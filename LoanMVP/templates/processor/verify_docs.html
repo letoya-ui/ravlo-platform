@@ -1,0 +1,138 @@
+{% extends "layouts/base.html" %}
+{% block title %}Verify Documents | Processor{% endblock %}
+{% block content %}
+
+<main class="dashboard-main">
+  <div class="wrap">
+    <section class="card">
+      <h2>✅ Verify Documents</h2>
+      <p class="muted">Review and approve borrower uploads. AI helps summarize workload below.</p>
+
+      <div class="ai-summary-box">
+        <h4>🤖 AI Summary</h4>
+        <p>{{ ai_summary or "AI summary unavailable." }}</p>
+      </div>
+
+      <form method="POST">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Select</th>
+              <th>Document</th>
+              <th>Status</th>
+              <th>Borrower</th>
+              <th>Uploaded</th>
+              <th>Notes</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for doc in documents %}
+            <tr>
+              <td><input type="radio" name="doc_id" value="{{ doc.id }}"></td>
+              <td>{{ doc.document_name }}</td>
+              <td><span class="badge">{{ doc.status or "Pending" }}</span></td>
+              <td>{{ doc.uploaded_by or "Borrower" }}</td>
+              <td>{{ doc.created_at.strftime("%Y-%m-%d") if doc.created_at else "—" }}</td>
+              <td><input type="text" name="notes" placeholder="Add notes..." class="note-input"></td>
+            </tr>
+            {% else %}
+            <tr><td colspan="6" class="muted">No documents awaiting verification.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+
+        <div class="actions">
+          <button class="btn" name="action" value="approve">✅ Approve</button>
+          <button class="btn btn-outline" name="action" value="flag">🚩 Flag</button>
+          <button class="btn btn-outline" name="action" value="reject">❌ Reject</button>
+        </div>
+      </form>
+    </section>
+  </div>
+</main>
+
+<style>
+  :root {
+    --bg: #0f0f11;
+    --panel: #15161a;
+    --line: #2b2f36;
+    --text: #e6e6e6;
+    --muted: #a5a7ad;
+    --accent: #7ab8ff;
+    --glow: 0 0 14px rgba(122,184,255,0.35);
+  }
+  body { background: var(--bg); color: var(--text); }
+  .wrap { padding: 2rem; }
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 1.5rem;
+    box-shadow: var(--glow);
+  }
+  h2 { color: var(--accent); margin-bottom: .3rem; }
+  .muted { color: var(--muted); }
+  .ai-summary-box {
+    background: var(--bg);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    box-shadow: inset 0 0 10px rgba(122,184,255,0.1);
+  }
+  .data-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 1rem;
+  }
+  .data-table th, .data-table td {
+    padding: .6rem;
+    border-bottom: 1px solid var(--line);
+  }
+  .data-table th {
+    color: var(--accent);
+    text-transform: uppercase;
+    font-size: .85rem;
+  }
+  .badge {
+    background: var(--accent);
+    color: #000;
+    border-radius: 6px;
+    padding: .2rem .5rem;
+    font-size: .8rem;
+  }
+  .note-input {
+    width: 100%;
+    padding: .3rem .5rem;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    background: var(--bg);
+    color: var(--text);
+  }
+  .actions {
+    margin-top: 1rem;
+    display: flex;
+    gap: .5rem;
+  }
+  .btn {
+    background: var(--accent);
+    color: #000;
+    border-radius: 6px;
+    padding: .5rem 1rem;
+    border: none;
+    font-weight: 600;
+    cursor: pointer;
+    transition: .2s;
+  }
+  .btn:hover { box-shadow: var(--glow); }
+  .btn-outline {
+    background: transparent;
+    border: 1px solid var(--accent);
+    color: var(--accent);
+  }
+  .btn-outline:hover {
+    background: var(--accent);
+    color: #000;
+  }
+</style>
+{% endblock %}

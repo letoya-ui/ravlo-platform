@@ -1,0 +1,17 @@
+{% extends "layouts/base.html" %}
+{% block title %}Borrower Intake{% endblock %}
+
+{% block content %}
+<h2>New Borrower Intake</h2>
+
+<form method="POST">
+  {{ form.hidden_tag() }}
+  <div class="mb-3">{{ form.full_name.label }}{{ form.full_name(class="form-control") }}</div>
+  <div class="mb-3">{{ form.email.label }}{{ form.email(class="form-control") }}</div>
+  <div class="mb-3">{{ form.phone.label }}{{ form.phone(class="form-control") }}</div>
+  <div class="mb-3">{{ form.annual_income.label }}{{ form.annual_income(class="form-control") }}</div>
+  <div class="mb-3">{{ form.credit_score.label }}{{ form.credit_score(class="form-control") }}</div>
+  <div class="mb-3">{{ form.employment_status.label }}{{ form.employment_status(class="form-select") }}</div>
+  <div>{{ form.submit(class="btn btn-primary") }}</div>
+</form>
+{% endblock %}

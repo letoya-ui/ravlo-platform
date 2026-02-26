@@ -1,0 +1,23 @@
+[
+    {
+        "id": 1,
+        "name": "First National Bank",
+        "rate": 6.25,
+        "term": 30,
+        "type": "Residential"
+    },
+    {
+        "id": 2,
+        "name": "CapitalOne Commercial",
+        "rate": 7.1,
+        "term": 20,
+        "type": "Commercial"
+    },
+    {
+        "id": 3,
+        "name": "Blue Ridge Credit Union",
+        "rate": 5.85,
+        "term": 15,
+        "type": "Residential"
+    }
+]

@@ -1,0 +1,25 @@
+{% extends "layouts/base.html" %}
+{% block title %}Executive • Finance AI{% endblock %}
+{% block content %}
+<style>
+  :root{--panel:#15161a;--line:#2a2e36;--text:#e6e6e6;--accent:#7ab8ff;--glow:0 0 18px rgba(122,184,255,.35);}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:1.2rem;box-shadow:var(--glow);}
+  textarea{background:#0f0f11;border:1px solid var(--line);color:var(--text);border-radius:10px;padding:.6rem .7rem;width:100%;}
+  .btn{background:#1a1d23;color:var(--text);border:1px solid var(--line);padding:.6rem .9rem;border-radius:10px;}
+</style>
+
+<h1>🧮 Finance AI Assistant</h1>
+<div class="card">
+  <form method="POST">
+    <label>Ask Finance AI</label>
+    <textarea name="query" rows="3" placeholder="e.g., summarize current quarter’s ROI trends..."></textarea>
+    <button class="btn" style="margin-top:.8rem;">🧠 Analyze</button>
+  </form>
+
+  {% if response %}
+  <div style="margin-top:1rem;background:#1b1d22;border:1px solid var(--line);border-radius:10px;padding:1rem;">
+    {{ response }}
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

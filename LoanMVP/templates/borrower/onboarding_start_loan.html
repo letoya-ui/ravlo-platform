@@ -1,0 +1,27 @@
+{% extends "layouts/borrower_base.html" %}
+{% block title %}Start Loan{% endblock %}
+{% block content %}
+
+<div class="b-main-inner" style="max-width:600px; margin:auto;">
+
+  <h2>Start Your Loan</h2>
+  <p class="muted">Just a few details to get your loan started.</p>
+
+  <form method="POST" class="b-card" style="margin-top:1.5rem;">
+    <label>Loan Type</label>
+    <select name="loan_type" class="b-input" required>
+      <option value="Fix & Flip">Fix & Flip</option>
+      <option value="Rental">Rental</option>
+      <option value="Bridge">Bridge</option>
+      <option value="Construction">Construction</option>
+    </select>
+
+    <label style="margin-top:1rem;">Loan Amount</label>
+    <input type="number" name="amount" class="b-input" placeholder="Enter amount" required>
+
+    <button class="btn" style="margin-top:1.5rem; width:100%;">Create Loan ➜</button>
+  </form>
+
+</div>
+
+{% endblock %}

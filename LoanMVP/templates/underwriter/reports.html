@@ -1,0 +1,194 @@
+{% extends "layouts/base.html" %}
+{% block title %}Underwriter • Reports{% endblock %}
+{% block content %}
+
+<main class="dashboard-main">
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" />
+  <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+
+  <style>
+    :root {
+      --bg:#0f0f11;
+      --panel:#15161a;
+      --line:#282b31;
+      --text:#e6e6e6;
+      --muted:#a5a7ad;
+      --accent:#7ab8ff;
+      --accent2:#43d19e;
+      --warn:#ffdf6e;
+      --danger:#ff6b6b;
+      --glow:0 0 18px rgba(122,184,255,0.25);
+    }
+
+    .wrap {
+      display: flex;
+      flex-direction: column;
+      gap: 1.4rem;
+      padding: 1rem 1.5rem;
+    }
+
+    .header {
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      flex-wrap:wrap;
+      gap:1rem;
+    }
+
+    .header h1 {
+      color:var(--accent);
+      font-size:1.6rem;
+      margin:0;
+    }
+
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 1.2rem 1.4rem;
+      box-shadow: var(--glow);
+      animation: fadeIn 0.6s ease;
+    }
+
+    .grid {
+      display: grid;
+      gap: 1.2rem;
+    }
+
+    .g-4 {
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    }
+
+    .kpi {
+      background: linear-gradient(180deg, #1a1a1a, #101010);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 1rem;
+      text-align: center;
+      transition: all 0.25s ease;
+    }
+
+    .kpi:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 0 20px rgba(122,184,255,0.25);
+    }
+
+    .kpi h3 {
+      font-size: 2rem;
+      margin: 0;
+      color: var(--accent);
+    }
+
+    .kpi p {
+      color: var(--muted);
+      margin-top: 0.3rem;
+      font-size: 0.9rem;
+    }
+
+    .charts {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 1.5rem;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: none; }
+    }
+
+    .table {
+      width: 100%;
+      border-collapse: collapse;
+      color: var(--text);
+      font-size: .9rem;
+      margin-top:1rem;
+    }
+
+    .table th, .table td {
+      border-top: 1px solid var(--line);
+      padding: .7rem;
+      text-align:left;
+    }
+
+    .table th {
+      color: var(--accent);
+      font-weight:600;
+    }
+  </style>
+
+  <div class="wrap">
+    <div class="header">
+      <h1>📊 Underwriter Reports</h1>
+      <p class="muted">Review approval performance and loan activity overview.</p>
+    </div>
+
+    <!-- KPI Summary -->
+    <div class="grid g-4">
+      <div class="kpi"><h3>{{ total }}</h3><p>Total Loans</p></div>
+      <div class="kpi"><h3>{{ approved }}</h3><p>Approved</p></div>
+      <div class="kpi"><h3>{{ declined }}</h3><p>Declined</p></div>
+      <div class="kpi"><h3>{{ pending }}</h3><p>Pending</p></div>
+    </div>
+
+    <!-- Charts -->
+    <div class="charts">
+      <div class="card" id="chartStatus"></div>
+      <div class="card" id="chartProgress"></div>
+    </div>
+
+    <!-- Table (optional loan snapshot) -->
+    <div class="card">
+      <h3>📄 Summary Breakdown</h3>
+      <table class="table">
+        <thead>
+          <tr><th>Status</th><th>Count</th><th>Percentage</th></tr>
+        </thead>
+        <tbody>
+          {% set total_safe = total if total > 0 else 1 %}
+          <tr><td>Approved</td><td>{{ approved }}</td><td>{{ '%.1f'|format((approved/total_safe)*100) }}%</td></tr>
+          <tr><td>Declined</td><td>{{ declined }}</td><td>{{ '%.1f'|format((declined/total_safe)*100) }}%</td></tr>
+          <tr><td>Pending</td><td>{{ pending }}</td><td>{{ '%.1f'|format((pending/total_safe)*100) }}%</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <script>
+    const total = {{ total }};
+    const approved = {{ approved }};
+    const declined = {{ declined }};
+    const pending = {{ pending }};
+
+    // Donut Chart
+    new ApexCharts(document.querySelector("#chartStatus"), {
+      chart: { type: "donut", height: 280, foreColor: "#e6e6e6" },
+      series: [approved, declined, pending],
+      labels: ["Approved", "Declined", "Pending"],
+      colors: ["#43d19e", "#ff6b6b", "#ffdf6e"],
+      legend: { labels: { colors: "#a5a7ad" } },
+      stroke: { width: 0 },
+      dataLabels: { enabled: true },
+      theme: { mode: "dark" },
+    }).render();
+
+    // Bar Chart
+    new ApexCharts(document.querySelector("#chartProgress"), {
+      chart: { type: "bar", height: 280, foreColor: "#e6e6e6" },
+      series: [{
+        name: "Loans",
+        data: [approved, declined, pending],
+      }],
+      xaxis: {
+        categories: ["Approved", "Declined", "Pending"],
+        labels: { style: { colors: ["#a5a7ad","#a5a7ad","#a5a7ad"] } }
+      },
+      colors: ["#7ab8ff"],
+      plotOptions: {
+        bar: { borderRadius: 6, horizontal: false, columnWidth: "55%" }
+      },
+      grid: { borderColor: "#2b2b31" },
+      theme: { mode: "dark" },
+    }).render();
+  </script>
+</main>
+{% endblock %}

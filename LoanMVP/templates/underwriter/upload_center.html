@@ -1,0 +1,170 @@
+{% extends "layouts/base.html" %}
+{% block title %}Underwriter • Upload Center{% endblock %}
+
+{% block content %}
+<style>
+  :root {
+    --bg:#0f0f11;
+    --panel:#15161a;
+    --line:#2a2e36;
+    --text:#e6e6e6;
+    --muted:#a5a7ad;
+    --accent:#7ab8ff;
+    --glow:0 0 18px rgba(122,184,255,.3);
+  }
+
+  body { background:var(--bg); color:var(--text); }
+
+  .dashboard-container {
+    display:flex;
+    flex-direction:column;
+    gap:1.5rem;
+  }
+
+  .header-bar {
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding:1rem 1.5rem;
+    box-shadow:var(--glow);
+  }
+
+  .header-bar h2 {
+    font-size:1.3rem;
+    color:#cfe0f5;
+    font-weight:600;
+  }
+
+  .upload-section {
+    display:grid;
+    grid-template-columns:2fr 1fr;
+    gap:1.5rem;
+  }
+
+  @media (max-width:900px) {
+    .upload-section { grid-template-columns:1fr; }
+  }
+
+  .card {
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding:1.2rem;
+    box-shadow:var(--glow);
+    transition:all .2s ease;
+  }
+  .card:hover { transform:translateY(-2px); box-shadow:0 0 22px rgba(122,184,255,0.4); }
+
+  h3 { color:#cfe0f5; font-size:1rem; margin-bottom:.8rem; }
+
+  .upload-box {
+    border:2px dashed var(--line);
+    border-radius:12px;
+    padding:2rem;
+    text-align:center;
+    color:var(--muted);
+    transition:all .3s ease;
+  }
+  .upload-box:hover { border-color:var(--accent); box-shadow:var(--glow); color:#cfe8ff; }
+
+  input[type="file"] {
+    display:none;
+  }
+
+  label.upload-label {
+    display:inline-block;
+    background:linear-gradient(180deg,#1b1d22,#15161a);
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:.6rem 1.4rem;
+    color:var(--text);
+    margin-top:1rem;
+    cursor:pointer;
+    transition:all .2s ease;
+  }
+  label.upload-label:hover { border-color:var(--accent); box-shadow:var(--glow); color:#cfe8ff; }
+
+  ul.upload-list {
+    list-style:none;
+    padding-left:0;
+    margin-top:1rem;
+  }
+
+  ul.upload-list li {
+    border-bottom:1px solid var(--line);
+    padding:.6rem 0;
+    display:flex;
+    justify-content:space-between;
+    font-size:.9rem;
+  }
+
+  ul.upload-list li span {
+    color:var(--muted);
+  }
+
+  .ai-summary {
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:14px;
+    box-shadow:var(--glow);
+    padding:1rem;
+  }
+
+  .btn {
+    background:linear-gradient(180deg,#1b1d22,#15161a);
+    color:var(--text);
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:.55rem 1.2rem;
+    font-size:.9rem;
+    transition:all .2s ease;
+  }
+  .btn:hover { border-color:var(--accent); box-shadow:var(--glow); color:#cfe8ff; }
+  .btn-upload { border-color:#2d4c6e; }
+</style>
+
+<div class="dashboard-container">
+  <div class="header-bar">
+    <h2>📤 Upload Center</h2>
+    <a href="{{ url_for('underwriter.dashboard') }}" class="btn">← Back</a>
+  </div>
+
+  <div class="upload-section">
+    <div class="card">
+      <h3>Upload New Documents</h3>
+      <form method="POST" enctype="multipart/form-data">
+        <div class="upload-box">
+          <p>Drag & drop files here or click below to upload.</p>
+          <label for="file-upload" class="upload-label">Choose File</label>
+          <input id="file-upload" type="file" name="file" multiple />
+        </div>
+        <div style="text-align:right; margin-top:1rem;">
+          <button type="submit" class="btn btn-upload">📎 Upload</button>
+        </div>
+      </form>
+
+      <h3 style="margin-top:1.5rem;">📁 Uploaded Files</h3>
+      <ul class="upload-list">
+        {% for file in uploaded_files %}
+          <li>
+            <span><i class="fa-regular fa-file"></i> {{ file.filename }}</span>
+            <span>{{ file.status|capitalize if file.status else 'Pending' }}</span>
+          </li>
+        {% else %}
+          <li style="color:var(--muted);">No files uploaded yet.</li>
+        {% endfor %}
+      </ul>
+    </div>
+
+    <div class="ai-summary">
+      <h3>🧠 AI Insights</h3>
+      <p style="color:var(--muted); font-size:.9rem;">
+        {{ ai_summary or "AI will summarize uploaded document contents and flag potential issues here." }}
+      </p>
+    </div>
+  </div>
+</div>
+{% endblock %}

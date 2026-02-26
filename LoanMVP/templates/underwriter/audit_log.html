@@ -1,0 +1,55 @@
+<!-- =========================================================
+     2️⃣ audit_log.html
+     ========================================================= -->
+{% extends "layouts/base.html" %}
+{% block title %}Audit Log{% endblock %}
+{% block content %}
+<style>
+  :root{
+    --bg:#0f0f11;--panel:#15161a;--line:#2a2e36;
+    --text:#e6e6e6;--muted:#a5a7ad;--accent:#7ab8ff;
+    --glow:0 0 16px rgba(122,184,255,.4);
+  }
+  body{background:var(--bg);color:var(--text);}
+  .card{background:var(--panel);border:1px solid var(--line);
+        border-radius:14px;padding:1.2rem;box-shadow:var(--glow);}
+  table{width:100%;border-collapse:collapse;margin-top:.5rem;}
+  th,td{padding:.6rem .75rem;border-top:1px solid var(--line);}
+  th{color:#cfe0f5;text-align:left;}
+  tr:hover{background:#1a1d23;}
+</style>
+
+<div class="container py-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h2><i class="fa-solid fa-clipboard-list"></i> Audit Log</h2>
+    <a href="{{ url_for('underwriter.dashboard') }}" class="btn btn-outline-light btn-sm">← Back</a>
+  </div>
+
+  <div class="card">
+    <table>
+      <thead>
+        <tr>
+          <th>Loan ID</th>
+          <th>Action</th>
+          <th>User</th>
+          <th>Timestamp</th>
+          <th>Notes</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for log in audit_logs %}
+        <tr>
+          <td>{{ log.loan_id or '—' }}</td>
+          <td>{{ log.action or '—' }}</td>
+          <td>{{ log.user_name or 'System' }}</td>
+          <td>{{ log.created_at.strftime('%Y-%m-%d %H:%M') if log.created_at else '—' }}</td>
+          <td>{{ log.notes or '—' }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="5" class="text-muted text-center">No audit entries yet.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Edit Deal</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 2rem; background: #f9fafb; }
+    .card { background: #fff; border-radius: 8px; padding: 2rem; box-shadow: 0 2px 6px rgba(0,0,0,0.1); max-width: 800px; margin: auto; }
+    h2 { color: #2c3e50; margin-bottom: 1rem; }
+    .grid { display: grid; gap: 1rem; }
+    .grid-2 { grid-template-columns: 1fr 1fr; }
+    .grid-3 { grid-template-columns: 1fr 1fr 1fr; }
+    input { padding: .6rem; border: 1px solid #ccc; border-radius: 4px; width: 100%; }
+    button { background: #2c3e50; color: #fff; padding: .7rem 1.2rem; border: none; border-radius: 4px; cursor: pointer; }
+    button:hover { background: #34495e; }
+    .muted { color: #777; font-size: .9rem; margin-bottom: 1rem; }
+    .actions { margin-top: 1.5rem; display: flex; gap: 1rem; }
+    a.btn-secondary { background: #ccc; color: #333; padding: .7rem 1.2rem; border-radius: 4px; text-decoration: none; }
+    a.btn-secondary:hover { background: #bbb; }
+  </style>
+</head>
+<body>
+
+  <div class="card">
+    <h2>✏️ Edit Deal</h2>
+    <p class="muted">Update your property details and financing inputs below.</p>
+
+    <form method="POST" action="{{ url_for('borrower.edit_deal', deal_id=deal.id) }}">
+      <!-- Address Fields -->
+      <div class="grid grid-2">
+        <input type="text" name="address" value="{{ deal.property_address }}" placeholder="Street Address" required>
+        <input type="text" name="city" value="{{ deal.city }}" placeholder="City" required>
+        <input type="text" name="state" value="{{ deal.state }}" placeholder="State" required>
+        <input type="text" name="zip" value="{{ deal.zip_code }}" placeholder="ZIP Code" required>
+      </div>
+
+      <!-- Financial Inputs -->
+      <div class="grid grid-3 mt-3">
+        <input type="number" step="0.01" name="purchase_price" value="{{ deal.purchase_price }}" placeholder="Purchase Price ($)" required>
+        <input type="number" step="0.01" name="rehab_cost" value="{{ deal.rehab_cost }}" placeholder="Rehab Cost ($)">
+        <input type="number" step="0.01" name="arv" value="{{ deal.arv }}" placeholder="After Repair Value ($)">
+      </div>
+
+      <!-- Actions -->
+      <div class="actions">
+        <button type="submit">💾 Save Changes</button>
+        <a href="{{ url_for('borrower.view_deal', deal_id=deal.id) }}" class="btn-secondary">Cancel</a>
+      </div>
+    </form>
+  </div>
+
+</body>
+</html>

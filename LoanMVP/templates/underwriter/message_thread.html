@@ -1,0 +1,97 @@
+{% extends "layouts/base.html" %}
+{% block title %}Messages • {{ thread_title }}{% endblock %}
+{% block content %}
+
+<main class="dashboard-main">
+  <div class="wrap">
+
+    <!-- Header -->
+    <div class="card header-card">
+      <div>
+        <h1>💬 Conversation with {{ thread_title }}</h1>
+        <div class="muted">Direct messaging between you and {{ thread_title }}.</div>
+      </div>
+      <div class="actions-top">
+        <a href="{{ url_for('underwriter.messages') }}" class="btn">⬅ Back to Messages</a>
+      </div>
+    </div>
+
+    <!-- Messages Window -->
+    <div class="card message-window">
+      {% for msg in messages %}
+        <div class="msg-row {% if msg.sender_id == current_user.id %}sent{% else %}received{% endif %}">
+          <div class="msg-bubble">
+            <p>{{ msg.content }}</p>
+            <span class="timestamp">{{ msg.created_at.strftime('%b %d, %I:%M %p') }}</span>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+
+    <!-- Send Message -->
+    <div class="card send-box">
+      <form method="POST" action="">
+        <textarea name="message" placeholder="Type your message..." required></textarea>
+        <button class="btn btn-primary" type="submit">Send</button>
+      </form>
+    </div>
+
+  </div>
+</main>
+
+<style>
+  :root {
+    --bg:#0f0f11; --panel:#15161a; --line:#282b31;
+    --text:#e6e6e6; --muted:#a5a7ad; --accent:#7ab8ff;
+    --glow:0 0 18px rgba(122,184,255,0.35);
+  }
+
+  .wrap { padding:1.5rem; max-width:1200px; margin:0 auto; }
+
+  .message-window {
+    height:500px;
+    overflow-y:auto;
+    padding:1rem;
+    display:flex;
+    flex-direction:column;
+    gap:1rem;
+  }
+
+  .msg-row { display:flex; }
+  .msg-row.sent { justify-content:flex-end; }
+  .msg-row.received { justify-content:flex-start; }
+
+  .msg-bubble {
+    max-width:60%;
+    padding:.8rem 1rem;
+    border-radius:12px;
+    background:#1c1d22;
+    border:1px solid var(--line);
+    box-shadow:var(--glow);
+  }
+
+  .msg-row.sent .msg-bubble {
+    background:#2a4a62;
+    border-color:#3d6a8a;
+  }
+
+  .timestamp {
+    display:block;
+    margin-top:.3rem;
+    font-size:.7rem;
+    color:var(--muted);
+  }
+
+  .send-box textarea {
+    width:100%;
+    height:80px;
+    padding:.8rem;
+    border-radius:10px;
+    background:#1a1b1f;
+    border:1px solid var(--line);
+    color:var(--text);
+    margin-bottom:.6rem;
+  }
+</style>
+
+{% endblock %}

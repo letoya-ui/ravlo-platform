@@ -1,0 +1,121 @@
+{% extends "layouts/base.html" %}
+{% block title %}AI Loan Intake (Officer Mode){% endblock %}
+{% block content %}
+
+<div class="dashboard-main px-4 py-4">
+  <div class="card shadow-lg border-0" style="background:var(--panel);color:var(--text-light);max-width:880px;margin:auto;">
+    <h3 class="text-accent mb-3">🧠 AI Loan Intake Assistant (Officer)</h3>
+    <p class="text-muted">Use this guided chat to collect full borrower data during a call or meeting.</p>
+
+    <label class="form-label">Select Borrower</label>
+    <form id="borrowerForm">
+      <select name="borrower_id" class="dashboard-input">
+        {% for b in borrowers %}
+          <option value="{{ b.id }}">{{ b.full_name }}</option>
+        {% endfor %}
+      </select>
+
+    </form>
+
+    <div id="chat-window" style="background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:1rem;height:480px;overflow-y:auto;margin-top:1rem;">
+      <div class="ai-msg">Hello Officer 👋, ready to collect borrower details? Start by confirming their name.</div>
+    </div>
+
+    <div style="display:flex;gap:.6rem;margin-top:1rem;">
+      <input id="user-input" class="dashboard-input" placeholder="Type your question or borrower’s answer..." autocomplete="off" />
+      <button id="send-btn" class="btn btn-accent">Send</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const chatWindow = document.getElementById('chat-window');
+const input = document.getElementById('user-input');
+const sendBtn = document.getElementById('send-btn');
+const borrowerSelect = document.getElementById('borrowerSelect');
+let currentIndex = 0;
+const answers = {};
+
+const questions = [
+  "Full legal name?",
+  "Personal address?",
+  "Email address?",
+  "Phone number?",
+  "Entity type (LLC, Individual, Corp)?",
+  "Business name (if applicable)?",
+  "Employment / income source?",
+  "Citizenship status?",
+  "Marital status?",
+  "Credit score estimate?",
+  "Any bankruptcies or foreclosures in the last 7 years?",
+  "Loan purpose (Purchase, Refi, Construction, etc.)?",
+  "Requested loan amount?",
+  "Property address?",
+  "Property type (Multifamily, Retail, etc.)?",
+  "Owner-occupied or investment?",
+  "Purchase price?",
+  "As-is value?",
+  "After-repair value (ARV)?",
+  "Construction or rehab budget?",
+  "Permits in hand?",
+  "Expected monthly rental income?",
+  "Operating expenses?",
+  "Current mortgage or lien?",
+  "Payoff amount?",
+  "Loan term desired?",
+  "Fixed or interest-only?",
+  "Available liquid cash / reserves?",
+  "Guarantors or partners?",
+  "Any additional notes or project insights?"
+];
+
+function addMessage(sender, text) {
+  const msg = document.createElement('div');
+  msg.className = 'ai-msg';
+  msg.style.marginBottom = '10px';
+  msg.style.padding = '8px 12px';
+  msg.style.borderRadius = '10px';
+  msg.style.background = sender === 'ai' ? 'var(--hover)' : '#1f1f1f';
+  msg.textContent = text;
+  chatWindow.appendChild(msg);
+  chatWindow.scrollTop = chatWindow.scrollHeight;
+}
+
+function nextQuestion() {
+  if (currentIndex < questions.length) {
+    const q = questions[currentIndex];
+    setTimeout(() => addMessage('ai', q), 500);
+  } else {
+    const borrowerId = borrowerSelect.value;
+    fetch('/loan_officer/ai_intake/save', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ borrower_id: borrowerId, answers })
+    })
+    .then(res => res.json())
+    .then(data => {
+      addMessage('ai', "✅ Intake saved successfully!");
+      addMessage('ai', "Summary:\n" + data.summary);
+    })
+    .catch(() => addMessage('ai', "⚠️ Error saving intake."));
+  }
+}
+
+sendBtn.addEventListener('click', () => {
+  const val = input.value.trim();
+  if (!val) return;
+  addMessage('user', val);
+  answers[questions[currentIndex]] = val;
+  input.value = '';
+  currentIndex++;
+  nextQuestion();
+});
+
+input.addEventListener('keypress', e => {
+  if (e.key === 'Enter') sendBtn.click();
+});
+
+nextQuestion();
+</script>
+
+{% endblock %}

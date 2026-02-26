@@ -1,0 +1,295 @@
+/* ==========================================================
+   LoanMVP — Universal Metallic Blue Theme
+   Shared by Borrower, Processor, Underwriter, Admin
+   ========================================================== */
+
+:root {
+  --bg: #0f0f11;
+  --panel: #15161a;
+  --line: #2a2e36;
+  --text: #e6e6e6;
+  --muted: #a5a7ad;
+  --accent: #7ab8ff;          /* Metallic blue accent */
+  --hover: #1d2230;
+  --glow: 0 0 16px rgba(122,184,255,0.35);
+  --danger: #ff6b6b;          /* Warning tone */
+  --success: #5ef08c;         /* Success tone */
+}
+
+/* ==========================================================
+   🧱 Base Layout
+   ========================================================== */
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: "Inter", sans-serif;
+  overflow-x: hidden;
+}
+
+.dashboard-main {
+  padding: 2rem;
+}
+
+.wrap {
+  display: flex;
+  gap: 1.25rem;
+  flex-wrap: wrap;
+}
+
+.lhs { flex: 1 1 68%; }
+.rhs { flex: 1 1 30%; min-width: 300px; }
+
+/* ==========================================================
+   🧩 Card / Grid Layout
+   ========================================================== */
+.card {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 1rem 1.1rem;
+  box-shadow: var(--glow);
+  transition: all 0.25s ease;
+}
+.card:hover {
+  box-shadow: 0 0 24px rgba(122,184,255,0.45);
+  border-color: var(--accent);
+}
+
+.grid { display: grid; gap: 1rem; }
+.g-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.g-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+
+/* ==========================================================
+   ✍️ Typography
+   ========================================================== */
+h1, h2, h3, h4 {
+  color: var(--text);
+  margin: 0 0 .35rem;
+}
+.muted { color: var(--muted); }
+
+/* ==========================================================
+   🔘 Buttons
+   ========================================================== */
+select,
+input[type="file"],
+input[type="text"],
+input[type="number"],
+input[type="email"],
+input[type="password"],
+textarea,
+button {
+  background: #111;
+  border: 1px solid #2a2e36;
+  color: #e6e6e6;
+  border-radius: 8px;
+  padding: 0.7rem;
+  width: 100%;
+  margin-top: 0.5rem;
+  font-weight: 500;
+  transition: all .3s ease;
+}
+
+button {
+  background: var(--accent);
+  color: #000;
+  font-weight: 600;
+  cursor: pointer;
+}
+button:hover {
+  box-shadow: var(--glow);
+}
+
+/* ==========================================================
+   💡 AI Hint & Secondary Boxes
+   ========================================================== */
+.ai-hint {
+  background: rgba(122,184,255,0.05);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 0.8rem 1rem;
+  color: var(--muted);
+}
+
+/* ==========================================================
+   📊 KPI & Metrics
+   ========================================================== */
+.kpi {
+  display: flex;
+  align-items: flex-start;
+  gap: .8rem;
+}
+.kpi .num {
+  font-size: 1.9rem;
+  font-weight: 700;
+  color: #dfe9f7;
+}
+.kpi .badge {
+  font-size: .8rem;
+  padding: .15rem .5rem;
+  border-radius: 8px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  color: var(--muted);
+}
+
+/* ==========================================================
+   📋 Table
+   ========================================================== */
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.table th, .table td {
+  padding: .65rem .6rem;
+  border-top: 1px solid var(--line);
+}
+.table th {
+  color: #cfe0f5;
+  font-weight: 600;
+  text-align: left;
+}
+.table tr:hover td {
+  background: #1a1d25;
+}
+
+/* ==========================================================
+   🔵 Status Badges
+   ========================================================== */
+.status {
+  padding: .25rem .65rem;
+  border-radius: 999px;
+  font-size: .78rem;
+  border: 1px solid var(--line);
+  display: inline-block;
+}
+.st-submitted { background: #1e2430; color: #a9c7ff; }
+.st-cleared   { background: #1b2a23; color: #9af2c5; }
+.st-review    { background: #23251e; color: #e7f28f; }
+.st-declined  { background: #2a1b1b; color: #ff9d9d; }
+
+/* ==========================================================
+   🧭 Sidebar & Hover
+   ========================================================== */
+/* ==========================================================
+   🧭 Sidebar — Scrollable Metallic Blue
+   ========================================================== */
+.sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 260px;
+  height: 100vh;
+  background: var(--panel);
+  border-right: 1px solid var(--line);
+  box-shadow: 0 0 20px rgba(0,0,0,0.4);
+  color: var(--text);
+  font-size: 15px;
+  padding: 1rem 0 2rem;
+  z-index: 1000;
+
+  /* ✅ Enables scrolling */
+  overflow-y: auto;
+  overflow-x: hidden;
+
+  /* ✅ Makes scroll smooth and visible */
+  scrollbar-width: thin;
+  scrollbar-color: var(--accent) var(--panel);
+}
+
+/* Optional: WebKit Scrollbar Styling */
+.sidebar::-webkit-scrollbar {
+  width: 6px;
+}
+.sidebar::-webkit-scrollbar-track {
+  background: var(--panel);
+}
+.sidebar::-webkit-scrollbar-thumb {
+  background-color: var(--accent);
+  border-radius: 3px;
+}
+
+/* Sidebar links */
+.sidebar a {
+  color: var(--text);
+  text-decoration: none;
+  display: block;
+  padding: 0.75rem 1.1rem;
+  border-radius: 8px;
+  transition: all 0.25s ease;
+}
+
+.sidebar a:hover,
+.sidebar a.active {
+  background: var(--hover);
+  box-shadow: var(--glow);
+  color: var(--accent);
+}
+
+/* ==========================================================
+   🧠 AI Assistant Dock
+   ========================================================== */
+.ai-dock {
+  position: fixed;
+  bottom: 20px;
+  right: 25px;
+  z-index: 200;
+}
+.ai-toggle {
+  background: var(--accent);
+  color: #000;
+  border: none;
+  border-radius: 50%;
+  width: 55px;
+  height: 55px;
+  font-size: 1.4rem;
+  box-shadow: var(--glow);
+  cursor: pointer;
+  transition: all .25s ease;
+}
+.ai-toggle:hover {
+  transform: scale(1.1);
+  box-shadow: 0 0 25px rgba(122,184,255,0.6);
+}
+
+/* ==========================================================
+   ⚙️ Scrollbars
+   ========================================================== */
+
+/* Optional: WebKit scrollbar styling */
+.sidebar::-webkit-scrollbar {
+  width: 6px;
+}
+.sidebar::-webkit-scrollbar-track {
+  background: var(--panel);
+}
+.sidebar::-webkit-scrollbar-thumb {
+  background-color: var(--accent);
+  border-radius: 3px;
+}
+
+/* ==========================================================
+   ✅ Utility Classes
+   ========================================================== */
+.center { text-align: center; }
+.text-right { text-align: right; }
+.mt-1 { margin-top: 1rem; }
+.mt-2 { margin-top: 2rem; }
+.mb-1 { margin-bottom: 1rem; }
+.mb-2 { margin-bottom: 2rem; }
+
+/* ==========================================================
+   💬 Flash Messages
+   ========================================================== */
+.flash {
+  background: rgba(122,184,255,0.12);
+  border: 1px solid var(--accent);
+  color: var(--text);
+  border-radius: 8px;
+  margin-bottom: .5rem;
+  padding: .8rem 1rem;
+  font-size: .9rem;
+  box-shadow: 0 0 10px rgba(0,0,0,0.4);
+}

@@ -1,0 +1,118 @@
+{% extends "layouts/base.html" %}
+{% block title %}{{ partner.name }} | Partner Overview{% endblock %}
+{% block content %}
+
+<main class="dashboard-main">
+  <div class="wrap">
+    <header>
+      <h2>{{ partner.name }}</h2>
+      <p class="muted">Partner Overview — performance metrics and engagement stats</p>
+      <a href="{{ url_for('executive.partners') }}" class="btn btn-outline mt-1">← Back to Partners</a>
+    </header>
+
+    <!-- === SUMMARY GRID === -->
+    <div class="grid grid-3 mt-2">
+      <div class="card stat-card">
+        <h4>Partner Type</h4>
+        <p class="stat">{{ partner.type or '—' }}</p>
+      </div>
+      <div class="card stat-card">
+        <h4>Status</h4>
+        <p class="stat">
+          {% if partner.status == 'Active' %}
+            <span class="badge badge-success">Active</span>
+          {% elif partner.status == 'Pending' %}
+            <span class="badge badge-warning">Pending</span>
+          {% else %}
+            <span class="badge badge-muted">{{ partner.status or 'Unknown' }}</span>
+          {% endif %}
+        </p>
+      </div>
+      <div class="card stat-card">
+        <h4>Contact</h4>
+        <p class="stat">{{ partner.contact_email or '—' }}</p>
+      </div>
+    </div>
+
+    <!-- === PERFORMANCE STATS === -->
+    <div class="grid grid-3 mt-2">
+      <div class="card stat-card">
+        <h4>Total Deals</h4>
+        <p class="stat">{{ partner.deals or 0 }}</p>
+        <span class="muted">Closed loans</span>
+      </div>
+      <div class="card stat-card">
+        <h4>Total Volume</h4>
+        <p class="stat">${{ "{:,.0f}".format(partner.volume or 0) }}</p>
+        <span class="muted">Cumulative funding</span>
+      </div>
+      <div class="card stat-card">
+        <h4>Average Rating</h4>
+        <p class="stat">{{ "{:.1f}".format(partner.rating or 0) }}/5</p>
+        <span class="muted">Based on internal reviews</span>
+      </div>
+    </div>
+
+    <!-- === CHART SECTION === -->
+    <div class="card mt-2">
+      <h3>Performance Overview</h3>
+      <canvas id="partnerChart" style="max-height:320px;"></canvas>
+    </div>
+
+    <!-- === NOTES === -->
+    <div class="card mt-2">
+      <h3>Partner Notes</h3>
+      <p class="muted">Record insights, issues, or updates about this partner.</p>
+      <textarea rows="4" placeholder="Add notes here..." style="width:100%;padding:0.8rem;background:#111;border:1px solid var(--line);color:var(--text);border-radius:6px;"></textarea>
+      <button class="btn btn-glow mt-1">💾 Save Notes</button>
+    </div>
+  </div>
+</main>
+
+<!-- === ChartJS === -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  const ctx = document.getElementById('partnerChart').getContext('2d');
+  new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: ['Deals', 'Volume', 'Rating'],
+      datasets: [{
+        label: '{{ partner.name }} Performance',
+        data: [{{ partner.deals or 0 }}, {{ partner.volume or 0 }}, {{ partner.rating or 0 }}],
+        backgroundColor: ['#7ab8ff', '#3e8ed0', '#88ccff'],
+        borderWidth: 1
+      }]
+    },
+    options: {
+      plugins: { legend: { display: false } },
+      scales: {
+        y: { beginAtZero: true, ticks: { color: '#ccc' } },
+        x: { ticks: { color: '#ccc' } }
+      }
+    }
+  });
+</script>
+
+<style>
+.grid { display: grid; gap: 1.5rem; }
+.grid-3 { grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+
+.stat-card .stat {
+  font-size: 1.8rem;
+  font-weight: 700;
+  margin: 0.3rem 0;
+}
+
+.badge {
+  padding: 0.3rem 0.6rem;
+  border-radius: 6px;
+  font-size: 0.8rem;
+}
+
+.badge-success { background: #1f6f3e; color: #b7ffcb; }
+.badge-warning { background: #7a5e00; color: #ffe898; }
+.badge-muted { background: #2a2a2a; color: #aaa; }
+</style>
+
+{% endblock %}

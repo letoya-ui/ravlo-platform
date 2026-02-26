@@ -1,0 +1,68 @@
+{% extends "layouts/base.html" %}
+{% block content %}
+<style>
+  :root{--line:#2a2e36; --panel:#15161a; --text:#e6e6e6; --muted:#a5a7ad}
+  .card{background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:1rem}
+  table{width:100%; border-collapse:collapse}
+  th,td{padding:.6rem; border-top:1px solid var(--line); color:var(--text)}
+  input{background:#0f0f11; border:1px solid var(--line); color:var(--text); border-radius:10px; padding:.45rem .6rem; width:100%}
+  .btn{display:inline-flex; align-items:center; gap:.5rem; padding:.6rem .9rem; border-radius:10px; border:1px solid var(--line); color:var(--text); text-decoration:none; background:#1a1d23}
+</style>
+
+
+<div class="container-fluid py-4 text-light">
+  <h2 class="mb-4">📈 Reports</h2>
+
+  <div class="row g-4 mb-4">
+    <div class="col-md-3">
+      <div class="card bg-dark text-light border-0 shadow">
+        <div class="card-body text-center">
+          <h6 class="text-muted">Total Loans</h6>
+          <h2>{{ total_loans }}</h2>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card bg-dark text-light border-0 shadow">
+        <div class="card-body text-center">
+          <h6 class="text-muted">Approved</h6>
+          <h2>{{ approved_loans }}</h2>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card bg-dark text-light border-0 shadow">
+        <div class="card-body text-center">
+          <h6 class="text-muted">Declined</h6>
+          <h2>{{ declined_loans }}</h2>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card bg-dark text-light border-0 shadow">
+        <div class="card-body text-center">
+          <h6 class="text-muted">In Review</h6>
+          <h2>{{ in_review }}</h2>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card bg-dark text-light border-0 shadow mt-4">
+    <div class="card-body">
+      <h5>Recent AI Summaries</h5>
+      {% if summaries %}
+      <ul class="list-group list-group-flush">
+        {% for s in summaries %}
+        <li class="list-group-item bg-dark text-light border-secondary">
+          <strong>Loan #{{ s.loan_id }}</strong> — {{ s.summary[:150] }}...
+        </li>
+        {% endfor %}
+      </ul>
+      {% else %}
+      <p class="text-muted">No AI reports available.</p>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

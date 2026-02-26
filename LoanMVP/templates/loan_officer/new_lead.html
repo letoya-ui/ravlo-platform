@@ -1,0 +1,95 @@
+{% extends "layouts/base.html" %}
+{% block title %}Loan Officer • New Lead{% endblock %}
+{% block content %}
+
+<main class="dashboard-main">
+  <div class="wrap">
+    <section class="lhs grid">
+
+      <div class="card">
+        <h2>➕ Add New Lead</h2>
+        <p class="muted">Enter lead details and assign them to a property and officer.</p>
+
+        <form method="POST" class="grid g-2" style="margin-top:1rem;">
+          <div>
+            <label>Name</label>
+            <input type="text" name="name" required>
+          </div>
+          <div>
+            <label>Email</label>
+            <input type="email" name="email" required>
+          </div>
+          <div>
+            <label>Phone</label>
+            <input type="text" name="phone">
+          </div>
+          <div>
+            <label>Message</label>
+            <textarea name="message" rows="3"></textarea>
+          </div>
+          <div>
+            <label>Lead Source</label>
+            <select name="source_id">
+              <option value="">Select source...</option>
+              {% for s in sources %}
+              <option value="{{ s.id }}">{{ s.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div>
+            <label>Property</label>
+            <select name="property_id">
+              <option value="">Select property...</option>
+              {% for p in properties %}
+              <option value="{{ p.id }}">{{ p.address }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div>
+            <label>Assigned Officer</label>
+            <select name="assigned_officer_id">
+              <option value="">Select officer...</option>
+              {% for o in officers %}
+              <option value="{{ o.id }}">{{ o.full_name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div style="grid-column:1/-1; display:flex; gap:1rem; margin-top:1rem;">
+            <button type="submit" class="btn btn-primary">📤 Create Lead</button>
+            <a href="{{ url_for('loan_officer.dashboard') }}" class="btn">↩️ Cancel</a>
+          </div>
+        </form>
+      </div>
+
+    </section>
+
+    <aside class="rhs grid">
+      <div class="card">
+        <h3>Smart Tips</h3>
+        <p class="muted">Assign leads based on property proximity and officer availability. Use AI summary to prioritize follow-ups.</p>
+        <a href="{{ url_for('loan_officer.ai_summary') }}" class="btn btn-primary full-width">🤖 Generate AI Summary</a>
+      </div>
+    </aside>
+  </div>
+</main>
+
+<style>
+  input, select, textarea {
+    background: #0f0f11;
+    border: 1px solid var(--line);
+    color: var(--text);
+    border-radius: 10px;
+    padding: .6rem .8rem;
+    width: 100%;
+    font-family: 'Inter', sans-serif;
+  }
+  label {
+    display: block;
+    margin-bottom: .3rem;
+    color: var(--muted);
+    font-size: .9rem;
+  }
+</style>
+
+{% endblock %}

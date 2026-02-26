@@ -1,0 +1,195 @@
+{% extends "layouts/base.html" %}
+{% block content %}
+
+<style>
+  :root{--line:#2a2e36; --panel:#15161a; --text:#e6e6e6; --muted:#a5a7ad}
+  .card{background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:1rem}
+  table{width:100%; border-collapse:collapse}
+  th,td{padding:.6rem; border-top:1px solid var(--line); color:var(--text)}
+  input{background:#0f0f11; border:1px solid var(--line); color:var(--text); border-radius:10px; padding:.45rem .6rem; width:100%}
+  .btn{display:inline-flex; align-items:center; gap:.5rem; padding:.6rem .9rem; border-radius:10px; border:1px solid var(--line); color:var(--text); text-decoration:none; background:#1a1d23}
+</style>
+
+
+<div class="container-fluid py-4 text-light">
+  <h2 class="mb-4">📞 Lead Management</h2>
+
+  <!-- AI Summary Card -->
+  <div class="card bg-gradient-dark text-light mb-4 border-secondary shadow">
+    <div class="card-body">
+      <h5 class="card-title">🧠 AI Lead Insights</h5>
+      <p id="aiSummaryText" class="text-muted fst-italic">
+        Generating insights from your current leads...
+      </p>
+      <button id="refreshSummary" class="btn btn-outline-light btn-sm">🔄 Refresh Insights</button>
+    </div>
+  </div>
+
+  <!-- Search & Add Lead -->
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <form method="GET" class="d-flex">
+      <input type="text" name="q" placeholder="Search leads..." class="form-control bg-dark text-light border-secondary me-2" value="{{ request.args.get('q', '') }}">
+      <button class="btn btn-outline-light">Search</button>
+    </form>
+    <a href="{{ url_for('loan_officer.new_lead') }}" class="btn btn-outline-warning">➕ Add Lead</a>
+  </div>
+
+  <!-- AI Lead Generator -->
+  <div class="card bg-dark text-light border-secondary p-3 mb-4 shadow-sm">
+    <h5>🤖 Generate AI Leads</h5>
+    <form id="aiLeadForm" action="{{ url_for('loan_officer.ai_generator') }}" method="POST">
+      <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+        <input type="text" name="region" placeholder="Region (e.g., New York)" class="form-control bg-secondary text-light border-0" style="width: 180px;">
+        <input type="text" name="loan_type" placeholder="Loan Type (e.g., Commercial)" class="form-control bg-secondary text-light border-0" style="width: 180px;">
+        <input type="number" name="count" value="3" class="form-control bg-secondary text-light border-0" style="width: 80px;">
+        <button type="submit" class="btn btn-accent" id="generateBtn">Generate Leads</button>
+      </div>
+    </form>
+
+    <!-- Loading Spinner -->
+    <div id="loadingSpinner" class="text-center mt-3" style="display: none;">
+      <div class="spinner-border text-light" role="status">
+        <span class="visually-hidden">Generating...</span>
+      </div>
+      <p class="text-muted mt-2">AI is generating leads... please wait</p>
+    </div>
+  </div>
+
+  <!-- Leads Table -->
+  <div class="table-responsive">
+    <table class="table table-dark table-hover align-middle shadow-sm">
+      <thead class="table-secondary text-dark">
+        <tr>
+          <th>Name</th>
+          <th>Source</th>
+          <th>Status</th>
+          <th>Phone</th>
+          <th>Email</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="leadTableBody">
+        {% for lead in leads %}
+        <tr>
+          <td>{{ lead.name }}</td>
+          <td>{{ lead.source }}</td>
+          <td>
+            <span class="badge bg-{% if lead.status == 'converted' %}success{% elif lead.status == 'lost' %}danger{% else %}secondary{% endif %}">
+              {{ lead.status|capitalize }}
+            </span>
+          </td>
+          <td>{{ lead.phone }}</td>
+          <td>{{ lead.email }}</td>
+          <td>
+            <a href="{{ url_for('loan_officer.lead_detail', lead_id=lead.id) }}" class="btn btn-sm btn-outline-light">View</a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Toast Notification -->
+<div class="position-fixed bottom-0 end-0 p-3" style="z-index: 9999;">
+  <div id="toast" class="toast align-items-center text-white bg-dark border-light" role="alert" aria-live="assertive" aria-atomic="true">
+    <div class="d-flex">
+      <div class="toast-body" id="toastMessage">Notification</div>
+      <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+    </div>
+  </div>
+</div>
+<td>
+  <button class="btn btn-outline-info btn-sm" onclick="aiScore()">🤖 Score</button>
+  <button class="btn btn-outline-success btn-sm" onclick="followUp({{ leads.id }},'email')">📧 Email</button>
+  <button class="btn btn-outline-primary btn-sm" onclick="followUp({{ leads.id }},'sms')">📲 Text</button>
+</td>
+
+<script>
+async function aiScore(){
+  const res = await fetch('/ai/lead/score', {method:'POST'});
+  const data = await res.json();
+  alert('AI scored ' + data.length + ' leads!');
+}
+async function followUp(id,channel){
+  const res = await fetch(`/ai/lead/followup/${id}`,{
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({channel})
+  });
+  const d = await res.json();
+  alert(d.message);
+}
+</script>
+
+<!-- Scripts -->
+<script>
+async function updateSummary() {
+  const text = document.getElementById("aiSummaryText");
+  text.innerText = "🧩 Fetching AI summary...";
+  try {
+    const res = await fetch("{{ url_for('loan_officer.ai_summary') }}");
+    const data = await res.json();
+    text.innerText = data.summary || "No summary available yet.";
+  } catch (err) {
+    text.innerText = "⚠️ Unable to fetch AI insights.";
+  }
+}
+
+document.getElementById("refreshSummary").addEventListener("click", updateSummary);
+window.addEventListener("load", updateSummary);
+
+// Lead Generator
+document.getElementById("aiLeadForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const form = e.target;
+  const formData = new FormData(form);
+  const spinner = document.getElementById("loadingSpinner");
+  const btn = document.getElementById("generateBtn");
+
+  btn.disabled = true;
+  spinner.style.display = "block";
+
+  try {
+    const res = await fetch(form.action, { method: "POST", body: formData });
+    const data = await res.json();
+
+    if (data.error) {
+      showToast("⚠️ " + data.error, "bg-danger");
+    } else {
+      const table = document.getElementById("leadTableBody");
+      data.leads.forEach(lead => {
+        const row = document.createElement("tr");
+        row.innerHTML = `
+          <td>${lead.name}</td>
+          <td>${lead.source}</td>
+          <td><span class="badge bg-secondary">${lead.status}</span></td>
+          <td>${lead.phone}</td>
+          <td>${lead.email}</td>
+          <td><button class="btn btn-sm btn-outline-light">View</button></td>
+        `;
+        table.prepend(row);
+      });
+      showToast(`✅ ${data.message}`, "bg-success");
+      updateSummary(); // Refresh AI insights automatically
+    }
+  } catch (err) {
+    console.error(err);
+    showToast("❌ Something went wrong. Try again later.", "bg-danger");
+  } finally {
+    btn.disabled = false;
+    spinner.style.display = "none";
+  }
+});
+
+// Toast function
+function showToast(message, style) {
+  const toastEl = document.getElementById("toast");
+  const toastMsg = document.getElementById("toastMessage");
+  toastMsg.textContent = message;
+  toastEl.className = `toast align-items-center text-white ${style} border-light`;
+  const toast = new bootstrap.Toast(toastEl);
+  toast.show();
+}
+</script>
+
+{% endblock %}

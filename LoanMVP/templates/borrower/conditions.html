@@ -1,0 +1,87 @@
+{% extends "layouts/borrower_base.html" %}
+{% block title %}Loan Conditions{% endblock %}
+
+{% block content %}
+
+<div class="b-header">
+  <div>
+    <h1>📋 Loan Conditions</h1>
+    <p class="muted">These are the conditions your lender requires before your loan can move forward.</p>
+  </div>
+</div>
+
+<!-- AI SUMMARY -->
+{% if ai_summary %}
+<div class="b-card" style="margin-bottom:1.4rem;">
+  <h3>AI Summary</h3>
+  <p class="muted" style="margin-top:.4rem;">{{ ai_summary }}</p>
+</div>
+{% endif %}
+
+<!-- CONDITIONS TABLE -->
+<div class="b-card">
+  <h3>Outstanding Conditions</h3>
+
+  {% if conditions %}
+    <table class="table-dark" style="margin-top:.8rem;">
+      <thead>
+        <tr>
+          <th>Condition</th>
+          <th>Type</th>
+          <th>Severity</th>
+          <th>Status</th>
+          <th>Explain</th>
+        </tr>
+      </thead>
+
+      <tbody>
+        {% for c in conditions %}
+        <tr>
+          <td>{{ c.condition_type }}</td>
+          <td>{{ c.category or "General" }}</td>
+          <td>{{ c.severity }}</td>
+
+          <td>
+            {% if c.status == "Cleared" %}
+              <span class="badge bg-success">Cleared</span>
+            {% else %}
+              <span class="badge bg-warning">Open</span>
+            {% endif %}
+          </td>
+
+          <td>
+            <button class="action-btn" onclick="explainCondition({{ c.id }})">
+              <i class="lucide lucide-bot"></i> Explain
+            </button>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+  {% else %}
+    <p class="muted" style="margin-top:1rem;text-align:center;">
+      No outstanding conditions at this time.
+    </p>
+  {% endif %}
+</div>
+
+<!-- AI RESPONSE PANEL -->
+<div id="aiConditionBox" class="b-card" style="margin-top:1.4rem;display:none;">
+  <h3>🤖 AI Explanation</h3>
+  <p id="aiConditionText" class="muted" style="margin-top:.4rem;"></p>
+</div>
+
+<script>
+function explainCondition(id) {
+  fetch(`/borrower/conditions/ai/${id}`)
+    .then(r => r.json())
+    .then(data => {
+      document.getElementById("aiConditionText").innerText = data.reply;
+      document.getElementById("aiConditionBox").style.display = "block";
+      window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
+    });
+}
+</script>
+
+{% endblock %}

@@ -1,0 +1,101 @@
+{% extends "layouts/borrower_base.html" %}
+{% block title %}Loan Summary{% endblock %}
+
+{% block content %}
+
+<div class="b-header">
+  <div>
+    <h1>📄 Loan Summary</h1>
+    <p class="muted">A complete overview of your loan, property, documents, and underwriting progress.</p>
+  </div>
+</div>
+
+<!-- AI SUMMARY -->
+{% if ai_summary %}
+<div class="b-card" style="margin-bottom:1.4rem;">
+  <h3>AI Summary</h3>
+  <p class="muted" style="margin-top:.4rem;">{{ ai_summary }}</p>
+</div>
+{% endif %}
+
+<!-- LOAN OVERVIEW -->
+<div class="b-card">
+  <h3>Loan Overview</h3>
+
+  <div class="b-grid-2" style="margin-top:1rem;">
+    <div>
+      <p class="muted">Loan Type</p>
+      <p>{{ loan.loan_type }}</p>
+    </div>
+    <div>
+      <p class="muted">Loan Amount</p>
+      <p>${{ "{:,.0f}".format(loan.loan_amount) }}</p>
+    </div>
+    <div>
+      <p class="muted">Interest Rate</p>
+      <p>{{ loan.interest_rate }}%</p>
+    </div>
+    <div>
+      <p class="muted">Term</p>
+      <p>{{ loan.term_months }} months</p>
+    </div>
+  </div>
+</div>
+
+<!-- PROPERTY DETAILS -->
+<div class="b-card" style="margin-top:1.4rem;">
+  <h3>Property Details</h3>
+
+  <div class="b-grid-2" style="margin-top:1rem;">
+    <div>
+      <p class="muted">Address</p>
+      <p>{{ property.address }}</p>
+    </div>
+    <div>
+      <p class="muted">Type</p>
+      <p>{{ property.property_type }}</p>
+    </div>
+    <div>
+      <p class="muted">As‑Is Value</p>
+      <p>${{ "{:,.0f}".format(property.as_is_value) }}</p>
+    </div>
+    <div>
+      <p class="muted">After‑Repair Value (ARV)</p>
+      <p>${{ "{:,.0f}".format(property.after_repair_value) }}</p>
+    </div>
+  </div>
+</div>
+
+<!-- LOAN METRICS -->
+<div class="b-card" style="margin-top:1.4rem;">
+  <h3>Loan Metrics</h3>
+
+  <div class="b-grid-3" style="margin-top:1rem;">
+    <div>
+      <p class="muted">LTV</p>
+      <p>{{ loan.ltv }}%</p>
+    </div>
+    <div>
+      <p class="muted">LTC</p>
+      <p>{{ loan.ltc }}%</p>
+    </div>
+    <div>
+      <p class="muted">DSCR</p>
+      <p>{{ loan.dscr }}</p>
+    </div>
+  </div>
+</div>
+
+<!-- TIMELINE -->
+<div class="b-card" style="margin-top:1.4rem;">
+  <h3>Loan Timeline</h3>
+
+  <ul class="timeline" style="margin-top:1rem;">
+    <li><strong>Application Submitted:</strong> {{ loan.created_at.strftime('%b %d, %Y') }}</li>
+    <li><strong>Documents Uploaded:</strong> {{ documents_count }} files</li>
+    <li><strong>Conditions:</strong> {{ conditions_count }} outstanding</li>
+    <li><strong>Status:</strong> {{ loan.status }}</li>
+  </ul>
+</div>
+
+{% endblock %}

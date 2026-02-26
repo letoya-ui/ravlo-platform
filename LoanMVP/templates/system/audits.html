@@ -1,0 +1,21 @@
+{% extends "layouts/base.html" %}
+{% block title %}Audit Logs{% endblock %}
+{% block content %}
+<h1 class="text-xl mb-4">🕵️ Audit Logs</h1>
+<div class="card p-3">
+  <table class="table-auto w-full text-sm">
+    <thead><tr><th>Module</th><th>Action</th><th>Object</th><th>User</th><th>Date</th></tr></thead>
+    <tbody>
+    {% for a in audits %}
+      <tr>
+        <td>{{ a.module }}</td>
+        <td>{{ a.action }}</td>
+        <td>{{ a.object_type }} #{{ a.object_id }}</td>
+        <td>{{ a.user_id or 'System' }}</td>
+        <td>{{ a.created_at.strftime('%b %d, %Y %H:%M') }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

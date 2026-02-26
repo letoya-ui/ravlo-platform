@@ -1,0 +1,77 @@
+{% extends "layouts/base.html" %}
+{% block title %}CRM • Partner Management{% endblock %}
+{% block content %}
+<style>
+  :root {
+    --panel:#15161a;
+    --line:#2a2e36;
+    --text:#e6e6e6;
+    --muted:#a5a7ad;
+    --accent:#7ab8ff;
+    --glow:0 0 18px rgba(122,184,255,.35);
+  }
+  .card {
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding:1.2rem;
+    box-shadow:var(--glow);
+  }
+  table {
+    width:100%;
+    border-collapse:collapse;
+  }
+  th, td {
+    padding:.6rem;
+    border-top:1px solid var(--line);
+    text-align:left;
+  }
+  th {
+    color:var(--accent);
+    text-transform:uppercase;
+    font-size:.85rem;
+  }
+  tr:hover {
+    background:#1b1d22;
+  }
+</style>
+
+<h1>🤝 Partner CRM</h1>
+<div class="card">
+  {% if partners %}
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Company</th>
+        <th>Type</th>
+        <th>Deals</th>
+        <th>Volume ($)</th>
+        <th>Last Deal</th>
+        <th>Status</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for p in partners %}
+      <tr onclick="window.location='{{ url_for('crm.partner_detail', partner_id=p.id) }}'"
+          style="cursor:pointer;">
+        <td>{{ p.name }}</td>
+        <td>{{ p.company or '—' }}</td>
+        <td>{{ p.type or '—' }}</td>
+        <td>{{ p.deals or 0 }}</td>
+        <td>{{ '{:,.0f}'.format(p.volume or 0) }}</td>
+        <td>{{ p.last_deal.strftime('%b %d, %Y') if p.last_deal else '—' }}</td>
+        <td>{{ p.status or 'Active' }}</td>
+      </tr>
+      {% else %}
+      <tr>
+        <td colspan="7" style="text-align:center;padding:1rem;color:#a5a7ad;">No partners found.</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div class="muted">No active partners.</div>
+  {% endif %}
+</div>
+{% endblock %}

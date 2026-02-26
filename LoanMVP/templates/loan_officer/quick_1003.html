@@ -1,0 +1,79 @@
+{% extends "layouts/base.html" %}
+{% block title %}Quick 1003 • Loan Officer{% endblock %}
+
+{% block content %}
+
+<div class="wrap">
+
+  <div class="card">
+    <h2>🚀 Quick 1003 — Fast Loan Application</h2>
+    <p class="muted">Create a full loan file in under 60 seconds.</p>
+  </div>
+
+  <form method="POST" class="card" style="margin-top:1rem;">
+    
+    <h3 class="section-title">👤 Borrower Info</h3>
+    <div class="row-2">
+      <div>
+        <label>Full Name</label>
+        <input class="form-control" name="full_name" required>
+      </div>
+      <div>
+        <label>Email</label>
+        <input class="form-control" name="email" required>
+      </div>
+      <div>
+        <label>Phone</label>
+        <input class="form-control" name="phone">
+      </div>
+      <div>
+        <label>Monthly Income</label>
+        <input class="form-control" name="income">
+      </div>
+    </div>
+
+    <h3 class="section-title">🏠 Property</h3>
+    <div class="row-2">
+      <div>
+        <label>Property Address</label>
+        <input class="form-control" name="property_address">
+      </div>
+      <div>
+        <label>Property Value</label>
+        <input class="form-control" name="property_value">
+      </div>
+    </div>
+
+    <h3 class="section-title">💼 Loan Request</h3>
+    <div class="row-2">
+      <div>
+        <label>Loan Amount</label>
+        <input class="form-control" name="loan_amount" required>
+      </div>
+      <div>
+        <label>Loan Type</label>
+        <select class="form-control" name="loan_type">
+          <option value="Conventional">Conventional</option>
+          <option value="FHA">FHA</option>
+          <option value="VA">VA</option>
+          <option value="DSCR">DSCR</option>
+          <option value="Bridge">Bridge</option>
+        </select>
+      </div>
+    </div>
+
+    <button class="btn btn-glow" style="margin-top:2rem;">Create Loan File</button>
+
+  </form>
+
+</div>
+
+<style>
+.row-2 {
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:1.2rem;
+}
+</style>
+
+{% endblock %}

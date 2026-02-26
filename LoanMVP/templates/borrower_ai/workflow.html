@@ -1,0 +1,79 @@
+{% extends "layouts/base.html" %}
+{% block title %}AI Workflow Automation{% endblock %}
+{% block content %}
+{% include "borrower/_sidebar_borrower.html" %}
+
+<main style="margin-left:260px; padding:2rem; background:#0f0f11; color:#e6e6e6; min-height:100vh;">
+  <link rel="stylesheet" href="https://unpkg.com/lucide-static@latest/font/lucide.css">
+  <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+
+  <style>
+    .grid{display:grid;gap:1.25rem;}
+    .g-2{grid-template-columns:repeat(2,minmax(0,1fr));}
+    .card{background:#15161a;border:1px solid #282b31;border-radius:14px;padding:1.4rem;box-shadow:0 0 18px rgba(122,184,255,0.25);}
+    .card h3{margin:0 0 .6rem;color:#7ab8ff;display:flex;align-items:center;gap:.5rem;}
+    .muted{color:#a5a7ad;font-size:.9rem;}
+    .btn{display:inline-flex;align-items:center;gap:.4rem;margin-top:1.2rem;background:linear-gradient(180deg,#2a4a62,#1b2a38);border:1px solid #2a4a62;color:#cfe8ff;border-radius:10px;padding:.7rem 1.2rem;text-decoration:none;}
+    .btn:hover{box-shadow:0 0 10px rgba(122,184,255,0.3);}
+    .task-item{display:flex;justify-content:space-between;align-items:center;padding:.75rem 1rem;border-bottom:1px solid #2b2f36;}
+    .task-item:last-child{border-bottom:none;}
+    .task-item span{color:#e6e6e6;}
+    .task-item small{color:#a5a7ad;}
+    .ai-box{background:#18222b;border:1px solid #2b2f36;border-radius:14px;padding:1.2rem;margin-top:1.5rem;box-shadow:0 0 12px rgba(122,184,255,0.2);}
+    .status-dot{width:10px;height:10px;border-radius:50%;display:inline-block;margin-right:.5rem;}
+    .status-pending{background:#f0b34e;}
+    .status-complete{background:#43d19e;}
+    .status-failed{background:#e64c4c;}
+  </style>
+
+  <h1 style="margin-bottom:1rem;">⚙️ AI Workflow Automation</h1>
+  <p class="muted">Your AI assistant has generated the following workflow based on your current loan and property profile.</p>
+
+  <div class="grid g-2">
+    <div class="card">
+      <h3><i class="lucide lucide-list-checks"></i> Upcoming Tasks</h3>
+
+      <div class="task-item">
+        <div><span>Upload updated income docs</span><br><small>Due: Tomorrow</small></div>
+        <span><span class="status-dot status-pending"></span>Pending</span>
+      </div>
+      <div class="task-item">
+        <div><span>Refinance quote review</span><br><small>Scheduled: Friday 2 PM</small></div>
+        <span><span class="status-dot status-pending"></span>Pending</span>
+      </div>
+      <div class="task-item">
+        <div><span>Property photo verification</span><br><small>AI Review Complete</small></div>
+        <span><span class="status-dot status-complete"></span>Done</span>
+      </div>
+      <div class="task-item">
+        <div><span>Follow-up with Loan Officer</span><br><small>Auto-schedule next week</small></div>
+        <span><span class="status-dot status-pending"></span>Pending</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3><i class="lucide lucide-bar-chart-3"></i> Workflow Progress</h3>
+      <div id="chart_workflow" style="height:260px;"></div>
+    </div>
+  </div>
+
+  <div class="ai-box">
+    <h3><i class="lucide lucide-brain-circuit"></i> AI Workflow Summary</h3>
+    <p>{{ workflow.summary or "AI automation currently tracking 4 borrower actions. Based on your predicted eligibility window, document verification and refinance review will trigger automatically once the updated income data is uploaded. Estimated completion time: 4 business days." }}</p>
+
+    <a href="{{ url_for('borrower_ai.dashboard') }}" class="btn"><i class="lucide lucide-arrow-left-circle"></i> Back to Dashboard</a>
+    <a href="{{ url_for('ai.chat') }}" class="btn"><i class="lucide lucide-message-circle"></i> Ask AI Assistant</a>
+  </div>
+
+  <script>
+    const baseOpt={chart:{toolbar:{show:false},foreColor:'#c9d3df'},grid:{borderColor:'#2a2e36'},dataLabels:{enabled:false},theme:{mode:'dark'}};
+    new ApexCharts(document.querySelector("#chart_workflow"),{
+      ...baseOpt,chart:{type:'radialBar',height:260},
+      series:[75],
+      labels:['Progress'],
+      colors:['#7ab8ff'],
+      plotOptions:{radialBar:{hollow:{size:'65%'},dataLabels:{value:{fontSize:'28px'}}}}
+    }).render();
+  </script>
+</main>
+{% endblock %}

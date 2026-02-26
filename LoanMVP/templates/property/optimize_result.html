@@ -1,0 +1,69 @@
+{% extends "layouts/base.html" %}
+{% block title %}Optimization Results{% endblock %}
+{% block content %}
+
+
+<main style="margin-left:260px; padding:2rem; background:#0f0f11; color:#e6e6e6; min-height:100vh;">
+  <link rel="stylesheet" href="https://unpkg.com/lucide-static@latest/font/lucide.css">
+  <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+
+  <style>
+    .grid{display:grid;gap:1.25rem;}
+    .g-3{grid-template-columns:repeat(3,minmax(0,1fr));}
+    .card{background:#15161a;border:1px solid #282b31;border-radius:14px;padding:1.5rem;box-shadow:0 0 18px rgba(122,184,255,0.25);}
+    .card h3{margin:0 0 .6rem;color:#7ab8ff;display:flex;align-items:center;gap:.5rem;}
+    .muted{color:#a5a7ad;font-size:.9rem;}
+    .ai-box{background:#18222b;border:1px solid #2b2f36;border-radius:14px;padding:1.2rem;margin-top:1.5rem;box-shadow:0 0 12px rgba(122,184,255,0.2);}
+    .btn{display:inline-flex;align-items:center;gap:.4rem;margin-top:1.5rem;background:linear-gradient(180deg,#2a4a62,#1b2a38);border:1px solid #2a4a62;color:#cfe8ff;border-radius:10px;padding:.7rem 1.2rem;text-decoration:none;}
+    .btn:hover{box-shadow:0 0 10px rgba(122,184,255,0.3);}
+  </style>
+
+  <h1 style="margin-bottom:1rem;">📊 Optimization Results</h1>
+  <p class="muted">AI-driven valuation and ROI projection for your submitted property.</p>
+
+  <!-- KPI GRID -->
+  <div class="grid g-3">
+    <div class="card">
+      <h3><i class="lucide lucide-pie-chart"></i> ROI</h3>
+      <p style="font-size:2rem;color:#43d19e;">{{ results.roi or "18.7%" }}</p>
+      <p class="muted">Projected annual return based on rehab and rental yield.</p>
+    </div>
+    <div class="card">
+      <h3><i class="lucide lucide-percent"></i> LTV</h3>
+      <p style="font-size:2rem;color:#7ab8ff;">{{ results.ltv or "60%" }}</p>
+      <p class="muted">Loan-to-value ratio after optimization.</p>
+    </div>
+    <div class="card">
+      <h3><i class="lucide lucide-trending-up"></i> Equity Growth</h3>
+      <p style="font-size:2rem;color:#43d19e;">{{ results.equity_growth or "+7.2%" }}</p>
+      <p class="muted">Expected appreciation within the next 12 months.</p>
+    </div>
+  </div>
+
+  <!-- CHARTS -->
+  <div class="card" style="margin-top:1.5rem;">
+    <h3><i class="lucide lucide-bar-chart-3"></i> ROI / LTV Comparison</h3>
+    <div id="chart_optimization" style="height:250px;"></div>
+  </div>
+
+  <!-- AI RECOMMENDATION -->
+  <div class="ai-box">
+    <h3><i class="lucide lucide-brain-circuit"></i> AI Recommendation</h3>
+    <p>{{ results.recommendation or "AI suggests focusing on cosmetic rehab under $40k to improve ROI by 4.5%. Refinancing at 65% LTV could increase monthly cash flow by 12%." }}</p>
+    <a href="{{ url_for('property.optimize') }}" class="btn"><i class="lucide lucide-rotate-ccw"></i> Run Another Optimization</a>
+  </div>
+
+  <script>
+    const baseOpt={chart:{toolbar:{show:false},foreColor:'#c9d3df'},grid:{borderColor:'#2a2e36'},dataLabels:{enabled:false},theme:{mode:'dark'}};
+    new ApexCharts(document.querySelector("#chart_optimization"),{
+      ...baseOpt,chart:{type:'bar',height:250},
+      series:[
+        {name:'ROI (%)',data:[15,17,18.7,19.5]},
+        {name:'LTV (%)',data:[70,68,65,60]}
+      ],
+      xaxis:{categories:['Current','With Rehab','Refinanced','Optimized']},
+      colors:['#43d19e','#7ab8ff']
+    }).render();
+  </script>
+</main>
+{% endblock %}

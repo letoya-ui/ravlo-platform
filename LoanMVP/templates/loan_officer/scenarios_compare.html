@@ -1,0 +1,52 @@
+{% extends "layouts/base.html" %}
+{% block title %}Scenario Comparison{% endblock %}
+{% block content %}
+
+<h2 class="mb-4">📘 Loan Scenario Comparison</h2>
+
+<div class="scenario-compare">
+
+  {% for s in scenarios %}
+  <div class="card scenario-box">
+    <h3>{{ s.title }}</h3>
+
+    <p><b>Loan Amount:</b> ${{ "%.2f"|format(s.loan_amount) }}</p>
+    <p><b>Rate:</b> {{ s.rate }}%</p>
+    <p><b>Term:</b> {{ s.term }} months</p>
+    <p><b>LTV:</b> {{ s.ltv }}%</p>
+
+    <hr style="border-color:var(--line); margin:1rem 0;">
+
+    <h4>Monthly Breakdown</h4>
+    <p>P&I: ${{ "%.2f"|format(s.p_and_i) }}</p>
+    <p>Taxes: ${{ "%.2f"|format(s.taxes) }}</p>
+    <p>Insurance: ${{ "%.2f"|format(s.insurance) }}</p>
+    <p>PMI: ${{ "%.2f"|format(s.pmi) }}</p>
+
+    <h3>Total: ${{ "%.2f"|format(s.total_payment) }}</h3>
+  </div>
+  {% endfor %}
+
+</div>
+<section class="card mt-4">
+  <h3>🤖 AI Recommendation</h3>
+  <p>{{ ai_summary }}</p>
+</section>
+
+<style>
+.scenario-compare {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.5rem;
+}
+
+.scenario-box {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  padding: 1.5rem;
+  border-radius: 14px;
+  box-shadow: 0 0 20px rgba(0,0,0,0.35);
+}
+</style>
+
+{% endblock %}

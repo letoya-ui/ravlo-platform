@@ -1,0 +1,162 @@
+{% extends "layouts/base.html" %}
+{% block title %}Borrower AI Dashboard{% endblock %}
+{% block content %}
+
+<!-- =========================================
+     🤖 Borrower AI Dashboard — LoanMVP (2025)
+========================================= -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+<main class="dashboard-main">
+  {% include "partials/_sidebar_borrower_ai.html" %}
+
+  <section class="dashboard-content" style="margin-left:260px; padding:2rem;">
+    <h1 style="color:#7ab8ff; font-size:1.6rem; margin-bottom:1rem;">Borrower AI Dashboard</h1>
+    <p style="color:#a5a7ad; font-size:.95rem;">Welcome to your AI Hub. Review smart insights, automated workflows, and predictive tools that help you make faster, smarter decisions.</p>
+
+    <div class="grid">
+      <!-- 🧠 AI Summary Card -->
+      <div class="card glass">
+        <div class="card-header">
+          <i class="fa-solid fa-brain"></i>
+          <h3>AI Summary</h3>
+        </div>
+        <div class="card-body">
+          <p>{{ ai_summary or "Your AI assistant is analyzing your latest loan and property activity..." }}</p>
+        </div>
+      </div>
+
+      <!-- 📈 Predictive Insights -->
+      <div class="card glass">
+        <div class="card-header">
+          <i class="fa-solid fa-chart-line"></i>
+          <h3>Predictive Insights</h3>
+        </div>
+        <div class="card-body">
+          <p>AI projections based on your current profile and loan pipeline:</p>
+          <ul>
+            <li>Approval Probability: <strong>{{ insights.approval_rate or "89%" }}</strong></li>
+            <li>Optimal LTV: <strong>{{ insights.ltv or "72%" }}</strong></li>
+            <li>Interest Rate Forecast: <strong>{{ insights.rate_forecast or "6.2%" }}</strong></li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- 💰 Smart Quotes -->
+      <div class="card glass">
+        <div class="card-header">
+          <i class="fa-solid fa-file-invoice-dollar"></i>
+          <h3>Smart Quotes</h3>
+        </div>
+        <div class="card-body">
+          <p>AI-generated loan offers or quotes based on your intake and preferences:</p>
+          {% if quotes %}
+            <ul>
+              {% for quote in quotes %}
+                <li>{{ quote.lender_name }} — <strong>{{ quote.rate }}%</strong> | {{ quote.term }} yrs</li>
+              {% endfor %}
+            </ul>
+          {% else %}
+            <p class="muted">No quotes generated yet. Try running an <a href="{{ url_for('borrower_ai.quote') }}">AI Quote</a>.</p>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- ⚙️ Workflow Engine -->
+      <div class="card glass">
+        <div class="card-header">
+          <i class="fa-solid fa-diagram-project"></i>
+          <h3>Workflow Engine</h3>
+        </div>
+        <div class="card-body">
+          <p>Automation queue for AI processing and document verification.</p>
+          <ul>
+            <li>Document Check: <span class="status success">✓ Verified</span></li>
+            <li>Credit Analysis: <span class="status pending">In Progress</span></li>
+            <li>Underwriter AI Review: <span class="status queued">Queued</span></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<style>
+  .dashboard-main {
+    display:flex;
+    background:var(--bg);
+    min-height:100vh;
+  }
+
+  .dashboard-content {
+    flex:1;
+    background:var(--bg);
+  }
+
+  .grid {
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(300px,1fr));
+    gap:1.5rem;
+    margin-top:1.5rem;
+  }
+
+  .card.glass {
+    background:rgba(21,22,26,0.85);
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding:1.25rem;
+    color:var(--text-light);
+    box-shadow:0 0 18px rgba(0,0,0,0.4);
+    backdrop-filter:blur(8px);
+    transition:transform .25s ease, box-shadow .25s ease;
+  }
+
+  .card.glass:hover {
+    transform:translateY(-3px);
+    box-shadow:0 0 18px rgba(122,184,255,0.25);
+  }
+
+  .card-header {
+    display:flex;
+    align-items:center;
+    gap:.75rem;
+    border-bottom:1px solid var(--line);
+    padding-bottom:.5rem;
+    margin-bottom:.75rem;
+  }
+
+  .card-header h3 {
+    font-size:1rem;
+    color:var(--accent);
+    margin:0;
+  }
+
+  .card-body p, .card-body ul {
+    font-size:.9rem;
+    color:var(--text-light);
+    line-height:1.5;
+  }
+
+  .card-body ul {
+    list-style:none;
+    padding:0;
+  }
+
+  .card-body li {
+    margin-bottom:.5rem;
+  }
+
+  .muted {
+    color:var(--text-muted);
+  }
+
+  .status {
+    padding:2px 6px;
+    border-radius:4px;
+    font-size:.8rem;
+  }
+  .status.success { background:#1a472a; color:#8affb0; }
+  .status.pending { background:#33331a; color:#ffe680; }
+  .status.queued { background:#2b2b2f; color:#a5a7ad; }
+</style>
+{% endblock %}

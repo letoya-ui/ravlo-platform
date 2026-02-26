@@ -1,0 +1,30 @@
+{% extends "layouts/base.html" %}
+{% block title %}Executive • Investors{% endblock %}
+{% block content %}
+<style>
+  :root{--panel:#15161a;--line:#2a2e36;--text:#e6e6e6;--muted:#a5a7ad;--glow:0 0 18px rgba(122,184,255,.35);}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:1.2rem;box-shadow:var(--glow);}
+  table{width:100%;border-collapse:collapse}th,td{padding:.6rem;border-top:1px solid var(--line);}
+</style>
+
+<h1>👥 Investors</h1>
+<div class="card">
+  {% if investors %}
+  <table>
+    <thead><tr><th>Name</th><th>Investment</th><th>Return %</th><th>Last Payout</th></tr></thead>
+    <tbody>
+      {% for inv in investors %}
+      <tr>
+        <td>{{ inv.name }}</td>
+        <td>${{ "{:,.2f}".format(inv.amount) }}</td>
+        <td>{{ inv.roi }}%</td>
+        <td>{{ inv.last_payout.strftime("%b %d, %Y") }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div class="muted">No investor data available.</div>
+  {% endif %}
+</div>
+{% endblock %}

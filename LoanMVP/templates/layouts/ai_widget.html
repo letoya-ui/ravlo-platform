@@ -1,0 +1,27 @@
+<!-- templates/ai_widget.html -->
+<!-- CM Assistant Floating Widget -->
+<link rel="stylesheet" href="{{ url_for('static', filename='css/ai_widget.css') }}">
+<script src="{{ url_for('static', filename='js/ai_widget.js') }}"></script>
+
+<style>
+  /* Optional fallback styles (in case CSS file fails to load) */
+  #ai-toggle {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: #0b3d91;
+    color: white;
+    border: none;
+    border-radius: 50px;
+    padding: 12px 18px;
+    font-size: 15px;
+    cursor: pointer;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+    transition: all 0.2s ease;
+    z-index: 9999;
+  }
+  #ai-toggle:hover {
+    background: #d4af37;
+    color: #000;
+  }
+</style>

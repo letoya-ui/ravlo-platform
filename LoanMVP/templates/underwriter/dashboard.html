@@ -1,0 +1,214 @@
+{% extends "layouts/base.html" %}
+{% block title %}Underwriter • Dashboard{% endblock %}
+{% block content %}
+<main class="dashboard-main">
+
+<link rel="preconnect" href="https://cdn.jsdelivr.net" />
+<script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+
+<style>
+  :root{
+    --bg:#0f0f11; --panel:#15161a; --elev:#1b1d22;
+    --text:#e6e6e6; --muted:#a5a7ad; --line:#282b31;
+    --accent:#7ab8ff; --accent-soft:#2a4a62;
+    --success:#43d19e; --warn:#ffdf6e; --danger:#ff6b6b;
+    --glow:0 0 18px rgba(122,184,255,0.35);
+  }
+  body{background:var(--bg);color:var(--text);}
+  .wrap{display:flex;gap:1.25rem;flex-wrap:wrap;}
+  .lhs{flex:1 1 68%;}
+  .rhs{flex:1 1 30%;min-width:300px;}
+  .card{background:var(--panel);border:1px solid var(--line);
+        border-radius:14px;padding:1rem 1.1rem;box-shadow:var(--glow);}
+  .grid{display:grid;gap:1rem;}
+  .g-2{grid-template-columns:repeat(2,minmax(0,1fr));}
+  .g-3{grid-template-columns:repeat(3,minmax(0,1fr));}
+  h1,h2,h3,h4{color:var(--text);margin:0 0 .35rem}
+  .muted{color:var(--muted)}
+  .btn{display:inline-flex;align-items:center;gap:.5rem;padding:.7rem 1rem;
+       border-radius:10px;border:1px solid var(--line);color:var(--text);
+       text-decoration:none;background:linear-gradient(180deg,#1c1f25,#15161a);
+       transition:all .2s ease;}
+  .btn:hover{border-color:var(--accent);box-shadow:var(--glow);}
+  .btn-primary{background:linear-gradient(180deg,#2a4a62,#1b2a38);
+               border-color:#2a4a62;color:#cfe8ff}
+  .kpi{display:flex;align-items:flex-start;gap:.8rem}
+  .kpi .num{font-size:1.9rem;font-weight:700;color:#dfe9f7}
+  .kpi .badge{font-size:.8rem;padding:.15rem .5rem;border-radius:8px;
+              background:var(--elev);border:1px solid var(--line);
+              color:var(--muted)}
+  .table{width:100%;border-collapse:collapse}
+  .table th,.table td{padding:.65rem .6rem;border-top:1px solid var(--line);}
+  .table th{color:#cfe0f5;font-weight:600;text-align:left}
+  .status{padding:.2rem .55rem;border-radius:999px;font-size:.78rem;
+          border:1px solid var(--line)}
+  .st-pending{background:#1e2430;color:#a9c7ff}
+  .st-review{background:#23251e;color:#e7f28f}
+  .st-approved{background:#1b2a23;color:#9af2c5}
+  .st-declined{background:#2a1b1b;color:#ff9d9d}
+
+  /* AI Panel */
+  .ai-panel{position:fixed;right:22px;top:88px;width:360px;
+    max-width:calc(100vw - 40px);background:var(--panel);
+    border:1px solid var(--line);border-radius:16px;
+    box-shadow:var(--glow);z-index:40}
+  .ai-h{display:flex;align-items:center;justify-content:space-between;
+        padding:.8rem 1rem;border-bottom:1px solid var(--line)}
+  .ai-body{padding:1rem;max-height:58vh;overflow:auto}
+  .ai-msg{background:var(--elev);border:1px solid var(--line);
+          padding:.6rem .75rem;border-radius:12px;color:var(--text);
+          margin-bottom:.6rem}
+  .ai-input{display:flex;gap:.5rem;padding:.8rem 1rem;
+            border-top:1px solid var(--line)}
+  .ai-input input{flex:1;background:#0f0f11;border:1px solid var(--line);
+                  color:var(--text);border-radius:10px;padding:.6rem .7rem}
+  .chip{display:inline-flex;gap:.35rem;padding:.35rem .6rem;
+        border:1px solid var(--line);background:var(--elev);
+        color:#c4d9f2;border-radius:999px;font-size:.78rem;
+        margin:.2rem .25rem 0 0;cursor:pointer}
+  .chip:hover{box-shadow:var(--glow)}
+  @media(max-width:1100px){
+    .wrap{flex-direction:column}
+    .ai-panel{bottom:18px;top:auto;width:min(680px,calc(100vw - 36px))}
+  }
+</style>
+
+<div class="wrap">
+  <!-- LEFT -->
+  <section class="lhs grid">
+    <div class="card" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;">
+      <div>
+        <h1>Welcome, {{ current_user.username or 'Underwriter' }}</h1>
+        <div class="muted">Analyze risk, validate loan data, and issue underwriting approvals.</div>
+      </div>
+      <div style="display:flex;gap:.6rem;flex-wrap:wrap;">
+        <a class="btn btn-primary" href="{{ url_for('underwriter.review_loans') }}">🔍 Review Loans</a>
+        <a class="btn" href="{{ url_for('underwriter.risk_reports') }}">⚠️ Risk Reports</a>
+      </div>
+    </div>
+
+    <div class="grid g-3">
+      <div class="card"><div class="kpi"><div><div class="muted">Pending</div><div class="num">{{ pending or 0 }}</div></div><span class="badge">Queue</span></div></div>
+      <div class="card"><div class="kpi"><div><div class="muted">Approved</div><div class="num">{{ approved or 0 }}</div></div><span class="badge">This Month</span></div></div>
+      <div class="card"><div class="kpi"><div><div class="muted">Declined</div><div class="num">{{ declined or 0 }}</div></div><span class="badge">High Risk</span></div></div>
+    </div>
+
+    <div class="grid g-2">
+      <div class="card"><h3>Approval Trend</h3><div id="chart_approval" style="height:260px;"></div></div>
+      <div class="card"><h3>Risk Mix</h3><div id="chart_risk" style="height:260px;"></div></div>
+    </div>
+
+    <div class="card">
+      <h3>Recent Reviews</h3>
+      {% if loans %}
+      <table class="table">
+        <thead><tr><th>ID</th><th>Borrower</th><th>Amount</th><th>Status</th><th>Date</th></tr></thead>
+        <tbody>
+          {% for loan in loans[:6] %}
+          <tr>
+            <td>#{{ loan.id }}</td>
+            <td>{{ loan.borrower_profile.full_name if loan.borrower_profile else '—' }}</td>
+            <td>${{ "{:,.2f}".format(loan.amount or 0) }}</td>
+            <td><span class="status st-{{ loan.status|lower }}">{{ loan.status|capitalize }}</span></td>
+            <td>{{ loan.created_at.strftime('%b %d, %Y') if loan.created_at else '—' }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <p class="muted">No reviews processed yet.</p>
+      {% endif %}
+    </div>
+  </section>
+
+  <!-- RIGHT -->
+  <aside class="rhs grid">
+    <div class="card">
+      <h3>Quick Tools</h3>
+      <div style="display:flex;flex-wrap:wrap;gap:.5rem;">
+        <a class="btn" href="{{ url_for('underwriter.pipeline') }}">📂 Loan Pipeline</a>
+        <a class="btn" href="{{ url_for('underwriter.risk_reports') }}">📊 Reports</a>
+        <a class="btn" href="{{ url_for('underwriter.messages') }}">💬 Messages</a>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Risk Summary</h3>
+      <div id="chart_summary" style="height:240px;"></div>
+      <div class="muted" style="font-size:.85rem;margin-top:.4rem;">Updated daily from executive risk model.</div>
+    </div>
+  </aside>
+</div>
+
+<!-- AI Panel -->
+<div class="ai-panel" id="aiPanel" aria-label="AI Underwriter Assistant">
+  <div class="ai-h">
+    <strong>AI Underwriter</strong>
+    <button class="btn btn-sm" type="button" onclick="toggleAI()">✖</button>
+  </div>
+  <div class="ai-body" id="aiBody">
+    <div class="ai-msg">Hi {{ current_user.username or 'Underwriter' }}! I can summarize risk, identify anomalies, or pre-score approvals.</div>
+    <div>
+      <span class="chip" onclick="aiAsk('Show pending high-risk loans')">High Risk</span>
+      <span class="chip" onclick="aiAsk('Generate underwriting summary')">Summary</span>
+      <span class="chip" onclick="aiAsk('Show approval ratios for NY loans')">Approval Ratios</span>
+    </div>
+  </div>
+  <div class="ai-input">
+    <input id="aiInput" placeholder="Ask anything about your reviews…" />
+    <button class="btn btn-primary" type="button" onclick="aiSend()">Ask</button>
+  </div>
+</div>
+
+<script>
+  const baseOpt={
+    chart:{toolbar:{show:false},foreColor:'#c9d3df',background:'transparent'},
+    grid:{borderColor:'#2a2e36'},dataLabels:{enabled:false},
+    theme:{mode:'dark'}
+  };
+
+  new ApexCharts(document.querySelector("#chart_approval"),{
+    ...baseOpt,chart:{...baseOpt.chart,type:'line',height:260},
+    stroke:{curve:'smooth',width:2},
+    series:[{name:'Approvals',data:[10,14,20,18,25,29,31]}],
+    xaxis:{categories:['Jan','Feb','Mar','Apr','May','Jun','Jul']},
+    colors:['#43d19e']
+  }).render();
+
+  new ApexCharts(document.querySelector("#chart_risk"),{
+    ...baseOpt,chart:{...baseOpt.chart,type:'donut',height:260},
+    series:[55,30,15],
+    labels:['Low','Moderate','High'],
+    colors:['#43d19e','#ffdf6e','#ff9d9d'],
+    legend:{position:'bottom'}
+  }).render();
+
+  new ApexCharts(document.querySelector("#chart_summary"),{
+    ...baseOpt,chart:{...baseOpt.chart,type:'radialBar',height:240},
+    series:[78],labels:['Portfolio Quality'],
+    colors:['#7ab8ff'],
+    plotOptions:{radialBar:{hollow:{size:'58%'},dataLabels:{value:{fontSize:'22px'}}}}
+  }).render();
+
+  function aiAsk(q){document.getElementById('aiInput').value=q;aiSend();}
+  function aiSend(){
+    const box=document.getElementById('aiInput');
+    const body=document.getElementById('aiBody');
+    const q=box.value.trim();if(!q)return;
+    const you=document.createElement('div');
+    you.className='ai-msg';you.textContent='You: '+q;
+    body.appendChild(you);
+    box.value='';
+    setTimeout(()=>{
+      const bot=document.createElement('div');
+      bot.className='ai-msg';
+      bot.textContent='AI: Preliminary analysis suggests low risk in 62% of current loans.';
+      body.appendChild(bot);
+      body.scrollTop=body.scrollHeight;
+    },600);
+  }
+  function toggleAI(){
+    document.getElementById('aiPanel').classList.toggle('hidden');
+  }
+</script>
+{% endblock %}

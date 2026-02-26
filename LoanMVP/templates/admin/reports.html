@@ -1,0 +1,59 @@
+{% extends "layouts/base.html" %}
+{% block title %}Admin Reports{% endblock %}
+{% block content %}
+<main class="dashboard-main">
+  <div class="wrap">
+    <header>
+      <h2>📑 Reports Dashboard</h2>
+      <p class="muted">Generate CSV reports for users, loans, and documents.</p>
+    </header>
+
+    <!-- === STATS OVERVIEW === -->
+    <div class="grid grid-3">
+      <div class="card stat-card">
+        <h4>Total Users</h4>
+        <p class="stat">{{ total_users }}</p>
+      </div>
+      <div class="card stat-card">
+        <h4>Total Loans</h4>
+        <p class="stat">{{ total_loans }}</p>
+      </div>
+      <div class="card stat-card">
+        <h4>Total Documents</h4>
+        <p class="stat">{{ total_docs }}</p>
+      </div>
+    </div>
+
+    <!-- === REPORT GENERATOR === -->
+    <div class="card mt-2">
+      <h4>Generate Report</h4>
+      <form method="POST">
+        <label for="report_type" class="muted">Select report type:</label>
+        <select name="report_type" id="report_type" required>
+          <option value="">-- Choose one --</option>
+          <option value="users">Users Report</option>
+          <option value="loans">Loans Report</option>
+          <option value="documents">Documents Report</option>
+        </select>
+        <button type="submit" class="btn btn-glow mt-1">📥 Download CSV</button>
+      </form>
+    </div>
+
+    <!-- === INFO === -->
+    <div class="card mt-2">
+      <h4>💡 Tip:</h4>
+      <p>You can use these CSV files for compliance, internal reviews, or data audits. Each export includes timestamps and all key attributes.</p>
+    </div>
+  </div>
+</main>
+
+<style>
+.grid { display:grid; gap:1.5rem; }
+.grid-3 { grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
+.stat-card .stat { font-size:2rem; font-weight:700; margin:0.3rem 0; }
+select {
+  background:#111; color:#fff; border:1px solid var(--line);
+  padding:0.5rem; border-radius:6px; margin-top:0.3rem;
+}
+</style>
+{% endblock %}

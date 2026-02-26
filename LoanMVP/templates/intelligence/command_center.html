@@ -1,0 +1,28 @@
+{% extends "layouts/base.html" %}
+{% block title %}Intelligence • Command Center{% endblock %}
+{% block content %}
+<script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+<style>
+  :root{--panel:#15161a;--line:#2a2e36;--text:#e6e6e6;--muted:#a5a7ad;--accent:#7ab8ff;--glow:0 0 18px rgba(122,184,255,.35);}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:1rem;box-shadow:var(--glow);}
+  .grid{display:grid;gap:1rem}.g-2{grid-template-columns:repeat(2,minmax(0,1fr))}
+</style>
+
+<h1>🧩 Command Center</h1>
+<div class="grid g-2">
+  <div class="card"><h3>AI Activity Load</h3><div id="chart_load" style="height:260px;"></div></div>
+  <div class="card"><h3>Task Distribution</h3><div id="chart_tasks" style="height:260px;"></div></div>
+</div>
+
+<script>
+const base={chart:{toolbar:{show:false},foreColor:'#c9d3df'},theme:{mode:'dark'},grid:{borderColor:'#2a2e36'}};
+new ApexCharts(document.querySelector("#chart_load"),{
+  ...base,chart:{...base.chart,type:'area',height:260},stroke:{curve:'smooth',width:2},
+  series:[{name:'Load',data:[40,55,60,48,70,65,50]}],xaxis:{categories:['Mon','Tue','Wed','Thu','Fri','Sat','Sun']},colors:['#7ab8ff']
+}).render();
+new ApexCharts(document.querySelector("#chart_tasks"),{
+  ...base,chart:{...base.chart,type:'donut',height:260},series:[30,20,25,25],labels:['Analysis','Monitoring','Audit','Support'],
+  colors:['#7ab8ff','#43d19e','#ffdf6e','#ff6b6b']
+}).render();
+</script>
+{% endblock %}

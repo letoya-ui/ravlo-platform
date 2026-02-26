@@ -1,0 +1,94 @@
+{% extends "layouts/base.html" %}
+{% block title %}Condition Review | Processor{% endblock %}
+{% block content %}
+<main class="dashboard-main">
+  <div class="wrap">
+
+    <section class="card">
+      <h2>📋 Condition Review Center</h2>
+      <p class="muted">Loan ID: {{ loan.id }} — Borrower: {{ borrower.full_name }}</p>
+
+      <!-- Underwriter Conditions -->
+      <h3>🧾 Underwriter Conditions</h3>
+      <table class="styled-table">
+        <thead><tr><th>Description</th><th>Status</th><th>Action</th></tr></thead>
+        <tbody>
+        {% for c in conditions %}
+          <tr>
+            <td>{{ c.description }}</td>
+            <td>{{ c.status }}</td>
+            <td>
+              {% if c.status in ['Requested','In Review'] %}
+              <form method="POST" style="display:inline;">
+                <input type="hidden" name="action" value="send_to_borrower">
+                <input type="hidden" name="condition_id" value="{{ c.id }}">
+                <button class="btn">📤 Send to Borrower</button>
+              </form>
+              {% else %}
+              <span class="muted">No Action</span>
+              {% endif %}
+            </td>
+          </tr>
+        {% else %}
+          <tr><td colspan="3" class="muted">No underwriter conditions found.</td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+
+      <!-- Borrower Documents -->
+      <h3>📁 Borrower Documents</h3>
+      <table class="styled-table">
+        <thead><tr><th>Document</th><th>Status</th><th>Action</th></tr></thead>
+        <tbody>
+        {% for d in borrower_docs %}
+          <tr>
+            <td>{{ d.document_name }}</td>
+            <td>{{ d.status }}</td>
+            <td>
+              {% if d.status in ['Pending','Uploaded'] %}
+              <form method="POST" style="display:inline;">
+                <input type="hidden" name="action" value="verify_document">
+                <input type="hidden" name="document_id" value="{{ d.id }}">
+                <button class="btn">✅ Verify</button>
+              </form>
+              {% else %}
+              <span class="muted">{{ d.status }}</span>
+              {% endif %}
+            </td>
+          </tr>
+        {% else %}
+          <tr><td colspan="3" class="muted">No borrower documents yet.</td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+
+      <section class="ai-summary">
+        <h4>🤖 AI Summary</h4>
+        <p>{{ ai_summary }}</p>
+      </section>
+    </section>
+
+  </div>
+</main>
+
+<style>
+:root{--bg:#0f0f11;--panel:#15161a;--line:#2b2f36;
+--text:#e6e6e6;--muted:#a5a7ad;--accent:#7ab8ff;
+--glow:0 0 14px rgba(122,184,255,0.35);}
+body{background:var(--bg);color:var(--text);}
+.wrap{padding:2rem;}
+.card{background:var(--panel);border:1px solid var(--line);
+border-radius:16px;padding:1.5rem;box-shadow:var(--glow);}
+h2,h3{color:var(--accent);}
+.muted{color:var(--muted);}
+table{width:100%;border-collapse:collapse;margin-top:1rem;}
+th,td{padding:.6rem .8rem;border-bottom:1px solid var(--line);}
+th{background:rgba(122,184,255,0.1);}
+tr:hover{background:rgba(255,255,255,0.03);}
+.btn{background:var(--accent);color:#000;border:none;
+border-radius:8px;padding:.4rem .9rem;cursor:pointer;font-weight:600;}
+.btn:hover{box-shadow:var(--glow);}
+.ai-summary{margin-top:2rem;background:var(--bg);border:1px solid var(--line);
+border-radius:12px;padding:1rem;box-shadow:inset 0 0 10px rgba(122,184,255,0.1);}
+</style>
+{% endblock %}

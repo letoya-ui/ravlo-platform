@@ -1,0 +1,37 @@
+{% extends "layouts/borrower_base.html" %}
+{% block title %}Welcome{% endblock %}
+{% block content %}
+
+<div class="b-main-inner" style="max-width:600px; margin:auto;">
+
+  <h1>👋 Welcome to Your Borrower Workspace</h1>
+
+  <p class="muted" style="margin-top:.5rem;">
+    {{ welcome_ai }}
+  </p>
+
+  <div class="b-card" style="margin-top:2rem;">
+    <h3>What you can do here</h3>
+    <ul class="muted" style="margin-top:.75rem; line-height:1.6;">
+      <li>Search and analyze investment properties</li>
+      <li>Start a loan application</li>
+      <li>Upload documents and track progress</li>
+      <li>Get AI insights on your deals</li>
+    </ul>
+  </div>
+
+  <a href="{{ url_for('borrower.onboarding_start_loan') }}"
+     class="btn"
+     style="margin-top:2rem; width:100%; text-align:center;">
+     Start Your Loan ➜
+  </a>
+
+  <a href="{{ url_for('borrower.dashboard') }}"
+     class="btn"
+     style="margin-top:1rem; width:100%; text-align:center; background:#eaeaea; color:#333;">
+     Skip for Now
+  </a>
+
+</div>
+
+{% endblock %}

@@ -1,0 +1,185 @@
+{% extends "layouts/base.html" %}
+{% block title %}Underwriter • Verify Documents{% endblock %}
+{% block content %}
+
+<main class="dashboard-main">
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" />
+  <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+
+  <style>
+    :root {
+      --bg:#0f0f11;
+      --panel:#15161a;
+      --line:#282b31;
+      --text:#e6e6e6;
+      --muted:#a5a7ad;
+      --accent:#7ab8ff;
+      --success:#43d19e;
+      --warn:#ffdf6e;
+      --danger:#ff6b6b;
+      --glow:0 0 18px rgba(122,184,255,0.25);
+    }
+
+    .wrap {
+      display:flex;
+      gap:1.4rem;
+      flex-wrap:wrap;
+      align-items:flex-start;
+    }
+    .lhs { flex:1 1 65%; }
+    .rhs { flex:1 1 33%; }
+
+    .card {
+      background:var(--panel);
+      border:1px solid var(--line);
+      border-radius:14px;
+      padding:1.1rem 1.3rem;
+      box-shadow:var(--glow);
+      animation:fadeIn .6s ease;
+      margin-bottom:1.3rem;
+    }
+
+    h2,h3,h4{margin:0 0 .6rem;color:var(--accent);}
+    .muted{color:var(--muted);}
+    .table-dark {
+      width:100%;
+      border-collapse:collapse;
+      color:var(--text);
+      font-size:.9rem;
+      margin-top:.8rem;
+    }
+    .table-dark th,.table-dark td {
+      border-top:1px solid var(--line);
+      padding:.65rem .6rem;
+      vertical-align:middle;
+    }
+    .table-dark th {
+      color:var(--accent);
+      font-weight:600;
+      background:#121212;
+      text-align:left;
+    }
+    .table-dark tr:hover {
+      background:#1b1b1b;
+    }
+
+    .status {
+      display:inline-block;
+      padding:.25rem .6rem;
+      border-radius:999px;
+      font-size:.75rem;
+      border:1px solid var(--line);
+      text-transform:capitalize;
+    }
+    .st-pending{color:var(--warn);}
+    .st-approved{color:var(--success);}
+    .st-flagged{color:var(--danger);}
+    .st-sent{color:var(--accent);}
+
+    .btn-glow {
+      border:1px solid var(--accent);
+      background:linear-gradient(180deg,#1d1d1d,#0e0e0e);
+      color:var(--accent);
+      border-radius:8px;
+      padding:.45rem .8rem;
+      transition:all .25s ease;
+      text-decoration:none;
+      font-size:.85rem;
+      cursor:pointer;
+    }
+    .btn-glow:hover {
+      box-shadow:var(--glow);
+      transform:scale(1.05);
+    }
+
+    textarea {
+      width:100%;
+      min-height:70px;
+      background:#0f0f11;
+      border:1px solid var(--line);
+      color:var(--text);
+      border-radius:8px;
+      padding:.6rem;
+      margin-top:.4rem;
+      font-size:.85rem;
+    }
+
+    @keyframes fadeIn {
+      from{opacity:0;transform:translateY(8px);}
+      to{opacity:1;transform:none;}
+    }
+  </style>
+
+  <h2>🧾 Verify Borrower Documents</h2>
+  {% if loan %}
+  <p class="muted">Loan #{{ loan.id }} | Borrower: {{ loan.borrower_profile.full_name }}</p>
+  {% endif %}
+
+  <div class="wrap">
+    <!-- LHS -->
+    <section class="lhs">
+      <div class="card">
+        <h3>📂 Uploaded Documents</h3>
+        {% if documents %}
+        <table class="table-dark">
+          <thead>
+            <tr>
+              <th>Document</th>
+              <th>Uploaded By</th>
+              <th>Status</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for doc in documents %}
+            <tr>
+              <td>
+                <a href="{{ url_for('static', filename=doc.file_path) }}" target="_blank">{{ doc.document_name }}</a>
+              </td>
+              <td>{{ doc.uploaded_by }}</td>
+              <td><span class="status st-{{ doc.status|lower }}">{{ doc.status }}</span></td>
+              <td>
+                <form method="POST"
+                      action="{{ url_for('underwriter.verify_documents', loan_id=loan.id) }}"
+                      style="display:flex;flex-direction:column;gap:.4rem;">
+                  <input type="hidden" name="doc_id" value="{{ doc.id }}">
+                  <textarea name="notes" placeholder="Add review notes (optional)"></textarea>
+                  <div style="display:flex;gap:.4rem;flex-wrap:wrap;">
+                    <button class="btn-glow" name="action" value="approve">✅ Approve</button>
+                    <button class="btn-glow" name="action" value="flag">⚠️ Flag</button>
+                    <button class="btn-glow" name="action" value="send_underwriter">📤 Send Back</button>
+                  </div>
+                </form>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% else %}
+        <p class="muted">No documents found for this loan.</p>
+        {% endif %}
+      </div>
+    </section>
+
+    <!-- RHS -->
+    <aside class="rhs">
+      <div class="card">
+        <h3>📈 Loan Summary</h3>
+        {% if loan %}
+        <p><strong>Type:</strong> {{ loan.loan_type or '—' }}</p>
+        <p><strong>Amount:</strong> ${{ '%.2f'|format(loan.amount or 0) }}</p>
+        <p><strong>Status:</strong> {{ loan.status or 'Pending' }}</p>
+        <p><strong>Property:</strong> {{ loan.property_address or 'N/A' }}</p>
+        {% else %}
+        <p class="muted">Loan data not available.</p>
+        {% endif %}
+      </div>
+
+      <div class="card">
+        <h3>🧠 AI Insights</h3>
+        <p class="muted">“{{ ai_summary or 'AI summary not available for this loan.' }}”</p>
+      </div>
+    </aside>
+  </div>
+</main>
+{% endblock %}

@@ -1,0 +1,112 @@
+{% extends "layouts/base.html" %}
+{% block title %}Processor Profile{% endblock %}
+{% block content %}
+<main class="dashboard-main">
+  <div class="wrap">
+
+    <section class="card profile-card">
+      <h2>👤 Processor Profile</h2>
+      <p class="muted">Manage your personal details and account settings.</p>
+
+      <form method="POST" enctype="multipart/form-data">
+        <div class="profile-grid">
+          <div>
+            <label>First Name</label>
+            <input type="text" name="first_name" value="{{ user.first_name or '' }}">
+          </div>
+          <div>
+            <label>Last Name</label>
+            <input type="text" name="last_name" value="{{ user.last_name or '' }}">
+          </div>
+          <div>
+            <label>Email</label>
+            <input type="email" name="email" value="{{ user.email }}">
+          </div>
+          <div>
+            <label>Phone</label>
+            <input type="text" name="phone" value="{{ user.phone or '' }}">
+          </div>
+          <div>
+            <label>Department</label>
+            <input type="text" name="department" value="{{ user.department or 'Processing' }}">
+          </div>
+          <div>
+            <label>Profile Picture</label>
+            <input type="file" name="profile_pic" accept="image/*">
+          </div>
+        </div>
+        <button type="submit" class="btn">💾 Save Changes</button>
+      </form>
+    </section>
+
+    <section class="card activity-card">
+      <h3>🧾 Recent Activity</h3>
+      {% for act in recent_activity %}
+        <div class="activity-item">
+          <span class="time">{{ act.time }}</span>
+          <span class="event">{{ act.event }}</span>
+        </div>
+      {% else %}
+        <p class="muted">No recent actions logged.</p>
+      {% endfor %}
+    </section>
+
+  </div>
+</main>
+
+<style>
+:root {
+  --bg:#0f0f11;
+  --panel:#15161a;
+  --line:#2b2f36;
+  --text:#e6e6e6;
+  --muted:#a5a7ad;
+  --accent:#7ab8ff;
+  --glow:0 0 14px rgba(122,184,255,0.35);
+}
+body { background:var(--bg); color:var(--text); }
+.wrap { padding:2rem; display:grid; gap:1.5rem; }
+.card {
+  background:var(--panel);
+  border:1px solid var(--line);
+  border-radius:16px;
+  padding:1.5rem;
+  box-shadow:var(--glow);
+}
+h2,h3 { color:var(--accent); margin-bottom:.3rem; }
+.muted { color:var(--muted); }
+.profile-grid {
+  display:grid;
+  grid-template-columns: repeat(auto-fit,minmax(240px,1fr));
+  gap:1rem;
+  margin-top:1rem;
+}
+input[type="text"],input[type="email"],input[type="file"] {
+  width:100%;
+  padding:.6rem;
+  border:1px solid var(--line);
+  border-radius:10px;
+  background:var(--bg);
+  color:var(--text);
+}
+.btn {
+  background:var(--accent);
+  color:#000;
+  border:none;
+  border-radius:8px;
+  padding:.7rem 1.4rem;
+  margin-top:1rem;
+  font-weight:600;
+  cursor:pointer;
+  transition:.2s;
+}
+.btn:hover { box-shadow:var(--glow); }
+.activity-item {
+  display:flex; justify-content:space-between;
+  border-bottom:1px solid var(--line);
+  padding:.5rem 0;
+}
+.time { color:var(--muted); font-size:.9rem; }
+.event { color:var(--text); }
+</style>
+{% endblock %}

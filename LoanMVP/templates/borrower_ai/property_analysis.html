@@ -1,0 +1,75 @@
+{% extends "layouts/base.html" %}
+{% block title %}AI Property Analysis{% endblock %}
+{% block content %}
+{% include "borrower/_sidebar_borrower.html" %}
+
+<main style="margin-left:260px; padding:2rem; background:#0f0f11; color:#e6e6e6; min-height:100vh;">
+  <link rel="stylesheet" href="https://unpkg.com/lucide-static@latest/font/lucide.css">
+  <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+
+  <style>
+    .card{background:#15161a;border:1px solid #282b31;border-radius:14px;padding:1.4rem;box-shadow:0 0 18px rgba(122,184,255,0.25);}
+    .card h3{margin:0 0 .6rem;color:#7ab8ff;display:flex;align-items:center;gap:.5rem;}
+    .muted{color:#a5a7ad;font-size:.9rem;}
+    .grid{display:grid;gap:1.25rem;}
+    .g-2{grid-template-columns:repeat(2,minmax(0,1fr));}
+    .btn{display:inline-flex;align-items:center;gap:.4rem;margin-top:1.2rem;background:linear-gradient(180deg,#2a4a62,#1b2a38);border:1px solid #2a4a62;color:#cfe8ff;border-radius:10px;padding:.7rem 1.2rem;text-decoration:none;}
+    .btn:hover{box-shadow:0 0 10px rgba(122,184,255,0.3);}
+    .ai-box{background:#18222b;border:1px solid #2b2f36;border-radius:14px;padding:1.2rem;margin-top:1.5rem;box-shadow:0 0 12px rgba(122,184,255,0.2);}
+  </style>
+
+  <h1 style="margin-bottom:1rem;">🏡 AI Property Analysis</h1>
+  <p class="muted">AI evaluation of your property’s value, rehab ROI, and rental potential.</p>
+
+  <!-- PROPERTY SUMMARY -->
+  <div class="grid g-2">
+    <div class="card">
+      <h3><i class="lucide lucide-home"></i> Property Snapshot</h3>
+      <p><strong>Address:</strong> {{ analysis.address or "158 Whitlock Rd, Otisville NY" }}</p>
+      <p><strong>Type:</strong> {{ analysis.type or "Single Family" }}</p>
+      <p><strong>Value:</strong> <span style="color:#7ab8ff;">${{ analysis.value or "280,000" }}</span></p>
+      <p><strong>Loan Balance:</strong> ${{ analysis.loan_balance or "210,000" }}</p>
+      <p><strong>Equity:</strong> <span style="color:#43d19e;">${{ analysis.equity or "70,000" }}</span></p>
+    </div>
+
+    <div class="card">
+      <h3><i class="lucide lucide-line-chart"></i> Key Performance</h3>
+      <div id="chart_property" style="height:220px;"></div>
+    </div>
+  </div>
+
+  <!-- AI INSIGHTS -->
+  <div class="grid g-2" style="margin-top:1.5rem;">
+    <div class="card">
+      <h3><i class="lucide lucide-trending-up"></i> Projected ROI</h3>
+      <p style="font-size:2rem;color:#43d19e;">{{ analysis.roi or "18.5%" }}</p>
+      <p class="muted">Based on current rehab and market appreciation models.</p>
+    </div>
+    <div class="card">
+      <h3><i class="lucide lucide-piggy-bank"></i> Rental Yield</h3>
+      <p style="font-size:2rem;color:#7ab8ff;">{{ analysis.rental_yield or "9.2%" }}</p>
+      <p class="muted">Predicted annual yield with $2,500 monthly rent.</p>
+    </div>
+  </div>
+
+  <!-- AI RECOMMENDATION -->
+  <div class="ai-box">
+    <h3><i class="lucide lucide-brain-circuit"></i> AI Recommendation</h3>
+    <p>{{ analysis.recommendation or "AI suggests light rehab under $35,000 with a refinance at 65% LTV. Expected ROI +5% and improved rental yield stability by Q3 2026." }}</p>
+    <a href="{{ url_for('borrower_ai.quote') }}" class="btn"><i class="lucide lucide-file-bar-chart"></i> View AI Loan Quote</a>
+  </div>
+
+  <script>
+    const baseOpt={chart:{toolbar:{show:false},foreColor:'#c9d3df'},grid:{borderColor:'#2a2e36'},dataLabels:{enabled:false},theme:{mode:'dark'}};
+    new ApexCharts(document.querySelector("#chart_property"),{
+      ...baseOpt,chart:{type:'bar',height:220},
+      series:[
+        {name:'Value ($)',data:[250000,260000,275000,280000,345000]},
+        {name:'Equity ($)',data:[50000,55000,62000,70000,135000]}
+      ],
+      xaxis:{categories:['2021','2022','2023','2024','2025']},
+      colors:['#7ab8ff','#43d19e']
+    }).render();
+  </script>
+</main>
+{% endblock %}

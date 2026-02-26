@@ -1,0 +1,15 @@
+{% extends "layouts/base.html" %}
+{% block content %}
+<div class="section">
+    <h2>Request Document</h2>
+    <form method="POST">
+        <label>Document Name</label>
+        <input type="text" name="document_name" required>
+
+        <label>Notes (optional)</label>
+        <textarea name="notes"></textarea>
+
+        <button class="btn-outline">Submit</button>
+    </form>
+</div>
+{% endblock %}

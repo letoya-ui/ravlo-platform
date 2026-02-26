@@ -1,0 +1,101 @@
+{% extends "layouts/borrower_base.html" %}
+{% block title %}My Saved Properties{% endblock %}
+{% block content %}
+
+<div class="dashboard-container">
+  <main class="dashboard-main">
+
+    <section class="main-content" style="padding:2rem;">
+      <h1 class="page-title">🏘️ My Saved Properties ({{ properties|length }})</h1>
+      <p class="muted">All properties you’ve saved from Property Search or Deal Workspace.</p>
+
+      {% if properties %}
+      <div class="property-grid">
+        {% for prop in properties %}
+        <div class="property-card">
+          <div class="property-info">
+
+            <h3>{{ prop.address }}</h3>
+
+            <p class="muted">
+              {% if prop.zipcode %}{{ prop.zipcode }}{% else %}Zip not saved{% endif %}
+              • {{ prop.sqft or 0 }} sq ft
+            </p>
+
+            <p style="margin:.25rem 0;">
+              <strong>
+                {% if prop.price %}
+                  ${{ prop.price }}
+                {% else %}
+                  —
+                {% endif %}
+              </strong>
+            </p>
+
+            {% if prop.created_at %}
+              <p class="muted">Saved on {{ prop.created_at.strftime('%b %d, %Y') }}</p>
+            {% elif prop.saved_at %}
+              <p class="muted">Saved on {{ prop.saved_at.strftime('%b %d, %Y') }}</p>
+            {% endif %}
+
+            <div class="btn-group" style="margin-top:.75rem;">
+              <a href="{{ url_for('borrower.deal_workspace', property_id=prop.id, mode='flip') }}" class="btn btn-outline">
+                🧮 Open Deal Workspace
+              </a>
+
+              <a href="{{ url_for('borrower.property_explore_plus', prop_id=prop.id) }}" class="btn btn-outline">
+                🔎 Explore Plus
+              </a>
+            </div>
+
+            <!-- Optional: Notes + Delete (requires manage route below) -->
+            <form method="POST" action="{{ url_for('borrower.saved_properties_manage') }}" class="inline-form">
+              {{ csrf_token() if csrf_token is defined }}
+              <input type="hidden" name="prop_id" value="{{ prop.id }}">
+
+              <textarea name="notes" placeholder="Add notes..." rows="2">{{ prop.notes or '' }}</textarea>
+
+              <div class="btn-group">
+                <button type="submit" name="action" value="edit" class="btn btn-accent">💾 Save Notes</button>
+                <button type="submit" name="action" value="delete" class="btn btn-outline-danger"
+                        onclick="return confirm('Delete this saved property?');">
+                  🗑️ Delete
+                </button>
+              </div>
+            </form>
+
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+
+      {% else %}
+      <p class="muted" style="text-align:center;">No saved properties yet.</p>
+      <div class="card mt-4" style="text-align:center;">
+        <a href="{{ url_for('borrower.property_search') }}" class="btn btn-glow">🔍 Search Properties</a>
+      </div>
+      {% endif %}
+
+      {% if ai_summary %}
+      <div class="card ai-summary">
+        <h2>🤖 Portfolio Insight</h2>
+        <p>{{ ai_summary }}</p>
+      </div>
+      {% endif %}
+    </section>
+
+  </main>
+</div>
+
+<style>
+  .property-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(320px,1fr)); gap:1.5rem; }
+  .property-card { background:var(--panel); border:1px solid var(--border); border-radius:14px; padding:1rem 1.5rem; box-shadow:0 0 10px rgba(0,0,0,0.25); }
+  .property-info h3 { margin:0; font-size:1.3rem; }
+  .inline-form { display:flex; flex-direction:column; gap:.6rem; margin-top:.8rem; }
+  textarea { width:100%; border-radius:8px; background:var(--hover); color:var(--text-light); border:1px solid var(--line); padding:.5rem; resize:none; }
+  .btn-group { display:flex; gap:.5rem; flex-wrap:wrap; }
+  .btn-outline-danger { border:1px solid #ff6464; color:#ff6464; background:transparent; border-radius:8px; padding:.5rem 1rem; }
+  .btn-outline-danger:hover { background:rgba(255,100,100,0.1); }
+</style>
+
+{% endblock %}

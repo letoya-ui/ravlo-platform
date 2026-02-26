@@ -1,0 +1,91 @@
+{% extends "layouts/base.html" %}
+{% block title %}Underwriter • Request Documents Center{% endblock %}
+
+{% block content %}
+<style>
+  :root {
+    --bg:#0f0f11; --panel:#15161a; --line:#2a2e36;
+    --text:#e6e6e6; --muted:#a5a7ad; --accent:#7ab8ff;
+    --hover:#1f2328; --glow:0 0 12px rgba(122,184,255,.35);
+  }
+
+  body { background:var(--bg); color:var(--text); }
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 1.2rem;
+    box-shadow: var(--glow);
+    margin-bottom: 1rem;
+  }
+
+  table { width:100%; border-collapse:collapse; }
+  th,td { padding:.8rem .6rem; border-top:1px solid var(--line); }
+  th { color:#cfe0f5; text-align:left; font-weight:600; font-size:.9rem; }
+
+  .btn {
+    display:inline-flex; align-items:center; gap:.4rem;
+    background:linear-gradient(180deg,#1b1d22,#15161a);
+    color:var(--text); border:1px solid var(--line);
+    border-radius:10px; padding:.45rem .8rem; font-size:.85rem;
+    transition:all .2s ease;
+  }
+  .btn:hover { color:#cfe8ff; border-color:var(--accent); box-shadow:var(--glow); }
+
+  .btn-blue { background:linear-gradient(180deg,#1f2a36,#15161a); border-color:#2d4c6e; }
+  .btn-green { background:linear-gradient(180deg,#1f3d31,#162821); border-color:#2f6b4f; }
+  .btn-yellow { background:linear-gradient(180deg,#3a361f,#282316); border-color:#6b622f; }
+  .btn-red { background:linear-gradient(180deg,#3d1f1f,#281616); border-color:#6b2f2f; }
+
+  .muted { color:var(--muted); font-size:.9rem; }
+</style>
+
+<div class="container py-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h2><i class="fa-solid fa-envelope-open-text"></i> Request Documents Center</h2>
+    <a href="{{ url_for('underwriter.dashboard') }}" class="btn">← Back to Dashboard</a>
+  </div>
+
+  <div class="card">
+    <div class="muted mb-3">
+      Select a loan below to request missing borrower documents.  
+      The AI assistant will auto-summarize and draft a polite borrower message.
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Borrower</th>
+          <th>Loan Type</th>
+          <th>Amount</th>
+          <th>Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for loan in loans %}
+        <tr>
+          <td>#{{ loan.id }}</td>
+          <td>{{ loan.borrower_profile.full_name if loan.borrower_profile else '—' }}</td>
+          <td>{{ loan.loan_type or 'N/A' }}</td>
+          <td>${{ "{:,.2f}".format(loan.amount or 0) }}</td>
+          <td>{{ loan.status|capitalize }}</td>
+          <td style="white-space:nowrap;">
+            <a href="{{ url_for('underwriter.request_documents_list', loan_id=loan.id) }}" class="btn btn-green">
+              📤 Request Docs
+            </a>
+            <a href="{{ url_for('underwriter.underwriter_conditions', loan_id=loan.id) }}" class="btn btn-blue">
+              ✅ Verify Docs
+            </a>
+            <a href="{{ url_for('underwriter.ai_risk_details', loan_id=loan.id) }}" class="btn btn-yellow">
+              🧠 Risk
+            </a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

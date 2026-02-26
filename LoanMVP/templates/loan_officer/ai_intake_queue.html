@@ -1,0 +1,32 @@
+{% extends "layouts/base.html" %}
+{% block title %}AI Intake Queue{% endblock %}
+{% block content %}
+<div class="dashboard-main px-4 py-4">
+  <div class="card" style="background:var(--panel);color:var(--text-light);">
+    <h3>🤖 Borrower AI Intake Queue</h3>
+    <p class="text-muted">All borrower sessions awaiting review or conversion.</p>
+    {% if intakes %}
+      <table class="table" style="width:100%;border-collapse:collapse;">
+        <thead>
+          <tr>
+            <th>ID</th><th>Borrower</th><th>Status</th><th>Date</th><th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+        {% for i in intakes %}
+          <tr>
+            <td>#{{ i.id }}</td>
+            <td>{{ i.borrower.name if i.borrower else 'Unknown' }}</td>
+            <td><span class="badge bg-secondary">{{ i.status|capitalize }}</span></td>
+            <td>{{ i.created_at.strftime('%b %d, %Y %I:%M %p') }}</td>
+            <td><a class="btn btn-accent btn-sm" href="{{ url_for('loan_officer.ai_intake_review', intake_id=i.id) }}">Review</a></td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <p class="text-muted">No AI intakes awaiting review.</p>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

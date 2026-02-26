@@ -1,0 +1,19 @@
+{% extends 'loan_officer/base.html' %}
+{% block content %}
+<div class='container mt-5'>
+  <h2 class='mb-4'>AI Quote Generator</h2>
+  <form id='quoteForm'>
+    <div class='mb-3'>
+      <label>Loan Amount ($)</label>
+      <input type='number' class='form-control' name='amount' required>
+    </div>
+    <div class='mb-3'>
+      <label>Term (years)</label>
+      <input type='number' class='form-control' name='term' value='30' required>
+    </div>
+    <button type='submit' class='btn btn-primary'>Generate Quote</button>
+  </form>
+  <div id='quoteResult' class='mt-4'></div>
+</div>
+<script src='{{ url_for('static', filename='js/quote_engine.js') }}'></script>
+{% endblock %}

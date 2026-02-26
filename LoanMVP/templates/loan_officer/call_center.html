@@ -1,0 +1,182 @@
+{% extends "layouts/base.html" %}
+{% block title %}AI Call Center • Loan Officer{% endblock %}
+{% block content %}
+
+<style>
+.call-container {
+    display: grid;
+    grid-template-columns: 1.3fr 1fr;
+    gap: 2rem;
+    height: 85vh;
+}
+
+.call-left, .call-right {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    padding: 1.5rem;
+    border-radius: 16px;
+    box-shadow: 0 0 20px rgba(122,184,255,.25);
+    overflow-y: auto;
+}
+
+/* live transcript box */
+#callTranscript {
+    background: #0d0f12;
+    border: 1px solid var(--line);
+    height: 60vh;
+    padding: 1rem;
+    border-radius: 16px;
+    overflow-y: auto;
+    margin-bottom: 1rem;
+    line-height: 1.4rem;
+}
+
+.trans-user { color: var(--accent); margin-bottom: 8px; }
+.trans-borrower { color: #fff; margin-bottom: 8px; }
+
+/* AI Coaching Box */
+#aiCoach {
+    background: rgba(122,184,255,.12);
+    border: 1px solid var(--accent);
+    padding: 1rem;
+    border-radius: 16px;
+    height: 20vh;
+    overflow-y: auto;
+    font-size: .95rem;
+    line-height: 1.4rem;
+    text-shadow: 0 0 10px rgba(122,184,255,.4);
+}
+
+.call-controls {
+    display: flex;
+    gap: 1rem;
+    margin-top: 1rem;
+}
+.call-btn {
+    padding: .8rem 1.2rem;
+    background: var(--accent);
+    color: black;
+    font-weight: bold;
+    border-radius: 12px;
+    cursor: pointer;
+    border: none;
+}
+.call-btn:hover { background: white; }
+</style>
+
+<h1 class="intake-title">AI Call Center</h1>
+
+<div class="call-container">
+
+    <!-- LEFT: REAL-TIME TRANSCRIPT -->
+    <div class="call-left">
+        <h2>📞 Live Call Transcript</h2>
+
+        <div id="callTranscript"></div>
+
+        <div class="call-controls">
+           <button class="call-btn" onclick="startCall()">Start Call</button>
+           <button class="call-btn" style="background:#d9534f;" onclick="endCall()">End Call</button>
+           <button class="call-btn" style="background:#5bc0de;" onclick="saveCallNotes()">Save Notes</button>
+        </div>
+
+    </div>
+
+    <!-- RIGHT: AI COACHING -->
+    <div class="call-right">
+        <h2>🤖 AI Coaching Assistant</h2>
+
+        <div id="aiCoach">Waiting for live transcript…</div>
+    </div>
+
+</div>
+
+<script>
+
+/* Start Call */
+function startCall() {
+    addTranscript("System", "Call started. AI is now listening…");
+}
+
+/* End Call */
+function endCall() {
+    addTranscript("System", "Call ended.");
+    socket.emit("call_end");
+}
+
+/* Add transcript lines */
+function addTranscript(speaker, text) {
+    const box = document.getElementById("callTranscript");
+    const div = document.createElement("div");
+
+    div.classList.add(speaker === "You" ? "trans-user" : "trans-borrower");
+    div.innerHTML = `<strong>${speaker}:</strong> ${text}`;
+
+    box.appendChild(div);
+    box.scrollTop = box.scrollHeight;
+}
+
+/* Websocket listener */
+socket.on("call_transcript", function(data){
+    addTranscript(data.speaker, data.text);
+});
+
+/* AI coaching output */
+socket.on("ai_call_coach", function(data){
+    document.getElementById("aiCoach").innerHTML = data.advice;
+});  
+
+function saveCallNotes() {
+
+    let transcriptText = document.getElementById("callTranscript").innerText;
+    let aiSummary = document.getElementById("aiCoach").innerText;
+
+    let payload = {
+        borrower_id: {{ borrower.id }},
+        transcript: transcriptText,
+        summary: aiSummary,
+        tasks: aiExtractTasks(aiSummary),
+        missing_docs: aiExtractMissingDocs(aiSummary)
+    };
+
+    fetch("{{ url_for('loan_officer.save_call_notes') }}", {
+        method: "POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify(payload)
+    })
+    .then(r => r.json())
+    .then(data => {
+        alert("📌 Call notes saved successfully.");
+    });
+}
+
+/* Simple text-pattern extraction */
+function aiExtractTasks(text) {
+    let tasks = [];
+    let lines = text.split("\n");
+    lines.forEach(l => {
+        if (l.toLowerCase().includes("follow up") ||
+            l.toLowerCase().includes("verify") ||
+            l.toLowerCase().includes("confirm")) {
+            tasks.push(l.trim());
+        }
+    });
+    return tasks;
+}
+
+function aiExtractMissingDocs(text) {
+    let docs = [];
+    let patterns = ["w2", "paystub", "bank", "id", "driver", "insurance", "tax"];
+    let lower = text.toLowerCase();
+
+    patterns.forEach(p => {
+        if (lower.includes(p)) docs.push(p);
+    });
+
+    return docs;
+}
+
+
+</script>
+
+{% endblock %}

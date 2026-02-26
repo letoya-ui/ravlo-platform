@@ -1,0 +1,68 @@
+{% extends "layouts/base.html" %}
+{% block title %}Underwriter • Deal Planner{% endblock %}
+
+{% block content %}
+<style>
+:root {
+  --bg:#0f0f11; --panel:#15161a; --line:#2a2e36;
+  --text:#e6e6e6; --muted:#a5a7ad; --accent:#7ab8ff;
+  --glow:0 0 18px rgba(122,184,255,0.35);
+}
+.card {
+  background:var(--panel);
+  border:1px solid var(--line);
+  border-radius:14px;
+  box-shadow:var(--glow);
+  padding:1.5rem;
+  margin-bottom:1.2rem;
+}
+.deal-grid {
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(380px,1fr));
+  gap:1rem;
+}
+.btn {
+  display:inline-flex; align-items:center; gap:.4rem;
+  border:1px solid var(--line);
+  border-radius:8px; padding:.5rem .9rem;
+  color:var(--text); background:linear-gradient(180deg,#1b1d22,#15161a);
+  transition:all .2s ease;
+}
+.btn:hover { color:#cfe8ff; border-color:var(--accent); box-shadow:var(--glow); }
+.note-box textarea {
+  width:100%; min-height:90px;
+  background:#0f0f11; border:1px solid var(--line);
+  color:var(--text); border-radius:10px; padding:.6rem;
+}
+</style>
+
+<div class="container py-4">
+  <h2>📊 Deal Planner</h2>
+  <p class="muted">Analyze, plan, and document your underwriting decisions.</p>
+
+  <div class="deal-grid">
+    {% for loan in loans %}
+    <div class="card">
+      <h3>Loan #{{ loan.id }} — {{ loan.borrower.full_name if loan.borrower else 'Unknown Borrower' }}</h3>
+      <p><strong>Type:</strong> {{ loan.loan_type or 'N/A' }}</p>
+      <p><strong>Amount:</strong> ${{ "{:,.2f}".format(loan.amount or 0) }}</p>
+      <p><strong>Status:</strong> {{ loan.status|capitalize }}</p>
+      <p><strong>AI Risk:</strong> {{ "%.2f"|format(loan.risk_score or 0.5) }}</p>
+
+      <form method="POST">
+        <input type="hidden" name="loan_id" value="{{ loan.id }}">
+        <div class="note-box mb-2">
+          <textarea name="note" placeholder="Add underwriting notes or AI strategy request..."></textarea>
+        </div>
+        <button type="submit" class="btn">🧠 Generate AI Plan</button>
+      </form>
+
+      <div class="mt-2">
+        <a href="{{ url_for('underwriter.review_loan', loan_id=loan.id) }}" class="btn">🔍 Review</a>
+        <a href="{{ url_for('underwriter.conditions', loan_id=loan.id) }}" class="btn">⚖ Conditions</a>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

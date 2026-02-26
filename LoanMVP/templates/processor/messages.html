@@ -1,0 +1,180 @@
+{% extends "layouts/base.html" %}
+{% block title %}Messages{% endblock %}
+{% block content %}
+
+<div class="wrap">
+
+    <section class="lhs">
+        <div class="card">
+
+            <!-- HEADER WITH NEW MESSAGE BUTTON -->
+            <div class="messages-header">
+                <h2><i class="lucide lucide-messages-square"></i> Messages</h2>
+
+                <a href="{{ url_for('processor.new_message') }}" class="new-msg-btn">
+                    <i class="lucide lucide-plus"></i> New Message
+                </a>
+            </div>
+
+            {% if threads %}
+                <div class="thread-list">
+                   {% for t in threads %}
+                      <a href="{{ url_for('processor.message_thread', partner_id=t.partner_id) }}"
+                         class="thread-item">
+
+                         <div class="thread-info">
+
+                            <!-- Partner Name -->
+                            <h4>{{ t.partner_name }}</h4>
+
+                           <!-- ⭐ Last Message Preview -->
+                          <p class="muted thread-preview">
+                              {% if t.last_sender_id == current_user.id %}
+                                  <strong>You:</strong> {{ t.last_message_preview }}
+                              {% else %}
+                                  {{ t.last_message_preview }}
+                              {% endif %}
+                          </p>
+
+                      </div>
+
+                    <div class="thread-meta">
+
+                       <!-- Timestamp -->
+                       <span class="thread-time">
+                           {{ t.updated_at.strftime('%b %d, %Y %I:%M %p') }}
+                       </span>
+
+                       <!-- ⭐ Optional Unread Badge -->
+                       {% if t.unread_count and t.unread_count > 0 %}
+                           <span class="unread-badge">{{ t.unread_count }}</span>
+                       {% endif %}
+
+                   </div>
+
+              </a>
+          {% endfor %}
+        </div>
+
+            {% else %}
+                <p class="muted">No conversations yet. Start one using the button above.</p>
+            {% endif %}
+
+        </div>
+    </section>
+
+    <aside class="rhs">
+        <div class="card">
+            <h3>Smart Tip</h3>
+            <p class="muted">
+                Start a new message to coordinate tasks, request documents, or follow up with borrowers.
+            </p>
+        </div>
+    </aside>
+
+</div>
+
+<style>
+/* Layout */
+.wrap {
+    padding: 2rem;
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 1.5rem;
+}
+
+/* Header */
+.messages-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.2rem;
+}
+
+/* New Message Button */
+.new-msg-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: .45rem;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    padding: .55rem 1rem;
+    border-radius: 10px;
+    color: var(--text);
+    font-weight: 600;
+    text-decoration: none;
+    transition: .2s ease;
+}
+
+.new-msg-btn:hover {
+    background: var(--accent);
+    color: #000;
+    box-shadow: var(--glow);
+}
+
+/* Thread List */
+.thread-list {
+    display: flex;
+    flex-direction: column;
+    gap: .8rem;
+}
+
+.thread-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #111113;
+    border: 1px solid var(--line);
+    padding: 1rem;
+    border-radius: 12px;
+    text-decoration: none;
+    color: var(--text);
+    transition: .2s ease;
+}
+
+.thread-item:hover {
+    background: #1a1a1d;
+    border-color: var(--accent);
+    box-shadow: var(--glow);
+}
+
+.thread-info h4 {
+    margin: 0;
+    font-size: 1.05rem;
+    color: var(--text);
+}
+
+.thread-info p {
+    margin: .2rem 0 0;
+    font-size: .9rem;
+}
+
+.thread-time {
+    font-size: .8rem;
+    color: var(--muted);
+}
+
+.thread-meta {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: .3rem;
+}
+
+.thread-preview strong {
+    color: var(--accent);
+}
+
+.unread-badge {
+    background: var(--accent);
+    color: #000;
+    padding: .2rem .5rem;
+    border-radius: 8px;
+    font-size: .75rem;
+    font-weight: 700;
+}
+
+
+</style>
+
+{% endblock %}

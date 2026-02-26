@@ -1,0 +1,124 @@
+{% extends "layouts/base.html" %}
+{% block title %}Processor Queue{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="https://unpkg.com/lucide-static@latest/font/lucide.css">
+
+<style>
+:root {
+    --bg:#0f0f11;
+    --panel:#15161a;
+    --line:#282b31;
+    --text:#e6e6e6;
+    --muted:#a5a7ad;
+    --accent:#7ab8ff;
+    --danger:#ff6565;
+}
+
+body { background:var(--bg); color:var(--text); }
+.card {
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding:1.3rem;
+    margin-bottom:1.5rem;
+    transition:0.2s ease;
+}
+.card:hover {
+    box-shadow:0 0 18px rgba(122,184,255,0.25);
+}
+
+.status-pill {
+    padding:4px 10px;
+    border-radius:10px;
+    font-size:0.8rem;
+    text-transform:uppercase;
+    letter-spacing:1px;
+}
+.status-pending { background:#3d3d3d; color:#fff; }
+.status-review { background:#7ab8ff; color:#000; }
+.status-submitted { background:#444; color:#7ab8ff; }
+
+.pipeline-grid {
+    display:grid;
+    grid-template-columns: repeat(auto-fill, minmax(310px, 1fr));
+    gap:1.5rem;
+    margin-top:2rem;
+}
+
+.metric {
+    background:var(--panel);
+    border:1px solid var(--line);
+    padding:1rem;
+    border-radius:12px;
+    margin-right:1rem;
+}
+.metric h3 { margin:0; }
+</style>
+
+<!-- ================================ -->
+<!--      Pipeline Summary Tiles      -->
+<!-- ================================ -->
+
+<div style="display:flex; gap:1rem;">
+    <div class="metric">
+        <p class="muted">Active Loans</p>
+        <h3>{{ total_loans }}</h3>
+    </div>
+
+    <div class="metric">
+        <p class="muted">Docs Pending</p>
+        <h3>{{ docs_pending }}</h3>
+    </div>
+
+    <div class="metric">
+        <p class="muted">Conditions Open</p>
+        <h3>{{ cond_open }}</h3>
+    </div>
+</div>
+
+<!-- ================================ -->
+<!--          Pipeline Grid           -->
+<!-- ================================ -->
+
+<div class="pipeline-grid">
+{% for item in pipeline %}
+    <div class="card">
+        <h2>{{ item.borrower.full_name }}</h2>
+
+        <p class="muted">{{ item.borrower.email }} · {{ item.borrower.phone }}</p>
+
+        <p>
+            Loan Amount: <strong>${{ item.amount }}</strong><br>
+            LTV: <strong>{{ item.ltv }}%</strong><br>
+            Risk: <strong>{{ item.risk }}</strong>
+        </p>
+
+        <div style="margin:.5rem 0;">
+            <span class="status-pill status-{{ item.loan.status|lower }}">
+                {{ item.loan.status }}
+            </span>
+        </div>
+
+        <p>
+            Docs: {{ item.docs_pending }}/{{ item.docs_total }} pending<br>
+            Conditions: {{ item.cond_open }}/{{ item.cond_total }} open
+        </p>
+
+        <a href="/processor/loan/{{ item.loan.id }}" class="btn">
+            Review File
+        </a>
+    </div>
+{% endfor %}
+</div>
+<script src="//cdnjs.cloudflare.com/ajax/libs/socket.io/4.5.4/socket.io.min.js"></script>
+<script>
+const socket = io();
+
+// Loan changed, new docs, new conditions, new payment, etc.
+socket.on("new_notification", function(data) {
+    location.reload(); // auto-refresh pipeline
+});
+</script>
+
+{% endblock %}

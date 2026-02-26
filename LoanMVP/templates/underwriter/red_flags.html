@@ -1,0 +1,17 @@
+{% extends "layouts/base.html" %}
+{% block content %}
+
+
+<div class="section">
+    <h2><i class="lucide lucide-skull"></i> Fraud / Red Flags</h2>
+
+    {% if flags %}
+        {% for f in flags %}
+            <p style="color:var(--danger);">{{ f }}</p>
+        {% endfor %}
+    {% else %}
+        <p>No red flags detected.</p>
+    {% endif %}
+</div>
+
+{% endblock %}

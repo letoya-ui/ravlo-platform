@@ -1,0 +1,141 @@
+{% extends "layouts/base.html" %}
+{% block title %}Loan Officer Pipeline • Caughman Mason{% endblock %}
+
+{% block content %}
+
+<link rel="stylesheet" href="https://unpkg.com/lucide-static@latest/font/lucide.css">
+
+<style>
+    :root {
+        --bg:#0f0f11;
+        --panel:#15161a;
+        --line:#2b2f36;
+        --text:#e6e6e6;
+        --muted:#a5a7ad;
+        --accent:#7ab8ff;
+        --hover:#1f2328;
+        --glow:0 0 14px rgba(122,184,255,0.35);
+    }
+
+    body { background: var(--bg); color: var(--text); }
+
+    .section {
+        background: var(--panel);
+        padding: 2rem;
+        border-radius: 14px;
+        border: 1px solid var(--line);
+        margin-bottom: 2rem;
+    }
+
+    h2 { text-shadow: var(--glow); }
+
+    table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    th, td {
+        padding: .8rem;
+        border-bottom: 1px solid var(--line);
+    }
+
+    th {
+        color: var(--accent);
+        font-weight: 600;
+    }
+
+    .btn {
+        padding: .4rem .8rem;
+        border-radius: 8px;
+        background: transparent;
+        border: 1px solid var(--accent);
+        color: var(--accent);
+        cursor: pointer;
+        margin-right: .3rem;
+    }
+    .btn:hover { background: var(--accent); color: black; }
+
+    #ai-box {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        padding: 1rem;
+        margin-top: 2rem;
+        border-radius: 12px;
+    }
+</style>
+
+
+<main class="dashboard-main">
+
+<!-- HEADER -->
+<section class="section">
+    <h2>📋 Loan Officer Pipeline</h2>
+    <p class="muted">Full pipeline overview for all borrowers & loans.</p>
+</section>
+
+
+<!-- TABLE -->
+<section class="section">
+    <table>
+        <thead>
+            <tr>
+                <th>Borrower</th>
+                <th>Loan Amount</th>
+                <th>Status</th>
+                <th>Missing Docs</th>
+                <th>Last Activity</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+
+        <tbody>
+        {% for p in pipeline %}
+            <tr>
+                <td>{{ p.borrower.full_name }}</td>
+
+                <td>
+                    {% if p.loan %}
+                        ${{ "{:,.0f}".format(p.loan.loan_amount|float) }}
+                    {% else %}
+                        —
+                    {% endif %}
+                </td>
+
+                <td>
+                    {% if p.loan %}
+                        {{ p.loan.status|capitalize }}
+                    {% else %}
+                        —
+                    {% endif %}
+                </td>
+
+                <td>{{ p.missing_docs }}</td>
+                <td>{{ p.last_activity }}</td>
+
+                <td>
+
+                    <a href="{{ url_for('master.intake') }}" class="btn">Intake</a>
+
+                    {% if p.loan %}
+                        <a href="/master/documents/{{ p.loan.id }}" class="btn">Docs</a>
+                        <a href="/master/conditions/{{ p.loan.id }}" class="btn">UW</a>
+                    {% else %}
+                        <span class="muted">No Loan Yet</span>
+                    {% endif %}
+                </td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</section>
+
+
+<!-- AI BOX -->
+<section id="ai-box">
+    <h3>🤖 AI Pipeline Intelligence</h3>
+    <p style="white-space:pre-line;">{{ ai_summary }}</p>
+</section>
+
+</main>
+
+{% endblock %}

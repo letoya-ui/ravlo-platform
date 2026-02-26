@@ -1,0 +1,120 @@
+{% extends "layouts/base.html" %}
+{% block title %}CRM • Messages{% endblock %}
+{% block content %}
+<main class="dashboard-main">
+
+<style>
+  :root{
+    --bg:#0f0f11;--panel:#15161a;--line:#282b31;
+    --text:#e6e6e6;--muted:#a5a7ad;--accent:#7ab8ff;
+    --glow:0 0 18px rgba(122,184,255,.35);
+  }
+  body{background:var(--bg);color:var(--text);}
+  .wrap{display:flex;gap:1rem;flex-wrap:wrap;}
+  .lhs{flex:1 1 68%;min-width:400px;}
+  .rhs{flex:1 1 30%;min-width:300px;}
+  .card{background:var(--panel);border:1px solid var(--line);
+        border-radius:14px;padding:1rem;box-shadow:var(--glow);}
+  .muted{color:var(--muted);}
+  .btn{display:inline-flex;align-items:center;gap:.5rem;
+       padding:.6rem 1rem;border-radius:10px;border:1px solid var(--line);
+       color:var(--text);text-decoration:none;background:#1a1d23;}
+  .btn:hover{border-color:var(--accent);box-shadow:var(--glow);}
+  .chat-window{display:flex;flex-direction:column;gap:.6rem;
+               max-height:60vh;overflow-y:auto;padding-right:.5rem;}
+  .msg{padding:.6rem .8rem;border-radius:10px;max-width:80%;
+       word-wrap:break-word;}
+  .msg.user{background:linear-gradient(180deg,#2a4a62,#1b2a38);
+            color:#dcefff;align-self:flex-end;border:1px solid var(--accent);}
+  .msg.other{background:#1b1d22;border:1px solid var(--line);
+             color:var(--text);align-self:flex-start;}
+  .msg small{display:block;color:var(--muted);font-size:.7rem;margin-top:.25rem;}
+  .chat-input{display:flex;gap:.5rem;margin-top:1rem;}
+  .chat-input input{flex:1;background:#0f0f11;border:1px solid var(--line);
+                    color:var(--text);border-radius:10px;padding:.6rem .8rem;}
+  .ai-suggestions{margin-top:.5rem;}
+  .chip{display:inline-flex;gap:.3rem;padding:.3rem .6rem;
+        border:1px solid var(--line);background:var(--panel);
+        border-radius:999px;font-size:.78rem;color:#c4d9f2;
+        margin-right:.3rem;cursor:pointer;}
+  .chip:hover{box-shadow:var(--glow);}
+</style>
+
+<div class="wrap">
+  <!-- LEFT PANEL: Conversation -->
+  <section class="lhs">
+    <div class="card">
+      <h3>📨 CRM Message Center</h3>
+      <div class="muted" style="margin-bottom:.7rem;">
+        Communicate directly with borrowers or internal team members.
+      </div>
+
+      <div class="chat-window" id="chatWindow">
+        {% if messages %}
+          {% for msg in messages %}
+            <div class="msg {{ 'user' if msg.sender_id == current_user.id else 'other' }}">
+              {{ msg.content }}
+              <small>{{ msg.timestamp.strftime('%b %d, %Y • %I:%M %p') }}</small>
+            </div>
+          {% endfor %}
+        {% else %}
+          <p class="muted">No messages yet. Start the conversation below 👇</p>
+        {% endif %}
+      </div>
+
+      <form class="chat-input" method="POST" action="{{ url_for('crm.messages') }}">
+        <input type="text" name="content" id="msgInput" placeholder="Type your message..." required>
+        <button class="btn btn-primary" type="submit">Send</button>
+      </form>
+
+      <div class="ai-suggestions">
+        <span class="chip" onclick="quickMsg('Follow up on document submission')">📎 Follow-Up</span>
+        <span class="chip" onclick="quickMsg('Schedule call for underwriting review')">📅 Schedule</span>
+        <span class="chip" onclick="quickMsg('Send borrower application reminder')">🔔 Reminder</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- RIGHT PANEL: Insights / AI -->
+  <aside class="rhs">
+    <div class="card">
+      <h3>AI CRM Insights</h3>
+      <div id="aiSummary">
+        {% if ai_summary %}
+          <p>{{ ai_summary }}</p>
+        {% else %}
+          <p class="muted">AI insights will appear here after analyzing messages.</p>
+        {% endif %}
+      </div>
+      <button class="btn btn-primary" type="button" onclick="refreshAI()">🔄 Refresh Summary</button>
+    </div>
+
+    <div class="card">
+      <h3>Quick Actions</h3>
+      <a href="{{ url_for('crm.leads') }}" class="btn">📇 View Leads</a>
+      <a href="{{ url_for('crm.hub') }}" class="btn">📈 Pipeline</a>
+      <a href="{{ url_for('crm.campaigns') }}" class="btn">📊 Reports</a>
+    </div>
+  </aside>
+</div>
+
+<script>
+  function quickMsg(text){
+    document.getElementById('msgInput').value=text;
+    document.getElementById('msgInput').focus();
+  }
+
+  async function refreshAI(){
+    try{
+      const res = await fetch("{{ url_for('crm.ai_summary') }}");
+      const data = await res.json();
+      document.getElementById('aiSummary').innerHTML =
+        '<p>'+data.message+'</p><small class="muted">Updated '+data.timestamp+'</small>';
+    }catch(e){
+      document.getElementById('aiSummary').innerHTML =
+        '<p class="muted">⚠️ AI summary unavailable.</p>';
+    }
+  }
+</script>
+</main>
+{% endblock %}

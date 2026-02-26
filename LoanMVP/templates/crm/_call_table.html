@@ -1,0 +1,32 @@
+<table class="table" style="width:100%;border-collapse:collapse;">
+  <thead>
+    <tr style="border-bottom:1px solid #2b2f36;">
+      <th style="text-align:left;padding:.6rem;">Name</th>
+      <th style="text-align:left;padding:.6rem;">Phone</th>
+      <th style="text-align:left;padding:.6rem;">Direction</th>
+      <th style="text-align:left;padding:.6rem;">Outcome</th>
+      <th style="text-align:left;padding:.6rem;">Notes</th>
+      <th style="text-align:left;padding:.6rem;">AI Summary</th>
+      <th style="text-align:left;padding:.6rem;">Created</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for call in calls %}
+    <tr>
+      <td>{{ call.contact_name or '—' }}</td>
+      <td>{{ call.contact_phone or '—' }}</td>
+      <td>{{ call.direction or '—' }}</td>
+      <td>{{ call.outcome or '—' }}</td>
+      <td>{{ call.notes or '—' }}</td>
+      <td>
+        {% if call.ai_summary %}
+          <span style="color:#43d19e;">{{ call.ai_summary[:120] }}{% if call.ai_summary|length > 120 %}...{% endif %}</span>
+        {% else %}
+          <span style="color:#ffdf6e;">⏳ Pending</span>
+        {% endif %}
+      </td>
+      <td>{{ call.created_at.strftime('%b %d, %Y') }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>

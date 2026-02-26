@@ -1,0 +1,61 @@
+{% extends "layouts/base.html" %}
+{% block title %}UW Queue{% endblock %}
+{% block content %}
+
+<link rel="stylesheet" href="https://unpkg.com/lucide-static@latest/font/lucide.css">
+
+<style>
+.section {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    padding: 1.5rem;
+    border-radius: 16px;
+    margin-bottom: 2rem;
+}
+
+.table {
+    width: 100%;
+    margin-top: 1rem;
+}
+
+.table th, .table td {
+    padding: .75rem;
+    border-bottom: 1px solid var(--line);
+}
+</style>
+
+<main class="dashboard-main">
+
+<div class="section">
+    <h2><i class="lucide lucide-files"></i> Underwriting Queue</h2>
+
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Borrower</th>
+                <th>Loan Amount</th>
+                <th>LTV</th>
+                <th>Status</th>
+                <th></th>
+            </tr>
+        </thead>
+
+        <tbody>
+        {% for l in queue %}
+            <tr>
+                <td>{{ l.borrower_profile.full_name }}</td>
+                <td>${{ l.amount }}</td>
+                <td>{{ (l.ltv_ratio or 0) }}%</td>
+                <td>{{ l.status }}</td>
+                <td>
+                    <a href="/underwriter/file/{{ l.id }}" class="btn-outline">Review</a>
+                </td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+
+</div>
+
+</main>
+{% endblock %}

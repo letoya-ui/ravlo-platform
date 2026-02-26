@@ -1,0 +1,61 @@
+{% extends "layouts/base.html" %}
+{% block content %}
+<style>
+  :root{--line:#2a2e36; --panel:#15161a; --text:#e6e6e6; --muted:#a5a7ad}
+  .card{background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:1rem}
+  table{width:100%; border-collapse:collapse}
+  th,td{padding:.6rem; border-top:1px solid var(--line); color:var(--text)}
+  input{background:#0f0f11; border:1px solid var(--line); color:var(--text); border-radius:10px; padding:.45rem .6rem; width:100%}
+  .btn{display:inline-flex; align-items:center; gap:.5rem; padding:.6rem .9rem; border-radius:10px; border:1px solid var(--line); color:var(--text); text-decoration:none; background:#1a1d23}
+</style>
+
+
+<div class="container-fluid dashboard-content text-light" style="margin-left:260px;">
+  <h2 class="mb-4">💬 Chat Log</h2>
+  <p class="text-muted mb-4">Review all messages and AI conversations across your platform.</p>
+
+  <div class="card bg-dark border-secondary shadow-sm">
+    <div class="card-header border-secondary d-flex justify-content-between align-items-center">
+      <h5 class="mb-0">Recent Conversations</h5>
+      <button class="btn btn-sm btn-outline-light" onclick="refreshChat()">🔄 Refresh</button>
+    </div>
+
+    <div class="card-body" id="chatContainer" style="max-height:70vh; overflow-y:auto;">
+      {% for c in chats %}
+        <div class="p-3 mb-2 rounded" 
+             style="background-color:#111; border:1px solid #2a2a2a;">
+          <div class="d-flex justify-content-between">
+            <strong class="text-info">
+              {{ c.sender_name or "Unknown User" }}
+              <small class="text-muted">({{ c.sender_role or "N/A" }})</small>
+            </strong>
+            <span class="text-muted small">
+              {{ c.timestamp.strftime('%b %d, %Y %I:%M %p') if c.timestamp else "—" }}
+            </span>
+          </div>
+          <p class="mt-2 mb-0 text-light">{{ c.message }}</p>
+        </div>
+      {% else %}
+        <p class="text-center text-muted py-4">No messages found.</p>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+<script>
+function refreshChat() {
+  fetch("{{ url_for('admin.chat_logs') }}", { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+    .then(res => res.text())
+    .then(html => {
+      const parser = new DOMParser();
+      const newLogs = parser.parseFromString(html, "text/html").querySelector("#chatContainer").innerHTML;
+      document.querySelector("#chatContainer").innerHTML = newLogs;
+    });
+}
+</script>
+
+<style>
+.card:hover { border-color: #666; transition: 0.3s ease; }
+p { font-size: 0.95rem; line-height: 1.5; }
+</style>
+{% endblock %}

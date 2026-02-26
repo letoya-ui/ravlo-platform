@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+<body style="font-family:Inter,Arial;background:#f8f9fb;padding:40px;color:#333;">
+  <div style="max-width:650px;margin:auto;background:white;padding:35px;border-radius:14px;
+              box-shadow:0 0 25px rgba(0,0,0,0.12);">
+
+    <h2 style="color:#1a1a1a;font-size:26px;margin-bottom:10px;">
+        Your Pre-Approval Letter Is Ready
+    </h2>
+
+    <p style="font-size:15px;line-height:1.6;">
+      Dear <b>{{ borrower.full_name }}</b>,<br><br>
+      Congratulations — your **official pre-approval letter** from  
+      <b>Caughman Mason Loan Services</b> is now ready.
+    </p>
+
+    <p style="font-size:15px;line-height:1.6;">
+      This letter includes your loan amount, property details,  
+      DTI and LTV analysis, and a lending-grade summary  
+      reviewed with our underwriting engine.
+    </p>
+
+    <div style="margin:25px 0;padding:18px;background:#eef5ff;border-left:4px solid #7ab8ff;">
+      <b>What happens next?</b><br>
+      One of our loan advisors will contact you to discuss  
+      next steps, documentation needs, and final loan structure.
+    </div>
+
+    <p style="font-size:15px;">Your pre-approval letter is attached as a PDF.</p>
+
+    <p style="margin-top:35px;font-size:14px;color:#777;">
+      Warm regards,<br>
+      <b>Caughman Mason Loan Services</b><br>
+      Excellence. Precision. Finance Elevated.
+    </p>
+  </div>
+</body>
+</html>
+<img src="{{ url_for('tracking.pixel',
+    loan_id=loan.id,
+    borrower_id=borrower.id,
+    doc='Pre-Approval Letter',
+    _external=True) }}"
+    width="1" height="1" style="display:none;" />

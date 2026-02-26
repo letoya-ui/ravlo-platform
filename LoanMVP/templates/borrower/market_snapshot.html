@@ -1,0 +1,65 @@
+{% extends "layouts/borrower_base.html" %}
+
+{% block content %}
+
+<div class="page-header">
+  <h2>Market Snapshot</h2>
+  {% if active_property %}
+    <p class="muted">Based on {{ active_property.address }} ({{ active_property.zipcode }})</p>
+  {% endif %}
+</div>
+
+<div class="market-container">
+
+  {% if market_snapshot %}
+
+    <div class="market-grid">
+
+      <div class="market-stat">
+        <label>Median Price</label>
+        <div class="value">
+          {% if market_snapshot.median_price %}
+            ${{ "{:,.0f}".format(market_snapshot.median_price) }}
+          {% else %} N/A {% endif %}
+        </div>
+      </div>
+
+      <div class="market-stat">
+        <label>Median Rent</label>
+        <div class="value">
+          {% if market_snapshot.median_rent %}
+            ${{ "{:,.0f}".format(market_snapshot.median_rent) }}
+          {% else %} N/A {% endif %}
+        </div>
+      </div>
+
+      <div class="market-stat">
+        <label>Inventory</label>
+        <div class="value">{{ market_snapshot.inventory or "N/A" }}</div>
+      </div>
+
+      <div class="market-stat">
+        <label>Days on Market</label>
+        <div class="value">{{ market_snapshot.dom or "N/A" }}</div>
+      </div>
+
+      <div class="market-stat">
+        <label>Trend</label>
+        <div class="value">{{ market_snapshot.trend or "N/A" }}</div>
+      </div>
+
+    </div>
+
+    <div class="market-charts">
+      <canvas id="marketPriceChart" width="800" height="120"></canvas>
+      <canvas id="marketRentChart" width="800" height="120"></canvas>
+      <canvas id="marketInventoryChart" width="800" height="120"></canvas>
+    </div>
+
+  {% else %}
+    <p>No market data available yet. Save a property to get started.</p>
+  {% endif %}
+
+</div>
+
+{% endblock %}

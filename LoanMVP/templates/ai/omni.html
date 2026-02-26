@@ -1,0 +1,84 @@
+{% extends "layouts/base.html" %}
+{% block title %}AI Omni Panel{% endblock %}
+{% block content %}
+
+
+<main style="margin-left:260px; padding:2rem; background:#0f0f11; color:#e6e6e6; min-height:100vh;">
+  <link rel="stylesheet" href="https://unpkg.com/lucide-static@latest/font/lucide.css">
+
+  <style>
+    .grid{display:grid;gap:1.25rem;}
+    .g-3{grid-template-columns:repeat(3,minmax(0,1fr));}
+    .card{background:#15161a;border:1px solid #282b31;border-radius:14px;padding:1.4rem;box-shadow:0 0 18px rgba(122,184,255,0.25);transition:all .25s ease;}
+    .card:hover{transform:translateY(-3px);box-shadow:0 0 22px rgba(122,184,255,0.35);}
+    .card h3{margin:0 0 .4rem;color:#7ab8ff;display:flex;align-items:center;gap:.5rem;}
+    .muted{color:#a5a7ad;font-size:.9rem;}
+    .ai-action{display:flex;align-items:center;justify-content:space-between;margin-top:1rem;}
+    .btn{display:inline-flex;align-items:center;gap:.4rem;background:linear-gradient(180deg,#2a4a62,#1b2a38);border:1px solid #2a4a62;color:#cfe8ff;border-radius:10px;padding:.55rem 1rem;text-decoration:none;font-size:.9rem;}
+    .btn:hover{box-shadow:0 0 10px rgba(122,184,255,0.3);}
+    .top-actions{display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;}
+    .ai-summary{background:#18222b;border:1px solid #2b2f36;border-radius:14px;padding:1.2rem;margin-top:1.5rem;box-shadow:0 0 12px rgba(122,184,255,0.2);}
+  </style>
+
+  <div class="top-actions">
+    <h1><i class="lucide lucide-grid"></i> AI Omni Panel</h1>
+    <a href="{{ url_for('ai.dashboard') }}" class="btn"><i class="lucide lucide-arrow-left"></i> Back to Dashboard</a>
+  </div>
+
+  <p class="muted" style="margin-bottom:2rem;">Unified AI interface for cross-departmental collaboration. Quickly analyze, generate insights, and launch actions for any division.</p>
+
+  <!-- Omni Context Cards -->
+  <div class="grid g-3">
+    {% for context in contexts %}
+    <div class="card">
+      <h3>
+        {% if context == 'CRM' %}
+          <i class="lucide lucide-phone"></i>
+        {% elif context == 'Borrower' %}
+          <i class="lucide lucide-user"></i>
+        {% elif context == 'Processor' %}
+          <i class="lucide lucide-settings"></i>
+        {% elif context == 'Loan Officer' %}
+          <i class="lucide lucide-briefcase"></i>
+        {% elif context == 'Underwriter' %}
+          <i class="lucide lucide-shield-check"></i>
+        {% endif %}
+        {{ context }}
+      </h3>
+      <p class="muted">Access and manage AI features for the {{ context }} environment.</p>
+
+      <div class="ai-action">
+        <input type="text" id="input_{{ loop.index }}" placeholder="Ask AI about {{ context|lower }}..." 
+          style="flex:1;background:#0f0f11;border:1px solid #2b2f36;color:#e6e6e6;border-radius:10px;padding:.5rem .7rem;font-size:.9rem;">
+        <button class="btn" onclick="askAI('{{ context }}', {{ loop.index }})"><i class="lucide lucide-send"></i></button>
+      </div>
+
+      <div id="output_{{ loop.index }}" style="margin-top:.8rem;font-size:.9rem;color:#bcd8ff;min-height:2rem;"></div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <!-- AI Summary -->
+  <div class="ai-summary">
+    <h3><i class="lucide lucide-brain-circuit"></i> AI Cross-System Insight</h3>
+    <p>The AI Omni engine unifies insights across departments, ensuring synchronized decision-making and operational transparency. It enables the system to forecast bottlenecks, highlight borrower patterns, and suggest workflow optimizations across CRM, Processing, and Underwriting simultaneously.</p>
+  </div>
+
+  <script>
+    async function askAI(context, index){
+      const input=document.getElementById('input_'+index);
+      const output=document.getElementById('output_'+index);
+      const query=input.value.trim();
+      if(!query)return;
+      output.textContent="🧠 Processing...";
+      try{
+        const res=await fetch("{{ url_for('ai.ai_tip') }}?query="+encodeURIComponent(query)+"&context="+encodeURIComponent(context));
+        const data=await res.json();
+        output.textContent="AI: "+(data.reply || "No response.");
+      }catch(e){
+        output.textContent="❌ Connection error.";
+      }
+    }
+  </script>
+</main>
+{% endblock %}

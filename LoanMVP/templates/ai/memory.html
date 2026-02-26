@@ -1,0 +1,55 @@
+{% extends "layouts/base.html" %}
+{% block title %}Quantum Memory Console{% endblock %}
+{% block content %}
+
+
+<main style="margin-left:260px; padding:2rem; background:#0f0f11; color:#e6e6e6; min-height:100vh;">
+  <link rel="stylesheet" href="https://unpkg.com/lucide-static@latest/font/lucide.css">
+
+  <style>
+    .grid{display:grid;gap:1.25rem;}
+    .card{background:#15161a;border:1px solid #282b31;border-radius:14px;padding:1.25rem;box-shadow:0 0 18px rgba(122,184,255,0.25);}
+    .card h3{margin:0 0 .6rem;color:#7ab8ff;display:flex;align-items:center;gap:.5rem;}
+    .muted{color:#a5a7ad;font-size:.9rem;}
+    .memory-entry{background:#1a1c20;border:1px solid #2b2f36;border-radius:12px;padding:1rem;margin-bottom:1rem;box-shadow:0 0 10px rgba(122,184,255,0.15);}
+    .memory-entry:hover{border-color:#7ab8ff;box-shadow:0 0 14px rgba(122,184,255,0.25);}
+    .memory-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem;}
+    .context{color:#cfe8ff;font-size:.85rem;background:#1b2a38;border-radius:8px;padding:.2rem .6rem;}
+    .timestamp{font-size:.8rem;color:#999;}
+    pre{background:#0f0f11;border:1px solid #2b2f36;border-radius:10px;padding:.8rem;color:#bcd8ff;overflow:auto;font-size:.9rem;}
+    .btn{display:inline-flex;align-items:center;gap:.3rem;background:linear-gradient(180deg,#2a4a62,#1b2a38);border:1px solid #2a4a62;color:#cfe8ff;border-radius:8px;padding:.4rem .8rem;font-size:.8rem;cursor:pointer;}
+    .btn:hover{box-shadow:0 0 10px rgba(122,184,255,0.3);}
+    .top-actions{display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;}
+  </style>
+
+  <div class="top-actions">
+    <h1><i class="lucide lucide-database"></i> Quantum Memory Console</h1>
+    <a href="{{ url_for('ai.dashboard') }}" class="btn"><i class="lucide lucide-arrow-left"></i> Back to Dashboard</a>
+  </div>
+
+  <p class="muted" style="margin-bottom:1.5rem;">Review the latest AI memory snapshots. These records reflect the AI’s recent contextual understanding and cross-departmental insights.</p>
+
+  <div class="card">
+    <h3><i class="lucide lucide-brain"></i> Memory Logs</h3>
+
+    {% if memories and memories|length > 0 %}
+      {% for mem in memories %}
+        <div class="memory-entry">
+          <div class="memory-header">
+            <span class="context"><i class="lucide lucide-cpu"></i> {{ mem.context or 'general' }}</span>
+            <span class="timestamp"><i class="lucide lucide-clock-3"></i> {{ mem.timestamp or 'Just now' }}</span>
+          </div>
+          <pre>{{ mem.data or 'No content available.' }}</pre>
+        </div>
+      {% endfor %}
+    {% else %}
+      <p class="muted">No memory entries found.</p>
+    {% endif %}
+  </div>
+
+  <div class="card" style="margin-top:1.5rem;">
+    <h3><i class="lucide lucide-brain-circuit"></i> System Insight</h3>
+    <p>The AI memory engine stores recent requests, borrower analysis data, and workflow patterns to enhance predictive responses. These memories are refreshed every operational cycle and synchronized across modules.</p>
+  </div>
+</main>
+{% endblock %}

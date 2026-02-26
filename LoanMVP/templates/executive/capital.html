@@ -1,0 +1,26 @@
+
+{% extends "layouts/base.html" %}
+{% block title %}Executive • Capital Allocation{% endblock %}
+{% block content %}
+<script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+<style>
+  :root{--panel:#15161a;--line:#2a2e36;--text:#e6e6e6;--accent:#7ab8ff;--glow:0 0 18px rgba(122,184,255,.35);}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:1.2rem;box-shadow:var(--glow);}
+</style>
+
+<h1>💰 Capital Management</h1>
+<div class="card">
+  <h3>Portfolio Distribution</h3>
+  <div id="chart_capital" style="height:300px;"></div>
+</div>
+
+<script>
+const base={chart:{toolbar:{show:false},foreColor:'#c9d3df'},theme:{mode:'dark'}};
+new ApexCharts(document.querySelector("#chart_capital"),{
+  ...base,chart:{...base.chart,type:'donut',height:300},
+  series:[40,25,20,15],
+  labels:['Real Estate','Commercial','Construction','Other'],
+  colors:['#7ab8ff','#43d19e','#ffdf6e','#ff6b6b']
+}).render();
+</script>
+{% endblock %}

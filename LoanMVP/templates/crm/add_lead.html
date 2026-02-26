@@ -1,0 +1,117 @@
+{% extends "layouts/base.html" %}
+{% block title %}Add Lead{% endblock %}
+{% block content %}
+
+<main style="margin-left:260px; padding:2rem; background:#0f0f11; color:#e6e6e6; min-height:100vh;">
+  <link rel="stylesheet" href="https://unpkg.com/lucide-static@latest/font/lucide.css">
+
+  <style>
+    .card{
+      background:#15161a;border:1px solid #2b2f36;border-radius:14px;
+      padding:1.4rem;box-shadow:0 0 18px rgba(122,184,255,0.25);
+      max-width:980px;margin:0 auto 2rem;
+    }
+    h1{color:#7ab8ff;margin:0 0 .75rem;}
+    .muted{color:#a5a7ad;font-size:.9rem;margin-bottom:1rem;}
+    .grid{display:grid;gap:1rem;}
+    .g-2{grid-template-columns:repeat(2,minmax(0,1fr));}
+    .g-3{grid-template-columns:repeat(3,minmax(0,1fr));}
+    label{font-size:.9rem;color:#cfe0f5;margin-bottom:.3rem;display:block;}
+    input,select,textarea{
+      width:100%;background:#0f0f11;color:#e6e6e6;
+      border:1px solid #2b2f36;border-radius:10px;padding:.65rem .8rem;
+    }
+    textarea{min-height:120px;resize:vertical;}
+    .row{display:flex;gap:.6rem;flex-wrap:wrap;align-items:center;}
+    .btn{
+      display:inline-flex;align-items:center;gap:.5rem;
+      background:linear-gradient(180deg,#2a4a62,#1b2a38);
+      border:1px solid #2a4a62;color:#cfe8ff;
+      border-radius:10px;padding:.65rem 1.1rem;text-decoration:none;cursor:pointer;
+    }
+    .btn:hover{box-shadow:0 0 10px rgba(122,184,255,0.35);}
+    .btn-outline{
+      background:transparent;border:1px solid #2b2f36;color:#e6e6e6;
+    }
+    .inline-help{font-size:.8rem;color:#a5a7ad;margin-top:.25rem;}
+    .score-wrap{display:flex;gap:.8rem;align-items:center;}
+    .score-value{min-width:2.5rem;text-align:center;color:#cfe8ff;}
+  </style>
+
+  <div class="card">
+    <div class="row" style="justify-content:space-between;">
+      <h1><i class="lucide lucide-user-plus"></i> Add Lead</h1>
+      <div class="row">
+        <a href="{{ url_for('crm.view_leads') }}" class="btn btn-outline"><i class="lucide lucide-users"></i> View Leads</a>
+      </div>
+    </div>
+    <p class="muted">Create a new lead. Only name and email are required — everything else is optional and can be updated later.</p>
+
+    <form method="POST" action="{{ url_for('crm.add_lead') }}">
+      <!-- If you’re using WTForms/CSRF, include: {{ form.csrf_token }} -->
+
+      <div class="grid g-2">
+        <div>
+          <label for="name">Full Name *</label>
+          <input id="name" name="name" type="text" placeholder="e.g., Jordan Miles" required>
+        </div>
+        <div>
+          <label for="email">Email *</label>
+          <input id="email" name="email" type="email" placeholder="e.g., jordan@example.com" required>
+        </div>
+      </div>
+
+      <div class="grid g-3" style="margin-top:1rem;">
+        <div>
+          <label for="phone">Phone</label>
+          <input id="phone" name="phone" type="text" placeholder="e.g., (555) 123-4567">
+        </div>
+        <div>
+          <label for="status">Status</label>
+          <select id="status" name="status">
+            {% for s in ['New','Contacted','Qualified','In Progress','Closed Won','Closed Lost'] %}
+              <option value="{{ s }}" {% if request.args.get('status') == s %}selected{% endif %}>{{ s }}</option>
+            {% endfor %}
+          </select>
+          <div class="inline-help">Default is “New”.</div>
+        </div>
+        <div>
+          <label for="source">Source</label>
+          <select id="source" name="source">
+            {% for s in ['Website','Referral','Agent','Ads','Event','Other'] %}
+              <option value="{{ s }}">{{ s }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
+      <div class="grid g-2" style="margin-top:1rem;">
+        <div>
+          <label for="assigned_to">Assigned To</label>
+          <input id="assigned_to" name="assigned_to" type="text" placeholder="User or team name">
+          <div class="inline-help">Leave blank to assign later.</div>
+        </div>
+        <div>
+          <label for="score">Lead Score</label>
+          <div class="score-wrap">
+            <input id="score" name="score" type="range" min="0" max="100" step="1" value="50" oninput="document.getElementById('scoreVal').textContent=this.value">
+            <div class="score-value" id="scoreVal">50</div>
+          </div>
+          <div class="inline-help">Quick confidence score (0–100).</div>
+        </div>
+      </div>
+
+      <div style="margin-top:1rem;">
+        <label for="notes">Notes</label>
+        <textarea id="notes" name="notes" placeholder="Context, goals, timeline, products they’re interested in…"></textarea>
+      </div>
+
+      <div class="row" style="margin-top:1.2rem;">
+        <button type="submit" class="btn"><i class="lucide lucide-save"></i> Save Lead</button>
+        <a href="{{ url_for('crm.view_leads') }}" class="btn btn-outline"><i class="lucide lucide-x"></i> Cancel</a>
+      </div>
+    </form>
+  </div>
+</main>
+
+{% endblock %}

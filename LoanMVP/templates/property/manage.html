@@ -1,0 +1,113 @@
+{% extends "layouts/base.html" %}
+{% block content %}
+<style>
+  :root{--line:#2a2e36; --panel:#15161a; --text:#e6e6e6; --muted:#a5a7ad}
+  .card{background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:1rem}
+  table{width:100%; border-collapse:collapse}
+  th,td{padding:.6rem; border-top:1px solid var(--line); color:var(--text)}
+  input{background:#0f0f11; border:1px solid var(--line); color:var(--text); border-radius:10px; padding:.45rem .6rem; width:100%}
+  .btn{display:inline-flex; align-items:center; gap:.5rem; padding:.6rem .9rem; border-radius:10px; border:1px solid var(--line); color:var(--text); text-decoration:none; background:#1a1d23}
+</style>
+
+
+<div class="container-fluid py-4 text-light fade-in">
+  <h2 class="mb-4">🏘️ Property Management</h2>
+  <p class="text-muted">Manage borrower properties and access AI market insights instantly.</p>
+
+  <div id="aiInsight" class="alert alert-dark border-secondary shadow-sm mb-4 text-center">
+    <strong>🤖 AI Insight:</strong> Loading live property trends...
+  </div>
+
+  <div class="card bg-dark border border-secondary shadow-sm mb-4">
+    <div class="card-header border-secondary">
+      <h5 class="mb-0 text-light">➕ Add New Property</h5>
+    </div>
+    <div class="card-body">
+      <form method="POST">
+        <div class="row g-3">
+          <div class="col-md-3"><input name="owner" placeholder="Owner Name" class="form-control bg-dark text-light border-secondary"></div>
+          <div class="col-md-3"><input name="address" placeholder="Address" class="form-control bg-dark text-light border-secondary" required></div>
+          <div class="col-md-2"><input name="city" placeholder="City" class="form-control bg-dark text-light border-secondary"></div>
+          <div class="col-md-2"><input name="state" placeholder="State" class="form-control bg-dark text-light border-secondary"></div>
+          <div class="col-md-2"><input name="value" placeholder="Value ($)" class="form-control bg-dark text-light border-secondary" type="number"></div>
+        </div>
+        <div class="text-end mt-3">
+          <button type="submit" class="btn btn-outline-light">Add Property</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="card bg-dark border border-secondary shadow-sm">
+    <div class="card-header border-secondary">
+      <h5 class="mb-0 text-light">🏠 Property List & AI Insights</h5>
+    </div>
+    <div class="card-body table-responsive">
+      <table class="table table-dark table-hover align-middle">
+        <thead class="table-secondary text-dark">
+          <tr>
+            <th>ID</th><th>Owner</th><th>Address</th><th>City</th><th>State</th><th>Value ($)</th><th>AI Valuation</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for p in properties %}
+          <tr id="propertyRow{{ p.id }}">
+            <td>{{ p.id }}</td>
+            <td>{{ p.full_name }}</td>
+            <td>{{ p.property_address }}</td>
+            <td>{{ p.property_city }}</td>
+            <td>{{ p.property_state }}</td>
+            <td>${{ "{:,.0f}".format(p.property_value or 0) }}</td>
+            <td id="aiResult{{ p.id }}" class="text-muted small"><em>Loading AI valuation...</em></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+const AI_TARGET = "properties";  // 🔁 changeable per dashboard
+function updateInsight() {
+  fetch(`{{ url_for("admin.ai_refresh", target="__TARGET__") }}`.replace("__TARGET__", AI_TARGET), { method: "POST" })
+  ...
+}
+updateInsight();
+setInterval(updateInsight, 60000);
+
+document.addEventListener("DOMContentLoaded", () => {
+  const rows = document.querySelectorAll("[id^='propertyRow']");
+  rows.forEach(row => {
+    const id = row.id.replace("propertyRow", "");
+    const address = row.children[2].innerText;
+    const city = row.children[3].innerText;
+    const state = row.children[4].innerText;
+    const value = row.children[5].innerText.replace(/[^0-9]/g, '');
+    const cell = document.getElementById("aiResult" + id);
+
+    fetch('{{ url_for("property.ai_property_value") }}', {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({address, city, state, value})
+    })
+    .then(r => r.json())
+    .then(data => {
+      if (data.status === "success" || data.status === "cached") {
+        cell.innerHTML = `<span class="text-light">${data.insight}</span>`;
+      } else {
+        cell.innerHTML = `<span class="text-danger">⚠️ ${data.insight}</span>`;
+      }
+    })
+    .catch(() => cell.innerHTML = "<span class='text-danger'>AI connection failed.</span>");
+  });
+});
+</script>
+
+<style>
+.fade-in { animation: fadeIn .4s ease-in; }
+@keyframes fadeIn { from{opacity:0;transform:translateY(10px);} to{opacity:1;transform:translateY(0);} }
+.card:hover { transform:translateY(-3px);transition:0.2s ease;border-color:#999; }
+</style>
+
+{% endblock %}

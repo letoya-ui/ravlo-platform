@@ -1,0 +1,171 @@
+{% extends "layouts/base.html" %}
+{% block title %}Underwriter • AI Risk Overview{% endblock %}
+{% block content %}
+<main class="dashboard-main">
+
+<link rel="preconnect" href="https://cdn.jsdelivr.net" />
+<script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+
+<style>
+  :root {
+    --bg:#0f0f11; --panel:#15161a; --line:#282b31;
+    --text:#e6e6e6; --muted:#a5a7ad;
+    --accent:#7ab8ff; --success:#43d19e; --warn:#ffdf6e; --danger:#ff6b6b;
+    --glow:0 0 18px rgba(122,184,255,.35);
+  }
+  body { background:var(--bg); color:var(--text); }
+
+  .card {
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding:1.2rem 1.4rem;
+    box-shadow:var(--glow);
+    margin-bottom:1.2rem;
+  }
+
+  h2,h3 { color:var(--text); margin-bottom:.6rem; font-weight:600; }
+  .muted { color:var(--muted); }
+
+  .grid { display:grid; gap:1.2rem; }
+  .g-2 { grid-template-columns:repeat(2,minmax(0,1fr)); }
+
+  .ai-summary {
+    background:linear-gradient(180deg,#1b2a38,#15161a);
+    border:1px solid var(--line);
+    border-radius:12px;
+    padding:1rem;
+    color:#cfe0f5;
+    box-shadow:var(--glow);
+  }
+
+  .badge {
+    background:var(--elev);
+    border:1px solid var(--line);
+    border-radius:999px;
+    padding:.3rem .7rem;
+    font-size:.8rem;
+    color:var(--muted);
+  }
+
+  .status {
+    padding:.25rem .6rem;
+    border-radius:999px;
+    border:1px solid var(--line);
+    font-size:.78rem;
+    text-transform:capitalize;
+  }
+  .st-high { background:#2a1b1b; color:#ff9d9d; }
+  .st-med  { background:#23251e; color:#e7f28f; }
+  .st-low  { background:#1b2a23; color:#9af2c5; }
+
+  table { width:100%; border-collapse:collapse; }
+  th,td { padding:.7rem .6rem; border-top:1px solid var(--line); text-align:left; }
+  th { color:#cfe0f5; text-transform:uppercase; font-size:.8rem; letter-spacing:.3px; }
+
+  .btn {
+    display:inline-flex; align-items:center; gap:.4rem;
+    background:linear-gradient(180deg,#1c1f25,#15161a);
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:.55rem .9rem;
+    color:#e6e6e6;
+    text-decoration:none;
+    transition:all .2s ease;
+  }
+  .btn:hover { border-color:var(--accent); color:#cfe8ff; box-shadow:var(--glow); }
+</style>
+
+<div class="container py-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h2><i class="fa-solid fa-brain"></i> AI Risk Overview</h2>
+    <a href="{{ url_for('underwriter.dashboard') }}" class="btn">← Back to Dashboard</a>
+  </div>
+
+  <!-- AI Overview Summary -->
+  <div class="card ai-summary">
+    <h3>Portfolio Insights</h3>
+    <p>
+      AI analyzed <strong>{{ total_loans or 0 }}</strong> loans this week.
+      <br>
+      <span style="color:#9af2c5;">{{ low_risk or 0 }}</span> low risk,
+      <span style="color:#e7f28f;">{{ med_risk or 0 }}</span> moderate,
+      and <span style="color:#ff9d9d;">{{ high_risk or 0 }}</span> high risk.
+    </p>
+    <p class="muted">{{ ai_summary or "AI suggests re-evaluating loans exceeding 0.65 risk score threshold." }}</p>
+  </div>
+
+  <!-- Charts -->
+  <div class="grid g-2">
+    <div class="card">
+      <h3>Risk Distribution</h3>
+      <div id="chart_risk_mix" style="height:260px;"></div>
+    </div>
+    <div class="card">
+      <h3>Approval Trend (AI Confidence)</h3>
+      <div id="chart_approval_trend" style="height:260px;"></div>
+    </div>
+  </div>
+
+  <!-- High Risk Loans -->
+  <div class="card">
+    <h3>⚠ High-Risk Loans</h3>
+    {% if high_risk_loans %}
+    <table>
+      <thead>
+        <tr><th>ID</th><th>Borrower</th><th>Type</th><th>Amount</th><th>Risk</th><th>Status</th><th></th></tr>
+      </thead>
+      <tbody>
+        {% for loan in high_risk_loans %}
+        <tr>
+          <td>#{{ loan.id }}</td>
+          <td>{{ loan.borrower_profile.full_name if loan.borrower_profile else '—' }}</td>
+          <td>{{ loan.loan_type }}</td>
+          <td>${{ "{:,.2f}".format(loan.amount or 0) }}</td>
+          <td><span class="status st-high">{{ "%.2f"|format(loan.risk_score or 0.0) }}</span></td>
+          <td>{{ loan.status|capitalize }}</td>
+          <td>
+            <a href="{{ url_for('underwriter.review_loan', loan_id=loan.id) }}" class="btn">
+              <i class="fa-solid fa-eye"></i> Review
+            </a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+      <p class="muted">No high-risk loans at this time.</p>
+    {% endif %}
+  </div>
+</div>
+
+<script>
+  const baseOpt = {
+    chart:{toolbar:{show:false}, foreColor:'#c9d3df'},
+    grid:{borderColor:'#2a2e36'},
+    dataLabels:{enabled:false},
+    theme:{mode:'dark'}
+  };
+
+  // Risk Distribution
+  new ApexCharts(document.querySelector("#chart_risk_mix"), {
+    ...baseOpt,
+    chart:{...baseOpt.chart, type:'donut', height:260},
+    series:[{{ low_risk or 0 }}, {{ med_risk or 0 }}, {{ high_risk or 0 }}],
+    labels:['Low','Moderate','High'],
+    colors:['#43d19e','#ffdf6e','#ff9d9d'],
+    legend:{position:'bottom'}
+  }).render();
+
+  // Approval Trend
+  new ApexCharts(document.querySelector("#chart_approval_trend"), {
+    ...baseOpt,
+    chart:{...baseOpt.chart, type:'area', height:260},
+    stroke:{curve:'smooth', width:2},
+    fill:{type:'gradient', gradient:{shadeIntensity:.5, opacityFrom:.3, opacityTo:.05}},
+    series:[{name:'AI Confidence %', data:[60,65,72,68,74,77,80]}],
+    xaxis:{categories:['Jan','Feb','Mar','Apr','May','Jun','Jul']},
+    colors:['#7ab8ff']
+  }).render();
+</script>
+{% endblock %}

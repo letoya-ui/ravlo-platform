@@ -1,0 +1,120 @@
+{% extends "layouts/base.html" %}
+{% block title %}Messages • Borrower Portal{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="https://unpkg.com/lucide-static@latest/font/lucide.css">
+
+<style>
+:root {
+    --bg:#0f0f11;
+    --panel:#15161a;
+    --bubble-b:#1e1f23;
+    --bubble-s:#0d6efd;
+    --text:#e6e6e6;
+    --muted:#a5a7ad;
+    --accent:#7ab8ff;
+}
+
+body { background:var(--bg); color:var(--text); }
+
+/* Chat container */
+.chat-box {
+    max-width: 900px;
+    margin: 2rem auto;
+    padding:2rem;
+    background:var(--panel);
+    border:1px solid #2b2f36;
+    border-radius:16px;
+    height:70vh;
+    display:flex;
+    flex-direction:column;
+}
+
+/* Scrollable messages */
+.chat-messages {
+    flex:1;
+    overflow-y:auto;
+    padding-right:1rem;
+    margin-bottom:1rem;
+}
+
+.message {
+    margin-bottom:1rem;
+    max-width:70%;
+    padding:1rem;
+    border-radius:14px;
+    line-height:1.4;
+}
+
+.borrower {
+    background:var(--bubble-b);
+    margin-left:auto;
+    border:1px solid var(--accent);
+}
+
+.staff {
+    background:rgba(122,184,255,0.08);
+    border-left:3px solid var(--accent);
+}
+
+.ai {
+    background:#1a1c20;
+    border-left:3px solid #00d1ff;
+    font-style:italic;
+}
+
+/* Input box */
+.chat-input {
+    display:flex;
+    gap:.7rem;
+}
+
+textarea {
+    flex:1;
+    padding:1rem;
+    background:#1a1c20;
+    border:1px solid #2b2f36;
+    color:var(--text);
+    border-radius:12px;
+}
+
+.btn {
+    padding:1rem 1.5rem;
+    background:var(--accent);
+    color:#000;
+    border:none;
+    border-radius:12px;
+    cursor:pointer;
+}
+.btn:hover { opacity:.9; }
+</style>
+
+<main class="dashboard-main">
+
+    <h1>💬 Messages</h1>
+    <p class="muted">Chat directly with your loan team.</p>
+
+    <div class="chat-box">
+
+        <div class="chat-messages">
+            {% for m in chat %}
+                <div class="message {{ m.sender_type }}">
+                    <strong>{{ m.sender_name }}</strong><br>
+                    {{ m.message }}
+                    <div class="muted" style="font-size:.8rem; margin-top:.3rem;">
+                        {{ m.timestamp.strftime("%b %d, %Y • %I:%M %p") }}
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+
+        <form method="POST" class="chat-input">
+            <textarea name="message" placeholder="Type your message…" required></textarea>
+            <button class="btn">Send</button>
+        </form>
+
+    </div>
+
+</main>
+
+{% endblock %}

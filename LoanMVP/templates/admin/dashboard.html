@@ -1,0 +1,170 @@
+{% extends "layouts/base.html" %}
+{% block title %}Admin • Dashboard{% endblock %}
+
+{% block content %}
+<main class="dashboard-main">
+
+<link rel="preconnect" href="https://cdn.jsdelivr.net" />
+<script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+
+<style>
+  :root{
+    --bg:#0f0f11; --panel:#15161a; --elev:#1b1d22;
+    --text:#e6e6e6; --muted:#a5a7ad; --line:#282b31;
+    --accent:#7ab8ff; --accent-soft:#2a4a62;
+    --success:#43d19e; --warn:#ffdf6e; --danger:#ff6b6b;
+    --glow:0 0 18px rgba(122,184,255,0.35);
+  }
+  body{background:var(--bg); color:var(--text);}
+  .wrap{display:flex; gap:1.25rem;}
+  .lhs{flex:1 1 68%;}
+  .rhs{flex:1 1 32%;}
+  .card{background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:1rem 1.1rem; box-shadow:var(--glow);}
+  .grid{display:grid; gap:1rem;}
+  .g-2{grid-template-columns:repeat(2,minmax(0,1fr));}
+  .g-3{grid-template-columns:repeat(3,minmax(0,1fr));}
+  h1,h2,h3,h4{color:var(--text); margin:0 0 .35rem;}
+  .muted{color:var(--muted);}
+  .btn{display:inline-flex; align-items:center; gap:.5rem; padding:.7rem 1rem; border-radius:10px; border:1px solid var(--line); color:var(--text); text-decoration:none; background:linear-gradient(180deg,#1c1f25,#15161a);}
+  .btn:hover{border-color:#35506a; box-shadow:var(--glow);}
+  .btn-primary{background:linear-gradient(180deg,#2a4a62,#1b2a38); border-color:#2a4a62; color:#cfe8ff;}
+  .table{width:100%; border-collapse:collapse;}
+  .table th,.table td{padding:.65rem .6rem; border-top:1px solid var(--line);}
+  .table th{color:#cfe0f5; font-weight:600; text-align:left;}
+  .status{padding:.25rem .6rem; border-radius:999px; font-size:.78rem; border:1px solid var(--line);}
+  .st-active{background:#1b2a23; color:#9af2c5;}
+  .st-inactive{background:#2a1b1b; color:#ff9d9d;}
+  .chip{display:inline-flex; gap:.35rem; padding:.35rem .6rem; border:1px solid var(--line); background:var(--elev); color:#c4d9f2; border-radius:999px; font-size:.78rem; margin:.2rem .25rem 0 0; cursor:pointer;}
+  .chip:hover{box-shadow:var(--glow);}
+  @media (max-width: 1100px){.wrap{flex-direction:column}}
+</style>
+
+<div class="wrap">
+
+  <!-- Left Column -->
+  <section class="lhs grid">
+
+    <!-- Header -->
+    <div class="card" style="display:flex; justify-content:space-between; align-items:center;">
+      <div>
+        <h1>Welcome, {{ current_user.username or 'Admin' }}</h1>
+        <div class="muted">Central system management — monitor all platform activity in real time.</div>
+      </div>
+      <div style="display:flex; gap:.6rem; flex-wrap:wrap;">
+        <a class="btn btn-primary" href="{{ url_for('admin.analytics') }}">📊 View Analytics</a>
+        <a class="btn" href="{{ url_for('system.settings') }}">⚙️ Settings</a>
+      </div>
+    </div>
+
+    <!-- KPI Row -->
+    <div class="grid g-3">
+      <div class="card"><h4>👥 Users</h4><h2>{{ stats.users or 0 }}</h2><div class="muted">Registered accounts</div></div>
+      <div class="card"><h4>💼 Loans</h4><h2>{{ stats.loans or 0 }}</h2><div class="muted">Active loan files</div></div>
+      <div class="card"><h4>📎 Documents</h4><h2>{{ stats.documents or 0 }}</h2><div class="muted">Uploaded files</div></div>
+    </div>
+
+    <!-- Charts -->
+    <div class="grid g-2">
+      <div class="card"><h3>Loan Volume</h3><div id="chart_volume" style="height:260px;"></div></div>
+      <div class="card"><h3>User Growth</h3><div id="chart_users" style="height:260px;"></div></div>
+    </div>
+
+    <!-- System Users -->
+    <div class="card">
+      <h3>Recent Users</h3>
+      {% if users %}
+      <table class="table">
+        <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Status</th></tr></thead>
+        <tbody>
+          {% for user in users[:5] %}
+          <tr>
+            <td>{{ user.username }}</td>
+            <td>{{ user.email }}</td>
+            <td>{{ user.role|capitalize }}</td>
+            <td><span class="status st-{{ 'active' if user.active else 'inactive' }}">{{ 'Active' if user.active else 'Inactive' }}</span></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+        <p class="muted">No users found.</p>
+      {% endif %}
+    </div>
+
+    <!-- System Alerts -->
+    <div class="card">
+      <h3>System Notifications</h3>
+      <div id="aiInsight" class="muted">Loading latest AI insight...</div>
+    </div>
+  </section>
+
+  <!-- Right Column -->
+  <aside class="rhs grid">
+
+    <!-- Quick Actions -->
+    <div class="card">
+      <h3>Quick Actions</h3>
+      <div style="display:flex; flex-wrap:wrap; gap:.5rem;">
+        <a class="btn" href="{{ url_for('crm.view_leads') }}">📞 Manage Leads</a>
+        <a class="btn" href="{{ url_for('system.users') }}">👥 Users</a>
+        <a class="btn" href="{{ url_for('property.manage') }}">🏠 Properties</a>
+        <a class="btn" href="{{ url_for('admin.reports') }}">📑 Reports</a>
+      </div>
+    </div>
+
+    <!-- System Performance -->
+    <div class="card">
+      <h3>Server Load</h3>
+      <div id="chart_system" style="height:240px;"></div>
+      <div class="muted" style="font-size:.85rem; margin-top:.4rem;">System load and API latency (demo data).</div>
+    </div>
+  </aside>
+
+</div>
+
+<!-- AI Insight Script -->
+<script>
+function updateInsight() {
+  fetch('{{ url_for("admin.ai_refresh", target="analytics") }}', { method: "POST" })
+    .then(res => res.json())
+    .then(data => {
+      document.getElementById('aiInsight').innerHTML =
+        `<div class='ai-msg'><strong>🤖 AI Insight:</strong> ${data.message}</div>`;
+    })
+    .catch(() => {
+      document.getElementById('aiInsight').innerHTML =
+        "<div class='ai-msg'>⚠️ Unable to fetch AI insight at this time.</div>";
+    });
+}
+updateInsight();
+setInterval(updateInsight, 60000);
+
+// Charts
+const baseOpt={chart:{toolbar:{show:false},foreColor:'#c9d3df',animations:{enabled:true}},
+grid:{borderColor:'#2a2e36'},dataLabels:{enabled:false},legend:{labels:{colors:'#c9d3df'}},
+theme:{mode:'dark'}};
+
+new ApexCharts(document.querySelector("#chart_volume"),{
+  ...baseOpt,chart:{...baseOpt.chart,type:'area',height:260},
+  stroke:{curve:'smooth',width:2},
+  series:[{name:'Loans',data:[5,8,12,18,20,25,28,30]}],
+  xaxis:{categories:['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug']},
+  colors:['#7ab8ff']
+}).render();
+
+new ApexCharts(document.querySelector("#chart_users"),{
+  ...baseOpt,chart:{...baseOpt.chart,type:'line',height:260},
+  series:[{name:'Users',data:[10,14,18,22,27,32,38,45]}],
+  xaxis:{categories:['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug']},
+  colors:['#43d19e']
+}).render();
+
+new ApexCharts(document.querySelector("#chart_system"),{
+  ...baseOpt,chart:{...baseOpt.chart,type:'radialBar',height:240},
+  series:[68],labels:['Server Load %'],colors:['#ffdf6e'],
+  plotOptions:{radialBar:{hollow:{size:'58%'},dataLabels:{value:{fontSize:'22px'}}}}
+}).render();
+</script>
+
+</main>
+{% endblock %}

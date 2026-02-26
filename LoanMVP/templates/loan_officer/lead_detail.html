@@ -1,0 +1,41 @@
+{% extends "layouts/base.html" %}
+{% block content %}
+<style>
+  :root{--line:#2a2e36; --panel:#15161a; --text:#e6e6e6; --muted:#a5a7ad}
+  .card{background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:1rem}
+  table{width:100%; border-collapse:collapse}
+  th,td{padding:.6rem; border-top:1px solid var(--line); color:var(--text)}
+  input{background:#0f0f11; border:1px solid var(--line); color:var(--text); border-radius:10px; padding:.45rem .6rem; width:100%}
+  .btn{display:inline-flex; align-items:center; gap:.5rem; padding:.6rem .9rem; border-radius:10px; border:1px solid var(--line); color:var(--text); text-decoration:none; background:#1a1d23}
+</style>
+<div class="container-fluid py-4 text-light">
+  <h2 class="mb-3">👤 Lead: {{ lead.name }}</h2>
+
+  <div class="card bg-dark border-0 shadow mb-4">
+    <div class="card-body">
+      <p><strong>Email:</strong> {{ lead.email }}</p>
+      <p><strong>Phone:</strong> {{ lead.phone }}</p>
+      <p><strong>Source:</strong> {{ lead.source }}</p>
+      <p><strong>Status:</strong> {{ lead.status|capitalize }}</p>
+      <form method="POST" action="{{ url_for('loan_officer.convert_lead', lead_id=lead.id) }}">
+        <button class="btn btn-outline-warning">Convert to Borrower</button>
+      </form>
+    </div>
+  </div>
+
+  <h5 class="mb-3">📝 Notes</h5>
+  {% for note in lead.notes %}
+    <div class="bg-black p-3 mb-2 rounded">
+      <strong>{{ note.user.username }}</strong> — <small class="text-muted">{{ note.created_at.strftime("%b %d, %Y %I:%M %p") }}</small>
+      <p class="mb-0">{{ note.content }}</p>
+    </div>
+  {% else %}
+    <p class="text-muted">No notes yet.</p>
+  {% endfor %}
+
+    <form method="POST" action="{{ url_for('loan_officer.crm_note', lead_id=lead.id) }}" class="mt-4">
+    <textarea name="content" class="form-control bg-dark text-light border-secondary mb-2" rows="3" placeholder="Add a note..." required></textarea>
+    <button class="btn btn-outline-light">Add Note</button>
+  </form>
+</div>
+{% endblock %}

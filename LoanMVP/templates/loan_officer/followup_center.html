@@ -1,0 +1,197 @@
+{% extends "layouts/base.html" %}
+{% block title %}Follow-Up Center • Loan Officer{% endblock %}
+
+{% block content %}
+
+<style>
+/* Main 2-column layout */
+.followup-container {
+    display: grid;
+    grid-template-columns: 1fr 1.2fr;
+    gap: 2rem;
+}
+
+/* Left Column — Borrower List */
+.followup-list {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    padding: 1.5rem;
+    border-radius: 16px;
+    box-shadow: 0 0 16px rgba(122,184,255,.25);
+    max-height: 85vh;
+    overflow-y: auto;
+}
+
+.followup-item {
+    padding: 1rem;
+    border-bottom: 1px solid var(--line);
+    cursor: pointer;
+}
+.followup-item:hover {
+    background: var(--hover);
+}
+
+.followup-name {
+    font-size: 1.2rem;
+    font-weight: 700;
+}
+
+/* Right Column — AI Chat */
+.ai-followup-box {
+    display: flex;
+    flex-direction: column;
+    height: 85vh;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    box-shadow: 0 0 18px rgba(122,184,255,.35);
+}
+
+.ai-followup-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1rem;
+}
+
+.ai-msg {
+    margin-bottom: 1rem;
+    padding: 1rem;
+    border-radius: 12px;
+    line-height: 1.4rem;
+    font-size: 0.95rem;
+}
+
+.ai-msg.user {
+    background: rgba(122,184,255,0.12);
+    border: 1px solid var(--accent);
+}
+
+.ai-msg.ai {
+    background: #0f1115;
+    border: 1px solid var(--line);
+}
+
+.ai-input-bar {
+    padding: 1rem;
+    border-top: 1px solid var(--line);
+    display: flex;
+    gap: 1rem;
+}
+
+.ai-input-bar textarea {
+    flex: 1;
+    background: #0f1115;
+    border: 1px solid var(--line);
+    color: white;
+    padding: 0.7rem;
+    border-radius: 12px;
+    resize: none;
+    height: 60px;
+}
+
+.ai-input-bar button {
+    background: var(--accent);
+    color: black;
+    padding: 0 1.6rem;
+    border-radius: 12px;
+    border: none;
+    font-weight: 700;
+    cursor: pointer;
+}
+.ai-input-bar button:hover {
+    background: white;
+}
+
+</style>
+
+<h1 class="intake-title">Loan Officer • Follow-Up Center</h1>
+
+<div class="followup-container">
+
+    <!-- LEFT: Borrowers Needing Follow-Up -->
+    <div class="followup-list">
+        <h2 style="margin-bottom:1rem;">Borrowers Requiring Follow-Up</h2>
+
+        {% for b in borrowers %}
+        <div class="followup-item" onclick="loadBorrower({{ b.id }})">
+            <div class="followup-name">{{ b.full_name }}</div>
+            <div>Email: {{ b.email }}</div>
+            <div>Phone: {{ b.phone }}</div>
+
+            {% set missing = b.document_requests|selectattr("status", "equalto", "requested")|list %}
+            <div style="color:var(--accent); margin-top:.3rem;">
+                {{ missing|length }} Missing Docs
+            </div>
+
+            {% set overdue = b.followup_tasks|selectattr("status", "equalto", "Pending")|list %}
+            <div style="color:#ff7777;">
+                {{ overdue|length }} Tasks Pending
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+
+    <!-- RIGHT: AI Follow-Up Assistant -->
+    <div class="ai-followup-box">
+
+        <div class="ai-followup-messages" id="followupMessages"></div>
+
+        <div class="ai-input-bar">
+            <textarea id="followupInput" placeholder="Ask AI: What should I follow up on today?"></textarea>
+            <button onclick="sendFollowupAI()">Ask</button>
+        </div>
+    </div>
+
+</div>
+
+
+<script>
+let activeBorrower = null;
+
+/* Load a borrower into AI follow-up mode */
+function loadBorrower(id) {
+    activeBorrower = id;
+
+    document.getElementById("followupMessages").innerHTML = "";
+    addFollowupMsg("Borrower loaded. Ask AI how to follow up.", "ai");
+}
+
+/* Add message to chat window */
+function addFollowupMsg(msg, sender) {
+    const box = document.getElementById("followupMessages");
+    let div = document.createElement("div");
+    div.classList.add("ai-msg", sender);
+    div.innerHTML = msg.replace(/\n/g, "<br>");
+    box.appendChild(div);
+    box.scrollTop = box.scrollHeight;
+}
+
+/* Send question to AI */
+function sendFollowupAI() {
+
+    if (!activeBorrower) {
+        addFollowupMsg("Select a borrower first.", "ai");
+        return;
+    }
+
+    let message = document.getElementById("followupInput").value;
+    if (!message.trim()) return;
+
+    addFollowupMsg(message, "user");
+    document.getElementById("followupInput").value = "";
+
+    fetch(`/loan_officer/followup-ai/${activeBorrower}`, {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({ message })
+    })
+    .then(r => r.json())
+    .then(data => {
+        addFollowupMsg(data.reply, "ai");
+    });
+}
+
+</script>
+
+{% endblock %}

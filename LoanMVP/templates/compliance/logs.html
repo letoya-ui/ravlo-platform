@@ -1,0 +1,27 @@
+{% extends "layouts/base.html" %}
+{% block title %}Compliance • Logs{% endblock %}
+{% block content %}
+<style>
+  :root{--panel:#15161a;--line:#2a2e36;--text:#e6e6e6;--muted:#a5a7ad;--glow:0 0 18px rgba(122,184,255,.35);}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:1rem;box-shadow:var(--glow);}
+  ul{list-style:none;padding:0;margin:0;}
+  li{padding:.6rem 0;border-bottom:1px solid var(--line);}
+  .time{color:var(--muted);font-size:.85rem;}
+</style>
+
+<h1>🪪 Compliance Logs</h1>
+<div class="card">
+  {% if logs %}
+  <ul>
+    {% for log in logs %}
+    <li>
+      <div><strong>{{ log.action }}</strong></div>
+      <div class="time">{{ log.timestamp.strftime('%b %d, %Y %H:%M') if log.timestamp else '—' }}</div>
+    </li>
+    {% endfor %}
+  </ul>
+  {% else %}
+    <div class="muted">No log activity recorded yet.</div>
+  {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,23 @@
+{% extends "layouts/base.html" %}
+{% block title %}Executive • Forecast{% endblock %}
+{% block content %}
+<script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+<style>
+  :root{--panel:#15161a;--line:#2a2e36;--text:#e6e6e6;--accent:#7ab8ff;--glow:0 0 18px rgba(122,184,255,.35);}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:1.2rem;box-shadow:var(--glow);}
+</style>
+
+<h1>📈 Financial Forecast</h1>
+<div class="card">
+  <div id="chart_forecast" style="height:300px;"></div>
+</div>
+
+<script>
+const base={chart:{toolbar:{show:false},foreColor:'#c9d3df'},theme:{mode:'dark'}};
+new ApexCharts(document.querySelector("#chart_forecast"),{
+  ...base,chart:{...base.chart,type:'line',height:300},stroke:{curve:'smooth',width:2},
+  series:[{name:'Forecasted Revenue',data:[420,470,520,580,630,690,760]}],
+  xaxis:{categories:['Jan','Feb','Mar','Apr','May','Jun','Jul']},colors:['#7ab8ff']
+}).render();
+</script>
+{% endblock %}

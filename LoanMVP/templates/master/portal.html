@@ -1,0 +1,139 @@
+{% extends "layouts/base.html" %}
+{% block title %}Borrower Portal • Caughman Mason{% endblock %}
+
+{% block content %}
+
+<link rel="stylesheet" href="https://unpkg.com/lucide-static@latest/font/lucide.css">
+
+<style>
+:root {
+    --bg:#0f0f11;
+    --panel:#15161a;
+    --line:#2b2f36;
+    --text:#e6e6e6;
+    --muted:#a5a7ad;
+    --accent:#7ab8ff;
+    --hover:#1f2328;
+    --glow:0 0 14px rgba(122,184,255,0.35);
+}
+
+body { background: var(--bg); color: var(--text); }
+
+.section {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+}
+
+h2, h3 {
+    text-shadow: var(--glow);
+}
+
+.doc-item {
+    background: #1a1c20;
+    border: 1px solid var(--line);
+    padding: 1rem;
+    border-radius: 10px;
+    margin-bottom: .7rem;
+}
+
+.btn {
+    padding: .5rem 1rem;
+    border-radius: 8px;
+    border: 1px solid var(--accent);
+    background: transparent;
+    color: var(--accent);
+    cursor: pointer;
+}
+.btn:hover { background: var(--accent); color: #000; }
+
+input, textarea, select {
+    width: 100%;
+    padding: .7rem;
+    background: #1a1c20;
+    border: 1px solid var(--line);
+    color: var(--text);
+    border-radius: 8px;
+}
+
+.upload-box {
+    background: #1a1c20;
+    border: 1px solid var(--line);
+    padding: 1rem;
+    border-radius: 10px;
+}
+</style>
+
+
+<main class="dashboard-main">
+
+<!-- HEADER -->
+<section class="section">
+    <h2>📁 Borrower Document Portal</h2>
+
+    <p class="muted">
+        Hi <strong>{{ borrower.full_name }}</strong>, please upload documents requested by your loan officer.
+    </p>
+</section>
+
+
+<!-- REQUESTED DOCUMENTS -->
+<section class="section">
+    <h3>📨 Documents Needed</h3>
+
+    {% if requested %}
+        {% for r in requested %}
+            <div class="doc-item">
+                <strong>{{ r.name }}</strong><br>
+                <span class="muted">Status: Requested</span>
+            </div>
+        {% endfor %}
+    {% else %}
+        <p>No requested documents at this time.</p>
+    {% endif %}
+</section>
+
+
+<!-- UPLOAD FORM -->
+<section class="section">
+    <h3>⬆ Upload a Document</h3>
+
+    <form method="POST" action="/portal/upload" enctype="multipart/form-data" class="upload-box">
+        <input type="hidden" name="borrower_id" value="{{ borrower.id }}">
+        <input type="hidden" name="loan_id" value="{{ loan.id }}">
+
+        <label>Document Name</label>
+        <input type="text" name="doc_name" placeholder="Example: Bank Statement" required>
+
+        <label style="margin-top:1rem;">Choose File</label>
+        <input type="file" name="file" required>
+
+        <button class="btn" style="margin-top:1rem;">Upload</button>
+    </form>
+</section>
+
+
+<!-- UPLOADED DOCUMENTS -->
+<section class="section">
+    <h3>📂 Uploaded Documents</h3>
+
+    {% if uploaded %}
+        {% for u in uploaded %}
+            <div class="doc-item">
+                <strong>{{ u.name }}</strong><br>
+                <span class="muted">Status: {{ u.status|capitalize }}</span><br>
+                {% if u.file_path %}
+                    <a href="{{ u.file_path }}" target="_blank" class="btn" style="margin-top:.5rem;">Open</a>
+                {% endif %}
+            </div>
+        {% endfor %}
+    {% else %}
+        <p>No documents uploaded yet.</p>
+    {% endif %}
+</section>
+
+</main>
+
+{% endblock %}

@@ -1,0 +1,111 @@
+{# layouts/borrower_base.html #}
+{% set ep = request.endpoint or "" %}
+
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>{% block title %}Borrower{% endblock %}</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="https://unpkg.com/lucide-static@latest/font/lucide.css">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/borrower.css') }}">
+
+  {% block head %}{% endblock %}
+</head>
+
+<body>
+  <div class="borrower-shell">
+
+    <!-- SLIM SIDEBAR -->
+    <aside class="b-sidebar">
+      <a class="b-sidebar-logo" href="{{ url_for('borrower.dashboard') }}">CM</a>
+
+      <div class="b-sidebar-group">
+        <a class="b-sidebar-item {{ 'active' if ep == 'borrower.dashboard' else '' }}"
+           href="{{ url_for('borrower.dashboard') }}">
+          <i class="lucide lucide-layout-dashboard"></i>
+          <span class="b-tooltip">Dashboard</span>
+        </a>
+
+        <a class="b-sidebar-item {{ 'active' if 'property' in ep else '' }}"
+           href="{{ url_for('borrower.property_search') }}">
+          <i class="lucide lucide-search"></i>
+          <span class="b-tooltip">Property</span>
+        </a>
+
+        <a class="b-sidebar-item {{ 'active' if 'deal' in ep else '' }}"
+           href="{{ url_for('borrower.deal_workspace') }}">
+          <i class="lucide lucide-line-chart"></i>
+          <span class="b-tooltip">Deal</span>
+        </a>
+
+        <a class="b-sidebar-item {{ 'active' if 'payments' in ep else '' }}"
+           href="{{ url_for('borrower.payments') }}">
+          <i class="lucide lucide-credit-card"></i>
+          <span class="b-tooltip">Payments</span>
+        </a>
+
+        <a class="b-sidebar-item {{ 'active' if 'command' in ep or 'support' in ep else '' }}"
+           href="{{ url_for('borrower.borrower_command_center') }}">
+          <i class="lucide lucide-headset"></i>
+          <span class="b-tooltip">Support</span>
+        </a>
+      </div>
+
+      <div class="b-sidebar-group b-sidebar-bottom">
+        <a class="b-sidebar-item" href="{{ url_for('auth.logout') }}">
+          <i class="lucide lucide-log-out"></i>
+          <span class="b-tooltip">Logout</span>
+        </a>
+      </div>
+    </aside>
+
+    <!-- RIGHT SIDE -->
+    <div class="b-right">
+
+      <!-- WIDE TOPBAR -->
+      <header class="b-topbar">
+        <div class="b-topbar-left">
+          {% block topbar_left %}
+            <div class="b-topbar-title">
+              {% block topbar_title %}Borrower OS{% endblock %}
+            </div>
+          {% endblock %}
+        </div>
+
+        <div class="b-topbar-right">
+          {% block topbar_right %}
+            <a class="b-topbar-icon" href="{{ url_for('notifications.inbox') if notifications_enabled else '#' }}">
+              <i class="lucide lucide-bell"></i>
+            </a>
+
+            <div class="b-topbar-user">
+              <img
+                src="{{ borrower.avatar_url if borrower and borrower.avatar_url else url_for('static', filename='images/default_user.png') }}"
+                alt="User">
+            </div>
+          {% endblock %}
+        </div>
+      </header>
+
+      <!-- OPTIONAL PAGE TABS (sticky under topbar) -->
+      {% block top_tabs %}{% endblock %}
+
+      <!-- MAIN -->
+      <main class="b-main">
+        <div class="b-main-inner">
+          {% block content %}{% endblock %}
+        </div>
+      </main>
+
+    </div>
+  </div>
+
+  {% block scripts %}{% endblock %}
+</body>
+</html>

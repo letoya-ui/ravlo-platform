@@ -1,0 +1,58 @@
+<!-- =========================================================
+  📁 underwriter/borrowers.html
+  ========================================================= -->
+{% extends "layouts/base.html" %}
+{% block title %}Underwriter • Borrowers{% endblock %}
+{% block content %}
+<style>
+  :root{
+    --bg:#0f0f11; --panel:#15161a; --line:#2a2e36;
+    --text:#e6e6e6; --muted:#b0b0b0; --accent:#7ab8ff;
+    --glow:0 0 16px rgba(122,184,255,0.35);
+  }
+  .card{background:var(--panel); border:1px solid var(--line);
+    border-radius:14px; padding:1rem 1.2rem; box-shadow:var(--glow);}
+  table{width:100%; border-collapse:collapse;}
+  th,td{padding:.7rem .6rem; border-top:1px solid var(--line);}
+  th{color:var(--accent); text-align:left; font-weight:600;}
+  tr:hover{background:#1a1d23;}
+  .btn{display:inline-flex; align-items:center; gap:.4rem;
+    padding:.45rem .8rem; border-radius:8px; border:1px solid var(--line);
+    background:#1b1d22; color:var(--text); text-decoration:none;}
+  .btn:hover{border-color:var(--accent); box-shadow:var(--glow);}
+</style>
+
+<div class="container py-4">
+  <h2 class="text-light mb-3">Borrower Management</h2>
+  <div class="card">
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Loan Type</th>
+          <th>Amount</th>
+          <th>Status</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for b in borrowers %}
+        <tr>
+          <td>{{ b.full_name }}</td>
+          <td>{{ b.loan_type or "N/A" }}</td>
+          <td>${{ "{:,.2f}".format(b.loan_amount or 0) }}</td>
+          <td><span class="text-muted">{{ b.status or "Pending" }}</span></td>
+          <td>
+            <a href="{{ url_for('underwriter.borrower_detail', borrower_id=b.id) }}" class="btn">
+              🔍 View
+            </a>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="5" class="text-center text-muted py-3">No borrowers found.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

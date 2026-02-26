@@ -1,0 +1,130 @@
+{% extends "layouts/borrower_base.html" %}
+{% block title %}AI Pre-Qualification • Borrower Portal{% endblock %}
+{% block content %}
+
+<div class="borrower-shell">
+
+  <!-- SIDEBAR -->
+  <aside class="b-sidebar">
+    <div class="b-sidebar-logo">CM</div>
+
+    <div class="b-sidebar-group">
+
+      <a href="{{ url_for('borrower.dashboard') }}" class="b-sidebar-item">
+        <svg viewBox="0 0 24 24" fill="none">
+          <rect x="3" y="3" width="8" height="8" rx="2"></rect>
+          <rect x="13" y="3" width="8" height="5" rx="2"></rect>
+          <rect x="13" y="10" width="8" height="11" rx="2"></rect>
+          <rect x="3" y="13" width="8" height="8" rx="2"></rect>
+        </svg>
+        <div class="b-tooltip">Dashboard</div>
+      </a>
+
+      <a href="{{ url_for('borrower.property_search') }}" class="b-sidebar-item">
+        <svg viewBox="0 0 24 24" fill="none">
+          <path d="M12 3L4 9v11h16V9l-8-6Z"></path>
+          <circle cx="12" cy="13" r="2.5"></circle>
+        </svg>
+        <div class="b-tooltip">Property Finder</div>
+      </a>
+
+      <a href="{{ url_for('borrower.resource_center') }}" class="b-sidebar-item">
+        <svg viewBox="0 0 24 24" fill="none">
+          <circle cx="8" cy="8" r="3"></circle>
+          <circle cx="16" cy="8" r="3"></circle>
+          <path d="M4 19c.6-2.4 2.3-4 4-4s3.4 1.6 4 4"></path>
+          <path d="M12 19c.6-2.4 2.3-4 4-4s3.4 1.6 4 4"></path>
+        </svg>
+        <div class="b-tooltip">Partner Network</div>
+      </a>
+
+      <a href="{{ url_for('borrower.deal_workspace') }}" class="b-sidebar-item">
+        <svg viewBox="0 0 24 24" fill="none">
+          <rect x="4" y="4" width="16" height="16" rx="2"></rect>
+          <path d="M8 9h8M8 13h5M8 17h3"></path>
+        </svg>
+        <div class="b-tooltip">Project Planner</div>
+      </a>
+
+      <a href="{{ url_for('borrower.saved_properties') }}" class="b-sidebar-item">
+        <svg viewBox="0 0 24 24" fill="none">
+          <path d="M12 20s-4.5-2.7-6.7-5.4C3.4 13 3 11.9 3 10.8 3 8.7 4.7 7 6.8 7c1.2 0 2.3.6 3 1.5.7-.9 1.8-1.5 3-1.5C15.3 7 17 8.7 17 10.8c0 1.1-.4 2.2-2.3 3.8C16.5 17.3 12 20 12 20Z"></path>
+        </svg>
+        <div class="b-tooltip">Saved Properties</div>
+      </a>
+
+      <a href="{{ url_for('borrower.resource_center') }}" class="b-sidebar-item">
+        <svg viewBox="0 0 24 24" fill="none">
+          <path d="M5 4h10a3 3 0 0 1 3 3v13l-4-2-4 2-4-2-4 2V7a3 3 0 0 1 3-3Z"></path>
+        </svg>
+        <div class="b-tooltip">Resource Center</div>
+      </a>
+
+    </div>
+  </aside>
+
+  <!-- MAIN CONTENT -->
+  <main class="b-main">
+
+    <!-- TOP TABS -->
+    <div class="b-top-tabs">
+      <a href="{{ url_for('borrower.dashboard') }}" class="b-top-tab">Dashboard</a>
+      <a href="{{ url_for('borrower.status') }}" class="b-top-tab">Loan</a>
+      <div class="b-top-tab active">AI Pre‑Qualification</div>
+    </div>
+
+    <!-- PAGE CONTENT -->
+    <h1>📊 AI Pre‑Qualification</h1>
+    <p class="muted">Instant automated analysis based on your financial profile.</p>
+
+    <div class="b-card" style="margin-top:1rem;">
+      <form method="POST">
+
+        <h3>💵 Income & Debts</h3>
+        <input type="number" name="income" placeholder="Monthly Income ($)" required class="form-control">
+        <input type="number" name="debts" placeholder="Monthly Debts ($)" required class="form-control">
+
+        <h3 style="margin-top:1.5rem;">🏡 Loan Scenario</h3>
+        <input type="number" name="loan_amount" placeholder="Desired Loan Amount ($)" required class="form-control">
+        <input type="number" name="property_value" placeholder="Property Value ($)" required class="form-control">
+
+        <h3 style="margin-top:1.5rem;">🧩 Credit</h3>
+        <input type="number" name="credit_score" placeholder="Credit Score" required class="form-control">
+
+        <button class="btn-glow" type="submit" style="margin-top:1.5rem;">
+          Calculate Pre‑Qualification
+        </button>
+
+      </form>
+    </div>
+
+    {% if result %}
+    <div class="b-card" style="margin-top:1.5rem;">
+      <h3>📈 Pre‑Qualification Results</h3>
+
+      <p><strong>DTI:</strong> {{ result.dti }}%</p>
+      <p><strong>LTV:</strong> {{ result.ltv }}%</p>
+      <p><strong>Max Loan You May Qualify For:</strong> ${{ result.max_qual_amount }}</p>
+
+      <h3 style="margin-top:1.5rem;">🤖 AI Analysis</h3>
+      <div class="summary-box">
+        {{ result.ai_summary }}
+      </div>
+    </div>
+    {% endif %}
+
+  </main>
+</div>
+
+<style>
+.summary-box {
+  background:#1a1c20;
+  padding:1.5rem;
+  border-radius:12px;
+  border:1px solid var(--line);
+  margin-top:1rem;
+  white-space:pre-wrap;
+}
+</style>
+
+{% endblock %}

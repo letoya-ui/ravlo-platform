@@ -1,0 +1,25 @@
+{% extends "layouts/base.html" %}
+{% block title %}Edit Property{% endblock %}
+{% block content %}
+
+<div class="ai-insight-bar"><span class="ai-text">Loading property analysis...</span></div>
+
+<div class="container-fluid py-4 text-light">
+  <h2>🏠 Edit Property</h2>
+  <div class="card">
+    <form method="POST">
+      <label>Address</label>
+      <input type="text" name="address" class="form-control bg-dark text-light" value="{{ property.address }}">
+      <label>Value</label>
+      <input type="number" name="value" class="form-control bg-dark text-light" value="{{ property.value }}">
+      <label>Status</label>
+      <select name="status" class="form-control bg-dark text-light">
+        <option value="active" {% if property.status=='active' %}selected{% endif %}>Active</option>
+        <option value="sold" {% if property.status=='sold' %}selected{% endif %}>Sold</option>
+      </select>
+      <button class="btn btn-accent mt-3">💾 Save Changes</button>
+    </form>
+  </div>
+</div>
+<script src="{{ url_for('static', filename='js/admin_ai_refresh.js') }}"></script>
+{% endblock %}

@@ -1,0 +1,90 @@
+{% extends "layouts/base.html" %}
+{% block title %}1003 Application • Caughman Mason{% endblock %}
+
+{% block content %}
+
+<style>
+:root {
+    --bg:#0f0f11;
+    --panel:#15161a;
+    --line:#2b2f36;
+    --text:#e6e6e6;
+    --accent:#7ab8ff;
+    --muted:#a5a7ad;
+}
+body { background: var(--bg); color: var(--text); }
+
+.section {
+    background: var(--panel);
+    border:1px solid var(--line);
+    padding:2rem;
+    border-radius:14px;
+    margin-bottom:2rem;
+}
+
+input, select {
+    width:100%;
+    padding:.8rem;
+    margin-bottom:1rem;
+    border-radius:8px;
+    background:#1a1c20;
+    border:1px solid var(--line);
+    color:var(--text);
+}
+
+.btn {
+    width:100%;
+    padding:1rem;
+    background:transparent;
+    border:1px solid var(--accent);
+    color:var(--accent);
+    border-radius:8px;
+}
+.btn:hover { background:var(--accent); color:#000; }
+</style>
+
+<main class="dashboard-main">
+
+<form method="POST">
+
+    <section class="section">
+        <h2>🏡 Borrower Information</h2>
+
+        <input type="text" name="address" placeholder="Current Address" required>
+        <div style="display:flex; gap:1rem;">
+            <input type="text" name="city" placeholder="City" required>
+            <input type="text" name="state" placeholder="State" required>
+            <input type="text" name="zip" placeholder="ZIP" required>
+            <input type="text" name="ssn" placeholder="SSN (for soft credit pull)" required>
+        </div>
+    </section>
+
+    <section class="section">
+        <h2>💼 Employment</h2>
+        <input type="text" name="employer" placeholder="Employer Name" required>
+        <input type="number" name="income" placeholder="Monthly Income ($)" required>
+        <input type="number" name="secondary_income" placeholder="Secondary Income ($)">
+    </section>
+
+    <section class="section">
+        <h2>💵 Loan Details</h2>
+        <input type="number" name="loan_amount" placeholder="Loan Amount ($)" required>
+        <select name="loan_type" required>
+            <option value="">Select Loan Type</option>
+            <option value="FHA">FHA</option>
+            <option value="Conventional">Conventional</option>
+            <option value="VA">VA</option>
+            <option value="DSCR">DSCR</option>
+            <option value="Hard Money">Hard Money</option>
+        </select>
+
+        <input type="number" name="property_value" placeholder="Estimated Property Value ($)" required>
+        <input type="text" name="property_address" placeholder="Property Address (if known)">
+    </section>
+
+    <button class="btn" type="submit">Continue → Upload Documents</button>
+</form>
+
+</main>
+
+{% endblock %}

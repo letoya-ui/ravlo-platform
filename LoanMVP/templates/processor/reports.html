@@ -1,0 +1,99 @@
+{% extends "layouts/base.html" %}
+{% block title %}Processor Reports & Insights{% endblock %}
+{% block content %}
+
+<main class="dashboard-main">
+  <div class="wrap reports-grid">
+
+    <!-- Left panel -->
+    <section class="card stats-card">
+      <h2>📊 Performance Overview</h2>
+      <p class="muted">Key metrics from your processing pipeline.</p>
+
+      <div class="metric-box">
+        <h3>{{ total_loans }}</h3>
+        <p class="muted">Total Loans</p>
+      </div>
+      <div class="metric-box">
+        <h3>{{ verified_docs }}</h3>
+        <p class="muted">Verified Docs</p>
+      </div>
+      <div class="metric-box">
+        <h3>{{ pending_docs }}</h3>
+        <p class="muted">Pending Docs</p>
+      </div>
+
+      <hr>
+      <h4 class="muted">Last Updated: {{ timestamp.strftime('%Y-%m-%d %H:%M') }}</h4>
+
+    </section>
+
+    <!-- Right panel -->
+    <section class="card ai-card">
+      <h2>🤖 AI Insights</h2>
+      <p>{{ ai_insight or "AI insights unavailable." }}</p>
+      <hr>
+      <a href="{{ url_for('processor.ai_conversations') }}" class="btn btn-glow">💬 Open AI Conversations</a>
+    </section>
+
+  </div>
+</main>
+
+<style>
+  :root {
+    --bg: #0f0f11;
+    --panel: #15161a;
+    --line: #2b2f36;
+    --text: #e6e6e6;
+    --muted: #a5a7ad;
+    --accent: #7ab8ff;
+    --glow: 0 0 16px rgba(122,184,255,0.35);
+  }
+  body { background: var(--bg); color: var(--text); }
+  .wrap { padding: 2rem; }
+  .reports-grid {
+    display: grid;
+    grid-template-columns: 2fr 1.5fr;
+    gap: 1.5rem;
+  }
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 1.5rem;
+    box-shadow: var(--glow);
+  }
+  h2 { color: var(--accent); margin-bottom: .3rem; }
+  .muted { color: var(--muted); }
+  .metric-box {
+    background: var(--bg);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 1rem;
+    margin-top: 1rem;
+    text-align: center;
+    box-shadow: 0 0 10px rgba(122,184,255,0.1);
+  }
+  .metric-box h3 {
+    color: var(--accent);
+    font-size: 2rem;
+    margin: 0;
+  }
+  .btn {
+    background: var(--accent);
+    color: #000;
+    border-radius: 8px;
+    padding: .6rem 1.2rem;
+    text-decoration: none;
+    font-weight: 600;
+    transition: .2s;
+  }
+  .btn:hover { box-shadow: var(--glow); }
+  .btn-glow {
+    display: block;
+    text-align: center;
+    box-shadow: var(--glow);
+    margin-top: 1rem;
+  }
+</style>
+{% endblock %}

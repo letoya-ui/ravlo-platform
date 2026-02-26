@@ -1,0 +1,89 @@
+{% extends "layouts/base.html" %}
+{% block title %}Loan Status • Caughman Mason{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="https://unpkg.com/lucide-static@latest/font/lucide.css">
+
+<style>
+:root {
+    --bg:#0f0f11;
+    --panel:#15161a;
+    --line:#2b2f36;
+    --text:#e6e6e6;
+    --muted:#a5a7ad;
+    --accent:#7ab8ff;
+}
+
+body { background:var(--bg); color:var(--text); }
+
+.timeline {
+    max-width: 900px;
+    margin: 3rem auto;
+    padding: 1rem;
+}
+
+.step {
+    border-left: 3px solid var(--accent);
+    padding-left: 1.5rem;
+    margin-bottom: 2rem;
+    position: relative;
+}
+
+.step::before {
+    content: "";
+    width: 14px;
+    height: 14px;
+    background: var(--accent);
+    border-radius: 50%;
+    position: absolute;
+    left: -9px;
+    top: 5px;
+    box-shadow: 0 0 12px rgba(122,184,255,0.5);
+}
+
+.step h3 {
+    margin: 0;
+}
+
+.step small {
+    color: var(--muted);
+}
+
+.no-loan {
+    text-align:center;
+    padding:4rem;
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:12px;
+}
+</style>
+
+<main class="dashboard-main">
+
+    <h1>📊 Loan Status</h1>
+    <p class="muted">Track your mortgage progress in real time.</p>
+
+    {% if not loan %}
+        <div class="no-loan">
+            <h3>No active application found.</h3>
+            <p>Start your loan application to view updates.</p>
+        </div>
+    {% else %}
+
+        <div class="timeline">
+
+            {% for m in milestones %}
+            <div class="step">
+                <h3>{{ m.event_name }}</h3>
+                <small>{{ m.timestamp.strftime("%b %d, %Y • %I:%M %p") }}</small>
+                <p>{{ m.description }}</p>
+            </div>
+            {% endfor %}
+
+        </div>
+
+    {% endif %}
+
+</main>
+
+{% endblock %}

@@ -1,0 +1,83 @@
+{% extends "layouts/borrower_base.html" %}
+{% block title %}Upload Documents{% endblock %}
+
+{% block content %}
+
+<div class="b-header">
+  <div>
+    <h1>📤 Upload Documents</h1>
+    <p class="muted">Upload files required for your loan application.</p>
+  </div>
+</div>
+
+<!-- UPLOAD CARD -->
+<div class="b-card" style="max-width:600px;margin-top:1.4rem;">
+  <h3>Upload a Document</h3>
+
+  <form method="POST" enctype="multipart/form-data" style="margin-top:1rem;">
+    <label class="muted">Choose File</label>
+    <input type="file" name="file" required
+           style="background:var(--panel);border:1px solid var(--line);padding:.6rem;border-radius:8px;color:var(--text);width:100%;margin-top:.4rem;">
+
+    <button type="submit" class="action-btn" style="margin-top:1rem;">
+      <i class="lucide lucide-file-up"></i> Upload
+    </button>
+  </form>
+</div>
+
+<!-- UPLOADED FILES -->
+<div class="b-card" style="margin-top:2rem;">
+  <h3>📁 Uploaded Files</h3>
+
+  {% if documents %}
+    <div style="margin-top:1rem;display:flex;flex-direction:column;gap:1rem;">
+      {% for doc in documents %}
+      <div class="b-card" style="padding:1rem;">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          
+          <div>
+            <p style="margin:0;font-weight:600;">{{ doc.name }}</p>
+            <small class="muted">
+              Status: {{ doc.status }} • 
+              Uploaded: {{ doc.uploaded_at.strftime('%b %d, %Y') if doc.uploaded_at else 'N/A' }}
+            </small>
+          </div>
+
+          <div style="display:flex;gap:.6rem;">
+            <a href="{{ url_for('borrower.view_document', doc_id=doc.id) }}" class="action-btn">
+              <i class="lucide lucide-eye"></i> View
+            </a>
+            <a href="{{ url_for('borrower.download_file', filename=doc.name) }}" class="action-btn">
+              <i class="lucide lucide-download"></i> Download
+            </a>
+            <button 
+              class="action-btn" 
+              style="background:rgba(255,0,0,0.15);border-color:#ff4d4d;color:#ff4d4d;"
+              onclick="deleteDocument({{ doc.id }})">
+              <i class="lucide lucide-trash"></i> Delete
+            </button>
+          </div>
+
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+
+  {% else %}
+    <p class="muted" style="margin-top:1rem;">No documents uploaded yet.</p>
+  {% endif %}
+</div>
+
+<script>
+function deleteDocument(id) {
+  if (!confirm("Delete this document?")) return;
+
+  fetch(`/borrower/documents/delete/${id}`, { method: "DELETE" })
+    .then(r => r.json())
+    .then(data => {
+      if (data.success) location.reload();
+    });
+}
+</script>
+
+{% endblock %}

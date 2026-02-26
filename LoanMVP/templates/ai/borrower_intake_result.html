@@ -1,0 +1,42 @@
+{% extends "layouts/base.html" %}
+{% block title %}Borrower Intake Result{% endblock %}
+{% block content %}
+
+
+<main style="margin-left:260px; padding:2rem; background:#0f0f11; color:#e6e6e6; min-height:100vh;">
+  <link rel="stylesheet" href="https://unpkg.com/lucide-static@latest/font/lucide.css">
+
+  <style>
+    .result-card{max-width:900px;margin:auto;background:#15161a;border:1px solid #282b31;border-radius:16px;padding:2rem;box-shadow:0 0 18px rgba(122,184,255,0.25);}
+    h1{color:#7ab8ff;margin-bottom:.8rem;}
+    .grid{display:grid;gap:1rem;}
+    .g-2{grid-template-columns:repeat(2,minmax(0,1fr));}
+    .info-box{background:#1a1c20;border:1px solid #2b2f36;border-radius:12px;padding:.9rem 1rem;}
+    .ai-box{margin-top:1.5rem;padding:1.2rem;background:#18222b;border:1px solid #2b2f36;border-radius:14px;box-shadow:0 0 12px rgba(122,184,255,0.2);}
+    .btn{display:inline-flex;align-items:center;gap:.4rem;margin-top:1.5rem;background:linear-gradient(180deg,#2a4a62,#1b2a38);border:1px solid #2a4a62;color:#cfe8ff;border-radius:10px;padding:.7rem 1.2rem;text-decoration:none;}
+    .btn:hover{box-shadow:0 0 10px rgba(122,184,255,0.3);}
+    .muted{color:#a5a7ad;font-size:.9rem;}
+  </style>
+
+  <div class="result-card">
+    <h1><i class="lucide lucide-clipboard-list"></i> AI Borrower Intake Summary</h1>
+    <p class="muted">Here’s the AI-evaluated overview based on borrower data:</p>
+
+    <div class="grid g-2">
+      {% for key, value in data.items() %}
+      <div class="info-box">
+        <strong style="color:#7ab8ff;text-transform:capitalize;">{{ key.replace('_',' ') }}</strong>
+        <div>{{ value or '—' }}</div>
+      </div>
+      {% endfor %}
+    </div>
+
+    <div class="ai-box">
+      <h3><i class="lucide lucide-brain-circuit"></i> AI Insight</h3>
+      <p>{{ insight }}</p>
+    </div>
+
+    <a href="{{ url_for('ai.borrower_intake') }}" class="btn"><i class="lucide lucide-rotate-ccw"></i> Start New Intake</a>
+  </div>
+</main>
+{% endblock %}

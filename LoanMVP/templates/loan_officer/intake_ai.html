@@ -1,0 +1,254 @@
+{% extends "layouts/base.html" %}
+{% block title %}AI Smart Intake • Loan Officer{% endblock %}
+
+{% block content %}
+
+<style>
+/* GRID LAYOUT: LEFT SUMMARY • RIGHT AI CHAT */
+.intake-container {
+    display: grid;
+    grid-template-columns: 1.2fr 1fr;
+    gap: 2rem;
+}
+
+/* SUMMARY CARDS */
+.intake-card {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    padding: 1.5rem;
+    border-radius: 16px;
+    box-shadow: 0 0 18px rgba(122,184,255,.25);
+}
+
+.intake-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-bottom: 1rem;
+    text-shadow: 0 0 12px rgba(122,184,255,.45);
+}
+
+.section-header {
+    margin-top: 1.2rem;
+    font-size: 1.1rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    color: var(--accent);
+    letter-spacing: .5px;
+}
+
+/* AI CHAT PANEL */
+.ai-box {
+    display: flex;
+    flex-direction: column;
+    height: 80vh;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    box-shadow: 0 0 16px rgba(122,184,255,.35);
+    overflow: hidden;
+}
+
+.ai-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1rem;
+}
+
+.ai-msg {
+    margin-bottom: 1rem;
+    padding: 1rem;
+    border-radius: 12px;
+    line-height: 1.4rem;
+    font-size: 0.95rem;
+}
+
+.ai-msg.user {
+    background: rgba(122,184,255,0.12);
+    border: 1px solid var(--accent);
+}
+
+.ai-msg.ai {
+    background: #0f1115;
+    border: 1px solid var(--line);
+}
+
+/* INPUT AREA */
+.ai-input-bar {
+    padding: 1rem;
+    background: var(--panel);
+    border-top: 1px solid var(--line);
+    display: flex;
+    gap: 1rem;
+}
+
+.ai-input-bar textarea {
+    flex: 1;
+    background: #0f1115;
+    border: 1px solid var(--line);
+    color: white;
+    padding: 0.7rem;
+    border-radius: 12px;
+    resize: none;
+    height: 60px;
+}
+
+.ai-input-bar button {
+    background: var(--accent);
+    color: black;
+    font-weight: 700;
+    padding: 0 1.5rem;
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+}
+.ai-input-bar button:hover {
+    background: white;
+}
+
+/* SCROLLBAR */
+.ai-messages::-webkit-scrollbar {
+    width: 8px;
+}
+.ai-messages::-webkit-scrollbar-thumb {
+    background: #777;
+    border-radius: 8px;
+}
+</style>
+
+
+<h1 class="intake-title">AI Smart Intake — Borrower Analysis</h1>
+
+<div class="intake-container">
+
+    <!-- LEFT SIDE — Borrower Summary -->
+    <div>
+        <div class="intake-card">
+            <h2 class="section-header">Borrower Info</h2>
+            <p><strong>Name:</strong> {{ borrower.full_name }}</p>
+            <p><strong>Email:</strong> {{ borrower.email }}</p>
+            <p><strong>Phone:</strong> {{ borrower.phone }}</p>
+            <p><strong>Income:</strong> ${{ borrower.income or 0 }}</p>
+            <p><strong>Secondary Income:</strong> ${{ borrower.monthly_income_secondary or 0 }}</p>
+
+            <h2 class="section-header">Employment</h2>
+            <p><strong>Employer:</strong> {{ borrower.employer_name }}</p>
+            <p><strong>Job Title:</strong> {{ borrower.job_title }}</p>
+            <p><strong>Years on Job:</strong> {{ borrower.years_at_job }}</p>
+
+            <h2 class="section-header">Loan Details</h2>
+            {% if loan %}
+                <p><strong>Loan Amount:</strong> ${{ loan.amount }}</p>
+                <p><strong>Loan Type:</strong> {{ loan.loan_type }}</p>
+                <p><strong>Property Value:</strong> ${{ loan.property_value }}</p>
+                <p><strong>Address:</strong> {{ loan.property_address }}</p>
+            {% else %}
+                <p>No loan file yet — intake can still proceed.</p>
+            {% endif %}
+
+            <h2 class="section-header">Credit</h2>
+            {% if credit %}
+                <p><strong>Soft Score:</strong> {{ credit.credit_score }}</p>
+                <p><strong>Total Monthly Debts:</strong> ${{ credit.monthly_debt_total }}</p>
+            {% else %}
+                <p>No credit report yet.</p>
+            {% endif %}
+
+            <h2 class="section-header">Ratios</h2>
+            <p><strong>Front-End DTI:</strong> {{ front_dti }}</p>
+            <p><strong>Back-End DTI:</strong> {{ back_dti }}</p>
+            <p><strong>LTV:</strong> {{ ltv }}</p>
+
+            <h2 class="section-header">Missing Docs</h2>
+            {% if missing_docs %}
+                <ul>
+                    {% for d in missing_docs %}
+                        <li>{{ d }}</li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p>None requested yet.</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- RIGHT SIDE — AI Chat -->
+    <div class="ai-box">
+
+        <div class="ai-messages" id="aiMessages"></div>
+
+        <div class="ai-input-bar">
+            <textarea id="aiInput" placeholder="Ask: What else do I need to pre-approve this borrower?"></textarea>
+            <button onclick="sendAI()">Ask</button>
+        </div>
+    </div>
+
+</div>
+
+<button id="autoCreateLoanBtn" style="
+    background: var(--accent);
+    color: black;
+    padding: 12px 24px;
+    border-radius: 10px;
+    border: none;
+    font-weight: 700;
+    margin-top: 1rem;
+    display: none;  /* hidden until AI says borrower is ready */
+"
+onclick="autoCreateLoan()">
+    Create Loan File from AI Intake
+</button>
+
+<script>
+function addMessage(content, sender) {
+    const box = document.getElementById("aiMessages");
+    let msg = document.createElement("div");
+    msg.classList.add("ai-msg", sender);
+    msg.innerHTML = content.replace(/\n/g, "<br>");
+    box.appendChild(msg);
+    box.scrollTop = box.scrollHeight;
+}
+
+function sendAI() {
+    let message = document.getElementById("aiInput").value.trim();
+    if (!message) return;
+    
+    if (data.reply.includes("pre-approve") || 
+    data.reply.includes("eligible") ||
+    data.reply.includes("ready for a loan file") ||
+    data.reply.includes("DTI is acceptable") ) 
+{
+    document.getElementById("autoCreateLoanBtn").style.display = "block";
+}
+
+    addMessage(message, "user");
+    document.getElementById("aiInput").value = "";
+
+    fetch("{{ url_for('loan_officer.intake_ai', borrower_id=borrower.id) }}", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({ message })
+    })
+    .then(res => res.json())
+    .then(data => {
+        addMessage(data.reply, "ai");
+    });
+}
+
+function autoCreateLoan() {
+
+    fetch("{{ url_for('loan_officer.auto_create_loan', borrower_id=borrower.id) }}", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({})
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.redirect_url) {
+            window.location.href = data.redirect_url;
+        }
+    });
+}
+
+</script>
+
+{% endblock %}

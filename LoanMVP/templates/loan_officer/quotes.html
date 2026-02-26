@@ -1,0 +1,222 @@
+{% extends "layouts/base.html" %}
+{% block title %}Loan Officer • Quotes Center{% endblock %}
+
+{% block content %}
+<div class="wrap">
+
+  <div class="card">
+    <h2>💰 Quotes Center</h2>
+    <p class="muted">View, compare, and manage your loan quotes.</p>
+    <a href="{{ url_for('loan_officer.new_quote') }}" class="btn btn-glow" style="margin-top:1rem;">➕ New Quote</a>
+  </div>
+
+  <div class="card" style="margin-top:1.5rem;">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Borrower</th>
+          <th>Program</th>
+          <th>Rate</th>
+          <th>APR</th>
+          <th>Payment</th>
+          <th>Date</th>
+          <th></th>
+        </tr>
+      </thead>
+
+      <tbody>
+        {% for q in quotes %}
+        <tr>
+          <td>{{ q.borrower.full_name }}</td>
+          <td>{{ q.program }}</td>
+          <td>{{ q.rate }}%</td>{% extends "layouts/base.html" %}
+{% block title %}Loan Officer • Quotes Center{% endblock %}
+
+{% block content %}
+
+<style>
+/* =============================
+       QUOTES CENTER STYLES
+============================= */
+
+.filter-bar {
+    display:flex;
+    gap:1rem;
+    margin-bottom:1.5rem;
+}
+
+.filter-select {
+    padding:.7rem 1rem;
+    background:#0f1115;
+    color:white;
+    border:1px solid var(--line);
+    border-radius:12px;
+    font-size:1rem;
+    min-width:180px;
+}
+
+.quote-grid {
+    display:grid;
+    grid-template-columns:repeat(auto-fill, minmax(330px,1fr));
+    gap:1.5rem;
+}
+
+.quote-card {
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:16px;
+    padding:1.4rem;
+    box-shadow:0 0 14px rgba(122,184,255,.25);
+    animation:pulseGlow 1.5s infinite ease-in-out;
+    transition:.25s ease;
+}
+
+.quote-card:hover {
+    transform:translateY(-3px);
+    box-shadow:0 0 20px rgba(122,184,255,.45);
+}
+
+.quote-title {
+    font-size:1.2rem;
+    font-weight:700;
+    color:white;
+    margin-bottom:.4rem;
+    text-shadow:0 0 10px rgba(122,184,255,0.4);
+}
+
+.quote-info {
+    color:var(--muted);
+    font-size:.9rem;
+    line-height:1.55;
+}
+
+.rate-tag {
+    background:#0f1115;
+    padding:.35rem .7rem;
+    border-radius:8px;
+    border:1px solid var(--line);
+    color:#7ab8ff;
+    font-weight:600;
+    display:inline-block;
+    margin-top:.5rem;
+    font-size:.9rem;
+}
+
+.btn-open {
+    margin-top:1rem;
+    padding:.6rem 1rem;
+    font-weight:600;
+    background:var(--accent);
+    border:none;
+    border-radius:10px;
+    color:black;
+    cursor:pointer;
+    width:100%;
+}
+
+.btn-open:hover {
+    background:white;
+}
+
+@keyframes pulseGlow {
+    0% { box-shadow:0 0 12px rgba(122,184,255,.20); }
+    50% { box-shadow:0 0 22px rgba(122,184,255,.45); }
+    100% { box-shadow:0 0 12px rgba(122,184,255,.20); }
+}
+</style>
+
+
+<!-- ================================
+            PAGE TITLE
+================================ -->
+<h1 style="font-size:2rem; margin-bottom:1.2rem; text-shadow:0 0 14px rgba(122,184,255,.45);">
+    Quotes Center
+</h1>
+
+
+
+<!-- ================================
+            FILTER BAR
+================================ -->
+<div class="filter-bar">
+    <select id="statusFilter" class="filter-select" onchange="filterQuotes()">
+        <option value="all">All Quotes</option>
+        <option value="pending">Pending</option>
+        <option value="sent">Sent to Borrower</option>
+        <option value="accepted">Accepted</option>
+        <option value="expired">Expired</option>
+    </select>
+</div>
+
+
+
+<!-- ================================
+            QUOTE GRID
+================================ -->
+<div class="quote-grid" id="quoteGrid">
+
+    {% for q in quotes %}
+    <div class="quote-card" data-status="{{ q.status|lower }}">
+
+        <div class="quote-title">
+            {{ q.borrower.full_name }}
+        </div>
+
+        <div class="quote-info">
+            Loan Amount: ${{ "{:,.0f}".format(q.loan_amount or 0) }}<br>
+            Loan Type: {{ q.program_type }}<br>
+            Created: {{ q.created_at.strftime("%b %d, %Y") }}<br>
+            Status: {{ q.status }}
+        </div>
+
+        {% if q.rate %}
+        <div class="rate-tag">
+            Rate: {{ q.rate }}%
+        </div>
+        {% endif %}
+
+        <button class="btn-open" onclick="location.href='/loan_officer/quote/{{ q.id }}'">
+            View Quote
+        </button>
+    </div>
+    {% endfor %}
+
+</div>
+
+
+
+<!-- ================================
+            FILTER SCRIPT
+================================ -->
+<script>
+function filterQuotes() {
+    let selected = document.getElementById("statusFilter").value.toLowerCase();
+    let cards = document.querySelectorAll("#quoteGrid .quote-card");
+
+    cards.forEach(card => {
+        let status = card.getAttribute("data-status");
+        if (selected === "all" || selected === status) {
+            card.style.display = "";
+        } else {
+            card.style.display = "none";
+        }
+    });
+}
+</script>
+
+{% endblock %}
+
+          <td>{{ q.apr }}%</td>
+          <td>${{ q.payment }}</td>
+          <td>{{ q.created_at.strftime("%b %d, %Y") }}</td>
+          <td>
+            <a class="btn-sm" href="{{ url_for('loan_officer.view_quote', quote_id=q.id) }}">Open</a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+</div>
+{% endblock %}

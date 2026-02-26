@@ -1,0 +1,220 @@
+{% extends "layouts/base.html" %}
+{% block title %}Underwriting Conditions{% endblock %}
+{% block content %}
+
+<main class="dashboard-main">
+  <div class="wrap">
+    <section class="lhs">
+      <div class="card">
+        <h2>📋 Underwriting Conditions</h2>
+        <p class="muted">Loan ID: {{ loan.id }} | Borrower: {{ borrower.full_name }}</p>
+
+        <form method="POST" action="{{ url_for('underwriter.underwriter_conditions', loan_id=loan.id) }}">
+          <h3>✅ Select Required Documents</h3>
+
+          <div class="category-grid">
+            <!-- Left column -->
+            <div class="category-column">
+              <h4 class="section-header">Income & Employment</h4>
+              {% for doc in [
+                "Pay stubs (last 30 days)",
+                "W-2 forms (past 2 years)",
+                "Tax returns (past 2 years)",
+                "Employment verification (VOE)",
+                "Bonus/Commission documentation",
+                "Retirement income statements",
+                "Social Security award letter",
+                "Self-employment profit & loss statement"
+              ] %}
+              <label class="condition-card">
+                <input type="checkbox" name="documents[]" value="{{ doc }}">
+                <div><strong>{{ doc }}</strong></div>
+              </label>
+              {% endfor %}
+
+              <h4 class="section-header">Assets & Bank Statements</h4>
+              {% for doc in [
+                "Bank statements (last 60 days)",
+                "Retirement account statements",
+                "Investment account statements",
+                "Gift letter (if applicable)",
+                "Source of large deposits explanation"
+              ] %}
+              <label class="condition-card">
+                <input type="checkbox" name="documents[]" value="{{ doc }}">
+                <div><strong>{{ doc }}</strong></div>
+              </label>
+              {% endfor %}
+
+              <h4 class="section-header">Loan & Disclosures</h4>
+              {% for doc in [
+                "Signed loan disclosures",
+                "Rate lock confirmation",
+                "AUS findings and matching docs",
+                "Credit report explanation",
+                "Updated loan application (1003)"
+              ] %}
+              <label class="condition-card">
+                <input type="checkbox" name="documents[]" value="{{ doc }}">
+                <div><strong>{{ doc }}</strong></div>
+              </label>
+              {% endfor %}
+            </div>
+
+            <!-- Right column -->
+            <div class="category-column">
+              <h4 class="section-header">Property & Appraisal</h4>
+              {% for doc in [
+                "Appraisal report",
+                "Purchase contract",
+                "Sales contract addendums",
+                "Flood certification (if applicable)",
+                "HOA documents (if applicable)",
+                "Property insurance binder",
+                "Homeowners insurance declaration page"
+              ] %}
+              <label class="condition-card">
+                <input type="checkbox" name="documents[]" value="{{ doc }}">
+                <div><strong>{{ doc }}</strong></div>
+              </label>
+              {% endfor %}
+
+              <h4 class="section-header">Legal & Title</h4>
+              {% for doc in [
+                "Title commitment",
+                "Preliminary title report",
+                "Deed of trust/mortgage copy",
+                "Proof of residency status",
+                "Settlement statement / CD"
+              ] %}
+              <label class="condition-card">
+                <input type="checkbox" name="documents[]" value="{{ doc }}">
+                <div><strong>{{ doc }}</strong></div>
+              </label>
+              {% endfor %}
+
+              <h4 class="section-header">Identification & Miscellaneous</h4>
+              {% for doc in [
+                "Valid government-issued ID",
+                "Social Security card",
+                "Proof of address",
+                "Marriage/divorce decree (if applicable)",
+                "Power of attorney (if applicable)"
+              ] %}
+              <label class="condition-card">
+                <input type="checkbox" name="documents[]" value="{{ doc }}">
+                <div><strong>{{ doc }}</strong></div>
+              </label>
+              {% endfor %}
+            </div>
+          </div>
+
+          <div class="bulk-controls">
+            <button type="submit" class="btn btn-glow">📤 Request Selected</button>
+          </div>
+        </form>
+
+        {% if conditions %}
+        <h3 style="margin-top:2rem;">📄 Requested Documents</h3>
+        <div class="category-grid">
+          {% for cond in conditions %}
+          <div class="condition-card">
+            <div>
+              <strong>{{ cond.document_name }}</strong><br>
+              <span class="muted">Status: {{ cond.status }}</span><br>
+              <span class="muted">Requested on {{ cond.created_at.strftime('%b %d, %Y') }}</span>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+          <p class="muted">No requested documents yet.</p>
+        {% endif %}
+      </div>
+    </section>
+  </div>
+</main>
+
+<style>
+  :root {
+    --bg:#0b0b0c;
+    --panel:#111213;
+    --line:#2b2c2e;
+    --silver:#c0c0c0;
+    --text-light:#f1f1f1;
+    --text-muted:#a5a7ad;
+    --accent:#7ab8ff;
+    --hover:#1a1b1d;
+  }
+
+  body { background:var(--bg); color:var(--text-light); }
+
+  /* === Scrollable Card for Small Screens === */
+  .card {
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding:1.5rem;
+    box-shadow:0 0 12px rgba(122,184,255,0.05);
+    max-height:calc(100vh - 120px);
+    overflow-y:auto;
+    scrollbar-width:thin;
+    scrollbar-color:var(--accent) var(--panel);
+  }
+  .card::-webkit-scrollbar { width:8px; }
+  .card::-webkit-scrollbar-thumb {
+    background-color:var(--accent);
+    border-radius:6px;
+  }
+  .card::-webkit-scrollbar-track { background-color:var(--panel); }
+
+  h2,h3{ color:var(--silver); }
+  .section-header { color:var(--accent); margin-top:1rem; margin-bottom:.3rem; }
+
+  /* === Two-Column Grid === */
+  .category-grid {
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(420px,1fr));
+    gap:2rem;
+  }
+  .category-column { display:flex; flex-direction:column; }
+
+  /* === Checkbox Cards === */
+  .condition-card {
+    background:#121314;
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:0.5rem 0.8rem;
+    display:flex;
+    gap:.8rem;
+    align-items:center;
+    transition:.2s;
+    cursor:pointer;
+    font-size:0.9rem;
+  }
+  .condition-card:hover { box-shadow:0 0 10px rgba(122,184,255,0.2); }
+  .condition-card input[type="checkbox"]:checked + div {
+    border-left:4px solid var(--accent);
+    background:#1a1a1c;
+    box-shadow:0 0 10px rgba(122,184,255,0.3);
+  }
+  input[type="checkbox"] { accent-color:var(--accent); width:18px;height:18px; }
+
+  /* === Button Styling === */
+  .btn {
+    display:inline-flex;align-items:center;gap:.4rem;
+    padding:.6rem 1.2rem;border-radius:10px;
+    border:1px solid var(--silver);
+    background:linear-gradient(180deg,#222,#111);
+    color:var(--text-light);
+    font-size:.9rem;transition:.25s;
+  }
+  .btn-glow {
+    background:var(--accent);
+    border:none;
+    color:#0b0b0b;
+    font-weight:600;
+  }
+</style>
+
+{% endblock %}

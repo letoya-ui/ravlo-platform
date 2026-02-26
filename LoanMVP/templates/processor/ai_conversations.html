@@ -1,0 +1,112 @@
+{% extends "layouts/base.html" %}
+{% block title %}AI Conversations | Processor{% endblock %}
+{% block content %}
+
+<main class="dashboard-main">
+  <div class="wrap">
+
+    <section class="card ai-card">
+      <h2>🤖 AI Conversations</h2>
+      <p class="muted">Review previous AI sessions and ask new workflow questions.</p>
+
+      <!-- AI Form -->
+      <form method="POST" class="ai-form">
+        <textarea name="message" placeholder="Ask the AI Assistant..." required></textarea>
+        <button type="submit" class="btn">💬 Send</button>
+      </form>
+
+      {% if ai_reply %}
+      <div class="ai-reply">
+        <h4>AI Response:</h4>
+        <p>{{ ai_reply }}</p>
+      </div>
+      {% endif %}
+
+      <hr>
+
+      <!-- Conversation History -->
+      <div class="conversation-history">
+        <h3>🗂 Past Conversations</h3>
+        {% for convo in conversations %}
+        <div class="conversation-item">
+          <p><strong>You:</strong> {{ convo.user_message }}</p>
+          <p class="muted"><strong>AI:</strong> {{ convo.ai_response }}</p>
+          <small>{{ convo.created_at.strftime("%Y-%m-%d %H:%M") }}</small>
+        </div>
+        {% else %}
+        <p class="muted">No AI conversations recorded yet.</p>
+        {% endfor %}
+      </div>
+    </section>
+
+  </div>
+</main>
+
+<style>
+  :root {
+    --bg:#0f0f11;
+    --panel:#15161a;
+    --line:#2b2f36;
+    --text:#e6e6e6;
+    --muted:#a5a7ad;
+    --accent:#7ab8ff;
+    --glow:0 0 14px rgba(122,184,255,0.35);
+  }
+  body { background: var(--bg); color: var(--text); }
+  .wrap { padding: 2rem; }
+  .card {
+    background: var(--panel);
+    border:1px solid var(--line);
+    border-radius:16px;
+    padding:1.5rem;
+    box-shadow: var(--glow);
+    max-width:800px;
+    margin:0 auto;
+  }
+  h2 { color: var(--accent); margin-bottom:.3rem; }
+  .muted { color: var(--muted); }
+  textarea {
+    width:100%;
+    min-height:100px;
+    background:var(--bg);
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:.8rem;
+    color:var(--text);
+    resize:vertical;
+  }
+  .btn {
+    background:var(--accent);
+    color:#000;
+    border-radius:8px;
+    padding:.6rem 1.2rem;
+    border:none;
+    font-weight:600;
+    cursor:pointer;
+    transition:.2s;
+  }
+  .btn:hover { box-shadow:var(--glow); }
+  .ai-reply {
+    margin-top:1rem;
+    background:var(--bg);
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:1rem;
+    box-shadow: inset 0 0 10px rgba(122,184,255,0.1);
+  }
+  .conversation-history {
+    margin-top:1.5rem;
+    max-height:400px;
+    overflow-y:auto;
+  }
+  .conversation-item {
+    background:var(--bg);
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:.8rem;
+    margin-bottom:.8rem;
+    box-shadow:0 0 10px rgba(122,184,255,0.1);
+  }
+  small { color:var(--muted); font-size:.75rem; }
+</style>
+{% endblock %}

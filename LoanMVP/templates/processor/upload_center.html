@@ -1,0 +1,99 @@
+{% extends "layouts/base.html" %}
+{% block title %}Upload Center | Processor{% endblock %}
+{% block content %}
+<main class="dashboard-main">
+  <div class="wrap">
+
+    <section class="card upload-section">
+      <h2>📤 Upload Center</h2>
+      <p class="muted">Attach borrower or underwriting documents to active loans.</p>
+
+      <form method="POST" enctype="multipart/form-data">
+        <div class="form-grid">
+          <label>Loan</label>
+          <select name="loan_id" required>
+            <option value="">-- Select Loan --</option>
+            {% for loan in loans %}
+            <option value="{{ loan.id }}">#{{ loan.id }} – {{ loan.borrower.full_name if loan.borrower else 'N/A' }}</option>
+            {% endfor %}
+          </select>
+
+          <label>Document File</label>
+          <input type="file" name="file" accept=".pdf,.jpg,.png,.docx" required>
+
+          <div class="upload-actions">
+            <button type="submit" class="btn">⬆ Upload Document</button>
+            <a href="{{ url_for('processor.documents') }}" class="btn btn-outline">📁 View All</a>
+          </div>
+        </div>
+      </form>
+    </section>
+  </div>
+</main>
+
+<style>
+  :root {
+    --bg: #0f0f11;
+    --panel: #15161a;
+    --line: #2b2f36;
+    --text: #e6e6e6;
+    --muted: #a5a7ad;
+    --accent: #7ab8ff;
+    --glow: 0 0 14px rgba(122,184,255,0.35);
+  }
+  body { background: var(--bg); color: var(--text); }
+  .wrap { padding: 2rem; }
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 1.5rem;
+    box-shadow: var(--glow);
+    max-width: 700px;
+    margin: 0 auto;
+  }
+  h2 { color: var(--accent); margin-bottom: .3rem; }
+  .muted { color: var(--muted); }
+  .form-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    margin-top: 1rem;
+  }
+  label {
+    font-weight: 600;
+    color: var(--accent);
+  }
+  select, input[type="file"] {
+    background: var(--bg);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: .6rem;
+    color: var(--text);
+  }
+  .upload-actions {
+    display: flex;
+    gap: .8rem;
+    margin-top: 1rem;
+  }
+  .btn {
+    background: var(--accent);
+    color: #000;
+    border-radius: 6px;
+    padding: .5rem 1rem;
+    border: none;
+    font-weight: 600;
+    cursor: pointer;
+    transition: .2s;
+  }
+  .btn:hover { box-shadow: var(--glow); }
+  .btn-outline {
+    background: transparent;
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    text-decoration: none;
+    display: inline-block;
+  }
+  .btn-outline:hover { background: var(--accent); color: #000; }
+</style>
+{% endblock %}

@@ -1,0 +1,70 @@
+{% extends "layouts/base.html" %}
+{% block content %}
+<style>
+  :root{--line:#2a2e36; --panel:#15161a; --text:#e6e6e6; --muted:#a5a7ad}
+  .card{background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:1rem}
+  table{width:100%; border-collapse:collapse}
+  th,td{padding:.6rem; border-top:1px solid var(--line); color:var(--text)}
+  input{background:#0f0f11; border:1px solid var(--line); color:var(--text); border-radius:10px; padding:.45rem .6rem; width:100%}
+  .btn{display:inline-flex; align-items:center; gap:.5rem; padding:.6rem .9rem; border-radius:10px; border:1px solid var(--line); color:var(--text); text-decoration:none; background:#1a1d23}
+</style>
+
+
+<div class="container-fluid py-4 text-light fade-in">
+  <h2 class="mb-4">✅ Verify Loans</h2>
+  <p class="text-muted">Review borrower loan applications and approve or reject as needed.</p>
+
+  <div class="table-responsive">
+    <table class="table table-dark table-hover align-middle shadow-sm">
+      <thead class="table-secondary text-dark">
+        <tr>
+          <th>ID</th>
+          <th>Borrower</th>
+          <th>Loan Type</th>
+          <th>Amount</th>
+          <th>Status</th>
+          <th>Created</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for loan in loans %}
+        <tr>
+          <td>#{{ loan.id }}</td>
+          <td>{{ loan.borrower_profile_id }}</td>
+          <td>{{ loan.loan_type or "—" }}</td>
+          <td>${{ "{:,.2f}".format(loan.loan_amount or 0) }}</td>
+          <td>
+            <span class="badge bg-{% if loan.status == 'verified' %}success{% elif loan.status == 'rejected' %}danger{% else %}secondary{% endif %}">
+              {{ loan.status or "Pending" }}
+            </span>
+          </td>
+          <td>{{ loan.created_at.strftime("%Y-%m-%d %H:%M") if loan.created_at else "—" }}</td>
+          <td>
+            <form method="POST" action="{{ url_for('admin.verify_loan', loan_id=loan.id) }}" class="d-inline">
+              <button name="action" value="approve" class="btn btn-sm btn-outline-success me-1">Approve</button>
+              <button name="action" value="reject" class="btn btn-sm btn-outline-danger">Reject</button>
+            </form>
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="7" class="text-center text-muted py-4">No loan applications pending verification.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<style>
+.fade-in {
+  animation: fadeIn 0.4s ease-in;
+}
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+</style>
+
+{% endblock %}

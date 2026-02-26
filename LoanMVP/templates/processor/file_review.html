@@ -1,0 +1,343 @@
+{% extends "layouts/base.html" %}
+{% block title %}Processor • Loan File Review{% endblock %}
+{% block content %}
+
+<link rel="stylesheet" href="https://unpkg.com/lucide-static@latest/font/lucide.css">
+
+<style>
+:root {
+    --bg:#0f0f11;
+    --panel:#15161a;
+    --line:#282b31;
+    --text:#e6e6e6;
+    --muted:#a5a7ad;
+    --accent:#7ab8ff;
+    --danger:#ff6464;
+    --success:#4cd964;
+}
+
+.section {
+    background:var(--panel);
+    border:1px solid var(--line);
+    padding:1.5rem;
+    border-radius:14px;
+    margin-bottom:2rem;
+}
+
+.section h2 {
+    margin-bottom:1rem;
+    font-size:1.4rem;
+}
+
+.item {
+    padding:.7rem 0;
+    border-bottom:1px solid var(--line);
+}
+
+.item:last-child {
+    border-bottom:none;
+}
+
+.btn-outline {
+    padding:.5rem 1.2rem;
+    border-radius:10px;
+    border:1px solid var(--accent);
+    color:var(--accent);
+    background:transparent;
+    transition:0.2s;
+    text-decoration:none;
+}
+
+.btn-outline:hover {
+    background:var(--accent);
+    color:#000;
+}
+
+.status-pill {
+    padding:3px 10px;
+    border-radius:10px;
+    font-size:.75rem;
+    text-transform:uppercase;
+    letter-spacing:.8px;
+}
+
+.status-pending { background:#444; color:var(--accent); }
+.status-review { background:var(--accent); color:#000; }
+.status-cleared { background:var(--success); color:#000; }
+</style>
+
+<main class="dashboard-main">
+
+<!-- ========================================================= -->
+<!-- 🔧 Processor Action Toolbar -->
+<!-- ========================================================= -->
+<div class="section" style="display:flex; gap:1rem; flex-wrap:wrap;">
+    
+    <a href="/processor/request-doc/{{ loan.id }}" class="btn-outline">
+        <i class="lucide lucide-file-plus"></i> Request Document
+    </a>
+
+    <a href="/processor/add-note/{{ loan.id }}" class="btn-outline">
+        <i class="lucide lucide-sticky-note"></i> Add Note
+    </a>
+
+    <a href="/processor/update-status/{{ loan.id }}" class="btn-outline">
+        <i class="lucide lucide-arrow-up-circle"></i> Update Loan Status
+    </a>
+
+    <a href="/processor/assign/{{ loan.id }}" class="btn-outline">
+        <i class="lucide lucide-users"></i> Assign Loan
+    </a>
+
+    <a href="/processor/submit-underwriter/{{ loan.id }}" class="btn-outline" style="border-color:var(--success); color:var(--success);">
+        <i class="lucide lucide-badge-check"></i> Submit to Underwriter
+    </a>
+    
+    <a href="#" class="btn-outline" onclick="runAIRisk()">
+      <i class="lucide lucide-bot"></i> AI Risk Summary
+    </a>
+
+</div>
+
+
+<!-- ========================================================= -->
+<!-- 👤 Borrower Summary -->
+<!-- ========================================================= -->
+<div class="section">
+    <h2><i class="lucide lucide-user"></i> Borrower Summary</h2>
+    <p><strong>{{ borrower.full_name }}</strong></p>
+    <p>{{ borrower.email }} · {{ borrower.phone }}</p>
+    <p>{{ borrower.address }}, {{ borrower.city }}, {{ borrower.state }} {{ borrower.zip }}</p>
+</div>
+
+
+<!-- ========================================================= -->
+<!-- 🏦 Loan Summary -->
+<!-- ========================================================= -->
+<div class="section">
+    <h2><i class="lucide lucide-file-text"></i> Loan Details</h2>
+
+    <p>Amount: <strong>${{ loan.amount }}</strong></p>
+    <p>Loan Type: <strong>{{ loan.loan_type }}</strong></p>
+    <p>Property Value: <strong>${{ loan.property_value }}</strong></p>
+    <p>LTV Ratio: <strong>{{ loan.ltv_ratio }}%</strong></p>
+
+    <p>Status:
+        <span class="status-pill status-{{ loan.status|lower }}">
+            {{ loan.status }}
+        </span>
+    </p>
+
+    <br>
+
+    <a href="#" class="btn-outline">Update Status</a>
+    <a href="#" class="btn-outline">Submit to Underwriter</a>
+</div>
+
+
+<!-- ========================================================= -->
+<!-- 📁 Document Review -->
+<!-- ========================================================= -->
+<div class="section">
+    <h2><i class="lucide lucide-folder-open"></i> Documents</h2>
+
+    <h3>Pending</h3>
+    {% if docs_pending %}
+        {% for d in docs_pending %}
+            <div class="item">
+                {{ d.name }} — <span style="color:var(--accent)">Pending</span>
+                <a href="/processor/doc/{{ d.id }}/verify" class="btn-outline" style="margin-left:1rem;">
+                    Verify
+                </a>
+            </div>
+        {% endfor %}
+    {% else %}
+        <p class="muted">No pending documents.</p>
+    {% endif %}
+
+    <h3 style="margin-top:1.5rem;">Verified</h3>
+    {% for d in docs_verified %}
+        <div class="item">
+            {{ d.name }} — <span style="color:var(--success)">Verified ✔</span>
+        </div>
+    {% endfor %}
+
+    <br>
+    <a href="/processor/request-doc/{{ loan.id }}" class="btn-outline">Request Additional Document</a>
+</div>
+
+
+<!-- ========================================================= -->
+<!-- ⚠ Underwriting Conditions -->
+<!-- ========================================================= -->
+<div class="section">
+    <h2><i class="lucide lucide-alert-circle"></i> Underwriting Conditions</h2>
+
+    <h3>Open Conditions</h3>
+    {% if cond_open %}
+        {% for c in cond_open %}
+            <div class="item">
+                <strong>{{ c.condition_type }}</strong><br>
+                {{ c.description }}<br>
+                <a href="/processor/clear-condition/{{ c.id }}" class="btn-outline" style="margin-top:.5rem;">
+                    Clear Condition
+                </a>
+            </div>
+        {% endfor %}
+    {% else %}
+        <p class="muted">No open conditions.</p>
+    {% endif %}
+
+    <h3 style="margin-top:1.5rem;">Cleared</h3>
+    {% for c in cond_cleared %}
+        <div class="item">
+            {{ c.condition_type }} — <span style="color:var(--success)">Cleared ✔</span>
+        </div>
+    {% endfor %}
+</div>
+
+
+<!-- ========================================================= -->
+<!-- 💳 Payment Records -->
+<!-- ========================================================= -->
+<div class="section">
+    <h2><i class="lucide lucide-credit-card"></i> Payments</h2>
+
+    {% if payments %}
+        {% for p in payments %}
+            <div class="item">
+                {{ p.payment_type }} — ${{ p.amount }}
+                {% if p.status == "Paid" %}
+                    <span style="color:var(--success)">Paid ✔</span>
+                {% else %}
+                    <span style="color:var(--accent)">Pending</span>
+                {% endif %}
+            </div>
+        {% endfor %}
+    {% else %}
+        <p class="muted">No payments yet.</p>
+    {% endif %}
+</div>
+<!-- ========================================================= -->
+<!-- 📊 Processor Credit & Income Analysis -->
+<!-- ========================================================= -->
+<div class="section">
+    <h2><i class="lucide lucide-bar-chart-2"></i> Credit & Income Analysis</h2>
+
+    <p><strong>Total Monthly Income:</strong> ${{ ratios.income_total }}</p>
+    <p><strong>Monthly Debts:</strong> ${{ ratios.monthly_debts }}</p>
+    <p><strong>Housing Payment:</strong> ${{ borrower.monthly_housing_payment or 0 }}</p>
+
+    <hr>
+
+    <p><strong>LTV:</strong>
+        {% if ratios.ltv %}
+            {{ (ratios.ltv * 100)|round(2) }}%
+            {% if ratios.ltv > 0.80 %}
+                <span style="color:var(--danger)"> (High)</span>
+            {% elif ratios.ltv > 0.65 %}
+                <span style="color:var(--accent)"> (Moderate)</span>
+            {% else %}
+                <span style="color:var(--success)"> (Strong)</span>
+            {% endif %}
+        {% else %}
+            N/A
+        {% endif %}
+    </p>
+
+    <p><strong>Front-End DTI:</strong>
+        {% if ratios.front_end_dti %}
+            {{ (ratios.front_end_dti * 100)|round(2) }}%
+            {% if ratios.front_end_dti > 0.45 %}
+                <span style="color:var(--danger)"> (High)</span>
+            {% elif ratios.front_end_dti > 0.35 %}
+                <span style="color:var(--accent)"> (Moderate)</span>
+            {% else %}
+                <span style="color:var(--success)"> (Strong)</span>
+            {% endif %}
+        {% else %}
+            N/A
+        {% endif %}
+    </p>
+
+    <p><strong>Back-End DTI:</strong>
+        {% if ratios.back_end_dti %}
+            {{ (ratios.back_end_dti * 100)|round(2) }}%
+            {% if ratios.back_end_dti > 0.50 %}
+                <span style="color:var(--danger)"> (High)</span>
+            {% elif ratios.back_end_dti > 0.43 %}
+                <span style="color:var(--accent)"> (Borderline)</span>
+            {% else %}
+                <span style="color:var(--success)"> (Strong)</span>
+            {% endif %}
+        {% else %}
+            N/A
+        {% endif %}
+    </p>
+
+</div>
+<!-- ========================================================= -->
+<!-- 🔥 Risk Indicators -->
+<!-- ========================================================= -->
+<div class="section">
+    <h2><i class="lucide lucide-alert-triangle"></i> Risk Indicators</h2>
+
+    <ul>
+        {% if credit and credit.credit_score < 620 %}
+            <li style="color:var(--danger)">Low credit score (Non-QM)</li>
+        {% endif %}
+
+        {% if ratios.back_end_dti and ratios.back_end_dti > 0.50 %}
+            <li style="color:var(--danger)">Back-end DTI above 50% (High risk)</li>
+        {% endif %}
+
+        {% if ratios.ltv and ratios.ltv > 0.85 %}
+            <li style="color:var(--danger)">LTV above 85% (High risk)</li>
+        {% endif %}
+
+        {% if ratios.front_end_dti and ratios.front_end_dti > 0.40 %}
+            <li style="color:var(--accent)">Front-end DTI elevated</li>
+        {% endif %}
+
+        {% if borrower.income == 0 %}
+            <li style="color:var(--danger)">No verifiable income</li>
+        {% endif %}
+
+        {% if not docs_verified %}
+            <li style="color:var(--accent)">Documents still pending review</li>
+        {% endif %}
+
+        {% if cond_open %}
+            <li style="color:var(--accent)">Open underwriting conditions</li>
+        {% endif %}
+    </ul>
+</div>
+
+
+<!-- ========================================================= -->
+<!-- 🤖 AI Summary -->
+<!-- ========================================================= -->
+{% if ai_summary %}
+<div class="section">
+    <h2><i class="lucide lucide-brain"></i> AI Summary</h2>
+    <p>{{ ai_summary }}</p>
+</div>
+{% endif %}
+
+</main>
+<script>
+function runAIRisk() {
+    fetch("/ai/ask", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({
+            message: "Provide underwriting risk summary for this loan.",
+            borrower_id: {{ borrower.id }}
+        })
+    })
+    .then(r => r.json())
+    .then(data => alert(data.reply));
+}
+</script>
+
+{% endblock %}

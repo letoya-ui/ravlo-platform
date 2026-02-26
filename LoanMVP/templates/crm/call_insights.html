@@ -1,0 +1,137 @@
+{% extends "layouts/base.html" %}
+{% block title %}CRM • Call Intelligence{% endblock %}
+{% block content %}
+<main class="dashboard-main">
+<link rel="stylesheet" href="https://unpkg.com/lucide-static@latest/font/lucide.css">
+<script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+
+<style>
+:root{
+  --panel:#15161a;--line:#2a2e36;--text:#e6e6e6;
+  --muted:#a5a7ad;--accent:#7ab8ff;--glow:0 0 18px rgba(122,184,255,.3);
+}
+.dashboard-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+  gap:1rem;
+  margin-top:1rem;
+}
+.card{
+  background:var(--panel);
+  border:1px solid var(--line);
+  border-radius:14px;
+  padding:1rem;
+  box-shadow:var(--glow);
+}
+.card h3{color:var(--accent);margin-bottom:.5rem;}
+.ai-card{
+  background:#18222b;
+  border:1px solid #2b2f36;
+  border-radius:12px;
+  padding:1rem;
+  margin-top:1rem;
+}
+</style>
+
+<h1>📊 Call Intelligence Dashboard</h1>
+
+<!-- 📞 Call Summary Cards -->
+<div class="dashboard-grid">
+  <div class="card"><h3>Total Calls</h3><h2>{{ total_calls }}</h2></div>
+  <div class="card"><h3>Successful</h3><h2>{{ success_calls }}</h2></div>
+  <div class="card"><h3>Follow-Ups</h3><h2>{{ followup_calls }}</h2></div>
+  <div class="card"><h3>Avg Duration</h3><h2>{{ avg_duration }}s</h2></div>
+</div>
+
+<!-- 📈 Activity Trend -->
+<div class="card" style="margin-top:1rem;">
+  <h3>📈 Weekly Call Activity</h3>
+  <div id="activityChart" style="height:280px;"></div>
+</div>
+
+<!-- 😊 Sentiment Stats -->
+<div class="dashboard-grid" style="margin-top:1rem;">
+  <div class="card"><h3>😊 Positive</h3><h2>{{ positive_calls }}</h2></div>
+  <div class="card"><h3>😐 Neutral</h3><h2>{{ neutral_calls }}</h2></div>
+  <div class="card"><h3>😞 Negative</h3><h2>{{ negative_calls }}</h2></div>
+</div>
+
+<!-- 🧠 AI Feedback -->
+<div class="card" style="margin-top:1rem;">
+  <h3>🧠 Recent AI Feedback</h3>
+  {% for fb in ai_feedbacks %}
+    <div class="ai-card">
+      <div class="muted">Call #{{ fb.id }}</div>
+      <p>{{ fb.ai_summary if fb.ai_summary else 'No AI summary available.' }}</p>
+    </div>
+  {% else %}
+    <p class="muted">No AI feedback yet.</p>
+  {% endfor %}
+</div>
+
+<!-- ============================= -->
+<!-- 📊 Dual Charts Visualization -->
+<!-- ============================= -->
+<div class="card" style="margin-top:1rem;">
+  <h3>📊 Weekly Call Performance</h3>
+  <div id="callsChart" style="height:350px;"></div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+  // === Area Chart: Activity Trend ===
+  const activityOptions = {
+    chart: { type: 'area', background: 'transparent', toolbar: { show: false }, height: 280 },
+    series: [{ name: 'Calls', data: {{ values|tojson }} }],
+    xaxis: {
+      categories: {{ labels|tojson }},
+      labels: { style: { colors: '#a5a7ad' } }
+    },
+    yaxis: { labels: { style: { colors: '#a5a7ad' } } },
+    stroke: { curve: 'smooth', width: 3 },
+    fill: { opacity: .3, type: 'gradient', gradient: { shadeIntensity: .4, opacityFrom: .5, opacityTo: .1 } },
+    colors: ['#7ab8ff'],
+    grid: { borderColor: '#2b2f36' }
+  };
+  new ApexCharts(document.querySelector("#activityChart"), activityOptions).render();
+
+  // === Bar Chart: Weekly Performance ===
+  const barOptions = {
+    chart: {
+      type: "bar",
+      height: 350,
+      background: "transparent",
+      toolbar: { show: false }
+    },
+    series: [{
+      name: "Calls",
+      data: {{ values|tojson }}
+    }],
+    xaxis: {
+      categories: {{ labels|tojson }},
+      labels: {
+        style: { colors: "#a5a7ad", fontSize: "13px" }
+      }
+    },
+    yaxis: {
+      labels: {
+        style: { colors: "#a5a7ad", fontSize: "13px" }
+      }
+    },
+    plotOptions: {
+      bar: { borderRadius: 6, columnWidth: "45%" }
+    },
+    colors: ["#7ab8ff"],
+    fill: { opacity: 0.9 },
+    dataLabels: {
+      enabled: true,
+      style: { colors: ["#fff"] }
+    },
+    grid: { borderColor: "#2b2f36" },
+    tooltip: { theme: "dark" }
+  };
+  new ApexCharts(document.querySelector("#callsChart"), barOptions).render();
+});
+</script>
+</main>
+{% endblock %}

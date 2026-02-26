@@ -1,0 +1,1011 @@
+{# =========================
+  borrower/dashboard.html
+  Platinum / Silver Luxury UI (FIXED)
+  ========================= #}
+
+{% extends "layouts/borrower_base.html" %}
+{% block title %}Borrower Dashboard{% endblock %}
+
+{% block content %}
+
+<main class="b-main">
+  <div class="b-main-inner">
+
+    {# =========================
+       FIRST-TIME DASHBOARD TOUR
+       ========================= #}
+    {% if show_dashboard_tour %}
+      <div id="dashboardTour" class="b-card"
+           style="border-left:4px solid var(--accent); background:rgba(122,184,255,0.08); margin-bottom:1.5rem;">
+        <h2>👋 Welcome to Your Dashboard</h2>
+        <p class="muted">{{ dashboard_welcome_ai }}</p>
+
+        <ul style="margin-top:1rem; line-height:1.6;">
+          <li>Track your loan progress</li>
+          <li>Upload documents and complete conditions</li>
+          <li>See your timeline and next steps</li>
+          <li>Search and analyze properties</li>
+        </ul>
+
+        <button id="dismissTourBtn" class="btn" style="margin-top:1rem;">Got it — Hide this</button>
+      </div>
+
+      <script>
+      document.getElementById("dismissTourBtn")?.addEventListener("click", async () => {
+        const resp = await fetch("{{ url_for('borrower.dismiss_dashboard_tour') }}", { method: "POST" });
+        const data = await resp.json();
+        if (data.status === "ok") {
+          document.getElementById("dashboardTour")?.remove();
+        }
+      });
+      </script>
+    {% endif %}
+
+    {# =========================
+       WELCOME BACK
+       ========================= #}
+    {% if show_welcome_back %}
+      <div class="b-card" style="margin-bottom:1.5rem; background:#f7f7f7;">
+        <h3>👋 Welcome Back</h3>
+        <p class="muted">{{ welcome_back_ai }}</p>
+      </div>
+    {% endif %}
+
+    {# =========================
+       CHECKLIST
+       ========================= #}
+    {% if checklist_items %}
+      <div class="b-card" style="margin-bottom:1.5rem;">
+        <h3>📋 Your Checklist</h3>
+        <ul style="margin-top:1rem; padding-left:1rem;">
+          {% for item in checklist_items %}
+            <li style="margin-bottom:.5rem;">
+              {% if item.done %}
+                <span style="color:green;">✔</span>
+              {% else %}
+                <span style="color:#999;">○</span>
+              {% endif %}
+              {{ item.label }}
+            </li>
+          {% endfor %}
+        </ul>
+      </div>
+    {% endif %}
+
+    {# =========================
+       WHAT'S NEW
+       ========================= #}
+    {% if whats_new %}
+      <div class="b-card" style="margin-bottom:1.5rem;">
+        <h3>✨ What’s New</h3>
+        <ul style="margin-top:1rem; line-height:1.6;">
+          {% for item in whats_new %}
+            <li>{{ item }}</li>
+          {% endfor %}
+        </ul>
+      </div>
+    {% endif %}
+
+    {# =========================
+       HERO COMMAND STRIP
+       ========================= #}
+    <div class="hero-strip">
+      <div class="hero-left">
+        <div class="hero-kicker">BORROWER OS • LIVE</div>
+
+        <h1 class="hero-title">
+          Welcome back,
+          {{ borrower.full_name if borrower and borrower.full_name else (borrower.first_name if borrower and borrower.first_name else "Borrower") }}
+        </h1>
+
+        <div class="hero-date">{{ now_str or "" }}</div>
+
+        <div class="hero-badges">
+          <div class="chip">⚡ Active Loans: {{ loans|length if loans else 0 }}</div>
+          <div class="chip">💎 Saved Properties: {{ saved_properties|length if saved_properties else 0 }}</div>
+          <div class="chip">🚨 Conditions: {{ conditions|length if conditions else 0 }}</div>
+          <div class="chip">📤 Doc Requests: {{ doc_requests|length if doc_requests else 0 }}</div>
+        </div>
+      </div>
+
+      <div class="hero-right">
+        <div class="ai-glass">
+          <div class="ai-glass-top">
+            <div class="ai-title">
+              <span class="spark-dot"></span>
+              AI Snapshot
+            </div>
+            <div class="ai-mini">Pulse</div>
+          </div>
+
+          <div class="ai-copy">
+            {% if loans %}
+              You have <strong>{{ loans|length }}</strong> active loan{{ loans|length > 1 and 's' or '' }}.
+              Primary stage: <strong>{{ primary_stage or "Application" }}</strong>.
+              Keep momentum by completing your <strong>next steps</strong>.
+            {% else %}
+              No active loan yet — start with <strong>Property Search</strong>, run a <strong>Deal Strategy</strong>,
+              or launch a new application.
+            {% endif %}
+          </div>
+
+          <div class="ai-chart-wrap">
+            <canvas id="loanJourneyChart" height="70"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {# =========================
+       KPI METRICS
+       ========================= #}
+    <div class="bling-grid-4">
+      <div class="bling-card kpi">
+        <div class="kpi-top">
+          <div class="kpi-label">Saved Properties</div>
+          <div class="kpi-pill">LIVE</div>
+        </div>
+        <div class="kpi-value">{{ saved_properties|length if saved_properties else 0 }}</div>
+        <div class="kpi-sub">Watchlist & targets</div>
+      </div>
+
+      <div class="bling-card kpi">
+        <div class="kpi-top">
+          <div class="kpi-label">Active Loans</div>
+          <div class="kpi-pill">SYNC</div>
+        </div>
+        <div class="kpi-value">{{ loans|length if loans else 0 }}</div>
+        <div class="kpi-sub">Files in progress</div>
+      </div>
+
+      <div class="bling-card kpi">
+        <div class="kpi-top">
+          <div class="kpi-label">Outstanding Conditions</div>
+          <div class="kpi-pill">ALERT</div>
+        </div>
+        <div class="kpi-value">{{ conditions|length if conditions else 0 }}</div>
+        <div class="kpi-sub">Items to clear</div>
+      </div>
+
+      <div class="bling-card kpi">
+        <div class="kpi-top">
+          <div class="kpi-label">Document Requests</div>
+          <div class="kpi-pill">QUEUE</div>
+        </div>
+        <div class="kpi-value">{{ doc_requests|length if doc_requests else 0 }}</div>
+        <div class="kpi-sub">Awaiting upload</div>
+      </div>
+    </div>
+
+    {# =========================
+       ACTION LAUNCHPAD
+       ========================= #}
+    {% set pending_conditions = (conditions | selectattr('status', 'ne', 'cleared') | list) if conditions else [] %}
+
+    <div class="bling-grid-3">
+      <a href="{{ url_for('borrower.property_search') }}" class="bling-card action">
+        <div class="action-top">
+          <div class="action-icon">🔎</div>
+          <div>
+            <div class="action-title">Property Search</div>
+            <div class="action-sub">Find + save opportunities</div>
+          </div>
+        </div>
+        <div class="action-cta">Launch →</div>
+      </a>
+
+      {% if pending_conditions %}
+        <a href="/borrower/upload_request?item_id={{ pending_conditions[0].id }}&type=condition" class="bling-card action">
+          <div class="action-top">
+            <div class="action-icon">📤</div>
+            <div>
+              <div class="action-title">Upload: {{ pending_conditions[0].description }}</div>
+              <div class="action-sub">Required to move your loan forward</div>
+            </div>
+          </div>
+          <div class="action-cta">Upload →</div>
+        </a>
+      {% else %}
+       <a href="{{ url_for('borrower.document_requests') }}" class="bling-card action">
+        <div class="action-top">
+          <div class="action-icon">✅</div>
+           <div>
+             <div class="action-title">No Pending Conditions</div>
+             <div class="action-sub">You’re in a good spot — keep going.</div>
+           </div>
+         </div>
+         <div class="action-cta">View →</div>
+        </a>
+      {% endif %}
+
+      <a href="{{ url_for('borrower.deal_workspace') }}" class="bling-card action">
+        <div class="action-top">
+          <div class="action-icon">📈</div>
+          <div>
+            <div class="action-title">Deal Workspace</div>
+            <div class="action-sub">ROI • Rehab • Strategy</div>
+          </div>
+        </div>
+        <div class="action-cta">Analyze →</div>
+      </a>
+    </div>
+
+    {# =========================
+       MARKET SNAPSHOT (FIXED)
+       ========================= #}
+    <div class="b-card" style="margin-bottom:1rem;">
+      <h3>Market Snapshot</h3>
+
+      {% if market_snapshot %}
+        <p class="muted">
+          Median Price:
+          {% if market_snapshot.median_price %}
+            ${{ "{:,.0f}".format(market_snapshot.median_price|float) }}
+          {% else %}
+            N/A
+          {% endif %}
+        </p>
+      {% else %}
+        <p class="muted">No market data yet.</p>
+      {% endif %}
+
+      <div style="margin-top:1rem; display:flex; justify-content:flex-end;">
+        <a href="{{ url_for('borrower.market_snapshot_page') }}" class="lux-btn lux-btn-primary">
+          <span class="lux-ic">📊</span>
+          Open Full Market Intelligence →
+        </a>
+      </div>
+    </div>
+
+    {# =========================
+       PROPERTY SELECTOR
+       ========================= #}
+    {% if saved_properties %}
+      <div class="b-property-selector">
+        <label for="propertySelect">Property:</label>
+        <select id="propertySelect" onchange="changeProperty(this.value)">
+          {% for p in saved_properties %}
+            <option value="{{ p.id }}" {% if p.id == active_property_id %}selected{% endif %}>
+              {{ p.address }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+    {% endif %}
+
+    {# =========================
+       LOAN SNAPSHOT
+       ========================= #}
+    {% if loan %}
+      <div class="b-card" style="margin-bottom:1.5rem;">
+        <h3>📘 Loan Snapshot</h3>
+
+        <div class="b-grid-2" style="margin-top:1rem;">
+          <div>
+            <label class="muted">Loan Type</label>
+            <p>{{ snapshot.loan_type }}</p>
+          </div>
+          <div>
+            <label class="muted">Loan Amount</label>
+            <p>${{ "{:,.2f}".format(snapshot.amount) }}</p>
+          </div>
+        </div>
+
+        <div class="b-grid-2" style="margin-top:1rem;">
+          <div>
+            <label class="muted">Status</label>
+            <p>{{ snapshot.status }}</p>
+          </div>
+          <div>
+            <label class="muted">Property</label>
+            <p>{{ snapshot.address }}</p>
+          </div>
+        </div>
+
+        <div style="margin-top:1.5rem;">
+          <label class="muted">Progress</label>
+          <div class="progress-bar">
+            <div class="progress-fill" style="width: {{ snapshot.progress_percent }}%;"></div>
+          </div>
+          <p class="muted" style="margin-top:.25rem;">
+            {{ snapshot.progress_percent }}% • {{ snapshot.progress_stage }}
+          </p>
+        </div>
+      </div>
+    {% endif %}
+
+    {# =========================
+       NEXT STEP PANEL
+       ========================= #}
+    {% if next_step_ai %}
+      <div class="b-card" style="margin-bottom:1.5rem; border-left:3px solid var(--accent); background:rgba(122,184,255,0.05);">
+        <h3>✨ Your Next Step</h3>
+        <p class="muted" style="margin-top:.5rem;">{{ next_step_ai }}</p>
+      </div>
+    {% endif %}
+
+    {# =========================
+       PENDING CONDITIONS
+       ========================= #}
+    {% if loan and pending_conditions %}
+      <div class="b-card" style="margin-bottom:2rem;">
+        <h3>📄 Pending Conditions</h3>
+
+        {% for cond in pending_conditions %}
+          <a href="/borrower/upload_request?item_id={{ cond.id }}&type=condition" class="bling-card action" style="margin-top:.7rem;">
+            <div class="action-top">
+              <div class="action-icon">📤</div>
+              <div>
+                <div class="action-title">{{ cond.description }}</div>
+                <div class="action-sub">Upload required to move your loan forward</div>
+              </div>
+            </div>
+            <div class="action-cta">Upload →</div>
+          </a>
+        {% endfor %}
+      </div>
+    {% elif loan %}
+      <div class="b-card" style="margin-bottom:2rem;">
+        <h3>📄 Pending Conditions</h3>
+        <p class="muted">You have no pending conditions.</p>
+      </div>
+    {% endif %}
+
+    {# =========================
+       MAIN GRID: LOAN + NEXT STEPS
+       ========================= #}
+    <div class="b-grid-2">
+      <div class="b-card">
+        <h3>Loan Journey</h3>
+        <div class="b-progress-steps">
+          <div class="b-progress-step">Application</div>
+          <div class="b-progress-step">Docs</div>
+          <div class="b-progress-step">Processing</div>
+          <div class="b-progress-step">Underwriting</div>
+          <div class="b-progress-step">Clear to Close</div>
+          <div class="b-progress-step">Closing</div>
+        </div>
+        <div class="b-progress-bar">
+          <div class="b-progress-fill"></div>
+        </div>
+
+        <div style="margin-top:.9rem;">
+          {% if progress_data %}
+            <table class="table-dark">
+              <thead>
+                <tr>
+                  <th>Property</th>
+                  <th>Type</th>
+                  <th>Amount</th>
+                  <th>Status</th>
+                  <th>Progress</th>
+                </tr>
+              </thead>
+              <tbody>
+              {% for item in progress_data %}
+                <tr>
+                  <td>{{ item.loan.property_address }}</td>
+                  <td>{{ item.loan.loan_type }}</td>
+                  <td>${{ "%.2f"|format(item.loan.amount) }}</td>
+                  <td>{{ item.loan.status }}</td>
+                  <td>{{ item.percent }}% ({{ item.stage }})</td>
+                </tr>
+              {% endfor %}
+              </tbody>
+            </table>
+          {% else %}
+            <p class="muted">No applications yet. Start by exploring a property or launching a new application.</p>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="b-card">
+        <h3>Your Next Steps</h3>
+        <p style="font-size:.8rem;color:var(--muted);margin-bottom:.6rem;">
+          These are the most important actions to keep your loan and project moving forward.
+        </p>
+
+        <ul style="list-style:none;padding:0;margin:0;font-size:.8rem;display:flex;flex-direction:column;gap:.45rem;">
+          {% if next_steps %}
+            {% for step in next_steps %}
+              <li>
+                <strong>{{ step.label }}</strong><br>
+                <span style="color:var(--muted);">{{ step.detail }}</span>
+              </li>
+            {% endfor %}
+          {% else %}
+            <li>
+              <strong>No urgent items right now.</strong><br>
+              <span style="color:var(--muted);">You’re in a good place. Explore properties, plan a project, or refine your deal.</span>
+            </li>
+          {% endif %}
+        </ul>
+      </div>
+    </div>
+
+    {# =========================
+       DOCUMENTS & CONDITIONS
+       ========================= #}
+    <div class="b-grid-2">
+      <div class="b-card">
+        <h3>Documents Needed</h3>
+
+        {% if doc_requests %}
+          <table class="table-dark">
+            <thead>
+              <tr>
+                <th>Document</th>
+                <th>Status</th>
+                <th>Requested</th>
+              </tr>
+            </thead>
+            <tbody>
+            {% for d in doc_requests %}
+              <tr>
+                <td>{{ d.name }}</td>
+                <td>{{ d.status }}</td>
+                <td>{{ d.created_at.strftime("%b %d") }}</td>
+              </tr>
+            {% endfor %}
+            </tbody>
+          </table>
+
+          <div style="margin-top:.6rem;">
+            <a href="{{ url_for('borrower.upload_conditions') }}" class="action-btn">
+              <i class="lucide lucide-file-up"></i> Upload Documents
+            </a>
+          </div>
+        {% else %}
+          <p class="muted">No outstanding document requests at the moment.</p>
+        {% endif %}
+      </div>
+
+      <div class="b-card">
+        <h3>Conditions</h3>
+
+        {% if conditions %}
+          <table class="table-dark">
+            <thead>
+              <tr>
+                <th>Condition</th>
+                <th>Type</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+            {% for c in conditions %}
+              <tr>
+                <td>{{ c.title }}</td>
+                <td>{{ c.category }}</td>
+                <td>{{ c.status }}</td>
+              </tr>
+            {% endfor %}
+            </tbody>
+          </table>
+        {% else %}
+          <p class="muted">No outstanding conditions at this time.</p>
+        {% endif %}
+      </div>
+    </div>
+
+    {# =========================
+       TIMELINE
+       ========================= #}
+    <div class="b-card" style="margin-top:2rem;">
+      <h3>📅 Loan Timeline</h3>
+
+      {% if timeline %}
+        <ul class="timeline-list">
+          {% for item in timeline %}
+            <li class="timeline-item">
+              <div class="timeline-dot"></div>
+              <div class="timeline-content">
+                <div class="timeline-text">{{ item.text }}</div>
+                <div class="timeline-date">
+                  {{ item.timestamp.strftime('%b %d, %Y • %I:%M %p') }}
+                </div>
+              </div>
+            </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p class="muted">Your loan activity will appear here as you upload documents and complete steps.</p>
+      {% endif %}
+    </div>
+
+    {# =========================
+       INNER TABS
+       ========================= #}
+    <div class="b-card" style="margin-top:1.4rem;">
+      <div class="b-inner-tabs">
+        <div class="b-inner-tab active" data-inner-tab="property" onclick="setInnerTab('property')">Property</div>
+        <div class="b-inner-tab" data-inner-tab="partners" onclick="setInnerTab('partners')">Partners</div>
+        <div class="b-inner-tab" data-inner-tab="project" onclick="setInnerTab('project')">Project</div>
+        <div class="b-inner-tab" data-inner-tab="deal" onclick="setInnerTab('deal')">Deal</div>
+        <div class="b-inner-tab" data-inner-tab="loan" onclick="setInnerTab('loan')">Loan</div>
+      </div>
+
+      <div class="b-inner-panel" id="inner-property">
+        <h3 style="margin-bottom:.4rem;">Property Workspace</h3>
+        <p style="font-size:.8rem;color:var(--muted);margin-bottom:.7rem;">
+          Search, analyze, and save properties. Use AI to understand value, risk, and potential.
+        </p>
+
+        <div class="lux-btn-row" style="margin-bottom:.7rem;">
+          <a href="{{ url_for('borrower.property_search') }}" class="lux-btn lux-btn-primary">
+            <span class="lux-ic">🔎</span> Search Properties
+          </a>
+
+          <a href="{{ url_for('borrower.property_search') }}" class="lux-btn">
+            <span class="lux-ic">🧭</span> Property Explorer
+          </a>
+
+          <a href="{{ url_for('borrower.saved_properties') }}" class="lux-btn lux-btn-ghost">
+            <span class="lux-ic">💎</span> Saved Properties
+          </a>
+        </div>
+      </div>
+
+      <div class="b-inner-panel" id="inner-partners" style="display:none;">
+        <h3 style="margin-bottom:.4rem;">Partner Network</h3>
+        <p style="font-size:.8rem;color:var(--muted);margin-bottom:.7rem;">
+          Find realtors, contractors, inspectors, and property managers to support your project.
+        </p>
+        <a href="{{ url_for('borrower.borrower_command_center') }}" class="lux-btn lux-btn-primary">
+          <span class="lux-ic">🤝</span> Open Partner & Command Center
+        </a>
+      </div>
+
+      <div class="b-inner-panel" id="inner-project" style="display:none;">
+        <h3 style="margin-bottom:.4rem;">Project Planner</h3>
+        <p style="font-size:.8rem;color:var(--muted);margin-bottom:.7rem;">
+          Plan your renovation budget, phases, and explore AI-assisted design ideas.
+        </p>
+        <a href="{{ url_for('borrower.deal_workspace') }}" class="action-btn">
+          <i class="lucide lucide-calculator"></i> Project Planner
+        </a>
+      </div>
+
+      <div class="b-inner-panel" id="inner-deal" style="display:none;">
+        <h3 style="margin-bottom:.4rem;">Deal Strategy</h3>
+        <p style="font-size:.8rem;color:var(--muted);margin-bottom:.7rem;">
+          Model exit strategies, ROI, DSCR, and rent-vs-sell scenarios.
+        </p>
+        <a href="{{ url_for('borrower.deal_workspace') }}" class="action-btn">
+          <i class="lucide lucide-line-chart"></i> Open Deal Workspace
+        </a>
+      </div>
+
+      <div class="b-inner-panel" id="inner-loan" style="display:none;">
+        <h3 style="margin-bottom:.4rem;">Loan Overview</h3>
+        <p style="font-size:.8rem;color:var(--muted);margin-bottom:.7rem;">
+          Jump into your loan details, documents, conditions, and payments.
+        </p>
+        <div style="display:flex;gap:.7rem;flex-wrap:wrap;margin-bottom:.7rem;">
+          <a href="{{ url_for('borrower.status') }}" class="action-btn">
+            <i class="lucide lucide-clipboard-list"></i> Loan Status
+          </a>
+          {% if loan %}
+            <a href="{{ url_for('borrower.loan_summary', loan_id=loan.id) }}" class="action-btn">
+              Loan Summary →
+            </a>
+          {% endif %}
+          <a href="{{ url_for('borrower.payments') }}" class="action-btn">
+            <i class="lucide lucide-credit-card"></i> Payments
+          </a>
+        </div>
+      </div>
+    </div>
+
+    {# =========================
+       FLOATING AI COPILOT
+       ========================= #}
+    <div id="aiChatWidget" class="ai-chat-widget">
+      <div class="ai-chat-header" onclick="toggleAIChat()">
+        <i class="lucide lucide-bot"></i>
+        <span>Borrower Copilot</span>
+      </div>
+      <div class="ai-chat-body" id="aiChatBody">
+        <div id="aiMessages" class="ai-messages">
+          <div class="ai-msg-ai">
+            Hi {{ borrower.first_name if borrower and borrower.first_name else "there" }}, I’m your Borrower Copilot.
+            I can help you understand your loan, analyze a property, plan a project, or model a deal.
+          </div>
+        </div>
+        <div class="ai-chat-input">
+          <input id="aiInput" type="text" placeholder="Ask me about your loan, property, or deal…"
+                 onkeydown="if(event.key==='Enter') sendAIMessage()">
+          <button onclick="sendAIMessage()">
+            <i class="lucide lucide-send"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+
+  </div> {# /b-main-inner #}
+</main>
+
+{# =========================
+   SCRIPTS
+   ========================= #}
+<script>
+function setInnerTab(name) {
+  const tabs = document.querySelectorAll('.b-inner-tab');
+  const panels = document.querySelectorAll('.b-inner-panel');
+  tabs.forEach(t => t.classList.remove('active'));
+  panels.forEach(p => p.style.display = 'none');
+
+  const activeTab = document.querySelector('.b-inner-tab[data-inner-tab="'+name+'"]');
+  const activePanel = document.getElementById('inner-' + name);
+  if (activeTab) activeTab.classList.add('active');
+  if (activePanel) activePanel.style.display = 'block';
+}
+
+function toggleAIChat() {
+  const body = document.getElementById("aiChatBody");
+  body.style.display = body.style.display === "block" ? "none" : "block";
+}
+
+async function sendAIMessage() {
+  const input = document.getElementById("aiInput");
+  const text = input.value.trim();
+  if (!text) return;
+
+  const msgBox = document.getElementById("aiMessages");
+  msgBox.innerHTML += `<div class="ai-msg-user">${text}</div>`;
+  input.value = "";
+
+  try {
+    const res = await fetch("{{ url_for('borrower.ask_ai_page') }}", {
+      method:"POST",
+      headers:{"Content-Type":"application/x-www-form-urlencoded"},
+      body:new URLSearchParams({question:text})
+    });
+
+    const html = await res.text();
+    const doc = new DOMParser().parseFromString(html,"text/html");
+    const aiResponse =
+      doc.querySelector("#ai-response-text")?.innerText ||
+      "I couldn’t load a detailed answer, but you can open the AI Hub for more context.";
+
+    msgBox.innerHTML += `<div class="ai-msg-ai">${aiResponse}</div>`;
+    msgBox.scrollTop = msgBox.scrollHeight;
+  } catch(e) {
+    msgBox.innerHTML += `<div class="ai-msg-ai">Something went wrong reaching AI. Please try again in a moment.</div>`;
+  }
+}
+
+function changeProperty(id) {
+  window.location.href = `/borrower/dashboard?property_id=${id}`;
+}
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+const accent = 'rgba(217,221,228,1)';
+const accentSoft = 'rgba(217,221,228,0.18)';
+const gridColor = 'rgba(255,255,255,0.08)';
+const textColor = 'rgba(230,235,240,0.85)';
+
+(function(){
+  const el = document.getElementById('loanJourneyChart');
+  if (!el) return;
+
+  new Chart(el, {
+    type: 'line',
+    data: {
+      labels: ['Application','Docs','Processing','UW','CTC','Closing'],
+      datasets: [{
+        label: 'Progress',
+        data: [0, 20, 40, 60, 80, 100],
+        borderColor: accent,
+        backgroundColor: accentSoft,
+        tension: 0.35,
+        fill: true
+      }]
+    },
+    options: {
+      plugins: { legend: { display:false }},
+      scales: {
+        x: { ticks:{ color:textColor }, grid:{ color:gridColor }},
+        y: { ticks:{ color:textColor }, grid:{ color:gridColor }}
+      }
+    }
+  });
+})();
+
+(function(){
+  const el = document.getElementById('valueTrendChart');
+  if (!el) return;
+
+  const labels = {{ (resolved.price_history_labels if resolved and resolved.price_history_labels else []) | tojson }};
+  const values = {{ (resolved.price_history_values if resolved and resolved.price_history_values else []) | tojson }};
+
+  new Chart(el, {
+    type: 'line',
+    data: {
+      labels: labels,
+      datasets: [{
+        label: 'Value',
+        data: values,
+        borderColor: accent,
+        backgroundColor: accentSoft,
+        tension: 0.35,
+        fill: true,
+      }]
+    },
+    options: {
+      plugins:{ legend:{ display:false }},
+      scales:{
+        x:{ ticks:{ color:textColor }, grid:{ color:gridColor }},
+        y:{ ticks:{ color:textColor }, grid:{ color:gridColor }}
+      }
+    }
+  });
+})();
+</script>
+
+{# =========================
+   STYLES (yours unchanged)
+   ========================= #}
+<style>
+/* ===== Platinum / Silver Luxury Skin ===== */
+:root{
+  --lux-bg: #0c0f14;
+  --lux-card: rgba(18,22,30,.75);
+  --lux-border: rgba(255,255,255,.08);
+  --lux-soft: rgba(255,255,255,.04);
+  --lux-text: rgba(230,235,240,.92);
+  --lux-muted: rgba(180,185,195,.6);
+  --lux-accent: #d9dde4;
+  --lux-accent-soft: rgba(217,221,228,.15);
+  --lux-glow: 0 0 24px rgba(255,255,255,.06);
+}
+
+/* subtle depth background */
+.b-main{ position:relative; }
+.b-main:before{
+  content:"";
+  position:absolute;
+  inset:-70px;
+  background:
+    radial-gradient(circle at 15% 10%, rgba(255,255,255,.05), transparent 48%),
+    radial-gradient(circle at 85% 20%, rgba(255,255,255,.04), transparent 50%),
+    radial-gradient(circle at 45% 92%, rgba(255,255,255,.03), transparent 52%);
+  filter: blur(10px);
+  pointer-events:none;
+  z-index:0;
+}
+.b-main > *{ position:relative; z-index:1; }
+
+/* HERO */
+.hero-strip{
+  display:grid;
+  grid-template-columns: 1.3fr 1fr;
+  gap:1.2rem;
+  margin-bottom:1.2rem;
+}
+.hero-left{
+  padding:1.5rem;
+  border-radius:20px;
+  background: linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
+  border:1px solid var(--lux-border);
+  backdrop-filter: blur(12px);
+  box-shadow: var(--lux-glow);
+}
+.hero-kicker{
+  font-size:.72rem;
+  letter-spacing:.28em;
+  color: var(--lux-muted);
+}
+.hero-title{
+  margin:.35rem 0 .4rem 0;
+  font-size:2rem;
+  font-weight:800;
+  letter-spacing:.02em;
+  color: var(--lux-text);
+}
+.hero-date{ font-size:.85rem; color: var(--lux-muted); }
+.hero-badges{ margin-top:1rem; display:flex; gap:.6rem; flex-wrap:wrap; }
+.chip{
+  padding:.45rem .75rem;
+  border-radius:999px;
+  font-size:.75rem;
+  border:1px solid var(--lux-border);
+  background: var(--lux-soft);
+  color: var(--lux-muted);
+}
+
+/* AI glass */
+.ai-glass{
+  padding:1.4rem;
+  border-radius:20px;
+  background: var(--lux-card);
+  border:1px solid var(--lux-border);
+  backdrop-filter: blur(14px);
+  box-shadow: var(--lux-glow);
+}
+.ai-glass-top{ display:flex; align-items:center; justify-content:space-between; }
+.ai-title{ display:flex; align-items:center; gap:.55rem; font-weight:800; letter-spacing:.03em; color: var(--lux-text); }
+.ai-mini{
+  font-size:.72rem;
+  padding:.22rem .6rem;
+  border-radius:999px;
+  border:1px solid var(--lux-border);
+  background: var(--lux-soft);
+  color: var(--lux-muted);
+}
+.spark-dot{
+  width:10px;height:10px;border-radius:50%;
+  background: rgba(217,221,228,1);
+  box-shadow: 0 0 18px rgba(255,255,255,.20);
+  animation: pulse 1.8s ease-in-out infinite;
+}
+@keyframes pulse{
+  0%,100%{ transform:scale(1); opacity:.75; }
+  50%{ transform:scale(1.25); opacity:1; }
+}
+.ai-copy{ font-size:.85rem; line-height:1.5; color: var(--lux-muted); margin-top:.6rem; }
+.ai-chart-wrap{
+  margin-top:.8rem;
+  padding:.65rem;
+  border-radius:16px;
+  border:1px solid var(--lux-border);
+  background: rgba(255,255,255,.03);
+}
+
+/* KPI + ACTION cards */
+.bling-grid-4{
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:1.2rem;
+  margin-bottom:1.5rem;
+}
+.bling-grid-3{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:1.2rem;
+  margin-bottom:1.8rem;
+}
+.bling-card{
+  position:relative;
+  border-radius:20px;
+  padding:1.4rem;
+  background: var(--lux-card);
+  border:1px solid var(--lux-border);
+  backdrop-filter: blur(14px);
+  transition:.25s ease;
+  box-shadow: 0 10px 28px rgba(0,0,0,.35);
+}
+.bling-card:hover{
+  transform: translateY(-3px);
+  border-color: rgba(255,255,255,.18);
+  box-shadow: 0 16px 42px rgba(0,0,0,.45);
+}
+.bling-card::after{
+  content:"";
+  position:absolute;
+  top:0;
+  left:-120%;
+  width:60%;
+  height:100%;
+  background: linear-gradient(120deg, transparent, rgba(255,255,255,.08), transparent);
+  transform: skewX(-25deg);
+}
+.bling-card:hover::after{ animation: sheen 1s forwards; }
+@keyframes sheen{ to{ left:150%; } }
+
+.kpi-top{ display:flex; justify-content:space-between; align-items:center; }
+.kpi-label{
+  font-size:.8rem;
+  color: var(--lux-muted);
+  letter-spacing:.10em;
+  text-transform:uppercase;
+}
+.kpi-pill{
+  font-size:.7rem;
+  padding:.22rem .6rem;
+  border-radius:999px;
+  border:1px solid var(--lux-border);
+  background: var(--lux-soft);
+  color: var(--lux-muted);
+}
+.kpi-value{
+  margin-top:.55rem;
+  font-size:2.15rem;
+  font-weight:900;
+  letter-spacing:.02em;
+  color: var(--lux-accent);
+}
+.kpi-sub{ margin-top:.25rem; font-size:.78rem; color: var(--lux-muted); }
+
+.action{ display:block; text-decoration:none; color:inherit; }
+.action-top{ display:flex; gap:.8rem; align-items:center; }
+.action-icon{
+  width:44px;height:44px;
+  border-radius:14px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background: var(--lux-soft);
+  border:1px solid var(--lux-border);
+  font-size:1.05rem;
+}
+.action-title{ font-weight:850; font-size:1rem; color: var(--lux-text); }
+.action-sub{ font-size:.8rem; color: var(--lux-muted); margin-top:.1rem; }
+.action-cta{ margin-top:1rem; font-size:.82rem; font-weight:800; color: var(--lux-accent); }
+
+.b-grid-2{
+  display:grid;
+  grid-template-columns: 1.35fr 1fr;
+  gap:1rem;
+  margin-bottom:1rem;
+}
+
+@media (max-width: 1100px){
+  .hero-strip{ grid-template-columns:1fr; }
+  .bling-grid-4{ grid-template-columns:repeat(2, minmax(0,1fr)); }
+  .bling-grid-3{ grid-template-columns:1fr; }
+  .b-grid-2{ grid-template-columns:1fr; }
+}
+@media (max-width: 520px){
+  .bling-grid-4{ grid-template-columns:1fr; }
+  .hero-title{ font-size:1.65rem; }
+}
+</style>
+
+<style>
+/* ===== Platinum Buttons ===== */
+.lux-btn{
+  display:inline-flex;
+  align-items:center;
+  gap:.55rem;
+  padding:.72rem 1rem;
+  border-radius:14px;
+  border:1px solid var(--lux-border);
+  background: rgba(255,255,255,.04);
+  color: var(--lux-text);
+  text-decoration:none;
+  font-weight:800;
+  letter-spacing:.02em;
+  font-size:.85rem;
+  transition:.22s ease;
+  box-shadow: 0 10px 24px rgba(0,0,0,.22);
+}
+.lux-btn:hover{
+  transform: translateY(-2px);
+  border-color: rgba(255,255,255,.18);
+  background: rgba(255,255,255,.06);
+  box-shadow: 0 14px 34px rgba(0,0,0,.35);
+}
+.lux-btn:active{ transform: translateY(0px); }
+.lux-btn-primary{
+  background: linear-gradient(180deg, rgba(217,221,228,.14), rgba(255,255,255,.05));
+  border-color: rgba(255,255,255,.16);
+}
+.lux-btn-primary:hover{
+  background: linear-gradient(180deg, rgba(217,221,228,.18), rgba(255,255,255,.06));
+}
+.lux-btn-ghost{
+  background: transparent;
+  border-color: rgba(255,255,255,.10);
+  box-shadow:none;
+}
+.lux-btn-ghost:hover{
+  background: rgba(255,255,255,.04);
+  box-shadow: 0 10px 22px rgba(0,0,0,.22);
+}
+.lux-btn .lux-ic{
+  width:34px;
+  height:34px;
+  border-radius:12px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background: rgba(255,255,255,.05);
+  border:1px solid rgba(255,255,255,.08);
+}
+.lux-btn-row{ display:flex; gap:.7rem; flex-wrap:wrap; }
+</style>
+
+{% endblock %}

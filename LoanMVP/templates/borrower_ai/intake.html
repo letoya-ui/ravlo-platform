@@ -1,0 +1,205 @@
+{% extends "layouts/base.html" %}
+{% block title %}Borrower AI • Loan Intake{% endblock %}
+{% block content %}
+
+<!-- =========================================
+     Borrower AI – Loan Intake
+========================================= -->
+<link rel="stylesheet" href="https://unpkg.com/lucide-static@latest/font/lucide.css">
+
+<style>
+  :root {
+    --bg:#0f0f11;
+    --panel:#15161a;
+    --line:#282b31;
+    --text-light:#e6e6e6;
+    --text-muted:#a5a7ad;
+    --accent:#7ab8ff;
+    --hover:#1f2328;
+    --border:#2b2f36;
+    --glow:0 0 18px rgba(122,184,255,0.35);
+  }
+
+  main.dashboard-main {
+    margin-left:260px;
+    padding:2rem;
+    background:var(--bg);
+    color:var(--text-light);
+    min-height:100vh;
+  }
+
+  .card {
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding:1.5rem;
+    box-shadow:var(--glow);
+    margin-bottom:1.5rem;
+  }
+
+  h1, h2, h3 { color:var(--accent); margin-bottom:.5rem; }
+  .muted { color:var(--text-muted); }
+
+  label {
+    display:block;
+    margin-bottom:.3rem;
+    font-size:.9rem;
+    color:var(--text-muted);
+  }
+
+  input, select {
+    width:100%;
+    padding:.55rem .7rem;
+    background:var(--hover);
+    border:1px solid var(--border);
+    border-radius:8px;
+    color:var(--text-light);
+    margin-bottom:.9rem;
+    transition:border .2s ease, box-shadow .2s ease;
+  }
+
+  input:hover, select:hover { border-color:var(--accent); box-shadow:0 0 6px rgba(122,184,255,.2); }
+
+  .btn {
+    display:inline-flex;
+    align-items:center;
+    gap:.4rem;
+    padding:.7rem 1.2rem;
+    border-radius:10px;
+    border:1px solid var(--border);
+    background:linear-gradient(180deg,#1d2732,#14171a);
+    color:var(--text-light);
+    font-weight:500;
+    text-decoration:none;
+    transition:all .25s ease;
+  }
+
+  .btn:hover { box-shadow:var(--glow); border-color:var(--accent); }
+
+  .form-grid {
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(280px,1fr));
+    gap:1.2rem;
+  }
+
+  .ai-feedback {
+    display:none;
+    margin-top:1.5rem;
+    background:var(--hover);
+    border:1px solid var(--line);
+    border-radius:12px;
+    padding:1rem;
+    box-shadow:var(--glow);
+  }
+</style>
+
+<main class="dashboard-main">
+  {% include "borrower/_sidebar_borrower.html" %}
+
+  <h1>🤖 Borrower AI Loan Intake</h1>
+  <p class="muted">Answer a few questions — our AI will assess your eligibility and recommend loan programs.</p>
+
+  <form method="POST" action="{{ url_for('borrower_ai.intake') }}">
+    <div class="card">
+      <h3><i class="lucide lucide-user"></i> Personal Info</h3>
+      <div class="form-grid">
+        <div>
+          <label for="name">Full Name</label>
+          <input type="text" name="name" id="name" placeholder="John Doe" required>
+        </div>
+        <div>
+          <label for="email">Email</label>
+          <input type="email" name="email" id="email" placeholder="you@email.com" required>
+        </div>
+        <div>
+          <label for="phone">Phone</label>
+          <input type="text" name="phone" id="phone" placeholder="(555) 555-5555">
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3><i class="lucide lucide-home"></i> Property Info</h3>
+      <div class="form-grid">
+        <div>
+          <label for="property_address">Property Address</label>
+          <input type="text" name="property_address" id="property_address" placeholder="123 Main St, NY">
+        </div>
+        <div>
+          <label for="loan_type">Loan Type</label>
+          <select name="loan_type" id="loan_type">
+            <option value="Fix & Flip">Fix & Flip</option>
+            <option value="Rental">Rental</option>
+            <option value="Construction">Construction</option>
+            <option value="Commercial">Commercial</option>
+          </select>
+        </div>
+        <div>
+          <label for="amount">Loan Amount ($)</label>
+          <input type="number" name="amount" id="amount" placeholder="250000">
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3><i class="lucide lucide-bar-chart"></i> Financial Details</h3>
+      <div class="form-grid">
+        <div>
+          <label for="credit_score">Credit Score</label>
+          <input type="number" name="credit_score" id="credit_score" placeholder="700">
+        </div>
+        <div>
+          <label for="income">Annual Income ($)</label>
+          <input type="number" name="income" id="income" placeholder="85000">
+        </div>
+        <div>
+          <label for="employment">Employment</label>
+          <select name="employment" id="employment">
+            <option value="Employed">Employed</option>
+            <option value="Self-Employed">Self-Employed</option>
+            <option value="Investor">Investor</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3><i class="lucide lucide-file-input"></i> Investment Details</h3>
+      <div class="form-grid">
+        <div>
+          <label for="purchase_price">Purchase Price</label>
+          <input type="number" name="purchase_price" id="purchase_price" placeholder="200000">
+        </div>
+        <div>
+          <label for="arv">After Repair Value (ARV)</label>
+          <input type="number" name="arv" id="arv" placeholder="350000">
+        </div>
+        <div>
+          <label for="construction_budget">Construction Budget</label>
+          <input type="number" name="construction_budget" id="construction_budget" placeholder="50000">
+        </div>
+      </div>
+    </div>
+
+    <div style="text-align:center; margin-top:1.5rem;">
+      <button type="submit" class="btn"><i class="lucide lucide-send"></i> Submit Intake</button>
+    </div>
+  </form>
+
+  <!-- === AI Feedback === -->
+  <div id="ai_feedback" class="ai-feedback">
+    <h3><i class="lucide lucide-brain"></i> AI Feedback</h3>
+    <p id="ai_text" class="muted">Processing your intake results...</p>
+  </div>
+</main>
+
+<script>
+document.querySelector("form").addEventListener("submit", ()=>{
+  const box = document.getElementById("ai_feedback");
+  box.style.display = "block";
+  document.getElementById("ai_text").textContent = "🔍 Analyzing your data and generating insights...";
+});
+</script>
+
+{% endblock %}

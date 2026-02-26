@@ -1,0 +1,33 @@
+[2025-11-02 19:24:26,523] [INFO] Starting Caughman Mason LoanMVP Flask server...
+[2025-11-02 19:25:42,998] [INFO] Starting Caughman Mason LoanMVP Flask server...
+[2025-11-02 19:25:43,008] [INFO] [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5050
+ * Running on http://192.168.68.59:5050
+[2025-11-02 19:25:43,008] [INFO] [33mPress CTRL+C to quit[0m
+[2025-11-02 21:03:00,199] [INFO] Starting Caughman Mason LoanMVP Flask server...
+[2025-11-02 21:03:00,268] [INFO] [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5050
+ * Running on http://192.168.68.59:5050
+[2025-11-02 21:03:00,268] [INFO] [33mPress CTRL+C to quit[0m
+[2025-11-03 09:29:09,686] [INFO] Starting Caughman Mason LoanMVP Flask server...
+[2025-11-03 09:29:09,696] [INFO] [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5050
+ * Running on http://192.168.68.55:5050
+[2025-11-03 09:29:09,696] [INFO] [33mPress CTRL+C to quit[0m
+[2025-11-03 09:30:55,381] [INFO] Starting Caughman Mason LoanMVP Flask server...
+[2025-11-03 09:30:55,393] [INFO] [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5050
+ * Running on http://192.168.68.55:5050
+[2025-11-03 09:30:55,393] [INFO] [33mPress CTRL+C to quit[0m
+[2025-11-03 09:34:49,033] [INFO] Starting Caughman Mason LoanMVP Flask server...
+[2025-11-03 09:34:49,046] [INFO] [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5050
+ * Running on http://192.168.68.55:5050
+[2025-11-03 09:34:49,046] [INFO] [33mPress CTRL+C to quit[0m
+2025-11-03 10:07:57,007 [INFO] \u2705 Starting Caughman Mason LoanMVP (Production Mode)
+2025-11-03 10:07:57,008 [INFO] Serving on http://0.0.0.0:5050

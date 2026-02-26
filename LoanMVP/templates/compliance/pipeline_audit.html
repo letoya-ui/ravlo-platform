@@ -1,0 +1,32 @@
+{% extends "layouts/base.html" %}
+{% block title %}Compliance • Pipeline Audit{% endblock %}
+{% block content %}
+<style>
+  :root{--panel:#15161a;--line:#2a2e36;--text:#e6e6e6;--muted:#a5a7ad;--glow:0 0 18px rgba(122,184,255,.35);}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:1rem;box-shadow:var(--glow);}
+  table{width:100%;border-collapse:collapse}th,td{padding:.6rem;border-top:1px solid var(--line);}
+  th{color:#cfe0f5;text-align:left;}
+</style>
+
+<h1>📊 Pipeline Audit</h1>
+<div class="card">
+  {% if audits %}
+  <table>
+    <thead><tr><th>ID</th><th>Borrower</th><th>Loan Type</th><th>Flag</th><th>Status</th></tr></thead>
+    <tbody>
+      {% for a in audits %}
+      <tr>
+        <td>{{ a.id }}</td>
+        <td>{{ a.borrower }}</td>
+        <td>{{ a.loan_type }}</td>
+        <td>{{ a.flag }}</td>
+        <td>{{ a.status }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div class="muted">No flagged records found.</div>
+  {% endif %}
+</div>
+{% endblock %}

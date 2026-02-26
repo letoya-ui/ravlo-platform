@@ -1,0 +1,111 @@
+{% extends "layouts/base.html" %}
+{% block title %}Messages{% endblock %}
+{% block content %}
+
+<div class="wrap">
+
+    <section class="lhs">
+        <div class="card">
+
+            <!-- HEADER -->
+            <div class="messages-header">
+                <h2><i class="lucide lucide-messages-square"></i> Messages</h2>
+
+                <a href="{{ url_for('underwriter.new_message') }}" class="new-msg-btn">
+                    <i class="lucide lucide-plus"></i> New Message
+                </a>
+            </div>
+
+            <!-- SEARCH -->
+            <input type="text" id="threadSearch" class="search-input"
+                   placeholder="Search conversations...">
+
+            {% if threads %}
+                <div class="thread-list">
+                    {% for t in threads %}
+                        <a href="{{ url_for('underwriter.message_thread', partner_id=t.partner_id) }}"
+                           class="thread-item">
+
+                            <div class="thread-info">
+                                <h4 class="thread-name">{{ t.partner_name }}</h4>
+                                <p class="muted thread-preview">
+                                    {% if t.last_sender_id == current_user.id %}
+                                        <strong>You:</strong> {{ t.last_message_preview }}
+                                    {% else %}
+                                        {{ t.last_message_preview }}
+                                    {% endif %}
+                                </p>
+                            </div>
+
+                            <span class="thread-time">
+                                {{ t.updated_at.strftime('%b %d, %Y %I:%M %p') }}
+                            </span>
+                        </a>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <p class="muted">No conversations yet.</p>
+            {% endif %}
+
+        </div>
+    </section>
+
+    <aside class="rhs">
+        <div class="card">
+            <h3>Smart Tip</h3>
+            <p class="muted">Message processors or loan officers to clarify conditions or request documents.</p>
+        </div>
+    </aside>
+
+</div>
+
+<style>
+.wrap { padding:2rem; display:grid; grid-template-columns:2fr 1fr; gap:1.5rem; }
+
+.messages-header {
+    display:flex; justify-content:space-between; align-items:center;
+    margin-bottom:1.2rem;
+}
+
+.new-msg-btn {
+    display:inline-flex; align-items:center; gap:.45rem;
+    background:var(--panel); border:1px solid var(--line);
+    padding:.55rem 1rem; border-radius:10px; color:var(--text);
+    text-decoration:none; transition:.2s ease;
+}
+.new-msg-btn:hover { background:var(--accent); color:#000; box-shadow:var(--glow); }
+
+.search-input {
+    width:100%; padding:.7rem; margin-bottom:1rem;
+    border-radius:10px; background:#0f0f11; border:1px solid var(--line);
+    color:var(--text);
+}
+
+.thread-list { display:flex; flex-direction:column; gap:.8rem; }
+
+.thread-item {
+    display:flex; justify-content:space-between; align-items:center;
+    background:#111113; border:1px solid var(--line);
+    padding:1rem; border-radius:12px; text-decoration:none;
+    color:var(--text); transition:.2s ease;
+}
+.thread-item:hover { background:#1a1a1d; border-color:var(--accent); box-shadow:var(--glow); }
+
+.thread-preview strong { color:var(--accent); }
+.thread-time { font-size:.8rem; color:var(--muted); }
+</style>
+
+<script>
+document.getElementById("threadSearch").addEventListener("input", function () {
+    const filter = this.value.toLowerCase();
+    const items = document.querySelectorAll(".thread-item");
+
+    items.forEach(item => {
+        const name = item.querySelector(".thread-name").textContent.toLowerCase();
+        const preview = item.querySelector(".thread-preview").textContent.toLowerCase();
+        item.style.display = (name.includes(filter) || preview.includes(filter)) ? "flex" : "none";
+    });
+});
+</script>
+
+{% endblock %}

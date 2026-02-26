@@ -1,0 +1,31 @@
+{% extends "layouts/base.html" %}
+{% block title %}Admin | Messages{% endblock %}
+{% block content %}
+<div class="d-flex">
+  
+  <main class="flex-grow-1 p-4" style="margin-left:260px;background-color:#0f0f0f;color:#e0e0e0;">
+    <h2 class="mb-4">💬 Internal Messages</h2>
+    <div class="card bg-dark border-0 shadow p-3">
+      <form method="POST" class="mb-4">
+        <div class="d-flex gap-2">
+          <input type="text" name="recipient" class="form-control bg-dark text-light border-secondary" placeholder="Recipient email">
+          <input type="text" name="subject" class="form-control bg-dark text-light border-secondary" placeholder="Subject">
+        </div>
+        <textarea name="body" rows="4" class="form-control bg-dark text-light border-secondary mt-3" placeholder="Write your message..."></textarea>
+        <button type="submit" class="btn btn-outline-light mt-3">Send Message</button>
+      </form>
+
+      <h5 class="text-muted mb-3">Inbox</h5>
+      {% for msg in messages %}
+      <div class="border-bottom border-secondary pb-2 mb-3">
+        <strong>{{ msg.sender_email }}</strong> → <em>{{ msg.subject }}</em>
+        <p>{{ msg.body }}</p>
+        <small class="text-muted">{{ msg.sent_at.strftime('%b %d, %Y %I:%M %p') }}</small>
+      </div>
+      {% else %}
+        <p class="text-muted text-center">No messages yet.</p>
+      {% endfor %}
+    </div>
+  </main>
+</div>
+{% endblock %}

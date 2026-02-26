@@ -1,0 +1,186 @@
+<link rel="stylesheet" href="https://unpkg.com/lucide-static@latest/font/lucide.css">
+
+<style>
+  .sidebar {
+    width:260px;
+    background:var(--panel);
+    height:100vh;
+    position:fixed;
+    left:0; top:0;
+    border-right:1px solid var(--line);
+    box-shadow:0 0 20px rgba(0,0,0,0.45);
+    overflow-y:auto;
+    z-index:500;
+  }
+
+  .sidebar h2 {
+    font-size:1.3rem;
+    font-weight:700;
+    padding:1.4rem;
+    margin:0;
+    color:white;
+    text-shadow:0 0 10px rgba(122,184,255,0.6);
+  }
+
+  .nav-section-title {
+    padding:1rem 1.2rem .3rem;
+    font-size:.75rem;
+    text-transform:uppercase;
+    color:var(--muted);
+    letter-spacing:1px;
+  }
+
+  .nav-link {
+    display:flex;
+    align-items:center;
+    padding:.75rem 1.2rem;
+    color:var(--text);
+    text-decoration:none;
+    border-left:3px solid transparent;
+    transition:all .2s ease;
+    font-size:.92rem;
+  }
+  .nav-link i {
+    margin-right:.75rem;
+    font-size:1.1rem;
+  }
+
+  .nav-link:hover {
+    background:var(--hover);
+    border-left:3px solid var(--accent);
+    color:white;
+    text-shadow:0 0 8px rgba(122,184,255,0.4);
+  }
+
+  .active {
+    background:var(--hover);
+    border-left:3px solid var(--accent);
+    color:white !important;
+    font-weight:600;
+    text-shadow:0 0 10px rgba(122,184,255,0.5);
+  }
+</style>
+
+
+<div class="sidebar">
+  <h2>CM Master Panel</h2>
+
+  <!-- DASHBOARD -->
+  <div class="nav-section-title">Main</div>
+  <a href="{{ url_for('master.dashboard') }}" class="nav-link {% if active_blueprint=='master' %}active{% endif %}">
+    <i class="lucide lucide-layout-dashboard"></i> Dashboard
+  </a>
+
+  <!-- LEADS -->
+  <div class="nav-section-title">CRM</div>
+  <a href="{{ url_for('crm.view_leads') }}" class="nav-link">
+    <i class="lucide lucide-users"></i> Leads
+  </a>
+  <a href="{{ url_for('crm.analytics') }}" class="nav-link">
+    <i class="lucide lucide-bar-chart-2"></i> Analytics
+  </a>
+  <a href="{{ url_for('crm.messages') }}" class="nav-link">
+    <i class="lucide lucide-mail"></i> Messaging
+  </a>
+
+  <!-- LOAN OFFICER -->
+  <div class="nav-section-title">Loan Officer</div>
+  <a href="{{ url_for('loan_officer.dashboard') }}" class="nav-link">
+    <i class="lucide lucide-briefcase"></i> LO Dashboard
+  </a>
+  <a href="{{ url_for('loan_officer.pipeline') }}" class="nav-link">
+    <i class="lucide lucide-activity"></i> Pipeline
+  </a>
+  <a href="{{ url_for('loan_officer.quotes') }}" class="nav-link">
+    <i class="lucide lucide-clipboard-list"></i> Quotes
+  </a>
+  <a href="{{ url_for('loan_officer.tasks') }}" class="nav-link">
+    <i class="lucide lucide-check-square"></i> Tasks
+  </a>
+
+  <!-- PROCESSOR -->
+  <div class="nav-section-title">Processor</div>
+  <a href="{{ url_for('processor.dashboard') }}" class="nav-link">
+    <i class="lucide lucide-settings"></i> Processor Dashboard
+  </a>
+  <a href="{{ url_for('processor.file_review') }}" class="nav-link">
+    <i class="lucide lucide-folder-open"></i> File Review
+  </a>
+  <a href="{{ url_for('processor.documents') }}" class="nav-link">
+    <i class="lucide lucide-file-text"></i> Documents
+  </a>
+
+  <!-- UNDERWRITER -->
+  <div class="nav-section-title">Underwriter</div>
+  <a href="{{ url_for('underwriter.dashboard') }}" class="nav-link">
+    <i class="lucide lucide-shield-check"></i> UW Dashboard
+  </a>
+  <a href="{{ url_for('underwriter.conditions') }}" class="nav-link">
+    <i class="lucide lucide-alert-triangle"></i> Conditions
+  </a>
+  <a href="{{ url_for('underwriter.review') }}" class="nav-link">
+    <i class="lucide lucide-scroll"></i> File Review
+  </a>
+
+  <!-- BORROWERS -->
+  <div class="nav-section-title">Borrowers</div>
+  <a href="{{ url_for('borrower.list') }}" class="nav-link">
+    <i class="lucide lucide-user"></i> All Borrowers
+  </a>
+  <a href="{{ url_for('borrower.documents') }}" class="nav-link">
+    <i class="lucide lucide-file-stack"></i> Borrower Docs
+  </a>
+  <a href="{{ url_for('borrower.ai') }}" class="nav-link">
+    <i class="lucide lucide-bot"></i> Borrower AI
+  </a>
+
+  <!-- COMPLIANCE -->
+  <div class="nav-section-title">Compliance</div>
+  <a href="{{ url_for('compliance.audit') }}" class="nav-link">
+    <i class="lucide lucide-badge-check"></i> Audits
+  </a>
+  <a href="{{ url_for('compliance.reports') }}" class="nav-link">
+    <i class="lucide lucide-file-check"></i> Reports
+  </a>
+
+  <!-- PROPERTY -->
+  <div class="nav-section-title">Property Intelligence</div>
+  <a href="{{ url_for('property.dashboard') }}" class="nav-link">
+    <i class="lucide lucide-home"></i> Property Dashboard
+  </a>
+  <a href="{{ url_for('property.analyzer') }}" class="nav-link">
+    <i class="lucide lucide-bar-chart"></i> Analyzer
+  </a>
+
+  <!-- INTELLIGENCE -->
+  <div class="nav-section-title">AI / Data</div>
+  <a href="{{ url_for('intelligence.analytics') }}" class="nav-link">
+    <i class="lucide lucide-brain"></i> Intelligence Hub
+  </a>
+  <a href="{{ url_for('master.ai') }}" class="nav-link">
+    <i class="lucide lucide-bot-message-square"></i> Global AI
+  </a>
+
+  <!-- EXECUTIVE -->
+  <div class="nav-section-title">Executive</div>
+  <a href="{{ url_for('executive.dashboard') }}" class="nav-link">
+    <i class="lucide lucide-crown"></i> Executive Panel
+  </a>
+  <a href="{{ url_for('executive.revenue') }}" class="nav-link">
+    <i class="lucide lucide-dollar-sign"></i> Revenue
+  </a>
+
+  <!-- SYSTEM -->
+  <div class="nav-section-title">System</div>
+  <a href="{{ url_for('system.settings') }}" class="nav-link">
+    <i class="lucide lucide-sliders"></i> System Settings
+  </a>
+  <a href="{{ url_for('system.logs') }}" class="nav-link">
+    <i class="lucide lucide-terminal-square"></i> System Logs
+  </a>
+  </a>
+      <a href="{{ url_for('auth.logout') }}">
+        <i class="fa-solid fa-right-from-bracket"></i> Logout
+      </a>
+
+</div>

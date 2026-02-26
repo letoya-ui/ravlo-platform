@@ -1,0 +1,114 @@
+{% extends "layouts/base.html" %}
+{% block title %}Notifications{% endblock %}
+{% block content %}
+<main class="dashboard-main">
+
+<style>
+  :root {
+    --bg:#0f0f11; --panel:#15161a; --line:#2b2b31;
+    --text:#e6e6e6; --muted:#a5a7ad; --accent:#7ab8ff;
+    --glow:0 0 18px rgba(122,184,255,.25);
+  }
+  body { background:var(--bg); color:var(--text); }
+  .notif-wrap {
+    max-width:760px; margin:1.5rem auto; padding:1rem;
+  }
+  .notif-header {
+    display:flex; justify-content:space-between;
+    align-items:center; margin-bottom:1.2rem;
+  }
+  .notif-header h1 {
+    font-size:1.4rem; font-weight:600; color:var(--accent);
+  }
+  .notif-list {
+    display:flex; flex-direction:column; gap:.75rem;
+  }
+  .notif-card {
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:12px;
+    padding:.9rem 1rem;
+    box-shadow:var(--glow);
+    display:flex; justify-content:space-between;
+    align-items:flex-start;
+    transition:all .2s ease;
+  }
+  .notif-card:hover {
+    border-color:var(--accent);
+    box-shadow:0 0 16px rgba(122,184,255,.4);
+  }
+  .notif-left {
+    display:flex; align-items:flex-start; gap:.8rem;
+  }
+  .notif-icon {
+    font-size:1.2rem; flex-shrink:0;
+  }
+  .notif-message { font-size:.95rem; line-height:1.3; }
+  .notif-meta { font-size:.8rem; color:var(--muted); margin-top:.2rem; }
+  .notif-card.new { background:rgba(122,184,255,.1); }
+  .empty { text-align:center; color:var(--muted); padding:2rem; font-size:.9rem; }
+</style>
+
+<div class="notif-wrap">
+  <div class="notif-header">
+    <h1>🔔 Notifications</h1>
+    <a href="{{ url_for(current_user.role.lower() + '.dashboard') }}" class="btn btn-glow">← Back</a>
+  </div>
+
+  {% if notifications %}
+  <div class="notif-list" id="notifList">
+    {% for n in notifications %}
+    <div class="notif-card {% if not n.is_read %}new{% endif %}" id="notif-{{ n.id }}">
+      <div class="notif-left">
+        <div class="notif-icon">📢</div>
+        <div>
+          <div class="notif-message">{{ n.message }}</div>
+          <div class="notif-meta">{{ n.created_at.strftime('%b %d, %Y %I:%M %p') }}</div>
+        </div>
+      </div>
+      {% if not n.is_read %}
+      <button onclick="markRead({{ n.id }})" class="btn-glow" style="font-size:.8rem;padding:.3rem .6rem;">Mark Read</button>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="empty">No notifications yet.</div>
+  {% endif %}
+</div>
+
+<script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+<script>
+  const socket = io(location.origin, { transports:["websocket"] });
+  socket.on("connect", () => console.log("📡 Connected to notifications"));
+  socket.on("new_notification", data => {
+    const role = document.body.getAttribute("data-role") || "all";
+    if (data.role === role || data.role === "all") addNotification(data);
+  });
+
+  function addNotification(data){
+    const list=document.getElementById("notifList");
+    const card=document.createElement("div");
+    card.className="notif-card new";
+    card.innerHTML=`
+      <div class="notif-left">
+        <div class="notif-icon">📢</div>
+        <div>
+          <div class="notif-message">${data.message}</div>
+          <div class="notif-meta">Just now</div>
+        </div>
+      </div>`;
+    list.prepend(card);
+  }
+
+  async function markRead(id){
+    const res=await fetch(`/notifications/mark_read/${id}`,{method:"POST"});
+    if(res.ok){
+      const el=document.getElementById(`notif-${id}`);
+      if(el){el.classList.remove("new"); el.querySelector("button")?.remove();}
+    }
+  }
+</script>
+
+</main>
+{% endblock %}

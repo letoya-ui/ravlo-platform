@@ -1,0 +1,43 @@
+{% extends "layouts/base.html" %}
+{% block title %}Generated Loan Plan{% endblock %}
+{% block content %}
+<div class="container py-4 text-light">
+  <h2>🏗 Loan Plan for {{ quote.property_address }}</h2>
+  <hr class="border-secondary">
+  <div class="row">
+    <div class="col-md-6">
+      <p><strong>Borrower:</strong> ID {{ quote.borrower_id }}</p>
+      <p><strong>Loan Type:</strong> {{ quote.loan_type }}</p>
+      <p><strong>Category:</strong> {{ quote.loan_category|capitalize }}</p>
+      <p><strong>Property:</strong> {{ quote.property_type }}</p>
+      <p><strong>Purchase Price:</strong> ${{ quote.purchase_price }}</p>
+      <p><strong>As-Is Value:</strong> ${{ quote.as_is_value }}</p>
+      <p><strong>After Repair Value:</strong> ${{ quote.after_repair_value }}</p>
+    </div>
+    <div class="col-md-6">
+      <p><strong>Loan Amount:</strong> ${{ plan.loan_amount }}</p>
+      <p><strong>LTV:</strong> {{ plan.ltv }}%</p>
+      <p><strong>Rate:</strong> {{ plan.rate }}</p>
+      <p><strong>Term:</strong> {{ plan.term }}</p>
+      <p><strong>Monthly Payment:</strong> ${{ plan.monthly_payment }}</p>
+      <p><strong>Notes:</strong> {{ plan.notes }}</p>
+    </div>
+  </div>
+
+  {% if quote.photos %}
+  <div class="mt-4">
+    <h5>📸 Property Photos</h5>
+    <div class="d-flex flex-wrap gap-2">
+      {% for photo in quote.photos.split(',') %}
+        <img src="{{ url_for('static', filename='uploads/' + photo) }}" class="rounded" width="180">
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  <hr class="border-secondary mt-4">
+  <div class="text-end">
+    <a href="{{ url_for('loan_officer.quotes') }}" class="btn btn-outline-light">← Back to Quotes</a>
+  </div>
+</div>
+{% endblock %}

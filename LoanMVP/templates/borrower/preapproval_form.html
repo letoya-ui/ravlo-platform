@@ -1,0 +1,158 @@
+{% extends "layouts/borrower_base.html" %}
+{% block title %}Instant Preapproval Application{% endblock %}
+{% block content %}
+
+<div class="borrower-shell">
+
+  <!-- SIDEBAR -->
+  <aside class="b-sidebar">
+    <div class="b-sidebar-logo">CM</div>
+
+    <div class="b-sidebar-group">
+
+      <a href="{{ url_for('borrower.dashboard') }}" class="b-sidebar-item">
+        <svg viewBox="0 0 24 24" fill="none">
+          <rect x="3" y="3" width="8" height="8" rx="2"></rect>
+          <rect x="13" y="3" width="8" height="5" rx="2"></rect>
+          <rect x="13" y="10" width="8" height="11" rx="2"></rect>
+          <rect x="3" y="13" width="8" height="8" rx="2"></rect>
+        </svg>
+        <div class="b-tooltip">Dashboard</div>
+      </a>
+
+      <a href="{{ url_for('borrower.property_search') }}" class="b-sidebar-item">
+        <svg viewBox="0 0 24 24" fill="none">
+          <path d="M12 3L4 9v11h16V9l-8-6Z"></path>
+          <circle cx="12" cy="13" r="2.5"></circle>
+        </svg>
+        <div class="b-tooltip">Property Finder</div>
+      </a>
+
+      <a href="{{ url_for('borrower.resource_center') }}" class="b-sidebar-item">
+        <svg viewBox="0 0 24 24" fill="none">
+          <circle cx="8" cy="8" r="3"></circle>
+          <circle cx="16" cy="8" r="3"></circle>
+          <path d="M4 19c.6-2.4 2.3-4 4-4s3.4 1.6 4 4"></path>
+          <path d="M12 19c.6-2.4 2.3-4 4-4s3.4 1.6 4 4"></path>
+        </svg>
+        <div class="b-tooltip">Partner Network</div>
+      </a>
+
+      <a href="{{ url_for('borrower.deal_workspace') }}" class="b-sidebar-item">
+        <svg viewBox="0 0 24 24" fill="none">
+          <rect x="4" y="4" width="16" height="16" rx="2"></rect>
+          <path d="M8 9h8M8 13h5M8 17h3"></path>
+        </svg>
+        <div class="b-tooltip">Project Planner</div>
+      </a>
+
+      <a href="{{ url_for('borrower.saved_properties') }}" class="b-sidebar-item">
+        <svg viewBox="0 0 24 24" fill="none">
+          <path d="M12 20s-4.5-2.7-6.7-5.4C3.4 13 3 11.9 3 10.8 3 8.7 4.7 7 6.8 7c1.2 0 2.3.6 3 1.5.7-.9 1.8-1.5 3-1.5C15.3 7 17 8.7 17 10.8c0 1.1-.4 2.2-2.3 3.8C16.5 17.3 12 20 12 20Z"></path>
+        </svg>
+        <div class="b-tooltip">Saved Properties</div>
+      </a>
+
+      <a href="{{ url_for('borrower.resource_center') }}" class="b-sidebar-item">
+        <svg viewBox="0 0 24 24" fill="none">
+          <path d="M5 4h10a3 3 0 0 1 3 3v13l-4-2-4 2-4-2-4 2V7a3 3 0 0 1 3-3Z"></path>
+        </svg>
+        <div class="b-tooltip">Resource Center</div>
+      </a>
+
+    </div>
+  </aside>
+
+  <!-- MAIN CONTENT -->
+  <main class="b-main">
+
+    <!-- TOP TABS -->
+    <div class="b-top-tabs">
+      <a href="{{ url_for('borrower.dashboard') }}" class="b-top-tab">Dashboard</a>
+      <a href="{{ url_for('borrower.status') }}" class="b-top-tab">Loan</a>
+      <div class="b-top-tab active">Instant Preapproval</div>
+    </div>
+
+    <!-- PAGE CONTENT -->
+    <div class="b-card" style="max-width:900px;margin:0 auto;padding:2rem;">
+
+      <h2>📋 Instant Preapproval Application</h2>
+
+      <form method="POST" style="margin-top:1rem;">
+        {{ form.hidden_tag() }}
+
+        <!-- Business Info -->
+        <div class="b-grid-3">
+          <div>
+            {{ form.business_name.label(class="muted") }}
+            {{ form.business_name(class="form-control") }}
+          </div>
+          <div>
+            {{ form.annual_revenue.label(class="muted") }}
+            {{ form.annual_revenue(class="form-control") }}
+          </div>
+          <div>
+            {{ form.years_in_business.label(class="muted") }}
+            {{ form.years_in_business(class="form-control") }}
+          </div>
+        </div>
+
+        <!-- Loan Info -->
+        <div class="b-grid-3" style="margin-top:1.5rem;">
+          <div>
+            {{ form.loan_amount.label(class="muted") }}
+            {{ form.loan_amount(class="form-control") }}
+          </div>
+          <div>
+            {{ form.collateral.label(class="muted") }}
+            {{ form.collateral(class="form-control") }}
+          </div>
+          <div>
+            {{ form.property_address.label(class="muted") }}
+            {{ form.property_address(class="form-control") }}
+          </div>
+        </div>
+
+        <hr style="margin:2rem 0;">
+
+        <h4>🔐 Personal Info for Soft Pull</h4>
+
+        <div class="b-grid-2" style="margin-top:1rem;">
+          <div>
+            {{ form.full_name.label(class="muted") }}
+            {{ form.full_name(class="form-control") }}
+          </div>
+          <div>
+            {{ form.ssn.label(class="muted") }}
+            {{ form.ssn(class="form-control") }}
+          </div>
+        </div>
+
+        <div class="b-grid-2" style="margin-top:1rem;">
+          <div>
+            {{ form.dob.label(class="muted") }}
+            {{ form.dob(class="form-control") }}
+          </div>
+          <div>
+            {{ form.address.label(class="muted") }}
+            {{ form.address(class="form-control") }}
+          </div>
+        </div>
+
+        <div class="form-check" style="margin-top:1.5rem;">
+          {{ form.consent(class="form-check-input") }}
+          {{ form.consent.label(class="form-check-label muted") }}
+        </div>
+
+        <button type="submit" class="btn-glow" style="margin-top:2rem;">
+          🚀 Submit Application
+        </button>
+
+      </form>
+
+    </div>
+
+  </main>
+</div>
+
+{% endblock %}

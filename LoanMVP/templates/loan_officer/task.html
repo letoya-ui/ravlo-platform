@@ -1,0 +1,43 @@
+{% extends "layouts/base.html" %}
+{% block content %}
+<style>
+  :root{--line:#2a2e36; --panel:#15161a; --text:#e6e6e6; --muted:#a5a7ad}
+  .card{background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:1rem}
+  table{width:100%; border-collapse:collapse}
+  th,td{padding:.6rem; border-top:1px solid var(--line); color:var(--text)}
+  input{background:#0f0f11; border:1px solid var(--line); color:var(--text); border-radius:10px; padding:.45rem .6rem; width:100%}
+  .btn{display:inline-flex; align-items:center; gap:.5rem; padding:.6rem .9rem; border-radius:10px; border:1px solid var(--line); color:var(--text); text-decoration:none; background:#1a1d23}
+</style>
+<div class="container-fluid py-4 text-light">
+  <h2 class="mb-4">🗓️ Follow-up Tasks</h2>
+
+  {% if tasks %}
+  <table class="table table-dark table-hover align-middle shadow-sm">
+    <thead class="table-secondary text-dark">
+      <tr>
+        <th>Description</th>
+        <th>Lead</th>
+        <th>Due Date</th>
+        <th>Status</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for t in tasks %}
+      <tr>
+        <td>{{ t.description }}</td>
+        <td>{{ t.lead.name }}</td>
+        <td>{{ t.due_date.strftime("%Y-%m-%d") }}</td>
+        <td>
+          <span class="badge bg-{% if t.completed %}success{% else %}secondary{% endif %}">
+            {% if t.completed %}Done{% else %}Pending{% endif %}
+          </span>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div class="alert alert-secondary bg-dark text-light border-0">No tasks scheduled.</div>
+  {% endif %}
+</div>
+{% endblock %}

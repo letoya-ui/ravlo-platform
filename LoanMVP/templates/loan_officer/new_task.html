@@ -1,0 +1,59 @@
+{% extends "layouts/base.html" %}
+{% block title %}New Task{% endblock %}
+
+{% block content %}
+<div class="wrap">
+
+  <div class="card">
+    <h2>➕ Create Task</h2>
+    <p class="muted">Assign a follow-up or borrower/loan task.</p>
+  </div>
+
+  <form method="POST" class="card" style="margin-top:1rem;">
+
+    <label>Task Title</label>
+    <input class="form-control" name="title" required>
+
+    <label>Description</label>
+    <textarea class="form-control" name="description"></textarea>
+
+    <div class="row-2">
+      <div>
+        <label>Borrower (optional)</label>
+        <select class="form-control" name="borrower_id">
+          <option value="">None</option>
+          {% for b in borrowers %}
+          <option value="{{ b.id }}">{{ b.full_name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div>
+        <label>Loan (optional)</label>
+        <select class="form-control" name="loan_id">
+          <option value="">None</option>
+          {% for l in loans %}
+          <option value="{{ l.id }}">Loan #{{ l.id }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+
+    <label>Due Date</label>
+    <input type="date" class="form-control" name="due_date">
+
+    <button class="btn btn-glow" style="margin-top:2rem;">Create Task</button>
+
+  </form>
+
+</div>
+
+<style>
+.row-2 {
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:1.2rem;
+}
+</style>
+
+{% endblock %}

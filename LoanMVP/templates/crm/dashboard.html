@@ -1,0 +1,97 @@
+{% extends "layouts/base.html" %}
+{% from "layouts/_dashboard_wrapper.html" import dashboard_wrapper %}
+{% block title %}CRM Dashboard{% endblock %}
+
+<link rel="stylesheet" href="https://unpkg.com/lucide-static@latest/font/lucide.css">
+
+{% block content %}
+{% call dashboard_wrapper() %}
+  <div class="lhs">
+    <section class="card">
+      <h2>📈 CRM Stats Overview</h2>
+      <div class="stats-grid">
+        <div class="stat-card"><h3>{{ stats.total_leads }}</h3><p>Total Leads</p></div>
+        <div class="stat-card"><h3>{{ stats.active_leads }}</h3><p>Active Leads</p></div>
+        <div class="stat-card"><h3>{{ stats.contacted_leads }}</h3><p>Contacted (7 Days)</p></div>
+        <div class="stat-card"><h3>{{ stats.calls }}</h3><p>Calls Logged</p></div>
+        <div class="stat-card"><h3>{{ stats.messages }}</h3><p>Messages Sent</p></div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h3>📞 Recently Contacted Leads</h3>
+      {% if contacted_leads %}
+        <table class="data-table">
+          <thead>
+           <tr>
+             <th>Name</th>
+             <th>Status</th>
+             <th>Last Updated</th>
+             <th>Assigned To</th>
+           </tr>
+         </thead>
+         <tbody>
+           {% for lead in contacted_leads %}
+             <tr>
+               <td><a href="{{ url_for('crm.view_lead', lead_id=lead.id) }}">{{ lead.name }}</a></td>
+               <td>{{ lead.status }}</td>
+               <td>{{ lead.updated_at.strftime('%b %d, %Y %I:%M %p') }}</td>
+               <td>{{ lead.assigned_officer.full_name if lead.assigned_officer else 'Unassigned' }}</td>
+             </tr>
+           {% endfor %}
+         </tbody>
+       </table>
+     {% else %}
+       <p class="muted">No recent lead updates in the past week.</p>
+     {% endif %}
+   </section>
+
+
+    <section class="card">
+      <h2>⚙️ Quick Actions</h2>
+      <div class="quick-actions-grid">
+        <a href="{{ url_for('crm.dialer') }}" class="qa-btn">
+          <i class="lucide lucide-phone-call"></i> Dialer
+        </a>
+        <a href="{{ url_for('crm.messages') }}" class="qa-btn">
+          <i class="lucide lucide-message-circle"></i> Messages
+        </a>
+        <a href="{{ url_for('crm.partners') }}" class="qa-btn">
+          <i class="lucide lucide-handshake"></i> Partners
+        </a>
+        <a href="{{ url_for('crm.campaigns') }}" class="qa-btn">
+          <i class="lucide lucide-megaphone"></i> Campaigns
+        </a>
+        <a href="{{ url_for('crm.leads') }}" class="qa-btn">
+          <i class="lucide lucide-users"></i> Leads
+        </a>
+        <a href="{{ url_for('crm.call_insights') }}" class="qa-btn">
+          <i class="lucide lucide-line-chart"></i> Call Insights
+        </a>
+     </div>
+  </section>
+  </div>
+
+  <div class="rhs">
+    <section class="card">
+      <h2>🤖 AI Insights</h2>
+      <p>{{ ai_summary }}</p>
+    </section>
+
+    <section class="card">
+      <h2>📰 Recent Activity</h2>
+      <ul class="activity-feed">
+        {% for lead in leads_recent %}
+        <li>
+          <strong>{{ lead.full_name or lead.name }}</strong>
+          <span class="muted">{{ lead.status or "N/A" }}</span>
+          <span class="timestamp">
+            {{ lead.updated_at.strftime("%b %d") if lead.updated_at else "—" }}
+          </span>
+        </li>
+        {% endfor %}
+      </ul>
+    </section>
+  </div>
+{% endcall %}
+{% endblock %}

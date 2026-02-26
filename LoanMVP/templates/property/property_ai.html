@@ -1,0 +1,140 @@
+{% extends "layouts/base.html" %}
+{% block content %}
+
+<div class="container-fluid py-4 text-light fade-in">
+  <h2 class="mb-4">🏠 Property AI Dashboard</h2>
+  <p class="text-muted">AI-powered insights on property performance, valuation, and market behavior.</p>
+
+  <!-- === LIVE INSIGHT BANNER === -->
+  <div id="aiInsight" class="alert alert-dark border-secondary shadow-sm mb-4 text-center">
+    <strong>🤖 AI Insight:</strong> Loading property trends...
+  </div>
+
+  <!-- === TOP METRICS === -->
+  <div class="row g-3">
+    <div class="col-md-3">
+      <div class="card bg-dark border border-secondary rounded-3 p-3 text-center shadow-sm">
+        <h6 class="text-muted text-uppercase small">Total Properties</h6>
+        <h2 class="fw-bold">{{ stats.total_properties }}</h2>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card bg-dark border border-secondary rounded-3 p-3 text-center shadow-sm">
+        <h6 class="text-muted text-uppercase small">Active Listings</h6>
+        <h2 class="fw-bold text-info">{{ stats.active_listings }}</h2>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card bg-dark border border-secondary rounded-3 p-3 text-center shadow-sm">
+        <h6 class="text-muted text-uppercase small">Avg. Valuation</h6>
+        <h2 class="fw-bold text-success">${{ stats.avg_value }}</h2>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card bg-dark border border-secondary rounded-3 p-3 text-center shadow-sm">
+        <h6 class="text-muted text-uppercase small">Projected ROI</h6>
+        <h2 class="fw-bold text-warning">{{ stats.avg_roi }}%</h2>
+      </div>
+    </div>
+  </div>
+
+  <!-- === PROPERTY MARKET CHART === -->
+  <div class="card bg-dark border border-secondary rounded-3 mt-4 shadow-sm">
+    <div class="card-header border-secondary d-flex justify-content-between align-items-center">
+      <h5 class="mb-0 text-light">📊 Market Value Trends</h5>
+      <small class="text-muted">AI generated 12-month projection</small>
+    </div>
+    <div class="card-body">
+      <canvas id="valueChart" height="120"></canvas>
+    </div>
+  </div>
+
+  <!-- === PROPERTY TABLE === -->
+  <div class="card bg-dark border border-secondary rounded-3 mt-4 shadow-sm">
+    <div class="card-header border-secondary d-flex justify-content-between align-items-center">
+      <h5 class="mb-0 text-light">🏗️ Current Portfolio</h5>
+      <small class="text-muted">AI estimated values & risk analysis</small>
+    </div>
+    <div class="card-body table-responsive">
+      <table class="table table-dark table-hover align-middle">
+        <thead class="table-secondary text-dark">
+          <tr>
+            <th>Address</th>
+            <th>Type</th>
+            <th>Value</th>
+            <th>AI Risk</th>
+            <th>ROI</th>
+            <th>Last Updated</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for prop in properties %}
+          <tr>
+            <td>{{ prop.address }}</td>
+            <td>{{ prop.property_type }}</td>
+            <td>${{ "{:,.0f}".format(prop.value) }}</td>
+            <td>
+              {% if prop.risk_score < 35 %}
+                <span class="text-success fw-bold">Low</span>
+              {% elif prop.risk_score < 70 %}
+                <span class="text-warning fw-bold">Medium</span>
+              {% else %}
+                <span class="text-danger fw-bold">High</span>
+              {% endif %}
+            </td>
+            <td>{{ prop.roi }}%</td>
+            <td>{{ prop.updated_at.strftime("%Y-%m-%d") }}</td>
+          </tr>
+          {% else %}
+          <tr><td colspan="6" class="text-center text-muted">No property data available.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- === SCRIPTS === -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+// AI banner refresh
+function updateInsight() {
+  fetch('{{ url_for("admin.ai_refresh") }}')
+    .then(res => res.json())
+    .then(data => { document.getElementById('aiInsight').innerHTML = `<strong>🤖 AI Insight:</strong> ${data.message}`; });
+}
+updateInsight();
+setInterval(updateInsight, 60000);
+
+// Market trend chart
+const ctx = document.getElementById('valueChart').getContext('2d');
+new Chart(ctx, {
+  type: 'line',
+  data: {
+    labels: {{ chart.labels|safe }},
+    datasets: [{
+      label: 'Property Value',
+      data: {{ chart.values|safe }},
+      borderColor: '#c4a000',
+      backgroundColor: 'rgba(196,160,0,0.2)',
+      fill: true,
+      tension: 0.3
+    }]
+  },
+  options: {
+    scales: {
+      x: { ticks: { color: '#ccc' }, grid: { color: '#333' } },
+      y: { ticks: { color: '#ccc' }, grid: { color: '#333' } }
+    },
+    plugins: { legend: { labels: { color: '#e0e0e0' } } }
+  }
+});
+</script>
+
+<style>
+.fade-in { animation: fadeIn .4s ease-in; }
+@keyframes fadeIn { from{opacity:0;transform:translateY(10px);} to{opacity:1;transform:translateY(0);} }
+.card:hover { transform:translateY(-3px);transition:0.2s ease;border-color:#c4a000; }
+</style>
+
+{% endblock %}

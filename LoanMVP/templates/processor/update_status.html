@@ -1,0 +1,16 @@
+{% extends "layouts/base.html" %}
+{% block content %}
+<div class="section">
+    <h2>Update Loan Status</h2>
+
+    <form method="POST">
+        <select name="status">
+            {% for s in statuses %}
+                <option value="{{ s }}">{{ s }}</option>
+            {% endfor %}
+        </select>
+
+        <button class="btn-outline">Update</button>
+    </form>
+</div>
+{% endblock %}

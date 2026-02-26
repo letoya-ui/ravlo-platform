@@ -1,0 +1,244 @@
+{% extends "layouts/base.html" %}
+{% block title %}Underwriter File Review{% endblock %}
+{% block content %}
+
+<link rel="stylesheet" href="https://unpkg.com/lucide-static@latest/font/lucide.css">
+
+<style>
+.section {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    padding: 1.5rem;
+    border-radius: 16px;
+    margin-bottom: 2rem;
+}
+
+.section h2 { margin-bottom: .75rem; }
+
+.item {
+    border-bottom: 1px solid var(--line);
+    padding: .5rem 0;
+}
+
+.item:last-child {
+    border-bottom: none;
+}
+
+.btn-outline {
+    border: 1px solid var(--accent);
+    padding: .4rem 1rem;
+    border-radius: 10px;
+    color: var(--accent);
+    text-decoration: none;
+}
+</style>
+<style>
+@media (max-width: 850px) {
+    .sidebar { 
+        position: relative; 
+        width: 100%; 
+        height: auto; 
+        display: flex; 
+        overflow-x: auto;
+    }
+    .dashboard-main { margin-left: 0 !important; padding-top: 2rem; }
+    .section { padding: 1rem; }
+}
+</style>
+
+<main class="dashboard-main">
+
+<!-- ======================================================= -->
+<!-- Borrower Summary -->
+<!-- ======================================================= -->
+<div class="section">
+    <h2><i class="lucide lucide-user"></i> Borrower Profile</h2>
+    <p><strong>{{ borrower.full_name }}</strong></p>
+    <p>{{ borrower.email }} · {{ borrower.phone }}</p>
+    <p>{{ borrower.address }}, {{ borrower.city }}, {{ borrower.state }} {{ borrower.zip }}</p>
+</div>
+
+<!-- ======================================================= -->
+<!-- Loan Summary -->
+<!-- ======================================================= -->
+<div class="section">
+    <h2><i class="lucide lucide-file-text"></i> Loan Details</h2>
+    <p>Amount: ${{ loan.amount }}</p>
+    <p>Property Value: ${{ loan.property_value }}</p>
+    <p>LTV: 
+        {% if ratios.ltv %}
+            {{ (ratios.ltv * 100)|round(2) }}%
+        {% else %}N/A{% endif %}
+    </p>
+
+    <p>Status: {{ loan.status }}</p>
+</div>
+
+
+<!-- ======================================================= -->
+<!-- Documents -->
+<!-- ======================================================= -->
+<div class="section">
+    <h2><i class="lucide lucide-folder"></i> Documents</h2>
+
+    {% for d in docs %}
+        <div class="item">
+            <strong>{{ d.name }}</strong> — {{ d.status }}
+
+            {% if d.status != 'Verified' %}
+            <a href="/underwriter/document/{{ d.id }}/verify"
+               class="btn-outline" style="margin-left:1rem;">
+                Verify
+            </a>
+            {% endif %}
+        </div>
+    {% else %}
+        <p class="muted">No documents uploaded.</p>
+    {% endfor %}
+</div>
+
+
+<!-- ======================================================= -->
+<!-- Credit & DTI/LTV Analysis -->
+<!-- ======================================================= -->
+<div class="section">
+    <h2><i class="lucide lucide-bar-chart-2"></i> Credit & Income Analysis</h2>
+
+    <p><strong>Credit Score:</strong> {{ credit.credit_score if credit else "N/A" }}</p>
+    <p><strong>Total Income:</strong> ${{ ratios.income_total }}</p>
+    <p><strong>Monthly Debts:</strong> ${{ ratios.monthly_debts }}</p>
+
+    <p><strong>Front-End DTI:</strong>
+        {% if ratios.front_end_dti %}
+            {{ (ratios.front_end_dti * 100)|round(2) }}%
+        {% else %}N/A{% endif %}
+    </p>
+
+    <p><strong>Back-End DTI:</strong>
+        {% if ratios.back_end_dti %}
+            {{ (ratios.back_end_dti * 100)|round(2) }}%
+        {% else %}N/A{% endif %}
+    </p>
+</div>
+
+
+<!-- ======================================================= -->
+<!-- Conditions -->
+<!-- ======================================================= -->
+<div class="section">
+    <h2><i class="lucide lucide-alert-circle"></i> Conditions</h2>
+
+    <form method="POST" action="/underwriter/add-condition/{{ loan.id }}">
+        <form method="POST" action="/underwriter/add-condition/{{ loan.id }}">
+    
+    <label>Condition Type(s)</label>
+    <select name="type" multiple required class="multi-select">
+        <option value="W-2s (Last 2 Years)">W‑2s (Last 2 Years)</option>
+        <option value="30 Days of Paystubs">30 Days of Paystubs</option>
+        <option value="1040 Tax Returns (2 Years)">1040 Tax Returns (2 Years)</option>
+        <option value="Bank Statements (2 Months)">Bank Statements (2 Months)</option>
+        <option value="VOE">Verification of Employment (VOE)</option>
+        <option value="LOE">Letter of Explanation (LOE)</option>
+        <option value="Asset Documentation">Asset Documentation</option>
+        <option value="Credit LOE">Credit Letter of Explanation</option>
+        <option value="Divorce Decree">Divorce Decree</option>
+        <option value="Bankruptcy Discharge">Bankruptcy Discharge</option>
+        <option value="Gift Letter">Gift Letter</option>
+        <option value="Purchase Contract">Purchase Contract</option>
+        <option value="Appraisal">Appraisal</option>
+        <option value="Hazard Insurance">Hazard Insurance</option>
+        <option value="Title Commitment">Title Commitment</option>
+    </select>
+
+    <textarea name="description" placeholder="Description"></textarea>
+
+    <select name="severity">
+        <option>Standard</option>
+        <option>High</option>
+        <option>Low</option>
+    </select>
+
+    <button class="btn-outline">Add Condition</button>
+</form>
+
+        <textarea name="description" placeholder="Description"></textarea>
+        <select name="severity">
+            <option>Standard</option>
+            <option>High</option>
+            <option>Low</option>
+        </select>
+        <button class="btn-outline">Add Condition</button>
+    </form>
+
+    <hr>
+
+    {% for c in conditions %}
+        <div class="item">
+            <strong>{{ c.condition_type }}</strong><br>
+            {{ c.description }}
+
+            {% if c.status != "Cleared" %}
+            <a href="/underwriter/clear-condition/{{ c.id }}" class="btn-outline">
+                Clear
+            </a>
+            {% endif %}
+        </div>
+    {% else %}
+        <p class="muted">No conditions added.</p>
+    {% endfor %}
+</div>
+
+
+<!-- ======================================================= -->
+<!-- UW Decision -->
+<!-- ======================================================= -->
+<div class="section">
+    <h2><i class="lucide lucide-check-circle"></i> Decision</h2>
+
+    <form method="POST" action="/underwriter/decision/{{ loan.id }}">
+        <select name="decision">
+            <option value="Approved">Approve</option>
+            <option value="Suspended">Suspend</option>
+            <option value="Declined">Decline</option>
+        </select>
+
+        <textarea name="notes" placeholder="Decision Notes" required></textarea>
+
+        <button class="btn-outline">Submit Decision</button>
+    </form>
+</div>
+
+
+<!-- ======================================================= -->
+<!-- AI Underwriting Assistant -->
+<!-- ======================================================= -->
+<div class="section">
+    <h2><i class="lucide lucide-brain"></i> AI Underwriting Insight</h2>
+
+    <textarea id="ai-input" placeholder="Ask: What risks should I consider?"></textarea>
+    <button class="btn-outline" onclick="sendAI()">Ask AI</button>
+
+    <div id="ai-response" style="margin-top:1rem;"></div>
+</div>
+
+<script>
+function sendAI() {
+    let message = document.getElementById("ai-input").value;
+
+    fetch("/underwriter/ai", {
+        method:"POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({
+            borrower_id: {{ borrower.id }},
+            message: message
+        })
+    })
+    .then(r => r.json())
+    .then(data => {
+        document.getElementById("ai-response").innerHTML = data.reply;
+    });
+}
+</script>
+
+</main>
+{% endblock %}

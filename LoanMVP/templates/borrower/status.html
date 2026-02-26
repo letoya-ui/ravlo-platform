@@ -1,0 +1,90 @@
+{% extends "layouts/borrower_base.html" %}
+{% block title %}Loan Status{% endblock %}
+{% block content %}
+
+
+  
+  <!-- MAIN CONTENT -->
+  <main class="b-main">
+
+      <!-- PAGE TITLE -->
+    <h1 class="page-title">📊 Loan Status Overview</h1>
+    <p class="muted">Track your loan progress, documents, and milestones in real time.</p>
+
+    <!-- STATS GRID -->
+    <div class="stats-grid" style="margin-top:1.5rem;">
+      <div class="b-card">
+        <h3>Total Loans</h3>
+        <p class="stat">{{ stats.total_loans }}</p>
+      </div>
+      <div class="b-card">
+        <h3>Active Loans</h3>
+        <p class="stat">{{ stats.active_loans }}</p>
+      </div>
+      <div class="b-card">
+        <h3>Completed</h3>
+        <p class="stat">{{ stats.completed_loans }}</p>
+      </div>
+      <div class="b-card">
+        <h3>Pending Docs</h3>
+        <p class="stat">{{ stats.pending_docs }}</p>
+      </div>
+      <div class="b-card">
+        <h3>Verified Docs</h3>
+        <p class="stat">{{ stats.verified_docs }}</p>
+      </div>
+    </div>
+
+    <!-- LOANS TABLE -->
+    <div class="b-card" style="margin-top:2rem;">
+      <h2>💼 My Loans</h2>
+
+      {% if loans %}
+      <table class="loan-table" style="width:100%;margin-top:1rem;border-collapse:collapse;">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Type</th>
+            <th>Amount</th>
+            <th>Status</th>
+            <th>Created</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for loan in loans %}
+          <tr>
+            <td>#{{ loan.id }}</td>
+            <td>{{ loan.loan_type or "—" }}</td>
+            <td>${{ "{:,.2f}".format(loan.amount or 0) }}</td>
+            <td>
+              <span class="badge" style="
+                background: {{ 'rgba(0,255,150,0.1)' if loan.status|lower in ['funded','closed'] else 'rgba(255,200,0,0.15)' }};
+                color: {{ '#00ffaa' if loan.status|lower in ['funded','closed'] else '#ffd966' }};
+                padding:.25rem .6rem;border-radius:6px;font-size:.8rem;">
+                {{ loan.status or 'Pending' }}
+              </span>
+            </td>
+            <td>{{ loan.created_at.strftime('%b %d, %Y') if loan.created_at else '—' }}</td>
+            <td>
+              <a href="{{ url_for('borrower.loan_view', loan_id=loan.id) }}" class="action-btn">View / Manage</a>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <p class="muted" style="text-align:center;margin-top:1rem;">No loan records found yet.</p>
+      {% endif %}
+    </div>
+
+    <!-- AI INSIGHTS -->
+    <div class="b-card" style="margin-top:2rem;border-left:3px solid var(--accent);background:rgba(122,184,255,0.05);">
+      <h2>🤖 AI Insights</h2>
+      <p>{{ ai_summary }}</p>
+    </div>
+
+  </main>
+</div>
+
+{% endblock %}

@@ -1,0 +1,241 @@
+{% extends "layouts/base.html" %}
+{% block title %}Loan Officer Dashboard{% endblock %}
+
+{% block content %}
+
+<style>
+/* ===========================
+    CM LO DASHBOARD STYLE
+=========================== */
+
+.stat-grid {
+    display:grid;
+    grid-template-columns:repeat(4,1fr);
+    gap:1.4rem;
+    margin-bottom:2rem;
+}
+
+.stat-card {
+    background:var(--panel);
+    padding:1.7rem;
+    border-radius:16px;
+    border:1px solid var(--line);
+    box-shadow:0 0 12px rgba(122,184,255,0.26);
+    animation:pulseGlow 1.5s infinite ease-in-out;
+}
+
+.stat-title {
+    font-size:.85rem;
+    color:var(--muted);
+    margin-bottom:.3rem;
+}
+.stat-value {
+    font-size:1.8rem;
+    font-weight:700;
+    color:white;
+    text-shadow:0 0 12px rgba(122,184,255,0.45);
+}
+
+/* Glow animation */
+@keyframes pulseGlow {
+    0% { box-shadow:0 0 12px rgba(122,184,255,0.26); }
+    50% { box-shadow:0 0 22px rgba(122,184,255,0.55); }
+    100% { box-shadow:0 0 12px rgba(122,184,255,0.26); }
+}
+
+/* CHART BOX */
+.chart-box {
+    background:var(--panel);
+    padding:1.5rem;
+    border-radius:16px;
+    border:1px solid var(--line);
+    box-shadow:0 0 14px rgba(122,184,255,0.3);
+    animation:pulseGlow 1.5s infinite ease-in-out;
+}
+
+/* AI SUMMARY */
+.ai-lo-box {
+    background:var(--panel);
+    border:1px solid var(--line);
+    padding:1.5rem;
+    border-radius:16px;
+    box-shadow:0 0 14px rgba(122,184,255,0.3);
+    animation:pulseGlow 1.5s infinite ease-in-out;
+}
+
+/* TASK LIST */
+.task-box {
+    background:var(--panel);
+    border-radius:16px;
+    border:1px solid var(--line);
+    padding:1.5rem;
+    box-shadow:0 0 14px rgba(122,184,255,0.3);
+}
+
+.task-item {
+    padding:.75rem 0;
+    border-bottom:1px solid var(--line);
+}
+.task-item:last-child {
+    border-bottom:none;
+}
+
+</style>
+
+
+
+<!-- ===========================
+      TITLE
+=========================== -->
+<h1 style="font-size:2rem; margin-bottom:1.2rem; text-shadow:0 0 14px rgba(122,184,255,0.45);">
+    Loan Officer Dashboard
+</h1>
+
+
+
+<!-- ===========================
+      KPI CARDS
+=========================== -->
+<div class="stat-grid">
+
+    <div class="stat-card">
+        <div class="stat-title">Active Loans</div>
+        <div class="stat-value">{{ stats.active }}</div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-title">Submitted</div>
+        <div class="stat-value">{{ stats.submitted }}</div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-title">Approved</div>
+        <div class="stat-value">{{ stats.approved }}</div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-title">Declined</div>
+        <div class="stat-value">{{ stats.declined }}</div>
+    </div>
+
+</div>
+
+
+
+<!-- ===========================
+      CHART + AI SUMMARY
+=========================== -->
+<div style="display:grid; grid-template-columns:1.6fr 1fr; gap:1.5rem; margin-bottom:2.5rem;">
+
+    <!-- 📊 Pipeline Chart -->
+    <div class="chart-box">
+        <h3 style="margin-bottom:1rem;">Pipeline Activity</h3>
+        <canvas id="pipelineChart"></canvas>
+    </div>
+
+    <!-- 🤖 LO AI Assistant -->
+    <div class="ai-lo-box">
+        <h3 style="margin-bottom:1rem;">AI Loan Insights</h3>
+        <textarea id="aiInput" placeholder="Ask: what loan program fits this borrower?" 
+                  style="width:100%; height:90px; background:#0f1115; color:white; border:1px solid var(--line); border-radius:10px; padding:.6rem;"></textarea>
+        <button onclick="askLOAI()" class="btn" 
+                style="margin-top:.7rem; padding:.6rem 1.2rem; border-radius:8px; background:var(--accent); color:black; font-weight:600;">
+            Ask AI
+        </button>
+
+        <div id="aiResponse" style="margin-top:1rem; line-height:1.6;"></div>
+    </div>
+
+</div>
+
+
+
+<!-- ===========================
+      TASKS + RECENT ACTIVITY
+=========================== -->
+<div style="display:grid; grid-template-columns:1fr 1fr; gap:1.5rem; margin-bottom:3rem;">
+
+    <!-- TASKS -->
+    <div class="task-box">
+        <h3 style="margin-bottom:1rem;">Your Tasks</h3>
+
+        {% for t in tasks %}
+        <div class="task-item">
+            <div style="font-size:1rem; color:white;">{{ t.title }}</div>
+            <div style="font-size:.8rem; color:var(--muted);">{{ t.created_at.strftime("%b %d %I:%M %p") }}</div>
+        </div>
+        {% include 'loan_officer/_no_tasks.html' %}
+        {% endfor %}
+    </div>
+
+    <!-- RECENT LOAN ACTIVITY -->
+    <div class="task-box">
+        <h3 style="margin-bottom:1rem;">Recent Loan Activity</h3>
+
+        {% for e in events %}
+        <div class="task-item">
+            <div style="color:white;">{{ e.msg }}</div>
+            <div style="color:var(--muted); font-size:.8rem;">{{ e.time }}</div>
+        </div>
+        {% endfor %}
+    </div>
+
+</div>
+
+
+
+<!-- ===========================
+      CHART JS
+=========================== -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+const ctx = document.getElementById('pipelineChart');
+
+new Chart(ctx, {
+    type: 'bar',
+    data: {
+        labels: ['Active', 'Submitted', 'Approved', 'Declined'],
+        datasets: [{
+            label: 'Loans',
+            data: [
+                {{ stats.active }},
+                {{ stats.submitted }},
+                {{ stats.approved }},
+                {{ stats.declined }}
+            ],
+            backgroundColor: '#7ab8ff',
+            borderWidth: 1
+        }]
+    },
+    options: {
+        responsive: true,
+        scales: {
+            y: { beginAtZero: true }
+        }
+    }
+});
+</script>
+
+
+
+<!-- ===========================
+      AI CALL
+=========================== -->
+<script>
+function askLOAI() {
+    let message = document.getElementById("aiInput").value;
+
+    fetch("{{ url_for('loan_officer.ai') }}", {
+        method:"POST",
+        headers: { "Content-Type":"application/json" },
+        body: JSON.stringify({ message })
+    })
+    .then(r=>r.json())
+    .then(data=>{
+        document.getElementById("aiResponse").innerHTML = data.reply;
+    });
+}
+</script>
+
+{% endblock %}

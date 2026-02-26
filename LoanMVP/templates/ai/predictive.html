@@ -1,0 +1,116 @@
+{% extends "layouts/base.html" %}
+{% block title %}AI Predictive Insights{% endblock %}
+{% block content %}
+
+
+<main style="margin-left:260px; padding:2rem; background:#0f0f11; color:#e6e6e6; min-height:100vh;">
+  <link rel="stylesheet" href="https://unpkg.com/lucide-static@latest/font/lucide.css">
+  <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+
+  <style>
+    .grid{display:grid;gap:1.25rem;}
+    .g-2{grid-template-columns:repeat(2,minmax(0,1fr));}
+    .card{background:#15161a;border:1px solid #282b31;border-radius:14px;padding:1.4rem;box-shadow:0 0 18px rgba(122,184,255,0.25);}
+    .card h3{margin:0 0 .6rem;color:#7ab8ff;display:flex;align-items:center;gap:.5rem;}
+    .muted{color:#a5a7ad;font-size:.9rem;}
+    .ai-insight{background:#18222b;border:1px solid #2b2f36;border-radius:14px;padding:1.2rem;margin-top:1.5rem;box-shadow:0 0 12px rgba(122,184,255,0.2);}
+    .kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:1rem;margin-bottom:1.5rem;}
+    .kpi{background:#1a1c20;border:1px solid #2b2f36;border-radius:12px;padding:1rem;text-align:center;}
+    .kpi h2{margin:.25rem 0;color:#cfe8ff;font-size:1.8rem;}
+    .btn{display:inline-flex;align-items:center;gap:.4rem;margin-top:1rem;background:linear-gradient(180deg,#2a4a62,#1b2a38);border:1px solid #2a4a62;color:#cfe8ff;border-radius:10px;padding:.7rem 1.2rem;text-decoration:none;}
+    .btn:hover{box-shadow:0 0 10px rgba(122,184,255,0.3);}
+  </style>
+
+  <h1 style="margin-bottom:1rem;">📊 AI Predictive Insights</h1>
+  <p class="muted">Explore live analytics, AI-modeled loan probabilities, and portfolio risk projections.</p>
+
+  <!-- KPI Section -->
+  <div class="kpi-grid">
+    <div class="kpi">
+      <div class="muted">Approval Rate</div>
+      <h2>{{ data.approval_rate or 82 }}%</h2>
+    </div>
+    <div class="kpi">
+      <div class="muted">Default Risk</div>
+      <h2>{{ data.default_risk or 7.5 }}%</h2>
+    </div>
+    <div class="kpi">
+      <div class="muted">Turnaround</div>
+      <h2>{{ data.avg_turnaround or '3.2 days' }}</h2>
+    </div>
+    <div class="kpi">
+      <div class="muted">Key Drivers</div>
+      <h2 style="font-size:1rem;">{{ ', '.join(data.key_drivers) if data.key_drivers else 'Credit Score, LTV, Income Ratio' }}</h2>
+    </div>
+  </div>
+
+  <!-- Charts -->
+  <div class="grid g-2">
+    <div class="card">
+      <h3><i class="lucide lucide-bar-chart-3"></i> Approval Rate Trends</h3>
+      <div id="chart_approval" style="height:250px;"></div>
+    </div>
+    <div class="card">
+      <h3><i class="lucide lucide-activity"></i> Default Risk Distribution</h3>
+      <div id="chart_risk" style="height:250px;"></div>
+    </div>
+  </div>
+
+  <div class="grid g-2" style="margin-top:1.25rem;">
+    <div class="card">
+      <h3><i class="lucide lucide-trending-up"></i> Predictive AI Metrics</h3>
+      <div id="chart_predict" style="height:250px;"></div>
+    </div>
+    <div class="card">
+      <h3><i class="lucide lucide-clipboard-check"></i> Borrower Score Forecast</h3>
+      <div id="chart_borrower" style="height:250px;"></div>
+    </div>
+  </div>
+
+  <!-- AI Insight Summary -->
+  <div class="ai-insight">
+    <h3><i class="lucide lucide-brain-circuit"></i> AI Summary Insight</h3>
+    <p>The AI model projects consistent improvement in loan approvals over the next 30 days, driven by increased borrower credit quality and portfolio diversification. Default risk remains stable under 8% due to balanced underwriting criteria.</p>
+    <a href="{{ url_for('ai.dashboard') }}" class="btn"><i class="lucide lucide-arrow-left"></i> Return to AI Dashboard</a>
+  </div>
+
+  <script>
+    const baseOpt={chart:{toolbar:{show:false},foreColor:'#c9d3df'},grid:{borderColor:'#2a2e36'},dataLabels:{enabled:false},theme:{mode:'dark'}};
+
+    // Approval trend
+    new ApexCharts(document.querySelector("#chart_approval"),{
+      ...baseOpt,chart:{type:'line',height:250},
+      series:[{name:'Approval %',data:[74,78,81,85,83,86,88]}],
+      xaxis:{categories:['Mon','Tue','Wed','Thu','Fri','Sat','Sun']},
+      stroke:{curve:'smooth',width:2},
+      colors:['#7ab8ff']
+    }).render();
+
+    // Risk distribution
+    new ApexCharts(document.querySelector("#chart_risk"),{
+      ...baseOpt,chart:{type:'bar',height:250},
+      series:[{name:'Risk',data:[6,7.5,8.2,7.1,6.4,7.8,7.3]}],
+      xaxis:{categories:['Mon','Tue','Wed','Thu','Fri','Sat','Sun']},
+      colors:['#ff6b6b']
+    }).render();
+
+    // Predictive metrics
+    new ApexCharts(document.querySelector("#chart_predict"),{
+      ...baseOpt,chart:{type:'area',height:250},
+      stroke:{curve:'smooth',width:2},
+      series:[{name:'AI Confidence',data:[65,68,70,72,74,77,80]}],
+      xaxis:{categories:['Week 1','Week 2','Week 3','Week 4']},
+      colors:['#43d19e']
+    }).render();
+
+    // Borrower score forecast
+    new ApexCharts(document.querySelector("#chart_borrower"),{
+      ...baseOpt,chart:{type:'radialBar',height:250},
+      series:[82],
+      labels:['Average Credit Health'],
+      colors:['#7ab8ff'],
+      plotOptions:{radialBar:{hollow:{size:'58%'},dataLabels:{value:{fontSize:'22px'}}}}
+    }).render();
+  </script>
+</main>
+{% endblock %}

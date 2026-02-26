@@ -1,0 +1,146 @@
+<!-- =========================================
+     🏠 Property Intelligence Sidebar — Unified CM Theme (2025)
+     ========================================= -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+<style>
+  :root {
+    --bg:#0f0f11;
+    --panel:#15161a;
+    --line:#282b31;
+    --text-light:#e6e6e6;
+    --text-muted:#a5a7ad;
+    --accent:#7ab8ff;
+    --hover:#1f2328;
+    --glow:0 0 16px rgba(122,184,255,0.25);
+  }
+
+  .sidebar {
+    background:var(--panel);
+    border-right:1px solid var(--line);
+    width:260px;
+    height:100vh;
+    position:fixed;
+    top:0; left:0;
+    display:flex;
+    flex-direction:column;
+    box-shadow:var(--glow);
+    overflow-y:auto;
+    z-index:1000;
+  }
+
+  .sidebar .sidebar-header {
+    text-align:center;
+    padding:1.25rem .75rem;
+    border-bottom:1px solid var(--line);
+    background:linear-gradient(180deg,#17181b,#0f0f11);
+  }
+
+  .sidebar .sidebar-header h3 {
+    color:var(--text-light);
+    font-size:1.1rem;
+    margin-bottom:0.25rem;
+  }
+
+  .sidebar .nav {
+    flex:1;
+    padding:1rem 0.5rem;
+  }
+
+  .sidebar .nav-section {
+    margin-bottom:1.25rem;
+  }
+
+  .sidebar .nav-section h4 {
+    color:var(--text-muted);
+    font-size:.75rem;
+    text-transform:uppercase;
+    padding:0 1rem;
+    margin-bottom:.5rem;
+    border-left:3px solid var(--accent);
+  }
+
+  .sidebar .nav a {
+    display:flex;
+    align-items:center;
+    gap:.75rem;
+    padding:.55rem 1.25rem;
+    color:var(--text-light);
+    text-decoration:none;
+    border-left:3px solid transparent;
+    border-radius:8px;
+    transition:all .25s ease;
+    font-size:.93rem;
+  }
+
+  .sidebar .nav a:hover {
+    background:var(--hover);
+    color:var(--accent);
+    border-left-color:var(--accent);
+    box-shadow:var(--glow);
+  }
+
+  .sidebar .nav a.active {
+    color:var(--accent);
+    background:var(--hover);
+    border-left-color:var(--accent);
+  }
+
+  .sidebar .sidebar-footer {
+    border-top:1px solid var(--line);
+    text-align:center;
+    padding:1rem;
+    font-size:.8rem;
+    color:var(--text-muted);
+    background:#101113;
+  }
+</style>
+
+<aside class="sidebar" id="propertySidebar">
+
+  <div class="sidebar-header">
+    <h3>Property Intelligence</h3>
+    <small>Caughman Mason • LoanMVP</small>
+    <button class="toggle-btn" id="toggleSidebar"><i class="fa-solid fa-bars"></i></button>
+  </div>
+
+  <nav class="nav">
+
+    <div class="nav-section">
+      <h4>Property</h4>
+      <a href="/property/dashboard"><i class="fa-solid fa-gauge"></i> Dashboard</a>
+      <a href="/property/search"><i class="fa-solid fa-search"></i> Property Search</a>
+      <a href="/property/list"><i class="fa-solid fa-list"></i> Property List</a>
+      <a href="/property/manage"><i class="fa-solid fa-sliders"></i> Manage Properties</a>
+    </div>
+
+    <div class="nav-section">
+      <h4>AI Tools</h4>
+      <a href="/property/ai_property_value"><i class="fa-solid fa-brain"></i> AI Valuation</a>
+      <a href="/property/optimize"><i class="fa-solid fa-chart-simple"></i> Optimization</a>
+      <a href="/property/ai_refresh"><i class="fa-solid fa-rotate"></i> Refresh AI Models</a>
+    </div>
+
+    <div class="nav-section">
+      <h4>Risk & Analysis</h4>
+      <a href="/property/risk_map"><i class="fa-solid fa-triangle-exclamation"></i> Risk Map</a>
+    </div>
+
+    <div class="nav-section">
+      <h4>Account</h4>
+      <a href="{{ url_for('auth.logout') }}"><i class="fa-solid fa-right-from-bracket"></i> Logout</a>
+    </div>
+
+  </nav>
+
+  <div class="sidebar-footer">
+    © 2025 Caughman Mason LLC<br>Property Intelligence Portal
+  </div>
+
+</aside>
+
+<script>
+  document.getElementById("toggleSidebar").addEventListener("click", () => {
+    document.getElementById("propertySidebar").classList.toggle("active");
+  });
+</script>

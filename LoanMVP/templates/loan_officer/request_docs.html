@@ -1,0 +1,24 @@
+{% extends "layouts/base.html" %}
+{% block title %}Request Documents{% endblock %}
+
+{% block content %}
+<div class="card" style="max-width:600px; margin:2rem auto; padding:1.5rem;">
+  <h2 class="section-title">📄 Request Documents</h2>
+  <p>Borrower: <strong>{{ borrower.full_name }}</strong></p>
+
+  <form method="POST">
+    <div class="form-group">
+      <label for="notes">Notes / Instructions</label>
+      <textarea id="notes" name="notes" class="form-control" rows="4"
+        placeholder="Specify which documents you need (e.g., W-2, bank statements)..."></textarea>
+    </div>
+
+    <button type="submit" class="btn btn-primary" style="margin-top:1rem;">
+      Send Request
+    </button>
+    <a href="{{ url_for('loan_officer.view_borrower', borrower_id=borrower.id) }}" class="btn btn-secondary" style="margin-top:1rem;">
+      Cancel
+    </a>
+  </form>
+</div>
+{% endblock %}

@@ -1,0 +1,124 @@
+{% extends "layouts/base.html" %}
+{% block title %}Underwriting Queue{% endblock %}
+{% block content %}
+
+<div class="wrap">
+
+    <section class="lhs">
+        <div class="card">
+            <div class="queue-header">
+                <h2><i class="lucide lucide-list-checks"></i> Underwriting Queue</h2>
+                <p class="muted">Loans currently awaiting underwriting review.</p>
+            </div>
+
+            {% if queue %}
+            <table class="uw-table">
+                <thead>
+                    <tr>
+                        <th>Loan #</th>
+                        <th>Borrower</th>
+                        <th>Amount</th>
+                        <th>Status</th>
+                        <th>Submitted</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for loan in queue %}
+                    <tr>
+                        <td>#{{ loan.id }}</td>
+                        <td>{{ loan.borrower_profile.full_name }}</td>
+                        <td>${{ "{:,.0f}".format(loan.amount or 0) }}</td>
+                        <td>
+                            <span class="status st-{{ loan.status|lower|replace(' ', '-') }}">
+                                {{ loan.status }}
+                            </span>
+                        </td>
+                        <td>{{ loan.created_at.strftime('%b %d, %Y') }}</td>
+                        <td>
+                            <a href="{{ url_for('underwriter.file_review', loan_id=loan.id) }}"
+                               class="btn-small">
+                                Review →
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+
+            {% else %}
+            <p class="muted">No loans are currently in the underwriting queue.</p>
+            {% endif %}
+        </div>
+    </section>
+
+    <aside class="rhs">
+        <div class="card">
+            <h3>Queue Overview</h3>
+            <p class="muted">
+                These loans are in <strong>Submitted</strong>, <strong>In Review</strong>, or
+                <strong>UW Review</strong> status and require underwriting attention.
+            </p>
+        </div>
+    </aside>
+
+</div>
+
+<style>
+.wrap {
+    padding: 2rem;
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 1.5rem;
+}
+
+.queue-header h2 {
+    margin-bottom: .3rem;
+}
+
+.uw-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 1rem;
+}
+
+.uw-table th,
+.uw-table td {
+    padding: .7rem .6rem;
+    border-top: 1px solid var(--line);
+}
+
+.uw-table th {
+    color: #cfe0f5;
+    font-weight: 600;
+    text-align: left;
+}
+
+.status {
+    padding: .25rem .55rem;
+    border-radius: 999px;
+    font-size: .78rem;
+    border: 1px solid var(--line);
+}
+
+.st-submitted { background:#1e2430; color:#a9c7ff; }
+.st-in-review { background:#23251e; color:#e7f28f; }
+.st-uw-review { background:#2a1f1b; color:#ffb38a; }
+
+.btn-small {
+    padding: .35rem .75rem;
+    border-radius: 8px;
+    background: var(--accent);
+    color: #000;
+    text-decoration: none;
+    font-size: .8rem;
+    font-weight: 600;
+    transition: .2s ease;
+}
+
+.btn-small:hover {
+    box-shadow: var(--glow);
+}
+</style>
+
+{% endblock %}

@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Deal Report Pro</title>
+<style>
+  body { font-family: Arial, sans-serif; margin: 2rem; }
+  h1, h2, h3 { color: #2c3e50; margin-bottom: .5rem; }
+  .section-title { border-bottom: 2px solid #2c3e50; padding-bottom: .3rem; margin-top: 2rem; }
+  table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
+  th, td { border: 1px solid #ccc; padding: .4rem .6rem; text-align: left; }
+  th { background: #f4f6f8; }
+  .card { border: 1px solid #ddd; padding: 1rem; margin-bottom: 1rem; border-radius: 4px; }
+  .note { font-style: italic; color: #666; margin-top: .5rem; }
+  .page-break { page-break-before: always; }
+  .logo { font-weight: bold; color: #2c3e50; }
+
+  @page {
+    @bottom-left {
+      content: "CM Loans — Confidential Investment Report";
+      font-size: 0.8rem;
+      color: #777;
+    }
+    @bottom-right {
+      content: "For informational purposes only. Not a commitment to lend.";
+      font-size: 0.8rem;
+      color: #777;
+    }
+    @bottom-center {
+      content: "Page " counter(page) " of " counter(pages);
+      font-size: 0.8rem;
+      color: #777;
+    }
+  }
+</style>
+</head>
+<body>
+
+  <!-- Cover Page -->
+  <div class="page">
+    <h1>Deal Report Pro</h1>
+    <p><strong>Borrower:</strong> {{ borrower.full_name }}</p>
+    <p><strong>Property:</strong> {{ property_address }}</p>
+    <p><strong>Date:</strong> {{ report_date }}</p>
+    <div class="footer">
+      <span class="logo">CM Loans</span> — Confidential Investment Report<br>
+      For informational purposes only. Not a commitment to lend.
+    </div>
+  </div>
+
+  <!-- Budget Section -->
+  <div class="page page-break">
+    <h2 class="section-title">Budget</h2>
+    <table>
+      {% for key, value in budget.items() %}
+      <tr><td><strong>{{ key }}</strong></td><td>${{ value }}</td></tr>
+      {% endfor %}
+    </table>
+    <div class="footer"><span class="logo">CM Loans</span> — Confidential Investment Report</div>
+  </div>
+
+  <!-- Financing Section -->
+  <div class="page page-break">
+    <h2 class="section-title">Financing</h2>
+    <table>
+      {% for key, value in financing.items() %}
+      <tr><td><strong>{{ key }}</strong></td><td>{{ value }}</td></tr>
+      {% endfor %}
+    </table>
+    <div class="footer"><span class="logo">CM Loans</span> — Confidential Investment Report</div>
+  </div>
+
+  <!-- Investment Metrics Section -->
+  <div class="page page-break">
+    <h2 class="section-title">Investment Metrics</h2>
+    <div class="metrics-grid">
+      <div class="card">
+        <h3>Cash Flow</h3>
+        <table>
+          <tr><td><strong>Monthly Rent:</strong></td><td>${{ data.monthly_rent }}</td></tr>
+          <tr><td><strong>Vacancy %:</strong></td><td>{{ data.vacancy_pct }}%</td></tr>
+          <tr><td><strong>Management %:</strong></td><td>{{ data.management_pct }}%</td></tr>
+          <tr><td><strong>Monthly Expenses:</strong></td><td>${{ data.monthly_expenses }}</td></tr>
+          <tr><td><strong>Monthly Payment:</strong></td><td>${{ data.monthly_payment }}</td></tr>
+          <tr><td><strong>Net Cash Flow:</strong></td><td>${{ data.net_cash_flow }}/mo</td></tr>
+          <tr><td><strong>Annual Cash Flow:</strong></td><td>${{ data.annual_cash_flow }}</td></tr>
+        </table>
+      </div>
+      <div class="card">
+        <h3>Returns</h3>
+        <table>
+          <tr><td><strong>ROI:</strong></td><td>{{ data.roi }}%</td></tr>
+          <tr><td><strong>Cap Rate:</strong></td><td>{{ data.cap_rate }}%</td></tr>
+          <tr><td><strong>Cash-on-Cash:</strong></td><td>{{ data.cash_on_cash }}%</td></tr>
+          <tr><td><strong>DSCR:</strong></td><td>{{ data.dscr }}</td></tr>
+        </table>
+      </div>
+      <div class="card">
+        <h3>Other</h3>
+        <table>
+          <tr><td><strong>Taxes (annual):</strong></td><td>${{ data.annual_taxes }}</td></tr>
+          <tr><td><strong>Insurance (annual):</strong></td><td>${{ data.annual_insurance }}</td></tr>
+          <tr><td><strong>Loan Rate:</strong></td><td>{{ data.loan_rate }}%</td></tr>
+          <tr><td><strong>Loan Term:</strong></td><td>{{ data.loan_term }} years</td></tr>
+        </table>
+      </div>
+    </div>
+    <div class="footer"><span class="logo">CM Loans</span> — Confidential Investment Report</div>
+  </div>
+
+  <!-- Visuals Section -->
+  <div class="page page-break">
+    <h2 class="section-title">Visuals</h2>
+    <p>[Charts would render here: {{ visuals.cashflow_chart }}, {{ visuals.roi_chart }}, {{ visuals.amort_chart }}]</p>
+    <div class="footer"><span class="logo">CM Loans</span> — Confidential Investment Report</div>
+  </div>
+
+  <!-- AI Summary Section -->
+  <div class="page page-break">
+    <h2 class="section-title">AI Summary</h2>
+    <p>{{ ai_summary }}</p>
+    <div class="footer"><span class="logo">CM Loans</span> — Confidential Investment Report</div>
+  </div>
+  <!-- Rental Comps Section -->
+  <div class="page page-break">
+    <h2 class="section-title">Rental Comps</h2>
+    {% if comps.rentals and comps.rentals|length > 0 %}
+      <table>
+        <thead>
+          <tr><th>Address</th><th>Rent</th><th>Beds</th><th>Baths</th><th>Sqft</th></tr>
+        </thead>
+        <tbody>
+          {% for comp in comps.rentals %}
+          <tr>
+            <td>{{ comp.address }}</td>
+            <td>${{ comp.rent }}</td>
+            <td>{{ comp.beds }}</td>
+            <td>{{ comp.baths }}</td>
+            <td>{{ comp.sqft }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <p class="note">No rental comps available — data source not returned.</p>
+    {% endif %}
+    <div class="footer"><span class="logo">CM Loans</span> — Confidential Investment Report</div>
+  </div>
+
+  <!-- Sales Comps Section -->
+  <div class="page page-break">
+    <h2 class="section-title">Sales Comps</h2>
+    {% if comps.sales and comps.sales|length > 0 %}
+      <table>
+        <thead>
+          <tr><th>Address</th><th>Sale Price</th><th>Date</th><th>Price/Sqft</th></tr>
+        </thead>
+        <tbody>
+          {% for comp in comps.sales %}
+          <tr>
+            <td>{{ comp.address }}</td>
+            <td>${{ comp.price }}</td>
+            <td>{{ comp.date }}</td>
+            <td>${{ comp.price_per_sqft }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <p class="note">No sales comps available — source not connected.</p>
+    {% endif %}
+    <div class="footer"><span class="logo">CM Loans</span> — Confidential Investment Report</div>
+  </div>
+
+  <!-- Market Snapshot Section -->
+  <div class="page page-break">
+    <h2 class="section-title">Market Snapshot</h2>
+    <table>
+      <tr><td><strong>Median Home Price:</strong></td><td>{{ comps.market.median_price }}</td></tr>
+      <tr><td><strong>Median Rent:</strong></td><td>{{ comps.market.median_rent }}</td></tr>
+      <tr><td><strong>Vacancy Rate:</strong></td><td>{{ comps.market.vacancy_rate }}</td></tr>
+    </table>
+    <div class="footer">
+      <span class="logo">CM Loans</span> — Confidential Investment Report<br>
+      For informational purposes only. Not a commitment to lend.
+    </div>
+  </div>
+
+</body>
+</html>

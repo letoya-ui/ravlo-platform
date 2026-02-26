@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; }
+    h1 { color: #333; }
+    h2 { margin-top: 30px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    th, td { border: 1px solid #ccc; padding: 8px; }
+    th { background: #f0f0f0; }
+  </style>
+</head>
+<body>
+
+<h1>Rehab Scope Report</h1>
+<p><strong>Borrower:</strong> {{ borrower.first_name }} {{ borrower.last_name }}</p>
+<p><strong>Date:</strong> {{ date.strftime("%B %d, %Y") }}</p>
+
+<h2>Property Information</h2>
+<p><strong>Address:</strong> {{ property.address }}</p>
+<p><strong>Sqft:</strong> {{ property.sqft }}</p>
+<p><strong>Beds/Baths:</strong> {{ property.beds }} / {{ property.baths }}</p>
+
+<h2>Rehab Summary</h2>
+<p><strong>Total Rehab Cost:</strong> ${{ "{:,.0f}".format(rehab_summary.total) }}</p>
+<p><strong>Cost per Sqft:</strong> ${{ "{:,.2f}".format(rehab_summary.cost_per_sqft) }}</p>
+<p><strong>Scope:</strong> {{ rehab_summary.scope|capitalize }}</p>
+
+<h2>Room-by-Room Breakdown</h2>
+<table>
+  <tr>
+    <th>Item</th>
+    <th>Cost</th>
+  </tr>
+  {% for key, cost in rehab_breakdown.items.items() %}
+  <tr>
+    <td>{{ key|capitalize }}</td>
+    <td>${{ "{:,.0f}".format(cost) }}</td>
+  </tr>
+  {% endfor %}
+  <tr>
+    <th>Total</th>
+    <th>${{ "{:,.0f}".format(rehab_breakdown.total) }}</th>
+  </tr>
+</table>
+
+{% if risk_flags %}
+<h2>Risk Flags</h2>
+<ul>
+  {% for flag in risk_flags %}
+    <li>{{ flag }}</li>
+  {% endfor %}
+</ul>
+{% endif %}
+
+</body>
+</html>

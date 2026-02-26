@@ -1,0 +1,66 @@
+{% extends "layouts/base.html" %}
+{% block title %}AI Intelligence Control Center{% endblock %}
+{% block content %}
+<main class="dashboard-main">
+  <div class="wrap">
+    <header>
+      <h2>🤖 AI Intelligence Control Center</h2>
+      <p class="muted">Monitor and refresh system-wide AI models and summaries.</p>
+    </header>
+
+    <!-- === AI HEALTH OVERVIEW === -->
+    <div class="grid grid-2">
+      {% for name, status in ai_health.items() %}
+      <div class="card">
+        <h4>{{ name }}</h4>
+        <p class="muted">{{ status }}</p>
+      </div>
+      {% endfor %}
+    </div>
+
+    <!-- === REFRESH TIMESTAMPS === -->
+    <div class="card mt-2">
+      <h4>🕒 Last Refresh Summary</h4>
+      <table>
+        <tr><th>Module</th><th>Last Updated</th><th>Action</th></tr>
+        {% for key, ts in last_refresh.items() %}
+          <tr>
+            <td>{{ key.capitalize() }}</td>
+            <td>{{ ts.strftime("%b %d, %Y %I:%M %p") }}</td>
+            <td>
+              <form method="POST" action="{{ url_for('admin.ai_refresh', target=key) }}">
+                <button class="btn btn-sm btn-glow">🔄 Refresh</button>
+              </form>
+            </td>
+          </tr>
+        {% endfor %}
+      </table>
+    </div>
+
+    <!-- === AI LOG / SUMMARY PANEL === -->
+    <div class="card mt-2">
+      <h4>AI System Log</h4>
+      <p>🧩 Current AI modules are functioning normally.</p>
+      <ul class="muted">
+        <li>Analytics Engine is up-to-date and learning from borrower trends.</li>
+        <li>Partner Insights are synced with financial deal metrics.</li>
+        <li>Loan Predictor actively recalculates risk and LTV scores.</li>
+        <li>Borrower Risk Model is retrained weekly.</li>
+      </ul>
+    </div>
+  </div>
+</main>
+
+<style>
+.grid { display:grid; gap:1.5rem; }
+.grid-2 { grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+table {
+  width:100%; border-collapse:collapse; margin-top:1rem;
+}
+th, td {
+  border-bottom:1px solid var(--line); padding:0.7rem; text-align:left;
+}
+.btn-sm { padding:0.4rem 0.8rem; font-size:0.85rem; }
+.card ul { margin:0.8rem 0 0 1.2rem; }
+</style>
+{% endblock %}

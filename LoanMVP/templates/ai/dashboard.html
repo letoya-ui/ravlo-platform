@@ -1,0 +1,110 @@
+{% extends "layouts/base.html" %}
+{% block title %}AI Command Center{% endblock %}
+{% block content %}
+
+
+<main style="margin-left:260px; padding:2rem; color:#e6e6e6; background:#0f0f11; min-height:100vh;">
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" />
+  <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+
+  <style>
+    .grid{display:grid; gap:1.25rem;}
+    .g-2{grid-template-columns:repeat(2,minmax(0,1fr));}
+    .g-3{grid-template-columns:repeat(3,minmax(0,1fr));}
+    .card{background:#15161a; border:1px solid #282b31; border-radius:14px; padding:1.25rem; box-shadow:0 0 18px rgba(122,184,255,0.25);}
+    .card h3{margin:0 0 .6rem; color:#e6e6e6;}
+    .muted{color:#a5a7ad;}
+    .btn{display:inline-flex; align-items:center; gap:.4rem; border:1px solid #2b2f36; background:#1c1f25; color:#e6e6e6; border-radius:10px; padding:.6rem 1rem; text-decoration:none;}
+    .btn:hover{border-color:#35506a; box-shadow:0 0 10px rgba(122,184,255,0.3);}
+    .btn-primary{background:linear-gradient(180deg,#2a4a62,#1b2a38); color:#cfe8ff; border-color:#2a4a62;}
+    .section-title{font-size:1.1rem; color:#7ab8ff; margin-bottom:.6rem;}
+  </style>
+
+  <h1 style="margin-bottom:1rem;">🧠 AI Command Center</h1>
+  <p class="muted" style="margin-bottom:2rem;">Welcome, {{ current_user.username or 'User' }} — monitor system insights, AI usage, and predictive analytics here.</p>
+
+  <!-- KPI GRID -->
+  <div class="grid g-3">
+    <div class="card">
+      <h3>Active AI Sessions</h3>
+      <div id="chart_sessions" style="height:200px;"></div>
+    </div>
+    <div class="card">
+      <h3>Loan Predictions</h3>
+      <div id="chart_predictions" style="height:200px;"></div>
+    </div>
+    <div class="card">
+      <h3>AI Memory Load</h3>
+      <div id="chart_memory" style="height:200px;"></div>
+    </div>
+  </div>
+
+  <!-- INSIGHT ROW -->
+  <div class="grid g-2" style="margin-top:1.5rem;">
+    <div class="card">
+      <h3>System Overview</h3>
+      <p class="muted">AI completed <strong>{{ stats.completed_intakes or 15 }}</strong> borrower intakes and processed <strong>{{ stats.ai_recommendations or 27 }}</strong> recommendations this week.</p>
+      <a href="{{ url_for('ai.chat') }}" class="btn btn-primary"><i class="lucide lucide-message-circle"></i> Open Chat Assistant</a>
+    </div>
+    <div class="card">
+      <h3>Quick Tools</h3>
+      <div style="display:flex;flex-wrap:wrap;gap:.5rem;">
+        <a class="btn" href="{{ url_for('ai.workflow') }}"><i class="lucide lucide-cpu"></i> Build Workflow</a>
+        <a class="btn" href="{{ url_for('ai.predictive') }}"><i class="lucide lucide-trending-up"></i> Predictive Models</a>
+        <a class="btn" href="{{ url_for('ai.memory') }}"><i class="lucide lucide-database"></i> Memory Console</a>
+        <a class="btn" href="{{ url_for('ai.voice') }}"><i class="lucide lucide-mic"></i> Voice Interface</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- LOG PANEL -->
+  <div class="card" style="margin-top:1.5rem;">
+    <h3>Recent AI Activities</h3>
+    <table style="width:100%;border-collapse:collapse;">
+      <thead><tr style="color:#a5a7ad;border-bottom:1px solid #282b31;"><th align="left">Time</th><th align="left">Action</th><th align="left">Context</th></tr></thead>
+      <tbody>
+        <tr><td>09:32 AM</td><td>Generated borrower insight</td><td>Intake Review</td></tr>
+        <tr><td>11:15 AM</td><td>Optimized loan structure</td><td>Property AI</td></tr>
+        <tr><td>12:45 PM</td><td>Predicted funding timeline</td><td>AI Predictive</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Floating AI Dock -->
+  <div id="aiDock" style="position:fixed;right:22px;bottom:26px;width:360px;max-width:95vw;background:#15161a;border:1px solid #282b31;border-radius:16px;box-shadow:0 0 18px rgba(122,184,255,0.25);z-index:50;">
+    <div style="padding:.8rem 1rem;border-bottom:1px solid #282b31;display:flex;justify-content:space-between;align-items:center;">
+      <strong><i class="lucide lucide-bot"></i> AI Assistant</strong>
+      <button class="btn btn-sm" onclick="document.getElementById('aiDock').style.display='none'">✖</button>
+    </div>
+    <div id="aiBody" style="padding:1rem;max-height:250px;overflow:auto;">
+      <div class="muted">👋 Hi {{ current_user.username or 'User' }}, I can summarize data, forecast trends, or build workflows.</div>
+    </div>
+    <div style="display:flex;gap:.5rem;padding:.8rem 1rem;border-top:1px solid #282b31;">
+      <input id="aiInput" placeholder="Ask the AI…" style="flex:1;background:#0f0f11;border:1px solid #2b2f36;color:#e6e6e6;border-radius:10px;padding:.6rem .7rem;">
+      <button class="btn btn-primary" onclick="aiSend()"><i class="lucide lucide-send"></i></button>
+    </div>
+  </div>
+
+  <script>
+    const baseOpt={chart:{toolbar:{show:false},foreColor:'#c9d3df'},grid:{borderColor:'#2a2e36'},dataLabels:{enabled:false},theme:{mode:'dark'}};
+
+    new ApexCharts(document.querySelector("#chart_sessions"),{...baseOpt,chart:{type:'radialBar',height:200},series:[75],labels:['Active Sessions'],colors:['#7ab8ff']}).render();
+    new ApexCharts(document.querySelector("#chart_predictions"),{...baseOpt,chart:{type:'bar',height:200},series:[{name:'Predictions',data:[4,8,6,5]}],xaxis:{categories:['Mon','Tue','Wed','Thu']},colors:['#43d19e']}).render();
+    new ApexCharts(document.querySelector("#chart_memory"),{...baseOpt,chart:{type:'area',height:200},stroke:{curve:'smooth',width:2},series:[{name:'Memory Load',data:[20,35,40,28,50]}],xaxis:{categories:['10 AM','12 PM','2 PM','4 PM','6 PM']},colors:['#7ab8ff']}).render();
+
+    function aiSend(){
+      const input=document.getElementById('aiInput');
+      const body=document.getElementById('aiBody');
+      const q=input.value.trim(); if(!q)return;
+      const userMsg=document.createElement('div'); userMsg.textContent='You: '+q; userMsg.style.margin='4px 0'; body.appendChild(userMsg);
+      input.value='';
+      setTimeout(()=>{
+        const aiMsg=document.createElement('div');
+        aiMsg.textContent='AI: Based on system data, average approval rate is 82%.';
+        aiMsg.style.color='#7ab8ff'; aiMsg.style.margin='4px 0';
+        body.appendChild(aiMsg); body.scrollTop=body.scrollHeight;
+      },500);
+    }
+  </script>
+</main>
+{% endblock %}

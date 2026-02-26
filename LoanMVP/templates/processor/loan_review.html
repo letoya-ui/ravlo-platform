@@ -1,0 +1,344 @@
+{% extends "layouts/base.html" %}
+{% block title %}Loan Review | Processor{% endblock %}
+{% block content %}
+
+<main class="dashboard-main">
+  <div class="wrap">
+
+    <!-- ===================== -->
+    <!-- Loan + Borrower Header -->
+    <!-- ===================== -->
+    <section class="card mb-4">
+      <h2>🏦 Loan Review – {{ borrower.full_name }}</h2>
+      <p class="muted">
+        Loan ID: <strong>#{{ loan.id }}</strong> |
+        Status: <span class="accent">{{ loan.status or 'N/A' }}</span> |
+        Amount: ${{ "{:,.2f}".format(loan.amount or 0) }}
+      </p>
+    </section>
+
+    <!-- Manage Conditions Button -->
+    <a href="{{ url_for('processor.condition_review', loan_id=loan.id) }}"
+       class="btn btn-warning btn-sm" style="margin-bottom: 1rem;">
+      📋 Manage Conditions
+    </a>
+
+    <!-- ======================= -->
+    <!-- Underwriting Conditions -->
+    <!-- ======================= -->
+    <section class="card">
+      <h3>📋 Underwriting Conditions</h3>
+      <p class="muted">Review, send, verify, and communicate with borrower or underwriter.</p>
+
+      <!-- Add Condition Button -->
+      <button class="btn btn-glow" data-bs-toggle="modal" data-bs-target="#addConditionModal">
+        ➕ Add Condition
+      </button>
+
+      <!-- Add Condition Modal -->
+      <div class="modal fade" id="addConditionModal" tabindex="-1">
+        <div class="modal-dialog">
+          <form method="POST" action="{{ url_for('processor.add_condition', loan_id=loan.id) }}">
+            <div class="modal-content">
+
+              <div class="modal-header">
+                <h5 class="modal-title">Add Condition</h5>
+              </div>
+
+              <div class="modal-body">
+
+                <label>Select Condition</label>
+                <select name="condition_type" class="form-control">
+                  <option value="">-- Select Condition --</option>
+
+                  <!-- Income -->
+                  <optgroup label="Income Documentation">
+                    <option>30 Days of Paystubs</option>
+                    <option>W-2s (Last 2 Years)</option>
+                    <option>1099s (Last 2 Years)</option>
+                    <option>Personal Tax Returns (1040) – 2 Years</option>
+                    <option>Business Tax Returns – 2 Years</option>
+                    <option>Year-to-Date Profit & Loss Statement</option>
+                    <option>Employment Verification (VOE)</option>
+                    <option>Employment Gap Letter</option>
+                    <option>Bonus/Commission Breakdown</option>
+                    <option>CPA Letter Verifying Business</option>
+                  </optgroup>
+
+                  <!-- Assets -->
+                  <optgroup label="Assets & Banking">
+                    <option>2 Months Bank Statements</option>
+                    <option>Large Deposit Explanation</option>
+                    <option>Gift Letter</option>
+                    <option>Proof of Gift Funds Transfer</option>
+                    <option>Retirement Account Statements</option>
+                    <option>Brokerage/Investment Statements</option>
+                    <option>Earnest Money Deposit Proof</option>
+                  </optgroup>
+
+                  <!-- Credit -->
+                  <optgroup label="Credit & Liabilities">
+                    <option>Credit Inquiry Letter of Explanation</option>
+                    <option>Late Payment Letter of Explanation</option>
+                    <option>Bankruptcy Discharge Papers</option>
+                    <option>Divorce Decree</option>
+                    <option>Child Support Documentation</option>
+                    <option>Student Loan Payment Documentation</option>
+                    <option>Payoff Statement</option>
+                    <option>Proof of Closed Accounts</option>
+                  </optgroup>
+
+                  <!-- Identity -->
+                  <optgroup label="Identity & Legal">
+                    <option>Driver's License</option>
+                    <option>Social Security Card</option>
+                    <option>Passport</option>
+                    <option>Permanent Resident Card</option>
+                    <option>Trust Documents</option>
+                    <option>Power of Attorney</option>
+                    <option>Name Change Documentation</option>
+                  </optgroup>
+
+                  <!-- Property -->
+                  <optgroup label="Property & Appraisal">
+                    <option>Purchase Contract</option>
+                    <option>HOA Certification</option>
+                    <option>Condo Questionnaire</option>
+                    <option>Homeowner's Insurance Binder</option>
+                    <option>Flood Insurance</option>
+                    <option>Appraisal Report</option>
+                    <option>Lease Agreement</option>
+                    <option>Rent Roll</option>
+                  </optgroup>
+
+                  <!-- Misc -->
+                  <optgroup label="Miscellaneous">
+                    <option>Letter of Explanation (General)</option>
+                    <option>Updated Bank Statements</option>
+                    <option>Updated Paystubs</option>
+                    <option>Updated 1003 Application</option>
+                    <option>Missing Signature Pages</option>
+                    <option>Missing Initials</option>
+                  </optgroup>
+                </select>
+
+                <label class="mt-3">Notes (optional)</label>
+                <textarea name="notes" class="form-control"></textarea>
+
+              </div>
+
+              <div class="modal-footer">
+                <button class="btn btn-glow">Add Condition</button>
+              </div>
+
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- Conditions Table -->
+      <form method="POST" action="{{ url_for('processor.loan_review', loan_id=loan.id) }}">
+        <table class="data-table mt-3">
+          <thead>
+            <tr>
+              <th>Select</th>
+              <th>Description</th>
+              <th>Status</th>
+              <th>Requested By</th>
+              <th>Notes</th>
+              <th>Last Updated</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for cond in conditions %}
+            <tr>
+              <td><input type="checkbox" name="condition_ids" value="{{ cond.id }}"></td>
+              <td>{{ cond.description }}</td>
+              <td><span class="badge">{{ cond.status or "Pending" }}</span></td>
+              <td>{{ cond.requested_by or "Processor" }}</td>
+              <td>{{ cond.notes or "—" }}</td>
+              <td>{{ cond.updated_at.strftime("%Y-%m-%d %H:%M") if cond.updated_at else "—" }}</td>
+            </tr>
+            {% else %}
+            <tr>
+              <td colspan="6" class="muted">No conditions found for this loan.</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+
+        <!-- Bulk Action Notes -->
+        <div class="form-group mt-3">
+          <label class="muted">📝 Notes (optional)</label>
+          <textarea name="notes" rows="3" placeholder="Enter verification or communication notes..."></textarea>
+        </div>
+
+        <!-- Bulk Action Buttons -->
+        <div class="btn-group mt-3">
+          <button name="action" value="SendToBorrower" class="btn btn-glow">📨 Send to Borrower</button>
+          <button name="action" value="ReceivedFromBorrower" class="btn btn-outline">📥 Mark as Received</button>
+          <button name="action" value="VerifyDocument" class="btn btn-outline">✅ Verify</button>
+          <button name="action" value="SendToUnderwriter" class="btn btn-outline">📤 Send to Underwriter</button>
+        </div>
+      </form>
+    </section>
+
+    <!-- ======================= -->
+    <!-- Borrower Documents View -->
+    <!-- ======================= -->
+    <section class="card mt-4">
+      <h3>📄 Borrower Documents</h3>
+      <p class="muted">View uploaded borrower files related to this loan.</p>
+
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Document</th>
+            <th>Uploaded By</th>
+            <th>Status</th>
+            <th>Uploaded</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for doc in documents %}
+          <tr>
+            <td>{{ doc.document_name }}</td>
+            <td>{{ doc.uploaded_by or "Borrower" }}</td>
+            <td><span class="badge">{{ doc.status or "Pending" }}</span></td>
+            <td>{{ doc.created_at.strftime("%Y-%m-%d %H:%M") if doc.created_at else "—" }}</td>
+            <td>
+              <a href="{{ url_for('borrower.view_file', filename=doc.file_path) }}" target="_blank" class="btn btn-sm">🔍 View</a>
+              <a href="{{ url_for('borrower.download_file', filename=doc.file_path) }}" class="btn btn-sm">⬇️ Download</a>
+            </td>
+          </tr>
+          {% else %}
+          <tr><td colspan="5" class="muted">No borrower documents uploaded yet.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </section>
+
+    {% if ai_summary %}
+    <section class="card mt-4">
+      <h3>🤖 AI Summary</h3>
+      <p>{{ ai_summary }}</p>
+    </section>
+    {% endif %}
+
+  </div>
+</main>
+
+<!-- ================= -->
+<!-- Embedded CSS Style -->
+<!-- ================= -->
+<style>
+  :root {
+    --bg: #0f0f11;
+    --panel: #15161a;
+    --line: #2b2f36;
+    --text: #e6e6e6;
+    --muted: #a5a7ad;
+    --accent: #7ab8ff;
+    --hover: #1f2328;
+    --glow: 0 0 14px rgba(122,184,255,0.35);
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+  }
+
+  .wrap {
+    padding: 2rem;
+  }
+
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 1.5rem;
+    box-shadow: var(--glow);
+    margin-bottom: 2rem;
+  }
+
+  h2, h3 {
+    color: var(--accent);
+    margin-bottom: .5rem;
+  }
+
+  .muted {
+    color: var(--muted);
+  }
+
+  .btn, button {
+    background: var(--accent);
+    border: none;
+    color: #000;
+    padding: .6rem 1.2rem;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all .2s ease;
+  }
+
+  .btn-outline {
+    background: transparent;
+    border: 1px solid var(--accent);
+    color: var(--accent);
+  }
+
+  .btn-outline:hover {
+    background: var(--accent);
+    color: #000;
+  }
+
+  .btn-glow {
+    background: var(--accent);
+    box-shadow: var(--glow);
+  }
+
+  .data-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 1rem;
+  }
+
+  .data-table th, .data-table td {
+    padding: .6rem;
+    border-bottom: 1px solid var(--line);
+    text-align: left;
+  }
+
+  .data-table th {
+    color: var(--accent);
+    font-weight: 600;
+    text-transform: uppercase;
+  }
+
+  .badge {
+    display: inline-block;
+    background: var(--accent);
+    color: #000;
+    padding: .2rem .5rem;
+    border-radius: 4px;
+    font-size: .8rem;
+  }
+
+  textarea {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--line);
+    color: var(--text);
+    border-radius: 8px;
+    padding: .5rem;
+    resize: vertical;
+  }
+
+  .btn-group button {
+    margin-right: .5rem;
+    margin-top: .5rem;
+  }
+</style>
+
+{% endblock %}

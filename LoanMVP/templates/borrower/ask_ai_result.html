@@ -1,0 +1,156 @@
+{% extends "layouts/borrower_base.html" %}
+{% block title %}AI Assistant Response{% endblock %}
+{% block content %}
+
+<div class="borrower-shell">
+
+  <!-- SIDEBAR -->
+  <aside class="b-sidebar">
+    <div class="b-sidebar-logo">CM</div>
+
+    <div class="b-sidebar-group">
+
+      <a href="{{ url_for('borrower.dashboard') }}" class="b-sidebar-item">
+        <svg viewBox="0 0 24 24" fill="none">
+          <rect x="3" y="3" width="8" height="8" rx="2"></rect>
+          <rect x="13" y="3" width="8" height="5" rx="2"></rect>
+          <rect x="13" y="10" width="8" height="11" rx="2"></rect>
+          <rect x="3" y="13" width="8" height="8" rx="2"></rect>
+        </svg>
+        <div class="b-tooltip">Dashboard</div>
+      </a>
+
+      <a href="{{ url_for('borrower.property_search') }}" class="b-sidebar-item">
+        <svg viewBox="0 0 24 24" fill="none">
+          <path d="M12 3L4 9v11h16V9l-8-6Z"></path>
+          <circle cx="12" cy="13" r="2.5"></circle>
+        </svg>
+        <div class="b-tooltip">Property Finder</div>
+      </a>
+
+      <a href="{{ url_for('borrower.resource_center') }}" class="b-sidebar-item">
+        <svg viewBox="0 0 24 24" fill="none">
+          <circle cx="8" cy="8" r="3"></circle>
+          <circle cx="16" cy="8" r="3"></circle>
+          <path d="M4 19c.6-2.4 2.3-4 4-4s3.4 1.6 4 4"></path>
+          <path d="M12 19c.6-2.4 2.3-4 4-4s3.4 1.6 4 4"></path>
+        </svg>
+        <div class="b-tooltip">Partner Network</div>
+      </a>
+
+      <a href="{{ url_for('borrower.deal_workspace') }}" class="b-sidebar-item">
+        <svg viewBox="0 0 24 24" fill="none">
+          <rect x="4" y="4" width="16" height="16" rx="2"></rect>
+          <path d="M8 9h8M8 13h5M8 17h3"></path>
+        </svg>
+        <div class="b-tooltip">Project Planner</div>
+      </a>
+
+      <a href="{{ url_for('borrower.saved_properties') }}" class="b-sidebar-item">
+        <svg viewBox="0 0 24 24" fill="none">
+          <path d="M12 20s-4.5-2.7-6.7-5.4C3.4 13 3 11.9 3 10.8 3 8.7 4.7 7 6.8 7c1.2 0 2.3.6 3 1.5.7-.9 1.8-1.5 3-1.5C15.3 7 17 8.7 17 10.8c0 1.1-.4 2.2-2.3 3.8C16.5 17.3 12 20 12 20Z"></path>
+        </svg>
+        <div class="b-tooltip">Saved Properties</div>
+      </a>
+
+      <a href="{{ url_for('borrower.resource_center') }}" class="b-sidebar-item">
+        <svg viewBox="0 0 24 24" fill="none">
+          <path d="M5 4h10a3 3 0 0 1 3 3v13l-4-2-4 2-4-2-4 2V7a3 3 0 0 1 3-3Z"></path>
+        </svg>
+        <div class="b-tooltip">Resource Center</div>
+      </a>
+
+    </div>
+  </aside>
+
+  <!-- MAIN CONTENT -->
+  <main class="b-main">
+
+    <!-- TOP TABS -->
+    <div class="b-top-tabs">
+      <a href="{{ url_for('borrower.dashboard') }}" class="b-top-tab">Dashboard</a>
+      <a href="{{ url_for('borrower.status') }}" class="b-top-tab">Loan</a>
+      <a href="{{ url_for('borrower.documents') }}" class="b-top-tab">Documents</a>
+      <a href="{{ url_for('borrower.document_requests') }}" class="b-top-tab">Conditions</a>
+      <a href="{{ url_for('borrower.payments') }}" class="b-top-tab">Payments</a>
+      <a href="{{ url_for('borrower.messages') }}" class="b-top-tab">Messages</a>
+      <a href="{{ url_for('borrower.ai_hub') }}" class="b-top-tab">AI Hub</a>
+      <div class="b-top-tab active">AI Response</div>
+    </div>
+
+    <!-- AI RESPONSE CARD -->
+    <div class="b-card" style="padding:1.5rem;">
+
+      <h3>AI Assistant Response</h3>
+
+      <div class="b-card" style="margin-top:1rem;">
+        <div class="card-body">
+          <h5>Your Question</h5>
+          <p>{{ form.question.data }}</p>
+
+          <hr>
+          <h5>AI Response</h5>
+          <div class="alert alert-info" id="ai-response">{{ response }}</div>
+        </div>
+      </div>
+
+      {% if steps %}
+        <h5 class="mt-4">Next Steps</h5>
+        <ul class="list-group mb-3">
+          {% for line in steps.split('\n') %}
+            {% if line.strip() %}
+              <li class="list-group-item">{{ line.strip() }}</li>
+            {% endif %}
+          {% endfor %}
+        </ul>
+
+        {% if upload_trigger %}
+          <a href="{{ url_for('borrower.upload_documents') }}" class="btn btn-success">Upload Now</a>
+        {% endif %}
+      {% endif %}
+
+      <div class="mt-3">
+        <a href="{{ url_for('borrower.ask_ai', parent_id=chat.id) }}" class="btn btn-outline-primary me-2">
+          Ask a follow-up
+        </a>
+        <a href="{{ url_for('borrower.ask_ai') }}" class="btn btn-secondary">Ask another question</a>
+      </div>
+
+      {% if interactions %}
+        <hr>
+        <h5>Previous Questions</h5>
+        <ul class="list-group">
+          {% for chat in interactions %}
+            <li class="list-group-item">
+              <strong>Q:</strong> {{ chat.question }}<br>
+              <strong>A:</strong> {{ chat.response }}<br>
+              <small class="text-muted">{{ chat.timestamp.strftime('%b %d, %Y %I:%M %p') }}</small><br>
+              <a href="{{ url_for('borrower.ask_ai', parent_id=chat.id) }}" class="btn btn-sm btn-outline-primary mt-2">
+                Ask a follow-up
+              </a>
+            </li>
+          {% endfor %}
+        </ul>
+      {% endif %}
+
+    </div>
+
+  </main>
+</div>
+
+<script>
+  const el = document.getElementById("ai-response");
+  const text = el.innerText;
+  el.innerText = "";
+  let i = 0;
+  const type = () => {
+    if (i < text.length) {
+      el.innerText += text.charAt(i);
+      i++;
+      setTimeout(type, 20);
+    }
+  };
+  type();
+</script>
+
+{% endblock %}

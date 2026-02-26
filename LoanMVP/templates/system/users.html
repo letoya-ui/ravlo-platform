@@ -1,0 +1,54 @@
+{% extends "layouts/base.html" %}
+{% block title %}System Dashboard{% endblock %}
+{% block content %}
+<style>
+  :root { --line:#2a2e36; --panel:#15161a; --text:#e6e6e6; --muted:#a5a7ad }
+  .card { background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:1rem }
+  .btn { background:#1a1d23; border:1px solid var(--line); color:var(--text); border-radius:10px; padding:.6rem 1rem }
+  .btn:hover { border-color:#35506a; box-shadow:0 0 12px rgba(122,184,255,0.3) }
+</style>
+
+<div class="container-fluid py-4 text-light">
+  <h2 class="mb-4">🧠 System Dashboard</h2>
+  <div class="row g-4">
+    <div class="col-md-4">
+      <div class="card">
+        <h5>🛠 System Info</h5>
+        <p><strong>Name:</strong> {{ system.name }}</p>
+        <p><strong>Version:</strong> {{ system.version }}</p>
+        <p><strong>Environment:</strong> {{ system.environment or '—' }}</p>
+        <p><strong>Uptime:</strong> {{ uptime }} days</p>
+        <a href="{{ url_for('system.settings') }}" class="btn mt-2">⚙️ Edit Settings</a>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card">
+        <h5>📜 Recent Logs</h5>
+        <ul class="list-unstyled">
+          {% for log in logs %}
+          <li><small>{{ log.created_at.strftime('%b %d %I:%M %p') }} — {{ log.message }}</small></li>
+          {% endfor %}
+        </ul>
+        <a href="{{ url_for('system.logs') }}" class="btn mt-2">View All Logs</a>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card">
+        <h5>🧾 Audit Trail</h5>
+        <ul class="list-unstyled">
+          {% for audit in audits %}
+          <li><small>{{ audit.created_at.strftime('%b %d %I:%M %p') }} — {{ audit.action }}</small></li>
+          {% endfor %}
+        </ul>
+        <a href="{{ url_for('system.audits') }}" class="btn mt-2">View Audits</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="card mt-4">
+    <h5>👥 Users</h5>
+    <p class="text-muted">Manage system users and roles.</p>
+    <a href="{{ url_for('system.users') }}" class="btn">Manage Users</a>
+  </div>
+</div>
+{% endblock %}

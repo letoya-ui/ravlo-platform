@@ -1,0 +1,160 @@
+{% extends "layouts/base.html" %}
+{% block title %}Underwriter • Tasks{% endblock %}
+{% block content %}
+
+<main class="dashboard-main">
+  <div class="wrap">
+
+    <!-- HEADER -->
+    <div class="card header-card">
+      <div>
+        <h1>📝 Underwriter Tasks</h1>
+        <div class="muted">Manage underwriting tasks across all loan files.</div>
+      </div>
+      <div class="actions-top">
+        <button class="btn btn-primary" onclick="openTaskModal()">➕ New Task</button>
+      </div>
+    </div>
+
+    <!-- TASK LIST -->
+    <div class="card">
+      <h2>📋 Task List</h2>
+
+      {% if tasks %}
+      <table class="task-table">
+        <thead>
+          <tr>
+            <th>Title</th>
+            <th>Description</th>
+            <th>Loan</th>
+            <th>Priority</th>
+            <th>Status</th>
+            <th>Created</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for t in tasks %}
+          <tr>
+            <td>{{ t.title }}</td>
+            <td>{{ t.description }}</td>
+            <td>#{{ t.loan_id }}</td>
+            <td>{{ t.priority }}</td>
+            <td>{{ t.status }}</td>
+            <td>{{ t.created_at.strftime('%b %d, %Y') }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <p class="muted">No tasks yet.</p>
+      {% endif %}
+    </div>
+
+  </div>
+</main>
+
+<!-- MODAL -->
+<div id="taskModal" class="modal hidden">
+  <div class="modal-content card">
+    <h2>➕ New Task</h2>
+
+    <form method="POST" action="{{ url_for('underwriter.tasks') }}">
+        <label>Title</label>
+        <input type="text" name="title" required placeholder="Enter task title">
+
+        <label>Description</label>
+        <textarea name="description" required placeholder="Describe the task"></textarea>
+
+        <label>Loan ID</label>
+        <input type="number" name="loan_id" required placeholder="Loan ID">
+
+        <label>Priority</label>
+        <select name="priority">
+            <option>Normal</option>
+            <option>High</option>
+            <option>Critical</option>
+        </select>
+
+        <label>Due Date</label>
+        <input type="date" name="due_date">
+
+        <button class="btn btn-primary" type="submit">Create Task</button>
+    </form>
+
+  </div>
+</div>
+
+<style>
+  :root {
+    --bg:#0f0f11; --panel:#15161a; --line:#282b31;
+    --text:#e6e6e6; --muted:#a5a7ad; --accent:#7ab8ff;
+    --glow:0 0 18px rgba(122,184,255,0.35);
+  }
+
+  .wrap {
+    padding:1.5rem;
+    max-width:1600px;
+    margin:0 auto;
+  }
+
+  .header-card {
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:1.5rem;
+    flex-wrap:wrap;
+  }
+
+  .task-table {
+    width:100%;
+    border-collapse:collapse;
+    margin-top:1rem;
+  }
+
+  .task-table th,
+  .task-table td {
+    padding:.7rem;
+    border-top:1px solid var(--line);
+  }
+
+  .modal {
+    position:fixed;
+    top:0; left:0;
+    width:100%; height:100%;
+    background:rgba(0,0,0,0.6);
+    display:flex;
+    justify-content:center;
+    align-items:center;
+  }
+
+  .modal.hidden { display:none; }
+
+  .modal-content {
+    width:400px;
+    padding:1.5rem;
+    border-radius:14px;
+  }
+
+  input, textarea, select {
+    width:100%;
+    margin-bottom:1rem;
+    padding:.6rem;
+    border-radius:8px;
+    border:1px solid var(--line);
+    background:#1a1b1f;
+    color:var(--text);
+  }
+
+  textarea { height:90px; }
+</style>
+
+<script>
+function openTaskModal() {
+  document.getElementById("taskModal").classList.remove("hidden");
+}
+function closeTaskModal() {
+  document.getElementById("taskModal").classList.add("hidden");
+}
+</script>
+
+{% endblock %}

@@ -1,0 +1,47 @@
+{% extends "layouts/base.html" %}
+{% block title %}Borrower Intake Review{% endblock %}
+{% block content %}
+<div class="dashboard-content px-4 py-4 fade-in">
+  <div class="card shadow-lg border-0" style="background:var(--panel);color:var(--text-light);">
+    <div class="card-header border-bottom" style="background:var(--panel);border-color:var(--line);">
+      <h3 class="mb-0 text-accent">📋 Borrower Intake Review</h3>
+      <small class="text-muted">AI-captured responses — review, adjust, and confirm.</small>
+    </div>
+
+    <div class="card-body">
+      <form method="POST">
+        <div class="row">
+          {% for key, value in intake.data.items() %}
+          <div class="col-md-6 mb-3">
+            <label class="form-label text-light">{{ key.replace('_', ' ')|title }}</label>
+            <input type="text" name="{{ key }}" value="{{ value }}" class="dashboard-input">
+          </div>
+          {% endfor %}
+        </div>
+
+        <div class="d-flex justify-content-between mt-4">
+          <button type="submit" class="btn btn-accent rounded-pill w-50 me-2">💾 Save & Review</button>
+          <a href="{{ url_for('loan_officer.dashboard') }}" class="btn btn-outline-light rounded-pill w-50">← Back to Dashboard</a>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<style>
+.dashboard-input {
+  background-color: #0f0f11;
+  color: #e6e6e6;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  width: 100%;
+  padding: 10px 14px;
+  transition: all 0.25s ease;
+}
+.dashboard-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 6px var(--accent);
+  background-color: #15161a;
+}
+</style>
+{% endblock %}

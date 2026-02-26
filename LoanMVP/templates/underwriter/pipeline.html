@@ -1,0 +1,182 @@
+{% extends "layouts/base.html" %}
+{% block title %}Underwriter • Pipeline{% endblock %}
+{% block content %}
+
+<main class="dashboard-main">
+  <div class="wrap">
+
+    <!-- Header -->
+    <div class="card header-card">
+      <div>
+        <h1>📊 Underwriting Pipeline</h1>
+        <div class="muted">Track loan files across all underwriting stages.</div>
+      </div>
+      <div class="actions-top">
+        <a href="{{ url_for('underwriter.dashboard') }}" class="btn">🏠 Dashboard</a>
+        <a href="{{ url_for('underwriter.review_loans') }}" class="btn btn-primary">📂 Review Loans</a>
+      </div>
+    </div>
+
+    <!-- Pipeline Columns -->
+    <div class="pipeline-grid">
+
+      <!-- Column Component -->
+      {% macro column(title, loans, color) %}
+      <div class="pipeline-col">
+        <h3 class="col-title" style="border-color: {{ color }};">{{ title }} ({{ loans|length }})</h3>
+
+        {% if loans %}
+          {% for loan in loans %}
+          <div class="card loan-card">
+            <div class="loan-header">
+              <h4>#{{ loan.id }}</h4>
+              <span class="status">
+                {{ loan.status }}
+              </span>
+            </div>
+
+            <div class="loan-info">
+              <p><strong>Borrower:</strong> {{ loan.borrower_profile.full_name }}</p>
+              <p><strong>Amount:</strong> ${{ "{:,.0f}".format(loan.amount or 0) }}</p>
+            </div>
+
+            <div class="actions">
+              <a href="{{ url_for('underwriter.file_review', loan_id=loan.id) }}" class="btn btn-sm">🔍 Review</a>
+              <a href="{{ url_for('underwriter.redflags', loan_id=loan.id) }}" class="btn btn-sm">⚠ Risk</a>
+            </div>
+          </div>
+          {% endfor %}
+        {% else %}
+          <p class="muted small">No loans in this stage.</p>
+        {% endif %}
+      </div>
+      {% endmacro %}
+
+      <!-- Render Columns -->
+      {{ column("Submitted", submitted, "#7ab8ff") }}
+      {{ column("In Review", in_review, "#ffdf6e") }}
+      {{ column("UW Review", uw_review, "#ff9d9d") }}
+      {{ column("Approved", approved, "#43d19e") }}
+      {{ column("Declined", declined, "#b85c5c") }}
+
+    </div>
+
+  </div>
+</main>
+
+<style>
+  :root {
+    --bg:#0f0f11; --panel:#15161a; --line:#282b31;
+    --text:#e6e6e6; --muted:#a5a7ad; --accent:#7ab8ff;
+    --glow:0 0 18px rgba(122,184,255,0.35);
+  }
+
+  .wrap {
+    padding:1.5rem;
+    max-width:1800px;
+    margin:0 auto;
+  }
+
+  .header-card {
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    flex-wrap:wrap;
+    margin-bottom:1.5rem;
+  }
+
+  .pipeline-grid {
+    display:grid;
+    grid-template-columns:repeat(auto-fit, minmax(260px, 1fr));
+    gap:1.2rem;
+  }
+
+  .pipeline-col {
+    display:flex;
+    flex-direction:column;
+    gap:1rem;
+  }
+
+  .col-title {
+    padding:.6rem 1rem;
+    border-left:4px solid var(--accent);
+    background:#1a1b1f;
+    border-radius:8px;
+    font-size:1rem;
+    color:var(--text);
+  }
+
+  .loan-card {
+    padding:1rem;
+    border-radius:12px;
+    background:var(--panel);
+    border:1px solid var(--line);
+    box-shadow:var(--glow);
+    transition:.25s ease;
+  }
+
+  .loan-card:hover {
+    transform:translateY(-4px);
+    box-shadow:0 0 20px rgba(122,184,255,0.45);
+  }
+
+  .loan-header {
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:.5rem;
+  }
+
+  .status {
+    padding:.2rem .55rem;
+    border-radius:999px;
+    font-size:.75rem;
+    border:1px solid var(--line);
+    background:#1e2430;
+    color:#a9c7ff;
+  }
+
+  .loan-info p {
+    margin:.2rem 0;
+    font-size:.85rem;
+  }
+
+  .actions {
+    margin-top:.6rem;
+    display:flex;
+    gap:.4rem;
+    flex-wrap:wrap;
+  }
+
+  .btn {
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    padding:.45rem .8rem;
+    border-radius:8px;
+    border:1px solid var(--line);
+    background:linear-gradient(180deg,#1c1f25,#15161a);
+    color:var(--text);
+    text-decoration:none;
+    font-size:.8rem;
+    transition:.25s;
+  }
+
+  .btn-sm {
+    padding:.35rem .65rem;
+    font-size:.75rem;
+  }
+
+  .btn-primary {
+    background:linear-gradient(180deg,#2a4a62,#1b2a38);
+    border-color:#2a4a62;
+    color:#cfe8ff;
+  }
+
+  .muted.small {
+    font-size:.8rem;
+    padding:.5rem;
+  }
+</style>
+
+{% endblock %}

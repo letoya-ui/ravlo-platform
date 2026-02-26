@@ -1,0 +1,55 @@
+{% extends "layouts/base.html" %}
+{% block title %}Edit Loan | Processor{% endblock %}
+{% block content %}
+<main class="dashboard-main">
+  <div class="wrap">
+
+    <section class="card edit-card">
+      <h2>✏️ Edit Loan</h2>
+      <p class="muted">Modify borrower and loan details below.</p>
+
+      <form method="POST" class="edit-form">
+        <div class="grid">
+          <div>
+            <label>Borrower Name</label>
+            <input type="text" name="borrower_name" value="{{ borrower.full_name }}">
+          </div>
+          <div>
+            <label>Loan Amount ($)</label>
+            <input type="number" step="0.01" name="amount" value="{{ loan.amount }}">
+          </div>
+          <div>
+            <label>Status</label>
+            <select name="status">
+              {% for s in ["Pending","In Review","Cleared","Closed"] %}
+              <option value="{{ s }}" {% if loan.status==s %}selected{% endif %}>{{ s }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+        <button type="submit" class="btn">💾 Save Changes</button>
+      </form>
+    </section>
+  </div>
+</main>
+
+<style>
+:root{
+  --bg:#0f0f11;--panel:#15161a;--line:#2b2f36;
+  --text:#e6e6e6;--muted:#a5a7ad;--accent:#7ab8ff;
+  --glow:0 0 14px rgba(122,184,255,0.35);
+}
+body{background:var(--bg);color:var(--text);}
+.wrap{padding:2rem;}
+.card{background:var(--panel);border:1px solid var(--line);
+  border-radius:16px;padding:1.5rem;box-shadow:var(--glow);max-width:700px;margin:auto;}
+h2{color:var(--accent);}
+.muted{color:var(--muted);}
+.edit-form .grid{display:grid;gap:1rem;margin-top:1rem;}
+input,select{width:100%;padding:.6rem;border-radius:10px;
+  border:1px solid var(--line);background:var(--bg);color:var(--text);}
+.btn{background:var(--accent);color:#000;border:none;border-radius:8px;
+  padding:.7rem 1.4rem;margin-top:1rem;font-weight:600;cursor:pointer;}
+.btn:hover{box-shadow:var(--glow);}
+</style>
+{% endblock %}

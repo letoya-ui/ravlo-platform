@@ -1,0 +1,131 @@
+/* ===========================================
+   LoanMVP Auth Theme — Black | Silver | White
+   =========================================== */
+
+:root {
+  --primary-bg: #0b0b0b;
+  --secondary-bg: #141414;
+  --accent: #bfbfbf;
+  --text-light: #f5f5f5;
+  --border-color: #2a2a2a;
+  --radius: 12px;
+  --transition: 0.25s ease;
+  font-family: 'Poppins', 'Segoe UI', sans-serif;
+}
+
+/* ========== Body Layout ========== */
+body {
+  background: var(--primary-bg);
+  color: var(--text-light);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  margin: 0;
+  background-image: radial-gradient(circle at 30% 50%, #181818, #0b0b0b 80%);
+}
+
+/* ========== Auth Container ========== */
+.auth-container {
+  background: var(--secondary-bg);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  padding: 2.5rem 3rem;
+  width: 380px;
+  box-shadow: 0 0 25px rgba(0,0,0,0.45);
+  text-align: center;
+  animation: fadeIn 0.6s ease-in-out;
+}
+
+.auth-container h1 {
+  font-size: 1.8rem;
+  color: var(--accent);
+  margin-bottom: 1rem;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.auth-container p {
+  font-size: 0.9rem;
+  color: #aaa;
+  margin-bottom: 1.5rem;
+}
+
+/* ========== Input Fields ========== */
+.auth-container input {
+  width: 100%;
+  background: #1a1a1a;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  padding: 0.8rem 1rem;
+  margin-bottom: 1rem;
+  color: var(--text-light);
+  font-size: 0.95rem;
+  transition: border var(--transition), background var(--transition);
+}
+
+.auth-container input:focus {
+  border-color: var(--accent);
+  outline: none;
+}
+
+/* ========== Buttons ========== */
+.auth-container button {
+  width: 100%;
+  padding: 0.8rem;
+  border: none;
+  border-radius: var(--radius);
+  background-color: var(--accent);
+  color: #000;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  transition: background var(--transition), transform var(--transition);
+}
+
+.auth-container button:hover {
+  background-color: #e0e0e0;
+  transform: translateY(-2px);
+}
+
+/* ========== Links ========== */
+.auth-container a {
+  display: inline-block;
+  color: var(--accent);
+  margin-top: 1rem;
+  text-decoration: none;
+  font-size: 0.9rem;
+  transition: color var(--transition);
+}
+
+.auth-container a:hover {
+  color: var(--text-light);
+}
+
+/* ========== Logo Header ========== */
+.auth-logo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 1.2rem;
+}
+
+.auth-logo img {
+  width: 42px;
+  height: 42px;
+  border-radius: 8px;
+}
+
+.auth-logo span {
+  color: var(--text-light);
+  font-size: 1.2rem;
+  font-weight: 500;
+  letter-spacing: 0.5px;
+}
+
+/* ========== Animations ========== */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}

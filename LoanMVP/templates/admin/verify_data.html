@@ -1,0 +1,39 @@
+{% extends "layouts/base.html" %}
+{% block title %}Verify Data{% endblock %}
+{% block content %}
+<style>
+  :root{--line:#2a2e36; --panel:#15161a; --text:#e6e6e6; --muted:#a5a7ad}
+  .card{background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:1rem}
+  table{width:100%; border-collapse:collapse}
+  th,td{padding:.6rem; border-top:1px solid var(--line); color:var(--text)}
+  input{background:#0f0f11; border:1px solid var(--line); color:var(--text); border-radius:10px; padding:.45rem .6rem; width:100%}
+  .btn{display:inline-flex; align-items:center; gap:.5rem; padding:.6rem .9rem; border-radius:10px; border:1px solid var(--line); color:var(--text); text-decoration:none; background:#1a1d23}
+</style>
+
+
+<div class="ai-insight-bar"><span class="ai-text">Scanning document integrity...</span></div>
+
+<div class="container-fluid py-4 text-light">
+  <h2>🧾 Verify Borrower Data</h2>
+  <div class="card">
+    <table class="table table-dark table-hover">
+      <thead>
+        <tr><th>Borrower</th><th>Document</th><th>Status</th><th>Action</th></tr>
+      </thead>
+      <tbody>
+        {% for doc in docs %}
+        <tr>
+          <td>{{ doc.borrower_name }}</td>
+          <td>{{ doc.file_name }}</td>
+          <td>{{ doc.status }}</td>
+          <td>
+            <a href="{{ url_for('admin.verify_doc', doc_id=doc.id) }}" class="btn btn-accent btn-sm">Verify</a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+<script src="{{ url_for('static', filename='js/admin_ai_refresh.js') }}"></script>
+{% endblock %}

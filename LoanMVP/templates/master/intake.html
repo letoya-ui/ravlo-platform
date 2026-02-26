@@ -1,0 +1,361 @@
+{% extends "layouts/base.html" %}
+{% block title %}Borrower Intake (1003) • Caughman Mason{% endblock %}
+
+{% block content %}
+
+<link rel="stylesheet" href="https://unpkg.com/lucide-static@latest/font/lucide.css">
+
+<style>
+    :root {
+        --bg:#0f0f11;
+        --panel:#15161a;
+        --line:#282b31;
+        --text:#e6e6e6;
+        --muted:#a5a7ad;
+        --accent:#7ab8ff;
+        --hover:#1f2328;
+        --border:#2b2f36;
+        --glow:0 0 14px rgba(122,184,255,0.35);
+    }
+
+    body {
+        background: var(--bg);
+        color: var(--text);
+    }
+
+    .form-card {
+        background: var(--panel);
+        padding: 2rem;
+        border-radius: 14px;
+        border: 1px solid var(--line);
+        margin-bottom: 2rem;
+        box-shadow: 0 0 14px rgba(0,0,0,0.25);
+    }
+
+    h2 {
+        text-shadow: var(--glow);
+    }
+
+    label {
+        display: block;
+        font-size: .9rem;
+        margin-bottom: .4rem;
+        margin-top: 1rem;
+    }
+
+    input, select, textarea {
+        width: 100%;
+        padding: .7rem;
+        background: #1a1c20;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        color: var(--text);
+    }
+
+    .btn-submit {
+        padding: .7rem 1.3rem;
+        background: var(--accent);
+        color: black;
+        border-radius: 10px;
+        border: none;
+        font-weight: bold;
+        margin-top: 1.5rem;
+        cursor: pointer;
+    }
+    .btn-submit:hover {
+        opacity: .85;
+    }
+
+    .grid-2 {
+        display: grid;
+        grid-template-columns: repeat(2,1fr);
+        gap: 1.2rem;
+    }
+
+    .grid-3 {
+        display: grid;
+        grid-template-columns: repeat(3,1fr);
+        gap: 1.2rem;
+    }
+
+    #ai-box {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        padding: 1rem;
+        border-radius: 12px;
+        margin-top: 1.5rem;
+    }
+
+    #ai-box textarea {
+        height: 70px;
+    }
+</style>
+
+
+<main class="dashboard-main">
+
+<form method="POST">
+
+<!-- =======================================================
+     SECTION: Personal Information
+======================================================= -->
+<div class="form-card">
+    <h2>👤 Personal Information</h2>
+
+    <div class="grid-2">
+        <div>
+            <label>Full Name</label>
+            <input type="text" name="full_name" required>
+        </div>
+
+        <div>
+            <label>Date of Birth</label>
+            <input type="date" name="dob">
+        </div>
+    </div>
+
+    <div class="grid-2">
+        <div>
+            <label>SSN</label>
+            <input type="text" name="ssn">
+        </div>
+        <div>
+            <label>Citizenship</label>
+            <input type="text" name="citizenship">
+        </div>
+    </div>
+
+    <div class="grid-3">
+        <div>
+            <label>Marital Status</label>
+            <select name="marital_status">
+                <option value="">Select</option>
+                <option>Single</option>
+                <option>Married</option>
+                <option>Separated</option>
+                <option>Divorced</option>
+            </select>
+        </div>
+
+        <div>
+            <label>Dependents</label>
+            <input type="number" name="dependents">
+        </div>
+
+        <div>
+            <label>Phone</label>
+            <input type="text" name="phone">
+        </div>
+    </div>
+
+    <label>Email</label>
+    <input type="email" name="email">
+</div>
+
+
+<!-- =======================================================
+     SECTION: Address
+======================================================= -->
+<div class="form-card">
+    <h2>🏠 Current Address</h2>
+
+    <label>Street Address</label>
+    <input type="text" name="address">
+
+    <div class="grid-3">
+        <div>
+            <label>City</label>
+            <input type="text" name="city">
+        </div>
+        <div>
+            <label>State</label>
+            <input type="text" name="state">
+        </div>
+        <div>
+            <label>Zip</label>
+            <input type="text" name="zip">
+        </div>
+    </div>
+</div>
+
+
+<!-- =======================================================
+     SECTION: Employment
+======================================================= -->
+<div class="form-card">
+    <h2>💼 Employment Information</h2>
+
+    <label>Employer Name</label>
+    <input type="text" name="employer_name">
+
+    <div class="grid-2">
+        <div>
+            <label>Employer Phone</label>
+            <input type="text" name="employer_phone">
+        </div>
+
+        <div>
+            <label>Job Title</label>
+            <input type="text" name="job_title">
+        </div>
+    </div>
+
+    <div class="grid-2">
+        <div>
+            <label>Years at Job</label>
+            <input type="number" name="years_at_job">
+        </div>
+
+        <div>
+            <label>Primary Income (Monthly)</label>
+            <input type="number" name="income" step="0.01">
+        </div>
+    </div>
+
+    <label>Secondary Income (Monthly)</label>
+    <input type="number" name="income_secondary" step="0.01">
+</div>
+
+
+<!-- =======================================================
+     SECTION: Housing
+======================================================= -->
+<div class="form-card">
+    <h2>🏘 Housing Information</h2>
+
+    <div class="grid-2">
+        <div>
+            <label>Housing Status</label>
+            <select name="housing_status">
+                <option value="">Select</option>
+                <option>Rent</option>
+                <option>Own</option>
+                <option>Living with Family</option>
+            </select>
+        </div>
+
+        <div>
+            <label>Monthly Housing Payment</label>
+            <input type="number" name="monthly_housing_payment" step="0.01">
+        </div>
+    </div>
+</div>
+
+
+<!-- =======================================================
+     SECTION: Assets & Liabilities
+======================================================= -->
+<div class="form-card">
+    <h2>💰 Assets & Liabilities</h2>
+
+    <label>Bank Balance</label>
+    <input type="number" name="bank_balance" step="0.01">
+
+    <label>Assets Description</label>
+    <textarea name="assets_description"></textarea>
+
+    <label>Liabilities Description</label>
+    <textarea name="liabilities_description"></textarea>
+</div>
+
+
+<!-- =======================================================
+     SECTION: Real Estate Owned (JSON)
+======================================================= -->
+<div class="form-card">
+    <h2>🏡 Real Estate Owned</h2>
+
+    <p class="muted">Enter JSON. Example:<br>
+    <code>[{"address":"123 Main St", "value":350000, "mortgage_balance":250000}]</code></p>
+
+    <textarea name="reo_properties"></textarea>
+</div>
+
+
+<!-- =======================================================
+     SECTION: Declarations (JSON)
+======================================================= -->
+<div class="form-card">
+    <h2>⚠️ Declarations</h2>
+
+    <p class="muted">Enter JSON. Example:<br>
+    <code>{"bankruptcy": false, "lawsuit": false, "foreclosure": false}</code></p>
+
+    <textarea name="declarations_flags"></textarea>
+</div>
+
+
+<!-- =======================================================
+     SECTION: Loan Request
+======================================================= -->
+<div class="form-card">
+    <h2>📄 Loan Request</h2>
+
+    <div class="grid-3">
+        <div>
+            <label>Loan Amount</label>
+            <input type="number" name="loan_amount" step="0.01">
+        </div>
+
+        <div>
+            <label>Loan Purpose</label>
+            <select name="loan_purpose">
+                <option value="">Select</option>
+                <option>Purchase</option>
+                <option>Refinance</option>
+                <option>Cash Out</option>
+            </select>
+        </div>
+
+        <div>
+            <label>Loan Type</label>
+            <input type="text" name="loan_type">
+        </div>
+    </div>
+
+    <label>Property Address</label>
+    <input type="text" name="property_address">
+
+    <label>Property Value</label>
+    <input type="number" name="property_value" step="0.01">
+</div>
+
+
+<!-- SUBMIT -->
+<button class="btn-submit">Submit Borrower & Create Loan</button>
+
+</form>
+
+
+<!-- =======================================================
+     AI Intake Assistant
+======================================================= -->
+<div id="ai-box">
+    <h2>🤖 AI Intake Assistant</h2>
+    <textarea id="ai-input" placeholder="Ask: what else should I collect for this borrower?"></textarea>
+    <button class="btn-submit" onclick="sendAI()">Ask AI</button>
+
+    <div id="ai-response" style="margin-top:1rem;"></div>
+</div>
+
+
+
+<script>
+function sendAI() {
+    let message = document.getElementById("ai-input").value;
+
+    fetch("{{ url_for('master.ai') }}", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: message })
+    })
+    .then(r => r.json())
+    .then(data => {
+        document.getElementById("ai-response").innerHTML = data.reply;
+    });
+}
+</script>
+
+</main>
+
+{% endblock %}

@@ -1,0 +1,134 @@
+{% extends "layouts/base.html" %}
+{% block title %}Contractor Management{% endblock %}
+
+{% block content %}
+<main class="dashboard-main">
+  <div class="wrap">
+    <section class="lhs">
+      <div class="card">
+        <h2>🧰 Contractor Management</h2>
+        <p class="muted">Approve, feature, or remove contractors listed in the Borrower Resource Center.</p>
+
+        {% if contractors %}
+          <table class="contractor-table">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Category</th>
+                <th>Location</th>
+                <th>Contact</th>
+                <th>Approved</th>
+                <th>Featured</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for c in contractors %}
+              <tr class="{% if c.featured %}featured{% endif %}">
+                <td><strong>{{ c.name }}</strong></td>
+                <td>{{ c.category or '-' }}</td>
+                <td>{{ c.location or '-' }}</td>
+                <td>
+                  <div>{{ c.phone }}</div>
+                  <a href="mailto:{{ c.email }}">{{ c.email }}</a>
+                </td>
+                <td>
+                  {% if c.approved %}
+                    <span class="badge badge-success">Yes</span>
+                  {% else %}
+                    <span class="badge badge-muted">No</span>
+                  {% endif %}
+                </td>
+                <td>
+                  {% if c.featured %}
+                    <span class="badge badge-gold">⭐</span>
+                  {% else %}
+                    <span class="badge badge-muted">—</span>
+                  {% endif %}
+                </td>
+                <td>
+                  <form method="POST" action="{{ url_for('contractor_bp.update_contractor', id=c.id) }}">
+                    <label>
+                      <input type="checkbox" name="approved" {% if c.approved %}checked{% endif %}> Approve
+                    </label>
+                    <label>
+                      <input type="checkbox" name="featured" {% if c.featured %}checked{% endif %}> Feature
+                    </label>
+                    <button type="submit" class="btn btn-sm btn-glow">💾 Save</button>
+                  </form>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        {% else %}
+          <p class="muted">No contractors found yet.</p>
+        {% endif %}
+      </div>
+    </section>
+  </div>
+</main>
+
+<style>
+  .contractor-table {
+    width: 100%;
+    border-collapse: collapse;
+    color: #e0e0e0;
+    margin-top: 1.5rem;
+  }
+
+  .contractor-table th, .contractor-table td {
+    border-bottom: 1px solid #2b2b2b;
+    padding: 0.75rem;
+    text-align: left;
+  }
+
+  .contractor-table th {
+    color: #999;
+    text-transform: uppercase;
+    font-size: 0.8rem;
+  }
+
+  .contractor-table tr.featured {
+    background-color: rgba(255, 215, 0, 0.05);
+  }
+
+  .badge {
+    padding: 0.25rem 0.6rem;
+    border-radius: 6px;
+    font-size: 0.75rem;
+  }
+
+  .badge-success {
+    background: #28a745;
+    color: #fff;
+  }
+
+  .badge-gold {
+    background: #c4a000;
+    color: #000;
+  }
+
+  .badge-muted {
+    background: #444;
+    color: #aaa;
+  }
+
+  .btn-sm {
+    padding: 0.25rem 0.75rem;
+    font-size: 0.8rem;
+  }
+
+  .btn-glow {
+    background: linear-gradient(90deg, #999, #fff);
+    border: none;
+    border-radius: 6px;
+    color: #000;
+    cursor: pointer;
+  }
+
+  .btn-glow:hover {
+    box-shadow: 0 0 10px rgba(255,255,255,0.3);
+  }
+</style>
+{% endblock %}

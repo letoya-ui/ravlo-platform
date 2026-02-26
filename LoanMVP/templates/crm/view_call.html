@@ -1,0 +1,72 @@
+{% extends "layouts/base.html" %}
+{% block title %}Call Log Details{% endblock %}
+{% block content %}
+<main class="dashboard-main">
+<link rel="stylesheet" href="https://unpkg.com/lucide-static@latest/font/lucide.css">
+<style>
+  :root{--panel:#15161a;--line:#2a2e36;--text:#e6e6e6;--muted:#a5a7ad;--accent:#7ab8ff;--glow:0 0 18px rgba(122,184,255,.3);}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:1.2rem;box-shadow:var(--glow);}
+  .muted{color:var(--muted);}
+  .btn{display:inline-flex;align-items:center;gap:.4rem;background:linear-gradient(180deg,#2a4a62,#1b2a38);
+       border:1px solid #2a4a62;color:#cfe8ff;border-radius:10px;padding:.6rem 1.2rem;text-decoration:none;margin-top:1rem;}
+  .meta{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.5rem;}
+  .ai-box{background:#18222b;border:1px solid #2b2f36;border-radius:12px;padding:1rem;margin-top:1rem;}
+  .ai-box h3{color:var(--accent);}
+  .divider{border-top:1px solid var(--line);margin:1rem 0;}
+</style>
+
+<div class="card">
+  <h2>📞 Call Details</h2>
+  <div class="meta">
+    <div><strong>Contact:</strong> {{ call.contact_name or 'Unknown' }}</div>
+    <div><strong>Phone:</strong> {{ call.contact_phone }}</div>
+    <div><strong>Outcome:</strong> {{ call.outcome }}</div>
+    <div><strong>Direction:</strong> {{ call.direction }}</div>
+    <div><strong>Duration:</strong> {{ call.duration_seconds or '—' }} seconds</div>
+    <div><strong>Date:</strong> {{ call.created_at.strftime('%b %d, %Y %I:%M %p') }}</div>
+  </div>
+
+  {% if call.recording_url %}
+  <div class="divider"></div>
+  <audio controls style="width:100%;">
+    <source src="{{ call.recording_url }}" type="audio/mpeg">
+    Your browser does not support audio playback.
+  </audio>
+  {% endif %}
+
+  <div class="divider"></div>
+  <h3>📝 Call Notes</h3>
+  <p>{{ call.notes or 'No notes recorded.' }}</p>
+
+  {% if call.ai_summary %}
+  <div class="ai-box">
+    <h3><i class="lucide lucide-brain-circuit"></i> AI Summary</h3>
+    <p>{{ call.ai_summary }}</p>
+  </div>
+  {% endif %}
+
+  {% if related_lead %}
+  <div class="divider"></div>
+  <h3>🎯 Linked Lead</h3>
+  <p><strong>{{ related_lead.name }}</strong><br>
+     {{ related_lead.email or 'No email' }}<br>
+     {{ related_lead.phone or 'No phone' }}</p>
+  <a href="{{ url_for('crm.view_lead', lead_id=related_lead.id) }}" class="btn">
+    <i class="lucide lucide-eye"></i> View Lead
+  </a>
+  {% endif %}
+  <div class="divider"></div>
+  <div style="display:flex;gap:.6rem;flex-wrap:wrap;">
+    <form action="{{ url_for('crm.delete_call', call_id=call.id) }}" method="POST">
+      <button type="submit" class="btn" style="background:#2a1b1b;border-color:#aa4444;">🗑 Delete Call</button>
+    </form>
+  <a href="{{ url_for('crm.call_ai') }}" class="btn">🤖 Generate Follow-Up</a>
+</div>
+
+  <div style="margin-top:1rem;">
+    <a href="{{ url_for('crm.dialer') }}" class="btn">← Back to Dialer</a>
+  </div>
+</div>
+
+</main>
+{% endblock %}

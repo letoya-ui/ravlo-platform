@@ -1,0 +1,80 @@
+{% extends "layouts/base.html" %}
+{% block title %}Underwriter • AI Risk Queue{% endblock %}
+{% block content %}
+<main class="dashboard-main">
+
+<style>
+  :root{--bg:#0f0f11;--panel:#15161a;--line:#282b31;--text:#e6e6e6;
+        --muted:#a5a7ad;--accent:#7ab8ff;--success:#43d19e;
+        --warn:#ffdf6e;--danger:#ff6b6b;--glow:0 0 18px rgba(122,184,255,.35);}
+  body{background:var(--bg);color:var(--text);}
+  .card{background:var(--panel);border:1px solid var(--line);
+        border-radius:14px;padding:1rem;box-shadow:var(--glow);margin-bottom:1rem;}
+  .table{width:100%;border-collapse:collapse}
+  .table th,.table td{padding:.6rem;border-top:1px solid var(--line)}
+  .table th{color:#cfe0f5;text-align:left}
+  .badge{padding:.25rem .6rem;border-radius:8px;font-size:.8rem}
+  .b-high{background:#2a1b1b;color:#ff9d9d}
+  .b-med{background:#2a281b;color:#ffdf6e}
+  .b-low{background:#1b2a23;color:#9af2c5}
+  .ai-summary{background:linear-gradient(90deg,#2a4a62,#1b2a38);
+              padding:1rem;border-radius:12px;color:#cfe8ff;
+              box-shadow:var(--glow);margin-bottom:1rem;}
+  a.btn{display:inline-flex;align-items:center;gap:.4rem;
+        padding:.5rem .8rem;border-radius:10px;border:1px solid var(--line);
+        color:var(--text);text-decoration:none;background:#1b1c20;}
+  a.btn:hover{border-color:var(--accent);box-shadow:var(--glow);}
+</style>
+
+<div class="container py-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h2>⚠️ AI Risk Queue</h2>
+    <a href="{{ url_for('underwriter.dashboard') }}" class="btn">← Back</a>
+  </div>
+
+  <div class="ai-summary">
+    <strong>AI Overview:</strong> {{ ai_summary or "AI is assessing overall loan risk exposure..." }}
+  </div>
+
+  <div class="card">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Loan ID</th>
+          <th>Borrower</th>
+          <th>Pending Docs</th>
+          <th>Open Conditions</th>
+          <th>Risk Score</th>
+          <th>Risk Level</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in risk_list %}
+        <tr>
+          <td>#{{ r.loan.id }}</td>
+          <td>{{ r.borrower.full_name if r.borrower else '—' }}</td>
+          <td>{{ r.docs_pending }}</td>
+          <td>{{ r.conditions_pending }}</td>
+          <td>{{ r.score }}</td>
+          <td>
+            {% if r.risk_level == 'High' %}
+              <span class="badge b-high">High</span>
+            {% elif r.risk_level == 'Medium' %}
+              <span class="badge b-med">Medium</span>
+            {% else %}
+              <span class="badge b-low">Low</span>
+            {% endif %}
+          </td>
+          <td>
+            <a class="btn" href="{{ url_for('underwriter.verify_documents', loan_id=r.loan.id) }}">📁 Docs</a>
+            <a class="btn" href="{{ url_for('underwriter.conditions', loan_id=r.loan.id) }}">📋 Conditions</a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% endblock %}

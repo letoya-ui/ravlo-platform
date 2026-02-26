@@ -1,0 +1,21 @@
+{% extends "layouts/base.html" %}
+{% block title %}Underwriter • Documents{% endblock %}
+{% block content %}
+<main class="dashboard-main">
+  <div class="card">
+    <h2>📬 Documents from Processor</h2>
+    <table class="table">
+  <thead><tr><th>Document</th><th>Borrower</th><th>Processor Notes</th><th>Status</th><th>Reviewed</th></tr></thead>
+  <tbody>
+  {% for doc in documents %}
+    <tr>
+      <td><a href="{{ url_for('static', filename=doc.file_path) }}" target="_blank">{{ doc.document_name }}</a></td>
+      <td>{{ doc.uploaded_by }}</td>
+      <td>{{ doc.notes or '—' }}</td>
+      <td>{{ doc.review_status }}</td>
+      <td>{{ doc.reviewed_at.strftime('%b %d, %Y') if doc.reviewed_at else '—' }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

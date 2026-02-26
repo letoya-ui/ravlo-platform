@@ -1,0 +1,24 @@
+{% extends "layouts/base.html" %}
+{% block title %}CRM • Campaigns{% endblock %}
+{% block content %}
+<script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+<style>
+  :root{--panel:#15161a;--line:#2a2e36;--text:#e6e6e6;--muted:#a5a7ad;--accent:#7ab8ff;--glow:0 0 18px rgba(122,184,255,.35);}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:1.2rem;box-shadow:var(--glow);}
+</style>
+
+<h1>📢 Campaign Performance</h1>
+<div class="card">
+  <div id="chart_campaign" style="height:300px;"></div>
+</div>
+
+<script>
+const base={chart:{toolbar:{show:false},foreColor:'#c9d3df'},theme:{mode:'dark'}};
+new ApexCharts(document.querySelector("#chart_campaign"),{
+  ...base,chart:{...base.chart,type:'area',height:300},
+  series:[{name:'Open Rate %',data:[32,45,60,52,70,82,91]}],
+  xaxis:{categories:['Mon','Tue','Wed','Thu','Fri','Sat','Sun']},
+  colors:['#7ab8ff']
+}).render();
+</script>
+{% endblock %}

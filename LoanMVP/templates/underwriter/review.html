@@ -1,0 +1,177 @@
+{% extends "layouts/base.html" %}
+{% block title %}Underwriter • Review Loan{% endblock %}
+
+{% block content %}
+<style>
+  :root {
+    --bg:#0f0f11;
+    --panel:#15161a;
+    --line:#2a2e36;
+    --text:#e6e6e6;
+    --muted:#a5a7ad;
+    --accent:#7ab8ff;
+    --glow:0 0 18px rgba(122,184,255,.3);
+  }
+
+  body { background:var(--bg); color:var(--text); }
+  .dashboard-container {
+    display:flex;
+    flex-direction:column;
+    gap:1.5rem;
+  }
+
+  .header-bar {
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding:1rem 1.5rem;
+    box-shadow:var(--glow);
+  }
+
+  .header-bar h2 {
+    font-size:1.3rem;
+    color:#cfe0f5;
+    font-weight:600;
+  }
+
+  .loan-info {
+    display:grid;
+    grid-template-columns:repeat(auto-fit, minmax(250px,1fr));
+    gap:1rem;
+  }
+
+  .card {
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding:1rem 1.2rem;
+    box-shadow:var(--glow);
+    transition:all .2s ease;
+  }
+  .card:hover { transform:translateY(-2px); box-shadow:0 0 22px rgba(122,184,255,0.4); }
+
+  h3 { color:#cfe0f5; font-size:1rem; margin-bottom:.7rem; }
+
+  .data-grid {
+    display:grid;
+    grid-template-columns:repeat(auto-fit, minmax(200px,1fr));
+    gap:.5rem 1rem;
+  }
+
+  .data-item {
+    display:flex;
+    justify-content:space-between;
+    border-bottom:1px solid var(--line);
+    padding:.4rem 0;
+    font-size:.9rem;
+  }
+  .data-item span { color:var(--muted); }
+
+  .ai-summary {
+    background:var(--panel);
+    padding:1rem;
+    border-radius:14px;
+    border:1px solid var(--line);
+    box-shadow:var(--glow);
+    height:100%;
+  }
+
+  .actions {
+    display:flex;
+    justify-content:flex-end;
+    gap:.8rem;
+    margin-top:1.5rem;
+  }
+
+  .btn {
+    background:linear-gradient(180deg,#1b1d22,#15161a);
+    color:var(--text);
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:.55rem 1.2rem;
+    font-size:.9rem;
+    transition:all .2s ease;
+  }
+  .btn:hover { border-color:var(--accent); box-shadow:var(--glow); color:#cfe8ff; }
+  .btn-approve { border-color:#2f6b4f; }
+  .btn-decline { border-color:#6b2f2f; }
+  .btn-review { border-color:#2d4c6e; }
+
+  .flex-split {
+    display:grid;
+    grid-template-columns:2fr 1fr;
+    gap:1.5rem;
+  }
+
+  @media (max-width:900px) {
+    .flex-split { grid-template-columns:1fr; }
+  }
+</style>
+
+<div class="dashboard-container">
+  <div class="header-bar">
+    <h2>📄 Loan Review • #{{ loan.id }}</h2>
+    <a href="{{ url_for('underwriter.review_loans') }}" class="btn">← Back</a>
+  </div>
+
+  <div class="loan-info">
+    <div class="card">
+      <h3>Borrower Details</h3>
+      <div class="data-grid">
+        <div class="data-item"><strong>Name:</strong><span>{{ loan.borrower.full_name if loan.borrower else '—' }}</span></div>
+        <div class="data-item"><strong>Email:</strong><span>{{ loan.borrower.email if loan.borrower else '—' }}</span></div>
+        <div class="data-item"><strong>Phone:</strong><span>{{ loan.borrower.phone if loan.borrower else '—' }}</span></div>
+        <div class="data-item"><strong>Credit Score:</strong><span>{{ loan.credit_profile.credit_score if loan.credit_profile else 'N/A' }}</span></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Loan Overview</h3>
+      <div class="data-grid">
+        <div class="data-item"><strong>Type:</strong><span>{{ loan.loan_type or 'N/A' }}</span></div>
+        <div class="data-item"><strong>Amount:</strong><span>${{ "{:,.2f}".format(loan.amount or 0) }}</span></div>
+        <div class="data-item"><strong>Status:</strong><span>{{ loan.status|capitalize }}</span></div>
+        <div class="data-item"><strong>Created:</strong><span>{{ loan.created_at.strftime("%b %d, %Y") if loan.created_at else '—' }}</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="flex-split">
+    <div class="card">
+      <h3>📑 Uploaded Documents</h3>
+      <ul style="list-style:none; padding-left:0;">
+        {% for doc in documents %}
+          <li style="border-bottom:1px solid var(--line); padding:.5rem 0;">
+            <i class="fa-regular fa-file"></i> {{ doc.filename }}
+            <span style="float:right; color:{{ 'lime' if doc.status=='verified' else 'orange' }};">
+              {{ doc.status|capitalize }}
+            </span>
+          </li>
+        {% else %}
+          <li style="color:var(--muted);">No documents uploaded yet.</li>
+        {% endfor %}
+      </ul>
+    </div>
+
+    <div class="ai-summary">
+      <h3>🧠 AI Risk Summary</h3>
+      <p style="color:var(--muted); font-size:.9rem;">{{ ai_summary or "No AI insights available." }}</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Underwriter Notes</h3>
+    <form method="POST">
+      <textarea name="notes" style="width:100%; height:100px; border-radius:10px; border:1px solid var(--line); background:#0f0f11; color:var(--text); padding:.8rem; resize:none;"></textarea>
+      <div class="actions">
+        <button type="submit" name="action" value="approve" class="btn btn-approve">✅ Approve</button>
+        <button type="submit" name="action" value="review" class="btn btn-review">🕓 Needs Review</button>
+        <button type="submit" name="action" value="decline" class="btn btn-decline">❌ Decline</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,42 @@
+{% extends "layouts/base.html" %}
+{% block title %}Executive Finance • Dashboard{% endblock %}
+{% block content %}
+<script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+
+<style>
+  :root{--panel:#15161a;--line:#2a2e36;--text:#e6e6e6;--muted:#a5a7ad;--accent:#7ab8ff;--glow:0 0 18px rgba(122,184,255,.35);}
+  .grid{display:grid;gap:1rem}
+  .g-2{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .g-3{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:1rem 1.2rem;box-shadow:var(--glow);}
+  .muted{color:var(--muted)}
+  .num{font-size:1.8rem;font-weight:700;color:#dfe9f7}
+</style>
+
+<h1>🏦 Executive Finance Dashboard</h1>
+<div class="grid g-3">
+  <div class="card"><div class="muted">Total Capital Managed</div><div class="num">$82.5M</div></div>
+  <div class="card"><div class="muted">Active Investors</div><div class="num">124</div></div>
+  <div class="card"><div class="muted">Portfolio ROI</div><div class="num">12.4%</div></div>
+</div>
+
+<div class="grid g-2" style="margin-top:1rem">
+  <div class="card"><h3>Capital Allocation</h3><div id="chart_alloc" style="height:260px"></div></div>
+  <div class="card"><h3>Funding Pipeline</h3><div id="chart_pipeline" style="height:260px"></div></div>
+</div>
+
+<script>
+const base={chart:{toolbar:{show:false},foreColor:'#c9d3df'},grid:{borderColor:'#2a2e36'},theme:{mode:'dark'},dataLabels:{enabled:false}};
+new ApexCharts(document.querySelector("#chart_alloc"),{
+  ...base,chart:{...base.chart,type:'donut',height:260},
+  series:[35,25,20,20],labels:['Real Estate','Lending','Equities','Reserves'],
+  colors:['#7ab8ff','#43d19e','#c4c4c4','#999']
+}).render();
+new ApexCharts(document.querySelector("#chart_pipeline"),{
+  ...base,chart:{...base.chart,type:'bar',height:260},
+  series:[{name:'Deals',data:[5,7,9,11,8,10,12]}],
+  xaxis:{categories:['Mon','Tue','Wed','Thu','Fri','Sat','Sun']},
+  colors:['#7ab8ff']
+}).render();
+</script>
+{% endblock %}

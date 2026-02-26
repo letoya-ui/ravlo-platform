@@ -1,0 +1,159 @@
+{% extends "layouts/base.html" %}
+{% block title %}Borrower AI • Dashboard{% endblock %}
+{% block content %}
+
+<!-- =========================================
+     Borrower AI Dashboard
+========================================= -->
+<link rel="stylesheet" href="https://unpkg.com/lucide-static@latest/font/lucide.css">
+<script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+
+<style>
+  :root {
+    --bg:#0f0f11;
+    --panel:#15161a;
+    --line:#282b31;
+    --text-light:#e6e6e6;
+    --text-muted:#a5a7ad;
+    --accent:#7ab8ff;
+    --hover:#1f2328;
+    --border:#2b2f36;
+    --glow:0 0 18px rgba(122,184,255,0.35);
+  }
+
+  main.dashboard-main {
+    margin-left:260px;
+    padding:2rem;
+    background:var(--bg);
+    color:var(--text-light);
+    min-height:100vh;
+  }
+
+  .card {
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding:1.4rem;
+    box-shadow:var(--glow);
+  }
+
+  h2, h3 { color:var(--accent); }
+  .muted { color:var(--text-muted); }
+
+  .dashboard-grid {
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+    gap:1.2rem;
+    margin-top:1rem;
+  }
+
+  .btn {
+    display:inline-flex;align-items:center;gap:.5rem;
+    background:linear-gradient(180deg,#1d2732,#14171a);
+    border:1px solid var(--border);
+    border-radius:10px;
+    padding:.6rem 1.2rem;
+    color:var(--text-light);
+    text-decoration:none;
+    transition:all .25s ease;
+  }
+  .btn:hover { box-shadow:var(--glow);border-color:var(--accent); }
+
+  .btn-primary {
+    background:linear-gradient(180deg,#2a4a62,#1b2a38);
+    color:#cfe8ff;
+    border-color:#2a4a62;
+  }
+
+  .ai-summary {
+    background:var(--hover);
+    border:1px solid var(--line);
+    border-radius:12px;
+    padding:1rem;
+    margin-top:1.5rem;
+    color:var(--text-light);
+    box-shadow:var(--glow);
+  }
+
+  .quick-actions {
+    margin-top:1.5rem;
+    display:flex;
+    gap:1rem;
+    flex-wrap:wrap;
+  }
+</style>
+
+<main class="dashboard-main">
+  {% include "borrower/_sidebar_borrower.html" %}
+
+  <h1>🏠 Borrower AI Dashboard</h1>
+  <p class="muted">Welcome back, {{ borrower.full_name if borrower else 'Borrower' }}. Here's your loan overview and AI insights.</p>
+
+  <!-- === Key Stats === -->
+  <div class="dashboard-grid">
+    <div class="card">
+      <h3><i class="lucide lucide-briefcase"></i> Loan Balance</h3>
+      <p style="font-size:2rem;color:var(--accent);">
+        ${{ "{:,.0f}".format(stats['loan_balance'] or 0) }}
+      </p>
+    </div>
+
+    <div class="card">
+      <h3><i class="lucide lucide-pie-chart"></i> Equity</h3>
+      <p style="font-size:2rem;color:var(--accent);">
+        ${{ "{:,.0f}".format(stats['equity'] or 0) }}
+      </p>
+    </div>
+
+    <div class="card">
+      <h3><i class="lucide lucide-credit-card"></i> Credit Score</h3>
+      <p style="font-size:2rem;color:var(--accent);">
+        {{ stats['credit_score'] or 'N/A' }}
+      </p>
+    </div>
+  </div>
+
+  <!-- === Loan Chart === -->
+  <div class="card" style="margin-top:1.5rem;">
+    <h3><i class="lucide lucide-trending-up"></i> Loan Progress</h3>
+    <div id="loanChart" style="height:260px;"></div>
+  </div>
+
+  <!-- === AI Summary === -->
+  <div class="ai-summary">
+    <h3>🧠 AI Summary</h3>
+    <p>{{ ai_summary or "AI summary unavailable at the moment." }}</p>
+  </div>
+
+  <!-- === Quick Actions === -->
+  <div class="quick-actions">
+    <a href="{{ url_for('borrower_ai.intake') }}" class="btn btn-primary">
+      🤖 Start AI Intake
+    </a>
+    <a href="{{ url_for('borrower_ai.quote') }}" class="btn">
+      💰 Get AI Quote
+    </a>
+    <a href="{{ url_for('borrower_ai.property_analysis') }}" class="btn">
+      🏘 Property Analyzer
+    </a>
+    <a href="{{ url_for('borrower_ai.predictive') }}" class="btn">
+      📈 Predictive Insights
+    </a>
+  </div>
+</main>
+
+<script>
+document.addEventListener("DOMContentLoaded", ()=>{
+  const chart = new ApexCharts(document.querySelector("#loanChart"), {
+    chart:{type:'area',background:'transparent',toolbar:{show:false}},
+    series:[{name:'Loan Balance',data:[220000,210000,195000,183000,170000]}],
+    xaxis:{categories:['Jan','Feb','Mar','Apr','May'],labels:{style:{colors:'#a5a7ad'}}},
+    yaxis:{labels:{style:{colors:'#a5a7ad'}}},
+    colors:['#7ab8ff'],
+    fill:{opacity:.2,gradient:{shadeIntensity:.4,opacityFrom:.5,opacityTo:.1}},
+    stroke:{curve:'smooth',width:3}
+  });
+  chart.render();
+});
+</script>
+{% endblock %}

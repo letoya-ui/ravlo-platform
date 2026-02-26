@@ -1,0 +1,107 @@
+{% extends "layouts/borrower_base.html" %}
+{% block title %}View Loan • Borrower{% endblock %}
+{% block content %}
+
+<main class="b-main">
+
+  <!-- PAGE HEADER -->
+  <h1>📄 Loan Details</h1>
+  <p class="muted">Review your loan information, status, and next steps.</p>
+
+  <!-- LOAN SUMMARY CARD -->
+  <div class="b-card" style="margin-top:1.5rem;">
+    <h2>Loan #{{ loan.id }}</h2>
+
+    <div class="b-grid-3" style="margin-top:1rem;">
+      <div>
+        <label class="muted">Loan Type</label>
+        <p>{{ loan.loan_type or '—' }}</p>
+      </div>
+      <div>
+        <label class="muted">Amount</label>
+        <p>${{ "{:,.2f}".format(loan.amount or 0) }}</p>
+      </div>
+      <div>
+        <label class="muted">Status</label>
+        <p>
+          <span class="badge" style="
+            background: {{ 'rgba(0,255,150,0.1)' if loan.status|lower in ['funded','closed'] else 'rgba(255,200,0,0.15)' }};
+            color: {{ '#00ffaa' if loan.status|lower in ['funded','closed'] else '#ffd966' }};
+            padding:.25rem .6rem;border-radius:6px;font-size:.85rem;">
+            {{ loan.status or 'Pending' }}
+          </span>
+        </p>
+      </div>
+    </div>
+
+    <div class="b-grid-2" style="margin-top:1rem;">
+      <div>
+        <label class="muted">Property Address</label>
+        <p>{{ loan.property_address or '—' }}</p>
+      </div>
+      <div>
+        <label class="muted">Created</label>
+        <p>{{ loan.created_at.strftime('%b %d, %Y') if loan.created_at else '—' }}</p>
+      </div>
+    </div>
+
+    <div style="margin-top:1.5rem;">
+      <a href="{{ url_for('borrower.edit_loan', loan_id=loan.id) }}" class="action-btn">Edit Loan</a>
+    </div>
+  </div>
+
+
+  <!-- CONDITIONS SECTION -->
+  <h3 style="margin-top:2rem;">Loan Conditions</h3>
+
+  {% if conditions %}
+    {% for cond in conditions %}
+      <div class="b-card" style="margin-top:1rem;padding:1.25rem;">
+
+        <div class="b-grid-2">
+          <div>
+            <label class="muted">Condition</label>
+            <p>{{ cond.description }}</p>
+          </div>
+          <div>
+            <label class="muted">Status</label>
+            <p>
+              {% set s = cond.status|lower %}
+              {% if s == "cleared" %}
+                <span class="badge bg-success">Cleared</span>
+              {% elif s == "submitted" %}
+                <span class="badge bg-info">Submitted</span>
+              {% else %}
+                <span class="badge bg-warning">Pending</span>
+              {% endif %}
+            </p>
+          </div>
+        </div>
+
+        {% if cond.file_path %}
+          <label class="muted">Uploaded File</label>
+          <p><a href="/uploads/{{ cond.file_path }}" target="_blank">View File</a></p>
+        {% endif %}
+
+        {% if cond.status != "cleared" %}
+          <a href="/borrower/upload_request?item_id={{ cond.id }}&type=condition" class="action-btn">
+            Upload File
+          </a>
+        {% endif %}
+
+      </div>
+    {% endfor %}
+  {% else %}
+    <p class="muted" style="margin-top:1rem;">No conditions for this loan.</p>
+  {% endif %}
+
+
+  <!-- AI INSIGHTS -->
+  <div class="b-card" style="margin-top:2rem;border-left:3px solid var(--accent);background:rgba(122,184,255,0.05);">
+    <h2>🤖 AI Insights</h2>
+    <p>{{ ai_summary }}</p>
+  </div>
+
+</main>
+
+{% endblock %}

@@ -1,0 +1,71 @@
+<!-- =========================================================
+  📁 underwriter/borrower_detail.html
+  ========================================================= -->
+{% extends "layouts/base.html" %}
+{% block title %}Borrower • {{ borrower.full_name }}{% endblock %}
+{% block content %}
+<style>
+  :root{--bg:#0f0f11; --panel:#15161a; --line:#2a2e36;
+    --text:#e6e6e6; --muted:#b0b0b0; --accent:#7ab8ff; --glow:0 0 16px rgba(122,184,255,.35);}
+  .card{background:var(--panel); border:1px solid var(--line);
+    border-radius:14px; padding:1.1rem 1.3rem; box-shadow:var(--glow); margin-bottom:1rem;}
+  .section-title{color:var(--accent); font-weight:600; margin-bottom:.4rem;}
+  .muted{color:var(--muted);}
+  .table{width:100%; border-collapse:collapse;}
+  th,td{padding:.6rem; border-top:1px solid var(--line);}
+  th{color:var(--accent); text-align:left;}
+</style>
+
+<div class="container py-4">
+  <h2 class="text-light mb-3">{{ borrower.full_name }}</h2>
+
+  <div class="card">
+    <div class="section-title">Loan Overview</div>
+    <p class="muted">Loan Type: {{ borrower.loan_type or 'N/A' }}</p>
+    <p class="muted">Loan Amount: ${{ "{:,.2f}".format(borrower.loan_amount or 0) }}</p>
+    <p class="muted">Status: {{ borrower.status or 'Pending' }}</p>
+  </div>
+
+  <div class="card">
+    <div class="section-title">Underwriting Conditions</div>
+    {% if conditions %}
+    <table class="table">
+      <thead><tr><th>Condition</th><th>Status</th><th>Date Added</th></tr></thead>
+      <tbody>
+      {% for c in conditions %}
+        <tr>
+          <td>{{ c.description }}</td>
+          <td>{{ c.status or 'Open' }}</td>
+          <td>{{ c.created_at.strftime('%Y-%m-%d') }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+      <p class="muted">No underwriting conditions added yet.</p>
+    {% endif %}
+  </div>
+
+  <div class="card">
+    <div class="section-title">Audit Log</div>
+    {% if audit_logs %}
+    <table class="table">
+      <thead><tr><th>Action</th><th>User</th><th>Timestamp</th></tr></thead>
+      <tbody>
+        {% for log in audit_logs %}
+        <tr>
+          <td>{{ log.action }}</td>
+          <td>{{ log.user_name }}</td>
+          <td>{{ log.timestamp.strftime('%Y-%m-%d %H:%M') }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+      <p class="muted">No audit log entries found.</p>
+    {% endif %}
+  </div>
+
+  <a href="{{ url_for('underwriter.borrowers') }}" class="btn">← Back to Borrowers</a>
+</div>
+{% endblock %}

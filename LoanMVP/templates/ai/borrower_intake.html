@@ -1,0 +1,97 @@
+{% extends "layouts/base.html" %}
+{% block title %}AI Borrower Intake{% endblock %}
+{% block content %}
+
+
+<main style="margin-left:260px; padding:2rem; background:#0f0f11; color:#e6e6e6; min-height:100vh;">
+  <link rel="stylesheet" href="https://unpkg.com/lucide-static@latest/font/lucide.css">
+
+  <style>
+    .form-card{max-width:800px;margin:auto;background:#15161a;border:1px solid #282b31;border-radius:16px;padding:2rem;box-shadow:0 0 18px rgba(122,184,255,0.25);}
+    h1{color:#7ab8ff;margin-bottom:.8rem;}
+    label{display:block;margin-top:1rem;font-weight:500;color:#cfe8ff;}
+    input,select{
+      width:100%;margin-top:.35rem;background:#0f0f11;color:#e6e6e6;
+      border:1px solid #2b2f36;border-radius:10px;padding:.6rem .8rem;
+    }
+    input:focus,select:focus{outline:none;border-color:#7ab8ff;box-shadow:0 0 6px rgba(122,184,255,0.3);}
+    .btn{display:inline-flex;align-items:center;gap:.4rem;border:1px solid #2a4a62;background:linear-gradient(180deg,#2a4a62,#1b2a38);color:#cfe8ff;border-radius:10px;padding:.7rem 1.2rem;cursor:pointer;}
+    .btn:hover{box-shadow:0 0 10px rgba(122,184,255,0.3);}
+    .grid{display:grid;gap:1rem;}
+    .g-2{grid-template-columns:repeat(2,minmax(0,1fr));}
+    .muted{color:#a5a7ad;font-size:.9rem;}
+  </style>
+
+  <form class="form-card" method="POST">
+    <h1><i class="lucide lucide-user-plus"></i> AI Borrower Intake</h1>
+    <p class="muted">Provide borrower details and let the AI evaluate loan readiness.</p>
+
+    <div class="grid g-2">
+      <div>
+        <label>Full Name</label>
+        <input type="text" name="full_name" placeholder="John Doe" required>
+      </div>
+      <div>
+        <label>Project Type</label>
+        <input type="text" name="project_type" placeholder="Fix & Flip, Rental, etc." required>
+      </div>
+    </div>
+
+    <div class="grid g-2">
+      <div>
+        <label>Loan Type</label>
+        <select name="loan_type" required>
+          <option value="Fix & Flip">Fix & Flip</option>
+          <option value="Rental">Rental</option>
+          <option value="Commercial">Commercial</option>
+          <option value="Construction">Construction</option>
+        </select>
+      </div>
+      <div>
+        <label>Property Address</label>
+        <input type="text" name="property_address" placeholder="123 Main St, NY" required>
+      </div>
+    </div>
+
+    <div class="grid g-2">
+      <div>
+        <label>Credit Score</label>
+        <input type="number" name="credit_score" placeholder="700" min="300" max="850">
+      </div>
+      <div>
+        <label>Income ($)</label>
+        <input type="number" name="income" placeholder="85000">
+      </div>
+    </div>
+
+    <div class="grid g-2">
+      <div>
+        <label>Employment</label>
+        <input type="text" name="employment" placeholder="W-2 / Self-Employed">
+      </div>
+      <div>
+        <label>Citizenship</label>
+        <select name="citizenship">
+          <option>US Citizen</option>
+          <option>Permanent Resident</option>
+          <option>Foreign National</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="grid g-2">
+      <div>
+        <label>Marital Status</label>
+        <select name="marital_status">
+          <option>Single</option>
+          <option>Married</option>
+          <option>Divorced</option>
+        </select>
+      </div>
+      <div style="align-self:end;">
+        <button type="submit" class="btn"><i class="lucide lucide-brain"></i> Run AI Evaluation</button>
+      </div>
+    </div>
+  </form>
+</main>
+{% endblock %}

@@ -1,0 +1,58 @@
+{% extends "layouts/base.html" %}
+{% block title %}Application Submitted • Caughman Mason{% endblock %}
+
+{% block content %}
+
+<style>
+:root {
+    --bg:#0f0f11;
+    --panel:#15161a;
+    --line:#2b2f36;
+    --text:#e6e6e6;
+    --accent:#7ab8ff;
+}
+body { background:var(--bg); }
+
+#complete-box {
+    max-width:700px;
+    margin:4rem auto;
+    background:var(--panel);
+    border:1px solid var(--line);
+    padding:3rem;
+    border-radius:16px;
+    color:var(--text);
+}
+
+h2 { text-shadow: 0 0 12px rgba(122,184,255,0.4); }
+
+.summary {
+    background:#1a1c20;
+    border:1px solid var(--line);
+    padding:1.5rem;
+    margin-top:2rem;
+    border-radius:12px;
+}
+</style>
+
+<div id="complete-box">
+    <h2>🎉 Application Submitted</h2>
+
+    <p>
+        Thank you, <strong>{{ borrower.full_name }}</strong>.  
+        Your application has been successfully submitted.
+    </p>
+    {% if credit_success %}
+    <p style="color:#7ab8ff;"><strong>✔ Soft credit pull completed successfully.</strong></p>
+{% else %}
+    <p style="color:#ff6666;"><strong>⚠ Credit pull was not completed.</strong></p>
+{% endif %}
+
+    <p>A loan officer will review your file shortly.</p>
+     
+    <div class="summary">
+        <h3>🤖 AI Intake Summary</h3>
+        <p>{{ summary }}</p>
+    </div>
+</div>
+
+{% endblock %}

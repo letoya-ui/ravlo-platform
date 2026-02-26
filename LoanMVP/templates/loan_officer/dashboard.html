@@ -1,0 +1,195 @@
+{% extends "layouts/base.html" %}
+{% block title %}Loan Officer • Dashboard{% endblock %}
+
+{% block content %}
+
+<link rel="stylesheet" href="https://unpkg.com/lucide-static@latest/font/lucide.css">
+
+<style>
+  :root {
+    --bg:#0f0f11;
+    --panel:#15161a;
+    --line:#2a2e36;
+    --text:#e6e6e6;
+    --muted:#a5a7ad;
+    --primary:#d3d3d3;
+  }
+
+  body { background:var(--bg); color:var(--text); }
+
+  .wrap { display:grid; grid-template-columns:2fr 1fr; gap:2rem; padding:2rem; max-width:1800px; margin:0 auto; }
+
+  .card {
+    background:var(--panel);
+    border:1px solid var(--line);
+    padding:1.4rem;
+    border-radius:10px;
+    box-shadow:0 0 12px rgba(0,0,0,0.45);
+    margin-bottom:1.5rem;
+  }
+
+  .section-title { font-size:1.05rem; color:var(--primary); margin-bottom:.65rem; font-weight:600; }
+
+  .kpi-grid {
+    display:grid;
+    grid-template-columns:repeat(6,1fr);
+    gap:1rem;
+    margin-bottom:2rem;
+  }
+  .kpi-card { text-align:center; }
+  .kpi-number { font-size:2rem; font-weight:700; color:var(--primary); }
+
+  .table { width:100%; border-collapse:collapse; }
+  .table th, .table td { padding:.6rem; border-bottom:1px solid var(--line); }
+  .table th { color:var(--primary); font-weight:600; }
+
+  .activity-list, .task-list, .quote-list { list-style:none; padding:0; margin:0; }
+  .activity-list li, .task-list li, .quote-list li { padding:.4rem 0; border-bottom:1px solid var(--line); }
+  .muted { color:var(--muted); font-size:.85rem; }
+
+  textarea#ai-input {
+    width:100%; padding:.6rem; border-radius:8px;
+    background:#1b1c20; border:1px solid var(--line); color:var(--text);
+    margin-bottom:.6rem;
+  }
+  .btn, .btn-sm {
+    background:#1b1c20; border:1px solid var(--line);
+    color:var(--primary); padding:.5rem 1rem;
+    border-radius:8px; text-decoration:none; transition:.25s;
+    display:inline-block;
+  }
+  .btn:hover, .btn-sm:hover { background:#242529; }
+  .btn-sm { font-size:.8rem; padding:.3rem .7rem; }
+
+  /* Timeline */
+  .timeline { margin-top:1rem; display:flex; justify-content:space-between; width:100%; }
+  .timeline-step { flex:1; text-align:center; font-size:.75rem; color:var(--muted); }
+  .timeline-bar { height:6px; background:#333; border-radius:5px; margin:.4rem 0; overflow:hidden; }
+  .timeline-progress { height:100%; background:var(--primary); transition:.4s; }
+</style>
+
+<div class="wrap">
+
+  <!-- 🔹 TOP KPI BAR -->
+  <section class="kpi-grid">
+    <div class="card kpi-card"><h3 class="section-title">Active Loans</h3><div class="kpi-number">{{ stats.active_loans }}</div></div>
+    <div class="card kpi-card"><h3 class="section-title">Borrowers</h3><div class="kpi-number">{{ stats.borrowers }}</div></div>
+    <div class="card kpi-card"><h3 class="section-title">New Leads</h3><div class="kpi-number">{{ stats.total_leads }}</div></div>
+    <div class="card kpi-card"><h3 class="section-title">Approved</h3><div class="kpi-number">{{ stats.approved }}</div></div>
+    <div class="card kpi-card"><h3 class="section-title">Declined</h3><div class="kpi-number">{{ stats.declined }}</div></div>
+    <div class="card kpi-card"><h3 class="section-title">Pending Intakes</h3><div class="kpi-number">{{ stats.pending_intakes }}</div></div>
+  </section>
+
+  <!-- LHS -->
+  <div class="lhs">
+
+    <!-- 📊 Pipeline Overview -->
+    {% for stage, loans_in_stage in pipeline.items() %}
+    <div class="card">
+      <h3 class="section-title">📊 {{ stage|capitalize }} Loans</h3>
+      <table class="table">
+        <thead>
+          <tr><th>Borrower</th><th>Amount</th><th>Status</th><th>Stage</th><th>Progress</th><th></th></tr>
+        </thead>
+        <tbody>
+          {% for loan in loans_in_stage %}
+          <tr>
+            <td>{{ loan.borrower_profile.full_name }}</td>
+            <td>${{ "{:,.0f}".format(loan.amount or 0) }}</td>
+            <td>{{ loan.status }}</td>
+            <td>{{ loan.milestone_stage }}</td>
+            <td>
+              <div class="timeline-bar">
+                <div class="timeline-progress" style="width:{{ loan.progress_percent }}%"></div>
+              </div>
+            </td>
+            <td><a class="btn-sm" href="{{ url_for('loan_officer.view_loan', loan_id=loan.id) }}">Open</a></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% endfor %}
+
+    <!-- 🔥 Hot Leads -->
+    <div class="card">
+      <h3 class="section-title">🔥 Hot Leads</h3>
+      <table class="table">
+        <thead><tr><th>Name</th><th>Source</th><th>Status</th><th>Last Activity</th><th></th></tr></thead>
+        <tbody>
+          {% for lead in hot_leads %}
+          <tr>
+            <td>{{ lead.name }}</td>
+            <td>{{ lead.lead_source }}</td>
+            <td>{{ lead.status }}</td>
+            <td>{{ lead.last_update }}</td>
+            <td><a class="btn-sm" href="{{ url_for('crm.view_lead', lead_id=lead.id) }}">Open</a></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+  </div>
+
+  <!-- RHS -->
+  <div class="rhs">
+
+    <!-- 📁 Borrower Activity -->
+    <div class="card">
+      <h3 class="section-title">📁 Borrower Activity</h3>
+      <ul class="activity-list">
+        {% for ev in recent_activity %}
+        <li><span class="time">{{ ev.time }}</span> — {{ ev.msg }}</li>
+        {% endfor %}
+      </ul>
+    </div>
+
+    <!-- 📝 Tasks -->
+    <div class="card">
+      <h3 class="section-title">📝 Tasks</h3>
+      <ul class="task-list">
+        {% for t in tasks %}
+        <li><strong>{{ t.title }}</strong><div class="muted">Due: {{ t.due_date }}</div></li>
+        {% endfor %}
+      </ul>
+    </div>
+
+    <!-- 💼 Recent Quotes -->
+    <div class="card">
+      <h3 class="section-title">💼 Recent Quotes</h3>
+      <ul class="quote-list">
+        {% for q in quotes %}
+        <li>${{ "{:,.0f}".format(q.amount) }} — {{ q.lender_name }}</li>
+        {% endfor %}
+      </ul>
+    </div>
+
+    <!-- 🤖 AI Assistant -->
+    <div class="card">
+      <h3 class="section-title">🤖 AI Loan Officer Assistant</h3>
+      <textarea id="ai-input" placeholder="Ask: 'Which borrower should I follow up with?'"></textarea>
+      <button onclick="sendAI()" class="btn">Ask AI</button>
+      <div id="ai-response" class="ai-response"></div>
+    </div>
+
+  </div>
+
+</div>
+
+<script>
+function sendAI(){
+  let msg = document.getElementById("ai-input").value;
+  fetch("{{ url_for('loan_officer.ai') }}", {
+    method:"POST",
+    headers:{ "Content-Type":"application/json" },
+    body:JSON.stringify({ message:msg })
+  })
+  .then(res => res.json())
+  .then(data => {
+    document.getElementById("ai-response").innerHTML = data.reply;
+  });
+}
+</script>
+
+{% endblock %}

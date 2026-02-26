@@ -1,0 +1,100 @@
+{% extends "layouts/base.html" %}
+{% block title %}Lead Messages{% endblock %}
+
+{% block content %}
+<style>
+  :root{--line:#2a2e36; --panel:#15161a; --text:#e6e6e6; --muted:#a5a7ad}
+  .card{background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:1rem}
+  table{width:100%; border-collapse:collapse}
+  th,td{padding:.6rem; border-top:1px solid var(--line); color:var(--text)}
+  input{background:#0f0f11; border:1px solid var(--line); color:var(--text); border-radius:10px; padding:.45rem .6rem; width:100%}
+  .btn{display:inline-flex; align-items:center; gap:.5rem; padding:.6rem .9rem; border-radius:10px; border:1px solid var(--line); color:var(--text); text-decoration:none; background:#1a1d23}
+</style>
+<div class="fade-in">
+  <h1 style="margin-bottom: 1rem;">💬 Lead Messages</h1>
+  <p class="text-muted">Send quick messages or updates to one or multiple leads.</p>
+
+  <!-- Bulk Message Form -->
+  <div class="card">
+    <h3>📢 Broadcast Message to All Leads</h3>
+    <form method="POST" action="{{ url_for('loan_officer.lead_messages') }}">
+      <textarea 
+        name="message" 
+        placeholder="Type your message here..." 
+        style="width: 100%; height: 120px; background: var(--bg-dark); color: var(--text-light); border: 1px solid var(--border); border-radius: 8px; padding: 10px; resize: none;"
+        required></textarea>
+
+      <div style="margin-top: 1rem; display: flex; justify-content: space-between; align-items: center;">
+        <small style="color: var(--text-muted);">Sent to all leads assigned to you</small>
+        <button type="submit" class="btn">📤 Send Message</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Individual Leads Section -->
+  <div class="card fade-in">
+    <h3>🎯 Send to Individual Lead</h3>
+    {% if leads %}
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Email</th>
+          <th>Phone</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for lead in leads %}
+        <tr>
+          <td>{{ lead.name }}</td>
+          <td>{{ lead.email }}</td>
+          <td>{{ lead.phone }}</td>
+          <td>
+            <button class="btn" onclick="openMessageModal('{{ lead.id }}', '{{ lead.name }}')">💬 Message</button>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+      <p style="color: var(--text-muted);">No leads assigned yet.</p>
+    {% endif %}
+  </div>
+</div>
+
+<!-- ============================= -->
+<!-- Message Modal (Popup Window) -->
+<!-- ============================= -->
+<div id="messageModal" class="modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); align-items: center; justify-content: center;">
+  <div style="background: var(--bg-card); padding: 1.5rem; border-radius: 12px; width: 90%; max-width: 480px; box-shadow: var(--shadow);">
+    <h3 id="modalTitle" style="margin-top: 0;">Message Lead</h3>
+    <form method="POST" action="{{ url_for('loan_officer.lead_messages') }}">
+      <input type="hidden" name="lead_id" id="modalLeadId">
+      <textarea name="message" placeholder="Write your message..." required
+        style="width: 100%; height: 120px; background: var(--bg-dark); color: var(--text-light); border: 1px solid var(--border); border-radius: 8px; padding: 10px; resize: none;"></textarea>
+      <div style="margin-top: 1rem; display: flex; justify-content: flex-end; gap: 0.5rem;">
+        <button type="button" class="btn" onclick="closeModal()">Cancel</button>
+        <button type="submit" class="btn">Send</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+  function openMessageModal(leadId, leadName) {
+    document.getElementById("messageModal").style.display = "flex";
+    document.getElementById("modalLeadId").value = leadId;
+    document.getElementById("modalTitle").innerText = "Message " + leadName;
+  }
+
+  function closeModal() {
+    document.getElementById("messageModal").style.display = "none";
+  }
+
+  window.onclick = function(event) {
+    const modal = document.getElementById("messageModal");
+    if (event.target == modal) closeModal();
+  };
+</script>
+{% endblock %}

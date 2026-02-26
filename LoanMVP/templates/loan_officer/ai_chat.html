@@ -1,0 +1,61 @@
+{% extends "layouts/base.html" %}
+{% block content %}
+
+<div class="chat-container">
+
+    <div class="chat-history" id="chatHistory">
+        {% for c in history %}
+            <div class="bubble user">{{ c.question }}</div>
+            <div class="bubble ai">{{ c.response }}</div>
+        {% endfor %}
+    </div>
+
+    <div class="chat-input">
+        <textarea id="chatMessage" placeholder="Ask the AI Assistant..."></textarea>
+        <button id="sendChat" class="btn btn-primary">Send</button>
+    </div>
+
+</div>
+
+<script>
+    const borrowerId = "{{ borrower_id or '' }}";
+    const loanId = "{{ loan_id or '' }}";
+
+    document.getElementById("sendChat").onclick = function() {
+        const msg = document.getElementById("chatMessage").value;
+
+        fetch("/loan_officer/ai_chat", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({
+                message: msg,
+                borrower_id: borrowerId || null,
+                loan_id: loanId || null
+            })
+        })
+        .then(r => r.json())
+        .then(data => {
+            const history = document.getElementById("chatHistory");
+
+            history.innerHTML += `
+                <div class="bubble user">${msg}</div>
+                <div class="bubble ai">${data.reply}</div>
+            `;
+
+            document.getElementById("chatMessage").value = "";
+            history.scrollTop = history.scrollHeight;
+        });
+    };
+</script>
+
+<style>
+.chat-container { max-width: 800px; margin: auto; }
+.chat-history { height: 500px; overflow-y: scroll; padding: 20px; background: #f7f7f7; border-radius: 8px; }
+.bubble { padding: 12px 16px; margin-bottom: 10px; border-radius: 12px; max-width: 70%; }
+.bubble.user { background: #d1e7ff; margin-left: auto; }
+.bubble.ai { background: #e9ecef; margin-right: auto; }
+.chat-input { display: flex; gap: 10px; margin-top: 20px; }
+#chatMessage { flex: 1; height: 60px; }
+</style>
+
+{% endblock %}

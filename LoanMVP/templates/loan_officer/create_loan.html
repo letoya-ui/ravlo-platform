@@ -1,0 +1,155 @@
+{% extends "layouts/base.html" %}
+{% block title %}Loan Officer • Create Loan{% endblock %}
+{% block content %}
+
+<link rel="stylesheet" href="https://unpkg.com/lucide-static@latest/font/lucide.css">
+
+<style>
+:root {
+    --bg:#0f0f11;
+    --panel:#15161a;
+    --line:#292c33;
+    --text:#e6e6e6;
+    --muted:#a5a7ad;
+    --accent:#7ab8ff;
+    --hover:#1f2328;
+    --border:#2c2f36;
+}
+
+.page-wrap {
+    margin-left: 280px;
+    padding: 2rem;
+}
+
+.card {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    padding: 1.5rem;
+    border-radius: 16px;
+    box-shadow: 0 0 20px rgba(0,0,0,0.25);
+    margin-bottom: 2rem;
+}
+
+.card h2 {
+    color: var(--accent);
+    margin-bottom: 1rem;
+}
+
+.form-group {
+    margin-bottom: 1rem;
+}
+
+label {
+    color: var(--text);
+    font-weight: 600;
+    margin-bottom: .3rem;
+    display: block;
+}
+
+input, select {
+    width: 100%;
+    padding: .8rem;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--text);
+}
+
+.btn-submit {
+    background: var(--accent);
+    color: #000;
+    padding: .9rem 1.5rem;
+    border-radius: 12px;
+    font-weight: 700;
+    font-size: 1.1rem;
+    border: none;
+    margin-top: 1rem;
+    transition: .2s;
+}
+
+.btn-submit:hover {
+    opacity: .85;
+}
+</style>
+
+<main class="dashboard-main">
+
+<div class="page-wrap">
+
+    <h1 style="color:var(--text); margin-bottom:1.5rem;">
+        <i class="lucide lucide-file-plus"></i> Create Loan (Quick 1003)
+    </h1>
+
+    <form method="POST">
+
+        <!-- ======================================================
+             1. SELECT BORROWER
+        ======================================================= -->
+        <div class="card">
+            <h2><i class="lucide lucide-users"></i> Borrower</h2>
+
+            <div class="form-group">
+                <label>Select Borrower</label>
+                <select name="borrower_id" required>
+                    <option value="">-- Choose Borrower --</option>
+                    {% for b in borrowers %}
+                        <option value="{{ b.id }}">{{ b.full_name }} — {{ b.email }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+
+
+        <!-- ======================================================
+             2. LOAN DETAILS
+        ======================================================= -->
+        <div class="card">
+            <h2><i class="lucide lucide-wallet"></i> Loan Details</h2>
+
+            <div class="form-group">
+                <label>Loan Amount</label>
+                <input type="number" name="amount" required placeholder="Enter loan amount">
+            </div>
+
+            <div class="form-group">
+                <label>Loan Type</label>
+                <select name="loan_type" required>
+                    <option value="Conventional">Conventional</option>
+                    <option value="FHA">FHA</option>
+                    <option value="VA">VA</option>
+                    <option value="DSCR">DSCR</option>
+                    <option value="Fix & Flip">Fix & Flip</option>
+                    <option value="Commercial">Commercial</option>
+                </select>
+            </div>
+        </div>
+
+
+        <!-- ======================================================
+             3. PROPERTY DETAILS
+        ======================================================= -->
+        <div class="card">
+            <h2><i class="lucide lucide-home"></i> Subject Property</h2>
+
+            <div class="form-group">
+                <label>Property Value</label>
+                <input type="number" name="property_value" placeholder="Estimated market value">
+            </div>
+
+            <div class="form-group">
+                <label>Property Address</label>
+                <input type="text" name="property_address" placeholder="Street, City, State, ZIP">
+            </div>
+        </div>
+
+        <button class="btn-submit" type="submit">
+            Create Loan File
+        </button>
+
+    </form>
+
+</div>
+
+</main>
+
+{% endblock %}

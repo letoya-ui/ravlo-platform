@@ -1,0 +1,30 @@
+{% extends "layouts/base.html" %}
+{% block title %}Executive • Auto Funding{% endblock %}
+{% block content %}
+<style>
+  :root{--panel:#15161a;--line:#2a2e36;--text:#e6e6e6;--accent:#7ab8ff;--glow:0 0 18px rgba(122,184,255,.35);}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:1.2rem;box-shadow:var(--glow);}
+  input,select{background:#0f0f11;border:1px solid var(--line);color:var(--text);border-radius:10px;padding:.6rem .7rem;width:100%}
+  .btn{background:#1a1d23;color:var(--text);border:1px solid var(--line);padding:.6rem .9rem;border-radius:10px;}
+</style>
+
+<h1>🏦 Auto Funding Controls</h1>
+<div class="card">
+  <form method="POST">
+    <label>Funding Source</label>
+    <select name="funding_source">
+      <option>Main Reserve</option>
+      <option>Credit Facility A</option>
+      <option>Equity Pool</option>
+    </select>
+
+    <label style="margin-top:.8rem;">Disbursement Amount</label>
+    <input type="number" name="amount" placeholder="Enter amount">
+
+    <label style="margin-top:.8rem;">Purpose</label>
+    <input name="purpose" placeholder="e.g. Bridge Loan #3242">
+
+    <button class="btn" style="margin-top:.8rem;">🚀 Initiate Funding</button>
+  </form>
+</div>
+{% endblock %}

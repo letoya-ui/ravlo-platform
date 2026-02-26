@@ -1,0 +1,139 @@
+{% extends "layouts/borrower_base.html" %}
+{% block title %}Subscription • LoanMVP{% endblock %}
+{% block content %}
+
+<div class="borrower-shell">
+
+  <!-- SIDEBAR -->
+  <aside class="b-sidebar">
+    <div class="b-sidebar-logo">CM</div>
+
+    <div class="b-sidebar-group">
+
+      <a href="{{ url_for('borrower.dashboard') }}" class="b-sidebar-item">
+        <svg viewBox="0 0 24 24" fill="none">
+          <rect x="3" y="3" width="8" height="8" rx="2"></rect>
+          <rect x="13" y="3" width="8" height="5" rx="2"></rect>
+          <rect x="13" y="10" width="8" height="11" rx="2"></rect>
+          <rect x="3" y="13" width="8" height="8" rx="2"></rect>
+        </svg>
+        <div class="b-tooltip">Dashboard</div>
+      </a>
+
+      <a href="{{ url_for('borrower.property_search') }}" class="b-sidebar-item">
+        <svg viewBox="0 0 24 24" fill="none">
+          <path d="M12 3L4 9v11h16V9l-8-6Z"></path>
+          <circle cx="12" cy="13" r="2.5"></circle>
+        </svg>
+        <div class="b-tooltip">Property Finder</div>
+      </a>
+
+      <a href="{{ url_for('borrower.resource_center') }}" class="b-sidebar-item">
+        <svg viewBox="0 0 24 24" fill="none">
+          <circle cx="8" cy="8" r="3"></circle>
+          <circle cx="16" cy="8" r="3"></circle>
+          <path d="M4 19c.6-2.4 2.3-4 4-4s3.4 1.6 4 4"></path>
+          <path d="M12 19c.6-2.4 2.3-4 4-4s3.4 1.6 4 4"></path>
+        </svg>
+        <div class="b-tooltip">Partner Network</div>
+      </a>
+
+      <a href="{{ url_for('borrower.deal_workspace') }}" class="b-sidebar-item">
+        <svg viewBox="0 0 24 24" fill="none">
+          <rect x="4" y="4" width="16" height="16" rx="2"></rect>
+          <path d="M8 9h8M8 13h5M8 17h3"></path>
+        </svg>
+        <div class="b-tooltip">Project Planner</div>
+      </a>
+
+      <a href="{{ url_for('borrower.saved_properties') }}" class="b-sidebar-item">
+        <svg viewBox="0 0 24 24" fill="none">
+          <path d="M12 20s-4.5-2.7-6.7-5.4C3.4 13 3 11.9 3 10.8 3 8.7 4.7 7 6.8 7c1.2 0 2.3.6 3 1.5.7-.9 1.8-1.5 3-1.5C15.3 7 17 8.7 17 10.8c0 1.1-.4 2.2-2.3 3.8C16.5 17.3 12 20 12 20Z"></path>
+        </svg>
+        <div class="b-tooltip">Saved Properties</div>
+      </a>
+
+      <a href="{{ url_for('borrower.resource_center') }}" class="b-sidebar-item">
+        <svg viewBox="0 0 24 24" fill="none">
+          <path d="M5 4h10a3 3 0 0 1 3 3v13l-4-2-4 2-4-2-4 2V7a3 3 0 0 1 3-3Z"></path>
+        </svg>
+        <div class="b-tooltip">Resource Center</div>
+      </a>
+
+    </div>
+  </aside>
+
+  <!-- MAIN CONTENT -->
+  <main class="b-main">
+
+    <!-- TOP TABS -->
+    <div class="b-top-tabs">
+      <a href="{{ url_for('borrower.dashboard') }}" class="b-top-tab">Dashboard</a>
+      <a href="{{ url_for('borrower.status') }}" class="b-top-tab">Loan</a>
+      <a href="{{ url_for('borrower.documents') }}" class="b-top-tab">Documents</a>
+      <a href="{{ url_for('borrower.messages') }}" class="b-top-tab">Messages</a>
+      <div class="b-top-tab active">Subscription</div>
+    </div>
+
+    <!-- PAGE CONTENT -->
+    <h1>💳 Your Subscription</h1>
+    <p class="muted">Manage your LoanMVP plan — upgrade anytime to unlock premium borrower tools.</p>
+
+    <div class="pricing" style="display:grid;gap:2rem;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));margin-top:2rem;">
+
+      <!-- FREE PLAN -->
+      <div class="b-card {% if current_user.subscription_plan == 'Free' %}active{% endif %}" style="text-align:center;padding:2rem;">
+        <h2 style="color:var(--accent);font-size:1.8rem;">Free Plan</h2>
+        <div class="price" style="font-size:2.4rem;font-weight:700;margin:1rem 0;">
+          $0<span style="font-size:1rem;">/mo</span>
+        </div>
+        <p class="muted">Perfect for getting started — apply for loans and manage documents.</p>
+
+        <ul class="features" style="list-style:none;padding:0;margin:1rem 0 2rem;text-align:left;">
+          <li>✔ Loan application portal</li>
+          <li>✔ Document uploads</li>
+          <li>✔ Basic status tracking</li>
+          <li>✖ AI Deal Insights</li>
+          <li>✖ Property search tools</li>
+        </ul>
+
+        {% if current_user.subscription_plan == 'Free' %}
+          <span class="current" style="border:1px dashed var(--accent);padding:.3rem .6rem;border-radius:8px;color:var(--accent);font-size:.85rem;">Current Plan</span>
+        {% else %}
+          <form method="POST" action="{{ url_for('borrower.downgrade_plan') }}">
+            <button class="action-btn">Downgrade</button>
+          </form>
+        {% endif %}
+      </div>
+
+      <!-- PRO PLAN -->
+      <div class="b-card {% if current_user.subscription_plan == 'Pro' %}active{% endif %}" style="text-align:center;padding:2rem;">
+        <h2 style="color:var(--accent);font-size:1.8rem;">Pro Plan</h2>
+        <div class="price" style="font-size:2.4rem;font-weight:700;margin:1rem 0;">
+          $49<span style="font-size:1rem;">/mo</span>
+        </div>
+        <p class="muted">Unlock the full LoanMVP suite with AI, analytics, and property search.</p>
+
+        <ul class="features" style="list-style:none;padding:0;margin:1rem 0 2rem;text-align:left;">
+          <li>✔ Everything in Free</li>
+          <li>✔ AI Deal Analyzer</li>
+          <li>✔ Construction & Budget Planner</li>
+          <li>✔ Property Search Integration</li>
+          <li>✔ Smart Portfolio Insights</li>
+        </ul>
+
+        {% if current_user.subscription_plan == 'Pro' %}
+          <span class="current" style="border:1px dashed var(--accent);padding:.3rem .6rem;border-radius:8px;color:var(--accent);font-size:.85rem;">Current Plan</span>
+        {% else %}
+          <form method="POST" action="{{ url_for('borrower.upgrade_plan') }}">
+            <button class="action-btn">Upgrade to Pro</button>
+          </form>
+        {% endif %}
+      </div>
+
+    </div>
+
+  </main>
+</div>
+
+{% endblock %}

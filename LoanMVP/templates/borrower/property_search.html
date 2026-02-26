@@ -1,0 +1,170 @@
+{% extends "layouts/borrower_base.html" %}
+{% block title %}Property Search{% endblock %}
+{% block content %}
+
+<div class="b-main-inner">
+
+  <h2>🏠 Property Search</h2>
+  <p class="muted">Search any address and instantly see property details.</p>
+
+  <!-- Search Bar -->
+  <form method="GET" class="b-card" style="margin-top:1rem;">
+    <input type="text"
+           name="query"
+           placeholder="Enter an address..."
+           value="{{ query or '' }}"
+           style="width:100%; padding:0.75rem; font-size:1rem;">
+    <button type="submit" class="btn" style="margin-top:0.75rem;">Search</button>
+  </form>
+
+  <!-- Error -->
+  {% if error %}
+    <div class="b-card" style="margin-top:1rem; border-left:4px solid #ff4d4d;">
+      <strong style="color:#b30000;">Lookup Error</strong>
+      <p class="muted" style="margin-top:.5rem;">
+        {{ error }}
+        {% if debug %}
+          <br>Provider: {{ debug.provider or "—" }} | Stage: {{ debug.stage or "—" }}
+        {% endif %}
+      </p>
+    </div>
+  {% endif %}
+
+  {% if property %}
+  <div class="b-card" style="margin-top:1.5rem;">
+
+    <!-- Photos -->
+    {% if property.photos %}
+      {% if property.photos is string %}
+        <img src="{{ property.photos }}"
+             style="width:100%; max-height:320px; object-fit:cover; border-radius:12px; margin-bottom:1rem;">
+      {% else %}
+        <div style="display:flex; gap:1rem; overflow-x:auto; margin-bottom:1rem;">
+          {% for photo in property.photos[:6] %}
+            <img src="{{ photo }}"
+                 style="height:200px; border-radius:10px; object-fit:cover;">
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endif %}
+
+    <!-- Address -->
+    <h3 style="margin-bottom:0.25rem;">
+      {{ property.address }}
+      {% if property.city %}, {{ property.city }}{% endif %}
+      {% if property.state %}, {{ property.state }}{% endif %}
+      {% if property.zip %} {{ property.zip }}{% endif %}
+    </h3>
+
+    <!-- Price -->
+    <p style="font-size:1.35rem; font-weight:700; margin-bottom:0.5rem;">
+      {% if property.price %}
+        ${{ "{:,.0f}".format(property.price) }}
+        <span class="muted" style="font-size:.85rem;">(Listed Price)</span>
+      {% elif valuation.estimate %}
+        ${{ "{:,.0f}".format(valuation.estimate) }}
+        <span class="muted" style="font-size:.85rem;">(Estimated Value)</span>
+      {% else %}
+        <span class="muted">Off-market property • Showing investor estimates</span>
+      {% endif %}
+    </p>
+
+    <!-- Specs -->
+    <p class="muted">
+      {{ property.beds or "—" }} 🛏 &nbsp;|&nbsp;
+      {{ property.baths or "—" }} 🛁 &nbsp;|&nbsp;
+      {{ property.sqft or "—" }} sq ft &nbsp;|&nbsp;
+      Built {{ property.year_built or "—" }}
+    </p>
+
+    <!-- Deal Snapshot -->
+    <div class="b-card" style="margin-top:1rem; background:#fafafa;">
+      <strong>Deal Snapshot</strong>
+      <div style="display:flex; flex-wrap:wrap; gap:1rem; margin-top:0.75rem;">
+
+        <div>
+          <div class="muted" style="font-size:0.9rem;">Estimated Value (AVM)</div>
+          <div style="font-weight:700;">
+            {% if valuation.estimate %}
+              ${{ "{:,.0f}".format(valuation.estimate) }}
+            {% else %}
+              —
+            {% endif %}
+          </div>
+        </div>
+
+        <div>
+          <div class="muted" style="font-size:0.9rem;">Estimated Rent (Monthly)</div>
+          <div style="font-weight:700;">
+            {% if rent_estimate.rent %}
+              ${{ "{:,.0f}".format(rent_estimate.rent) }}
+            {% else %}
+              —
+            {% endif %}
+          </div>
+        </div>
+
+        <div>
+          <div class="muted" style="font-size:0.9rem;">Sales Comps</div>
+          <div style="font-weight:700;">
+            {{ comps.sales|length if comps.sales else "—" }}
+          </div>
+        </div>
+
+        <div>
+          <div class="muted" style="font-size:0.9rem;">Rental Comps</div>
+          <div style="font-weight:700;">
+            {{ comps.rentals|length if comps.rentals else "—" }}
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- AI Summary -->
+    {% if ai_summary %}
+    <div class="b-card" style="margin-top:1rem; background:#fafafa;">
+      <strong>AI Market Insight</strong>
+      <p style="margin-top:0.5rem;">{{ ai_summary }}</p>
+    </div>
+    {% endif %}
+
+    <!-- Buttons -->
+    <div style="display:flex; gap:.75rem; flex-wrap:wrap; margin-top:1.25rem;">
+
+      <!-- Save -->
+      <form method="POST" action="{{ url_for('borrower.save_property') }}" id="savePropertyForm">
+        {{ csrf_token() if csrf_token is defined }}
+        <input type="hidden" name="address" value="{{ property.address }}">
+        <input type="hidden" name="price" value="{{ property.price or valuation.estimate or 0 }}">
+        <input type="hidden" name="zipcode" value="{{ property.zip or '' }}">
+        <input type="hidden" name="sqft" value="{{ property.sqft or '' }}">
+        <button type="submit" class="btn">Save Property</button>
+      </form>
+
+      <!-- Analyze -->
+      <a href="{{ url_for('borrower.deal_workspace', address=property.address) }}"
+         class="btn">Analyze Deal ➜</a>
+
+      {% if saved_id %}
+        <a href="{{ url_for('borrower.deal_workspace', property_id=saved_id) }}"
+           class="btn">Open Deal Workspace ➜</a>
+      {% endif %}
+    </div>
+
+  </div>
+  {% endif %}
+
+</div>
+
+<script>
+document.getElementById("savePropertyForm")?.addEventListener("submit", async function(e){
+  e.preventDefault();
+  const form = e.target;
+  const resp = await fetch(form.action, { method: "POST", body: new FormData(form) });
+  const data = await resp.json();
+  alert(data.message || "Saved!");
+});
+</script>
+
+{% endblock %}

@@ -1,0 +1,39 @@
+{% extends "layouts/loan_officer_base.html" %}
+{% block title %}Upload Center{% endblock %}
+
+{% block content %}
+<h2>Upload Center for {{ borrower.full_name }}</h2>
+
+<form method="POST" enctype="multipart/form-data">
+  {{ form.hidden_tag() }}
+  <div class="mb-3">{{ form.file.label }}{{ form.file(class="form-control") }}</div>
+  <div class="mb-3">{{ form.description.label }}{{ form.description(class="form-control") }}</div>
+  <div class="mb-3">{{ form.loan_id.label }}{{ form.loan_id(class="form-select") }}</div>
+  <div>{{ form.submit(class="btn btn-primary") }}</div>
+</form>
+
+<hr>
+<h4>📄 Requested Documents</h4>
+<ul>
+  {% for doc in requested_docs %}
+    <li>{{ doc.name }} — 
+      {% if doc.loan_id in uploads|map(attribute='loan_id') and doc.name in uploads|map(attribute='description') %}
+        ✅ <span class="text-success">Received</span>
+      {% else %}
+        ❌ <span class="text-danger">Missing</span>
+      {% endif %}
+    </li>
+  {% else %}
+    <li class="text-muted">No documents requested.</li>
+  {% endfor %}
+</ul>
+
+<h4>📥 Received Uploads</h4>
+<ul>
+  {% for u in uploads %}
+    <li>{{ u.uploaded_at.strftime('%b %d, %Y') }} — {{ u.filename }} <small class="text-muted">({{ u.description }})</small></li>
+  {% else %}
+    <li class="text-muted">No uploads yet.</li>
+  {% endfor %}
+</ul>
+{% endblock %}

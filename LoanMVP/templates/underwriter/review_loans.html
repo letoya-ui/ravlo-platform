@@ -1,0 +1,186 @@
+{% extends "layouts/base.html" %}
+{% block title %}Underwriter • Review Loans{% endblock %}
+{% block content %}
+
+<main class="dashboard-main">
+  <div class="wrap">
+    <section class="lhs grid scrollable">
+
+      <!-- Header -->
+      <div class="card header-card">
+        <div>
+          <h1>📂 Loan Review Queue</h1>
+          <div class="muted">All active loan files awaiting underwriting review.</div>
+        </div>
+        <div class="actions-top">
+          <a href="{{ url_for('underwriter.dashboard') }}" class="btn">🏠 Dashboard</a>
+          <a href="{{ url_for('underwriter.risk_reports') }}" class="btn btn-primary">📊 Reports</a>
+        </div>
+      </div>
+
+      <!-- Loan Cards -->
+      {% if loans %}
+      <div class="loan-grid">
+        {% for loan in loans %}
+        <div class="card loan-card">
+
+          <!-- Header -->
+          <div class="loan-header">
+            <h3>#{{ loan.id }}</h3>
+
+            <span class="status
+              {% if loan.status == 'Approved' %}st-approved
+              {% elif loan.status in ['In Review', 'UW Review'] %}st-review
+              {% else %}st-pending{% endif %}">
+              {{ loan.status }}
+            </span>
+          </div>
+
+          <!-- Info -->
+          <div class="loan-info">
+            <p><strong>Borrower:</strong> {{ loan.borrower_profile.full_name }}</p>
+            <p><strong>Type:</strong> {{ loan.loan_type or '—' }}</p>
+            <p><strong>Amount:</strong> ${{ "{:,.0f}".format(loan.amount or 0) }}</p>
+          </div>
+
+          <!-- Actions -->
+          <div class="actions">
+            <a href="{{ url_for('underwriter.file_review', loan_id=loan.id) }}" class="btn btn-sm">🔍 Review</a>
+
+            <a href="{{ url_for('underwriter.file_review', loan_id=loan.id) }}#conditions"
+               class="btn btn-sm">📄 Conditions</a>
+
+            <a href="{{ url_for('underwriter.file_review', loan_id=loan.id) }}#documents"
+               class="btn btn-sm">📁 Docs</a>
+
+            <a href="{{ url_for('underwriter.redflags', loan_id=loan.id) }}"
+               class="btn btn-sm">⚖ Risk</a>
+          </div>
+
+        </div>
+        {% endfor %}
+      </div>
+
+      {% else %}
+      <div class="card">
+        <p class="muted">No loans are currently awaiting review.</p>
+      </div>
+      {% endif %}
+
+    </section>
+  </div>
+</main>
+
+<style>
+  :root {
+    --bg:#0f0f11; --panel:#15161a; --line:#282b31;
+    --text:#e6e6e6; --muted:#a5a7ad; --accent:#7ab8ff;
+    --success:#43d19e; --warn:#ffdf6e;
+    --glow:0 0 18px rgba(122,184,255,0.35);
+  }
+
+  .wrap {
+    display:flex;
+    flex-direction:column;
+    height:100vh;
+    padding:1.5rem;
+    max-width:1600px;
+    margin:0 auto;
+  }
+
+  .scrollable {
+    overflow-y:auto;
+    padding-right:0.5rem;
+    max-height:calc(100vh - 3rem);
+  }
+
+  .card {
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding:1rem 1.2rem;
+    box-shadow:var(--glow);
+    color:var(--text);
+  }
+
+  .header-card {
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    flex-wrap:wrap;
+    gap:1rem;
+  }
+
+  .loan-grid {
+    display:grid;
+    grid-template-columns:repeat(auto-fill,minmax(250px,1fr));
+    gap:1rem;
+    margin-top:1rem;
+  }
+
+  .loan-card {
+    display:flex;
+    flex-direction:column;
+    justify-content:space-between;
+    min-height:180px;
+    transition:transform .25s ease, box-shadow .25s ease;
+  }
+
+  .loan-card:hover {
+    transform:translateY(-4px);
+    box-shadow:0 0 20px rgba(122,184,255,0.45);
+  }
+
+  .loan-header {
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+  }
+
+  .status {
+    padding:.2rem .55rem;
+    border-radius:999px;
+    font-size:.75rem;
+    border:1px solid var(--line);
+  }
+
+  .st-pending{background:#1e2430;color:#a9c7ff;}
+  .st-review{background:#23251e;color:#e7f28f;}
+  .st-approved{background:#1b2a23;color:#9af2c5;}
+
+  .actions {
+    margin-top:.5rem;
+    display:flex;
+    gap:.4rem;
+    flex-wrap:wrap;
+  }
+
+  .btn {
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    gap:.4rem;
+    padding:.55rem .9rem;
+    border-radius:10px;
+    border:1px solid var(--line);
+    background:linear-gradient(180deg,#1c1f25,#15161a);
+    color:var(--text);
+    text-decoration:none;
+    font-size:.85rem;
+    transition:.25s;
+  }
+
+  .btn-sm {
+    font-size:.8rem;
+    padding:.4rem .75rem;
+    border-radius:8px;
+  }
+
+  .btn-primary {
+    background:linear-gradient(180deg,#2a4a62,#1b2a38);
+    color:#cfe8ff;
+    border-color:#2a4a62;
+  }
+</style>
+
+{% endblock %}

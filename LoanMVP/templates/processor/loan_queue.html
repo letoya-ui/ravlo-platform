@@ -1,0 +1,89 @@
+{% extends "layouts/base.html" %}
+{% block title %}Loan Queue | Processor{% endblock %}
+{% block content %}
+<main class="dashboard-main">
+  <div class="wrap">
+
+    <section class="card">
+      <h2>📂 Loan Queue</h2>
+      <p class="muted">Manage and review all active loans in the pipeline.</p>
+
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Borrower</th>
+            <th>Loan Type</th>
+            <th>Status</th>
+            <th>Created</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for loan in loans %}
+          <tr>
+            <td>#{{ loan.id }}</td>
+            <td>{{ loan.borrower_profile.full_name if loan.borrower_profile else '—' }}</td>
+            <td>{{ loan.loan_type or 'N/A' }}</td>
+            <td><span class="badge">{{ loan.status or 'Pending' }}</span></td>
+            <td>{{ loan.created_at.strftime('%Y-%m-%d') if loan.created_at else '—' }}</td>
+            <td>
+              <a href="{{ url_for('processor.loan_review', loan_id=loan.id) }}" class="btn btn-sm">🔍 Review</a>
+            </td>
+          </tr>
+          {% else %}
+          <tr><td colspan="6" class="muted">No loans found in queue.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </section>
+
+  </div>
+</main>
+
+<style>
+  :root {
+    --bg: #0f0f11;
+    --panel: #15161a;
+    --line: #2b2f36;
+    --text: #e6e6e6;
+    --muted: #a5a7ad;
+    --accent: #7ab8ff;
+    --glow: 0 0 14px rgba(122,184,255,0.35);
+  }
+  body { background: var(--bg); color: var(--text); }
+  .wrap { padding: 2rem; }
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 1.5rem;
+    box-shadow: var(--glow);
+  }
+  h2 { color: var(--accent); margin-bottom: .3rem; }
+  .muted { color: var(--muted); }
+  .data-table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
+  .data-table th, .data-table td {
+    padding: .6rem;
+    border-bottom: 1px solid var(--line);
+  }
+  .data-table th { color: var(--accent); text-transform: uppercase; font-size: .85rem; }
+  .badge {
+    background: var(--accent);
+    color: #000;
+    border-radius: 6px;
+    padding: .2rem .5rem;
+    font-size: .8rem;
+  }
+  .btn-sm {
+    background: var(--accent);
+    color: #000;
+    border-radius: 6px;
+    padding: .3rem .7rem;
+    text-decoration: none;
+    font-weight: 600;
+    transition: .2s;
+  }
+  .btn-sm:hover { box-shadow: var(--glow); }
+</style>
+{% endblock %}

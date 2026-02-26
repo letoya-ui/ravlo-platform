@@ -1,0 +1,82 @@
+{% extends "layouts/base.html" %}
+{% block title %}AI Risk Map{% endblock %}
+{% block content %}
+
+
+<main style="margin-left:260px; padding:2rem; background:#0f0f11; color:#e6e6e6; min-height:100vh;">
+  <link rel="stylesheet" href="https://unpkg.com/lucide-static@latest/font/lucide.css">
+  <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+
+  <style>
+    .grid{display:grid;gap:1.25rem;}
+    .g-2{grid-template-columns:repeat(2,minmax(0,1fr));}
+    .card{background:#15161a;border:1px solid #282b31;border-radius:14px;padding:1.4rem;box-shadow:0 0 18px rgba(122,184,255,0.25);}
+    .card h3{margin:0 0 .6rem;color:#7ab8ff;display:flex;align-items:center;gap:.5rem;}
+    .muted{color:#a5a7ad;font-size:.9rem;}
+    .map-container{background:#0f0f11;border:1px solid #2b2f36;border-radius:14px;box-shadow:inset 0 0 18px rgba(122,184,255,0.15);height:420px;position:relative;overflow:hidden;}
+    .map-overlay{position:absolute;top:0;left:0;width:100%;height:100%;background:radial-gradient(circle at center,rgba(122,184,255,0.15),transparent 80%);}
+    .legend{position:absolute;bottom:10px;left:10px;background:rgba(21,22,26,0.9);padding:.5rem 1rem;border-radius:8px;font-size:.8rem;border:1px solid #2b2f36;}
+    .legend span{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:5px;}
+    .risk-high{background:#e64c4c;}
+    .risk-med{background:#e6b84c;}
+    .risk-low{background:#43d19e;}
+    .ai-summary{background:#18222b;border:1px solid #2b2f36;border-radius:14px;padding:1.2rem;margin-top:1.5rem;box-shadow:0 0 12px rgba(122,184,255,0.2);}
+    .btn{display:inline-flex;align-items:center;gap:.4rem;margin-top:1rem;background:linear-gradient(180deg,#2a4a62,#1b2a38);border:1px solid #2a4a62;color:#cfe8ff;border-radius:10px;padding:.7rem 1.2rem;text-decoration:none;cursor:pointer;}
+    .btn:hover{box-shadow:0 0 10px rgba(122,184,255,0.3);}
+  </style>
+
+  <h1 style="margin-bottom:1rem;">🌍 Property Risk Map</h1>
+  <p class="muted">Visualize and assess risk exposure across your active properties — including environmental, market, and financial volatility metrics.</p>
+
+  <div class="grid g-2">
+    <!-- MAP -->
+    <div class="card">
+      <h3><i class="lucide lucide-map"></i> Risk Zone Map</h3>
+      <div class="map-container" id="riskMap">
+        <div class="map-overlay"></div>
+        <div class="legend">
+          <div><span class="risk-high"></span> High Risk</div>
+          <div><span class="risk-med"></span> Moderate Risk</div>
+          <div><span class="risk-low"></span> Low Risk</div>
+        </div>
+      </div>
+      <button class="btn" onclick="simulateHeatmap()"><i class="lucide lucide-radar"></i> Refresh AI Heatmap</button>
+      <div id="statusMsg" class="muted" style="margin-top:.7rem;">AI heatmap last updated 2 hrs ago.</div>
+    </div>
+
+    <!-- CHARTS -->
+    <div class="card">
+      <h3><i class="lucide lucide-bar-chart-3"></i> Risk Distribution</h3>
+      <div id="chart_risk" style="height:280px;"></div>
+    </div>
+  </div>
+
+  <!-- AI SUMMARY -->
+  <div class="ai-summary">
+    <h3><i class="lucide lucide-brain-circuit"></i> AI Insight</h3>
+    <p id="aiSummary">AI indicates moderate exposure in western Orange County due to market saturation and pending foreclosures. Recommended focus: refinancing or asset diversification within the next 90 days.</p>
+  </div>
+
+  <script>
+    // Risk chart
+    const baseOpt={chart:{toolbar:{show:false},foreColor:'#c9d3df'},grid:{borderColor:'#2a2e36'},dataLabels:{enabled:false},theme:{mode:'dark'}};
+    new ApexCharts(document.querySelector("#chart_risk"),{
+      ...baseOpt,chart:{type:'donut',height:280},
+      series:[45,30,25],
+      labels:['High Risk','Moderate','Low'],
+      colors:['#e64c4c','#e6b84c','#43d19e'],
+      legend:{position:'bottom'}
+    }).render();
+
+    // Simulated heatmap refresh
+    function simulateHeatmap(){
+      const msg=document.getElementById('statusMsg');
+      msg.textContent='🧠 Recomputing AI heatmap...';
+      setTimeout(()=>{
+        msg.textContent='✅ AI risk heatmap refreshed. Data synced successfully.';
+        document.getElementById('aiSummary').textContent='AI detects improved market stability in northern zones following rate adjustments and Q4 buyer influx.';
+      },2500);
+    }
+  </script>
+</main>
+{% endblock %}

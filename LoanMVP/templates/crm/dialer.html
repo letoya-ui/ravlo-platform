@@ -1,0 +1,87 @@
+{% extends "layouts/base.html" %}
+{% block title %}CRM • Smart Dialer{% endblock %}
+{% block content %}
+<main class="dashboard-main">
+<link rel="stylesheet" href="https://unpkg.com/lucide-static@latest/font/lucide.css">
+
+<style>
+  :root {
+    --bg:#0f0f11;--panel:#15161a;--line:#2a2e36;
+    --text:#e6e6e6;--muted:#a5a7ad;--accent:#7ab8ff;
+    --glow:0 0 18px rgba(122,184,255,.35);
+  }
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:1.2rem;box-shadow:var(--glow);}
+  label{display:block;margin-top:.6rem;color:var(--accent);}
+  input,textarea,select{
+    width:100%;background:#0f0f11;color:var(--text);
+    border:1px solid var(--line);border-radius:10px;
+    padding:.6rem;margin-top:.3rem;
+  }
+  textarea{min-height:90px;}
+  .btn{background:linear-gradient(180deg,#2a4a62,#1b2a38);border:1px solid #2a4a62;color:#cfe8ff;
+       border-radius:10px;padding:.6rem 1.2rem;margin-top:1rem;cursor:pointer;}
+  .ai-box{background:#18222b;border:1px solid #2b2f36;border-radius:12px;padding:1rem;margin-top:1rem;}
+  .muted{color:var(--muted);}
+  table{width:100%;border-collapse:collapse;margin-top:1rem;}
+  th,td{padding:.65rem;border-top:1px solid var(--line);}
+  th{color:var(--accent);text-align:left;}
+  tr:hover{background:#1a1c20;}
+</style>
+
+<h1>📞 Smart Dialer</h1>
+<p class="muted">Log calls, capture notes, and get instant AI feedback on performance.</p>
+
+<div class="card">
+  <form method="POST">
+    <label>Contact Number</label>
+    <input name="phone" placeholder="(845) 555-1234" required>
+
+    <label>Call Outcome</label>
+    <select name="status" required>
+      <option>Success</option>
+      <option>Voicemail</option>
+      <option>No Answer</option>
+      <option>Follow-up Needed</option>
+    </select>
+
+    <label>Call Notes</label>
+    <textarea name="note" placeholder="Example: Spoke with borrower about loan prequalification..."></textarea>
+
+    <button type="submit" class="btn"><i class="lucide lucide-phone-call"></i> Log Call</button>
+  </form>
+</div>
+
+{% if ai_feedback %}
+<div class="ai-box">
+  <h3><i class="lucide lucide-brain-circuit"></i> AI Call Feedback</h3>
+  <p>{{ ai_feedback }}</p>
+</div>
+{% endif %}
+
+<div class="card">
+  <h3>📜 Recent Calls</h3>
+  {% if calls %}
+  <table>
+    <thead><tr><th>Name</th><th>Number</th><th>Status</th><th>Logged</th></tr></thead>
+    <tbody>
+      {% for c in calls %}
+      <tr>
+        <td>{{ c.name or 'Unknown' }}</td>
+        <td>{{ c.number }}</td>
+        <td>{{ c.status }}</td>
+        <td>{{ c.timestamp.strftime('%b %d, %Y %I:%M %p') }}</td>
+        <td>
+          <a href="{{ url_for('crm.view_call', call_id=c.id) }}" style="color:#7ab8ff;text-decoration:none;">
+            {{ c.contact_name or c.contact_phone }}
+          </a>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div class="muted">No calls logged yet.</div>
+  {% endif %}
+</div>
+</main>
+{% endblock %}

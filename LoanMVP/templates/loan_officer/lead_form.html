@@ -1,0 +1,21 @@
+{% extends "layouts/base.html" %}
+{% block content %}
+<style>
+  :root{--line:#2a2e36; --panel:#15161a; --text:#e6e6e6; --muted:#a5a7ad}
+  .card{background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:1rem}
+  table{width:100%; border-collapse:collapse}
+  th,td{padding:.6rem; border-top:1px solid var(--line); color:var(--text)}
+  input{background:#0f0f11; border:1px solid var(--line); color:var(--text); border-radius:10px; padding:.45rem .6rem; width:100%}
+  .btn{display:inline-flex; align-items:center; gap:.5rem; padding:.6rem .9rem; border-radius:10px; border:1px solid var(--line); color:var(--text); text-decoration:none; background:#1a1d23}
+</style>
+<div class="container py-4 text-light">
+  <h2 class="fw-bold mb-4">Add New Lead</h2>
+  <form method="POST">
+    <div class="mb-3"><label>Name</label><input name="name" class="form-control bg-dark text-light"></div>
+    <div class="mb-3"><label>Email</label><input name="email" class="form-control bg-dark text-light"></div>
+    <div class="mb-3"><label>Phone</label><input name="phone" class="form-control bg-dark text-light"></div>
+    <div class="mb-3"><label>Source</label><input name="source" class="form-control bg-dark text-light"></div>
+    <button class="btn btn-warning w-100">Save Lead</button>
+  </form>
+</div>
+{% endblock %}

@@ -1,0 +1,44 @@
+{% extends "layouts/base.html" %}
+{% block content %}
+<style>
+  :root{--line:#2a2e36; --panel:#15161a; --text:#e6e6e6; --muted:#a5a7ad}
+  .card{background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:1rem}
+  table{width:100%; border-collapse:collapse}
+  th,td{padding:.6rem; border-top:1px solid var(--line); color:var(--text)}
+  input{background:#0f0f11; border:1px solid var(--line); color:var(--text); border-radius:10px; padding:.45rem .6rem; width:100%}
+  .btn{display:inline-flex; align-items:center; gap:.5rem; padding:.6rem .9rem; border-radius:10px; border:1px solid var(--line); color:var(--text); text-decoration:none; background:#1a1d23}
+</style>
+
+<div class="layout-container" style="display:flex; min-height:100vh;">
+
+  
+  <main class="dashboard-content fade-in" style="flex-grow:1;">
+    <h1 style="color:var(--highlight); margin-bottom:1rem;">👤 My Profile</h1>
+
+    <div class="card fade-in">
+      <h3>Account Details</h3>
+      <p><strong>Name:</strong> {{ user.username or "N/A" }}</p>
+      <p><strong>Email:</strong> {{ user.email }}</p>
+      <p><strong>Role:</strong> {{ user.role|replace('_',' ')|title }}</p>
+      <p><strong>Last Login:</strong> {{ user.last_login.strftime("%b %d, %Y %I:%M %p") if user.last_login else "Never" }}</p>
+    </div>
+
+    <div class="card fade-in">
+      <h3>Settings</h3>
+      <form method="POST" action="#">
+        <div style="margin-bottom:1rem;">
+          <label for="username" style="display:block; margin-bottom:0.3rem;">Display Name</label>
+          <input type="text" id="username" name="username" placeholder="{{ user.username }}" />
+        </div>
+
+        <div style="margin-bottom:1rem;">
+          <label for="password" style="display:block; margin-bottom:0.3rem;">New Password</label>
+          <input type="password" id="password" name="password" placeholder="********" />
+        </div>
+
+        <button type="submit" class="btn btn-primary">💾 Save Changes</button>
+      </form>
+    </div>
+  </main>
+</div>
+{% endblock %}

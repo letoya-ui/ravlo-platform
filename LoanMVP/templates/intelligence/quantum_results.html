@@ -1,0 +1,21 @@
+{% extends "layouts/base.html" %}
+{% block title %}Intelligence • Memory Results{% endblock %}
+{% block content %}
+<style>
+  :root{--panel:#15161a;--line:#2a2e36;--text:#e6e6e6;--accent:#7ab8ff;--glow:0 0 18px rgba(122,184,255,.35);}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:1.2rem;box-shadow:var(--glow);}
+</style>
+
+<h1>🧩 Quantum Recall Results</h1>
+<div class="card">
+  <h3>Query:</h3>
+  <div style="margin-bottom:.5rem;">{{ query }}</div>
+  <h3>Memory Output:</h3>
+  <div style="background:#1b1d22;border:1px solid var(--line);border-radius:10px;padding:1rem;margin-top:.5rem;">
+    {{ result or "AI Memory retrieved relevant patterns with high accuracy." }}
+  </div>
+  <div style="margin-top:1rem;">
+    <a class="btn" href="{{ url_for('intelligence.quantum_memory') }}">← New Query</a>
+  </div>
+</div>
+{% endblock %}

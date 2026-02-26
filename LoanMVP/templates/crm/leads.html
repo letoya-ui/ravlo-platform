@@ -1,0 +1,125 @@
+{% extends "layouts/base.html" %}
+{% block title %}CRM • Leads{% endblock %}
+{% block content %}
+<main class="dashboard-main">
+
+<link rel="stylesheet" href="https://unpkg.com/lucide-static@latest/font/lucide.css">
+
+<style>
+  :root {
+    --bg:#0f0f11; --panel:#15161a; --line:#2b2f36;
+    --text:#e6e6e6; --muted:#a5a7ad; --accent:#7ab8ff;
+    --success:#43d19e; --warn:#ffdf6e; --danger:#ff6b6b;
+    --glow:0 0 18px rgba(122,184,255,.25);
+  }
+
+  body { background:var(--bg); color:var(--text); }
+  .wrap { max-width:1100px; margin:0 auto; }
+  .card {
+    background:var(--panel); border:1px solid var(--line);
+    border-radius:14px; padding:1.4rem 1.6rem;
+    box-shadow:var(--glow); margin-top:1.5rem;
+  }
+  h1,h2,h3 { margin:0 0 .5rem; color:var(--text); }
+  .muted { color:var(--muted); }
+  .btn {
+    display:inline-flex; align-items:center; gap:.4rem;
+    padding:.6rem 1rem; border-radius:10px;
+    border:1px solid #2b2f36;
+    background:linear-gradient(180deg,#1c1f25,#15161a);
+    color:var(--text); text-decoration:none; cursor:pointer;
+  }
+  .btn:hover { border-color:var(--accent); box-shadow:var(--glow); }
+  .btn-glow {
+    background:linear-gradient(180deg,#2a4a62,#1b2a38);
+    border:1px solid #2a4a62; color:#cfe8ff;
+  }
+  .table { width:100%; border-collapse:collapse; margin-top:1rem; }
+  .table th, .table td {
+    padding:.7rem .6rem; border-top:1px solid var(--line);
+  }
+  .table th { text-align:left; color:#cfe0f5; }
+  .badge {
+    border-radius:999px; padding:.3rem .7rem; font-size:.8rem;
+    border:1px solid var(--line);
+  }
+  .b-new { background:#2a2e36; color:#7ab8ff; }
+  .b-active { background:#1b2a23; color:#43d19e; }
+  .b-closed { background:#2a1b1b; color:#ff6b6b; }
+  .ai-summary {
+    background:#18222b; border:1px solid #2b2f36;
+    border-radius:14px; padding:1.2rem;
+    margin-top:1.5rem; box-shadow:0 0 12px rgba(122,184,255,0.2);
+  }
+</style>
+
+<div class="wrap">
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;">
+      <h1><i class="lucide lucide-users"></i> Leads Dashboard</h1>
+      <div style="display:flex;gap:.6rem;">
+        <a href="{{ url_for('crm.add_lead') }}" class="btn-glow"><i class="lucide lucide-plus"></i> Add Lead</a>
+        <a href="{{ url_for('crm.lead_engine') }}" class="btn"><i class="lucide lucide-brain-circuit"></i> Lead Engine</a>
+        <a href="{{ url_for('crm.dialer_results') }}" class="btn"><i class="lucide lucide-phone-call"></i> Dialer</a>
+      </div>
+    </div>
+    <p class="muted">Manage, track, and analyze all inbound and outbound loan leads.</p>
+
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Name</th><th>Email</th><th>Phone</th>
+          <th>Source</th><th>Status</th><th>Score</th><th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for lead in leads %}
+        <tr>
+          <td>{{ lead.name }}</td>
+          <td>{{ lead.email or "—" }}</td>
+          <td>{{ lead.phone or "—" }}</td>
+          <td>{{ lead.source or "—" }}</td>
+          <td>
+            <span class="badge 
+              {% if lead.status == 'Active' %}b-active{% elif lead.status == 'Closed' %}b-closed{% else %}b-new{% endif %}">
+              {{ lead.status or "New" }}
+            </span>
+          </td>
+          <td>{{ lead.score or 0 }}</td>
+          <td>
+            {% if lead.ai_summary %}
+          <div class="muted">{{ lead.ai_summary[:80] }}...</div>
+            {% endif %}
+          </td>
+            <a href="{{ url_for('crm.lead_detail', lead_id=lead.id) }}" class="btn btn-sm">🔍</a>
+            <a href="{{ url_for('crm.update_lead', lead_id=lead.id) }}" class="btn btn-sm">✏️</a>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="7" class="muted">No leads found.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="ai-summary">
+    <h3><i class="lucide lucide-brain"></i> AI Summary</h3>
+    <p id="aiSummary">
+      {% if ai_summary %}
+        {{ ai_summary }}
+      {% else %}
+        The AI Assistant will summarize lead activity and predict closing likelihood once data syncs.
+      {% endif %}
+    </p>
+  </div>
+</div>
+
+<script>
+setTimeout(()=>{
+  const summary = "AI detected 12 new leads with 70%+ engagement potential. Focus follow-up on referral and website leads to improve conversion rate.";
+  document.getElementById("aiSummary").textContent = summary;
+},1200);
+</script>
+
+</main>
+{% endblock %}

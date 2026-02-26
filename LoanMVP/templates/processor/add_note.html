@@ -1,0 +1,12 @@
+{% extends "layouts/base.html" %}
+{% block content %}
+<div class="section">
+    <h2>Add Note</h2>
+    <form method="POST">
+        <label>Note</label>
+        <textarea name="note" required></textarea>
+
+        <button class="btn-outline">Save Note</button>
+    </form>
+</div>
+{% endblock %}

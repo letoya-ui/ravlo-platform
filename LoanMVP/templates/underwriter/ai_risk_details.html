@@ -1,0 +1,66 @@
+{% extends "layouts/base.html" %}
+{% block title %}Underwriter • AI Risk Details{% endblock %}
+{% block content %}
+<main class="dashboard-main">
+
+<style>
+  :root{--bg:#0f0f11;--panel:#15161a;--line:#282b31;--text:#e6e6e6;
+        --muted:#a5a7ad;--accent:#7ab8ff;--glow:0 0 18px rgba(122,184,255,.35);}
+  body{background:var(--bg);color:var(--text);}
+  .card{background:var(--panel);border:1px solid var(--line);
+        border-radius:14px;padding:1rem;box-shadow:var(--glow);margin-bottom:1rem;}
+  h2,h3{color:var(--text);}
+  .muted{color:var(--muted);}
+  .btn{display:inline-flex;align-items:center;gap:.5rem;
+       padding:.5rem .9rem;border-radius:10px;border:1px solid var(--line);
+       color:var(--text);text-decoration:none;background:#1b1c20;}
+  .btn:hover{border-color:var(--accent);box-shadow:var(--glow);}
+  pre{background:#1a1a1a;border:1px solid var(--line);padding:1rem;border-radius:10px;white-space:pre-wrap;color:#d8e2f0;}
+</style>
+
+<div class="container py-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h2>🧠 AI Risk Report — Loan #{{ loan.id }}</h2>
+    <a href="{{ url_for('underwriter.ai_risk_queue') }}" class="btn">← Back to Risk Queue</a>
+  </div>
+
+  <div class="card">
+    <h4>Loan Overview</h4>
+    <p><strong>Borrower:</strong> {{ borrower.full_name if borrower else '—' }}</p>
+    <p><strong>Status:</strong> {{ loan.status }}</p>
+    <p><strong>Loan Amount:</strong> ${{ "{:,.2f}".format(loan.amount or 0) }}</p>
+  </div>
+
+  <div class="card">
+    <h4>AI Risk Summary</h4>
+    <pre>{{ ai_report or "AI summary not available at this time." }}</pre>
+  </div>
+
+  <div class="card">
+    <h4>Documents</h4>
+    {% if docs %}
+    <ul>
+      {% for d in docs %}
+      <li>{{ d.filename }} — <span class="muted">{{ d.status }}</span></li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="muted">No documents uploaded yet.</p>
+    {% endif %}
+  </div>
+
+  <div class="card">
+    <h4>Underwriting Conditions</h4>
+    {% if conditions %}
+    <ul>
+      {% for c in conditions %}
+      <li>{{ c.description }} — <span class="muted">{{ c.status }}</span></li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="muted">No conditions found for this loan.</p>
+    {% endif %}
+  </div>
+</div>
+
+{% endblock %}

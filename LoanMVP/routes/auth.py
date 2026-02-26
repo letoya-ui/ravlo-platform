@@ -1,0 +1,252 @@
+from flask import Blueprint, render_template, redirect, url_for, flash, request, current_app
+from flask_login import login_user, logout_user, login_required, current_user
+from LoanMVP.models.user_model import User
+from LoanMVP.extensions import db
+from LoanMVP.forms import LoginForm, ResetPasswordRequestForm, ResetPasswordForm, RegisterForm
+from itsdangerous import URLSafeTimedSerializer, SignatureExpired, BadSignature
+from flask_mail import Message
+from LoanMVP.app import mail, login_manager
+from datetime import datetime
+from LoanMVP.utils.decorators import role_required   # ✅ import custom decorator
+
+auth_bp = Blueprint("auth", __name__, url_prefix="/auth")
+
+serializer = URLSafeTimedSerializer("super-secret-key")
+
+# ------------------------------------------------
+# 🔐 Token Helpers
+# ------------------------------------------------
+def generate_reset_token(email):
+    s = URLSafeTimedSerializer(current_app.config["SECRET_KEY"])
+    return s.dumps(email, salt=current_app.config["SECURITY_PASSWORD_SALT"])
+
+def verify_reset_token(token, expiration=3600):
+    s = URLSafeTimedSerializer(current_app.config["SECRET_KEY"])
+    try:
+        email = s.loads(token, salt=current_app.config["SECURITY_PASSWORD_SALT"], max_age=expiration)
+    except (SignatureExpired, BadSignature):
+        return None
+    return email
+
+# ------------------------------------------------
+# 🟩 Login
+# ------------------------------------------------
+@auth_bp.route("/login", methods=["GET", "POST"])
+def login():
+    if request.method == "POST":
+        email = request.form.get("email", "").strip().lower()
+        password = request.form.get("password", "").strip()
+
+        if not email or not password:
+            flash("⚠️ Please enter both email and password.", "warning")
+            return redirect(url_for("auth.login"))
+
+        user = User.query.filter_by(email=email).first()
+
+        if user and user.check_password(password):
+            if not user.is_active:
+                flash("🚫 Your account is deactivated. Contact admin for access.", "danger")
+                return redirect(url_for("auth.login"))
+
+            # ✅ Log in user and update timestamp
+            login_user(user)
+            user.last_login = datetime.utcnow()
+            db.session.commit()
+
+            display_name = user.full_name or user.email
+            flash(f"👋 Welcome back, {display_name}!", "success")
+
+            # ✅ 1. Check if user tried to access a protected page before login
+            next_page = request.args.get("next")
+            if next_page:
+                return redirect(next_page)
+
+            # ✅ 2. Role-based redirect (explicit control)
+            if user.role.lower() == "admin":
+                return redirect(url_for("admin.dashboard"))
+            elif user.role.lower() == "loan_officer":
+                return redirect(url_for("loan_officer.dashboard"))
+            elif user.role.lower() == "processor":
+                return redirect(url_for("processor.dashboard"))
+            elif user.role.lower() == "underwriter":
+                return redirect(url_for("underwriter.dashboard"))
+            elif user.role.lower() == "borrower":
+                return redirect(url_for("borrower.dashboard"))
+            elif user.role.lower() == "executive":
+                return redirect(url_for("executive.dashboard"))
+            elif user.role.lower() == "compliance":
+                return redirect(url_for("compliance.dashboard"))
+            elif user.role.lower() == "property":
+                return redirect(url_for("property.dashboard"))
+            elif user.role.lower() == "system":
+                return redirect(url_for("system.dashboard"))
+            elif user.role.lower() == "crm":
+                return redirect(url_for("crm.dashboard"))
+            elif user.role.lower() == "ai":
+                return redirect(url_for("ai.dashboard"))
+            elif user.role.lower() == "intelligence":
+                return redirect(url_for("intelligence.dashboard"))
+            else:
+                # fallback if role doesn't have a dashboard
+                flash("✅ Logged in successfully — redirected to home.", "info")
+                return redirect(url_for("index"))
+
+        # ❌ Wrong credentials
+        flash("❌ Invalid email or password.", "danger")
+        return redirect(url_for("auth.login"))
+
+    return render_template("auth/login.html", title="Login | LoanMVP")
+
+# ------------------------------------------------
+# 🟥 Logout
+# ------------------------------------------------
+@auth_bp.route("/logout")
+@login_required
+def logout():
+    logout_user()
+    flash("You have been logged out successfully.", "info")
+    return redirect(url_for("auth.login"))
+
+# ------------------------------------------------
+# 🔁 Password Reset Request
+# ------------------------------------------------
+@auth_bp.route("/reset_password_request", methods=["GET", "POST"])
+def reset_password_request():
+    form = ResetPasswordRequestForm()
+    if form.validate_on_submit():
+        user = User.query.filter_by(email=form.email.data).first()
+        if user:
+            token = generate_reset_token(user.email)
+            reset_link = url_for("auth.reset_password", token=token, _external=True)
+            print(f" Password reset link: {reset_link}")
+            flash("Password reset instructions have been sent to your email.", "info")
+            return redirect(url_for("auth.login"))
+        flash("No account found with that email.", "warning")
+
+    return render_template("auth/reset_password_request.html", form=form)
+
+# ------------------------------------------------
+# 🔑 Reset Password
+# ------------------------------------------------
+@auth_bp.route("/reset_password/<token>", methods=["GET", "POST"])
+def reset_password(token):
+    email = verify_reset_token(token)
+    if not email:
+        flash("Invalid or expired reset link.", "danger")
+        return redirect(url_for("auth.reset_password_request"))
+
+    form = ResetPasswordForm()
+    if form.validate_on_submit():
+        user = User.query.filter_by(email=email).first()
+        if user:
+            user.set_password(form.password.data)   # ✅ use helper
+            db.session.commit()
+            flash("✅ Your password has been updated.", "success")
+            return redirect(url_for("auth.login"))
+
+    return render_template("auth/reset_password.html", form=form, token=token)
+
+# ------------------------------------------------
+# 🆕 Register
+# ------------------------------------------------
+@auth_bp.route("/register", methods=["GET", "POST"])
+def register():
+    form = RegisterForm()
+    if form.validate_on_submit():
+        existing_user = User.query.filter_by(email=form.email.data).first()
+        if existing_user:
+            flash("An account with that email already exists.", "warning")
+            return redirect(url_for("auth.register"))
+
+        user = User(
+            username=form.username.data,
+            email=form.email.data.lower(),
+            role=form.role.data,
+        )
+        user.set_password(form.password.data)
+        db.session.add(user)
+        db.session.commit()
+
+        # Auto-login
+        login_user(user)
+
+        # ⭐ Borrowers go to onboarding
+        if user.role.lower() == "borrower":
+            return redirect(url_for("borrower.create_profile"))
+
+        # ⭐ Everyone else goes to login (then dashboard)
+        flash("🎉 Registration successful! Please log in.", "success")
+        return redirect(url_for("auth.login"))
+
+    return render_template("auth/register.html", form=form)
+
+@auth_bp.route("/register_borrower", methods=["GET", "POST"])
+def register_borrower():
+    if request.method == "POST":
+        full_name = request.form.get("full_name")
+        email = request.form.get("email", "").strip().lower()
+        password = request.form.get("password")
+
+        if not full_name or not email or not password:
+            flash("Please complete all fields.", "warning")
+            return redirect(url_for("auth.register_borrower"))
+
+        existing = User.query.filter_by(email=email).first()
+        if existing:
+            flash("An account with that email already exists.", "warning")
+            return redirect(url_for("auth.register_borrower"))
+
+        user = User(
+            username=email,
+            email=email,
+            full_name=full_name,
+            role="borrower",
+        )
+        user.set_password(password)
+        db.session.add(user)
+        db.session.commit()
+
+        login_user(user)
+        return redirect(url_for("borrower.create_profile"))
+
+    return render_template("auth/register_borrower.html")
+
+
+# ----------------------------
+# ⚙️ LOGIN MANAGER LOADER
+# ----------------------------
+@login_manager.user_loader
+def load_user(user_id):
+    return User.query.get(int(user_id))
+
+# ----------------------------
+# 🔑 Forgot Password
+# ----------------------------
+@auth_bp.route("/forgot", methods=["GET", "POST"])
+def forgot_password():
+    if request.method == "POST":
+        email = request.form.get("email")
+        user = User.query.filter_by(email=email).first()
+
+        if not user:
+            flash("⚠️ No account found with that email.", "danger")
+            return render_template("auth/forgot_password.html")
+
+        token = serializer.dumps(email, salt="password-reset")
+        reset_link = url_for("auth.reset_password", token=token, _external=True)
+
+        msg = Message(
+            "Password Reset Request - LoanMVP",
+            recipients=[email],
+            body=f"Hi {user.full_name or 'there'},\n\n"
+                 f"Click the link below to reset your password:\n{reset_link}\n\n"
+                 f"If you didn’t request this, ignore this email."
+        )
+        try:
+            mail.send(msg)
+            flash("📧 A password reset link has been sent to your email.", "info")
+        except Exception as e:
+            flash("⚠️ Could not send email. Please contact support.", "danger")
+            print("Mail error:", e)
+
+    return render_template("auth/forgot_password.html")

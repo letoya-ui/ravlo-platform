@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>LoanMVP Borrower Beta</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: Inter, sans-serif;
+      background: #0d0d0d;
+      color: #f5f5f5;
+      line-height: 1.6;
+    }
+
+    .hero {
+      padding: 6rem 2rem;
+      text-align: center;
+      background: linear-gradient(135deg, #111, #1a1a1a);
+      border-bottom: 1px solid #222;
+    }
+
+    .hero h1 {
+      font-size: 3rem;
+      font-weight: 700;
+      margin-bottom: 1rem;
+      color: #fff;
+    }
+
+    .hero p {
+      font-size: 1.25rem;
+      max-width: 720px;
+      margin: 0 auto 2rem;
+      color: #cfcfcf;
+    }
+
+    .cta-button {
+      background: #4f46e5;
+      color: white;
+      padding: 1rem 2rem;
+      border-radius: 8px;
+      font-size: 1.1rem;
+      text-decoration: none;
+      display: inline-block;
+      transition: 0.2s ease;
+    }
+
+    .cta-button:hover {
+      background: #6d63ff;
+    }
+
+    .section {
+      padding: 4rem 2rem;
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
+    .section h2 {
+      font-size: 2rem;
+      margin-bottom: 1rem;
+      color: #fff;
+    }
+
+    .feature-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 2rem;
+      margin-top: 2rem;
+    }
+
+    .feature-card {
+      background: #141414;
+      padding: 1.5rem;
+      border-radius: 12px;
+      border: 1px solid #222;
+    }
+
+    .feature-card h3 {
+      margin-top: 0;
+      color: #fff;
+    }
+
+    .footer {
+      padding: 2rem;
+      text-align: center;
+      color: #777;
+      font-size: 0.9rem;
+      border-top: 1px solid #222;
+      margin-top: 4rem;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="hero">
+    <h1>Welcome to the LoanMVP Borrower Beta</h1>
+    <p>
+      A smarter, guided way to analyze deals, understand your numbers, and prepare for funding.
+      You’re getting early access to the Borrower Deal Workspace — the tool designed to help you
+      move from property search to loan‑ready with confidence.
+    </p>
+    <a href="{{ url_for('auth.register_borrower') }}" class="cta-button">Join the Beta</a>
+  </div>
+
+  <div class="section">
+    <h2>What You Get in the Beta</h2>
+
+    <div class="feature-grid">
+
+      <div class="feature-card">
+        <h3>🏠 Property Search</h3>
+        <p>
+          Search any address and instantly pull valuation, rent estimates, comps, and market data —
+          all in one clean, unified view.
+        </p>
+      </div>
+
+      <div class="feature-card">
+        <h3>📊 Deal Workspace</h3>
+        <p>
+          Analyze flip, rental, and Airbnb strategies side‑by‑side with automated calculations and
+          AI‑powered insights.
+        </p>
+      </div>
+
+      <div class="feature-card">
+        <h3>✨ AI Renovation Visualizer</h3>
+        <p>
+          Upload or select property photos and let AI reimagine the space in different styles —
+          modern, luxury, Airbnb‑ready, and more.
+        </p>
+      </div>
+
+      <div class="feature-card">
+        <h3>🤖 AI Deal Insights</h3>
+        <p>
+          Get instant summaries, strategy recommendations, and market context tailored to each
+          property you analyze.
+        </p>
+      </div>
+
+      <div class="feature-card">
+        <h3>📁 Save & Track Deals</h3>
+        <p>
+          Save properties to your dashboard, revisit your analysis, and prepare your loan package
+          with clean, organized data.
+        </p>
+      </div>
+
+      <div class="feature-card">
+        <h3>📨 Direct Feedback Loop</h3>
+        <p>
+          Help shape the future of LoanMVP. Your feedback directly influences what we build next.
+        </p>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>Who This Beta Is For</h2>
+    <p>
+      New and experienced investors who want a guided, intelligent, and stress‑free way to evaluate
+      deals and prepare for funding. Whether you're analyzing your first property or your fiftieth,
+      LoanMVP helps you move faster and with more clarity.
+    </p>
+  </div>
+
+  <div class="section">
+    <h2>How to Join</h2>
+    <p>
+      Click the button below to create your borrower profile. Once you're in, you’ll get full access
+      to the Borrower Deal Workspace and all beta features.
+    </p>
+   <a href="{{ url_for('auth.register_borrower') }}" class="cta-button">Create Your Account</a>
+  </div>
+
+  <div class="footer">
+    LoanMVP Borrower Beta • 2026
+  </div>
+
+</body>
+</html>

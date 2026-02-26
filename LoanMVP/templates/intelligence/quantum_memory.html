@@ -1,0 +1,22 @@
+{% extends "layouts/base.html" %}
+{% block title %}Intelligence • Quantum Memory{% endblock %}
+{% block content %}
+<style>
+  :root{--panel:#15161a;--line:#2a2e36;--text:#e6e6e6;--accent:#7ab8ff;--glow:0 0 18px rgba(122,184,255,.35);}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:1.2rem;box-shadow:var(--glow);}
+  textarea,input{background:#0f0f11;border:1px solid var(--line);color:var(--text);border-radius:10px;padding:.6rem .7rem;width:100%}
+  .btn{display:inline-flex;align-items:center;gap:.5rem;padding:.6rem .9rem;border-radius:10px;border:1px solid var(--line);
+    color:var(--text);background:#1a1d23;text-decoration:none;}
+</style>
+
+<h1>🔮 Quantum Memory Access</h1>
+<div class="card">
+  <form method="POST">
+    <label>Query AI Memory</label>
+    <textarea name="query" rows="3" placeholder="e.g. recall borrower behavioral trends over Q2 2025"></textarea>
+    <div style="margin-top:.8rem;">
+      <button class="btn">🧠 Run Query</button>
+    </div>
+  </form>
+</div>
+{% endblock %}

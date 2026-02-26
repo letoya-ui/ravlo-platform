@@ -1,0 +1,103 @@
+{% extends "layouts/borrower_base.html" %}
+{% block title %}Document Requests{% endblock %}
+
+{% block content %}
+
+<div class="b-header">
+  <div>
+    <h1>🧾 Document Requests</h1>
+    <p class="muted">These are the documents and conditions your processor or underwriter needs from you.</p>
+  </div>
+</div>
+
+<!-- AI SUMMARY -->
+{% if ai_summary %}
+<div class="b-card" style="margin-bottom:1.4rem;">
+  <h3>AI Summary</h3>
+  <p class="muted" style="margin-top:.4rem;">{{ ai_summary }}</p>
+</div>
+{% endif %}
+
+<!-- REQUEST TABLE -->
+<div class="b-card">
+  <h3>Requested Items</h3>
+
+  {% if requests %}
+    <table class="table-dark" style="margin-top:.8rem;">
+      <thead>
+        <tr>
+          <th>Item</th>
+          <th>Type</th>
+          <th>Requested By</th>
+          <th>Notes</th>
+          <th>Status</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+
+      <tbody>
+        {% for req in requests %}
+        <tr>
+          <!-- Item Name -->
+          <td>{{ req.document_name }}</td>
+
+          <!-- Type -->
+          <td>
+            {% if req.type == "document" %}
+              <span class="badge bg-info">Document</span>
+            {% else %}
+              <span class="badge bg-primary">Condition</span>
+            {% endif %}
+          </td>
+
+          <!-- Requested By -->
+          <td>{{ req.requested_by or "Processor" }}</td>
+
+          <!-- Notes -->
+          <td>{{ req.notes or "—" }}</td>
+
+          <!-- Status -->
+          <td>
+            {% set s = req.status|lower %}
+            {% if s in ["completed", "cleared"] %}
+              <span class="badge bg-success">Completed</span>
+            {% elif s == "flagged" %}
+              <span class="badge bg-danger">Flagged</span>
+            {% elif s == "submitted" %}
+              <span class="badge bg-info">Submitted</span>
+            {% else %}
+              <span class="badge bg-warning">Pending</span>
+            {% endif %}
+          </td>
+
+          <!-- Action -->
+          <td>
+            {% if req.status|lower in ["pending", "requested"] %}
+              <a href="/borrower/upload_request?item_id={{ req.id }}&type={{ req.type }}" class="action-btn">
+                <i class="lucide lucide-file-up"></i> Upload
+              </a>
+            {% else %}
+              <span class="muted">✔ Submitted</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+  {% else %}
+    <p class="muted" style="margin-top:1rem;text-align:center;">
+      No document requests or conditions at this time.
+    </p>
+  {% endif %}
+</div>
+
+<!-- AI ASSISTANT INFO -->
+<div class="b-card" style="margin-top:1.4rem;">
+  <h3>🤖 AI Assistant Insight</h3>
+  <p class="muted" style="margin-top:.4rem;">
+    The AI will monitor your pending requests and notify you if you’ve already uploaded a matching document under a different name or folder.
+  </p>
+</div>
+
+{% endblock %}

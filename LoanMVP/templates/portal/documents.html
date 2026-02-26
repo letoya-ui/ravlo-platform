@@ -1,0 +1,156 @@
+{% extends "layouts/base.html" %}
+{% block title %}Documents • Borrower Portal{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="https://unpkg.com/lucide-static@latest/font/lucide.css">
+
+<style>
+:root {
+    --bg:#0f0f11;
+    --panel:#15161a;
+    --line:#2b2f36;
+    --text:#e6e6e6;
+    --muted:#a5a7ad;
+    --accent:#7ab8ff;
+}
+
+body { background:var(--bg); color:var(--text); }
+
+.page-title {
+    font-size:1.8rem;
+    margin-bottom:1rem;
+}
+
+.card {
+    background:var(--panel);
+    padding:1.5rem;
+    border-radius:14px;
+    border:1px solid var(--line);
+    margin-bottom:2rem;
+    box-shadow:0 0 18px rgba(122,184,255,0.22);
+}
+
+h3 { margin-bottom:1rem; }
+
+.doc-item {
+    display:flex;
+    justify-content:space-between;
+    padding:.8rem 0;
+    border-bottom:1px solid var(--line);
+}
+
+.doc-item:last-child { border-bottom:none; }
+
+.btn {
+    padding:.7rem 1.2rem;
+    border:1px solid var(--accent);
+    border-radius:8px;
+    background:transparent;
+    color:var(--accent);
+    cursor:pointer;
+}
+.btn:hover {
+    background:var(--accent);
+    color:#111;
+}
+
+select, input[type="file"] {
+    width:100%;
+    padding:.8rem;
+    background:#1a1c20;
+    border:1px solid var(--line);
+    color:var(--text);
+    border-radius:8px;
+    margin-bottom:1rem;
+}
+
+.text-muted { color:var(--muted); }
+</style>
+
+<main class="dashboard-main">
+
+    <h1 class="page-title">📁 Your Documents</h1>
+    <p class="muted">Secure Document Upload Center</p>
+
+    <!-- Requested Documents -->
+    <div class="card">
+        <h3>📌 Requested by Underwriting / Processing</h3>
+
+        {% if requests %}
+            {% for r in requests %}
+                <div class="doc-item">
+                    <span>{{ r.document_name }}</span>
+                    <span class="text-muted">Requested</span>
+                </div>
+            {% endfor %}
+        {% else %}
+            <p>No documents have been requested yet.</p>
+        {% endif %}
+    </div>
+
+    <!-- Uploaded Documents -->
+    <div class="card">
+        <h3>📄 Uploaded Documents</h3>
+
+        {% if documents %}
+            {% for d in documents %}
+                <div class="doc-item">
+                    <span>{{ d.name }}</span>
+                    <span class="text-muted">{{ d.status }}</span>
+                </div>
+            {% endfor %}
+        {% else %}
+            <p>You have not uploaded any documents yet.</p>
+        {% endif %}
+    </div>
+
+    <!-- Upload Form -->
+    <div class="card">
+        <h3>⬆ Upload a Document</h3>
+
+        <form method="POST" enctype="multipart/form-data">
+            <select name="doc_name" required>
+                <option value="">Select Document Type</option>
+                <option>ID</option>
+                <option>Driver License</option>
+                <option>Social Security Card</option>
+                <option>W2</option>
+                <option>Paystubs</option>
+                <option>Bank Statements</option>
+                <option>Purchase Contract</option>
+                <option>Employment Letter</option>
+                <option>Other</option>
+            </select>
+
+            <input type="file" name="file" required>
+
+            <button class="btn">Upload</button>
+        </form>
+       <a href="{{ url_for('borrower.view_document', doc_id=doc.id) }}" 
+   class="btn view-btn">
+    👁 View PDF
+</a>
+<a href="{{ url_for('borrower.download_document', doc_id=doc.id) }}" class="btn download-btn">
+    ⬇ Download
+</a>
+
+    </div>
+
+</main>
+.view-btn {
+    color: #7ab8ff;
+    text-decoration: none;
+    font-weight: 600;
+}
+.view-btn:hover {
+    text-shadow: 0 0 10px rgba(122,184,255,0.5);
+}
+.download-btn {
+    color: var(--accent);
+    font-weight: 600;
+}
+.download-btn:hover {
+    text-shadow: 0 0 10px rgba(122,184,255,0.6);
+}
+
+{% endblock %}

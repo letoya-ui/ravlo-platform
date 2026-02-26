@@ -1,0 +1,202 @@
+{% extends "layouts/base.html" %}
+{% block content %}
+<style>
+  :root{--line:#2a2e36; --panel:#15161a; --text:#e6e6e6; --muted:#a5a7ad}
+  .card{background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:1rem}
+  table{width:100%; border-collapse:collapse}
+  th,td{padding:.6rem; border-top:1px solid var(--line); color:var(--text)}
+  input{background:#0f0f11; border:1px solid var(--line); color:var(--text); border-radius:10px; padding:.45rem .6rem; width:100%}
+  .btn{display:inline-flex; align-items:center; gap:.5rem; padding:.6rem .9rem; border-radius:10px; border:1px solid var(--line); color:var(--text); text-decoration:none; background:#1a1d23}
+</style>
+
+
+<div class="container-fluid py-4 text-light fade-in">
+  <h2 class="mb-4">💼 Loan AI Dashboard</h2>
+  <p class="text-muted">AI-powered loan analytics, risk modeling, and performance forecasting.</p>
+
+  <!-- === LIVE AI INSIGHT === -->
+  <div id="aiInsight" class="alert alert-dark border-secondary shadow-sm mb-4 text-center">
+    <strong>🤖 AI Insight:</strong> Loading portfolio performance...
+  </div>
+
+  <!-- === TOP METRICS === -->
+  <div class="row g-3">
+    <div class="col-md-3">
+      <div class="card bg-dark border border-secondary p-3 text-center shadow-sm">
+        <h6 class="text-muted text-uppercase small">Total Loans</h6>
+        <h2 class="fw-bold">{{ stats.total_loans }}</h2>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card bg-dark border border-secondary p-3 text-center shadow-sm">
+        <h6 class="text-muted text-uppercase small">Funded Loans</h6>
+        <h2 class="fw-bold text-success">{{ stats.funded }}</h2>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card bg-dark border border-secondary p-3 text-center shadow-sm">
+        <h6 class="text-muted text-uppercase small">Pending</h6>
+        <h2 class="fw-bold text-info">{{ stats.pending }}</h2>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card bg-dark border border-secondary p-3 text-center shadow-sm">
+        <h6 class="text-muted text-uppercase small">Declined</h6>
+        <h2 class="fw-bold text-danger">{{ stats.declined }}</h2>
+      </div>
+    </div>
+  </div>
+
+  <!-- === AI PORTFOLIO PERFORMANCE CHART === -->
+  <div class="card bg-dark border border-secondary rounded-3 mt-4 shadow-sm">
+    <div class="card-header border-secondary d-flex justify-content-between align-items-center">
+      <h5 class="mb-0 text-light">📈 Loan Performance Trends</h5>
+      <small class="text-muted">AI generated 12-month forecast</small>
+    </div>
+    <div class="card-body">
+      <canvas id="loanChart" height="120"></canvas>
+    </div>
+  </div>
+
+  <!-- === LOAN TABLE WITH AI RISK === -->
+  <div class="card bg-dark border border-secondary rounded-3 mt-4 shadow-sm">
+    <div class="card-header border-secondary d-flex justify-content-between align-items-center">
+      <h5 class="mb-0 text-light">🧮 Loan Portfolio</h5>
+      <small class="text-muted">AI loan risk and profitability modeling</small>
+    </div>
+    <div class="card-body table-responsive">
+      <form id="compareForm">
+        <table class="table table-dark table-hover align-middle">
+          <thead class="table-secondary text-dark">
+            <tr>
+              <th></th>
+              <th>Borrower</th>
+              <th>Loan Type</th>
+              <th>Amount</th>
+              <th>Status</th>
+              <th>AI Risk</th>
+              <th>AI Performance</th>
+              <th>Created</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for loan in loans %}
+            <tr>
+              <td><input type="checkbox" name="compare_ids" value="{{ loan.id }}" class="form-check-input"></td>
+              <td>{{ loan.borrower_name or 'N/A' }}</td>
+              <td>{{ loan.loan_type }}</td>
+              <td>${{ "{:,.0f}".format(loan.amount) }}</td>
+              <td>
+                <span class="badge bg-{% if loan.status == 'approved' %}success{% elif loan.status == 'pending' %}info{% else %}danger{% endif %}">
+                  {{ loan.status|capitalize }}
+                </span>
+              </td>
+              <td>
+                {% if loan.risk_score < 35 %}
+                  <span class="text-success fw-bold">Low</span>
+                {% elif loan.risk_score < 70 %}
+                  <span class="text-warning fw-bold">Medium</span>
+                {% else %}
+                  <span class="text-danger fw-bold">High</span>
+                {% endif %}
+              </td>
+              <td>{{ loan.ai_performance }}%</td>
+              <td>{{ loan.created_at.strftime("%Y-%m-%d") }}</td>
+            </tr>
+            {% else %}
+            <tr><td colspan="8" class="text-center text-muted">No loan data available.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        <div class="text-end">
+          <button type="button" id="compareBtn" class="btn btn-outline-light mt-3">🔍 Compare Selected Loans</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- === AI COMPARISON PANEL === -->
+  <div id="comparisonPanel" class="card bg-dark border border-secondary rounded-3 mt-4 shadow-sm d-none">
+    <div class="card-header border-secondary d-flex justify-content-between align-items-center">
+      <h5 class="mb-0 text-light">📊 AI Loan Comparison</h5>
+      <button class="btn btn-sm btn-outline-secondary" onclick="hideComparison()">✖</button>
+    </div>
+    <div class="card-body" id="comparisonContent">
+      <p class="text-muted">Analyzing selected loans...</p>
+    </div>
+  </div>
+</div>
+
+<!-- === SCRIPTS === -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+function updateInsight() {
+  fetch('{{ url_for("admin.ai_refresh") }}')
+    .then(res => res.json())
+    .then(data => { document.getElementById('aiInsight').innerHTML = `<strong>🤖 AI Insight:</strong> ${data.message}`; });
+}
+updateInsight();
+setInterval(updateInsight, 60000);
+
+// Loan chart
+const ctx = document.getElementById('loanChart').getContext('2d');
+new Chart(ctx, {
+  type: 'bar',
+  data: {
+    labels: {{ chart.labels|safe }},
+    datasets: [{
+      label: 'Funded Amount ($K)',
+      data: {{ chart.values|safe }},
+      backgroundColor: 'rgba(196,160,0,0.5)',
+      borderColor: '#c4a000',
+      borderWidth: 1
+    }]
+  },
+  options: {
+    scales: {
+      x: { ticks: { color: '#ccc' }, grid: { color: '#333' } },
+      y: { ticks: { color: '#ccc' }, grid: { color: '#333' } }
+    },
+    plugins: { legend: { labels: { color: '#e0e0e0' } } }
+  }
+});
+
+// === AI Loan Comparison ===
+document.getElementById('compareBtn').addEventListener('click', function() {
+  const selected = Array.from(document.querySelectorAll('input[name="compare_ids"]:checked')).map(el => el.value);
+  if (selected.length < 2) {
+    alert('Select at least two loans for comparison.');
+    return;
+  }
+  fetch('{{ url_for("admin.compare_loans") }}', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ids: selected })
+  })
+  .then(res => res.json())
+  .then(data => {
+    const panel = document.getElementById('comparisonPanel');
+    const content = document.getElementById('comparisonContent');
+    panel.classList.remove('d-none');
+    content.innerHTML = `
+      <h6 class="text-warning mb-3">📊 Comparative Summary</h6>
+      <p><strong>Largest Loan:</strong> ${data.largest.address} ($${data.largest.amount.toLocaleString()})</p>
+      <p><strong>Best Performance:</strong> ${data.best.address} (${data.best.performance}%)</p>
+      <p><strong>AI Comment:</strong> ${data.comment}</p>
+    `;
+  })
+  .catch(() => alert('Error comparing loans.'));
+});
+
+function hideComparison() {
+  document.getElementById('comparisonPanel').classList.add('d-none');
+}
+</script>
+
+<style>
+.fade-in { animation: fadeIn .4s ease-in; }
+@keyframes fadeIn { from{opacity:0;transform:translateY(10px);} to{opacity:1;transform:translateY(0);} }
+.card:hover { transform:translateY(-3px);transition:0.2s ease;border-color:#c4a000; }
+</style>
+
+{% endblock %}

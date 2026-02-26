@@ -1,0 +1,29 @@
+{% extends "layouts/borrower_base.html" %}
+{% block title %}Condition Detail{% endblock %}
+{% block content %}
+
+<div class="b-main-inner" style="max-width:700px; margin:auto;">
+
+  <h2>📄 Condition Detail</h2>
+
+  <div class="b-card" style="margin-top:1.5rem;">
+    <p><strong>Description:</strong> {{ condition.description }}</p>
+    <p><strong>Status:</strong> {{ condition.status }}</p>
+
+    {% if condition.file_path %}
+      <p style="margin-top:1rem;">
+        <strong>Uploaded File:</strong><br>
+        {{ condition.file_path }}
+      </p>
+    {% endif %}
+
+    <a href="{{ url_for('borrower.condition_history', cond_id=condition.id) }}"
+       class="btn"
+       style="margin-top:1.5rem;">
+      View History →
+    </a>
+  </div>
+
+</div>
+
+{% endblock %}

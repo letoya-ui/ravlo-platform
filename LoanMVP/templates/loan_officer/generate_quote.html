@@ -1,0 +1,104 @@
+{% extends "layouts/base.html" %}
+{% block title %}Generate Loan Quote{% endblock %}
+{% block content %}
+<style>
+  :root{--line:#2a2e36; --panel:#15161a; --text:#e6e6e6; --muted:#a5a7ad}
+  .card{background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:1rem}
+  table{width:100%; border-collapse:collapse}
+  th,td{padding:.6rem; border-top:1px solid var(--line); color:var(--text)}
+  input{background:#0f0f11; border:1px solid var(--line); color:var(--text); border-radius:10px; padding:.45rem .6rem; width:100%}
+  .btn{display:inline-flex; align-items:center; gap:.5rem; padding:.6rem .9rem; border-radius:10px; border:1px solid var(--line); color:var(--text); text-decoration:none; background:#1a1d23}
+</style>
+<div class="container-fluid py-4 text-light">
+  <h3 class="mb-4" style="color:#73b7ff;">
+    <i class="fas fa-file-invoice-dollar"></i> Generate Loan Quote
+  </h3>
+  <p class="text-muted">Use this tool to calculate and generate a custom quote for your borrower.</p>
+
+  <!-- Loan Quote Form -->
+  <div class="card p-4 mb-4" style="background-color:#181a1b;border:1px solid #2b2b2b;border-radius:10px;">
+    <form id="quoteForm" method="POST" action="{{ url_for('loan_officer.generate_quote', loan_id=loan.id) }}">
+      <div class="row">
+        <div class="col-md-4 mb-3">
+          <label>Borrower Name</label>
+          <input type="text" name="borrower_name" class="form-control bg-dark text-light border-secondary" required>
+        </div>
+        <div class="col-md-4 mb-3">
+          <label>Loan Amount ($)</label>
+          <input type="number" step="0.01" name="loan_amount" class="form-control bg-dark text-light border-secondary" required>
+        </div>
+        <div class="col-md-4 mb-3">
+          <label>Loan Type</label>
+          <select name="loan_type" class="form-select bg-dark text-light border-secondary">
+            <option value="Residential">Residential</option>
+            <option value="Commercial">Commercial</option>
+            <option value="Bridge">Bridge</option>
+            <option value="Fix & Flip">Fix & Flip</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="col-md-4 mb-3">
+          <label>Interest Rate (%)</label>
+          <input type="number" step="0.01" name="rate" class="form-control bg-dark text-light border-secondary" required>
+        </div>
+        <div class="col-md-4 mb-3">
+          <label>Term (years)</label>
+          <input type="number" name="term" class="form-control bg-dark text-light border-secondary" value="30" required>
+        </div>
+        <div class="col-md-4 mb-3">
+          <label>LTV (%)</label>
+          <input type="number" step="0.1" name="ltv" class="form-control bg-dark text-light border-secondary" required>
+        </div>
+      </div>
+
+      <div class="d-flex justify-content-between align-items-center mt-3">
+        <button type="button" class="btn btn-outline-info" onclick="calculateQuote()">💡 Calculate Quote</button>
+        <button type="submit" class="btn btn-outline-success">💾 Save Quote</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Quote Preview -->
+  <div id="quotePreview" class="card p-4" style="display:none;background-color:#181a1b;border:1px solid #2b2b2b;border-radius:10px;">
+    <h5 class="text-secondary mb-3">Quote Summary</h5>
+    <p><strong>Borrower:</strong> <span id="previewBorrower"></span></p>
+    <p><strong>Loan Type:</strong> <span id="previewType"></span></p>
+    <p><strong>Amount:</strong> $<span id="previewAmount"></span></p>
+    <p><strong>Rate:</strong> <span id="previewRate"></span>%</p>
+    <p><strong>Term:</strong> <span id="previewTerm"></span> years</p>
+    <p><strong>LTV:</strong> <span id="previewLtv"></span>%</p>
+    <hr style="border-color:#444;">
+    <h5>Estimated Monthly Payment: <span id="previewPayment" class="text-info"></span></h5>
+  </div>
+</div>
+
+<script>
+function calculateQuote() {
+  const amount = parseFloat(document.querySelector('[name="loan_amount"]').value) || 0;
+  const rate = parseFloat(document.querySelector('[name="rate"]').value) / 100 / 12;
+  const years = parseInt(document.querySelector('[name="term"]').value) || 30;
+  const payments = years * 12;
+
+  if (amount <= 0 || rate <= 0) {
+    alert("⚠️ Please enter valid loan amount and rate.");
+    return;
+  }
+
+  // Standard amortization formula
+  const monthlyPayment = (amount * rate) / (1 - Math.pow(1 + rate, -payments));
+
+  // Populate preview
+  document.getElementById("quotePreview").style.display = "block";
+  document.getElementById("previewBorrower").innerText = document.querySelector('[name="borrower_name"]').value;
+  document.getElementById("previewType").innerText = document.querySelector('[name="loan_type"]').value;
+  document.getElementById("previewAmount").innerText = amount.toLocaleString();
+  document.getElementById("previewRate").innerText = (rate * 1200).toFixed(2);
+  document.getElementById("previewTerm").innerText = years;
+  document.getElementById("previewLtv").innerText = document.querySelector('[name="ltv"]').value;
+  document.getElementById("previewPayment").innerText = "$" + monthlyPayment.toLocaleString(undefined, { maximumFractionDigits: 2 });
+}
+</script>
+
+{% endblock %}

@@ -1,0 +1,249 @@
+{% extends "layouts/base.html" %}
+{% block title %}Underwriting Panel • Caughman Mason{% endblock %}
+
+{% block content %}
+
+<link rel="stylesheet" href="https://unpkg.com/lucide-static@latest/font/lucide.css">
+
+<style>
+:root {
+    --bg:#0f0f11;
+    --panel:#15161a;
+    --line:#2b2f36;
+    --text:#e6e6e6;
+    --muted:#a5a7ad;
+    --accent:#7ab8ff;
+    --hover:#1f2328;
+    --glow:0 0 14px rgba(122,184,255,0.35);
+}
+
+body { background: var(--bg); color: var(--text); }
+
+.section {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+}
+
+h2, h3 { text-shadow: var(--glow); }
+
+.doc-row, .condition-row {
+    background: #1a1c20;
+    border: 1px solid var(--line);
+    padding: 1rem;
+    border-radius: 10px;
+    margin-bottom: 1rem;
+}
+
+.btn {
+    padding: .5rem 1rem;
+    border-radius: 8px;
+    background: transparent;
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    cursor: pointer;
+}
+.btn:hover { background: var(--accent); color: #000; }
+
+textarea, input, select {
+    width: 100%;
+    padding: .6rem;
+    background: #1a1c20;
+    border: 1px solid var(--line);
+    color: var(--text);
+    border-radius: 8px;
+}
+</style>
+
+
+<main class="dashboard-main">
+
+<!-- ==========================================================
+     UW HEADER
+========================================================== -->
+<section class="section">
+    <h2>📝 Underwriting Review</h2>
+    <p class="muted">
+        Borrower: <strong>{{ borrower.full_name }}</strong><br>
+        Loan #: <strong>{{ loan.id }}</strong><br>
+        Status: <strong>{{ loan.status }}</strong>
+    </p>
+</section>
+
+
+<!-- ==========================================================
+     LOAN RATIOS (DTI + LTV)
+========================================================== -->
+<section class="section">
+    <h3>📊 Loan Metrics</h3>
+
+    <p><strong>LTV:</strong> 
+        {% if loan.ltv_ratio %} {{ loan.ltv_ratio }}% {% else %} N/A {% endif %}
+    </p>
+
+    <p><strong>Front-End DTI:</strong> 
+        {% if loan.front_end_dti %} {{ loan.front_end_dti }}% {% else %} N/A {% endif %}
+    </p>
+
+    <p><strong>Back-End DTI:</strong> 
+        {% if loan.back_end_dti %} {{ loan.back_end_dti }}% {% else %} N/A {% endif %}
+    </p>
+
+    <p><strong>Risk Level:</strong> {{ loan.risk_level }}</p>
+</section>
+
+
+<!-- ==========================================================
+     CREDIT SUMMARY
+========================================================== -->
+<section class="section">
+    <h3>📌 Credit Summary</h3>
+
+    {% if borrower.credit_reports %}
+        {% set credit = borrower.credit_reports[-1] %}
+        <p><strong>Credit Score:</strong> {{ credit.credit_score }}</p>
+        <p><strong>Date Pulled:</strong> {{ credit.created_at.strftime("%b %d, %Y %I:%M %p") }}</p>
+
+        <a class="btn" onclick="alert(JSON.stringify({{ credit.credit_data|tojson }}, null, 2))">
+            View Raw Credit JSON
+        </a>
+    {% else %}
+        <p class="muted">No credit report pulled.</p>
+    {% endif %}
+
+    <form method="POST" action="/master/pull_credit/{{ borrower.id }}" style="margin-top:1rem;">
+        <button class="btn">🔄 Pull Soft Credit</button>
+    </form>
+</section>
+
+
+
+<!-- ==========================================================
+     DOCUMENT REVIEW (Processor Results)
+========================================================== -->
+<section class="section">
+    <h3>📂 Documents (Processor → UW)</h3>
+
+    {% if docs %}
+        {% for d in docs %}
+        <div class="doc-row">
+
+            <strong>{{ d.name }}</strong><br>
+            <span class="muted">Status: {{ d.status }}</span><br>
+
+            {% if d.processor_notes %}
+                <p><strong>Processor Notes:</strong> {{ d.processor_notes }}</p>
+            {% endif %}
+
+            {% if d.file_path %}
+                <a href="{{ d.file_path }}" target="_blank" class="btn" style="margin-top: .5rem;">Open File</a>
+            {% endif %}
+
+        </div>
+        {% endfor %}
+    {% else %}
+        <p>No documents uploaded yet.</p>
+    {% endif %}
+</section>
+
+
+
+<!-- ==========================================================
+     UNDERWRITING CONDITIONS
+========================================================== -->
+<section class="section">
+    <h3>📜 Underwriting Conditions</h3>
+
+    {% for c in conditions %}
+        <div class="condition-row">
+            <p><strong>{{ c.category }}</strong></p>
+            <p>{{ c.description }}</p>
+            <p class="muted">Status: {{ c.status }}</p>
+
+            <form method="POST" action="/master/update_condition/{{ c.id }}" style="margin-top:.5rem;">
+                <select name="status">
+                    <option value="pending" {% if c.status == "pending" %}selected{% endif %}>Pending</option>
+                    <option value="met" {% if c.status == "met" %}selected{% endif %}>Met</option>
+                    <option value="not_met" {% if c.status == "not_met" %}selected{% endif %}>Not Met</option>
+                </select>
+
+                <button class="btn" style="margin-top:.5rem;">Update</button>
+            </form>
+        </div>
+    {% endfor %}
+
+    <!-- ADD NEW CONDITION -->
+    <h4>Add Condition</h4>
+    <form method="POST" action="/master/add_condition/{{ loan.id }}">
+        <input type="text" name="category" placeholder="Category (Income, Credit, Assets, etc.)" required>
+        <textarea name="description" placeholder="Describe the condition..." required></textarea>
+        <button class="btn" style="margin-top:1rem;">➕ Add Condition</button>
+    </form>
+</section>
+<form method="POST" action="/master/auto_conditions/{{ loan.id }}" style="margin-bottom:1rem;">
+    <button class="btn">🤖 Auto-Generate Conditions</button>
+</form>
+
+
+
+<!-- ==========================================================
+     UW DECISION PANEL
+========================================================== -->
+<section class="section">
+    <h3>🏁 Final Underwriting Decision</h3>
+
+    <form method="POST" action="/master/uw_decision/{{ loan.id }}">
+        <select name="decision" required>
+            <option value="">Choose decision</option>
+            <option value="approved">Approve</option>
+            <option value="suspended">Suspend</option>
+            <option value="declined">Decline</option>
+        </select>
+
+        <textarea name="notes" placeholder="Decision notes..."></textarea>
+
+        <button class="btn" style="margin-top:1rem;">Submit Decision</button>
+    </form>
+</section>
+
+
+
+<!-- ==========================================================
+     AI UNDERWRITER
+========================================================== -->
+<section class="section">
+    <h3>🤖 AI Underwriting Insights</h3>
+
+    <textarea id="ai-input" placeholder="Ask: What does underwriting still need?"></textarea>
+    <button class="btn" onclick="sendAI()">Ask AI</button>
+
+    <div id="ai-response" style="margin-top:1rem;"></div>
+</section>
+
+
+</main>
+
+
+
+<script>
+function sendAI() {
+    let message = document.getElementById("ai-input").value;
+
+    fetch("{{ url_for('master.ai') }}", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+            message: message,
+            borrower_id: {{ borrower.id }}
+        })
+    })
+    .then(r => r.json())
+    .then(data => {
+        document.getElementById("ai-response").innerHTML = data.reply;
+    });
+}
+</script>
+
+{% endblock %}

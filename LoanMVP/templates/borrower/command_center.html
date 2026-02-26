@@ -1,0 +1,262 @@
+{% extends "layouts/borrower_base.html" %}
+{% block content %}
+
+<!-- ========================= -->
+<!--   SEARCH FIRST            -->
+<!-- ========================= -->
+<div class="calm-header text-center mb-5">
+  <h1 class="fw-bold">Borrower Command Center</h1>
+  <p class="text-muted">A calm space to manage your loan journey.</p>
+
+  <form action="/borrower/search" method="get" class="mt-4">
+    <input type="text"
+           class="form-control form-control-lg calm-search"
+           name="q"
+           placeholder="Search your loan, documents, partners, FAQs…">
+  </form>
+</div>
+
+<div class="calm-container mx-auto">
+
+  <!-- ========================= -->
+  <!--   CATEGORY: MY LOAN       -->
+  <!-- ========================= -->
+  <div class="category-block mb-5">
+    <h3 class="category-title mb-4">My Loan</h3>
+
+    <div class="row g-4">
+
+      <!-- View Loan -->
+      <div class="col-md-6">
+        <div class="soft-card p-4">
+          <h5 class="fw-semibold mb-2">Loan Overview</h5>
+          <p class="text-muted small mb-3">See your loan details, progress, and status.</p>
+
+          {% if loan %}
+          <a href="{{ url_for('borrower.loan_view', loan_id=loan.id) }}" class="btn btn-primary w-100">
+            View My Loan
+          </a>
+          {% else %}
+          <button class="btn btn-secondary w-100" disabled>No Loan Yet</button>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Conditions -->
+      <div class="col-md-6">
+        <div class="soft-card p-4">
+          <h5 class="fw-semibold mb-2">Conditions</h5>
+          <p class="text-muted small mb-3">Review outstanding items needed for approval.</p>
+
+          <a href="{{ url_for('borrower.conditions') }}" class="btn btn-outline-light w-100">
+            View Conditions
+          </a>
+        </div>
+      </div>
+
+      <!-- Documents -->
+      <div class="col-md-6">
+        <div class="soft-card p-4">
+          <h5 class="fw-semibold mb-2">Documents</h5>
+          <p class="text-muted small mb-3">Upload or download your loan documents.</p>
+
+          <a href="{{ url_for('borrower.documents') }}" class="btn btn-outline-light w-100">
+            Document Library
+          </a>
+        </div>
+      </div>
+
+      <!-- Timeline -->
+      <div class="col-md-6">
+        <div class="soft-card p-4">
+          <h5 class="fw-semibold mb-2">Loan Timeline</h5>
+          <p class="text-muted small mb-3">Track your progress from start to finish.</p>
+
+          <a href="#timeline-section" class="btn btn-outline-light w-100">
+            View Timeline
+          </a>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ========================= -->
+  <!--   CATEGORY: SUPPORT TEAM  -->
+  <!-- ========================= -->
+  <div class="category-block mb-5">
+    <h3 class="category-title mb-4">My Support Team</h3>
+
+    <div class="row g-4">
+
+      <!-- Loan Officer -->
+      <div class="col-md-6">
+        <div class="soft-card p-4">
+          <h5 class="fw-semibold mb-2">Loan Officer</h5>
+
+          {% if loan_officer %}
+            <p class="mb-1">{{ loan_officer.name }}</p>
+            <p class="text-muted small mb-1">{{ loan_officer.email }}</p>
+            <p class="text-muted small">{{ loan_officer.phone }}</p>
+
+            <a href="mailto:{{ loan_officer.email }}" class="btn btn-outline-light w-100 mt-3">
+              Contact Loan Officer
+            </a>
+          {% else %}
+            <p class="text-muted small">Not assigned yet.</p>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Processor -->
+      <div class="col-md-6">
+        <div class="soft-card p-4">
+          <h5 class="fw-semibold mb-2">Processor</h5>
+
+          {% if processor %}
+            <p class="mb-1">{{ processor.name }}</p>
+            <p class="text-muted small mb-1">{{ processor.email }}</p>
+            <p class="text-muted small">{{ processor.phone }}</p>
+
+            <a href="mailto:{{ processor.email }}" class="btn btn-outline-light w-100 mt-3">
+              Contact Processor
+            </a>
+          {% else %}
+            <p class="text-muted small">Not assigned yet.</p>
+          {% endif %}
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ========================= -->
+  <!--   CATEGORY: RESOURCES     -->
+  <!-- ========================= -->
+  <div class="category-block mb-5">
+    <h3 class="category-title mb-4">Tools & Resources</h3>
+
+    <div class="row g-4">
+
+      <!-- AI Support -->
+      <div class="col-md-6">
+        <div class="soft-card p-4">
+          <h5 class="fw-semibold mb-2">AI Support</h5>
+          <p class="text-muted small mb-3">Ask anything about your loan.</p>
+
+          <form id="ai-support-form">
+            <div class="input-group">
+              <input type="text" class="form-control" placeholder="Ask a question..." id="ai-question">
+              <button class="btn btn-primary" type="submit">Ask</button>
+            </div>
+          </form>
+
+          <div id="ai-response" class="mt-3 text-muted small"></div>
+        </div>
+      </div>
+
+      <!-- Partner Directory -->
+      <div class="col-md-6">
+        <div class="soft-card p-4">
+          <h5 class="fw-semibold mb-2">Partner Directory</h5>
+          <p class="text-muted small mb-3">Find trusted professionals for your project.</p>
+
+          <a href="#partners-section" class="btn btn-outline-light w-100">
+            Browse Partners
+          </a>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ========================= -->
+  <!--   TIMELINE SECTION        -->
+  <!-- ========================= -->
+  <div id="timeline-section" class="soft-card p-5 mb-5">
+    <h4 class="mb-3">Your Loan Timeline</h4>
+
+    <div class="timeline">
+      {% for item in timeline %}
+        <div class="timeline-step mb-4">
+          <div class="timeline-dot {{ item.status }}"></div>
+          <div class="timeline-content">
+            <h6 class="fw-semibold">{{ item.title }}</h6>
+
+            {% if item.status == "current" %}
+              <p class="text-primary small">This is your current step.</p>
+            {% elif item.status == "completed" %}
+              <p class="text-muted small">Completed</p>
+            {% else %}
+              <p class="text-muted small">Upcoming</p>
+            {% endif %}
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- ========================= -->
+  <!--   PARTNERS SECTION        -->
+  <!-- ========================= -->
+  <div id="partners-section" class="soft-card p-5 mb-5">
+    <h4 class="mb-3">Partner Directory</h4>
+
+    <form method="get" action="/borrower/partners/filter" class="mb-4">
+      <select name="category" class="form-select" onchange="this.form.submit()">
+        <option value="All">All Categories</option>
+        {% for cat in ['Contractor','Realtor','Inspector','Insurance Agent','Builder','Designer','Title Company','Attorney'] %}
+          <option value="{{ cat }}">{{ cat }}</option>
+        {% endfor %}
+      </select>
+    </form>
+
+    {% if partners %}
+      {% for partner in partners %}
+        <div class="partner-card p-3 mb-3 rounded">
+          <h5 class="fw-semibold">{{ partner.name }}</h5>
+          <p class="text-muted small mb-1">{{ partner.category }}</p>
+          <p class="text-muted small">{{ partner.service_area }}</p>
+          <p class="text-muted small">{{ partner.description }}</p>
+
+          <button type="button" class="btn btn-primary btn-sm mt-2"
+                  onclick="requestConnection({{ partner.id }})">
+            Request Connection
+          </button>
+        </div>
+      {% endfor %}
+    {% else %}
+      <p class="text-muted">No partners available yet.</p>
+    {% endif %}
+  </div>
+
+  <!-- ========================= -->
+  <!--   FAQ SECTION             -->
+  <!-- ========================= -->
+  <div class="soft-card p-5 mb-5">
+    <h4 class="mb-3">Frequently Asked Questions</h4>
+
+    <div class="accordion" id="faqAccordion">
+      {% for item in faqs %}
+        <div class="accordion-item">
+          <h2 class="accordion-header" id="faqHead{{ loop.index }}">
+            <button class="accordion-button collapsed"
+                    data-bs-toggle="collapse"
+                    data-bs-target="#faq{{ loop.index }}">
+              {{ item.q }}
+            </button>
+          </h2>
+
+          <div id="faq{{ loop.index }}" class="accordion-collapse collapse">
+            <div class="accordion-body">
+              {{ item.a }}
+            </div>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+
+</div>
+
+{% endblock %}

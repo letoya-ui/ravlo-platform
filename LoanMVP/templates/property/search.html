@@ -1,0 +1,241 @@
+{% extends "layouts/base.html" %}
+{% block title %}Property Search{% endblock %}
+
+{% block content %}
+
+<div class="cm-dashboard">
+
+  <h1 class="cm-title">
+    <i class="fa-solid fa-magnifying-glass-location"></i>
+    Property Search
+  </h1>
+
+  <p class="cm-subtitle">
+    Search any address and pull live property intelligence into your system.
+  </p>
+
+  <!-- SEARCH BAR -->
+  <div class="cm-card" style="margin-bottom:1.5rem;">
+    <h3><i class="fa-solid fa-search"></i> Search for a Property</h3>
+
+    <div class="search-container">
+      <input 
+        id="address-input"
+        type="text"
+        placeholder="Enter an address…"
+        class="cm-input"
+        autocomplete="off"
+      >
+
+      <div id="autocomplete-loading" class="loading-spinner" style="display:none;"></div>
+      <div id="autocomplete-dropdown" class="autocomplete-dropdown"></div>
+    </div>
+
+    <button id="search-btn" class="cm-btn" style="margin-top:1rem;">
+      <i class="fa-solid fa-magnifying-glass"></i> Search
+    </button>
+  </div>
+
+  <!-- LOADING STATE -->
+  <div id="loadingState" class="cm-loading" style="display:none;">
+    <div class="spinner"></div>
+    <p>Loading property details…</p>
+  </div>
+
+  <!-- RESULTS -->
+  <div id="property-results"></div>
+
+</div>
+
+<!-- PHOTO MODAL -->
+<div id="photoModal" class="cm-modal">
+  <span class="cm-modal-close">&times;</span>
+  <img id="modalImage" src="">
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    const input = document.getElementById("address-input");
+    const dropdown = document.getElementById("autocomplete-dropdown");
+    const loading = document.getElementById("autocomplete-loading");
+    const results = document.getElementById("property-results");
+    const loadingState = document.getElementById("loadingState");
+
+    let suggestions = [];
+    let selectedIndex = -1;
+    let debounceTimer = null;
+
+    function debounce(fn, delay = 250) {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(fn, delay);
+    }
+
+    function renderDropdown() {
+        dropdown.innerHTML = "";
+
+        if (!suggestions.length) {
+            dropdown.style.display = "none";
+            return;
+        }
+
+        suggestions.forEach((item, index) => {
+            const div = document.createElement("div");
+            div.className = "autocomplete-item";
+            if (index === selectedIndex) div.classList.add("selected");
+            div.textContent = item.description;
+
+            div.addEventListener("click", () => {
+                input.value = item.description;
+                dropdown.style.display = "none";
+            });
+
+            dropdown.appendChild(div);
+        });
+
+        dropdown.style.display = "block";
+    }
+
+    async function fetchAutocomplete(query) {
+        if (!query.trim()) {
+            dropdown.style.display = "none";
+            return;
+        }
+
+        loading.style.display = "inline-block";
+
+        try {
+            const res = await fetch("/property/autocomplete", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ query })
+            });
+
+            const data = await res.json();
+            suggestions = data.predictions || [];
+            selectedIndex = -1;
+            renderDropdown();
+        } catch (err) {
+            console.error("Autocomplete error:", err);
+        }
+
+        loading.style.display = "none";
+    }
+
+    input.addEventListener("input", () => {
+        debounce(() => fetchAutocomplete(input.value));
+    });
+
+    input.addEventListener("keydown", (e) => {
+        if (!suggestions.length) return;
+
+        if (e.key === "ArrowDown") {
+            selectedIndex = (selectedIndex + 1) % suggestions.length;
+            renderDropdown();
+        }
+
+        if (e.key === "ArrowUp") {
+            selectedIndex = (selectedIndex - 1 + suggestions.length) % suggestions.length;
+            renderDropdown();
+        }
+
+        if (e.key === "Enter") {
+            if (selectedIndex >= 0) {
+                input.value = suggestions[selectedIndex].description;
+                dropdown.style.display = "none";
+            }
+        }
+    });
+
+    document.addEventListener("click", (e) => {
+        if (!dropdown.contains(e.target) && e.target !== input) {
+            dropdown.style.display = "none";
+        }
+    });
+
+    // ⭐ SEARCH → UNIFIED RESOLVER
+    document.getElementById("search-btn").addEventListener("click", async () => {
+        const address = input.value.trim();
+        if (!address) return;
+
+        results.innerHTML = "";
+        loadingState.style.display = "block";
+
+        const res = await fetch("/property/resolve", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ address })
+        });
+
+        const data = await res.json();
+
+        // ⭐ NEW: unified resolver returns { status, primary_source, property, ai_summary }
+        if (data.status !== "ok" || !data.property) {
+            results.innerHTML = `
+                <div class="error-box">
+                    Could not resolve this property.<br/>
+                    Source: ${data.primary_source || "NONE"}
+                </div>
+            `;
+            loadingState.style.display = "none";
+            return;
+        }
+
+        // ⭐ NEW: pass ONLY the property object to your renderer
+        const property = data.property;
+
+        const cardHtml = renderPropertyCard(property);
+
+        const summaryHtml = data.ai_summary
+            ? `<div class="property-ai-summary-wrapper">${data.ai_summary}</div>`
+            : "";
+
+        results.innerHTML = cardHtml + summaryHtml;
+        loadingState.style.display = "none";
+    });
+
+    // RENDER FULL PROPERTY CARD (unchanged)
+    function renderPropertyCard(data) {
+        const sourceLabel = (data.source || "").toUpperCase();
+        const price = data.price ? `$${Number(data.price).toLocaleString()}` : "—";
+        const zestimate = data.zestimate ? `$${Number(data.zestimate).toLocaleString()}` : null;
+
+        const photos = (data.photos || []).slice(0, 8);
+        const comps = data.comps || [];
+        const priceHistory = data.price_history || [];
+        const taxHistory = data.tax_history || [];
+
+        const mapImg = (data.lat && data.lng)
+            ? `<img class="property-map" src="https://maps.googleapis.com/maps/api/staticmap?center=${data.lat},${data.lng}&zoom=15&size=600x300&markers=color:red%7C${data.lat},${data.lng}&key=YOUR_GOOGLE_MAPS_KEY" alt="Map" />`
+            : "";
+
+        // ... your existing card HTML continues exactly as you pasted it ...
+    }
+
+    // SAVE PROPERTY (stub)
+    window.saveProperty = async function(payload) {
+        console.log("Save property clicked:", payload);
+    };
+
+    // PHOTO MODAL
+    document.addEventListener("click", (e) => {
+        if (e.target.classList.contains("cm-photo")) {
+            const modal = document.getElementById("photoModal");
+            const modalImg = document.getElementById("modalImage");
+            modalImg.src = e.target.src;
+            modal.style.display = "flex";
+        }
+    });
+
+    document.querySelector(".cm-modal-close").onclick = () => {
+        document.getElementById("photoModal").style.display = "none";
+    };
+
+    document.getElementById("photoModal").onclick = (e) => {
+        if (e.target.id === "photoModal") {
+            e.target.style.display = "none";
+        }
+    };
+});
+</script>
+
+{% endblock %}

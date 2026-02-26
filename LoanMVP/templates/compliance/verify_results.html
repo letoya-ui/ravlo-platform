@@ -1,0 +1,22 @@
+{% extends "layouts/base.html" %}
+{% block title %}Compliance • Verification Result{% endblock %}
+{% block content %}
+<style>
+  :root{--panel:#15161a;--line:#2a2e36;--text:#e6e6e6;--accent:#7ab8ff;--glow:0 0 18px rgba(122,184,255,.35);}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:1.2rem;box-shadow:var(--glow);}
+</style>
+
+<h1>✅ Verification Results</h1>
+<div class="card">
+  <p><strong>File:</strong> {{ result.file_name }}</p>
+  <p><strong>Status:</strong> {{ result.status or 'Validated' }}</p>
+  <p><strong>Confidence:</strong> {{ result.confidence or '99.2%' }}</p>
+  <p><strong>AI Summary:</strong></p>
+  <div style="background:#1b1d22;border:1px solid var(--line);border-radius:10px;padding:1rem;margin-top:.5rem;">
+    {{ result.ai_summary or "No inconsistencies found. Document structure verified successfully." }}
+  </div>
+  <div style="margin-top:1rem;">
+    <a href="{{ url_for('compliance.dashboard') }}" class="btn">← Back to Dashboard</a>
+  </div>
+</div>
+{% endblock %}

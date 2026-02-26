@@ -1,0 +1,110 @@
+{% extends "layouts/base.html" %}
+{% block title %}Property Admin Dashboard{% endblock %}
+{% block content %}
+
+
+<main style="margin-left:260px; padding:2rem; background:#0f0f11; color:#e6e6e6; min-height:100vh;">
+  <link rel="stylesheet" href="https://unpkg.com/lucide-static@latest/font/lucide.css">
+  <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+
+  <style>
+    .grid{display:grid;gap:1.25rem;}
+    .g-2{grid-template-columns:repeat(2,minmax(0,1fr));}
+    .card{background:#15161a;border:1px solid #282b31;border-radius:14px;padding:1.4rem;box-shadow:0 0 18px rgba(122,184,255,0.25);}
+    .card h3{margin:0 0 .6rem;color:#7ab8ff;display:flex;align-items:center;gap:.5rem;}
+    .muted{color:#a5a7ad;font-size:.9rem;}
+    input,select{
+      width:100%;margin-top:.35rem;background:#0f0f11;color:#e6e6e6;
+      border:1px solid #2b2f36;border-radius:10px;padding:.6rem .8rem;
+    }
+    input:focus,select:focus{outline:none;border-color:#7ab8ff;box-shadow:0 0 6px rgba(122,184,255,0.3);}
+    .btn{display:inline-flex;align-items:center;gap:.4rem;margin-top:1rem;background:linear-gradient(180deg,#2a4a62,#1b2a38);border:1px solid #2a4a62;color:#cfe8ff;border-radius:10px;padding:.7rem 1.2rem;text-decoration:none;cursor:pointer;}
+    .btn:hover{box-shadow:0 0 10px rgba(122,184,255,0.3);}
+    table{width:100%;border-collapse:collapse;margin-top:1rem;}
+    th,td{padding:.7rem;text-align:left;border-bottom:1px solid #2b2f36;}
+    th{color:#7ab8ff;font-weight:600;}
+    .highlight{color:#43d19e;}
+  </style>
+
+  <h1 style="margin-bottom:1rem;">🏗️ Property Intelligence Admin</h1>
+  <p class="muted" style="margin-bottom:2rem;">Manage property data, run AI revaluations, and monitor performance insights.</p>
+
+  <div class="grid g-2">
+    <!-- Upload Section -->
+    <div class="card">
+      <h3><i class="lucide lucide-upload-cloud"></i> Upload / Manage Properties</h3>
+      <form id="uploadForm" method="POST" enctype="multipart/form-data">
+        <label>Property Data File (CSV/XLSX)</label>
+        <input type="file" name="file" accept=".csv,.xlsx" required>
+
+        <label style="margin-top:1rem;">Property Type</label>
+        <select name="property_type">
+          <option>Residential</option>
+          <option>Commercial</option>
+          <option>Mixed-Use</option>
+        </select>
+
+        <button type="submit" class="btn"><i class="lucide lucide-database"></i> Upload & Sync</button>
+      </form>
+
+      <hr style="border:none;border-top:1px solid #2b2f36;margin:1.5rem 0;">
+      <h3><i class="lucide lucide-brain-circuit"></i> AI Data Refresh</h3>
+      <p class="muted">Re-run AI valuation models to update current market estimates and ROI projections.</p>
+      <button class="btn" onclick="refreshAI()"><i class="lucide lucide-rotate-cw"></i> Run AI Revaluation</button>
+      <div id="statusMsg" style="margin-top:.8rem;color:#a5a7ad;"></div>
+    </div>
+
+    <!-- Insights / Charts -->
+    <div class="card">
+      <h3><i class="lucide lucide-bar-chart-3"></i> Property Analytics Overview</h3>
+      <div id="chart_property" style="height:250px;"></div>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Metric</th>
+            <th>Current</th>
+            <th>Change</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>Total Properties</td><td>128</td><td class="highlight">+12</td></tr>
+          <tr><td>Average ROI</td><td>18.4%</td><td class="highlight">+2.1%</td></tr>
+          <tr><td>AI Accuracy</td><td>93.6%</td><td class="highlight">+0.8%</td></tr>
+          <tr><td>Active Projects</td><td>47</td><td class="highlight">+4</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:1.5rem;">
+    <h3><i class="lucide lucide-file-text"></i> System Log</h3>
+    <p class="muted">Recent admin activities:</p>
+    <ul style="list-style:none;padding:0;margin:0;">
+      <li>📁 Uploaded <strong>commercial_dataset.xlsx</strong> — <span class="muted">2 hrs ago</span></li>
+      <li>🤖 AI revaluation completed — <span class="muted">Today 11:45 AM</span></li>
+      <li>📊 Updated property metrics synced to dashboard — <span class="muted">Today 10:30 AM</span></li>
+    </ul>
+  </div>
+
+  <script>
+    // AI Refresh simulation
+    function refreshAI(){
+      const msg=document.getElementById('statusMsg');
+      msg.textContent='🧠 Running AI revaluation...';
+      setTimeout(()=>{
+        msg.textContent='✅ AI revaluation complete. Property metrics updated successfully.';
+      },2500);
+    }
+
+    // Property overview chart
+    const baseOpt={chart:{toolbar:{show:false},foreColor:'#c9d3df'},grid:{borderColor:'#2a2e36'},dataLabels:{enabled:false},theme:{mode:'dark'}};
+    new ApexCharts(document.querySelector("#chart_property"),{
+      ...baseOpt,chart:{type:'area',height:250},stroke:{curve:'smooth',width:2},
+      series:[{name:'Valuation Index',data:[78,82,85,90,94,98,100]}],
+      xaxis:{categories:['Jan','Feb','Mar','Apr','May','Jun','Jul']},
+      colors:['#7ab8ff']
+    }).render();
+  </script>
+</main>
+{% endblock %}

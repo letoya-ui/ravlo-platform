@@ -1,0 +1,204 @@
+<!-- =========================================
+     📞 CRM Sidebar — Unified 2025 (Dark Silver / Blue Glow)
+========================================= -->
+<link rel="stylesheet" href="https://unpkg.com/lucide-static@latest/font/lucide.css">
+
+<style>
+  :root {
+    --bg:#0f0f11;
+    --panel:#15161a;
+    --line:#282b31;
+    --text-light:#e6e6e6;
+    --text-muted:#a5a7ad;
+    --accent:#7ab8ff;
+    --hover:#1f2328;
+    --glow:0 0 16px rgba(122,184,255,0.25);
+  }
+
+  .sidebar {
+    background:var(--panel);
+    border-right:1px solid var(--line);
+    width:260px; height:100vh;
+    position:fixed; top:0; left:0;
+    display:flex; flex-direction:column;
+    box-shadow:var(--glow);
+    overflow-y:auto;
+    -webkit-overflow-scrolling:touch;
+    scrollbar-width:none;
+    z-index:1000;
+  }
+
+  .sidebar:hover { scrollbar-width:thin; scrollbar-color:var(--accent) var(--panel); }
+  .sidebar::-webkit-scrollbar { width:0; }
+  .sidebar:hover::-webkit-scrollbar { width:8px; }
+  .sidebar::-webkit-scrollbar-thumb {
+    background:var(--accent);
+    border-radius:6px;
+    border:2px solid var(--panel);
+  }
+
+  .sidebar-header {
+    text-align:center;
+    padding:1.25rem .5rem;
+    border-bottom:1px solid var(--line);
+  }
+  .sidebar-header h3 {
+    font-size:1.1rem;
+    color:var(--text-light);
+    font-weight:600;
+    margin-bottom:.25rem;
+  }
+  .sidebar-header small {
+    color:var(--text-muted);
+    font-size:.75rem;
+  }
+
+  .nav {
+    flex:1;
+    display:flex;
+    flex-direction:column;
+    padding:.75rem 0;
+  }
+
+  .nav-section {
+    margin-bottom:1rem;
+  }
+  .nav-section h4 {
+    font-size:.75rem;
+    text-transform:uppercase;
+    letter-spacing:.05rem;
+    color:var(--text-muted);
+    padding:.4rem 1.25rem;
+    border-bottom:1px solid var(--line);
+    margin-bottom:.25rem;
+  }
+
+  .nav a {
+    display:flex; align-items:center; gap:.6rem;
+    padding:.55rem 1.25rem;
+    color:var(--text-light);
+    font-size:.93rem;
+    text-decoration:none;
+    border-left:3px solid transparent;
+    transition:all .25s ease;
+  }
+  .nav a:hover,
+  .nav a.active {
+    background:var(--hover);
+    border-left:3px solid var(--accent);
+    color:var(--accent);
+    box-shadow:var(--glow);
+  }
+
+  .sidebar-footer {
+    padding:.8rem 1.25rem;
+    border-top:1px solid var(--line);
+    text-align:center;
+    font-size:.8rem;
+    color:var(--text-muted);
+    background:#101113;
+  }
+
+  @media(max-width:992px){
+    .sidebar{transform:translateX(-100%);transition:transform .3s ease;}
+    .sidebar.active{transform:translateX(0);}
+  }
+</style>
+
+<aside class="sidebar">
+  <div class="sidebar-header">
+    <h3>CRM Center</h3>
+    <small>Caughman Mason • LoanMVP</small>
+  </div>
+
+  <nav class="nav">
+
+    <!-- 📊 Dashboard -->
+    <div class="nav-section">
+      <h4>Dashboard</h4>
+      <a href="{{ url_for('crm.dashboard') }}" class="{% if request.endpoint == 'crm.dashboard' %}active{% endif %}">
+        <i class="lucide lucide-layout-dashboard"></i> Dashboard
+      </a>
+      <a href="{{ url_for('system.cm_dashboard') }}">
+        <i class="lucide lucide-panel-left-close"></i> CM Master Dashboard
+      </a>
+
+      <a href="{{ url_for('crm.call_insights') }}" class="{% if request.endpoint == 'crm.call_insights' %}active{% endif %}">
+        <i class="lucide lucide-bar-chart-2"></i> Call Insights
+      </a>
+      <a href="{{ url_for('crm.analytics') if 'crm.analytics' in current_app.view_functions else '#' }}">
+        <i class="lucide lucide-trending-up"></i> Analytics
+      </a>
+    </div>
+
+    <!-- 📞 Dialer & Calls -->
+    <div class="nav-section">
+      <h4>Call Center</h4>
+      <a href="{{ url_for('crm.dialer') }}" class="{% if request.endpoint == 'crm.dialer' %}active{% endif %}">
+        <i class="lucide lucide-phone-call"></i> Dialer
+      </a>
+      <a href="{{ url_for('crm.call_ai') }}" class="{% if request.endpoint == 'crm.call_ai' %}active{% endif %}">
+        <i class="lucide lucide-bot"></i> AI Call Review
+      </a>
+      <a href="{{ url_for('crm.ai_followup') }}" class="{% if request.endpoint == 'crm.ai_followup' %}active{% endif %}">
+        <i class="lucide lucide-message-square"></i> AI Follow-Up
+      </a>
+      <a href="{{ url_for('crm.messages') }}" class="{% if request.endpoint == 'crm.messages' %}active{% endif %}">
+        <i class="lucide lucide-message-circle"></i> Messages
+      </a>
+    </div>
+
+    <!-- 👥 Leads & Partners -->
+    <div class="nav-section">
+      <h4>Leads & Partners</h4>
+      <a href="{{ url_for('crm.leads') }}" class="{% if request.endpoint == 'crm.leads' %}active{% endif %}">
+        <i class="lucide lucide-users"></i> Leads
+      </a>
+      <a href="{{ url_for('crm.add_lead') }}" class="{% if request.endpoint == 'crm.add_lead' %}active{% endif %}">
+        <i class="lucide lucide-user-plus"></i> Add Lead
+      </a>
+      <a href="{{ url_for('crm.partners') }}" class="{% if request.endpoint == 'crm.partners' %}active{% endif %}">
+        <i class="lucide lucide-handshake"></i> Partners
+      </a>
+      <a href="{{ url_for('crm.campaigns') }}" class="{% if request.endpoint == 'crm.campaigns' %}active{% endif %}">
+        <i class="lucide lucide-megaphone"></i> Campaigns
+      </a>
+      <a href="{{ url_for('crm.hub') }}" class="{% if request.endpoint == 'crm.hub' %}active{% endif %}">
+        <i class="lucide lucide-network"></i> CRM Hub
+      </a>
+    </div>
+
+    <!-- 🤖 AI & Automation -->
+    <div class="nav-section">
+      <h4>AI & Automation</h4>
+      <a href="{{ url_for('crm.ai_summary') }}" class="{% if request.endpoint == 'crm.ai_summary' %}active{% endif %}">
+        <i class="lucide lucide-brain-circuit"></i> AI Summary
+      </a>
+      <a href="{{ url_for('crm.refresh_ai_summary') }}" class="{% if request.endpoint == 'crm.refresh_ai_summary' %}active{% endif %}">
+        <i class="lucide lucide-rotate-cw"></i> Refresh AI Data
+      </a>
+      <a href="{{ url_for('crm.ai_tip') }}" class="{% if request.endpoint == 'crm.ai_tip' %}active{% endif %}">
+        <i class="lucide lucide-lightbulb"></i> AI Tips
+      </a>
+    </div>
+
+    <!-- 📊 Reports -->
+    <div class="nav-section">
+      <h4>Reports</h4>
+      <a href="{{ url_for('crm.export_call_report') }}" class="{% if request.endpoint == 'crm.export_call_report' %}active{% endif %}">
+        <i class="lucide lucide-download"></i> Export Reports
+      </a>
+    </div>
+
+    <!-- ⚙️ Account -->
+    <div class="nav-section">
+      <h4>Account</h4>
+      <a href="{{ url_for('auth.logout') }}"><i class="lucide lucide-log-out"></i> Logout</a>
+    </div>
+
+  </nav>
+
+  <div class="sidebar-footer">
+    © 2025 Caughman Mason LLC<br>CRM Portal
+  </div>
+</aside>

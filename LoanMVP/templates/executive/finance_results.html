@@ -1,0 +1,24 @@
+{% extends "layouts/base.html" %}
+{% block title %}Finance AI Result{% endblock %}
+{% block content %}
+<main class="dashboard-main">
+  <style>
+    .card { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 1.2rem; box-shadow: var(--glow); }
+    .ai-box { background: var(--elev); border: 1px solid var(--line); border-radius: 12px; padding: 1rem; margin-top: 1.5rem; color: var(--text); }
+    .btn { background: linear-gradient(180deg,#1c1f25,#15161a); border: 1px solid var(--line); padding: .6rem 1rem; border-radius: 10px; color: var(--text); text-decoration: none; display: inline-block; margin-top: 1rem; }
+    .btn:hover { border-color: #35506a; box-shadow: var(--glow); }
+  </style>
+
+  <div class="card">
+    <h2>🧮 Financial Intelligence Summary</h2>
+    <p class="muted">AI analysis of submitted financial metrics, ratios, and yield projections.</p>
+
+    <div class="ai-box">
+      <h4 class="text-accent">📊 AI Analysis</h4>
+      <p>{{ analysis }}</p>
+    </div>
+
+    <a href="{{ url_for('executive.finance_ai') }}" class="btn">← Back to Finance Input</a>
+  </div>
+</main>
+{% endblock %}

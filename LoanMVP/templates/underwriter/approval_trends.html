@@ -1,0 +1,93 @@
+{% extends "layouts/base.html" %}
+{% block title %}Approval Trends{% endblock %}
+{% block content %}
+<style>
+  :root {
+    --bg:#0f0f11;--panel:#15161a;--line:#2a2e36;
+    --text:#e6e6e6;--accent:#7ab8ff;--muted:#a5a7ad;
+    --glow:0 0 14px rgba(122,184,255,.4);
+  }
+  body{background:var(--bg);color:var(--text);}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;
+        padding:1.2rem;box-shadow:var(--glow);}
+  .btn{
+    background:#1a1d23;border:1px solid var(--line);border-radius:10px;
+    color:var(--text);padding:.6rem 1.1rem;text-decoration:none;
+  }
+  .btn:hover{border-color:var(--accent);box-shadow:var(--glow);}
+  .ai-box{
+    margin-top:1rem;background:var(--panel);border:1px solid var(--line);
+    border-radius:14px;padding:1rem;box-shadow:var(--glow);
+  }
+  .ai-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem;}
+  .ai-msg{background:#1a1d23;border:1px solid var(--line);border-radius:12px;
+          padding:.6rem .8rem;margin-top:.5rem;color:var(--text);}
+</style>
+
+<div class="container py-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h2><i class="fa-solid fa-chart-line"></i> Approval Trends</h2>
+    <a href="{{ url_for('underwriter.dashboard') }}" class="btn btn-outline-light btn-sm">← Back</a>
+  </div>
+
+  <div class="card">
+    <div id="approvalTrendChart" style="height:320px;"></div>
+  </div>
+
+  <!-- AI Insight Box -->
+  <div class="ai-box">
+    <div class="ai-header">
+      <strong><i class="fa-solid fa-robot"></i> AI Insight</strong>
+      <button class="btn btn-sm" onclick="generateAISummary()">📊 Explain Trends</button>
+    </div>
+    <div id="aiSummaryBox" class="ai-msg text-muted small">
+      Click “Explain Trends” for AI summary of approval ratios.
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+<script>
+  const stats = {{ stats|tojson }};
+  const months = stats.months;
+
+  const options = {
+    chart: { type:'area', height:320, toolbar:{show:false}, foreColor:'#cfe0f5' },
+    grid: { borderColor:'#2a2e36' },
+    theme: { mode:'dark' },
+    dataLabels: { enabled:false },
+    stroke: { curve:'smooth', width:2 },
+    series: [
+      { name:'Approved', data:stats.approved },
+      { name:'Declined', data:stats.declined },
+      { name:'Pending', data:stats.pending }
+    ],
+    colors:['#43d19e','#ff6b6b','#ffdf6e'],
+    xaxis: { categories:months },
+    legend: { position:'bottom' }
+  };
+
+  new ApexCharts(document.querySelector("#approvalTrendChart"), options).render();
+
+  function generateAISummary(){
+    const approvedTotal = stats.approved.reduce((a,b)=>a+b,0);
+    const declinedTotal = stats.declined.reduce((a,b)=>a+b,0);
+    const pendingTotal = stats.pending.reduce((a,b)=>a+b,0);
+    const total = approvedTotal + declinedTotal + pendingTotal;
+    const approvalRate = total ? ((approvedTotal/total)*100).toFixed(1) : 0;
+    const declineRate = total ? ((declinedTotal/total)*100).toFixed(1) : 0;
+
+    const msgBox = document.getElementById("aiSummaryBox");
+    msgBox.innerHTML =
+      `<strong>AI Summary:</strong><br>
+      Total Loans Reviewed: <b>${total}</b><br>
+      Approval Rate: <b>${approvalRate}%</b><br>
+      Decline Rate: <b>${declineRate}%</b><br><br>
+      ${approvalRate > 70
+        ? "✅ Strong underwriting consistency. Low risk pattern observed."
+        : approvalRate < 50
+          ? "⚠️ Approval ratio below average — review DTI or appraisal variance."
+          : "ℹ️ Moderate balance of approvals and declines, maintain review accuracy."}`;
+  }
+</script>
+{% endblock %}

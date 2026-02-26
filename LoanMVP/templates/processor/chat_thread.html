@@ -1,0 +1,206 @@
+{% extends "layouts/base.html" %}
+{% block title %}Chat with {{ other.full_name }}{% endblock %}
+{% block content %}
+
+<main class="dashboard-main">
+  <div class="wrap">
+
+    <section class="chat-container">
+
+      <!-- Header -->
+      <div class="chat-header">
+        <h2>💬 Chat with {{ other.full_name }}</h2>
+        <p class="muted">{{ other.role|capitalize }}</p>
+      </div>
+
+      <!-- Chat Messages -->
+      <div class="chat-thread" id="chat-thread">
+        {% for msg in messages %}
+          {% if msg.sender_id == current_user.id %}
+            <!-- My Message -->
+            <div class="chat-bubble me">
+              <div class="text">{{ msg.content }}</div>
+              <div class="time">{{ msg.created_at.strftime('%H:%M') }}</div>
+            </div>
+          {% else %}
+            <!-- Their Message -->
+            <div class="chat-bubble them">
+              <div class="text">{{ msg.content }}</div>
+              <div class="time">{{ msg.created_at.strftime('%H:%M') }}</div>
+            </div>
+          {% endif %}
+        {% endfor %}
+      </div>
+
+      <!-- Message Input -->
+      <form method="POST" class="chat-input">
+        <input type="text" name="content" placeholder="Type a message..." autocomplete="off" required>
+        <button type="submit">📨</button>
+      </form>
+
+    </section>
+
+  </div>
+</main>
+
+<style>
+  :root {
+    --bg: #0f0f11;
+    --panel: #15161a;
+    --line: #2b2f36;
+    --text: #e6e6e6;
+    --muted: #a5a7ad;
+    --accent: #7ab8ff;
+    --glow: 0 0 16px rgba(122,184,255,0.35);
+  }
+
+  body { background: var(--bg); color: var(--text); }
+  .wrap { padding: 2rem; }
+
+  .chat-container {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 1.5rem;
+    box-shadow: var(--glow);
+    max-width: 900px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    height: 80vh;
+  }
+
+  .chat-header {
+    border-bottom: 1px solid var(--line);
+    padding-bottom: .8rem;
+    margin-bottom: 1rem;
+  }
+
+  .chat-thread {
+    flex: 1;
+    overflow-y: auto;
+    padding-right: .5rem;
+    display: flex;
+    flex-direction: column;
+    gap: .8rem;
+  }
+
+  .chat-bubble {
+    max-width: 70%;
+    padding: .7rem 1rem;
+    border-radius: 12px;
+    position: relative;
+    display: inline-block;
+  }
+
+  .chat-bubble.me {
+    background: var(--accent);
+    color: #000;
+    align-self: flex-end;
+    border-bottom-right-radius: 4px;
+  }
+
+  .chat-bubble.them {
+    background: var(--bg);
+    border: 1px solid var(--line);
+    align-self: flex-start;
+    border-bottom-left-radius: 4px;
+  }
+
+  .chat-bubble .time {
+    font-size: .75rem;
+    color: var(--muted);
+    margin-top: .3rem;
+    text-align: right;
+  }
+
+  .chat-input {
+    display: flex;
+    gap: .6rem;
+    margin-top: 1rem;
+    border-top: 1px solid var(--line);
+    padding-top: 1rem;
+  }
+
+  .chat-input input {
+    flex: 1;
+    background: var(--bg);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: .7rem;
+    color: var(--text);
+  }
+
+  .chat-input button {
+    background: var(--accent);
+    border: none;
+    padding: .7rem 1rem;
+    border-radius: 10px;
+    cursor: pointer;
+    font-size: 1.2rem;
+    transition: .2s;
+  }
+
+  .chat-input button:hover {
+    box-shadow: var(--glow);
+  }
+</style>
+
+<<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+<script>
+  const thread = document.getElementById("chat-thread");
+  thread.scrollTop = thread.scrollHeight;
+
+  const socket = io();
+
+  const meId = {{ current_user.id }};
+  const otherId = {{ other.id }};
+
+  // Join conversation room
+  socket.emit("join_chat", {
+    user1_id: meId,
+    user2_id: otherId
+  });
+
+  // Listen for new messages
+  socket.on("new_message", function(data) {
+    const isMe = data.sender_id === meId;
+
+    const bubble = document.createElement("div");
+    bubble.classList.add("chat-bubble");
+    bubble.classList.add(isMe ? "me" : "them");
+
+    const text = document.createElement("div");
+    text.classList.add("text");
+    text.textContent = data.text;
+
+    const time = document.createElement("div");
+    time.classList.add("time");
+    time.textContent = data.timestamp;
+
+    bubble.appendChild(text);
+    bubble.appendChild(time);
+    thread.appendChild(bubble);
+    thread.scrollTop = thread.scrollHeight;
+  });
+
+  // Intercept form submit to send via Socket.IO
+  const form = document.querySelector(".chat-input");
+  const input = form.querySelector("input[name='content']");
+
+  form.addEventListener("submit", function(e) {
+    e.preventDefault();
+    const text = input.value.trim();
+    if (!text) return;
+
+    socket.emit("send_message", {
+      sender_id: meId,
+      receiver_id: otherId,
+      text: text
+    });
+
+    input.value = "";
+  });
+</script>
+
+{% endblock %}

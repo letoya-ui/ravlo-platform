@@ -1,0 +1,61 @@
+{% extends "layouts/base.html" %}
+{% block title %}Admin Settings{% endblock %}
+{% block content %}
+<style>
+  :root{--line:#2a2e36; --panel:#15161a; --text:#e6e6e6; --muted:#a5a7ad}
+  .card{background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:1rem}
+  table{width:100%; border-collapse:collapse}
+  th,td{padding:.6rem; border-top:1px solid var(--line); color:var(--text)}
+  input{background:#0f0f11; border:1px solid var(--line); color:var(--text); border-radius:10px; padding:.45rem .6rem; width:100%}
+  .btn{display:inline-flex; align-items:center; gap:.5rem; padding:.6rem .9rem; border-radius:10px; border:1px solid var(--line); color:var(--text); text-decoration:none; background:#1a1d23}
+</style>
+
+
+
+<div class="container-fluid py-4 text-light" style="margin-left:260px;">
+  <h2 class="mb-4">⚙️ System Settings</h2>
+
+  <form method="POST" action="{{ url_for('system.settings') }}" class="needs-validation" novalidate>
+    <div class="card mb-4">
+      <h5 class="mb-3">🔧 General Configuration</h5>
+      <div class="mb-3">
+        <label class="form-label text-muted">System Name</label>
+        <input type="text" name="system_name" value="{{ settings.system_name or 'Caughman Mason Loan Services' }}" class="form-control bg-dark text-light border-secondary">
+      </div>
+      <div class="mb-3">
+        <label class="form-label text-muted">Default Email Sender</label>
+        <input type="email" name="default_email" value="{{ settings.default_email or 'noreply@caughmanmason.com' }}" class="form-control bg-dark text-light border-secondary">
+      </div>
+    </div>
+
+    <div class="card mb-4">
+      <h5 class="mb-3">🤖 AI & Automation</h5>
+      <div class="mb-3">
+        <label class="form-label text-muted">AI Insights Refresh (seconds)</label>
+        <input type="number" name="ai_refresh_interval" value="{{ settings.ai_refresh_interval or 30 }}" class="form-control bg-dark text-light border-secondary">
+      </div>
+      <div class="mb-3">
+        <label class="form-label text-muted">Enable Auto Lead Generation</label>
+        <select name="auto_leads" class="form-select bg-dark text-light border-secondary">
+          <option value="yes" {% if settings.auto_leads == 'yes' %}selected{% endif %}>Yes</option>
+          <option value="no" {% if settings.auto_leads == 'no' %}selected{% endif %}>No</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="card mb-4">
+      <h5 class="mb-3">📢 Notifications</h5>
+      <div class="form-check form-switch mb-2">
+        <input class="form-check-input" type="checkbox" name="email_alerts" id="emailAlerts" {% if settings.email_alerts %}checked{% endif %}>
+        <label class="form-check-label" for="emailAlerts">Enable Email Alerts</label>
+      </div>
+      <div class="form-check form-switch mb-2">
+        <input class="form-check-input" type="checkbox" name="system_updates" id="systemUpdates" {% if settings.system_updates %}checked{% endif %}>
+        <label class="form-check-label" for="systemUpdates">Enable System Updates Notifications</label>
+      </div>
+    </div>
+
+    <button type="submit" class="btn btn-accent">💾 Save Changes</button>
+  </form>
+</div>
+{% endblock %}

@@ -1,0 +1,23 @@
+{% extends "layouts/base.html" %}
+{% block title %}Compliance • Verify Document{% endblock %}
+{% block content %}
+<style>
+  :root{--panel:#15161a;--line:#2a2e36;--text:#e6e6e6;--accent:#7ab8ff;--glow:0 0 18px rgba(122,184,255,.35);}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:1rem;box-shadow:var(--glow);}
+  input,textarea{background:#0f0f11;border:1px solid var(--line);color:var(--text);border-radius:10px;padding:.6rem .7rem;width:100%;}
+  .btn{display:inline-flex;align-items:center;gap:.5rem;padding:.6rem .9rem;border-radius:10px;border:1px solid var(--line);background:#1a1d23;color:var(--text);text-decoration:none;}
+</style>
+
+<h1>📂 Verify Document</h1>
+<div class="card">
+  <form method="POST" enctype="multipart/form-data">
+    <label>Upload Document</label>
+    <input type="file" name="document" required>
+    <label style="margin-top:.6rem;">Notes</label>
+    <textarea name="notes" rows="3" placeholder="Enter context or special checks..."></textarea>
+    <div style="margin-top:.8rem;">
+      <button class="btn" type="submit">⚙️ Run Verification</button>
+    </div>
+  </form>
+</div>
+{% endblock %}

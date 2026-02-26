@@ -1,0 +1,229 @@
+{% extends "layouts/base.html" %}
+{% block title %}Borrower Dashboard • CM Loan Services{% endblock %}
+
+{% block content %}
+{% include "components/timeline.html" %}
+
+<link rel="stylesheet" href="https://unpkg.com/lucide-static@latest/font/lucide.css">
+
+<style>
+:root {
+    --bg:#0f0f11;
+    --panel:#15161a;
+    --line:#2b2f36;
+    --text:#e6e6e6;
+    --muted:#a5a7ad;
+    --accent:#7ab8ff;
+}
+
+/* Sidebar */
+.sidebar {
+    background: var(--panel);
+    width: 240px;
+    height: 100vh;
+    position: fixed;
+    top:0; left:0;
+    border-right: 1px solid var(--line);
+    padding: 2rem 1rem;
+    box-shadow: 0 0 20px rgba(122,184,255,0.25);
+}
+.sidebar h3 {
+    margin-bottom: 2rem;
+    text-align:center;
+}
+.sidebar a {
+    display:block;
+    padding:.8rem 1rem;
+    color:var(--text);
+    border-radius:10px;
+    margin-bottom:.5rem;
+}
+.sidebar a:hover {
+    background:var(--hover);
+}
+.dashboard-main {
+    margin-left:260px;
+    padding:2rem;
+}
+
+/* Cards */
+.card {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius:14px;
+    padding:1.5rem;
+    box-shadow:0 0 18px rgba(122,184,255,0.18);
+    margin-bottom:2rem;
+}
+.muted { color:var(--muted); }
+.btn {
+    padding:.7rem 1.2rem;
+    border:1px solid var(--accent);
+    border-radius:8px;
+    background:transparent;
+    color:var(--accent);
+}
+.btn:hover { background:var(--accent); color:#111; }
+<!-- ================================
+     CM Loan Progress Heatmap
+================================ -->
+<style>
+.progress-wrap {
+    margin: 2rem 0;
+}
+
+.progress-bar {
+    width: 100%;
+    background:#15161a;
+    border:1px solid #2b2f36;
+    height: 24px;
+    border-radius: 12px;
+    overflow:hidden;
+}
+
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #7ab8ff, #4a9cff);
+    width: {{ progress }}%;
+    transition: width 0.6s ease-in-out;
+}
+
+.stage-label {
+    margin-top:0.5rem;
+    color:#a5a7ad;
+    font-size:1rem;
+}
+
+.heatmap-grid {
+    display:flex;
+    justify-content: space-between;
+    margin-top:1.5rem;
+}
+
+.heatmap-item {
+    width: 16%;
+    text-align:center;
+    padding:0.5rem;
+    border-radius:10px;
+    background:#15161a;
+    border:1px solid #2b2f36;
+    font-size:0.9rem;
+    color:#777;
+}
+
+.heatmap-item.active {
+    border-color:#7ab8ff;
+    color:#7ab8ff;
+    box-shadow: 0 0 12px rgba(122,184,255,0.35);
+}
+</style>
+
+<div class="progress-wrap">
+    
+    <div class="progress-bar">
+        <div class="progress-fill"></div>
+    </div>
+
+    <div class="stage-label">
+        {{ stage }}
+    </div>
+
+    <div class="heatmap-grid">
+
+        <div class="heatmap-item {% if progress >= 10 %}active{% endif %}">
+            App Started
+        </div>
+
+        <div class="heatmap-item {% if progress >= 20 %}active{% endif %}">
+            1003 Complete
+        </div>
+
+        <div class="heatmap-item {% if progress >= 40 %}active{% endif %}">
+            Docs
+        </div>
+
+        <div class="heatmap-item {% if progress >= 60 %}active{% endif %}">
+            eSign
+        </div>
+
+        <div class="heatmap-item {% if progress >= 80 %}active{% endif %}">
+            Appraisal
+        </div>
+
+        <div class="heatmap-item {% if progress >= 100 %}active{% endif %}">
+            Clear to Close
+        </div>
+
+    </div>
+</div>
+
+
+<aside class="sidebar">
+    <h3>Borrower Portal</h3>
+
+    <a href="/portal/dashboard"><i class="lucide lucide-layout-dashboard"></i> Dashboard</a>
+    <a href="/portal/documents"><i class="lucide lucide-folder-down"></i> Documents</a>
+    <a href="/portal/status"><i class="lucide lucide-check-circle"></i> Loan Status</a>
+    <a href="/portal/messages"><i class="lucide lucide-message-circle"></i> Messages</a>
+    <a href="/portal/logout"><i class="lucide lucide-log-out"></i> Logout</a>
+</aside>
+
+<main class="dashboard-main">
+
+    <h1>Welcome, {{ borrower.full_name }}</h1>
+    <p class="muted">Borrower Dashboard • Caughman Mason Loan Services</p>
+
+    <!-- Loan Summary -->
+    <div class="card">
+        <h3>📄 Loan Summary</h3>
+
+        {% if loans %}
+            <p><strong>Status:</strong> {{ loans[0].status }}</p>
+            <p><strong>Loan Amount:</strong> ${{ loans[0].amount }}</p>
+            <p><strong>Property:</strong> {{ loans[0].property_address }}</p>
+        {% else %}
+            <p>No active applications found.</p>
+        {% endif %}
+    </div>
+
+    <!-- Documents -->
+    <div class="card">
+        <h3>📁 Documents</h3>
+
+        {% for d in documents %}
+            <p>• {{ d.name }} — <span class="muted">{{ d.status }}</span></p>
+        {% else %}
+            <p>No documents uploaded yet.</p>
+        {% endfor %}
+
+        <a href="/portal/documents" class="btn" style="margin-top:1rem;">Upload Documents</a>
+    </div>
+
+    <!-- AI Assistant -->
+    <div class="card">
+        <h3>🤖 Loan Assistant AI</h3>
+        <textarea id="ai-input" class="form-control" style="width:100%; height:90px;"></textarea>
+        <button class="btn" style="margin-top:1rem;" onclick="sendAI()">Ask AI</button>
+
+        <div id="ai-response" style="margin-top:1rem;"></div>
+    </div>
+
+</main>
+
+<script>
+function sendAI() {
+    const message = document.getElementById("ai-input").value;
+
+    fetch("/master/ai", {
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body: JSON.stringify({ message })
+    })
+    .then(r => r.json())
+    .then(data => {
+        document.getElementById("ai-response").innerHTML = data.reply;
+    });
+}
+</script>
+
+{% endblock %}

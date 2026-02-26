@@ -1,0 +1,86 @@
+{% extends "layouts/base.html" %}
+{% block title %}Leads • Caughman Mason{% endblock %}
+
+{% block content %}
+
+<style>
+:root {
+    --bg:#0f0f11;
+    --panel:#15161a;
+    --line:#2b2f36;
+    --text:#e6e6e6;
+    --muted:#a5a7ad;
+    --accent:#7ab8ff;
+    --hover:#1f2328;
+    --glow:0 0 14px rgba(122,184,255,0.35);
+}
+
+.section {
+    background: var(--panel);
+    padding: 2rem;
+    border-radius: 14px;
+    border: 1px solid var(--line);
+    margin-bottom: 2rem;
+}
+
+.btn {
+    padding: .5rem 1rem;
+    border-radius: 8px;
+    border: 1px solid var(--accent);
+    background: transparent;
+    color: var(--accent);
+    cursor: pointer;
+}
+.btn:hover {
+    background: var(--accent);
+    color: black;
+}
+</style>
+
+<main class="dashboard-main">
+
+<section class="section">
+    <h2>📋 CRM Leads</h2>
+    <p class="muted">Convert leads into borrowers with one click.</p>
+</section>
+
+<section class="section">
+<table style="width:100%; border-collapse: collapse;">
+    <thead>
+        <tr style="border-bottom:1px solid var(--line);">
+            <th style="padding:.7rem;">Name</th>
+            <th>Email</th>
+            <th>Phone</th>
+            <th>Source</th>
+            <th>Created</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+
+    <tbody>
+    {% for lead in leads %}
+        <tr style="border-bottom:1px solid var(--line);">
+            <td style="padding:.7rem;">{{ lead.name }}</td>
+            <td>{{ lead.email }}</td>
+            <td>{{ lead.phone }}</td>
+            <td>{{ lead.source or "—" }}</td>
+            <td>{{ lead.created_at.strftime("%b %d %I:%M %p") }}</td>
+
+            <td>
+                {% if lead.status != "converted" %}
+                <form method="POST" action="/master/convert_lead/{{ lead.id }}" style="display:inline;">
+                    <button class="btn">Convert</button>
+                </form>
+                {% else %}
+                <span class="muted">Converted</span>
+                {% endif %}
+            </td>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>
+</section>
+
+</main>
+
+{% endblock %}

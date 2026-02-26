@@ -1,0 +1,71 @@
+{% extends "layouts/base.html" %}
+{% block title %}AI Loan Summary{% endblock %}
+{% block content %}
+
+<main class="dashboard-main">
+  <div class="wrap">
+    <section class="lhs grid">
+      <!-- HEADER -->
+      <div class="card" style="display:flex; justify-content:space-between; align-items:center;">
+        <div>
+          <h1>🤖 AI Loan Summary</h1>
+          <div class="muted">Generate instant AI insights for selected loans — powered by CM Loan Services.</div>
+        </div>
+        <div style="display:flex; gap:.6rem;">
+          <a class="btn btn-primary" href="{{ url_for('loan_officer.dashboard') }}">🏠 Dashboard</a>
+        </div>
+      </div>
+
+      <!-- FORM CARD -->
+      <div class="card">
+        <h3>Select a Loan to Analyze</h3>
+        <form method="POST" class="grid" style="gap:1rem;">
+          <div>
+            <label class="muted">Loan</label>
+            <select name="loan_id" class="form-select" style="background:var(--elev); color:var(--text); border:1px solid var(--line); border-radius:10px; padding:.6rem;" required>
+              <option value="">-- Choose Loan --</option>
+              {% for loan in loans %}
+              <option value="{{ loan.id }}">#{{ loan.id }} - {{ loan.loan_type }} (${{ "%.2f"|format(loan.amount) }})</option>
+              {% endfor %}
+            </select>
+          </div>
+          <button type="submit" class="btn btn-primary" style="align-self:start;">⚙️ Generate Summary</button>
+        </form>
+      </div>
+
+      <!-- AI SUMMARY OUTPUT -->
+      {% if summary %}
+      <div class="card">
+        <h3>AI Summary Result</h3>
+        <pre style="background:#0f0f11; color:var(--text); border:1px solid var(--line); border-radius:10px; padding:1rem; font-family:'Roboto Mono', monospace; white-space:pre-wrap;">
+{{ summary }}
+        </pre>
+      </div>
+      {% endif %}
+    </section>
+
+    <!-- RIGHT SIDE -->
+    <aside class="rhs grid">
+      <div class="card">
+        <h3>Smart Insights</h3>
+        <div class="muted">AI can identify risk factors, payment anomalies, or borrower strength indicators based on loan data.</div>
+        <ul style="margin-top:1rem; padding-left:1rem; line-height:1.7;">
+          <li>💡 Detect risky debt-to-income patterns</li>
+          <li>📊 Summarize borrower eligibility factors</li>
+          <li>💬 Generate ready-to-send report text</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <h3>Next Steps</h3>
+        <div style="display:flex; flex-direction:column; gap:.5rem;">
+          <a href="{{ url_for('loan_officer.reports') }}" class="btn">📈 View Reports</a>
+          <a href="{{ url_for('loan_officer.pipeline') }}" class="btn">📊 View Pipeline</a>
+          <a href="{{ url_for('loan_officer.messages') }}" class="btn">💬 Open Messages</a>
+        </div>
+      </div>
+    </aside>
+  </div>
+</main>
+
+{% endblock %}

@@ -1,0 +1,61 @@
+{% extends "layouts/borrower_base.html" %}
+{% block title %}Payments • Borrower Portal{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="https://unpkg.com/lucide-static@latest/font/lucide.css">
+
+<style>
+:root {
+    --bg:#0f0f11;
+    --panel:#15161a;
+    --line:#2b2f36;
+    --text:#e6e6e6;
+    --muted:#a5a7ad;
+    --accent:#7ab8ff;
+    --danger:#ff6565;
+}
+body{ background:var(--bg); color:var(--text); }
+
+.card {
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:16px;
+    padding:1.5rem;
+    margin-bottom:2rem;
+    box-shadow:0 0 20px rgba(122,184,255,0.25);
+}
+
+.btn {
+    padding:.7rem 1.2rem;
+    border-radius:8px;
+    background:transparent;
+    border:1px solid var(--accent);
+    color:var(--accent);
+}
+.btn:hover{ background:var(--accent); color:#000; }
+
+.status-paid { color:#3ce43c; }
+.status-pending { color:var(--danger); }
+</style>
+
+<main class="dashboard-main">
+
+    <h1>💳 Payments</h1>
+    <p class="muted">Secure online fee payments.</p>
+
+    {% for p in payments %}
+    <div class="card">
+        <h3>{{ p.payment_type }}</h3>
+        <p><strong>Amount:</strong> ${{ p.amount }}</p>
+
+        {% if p.status == "Paid" %}
+            <p class="status-paid">✔ Paid</p>
+        {% else %}
+            <p class="status-pending">Pending</p>
+            <a href="{{ url_for('borrower.checkout', payment_id=p.id) }}" class="btn">Pay Now</a>
+        {% endif %}
+    </div>
+    {% endfor %}
+
+</main>
+{% endblock %}

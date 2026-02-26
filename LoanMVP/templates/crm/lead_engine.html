@@ -1,0 +1,142 @@
+{% extends "layouts/base.html" %}
+{% block title %}Lead Engine{% endblock %}
+{% block content %}
+
+<main style="margin-left:260px; padding:2rem; background:#0f0f11; color:#e6e6e6; min-height:100vh;">
+  <link rel="stylesheet" href="https://unpkg.com/lucide-static@latest/font/lucide.css">
+  <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+
+  <style>
+    .card {
+      background:#15161a;border:1px solid #2b2f36;border-radius:14px;
+      padding:1.4rem;box-shadow:0 0 18px rgba(122,184,255,0.25);
+      margin-bottom:1.5rem;
+    }
+    h1,h2{color:#7ab8ff;margin-bottom:.8rem;}
+    .muted{color:#a5a7ad;font-size:.9rem;}
+    .grid{display:grid;gap:1.25rem;}
+    .g-2{grid-template-columns:repeat(2,minmax(0,1fr));}
+    .btn{
+      display:inline-flex;align-items:center;gap:.4rem;
+      background:linear-gradient(180deg,#2a4a62,#1b2a38);
+      border:1px solid #2a4a62;color:#cfe8ff;
+      border-radius:10px;padding:.6rem 1.1rem;text-decoration:none;cursor:pointer;
+    }
+    .btn:hover{box-shadow:0 0 10px rgba(122,184,255,0.35);}
+    .btn-outline{background:transparent;border:1px solid #2b2f36;color:#e6e6e6;}
+    table{width:100%;border-collapse:collapse;}
+    th,td{padding:.6rem .8rem;border-top:1px solid #2b2f36;text-align:left;}
+    th{color:#9cb9d8;font-size:.85rem;text-transform:uppercase;}
+    tr:hover{background:#1c1f25;}
+    .badge{padding:.25rem .6rem;border-radius:999px;font-size:.78rem;}
+    .b-hot{background:#1b2a23;color:#43d19e;}
+    .b-warm{background:#2a2a1b;color:#ffdf6e;}
+    .b-cold{background:#2a1b1b;color:#ff6b6b;}
+    .ai-summary{background:#18222b;border:1px solid #2b2f36;border-radius:14px;
+      padding:1.2rem;box-shadow:0 0 12px rgba(122,184,255,0.2);}
+  </style>
+
+  <!-- Header -->
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;">
+      <h1><i class="lucide lucide-cpu"></i> Lead Engine</h1>
+      <div style="display:flex;gap:.5rem;flex-wrap:wrap;">
+        <a href="{{ url_for('crm.view_leads') }}" class="btn btn-outline"><i class="lucide lucide-users"></i> View Leads</a>
+        <a href="{{ url_for('crm.add_lead') }}" class="btn btn-outline"><i class="lucide lucide-user-plus"></i> Add Lead</a>
+      </div>
+    </div>
+    <p class="muted">AI-driven intelligence hub — monitor, score, and qualify leads in real time.</p>
+  </div>
+
+  <!-- Charts Section -->
+  <div class="grid g-2">
+    <div class="card">
+      <h2>📈 Lead Quality Distribution</h2>
+      <div id="chartLeadQuality" style="height:260px;"></div>
+    </div>
+    <div class="card">
+      <h2>💡 Source Performance</h2>
+      <div id="chartSourcePerf" style="height:260px;"></div>
+    </div>
+  </div>
+
+  <!-- Leads Table -->
+  <div class="card" style="overflow-x:auto;">
+    <h2><i class="lucide lucide-filter"></i> AI-Qualified Leads</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Email</th>
+          <th>Source</th>
+          <th>Status</th>
+          <th>Score</th>
+          <th>AI Rank</th>
+          <th>Last Contact</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for lead in leads %}
+        <tr>
+          <td><a href="{{ url_for('crm.lead_detail', lead_id=lead.id) }}" style="color:#7ab8ff;">{{ lead.name }}</a></td>
+          <td>{{ lead.email }}</td>
+          <td>{{ lead.source or '—' }}</td>
+          <td>{{ lead.status or 'New' }}</td>
+          <td>
+            <span class="badge 
+              {% if lead.score >= 75 %}b-hot
+              {% elif lead.score >= 50 %}b-warm
+              {% else %}b-cold{% endif %}">
+              {{ lead.score or 0 }}
+            </span>
+          </td>
+          <td>#{{ loop.index }}</td>
+          <td>{{ lead.last_contact.strftime('%b %d, %Y') if lead.last_contact else '—' }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="7" class="muted" style="text-align:center;">No leads available.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- AI Summary -->
+  <div class="ai-summary">
+    <h2><i class="lucide lucide-brain-circuit"></i> AI Summary</h2>
+    <p id="aiSummary" class="muted">Analyzing lead activity...</p>
+  </div>
+
+  <script>
+    // --- Charts ---
+    const baseOpt={chart:{toolbar:{show:false},foreColor:'#c9d3df'},grid:{borderColor:'#2a2e36'},dataLabels:{enabled:false},theme:{mode:'dark'}};
+
+    // Lead Quality
+    new ApexCharts(document.querySelector("#chartLeadQuality"),{
+      ...baseOpt,
+      chart:{...baseOpt.chart,type:'radialBar',height:260},
+      series:[{{ summary.hot or 0 }},{{ summary.warm or 0 }},{{ summary.cold or 0 }}],
+      labels:['Hot','Warm','Cold'],
+      colors:['#43d19e','#ffdf6e','#ff6b6b'],
+      plotOptions:{radialBar:{hollow:{size:'58%'},dataLabels:{value:{fontSize:'22px'}}}}
+    }).render();
+
+    // Source Performance
+    new ApexCharts(document.querySelector("#chartSourcePerf"),{
+      ...baseOpt,
+      chart:{...baseOpt.chart,type:'bar',height:260},
+      series:[{name:'Leads',data:{{ source_counts|tojson }} }],
+      xaxis:{categories:{{ source_labels|tojson }}},
+      colors:['#7ab8ff']
+    }).render();
+
+    // AI Summary Demo
+    setTimeout(()=>{
+      document.getElementById('aiSummary').innerHTML = `
+        <strong>🤖 AI Insight:</strong> ${new Date().toLocaleDateString()} — 
+        <b>{{ summary.hot or 0 }}</b> high-quality leads flagged. 
+        Conversion likelihood: <b>+{{ summary.conversion_boost or 15 }}%</b> this week.`;
+    },1200);
+  </script>
+</main>
+
+{% endblock %}

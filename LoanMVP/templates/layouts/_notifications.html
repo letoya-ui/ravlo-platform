@@ -1,0 +1,246 @@
+<!-- =========================================
+     🔔 Notifications Sidebar — Unified CM Theme (2025)
+     ========================================= -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+<style>
+  :root {
+    --bg:#0f0f11;
+    --panel:#15161a;
+    --line:#282b31;
+    --text-light:#e6e6e6;
+    --text-muted:#a5a7ad;
+    --accent:#7ab8ff;
+    --hover:#1f2328;
+    --glow:0 0 16px rgba(122,184,255,0.25);
+  }
+
+  .sidebar {
+    background:var(--panel);
+    border-right:1px solid var(--line);
+    width:260px;
+    height:100vh;
+    position:fixed;
+    top:0; left:0;
+    display:flex;
+    flex-direction:column;
+    box-shadow:var(--glow);
+    overflow-y:auto;
+    -webkit-overflow-scrolling:touch;
+    z-index:1000;
+    transition:transform 0.3s ease;
+  }
+
+  .sidebar-header {
+    text-align:center;
+    padding:1.25rem .75rem;
+    border-bottom:1px solid var(--line);
+    background:linear-gradient(180deg,#17181b,#0f0f11);
+    box-shadow:0 2px 8px rgba(0,0,0,0.3);
+    position:relative;
+  }
+
+  .sidebar-header h3 {
+    color:var(--text-light);
+    font-size:1.1rem;
+    margin-bottom:0.25rem;
+    letter-spacing:0.5px;
+  }
+
+  .sidebar-header small {
+    color:var(--text-muted);
+    font-size:.75rem;
+  }
+
+  .toggle-btn {
+    position:absolute;
+    top:1rem; right:1rem;
+    background:none;
+    border:none;
+    color:var(--accent);
+    font-size:1.2rem;
+    cursor:pointer;
+    display:none;
+  }
+
+  .nav {
+    flex:1;
+    padding:1rem 0.5rem;
+  }
+
+  .nav-section {
+    margin-bottom:1.25rem;
+  }
+
+  .nav-section h4 {
+    color:var(--text-muted);
+    font-size:.75rem;
+    text-transform:uppercase;
+    letter-spacing:1px;
+    padding:0 1rem;
+    margin-bottom:.5rem;
+    border-left:3px solid var(--accent);
+  }
+
+  .nav a {
+    display:flex;
+    align-items:center;
+    gap:.75rem;
+    padding:.55rem 1.25rem;
+    color:var(--text-light);
+    text-decoration:none;
+    border-left:3px solid transparent;
+    border-radius:8px;
+    transition:all .25s ease;
+    font-size:.93rem;
+  }
+
+  .nav a i {
+    width:20px;
+    text-align:center;
+    opacity:.9;
+  }
+
+  .nav a:hover {
+    background:var(--hover);
+    color:var(--accent);
+    border-left-color:var(--accent);
+    box-shadow:var(--glow);
+  }
+
+  .nav a.active {
+    color:var(--accent);
+    background:var(--hover);
+    border-left-color:var(--accent);
+    box-shadow:0 0 12px rgba(122,184,255,0.35);
+  }
+
+  .badge {
+    background:#d9534f;
+    color:#fff;
+    font-size:.7rem;
+    padding:0 6px;
+    border-radius:8px;
+    margin-left:auto;
+  }
+
+  .sidebar-footer {
+    border-top:1px solid var(--line);
+    text-align:center;
+    padding:1rem;
+    font-size:.8rem;
+    color:var(--text-muted);
+    background:#101113;
+  }
+
+  .sidebar-footer a {
+    color:var(--text-muted);
+    text-decoration:none;
+    transition:color .25s;
+  }
+
+  .sidebar-footer a:hover {
+    color:var(--accent);
+    text-shadow:0 0 6px rgba(122,184,255,0.4);
+  }
+
+  @media(max-width:992px){
+    .sidebar {
+      transform:translateX(-100%);
+    }
+    .sidebar.active {
+      transform:translateX(0);
+    }
+    .toggle-btn {
+      display:block;
+    }
+  }
+</style>
+
+<aside class="sidebar" id="notificationsSidebar">
+  <div class="sidebar-header">
+    <h3>Notifications</h3>
+    <small>Caughman Mason • LoanMVP</small>
+    <button class="toggle-btn" id="toggleSidebar"><i class="fa-solid fa-bars"></i></button>
+  </div>
+  
+  <nav class="nav">
+
+    <!-- 🔔 Overview -->
+    <div class="nav-section">
+      <h4>Alerts</h4>
+      <a href="{{ url_for('notifications.dashboard') }}" class="{% if request.endpoint == 'notifications.dashboard' %}active{% endif %}">
+        <i class="fa-solid fa-bell"></i> All Notifications
+      </a>
+      <a href="{{ url_for('notifications.api_latest') }}">
+        <i class="fa-solid fa-clock-rotate-left"></i> Latest Updates
+      </a>
+    </div>
+
+    <!-- 📬 Notification Categories -->
+    <div class="nav-section">
+      <h4>Categories</h4>
+      <a href="{{ url_for('crm.dashboard') }}">
+        <i class="fa-solid fa-users"></i> CRM Alerts <span class="badge">{{ crm_unread or 0 }}</span>
+      </a>
+      <a href="{{ url_for('loan_officer.dashboard') }}">
+        <i class="fa-solid fa-briefcase"></i> Loan Updates <span class="badge">{{ loan_unread or 0 }}</span>
+      </a>
+      <a href="{{ url_for('processor.dashboard') }}">
+        <i class="fa-solid fa-gears"></i> Processor Tasks <span class="badge">{{ processor_unread or 0 }}</span>
+      </a>
+      <a href="{{ url_for('compliance.dashboard') }}">
+        <i class="fa-solid fa-scale-balanced"></i> Compliance Notices <span class="badge">{{ compliance_unread or 0 }}</span>
+      </a>
+      <a href="{{ url_for('underwriter.dashboard') }}">
+        <i class="fa-solid fa-shield-halved"></i> Underwriter Reviews <span class="badge">{{ underwriter_unread or 0 }}</span>
+      </a>
+      <a href="{{ url_for('executive.dashboard') }}">
+        <i class="fa-solid fa-building-columns"></i> Executive Briefs <span class="badge">{{ executive_unread or 0 }}</span>
+      </a>
+    </div>
+
+    <!-- 🧠 AI & System -->
+    <div class="nav-section">
+      <h4>AI & System</h4>
+      <a href="{{ url_for('ai.dashboard') }}">
+        <i class="fa-solid fa-brain"></i> AI Activity
+      </a>
+      <a href="{{ url_for('system.logs') }}">
+        <i class="fa-solid fa-file-lines"></i> System Logs
+      </a>
+      <a href="{{ url_for('notifications.mark_read', notif_id=1) }}">
+        <i class="fa-solid fa-envelope-open"></i> Mark as Read
+      </a>
+    <a href="{{ url_for('notifications.mark_all_read') }}" onclick="markAllRead(event)">
+  <i class="fa-solid fa-envelope-open"></i> Mark All Read
+</a>
+
+<script>
+  async function markAllRead(e){
+    e.preventDefault();
+    await fetch("{{ url_for('notifications.mark_all_read') }}", {method: "POST"});
+    location.reload();
+  }
+</script>
+
+
+    <!-- ⚙️ Account -->
+    <div class="nav-section">
+      <h4>Account</h4>
+      <a href="{{ url_for('auth.logout') }}">
+        <i class="fa-solid fa-right-from-bracket"></i> Logout
+      </a>
+    </div>
+  </nav>
+
+  <div class="sidebar-footer">
+    © 2025 Caughman Mason LLC<br>Notifications Center
+  </div>
+</aside>
+
+<script>
+  document.getElementById("toggleSidebar").addEventListener("click", () => {
+    document.getElementById("notificationsSidebar").classList.toggle("active");
+  });
+</script>

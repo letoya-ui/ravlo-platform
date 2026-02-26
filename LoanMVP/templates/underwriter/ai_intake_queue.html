@@ -1,0 +1,150 @@
+{% extends "layouts/base.html" %}
+{% block title %}Underwriter • AI Intake Queue{% endblock %}
+
+{% block content %}
+<main class="dashboard-main">
+<link rel="preconnect" href="https://cdn.jsdelivr.net" />
+<script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+
+<style>
+  :root {
+    --bg:#0f0f11; --panel:#15161a; --elev:#1b1d22;
+    --text:#e6e6e6; --muted:#a5a7ad; --line:#282b31;
+    --accent:#7ab8ff; --accent-soft:#2a4a62;
+    --success:#43d19e; --warn:#ffdf6e; --danger:#ff6b6b;
+    --glow:0 0 18px rgba(122,184,255,0.35);
+  }
+
+  body { background: var(--bg); color: var(--text); }
+
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 1.1rem;
+    box-shadow: var(--glow);
+    margin-bottom: 1rem;
+  }
+
+  .table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  .table th, .table td {
+    padding: .7rem .6rem;
+    border-top: 1px solid var(--line);
+  }
+
+  .table th {
+    color: #cfe0f5;
+    font-weight: 600;
+    text-align: left;
+  }
+
+  .status {
+    padding: .2rem .6rem;
+    border-radius: 999px;
+    font-size: .78rem;
+    border: 1px solid var(--line);
+  }
+
+  .st-low { background:#1b2a23; color:#9af2c5; }
+  .st-moderate { background:#23251e; color:#e7f28f; }
+  .st-high { background:#2a1b1b; color:#ff9d9d; }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: .4rem;
+    padding: .5rem .8rem;
+    border-radius: 10px;
+    border: 1px solid var(--line);
+    color: var(--text);
+    text-decoration: none;
+    background: linear-gradient(180deg,#1c1f25,#15161a);
+    transition: all .2s ease;
+  }
+
+  .btn:hover {
+    border-color: var(--accent);
+    box-shadow: var(--glow);
+    color: #cfe8ff;
+  }
+
+  h1, h2, h3 {
+    color: var(--text);
+    margin-bottom: .5rem;
+  }
+
+  .muted {
+    color: var(--muted);
+  }
+
+  .ai-banner {
+    background: linear-gradient(90deg,#2a4a62,#1b2a38);
+    color: #cfe8ff;
+    padding: 1rem;
+    border-radius: 12px;
+    margin-bottom: 1.2rem;
+    box-shadow: var(--glow);
+    font-size: .95rem;
+  }
+</style>
+
+<div class="container py-4">
+  <h2 class="fw-bold mb-3">🤖 AI Intake Queue</h2>
+
+  <div class="ai-banner">
+    <strong>AI Summary:</strong> Reviewing {{ loans|length }} loans. Higher scores indicate higher underwriting priority.
+  </div>
+
+  <div class="card">
+    {% if loans %}
+    <table class="table">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Borrower</th>
+          <th>Amount</th>
+          <th>Risk Level</th>
+          <th>Status</th>
+          <th>Date</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for loan in loans %}
+        <tr>
+          <td>#{{ loan.id }}</td>
+          <td>{{ loan.borrower_profile.full_name if loan.borrower_profile else '—' }}</td>
+          <td>${{ "{:,.2f}".format(loan.amount or 0) }}</td>
+          <td>
+            {% set risk = (loan.risk_score or 0) %}
+            {% if risk >= 0.7 %}
+              <span class="status st-high">High</span>
+            {% elif risk >= 0.4 %}
+              <span class="status st-moderate">Moderate</span>
+            {% else %}
+              <span class="status st-low">Low</span>
+            {% endif %}
+          </td>
+          <td>
+            <span class="muted">{{ loan.status|capitalize }}</span>
+          </td>
+          <td>{{ loan.created_at.strftime('%b %d, %Y') if loan.created_at else '—' }}</td>
+          <td>
+            <a href="{{ url_for('underwriter.review_loan', loan_id=loan.id) }}" class="btn">🔍 Review</a>
+            <a href="{{ url_for('processor.borrowers') }}" class="btn">👤 Borrower</a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+      <p class="muted text-center mb-0">No AI intake loans available for review.</p>
+    {% endif %}
+  </div>
+</div>
+
+{% endblock %}

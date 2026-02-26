@@ -1,0 +1,33 @@
+{% extends "layouts/base.html" %}
+{% block title %}AI Loan Summary{% endblock %}
+{% block content %}
+<style>
+  :root{--line:#2a2e36; --panel:#15161a; --text:#e6e6e6; --muted:#a5a7ad}
+  .card{background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:1rem}
+  table{width:100%; border-collapse:collapse}
+  th,td{padding:.6rem; border-top:1px solid var(--line); color:var(--text)}
+  input{background:#0f0f11; border:1px solid var(--line); color:var(--text); border-radius:10px; padding:.45rem .6rem; width:100%}
+  .btn{display:inline-flex; align-items:center; gap:.5rem; padding:.6rem .9rem; border-radius:10px; border:1px solid var(--line); color:var(--text); text-decoration:none; background:#1a1d23}
+</style><div class="container py-4">
+  <h2 class="fw-bold text-light mb-3">🤖 AI Loan Summary</h2>
+
+  <div class="card p-4 shadow-sm mb-4">
+    <h5 class="text-secondary mb-2">Borrower</h5>
+    <p class="mb-1"><strong>{{ borrower.full_name }}</strong></p>
+    <p class="text-muted small">{{ borrower.email }} | {{ borrower.phone }}</p>
+  </div>
+
+  <div class="card p-4 shadow-sm mb-4">
+    <h5 class="text-secondary mb-2">Loan Details</h5>
+    <p><strong>Type:</strong> {{ loan.loan_type }}</p>
+    <p><strong>Amount:</strong> ${{ "%.2f"|format(loan.amount or 0) }}</p>
+    <p><strong>Status:</strong> {{ loan.status }}</p>
+    <p><strong>Property:</strong> {{ loan.property_address }}</p>
+  </div>
+
+  <div class="card p-4 shadow-sm">
+    <h5 class="text-secondary mb-2">AI Analysis</h5>
+    <pre>{{ summary }}</pre>
+  </div>
+</div>
+{% endblock %}

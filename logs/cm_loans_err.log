@@ -1,0 +1,60 @@
+Traceback (most recent call last):
+  File "LoanMVP\config.py", line 23, in Config
+FileNotFoundError: [Errno 2] No such file or directory: 'C:\\WINDOWS\\TEMP\\_MEI170722\\LoanMVP\\instance\\test.tmp'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "run.py", line 12, in <module>
+  File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1331, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 935, in _load_unlocked
+  File "pyimod02_importers.py", line 457, in exec_module
+  File "LoanMVP\app.py", line 13, in <module>
+  File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1331, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 935, in _load_unlocked
+  File "pyimod02_importers.py", line 457, in exec_module
+  File "LoanMVP\config.py", line 12, in <module>
+  File "LoanMVP\config.py", line 27, in Config
+NameError: name 'BASE_DIR' is not defined
+Traceback (most recent call last):
+  File "LoanMVP\config.py", line 23, in Config
+FileNotFoundError: [Errno 2] No such file or directory: 'C:\\WINDOWS\\TEMP\\_MEI21682\\LoanMVP\\instance\\test.tmp'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "run.py", line 12, in <module>
+  File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1331, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 935, in _load_unlocked
+  File "pyimod02_importers.py", line 457, in exec_module
+  File "LoanMVP\app.py", line 13, in <module>
+  File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1331, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 935, in _load_unlocked
+  File "pyimod02_importers.py", line 457, in exec_module
+  File "LoanMVP\config.py", line 12, in <module>
+  File "LoanMVP\config.py", line 27, in Config
+NameError: name 'BASE_DIR' is not defined
+Traceback (most recent call last):
+  File "LoanMVP\config.py", line 23, in Config
+FileNotFoundError: [Errno 2] No such file or directory: 'C:\\WINDOWS\\TEMP\\_MEI150922\\LoanMVP\\instance\\test.tmp'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "run.py", line 12, in <module>
+  File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1331, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 935, in _load_unlocked
+  File "pyimod02_importers.py", line 457, in exec_module
+  File "LoanMVP\app.py", line 13, in <module>
+  File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1331, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 935, in _load_unlocked
+  File "pyimod02_importers.py", line 457, in exec_module
+  File "LoanMVP\config.py", line 12, in <module>
+  File "LoanMVP\config.py", line 27, in Config
+NameError: name 'BASE_DIR' is not defined

@@ -1,0 +1,128 @@
+<!-- =========================================
+     🤖 Borrower AI Sidebar — Black / Silver / Blue Glow
+     ========================================= -->
+<link rel="stylesheet" href="https://unpkg.com/lucide-static@latest/font/lucide.css">
+
+<aside class="sidebar">
+  <div class="sidebar-header">
+    <h3>Borrower AI</h3>
+    <small>Caughman Mason • LoanMVP</small>
+  </div>
+
+  <nav class="nav">
+    <!-- 🏠 Dashboard -->
+    <a href="{{ url_for('borrower_ai.dashboard') }}" class="{% if request.endpoint == 'borrower_ai.dashboard' %}active{% endif %}">
+      <i class="lucide lucide-layout-dashboard"></i> Dashboard
+    </a>
+
+    <!-- 🧾 Intake -->
+    <a href="{{ url_for('borrower_ai.intake') }}" class="{% if request.endpoint == 'borrower_ai.intake' %}active{% endif %}">
+      <i class="lucide lucide-file-input"></i> AI Intake
+    </a>
+
+    <!-- 💰 Quote -->
+    <a href="{{ url_for('borrower_ai.quote') }}" class="{% if request.endpoint == 'borrower_ai.quote' %}active{% endif %}">
+      <i class="lucide lucide-file-text"></i> AI Quote
+    </a>
+
+    <!-- 🏘 Property -->
+    <a href="{{ url_for('borrower_ai.property_analysis') }}" class="{% if request.endpoint == 'borrower_ai.property_analysis' %}active{% endif %}">
+      <i class="lucide lucide-home"></i> Property Analysis
+    </a>
+
+    <!-- 📈 Predictive -->
+    <a href="{{ url_for('borrower_ai.predictive') }}" class="{% if request.endpoint == 'borrower_ai.predictive' %}active{% endif %}">
+      <i class="lucide lucide-trending-up"></i> Predictive Analytics
+    </a>
+
+    <!-- ⚙️ Workflow -->
+    <a href="{{ url_for('borrower_ai.workflow') }}" class="{% if request.endpoint == 'borrower_ai.workflow' %}active{% endif %}">
+      <i class="lucide lucide-cpu"></i> AI Workflows
+    </a>
+
+    <!-- 💡 AI Tips (NEW) -->
+    <a href="{{ url_for('borrower_ai.ai_tip') }}" class="{% if request.endpoint == 'borrower_ai.ai_tip' %}active{% endif %}">
+      <i class="lucide lucide-sparkles"></i> AI Tips
+    </a>
+
+    <hr style="border-color:var(--line);margin:1rem 0;">
+
+    <!-- 🏠 Back to Borrower Hub -->
+    <a href="{{ url_for('borrower.dashboard') }}">
+      <i class="lucide lucide-arrow-left-circle"></i> Back to Borrower
+    </a>
+
+    <!-- 🚪 Logout -->
+    <a href="{{ url_for('auth.logout') }}">
+      <i class="lucide lucide-log-out"></i> Logout
+    </a>
+  </nav>
+
+  <div class="sidebar-footer">
+    <p>© {{ year or "2025" }} LoanMVP • Borrower AI</p>
+  </div>
+</aside>
+
+<style>
+  :root {
+    --bg:#0f0f11;
+    --panel:#15161a;
+    --line:#282b31;
+    --text-light:#e6e6e6;
+    --text-muted:#a5a7ad;
+    --accent:#7ab8ff;
+    --hover:#1f2328;
+    --border:#2b2f36;
+  }
+
+  .sidebar {
+    background:var(--panel);
+    border-right:1px solid var(--line);
+    width:260px;
+    height:100vh;
+    position:fixed;
+    top:0; left:0;
+    display:flex; flex-direction:column;
+    box-shadow:0 0 18px rgba(122,184,255,.25);
+    z-index:1000;
+    overflow-y:auto;
+  }
+
+  .sidebar-header {
+    text-align:center;
+    padding:1.25rem .5rem;
+    border-bottom:1px solid var(--line);
+  }
+  .sidebar-header h3 {
+    font-size:1.1rem;
+    color:var(--text-light);
+    font-weight:600;
+    margin-bottom:.25rem;
+  }
+  .sidebar-header small {
+    color:var(--text-muted);
+    font-size:.75rem;
+  }
+
+  .nav { flex:1; display:flex; flex-direction:column; }
+  .nav a {
+    display:flex; align-items:center; gap:.6rem;
+    padding:.6rem 1.25rem;
+    color:var(--text-light);
+    text-decoration:none;
+    border-left:3px solid transparent;
+    transition:all .25s ease;
+  }
+  .nav a:hover, .nav a.active {
+    background:var(--hover);
+    border-left:3px solid var(--accent);
+    color:var(--accent);
+  }
+  .sidebar-footer {
+    text-align:center;
+    padding:1rem;
+    font-size:.8rem;
+    color:var(--text-muted);
+    border-top:1px solid var(--line);
+  }
+</style>

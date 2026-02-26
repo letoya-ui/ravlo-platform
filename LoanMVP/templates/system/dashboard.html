@@ -1,0 +1,155 @@
+{% extends "layouts/base.html" %}
+{% block title %}System Dashboard | LoanMVP{% endblock %}
+{% block content %}
+<main class="dashboard-main">
+  <style>
+    :root {
+      --bg:#0f0f11;
+      --panel:#15161a;
+      --line:#2a2e36;
+      --text:#e6e6e6;
+      --muted:#a5a7ad;
+      --accent:#7ab8ff;
+      --glow:0 0 14px rgba(122,184,255,0.35);
+    }
+
+    .dashboard-main {
+      padding: 2rem;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 1.6rem;
+    }
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 1.3rem 1.5rem;
+      box-shadow: 0 0 16px rgba(0,0,0,0.4);
+      transition: all .25s ease;
+    }
+    .card:hover {
+      border-color: var(--accent);
+      box-shadow: var(--glow);
+    }
+    .card h4 {
+      margin-top: 0;
+      color: var(--accent);
+      margin-bottom: 1rem;
+      font-size: 1.1rem;
+    }
+    .stat {
+      font-size: 1.2rem;
+      color: var(--text);
+      margin: .3rem 0;
+    }
+    .muted { color: var(--muted); font-size: .9rem; }
+    .btn {
+      display:inline-block;
+      margin-top:.8rem;
+      background:#1a1d23;
+      color:var(--text);
+      border:1px solid var(--line);
+      border-radius:10px;
+      padding:.5rem .9rem;
+      font-size:.9rem;
+      text-decoration:none;
+      transition:all .25s ease;
+    }
+    .btn:hover {
+      border-color:var(--accent);
+      box-shadow:0 0 10px rgba(122,184,255,0.3);
+      color:var(--accent);
+    }
+    ul.clean {
+      list-style:none;
+      padding:0;
+      margin:0;
+    }
+    ul.clean li {
+      padding:.3rem 0;
+      border-bottom:1px solid #222;
+      font-size:.9rem;
+    }
+  </style>
+
+  <h2 class="mb-4">🧠 System Dashboard</h2>
+
+  <div class="grid">
+    <!-- 🖥️ System Info -->
+    <div class="card">
+      <h4>🖥️ System Info</h4>
+      <p class="stat"><strong>Name:</strong> {{ system.name }}</p>
+      <p class="stat"><strong>Version:</strong> {{ system.version }}</p>
+      <p class="stat"><strong>Environment:</strong> {{ system.environment or 'Production' }}</p>
+      <p class="stat"><strong>Uptime:</strong> {{ uptime }} days</p>
+      <a href="{{ url_for('system.settings') }}" class="btn">⚙️ Manage Settings</a>
+    </div>
+
+    <!-- 📊 Active Metrics -->
+    <div class="card">
+      <h4>📊 AI System Metrics</h4>
+      <p class="stat">🕒 Last Heartbeat: {{ system.last_heartbeat.strftime('%b %d, %Y %I:%M %p') if system.last_heartbeat else 'Never' }}</p>
+      <p class="stat">💡 Total Logs: {{ logs|length }}</p>
+      <p class="stat">🧾 Total Audits: {{ audits|length }}</p>
+      <p class="muted">These metrics refresh automatically as the system receives events.</p>
+      <form id="pingForm" method="post" action="{{ url_for('system.heartbeat') }}">
+        <button type="submit" class="btn">💓 Ping Heartbeat</button>
+      </form>
+    </div>
+
+    <!-- 📜 Recent Logs -->
+    <div class="card">
+      <h4>📜 Recent Logs</h4>
+      <ul class="clean">
+        {% for log in logs %}
+        <li><small>{{ log.created_at.strftime('%b %d %I:%M %p') }} — {{ log.message }}</small></li>
+        {% else %}
+        <li class="muted">No recent logs available.</li>
+        {% endfor %}
+      </ul>
+      <a href="{{ url_for('system.logs') }}" class="btn">View All Logs</a>
+    </div>
+
+    <!-- 🧾 Audit Trail -->
+    <div class="card">
+      <h4>🧾 Audit Trail</h4>
+      <ul class="clean">
+        {% for audit in audits %}
+        <li><small>{{ audit.created_at.strftime('%b %d %I:%M %p') }} — {{ audit.action }}</small></li>
+        {% else %}
+        <li class="muted">No recent audit records.</li>
+        {% endfor %}
+      </ul>
+      <a href="{{ url_for('system.audits') }}" class="btn">View Full Audits</a>
+    </div>
+
+    <!-- 🤖 AI Summary -->
+    <div class="card" style="grid-column: span 2;">
+      <h4>🤖 AI System Summary</h4>
+      <p class="muted">Automated insights from the AI Assistant about current system performance:</p>
+      <div id="aiSummary" class="stat" style="margin-top:1rem; line-height:1.5;"></div>
+      <button id="refreshAI" class="btn mt-2">🔄 Refresh Summary</button>
+    </div>
+  </div>
+
+  <script>
+    document.getElementById('pingForm')?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const res = await fetch('{{ url_for("system.heartbeat") }}', {method:'POST'});
+      const data = await res.json();
+      alert(data.status === 'ok' ? '✅ Heartbeat sent!' : '⚠️ System not initialized.');
+    });
+
+    document.getElementById('refreshAI')?.addEventListener('click', async () => {
+      const res = await fetch('/ai/tip?query=Summarize system health&context=ai');
+      const data = await res.json();
+      document.getElementById('aiSummary').textContent = data.reply || '(No response)';
+    });
+  </script>
+</main>
+{% endblock %}

@@ -1,0 +1,133 @@
+{% extends "layouts/base.html" %}
+{% block title %}Loan Officer • New Loan Application{% endblock %}
+{% block content %}
+
+<style>
+  :root {
+    --bg:#0f0f11; --panel:#15161a; --line:#282b31;
+    --text:#e6e6e6; --muted:#a5a7ad; --accent:#7ab8ff;
+    --glow:0 0 18px rgba(122,184,255,0.35);
+  }
+
+  body, input, select, textarea, h1, label { font-family: 'Inter', sans-serif; }
+
+  .wrap { display:flex; justify-content:center; padding:2rem 1rem; }
+  .card {
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:16px;
+    box-shadow:var(--glow);
+    padding:2rem;
+    width:min(900px, 100%);
+  }
+
+  h2 { color:var(--text); margin-bottom:1.2rem; }
+  label { color:var(--muted); font-weight:500; font-size:.9rem; margin-bottom:.3rem; display:block; }
+
+  input, select, textarea {
+    background:#0f0f11;
+    border:1px solid var(--line);
+    color:var(--text);
+    border-radius:10px;
+    padding:.6rem .8rem;
+    width:100%;
+  }
+
+  .row { display:grid; grid-template-columns:repeat(auto-fit, minmax(260px, 1fr)); gap:1rem; margin-bottom:1rem; }
+
+  .btn {
+    display:inline-flex; justify-content:center; align-items:center; gap:.5rem;
+    padding:.7rem 1.2rem; border-radius:10px; border:1px solid var(--line);
+    color:var(--text); background:linear-gradient(180deg, #1c1f25, #15161a);
+    text-decoration:none; transition:.25s; font-weight:500;
+  }
+  .btn:hover { border-color:#35506a; box-shadow:var(--glow); }
+
+  .btn-primary {
+    background:linear-gradient(180deg, #2a4a62, #1b2a38);
+    color:#cfe8ff; border-color:#2a4a62;
+  }
+
+  .muted { color:var(--muted); font-size:.85rem; margin-top:.5rem; }
+</style>
+
+<div class="wrap">
+  <div class="card">
+    <h2>📝 New Loan Application</h2>
+    <form method="POST">
+      <!-- Borrower + Type -->
+      <div class="row">
+        <div>
+          <label>Borrower</label>
+          <select name="borrower_profile_id" required>
+            <option value="">-- Select Borrower --</option>
+            {% for b in borrowers %}
+            <option value="{{ b.id }}">{{ b.full_name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label>Loan Type</label>
+          <select name="loan_type" required>
+            <option value="Conventional">Conventional</option>
+            <option value="FHA">FHA</option>
+            <option value="Commercial">Commercial</option>
+            <option value="Bridge">Bridge</option>
+            <option value="Private">Private</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Core Loan Inputs -->
+      <div class="row">
+        <div>
+          <label>Loan Amount ($)</label>
+          <input type="number" name="amount" step="0.01" required>
+        </div>
+        <div>
+          <label>Property Value ($)</label>
+          <input type="number" name="property_value" step="0.01" required>
+        </div>
+      </div>
+
+      <div class="row">
+        <div>
+          <label>Interest Rate (%)</label>
+          <input type="number" name="rate" step="0.01" placeholder="e.g. 7.25" required>
+        </div>
+        <div>
+          <label>Term (Months)</label>
+          <input type="number" name="term_months" step="1" placeholder="e.g. 360" required>
+        </div>
+      </div>
+
+      <!-- Property Info -->
+      <div class="row">
+        <div style="grid-column:1/-1;">
+          <label>Property Address</label>
+          <input type="text" name="property_address" required>
+        </div>
+      </div>
+
+      <div class="row">
+        <div style="grid-column:1/-1;">
+          <label>Lender Name (optional)</label>
+          <input type="text" name="lender_name" placeholder="If pre-selected lender applies">
+        </div>
+      </div>
+
+      <!-- Notes -->
+      <div class="row">
+        <div style="grid-column:1/-1;">
+          <label>Additional Notes or Summary</label>
+          <textarea name="ai_summary" rows="4" placeholder="Describe property, goals, or any AI notes…"></textarea>
+        </div>
+      </div>
+
+      <button type="submit" class="btn btn-primary">📤 Submit Application</button>
+      <p class="muted">Once submitted, this will be routed to your assigned Loan Officer or Processor for verification.</p>
+    </form>
+  </div>
+</div>
+
+{% endblock %}

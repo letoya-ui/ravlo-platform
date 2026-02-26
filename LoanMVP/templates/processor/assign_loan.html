@@ -1,0 +1,16 @@
+{% extends "layouts/base.html" %}
+{% block content %}
+<div class="section">
+    <h2>Assign Loan</h2>
+
+    <form method="POST">
+        <select name="user_id">
+            {% for u in users %}
+                <option value="{{ u.id }}">{{ u.full_name }} ({{ u.role }})</option>
+            {% endfor %}
+        </select>
+
+        <button class="btn-outline">Assign</button>
+    </form>
+</div>
+{% endblock %}

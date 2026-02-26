@@ -1,0 +1,239 @@
+{% extends "layouts/base.html" %}
+{% block title %}Documents • Caughman Mason{% endblock %}
+
+{% block content %}
+
+<link rel="stylesheet" href="https://unpkg.com/lucide-static@latest/font/lucide.css">
+
+<style>
+    :root {
+        --bg:#0f0f11;
+        --panel:#15161a;
+        --line:#282b31;
+        --text:#e6e6e6;
+        --muted:#a5a7ad;
+        --accent:#7ab8ff;
+        --hover:#1f2328;
+        --border:#2b2f36;
+        --glow:0 0 14px rgba(122,184,255,0.35);
+    }
+
+    body { background: var(--bg); color: var(--text); }
+
+    .section {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+    }
+
+    h2 { text-shadow: var(--glow); }
+
+    .grid-2 {
+        display: grid;
+        grid-template-columns: repeat(2,1fr);
+        gap: 2rem;
+    }
+
+    .doc-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .doc-table th, .doc-table td {
+        border-bottom: 1px solid var(--line);
+        padding: .7rem;
+    }
+
+    .btn {
+        padding: .5rem 1rem;
+        border-radius: 8px;
+        border: 1px solid var(--accent);
+        background: transparent;
+        color: var(--accent);
+        cursor: pointer;
+        margin-right: .4rem;
+    }
+    .btn:hover {
+        background: var(--accent);
+        color: #000;
+    }
+
+    input, select {
+        width: 100%;
+        padding: .6rem;
+        background: #1a1c20;
+        border: 1px solid var(--line);
+        color: var(--text);
+        border-radius: 8px;
+    }
+
+    .upload-box {
+        padding: 1rem;
+        background: #1a1c20;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+    }
+
+    #ai-box {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        padding: 1rem;
+        border-radius: 12px;
+        margin-top: 2rem;
+    }
+</style>
+
+
+<main class="dashboard-main">
+
+<!-- =======================================================
+     Header
+======================================================= -->
+<section class="section">
+    <h2>📂 Document Matrix</h2>
+    <p class="muted">
+        Borrower: <strong>{{ borrower.full_name }}</strong><br>
+        Loan #: <strong>{{ loan.id }}</strong>
+    </p>
+</section>
+
+
+<!-- =======================================================
+     Upload + Request Document (Side by Side)
+======================================================= -->
+<section class="section grid-2">
+
+    <!-- Upload -->
+    <div>
+        <h3>⬆ Upload Document</h3>
+
+        <form method="POST" action="{{ url_for('master.upload_doc') }}" enctype="multipart/form-data" class="upload-box">
+
+            <input type="hidden" name="borrower_id" value="{{ borrower.id }}">
+            <input type="hidden" name="loan_id" value="{{ loan.id }}">
+
+            <label>Document Name</label>
+            <input type="text" name="doc_name" placeholder="W-2, Bank Statement, ID..." required>
+
+            <label style="margin-top:1rem;">Choose File</label>
+            <input type="file" name="file" required>
+
+            <button class="btn" style="margin-top:1rem;">Upload</button>
+        </form>
+    </div>
+
+    <!-- Request -->
+    <div>
+        <h3>📨 Request Document</h3>
+
+        <form method="POST" action="{{ url_for('master.request_doc') }}" class="upload-box">
+
+            <input type="hidden" name="borrower_id" value="{{ borrower.id }}">
+
+            <label>Select Document Type</label>
+            <select name="document_name" required>
+                <option value="">Select</option>
+                <option>Driver License</option>
+                <option>Voided Check</option>
+                <option>W-2</option>
+                <option>Paystub</option>
+                <option>Bank Statement</option>
+                <option>Tax Return</option>
+                <option>Purchase Contract</option>
+                <option>Insurance Binder</option>
+                <option>CPA Letter</option>
+                <option>Gift Letter</option>
+            </select>
+
+            <button class="btn" style="margin-top:1rem;">Request</button>
+        </form>
+    </div>
+
+</section>
+
+
+<!-- =======================================================
+     DOCUMENT TABLE
+======================================================= -->
+<section class="section">
+    <h2>📁 Borrower Documents</h2>
+
+    <table class="doc-table">
+        <thead>
+            <tr>
+                <th>Document</th>
+                <th>Status</th>
+                <th>File</th>
+                <th>Uploaded</th>
+            </tr>
+        </thead>
+
+        <tbody>
+        {% if docs %}
+            {% for doc in docs %}
+            <tr>
+                <td>{{ doc.name }}</td>
+                <td>{{ doc.status }}</td>
+
+                <td>
+                    {% if doc.file_path %}
+                        <a href="{{ doc.file_path }}" target="_blank" class="btn">Open</a>
+                    {% else %}
+                        —
+                    {% endif %}
+                </td>
+
+                <td>
+                    {% if doc.created_at %}
+                        {{ doc.created_at.strftime("%b %d, %Y %I:%M %p") }}
+                    {% else %}
+                        —
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        {% else %}
+            <tr>
+                <td colspan="4">No documents yet.</td>
+            </tr>
+        {% endif %}
+        </tbody>
+    </table>
+
+</section>
+
+
+<!-- =======================================================
+     AI Document Assistant
+======================================================= -->
+<div id="ai-box">
+    <h3>🤖 AI Document Review Assistant</h3>
+
+    <textarea id="ai-input" style="width:100%; height:60px;" placeholder="Ask: What docs are still needed? Or: Tell me if this borrower is ready for underwriting."></textarea>
+    <button class="btn" onclick="sendAI()">Ask AI</button>
+
+    <div id="ai-response" style="margin-top:1rem;"></div>
+</div>
+
+
+<script>
+function sendAI() {
+    let message = document.getElementById("ai-input").value;
+
+    fetch("{{ url_for('master.ai') }}", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: message })
+    })
+    .then(r => r.json())
+    .then(data => {
+        document.getElementById("ai-response").innerHTML = data.reply;
+    });
+}
+</script>
+
+</main>
+
+{% endblock %}

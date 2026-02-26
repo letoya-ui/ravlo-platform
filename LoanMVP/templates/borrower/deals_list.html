@@ -1,0 +1,56 @@
+{% extends "layouts/borrower_base.html" %}
+{% block content %}
+
+<div class="page-header">
+  <h2>Saved Deals</h2>
+  <p class="text-muted">Browse, open, edit, or delete deals you’ve saved.</p>
+</div>
+
+<div class="dw-card" style="margin-top:1rem;">
+  <form method="GET" action="{{ url_for('borrower.deals_list') }}" style="display:flex; gap:.75rem; flex-wrap:wrap;">
+    <input class="dw-input" name="q" value="{{ q or '' }}" placeholder="Search title, property_id, strategy..." style="flex:1; min-width:240px;">
+    <select class="dw-input" name="status" style="width:160px;">
+      <option value="active" {% if status == 'active' %}selected{% endif %}>Active</option>
+      <option value="archived" {% if status == 'archived' %}selected{% endif %}>Archived</option>
+    </select>
+    <button class="dw-button" type="submit">Search</button>
+  </form>
+</div>
+
+<div class="dw-card" style="margin-top:1rem;">
+  {% if deals and deals|length %}
+    <table class="comparison-table" style="width:100%;">
+      <thead>
+        <tr>
+          <th>Title</th>
+          <th>Property ID</th>
+          <th>Strategy</th>
+          <th>Updated</th>
+          <th style="width:260px;">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for d in deals %}
+        <tr>
+          <td><a href="{{ url_for('borrower.deal_detail', deal_id=d.id) }}">{{ d.title or ('Deal #' ~ d.id) }}</a></td>
+          <td>{{ d.property_id or '—' }}</td>
+          <td>{{ d.strategy or '—' }}</td>
+          <td>{{ d.updated_at.strftime('%Y-%m-%d %H:%M') if d.updated_at else '—' }}</td>
+          <td>
+            <a href="{{ url_for('borrower.deal_detail', deal_id=d.id) }}"><button type="button" class="dw-button">View</button></a>
+            <a href="{{ url_for('borrower.deal_open', deal_id=d.id) }}"><button type="button" class="dw-button">Open</button></a>
+            <form method="POST" action="{{ url_for('borrower.deal_delete', deal_id=d.id) }}" style="display:inline;">
+              {{ csrf_token() if csrf_token is defined }}
+              <button type="submit" class="dw-button" onclick="return confirm('Delete this deal?')">Delete</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p class="ai-text">No deals saved yet.</p>
+  {% endif %}
+</div>
+
+{% endblock %}

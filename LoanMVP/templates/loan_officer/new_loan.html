@@ -1,0 +1,86 @@
+{% extends "layouts/base.html" %}
+{% block title %}New Loan{% endblock %}
+{% block content %}
+<style>
+  :root {
+    --bg:#0f0f11;
+    --panel:#15161a;
+    --line:#2a2e36;
+    --text:#e6e6e6;
+    --muted:#a5a7ad;
+    --accent:#7ab8ff;
+  }
+
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 2rem;
+    color: var(--text);
+    box-shadow: 0 0 16px rgba(0,0,0,0.4);
+    max-width: 720px;
+    margin: 2rem auto;
+  }
+
+  label { font-weight: 600; color: var(--accent); }
+  input, select {
+    background: #0f0f11;
+    border: 1px solid var(--line);
+    color: var(--text);
+    border-radius: 10px;
+    padding: .6rem .8rem;
+    width: 100%;
+    margin-bottom: 1rem;
+  }
+
+  .btn {
+    background: var(--accent);
+    color: #000;
+    border: none;
+    border-radius: 10px;
+    padding: .65rem 1.2rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.2s ease;
+  }
+  .btn:hover { background: #98ccff; }
+
+  .header { text-align: center; margin-bottom: 1.5rem; }
+</style>
+
+<div class="card">
+  <div class="header">
+    <h2>📝 Create New Loan</h2>
+    <p class="text-muted">Enter borrower and loan details below.</p>
+  </div>
+
+  <form method="POST">
+    <label for="borrower_id">Borrower</label>
+    <select name="borrower_id" required>
+      <option value="">-- Select Borrower --</option>
+      {% for b in borrowers %}
+      <option value="{{ b.id }}">{{ b.full_name }}</option>
+      {% endfor %}
+    </select>
+
+    <label for="loan_type">Loan Type</label>
+    <input type="text" name="loan_type" placeholder="e.g. Commercial, Residential" required>
+
+    <label for="amount">Amount</label>
+    <input type="number" name="amount" step="0.01" placeholder="Enter loan amount" required>
+
+    <label for="status">Status</label>
+    <select name="status">
+      <option value="pending">Pending</option>
+      <option value="active">Active</option>
+      <option value="approved">Approved</option>
+      <option value="declined">Declined</option>
+    </select>
+
+    <div style="display:flex; justify-content:space-between; margin-top:1.5rem;">
+      <a href="{{ url_for('loan_officer.loan_queue') }}" class="btn" style="background:#333;color:#fff;">← Back</a>
+      <button type="submit" class="btn">💾 Save Loan</button>
+    </div>
+  </form>
+</div>
+{% endblock %}

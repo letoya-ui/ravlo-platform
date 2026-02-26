@@ -1,0 +1,148 @@
+{% extends "layouts/base.html" %}
+{% block title %}Borrower Profile{% endblock %}
+
+{% block content %}
+<div class="wrap">
+
+  <!-- HEADER -->
+  <div class="card">
+    <h2>👤 {{ borrower.full_name }}</h2>
+    <p class="muted">
+      Borrower Profile • Created {{ borrower.created_at.strftime("%b %d, %Y") }}
+    </p>
+  </div>
+
+  <!-- ACTIONS -->
+  <div class="card" style="margin-top:1rem; display:flex; gap:1rem;">
+    <a href="{{ url_for('loan_officer.new_task') }}?borrower_id={{ borrower.id }}" class="btn btn-glow">➕ Add Task</a>
+    <a href="/loan_officer/quick-1003?borrower_id={{ borrower.id }}" class="btn btn-glow">📝 Start Loan</a>
+    <a href="{{ url_for('loan_officer.request_documents', borrower_id=borrower.id) }}" class="btn btn-glow">📄 Request Docs</a>
+    <a href="{{ url_for('loan_officer.credit_check', borrower_id=borrower.id) }}" class="btn btn-glow">📊 Pull Soft Credit</a>
+  </div>
+
+  <!-- GRID LAYOUT -->
+  <div class="grid-2" style="margin-top:1.5rem;">
+
+    <!-- LEFT COLUMN: BORROWER INFO -->
+    <div class="card">
+      <h3>📋 Borrower Details</h3>
+      <p>Email: {{ borrower.email }}</p>
+      <p>Phone: {{ borrower.phone }}</p>
+
+      <h4 class="section-title">Address</h4>
+      <p>{{ borrower.address }}<br>
+         {{ borrower.city }}, {{ borrower.state }} {{ borrower.zip }}</p>
+
+      <h4 class="section-title">Employment</h4>
+      <p>{{ borrower.employer_name }}</p>
+
+      <h4 class="section-title">Income</h4>
+      <p>Primary Income: ${{ borrower.income }}</p>
+      <p>Secondary Income: ${{ borrower.monthly_income_secondary or 0 }}</p>
+    </div>
+
+    <!-- RIGHT COLUMN: CREDIT -->
+    <div class="card">
+      <h3>📊 Credit Report (Latest)</h3>
+
+      {% if credit %}
+        <p>Score: <strong>{{ credit.credit_score }}</strong></p>
+        <p>Monthly Debt: ${{ credit.monthly_debt_total }}</p>
+
+        <details style="margin-top:1rem;">
+          <summary>View Full Credit JSON</summary>
+          <pre>{{ credit.credit_data | tojson(indent=2) }}</pre>
+        </details>
+      {% else %}
+        <p class="muted">No credit report yet.</p>
+      {% endif %}
+    </div>
+
+  </div>
+
+  <!-- LOANS SECTION -->
+  <div class="card" style="margin-top:1.5rem;">
+    <h3>🏠 Loan Files</h3>
+
+    {% if loans %}
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Loan #</th>
+          <th>Amount</th>
+          <th>Type</th>
+          <th>Status</th>
+          <th></th>
+        </tr>
+      </thead>
+
+      <tbody>
+        {% for loan in loans %}
+        <tr>
+          <td>{{ loan.id }}</td>
+          <td>${{ loan.amount }}</td>
+          <td>{{ loan.loan_type }}</td>
+          <td>{{ loan.status }}</td>
+          <td>
+            <a class="btn-sm" href="{{ url_for('loan_officer.loan_file', loan_id=loan.id) }}">Open</a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+      <p class="muted">No loans yet.</p>
+    {% endif %}
+  </div>
+
+  <!-- DOCUMENTS -->
+  <div class="card" style="margin-top:1.5rem;">
+    <h3>📄 Documents</h3>
+
+    {% if documents %}
+      <ul>
+        {% for d in documents %}
+          <li>{{ d.name }} – {{ d.status }}</li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p class="muted">No documents yet.</p>
+    {% endif %}
+  </div>
+
+  <!-- TASK LIST -->
+  <div class="card" style="margin-top:1.5rem;">
+    <h3>📋 Tasks</h3>
+
+    {% if tasks %}
+      <ul>
+      {% for t in tasks %}
+        <li>
+          {{ t.title }} — 
+          {% if t.status == "Completed" %}
+            <span class="badge badge-good">Done</span>
+          {% else %}
+            <span class="badge badge-warn">Open</span>
+          {% endif %}
+        </li>
+      {% endfor %}
+      </ul>
+    {% else %}
+      <p class="muted">No tasks for this borrower.</p>
+    {% endif %}
+  </div>
+
+</div>
+
+<style>
+.grid-2 { 
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:1.5rem;
+}
+.badge { padding:3px 8px; border-radius:10px; font-size:.75rem; }
+.badge-good { background:#26d07c; color:#000; }
+.badge-warn { background:#ffb84d; color:#000; }
+</style>
+
+{% endblock %}

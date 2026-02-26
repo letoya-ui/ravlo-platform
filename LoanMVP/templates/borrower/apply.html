@@ -1,0 +1,203 @@
+{% extends "layouts/borrower_base.html" %}
+{% block title %}Full Loan Application | Borrower{% endblock %}
+{% block content %}
+
+<div class="borrower-shell">
+
+  <!-- SIDEBAR -->
+  <aside class="b-sidebar">
+    <div class="b-sidebar-logo">CM</div>
+
+    <div class="b-sidebar-group">
+
+      <a href="{{ url_for('borrower.dashboard') }}" class="b-sidebar-item">
+        <svg viewBox="0 0 24 24" fill="none">
+          <rect x="3" y="3" width="8" height="8" rx="2"></rect>
+          <rect x="13" y="3" width="8" height="5" rx="2"></rect>
+          <rect x="13" y="10" width="8" height="11" rx="2"></rect>
+          <rect x="3" y="13" width="8" height="8" rx="2"></rect>
+        </svg>
+        <div class="b-tooltip">Dashboard</div>
+      </a>
+
+      <a href="{{ url_for('borrower.property_search') }}" class="b-sidebar-item">
+        <svg viewBox="0 0 24 24" fill="none">
+          <path d="M12 3L4 9v11h16V9l-8-6Z"></path>
+          <circle cx="12" cy="13" r="2.5"></circle>
+        </svg>
+        <div class="b-tooltip">Property Finder</div>
+      </a>
+
+      <a href="{{ url_for('borrower.resource_center') }}" class="b-sidebar-item">
+        <svg viewBox="0 0 24 24" fill="none">
+          <circle cx="8" cy="8" r="3"></circle>
+          <circle cx="16" cy="8" r="3"></circle>
+          <path d="M4 19c.6-2.4 2.3-4 4-4s3.4 1.6 4 4"></path>
+          <path d="M12 19c.6-2.4 2.3-4 4-4s3.4 1.6 4 4"></path>
+        </svg>
+        <div class="b-tooltip">Partner Network</div>
+      </a>
+
+      <a href="{{ url_for('borrower.deal_workspace') }}" class="b-sidebar-item">
+        <svg viewBox="0 0 24 24" fill="none">
+          <rect x="4" y="4" width="16" height="16" rx="2"></rect>
+          <path d="M8 9h8M8 13h5M8 17h3"></path>
+        </svg>
+        <div class="b-tooltip">Project Planner</div>
+      </a>
+
+      <a href="{{ url_for('borrower.saved_properties') }}" class="b-sidebar-item">
+        <svg viewBox="0 0 24 24" fill="none">
+          <path d="M12 20s-4.5-2.7-6.7-5.4C3.4 13 3 11.9 3 10.8 3 8.7 4.7 7 6.8 7c1.2 0 2.3.6 3 1.5.7-.9 1.8-1.5 3-1.5C15.3 7 17 8.7 17 10.8c0 1.1-.4 2.2-2.3 3.8C16.5 17.3 12 20 12 20Z"></path>
+        </svg>
+        <div class="b-tooltip">Saved Properties</div>
+      </a>
+
+      <a href="{{ url_for('borrower.resource_center') }}" class="b-sidebar-item">
+        <svg viewBox="0 0 24 24" fill="none">
+          <path d="M5 4h10a3 3 0 0 1 3 3v13l-4-2-4 2-4-2-4 2V7a3 3 0 0 1 3-3Z"></path>
+        </svg>
+        <div class="b-tooltip">Resource Center</div>
+      </a>
+
+    </div>
+  </aside>
+
+  <!-- MAIN CONTENT -->
+  <main class="b-main">
+
+    <!-- TOP TABS -->
+    <div class="b-top-tabs">
+      <a href="{{ url_for('borrower.dashboard') }}" class="b-top-tab">Dashboard</a>
+      <a href="{{ url_for('borrower.status') }}" class="b-top-tab">Loan</a>
+      <a href="{{ url_for('borrower.documents') }}" class="b-top-tab">Documents</a>
+      <a href="{{ url_for('borrower.document_requests') }}" class="b-top-tab">Conditions</a>
+      <a href="{{ url_for('borrower.payments') }}" class="b-top-tab">Payments</a>
+      <a href="{{ url_for('borrower.messages') }}" class="b-top-tab">Messages</a>
+      <a href="{{ url_for('borrower.ai_hub') }}" class="b-top-tab">AI Hub</a>
+      <div class="b-top-tab active">Full Application</div>
+    </div>
+
+    <!-- FULL APPLICATION FORM -->
+    <div class="b-card" style="padding:2rem;">
+
+      <h2 class="mb-3">📝 Full Loan Application</h2>
+
+      <form method="POST" enctype="multipart/form-data">
+
+        <!-- PERSONAL INFO -->
+        <h4>👤 Personal Information</h4>
+        <div class="row">
+          <div class="col-md-6">
+            <label class="form-label">Full Legal Name</label>
+            <input type="text" name="full_name" class="form-control" required>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Email Address</label>
+            <input type="email" name="email" class="form-control" required>
+          </div>
+        </div>
+
+        <div class="row mt-3">
+          <div class="col-md-6">
+            <label class="form-label">Phone Number</label>
+            <input type="text" name="phone" class="form-control" required>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Date of Birth</label>
+            <input type="date" name="dob" class="form-control" required>
+          </div>
+        </div>
+
+        <hr class="my-4">
+
+        <!-- BUSINESS INFO -->
+        <h4>🏢 Business Information</h4>
+        <div class="row">
+          <div class="col-md-6">
+            <label class="form-label">Company Name</label>
+            <input type="text" name="company" class="form-control" required>
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">Annual Revenue ($)</label>
+            <input type="number" name="annual_revenue" class="form-control" required>
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">Years in Business</label>
+            <input type="number" name="years_in_business" class="form-control" required>
+          </div>
+        </div>
+
+        <hr class="my-4">
+
+        <!-- PROPERTY DETAILS -->
+        <h4>🏡 Property Details</h4>
+        <div class="row">
+          <div class="col-md-8">
+            <label class="form-label">Property Address</label>
+            <input type="text" name="property_address" class="form-control" required>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Estimated Property Value ($)</label>
+            <input type="number" name="property_value" class="form-control">
+          </div>
+        </div>
+
+        <hr class="my-4">
+
+        <!-- LOAN REQUEST -->
+        <h4>💰 Loan Request</h4>
+        <div class="row">
+          <div class="col-md-4">
+            <label class="form-label">Loan Type</label>
+            <select name="loan_type" class="form-select" required>
+              <option value="">Select type</option>
+              <option value="Commercial">Commercial</option>
+              <option value="Residential">Residential</option>
+              <option value="Bridge">Bridge</option>
+              <option value="Rehab">Rehab</option>
+            </select>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Loan Amount Requested ($)</label>
+            <input type="number" name="loan_amount" class="form-control" required>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Collateral Offered</label>
+            <input type="text" name="collateral" class="form-control">
+          </div>
+        </div>
+
+        <hr class="my-4">
+
+        <!-- DOCUMENT UPLOAD -->
+        <h4>📎 Upload Supporting Documents</h4>
+        <div class="row">
+          <div class="col-md-6">
+            <label class="form-label">Document Type</label>
+            <select name="doc_type" class="form-select">
+              <option value="">Select type</option>
+              <option value="Bank Statement">Bank Statement</option>
+              <option value="Driver’s License">Driver’s License</option>
+              <option value="Tax Return">Tax Return</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Choose File</label>
+            <input type="file" name="file" class="form-control">
+          </div>
+        </div>
+
+        <div class="mt-4">
+          <button type="submit" class="btn btn-primary">🚀 Submit Full Application</button>
+        </div>
+
+      </form>
+
+    </div>
+
+  </main>
+</div>
+
+{% endblock %}

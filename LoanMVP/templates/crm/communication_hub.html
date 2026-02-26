@@ -1,0 +1,25 @@
+{% extends "layouts/base.html" %}
+{% block title %}CRM • Communication Hub{% endblock %}
+{% block content %}
+<style>
+  :root{--panel:#15161a;--line:#2a2e36;--text:#e6e6e6;--muted:#a5a7ad;--accent:#7ab8ff;--glow:0 0 18px rgba(122,184,255,.35);}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:1.2rem;box-shadow:var(--glow);}
+  table{width:100%;border-collapse:collapse}th,td{padding:.6rem;border-top:1px solid var(--line);}
+</style>
+
+<h1>🧩 Communication Matrix</h1>
+<div class="card">
+  {% if messages %}
+  <table>
+    <thead><tr><th>Sender</th><th>Receiver</th><th>Message</th><th>Time</th></tr></thead>
+    <tbody>
+      {% for m in messages %}
+      <tr><td>{{ m.sender }}</td><td>{{ m.receiver }}</td><td>{{ m.body }}</td><td>{{ m.timestamp.strftime('%b %d %H:%M') }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div class="muted">No active communications.</div>
+  {% endif %}
+</div>
+{% endblock %}

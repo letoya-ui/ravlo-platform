@@ -1,0 +1,32 @@
+{% extends "layouts/base.html" %}
+{% block title %}Capital Intelligence Result{% endblock %}
+{% block content %}
+<main class="dashboard-main">
+  <style>
+    .card { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 1.2rem; box-shadow: var(--glow); }
+    .pool-box div { margin-bottom: .6rem; color: var(--text); }
+    .ai-box { background: var(--elev); border: 1px solid var(--line); border-radius: 12px; padding: 1rem; margin-top: 1.5rem; color: var(--text); }
+    .btn { background: linear-gradient(180deg,#1c1f25,#15161a); border: 1px solid var(--line); padding: .6rem 1rem; border-radius: 10px; color: var(--text); text-decoration: none; display: inline-block; margin-top: 1rem; }
+    .btn:hover { border-color: #35506a; box-shadow: var(--glow); }
+  </style>
+
+  <div class="card">
+    <h2>💰 Capital Allocation Summary</h2>
+    <p class="muted">AI feedback on your funding request and pool utilization.</p>
+
+    <div class="pool-box">
+      <h4 class="text-accent">🏦 Capital Pools</h4>
+      {% for pool in pools %}
+        <div><strong>{{ pool.name }}</strong> — Balance: ${{ "{:,.0f}".format(pool.balance) }} | Utilization: {{ pool.utilization }}%</div>
+      {% endfor %}
+    </div>
+
+    <div class="ai-box">
+      <h4 class="text-warning">🧠 AI Advice</h4>
+      <p>{{ ai_advice }}</p>
+    </div>
+
+    <a href="{{ url_for('executive.capital') }}" class="btn">← Back to Capital Management</a>
+  </div>
+</main>
+{% endblock %}

@@ -1,0 +1,63 @@
+{% extends "layouts/base.html" %}
+{% block title %}Edit Loan{% endblock %}
+{% block content %}
+
+<div class="container py-4">
+  <h2 class="text-accent">✏️ Edit Loan Application</h2>
+
+  <form method="POST" class="card p-4 bg-panel text-light rounded-3 shadow">
+    <div class="grid grid-cols-2 gap-3">
+      <div>
+        <label>Borrower Name</label>
+        <input type="text" name="borrower_name" value="{{ borrower.full_name if borrower else '' }}" class="form-control bg-dark text-light">
+      </div>
+      <div>
+        <label>Loan Amount</label>
+        <input type="number" step="0.01" name="amount" value="{{ loan.amount }}" class="form-control bg-dark text-light">
+      </div>
+      <div>
+        <label>Loan Type</label>
+        <input type="text" name="loan_type" value="{{ loan.loan_type }}" class="form-control bg-dark text-light">
+      </div>
+      <div>
+        <label>Term (months)</label>
+        <input type="number" name="term_months" value="{{ loan.term_months }}" class="form-control bg-dark text-light">
+      </div>
+      <div>
+        <label>Interest Rate</label>
+        <input type="number" step="0.01" name="rate" value="{{ loan.rate }}" class="form-control bg-dark text-light">
+      </div>
+      <div>
+        <label>LTV</label>
+        <input type="number" step="0.01" name="ltv" value="{{ loan.ltv }}" class="form-control bg-dark text-light">
+      </div>
+      <div>
+        <label>Property Value</label>
+        <input type="number" step="0.01" name="property_value" value="{{ loan.property_value }}" class="form-control bg-dark text-light">
+      </div>
+      <div class="col-span-2">
+        <label>Property Address</label>
+        <input type="text" name="property_address" value="{{ loan.property_address }}" class="form-control bg-dark text-light">
+      </div>
+      <div class="col-span-2">
+        <label>Description / Notes</label>
+        <textarea name="description" rows="3" class="form-control bg-dark text-light">{{ loan.description }}</textarea>
+      </div>
+      <div>
+        <label>Status</label>
+        <select name="status" class="form-select bg-dark text-light">
+          {% for s in ["Pending", "In Review", "Cleared", "Approved", "Declined"] %}
+            <option value="{{ s }}" {% if s == loan.status %}selected{% endif %}>{{ s }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+
+    <div class="mt-4 text-end">
+      <button type="submit" class="btn btn-glow">💾 Save Changes</button>
+      <a href="{{ url_for('loan_officer.view_loan', loan_id=loan.id) }}" class="btn btn-outline-light">← Cancel</a>
+    </div>
+  </form>
+</div>
+
+{% endblock %}

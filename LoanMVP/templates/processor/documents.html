@@ -1,0 +1,107 @@
+{% extends "layouts/base.html" %}
+{% block title %}Documents | Processor{% endblock %}
+{% block content %}
+
+<main class="dashboard-main">
+  <div class="wrap">
+
+    <section class="card">
+      <h2>📄 Document Pipeline</h2>
+      <p class="muted">View, verify, or flag borrower documents for compliance.</p>
+
+      <form method="POST">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Select</th>
+              <th>Document</th>
+              <th>Status</th>
+              <th>Uploaded By</th>
+              <th>Date</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for doc in documents %}
+            <tr>
+              <td><input type="radio" name="doc_id" value="{{ doc.id }}"></td>
+              <td>{{ doc.document_name }}</td>
+              <td><span class="badge">{{ doc.status or "Pending" }}</span></td>
+              <td>{{ doc.uploaded_by or "Borrower" }}</td>
+              <td>{{ doc.created_at.strftime("%Y-%m-%d") if doc.created_at else "—" }}</td>
+              <td>
+                <a href="{{ url_for('processor.view_file', filename=doc.file_path) }}" target="_blank" class="btn-sm">🔍 View</a>
+              </td>
+            </tr>
+            {% else %}
+            <tr><td colspan="6" class="muted">No documents found.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+
+        <div class="action-group mt-3">
+          <button name="action" value="verify" class="btn">✅ Verify</button>
+          <button name="action" value="flag" class="btn btn-outline">🚩 Flag</button>
+          <button name="action" value="clear" class="btn btn-outline">🗑 Clear</button>
+        </div>
+      </form>
+    </section>
+
+  </div>
+</main>
+
+<style>
+  :root {
+    --bg: #0f0f11;
+    --panel: #15161a;
+    --line: #2b2f36;
+    --text: #e6e6e6;
+    --muted: #a5a7ad;
+    --accent: #7ab8ff;
+    --glow: 0 0 14px rgba(122,184,255,0.35);
+  }
+  body { background: var(--bg); color: var(--text); }
+  .wrap { padding: 2rem; }
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 1.5rem;
+    box-shadow: var(--glow);
+  }
+  h2 { color: var(--accent); margin-bottom: .3rem; }
+  .muted { color: var(--muted); }
+  .data-table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
+  .data-table th, .data-table td {
+    padding: .6rem;
+    border-bottom: 1px solid var(--line);
+  }
+  .data-table th { color: var(--accent); text-transform: uppercase; font-size: .85rem; }
+  .badge {
+    background: var(--accent);
+    color: #000;
+    border-radius: 6px;
+    padding: .2rem .5rem;
+    font-size: .8rem;
+  }
+  .btn {
+    background: var(--accent);
+    color: #000;
+    border-radius: 6px;
+    padding: .5rem 1rem;
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+    margin-right: .5rem;
+    transition: .2s;
+  }
+  .btn:hover { box-shadow: var(--glow); }
+  .btn-outline {
+    background: transparent;
+    border: 1px solid var(--accent);
+    color: var(--accent);
+  }
+  .btn-outline:hover { background: var(--accent); color: #000; }
+  .action-group { margin-top: 1rem; }
+</style>
+{% endblock %}

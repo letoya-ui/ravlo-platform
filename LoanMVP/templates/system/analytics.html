@@ -1,0 +1,54 @@
+{% extends "layouts/base.html" %}
+{% block title %}Admin Analytics{% endblock %}
+{% block content %}
+<style>
+  :root{--line:#2a2e36; --panel:#15161a; --text:#e6e6e6; --muted:#a5a7ad}
+  .card{background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:1rem}
+  table{width:100%; border-collapse:collapse}
+  th,td{padding:.6rem; border-top:1px solid var(--line); color:var(--text)}
+  input{background:#0f0f11; border:1px solid var(--line); color:var(--text); border-radius:10px; padding:.45rem .6rem; width:100%}
+  .btn{display:inline-flex; align-items:center; gap:.5rem; padding:.6rem .9rem; border-radius:10px; border:1px solid var(--line); color:var(--text); text-decoration:none; background:#1a1d23}
+</style>
+
+
+<div class="ai-insight-bar"><span class="ai-text">Loading AI analytics insights...</span></div>
+
+<div class="container-fluid py-4 text-light">
+  <h2 class="mb-3">📊 Analytics Overview</h2>
+  <div class="row">
+    <div class="col-md-4">
+      <div class="card text-center">
+        <h4>Total Loans</h4>
+        <h2>{{ total_loans }}</h2>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card text-center">
+        <h4>Active Borrowers</h4>
+        <h2>{{ active_borrowers }}</h2>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card text-center">
+        <h4>Pending Verifications</h4>
+        <h2>{{ pending_verifications }}</h2>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <h4>Trends & Reports</h4>
+    <div id="analyticsChart" style="height: 300px;"></div>
+  </div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+<script>
+var chart = new ApexCharts(document.querySelector("#analyticsChart"), {
+  chart: { type: 'line', height: 300, foreColor: '#ccc', background: 'transparent' },
+  series: [{ name: 'Loans', data: [10, 14, 18, 25, 22, 30] }],
+  xaxis: { categories: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'] },
+  colors: ['#c4c4c4']
+});
+chart.render();
+</script>
+<script src="{{ url_for('static', filename='js/admin_ai_refresh.js') }}"></script>
+{% endblock %}

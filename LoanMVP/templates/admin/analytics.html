@@ -1,0 +1,88 @@
+{% extends "layouts/base.html" %}
+{% block title %}Admin Analytics{% endblock %}
+{% block content %}
+<main class="dashboard-main">
+  <div class="wrap">
+    <header>
+      <h2>📊 Admin Analytics Dashboard</h2>
+      <p class="muted">System-wide insights and performance metrics.</p>
+    </header>
+
+    <!-- === TOP STATS === -->
+    <div class="grid grid-4">
+      <div class="card stat-card">
+        <h4>Total Users</h4>
+        <p class="stat">{{ total_users }}</p>
+      </div>
+      <div class="card stat-card">
+        <h4>Total Loans</h4>
+        <p class="stat">{{ total_loans }}</p>
+      </div>
+      <div class="card stat-card">
+        <h4>Total Documents</h4>
+        <p class="stat">{{ total_docs }}</p>
+      </div>
+      <div class="card stat-card">
+        <h4>Active Borrowers</h4>
+        <p class="stat">{{ active_borrowers }}</p>
+      </div>
+    </div>
+
+    <!-- === CHARTS === -->
+    <div class="grid grid-2 mt-2">
+      <div class="card chart">
+        <h4>Loan Status Overview</h4>
+        <canvas id="loanStatusChart"></canvas>
+      </div>
+      <div class="card chart">
+        <h4>User Roles</h4>
+        <canvas id="userRolesChart"></canvas>
+      </div>
+    </div>
+
+    <!-- === AI SUMMARY === -->
+    <div class="card mt-2">
+      <h4>AI Summary</h4>
+      <p>{{ ai_summary }}</p>
+    </div>
+  </div>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  // === Loan Status Bar ===
+  new Chart(document.getElementById('loanStatusChart'), {
+    type: 'bar',
+    data: {
+      labels: {{ loan_status_labels|tojson }},
+      datasets: [{
+        label: 'Loans',
+        data: {{ loan_status_values|tojson }},
+        backgroundColor: '#7ab8ff'
+      }]
+    },
+    options: {plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true}}}
+  });
+
+  // === User Roles Pie ===
+  new Chart(document.getElementById('userRolesChart'), {
+    type: 'pie',
+    data: {
+      labels: {{ role_labels|tojson }},
+      datasets: [{
+        data: {{ role_counts|tojson }},
+        backgroundColor: ['#4ade80','#60a5fa','#facc15','#f87171','#a78bfa']
+      }]
+    },
+    options: {plugins:{legend:{position:'bottom'}}}
+  });
+</script>
+
+<style>
+.grid { display:grid; gap:1.5rem; }
+.grid-4 { grid-template-columns: repeat(auto-fit, minmax(220px,1fr)); }
+.grid-2 { grid-template-columns: repeat(auto-fit, minmax(380px,1fr)); }
+.stat-card .stat { font-size:2rem; font-weight:700; margin-top:0.5rem; }
+.chart canvas { width:100%!important; height:300px!important; }
+</style>
+{% endblock %}

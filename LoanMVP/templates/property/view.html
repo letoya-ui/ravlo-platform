@@ -1,0 +1,82 @@
+{% extends "layouts/base.html" %}
+{% block title %}View Property{% endblock %}
+{% block content %}
+
+
+<main style="margin-left:260px; padding:2rem; background:#0f0f11; color:#e6e6e6; min-height:100vh;">
+  <link rel="stylesheet" href="https://unpkg.com/lucide-static@latest/font/lucide.css">
+  <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+
+  <style>
+    .grid{display:grid;gap:1.25rem;}
+    .g-2{grid-template-columns:repeat(2,minmax(0,1fr));}
+    .card{background:#15161a;border:1px solid #282b31;border-radius:14px;padding:1.5rem;box-shadow:0 0 18px rgba(122,184,255,0.25);}
+    .card h3{margin:0 0 .6rem;color:#7ab8ff;display:flex;align-items:center;gap:.5rem;}
+    .muted{color:#a5a7ad;font-size:.9rem;}
+    .info-list{list-style:none;padding:0;margin:.5rem 0;}
+    .info-list li{margin-bottom:.4rem;}
+    .highlight{color:#43d19e;}
+    .ai-summary{background:#18222b;border:1px solid #2b2f36;border-radius:14px;padding:1.2rem;margin-top:1.5rem;box-shadow:0 0 12px rgba(122,184,255,0.2);}
+    .btn{display:inline-flex;align-items:center;gap:.4rem;margin-top:1rem;background:linear-gradient(180deg,#2a4a62,#1b2a38);border:1px solid #2a4a62;color:#cfe8ff;border-radius:10px;padding:.7rem 1.2rem;text-decoration:none;cursor:pointer;}
+    .btn:hover{box-shadow:0 0 10px rgba(122,184,255,0.3);}
+  </style>
+
+  <h1 style="margin-bottom:1rem;">🏡 Property Details</h1>
+  <p class="muted">Comprehensive overview and AI valuation analysis for this property.</p>
+
+  <div class="grid g-2">
+    <!-- LEFT: Details -->
+    <div class="card">
+      <h3><i class="lucide lucide-home"></i> Property Information</h3>
+      <ul class="info-list">
+        <li><strong>Address:</strong> {{ property.address or "158 Whitlock Rd, Otisville NY" }}</li>
+        <li><strong>Type:</strong> {{ property.type or "Single Family" }}</li>
+        <li><strong>Bedrooms:</strong> {{ property.bedrooms or "3" }}</li>
+        <li><strong>Bathrooms:</strong> {{ property.bathrooms or "2" }}</li>
+        <li><strong>Square Feet:</strong> {{ property.sqft or "2,504" }}</li>
+        <li><strong>Lot Size:</strong> {{ property.lot_size or "0.45 acres" }}</li>
+      </ul>
+
+      <hr style="border:none;border-top:1px solid #2b2f36;margin:1rem 0;">
+      <h3><i class="lucide lucide-user"></i> Borrower / Owner</h3>
+      <p><strong>Name:</strong> {{ property.owner or "Letoya Washington" }}</p>
+      <p><strong>Linked Borrower File:</strong> <a href="{{ url_for('borrower.profile', borrower_id=property.borrower_id or 1) }}" class="highlight">View Borrower</a></p>
+      <a href="/property/search_online?q={{ property.address }}" class="btn-glow">
+          Verify Online
+      </a>
+      <a href="{{ url_for('property.optimize') }}" class="btn"><i class="lucide lucide-trending-up"></i> Optimize Value</a>
+      <a href="{{ url_for('property.risk_map') }}" class="btn"><i class="lucide lucide-map"></i> View Risk Map</a>
+    </div>
+
+    <!-- RIGHT: AI Analysis -->
+    <div class="card">
+      <h3><i class="lucide lucide-bar-chart-3"></i> AI Valuation Metrics</h3>
+      <div id="chart_value" style="height:240px;"></div>
+
+      <ul class="info-list" style="margin-top:1rem;">
+        <li><strong>Current Value:</strong> <span class="highlight">${{ property.value or "280,000" }}</span></li>
+        <li><strong>Estimated After Rehab:</strong> <span class="highlight">${{ property.after_rehab or "345,000" }}</span></li>
+        <li><strong>Loan Balance:</strong> ${{ property.loan_balance or "210,000" }}</li>
+        <li><strong>Equity:</strong> <span class="highlight">${{ property.equity or "135,000" }}</span></li>
+        <li><strong>ROI:</strong> {{ property.roi or "17.3%" }}</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- AI INSIGHT -->
+  <div class="ai-summary">
+    <h3><i class="lucide lucide-brain-circuit"></i> AI Insight</h3>
+    <p>{{ property.insight or "AI suggests light rehab focused on exterior improvements and kitchen upgrade. Projected +7.2% appreciation over 12 months with improved LTV position for refinance." }}</p>
+  </div>
+
+  <script>
+    const baseOpt={chart:{toolbar:{show:false},foreColor:'#c9d3df'},grid:{borderColor:'#2a2e36'},dataLabels:{enabled:false},theme:{mode:'dark'}};
+    new ApexCharts(document.querySelector("#chart_value"),{
+      ...baseOpt,chart:{type:'area',height:240},stroke:{curve:'smooth',width:2},
+      series:[{name:'Valuation ($)',data:[240000,250000,260000,275000,280000,345000]}],
+      xaxis:{categories:['2019','2020','2021','2022','2023','Projected 2025']},
+      colors:['#7ab8ff']
+    }).render();
+  </script>
+</main>
+{% endblock %}

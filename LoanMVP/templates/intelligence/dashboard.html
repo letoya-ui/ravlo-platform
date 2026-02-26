@@ -1,0 +1,38 @@
+{% extends "layouts/base.html" %}
+{% block title %}Intelligence • Dashboard{% endblock %}
+{% block content %}
+<script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+<style>
+  :root{--panel:#15161a;--line:#2a2e36;--text:#e6e6e6;--muted:#a5a7ad;--accent:#7ab8ff;--glow:0 0 18px rgba(122,184,255,.35);}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:1rem;box-shadow:var(--glow);}
+  .grid{display:grid;gap:1rem}.g-2{grid-template-columns:repeat(2,minmax(0,1fr))}.num{font-size:1.8rem;font-weight:700;color:#dfe9f7}
+  .muted{color:var(--muted)}
+</style>
+
+<h1>🧠 Intelligence Dashboard</h1>
+<div class="grid g-2">
+  <div class="card"><div class="muted">AI Insights Generated</div><div class="num">{{ stats.insights or 235 }}</div></div>
+  <div class="card"><div class="muted">Memory Retrievals</div><div class="num">{{ stats.memory_queries or 52 }}</div></div>
+  <div class="card"><div class="muted">Active Agents</div><div class="num">{{ stats.active_agents or 6 }}</div></div>
+  <div class="card"><div class="muted">System Health</div><div class="num">Optimal</div></div>
+</div>
+
+<div class="grid g-2" style="margin-top:1rem;">
+  <div class="card"><h3>Intelligence Flow</h3><div id="chart_flow" style="height:260px;"></div></div>
+  <div class="card"><h3>Agent Efficiency</h3><div id="chart_eff" style="height:260px;"></div></div>
+</div>
+
+<script>
+const base={chart:{toolbar:{show:false},foreColor:'#c9d3df'},theme:{mode:'dark'},grid:{borderColor:'#2a2e36'},dataLabels:{enabled:false}};
+new ApexCharts(document.querySelector("#chart_flow"),{
+  ...base,chart:{...base.chart,type:'bar',height:260},
+  series:[{name:'Insights',data:[3,6,4,8,7,5,9]}],
+  xaxis:{categories:['Mon','Tue','Wed','Thu','Fri','Sat','Sun']},colors:['#7ab8ff']
+}).render();
+new ApexCharts(document.querySelector("#chart_eff"),{
+  ...base,chart:{...base.chart,type:'radialBar',height:260},
+  series:[93],labels:['Agent Efficiency'],colors:['#43d19e'],
+  plotOptions:{radialBar:{hollow:{size:'60%'},dataLabels:{value:{fontSize:'20px'}}}}
+}).render();
+</script>
+{% endblock %}

@@ -1,0 +1,193 @@
+{% extends "layouts/base.html" %}
+{% block title %}Loan Officer • Borrower Details{% endblock %}
+{% block content %}
+<link rel="stylesheet" href="https://unpkg.com/lucide-static@latest/font/lucide.css">
+
+<style>
+  :root {
+    --bg:#0f0f11;
+    --panel:rgba(21,22,26,0.55);
+    --line:rgba(122,184,255,0.25);
+    --text:#e6e6e6;
+    --muted:#a5a7ad;
+    --accent:#7ab8ff;
+    --hover:rgba(255,255,255,0.06);
+    --border:#2b2f36;
+    --glow:0 0 18px rgba(122,184,255,0.45);
+    --radius:14px;
+    --silver:#c0c0c0;
+    --white:#ffffff;
+    --black:#000000;
+  }
+
+  body { background:var(--bg); color:var(--text); }
+  main { margin-left:260px; padding:2rem; min-height:100vh; overflow-y:auto; }
+
+  .card {
+    background:var(--panel);
+    backdrop-filter:blur(14px);
+    -webkit-backdrop-filter:blur(14px);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    box-shadow:var(--glow);
+    padding:1.5rem;
+    width:100%;
+  }
+
+  .grid-wrap {
+    display:grid;
+    grid-template-columns:repeat(auto-fill, minmax(340px, 1fr));
+    gap:1.6rem;
+    width:100%;
+    margin-top:1.6rem;
+  }
+
+  .full { grid-column:1 / -1; }
+
+  h1,h2,h3 { color:var(--accent); margin:0 0 .4rem; }
+  h1 { font-size:1.65rem; }
+  h2 { font-size:1.25rem; }
+  .muted { color:var(--muted); }
+
+  ul { padding-left:1rem; margin:0; }
+  li { margin-bottom:.3rem; }
+
+  .btn {
+    display:inline-flex; align-items:center; gap:.4rem;
+    background:var(--hover); border:1px solid var(--line);
+    border-radius:8px; padding:.5rem 1rem;
+    cursor:pointer; text-decoration:none; color:var(--text);
+    transition:.25s;
+  }
+  .btn:hover { box-shadow:var(--glow); border-color:var(--accent); }
+  .btn-accent { background:var(--accent); color:#000; }
+
+  table { width:100%; border-collapse:collapse; }
+  th, td { border-bottom:1px solid var(--line); padding:.6rem; text-align:left; }
+  th { color:var(--muted); text-transform:uppercase; font-size:.8rem; }
+
+  .score-high { color:var(--white); font-weight:600; }
+  .score-mid { color:var(--silver); font-weight:600; }
+  .score-low { color:var(--muted); font-weight:600; }
+</style>
+
+<main>
+<div class="grid-wrap">
+
+  <!-- Header -->
+  <div class="card full">
+    <div style="display:flex;justify-content:space-between;align-items:center;">
+      <div>
+        <h1>Borrower Details</h1>
+        <p class="muted">Review borrower, loans, credit, tasks, documents, and AI insights.</p>
+      </div>
+      <a href="{{ url_for('loan_officer.borrowers') }}" class="btn">← Back</a>
+    </div>
+  </div>
+
+  <!-- Borrower Info -->
+  <div class="card">
+    <h2>👤 Borrower Info</h2>
+    {% if borrower %}
+    <ul>
+      <li><strong>Name:</strong> {{ borrower.full_name }}</li>
+      <li><strong>Email:</strong> {{ borrower.email }}</li>
+      <li><strong>Phone:</strong> {{ borrower.phone }}</li>
+      <li><strong>Address:</strong> {{ borrower.address }}, {{ borrower.city }}, {{ borrower.state }}</li>
+    </ul>
+    {% else %}
+      <p class="muted">Borrower details not available.</p>
+    {% endif %}
+  </div>
+
+  <!-- Credit Summary -->
+  <div class="card">
+    <h2>💳 Credit Summary</h2>
+    {% if credit %}
+      <p><strong>Score:</strong>
+        <span class="{% if credit.score > 700 %}score-high{% elif credit.score > 600 %}score-mid{% else %}score-low{% endif %}">
+          {{ credit.score }}
+        </span>
+      </p>
+      <p><strong>Report Date:</strong> {{ credit.report_date.strftime('%Y-%m-%d') }}</p>
+      <p><strong>Delinquencies:</strong> {{ credit.delinquencies }}</p>
+      <p><strong>Public Records:</strong> {{ credit.public_records }}</p>
+      <p><strong>Total Debt:</strong> ${{ "{:,.0f}".format(credit.total_debt) }}</p>
+      <a href="{{ url_for('loan_officer.credit_check', borrower_id=borrower.id) }}" class="btn mt-2">📊 Pull Again</a>
+    {% else %}
+      <p class="muted">No credit report pulled yet.</p>
+      <a href="{{ url_for('loan_officer.credit_check', borrower_id=borrower.id) }}" class="btn">📊 Pull Credit</a>
+    {% endif %}
+  </div>
+
+  <!-- Loans -->
+  <div class="card">
+    <h2>📋 Loans</h2>
+    {% if loans %}
+      <table>
+        <thead><tr><th>Type</th><th>Amount</th><th>Status</th></tr></thead>
+        <tbody>
+          {% for loan in loans %}
+          <tr>
+            <td>{{ loan.loan_type }}</td>
+            <td>${{ "{:,.0f}".format(loan.amount or 0) }}</td>
+            <td>{{ loan.status|capitalize }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <p class="muted">No loans found.</p>
+    {% endif %}
+  </div>
+
+  <!-- Tasks -->
+  <div class="card">
+    <h2>📝 Tasks</h2>
+    {% if tasks %}
+      <ul>
+        {% for t in tasks %}
+        <li><strong>{{ t.title }}</strong> — Due {{ t.due_date.strftime('%Y-%m-%d') if t.due_date else '—' }}</li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p class="muted">No tasks assigned.</p>
+    {% endif %}
+  </div>
+
+  <!-- Documents -->
+  <div class="card">
+    <h2>📄 Documents</h2>
+    {% if documents %}
+      <ul>
+        {% for doc in documents %}
+        <li>{{ doc.filename }}</li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p class="muted">No documents uploaded.</p>
+    {% endif %}
+  </div>
+
+  <!-- AI Summary -->
+  <div class="card full">
+    <h2>🧠 AI Summary</h2>
+    <p id="aiSummaryText" style="white-space:pre-wrap;">
+      {{ borrower.ai_summary or "No summary yet." }}
+    </p>
+    <button class="btn" onclick="refreshSummary()">🔄 Refresh Summary</button>
+  </div>
+
+</div>
+</main>
+
+<script>
+async function refreshSummary() {
+  const res = await fetch(`/loan_officer/borrower/{{ borrower.id }}/ai_summary_refresh`, {
+    method: "POST"
+  });
+  const data = await res.json();
+  document.getElementById("aiSummaryText").textContent = data.summary || "No summary available.";
+}
+</script>
+{% endblock %}

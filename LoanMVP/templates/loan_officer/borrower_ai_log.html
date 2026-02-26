@@ -1,0 +1,35 @@
+{% extends "layouts/loan_officer_base.html" %}
+{% block title %}AI Chat Log: {{ borrower.name }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+  <h3>AI Chat Log for {{ borrower.name }}</h3>
+  <p class="text-muted">Review borrower questions, AI responses, and suggested next steps.</p>
+
+  {% for chat in chats %}
+    <div class="card mb-4">
+      <div class="card-body">
+        <h5 class="card-title">Q: {{ chat.question }}</h5>
+        <p><strong>AI:</strong> {{ chat.response }}</p>
+
+        {% if chat.topic %}
+          <span class="badge bg-secondary">{{ chat.topic|capitalize }}</span>
+        {% endif %}
+
+        {% if chat.parent_id %}
+          <small class="text-muted">Follow-up to #{{ chat.parent_id }}</small><br>
+        {% endif %}
+
+        <small class="text-muted">Asked on {{ chat.timestamp.strftime('%b %d, %Y %I:%M %p') }}</small>
+
+        <div class="mt-3">
+          <a href="{{ url_for('loan_officer.view_borrower', borrower_id=borrower.id) }}" class="btn btn-sm btn-outline-primary">View Profile</a>
+          <a href="{{ url_for('loan_officer.upload_center', borrower_id=borrower.id) }}" class="btn btn-sm btn-outline-success">Upload Docs</a>
+        </div>
+      </div>
+    </div>
+  {% else %}
+    <p>No AI questions yet.</p>
+  {% endfor %}
+</div>
+{% endblock %}

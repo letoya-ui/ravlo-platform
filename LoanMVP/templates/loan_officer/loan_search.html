@@ -1,0 +1,92 @@
+{% extends "layouts/base.html" %}
+{% block title %}Loan Officer • Loan Search{% endblock %}
+{% block content %}
+<main class="dashboard-main">
+<link rel="stylesheet" href="https://unpkg.com/lucide-static@latest/font/lucide.css">
+
+<style>
+:root {
+  --panel:#15161a;--line:#2a2e36;--text:#e6e6e6;
+  --muted:#a5a7ad;--accent:#7ab8ff;--glow:0 0 18px rgba(122,184,255,.35);
+}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:1.2rem;box-shadow:var(--glow);}
+.search-bar{display:flex;gap:.75rem;margin-bottom:1rem;align-items:center;}
+.search-bar input{flex:1;padding:.6rem;border:1px solid var(--line);border-radius:8px;background:#1b1d22;color:var(--text);}
+.search-bar button{background:var(--accent);border:none;padding:.6rem 1.2rem;border-radius:8px;color:#000;font-weight:600;cursor:pointer;}
+.search-bar button:hover{opacity:.85;}
+.table{width:100%;border-collapse:collapse;margin-top:1rem;}
+.table th,.table td{padding:.6rem;border-top:1px solid var(--line);}
+.table th{color:var(--accent);text-align:left;}
+.table tr:hover{background:#1c1e23;cursor:pointer;}
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:1rem;margin-top:1rem;}
+.stat-card{background:#1b1d22;border:1px solid var(--line);border-radius:10px;padding:.8rem;text-align:center;}
+.stat-card h3{margin:0;color:var(--accent);}
+.stat-card p{color:var(--muted);}
+.top-actions{display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;}
+.new-loan-btn{
+  display:flex;align-items:center;gap:.5rem;
+  background:#28a745;border:none;color:#fff;
+  padding:.6rem 1.2rem;border-radius:8px;
+  font-weight:600;cursor:pointer;text-decoration:none;
+}
+.new-loan-btn:hover{background:#23923c;}
+</style>
+
+<h1>🔍 Loan Search</h1>
+
+<div class="card">
+  <div class="top-actions">
+    <form method="get" action="{{ url_for('loan_officer.loan_search') }}" class="search-bar">
+      <input type="text" name="q" placeholder="Search by borrower name, loan ID, or status..." value="{{ query }}">
+      <button type="submit"><i class="lucide lucide-search"></i> Search</button>
+    </form>
+
+    <a href="{{ url_for('loan_officer.new_application') }}" class="new-loan-btn">
+      <i class="lucide lucide-file-plus"></i> New Loan Application
+    </a>
+  </div>
+
+  {% if query %}
+    <p class="muted">Results for "<strong>{{ query }}</strong>": {{ loans|length }} found</p>
+  {% endif %}
+
+  {% if loans %}
+  <table class="table">
+    <thead>
+      <tr>
+        <th>ID</th><th>Borrower</th><th>Loan Type</th><th>Amount</th><th>Status</th><th>Date</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for loan in loans %}
+      <tr onclick="window.location='{{ url_for('loan_officer.view_loan', loan_id=loan.id) }}'">
+        <td>#{{ loan.id }}</td>
+        <td>{{ loan.borrower.full_name }}</td>
+        <td>{{ loan.loan_type or '—' }}</td>
+        <td>${{ "{:,.0f}".format(loan.amount or 0) }}</td>
+        <td>{{ loan.status or '—' }}</td>
+        <td>{{ loan.created_at.strftime('%b %d, %Y') if loan.created_at else '—' }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+    {% if query %}
+      <p class="muted">No matching loans found.</p>
+    {% endif %}
+  {% endif %}
+</div>
+
+<div class="stats-grid">
+  <div class="stat-card"><h3>{{ stats.total_loans }}</h3><p>Total Loans</p></div>
+  <div class="stat-card"><h3>{{ stats.active_loans }}</h3><p>Active</p></div>
+  <div class="stat-card"><h3>{{ stats.pending_loans }}</h3><p>Pending</p></div>
+  <div class="stat-card"><h3>{{ stats.closed_loans }}</h3><p>Closed</p></div>
+</div>
+
+<div class="card" style="margin-top:1rem;">
+  <h3>🤖 AI Summary</h3>
+  <p>{{ ai_summary }}</p>
+</div>
+</main>
+{% endblock %}

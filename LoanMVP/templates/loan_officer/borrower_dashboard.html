@@ -1,0 +1,55 @@
+{% extends "layouts/base.html" %}
+{% block title %}Borrower Dashboard{% endblock %}
+
+{% block content %}
+<h2>{{ borrower.full_name }}</h2>
+<p>Email: {{ borrower.email }} | Income: ${{ borrower.annual_income }} | Credit Score: {{ borrower.credit_score }}</p>
+
+<hr>
+<h4>📄 Loans</h4>
+<ul>
+  {% for loan in loans %}
+    <li>
+      Loan #{{ loan.id }} — {{ loan.loan_type }} (${{ loan.loan_amount }}) — {{ loan.status }}
+      <a href="{{ url_for('loan_officer.loan_summary', loan_id=loan.id) }}" class="btn btn-sm btn-outline-primary">View</a>
+    </li>
+  {% else %}
+    <li class="text-muted">No loans found.</li>
+  {% endfor %}
+</ul>
+
+<h4>💬 Follow-Ups</h4>
+<ul>
+  {% for f in followups %}
+    <li>{{ f.description }} <small class="text-muted">Added {{ f.created_at.strftime('%b %d') }}</small></li>
+  {% else %}
+    <li class="text-muted">No pending follow-ups.</li>
+  {% endfor %}
+</ul>
+
+<h4>📥 Uploads</h4>
+<p>{{ uploads|length }} files uploaded</p>
+<a href="{{ url_for('loan_officer.upload', borrower_id=borrower.id) }}" class="btn btn-sm btn-outline-secondary">View Upload Center</a>
+
+<h4>🧠 AI Intake Summary</h4>
+{% if ai_summary %}
+  <div class="card mt-2"><div class="card-body"><pre style="white-space: pre-wrap;">{{ ai_summary.summary }}</pre></div></div>
+{% else %}
+  <p class="text-muted">No AI summary available.</p>
+{% endif %}
+
+<hr>
+<h4>🔗 Quick Links</h4>
+<ul>
+  <li><a href="{{ url_for('loan_officer.intake_review', borrower_id=borrower.id) }}">Intake Review</a></li>
+  <li><a href="{{ url_for('loan_officer.timeline', borrower_id=borrower.id) }}">Timeline</a></li>
+  <li><a href="{{ url_for('loan_officer.messages', borrower_id=borrower.id) }}">Messages</a></li>
+  <li><a href="{{ url_for('loan_officer.quotes', borrower_id=borrower.id) }}">Quotes</a></li>
+  <li><a href="{{ url_for('loan_officer.view_loan', loan_id=loan.id) }}">View Loans</a></li>
+   <a href="{{ url_for('loan_officer.ai_chat_history', borrower_id=borrower.id) }}" class="btn btn-secondary">
+    Chat About This Borrower
+</a>
+  <li><a href="{{ url_for('loan_officer.follow_up', borrower_profile_id=borrower.id) }}">Follow-Up</a></li>
+  <li><a href="{{ url_for('loan_officer.profile', borrower_id=borrower.id) }}">Edit Profile</a></li>
+</ul>
+{% endblock %}

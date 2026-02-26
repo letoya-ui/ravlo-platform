@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>{% block title %}LoanMVP{% endblock %}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <!-- Shared Public Styles -->
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: Inter, sans-serif;
+      background: #0d0d0d;
+      color: #f5f5f5;
+    }
+
+    .public-wrapper {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .public-content {
+      flex: 1;
+      padding: 2rem 1rem;
+    }
+
+    .public-footer {
+      text-align: center;
+      padding: 1.5rem;
+      color: #777;
+      font-size: 0.9rem;
+      border-top: 1px solid #222;
+    }
+  </style>
+
+  {% block head %}{% endblock %}
+</head>
+
+<body>
+  <div class="public-wrapper">
+
+    <div class="public-content">
+      {% block content %}{% endblock %}
+    </div>
+
+    <div class="public-footer">
+      LoanMVP • Borrower Beta • 2026
+    </div>
+
+  </div>
+</body>
+</html>

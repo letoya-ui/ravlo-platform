@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LoanMVP System Login</title>
+
+  <style>
+    :root {
+      --bg: #0a0c10;
+      --panel: #15161a;
+      --accent: #7ab8ff;
+      --text: #e6e6e6;
+      --muted: #a5a7ad;
+      --line: #2a2e36;
+    }
+
+    body {
+      margin: 0;
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      background: radial-gradient(circle at center, #0e1116 0%, #07080b 100%);
+      font-family: "Segoe UI", sans-serif;
+      color: var(--text);
+      overflow: hidden;
+    }
+
+    /* === ENERGY BACKGROUND === */
+    .energy-bg {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      width: 1000px;
+      height: 1000px;
+      background: radial-gradient(circle, rgba(122,184,255,0.15) 0%, transparent 70%);
+      border-radius: 50%;
+      transform: translate(-50%, -50%) rotate(0deg);
+      animation: spin 40s linear infinite;
+      filter: blur(60px);
+      z-index: 0;
+    }
+
+    @keyframes spin {
+      0% { transform: translate(-50%, -50%) rotate(0deg); }
+      100% { transform: translate(-50%, -50%) rotate(360deg); }
+    }
+
+    /* === REACTOR LOGO === */
+    .reactor {
+      position: relative;
+      z-index: 1;
+      top: -20px;
+      width: 240px;
+      height: 240px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .reactor::before {
+      content: "";
+      position: absolute;
+      width: 320px;
+      height: 320px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(122,184,255,0.3) 0%, transparent 70%);
+      animation: pulse 3s ease-in-out infinite;
+      filter: blur(25px);
+      z-index: 0;
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); opacity: 0.6; }
+      50% { transform: scale(1.1); opacity: 0.9; }
+    }
+
+    .reactor img {
+      width: 190px;
+      opacity: 0.8;
+      filter: drop-shadow(0 0 25px rgba(122,184,255,0.7));
+      z-index: 1;
+    }
+
+    /* === LOGIN BOX === */
+    .login-box {
+      position: relative;
+      z-index: 2;
+      background: rgba(20, 22, 28, 0.75);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      box-shadow: 0 0 20px rgba(0,0,0,0.7), inset 0 0 20px rgba(122,184,255,0.05);
+      padding: 2rem;
+      width: 320px;
+      text-align: center;
+      backdrop-filter: blur(10px);
+      animation: fadeIn 1s ease-out;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(30px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    h2 {
+      color: var(--accent);
+      margin-bottom: 1rem;
+      font-weight: 600;
+    }
+
+    input {
+      width: 100%;
+      margin-bottom: 1rem;
+      padding: 0.7rem;
+      border-radius: 8px;
+      border: 1px solid var(--line);
+      background: #0f1013;
+      color: var(--text);
+    }
+
+    button {
+      width: 100%;
+      padding: 0.7rem;
+      border: none;
+      border-radius: 8px;
+      background: linear-gradient(90deg, var(--accent), #5aa0ff);
+      color: #fff;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    button:hover {
+      background: linear-gradient(90deg, #5aa0ff, var(--accent));
+      box-shadow: 0 0 14px rgba(122,184,255,0.4);
+    }
+
+    footer {
+      position: absolute;
+      bottom: 20px;
+      font-size: 0.85rem;
+      color: var(--muted);
+      text-align: center;
+      width: 100%;
+      letter-spacing: 0.3px;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="energy-bg"></div>
+
+  <div class="reactor">
+    <img src="{{ url_for('static', filename='images/cm_logo.png') }}" alt="Caughman Mason Logo">
+  </div>
+
+  <div class="login-box">
+    <h2>LoanMVP System Login</h2>
+    <form method="POST">
+      <input type="email" name="email" placeholder="Email Address" required>
+      <input type="password" name="password" placeholder="Password" required>
+      <button type="submit">Login</button>
+    </form>
+  </div>
+
+  <footer>
+    © {{ current_year or 2025 }} Caughman Mason Loan Services<br>
+    Powered by LoanMVP AI Core
+  </footer>
+</body>
+</html>

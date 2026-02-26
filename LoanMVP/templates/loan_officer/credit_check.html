@@ -1,0 +1,82 @@
+{% extends "layouts/base.html" %}
+{% block content %}
+<style>
+  :root{--line:#2a2e36; --panel:#15161a; --text:#e6e6e6; --muted:#a5a7ad}
+  .card{background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:1rem}
+  table{width:100%; border-collapse:collapse}
+  th,td{padding:.6rem; border-top:1px solid var(--line); color:var(--text)}
+  input{background:#0f0f11; border:1px solid var(--line); color:var(--text); border-radius:10px; padding:.45rem .6rem; width:100%}
+  .btn{display:inline-flex; align-items:center; gap:.5rem; padding:.6rem .9rem; border-radius:10px; border:1px solid var(--line); color:var(--text); text-decoration:none; background:#1a1d23}
+</style>
+
+<div class="container py-4 text-light">
+  <h2 class="mb-4">💳 Credit Check</h2>
+
+  <!-- Borrower selection form -->
+  <form method="POST" class="bg-dark p-4 rounded shadow-sm mb-4">
+    <label for="borrower_profile_id" class="form-label text-light">Select Borrower</label>
+    <select name="borrower_profile_id" class="form-select bg-dark text-light border-secondary" required>
+      <option value="">-- Choose Borrower --</option>
+      {% for b in borrowers %}
+      <option value="{{ b.id }}">{{ b.full_name }}</option>
+      {% endfor %}
+    </select>
+    <button type="submit" class="btn btn-outline-light mt-3">Run Credit Check</button>
+  </form>
+
+  <!-- Latest credit summary -->
+  {% if credit_data %}
+  <div class="card bg-dark text-light border-0 shadow">
+    <div class="card-body">
+      <h5 class="mb-3">Credit Summary for {{ credit_data.borrower_profile.full_name }}</h5>
+      <p>
+        <strong>Score:</strong>
+        <span class="{% if credit_data.score > 700 %}score-high{% elif credit_data.credit_score > 600 %}score-mid{% else %}score-low{% endif %}">
+          {{ credit_data.credit_score }}
+        </span>
+      </p>
+      <p><strong>Report Date:</strong> {{ credit_data.report_date.strftime('%Y-%m-%d') }}</p>
+      <p><strong>Delinquencies:</strong> {{ credit_data.delinquencies }}</p>
+      <p><strong>Public Records:</strong> {{ credit_data.public_records }}</p>
+      <p><strong>Total Debt:</strong> ${{ "{:,.0f}".format(credit_data.total_debt) }}</p>
+      <a href="{{ url_for('loan_officer.credit_check', borrower_id=credit_data.borrower_id) }}" class="btn mt-3">📊 Pull Again</a>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- History of past credit pulls -->
+  {% if credit_history %}
+  <div class="card bg-dark text-light border-0 shadow">
+    <div class="card-body">
+      <h5 class="mb-3">📜 Credit History</h5>
+      <table>
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Score</th>
+            <th>Delinquencies</th>
+            <th>Public Records</th>
+            <th>Total Debt</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for c in credit_history %}
+          <tr>
+            <td>{{ c.report_date.strftime('%Y-%m-%d') }}</td>
+            <td>
+              <span class="{% if c.credit_score > 700 %}score-high{% elif c.credit_score > 600 %}score-mid{% else %}score-low{% endif %}">
+                {{ c.credit_score }}
+              </span>
+            </td>
+            <td>{{ c.delinquencies }}</td>
+            <td>{{ c.public_records }}</td>
+            <td>${{ "{:,.0f}".format(c.total_debt) }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

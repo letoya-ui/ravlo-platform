@@ -1,0 +1,101 @@
+{% extends "layouts/base.html" %}
+{% block title %}Partner Detail{% endblock %}
+{% block content %}
+
+<main class="dashboard-main">
+  <style>
+    :root {--bg:#0f0f11;--panel:#15161a;--line:#2a2e36;--text:#e6e6e6;--muted:#a5a7ad;--accent:#7ab8ff;}
+    .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:1.2rem;box-shadow:0 0 14px rgba(122,184,255,0.25);}
+    .tabs{display:flex;gap:.5rem;margin:1rem 0;}
+    .tab-btn{padding:.6rem 1rem;border:1px solid var(--line);background:#1b1d22;color:var(--text);border-radius:10px;cursor:pointer;}
+    .tab-btn.active{background:#2a4a62;color:#cfe8ff;}
+    .tab-content{display:none;}
+    .tab-content.active{display:block;}
+    .muted{color:var(--muted);}
+    textarea{width:100%;background:#0f0f11;border:1px solid var(--line);color:var(--text);border-radius:10px;padding:.6rem;}
+    .btn{background:linear-gradient(180deg,#2a4a62,#1b2a38);border:1px solid #2a4a62;color:#cfe8ff;border-radius:10px;padding:.6rem 1rem;cursor:pointer;}
+  </style>
+
+  <h1>🤝 {{ partner.name }} <span class="muted">({{ partner.company or 'Independent' }})</span></h1>
+  <p class="muted">Type: {{ partner.type or 'N/A' }} • Joined {{ partner.joined_date.strftime('%b %d, %Y') }}</p>
+
+  <div class="tabs">
+    <button class="tab-btn active" data-tab="activity">Activity</button>
+    <button class="tab-btn" data-tab="ai">AI Insight</button>
+    <button class="tab-btn" data-tab="deals">Deals</button>
+    <button class="tab-btn" data-tab="notes">Notes</button>
+  </div>
+
+  <!-- ACTIVITY TAB -->
+  <div id="activity" class="tab-content active card">
+    <h3>📅 Recent Activity</h3>
+    {% if activities %}
+      <ul>
+        {% for a in activities %}
+        <li>{{ a.timestamp.strftime('%b %d, %Y %I:%M %p') }} — {{ a.description }}</li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p class="muted">No activity yet.</p>
+    {% endif %}
+  </div>
+
+  <!-- AI TAB -->
+  <div id="ai" class="tab-content card">
+    <h3>🧠 AI Insight</h3>
+    <p>{{ ai_summary or "AI analysis not available yet." }}</p>
+  </div>
+
+  <!-- DEALS TAB -->
+  <div id="deals" class="tab-content card">
+    <h3>💼 Deals Linked to {{ partner.name }}</h3>
+    {% if deals %}
+      <table style="width:100%;border-collapse:collapse;">
+        <thead><tr><th>ID</th><th>Borrower</th><th>Amount</th><th>Status</th></tr></thead>
+        <tbody>
+          {% for d in deals %}
+          <tr>
+            <td>{{ d.id }}</td>
+            <td>{{ d.borrower_name }}</td>
+            <td>${{ '{:,.0f}'.format(d.amount or 0) }}</td>
+            <td>{{ d.status }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <p class="muted">No deals linked.</p>
+    {% endif %}
+  </div>
+
+  <!-- NOTES TAB -->
+  <div id="notes" class="tab-content card">
+    <h3>📝 Partner Notes</h3>
+    {% if notes %}
+      <ul>
+        {% for n in notes %}
+        <li><strong>{{ n.author }}</strong> ({{ n.created_at.strftime('%b %d, %Y %I:%M %p') }}): {{ n.content }}</li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p class="muted">No notes yet.</p>
+    {% endif %}
+    <form method="POST" action="{{ url_for('crm.add_partner_note', partner_id=partner.id) }}">
+      <textarea name="content" placeholder="Add a quick note..."></textarea>
+      <button type="submit" class="btn">💬 Save Note</button>
+    </form>
+  </div>
+
+  <script>
+    document.querySelectorAll('.tab-btn').forEach(btn=>{
+      btn.addEventListener('click',()=>{
+        document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById(btn.dataset.tab).classList.add('active');
+      });
+    });
+  </script>
+</main>
+
+{% endblock %}

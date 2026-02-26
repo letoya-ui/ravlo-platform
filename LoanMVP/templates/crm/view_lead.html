@@ -1,0 +1,240 @@
+{% extends "layouts/base.html" %}
+{% block title %}View Leads{% endblock %}
+{% block content %}
+
+<main style="margin-left:260px; padding:2rem; background:#0f0f11; color:#e6e6e6; min-height:100vh;">
+  <link rel="stylesheet" href="https://unpkg.com/lucide-static@latest/font/lucide.css">
+  <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+
+  <style>
+    .card{
+      background:#15161a;border:1px solid #2b2f36;border-radius:14px;
+      padding:1.4rem;box-shadow:0 0 18px rgba(122,184,255,0.25);
+      margin-bottom:1.5rem;
+    }
+    h1,h2{color:#7ab8ff;margin-bottom:1rem;}
+    .muted{color:#a5a7ad;font-size:.9rem;}
+    .btn{
+      display:inline-flex;align-items:center;gap:.5rem;
+      background:linear-gradient(180deg,#2a4a62,#1b2a38);
+      border:1px solid #2a4a62;color:#cfe8ff;
+      border-radius:10px;padding:.6rem 1.1rem;text-decoration:none;
+      cursor:pointer;
+    }
+    .btn:hover{box-shadow:0 0 10px rgba(122,184,255,0.35);}
+    .grid{display:grid;gap:1rem;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));}
+    table{width:100%;border-collapse:collapse;}
+    th,td{padding:.65rem .8rem;border-top:1px solid #2b2f36;text-align:left;}
+    th{color:#9cb9d8;text-transform:uppercase;font-size:.8rem;}
+    tr:hover{background:#1c1f25;}
+    input,select{
+      background:#0f0f11;color:#e6e6e6;
+      border:1px solid #2b2f36;border-radius:10px;
+      padding:.6rem .8rem;width:100%;
+    }
+    .actions{display:flex;gap:.4rem;flex-wrap:wrap;}
+    .badge{padding:.25rem .6rem;border-radius:999px;font-size:.78rem;}
+    .b-new{background:#2a4a62;color:#cfe8ff;}
+    .b-contacted{background:#223f5a;color:#7ab8ff;}
+    .b-progress{background:#2a5a4a;color:#43d19e;}
+    .b-won{background:#3a3622;color:#ffdf6e;}
+    .b-lost{background:#5a2a2a;color:#ff6b6b;}
+  </style>
+
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;">
+      <h1><i class="lucide lucide-users"></i> All Leads</h1>
+      <div style="display:flex;gap:.5rem;flex-wrap:wrap;">
+        <a href="{{ url_for('crm.add_lead') }}" class="btn"><i class="lucide lucide-user-plus"></i> Add Lead</a>
+        <a href="{{ url_for('crm.lead_engine') }}" class="btn"><i class="lucide lucide-cpu"></i> Lead Engine</a>
+      </div>
+    </div>
+    <p class="muted">Overview of all active and closed leads across your CRM system.</p>
+
+    <!-- Filter -->
+    <form method="GET" style="margin-top:1rem;display:grid;gap:1rem;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));">
+      <input type="text" name="q" placeholder="Search by name or email" value="{{ request.args.get('q','') }}">
+      <select name="status">
+        <option value="">All Statuses</option>
+        {% for s in ['New','Contacted','Qualified','In Progress','Closed Won','Closed Lost'] %}
+          <option value="{{ s }}" {% if request.args.get('status') == s %}selected{% endif %}>{{ s }}</option>
+        {% endfor %}
+      </select>
+      <button type="submit" class="btn"><i class="lucide lucide-search"></i> Filter</button>
+    </form>
+  </div>
+
+  <!-- Table -->
+  <div class="card" style="overflow-x:auto;">
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th><th>Email</th><th>Phone</th>
+          <th>Status</th><th>Score</th><th>Source</th>
+          <th>Assigned To</th><th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for lead in leads %}
+        <tr>
+          <td>{{ lead.name }}</td>
+          <td>{{ lead.email }}</td>
+          <td>{{ lead.phone or '—' }}</td>
+          <td>
+            <span class="badge 
+              {% if lead.status == 'New' %}b-new
+              {% elif lead.status == 'Contacted' %}b-contacted
+              {% elif lead.status == 'In Progress' %}b-progress
+              {% elif lead.status == 'Closed Won' %}b-won
+              {% elif lead.status == 'Closed Lost' %}b-lost{% endif %}">
+              {{ lead.status }}
+            </span>
+          </td>
+          <td>{{ lead.score or '—' }}</td>
+          <td>{{ lead.source or '—' }}</td>
+          <td>{{ lead.assigned_to or 'Unassigned' }}</td>
+          <td class="actions">
+            <a href="{{ url_for('crm.lead_detail', lead_id=lead.id) }}" class="btn"><i class="lucide lucide-eye"></i></a>
+            <a href="{{ url_for('crm.update_lead', lead_id=lead.id) }}" class="btn"><i class="lucide lucide-edit-3"></i></a>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="8" class="muted" style="text-align:center;">No leads found.</td></tr>
+        {% endfor %}
+      <form action="{{ url_for('crm.convert_lead_to_borrower', lead_id=lead.id) }}" method="POST" style="display:inline;">
+        <button type="submit" class="btn btn-glow">🏦 Convert to Borrower</button>
+      </form>
+      </tbody>
+    </table>
+  </div>
+ <hr style="border-color:#2a2e36;margin:2rem 0;">
+
+<h3 style="color:#7ab8ff;">📞 Call Log & AI Follow-Up</h3>
+
+<div class="wrap" style="display:flex;gap:1.2rem;flex-wrap:wrap;">
+  <!-- Call Log Panel -->
+  <div class="card" style="flex:1 1 65%;min-width:480px;">
+    <form method="POST" style="margin-bottom:1rem;">
+      <div style="display:flex;gap:.5rem;flex-wrap:wrap;">
+        <input name="phone" placeholder="Phone" value="{{ lead.phone or '' }}"
+               style="flex:1;padding:.5rem;background:#0f0f11;border:1px solid #2a2e36;border-radius:8px;color:#e6e6e6;">
+        <input name="outcome" placeholder="Outcome (e.g. Left VM, Spoke)"
+               style="flex:1;padding:.5rem;background:#0f0f11;border:1px solid #2a2e36;border-radius:8px;color:#e6e6e6;">
+      </div>
+      <textarea name="note" placeholder="Call notes..." rows="2"
+                style="width:100%;margin-top:.6rem;background:#0f0f11;border:1px solid #2a2e36;border-radius:8px;color:#e6e6e6;"></textarea>
+      <button type="submit" class="btn" style="margin-top:.6rem;">
+        <i class="lucide lucide-phone-call"></i> Log Call
+      </button>
+    </form>
+
+    {% if calls %}
+    <table class="table" style="width:100%;border-collapse:collapse;">
+      <thead>
+        <tr><th>Date</th><th>Phone</th><th>Outcome</th><th>Notes</th><th>AI Summary</th></tr>
+      </thead>
+      <tbody>
+        {% for c in calls %}
+        <tr>
+          <td>{{ c.created_at.strftime('%b %d, %Y %I:%M %p') }}</td>
+          <td>{{ c.contact_phone or '—' }}</td>
+          <td>{{ c.outcome or '—' }}</td>
+          <td>{{ c.notes or '—' }}</td>
+          <td>{{ c.ai_summary or '—' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+      <p class="muted">No calls logged yet.</p>
+    {% endif %}
+  </div>
+
+  <!-- AI Follow-Up Sidebar -->
+  <aside class="card" style="flex:1 1 30%;min-width:280px;">
+    <h4 style="color:#7ab8ff;">🤖 AI Follow-Up Plan</h4>
+    {% if ai_followup %}
+      <div class="ai-summary" style="margin-top:.6rem;background:#18222b;border:1px solid #2b2f36;border-radius:10px;padding:.9rem;">
+        {{ ai_followup }}
+      </div>
+    {% else %}
+      <p class="muted">No AI insights yet.</p>
+    {% endif %}
+  </aside>
+</div>
+<p><strong>Borrower:</strong>
+  {% if lead.borrower %}
+    <a href="{{ url_for('borrower.dashboard', borrower_id=lead.borrower.id) }}">
+      {{ lead.borrower.full_name }}
+    </a>
+  {% else %}
+    Not converted yet
+  {% endif %}
+</p>
+
+<p><strong>Loan Officer:</strong>
+  {% if lead.loan_officer %}
+    {{ lead.loan_officer.name }} ({{ lead.loan_officer.email }})
+  {% else %}
+    Not assigned
+  {% endif %}
+</p>
+
+
+  <!-- Chart Summary -->
+  <div class="card">
+    <h2><i class="lucide lucide-bar-chart-2"></i> Lead Status Overview</h2>
+    <div id="chartLeads" style="height:260px;"></div>
+  </div>
+
+  <script>
+    const baseOpt={chart:{toolbar:{show:false},foreColor:'#c9d3df'},grid:{borderColor:'#2a2e36'},dataLabels:{enabled:false},theme:{mode:'dark'}};
+
+    new ApexCharts(document.querySelector("#chartLeads"),{
+      ...baseOpt,
+      chart:{...baseOpt.chart,type:'bar',height:260},
+      series:[{name:'Leads',data:[
+        {{ status_counts['New'] or 0 }},
+        {{ status_counts['Contacted'] or 0 }},
+        {{ status_counts['Qualified'] or 0 }},
+        {{ status_counts['In Progress'] or 0 }},
+        {{ status_counts['Closed Won'] or 0 }},
+        {{ status_counts['Closed Lost'] or 0 }}
+      ]}],
+      xaxis:{categories:['New','Contacted','Qualified','In Progress','Closed Won','Closed Lost']},
+      colors:['#7ab8ff']
+    }).render();
+  </script>
+ <script>
+document.addEventListener("DOMContentLoaded", ()=>{
+  const form = document.querySelector("form");
+  const followupBox = document.querySelector(".ai-summary");
+  const followupPanel = document.querySelector("aside.card");
+
+  if(form){
+    form.addEventListener("submit", async (e)=>{
+      e.preventDefault();
+      const formData = new FormData(form);
+      const response = await fetch(window.location.href, {
+        method:"POST",
+        body:formData
+      });
+      if(response.ok){
+        // 🔁 Fetch new AI Follow-Up via AJAX
+        const aiRes = await fetch(`${window.location.pathname}/ai_followup`);
+        const aiData = await aiRes.json();
+        if(followupBox){
+          followupBox.innerHTML = `<div><strong>🤖 Updated Plan:</strong><br>${aiData.message}</div>`;
+          followupBox.style.boxShadow="0 0 14px rgba(122,184,255,.4)";
+          setTimeout(()=>followupBox.style.boxShadow="none",1500);
+        } else if(followupPanel){
+          followupPanel.innerHTML += `<div class='ai-summary'>${aiData.message}</div>`;
+        }
+      }
+    });
+  }
+});
+</script>
+
+</main>
+{% endblock %}

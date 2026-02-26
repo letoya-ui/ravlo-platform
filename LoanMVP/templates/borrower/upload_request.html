@@ -1,0 +1,76 @@
+{% extends "layouts/borrower_base.html" %}
+{% block title %}Upload Requested Document{% endblock %}
+
+{% block content %}
+
+<div class="b-header">
+  <div>
+    <h1>📤 Upload Requested Item</h1>
+    <p class="muted">Submit the document or condition file requested by your processor or underwriter.</p>
+  </div>
+</div>
+
+<!-- REQUEST DETAILS -->
+<div class="b-card" style="margin-bottom:1.4rem;">
+  <h3>Request Details</h3>
+
+  <div class="b-grid-2" style="margin-top:1rem;">
+    <div>
+      <label class="muted">Item</label>
+      <p>{{ request_item.document_name }}</p>
+    </div>
+
+    <div>
+      <label class="muted">Type</label>
+      <p>
+        {% if request_item.type == "document" %}
+          <span class="badge bg-info">Document</span>
+        {% else %}
+          <span class="badge bg-primary">Condition</span>
+        {% endif %}
+      </p>
+    </div>
+  </div>
+
+  <div class="b-grid-2" style="margin-top:1rem;">
+    <div>
+      <label class="muted">Requested By</label>
+      <p>{{ request_item.requested_by or "Processor" }}</p>
+    </div>
+
+    <div>
+      <label class="muted">Status</label>
+      <p>
+        {% set s = request_item.status|lower %}
+        {% if s in ["completed", "cleared"] %}
+          <span class="badge bg-success">Completed</span>
+        {% elif s == "submitted" %}
+          <span class="badge bg-info">Submitted</span>
+        {% else %}
+          <span class="badge bg-warning">Pending</span>
+        {% endif %}
+      </p>
+    </div>
+  </div>
+
+  <div style="margin-top:1rem;">
+    <label class="muted">Notes</label>
+    <p>{{ request_item.notes or "—" }}</p>
+  </div>
+</div>
+
+<!-- UPLOAD FORM -->
+<div class="b-card">
+  <h3>Upload File</h3>
+  <p class="muted" style="margin-top:.4rem;">Choose the file that satisfies this request.</p>
+
+  <form method="POST" enctype="multipart/form-data" style="margin-top:1rem;">
+    <input type="file" name="file" class="form-control" required>
+
+    <button class="action-btn" style="margin-top:1rem;">
+      <i class="lucide lucide-upload"></i> Submit File
+    </button>
+  </form>
+</div>
+
+{% endblock %}

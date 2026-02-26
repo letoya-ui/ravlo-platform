@@ -1,0 +1,68 @@
+{% extends "layouts/base.html" %}
+{% block title %}Upload Documents • Caughman Mason{% endblock %}
+
+{% block content %}
+
+<style>
+:root {
+    --bg:#0f0f11;
+    --panel:#15161a;
+    --line:#2b2f36;
+    --text:#e6e6e6;
+    --accent:#7ab8ff;
+}
+.section {
+    background:var(--panel);
+    border:1px solid var(--line);
+    padding:2rem;
+    border-radius:14px;
+    m
+    margin-bottom:2rem;
+}
+
+input, select {
+    width:100%;
+    padding:.8rem;
+    background:#1b1d21;
+    border:1px solid var(--line);
+    color:var(--text);
+    border-radius:10px;
+    margin-bottom:1rem;
+}
+
+.btn {
+    width:100%;
+    padding:1rem;
+    background:transparent;
+    border:1px solid var(--accent);
+    color:var(--accent);
+    border-radius:10px;
+}
+.btn:hover { background:var(--accent); color:#000; }
+</style>
+
+<main class="dashboard-main">
+
+<section class="section">
+    <h2>📄 Upload Your Documents</h2>
+
+    <form method="POST" enctype="multipart/form-data">
+        <select name="doc_name">
+            <option value="">Select Document</option>
+            <option value="ID">Government ID</option>
+            <option value="Paystubs">Paystubs</option>
+            <option value="Bank Statements">Bank Statements</option>
+            <option value="Purchase Contract">Purchase Contract</option>
+            <option value="Other">Other</option>
+        </select>
+
+        <input type="file" name="file" required>
+        <button class="btn">Upload</button>
+    </form>
+
+    <a href="/apply/submit/{{ borrower.id }}" class="btn" style="margin-top:1.5rem;">Continue → Submit Application</a>
+</section>
+
+</main>
+
+{% endblock %}

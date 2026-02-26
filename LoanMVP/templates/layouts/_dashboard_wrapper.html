@@ -1,0 +1,75 @@
+{% macro dashboard_wrapper(caller=None) %}
+  <div class="dashboard-wrapper">
+    {{ caller() }}
+  </div>
+
+  <style>
+    .dashboard-wrapper {
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: 1.5rem;
+      padding: 1.5rem;
+      align-items: start;
+      background: var(--bg);
+    }
+
+    .dashboard-wrapper .lhs, 
+    .dashboard-wrapper .rhs {
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+    }
+
+    /* Ensure 'card' exists in case theme.css doesn't define it the way we want */
+    .dashboard-wrapper .card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 1rem 1.1rem;
+      box-shadow: var(--glow);
+    }
+
+    /* --- Quick Action Buttons (with higher specificity) --- */
+    .dashboard-wrapper .quick-actions-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 0.75rem;
+      margin-top: 0.5rem;
+    }
+
+    .dashboard-wrapper .qa-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 0.7rem 0.9rem;
+      color: var(--text);
+      font-weight: 500;
+      text-decoration: none;
+      box-shadow: 0 0 12px rgba(0,0,0,0.25);
+      transition: 0.2s ease-in-out;
+    }
+
+    .dashboard-wrapper .qa-btn i {
+      font-size: 1.1rem;
+      color: var(--accent);
+    }
+
+    .dashboard-wrapper .qa-btn:hover {
+      border-color: var(--accent);
+      background: var(--hover);
+      box-shadow: 0 0 12px rgba(122,184,255,0.35);
+      transform: translateY(-2px);
+    }
+
+    /* --- Responsive Layout --- */
+    @media (max-width: 1100px) {
+      .dashboard-wrapper {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+{% endmacro %}

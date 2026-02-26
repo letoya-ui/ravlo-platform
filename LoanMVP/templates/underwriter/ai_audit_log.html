@@ -1,0 +1,60 @@
+{% extends "layouts/base.html" %}
+{% block title %}Underwriter • AI Audit Log{% endblock %}
+{% block content %}
+<main class="dashboard-main">
+
+<style>
+  :root{--bg:#0f0f11;--panel:#15161a;--line:#282b31;
+        --text:#e6e6e6;--muted:#a5a7ad;--accent:#7ab8ff;
+        --glow:0 0 18px rgba(122,184,255,.35);}
+  body{background:var(--bg);color:var(--text);}
+  .card{background:var(--panel);border:1px solid var(--line);
+        border-radius:14px;padding:1rem;box-shadow:var(--glow);margin-bottom:1rem;}
+  .timeline{list-style:none;padding:0;margin:0;}
+  .timeline li{border-left:2px solid var(--accent);padding-left:1rem;margin-bottom:1rem;position:relative;}
+  .timeline li::before{content:"";width:10px;height:10px;background:var(--accent);
+                       border-radius:50%;position:absolute;left:-6px;top:6px;}
+  .muted{color:var(--muted);}
+  .ai-summary{background:linear-gradient(90deg,#2a4a62,#1b2a38);
+              padding:1rem;border-radius:12px;color:#cfe8ff;
+              box-shadow:var(--glow);margin-bottom:1rem;}
+  a.btn{display:inline-flex;align-items:center;gap:.4rem;padding:.5rem .8rem;
+        border-radius:10px;border:1px solid var(--line);color:var(--text);
+        text-decoration:none;background:#1b1c20;}
+  a.btn:hover{border-color:var(--accent);box-shadow:var(--glow);}
+</style>
+
+<div class="container py-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h2>🧾 AI Audit Log</h2>
+    <a href="{{ url_for('underwriter.dashboard') }}" class="btn">← Back</a>
+  </div>
+
+  <div class="ai-summary">
+    <strong>AI Overview:</strong>
+    {{ ai_summary or "AI is compiling a summary of recent underwriting actions..." }}
+  </div>
+
+  <div class="card">
+    {% if logs %}
+      <ul class="timeline">
+        {% for log in logs %}
+        <li>
+          <strong>[{{ log.action_type }}]</strong>
+          — <span class="muted">{{ log.actor }}</span>
+          <br>
+          <small>{{ log.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}</small>
+          <p style="margin-top:.4rem;">{{ log.description }}</p>
+          {% if log.outcome %}
+          <p class="muted"><em>Outcome:</em> {{ log.outcome }}</p>
+          {% endif %}
+        </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p class="muted">No audit log entries recorded yet.</p>
+    {% endif %}
+  </div>
+</div>
+
+{% endblock %}

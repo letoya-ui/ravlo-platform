@@ -1,0 +1,154 @@
+{% extends "layouts/base.html" %}
+{% block title %}Partner Intelligence Hub{% endblock %}
+{% block content %}
+
+<main class="dashboard-main">
+  <div class="wrap">
+    <header>
+      <h2>🤝 Partner Intelligence Hub</h2>
+      <p class="muted">Monitor performance, track deal volume, and manage partner invites.</p>
+    </header>
+
+    <!-- === TOP METRICS === -->
+    <div class="grid grid-3 mt-2">
+      <div class="card stat-card">
+        <h4>Total Partners</h4>
+        <p class="stat">{{ partners|length }}</p>
+        <span class="muted">Active relationships</span>
+      </div>
+
+      <div class="card stat-card">
+        <h4>Total Volume</h4>
+        <p class="stat">${{ "{:,.0f}".format(total_volume or 0) }}</p>
+        <span class="muted">Lifetime value</span>
+      </div>
+
+      <div class="card stat-card">
+        <h4>Avg Rating</h4>
+        <p class="stat">{{ "{:.1f}".format(avg_rating or 0) }}/5</p>
+        <span class="muted">Across all partners</span>
+      </div>
+    </div>
+
+    <!-- === PARTNER DIRECTORY === -->
+    <div class="card mt-2">
+      <h3>Partner Directory</h3>
+      {% if partners %}
+      <table class="styled-table">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Type</th>
+            <th>Email</th>
+            <th>Status</th>
+            <th>Deals</th>
+            <th>Volume</th>
+            <th>Rating</th>
+            <th>Created</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for p in partners %}
+          <tr>
+            <td>{{ p.name }}</td>
+            <td>{{ p.type }}</td>
+            <td>{{ p.contact_email or '—' }}</td>
+            <td>
+              {% if p.status == 'Active' %}
+                <span class="badge badge-success">Active</span>
+              {% elif p.status == 'Pending' %}
+                <span class="badge badge-warning">Pending</span>
+              {% else %}
+                <span class="badge badge-muted">{{ p.status }}</span>
+              {% endif %}
+            </td>
+            <td>{{ p.deals or 0 }}</td>
+            <td>${{ "{:,.0f}".format(p.volume or 0) }}</td>
+            <td>{{ "{:.1f}".format(p.rating or 0) }}</td>
+            <td>{{ p.created_at.strftime("%b %d, %Y") if p.created_at else '—' }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+        <p class="muted">No partners yet. Use the form below to add one.</p>
+      {% endif %}
+    </div>
+
+    <!-- === INVITE NEW PARTNER === -->
+    <div class="card mt-3">
+      <h3>Invite New Partner</h3>
+      <form method="POST">
+        <div class="grid grid-3">
+          <input type="text" name="name" placeholder="Partner Name" required>
+          <input type="email" name="contact_email" placeholder="Email (optional)">
+          <select name="type" required>
+            <option value="">-- Select Type --</option>
+            <option value="Lender">Lender</option>
+            <option value="Affiliate">Affiliate</option>
+            <option value="Vendor">Vendor</option>
+          </select>
+        </div>
+        <button class="btn btn-glow mt-1">➕ Add Partner</button>
+      </form>
+    </div>
+
+  </div>
+</main>
+
+<style>
+.grid { display: grid; gap: 1.5rem; }
+.grid-3 { grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+
+.stat-card .stat {
+  font-size: 2rem;
+  font-weight: 700;
+  margin: 0.4rem 0;
+}
+
+.styled-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 1rem;
+}
+
+.styled-table th, .styled-table td {
+  padding: 0.8rem;
+  text-align: left;
+  border-bottom: 1px solid var(--line);
+}
+
+.styled-table th {
+  color: var(--accent);
+  text-transform: uppercase;
+  font-size: 0.85rem;
+  letter-spacing: 0.5px;
+}
+
+.badge {
+  padding: 0.3rem 0.6rem;
+  border-radius: 6px;
+  font-size: 0.8rem;
+}
+
+.badge-success { background: #1f6f3e; color: #b7ffcb; }
+.badge-warning { background: #7a5e00; color: #ffe898; }
+.badge-muted { background: #2a2a2a; color: #aaa; }
+
+form input, form select {
+  width: 100%;
+  padding: 0.6rem;
+  background: #111;
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+}
+
+form input:focus, form select:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 6px rgba(122,184,255,0.3);
+}
+</style>
+
+{% endblock %}

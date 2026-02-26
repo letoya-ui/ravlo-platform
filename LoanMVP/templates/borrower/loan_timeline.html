@@ -1,0 +1,68 @@
+{% extends "layouts/borrower_base.html" %}
+{% block title %}Loan Timeline{% endblock %}
+
+{% block content %}
+
+<div class="b-header">
+  <div>
+    <h1>📅 Loan Timeline</h1>
+    <p class="muted">Track your loan from application to closing.</p>
+  </div>
+</div>
+
+<!-- AI SUMMARY -->
+{% if ai_summary %}
+<div class="b-card" style="margin-bottom:1.4rem;">
+  <h3>AI Summary</h3>
+  <p class="muted" style="margin-top:.4rem;">{{ ai_summary }}</p>
+</div>
+{% endif %}
+
+<!-- TIMELINE CARD -->
+<div class="b-card">
+  <h3>Loan Progress</h3>
+
+  <ul class="timeline" style="margin-top:1rem;">
+
+    <li>
+      <strong>Application Submitted</strong>
+      <p class="muted">{{ loan.created_at.strftime('%b %d, %Y') }}</p>
+    </li>
+
+    <li>
+      <strong>Documents Uploaded</strong>
+      <p class="muted">{{ documents_count }} uploaded</p>
+    </li>
+
+    <li>
+      <strong>Conditions</strong>
+      {% if conditions_count == 0 %}
+        <span class="badge bg-success">All Cleared</span>
+      {% else %}
+        <span class="badge bg-warning">{{ conditions_count }} Outstanding</span>
+      {% endif %}
+    </li>
+
+    <li>
+      <strong>Underwriting Status</strong>
+      <p class="muted">{{ loan.status }}</p>
+    </li>
+
+    {% if loan.status == "Clear to Close" %}
+    <li>
+      <strong>Clear to Close</strong>
+      <span class="badge bg-success">Ready for Closing</span>
+    </li>
+    {% endif %}
+
+    {% if loan.status == "Closed" %}
+    <li>
+      <strong>Closing Completed</strong>
+      <span class="badge bg-success">Loan Closed</span>
+    </li>
+    {% endif %}
+
+  </ul>
+</div>
+
+{% endblock %}

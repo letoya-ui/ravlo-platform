@@ -1,0 +1,181 @@
+{% extends "layouts/base.html" %}
+{% block title %}Underwriter • Risk Reports{% endblock %}
+{% block content %}
+
+<main class="dashboard-main">
+  <div class="wrap">
+
+    <!-- HEADER -->
+    <div class="card header-card">
+      <div>
+        <h1>⚠️ Portfolio Risk Reports</h1>
+        <div class="muted">Portfolio‑level analytics across all active loan files.</div>
+      </div>
+      <div class="actions-top">
+        <a href="{{ url_for('underwriter.dashboard') }}" class="btn">🏠 Dashboard</a>
+        <a href="{{ url_for('underwriter.review_loans') }}" class="btn btn-primary">📂 Review Loans</a>
+      </div>
+    </div>
+
+    <!-- KPI GRID -->
+    <div class="kpi-grid">
+      <div class="card kpi">
+        <h3>{{ high_risk }}</h3>
+        <p class="muted">High‑Risk Loans</p>
+      </div>
+
+      <div class="card kpi">
+        <h3>{{ approved }}</h3>
+        <p class="muted">Approved</p>
+      </div>
+
+      <div class="card kpi">
+        <h3>{{ declined }}</h3>
+        <p class="muted">Declined</p>
+      </div>
+
+      <div class="card kpi">
+        <h3>{{ open_conditions|length }}</h3>
+        <p class="muted">Open Conditions</p>
+      </div>
+    </div>
+
+    <!-- CONDITIONS BY SEVERITY -->
+    <div class="card">
+      <h2>📄 Conditions by Severity</h2>
+
+      <div class="severity-grid">
+        <div class="sev-card sev-critical">
+          <h3>{{ critical_conditions|length }}</h3>
+          <p>Critical</p>
+        </div>
+
+        <div class="sev-card sev-moderate">
+          <h3>{{ moderate_conditions|length }}</h3>
+          <p>Moderate</p>
+        </div>
+
+        <div class="sev-card sev-low">
+          <h3>{{ low_conditions|length }}</h3>
+          <p>Low</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- RISK TABLE -->
+    <div class="card">
+      <h2>📊 Loan Risk Breakdown</h2>
+
+      <table class="risk-table">
+        <thead>
+          <tr>
+            <th>Loan #</th>
+            <th>Borrower</th>
+            <th>Credit</th>
+            <th>LTV</th>
+            <th>Front DTI</th>
+            <th>Back DTI</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in risk_rows %}
+          <tr>
+            <td>#{{ row.loan.id }}</td>
+            <td>{{ row.borrower.full_name }}</td>
+            <td>{{ row.credit_score or "—" }}</td>
+            <td>{{ row.ltv or "—" }}</td>
+            <td>{{ row.front_dti or "—" }}</td>
+            <td>{{ row.back_dti or "—" }}</td>
+            <td>
+              <a href="{{ url_for('underwriter.file_review', loan_id=row.loan.id) }}" class="btn-sm">🔍 Review</a>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+  </div>
+</main>
+
+<style>
+  :root {
+    --bg:#0f0f11; --panel:#15161a; --line:#282b31;
+    --text:#e6e6e6; --muted:#a5a7ad; --accent:#7ab8ff;
+    --glow:0 0 18px rgba(122,184,255,0.35);
+    --critical:#ff6b6b; --moderate:#ffdf6e; --low:#7ab8ff;
+  }
+
+  .wrap {
+    padding:1.5rem;
+    max-width:1600px;
+    margin:0 auto;
+  }
+
+  .header-card {
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:1.5rem;
+    flex-wrap:wrap;
+  }
+
+  .kpi-grid {
+    display:grid;
+    grid-template-columns:repeat(auto-fit, minmax(200px,1fr));
+    gap:1rem;
+    margin-bottom:1.5rem;
+  }
+
+  .kpi {
+    text-align:center;
+    padding:1.2rem;
+  }
+
+  .kpi h3 {
+    font-size:2rem;
+    margin:0;
+  }
+
+  .severity-grid {
+    display:grid;
+    grid-template-columns:repeat(auto-fit, minmax(180px,1fr));
+    gap:1rem;
+    margin-top:1rem;
+  }
+
+  .sev-card {
+    padding:1rem;
+    border-radius:12px;
+    text-align:center;
+    border:1px solid var(--line);
+  }
+
+  .sev-critical { background:#2a1b1b; color:var(--critical); }
+  .sev-moderate { background:#2a281b; color:var(--moderate); }
+  .sev-low { background:#1b2430; color:var(--low); }
+
+  .risk-table {
+    width:100%;
+    border-collapse:collapse;
+    margin-top:1rem;
+  }
+
+  .risk-table th,
+  .risk-table td {
+    padding:.7rem;
+    border-top:1px solid var(--line);
+  }
+
+  .btn-sm {
+    padding:.35rem .7rem;
+    border-radius:8px;
+    background:var(--accent);
+    color:#000;
+    text-decoration:none;
+    font-size:.75rem;
+  }
+</style>
+
+{% endblock %}

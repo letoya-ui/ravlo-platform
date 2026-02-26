@@ -1,0 +1,81 @@
+{% extends "layouts/base.html" %}
+{% block title %}Property Search | Processor{% endblock %}
+{% block content %}
+
+<main class="dashboard-main">
+  <div class="wrap">
+
+    <!-- SEARCH CARD -->
+    <section class="card search-card">
+      <h2>🏘 Property Search</h2>
+      <p class="muted">Find borrower properties and generate AI insights.</p>
+
+      <form method="GET" class="search-form">
+        <input type="text" name="query" placeholder="Address" value="{{ request.args.get('query','') }}">
+        <input type="text" name="city" placeholder="City" value="{{ request.args.get('city','') }}">
+        <input type="text" name="state" placeholder="State" value="{{ request.args.get('state','') }}">
+        <button type="submit" class="btn">🔍 Search</button>
+      </form>
+
+      {% if error %}
+      <div class="property-item" style="border-color:#ff6b6b;">
+        <p class="muted">{{ error }}</p>
+      </div>
+      {% endif %}
+    </section>
+
+    <!-- PROPERTY RESULT -->
+    {% if property %}
+    <section class="card property-card">
+      <h3>{{ property.address }}</h3>
+
+      <div class="muted" style="margin-bottom:.8rem;">
+        {{ property.beds }} Beds • {{ property.baths }} Baths • {{ property.sqft }} sqft
+      </div>
+
+      <p><strong>${{ "{:,.0f}".format(property.price or 0) }}</strong></p>
+
+      {% if property.photos %}
+      <img src="{{ property.photos[0] }}" class="property-photo" style="width:100%;border-radius:12px;margin:1rem 0;">
+      {% endif %}
+
+      <div class="muted" style="margin-top:.5rem;">
+        Source: {{ property.source|upper }}
+      </div>
+    </section>
+    {% endif %}
+
+    <!-- AI SUMMARY -->
+    {% if ai_summary %}
+    <section class="card ai-card">
+      <h3>🤖 AI Market Summary</h3>
+      <p>{{ ai_summary }}</p>
+    </section>
+    {% endif %}
+
+  </div>
+</main>
+
+<style>
+:root {
+  --bg:#0f0f11;--panel:#15161a;--line:#2b2f36;
+  --text:#e6e6e6;--muted:#a5a7ad;--accent:#7ab8ff;
+  --glow:0 0 14px rgba(122,184,255,0.35);
+}
+body{background:var(--bg);color:var(--text);}
+.wrap{padding:2rem;display:grid;gap:1.5rem;}
+.card{background:var(--panel);border:1px solid var(--line);
+  border-radius:16px;padding:1.5rem;box-shadow:var(--glow);}
+h2,h3{color:var(--accent);}
+.muted{color:var(--muted);}
+.search-form{display:flex;flex-wrap:wrap;gap:.6rem;margin-top:1rem;}
+input{background:var(--bg);border:1px solid var(--line);border-radius:10px;
+  color:var(--text);padding:.6rem;flex:1;}
+.btn{background:var(--accent);color:#000;border:none;border-radius:8px;
+  padding:.6rem 1.2rem;font-weight:600;cursor:pointer;}
+.btn:hover{box-shadow:var(--glow);}
+.property-item{background:var(--bg);border:1px solid var(--line);
+  border-radius:10px;padding:1rem;margin-top:.8rem;}
+</style>
+
+{% endblock %}

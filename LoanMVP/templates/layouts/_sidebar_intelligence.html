@@ -1,0 +1,234 @@
+<!-- =========================================
+     🧠 Intelligence Sidebar — Unified CM Theme (2025)
+     ========================================= -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+<style>
+  :root {
+    --bg:#0f0f11;
+    --panel:#15161a;
+    --line:#282b31;
+    --text-light:#e6e6e6;
+    --text-muted:#a5a7ad;
+    --accent:#7ab8ff;
+    --hover:#1f2328;
+    --glow:0 0 16px rgba(122,184,255,0.25);
+  }
+
+  .sidebar {
+    background:var(--panel);
+    border-right:1px solid var(--line);
+    width:260px;
+    height:100vh;
+    position:fixed;
+    top:0; left:0;
+    display:flex;
+    flex-direction:column;
+    box-shadow:var(--glow);
+    overflow-y:auto;
+    -webkit-overflow-scrolling:touch;
+    z-index:1000;
+    transition:transform 0.3s ease;
+  }
+
+  .sidebar-header {
+    text-align:center;
+    padding:1.25rem .75rem;
+    border-bottom:1px solid var(--line);
+    background:linear-gradient(180deg,#17181b,#0f0f11);
+    box-shadow:0 2px 8px rgba(0,0,0,0.3);
+    position:relative;
+  }
+
+  .sidebar-header h3 {
+    color:var(--text-light);
+    font-size:1.1rem;
+    margin-bottom:0.25rem;
+    letter-spacing:0.5px;
+  }
+
+  .sidebar-header small {
+    color:var(--text-muted);
+    font-size:.75rem;
+  }
+
+  .toggle-btn {
+    position:absolute;
+    top:1rem; right:1rem;
+    background:none;
+    border:none;
+    color:var(--accent);
+    font-size:1.2rem;
+    cursor:pointer;
+    display:none;
+  }
+
+  .nav {
+    flex:1;
+    padding:1rem 0.5rem;
+  }
+
+  .nav-section {
+    margin-bottom:1.25rem;
+  }
+
+  .nav-section h4 {
+    color:var(--text-muted);
+    font-size:.75rem;
+    text-transform:uppercase;
+    letter-spacing:1px;
+    padding:0 1rem;
+    margin-bottom:.5rem;
+    border-left:3px solid var(--accent);
+  }
+
+  .nav a {
+    display:flex;
+    align-items:center;
+    gap:.75rem;
+    padding:.55rem 1.25rem;
+    color:var(--text-light);
+    text-decoration:none;
+    border-left:3px solid transparent;
+    border-radius:8px;
+    transition:all .25s ease;
+    font-size:.93rem;
+  }
+
+  .nav a i {
+    width:20px;
+    text-align:center;
+    opacity:.9;
+  }
+
+  .nav a:hover {
+    background:var(--hover);
+    color:var(--accent);
+    border-left-color:var(--accent);
+    box-shadow:var(--glow);
+  }
+
+  .nav a.active {
+    color:var(--accent);
+    background:var(--hover);
+    border-left-color:var(--accent);
+    box-shadow:0 0 12px rgba(122,184,255,0.35);
+  }
+
+  .sidebar-footer {
+    border-top:1px solid var(--line);
+    text-align:center;
+    padding:1rem;
+    font-size:.8rem;
+    color:var(--text-muted);
+    background:#101113;
+  }
+
+  .sidebar-footer a {
+    color:var(--text-muted);
+    text-decoration:none;
+    transition:color .25s;
+  }
+
+  .sidebar-footer a:hover {
+    color:var(--accent);
+    text-shadow:0 0 6px rgba(122,184,255,0.4);
+  }
+
+  @media(max-width:992px){
+    .sidebar {
+      transform:translateX(-100%);
+    }
+    .sidebar.active {
+      transform:translateX(0);
+    }
+    .toggle-btn {
+      display:block;
+    }
+  }
+</style>
+
+<aside class="sidebar" id="intelligenceSidebar">
+  <div class="sidebar-header">
+    <h3>Intelligence Panel</h3>
+    <small>Caughman Mason • LoanMVP</small>
+    <button class="toggle-btn" id="toggleSidebar"><i class="fa-solid fa-bars"></i></button>
+  </div>
+
+  <nav class="nav">
+
+    <!-- 📊 Core Intelligence -->
+    <div class="nav-section">
+      <h4>Core Intelligence</h4>
+      <a href="{{ url_for('intelligence.dashboard') }}" class="{% if request.endpoint == 'intelligence.dashboard' %}active{% endif %}">
+        <i class="fa-solid fa-gauge"></i> Dashboard
+      </a>
+      <a href="{{ url_for('intelligence.realtime') }}">
+        <i class="fa-solid fa-wave-square"></i> Real-Time Monitor
+      </a>
+      <a href="{{ url_for('intelligence.command_center') }}">
+        <i class="fa-solid fa-terminal"></i> Command Center
+      </a>
+    </div>
+
+    <!-- 🧠 AI & Quantum Systems -->
+    <div class="nav-section">
+      <h4>AI & Quantum</h4>
+      <a href="{{ url_for('intelligence.omni') }}">
+        <i class="fa-solid fa-circle-nodes"></i> Omni Intelligence
+      </a>
+      <a href="{{ url_for('intelligence.quantum_memory') }}">
+        <i class="fa-solid fa-atom"></i> Quantum Memory
+      </a>
+      <a href="{{ url_for('intelligence.ai_query') }}">
+        <i class="fa-solid fa-code-branch"></i> AI Query
+      </a>
+    </div>
+
+    <!-- 📈 Analytics -->
+    <div class="nav-section">
+      <h4>Analytics</h4>
+      <a href="{{ url_for('admin.analytics') }}">
+        <i class="fa-solid fa-chart-bar"></i> Analytics Center
+      </a>
+      <a href="{{ url_for('system.logs') }}">
+        <i class="fa-solid fa-file-lines"></i> System Logs
+      </a>
+      <a href="{{ url_for('system.audits') }}">
+        <i class="fa-solid fa-magnifying-glass-chart"></i> Audit Reports
+      </a>
+    </div>
+
+    <!-- 🧩 Integrations -->
+    <div class="nav-section">
+      <h4>Integrations</h4>
+      <a href="{{ url_for('ai.workflow') }}">
+        <i class="fa-solid fa-diagram-project"></i> AI Workflow
+      </a>
+      <a href="{{ url_for('ai.omni') }}">
+        <i class="fa-solid fa-network-wired"></i> Omni Sync
+      </a>
+      <a href="{{ url_for('ai.predictive') }}">
+        <i class="fa-solid fa-robot"></i> Predictive Engine
+      </a>
+    </div>
+
+    <!-- 👤 Account -->
+    <div class="nav-section">
+      <h4>Account</h4>
+      <a href="{{ url_for('auth.logout') }}">
+        <i class="fa-solid fa-right-from-bracket"></i> Logout
+      </a>
+    </div>
+  </nav>
+
+  <div class="sidebar-footer">
+    © 2025 Caughman Mason LLC<br>Intelligence Portal
+  </div>
+</aside>
+
+<script>
+  document.getElementById("toggleSidebar").addEventListener("click", () => {
+    document.getElementById("intelligenceSidebar").classList.toggle("active");
+  });
+</script>

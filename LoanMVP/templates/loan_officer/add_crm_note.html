@@ -1,0 +1,64 @@
+{% extends "layouts/base.html" %}
+{% block title %}Add CRM Note{% endblock %}
+{% block content %}
+
+<main class="dashboard-main">
+  <div class="wrap">
+    <section class="lhs">
+      <div class="card">
+        <h2>🗒️ Add CRM Note</h2>
+        <p class="muted">Attach a note to a lead or borrower for internal tracking.</p>
+
+        <form method="POST" style="margin-top:1.5rem;">
+          <div class="grid g-2">
+            <div>
+              <label>Lead ID</label>
+              <input type="number" name="lead_id" placeholder="Optional">
+            </div>
+            <div>
+              <label>Borrower ID</label>
+              <input type="number" name="borrower_id" placeholder="Optional">
+            </div>
+          </div>
+
+          <div style="margin-top:1rem;">
+            <label>Note Content</label>
+            <textarea name="content" rows="5" placeholder="Enter your note..." required></textarea>
+          </div>
+
+          <div style="margin-top:2rem;">
+            <button type="submit" class="btn btn-primary">💾 Save Note</button>
+            <a href="{{ url_for('loan_officer.dashboard') }}" class="btn">↩️ Cancel</a>
+          </div>
+        </form>
+      </div>
+    </section>
+
+    <aside class="rhs">
+      <div class="card">
+        <h3>Smart Tip</h3>
+        <p class="muted">Notes are timestamped and linked to the author. Use them to track decisions, updates, or follow-ups.</p>
+      </div>
+    </aside>
+  </div>
+</main>
+
+<style>
+  input, textarea {
+    background: #0f0f11;
+    border: 1px solid var(--line);
+    color: var(--text);
+    border-radius: 10px;
+    padding: .6rem .8rem;
+    width: 100%;
+    font-family: 'Inter', sans-serif;
+  }
+  label {
+    display: block;
+    margin-bottom: .3rem;
+    color: var(--muted);
+    font-size: .9rem;
+  }
+</style>
+
+{% endblock %}

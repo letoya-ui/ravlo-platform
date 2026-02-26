@@ -1,0 +1,521 @@
+{% extends "layouts/base.html" %}
+{% block title %}Loan File • {{ borrower.full_name }}{% endblock %}
+
+{% block content %}
+
+<style>
+/* ====================================
+       CM FILE REVIEW STYLES
+==================================== */
+
+.section-box {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    padding: 1.5rem;
+    border-radius: 16px;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 0 14px rgba(122,184,255,.30);
+    animation: pulseGlow 1.5s infinite ease-in-out;
+}
+
+.section-title {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: white;
+    margin-bottom: 1rem;
+    text-shadow: 0 0 12px rgba(122,184,255,0.45);
+}
+
+.info-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: .8rem 2rem;
+    font-size: 1rem;
+    color: var(--text);
+}
+
+.label {
+    color: var(--muted);
+    font-size: .85rem;
+}
+
+.value {
+    color: white;
+}
+
+/* DOCUMENTS */
+.doc-item {
+    background:#0f1115;
+    border:1px solid var(--line);
+    padding:1rem;
+    border-radius:12px;
+    margin-bottom:.8rem;
+}
+
+.doc-item a {
+    color: var(--accent);
+}
+
+/* RATIOS */
+.ratio-badge {
+    display:inline-block;
+    padding:.4rem .7rem;
+    border-radius:8px;
+    background:#0f1115;
+    border:1px solid var(--line);
+    margin-right:.5rem;
+    margin-bottom:.5rem;
+}
+
+/* AI Box */
+.ai-box {
+    background:var(--panel);
+    border:1px solid var(--line);
+    padding:1.3rem;
+    border-radius:16px;
+    box-shadow:0 0 14px rgba(122,184,255,.35);
+    animation:pulseGlow 1.5s infinite ease-in-out;
+}
+
+.ai-input {
+    width:100%;
+    height:85px;
+    background:#0f1115;
+    border:1px solid var(--line);
+    border-radius:12px;
+    padding:.7rem;
+    color:white;
+    margin-bottom:.7rem;
+}
+
+.ai-btn {
+    background:var(--accent);
+    padding:.7rem 1.2rem;
+    color:black;
+    border-radius:10px;
+    font-weight:600;
+    border:none;
+    cursor:pointer;
+}
+
+.ai-btn:hover { background:white; }
+
+/* Glow animation */
+@keyframes pulseGlow {
+    0%   { box-shadow:0 0 12px rgba(122,184,255,.20); }
+    50%  { box-shadow:0 0 22px rgba(122,184,255,.45); }
+    100% { box-shadow:0 0 12px rgba(122,184,255,.20); }
+}
+</style>
+
+<!-- ====================================
+         PAGE TITLE
+==================================== -->
+<h1 style="font-size:2rem; margin-bottom:1.2rem; text-shadow:0 0 14px rgba(122,184,255,.45);">
+    Loan File — {{ borrower.full_name }}
+</h1>
+
+<!-- ====================================
+         BORROWER SECTION
+==================================== -->
+<div class="section-box">
+    <div class="section-title">Borrower Information</div>
+
+    <div class="info-grid">
+        <div><span class="label">Name:</span> <span class="value">{{ borrower.full_name }}</span></div>
+        <div><span class="label">Email:</span> <span class="value">{{ borrower.email }}</span></div>
+
+        <div><span class="label">Phone:</span> <span class="value">{{ borrower.phone }}</span></div>
+        <div><span class="label">Address:</span> 
+            <span class="value">
+                {{ borrower.address }}, {{ borrower.city }}, {{ borrower.state }} {{ borrower.zip }}
+            </span>
+        </div>
+
+        <div><span class="label">Employer:</span> <span class="value">{{ borrower.employer_name }}</span></div>
+        <div><span class="label">Income:</span> 
+            <span class="value">${{ '{:,.0f}'.format(borrower.income or 0) }}</span>
+        </div>
+    </div>
+</div>
+
+<!-- ====================================
+         LOAN SECTION
+==================================== -->
+<div class="section-box">
+    <div class="section-title">Loan Information</div>
+
+    <div class="info-grid">
+        <div><span class="label">Amount:</span> 
+            <span class="value">${{ '{:,.0f}'.format(loan.amount or 0) }}</span>
+        </div>
+        <div><span class="label">Loan Type:</span> <span class="value">{{ loan.loan_type }}</span></div>
+
+        <div><span class="label">Property Value:</span> 
+            <span class="value">${{ '{:,.0f}'.format(loan.property_value or 0) }}</span>
+        </div>
+        <div><span class="label">Address:</span> <span class="value">{{ loan.property_address }}</span></div>
+    </div>
+</div>
+
+<!-- ====================================
+         RATIOS (DTI / LTV)
+==================================== -->
+<div class="section-box">
+    <div class="section-title">Underwriting Ratios</div>
+
+    <div class="ratio-badge">Front-End DTI: {{ ratios.front_end_dti|default("N/A") }}</div>
+    <div class="ratio-badge">Back-End DTI: {{ ratios.back_end_dti|default("N/A") }}</div>
+    <div class="ratio-badge">LTV: {{ ratios.ltv|default("N/A") }}</div>
+</div>
+
+<!-- ====================================
+         DOCUMENTS
+==================================== -->
+<div class="section-box">
+    <div class="section-title">Documents</div>
+
+    <h4 style="color:var(--accent); margin-bottom:.7rem;">Uploaded</h4>
+
+    {% for doc in uploaded_docs %}
+    <div class="doc-item">
+        <a href="{{ url_for('processor.download', filename=doc.file_name) }}">{{ doc.name }}</a>
+        <br>
+        <span class="label">{{ doc.status }}</span>
+
+       <a href="{{ url_for('loan_officer.preapproval_letter', loan_id=loan.id) }}"
+   class="btn glow">
+    📝 Generate Pre-Approval Letter
+</a>
+    </div>
+    {% endfor %}
+
+    <h4 style="color:#ff6f6f; margin-top:1rem;">Missing</h4>
+
+    {% for m in missing_docs %}
+    <div class="doc-item" style="border-color:#ff6f6f;">
+        ❗ {{ m }}
+    </div>
+    {% endfor %}
+</div>
+
+<!-- ====================================
+         TIMELINE
+==================================== -->
+<section class="timeline">
+    <h3 style="margin-bottom:1rem;">📊 Loan Activity Timeline</h3>
+
+    {% for e in loan.doc_events|sort(attribute='timestamp', reverse=True) %}
+    <div class="timeline-item">
+
+        <div class="timeline-icon"
+             style="background: {{ COLOR_MAP.get(e.event_type, '#7ab8ff') }}20;
+                    color: {{ COLOR_MAP.get(e.event_type, '#7ab8ff') }};">
+            {{ ICON_MAP.get(e.event_type, '📄') }}
+        </div>
+
+        <div class="timeline-content">
+            <h4>{{ e.event_type|replace("_", " ")|capitalize }}</h4>
+
+            <p style="margin:0;">{{ e.document_name }}</p>
+
+            <div class="time">
+                {{ e.timestamp.strftime("%b %d, %Y %I:%M %p") }} ·
+                <span style="opacity:0.6;">
+                    {{ e.user_agent.split("(")[0] }}
+                </span>
+            </div>
+        </div>
+
+    </div>
+    {% endfor %}
+</section>
+
+<!-- ====================================
+         ENGAGEMENT SCORE
+==================================== -->
+<div class="card" style="padding:1.2rem; margin-bottom:1.5rem;">
+    <h3>🔥 Engagement Heat Score</h3>
+
+    <div class="heat-score"
+         style="font-size:2.4rem;
+                font-weight:600;
+                color: {{ 'lime' if engagement_score > 70
+                           else 'gold' if engagement_score > 40
+                           else 'tomato' }};">
+        {{ engagement_score }}
+    </div>
+
+    <p style="opacity:0.7;">
+        {{
+            '🔥 Highly Engaged — Hot Lead' if engagement_score > 70 else
+            '⚡ Moderately Engaged — Warm Lead' if engagement_score > 40 else
+            '❄ Low Engagement — Follow Up Needed'
+        }}
+    </p>
+</div>
+
+<!-- ====================================
+         SCENARIOS — ADD
+==================================== -->
+<div class="card scenario-card">
+    <h3>➕ Add Scenario</h3>
+
+    <form method="POST" action="{{ url_for('loan_officer.add_scenario', loan_id=loan.id) }}">
+
+        <label>Scenario Title</label>
+        <input name="title" required placeholder="FHA Option 1">
+
+        <label>Loan Amount</label>
+        <input name="amount" required type="number">
+
+        <label>Rate (%)</label>
+        <input name="rate" required type="number" step="0.001">
+
+        <label>Term (Months)</label>
+        <input name="term_months" required type="number">
+
+        <label>Loan Type</label>
+        <input name="loan_type" placeholder="FHA, Conventional, DSCR">
+
+        <label>Down Payment</label>
+        <input name="down_payment" type="number">
+
+        <label>Estimated Closing Costs</label>
+        <input name="closing_costs" type="number">
+
+        <label>Monthly Payment</label>
+        <input name="monthly_payment" type="number">
+
+        <button class="btn">Save Scenario</button>
+    </form>
+</div>
+
+<!-- ====================================
+         SCENARIOS — LIST
+==================================== -->
+<h3>📊 Saved Scenarios</h3>
+
+<div class="scenario-grid">
+    {% for s in loan.scenarios %}
+    <div class="card">
+        <h4>{{ s.title }}</h4>
+
+        <p><strong>Amount:</strong> ${{ s.amount }}</p>
+        <p><strong>Rate:</strong> {{ s.rate }}%</p>
+        <p><strong>Term:</strong> {{ s.term_months }} months</p>
+        <p><strong>Payment:</strong> ${{ s.monthly_payment }}</p>
+        <p><strong>LTV:</strong> {{ s.ltv }}%</p>
+        <p><strong>APR:</strong> {{ s.apr }}%</p>
+
+        <form method="POST" action="{{ url_for('loan_officer.delete_scenario', id=s.id, loan_id=loan.id) }}">
+            <button class="btn-danger">Delete</button>
+        </form>
+    </div>
+    {% endfor %}
+</div>
+<!-- ====================================
+         AI LO FILE ANALYSIS BOX
+==================================== -->
+<div class="ai-box">
+    <div class="section-title">AI Loan Assistant</div>
+
+    <textarea class="ai-input" id="aiInput" placeholder="Ask: What program fits this borrower?"></textarea>
+
+    <button class="ai-btn" onclick="askLOAI()">Ask AI</button>
+
+    <div id="aiResponse" style="margin-top:1rem;"></div>
+</div>
+
+<!-- ====================================
+         AI PREAPPROVAL ENGINE
+==================================== -->
+<div class="preapproval-box">
+    <h3>🏦 AI Preapproval Engine</h3>
+
+    <button onclick="runPreapproval()" class="pre-btn">Run Preapproval</button>
+
+    <div id="preResult" class="pre-result hidden">
+        <p><strong>Front DTI:</strong> <span id="preFE"></span></p>
+        <p><strong>Back DTI:</strong> <span id="preBE"></span></p>
+        <p><strong>LTV:</strong> <span id="preLTV"></span></p>
+        <p><strong>Program Fit:</strong> <span id="preFit"></span></p>
+
+        <p><strong>Red Flags:</strong></p>
+        <ul id="preFlags"></ul>
+
+        <p><strong>Conditions:</strong></p>
+        <ul id="preConds"></ul>
+
+        <h4>AI Summary:</h4>
+        <div id="preSummary" class="ai-box"></div>
+
+        <a href="{{ url_for('loan_officer.ai_chat_history', borrower_id=borrower.id, loan_id=loan.id) }}"
+           class="btn btn-secondary">
+            Chat About This Loan
+        </a>
+        <button onclick="saveSnapshot()" class="btn glow" style="margin-top: 1rem;">
+            Save Preapproval Snapshot
+        </button>
+
+        <a href="{{ url_for('loan_officer.preapproval_letter', loan_id=loan.id) }}"
+           class="btn glow" style="margin-top: 0.5rem; display: block; text-align: center;">
+            Generate Preapproval Letter
+        </a>
+    </div>
+</div>
+
+<style>
+.preapproval-box {
+    background: var(--panel);
+    padding: 1.5rem;
+    margin-top: 1rem;
+    border-radius: 16px;
+    border: 1px solid var(--accent);
+    box-shadow: 0 0 18px rgba(122,184,255,0.35);
+}
+
+.pre-btn {
+    width: 100%;
+    padding: 1rem;
+    background: var(--accent);
+    border-radius: 8px;
+    border: none;
+    color: white;
+    font-size: 1.1rem;
+    cursor: pointer;
+}
+
+.btn.glow {
+    background: var(--accent);
+    border: 1px solid var(--accent);
+    color: white;
+    padding: 0.8rem 1.2rem;
+    border-radius: 8px;
+    box-shadow: 0 0 12px rgba(122,184,255,0.5);
+    transition: 0.2s;
+}
+
+.btn.glow:hover {
+    box-shadow: 0 0 18px rgba(122,184,255,0.9);
+}
+
+.ai-box {
+    margin-top: 1rem;
+    white-space: pre-wrap;
+}
+</style>
+
+<script>
+function runPreapproval() {
+    fetch("/loan_officer/preapprove/{{ borrower.id }}")
+        .then(r => r.json())
+        .then(data => {
+
+            document.getElementById("preResult").classList.remove("hidden");
+
+            document.getElementById("preFE").innerText = data.front_dti;
+            document.getElementById("preBE").innerText = data.back_dti;
+            document.getElementById("preLTV").innerText = (data.ltv * 100).toFixed(2) + "%";
+            document.getElementById("preFit").innerText = data.fits.join(", ");
+
+            let flagsList = document.getElementById("preFlags");
+            flagsList.innerHTML = "";
+            data.flags.forEach(f => {
+                let li = document.createElement("li");
+                li.innerText = f;
+                flagsList.appendChild(li);
+            });
+
+            let condList = document.getElementById("preConds");
+            condList.innerHTML = "";
+            data.conditions.forEach(c => {
+                let li = document.createElement("li");
+                li.innerText = c;
+                condList.appendChild(li);
+            });
+
+            document.getElementById("preSummary").innerText = data.ai_summary;
+        });
+}
+</script>
+
+<!-- ====================================
+         PDF + REQUIRED DOCS BUTTONS
+==================================== -->
+<a href="{{ url_for('loan_officer.generate_1003', loan_id=loan.id) }}"
+   class="btn btn-glow" style="margin-top: 1rem;">
+   📄 Generate 1003 (PDF)
+</a>
+
+<form method="POST" action="{{ url_for('loan_officer.generate_doc_needs', loan_id=loan.id) }}">
+    <button class="btn btn-glow">⚡ Generate Required Docs (AI)</button>
+</form>
+
+<!-- ====================================
+         REQUIRED DOCUMENTS LIST
+==================================== -->
+<h3>📁 Required Documents</h3>
+
+<ul class="doc-list">
+    {% for d in loan.doc_needs %}
+    <li>
+        <strong>{{ d.name }}</strong>
+        <p class="reason">{{ d.reason }}</p>
+
+        <span class="status">{{ d.status }}</span>
+
+        {% if d.status != "uploaded" %}
+        <form method="POST" action="{{ url_for('loan_officer.request_doc', id=d.id) }}">
+            <button class="btn-small">Request from Borrower</button>
+        </form>
+        {% endif %}
+    </li>
+    {% endfor %}
+</ul>
+
+<!-- ====================================
+         AI SCRIPT
+==================================== -->
+<script>
+function askLOAI() {
+    let message = document.getElementById("aiInput").value;
+
+    fetch("{{ url_for('loan_officer.ai') }}", {
+        method: "POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({
+            message: message,
+            borrower_id: {{ borrower.id }},
+            loan_id: {{ loan.id }}
+        })
+    })
+    .then(r => r.json())
+    .then(data => {
+        document.getElementById("aiResponse").innerHTML = data.reply;
+    });
+}
+</script>
+<script>
+function saveSnapshot() {
+    fetch("/loan_officer/save_preapproval_snapshot/{{ loan.id }}", {
+        method: "POST"
+    })
+    .then(r => r.json())
+    .then(data => {
+        alert(data.message);
+    })
+    .catch(err => {
+        alert("Error saving snapshot.");
+    });
+}
+</script>
+<style>
+.scenario-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 1.5rem;
+}
+</style>
+
+{% endblock %}

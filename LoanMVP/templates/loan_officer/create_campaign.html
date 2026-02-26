@@ -1,0 +1,150 @@
+{% extends "layouts/base.html" %}
+{% block title %}Create Campaign{% endblock %}
+{% block content %}
+<main class="dashboard-main">
+
+<link rel="stylesheet" href="https://unpkg.com/lucide-static@latest/font/lucide.css">
+
+<style>
+  :root {
+    --bg:#0f0f11;
+    --panel:#15161a;
+    --line:#282b31;
+    --text-light:#e6e6e6;
+    --text-muted:#a5a7ad;
+    --accent:#7ab8ff;
+    --hover:#1f2328;
+    --border:#2b2f36;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text-light);
+    overflow-x: hidden;
+  }
+
+  .wrap {
+    margin-left:260px;
+    padding:2rem;
+    max-width:900px;
+    margin-right:auto;
+    margin-left:auto;
+  }
+
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 2rem;
+    box-shadow: 0 0 18px rgba(0,0,0,0.35);
+    transition: all 0.25s ease;
+  }
+  .card:hover {
+    box-shadow: 0 0 25px rgba(122,184,255,0.25);
+  }
+
+  h2 { margin-bottom:1.2rem; color:var(--text-light); }
+
+  form {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  label {
+    font-weight:600;
+    font-size:.95rem;
+    color:var(--text-muted);
+  }
+
+  input, textarea, select {
+    background: var(--hover);
+    color: var(--text-light);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: .7rem 1rem;
+    font-size: .95rem;
+    width: 100%;
+    outline: none;
+    transition: .2s ease;
+  }
+
+  input:focus, textarea:focus, select:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 8px rgba(122,184,255,0.25);
+  }
+
+  textarea { resize: vertical; min-height: 120px; }
+
+  .btn {
+    background: var(--panel);
+    color: var(--text-light);
+    border: 1px solid var(--accent);
+    border-radius: 8px;
+    padding: .8rem 1.2rem;
+    text-decoration: none;
+    font-size: .9rem;
+    transition: .2s ease;
+    cursor: pointer;
+  }
+  .btn:hover { background: var(--hover); }
+  .btn-primary {
+    background: var(--accent);
+    color: #000;
+    font-weight: 600;
+    border: none;
+  }
+
+  .actions {
+    display:flex;
+    justify-content:flex-end;
+    gap:1rem;
+    margin-top:1.2rem;
+  }
+
+  .muted { color:var(--text-muted); font-size:.9rem; }
+
+  @media (max-width: 992px) {
+    .wrap { margin-left:0; padding:1rem; }
+  }
+</style>
+
+<div class="wrap">
+  <div class="card">
+    <h2><i class="lucide lucide-megaphone"></i> Create New Campaign</h2>
+    <p class="muted">Define a new marketing or communication campaign to reach borrowers, leads, or partners.</p>
+
+    <form method="POST" action="{{ url_for('loan_officer.create_campaign') }}">
+      <label for="name">Campaign Name</label>
+      <input type="text" id="name" name="name" placeholder="Enter campaign name" required>
+
+      <label for="description">Description</label>
+      <textarea id="description" name="description" placeholder="Brief summary or objective"></textarea>
+
+      <label for="channel">Channel</label>
+      <select id="channel" name="channel">
+        <option value="email">Email</option>
+        <option value="sms">SMS</option>
+        <option value="phone">Phone Outreach</option>
+        <option value="social">Social Media</option>
+        <option value="ai">AI-Generated</option>
+      </select>
+
+      <label for="status">Status</label>
+      <select id="status" name="status">
+        <option value="draft">Draft</option>
+        <option value="active">Active</option>
+        <option value="paused">Paused</option>
+        <option value="completed">Completed</option>
+      </select>
+
+      <div class="actions">
+        <a href="{{ url_for('loan_officer.campaigns') }}" class="btn">← Cancel</a>
+        <button type="submit" class="btn btn-primary">💾 Save Campaign</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+</main>
+{% endblock %}

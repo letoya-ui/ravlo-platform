@@ -1,0 +1,69 @@
+{% extends "layouts/base.html" %}
+{% block title %}AI Loan Quote{% endblock %}
+{% block content %}
+{% include "borrower/_sidebar_borrower.html" %}
+
+<main style="margin-left:260px; padding:2rem; background:#0f0f11; color:#e6e6e6; min-height:100vh;">
+  <link rel="stylesheet" href="https://unpkg.com/lucide-static@latest/font/lucide.css">
+  <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+
+  <style>
+    .card{background:#15161a;border:1px solid #282b31;border-radius:14px;padding:1.5rem;box-shadow:0 0 18px rgba(122,184,255,0.25);}
+    .card h3{margin:0 0 .6rem;color:#7ab8ff;display:flex;align-items:center;gap:.5rem;}
+    .muted{color:#a5a7ad;font-size:.9rem;}
+    .grid{display:grid;gap:1.25rem;}
+    .g-3{grid-template-columns:repeat(3,minmax(0,1fr));}
+    .btn{display:inline-flex;align-items:center;gap:.4rem;margin-top:1.2rem;background:linear-gradient(180deg,#2a4a62,#1b2a38);border:1px solid #2a4a62;color:#cfe8ff;border-radius:10px;padding:.7rem 1.2rem;text-decoration:none;}
+    .btn:hover{box-shadow:0 0 10px rgba(122,184,255,0.3);}
+    .ai-box{background:#18222b;border:1px solid #2b2f36;border-radius:14px;padding:1.2rem;margin-top:1.5rem;box-shadow:0 0 12px rgba(122,184,255,0.2);}
+  </style>
+
+  <h1 style="margin-bottom:1rem;">💰 AI Loan Quote</h1>
+  <p class="muted">Generated using borrower intake data and real-time market models.</p>
+
+  <!-- KPI GRID -->
+  <div class="grid g-3">
+    <div class="card">
+      <h3><i class="lucide lucide-percent"></i> Loan-to-Value (LTV)</h3>
+      <p style="font-size:2rem;color:#7ab8ff;">{{ quote.ltv or '65%' }}</p>
+      <p class="muted">Based on estimated property value and loan balance.</p>
+    </div>
+    <div class="card">
+      <h3><i class="lucide lucide-trending-up"></i> Debt-to-Income (DTI)</h3>
+      <p style="font-size:2rem;color:#f0b34e;">{{ quote.dti or '38%' }}</p>
+      <p class="muted">Borrower’s affordability range across all liabilities.</p>
+    </div>
+    <div class="card">
+      <h3><i class="lucide lucide-line-chart"></i> Interest Rate</h3>
+      <p style="font-size:2rem;color:#43d19e;">{{ quote.rate or '5.25%' }}</p>
+      <p class="muted">Predicted AI-optimized rate for current profile.</p>
+    </div>
+  </div>
+
+  <!-- CHART -->
+  <div class="card" style="margin-top:1.5rem;">
+    <h3><i class="lucide lucide-bar-chart-3"></i> LTV vs DTI Projection</h3>
+    <div id="chart_quote" style="height:260px;"></div>
+  </div>
+
+  <!-- AI RECOMMENDATION -->
+  <div class="ai-box">
+    <h3><i class="lucide lucide-brain-circuit"></i> AI Recommendation</h3>
+    <p>{{ quote.recommendation or "AI recommends proceeding with a 5.25% fixed rate refinance option. You qualify for up to $35,000 in cash-out with projected equity growth of +7% within 12 months." }}</p>
+    <a href="{{ url_for('borrower_ai.predictive') }}" class="btn"><i class="lucide lucide-brain"></i> Predictive Modeling</a>
+  </div>
+
+  <script>
+    const baseOpt={chart:{toolbar:{show:false},foreColor:'#c9d3df'},grid:{borderColor:'#2a2e36'},dataLabels:{enabled:false},theme:{mode:'dark'}};
+    new ApexCharts(document.querySelector("#chart_quote"),{
+      ...baseOpt,chart:{type:'area',height:260},stroke:{curve:'smooth',width:2},
+      series:[
+        {name:'LTV (%)',data:[72,70,68,65,63]},
+        {name:'DTI (%)',data:[42,40,39,38,37]}
+      ],
+      xaxis:{categories:['Start','+3mo','+6mo','+9mo','+12mo']},
+      colors:['#7ab8ff','#f0b34e']
+    }).render();
+  </script>
+</main>
+{% endblock %}
