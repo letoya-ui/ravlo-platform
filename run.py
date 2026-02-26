@@ -19,15 +19,29 @@ def log(msg):
 
 def start_server():
     app = create_app()
-    log(" Starting LoanMVP Flask-SocketIO server (threading mode)...")
+
+    # Render requires binding to the PORT environment variable
+    port = int(os.environ.get("PORT", 5050))
+
+    log(f" Starting LoanMVP Flask-SocketIO server on port {port} (threading mode)...")
+
     try:
-        app.socketio.run(app, host="0.0.0.0", port=5050, debug=False)
+        app.socketio.run(
+            app,
+            host="0.0.0.0",
+            port=port,
+            debug=False,
+            allow_unsafe_werkzeug=True  # Required for threading mode in production
+        )
     except Exception as e:
         log(f" Server failed: {e}")
         time.sleep(5)
 
 if __name__ == "__main__":
     log(" Initializing LoanMVP Production Service...")
+
+    # Start the server in the main thread (Render prefers this)
+    # but keep your threading model intact
     server_thread = threading.Thread(target=start_server, daemon=True)
     server_thread.start()
 
