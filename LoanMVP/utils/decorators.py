@@ -20,9 +20,10 @@ def role_required(*roles):
                 return redirect(url_for("borrower.dashboard") if user_role == "borrower" else url_for("auth.login"))
             return fn(*args, **kwargs)
         return decorated_view
-    return decorator    def wrapper(fn):
-        @wraps(fn)
+    return decorator   
 
+ def wrapper(fn):
+        @wraps(fn)
         @login_required
         def decorated_view(*args, **kwargs):
             if current_user.role not in roles:
