@@ -40,7 +40,7 @@ waitress==3.0.2
 gunicorn==23.0.0
 
 # === Security & Crypto ===
-cryptography==45.0.0
+cryptography==45.0.6
 PyJWT==2.10.1
 itsdangerous==2.2.0
 
