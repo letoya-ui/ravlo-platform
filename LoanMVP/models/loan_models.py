@@ -29,12 +29,14 @@ class BorrowerProfile(db.Model):
     zip = db.Column(db.String(20))
 
     # 💼 Employment
+    employment_status = db.Column(db.String(50))
     employer_name = db.Column(db.String(150))
     employer_phone = db.Column(db.String(50))
     job_title = db.Column(db.String(150))
     years_at_job = db.Column(db.Integer)
 
     # 💰 Income
+    annual_income = db.Column(db.Float)
     income = db.Column(db.Float)
     monthly_income_secondary = db.Column(db.Float)
 
