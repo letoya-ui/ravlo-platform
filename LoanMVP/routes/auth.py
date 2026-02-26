@@ -206,7 +206,7 @@ def register_borrower():
         db.session.add(user)
         db.session.commit()
 
-        login_user(user, remember+True)
+        login_user(user, remember=True)
         return redirect(url_for("borrower.create_profile"))
 
     return render_template("auth/register_borrower.html")
