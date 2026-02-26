@@ -2799,16 +2799,22 @@ def borrower_esign_sign(doc_id):
 @borrower_bp.route("/payments")
 @role_required("borrower")
 def payments():
-    borrower = BorrowerProfile.query.filter_by(user_id=current_user.id).first()
-    loan = LoanApplication.query.filter_by(borrower_profile_id=borrower.id).first()
-    payments_q = PaymentRecord.query.filter_by(borrower_profile_id=borrower.id).all()
+    # Get the user
+    user = current_user
+
+    # Subscription info (if you store it on the user or borrower profile)
+    subscription_plan = getattr(user, "subscription_plan", "Free")
+
+    # Payment history (subscription payments only)
+    payments = PaymentRecord.query.filter_by(user_id=user.id).order_by(PaymentRecord.created_at.desc()).all()
 
     return render_template(
         "borrower/payments.html",
-        borrower=borrower,
-        loan=loan,
-        payments=payments_q,
+        user=user,
+        subscription_plan=subscription_plan,
+        payments=payments
     )
+
 
 
 @borrower_bp.route("/payments/checkout/<int:payment_id>")
