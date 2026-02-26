@@ -49,7 +49,7 @@ def login():
                 return redirect(url_for("auth.login"))
 
             # ✅ Log in user and update timestamp
-            login_user(user)
+            login_user(user, remember=True)
             user.last_login = datetime.utcnow()
             db.session.commit()
 
@@ -168,7 +168,7 @@ def register():
         db.session.commit()
 
         # Auto-login
-        login_user(user)
+        login_user(user, remember=True)
 
         # ⭐ Borrowers go to onboarding
         if user.role.lower() == "borrower":
@@ -206,7 +206,7 @@ def register_borrower():
         db.session.add(user)
         db.session.commit()
 
-        login_user(user)
+        login_user(user, remember+True)
         return redirect(url_for("borrower.create_profile"))
 
     return render_template("auth/register_borrower.html")
