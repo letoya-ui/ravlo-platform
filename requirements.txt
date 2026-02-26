@@ -78,3 +78,4 @@ MarkupSafe==3.0.3
 pytest==8.3.3
 flake8==7.1.1
 black==24.4.2
+stripe==10.8.0
