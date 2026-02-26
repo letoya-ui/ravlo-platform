@@ -392,7 +392,7 @@ def create_profile():
             address=form.address.data,
             city=form.city.data,
             state=form.state.data,
-            zip_code=form.zip_code.data,
+            zip=form.zip_code.data,
             employment_status=form.employment_status.data,
             annual_income=form.annual_income.data,
             credit_score=form.credit_score.data,
