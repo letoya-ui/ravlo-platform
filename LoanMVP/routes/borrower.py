@@ -71,7 +71,7 @@ from LoanMVP.services.deal_export_service import (
     generate_amortization_chart,
 )
 from LoanMVP.services.unified_resolver import resolve_property_unified
-
+from LoanMVP.forms import BorrowerProfileForm
 
 borrower_bp = Blueprint("borrower", __name__, url_prefix="/borrower")
 
@@ -381,24 +381,34 @@ def onboarding_start_loan():
 @borrower_bp.route("/create_profile", methods=["GET", "POST"])
 @role_required("borrower")
 def create_profile():
-    if request.method == "POST":
+    form = BorrowerProfileForm()
+
+    if form.validate_on_submit():
         borrower = BorrowerProfile(
             user_id=current_user.id,
-            full_name=request.form.get("full_name"),
-            email=request.form.get("email"),
-            phone=request.form.get("phone"),
-            address=request.form.get("address"),
-            city=request.form.get("city"),
-            state=request.form.get("state"),
+            full_name=form.full_name.data,
+            email=form.email.data,
+            phone=form.phone.data,
+            address=form.address.data,
+            city=form.city.data,
+            state=form.state.data,
+            zip_code=form.zip_code.data,
+            employment_status=form.employment_status.data,
+            annual_income=form.annual_income.data,
+            credit_score=form.credit_score.data,
             created_at=datetime.utcnow(),
         )
         db.session.add(borrower)
         db.session.commit()
+
         flash("✅ Profile created successfully!", "success")
         return redirect(url_for("borrower.dashboard"))
 
-    return render_template("borrower/create_profile.html", title="Create Profile")
-
+    return render_template(
+        "borrower/create_profile.html",
+        form=form,
+        title="Create Profile"
+    )
 
 
 @borrower_bp.route("/update_profile", methods=["POST"])
