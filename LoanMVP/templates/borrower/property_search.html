@@ -85,10 +85,12 @@
         <div>
           <div class="muted" style="font-size:0.9rem;">Estimated Value (AVM)</div>
           <div style="font-weight:700;">
-            {% if valuation.estimate %}
-              ${{ "{:,.0f}".format(valuation.estimate) }}
-            {% else %}
-              —
+            {% if valuation %}
+              {% if valuation.estimate %}
+                <div class="valuation-box">
+                  Estimated Value: {{ valuation.estimate }}
+                </div>
+              {% endif %}
             {% endif %}
           </div>
         </div>
@@ -96,25 +98,36 @@
         <div>
           <div class="muted" style="font-size:0.9rem;">Estimated Rent (Monthly)</div>
           <div style="font-weight:700;">
-            {% if rent_estimate.rent %}
-              ${{ "{:,.0f}".format(rent_estimate.rent) }}
-            {% else %}
-              —
+            {% if rent_estimate and rent_estimate.rent %}
+              <div class="rent-box">
+                Estimated Rent: {{ rent_estimate.rent }}
+              </div>
             {% endif %}
+
           </div>
         </div>
 
         <div>
           <div class="muted" style="font-size:0.9rem;">Sales Comps</div>
           <div style="font-weight:700;">
-            {{ comps.sales|length if comps.sales else "—" }}
+            {% if comps and comps.sales %}
+              {{ comps.sales|length }}
+            {% else %}
+              —
+            {% endif %}
+
           </div>
         </div>
 
         <div>
           <div class="muted" style="font-size:0.9rem;">Rental Comps</div>
           <div style="font-weight:700;">
-            {{ comps.rentals|length if comps.rentals else "—" }}
+            {% if comps and comps.rentals %}
+              {{ comps.rentals|length }}
+            {% else %}
+               —
+            {% endif %}
+
           </div>
         </div>
 

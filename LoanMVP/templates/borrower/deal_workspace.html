@@ -136,10 +136,49 @@
   <p class="text-muted">Analyze Flip, Rental, and Airbnb strategies with comps, rehab, and AI guidance.</p>
 </div>
 
-<form method="POST" action="{{ url_for('borrower.deal_workspace') }}">
+{# =========================
+   PROPERTY PICKER (GET)
+   - single source of truth: prop_id = SavedProperty.id
+========================= #}
+<div class="dw-card" style="margin-bottom:1rem;">
+  <h3>🏠 Select a Saved Property</h3>
+
+  <form method="GET" action="{{ url_for('borrower.deal_workspace') }}">
+    <label class="dw-label">Saved Properties</label>
+    <select name="prop_id" class="dw-input" onchange="this.form.submit()">
+      <option value="">— Choose a property —</option>
+      {% for p in saved_props %}
+        <option value="{{ p.id }}" {% if selected_prop and selected_prop.id == p.id %}selected{% endif %}>
+          {{ p.address }}{% if p.price %} — ${{ "{:,.0f}".format(p.price|float) }}{% endif %}
+        </option>
+      {% endfor %}
+    </select>
+
+    <div style="margin-top:.75rem; display:flex; gap:.5rem; flex-wrap:wrap;">
+      <button type="submit" class="dw-button">Load Property</button>
+      <a href="{{ url_for('borrower.saved_properties') }}" class="dw-button" style="text-decoration:none;">
+        View Saved Properties
+      </a>
+    </div>
+  </form>
+</div>
+
+{# If no property selected, stop here (prevents errors + empty comps) #}
+{% if not selected_prop %}
+  <div class="dw-card">
+    <p class="ai-text">Select a saved property to load comps and run strategy analysis.</p>
+  </div>
+  {# DO NOT render the POST form below #}
+{% else %}
+
+{# =========================
+   MAIN ANALYSIS FORM (POST)
+   - keeps prop_id stable
+========================= #}
+<form method="POST" action="{{ url_for('borrower.deal_workspace', prop_id=selected_prop.id) }}">
   {{ csrf_token() if csrf_token is defined }}
 
-  <input type="hidden" name="property_id" value="{{ property_id or '' }}">
+  <input type="hidden" name="prop_id" value="{{ selected_prop.id }}">
 
   <!-- DEAL SETUP -->
   <div class="dw-card">
@@ -148,7 +187,7 @@
     <div class="dw-row">
       <div>
         <label class="dw-label">Strategy</label>
-        <select name="mode" class="dw-input">
+        <select name="mode" class="dw-input" onchange="this.form.submit()">
           <option value="flip" {% if mode == 'flip' %}selected{% endif %}>Flip</option>
           <option value="rental" {% if mode == 'rental' %}selected{% endif %}>Rental</option>
           <option value="airbnb" {% if mode == 'airbnb' %}selected{% endif %}>Airbnb</option>
@@ -156,8 +195,8 @@
       </div>
 
       <div>
-        <label class="dw-label">Property ID</label>
-        <input type="text" class="dw-input" value="{{ property_id or '' }}" readonly>
+        <label class="dw-label">Property</label>
+        <input type="text" class="dw-input" value="{{ selected_prop.address }}" readonly>
       </div>
     </div>
 
@@ -165,7 +204,7 @@
       <button type="submit" class="dw-button">Run Analysis</button>
     </div>
   </div>
-
+    
   <!-- ⭐ PROPERTY INTELLIGENCE GRID -->
   {% if resolved %}
   <div class="intelligence-grid">
@@ -769,6 +808,7 @@
     </div>
   </div>
 </div>
+{% endif %}
 
 <script>
 function applyRehabTemplate() {

@@ -131,60 +131,85 @@ def _safe_json_loads(s, default=None):
 def dashboard():
     borrower = BorrowerProfile.query.filter_by(user_id=current_user.id).first()
 
-    # Active loan
-    loan = LoanApplication.query.filter_by(
-        borrower_profile_id=borrower.id,
-        is_active=True
-    ).first()
-
-    # Load conditions
+    # --- Always-safe defaults ---
+    loans = []
+    loan = None
     conditions = []
-    if loan:
-        conditions = UnderwritingCondition.query.filter_by(
+    doc_requests = []
+    timeline = []
+    progress_data = []
+    primary_stage = None
+
+    saved_props = []
+    if borrower:
+        # Saved Properties
+        saved_props = SavedProperty.query.filter_by(
+            borrower_profile_id=borrower.id
+        ).order_by(SavedProperty.created_at.desc()).all()
+
+        # Active loans (for counts + hero chips)
+        loans = LoanApplication.query.filter_by(
+            borrower_profile_id=borrower.id
+        ).order_by(LoanApplication.created_at.desc()).all()
+
+        # Primary active loan
+        loan = LoanApplication.query.filter_by(
             borrower_profile_id=borrower.id,
-            loan_id=loan.id
-        ).all()
+            is_active=True
+        ).first()
 
-    # -------------------------------
-    # 1️⃣ AI NEXT STEP PANEL
-    # -------------------------------
-    if loan:
-        pending_conditions = [
-            c for c in conditions
-            if c.status.lower() not in ["submitted", "cleared", "completed"]
-        ]
+        # Documents (if you store borrower_profile_id on LoanDocument)
+        doc_requests = LoanDocument.query.filter_by(
+            borrower_profile_id=borrower.id
+        ).order_by(LoanDocument.created_at.desc()).all()
 
-        if pending_conditions:
-            next_step_text = (
-                f"The borrower has {len(pending_conditions)} pending conditions. "
-                f"The next required item is: {pending_conditions[0].description}."
-            )
-        else:
-            next_step_text = (
-                "The borrower has completed all required items. "
-                "They are waiting on lender review."
-            )
-    else:
-        next_step_text = (
-            "The borrower has no active loan. Prompt them to start a new loan application."
-        )
+        # Conditions (if active loan exists)
+        if loan:
+            conditions = UnderwritingCondition.query.filter_by(
+                borrower_profile_id=borrower.id,
+                loan_id=loan.id
+            ).order_by(UnderwritingCondition.created_at.desc()).all()
 
+            primary_stage = getattr(loan, "status", None) or "Application"
+
+    # --------------------------
+    # Next Step AI
+    # --------------------------
     assistant = AIAssistant()
-    next_step_ai = assistant.generate_reply(
-        f"Create a friendly, borrower-facing next-step message based on this situation: {next_step_text}",
-        "borrower_next_step"
-    )
+    next_step_ai = None
 
-    # -------------------------------
-    # 2️⃣ SNAPSHOT + PROGRESS
-    # -------------------------------
+    if borrower:
+        if loan:
+            pending_conditions = [
+                c for c in conditions
+                if (c.status or "").lower() not in ["submitted", "cleared", "completed"]
+            ]
+            if pending_conditions:
+                next_step_text = (
+                    f"The borrower has {len(pending_conditions)} pending conditions. "
+                    f"The next required item is: {pending_conditions[0].description}."
+                )
+            else:
+                next_step_text = "All conditions are completed. They are waiting on lender review."
+        else:
+            next_step_text = "No active loan. Prompt them to start a new loan application."
+
+        try:
+            next_step_ai = assistant.generate_reply(
+                f"Create a friendly, borrower-facing next-step message: {next_step_text}",
+                "borrower_next_step"
+            )
+        except Exception:
+            next_step_ai = "Next step guidance is unavailable right now."
+
+    # --------------------------
+    # Snapshot + Progress
+    # --------------------------
     progress_percent = 0
     progress_stage = "Not Started"
-
     if loan:
         total_conditions = len(conditions)
-        cleared_conditions = len([c for c in conditions if c.status.lower() == "cleared"])
-
+        cleared_conditions = len([c for c in conditions if (c.status or "").lower() == "cleared"])
         if total_conditions > 0:
             progress_percent = int((cleared_conditions / total_conditions) * 100)
 
@@ -196,133 +221,84 @@ def dashboard():
             progress_stage = "Completed"
 
     snapshot = {
-        "loan_type": loan.loan_type if loan else None,
-        "amount": loan.amount if loan else None,
-        "status": loan.status if loan else None,
-        "address": loan.property_address if loan else None,
+        "loan_type": getattr(loan, "loan_type", None) if loan else None,
+        "amount": getattr(loan, "amount", None) if loan else None,
+        "status": getattr(loan, "status", None) if loan else None,
+        "address": getattr(loan, "property_address", None) if loan else None,
         "progress_percent": progress_percent,
-        "progress_stage": progress_stage
+        "progress_stage": progress_stage,
     }
 
-    # -------------------------------
-    # 3️⃣ TIMELINE
-    # -------------------------------
-    timeline = []
+    # --------------------------
+    # Checklist
+    # --------------------------
+    checklist_items = []
     if loan:
-        if loan.created_at:
-            timeline.append({
-                "timestamp": loan.created_at,
-                "text": f"Loan application created for {loan.property_address or 'your property'}."
-            })
+        pending = [c for c in conditions if (c.status or "").lower() not in ["cleared", "completed"]]
+        if pending:
+            for c in pending[:6]:
+                checklist_items.append({"label": f"Upload: {c.description}", "done": False})
+        else:
+            checklist_items.append({"label": "All required documents submitted", "done": True})
 
-        for cond in conditions:
-            if cond.created_at:
-                timeline.append({
-                    "timestamp": cond.created_at,
-                    "text": f"Condition added: {cond.description}"
-                })
+        checklist_items.append({"label": f"Loan is {progress_percent}% complete", "done": progress_percent >= 100})
+    else:
+        checklist_items.append({"label": "Start your first loan", "done": False})
 
-            if cond.file_path:
-                timeline.append({
-                    "timestamp": cond.updated_at or cond.created_at,
-                    "text": f"You uploaded a file for: {cond.description}"
-                })
-
-            if cond.status.lower() == "cleared":
-                timeline.append({
-                    "timestamp": cond.updated_at or cond.created_at,
-                    "text": f"Condition cleared: {cond.description}"
-                })
-
-        timeline.sort(key=lambda x: x["timestamp"], reverse=True)
-
-    # -------------------------------
-    # 4️⃣ FIRST-TIME DASHBOARD TOUR
-    # -------------------------------
-    show_dashboard_tour = False
+    # --------------------------
+    # Tour / Welcome back
+    # --------------------------
+    show_dashboard_tour = bool(borrower and not getattr(borrower, "has_seen_dashboard_tour", False))
     dashboard_welcome_ai = None
-
-    if borrower and not borrower.has_seen_dashboard_tour:
-        show_dashboard_tour = True
-        dashboard_welcome_ai = assistant.generate_reply(
-            "Write a warm, friendly welcome message for a borrower seeing their dashboard for the first time.",
-            "borrower_dashboard_welcome"
-        )
-
-    # -------------------------------
-    # 5️⃣ WELCOME BACK BANNER
-    # -------------------------------
-    show_welcome_back = False
+    show_welcome_back = bool(borrower and getattr(borrower, "has_seen_dashboard_tour", False))
     welcome_back_ai = None
 
-    if borrower and borrower.has_seen_dashboard_tour:
-        show_welcome_back = True
-        welcome_back_ai = assistant.generate_reply(
-            "Write a short, friendly welcome-back message for a borrower returning to their dashboard.",
-            "borrower_welcome_back"
-        )
+    if show_dashboard_tour:
+        try:
+            dashboard_welcome_ai = assistant.generate_reply(
+                "Write a warm, friendly welcome message for a borrower seeing their dashboard for the first time.",
+                "borrower_dashboard_welcome"
+            )
+        except Exception:
+            dashboard_welcome_ai = "Welcome to your dashboard!"
 
-    # -------------------------------
-    # 6️⃣ CHECKLIST WIDGET
-    # -------------------------------
-    checklist_items = []
+    if show_welcome_back:
+        try:
+            welcome_back_ai = assistant.generate_reply(
+                "Write a short, friendly welcome-back message for a borrower returning to their dashboard.",
+                "borrower_welcome_back"
+            )
+        except Exception:
+            welcome_back_ai = "Welcome back!"
 
-    if loan:
-        pending = [c for c in conditions if c.status.lower() not in ["cleared", "completed"]]
-
-        if pending:
-            for c in pending:
-                checklist_items.append({
-                    "label": f"Upload: {c.description}",
-                    "done": False
-                })
-        else:
-            checklist_items.append({
-                "label": "All required documents submitted",
-                "done": True
-            })
-
-        if progress_percent < 100:
-            checklist_items.append({
-                "label": f"Loan is {progress_percent}% complete",
-                "done": False
-            })
-        else:
-            checklist_items.append({
-                "label": "Loan file complete",
-                "done": True
-            })
-    else:
-        checklist_items.append({
-            "label": "Start your first loan",
-            "done": False
-        })
-
-    # -------------------------------
-    # 7️⃣ WHAT'S NEW PANEL
-    # -------------------------------
     whats_new = [
         "AI-powered Next Step guidance",
-        "Loan Timeline with activity tracking",
-        "Property Search with unified data",
-        "Deal Workspace enhancements",
-        "Borrower Dashboard Snapshot + Progress Bar"
+        "Saved Properties list with Deal Workspace links",
+        "Loan Snapshot + Progress",
+        "Document and Conditions tables",
     ]
+
+    # for your hero date
+    now_str = datetime.now().strftime("%b %d, %Y • %I:%M %p")
 
     return render_template(
         "borrower/dashboard.html",
         borrower=borrower,
+        loans=loans,
         loan=loan,
         conditions=conditions,
-        next_step_ai=next_step_ai,
-        timeline=timeline,
+        doc_requests=doc_requests,
+        saved_props=saved_props,     # ✅ use ONE name everywhere
         snapshot=snapshot,
+        next_step_ai=next_step_ai,
+        checklist_items=checklist_items,
         show_dashboard_tour=show_dashboard_tour,
         dashboard_welcome_ai=dashboard_welcome_ai,
         show_welcome_back=show_welcome_back,
         welcome_back_ai=welcome_back_ai,
-        checklist_items=checklist_items,
         whats_new=whats_new,
+        primary_stage=primary_stage,
+        now_str=now_str,
         active_tab="dashboard",
         title="Dashboard"
     )
@@ -1259,193 +1235,208 @@ def ask_ai_response(chat_id):
     )
 
 # =========================================================
-# 🧠 Deal Workspace (Flip / Rental / Airbnb) — FINAL UPDATED
+# 🧠 Deal Workspace (Flip / Rental / Airbnb) — FINAL CLEAN VERSION
 # =========================================================
+
 @borrower_bp.route("/deal_workspace", methods=["GET", "POST"])
 @role_required("borrower")
 def deal_workspace():
+    # -------------------------
+    # Borrower + saved props
+    # -------------------------
+    borrower = BorrowerProfile.query.filter_by(user_id=current_user.id).first()
+    if not borrower:
+        flash("Borrower profile not found.", "danger")
+        return redirect(url_for("borrower.dashboard"))
 
-    mode = request.values.get("mode", "flip").lower()
-    property_id = request.values.get("property_id")
+    saved_props = (
+        SavedProperty.query
+        .filter_by(borrower_profile_id=borrower.id)
+        .order_by(SavedProperty.created_at.desc())
+        .all()
+    )
 
-    results = {}
-    ai_summary = None
+    # -------------------------
+    # Property selection (ONE param)
+    # -------------------------
+    # Use prop_id everywhere (SavedProperty.id)
+    prop_id = request.values.get("prop_id")  # works for GET + POST
+    selected_prop = None
+    if prop_id:
+        try:
+            prop_id_int = int(prop_id)
+            selected_prop = SavedProperty.query.filter_by(
+                id=prop_id_int,
+                borrower_profile_id=borrower.id
+            ).first()
+        except Exception:
+            selected_prop = None
+
+    # If POST but no property selected, bounce back
+    if request.method == "POST" and not selected_prop:
+        flash("Please select a saved property first.", "warning")
+        return redirect(url_for("borrower.deal_workspace"))
+
+    # -------------------------
+    # Mode
+    # -------------------------
+    mode = (request.values.get("mode") or "flip").lower()
+    if mode not in ("flip", "rental", "airbnb"):
+        mode = "flip"
+
+    # -------------------------
+    # Output containers
+    # -------------------------
+    comps = {}
+    resolved = None
     comparison = {}
     recommendation = None
+    results = {}
+    ai_summary = None
     risk_flags = []
     timeline = {}
     material_costs = {}
     rehab_notes = {}
 
-    # -----------------------------------
-    # Load comps (only if property selected)
-    # -----------------------------------
-    comps = get_saved_property_comps(current_user.id, property_id) if property_id else {}
+    # -------------------------
+    # Load comps + resolved intelligence
+    # -------------------------
+    if selected_prop:
+        # IMPORTANT FIX: pass current_user.id (NOT borrower.id)
+        comps = get_saved_property_comps(
+            user_id=current_user.id,
+            property_id=selected_prop.id,
+            rentometer_api_key=None  # or your config key
+        ) or {}
 
-    # -----------------------------------
-    # NEW: Unified Property Intelligence
-    # -----------------------------------
-    resolved = None
-    if property_id and comps:
+        # Unified property intelligence
+        if comps:
+            try:
+                from LoanMVP.services.unified_property_resolver import resolve_property_intelligence
+                resolved = resolve_property_intelligence(selected_prop.id, comps)
+            except Exception as e:
+                print("Resolver error:", e)
+                resolved = None
+
+        # Comparison (works for both GET + POST, uses request.form on POST)
+        inputs = request.form if request.method == "POST" else ImmutableMultiDict()
+
+        if comps:
+            from LoanMVP.services.deal_workspace_calcs import (
+                calculate_flip_budget,
+                calculate_rental_budget,
+                calculate_airbnb_budget,
+                recommend_strategy,
+            )
+
+            comparison = {
+                "flip": calculate_flip_budget(inputs, comps),
+                "rental": calculate_rental_budget(inputs, comps),
+                "airbnb": calculate_airbnb_budget(inputs, comps),
+            }
+            recommendation = recommend_strategy(comparison)
+
+    # -------------------------
+    # POST: run selected strategy + rehab tools
+    # -------------------------
+    if request.method == "POST" and selected_prop and comps:
+        # pick results for selected mode (fallback flip)
+        results = (comparison.get(mode) or comparison.get("flip") or {}) if comparison else {}
+
+        # AI Summary
         try:
-            from LoanMVP.services.unified_property_resolver import resolve_property_intelligence
-            resolved = resolve_property_intelligence(property_id, comps)
-        except Exception as e:
-            print("Resolver error:", e)
-            resolved = None
+            ai_summary = generate_ai_insights(mode, results, comps)
+        except Exception:
+            ai_summary = "AI summary unavailable."
 
-    # Stable input source
-    inputs = request.form if request.method == "POST" else ImmutableMultiDict()
-
-    # -----------------------------------
-    # Strategy Comparison (GET + POST)
-    # Only run if property + comps exist
-    # -----------------------------------
-    if property_id and comps:
-        from LoanMVP.services.deal_workspace_calcs import (
-            calculate_flip_budget,
-            calculate_rental_budget,
-            calculate_airbnb_budget,
-            recommend_strategy,
-        )
-
-        comparison = {
-            "flip": calculate_flip_budget(inputs, comps),
-            "rental": calculate_rental_budget(inputs, comps),
-            "airbnb": calculate_airbnb_budget(inputs, comps),
+        # Rehab tools
+        rehab_items = {
+            "kitchen": request.form.get("kitchen") or "",
+            "bathroom": request.form.get("bathroom") or "",
+            "flooring": request.form.get("flooring") or "",
+            "paint": request.form.get("paint") or "",
+            "roof": request.form.get("roof") or "",
+            "hvac": request.form.get("hvac") or "",
         }
-        recommendation = recommend_strategy(comparison)
+        rehab_scope = request.form.get("rehab_scope", "medium")
 
-    # -----------------------------------
-    # POST: Run selected strategy + rehab tools
-    # -----------------------------------
-    if request.method == "POST":
+        sqft = (comps.get("property") or {}).get("sqft", 0)
+        try:
+            sqft = int(float(sqft or 0))
+        except Exception:
+            sqft = 0
 
-        if not property_id:
-            flash("Please select a property first.", "warning")
+        rehab = estimate_rehab_cost(property_sqft=sqft, scope=rehab_scope, items=rehab_items)
 
-        elif not comps:
-            flash("Unable to load property data.", "warning")
+        action = request.form.get("action")
+        target_budget = request.form.get("target_rehab_budget")
 
-        else:
-            # Use comparison results if available
-            if comparison:
-                results = comparison.get(mode) or comparison.get("flip") or {}
-            else:
-                from LoanMVP.services.deal_workspace_calcs import calculate_flip_budget
-                results = calculate_flip_budget(inputs, comps)
-
-            # === AI Summary ===
-            try:
-                ai_summary = generate_ai_insights(mode, results, comps)
-            except Exception:
-                ai_summary = "AI summary unavailable."
-
-            # === Rehab Tools ===
-            rehab_items = {
-                "kitchen": request.form.get("kitchen"),
-                "bathroom": request.form.get("bathroom"),
-                "flooring": request.form.get("flooring"),
-                "paint": request.form.get("paint"),
-                "roof": request.form.get("roof"),
-                "hvac": request.form.get("hvac"),
-            }
-
-            rehab_scope = request.form.get("rehab_scope", "medium")
-
-            sqft = (comps.get("property") or {}).get("sqft", 0)
-            try:
-                sqft = int(float(sqft or 0))
-            except Exception:
-                sqft = 0
-
-            rehab = estimate_rehab_cost(
-                property_sqft=sqft,
+        if action == "optimize_rehab" and target_budget:
+            rehab_items, rehab = optimize_rehab_to_budget(
+                target_budget=float(target_budget),
+                items=rehab_items,
                 scope=rehab_scope,
-                items=rehab_items,
+                sqft=sqft,
             )
+        elif action == "optimize_roi":
+            rehab_items, rehab = optimize_rehab_for_roi(items=rehab_items, scope=rehab_scope, sqft=sqft, comps=comps)
+        elif action == "optimize_timeline":
+            rehab_items, rehab = optimize_rehab_for_timeline(items=rehab_items, scope=rehab_scope, sqft=sqft)
+        elif action == "optimize_arv":
+            rehab_items, rehab = optimize_rehab_for_arv(items=rehab_items, scope=rehab_scope, sqft=sqft)
 
-            action = request.form.get("action")
-            target_budget = request.form.get("target_rehab_budget")
+        # Attach rehab data
+        results["rehab_breakdown"] = rehab
+        results["rehab_total"] = rehab.get("total")
+        results["rehab_summary"] = {
+            "total": rehab.get("total"),
+            "cost_per_sqft": rehab.get("cost_per_sqft"),
+            "scope": rehab.get("scope"),
+            "items": {k: v for k, v in rehab_items.items() if v},
+        }
 
-            if action == "optimize_rehab" and target_budget:
-                rehab_items, rehab = optimize_rehab_to_budget(
-                    target_budget=float(target_budget),
-                    items=rehab_items,
-                    scope=rehab_scope,
-                    sqft=sqft,
-                )
+        risk_flags = generate_rehab_risk_flags(results, comps) or []
+        results["risk_flags"] = risk_flags
 
-            elif action == "optimize_roi":
-                rehab_items, rehab = optimize_rehab_for_roi(
-                    items=rehab_items,
-                    scope=rehab_scope,
-                    sqft=sqft,
-                    comps=comps,
-                )
+        timeline = estimate_rehab_timeline(rehab_items, rehab_scope) or {}
+        results["rehab_timeline"] = timeline
 
-            elif action == "optimize_timeline":
-                rehab_items, rehab = optimize_rehab_for_timeline(
-                    items=rehab_items,
-                    scope=rehab_scope,
-                    sqft=sqft,
-                )
+        material_costs = estimate_material_costs(property_sqft=sqft, items=rehab_items) or {}
+        results["material_costs"] = material_costs
 
-            elif action == "optimize_arv":
-                rehab_items, rehab = optimize_rehab_for_arv(
-                    items=rehab_items,
-                    scope=rehab_scope,
-                    sqft=sqft,
-                )
+        rehab_notes = generate_rehab_notes(results, comps, strategy=mode) or {}
+        results["rehab_notes"] = rehab_notes
 
-            # Attach rehab data to results
-            results["rehab_breakdown"] = rehab
-            results["rehab_total"] = rehab.get("total")
-            results["rehab_summary"] = {
-                "total": rehab.get("total"),
-                "cost_per_sqft": rehab.get("cost_per_sqft"),
-                "scope": rehab.get("scope"),
-                "items": {k: v for k, v in rehab_items.items() if v},
-            }
-
-            risk_flags = generate_rehab_risk_flags(results, comps)
-            results["risk_flags"] = risk_flags
-
-            timeline = estimate_rehab_timeline(rehab_items, rehab_scope)
-            results["rehab_timeline"] = timeline
-
-            material_costs = estimate_material_costs(
-                property_sqft=sqft,
-                items=rehab_items,
-            )
-            results["material_costs"] = material_costs
-
-            rehab_notes = generate_rehab_notes(results, comps, strategy=mode)
-            results["rehab_notes"] = rehab_notes
-
-            session["latest_rehab_results"] = {
-                "rehab_summary": results.get("rehab_summary"),
-                "rehab_breakdown": results.get("rehab_breakdown"),
-                "risk_flags": risk_flags,
-                "rehab_timeline": timeline,
-                "material_costs": material_costs,
-                "rehab_notes": rehab_notes,
-            }
+        session["latest_rehab_results"] = {
+            "rehab_summary": results.get("rehab_summary"),
+            "rehab_breakdown": results.get("rehab_breakdown"),
+            "risk_flags": risk_flags,
+            "rehab_timeline": timeline,
+            "material_costs": material_costs,
+            "rehab_notes": rehab_notes,
+        }
 
     return render_template(
         "borrower/deal_workspace.html",
+        borrower=borrower,
+        saved_props=saved_props,
+        selected_prop=selected_prop,
+        prop_id=(selected_prop.id if selected_prop else None),
         mode=mode,
-        results=results,
+
         comps=comps,
+        resolved=resolved,
+
         comparison=comparison,
         recommendation=recommendation,
-        risk_flags=risk_flags,
-        property_id=property_id,
+
+        results=results,
         ai_summary=ai_summary,
-        material_costs=material_costs,
+        risk_flags=risk_flags,
         timeline=timeline,
+        material_costs=material_costs,
         rehab_notes=rehab_notes,
-        resolved=resolved,   # ⭐ NEW
+
         active_page="deal_workspace",
     )
 

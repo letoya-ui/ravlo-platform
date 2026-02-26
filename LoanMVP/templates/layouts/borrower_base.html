@@ -15,48 +15,92 @@
   <link rel="stylesheet" href="https://unpkg.com/lucide-static@latest/font/lucide.css">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/borrower.css') }}">
 
+  <style>
+    /* Ensure the main shell accounts for fixed sidebar */
+    .borrower-shell { min-height: 100vh; }
+    .b-right { margin-left: 64px; min-height: 100vh; }
+
+    /* Tooltip baseline */
+    .b-tooltip{
+      color: var(--text) !important;
+      background:#0b0c0f;
+      padding:4px 8px;
+      border-radius:6px;
+      font-size:.75rem;
+      white-space:nowrap;
+      position:absolute;
+      left:50px;
+      opacity:0;
+      pointer-events:none;
+      transition:.2s ease;
+    }
+    .b-sidebar-item:hover .b-tooltip{ opacity:1; }
+  </style>
+
   {% block head %}{% endblock %}
 </head>
 
 <body>
   <div class="borrower-shell">
 
-    <!-- SLIM SIDEBAR -->
+    <!-- SLIM SIDEBAR (GLOBAL) -->
     <aside class="b-sidebar">
       <a class="b-sidebar-logo" href="{{ url_for('borrower.dashboard') }}">CM</a>
 
       <div class="b-sidebar-group">
+
+        <!-- Dashboard -->
         <a class="b-sidebar-item {{ 'active' if ep == 'borrower.dashboard' else '' }}"
            href="{{ url_for('borrower.dashboard') }}">
           <i class="lucide lucide-layout-dashboard"></i>
           <span class="b-tooltip">Dashboard</span>
         </a>
 
-        <a class="b-sidebar-item {{ 'active' if 'property' in ep else '' }}"
+        <!-- Property Search -->
+        <a class="b-sidebar-item {{ 'active' if ep in ['borrower.property_search','borrower.property_finder'] or 'property' in ep else '' }}"
            href="{{ url_for('borrower.property_search') }}">
           <i class="lucide lucide-search"></i>
-          <span class="b-tooltip">Property</span>
+          <span class="b-tooltip">Property Search</span>
         </a>
 
-        <a class="b-sidebar-item {{ 'active' if 'deal' in ep else '' }}"
+        <!-- Saved Properties (NEW in sidebar) -->
+        <a class="b-sidebar-item {{ 'active' if ep == 'borrower.saved_properties' else '' }}"
+           href="{{ url_for('borrower.saved_properties') }}">
+          <i class="lucide lucide-bookmark"></i>
+          <span class="b-tooltip">Saved Properties</span>
+        </a>
+
+        <!-- Deal Workspace -->
+        <a class="b-sidebar-item {{ 'active' if ep == 'borrower.deal_workspace' or 'deal' in ep else '' }}"
            href="{{ url_for('borrower.deal_workspace') }}">
-          <i class="lucide lucide-line-chart"></i>
-          <span class="b-tooltip">Deal</span>
+          <i class="lucide lucide-trending-up"></i>
+          <span class="b-tooltip">Deal Workspace</span>
         </a>
 
-        <a class="b-sidebar-item {{ 'active' if 'payments' in ep else '' }}"
+        <!-- Loan View (NEW) -->
+        <a class="b-sidebar-item {{ 'active' if ep in ['borrower.status','borrower.loan_view','borrower.loan_summary'] or 'loan' in ep else '' }}"
+           href="{{ url_for('borrower.status') }}">
+          <i class="lucide lucide-file-text"></i>
+          <span class="b-tooltip">Loan View</span>
+        </a>
+
+        <!-- Payments -->
+        <a class="b-sidebar-item {{ 'active' if ep == 'borrower.payments' or 'payment' in ep else '' }}"
            href="{{ url_for('borrower.payments') }}">
           <i class="lucide lucide-credit-card"></i>
           <span class="b-tooltip">Payments</span>
         </a>
 
-        <a class="b-sidebar-item {{ 'active' if 'command' in ep or 'support' in ep else '' }}"
+        <!-- Support / Command Center -->
+        <a class="b-sidebar-item {{ 'active' if ep == 'borrower.borrower_command_center' or 'command' in ep or 'support' in ep else '' }}"
            href="{{ url_for('borrower.borrower_command_center') }}">
           <i class="lucide lucide-headset"></i>
           <span class="b-tooltip">Support</span>
         </a>
+
       </div>
 
+      <!-- Bottom -->
       <div class="b-sidebar-group b-sidebar-bottom">
         <a class="b-sidebar-item" href="{{ url_for('auth.logout') }}">
           <i class="lucide lucide-log-out"></i>
@@ -93,7 +137,6 @@
         </div>
       </header>
 
-      <!-- OPTIONAL PAGE TABS (sticky under topbar) -->
       {% block top_tabs %}{% endblock %}
 
       <!-- MAIN -->

@@ -1,6 +1,6 @@
 {# =========================
   borrower/dashboard.html
-  Platinum / Silver Luxury UI (FIXED)
+  Platinum / Silver Luxury UI (CLEANED + FIXED)
   ========================= #}
 
 {% extends "layouts/borrower_base.html" %}
@@ -34,9 +34,7 @@
       document.getElementById("dismissTourBtn")?.addEventListener("click", async () => {
         const resp = await fetch("{{ url_for('borrower.dismiss_dashboard_tour') }}", { method: "POST" });
         const data = await resp.json();
-        if (data.status === "ok") {
-          document.getElementById("dashboardTour")?.remove();
-        }
+        if (data.status === "ok") document.getElementById("dashboardTour")?.remove();
       });
       </script>
     {% endif %}
@@ -206,15 +204,15 @@
           <div class="action-cta">Upload →</div>
         </a>
       {% else %}
-       <a href="{{ url_for('borrower.document_requests') }}" class="bling-card action">
-        <div class="action-top">
-          <div class="action-icon">✅</div>
-           <div>
-             <div class="action-title">No Pending Conditions</div>
-             <div class="action-sub">You’re in a good spot — keep going.</div>
-           </div>
-         </div>
-         <div class="action-cta">View →</div>
+        <a href="{{ url_for('borrower.document_requests') }}" class="bling-card action">
+          <div class="action-top">
+            <div class="action-icon">✅</div>
+            <div>
+              <div class="action-title">No Pending Conditions</div>
+              <div class="action-sub">You’re in a good spot — keep going.</div>
+            </div>
+          </div>
+          <div class="action-cta">View →</div>
         </a>
       {% endif %}
 
@@ -231,7 +229,7 @@
     </div>
 
     {# =========================
-       MARKET SNAPSHOT (FIXED)
+       MARKET SNAPSHOT
        ========================= #}
     <div class="b-card" style="margin-bottom:1rem;">
       <h3>Market Snapshot</h3>
@@ -257,21 +255,7 @@
       </div>
     </div>
 
-    {# =========================
-       PROPERTY SELECTOR
-       ========================= #}
-    {% if saved_properties %}
-      <div class="b-property-selector">
-        <label for="propertySelect">Property:</label>
-        <select id="propertySelect" onchange="changeProperty(this.value)">
-          {% for p in saved_properties %}
-            <option value="{{ p.id }}" {% if p.id == active_property_id %}selected{% endif %}>
-              {{ p.address }}
-            </option>
-          {% endfor %}
-        </select>
-      </div>
-    {% endif %}
+    {# ✅ REMOVED: PROPERTY SELECTOR BLOCK #}
 
     {# =========================
        LOAN SNAPSHOT
@@ -451,7 +435,17 @@
           </table>
 
           <div style="margin-top:.6rem;">
-            <a href="{{ url_for('borrower.upload_conditions') }}" class="action-btn">
+            {% set pending_conditions = (conditions | selectattr('status','ne','cleared') | list) if conditions else [] %}
+
+            {% if pending_conditions %}
+              <a href="{{ url_for('borrower.upload_condition', cond_id=pending_conditions[0].id) }}" class="action-btn">
+                <i class="lucide lucide-file-up"></i> Upload Documents
+              </a>
+            {% else %}
+              <a href="{{ url_for('borrower.document_requests') }}" class="action-btn">
+                <i class="lucide lucide-file-up"></i> View Document Requests
+              </a>
+            {% endif %}
               <i class="lucide lucide-file-up"></i> Upload Documents
             </a>
           </div>
@@ -622,8 +616,9 @@
       </div>
     </div>
 
-  </div> {# /b-main-inner #}
+  </div>
 </main>
+...
 
 {# =========================
    SCRIPTS
