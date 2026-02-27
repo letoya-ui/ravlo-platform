@@ -43,3 +43,20 @@ class PartnerConnectionRequest(db.Model):
 
     # Helpful relationship (optional)
     partner = db.relationship("Partner", backref=db.backref("connection_requests", lazy=True))
+
+class PartnerJob(db.Model):
+    __tablename__ = "partner_jobs"
+
+    id = db.Column(db.Integer, primary_key=True)
+    partner_id = db.Column(db.Integer, db.ForeignKey("partners.id"), nullable=False)
+    borrower_profile_id = db.Column(db.Integer, db.ForeignKey("borrower_profile.id"), nullable=True)
+    property_id = db.Column(db.Integer, db.ForeignKey("property.id"), nullable=True)
+
+    title = db.Column(db.String(200), nullable=False)
+    scope = db.Column(db.Text, nullable=True)
+
+    status = db.Column(db.String(30), default="Open")  # Open/In Progress/Blocked/Complete
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    partner = db.relationship("Partner", backref=db.backref("jobs", lazy=True))
+    borrower = db.relationship("BorrowerProfile", backref=db.backref("partner_jobs", lazy=True))
