@@ -2525,6 +2525,80 @@ def property_tool():
     """
     return render_template("borrower/property_tool.html", active_page="property_tool")
 
+@borrower_bp.route("/api/property_tool_search", methods=["POST"])
+@role_required("borrower")
+def api_property_tool_search():
+    """
+    ZIP-based Property Tool search.
+    Does NOT require address.
+    Returns deal-ready results list.
+    """
+
+    payload = request.get_json(force=True) or {}
+
+    zip_code = (payload.get("zip") or "").strip()
+    strategy = (payload.get("strategy") or "flip").strip().lower()
+
+    # Filters (optional)
+    price_min = payload.get("price_min")
+    price_max = payload.get("price_max")
+    beds_min = payload.get("beds_min")
+    baths_min = payload.get("baths_min")
+    min_roi = payload.get("min_roi")
+    min_cashflow = payload.get("min_cashflow")
+    limit = int(payload.get("limit") or 20)
+
+    if not zip_code:
+        return jsonify({
+            "status": "error",
+            "message": "ZIP code is required."
+        }), 400
+
+    # Normalize numeric filters safely
+    def _num(v):
+        try:
+            if v in (None, "", "None"):
+                return None
+            return float(v)
+        except Exception:
+            return None
+
+    price_min = _num(price_min)
+    price_max = _num(price_max)
+    beds_min = _num(beds_min)
+    baths_min = _num(baths_min)
+    min_roi = _num(min_roi)
+    min_cashflow = _num(min_cashflow)
+
+    try:
+        # 🔥 Your core search engine
+        results = search_deals_for_zip(
+            zip_code=zip_code,
+            strategy=strategy,
+            price_min=price_min,
+            price_max=price_max,
+            beds_min=beds_min,
+            baths_min=baths_min,
+            min_roi=min_roi,
+            min_cashflow=min_cashflow,
+            limit=limit,
+        )
+
+        return jsonify({
+            "status": "ok",
+            "zip": zip_code,
+            "strategy": strategy,
+            "count": len(results),
+            "results": results
+        })
+
+    except Exception as e:
+        print("PROPERTY_TOOL_SEARCH ERROR:", e)
+        return jsonify({
+            "status": "error",
+            "message": "Search failed. Check logs."
+        }), 500
+    
 @borrower_bp.route("/api/property_tool_save_and_analyze", methods=["POST"])
 @role_required("borrower")
 def api_property_tool_save_and_analyze():
