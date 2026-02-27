@@ -1,0 +1,16 @@
+{% extends "layouts/base.html" %}
+{% block content %}
+
+<h2>Workspace</h2>
+
+{% for job in jobs %}
+  <div class="card mb-2 p-2">
+    <a href="{{ url_for('partners.workspace_job', job_id=job.id) }}">
+      {{ job.title }}
+    </a>
+  </div>
+{% else %}
+  <p>No jobs yet.</p>
+{% endfor %}
+
+{% endblock %}
