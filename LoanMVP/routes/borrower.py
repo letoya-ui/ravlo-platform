@@ -42,7 +42,7 @@ from LoanMVP.models.underwriter_model import UnderwritingCondition
 from LoanMVP.models.borrowers import PropertyAnalysis, ProjectBudget, SubscriptionPlan, ProjectExpense, BorrowerMessage, BorrowerInteraction, Deal, DealShare
 from LoanMVP.models.loan_officer_model import LoanOfficerProfile
 from LoanMVP.models.renovation_models import RenovationMockup
-
+from LoanMVP.models.partner_models import PartnerRequest
 
 # --- AI / Assistant ---
 from LoanMVP.ai.master_ai import master_ai
@@ -1111,7 +1111,75 @@ def request_partner_connection(partner_id):
     # TODO: Save request or notify LO/Processor
     return jsonify({"success": True, "message": f"Connection request sent to {partner.name}."})
 
+# LoanMVP/routes/borrower_routes.py
 
+@borrower_bp.route("/partners")
+@role_required("borrower")
+def borrower_partners():
+    role_filter = request.args.get("role")
+    q = Partner.query
+
+    if role_filter:
+        q = q.filter_by(role=role_filter)
+
+    partners = q.order_by(Partner.company.asc()).all()
+    return render_template("borrower/partners/center.html", partners=partners, role_filter=role_filter)
+
+@borrower_bp.route("/partners/<int:partner_id>")
+@role_required("borrower")
+def borrower_partner_profile(partner_id):
+    partner = Partner.query.get_or_404(partner_id)
+
+    # show if borrower already requested them
+    existing = PartnerRequest.query.filter_by(
+        borrower_user_id=current_user.id,
+        partner_id=partner.id
+    ).order_by(PartnerRequest.created_at.desc()).first()
+
+    return render_template("borrower/partners/profile.html", partner=partner, existing=existing)
+
+@borrower_bp.route("/partners/request/<int:partner_id>", methods=["POST"])
+@role_required("borrower")
+def request_partner(partner_id):
+    partner = Partner.query.get_or_404(partner_id)
+
+    message = (request.form.get("message") or "").strip()
+    category = (request.form.get("category") or "").strip() or None
+
+    # optional link to deal/property if you pass it
+    deal_id = request.form.get("deal_id")
+    property_id = request.form.get("property_id")
+
+    # prevent spam duplicates (pending only)
+    existing = PartnerRequest.query.filter_by(
+        borrower_user_id=current_user.id,
+        partner_id=partner.id,
+        status="pending"
+    ).first()
+    if existing:
+        flash("You already have a pending request to this partner.", "info")
+        return redirect(url_for("borrower.borrower_partner_profile", partner_id=partner.id))
+
+    pr = PartnerRequest(
+        borrower_user_id=current_user.id,
+        partner_id=partner.id,
+        category=category,
+        message=message or None,
+        deal_id=int(deal_id) if deal_id else None,
+        property_id=int(property_id) if property_id else None
+    )
+    db.session.add(pr)
+    db.session.commit()
+
+    flash("Request sent. The partner will be notified in their dashboard.", "success")
+    return redirect(url_for("borrower.borrower_partner_profile", partner_id=partner.id))
+
+@borrower_bp.route("/partners/requests")
+@role_required("borrower")
+def borrower_partner_requests():
+    requests_q = PartnerRequest.query.filter_by(borrower_user_id=current_user.id)\
+        .order_by(PartnerRequest.created_at.desc()).all()
+    return render_template("borrower/partners/requests.html", requests=requests_q)
 # =========================================================
 # 💬 Messages
 # =========================================================
