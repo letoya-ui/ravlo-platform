@@ -6,6 +6,15 @@ from LoanMVP.extensions import db
 from LoanMVP.crm import Partner
 from LoanMVP.models.partner_models import PartnerRequest, PartnerConnectionRequest
 
+def partner_tier(partner: Partner) -> str:
+    if not partner.approved:
+        return "Blocked"
+    if partner.subscription_tier in ("Premium", "Enterprise") and partner.is_active_listing():
+        return partner.subscription_tier
+    if partner.subscription_tier in ("Featured", "Pro") and partner.is_active_listing():
+        return "Pro"
+    return "Free"
+    
 @partners_bp.route("/dashboard")
 @role_required("partner")
 def dashboard():
@@ -85,34 +94,43 @@ def register():
 def requests_inbox():
     partner = Partner.query.filter_by(user_id=current_user.id).first()
     if not partner:
-        flash("Partner profile not found. Please register first.", "warning")
         return redirect(url_for("partners.register"))
+
+    # Gate: only Pro+ can see inbox (or allow Free too; your call)
+    if partner.subscription_tier == "Free":
+        return render_template("partners/upgrade_required.html", partner=partner), 403
 
     requests_q = PartnerRequest.query.filter_by(partner_id=partner.id)\
         .order_by(PartnerRequest.created_at.desc()).all()
 
     return render_template("partners/requests_inbox.html", partner=partner, requests=requests_q)
 
-@partners_bp.route("/requests/<int:request_id>/accept", methods=["POST"])
+@partners_bp.route("/requests/<int:req_id>/accept", methods=["POST"])
 @role_required("partner")
-def accept_request(request_id):
+def accept_request(req_id):
     partner = Partner.query.filter_by(user_id=current_user.id).first()
-    pr = PartnerRequest.query.get_or_404(request_id)
+    req = PartnerRequest.query.get_or_404(req_id)
 
-    if not partner or pr.partner_id != partner.id:
+    if not partner or req.partner_id != partner.id:
         abort(403)
 
-    if pr.status != "pending":
-        flash("This request is no longer pending.", "info")
-        return redirect(url_for("partners.requests_inbox"))
+    req.status = "accepted"
+    req.responded_at = datetime.utcnow()
 
-    pr.status = "accepted"
-    pr.responded_at = datetime.utcnow()
+    # ✅ Auto-create a Task assigned to the partner user (simple CRM)
+    t = Task(
+        borrower_id=req.borrower_profile_id,   # your Task expects borrower_profile.id
+        title=f"Partner Request: {req.category or partner.category or 'Service'}",
+        description=(req.message or "New partner request accepted."),
+        assigned_to=current_user.id,
+        status="Pending"
+    )
+    db.session.add(t)
     db.session.commit()
 
-    flash("Request accepted. You’re now connected with the borrower.", "success")
+    flash("Accepted. Task created in your Partner CRM.", "success")
     return redirect(url_for("partners.requests_inbox"))
-
+    
 @partners_bp.route("/requests/<int:request_id>/decline", methods=["POST"])
 @role_required("partner")
 def decline_request(request_id):
