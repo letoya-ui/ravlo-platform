@@ -1,131 +1,35 @@
+{# templates/borrower/property_search.html #}
 {% extends "layouts/borrower_base.html" %}
 {% block title %}Property Search{% endblock %}
 {% block content %}
 
-<style>
-  /* Readability + alignment (Borrower OS dark shell) */
-  .ps-wrap { max-width: 1100px; margin: 0 auto; }
+<div class="b-main-inner">
 
-  .ps-title { margin: 0; font-size: 1.4rem; font-weight: 800; }
-  .ps-sub { margin: .35rem 0 0; color: var(--muted); }
-
-  .ps-card {
-    background: var(--panel);
-    border: 1px solid var(--line);
-    border-radius: var(--radius);
-    padding: 1.25rem;
-    box-shadow: var(--glow-soft);
-  }
-
-  .ps-input {
-    width: 100%;
-    padding: .85rem 1rem;
-    font-size: 1rem;
-    border-radius: 14px;
-    background: #0b0c0f;
-    border: 1px solid var(--line);
-    color: var(--text);
-    outline: none;
-  }
-  .ps-input:focus {
-    border-color: var(--accent);
-    box-shadow: 0 0 0 3px rgba(122,184,255,.15);
-  }
-
-  .ps-btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: .5rem;
-    padding: .75rem 1rem;
-    border-radius: 14px;
-    border: 1px solid var(--accent-border, rgba(122,184,255,.35));
-    background: var(--accent-soft, rgba(122,184,255,.10));
-    color: var(--text);
-    text-decoration: none;
-    cursor: pointer;
-    transition: .2s;
-    font-weight: 700;
-  }
-  .ps-btn:hover { box-shadow: var(--glow-soft); transform: translateY(-1px); }
-  .ps-btn.secondary {
-    background: transparent;
-    border-color: var(--line);
-    color: var(--text);
-  }
-
-  .ps-row { display: flex; gap: .75rem; flex-wrap: wrap; margin-top: .85rem; }
-
-  .ps-meta {
-    display:flex;
-    flex-wrap:wrap;
-    gap: .75rem 1.25rem;
-    color: var(--muted);
-    margin-top: .5rem;
-    font-size: .95rem;
-  }
-
-  .ps-grid {
-    display: grid;
-    grid-template-columns: 1.2fr .8fr;
-    gap: 1rem;
-    margin-top: 1rem;
-  }
-  @media (max-width: 980px){
-    .ps-grid{ grid-template-columns: 1fr; }
-  }
-
-  .ps-kpi {
-    display:flex;
-    flex-wrap:wrap;
-    gap: 1rem;
-    margin-top: .75rem;
-  }
-  .ps-kpi .k {
-    background: #0b0c0f;
-    border: 1px solid var(--line);
-    border-radius: 14px;
-    padding: .85rem 1rem;
-    min-width: 180px;
-  }
-  .ps-kpi .k .label { color: var(--muted); font-size: .85rem; }
-  .ps-kpi .k .val { font-weight: 800; margin-top: .2rem; }
-
-  .ps-photos { display:flex; gap: .75rem; overflow-x:auto; padding-bottom:.25rem; }
-  .ps-photos img { height: 200px; border-radius: 14px; object-fit: cover; border:1px solid var(--line); }
-
-  .ps-error {
-    border-left: 4px solid #ff4d4d;
-  }
-</style>
-
-<div class="ps-wrap">
-
-  <div class="page-header">
-    <h2 class="ps-title">🏠 Property Search</h2>
-    <p class="ps-sub">Search an address and analyze it instantly in Deal Workspace (auto-saves to keep costs down).</p>
+  <div class="page-header" style="margin-bottom:1rem;">
+    <h2 style="margin:0;">🏠 Property Search</h2>
+    <p class="muted" style="margin:.35rem 0 0 0;">
+      Search any address and instantly see property details. Analyze will auto-save first.
+    </p>
   </div>
 
   <!-- Search Bar -->
-  <form method="GET" class="ps-card" style="margin-top:1rem;">
-    <input class="ps-input"
-           type="text"
-           name="query"
-           placeholder="Enter an address..."
-           value="{{ query or '' }}">
-    <div class="ps-row">
-      <button type="submit" class="ps-btn">Search</button>
-      {% if query %}
-        <a href="{{ url_for('borrower.property_search') }}" class="ps-btn secondary">Clear</a>
-      {% endif %}
-    </div>
+  <form method="GET" class="b-card" style="margin-top:1rem;">
+    <input
+      type="text"
+      name="query"
+      placeholder="Enter an address..."
+      value="{{ query or '' }}"
+      style="width:100%; padding:0.75rem; font-size:1rem;"
+      autocomplete="street-address"
+    >
+    <button type="submit" class="btn" style="margin-top:0.75rem;">Search</button>
   </form>
 
   <!-- Error -->
   {% if error %}
-    <div class="ps-card ps-error" style="margin-top:1rem;">
-      <strong style="color:#ffb3b3;">Lookup Error</strong>
-      <p class="ps-sub" style="margin-top:.5rem;">
+    <div class="b-card" style="margin-top:1rem; border-left:4px solid #ff4d4d;">
+      <strong style="color:#b30000;">Lookup Error</strong>
+      <p class="muted" style="margin-top:.5rem;">
         {{ error }}
         {% if debug %}
           <br>Provider: {{ debug.provider or "—" }} | Stage: {{ debug.stage or "—" }}
@@ -135,152 +39,161 @@
   {% endif %}
 
   {% if property %}
-  <div class="ps-card" style="margin-top:1.25rem;">
+  <div class="b-card" style="margin-top:1.5rem;">
 
-    <!-- Photos -->
+    {# ---- safe locals ---- #}
+    {% set valuation = valuation if valuation is defined else (property.valuation if property and property.valuation is defined else {}) %}
+    {% set rent_estimate = rent_estimate if rent_estimate is defined else (property.rent_estimate if property and property.rent_estimate is defined else {}) %}
+    {% set comps = comps if comps is defined else (property.comps if property and property.comps is defined else {}) %}
+
+    {# Photos #}
     {% if property.photos %}
       {% if property.photos is string %}
-        <img src="{{ property.photos }}"
-             style="width:100%; max-height:320px; object-fit:cover; border-radius:14px; border:1px solid var(--line); margin-bottom:1rem;">
+        <img
+          src="{{ property.photos }}"
+          alt="Property photo"
+          style="width:100%; max-height:320px; object-fit:cover; border-radius:12px; margin-bottom:1rem;"
+        >
       {% else %}
-        <div class="ps-photos" style="margin-bottom:1rem;">
+        <div style="display:flex; gap:1rem; overflow-x:auto; margin-bottom:1rem; padding-bottom:.25rem;">
           {% for photo in property.photos[:8] %}
-            <img src="{{ photo }}" alt="Property photo">
+            <img
+              src="{{ photo }}"
+              alt="Property photo"
+              style="height:200px; border-radius:10px; object-fit:cover;"
+            >
           {% endfor %}
         </div>
       {% endif %}
     {% endif %}
 
-    <!-- Address -->
-    <h3 style="margin:0 0 .25rem; font-weight:900;">
+    {# Address #}
+    <h3 style="margin-bottom:0.25rem;">
       {{ property.address }}
       {% if property.city %}, {{ property.city }}{% endif %}
       {% if property.state %}, {{ property.state }}{% endif %}
       {% if property.zip %} {{ property.zip }}{% endif %}
     </h3>
 
-    <!-- Price -->
-    <div style="font-size:1.35rem; font-weight:900; margin-top:.25rem;">
+    {# Price / Value #}
+    <p style="font-size:1.35rem; font-weight:700; margin-bottom:0.5rem;">
       {% if property.price %}
         ${{ "{:,.0f}".format(property.price) }}
-        <span style="color:var(--muted); font-size:.85rem; font-weight:600;">(Listed Price)</span>
-      {% elif valuation and valuation.estimate %}
+        <span class="muted" style="font-size:.85rem;">(Listed Price)</span>
+      {% elif valuation and (valuation.estimate is defined and valuation.estimate) %}
         ${{ "{:,.0f}".format(valuation.estimate) }}
-        <span style="color:var(--muted); font-size:.85rem; font-weight:600;">(Estimated Value)</span>
+        <span class="muted" style="font-size:.85rem;">(Estimated Value)</span>
       {% else %}
-        <span style="color:var(--muted); font-size:1rem; font-weight:600;">Off-market • showing investor estimates</span>
+        <span class="muted">Off-market property • Showing investor estimates when available</span>
       {% endif %}
-    </div>
+    </p>
 
-    <!-- Specs -->
-    <div class="ps-meta">
-      <span><strong style="color:var(--text);">{{ property.beds or "—" }}</strong> 🛏 Beds</span>
-      <span><strong style="color:var(--text);">{{ property.baths or "—" }}</strong> 🛁 Baths</span>
-      <span><strong style="color:var(--text);">{{ property.sqft or "—" }}</strong> sq ft</span>
-      <span>Built <strong style="color:var(--text);">{{ property.year_built or "—" }}</strong></span>
-    </div>
+    {# Specs #}
+    <p class="muted">
+      {{ property.beds or "—" }} 🛏 &nbsp;|&nbsp;
+      {{ property.baths or "—" }} 🛁 &nbsp;|&nbsp;
+      {{ property.sqft or "—" }} sq ft &nbsp;|&nbsp;
+      Built {{ property.year_built or "—" }}
+    </p>
 
-    <div class="ps-grid">
+    {# Deal Snapshot #}
+    <div class="b-card" style="margin-top:1rem;">
+      <strong>Deal Snapshot</strong>
 
-      <!-- Left: snapshot -->
-      <div>
-        <div style="margin-top:1rem; font-weight:900;">Deal Snapshot</div>
+      <div style="display:flex; flex-wrap:wrap; gap:1rem; margin-top:0.75rem;">
 
-        <div class="ps-kpi">
-          <div class="k">
-            <div class="label">Estimated Value (AVM)</div>
-            <div class="val">
-              {% if valuation and valuation.estimate %}
-                ${{ "{:,.0f}".format(valuation.estimate|float) }}
-              {% else %}
-                —
-              {% endif %}
-            </div>
-          </div>
-
-          <div class="k">
-            <div class="label">Estimated Rent (Monthly)</div>
-            <div class="val">
-              {% if rent_estimate and rent_estimate.rent %}
-                ${{ "{:,.0f}".format(rent_estimate.rent|float) }}
-              {% else %}
-                —
-              {% endif %}
-            </div>
-          </div>
-
-          <div class="k">
-            <div class="label">Sales Comps</div>
-            <div class="val">
-              {% if comps and comps.sales %}
-                {{ comps.sales|length }}
-              {% else %}
-                —
-              {% endif %}
-            </div>
-          </div>
-
-          <div class="k">
-            <div class="label">Rental Comps</div>
-            <div class="val">
-              {% if comps and comps.rentals %}
-                {{ comps.rentals|length }}
-              {% else %}
-                —
-              {% endif %}
-            </div>
+        <div style="min-width:180px;">
+          <div class="muted" style="font-size:0.9rem;">Estimated Value (AVM)</div>
+          <div style="font-weight:700;">
+            {% if valuation and valuation.estimate is defined and valuation.estimate %}
+              ${{ "{:,.0f}".format(valuation.estimate|float) }}
+            {% else %}
+              —
+            {% endif %}
           </div>
         </div>
 
-        <!-- AI Summary -->
-        {% if ai_summary %}
-        <div class="ps-card" style="margin-top:1rem; background:#0b0c0f;">
-          <strong style="color:var(--accent);">AI Market Insight</strong>
-          <p style="margin:.5rem 0 0; color:var(--text); line-height:1.55;">
-            {{ ai_summary }}
-          </p>
+        <div style="min-width:180px;">
+          <div class="muted" style="font-size:0.9rem;">Estimated Rent (Monthly)</div>
+          <div style="font-weight:700;">
+            {% if rent_estimate and (rent_estimate.rent is defined and rent_estimate.rent) %}
+              ${{ "{:,.0f}".format(rent_estimate.rent|float) }}/mo
+            {% else %}
+              —
+            {% endif %}
+          </div>
         </div>
-        {% endif %}
+
+        <div style="min-width:140px;">
+          <div class="muted" style="font-size:0.9rem;">Sales Comps</div>
+          <div style="font-weight:700;">
+            {% if comps and comps.sales is defined and comps.sales %}
+              {{ comps.sales|length }}
+            {% else %}
+              —
+            {% endif %}
+          </div>
+        </div>
+
+        <div style="min-width:140px;">
+          <div class="muted" style="font-size:0.9rem;">Rental Comps</div>
+          <div style="font-weight:700;">
+            {% if comps and comps.rentals is defined and comps.rentals %}
+              {{ comps.rentals|length }}
+            {% else %}
+              —
+            {% endif %}
+          </div>
+        </div>
 
       </div>
+    </div>
 
-      <!-- Right: actions -->
-      <div>
-        <div style="margin-top:1rem; font-weight:900;">Actions</div>
-
-        <!-- ✅ Analyze auto-saves then redirects -->
-        <form method="POST" action="{{ url_for('borrower.save_property_and_analyze') }}" style="margin-top:.75rem;">
-          {{ csrf_token() if csrf_token is defined }}
-
-          <input type="hidden" name="property_id" value="{{ property.property_id or '' }}">
-          <input type="hidden" name="address" value="{{ property.address }}">
-          <input type="hidden" name="price" value="{{ property.price or (valuation.estimate if valuation else 0) or 0 }}">
-          <input type="hidden" name="zipcode" value="{{ property.zip or '' }}">
-          <input type="hidden" name="sqft" value="{{ property.sqft or '' }}">
-
-          <button type="submit" class="ps-btn" style="width:100%; padding: .9rem 1rem;">
-            Analyze Deal ➜ (Auto-Save)
-          </button>
-        </form>
-
-        <!-- Optional: Save without analyze -->
-        <form method="POST" action="{{ url_for('borrower.save_property') }}" id="savePropertyForm" style="margin-top:.75rem;">
-          {{ csrf_token() if csrf_token is defined }}
-          <input type="hidden" name="property_id" value="{{ property.property_id or '' }}">
-          <input type="hidden" name="address" value="{{ property.address }}">
-          <input type="hidden" name="price" value="{{ property.price or (valuation.estimate if valuation else 0) or 0 }}">
-          <input type="hidden" name="zipcode" value="{{ property.zip or '' }}">
-          <input type="hidden" name="sqft" value="{{ property.sqft or '' }}">
-          <button type="submit" class="ps-btn secondary" style="width:100%; padding: .9rem 1rem;">
-            Save Property Only
-          </button>
-        </form>
-
-        <div style="margin-top:.75rem; color:var(--muted); font-size:.9rem; line-height:1.4;">
-          Ravlo tip: analyzing from saved properties keeps your API costs down because we cache the resolved snapshot.
-        </div>
+    {# AI Summary #}
+    {% if ai_summary %}
+      <div class="b-card" style="margin-top:1rem;">
+        <strong>AI Market Insight</strong>
+        <p style="margin-top:0.5rem;">{{ ai_summary }}</p>
       </div>
+    {% endif %}
 
+    {# Actions #}
+    <div style="display:flex; gap:.75rem; flex-wrap:wrap; margin-top:1.25rem; align-items:center;">
+
+      {# ---- Save only (AJAX) ---- #}
+      <form method="POST" action="{{ url_for('borrower.save_property') }}" id="savePropertyForm" style="margin:0;">
+        {{ csrf_token() if csrf_token is defined }}
+
+        <input type="hidden" name="property_id" value="{{ property.property_id or property.id or '' }}">
+        <input type="hidden" name="address" value="{{ property.address }}">
+        <input type="hidden" name="price" value="{{ property.price or (valuation.estimate if valuation and valuation.estimate is defined else 0) or 0 }}">
+        <input type="hidden" name="zipcode" value="{{ property.zip or '' }}">
+        <input type="hidden" name="sqft" value="{{ property.sqft or '' }}">
+
+        <button type="submit" class="btn" id="btnSaveOnly">Save Property</button>
+      </form>
+
+      {# ---- Analyze (AUTO-SAVE + REDIRECT) ---- #}
+      <form method="POST" action="{{ url_for('borrower.save_property_and_analyze') }}" id="analyzeForm" style="margin:0;">
+        {{ csrf_token() if csrf_token is defined }}
+
+        <input type="hidden" name="property_id" value="{{ property.property_id or property.id or '' }}">
+        <input type="hidden" name="address" value="{{ property.address }}">
+        <input type="hidden" name="price" value="{{ property.price or (valuation.estimate if valuation and valuation.estimate is defined else 0) or 0 }}">
+        <input type="hidden" name="zipcode" value="{{ property.zip or '' }}">
+        <input type="hidden" name="sqft" value="{{ property.sqft or '' }}">
+
+        <button type="submit" class="btn" id="btnAnalyze">Analyze Deal ➜</button>
+      </form>
+
+      {# ---- If already saved, direct open ---- #}
+      {% if saved_id %}
+        <a href="{{ url_for('borrower.deal_workspace', prop_id=saved_id, mode='flip') }}" class="btn">
+          Open Deal Workspace ➜
+        </a>
+      {% endif %}
+
+      <span id="saveStatus" class="muted" style="font-size:.9rem;"></span>
     </div>
 
   </div>
@@ -289,14 +202,57 @@
 </div>
 
 <script>
-/* Optional: keep Save Property as AJAX so the page doesn't reload */
-document.getElementById("savePropertyForm")?.addEventListener("submit", async function(e){
-  e.preventDefault();
-  const form = e.target;
-  const resp = await fetch(form.action, { method: "POST", body: new FormData(form) });
-  const data = await resp.json();
-  alert(data.message || "Saved!");
-});
+(function () {
+  const saveForm = document.getElementById("savePropertyForm");
+  const analyzeForm = document.getElementById("analyzeForm");
+  const statusEl = document.getElementById("saveStatus");
+  const btnSave = document.getElementById("btnSaveOnly");
+  const btnAnalyze = document.getElementById("btnAnalyze");
+
+  async function postForm(form) {
+    const resp = await fetch(form.action, { method: "POST", body: new FormData(form) });
+    // If server redirects (analyze route), fetch will follow and return HTML.
+    const ct = (resp.headers.get("content-type") || "").toLowerCase();
+    if (ct.includes("application/json")) {
+      return { type: "json", resp, data: await resp.json() };
+    }
+    return { type: "html", resp, text: await resp.text() };
+  }
+
+  if (saveForm) {
+    saveForm.addEventListener("submit", async function (e) {
+      e.preventDefault();
+      if (statusEl) statusEl.textContent = "Saving...";
+      if (btnSave) btnSave.disabled = true;
+
+      try {
+        const result = await postForm(saveForm);
+        if (result.type === "json") {
+          if (statusEl) statusEl.textContent = result.data.message || "Saved!";
+          alert(result.data.message || "Saved!");
+        } else {
+          // Fallback: if server returned HTML, just reload
+          if (statusEl) statusEl.textContent = "Saved.";
+          window.location.reload();
+        }
+      } catch (err) {
+        console.error(err);
+        if (statusEl) statusEl.textContent = "Save failed.";
+        alert("Save failed. Check logs.");
+      } finally {
+        if (btnSave) btnSave.disabled = false;
+      }
+    });
+  }
+
+  // Analyze should POST normally so Flask can redirect to Deal Workspace
+  if (analyzeForm) {
+    analyzeForm.addEventListener("submit", function () {
+      if (statusEl) statusEl.textContent = "Saving & opening Deal Workspace...";
+      if (btnAnalyze) btnAnalyze.disabled = true;
+    });
+  }
+})();
 </script>
 
 {% endblock %}
