@@ -8,20 +8,6 @@ from LoanMVP.models.partner_models import PartnerConnectionRequest, PartnerJob
 
 partners_bp = Blueprint("partners", __name__, url_prefix="/partners")
 
-def partner_tier(partner: Partner) -> str:
-    if not partner.approved:
-        return "Blocked"
-    if partner.subscription_tier in ("Premium", "Enterprise") and partner.is_active_listing():
-        return partner.subscription_tier
-    if partner.subscription_tier in ("Featured", "Pro") and partner.is_active_listing():
-        return "Pro"
-    return "Free"
-
-def _require_pro(partner):
-    # You can tweak this rule anytime
-    if partner.subscription_tier in ("Free", None):
-        return False
-    return partner.is_active_listing()
 
 def partner_has_pro_access(partner) -> bool:
     # Pro = Featured/Premium AND active paid listing AND approved
