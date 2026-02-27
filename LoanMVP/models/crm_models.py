@@ -263,6 +263,8 @@ class Partner(db.Model):
     __tablename__ = "partners"
 
     id = db.Column(db.Integer, primary_key=True)
+    # in Partner model:
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=True, unique=True)
     name = db.Column(db.String(120), nullable=False)
     company = db.Column(db.String(120))
     email = db.Column(db.String(120))
@@ -301,6 +303,8 @@ class Partner(db.Model):
         lazy='dynamic'
     )
 
+    user = db.relationship("User", backref=db.backref("partner_profile", uselist=False))
+    
     # === Utility Methods ===
     def is_active_listing(self):
         """Return True if the partner is active and payment is valid."""
