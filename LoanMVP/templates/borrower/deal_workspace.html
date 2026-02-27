@@ -868,15 +868,62 @@ function closeRehabPreview() {
 
 /* Style modal */
 let _styleCurrentBefore = null;
+let _styleCurrentFile = null;
+
+document.getElementById("uploadRoomPhoto")?.addEventListener("change", (e) => {
+  const file = e.target.files?.[0];
+  if (!file) return;
+  _styleCurrentFile = file;
+  _styleCurrentBefore = null;
+
+  // preview in modal
+  const url = URL.createObjectURL(file);
+  openStyleModal(url);
+});
 
 function openStyleModal(photoUrl) {
   _styleCurrentBefore = photoUrl;
-  document.getElementById("styleBeforeImage").src = photoUrl;
+  _styleCurrentFile = _styleCurrentFile || null;
+
+  document.getElementById("styleBeforeImage").src = photoUrl || "";
   document.getElementById("styleModal").style.display = "flex";
   document.getElementById("styleResults").style.display = "none";
   document.getElementById("styleResultsGrid").innerHTML = "";
   document.getElementById("styleCostEstimate").innerHTML = "";
   document.getElementById("beforeAfterWrapper").style.display = "none";
+}
+
+async function runStyleTransform() {
+  const stylePrompt = document.getElementById("stylePrompt").value.trim();
+  const preset = document.getElementById("stylePrompt").dataset.preset || "";
+  const variations = document.getElementById("styleVariations").value;
+  const saveToDeal = document.getElementById("styleSaveToDeal").checked;
+
+  const propertyId = "{{ property_id or '' }}";
+
+  const formData = new FormData();
+  formData.append("style_prompt", stylePrompt);
+  formData.append("style_preset", preset);
+  formData.append("variations", variations);
+  formData.append("save_to_deal", saveToDeal ? "true" : "false");
+  formData.append("property_id", propertyId);
+
+  if (_styleCurrentFile) {
+    formData.append("image_file", _styleCurrentFile);
+  } else if (_styleCurrentBefore) {
+    formData.append("image_url", _styleCurrentBefore);
+  } else {
+    return;
+  }
+
+  // ... keep the rest of your existing fetch logic ...
+  const resp = await fetch("{{ url_for('borrower.renovation_visualizer') }}", {
+    method: "POST",
+    body: formData
+  });
+
+  const data = await resp.json();
+  // (same success/error handling you already have)
 }
 
 function closeStyleModal() {
