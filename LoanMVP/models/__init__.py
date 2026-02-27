@@ -90,6 +90,7 @@ from LoanMVP.models.payment_models import PaymentRecord
 
 from LoanMVP.models.credit_models import SoftCreditReport
 from LoanMVP.models.partner_models import PartnerRequest, PartnerJob,PartnerConnectionRequest
+from LoanMVP.models.renovation_models import RenovationMockup
 # ======================================================
 # 🧩 SQLAlchemy Export (for Migrate / Shell)
 # ======================================================
