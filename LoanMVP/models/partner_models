@@ -24,7 +24,7 @@ class PartnerRequest(db.Model):
     responded_at = db.Column(db.DateTime, nullable=True)
 
     partner = db.relationship("Partner", backref=db.backref("requests", lazy=True))
-
+    
 
 class PartnerConnectionRequest(db.Model):
     __tablename__ = "partner_connection_requests"
@@ -43,6 +43,8 @@ class PartnerConnectionRequest(db.Model):
 
     # Helpful relationship (optional)
     partner = db.relationship("Partner", backref=db.backref("connection_requests", lazy=True))
+    borrower = db.relationship("BorrowerProfile", foreign_keys=[borrower_profile_id])
+    property = db.relationship("Property", foreign_keys=[property_id])
 
 class PartnerJob(db.Model):
     __tablename__ = "partner_jobs"
@@ -60,3 +62,4 @@ class PartnerJob(db.Model):
 
     partner = db.relationship("Partner", backref=db.backref("jobs", lazy=True))
     borrower = db.relationship("BorrowerProfile", backref=db.backref("partner_jobs", lazy=True))
+    property = db.relationship("Property", foreign_keys=[property_id])
