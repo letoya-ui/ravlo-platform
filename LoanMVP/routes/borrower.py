@@ -1315,9 +1315,6 @@ def ask_ai_response(chat_id):
 @borrower_bp.route("/deal_workspace", methods=["GET", "POST"])
 @role_required("borrower")
 def deal_workspace():
-    # -------------------------
-    # Borrower + saved props
-    # -------------------------
     borrower = BorrowerProfile.query.filter_by(user_id=current_user.id).first()
     if not borrower:
         flash("Borrower profile not found.", "danger")
@@ -1330,12 +1327,11 @@ def deal_workspace():
         .all()
     )
 
-    # -------------------------
-    # Property selection (ONE param)
-    # -------------------------
-    # Use prop_id everywhere (SavedProperty.id)
-    prop_id = request.values.get("prop_id")  # works for GET + POST
+    # ONE param everywhere: prop_id = SavedProperty.id
+    prop_id = request.values.get("prop_id")
     selected_prop = None
+    prop_id_int = None
+
     if prop_id:
         try:
             prop_id_int = int(prop_id)
@@ -1346,21 +1342,12 @@ def deal_workspace():
         except Exception:
             selected_prop = None
 
-    # If POST but no property selected, bounce back
-    if request.method == "POST" and not selected_prop:
-        flash("Please select a saved property first.", "warning")
-        return redirect(url_for("borrower.deal_workspace"))
-
-    # -------------------------
-    # Mode
-    # -------------------------
     mode = (request.values.get("mode") or "flip").lower()
     if mode not in ("flip", "rental", "airbnb"):
         mode = "flip"
 
-    # -------------------------
-    # Output containers
-    # -------------------------
+    inputs = request.form if request.method == "POST" else ImmutableMultiDict()
+
     comps = {}
     resolved = None
     comparison = {}
@@ -1372,18 +1359,38 @@ def deal_workspace():
     material_costs = {}
     rehab_notes = {}
 
-    # -------------------------
-    # Load comps + resolved intelligence
-    # -------------------------
+    # If POST but no property selected: don't redirect (keeps UX smooth)
+    if request.method == "POST" and not selected_prop:
+        flash("Please select a saved property first.", "warning")
+        return render_template(
+            "borrower/deal_workspace.html",
+            borrower=borrower,
+            saved_props=saved_props,
+            selected_prop=None,
+            prop_id=None,
+            mode=mode,
+            comps=comps,
+            resolved=resolved,
+            comparison=comparison,
+            recommendation=recommendation,
+            results=results,
+            ai_summary=ai_summary,
+            risk_flags=risk_flags,
+            timeline=timeline,
+            material_costs=material_costs,
+            rehab_notes=rehab_notes,
+            active_page="deal_workspace",
+        )
+
+    # Load comps + resolved
     if selected_prop:
-        # IMPORTANT FIX: pass current_user.id (NOT borrower.id)
+        # ✅ IMPORTANT: have this function accept saved_property_id
         comps = get_saved_property_comps(
             user_id=current_user.id,
-            property_id=selected_prop.id,
-            rentometer_api_key=None  # or your config key
+            saved_property_id=selected_prop.id,
+            rentometer_api_key=None,
         ) or {}
 
-        # Unified property intelligence
         if comps:
             try:
                 from LoanMVP.services.unified_property_resolver import resolve_property_intelligence
@@ -1392,17 +1399,12 @@ def deal_workspace():
                 print("Resolver error:", e)
                 resolved = None
 
-        # Comparison (works for both GET + POST, uses request.form on POST)
-        inputs = request.form if request.method == "POST" else ImmutableMultiDict()
-
-        if comps:
             from LoanMVP.services.deal_workspace_calcs import (
                 calculate_flip_budget,
                 calculate_rental_budget,
                 calculate_airbnb_budget,
                 recommend_strategy,
             )
-
             comparison = {
                 "flip": calculate_flip_budget(inputs, comps),
                 "rental": calculate_rental_budget(inputs, comps),
@@ -1410,20 +1412,15 @@ def deal_workspace():
             }
             recommendation = recommend_strategy(comparison)
 
-    # -------------------------
-    # POST: run selected strategy + rehab tools
-    # -------------------------
+    # POST run
     if request.method == "POST" and selected_prop and comps:
-        # pick results for selected mode (fallback flip)
-        results = (comparison.get(mode) or comparison.get("flip") or {}) if comparison else {}
+        results = comparison.get(mode) or comparison.get("flip") or {}
 
-        # AI Summary
         try:
             ai_summary = generate_ai_insights(mode, results, comps)
         except Exception:
             ai_summary = "AI summary unavailable."
 
-        # Rehab tools
         rehab_items = {
             "kitchen": request.form.get("kitchen") or "",
             "bathroom": request.form.get("bathroom") or "",
@@ -1459,7 +1456,6 @@ def deal_workspace():
         elif action == "optimize_arv":
             rehab_items, rehab = optimize_rehab_for_arv(items=rehab_items, scope=rehab_scope, sqft=sqft)
 
-        # Attach rehab data
         results["rehab_breakdown"] = rehab
         results["rehab_total"] = rehab.get("total")
         results["rehab_summary"] = {
@@ -1497,20 +1493,16 @@ def deal_workspace():
         selected_prop=selected_prop,
         prop_id=(selected_prop.id if selected_prop else None),
         mode=mode,
-
         comps=comps,
         resolved=resolved,
-
         comparison=comparison,
         recommendation=recommendation,
-
         results=results,
         ai_summary=ai_summary,
         risk_flags=risk_flags,
         timeline=timeline,
         material_costs=material_costs,
         rehab_notes=rehab_notes,
-
         active_page="deal_workspace",
     )
 
