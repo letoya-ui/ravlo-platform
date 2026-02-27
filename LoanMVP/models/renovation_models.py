@@ -10,7 +10,7 @@ class RenovationMockup(db.Model):
     borrower_id = db.Column(db.Integer, db.ForeignKey("borrower_profile.id"), nullable=True)
 
     property_id = db.Column(db.String(64), nullable=True)  # your "property_id" string
-    saved_property_id = db.Column(db.Integer, db.ForeignKey("saved_property.id"), nullable=True)
+    saved_property_id = db.Column(db.Integer, db.ForeignKey("saved_properties.id"), nullable=True)
     deal_id = db.Column(db.Integer, db.ForeignKey("deal.id"), nullable=True)
 
     before_url = db.Column(db.Text, nullable=False)
