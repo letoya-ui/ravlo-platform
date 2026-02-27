@@ -2823,7 +2823,13 @@ def payments():
     subscription_plan = getattr(user, "subscription_plan", "Free")
 
     # Payment history (subscription payments only)
-    payments = PaymentRecord.query.filter_by(user_id=user.id).order_by(PaymentRecord.created_at.desc()).all()
+    payments = (
+        PaymentRecord.query
+        .filter_by(user_id=user.id)
+        .order_by(PaymentRecord.paid_at.desc())
+        .all()
+    )
+
 
     return render_template(
         "borrower/payments.html",
