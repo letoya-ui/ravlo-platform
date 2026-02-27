@@ -56,6 +56,12 @@
           <span class="b-tooltip">Dashboard</span>
         </a>
 
+        <a class="b-sidebar-item {{ 'active' if ep == 'borrower.property_tool' else '' }}"
+           href="{{ url_for('borrower.property_tool') }}">
+          <i class="lucide lucide-radar"></i>
+          <span class="b-tooltip">Deal Finder</span>
+        </a>
+        
         <!-- Property Search -->
         <a class="b-sidebar-item {{ 'active' if ep in ['borrower.property_search','borrower.property_finder'] or 'property' in ep else '' }}"
            href="{{ url_for('borrower.property_search') }}">
