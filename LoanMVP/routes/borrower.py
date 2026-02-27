@@ -3118,7 +3118,7 @@ def payments():
     payments = (
         PaymentRecord.query
         .filter_by(user_id=user.id)
-        .order_by(PaymentRecord.paid_at.desc())
+        .order_by(PaymentRecord.timestamp.desc())
         .all()
     )
 
