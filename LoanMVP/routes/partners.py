@@ -6,6 +6,8 @@ from LoanMVP.extensions import db
 from LoanMVP.models.crm_models import Partner, Task, CRMNote
 from LoanMVP.models.partner_models import PartnerConnectionRequest, PartnerJob
 
+partners_bp = Blueprint("partners", __name__, url_prefix="/partners")
+
 def partner_tier(partner: Partner) -> str:
     if not partner.approved:
         return "Blocked"
