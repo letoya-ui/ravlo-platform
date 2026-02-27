@@ -23,3 +23,23 @@ class PartnerRequest(db.Model):
     responded_at = db.Column(db.DateTime, nullable=True)
 
     partner = db.relationship("Partner", backref=db.backref("requests", lazy=True))
+
+
+
+class PartnerConnectionRequest(db.Model):
+    __tablename__ = "partner_connection_requests"
+
+    id = db.Column(db.Integer, primary_key=True)
+
+    borrower_user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    partner_id = db.Column(db.Integer, db.ForeignKey("partners.id"), nullable=False)
+
+    category = db.Column(db.String(50), nullable=True)  # optional (cleaning, contractor, etc.)
+    message = db.Column(db.Text, nullable=True)
+
+    status = db.Column(db.String(20), default="pending")  # pending | accepted | declined | canceled
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    responded_at = db.Column(db.DateTime, nullable=True)
+
+    # Helpful relationship (optional)
+    partner = db.relationship("Partner", backref=db.backref("connection_requests", lazy=True))
