@@ -74,6 +74,112 @@ function money(x){
   return "$" + n.toLocaleString(undefined, {maximumFractionDigits:0});
 }
 
+function numOrNull(v){
+  if (v === null || v === undefined) return null;
+  const s = String(v).trim();
+  if (!s) return null;
+  const n = Number(s);
+  return Number.isNaN(n) ? null : n;
+}
+
+async function saveAndAnalyze(item){
+  // button UI
+  const btn = document.getElementById(item._btnId);
+  if (btn){
+    btn.disabled = true;
+    btn.innerText = "Saving…";
+  }
+
+  try{
+    const resp = await fetch("{{ url_for('borrower.api_property_tool_save_and_analyze') }}", {
+      method: "POST",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify({
+        address: item.address || "",
+        city: item.city || "",
+        state: item.state || "",
+        zip: item.zip || "",
+        price: item.price ?? null,
+        sqft: item.sqft ?? null,
+        photo: item.photo || null,
+        property_id: item.property_id || null
+      })
+    });
+
+    const data = await resp.json();
+    if (data.status !== "ok"){
+      alert(data.message || "Could not save property.");
+      if (btn){
+        btn.disabled = false;
+        btn.innerText = "📈 Send to Deal Workspace";
+      }
+      return;
+    }
+
+    // redirect to Deal Workspace using prop_id
+    window.location.href = data.deal_url;
+
+  } catch (e){
+    console.error(e);
+    alert("Network error while saving. Try again.");
+    if (btn){
+      btn.disabled = false;
+      btn.innerText = "📈 Send to Deal Workspace";
+    }
+  }
+}
+
+async function saveOnly(item){
+  const btn = document.getElementById(item._saveBtnId);
+  if (btn){
+    btn.disabled = true;
+    btn.innerText = "Saving…";
+  }
+
+  try{
+    const resp = await fetch("{{ url_for('borrower.api_property_tool_save_and_analyze') }}", {
+      method: "POST",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify({
+        address: item.address || "",
+        city: item.city || "",
+        state: item.state || "",
+        zip: item.zip || "",
+        price: item.price ?? null,
+        sqft: item.sqft ?? null,
+        photo: item.photo || null,
+        property_id: item.property_id || null
+      })
+    });
+
+    const data = await resp.json();
+    if (data.status !== "ok"){
+      alert(data.message || "Could not save property.");
+      if (btn){
+        btn.disabled = false;
+        btn.innerText = "💾 Save";
+      }
+      return;
+    }
+
+    if (btn){
+      btn.innerText = "✅ Saved";
+      setTimeout(() => {
+        btn.disabled = false;
+        btn.innerText = "💾 Save";
+      }, 1200);
+    }
+
+  } catch (e){
+    console.error(e);
+    alert("Network error while saving. Try again.");
+    if (btn){
+      btn.disabled = false;
+      btn.innerText = "💾 Save";
+    }
+  }
+}
+
 async function runSearch(){
   const zip = document.getElementById("zip").value.trim();
   const strategy = document.getElementById("strategy").value;
@@ -81,12 +187,12 @@ async function runSearch(){
   const payload = {
     zip,
     strategy,
-    price_min: document.getElementById("price_min").value || null,
-    price_max: document.getElementById("price_max").value || null,
-    beds_min: document.getElementById("beds_min").value || null,
-    baths_min: document.getElementById("baths_min").value || null,
-    min_roi: document.getElementById("min_roi").value || null,
-    min_cashflow: document.getElementById("min_cashflow").value || null,
+    price_min: numOrNull(document.getElementById("price_min").value),
+    price_max: numOrNull(document.getElementById("price_max").value),
+    beds_min:  numOrNull(document.getElementById("beds_min").value),
+    baths_min: numOrNull(document.getElementById("baths_min").value),
+    min_roi:   numOrNull(document.getElementById("min_roi").value),
+    min_cashflow: numOrNull(document.getElementById("min_cashflow").value),
     limit: 20
   };
 
@@ -108,8 +214,33 @@ async function runSearch(){
   }
 
   status.innerText = `Found ${data.results.length} opportunities in ${data.zip}.`;
-  results.innerHTML = data.results.map(r => {
+
+  // Build cards
+  results.innerHTML = data.results.map((r, idx) => {
     const m = r.metrics || {};
+    const safeId = `dw_${idx}_${Date.now()}`;
+    const saveId = `sv_${idx}_${Date.now()}`;
+
+    // Some providers give propertyId/id. Keep it if we have it.
+    const propertyId = r.property_id || r.propertyId || r.id || null;
+
+    // Create a JS object encoded inside attribute later via onclick wrapper
+    // We'll pass only what we need.
+    const payloadObj = {
+      address: r.address || "",
+      city: r.city || "",
+      state: r.state || "",
+      zip: r.zip || "",
+      price: r.price ?? null,
+      sqft: r.sqft ?? null,
+      photo: r.photo || null,
+      property_id: propertyId,
+      _btnId: safeId,
+      _saveBtnId: saveId
+    };
+
+    const encoded = encodeURIComponent(JSON.stringify(payloadObj));
+
     return `
       <div class="bling-card">
         <div style="display:flex;gap:.8rem;align-items:flex-start;">
@@ -130,15 +261,29 @@ async function runSearch(){
           <div><span class="muted">Price</span><br><strong>${money(r.price)}</strong></div>
           <div><span class="muted">Sqft</span><br><strong>${r.sqft || "—"}</strong></div>
           <div><span class="muted">Flip Profit</span><br><strong>${money(m.profit)}</strong></div>
-          <div><span class="muted">Flip ROI</span><br><strong>${m.roi !== undefined ? Math.round(m.roi*100) + "%" : "—"}</strong></div>
+          <div><span class="muted">Flip ROI</span><br><strong>${m.roi !== undefined && m.roi !== null ? Math.round(m.roi*100) + "%" : "—"}</strong></div>
           <div><span class="muted">Rent Est</span><br><strong>${money(m.rent_est)}</strong></div>
           <div><span class="muted">Cashflow</span><br><strong>${money(m.net_cashflow_mo)}</strong></div>
         </div>
 
         <div style="margin-top:.75rem;display:flex;gap:.5rem;flex-wrap:wrap;">
-          <a class="lux-btn lux-btn-ghost" href="{{ url_for('borrower.deal_workspace') }}" style="padding:.55rem .8rem;">
+          <button
+            id="${safeId}"
+            type="button"
+            class="lux-btn lux-btn-ghost"
+            style="padding:.55rem .8rem;"
+            onclick='saveAndAnalyze(JSON.parse(decodeURIComponent("${encoded}")))'>
             <span class="lux-ic">📈</span> Send to Deal Workspace
-          </a>
+          </button>
+
+          <button
+            id="${saveId}"
+            type="button"
+            class="lux-btn lux-btn-ghost"
+            style="padding:.55rem .8rem; opacity:.9;"
+            onclick='saveOnly(JSON.parse(decodeURIComponent("${encoded}")))'>
+            <span class="lux-ic">💾</span> Save
+          </button>
         </div>
       </div>
     `;
@@ -149,6 +294,7 @@ async function runSearch(){
 <style>
 /* Readability fix: avoid “washed out” text */
 .muted{ color: rgba(230,235,240,.70) !important; }
+
 .dw-input{
   width:100%;
   padding:.75rem .85rem;
