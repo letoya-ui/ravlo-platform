@@ -5,6 +5,10 @@ class PaymentRecord(db.Model):
     __tablename__ = "payment_record"
 
     id = db.Column(db.Integer, primary_key=True)
+    
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=True, index=True)
+    
+    user = db.relationship("User", backref=db.backref("payment_records", lazy=True))
 
     borrower_profile_id = db.Column(
         db.Integer,
@@ -21,6 +25,6 @@ class PaymentRecord(db.Model):
     status = db.Column(db.String(20), default="Pending")  # Pending / Paid
     stripe_payment_intent = db.Column(db.String(255), nullable=True)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
-
+    
     borrower = db.relationship("BorrowerProfile", backref="payments")
     loan = db.relationship("LoanApplication", backref="payments")
