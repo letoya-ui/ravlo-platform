@@ -71,6 +71,8 @@ from LoanMVP.services.deal_export_service import (
     generate_amortization_chart,
 )
 from LoanMVP.services.unified_resolver import resolve_property_unified
+from LoanMVP.services.property_tool import search_deals_for_zip
+
 from LoanMVP.forms import BorrowerProfileForm
 
 borrower_bp = Blueprint("borrower", __name__, url_prefix="/borrower")
@@ -2307,6 +2309,49 @@ def property_explore_plus(prop_id):
         photos=photos,
     )
 
+@borrower_bp.route("/property_tool", methods=["GET"])
+@role_required("borrower")
+def property_tool():
+    """
+    Ravlo Property Tool:
+    - GET shows UI
+    - UI calls /borrower/api/property_tool_search to fetch results
+    """
+    return render_template("borrower/property_tool.html", active_page="property_tool")
+
+
+@borrower_bp.route("/api/property_tool_search", methods=["POST"])
+@role_required("borrower")
+def api_property_tool_search():
+    payload = request.get_json(force=True) or {}
+
+    zip_code = (payload.get("zip") or "").strip()
+    strategy = (payload.get("strategy") or "flip").strip().lower()
+
+    # filters
+    price_min = payload.get("price_min")
+    price_max = payload.get("price_max")
+    beds_min = payload.get("beds_min")
+    baths_min = payload.get("baths_min")
+    min_roi = payload.get("min_roi")
+    min_cashflow = payload.get("min_cashflow")
+
+    if not zip_code:
+        return jsonify({"status": "error", "message": "ZIP code is required."}), 400
+
+    results = search_deals_for_zip(
+        zip_code=zip_code,
+        strategy=strategy,
+        price_min=price_min,
+        price_max=price_max,
+        beds_min=beds_min,
+        baths_min=baths_min,
+        min_roi=min_roi,
+        min_cashflow=min_cashflow,
+        limit=int(payload.get("limit") or 20),
+    )
+
+    return jsonify({"status": "ok", "zip": zip_code, "strategy": strategy, "results": results})
 # =========================================================
 # 💰 Quotes & Conversion
 # =========================================================
