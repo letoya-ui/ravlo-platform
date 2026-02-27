@@ -232,9 +232,7 @@ class Task(db.Model):
     completed = db.Column(db.Boolean, default=False) 
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     partner_job_id = db.Column(db.Integer, db.ForeignKey("partner_jobs.id"), nullable=True)
-    partner_job_id = db.Column(db.Integer, db.ForeignKey("partner_job.id"), nullable=True)
-
-    partner_job = db.relationship("PartnerJob", backref=db.backref("tasks", lazy=True))
+   
     partner_job = db.relationship("PartnerJob", backref=db.backref("tasks", lazy=True))
     assigned_user = db.relationship("User", backref="tasks_assigned", lazy=True)
     borrower = db.relationship("BorrowerProfile", back_populates="tasks")
