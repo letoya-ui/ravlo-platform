@@ -1,0 +1,25 @@
+# LoanMVP/models/partner_models.py (or wherever Partner model lives)
+
+from datetime import datetime
+from LoanMVP.extensions import db
+
+class PartnerRequest(db.Model):
+    __tablename__ = "partner_requests"
+
+    id = db.Column(db.Integer, primary_key=True)
+
+    borrower_user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    partner_id = db.Column(db.Integer, db.ForeignKey("partners.id"), nullable=False)
+
+    # Optional but powerful:
+    deal_id = db.Column(db.Integer, db.ForeignKey("deals.id"), nullable=True)  # if you have Deal model
+    property_id = db.Column(db.Integer, db.ForeignKey("properties.id"), nullable=True)  # if you have Property model
+
+    category = db.Column(db.String(50), nullable=True)   # ex: "estimate", "inspection", "cleaning"
+    message = db.Column(db.Text, nullable=True)
+
+    status = db.Column(db.String(20), default="pending") # pending | accepted | declined | canceled | completed
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    responded_at = db.Column(db.DateTime, nullable=True)
+
+    partner = db.relationship("Partner", backref=db.backref("requests", lazy=True))
