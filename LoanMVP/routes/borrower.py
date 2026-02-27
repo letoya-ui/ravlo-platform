@@ -73,6 +73,7 @@ from LoanMVP.services.deal_export_service import (
 )
 from LoanMVP.services.unified_resolver import resolve_property_unified
 from LoanMVP.services.property_tool import search_deals_for_zip
+from LoanMVP.services.ai_image_service import generate_renovation_images
 
 from LoanMVP.forms import BorrowerProfileForm
 from openai import OpenAI
@@ -1640,26 +1641,16 @@ def renovation_visualizer():
     # NOTE: API varies by SDK version. If you're already using image generation elsewhere,
     # mirror that call. This is the *shape* you want:
     try:
-        # PSEUDO-CALL: replace with your actual image endpoint call in your codebase
-        # For example if you have an internal service wrapper, call that here.
-        #
-        # result = client.images.generate(
-        #   model="gpt-image-1",
-        #   prompt=f"HGTV renovation after photo. {style_prompt}. Keep same room layout.",
-        #   image=before_ref,
-        #   n=variations,
-        #   size="1024x1024"
-        # )
-        #
-        # after_urls = [img.url for img in result.data]
-
-        after_urls = []  # <-- replace with real output from your generator
-        # For now, fail loudly so you hook in your current image pipeline
-        if not after_urls:
-            raise RuntimeError("Hook image generation call here (after_urls empty).")
-
+        after_urls = generate_renovation_images(
+            before_image_url=before_ref,
+            style_prompt=style_prompt,
+            variations=variations,
+        )
     except Exception as e:
-        return jsonify({"status":"error","message":f"Visualizer failed: {str(e)}"}), 500
+        return jsonify({
+            "status": "error",
+            "message": f"AI image generation failed: {str(e)}"
+        }), 500
 
     # ---- Optional: save to DB (first after image or all) ----
     save_to_deal = (request.form.get("save_to_deal") or "").lower() == "true"
