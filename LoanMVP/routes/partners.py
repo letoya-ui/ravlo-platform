@@ -4,7 +4,7 @@ from datetime import datetime
 from LoanMVP.utils.decorators import role_required
 from LoanMVP.extensions import db
 from LoanMVP.crm import Partner
-from LoanMVP.models.partner_models import PartnerRequest
+from LoanMVP.models.partner_models import PartnerRequest, PartnerConnectionRequest
 
 @partners_bp.route("/dashboard")
 @role_required("partner")
@@ -132,3 +132,57 @@ def decline_request(request_id):
 
     flash("Request declined.", "info")
     return redirect(url_for("partners.requests_inbox"))
+
+
+@partners_bp.route("/requests")
+@role_required("partner")
+def partner_requests():
+    partner = Partner.query.filter_by(user_id=current_user.id).first()
+    if not partner:
+        flash("Partner profile not found. Please register first.", "warning")
+        return redirect(url_for("partners.register"))
+
+    requests_q = PartnerConnectionRequest.query.filter_by(partner_id=partner.id)\
+        .order_by(PartnerConnectionRequest.created_at.desc()).all()
+
+    return render_template("partners/requests_inbox.html", partner=partner, requests=requests_q)
+
+@partners_bp.route("/requests/<int:req_id>/accept", methods=["POST"])
+@role_required("partner")
+def accept_partner_request(req_id):
+    partner = Partner.query.filter_by(user_id=current_user.id).first()
+    req = PartnerConnectionRequest.query.get_or_404(req_id)
+
+    if not partner or req.partner_id != partner.id:
+        abort(403)
+
+    if req.status != "pending":
+        flash("This request is no longer pending.", "info")
+        return redirect(url_for("partners.partner_requests"))
+
+    req.status = "accepted"
+    req.responded_at = datetime.utcnow()
+    db.session.commit()
+
+    flash("Request accepted. You’re now connected with this borrower.", "success")
+    return redirect(url_for("partners.partner_requests"))
+
+@partners_bp.route("/requests/<int:req_id>/decline", methods=["POST"])
+@role_required("partner")
+def decline_partner_request(req_id):
+    partner = Partner.query.filter_by(user_id=current_user.id).first()
+    req = PartnerConnectionRequest.query.get_or_404(req_id)
+
+    if not partner or req.partner_id != partner.id:
+        abort(403)
+
+    if req.status != "pending":
+        flash("This request is no longer pending.", "info")
+        return redirect(url_for("partners.partner_requests"))
+
+    req.status = "declined"
+    req.responded_at = datetime.utcnow()
+    db.session.commit()
+
+    flash("Request declined.", "info")
+    return redirect(url_for("partners.partner_requests"))
