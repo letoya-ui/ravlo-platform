@@ -1214,10 +1214,12 @@ def borrower_partner_requests():
 @borrower_bp.route("/partners/requests")
 @role_required("borrower")
 def my_partner_requests():
-    requests_q = PartnerConnectionRequest.query.filter_by(borrower_user_id=current_user.id)\
-        .order_by(PartnerConnectionRequest.created_at.desc()).all()
+    borrower_profile = BorrowerProfile.query.filter_by(user_id=current_user.id).first()
 
-    return render_template("borrower/partner_requests.html", requests=requests_q)
+    q = PartnerRequest.query.filter_by(borrower_user_id=current_user.id)\
+        .order_by(PartnerRequest.created_at.desc()).all()
+
+    return render_template("borrower/partner_requests.html", requests=q, borrower=borrower_profile)
 
 
 
