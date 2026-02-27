@@ -2333,7 +2333,6 @@ def saved_properties():
         title="Saved Properties",
     )
 
-
 @borrower_bp.route("/save_property_and_analyze", methods=["POST"])
 @role_required("borrower")
 def save_property_and_analyze():
@@ -2347,7 +2346,18 @@ def save_property_and_analyze():
         flash("Address required.", "warning")
         return redirect(url_for("borrower.property_search"))
 
-    # Resolve + normalize address (same as save_property)
+    zipcode = (request.form.get("zipcode") or "").strip() or None
+    price = request.form.get("price")
+    sqft_raw = request.form.get("sqft")
+
+    # Normalize sqft
+    sqft = None
+    try:
+        sqft = int(float(sqft_raw)) if sqft_raw not in (None, "", "None") else None
+    except Exception:
+        sqft = None
+
+    # Resolve + normalize
     resolved = {}
     normalized_address = raw_address
     resolved_property_id = None
@@ -2357,22 +2367,15 @@ def save_property_and_analyze():
         resolved = resolve_property_unified(raw_address)
     except Exception as e:
         print("SAVE_PROPERTY_AND_ANALYZE resolver error:", e)
-
-    zipcode = (request.form.get("zipcode") or "").strip() or None
-    price = request.form.get("price")
-    sqft_raw = request.form.get("sqft")
-
-    sqft = None
-    try:
-        sqft = int(float(sqft_raw)) if sqft_raw not in (None, "", "None") else None
-    except Exception:
-        sqft = None
+        resolved = {}
 
     if resolved.get("status") == "ok":
         p = resolved.get("property") or {}
         normalized_address = (p.get("address") or raw_address).strip()
+
         resolved_property_id = (p.get("property_id") or p.get("id") or p.get("propertyId"))
         resolved_property_id = str(resolved_property_id).strip() if resolved_property_id else None
+
         zipcode = zipcode or p.get("zip") or p.get("zipCode") or p.get("postalCode")
 
         if sqft is None:
@@ -2382,34 +2385,73 @@ def save_property_and_analyze():
             except Exception:
                 sqft = None
 
-    final_property_id = ((request.form.get("property_id") or "").strip() or resolved_property_id or None)
+        # If no price passed in, optionally use provider value
+        if (price in (None, "", "None")) and (p.get("price") is not None):
+            try:
+                price = str(p.get("price"))
+            except Exception:
+                pass
 
-    # Duplicate check: property_id OR normalized address
+    # Best property_id to store
+    form_pid = (request.form.get("property_id") or "").strip()
+    final_property_id = form_pid or resolved_property_id or None
+    final_property_id = str(final_property_id).strip() if final_property_id else None
+
+    # Deduplicate: property_id first, else normalized address (case-insensitive)
     existing = None
     if final_property_id:
         existing = SavedProperty.query.filter_by(
             borrower_profile_id=borrower.id,
-            property_id=str(final_property_id)
+            property_id=final_property_id
         ).first()
 
-    if not existing:
+    if not existing and normalized_address:
         existing = SavedProperty.query.filter(
             SavedProperty.borrower_profile_id == borrower.id,
             db.func.lower(SavedProperty.address) == normalized_address.lower()
         ).first()
 
     if existing:
+        # Optional: update missing fields before redirect
+        updated = False
+
+        if (not existing.property_id) and final_property_id:
+            existing.property_id = final_property_id
+            updated = True
+
+        if (not existing.zipcode) and zipcode:
+            existing.zipcode = zipcode
+            updated = True
+
+        if (existing.sqft is None or existing.sqft == 0) and sqft:
+            existing.sqft = sqft
+            updated = True
+
+        if (not existing.price) and price not in (None, "", "None"):
+            existing.price = str(price)
+            updated = True
+
+        if hasattr(existing, "resolved_json"):
+            existing.resolved_json = json.dumps(resolved) if resolved else None
+            existing.resolved_at = datetime.utcnow() if resolved else None
+            updated = True
+
+        if updated:
+            db.session.commit()
+
         flash("✅ Property already saved — opening Deal Workspace.", "info")
         return redirect(url_for("borrower.deal_workspace", prop_id=existing.id, mode="flip"))
 
+    # Create new SavedProperty
     saved = SavedProperty(
         borrower_profile_id=borrower.id,
-        property_id=str(final_property_id) if final_property_id else None,
+        property_id=final_property_id,
         address=normalized_address,
         price=str(price or ""),
         sqft=sqft,
         zipcode=zipcode,
         saved_at=datetime.utcnow(),
+        created_at=datetime.utcnow(),
     )
 
     if hasattr(saved, "resolved_json"):
@@ -2420,7 +2462,7 @@ def save_property_and_analyze():
     db.session.commit()
 
     flash("🏠 Property saved! Opening Deal Workspace…", "success")
-    return redirect(url_for("borrower.deal_workspace", prop_id=saved.id, mode="flip")
+    return redirect(url_for("borrower.deal_workspace", prop_id=saved.id, mode="flip"))
 
 @borrower_bp.route("/saved_properties/manage", methods=["POST"])
 @role_required("borrower")
@@ -2433,6 +2475,12 @@ def saved_properties_manage():
     prop_id = request.form.get("prop_id")
     action = request.form.get("action")
     notes = request.form.get("notes", "")
+
+    try:
+        prop_id = int(prop_id)
+    except Exception:
+        flash("Invalid property id.", "warning")
+        return redirect(url_for("borrower.saved_properties"))
 
     prop = SavedProperty.query.filter_by(
         id=prop_id,
@@ -2457,7 +2505,7 @@ def saved_properties_manage():
         flash("🗑️ Saved property deleted.", "success")
 
     return redirect(url_for("borrower.saved_properties"))
-
+    
 @borrower_bp.route("/property_explore_plus/<int:prop_id>")
 @role_required("borrower")
 def property_explore_plus(prop_id):
@@ -2466,25 +2514,46 @@ def property_explore_plus(prop_id):
         flash("Borrower profile not found.", "danger")
         return redirect(url_for("borrower.property_search"))
 
-    prop = SavedProperty.query.filter_by(id=prop_id, borrower_profile_id=borrower.id).first()
+    prop = SavedProperty.query.filter_by(
+        id=prop_id,
+        borrower_profile_id=borrower.id
+    ).first()
+
     if not prop:
         flash("Property not found.", "danger")
         return redirect(url_for("borrower.property_search"))
 
-    resolved = unified_property_resolver(prop.address)
-    ai_summary = generate_property_ai_summary(resolved)
-    comps = get_property_comps(resolved)
-    market = get_market_snapshot(getattr(prop, "zip_code", None))
-    photos = resolved.get("photos", []) if resolved else []
+    # Resolve
+    from LoanMVP.services.unified_resolver import resolve_property_unified
+    resolved = resolve_property_unified(prop.address)
+
+    resolved_property = (resolved.get("property") or {}) if resolved.get("status") == "ok" else {}
+    photos = resolved_property.get("photos") or []
+
+    # Comps + market
+    from LoanMVP.services.comps_service import get_comps_for_property
+    comps = get_comps_for_property(
+        address=prop.address,
+        zipcode=(prop.zipcode or ""),
+        rentometer_api_key=None
+    )
+
+    from LoanMVP.services.market_service import get_market_snapshot
+    market = get_market_snapshot(zipcode=(prop.zipcode or "")) if prop.zipcode else {}
+
+    # AI summary (optional; keep it lightweight)
+    ai_summary = resolved.get("ai_summary") or None
 
     return render_template(
         "borrower/property_explore_plus.html",
+        borrower=borrower,
         prop=prop,
-        resolved=resolved,
+        resolved=resolved_property,
         ai_summary=ai_summary,
         comps=comps,
         market=market,
         photos=photos,
+        active_page="property_search",
     )
 
 @borrower_bp.route("/property_tool", methods=["GET"])
