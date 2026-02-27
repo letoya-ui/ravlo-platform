@@ -2525,39 +2525,141 @@ def property_tool():
     """
     return render_template("borrower/property_tool.html", active_page="property_tool")
 
-
-@borrower_bp.route("/api/property_tool_search", methods=["POST"])
+@borrower_bp.route("/api/property_tool_save_and_analyze", methods=["POST"])
 @role_required("borrower")
-def api_property_tool_search():
+def api_property_tool_save_and_analyze():
+    """
+    Takes one result from Property Tool and:
+    - resolves/normalizes address
+    - saves (or updates existing) SavedProperty
+    - returns Deal Workspace URL (prop_id)
+    """
+    borrower = BorrowerProfile.query.filter_by(user_id=current_user.id).first()
+    if not borrower:
+        return jsonify({"status": "error", "message": "Borrower profile not found."}), 400
+
     payload = request.get_json(force=True) or {}
 
-    zip_code = (payload.get("zip") or "").strip()
-    strategy = (payload.get("strategy") or "flip").strip().lower()
+    raw_address = (payload.get("address") or "").strip()
+    if not raw_address:
+        return jsonify({"status": "error", "message": "Address is required."}), 400
 
-    # filters
-    price_min = payload.get("price_min")
-    price_max = payload.get("price_max")
-    beds_min = payload.get("beds_min")
-    baths_min = payload.get("baths_min")
-    min_roi = payload.get("min_roi")
-    min_cashflow = payload.get("min_cashflow")
+    raw_zip = (payload.get("zip") or payload.get("zipcode") or "").strip() or None
+    raw_price = payload.get("price")
+    raw_sqft = payload.get("sqft")
+    raw_property_id = (payload.get("property_id") or payload.get("id") or payload.get("propertyId") or "")
+    raw_property_id = str(raw_property_id).strip() or None
 
-    if not zip_code:
-        return jsonify({"status": "error", "message": "ZIP code is required."}), 400
+    # normalize sqft
+    sqft = None
+    try:
+        if raw_sqft not in (None, "", "None"):
+            sqft = int(float(raw_sqft))
+    except Exception:
+        sqft = None
 
-    results = search_deals_for_zip(
-        zip_code=zip_code,
-        strategy=strategy,
-        price_min=price_min,
-        price_max=price_max,
-        beds_min=beds_min,
-        baths_min=baths_min,
-        min_roi=min_roi,
-        min_cashflow=min_cashflow,
-        limit=int(payload.get("limit") or 20),
+    # -------------------------
+    # Resolve for normalized address + snapshot (saves money later)
+    # -------------------------
+    resolved = {}
+    normalized_address = raw_address
+    resolved_property_id = None
+
+    try:
+        from LoanMVP.services.unified_resolver import resolve_property_unified
+        resolved = resolve_property_unified(raw_address)
+    except Exception as e:
+        print("PROPERTY_TOOL_SAVE resolver error:", e)
+        resolved = {}
+
+    if resolved.get("status") == "ok":
+        p = resolved.get("property") or {}
+
+        normalized_address = (p.get("address") or p.get("formattedAddress") or raw_address).strip()
+
+        resolved_property_id = (p.get("property_id") or p.get("id") or p.get("propertyId"))
+        resolved_property_id = str(resolved_property_id).strip() if resolved_property_id else None
+
+        raw_zip = raw_zip or p.get("zip") or p.get("zipCode") or p.get("postalCode")
+
+        if sqft is None:
+            try:
+                sqft_val = p.get("sqft") or p.get("squareFootage")
+                sqft = int(float(sqft_val)) if sqft_val not in (None, "", "None") else None
+            except Exception:
+                sqft = None
+
+        # if no price provided from search results, fall back to valuation estimate if present
+        if raw_price in (None, "", "None"):
+            valuation = p.get("valuation") or {}
+            raw_price = valuation.get("value") or valuation.get("estimate") or None
+
+    final_property_id = raw_property_id or resolved_property_id or None
+
+    # -------------------------
+    # Dedup: property_id first, else normalized address
+    # -------------------------
+    existing = None
+
+    if final_property_id:
+        existing = SavedProperty.query.filter_by(
+            borrower_profile_id=borrower.id,
+            property_id=str(final_property_id)
+        ).first()
+
+    if not existing:
+        existing = SavedProperty.query.filter(
+            SavedProperty.borrower_profile_id == borrower.id,
+            db.func.lower(SavedProperty.address) == normalized_address.lower()
+        ).first()
+
+    def _set_snapshot(sp: SavedProperty):
+        if hasattr(sp, "resolved_json"):
+            sp.resolved_json = json.dumps(resolved) if resolved else None
+            sp.resolved_at = datetime.utcnow() if resolved else None
+
+    if existing:
+        # update missing fields
+        existing.address = normalized_address or existing.address
+        if not existing.zipcode and raw_zip:
+            existing.zipcode = raw_zip
+        if (existing.sqft is None or existing.sqft == 0) and sqft:
+            existing.sqft = sqft
+        if (not existing.price) and raw_price is not None:
+            existing.price = str(raw_price)
+        if (not existing.property_id) and final_property_id:
+            existing.property_id = str(final_property_id)
+
+        _set_snapshot(existing)
+        db.session.commit()
+
+        return jsonify({
+            "status": "ok",
+            "saved_id": existing.id,
+            "deal_url": url_for("borrower.deal_workspace", prop_id=existing.id, mode="flip")
+        })
+
+    saved = SavedProperty(
+        borrower_profile_id=borrower.id,
+        property_id=str(final_property_id) if final_property_id else None,
+        address=normalized_address,
+        price=str(raw_price or ""),
+        sqft=sqft,
+        zipcode=raw_zip,
+        saved_at=datetime.utcnow(),
+        created_at=datetime.utcnow(),
     )
+    _set_snapshot(saved)
 
-    return jsonify({"status": "ok", "zip": zip_code, "strategy": strategy, "results": results})
+    db.session.add(saved)
+    db.session.commit()
+
+    return jsonify({
+        "status": "ok",
+        "saved_id": saved.id,
+        "deal_url": url_for("borrower.deal_workspace", prop_id=saved.id, mode="flip")
+    })
+    
 # =========================================================
 # 💰 Quotes & Conversion
 # =========================================================
