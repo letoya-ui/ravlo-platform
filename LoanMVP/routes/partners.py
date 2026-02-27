@@ -4,7 +4,7 @@ from datetime import datetime
 from LoanMVP.utils.decorators import role_required
 from LoanMVP.extensions import db
 from LoanMVP.models.crm_models import Partner, Task, CRMNote
-from LoanMVP.models.partner_models import PartnerRequest, PartnerConnectionRequest
+from LoanMVP.models.partner_models import PartnerRequest, PartnerConnectionRequest, PartnerJob
 
 def partner_tier(partner: Partner) -> str:
     if not partner.approved:
@@ -21,6 +21,21 @@ def _require_pro(partner):
         return False
     return partner.is_active_listing()
 
+def partner_has_pro_access(partner) -> bool:
+    # Pro = Featured/Premium AND active paid listing AND approved
+    if not partner or not partner.approved:
+        return False
+    if partner.subscription_tier in ("Featured", "Premium", "Enterprise") and partner.is_active_listing():
+        return True
+    return False
+
+def partner_has_premium_access(partner) -> bool:
+    if not partner or not partner.approved:
+        return False
+    if partner.subscription_tier in ("Premium", "Enterprise") and partner.is_active_listing():
+        return True
+    return False
+    
 @partners_bp.route("/dashboard")
 @role_required("partner")
 def dashboard():
@@ -102,16 +117,17 @@ def register():
 def requests_inbox():
     partner = Partner.query.filter_by(user_id=current_user.id).first()
     if not partner:
-        flash("Partner profile not found. Please register first.", "warning")
+        flash("Partner profile not found. Please register.", "warning")
         return redirect(url_for("partners.register"))
 
-    if not _require_pro(partner):
+    if not partner_has_pro_access(partner):
         return render_template("partners/upgrade_required.html", partner=partner), 403
 
     requests_q = PartnerRequest.query.filter_by(partner_id=partner.id)\
         .order_by(PartnerRequest.created_at.desc()).all()
 
     return render_template("partners/requests_inbox.html", partner=partner, requests=requests_q)
+
 
 @partners_bp.route("/requests/<int:req_id>/accept", methods=["POST"])
 @role_required("partner")
@@ -122,32 +138,50 @@ def accept_request(req_id):
     if not partner or req.partner_id != partner.id:
         abort(403)
 
+    if req.status != "pending":
+        flash("Not pending anymore.", "info")
+        return redirect(url_for("partners.requests_inbox"))
+
     req.status = "accepted"
     req.responded_at = datetime.utcnow()
 
-    # ✅ Create a CRM task assigned to partner user
+    # ✅ Tier 1: always create a Task in your CRM system
     t = Task(
-        borrower_id=req.borrower_profile_id,           # Task.borrower_id expects borrower_profile.id
-        title=f"{req.category or partner.category or 'Service'} Request",
-        description=req.message or "New partner request accepted.",
+        borrower_id=req.borrower_profile_id,  # borrower_profile.id
+        title=f"{req.category or partner.category or 'Service'} • New Request",
+        description=req.message or "Partner request accepted.",
         assigned_to=current_user.id,
         status="Pending",
         priority="Normal"
     )
     db.session.add(t)
 
-    # ✅ Add a CRM note (optional)
-    note = CRMNote(
-        borrower_id=req.borrower_profile_id,
-        user_id=current_user.id,
-        content=f"Accepted partner request (Partner: {partner.name})."
-    )
-    db.session.add(note)
+    # ✅ create a CRM note
+    if req.borrower_profile_id:
+        db.session.add(CRMNote(
+            borrower_id=req.borrower_profile_id,
+            user_id=current_user.id,
+            content=f"Accepted partner request (Partner: {partner.name})."
+        ))
+
+    # ✅ Tier 2: if Premium, create a PartnerJob + link the task
+    if partner_has_premium_access(partner):
+        job = PartnerJob(
+            partner_id=partner.id,
+            borrower_profile_id=req.borrower_profile_id,
+            property_id=req.property_id,
+            title=f"{req.category or partner.category or 'Service'} Job",
+            scope=req.message
+        )
+        db.session.add(job)
+        db.session.flush()  # get job.id
+        t.partner_job_id = job.id
 
     db.session.commit()
 
-    flash("Accepted. Added to your Partner CRM tasks.", "success")
+    flash("Accepted. Added to your CRM (and Workspace if Premium).", "success")
     return redirect(url_for("partners.requests_inbox"))
+
 
 @partners_bp.route("/requests/<int:req_id>/decline", methods=["POST"])
 @role_required("partner")
@@ -218,3 +252,25 @@ def decline_partner_request(req_id):
 
     flash("Request declined.", "info")
     return redirect(url_for("partners.partner_requests"))
+
+@partners_bp.route("/workspace")
+@role_required("partner")
+def workspace_home():
+    partner = Partner.query.filter_by(user_id=current_user.id).first()
+    if not partner or not partner_has_premium_access(partner):
+        return render_template("partners/upgrade_required.html", partner=partner), 403
+
+    jobs = PartnerJob.query.filter_by(partner_id=partner.id).order_by(PartnerJob.created_at.desc()).all()
+    return render_template("partners/workspace/home.html", partner=partner, jobs=jobs)
+
+@partners_bp.route("/workspace/jobs/<int:job_id>")
+@role_required("partner")
+def workspace_job(job_id):
+    partner = Partner.query.filter_by(user_id=current_user.id).first()
+    job = PartnerJob.query.get_or_404(job_id)
+
+    if not partner or not partner_has_premium_access(partner) or job.partner_id != partner.id:
+        abort(403)
+
+    tasks = Task.query.filter_by(partner_job_id=job.id).order_by(Task.created_at.desc()).all()
+    return render_template("partners/workspace/job.html", partner=partner, job=job, tasks=tasks)
