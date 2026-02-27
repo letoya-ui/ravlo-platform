@@ -42,7 +42,7 @@ from LoanMVP.models.underwriter_model import UnderwritingCondition
 from LoanMVP.models.borrowers import PropertyAnalysis, ProjectBudget, SubscriptionPlan, ProjectExpense, BorrowerMessage, BorrowerInteraction, Deal, DealShare
 from LoanMVP.models.loan_officer_model import LoanOfficerProfile
 from LoanMVP.models.renovation_models import RenovationMockup
-from LoanMVP.models.partner_models import PartnerRequest, PartnerConnectionRequest
+from LoanMVP.models.partner_models import PartnerConnectionRequest
 
 
 # --- AI / Assistant ---
