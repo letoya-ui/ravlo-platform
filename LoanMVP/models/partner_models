@@ -3,29 +3,6 @@
 from datetime import datetime
 from LoanMVP.extensions import db
 
-class PartnerRequest(db.Model):
-    __tablename__ = "partner_requests"
-
-    id = db.Column(db.Integer, primary_key=True)
-
-    borrower_user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
-    partner_id = db.Column(db.Integer, db.ForeignKey("partners.id"), nullable=False)
-
-    # Optional context (keep nullable so it works now)
-    borrower_profile_id = db.Column(db.Integer, db.ForeignKey("borrower_profile.id"), nullable=True)
-    lead_id = db.Column(db.Integer, db.ForeignKey("lead.id"), nullable=True)
-    property_id = db.Column(db.Integer, db.ForeignKey("property.id"), nullable=True)
-
-    category = db.Column(db.String(100), nullable=True)   # matches Partner.category filter
-    message = db.Column(db.Text, nullable=True)
-
-    status = db.Column(db.String(20), default="pending")  # pending/accepted/declined/canceled/completed
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    responded_at = db.Column(db.DateTime, nullable=True)
-
-    partner = db.relationship("Partner", backref=db.backref("requests", lazy=True))
-    
-
 class PartnerConnectionRequest(db.Model):
     __tablename__ = "partner_connection_requests"
 
