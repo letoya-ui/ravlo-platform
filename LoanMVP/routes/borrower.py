@@ -604,6 +604,23 @@ def loan_timeline(loan_id):
         title="Loan Timeline",
     )
 
+@borrower_bp.route("/loan")
+@role_required("borrower")
+def loan_center():
+    borrower = BorrowerProfile.query.filter_by(user_id=current_user.id).first()
+
+    if not borrower:
+        flash("Please complete your profile before accessing the Loan Center.", "warning")
+        return redirect(url_for("borrower.create_profile"))
+
+    loans = LoanApplication.query.filter_by(borrower_profile_id=borrower.id).all()
+
+    return render_template(
+        "borrower/loan_center.html",
+        borrower=borrower,
+        loans=loans,
+        title="Loan Center"
+    )
 
 
 # =========================================================
