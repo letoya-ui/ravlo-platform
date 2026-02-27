@@ -122,6 +122,9 @@
               Primary stage: <strong>{{ primary_stage or "Application" }}</strong>.
               Keep momentum by completing your <strong>next steps</strong>.
             {% else %}
+               <a href="{{ url_for('borrower.loan_center') }}" class="btn btn-primary btn-lg w-100">
+                   Loan Center
+               </a>
               No active loan yet — start with <strong>Property Search</strong>, run a <strong>Deal Strategy</strong>,
               or launch a new application.
             {% endif %}
@@ -266,9 +269,6 @@
 
         <div class="b-grid-2" style="margin-top:1rem;">
           <div>
-            <a href="{{ url_for('borrower.loan_center') }}" class="btn btn-primary btn-lg w-100">
-                Loan Center
-            </a>
             <label class="muted">Loan Type</label>
             <p>{{ snapshot.loan_type }}</p>
           </div>
