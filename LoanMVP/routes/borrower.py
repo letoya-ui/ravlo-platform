@@ -37,6 +37,7 @@ from LoanMVP.models.property import SavedProperty
 from LoanMVP.models.underwriter_model import UnderwritingCondition
 from LoanMVP.models.borrowers import PropertyAnalysis, ProjectBudget, SubscriptionPlan, ProjectExpense, BorrowerMessage, BorrowerInteraction, Deal, DealShare
 from LoanMVP.models.loan_officer_model import LoanOfficerProfile
+from LoanMVP.models.renovation_models import RenovationMockup
 
 
 # --- AI / Assistant ---
@@ -74,6 +75,8 @@ from LoanMVP.services.unified_resolver import resolve_property_unified
 from LoanMVP.services.property_tool import search_deals_for_zip
 
 from LoanMVP.forms import BorrowerProfileForm
+from openai import OpenAI
+
 
 borrower_bp = Blueprint("borrower", __name__, url_prefix="/borrower")
 
@@ -96,6 +99,9 @@ BORROWER_TIMELINE = [
 # 🔧 Helpers
 # =========================================================
 
+def _openai_client():
+    key = (os.getenv("OPENAI_API_KEY") or "").strip()  # ✅ IMPORTANT
+    return OpenAI(api_key=key)
 
 def safe_float(value, default=0.0):
     try:
@@ -1569,86 +1575,125 @@ def deal_open(deal_id):
     # simplest: redirect with property_id + mode. Workspace can use those to refetch comps/resolved.
     return redirect(url_for("borrower.deal_workspace", property_id=deal.property_id, mode=deal.strategy))
 
-@borrower_bp.route("/ai/renovation_visualizer", methods=["POST"])
+
+@borrower_bp.route("/renovation_visualizer", methods=["POST"])
 @role_required("borrower")
 def renovation_visualizer():
     """
-    AI Renovation Visualizer:
-    - Accepts image_url or uploaded image
-    - Accepts style_prompt or style_preset
-    - Supports multiple variations
-    - Optional: save best result to deal
+    Input:
+      - image_url OR image_file
+      - style_prompt
+      - style_preset
+      - variations (1-4)
+      - save_to_deal true/false
+      - property_id (optional)
+      - saved_property_id (optional)
+      - deal_id (optional)
+    Output:
+      { status: "ok", images: [after_url...], cost_estimate: {...} }
     """
-
-    import base64
-
-    image_url = request.form.get("image_url")
     style_prompt = (request.form.get("style_prompt") or "").strip()
-    style_preset = request.form.get("style_preset")
-    variations = int(request.form.get("variations") or 1)
-    property_id = request.form.get("property_id")
-    save_to_deal = request.form.get("save_to_deal") == "true"
-    uploaded_file = request.files.get("image")
+    style_preset = (request.form.get("style_preset") or "").strip()
+    variations = int(request.form.get("variations") or 2)
+    variations = max(1, min(variations, 4))
 
-    # Preset → prompt mapping
-    if not style_prompt and style_preset:
+    image_url = (request.form.get("image_url") or "").strip()
+    image_file = request.files.get("image_file")
+
+    if not image_url and not image_file:
+        return jsonify({"status": "error", "message": "Provide an image_url or image_file."}), 400
+
+    if not style_prompt:
+        # you can allow preset-only too; this keeps UX clean
         preset_map = {
-            "luxury": "luxury high-end finishes, marble, designer lighting, spa-like feel",
-            "modern": "modern minimalist, clean lines, neutral palette, matte black fixtures",
-            "airbnb": "Airbnb-ready, cozy, Instagrammable, layered textures, warm lighting",
-            "flip": "flip-ready, durable mid-range finishes, bright, neutral, resale-friendly",
-            "budget": "budget-friendly, clean, simple, fresh paint, basic but appealing finishes",
+            "luxury": "luxury HGTV makeover, white shaker cabinets, quartz, warm lighting, modern hardware",
+            "modern": "modern minimalist refresh, white cabinets, clean lines, matte black fixtures, bright airy",
+            "airbnb": "airbnb-ready cozy design, white cabinets, light wood tones, warm lighting, durable finishes",
+            "flip": "flip-ready resale design, white cabinets, neutral palette, mid-range durable finishes",
+            "budget": "budget refresh, white paint, refaced cabinets, simple hardware, clean staged look",
         }
         style_prompt = preset_map.get(style_preset, "")
 
     if not style_prompt:
-        return {"status": "error", "message": "Style prompt required"}, 400
+        return jsonify({"status":"error","message":"Add a style prompt (or choose a preset)."}), 400
 
-    # Convert uploaded file → base64
-    image_data = None
-    if uploaded_file:
-        image_data = base64.b64encode(uploaded_file.read()).decode("utf-8")
+    # ---- Build input image bytes (either from URL or upload) ----
+    # MVP approach:
+    # - If URL: send URL as reference
+    # - If upload: base64 encode it
+    before_ref = None
+    before_url_for_save = image_url
 
-    # Or use URL
-    if not image_data and image_url:
-        image_data = image_url
+    if image_file:
+        raw = image_file.read()
+        b64 = base64.b64encode(raw).decode("utf-8")
+        # data URL (works for quick demo; long-term use S3/Cloudinary)
+        mime = image_file.mimetype or "image/jpeg"
+        before_url_for_save = f"data:{mime};base64,{b64}"
+        before_ref = before_url_for_save
+    else:
+        before_ref = image_url
 
-    if not image_data:
-        return {"status": "error", "message": "No image provided"}, 400
+    # ---- Generate images ----
+    client = _openai_client()
 
-    # AI transformation
+    # NOTE: API varies by SDK version. If you're already using image generation elsewhere,
+    # mirror that call. This is the *shape* you want:
     try:
-        from LoanMVP.services.ai_image import transform_image_style
+        # PSEUDO-CALL: replace with your actual image endpoint call in your codebase
+        # For example if you have an internal service wrapper, call that here.
+        #
+        # result = client.images.generate(
+        #   model="gpt-image-1",
+        #   prompt=f"HGTV renovation after photo. {style_prompt}. Keep same room layout.",
+        #   image=before_ref,
+        #   n=variations,
+        #   size="1024x1024"
+        # )
+        #
+        # after_urls = [img.url for img in result.data]
 
-        images = []
-        for _ in range(max(1, min(variations, 4))):
-            img = transform_image_style(
-                image=image_data,
-                style_prompt=style_prompt,
-            )
-            images.append(img)
-
-        # Placeholder for cost estimate
-        cost_estimate = {
-            "status": "todo",
-            "note": "Connect this to your rehab engine for style-based cost estimation."
-        }
-
-        # Optional: save best result to deal
-        if save_to_deal and property_id:
-            # TODO: implement persistence (e.g., DealAsset table)
-            pass
-
-        return {
-            "status": "ok",
-            "images": images,
-            "cost_estimate": cost_estimate,
-        }
+        after_urls = []  # <-- replace with real output from your generator
+        # For now, fail loudly so you hook in your current image pipeline
+        if not after_urls:
+            raise RuntimeError("Hook image generation call here (after_urls empty).")
 
     except Exception as e:
-        print("Renovation visualizer error:", e)
-        return {"status": "error", "message": "AI transformation failed"}, 500
+        return jsonify({"status":"error","message":f"Visualizer failed: {str(e)}"}), 500
 
+    # ---- Optional: save to DB (first after image or all) ----
+    save_to_deal = (request.form.get("save_to_deal") or "").lower() == "true"
+    property_id = (request.form.get("property_id") or "").strip() or None
+    saved_property_id = request.form.get("saved_property_id")
+    deal_id = request.form.get("deal_id")
+
+    if save_to_deal:
+        for after_url in after_urls:
+            mock = RenovationMockup(
+                user_id=current_user.id,
+                property_id=property_id,
+                saved_property_id=int(saved_property_id) if saved_property_id else None,
+                deal_id=int(deal_id) if deal_id else None,
+                before_url=before_url_for_save,
+                after_url=after_url,
+                style_prompt=style_prompt,
+                style_preset=style_preset or None,
+            )
+            db.session.add(mock)
+        db.session.commit()
+
+    return jsonify({
+        "status": "ok",
+        "images": after_urls,
+        "cost_estimate": {"note": "Estimate: attach your rehab cost logic here if desired."}
+    })
+    
+@borrower_bp.route("/deal/<int:deal_id>/reveal")
+@role_required("borrower")
+def deal_reveal(deal_id):
+    mockups = RenovationMockup.query.filter_by(deal_id=deal_id, user_id=current_user.id)\
+                                   .order_by(RenovationMockup.created_at.desc()).all()
+    return render_template("borrower/deal_reveal.html", deal_id=deal_id, mockups=mockups)
 
 @borrower_bp.route("/deals/send-to-lo", methods=["POST"])
 @role_required("borrower")
