@@ -76,8 +76,6 @@ from LoanMVP.models.ai_models import LoanAIConversation, AIAuditLog, LoanOfficer
 
 from LoanMVP.models.system_models import System, SystemLog, AuditLog, SystemSettings
 
-from LoanMVP.models.chat_models import ChatHistory
-
 from LoanMVP.models.campaign_model import Campaign, CampaignRecipient, CampaignMessage
 
 from LoanMVP.models.call_model import CallLog, CommunicationLog
@@ -89,7 +87,7 @@ from LoanMVP.models.activity_models import BorrowerActivity
 from LoanMVP.models.payment_models import PaymentRecord
 
 from LoanMVP.models.credit_models import SoftCreditReport
-from LoanMVP.models.partner_models import PartnerRequest, PartnerJob,PartnerConnectionRequest
+from LoanMVP.models.partner_models import  PartnerJob, PartnerConnectionRequest
 from LoanMVP.models.renovation_models import RenovationMockup
 # ======================================================
 # 🧩 SQLAlchemy Export (for Migrate / Shell)
