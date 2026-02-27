@@ -42,7 +42,8 @@ from LoanMVP.models.underwriter_model import UnderwritingCondition
 from LoanMVP.models.borrowers import PropertyAnalysis, ProjectBudget, SubscriptionPlan, ProjectExpense, BorrowerMessage, BorrowerInteraction, Deal, DealShare
 from LoanMVP.models.loan_officer_model import LoanOfficerProfile
 from LoanMVP.models.renovation_models import RenovationMockup
-from LoanMVP.models.partner_models import PartnerRequest
+from LoanMVP.models.partner_models import PartnerRequest, PartnerConnectionRequest
+
 
 # --- AI / Assistant ---
 from LoanMVP.ai.master_ai import master_ai
@@ -1084,13 +1085,16 @@ def borrower_search():
 @borrower_bp.route('/partners/filter')
 @role_required("borrower")
 def filter_partners():
-    category = request.args.get('category')
-    partners = Partner.query.filter_by(active=True)
+    category = (request.args.get('category') or "All").strip()
 
-    if category and category != "All":
-        partners = partners.filter_by(category=category)
+    q = Partner.query.filter_by(active=True)
 
-    partners = partners.order_by(Partner.name.asc()).all()
+    if category and category.lower() != "all":
+        # NOTE: you used Partner.category; earlier you used partner.role in other routes.
+        # Keep category if that's your column; otherwise change to role.
+        q = q.filter_by(category=category)
+
+    partners = q.order_by(Partner.name.asc()).all()
 
     return render_template(
         'borrower/partner_list.html',
@@ -1180,6 +1184,60 @@ def borrower_partner_requests():
     requests_q = PartnerRequest.query.filter_by(borrower_user_id=current_user.id)\
         .order_by(PartnerRequest.created_at.desc()).all()
     return render_template("borrower/partners/requests.html", requests=requests_q)
+
+
+@borrower_bp.route("/partners/requests")
+@role_required("borrower")
+def my_partner_requests():
+    requests_q = PartnerConnectionRequest.query.filter_by(borrower_user_id=current_user.id)\
+        .order_by(PartnerConnectionRequest.created_at.desc()).all()
+
+    return render_template("borrower/partner_requests.html", requests=requests_q)
+
+
+
+@borrower_bp.route('/partners/request/<int:partner_id>', methods=['POST'])
+@role_required("borrower")
+def request_partner_connection(partner_id):
+    partner = Partner.query.get_or_404(partner_id)
+
+    category = (request.form.get("category") or request.json.get("category") if request.is_json else None)
+    message  = (request.form.get("message")  or request.json.get("message")  if request.is_json else None)
+
+    category = (category or "").strip() or None
+    message = (message or "").strip() or None
+
+    # ✅ stop duplicates (pending)
+    existing = PartnerConnectionRequest.query.filter_by(
+        borrower_user_id=current_user.id,
+        partner_id=partner.id,
+        status="pending"
+    ).first()
+    if existing:
+        return jsonify({
+            "success": True,
+            "message": f"You already have a pending request to {partner.name}."
+        })
+
+    req = PartnerConnectionRequest(
+        borrower_user_id=current_user.id,
+        partner_id=partner.id,
+        category=category,
+        message=message
+    )
+    db.session.add(req)
+    db.session.commit()
+
+    # TODO (optional): notify loan officer / processor / partner via your notification system
+    # send_notification(user_id=partner.user_id, ...)
+
+    return jsonify({
+        "success": True,
+        "message": f"Connection request sent to {partner.name}.",
+        "request_id": req.id,
+        "status": req.status
+    })
+    
 # =========================================================
 # 💬 Messages
 # =========================================================
@@ -1211,7 +1269,6 @@ def messages():
         selected_receiver=receiver_id,
         title="Messages",
     )
-
 
 @borrower_bp.route("/messages/send", methods=["POST"])
 @role_required("borrower")
