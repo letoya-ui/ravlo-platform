@@ -3,7 +3,7 @@ from flask_login import login_required, current_user
 from datetime import datetime
 from LoanMVP.utils.decorators import role_required
 from LoanMVP.extensions import db
-from LoanMVP.crm import Partner
+from LoanMVP.models.crm_models import Partner, Task, CRMNote
 from LoanMVP.models.partner_models import PartnerRequest, PartnerConnectionRequest
 
 def partner_tier(partner: Partner) -> str:
@@ -14,7 +14,13 @@ def partner_tier(partner: Partner) -> str:
     if partner.subscription_tier in ("Featured", "Pro") and partner.is_active_listing():
         return "Pro"
     return "Free"
-    
+
+def _require_pro(partner):
+    # You can tweak this rule anytime
+    if partner.subscription_tier in ("Free", None):
+        return False
+    return partner.is_active_listing()
+
 @partners_bp.route("/dashboard")
 @role_required("partner")
 def dashboard():
@@ -59,13 +65,13 @@ def center():
     )
 
 @partners_bp.route("/<int:partner_id>")
-@login_required
+@role_required("partner")
 def profile(partner_id):
     partner = Partner.query.get_or_404(partner_id)
     return render_template("partners/profile.html", partner=partner)
 
 @partners_bp.route("/register", methods=["GET", "POST"])
-@login_required
+@role_required("partner")
 def register():
     if request.method == "POST":
         role = request.form.get("role")
@@ -89,15 +95,17 @@ def register():
 
     return render_template("partners/register.html")
 
+
+
 @partners_bp.route("/requests")
 @role_required("partner")
 def requests_inbox():
     partner = Partner.query.filter_by(user_id=current_user.id).first()
     if not partner:
+        flash("Partner profile not found. Please register first.", "warning")
         return redirect(url_for("partners.register"))
 
-    # Gate: only Pro+ can see inbox (or allow Free too; your call)
-    if partner.subscription_tier == "Free":
+    if not _require_pro(partner):
         return render_template("partners/upgrade_required.html", partner=partner), 403
 
     requests_q = PartnerRequest.query.filter_by(partner_id=partner.id)\
@@ -117,38 +125,44 @@ def accept_request(req_id):
     req.status = "accepted"
     req.responded_at = datetime.utcnow()
 
-    # ✅ Auto-create a Task assigned to the partner user (simple CRM)
+    # ✅ Create a CRM task assigned to partner user
     t = Task(
-        borrower_id=req.borrower_profile_id,   # your Task expects borrower_profile.id
-        title=f"Partner Request: {req.category or partner.category or 'Service'}",
-        description=(req.message or "New partner request accepted."),
+        borrower_id=req.borrower_profile_id,           # Task.borrower_id expects borrower_profile.id
+        title=f"{req.category or partner.category or 'Service'} Request",
+        description=req.message or "New partner request accepted.",
         assigned_to=current_user.id,
-        status="Pending"
+        status="Pending",
+        priority="Normal"
     )
     db.session.add(t)
+
+    # ✅ Add a CRM note (optional)
+    note = CRMNote(
+        borrower_id=req.borrower_profile_id,
+        user_id=current_user.id,
+        content=f"Accepted partner request (Partner: {partner.name})."
+    )
+    db.session.add(note)
+
     db.session.commit()
 
-    flash("Accepted. Task created in your Partner CRM.", "success")
+    flash("Accepted. Added to your Partner CRM tasks.", "success")
     return redirect(url_for("partners.requests_inbox"))
-    
-@partners_bp.route("/requests/<int:request_id>/decline", methods=["POST"])
-@role_required("partner")
-def decline_request(request_id):
-    partner = Partner.query.filter_by(user_id=current_user.id).first()
-    pr = PartnerRequest.query.get_or_404(request_id)
 
-    if not partner or pr.partner_id != partner.id:
+@partners_bp.route("/requests/<int:req_id>/decline", methods=["POST"])
+@role_required("partner")
+def decline_request(req_id):
+    partner = Partner.query.filter_by(user_id=current_user.id).first()
+    req = PartnerRequest.query.get_or_404(req_id)
+
+    if not partner or req.partner_id != partner.id:
         abort(403)
 
-    if pr.status != "pending":
-        flash("This request is no longer pending.", "info")
-        return redirect(url_for("partners.requests_inbox"))
-
-    pr.status = "declined"
-    pr.responded_at = datetime.utcnow()
+    req.status = "declined"
+    req.responded_at = datetime.utcnow()
     db.session.commit()
 
-    flash("Request declined.", "info")
+    flash("Declined.", "info")
     return redirect(url_for("partners.requests_inbox"))
 
 
