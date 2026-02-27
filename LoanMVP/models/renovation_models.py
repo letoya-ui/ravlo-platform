@@ -11,7 +11,7 @@ class RenovationMockup(db.Model):
 
     property_id = db.Column(db.String(64), nullable=True)  # your "property_id" string
     saved_property_id = db.Column(db.Integer, db.ForeignKey("saved_properties.id"), nullable=True)
-    deal_id = db.Column(db.Integer, db.ForeignKey("deal.id"), nullable=True)
+    deal_id = db.Column(db.Integer, db.ForeignKey("deals.id"), nullable=True)
 
     before_url = db.Column(db.Text, nullable=False)
     after_url = db.Column(db.Text, nullable=False)
