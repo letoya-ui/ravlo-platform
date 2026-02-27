@@ -287,18 +287,27 @@
 
     <!-- COLUMN 3: PHOTOS -->
     <div class="dw-card">
-      <h3>🖼️ Photos</h3>
+     <h3>🖼️ Photos</h3>
+
+     <div style="display:flex; gap:.5rem; flex-wrap:wrap; margin-bottom:.75rem;">
+        <label class="dw-button" style="cursor:pointer;">
+          📷 Upload Photo
+          <input type="file" id="uploadRoomPhoto" accept="image/*" style="display:none;">
+        </label>
+        <button type="button" class="dw-button" onclick="openStyleModal(null)">✨ Open Visualizer</button>
+      </div>
+
       {% if resolved.property and resolved.property.photos %}
         <div class="photo-carousel">
           {% for photo in resolved.property.photos %}
-            <img src="{{ photo }}" alt="Property photo">
-            <button type="button" class="dw-button" onclick="openStyleModal('{{ photo }}')">
-              ✨ AI: Reimagine This Room
+            <img src="{{ photo }}" alt="Property photo" style="width:100%; border-radius:10px; margin-bottom:.6rem;">
+           <button type="button" class="dw-button" onclick="openStyleModal('{{ photo }}')">
+              ✨ Reimagine This Room (HGTV)
             </button>
           {% endfor %}
         </div>
       {% else %}
-        <p class="ai-text">No photos available.</p>
+       <p class="ai-text">No photos available. Upload one to start.</p>
       {% endif %}
     </div>
 
