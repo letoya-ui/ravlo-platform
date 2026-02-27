@@ -2029,19 +2029,23 @@ def edit_loan(loan_id):
 # =========================================================
 # 🔍 Property Search & Saved Properties
 # =========================================================
-
 @borrower_bp.route("/property_search", methods=["GET"])
 @role_required("borrower")
 def property_search():
     borrower = BorrowerProfile.query.filter_by(user_id=current_user.id).first()
 
-    query = request.args.get("query", "").strip()
+    query = (request.args.get("query") or "").strip()
 
     property_data = None
     ai_summary = None
     error = None
     debug = None
     saved_id = None
+
+    # NEW: template expects these
+    valuation = {}
+    rent_estimate = {}
+    comps = {}
 
     def normalize_property(p: dict) -> dict:
         """Make sure templates always get a consistent payload."""
@@ -2054,18 +2058,36 @@ def property_search():
         p.setdefault("state", p.get("state") or p.get("region") or p.get("stateCode"))
         p.setdefault("address", p.get("address") or p.get("formattedAddress") or query)
 
-        # listing price might not exist for RentCast — keep price None
+        # Normalize price (may be None for RentCast)
         if p.get("price") is not None:
             try:
                 p["price"] = float(p["price"])
             except Exception:
                 pass
 
-        # photos should be string or list; keep as-is but avoid empty dict
-        if p.get("photos") in ({}, []):
+        # Normalize beds/baths/sqft if present
+        for k in ("beds", "baths", "sqft", "year_built"):
+            if p.get(k) is not None:
+                try:
+                    if k in ("baths",):
+                        p[k] = float(p[k])
+                    else:
+                        p[k] = int(float(p[k]))
+                except Exception:
+                    pass
+
+        # photos should be string or list; keep as-is but avoid empty dict/list
+        if p.get("photos") in ({}, [], ""):
             p["photos"] = None
 
+        # property_id aliases (important for dedupe)
+        if not p.get("property_id"):
+            p["property_id"] = p.get("propertyId") or p.get("id")
+
         return p
+
+    def safe_dict(x):
+        return x if isinstance(x, dict) else {}
 
     if query:
         from LoanMVP.services.unified_resolver import resolve_property_unified
@@ -2074,19 +2096,45 @@ def property_search():
         print("PROPERTY SEARCH RESOLVED =>", resolved)
 
         if resolved.get("status") == "ok":
-            property_data = normalize_property(resolved.get("property") or {})
+            prop = normalize_property(resolved.get("property") or {})
+            property_data = prop
             ai_summary = resolved.get("ai_summary")
 
-            # Check if already saved
-            if borrower and property_data.get("address"):
+            # Pull these safely for your template
+            valuation = safe_dict(prop.get("valuation") or resolved.get("valuation"))
+            rent_estimate = safe_dict(prop.get("rent_estimate") or resolved.get("rent_estimate"))
+            comps = safe_dict(prop.get("comps") or resolved.get("comps"))
+
+            # If resolver uses comps.sales/comps.rentals already, good.
+            # If it uses comps = {"sales":[...], "rentals":[...]}, your template works.
+
+            # ✅ Check if already saved (robust)
+            if borrower and prop.get("address"):
                 try:
-                    existing = SavedProperty.query.filter_by(
-                        borrower_profile_id=borrower.id,
-                        address=property_data.get("address")
-                    ).first()
+                    normalized_addr = (prop.get("address") or "").strip()
+                    prop_pid = (prop.get("property_id") or "")
+                    prop_pid = str(prop_pid).strip() if prop_pid else None
+
+                    existing = None
+
+                    # Prefer matching by provider property_id if we have it
+                    if prop_pid:
+                        existing = SavedProperty.query.filter_by(
+                            borrower_profile_id=borrower.id,
+                            property_id=prop_pid
+                        ).first()
+
+                    # Fallback: case-insensitive address compare
+                    if not existing and normalized_addr:
+                        existing = SavedProperty.query.filter(
+                            SavedProperty.borrower_profile_id == borrower.id,
+                            db.func.lower(SavedProperty.address) == normalized_addr.lower()
+                        ).first()
+
                     if existing:
                         saved_id = existing.id
-                except Exception:
+                except Exception as e:
+                    print("SavedProperty lookup error:", e)
                     saved_id = None
 
         else:
@@ -2098,17 +2146,25 @@ def property_search():
 
     return render_template(
         "borrower/property_search.html",
+        borrower=borrower,
+
         property=property_data,
         ai_summary=ai_summary,
-        borrower=borrower,
-        title="Property Search",
-        active_tab="property",
+
+        # NEW: pass what your template is already using
+        valuation=valuation,
+        rent_estimate=rent_estimate,
+        comps=comps,
+
         error=error,
         debug=debug,
         saved_id=saved_id,
-        query=query
-    )
+        query=query,
 
+        title="Property Search",
+        active_page="property_search",  # matches your slim sidebar pattern
+    )
+    
 @borrower_bp.route("/save_property", methods=["POST"])
 @role_required("borrower")
 def save_property():
