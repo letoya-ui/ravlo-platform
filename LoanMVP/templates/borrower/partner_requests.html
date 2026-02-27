@@ -1,0 +1,16 @@
+{% extends "layouts/base.html" %}
+{% block content %}
+
+<h2>My Partner Requests</h2>
+
+{% for r in requests %}
+  <div class="card mb-2 p-2">
+    <strong>{{ r.partner.name }}</strong><br>
+    Status: {{ r.status }}<br>
+    Sent: {{ r.created_at.strftime("%Y-%m-%d") }}
+  </div>
+{% else %}
+  <p>No requests yet.</p>
+{% endfor %}
+
+{% endblock %}
