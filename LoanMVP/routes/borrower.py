@@ -1080,46 +1080,61 @@ def borrower_search():
 
 
 # ============================
-# PARTNER FILTER
+# BORROWER → PARTNERS (FILTER/LIST/REQUEST)
 # ============================
-@borrower_bp.route('/partners/filter')
+
+@borrower_bp.route("/partners/filter")
 @role_required("borrower")
 def filter_partners():
-    category = (request.args.get('category') or "All").strip()
+    category = (request.args.get("category") or "All").strip()
 
-    q = Partner.query.filter_by(active=True)
+    q = Partner.query.filter_by(active=True, approved=True)
 
     if category and category.lower() != "all":
-        # NOTE: you used Partner.category; earlier you used partner.role in other routes.
-        # Keep category if that's your column; otherwise change to role.
         q = q.filter_by(category=category)
 
     partners = q.order_by(Partner.name.asc()).all()
 
     return render_template(
-        'borrower/partner_list.html',
+        "borrower/partner_list.html",
         partners=partners,
         category=category
     )
 
 
-# ============================
-# PARTNER CONNECTION REQUEST
-# ============================
-@borrower_bp.route('/partners/request/<int:partner_id>', methods=['POST'])
+@borrower_bp.route("/partners/requests")
+@role_required("borrower")
+def my_partner_requests():
+    borrower_profile = BorrowerProfile.query.filter_by(user_id=current_user.id).first()
+
+    reqs = PartnerConnectionRequest.query.filter_by(borrower_user_id=current_user.id) \
+        .order_by(PartnerConnectionRequest.created_at.desc()).all()
+
+    return render_template(
+        "borrower/partner_requests.html",
+        borrower=borrower_profile,
+        requests=reqs
+    )
+
+
+@borrower_bp.route("/partners/request/<int:partner_id>", methods=["POST"])
 @role_required("borrower")
 def request_partner_connection(partner_id):
     partner = Partner.query.get_or_404(partner_id)
 
-    # Only allow approved listings
-    if not partner.approved:
-        return jsonify({"success": False, "message": "This partner is not available yet."}), 403
+    if not partner.approved or not partner.active:
+        return jsonify({"success": False, "message": "This partner is not available."}), 403
 
-    category = (request.form.get("category") or "").strip() or None
-    message  = (request.form.get("message") or "").strip() or None
+    payload = request.get_json(silent=True) or {}
+    category = (request.form.get("category") or payload.get("category") or partner.category or "").strip() or None
+    message = (request.form.get("message") or payload.get("message") or "").strip() or None
+    property_id = request.form.get("property_id") or payload.get("property_id")
+    lead_id = request.form.get("lead_id") or payload.get("lead_id")
 
-    # Prevent duplicates
-    existing = PartnerRequest.query.filter_by(
+    borrower_profile = BorrowerProfile.query.filter_by(user_id=current_user.id).first()
+
+    # ✅ prevent duplicate pending requests
+    existing = PartnerConnectionRequest.query.filter_by(
         borrower_user_id=current_user.id,
         partner_id=partner.id,
         status="pending"
@@ -1127,16 +1142,16 @@ def request_partner_connection(partner_id):
     if existing:
         return jsonify({"success": True, "message": "You already have a pending request."})
 
-    # Optional link to borrower_profile if you have it
-    borrower_profile = BorrowerProfile.query.filter_by(user_id=current_user.id).first()
-
-    req = PartnerRequest(
+    req = PartnerConnectionRequest(
         borrower_user_id=current_user.id,
         borrower_profile_id=borrower_profile.id if borrower_profile else None,
         partner_id=partner.id,
-        category=category or partner.category,
+        property_id=int(property_id) if property_id else None,
+        lead_id=int(lead_id) if lead_id else None,
+        category=category,
         message=message
     )
+
     db.session.add(req)
     db.session.commit()
 
@@ -1167,41 +1182,7 @@ def borrower_partner_profile(partner_id):
 
     return render_template("borrower/partners/profile.html", partner=partner, existing=existing)
 
-@borrower_bp.route("/partners/request/<int:partner_id>", methods=["POST"])
-@role_required("borrower")
-def request_partner(partner_id):
-    partner = Partner.query.get_or_404(partner_id)
 
-    message = (request.form.get("message") or "").strip()
-    category = (request.form.get("category") or "").strip() or None
-
-    # optional link to deal/property if you pass it
-    deal_id = request.form.get("deal_id")
-    property_id = request.form.get("property_id")
-
-    # prevent spam duplicates (pending only)
-    existing = PartnerRequest.query.filter_by(
-        borrower_user_id=current_user.id,
-        partner_id=partner.id,
-        status="pending"
-    ).first()
-    if existing:
-        flash("You already have a pending request to this partner.", "info")
-        return redirect(url_for("borrower.borrower_partner_profile", partner_id=partner.id))
-
-    pr = PartnerRequest(
-        borrower_user_id=current_user.id,
-        partner_id=partner.id,
-        category=category,
-        message=message or None,
-        deal_id=int(deal_id) if deal_id else None,
-        property_id=int(property_id) if property_id else None
-    )
-    db.session.add(pr)
-    db.session.commit()
-
-    flash("Request sent. The partner will be notified in their dashboard.", "success")
-    return redirect(url_for("borrower.borrower_partner_profile", partner_id=partner.id))
 
 @borrower_bp.route("/partners/requests")
 @role_required("borrower")
@@ -1223,47 +1204,6 @@ def my_partner_requests():
 
 
 
-@borrower_bp.route('/partners/request/<int:partner_id>', methods=['POST'])
-@role_required("borrower")
-def request_partner_connection(partner_id):
-    partner = Partner.query.get_or_404(partner_id)
-
-    category = (request.form.get("category") or request.json.get("category") if request.is_json else None)
-    message  = (request.form.get("message")  or request.json.get("message")  if request.is_json else None)
-
-    category = (category or "").strip() or None
-    message = (message or "").strip() or None
-
-    # ✅ stop duplicates (pending)
-    existing = PartnerConnectionRequest.query.filter_by(
-        borrower_user_id=current_user.id,
-        partner_id=partner.id,
-        status="pending"
-    ).first()
-    if existing:
-        return jsonify({
-            "success": True,
-            "message": f"You already have a pending request to {partner.name}."
-        })
-
-    req = PartnerConnectionRequest(
-        borrower_user_id=current_user.id,
-        partner_id=partner.id,
-        category=category,
-        message=message
-    )
-    db.session.add(req)
-    db.session.commit()
-
-    # TODO (optional): notify loan officer / processor / partner via your notification system
-    # send_notification(user_id=partner.user_id, ...)
-
-    return jsonify({
-        "success": True,
-        "message": f"Connection request sent to {partner.name}.",
-        "request_id": req.id,
-        "status": req.status
-    })
     
 # =========================================================
 # 💬 Messages
