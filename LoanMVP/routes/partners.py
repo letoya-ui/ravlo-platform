@@ -11,6 +11,10 @@ from LoanMVP.models.partner_models import PartnerRequest
 def dashboard():
     partner = Partner.query.filter_by(user_id=current_user.id).first()
 
+    pending_count = 0
+    if partner:
+        pending_count = PartnerRequest.query.filter_by(partner_id=partner.id, status="pending").count()
+
     dashboards = {
         "contractor": "partners/dashboards/contractor.html",
         "designer": "partners/dashboards/designer.html",
@@ -26,7 +30,7 @@ def dashboard():
     }
 
     template = dashboards.get(partner.role, "partners/dashboards/default.html")
-    return render_template(template, partner=partner)
+    return render_template(template, partner=partner, pending_count=pending_count)
 
 @partners_bp.route("/")
 @role_required("partner")
