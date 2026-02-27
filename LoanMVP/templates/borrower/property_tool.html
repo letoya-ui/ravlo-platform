@@ -91,7 +91,7 @@ async function saveAndAnalyze(item){
   }
 
   try{
-    const resp = await fetch("{{ url_for('borrower.api_property_tool_save_and_analyze') }}", {
+    const resp = await fetch("{{ url_for('borrower.api_property_tool_save') }}", {
       method: "POST",
       headers: {"Content-Type":"application/json"},
       body: JSON.stringify({
@@ -137,7 +137,7 @@ async function saveOnly(item){
   }
 
   try{
-    const resp = await fetch("{{ url_for('borrower.api_property_tool_save_and_analyze') }}", {
+    const resp = await fetch("{{ url_for('borrower.api_property_tool_save') }}", {
       method: "POST",
       headers: {"Content-Type":"application/json"},
       body: JSON.stringify({
