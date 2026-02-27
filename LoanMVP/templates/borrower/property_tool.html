@@ -201,7 +201,7 @@ async function runSearch(){
   status.innerText = "Searching…";
   results.innerHTML = "";
 
-  const resp = await fetch("{{ url_for('borrower.api_property_tool') }}", {
+  const resp = await fetch("{{ url_for('borrower.api_property_tool_save_and_analyze') }}", {
     method:"POST",
     headers: {"Content-Type":"application/json"},
     body: JSON.stringify(payload)
