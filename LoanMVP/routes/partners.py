@@ -4,7 +4,7 @@ from datetime import datetime
 from LoanMVP.utils.decorators import role_required
 from LoanMVP.extensions import db
 from LoanMVP.models.crm_models import Partner, Task, CRMNote
-from LoanMVP.models.partner_models import PartnerRequest, PartnerConnectionRequest, PartnerJob
+from LoanMVP.models.partner_models import PartnerConnectionRequest, PartnerJob
 
 def partner_tier(partner: Partner) -> str:
     if not partner.approved:
