@@ -1109,13 +1109,38 @@ def filter_partners():
 @borrower_bp.route('/partners/request/<int:partner_id>', methods=['POST'])
 @role_required("borrower")
 def request_partner_connection(partner_id):
-    borrower = current_user
     partner = Partner.query.get_or_404(partner_id)
 
-    # TODO: Save request or notify LO/Processor
-    return jsonify({"success": True, "message": f"Connection request sent to {partner.name}."})
+    # Only allow approved listings
+    if not partner.approved:
+        return jsonify({"success": False, "message": "This partner is not available yet."}), 403
 
-# LoanMVP/routes/borrower_routes.py
+    category = (request.form.get("category") or "").strip() or None
+    message  = (request.form.get("message") or "").strip() or None
+
+    # Prevent duplicates
+    existing = PartnerRequest.query.filter_by(
+        borrower_user_id=current_user.id,
+        partner_id=partner.id,
+        status="pending"
+    ).first()
+    if existing:
+        return jsonify({"success": True, "message": "You already have a pending request."})
+
+    # Optional link to borrower_profile if you have it
+    borrower_profile = BorrowerProfile.query.filter_by(user_id=current_user.id).first()
+
+    req = PartnerRequest(
+        borrower_user_id=current_user.id,
+        borrower_profile_id=borrower_profile.id if borrower_profile else None,
+        partner_id=partner.id,
+        category=category or partner.category,
+        message=message
+    )
+    db.session.add(req)
+    db.session.commit()
+
+    return jsonify({"success": True, "message": f"Connection request sent to {partner.name}.", "request_id": req.id})
 
 @borrower_bp.route("/partners")
 @role_required("borrower")
