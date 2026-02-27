@@ -2,9 +2,12 @@
 
 import os
 import base64
+import uuid
+import requests
 import json
 from datetime import datetime
 from io import BytesIO
+from PIL import Image
 
 from flask import (
     Blueprint,
@@ -22,6 +25,7 @@ from flask import (
 from flask_login import current_user
 from werkzeug.utils import secure_filename
 from werkzeug.datastructures import ImmutableMultiDict
+from sqlalchemy.exc import SQLAlchemyError
 
 from LoanMVP.extensions import db, stripe
 from LoanMVP.utils.decorators import role_required
@@ -74,6 +78,7 @@ from LoanMVP.services.deal_export_service import (
 from LoanMVP.services.unified_resolver import resolve_property_unified
 from LoanMVP.services.property_tool import search_deals_for_zip
 from LoanMVP.services.ai_image_service import generate_renovation_images
+from LoanMVP.services.openai_client import get_openai_client
 
 from LoanMVP.forms import BorrowerProfileForm
 from openai import OpenAI
@@ -131,7 +136,40 @@ def _safe_json_loads(s, default=None):
         return json.loads(s)
     except Exception:
         return default
+def _safe_int(val, default=1, min_v=1, max_v=4):
+    try:
+        n = int(val)
+        return max(min_v, min(max_v, n))
+    except Exception:
+        return default
 
+def _download_image_bytes(url: str, timeout=15) -> bytes:
+    # basic allowlist could be added later (S3/CDN only), but MVP is fine
+    resp = requests.get(url, timeout=timeout)
+    resp.raise_for_status()
+    return resp.content
+
+def _to_png_bytes(img_bytes: bytes, max_size=1024) -> bytes:
+    im = Image.open(BytesIO(img_bytes)).convert("RGB")
+    im.thumbnail((max_size, max_size))
+    out = BytesIO()
+    im.save(out, format="PNG", optimize=True)
+    return out.getvalue()
+
+def _save_to_static(png_bytes: bytes, subdir="visualizer") -> str:
+    # Save to /static/uploads/visualizer/<uuid>.png
+    static_dir = current_app.static_folder  # e.g. .../LoanMVP/static
+    upload_dir = os.path.join(static_dir, "uploads", subdir)
+    os.makedirs(upload_dir, exist_ok=True)
+
+    filename = f"{uuid.uuid4().hex}.png"
+    path = os.path.join(upload_dir, filename)
+    with open(path, "wb") as f:
+        f.write(png_bytes)
+
+    # Return a public URL
+    return f"/static/uploads/{subdir}/{filename}"
+    
 # =========================================================
 # 🏠 Borrower Dashboard
 # =========================================================
@@ -1576,108 +1614,106 @@ def deal_open(deal_id):
     # simplest: redirect with property_id + mode. Workspace can use those to refetch comps/resolved.
     return redirect(url_for("borrower.deal_workspace", property_id=deal.property_id, mode=deal.strategy))
 
-
 @borrower_bp.route("/renovation_visualizer", methods=["POST"])
 @role_required("borrower")
 def renovation_visualizer():
     """
-    Input:
-      - image_url OR image_file
-      - style_prompt
-      - style_preset
-      - variations (1-4)
-      - save_to_deal true/false
-      - property_id (optional)
-      - saved_property_id (optional)
-      - deal_id (optional)
-    Output:
-      { status: "ok", images: [after_url...], cost_estimate: {...} }
+    Takes an existing property photo URL, applies a renovation style prompt,
+    returns 1-4 generated images (as hosted static files).
     """
-    style_prompt = (request.form.get("style_prompt") or "").strip()
-    style_preset = (request.form.get("style_preset") or "").strip()
-    variations = int(request.form.get("variations") or 2)
-    variations = max(1, min(variations, 4))
 
     image_url = (request.form.get("image_url") or "").strip()
-    image_file = request.files.get("image_file")
+    style_prompt = (request.form.get("style_prompt") or "").strip()
+    style_preset = (request.form.get("style_preset") or "").strip()
+    variations = _safe_int(request.form.get("variations"), default=2, min_v=1, max_v=4)
+    save_to_deal = (request.form.get("save_to_deal") or "").lower() in ("1", "true", "yes", "on")
+    property_id = (request.form.get("property_id") or "").strip()
 
-    if not image_url and not image_file:
-        return jsonify({"status": "error", "message": "Provide an image_url or image_file."}), 400
+    if not image_url:
+        return jsonify({"status": "error", "message": "Missing image_url."}), 400
 
-    if not style_prompt:
-        # you can allow preset-only too; this keeps UX clean
-        preset_map = {
-            "luxury": "luxury HGTV makeover, white shaker cabinets, quartz, warm lighting, modern hardware",
-            "modern": "modern minimalist refresh, white cabinets, clean lines, matte black fixtures, bright airy",
-            "airbnb": "airbnb-ready cozy design, white cabinets, light wood tones, warm lighting, durable finishes",
-            "flip": "flip-ready resale design, white cabinets, neutral palette, mid-range durable finishes",
-            "budget": "budget refresh, white paint, refaced cabinets, simple hardware, clean staged look",
-        }
-        style_prompt = preset_map.get(style_preset, "")
+    # If user didn't type prompt, but selected preset, we still allow it.
+    if not style_prompt and not style_preset:
+        return jsonify({"status": "error", "message": "Add a style prompt or choose a preset."}), 400
 
-    if not style_prompt:
-        return jsonify({"status":"error","message":"Add a style prompt (or choose a preset)."}), 400
+    # Combine preset into the final prompt
+    preset_map = {
+        "luxury": "Luxury HGTV renovation: bright, high-end finishes, clean staging, premium lighting.",
+        "modern": "Modern renovation: clean lines, minimal clutter, matte black fixtures, neutral palette.",
+        "airbnb": "Airbnb-ready renovation: cozy, warm lighting, durable finishes, photogenic styling.",
+        "flip": "Flip-ready renovation: resale-friendly neutrals, durable materials, bright and clean.",
+        "budget": "Budget-friendly renovation: fresh paint, simple upgrades, clean and functional."
+    }
 
-    # ---- Build input image bytes (either from URL or upload) ----
-    # MVP approach:
-    # - If URL: send URL as reference
-    # - If upload: base64 encode it
-    before_ref = None
-    before_url_for_save = image_url
+    final_prompt = (
+        f"{preset_map.get(style_preset, '')}\n"
+        f"{style_prompt}\n"
+        "Keep the same room layout. Produce an HGTV-style after image. No text overlays."
+    ).strip()
 
-    if image_file:
-        raw = image_file.read()
-        b64 = base64.b64encode(raw).decode("utf-8")
-        # data URL (works for quick demo; long-term use S3/Cloudinary)
-        mime = image_file.mimetype or "image/jpeg"
-        before_url_for_save = f"data:{mime};base64,{b64}"
-        before_ref = before_url_for_save
-    else:
-        before_ref = image_url
-
-    # ---- Generate images ----
-    client = _openai_client()
-
-    # NOTE: API varies by SDK version. If you're already using image generation elsewhere,
-    # mirror that call. This is the *shape* you want:
     try:
-        after_urls = generate_renovation_images(
-            before_image_url=before_ref,
-            style_prompt=style_prompt,
-            variations=variations,
+        # 1) download and normalize the image
+        raw = _download_image_bytes(image_url)
+        png = _to_png_bytes(raw, max_size=1024)
+
+        # 2) OpenAI image edit
+        client = get_openai_client()
+
+        # NOTE:
+        # - This uses the OpenAI Images "edits" style flow.
+        # - The SDK response typically contains base64 images.
+        result = client.images.edits(
+            model="gpt-image-1",
+            image=("before.png", png, "image/png"),
+            prompt=final_prompt,
+            n=variations,
+            size="1024x1024",
         )
-    except Exception as e:
+
+        out_urls = []
+        # OpenAI returns base64 in many cases:
+        for item in (result.data or []):
+            b64 = getattr(item, "b64_json", None)
+            if not b64:
+                # fallback if the SDK returns a URL field
+                url = getattr(item, "url", None)
+                if url:
+                    out_urls.append(url)
+                continue
+
+            # decode and store locally
+            import base64
+            img_bytes = base64.b64decode(b64)
+            out_urls.append(_save_to_static(img_bytes, subdir="visualizer"))
+
+        if not out_urls:
+            return jsonify({"status": "error", "message": "No images returned from generator."}), 500
+
+        # Optional “save to deal” MVP: stash in session for now (DB table later)
+        if save_to_deal:
+            session["latest_renovation_visuals"] = {
+                "property_id": property_id,
+                "before": image_url,
+                "after_images": out_urls,
+                "preset": style_preset,
+                "prompt": style_prompt,
+            }
+
         return jsonify({
-            "status": "error",
-            "message": f"AI image generation failed: {str(e)}"
-        }), 500
+            "status": "ok",
+            "images": out_urls,
+            "cost_estimate": {
+                "note": "AI design preview only (not a contractor bid)."
+            }
+        })
 
-    # ---- Optional: save to DB (first after image or all) ----
-    save_to_deal = (request.form.get("save_to_deal") or "").lower() == "true"
-    property_id = (request.form.get("property_id") or "").strip() or None
-    saved_property_id = request.form.get("saved_property_id")
-    deal_id = request.form.get("deal_id")
-
-    if save_to_deal:
-        for after_url in after_urls:
-            mock = RenovationMockup(
-                user_id=current_user.id,
-                property_id=property_id,
-                saved_property_id=int(saved_property_id) if saved_property_id else None,
-                deal_id=int(deal_id) if deal_id else None,
-                before_url=before_url_for_save,
-                after_url=after_url,
-                style_prompt=style_prompt,
-                style_preset=style_preset or None,
-            )
-            db.session.add(mock)
-        db.session.commit()
-
-    return jsonify({
-        "status": "ok",
-        "images": after_urls,
-        "cost_estimate": {"note": "Estimate: attach your rehab cost logic here if desired."}
-    })
+    except RuntimeError as e:
+        # Missing OPENAI_API_KEY
+        return jsonify({"status": "error", "message": str(e)}), 400
+    except requests.RequestException as e:
+        return jsonify({"status": "error", "message": f"Could not download image: {e}"}), 400
+    except Exception as e:
+        return jsonify({"status": "error", "message": f"Renovation generator failed: {e}"}), 500
     
 @borrower_bp.route("/deal/<int:deal_id>/reveal")
 @role_required("borrower")
@@ -1685,6 +1721,24 @@ def deal_reveal(deal_id):
     mockups = RenovationMockup.query.filter_by(deal_id=deal_id, user_id=current_user.id)\
                                    .order_by(RenovationMockup.created_at.desc()).all()
     return render_template("borrower/deal_reveal.html", deal_id=deal_id, mockups=mockups)
+
+@borrower_bp.route("/renovation_upload", methods=["POST"])
+@role_required("borrower")
+def renovation_upload():
+    f = request.files.get("photo")
+    if not f:
+        return jsonify({"status": "error", "message": "No file uploaded."}), 400
+
+    filename = secure_filename(f.filename or "upload.png")
+    ext = os.path.splitext(filename)[1].lower()
+    if ext not in [".png", ".jpg", ".jpeg", ".webp"]:
+        return jsonify({"status": "error", "message": "Upload png/jpg/webp only."}), 400
+
+    raw = f.read()
+    png = _to_png_bytes(raw, max_size=1400)
+    url = _save_to_static(png, subdir="renovation_uploads")
+
+    return jsonify({"status": "ok", "image_url": url})
 
 @borrower_bp.route("/deals/send-to-lo", methods=["POST"])
 @role_required("borrower")
