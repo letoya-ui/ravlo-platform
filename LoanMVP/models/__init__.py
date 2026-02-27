@@ -89,7 +89,7 @@ from LoanMVP.models.activity_models import BorrowerActivity
 from LoanMVP.models.payment_models import PaymentRecord
 
 from LoanMVP.models.credit_models import SoftCreditReport
-from LoanMVP.models.partner_models import PartnerRequest, PartnerJob
+from LoanMVP.models.partner_models import PartnerRequest, PartnerJob,PartnerConnectionRequest
 # ======================================================
 # 🧩 SQLAlchemy Export (for Migrate / Shell)
 # ======================================================
