@@ -152,21 +152,53 @@ def _download_image_bytes(url: str, timeout=15) -> bytes:
     resp.raise_for_status()
     return resp.content
 
+def _to_webp_bytes(img_bytes: bytes, max_size=1600, quality=86) -> bytes:
+    """
+    Professional photo compression:
+    - Resize to max_size (keeps aspect ratio)
+    - Convert to WebP for big savings
+    - quality 82-88 is usually crisp for interiors
+    """
+    im = Image.open(BytesIO(img_bytes))
+
+    # Convert to RGB/RGBA safely
+    if im.mode not in ("RGB", "RGBA"):
+        im = im.convert("RGB")
+
+    im.thumbnail((max_size, max_size))
+
+    out = BytesIO()
+    # If image has alpha, keep RGBA; otherwise RGB
+    if im.mode == "RGBA":
+        im.save(out, format="WEBP", quality=quality, method=6, lossless=False)
+    else:
+        im = im.convert("RGB")
+        im.save(out, format="WEBP", quality=quality, method=6)
+
+    return out.getvalue()
+
+
 def _to_png_bytes(img_bytes: bytes, max_size=1024) -> bytes:
+    """
+    Keep this for OpenAI edits if you want PNG going into the model.
+    (Your current version is fine.)
+    """
     im = Image.open(BytesIO(img_bytes)).convert("RGB")
     im.thumbnail((max_size, max_size))
     out = BytesIO()
     im.save(out, format="PNG", optimize=True)
     return out.getvalue()
 
-def _save_to_static(png_bytes: bytes, subdir="visualizer") -> str:
-    # Keep function name so you don't refactor everything else
+
+def _save_to_static(img_bytes: bytes, subdir="visualizer", *, ext="png", content_type="image/png") -> str:
+    filename = f"{uuid.uuid4().hex}.{ext}"
     result = r2_put_bytes(
-        png_bytes,
+        img_bytes,
         subdir=f"uploads/{subdir}",
-        content_type="image/png"
+        content_type=content_type,
+        filename=filename
     )
-    return result["url"]  # ✅ https://img.ravlohq.com/uploads/visualizer/xxxx.png
+    return result["url"]
     
 # =========================================================
 # 🏠 Borrower Dashboard
@@ -1629,6 +1661,7 @@ def deal_workspace():
         saved_props=saved_props,
         selected_prop=selected_prop,
         prop_id=(selected_prop.id if selected_prop else None),
+        property_id=(selected_prop.id if selected_prop else None), 
         mode=mode,
         comps=comps,
         resolved=resolved,
@@ -1743,10 +1776,15 @@ def deal_open(deal_id):
     # simplest: redirect with property_id + mode. Workspace can use those to refetch comps/resolved.
     return redirect(url_for("borrower.deal_workspace", property_id=deal.property_id, mode=deal.strategy))
 
-
 @borrower_bp.route("/renovation_visualizer", methods=["POST"])
 @role_required("borrower")
 def renovation_visualizer():
+    """
+    Accepts:
+      - image_file (preferred) OR
+      - image_url (must be http/https; NOT blob:)
+    Generates 1-4 renovation mockups and returns hosted URLs.
+    """
 
     image_file = request.files.get("image_file")
     image_url = (request.form.get("image_url") or "").strip()
@@ -1760,12 +1798,14 @@ def renovation_visualizer():
     if not image_file and not image_url:
         return jsonify({"status": "error", "message": "Provide image_file or image_url."}), 400
 
+    # Block browser preview URLs
     if image_url.startswith("blob:"):
         return jsonify({
             "status": "error",
             "message": "Browser preview URL detected. Please upload the image file."
         }), 400
 
+    # Must have some styling instruction
     if not style_prompt and not style_preset:
         return jsonify({"status": "error", "message": "Add a style prompt or choose a preset."}), 400
 
@@ -1784,9 +1824,9 @@ def renovation_visualizer():
     ).strip()
 
     try:
-        # ---------------------------------
-        # 1️⃣ Get image bytes safely
-        # ---------------------------------
+        # -----------------------------
+        # 1) Get input image bytes
+        # -----------------------------
         if image_file:
             raw = image_file.read()
             before_ref = "uploaded_file"
@@ -1796,13 +1836,13 @@ def renovation_visualizer():
             raw = _download_image_bytes(image_url)
             before_ref = image_url
 
+        # OpenAI edits wants a normal image (PNG bytes are fine)
         png = _to_png_bytes(raw, max_size=1024)
 
-        # ---------------------------------
-        # 2️⃣ Generate images
-        # ---------------------------------
+        # -----------------------------
+        # 2) Generate (OpenAI)
+        # -----------------------------
         client = get_openai_client()
-
         result = client.images.edits(
             model="gpt-image-1",
             image=("before.png", png, "image/png"),
@@ -1813,21 +1853,39 @@ def renovation_visualizer():
 
         out_urls = []
 
+        # -----------------------------
+        # 3) Decode + compress + save
+        # -----------------------------
         for item in (result.data or []):
             b64 = getattr(item, "b64_json", None)
 
             if b64:
                 img_bytes = base64.b64decode(b64)
-                rel_url = _save_to_static(img_bytes, subdir="visualizer")
-                out_urls.append(rel_url)  # your helper already returns /static/...
+
+                # ✅ compress to WebP (small, sharp)
+                webp = _to_webp_bytes(img_bytes, max_size=1024, quality=88)
+
+                # IMPORTANT:
+                # Update _save_to_static to support ext/content_type if you followed the R2 setup.
+                # If you didn't update it yet, you can temporarily save as PNG by removing webp conversion.
+                try:
+                    url = _save_to_static(webp, subdir="visualizer", ext="webp", content_type="image/webp")
+                except TypeError:
+                    # Backward-compatible fallback if your _save_to_static still only accepts (bytes, subdir)
+                    url = _save_to_static(webp, subdir="visualizer")
+
+                out_urls.append(url)
             else:
-                url = getattr(item, "url", None)
-                if url:
-                    out_urls.append(url)
+                u = getattr(item, "url", None)
+                if u:
+                    out_urls.append(u)
 
         if not out_urls:
             return jsonify({"status": "error", "message": "No images returned from generator."}), 500
 
+        # -----------------------------
+        # 4) Save to deal (session MVP)
+        # -----------------------------
         if save_to_deal:
             session["latest_renovation_visuals"] = {
                 "property_id": property_id,
@@ -1840,9 +1898,7 @@ def renovation_visualizer():
         return jsonify({
             "status": "ok",
             "images": out_urls,
-            "cost_estimate": {
-                "note": "AI design preview only (not a contractor bid)."
-            }
+            "cost_estimate": {"note": "AI design preview only (not a contractor bid)."}
         })
 
     except requests.RequestException as e:
