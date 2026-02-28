@@ -81,6 +81,8 @@ from LoanMVP.services.property_tool import search_deals_for_zip
 from LoanMVP.services.ai_image_service import generate_renovation_images
 from LoanMVP.services.openai_client import get_openai_client
 
+from LoanMVP.utils.r2_storage import r2_put_bytes
+
 from LoanMVP.forms import BorrowerProfileForm
 from openai import OpenAI
 
@@ -158,18 +160,13 @@ def _to_png_bytes(img_bytes: bytes, max_size=1024) -> bytes:
     return out.getvalue()
 
 def _save_to_static(png_bytes: bytes, subdir="visualizer") -> str:
-    # Save to /static/uploads/visualizer/<uuid>.png
-    static_dir = current_app.static_folder  # e.g. .../LoanMVP/static
-    upload_dir = os.path.join(static_dir, "uploads", subdir)
-    os.makedirs(upload_dir, exist_ok=True)
-
-    filename = f"{uuid.uuid4().hex}.png"
-    path = os.path.join(upload_dir, filename)
-    with open(path, "wb") as f:
-        f.write(png_bytes)
-
-    # Return a public URL
-    return f"/static/uploads/{subdir}/{filename}"
+    # Keep function name so you don't refactor everything else
+    result = r2_put_bytes(
+        png_bytes,
+        subdir=f"uploads/{subdir}",
+        content_type="image/png"
+    )
+    return result["url"]  # ✅ https://img.ravlohq.com/uploads/visualizer/xxxx.png
     
 # =========================================================
 # 🏠 Borrower Dashboard
