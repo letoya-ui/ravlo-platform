@@ -78,14 +78,12 @@
 </div>
 
 {# =======================
-   OPTIONAL: RENOVATION VISUALS
-   - Works if you pass mockups into template
-   - Safe if mockups is missing/empty
+   RENOVATION VISUALS (SELECT + SHARE)
 ======================= #}
 <div class="dw-card" style="margin-top:1.25rem;">
   <h3>✨ Renovation Visuals</h3>
   <p class="ai-text" style="margin-top:-.25rem;">
-    Your saved renovation mockups for this deal.
+    Your saved renovation mockups for this deal. Select a final design and send to partners.
   </p>
 
   {% if mockups is defined and mockups and mockups|length %}
@@ -95,16 +93,158 @@
           {% if m.after_url %}
             <img src="{{ m.after_url }}" style="width:100%; border-radius:10px;">
           {% endif %}
+
           <div class="ai-text" style="margin-top:.4rem; font-size:.85rem;">
-            <strong>{{ (m.preset or 'custom')|title }}</strong><br>
+            <strong>{{ (m.style_preset or 'custom')|title }}</strong><br>
             <span style="opacity:.85;">{{ m.created_at.strftime('%b %d, %Y') if m.created_at else '' }}</span>
+          </div>
+
+          <div style="display:flex; gap:.5rem; flex-wrap:wrap; margin-top:.55rem;">
+            <button type="button"
+                    class="dw-button"
+                    style="flex:1;"
+                    onclick="selectDesign('{{ m.after_url }}','{{ m.before_url }}')">
+              ✅ Select
+            </button>
+
+            <button type="button"
+                    class="dw-button"
+                    style="flex:1;"
+                    onclick="openShareModal('{{ m.after_url }}')">
+              📤 Send
+            </button>
           </div>
         </div>
       {% endfor %}
     </div>
+
+    <!-- Selected preview -->
+    <div id="selectedDesignWrap" style="display:none; margin-top:1rem;">
+      <hr style="border-color: var(--line); margin: 1rem 0;">
+      <h3 style="margin:.25rem 0 .75rem;">Selected Design</h3>
+      <img id="selectedDesignImg" src="" style="width:100%; border-radius:12px; max-width:520px;">
+      <div class="ai-text" style="margin-top:.5rem;">
+        <span id="selectedDesignUrl" style="opacity:.9;"></span>
+      </div>
+    </div>
+
   {% else %}
     <p class="ai-text">No saved visuals yet. Generate mockups in the Deal Workspace and choose “Save to deal”.</p>
   {% endif %}
 </div>
+
+<!-- Share Modal -->
+<div id="shareModal" class="modal-overlay" style="display:none;">
+  <div class="modal-content">
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+      <h3>📤 Send Selected Design to Partners</h3>
+      <button type="button" class="dw-button" onclick="closeShareModal()">Close</button>
+    </div>
+
+    {% if partners is defined and partners and partners|length %}
+      <p class="ai-text">Choose partner(s):</p>
+
+      <div style="display:grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap:.5rem; margin-top:.75rem;">
+        {% for p in partners %}
+          <label style="display:flex; gap:.5rem; align-items:center; padding:.5rem; border:1px solid rgba(255,255,255,.08); border-radius:10px;">
+            <input type="checkbox" class="partnerCheck" value="{{ p.id }}">
+            <span class="ai-text" style="margin:0;">
+              <strong>{{ p.name or p.company_name or ('Partner #' ~ p.id) }}</strong>
+              {% if p.email %}<span style="opacity:.75;"> — {{ p.email }}</span>{% endif %}
+            </span>
+          </label>
+        {% endfor %}
+      </div>
+    {% else %}
+      <p class="ai-text">No partners found yet. Add partners first, then share from here.</p>
+    {% endif %}
+
+    <label class="dw-label" style="margin-top:1rem;">Note (optional)</label>
+    <textarea id="partnerNote" class="dw-input" rows="4" placeholder="Quick note about scope, finishes, budget, or next steps..."></textarea>
+
+    <div style="margin-top:1rem; display:flex; gap:.5rem; flex-wrap:wrap;">
+      <button type="button" class="dw-button" onclick="sendSelectedToPartners()">Send</button>
+      <span id="shareStatus" class="ai-text" style="opacity:.85;"></span>
+    </div>
+  </div>
+</div>
+
+<script>
+  let _selectedAfterUrl = "";
+  let _selectedBeforeUrl = "";
+
+  function selectDesign(afterUrl, beforeUrl){
+    _selectedAfterUrl = afterUrl || "";
+    _selectedBeforeUrl = beforeUrl || "";
+
+    // UI
+    const wrap = document.getElementById("selectedDesignWrap");
+    document.getElementById("selectedDesignImg").src = _selectedAfterUrl;
+    document.getElementById("selectedDesignUrl").innerText = _selectedAfterUrl;
+    wrap.style.display = "block";
+
+    // Persist selection to deal
+    const fd = new FormData();
+    fd.append("after_url", _selectedAfterUrl);
+    if (_selectedBeforeUrl) fd.append("before_url", _selectedBeforeUrl);
+
+    fetch("{{ url_for('borrower.deal_select_design', deal_id=deal.id) }}", {
+      method: "POST",
+      body: fd,
+      credentials: "include"
+    })
+    .then(r => r.json())
+    .then(data => {
+      if (data.status !== "ok") alert(data.message || "Could not save selection.");
+    })
+    .catch(() => alert("Could not save selection."));
+  }
+
+  function openShareModal(afterUrl){
+    if (afterUrl) _selectedAfterUrl = afterUrl;
+    if (!_selectedAfterUrl) {
+      alert("Select a design first.");
+      return;
+    }
+    document.getElementById("shareModal").style.display = "flex";
+    document.getElementById("shareStatus").innerText = "";
+  }
+
+  function closeShareModal(){
+    document.getElementById("shareModal").style.display = "none";
+  }
+
+  function sendSelectedToPartners(){
+    const checks = Array.from(document.querySelectorAll(".partnerCheck:checked"));
+    const partnerIds = checks.map(c => c.value).join(",");
+    const note = (document.getElementById("partnerNote")?.value || "").trim();
+    const status = document.getElementById("shareStatus");
+
+    if (!_selectedAfterUrl) return alert("Select a design first.");
+    if (!partnerIds) return alert("Choose at least one partner.");
+
+    status.innerText = "Sending...";
+
+    const fd = new FormData();
+    fd.append("image_url", _selectedAfterUrl);
+    fd.append("partner_ids", partnerIds);
+    fd.append("note", note);
+
+    fetch("{{ url_for('borrower.deal_share_design', deal_id=deal.id) }}", {
+      method: "POST",
+      body: fd,
+      credentials: "include"
+    })
+    .then(r => r.json())
+    .then(data => {
+      if (data.status !== "ok") {
+        status.innerText = data.message || "Send failed.";
+        return;
+      }
+      status.innerText = `Sent: ${data.sent} • Failed: ${data.failed}`;
+    })
+    .catch(() => status.innerText = "Send failed.");
+  }
+</script>
 
 {% endblock %}
