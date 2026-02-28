@@ -820,6 +820,9 @@
 {% endif %}
 
 <script>
+/* ===========================================
+   REHAB TEMPLATE HELPERS
+=========================================== */
 function applyRehabTemplate() {
   const template = document.getElementById("rehab-template")?.value;
   const templates = {
@@ -866,24 +869,28 @@ function closeRehabPreview() {
   document.getElementById("rehabPreviewModal").style.display = "none";
 }
 
-/* Style modal */
-let _styleCurrentBefore = null;
+/* ===========================================
+   STYLE MODAL + UPLOAD FLOW (FIXED)
+   - Never sends blob: URL to backend
+   - Sends actual file bytes as image_file
+   - Only ONE runStyleTransform function
+=========================================== */
+let _styleCurrentBefore = null; // for UI preview only (blob URL)
 let _styleCurrentFile = null;
 
 document.getElementById("uploadRoomPhoto")?.addEventListener("change", (e) => {
   const file = e.target.files?.[0];
   if (!file) return;
-  _styleCurrentFile = file;
-  _styleCurrentBefore = null;
 
-  // preview in modal
-  const url = URL.createObjectURL(file);
-  openStyleModal(url);
+  _styleCurrentFile = file;
+
+  // preview in modal (blob is OK for <img>, NOT OK for backend)
+  const previewUrl = URL.createObjectURL(file);
+  openStyleModal(previewUrl);
 });
 
 function openStyleModal(photoUrl) {
-  _styleCurrentBefore = photoUrl;
-  _styleCurrentFile = _styleCurrentFile || null;
+  _styleCurrentBefore = photoUrl || null;
 
   document.getElementById("styleBeforeImage").src = photoUrl || "";
   document.getElementById("styleModal").style.display = "flex";
@@ -891,39 +898,6 @@ function openStyleModal(photoUrl) {
   document.getElementById("styleResultsGrid").innerHTML = "";
   document.getElementById("styleCostEstimate").innerHTML = "";
   document.getElementById("beforeAfterWrapper").style.display = "none";
-}
-
-async function runStyleTransform() {
-  const stylePrompt = document.getElementById("stylePrompt").value.trim();
-  const preset = document.getElementById("stylePrompt").dataset.preset || "";
-  const variations = document.getElementById("styleVariations").value;
-  const saveToDeal = document.getElementById("styleSaveToDeal").checked;
-
-  const propertyId = "{{ property_id or '' }}";
-
-  const formData = new FormData();
-  formData.append("style_prompt", stylePrompt);
-  formData.append("style_preset", preset);
-  formData.append("variations", variations);
-  formData.append("save_to_deal", saveToDeal ? "true" : "false");
-  formData.append("property_id", propertyId);
-
-  if (_styleCurrentFile) {
-    formData.append("image_file", _styleCurrentFile);
-  } else if (_styleCurrentBefore) {
-    formData.append("image_url", _styleCurrentBefore);
-  } else {
-    return;
-  }
-
-  // ... keep the rest of your existing fetch logic ...
-  const resp = await fetch("{{ url_for('borrower.renovation_visualizer') }}", {
-    method: "POST",
-    body: formData
-  });
-
-  const data = await resp.json();
-  // (same success/error handling you already have)
 }
 
 function closeStyleModal() {
@@ -942,27 +916,33 @@ function setStylePreset(preset) {
   document.getElementById("stylePrompt").dataset.preset = preset;
 }
 
+/* ✅ SINGLE SOURCE OF TRUTH: runStyleTransform (file upload version) */
 async function runStyleTransform() {
-  const stylePrompt = document.getElementById("stylePrompt").value.trim();
-  const preset = document.getElementById("stylePrompt").dataset.preset || "";
-  const variations = document.getElementById("styleVariations").value;
-  const saveToDeal = document.getElementById("styleSaveToDeal").checked;
-  const imageUrl = _styleCurrentBefore;
+  const stylePrompt = document.getElementById("stylePrompt")?.value?.trim() || "";
+  const preset = document.getElementById("stylePrompt")?.dataset?.preset || "";
+  const variations = document.getElementById("styleVariations")?.value || "2";
+  const saveToDeal = document.getElementById("styleSaveToDeal")?.checked || false;
+
   const propertyId = "{{ property_id or '' }}";
 
-  if (!imageUrl) return;
+  const resultsGrid = document.getElementById("styleResultsGrid");
+  const resultsWrapper = document.getElementById("styleResults");
+  const costDiv = document.getElementById("styleCostEstimate");
+
+  if (!_styleCurrentFile) {
+    alert("Please choose a room photo first.");
+    return;
+  }
 
   const formData = new FormData();
-  formData.append("image_url", imageUrl);
   formData.append("style_prompt", stylePrompt);
   formData.append("style_preset", preset);
   formData.append("variations", variations);
   formData.append("save_to_deal", saveToDeal ? "true" : "false");
   formData.append("property_id", propertyId);
 
-  const resultsGrid = document.getElementById("styleResultsGrid");
-  const resultsWrapper = document.getElementById("styleResults");
-  const costDiv = document.getElementById("styleCostEstimate");
+  // ✅ Send real file bytes
+  formData.append("image_file", _styleCurrentFile);
 
   resultsGrid.innerHTML = "Generating...";
   resultsWrapper.style.display = "block";
@@ -970,13 +950,14 @@ async function runStyleTransform() {
 
   const resp = await fetch("{{ url_for('borrower.renovation_visualizer') }}", {
     method: "POST",
-    body: formData
+    body: formData,
+    credentials: "include"
   });
 
   const data = await resp.json();
 
   if (data.status !== "ok") {
-    resultsGrid.innerHTML = `<p style="color:red;">${data.message || 'Something went wrong.'}</p>`;
+    resultsGrid.innerHTML = `<p style="color:red;">${data.message || "Something went wrong."}</p>`;
     return;
   }
 
@@ -1002,8 +983,8 @@ function selectBeforeAfter(afterImg) {
   const after = document.getElementById("baAfter");
   const slider = document.getElementById("baSlider");
 
-  before.src = _styleCurrentBefore;
-  after.src = afterImg;
+  before.src = _styleCurrentBefore || "";
+  after.src = afterImg || "";
   wrapper.style.display = "block";
 
   slider.value = 50;
@@ -1019,5 +1000,3 @@ function updateBeforeAfterClip(val) {
   after.style.clipPath = `inset(0 ${100 - val}% 0 0)`;
 }
 </script>
-
-{% endblock %}
