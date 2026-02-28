@@ -191,3 +191,27 @@
   {% block scripts %}{% endblock %}
 </body>
 </html>
+<script>
+  (function () {
+    const btn = document.getElementById("bUserBtn");
+    const dd  = document.getElementById("bUserDropdown");
+
+    if (!btn || !dd) return;
+
+    const close = () => {
+      dd.classList.remove("open");
+      btn.setAttribute("aria-expanded", "false");
+    };
+
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const isOpen = dd.classList.toggle("open");
+      btn.setAttribute("aria-expanded", isOpen ? "true" : "false");
+    });
+
+    document.addEventListener("click", close);
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") close();
+    });
+  })();
+</script>
