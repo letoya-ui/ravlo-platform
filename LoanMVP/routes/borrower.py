@@ -2607,16 +2607,11 @@ def property_explore_plus(prop_id):
         active_page="property_search",
     )
 
-@borrower_bp.route("/property_tool", methods=["GET"])
+@borrower_bp.route("/property_tool", methods=["GET"], endpoint="property_tool")
 @role_required("borrower")
 def property_tool():
-    """
-    Ravlo Property Tool:
-    - GET shows UI
-    - UI calls /borrower/api/property_tool_search to fetch results
-    """
     return render_template("borrower/property_tool.html", active_page="property_tool")
-
+    
 # -------------------------------
 # ZIP SEARCH (NO ADDRESS REQUIRED)
 # -------------------------------
