@@ -824,7 +824,7 @@ function setStylePreset(preset) {
   document.getElementById("stylePrompt").dataset.preset = preset;
 }
 
-formData.append("saved_property_id", savedPropertyId);
+formData.append("saved_property_id", "{{ selected_prop.id if selected_prop else '' }}");
 function selectBeforeAfter(afterImg) {
   const wrapper = document.getElementById("beforeAfterWrapper");
   const before = document.getElementById("baBefore");
