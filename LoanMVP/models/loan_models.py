@@ -72,7 +72,9 @@ class BorrowerProfile(db.Model):
     company = db.Column(db.String(120), nullable=True)
     subscription_plan = db.Column(db.String(20), default="Free")
     has_seen_dashboard_tour = db.Column(db.Boolean, default=False)
-
+    email_notifications = db.Column(db.Boolean, default=True)
+    sms_notifications = db.Column(db.Boolean, default=False)
+    
     # 🔗 Relationships
     user = db.relationship("User", back_populates="borrower_profile", foreign_keys=[user_id])
     assigned_user = db.relationship("User", backref="assigned_borrowers", foreign_keys=[assigned_to])
