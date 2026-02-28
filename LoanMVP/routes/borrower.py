@@ -1868,9 +1868,13 @@ def renovation_upload():
 
     raw = f.read()
     png = _to_png_bytes(raw, max_size=1400)
-    url = _save_to_static(png, subdir="renovation_uploads")
 
-    return jsonify({"status": "ok", "image_url": url})
+    # save as unique png
+    unique = f"{uuid.uuid4().hex}.png"
+    rel_path = _save_to_static(png, subdir="renovation_uploads", filename=unique)
+    public_url = url_for("static", filename=rel_path, _external=True)
+
+    return jsonify({"status": "success", "url": public_url})
 
 @borrower_bp.route("/deals/send-to-lo", methods=["POST"])
 @role_required("borrower")
