@@ -117,7 +117,7 @@ def _safe_int(v, default=2, min_v=1, max_v=4):
 
 def _split_ids(csv: str):
     out = []
-    for p in (csv or "").split(","):
+    for p in (csv or "").replace(";", ",").split(","):
         p = p.strip()
         if not p:
             continue
@@ -125,7 +125,14 @@ def _split_ids(csv: str):
             out.append(int(p))
         except Exception:
             pass
-    return list(dict.fromkeys(out))
+    # de-dupe while preserving order
+    seen = set()
+    final = []
+    for i in out:
+        if i not in seen:
+            seen.add(i)
+            final.append(i)
+    return final
 
 
 def _download_image_bytes(url: str, timeout=15) -> bytes:
@@ -1690,18 +1697,19 @@ def deal_detail(deal_id):
         mockups=mockups,
         partners=partners
     )
+
 @borrower_bp.route("/deals/<int:deal_id>/select_design", methods=["POST"])
 @role_required("borrower")
 def deal_select_design(deal_id):
     deal = Deal.query.filter_by(id=deal_id, user_id=current_user.id).first_or_404()
 
-    after_url = (request.form.get("after_url") or "").strip()
+    after_url  = (request.form.get("after_url") or "").strip()
     before_url = (request.form.get("before_url") or "").strip()
 
     if not after_url:
         return jsonify({"status": "error", "message": "Missing after_url."}), 400
 
-    # ✅ Ensure the mockup belongs to this user/deal
+    # Ensure this design belongs to this deal + user
     owned = RenovationMockup.query.filter_by(
         user_id=current_user.id,
         deal_id=deal_id,
@@ -1711,7 +1719,6 @@ def deal_select_design(deal_id):
     if not owned:
         return jsonify({"status": "error", "message": "Design not found for this deal."}), 404
 
-    # ✅ store selection on deal
     deal.final_after_url = after_url
     if before_url:
         deal.final_before_url = before_url
@@ -1719,46 +1726,75 @@ def deal_select_design(deal_id):
     db.session.commit()
     return jsonify({"status": "ok"})
 
+
 @borrower_bp.route("/deals/<int:deal_id>/share_design", methods=["POST"])
 @role_required("borrower")
 def deal_share_design(deal_id):
     deal = Deal.query.filter_by(id=deal_id, user_id=current_user.id).first_or_404()
 
     image_url = (request.form.get("image_url") or "").strip() or (getattr(deal, "final_after_url", "") or "")
-    note = (request.form.get("note") or "").strip() or None
     partner_ids = _split_ids(request.form.get("partner_ids") or "")
+    note = (request.form.get("note") or "").strip()
 
     if not image_url:
         return jsonify({"status": "error", "message": "Select a design first."}), 400
     if not partner_ids:
         return jsonify({"status": "error", "message": "Choose at least one partner."}), 400
 
-    # ✅ pull partners owned by this borrower
-    partners = Partner.query.filter(
-        Partner.user_id == current_user.id,
-        Partner.id.in_(partner_ids)
-    ).all()
+    borrower_profile = BorrowerProfile.query.filter_by(user_id=current_user.id).first()
+    borrower_profile_id = borrower_profile.id if borrower_profile else None
+
+    # ✅ Only send to valid, active listings (approved + paid)
+    now = datetime.utcnow()
+    partners = (Partner.query
+        .filter(Partner.id.in_(partner_ids))
+        .filter(Partner.active == True)
+        .filter(Partner.approved == True)
+        .filter(Partner.paid_until >= now)
+        .all())
 
     if not partners:
-        return jsonify({"status": "error", "message": "No valid partners selected."}), 400
+        return jsonify({"status": "error", "message": "No valid partners selected (must be approved + active + paid)."}), 400
+
+    deal_link = url_for("borrower.deal_detail", deal_id=deal.id, _external=True)
+    reveal_link = url_for("borrower.deal_reveal", deal_id=deal.id, _external=True)
 
     sent = 0
-    failed = 0
-
     for p in partners:
-        try:
-            # ✅ plug into your existing send flow:
-            # Examples:
-            # send_partner_message(partner=p, subject="Renovation Design", body=..., link=image_url)
-            # send_partner_email(p.email, ...)
-            send_partner_design_to_partner(partner=p, deal=deal, image_url=image_url, note=note)  # <-- you wire this
-            sent += 1
-        except Exception as e:
-            print("Partner send failed:", e)
-            failed += 1
+        msg = (
+            (note + "\n\n" if note else "") +
+            f"Selected renovation design:\n{image_url}\n\n"
+            f"Deal:\n{deal_link}\n"
+            f"Reveal:\n{reveal_link}\n"
+        )
 
-    return jsonify({"status": "ok", "sent": sent, "failed": failed})
+        # Avoid duplicates (same deal+partner pending)
+        existing = PartnerConnectionRequest.query.filter_by(
+            borrower_user_id=current_user.id,
+            partner_id=p.id,
+            lead_id=None,
+            property_id=None,
+            status="pending"
+        ).order_by(PartnerConnectionRequest.created_at.desc()).first()
 
+        # If you want duplicates allowed, remove this check.
+        if existing and (existing.message or "").strip() == msg.strip():
+            continue
+
+        req = PartnerConnectionRequest(
+            borrower_user_id=current_user.id,
+            borrower_profile_id=borrower_profile_id,
+            partner_id=p.id,
+            category=p.category,
+            message=msg,
+            status="pending",
+        )
+        db.session.add(req)
+        sent += 1
+
+    db.session.commit()
+    return jsonify({"status": "ok", "sent": sent, "failed": 0})
+    
 @borrower_bp.route("/deals/save", methods=["POST"])
 @role_required("borrower")
 def save_deal():
