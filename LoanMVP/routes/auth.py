@@ -158,7 +158,7 @@ def reset_password(token):
 def register():
     form = RegisterForm()
     if form.validate_on_submit():
-        existing_user = User.query.filter_by(email=form.email.data).first()
+    existing_user = User.query.filter_by(email=form.email.data).first()
        if existing_user:
            flash("Account already exists. Please log in.", "info")
            return redirect(url_for("auth.login"))
