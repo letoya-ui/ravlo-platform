@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, redirect, url_for, flash, request, current_app
+from flask import Blueprint, render_template, redirect, url_for, flash, request, current_app,  get_flashed_messages
 from flask_login import login_user, logout_user, login_required, current_user
 from LoanMVP.models.user_model import User
 from LoanMVP.extensions import db
@@ -33,7 +33,12 @@ def verify_reset_token(token, expiration=3600):
 # ------------------------------------------------
 @auth_bp.route("/login", methods=["GET", "POST"])
 def login():
-    if request.method == "POST":
+    if request.method == "GET":
+        # clears stale "welcome" / old messages
+        get_flashed_messages()
+        return render_template("auth/login.html", title="Login | Ravlo")
+
+    # POST continues as normal...
         email = request.form.get("email", "").strip().lower()
         password = request.form.get("password", "").strip()
 
