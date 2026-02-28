@@ -1750,16 +1750,7 @@ def deal_open(deal_id):
 @borrower_bp.route("/renovation_visualizer", methods=["POST"])
 @role_required("borrower")
 def renovation_visualizer():
-    """
-    Accepts either:
-      - image_file (preferred): uploaded file bytes from the browser
-      - image_url: http(s) URL to an existing image
 
-    Applies a renovation style prompt and returns 1-4 generated images
-    as PUBLIC URLs (hosted under /static/visualizer).
-    """
-
-    # ✅ Accept file OR url
     image_file = request.files.get("image_file")
     image_url = (request.form.get("image_url") or "").strip()
 
@@ -1769,22 +1760,18 @@ def renovation_visualizer():
     save_to_deal = (request.form.get("save_to_deal") or "").lower() in ("1", "true", "yes", "on")
     property_id = (request.form.get("property_id") or "").strip()
 
-    # ✅ Validate: must have file or url
     if not image_file and not image_url:
         return jsonify({"status": "error", "message": "Provide image_file or image_url."}), 400
 
-    # ✅ Block browser blob: urls (not fetchable on backend)
     if image_url.startswith("blob:"):
         return jsonify({
             "status": "error",
-            "message": "That photo is a browser preview (blob URL). Please upload the file instead."
+            "message": "Browser preview URL detected. Please upload the image file."
         }), 400
 
-    # If user didn't type prompt, but selected preset, we still allow it.
     if not style_prompt and not style_preset:
         return jsonify({"status": "error", "message": "Add a style prompt or choose a preset."}), 400
 
-    # Combine preset into the final prompt
     preset_map = {
         "luxury": "Luxury HGTV renovation: bright, high-end finishes, clean staging, premium lighting.",
         "modern": "Modern renovation: clean lines, minimal clutter, matte black fixtures, neutral palette.",
@@ -1800,23 +1787,23 @@ def renovation_visualizer():
     ).strip()
 
     try:
-        # 1) Get bytes (from upload OR from URL)
-        before_ref_for_save = None
-
+        # ---------------------------------
+        # 1️⃣ Get image bytes safely
+        # ---------------------------------
         if image_file:
             raw = image_file.read()
-            before_ref_for_save = "uploaded_file"
+            before_ref = "uploaded_file"
         else:
-            # only allow http(s) for backend download
             if not (image_url.startswith("http://") or image_url.startswith("https://")):
                 return jsonify({"status": "error", "message": "image_url must start with http:// or https://"}), 400
-
             raw = _download_image_bytes(image_url)
-            before_ref_for_save = image_url
+            before_ref = image_url
 
         png = _to_png_bytes(raw, max_size=1024)
 
-        # 2) OpenAI image edit
+        # ---------------------------------
+        # 2️⃣ Generate images
+        # ---------------------------------
         client = get_openai_client()
 
         result = client.images.edits(
@@ -1829,29 +1816,25 @@ def renovation_visualizer():
 
         out_urls = []
 
-        # 3) Decode + save results and return PUBLIC URLs
         for item in (result.data or []):
             b64 = getattr(item, "b64_json", None)
+
             if b64:
                 img_bytes = base64.b64decode(b64)
-                rel_path = _save_to_static(img_bytes, subdir="visualizer")  # should return "visualizer/xxx.png"
-                public_url = url_for("static", filename=rel_path, _external=True)
-                out_urls.append(public_url)
-                continue
-
-            # fallback if SDK returns URL directly
-            u = getattr(item, "url", None)
-            if u:
-                out_urls.append(u)
+                rel_url = _save_to_static(img_bytes, subdir="visualizer")
+                out_urls.append(rel_url)  # your helper already returns /static/...
+            else:
+                url = getattr(item, "url", None)
+                if url:
+                    out_urls.append(url)
 
         if not out_urls:
             return jsonify({"status": "error", "message": "No images returned from generator."}), 500
 
-        # Optional “save to deal”
         if save_to_deal:
             session["latest_renovation_visuals"] = {
                 "property_id": property_id,
-                "before": before_ref_for_save,     # don't store blob
+                "before": before_ref,
                 "after_images": out_urls,
                 "preset": style_preset,
                 "prompt": style_prompt,
@@ -1865,8 +1848,6 @@ def renovation_visualizer():
             }
         })
 
-    except RuntimeError as e:
-        return jsonify({"status": "error", "message": str(e)}), 400
     except requests.RequestException as e:
         return jsonify({"status": "error", "message": f"Could not download image: {e}"}), 400
     except Exception as e:
