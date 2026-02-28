@@ -542,3 +542,10 @@ textarea::placeholder{ color:rgba(154,160,170,0.9); }
 }
 
 .b-user-item.danger{ color: #ff6b6b; }
+
+.flash-stack{ display:flex; flex-direction:column; gap:.6rem; margin:0 0 1rem 0; }
+.flash{ padding:.75rem 1rem; border:1px solid var(--line); border-radius:12px; background:var(--panel); color:var(--text); }
+.flash-success{ border-color: rgba(60, 220, 140, .35); }
+.flash-danger{ border-color: rgba(255, 90, 90, .35); }
+.flash-warning{ border-color: rgba(255, 200, 80, .35); }
+.flash-info{ border-color: rgba(122, 184, 255, .35); }
