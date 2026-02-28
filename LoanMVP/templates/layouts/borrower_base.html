@@ -134,10 +134,43 @@
               <i class="lucide lucide-bell"></i>
             </a>
 
-            <div class="b-topbar-user">
-              <img
-                src="{{ borrower.avatar_url if borrower and borrower.avatar_url else url_for('static', filename='images/default_user.png') }}"
-                alt="User">
+            <div class="b-user-menu" id="bUserMenu">
+              <button class="b-user-btn" type="button" id="bUserBtn" aria-haspopup="true" aria-expanded="false">
+                <img
+                  class="b-user-avatar"
+                  src="{{ borrower.profile_pic if borrower and borrower.profile_pic else url_for('static', filename='images/default_user.png') }}"
+                  alt="User">
+                 <i class="lucide lucide-chevron-down b-user-caret"></i>
+               </button>
+
+              <div class="b-user-dropdown" id="bUserDropdown" role="menu" aria-label="User menu">
+                 <div class="b-user-header">
+                  <div class="b-user-name">{{ current_user.full_name if current_user else "Account" }}</div>
+                    <div class="b-user-email">{{ current_user.email if current_user else "" }}</div>
+                  </div>
+
+                  <a class="b-user-item" href="{{ url_for('borrower.profile') if 'borrower.profile' in current_app.view_functions else '#' }}">
+                  <i class="lucide lucide-user"></i> Profile
+                </a>
+
+                 <a class="b-user-item" href="{{ url_for('borrower.settings') if 'borrower.settings' in current_app.view_functions else '#' }}">
+                     <i class="lucide lucide-settings"></i> Settings
+                 </a>
+
+                <a class="b-user-item" href="{{ url_for('borrower.privacy') if 'borrower.privacy' in current_app.view_functions else '#' }}">
+                  <i class="lucide lucide-shield"></i> Privacy
+                </a>
+
+                <a class="b-user-item" href="{{ url_for('borrower.notifications_settings') if 'borrower.notifications_settings' in current_app.view_functions else '#' }}">
+                  <i class="lucide lucide-bell"></i> Notifications
+                </a>
+
+                <div class="b-user-divider"></div>
+
+                <a class="b-user-item danger" href="{{ url_for('auth.logout') }}">
+                  <i class="lucide lucide-log-out"></i> Logout
+                </a>
+              </div>
             </div>
           {% endblock %}
         </div>
