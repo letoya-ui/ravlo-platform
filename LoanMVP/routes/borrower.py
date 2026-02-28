@@ -1755,17 +1755,18 @@ def deal_open(deal_id):
     flash("This deal is not linked to a saved property yet. Please select a property in the workspace.", "warning")
     return redirect(url_for("borrower.deal_workspace", prop_id=deal.saved_property_id, mode=deal.strategy or "flip"))
 
+
 @borrower_bp.route("/renovation_visualizer", methods=["POST"])
 @role_required("borrower")
 def renovation_visualizer():
     """
     Accepts:
-      - image_file (preferred) OR
+      - image_file OR
       - image_url (http/https; NOT blob:)
     Generates 1-4 renovation mockups and returns hosted URLs (R2).
 
     If save_to_deal=true:
-      - saves RenovationMockup rows
+      - saves RenovationMockup (DB)
       - links to saved_property_id + optional deal_id
     """
 
@@ -1787,10 +1788,7 @@ def renovation_visualizer():
         return jsonify({"status": "error", "message": "Provide image_file or image_url."}), 400
 
     if image_url.startswith("blob:"):
-        return jsonify({
-            "status": "error",
-            "message": "Browser preview URL detected. Please upload the image file."
-        }), 400
+        return jsonify({"status": "error", "message": "Browser preview URL detected. Please upload the image file."}), 400
 
     if image_url and not (image_url.startswith("http://") or image_url.startswith("https://")):
         return jsonify({"status": "error", "message": "image_url must start with http:// or https://"}), 400
@@ -1812,7 +1810,7 @@ def renovation_visualizer():
         "Keep the same room layout. Produce an HGTV-style after image. No text overlays."
     ).strip()
 
-    # parse ids
+    # Parse ids safely
     saved_property_id = None
     if saved_property_id_raw:
         try:
@@ -1829,31 +1827,29 @@ def renovation_visualizer():
 
     try:
         # -----------------------------
-        # 1) Get input bytes
+        # 1) Get input image bytes
         # -----------------------------
         if image_file:
             raw = image_file.read()
-            before_source = "upload"
+            if not raw:
+                return jsonify({"status": "error", "message": "Empty image_file."}), 400
         else:
             raw = _download_image_bytes(image_url)
-            before_source = "url"
 
         # -----------------------------
-        # 2) Upload BEFORE to R2 (so DB always has a real URL)
+        # 2) Upload BEFORE to R2 (compressed) so before_url is always real
         # -----------------------------
-        # Store before as JPEG (fast load + small); you can switch to webp if you prefer.
-        before_jpg = _to_jpeg_bytes(raw, max_size=1400, quality=84)
-        before_key_name = f"{uuid.uuid4().hex}_before.jpg"
+        before_webp = _to_webp_bytes(raw, max_size=1600, quality=86)
         before_up = r2_put_bytes(
-            before_jpg,
+            before_webp,
             subdir=f"visualizer/{current_user.id}/before",
-            content_type="image/jpeg",
-            filename=before_key_name
+            content_type="image/webp",
+            filename=f"{uuid.uuid4().hex}_before.webp",
         )
         before_url = before_up["url"]
 
         # -----------------------------
-        # 3) Normalize for OpenAI input
+        # 3) Normalize for OpenAI
         # -----------------------------
         png = _to_png_bytes(raw, max_size=1024)
 
@@ -1870,9 +1866,10 @@ def renovation_visualizer():
         )
 
         # -----------------------------
-        # 5) Decode + compress + upload AFTER images
+        # 5) Decode + compress + upload AFTER images to R2
         # -----------------------------
         out_urls = []
+
         for item in (getattr(result, "data", None) or []):
             b64 = item.get("b64_json") if isinstance(item, dict) else getattr(item, "b64_json", None)
             url = item.get("url") if isinstance(item, dict) else getattr(item, "url", None)
@@ -1880,27 +1877,23 @@ def renovation_visualizer():
             if b64:
                 img_bytes = base64.b64decode(b64)
 
-                # ✅ pro WebP compression to cut storage
-                after_webp = _to_webp_bytes(img_bytes, max_size=1400, quality=86)
-
-                after_key_name = f"{uuid.uuid4().hex}_after.webp"
-                up = r2_put_bytes(
+                after_webp = _to_webp_bytes(img_bytes, max_size=1600, quality=86)
+                after_up = r2_put_bytes(
                     after_webp,
                     subdir=f"visualizer/{current_user.id}/after",
                     content_type="image/webp",
-                    filename=after_key_name
+                    filename=f"{uuid.uuid4().hex}_after.webp",
                 )
-                out_urls.append(up["url"])
+                out_urls.append(after_up["url"])
 
             elif url:
-                # If SDK ever returns URLs, you can keep them
                 out_urls.append(url)
 
         if not out_urls:
             return jsonify({"status": "error", "message": "No images returned from generator."}), 500
 
         # -----------------------------
-        # 6) Save to DB
+        # 6) Save to DB (RenovationMockup)
         # -----------------------------
         if save_to_deal:
             borrower = BorrowerProfile.query.filter_by(user_id=current_user.id).first()
@@ -1910,9 +1903,9 @@ def renovation_visualizer():
                 db.session.add(RenovationMockup(
                     user_id=current_user.id,
                     borrower_id=borrower_id,
-                    property_id=property_id,              # optional legacy
-                    saved_property_id=saved_property_id,   # ✅ Option A
-                    deal_id=deal_id,                       # optional
+                    property_id=property_id,
+                    saved_property_id=saved_property_id,
+                    deal_id=deal_id,
                     before_url=before_url,
                     after_url=after_url,
                     style_prompt=style_prompt or None,
@@ -1922,8 +1915,8 @@ def renovation_visualizer():
 
         return jsonify({
             "status": "ok",
-            "images": out_urls,
             "before_url": before_url,
+            "images": out_urls,
             "cost_estimate": {"note": "AI design preview only (not a contractor bid)."}
         })
 
@@ -1935,31 +1928,71 @@ def renovation_visualizer():
 @borrower_bp.route("/deal/<int:deal_id>/reveal")
 @role_required("borrower")
 def deal_reveal(deal_id):
-    mockups = RenovationMockup.query.filter_by(deal_id=deal_id, user_id=current_user.id)\
-                                   .order_by(RenovationMockup.created_at.desc()).all()
-    return render_template("borrower/deal_reveal.html", deal_id=deal_id, mockups=mockups)
+    deal = Deal.query.filter_by(id=deal_id, user_id=current_user.id).first_or_404()
+
+    # Primary: mockups linked to this deal
+    mockups = (RenovationMockup.query
+        .filter_by(deal_id=deal_id, user_id=current_user.id)
+        .order_by(RenovationMockup.created_at.desc())
+        .all())
+
+    # Fallback: if none, pull by saved_property_id (Option A)
+    if not mockups and getattr(deal, "saved_property_id", None):
+        mockups = (RenovationMockup.query
+            .filter_by(saved_property_id=deal.saved_property_id, user_id=current_user.id)
+            .order_by(RenovationMockup.created_at.desc())
+            .all())
+
+    return render_template(
+        "borrower/deal_reveal.html",
+        deal=deal,
+        deal_id=deal_id,
+        mockups=mockups
+    )
 
 @borrower_bp.route("/renovation_upload", methods=["POST"])
 @role_required("borrower")
 def renovation_upload():
-    f = request.files.get("photo")
+    f = request.files.get("photo") or request.files.get("image_file")
     if not f:
         return jsonify({"status": "error", "message": "No file uploaded."}), 400
 
-    filename = secure_filename(f.filename or "upload.png")
-    ext = os.path.splitext(filename)[1].lower()
-    if ext not in [".png", ".jpg", ".jpeg", ".webp"]:
-        return jsonify({"status": "error", "message": "Upload png/jpg/webp only."}), 400
-
     raw = f.read()
-    png = _to_png_bytes(raw, max_size=1400)
+    if not raw:
+        return jsonify({"status": "error", "message": "Empty upload."}), 400
 
-    # save as unique png
-    unique = f"{uuid.uuid4().hex}.png"
-    rel_path = _save_to_static(png, subdir="renovation_uploads", filename=unique)
-    public_url = url_for("static", filename=rel_path, _external=True)
+    # Optional context (helps auto-link in UI)
+    saved_property_id_raw = (request.form.get("saved_property_id") or request.form.get("prop_id") or "").strip()
+    deal_id_raw = (request.form.get("deal_id") or "").strip()
 
-    return jsonify({"status": "success", "url": public_url})
+    saved_property_id = None
+    if saved_property_id_raw:
+        try: saved_property_id = int(saved_property_id_raw)
+        except Exception: saved_property_id = None
+
+    deal_id = None
+    if deal_id_raw:
+        try: deal_id = int(deal_id_raw)
+        except Exception: deal_id = None
+
+    # ✅ compress before storage
+    webp = _to_webp_bytes(raw, max_size=1600, quality=86)
+
+    up = r2_put_bytes(
+        webp,
+        subdir=f"uploads/{current_user.id}/rooms",
+        content_type="image/webp",
+        filename=f"{uuid.uuid4().hex}.webp",
+    )
+
+    return jsonify({
+        "status": "ok",
+        "url": up["url"],
+        "key": up["key"],
+        "saved_property_id": saved_property_id,
+        "deal_id": deal_id
+    })
+        
 @borrower_bp.route("/deals/<int:deal_id>/mockups/save", methods=["POST"])
 @role_required("borrower")
 def save_renovation_mockups(deal_id):
