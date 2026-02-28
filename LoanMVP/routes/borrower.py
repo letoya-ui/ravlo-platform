@@ -1716,7 +1716,12 @@ def save_deal():
     property_id = request.form.get("property_id") or None
     strategy = request.form.get("mode") or request.form.get("strategy") or None
     title = request.form.get("title") or None
-
+    saved_property_id = request.form.get("saved_property_id") or None
+    try:
+        saved_property_id = int(saved_property_id) if saved_property_id else None
+    except Exception:
+        saved_property_id = None
+        
     results_json = _safe_json_loads(request.form.get("results_json"), default={})
     inputs_json  = _safe_json_loads(request.form.get("inputs_json"), default={})
     comps_json    = _safe_json_loads(request.form.get("comps_json"), default={})
@@ -1733,6 +1738,7 @@ def save_deal():
 
     deal = Deal(
         user_id=current_user.id,
+        saved_property_id=saved_property_id,
         property_id=property_id,
         title=title,
         strategy=strategy,
@@ -1779,34 +1785,15 @@ def deal_delete(deal_id):
 def deal_open(deal_id):
     deal = Deal.query.filter_by(id=deal_id, user_id=current_user.id).first_or_404()
 
-    # deal.property_id is your stored property reference (string/int).
-    # Workspace expects prop_id = SavedProperty.id (the saved property row id).
-    saved = None
-    try:
-        # If deal.property_id is actually the SavedProperty.id already
-        saved_id = int(deal.property_id)
-        saved = SavedProperty.query.filter_by(id=saved_id, borrower_profile_id=BorrowerProfile.query.filter_by(user_id=current_user.id).first().id).first()
-    except Exception:
-        saved = None
+    if deal.saved_property_id:
+        return redirect(url_for(
+            "borrower.deal_workspace",
+            prop_id=deal.saved_property_id,
+            mode=deal.strategy or "flip"
+        ))
 
-    # Fallback: try matching by address if you stored it in title/resolved_json
-    if not saved:
-        addr = None
-        try:
-            addr = (deal.resolved_json or {}).get("property", {}).get("address")
-        except Exception:
-            addr = None
-        if addr:
-            borrower = BorrowerProfile.query.filter_by(user_id=current_user.id).first()
-            if borrower:
-                saved = SavedProperty.query.filter_by(borrower_profile_id=borrower.id, address=addr).first()
-
-    # If we still can't map it, send them to workspace without prop_id
-    if not saved:
-        flash("Could not link this deal to a saved property. Please select a property in the workspace.", "warning")
-        return redirect(url_for("borrower.deal_workspace", mode=deal.strategy or "flip"))
-
-    return redirect(url_for("borrower.deal_workspace", prop_id=saved.id, mode=deal.strategy or "flip"))
+    flash("This deal is not linked to a saved property yet. Please select a property in the workspace.", "warning")
+    return redirect(url_for("borrower.deal_workspace", mode=deal.strategy or "flip"))
 
 @borrower_bp.route("/renovation_visualizer", methods=["POST"])
 @role_required("borrower")
