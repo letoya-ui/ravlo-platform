@@ -17,13 +17,17 @@ serializer = URLSafeTimedSerializer("super-secret-key")
 # 🔐 Token Helpers
 # ------------------------------------------------
 def generate_reset_token(email):
-    s = URLSafeTimedSerializer(current_app.config["SECRET_KEY"])
-    return s.dumps(email, salt=current_app.config["SECURITY_PASSWORD_SALT"])
+    serializer = URLSafeTimedSerializer(current_app.config["SECRET_KEY"])
+    return serializer.dumps(email, salt=current_app.config["SECURITY_PASSWORD_SALT"])
 
-def verify_reset_token(token, expiration=3600):
-    s = URLSafeTimedSerializer(current_app.config["SECRET_KEY"])
+def verify_reset_token(token, expiration=3600):  # 1 hour
+    serializer = URLSafeTimedSerializer(current_app.config["SECRET_KEY"])
     try:
-        email = s.loads(token, salt=current_app.config["SECURITY_PASSWORD_SALT"], max_age=expiration)
+        email = serializer.loads(
+            token,
+            salt=current_app.config["SECURITY_PASSWORD_SALT"],
+            max_age=expiration
+        )
     except (SignatureExpired, BadSignature):
         return None
     return email
@@ -133,24 +137,34 @@ def reset_password_request():
 # ------------------------------------------------
 # 🔑 Reset Password
 # ------------------------------------------------
-@auth_bp.route("/reset_password/<token>", methods=["GET", "POST"])
+@auth_bp.route("/reset-password/<token>", methods=["GET", "POST"])
 def reset_password(token):
     email = verify_reset_token(token)
+
     if not email:
-        flash("Invalid or expired reset link.", "danger")
-        return redirect(url_for("auth.reset_password_request"))
+        flash("❌ Invalid or expired reset link.", "danger")
+        return redirect(url_for("auth.forgot_password"))
 
-    form = ResetPasswordForm()
-    if form.validate_on_submit():
-        user = User.query.filter_by(email=email).first()
-        if user:
-            user.set_password(form.password.data)   # ✅ use helper
-            db.session.commit()
-            flash("✅ Your password has been updated.", "success")
-            return redirect(url_for("auth.login"))
+    user = User.query.filter_by(email=email).first()
+    if not user:
+        flash("⚠️ Account not found.", "danger")
+        return redirect(url_for("auth.login"))
 
-    return render_template("auth/reset_password.html", form=form, token=token)
+    if request.method == "POST":
+        password = request.form.get("password")
+        confirm = request.form.get("confirm_password")
 
+        if not password or password != confirm:
+            flash("⚠️ Passwords do not match.", "warning")
+            return redirect(request.url)
+
+        user.set_password(password)
+        db.session.commit()
+
+        flash("✅ Password successfully updated. Please log in.", "success")
+        return redirect(url_for("auth.login"))
+
+    return render_template("auth/reset_password.html", token=token)
 # ------------------------------------------------
 # 🆕 Register
 # ------------------------------------------------
@@ -227,31 +241,42 @@ def load_user(user_id):
 # ----------------------------
 # 🔑 Forgot Password
 # ----------------------------
-@auth_bp.route("/forgot", methods=["GET", "POST"])
+@auth_bp.route("/forgot-password", methods=["GET", "POST"])
 def forgot_password():
     if request.method == "POST":
-        email = request.form.get("email")
+        email = request.form.get("email", "").strip().lower()
         user = User.query.filter_by(email=email).first()
 
         if not user:
             flash("⚠️ No account found with that email.", "danger")
-            return render_template("auth/forgot_password.html")
+            return redirect(url_for("auth.forgot_password"))
 
-        token = serializer.dumps(email, salt="password-reset")
+        token = generate_reset_token(user.email)
         reset_link = url_for("auth.reset_password", token=token, _external=True)
 
         msg = Message(
-            "Password Reset Request - LoanMVP",
-            recipients=[email],
-            body=f"Hi {user.full_name or 'there'},\n\n"
-                 f"Click the link below to reset your password:\n{reset_link}\n\n"
-                 f"If you didn’t request this, ignore this email."
+            subject="Reset Your Password - Ravlo",
+            recipients=[user.email],
+            body=f"""
+Hi {user.first_name or 'there'},
+
+Click the link below to reset your password:
+
+{reset_link}
+
+This link expires in 1 hour.
+
+If you did not request this, ignore this message.
+"""
         )
+
         try:
             mail.send(msg)
-            flash("📧 A password reset link has been sent to your email.", "info")
+            flash("📧 Password reset link sent to your email.", "success")
         except Exception as e:
-            flash("⚠️ Could not send email. Please contact support.", "danger")
             print("Mail error:", e)
+            flash("⚠️ Could not send reset email. Contact support.", "danger")
+
+        return redirect(url_for("auth.login"))
 
     return render_template("auth/forgot_password.html")
