@@ -425,7 +425,69 @@ def onboarding_start_loan():
 # =========================================================
 # 🧾 Borrower Profile
 # =========================================================
+# =====================================================
+# 👤 PROFILE
+# =====================================================
+@borrower_bp.route("/profile")
+@role_required("borrower")
+def profile():
+    borrower = BorrowerProfile.query.filter_by(user_id=current_user.id).first()
+    return render_template("borrower/profile.html", borrower=borrower)
 
+
+# =====================================================
+# ⚙️ SETTINGS
+# =====================================================
+@borrower_bp.route("/settings", methods=["GET", "POST"])
+@role_required("borrower")
+def settings():
+    borrower = BorrowerProfile.query.filter_by(user_id=current_user.id).first()
+
+    if request.method == "POST":
+        current_user.first_name = request.form.get("first_name")
+        current_user.last_name = request.form.get("last_name")
+        current_user.email = request.form.get("email")
+        db.session.commit()
+        flash("Settings updated successfully.", "success")
+        return redirect(url_for("borrower.settings"))
+
+    return render_template("borrower/settings.html", borrower=borrower)
+
+
+# =====================================================
+# 🔐 PRIVACY
+# =====================================================
+@borrower_bp.route("/privacy", methods=["GET", "POST"])
+@role_required("borrower")
+def privacy():
+    borrower = BorrowerProfile.query.filter_by(user_id=current_user.id).first()
+
+    if request.method == "POST":
+        borrower.subscription_plan = request.form.get("subscription_plan")
+        db.session.commit()
+        flash("Privacy preferences updated.", "success")
+        return redirect(url_for("borrower.privacy"))
+
+    return render_template("borrower/privacy.html", borrower=borrower)
+
+
+# =====================================================
+# 🔔 NOTIFICATION SETTINGS
+# =====================================================
+@borrower_bp.route("/notifications-settings", methods=["GET", "POST"])
+@role_required("borrower")
+def notifications_settings():
+    borrower = BorrowerProfile.query.filter_by(user_id=current_user.id).first()
+
+    if request.method == "POST":
+        # Example toggle fields (you can expand later)
+        borrower.email_notifications = True if request.form.get("email_notifications") else False
+        borrower.sms_notifications = True if request.form.get("sms_notifications") else False
+        db.session.commit()
+        flash("Notification settings updated.", "success")
+        return redirect(url_for("borrower.notifications_settings"))
+
+    return render_template("borrower/notifications_settings.html", borrower=borrower)
 @borrower_bp.route("/create_profile", methods=["GET", "POST"])
 @role_required("borrower")
 def create_profile():
