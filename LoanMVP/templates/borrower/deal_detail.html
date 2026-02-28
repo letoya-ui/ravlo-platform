@@ -9,8 +9,12 @@
 </div>
 
 <div class="dw-row" style="margin-top:1rem;">
+  <!-- =======================
+       EDIT CARD
+  ======================== -->
   <div class="dw-card">
     <h3>📝 Edit</h3>
+
     <form method="POST" action="{{ url_for('borrower.deal_edit', deal_id=deal.id) }}">
       {{ csrf_token() if csrf_token is defined }}
 
@@ -28,12 +32,23 @@
 
       <div style="margin-top:1rem; display:flex; gap:.75rem; flex-wrap:wrap;">
         <button class="dw-button" type="submit">Save Changes</button>
-        <a href="{{ url_for('borrower.deal_open', deal_id=deal.id) }}"><button type="button" class="dw-button">Open in Workspace</button></a>
-        <a href="{{ url_for('borrower.deals_list') }}"><button type="button" class="dw-button">Back to List</button></a>
+
+        <a class="dw-button" href="{{ url_for('borrower.deal_open', deal_id=deal.id) }}"
+           style="text-decoration:none; display:inline-flex; align-items:center; justify-content:center;">
+          Open in Workspace
+        </a>
+
+        <a class="dw-button" href="{{ url_for('borrower.deals_list') }}"
+           style="text-decoration:none; display:inline-flex; align-items:center; justify-content:center;">
+          Back to List
+        </a>
       </div>
     </form>
   </div>
 
+  <!-- =======================
+       SNAPSHOT CARD
+  ======================== -->
   <div class="dw-card">
     <h3>📦 Snapshot</h3>
 
@@ -60,6 +75,36 @@
       <pre style="white-space:pre-wrap; font-size:.85rem; margin-top:.75rem;">{{ deal.results_json | tojson(indent=2) }}</pre>
     </details>
   </div>
+</div>
+
+{# =======================
+   OPTIONAL: RENOVATION VISUALS
+   - Works if you pass mockups into template
+   - Safe if mockups is missing/empty
+======================= #}
+<div class="dw-card" style="margin-top:1.25rem;">
+  <h3>✨ Renovation Visuals</h3>
+  <p class="ai-text" style="margin-top:-.25rem;">
+    Your saved renovation mockups for this deal.
+  </p>
+
+  {% if mockups is defined and mockups and mockups|length %}
+    <div style="display:grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap:.75rem; margin-top:.75rem;">
+      {% for m in mockups %}
+        <div style="border:1px solid rgba(255,255,255,.08); border-radius:12px; padding:.5rem;">
+          {% if m.after_url %}
+            <img src="{{ m.after_url }}" style="width:100%; border-radius:10px;">
+          {% endif %}
+          <div class="ai-text" style="margin-top:.4rem; font-size:.85rem;">
+            <strong>{{ (m.preset or 'custom')|title }}</strong><br>
+            <span style="opacity:.85;">{{ m.created_at.strftime('%b %d, %Y') if m.created_at else '' }}</span>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <p class="ai-text">No saved visuals yet. Generate mockups in the Deal Workspace and choose “Save to deal”.</p>
+  {% endif %}
 </div>
 
 {% endblock %}
