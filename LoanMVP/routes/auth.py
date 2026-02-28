@@ -214,39 +214,82 @@ def reset_password(token):
         return redirect(url_for("auth.login"))
 
     return render_template("auth/reset_password.html", token=token)
+    
+# ------------------------------------------------
+# 🆕 Register
+# ------------------------------------------------
 # ------------------------------------------------
 # 🆕 Register
 # ------------------------------------------------
 @auth_bp.route("/register", methods=["GET", "POST"])
 def register():
-    form = RegisterForm()
-       if form.validate_on_submit():
-        existing_user = User.query.filter_by(email=form.email.data).first()
-       if existing_user:
-           flash("Account already exists. Please log in.", "info")
-           return redirect(url_for("auth.login"))
+    if request.method == "POST":
 
+        full_name = (request.form.get("username") or "").strip()
+        email = (request.form.get("email") or "").strip().lower()
+        password = request.form.get("password")
+        role = (request.form.get("role") or "borrower").lower()
+
+        # Basic validation
+        if not full_name or not email or not password:
+            flash("⚠️ Please complete all required fields.", "warning")
+            return redirect(url_for("auth.register"))
+
+        # Prevent duplicate accounts
+        existing = User.query.filter_by(email=email).first()
+        if existing:
+            flash("Account already exists. Please log in.", "info")
+            return redirect(url_for("auth.login"))
+
+        # Split name into first / last
+        parts = full_name.split(" ", 1)
+        first = parts[0]
+        last = parts[1] if len(parts) > 1 else ""
+
+        # Create user
         user = User(
-            username=form.username.data,
-            email=form.email.data.lower(),
-            role=form.role.data,
+            username=email,
+            email=email,
+            first_name=first,
+            last_name=last,
+            role=role
         )
-        user.set_password(form.password.data)
+
+        user.set_password(password)
+
         db.session.add(user)
         db.session.commit()
 
         # Auto-login
+        from flask import session
+        session.permanent = True
         login_user(user, remember=True)
 
-        # ⭐ Borrowers go to onboarding
-        if user.role.lower() == "borrower":
+        flash("🎉 Account created successfully!", "success")
+
+        # Role-based redirect
+        dashboard_map = {
+            "admin": "admin.dashboard",
+            "loan_officer": "loan_officer.dashboard",
+            "processor": "processor.dashboard",
+            "underwriter": "underwriter.dashboard",
+            "executive": "executive.dashboard",
+            "compliance": "compliance.dashboard",
+            "property": "property.dashboard",
+            "system": "system.dashboard",
+            "crm": "crm.dashboard",
+            "ai": "ai.dashboard",
+            "intelligence": "intelligence.dashboard",
+            "partner": "partners.dashboard",
+        }
+
+        if role == "borrower":
             return redirect(url_for("borrower.create_profile"))
 
-        # ⭐ Everyone else goes to login (then dashboard)
-        flash("🎉 Registration successful! Please log in.", "success")
-        return redirect(url_for("auth.login"))
+        endpoint = dashboard_map.get(role, "index")
+        return redirect(url_for(endpoint))
 
-    return render_template("auth/register.html", form=form)
+    return render_template("auth/register.html")
 
 @auth_bp.route("/register_borrower", methods=["GET", "POST"])
 def register_borrower():
