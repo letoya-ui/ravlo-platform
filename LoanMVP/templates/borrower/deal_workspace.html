@@ -824,69 +824,7 @@ function setStylePreset(preset) {
   document.getElementById("stylePrompt").dataset.preset = preset;
 }
 
-async function runStyleTransform() {
-  const stylePrompt = document.getElementById("stylePrompt")?.value?.trim() || "";
-  const preset = document.getElementById("stylePrompt")?.dataset?.preset || "";
-  const variations = document.getElementById("styleVariations")?.value || "2";
-  const saveToDeal = document.getElementById("styleSaveToDeal")?.checked || false;
-
-  const propertyId = "{{ property_id or selected_prop.id }}";
-
-  if (!_styleCurrentFile && !_styleCurrentUrl) {
-    alert("Upload a room photo or choose a property photo first.");
-    return;
-  }
-
-  const formData = new FormData();
-  formData.append("style_prompt", stylePrompt);
-  formData.append("style_preset", preset);
-  formData.append("variations", variations);
-  formData.append("save_to_deal", saveToDeal ? "true" : "false");
-  formData.append("property_id", propertyId);
-
-  if (_styleCurrentFile) {
-    formData.append("image_file", _styleCurrentFile);
-  } else {
-    formData.append("image_url", _styleCurrentUrl);
-  }
-
-  const resultsGrid = document.getElementById("styleResultsGrid");
-  const resultsWrapper = document.getElementById("styleResults");
-  const costDiv = document.getElementById("styleCostEstimate");
-
-  resultsGrid.innerHTML = "Generating...";
-  resultsWrapper.style.display = "block";
-  costDiv.innerHTML = "";
-
-  const resp = await fetch("{{ url_for('borrower.renovation_visualizer') }}", {
-    method: "POST",
-    body: formData,
-    credentials: "include"
-  });
-
-  const data = await resp.json();
-
-  if (data.status !== "ok") {
-    resultsGrid.innerHTML = `<p style="color:red;">${data.message || "Something went wrong."}</p>`;
-    return;
-  }
-
-  resultsGrid.innerHTML = "";
-  (data.images || []).forEach((img) => {
-    const div = document.createElement("div");
-    div.innerHTML = `
-      <img src="${img}" style="width:100%; border-radius:8px; margin-bottom:.4rem;">
-      <button type="button" class="dw-button" style="width:100%;">Use for Before/After</button>
-    `;
-    div.querySelector("button").addEventListener("click", () => selectBeforeAfter(img));
-    resultsGrid.appendChild(div);
-  });
-
-  if (data.cost_estimate) {
-    costDiv.innerHTML = `<strong>Cost Estimate:</strong> <span>${data.cost_estimate.note}</span>`;
-  }
-}
-
+formData.append("saved_property_id", savedPropertyId);
 function selectBeforeAfter(afterImg) {
   const wrapper = document.getElementById("beforeAfterWrapper");
   const before = document.getElementById("baBefore");
