@@ -1,0 +1,281 @@
+{# borrower/deal_reveal.html #}
+{% extends "layouts/borrower_base.html" %}
+{% block content %}
+
+<style>
+  .reveal-wrap{margin-top:1.25rem;}
+  .reveal-top{
+    display:flex; align-items:flex-start; justify-content:space-between;
+    gap:1rem; flex-wrap:wrap; margin-bottom:1rem;
+  }
+  .reveal-title h2{margin:0;}
+  .reveal-sub{color:var(--muted); margin:.25rem 0 0;}
+  .reveal-actions{display:flex; gap:.5rem; flex-wrap:wrap;}
+
+  .reveal-grid{
+    display:grid;
+    grid-template-columns: 1.1fr 1.9fr;
+    gap:1.25rem;
+    margin-top:1rem;
+  }
+  .card{
+    background: #0b1016;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 1rem 1.1rem;
+    box-shadow: 0 0 18px rgba(0,0,0,0.45);
+  }
+  .card h3{margin:.1rem 0 .75rem; color:var(--accent); font-size:1.05rem;}
+  .muted{color:var(--muted);}
+  .btn{
+    background: rgba(122,184,255,0.12);
+    border: 1px solid rgba(122,184,255,0.45);
+    color: #7ab8ff;
+    padding: .6rem .9rem;
+    border-radius: 10px;
+    cursor: pointer;
+    font-weight: 650;
+    transition: .2s;
+    font-size: .9rem;
+    text-decoration:none;
+    display:inline-flex; align-items:center; gap:.45rem;
+  }
+  .btn:hover{
+    background: rgba(122,184,255,0.22);
+    border-color: #7ab8ff;
+    box-shadow: 0 0 12px rgba(122,184,255,0.35);
+  }
+  .btn-secondary{
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.10);
+    color: var(--text);
+  }
+  .chip-row{display:flex; gap:.5rem; flex-wrap:wrap; margin:.5rem 0 0;}
+  .chip{
+    font-size:.8rem;
+    border-radius:999px;
+    padding:.35rem .6rem;
+    background: rgba(122,184,255,0.10);
+    border: 1px solid rgba(122,184,255,0.25);
+    color: #a9d2ff;
+  }
+
+  .img{
+    width:100%;
+    border-radius: 12px;
+    display:block;
+    border: 1px solid rgba(255,255,255,0.07);
+    background:#0f141a;
+  }
+
+  .after-grid{
+    display:grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap:.75rem;
+  }
+  @media (max-width: 1100px){
+    .reveal-grid{grid-template-columns:1fr;}
+    .after-grid{grid-template-columns: repeat(2, minmax(0, 1fr));}
+  }
+  @media (max-width: 620px){
+    .after-grid{grid-template-columns: 1fr;}
+  }
+
+  .thumb{
+    padding:.6rem;
+    border-radius: 14px;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.08);
+    transition:.15s;
+  }
+  .thumb:hover{transform: translateY(-1px); border-color: rgba(122,184,255,0.28);}
+  .thumb-meta{margin-top:.45rem; display:flex; gap:.35rem; flex-wrap:wrap;}
+  .thumb small{color:var(--muted);}
+  .thumb .pick{
+    width:100%;
+    margin-top:.55rem;
+    justify-content:center;
+  }
+
+  /* Lightbox */
+  .overlay{
+    position:fixed; inset:0;
+    background: rgba(0,0,0,0.72);
+    display:none;
+    align-items:center; justify-content:center;
+    padding: 1rem;
+    z-index: 9999;
+  }
+  .overlay-inner{
+    width: min(1100px, 100%);
+    background: #0b1016;
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 1rem;
+    box-shadow: 0 0 26px rgba(0,0,0,0.65);
+  }
+  .overlay-top{
+    display:flex; justify-content:space-between; align-items:center; gap:.75rem; margin-bottom:.75rem;
+  }
+  .overlay-top h4{margin:0; color:var(--text);}
+  .overlay-img{width:100%; border-radius: 12px; display:block;}
+</style>
+
+<div class="reveal-wrap">
+
+  <div class="reveal-top">
+    <div class="reveal-title">
+      <h2>✨ Deal Reveal</h2>
+      <div class="reveal-sub">
+        {% if deal %}
+          {{ deal.title or ('Deal #' ~ deal.id) }} • Strategy: {{ deal.strategy or '—' }}
+        {% else %}
+          Deal #{{ deal_id }}
+        {% endif %}
+      </div>
+
+      {% if mockups and mockups[0] %}
+        <div class="chip-row">
+          {% if mockups[0].style_preset %}<span class="chip">Preset: {{ mockups[0].style_preset }}</span>{% endif %}
+          {% if mockups[0].style_prompt %}<span class="chip">Prompt: {{ mockups[0].style_prompt[:60] }}{% if mockups[0].style_prompt|length > 60 %}…{% endif %}</span>{% endif %}
+          <span class="chip">{{ mockups|length }} design{% if mockups|length != 1 %}s{% endif %}</span>
+        </div>
+      {% endif %}
+    </div>
+
+    <div class="reveal-actions">
+      {% if deal %}
+        <a class="btn btn-secondary" href="{{ url_for('borrower.deal_open', deal_id=deal.id) }}">🧠 Open Workspace</a>
+        <a class="btn btn-secondary" href="{{ url_for('borrower.deal_detail', deal_id=deal.id) }}">🗂️ Deal Details</a>
+      {% else %}
+        <a class="btn btn-secondary" href="{{ url_for('borrower.deals_list') }}">🗂️ Back to Deals</a>
+      {% endif %}
+    </div>
+  </div>
+
+  {% if not mockups %}
+    <div class="card">
+      <h3>No mockups yet</h3>
+      <p class="muted">Generate designs from the Deal Workspace Visualizer, then come back here to review.</p>
+      {% if deal %}
+        <a class="btn" href="{{ url_for('borrower.deal_open', deal_id=deal.id) }}">✨ Generate Designs</a>
+      {% endif %}
+    </div>
+  {% else %}
+
+  {# Use the latest mockup as the "lead" set for before image #}
+  {% set lead = mockups[0] %}
+
+  <div class="reveal-grid">
+
+    <!-- BEFORE -->
+    <div class="card">
+      <h3>Before</h3>
+
+      {% if lead.before_url %}
+        <img class="img" src="{{ lead.before_url }}" alt="Before image" onclick="openLightbox('{{ lead.before_url }}','Before')" style="cursor:zoom-in;">
+      {% else %}
+        <p class="muted">No before image found.</p>
+      {% endif %}
+
+      <div style="margin-top:.75rem;">
+        <p class="muted" style="margin:.25rem 0 0;">
+          Tip: Upload a room photo in Deal Workspace so Ravlo can keep a clean before/after history.
+        </p>
+      </div>
+    </div>
+
+    <!-- AFTER VARIATIONS -->
+    <div class="card">
+      <h3>After Variations</h3>
+
+      <div class="after-grid">
+        {% for m in mockups %}
+          <div class="thumb">
+            <img class="img" src="{{ m.after_url }}" alt="After mockup" onclick="openLightbox('{{ m.after_url }}','After')" style="cursor:zoom-in;">
+            <div class="thumb-meta">
+              {% if m.style_preset %}<span class="chip">{{ m.style_preset }}</span>{% endif %}
+              <small> {{ m.created_at.strftime("%b %d, %Y %I:%M %p") if m.created_at else '' }} </small>
+            </div>
+
+            <button type="button" class="btn pick" onclick="setSelected('{{ m.after_url }}')">
+              ✅ Select This Design
+            </button>
+          </div>
+        {% endfor %}
+      </div>
+
+      <div id="selectedWrap" style="display:none; margin-top:1rem;">
+        <hr style="border-color: var(--line); margin: 1rem 0;">
+        <h3 style="margin:.25rem 0 .75rem;">Selected Design</h3>
+        <img id="selectedImg" class="img" src="" alt="Selected design">
+        <div style="margin-top:.75rem; display:flex; gap:.5rem; flex-wrap:wrap;">
+          <a id="openSelected" class="btn btn-secondary" href="#" target="_blank" rel="noopener">🔗 Open Full Size</a>
+          {# Placeholder button (wire route later if you want) #}
+          <button type="button" class="btn" onclick="copySelected()">📋 Copy Link</button>
+        </div>
+      </div>
+
+      <p class="muted" style="margin-top:1rem;">
+        Want more styles? Go back to the workspace and generate additional variations (Modern, Luxury, Airbnb, etc.).
+      </p>
+    </div>
+
+  </div>
+  {% endif %}
+
+</div>
+
+<!-- Lightbox -->
+<div id="lightbox" class="overlay" onclick="closeLightbox(event)">
+  <div class="overlay-inner">
+    <div class="overlay-top">
+      <h4 id="lbTitle">Preview</h4>
+      <button type="button" class="btn btn-secondary" onclick="hideLightbox()">Close</button>
+    </div>
+    <img id="lbImg" class="overlay-img" src="" alt="Preview">
+  </div>
+</div>
+
+<script>
+  function openLightbox(url, title){
+    const lb = document.getElementById("lightbox");
+    document.getElementById("lbImg").src = url;
+    document.getElementById("lbTitle").innerText = title || "Preview";
+    lb.style.display = "flex";
+  }
+  function hideLightbox(){
+    const lb = document.getElementById("lightbox");
+    lb.style.display = "none";
+    document.getElementById("lbImg").src = "";
+  }
+  function closeLightbox(e){
+    // Only close if they click the overlay background
+    if (e.target && e.target.id === "lightbox") hideLightbox();
+  }
+
+  function setSelected(url){
+    const wrap = document.getElementById("selectedWrap");
+    const img = document.getElementById("selectedImg");
+    const open = document.getElementById("openSelected");
+    img.src = url;
+    open.href = url;
+    wrap.style.display = "block";
+    // scroll lightly into view on smaller screens
+    wrap.scrollIntoView({behavior:"smooth", block:"start"});
+    window._selectedDesignUrl = url;
+  }
+
+  async function copySelected(){
+    const url = window._selectedDesignUrl || "";
+    if (!url) return alert("Select a design first.");
+    try{
+      await navigator.clipboard.writeText(url);
+      alert("Copied!");
+    }catch(e){
+      alert("Could not copy automatically. Open full size and copy the URL.");
+    }
+  }
+</script>
+
+{% endblock %}
