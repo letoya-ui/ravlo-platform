@@ -1702,7 +1702,13 @@ def deals_list():
 @role_required("borrower")
 def deal_detail(deal_id):
     deal = Deal.query.filter_by(id=deal_id, user_id=current_user.id).first_or_404()
-    return render_template("borrower/deal_detail.html", deal=deal)
+
+    mockups = RenovationMockup.query.filter_by(
+        deal_id=deal.id,
+        user_id=current_user.id
+    ).order_by(RenovationMockup.created_at.desc()).all()
+
+    return render_template("borrower/deal_detail.html", deal=deal, mockups=mockups)
 
 @borrower_bp.route("/deals/save", methods=["POST"])
 @role_required("borrower")
@@ -1773,8 +1779,34 @@ def deal_delete(deal_id):
 def deal_open(deal_id):
     deal = Deal.query.filter_by(id=deal_id, user_id=current_user.id).first_or_404()
 
-    # simplest: redirect with property_id + mode. Workspace can use those to refetch comps/resolved.
-    return redirect(url_for("borrower.deal_workspace", property_id=deal.property_id, mode=deal.strategy))
+    # deal.property_id is your stored property reference (string/int).
+    # Workspace expects prop_id = SavedProperty.id (the saved property row id).
+    saved = None
+    try:
+        # If deal.property_id is actually the SavedProperty.id already
+        saved_id = int(deal.property_id)
+        saved = SavedProperty.query.filter_by(id=saved_id, borrower_profile_id=BorrowerProfile.query.filter_by(user_id=current_user.id).first().id).first()
+    except Exception:
+        saved = None
+
+    # Fallback: try matching by address if you stored it in title/resolved_json
+    if not saved:
+        addr = None
+        try:
+            addr = (deal.resolved_json or {}).get("property", {}).get("address")
+        except Exception:
+            addr = None
+        if addr:
+            borrower = BorrowerProfile.query.filter_by(user_id=current_user.id).first()
+            if borrower:
+                saved = SavedProperty.query.filter_by(borrower_profile_id=borrower.id, address=addr).first()
+
+    # If we still can't map it, send them to workspace without prop_id
+    if not saved:
+        flash("Could not link this deal to a saved property. Please select a property in the workspace.", "warning")
+        return redirect(url_for("borrower.deal_workspace", mode=deal.strategy or "flip"))
+
+    return redirect(url_for("borrower.deal_workspace", prop_id=saved.id, mode=deal.strategy or "flip"))
 
 @borrower_bp.route("/renovation_visualizer", methods=["POST"])
 @role_required("borrower")
@@ -1934,7 +1966,40 @@ def renovation_upload():
     public_url = url_for("static", filename=rel_path, _external=True)
 
     return jsonify({"status": "success", "url": public_url})
+@borrower_bp.route("/deals/<int:deal_id>/mockups/save", methods=["POST"])
+@role_required("borrower")
+def save_renovation_mockups(deal_id):
+    deal = Deal.query.filter_by(id=deal_id, user_id=current_user.id).first_or_404()
 
+    data = request.get_json(silent=True) or {}
+    before_url = (data.get("before_url") or "").strip()
+    images = data.get("images") or []
+    preset = (data.get("preset") or "").strip()
+    prompt = (data.get("prompt") or "").strip()
+
+    if not images or not isinstance(images, list):
+        return jsonify({"status": "error", "message": "No images provided."}), 400
+
+    saved = 0
+    for img in images[:8]:
+        img = (img or "").strip()
+        if not img:
+            continue
+
+        m = RenovationMockup(
+            user_id=current_user.id,
+            deal_id=deal.id,
+            before_url=before_url or None,
+            after_url=img,
+            preset=preset or None,
+            prompt=prompt or None,
+        )
+        db.session.add(m)
+        saved += 1
+
+    db.session.commit()
+    return jsonify({"status": "ok", "saved": saved})
+    
 @borrower_bp.route("/deals/send-to-lo", methods=["POST"])
 @role_required("borrower")
 def send_to_lo():
