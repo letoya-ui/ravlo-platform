@@ -1793,7 +1793,7 @@ def deal_open(deal_id):
         ))
 
     flash("This deal is not linked to a saved property yet. Please select a property in the workspace.", "warning")
-    return redirect(url_for("borrower.deal_workspace", mode=deal.strategy or "flip"))
+    return redirect(url_for("borrower.deal_workspace", prop_id=deal.saved_property_id, mode=deal.strategy or "flip"))
 
 @borrower_bp.route("/renovation_visualizer", methods=["POST"])
 @role_required("borrower")
@@ -1862,7 +1862,7 @@ def renovation_visualizer():
         # 2) Generate (OpenAI)
         # -----------------------------
         client = get_openai_client()
-        result = client.images.edits(
+        result = client.images.edit(
             model="gpt-image-1",
             image=("before.png", png, "image/png"),
             prompt=final_prompt,
@@ -1875,8 +1875,9 @@ def renovation_visualizer():
         # -----------------------------
         # 3) Decode + compress + save
         # -----------------------------
-        for item in (result.data or []):
-            b64 = getattr(item, "b64_json", None)
+        for item in (getattr(result, "data", None) or []):
+            b64 = item.get("b64_json") if isinstance(item, dict) else getattr(item, "b64_json", None)
+            url = item.get("url") if isinstance(item, dict) else getattr(item, "url", None))
 
             if b64:
                 img_bytes = base64.b64decode(b64)
@@ -1894,10 +1895,8 @@ def renovation_visualizer():
                     url = _save_to_static(webp, subdir="visualizer")
 
                 out_urls.append(url)
-            else:
-                u = getattr(item, "url", None)
-                if u:
-                    out_urls.append(u)
+            elif url:
+                out_urls.append(url)
 
         if not out_urls:
             return jsonify({"status": "error", "message": "No images returned from generator."}), 500
