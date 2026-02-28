@@ -69,6 +69,8 @@ tqdm==4.67.1
 packaging==25.0
 platformdirs==4.5.0
 virtualenv==20.25.1
+boto3==1.34.162
+botocore==1.34.162
 
 # === Templating ===
 Jinja2==3.1.6
