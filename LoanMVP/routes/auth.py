@@ -154,9 +154,9 @@ def register():
     form = RegisterForm()
     if form.validate_on_submit():
         existing_user = User.query.filter_by(email=form.email.data).first()
-        if existing_user:
-            flash("An account with that email already exists.", "warning")
-            return redirect(url_for("auth.register"))
+       if existing_user:
+           flash("Account already exists. Please log in.", "info")
+           return redirect(url_for("auth.login"))
 
         user = User(
             username=form.username.data,
@@ -194,7 +194,7 @@ def register_borrower():
         existing = User.query.filter_by(email=email).first()
         if existing:
             flash("An account with that email already exists.", "warning")
-            return redirect(url_for("auth.register_borrower"))
+            return redirect(url_for("auth.login"))
 
         user = User(
             username=email,
