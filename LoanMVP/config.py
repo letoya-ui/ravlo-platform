@@ -21,7 +21,7 @@ class Config:
     # --------------------------------------------------
     # 🔐 CORE APP SETTINGS
     # --------------------------------------------------
-    SECRET_KEY = os.environ.get("SECRET_KEY", "supersecretkey")
+    app.secret_key = os.getenv("SECRET_KEY", "dev_only_change_me")
     DEBUG = os.environ.get("FLASK_DEBUG", "true").lower() in ("1", "true", "yes")
 
     PERMANENT_SESSION_LIFETIME = timedelta(days=7)
