@@ -149,21 +149,21 @@
                     <div class="b-user-email">{{ current_user.email if current_user else "" }}</div>
                   </div>
 
-                  <a class="b-user-item" href="{{ url_for('borrower.profile') if 'borrower.profile' in current_app.view_functions else '#' }}">
-                  <i class="lucide lucide-user"></i> Profile
-                </a>
+                  <a class="b-user-item" href="{{ url_for('borrower.profile') }}">
+                    <i class="lucide lucide-user"></i> Profile
+                  </a>
 
-                 <a class="b-user-item" href="{{ url_for('borrower.settings') if 'borrower.settings' in current_app.view_functions else '#' }}">
-                     <i class="lucide lucide-settings"></i> Settings
-                 </a>
+                  <a class="b-user-item" href="{{ url_for('borrower.settings') }}">
+                    <i class="lucide lucide-settings"></i> Settings
+                  </a>
 
-                <a class="b-user-item" href="{{ url_for('borrower.privacy') if 'borrower.privacy' in current_app.view_functions else '#' }}">
-                  <i class="lucide lucide-shield"></i> Privacy
-                </a>
+                   <a class="b-user-item" href="{{ url_for('borrower.privacy') }}">
+                     <i class="lucide lucide-shield"></i> Privacy
+                   </a>
 
-                <a class="b-user-item" href="{{ url_for('borrower.notifications_settings') if 'borrower.notifications_settings' in current_app.view_functions else '#' }}">
-                  <i class="lucide lucide-bell"></i> Notifications
-                </a>
+                   <a class="b-user-item" href="{{ url_for('borrower.notifications_settings') }}">
+                     <i class="lucide lucide-bell"></i> Notifications
+                   </a>
 
                 <div class="b-user-divider"></div>
 
