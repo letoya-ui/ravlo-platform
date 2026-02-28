@@ -153,6 +153,8 @@ class Deal(db.Model):
     # Ownership / access control
     user_id = db.Column(db.Integer, nullable=False, index=True)
 
+    saved_property_id = db.Column(db.Integer, db.ForeignKey("saved_properties.id"), nullable=True, index=True)
+
     # Identifiers / display
     property_id = db.Column(db.String(120), nullable=True, index=True)
     title = db.Column(db.String(255), nullable=True)
