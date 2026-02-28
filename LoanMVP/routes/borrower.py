@@ -1803,6 +1803,10 @@ def renovation_visualizer():
       - image_file (preferred) OR
       - image_url (must be http/https; NOT blob:)
     Generates 1-4 renovation mockups and returns hosted URLs.
+
+    If save_to_deal=true:
+      - saves to RenovationMockup (DB)
+      - links to saved_property_id + optional deal_id
     """
 
     image_file = request.files.get("image_file")
@@ -1812,6 +1816,13 @@ def renovation_visualizer():
     style_preset = (request.form.get("style_preset") or "").strip()
     variations = _safe_int(request.form.get("variations"), default=2, min_v=1, max_v=4)
     save_to_deal = (request.form.get("save_to_deal") or "").lower() in ("1", "true", "yes", "on")
+
+    # ✅ Option A: SavedProperty.id (workspace prop_id)
+    saved_property_id_raw = (request.form.get("saved_property_id") or request.form.get("prop_id") or "").strip()
+    # Optional: if you have a deal already saved/opened
+    deal_id_raw = (request.form.get("deal_id") or "").strip()
+
+    # Keep legacy field for compatibility (not used for linking)
     property_id = (request.form.get("property_id") or "").strip()
 
     if not image_file and not image_url:
@@ -1842,6 +1853,21 @@ def renovation_visualizer():
         "Keep the same room layout. Produce an HGTV-style after image. No text overlays."
     ).strip()
 
+    # Parse ids safely
+    saved_property_id = None
+    if saved_property_id_raw:
+        try:
+            saved_property_id = int(saved_property_id_raw)
+        except Exception:
+            saved_property_id = None
+
+    deal_id = None
+    if deal_id_raw:
+        try:
+            deal_id = int(deal_id_raw)
+        except Exception:
+            deal_id = None
+
     try:
         # -----------------------------
         # 1) Get input image bytes
@@ -1855,7 +1881,7 @@ def renovation_visualizer():
             raw = _download_image_bytes(image_url)
             before_ref = image_url
 
-        # OpenAI edits wants a normal image (PNG bytes are fine)
+        # Normalize
         png = _to_png_bytes(raw, max_size=1024)
 
         # -----------------------------
@@ -1870,14 +1896,13 @@ def renovation_visualizer():
             size="1024x1024",
         )
 
-        out_urls = []
-
         # -----------------------------
         # 3) Decode + compress + save
         # -----------------------------
+        out_urls = []
         for item in (getattr(result, "data", None) or []):
             b64 = item.get("b64_json") if isinstance(item, dict) else getattr(item, "b64_json", None)
-            url = item.get("url") if isinstance(item, dict) else getattr(item, "url", None))
+            url = item.get("url") if isinstance(item, dict) else getattr(item, "url", None)
 
             if b64:
                 img_bytes = base64.b64decode(b64)
@@ -1885,16 +1910,14 @@ def renovation_visualizer():
                 # ✅ compress to WebP (small, sharp)
                 webp = _to_webp_bytes(img_bytes, max_size=1024, quality=88)
 
-                # IMPORTANT:
-                # Update _save_to_static to support ext/content_type if you followed the R2 setup.
-                # If you didn't update it yet, you can temporarily save as PNG by removing webp conversion.
+                # Save locally (or swap this to R2 later)
                 try:
-                    url = _save_to_static(webp, subdir="visualizer", ext="webp", content_type="image/webp")
+                    saved_url = _save_to_static(webp, subdir="visualizer", ext="webp", content_type="image/webp")
                 except TypeError:
-                    # Backward-compatible fallback if your _save_to_static still only accepts (bytes, subdir)
-                    url = _save_to_static(webp, subdir="visualizer")
+                    saved_url = _save_to_static(webp, subdir="visualizer")
 
-                out_urls.append(url)
+                out_urls.append(saved_url)
+
             elif url:
                 out_urls.append(url)
 
@@ -1902,16 +1925,31 @@ def renovation_visualizer():
             return jsonify({"status": "error", "message": "No images returned from generator."}), 500
 
         # -----------------------------
-        # 4) Save to deal (session MVP)
+        # 4) Save to DB (RenovationMockup)
         # -----------------------------
         if save_to_deal:
-            session["latest_renovation_visuals"] = {
-                "property_id": property_id,
-                "before": before_ref,
-                "after_images": out_urls,
-                "preset": style_preset,
-                "prompt": style_prompt,
-            }
+            borrower = BorrowerProfile.query.filter_by(user_id=current_user.id).first()
+            borrower_id = borrower.id if borrower else None
+
+            # If uploaded file, we *should* have a before URL too (optional).
+            # For now, keep before_ref. Later you can upload "before" to R2.
+            before_url = before_ref if before_ref != "uploaded_file" else before_ref
+
+            for after_url in out_urls:
+                m = RenovationMockup(
+                    user_id=current_user.id,
+                    borrower_id=borrower_id,
+                    property_id=property_id or None,         # legacy / optional
+                    saved_property_id=saved_property_id,      # ✅ Option A link
+                    deal_id=deal_id,                          # ✅ optional link
+                    before_url=before_url,
+                    after_url=after_url,
+                    style_prompt=style_prompt or None,
+                    style_preset=style_preset or None,
+                )
+                db.session.add(m)
+
+            db.session.commit()
 
         return jsonify({
             "status": "ok",
