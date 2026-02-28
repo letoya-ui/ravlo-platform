@@ -157,8 +157,8 @@ def reset_password(token):
 @auth_bp.route("/register", methods=["GET", "POST"])
 def register():
     form = RegisterForm()
-    if form.validate_on_submit():
-    existing_user = User.query.filter_by(email=form.email.data).first()
+       if form.validate_on_submit():
+        existing_user = User.query.filter_by(email=form.email.data).first()
        if existing_user:
            flash("Account already exists. Please log in.", "info")
            return redirect(url_for("auth.login"))
