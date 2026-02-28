@@ -1,4 +1,4 @@
-from flask import render_template, request, redirect, url_for, flash, abort
+from flask import render_template, request, redirect, url_for, flash, abort, Blueprint
 from flask_login import login_required, current_user
 from datetime import datetime
 from LoanMVP.utils.decorators import role_required
