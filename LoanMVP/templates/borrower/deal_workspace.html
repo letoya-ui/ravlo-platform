@@ -18,14 +18,7 @@
   {%- endif -%}
 {%- endmacro %}
 
-{# Read key/attr safely from dict OR object #}
-{% macro pick(obj, key) -%}
-  {%- if obj is mapping -%}
-    {{ obj.get(key) }}
-  {%- else -%}
-    {{ attribute(obj, key) if obj is not none else none }}
-  {%- endif -%}
-{%- endmacro %}
+{% set comps = comps or {} %}
 
 <div class="dashboard-container">
 
@@ -85,7 +78,7 @@
 
   .intelligence-grid {
     display: grid;
-    grid-template-columns: 1fr 1fr 1.4fr;
+    grid-template-columns: 1fr 1fr 1.3fr;
     gap: 1.5rem;
     margin-top: 1.5rem;
   }
@@ -95,7 +88,37 @@
     margin-bottom: .5rem;
   }
 
-  /* Basic modal styling used by both modals */
+  /* Rehab planner */
+  .rehab-visual-grid{
+    display:grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: .9rem;
+    margin-top: .75rem;
+  }
+  .rehab-visual-item{
+    border: 1px solid rgba(255,255,255,.08);
+    border-radius: 10px;
+    padding: .75rem;
+    background: rgba(255,255,255,.02);
+  }
+  .rehab-visual-item h4{ margin:0 0 .5rem; color: var(--text-light); }
+  .rehab-options{
+    display:flex;
+    gap:.5rem;
+    flex-wrap:wrap;
+  }
+  .rehab-tag{
+    display:inline-block;
+    padding:.25rem .5rem;
+    border-radius:999px;
+    border:1px solid rgba(122,184,255,.35);
+    background: rgba(122,184,255,.08);
+    color:#cfe4ff;
+    font-size:.8rem;
+    margin-left:.35rem;
+  }
+
+  /* Modals */
   .modal-overlay {
     position: fixed;
     inset: 0;
@@ -128,9 +151,6 @@
   }
 </style>
 
-{% set action = request.form.get("action") %}
-{% set comps = comps or {} %}
-
 <div class="page-header">
   <h2>Borrower Deal Workspace</h2>
   <p class="text-muted">Analyze Flip, Rental, and Airbnb strategies with comps, rehab, and AI guidance.</p>
@@ -138,7 +158,6 @@
 
 {# =========================
    PROPERTY PICKER (GET)
-   - single source of truth: prop_id = SavedProperty.id
 ========================= #}
 <div class="dw-card" style="margin-bottom:1rem;">
   <h3>🏠 Select a Saved Property</h3>
@@ -163,21 +182,17 @@
   </form>
 </div>
 
-{# If no property selected, stop here (prevents errors + empty comps) #}
 {% if not selected_prop %}
   <div class="dw-card">
     <p class="ai-text">Select a saved property to load comps and run strategy analysis.</p>
   </div>
-  {# DO NOT render the POST form below #}
 {% else %}
 
 {# =========================
    MAIN ANALYSIS FORM (POST)
-   - keeps prop_id stable
 ========================= #}
 <form method="POST" action="{{ url_for('borrower.deal_workspace', prop_id=selected_prop.id) }}">
   {{ csrf_token() if csrf_token is defined }}
-
   <input type="hidden" name="prop_id" value="{{ selected_prop.id }}">
 
   <!-- DEAL SETUP -->
@@ -204,19 +219,20 @@
       <button type="submit" class="dw-button">Run Analysis</button>
     </div>
   </div>
-    
-  <!-- ⭐ PROPERTY INTELLIGENCE GRID -->
+
+  {# =========================
+     PROPERTY INTELLIGENCE GRID
+  ========================= #}
   {% if resolved %}
   <div class="intelligence-grid">
 
-    <!-- COLUMN 1: PROPERTY SUMMARY -->
+    <!-- 1) Property Summary -->
     <div class="dw-card">
       <h3>🏡 Property Summary</h3>
       {% if resolved.property %}
         <p class="ai-text">
           <strong>{{ resolved.property.address }}</strong><br>
           {{ resolved.property.city }}, {{ resolved.property.state }} {{ resolved.property.zip }}<br><br>
-
           <strong>Beds:</strong> {{ resolved.property.beds or '—' }}<br>
           <strong>Baths:</strong> {{ resolved.property.baths or '—' }}<br>
           <strong>Sqft:</strong> {{ resolved.property.sqft or '—' }}<br>
@@ -228,86 +244,143 @@
       {% endif %}
     </div>
 
-    <!-- COLUMN 2: VALUATION + RENT -->
+    <!-- 2) Valuation + Rent -->
     <div class="dw-card">
-      <h3>📈 Valuation</h3>
+      <h3>📈 Valuation + Rent</h3>
 
+      {# valuation #}
       {% set v = resolved.property.valuation if resolved and resolved.property and resolved.property.valuation is not undefined else none %}
       {% set v_value = (v.get('value') if v is mapping else (v.value if v else none)) %}
       {% set v_low   = (v.get('low')   if v is mapping else (v.low   if v else none)) %}
       {% set v_high  = (v.get('high')  if v is mapping else (v.high  if v else none)) %}
       {% set v_conf  = (v.get('confidence') if v is mapping else (v.confidence if v else none)) %}
- 
-      {% if v and v_value is not none and v_value is not undefined %}
-        <p class="ai-text">
-          <strong>Estimate:</strong> {{ money(v_value) }}<br>
 
-          <strong>Range:</strong>
-          {% if v_low is not none and v_low is not undefined and v_high is not none and v_high is not undefined %}
-            {{ money(v_low) }} – {{ money(v_high) }}<br>
-          {% else %}
-            —<br>
-          {% endif %}
-
-          <strong>Confidence:</strong> {{ v_conf or '—' }}
-        </p>
-      {% else %}
-        <p class="ai-text">No valuation available.</p>
-      {% endif %}
-    </div>
-
-     <div class="dw-card" style="margin-top:1.5rem;">
-       <h3>🏢 Rent Estimate</h3>
-
-       {% set r = resolved.property.rent_estimate if resolved and resolved.property and resolved.property.rent_estimate is not undefined else none %}
-       {% set r_value = (r.get('value') if r is mapping else (r.value if r else none)) %}
-       {% set r_low   = (r.get('low')   if r is mapping else (r.low   if r else none)) %}
-       {% set r_high  = (r.get('high')  if r is mapping else (r.high  if r else none)) %}
-       {% set r_conf  = (r.get('confidence') if r is mapping else (r.confidence if r else none)) %}
-
-       {% if r and r_value is not none and r_value is not undefined %}
-         <p class="ai-text">
-            <strong>Estimate:</strong> {{ money_mo(r_value) }}<br>
-
-           <strong>Range:</strong>
-           {% if r_low is not none and r_low is not undefined and r_high is not none and r_high is not undefined %}
-             {{ money(r_low) }} – {{ money(r_high) }}<br>
-            {% else %}
-             —<br>
-            {% endif %}
-
-           <strong>Confidence:</strong> {{ r_conf or '—' }}
-         </p>
+      <div class="ai-text" style="margin-bottom:1rem;">
+        <strong>Value:</strong> {{ money(v_value) }}<br>
+        <strong>Range:</strong>
+        {% if v_low is not none and v_high is not none %}
+          {{ money(v_low) }} – {{ money(v_high) }}
         {% else %}
-          <p class="ai-text">No rent estimate available.</p>
+          —
         {% endif %}
-     </div>
+        <br>
+        <strong>Confidence:</strong> {{ v_conf or '—' }}
+      </div>
 
+      {# rent #}
+      {% set r = resolved.property.rent_estimate if resolved and resolved.property and resolved.property.rent_estimate is not undefined else none %}
+      {% set r_value = (r.get('value') if r is mapping else (r.value if r else none)) %}
+      {% set r_low   = (r.get('low')   if r is mapping else (r.low   if r else none)) %}
+      {% set r_high  = (r.get('high')  if r is mapping else (r.high  if r else none)) %}
+      {% set r_conf  = (r.get('confidence') if r is mapping else (r.confidence if r else none)) %}
+
+      <div class="ai-text">
+        <strong>Rent:</strong> {{ money_mo(r_value) }}<br>
+        <strong>Range:</strong>
+        {% if r_low is not none and r_high is not none %}
+          {{ money_mo(r_low) }} – {{ money_mo(r_high) }}
+        {% else %}
+          —
+        {% endif %}
+        <br>
+        <strong>Confidence:</strong> {{ r_conf or '—' }}
+      </div>
     </div>
 
-    <!-- COLUMN 3: PHOTOS -->
+    <!-- 3) Renovation Studio -->
     <div class="dw-card">
-     <h3>🖼️ Photos</h3>
+      <h3>🏗️ Renovation Studio</h3>
+      <p class="ai-text" style="margin-top:-.25rem;">
+        Upload a room photo or pick a property photo. Generate HGTV-style after images + plan scope.
+      </p>
 
-     <div style="display:flex; gap:.5rem; flex-wrap:wrap; margin-bottom:.75rem;">
+      <div style="display:flex; gap:.5rem; flex-wrap:wrap; margin:.75rem 0 1rem;">
         <label class="dw-button" style="cursor:pointer;">
-          📷 Upload Photo
+          📷 Upload Room Photo
           <input type="file" id="uploadRoomPhoto" accept="image/*" style="display:none;">
         </label>
+
         <button type="button" class="dw-button" onclick="openStyleModal(null)">✨ Open Visualizer</button>
+        <button type="button" class="dw-button" onclick="openRehabPreview()">👀 Rehab Preview</button>
       </div>
 
       {% if resolved.property and resolved.property.photos %}
         <div class="photo-carousel">
           {% for photo in resolved.property.photos %}
-            <img src="{{ photo }}" alt="Property photo" style="width:100%; border-radius:10px; margin-bottom:.6rem;">
-           <button type="button" class="dw-button" onclick="openStyleModal('{{ photo }}')">
-              ✨ Reimagine This Room (HGTV)
-            </button>
+            <div style="margin-bottom:.9rem;">
+              <img src="{{ photo }}" alt="Property photo" style="width:100%; border-radius:10px; margin-bottom:.45rem;">
+              <div style="display:flex; gap:.5rem; flex-wrap:wrap;">
+                <button type="button" class="dw-button" onclick="setVisualizerSourceUrl('{{ photo }}')">✅ Use as Before</button>
+                <button type="button" class="dw-button" onclick="openStyleModal('{{ photo }}')">✨ Reimagine</button>
+              </div>
+            </div>
           {% endfor %}
         </div>
       {% else %}
-       <p class="ai-text">No photos available. Upload one to start.</p>
+        <p class="ai-text">No property photos found. Upload a room photo to start.</p>
+      {% endif %}
+
+      {% if mode == "flip" %}
+      <hr style="border:none; border-top:1px solid rgba(255,255,255,.08); margin:1rem 0;">
+
+      <h4 style="color:var(--accent); margin:0 0 .6rem;">📦 Rehab Templates</h4>
+      <select id="rehab-template" class="dw-input" onchange="applyRehabTemplate()">
+        <option value="">Select a template...</option>
+        <option value="rental">Rental-Ready</option>
+        <option value="flip">Flip-Ready</option>
+        <option value="airbnb">Airbnb-Ready</option>
+        <option value="luxury">Luxury Upgrade</option>
+        <option value="budget">Budget Rehab</option>
+      </select>
+
+      <div style="margin-top:1rem;">
+        <h4 style="color:var(--accent); margin:0 0 .6rem;">🏡 Rehab Visual Planner</h4>
+
+        <label class="dw-label">Scope</label>
+        <select name="rehab_scope" class="dw-input">
+          <option value="light" {% if request.form.rehab_scope == 'light' %}selected{% endif %}>Light</option>
+          <option value="medium" {% if request.form.rehab_scope in ['', None, 'medium'] %}selected{% endif %}>Medium</option>
+          <option value="heavy" {% if request.form.rehab_scope == 'heavy' %}selected{% endif %}>Heavy</option>
+        </select>
+
+        <div class="rehab-visual-grid">
+          <div class="rehab-visual-item">
+            <h4>Kitchen</h4>
+            <div class="rehab-options">
+              <label><input type="radio" name="kitchen" value="light" {% if request.form.kitchen == 'light' %}checked{% endif %}><span class="rehab-tag">Light</span></label>
+              <label><input type="radio" name="kitchen" value="medium" {% if request.form.kitchen == 'medium' %}checked{% endif %}><span class="rehab-tag">Medium</span></label>
+              <label><input type="radio" name="kitchen" value="heavy" {% if request.form.kitchen == 'heavy' %}checked{% endif %}><span class="rehab-tag">Full Gut</span></label>
+            </div>
+          </div>
+
+          <div class="rehab-visual-item">
+            <h4>Bathroom</h4>
+            <div class="rehab-options">
+              <label><input type="radio" name="bathroom" value="light" {% if request.form.bathroom == 'light' %}checked{% endif %}><span class="rehab-tag">Light</span></label>
+              <label><input type="radio" name="bathroom" value="medium" {% if request.form.bathroom == 'medium' %}checked{% endif %}><span class="rehab-tag">Medium</span></label>
+              <label><input type="radio" name="bathroom" value="heavy" {% if request.form.bathroom == 'heavy' %}checked{% endif %}><span class="rehab-tag">Full Gut</span></label>
+            </div>
+          </div>
+
+          <div class="rehab-visual-item">
+            <h4>Flooring</h4>
+            <div class="rehab-options">
+              <label><input type="radio" name="flooring" value="light" {% if request.form.flooring == 'light' %}checked{% endif %}><span class="rehab-tag">Carpet</span></label>
+              <label><input type="radio" name="flooring" value="medium" {% if request.form.flooring == 'medium' %}checked{% endif %}><span class="rehab-tag">Vinyl</span></label>
+              <label><input type="radio" name="flooring" value="heavy" {% if request.form.flooring == 'heavy' %}checked{% endif %}><span class="rehab-tag">Hardwood</span></label>
+            </div>
+          </div>
+
+          <div class="rehab-visual-item">
+            <h4>Paint</h4>
+            <div class="rehab-options">
+              <label><input type="radio" name="paint" value="light" {% if request.form.paint == 'light' %}checked{% endif %}><span class="rehab-tag">Touch-up</span></label>
+              <label><input type="radio" name="paint" value="medium" {% if request.form.paint == 'medium' %}checked{% endif %}><span class="rehab-tag">Full Interior</span></label>
+              <label><input type="radio" name="paint" value="heavy" {% if request.form.paint == 'heavy' %}checked{% endif %}><span class="rehab-tag">Interior + Exterior</span></label>
+            </div>
+          </div>
+        </div>
+      </div>
       {% endif %}
     </div>
 
@@ -428,74 +501,6 @@
       </div>
       {% endif %}
 
-      <!-- REHAB TEMPLATES / VISUAL PLANNER (left as-is from your original) -->
-      {% if mode == "flip" %}
-      <div class="dw-card" style="margin-top:1.5rem;">
-        <h3>📦 Rehab Templates</h3>
-        <select id="rehab-template" class="dw-input" onchange="applyRehabTemplate()">
-          <option value="">Select a template...</option>
-          <option value="rental">Rental-Ready</option>
-          <option value="flip">Flip-Ready</option>
-          <option value="airbnb">Airbnb-Ready</option>
-          <option value="luxury">Luxury Upgrade</option>
-          <option value="budget">Budget Rehab</option>
-        </select>
-      </div>
-
-      <div class="dw-card" style="margin-top:1.5rem;">
-        <h3>🏡 Rehab Visual Planner</h3>
-
-        <label class="dw-label">Scope</label>
-        <select name="rehab_scope" class="dw-input">
-          <option value="light" {% if request.form.rehab_scope == 'light' %}selected{% endif %}>Light</option>
-          <option value="medium" {% if request.form.rehab_scope in ['', None, 'medium'] %}selected{% endif %}>Medium</option>
-          <option value="heavy" {% if request.form.rehab_scope == 'heavy' %}selected{% endif %}>Heavy</option>
-        </select>
-
-        <div class="rehab-visual-grid">
-          <div class="rehab-visual-item">
-            <h4>Kitchen</h4>
-            <div class="rehab-options">
-              <label><input type="radio" name="kitchen" value="light" {% if request.form.kitchen == 'light' %}checked{% endif %}><span class="rehab-tag">Light</span></label>
-              <label><input type="radio" name="kitchen" value="medium" {% if request.form.kitchen == 'medium' %}checked{% endif %}><span class="rehab-tag">Medium</span></label>
-              <label><input type="radio" name="kitchen" value="heavy" {% if request.form.kitchen == 'heavy' %}checked{% endif %}><span class="rehab-tag">Full Gut</span></label>
-            </div>
-          </div>
-
-          <div class="rehab-visual-item">
-            <h4>Bathroom</h4>
-            <div class="rehab-options">
-              <label><input type="radio" name="bathroom" value="light" {% if request.form.bathroom == 'light' %}checked{% endif %}><span class="rehab-tag">Light</span></label>
-              <label><input type="radio" name="bathroom" value="medium" {% if request.form.bathroom == 'medium' %}checked{% endif %}><span class="rehab-tag">Medium</span></label>
-              <label><input type="radio" name="bathroom" value="heavy" {% if request.form.bathroom == 'heavy' %}checked{% endif %}><span class="rehab-tag">Full Gut</span></label>
-            </div>
-          </div>
-
-          <div class="rehab-visual-item">
-            <h4>Flooring</h4>
-            <div class="rehab-options">
-              <label><input type="radio" name="flooring" value="light" {% if request.form.flooring == 'light' %}checked{% endif %}><span class="rehab-tag">Carpet</span></label>
-              <label><input type="radio" name="flooring" value="medium" {% if request.form.flooring == 'medium' %}checked{% endif %}><span class="rehab-tag">Vinyl</span></label>
-              <label><input type="radio" name="flooring" value="heavy" {% if request.form.flooring == 'heavy' %}checked{% endif %}><span class="rehab-tag">Hardwood</span></label>
-            </div>
-          </div>
-
-          <div class="rehab-visual-item">
-            <h4>Paint</h4>
-            <div class="rehab-options">
-              <label><input type="radio" name="paint" value="light" {% if request.form.paint == 'light' %}checked{% endif %}><span class="rehab-tag">Touch-up</span></label>
-              <label><input type="radio" name="paint" value="medium" {% if request.form.paint == 'medium' %}checked{% endif %}><span class="rehab-tag">Full Interior</span></label>
-              <label><input type="radio" name="paint" value="heavy" {% if request.form.paint == 'heavy' %}checked{% endif %}><span class="rehab-tag">Interior + Exterior</span></label>
-            </div>
-          </div>
-        </div>
-
-        <button type="button" class="dw-button" onclick="openRehabPreview()" style="margin-top:1rem;">
-          👀 View Rehab Preview
-        </button>
-      </div>
-      {% endif %}
-
       <!-- OPTIMIZATION BUTTONS -->
       <div style="margin-top:1rem;">
         <button type="submit" name="action" value="optimize_roi" class="dw-button" style="margin-top:.75rem;">
@@ -527,57 +532,40 @@
       <div class="dw-card" style="margin-top:1.5rem;">
         <h3>📈 Deal Results</h3>
         <p class="ai-text">
-          {% if results.profit is defined %}
-            <strong>Profit (Flip):</strong> ${{ "{:,.0f}".format(results.profit|float) }}<br>
-          {% endif %}
-          {% if results.net_cashflow is defined %}
-            <strong>Monthly Cash Flow (Rental):</strong> ${{ "{:,.0f}".format(results.net_cashflow|float) }}<br>
-          {% endif %}
-          {% if results.net_monthly is defined %}
-            <strong>Net Monthly (Airbnb):</strong> ${{ "{:,.0f}".format(results.net_monthly|float) }}<br>
-          {% endif %}
-          {% if results.roi is defined and results.roi %}
-            <strong>ROI:</strong> {{ "{:,.1f}".format(results.roi * 100) }}%
-          {% endif %}
+          {% if results.profit is defined %}<strong>Profit (Flip):</strong> ${{ "{:,.0f}".format(results.profit|float) }}<br>{% endif %}
+          {% if results.net_cashflow is defined %}<strong>Monthly Cash Flow (Rental):</strong> ${{ "{:,.0f}".format(results.net_cashflow|float) }}<br>{% endif %}
+          {% if results.net_monthly is defined %}<strong>Net Monthly (Airbnb):</strong> ${{ "{:,.0f}".format(results.net_monthly|float) }}<br>{% endif %}
+          {% if results.roi is defined and results.roi %}<strong>ROI:</strong> {{ "{:,.1f}".format(results.roi * 100) }}%{% endif %}
         </p>
       </div>
 
-      <!-- SAVE / SEND / EXPORT (NO NESTED FORMS) -->
+      <!-- SAVE / SEND / EXPORT -->
       <div class="dw-card" style="margin-top:1.5rem; text-align:right;">
-        <input type="hidden" name="property_id" value="{{ property_id or '' }}">
+        <input type="hidden" name="property_id" value="{{ property_id or selected_prop.id }}">
         <input type="hidden" name="mode" value="{{ mode or '' }}">
         <input type="hidden" name="results_json" value="{{ results | tojson if results else '{}' }}">
         <input type="hidden" name="comps_json" value="{{ comps | tojson if comps else '{}' }}">
         <input type="hidden" name="resolved_json" value="{{ resolved | tojson if resolved else '{}' }}">
-        <button type="submit"
-                class="dw-button"
-                formaction="{{ url_for('borrower.save_deal') }}"
-                formmethod="POST">
+
+        <button type="submit" class="dw-button" formaction="{{ url_for('borrower.save_deal') }}" formmethod="POST">
           💾 Save Deal
         </button>
 
-        <button type="submit"
-                class="dw-button"
-                formaction="{{ url_for('borrower.send_to_lo') }}"
-                formmethod="POST">
+        <button type="submit" class="dw-button" formaction="{{ url_for('borrower.send_to_lo') }}" formmethod="POST">
           📤 Send to Loan Officer
         </button>
 
         {% if deal_id %}
-          <a href="{{ url_for('borrower.export_deal_report_pro', deal_id=deal_id) }}">
-           <button type="button" class="dw-button">📄 Download Deal Report</button>
-          </a>
-
-          <a href="{{ url_for('borrower.export_rehab_scope', deal_id=deal_id) }}">
-            <button type="button" class="dw-button">📄 Download Rehab Scope</button>
-          </a>
+          <a href="{{ url_for('borrower.export_deal_report_pro', deal_id=deal_id) }}"><button type="button" class="dw-button">📄 Download Deal Report</button></a>
+          <a href="{{ url_for('borrower.export_rehab_scope', deal_id=deal_id) }}"><button type="button" class="dw-button">📄 Download Rehab Scope</button></a>
         {% else %}
           <button type="button" class="dw-button" disabled>📄 Download Deal Report (Save Deal First)</button>
           <button type="button" class="dw-button" disabled>📄 Download Rehab Scope (Save Deal First)</button>
         {% endif %}
+      </div>
       {% endif %}
 
-    </div> <!-- END LEFT COLUMN -->
+    </div>
 
     <!-- RIGHT COLUMN -->
     <div>
@@ -589,27 +577,13 @@
         <p class="ai-text">
           {% if comps.market_snapshot %}
             <strong>Median Price:</strong>
-            {% if comps.market_snapshot.median_price %}
-              ${{ "{:,.0f}".format(comps.market_snapshot.median_price|float) }}
-            {% else %}
-              {{ placeholder|safe }}
-            {% endif %}
+            {% if comps.market_snapshot.median_price %}${{ "{:,.0f}".format(comps.market_snapshot.median_price|float) }}{% else %}{{ placeholder|safe }}{% endif %}
             <br>
-
             <strong>YoY Change:</strong>
-            {% if comps.market_snapshot.yoy_change is not none %}
-              {{ comps.market_snapshot.yoy_change }}%
-            {% else %}
-              {{ placeholder|safe }}
-            {% endif %}
+            {% if comps.market_snapshot.yoy_change is not none %}{{ comps.market_snapshot.yoy_change }}%{% else %}{{ placeholder|safe }}{% endif %}
             <br>
-
             <strong>Days on Market:</strong>
-            {% if comps.market_snapshot.days_on_market %}
-              {{ comps.market_snapshot.days_on_market }}
-            {% else %}
-              {{ placeholder|safe }}
-            {% endif %}
+            {% if comps.market_snapshot.days_on_market %}{{ comps.market_snapshot.days_on_market }}{% else %}{{ placeholder|safe }}{% endif %}
           {% else %}
             {{ placeholder|safe }}
           {% endif %}
@@ -620,99 +594,33 @@
       {% if comparison %}
       <div class="dw-card" style="margin-top:1.5rem;">
         <h3>📘 Strategy Summary</h3>
-
         <div class="ai-text">
 
-          {# --- Safe resolved/property handle --- #}
           {% set prop = (resolved.property if resolved and resolved.property is not undefined else none) %}
-
-          {# valuation could be dict OR object OR undefined #}
           {% set v2 = (prop.valuation if prop and prop.valuation is not undefined else none) %}
           {% set arv_val = (v2.get('value') if v2 is mapping else (v2.value if v2 else none)) %}
-
-          {# rent_estimate could be dict OR object OR undefined #}
           {% set r2 = (prop.rent_estimate if prop and prop.rent_estimate is not undefined else none) %}
           {% set rent_val = (r2.get('value') if r2 is mapping else (r2.value if r2 else none)) %}
 
-          <!-- FLIP -->
           <h4 style="color:var(--accent); margin-top:.5rem;">Flip</h4>
           <p>
-            <strong>Profit:</strong>
-            {% if comparison.flip.profit is not none %}
-              ${{ "{:,.0f}".format(comparison.flip.profit|float) }}
-            {% else %}
-              {{ placeholder|safe }}
-            {% endif %}
-            <br>
-
-            <strong>ROI:</strong>
-             {% if comparison.flip.roi %}
-               {{ "{:,.1f}".format(comparison.flip.roi * 100) }}%
-            {% else %}
-               {{ placeholder|safe }}
-            {% endif %}
-            <br>
-  
-            <strong>ARV:</strong>
-            {% if arv_val is not none and arv_val is not undefined %}
-              ${{ "{:,.0f}".format(arv_val|float) }}
-            {% else %}
-               {{ placeholder|safe }}
-            {% endif %}
+            <strong>Profit:</strong> {% if comparison.flip.profit is not none %}${{ "{:,.0f}".format(comparison.flip.profit|float) }}{% else %}{{ placeholder|safe }}{% endif %}<br>
+            <strong>ROI:</strong> {% if comparison.flip.roi %}{{ "{:,.1f}".format(comparison.flip.roi * 100) }}%{% else %}{{ placeholder|safe }}{% endif %}<br>
+            <strong>ARV:</strong> {% if arv_val is not none %}${{ "{:,.0f}".format(arv_val|float) }}{% else %}{{ placeholder|safe }}{% endif %}
           </p>
 
-           <!-- RENTAL -->
-           <h4 style="color:var(--accent); margin-top:1rem;">Rental</h4>
+          <h4 style="color:var(--accent); margin-top:1rem;">Rental</h4>
           <p>
-             <strong>Cash Flow:</strong>
-             {% if comparison.rental.net_cashflow is not none %}
-              ${{ "{:,.0f}".format(comparison.rental.net_cashflow|float) }}/mo
-            {% else %}
-              {{ placeholder|safe }}
-            {% endif %}
-            <br>
-
-            <strong>DSCR:</strong>
-            {% if comparison.rental.dscr %}
-              {{ "{:,.2f}".format(comparison.rental.dscr|float) }}
-            {% else %}
-               {{ placeholder|safe }}
-             {% endif %}
-             <br>
-
-             <strong>Rent Estimate:</strong>
-            {% if rent_val is not none and rent_val is not undefined %}
-              ${{ "{:,.0f}".format(rent_val|float) }}/mo
-            {% else %}
-               {{ placeholder|safe }}
-            {% endif %}
+            <strong>Cash Flow:</strong> {% if comparison.rental.net_cashflow is not none %}${{ "{:,.0f}".format(comparison.rental.net_cashflow|float) }}/mo{% else %}{{ placeholder|safe }}{% endif %}<br>
+            <strong>DSCR:</strong> {% if comparison.rental.dscr %}{{ "{:,.2f}".format(comparison.rental.dscr|float) }}{% else %}{{ placeholder|safe }}{% endif %}<br>
+            <strong>Rent Estimate:</strong> {% if rent_val is not none %}${{ "{:,.0f}".format(rent_val|float) }}/mo{% else %}{{ placeholder|safe }}{% endif %}
           </p>
 
-          <!-- AIRBNB -->
           <h4 style="color:var(--accent); margin-top:1rem;">Airbnb</h4>
           <p>
-            <strong>Net Monthly:</strong>
-            {% if comparison.airbnb.net_monthly is not none %}
-              ${{ "{:,.0f}".format(comparison.airbnb.net_monthly|float) }}/mo
-            {% else %}
-              {{ placeholder|safe }}
-            {% endif %}
-            <br>
-
-            <strong>Occupancy:</strong>
-            {% if comparison.airbnb.occupancy %}
-              {{ "{:,.0f}".format(comparison.airbnb.occupancy * 100) }}%
-            {% else %}
-              {{ placeholder|safe }}
-            {% endif %}
-            <br>
-
-            <strong>Nightly Rate:</strong>
-            {% if comparison.airbnb.nightly_rate %}
-              ${{ "{:,.0f}".format(comparison.airbnb.nightly_rate|float) }}
-            {% else %}
-              {{ placeholder|safe }}
-            {% endif %}
+            <strong>Net Monthly:</strong> {% if comparison.airbnb.net_monthly is not none %}${{ "{:,.0f}".format(comparison.airbnb.net_monthly|float) }}/mo{% else %}{{ placeholder|safe }}{% endif %}<br>
+            <strong>Occupancy:</strong> {% if comparison.airbnb.occupancy %}{{ "{:,.0f}".format(comparison.airbnb.occupancy * 100) }}%{% else %}{{ placeholder|safe }}{% endif %}<br>
+            <strong>Nightly Rate:</strong> {% if comparison.airbnb.nightly_rate %}${{ "{:,.0f}".format(comparison.airbnb.nightly_rate|float) }}{% else %}{{ placeholder|safe }}{% endif %}
           </p>
 
         </div>
@@ -725,10 +633,9 @@
         <p class="ai-text">{{ ai_summary }}</p>
       </div>
       {% endif %}
+    </div>
 
-    </div> <!-- END RIGHT COLUMN -->
-
-  </div> <!-- END dw-layout -->
+  </div>
 
 </form>
 
@@ -745,9 +652,7 @@
     <p><strong>After (Based on Your Selections):</strong></p>
     <p id="preview-after" class="preview-text"></p>
 
-    <button type="button" class="dw-button" onclick="closeRehabPreview()" style="margin-top:1rem;">
-      Close
-    </button>
+    <button type="button" class="dw-button" onclick="closeRehabPreview()" style="margin-top:1rem;">Close</button>
   </div>
 </div>
 
@@ -817,12 +722,13 @@
     </div>
   </div>
 </div>
+
 {% endif %}
 
 <script>
-/* ===========================================
-   REHAB TEMPLATE HELPERS
-=========================================== */
+/* ==========================
+   Rehab templates
+========================== */
 function applyRehabTemplate() {
   const template = document.getElementById("rehab-template")?.value;
   const templates = {
@@ -864,35 +770,37 @@ function openRehabPreview() {
 
   document.getElementById("rehabPreviewModal").style.display = "flex";
 }
-
 function closeRehabPreview() {
   document.getElementById("rehabPreviewModal").style.display = "none";
 }
 
-/* ===========================================
-   STYLE MODAL + UPLOAD FLOW (FIXED)
-   - Never sends blob: URL to backend
-   - Sends actual file bytes as image_file
-   - Only ONE runStyleTransform function
-=========================================== */
-let _styleCurrentBefore = null; // for UI preview only (blob URL)
-let _styleCurrentFile = null;
+/* ==========================
+   Visualizer (file OR url)
+========================== */
+let _styleCurrentBefore = null;     // what we show in the modal (can be blob or url)
+let _styleCurrentFile = null;       // upload file bytes (preferred)
+let _styleCurrentUrl = null;        // property photo url (http/https)
 
 document.getElementById("uploadRoomPhoto")?.addEventListener("change", (e) => {
   const file = e.target.files?.[0];
   if (!file) return;
-
   _styleCurrentFile = file;
+  _styleCurrentUrl = null;
 
-  // preview in modal (blob is OK for <img>, NOT OK for backend)
   const previewUrl = URL.createObjectURL(file);
   openStyleModal(previewUrl);
 });
 
-function openStyleModal(photoUrl) {
-  _styleCurrentBefore = photoUrl || null;
+function setVisualizerSourceUrl(url) {
+  _styleCurrentUrl = url;
+  _styleCurrentFile = null;
+  openStyleModal(url);
+}
 
-  document.getElementById("styleBeforeImage").src = photoUrl || "";
+function openStyleModal(photoUrl) {
+  _styleCurrentBefore = photoUrl || _styleCurrentBefore || null;
+
+  document.getElementById("styleBeforeImage").src = _styleCurrentBefore || "";
   document.getElementById("styleModal").style.display = "flex";
   document.getElementById("styleResults").style.display = "none";
   document.getElementById("styleResultsGrid").innerHTML = "";
@@ -916,21 +824,16 @@ function setStylePreset(preset) {
   document.getElementById("stylePrompt").dataset.preset = preset;
 }
 
-/* ✅ SINGLE SOURCE OF TRUTH: runStyleTransform (file upload version) */
 async function runStyleTransform() {
   const stylePrompt = document.getElementById("stylePrompt")?.value?.trim() || "";
   const preset = document.getElementById("stylePrompt")?.dataset?.preset || "";
   const variations = document.getElementById("styleVariations")?.value || "2";
   const saveToDeal = document.getElementById("styleSaveToDeal")?.checked || false;
 
-  const propertyId = "{{ property_id or '' }}";
+  const propertyId = "{{ property_id or selected_prop.id }}";
 
-  const resultsGrid = document.getElementById("styleResultsGrid");
-  const resultsWrapper = document.getElementById("styleResults");
-  const costDiv = document.getElementById("styleCostEstimate");
-
-  if (!_styleCurrentFile) {
-    alert("Please choose a room photo first.");
+  if (!_styleCurrentFile && !_styleCurrentUrl) {
+    alert("Upload a room photo or choose a property photo first.");
     return;
   }
 
@@ -941,8 +844,15 @@ async function runStyleTransform() {
   formData.append("save_to_deal", saveToDeal ? "true" : "false");
   formData.append("property_id", propertyId);
 
-  // ✅ Send real file bytes
-  formData.append("image_file", _styleCurrentFile);
+  if (_styleCurrentFile) {
+    formData.append("image_file", _styleCurrentFile);
+  } else {
+    formData.append("image_url", _styleCurrentUrl);
+  }
+
+  const resultsGrid = document.getElementById("styleResultsGrid");
+  const resultsWrapper = document.getElementById("styleResults");
+  const costDiv = document.getElementById("styleCostEstimate");
 
   resultsGrid.innerHTML = "Generating...";
   resultsWrapper.style.display = "block";
@@ -1000,3 +910,6 @@ function updateBeforeAfterClip(val) {
   after.style.clipPath = `inset(0 ${100 - val}% 0 0)`;
 }
 </script>
+
+</div>
+{% endblock %}
