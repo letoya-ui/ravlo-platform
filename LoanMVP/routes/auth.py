@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, redirect, url_for, flash, request, current_app,  get_flashed_messages
+from flask import Blueprint, render_template, redirect, url_for, flash, request, current_app,  get_flashed_messages, session
 from flask_login import login_user, logout_user, login_required, current_user
 from LoanMVP.models.user_model import User
 from LoanMVP.extensions import db
