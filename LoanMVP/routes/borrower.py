@@ -115,6 +115,18 @@ def _safe_int(v, default=2, min_v=1, max_v=4):
     except Exception:
         return default
 
+def _split_ids(csv: str):
+    out = []
+    for p in (csv or "").split(","):
+        p = p.strip()
+        if not p:
+            continue
+        try:
+            out.append(int(p))
+        except Exception:
+            pass
+    return list(dict.fromkeys(out))
+
 
 def _download_image_bytes(url: str, timeout=15) -> bytes:
     resp = requests.get(url, timeout=timeout)
@@ -1663,12 +1675,89 @@ def deals_list():
 def deal_detail(deal_id):
     deal = Deal.query.filter_by(id=deal_id, user_id=current_user.id).first_or_404()
 
-    mockups = RenovationMockup.query.filter_by(
-        deal_id=deal.id,
-        user_id=current_user.id
-    ).order_by(RenovationMockup.created_at.desc()).all()
+    mockups = (RenovationMockup.query
+        .filter_by(deal_id=deal_id, user_id=current_user.id)
+        .order_by(RenovationMockup.created_at.desc())
+        .all())
 
-    return render_template("borrower/deal_detail.html", deal=deal, mockups=mockups)
+    # ✅ use YOUR partner model/query here:
+    # Example: Partner rows owned by borrower user
+    partners = Partner.query.filter_by(user_id=current_user.id).order_by(Partner.created_at.desc()).all()
+
+    return render_template(
+        "borrower/deal_detail.html",
+        deal=deal,
+        mockups=mockups,
+        partners=partners
+    )
+@borrower_bp.route("/deals/<int:deal_id>/select_design", methods=["POST"])
+@role_required("borrower")
+def deal_select_design(deal_id):
+    deal = Deal.query.filter_by(id=deal_id, user_id=current_user.id).first_or_404()
+
+    after_url = (request.form.get("after_url") or "").strip()
+    before_url = (request.form.get("before_url") or "").strip()
+
+    if not after_url:
+        return jsonify({"status": "error", "message": "Missing after_url."}), 400
+
+    # ✅ Ensure the mockup belongs to this user/deal
+    owned = RenovationMockup.query.filter_by(
+        user_id=current_user.id,
+        deal_id=deal_id,
+        after_url=after_url
+    ).first()
+
+    if not owned:
+        return jsonify({"status": "error", "message": "Design not found for this deal."}), 404
+
+    # ✅ store selection on deal
+    deal.final_after_url = after_url
+    if before_url:
+        deal.final_before_url = before_url
+
+    db.session.commit()
+    return jsonify({"status": "ok"})
+
+@borrower_bp.route("/deals/<int:deal_id>/share_design", methods=["POST"])
+@role_required("borrower")
+def deal_share_design(deal_id):
+    deal = Deal.query.filter_by(id=deal_id, user_id=current_user.id).first_or_404()
+
+    image_url = (request.form.get("image_url") or "").strip() or (getattr(deal, "final_after_url", "") or "")
+    note = (request.form.get("note") or "").strip() or None
+    partner_ids = _split_ids(request.form.get("partner_ids") or "")
+
+    if not image_url:
+        return jsonify({"status": "error", "message": "Select a design first."}), 400
+    if not partner_ids:
+        return jsonify({"status": "error", "message": "Choose at least one partner."}), 400
+
+    # ✅ pull partners owned by this borrower
+    partners = Partner.query.filter(
+        Partner.user_id == current_user.id,
+        Partner.id.in_(partner_ids)
+    ).all()
+
+    if not partners:
+        return jsonify({"status": "error", "message": "No valid partners selected."}), 400
+
+    sent = 0
+    failed = 0
+
+    for p in partners:
+        try:
+            # ✅ plug into your existing send flow:
+            # Examples:
+            # send_partner_message(partner=p, subject="Renovation Design", body=..., link=image_url)
+            # send_partner_email(p.email, ...)
+            send_partner_design_to_partner(partner=p, deal=deal, image_url=image_url, note=note)  # <-- you wire this
+            sent += 1
+        except Exception as e:
+            print("Partner send failed:", e)
+            failed += 1
+
+    return jsonify({"status": "ok", "sent": sent, "failed": failed})
 
 @borrower_bp.route("/deals/save", methods=["POST"])
 @role_required("borrower")
