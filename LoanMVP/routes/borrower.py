@@ -1190,21 +1190,7 @@ def borrower_partner_requests():
     requests_q = PartnerRequest.query.filter_by(borrower_user_id=current_user.id)\
         .order_by(PartnerRequest.created_at.desc()).all()
     return render_template("borrower/partners/requests.html", requests=requests_q)
-
-
-@borrower_bp.route("/partners/requests")
-@role_required("borrower")
-def my_partner_requests():
-    borrower_profile = BorrowerProfile.query.filter_by(user_id=current_user.id).first()
-
-    q = PartnerRequest.query.filter_by(borrower_user_id=current_user.id)\
-        .order_by(PartnerRequest.created_at.desc()).all()
-
-    return render_template("borrower/partner_requests.html", requests=q, borrower=borrower_profile)
-
-
-
-    
+   
 # =========================================================
 # 💬 Messages
 # =========================================================
