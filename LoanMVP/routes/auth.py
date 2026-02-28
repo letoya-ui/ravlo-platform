@@ -39,76 +39,75 @@ def verify_reset_token(token: str, expiration_seconds: int = 3600):
 # ------------------------------------------------
 # 🟩 Login
 # ------------------------------------------------
+
 @auth_bp.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "GET":
-        # clears stale "welcome" / old messages
+        # Clear stale flash messages on page load (optional)
         get_flashed_messages()
         return render_template("auth/login.html", title="Login | Ravlo")
 
-    # POST continues as normal...
-        email = request.form.get("email", "").strip().lower()
-        password = request.form.get("password", "").strip()
+    # -------------------------
+    # POST (login attempt)
+    # -------------------------
+    email = (request.form.get("email") or "").strip().lower()
+    password = (request.form.get("password") or "").strip()
 
-        if not email or not password:
-            flash("⚠️ Please enter both email and password.", "warning")
-            return redirect(url_for("auth.login"))
+    if not email or not password:
+        flash("⚠️ Please enter both email and password.", "warning")
+        return redirect(url_for("auth.login"))
 
-        user = User.query.filter_by(email=email).first()
+    user = User.query.filter_by(email=email).first()
 
-        if user and user.check_password(password):
-            if not user.is_active:
-                flash("🚫 Your account is deactivated. Contact admin for access.", "danger")
-                return redirect(url_for("auth.login"))
-
-            # ✅ Log in user and update timestamp
-            login_user(user, remember=True)
-            user.last_login = datetime.utcnow()
-            db.session.commit()
-
-            display_name = user.full_name or user.email
-            flash(f"👋 Welcome back, {display_name}!", "success")
-
-            # ✅ 1. Check if user tried to access a protected page before login
-            next_page = request.args.get("next")
-            if next_page:
-                return redirect(next_page)
-
-            # ✅ 2. Role-based redirect (explicit control)
-            if user.role.lower() == "admin":
-                return redirect(url_for("admin.dashboard"))
-            elif user.role.lower() == "loan_officer":
-                return redirect(url_for("loan_officer.dashboard"))
-            elif user.role.lower() == "processor":
-                return redirect(url_for("processor.dashboard"))
-            elif user.role.lower() == "underwriter":
-                return redirect(url_for("underwriter.dashboard"))
-            elif user.role.lower() == "borrower":
-                return redirect(url_for("borrower.dashboard"))
-            elif user.role.lower() == "executive":
-                return redirect(url_for("executive.dashboard"))
-            elif user.role.lower() == "compliance":
-                return redirect(url_for("compliance.dashboard"))
-            elif user.role.lower() == "property":
-                return redirect(url_for("property.dashboard"))
-            elif user.role.lower() == "system":
-                return redirect(url_for("system.dashboard"))
-            elif user.role.lower() == "crm":
-                return redirect(url_for("crm.dashboard"))
-            elif user.role.lower() == "ai":
-                return redirect(url_for("ai.dashboard"))
-            elif user.role.lower() == "intelligence":
-                return redirect(url_for("intelligence.dashboard"))
-            else:
-                # fallback if role doesn't have a dashboard
-                flash("✅ Logged in successfully — redirected to home.", "info")
-                return redirect(url_for("index"))
-
-        # ❌ Wrong credentials
+    if not user or not user.check_password(password):
         flash("❌ Invalid email or password.", "danger")
         return redirect(url_for("auth.login"))
 
-    return render_template("auth/login.html", title="Login | LoanMVP")
+    # If you have is_active, keep this
+    if hasattr(user, "is_active") and (user.is_active is False):
+        flash("🚫 Your account is deactivated. Contact admin for access.", "danger")
+        return redirect(url_for("auth.login"))
+
+    # ✅ Make sessions stick
+    session.permanent = True
+
+    login_user(user, remember=True)
+    user.last_login = datetime.utcnow()
+    db.session.commit()
+
+    # OPTIONAL: don’t show name publicly on shared devices
+    flash("👋 Welcome back!", "success")
+
+    # ✅ Respect "next"
+    next_page = request.args.get("next")
+    if next_page:
+        return redirect(next_page)
+
+    # ✅ Safe role normalize
+    role = (user.role or "").strip().lower()
+
+    dashboard_map = {
+        "admin": "admin.dashboard",
+        "loan_officer": "loan_officer.dashboard",
+        "processor": "processor.dashboard",
+        "underwriter": "underwriter.dashboard",
+        "borrower": "borrower.dashboard",
+        "executive": "executive.dashboard",
+        "compliance": "compliance.dashboard",
+        "property": "property.dashboard",
+        "system": "system.dashboard",
+        "crm": "crm.dashboard",
+        "ai": "ai.dashboard",
+        "intelligence": "intelligence.dashboard",
+        "partner": "partners.dashboard",
+    }
+
+    endpoint = dashboard_map.get(role)
+    if endpoint:
+        return redirect(url_for(endpoint))
+
+    flash("Logged in, but your account role is not set. Contact support.", "warning")
+    return redirect(url_for("index"))
 
 # ------------------------------------------------
 # 🟥 Logout
