@@ -1,120 +1,65 @@
-{# ============================================================
-   RAVLO — AUTH / LOGIN (Engraved Metallic)
-   File: templates/auth/login.html
-   Requires: static/css/auth.css  (included below)
-   ============================================================ #}
-
-{% extends "layouts/ravlo_auth_base.html" %}
+{% extends "layouts/auth_base.html" %}
 {% block title %}Login | Ravlo{% endblock %}
 
 {% block content %}
-<div class="auth-wrap">
-  <div class="auth-card">
+<section class="ravlo-auth-card" role="region" aria-label="Ravlo Login">
 
-    <div class="brand-stack">
-      <!-- RV Engraved Mark -->
-      <div class="rv-mark" aria-hidden="true">
-        <!-- Inline SVG so it renders crisp everywhere -->
-        <svg viewBox="0 0 220 160" role="img" aria-label="Ravlo">
-          <defs>
-            <!-- Metallic gradient -->
-            <linearGradient id="metalGrad" x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0%"  stop-color="#f4f6fb"/>
-              <stop offset="18%" stop-color="#cfd6e4"/>
-              <stop offset="45%" stop-color="#7d879b"/>
-              <stop offset="70%" stop-color="#dfe5f1"/>
-              <stop offset="100%" stop-color="#6c768a"/>
-            </linearGradient>
-
-            <!-- bevel highlight -->
-            <linearGradient id="bevelHi" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stop-color="rgba(255,255,255,.75)"/>
-              <stop offset="55%" stop-color="rgba(255,255,255,.05)"/>
-              <stop offset="100%" stop-color="rgba(0,0,0,.35)"/>
-            </linearGradient>
-
-            <!-- subtle inner shadow -->
-            <filter id="engrave" x="-20%" y="-20%" width="140%" height="160%">
-              <feDropShadow dx="0" dy="8" stdDeviation="6" flood-color="#000" flood-opacity=".55"/>
-              <feDropShadow dx="0" dy="2" stdDeviation="1.5" flood-color="#000" flood-opacity=".55"/>
-            </filter>
-
-            <filter id="innerShadow" x="-20%" y="-20%" width="140%" height="140%">
-              <feOffset dx="0" dy="2" />
-              <feGaussianBlur stdDeviation="2" result="blur"/>
-              <feComposite in="SourceGraphic" in2="blur" operator="out" result="inverse"/>
-              <feColorMatrix in="inverse" type="matrix"
-                values="0 0 0 0 0
-                        0 0 0 0 0
-                        0 0 0 0 0
-                        0 0 0 .55 0" />
-              <feComposite in="SourceGraphic" operator="over"/>
-            </filter>
-          </defs>
-
-          <!-- RV monogram (stylized, beveled) -->
-          <g filter="url(#engrave)">
-            <!-- R -->
-            <path fill="url(#metalGrad)" d="M54 30h70c22 0 38 12 38 31 0 15-9 25-24 29l27 40h-34l-23-36H84v36H54V30zm30 22v20h34c9 0 14-4 14-10s-5-10-14-10H84z"/>
-            <!-- V -->
-            <path fill="url(#metalGrad)" d="M150 30h30l-38 100h-30l-38-100h30l23 69 23-69z" opacity=".0"/>
-            <!-- V (visible overlay) -->
-            <path fill="url(#metalGrad)" d="M132 28h28l-42 106h-26L50 28h28l26 74 28-74z" transform="translate(40,0)"/>
-            <!-- bevel sheen -->
-            <path fill="url(#bevelHi)" d="M54 30h70c22 0 38 12 38 31 0 15-9 25-24 29l27 40h-34l-23-36H84v36H54V30zm30 22v20h34c9 0 14-4 14-10s-5-10-14-10H84z" opacity=".28"/>
-          </g>
-        </svg>
-      </div>
-
-      <div class="wordmark" aria-hidden="true">RAVLO</div>
+  <div class="ravlo-auth-brand">
+    <!-- Put your engraved RV file here: /static/img/rv_mark.png -->
+    <div class="ravlo-auth-logo">
+      <img src="{{ url_for('static', filename='img/rv_mark.png') }}" alt="Ravlo" />
     </div>
 
-    <form class="auth-form" method="post" action="{{ url_for('auth.login') }}">
-      {# If you use CSRF (Flask-WTF), uncomment: #}
-      {# <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"> #}
+    <div class="ravlo-auth-word">RAVLO</div>
+  </div>
 
-      <label class="auth-label" for="email">Email</label>
-      <div class="auth-input">
-        <input id="email" name="email" type="email" placeholder="Email" autocomplete="email" required>
-      </div>
+  <form method="post" action="{{ url_for('auth.login') }}" class="ravlo-auth-form">
+    {# if you use CSRF, enable: #}
+    {# <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"> #}
 
-      <label class="auth-label" for="password">Password</label>
-      <div class="auth-input has-icon">
-        <input id="password" name="password" type="password" placeholder="Password" autocomplete="current-password" required>
-        <button class="eye-btn" type="button" aria-label="Show password" onclick="togglePassword()">
-          <!-- inline eye icon -->
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z" fill="none" stroke="currentColor" stroke-width="1.7"/>
-            <path d="M9.5 9.5a3.5 3.5 0 1 0 5 5 3.5 3.5 0 0 0-5-5Z" fill="none" stroke="currentColor" stroke-width="1.7"/>
-            <path id="eyeSlash" d="M4 4l16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
-          </svg>
-        </button>
-      </div>
+    <label class="ravlo-auth-label" for="email">Email</label>
+    <div class="ravlo-auth-input">
+      <input id="email" name="email" type="email" autocomplete="email"
+             placeholder="Email" required />
+    </div>
 
-      <button class="auth-btn" type="submit">Sign In</button>
+    <label class="ravlo-auth-label" for="password">Password</label>
+    <div class="ravlo-auth-input has-eye">
+      <input id="password" name="password" type="password" autocomplete="current-password"
+             placeholder="Password" required />
+      <button class="ravlo-eye" type="button" aria-label="Show password" onclick="togglePw()">
+        <!-- minimal “eye” so you don't rely on icon cdns -->
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" fill="none" stroke="currentColor" stroke-width="2"/>
+          <path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" fill="none" stroke="currentColor" stroke-width="2"/>
+        </svg>
+      </button>
+    </div>
 
-      <a class="auth-link" href="{{ url_for('auth.forgot_password') }}"
+    <button class="ravlo-auth-btn" type="submit">Sign In</button>
+
+    <div class="ravlo-auth-links">
+      <a class="ravlo-auth-link" href="{{ url_for('auth.forgot_password') if 'auth.forgot_password' in current_app.view_functions else '#' }}">
         Forgot password?
       </a>
+    </div>
 
-      <div class="auth-foot">
-        <span class="muted">Don't have an account?</span>
-        <a class="auth-link subtle" href="{{ url_for('auth.request_access') }}"
-          Request access
-        </a>
-      </div>
-    </form>
+    <div class="ravlo-auth-bottom">
+      <div class="muted">Don’t have an account?</div>
+      <a class="ravlo-auth-link" href="{{ url_for('auth.request_access') if 'auth.request_access' in current_app.view_functions else '#' }}">
+        Request access
+      </a>
+    </div>
+  </form>
 
-  </div>
-</div>
+</section>
+{% endblock %}
 
+{% block scripts %}
 <script>
-  function togglePassword(){
-    const input = document.getElementById("password");
-    const slash = document.getElementById("eyeSlash");
-    const isPw = input.type === "password";
-    input.type = isPw ? "text" : "password";
-    if(slash) slash.style.opacity = isPw ? "0" : "1";
+  function togglePw(){
+    const el = document.getElementById('password');
+    el.type = (el.type === 'password') ? 'text' : 'password';
   }
 </script>
 {% endblock %}
