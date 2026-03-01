@@ -1,13 +1,9 @@
-{# ============================================================
-   RAVLO — AUTH BASE
-   File: templates/layouts/ravlo_auth_base.html
-   ============================================================ #}
 <!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>{% block title %}Ravlo{% endblock %}</title>
+  <title>{% block title %}Login | Ravlo{% endblock %}</title>
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -16,9 +12,15 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='css/auth.css') }}">
   {% block head %}{% endblock %}
 </head>
-<body>
-  <div class="auth-bg"></div>
-  <div class="auth-grain"></div>
-  {% block content %}{% endblock %}
+
+<body class="ravlo-auth">
+  <div class="ravlo-auth-bg"></div>
+  <div class="ravlo-auth-grain"></div>
+
+  <main class="ravlo-auth-wrap">
+    {% block content %}{% endblock %}
+  </main>
+
+  {% block scripts %}{% endblock %}
 </body>
 </html>
