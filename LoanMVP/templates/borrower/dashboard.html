@@ -6,11 +6,11 @@
 
 {% block topbar_actions %}
   <button class="ravlo-btn ghost sm" type="button"
-          onclick="location.href='{{ url_for('borrower.index') if 'deals.index' in current_app.view_functions else '#' }}'">
+          onclick="location.href='{{ url_for('borrower.index') }}'"
     View Deals
   </button>
   <button class="ravlo-btn primary sm" type="button"
-          onclick="location.href='{{ url_for('borrower.new') if 'deals.new' in current_app.view_functions else '#' }}'">
+          onclick="location.href='{{ url_for('borrower.new') }}'"
     New Deal
   </button>
 {% endblock %}
