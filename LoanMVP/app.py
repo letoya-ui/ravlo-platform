@@ -172,7 +172,11 @@ def create_app():
                     is_read=False,
                 ).count()
         return dict(unread_count=unread)
-
+  
+    @app.context_processor
+    def inject_view_functions():
+        return {"view_functions": current_app.view_functions}
+    
     @app.context_processor
     def inject_datetime():
         return dict(datetime=datetime)
