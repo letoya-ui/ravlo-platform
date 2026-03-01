@@ -2659,3 +2659,31 @@ def market_snapshot_page():
         active_property=active_property,
         market_snapshot=market_snapshot,
     )
+
+@dual_route("/", methods=["GET"])
+@dual_route("/index", methods=["GET"])
+@dual_route("/dashboard", methods=["GET"])    # legacy
+@dual_route("/command", methods=["GET"])      # canonical
+@role_required("investor")
+def command_center():
+
+    investor = InvestorProfile.query.filter_by(
+        user_id=current_user.id
+    ).first()
+
+    investments = []
+
+    if investor:
+        investments = (Investment.query
+                       .filter_by(investor_id=investor.id)
+                       .order_by(Investment.created_at.desc())
+                       .all())
+
+    return render_template(
+        "investor/index.html",   # 🔥 investor landing template
+        investor=investor,
+        investments=investments,
+        now_str=datetime.utcnow().strftime("%b %d, %Y • %I:%M %p"),
+        active_tab="command",
+        title="Ravlo Investor Command Center"
+    )
