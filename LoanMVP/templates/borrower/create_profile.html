@@ -1,68 +1,60 @@
-{% extends "layouts/borrower_base.html" %}
-{% block title %}Create Borrower Profile{% endblock %}
+{% extends "layouts/ravlo_base.html" %}
+{% block title %}Create Investor Profile{% endblock %}
 {% block content %}
 
-  <!-- MAIN CONTENT -->
-  <main class="b-main">
+<!-- MAIN CONTENT -->
+<main class="b-main">
 
-    <!-- TOP TABS -->
-    <div class="b-top-tabs">
-      <div class="b-top-tab active">Profile Setup</div>
-    </div>
+  <!-- TOP TABS -->
+  <div class="b-top-tabs">
+    <div class="b-top-tab active">Profile Setup</div>
+  </div>
 
-    <!-- PROFILE SETUP CARD -->
-    <div class="b-card" style="max-width:700px;margin:0 auto;padding:2rem;">
+  <!-- PROFILE SETUP CARD -->
+  <div class="b-card" style="max-width:700px;margin:0 auto;padding:2rem;">
 
-      <h2>👤 Borrower Profile Setup</h2>
-      <p class="muted">Please complete your profile to access the full Borrower Dashboard.</p>
+    <h2>👤 Investor Profile Setup</h2>
+    <p class="muted">Complete your profile to unlock your Ravlo Investor Command Center.</p>
 
-      <form method="POST" style="margin-top:1rem;">
-        {{ form.hidden_tag() }}
+    <form method="POST" style="margin-top:1rem;">
+      {{ form.hidden_tag() }}
 
-        <div class="form-grid">
-          {{ form.full_name.label }} {{ form.full_name(class="form-control") }}
-          {{ form.phone.label }} {{ form.phone(class="form-control") }}
-          {{ form.email.label }} {{ form.email(class="form-control") }}
-          {{ form.address.label }} {{ form.address(class="form-control") }}
-          {{ form.city.label }} {{ form.city(class="form-control") }}
-          {{ form.state.label }} {{ form.state(class="form-control") }}
-          {{ form.zip_code.label }} {{ form.zip_code(class="form-control") }}
-          {{ form.employment_status.label }} {{ form.employment_status(class="form-control") }}
-          {{ form.annual_income.label }} {{ form.annual_income(class="form-control") }}
-          {{ form.credit_score.label }} {{ form.credit_score(class="form-control") }}
-        </div>
+      <div class="form-grid">
+        {{ form.full_name.label }} {{ form.full_name(class="form-control") }}
+        {{ form.phone.label }} {{ form.phone(class="form-control") }}
+        {{ form.email.label }} {{ form.email(class="form-control") }}
+        {{ form.address.label }} {{ form.address(class="form-control") }}
+        {{ form.city.label }} {{ form.city(class="form-control") }}
+        {{ form.state.label }} {{ form.state(class="form-control") }}
+        {{ form.zip_code.label }} {{ form.zip_code(class="form-control") }}
+        {{ form.employment_status.label }} {{ form.employment_status(class="form-control") }}
+        {{ form.annual_income.label }} {{ form.annual_income(class="form-control") }}
+        {{ form.credit_score.label }} {{ form.credit_score(class="form-control") }}
+      </div>
 
-        <button type="submit" class="btn-glow" style="margin-top:1rem;">💾 Save Profile</button>
-      </form>
+      <button type="submit" class="ravlo-btn primary" style="margin-top:1rem;">
+        💾 Save Profile
+      </button>
+    </form>
 
-    </div>
+  </div>
 
-  </main>
-</div>
+</main>
 
 <style>
-  .form-grid {
-    display: grid;
+  .form-grid{
+    display:grid;
     grid-template-columns: 1fr 1fr;
     gap: 1rem;
   }
-  label { color: var(--muted); font-size:0.9rem; }
-  .form-control {
+  label{ color: var(--muted); font-size:0.9rem; }
+  .form-control{
     background: #0f0f11;
     border: 1px solid var(--line);
-    border-radius: 8px;
+    border-radius: 10px;
     color: var(--text);
-    padding: 0.6rem;
+    padding: 0.65rem 0.75rem;
     width: 100%;
-  }
-  .btn-glow {
-    background: var(--accent);
-    color: #000;
-    border: none;
-    border-radius: 8px;
-    padding: 0.8rem 1.2rem;
-    cursor: pointer;
-    font-weight: 600;
   }
 </style>
 

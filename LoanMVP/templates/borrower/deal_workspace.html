@@ -1,4 +1,9 @@
-{% extends "layouts/borrower_base.html" %}
+{% extends "layouts/ravlo_base.html" %}
+{% block title %}Ravlo • Deal Workspace{% endblock %}
+
+{% block page_title %}Deal Workspace{% endblock %}
+{% block page_subline %}Analyze Flip, Rental, and STR strategies with comps, rehab, and AI guidance.{% endblock %}
+
 {% block content %}
 
 {# ---------- Helpers ---------- #}
@@ -20,8 +25,6 @@
 
 {% set comps = comps or {} %}
 
-<div class="dashboard-container">
-
 <style>
   .dw-layout {
     display: grid;
@@ -42,7 +45,7 @@
     margin-top: .75rem;
     margin-bottom: .25rem;
     font-size: .9rem;
-    color: var(--text-light);
+    color: var(--text-light, var(--text));
   }
   .dw-input {
     width: 100%;
@@ -69,6 +72,10 @@
     transition: .2s;
     font-size: .9rem;
     letter-spacing: .3px;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    gap:.5rem;
   }
   .dw-button:hover {
     background: rgba(122,184,255,0.22);
@@ -101,7 +108,7 @@
     padding: .75rem;
     background: rgba(255,255,255,.02);
   }
-  .rehab-visual-item h4{ margin:0 0 .5rem; color: var(--text-light); }
+  .rehab-visual-item h4{ margin:0 0 .5rem; color: var(--text-light, var(--text)); }
   .rehab-options{
     display:flex;
     gap:.5rem;
@@ -149,10 +156,19 @@
     gap: .75rem;
     margin-top: .75rem;
   }
+  @media (max-width: 980px){
+    .intelligence-grid{grid-template-columns:1fr;}
+    .dw-layout{grid-template-columns:1fr;}
+    .style-grid{grid-template-columns:1fr;}
+    .style-results-grid{grid-template-columns:repeat(2, minmax(0, 1fr));}
+  }
+  @media (max-width: 560px){
+    .style-results-grid{grid-template-columns:1fr;}
+  }
 </style>
 
 <div class="page-header">
-  <h2>Borrower Deal Workspace</h2>
+  <h2>Ravlo Deal Workspace</h2>
   <p class="text-muted">Analyze Flip, Rental, and Airbnb strategies with comps, rehab, and AI guidance.</p>
 </div>
 
@@ -162,7 +178,7 @@
 <div class="dw-card" style="margin-bottom:1rem;">
   <h3>🏠 Select a Saved Property</h3>
 
-  <form method="GET" action="{{ url_for('borrower.deal_workspace') }}">
+  <form method="GET" action="{{ url_for('investor.deal_workspace') }}">
     <label class="dw-label">Saved Properties</label>
     <select name="prop_id" class="dw-input" onchange="this.form.submit()">
       <option value="">— Choose a property —</option>
@@ -175,9 +191,15 @@
 
     <div style="margin-top:.75rem; display:flex; gap:.5rem; flex-wrap:wrap;">
       <button type="submit" class="dw-button">Load Property</button>
-      <a href="{{ url_for('borrower.saved_properties') }}" class="dw-button" style="text-decoration:none;">
-        View Saved Properties
-      </a>
+
+      {# Use whichever saved properties endpoint exists in your app #}
+      {% if 'investor.saved' in current_app.view_functions %}
+        <a href="{{ url_for('investor.saved') }}" class="dw-button" style="text-decoration:none;">View Saved Properties</a>
+      {% elif 'investor.saved_properties' in current_app.view_functions %}
+        <a href="{{ url_for('investor.saved_properties') }}" class="dw-button" style="text-decoration:none;">View Saved Properties</a>
+      {% else %}
+        <a href="#" class="dw-button" style="text-decoration:none; opacity:.6; pointer-events:none;">View Saved Properties</a>
+      {% endif %}
     </div>
   </form>
 </div>
@@ -191,7 +213,7 @@
 {# =========================
    MAIN ANALYSIS FORM (POST)
 ========================= #}
-<form method="POST" action="{{ url_for('borrower.deal_workspace', prop_id=selected_prop.id) }}">
+<form method="POST" action="{{ url_for('investor.deal_workspace', prop_id=selected_prop.id) }}">
   {{ csrf_token() if csrf_token is defined }}
   <input type="hidden" name="prop_id" value="{{ selected_prop.id }}">
 
@@ -547,17 +569,21 @@
         <input type="hidden" name="comps_json" value="{{ comps | tojson if comps else '{}' }}">
         <input type="hidden" name="resolved_json" value="{{ resolved | tojson if resolved else '{}' }}">
 
-        <button type="submit" class="dw-button" formaction="{{ url_for('borrower.save_deal') }}" formmethod="POST">
+        <button type="submit" class="dw-button" formaction="{{ url_for('investor.save_deal') }}" formmethod="POST">
           💾 Save Deal
         </button>
 
-        <button type="submit" class="dw-button" formaction="{{ url_for('borrower.send_to_lo') }}" formmethod="POST">
-          📤 Send to Loan Officer
+        <button type="submit" class="dw-button" formaction="{{ url_for('investor.send_to_team') }}" formmethod="POST">
+          📤 Send to Team
         </button>
 
         {% if deal_id %}
-          <a href="{{ url_for('borrower.export_deal_report_pro', deal_id=deal_id) }}"><button type="button" class="dw-button">📄 Download Deal Report</button></a>
-          <a href="{{ url_for('borrower.export_rehab_scope', deal_id=deal_id) }}"><button type="button" class="dw-button">📄 Download Rehab Scope</button></a>
+          <a href="{{ url_for('investor.export_deal_report_pro', deal_id=deal_id) }}" style="text-decoration:none;">
+            <button type="button" class="dw-button">📄 Download Deal Report</button>
+          </a>
+          <a href="{{ url_for('investor.export_rehab_scope', deal_id=deal_id) }}" style="text-decoration:none;">
+            <button type="button" class="dw-button">📄 Download Rehab Scope</button>
+          </a>
         {% else %}
           <button type="button" class="dw-button" disabled>📄 Download Deal Report (Save Deal First)</button>
           <button type="button" class="dw-button" disabled>📄 Download Rehab Scope (Save Deal First)</button>
@@ -673,6 +699,7 @@
       <div>
         <label class="dw-label">Style Prompt</label>
         <input id="stylePrompt" class="dw-input" placeholder="e.g., modern minimalist kitchen with matte black fixtures">
+
         <div style="display:flex; gap:.5rem; margin-top:.75rem; flex-wrap:wrap;">
           <button type="button" class="dw-button" onclick="setStylePreset('luxury')">Luxury</button>
           <button type="button" class="dw-button" onclick="setStylePreset('modern')">Modern</button>
@@ -780,6 +807,8 @@ function closeRehabPreview() {
 let _styleCurrentBefore = null;     // what we show in the modal (can be blob or url)
 let _styleCurrentFile = null;       // upload file bytes (preferred)
 let _styleCurrentUrl = null;        // property photo url (http/https)
+let _stylePreset = "";              // preset key like "luxury"
+let _styleUploadedUrl = "";         // URL returned from /renovation_upload
 
 document.getElementById("uploadRoomPhoto")?.addEventListener("change", (e) => {
   const file = e.target.files?.[0];
@@ -813,6 +842,7 @@ function closeStyleModal() {
 }
 
 function setStylePreset(preset) {
+  _stylePreset = preset || "";
   const map = {
     luxury: "luxury high-end finishes, marble, designer lighting, spa-like feel",
     modern: "modern minimalist, clean lines, neutral palette, matte black fixtures",
@@ -820,18 +850,158 @@ function setStylePreset(preset) {
     flip: "flip-ready, durable mid-range finishes, bright, neutral, resale-friendly",
     budget: "budget-friendly, clean, simple, fresh paint, basic but appealing finishes",
   };
-  document.getElementById("stylePrompt").value = map[preset] || "";
-  document.getElementById("stylePrompt").dataset.preset = preset;
+  const el = document.getElementById("stylePrompt");
+  if (el) el.value = map[preset] || "";
 }
 
-formData.append("saved_property_id", "{{ selected_prop.id if selected_prop else '' }}");
+/* ---------- FIXED: this was a broken line in your original (it crashed JS) ---------- */
+/* formData.append("saved_property_id", "...");  <-- removed from global scope and used inside functions */
+
+/* ==========================
+   Upload helper (returns hosted URL)
+========================== */
+async function uploadRoomFileIfNeeded(){
+  if (_styleCurrentFile){
+    const fd = new FormData();
+    fd.append("photo", _styleCurrentFile);
+    fd.append("saved_property_id", "{{ selected_prop.id if selected_prop else '' }}");
+
+    const res = await fetch("{{ url_for('investor.renovation_upload') }}", {
+      method: "POST",
+      body: fd,
+      credentials: "include"
+    });
+    const data = await res.json();
+    if (data.status !== "ok") throw new Error(data.message || "Upload failed");
+    _styleUploadedUrl = data.url || "";
+    return _styleUploadedUrl;
+  }
+  return "";
+}
+
+/* ==========================
+   Run visualizer (calls your route)
+========================== */
+async function runStyleTransform(){
+  const promptEl = document.getElementById("stylePrompt");
+  const prompt = (promptEl?.value || "").trim();
+  const variations = parseInt(document.getElementById("styleVariations")?.value || "2", 10);
+  const saveToDeal = document.getElementById("styleSaveToDeal")?.checked ? "true" : "false";
+
+  if (!prompt && !_stylePreset){
+    alert("Add a style prompt or choose a preset.");
+    return;
+  }
+
+  const costBox = document.getElementById("styleCostEstimate");
+  if (costBox) costBox.innerHTML = "<span class='muted'>Generating…</span>";
+
+  try{
+    // Prefer file upload → hosted URL (prevents blob: issue)
+    let image_url = _styleCurrentUrl || "";
+    if (!image_url && _styleCurrentFile){
+      image_url = await uploadRoomFileIfNeeded();
+    }
+    if (!image_url){
+      alert("Upload a room photo or choose a property photo first.");
+      return;
+    }
+
+    const fd = new FormData();
+    fd.append("image_url", image_url);
+    fd.append("style_prompt", prompt);
+    fd.append("style_preset", _stylePreset || "");
+    fd.append("variations", String(variations));
+    fd.append("save_to_deal", saveToDeal);
+    fd.append("saved_property_id", "{{ selected_prop.id if selected_prop else '' }}");
+    {% if deal_id %}fd.append("deal_id", "{{ deal_id }}");{% endif %}
+
+    const res = await fetch("{{ url_for('investor.renovation_visualizer') }}", {
+      method: "POST",
+      body: fd,
+      credentials: "include"
+    });
+    const data = await res.json();
+
+    if (data.status !== "ok"){
+      throw new Error(data.message || "Visualizer failed");
+    }
+
+    // Your route currently returns images: [] with a note.
+    // This UI handles both now (empty) and later (real images).
+    const before_url = data.before_url || image_url;
+    const images = Array.isArray(data.images) ? data.images : [];
+
+    if (costBox){
+      const note = data.note ? `<div class="muted" style="margin-top:.35rem;">${data.note}</div>` : "";
+      costBox.innerHTML = `<div class="muted">Before uploaded ✅</div>${note}`;
+    }
+
+    // Render results grid
+    const resultsWrap = document.getElementById("styleResults");
+    const grid = document.getElementById("styleResultsGrid");
+    grid.innerHTML = "";
+
+    if (!images.length){
+      resultsWrap.style.display = "block";
+      grid.innerHTML = `<div class="muted">No generated after-images returned yet (your route is still in stub mode). Once you wire the image generator, results will show here.</div>`;
+      // Still show BA wrapper with before (no after)
+      document.getElementById("beforeAfterWrapper").style.display = "none";
+      return;
+    }
+
+    resultsWrap.style.display = "block";
+    images.forEach((img) => {
+      const card = document.createElement("div");
+      card.style.border = "1px solid rgba(255,255,255,.08)";
+      card.style.borderRadius = "10px";
+      card.style.padding = ".6rem";
+      card.style.background = "rgba(255,255,255,.02)";
+      card.innerHTML = `
+        <img src="${img}" style="width:100%; border-radius:8px; display:block;">
+        <div style="display:flex; gap:.5rem; margin-top:.55rem; flex-wrap:wrap;">
+          <button type="button" class="dw-button" style="flex:1;" onclick="selectBeforeAfter('${img}')">Compare</button>
+          <a class="dw-button" style="flex:1; text-decoration:none;" href="${img}" target="_blank" rel="noopener">Open</a>
+        </div>
+      `;
+      grid.appendChild(card);
+    });
+
+    // Default compare using first image
+    selectBeforeAfter(images[0]);
+
+    // Optional: if you want to save returned images into RenovationMockup
+    // (only useful once images[] is real)
+    if (saveToDeal === "true" && images.length && {{ 'true' if deal_id else 'false' }}){
+      await fetch("{{ url_for('investor.save_renovation_mockups', deal_id=deal_id or 0) }}", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          before_url: before_url,
+          images: images,
+          preset: _stylePreset || "",
+          prompt: prompt
+        })
+      }).catch(()=>{});
+    }
+
+  }catch(err){
+    if (costBox) costBox.innerHTML = `<span class="muted">${String(err.message || err)}</span>`;
+    alert(String(err.message || err));
+  }
+}
+
+/* ==========================
+   Before / After compare
+========================== */
 function selectBeforeAfter(afterImg) {
   const wrapper = document.getElementById("beforeAfterWrapper");
   const before = document.getElementById("baBefore");
   const after = document.getElementById("baAfter");
   const slider = document.getElementById("baSlider");
 
-  before.src = _styleCurrentBefore || "";
+  before.src = _styleCurrentUrl || _styleUploadedUrl || _styleCurrentBefore || "";
   after.src = afterImg || "";
   wrapper.style.display = "block";
 
@@ -842,12 +1012,10 @@ function selectBeforeAfter(afterImg) {
     updateBeforeAfterClip(this.value);
   };
 }
-
 function updateBeforeAfterClip(val) {
   const after = document.getElementById("baAfter");
   after.style.clipPath = `inset(0 ${100 - val}% 0 0)`;
 }
 </script>
 
-</div>
 {% endblock %}

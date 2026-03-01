@@ -1,103 +1,133 @@
-{% extends "layouts/borrower_base.html" %}
-{% block title %}Document Requests{% endblock %}
+{% extends "layouts/ravlo_base.html" %}
+{% block title %}Ravlo • Document Requests{% endblock %}
+
+{% block page_title %}Document Requests{% endblock %}
+{% block page_subline %}Documents and conditions your processor or underwriter needs from you.{% endblock %}
+
+{% block topbar_actions %}
+  <button class="ravlo-btn ghost sm" type="button"
+          onclick="location.href='{{ url_for('investor.command_center') if 'investor.command_center' in current_app.view_functions else url_for('investor.index') }}'">
+    Command Center
+  </button>
+
+  {% if 'investor.documents' in current_app.view_functions %}
+    <button class="ravlo-btn ghost sm" type="button"
+            onclick="location.href='{{ url_for('investor.documents') }}'">
+      Document Library
+    </button>
+  {% endif %}
+{% endblock %}
 
 {% block content %}
 
-<div class="b-header">
-  <div>
-    <h1>🧾 Document Requests</h1>
-    <p class="muted">These are the documents and conditions your processor or underwriter needs from you.</p>
+<div class="ravlo-card pad">
+  <div class="row between" style="gap:1rem; flex-wrap:wrap;">
+    <div>
+      <div class="ravlo-card-title">🧾 Document Requests</div>
+      <div style="color:var(--muted); margin-top:.35rem;">
+        These are the documents and conditions your processor or underwriter needs from you.
+      </div>
+    </div>
   </div>
 </div>
 
-<!-- AI SUMMARY -->
 {% if ai_summary %}
-<div class="b-card" style="margin-bottom:1.4rem;">
-  <h3>AI Summary</h3>
-  <p class="muted" style="margin-top:.4rem;">{{ ai_summary }}</p>
-</div>
+  <div class="ravlo-card pad mt-16">
+    <div class="ravlo-card-title">AI Summary</div>
+    <div style="color:var(--muted); margin-top:.5rem;">{{ ai_summary }}</div>
+  </div>
 {% endif %}
 
-<!-- REQUEST TABLE -->
-<div class="b-card">
-  <h3>Requested Items</h3>
+<div class="ravlo-card pad mt-16">
+  <div class="ravlo-card-title">Requested Items</div>
 
   {% if requests %}
-    <table class="table-dark" style="margin-top:.8rem;">
-      <thead>
-        <tr>
-          <th>Item</th>
-          <th>Type</th>
-          <th>Requested By</th>
-          <th>Notes</th>
-          <th>Status</th>
-          <th>Action</th>
-        </tr>
-      </thead>
+    <div class="mt-12">
+      <table class="ravlo-table" style="width:100%;">
+        <thead>
+          <tr>
+            <th>Item</th>
+            <th>Type</th>
+            <th>Requested By</th>
+            <th>Notes</th>
+            <th>Status</th>
+            <th style="text-align:right;">Action</th>
+          </tr>
+        </thead>
 
-      <tbody>
-        {% for req in requests %}
-        <tr>
-          <!-- Item Name -->
-          <td>{{ req.document_name }}</td>
+        <tbody>
+          {% for req in requests %}
+            <tr>
+              <td style="font-weight:700; color:var(--text);">
+                {{ req.document_name }}
+              </td>
 
-          <!-- Type -->
-          <td>
-            {% if req.type == "document" %}
-              <span class="badge bg-info">Document</span>
-            {% else %}
-              <span class="badge bg-primary">Condition</span>
-            {% endif %}
-          </td>
+              <td>
+                {% if (req.type or '')|lower == "document" %}
+                  <span class="ravlo-badge watch">Document</span>
+                {% else %}
+                  <span class="ravlo-badge ok">Condition</span>
+                {% endif %}
+              </td>
 
-          <!-- Requested By -->
-          <td>{{ req.requested_by or "Processor" }}</td>
+              <td style="color:var(--muted);">{{ req.requested_by or "Processor" }}</td>
+              <td style="color:var(--muted);">{{ req.notes or "—" }}</td>
 
-          <!-- Notes -->
-          <td>{{ req.notes or "—" }}</td>
+              <td>
+                {% set s = (req.status or 'pending')|lower %}
+                {% if s in ["completed", "cleared"] %}
+                  <span class="ravlo-badge ok">Completed</span>
+                {% elif s == "flagged" %}
+                  <span class="ravlo-badge risk">Flagged</span>
+                {% elif s == "submitted" %}
+                  <span class="ravlo-badge watch">Submitted</span>
+                {% else %}
+                  <span class="ravlo-badge watch">Pending</span>
+                {% endif %}
+              </td>
 
-          <!-- Status -->
-          <td>
-            {% set s = req.status|lower %}
-            {% if s in ["completed", "cleared"] %}
-              <span class="badge bg-success">Completed</span>
-            {% elif s == "flagged" %}
-              <span class="badge bg-danger">Flagged</span>
-            {% elif s == "submitted" %}
-              <span class="badge bg-info">Submitted</span>
-            {% else %}
-              <span class="badge bg-warning">Pending</span>
-            {% endif %}
-          </td>
+              <td style="text-align:right;">
+                {% if (req.status or '')|lower in ["pending", "requested"] %}
 
-          <!-- Action -->
-          <td>
-            {% if req.status|lower in ["pending", "requested"] %}
-              <a href="/borrower/upload_request?item_id={{ req.id }}&type={{ req.type }}" class="action-btn">
-                <i class="lucide lucide-file-up"></i> Upload
-              </a>
-            {% else %}
-              <span class="muted">✔ Submitted</span>
-            {% endif %}
-          </td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
+                  {# Prefer a real route if you have one #}
+                  {% if 'investor.upload_request' in current_app.view_functions %}
+                    <button class="ravlo-btn primary sm" type="button"
+                            onclick="location.href='{{ url_for('investor.upload_request', item_id=req.id, type=req.type) }}'">
+                      Upload
+                    </button>
+
+                  {% elif 'investor.upload_docs' in current_app.view_functions %}
+                    <button class="ravlo-btn primary sm" type="button"
+                            onclick="location.href='{{ url_for('investor.upload_docs') }}?item_id={{ req.id }}&type={{ req.type }}'">
+                      Upload
+                    </button>
+
+                  {% else %}
+                    <span style="color:var(--muted);">Upload route not wired</span>
+                  {% endif %}
+
+                {% else %}
+                  <span style="color:var(--muted);">✔ Submitted</span>
+                {% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
 
   {% else %}
-    <p class="muted" style="margin-top:1rem;text-align:center;">
+    <div class="mt-12" style="color:var(--muted); text-align:center;">
       No document requests or conditions at this time.
-    </p>
+    </div>
   {% endif %}
 </div>
 
-<!-- AI ASSISTANT INFO -->
-<div class="b-card" style="margin-top:1.4rem;">
-  <h3>🤖 AI Assistant Insight</h3>
-  <p class="muted" style="margin-top:.4rem;">
+<div class="ravlo-card pad mt-16">
+  <div class="ravlo-card-title">🤖 AI Assistant Insight</div>
+  <div style="color:var(--muted); margin-top:.5rem;">
     The AI will monitor your pending requests and notify you if you’ve already uploaded a matching document under a different name or folder.
-  </p>
+  </div>
 </div>
 
 {% endblock %}

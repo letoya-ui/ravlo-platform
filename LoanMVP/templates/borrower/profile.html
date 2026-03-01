@@ -1,19 +1,78 @@
-{% extends "layouts/borrower_base.html" %}
-{% block title %}Profile{% endblock %}
+{# investor/profile.html #}
+{% extends "layouts/ravlo_base.html" %}
+
+{% block title %}Ravlo • Profile{% endblock %}
+
+{% block page_title %}Profile{% endblock %}
+{% block page_subline %}Manage your investor identity and contact details.{% endblock %}
+
+{% block topbar_actions %}
+  <button class="ravlo-btn ghost sm" type="button"
+          onclick="location.href='
+            {% if "investor.command_center" in current_app.view_functions %}
+              {{ url_for("investor.command_center") }}
+            {% elif "investor.index" in current_app.view_functions %}
+              {{ url_for("investor.index") }}
+            {% else %}
+              {{ url_for("investor.dashboard") if "investor.dashboard" in current_app.view_functions else "/" }}
+            {% endif %}
+          '">
+    Back
+  </button>
+{% endblock %}
+
 {% block content %}
-<div class="card soft-card p-4" style="max-width:760px;margin:0 auto;">
-  <h2>Profile</h2>
-  <form method="POST" style="margin-top:14px;">
-    <label class="muted">Full Name</label>
-    <input class="form-control" name="full_name" value="{{ borrower.full_name or '' }}">
 
-    <label class="muted">Phone</label>
-    <input class="form-control" name="phone" value="{{ borrower.phone or '' }}">
+<div class="ravlo-card pad" style="max-width:760px;margin:0 auto;">
 
-    <label class="muted">Company</label>
-    <input class="form-control" name="company" value="{{ borrower.company or '' }}">
+  <form method="POST"
+        action="{{ url_for('investor.profile') }}">
 
-    <button class="btn btn-glow" type="submit" style="margin-top:14px;">Save</button>
+    {{ csrf_token() if csrf_token is defined }}
+
+    <div style="font-weight:900;font-size:16px;margin-bottom:10px;">
+      Investor Profile
+    </div>
+
+    <div class="ravlo-grid cols-2">
+      <div>
+        <label class="ravlo-label">Full Name</label>
+        <input class="ravlo-input"
+               name="full_name"
+               value="{{ investor.full_name if investor is defined else borrower.full_name if borrower is defined else '' }}"
+               placeholder="Your full name">
+      </div>
+
+      <div>
+        <label class="ravlo-label">Phone</label>
+        <input class="ravlo-input"
+               name="phone"
+               value="{{ investor.phone if investor is defined else borrower.phone if borrower is defined else '' }}"
+               placeholder="Your phone number">
+      </div>
+    </div>
+
+    <div style="margin-top:12px;">
+      <label class="ravlo-label">Company</label>
+      <input class="ravlo-input"
+             name="company"
+             value="{{ investor.company if investor is defined else borrower.company if borrower is defined else '' }}"
+             placeholder="LLC / Company name">
+    </div>
+
+    <div style="margin-top:18px;display:flex;gap:10px;flex-wrap:wrap;">
+      <button type="submit" class="ravlo-btn primary">
+        Save Changes
+      </button>
+
+      <button type="button" class="ravlo-btn ghost"
+              onclick="history.back()">
+        Cancel
+      </button>
+    </div>
+
   </form>
+
 </div>
+
 {% endblock %}

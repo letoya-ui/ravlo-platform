@@ -1,4 +1,9 @@
-{% extends "layouts/borrower_base.html" %}
+{% extends "layouts/ravlo_base.html" %}
+{% block title %}Ravlo • Deal{% endblock %}
+
+{% block page_title %}Deal Studio{% endblock %}
+{% block page_subline %}Edit, review, and share your renovation plan.{% endblock %}
+
 {% block content %}
 
 <div class="page-header">
@@ -15,7 +20,7 @@
   <div class="dw-card">
     <h3>📝 Edit</h3>
 
-    <form method="POST" action="{{ url_for('borrower.deal_edit', deal_id=deal.id) }}">
+    <form method="POST" action="{{ url_for('investor.deal_edit', deal_id=deal.id) }}">
       {{ csrf_token() if csrf_token is defined }}
 
       <label class="dw-label">Title</label>
@@ -33,12 +38,12 @@
       <div style="margin-top:1rem; display:flex; gap:.75rem; flex-wrap:wrap;">
         <button class="dw-button" type="submit">Save Changes</button>
 
-        <a class="dw-button" href="{{ url_for('borrower.deal_open', deal_id=deal.id) }}"
+        <a class="dw-button" href="{{ url_for('investor.deal_open', deal_id=deal.id) }}"
            style="text-decoration:none; display:inline-flex; align-items:center; justify-content:center;">
           Open in Workspace
         </a>
 
-        <a class="dw-button" href="{{ url_for('borrower.deals_list') }}"
+        <a class="dw-button" href="{{ url_for('investor.deals_list') }}"
            style="text-decoration:none; display:inline-flex; align-items:center; justify-content:center;">
           Back to List
         </a>
@@ -64,6 +69,7 @@
         <strong>Airbnb Net:</strong> ${{ "{:,.0f}".format(r.net_monthly|float) }}/mo<br>
       {% endif %}
       {% if r.roi is defined and r.roi %}
+        {# r.roi might already be percent OR decimal; keep your existing behavior #}
         <strong>ROI:</strong> {{ "{:,.1f}".format(r.roi * 100) }}%<br>
       {% endif %}
     </p>
@@ -95,7 +101,7 @@
           {% endif %}
 
           <div class="ai-text" style="margin-top:.4rem; font-size:.85rem;">
-            <strong>{{ (m.style_preset or 'custom')|title }}</strong><br>
+            <strong>{{ (m.style_preset or m.preset or 'custom')|title }}</strong><br>
             <span style="opacity:.85;">{{ m.created_at.strftime('%b %d, %Y') if m.created_at else '' }}</span>
           </div>
 
@@ -188,7 +194,7 @@
     fd.append("after_url", _selectedAfterUrl);
     if (_selectedBeforeUrl) fd.append("before_url", _selectedBeforeUrl);
 
-    fetch("{{ url_for('borrower.deal_select_design', deal_id=deal.id) }}", {
+    fetch("{{ url_for('investor.deal_select_design', deal_id=deal.id) }}", {
       method: "POST",
       body: fd,
       credentials: "include"
@@ -230,7 +236,7 @@
     fd.append("partner_ids", partnerIds);
     fd.append("note", note);
 
-    fetch("{{ url_for('borrower.deal_share_design', deal_id=deal.id) }}", {
+    fetch("{{ url_for('investor.deal_share_design', deal_id=deal.id) }}", {
       method: "POST",
       body: fd,
       credentials: "include"

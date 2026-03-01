@@ -1,160 +1,194 @@
-{% extends "layouts/borrower_base.html" %}
-{% block title %}eSignature Center • Borrower Portal{% endblock %}
+{% extends "layouts/ravlo_base.html" %}
+{% block title %}Ravlo • eSignature Center{% endblock %}
+
+{% block page_title %}eSignature Center{% endblock %}
+{% block page_subline %}Sign required loan disclosures and authorizations securely.{% endblock %}
+
+{% block topbar_actions %}
+  <button class="ravlo-btn ghost sm" type="button"
+          onclick="location.href='{{ url_for('investor.command_center') if 'investor.command_center' in current_app.view_functions else url_for('investor.index') }}'">
+    Back
+  </button>
+{% endblock %}
+
 {% block content %}
 
-<div class="borrower-shell">
+  <div class="ravlo-card pad">
 
-  <!-- SIDEBAR -->
-  <aside class="b-sidebar">
-    <div class="b-sidebar-logo">CM</div>
+    {% if docs and docs|length %}
+      {% for d in docs %}
+        <div class="ravlo-card pad" style="margin-top:12px;">
+          <div class="row between" style="gap:12px; align-items:flex-start;">
+            <div>
+              <div style="font-weight:800; font-size:1.05rem;">{{ d.name }}</div>
+              <div style="margin-top:6px; color:var(--muted);">
+                Status:
+                {% set st = (d.status or "Pending") %}
+                <span class="ravlo-badge {% if st|lower == 'signed' %}ok{% elif st|lower in ['pending','requested','open'] %}watch{% else %}risk{% endif %}">
+                  {{ st }}
+                </span>
+              </div>
+            </div>
 
-    <div class="b-sidebar-group">
+            <div style="display:flex; gap:10px; flex-wrap:wrap;">
+              {% if (d.status or "") != "Signed" %}
+                <button class="ravlo-btn primary sm" type="button" onclick="openSign('{{ d.id }}')">
+                  Sign Document
+                </button>
+              {% else %}
+                <span style="color:var(--muted); font-weight:650;">✔ Signed</span>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      {% endfor %}
+    {% else %}
+      <div style="color:var(--muted);">
+        No eSignature documents available yet.
+      </div>
+    {% endif %}
 
-      <a href="{{ url_for('borrower.dashboard') }}" class="b-sidebar-item">
-        <svg viewBox="0 0 24 24" fill="none">
-          <rect x="3" y="3" width="8" height="8" rx="2"></rect>
-          <rect x="13" y="3" width="8" height="5" rx="2"></rect>
-          <rect x="13" y="10" width="8" height="11" rx="2"></rect>
-          <rect x="3" y="13" width="8" height="8" rx="2"></rect>
-        </svg>
-        <div class="b-tooltip">Dashboard</div>
-      </a>
+  </div>
 
-      <a href="{{ url_for('borrower.property_search') }}" class="b-sidebar-item">
-        <svg viewBox="0 0 24 24" fill="none">
-          <path d="M12 3L4 9v11h16V9l-8-6Z"></path>
-          <circle cx="12" cy="13" r="2.5"></circle>
-        </svg>
-        <div class="b-tooltip">Property Finder</div>
-      </a>
+  <!-- Signature Modal -->
+  <div id="signModal"
+       style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.72); z-index:9999; align-items:center; justify-content:center; padding:16px;">
+    <div class="ravlo-card pad" style="width:min(720px, 100%);">
+      <div class="row between" style="align-items:center; gap:12px;">
+        <div>
+          <div style="font-weight:900; font-size:1.1rem;">Draw Your Signature</div>
+          <div style="color:var(--muted); font-size:.92rem; margin-top:4px;">Use your mouse or trackpad.</div>
+        </div>
+        <button class="ravlo-btn ghost sm" type="button" onclick="closeSign()">Close</button>
+      </div>
 
-      <a href="{{ url_for('borrower.resource_center') }}" class="b-sidebar-item">
-        <svg viewBox="0 0 24 24" fill="none">
-          <circle cx="8" cy="8" r="3"></circle>
-          <circle cx="16" cy="8" r="3"></circle>
-          <path d="M4 19c.6-2.4 2.3-4 4-4s3.4 1.6 4 4"></path>
-          <path d="M12 19c.6-2.4 2.3-4 4-4s3.4 1.6 4 4"></path>
-        </svg>
-        <div class="b-tooltip">Partner Network</div>
-      </a>
-
-      <a href="{{ url_for('borrower.deal_workspace') }}" class="b-sidebar-item">
-        <svg viewBox="0 0 24 24" fill="none">
-          <rect x="4" y="4" width="16" height="16" rx="2"></rect>
-          <path d="M8 9h8M8 13h5M8 17h3"></path>
-        </svg>
-        <div class="b-tooltip">Project Planner</div>
-      </a>
-
-      <a href="{{ url_for('borrower.saved_properties') }}" class="b-sidebar-item">
-        <svg viewBox="0 0 24 24" fill="none">
-          <path d="M12 20s-4.5-2.7-6.7-5.4C3.4 13 3 11.9 3 10.8 3 8.7 4.7 7 6.8 7c1.2 0 2.3.6 3 1.5.7-.9 1.8-1.5 3-1.5C15.3 7 17 8.7 17 10.8c0 1.1-.4 2.2-2.3 3.8C16.5 17.3 12 20 12 20Z"></path>
-        </svg>
-        <div class="b-tooltip">Saved Properties</div>
-      </a>
-
-      <a href="{{ url_for('borrower.resource_center') }}" class="b-sidebar-item">
-        <svg viewBox="0 0 24 24" fill="none">
-          <path d="M5 4h10a3 3 0 0 1 3 3v13l-4-2-4 2-4-2-4 2V7a3 3 0 0 1 3-3Z"></path>
-        </svg>
-        <div class="b-tooltip">Resource Center</div>
-      </a>
-
-    </div>
-  </aside>
-
-  <!-- MAIN CONTENT -->
-  <main class="b-main">
-
-    <!-- TOP TABS -->
-    <div class="b-top-tabs">
-      <a href="{{ url_for('borrower.dashboard') }}" class="b-top-tab">Dashboard</a>
-      <a href="{{ url_for('borrower.documents') }}" class="b-top-tab">Documents</a>
-      <div class="b-top-tab active">eSignature</div>
-    </div>
-
-    <!-- PAGE CONTENT -->
-    <h1>✒️ eSignature Center</h1>
-    <p class="muted">Sign required loan disclosures and authorizations securely.</p>
-
-    {% for d in docs %}
-    <div class="b-card" style="margin-top:1rem;">
-        <h3>{{ d.name }}</h3>
-        <p class="muted">Status: {{ d.status }}</p>
-
-        {% if d.status != "Signed" %}
-        <button onclick="openSign('{{ d.id }}')" class="action-btn">
-            Sign Document
-        </button>
-        {% else %}
-        <p class="muted">✔ Signed</p>
-        {% endif %}
-    </div>
-    {% endfor %}
-
-  </main>
-</div>
-
-<!-- Signature Modal -->
-<div id="signModal" style="display:none; position:fixed; left:0; top:0; right:0; bottom:0; background:rgba(0,0,0,0.8); z-index:9999;">
-    <div style="width:600px; margin:5rem auto; background:#15161a; padding:2rem; border-radius:16px;">
-
-        <h2>Draw Your Signature</h2>
+      <div style="margin-top:12px;">
         <canvas id="signaturePad" class="sign-pad"></canvas>
+      </div>
 
-        <form id="signForm" method="POST">
-            <input type="hidden" name="signature_data" id="signatureData">
-            <button class="action-btn" type="submit">Submit Signature</button>
-            <button class="action-btn" type="button" onclick="closeSign()">Cancel</button>
-        </form>
+      <form id="signForm" method="POST" style="margin-top:12px;">
+        {{ csrf_token() if csrf_token is defined }}
+        <input type="hidden" name="signature_data" id="signatureData">
+
+        <div class="row" style="gap:10px; flex-wrap:wrap; margin-top:12px;">
+          <button class="ravlo-btn primary" type="submit">Submit Signature</button>
+          <button class="ravlo-btn ghost" type="button" onclick="clearSign()">Clear</button>
+          <button class="ravlo-btn ghost" type="button" onclick="closeSign()">Cancel</button>
+        </div>
+      </form>
     </div>
-</div>
+  </div>
 
-<style>
-.sign-pad {
-    width:100%;
-    height:200px;
-    background:#000;
-    border:1px solid var(--line);
-    border-radius:10px;
-    cursor:crosshair;
-}
-</style>
+  <style>
+    .sign-pad{
+      width:100%;
+      height:220px;
+      background:#000;
+      border:1px solid var(--line);
+      border-radius:12px;
+      cursor:crosshair;
+      display:block;
+    }
+  </style>
 
-<script>
-let currentDoc = null;
-const canvas = document.getElementById('signaturePad');
-const ctx = canvas.getContext('2d');
-let drawing = false;
+  <script>
+    let currentDoc = null;
 
-canvas.addEventListener('mousedown', () => drawing = true);
-canvas.addEventListener('mouseup', () => drawing = false);
-canvas.addEventListener('mousemove', draw);
+    const canvas = document.getElementById("signaturePad");
+    const ctx = canvas.getContext("2d");
 
-function draw(e) {
-    if (!drawing) return;
-    ctx.lineWidth = 2;
-    ctx.lineCap = 'round';
-    ctx.strokeStyle = '#fff';
-    ctx.lineTo(e.offsetX, e.offsetY);
-    ctx.stroke();
-}
+    // Make canvas match its CSS size for correct drawing
+    function resizeCanvas(){
+      const rect = canvas.getBoundingClientRect();
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width  = Math.floor(rect.width * dpr);
+      canvas.height = Math.floor(rect.height * dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0); // draw in CSS pixels
+      ctx.lineWidth = 2;
+      ctx.lineCap = "round";
+      ctx.strokeStyle = "#fff";
+    }
 
-function openSign(docId) {
-    currentDoc = docId;
-    document.getElementById('signModal').style.display = 'block';
-    ctx.clearRect(0,0,canvas.width,canvas.height);
-    document.getElementById('signForm').action = "/portal/esign/sign/" + docId;
-}
+    let drawing = false;
+    let lastX = 0, lastY = 0;
 
-function closeSign() {
-    document.getElementById('signModal').style.display = 'none';
-}
+    function getPos(e){
+      const rect = canvas.getBoundingClientRect();
+      const clientX = (e.touches ? e.touches[0].clientX : e.clientX);
+      const clientY = (e.touches ? e.touches[0].clientY : e.clientY);
+      return { x: clientX - rect.left, y: clientY - rect.top };
+    }
 
-document.getElementById('signForm').addEventListener('submit', function(e) {
-    const data = canvas.toDataURL();
-    document.getElementById('signatureData').value = data;
-});
-</script>
+    function startDraw(e){
+      drawing = true;
+      const p = getPos(e);
+      lastX = p.x; lastY = p.y;
+      ctx.beginPath();
+      ctx.moveTo(lastX, lastY);
+      e.preventDefault?.();
+    }
+
+    function draw(e){
+      if(!drawing) return;
+      const p = getPos(e);
+      ctx.lineTo(p.x, p.y);
+      ctx.stroke();
+      lastX = p.x; lastY = p.y;
+      e.preventDefault?.();
+    }
+
+    function endDraw(){
+      drawing = false;
+      ctx.beginPath();
+    }
+
+    // Mouse
+    canvas.addEventListener("mousedown", startDraw);
+    canvas.addEventListener("mousemove", draw);
+    window.addEventListener("mouseup", endDraw);
+
+    // Touch
+    canvas.addEventListener("touchstart", startDraw, {passive:false});
+    canvas.addEventListener("touchmove", draw, {passive:false});
+    canvas.addEventListener("touchend", endDraw);
+
+    function openSign(docId){
+      currentDoc = docId;
+      resizeCanvas();
+      clearSign();
+      document.getElementById("signModal").style.display = "flex";
+
+      // ✅ Your dual_route uses /investor AND /borrower, but we standardize to investor
+      // Matches your backend:
+      // @dual_route("/sign/<int:doc_id>", methods=["POST"])
+      // @dual_route("/esign/sign/<int:doc_id>", methods=["POST"])
+      document.getElementById("signForm").action = "{{ url_for('investor.investor_esign_sign', doc_id=0) }}".replace("/0", "/" + docId);
+    }
+
+    function closeSign(){
+      document.getElementById("signModal").style.display = "none";
+    }
+
+    function clearSign(){
+      // Clear in CSS pixel space
+      const rect = canvas.getBoundingClientRect();
+      ctx.clearRect(0, 0, rect.width, rect.height);
+      ctx.beginPath();
+    }
+
+    document.getElementById("signForm").addEventListener("submit", function(){
+      // Note: keep PNG data URL (your backend expects "data:image/png;base64,...")
+      document.getElementById("signatureData").value = canvas.toDataURL("image/png");
+    });
+
+    window.addEventListener("resize", () => {
+      if (document.getElementById("signModal").style.display === "flex") {
+        const img = canvas.toDataURL("image/png");
+        resizeCanvas();
+        // Don't try to redraw old strokes; just keep it simple:
+        // user can hit Clear if needed.
+      }
+    });
+  </script>
 
 {% endblock %}

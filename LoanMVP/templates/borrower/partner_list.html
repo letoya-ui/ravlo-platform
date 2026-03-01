@@ -1,23 +1,95 @@
-{% extends "layouts/base.html" %}
+{# investor/partners.html #}
+{% extends "layouts/ravlo_base.html" %}
+
+{% block title %}Ravlo • Partners{% endblock %}
+
+{% block page_title %}Available Partners{% endblock %}
+{% block page_subline %}
+Build your team — contractors, agents, lenders, vendors.
+{% endblock %}
+
 {% block content %}
 
-<h2>Available Partners</h2>
+<style>
+  .partner-grid{
+    display:grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap:14px;
+    margin-top:14px;
+  }
+  .partner-card{
+    border:1px solid rgba(255,255,255,0.08);
+    border-radius:16px;
+    padding:16px;
+    background:rgba(255,255,255,0.02);
+    transition:.2s ease;
+  }
+  .partner-card:hover{
+    border-color:rgba(122,184,255,0.5);
+    box-shadow:0 0 18px rgba(122,184,255,0.15);
+  }
+  .partner-name{
+    font-weight:800;
+    font-size:16px;
+  }
+  .partner-meta{
+    font-size:12px;
+    color:var(--muted);
+    margin-top:4px;
+  }
+  .partner-tag{
+    display:inline-block;
+    margin-top:8px;
+    padding:4px 10px;
+    border-radius:999px;
+    font-size:11px;
+    background:rgba(122,184,255,0.15);
+    color:#7ab8ff;
+    font-weight:600;
+  }
+</style>
 
-{% for p in partners %}
-  <div class="card mb-3 p-3">
-    <h4>{{ p.name }}</h4>
-    <p>{{ p.company }}</p>
-    <p>{{ p.category }} • {{ p.service_area }}</p>
+{% if partners and partners|length > 0 %}
+  <div class="partner-grid">
+    {% for p in partners %}
+      <div class="partner-card">
 
-    <form method="post"
-          action="{{ url_for('borrower.request_partner_connection', partner_id=p.id) }}">
-      <button type="submit" class="btn btn-primary">
-        Request Connection
-      </button>
-    </form>
+        <div class="partner-name">
+          {{ p.name }}
+        </div>
+
+        <div class="partner-meta">
+          {{ p.company or "Independent" }}
+        </div>
+
+        <div class="partner-meta" style="margin-top:6px;">
+          {{ p.category }} • {{ p.service_area }}
+        </div>
+
+        <span class="partner-tag">
+          {{ p.category }}
+        </span>
+
+        <form method="POST"
+              action="{{ url_for('investor.request_partner_connection', partner_id=p.id) if 'investor.request_partner_connection' }}"
+              style="margin-top:14px;">
+
+          {{ csrf_token() if csrf_token is defined }}
+
+          <button type="submit" class="ravlo-btn primary" style="width:100%;">
+            Request Connection
+          </button>
+        </form>
+
+      </div>
+    {% endfor %}
   </div>
 {% else %}
-  <p>No partners available.</p>
-{% endfor %}
+  <div class="ravlo-card pad" style="margin-top:14px;">
+    <div style="color:var(--muted);">
+      No partners available at this time.
+    </div>
+  </div>
+{% endif %}
 
 {% endblock %}

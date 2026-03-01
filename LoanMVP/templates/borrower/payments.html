@@ -1,61 +1,87 @@
-{% extends "layouts/borrower_base.html" %}
-{% block title %}Payments • Borrower Portal{% endblock %}
+{# investor/payments.html #}
+{% extends "layouts/ravlo_base.html" %}
+
+{% block title %}Ravlo • Payments{% endblock %}
+
+{% block page_title %}Payments{% endblock %}
+{% block page_subline %}Secure online fee payments and transaction history.{% endblock %}
 
 {% block content %}
-<link rel="stylesheet" href="https://unpkg.com/lucide-static@latest/font/lucide.css">
 
 <style>
-:root {
-    --bg:#0f0f11;
-    --panel:#15161a;
-    --line:#2b2f36;
-    --text:#e6e6e6;
-    --muted:#a5a7ad;
-    --accent:#7ab8ff;
-    --danger:#ff6565;
-}
-body{ background:var(--bg); color:var(--text); }
-
-.card {
-    background:var(--panel);
-    border:1px solid var(--line);
+  .payment-grid{
+    display:grid;
+    gap:14px;
+    margin-top:14px;
+  }
+  .payment-card{
+    border:1px solid rgba(255,255,255,0.08);
     border-radius:16px;
-    padding:1.5rem;
-    margin-bottom:2rem;
-    box-shadow:0 0 20px rgba(122,184,255,0.25);
-}
-
-.btn {
-    padding:.7rem 1.2rem;
-    border-radius:8px;
-    background:transparent;
-    border:1px solid var(--accent);
-    color:var(--accent);
-}
-.btn:hover{ background:var(--accent); color:#000; }
-
-.status-paid { color:#3ce43c; }
-.status-pending { color:var(--danger); }
+    padding:16px;
+    background:rgba(255,255,255,0.02);
+    transition:.2s ease;
+  }
+  .payment-card:hover{
+    border-color:rgba(122,184,255,0.5);
+    box-shadow:0 0 18px rgba(122,184,255,0.15);
+  }
+  .payment-title{
+    font-weight:800;
+    font-size:16px;
+  }
+  .payment-amount{
+    font-size:14px;
+    margin-top:6px;
+    color:var(--muted);
+  }
+  .status-paid{
+    color:#3ce43c;
+    font-weight:600;
+    margin-top:8px;
+  }
+  .status-pending{
+    color:#ff6565;
+    font-weight:600;
+    margin-top:8px;
+  }
 </style>
 
-<main class="dashboard-main">
-
-    <h1>💳 Payments</h1>
-    <p class="muted">Secure online fee payments.</p>
-
+{% if payments and payments|length > 0 %}
+  <div class="payment-grid">
     {% for p in payments %}
-    <div class="card">
-        <h3>{{ p.payment_type }}</h3>
-        <p><strong>Amount:</strong> ${{ p.amount }}</p>
+      <div class="payment-card">
+
+        <div class="payment-title">
+          {{ p.payment_type }}
+        </div>
+
+        <div class="payment-amount">
+          <strong>Amount:</strong>
+          ${{ "{:,.2f}".format(p.amount|float) if p.amount else "0.00" }}
+        </div>
 
         {% if p.status == "Paid" %}
-            <p class="status-paid">✔ Paid</p>
+          <div class="status-paid">✔ Paid</div>
         {% else %}
-            <p class="status-pending">Pending</p>
-            <a href="{{ url_for('borrower.checkout', payment_id=p.id) }}" class="btn">Pay Now</a>
-        {% endif %}
-    </div>
-    {% endfor %}
+          <div class="status-pending">Pending</div>
 
-</main>
+          <div style="margin-top:10px;">
+            <button class="ravlo-btn primary"
+                    onclick="location.href='{% if 'investor.checkout' %}{{ url_for('investor.checkout', payment_id=p.id) }}{% else %}{{ url_for('investor.command_center') }}{% endif %}'">
+              Pay Now
+            </button>
+          </div>
+        {% endif %}
+
+      </div>
+    {% endfor %}
+  </div>
+{% else %}
+  <div class="ravlo-card pad" style="margin-top:14px;">
+    <div style="color:var(--muted);">
+      No payments due at this time.
+    </div>
+  </div>
+{% endif %}
+
 {% endblock %}

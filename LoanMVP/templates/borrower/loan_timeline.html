@@ -1,68 +1,155 @@
-{% extends "layouts/borrower_base.html" %}
-{% block title %}Loan Timeline{% endblock %}
+{# investor/loan_timeline.html #}
+{% extends "layouts/ravlo_base.html" %}
+{% block title %}Ravlo • Loan Timeline{% endblock %}
+
+{% block page_title %}Loan Timeline{% endblock %}
+{% block page_subline %}Track your loan from application to closing.{% endblock %}
+
+{% block topbar_actions %}
+  <button class="ravlo-btn ghost sm" type="button"
+          onclick="location.href='{{ url_for('investor.loan_summary', loan_id=loan.id) if loan and loan.id else (url_for('investor.loans') if 'investor.loans' in current_app.view_functions else url_for('investor.loan_center')) }}'">
+    Back
+  </button>
+
+  {% if loan and loan.id %}
+    <button class="ravlo-btn ghost sm" type="button"
+            onclick="location.href='{{ url_for('investor.loan_summary', loan_id=loan.id) }}'">
+      Summary
+    </button>
+  {% endif %}
+{% endblock %}
 
 {% block content %}
 
-<div class="b-header">
-  <div>
-    <h1>📅 Loan Timeline</h1>
-    <p class="muted">Track your loan from application to closing.</p>
+  {# ---------- status helpers ---------- #}
+  {% set status = (loan.status or "In Progress")|string %}
+  {% set status_l = status|lower %}
+
+  <div class="ravlo-grid cols-2">
+
+    {# AI Summary #}
+    {% if ai_summary %}
+      <div class="ravlo-card pad" style="grid-column: 1 / -1;">
+        <div class="ravlo-card-title">Ravlo Insight</div>
+        <div style="color:var(--muted); margin-top:10px;">{{ ai_summary }}</div>
+      </div>
+    {% endif %}
+
+    {# KPI strip #}
+    <div class="ravlo-card pad">
+      <div class="ravlo-card-title">Snapshot</div>
+
+      <div class="ravlo-grid cols-2 mt-16">
+        <div class="ravlo-kpi" style="min-height:92px;">
+          <div class="value">
+            {% if loan and loan.created_at %}{{ loan.created_at.strftime('%b %d, %Y') }}{% else %}—{% endif %}
+          </div>
+          <div class="label">Submitted</div>
+        </div>
+
+        <div class="ravlo-kpi" style="min-height:92px;">
+          <div class="value">{{ documents_count if documents_count is not none else 0 }}</div>
+          <div class="label">Docs Uploaded</div>
+        </div>
+
+        <div class="ravlo-kpi" style="min-height:92px;">
+          <div class="value">{{ conditions_count if conditions_count is not none else 0 }}</div>
+          <div class="label">Conditions</div>
+        </div>
+
+        <div class="ravlo-kpi" style="min-height:92px;">
+          <div class="value">
+            <span class="ravlo-badge
+              {% if status_l in ['approved','clear to close','cleared','completed','funded','closed'] %}ok
+              {% elif status_l in ['pending','in progress','processing','underwriting','review','submitted'] %}watch
+              {% else %}risk{% endif %}">
+              {{ status }}
+            </span>
+          </div>
+          <div class="label">Underwriting</div>
+        </div>
+      </div>
+    </div>
+
+    {# Timeline #}
+    <div class="ravlo-card pad">
+      <div class="ravlo-card-title">Loan Progress</div>
+
+      <div style="margin-top:12px; display:grid; gap:12px;">
+
+        <div style="padding:12px; border:1px solid rgba(255,255,255,.08); border-radius:14px;">
+          <div style="font-weight:800;">1) Application Submitted</div>
+          <div style="color:var(--muted); margin-top:6px;">
+            {% if loan and loan.created_at %}{{ loan.created_at.strftime('%b %d, %Y') }}{% else %}—{% endif %}
+          </div>
+        </div>
+
+        <div style="padding:12px; border:1px solid rgba(255,255,255,.08); border-radius:14px;">
+          <div style="font-weight:800;">2) Documents Uploaded</div>
+          <div style="color:var(--muted); margin-top:6px;">
+            {{ documents_count if documents_count is not none else 0 }} uploaded
+          </div>
+        </div>
+
+        <div style="padding:12px; border:1px solid rgba(255,255,255,.08); border-radius:14px;">
+          <div style="font-weight:800;">3) Conditions</div>
+          <div style="margin-top:6px;">
+            {% if (conditions_count or 0) == 0 %}
+              <span class="ravlo-badge ok">All Cleared</span>
+            {% else %}
+              <span class="ravlo-badge watch">{{ conditions_count }} Outstanding</span>
+            {% endif %}
+          </div>
+        </div>
+
+        <div style="padding:12px; border:1px solid rgba(255,255,255,.08); border-radius:14px;">
+          <div style="font-weight:800;">4) Underwriting Status</div>
+          <div style="color:var(--muted); margin-top:6px;">{{ status }}</div>
+        </div>
+
+        {% if status_l == "clear to close" %}
+          <div style="padding:12px; border:1px solid rgba(255,255,255,.08); border-radius:14px;">
+            <div style="font-weight:800;">5) Clear to Close</div>
+            <div style="margin-top:6px;">
+              <span class="ravlo-badge ok">Ready for Closing</span>
+            </div>
+          </div>
+        {% endif %}
+
+        {% if status_l == "closed" %}
+          <div style="padding:12px; border:1px solid rgba(255,255,255,.08); border-radius:14px;">
+            <div style="font-weight:800;">6) Closing Completed</div>
+            <div style="margin-top:6px;">
+              <span class="ravlo-badge ok">Loan Closed</span>
+            </div>
+          </div>
+        {% endif %}
+
+      </div>
+
+      <div class="row" style="gap:10px; flex-wrap:wrap; margin-top:16px;">
+        {% if loan and loan.id and ('investor.loan_summary' in current_app.view_functions) %}
+          <button class="ravlo-btn ghost sm" type="button"
+                  onclick="location.href='{{ url_for('investor.loan_summary', loan_id=loan.id) }}'">
+            View Summary
+          </button>
+        {% endif %}
+        {% if ('investor.documents' in current_app.view_functions) %}
+          <button class="ravlo-btn ghost sm" type="button"
+                  onclick="location.href='{{ url_for('investor.documents') }}'">
+            Documents
+          </button>
+        {% endif %}
+        {% if ('investor.conditions' in current_app.view_functions) %}
+          <button class="ravlo-btn ghost sm" type="button"
+                  onclick="location.href='{{ url_for('investor.conditions') }}'">
+            Conditions
+          </button>
+        {% endif %}
+      </div>
+
+    </div>
+
   </div>
-</div>
-
-<!-- AI SUMMARY -->
-{% if ai_summary %}
-<div class="b-card" style="margin-bottom:1.4rem;">
-  <h3>AI Summary</h3>
-  <p class="muted" style="margin-top:.4rem;">{{ ai_summary }}</p>
-</div>
-{% endif %}
-
-<!-- TIMELINE CARD -->
-<div class="b-card">
-  <h3>Loan Progress</h3>
-
-  <ul class="timeline" style="margin-top:1rem;">
-
-    <li>
-      <strong>Application Submitted</strong>
-      <p class="muted">{{ loan.created_at.strftime('%b %d, %Y') }}</p>
-    </li>
-
-    <li>
-      <strong>Documents Uploaded</strong>
-      <p class="muted">{{ documents_count }} uploaded</p>
-    </li>
-
-    <li>
-      <strong>Conditions</strong>
-      {% if conditions_count == 0 %}
-        <span class="badge bg-success">All Cleared</span>
-      {% else %}
-        <span class="badge bg-warning">{{ conditions_count }} Outstanding</span>
-      {% endif %}
-    </li>
-
-    <li>
-      <strong>Underwriting Status</strong>
-      <p class="muted">{{ loan.status }}</p>
-    </li>
-
-    {% if loan.status == "Clear to Close" %}
-    <li>
-      <strong>Clear to Close</strong>
-      <span class="badge bg-success">Ready for Closing</span>
-    </li>
-    {% endif %}
-
-    {% if loan.status == "Closed" %}
-    <li>
-      <strong>Closing Completed</strong>
-      <span class="badge bg-success">Loan Closed</span>
-    </li>
-    {% endif %}
-
-  </ul>
-</div>
 
 {% endblock %}

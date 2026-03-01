@@ -1,166 +1,172 @@
-{% extends "layouts/borrower_base.html" %}
-{% block title %}Instant Preapproval Request{% endblock %}
+{# investor/preapproval_request.html #}
+{% extends "layouts/ravlo_base.html" %}
+
+{% block title %}Ravlo • Instant Pre-Approval{% endblock %}
+
+{% block page_title %}Instant Pre-Approval{% endblock %}
+{% block page_subline %}Submit your request — we’ll return a decision + next steps.{% endblock %}
+
+{% block topbar_actions %}
+  <button class="ravlo-btn ghost sm" type="button"
+          onclick="location.href='
+            {% if "investor.command_center" %}
+              {{ url_for("investor.command_center") }}
+            {% elif "investor.index" %}
+              {{ url_for("investor.index") }}
+            {% else %}
+              {{ url_for("investor.dashboard") }}
+            {% endif %}
+          '">
+    Back
+  </button>
+{% endblock %}
+
 {% block content %}
 
-<div class="borrower-shell">
+<div class="ravlo-card pad" style="max-width:980px;margin:0 auto;">
 
-  <!-- SIDEBAR -->
-  <aside class="b-sidebar">
-    <div class="b-sidebar-logo">CM</div>
-
-    <div class="b-sidebar-group">
-
-      <a href="{{ url_for('borrower.dashboard') }}" class="b-sidebar-item">
-        <svg viewBox="0 0 24 24" fill="none">
-          <rect x="3" y="3" width="8" height="8" rx="2"></rect>
-          <rect x="13" y="3" width="8" height="5" rx="2"></rect>
-          <rect x="13" y="10" width="8" height="11" rx="2"></rect>
-          <rect x="3" y="13" width="8" height="8" rx="2"></rect>
-        </svg>
-        <div class="b-tooltip">Dashboard</div>
-      </a>
-
-      <a href="{{ url_for('borrower.property_search') }}" class="b-sidebar-item">
-        <svg viewBox="0 0 24 24" fill="none">
-          <path d="M12 3L4 9v11h16V9l-8-6Z"></path>
-          <circle cx="12" cy="13" r="2.5"></circle>
-        </svg>
-        <div class="b-tooltip">Property Finder</div>
-      </a>
-
-      <a href="{{ url_for('borrower.resource_center') }}" class="b-sidebar-item">
-        <svg viewBox="0 0 24 24" fill="none">
-          <circle cx="8" cy="8" r="3"></circle>
-          <circle cx="16" cy="8" r="3"></circle>
-          <path d="M4 19c.6-2.4 2.3-4 4-4s3.4 1.6 4 4"></path>
-          <path d="M12 19c.6-2.4 2.3-4 4-4s3.4 1.6 4 4"></path>
-        </svg>
-        <div class="b-tooltip">Partner Network</div>
-      </a>
-
-      <a href="{{ url_for('borrower.deal_workspace') }}" class="b-sidebar-item">
-        <svg viewBox="0 0 24 24" fill="none">
-          <rect x="4" y="4" width="16" height="16" rx="2"></rect>
-          <path d="M8 9h8M8 13h5M8 17h3"></path>
-        </svg>
-        <div class="b-tooltip">Project Planner</div>
-      </a>
-
-      <a href="{{ url_for('borrower.saved_properties') }}" class="b-sidebar-item">
-        <svg viewBox="0 0 24 24" fill="none">
-          <path d="M12 20s-4.5-2.7-6.7-5.4C3.4 13 3 11.9 3 10.8 3 8.7 4.7 7 6.8 7c1.2 0 2.3.6 3 1.5.7-.9 1.8-1.5 3-1.5C15.3 7 17 8.7 17 10.8c0 1.1-.4 2.2-2.3 3.8C16.5 17.3 12 20 12 20Z"></path>
-        </svg>
-        <div class="b-tooltip">Saved Properties</div>
-      </a>
-
-      <a href="{{ url_for('borrower.resource_center') }}" class="b-sidebar-item">
-        <svg viewBox="0 0 24 24" fill="none">
-          <path d="M5 4h10a3 3 0 0 1 3 3v13l-4-2-4 2-4-2-4 2V7a3 3 0 0 1 3-3Z"></path>
-        </svg>
-        <div class="b-tooltip">Resource Center</div>
-      </a>
-
+  <div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:flex-end;">
+    <div>
+      <div style="font-weight:900;font-size:18px;">📋 Instant Preapproval Request</div>
+      <div style="color:var(--muted);margin-top:4px;">
+        Enter your details below. Ravlo will generate an estimated decision and guidance.
+      </div>
     </div>
-  </aside>
+  </div>
 
-  <!-- MAIN CONTENT -->
-  <main class="b-main">
+  <form method="POST" style="margin-top:16px;">
+    {{ form.hidden_tag() }}
 
-    <!-- TOP TABS -->
-    <div class="b-top-tabs">
-      <a href="{{ url_for('borrower.dashboard') }}" class="b-top-tab">Dashboard</a>
-      <a href="{{ url_for('borrower.status') }}" class="b-top-tab">Loan</a>
-      <div class="b-top-tab active">Instant Preapproval</div>
+    <!-- =========================
+         BUSINESS INFORMATION
+    ========================== -->
+    <div class="ravlo-card" style="padding:14px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.02);">
+      <div style="font-weight:800;margin-bottom:10px;">🏢 Business Information</div>
+
+      <div class="ravlo-grid cols-3">
+        <div>
+          {{ form.business_name.label(class="ravlo-label") }}
+          {{ form.business_name(class="ravlo-input", placeholder="Business / LLC name") }}
+        </div>
+        <div>
+          {{ form.annual_revenue.label(class="ravlo-label") }}
+          {{ form.annual_revenue(class="ravlo-input", placeholder="Annual revenue") }}
+        </div>
+        <div>
+          {{ form.years_in_business.label(class="ravlo-label") }}
+          {{ form.years_in_business(class="ravlo-input", placeholder="Years in business") }}
+        </div>
+      </div>
     </div>
 
-    <!-- PAGE CONTENT -->
-    <div class="b-card" style="max-width:900px;margin:0 auto;padding:2rem;">
+    <!-- =========================
+         LOAN REQUEST
+    ========================== -->
+    <div class="ravlo-card" style="margin-top:14px;padding:14px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.02);">
+      <div style="font-weight:800;margin-bottom:10px;">💰 Loan Request</div>
 
-      <h2>📋 Instant Preapproval Request</h2>
-
-      <form method="POST" style="margin-top:1rem;">
-        {{ form.hidden_tag() }}
-
-        <!-- Business Information -->
-        <h4>🏢 Business Information</h4>
-        <div class="b-grid-3" style="margin-top:1rem;">
-          <div>
-            {{ form.business_name.label(class="muted") }}
-            {{ form.business_name(class="form-control") }}
-          </div>
-          <div>
-            {{ form.annual_revenue.label(class="muted") }}
-            {{ form.annual_revenue(class="form-control") }}
-          </div>
-          <div>
-            {{ form.years_in_business.label(class="muted") }}
-            {{ form.years_in_business(class="form-control") }}
-          </div>
+      <div class="ravlo-grid cols-3">
+        <div>
+          {{ form.loan_amount.label(class="ravlo-label") }}
+          {{ form.loan_amount(class="ravlo-input", placeholder="Requested amount") }}
         </div>
-
-        <!-- Loan Request -->
-        <h4 style="margin-top:2rem;">💰 Loan Request</h4>
-        <div class="b-grid-3" style="margin-top:1rem;">
-          <div>
-            {{ form.loan_amount.label(class="muted") }}
-            {{ form.loan_amount(class="form-control") }}
-          </div>
-          <div>
-            {{ form.collateral.label(class="muted") }}
-            {{ form.collateral(class="form-control") }}
-          </div>
-          <div>
-            {{ form.property_address.label(class="muted") }}
-            {{ form.property_address(class="form-control") }}
-          </div>
+        <div>
+          {{ form.collateral.label(class="ravlo-label") }}
+          {{ form.collateral(class="ravlo-input", placeholder="Collateral / asset") }}
         </div>
-
-        <!-- Personal Information -->
-        <h4 style="margin-top:2rem;">👤 Personal Information</h4>
-        <div class="b-grid-2" style="margin-top:1rem;">
-          <div>
-            {{ form.full_name.label(class="muted") }}
-            {{ form.full_name(class="form-control") }}
-          </div>
-          <div>
-            {{ form.ssn.label(class="muted") }}
-            {{ form.ssn(class="form-control") }}
-          </div>
+        <div>
+          {{ form.property_address.label(class="ravlo-label") }}
+          {{ form.property_address(class="ravlo-input", placeholder="Property address") }}
         </div>
+      </div>
+    </div>
 
-        <div class="b-grid-2" style="margin-top:1rem;">
-          <div>
-            {{ form.dob.label(class="muted") }}
-            {{ form.dob(class="form-control") }}
-          </div>
-          <div>
-            {{ form.address.label(class="muted") }}
-            {{ form.address(class="form-control") }}
-          </div>
-        </div>
+    <!-- =========================
+         PERSONAL INFORMATION
+    ========================== -->
+    <div class="ravlo-card" style="margin-top:14px;padding:14px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.02);">
+      <div style="font-weight:800;margin-bottom:10px;">👤 Personal Information</div>
 
-        <!-- Preapproval Decision -->
-        {% if result %}
-        <div class="b-card" style="margin-top:2rem;">
-          <h4>Preapproval Decision</h4>
-          <p><strong>Status:</strong> {{ result.status }}</p>
-          <p><strong>Estimated Rate:</strong> {{ result.rate }}</p>
-          <p><strong>Term:</strong> {{ result.term }}</p>
-          <p><strong>Reason:</strong> {{ result.reason }}</p>
-          <hr>
-          <p><strong>AI Summary:</strong> {{ ai_summary }}</p>
+      <div class="ravlo-grid cols-2">
+        <div>
+          {{ form.full_name.label(class="ravlo-label") }}
+          {{ form.full_name(class="ravlo-input", placeholder="Full legal name") }}
         </div>
+        <div>
+          {{ form.ssn.label(class="ravlo-label") }}
+          {{ form.ssn(class="ravlo-input", placeholder="SSN") }}
+        </div>
+      </div>
+
+      <div class="ravlo-grid cols-2 mt-12">
+        <div>
+          {{ form.dob.label(class="ravlo-label") }}
+          {{ form.dob(class="ravlo-input") }}
+        </div>
+        <div>
+          {{ form.address.label(class="ravlo-label") }}
+          {{ form.address(class="ravlo-input", placeholder="Home address") }}
+        </div>
+      </div>
+    </div>
+
+    <!-- =========================
+         PREAPPROVAL DECISION
+    ========================== -->
+    {% if result %}
+    <div class="ravlo-card" style="margin-top:14px;padding:14px;border:1px solid rgba(122,184,255,.25);background:rgba(122,184,255,.06);">
+      <div class="row between" style="align-items:center;">
+        <div style="font-weight:900;">Preapproval Decision</div>
+        {% if result.status %}
+          {% set st = (result.status|string)|upper %}
+          <span class="ravlo-badge
+            {% if st in ['APPROVED','PREAPPROVED','ELIGIBLE'] %}ok
+            {% elif st in ['PENDING','REVIEW','CONDITIONAL'] %}watch
+            {% else %}risk{% endif %}">
+            {{ st }}
+          </span>
         {% endif %}
+      </div>
 
-        <button type="submit" class="btn-glow" style="margin-top:2rem;">
-          🚀 Submit Request
-        </button>
+      <div class="ravlo-grid cols-3 mt-12">
+        <div class="ravlo-kpi" style="min-height:92px;">
+          <div class="value">{{ result.rate or "—" }}</div>
+          <div class="label">Estimated Rate</div>
+        </div>
+        <div class="ravlo-kpi" style="min-height:92px;">
+          <div class="value">{{ result.term or "—" }}</div>
+          <div class="label">Term</div>
+        </div>
+        <div class="ravlo-kpi" style="min-height:92px;">
+          <div class="value">{{ result.reason or "—" }}</div>
+          <div class="label">Reason</div>
+        </div>
+      </div>
 
-      </form>
+      {% if ai_summary %}
+        <div style="margin-top:12px;color:var(--muted);">
+          <div style="font-weight:800;color:var(--text);">AI Summary</div>
+          <div style="margin-top:6px;line-height:1.55;">{{ ai_summary }}</div>
+        </div>
+      {% endif %}
+    </div>
+    {% endif %}
 
+    <!-- =========================
+         ACTIONS
+    ========================== -->
+    <div style="margin-top:16px;display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end;">
+      <button type="submit" class="ravlo-btn primary">
+        🚀 Submit Request
+      </button>
+
+      <button type="button" class="ravlo-btn ghost" onclick="history.back()">
+        Cancel
+      </button>
     </div>
 
-  </main>
+  </form>
+
 </div>
 
 {% endblock %}

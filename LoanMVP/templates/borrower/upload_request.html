@@ -1,76 +1,174 @@
-{% extends "layouts/borrower_base.html" %}
-{% block title %}Upload Requested Document{% endblock %}
+{# templates/investor/upload_request.html #}
+{% extends "layouts/ravlo_base.html" %}
+{% block title %}Ravlo • Upload Requested Item{% endblock %}
+
+{% block page_title %}Upload Requested Item{% endblock %}
+{% block page_subline %}Submit the document or condition requested by your processor or underwriter.{% endblock %}
+
+{% block topbar_actions %}
+  {% if 'investor.document_requests' in current_app.view_functions %}
+    <button class="ravlo-btn ghost sm" type="button"
+            onclick="location.href='{{ url_for('investor.document_requests') }}'">
+      Back to Requests
+    </button>
+  {% endif %}
+{% endblock %}
 
 {% block content %}
 
-<div class="b-header">
-  <div>
-    <h1>📤 Upload Requested Item</h1>
-    <p class="muted">Submit the document or condition file requested by your processor or underwriter.</p>
-  </div>
-</div>
+<style>
+  .rq-wrap{ margin-top: 1rem; }
+  .rq-grid{
+    display:grid;
+    grid-template-columns: 1.2fr 1fr;
+    gap: 1.25rem;
+    align-items:start;
+  }
+  @media (max-width: 980px){ .rq-grid{ grid-template-columns:1fr; } }
 
-<!-- REQUEST DETAILS -->
-<div class="b-card" style="margin-bottom:1.4rem;">
-  <h3>Request Details</h3>
+  .rq-card{
+    background: rgba(255,255,255,.03);
+    border: 1px solid rgba(255,255,255,.10);
+    border-radius: 18px;
+    padding: 1.05rem 1.1rem;
+    box-shadow: 0 0 18px rgba(0,0,0,.45);
+  }
+  .rq-card h3{ margin:.1rem 0 .75rem; color: var(--accent); font-size: 1.05rem; }
 
-  <div class="b-grid-2" style="margin-top:1rem;">
-    <div>
-      <label class="muted">Item</label>
-      <p>{{ request_item.document_name }}</p>
+  .muted{ color: rgba(230,235,240,.70) !important; }
+  .row2{ display:grid; grid-template-columns: 1fr 1fr; gap: .9rem; }
+  @media (max-width: 620px){ .row2{ grid-template-columns:1fr; } }
+
+  .label{ display:block; font-size:.82rem; margin-bottom:.25rem; color: rgba(230,235,240,.65); }
+  .value{ font-weight: 800; color: rgba(230,235,240,.92); }
+
+  .chip{
+    display:inline-flex;
+    align-items:center;
+    gap:.35rem;
+    padding:.35rem .6rem;
+    border-radius:999px;
+    border:1px solid rgba(122,184,255,.25);
+    background: rgba(122,184,255,.10);
+    color:#a9d2ff;
+    font-size:.78rem;
+    font-weight:700;
+  }
+  .chip.success{ border-color: rgba(0,255,170,.25); background: rgba(0,255,170,.10); color:#7dffd6; }
+  .chip.warn{ border-color: rgba(255,210,120,.25); background: rgba(255,210,120,.10); color:#ffdba1; }
+  .chip.info{ border-color: rgba(122,184,255,.28); background: rgba(122,184,255,.10); color:#a9d2ff; }
+
+  .dw-input{
+    width:100%;
+    padding:.75rem .85rem;
+    border-radius:14px;
+    background: rgba(255,255,255,.04);
+    border: 1px solid rgba(255,255,255,.10);
+    color: rgba(230,235,240,.92);
+    outline: none;
+  }
+  .dw-input:focus{
+    border-color: rgba(217,221,228,.35);
+    box-shadow: 0 0 0 4px rgba(217,221,228,.08);
+  }
+
+  .help{
+    margin-top:.65rem;
+    font-size:.85rem;
+    color: rgba(230,235,240,.65);
+    line-height:1.4;
+  }
+</style>
+
+<div class="rq-wrap">
+
+  <div class="rq-grid">
+
+    <!-- REQUEST DETAILS -->
+    <div class="rq-card">
+      <h3>Request Details</h3>
+
+      <div class="row2">
+        <div>
+          <span class="label">Item</span>
+          <div class="value">{{ request_item.document_name }}</div>
+        </div>
+
+        <div>
+          <span class="label">Type</span>
+          {% if request_item.type == "document" %}
+            <span class="chip info">Document</span>
+          {% else %}
+            <span class="chip info">Condition</span>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="row2" style="margin-top:.85rem;">
+        <div>
+          <span class="label">Requested By</span>
+          <div class="value">{{ request_item.requested_by or "Processor" }}</div>
+        </div>
+
+        <div>
+          <span class="label">Status</span>
+          {% set s = (request_item.status or '')|lower %}
+          {% if s in ["completed", "cleared"] %}
+            <span class="chip success">Completed</span>
+          {% elif s == "submitted" %}
+            <span class="chip info">Submitted</span>
+          {% else %}
+            <span class="chip warn">Pending</span>
+          {% endif %}
+        </div>
+      </div>
+
+      <div style="margin-top:1rem;">
+        <span class="label">Notes</span>
+        <div class="muted" style="white-space:pre-wrap;">
+          {{ request_item.notes or "—" }}
+        </div>
+      </div>
+
+      <div class="help">
+        Tip: If the request name is unclear, upload what you have — Ravlo can flag mismatches and notify you.
+      </div>
     </div>
 
-    <div>
-      <label class="muted">Type</label>
-      <p>
-        {% if request_item.type == "document" %}
-          <span class="badge bg-info">Document</span>
-        {% else %}
-          <span class="badge bg-primary">Condition</span>
-        {% endif %}
+    <!-- UPLOAD FORM -->
+    <div class="rq-card">
+      <h3>Upload File</h3>
+      <p class="muted" style="margin-top:-.25rem;">
+        Choose the file that satisfies this request.
       </p>
+
+      {# IMPORTANT: keep POST on same route OR set action=... #}
+      <form method="POST" enctype="multipart/form-data" style="margin-top:.85rem;">
+        {{ csrf_token() if csrf_token is defined }}
+
+        <label class="label">Select file</label>
+        <input type="file" name="file" class="dw-input" required>
+
+        <div style="margin-top:1rem; display:flex; gap:.6rem; flex-wrap:wrap;">
+          <button class="ravlo-btn primary sm" type="submit">
+            Submit File
+          </button>
+
+          {% if 'investor.document_requests' in current_app.view_functions %}
+            <button class="ravlo-btn ghost sm" type="button"
+                    onclick="location.href='{{ url_for('investor.document_requests') }}'">
+              Cancel
+            </button>
+          {% endif %}
+        </div>
+      </form>
+
+      <div class="help">
+        Accepted formats depend on your setup (PDF, JPG/PNG, DOCX are typical).
+      </div>
     </div>
+
   </div>
-
-  <div class="b-grid-2" style="margin-top:1rem;">
-    <div>
-      <label class="muted">Requested By</label>
-      <p>{{ request_item.requested_by or "Processor" }}</p>
-    </div>
-
-    <div>
-      <label class="muted">Status</label>
-      <p>
-        {% set s = request_item.status|lower %}
-        {% if s in ["completed", "cleared"] %}
-          <span class="badge bg-success">Completed</span>
-        {% elif s == "submitted" %}
-          <span class="badge bg-info">Submitted</span>
-        {% else %}
-          <span class="badge bg-warning">Pending</span>
-        {% endif %}
-      </p>
-    </div>
-  </div>
-
-  <div style="margin-top:1rem;">
-    <label class="muted">Notes</label>
-    <p>{{ request_item.notes or "—" }}</p>
-  </div>
-</div>
-
-<!-- UPLOAD FORM -->
-<div class="b-card">
-  <h3>Upload File</h3>
-  <p class="muted" style="margin-top:.4rem;">Choose the file that satisfies this request.</p>
-
-  <form method="POST" enctype="multipart/form-data" style="margin-top:1rem;">
-    <input type="file" name="file" class="form-control" required>
-
-    <button class="action-btn" style="margin-top:1rem;">
-      <i class="lucide lucide-upload"></i> Submit File
-    </button>
-  </form>
 </div>
 
 {% endblock %}

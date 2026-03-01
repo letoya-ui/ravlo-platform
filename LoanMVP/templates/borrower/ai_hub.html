@@ -1,42 +1,46 @@
-{% extends "layouts/borrower_base.html" %}
-{% block title %}AI Hub | Borrower{% endblock %}
+{% extends "layouts/ravlo_base.html" %}
+{% block title %}AI Hub | Investor{% endblock %}
 {% block content %}
 
+<!-- MAIN CONTENT -->
+<main class="b-main">
 
-  <!-- MAIN CONTENT -->
-  <main class="b-main">
+  <!-- AI HUB CONTENT -->
+  <h2>🧠 Ravlo AI Hub</h2>
+  <p class="muted">
+    Ask Ravlo AI for capital guidance, deal strategy, underwriting clarity, or portfolio insight.
+  </p>
 
-    <!-- AI HUB CONTENT -->
-    <h2>🧠 Borrower AI Hub</h2>
-    <p class="muted">Ask LoanMVP Assistant for personalized help or loan guidance.</p>
+  <div class="panel" style="margin-top:1rem;">
+    <form method="POST" action="{{ url_for('investor.ask_ai_post') }}">
+      <textarea name="question" placeholder="Ask about funding, ROI, conditions, strategy..." required></textarea>
+      <button type="submit" class="ravlo-btn primary">Send</button>
+    </form>
+  </div>
 
-    <div class="panel" style="margin-top:1rem;">
-      <form method="POST">
-        <textarea name="message" placeholder="Ask your question..." required></textarea>
-        <button type="submit">Send</button>
-      </form>
+  {% if ai_reply %}
+    <div class="card ai-hint" style="margin-top:1rem;">
+      <strong>Ravlo AI:</strong> {{ ai_reply }}
     </div>
+  {% endif %}
 
-    {% if ai_reply %}
-      <div class="card ai-hint" style="margin-top:1rem;">
-        <strong>AI:</strong> {{ ai_reply }}
+  <section style="margin-top:2rem;">
+    <h3>📜 Recent Conversations</h3>
+
+    {% for convo in interactions %}
+      <div class="card" style="margin-bottom:.6rem;">
+        <p><strong>You:</strong> {{ convo.question }}</p>
+        <p><strong>AI:</strong> {{ convo.response }}</p>
+        <small class="muted">
+          {{ convo.timestamp.strftime('%b %d, %I:%M %p') }}
+        </small>
       </div>
-    {% endif %}
+    {% else %}
+      <p class="muted">No AI conversations yet.</p>
+    {% endfor %}
 
-    <section style="margin-top:2rem;">
-      <h3>📜 Recent Conversations</h3>
-      {% for convo in conversations %}
-        <div class="card" style="margin-bottom:.6rem;">
-          <p><strong>You:</strong> {{ convo.user_message }}</p>
-          <p><strong>AI:</strong> {{ convo.ai_response }}</p>
-          <small class="muted">{{ convo.created_at.strftime('%b %d, %I:%M %p') }}</small>
-        </div>
-      {% else %}
-        <p class="muted">No AI conversations yet.</p>
-      {% endfor %}
-    </section>
+  </section>
 
-  </main>
-</div>
+</main>
 
 {% endblock %}

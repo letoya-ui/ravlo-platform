@@ -1,143 +1,292 @@
-{% extends "layouts/borrower_base.html" %}
-{% block title %}Messages{% endblock %}
+{# investor/messages.html #}
+{% extends "layouts/ravlo_base.html" %}
+
+{% block title %}Ravlo • Messages{% endblock %}
+{% block page_title %}Messages{% endblock %}
+{% block page_subline %}Chat with your team and keep deal communication in one place.{% endblock %}
+
+{% block topbar_actions %}
+  <button class="ravlo-btn ghost sm" type="button"
+          onclick="location.href='{% if 'investor.command_center' in current_app.view_functions %}{{ url_for('investor.command_center') }}{% else %}{{ url_for('investor.index') }}{% endif %}'">
+    Back
+  </button>
+{% endblock %}
+
 {% block content %}
 
-  </aside>
+<style>
+  /* Layout */
+  .msg-shell{margin-top:14px;}
+  .messenger-layout{
+    display:flex;
+    height: 620px;
+    border: 1px solid rgba(255,255,255,0.10);
+    border-radius: 16px;
+    overflow: hidden;
+    background: rgba(255,255,255,0.02);
+  }
 
-  <!-- MAIN CONTENT -->
-  <main class="b-main">
-    
-    <!-- MESSENGER LAYOUT -->
-    <div class="messenger-layout">
+  /* Left list */
+  .conversation-list{
+    width: 310px;
+    border-right: 1px solid rgba(255,255,255,0.10);
+    background: rgba(0,0,0,0.10);
+    overflow-y:auto;
+  }
+  .conversation-list h2{
+    margin:0;
+    padding: 14px 14px 10px;
+    font-size: 13px;
+    letter-spacing:.6px;
+    color: var(--muted);
+    text-transform: uppercase;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+  }
+  .conversation{
+    display:block;
+    padding: 12px 14px;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    text-decoration:none;
+    color: var(--text);
+    transition:.15s;
+  }
+  .conversation:hover{background: rgba(255,255,255,0.04);}
+  .conversation.active{
+    background: rgba(122,184,255,0.10);
+    border-left: 3px solid rgba(122,184,255,0.95);
+    padding-left: 11px;
+  }
+  .conversation .name{font-weight:800;}
+  .conversation .last-msg{
+    margin-top:4px;
+    color: var(--muted);
+    font-size: 12px;
+  }
 
-      <!-- Conversation List -->
-      <aside class="conversation-list">
-        <h2>Conversations</h2>
-        {% for officer in officers %}
-          <a href="{{ url_for('borrower.messages', receiver_id=officer.id) }}"
-             class="conversation {% if selected_receiver == officer.id %}active{% endif %}">
-            <div class="name">{{ officer.full_name or officer.username }}</div>
-            <div class="last-msg">
-              {{ officer.last_message.content[:30] if officer.last_message else 'No messages yet' }}
+  /* Thread */
+  .messages{
+    flex:1;
+    overflow-y:auto;
+    padding: 14px;
+    display:flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  /* bubbles */
+  .message{display:flex; width:100%;}
+  .from-me{justify-content:flex-end;}
+  .from-them{justify-content:flex-start;}
+  .bubble{
+    max-width: 72%;
+    padding: 10px 12px;
+    border-radius: 16px;
+    line-height: 1.45;
+    font-size: 14px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08);
+    box-shadow: 0 0 14px rgba(0,0,0,0.35);
+  }
+  .from-me .bubble{
+    background: rgba(122,184,255,0.95);
+    color:#000;
+    border-color: rgba(122,184,255,0.55);
+    border-bottom-right-radius: 6px;
+    box-shadow: 0 0 16px rgba(122,184,255,0.35);
+  }
+  .from-them .bubble{
+    border-bottom-left-radius: 6px;
+  }
+  .bubble p{margin:0;}
+  .timestamp{
+    display:block;
+    font-size: 11px;
+    opacity: .75;
+    margin-top: 6px;
+    text-align: right;
+    white-space: nowrap;
+  }
+
+  /* Composer */
+  .chat-input{
+    display:flex;
+    align-items:center;
+    gap: 10px;
+    margin-top: 12px;
+    padding: 12px;
+    border: 1px solid rgba(255,255,255,0.10);
+    border-radius: 16px;
+    background: rgba(255,255,255,0.02);
+  }
+  .chat-input input[type="text"]{
+    flex:1;
+    min-width: 220px;
+    padding: 10px 12px;
+    border-radius: 12px;
+    border: 1px solid rgba(255,255,255,0.10);
+    background: rgba(0,0,0,0.18);
+    color: var(--text);
+    outline: none;
+  }
+  .chat-input input[type="text"]::placeholder{color: rgba(255,255,255,0.45);}
+  .file-upload{max-width: 190px;}
+
+  /* AI panel */
+  .ai-card{
+    margin-top: 14px;
+  }
+  .ai-response{
+    margin-top: 10px;
+    padding: 12px;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.10);
+    border-left: 3px solid rgba(122,184,255,0.95);
+    border-radius: 14px;
+    display:none;
+    color: var(--text);
+  }
+
+  @media (max-width: 980px){
+    .messenger-layout{height: 720px; flex-direction:column;}
+    .conversation-list{width:100%; max-height: 220px; border-right:none; border-bottom:1px solid rgba(255,255,255,0.10);}
+  }
+</style>
+
+<div class="msg-shell">
+
+  <div class="messenger-layout">
+
+    <!-- Conversation List -->
+    <aside class="conversation-list">
+      <h2>Conversations</h2>
+
+      {% for officer in officers %}
+        <a href="{{ url_for('investor.messages', receiver_id=officer.id) }}"
+           class="conversation {% if selected_receiver == officer.id %}active{% endif %}">
+          <div class="name">{{ officer.full_name or officer.username }}</div>
+          <div class="last-msg">
+            {{ officer.last_message.content[:34] if officer.last_message else 'No messages yet' }}
+          </div>
+        </a>
+      {% else %}
+        <div style="padding:14px; color:var(--muted);">No conversations yet.</div>
+      {% endfor %}
+    </aside>
+
+    <!-- Conversation Window -->
+    <div class="messages" id="messagesThread">
+      {% if messages %}
+        {% for msg in messages %}
+          <div class="message {{ 'from-me' if msg.sender_id == current_user.id else 'from-them' }}">
+            <div class="bubble">
+              <p>{{ msg.content }}</p>
+              <small class="timestamp">
+                {{ msg.created_at.strftime("%b %d, %Y %I:%M %p") }}
+                {% if msg.sender_id == current_user.id %}
+                  • You
+                {% else %}
+                  • {{ msg.sender.full_name or msg.sender.username }}
+                {% endif %}
+                {% if msg.is_read %} • Seen{% endif %}
+              </small>
             </div>
-          </a>
+          </div>
         {% endfor %}
-      </aside>
-
-      <!-- Conversation Window -->
-      <div class="messages">
-        {% if messages %}
-          {% for msg in messages %}
-            <div class="message {{ 'from-me' if msg.sender_id == current_user.id else 'from-them' }}">
-              <div class="bubble">
-                <p>{{ msg.content }}</p>
-                <small class="timestamp">
-                  {{ msg.created_at.strftime("%b %d, %Y %I:%M %p") }}
-                  {% if msg.sender_id == current_user.id %}
-                    • You
-                  {% else %}
-                    • {{ msg.sender.full_name or msg.sender.username }}
-                  {% endif %}
-                  {% if msg.is_read %} • Seen{% endif %}
-                </small>
-              </div>
-            </div>
-          {% endfor %}
-        {% else %}
-          <p class="muted" style="text-align:center; margin-top:2rem;">No messages yet. Select a conversation 👈</p>
-        {% endif %}
-      </div>
-
+      {% else %}
+        <p style="color:var(--muted); text-align:center; margin-top:2rem;">
+          No messages yet. Select a conversation 👈
+        </p>
+      {% endif %}
     </div>
 
-    <!-- Send Message Form -->
-    {% if selected_receiver %}
-    <form method="POST" action="{{ url_for('borrower.send_message') }}" class="chat-input" enctype="multipart/form-data">
+  </div>
+
+  <!-- Send Message Form -->
+  {% if selected_receiver %}
+    <form method="POST"
+          action="{{ url_for('investor.send_message') }}"
+          class="chat-input"
+          enctype="multipart/form-data">
+      {{ csrf_token() if csrf_token is defined }}
+
       <input type="hidden" name="receiver_id" value="{{ selected_receiver }}">
       <input type="text" name="content" placeholder="Type a message..." required>
       <input type="file" name="attachment" class="file-upload">
-      <button type="submit" class="btn-glow">Send</button>
+      <button type="submit" class="ravlo-btn primary sm">Send</button>
     </form>
-    {% endif %}
+  {% endif %}
 
-    <!-- AI Assistant Panel -->
-    <div class="b-card" style="margin-top:2rem;">
-      <h2>🤖 Ask LoanMVP AI</h2>
-      <p class="muted">Ask your virtual assistant about your loan, documents, or project insights.</p>
-
-      <form id="aiForm" method="POST" action="{{ url_for('borrower.ask_ai_post') }}">
-        <input type="text" name="question" id="aiInput" placeholder="e.g., What’s the status of my loan?" required class="form-control">
-        <button type="submit" class="action-btn" style="margin-top:.75rem;">Ask AI</button>
-      </form>
-
-      <div id="aiResponse" class="ai-response"></div>
+  <!-- AI Assistant Panel -->
+  <div class="ravlo-card pad ai-card">
+    <div class="ravlo-card-title">🤖 Ask Ravlo AI</div>
+    <div style="color:var(--muted); margin-top:8px;">
+      Ask about your deals, documents, funding, or next steps.
     </div>
 
-  </main>
+    <form id="aiForm" method="POST" action="{{ url_for('investor.ask_ai_post') }}" style="margin-top:12px;">
+      {{ csrf_token() if csrf_token is defined }}
+
+      <input type="text"
+             name="question"
+             id="aiInput"
+             placeholder="e.g., What’s the status of my funding?"
+             required
+             style="width:100%; padding:10px 12px; border-radius:12px; border:1px solid rgba(255,255,255,0.10); background:rgba(0,0,0,0.18); color:var(--text);">
+      <button type="submit" class="ravlo-btn ghost sm" style="margin-top:10px;">
+        Ask AI
+      </button>
+    </form>
+
+    <div id="aiResponse" class="ai-response"></div>
+  </div>
+
 </div>
-
-<style>
-/* Messenger Layout */
-.messenger-layout { display: flex; height: 600px; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; margin-top:1rem; }
-.conversation-list { width: 280px; border-right: 1px solid var(--line); background: var(--panel); overflow-y: auto; }
-.conversation { display: block; padding: 1rem; border-bottom: 1px solid var(--line); text-decoration: none; color: var(--text); }
-.conversation.active { background: var(--hover); }
-.messages { flex: 1; overflow-y: auto; padding: 1rem; display: flex; flex-direction: column; gap: 1rem; }
-
-/* Message Bubbles */
-.message { display: flex; width: 100%; }
-.from-me { justify-content: flex-end; }
-.from-them { justify-content: flex-start; }
-.bubble { max-width: 70%; padding: .9rem 1.2rem; border-radius: 18px; line-height: 1.5; font-size: 0.95rem; background: var(--hover); box-shadow: 0 0 12px rgba(0,0,0,0.35); }
-.from-them .bubble { background: #1f2328; border: 1px solid var(--line); color: var(--text); border-bottom-left-radius: 4px; }
-.from-me .bubble { background: var(--accent); color: #000; border-bottom-right-radius: 4px; box-shadow: 0 0 14px rgba(122,184,255,0.4); }
-.timestamp { display: block; font-size: .75rem; opacity: 0.7; margin-top: .4rem; text-align: right; }
-
-/* Chat Input */
-.chat-input { display: flex; align-items: center; padding: 1rem; border-top: 1px solid var(--line); gap: .5rem; margin-top:1rem; }
-.chat-input input[type="text"] { flex: 1; min-width: 250px; padding: .75rem; border-radius: 10px; border: 1px solid var(--line); background: var(--hover); color: var(--text); }
-.file-upload { max-width: 180px; }
-
-/* AI Panel */
-.ai-response { margin-top: 1rem; padding: 1rem; background: var(--hover); border-radius: 10px; border-left: 4px solid var(--accent); display: none; }
-</style>
 
 <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
 <script>
+  // Socket room for live updates (keep your server event names the same)
   const socket = io();
-
   socket.emit("join", { room: "user_{{ current_user.id }}" });
 
   socket.on("new_message", (data) => {
-    const messagesDiv = document.querySelector(".messages");
-    const bubble = document.createElement("div");
-    bubble.className = "message " + (data.sender_id == {{ current_user.id }} ? "from-me" : "from-them");
-    bubble.innerHTML = `
+    const messagesDiv = document.getElementById("messagesThread");
+    if (!messagesDiv) return;
+
+    const wrap = document.createElement("div");
+    wrap.className = "message " + (data.sender_id == {{ current_user.id }} ? "from-me" : "from-them");
+
+    wrap.innerHTML = `
       <div class="bubble">
-        <p>${data.content}</p>
-        <small class="timestamp">${data.timestamp} • ${data.sender_name}</small>
-      </div>`;
-    messagesDiv.appendChild(bubble);
+        <p>${(data.content || "").toString()}</p>
+        <small class="timestamp">${data.timestamp || ""} • ${data.sender_name || ""}</small>
+      </div>
+    `;
+
+    messagesDiv.appendChild(wrap);
     messagesDiv.scrollTop = messagesDiv.scrollHeight;
   });
 
-  document.getElementById("aiForm").addEventListener("submit", async (e) => {
+  // AI (JSON post)
+  document.getElementById("aiForm")?.addEventListener("submit", async (e) => {
     e.preventDefault();
-    const input = document.getElementById("aiInput").value.trim();
+    const inputEl = document.getElementById("aiInput");
+    const input = (inputEl?.value || "").trim();
     if (!input) return;
 
     const resBox = document.getElementById("aiResponse");
     resBox.style.display = "block";
-    resBox.innerHTML = "<em>⏳ Thinking...</em>";
+    resBox.innerHTML = "<em style='color:var(--muted)'>⏳ Thinking...</em>";
 
     try {
-      const response = await fetch("{{ url_for('borrower.ask_ai_post') }}", {
+      const response = await fetch("{{ url_for('investor.ask_ai_post') }}", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ question: input })
+        body: JSON.stringify({ question: input }),
+        credentials: "include"
       });
+
       const data = await response.json();
-      resBox.innerHTML = data.reply || "⚠️ No AI response.";
+      resBox.innerHTML = (data.reply || "⚠️ No AI response.");
     } catch (err) {
       resBox.innerHTML = "⚠️ Unable to reach AI service.";
     }

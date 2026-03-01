@@ -6,11 +6,11 @@
 
 {% block topbar_actions %}
   <button class="ravlo-btn ghost sm" type="button"
-          onclick="location.href='{{ url_for('borrower.index') }}'"
+          onclick="location.href='{{ url_for('investor.deals_list') }}'">
     View Deals
   </button>
   <button class="ravlo-btn primary sm" type="button"
-          onclick="location.href='{{ url_for('borrower.new') }}'"
+          onclick="location.href='{{ url_for('investor.deal_workspace') }}'">
     New Deal
   </button>
 {% endblock %}
@@ -49,7 +49,7 @@
       <div class="row between">
         <div class="ravlo-card-title">Active Deals</div>
         <button class="ravlo-btn ghost sm" type="button"
-                onclick="location.href='{{ url_for('borrower.index') }}'"
+                onclick="location.href='{{ url_for('investor.deals_list', status='active') }}'">
           View All
         </button>
       </div>
@@ -69,14 +69,16 @@
               {% for d in active_deals %}
               <tr>
                 <td>
-                  <div style="font-weight:700;color:var(--text);">{{ d.name or d.address or "Deal" }}</div>
+                  <div style="font-weight:700;color:var(--text);">
+                    {{ d.title or d.name or d.address or "Deal" }}
+                  </div>
                   <div style="font-size:12px;color:var(--muted);margin-top:2px;">
                     {{ d.city or "" }} {{ d.state or "" }} {{ d.zipcode or "" }}
                   </div>
                 </td>
                 <td>
-                  {% set st = (d.status or "OPEN")|upper %}
-                  <span class="ravlo-badge {% if st in ['OPEN','ACTIVE'] %}ok{% elif st in ['PENDING','REVIEW'] %}watch{% else %}risk{% endif %}">
+                  {% set st = (d.status or "active")|upper %}
+                  <span class="ravlo-badge {% if st in ['OPEN','ACTIVE'] %}ok{% elif st in ['PENDING','REVIEW','NEW'] %}watch{% else %}risk{% endif %}">
                     {{ st }}
                   </span>
                 </td>
@@ -85,7 +87,7 @@
                 </td>
                 <td style="text-align:right;">
                   <button class="ravlo-btn primary sm" type="button"
-                    onclick="location.href='{{ url_for('borrower.view', deal_id=d.id) }}'"
+                          onclick="location.href='{{ url_for('investor.deal_detail', deal_id=d.id) }}'">
                     Open
                   </button>
                 </td>
@@ -94,7 +96,7 @@
             {% else %}
               <tr>
                 <td colspan="4" style="color:var(--muted);">
-                  No active deals yet. Create your first deal to get started.
+                  No active deals yet. Use Deal Studio to create your first analysis.
                 </td>
               </tr>
             {% endif %}
@@ -113,11 +115,11 @@
         </p>
         <div class="row mt-12">
           <button class="ravlo-btn primary sm" type="button"
-            onclick="location.href='{{ url_for('borrower.index') }}'"
+                  onclick="location.href='{{ url_for('investor.deal_workspace') }}'">
             Explore Deals
           </button>
           <button class="ravlo-btn ghost sm" type="button"
-            onclick="location.href='{{ url_for('borrower.profile') }}'"
+                  onclick="location.href='{{ url_for('investor.create_profile') }}'">
             Strategy Profile
           </button>
         </div>
@@ -138,19 +140,19 @@
         <div class="ravlo-card-title">Quick Actions</div>
         <div class="ravlo-grid cols-2 mt-12">
           <button class="ravlo-btn ghost" type="button"
-            onclick="location.href='{{ url_for('borrower.index') }}'"
+                  onclick="location.href='{{ url_for('investor.property_search') }}'">
             Property Intelligence
           </button>
           <button class="ravlo-btn ghost" type="button"
-            onclick="location.href='{{ url_for('borrower.index') }}'"
+                  onclick="location.href='{{ url_for('investor.upload_document') }}'">
             Upload Documents
           </button>
           <button class="ravlo-btn ghost" type="button"
-            onclick="location.href='{{ url_for('borrower.index') }}'"
+                  onclick="location.href='{{ url_for('investor.apply') }}'">
             Funding Options
           </button>
           <button class="ravlo-btn ghost" type="button"
-            onclick="location.href='{{ url_for('borrower.support') }}'"
+                  onclick="location.href='{{ url_for('investor.messages') }}'">
             Contact Team
           </button>
         </div>
@@ -169,7 +171,7 @@
       <div class="row between">
         <div class="ravlo-card-title">Saved Properties</div>
         <button class="ravlo-btn ghost sm" type="button"
-          onclick="location.href='{{ url_for('borrower.saved') }}'"
+                onclick="location.href='{{ url_for('investor.saved_properties') }}'">
           View Saved
         </button>
       </div>
@@ -196,7 +198,7 @@
                 <td style="color:var(--muted);">{{ p.asset_type or "Residential" }}</td>
                 <td style="text-align:right;">
                   <button class="ravlo-btn primary sm" type="button"
-                    onclick="location.href='{{ url_for('borrower.view_property', property_id=p.id) }}'"
+                          onclick="location.href='{{ url_for('investor.property_explore_plus', prop_id=p.id) }}'">
                     Open
                   </button>
                 </td>
@@ -227,12 +229,12 @@
           </div>
           <div style="margin-top:8px;display:flex;gap:10px;flex-wrap:wrap;">
             <button class="ravlo-btn ghost sm" type="button"
-              onclick="location.href='{{ url_for('borrower.contact_officer') }}'"
+                    onclick="location.href='{{ url_for('investor.messages') }}'">
               Message
             </button>
             {% if loan_officer and loan_officer.email %}
-            <a class="ravlo-btn ghost sm" style="text-decoration:none;display:inline-flex;align-items:center;"
-               href="mailto:{{ loan_officer.email }}">Email</a>
+              <a class="ravlo-btn ghost sm" style="text-decoration:none;display:inline-flex;align-items:center;"
+                 href="mailto:{{ loan_officer.email }}">Email</a>
             {% endif %}
           </div>
         </div>
@@ -245,12 +247,12 @@
           </div>
           <div style="margin-top:8px;display:flex;gap:10px;flex-wrap:wrap;">
             <button class="ravlo-btn ghost sm" type="button"
-              onclick="location.href='{{ url_for('borrower.contact_processor') }}'"
+                    onclick="location.href='{{ url_for('investor.messages') }}'">
               Message
             </button>
             {% if processor and processor.email %}
-            <a class="ravlo-btn ghost sm" style="text-decoration:none;display:inline-flex;align-items:center;"
-               href="mailto:{{ processor.email }}">Email</a>
+              <a class="ravlo-btn ghost sm" style="text-decoration:none;display:inline-flex;align-items:center;"
+                 href="mailto:{{ processor.email }}">Email</a>
             {% endif %}
           </div>
         </div>
@@ -263,11 +265,11 @@
           </div>
           <div class="mt-12">
             <button class="ravlo-btn primary sm" type="button"
-              onclick="location.href='{{ url_for('borrower.partners') }}'"
+                    onclick="location.href='{{ url_for('investor.partners') if 'investor.partners' in current_app.view_functions else url_for('investor.messages') }}'">
               Find Partners
             </button>
             <button class="ravlo-btn ghost sm" type="button"
-              onclick="location.href='{{ url_for('borrower.support') }}'"
+                    onclick="location.href='{{ url_for('investor.messages') }}'">
               Contact Support
             </button>
           </div>

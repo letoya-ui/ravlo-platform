@@ -1,43 +1,47 @@
-{% extends "layouts/borrower_base.html" %}
+{% extends "layouts/ravlo_base.html" %}
+{% block title %}Ravlo • Command Center{% endblock %}
 {% block content %}
 
 <!-- ========================= -->
 <!--   SEARCH FIRST            -->
 <!-- ========================= -->
 <div class="calm-header text-center mb-5">
-  <h1 class="fw-bold">Borrower Command Center</h1>
-  <p class="text-muted">A calm space to manage your loan journey.</p>
+  <h1 class="fw-bold">Investor Command Center</h1>
+  <p class="text-muted">A calm space to manage your capital, deals, and funding journey.</p>
 
-  <form action="/borrower/search" method="get" class="mt-4">
+  <form action="{{ url_for('investor.search') if 'investor.search' in current_app.view_functions else '#' }}"
+        method="get" class="mt-4">
     <input type="text"
            class="form-control form-control-lg calm-search"
            name="q"
-           placeholder="Search your loan, documents, partners, FAQs…">
+           placeholder="Search capital requests, documents, partners, FAQs…">
   </form>
 </div>
 
 <div class="calm-container mx-auto">
 
   <!-- ========================= -->
-  <!--   CATEGORY: MY LOAN       -->
+  <!--   CATEGORY: CAPITAL       -->
   <!-- ========================= -->
   <div class="category-block mb-5">
-    <h3 class="category-title mb-4">My Loan</h3>
+    <h3 class="category-title mb-4">Capital</h3>
 
     <div class="row g-4">
 
-      <!-- View Loan -->
+      <!-- View Capital Request -->
       <div class="col-md-6">
         <div class="soft-card p-4">
-          <h5 class="fw-semibold mb-2">Loan Overview</h5>
-          <p class="text-muted small mb-3">See your loan details, progress, and status.</p>
+          <h5 class="fw-semibold mb-2">Capital Overview</h5>
+          <p class="text-muted small mb-3">See your request details, progress, and status.</p>
 
           {% if loan %}
-          <a href="{{ url_for('borrower.loan_view', loan_id=loan.id) }}" class="btn btn-primary w-100">
-            View My Loan
-          </a>
+            <a href="{{ url_for('investor.loan_view', loan_id=loan.id) }}" class="btn btn-primary w-100">
+              View My Request
+            </a>
           {% else %}
-          <button class="btn btn-secondary w-100" disabled>No Loan Yet</button>
+            <a href="{{ url_for('investor.apply') }}" class="btn btn-outline-light w-100">
+              Start a Capital Request
+            </a>
           {% endif %}
         </div>
       </div>
@@ -46,9 +50,9 @@
       <div class="col-md-6">
         <div class="soft-card p-4">
           <h5 class="fw-semibold mb-2">Conditions</h5>
-          <p class="text-muted small mb-3">Review outstanding items needed for approval.</p>
+          <p class="text-muted small mb-3">Review outstanding items required for approval.</p>
 
-          <a href="{{ url_for('borrower.conditions') }}" class="btn btn-outline-light w-100">
+          <a href="{{ url_for('investor.conditions') }}" class="btn btn-outline-light w-100">
             View Conditions
           </a>
         </div>
@@ -58,9 +62,9 @@
       <div class="col-md-6">
         <div class="soft-card p-4">
           <h5 class="fw-semibold mb-2">Documents</h5>
-          <p class="text-muted small mb-3">Upload or download your loan documents.</p>
+          <p class="text-muted small mb-3">Upload or download your funding documents.</p>
 
-          <a href="{{ url_for('borrower.documents') }}" class="btn btn-outline-light w-100">
+          <a href="{{ url_for('investor.documents') }}" class="btn btn-outline-light w-100">
             Document Library
           </a>
         </div>
@@ -69,8 +73,8 @@
       <!-- Timeline -->
       <div class="col-md-6">
         <div class="soft-card p-4">
-          <h5 class="fw-semibold mb-2">Loan Timeline</h5>
-          <p class="text-muted small mb-3">Track your progress from start to finish.</p>
+          <h5 class="fw-semibold mb-2">Capital Timeline</h5>
+          <p class="text-muted small mb-3">Track progress from submission to funding.</p>
 
           <a href="#timeline-section" class="btn btn-outline-light w-100">
             View Timeline
@@ -131,7 +135,7 @@
   </div>
 
   <!-- ========================= -->
-  <!--   CATEGORY: RESOURCES     -->
+  <!--   CATEGORY: TOOLS         -->
   <!-- ========================= -->
   <div class="category-block mb-5">
     <h3 class="category-title mb-4">Tools & Resources</h3>
@@ -142,7 +146,7 @@
       <div class="col-md-6">
         <div class="soft-card p-4">
           <h5 class="fw-semibold mb-2">AI Support</h5>
-          <p class="text-muted small mb-3">Ask anything about your loan.</p>
+          <p class="text-muted small mb-3">Ask anything about funding, conditions, or deal strategy.</p>
 
           <form id="ai-support-form">
             <div class="input-group">
@@ -159,7 +163,7 @@
       <div class="col-md-6">
         <div class="soft-card p-4">
           <h5 class="fw-semibold mb-2">Partner Directory</h5>
-          <p class="text-muted small mb-3">Find trusted professionals for your project.</p>
+          <p class="text-muted small mb-3">Find trusted pros for your project and deals.</p>
 
           <a href="#partners-section" class="btn btn-outline-light w-100">
             Browse Partners
@@ -174,10 +178,10 @@
   <!--   TIMELINE SECTION        -->
   <!-- ========================= -->
   <div id="timeline-section" class="soft-card p-5 mb-5">
-    <h4 class="mb-3">Your Loan Timeline</h4>
+    <h4 class="mb-3">Your Capital Timeline</h4>
 
     <div class="timeline">
-      {% for item in timeline %}
+      {% for item in (timeline or []) %}
         <div class="timeline-step mb-4">
           <div class="timeline-dot {{ item.status }}"></div>
           <div class="timeline-content">
@@ -202,7 +206,9 @@
   <div id="partners-section" class="soft-card p-5 mb-5">
     <h4 class="mb-3">Partner Directory</h4>
 
-    <form method="get" action="/borrower/partners/filter" class="mb-4">
+    <form method="get"
+          action="{{ url_for('investor.partners_filter') if 'investor.partners_filter' in current_app.view_functions else '#' }}"
+          class="mb-4">
       <select name="category" class="form-select" onchange="this.form.submit()">
         <option value="All">All Categories</option>
         {% for cat in ['Contractor','Realtor','Inspector','Insurance Agent','Builder','Designer','Title Company','Attorney'] %}
@@ -237,7 +243,7 @@
     <h4 class="mb-3">Frequently Asked Questions</h4>
 
     <div class="accordion" id="faqAccordion">
-      {% for item in faqs %}
+      {% for item in (faqs or []) %}
         <div class="accordion-item">
           <h2 class="accordion-header" id="faqHead{{ loop.index }}">
             <button class="accordion-button collapsed"
@@ -258,5 +264,57 @@
   </div>
 
 </div>
+
+<script>
+  // -------------------------------------------------------
+  // AI Support (AJAX) -> investor.ask_ai_post
+  // -------------------------------------------------------
+  const form = document.getElementById("ai-support-form");
+  const input = document.getElementById("ai-question");
+  const out = document.getElementById("ai-response");
+
+  if (form) {
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const q = (input?.value || "").trim();
+      if (!q) return;
+
+      out.innerText = "Thinking…";
+
+      try {
+        const res = await fetch("{{ url_for('investor.ask_ai_post') }}", {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: new URLSearchParams({ question: q }).toString()
+        });
+
+        const html = await res.text();
+        // Your ask_ai_post returns a rendered template, not JSON.
+        // So we give a helpful message + link to AI Hub if needed.
+        out.innerText = "✅ Sent. View the full response in the AI Hub.";
+      } catch (err) {
+        out.innerText = "⚠️ AI is unavailable right now.";
+      }
+    });
+  }
+
+  // -------------------------------------------------------
+  // Partner Connection (expects investor route)
+  // You likely have: investor.request_partner_connection / api endpoint
+  // -------------------------------------------------------
+  async function requestConnection(partnerId) {
+    try {
+      const res = await fetch("{{ url_for('investor.request_connection') if 'investor.request_connection' in current_app.view_functions else '#' }}", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ partner_id: partnerId })
+      });
+      if (!res.ok) throw new Error("request failed");
+      alert("Request sent!");
+    } catch (e) {
+      alert("Could not send request (route not connected yet).");
+    }
+  }
+</script>
 
 {% endblock %}

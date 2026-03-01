@@ -1,61 +1,128 @@
-{% extends "layouts/borrower_base.html" %}
-{% block title %}My Documents{% endblock %}
+{% extends "layouts/ravlo_base.html" %}
+{% block title %}Ravlo • My Documents{% endblock %}
+
+{% block page_title %}My Documents{% endblock %}
+{% block page_subline %}View, manage, and delete documents you’ve uploaded.{% endblock %}
+
+{% block topbar_actions %}
+  <button class="ravlo-btn ghost sm" type="button"
+          onclick="location.href='{{ url_for('investor.command_center') url_for('investor.index') }}'">
+    Command Center
+  </button>
+
+  {% if 'investor.upload_docs' in current_app.view_functions %}
+    <button class="ravlo-btn primary sm" type="button"
+            onclick="location.href='{{ url_for('investor.upload_docs') }}'">
+      Upload
+    </button>
+  {% endif %}
+{% endblock %}
+
 {% block content %}
 
-<div class="b-main-inner">
+{% if ai_summary %}
+  <div class="ravlo-card pad">
+    <div class="ravlo-card-title">AI Summary</div>
+    <div style="color:var(--muted); margin-top:.5rem;">{{ ai_summary }}</div>
+  </div>
+{% endif %}
 
-  <h2>📄 My Documents</h2>
-  <p class="muted">View, manage, and delete documents you’ve uploaded.</p>
-
-  {% if ai_summary %}
-    <div class="b-card is-light" style="margin-top:1rem;">
-      <strong>AI Summary</strong>
-      <p style="margin-top:.5rem;">{{ ai_summary }}</p>
+<div class="ravlo-card pad mt-16">
+  <div class="row between" style="gap:1rem; flex-wrap:wrap;">
+    <div class="ravlo-card-title">📄 Documents</div>
+    <div style="color:var(--muted);">
+      {{ documents|length if documents else 0 }} item{% if documents and documents|length != 1 %}s{% endif %}
     </div>
-  {% endif %}
+  </div>
 
-  <div class="b-card" style="margin-top:1.5rem;">
+  <div class="mt-12">
     {% if documents %}
-      <table style="width:100%; border-collapse:collapse; font-size:.95rem;">
+      <table class="ravlo-table" style="width:100%;">
         <thead>
-          <tr style="text-align:left; border-bottom:1px solid var(--line);">
-            <th style="padding:.5rem 0;">Name</th>
-            <th style="padding:.5rem 0;">Type</th>
-            <th style="padding:.5rem 0;">Status</th>
-            <th style="padding:.5rem 0;">Uploaded</th>
-            <th style="padding:.5rem 0; text-align:right;">Actions</th>
+          <tr>
+            <th>Name</th>
+            <th>Type</th>
+            <th>Status</th>
+            <th>Uploaded</th>
+            <th style="text-align:right;">Actions</th>
           </tr>
         </thead>
+
         <tbody>
           {% for doc in documents %}
-          <tr style="border-bottom:1px solid rgba(255,255,255,0.04);">
-            <td style="padding:.5rem 0;">{{ doc.file_path }}</td>
-            <td style="padding:.5rem 0;">{{ doc.doc_type or "—" }}</td>
-            <td style="padding:.5rem 0;">{{ doc.status or "uploaded" }}</td>
-            <td style="padding:.5rem 0;">
-              {{ doc.created_at.strftime('%b %d, %Y') if doc.created_at else "—" }}
-            </td>
-            <td style="padding:.5rem 0; text-align:right;">
-              <form method="POST"
-                    action="{{ url_for('borrower.delete_document', doc_id=doc.id) }}"
-                    style="display:inline;">
-                {{ csrf_token() if csrf_token is defined }}
-                <button type="submit"
-                        class="btn"
-                        style="background:#b91c1c; border:none; padding:.35rem .7rem; font-size:.8rem;">
-                  Delete
-                </button>
-              </form>
-            </td>
-          </tr>
+            <tr>
+              <td style="font-weight:700; color:var(--text);">
+                {{ doc.name or doc.file_path or ('Document #' ~ doc.id) }}
+                {% if doc.file_path and (doc.name and doc.name != doc.file_path) %}
+                  <div style="font-size:12px; color:var(--muted); margin-top:2px;">
+                    {{ doc.file_path }}
+                  </div>
+                {% endif %}
+              </td>
+
+              <td style="color:var(--muted);">{{ doc.doc_type or "—" }}</td>
+              <td>
+                {% set s = (doc.status or "uploaded")|lower %}
+                <span class="ravlo-badge {% if s in ['verified','approved','cleared'] %}ok{% elif s in ['pending','review','submitted','uploaded'] %}watch{% else %}risk{% endif %}">
+                  {{ (doc.status or "Uploaded") }}
+                </span>
+              </td>
+
+              <td style="color:var(--muted);">
+                {{ doc.uploaded_at.strftime('%b %d, %Y') if doc.uploaded_at else (doc.created_at.strftime('%b %d, %Y') if doc.created_at else "—") }}
+              </td>
+
+              <td style="text-align:right;">
+                {# Optional: View/Download if you have a route #}
+                {% if 'investor.download_document' in current_app.view_functions %}
+                  <button class="ravlo-btn ghost sm" type="button"
+                          onclick="location.href='{{ url_for('investor.download_document', doc_id=doc.id) }}'">
+                    View
+                  </button>
+                {% endif %}
+
+                {# Delete route (prefer investor) #}
+                {% if 'investor.delete_document' %}
+                  <form method="POST"
+                        action="{{ url_for('investor.delete_document', doc_id=doc.id) }}"
+                        style="display:inline;">
+                    {{ csrf_token() if csrf_token is defined }}
+                    <button type="submit"
+                            class="ravlo-btn ghost sm"
+                            onclick="return confirm('Delete this document?')"
+                            style="border-color: rgba(255,90,90,.45); color: #ff8a8a;">
+                      Delete
+                    </button>
+                  </form>
+
+                {% elif 'borrower.delete_document'  %}
+                  {# fallback if you haven't duplicated delete endpoint yet #}
+                  <form method="POST"
+                        action="{{ url_for('borrower.delete_document', doc_id=doc.id) }}"
+                        style="display:inline;">
+                    {{ csrf_token() if csrf_token is defined }}
+                    <button type="submit"
+                            class="ravlo-btn ghost sm"
+                            onclick="return confirm('Delete this document?')"
+                            style="border-color: rgba(255,90,90,.45); color: #ff8a8a;">
+                      Delete
+                    </button>
+                  </form>
+                {% else %}
+                  <span style="color:var(--muted);">Delete route not wired</span>
+                {% endif %}
+              </td>
+            </tr>
           {% endfor %}
         </tbody>
       </table>
+
     {% else %}
-      <p class="muted">You haven’t uploaded any documents yet.</p>
+      <div style="color:var(--muted);">
+        You haven’t uploaded any documents yet.
+      </div>
     {% endif %}
   </div>
-
 </div>
 
 {% endblock %}

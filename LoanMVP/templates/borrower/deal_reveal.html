@@ -1,5 +1,10 @@
-{# borrower/deal_reveal.html #}
-{% extends "layouts/borrower_base.html" %}
+{# investor/deal_reveal.html #}
+{% extends "layouts/ravlo_base.html" %}
+{% block title %}Ravlo • Deal Reveal{% endblock %}
+
+{% block page_title %}Deal Reveal{% endblock %}
+{% block page_subline %}Review before/after concepts and pick a final direction.{% endblock %}
+
 {% block content %}
 
 <style>
@@ -18,15 +23,19 @@
     gap:1.25rem;
     margin-top:1rem;
   }
+
+  /* Use Ravlo card styling if you already have it.
+     Keeping local styles to ensure this page renders nicely even if base changes. */
   .card{
-    background: #0b1016;
-    border: 1px solid var(--line);
+    background: var(--panel, #0b1016);
+    border: 1px solid var(--line, rgba(255,255,255,0.10));
     border-radius: 14px;
     padding: 1rem 1.1rem;
     box-shadow: 0 0 18px rgba(0,0,0,0.45);
   }
-  .card h3{margin:.1rem 0 .75rem; color:var(--accent); font-size:1.05rem;}
+  .card h3{margin:.1rem 0 .75rem; color:var(--accent, #7ab8ff); font-size:1.05rem;}
   .muted{color:var(--muted);}
+
   .btn{
     background: rgba(122,184,255,0.12);
     border: 1px solid rgba(122,184,255,0.45);
@@ -50,6 +59,7 @@
     border: 1px solid rgba(255,255,255,0.10);
     color: var(--text);
   }
+
   .chip-row{display:flex; gap:.5rem; flex-wrap:wrap; margin:.5rem 0 0;}
   .chip{
     font-size:.8rem;
@@ -108,8 +118,8 @@
   }
   .overlay-inner{
     width: min(1100px, 100%);
-    background: #0b1016;
-    border: 1px solid var(--line);
+    background: var(--panel, #0b1016);
+    border: 1px solid var(--line, rgba(255,255,255,0.10));
     border-radius: 16px;
     padding: 1rem;
     box-shadow: 0 0 26px rgba(0,0,0,0.65);
@@ -145,10 +155,10 @@
 
     <div class="reveal-actions">
       {% if deal %}
-        <a class="btn btn-secondary" href="{{ url_for('borrower.deal_open', deal_id=deal.id) }}">🧠 Open Workspace</a>
-        <a class="btn btn-secondary" href="{{ url_for('borrower.deal_detail', deal_id=deal.id) }}">🗂️ Deal Details</a>
+        <a class="btn btn-secondary" href="{{ url_for('investor.deal_open', deal_id=deal.id) }}">🧠 Open Workspace</a>
+        <a class="btn btn-secondary" href="{{ url_for('investor.deal_detail', deal_id=deal.id) }}">🗂️ Deal Details</a>
       {% else %}
-        <a class="btn btn-secondary" href="{{ url_for('borrower.deals_list') }}">🗂️ Back to Deals</a>
+        <a class="btn btn-secondary" href="{{ url_for('investor.deals_list') }}">🗂️ Back to Deals</a>
       {% endif %}
     </div>
   </div>
@@ -158,7 +168,7 @@
       <h3>No mockups yet</h3>
       <p class="muted">Generate designs from the Deal Workspace Visualizer, then come back here to review.</p>
       {% if deal %}
-        <a class="btn" href="{{ url_for('borrower.deal_open', deal_id=deal.id) }}">✨ Generate Designs</a>
+        <a class="btn" href="{{ url_for('investor.deal_open', deal_id=deal.id) }}">✨ Generate Designs</a>
       {% endif %}
     </div>
   {% else %}
@@ -173,7 +183,8 @@
       <h3>Before</h3>
 
       {% if lead.before_url %}
-        <img class="img" src="{{ lead.before_url }}" alt="Before image" onclick="openLightbox('{{ lead.before_url }}','Before')" style="cursor:zoom-in;">
+        <img class="img" src="{{ lead.before_url }}" alt="Before image"
+             onclick="openLightbox('{{ lead.before_url }}','Before')" style="cursor:zoom-in;">
       {% else %}
         <p class="muted">No before image found.</p>
       {% endif %}
@@ -192,10 +203,11 @@
       <div class="after-grid">
         {% for m in mockups %}
           <div class="thumb">
-            <img class="img" src="{{ m.after_url }}" alt="After mockup" onclick="openLightbox('{{ m.after_url }}','After')" style="cursor:zoom-in;">
+            <img class="img" src="{{ m.after_url }}" alt="After mockup"
+                 onclick="openLightbox('{{ m.after_url }}','After')" style="cursor:zoom-in;">
             <div class="thumb-meta">
               {% if m.style_preset %}<span class="chip">{{ m.style_preset }}</span>{% endif %}
-              <small> {{ m.created_at.strftime("%b %d, %Y %I:%M %p") if m.created_at else '' }} </small>
+              <small>{{ m.created_at.strftime("%b %d, %Y %I:%M %p") if m.created_at else '' }}</small>
             </div>
 
             <button type="button" class="btn pick" onclick="setSelected('{{ m.after_url }}')">
@@ -211,7 +223,6 @@
         <img id="selectedImg" class="img" src="" alt="Selected design">
         <div style="margin-top:.75rem; display:flex; gap:.5rem; flex-wrap:wrap;">
           <a id="openSelected" class="btn btn-secondary" href="#" target="_blank" rel="noopener">🔗 Open Full Size</a>
-          {# Placeholder button (wire route later if you want) #}
           <button type="button" class="btn" onclick="copySelected()">📋 Copy Link</button>
         </div>
       </div>
@@ -250,7 +261,6 @@
     document.getElementById("lbImg").src = "";
   }
   function closeLightbox(e){
-    // Only close if they click the overlay background
     if (e.target && e.target.id === "lightbox") hideLightbox();
   }
 
@@ -261,7 +271,6 @@
     img.src = url;
     open.href = url;
     wrap.style.display = "block";
-    // scroll lightly into view on smaller screens
     wrap.scrollIntoView({behavior:"smooth", block:"start"});
     window._selectedDesignUrl = url;
   }

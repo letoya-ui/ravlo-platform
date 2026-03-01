@@ -1,21 +1,21 @@
-{% extends "layouts/borrower_base.html" %}
-{% block title %}Loan Conditions{% endblock %}
+{% extends "layouts/ravlo_base.html" %}
+{% block title %}Capital Conditions | Investor{% endblock %}
 
 {% block content %}
 
 <div class="b-header">
   <div>
-    <h1>📋 Loan Conditions</h1>
-    <p class="muted">These are the conditions your lender requires before your loan can move forward.</p>
+    <h1>📋 Capital Conditions</h1>
+    <p class="muted">These are the conditions required before your request can move forward.</p>
   </div>
 </div>
 
 <!-- AI SUMMARY -->
 {% if ai_summary %}
-<div class="b-card" style="margin-bottom:1.4rem;">
-  <h3>AI Summary</h3>
-  <p class="muted" style="margin-top:.4rem;">{{ ai_summary }}</p>
-</div>
+  <div class="b-card" style="margin-bottom:1.4rem;">
+    <h3>AI Summary</h3>
+    <p class="muted" style="margin-top:.4rem;">{{ ai_summary }}</p>
+  </div>
 {% endif %}
 
 <!-- CONDITIONS TABLE -->
@@ -36,25 +36,28 @@
 
       <tbody>
         {% for c in conditions %}
-        <tr>
-          <td>{{ c.condition_type }}</td>
-          <td>{{ c.category or "General" }}</td>
-          <td>{{ c.severity }}</td>
+          {% set st = (c.status or '')|lower %}
+          <tr>
+            <td>{{ c.condition_type or c.description }}</td>
+            <td>{{ c.category or "General" }}</td>
+            <td>{{ c.severity or "—" }}</td>
 
-          <td>
-            {% if c.status == "Cleared" %}
-              <span class="badge bg-success">Cleared</span>
-            {% else %}
-              <span class="badge bg-warning">Open</span>
-            {% endif %}
-          </td>
+            <td>
+              {% if st in ["cleared", "completed"] %}
+                <span class="badge bg-success">Cleared</span>
+              {% elif st in ["submitted", "uploaded"] %}
+                <span class="badge bg-info">Submitted</span>
+              {% else %}
+                <span class="badge bg-warning">Open</span>
+              {% endif %}
+            </td>
 
-          <td>
-            <button class="action-btn" onclick="explainCondition({{ c.id }})">
-              <i class="lucide lucide-bot"></i> Explain
-            </button>
-          </td>
-        </tr>
+            <td>
+              <button class="action-btn" onclick="explainCondition({{ c.id }})" type="button">
+                <i class="lucide lucide-bot"></i> Explain
+              </button>
+            </td>
+          </tr>
         {% endfor %}
       </tbody>
     </table>
@@ -74,12 +77,16 @@
 
 <script>
 function explainCondition(id) {
-  fetch(`/borrower/conditions/ai/${id}`)
+  fetch(`/investor/conditions/ai/${id}`)
     .then(r => r.json())
     .then(data => {
-      document.getElementById("aiConditionText").innerText = data.reply;
+      document.getElementById("aiConditionText").innerText = data.reply || "No explanation available.";
       document.getElementById("aiConditionBox").style.display = "block";
       window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
+    })
+    .catch(() => {
+      document.getElementById("aiConditionText").innerText = "⚠️ AI explanation unavailable right now.";
+      document.getElementById("aiConditionBox").style.display = "block";
     });
 }
 </script>
