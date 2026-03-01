@@ -1,10 +1,40 @@
 {# ============================================================
    RAVLO — BASE LAYOUT (Sidebar + Topbar + Content)
-   Use with dashboard.css you added
+   Compatible with dual blueprints:
+     - investor_bp  -> /investor/*
+     - borrower_bp  -> /borrower/* (legacy)
    ============================================================ #}
 
 {% set bp = request.blueprint or "" %}
 {% set ep = request.endpoint or "" %}
+{% set active_page = active_page or "" %}
+
+{# -----------------------------
+   Helper: prefer investor endpoint,
+   fallback to borrower endpoint.
+   Usage: nav_url('command_center')
+   ----------------------------- #}
+{% macro nav_url(endpoint_name, **kwargs) -%}
+  {# try investor.<name> first #}
+  {% set inv = "investor." ~ endpoint_name %}
+  {% set bor = "borrower." ~ endpoint_name %}
+  {% if inv in (view_functions if view_functions is defined else {}) %}
+    {{ url_for(inv, **kwargs) }}
+  {% elif bor in (view_functions if view_functions is defined else {}) %}
+    {{ url_for(bor, **kwargs) }}
+  {% else %}
+    {# last resort: try url_for directly (may error if endpoint missing) #}
+    {{ "#" }}
+  {% endif %}
+{%- endmacro %}
+
+{# -----------------------------
+   Helper: active if endpoint matches
+   investor.* OR borrower.*
+   ----------------------------- #}
+{% macro is_active(endpoint_name) -%}
+  {% if ep in ["investor." ~ endpoint_name, "borrower." ~ endpoint_name] %}active{% endif %}
+{%- endmacro %}
 
 <!doctype html>
 <html lang="en">
@@ -13,22 +43,21 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>{% block title %}Ravlo{% endblock %}</title>
 
-  <!-- Inter (optional) -->
+  <!-- Inter -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
-  <!-- Lucide icons (optional) -->
+  <!-- Lucide icons -->
   <link rel="stylesheet" href="https://unpkg.com/lucide-static@latest/font/lucide.css">
 
-  <!-- Your new Ravlo CSS -->
+  <!-- Ravlo CSS -->
   <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
 
   {% block head %}{% endblock %}
 </head>
 
 <body>
-  <!-- subtle grain overlay -->
   <div class="ravlo-grain"></div>
 
   <div class="ravlo-shell">
@@ -40,7 +69,6 @@
       <div class="ravlo-sb-head">
         <div class="ravlo-brand">
           <div class="ravlo-mark" aria-label="Ravlo">
-            {# Replace this SVG with your final RV monogram SVG #}
             <svg viewBox="0 0 64 64" role="img" aria-hidden="true">
               <defs>
                 <linearGradient id="rvMetal" x1="0" y1="0" x2="1" y2="1">
@@ -51,108 +79,131 @@
                 </linearGradient>
               </defs>
               <path fill="url(#rvMetal)" d="M18 14h18c7 0 12 4 12 10 0 5-3 8-8 9l10 17H38L30 36h-6v14H18V14zm6 6v10h11c4 0 6-2 6-5s-2-5-6-5H24z"/>
-              <path fill="url(#rvMetal)" d="M36 14h8l8 18 8-18h8L60 50h-8l-8-18-8 18h-8l8-18-8-18z" opacity=".0"/>
-              {# NOTE: placeholder. Swap with your real RV monogram path(s). #}
             </svg>
           </div>
 
           <div class="ravlo-word">
             <div class="name">RAVLO</div>
-            <div class="sub">Command Center</div>
+            <div class="sub">{% block sidebar_subtitle %}Command Center{% endblock %}</div>
           </div>
         </div>
       </div>
+      
+      <!-- NAV -->
+     <nav class="ravlo-nav">
 
-      <nav class="ravlo-nav">
-        <a class="{% if ep in ['app.command_center','app.dashboard'] %}active{% endif %}"
-           href="{{ url_for('app.command_center') }}"
-          <i class="lucide lucide-layout-dashboard icon"></i>
-          Command Center
-        </a>
+      <a class="{% if ep in ['investor.command_center','borrower.command_center'] %}active{% endif %}"
+         href="{{ url_for('investor.command_center') }}">
+        <i class="lucide lucide-layout-dashboard icon"></i>
+         Command Center
+      </a>
 
-        <a class="{% if bp == 'intelligence' %}active{% endif %}"
-           href="{{ url_for('intelligence.index') }}"
-          <i class="lucide lucide-search icon"></i>
-          Property Intelligence
-        </a>
+      <a class="{% if ep in ['investor.property_search','borrower.property_search'] %}active{% endif %}"
+          href="{{ url_for('investor.property_search') }}">
+         <i class="lucide lucide-search icon"></i>
+         Property Intelligence
+      </a>
 
-        <a class="{% if bp == 'deals' %}active{% endif %}"
-           href="{{ url_for('deals.index') }}"
-          <i class="lucide lucide-briefcase icon"></i>
-          Deals
-        </a>
+      <a class="{% if ep in ['investor.property_tool','borrower.property_tool'] %}active{% endif %}"
+         href="{{ url_for('investor.property_tool') }}">
+        <i class="lucide lucide-radar icon"></i>
+        Property Tool
+      </a>
 
-        <a class="{% if bp == 'portfolio' %}active{% endif %}"
-           href="{{ url_for('portfolio.index') }}"
-          <i class="lucide lucide-pie-chart icon"></i>
-          Portfolio
-        </a>
+      <a class="{% if ep in ['investor.saved_properties','borrower.saved_properties'] %}active{% endif %}"
+         href="{{ url_for('investor.saved_properties') }}">
+        <i class="lucide lucide-bookmark icon"></i>
+        Saved Properties
+      </a>
 
-        <a class="{% if bp == 'capital' %}active{% endif %}"
-           href="{{ url_for('capital.index') }}"
-          <i class="lucide lucide-landmark icon"></i>
-          Capital
-        </a>
+      <a class="{% if ep in ['investor.deal_workspace','borrower.deal_workspace'] %}active{% endif %}"
+         href="{{ url_for('investor.deal_workspace') }}">
+        <i class="lucide lucide-wrench icon"></i>
+         Deal Workspace
+      </a>
 
-        <a class="{% if bp == 'strategy' %}active{% endif %}"
-           href="{{ url_for('strategy.profile') }}"
-          <i class="lucide lucide-scroll-text icon"></i>
-          Strategy Profile
-        </a>
+      <a class="{% if ep in ['investor.deals_list','borrower.deals_list'] %}active{% endif %}"
+         href="{{ url_for('investor.deals_list') }}">
+        <i class="lucide lucide-briefcase icon"></i>
+         Deals
+      </a>
 
-        <a class="{% if bp == 'documents' %}active{% endif %}"
-           href="{{ url_for('documents.index') }}"
-          <i class="lucide lucide-folder icon"></i>
-          Documents
-        </a>
-      </nav>
+      <a class="{% if ep in ['investor.status','borrower.status'] %}active{% endif %}"
+         href="{{ url_for('investor.status') }}">
+        <i class="lucide lucide-landmark icon"></i>
+         Capital
+      </a>
+
+      <a class="{% if ep in ['investor.quote','borrower.quote'] %}active{% endif %}"
+         href="{{ url_for('investor.quote') }}">
+        <i class="lucide lucide-badge-dollar-sign icon"></i>
+         Quotes
+      </a>
+
+      <a class="{% if ep in ['investor.documents','borrower.documents','investor.document_requests','borrower.document_requests'] %}active{% endif %}"
+         href="{{ url_for('investor.documents') }}">
+        <i class="lucide lucide-folder icon"></i>
+         Documents
+      </a>
+
+     <a class="{% if ep in ['investor.conditions','borrower.conditions'] %}active{% endif %}"
+        href="{{ url_for('investor.conditions') }}">
+       <i class="lucide lucide-shield-check icon"></i>
+        Conditions
+     </a>
+
+    </nav>
 
       <div class="ravlo-sb-foot">
-        <a class="{% if ep == 'app.settings' %}active{% endif %}"
-           href="{{ url_for('app.settings') }}"
+
+        <a class="{{ is_active('settings') }} {% if active_page in ['settings','profile','privacy','notifications'] %}active{% endif %}"
+           href="{{ nav_url('settings') }}">
           <i class="lucide lucide-settings icon"></i>
           Settings
         </a>
 
-        {# IMPORTANT: Logout should be POST to avoid weird behavior #}
-        <form method="post"
-              action="{{ url_for('auth.logout') }}"
-              style="margin:0;">
-          {# If you use CSRF, include token here: #}
-          {# <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"> #}
+        <form method="post" action="{{ url_for('auth.logout') }}" style="margin:0;">
+          {# If you use CSRF:
+             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          #}
           <button type="submit" class="ravlo-btn ghost sm" style="width:100%; justify-content:flex-start;">
             <i class="lucide lucide-log-out icon"></i>
             Logout
           </button>
         </form>
+
       </div>
     </aside>
 
     <!-- =========================
-         MAIN AREA
+         MAIN
     ========================== -->
     <main class="ravlo-main">
 
       <header class="ravlo-topbar">
         <div class="ravlo-top-left">
           <h1 class="ravlo-title">{% block page_title %}RAVLO{% endblock %}</h1>
-          <p class="ravlo-subline">{% block page_subline %}Your capital, deals, and funding — in one place.{% endblock %}</p>
+          <p class="ravlo-subline">
+            {% block page_subline %}Your capital activity, deals, and funding — in one place.{% endblock %}
+          </p>
         </div>
 
         <div class="ravlo-actions">
-          <div class="ravlo-search">
+          {# Search (optional) — only works if you implement dual_route('/search') endpoint search #}
+          <form class="ravlo-search" method="get" action="{{ nav_url('search') }}">
             <i class="lucide lucide-search"></i>
-            <input placeholder="Search deals, investors, docs…" />
-          </div>
+            <input name="q" value="{{ request.args.get('q','') }}" placeholder="Search deals, docs, partners…" />
+          </form>
 
           {% block topbar_actions %}
-          <button class="ravlo-btn ghost sm" type="button">View All</button>
-          <button class="ravlo-btn primary sm" type="button">New Deal</button>
+            <a class="ravlo-btn ghost sm" href="{{ nav_url('deals_list') }}">View Deals</a>
+            <a class="ravlo-btn primary sm" href="{{ nav_url('deal_workspace') }}">New Deal</a>
           {% endblock %}
         </div>
       </header>
 
       <section class="ravlo-content">
+
         {% with messages = get_flashed_messages(with_categories=true) %}
           {% if messages %}
             <div class="ravlo-card pad" style="margin-bottom:14px;">
