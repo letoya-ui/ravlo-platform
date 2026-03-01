@@ -122,7 +122,74 @@ def dual_route(rule, **options):
         return fn
     return decorator
 
+@dual_route("/", methods=["GET"])
+@dual_route("/index", methods=["GET"])
+@dual_route("/command", methods=["GET"])
+@dual_route("/dashboard", methods=["GET"])   # legacy alias
+@role_required("investor", "borrower")       # ✅ allow both roles
+def ecosystem_index():
+    # ✅ Respect next if present (only if safe in your app)
+    next_page = request.args.get("next")
+    if next_page:
+        return redirect(next_page)
 
+    role = (getattr(current_user, "role", "") or "").strip().lower()
+    now_str = datetime.utcnow().strftime("%b %d, %Y • %I:%M %p")
+
+    # ------------------------------------------------------
+    # Borrower view
+    # ------------------------------------------------------
+    if role == "borrower":
+        bp = BorrowerProfile.query.filter_by(user_id=current_user.id).first()
+
+        loans = []
+        active_loan = None
+
+        if bp:
+            loans = (LoanApplication.query
+                     .filter_by(borrower_profile_id=bp.id)
+                     .order_by(LoanApplication.created_at.desc())
+                     .all())
+
+            active_loan = (LoanApplication.query
+                           .filter_by(borrower_profile_id=bp.id, is_active=True)
+                           .order_by(LoanApplication.created_at.desc())
+                           .first())
+
+        return render_template(
+            "borrower/index.html",   # or keep "borrower/dashboard.html" until migrated
+            borrower=bp,
+            loans=loans,
+            loan=active_loan,
+            active_tab="command",
+            title="RAVLO Command Center",
+            now_str=now_str,
+        )
+
+    # ------------------------------------------------------
+    # Investor view
+    # ------------------------------------------------------
+    if role == "investor":
+        investor = InvestorProfile.query.filter_by(user_id=current_user.id).first()
+
+        investments = []
+        if investor:
+            investments = (Investment.query
+                           .filter_by(investor_id=investor.id)
+                           .order_by(Investment.created_at.desc())
+                           .all())
+
+        return render_template(
+            "investor/index.html",
+            investor=investor,
+            investments=investments,
+            active_tab="command",
+            title="RAVLO Investor Command Center",
+            now_str=now_str,
+        )
+
+    # If user is logged in but role isn't configured
+    abort(403)
 # =========================================================
 # Helpers
 # =========================================================
@@ -2660,30 +2727,3 @@ def market_snapshot_page():
         market_snapshot=market_snapshot,
     )
 
-@dual_route("/", methods=["GET"])
-@dual_route("/index", methods=["GET"])
-@dual_route("/dashboard", methods=["GET"])    # legacy
-@dual_route("/command", methods=["GET"])      # canonical
-@role_required("investor")
-def command_center():
-
-    investor = InvestorProfile.query.filter_by(
-        user_id=current_user.id
-    ).first()
-
-    investments = []
-
-    if investor:
-        investments = (Investment.query
-                       .filter_by(investor_id=investor.id)
-                       .order_by(Investment.created_at.desc())
-                       .all())
-
-    return render_template(
-        "investor/index.html",   # 🔥 investor landing template
-        investor=investor,
-        investments=investments,
-        now_str=datetime.utcnow().strftime("%b %d, %Y • %I:%M %p"),
-        active_tab="command",
-        title="Ravlo Investor Command Center"
-    )
