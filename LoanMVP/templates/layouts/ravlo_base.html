@@ -65,43 +65,43 @@
 
       <nav class="ravlo-nav">
         <a class="{% if ep in ['app.command_center','app.dashboard'] %}active{% endif %}"
-           href="{{ url_for('app.command_center') if 'app.command_center' in current_app.view_functions else '#' }}">
+           href="{{ url_for('app.command_center') }}"
           <i class="lucide lucide-layout-dashboard icon"></i>
           Command Center
         </a>
 
         <a class="{% if bp == 'intelligence' %}active{% endif %}"
-           href="{{ url_for('intelligence.index') if 'intelligence.index' in current_app.view_functions else '#' }}">
+           href="{{ url_for('intelligence.index') }}"
           <i class="lucide lucide-search icon"></i>
           Property Intelligence
         </a>
 
         <a class="{% if bp == 'deals' %}active{% endif %}"
-           href="{{ url_for('deals.index') if 'deals.index' in current_app.view_functions else '#' }}">
+           href="{{ url_for('deals.index') }}"
           <i class="lucide lucide-briefcase icon"></i>
           Deals
         </a>
 
         <a class="{% if bp == 'portfolio' %}active{% endif %}"
-           href="{{ url_for('portfolio.index') if 'portfolio.index' in current_app.view_functions else '#' }}">
+           href="{{ url_for('portfolio.index') }}"
           <i class="lucide lucide-pie-chart icon"></i>
           Portfolio
         </a>
 
         <a class="{% if bp == 'capital' %}active{% endif %}"
-           href="{{ url_for('capital.index') if 'capital.index' in current_app.view_functions else '#' }}">
+           href="{{ url_for('capital.index') }}"
           <i class="lucide lucide-landmark icon"></i>
           Capital
         </a>
 
         <a class="{% if bp == 'strategy' %}active{% endif %}"
-           href="{{ url_for('strategy.profile') if 'strategy.profile' in current_app.view_functions else '#' }}">
+           href="{{ url_for('strategy.profile') }}"
           <i class="lucide lucide-scroll-text icon"></i>
           Strategy Profile
         </a>
 
         <a class="{% if bp == 'documents' %}active{% endif %}"
-           href="{{ url_for('documents.index') if 'documents.index' in current_app.view_functions else '#' }}">
+           href="{{ url_for('documents.index') }}"
           <i class="lucide lucide-folder icon"></i>
           Documents
         </a>
@@ -109,14 +109,14 @@
 
       <div class="ravlo-sb-foot">
         <a class="{% if ep == 'app.settings' %}active{% endif %}"
-           href="{{ url_for('app.settings') if 'app.settings' in current_app.view_functions else '#' }}">
+           href="{{ url_for('app.settings') }}"
           <i class="lucide lucide-settings icon"></i>
           Settings
         </a>
 
         {# IMPORTANT: Logout should be POST to avoid weird behavior #}
         <form method="post"
-              action="{{ url_for('auth.logout') if 'auth.logout' in current_app.view_functions else '#' }}"
+              action="{{ url_for('auth.logout') }}"
               style="margin:0;">
           {# If you use CSRF, include token here: #}
           {# <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"> #}
