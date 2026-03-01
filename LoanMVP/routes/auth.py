@@ -4,7 +4,7 @@ from LoanMVP.models.user_model import User
 from LoanMVP.extensions import db
 from LoanMVP.forms import LoginForm, ResetPasswordRequestForm, ResetPasswordForm, RegisterForm
 from itsdangerous import URLSafeTimedSerializer, SignatureExpired, BadSignature
-from flask_mail import Message
+from flask_mail import Message as MailMessage
 from LoanMVP.app import mail, login_manager
 from datetime import datetime
 from LoanMVP.utils.decorators import role_required   # ✅ import custom decorator
@@ -329,3 +329,45 @@ def register_borrower():
 def load_user(user_id):
     return User.query.get(int(user_id))
 
+
+@auth_bp.route("/request-access", methods=["GET", "POST"])
+def request_access():
+    if request.method == "POST":
+        first_name = request.form.get("first_name", "").strip()
+        last_name = request.form.get("last_name", "").strip()
+        email = request.form.get("email", "").strip()
+        phone = request.form.get("phone", "").strip()
+        notes = request.form.get("notes", "").strip()
+
+        if not first_name or not last_name or not email:
+            flash("Please complete all required fields.", "warning")
+            return redirect(url_for("auth.request_access"))
+
+        # Optional: send email notification to admin
+        try:
+            msg = MailMessage(
+                subject="🔐 New Ravlo Access Request",
+                recipients=["admin@ravlohq.com"],  # ← change this
+            )
+
+            msg.body = f"""
+New Ravlo Access Request
+
+Name: {first_name} {last_name}
+Email: {email}
+Phone: {phone}
+
+Notes:
+{notes}
+
+Requested At: {datetime.utcnow()}
+"""
+            mail.send(msg)
+
+        except Exception as e:
+            print("Mail error:", e)
+
+        flash("Request submitted successfully. Our team will review your access.", "success")
+        return redirect(url_for("auth.login"))
+
+    return render_template("auth/request_access.html", title="Request Access | Ravlo")
