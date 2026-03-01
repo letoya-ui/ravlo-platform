@@ -170,3 +170,9 @@ body{
 .auth-link:hover{
   color:white;
 }
+
+input:-webkit-autofill,
+input:-webkit-autofill:focus {
+  -webkit-text-fill-color: white;
+  transition: background-color 9999s ease-in-out 0s;
+}
