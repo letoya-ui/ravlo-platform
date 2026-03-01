@@ -68,7 +68,7 @@
           Remember me
         </label>
 
-        <a href="{{ url_for('auth.forgot_password') if 'auth.forgot_password' in current_app.view_functions else '#' }}"
+        <a href="{{ url_for('auth.forgot_password') }}"
            style="font-size:13px;color:var(--accent2);text-decoration:none;">
           Forgot password?
         </a>
