@@ -1,0 +1,347 @@
+/* ===========================================================
+   RAVLO AUTH BASE — Engraved Metal Login (Exact Style)
+   Palette:
+   - Grayish Blue: #6B7F93
+   - Midnight:     #0C1116
+   - White:       #FFFFFF
+   - Accent:      #3A5C7A
+   =========================================================== */
+
+:root{
+  --bg: #0C1116;
+  --panel: #0B0F14;
+  --panel2: #0E141B;
+  --line: rgba(255,255,255,.07);
+
+  --text: rgba(255,255,255,.92);
+  --muted: rgba(255,255,255,.58);
+
+  --blue: #6B7F93;
+  --accent: #3A5C7A;
+
+  --radius: 18px;
+  --radius-lg: 26px;
+
+  --shadow-lg: 0 24px 70px rgba(0,0,0,.65);
+  --shadow-md: 0 12px 35px rgba(0,0,0,.55);
+
+  --inset-top: inset 0 1px 0 rgba(255,255,255,.08);
+  --inset-deep: inset 0 -22px 45px rgba(0,0,0,.70);
+
+  --focus: 0 0 0 4px rgba(58,92,122,.22);
+}
+
+*{ box-sizing:border-box; }
+html,body{ height:100%; }
+
+body{
+  margin:0;
+  font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  color:var(--text);
+  background:
+    radial-gradient(1200px 900px at 55% 18%, rgba(107,127,147,.16), transparent 58%),
+    radial-gradient(1000px 760px at 50% 72%, rgba(255,255,255,.05), transparent 62%),
+    linear-gradient(180deg, #070A0E 0%, var(--bg) 55%, #06080C 100%);
+  overflow-x:hidden;
+}
+
+/* Film grain */
+body:before{
+  content:"";
+  position:fixed; inset:0;
+  pointer-events:none;
+  opacity:.11;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='240' height='240' filter='url(%23n)' opacity='.25'/%3E%3C/svg%3E");
+  mix-blend-mode: overlay;
+}
+
+/* ===========================================================
+   Shell
+   =========================================================== */
+
+.auth-shell{
+  min-height:100%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding: 40px 18px;
+}
+
+/* The “picture-like” textured plate behind everything */
+.auth-plate{
+  width: min(420px, 100%);
+  border-radius: var(--radius-lg);
+  position:relative;
+  padding: 26px 22px 18px 22px;
+
+  background:
+    radial-gradient(800px 520px at 52% 12%, rgba(255,255,255,.06), transparent 58%),
+    radial-gradient(900px 650px at 50% 75%, rgba(0,0,0,.55), transparent 60%),
+    linear-gradient(180deg, rgba(14,20,27,.92), rgba(8,10,14,.92));
+
+  border: 1px solid rgba(255,255,255,.08);
+  box-shadow: var(--shadow-lg);
+  overflow:hidden;
+}
+
+/* vignette + subtle highlight sweep */
+.auth-plate:before{
+  content:"";
+  position:absolute; inset:-2px;
+  pointer-events:none;
+  background:
+    radial-gradient(1200px 800px at 50% 18%, rgba(255,255,255,.08), transparent 45%),
+    radial-gradient(900px 650px at 50% 75%, rgba(0,0,0,.75), transparent 58%),
+    linear-gradient(135deg, rgba(255,255,255,.06), transparent 40%);
+  opacity:.75;
+}
+
+/* faint “texture” overlay to feel like a photo */
+.auth-plate:after{
+  content:"";
+  position:absolute; inset:0;
+  pointer-events:none;
+  opacity:.22;
+  background:
+    repeating-linear-gradient(
+      0deg,
+      rgba(255,255,255,.035) 0px,
+      rgba(255,255,255,.035) 1px,
+      transparent 2px,
+      transparent 6px
+    );
+  mix-blend-mode: overlay;
+}
+
+/* content layer */
+.auth-inner{
+  position:relative;
+  z-index:1;
+}
+
+/* ===========================================================
+   Engraved Logo Block (THIS creates the “engraved” look)
+   Put your required image inside .auth-logo img
+   =========================================================== */
+
+.auth-logo{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap: 14px;
+  margin-top: 8px;
+  margin-bottom: 22px;
+}
+
+/* Logo “metal mount” feel */
+.auth-logo__mount{
+  width: 100%;
+  border-radius: 24px;
+  padding: 18px 16px 12px 16px;
+
+  background:
+    radial-gradient(900px 520px at 50% 10%, rgba(255,255,255,.06), transparent 62%),
+    linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,0)),
+    linear-gradient(180deg, rgba(10,12,16,.82), rgba(10,12,16,.52));
+
+  border: 1px solid rgba(255,255,255,.08);
+  box-shadow: var(--inset-top), var(--inset-deep), var(--shadow-md);
+  position:relative;
+  overflow:hidden;
+}
+
+/* Emboss highlight + shadow edges */
+.auth-logo__mount:before,
+.auth-logo__mount:after{
+  content:"";
+  position:absolute;
+  inset: 12px;
+  border-radius: 18px;
+  pointer-events:none;
+}
+
+.auth-logo__mount:before{
+  box-shadow:
+    inset 1px 1px 0 rgba(255,255,255,.09),
+    inset 18px 16px 40px rgba(255,255,255,.06);
+  opacity:.95;
+}
+
+.auth-logo__mount:after{
+  box-shadow:
+    inset -1px -1px 0 rgba(0,0,0,.65),
+    inset -20px -18px 48px rgba(0,0,0,.72);
+  opacity:.95;
+}
+
+/* The actual logo image = engraved metal effect */
+.auth-logo img{
+  display:block;
+  width: min(280px, 86%);
+  height:auto;
+  margin: 0 auto;
+
+  /* Turn any logo into that “steel badge” look */
+  filter:
+    grayscale(1)
+    contrast(1.14)
+    brightness(1.12);
+
+  opacity:.86;
+
+  /* gives that etched/engraved feel over the mount */
+  mix-blend-mode: screen;
+
+  /* crisp + depth */
+  filter:
+    grayscale(1)
+    contrast(1.18)
+    brightness(1.10)
+    drop-shadow(0 8px 18px rgba(0,0,0,.55))
+    drop-shadow(0 2px 0 rgba(255,255,255,.08));
+}
+
+/* optional tiny cutline like your mock */
+.auth-logo__cut{
+  width: 74px;
+  height: 3px;
+  margin: 12px auto 0 auto;
+  border-radius: 999px;
+  background: linear-gradient(90deg, transparent, rgba(107,127,147,.95), transparent);
+  opacity:.7;
+}
+
+/* ===========================================================
+   Form
+   =========================================================== */
+
+.auth-form{
+  margin-top: 10px;
+}
+
+.auth-field{
+  margin: 16px 0;
+}
+
+.auth-label{
+  display:block;
+  margin: 0 0 10px 2px;
+  font-size: 14px;
+  letter-spacing:.2px;
+  color: rgba(255,255,255,.62);
+}
+
+/* Input shell matches your screenshot */
+.auth-input{
+  width:100%;
+  padding: 14px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,.10);
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,0)),
+    rgba(8,10,12,.55);
+  color: rgba(255,255,255,.90);
+  outline:none;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.07),
+    inset 0 -10px 24px rgba(0,0,0,.55);
+  transition: .18s ease;
+}
+
+.auth-input::placeholder{ color: rgba(255,255,255,.32); }
+
+.auth-input:focus{
+  border-color: rgba(58,92,122,.55);
+  box-shadow: var(--focus), inset 0 1px 0 rgba(255,255,255,.07), inset 0 -10px 24px rgba(0,0,0,.55);
+}
+
+/* Password row with “eye” icon */
+.auth-input-wrap{
+  position:relative;
+}
+
+.auth-eye{
+  position:absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 38px;
+  height: 38px;
+  display:grid;
+  place-items:center;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,.08);
+  background: rgba(10,12,16,.35);
+  color: rgba(255,255,255,.55);
+  cursor:pointer;
+  transition:.15s ease;
+}
+.auth-eye:hover{
+  border-color: rgba(107,127,147,.35);
+  color: rgba(255,255,255,.80);
+}
+
+/* ===========================================================
+   Button (frosted steel, like your mock)
+   =========================================================== */
+
+.auth-btn{
+  width:100%;
+  margin-top: 8px;
+  padding: 14px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,.10);
+  color: rgba(255,255,255,.82);
+  font-size: 20px;
+  letter-spacing:.2px;
+  cursor:pointer;
+  transition: transform .10s ease, box-shadow .18s ease, border-color .18s ease;
+
+  background:
+    radial-gradient(900px 240px at 50% 20%, rgba(255,255,255,.10), transparent 62%),
+    linear-gradient(180deg, rgba(107,127,147,.34), rgba(107,127,147,.16));
+
+  box-shadow:
+    0 12px 28px rgba(0,0,0,.55),
+    inset 0 1px 0 rgba(255,255,255,.10),
+    inset 0 -18px 34px rgba(0,0,0,.55);
+}
+
+.auth-btn:hover{
+  transform: translateY(-1px);
+  border-color: rgba(107,127,147,.35);
+  box-shadow:
+    0 14px 34px rgba(0,0,0,.60),
+    inset 0 1px 0 rgba(255,255,255,.12),
+    inset 0 -18px 34px rgba(0,0,0,.55);
+}
+.auth-btn:active{ transform: translateY(0); }
+
+/* Links under button */
+.auth-links{
+  text-align:center;
+  margin-top: 18px;
+  color: rgba(255,255,255,.40);
+  font-size: 16px;
+}
+
+.auth-links a{
+  color: rgba(255,255,255,.52);
+  text-decoration:none;
+}
+.auth-links a:hover{
+  color: rgba(255,255,255,.78);
+  text-decoration: underline;
+}
+
+/* Footer line */
+.auth-footer{
+  text-align:center;
+  margin-top: 26px;
+  padding-top: 10px;
+  color: rgba(255,255,255,.26);
+  font-size: 14px;
+}
+
+/* Keep spacing like your screenshot */
+.auth-form .auth-field:first-child{ margin-top: 0; }
