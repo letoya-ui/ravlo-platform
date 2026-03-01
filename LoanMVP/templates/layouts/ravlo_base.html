@@ -92,62 +92,62 @@
       <!-- NAV -->
      <nav class="ravlo-nav">
 
-      <a class="{% if ep in ['investor.command_center','borrower.command_center'] %}active{% endif %}"
-         href="{{ url_for('investor.command_center') }}">
+      <a class="{% if ep in ['borrower.command_center','borrower.command_center'] %}active{% endif %}"
+         href="{{ url_for('borrower.command_center') }}">
         <i class="lucide lucide-layout-dashboard icon"></i>
          Command Center
       </a>
 
-      <a class="{% if ep in ['investor.property_search','borrower.property_search'] %}active{% endif %}"
-          href="{{ url_for('investor.property_search') }}">
+      <a class="{% if ep in ['borrower.property_search','borrower.property_search'] %}active{% endif %}"
+          href="{{ url_for('borrower.property_search') }}">
          <i class="lucide lucide-search icon"></i>
          Property Intelligence
       </a>
 
-      <a class="{% if ep in ['investor.property_tool','borrower.property_tool'] %}active{% endif %}"
-         href="{{ url_for('investor.property_tool') }}">
+      <a class="{% if ep in ['borrower.property_tool','borrower.property_tool'] %}active{% endif %}"
+         href="{{ url_for('borrower.property_tool') }}">
         <i class="lucide lucide-radar icon"></i>
         Property Tool
       </a>
 
-      <a class="{% if ep in ['investor.saved_properties','borrower.saved_properties'] %}active{% endif %}"
-         href="{{ url_for('investor.saved_properties') }}">
+      <a class="{% if ep in ['borrower.saved_properties','borrower.saved_properties'] %}active{% endif %}"
+         href="{{ url_for('borrower.saved_properties') }}">
         <i class="lucide lucide-bookmark icon"></i>
         Saved Properties
       </a>
 
-      <a class="{% if ep in ['investor.deal_workspace','borrower.deal_workspace'] %}active{% endif %}"
-         href="{{ url_for('investor.deal_workspace') }}">
+      <a class="{% if ep in ['borrower.deal_workspace','borrower.deal_workspace'] %}active{% endif %}"
+         href="{{ url_for('borrower.deal_workspace') }}">
         <i class="lucide lucide-wrench icon"></i>
          Deal Workspace
       </a>
 
-      <a class="{% if ep in ['investor.deals_list','borrower.deals_list'] %}active{% endif %}"
-         href="{{ url_for('investor.deals_list') }}">
+      <a class="{% if ep in ['borrower.deals_list','borrower.deals_list'] %}active{% endif %}"
+         href="{{ url_for('borrower.deals_list') }}">
         <i class="lucide lucide-briefcase icon"></i>
          Deals
       </a>
 
-      <a class="{% if ep in ['investor.status','borrower.status'] %}active{% endif %}"
-         href="{{ url_for('investor.status') }}">
+      <a class="{% if ep in ['borrower.status','borrower.status'] %}active{% endif %}"
+         href="{{ url_for('borrower.status') }}">
         <i class="lucide lucide-landmark icon"></i>
          Capital
       </a>
 
-      <a class="{% if ep in ['investor.quote','borrower.quote'] %}active{% endif %}"
-         href="{{ url_for('investor.quote') }}">
+      <a class="{% if ep in ['borrower.quote','borrower.quote'] %}active{% endif %}"
+         href="{{ url_for('borrower.quote') }}">
         <i class="lucide lucide-badge-dollar-sign icon"></i>
          Quotes
       </a>
 
-      <a class="{% if ep in ['investor.documents','borrower.documents','investor.document_requests','borrower.document_requests'] %}active{% endif %}"
-         href="{{ url_for('investor.documents') }}">
+      <a class="{% if ep in ['borrower.documents','borrower.documents','borrower.document_requests','borrower.document_requests'] %}active{% endif %}"
+         href="{{ url_for('borrower.documents') }}">
         <i class="lucide lucide-folder icon"></i>
          Documents
       </a>
 
-     <a class="{% if ep in ['investor.conditions','borrower.conditions'] %}active{% endif %}"
-        href="{{ url_for('investor.conditions') }}">
+     <a class="{% if ep in ['borrower.conditions','borrower.conditions'] %}active{% endif %}"
+        href="{{ url_for('borrower.conditions') }}">
        <i class="lucide lucide-shield-check icon"></i>
         Conditions
      </a>
