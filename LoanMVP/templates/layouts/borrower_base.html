@@ -56,6 +56,12 @@
           <span class="b-tooltip">Dashboard</span>
         </a>
 
+        <a class="b-sidebar-item {{ 'active' if ep == 'borrower.property_tool' else '' }}"
+           href="{{ url_for('borrower.property_tool') }}">
+          <i class="lucide lucide-radar"></i>
+          <span class="b-tooltip">Deal Finder</span>
+        </a>
+        
         <!-- Property Search -->
         <a class="b-sidebar-item {{ 'active' if ep in ['borrower.property_search','borrower.property_finder'] or 'property' in ep else '' }}"
            href="{{ url_for('borrower.property_search') }}">
@@ -128,10 +134,43 @@
               <i class="lucide lucide-bell"></i>
             </a>
 
-            <div class="b-topbar-user">
-              <img
-                src="{{ borrower.avatar_url if borrower and borrower.avatar_url else url_for('static', filename='images/default_user.png') }}"
-                alt="User">
+            <div class="b-user-menu" id="bUserMenu">
+              <button class="b-user-btn" type="button" id="bUserBtn" aria-haspopup="true" aria-expanded="false">
+                <img
+                  class="b-user-avatar"
+                  src="{{ borrower.profile_pic if borrower and borrower.profile_pic else url_for('static', filename='images/default_user.png') }}"
+                  alt="User">
+                 <i class="lucide lucide-chevron-down b-user-caret"></i>
+               </button>
+
+              <div class="b-user-dropdown" id="bUserDropdown" role="menu" aria-label="User menu">
+                 <div class="b-user-header">
+                  <div class="b-user-name">{{ current_user.full_name if current_user else "Account" }}</div>
+                    <div class="b-user-email">{{ current_user.email if current_user else "" }}</div>
+                  </div>
+
+                  <a class="b-user-item" href="{{ url_for('borrower.profile') }}">
+                    <i class="lucide lucide-user"></i> Profile
+                  </a>
+
+                  <a class="b-user-item" href="{{ url_for('borrower.settings') }}">
+                    <i class="lucide lucide-settings"></i> Settings
+                  </a>
+
+                   <a class="b-user-item" href="{{ url_for('borrower.privacy') }}">
+                     <i class="lucide lucide-shield"></i> Privacy
+                   </a>
+
+                   <a class="b-user-item" href="{{ url_for('borrower.notifications_settings') }}">
+                     <i class="lucide lucide-bell"></i> Notifications
+                   </a>
+
+                <div class="b-user-divider"></div>
+
+                <a class="b-user-item danger" href="{{ url_for('auth.logout') }}">
+                  <i class="lucide lucide-log-out"></i> Logout
+                </a>
+              </div>
             </div>
           {% endblock %}
         </div>
@@ -141,6 +180,15 @@
 
       <!-- MAIN -->
       <main class="b-main">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+         {% if messages %}
+           <div class="flash-stack">
+             {% for category, msg in messages %}
+              <div class="flash flash-{{ category }}">{{ msg }}</div>
+            {% endfor %}
+          </div>
+        {% endif %}
+      {% endwith %}
         <div class="b-main-inner">
           {% block content %}{% endblock %}
         </div>
@@ -152,3 +200,27 @@
   {% block scripts %}{% endblock %}
 </body>
 </html>
+<script>
+  (function () {
+    const btn = document.getElementById("bUserBtn");
+    const dd  = document.getElementById("bUserDropdown");
+
+    if (!btn || !dd) return;
+
+    const close = () => {
+      dd.classList.remove("open");
+      btn.setAttribute("aria-expanded", "false");
+    };
+
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const isOpen = dd.classList.toggle("open");
+      btn.setAttribute("aria-expanded", isOpen ? "true" : "false");
+    });
+
+    document.addEventListener("click", close);
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") close();
+    });
+  })();
+</script>

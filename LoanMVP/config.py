@@ -16,16 +16,27 @@ load_dotenv()
 # ===================================================
 # ⚙️ MAIN CONFIG CLASS
 # ===================================================
+ 
 class Config:
-
     # --------------------------------------------------
     # 🔐 CORE APP SETTINGS
     # --------------------------------------------------
-    SECRET_KEY = os.environ.get("SECRET_KEY", "supersecretkey")
-    DEBUG = os.environ.get("FLASK_DEBUG", "true").lower() in ("1", "true", "yes")
+    SECRET_KEY = os.getenv("SECRET_KEY", "dev_only_change_me")
+    SECURITY_PASSWORD_SALT = os.getenv("SECURITY_PASSWORD_SALT", "dev_salt_change_me")
 
-    PERMANENT_SESSION_LIFETIME = timedelta(days=7)
-    REMEMBER_COOKIE_DURATION = timedelta(days=7)
+    DEBUG = os.environ.get("FLASK_DEBUG", "false").lower() in ("1", "true", "yes")
+
+    PERMANENT_SESSION_LIFETIME = timedelta(days=30)
+    REMEMBER_COOKIE_DURATION = timedelta(days=30)
+
+    SESSION_COOKIE_SECURE = True
+    SESSION_COOKIE_HTTPONLY = True
+    SESSION_COOKIE_SAMESITE = "Lax"
+
+    REMEMBER_COOKIE_SECURE = True
+    REMEMBER_COOKIE_HTTPONLY = True
+    REMEMBER_COOKIE_SAMESITE = "Lax"
+
     SESSION_PROTECTION = "strong"
 
     # --------------------------------------------------

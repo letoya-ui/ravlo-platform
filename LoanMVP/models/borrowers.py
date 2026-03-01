@@ -153,10 +153,14 @@ class Deal(db.Model):
     # Ownership / access control
     user_id = db.Column(db.Integer, nullable=False, index=True)
 
+    saved_property_id = db.Column(db.Integer, db.ForeignKey("saved_properties.id"), nullable=True, index=True)
+
     # Identifiers / display
     property_id = db.Column(db.String(120), nullable=True, index=True)
     title = db.Column(db.String(255), nullable=True)
     strategy = db.Column(db.String(32), nullable=True)  # flip/rental/airbnb
+    final_before_url = db.Column(db.Text, nullable=True)
+    final_after_url  = db.Column(db.Text, nullable=True)
 
     # Persisted analysis payloads
     inputs_json = db.Column(db.JSON, nullable=True)   # optional: store inputs

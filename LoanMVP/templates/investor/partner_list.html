@@ -1,0 +1,23 @@
+{% extends "layouts/base.html" %}
+{% block content %}
+
+<h2>Available Partners</h2>
+
+{% for p in partners %}
+  <div class="card mb-3 p-3">
+    <h4>{{ p.name }}</h4>
+    <p>{{ p.company }}</p>
+    <p>{{ p.category }} • {{ p.service_area }}</p>
+
+    <form method="post"
+          action="{{ url_for('borrower.request_partner_connection', partner_id=p.id) }}">
+      <button type="submit" class="btn btn-primary">
+        Request Connection
+      </button>
+    </form>
+  </div>
+{% else %}
+  <p>No partners available.</p>
+{% endfor %}
+
+{% endblock %}

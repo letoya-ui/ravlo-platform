@@ -29,12 +29,14 @@ class BorrowerProfile(db.Model):
     zip = db.Column(db.String(20))
 
     # 💼 Employment
+    employment_status = db.Column(db.String(50))
     employer_name = db.Column(db.String(150))
     employer_phone = db.Column(db.String(50))
     job_title = db.Column(db.String(150))
     years_at_job = db.Column(db.Integer)
 
     # 💰 Income
+    annual_income = db.Column(db.Float)
     income = db.Column(db.Float)
     monthly_income_secondary = db.Column(db.Float)
 
@@ -70,7 +72,9 @@ class BorrowerProfile(db.Model):
     company = db.Column(db.String(120), nullable=True)
     subscription_plan = db.Column(db.String(20), default="Free")
     has_seen_dashboard_tour = db.Column(db.Boolean, default=False)
-
+    email_notifications = db.Column(db.Boolean, default=True)
+    sms_notifications = db.Column(db.Boolean, default=False)
+    
     # 🔗 Relationships
     user = db.relationship("User", back_populates="borrower_profile", foreign_keys=[user_id])
     assigned_user = db.relationship("User", backref="assigned_borrowers", foreign_keys=[assigned_to])

@@ -168,7 +168,11 @@ def get_comps_for_property(address, zipcode, rentometer_api_key=None):
 # ---------------------------------------------------------
 # SAVED PROPERTY COMPS WRAPPER
 # ---------------------------------------------------------
-def get_saved_property_comps(user_id, property_id=None, rentometer_api_key=None):
+def get_saved_property_comps(user_id, property_id=None, saved_property_id=None, rentometer_api_key=None):
+    # allow either param name
+    if property_id is None and saved_property_id is not None:
+        property_id = saved_property_id
+
     borrower = BorrowerProfile.query.filter_by(user_id=user_id).first()
     if not borrower or not property_id:
         return {}

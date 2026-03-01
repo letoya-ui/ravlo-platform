@@ -1,5 +1,5 @@
 @echo off
-title 🚀 Caughman Mason LoanMVP Auto Setup
+title Caughman Mason LoanMVP Auto Setup
 color 0A
 echo.
 echo ===============================================
@@ -10,43 +10,50 @@ echo.
 REM --- Change working directory ---
 cd /d "%~dp0"
 
-echo 🔄 Cleaning up old cache files...
+echo  Cleaning up old cache files...
 for /r %%i in (__pycache__) do if exist "%%i" rmdir /s /q "%%i"
+
+REM --- Ensure venv ---
 if exist "venv\Scripts\activate" (
-    echo ✅ Virtual environment found.
+    echo  Virtual environment found.
 ) else (
-    echo ⚙️  Creating new virtual environment...
+    echo  Creating new virtual environment...
     py -m venv venv
 )
 
 echo.
-echo 🔥 Activating virtual environment...
+echo  Activating virtual environment...
 call venv\Scripts\activate
 
 echo.
-echo 📦 Installing dependencies...
+echo  Installing dependencies...
 pip install --upgrade pip
 pip install -r requirements.txt
+
+REM (Optional: keep these only if they are NOT in requirements.txt)
 pip install Flask-Session
 pip install flask flask_sqlalchemy flask_login flask_migrate flask_socketio flask_cors
 pip install pandas
 
 echo.
-echo 🧱 Preparing database...
+echo  Preparing database...
 if not exist "LoanMVP\instance" mkdir LoanMVP\instance
-if not exist "LoanMVP\instance\loanmvp.db" (
-    echo ⚙️  Initializing new database...
+
+REM ✅ db init should be based on migrations folder, not DB file
+if not exist "migrations" (
+    echo  Initializing migrations folder...
     flask --app LoanMVP.app db init
 )
-echo ⚙️  Running migrations...
+
+echo  Running migrations...
 flask --app LoanMVP.app db migrate -m "auto update"
 flask --app LoanMVP.app db upgrade
 
 echo.
-echo ✅ Database updated.
+echo  Database updated.
 
 echo.
-echo 🚀 Starting LoanMVP application...
+echo  Starting LoanMVP application...
 python -m LoanMVP.app
 
 pause

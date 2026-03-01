@@ -76,9 +76,13 @@ def create_app():
     )
 
     # Core configuration
-    app.secret_key = "super_secret_key"  # consider loading from env in production
-    app.config["SESSION_TYPE"] = "filesystem"
     app.config.from_object(Config)
+
+    # ✅ Make sure secret key comes from config/env
+    app.secret_key = app.config.get("SECRET_KEY")
+
+    # ✅ Remove filesystem sessions on Render (ephemeral)
+    app.config.pop("SESSION_TYPE", None)
 
     # Stripe configuration
     stripe.api_key = app.config.get("STRIPE_SECRET_KEY")

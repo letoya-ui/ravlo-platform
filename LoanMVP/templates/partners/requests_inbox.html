@@ -1,0 +1,34 @@
+{% extends "layouts/base.html" %}
+{% block content %}
+
+<div class="page-title mb-4">
+  <h2>Partner Requests</h2>
+  <p class="text-muted">New borrower requests and active connections.</p>
+</div>
+
+{% for r in requests %}
+  <div class="soft-card p-4 mb-3">
+    <div class="d-flex justify-content-between align-items-start">
+      <div>
+        <div class="fw-semibold">Request #{{ r.id }} • {{ (r.category or "General")|title }}</div>
+        <div class="text-muted small">Status: {{ r.status|title }} • {{ r.created_at.strftime("%b %d, %Y %I:%M %p") }}</div>
+        {% if r.message %}<div class="mt-2">{{ r.message }}</div>{% endif %}
+      </div>
+
+      <div class="d-flex gap-2">
+        {% if r.status == "pending" %}
+          <form method="POST" action="{{ url_for('partners.accept_request', request_id=r.id) }}">
+            <button class="btn btn-success btn-sm">Accept</button>
+          </form>
+          <form method="POST" action="{{ url_for('partners.decline_request', request_id=r.id) }}">
+            <button class="btn btn-outline-light btn-sm">Decline</button>
+          </form>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+{% else %}
+  <div class="soft-card p-4">No requests yet.</div>
+{% endfor %}
+
+{% endblock %}

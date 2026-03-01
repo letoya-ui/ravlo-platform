@@ -1,212 +1,564 @@
-/* ======================================
-   CM Loan Services Universal Dashboard Theme
-   ====================================== */
-:root {
-  --bg:#0f0f11;
-  --panel:#15161a;
-  --elev:#1b1d22;
-  --text:#e6e6e6;
-  --muted:#a5a7ad;
-  --line:#282b31;
-  --accent:#7ab8ff;
-  --accent-soft:#2a4a62;
-  --success:#43d19e;
-  --warn:#ffdf6e;
-  --danger:#ff6b6b;
-  --glow:0 0 18px rgba(122,184,255,0.35);
+/* ============================================================
+   RAVLO — ENGRAVED STEEL UI (Base + Sidebar + Topbar + Buttons)
+   Palette: Midnight steel + grayish-blue metallic accents
+   ============================================================ */
+
+/* ---------- TOKENS ---------- */
+:root{
+  /* surfaces */
+  --bg0:#070A0E;
+  --bg1:#0B1016;        /* main */
+  --bg2:#0E141B;        /* panels */
+  --bg3:#121A23;        /* elevated */
+  --line:#1A2330;
+
+  /* text */
+  --text:#FFFFFF;
+  --muted:#A9B2BE;
+  --muted2:#7F8A99;
+
+  /* accent (grayish blue) */
+  --accent:#6B7F93;     /* primary */
+  --accent2:#7A8FA5;    /* hover */
+  --accent3:#3A5C7A;    /* deep */
+
+  /* shadows (engraved) */
+  --shadow-out: 0 18px 45px rgba(0,0,0,.55);
+  --shadow-soft: 0 10px 30px rgba(0,0,0,.45);
+
+  /* inset / engraved */
+  --inset-1: inset 0 1px 0 rgba(255,255,255,.06),
+             inset 0 -1px 0 rgba(0,0,0,.65),
+             inset 0 0 0 1px rgba(255,255,255,.03);
+
+  --inset-2: inset 0 2px 10px rgba(0,0,0,.70),
+             inset 0 1px 0 rgba(255,255,255,.05),
+             inset 0 0 0 1px rgba(255,255,255,.03);
+
+  /* metallic (for logo + hero moments) */
+  --metal-a:#8EA0B3;
+  --metal-b:#6B7F93;
+  --metal-c:#42586E;
+  --metal-d:#2B3B4C;
+
+  /* radius & spacing */
+  --r-sm:12px;
+  --r-md:16px;
+  --r-lg:22px;
+
+  --sidebar-w: 280px;
+  --topbar-h: 66px;
+  --pad: 22px;
+
+  /* focus */
+  --focus: 0 0 0 3px rgba(107,127,147,.22);
 }
 
-/* ===== Layout ===== */
-body {
-  background: var(--bg);
-  color: var(--text);
-  font-family: 'Inter', sans-serif;
-  overflow: hidden;
+/* ---------- GLOBAL ---------- */
+*{ box-sizing:border-box; }
+html,body{ height:100%; }
+body{
+  margin:0;
+  color:var(--text);
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  background:
+    radial-gradient(1200px 700px at 50% -180px, rgba(255,255,255,.10), transparent 55%),
+    radial-gradient(900px 520px at 60% 0px, rgba(107,127,147,.18), transparent 55%),
+    radial-gradient(900px 520px at 18% 12%, rgba(0,0,0,.75), transparent 60%),
+    linear-gradient(180deg, var(--bg0), var(--bg1) 30%, var(--bg1));
 }
 
-main.dashboard-main {
-  margin-left: 260px;
-  margin-top: 60px;
-  height: calc(100vh - 60px);
-  width: calc(100% - 260px);
-  overflow-y: auto;
-  overflow-x: hidden;
-  padding: 2rem;
-  background: var(--bg);
-  scroll-behavior: smooth;
+/* Subtle grain texture (safe fallback) */
+.ravlo-grain{
+  position:fixed;
+  inset:0;
+  pointer-events:none;
+  opacity:.08;
+  background-image:
+    repeating-linear-gradient(0deg, rgba(255,255,255,.03) 0 1px, transparent 1px 2px),
+    repeating-linear-gradient(90deg, rgba(255,255,255,.02) 0 1px, transparent 1px 3px);
+  mix-blend-mode: overlay;
 }
 
-/* Scrollbar */
-main.dashboard-main::-webkit-scrollbar { width: 10px; }
-main.dashboard-main::-webkit-scrollbar-thumb {
-  background: var(--line);
-  border-radius: 8px;
-}
-main.dashboard-main::-webkit-scrollbar-thumb:hover {
-  background: var(--accent);
+/* ---------- LAYOUT SHELL ---------- */
+.ravlo-shell{
+  min-height:100vh;
+  display:grid;
+  grid-template-columns: var(--sidebar-w) 1fr;
 }
 
-/* ===== Puzzle Grid ===== */
-.wrap {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 1.25rem;
-}
-.lhs { flex: 1 1 68%; min-width: 480px; }
-.rhs { flex: 1 1 30%; min-width: 320px; }
-
-.grid { display: grid; gap: 1rem; }
-.g-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-.g-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-
-@media (max-width: 1100px) {
-  .wrap { flex-direction: column; }
-  .lhs, .rhs { flex: 1 1 100%; min-width: 100%; }
+.ravlo-main{
+  min-height:100vh;
+  display:flex;
+  flex-direction:column;
 }
 
-/* ===== Cards ===== */
-.card {
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: 14px;
-  padding: 1rem 1.1rem;
-  box-shadow: var(--glow);
-  transition: 0.25s ease;
-}
-.card:hover {
-  background: var(--elev);
-  transform: translateY(-2px);
-  box-shadow: 0 0 24px rgba(122,184,255,0.35);
-}
-
-/* ===== Text ===== */
-h1,h2,h3,h4 { color: var(--text); margin: 0 0 .35rem; font-weight: 600; }
-.muted { color: var(--muted); }
-
-/* ===== Buttons ===== */
-.btn {
-  display: inline-flex;
-  align-items: center;
-  gap: .5rem;
-  padding: .7rem 1rem;
-  border-radius: 10px;
-  border: 1px solid var(--line);
-  color: var(--text);
-  text-decoration: none;
-  background: linear-gradient(180deg,#1c1f25,#15161a);
-  transition: all .2s ease;
-}
-.btn:hover {
-  border-color: #35506a;
-  box-shadow: var(--glow);
-}
-.btn-primary {
-  background: linear-gradient(180deg,#2a4a62,#1b2a38);
-  border-color:#2a4a62;
-  color:#cfe8ff;
-}
-.btn-primary:hover {
-  background: linear-gradient(180deg,#355f7f,#1e2e40);
+/* ---------- SIDEBAR (ENGRAVED) ---------- */
+.ravlo-sidebar{
+  position:sticky;
+  top:0;
+  height:100vh;
+  padding:18px 14px;
+  background:
+    radial-gradient(900px 520px at 45% -120px, rgba(255,255,255,.10), transparent 60%),
+    radial-gradient(800px 520px at 35% 0px, rgba(107,127,147,.14), transparent 62%),
+    linear-gradient(180deg, #070A0E, #0B1016 40%, #0B1016);
+  border-right:1px solid rgba(255,255,255,.05);
+  box-shadow: 14px 0 40px rgba(0,0,0,.55);
 }
 
-/* ===== Tables ===== */
-.table {
-  width: 100%;
-  border-collapse: collapse;
-  color: var(--text);
-  font-size: 0.9rem;
+.ravlo-sb-head{
+  padding:14px 12px 18px;
+  border-radius: var(--r-lg);
+  background:
+    radial-gradient(520px 220px at 40% -60px, rgba(255,255,255,.10), transparent 65%),
+    linear-gradient(180deg, rgba(255,255,255,.03), rgba(0,0,0,.45));
+  box-shadow: var(--inset-2);
+  margin-bottom:14px;
 }
-.table th, .table td {
-  padding: .65rem .6rem;
-  border-top: 1px solid var(--line);
-}
-.table th {
-  color: #cfe0f5;
-  font-weight: 600;
-  text-align: left;
-}
-.table tr:hover { background: var(--elev); }
 
-/* ===== Status & Chips ===== */
-.status {
-  padding:.25rem .6rem;
+.ravlo-brand{
+  display:flex;
+  align-items:center;
+  gap:12px;
+}
+
+.ravlo-mark{
+  width:44px;
+  height:44px;
+  border-radius:14px;
+  display:grid;
+  place-items:center;
+  background:
+    radial-gradient(140px 90px at 35% 25%, rgba(255,255,255,.10), transparent 60%),
+    linear-gradient(180deg, rgba(255,255,255,.03), rgba(0,0,0,.62));
+  box-shadow: var(--inset-2);
+  overflow:hidden;
+}
+
+/* Put your RV SVG inside this and it will look “engraved-metallic” */
+.ravlo-mark svg{
+  width:30px; height:30px;
+  filter: drop-shadow(0 10px 14px rgba(0,0,0,.45));
+}
+
+.ravlo-word{
+  display:flex;
+  flex-direction:column;
+  line-height:1.05;
+}
+.ravlo-word .name{
+  font-weight:700;
+  letter-spacing:.14em;
+  font-size:15px;
+}
+.ravlo-word .sub{
+  margin-top:5px;
+  font-size:12px;
+  letter-spacing:.02em;
+  color:var(--muted);
+}
+
+.ravlo-nav{
+  padding:10px 8px;
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+}
+
+.ravlo-nav a{
+  text-decoration:none;
+  color:var(--muted);
+  display:flex;
+  align-items:center;
+  gap:12px;
+  padding:12px 12px;
+  border-radius: 16px;
+  position:relative;
+  transition: .18s ease;
+  background: transparent;
+}
+
+/* engraved “button” feel on hover */
+.ravlo-nav a:hover{
+  color:var(--text);
+  background:
+    radial-gradient(240px 90px at 30% 0%, rgba(255,255,255,.07), transparent 60%),
+    linear-gradient(180deg, rgba(255,255,255,.03), rgba(0,0,0,.40));
+  box-shadow: var(--inset-1);
+}
+
+/* Active = thin metallic indicator strip */
+.ravlo-nav a.active{
+  color:var(--text);
+  background:
+    radial-gradient(240px 90px at 30% 0%, rgba(255,255,255,.09), transparent 60%),
+    linear-gradient(180deg, rgba(255,255,255,.04), rgba(0,0,0,.48));
+  box-shadow: var(--inset-2);
+}
+
+.ravlo-nav a.active::before{
+  content:"";
+  position:absolute;
+  left:8px;
+  top:10px;
+  bottom:10px;
+  width:3px;
   border-radius:999px;
-  font-size:.78rem;
-  border:1px solid var(--line);
+  background: linear-gradient(180deg, var(--metal-a), var(--metal-b), var(--metal-d));
+  box-shadow: 0 0 0 1px rgba(255,255,255,.08);
+  opacity:.95;
 }
-.st-active { background:#1b2a23; color:#9af2c5; }
-.st-inactive { background:#2a1b1b; color:#ff9d9d; }
 
-.chip {
-  display:inline-flex;
-  gap:.35rem;
-  padding:.35rem .6rem;
-  border:1px solid var(--line);
-  background:var(--elev);
-  color:#c4d9f2;
-  border-radius:999px;
-  font-size:.78rem;
-  margin:.2rem .25rem 0 0;
+.ravlo-nav .icon{
+  width:18px; height:18px;
+  opacity:.9;
+  flex:0 0 auto;
+}
+
+/* Sidebar footer (logout/settings) */
+.ravlo-sb-foot{
+  margin-top:auto;
+  padding:10px 8px 8px;
+  border-top:1px solid rgba(255,255,255,.06);
+}
+.ravlo-sb-foot a{
+  display:flex;
+  gap:12px;
+  align-items:center;
+  color:var(--muted);
+  text-decoration:none;
+  padding:12px 12px;
+  border-radius:16px;
+  transition:.18s ease;
+}
+.ravlo-sb-foot a:hover{
+  color:var(--text);
+  background:
+    radial-gradient(260px 90px at 30% 0%, rgba(255,255,255,.06), transparent 60%),
+    linear-gradient(180deg, rgba(255,255,255,.03), rgba(0,0,0,.42));
+  box-shadow: var(--inset-1);
+}
+
+/* ---------- TOPBAR ---------- */
+.ravlo-topbar{
+  height:var(--topbar-h);
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding: 0 var(--pad);
+  position:sticky;
+  top:0;
+  z-index:10;
+  background:
+    radial-gradient(900px 240px at 50% -120px, rgba(255,255,255,.10), transparent 62%),
+    linear-gradient(180deg, rgba(0,0,0,.55), rgba(0,0,0,.22));
+  border-bottom:1px solid rgba(255,255,255,.06);
+  backdrop-filter: blur(8px);
+}
+
+.ravlo-top-left{
+  display:flex;
+  align-items:baseline;
+  gap:14px;
+}
+.ravlo-title{
+  font-size:26px;
+  font-weight:700;
+  letter-spacing:.02em;
+  margin:0;
+}
+.ravlo-subline{
+  margin:0;
+  font-size:14px;
+  color: var(--accent2);
+  letter-spacing:.01em;
+}
+
+/* topbar actions */
+.ravlo-actions{
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
+
+.ravlo-search{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:10px 12px;
+  min-width: 280px;
+  border-radius: 16px;
+  color:var(--muted);
+  background:
+    radial-gradient(240px 90px at 30% 0%, rgba(255,255,255,.05), transparent 60%),
+    linear-gradient(180deg, rgba(255,255,255,.02), rgba(0,0,0,.50));
+  box-shadow: var(--inset-2);
+  border:1px solid rgba(255,255,255,.06);
+}
+.ravlo-search input{
+  width:100%;
+  border:none;
+  outline:none;
+  background:transparent;
+  color:var(--text);
+  font-size:14px;
+}
+
+/* ---------- CONTENT WRAP ---------- */
+.ravlo-content{
+  padding: var(--pad);
+}
+
+/* ---------- CARDS / PANELS ---------- */
+.ravlo-card{
+  border-radius: var(--r-lg);
+  background:
+    radial-gradient(420px 200px at 45% -40px, rgba(255,255,255,.08), transparent 60%),
+    linear-gradient(180deg, rgba(255,255,255,.03), rgba(0,0,0,.55));
+  border:1px solid rgba(255,255,255,.06);
+  box-shadow: var(--inset-2), var(--shadow-soft);
+}
+
+.ravlo-card.pad{ padding:18px; }
+.ravlo-card-header{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:16px 18px 10px;
+}
+.ravlo-card-title{
+  margin:0;
+  font-size:14px;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+  color:var(--muted);
+}
+.ravlo-card-body{ padding: 0 18px 18px; }
+
+/* ---------- GRID HELPERS ---------- */
+.ravlo-grid{
+  display:grid;
+  gap:14px;
+}
+.ravlo-grid.cols-4{ grid-template-columns: repeat(4, minmax(0,1fr)); }
+.ravlo-grid.cols-3{ grid-template-columns: repeat(3, minmax(0,1fr)); }
+.ravlo-grid.cols-2{ grid-template-columns: repeat(2, minmax(0,1fr)); }
+
+@media (max-width:1200px){
+  :root{ --sidebar-w: 250px; }
+  .ravlo-grid.cols-4{ grid-template-columns: repeat(2, minmax(0,1fr)); }
+}
+@media (max-width:860px){
+  .ravlo-shell{ grid-template-columns: 1fr; }
+  .ravlo-sidebar{ display:none; } /* you can swap to a drawer later */
+  .ravlo-grid.cols-3,.ravlo-grid.cols-2,.ravlo-grid.cols-4{ grid-template-columns:1fr; }
+  .ravlo-search{ min-width: 180px; }
+}
+
+/* ---------- KPI TILE ---------- */
+.ravlo-kpi{
+  padding:16px 16px 14px;
+  border-radius: var(--r-lg);
+  background:
+    radial-gradient(260px 140px at 35% 0%, rgba(255,255,255,.07), transparent 58%),
+    linear-gradient(180deg, rgba(255,255,255,.02), rgba(0,0,0,.58));
+  border:1px solid rgba(255,255,255,.06);
+  box-shadow: var(--inset-2);
+}
+.ravlo-kpi .value{
+  font-size:26px;
+  font-weight:700;
+  letter-spacing:.01em;
+}
+.ravlo-kpi .label{
+  margin-top:6px;
+  color:var(--muted);
+  font-size:13px;
+}
+
+/* ---------- BUTTONS ---------- */
+.ravlo-btn{
+  border:none;
+  outline:none;
+  border-radius: 16px;
+  padding: 12px 14px;
+  font-weight:600;
+  letter-spacing:.01em;
   cursor:pointer;
-}
-.chip:hover { box-shadow: var(--glow); }
-
-/* ===== Responsive ===== */
-@media (max-width:768px) {
-  .btn { width:100%; justify-content:center; }
-  .card { padding:1rem; }
-  .table th, .table td { font-size:.85rem; }
+  transition: .16s ease;
+  user-select:none;
 }
 
-/* ===== Fade In ===== */
-@keyframes fadeIn {
-  from {opacity:0; transform:translateY(10px);}
-  to {opacity:1; transform:none;}
+.ravlo-btn:focus{ box-shadow: var(--focus); }
+
+/* primary (steel-blue) */
+.ravlo-btn.primary{
+  color:#EEF3F8;
+  background:
+    radial-gradient(220px 110px at 35% 0%, rgba(255,255,255,.10), transparent 60%),
+    linear-gradient(180deg, rgba(122,143,165,.35), rgba(58,92,122,.35));
+  border:1px solid rgba(255,255,255,.08);
+  box-shadow: var(--inset-2);
 }
-.timeline {
-    margin-top: 1.5rem;
-    padding: 1.5rem;
-    background: var(--panel);
-    border-radius: 14px;
-    border: 1px solid var(--line);
-    box-shadow: 0 0 18px rgba(0,0,0,0.4);
+.ravlo-btn.primary:hover{
+  transform: translateY(-1px);
+  background:
+    radial-gradient(220px 110px at 35% 0%, rgba(255,255,255,.12), transparent 60%),
+    linear-gradient(180deg, rgba(122,143,165,.45), rgba(58,92,122,.42));
 }
 
-.timeline-item {
-    display: flex;
-    align-items: flex-start;
-    gap: 1rem;
-    padding: 1rem 0;
-    border-bottom: 1px solid var(--line);
+/* secondary / ghost */
+.ravlo-btn.ghost{
+  color:var(--text);
+  background:
+    radial-gradient(220px 110px at 35% 0%, rgba(255,255,255,.06), transparent 60%),
+    linear-gradient(180deg, rgba(255,255,255,.02), rgba(0,0,0,.55));
+  border:1px solid rgba(255,255,255,.06);
+  box-shadow: var(--inset-2);
+}
+.ravlo-btn.ghost:hover{ transform: translateY(-1px); }
+
+/* tiny */
+.ravlo-btn.sm{
+  padding:9px 11px;
+  border-radius: 14px;
+  font-size:13px;
 }
 
-.timeline-item:last-child {
-    border-bottom: none;
+/* ---------- INPUTS ---------- */
+.ravlo-field{
+  width:100%;
+  padding:12px 12px;
+  border-radius: 16px;
+  border:1px solid rgba(255,255,255,.06);
+  background:
+    radial-gradient(260px 100px at 30% 0%, rgba(255,255,255,.04), transparent 60%),
+    linear-gradient(180deg, rgba(255,255,255,.02), rgba(0,0,0,.58));
+  box-shadow: var(--inset-2);
+  color:var(--text);
+  outline:none;
+  transition:.16s ease;
+}
+.ravlo-field::placeholder{ color: rgba(169,178,190,.55); }
+.ravlo-field:focus{ border-color: rgba(107,127,147,.55); box-shadow: var(--inset-2), var(--focus); }
+
+/* ---------- TABLES ---------- */
+.ravlo-table{
+  width:100%;
+  border-collapse: separate;
+  border-spacing:0;
+  overflow:hidden;
+  border-radius: var(--r-lg);
+  border:1px solid rgba(255,255,255,.06);
+  box-shadow: var(--inset-2);
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.02), rgba(0,0,0,.62));
+}
+.ravlo-table th,
+.ravlo-table td{
+  padding:12px 12px;
+  border-bottom:1px solid rgba(255,255,255,.06);
+  font-size:13px;
+}
+.ravlo-table th{
+  text-align:left;
+  color:var(--muted);
+  font-weight:700;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+  background: rgba(255,255,255,.02);
+}
+.ravlo-table tr:last-child td{ border-bottom:none; }
+
+/* ---------- BADGES / STATUS ---------- */
+.ravlo-badge{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  padding:6px 10px;
+  border-radius:999px;
+  font-size:12px;
+  letter-spacing:.02em;
+  border:1px solid rgba(255,255,255,.08);
+  background:
+    radial-gradient(160px 70px at 30% 0%, rgba(255,255,255,.06), transparent 60%),
+    linear-gradient(180deg, rgba(255,255,255,.02), rgba(0,0,0,.55));
+  box-shadow: var(--inset-1);
+  color: var(--muted);
+}
+.ravlo-badge.ok{ color:#DCE6F2; border-color: rgba(107,127,147,.35); }
+.ravlo-badge.watch{ color:#E7E2D6; border-color: rgba(186,170,120,.28); }
+.ravlo-badge.risk{ color:#F0D9D9; border-color: rgba(195,120,120,.28); }
+
+/* ---------- “RAVLO INSIGHT” CALLOUT ---------- */
+.ravlo-insight{
+  border-radius: var(--r-lg);
+  padding:14px 14px;
+  border:1px solid rgba(107,127,147,.28);
+  background:
+    radial-gradient(420px 160px at 25% 0%, rgba(107,127,147,.18), transparent 60%),
+    linear-gradient(180deg, rgba(255,255,255,.02), rgba(0,0,0,.62));
+  box-shadow: var(--inset-2);
+}
+.ravlo-insight .k{
+  font-size:12px;
+  letter-spacing:.10em;
+  text-transform:uppercase;
+  color:var(--accent2);
+  margin:0 0 8px 0;
+}
+.ravlo-insight .v{
+  margin:0;
+  color:var(--text);
+  line-height:1.4;
+  font-size:14px;
 }
 
-.timeline-icon {
-    width: 40px;
-    height: 40px;
-    border-radius: 10px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 18px;
-    box-shadow: 0 0 14px rgba(122,184,255,0.25);
+/* ---------- LOGIN (engraved hero look) ---------- */
+.ravlo-login{
+  min-height:100vh;
+  display:grid;
+  place-items:center;
+  padding:24px;
+  background:
+    radial-gradient(1200px 740px at 50% -220px, rgba(255,255,255,.12), transparent 55%),
+    radial-gradient(900px 520px at 52% 12%, rgba(107,127,147,.16), transparent 58%),
+    linear-gradient(180deg, var(--bg0), var(--bg1) 35%, var(--bg1));
+}
+.ravlo-login-card{
+  width:min(440px, 96vw);
+  border-radius: 28px;
+  padding:22px;
+  border:1px solid rgba(255,255,255,.06);
+  background:
+    radial-gradient(560px 260px at 45% -80px, rgba(255,255,255,.10), transparent 62%),
+    linear-gradient(180deg, rgba(255,255,255,.03), rgba(0,0,0,.62));
+  box-shadow: var(--inset-2), var(--shadow-out);
+}
+.ravlo-login-hero{
+  display:grid;
+  justify-items:center;
+  gap:10px;
+  padding:10px 0 16px;
+}
+.ravlo-login-hero .rv{
+  width:120px;
+  filter: drop-shadow(0 18px 24px rgba(0,0,0,.55));
+}
+.ravlo-login-hero .brand{
+  font-size:28px;
+  letter-spacing:.16em;
+  font-weight:800;
+}
+.ravlo-login-hero .hint{
+  color:var(--muted);
+  font-size:13px;
 }
 
-.timeline-content {
-    flex: 1;
-}
-
-.timeline-content h4 {
-    margin: 0;
-    font-size: 1rem;
-    color: var(--text);
-}
-
-.timeline-content .time {
-    font-size: 0.8rem;
-    color: var(--muted);
-    margin-top: 4px;
-}
+/* ---------- UTIL ---------- */
+.mt-12{ margin-top:12px; }
+.mt-16{ margin-top:16px; }
+.mt-20{ margin-top:20px; }
+.row{ display:flex; gap:12px; align-items:center; }
+.row.between{ justify-content:space-between; }
