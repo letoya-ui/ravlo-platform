@@ -93,13 +93,13 @@
 
       <button class="auth-btn" type="submit">Sign In</button>
 
-      <a class="auth-link" href="{{ url_for('auth.forgot_password') if 'auth.forgot_password' in current_app.view_functions else '#' }}">
+      <a class="auth-link" href="{{ url_for('auth.forgot_password') }}"
         Forgot password?
       </a>
 
       <div class="auth-foot">
         <span class="muted">Don't have an account?</span>
-        <a class="auth-link subtle" href="{{ url_for('auth.request_access') if 'auth.request_access' in current_app.view_functions else '#' }}">
+        <a class="auth-link subtle" href="{{ url_for('auth.request_access') }}"
           Request access
         </a>
       </div>
