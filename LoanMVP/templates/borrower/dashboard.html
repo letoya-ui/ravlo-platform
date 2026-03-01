@@ -6,11 +6,11 @@
 
 {% block topbar_actions %}
   <button class="ravlo-btn ghost sm" type="button"
-          onclick="location.href='{{ url_for('deals.index') if 'deals.index' in current_app.view_functions else '#' }}'">
+          onclick="location.href='{{ url_for('borrower.index') if 'deals.index' in current_app.view_functions else '#' }}'">
     View Deals
   </button>
   <button class="ravlo-btn primary sm" type="button"
-          onclick="location.href='{{ url_for('deals.new') if 'deals.new' in current_app.view_functions else '#' }}'">
+          onclick="location.href='{{ url_for('borrower.new') if 'deals.new' in current_app.view_functions else '#' }}'">
     New Deal
   </button>
 {% endblock %}
@@ -49,7 +49,7 @@
       <div class="row between">
         <div class="ravlo-card-title">Active Deals</div>
         <button class="ravlo-btn ghost sm" type="button"
-                onclick="location.href='{{ url_for('deals.index') if 'deals.index' in current_app.view_functions else '#' }}'">
+                onclick="location.href='{{ url_for('borrower.index') }}'"
           View All
         </button>
       </div>
@@ -85,7 +85,7 @@
                 </td>
                 <td style="text-align:right;">
                   <button class="ravlo-btn primary sm" type="button"
-                    onclick="location.href='{{ url_for('deals.view', deal_id=d.id) if 'deals.view' in current_app.view_functions else '#' }}'">
+                    onclick="location.href='{{ url_for('borrower.view', deal_id=d.id) }}'"
                     Open
                   </button>
                 </td>
@@ -113,11 +113,11 @@
         </p>
         <div class="row mt-12">
           <button class="ravlo-btn primary sm" type="button"
-            onclick="location.href='{{ url_for('deals.index') if 'deals.index' in current_app.view_functions else '#' }}'">
+            onclick="location.href='{{ url_for('borrower.index') }}'"
             Explore Deals
           </button>
           <button class="ravlo-btn ghost sm" type="button"
-            onclick="location.href='{{ url_for('strategy.profile') if 'strategy.profile' in current_app.view_functions else '#' }}'">
+            onclick="location.href='{{ url_for('borrower.profile') }}'"
             Strategy Profile
           </button>
         </div>
@@ -138,19 +138,19 @@
         <div class="ravlo-card-title">Quick Actions</div>
         <div class="ravlo-grid cols-2 mt-12">
           <button class="ravlo-btn ghost" type="button"
-            onclick="location.href='{{ url_for('intelligence.index') if 'intelligence.index' in current_app.view_functions else '#' }}'">
+            onclick="location.href='{{ url_for('borrower.index') }}'"
             Property Intelligence
           </button>
           <button class="ravlo-btn ghost" type="button"
-            onclick="location.href='{{ url_for('documents.index') if 'documents.index' in current_app.view_functions else '#' }}'">
+            onclick="location.href='{{ url_for('borrower.index') }}'"
             Upload Documents
           </button>
           <button class="ravlo-btn ghost" type="button"
-            onclick="location.href='{{ url_for('capital.index') if 'capital.index' in current_app.view_functions else '#' }}'">
+            onclick="location.href='{{ url_for('borrower.index') }}'"
             Funding Options
           </button>
           <button class="ravlo-btn ghost" type="button"
-            onclick="location.href='{{ url_for('app.support') if 'app.support' in current_app.view_functions else '#' }}'">
+            onclick="location.href='{{ url_for('borrower.support') }}'"
             Contact Team
           </button>
         </div>
@@ -169,7 +169,7 @@
       <div class="row between">
         <div class="ravlo-card-title">Saved Properties</div>
         <button class="ravlo-btn ghost sm" type="button"
-          onclick="location.href='{{ url_for('intelligence.saved') if 'intelligence.saved' in current_app.view_functions else '#' }}'">
+          onclick="location.href='{{ url_for('borrower.saved') }}'"
           View Saved
         </button>
       </div>
@@ -196,7 +196,7 @@
                 <td style="color:var(--muted);">{{ p.asset_type or "Residential" }}</td>
                 <td style="text-align:right;">
                   <button class="ravlo-btn primary sm" type="button"
-                    onclick="location.href='{{ url_for('intelligence.view_property', property_id=p.id) if 'intelligence.view_property' in current_app.view_functions else '#' }}'">
+                    onclick="location.href='{{ url_for('borrower.view_property', property_id=p.id) }}'"
                     Open
                   </button>
                 </td>
@@ -227,7 +227,7 @@
           </div>
           <div style="margin-top:8px;display:flex;gap:10px;flex-wrap:wrap;">
             <button class="ravlo-btn ghost sm" type="button"
-              onclick="location.href='{{ url_for('app.contact_officer') if 'app.contact_officer' in current_app.view_functions else '#' }}'">
+              onclick="location.href='{{ url_for('borrower.contact_officer') }}'"
               Message
             </button>
             {% if loan_officer and loan_officer.email %}
@@ -245,7 +245,7 @@
           </div>
           <div style="margin-top:8px;display:flex;gap:10px;flex-wrap:wrap;">
             <button class="ravlo-btn ghost sm" type="button"
-              onclick="location.href='{{ url_for('app.contact_processor') if 'app.contact_processor' in current_app.view_functions else '#' }}'">
+              onclick="location.href='{{ url_for('borrower.contact_processor') }}'"
               Message
             </button>
             {% if processor and processor.email %}
@@ -263,11 +263,11 @@
           </div>
           <div class="mt-12">
             <button class="ravlo-btn primary sm" type="button"
-              onclick="location.href='{{ url_for('app.partners') if 'app.partners' in current_app.view_functions else '#' }}'">
+              onclick="location.href='{{ url_for('borrower.partners') }}'"
               Find Partners
             </button>
             <button class="ravlo-btn ghost sm" type="button"
-              onclick="location.href='{{ url_for('app.support') if 'app.support' in current_app.view_functions else '#' }}'">
+              onclick="location.href='{{ url_for('borrower.support') }}'"
               Contact Support
             </button>
           </div>
