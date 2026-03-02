@@ -282,13 +282,16 @@ def register():
             "partner": "partners.dashboard",
         }
 
-        if role == "borrower":
-            return redirect(url_for("borrower.create_profile"))
+        if role == "":
+            return redirect(url_for("investor.create_profile"))
 
-        endpoint = dashboard_map.get(role, "index")
-        return redirect(url_for(endpoint))
+        endpoint = dashboard_map.get(role)
+        if endpoint:
+            return redirect(url_for(endpoint))
 
-    return render_template("auth/register.html")
+        flash("Logged in, but your account role is not set. Contact support.", "warning")
+        return redirect(url_for("investor.command_center"))
+
 
 @auth_bp.route("/register_borrower", methods=["GET", "POST"])
 def register_borrower():
