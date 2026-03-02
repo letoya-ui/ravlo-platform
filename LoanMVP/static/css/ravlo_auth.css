@@ -1,232 +1,124 @@
-/* ==========================================================
-   RAVLO AUTH STYLES
-   Premium Dark Investor UI
-   ========================================================== */
+/* ===========================================================
+   RAVLO AUTH — LUXURY FINTECH STYLE
+   =========================================================== */
 
 :root {
-  --bg: #0b0d10;
-  --panel: #14171c;
-  --line: #20242b;
-  --text: #ffffff;
-  --muted: #9aa0aa;
-
-  --accent: #7ab8ff;
-  --accent-strong: #5aa9ff;
-  --accent-glow: rgba(122,184,255,0.45);
-
-  --danger: #ff6b6b;
-
-  --radius: 18px;
+    --midnight: #0C1116;
+    --panel: #11161d;
+    --grayish-blue: #6B7F93;
+    --white: #FFFFFF;
+    --accent: #3A5C7A;
+    --line: #1d2530;
 }
 
-/* =========================
-   GLOBAL
-========================= */
-
-* {
-  box-sizing: border-box;
+/* Background */
+.auth-wrapper {
+    min-height: 100vh;
+    background: radial-gradient(circle at top, #111a22 0%, #0C1116 60%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
-body {
-  margin: 0;
-  padding: 0;
-  font-family: "Inter", sans-serif;
-  background: radial-gradient(circle at 20% 30%, #10141c, #0b0d10 60%);
-  color: var(--text);
-  min-height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+/* Card */
+.auth-card {
+    width: 420px;
+    padding: 3rem;
+    background: rgba(17, 22, 29, 0.85);
+    border: 1px solid var(--line);
+    border-radius: 20px;
+    backdrop-filter: blur(18px);
+    box-shadow:
+        0 0 40px rgba(58,92,122,0.15),
+        0 15px 40px rgba(0,0,0,0.5);
+    text-align: center;
 }
 
-/* =========================
-   AUTH WRAPPER
-========================= */
-
-.ravlo-auth-wrapper {
-  width: 100%;
-  max-width: 460px;
-  padding: 24px;
+/* Logo */
+.auth-logo img {
+    width: 70px;
+    margin-bottom: 1.5rem;
+    filter: drop-shadow(0 0 12px rgba(107,127,147,0.4));
 }
 
-/* =========================
-   AUTH CARD
-========================= */
-
-.ravlo-auth-card {
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  padding: 36px;
-  box-shadow:
-    0 20px 60px rgba(0,0,0,0.6),
-    0 0 0 1px rgba(122,184,255,0.04);
-  position: relative;
+/* Typography */
+.auth-card h1 {
+    color: var(--white);
+    font-size: 1.8rem;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
 }
 
-/* subtle glow */
-.ravlo-auth-card::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: var(--radius);
-  pointer-events: none;
-  box-shadow: 0 0 40px rgba(122,184,255,0.08);
+.auth-sub {
+    color: var(--grayish-blue);
+    font-size: 0.95rem;
+    margin-bottom: 2rem;
 }
 
-/* =========================
-   LOGO AREA
-========================= */
-
-.ravlo-auth-brand {
-  text-align: center;
-  margin-bottom: 28px;
+/* Inputs */
+.input-group {
+    text-align: left;
+    margin-bottom: 1.4rem;
 }
 
-.ravlo-auth-logo {
-  font-weight: 800;
-  font-size: 26px;
-  letter-spacing: 2px;
+.input-group label {
+    display: block;
+    font-size: 0.85rem;
+    color: var(--grayish-blue);
+    margin-bottom: 0.4rem;
 }
 
-.ravlo-auth-sub {
-  font-size: 13px;
-  color: var(--muted);
-  margin-top: 6px;
+.input-group input {
+    width: 100%;
+    padding: 0.85rem 1rem;
+    background: var(--midnight);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    color: var(--white);
+    font-size: 0.95rem;
+    transition: all 0.3s ease;
 }
 
-/* =========================
-   HEADINGS
-========================= */
-
-.ravlo-auth-title {
-  font-size: 20px;
-  font-weight: 800;
-  margin-bottom: 6px;
-  text-align: center;
+.input-group input:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 10px rgba(58,92,122,0.4);
 }
 
-.ravlo-auth-desc {
-  font-size: 13px;
-  color: var(--muted);
-  text-align: center;
-  margin-bottom: 24px;
+/* Button */
+.ravlo-btn-primary {
+    width: 100%;
+    padding: 0.9rem;
+    margin-top: 1rem;
+    background: linear-gradient(135deg, #6B7F93, #3A5C7A);
+    border: none;
+    border-radius: 12px;
+    color: white;
+    font-weight: 500;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
 }
 
-/* =========================
-   INPUTS
-========================= */
-
-.ravlo-auth-label {
-  display: block;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--muted);
-  margin-bottom: 6px;
+.ravlo-btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(58,92,122,0.4);
 }
 
-.ravlo-auth-input {
-  width: 100%;
-  background: #0f1319;
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  padding: 12px 14px;
-  font-size: 14px;
-  color: var(--text);
-  outline: none;
-  transition: 0.2s ease;
+/* Links */
+.auth-links {
+    margin-top: 1.8rem;
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.85rem;
 }
 
-.ravlo-auth-input:focus {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 2px rgba(122,184,255,0.2);
+.auth-links a {
+    color: var(--grayish-blue);
+    text-decoration: none;
+    transition: 0.3s;
 }
 
-/* =========================
-   BUTTON
-========================= */
-
-.ravlo-auth-btn {
-  width: 100%;
-  margin-top: 18px;
-  background: var(--accent);
-  border: none;
-  border-radius: 12px;
-  padding: 12px;
-  font-weight: 700;
-  font-size: 14px;
-  color: #0b0d10;
-  cursor: pointer;
-  transition: 0.2s ease;
-}
-
-.ravlo-auth-btn:hover {
-  background: var(--accent-strong);
-  box-shadow: 0 0 18px var(--accent-glow);
-}
-
-/* =========================
-   LINKS
-========================= */
-
-.ravlo-auth-links {
-  margin-top: 18px;
-  text-align: center;
-  font-size: 13px;
-  color: var(--muted);
-}
-
-.ravlo-auth-links a {
-  color: var(--accent);
-  text-decoration: none;
-  font-weight: 600;
-}
-
-.ravlo-auth-links a:hover {
-  text-decoration: underline;
-}
-
-/* =========================
-   ERROR / FLASH
-========================= */
-
-.ravlo-auth-error {
-  background: rgba(255,107,107,0.08);
-  border: 1px solid rgba(255,107,107,0.3);
-  color: var(--danger);
-  padding: 10px 12px;
-  border-radius: 10px;
-  font-size: 13px;
-  margin-bottom: 16px;
-}
-
-.ravlo-auth-success {
-  background: rgba(122,184,255,0.08);
-  border: 1px solid rgba(122,184,255,0.3);
-  color: var(--accent);
-  padding: 10px 12px;
-  border-radius: 10px;
-  font-size: 13px;
-  margin-bottom: 16px;
-}
-
-/* =========================
-   FOOTER TEXT
-========================= */
-
-.ravlo-auth-footer {
-  margin-top: 26px;
-  text-align: center;
-  font-size: 11px;
-  color: rgba(255,255,255,0.3);
-}
-
-/* =========================
-   MOBILE
-========================= */
-
-@media (max-width: 500px) {
-  .ravlo-auth-card {
-    padding: 26px;
-  }
+.auth-links a:hover {
+    color: var(--white);
 }

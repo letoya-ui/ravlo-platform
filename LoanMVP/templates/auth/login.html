@@ -5,47 +5,86 @@
 <section class="auth-plate" role="region" aria-label="Ravlo Login">
   <div class="auth-inner">
 
-    <!-- ✅ Engraved brand (NO IMAGE) -->
+    <!-- Engraved Brand (No Image) -->
     <div class="ravlo-engraved">
       <div class="ravlo-mark" aria-hidden="true">RV</div>
       <div class="ravlo-word" aria-hidden="true">RAVLO</div>
       <div class="ravlo-cutline" aria-hidden="true"></div>
     </div>
 
-    <form method="post" action="{{ url_for('auth.login') }}" class="auth-form">
-      {# if you use CSRF, enable: #}
-      {# <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"> #}
+    <form method="POST" action="{{ url_for('auth.login') }}" class="auth-form" novalidate>
+      
+      {# ✅ Enable this if Flask-WTF is active #}
+      {% if csrf_token %}
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      {% endif %}
 
+      <!-- Email -->
       <label class="auth-label" for="email">Email</label>
       <div class="auth-field">
-        <input id="email" name="email" class="auth-input" type="email" autocomplete="email"
-               placeholder="Email" required />
+        <input 
+          id="email"
+          name="email"
+          class="auth-input"
+          type="email"
+          autocomplete="email"
+          placeholder="Email"
+          required
+        />
       </div>
 
+      <!-- Password -->
       <label class="auth-label" for="password">Password</label>
       <div class="auth-field">
         <div class="auth-input-wrap">
-          <input id="password" name="password" class="auth-input" type="password"
-                 autocomplete="current-password" placeholder="Password" required />
-          <button class="auth-eye" type="button" aria-label="Show password" onclick="togglePw()">
+          <input 
+            id="password"
+            name="password"
+            class="auth-input"
+            type="password"
+            autocomplete="current-password"
+            placeholder="Password"
+            required
+          />
+          <button 
+            class="auth-eye" 
+            type="button"
+            aria-label="Toggle password visibility"
+            aria-controls="password"
+            onclick="togglePw()"
+          >
             <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" fill="none" stroke="currentColor" stroke-width="2"/>
-              <path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" fill="none" stroke="currentColor" stroke-width="2"/>
+              <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"
+                    fill="none" stroke="currentColor" stroke-width="2"/>
+              <path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"
+                    fill="none" stroke="currentColor" stroke-width="2"/>
             </svg>
           </button>
         </div>
       </div>
 
-      <button class="auth-btn" type="submit">Sign In</button>
+      <!-- Submit -->
+      <button class="auth-btn" type="submit">
+        Sign In
+      </button>
 
+      <!-- Links -->
       <div class="auth-links">
-        <a class="ravlo-auth-link" href="{{ url_for('auth.forgot_password') }}">Forgot password?</a>
+        <a class="ravlo-auth-link"
+           href="{{ url_for('auth.forgot_password') }}">
+          Forgot password?
+        </a>
       </div>
 
+      <!-- Footer -->
       <div class="auth-footer">
         <div class="muted">Don’t have an account?</div>
-        <a class="ravlo-auth-link" href="{{ url_for('auth.request_access') }}">Request access</a>
+        <a class="ravlo-auth-link"
+           href="{{ url_for('auth.request_access') }}">
+          Request access
+        </a>
       </div>
+
     </form>
 
   </div>
@@ -54,9 +93,10 @@
 
 {% block scripts %}
 <script>
-  function togglePw(){
-    const el = document.getElementById('password');
-    el.type = (el.type === 'password') ? 'text' : 'password';
-  }
+function togglePw(){
+  const el = document.getElementById('password');
+  const isHidden = el.type === 'password';
+  el.type = isHidden ? 'text' : 'password';
+}
 </script>
 {% endblock %}

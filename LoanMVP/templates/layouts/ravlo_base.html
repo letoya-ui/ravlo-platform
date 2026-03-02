@@ -15,7 +15,31 @@
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">{% extends "layouts/ravlo_auth_base.html" %}
+{% block title %}Ravlo • Login{% endblock %}
+
+{% block content %}
+
+<div class="ravlo-auth-title">Sign In</div>
+<div class="ravlo-auth-desc">Access your command center</div>
+
+<form method="POST">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+  <label class="ravlo-auth-label">Email</label>
+  <input class="ravlo-auth-input" type="email" name="email" required>
+
+  <label class="ravlo-auth-label" style="margin-top:14px;">Password</label>
+  <input class="ravlo-auth-input" type="password" name="password" required>
+
+  <button class="ravlo-auth-btn">Sign In</button>
+</form>
+
+<div class="ravlo-auth-links">
+  <a href="{{ url_for('auth.forgot_password') }}">Forgot password?</a>
+</div>
+
+{% endblock %}
 
   <link rel="stylesheet" href="https://unpkg.com/lucide-static@latest/font/lucide.css">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
