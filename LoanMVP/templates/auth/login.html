@@ -1,17 +1,40 @@
-{% extends "layouts/ravlo_auth_base.html" %}
-{% block title %}Login | Ravlo{% endblock %}
+{% extends "layouts/ravlo_base.html" %}
+{% block title %}Ravlo • Login{% endblock %}
+
+{% block page_title %}{% endblock %}
+{% block page_subline %}{% endblock %}
 
 {% block content %}
-<section class="auth-plate" role="region" aria-label="Ravlo Login">
-  <div class="auth-inner">
+<div class="ravlo-login">
 
-    <!-- Engraved Brand (No Image) -->
-    <div class="ravlo-engraved">
-      <div class="ravlo-mark" aria-hidden="true">RV</div>
-      <div class="ravlo-word" aria-hidden="true">RAVLO</div>
-      <div class="ravlo-cutline" aria-hidden="true"></div>
+  <div class="ravlo-login-card">
+
+    <!-- =======================
+         HERO / BRAND
+    ======================== -->
+    <div class="ravlo-login-hero">
+
+      <!-- Metallic RV -->
+      <div class="ravlo-mark rv" style="width:120px;height:120px;border-radius:28px;">
+        <svg viewBox="0 0 64 64">
+          <defs>
+            <linearGradient id="rvMetalLogin" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stop-color="var(--metal-a)"/>
+              <stop offset="35%" stop-color="var(--metal-b)"/>
+              <stop offset="70%" stop-color="var(--metal-c)"/>
+              <stop offset="100%" stop-color="var(--metal-d)"/>
+            </linearGradient>
+          </defs>
+
+          <!-- Replace with final RV geometry if needed -->
+          <path fill="url(#rvMetalLogin)"
+            d="M14 14h18c7 0 12 4 12 10 0 5-3 8-8 9l10 17H36L28 36h-6v14H14V14zm6 6v10h11c4 0 6-2 6-5s-2-5-6-5H20z"/>
+        </svg>
+      </div>
+
+      <div class="brand">RAVLO</div>
+      <div class="hint">Access your capital platform</div>
     </div>
-
     <form method="POST" action="{{ url_for('auth.login') }}" class="auth-form" novalidate>
       
       {# ✅ Enable this if Flask-WTF is active #}
