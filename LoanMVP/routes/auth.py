@@ -84,7 +84,7 @@ def login():
         return redirect(next_page)
 
     # ✅ Safe role normalize
-    role = (user.role or "").strip().lower()
+    role = (request.form.get("role") or "investor").lower()
 
     dashboard_map = {
         "admin": "admin.dashboard",
@@ -296,6 +296,7 @@ def register():
 
 
 @auth_bp.route("/register_borrower", methods=["GET", "POST"])
+@csrf.exempt
 def register_borrower():
     if request.method == "POST":
         full_name = request.form.get("full_name")
