@@ -150,7 +150,7 @@ def create_app():
             ("AI", "/ai"),
             ("Auth", "/auth"),
         ]
-        return render_template("dashboard.html", dashboards=dashboards)
+        return render_template("/dashboard.html", dashboards=dashboards)
 
         
     # Global error handler
