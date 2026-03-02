@@ -562,3 +562,132 @@ body{
 .mt-20{ margin-top:20px; }
 .row{ display:flex; gap:12px; align-items:center; }
 .row.between{ justify-content:space-between; }
+
+/* ============================================================
+   AUTH FORM (maps auth-* classes to Ravlo engraved style)
+   ============================================================ */
+
+.auth-form{ display:grid; gap:12px; margin-top:10px; }
+
+.auth-label{
+  font-size:12px;
+  letter-spacing:.10em;
+  text-transform:uppercase;
+  color:var(--muted);
+  margin-top:6px;
+}
+
+.auth-field{ width:100%; }
+
+.auth-input-wrap{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding: 2px;
+  border-radius: 16px;
+  border:1px solid rgba(255,255,255,.06);
+  background:
+    radial-gradient(260px 100px at 30% 0%, rgba(255,255,255,.04), transparent 60%),
+    linear-gradient(180deg, rgba(255,255,255,.02), rgba(0,0,0,.58));
+  box-shadow: var(--inset-2);
+}
+
+.auth-input{
+  width:100%;
+  border:none;
+  outline:none;
+  background:transparent;
+  color:var(--text);
+  padding:12px 12px;
+  font-size:14px;
+  border-radius: 14px;
+}
+
+.auth-input::placeholder{ color: rgba(169,178,190,.55); }
+
+.auth-input:focus{
+  box-shadow:none; /* wrapper handles focus */
+}
+
+.auth-input-wrap:focus-within{
+  border-color: rgba(107,127,147,.55);
+  box-shadow: var(--inset-2), var(--focus);
+}
+
+/* eye button */
+.auth-eye{
+  width:44px;
+  height:44px;
+  border-radius: 14px;
+  border:1px solid rgba(255,255,255,.06);
+  background:
+    radial-gradient(140px 70px at 30% 0%, rgba(255,255,255,.06), transparent 60%),
+    linear-gradient(180deg, rgba(255,255,255,.02), rgba(0,0,0,.58));
+  box-shadow: var(--inset-2);
+  color: var(--muted);
+  display:grid;
+  place-items:center;
+  cursor:pointer;
+  transition:.16s ease;
+}
+.auth-eye:hover{ color:var(--text); transform: translateY(-1px); }
+.auth-eye svg{ width:20px; height:20px; }
+
+/* submit button matches Ravlo primary */
+.auth-btn{
+  margin-top:6px;
+  width:100%;
+  border:none;
+  outline:none;
+  border-radius: 16px;
+  padding: 12px 14px;
+  font-weight:700;
+  letter-spacing:.02em;
+  cursor:pointer;
+  transition: .16s ease;
+  user-select:none;
+  color:#EEF3F8;
+  background:
+    radial-gradient(220px 110px at 35% 0%, rgba(255,255,255,.10), transparent 60%),
+    linear-gradient(180deg, rgba(122,143,165,.35), rgba(58,92,122,.35));
+  border:1px solid rgba(255,255,255,.08);
+  box-shadow: var(--inset-2);
+}
+.auth-btn:hover{
+  transform: translateY(-1px);
+  background:
+    radial-gradient(220px 110px at 35% 0%, rgba(255,255,255,.12), transparent 60%),
+    linear-gradient(180deg, rgba(122,143,165,.45), rgba(58,92,122,.42));
+}
+.auth-btn:focus{ box-shadow: var(--inset-2), var(--focus); }
+
+/* links + footer */
+.auth-links{
+  margin-top:8px;
+  display:flex;
+  justify-content:flex-end;
+}
+
+.auth-footer{
+  margin-top:14px;
+  padding-top:12px;
+  border-top:1px solid rgba(255,255,255,.06);
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+}
+
+.ravlo-auth-link{
+  color: var(--accent2);
+  text-decoration:none;
+  font-size:13px;
+  transition:.16s ease;
+}
+.ravlo-auth-link:hover{ color: var(--text); text-decoration: underline; }
+
+.muted{ color: var(--muted); }
+
+.ravlo-login-hero .ravlo-mark.rv{
+  box-shadow: var(--inset-2), 0 18px 45px rgba(0,0,0,.55);
+}
