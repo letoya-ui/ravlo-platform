@@ -16,8 +16,8 @@ def role_required(*roles):
             if user_role not in roles:
                 flash("Your account doesn’t have access to that page yet.", "warning")
                 return redirect(
-                    url_for("borrower.dashboard")
-                    if user_role == "borrower"
+                    url_for("investor.command_center")
+                    if user_role == "investor"
                     else url_for("auth.login")
                 )
 
