@@ -126,9 +126,9 @@ def create_app():
             # User-facing
             ("Investor", "/investor"),
             ("Investor AI", "/investor_ai"),
-           
+       
             # Partner-facing        
-            ("Partner", "/partner")
+            ("Partner", "/partner"),
 
             # Internal lending workflow
             ("Loan Officer", "/loan_officer"),
@@ -152,7 +152,7 @@ def create_app():
         ]
         return render_template("dashboard.html", dashboards=dashboards)
 
-
+        
     # Global error handler
     @app.errorhandler(Exception)
     def handle_any_exception(e):
