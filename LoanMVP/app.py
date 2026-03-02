@@ -230,10 +230,10 @@ def register_blueprints(app):
                     obj = getattr(mod, attr)
 
                     if isinstance(obj, Blueprint):
-                        # Ensure prefix is applied correctly
+                        # Force prefix to be applied
                         prefix = obj.url_prefix or f"/{obj.name}"
 
-                        # Register with explicit prefix
+                        # Register blueprint with explicit prefix
                         app.register_blueprint(obj, url_prefix=prefix)
 
                         print(f"Registered blueprint: {obj.name} -> {prefix}")

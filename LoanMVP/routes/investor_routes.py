@@ -255,9 +255,20 @@ def profile_id_filter(model, profile_id):
         return {"borrower_profile_id": profile_id}
     return {}
 
-# =========================================================
-# Timeline (your original)
-# =========================================================
+
+# ---------------------------------------------------------
+# Investor Capital Timeline (used for progress UI)
+# ---------------------------------------------------------
+INVESTOR_TIMELINE = [
+    {"step": 1, "title": "Capital Request Started", "key": "request_started"},
+    {"step": 2, "title": "Documents Uploaded", "key": "docs_uploaded"},
+    {"step": 3, "title": "Under Review", "key": "under_review"},
+    {"step": 4, "title": "Conditions Issued", "key": "conditions_issued"},
+    {"step": 5, "title": "Conditions Cleared", "key": "conditions_cleared"},
+    {"step": 6, "title": "Final Review", "key": "final_review"},
+    {"step": 7, "title": "Cleared to Close", "key": "ctc"},
+]
+
 TIMELINES = {
     "capital": INVESTOR_TIMELINE,
     "construction": [
@@ -270,9 +281,11 @@ TIMELINES = {
     ]
 }
 
+
 # ---------------------------------------------------------
 # Investor Command Center Routes
 # ---------------------------------------------------------
+
 @investor_bp.route("/", methods=["GET"], endpoint="command_center")
 @investor_bp.route("/index", methods=["GET"])
 @investor_bp.route("/command", methods=["GET"])
