@@ -214,9 +214,7 @@ def reset_password(token):
 
     return render_template("auth/reset_password.html", token=token)
     
-# ------------------------------------------------
-# 🆕 Register
-# ------------------------------------------------
+
 # ------------------------------------------------
 # 🆕 Register
 # ------------------------------------------------
@@ -291,6 +289,10 @@ def register():
 
         flash("Logged in, but your account role is not set. Contact support.", "warning")
         return redirect(url_for("investor.command_center"))
+
+    # 🔥 THIS WAS MISSING
+    return render_template("auth/register.html")
+
 
 
 @auth_bp.route("/register_borrower", methods=["GET", "POST"])

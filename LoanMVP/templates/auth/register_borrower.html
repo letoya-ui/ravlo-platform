@@ -10,6 +10,7 @@
     <p class="auth-subtitle">Create your account to access the Borrower Deal Workspace.</p>
 
     <form method="POST" action="{{ url_for('auth.register_borrower') }}" class="auth-form">
+     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
       <div class="form-group">
         <label>Full Name</label>
