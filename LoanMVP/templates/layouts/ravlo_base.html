@@ -1,13 +1,10 @@
 {# ============================================================
-   RAVLO — BASE LAYOUT (Sidebar + Topbar + Content)
-   FIXED: no **kwargs macro (Jinja2 doesn't allow it)
+   RAVLO — INVESTOR BASE LAYOUT
+   Sidebar + Topbar + Content
+   Clean Investor-Only Version
    ============================================================ #}
 
-{% set bp = request.blueprint or "" %}
 {% set ep = request.endpoint or "" %}
-
-{# Safe endpoint check #}
-{% set views = current_app.view_functions if current_app is defined else {} %}
 
 <!doctype html>
 <html lang="en">
@@ -35,8 +32,10 @@
          SIDEBAR
     ========================== -->
     <aside class="ravlo-sidebar">
+
       <div class="ravlo-sb-head">
         <div class="ravlo-brand">
+
           <div class="ravlo-mark" aria-label="Ravlo">
             <svg viewBox="0 0 64 64" role="img" aria-hidden="true">
               <defs>
@@ -55,69 +54,76 @@
             <div class="name">RAVLO</div>
             <div class="sub">Command Center</div>
           </div>
+
         </div>
       </div>
 
       <nav class="ravlo-nav">
-        {# ✅ Use investor endpoints (dual_route means borrower.* exists too, but keep it clean) #}
 
-        <a class="{% if ep in ['investor.command_center','borrower.command_center'] %}active{% endif %}"
-           href="{{ url_for('investor.command_center') if 'investor.command_center' in views else (url_for('borrower.command_center') if 'borrower.command_center' in views else '#') }}">
+        <a class="{% if ep == 'investor.command_center' %}active{% endif %}"
+           href="{{ url_for('investor.command_center') }}">
           <i class="lucide lucide-layout-dashboard icon"></i>
           Command Center
         </a>
 
-        <a class="{% if ep in ['investor.property_search','borrower.property_search'] %}active{% endif %}"
-           href="{{ url_for('investor.property_search') if 'investor.property_search' in views else (url_for('borrower.property_search') if 'borrower.property_search' in views else '#') }}">
+        <a class="{% if ep == 'investor.property_search' %}active{% endif %}"
+           href="{{ url_for('investor.property_search') }}">
           <i class="lucide lucide-search icon"></i>
           Property Intelligence
         </a>
 
-        <a class="{% if ep in ['investor.deal_workspace','borrower.deal_workspace','investor.deals_list','borrower.deals_list'] %}active{% endif %}"
-           href="{{ url_for('investor.deal_workspace') if 'investor.deal_workspace' in views else (url_for('borrower.deal_workspace') if 'borrower.deal_workspace' in views else '#') }}">
+        <a class="{% if ep in ['investor.deal_workspace','investor.deals_list','investor.deal_detail'] %}active{% endif %}"
+           href="{{ url_for('investor.deal_workspace') }}">
           <i class="lucide lucide-briefcase icon"></i>
           Deals
         </a>
 
-        <a class="{% if ep in ['investor.documents','borrower.documents','investor.document_requests','borrower.document_requests'] %}active{% endif %}"
-           href="{{ url_for('investor.documents') if 'investor.documents' in views else (url_for('borrower.documents') if 'borrower.documents' in views else '#') }}">
+        <a class="{% if ep in ['investor.documents','investor.document_requests'] %}active{% endif %}"
+           href="{{ url_for('investor.documents') }}">
           <i class="lucide lucide-folder icon"></i>
           Documents
         </a>
 
-        <a class="{% if ep in ['investor.conditions','borrower.conditions'] %}active{% endif %}"
-           href="{{ url_for('investor.conditions') if 'investor.conditions' in views else (url_for('borrower.conditions') if 'borrower.conditions' in views else '#') }}">
+        <a class="{% if ep == 'investor.conditions' %}active{% endif %}"
+           href="{{ url_for('investor.conditions') }}">
           <i class="lucide lucide-shield icon"></i>
           Conditions
         </a>
 
-        <a class="{% if ep in ['investor.quote','borrower.quote'] %}active{% endif %}"
-           href="{{ url_for('investor.quote') if 'investor.quote' in views else (url_for('borrower.quote') if 'borrower.quote' in views else '#') }}">
+        <a class="{% if ep == 'investor.quote' %}active{% endif %}"
+           href="{{ url_for('investor.quote') }}">
           <i class="lucide lucide-landmark icon"></i>
           Quotes
         </a>
 
-        <a class="{% if ep in ['investor.status','borrower.status'] %}active{% endif %}"
-           href="{{ url_for('investor.status') if 'investor.status' in views else (url_for('borrower.status') if 'borrower.status' in views else '#') }}">
+        <a class="{% if ep == 'investor.status' %}active{% endif %}"
+           href="{{ url_for('investor.status') }}">
           <i class="lucide lucide-bar-chart-2 icon"></i>
           Status
         </a>
+
       </nav>
 
       <div class="ravlo-sb-foot">
-        <a class="{% if ep in ['investor.settings','borrower.settings'] %}active{% endif %}"
-           href="{{ url_for('investor.settings') if 'investor.settings' in views else (url_for('borrower.settings') if 'borrower.settings' in views else '#') }}">
+
+        <a class="{% if ep == 'investor.settings' %}active{% endif %}"
+           href="{{ url_for('investor.settings') }}">
           <i class="lucide lucide-settings icon"></i>
           Settings
         </a>
 
         <form method="post" action="{{ url_for('auth.logout') }}" style="margin:0;">
-          <button type="submit" class="ravlo-btn ghost sm" style="width:100%; justify-content:flex-start;">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button type="submit"
+                  class="ravlo-btn ghost sm"
+                  style="width:100%; justify-content:flex-start;">
             <i class="lucide lucide-log-out icon"></i>
             Logout
           </button>
         </form>
+
       </div>
+
     </aside>
 
     <!-- =========================
@@ -126,12 +132,20 @@
     <main class="ravlo-main">
 
       <header class="ravlo-topbar">
+
         <div class="ravlo-top-left">
-          <h1 class="ravlo-title">{% block page_title %}RAVLO{% endblock %}</h1>
-          <p class="ravlo-subline">{% block page_subline %}Your capital, deals, and funding — in one place.{% endblock %}</p>
+          <h1 class="ravlo-title">
+            {% block page_title %}RAVLO{% endblock %}
+          </h1>
+          <p class="ravlo-subline">
+            {% block page_subline %}
+              Your capital, deals, and funding — in one place.
+            {% endblock %}
+          </p>
         </div>
 
         <div class="ravlo-actions">
+
           <div class="ravlo-search">
             <i class="lucide lucide-search"></i>
             <input placeholder="Search deals, docs…" />
@@ -141,16 +155,22 @@
           <button class="ravlo-btn ghost sm" type="button">View All</button>
           <button class="ravlo-btn primary sm" type="button">New Deal</button>
           {% endblock %}
+
         </div>
+
       </header>
 
       <section class="ravlo-content">
+
         {% with messages = get_flashed_messages(with_categories=true) %}
           {% if messages %}
             <div class="ravlo-card pad" style="margin-bottom:14px;">
               {% for category, msg in messages %}
                 <div style="margin:6px 0; color: var(--muted);">
-                  <strong style="color:var(--text); text-transform:capitalize;">{{ category }}</strong> — {{ msg }}
+                  <strong style="color:var(--text); text-transform:capitalize;">
+                    {{ category }}
+                  </strong>
+                  — {{ msg }}
                 </div>
               {% endfor %}
             </div>
@@ -158,9 +178,11 @@
         {% endwith %}
 
         {% block content %}{% endblock %}
+
       </section>
 
     </main>
+
   </div>
 
   {% block scripts %}{% endblock %}
