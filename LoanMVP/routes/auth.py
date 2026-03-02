@@ -91,7 +91,7 @@ def login():
         "loan_officer": "loan_officer.dashboard",
         "processor": "processor.dashboard",
         "underwriter": "underwriter.dashboard",
-        "borrower": "borrower.command_center",
+        "investor": "investor.command_center",
         "executive": "executive.dashboard",
         "compliance": "compliance.dashboard",
         "property": "property.dashboard",
