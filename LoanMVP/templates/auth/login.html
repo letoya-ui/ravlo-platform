@@ -1,57 +1,54 @@
-{% extends "layouts/auth_base.html" %}
+{% extends "layouts/ravlo_auth_base.html" %}
 {% block title %}Login | Ravlo{% endblock %}
 
 {% block content %}
-<section class="ravlo-auth-card" role="region" aria-label="Ravlo Login">
+<section class="auth-plate" role="region" aria-label="Ravlo Login">
+  <div class="auth-inner">
 
-  <div class="ravlo-auth-brand">
-    <!-- Put your engraved RV file here: /static/img/rv_mark.png -->
-    <div class="ravlo-auth-logo">
-      <img src="{{ url_for('static', filename='img/rv_mark.png') }}" alt="Ravlo" />
+    <!-- ✅ Engraved brand (NO IMAGE) -->
+    <div class="ravlo-engraved">
+      <div class="ravlo-mark" aria-hidden="true">RV</div>
+      <div class="ravlo-word" aria-hidden="true">RAVLO</div>
+      <div class="ravlo-cutline" aria-hidden="true"></div>
     </div>
 
-    <div class="ravlo-auth-word">RAVLO</div>
+    <form method="post" action="{{ url_for('auth.login') }}" class="auth-form">
+      {# if you use CSRF, enable: #}
+      {# <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"> #}
+
+      <label class="auth-label" for="email">Email</label>
+      <div class="auth-field">
+        <input id="email" name="email" class="auth-input" type="email" autocomplete="email"
+               placeholder="Email" required />
+      </div>
+
+      <label class="auth-label" for="password">Password</label>
+      <div class="auth-field">
+        <div class="auth-input-wrap">
+          <input id="password" name="password" class="auth-input" type="password"
+                 autocomplete="current-password" placeholder="Password" required />
+          <button class="auth-eye" type="button" aria-label="Show password" onclick="togglePw()">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" fill="none" stroke="currentColor" stroke-width="2"/>
+              <path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" fill="none" stroke="currentColor" stroke-width="2"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <button class="auth-btn" type="submit">Sign In</button>
+
+      <div class="auth-links">
+        <a class="ravlo-auth-link" href="{{ url_for('auth.forgot_password') }}">Forgot password?</a>
+      </div>
+
+      <div class="auth-footer">
+        <div class="muted">Don’t have an account?</div>
+        <a class="ravlo-auth-link" href="{{ url_for('auth.request_access') }}">Request access</a>
+      </div>
+    </form>
+
   </div>
-
-  <form method="post" action="{{ url_for('auth.login') }}" class="ravlo-auth-form">
-    {# if you use CSRF, enable: #}
-    {# <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"> #}
-
-    <label class="ravlo-auth-label" for="email">Email</label>
-    <div class="ravlo-auth-input">
-      <input id="email" name="email" type="email" autocomplete="email"
-             placeholder="Email" required />
-    </div>
-
-    <label class="ravlo-auth-label" for="password">Password</label>
-    <div class="ravlo-auth-input has-eye">
-      <input id="password" name="password" type="password" autocomplete="current-password"
-             placeholder="Password" required />
-      <button class="ravlo-eye" type="button" aria-label="Show password" onclick="togglePw()">
-        <!-- minimal “eye” so you don't rely on icon cdns -->
-        <svg viewBox="0 0 24 24" aria-hidden="true">
-          <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" fill="none" stroke="currentColor" stroke-width="2"/>
-          <path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" fill="none" stroke="currentColor" stroke-width="2"/>
-        </svg>
-      </button>
-    </div>
-
-    <button class="ravlo-auth-btn" type="submit">Sign In</button>
-
-    <div class="ravlo-auth-links">
-      <a class="ravlo-auth-link" href="{{ url_for('auth.forgot_password') if 'auth.forgot_password' in current_app.view_functions else '#' }}">
-        Forgot password?
-      </a>
-    </div>
-
-    <div class="ravlo-auth-bottom">
-      <div class="muted">Don’t have an account?</div>
-      <a class="ravlo-auth-link" href="{{ url_for('auth.request_access') if 'auth.request_access' in current_app.view_functions else '#' }}">
-        Request access
-      </a>
-    </div>
-  </form>
-
 </section>
 {% endblock %}
 
