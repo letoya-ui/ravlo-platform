@@ -1,433 +1,138 @@
 {% extends "layouts/ravlo_base.html" %}
 {% block title %}Ravlo • Command Center{% endblock %}
 
-{% block page_title %}RAVLO{% endblock %}
-{% block page_subline %}Your capital, deals, and funding — in one place.{% endblock %}
-
-{% block topbar_actions %}
-  <button class="ravlo-btn ghost sm" type="button"
-          onclick="location.href='{{ url_for('investor.deals_list') }}'">
-    View Deals
-  </button>
-  <button class="ravlo-btn primary sm" type="button"
-          onclick="location.href='{{ url_for('investor.deal_workspace') }}'">
-    New Deal
-  </button>
+{% block page_title %}Command Center{% endblock %}
+{% block page_subline %}
+Your capital, deals, and funding — in one place.
 {% endblock %}
 
 {% block content %}
 
-<style>
-/* =========================================================
-   RAVLO — COMMAND CENTER (Mock-like glass UI)
-========================================================= */
-:root{
-  --cc-panel: rgba(18, 20, 26, 0.62);
-  --cc-panel2: rgba(20, 22, 30, 0.72);
-  --cc-line: rgba(255,255,255,0.08);
-  --cc-soft: rgba(255,255,255,0.06);
-  --cc-glow: 0 0 0 1px rgba(255,255,255,0.07), 0 20px 55px rgba(0,0,0,0.45);
-}
+<!-- ===================== KPI STRIP ===================== -->
+<div class="cc-kpis">
 
-.cc-shell{
-  position: relative;
-  border-radius: 22px;
-  padding: 18px;
-  background:
-    radial-gradient(1200px 520px at 55% -80px, rgba(122,184,255,0.20), transparent 70%),
-    radial-gradient(900px 420px at 12% 0px, rgba(255,255,255,0.06), transparent 60%),
-    rgba(0,0,0,0);
-}
-
-.cc-hero{
-  display:flex;
-  align-items:flex-end;
-  justify-content:space-between;
-  gap:16px;
-  margin-bottom: 12px;
-}
-
-.cc-hero h1{
-  margin:0;
-  font-size: 42px;
-  letter-spacing: .2px;
-}
-
-.cc-hero .sub{
-  margin:8px 0 0 0;
-  color: var(--muted);
-  max-width: 720px;
-}
-
-.cc-filters{
-  display:flex;
-  align-items:center;
-  gap:10px;
-  flex-wrap:wrap;
-}
-
-.cc-pill{
-  border: 1px solid var(--cc-line);
-  background: rgba(255,255,255,0.04);
-  color: var(--muted);
-  padding: 8px 10px;
-  border-radius: 12px;
-  font-size: 12px;
-}
-
-.cc-kpis{
-  display:grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 14px;
-  margin: 14px 0 16px 0;
-}
-
-.cc-kpi{
-  background: linear-gradient(180deg, var(--cc-panel), rgba(12,14,18,0.55));
-  border: 1px solid var(--cc-line);
-  border-radius: 18px;
-  padding: 16px 16px;
-  box-shadow: var(--cc-glow);
-  backdrop-filter: blur(14px);
-}
-
-.cc-kpi .val{
-  font-weight: 800;
-  font-size: 26px;
-  letter-spacing: .2px;
-}
-.cc-kpi .lbl{
-  margin-top:6px;
-  font-size: 12px;
-  color: var(--muted);
-}
-
-.cc-grid{
-  display:grid;
-  grid-template-columns: 1.35fr 0.65fr;
-  gap: 16px;
-  align-items:start;
-}
-
-.cc-card{
-  background: linear-gradient(180deg, var(--cc-panel2), rgba(12,14,18,0.62));
-  border: 1px solid var(--cc-line);
-  border-radius: 18px;
-  box-shadow: var(--cc-glow);
-  backdrop-filter: blur(14px);
-}
-
-.cc-head{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap: 12px;
-  padding: 14px 16px;
-  border-bottom: 1px solid var(--cc-line);
-}
-
-.cc-title{
-  font-weight: 800;
-  letter-spacing: .2px;
-}
-
-.cc-table{
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 13px;
-}
-
-.cc-table th{
-  text-align:left;
-  color: var(--muted);
-  font-weight: 600;
-  padding: 12px 16px;
-  border-bottom: 1px solid var(--cc-line);
-}
-
-.cc-table td{
-  padding: 12px 16px;
-  border-bottom: 1px solid rgba(255,255,255,0.05);
-  vertical-align: middle;
-}
-
-.cc-row-title{
-  font-weight: 750;
-  color: var(--text);
-}
-.cc-row-sub{
-  margin-top:2px;
-  font-size: 12px;
-  color: var(--muted);
-}
-
-.cc-badge{
-  display:inline-flex;
-  align-items:center;
-  gap:8px;
-  padding: 6px 10px;
-  border-radius: 999px;
-  border: 1px solid var(--cc-line);
-  background: rgba(255,255,255,0.04);
-  font-size: 12px;
-  color: var(--text);
-}
-
-.cc-badge.ok{ border-color: rgba(122,184,255,0.26); background: rgba(122,184,255,0.08); }
-.cc-badge.watch{ border-color: rgba(255,210,128,0.22); background: rgba(255,210,128,0.08); }
-.cc-badge.risk{ border-color: rgba(255,120,120,0.22); background: rgba(255,120,120,0.08); }
-
-.cc-mini-chart{
-  height: 140px;
-  margin: 12px 16px 16px 16px;
-  border: 1px dashed rgba(255,255,255,0.12);
-  border-radius: 14px;
-  background: radial-gradient(600px 200px at 50% 0%, rgba(122,184,255,0.10), transparent 65%);
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  color: var(--muted);
-  font-size: 12px;
-}
-
-.cc-side{
-  display:grid;
-  gap: 16px;
-}
-
-.cc-item{
-  display:flex;
-  justify-content:space-between;
-  gap: 12px;
-  padding: 12px 16px;
-  border-top: 1px solid rgba(255,255,255,0.05);
-}
-.cc-item:first-child{ border-top: none; }
-
-.cc-item .l{ min-width: 0; }
-.cc-item .k{
-  font-weight: 750;
-  color: var(--text);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.cc-item .d{
-  margin-top:3px;
-  color: var(--muted);
-  font-size: 12px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.cc-item .t{
-  color: rgba(255,255,255,0.28);
-  font-size: 11px;
-  white-space: nowrap;
-}
-
-.cc-alerts li{
-  color: var(--muted);
-  padding: 9px 0;
-  border-top: 1px solid rgba(255,255,255,0.05);
-}
-.cc-alerts li:first-child{ border-top:none; }
-
-@media (max-width: 1100px){
-  .cc-grid{ grid-template-columns: 1fr; }
-  .cc-kpis{ grid-template-columns: repeat(2, minmax(0,1fr)); }
-}
-</style>
-
-<div class="cc-shell">
-
-  <!-- HERO -->
-  <div class="cc-hero">
-    <div>
-      <h1>Command Center</h1>
-      <p class="sub">Your capital, deals, and funding — in one place.</p>
+  <div class="ravlo-card kpi">
+    <div class="kpi-label">Capital Requested</div>
+    <div class="kpi-value">
+      ${{ "{:,.0f}".format(snapshot.amount or 0) }}
     </div>
-
-    <div class="cc-filters">
-      <div class="cc-pill">Stage • {{ primary_stage or "All" }}</div>
-      <div class="cc-pill">Status • {{ (snapshot.status if snapshot else None) or "Tracking" }}</div>
-      <button class="ravlo-btn ghost sm" type="button"
-              onclick="location.href='{{ url_for('investor.deals_list') }}'">
-        View All
-      </button>
+    <div class="kpi-sub muted">
+      {{ primary_stage or "No active request" }}
     </div>
   </div>
 
-  <!-- KPIs -->
-  <div class="cc-kpis">
-    <div class="cc-kpi">
-      <div class="val">{{ kpi_funds_incoming or "$0" }}</div>
-      <div class="lbl">Funds Incoming</div>
+  <div class="ravlo-card kpi">
+    <div class="kpi-label">Active Requests</div>
+    <div class="kpi-value">
+      {{ capital_requests|length }}
     </div>
-    <div class="cc-kpi">
-      <div class="val">{{ kpi_capital_deployed or "$0" }}</div>
-      <div class="lbl">Capital Deployed</div>
-    </div>
-    <div class="cc-kpi">
-      <div class="val">{{ kpi_active_deals or (active_deals|length if active_deals else 0) }}</div>
-      <div class="lbl">Active Deals</div>
-    </div>
-    <div class="cc-kpi">
-      <div class="val">{{ kpi_investors or "—" }}</div>
-      <div class="lbl">Investors</div>
-    </div>
+    <div class="kpi-sub muted">Total submitted</div>
   </div>
 
-  <!-- MAIN GRID -->
-  <div class="cc-grid">
+  <div class="ravlo-card kpi">
+    <div class="kpi-label">Saved Properties</div>
+    <div class="kpi-value">
+      {{ saved_props|length }}
+    </div>
+    <div class="kpi-sub muted">Portfolio watchlist</div>
+  </div>
 
-    <!-- LEFT: Active Deals -->
-    <div class="cc-card">
-      <div class="cc-head">
-        <div class="cc-title">Active Deals</div>
-        <div style="display:flex;gap:10px;align-items:center;">
-          <span class="cc-pill">All Deals</span>
-          <button class="ravlo-btn ghost sm" type="button"
-                  onclick="location.href='{{ url_for('investor.deals_list', status='active') }}'">
-            View
-          </button>
-        </div>
-      </div>
+  <div class="ravlo-card kpi">
+    <div class="kpi-label">Progress</div>
+    <div class="kpi-value">
+      {{ snapshot.progress_percent }}%
+    </div>
+    <div class="kpi-sub muted">Current capital stage</div>
+  </div>
 
-      <div style="overflow:auto;">
-        <table class="cc-table">
-          <thead>
+</div>
+
+<!-- ===================== MAIN GRID ===================== -->
+<div class="cc-grid">
+
+  <!-- LEFT: ACTIVE CAPITAL REQUESTS -->
+  <div class="ravlo-card pad">
+
+    <div class="cc-cardhead">
+      <h3>Active Capital Requests</h3>
+    </div>
+
+    <table class="cc-table">
+      <thead>
+        <tr>
+          <th>Property</th>
+          <th>Status</th>
+          <th>Amount</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% if capital_requests %}
+          {% for req in capital_requests[:6] %}
             <tr>
-              <th style="min-width:260px;">Deal</th>
-              <th style="min-width:120px;">Funding</th>
-              <th style="min-width:120px;">Stage</th>
-              <th style="min-width:120px;">Docs</th>
-              <th style="text-align:right;min-width:120px;">Action</th>
+              <td>{{ req.property_address or "Unnamed Property" }}</td>
+              <td>
+                <span class="pill">
+                  {{ req.status or "Open" }}
+                </span>
+              </td>
+              <td>
+                ${{ "{:,.0f}".format(req.amount or 0) }}
+              </td>
+              <td class="td-right">
+                <a href="#" class="ravlo-link">View →</a>
+              </td>
             </tr>
-          </thead>
-          <tbody>
-            {% if active_deals %}
-              {% for d in active_deals[:8] %}
-              <tr>
-                <td>
-                  <div class="cc-row-title">{{ d.title or d.name or d.address or "Deal" }}</div>
-                  <div class="cc-row-sub">{{ d.city or "" }} {{ d.state or "" }} {{ d.zipcode or "" }}</div>
-                </td>
+          {% endfor %}
+        {% else %}
+          <tr>
+            <td colspan="4" class="muted">
+              No capital requests yet.
+            </td>
+          </tr>
+        {% endif %}
+      </tbody>
+    </table>
 
-                <td>
-                  {% set st = (d.status or "active")|lower %}
-                  <span class="cc-badge {% if st in ['open','active'] %}ok{% elif st in ['pending','review','new'] %}watch{% else %}risk{% endif %}">
-                    {{ (d.funding_status or d.status or "ACTIVE")|upper }}
-                  </span>
-                </td>
-
-                <td style="color:var(--muted);">{{ d.stage or "Intake" }}</td>
-
-                <td>
-                  {% set doc_state = (d.doc_state or "docs out")|lower %}
-                  <span class="cc-badge {% if doc_state in ['complete','cleared'] %}ok{% elif doc_state in ['outstanding','needed','pending','docs out'] %}watch{% else %}watch{% endif %}">
-                    {{ (d.doc_state or "DOCS OUT")|upper }}
-                  </span>
-                </td>
-
-                <td style="text-align:right;">
-                  <button class="ravlo-btn primary sm" type="button"
-                          onclick="location.href='{{ url_for('investor.deal_detail', deal_id=d.id) }}'">
-                    Open
-                  </button>
-                </td>
-              </tr>
-              {% endfor %}
-            {% else %}
-              <tr>
-                <td colspan="5" style="color:var(--muted);padding:16px;">
-                  No active deals yet. Start a Deal Workspace to begin analysis.
-                </td>
-              </tr>
-            {% endif %}
-          </tbody>
-        </table>
-      </div>
-
-      <div class="cc-mini-chart">
-        Performance chart (wire to analytics later)
-      </div>
-    </div>
-
-    <!-- RIGHT: Activity + Alerts -->
-    <div class="cc-side">
-
-      <!-- Activity Feed -->
-      <div class="cc-card">
-        <div class="cc-head">
-          <div class="cc-title">Investment Activity Feed</div>
-          <button class="ravlo-btn ghost sm" type="button"
-                  onclick="location.href='{{ url_for('investor.activity') }}'">
-            View All
-          </button>
-        </div>
-
-        <div style="padding: 10px 0;">
-          {% if activity_feed %}
-            {% for a in activity_feed[:5] %}
-              <div class="cc-item">
-                <div class="l">
-                  <div class="k">{{ a.title or "Update" }}</div>
-                  <div class="d">{{ a.detail or a.description or "" }}</div>
-                </div>
-                <div class="t">{{ a.when or "—" }}</div>
-              </div>
-            {% endfor %}
-          {% else %}
-            <div class="cc-item">
-              <div class="l">
-                <div class="k">No activity yet</div>
-                <div class="d">Once you start deals, updates will show here.</div>
-              </div>
-              <div class="t">—</div>
-            </div>
-          {% endif %}
-        </div>
-      </div>
-
-      <!-- Alerts -->
-      <div class="cc-card">
-        <div class="cc-head">
-          <div class="cc-title">Important Alerts</div>
-          <button class="ravlo-btn ghost sm" type="button"
-                  onclick="location.href='{{ url_for('investor.alerts') }}'">
-            View
-          </button>
-        </div>
-
-        <div style="padding: 10px 16px 14px 16px;">
-          <ul class="cc-alerts" style="list-style:none;margin:0;padding:0;">
-            {% if alerts %}
-              {% for al in alerts[:4] %}
-                <li>{{ al.text or al.title or "Alert" }}</li>
-              {% endfor %}
-            {% else %}
-              <li>No alerts right now.</li>
-              <li style="opacity:.85;">We’ll flag missing docs, timeline issues, and funding steps here.</li>
-            {% endif %}
-          </ul>
-
-          <div style="margin-top:12px;display:flex;gap:10px;flex-wrap:wrap;">
-            <button class="ravlo-btn primary sm" type="button"
-                    onclick="location.href='{{ url_for('investor.upload_document') }}'">
-              Upload Docs
-            </button>
-            <button class="ravlo-btn ghost sm" type="button"
-                    onclick="location.href='{{ url_for('investor.messages') }}'">
-              Contact Team
-            </button>
-          </div>
-        </div>
-      </div>
-
-    </div>
   </div>
 
+  <!-- RIGHT COLUMN -->
+  <div class="cc-right">
+
+    <!-- AI INSIGHT -->
+    <div class="ravlo-card pad">
+      <h3>Ravlo Insight</h3>
+      <p class="muted">
+        {{ next_step_ai }}
+      </p>
+    </div>
+
+    <!-- ALERTS -->
+    <div class="ravlo-card pad" style="margin-top:14px;">
+      <h3>Important Alerts</h3>
+
+      {% set pending_conditions = conditions | selectattr("status", "ne", "cleared") | list %}
+
+      {% if pending_conditions %}
+        <ul class="cc-alerts">
+          {% for c in pending_conditions[:4] %}
+            <li class="muted">
+              • {{ c.description }}
+            </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <div class="muted">No active alerts.</div>
+      {% endif %}
+
+    </div>
+
+  </div>
+
+</div>
+
+<div class="muted" style="margin-top:14px;">
+  {{ now_str }}
 </div>
 
 {% endblock %}
