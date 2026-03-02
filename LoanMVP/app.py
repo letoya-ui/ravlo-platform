@@ -118,7 +118,11 @@ def create_app():
     # -----------------------------------------------------
     @app.route("/")
     def home_redirect():
-        return redirect("/cm-dashboard")
+        return redirect(url_for("investor.command_center"))
+
+    @app.route("/dashboard")
+    def dashboard_redirect():
+        return redirect(url_for("investor.command_center"))
 
     @app.route("/dashboard")
     def index():
@@ -150,7 +154,7 @@ def create_app():
             ("AI", "/ai"),
             ("Auth", "/auth"),
         ]
-        return render_template("/dashboard.html", dashboards=dashboards)
+        return render_template("dashboard.html", dashboards=dashboards)
 
         
     # Global error handler
