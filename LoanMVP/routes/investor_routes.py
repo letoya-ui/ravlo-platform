@@ -270,7 +270,9 @@ TIMELINES = {
     ]
 }
 
-
+# ---------------------------------------------------------
+# Investor Command Center Routes
+# ---------------------------------------------------------
 @investor_bp.route("/", methods=["GET"], endpoint="command_center")
 @investor_bp.route("/index", methods=["GET"])
 @investor_bp.route("/command", methods=["GET"])
@@ -278,12 +280,12 @@ TIMELINES = {
 @login_required
 @role_required("investor")
 def command_center():
-     """
+    """
     Investor Command Center — single source of truth.
     '/' '/index' '/command' '/dashboard' all land here.
     """
 
-    # ✅ Respect next if present (basic safety check)
+    # Respect ?next= if present
     next_page = (request.args.get("next") or "").strip()
     if next_page and next_page.startswith("/"):
         return redirect(next_page)
@@ -295,42 +297,52 @@ def command_center():
     conditions = []
     doc_requests = []
     saved_props = []
-
     primary_stage = None
+
     assistant = AIAssistant()
     next_step_ai = None
     next_step_text = "No active capital request. Start a new deal when ready."
 
     if ip:
         # Saved properties / watchlist
-        saved_props = (SavedProperty.query
-                       .filter_by(investor_profile_id=ip.id)
-                       .order_by(SavedProperty.created_at.desc())
-                       .all())
+        saved_props = (
+            SavedProperty.query
+            .filter_by(investor_profile_id=ip.id)
+            .order_by(SavedProperty.created_at.desc())
+            .all()
+        )
 
         # All capital requests
-        capital_requests = (LoanApplication.query
-                            .filter_by(investor_profile_id=ip.id)
-                            .order_by(LoanApplication.created_at.desc())
-                            .all())
+        capital_requests = (
+            LoanApplication.query
+            .filter_by(investor_profile_id=ip.id)
+            .order_by(LoanApplication.created_at.desc())
+            .all()
+        )
 
         # Active capital request
-        active_request = (LoanApplication.query
-                          .filter_by(investor_profile_id=ip.id, is_active=True)
-                          .order_by(LoanApplication.created_at.desc())
-                          .first())
+        active_request = (
+            LoanApplication.query
+            .filter_by(investor_profile_id=ip.id, is_active=True)
+            .order_by(LoanApplication.created_at.desc())
+            .first()
+        )
 
         # Document requests
-        doc_requests = (LoanDocument.query
-                        .filter_by(investor_profile_id=ip.id)
-                        .order_by(LoanDocument.created_at.desc())
-                        .all())
+        doc_requests = (
+            LoanDocument.query
+            .filter_by(investor_profile_id=ip.id)
+            .order_by(LoanDocument.created_at.desc())
+            .all()
+        )
 
         if active_request:
-            conditions = (UnderwritingCondition.query
-                          .filter_by(investor_profile_id=ip.id, loan_id=active_request.id)
-                          .order_by(UnderwritingCondition.created_at.desc())
-                          .all())
+            conditions = (
+                UnderwritingCondition.query
+                .filter_by(investor_profile_id=ip.id, loan_id=active_request.id)
+                .order_by(UnderwritingCondition.created_at.desc())
+                .all()
+            )
 
             primary_stage = getattr(active_request, "status", None) or "Application"
 
@@ -351,7 +363,10 @@ def command_center():
     progress_percent = 0
     if active_request:
         total_conditions = len(conditions)
-        cleared_conditions = len([c for c in conditions if (c.status or "").strip().lower() == "cleared"])
+        cleared_conditions = len([
+            c for c in conditions
+            if (c.status or "").strip().lower() == "cleared"
+        ])
         if total_conditions > 0:
             progress_percent = int((cleared_conditions / total_conditions) * 100)
 
@@ -374,7 +389,7 @@ def command_center():
     now_str = datetime.now().strftime("%b %d, %Y • %I:%M %p")
 
     return render_template(
-        "investor/dashboard.html",   # keep your dashboard template as the Command Center UI
+        "investor/dashboard.html",
         investor=ip,
         capital_requests=capital_requests,
         active_request=active_request,
@@ -388,6 +403,7 @@ def command_center():
         active_tab="command",
         title="RAVLO • Command Center",
     )
+
 
 @investor_bp.route("/resources", methods=["GET"])
 @login_required
