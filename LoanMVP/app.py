@@ -120,30 +120,38 @@ def create_app():
     def home_redirect():
         return redirect("/cm-dashboard")
 
-    @app.route("/index")
+    @app.route("/dashboard")
     def index():
         dashboards = [
-            ("Admin", "/admin"),
-            ("AI", "/ai"),
-            ("Auth", "/auth"),
-            ("Borrower", "/borrower"),
-            ("Borrower AI", "/borrower_ai"),
+            # User-facing
+            ("Investor", "/investor"),
+            ("Investor AI", "/investor_ai"),
+           
+            # Partner-facing        
+            ("Partner", "/partner")
+
+            # Internal lending workflow
+            ("Loan Officer", "/loan_officer"),
+            ("Processor", "/processor"),
+            ("Underwriter", "/underwriter"),
             ("Compliance", "/compliance"),
-            ("Contractors", "/contractors"),
-            ("CRM", "/crm"),
+
+            # System-level dashboards
+            ("Admin", "/admin"),
             ("Executive", "/executive"),
             ("Intelligence", "/intelligence"),
-            ("Loan Officer", "/loan_officer"),
-            ("Master", "/master"),
-            ("Notifications", "/notifications"),
-            ("Processor", "/processor"),
-            ("Processor Queue", "/processor"),
+            ("CRM", "/crm"),
+            ("Contractors", "/contractors"),
             ("Property", "/property"),
+            ("Notifications", "/notifications"),
             ("System", "/system"),
             ("Tracking", "/track"),
-            ("Underwriter", "/underwriter"),
-        ]
-        return render_template("index.html", dashboards=dashboards)
+            ("Master", "/master"),
+            ("AI", "/ai"),
+            ("Auth", "/auth"),
+    ]
+    return render_template("dashboard.html", dashboards=dashboards)
+
 
     # Global error handler
     @app.errorhandler(Exception)
