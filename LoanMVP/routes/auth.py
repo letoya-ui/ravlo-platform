@@ -269,6 +269,7 @@ def register():
         dashboard_map = {
             "admin": "admin.dashboard",
             "loan_officer": "loan_officer.dashboard",
+            "investor": "investor.command_center",
             "processor": "processor.dashboard",
             "underwriter": "underwriter.dashboard",
             "executive": "executive.dashboard",
