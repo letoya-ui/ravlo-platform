@@ -225,14 +225,21 @@ def register_blueprints(app):
             mod_name = f"LoanMVP.routes.{file[:-3]}"
             try:
                 mod = importlib.import_module(mod_name)
+
                 for attr in dir(mod):
                     obj = getattr(mod, attr)
+
                     if isinstance(obj, Blueprint):
-                        app.register_blueprint(obj)
-                        print(f"Registered blueprint: {obj.name} -> {obj.url_prefix}")
+                        # Ensure prefix is applied correctly
+                        prefix = obj.url_prefix or f"/{obj.name}"
+
+                        # Register with explicit prefix
+                        app.register_blueprint(obj, url_prefix=prefix)
+
+                        print(f"Registered blueprint: {obj.name} -> {prefix}")
+
             except Exception as e:
                 print(f"Failed to load {file}: {e}")
-
 
 # ---------------------------------------------------------
 # ENTRY POINT
