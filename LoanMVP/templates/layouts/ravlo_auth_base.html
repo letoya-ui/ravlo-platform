@@ -1,26 +1,79 @@
+{# ============================================================
+   RAVLO AUTH BASE LAYOUT
+   Investor Login / Register / Reset
+   ============================================================ #}
+
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>{% block title %}Login | Ravlo{% endblock %}</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Ravlo{% endblock %}</title>
 
+  <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
+  <!-- Auth Styles -->
   <link rel="stylesheet" href="{{ url_for('static', filename='css/ravlo_auth.css') }}">
+
   {% block head %}{% endblock %}
 </head>
 
-<body class="ravlo-auth">
-  <div class="ravlo-auth-bg"></div>
-  <div class="ravlo-auth-grain"></div>
+<body>
 
-  <main class="ravlo-auth-wrap">
-    {% block content %}{% endblock %}
-  </main>
+  <div class="ravlo-auth-wrapper">
+
+    <div class="ravlo-auth-card">
+
+      <!-- =========================
+           BRAND HEADER
+      ========================== -->
+      <div class="ravlo-auth-brand">
+        <div class="ravlo-auth-logo">RAVLO</div>
+        <div class="ravlo-auth-sub">Investor Command Center</div>
+      </div>
+
+      <!-- =========================
+           FLASH MESSAGES
+      ========================== -->
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          {% for category, msg in messages %}
+            <div class="
+              {% if category in ['error','danger'] %}
+                ravlo-auth-error
+              {% elif category in ['success'] %}
+                ravlo-auth-success
+              {% else %}
+                ravlo-auth-success
+              {% endif %}
+            ">
+              {{ msg }}
+            </div>
+          {% endfor %}
+        {% endif %}
+      {% endwith %}
+
+      <!-- =========================
+           PAGE CONTENT
+      ========================== -->
+      {% block content %}{% endblock %}
+
+      <!-- =========================
+           FOOTER
+      ========================== -->
+      <div class="ravlo-auth-footer">
+        © {{ datetime.utcnow().year if datetime else "2026" }} Ravlo.
+        Built for serious investors.
+      </div>
+
+    </div>
+
+  </div>
 
   {% block scripts %}{% endblock %}
+
 </body>
 </html>
