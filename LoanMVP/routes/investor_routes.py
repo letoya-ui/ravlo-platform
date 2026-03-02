@@ -271,14 +271,14 @@ TIMELINES = {
 }
 
 
-@investor_bp.route("/", methods=["GET"])
+@investor_bp.route("/", methods=["GET"], endpoint="command_center")
 @investor_bp.route("/index", methods=["GET"])
 @investor_bp.route("/command", methods=["GET"])
-@investor_bp.route("/dashboard", methods=["GET"])  # legacy alias
+@investor_bp.route("/dashboard", methods=["GET"])
 @login_required
 @role_required("investor")
 def command_center():
-    """
+     """
     Investor Command Center — single source of truth.
     '/' '/index' '/command' '/dashboard' all land here.
     """
