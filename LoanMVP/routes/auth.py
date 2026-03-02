@@ -219,6 +219,7 @@ def reset_password(token):
 # 🆕 Register
 # ------------------------------------------------
 @auth_bp.route("/register", methods=["GET", "POST"])
+@csrf.exempt
 def register():
     if request.method == "POST":
 
