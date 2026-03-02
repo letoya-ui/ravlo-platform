@@ -1,0 +1,369 @@
+{% extends "layouts/ravlo_base.html" %}
+{% block title %}Ravlo • My Documents{% endblock %}
+
+{% block page_title %}My Documents{% endblock %}
+{% block page_subline %}View, manage, and delete documents you’ve uploaded.{% endblock %}
+
+{% block topbar_actions %}
+  <button class="ravlo-btn ghost sm" type="button"
+          onclick="location.href='{{ url_for('investor.command_center') }}'">
+    Command Center
+  </button>
+
+  <button class="ravlo-btn primary sm" type="button"
+          onclick="location.href='{{ url_for('investor.upload_document') }}'">
+    Upload
+  </button>
+{% endblock %}
+
+{% block content %}
+
+<style>
+  /* ---------------------------------------------------------
+     Ravlo Glass Documents
+  --------------------------------------------------------- */
+  .docs-shell{
+    position:relative;
+    border-radius:22px;
+    padding:16px;
+    background:
+      radial-gradient(900px 380px at 55% -120px, rgba(122,184,255,0.18), transparent 70%),
+      radial-gradient(700px 320px at 14% 0px, rgba(255,255,255,0.06), transparent 60%),
+      rgba(0,0,0,0);
+  }
+  .docs-card{
+    background: linear-gradient(180deg, rgba(20,22,30,0.72), rgba(12,14,18,0.62));
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 18px;
+    box-shadow: 0 0 0 1px rgba(255,255,255,0.06), 0 20px 55px rgba(0,0,0,0.45);
+    backdrop-filter: blur(14px);
+  }
+  .docs-pad{ padding: 14px 16px; }
+  .docs-head{
+    display:flex;
+    align-items:flex-end;
+    justify-content:space-between;
+    gap: 12px;
+    flex-wrap:wrap;
+  }
+  .docs-title{
+    font-weight: 900;
+    letter-spacing: .2px;
+    font-size: 18px;
+  }
+  .docs-muted{ color: var(--muted); }
+  .docs-controls{
+    display:flex;
+    gap: 10px;
+    flex-wrap:wrap;
+    align-items:center;
+  }
+  .docs-input{
+    height: 40px;
+    border-radius: 12px;
+    border: 1px solid rgba(255,255,255,0.10);
+    background: rgba(255,255,255,0.04);
+    color: var(--text);
+    padding: 0 12px;
+    outline:none;
+    min-width: 240px;
+  }
+  .docs-select{
+    height: 40px;
+    border-radius: 12px;
+    border: 1px solid rgba(255,255,255,0.10);
+    background: rgba(255,255,255,0.04);
+    color: var(--text);
+    padding: 0 10px;
+    outline:none;
+  }
+  .docs-divider{
+    border: none;
+    border-top: 1px solid rgba(255,255,255,0.08);
+    margin: 0;
+  }
+  .docs-kpis{
+    display:grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px;
+    margin-top: 12px;
+  }
+  .docs-kpi{
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 16px;
+    padding: 12px 14px;
+    background: rgba(255,255,255,0.03);
+  }
+  .docs-kpi .v{
+    font-weight: 900;
+    font-size: 18px;
+  }
+  .docs-kpi .l{
+    margin-top: 3px;
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .docs-drop{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap: 12px;
+    padding: 12px 14px;
+    border: 1px dashed rgba(255,255,255,0.14);
+    border-radius: 16px;
+    background: radial-gradient(700px 220px at 50% 0%, rgba(122,184,255,0.12), transparent 65%);
+  }
+  .docs-drop strong{ font-weight: 900; }
+  .docs-table-wrap{ overflow:auto; }
+  .docs-table{
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+  .docs-table th{
+    text-align:left;
+    color: var(--muted);
+    font-weight: 650;
+    padding: 12px 14px;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+    white-space: nowrap;
+  }
+  .docs-table td{
+    padding: 12px 14px;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    vertical-align: middle;
+  }
+  .docs-name{ font-weight: 800; color: var(--text); }
+  .docs-sub{ font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .docs-actions{ display:flex; justify-content:flex-end; gap: 8px; flex-wrap:wrap; }
+  .docs-check{
+    width: 16px;
+    height: 16px;
+    accent-color: var(--accent);
+  }
+
+  @media (max-width: 1050px){
+    .docs-kpis{ grid-template-columns: repeat(2, minmax(0,1fr)); }
+  }
+  @media (max-width: 520px){
+    .docs-input{ min-width: 0; width: 100%; }
+  }
+</style>
+
+{% set docs = documents or [] %}
+{% set total = docs|length %}
+{% set verified = docs|selectattr("status")|select("equalto", "verified")|list|length %}
+{% set approved = docs|selectattr("status")|select("equalto", "approved")|list|length %}
+{% set pending = docs|selectattr("status")|select("equalto", "pending")|list|length %}
+
+<div class="docs-shell">
+
+  {% if ai_summary %}
+    <div class="docs-card docs-pad" style="margin-bottom:14px;">
+      <div class="docs-title">AI Summary</div>
+      <div class="docs-muted" style="margin-top:.5rem;">{{ ai_summary }}</div>
+    </div>
+  {% endif %}
+
+  <div class="docs-card">
+    <div class="docs-pad docs-head">
+      <div>
+        <div class="docs-title">📄 Documents</div>
+        <div class="docs-muted" style="margin-top:4px;">
+          {{ total }} item{% if total != 1 %}s{% endif %} • Keep your file set clean for faster capital review.
+        </div>
+      </div>
+
+      <form method="GET" style="margin:0;" class="docs-controls">
+        <input class="docs-input" type="text" name="q" value="{{ request.args.get('q','') }}"
+               placeholder="Search name, type, status…">
+        <select class="docs-select" name="status" onchange="this.form.submit()">
+          {% set st = request.args.get('status','') %}
+          <option value="" {% if not st %}selected{% endif %}>All Status</option>
+          <option value="uploaded" {% if st=='uploaded' %}selected{% endif %}>Uploaded</option>
+          <option value="pending" {% if st=='pending' %}selected{% endif %}>Pending</option>
+          <option value="verified" {% if st=='verified' %}selected{% endif %}>Verified</option>
+          <option value="approved" {% if st=='approved' %}selected{% endif %}>Approved</option>
+          <option value="cleared" {% if st=='cleared' %}selected{% endif %}>Cleared</option>
+        </select>
+        <button class="ravlo-btn ghost sm" type="submit">Filter</button>
+      </form>
+    </div>
+
+    <hr class="docs-divider">
+
+    <div class="docs-pad">
+      <div class="docs-kpis">
+        <div class="docs-kpi">
+          <div class="v">{{ total }}</div>
+          <div class="l">Total</div>
+        </div>
+        <div class="docs-kpi">
+          <div class="v">{{ pending }}</div>
+          <div class="l">Pending</div>
+        </div>
+        <div class="docs-kpi">
+          <div class="v">{{ verified }}</div>
+          <div class="l">Verified</div>
+        </div>
+        <div class="docs-kpi">
+          <div class="v">{{ approved }}</div>
+          <div class="l">Approved</div>
+        </div>
+      </div>
+
+      <div class="docs-drop" style="margin-top:12px;">
+        <div>
+          <strong>Quick Upload</strong>
+          <div class="docs-muted" style="margin-top:2px;">Drag & drop to upload faster (opens uploader).</div>
+        </div>
+        <button class="ravlo-btn primary sm" type="button"
+                onclick="location.href='{{ url_for('investor.upload_document') }}'">
+          Upload Now
+        </button>
+      </div>
+    </div>
+
+    <hr class="docs-divider">
+
+    <div class="docs-pad docs-table-wrap">
+      {% if docs %}
+        <form id="bulkForm" method="POST" action="#" onsubmit="return false;" style="margin:0;">
+          {% if csrf_token is defined %}
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          {% endif %}
+
+          <table class="docs-table">
+            <thead>
+              <tr>
+                <th style="width:42px;">
+                  <input class="docs-check" id="checkAll" type="checkbox" onclick="toggleAll(this)">
+                </th>
+                <th>Name</th>
+                <th>Type</th>
+                <th>Status</th>
+                <th>Uploaded</th>
+                <th style="text-align:right;">Actions</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {% for doc in docs %}
+              <tr>
+                <td>
+                  <input class="docs-check docCheck" type="checkbox" name="doc_ids" value="{{ doc.id }}">
+                </td>
+
+                <td>
+                  <div class="docs-name">{{ doc.name or doc.file_path or ('Document #' ~ doc.id) }}</div>
+                  {% if doc.file_path and (doc.name and doc.name != doc.file_path) %}
+                    <div class="docs-sub">{{ doc.file_path }}</div>
+                  {% endif %}
+                </td>
+
+                <td class="docs-muted">{{ doc.doc_type or "—" }}</td>
+
+                <td>
+                  {% set s = (doc.status or "uploaded")|lower %}
+                  <span class="ravlo-badge {% if s in ['verified','approved','cleared'] %}ok{% elif s in ['pending','review','submitted','uploaded'] %}watch{% else %}risk{% endif %}">
+                    {{ (doc.status or "Uploaded") }}
+                  </span>
+                </td>
+
+                <td class="docs-muted">
+                  {{ doc.uploaded_at.strftime('%b %d, %Y') if doc.uploaded_at else (doc.created_at.strftime('%b %d, %Y') if doc.created_at else "—") }}
+                </td>
+
+                <td>
+                  <div class="docs-actions">
+
+                    {# Optional: if you have download/view route #}
+                    {% if doc.file_path %}
+                      <button class="ravlo-btn ghost sm" type="button"
+                              onclick="location.href='{{ url_for('investor.download_document', doc_id=doc.id) }}'">
+                        View
+                      </button>
+                    {% endif %}
+
+                    <form method="POST"
+                          action="{{ url_for('investor.delete_document', doc_id=doc.id) }}"
+                          style="display:inline;">
+                      {% if csrf_token is defined %}
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                      {% endif %}
+                      <button type="submit"
+                              class="ravlo-btn ghost sm"
+                              onclick="return confirm('Delete this document?')"
+                              style="border-color: rgba(255,90,90,.45); color: #ff8a8a;">
+                        Delete
+                      </button>
+                    </form>
+
+                  </div>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+
+          <div style="display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-top:12px;">
+            <div class="docs-muted">
+              <span id="selCount">0</span> selected
+            </div>
+            <div style="display:flex; gap:10px; flex-wrap:wrap;">
+              <button class="ravlo-btn ghost sm" type="button" onclick="bulkDelete()"
+                      style="border-color: rgba(255,90,90,.45); color: #ff8a8a;">
+                Delete Selected
+              </button>
+              <button class="ravlo-btn ghost sm" type="button" onclick="clearSelection()">
+                Clear
+              </button>
+            </div>
+          </div>
+        </form>
+      {% else %}
+        <div class="docs-muted">
+          You haven’t uploaded any documents yet.
+        </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<script>
+  function toggleAll(cb){
+    const checks = document.querySelectorAll(".docCheck");
+    checks.forEach(c => c.checked = cb.checked);
+    updateSelectedCount();
+  }
+
+  function clearSelection(){
+    document.getElementById("checkAll")?.checked = false;
+    document.querySelectorAll(".docCheck").forEach(c => c.checked = false);
+    updateSelectedCount();
+  }
+
+  function updateSelectedCount(){
+    const n = [...document.querySelectorAll(".docCheck")].filter(c => c.checked).length;
+    const el = document.getElementById("selCount");
+    if (el) el.textContent = String(n);
+  }
+
+  document.querySelectorAll(".docCheck").forEach(c => {
+    c.addEventListener("change", updateSelectedCount);
+  });
+
+  function bulkDelete(){
+    const ids = [...document.querySelectorAll(".docCheck")]
+      .filter(c => c.checked)
+      .map(c => c.value);
+
+    if (!ids.length){
+      alert("Select at least 1 document.");
+      return;
+    }
+    alert("Bulk delete UI is ready. Wire a route like POST /documents/bulk_delete to delete: " + ids.join(", "));
+  }
+</script>
+
+{% endblock %}

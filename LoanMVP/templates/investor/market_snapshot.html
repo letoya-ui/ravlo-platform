@@ -1,0 +1,237 @@
+{# investor/market_snapshot.html #}
+{% extends "layouts/ravlo_base.html" %}
+
+{% block title %}Ravlo • Market Snapshot{% endblock %}
+{% block page_title %}Market Snapshot{% endblock %}
+{% block page_subline %}
+  {% if active_property %}
+    Based on {{ active_property.address }} ({{ active_property.zipcode }})
+  {% else %}
+    Local pricing, rents, and inventory — at a glance.
+  {% endif %}
+{% endblock %}
+
+{% block topbar_actions %}
+
+  <button class="ravlo-btn ghost sm" type="button"
+          onclick="location.href='{{ url_for('investor.command_center') }}'">
+    Back
+  </button>
+
+  {% if 'investor.saved' in view_functions %}
+    <button class="ravlo-btn ghost sm" type="button"
+            onclick="location.href='{{ url_for('investor.saved') }}'">
+      Saved Properties
+    </button>
+  {% elif 'investor.saved_properties' in view_functions %}
+    <button class="ravlo-btn ghost sm" type="button"
+            onclick="location.href='{{ url_for('investor.saved_properties') }}'">
+      Saved Properties
+    </button>
+  {% endif %}
+
+{% endblock %}
+
+{% block content %}
+
+<style>
+  .market-container{margin-top:14px;}
+
+  .market-grid{
+    display:grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap:12px;
+  }
+
+  @media (max-width: 1100px){
+    .market-grid{grid-template-columns: repeat(2, minmax(0, 1fr));}
+  }
+
+  .market-stat{
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 14px;
+    padding: 14px;
+  }
+
+  .market-stat label{
+    display:block;
+    font-size:12px;
+    color: var(--muted);
+    margin-bottom:6px;
+  }
+
+  .market-stat .value{
+    font-size:18px;
+    font-weight:800;
+    color: var(--text);
+  }
+
+  .market-charts{
+    margin-top:14px;
+    display:grid;
+    gap:12px;
+  }
+
+  .chart-card{
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 14px;
+    padding: 14px;
+    overflow:hidden;
+  }
+
+  .chart-title{
+    font-weight:800;
+    margin-bottom:10px;
+    color: var(--text);
+  }
+
+  canvas{width:100%; height:140px;}
+</style>
+
+<div class="market-container">
+
+{% if market_snapshot %}
+
+  <div class="market-grid">
+
+    <div class="market-stat">
+      <label>Median Price</label>
+      <div class="value">
+        {% if market_snapshot.median_price %}
+          ${{ "{:,.0f}".format(market_snapshot.median_price) }}
+        {% else %}—{% endif %}
+      </div>
+    </div>
+
+    <div class="market-stat">
+      <label>Median Rent</label>
+      <div class="value">
+        {% if market_snapshot.median_rent %}
+          ${{ "{:,.0f}".format(market_snapshot.median_rent) }}
+        {% else %}—{% endif %}
+      </div>
+    </div>
+
+    <div class="market-stat">
+      <label>Inventory</label>
+      <div class="value">{{ market_snapshot.inventory or "—" }}</div>
+    </div>
+
+    <div class="market-stat">
+      <label>Days on Market</label>
+      <div class="value">{{ market_snapshot.dom or "—" }}</div>
+    </div>
+
+    <div class="market-stat">
+      <label>Trend</label>
+      <div class="value">{{ market_snapshot.trend or "—" }}</div>
+    </div>
+
+  </div>
+
+  <div class="market-charts">
+
+    <div class="chart-card">
+      <div class="chart-title">Price Trend</div>
+      <canvas id="marketPriceChart" width="900" height="160"></canvas>
+    </div>
+
+    <div class="chart-card">
+      <div class="chart-title">Rent Trend</div>
+      <canvas id="marketRentChart" width="900" height="160"></canvas>
+    </div>
+
+    <div class="chart-card">
+      <div class="chart-title">Inventory Trend</div>
+      <canvas id="marketInventoryChart" width="900" height="160"></canvas>
+    </div>
+
+  </div>
+
+  <script>
+    const snap = {{ market_snapshot | tojson }};
+
+    function seriesOrEmpty(key){
+      return Array.isArray(snap?.[key]) ? snap[key] : [];
+    }
+
+    function drawMiniLine(canvasId, series){
+      const c = document.getElementById(canvasId);
+      if (!c) return;
+
+      const ctx = c.getContext("2d");
+      const w = c.width, h = c.height;
+      ctx.clearRect(0,0,w,h);
+
+      if (!series.length){
+        ctx.fillStyle = "rgba(255,255,255,0.5)";
+        ctx.font = "14px Inter, sans-serif";
+        ctx.fillText("No data yet.", 14, 28);
+        return;
+      }
+
+      const vals = series.map(p => Number(p.value)).filter(v => !isNaN(v));
+      const min = Math.min(...vals);
+      const max = Math.max(...vals);
+
+      const pad = 18;
+      const step = (w - pad*2) / Math.max(1, series.length - 1);
+
+      function yScale(v){
+        if (max === min) return h/2;
+        const t = (v - min) / (max - min);
+        return (h - pad) - t * (h - pad*2);
+      }
+
+      ctx.strokeStyle = "rgba(122,184,255,0.95)";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+
+      series.forEach((p, i) => {
+        const x = pad + i*step;
+        const y = yScale(Number(p.value));
+        if (i === 0) ctx.moveTo(x,y);
+        else ctx.lineTo(x,y);
+      });
+
+      ctx.stroke();
+    }
+
+    drawMiniLine("marketPriceChart", seriesOrEmpty("price_series"));
+    drawMiniLine("marketRentChart", seriesOrEmpty("rent_series"));
+    drawMiniLine("marketInventoryChart", seriesOrEmpty("inv_series"));
+  </script>
+
+{% else %}
+
+  <div class="ravlo-card pad">
+    <div class="ravlo-card-title">No market data yet</div>
+
+    <div style="color:var(--muted); margin-top:10px;">
+      Save a property to load a ZIP-based snapshot.
+    </div>
+
+    <div style="margin-top:14px; display:flex; gap:10px; flex-wrap:wrap;">
+
+      {% if 'investor.saved' in view_functions %}
+        <button class="ravlo-btn primary sm" type="button"
+                onclick="location.href='{{ url_for('investor.saved') }}'">
+          View Saved Properties
+        </button>
+      {% endif %}
+
+      <button class="ravlo-btn ghost sm" type="button"
+              onclick="location.href='{{ url_for('investor.command_center') }}'">
+        Back to Command Center
+      </button>
+
+    </div>
+  </div>
+
+{% endif %}
+
+</div>
+
+{% endblock %}

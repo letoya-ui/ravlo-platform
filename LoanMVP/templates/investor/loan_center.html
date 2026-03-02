@@ -1,0 +1,95 @@
+{% extends "layouts/ravlo_base.html" %}
+{% block title %}Ravlo • Loan Center{% endblock %}
+
+{% block page_title %}Loan Center{% endblock %}
+{% block page_subline %}Track your applications, status, and next steps.{% endblock %}
+
+{% block topbar_actions %}
+  <button class="ravlo-btn ghost sm" type="button"
+          onclick="location.href='{{ url_for('investor.command_center') }}'">
+    Back
+  </button>
+
+  <button class="ravlo-btn primary sm" type="button"
+          onclick="location.href='{{ url_for('investor.apply') }}'">
+    Start Application
+  </button>
+{% endblock %}
+
+{% block content %}
+
+  <div class="ravlo-card pad">
+
+    <div class="row between" style="align-items:flex-end; gap:12px;">
+      <div>
+        <div class="ravlo-card-title">Your Loans</div>
+        <div style="color:var(--muted); margin-top:6px;">
+          {% if loans %}{{ loans|length }} application{% if loans|length != 1 %}s{% endif %}{% else %}0 applications{% endif %}
+        </div>
+      </div>
+    </div>
+
+    {% if not loans or loans|length == 0 %}
+      <div class="ravlo-card pad" style="margin-top:12px;">
+        <div style="font-weight:800;">No loan applications yet</div>
+        <div style="color:var(--muted); margin-top:6px;">
+          Start your first application and we’ll guide you step-by-step.
+        </div>
+
+        <div class="row" style="gap:10px; flex-wrap:wrap; margin-top:12px;">
+          <button class="ravlo-btn primary" type="button"
+                  onclick="location.href='{{ url_for('investor.apply') }}'">
+            Start Loan Application
+          </button>
+        </div>
+      </div>
+
+    {% else %}
+      <div class="ravlo-grid cols-2 mt-16">
+        {% for loan in loans %}
+          {% set st = (loan.status or "In Progress")|string %}
+          <div class="ravlo-card pad">
+            <div class="row between" style="gap:12px; align-items:flex-start;">
+              <div>
+                <div style="font-weight:900; font-size:1.05rem;">
+                  {{ loan.loan_type or "Loan" }}{% if loan.id %} • #{{ loan.id }}{% endif %}
+                </div>
+
+                <div style="color:var(--muted); margin-top:6px;">
+                  Status:
+                  <span class="ravlo-badge
+                    {% if st|lower in ['approved','clear to close','cleared','completed','funded','closed'] %}ok
+                    {% elif st|lower in ['pending','in progress','processing','underwriting','review','submitted'] %}watch
+                    {% else %}risk{% endif %}">
+                    {{ st }}
+                  </span>
+                </div>
+              </div>
+
+              <div style="display:flex; gap:10px; flex-wrap:wrap; justify-content:flex-end;">
+                <button class="ravlo-btn ghost sm" type="button"
+                        onclick="location.href='{{ url_for('investor.loan_summary', loan_id=loan.id) }}'">
+                  View Summary
+                </button>
+
+                <button class="ravlo-btn ghost sm" type="button"
+                        onclick="location.href='{{ url_for('investor.loan_timeline', loan_id=loan.id) }}'">
+                  Timeline
+                </button>
+              </div>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+
+      <div class="row" style="gap:10px; flex-wrap:wrap; margin-top:16px;">
+        <button class="ravlo-btn primary" type="button"
+                onclick="location.href='{{ url_for('investor.apply') }}'">
+          Start Another Loan
+        </button>
+      </div>
+    {% endif %}
+
+  </div>
+
+{% endblock %}

@@ -1,0 +1,173 @@
+{# investor/start_loan.html #}
+{% extends "layouts/ravlo_base.html" %}
+
+{% block title %}Ravlo • Start Loan{% endblock %}
+
+{% block page_title %}Start a New Loan{% endblock %}
+{% block page_subline %}Launch a new capital request in under 60 seconds.{% endblock %}
+
+{% block content %}
+
+<style>
+  .loan-shell{
+    max-width: 760px;
+    margin: 0 auto;
+  }
+
+  .loan-card{
+    background:
+      radial-gradient(800px 300px at 50% -120px, rgba(122,184,255,0.18), transparent 70%),
+      linear-gradient(180deg, rgba(20,22,30,0.75), rgba(12,14,18,0.60));
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 20px;
+    padding: 18px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.45);
+    backdrop-filter: blur(14px);
+  }
+
+  .loan-section-title{
+    font-size: 18px;
+    font-weight: 900;
+    margin-bottom: 4px;
+  }
+
+  .loan-muted{
+    font-size: 13px;
+    color: var(--muted);
+  }
+
+  .strategy-grid{
+    display:grid;
+    grid-template-columns: repeat(2, minmax(0,1fr));
+    gap:12px;
+    margin-top:14px;
+  }
+
+  .strategy-card{
+    border:1px solid rgba(255,255,255,0.10);
+    background:rgba(255,255,255,0.03);
+    border-radius:16px;
+    padding:14px;
+    cursor:pointer;
+    transition:.18s ease;
+  }
+
+  .strategy-card:hover{
+    border-color: rgba(122,184,255,0.45);
+    box-shadow: 0 0 18px rgba(122,184,255,0.20);
+  }
+
+  .strategy-card.active{
+    border-color: rgba(122,184,255,0.65);
+    background: rgba(122,184,255,0.12);
+    box-shadow: 0 0 0 2px rgba(122,184,255,0.20);
+  }
+
+  .strategy-card h4{
+    margin:0;
+    font-weight:900;
+  }
+
+  .strategy-card p{
+    margin:6px 0 0;
+    font-size:12px;
+    color:var(--muted);
+  }
+
+  .amount-wrap{
+    margin-top:18px;
+  }
+
+  .amount-input{
+    width:100%;
+    padding:12px 14px;
+    border-radius:14px;
+    border:1px solid rgba(255,255,255,0.12);
+    background:rgba(255,255,255,0.04);
+    color:var(--text);
+    font-size:18px;
+    font-weight:800;
+    letter-spacing:.3px;
+  }
+
+  @media(max-width:700px){
+    .strategy-grid{ grid-template-columns:1fr; }
+  }
+</style>
+
+<div class="loan-shell">
+  <div class="loan-card">
+
+    <div class="loan-section-title">Loan Setup</div>
+    <div class="loan-muted">
+      Choose your strategy and estimated capital request.
+    </div>
+
+    <form method="POST" action="{{ url_for('investor.start_loan') }}" style="margin-top:16px;">
+
+      {% if csrf_token is defined %}
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      {% endif %}
+
+      <input type="hidden" name="loan_type" id="loan_type" value="Fix & Flip">
+
+      <!-- Strategy Selection -->
+      <div class="strategy-grid">
+
+        <div class="strategy-card active" data-type="Fix & Flip" onclick="selectStrategy(this)">
+          <h4>Fix & Flip</h4>
+          <p>Short-term capital, rehab + resale focus.</p>
+        </div>
+
+        <div class="strategy-card" data-type="Rental" onclick="selectStrategy(this)">
+          <h4>Rental</h4>
+          <p>Long-term hold with DSCR underwriting.</p>
+        </div>
+
+        <div class="strategy-card" data-type="Bridge" onclick="selectStrategy(this)">
+          <h4>Bridge</h4>
+          <p>Short-term liquidity or transition financing.</p>
+        </div>
+
+        <div class="strategy-card" data-type="Construction" onclick="selectStrategy(this)">
+          <h4>Construction</h4>
+          <p>Ground-up or major renovation funding.</p>
+        </div>
+
+      </div>
+
+      <!-- Amount -->
+      <div class="amount-wrap">
+        <label class="loan-muted">Requested Loan Amount</label>
+        <input type="number"
+               name="amount"
+               class="amount-input"
+               placeholder="Enter amount"
+               required>
+      </div>
+
+      <div style="margin-top:22px;">
+        <button type="submit"
+                class="ravlo-btn primary"
+                style="width:100%; padding:14px; font-size:15px;">
+          Create Loan →
+        </button>
+      </div>
+
+    </form>
+  </div>
+</div>
+
+<script>
+  function selectStrategy(card){
+    document.querySelectorAll(".strategy-card")
+      .forEach(c => c.classList.remove("active"));
+
+    card.classList.add("active");
+
+    const type = card.getAttribute("data-type");
+    document.getElementById("loan_type").value = type;
+  }
+</script>
+
+{% endblock %}

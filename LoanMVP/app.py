@@ -21,7 +21,7 @@ from flask_migrate import Migrate
 from flask_login import LoginManager, current_user
 
 from LoanMVP.config import Config
-from LoanMVP.extensions import db, login_manager, migrate, mail, stripe
+from LoanMVP.extensions import db, login_manager, migrate, mail, stripe, csrf
 from LoanMVP.models import User
 from LoanMVP.models.loan_models import BorrowerProfile, LoanNotification
 
@@ -96,6 +96,7 @@ def create_app():
     mail.init_app(app)
     socketio.init_app(app)
     app.socketio = socketio
+    csrf.init_app(app)
 
     # Login manager settings
     login_manager.login_view = "auth.login"
@@ -174,10 +175,7 @@ def create_app():
                 ).count()
         return dict(unread_count=unread)
   
-    @app.context_processor
-    def inject_view_functions():
-        return {"view_functions": current_app.view_functions}
-    
+   
     @app.context_processor
     def inject_datetime():
         return dict(datetime=datetime)
@@ -188,6 +186,14 @@ def create_app():
             return "${:,.0f}".format(int(value))
         except (ValueError, TypeError):
             return "$0"
+   
+    def safe_url_for(endpoint, **values):
+        try:
+            return url_for(endpoint, **values)
+        except Exception:
+            return None
+
+    app.jinja_env.globals["safe_url_for"] = safe_url_for
 
     return app
 

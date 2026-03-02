@@ -1,0 +1,154 @@
+{# investor/partner_requests.html #}
+{% extends "layouts/ravlo_base.html" %}
+
+{% block title %}Ravlo • My Partner Requests{% endblock %}
+
+{% block page_title %}My Partner Requests{% endblock %}
+{% block page_subline %}
+Track the status of your team connection requests.
+{% endblock %}
+
+{% block topbar_actions %}
+  <button class="ravlo-btn ghost sm" type="button"
+          onclick="location.href='{{ url_for('investor.command_center') }}'">
+    Command Center
+  </button>
+
+  {% if 'investor.partners' in current_app.view_functions %}
+    <button class="ravlo-btn primary sm" type="button"
+            onclick="location.href='{{ url_for('investor.partners') }}'">
+      Browse Partners
+    </button>
+  {% endif %}
+{% endblock %}
+
+{% block content %}
+
+<style>
+  .request-list{
+    display:flex;
+    flex-direction:column;
+    gap:12px;
+    margin-top:16px;
+  }
+  .request-card{
+    border:1px solid rgba(255,255,255,0.08);
+    border-radius:18px;
+    padding:14px 16px;
+    background:
+      radial-gradient(700px 240px at 50% -140px, rgba(122,184,255,0.12), transparent 70%),
+      rgba(255,255,255,0.02);
+    box-shadow: 0 0 0 1px rgba(255,255,255,0.04);
+    display:flex;
+    align-items:flex-start;
+    justify-content:space-between;
+    gap:12px;
+    flex-wrap:wrap;
+  }
+  .request-title{
+    font-weight:900;
+    font-size:15px;
+    color: var(--text);
+  }
+  .request-meta{
+    font-size:12px;
+    color:var(--muted);
+    margin-top:4px;
+    line-height: 1.4;
+  }
+  .status-badge{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    padding:6px 12px;
+    border-radius:999px;
+    font-size:11px;
+    font-weight:800;
+    letter-spacing:.2px;
+    white-space:nowrap;
+    margin-top:2px;
+    border: 1px solid rgba(255,255,255,0.10);
+  }
+  .status-pending{
+    background:rgba(255,193,7,0.14);
+    color:#ffc107;
+    border-color: rgba(255,193,7,0.25);
+  }
+  .status-approved{
+    background:rgba(40,167,69,0.14);
+    color:#38d26c;
+    border-color: rgba(40,167,69,0.25);
+  }
+  .status-declined{
+    background:rgba(220,53,69,0.14);
+    color:#ff808f;
+    border-color: rgba(220,53,69,0.25);
+  }
+</style>
+
+{% if requests and requests|length > 0 %}
+  <div class="request-list">
+
+    {% for r in requests %}
+      {# safe partner + status #}
+      {% set partner = r.partner if (r.partner is defined and r.partner) else none %}
+      {% set status_lower = (r.status or 'pending')|lower %}
+
+      <div class="request-card">
+
+        <div>
+          <div class="request-title">
+            {{ partner.name if partner and partner.name else ("Partner Request #" ~ r.id) }}
+          </div>
+
+          <div class="request-meta">
+            {{ partner.company if partner and partner.company else "Independent" }}
+          </div>
+
+          <div class="request-meta">
+            Sent: {{ r.created_at.strftime("%b %d, %Y") if r.created_at else "—" }}
+          </div>
+        </div>
+
+        <div>
+          <div class="status-badge
+            {% if status_lower in ['approved','connected'] %}
+              status-approved
+            {% elif status_lower in ['declined','rejected'] %}
+              status-declined
+            {% else %}
+              status-pending
+            {% endif %}
+          ">
+            {{ (r.status or "Pending") }}
+          </div>
+        </div>
+
+      </div>
+    {% endfor %}
+
+  </div>
+
+{% else %}
+  <div class="ravlo-card pad" style="margin-top:16px;">
+    <div style="color:var(--muted);">
+      You haven’t requested any partner connections yet.
+    </div>
+
+    <div style="margin-top:12px; display:flex; gap:10px; flex-wrap:wrap;">
+      {% if 'investor.partners' in current_app.view_functions %}
+        <button class="ravlo-btn primary" type="button"
+                onclick="location.href='{{ url_for('investor.partners') }}'">
+          Browse Partners →
+        </button>
+      {% endif %}
+
+      <button class="ravlo-btn ghost" type="button"
+              onclick="location.href='{{ url_for('investor.command_center') }}'">
+        Back to Command Center
+      </button>
+    </div>
+  </div>
+{% endif %}
+
+{% endblock %}

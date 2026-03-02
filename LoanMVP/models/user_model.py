@@ -54,6 +54,14 @@ class User(UserMixin, db.Model):
         back_populates="user",
         lazy=True
     )
+    
+    # inside class User(db.Model):
+    investor_profile = db.relationship(
+        "InvestorProfile",
+        back_populates="user",
+        uselist=False,
+        cascade="all, delete-orphan",
+    )
 
     # ===============================
     # 🧩 Methods
@@ -69,11 +77,20 @@ class User(UserMixin, db.Model):
     
     @hybrid_property
     def full_name(self):
-        return f"{self.first_name or ''} {self.last_name or ''}".strip()
+        if self.first_name or self.last_name:
+            return f"{self.first_name or ''} {self.last_name or ''}".strip()
+        return self.username or self.email
 
     @full_name.expression
     def full_name(cls):
-        return func.concat(cls.first_name, " ", cls.last_name)
+        # coalesce to avoid NULL issues in concat
+        return func.trim(
+            func.concat(
+                func.coalesce(cls.first_name, ""),
+                " ",
+                func.coalesce(cls.last_name, "")
+            )
+        )
 
     @property
     def full_name(self):

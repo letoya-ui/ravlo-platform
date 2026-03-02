@@ -1,0 +1,311 @@
+{# templates/investor/welcome.html #}
+{% extends "layouts/ravlo_base.html" %}
+
+{% block title %}Ravlo • Welcome{% endblock %}
+
+{% block page_title %}Welcome to Ravlo{% endblock %}
+{% block page_subline %}Let’s set up your workspace in under 60 seconds.{% endblock %}
+
+{% block topbar_actions %}
+  <button class="ravlo-btn ghost sm" type="button"
+          onclick="location.href='{{ url_for('investor.command_center') }}'">
+    Skip
+  </button>
+{% endblock %}
+
+{% block content %}
+
+<style>
+  .onb-shell{
+    max-width: 860px;
+    margin: 0 auto;
+  }
+
+  .onb-hero{
+    background:
+      radial-gradient(950px 360px at 50% -140px, rgba(122,184,255,0.20), transparent 70%),
+      radial-gradient(650px 240px at 10% 0px, rgba(255,255,255,0.06), transparent 60%),
+      linear-gradient(180deg, rgba(20,22,30,0.75), rgba(12,14,18,0.60));
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 22px;
+    box-shadow: 0 0 0 1px rgba(255,255,255,0.06), 0 20px 55px rgba(0,0,0,0.45);
+    backdrop-filter: blur(14px);
+    padding: 18px;
+  }
+
+  .onb-stepper{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    margin-bottom: 14px;
+    flex-wrap:wrap;
+  }
+  .onb-step{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    color: var(--muted);
+    font-size: 13px;
+  }
+  .onb-dot{
+    width: 10px; height: 10px;
+    border-radius: 999px;
+    background: rgba(255,255,255,0.18);
+    box-shadow: 0 0 0 3px rgba(122,184,255,0.12);
+  }
+  .onb-dot.on{
+    background: var(--accent);
+    box-shadow: 0 0 0 3px rgba(122,184,255,0.22), 0 0 24px rgba(122,184,255,0.35);
+  }
+  .onb-progress{
+    flex: 1;
+    min-width: 220px;
+    height: 8px;
+    border-radius: 999px;
+    background: rgba(255,255,255,0.06);
+    overflow:hidden;
+    border: 1px solid rgba(255,255,255,0.06);
+  }
+  .onb-progress > div{
+    height: 100%;
+    width: 33%;
+    background: linear-gradient(90deg, rgba(122,184,255,0.55), rgba(122,184,255,0.95));
+    border-radius: 999px;
+  }
+
+  .onb-grid{
+    display:grid;
+    grid-template-columns: 1.2fr .8fr;
+    gap: 14px;
+    margin-top: 14px;
+  }
+
+  .onb-card{
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 18px;
+    padding: 14px;
+  }
+
+  .onb-title{
+    font-size: 18px;
+    font-weight: 900;
+    letter-spacing: .2px;
+    margin: 0;
+  }
+  .onb-muted{
+    color: var(--muted);
+    margin: 8px 0 0 0;
+    line-height: 1.6;
+  }
+
+  .onb-choices{
+    display:grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+    margin-top: 12px;
+  }
+  .onb-choice{
+    border: 1px solid rgba(255,255,255,0.10);
+    background: rgba(255,255,255,0.03);
+    border-radius: 16px;
+    padding: 12px;
+    cursor:pointer;
+    transition: .18s ease;
+    text-align:left;
+  }
+  .onb-choice:hover{
+    border-color: rgba(122,184,255,0.35);
+    box-shadow: 0 0 18px rgba(122,184,255,0.18);
+  }
+  .onb-choice.on{
+    border-color: rgba(122,184,255,0.55);
+    background: rgba(122,184,255,0.10);
+    box-shadow: 0 0 0 2px rgba(122,184,255,0.18);
+  }
+  .onb-choice .k{
+    font-weight: 900;
+    margin: 0;
+  }
+  .onb-choice .v{
+    margin: 6px 0 0 0;
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 1.5;
+  }
+
+  .onb-row{
+    display:flex;
+    gap: 10px;
+    flex-wrap:wrap;
+    align-items:center;
+    margin-top: 12px;
+  }
+
+  .onb-toggle{
+    display:flex;
+    align-items:flex-start;
+    gap: 10px;
+    padding: 10px 12px;
+    border-radius: 14px;
+    border: 1px solid rgba(255,255,255,0.08);
+    background: rgba(255,255,255,0.02);
+  }
+  .onb-toggle input{
+    margin-top: 3px;
+    accent-color: var(--accent);
+  }
+  .onb-toggle .t{
+    font-weight: 800;
+    margin: 0;
+  }
+  .onb-toggle .d{
+    margin: 4px 0 0 0;
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 1.45;
+  }
+
+  @media (max-width: 900px){
+    .onb-grid{ grid-template-columns: 1fr; }
+    .onb-choices{ grid-template-columns: 1fr; }
+  }
+</style>
+
+<div class="onb-shell">
+
+  <div class="onb-hero">
+    <div class="onb-stepper">
+      <div class="onb-step">
+        <div class="onb-dot on"></div>
+        <div><strong style="color:var(--text);">Step 1</strong> • Strategy + Preferences</div>
+      </div>
+
+      <div class="onb-progress" aria-label="Onboarding progress">
+        <div></div>
+      </div>
+
+      <div class="onb-step">
+        <div class="onb-dot"></div>
+        <div>Step 2 • Profile</div>
+      </div>
+
+      <div class="onb-step">
+        <div class="onb-dot"></div>
+        <div>Step 3 • First Deal</div>
+      </div>
+    </div>
+
+    <h2 class="onb-title">👋 Welcome to Ravlo</h2>
+    <p class="onb-muted">
+      {{ welcome_ai or "Your Command Center is ready. Choose your investing strategy and notification preferences — then we’ll tailor your workspace." }}
+    </p>
+
+    <form method="POST" action="{{ url_for('investor.command_center') }}" style="margin-top:14px;">
+      {% if csrf_token is defined %}
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      {% endif %}
+
+      {# Strategy selected via cards -> stored into hidden input #}
+      <input type="hidden" name="strategy_focus" id="strategy_focus" value="flip">
+
+      <div class="onb-card">
+        <div style="font-weight:900;">Choose your primary strategy</div>
+        <div class="onb-muted" style="margin-top:6px;">
+          This only sets your default widgets + language. You can run all strategies inside Deal Workspace.
+        </div>
+
+        <div class="onb-choices" role="list">
+          <button type="button" class="onb-choice on" data-strategy="flip" onclick="pickStrategy(this)">
+            <p class="k">Flip</p>
+            <p class="v">Fast evaluation, rehab scope, ARV + exit.</p>
+          </button>
+
+          <button type="button" class="onb-choice" data-strategy="rental" onclick="pickStrategy(this)">
+            <p class="k">Rental</p>
+            <p class="v">Cash flow, DSCR, rent comps + hold plan.</p>
+          </button>
+
+          <button type="button" class="onb-choice" data-strategy="str" onclick="pickStrategy(this)">
+            <p class="k">STR / Airbnb</p>
+            <p class="v">Nightly rate, occupancy + furnishing plan.</p>
+          </button>
+        </div>
+      </div>
+
+      <div class="onb-grid">
+        <div class="onb-card">
+          <div style="font-weight:900;">Notification preferences</div>
+          <div class="onb-muted" style="margin-top:6px;">
+            Keep this calm: only important updates, no spam.
+          </div>
+
+          <div class="onb-row">
+            <label class="onb-toggle" style="flex:1;">
+              <input type="checkbox" name="pref_email" value="1" checked>
+              <div>
+                <p class="t">Email updates</p>
+                <p class="d">Funding status, doc requests, approvals.</p>
+              </div>
+            </label>
+
+            <label class="onb-toggle" style="flex:1;">
+              <input type="checkbox" name="pref_sms" value="1">
+              <div>
+                <p class="t">SMS alerts</p>
+                <p class="d">Only time-sensitive items and deadlines.</p>
+              </div>
+            </label>
+          </div>
+
+          <label class="onb-toggle" style="margin-top:10px;">
+            <input type="checkbox" name="pref_weekly_summary" value="1" checked>
+            <div>
+              <p class="t">Weekly summary</p>
+              <p class="d">A simple recap of your active deals + next steps.</p>
+            </div>
+          </label>
+        </div>
+
+        <div class="onb-card">
+          <div style="font-weight:900;">What you can do next</div>
+          <ul style="color:var(--muted); margin:10px 0 0; padding-left:18px; line-height:1.7;">
+            <li>Build your Strategy Profile</li>
+            <li>Start a capital request</li>
+            <li>Upload docs and track progress</li>
+            <li>Run Deal Workspace + AI insight</li>
+          </ul>
+
+          <div style="margin-top:12px; display:flex; flex-direction:column; gap:10px;">
+            <button class="ravlo-btn primary" type="submit">
+              Save & Continue →
+            </button>
+
+            <button class="ravlo-btn ghost" type="button"
+                    onclick="location.href='{{ url_for('investor.command_center') }}'">
+              Skip for Now
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="onb-muted" style="margin-top:12px; font-size:12px;">
+        Tip: You can change these later in Settings.
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+  function pickStrategy(btn){
+    const all = document.querySelectorAll(".onb-choice");
+    all.forEach(b => b.classList.remove("on"));
+    btn.classList.add("on");
+    const val = btn.getAttribute("data-strategy") || "flip";
+    const hidden = document.getElementById("strategy_focus");
+    if (hidden) hidden.value = val;
+  }
+</script>
+
+{% endblock %}

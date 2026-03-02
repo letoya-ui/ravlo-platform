@@ -1,0 +1,125 @@
+{# templates/investor/loan_status.html #}
+{% extends "layouts/ravlo_base.html" %}
+{% block title %}Ravlo • Loan Status{% endblock %}
+
+{% block page_title %}Loan Status Overview{% endblock %}
+{% block page_subline %}Track your loan progress, documents, and milestones in real time.{% endblock %}
+
+{% block topbar_actions %}
+      <button class="ravlo-btn primary sm" type="button"
+            onclick="location.href='{{ url_for('investor.apply') }}'">
+      Start Loan
+    </button>
+  {% endif %}
+
+  
+    <button class="ravlo-btn ghost sm" type="button"
+            onclick="location.href='{{ url_for('investor.loan_center') }}'">
+      Loan Center
+    </button>
+  {% endif %}
+{% endblock %}
+
+{% block content %}
+
+{# =========================
+   STATS STRIP
+========================= #}
+<div class="ravlo-grid cols-5">
+  <div class="ravlo-kpi">
+    <div class="value">{{ stats.total_loans or 0 }}</div>
+    <div class="label">Total Loans</div>
+  </div>
+  <div class="ravlo-kpi">
+    <div class="value">{{ stats.active_loans or 0 }}</div>
+    <div class="label">Active Loans</div>
+  </div>
+  <div class="ravlo-kpi">
+    <div class="value">{{ stats.completed_loans or 0 }}</div>
+    <div class="label">Completed</div>
+  </div>
+  <div class="ravlo-kpi">
+    <div class="value">{{ stats.pending_docs or 0 }}</div>
+    <div class="label">Pending Docs</div>
+  </div>
+  <div class="ravlo-kpi">
+    <div class="value">{{ stats.verified_docs or 0 }}</div>
+    <div class="label">Verified Docs</div>
+  </div>
+</div>
+
+{# =========================
+   LOANS TABLE
+========================= #}
+<div class="ravlo-card pad mt-16">
+  <div class="row between">
+    <div class="ravlo-card-title">My Loans</div>
+
+      <button class="ravlo-btn ghost sm" type="button"
+              onclick="location.href='{{ url_for('investor.apply') }}'">
+        + New Loan
+      </button>
+    {% endif %}
+  </div>
+
+  {% if loans %}
+    <div class="mt-12">
+      <table class="ravlo-table">
+        <thead>
+          <tr>
+            <th style="width:90px;">ID</th>
+            <th>Type</th>
+            <th>Amount</th>
+            <th>Status</th>
+            <th>Created</th>
+            <th style="text-align:right;">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for loan in loans %}
+          {% set s = (loan.status or 'pending')|lower %}
+          <tr>
+            <td>#{{ loan.id }}</td>
+            <td>{{ loan.loan_type or "—" }}</td>
+            <td>${{ "{:,.2f}".format(loan.amount or 0) }}</td>
+            <td>
+              <span class="ravlo-badge
+                {% if s in ['funded','closed','clear to close'] %}ok
+                {% elif s in ['review','processing','submitted','underwriting'] %}watch
+                {% else %}risk{% endif %}">
+                {{ loan.status or 'Pending' }}
+              </span>
+            </td>
+            <td>{{ loan.created_at.strftime('%b %d, %Y') if loan.created_at else '—' }}</td>
+            <td style="text-align:right;">
+                <button class="ravlo-btn primary sm" type="button"
+                        onclick="location.href='{{ url_for('investor.loan_view', loan_id=loan.id) }}'">
+                  View / Manage
+                </button>
+              {% else %}
+                <span style="color:var(--muted); font-size:.9rem;">Route missing: investor.loan_view</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <div class="mt-12" style="color:var(--muted); text-align:center;">
+      No loan records found yet.
+    </div>
+  {% endif %}
+</div>
+
+{# =========================
+   AI INSIGHTS
+========================= #}
+{% if ai_summary %}
+<div class="ravlo-card pad mt-16" style="border-left:3px solid var(--accent); background: rgba(122,184,255,0.06);">
+  <div class="ravlo-card-title">AI Insights</div>
+  <p style="color:var(--muted); margin-top:.6rem;">{{ ai_summary }}</p>
+</div>
+{% endif %}
+
+{% endblock %}

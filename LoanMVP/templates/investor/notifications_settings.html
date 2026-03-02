@@ -1,0 +1,140 @@
+{# investor/notification_preferences.html #}
+{% extends "layouts/ravlo_base.html" %}
+
+{% block title %}Ravlo • Notification Preferences{% endblock %}
+{% block page_title %}Notification Preferences{% endblock %}
+{% block page_subline %}Control how Ravlo keeps you updated.{% endblock %}
+
+{% block topbar_actions %}
+  <button class="ravlo-btn ghost sm" type="button"
+          onclick="location.href='{{ url_for('investor.profile') }}{% else %}{{ url_for('investor.command_center') }}{% endif %}'">
+    Back
+  </button>
+{% endblock %}
+
+{% block content %}
+
+<style>
+  .pref-card{
+    max-width: 560px;
+    margin-top: 14px;
+  }
+  .pref-option{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding: 14px;
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 14px;
+    background: rgba(255,255,255,0.02);
+    margin-bottom: 12px;
+  }
+  .pref-option .info{
+    display:flex;
+    flex-direction:column;
+    gap:4px;
+  }
+  .pref-option .title{
+    font-weight:800;
+  }
+  .pref-option .desc{
+    font-size:12px;
+    color: var(--muted);
+  }
+
+  /* Toggle */
+  .switch{
+    position:relative;
+    width:46px;
+    height:26px;
+  }
+  .switch input{
+    opacity:0;
+    width:0;
+    height:0;
+  }
+  .slider{
+    position:absolute;
+    cursor:pointer;
+    inset:0;
+    background: rgba(255,255,255,0.18);
+    border-radius: 999px;
+    transition:.2s;
+  }
+  .slider:before{
+    content:"";
+    position:absolute;
+    height:20px;
+    width:20px;
+    left:3px;
+    top:3px;
+    background:white;
+    border-radius:50%;
+    transition:.2s;
+  }
+  .switch input:checked + .slider{
+    background: rgba(122,184,255,0.95);
+  }
+  .switch input:checked + .slider:before{
+    transform: translateX(20px);
+  }
+</style>
+
+<div class="ravlo-card pad pref-card">
+
+  <form method="POST"
+        action="{{ url_for('investor.notification_preferences')  }}">
+
+    {{% if csrf_token is defined }}
+       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    {% endif %}
+
+    <div class="pref-option">
+      <div class="info">
+        <div class="title">Email Notifications</div>
+        <div class="desc">
+          Receive loan updates, document alerts, and funding notifications by email.
+        </div>
+      </div>
+
+      <label class="switch">
+        <input type="checkbox"
+               name="email_notifications"
+               {% if borrower and borrower.email_notifications %}checked{% endif %}>
+        <span class="slider"></span>
+      </label>
+    </div>
+
+    <div class="pref-option">
+      <div class="info">
+        <div class="title">SMS Notifications</div>
+        <div class="desc">
+          Get text alerts for important status changes and urgent conditions.
+        </div>
+      </div>
+
+      <label class="switch">
+        <input type="checkbox"
+               name="sms_notifications"
+               {% if borrower and borrower.sms_notifications %}checked{% endif %}>
+        <span class="slider"></span>
+      </label>
+    </div>
+
+    <div style="margin-top:16px; display:flex; gap:10px; flex-wrap:wrap;">
+      <button type="submit" class="ravlo-btn primary">
+        Save Preferences
+      </button>
+
+      <button type="button"
+              class="ravlo-btn ghost"
+              onclick="location.href='{{ url_for('investor.command_center') }}{% else %}{{ url_for('investor.index') }}{% endif %}'">
+        Cancel
+      </button>
+    </div>
+
+  </form>
+
+</div>
+
+{% endblock %}

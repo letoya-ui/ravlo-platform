@@ -1,0 +1,326 @@
+{# templates/investor/property_tool.html #}
+{% extends "layouts/ravlo_base.html" %}
+{% block title %}Ravlo • Property Tool{% endblock %}
+
+{% block page_title %}Property Tool{% endblock %}
+{% block page_subline %}Search by ZIP and get deal metrics for flips or rentals.{% endblock %}
+
+{% block topbar_actions %}
+  <button class="ravlo-btn ghost sm" type="button"
+          onclick="location.href='{{ url_for("investor.command_center") }}'">
+    Command Center
+  </button>
+
+  <button class="ravlo-btn primary sm" type="button"
+          onclick="location.href='{{ url_for("investor.saved_properties") }}'">
+    Saved Properties
+  </button>
+{% endblock %}
+
+{% block content %}
+
+<div class="ravlo-grid cols-2" style="grid-template-columns: 1fr 1.6fr; gap:1rem;">
+
+  <!-- LEFT: SEARCH PANEL -->
+  <div class="ravlo-card pad">
+    <div class="ravlo-card-title">Search</div>
+
+    <label class="ravlo-label" style="margin-top:.75rem;">ZIP Code</label>
+    <input id="zip" class="ravlo-input" placeholder="e.g., 10924" />
+
+    <label class="ravlo-label" style="margin-top:.75rem;">Strategy</label>
+    <select id="strategy" class="ravlo-input">
+      <option value="flip">Fixer-Upper (Flip)</option>
+      <option value="rental">Rental (Cashflow)</option>
+      <option value="all">All</option>
+    </select>
+
+    <div class="ravlo-grid cols-2" style="margin-top:.75rem; gap:.75rem;">
+      <div>
+        <label class="ravlo-label">Min Price</label>
+        <input id="price_min" class="ravlo-input" type="number" placeholder="0" />
+      </div>
+      <div>
+        <label class="ravlo-label">Max Price</label>
+        <input id="price_max" class="ravlo-input" type="number" placeholder="500000" />
+      </div>
+    </div>
+
+    <div class="ravlo-grid cols-2" style="margin-top:.6rem; gap:.75rem;">
+      <div>
+        <label class="ravlo-label">Beds ≥</label>
+        <input id="beds_min" class="ravlo-input" type="number" placeholder="2" />
+      </div>
+      <div>
+        <label class="ravlo-label">Baths ≥</label>
+        <input id="baths_min" class="ravlo-input" type="number" placeholder="1" />
+      </div>
+    </div>
+
+    <div class="ravlo-grid cols-2" style="margin-top:.6rem; gap:.75rem;">
+      <div>
+        <label class="ravlo-label">Min ROI (flip)</label>
+        <input id="min_roi" class="ravlo-input" type="number" step="0.01" placeholder="0.20" />
+      </div>
+      <div>
+        <label class="ravlo-label">Min Cashflow (rental)</label>
+        <input id="min_cashflow" class="ravlo-input" type="number" placeholder="300" />
+      </div>
+    </div>
+
+    <button class="ravlo-btn primary" style="margin-top:1rem;width:100%;" onclick="runSearch()">
+      🔍 Run Search
+    </button>
+
+    <div id="searchStatus" style="color:var(--muted); margin-top:.75rem;"></div>
+  </div>
+
+  <!-- RIGHT: RESULTS -->
+  <div>
+    <div id="results" class="ravlo-grid cols-2"></div>
+  </div>
+
+</div>
+
+<script>
+function money(x){
+  if (x === null || x === undefined || x === "") return "—";
+  const n = Number(x);
+  if (Number.isNaN(n)) return "—";
+  return "$" + n.toLocaleString(undefined, {maximumFractionDigits:0});
+}
+
+function numOrNull(v){
+  if (v === null || v === undefined) return null;
+  const s = String(v).trim();
+  if (!s) return null;
+  const n = Number(s);
+  return Number.isNaN(n) ? null : n;
+}
+
+async function saveAndAnalyze(item){
+  const btn = document.getElementById(item._btnId);
+  if (btn){ btn.disabled = true; btn.innerText = "Saving…"; }
+
+  try{
+    const resp = await fetch("{{ url_for('investor.api_property_tool_save') }}", {
+      method: "POST",
+      headers: {"Content-Type":"application/json"},
+      credentials: "include",
+      body: JSON.stringify({
+        address: item.address || "",
+        city: item.city || "",
+        state: item.state || "",
+        zip: item.zip || "",
+        price: item.price ?? null,
+        sqft: item.sqft ?? null,
+        photo: item.photo || null,
+        property_id: item.property_id || null
+      })
+    });
+
+    const data = await resp.json();
+    if (data.status !== "ok"){
+      alert(data.message || "Could not save property.");
+      if (btn){ btn.disabled = false; btn.innerText = "📈 Send to Deal Workspace"; }
+      return;
+    }
+
+    // server returns deal_url (preferred)
+    if (data.deal_url){
+      window.location.href = data.deal_url;
+      return;
+    }
+
+    // fallback if server returns saved_id only
+    if (data.saved_id){
+      window.location.href = "{{ url_for('investor.deal_workspace') }}" + "?prop_id=" + data.saved_id + "&mode=flip";
+      return;
+    }
+
+    alert("Saved, but no redirect URL returned.");
+
+  } catch (e){
+    console.error(e);
+    alert("Network error while saving. Try again.");
+    if (btn){ btn.disabled = false; btn.innerText = "📈 Send to Deal Workspace"; }
+  }
+}
+
+async function saveOnly(item){
+  const btn = document.getElementById(item._saveBtnId);
+  if (btn){ btn.disabled = true; btn.innerText = "Saving…"; }
+
+  try{
+    const resp = await fetch("{{ url_for('investor.api_property_tool_save') }}", {
+      method: "POST",
+      headers: {"Content-Type":"application/json"},
+      credentials: "include",
+      body: JSON.stringify({
+        address: item.address || "",
+        city: item.city || "",
+        state: item.state || "",
+        zip: item.zip || "",
+        price: item.price ?? null,
+        sqft: item.sqft ?? null,
+        photo: item.photo || null,
+        property_id: item.property_id || null
+      })
+    });
+
+    const data = await resp.json();
+    if (data.status !== "ok"){
+      alert(data.message || "Could not save property.");
+      if (btn){ btn.disabled = false; btn.innerText = "💾 Save"; }
+      return;
+    }
+
+    if (btn){
+      btn.innerText = "✅ Saved";
+      setTimeout(() => { btn.disabled = false; btn.innerText = "💾 Save"; }, 1200);
+    }
+
+  } catch (e){
+    console.error(e);
+    alert("Network error while saving. Try again.");
+    if (btn){ btn.disabled = false; btn.innerText = "💾 Save"; }
+  }
+}
+
+async function runSearch(){
+  const zip = document.getElementById("zip").value.trim();
+  const strategy = document.getElementById("strategy").value;
+
+  const status = document.getElementById("searchStatus");
+  const results = document.getElementById("results");
+
+  if (!zip){
+    status.innerText = "Enter a ZIP code first.";
+    return;
+  }
+
+  const payload = {
+    zip,
+    strategy,
+    price_min: numOrNull(document.getElementById("price_min").value),
+    price_max: numOrNull(document.getElementById("price_max").value),
+    beds_min:  numOrNull(document.getElementById("beds_min").value),
+    baths_min: numOrNull(document.getElementById("baths_min").value),
+    min_roi:   numOrNull(document.getElementById("min_roi").value),
+    min_cashflow: numOrNull(document.getElementById("min_cashflow").value),
+    limit: 20
+  };
+
+  status.innerText = "Searching…";
+  results.innerHTML = "";
+
+  try{
+    const resp = await fetch("{{ url_for('investor.api_property_tool_search') }}", {
+      method:"POST",
+      headers: {"Content-Type":"application/json"},
+      credentials: "include",
+      body: JSON.stringify(payload)
+    });
+
+    const data = await resp.json();
+    if (data.status !== "ok"){
+      status.innerText = data.message || "Search failed.";
+      return;
+    }
+
+    status.innerText = `Found ${data.results.length} opportunities in ${data.zip}.`;
+
+    results.innerHTML = data.results.map((r, idx) => {
+      const m = r.metrics || {};
+      const safeId = `dw_${idx}_${Date.now()}`;
+      const saveId = `sv_${idx}_${Date.now()}`;
+      const propertyId = r.property_id || r.propertyId || r.id || null;
+
+      const payloadObj = {
+        address: r.address || "",
+        city: r.city || "",
+        state: r.state || "",
+        zip: r.zip || "",
+        price: r.price ?? null,
+        sqft: r.sqft ?? null,
+        photo: r.photo || null,
+        property_id: propertyId,
+        _btnId: safeId,
+        _saveBtnId: saveId
+      };
+
+      const encoded = encodeURIComponent(JSON.stringify(payloadObj));
+
+      return `
+        <div class="ravlo-card pad">
+          <div class="row" style="gap:.8rem; align-items:flex-start;">
+            <div style="width:64px;height:64px;border-radius:14px;overflow:hidden;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03);flex:0 0 auto;">
+              ${r.photo ? `<img src="${r.photo}" style="width:100%;height:100%;object-fit:cover;">` : ``}
+            </div>
+            <div style="min-width:0;">
+              <div style="font-weight:900;color:var(--text);font-size:.95rem;line-height:1.2;">
+                ${r.address || "—"}
+              </div>
+              <div style="color:var(--muted);font-size:.78rem;margin-top:.2rem;">
+                ${r.city || ""} ${r.state || ""} ${r.zip || ""}
+              </div>
+            </div>
+          </div>
+
+          <div style="margin-top:.75rem;display:grid;grid-template-columns:1fr 1fr;gap:.5rem;font-size:.78rem;">
+            <div><span style="color:var(--muted);">Price</span><br><strong>${money(r.price)}</strong></div>
+            <div><span style="color:var(--muted);">Sqft</span><br><strong>${r.sqft || "—"}</strong></div>
+            <div><span style="color:var(--muted);">Flip Profit</span><br><strong>${money(m.profit)}</strong></div>
+            <div><span style="color:var(--muted);">Flip ROI</span><br><strong>${(m.roi !== undefined && m.roi !== null) ? Math.round(m.roi*100) + "%" : "—"}</strong></div>
+            <div><span style="color:var(--muted);">Rent Est</span><br><strong>${money(m.rent_est)}</strong></div>
+            <div><span style="color:var(--muted);">Cashflow</span><br><strong>${money(m.net_cashflow_mo)}</strong></div>
+          </div>
+
+          <div style="margin-top:.75rem;display:flex;gap:.5rem;flex-wrap:wrap;">
+            <button
+              id="${safeId}"
+              type="button"
+              class="ravlo-btn ghost"
+              onclick='saveAndAnalyze(JSON.parse(decodeURIComponent("${encoded}")))'>
+              📈 Send to Deal Workspace
+            </button>
+
+            <button
+              id="${saveId}"
+              type="button"
+              class="ravlo-btn ghost"
+              style="opacity:.92;"
+              onclick='saveOnly(JSON.parse(decodeURIComponent("${encoded}")))'>
+              💾 Save
+            </button>
+          </div>
+        </div>
+      `;
+    }).join("");
+
+  } catch (e){
+    console.error(e);
+    status.innerText = "Search failed (network).";
+  }
+}
+</script>
+
+<style>
+/* Keep your inputs readable inside Ravlo base */
+.ravlo-input{
+  width:100%;
+  padding:.75rem .85rem;
+  border-radius:14px;
+  background: rgba(255,255,255,.04);
+  border: 1px solid rgba(255,255,255,.10);
+  color: rgba(230,235,240,.92);
+  outline: none;
+}
+.ravlo-input::placeholder{ color: rgba(230,235,240,.45); }
+.ravlo-input:focus{
+  border-color: rgba(122,184,255,.45);
+  box-shadow: 0 0 0 4px rgba(122,184,255,.10);
+}
+</style>
+
+{% endblock %}

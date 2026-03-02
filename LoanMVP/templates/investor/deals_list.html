@@ -1,0 +1,111 @@
+{% extends "layouts/ravlo_base.html" %}
+{% block title %}Ravlo • Saved Deals{% endblock %}
+
+{% block page_title %}Saved Deals{% endblock %}
+{% block page_subline %}Browse, open, edit, or delete deals you’ve saved.{% endblock %}
+
+{% block topbar_actions %}
+  <button class="ravlo-btn ghost sm" type="button"
+          onclick="location.href='{{ url_for('investor.command_center') }}'">
+    Command Center
+  </button>
+
+  <button class="ravlo-btn primary sm" type="button"
+          onclick="location.href='{{ url_for('investor.deal_workspace') }}'">
+    New Deal
+  </button>
+  {% endif %}
+{% endblock %}
+
+{% block content %}
+
+<div class="page-header">
+  <h2>Saved Deals</h2>
+  <p class="text-muted">Browse, open, edit, or delete deals you’ve saved.</p>
+</div>
+
+<div class="ravlo-card pad" style="margin-top:1rem;">
+  <form method="GET" action="{{ url_for('investor.deals_list') }}"
+        style="display:flex; gap:.75rem; flex-wrap:wrap; align-items:center;">
+    <input class="dw-input" name="q" value="{{ q or '' }}"
+           placeholder="Search title, property_id, strategy..."
+           style="flex:1; min-width:240px;">
+
+    <select class="dw-input" name="status" style="width:160px;">
+      <option value="active" {% if status == 'active' %}selected{% endif %}>Active</option>
+      <option value="archived" {% if status == 'archived' %}selected{% endif %}>Archived</option>
+      <option value="all" {% if status == 'all' %}selected{% endif %}>All</option>
+    </select>
+
+    <button class="ravlo-btn primary sm" type="submit">Search</button>
+
+    {% if q or (status and status != 'active') %}
+      <button class="ravlo-btn ghost sm" type="button"
+              onclick="location.href='{{ url_for('investor.deals_list') }}'">
+        Reset
+      </button>
+    {% endif %}
+  </form>
+</div>
+
+<div class="ravlo-card pad" style="margin-top:1rem;">
+  {% if deals and deals|length %}
+
+    <table class="ravlo-table" style="width:100%;">
+      <thead>
+        <tr>
+          <th>Title</th>
+          <th>Property ID</th>
+          <th>Strategy</th>
+          <th>Updated</th>
+          <th style="width:320px; text-align:right;">Actions</th>
+        </tr>
+      </thead>
+
+      <tbody>
+        {% for d in deals %}
+          <tr>
+            <td style="font-weight:700;">
+              <a href="{{ url_for('investor.deal_detail', deal_id=d.id) }}"
+                 style="color:var(--text); text-decoration:none;">
+                {{ d.title or ('Deal #' ~ d.id) }}
+              </a>
+            </td>
+            <td style="color:var(--muted);">{{ d.property_id or '—' }}</td>
+            <td style="color:var(--muted);">{{ d.strategy or '—' }}</td>
+            <td style="color:var(--muted);">
+              {{ d.updated_at.strftime('%Y-%m-%d %H:%M') if d.updated_at else '—' }}
+            </td>
+
+            <td style="text-align:right;">
+              <div style="display:flex; gap:.5rem; justify-content:flex-end; flex-wrap:wrap;">
+                <button class="ravlo-btn ghost sm" type="button"
+                        onclick="location.href='{{ url_for('investor.deal_detail', deal_id=d.id) }}'">
+                  View
+                </button>
+
+                <button class="ravlo-btn primary sm" type="button"
+                        onclick="location.href='{{ url_for('investor.deal_open', deal_id=d.id) }}'">
+                  Open
+                </button>
+
+                <form method="POST" action="{{ url_for('investor.deal_delete', deal_id=d.id) }}" style="display:inline;">
+                  {{ csrf_token() if csrf_token is defined }}
+                  <button type="submit" class="ravlo-btn ghost sm"
+                          onclick="return confirm('Delete this deal?')">
+                    Delete
+                  </button>
+                </form>
+              </div>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+  {% else %}
+    <p class="ai-text" style="color:var(--muted); margin:0;">No deals saved yet.</p>
+  {% endif %}
+</div>
+
+{% endblock %}
