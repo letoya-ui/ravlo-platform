@@ -24,7 +24,6 @@
   <!-- Your new Ravlo CSS -->
   <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
 
-
   {% block head %}{% endblock %}
 </head>
 
@@ -52,7 +51,7 @@
                 </linearGradient>
               </defs>
               <path fill="url(#rvMetal)" d="M18 14h18c7 0 12 4 12 10 0 5-3 8-8 9l10 17H38L30 36h-6v14H18V14zm6 6v10h11c4 0 6-2 6-5s-2-5-6-5H24z"/>
-              <path fill="url(#rvMetal)" d="M36 14h8l8 18 8-18h8L60 50h-8l-8-18-8 18h-8l8-18-8-18z" opacity=".0"/>
+              <path fill="url(#rvMetal)" d="M36 14h8l8 18 8-18h8L60 50h-8l-8-18-8 18h-8l8-18-8-18z" opacity="0"/>
               {# NOTE: placeholder. Swap with your real RV monogram path(s). #}
             </svg>
           </div>
@@ -65,44 +64,44 @@
       </div>
 
       <nav class="ravlo-nav">
-        <a class="{% if ep in ['investor.command_center'] %}active{% endif %}"
+        <a class="{% if ep == 'investor.command_center' %}active{% endif %}"
            href="{{ url_for('investor.command_center') }}">
           <i class="lucide lucide-layout-dashboard icon"></i>
           Command Center
         </a>
 
-        <a class="{% if bp == 'investor.property_search' %}active{% endif %}"
+        <a class="{% if ep == 'investor.property_search' %}active{% endif %}"
            href="{{ url_for('investor.property_search') }}">
           <i class="lucide lucide-search icon"></i>
           Property Intelligence
         </a>
 
-        <a class="{% if bp == 'investor.deals' %}active{% endif %}"
+        <a class="{% if ep == 'investor.deals' %}active{% endif %}"
            href="{{ url_for('investor.deals') }}">
           <i class="lucide lucide-briefcase icon"></i>
           Deals
         </a>
 
-        <a class="{% if bp == investor.saved_properties' %}active{% endif %}"
+        <a class="{% if ep == 'investor.saved_properties' %}active{% endif %}"
            href="{{ url_for('investor.saved_properties') }}">
           <i class="lucide lucide-pie-chart icon"></i>
           Portfolio
         </a>
 
-        <a class="{% if bp == 'investor.loan_view' %}active{% endif %}"
+        <a class="{% if ep == 'investor.loan_view' %}active{% endif %}"
            href="{{ url_for('investor.loan_view') }}">
           <i class="lucide lucide-landmark icon"></i>
           Capital
         </a>
 
-        <a class="{% if bp == 'investor.resource_center' %}active{% endif %}"
+        <a class="{% if ep == 'investor.resource_center' %}active{% endif %}"
            href="{{ url_for('investor.resource_center') }}">
           <i class="lucide lucide-scroll-text icon"></i>
           Strategy Profile
         </a>
 
-        <a class="{% if bp == 'investor.documents' %}active{% endif %}"
-           href="{{ url_for('investor.documents')  }}">
+        <a class="{% if ep == 'investor.documents' %}active{% endif %}"
+           href="{{ url_for('investor.documents') }}">
           <i class="lucide lucide-folder icon"></i>
           Documents
         </a>
