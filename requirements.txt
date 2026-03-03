@@ -4,6 +4,8 @@ Jinja2==3.1.4
 itsdangerous==2.2.0
 click==8.1.7
 blinker==1.9.0
+boto3==1.34.69
+botocore==1.34.69
 
 Flask-Login==0.6.3
 Flask-Migrate==4.1.0
@@ -44,4 +46,5 @@ pydantic==2.7.4
 annotated-types==0.7.0
 
 waitress==3.0.0
+
 
