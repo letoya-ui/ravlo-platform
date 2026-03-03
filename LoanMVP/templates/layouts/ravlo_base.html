@@ -87,7 +87,13 @@
           <i class="lucide lucide-pie-chart icon"></i>
           Portfolio
         </a>
-
+        
+        <a class="{% if ep == 'investor.apply' %}active{% endif %}"
+           href="{{ url_for('investor.apply') }}">
+          <i class="lucide lucide-landmark icon"></i>
+          Apply
+        </a>
+ 
         <a class="{% if ep == 'investor.resource_center' %}active{% endif %}"
            href="{{ url_for('investor.resource_center') }}">
           <i class="lucide lucide-scroll-text icon"></i>
