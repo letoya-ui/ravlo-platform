@@ -15,13 +15,13 @@ Manage your profile, preferences, and account details.
     <div class="row" style="gap:16px;">
       <div class="ravlo-mark" style="width:52px; height:52px;">
         <span style="font-size:20px; font-weight:700;">
-          {{ current_user.first_name[0] }}{{ current_user.last_name[0] }}
+          {{ investor.first_name[0] }}{{ investor.last_name[0] }}
         </span>
       </div>
 
       <div>
         <div class="ravlo-title" style="font-size:22px; margin:0;">
-          {{ current_user.first_name }} {{ current_user.last_name }}
+          {{ investor.first_name }} {{ investor.last_name }}
         </div>
         <div class="muted" style="margin-top:4px;">
           {{ investor_profile.strategy or "No strategy selected" }}
@@ -31,7 +31,7 @@ Manage your profile, preferences, and account details.
 
     <div class="ravlo-insight" style="min-width:180px;">
       <p class="k">Member Since</p>
-      <p class="v">{{ current_user.created_at.strftime('%b %d, %Y') }}</p>
+      <p class="v">{{ investor.created_at.strftime('%b %d, %Y') }}</p>
     </div>
 
   </div>
@@ -40,7 +40,6 @@ Manage your profile, preferences, and account details.
 
 <!-- ===================== SETTINGS FORM ===================== -->
 <form method="POST" action="{{ url_for('investor.settings') }}">
-  {{ form.hidden_tag() }}
 
   <div class="ravlo-card pad mt-20">
     <h3 class="ravlo-card-title" style="margin-bottom:14px;">Profile Information</h3>
@@ -49,20 +48,20 @@ Manage your profile, preferences, and account details.
       <div>
         <label class="auth-label">First Name</label>
         <input class="ravlo-field" name="first_name"
-               value="{{ current_user.first_name }}">
+               value="{{ investor.first_name }}">
       </div>
 
       <div>
         <label class="auth-label">Last Name</label>
         <input class="ravlo-field" name="last_name"
-               value="{{ current_user.last_name }}">
+               value="{{ investor.last_name }}">
       </div>
     </div>
 
     <div class="mt-20">
       <label class="auth-label">Email</label>
       <input class="ravlo-field" name="email"
-             value="{{ current_user.email }}">
+             value="{{ investor.email }}">
     </div>
 
     <div class="mt-20">
@@ -75,7 +74,7 @@ Manage your profile, preferences, and account details.
 
 
   <!-- ===================== PASSWORD SECTION ===================== -->
-  <div class="ravlo-card pad mt-20">
+  <div class="ravlo-card pad mt-20" id="password">
     <h3 class="ravlo-card-title" style="margin-bottom:14px;">Password</h3>
 
     <div class="mt-12">
@@ -108,11 +107,5 @@ Manage your profile, preferences, and account details.
   </div>
 
 </form>
-
-
-<!-- Timestamp -->
-<div class="muted mt-20">
-  {{ now_str }}
-</div>
 
 {% endblock %}
