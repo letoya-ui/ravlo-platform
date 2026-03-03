@@ -11,6 +11,24 @@ from wtforms.validators import  DataRequired, Optional, Length, Email, NumberRan
 
 
 class InvestorProfileForm(FlaskForm):
+    full_name = StringField("Full Name", validators=[DataRequired(), Length(max=120)])
+    phone = StringField("Phone", validators=[Optional(), Length(max=20)])
+    email = StringField("Email", validators=[DataRequired(), Email()])
+    address = StringField("Address", validators=[Optional(), Length(max=255)])
+    city = StringField("City", validators=[Optional(), Length(max=100)])
+    state = StringField("State", validators=[Optional(), Length(max=50)])
+    zip_code = StringField("Zip Code", validators=[Optional(), Length(max=10)])
+    employment_status = SelectField("Employment Status", choices=[
+        ("Employed", "Employed"),
+        ("Self-Employed", "Self-Employed"),
+        ("Unemployed", "Unemployed"),
+        ("Retired", "Retired"),
+        ("Other", "Other")
+    ], validators=[Optional()])
+    annual_income = DecimalField("Annual Income ($)", validators=[Optional()])
+    credit_score = IntegerField("Credit Score", validators=[Optional()])
+    submit = SubmitField("Save Profile")
+
     # Required fields for creating a profile
     strategy = SelectField(
         "Primary Strategy",
@@ -59,10 +77,9 @@ class InvestorProfileForm(FlaskForm):
     submit = SubmitField("Create Profile")
 
 class InvestorSettingsForm(FlaskForm):
-    first_name = StringField("First Name", validators=[DataRequired()])
-    last_name = StringField("Last Name", validators=[DataRequired()])
+    full_name = StringField("Full Name", validators=[DataRequired(), Length(max=120)])
+    phone = StringField("Phone", validators=[Optional(), Length(max=20)])
     email = StringField("Email", validators=[DataRequired(), Email()])
-    strategy = StringField("Investment Strategy", validators=[Optional()])
 
     current_password = PasswordField("Current Password", validators=[Optional()])
     new_password = PasswordField("New Password", validators=[Optional()])
