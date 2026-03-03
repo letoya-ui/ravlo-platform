@@ -11,34 +11,19 @@ from wtforms.validators import  DataRequired, Optional, Length, Email, NumberRan
 
 
 class InvestorProfileForm(FlaskForm):
-    full_name = StringField("Full Name", validators=[DataRequired(), Length(max=120)])
-    phone = StringField("Phone", validators=[Optional(), Length(max=20)])
+    full_name = StringField("Full Name", validators=[DataRequired()])
     email = StringField("Email", validators=[DataRequired(), Email()])
-    address = StringField("Address", validators=[Optional(), Length(max=255)])
-    city = StringField("City", validators=[Optional(), Length(max=100)])
-    state = StringField("State", validators=[Optional(), Length(max=50)])
-    zip_code = StringField("Zip Code", validators=[Optional(), Length(max=10)])
-    employment_status = SelectField("Employment Status", choices=[
-        ("Employed", "Employed"),
-        ("Self-Employed", "Self-Employed"),
-        ("Unemployed", "Unemployed"),
-        ("Retired", "Retired"),
-        ("Other", "Other")
-    ], validators=[Optional()])
-    annual_income = DecimalField("Annual Income ($)", validators=[Optional()])
-    credit_score = IntegerField("Credit Score", validators=[Optional()])
-    submit = SubmitField("Save Profile")
+    phone = StringField("Phone", validators=[Optional()])
 
-    # Required fields for creating a profile
     strategy = SelectField(
-        "Primary Strategy",
+        "Investment Strategy",
         choices=[
             ("fix_and_flip", "Fix & Flip"),
             ("buy_and_hold", "Buy & Hold"),
             ("new_construction", "New Construction"),
             ("wholesale", "Wholesale"),
         ],
-        validators=[DataRequired()],
+        validators=[Optional()],
     )
 
     experience_level = SelectField(
@@ -48,31 +33,27 @@ class InvestorProfileForm(FlaskForm):
             ("intermediate", "Intermediate"),
             ("advanced", "Advanced"),
         ],
-        validators=[DataRequired()],
+        validators=[Optional()],
     )
 
-    # Buy box
     target_markets = StringField("Target Markets", validators=[Optional()])
     property_types = StringField("Property Types", validators=[Optional()])
-    min_price = IntegerField("Min Price", validators=[Optional(), NumberRange(min=0)])
-    max_price = IntegerField("Max Price", validators=[Optional(), NumberRange(min=0)])
-    min_sqft = IntegerField("Min Sq Ft", validators=[Optional(), NumberRange(min=0)])
-    max_sqft = IntegerField("Max Sq Ft", validators=[Optional(), NumberRange(min=0)])
 
-    # Capital & returns
-    capital_available = DecimalField("Capital Available", validators=[Optional()])
+    min_price = IntegerField("Min Price", validators=[Optional()])
+    max_price = IntegerField("Max Price", validators=[Optional()])
+    min_sqft = IntegerField("Min Sq Ft", validators=[Optional()])
+    max_sqft = IntegerField("Max Sq Ft", validators=[Optional()])
+
+    capital_available = IntegerField("Capital Available", validators=[Optional()])
     min_cash_on_cash = DecimalField("Min Cash-on-Cash Return", validators=[Optional()])
     min_roi = DecimalField("Min ROI", validators=[Optional()])
     timeline_days = IntegerField("Timeline (Days)", validators=[Optional()])
 
-    # Risk
     risk_tolerance = SelectField(
         "Risk Tolerance",
         choices=[("low", "Low"), ("medium", "Medium"), ("high", "High")],
         validators=[Optional()],
     )
-
-    notes = TextAreaField("Notes", validators=[Optional()])
 
     submit = SubmitField("Create Profile")
 
