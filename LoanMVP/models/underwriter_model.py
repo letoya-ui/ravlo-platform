@@ -121,7 +121,7 @@ class ConditionRequest(db.Model):
     )
     investor_profile_id = db.Column(
         db.Integer,
-        db.ForeignKey("borrower_profile.id", name="fk_conditionreq_investor_id"),
+        db.ForeignKey("investor_profile.id", name="fk_conditionreq_investor_id"),
         nullable=True
     )
     document_name = db.Column(db.String(255), nullable=True)
