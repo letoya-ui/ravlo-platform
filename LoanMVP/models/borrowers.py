@@ -53,6 +53,7 @@ class ProjectBudget(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     borrower_profile_id = db.Column(db.Integer, db.ForeignKey("borrower_profile.id"), nullable=False)
+    investor_profile_id = db.Column( db.Integer, db.ForeignKey("investor_profile.id"), nullable=True)
     loan_app_id = db.Column(db.Integer, db.ForeignKey("loan_application.id"), nullable=True)
 
     name = db.Column(db.String(100), nullable=False)
@@ -69,6 +70,7 @@ class ProjectBudget(db.Model):
 
     # ✅ Relationships
     borrower = db.relationship("BorrowerProfile", back_populates="budgets")
+    investor_profile = db.relationship( "InvestorProfile", back_populates="budgets" )
     loan_application = db.relationship("LoanApplication", back_populates="project_budgets")
     expenses = db.relationship("ProjectExpense", back_populates="budget", cascade="all, delete-orphan")
 
@@ -102,7 +104,8 @@ class SubscriptionPlan(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     borrower_profile_id = db.Column(db.Integer, db.ForeignKey("borrower_profile.id"), nullable=False)
-
+    investor_profile_id = db.Column( db.Integer, db.ForeignKey("investor_profile.id"), nullable=True )
+    
     plan_name = db.Column(db.String(100))
     price = db.Column(db.Float)
     features = db.Column(db.Text)
@@ -113,7 +116,8 @@ class SubscriptionPlan(db.Model):
 
     # Relationship
     borrower_profile = db.relationship("BorrowerProfile", backref="subscription_plans")
-
+    investor_profile = db.relationship( "InvestorProfile", backref="subscription_plans" )
+    
     def __repr__(self):
         return f"<SubscriptionPlan {self.plan_name} for Borrower:{self.borrower_id}>"
 
@@ -152,33 +156,30 @@ class Deal(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
 
-    # Ownership / access control
     user_id = db.Column(db.Integer, nullable=False, index=True)
+    borrower_profile_id = db.Column(db.Integer, db.ForeignKey("borrower_profile.id"), nullable=True)
+    investor_profile_id = db.Column(db.Integer, db.ForeignKey("investor_profile.id"), nullable=True)
 
-    saved_property_id = db.Column(db.Integer, db.ForeignKey("saved_properties.id"), nullable=True, index=True)
+    saved_property_id = db.Column(db.Integer, db.ForeignKey("saved_properties.id"), nullable=True)
 
-    # Identifiers / display
-    property_id = db.Column(db.String(120), nullable=True, index=True)
-    title = db.Column(db.String(255), nullable=True)
-    strategy = db.Column(db.String(32), nullable=True)  # flip/rental/airbnb
-    final_before_url = db.Column(db.Text, nullable=True)
-    final_after_url  = db.Column(db.Text, nullable=True)
+    property_id = db.Column(db.String(120), index=True)
+    title = db.Column(db.String(255))
+    strategy = db.Column(db.String(32))
 
-    # Persisted analysis payloads
-    inputs_json = db.Column(db.JSON, nullable=True)   # optional: store inputs
-    results_json = db.Column(db.JSON, nullable=True)
-    comps_json = db.Column(db.JSON, nullable=True)    # optional
-    resolved_json = db.Column(db.JSON, nullable=True) # optional
+    inputs_json = db.Column(db.JSON)
+    results_json = db.Column(db.JSON)
+    comps_json = db.Column(db.JSON)
+    resolved_json = db.Column(db.JSON)
 
-    # Notes / status
-    notes = db.Column(db.Text, nullable=True)
-    status = db.Column(db.String(32), nullable=True, default="active")  # active/archived
+    notes = db.Column(db.Text)
+    status = db.Column(db.String(32), default="active")
 
-    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
-    def __repr__(self):
-        return f"<Deal id={self.id} property_id={self.property_id} strategy={self.strategy}>"
+    # Relationships
+    investor_profile = db.relationship("InvestorProfile", backref="deals")
+
 
 
 class DealShare(db.Model):
@@ -186,26 +187,25 @@ class DealShare(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
 
-    # who sent it
-    borrower_user_id = db.Column(db.Integer, nullable=False, index=True)
+    borrower_user_id = db.Column(db.Integer, db.ForeignKey("borrower_profile.id"), nullable=False)
+    investor_profile_id = db.Column(db.Integer, db.ForeignKey("investor_profile.id"), nullable=True)
 
-    # who receives it (loan officer)
-    loan_officer_user_id = db.Column(db.Integer, nullable=True, index=True)
+    loan_officer_user_id = db.Column(db.Integer)
+    property_id = db.Column(db.String(120))
+    strategy = db.Column(db.String(32))
+    title = db.Column(db.String(255))
 
-    # payload
-    property_id = db.Column(db.String(120), nullable=True, index=True)
-    strategy = db.Column(db.String(32), nullable=True)  # flip/rental/airbnb
-    title = db.Column(db.String(255), nullable=True)
+    results_json = db.Column(db.JSON)
+    comps_json = db.Column(db.JSON)
+    resolved_json = db.Column(db.JSON)
 
-    results_json = db.Column(db.JSON, nullable=True)
-    comps_json = db.Column(db.JSON, nullable=True)
-    resolved_json = db.Column(db.JSON, nullable=True)
+    note = db.Column(db.Text)
+    status = db.Column(db.String(32), default="new")
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    opened_at = db.Column(db.DateTime)
 
-    note = db.Column(db.Text, nullable=True)
-
-    status = db.Column(db.String(32), default="new", nullable=False)  # new/opened/archived
-    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
-    opened_at = db.Column(db.DateTime, nullable=True)
+    # Relationships
+    investor_profile = db.relationship("InvestorProfile", backref="deal_shares")
 
     def __repr__(self):
         return f"<DealShare id={self.id} property_id={self.property_id} status={self.status}>"
