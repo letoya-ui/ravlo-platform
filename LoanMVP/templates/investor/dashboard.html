@@ -8,130 +8,290 @@ Your capital, deals, and funding — in one place.
 
 {% block content %}
 
-<!-- ===================== KPI STRIP ===================== -->
-<div class="cc-kpis">
+<!-- ============================================================
+     IDENTITY HEADER (Premium Ravlo)
+============================================================ -->
+<div class="ravlo-card pad mt-20">
+  <div class="row between">
 
-  <div class="ravlo-card kpi">
-    <div class="kpi-label">Capital Requested</div>
-    <div class="kpi-value">
-      ${{ "{:,.0f}".format(snapshot.amount or 0) }}
-    </div>
-    <div class="kpi-sub muted">
-      {{ primary_stage or "No active request" }}
-    </div>
-  </div>
+    <!-- LEFT: Avatar + Name + Strategy -->
+    <div class="row" style="gap:16px;">
 
-  <div class="ravlo-card kpi">
-    <div class="kpi-label">Active Requests</div>
-    <div class="kpi-value">
-      {{ capital_requests|length }}
-    </div>
-    <div class="kpi-sub muted">Total submitted</div>
-  </div>
+      <!-- Engraved Initials Badge -->
+      <div class="ravlo-mark" style="width:52px; height:52px;">
+        <span style="font-size:20px; font-weight:700;">
+          {{ current_user.first_name[0] }}{{ current_user.last_name[0] }}
+        </span>
+      </div>
 
-  <div class="ravlo-card kpi">
-    <div class="kpi-label">Saved Properties</div>
-    <div class="kpi-value">
-      {{ saved_props|length }}
-    </div>
-    <div class="kpi-sub muted">Portfolio watchlist</div>
-  </div>
+      <div>
+        <div class="ravlo-title" style="font-size:22px; margin:0;">
+          {{ current_user.first_name }} {{ current_user.last_name }}
+        </div>
 
-  <div class="ravlo-card kpi">
-    <div class="kpi-label">Progress</div>
-    <div class="kpi-value">
-      {{ snapshot.progress_percent }}%
-    </div>
-    <div class="kpi-sub muted">Current capital stage</div>
-  </div>
+        <div class="muted" style="margin-top:4px;">
+          {{ investor_profile.strategy or "No strategy selected" }}
+        </div>
+      </div>
 
-</div>
-
-<!-- ===================== MAIN GRID ===================== -->
-<div class="cc-grid">
-
-  <!-- LEFT: ACTIVE CAPITAL REQUESTS -->
-  <div class="ravlo-card pad">
-
-    <div class="cc-cardhead">
-      <h3>Active Capital Requests</h3>
     </div>
 
-    <table class="cc-table">
-      <thead>
-        <tr>
-          <th>Property</th>
-          <th>Status</th>
-          <th>Amount</th>
-          <th></th>
-        </tr>
-      </thead>
-      <tbody>
-        {% if capital_requests %}
-          {% for req in capital_requests[:6] %}
-            <tr>
-              <td>{{ req.property_address or "Unnamed Property" }}</td>
-              <td>
-                <span class="pill">
-                  {{ req.status or "Open" }}
-                </span>
-              </td>
-              <td>
-                ${{ "{:,.0f}".format(req.amount or 0) }}
-              </td>
-              <td class="td-right">
-                <a href="#" class="ravlo-link">View →</a>
-              </td>
-            </tr>
-          {% endfor %}
-        {% else %}
-          <tr>
-            <td colspan="4" class="muted">
-              No capital requests yet.
-            </td>
-          </tr>
-        {% endif %}
-      </tbody>
-    </table>
-
-  </div>
-
-  <!-- RIGHT COLUMN -->
-  <div class="cc-right">
-
-    <!-- AI INSIGHT -->
-    <div class="ravlo-card pad">
-      <h3>Ravlo Insight</h3>
-      <p class="muted">
-        {{ next_step_ai }}
+    <!-- RIGHT: Capital Snapshot -->
+    <div class="ravlo-insight" style="min-width:180px;">
+      <p class="k">Capital</p>
+      <p class="v">
+        ${{ "{:,.0f}".format(snapshot.amount or 0) }}
       </p>
     </div>
 
-    <!-- ALERTS -->
-    <div class="ravlo-card pad" style="margin-top:14px;">
-      <h3>Important Alerts</h3>
+  </div>
+</div>
 
-      {% set pending_conditions = conditions | selectattr("status", "ne", "cleared") | list %}
 
-      {% if pending_conditions %}
-        <ul class="cc-alerts">
-          {% for c in pending_conditions[:4] %}
-            <li class="muted">
-              • {{ c.description }}
-            </li>
+
+<!-- ============================================================
+     KPI BAR
+============================================================ -->
+<div class="ravlo-grid cols-4 mt-20">
+
+  <div class="ravlo-kpi">
+    <div class="value">
+      ${{ "{:,.0f}".format(snapshot.amount or 0) }}
+    </div>
+    <div class="label">Capital Requested</div>
+  </div>
+
+  <div class="ravlo-kpi">
+    <div class="value">{{ capital_requests|length }}</div>
+    <div class="label">Active Requests</div>
+  </div>
+
+  <div class="ravlo-kpi">
+    <div class="value">{{ saved_props|length }}</div>
+    <div class="label">Saved Properties</div>
+  </div>
+
+  <div class="ravlo-kpi">
+    <div class="value">{{ snapshot.progress_percent }}%</div>
+    <div class="label">Progress</div>
+  </div>
+
+</div>
+
+
+
+<!-- ============================================================
+     MAIN 3-COLUMN GRID
+============================================================ -->
+<div class="ravlo-grid cols-3 mt-20">
+
+  <!-- ============================================================
+       COLUMN 1 — CAPITAL WORKFLOW
+  ============================================================ -->
+  <div>
+
+    <div class="ravlo-card pad">
+      <div class="ravlo-card-header">
+        <h3 class="ravlo-card-title">Active Capital Requests</h3>
+        <a href="{{ url_for('investor.apply') }}" class="ravlo-btn primary sm">Apply</a>
+      </div>
+
+      <div class="ravlo-card-body">
+
+        {% if capital_requests %}
+          {% for req in capital_requests[:6] %}
+            <div class="row between mt-12">
+              <div>
+                <div class="ravlo-badge ok">{{ req.status or "Open" }}</div>
+                <div class="muted" style="margin-top:4px;">
+                  {{ req.property_address or "Unnamed Property" }}
+                </div>
+              </div>
+
+              <div class="td-right">
+                <div class="muted">${{ "{:,.0f}".format(req.amount or 0) }}</div>
+              </div>
+            </div>
           {% endfor %}
-        </ul>
-      {% else %}
-        <div class="muted">No active alerts.</div>
-      {% endif %}
+        {% else %}
+          <div class="muted">No capital requests yet.</div>
+        {% endif %}
 
+      </div>
+    </div>
+
+  </div>
+
+
+
+  <!-- ============================================================
+       COLUMN 2 — DEALS TABLE
+  ============================================================ -->
+  <div>
+
+    <div class="ravlo-card">
+      <div class="ravlo-card-header">
+        <h3 class="ravlo-card-title">Active Deals</h3>
+      </div>
+
+      <table class="ravlo-table">
+        <thead>
+          <tr>
+            <th>Status</th>
+            <th>Deal</th>
+            <th>Funding</th>
+            <th>Equity</th>
+            <th>Stage</th>
+            <th>Time</th>
+          </tr>
+        </thead>
+
+        <tbody>
+
+          {% if capital_requests %}
+            {% for req in capital_requests[:6] %}
+              <tr>
+                <td>
+                  <span class="ravlo-badge ok">{{ req.status or "Open" }}</span>
+                </td>
+                <td>{{ req.property_address or "Unnamed Property" }}</td>
+                <td>${{ "{:,.0f}".format(req.amount or 0) }}</td>
+                <td>{{ req.equity or "—" }}</td>
+                <td>{{ req.status or "Pipeline" }}</td>
+                <td>—</td>
+              </tr>
+            {% endfor %}
+          {% else %}
+            <tr>
+              <td colspan="6" class="muted">No active deals.</td>
+            </tr>
+          {% endif %}
+
+        </tbody>
+      </table>
+    </div>
+
+  </div>
+
+
+
+  <!-- ============================================================
+       COLUMN 3 — PORTFOLIO + ALERTS
+  ============================================================ -->
+  <div>
+
+    <!-- Portfolio -->
+    <div class="ravlo-card pad">
+      <div class="ravlo-card-header">
+        <h3 class="ravlo-card-title">Portfolio</h3>
+      </div>
+
+      <div class="ravlo-card-body">
+        <div class="ravlo-grid cols-2">
+          <div>
+            <p class="muted">Saved Properties</p>
+            <p class="ravlo-title">{{ saved_props|length }}</p>
+          </div>
+
+          <div>
+            <p class="muted">Watchlist</p>
+            <p class="ravlo-title">0</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+
+    <!-- Alerts -->
+    <div class="ravlo-card pad mt-20">
+      <div class="ravlo-card-header">
+        <h3 class="ravlo-card-title">Important Alerts</h3>
+      </div>
+
+      <div class="ravlo-card-body">
+
+        {% set pending_conditions = conditions | selectattr("status", "ne", "cleared") | list %}
+
+        {% if pending_conditions %}
+          {% for c in pending_conditions[:4] %}
+            <div class="row between mt-12">
+              <span class="ravlo-badge risk">Alert</span>
+              <span class="muted">{{ c.description }}</span>
+            </div>
+          {% endfor %}
+        {% else %}
+          <div class="muted">No active alerts.</div>
+        {% endif %}
+
+      </div>
     </div>
 
   </div>
 
 </div>
 
-<div class="muted" style="margin-top:14px;">
+
+
+<!-- ============================================================
+     ACTIVITY + AI INSIGHTS
+============================================================ -->
+<div class="ravlo-grid cols-2 mt-20">
+
+  <!-- Activity Feed -->
+  <div class="ravlo-card pad">
+    <div class="ravlo-card-header">
+      <h3 class="ravlo-card-title">Activity</h3>
+    </div>
+
+    <div class="ravlo-card-body">
+
+      {% if capital_requests %}
+        {% for req in capital_requests[:3] %}
+          <div class="ravlo-insight mt-12">
+            <p class="k">{{ req.property_address or "Property" }}</p>
+            <p class="v">Capital request updated: {{ req.status }}</p>
+          </div>
+        {% endfor %}
+      {% else %}
+        <div class="muted">No recent activity.</div>
+      {% endif %}
+
+    </div>
+  </div>
+
+
+  <!-- AI Insights -->
+  <div class="ravlo-card pad">
+    <div class="ravlo-card-header">
+      <h3 class="ravlo-card-title">AI Insights</h3>
+    </div>
+
+    <div class="ravlo-card-body">
+
+      <div class="ravlo-insight mt-12">
+        <p class="k">Next Step</p>
+        <p class="v">{{ next_step_ai }}</p>
+      </div>
+
+      <div class="ravlo-insight mt-12">
+        <p class="k">Market Signal</p>
+        <p class="v">AI indicates strong investor appetite for value‑add multifamily.</p>
+      </div>
+
+      <div class="ravlo-insight mt-12">
+        <p class="k">Risk Note</p>
+        <p class="v">Underwriting delays may impact closing timelines.</p>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+
+
+<!-- Timestamp -->
+<div class="muted mt-20">
   {{ now_str }}
 </div>
 
