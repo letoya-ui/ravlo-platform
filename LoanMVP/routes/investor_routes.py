@@ -556,20 +556,32 @@ def create_profile():
             full_name=form.full_name.data,
             email=form.email.data,
             phone=form.phone.data,
-            address=form.address.data,
-            city=form.city.data,
-            state=form.state.data,
-            zip=form.zip_code.data,
-            investment_focus=getattr(form, "investment_focus", None).data if hasattr(form, "investment_focus") else None,
-            created_at=datetime.utcnow(),
+            strategy=form.strategy.data,
+            experience_level=form.experience_level.data,
+            target_markets=form.target_markets.data,
+            property_types=form.property_types.data,
+            min_price=form.min_price.data,
+            max_price=form.max_price.data,
+            min_sqft=form.min_sqft.data,
+            max_sqft=form.max_sqft.data,
+            capital_available=form.capital_available.data,
+            min_cash_on_cash=form.min_cash_on_cash.data,
+            min_roi=form.min_roi.data,
+            timeline_days=form.timeline_days.data,
+            risk_tolerance=form.risk_tolerance.data,
         )
+
         db.session.add(ip)
         db.session.commit()
-        flash("✅ Investor profile created successfully!", "success")
+
+        flash("Investor profile created successfully!", "success")
         return redirect(url_for("investor.command_center"))
 
-    return render_template("investor/create_profile.html", form=form, title="Create Investor Profile")
-
+    return render_template(
+        "investor/create_profile.html",
+        form=form,
+        title="Create Investor Profile"
+    )
 
 @investor_bp.route("/update_profile", methods=["POST"])
 @login_required
