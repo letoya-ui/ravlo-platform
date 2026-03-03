@@ -1,0 +1,128 @@
+{% extends "layouts/ravlo_base.html" %}
+{% block title %}Ravlo • Account{% endblock %}
+
+{% block page_title %}Account{% endblock %}
+{% block page_subline %}
+Manage your identity, security, subscription, and account preferences.
+{% endblock %}
+
+{% block content %}
+
+<!-- ===================== IDENTITY HEADER ===================== -->
+<div class="ravlo-card pad mt-20">
+  <div class="row between">
+
+    <div class="row" style="gap:16px;">
+      <div class="ravlo-mark" style="width:52px; height:52px;">
+        <span style="font-size:20px; font-weight:700;">
+          {{ investor.first_name[0] }}{{ investor.last_name[0] }}
+        </span>
+      </div>
+
+      <div>
+        <div class="ravlo-title" style="font-size:22px; margin:0;">
+          {{ investor.first_name }} {{ investor.last_name }}
+        </div>
+        <div class="muted" style="margin-top:4px;">
+          {{ investor_profile.strategy or "No strategy selected" }}
+        </div>
+      </div>
+    </div>
+
+    <div class="ravlo-insight" style="min-width:180px;">
+      <p class="k">Member Since</p>
+      <p class="v">{{ investor.created_at.strftime('%b %d, %Y') }}</p>
+    </div>
+
+  </div>
+</div>
+
+
+<!-- ===================== ACCOUNT SECTIONS ===================== -->
+<div class="ravlo-grid cols-2 mt-20">
+
+  <!-- LEFT COLUMN -->
+  <div>
+
+    <!-- Profile -->
+    <div class="ravlo-card pad">
+      <h3 class="ravlo-card-title">Profile</h3>
+
+      <p class="muted mt-12">Name</p>
+      <p>{{ investor.first_name }} {{ investor.last_name }}</p>
+
+      <p class="muted mt-12">Email</p>
+      <p>{{ investor.email }}</p>
+
+      <p class="muted mt-12">Strategy</p>
+      <p>{{ investor_profile.strategy or "Not set" }}</p>
+
+      <button class="ravlo-btn primary sm mt-20"
+              onclick="location.href='{{ url_for('investor.settings') }}'">
+        Edit Profile
+      </button>
+    </div>
+
+    <!-- Security -->
+    <div class="ravlo-card pad mt-20">
+      <h3 class="ravlo-card-title">Security</h3>
+
+      <p class="muted mt-12">Password</p>
+      <p>••••••••••</p>
+
+      <button class="ravlo-btn ghost sm mt-20"
+              onclick="location.href='{{ url_for('investor.settings') }}#password'">
+        Change Password
+      </button>
+    </div>
+
+  </div>
+
+
+  <!-- RIGHT COLUMN -->
+  <div>
+
+    <!-- Subscription -->
+    <div class="ravlo-card pad">
+      <h3 class="ravlo-card-title">Subscription</h3>
+
+      <p class="muted mt-12">Current Plan</p>
+      <p>{{ investor_profile.plan or "Free" }}</p>
+
+      <p class="muted mt-12">Renewal</p>
+      <p>{{ investor_profile.renewal_date or "—" }}</p>
+
+      <button class="ravlo-btn primary sm mt-20"
+              onclick="location.href='{{ url_for('investor.subscription') }}'">
+        Manage Subscription
+      </button>
+    </div>
+
+    <!-- Danger Zone -->
+    <div class="ravlo-card pad mt-20">
+      <h3 class="ravlo-card-title">Danger Zone</h3>
+
+      <p class="muted mt-12">
+        Permanently delete your account and all associated data.
+      </p>
+
+      <form method="POST" action="{{ url_for('investor.delete_account') }}">
+        {{ csrf_token() if csrf_token is defined }}
+        <button class="ravlo-btn ghost sm mt-20"
+                onclick="return confirm('Are you sure you want to delete your account? This cannot be undone.')">
+          Delete Account
+        </button>
+      </form>
+    </div>
+
+  </div>
+
+</div>
+
+
+<!-- Timestamp -->
+<div class="muted mt-20">
+  {{ now_str }}
+</div>
+
+{% endblock %}
