@@ -15,7 +15,7 @@ import sqlalchemy as sa
 
 # revision identifiers
 revision = 'fix_investor_fk_and_ai_conversation'
-down_revision = '<PUT_YOUR_PREVIOUS_REVISION_HERE>'
+down_revision = 'c71d784e3fb3'
 branch_labels = None
 depends_on = None
 
