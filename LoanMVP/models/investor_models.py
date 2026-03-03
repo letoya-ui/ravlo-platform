@@ -121,7 +121,7 @@ class InvestorProfile(db.Model, TimestampMixin):
         lazy=True
     )
 
-     loan_intake_sessions= db.relationship(
+    loan_intake_sessions= db.relationship(
         "LoanIntakeSession",
         back_populates="investor_profile",
         cascade="all, delete-orphan",
