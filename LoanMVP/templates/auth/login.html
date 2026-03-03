@@ -43,6 +43,7 @@
       <!-- Email -->
       <label class="auth-label" for="email">Email</label>
       <div class="auth-field">
+      <div class="auth-input-wrap">
         <input
           id="email"
           name="email"
@@ -52,23 +53,7 @@
           placeholder="Email"
           required
         />
-        <button
-            id="pwToggle"
-            class="auth-eye"
-            type="button"
-            aria-label="Show email"
-            aria-controls="email"
-            aria-pressed="false"
-            onclick="togglePw()"
-          >
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"
-                    fill="none" stroke="currentColor" stroke-width="2"/>
-              <path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"
-                    fill="none" stroke="currentColor" stroke-width="2"/>
-      </div>
-
-      <!-- Password -->
+              <!-- Password -->
       <label class="auth-label" for="password">Password</label>
       <div class="auth-field">
         <div class="auth-input-wrap">
