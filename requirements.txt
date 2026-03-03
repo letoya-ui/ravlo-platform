@@ -1,6 +1,6 @@
 aiohappyeyeballs==2.6.1
-aiohttp==3.13.2
-aiohttp-retry==2.9.1
+aiohttp==3.9.5
+aiohttp-retry==2.8.13
 aiosignal==1.4.0
 alembic==1.17.1
 altgraph==0.17.4
@@ -115,3 +115,4 @@ yarl==1.9.4
 zope.event==5.0
 zope.interface==6.2
 zopfli==0.2.3
+
