@@ -496,6 +496,11 @@ def settings():
         current_user.first_name = request.form.get("first_name")
         current_user.last_name = request.form.get("last_name")
         current_user.email = request.form.get("email")
+    form = InvestorSettingsForm()
+
+    if form.validate_on_submit():
+        investor = current
+        
         db.session.commit()
         flash("Settings updated successfully.", "success")
         return redirect(url_for("investor.settings"))
