@@ -24,7 +24,14 @@ class InvestorProfile(db.Model, TimestampMixin):
     full_name = db.Column(db.String(120), nullable=True)
     email = db.Column(db.String(120), nullable=True)
     phone = db.Column(db.String(50), nullable=True)
+    address = db.Column(db.String(255))
+    city = db.Column(db.String(100))
+    state = db.Column(db.String(50))
+    zip_code = db.Column(db.String(20))
 
+    employment_status = db.Column(db.String(100))
+    annual_income = db.Column(db.Integer)
+    credit_score = db.Column(db.Integer)
     # Preferences
     strategy = db.Column(db.String(50), nullable=True)
     experience_level = db.Column(db.String(30), nullable=True)
