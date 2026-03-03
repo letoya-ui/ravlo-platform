@@ -184,6 +184,8 @@ class CRMNote(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     lead_id = db.Column(db.Integer, db.ForeignKey("lead.id"), nullable=True)
     borrower_id = db.Column(db.Integer, db.ForeignKey("borrower_profile.id"), nullable=True)
+    investor_profile_id = db.Column(db.Integer, db.ForeignKey("investor_profile.id"), nullable=True)
+
     user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
     content = db.Column(db.Text, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
@@ -192,7 +194,9 @@ class CRMNote(db.Model):
     user = db.relationship("User", back_populates="crm_notes")
     lead = db.relationship("Lead", backref="notes")
     borrower = db.relationship("BorrowerProfile", backref="notes")
+    investor_profile = db.relationship("InvestorProfile", backref="notes")
 
+    
     def __repr__(self):
         return f"<CRMNote {self.id} by User:{self.user_id}>"
 
@@ -224,6 +228,7 @@ class Task(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     borrower_id = db.Column(db.Integer, db.ForeignKey("borrower_profile.id"))
+    investor_profile_id = db.Column(db.Integer, db.ForeignKey("investor_profile.id"))
     loan_id = db.Column(db.Integer, db.ForeignKey("loan_application.id"))
     title = db.Column(db.String(120), nullable=False)
     description = db.Column(db.String(255))
@@ -238,6 +243,7 @@ class Task(db.Model):
     partner_job = db.relationship("PartnerJob", backref=db.backref("tasks", lazy=True))
     assigned_user = db.relationship("User", backref="tasks_assigned", lazy=True)
     borrower = db.relationship("BorrowerProfile", back_populates="tasks")
+    investor_profile = db.relationship("InvestorProfile", back_populates="tasks")
     loan = db.relationship("LoanApplication", back_populates="tasks")
 
     def __repr__(self):
