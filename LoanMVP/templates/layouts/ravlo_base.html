@@ -89,7 +89,7 @@
         </a>
 
         <a class="{% if ep == 'investor.loan_view' %}active{% endif %}"
-           href="{{ url_for('investor.loan_view') }}">
+           href="{{ url_for('investor.loan_view', loan_id=current_loan.id) }}"
           <i class="lucide lucide-landmark icon"></i>
           Capital
         </a>
@@ -109,7 +109,7 @@
 
       <div class="ravlo-sb-foot">
         <a class="{% if ep == 'investor.settings' %}active{% endif %}"
-           href="{{ url_for('app.settings') }}">
+           href="{{ url_for('investor.settings') }}">
           <i class="lucide lucide-settings icon"></i>
           Settings
         </a>
