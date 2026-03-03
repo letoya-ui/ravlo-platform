@@ -96,7 +96,7 @@ class UnderwritingCondition(db.Model):
     # Relationships
     borrower_profile = db.relationship("BorrowerProfile", back_populates="underwriting_conditions")
     loan = db.relationship("LoanApplication", back_populates="underwriting_conditions")
-    investor_profile = db.relationship("InvestorProfile", back_populates="saved_properties")
+    investor_profile = db.relationship("InvestorProfile", back_populates="conditions")
 
     def __repr__(self):
         return f"<UnderwritingCondition ID={self.id} InvestorProfile={self.investor_profile_id} Status={self.status}>"
