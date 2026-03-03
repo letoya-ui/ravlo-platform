@@ -17,7 +17,7 @@ class PaymentRecord(db.Model):
     
     investor_profile_id = db.Column(
         db.Integer,
-        db.ForeignKey("investor_profile.id", name="fk_payment_borrower")
+        db.ForeignKey("investor_profile.id", name="fk_payment_investor")
     )
 
     loan_id = db.Column(
