@@ -89,7 +89,7 @@
         </a>
 
         <a class="{% if ep == 'investor.loan_view' %}active{% endif %}"
-           href="{{ url_for('investor.loan_view', loan_id=current_loan.id) }}"
+           href="{{ url_for('investor.loan_view', loan_id=loan.id) }}"
           <i class="lucide lucide-landmark icon"></i>
           Capital
         </a>
