@@ -6,7 +6,9 @@ from flask_wtf import FlaskForm
 from wtforms import (
     StringField, PasswordField, SubmitField, SelectField, IntegerField, DecimalField,   BooleanField, DateField, TextAreaField
 )
-from wtforms.validators import DataRequired, Optional, NumberRange,Email
+from wtforms.validators import  DataRequired, Optional, Length, Email, NumberRange
+
+
 
 class InvestorProfileForm(FlaskForm):
     # Required fields for creating a profile
