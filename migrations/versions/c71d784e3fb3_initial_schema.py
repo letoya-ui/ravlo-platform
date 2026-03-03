@@ -1502,8 +1502,7 @@ def downgrade():
     op.drop_table('deal_shares')
     op.drop_table('contractors')
     op.drop_table('chat_history')
-    def downgrade():
-
+    
     # Reverse investor FK fixes
     with op.batch_alter_table('loan_application') as batch_op:
         batch_op.drop_constraint('fk_loanapp_investor', type_='foreignkey')
