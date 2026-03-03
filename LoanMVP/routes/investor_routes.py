@@ -488,6 +488,7 @@ def profile():
 
 
 @investor_bp.route("/settings", methods=["GET", "POST"])
+@csrf.exempt
 @login_required
 @role_required("investor")
 def settings():
