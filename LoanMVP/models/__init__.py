@@ -49,7 +49,7 @@ from LoanMVP.models.crm_models import (
     FollowUpItem, 
     MessageThread,
     FollowUpTask,
-    BorrowerLastContact,
+    LastContact,
 )
 
 # 📈 Borrower-side tools (analysis, budgeting, plans)
