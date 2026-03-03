@@ -143,7 +143,7 @@ class InvestorProfile(db.Model, TimestampMixin):
     )
 
     ai_conversations= db.relationship(
-        "LoanAiConversation",
+        "LoanAIConversation",
         back_populates="investor_profile",
         cascade="all, delete-orphan",
         lazy=True
