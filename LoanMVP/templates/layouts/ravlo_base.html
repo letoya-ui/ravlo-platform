@@ -88,12 +88,6 @@
           Portfolio
         </a>
 
-        <a class="disabled">
-           href="{{ url_for('investor.loan_view', loan_id=loan.id) }}"
-          <i class="lucide lucide-landmark icon"></i>
-          Capital
-        </a>
-
         <a class="{% if ep == 'investor.resource_center' %}active{% endif %}"
            href="{{ url_for('investor.resource_center') }}">
           <i class="lucide lucide-scroll-text icon"></i>
