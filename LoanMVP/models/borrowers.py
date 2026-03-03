@@ -11,6 +11,7 @@ class PropertyAnalysis(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     borrower_profile_id = db.Column(db.Integer, db.ForeignKey("borrower_profile.id"), nullable=False)
+    investor_profile_id = db.Column( db.Integer, db.ForeignKey("investor_profile.id"), nullable=True )
     loan_app_id = db.Column(db.Integer, db.ForeignKey("loan_application.id"), nullable=True)
     property_id = db.Column(db.Integer, db.ForeignKey("property.id"), nullable=True)
 
@@ -35,6 +36,7 @@ class PropertyAnalysis(db.Model):
 
     # Relationships
     borrower_profile = db.relationship("BorrowerProfile", back_populates="property_analyses")
+    investor_profile = db.relationship( "InvestorProfile", back_populates="property_analysis")
     loan_application = db.relationship("LoanApplication", back_populates="property_analyses")
     property = db.relationship("Property", back_populates="analyses")
 
