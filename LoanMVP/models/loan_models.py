@@ -154,7 +154,7 @@ class LoanApplication(db.Model):
     underwriter = db.relationship("UnderwriterProfile", backref="loan_applications")
     property = db.relationship("Property", back_populates="loan_applications")
     tasks = db.relationship("Task", back_populates="loan", cascade="all, delete-orphan")
-    investor_profile = db.relationship("InvestorProfile", back_populates="loans")
+    investor_profile = db.relationship("InvestorProfile", back_populates="capital_requests")
 
     # --- Related Entities ---
     loan_quotes = db.relationship("LoanQuote", back_populates="loan_application", cascade="all, delete-orphan")
