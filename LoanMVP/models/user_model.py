@@ -56,7 +56,7 @@ class User(UserMixin, db.Model):
     )
     
     # inside class User(db.Model):
-     investor_profile = db.relationship(
+    investor_profile = db.relationship(
         "InvestorProfile",
         back_populates="user",
         foreign_keys="[InvestorProfile.user_id]"
