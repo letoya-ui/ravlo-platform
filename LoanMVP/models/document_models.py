@@ -57,7 +57,7 @@ class DocumentRequest(db.Model):
     # Relationships
     borrower = db.relationship("BorrowerProfile", back_populates="document_requests")
     loan = db.relationship("LoanApplication", back_populates="document_requests")
-    investor_profile = db.relationship("InvestorProfile", back_populates="documents_requests")
+    investor_profile = db.relationship("InvestorProfile", back_populates="document_requests")
 
     def __repr__(self):
         return f"<DocRequest {self.document_name} for borrower {self.investor_id}>"
