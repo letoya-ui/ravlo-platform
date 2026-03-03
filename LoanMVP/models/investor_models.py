@@ -128,7 +128,7 @@ class InvestorProfile(db.Model, TimestampMixin):
         lazy=True
     )
      
-    document_request= db.relationship(
+    document_requests= db.relationship(
         "DocumentRequest",
         back_populates="investor_profile",
         cascade="all, delete-orphan",
