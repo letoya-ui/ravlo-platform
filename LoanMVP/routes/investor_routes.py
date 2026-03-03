@@ -499,7 +499,7 @@ def settings():
         db.session.commit()
         flash("Settings updated successfully.", "success")
         return redirect(url_for("investor.settings"))
-    return render_template("investor/settings.html", investor=ip, investor_profile=ip, )
+    return render_template("investor/settings.html", investor=ip, investor_profile=ip, investor=current_user, )
 
 
 @investor_bp.route("/privacy", methods=["GET", "POST"])
