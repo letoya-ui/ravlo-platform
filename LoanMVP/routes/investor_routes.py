@@ -413,9 +413,11 @@ def command_center():
         next_step_ai=next_step_ai,
         primary_stage=primary_stage,
         now_str=now_str,
+        investor_profile=ip,   # ← FIXED
         active_tab="command",
         title="RAVLO • Command Center",
     )
+
 
 
 @investor_bp.route("/resources", methods=["GET"])
