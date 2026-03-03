@@ -18,9 +18,6 @@ load_dotenv()
 # ===================================================
  
 class Config:
-    # --------------------------------------------------
-    # 🔐 CORE APP SETTINGS
-    # --------------------------------------------------
     SECRET_KEY = os.getenv("SECRET_KEY", "dev_only_change_me")
     SECURITY_PASSWORD_SALT = os.getenv("SECURITY_PASSWORD_SALT", "dev_salt_change_me")
 
@@ -39,25 +36,15 @@ class Config:
 
     SESSION_PROTECTION = "strong"
 
-    # --------------------------------------------------
-    # 🗄 DATABASE
-    # --------------------------------------------------
-    SQLALCHEMY_DATABASE_URI = os.environ.get(
-        "DATABASE_URL",
-        "postgresql+psycopg2://postgres@localhost:5432/loanmvp_db"
-    )
-
+    # DATABASE
+    SQLALCHEMY_DATABASE_URI = os.getenv("DATABASE_URL")
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
-    # --------------------------------------------------
-    # 💳 STRIPE
-    # --------------------------------------------------
+    # STRIPE
     STRIPE_SECRET_KEY = os.environ.get("STRIPE_SECRET_KEY", "")
     STRIPE_WEBHOOK_SECRET = os.environ.get("STRIPE_WEBHOOK_SECRET", "")
 
-    # --------------------------------------------------
-    # 📧 MAIL SETTINGS
-    # --------------------------------------------------
+    # MAIL
     MAIL_SERVER = os.environ.get("MAIL_SERVER", "smtp.gmail.com")
     MAIL_PORT = int(os.environ.get("MAIL_PORT", 587))
     MAIL_USE_TLS = True
@@ -66,86 +53,62 @@ class Config:
     MAIL_PASSWORD = os.environ.get("MAIL_PASSWORD", "")
     MAIL_DEFAULT_SENDER = os.environ.get("MAIL_DEFAULT_SENDER", MAIL_USERNAME)
 
-    # --------------------------------------------------
-    # 📡 SOCKETIO
-    # --------------------------------------------------
+    # SOCKETIO
     SOCKETIO_MESSAGE_QUEUE = os.environ.get("SOCKETIO_MESSAGE_QUEUE", None)
     SOCKETIO_CORS_ALLOWED_ORIGINS = "*"
 
-    # --------------------------------------------------
-    # 🌍 CORS
-    # --------------------------------------------------
+    # CORS
     CORS_ORIGINS = os.environ.get("CORS_ORIGINS", "*")
     CORS_SUPPORTS_CREDENTIALS = True
 
-    # --------------------------------------------------
-    # 📁 FILE UPLOADS
-    # --------------------------------------------------
+    # FILE UPLOADS
     UPLOAD_FOLDER = os.path.join(BASE_DIR, "uploads")
     os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-    MAX_CONTENT_LENGTH = 25 * 1024 * 1024  # 25 MB
+    MAX_CONTENT_LENGTH = 25 * 1024 * 1024
 
-    # --------------------------------------------------
-    # 📲 TWILIO
-    # --------------------------------------------------
+    # TWILIO
     TWILIO_ACCOUNT_SID = os.environ.get("TWILIO_ACCOUNT_SID", "")
     TWILIO_AUTH_TOKEN = os.environ.get("TWILIO_AUTH_TOKEN", "")
     TWILIO_PHONE_NUMBER = os.environ.get("TWILIO_PHONE_NUMBER", "")
 
-    # --------------------------------------------------
-    # 📩 SENDGRID
-    # --------------------------------------------------
+    # SENDGRID
     SENDGRID_API_KEY = os.environ.get("SENDGRID_API_KEY", "")
     SENDGRID_FROM_EMAIL = os.environ.get("SENDGRID_FROM_EMAIL", "noreply@caughmanmason.com")
 
-    # --------------------------------------------------
-    # 🤖 AI SETTINGS
-    # --------------------------------------------------
+    # AI
     OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")
     AI_MODEL = os.environ.get("AI_MODEL", "gpt-4-turbo-preview")
     AI_TIMEOUT = int(os.environ.get("AI_TIMEOUT", 30))
 
     GOOGLE_PLACES_API_KEY = os.environ.get("GOOGLE_PLACES_API_KEY", "")
 
-    # =========================================================
-    # 🏠 RENTCAST (Property Data + AVM)
-    # =========================================================
+    # RENTCAST
     RENTCAST_API_KEY = os.environ.get("RENTCAST_API_KEY", "").strip()
     RENTCAST_BASE_URL = os.environ.get("RENTCAST_BASE_URL", "https://api.rentcast.io/v1").strip()
     RENTCAST_TIMEOUT = int(os.environ.get("RENTCAST_TIMEOUT", 12))
-
-    # AVM tuning (used by BOTH value + rent estimates)
     RENTCAST_COMP_COUNT = int(os.environ.get("RENTCAST_COMP_COUNT", 15))
-    RENTCAST_MAX_RADIUS = float(os.environ.get("RENTCAST_MAX_RADIUS", 2))   # miles
+    RENTCAST_MAX_RADIUS = float(os.environ.get("RENTCAST_MAX_RADIUS", 2))
     RENTCAST_DAYS_OLD = int(os.environ.get("RENTCAST_DAYS_OLD", 180))
+    RENTCAST_LOOKUP_SUBJECT_ATTRS = os.environ.get("RENTCAST_LOOKUP_SUBJECT_ATTRS", "true").lower() in ("1", "true", "yes")
 
-    RENTCAST_LOOKUP_SUBJECT_ATTRS = os.environ.get(
-        "RENTCAST_LOOKUP_SUBJECT_ATTRS",
-        "true"
-    ).lower() in ("1", "true", "yes")
-
-    # Feature toggles
     PROPERTY_PROVIDER = os.environ.get("PROPERTY_PROVIDER", "rentcast")
     ENABLE_PROPERTY_CACHE = os.environ.get("ENABLE_PROPERTY_CACHE", "true").lower() in ("1", "true", "yes")
 
-    # --------------------------------------------------
-    # 🏢 BRAND INFO
-    # --------------------------------------------------
+    # BRAND
     COMPANY_NAME = "Caughman Mason Realty Group"
     COMPANY_EMAIL = "info@caughmanmason.com"
     COMPANY_PHONE = "(845) 395-6627"
     COMPANY_ADDRESS = "33 Maple Fields Dr Middletown NY 10940"
 
-    # --------------------------------------------------
-    # 📝 LOGGING
-    # --------------------------------------------------
+    # LOGGING
     LOG_FOLDER = os.path.join(BASE_DIR, "logs")
     os.makedirs(LOG_FOLDER, exist_ok=True)
 
-    # --------------------------------------------------
-    # 🚀 FEATURE TOGGLES
-    # --------------------------------------------------
+    # FEATURE TOGGLES
     ENABLE_AI_CHAT = True
     ENABLE_LOAN_ENGINE = True
     ENABLE_CONSTRUCTION_MODE = False
     ENABLE_DEVELOPER_TOOLS = True
+
+def get_config():
+    return Config
