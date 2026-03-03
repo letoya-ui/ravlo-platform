@@ -33,7 +33,7 @@ from reportlab.lib.pagesizes import LETTER
 
 from LoanMVP.extensions import db, stripe, csrf
 from LoanMVP.utils.decorators import role_required
-
+from LoanMVP.forms.investor_forms import InvestorSettingsForm
 # -------------------------
 # Models (updated for Investor)
 # -------------------------
