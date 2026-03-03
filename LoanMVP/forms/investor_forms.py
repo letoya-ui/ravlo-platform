@@ -14,7 +14,19 @@ class InvestorProfileForm(FlaskForm):
     full_name = StringField("Full Name", validators=[DataRequired()])
     email = StringField("Email", validators=[DataRequired(), Email()])
     phone = StringField("Phone", validators=[Optional()])
-
+    address = StringField("Address", validators=[Optional(), Length(max=255)])
+    city = StringField("City", validators=[Optional(), Length(max=100)])
+    state = StringField("State", validators=[Optional(), Length(max=50)])
+    zip_code = StringField("Zip Code", validators=[Optional(), Length(max=10)])
+    employment_status = SelectField("Employment Status", choices=[
+        ("Employed", "Employed"),
+        ("Self-Employed", "Self-Employed"),
+        ("Unemployed", "Unemployed"),
+        ("Retired", "Retired"),
+        ("Other", "Other")
+    ], validators=[Optional()])
+    annual_income = DecimalField("Annual Income ($)", validators=[Optional()])
+    credit_score = IntegerField("Credit Score", validators=[Optional()])
     strategy = SelectField(
         "Investment Strategy",
         choices=[
