@@ -1,6 +1,6 @@
 # LoanMVP/models/investor_models.py
 from datetime import datetime
-from LoanMVP.app.extensions import db
+from LoanMVP.extensions import db
 
 
 class TimestampMixin:
