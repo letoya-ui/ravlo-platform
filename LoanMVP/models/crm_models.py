@@ -50,6 +50,7 @@ class BehavioralInsight(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     borrower_id = db.Column(db.Integer, db.ForeignKey("borrower_profile.id"))
+    investor_profile_id = db.Column(db.Integer, db.ForeignKey("investor_profile.id"))
     officer_id = db.Column(db.Integer, db.ForeignKey("loan_officer_profile.id"), nullable=True)
 
     # Core metrics
@@ -73,6 +74,7 @@ class BehavioralInsight(db.Model):
     # Relationships
     borrower = db.relationship("BorrowerProfile", backref="behavioral_insights")
     officer = db.relationship("LoanOfficerProfile", backref="behavioral_insights")
+    investor_profile = db.relationship("InvestorProfile", backref="behavioral_insights")
 
     def __repr__(self):
         return f"<BehavioralInsight borrower={self.borrower_id} officer={self.officer_id}>"
@@ -330,26 +332,43 @@ partner_lead_link = db.Table(
 )
 
 class FollowUpItem(db.Model):
+    __tablename__ = "followup_item"
+
     id = db.Column(db.Integer, primary_key=True)
-    borrower_profile_id = db.Column(db.Integer, db.ForeignKey("borrower_profile.id"), nullable=False)
+
+    # Borrower or Investor
+    borrower_profile_id = db.Column(db.Integer, db.ForeignKey("borrower_profile.id"), nullable=True)
+    investor_profile_id = db.Column(db.Integer, db.ForeignKey("investor_profile.id"), nullable=True)
+
     description = db.Column(db.String(255))
     is_done = db.Column(db.Boolean, default=False)
+
     created_by = db.Column(db.Integer, db.ForeignKey("user.id"))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     completed_at = db.Column(db.DateTime)
 
-    borrower = db.relationship("BorrowerProfile")
+    # Relationships
+    borrower = db.relationship("BorrowerProfile", backref="followup_items")
+    investor_profile = db.relationship("InvestorProfile", backref="followup_items")
     created_by_user = db.relationship("User")
+
+    def __repr__(self):
+        return f"<FollowUpItem {self.id}>"
 
 class FollowUpTask(db.Model):
     __tablename__ = "followup_task"
 
     id = db.Column(db.Integer, primary_key=True)
-    borrower_id = db.Column(db.Integer, db.ForeignKey("borrower_profile.id"))
+
+    # Borrower or Investor
+    borrower_id = db.Column(db.Integer, db.ForeignKey("borrower_profile.id"), nullable=True)
+    investor_profile_id = db.Column(db.Integer, db.ForeignKey("investor_profile.id"), nullable=True)
+
     loan_id = db.Column(db.Integer, db.ForeignKey("loan_application.id"), nullable=True)
 
-    created_by = db.Column(db.Integer)
-    assigned_to = db.Column(db.Integer)
+    created_by = db.Column(db.Integer, db.ForeignKey("user.id"))
+    assigned_to = db.Column(db.Integer, db.ForeignKey("user.id"))
+
     title = db.Column(db.String(255))
     description = db.Column(db.Text)
     status = db.Column(db.String(50), default="Pending")
@@ -357,15 +376,30 @@ class FollowUpTask(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     due_date = db.Column(db.DateTime, nullable=True)
 
+    # Relationships
     borrower = db.relationship("BorrowerProfile", backref="followup_tasks")
+    investor_profile = db.relationship("InvestorProfile", backref="followup_tasks")
     loan = db.relationship("LoanApplication", backref="followup_tasks")
 
+    created_by_user = db.relationship("User", foreign_keys=[created_by])
+    assigned_user = db.relationship("User", foreign_keys=[assigned_to])
 
-class BorrowerLastContact(db.Model):
-    __tablename__ = "borrower_last_contact"
+    def __repr__(self):
+        return f"<FollowUpTask {self.id}>"
+
+class LastContact(db.Model):
+    __tablename__ = "last_contact"
 
     id = db.Column(db.Integer, primary_key=True)
-    borrower_id = db.Column(db.Integer, db.ForeignKey("borrower_profile.id"))
+
+    borrower_id = db.Column(db.Integer, db.ForeignKey("borrower_profile.id"), nullable=True)
+    investor_profile_id = db.Column(db.Integer, db.ForeignKey("investor_profile.id"), nullable=True)
+
     last_contact_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     borrower = db.relationship("BorrowerProfile", backref="last_contact_record")
+    investor_profile = db.relationship("InvestorProfile", backref="last_contact_record")
+
+    def __repr__(self):
+        return f"<LastContact {self.id}>"
+

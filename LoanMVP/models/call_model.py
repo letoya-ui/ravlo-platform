@@ -31,6 +31,7 @@ class CommunicationLog(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     borrower_id = db.Column(db.Integer, db.ForeignKey("borrower_profile.id"))
+    investor_profile_id = db.Column(db.Integer, db.ForeignKey("investor_profile.id"))
     loan_id = db.Column(db.Integer, db.ForeignKey("loan_application.id"), nullable=True)
 
     channel = db.Column(db.String(20))  # call, sms, email
@@ -39,6 +40,7 @@ class CommunicationLog(db.Model):
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
 
     borrower = db.relationship("BorrowerProfile", backref="communication_logs")
+    investor_profile = db.relationship("InvestorProfile", backref="communication_logs")
     loan = db.relationship("LoanApplication", backref="communication_logs")
 
     def __repr__(self):

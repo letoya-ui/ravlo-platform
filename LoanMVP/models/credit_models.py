@@ -7,7 +7,7 @@ class SoftCreditReport(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     borrower_profile_id = db.Column(db.Integer, db.ForeignKey("borrower_profile.id"))
-
+    investor_profile_id = db.Column(db.Integer, db.ForeignKey("investor_profile.id"))
     credit_score = db.Column(db.Integer)
     bureau = db.Column(db.String(50), default="Equifax")
 
@@ -18,4 +18,4 @@ class SoftCreditReport(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     borrower = db.relationship("BorrowerProfile", backref="credit_reports")
-
+    investor_profile = db.relationship("InvestorProfile", backref="credit_reports")

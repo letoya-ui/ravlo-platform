@@ -14,6 +14,11 @@ class PaymentRecord(db.Model):
         db.Integer,
         db.ForeignKey("borrower_profile.id", name="fk_payment_borrower")
     )
+    
+    investor_profile_id = db.Column(
+        db.Integer,
+        db.ForeignKey("investor_profile.id", name="fk_payment_borrower")
+    )
 
     loan_id = db.Column(
         db.Integer,
@@ -28,3 +33,4 @@ class PaymentRecord(db.Model):
     
     borrower = db.relationship("BorrowerProfile", backref="payments")
     loan = db.relationship("LoanApplication", backref="payments")
+    investor_profile = db.relationship("InvestorProfile", backref="payments")

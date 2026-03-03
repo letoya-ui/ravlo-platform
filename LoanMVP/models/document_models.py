@@ -8,6 +8,7 @@ class LoanDocument(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     borrower_profile_id = db.Column(db.Integer, db.ForeignKey("borrower_profile.id"), nullable=True)
+    investor_profile_id = db.Column(db.Integer, db.ForeignKey("investor_profile.id"), nullable=True)
     loan_id = db.Column(db.Integer, db.ForeignKey("loan_application.id"), nullable=True)
     processor_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=True)
     file_name = db.Column(db.String(255))
@@ -31,7 +32,8 @@ class LoanDocument(db.Model):
     # Relationships
     borrower_profile = db.relationship("BorrowerProfile", back_populates="documents")
     loan_application = db.relationship("LoanApplication", back_populates="loan_documents")
-    
+    investor_profile = db.relationship("InvestorProfile", back_populates="documents")
+
     def __repr__(self):
         return f"<LoanDocument {self.file_name} Loan:{self.loan_id}>"
 
@@ -41,6 +43,7 @@ class DocumentRequest(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     borrower_id = db.Column(db.Integer, db.ForeignKey("borrower_profile.id"))
+    investor_profile_id = db.Column(db.Integer, db.ForeignKey("investor_profile.id"))
     loan_id = db.Column(db.Integer, db.ForeignKey("loan_application.id"), nullable=True)
     requested_by = db.Column(db.String(120))
     document_name = db.Column(db.String(255))
@@ -54,9 +57,10 @@ class DocumentRequest(db.Model):
     # Relationships
     borrower = db.relationship("BorrowerProfile", back_populates="document_requests")
     loan = db.relationship("LoanApplication", back_populates="document_requests")
+    investor_profile = db.relationship("InvestorProfile", back_populates="documents_requests")
 
     def __repr__(self):
-        return f"<DocRequest {self.document_name} for borrower {self.borrower_id}>"
+        return f"<DocRequest {self.document_name} for borrower {self.investor_id}>"
 
 class ESignedDocument(db.Model):
     __tablename__ = "esigned_document"
@@ -69,6 +73,12 @@ class ESignedDocument(db.Model):
     borrower_profile_id = db.Column(
         db.Integer,
         db.ForeignKey("borrower_profile.id"),
+        nullable=False
+    )
+
+    investor_profile_id = db.Column(
+        db.Integer,
+        db.ForeignKey("investor_profile.id"),
         nullable=False
     )
 
@@ -130,6 +140,7 @@ class ESignedDocument(db.Model):
     borrower = db.relationship("BorrowerProfile", backref="esigned_documents")
     loan = db.relationship("LoanApplication", backref="esigned_documents")
     loan_document = db.relationship("LoanDocument", backref="esign_record")
+    investor_profile = db.relationship("InvestorProfile", back_populates="esigned_documents")
 
     def __repr__(self):
         return f"<ESignedDocument {self.document_name} status={self.status}>"
@@ -143,6 +154,11 @@ class DocumentNeed(db.Model):
         db.Integer,
         db.ForeignKey("borrower_profile.id", name="fk_need_borrower")
     )
+    
+    investor_id = db.Column(
+        db.Integer,
+        db.ForeignKey("investor_profile.id", name="fk_need_investor")
+    )   
 
     loan_id = db.Column(
         db.Integer,
@@ -156,9 +172,10 @@ class DocumentNeed(db.Model):
 
     borrower = db.relationship("BorrowerProfile", backref="doc_needs")
     loan = db.relationship("LoanApplication", backref="doc_needs")
+    investor_profile = db.relationship("InvestorProfile", backref="doc_needs")
 
     def __repr__(self):
-        return f"<DocNeed {self.name} borrower={self.borrower_id}>"
+        return f"<DocNeed {self.name} investor={self.investor_id}>"
 
 class ResourceDocument(db.Model):
     id = db.Column(db.Integer, primary_key=True)

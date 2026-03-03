@@ -48,6 +48,7 @@ class CampaignRecipient(db.Model):
     campaign_id = db.Column(db.Integer, db.ForeignKey("campaign.id"), nullable=False)
     lead_id = db.Column(db.Integer, db.ForeignKey("lead.id"), nullable=True)
     borrower_id = db.Column(db.Integer, db.ForeignKey("borrower_profile.id"), nullable=True)
+    investor_profile_id = db.Column(db.Integer, db.ForeignKey("investor_profile.id"), nullable=True)
     email = db.Column(db.String(255), nullable=True)
     phone = db.Column(db.String(20), nullable=True)
     status = db.Column(db.String(50), default="pending")  # pending, sent, opened, responded

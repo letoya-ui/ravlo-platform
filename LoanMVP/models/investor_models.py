@@ -55,6 +55,34 @@ class InvestorProfile(db.Model, TimestampMixin):
         cascade="all, delete-orphan",
         lazy=True
     )
+    
+    saved_properties = db.relationship(
+        "SavedProperty",
+        back_populates="investor_profile",
+        cascade="all, delete-orphan",
+        lazy=True
+    )
+
+    capital_requests = db.relationship(
+        "LoanApplication",
+        back_populates="investor_profile",
+        cascade="all, delete-orphan",
+        lazy=True
+    )
+
+    documents = db.relationship(
+        "LoanDocument",
+        back_populates="investor_profile",
+        cascade="all, delete-orphan",
+        lazy=True
+    )
+
+    conditions = db.relationship(
+        "UnderwritingCondition",
+        back_populates="investor_profile",
+        cascade="all, delete-orphan",
+        lazy=True
+    )
 
     def __repr__(self):
         return f"<InvestorProfile id={self.id} user_id={self.user_id}>"

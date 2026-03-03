@@ -106,6 +106,7 @@ class LoanApplication(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     borrower_profile_id = db.Column(db.Integer, db.ForeignKey("borrower_profile.id", name="fk_loanapp_borrower"))
+    investor_profile_id = db.Column(db.Integer, db.ForeignKey("investor_profile.id"))
     loan_officer_id = db.Column(db.Integer, db.ForeignKey("loan_officer_profile.id", name="fk_loanapp_officer"))
     processor_id = db.Column(db.Integer, db.ForeignKey("processor_profile.id", name="fk_loanapp_processor"))
     underwriter_id = db.Column(db.Integer, db.ForeignKey("underwriter_profile.id", name="fk_loanapp_underwriter"))
@@ -153,6 +154,7 @@ class LoanApplication(db.Model):
     underwriter = db.relationship("UnderwriterProfile", backref="loan_applications")
     property = db.relationship("Property", back_populates="loan_applications")
     tasks = db.relationship("Task", back_populates="loan", cascade="all, delete-orphan")
+    investor_profile = db.relationship("InvestorProfile", back_populates="loans")
 
     # --- Related Entities ---
     loan_quotes = db.relationship("LoanQuote", back_populates="loan_application", cascade="all, delete-orphan")
@@ -224,6 +226,7 @@ class LoanNotification(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     loan_id = db.Column(db.Integer, db.ForeignKey("loan_application.id"), nullable=False)
     borrower_id = db.Column(db.Integer, db.ForeignKey("borrower_profile.id"))
+    investor_profile_id = db.Column(db.Integer, db.ForeignKey("investor_profile.id"))
     role = db.Column(db.String(50))  # "borrower", "processor", "underwriter", "admin"
     message = db.Column(db.String(255))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
@@ -234,7 +237,7 @@ class LoanNotification(db.Model):
 
     loan = db.relationship("LoanApplication", backref="notifications")
     borrower = db.relationship("BorrowerProfile", backref="notifications")
-
+    investor_profile = db.relationship("InvestorProfile", backref="notifications")
     def to_dict(self):
         return {
             "id": self.id,
@@ -254,6 +257,7 @@ class LoanQuote(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     borrower_profile_id = db.Column(db.Integer, db.ForeignKey("borrower_profile.id", name="fk_quote_borrower"))
     loan_application_id = db.Column(db.Integer, db.ForeignKey("loan_application.id", name="fk_quote_loanapp"))
+    investor_profile_id = db.Column(db.Integer, db.ForeignKey("investor_profile.id", name="fk_quote_investor"))
 
     lender_name = db.Column(db.String(120))
     rate = db.Column(db.Float)
@@ -287,6 +291,7 @@ class LoanQuote(db.Model):
     assigned_underwriter_id = db.Column(db.Integer, db.ForeignKey("underwriter_profile.id", name="fk_quote_underwriter"))
 
     borrower_profile = db.relationship("BorrowerProfile", back_populates="loan_quotes")
+    investor_profile = db.relationship("InvestorProfile", back_populates="loan_quotes")
     loan_application = db.relationship("LoanApplication", back_populates="loan_quotes", foreign_keys=[loan_application_id])
 
     def __repr__(self):
@@ -314,12 +319,14 @@ class LoanIntakeSession(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     borrower_id = db.Column(db.Integer, db.ForeignKey("borrower_profile.id"))
+    investor_profile_id = db.Column(db.Integer, db.ForeignKey("investor_profile.id"))
     assigned_officer_id = db.Column(db.Integer, db.ForeignKey("loan_officer_profile.id"))
     status = db.Column(db.String(50), default="in_progress")
     data = db.Column(db.JSON, default={})
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     borrower = db.relationship("BorrowerProfile", back_populates="loan_intake_sessions")
+    investor_profile = db.relationship("InvestorProfile", back_populates="loan_intake_sessions")
     assigned_officer = db.relationship("LoanOfficerProfile", back_populates="loan_intakes")
 
     def __repr__(self):
@@ -334,6 +341,7 @@ class CreditProfile(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     borrower_profile_id = db.Column(db.Integer, db.ForeignKey("borrower_profile.id"))
+    investor_profile_id = db.Column(db.Integer, db.ForeignKey("investor_profile.id"))
     loan_app_id = db.Column(db.Integer, db.ForeignKey("loan_application.id"))
     credit_score = db.Column(db.Integer)
     report_date = db.Column(db.DateTime, default=datetime.utcnow)
@@ -350,9 +358,10 @@ class CreditProfile(db.Model):
 
     borrower_profile = db.relationship("BorrowerProfile", back_populates="credit_profiles")
     loan_application = db.relationship("LoanApplication", back_populates="credit_profiles")
+    investor_profile = db.relationship("InvestorProfile", back_populates="credit_profiles")
 
     def __repr__(self):
-        return f"<CreditProfile Borrower={self.borrower_profile_id} Score={self.credit_score}>"
+        return f"<CreditProfile Investor={self.investor_profile_id} Score={self.credit_score}>"
 
 class Upload(db.Model):
     __tablename__ = "upload"
@@ -365,6 +374,7 @@ class Upload(db.Model):
     size_kb = db.Column(db.Float, nullable=True)
 
     borrower_profile_id = db.Column(db.Integer, db.ForeignKey("borrower_profile.id"), nullable=True)
+    investor_profile_id = db.Column(db.Integer, db.ForeignKey("investor_profile.id"), nullable=True)
     loan_id = db.Column(db.Integer, db.ForeignKey("loan_application.id"), nullable=True)
     uploaded_by_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
 
@@ -375,7 +385,8 @@ class Upload(db.Model):
     review_notes = db.Column(db.Text, nullable=True)
 
     uploaded_at = db.Column(db.DateTime, default=datetime.utcnow)
-
+    
+    investor_profile = db.relationship("InvestorProfile", backref="uploads", lazy=True)
     borrower_profile = db.relationship("BorrowerProfile", backref="uploads", lazy=True)
     loan_application = db.relationship("LoanApplication", backref="uploads", lazy=True)
     uploaded_by_user = db.relationship("User", foreign_keys=[uploaded_by_id])
@@ -414,6 +425,11 @@ class DocumentEvent(db.Model):
         db.ForeignKey("borrower_profile.id"),
         nullable=False
     )
+    investor_profile_id = db.Column(
+        db.Integer,
+        db.ForeignKey("investor_profile.id"),
+        nullable=False
+    )
 
     document_name = db.Column(db.String(200))
     event_type = db.Column(db.String(50))  
@@ -426,6 +442,7 @@ class DocumentEvent(db.Model):
 
     loan = db.relationship("LoanApplication", backref="doc_events")
     borrower = db.relationship("BorrowerProfile", backref="doc_events")
+    investor_profile = db.relationship("InvestorProfile", backref="doc_events")
 
 class LoanScenario(db.Model):
     __tablename__ = "loan_scenario"

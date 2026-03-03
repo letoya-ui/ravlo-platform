@@ -69,6 +69,12 @@ class UnderwritingCondition(db.Model):
         db.ForeignKey("borrower_profile.id", name="fk_condition_borrower_id"),
         nullable=False
     )
+    
+    investor_profile_id = db.Column(
+        db.Integer,
+        db.ForeignKey("investor_profile.id", name="fk_condition_investor_id"),
+        nullable=False
+    )
 
     loan_id = db.Column(
         db.Integer,
@@ -90,9 +96,10 @@ class UnderwritingCondition(db.Model):
     # Relationships
     borrower_profile = db.relationship("BorrowerProfile", back_populates="underwriting_conditions")
     loan = db.relationship("LoanApplication", back_populates="underwriting_conditions")
+    investor_profile = db.relationship("InvestorProfile", back_populates="saved_properties")
 
     def __repr__(self):
-        return f"<UnderwritingCondition ID={self.id} BorrowerProfile={self.borrower_profile_id} Status={self.status}>"
+        return f"<UnderwritingCondition ID={self.id} InvestorProfile={self.investor_profile_id} Status={self.status}>"
 
 
 # =========================================================
@@ -112,6 +119,11 @@ class ConditionRequest(db.Model):
         db.ForeignKey("borrower_profile.id", name="fk_conditionreq_borrower_id"),
         nullable=True
     )
+    investor_profile_id = db.Column(
+        db.Integer,
+        db.ForeignKey("borrower_profile.id", name="fk_conditionreq_investor_id"),
+        nullable=True
+    )
     document_name = db.Column(db.String(255), nullable=True)
     status = db.Column(db.String(50), default="pending")  # pending / received / cleared / waived
     requested_by = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=True)
@@ -125,6 +137,7 @@ class ConditionRequest(db.Model):
     # Relationships
     loan = db.relationship("LoanApplication", back_populates="condition_requests")
     borrower_profile = db.relationship("BorrowerProfile", back_populates="condition_requests")
+    investor_profile = db.relationship("InvestorProfile", back_populates="condition_requests")
     requested_by_user = db.relationship("User", foreign_keys=[requested_by])
     assigned_to_user = db.relationship("User", foreign_keys=[assigned_to])
 

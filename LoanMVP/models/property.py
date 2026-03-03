@@ -68,6 +68,7 @@ class SavedProperty(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     borrower_profile_id = db.Column(db.Integer, db.ForeignKey("borrower_profile.id"), nullable=False)
+    investor_profile_id = db.Column(db.Integer, db.ForeignKey("investor_profile.id"), nullable=False)
     property_id = db.Column(db.String(50))
     address = db.Column(db.String(255))
     price = db.Column(db.String(50))
@@ -80,4 +81,5 @@ class SavedProperty(db.Model):
     resolved_json = db.Column(db.Text, nullable=True)   # stores unified property payload
     resolved_at = db.Column(db.DateTime, nullable=True)
 
+    investor_profile = db.relationship("InvestorProfile", back_populates="saved_properties")
     borrower = db.relationship("BorrowerProfile", backref=db.backref("saved_properties", lazy=True))

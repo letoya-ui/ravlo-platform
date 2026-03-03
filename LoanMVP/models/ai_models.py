@@ -14,6 +14,7 @@ class LoanAIConversation(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     borrower_profile_id = db.Column(db.Integer, db.ForeignKey("borrower_profile.id"))
+    investor_profile_id = db.Column(db.Integer, db.ForeignKey("investor_profile.id"))
     loan_id = db.Column(db.Integer, db.ForeignKey("loan_application.id"))
     user_role = db.Column(db.String(50))
     topic = db.Column(db.String(120))
@@ -25,6 +26,7 @@ class LoanAIConversation(db.Model):
     # ✅ Relationships
     loan = db.relationship("LoanApplication", back_populates="ai_conversations")
     borrower = db.relationship("BorrowerProfile", back_populates="ai_conversations")
+    investor_profile = db.relationship("InvestorProfile", back_populates="ai_conversations")
 
     def __repr__(self):
         return f"<LoanAIConversation Loan={self.loan_id} Role={self.user_role}>"
@@ -45,6 +47,7 @@ class AIAuditLog(db.Model):
 
     # === 🔥 New Shared Insight Fields ===
     borrower_profile_id = db.Column(db.Integer, db.ForeignKey("borrower_profile.id"), nullable=True)
+    investor_profile_id = db.Column(db.Integer, db.ForeignKey("investor_profile.id"), nullable=True)
     lead_id = db.Column(db.Integer, db.ForeignKey("lead.id"), nullable=True)
     context = db.Column(db.String(100), nullable=True)   # e.g. "borrower_dashboard", "crm_view_lead"
     role_view = db.Column(db.String(50), nullable=True)  # e.g. "borrower", "crm", "processor"
@@ -87,6 +90,7 @@ class AIIntakeSummary(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     borrower_profile_id = db.Column(db.Integer, db.ForeignKey("borrower_profile.id"), nullable=False)
+    investor_profile_id = db.Column(db.Integer, db.ForeignKey("investor_profile.id"), nullable=False)
     summary = db.Column(db.Text, nullable=True)
     status = db.Column(db.String(50), default="pending")  # pending / reviewed / approved / flagged
     reviewer_notes = db.Column(db.Text, nullable=True)
@@ -97,7 +101,7 @@ class AIIntakeSummary(db.Model):
     # Relationships
     borrower = db.relationship("BorrowerProfile", backref="ai_intake_summaries")
     reviewer = db.relationship("User", backref="ai_reviews", foreign_keys=[reviewer_id])
-
+    investor_profile = db.relationship("InvestorProfile", backref="ai_intake_summaries")
     def __repr__(self):
         return f"<AIIntakeSummary #{self.id} for Borrower {self.borrower_id}>"
 
@@ -112,6 +116,7 @@ class AIAssistantInteraction(db.Model):
 
     # Context
     borrower_profile_id = db.Column(db.Integer, db.ForeignKey("borrower_profile.id"))
+    investor_profile_id = db.Column(db.Integer, db.ForeignKey("investor_profile.id"))
     loan_id = db.Column(db.Integer, db.ForeignKey("loan_application.id"), nullable=True)
 
     # Threading
@@ -126,8 +131,9 @@ class AIAssistantInteraction(db.Model):
 
     # Relationships
     borrower = db.relationship("BorrowerProfile", backref=db.backref("ai_interactions", lazy=True))
+    investor_profile = db.relationship("InvestorProfile", backref=db.backref("ai_interactions", lazy=True))
     loan = db.relationship("LoanApplication", backref=db.backref("ai_interactions", lazy=True))
     parent = db.relationship("AIAssistantInteraction", remote_side=[id], backref="followups")
 
     def __repr__(self):
-        return f"<AIInteraction {self.id} LO={self.loan_officer_id} Borrower={self.borrower_profile_id} Loan={self.loan_id}>"
+        return f"<AIInteraction {self.id} LO={self.loan_officer_id} Investor={self.Investor_profile_id} Loan={self.loan_id}>"
