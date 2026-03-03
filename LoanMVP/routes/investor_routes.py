@@ -556,6 +556,14 @@ def create_profile():
             full_name=form.full_name.data,
             email=form.email.data,
             phone=form.phone.data,
+            address=form.address.data,
+            city=form.city.data,
+            state=form.state.data,
+            zip_code=form.zip_code.data,
+            employment_status=form.employment_status.data,
+            annual_income=form.annual_income.data,
+            credit_score=form.credit_score.data,
+
             strategy=form.strategy.data,
             experience_level=form.experience_level.data,
             target_markets=form.target_markets.data,
@@ -598,6 +606,7 @@ def update_profile():
     ip.updated_at = datetime.utcnow()
     db.session.commit()
     return jsonify({"status": "success", "message": "Profile updated successfully."})
+    
 # =========================================================
 # 📝 INVESTOR • CAPITAL APPLICATION + STATUS
 # =========================================================
