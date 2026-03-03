@@ -13,21 +13,26 @@ class InvestorProfile(db.Model, TimestampMixin):
 
     id = db.Column(db.Integer, primary_key=True)
 
-    # ✅ matches User.__tablename__ = "user"
-    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False, unique=True, index=True)
+    user_id = db.Column(
+        db.Integer,
+        db.ForeignKey("user.id"),
+        nullable=False,
+        unique=True,
+        index=True
+    )
 
-    # Basic identity (optional — you can also just use User fields)
+    # Basic identity
     full_name = db.Column(db.String(120), nullable=True)
     email = db.Column(db.String(120), nullable=True)
     phone = db.Column(db.String(50), nullable=True)
 
     # Preferences
-    strategy = db.Column(db.String(50), nullable=True)            # flip | rental | brrrr | notes
-    experience_level = db.Column(db.String(30), nullable=True)    # new | intermediate | pro
+    strategy = db.Column(db.String(50), nullable=True)
+    experience_level = db.Column(db.String(30), nullable=True)
 
     # Buy box
-    target_markets = db.Column(db.Text, nullable=True)            # "Orange County, NY; Tampa, FL"
-    property_types = db.Column(db.Text, nullable=True)            # "SFR; MF; Condo"
+    target_markets = db.Column(db.Text, nullable=True)
+    property_types = db.Column(db.Text, nullable=True)
     min_price = db.Column(db.Integer, nullable=True)
     max_price = db.Column(db.Integer, nullable=True)
     min_sqft = db.Column(db.Integer, nullable=True)
@@ -40,12 +45,12 @@ class InvestorProfile(db.Model, TimestampMixin):
 
     # Risk + timeline
     timeline_days = db.Column(db.Integer, nullable=True)
-    risk_tolerance = db.Column(db.String(30), nullable=True)      # conservative | balanced | aggressive
+    risk_tolerance = db.Column(db.String(30), nullable=True)
 
     is_verified = db.Column(db.Boolean, default=False, nullable=False)
 
     # ----------------------------
-    # Relationships (back_populates)
+    # Relationships
     # ----------------------------
     user = db.relationship("User", back_populates="investor_profile", uselist=False)
 
@@ -55,7 +60,7 @@ class InvestorProfile(db.Model, TimestampMixin):
         cascade="all, delete-orphan",
         lazy=True
     )
-    
+
     saved_properties = db.relationship(
         "SavedProperty",
         back_populates="investor_profile",
@@ -63,6 +68,7 @@ class InvestorProfile(db.Model, TimestampMixin):
         lazy=True
     )
 
+    # 🔥 THIS IS THE FIX: LoanApplication expects back_populates="capital_requests"
     capital_requests = db.relationship(
         "LoanApplication",
         back_populates="investor_profile",
@@ -84,8 +90,246 @@ class InvestorProfile(db.Model, TimestampMixin):
         lazy=True
     )
 
+    # 🔥 NEW: ConditionRequest expects back_populates="investor_profile"
+    class InvestorProfile(db.Model, TimestampMixin):
+    __tablename__ = "investor_profile"
+
+    id = db.Column(db.Integer, primary_key=True)
+
+    user_id = db.Column(
+        db.Integer,
+        db.ForeignKey("user.id"),
+        nullable=False,
+        unique=True,
+        index=True
+    )
+
+    # Basic identity
+    full_name = db.Column(db.String(120), nullable=True)
+    email = db.Column(db.String(120), nullable=True)
+    phone = db.Column(db.String(50), nullable=True)
+
+    # Preferences
+    strategy = db.Column(db.String(50), nullable=True)
+    experience_level = db.Column(db.String(30), nullable=True)
+
+    # Buy box
+    target_markets = db.Column(db.Text, nullable=True)
+    property_types = db.Column(db.Text, nullable=True)
+    min_price = db.Column(db.Integer, nullable=True)
+    max_price = db.Column(db.Integer, nullable=True)
+    min_sqft = db.Column(db.Integer, nullable=True)
+    max_sqft = db.Column(db.Integer, nullable=True)
+
+    # Capital + returns
+    capital_available = db.Column(db.Integer, nullable=True)
+    min_cash_on_cash = db.Column(db.Float, nullable=True)
+    min_roi = db.Column(db.Float, nullable=True)
+
+    # Risk + timeline
+    timeline_days = db.Column(db.Integer, nullable=True)
+    risk_tolerance = db.Column(db.String(30), nullable=True)
+
+    is_verified = db.Column(db.Boolean, default=False, nullable=False)
+
+    # ----------------------------
+    # Relationships
+    # ----------------------------
+    user = db.relationship("User", back_populates="investor_profile", uselist=False)
+
+    investments = db.relationship(
+        "Investment",
+        back_populates="investor_profile",
+        cascade="all, delete-orphan",
+        lazy=True
+    )
+
+    saved_properties = db.relationship(
+        "SavedProperty",
+        back_populates="investor_profile",
+        cascade="all, delete-orphan",
+        lazy=True
+    )
+
+    # 🔥 THIS IS THE FIX: LoanApplication expects back_populates="capital_requests"
+    capital_requests = db.relationship(
+        "LoanApplication",
+        back_populates="investor_profile",
+        cascade="all, delete-orphan",
+        lazy=True
+    )
+
+    documents = db.relationship(
+        "LoanDocument",
+        back_populates="investor_profile",
+        cascade="all, delete-orphan",
+        lazy=True
+    )
+
+    conditions = db.relationship(
+        "UnderwritingCondition",
+        back_populates="investor_profile",
+        cascade="all, delete-orphan",
+        lazy=True
+    )
+
+    # 🔥 NEW: ConditionRequest expects back_populates="investor_profile"
+    condition_requests = db.relationship(
+        "ConditionRequest",
+        back_populates="investor_profile",
+        cascade="all, delete-orphan",
+        lazy=True
+    )
+
+    class InvestorProfile(db.Model, TimestampMixin):
+    __tablename__ = "investor_profile"
+
+    id = db.Column(db.Integer, primary_key=True)
+
+    user_id = db.Column(
+        db.Integer,
+        db.ForeignKey("user.id"),
+        nullable=False,
+        unique=True,
+        index=True
+    )
+
+    # Basic identity
+    full_name = db.Column(db.String(120), nullable=True)
+    email = db.Column(db.String(120), nullable=True)
+    phone = db.Column(db.String(50), nullable=True)
+
+    # Preferences
+    strategy = db.Column(db.String(50), nullable=True)
+    experience_level = db.Column(db.String(30), nullable=True)
+
+    # Buy box
+    target_markets = db.Column(db.Text, nullable=True)
+    property_types = db.Column(db.Text, nullable=True)
+    min_price = db.Column(db.Integer, nullable=True)
+    max_price = db.Column(db.Integer, nullable=True)
+    min_sqft = db.Column(db.Integer, nullable=True)
+    max_sqft = db.Column(db.Integer, nullable=True)
+
+    # Capital + returns
+    capital_available = db.Column(db.Integer, nullable=True)
+    min_cash_on_cash = db.Column(db.Float, nullable=True)
+    min_roi = db.Column(db.Float, nullable=True)
+
+    # Risk + timeline
+    timeline_days = db.Column(db.Integer, nullable=True)
+    risk_tolerance = db.Column(db.String(30), nullable=True)
+
+    is_verified = db.Column(db.Boolean, default=False, nullable=False)
+
+    # ----------------------------
+    # Relationships
+    # ----------------------------
+    user = db.relationship("User", back_populates="investor_profile", uselist=False)
+
+    investments = db.relationship(
+        "Investment",
+        back_populates="investor_profile",
+        cascade="all, delete-orphan",
+        lazy=True
+    )
+
+    saved_properties = db.relationship(
+        "SavedProperty",
+        back_populates="investor_profile",
+        cascade="all, delete-orphan",
+        lazy=True
+    )
+
+    # 🔥 THIS IS THE FIX: LoanApplication expects back_populates="capital_requests"
+    capital_requests = db.relationship(
+        "LoanApplication",
+        back_populates="investor_profile",
+        cascade="all, delete-orphan",
+        lazy=True
+    )
+
+    documents = db.relationship(
+        "LoanDocument",
+        back_populates="investor_profile",
+        cascade="all, delete-orphan",
+        lazy=True
+    )
+
+    conditions = db.relationship(
+        "UnderwritingCondition",
+        back_populates="investor_profile",
+        cascade="all, delete-orphan",
+        lazy=True
+    )
+
+    # 🔥 NEW: ConditionRequest expects back_populates="investor_profile"
+    condition_requests = db.relationship(
+        "ConditionRequest",
+        back_populates="investor_profile",
+        cascade="all, delete-orphan",
+        lazy=True
+    )
+
+    
+    credit_profiles = db.relationship(
+        "CreditProfile",
+        back_populates="investor_profile",
+        cascade="all, delete-orphan",
+        lazy=True
+    )
+
+    loan_quotes = db.relationship(
+        "LoanQuote",
+        back_populates="investor_profile",
+        cascade="all, delete-orphan",
+        lazy=True
+    )
+
+    property_analysis= db.relationship(
+        "PropertyAnalysis",
+        back_populates="investor_profile",
+        cascade="all, delete-orphan",
+        lazy=True
+    )
+
+     loan_intake_sessions= db.relationship(
+        "LoanIntakeSession",
+        back_populates="investor_profile",
+        cascade="all, delete-orphan",
+        lazy=True
+    )
+     
+    document_request= db.relationship(
+        "DocumentRequest",
+        back_populates="investor_profile",
+        cascade="all, delete-orphan",
+        lazy=True
+    )
+
+    budgets= db.relationship(
+        "ProjectBudget",
+        back_populates="investor_profile",
+        cascade="all, delete-orphan",
+        lazy=True
+    )
+
+    ai_conversations= db.relationship(
+        "AiConversation",
+        back_populates="investor_profile",
+        cascade="all, delete-orphan",
+        lazy=True
+    )
+
+    Tasks= db.relationship(
+        "Task",
+        back_populates="investor_profile",
+        cascade="all, delete-orphan",
+        lazy=True
+    )
     def __repr__(self):
         return f"<InvestorProfile id={self.id} user_id={self.user_id}>"
+
 
 
 class Investment(db.Model, TimestampMixin):
