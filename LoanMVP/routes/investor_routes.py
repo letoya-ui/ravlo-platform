@@ -33,7 +33,7 @@ from reportlab.lib.pagesizes import LETTER
 
 from LoanMVP.extensions import db, stripe, csrf
 from LoanMVP.utils.decorators import role_required
-from LoanMVP.forms.investor_forms import InvestorSettingsForm
+from LoanMVP.forms.investor_forms import InvestorSettingsForm, InvestorProfileForm
 # -------------------------
 # Models (updated for Investor)
 # -------------------------
@@ -547,7 +547,7 @@ def notifications_settings():
 @login_required
 @role_required("investor")
 def create_profile():
-    from LoanMVP.forms import InvestorProfileForm
+    from LoanMVP.forms.investor_forms import InvestorProfileForm
     form = InvestorProfileForm()
 
     if form.validate_on_submit():
