@@ -462,6 +462,22 @@ def dismiss_dashboard_tour():
 # =========================================================
 # 👤 INVESTOR ACCOUNT (profile/settings/privacy/notifications)
 # =========================================================
+@investor_bp.route("/account", methods=["GET", "POST"])
+@login_required
+@role_required("investor")
+def account():
+    ip = InvestorProfile.query.filter_by(user_id=current_user.id).first()
+
+    now_str = datetime.now().strftime("%b %d, %Y • %I:%M %p")
+
+    return render_template(
+        "investor/account.html",
+        investor=current_user,
+        investor_profile=ip,
+        now_str=now_str,
+        active_tab="account",
+        title="RAVLO • Account"
+    )
 
 @investor_bp.route("/profile", methods=["GET"])
 @login_required
