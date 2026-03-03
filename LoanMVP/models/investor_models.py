@@ -155,7 +155,7 @@ class InvestorProfile(db.Model, TimestampMixin):
         lazy=True
     )
 
-    Tasks= db.relationship(
+    tasks= db.relationship(
         "Task",
         back_populates="investor_profile",
         cascade="all, delete-orphan",
