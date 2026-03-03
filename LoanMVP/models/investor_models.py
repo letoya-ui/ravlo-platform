@@ -97,7 +97,13 @@ class InvestorProfile(db.Model, TimestampMixin):
         lazy=True
     )
 
-    
+    esigned_documents = db.relationship(
+        "ESignedDocument",   # or the exact model name in document_models.py
+         back_populates="investor_profile",
+         cascade="all, delete-orphan",
+         lazy=True
+    )
+
 
         
     credit_profiles = db.relationship(
