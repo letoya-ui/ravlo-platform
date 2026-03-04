@@ -173,6 +173,10 @@ class Deal(db.Model):
 
     notes = db.Column(db.Text)
     status = db.Column(db.String(32), default="active")
+    # 🔥 HGTV Reveal Sharing
+    reveal_public_id = db.Column(db.String(32), unique=True, index=True, nullable=True)
+    reveal_is_public = db.Column(db.Boolean, default=False, nullable=False)
+    reveal_published_at = db.Column(db.DateTime, nullable=True)
 
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
