@@ -323,7 +323,7 @@
           </div>
           <div style="margin-top:.75rem; display:flex; gap:.5rem; flex-wrap:wrap;">
             <a class="btn ghost" href="{{ feat.get('after_url') }}" target="_blank" rel="noopener">🔗 Open Full Size</a>
-            {% if 'investor.deal_reveal' in current_app.view_functions %}
+            {% if 'investor.deal_reveal' %}
               <a class="btn" href="{{ url_for('investor.deal_reveal', deal_id=deal.id) }}">✨ Open Reveal</a>
             {% endif %}
           </div>
