@@ -1,37 +1,124 @@
-<!DOCTYPE html>
+{# ============================================================
+   RAVLO PUBLIC BASE LAYOUT
+   Used for: HGTV Reveal share pages (/reveal/<public_id>)
+   Full-bleed, no sidebar, no auth card
+   ============================================================ #}
+
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>{% block title %}LoanMVP{% endblock %}</title>
+  <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Ravlo Reveal{% endblock %}</title>
 
-  <!-- Shared Public Styles -->
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <!-- Reuse your existing design tokens -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+
   <style>
-    body {
-      margin: 0;
-      padding: 0;
-      font-family: Inter, sans-serif;
-      background: #0d0d0d;
-      color: #f5f5f5;
+    :root{
+      --bg0:#070A0E;
+      --bg1:#0B1016;
+      --panel:#0E141B;
+      --line:#1A2330;
+      --text:#FFFFFF;
+      --muted:#A9B2BE;
+      --accent:#6B7F93;
+      --accent2:#7A8FA5;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;
+      font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+      background: radial-gradient(1200px 700px at 20% 10%, rgba(122,184,255,.10), transparent 55%),
+                  radial-gradient(900px 600px at 80% 20%, rgba(107,127,147,.16), transparent 55%),
+                  var(--bg0);
+      color:var(--text);
+    }
+    a{color:inherit}
+
+    .pub-topbar{
+      position:sticky; top:0; z-index:50;
+      backdrop-filter: blur(10px);
+      background: rgba(7,10,14,.55);
+      border-bottom:1px solid rgba(255,255,255,.08);
+    }
+    .pub-topbar-inner{
+      max-width:1180px;
+      margin:0 auto;
+      padding:.85rem 1rem;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:1rem;
+    }
+    .brand{
+      display:flex; align-items:center; gap:.7rem;
+      text-decoration:none;
+    }
+    .brand-mark{
+      width:34px; height:34px; border-radius:10px;
+      border:1px solid rgba(255,255,255,.12);
+      background: linear-gradient(135deg, rgba(255,255,255,.16), rgba(255,255,255,.06));
+      display:flex; align-items:center; justify-content:center;
+      font-weight:900; letter-spacing:.06em;
+    }
+    .brand-name{font-weight:900; letter-spacing:.08em}
+    .brand-sub{color:var(--muted); font-size:.85rem; margin-top:.1rem}
+
+    .pub-shell{
+      max-width:1180px;
+      margin:0 auto;
+      padding: 1.15rem 1rem 2.5rem;
     }
 
-    .public-wrapper {
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
+    .pub-pill{
+      display:inline-flex; gap:.45rem; align-items:center;
+      padding:.35rem .6rem;
+      border-radius:999px;
+      background: rgba(255,255,255,.06);
+      border:1px solid rgba(255,255,255,.12);
+      color: rgba(255,255,255,.88);
+      font-weight:800;
+      font-size:.78rem;
     }
 
-    .public-content {
-      flex: 1;
-      padding: 2rem 1rem;
+    .pub-btn{
+      display:inline-flex; align-items:center; gap:.45rem;
+      padding:.55rem .85rem;
+      border-radius:12px;
+      background: rgba(122,184,255,.12);
+      border:1px solid rgba(122,184,255,.45);
+      color:#a9d2ff;
+      text-decoration:none;
+      font-weight:800;
+      font-size:.9rem;
+      transition:.18s;
+      cursor:pointer;
+      white-space:nowrap;
+    }
+    .pub-btn:hover{
+      background: rgba(122,184,255,.22);
+      border-color: rgba(122,184,255,.85);
+      box-shadow: 0 0 14px rgba(122,184,255,.35);
+    }
+    .pub-btn.ghost{
+      background: rgba(255,255,255,.04);
+      border:1px solid rgba(255,255,255,.12);
+      color: rgba(255,255,255,.92);
     }
 
-    .public-footer {
-      text-align: center;
-      padding: 1.5rem;
-      color: #777;
-      font-size: 0.9rem;
-      border-top: 1px solid #222;
+    .pub-footer{
+      max-width:1180px;
+      margin:0 auto;
+      padding: 1.25rem 1rem 2rem;
+      color: rgba(255,255,255,.55);
+      border-top:1px solid rgba(255,255,255,.08);
     }
   </style>
 
@@ -39,16 +126,34 @@
 </head>
 
 <body>
-  <div class="public-wrapper">
 
-    <div class="public-content">
-      {% block content %}{% endblock %}
+  <header class="pub-topbar">
+    <div class="pub-topbar-inner">
+      <a class="brand" href="{{ url_for('auth.login') }}">
+        <div class="brand-mark">R</div>
+        <div>
+          <div class="brand-name">RAVLO</div>
+          <div class="brand-sub">Deal Reveal</div>
+        </div>
+      </a>
+
+      <div style="display:flex; gap:.5rem; align-items:center; flex-wrap:wrap;">
+        <span class="pub-pill">📺 HGTV-Style Reveal</span>
+        {% block topbar_actions %}
+          <a class="pub-btn ghost" href="{{ url_for('auth.login') }}">Investor Login</a>
+        {% endblock %}
+      </div>
     </div>
+  </header>
 
-    <div class="public-footer">
-      LoanMVP • Borrower Beta • 2026
-    </div>
+  <main class="pub-shell">
+    {% block content %}{% endblock %}
+  </main>
 
-  </div>
+  <footer class="pub-footer">
+    © {{ current_year if current_year else "2026" }} Ravlo. Built for serious investors.
+  </footer>
+
+  {% block scripts %}{% endblock %}
 </body>
 </html>
