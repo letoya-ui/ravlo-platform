@@ -1,0 +1,260 @@
+{% extends "layouts/ravlo_base.html" %}
+{% block title %}Ravlo • Rehab Studio{% endblock %}
+
+{% block page_title %}Rehab Studio{% endblock %}
+{% block page_subline %}Upload before photos, generate HGTV after concepts, plan scope, and share with contractors.{% endblock %}
+
+{% block content %}
+<style>
+  .rs-wrap{margin-top:1.25rem;}
+  .rs-hero{
+    background: rgba(255,255,255,.03);
+    border:1px solid rgba(255,255,255,.10);
+    border-radius: 18px;
+    padding: 1rem 1.1rem;
+    box-shadow: 0 0 22px rgba(0,0,0,.55);
+    display:flex; justify-content:space-between; gap:1rem; flex-wrap:wrap;
+    align-items:flex-start;
+  }
+  .rs-hero h2{margin:0}
+  .rs-sub{color:var(--muted); margin:.35rem 0 0}
+  .rs-actions{display:flex; gap:.5rem; flex-wrap:wrap;}
+
+  .rs-grid{
+    display:grid;
+    grid-template-columns: 1.35fr .85fr;
+    gap:1.1rem;
+    margin-top:1rem;
+  }
+  @media(max-width:1000px){ .rs-grid{grid-template-columns:1fr;} }
+
+  .card{
+    background: var(--panel, #0b1016);
+    border: 1px solid var(--line, rgba(255,255,255,0.10));
+    border-radius: 16px;
+    padding: 1rem 1.05rem;
+    box-shadow: 0 0 18px rgba(0,0,0,0.45);
+  }
+  .card h3{margin:.1rem 0 .8rem; color:var(--accent);}
+  .btn{
+    background: rgba(122,184,255,0.12);
+    border: 1px solid rgba(122,184,255,0.45);
+    color: #7ab8ff;
+    padding: .6rem .9rem;
+    border-radius: 10px;
+    cursor: pointer;
+    font-weight: 750;
+    transition: .2s;
+    font-size: .9rem;
+    text-decoration:none;
+    display:inline-flex; align-items:center; gap:.45rem;
+  }
+  .btn:hover{background: rgba(122,184,255,0.22); border-color:#7ab8ff; box-shadow:0 0 12px rgba(122,184,255,0.35);}
+  .btn.ghost{background: rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.10); color: var(--text);}
+
+  /* Before/After slider */
+  .ba{
+    position:relative;
+    border-radius: 16px;
+    overflow:hidden;
+    border:1px solid rgba(255,255,255,.10);
+    background: rgba(255,255,255,.02);
+  }
+  .ba img{display:block; width:100%; height:auto;}
+  .ba .after{position:absolute; inset:0; clip-path: inset(0 50% 0 0);}
+  .ba .handle{position:absolute; top:0; bottom:0; left:50%; width:2px; background: rgba(122,184,255,.85); box-shadow: 0 0 18px rgba(122,184,255,.35);}
+  .ba .knob{position:absolute; top:50%; left:50%; transform: translate(-50%,-50%); width:46px; height:46px; border-radius:999px; background: rgba(0,0,0,.55); border:1px solid rgba(122,184,255,.55); display:flex; align-items:center; justify-content:center; color:#a9d2ff; font-weight:900;}
+  .ba input[type="range"]{position:absolute; inset:0; width:100%; opacity:0; cursor: ew-resize;}
+  .ba-badges{position:absolute; inset:12px 12px auto 12px; display:flex; justify-content:space-between; pointer-events:none;}
+  .badge{font-size:.78rem; padding:.28rem .55rem; border-radius:999px; background: rgba(0,0,0,.45); border: 1px solid rgba(255,255,255,.14); color: rgba(255,255,255,.88); backdrop-filter: blur(6px);}
+
+  .img{width:100%; border-radius:14px; border:1px solid rgba(255,255,255,.08); background:#0f141a; display:block;}
+  .gallery{display:grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap:.75rem;}
+  @media(max-width:900px){ .gallery{grid-template-columns: repeat(2, minmax(0,1fr));} }
+  @media(max-width:560px){ .gallery{grid-template-columns: 1fr;} }
+
+  .tile{padding:.6rem; border-radius:14px; background: rgba(255,255,255,.03); border:1px solid rgba(255,255,255,.08);}
+  .muted{color:var(--muted);}
+</style>
+
+<div class="rs-wrap">
+
+  <div class="rs-hero">
+    <div>
+      <h2>🏗️ Rehab Studio</h2>
+      <div class="rs-sub">
+        {{ deal.title or ('Deal #' ~ deal.id) }} • Strategy: {{ deal.strategy or '—' }}
+      </div>
+    </div>
+    <div class="rs-actions">
+      <a class="btn ghost" href="{{ url_for('investor.deal_detail', deal_id=deal.id) }}">🗂️ Deal Details</a>
+      <a class="btn ghost" href="{{ url_for('investor.deal_reveal', deal_id=deal.id) }}">✨ Reveal View</a>
+      <button class="btn" type="button" onclick="openStyleModal()">✨ Generate Designs</button>
+    </div>
+  </div>
+
+  {% set lead = mockups[0] if mockups and mockups[0] else None %}
+
+  <div class="rs-grid">
+    <!-- LEFT: HGTV slider + gallery -->
+    <div class="card">
+      <h3>HGTV Reveal Slider</h3>
+
+      {% if lead and lead.before_url and lead.after_url %}
+        <div class="ba" id="ba">
+          <div class="ba-badges">
+            <span class="badge">BEFORE</span>
+            <span class="badge">AFTER</span>
+          </div>
+
+          <img src="{{ lead.before_url }}" alt="Before">
+          <div class="after" id="baAfter">
+            <img src="{{ lead.after_url }}" alt="After">
+          </div>
+
+          <div class="handle" id="baHandle"></div>
+          <div class="knob">↔</div>
+          <input id="baRange" type="range" min="0" max="100" value="50">
+        </div>
+        <p class="muted" style="margin-top:.65rem;">Drag left/right for the reveal moment.</p>
+      {% else %}
+        <p class="muted">No before/after pair yet. Generate your first design.</p>
+      {% endif %}
+
+      <h3 style="margin-top:1.1rem;">Design Gallery</h3>
+      {% if not mockups %}
+        <p class="muted">No designs yet.</p>
+      {% else %}
+        <div class="gallery">
+          {% for m in mockups %}
+            <div class="tile">
+              <img class="img" src="{{ m.after_url }}" alt="After concept">
+              <div style="display:flex; gap:.5rem; flex-wrap:wrap; margin-top:.55rem;">
+                <button class="btn ghost" type="button" onclick="setSlider('{{ m.before_url }}','{{ m.after_url }}')">Compare</button>
+                <button class="btn" type="button" onclick="selectFeatured('{{ m.after_url }}')">✅ Feature</button>
+              </div>
+              <div class="muted" style="margin-top:.45rem; font-size:.85rem;">
+                {{ m.style_preset or '' }} {% if m.created_at %}• {{ m.created_at.strftime("%b %d %I:%M %p") }}{% endif %}
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    </div>
+
+    <!-- RIGHT: Scope + Share -->
+    <div class="card">
+      <h3>Scope Planner</h3>
+      <p class="muted">This is what you send to contractors (clean + visual).</p>
+
+      <div style="display:grid; gap:.6rem;">
+        <label class="muted">Kitchen</label>
+        <select class="dw-input" id="scopeKitchen">
+          <option value="light">Light</option><option value="medium" selected>Medium</option><option value="heavy">Full Gut</option>
+        </select>
+
+        <label class="muted">Bathroom</label>
+        <select class="dw-input" id="scopeBath">
+          <option value="light">Light</option><option value="medium" selected>Medium</option><option value="heavy">Full Gut</option>
+        </select>
+
+        <label class="muted">Flooring</label>
+        <select class="dw-input" id="scopeFloor">
+          <option value="light">Carpet</option><option value="medium" selected>Vinyl</option><option value="heavy">Hardwood</option>
+        </select>
+
+        <label class="muted">Paint</label>
+        <select class="dw-input" id="scopePaint">
+          <option value="light">Touch-up</option><option value="medium" selected>Full Interior</option><option value="heavy">Interior + Exterior</option>
+        </select>
+      </div>
+
+      <hr style="border:none; border-top:1px solid rgba(255,255,255,.08); margin:1rem 0;">
+
+      <h3>Share With Contractor</h3>
+      <p class="muted" style="margin-top:-.2rem;">Pick a featured design first.</p>
+
+      <div style="display:flex; gap:.5rem; flex-wrap:wrap;">
+        <button class="btn" type="button" onclick="shareToContractor()">📤 Send Featured + Scope</button>
+        <a class="btn ghost" href="{{ url_for('investor.deal_reveal', deal_id=deal.id) }}">✨ Open Reveal</a>
+      </div>
+
+      <div id="shareStatus" class="muted" style="margin-top:.75rem;"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Reuse your existing Style Modal if you want (or keep it separate file). -->
+<div id="styleModal" class="modal-overlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.65); align-items:center; justify-content:center; padding:1rem; z-index:9999;">
+  <div class="modal-content" style="width:min(980px,100%); background:#0b1016; border:1px solid var(--line); border-radius:12px; padding:1.25rem;">
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+      <h3 style="margin:0;">✨ AI Renovation Visualizer</h3>
+      <button type="button" class="btn ghost" onclick="closeStyleModal()">Close</button>
+    </div>
+
+    <p class="muted" style="margin:.6rem 0 0;">Use your existing visualizer JS here (copied from Deal Workspace).</p>
+  </div>
+</div>
+
+<script>
+  // Slider
+  (function(){
+    const r = document.getElementById("baRange");
+    const after = document.getElementById("baAfter");
+    const handle = document.getElementById("baHandle");
+    if(!r || !after || !handle) return;
+    function set(v){
+      const pct = Math.max(0, Math.min(100, Number(v)||50));
+      after.style.clipPath = `inset(0 ${100-pct}% 0 0)`;
+      handle.style.left = pct + "%";
+    }
+    r.addEventListener("input", e => set(e.target.value));
+    set(r.value);
+  })();
+
+  // Update slider from gallery selection
+  function setSlider(beforeUrl, afterUrl){
+    const ba = document.getElementById("ba");
+    if(!ba) return;
+    const imgs = ba.querySelectorAll("img");
+    if(imgs.length >= 2){
+      imgs[0].src = beforeUrl;
+      const afterImg = document.querySelector("#baAfter img");
+      if(afterImg) afterImg.src = afterUrl;
+    }
+  }
+
+  // Featured selection (store client side for now)
+  window._featuredAfter = "";
+  function selectFeatured(url){
+    window._featuredAfter = url;
+    alert("Featured design selected ✅");
+  }
+
+  // Stub: share (you’ll wire to your existing deal_share_design route)
+  async function shareToContractor(){
+    const img = window._featuredAfter || "";
+    if(!img) return alert("Select a featured design first.");
+
+    const scope = {
+      kitchen: document.getElementById("scopeKitchen")?.value,
+      bathroom: document.getElementById("scopeBath")?.value,
+      flooring: document.getElementById("scopeFloor")?.value,
+      paint: document.getElementById("scopePaint")?.value
+    };
+
+    // You already have partner sharing route expecting partner_ids + image_url + note
+    // Here we just show how to package the note.
+    const note =
+      `Scope:\nKitchen: ${scope.kitchen}\nBathroom: ${scope.bathroom}\nFlooring: ${scope.flooring}\nPaint: ${scope.paint}`;
+
+    document.getElementById("shareStatus").innerText = "Ready to send — wire partner picker + POST.";
+
+    // When you’re ready, POST to:
+    // fetch("{{ url_for('investor.deal_share_design', deal_id=deal.id) }}", { method:"POST", body: formData })
+  }
+
+  function openStyleModal(){ document.getElementById("styleModal").style.display="flex"; }
+  function closeStyleModal(){ document.getElementById("styleModal").style.display="none"; }
+</script>
+{% endblock %}
