@@ -96,4 +96,4 @@ class SavedProperty(db.Model):
 
      # ✅ back_populates (no backref)
     investor_profile = db.relationship("InvestorProfile", back_populates="saved_properties")
-    borrower = db.relationship("BorrowerProfile", back_populates="saved_properties")
+    
