@@ -3,236 +3,362 @@
 {% block title %}Ravlo • Deal Reveal{% endblock %}
 
 {% block page_title %}Deal Reveal{% endblock %}
-{% block page_subline %}Review before/after concepts and pick a final direction.{% endblock %}
+{% block page_subline %}An HGTV-style before → after story for your deal.{% endblock %}
 
 {% block content %}
 
 <style>
-  .reveal-wrap{margin-top:1.25rem;}
-  .reveal-top{
-    display:flex; align-items:flex-start; justify-content:space-between;
-    gap:1rem; flex-wrap:wrap; margin-bottom:1rem;
-  }
-  .reveal-title h2{margin:0;}
-  .reveal-sub{color:var(--muted); margin:.25rem 0 0;}
-  .reveal-actions{display:flex; gap:.5rem; flex-wrap:wrap;}
+  /* ==========================
+     HGTV REVEAL LOOK (RAVLO)
+     ========================== */
 
-  .reveal-grid{
-    display:grid;
-    grid-template-columns: 1.1fr 1.9fr;
-    gap:1.25rem;
-    margin-top:1rem;
+  .hgtv-wrap{margin-top:1rem;}
+
+  /* full-bleed hero */
+  .hgtv-hero{
+    position:relative;
+    border-radius: 18px;
+    overflow:hidden;
+    border: 1px solid var(--line, rgba(255,255,255,.10));
+    background: radial-gradient(1200px 600px at 20% 10%, rgba(122,184,255,.12), transparent 55%),
+                linear-gradient(180deg, rgba(0,0,0,.0), rgba(0,0,0,.55));
+    box-shadow: 0 0 28px rgba(0,0,0,.55);
+  }
+  .hgtv-hero-bg{
+    position:absolute; inset:0;
+    background-size:cover;
+    background-position:center;
+    filter: saturate(1.05) contrast(1.02);
+    transform: scale(1.02);
+  }
+  .hgtv-hero::after{
+    content:"";
+    position:absolute; inset:0;
+    background: linear-gradient(90deg, rgba(0,0,0,.74), rgba(0,0,0,.22) 55%, rgba(0,0,0,.62));
   }
 
-  /* Use Ravlo card styling if you already have it.
-     Keeping local styles to ensure this page renders nicely even if base changes. */
+  .hgtv-hero-inner{
+    position:relative;
+    padding: 1.1rem 1.1rem 1.2rem;
+    display:flex;
+    align-items:flex-end;
+    justify-content:space-between;
+    gap:1rem;
+    flex-wrap:wrap;
+  }
+
+  .episode-tag{
+    display:inline-flex; gap:.5rem; align-items:center;
+    padding:.35rem .65rem;
+    border-radius:999px;
+    background: rgba(255,255,255,.06);
+    border:1px solid rgba(255,255,255,.12);
+    color: rgba(255,255,255,.88);
+    font-weight:700;
+    letter-spacing:.02em;
+    font-size:.78rem;
+  }
+
+  .hero-title{margin:.55rem 0 0; font-size:1.35rem;}
+  .hero-sub{color: rgba(255,255,255,.75); margin:.25rem 0 0;}
+
+  .chip-row{display:flex; gap:.5rem; flex-wrap:wrap; margin:.65rem 0 0;}
+  .chip{
+    font-size:.78rem;
+    border-radius:999px;
+    padding:.35rem .6rem;
+    background: rgba(122,184,255,0.12);
+    border: 1px solid rgba(122,184,255,0.26);
+    color: #a9d2ff;
+  }
+
+  .hero-actions{display:flex; gap:.5rem; flex-wrap:wrap;}
+  .btn{
+    background: rgba(122,184,255,0.12);
+    border: 1px solid rgba(122,184,255,0.45);
+    color: #7ab8ff;
+    padding: .62rem .95rem;
+    border-radius: 12px;
+    cursor: pointer;
+    font-weight: 750;
+    transition: .2s;
+    font-size: .9rem;
+    text-decoration:none;
+    display:inline-flex; align-items:center; gap:.45rem;
+  }
+  .btn:hover{background: rgba(122,184,255,0.22); border-color:#7ab8ff; box-shadow:0 0 14px rgba(122,184,255,.35);}
+  .btn-secondary{
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.12);
+    color: var(--text);
+  }
+
+  /* cards */
   .card{
     background: var(--panel, #0b1016);
     border: 1px solid var(--line, rgba(255,255,255,0.10));
-    border-radius: 14px;
+    border-radius: 16px;
     padding: 1rem 1.1rem;
     box-shadow: 0 0 18px rgba(0,0,0,0.45);
   }
   .card h3{margin:.1rem 0 .75rem; color:var(--accent, #7ab8ff); font-size:1.05rem;}
   .muted{color:var(--muted);}
 
-  .btn{
-    background: rgba(122,184,255,0.12);
-    border: 1px solid rgba(122,184,255,0.45);
-    color: #7ab8ff;
-    padding: .6rem .9rem;
-    border-radius: 10px;
-    cursor: pointer;
-    font-weight: 650;
-    transition: .2s;
-    font-size: .9rem;
-    text-decoration:none;
-    display:inline-flex; align-items:center; gap:.45rem;
+  .grid{
+    display:grid;
+    grid-template-columns: 1.25fr 1.75fr;
+    gap:1.1rem;
+    margin-top:1.1rem;
   }
-  .btn:hover{
-    background: rgba(122,184,255,0.22);
-    border-color: #7ab8ff;
-    box-shadow: 0 0 12px rgba(122,184,255,0.35);
-  }
-  .btn-secondary{
-    background: rgba(255,255,255,0.04);
-    border: 1px solid rgba(255,255,255,0.10);
-    color: var(--text);
-  }
-
-  .chip-row{display:flex; gap:.5rem; flex-wrap:wrap; margin:.5rem 0 0;}
-  .chip{
-    font-size:.8rem;
-    border-radius:999px;
-    padding:.35rem .6rem;
-    background: rgba(122,184,255,0.10);
-    border: 1px solid rgba(122,184,255,0.25);
-    color: #a9d2ff;
-  }
+  @media (max-width: 1100px){ .grid{grid-template-columns:1fr;} }
 
   .img{
     width:100%;
-    border-radius: 12px;
+    border-radius: 14px;
     display:block;
     border: 1px solid rgba(255,255,255,0.07);
     background:#0f141a;
   }
 
+  /* BEFORE/AFTER slider */
+  .ba{
+    position:relative;
+    border-radius: 16px;
+    overflow:hidden;
+    border: 1px solid rgba(255,255,255,.10);
+    background: rgba(255,255,255,.02);
+  }
+  .ba img{display:block; width:100%; height:auto;}
+  .ba .after{
+    position:absolute; inset:0;
+    clip-path: inset(0 50% 0 0); /* start 50% */
+  }
+  .ba .handle{
+    position:absolute; top:0; bottom:0; left:50%;
+    width:2px;
+    background: rgba(122,184,255,.85);
+    box-shadow: 0 0 18px rgba(122,184,255,.35);
+  }
+  .ba .knob{
+    position:absolute; top:50%; left:50%;
+    transform: translate(-50%, -50%);
+    width:46px; height:46px;
+    border-radius: 999px;
+    background: rgba(0,0,0,.55);
+    border:1px solid rgba(122,184,255,.55);
+    display:flex; align-items:center; justify-content:center;
+    color:#a9d2ff;
+    font-weight:900;
+  }
+  .ba input[type="range"]{
+    position:absolute; inset:0;
+    width:100%;
+    opacity:0;
+    cursor: ew-resize;
+  }
+  .ba-badges{
+    position:absolute; inset:12px 12px auto 12px;
+    display:flex; justify-content:space-between; gap:.5rem;
+    pointer-events:none;
+  }
+  .badge{
+    font-size:.78rem;
+    padding:.28rem .55rem;
+    border-radius:999px;
+    background: rgba(0,0,0,.45);
+    border: 1px solid rgba(255,255,255,.14);
+    color: rgba(255,255,255,.88);
+    backdrop-filter: blur(6px);
+  }
+
+  /* Variations */
   .after-grid{
     display:grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0,1fr));
     gap:.75rem;
   }
-  @media (max-width: 1100px){
-    .reveal-grid{grid-template-columns:1fr;}
-    .after-grid{grid-template-columns: repeat(2, minmax(0, 1fr));}
-  }
-  @media (max-width: 620px){
-    .after-grid{grid-template-columns: 1fr;}
-  }
+  @media (max-width: 900px){ .after-grid{grid-template-columns: repeat(2, minmax(0,1fr));} }
+  @media (max-width: 620px){ .after-grid{grid-template-columns: 1fr;} }
 
   .thumb{
     padding:.6rem;
-    border-radius: 14px;
+    border-radius: 16px;
     background: rgba(255,255,255,0.03);
-    border: 1px solid rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.10);
     transition:.15s;
   }
   .thumb:hover{transform: translateY(-1px); border-color: rgba(122,184,255,0.28);}
-  .thumb-meta{margin-top:.45rem; display:flex; gap:.35rem; flex-wrap:wrap;}
+  .thumb-meta{margin-top:.45rem; display:flex; justify-content:space-between; gap:.35rem; align-items:center;}
   .thumb small{color:var(--muted);}
-  .thumb .pick{
-    width:100%;
-    margin-top:.55rem;
-    justify-content:center;
+  .pick{width:100%; margin-top:.55rem; justify-content:center;}
+
+  /* Selected */
+  #selectedWrap{
+    margin-top:1rem;
+    padding-top:.9rem;
+    border-top:1px solid var(--line, rgba(255,255,255,.10));
   }
 
-  /* Lightbox */
-  .overlay{
-    position:fixed; inset:0;
-    background: rgba(0,0,0,0.72);
-    display:none;
-    align-items:center; justify-content:center;
-    padding: 1rem;
-    z-index: 9999;
-  }
-  .overlay-inner{
-    width: min(1100px, 100%);
-    background: var(--panel, #0b1016);
-    border: 1px solid var(--line, rgba(255,255,255,0.10));
-    border-radius: 16px;
-    padding: 1rem;
-    box-shadow: 0 0 26px rgba(0,0,0,0.65);
-  }
-  .overlay-top{
-    display:flex; justify-content:space-between; align-items:center; gap:.75rem; margin-bottom:.75rem;
-  }
+  /* lightbox */
+  .overlay{position:fixed; inset:0; background: rgba(0,0,0,0.72); display:none; align-items:center; justify-content:center; padding: 1rem; z-index: 9999;}
+  .overlay-inner{width:min(1100px,100%); background: var(--panel, #0b1016); border: 1px solid var(--line, rgba(255,255,255,0.10)); border-radius: 16px; padding: 1rem; box-shadow: 0 0 26px rgba(0,0,0,0.65);}
+  .overlay-top{display:flex; justify-content:space-between; align-items:center; gap:.75rem; margin-bottom:.75rem;}
   .overlay-top h4{margin:0; color:var(--text);}
   .overlay-img{width:100%; border-radius: 12px; display:block;}
+
+  /* mini “episode stats” bar (optional if results_json exists) */
+  .stats{
+    display:grid;
+    grid-template-columns: repeat(4, minmax(0,1fr));
+    gap:.75rem;
+    margin-top:1rem;
+  }
+  @media (max-width: 900px){ .stats{grid-template-columns: repeat(2, minmax(0,1fr));} }
+  .stat{
+    border-radius: 14px;
+    padding:.85rem .9rem;
+    background: rgba(255,255,255,.03);
+    border: 1px solid rgba(255,255,255,.10);
+  }
+  .stat .k{color:var(--muted); font-size:.78rem;}
+  .stat .v{font-size:1.02rem; font-weight:850; margin-top:.25rem;}
 </style>
 
-<div class="reveal-wrap">
-
-  <div class="reveal-top">
-    <div class="reveal-title">
-      <h2>✨ Deal Reveal</h2>
-      <div class="reveal-sub">
-        {% if deal %}
-          {{ deal.title or ('Deal #' ~ deal.id) }} • Strategy: {{ deal.strategy or '—' }}
-        {% else %}
-          Deal #{{ deal_id }}
-        {% endif %}
-      </div>
-
-      {% if mockups and mockups[0] %}
-        <div class="chip-row">
-          {% if mockups[0].style_preset %}<span class="chip">Preset: {{ mockups[0].style_preset }}</span>{% endif %}
-          {% if mockups[0].style_prompt %}<span class="chip">Prompt: {{ mockups[0].style_prompt[:60] }}{% if mockups[0].style_prompt|length > 60 %}…{% endif %}</span>{% endif %}
-          <span class="chip">{{ mockups|length }} design{% if mockups|length != 1 %}s{% endif %}</span>
-        </div>
-      {% endif %}
-    </div>
-
-    <div class="reveal-actions">
-      {% if deal %}
-        <a class="btn btn-secondary" href="{{ url_for('investor.deal_open', deal_id=deal.id) }}">🧠 Open Workspace</a>
-        <a class="btn btn-secondary" href="{{ url_for('investor.deal_detail', deal_id=deal.id) }}">🗂️ Deal Details</a>
-      {% else %}
-        <a class="btn btn-secondary" href="{{ url_for('investor.deals_list') }}">🗂️ Back to Deals</a>
-      {% endif %}
-    </div>
-  </div>
+<div class="hgtv-wrap">
 
   {% if not mockups %}
     <div class="card">
       <h3>No mockups yet</h3>
-      <p class="muted">Generate designs from the Deal Workspace Visualizer, then come back here to review.</p>
+      <p class="muted">Generate designs from the Deal Workspace Visualizer, then come back here to reveal.</p>
       {% if deal %}
         <a class="btn" href="{{ url_for('investor.deal_open', deal_id=deal.id) }}">✨ Generate Designs</a>
       {% endif %}
     </div>
   {% else %}
 
-  {# Use the latest mockup as the "lead" set for before image #}
-  {% set lead = mockups[0] %}
+    {% set lead = mockups[0] %}
+    {% set hero_bg = lead.after_url or lead.before_url or '' %}
 
-  <div class="reveal-grid">
+    <!-- HERO (episode cover) -->
+    <div class="hgtv-hero">
+      <div class="hgtv-hero-bg" style="background-image:url('{{ hero_bg }}');"></div>
 
-    <!-- BEFORE -->
-    <div class="card">
-      <h3>Before</h3>
+      <div class="hgtv-hero-inner">
+        <div>
+          <div class="episode-tag">📺 REVEAL EPISODE • DEAL #{{ deal.id }}</div>
+          <h2 class="hero-title">{{ deal.title or ('Deal #' ~ deal.id) }}</h2>
+          <div class="hero-sub">Strategy: <b>{{ deal.strategy or '—' }}</b> • {{ mockups|length }} concept{% if mockups|length != 1 %}s{% endif %}</div>
 
-      {% if lead.before_url %}
-        <img class="img" src="{{ lead.before_url }}" alt="Before image"
-             onclick="openLightbox('{{ lead.before_url }}','Before')" style="cursor:zoom-in;">
-      {% else %}
-        <p class="muted">No before image found.</p>
-      {% endif %}
-
-      <div style="margin-top:.75rem;">
-        <p class="muted" style="margin:.25rem 0 0;">
-          Tip: Upload a room photo in Deal Workspace so Ravlo can keep a clean before/after history.
-        </p>
-      </div>
-    </div>
-
-    <!-- AFTER VARIATIONS -->
-    <div class="card">
-      <h3>After Variations</h3>
-
-      <div class="after-grid">
-        {% for m in mockups %}
-          <div class="thumb">
-            <img class="img" src="{{ m.after_url }}" alt="After mockup"
-                 onclick="openLightbox('{{ m.after_url }}','After')" style="cursor:zoom-in;">
-            <div class="thumb-meta">
-              {% if m.style_preset %}<span class="chip">{{ m.style_preset }}</span>{% endif %}
-              <small>{{ m.created_at.strftime("%b %d, %Y %I:%M %p") if m.created_at else '' }}</small>
-            </div>
-
-            <button type="button" class="btn pick" onclick="setSelected('{{ m.after_url }}')">
-              ✅ Select This Design
-            </button>
+          <div class="chip-row">
+            {% if lead.style_preset %}<span class="chip">Style: {{ lead.style_preset }}</span>{% endif %}
+            {% if lead.style_prompt %}<span class="chip">Prompt: {{ lead.style_prompt[:60] }}{% if lead.style_prompt|length > 60 %}…{% endif %}</span>{% endif %}
+            {% if deal.reveal_is_public %}<span class="chip">Public: ON</span>{% endif %}
           </div>
-        {% endfor %}
-      </div>
+        </div>
 
-      <div id="selectedWrap" style="display:none; margin-top:1rem;">
-        <hr style="border-color: var(--line); margin: 1rem 0;">
-        <h3 style="margin:.25rem 0 .75rem;">Selected Design</h3>
-        <img id="selectedImg" class="img" src="" alt="Selected design">
-        <div style="margin-top:.75rem; display:flex; gap:.5rem; flex-wrap:wrap;">
-          <a id="openSelected" class="btn btn-secondary" href="#" target="_blank" rel="noopener">🔗 Open Full Size</a>
-          <button type="button" class="btn" onclick="copySelected()">📋 Copy Link</button>
+        <div class="hero-actions">
+          <a class="btn btn-secondary" href="{{ url_for('investor.deal_open', deal_id=deal.id) }}">🧠 Workspace</a>
+          <a class="btn btn-secondary" href="{{ url_for('investor.deal_detail', deal_id=deal.id) }}">🗂️ Details</a>
+
+          <!-- Publish Reveal -->
+          <button class="btn" type="button" onclick="publishReveal({{ deal.id }})">🚀 Publish HGTV Reveal</button>
         </div>
       </div>
-
-      <p class="muted" style="margin-top:1rem;">
-        Want more styles? Go back to the workspace and generate additional variations (Modern, Luxury, Airbnb, etc.).
-      </p>
     </div>
 
-  </div>
+    <!-- Optional stats strip (reads from results_json if present) -->
+    <div class="stats">
+      <div class="stat">
+        <div class="k">Projected Profit</div>
+        <div class="v" id="statProfit">—</div>
+      </div>
+      <div class="stat">
+        <div class="k">ARV</div>
+        <div class="v" id="statARV">—</div>
+      </div>
+      <div class="stat">
+        <div class="k">Rehab Budget</div>
+        <div class="v" id="statRehab">—</div>
+      </div>
+      <div class="stat">
+        <div class="k">ROI</div>
+        <div class="v" id="statROI">—</div>
+      </div>
+    </div>
+
+    <div class="grid">
+
+      <!-- BEFORE/AFTER SLIDER -->
+      <div class="card">
+        <h3>Before → After (HGTV Slider)</h3>
+
+        {% if lead.before_url and lead.after_url %}
+          <div class="ba" id="ba">
+            <div class="ba-badges">
+              <span class="badge">BEFORE</span>
+              <span class="badge">AFTER</span>
+            </div>
+
+            <img src="{{ lead.before_url }}" alt="Before" onclick="openLightbox('{{ lead.before_url }}','Before')" style="cursor:zoom-in;">
+            <div class="after" id="baAfter">
+              <img src="{{ lead.after_url }}" alt="After" onclick="openLightbox('{{ lead.after_url }}','After')" style="cursor:zoom-in;">
+            </div>
+
+            <div class="handle" id="baHandle"></div>
+            <div class="knob">↔</div>
+            <input id="baRange" type="range" min="0" max="100" value="50" aria-label="Before after slider">
+          </div>
+          <p class="muted" style="margin-top:.75rem;">Drag left/right for the HGTV reveal moment.</p>
+        {% else %}
+          <p class="muted">Missing before/after for the lead concept. Generate from the visualizer and save to the deal.</p>
+        {% endif %}
+      </div>
+
+      <!-- AFTER VARIATIONS -->
+      <div class="card">
+        <h3>Room Reveals (Concept Variations)</h3>
+
+        <div class="after-grid">
+          {% for m in mockups %}
+            <div class="thumb">
+              <img class="img" src="{{ m.after_url }}" alt="After mockup"
+                   onclick="openLightbox('{{ m.after_url }}','After')" style="cursor:zoom-in;">
+              <div class="thumb-meta">
+                <span class="chip">{{ m.style_preset or 'Concept' }}</span>
+                <small>{{ m.created_at.strftime("%b %d, %Y %I:%M %p") if m.created_at else '' }}</small>
+              </div>
+
+              <button type="button" class="btn pick" onclick="setSelected('{{ m.after_url }}')">
+                ✅ Feature This Reveal
+              </button>
+            </div>
+          {% endfor %}
+        </div>
+
+        <div id="selectedWrap" style="display:none;">
+          <h3 style="margin:.25rem 0 .75rem;">Featured Reveal</h3>
+          <img id="selectedImg" class="img" src="" alt="Selected design">
+          <div style="margin-top:.75rem; display:flex; gap:.5rem; flex-wrap:wrap;">
+            <a id="openSelected" class="btn btn-secondary" href="#" target="_blank" rel="noopener">🔗 Open Full Size</a>
+            <button type="button" class="btn" onclick="copySelected()">📋 Copy Image Link</button>
+          </div>
+
+          <div id="publicLinkWrap" class="muted" style="margin-top:.65rem; display:none;">
+            <div style="margin-bottom:.35rem;">HGTV Share Link:</div>
+            <div style="display:flex; gap:.5rem; flex-wrap:wrap;">
+              <a id="publicLink" class="btn btn-secondary" href="#" target="_blank" rel="noopener">🌐 View Public Reveal</a>
+              <button type="button" class="btn" onclick="copyPublic()">📋 Copy Reveal Link</button>
+            </div>
+          </div>
+        </div>
+
+        <p class="muted" style="margin-top:1rem;">
+          Want more styles? Generate more concepts (Modern, Luxury, Airbnb, Flip, Budget) in the Workspace Visualizer.
+        </p>
+      </div>
+
+    </div>
+
   {% endif %}
 
 </div>
@@ -249,6 +375,7 @@
 </div>
 
 <script>
+  // Lightbox
   function openLightbox(url, title){
     const lb = document.getElementById("lightbox");
     document.getElementById("lbImg").src = url;
@@ -264,6 +391,7 @@
     if (e.target && e.target.id === "lightbox") hideLightbox();
   }
 
+  // Featured selection (client-side)
   function setSelected(url){
     const wrap = document.getElementById("selectedWrap");
     const img = document.getElementById("selectedImg");
@@ -277,14 +405,86 @@
 
   async function copySelected(){
     const url = window._selectedDesignUrl || "";
-    if (!url) return alert("Select a design first.");
+    if (!url) return alert("Select a reveal first.");
+    try{ await navigator.clipboard.writeText(url); alert("Copied image link!"); }
+    catch(e){ alert("Could not copy automatically. Open full size and copy the URL."); }
+  }
+
+  // Before/After slider
+  (function(){
+    const r = document.getElementById("baRange");
+    const after = document.getElementById("baAfter");
+    const handle = document.getElementById("baHandle");
+    if(!r || !after || !handle) return;
+
+    function set(v){
+      const pct = Math.max(0, Math.min(100, Number(v)||50));
+      after.style.clipPath = `inset(0 ${100-pct}% 0 0)`;
+      handle.style.left = pct + "%";
+    }
+    r.addEventListener("input", e => set(e.target.value));
+    set(r.value);
+  })();
+
+  // Publish reveal → gets public link from server
+  async function publishReveal(dealId){
     try{
-      await navigator.clipboard.writeText(url);
-      alert("Copied!");
+      const res = await fetch(`/investor/deals/${dealId}/reveal/publish`, {
+        method: "POST",
+        headers: {"Content-Type":"application/json"},
+        body: "{}"
+      });
+      const data = await res.json();
+      if(!data || data.status !== "ok") throw new Error(data?.message || "Publish failed");
+
+      const wrap = document.getElementById("publicLinkWrap");
+      const link = document.getElementById("publicLink");
+      if(wrap && link){
+        link.href = data.public_url;
+        wrap.style.display = "block";
+        window._publicRevealUrl = data.public_url;
+      }
+      alert("Published! Your HGTV share link is ready.");
     }catch(e){
-      alert("Could not copy automatically. Open full size and copy the URL.");
+      alert(e.message || "Could not publish reveal.");
     }
   }
+
+  async function copyPublic(){
+    const url = window._publicRevealUrl || "";
+    if(!url) return alert("Publish first to generate a share link.");
+    try{ await navigator.clipboard.writeText(url); alert("Copied reveal link!"); }
+    catch(e){ alert("Could not copy automatically. Open Public Reveal and copy URL."); }
+  }
+
+  // Stats (best-effort from deal.results_json)
+  (function(){
+    try{
+      const results = {{ (deal.results_json or {})|tojson }};
+      const fmt = (v) => (v===null||v===undefined||v==="") ? "—" : (
+        (typeof v === "number") ? v.toLocaleString(undefined, {maximumFractionDigits:0}) : String(v)
+      );
+
+      const profit = results.profit || results.projected_profit || results.net_profit;
+      const arv = results.arv || results.after_repair_value;
+      const rehab = results.rehab_budget || results.renovation_budget || results.total_rehab;
+      const roi = results.roi || results.projected_roi;
+
+      const set = (id, val, isMoney=false, isPct=false) => {
+        const el = document.getElementById(id);
+        if(!el) return;
+        if(val===null||val===undefined||val==="") return;
+        if(typeof val === "number" && isMoney) el.textContent = "$" + val.toLocaleString();
+        else if(typeof val === "number" && isPct) el.textContent = val.toFixed(1) + "%";
+        else el.textContent = fmt(val);
+      };
+
+      set("statProfit", profit, true, false);
+      set("statARV", arv, true, false);
+      set("statRehab", rehab, true, false);
+      set("statROI", roi, false, true);
+    }catch(e){}
+  })();
 </script>
 
 {% endblock %}
