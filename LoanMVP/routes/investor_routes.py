@@ -2376,10 +2376,10 @@ def save_deal():
     except Exception:
         saved_property_id = None
 
-    results_json = _safe_json_loads(request.form.get("results_json"), default={})
-    inputs_json  = _safe_json_loads(request.form.get("inputs_json"), default={})
-    comps_json    = _safe_json_loads(request.form.get("comps_json"), default={})
-    resolved_json = _safe_json_loads(request.form.get("resolved_json"), default={})
+    results_json = safe_json_loads(request.form.get("results_json"), default={})
+    inputs_json  = safe_json_loads(request.form.get("inputs_json"), default={})
+    comps_json    = safe_json_loads(request.form.get("comps_json"), default={})
+    resolved_json = safe_json_loads(request.form.get("resolved_json"), default={})
 
     if not title:
         addr = None
