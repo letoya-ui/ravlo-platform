@@ -167,7 +167,7 @@
            </button>
 
            <button class="ravlo-btn primary sm" type="button"
-                   onclick="location.href='{% if deal_id is defined and deal_id %}{{ url_for('investor.rehab_studio', deal_id=deal_id) }}{% else %}{{ url_for('investor.deals_list') }}{% endif %}'">
+                   onclick="location.href='{% if deal_id is defined and deal_id %}{{ url_for('investor.deal_rehab_studio', deal_id=deal_id) }}{% else %}{{ url_for('investor.deals_list') }}{% endif %}'">
              Rehab Studio
            </button>
          {% endblock %}
