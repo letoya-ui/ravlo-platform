@@ -560,16 +560,18 @@
       </div>
       {% endif %}
 
-      {% if ai_summary %}
-      <div class="dw-card" style="margin-top:1.5rem;">
-        <h3>🤖 AI Deal Insights</h3>
-        <p class="ai-text">{{ ai_summary }}</p>
-      </div>
-      {% endif %}
-    </div>
+            {% if ai_summary %}
+            <div class="dw-card" style="margin-top:1.5rem;">
+              <h3>🤖 AI Deal Insights</h3>
+              <p class="ai-text">{{ ai_summary }}</p>
+             </div>
+            {% endif %}
 
-  </div>
+          </div> {# end RIGHT COLUMN #}
 
-</form>
+        </div> {# end .dw-layout #}
 
-(% endblock %}
+      </form>
+
+      {% endif %}   {# closes: {% if not selected_prop %} ... {% else %} ... #}
+      {% endblock %}
