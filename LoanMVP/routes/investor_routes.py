@@ -2490,8 +2490,10 @@ def deal_reveal(deal_id):
     # Pull mockups tied to deal first
     mockups = (RenovationMockup.query
         .filter_by(deal_id=deal_id, user_id=current_user.id)
+        .filter(RenovationMockup.after_url == after_url)
+        .filter((RenovationMockup.deal_id == deal_id) | (RenovationMockup.saved_property_id == deal.saved_property_id))
         .order_by(RenovationMockup.created_at.desc())
-        .all())
+        .first())
 
     # Fallback: if none tied to deal, use saved_property_id mockups
     if not mockups and getattr(deal, "saved_property_id", None):
