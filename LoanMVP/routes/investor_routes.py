@@ -238,7 +238,13 @@ def to_webp_bytes(img_bytes: bytes, max_size=1400, quality=86) -> bytes:
     im.save(out, format="WEBP", quality=int(quality), method=6)
     return out.getvalue()
 
-
+def generate_renovation_images(before_url: str, prompt: str, n: int = 2) -> list[str]:
+    """
+    Return a list of AFTER image URLs.
+    Wire your AI image generator here (OpenAI / Replicate / internal service).
+    """
+    # TODO: implement generator
+    return []
 # =========================================================
 # 👤 PROFILE FILTER (INVESTOR SAFE)
 # =========================================================
@@ -2269,9 +2275,20 @@ def deal_rehab(deal_id):
         .order_by(RenovationMockup.created_at.desc())
         .all())
 
+    before_url = None
+    try:
+        if isinstance(deal.resolved_json, dict):
+            before_url = (deal.resolved_json.get("rehab") or {}).get("before_url")
+    except Exception:
+        before_url = None
+
+    if not before_url and mockups:
+        before_url = mockups[0].before_url
+
     return render_template(
         "investor/deal_rehab.html",
         deal=deal,
+        before_url=before_url,
         mockups=mockups
     )
 
@@ -2455,6 +2472,9 @@ def renovation_visualizer():
         "Keep the same room layout. Produce an HGTV-style after image. No text overlays."
     ).strip()
 
+    # ----------------------------
+    # Parse IDs + deal-first linking
+    # ----------------------------
     saved_property_id = None
     if saved_property_id_raw:
         try:
@@ -2462,6 +2482,7 @@ def renovation_visualizer():
         except Exception:
             saved_property_id = None
 
+    deal = None
     deal_id = None
     if deal_id_raw:
         try:
@@ -2469,11 +2490,27 @@ def renovation_visualizer():
         except Exception:
             deal_id = None
 
+    if deal_id:
+        deal = Deal.query.filter_by(id=deal_id, user_id=current_user.id).first()
+        if not deal:
+            return jsonify({"status": "error", "message": "Deal not found or not authorized."}), 404
+
+        # Derive saved_property_id from deal if not provided
+        if saved_property_id is None and getattr(deal, "saved_property_id", None):
+            saved_property_id = deal.saved_property_id
+
+        # Derive property_id string too (optional)
+        if not property_id and getattr(deal, "property_id", None):
+            property_id = deal.property_id
+
     try:
         raw = image_file.read() if image_file else _download_image_bytes(image_url)
         if not raw:
             return jsonify({"status": "error", "message": "Empty image input."}), 400
 
+        # ----------------------------
+        # Upload BEFORE to R2
+        # ----------------------------
         before_webp = _to_webp_bytes(raw, max_size=1600, quality=86)
         before_up = r2_put_bytes(
             before_webp,
@@ -2483,12 +2520,60 @@ def renovation_visualizer():
         )
         before_url = before_up["url"]
 
-        # Keep compatible with your existing generator (wire it where you had it before).
+        # ----------------------------
+        # Persist "current before" on deal (for Rehab Studio preload)
+        # ----------------------------
+        if deal is not None:
+            try:
+                payload = deal.resolved_json or {}
+                payload = payload if isinstance(payload, dict) else {}
+                payload.setdefault("rehab", {})
+                payload["rehab"]["before_url"] = before_url
+                deal.resolved_json = payload
+                db.session.commit()
+            except Exception:
+                db.session.rollback()
+                # not fatal; continue
+
+        # ----------------------------
+        # ✅ Generate AFTER images (YOU wire this)
+        # Must return a list of http(s) URLs: ["https://...after1.webp", ...]
+        # ----------------------------
+        after_urls = generate_renovation_images(
+            before_url=before_url,
+            prompt=final_prompt,
+            n=variations
+        )  # <-- implement this
+
+        if not isinstance(after_urls, list):
+            after_urls = []
+        after_urls = [u for u in after_urls if isinstance(u, str) and u.startswith("http")]
+
+        # ----------------------------
+        # Save to deal (create RenovationMockup rows)
+        # ----------------------------
+        if save_to_deal and deal is not None and after_urls:
+            ip = InvestorProfile.query.filter_by(user_id=current_user.id).first()
+            ip_id = ip.id if ip else None
+
+            for after_url in after_urls:
+                db.session.add(RenovationMockup(
+                    user_id=current_user.id,
+                    investor_profile_id=ip_id,
+                    deal_id=deal.id,
+                    saved_property_id=saved_property_id,
+                    property_id=property_id,
+                    before_url=before_url,
+                    after_url=after_url,
+                    style_prompt=style_prompt,
+                    style_preset=style_preset
+                ))
+            db.session.commit()
+
         return jsonify({
             "status": "ok",
             "before_url": before_url,
-            "images": [],
-            "note": "Wire your image generator call here (kept compatible).",
+            "images": after_urls,          # ✅ now real images
             "prompt": final_prompt,
             "variations": variations,
             "save_to_deal": save_to_deal,
@@ -2501,7 +2586,6 @@ def renovation_visualizer():
         return jsonify({"status": "error", "message": f"Could not download image: {e}"}), 400
     except Exception as e:
         return jsonify({"status": "error", "message": f"Renovation generator failed: {e}"}), 500
-
 # =========================================================
 # 📤 INVESTOR • UPLOADS + MOCKUPS + SEND TO TEAM + EXPORTS
 # =========================================================
