@@ -1770,6 +1770,7 @@ def property_tool():
 
 @investor_bp.route("/api/intelligence/zip-search", methods=["POST"])
 @investor_bp.route("/api/property_tool_search", methods=["POST"])
+@csrf.exempt
 @login_required
 @role_required("investor")
 def api_property_tool_search():
