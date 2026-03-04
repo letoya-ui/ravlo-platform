@@ -465,95 +465,74 @@
         </button>
       </div>
 
-      <!-- RESULTS -->
-      {% if results is not none %}
-  <div class="dw-card" style="margin-top:1.5rem;">
-    <h3>📈 Deal Results</h3>
-    <p class="ai-text">
-      {% if results.profit is defined and results.profit is not none %}
-        <strong>Profit (Flip):</strong> ${{ "{:,.0f}".format(results.profit|float) }}<br>
+            <!-- RESULTS -->
+      {% if request.method == 'POST' and results %}
+        <div class="dw-card" style="margin-top:1.5rem;">
+          <h3>📈 Deal Results</h3>
+          <p class="ai-text">
+            {% if results.profit is defined and results.profit is not none %}
+              <strong>Profit (Flip):</strong> ${{ "{:,.0f}".format(results.profit|float) }}<br>
+            {% endif %}
+
+            {% if results.net_cashflow is defined and results.net_cashflow is not none %}
+              <strong>Monthly Cash Flow (Rental):</strong> ${{ "{:,.0f}".format(results.net_cashflow|float) }}<br>
+            {% endif %}
+
+            {% if results.net_monthly is defined and results.net_monthly is not none %}
+              <strong>Net Monthly (Airbnb):</strong> ${{ "{:,.0f}".format(results.net_monthly|float) }}<br>
+            {% endif %}
+
+            {% if results.roi is defined and results.roi %}
+              <strong>ROI:</strong> {{ "{:,.1f}".format(results.roi * 100) }}%
+            {% endif %}
+          </p>
+        </div>
       {% endif %}
 
-      {% if results.net_cashflow is defined and results.net_cashflow is not none %}
-        <strong>Monthly Cash Flow (Rental):</strong> ${{ "{:,.0f}".format(results.net_cashflow|float) }}<br>
-      {% endif %}
-
-      {% if results.net_monthly is defined and results.net_monthly is not none %}
-        <strong>Net Monthly (Airbnb):</strong> ${{ "{:,.0f}".format(results.net_monthly|float) }}<br>
-      {% endif %}
-
-      {% if results.roi is defined and results.roi %}
-        <strong>ROI:</strong> {{ "{:,.1f}".format(results.roi * 100) }}%
-      {% endif %}
-    </p>
-  </div>
-{% endif %}
-      
-      <!-- SAVE / SEND / EXPORT -->
-      {# =========================
-         SAVE DEAL (Workspace Button + Hidden Fields)
-         Drop this into your Deal Workspace template inside the MAIN <form> (POST)
-         Recommended placement: near the top of the form (right under Deal Setup),
-         and/or inside your existing "SAVE / SEND / EXPORT" card.
-      ========================= #}
-
-      {# --- Top action row (optional, nice UX) --- #}
+      <!-- SAVE DEAL (Workspace Actions) -->
       <div class="dw-card" style="margin-top:1rem;">
-       <div style="display:flex; justify-content:space-between; gap:.75rem; flex-wrap:wrap; align-items:center;">
-        <div class="ai-text" style="margin:0;">
-         <strong>Workspace Actions</strong><br>
-        <span class="muted">Save this deal so Rehab Studio + Reveal can attach to it.</span>
+        <div style="display:flex; justify-content:space-between; gap:.75rem; flex-wrap:wrap; align-items:center;">
+          <div class="ai-text" style="margin:0;">
+            <strong>Workspace Actions</strong><br>
+            <span class="muted">Save this deal so Rehab Studio + Reveal can attach to it.</span>
+          </div>
+
+          <div style="display:flex; gap:.5rem; flex-wrap:wrap;">
+            <button type="submit"
+                    class="dw-button"
+                    formaction="{{ url_for('investor.save_deal') }}"
+                    formmethod="POST">
+              💾 Save Deal
+            </button>
+
+            {% if deal_id %}
+              <a class="dw-button" style="text-decoration:none;"
+                 href="{{ url_for('investor.deal_rehab_studio', deal_id=deal_id) }}">
+                🏗️ Rehab Studio
+              </a>
+            {% else %}
+              <button type="button" class="dw-button" disabled>🏗️ Rehab Studio (Save Deal First)</button>
+            {% endif %}
+          </div>
+        </div>
+
+        {# Hidden payload fields for save_deal #}
+        <input type="hidden" name="property_id" value="{{ property_id or selected_prop.id }}">
+        <input type="hidden" name="saved_property_id" value="{{ selected_prop.id }}">
+        <input type="hidden" name="mode" value="{{ mode or '' }}">
+        <input type="hidden" name="strategy" value="{{ mode }}">
+        <input type="hidden" name="title" value="{{ (selected_prop.address if selected_prop else '') }}">
+
+        <input type="hidden" name="results_json" value="{{ results | tojson if results else '{}' }}">
+        <input type="hidden" name="comps_json" value="{{ comps | tojson if comps else '{}' }}">
+        <input type="hidden" name="resolved_json" value="{{ resolved | tojson if resolved else '{}' }}">
+
+        {% if deal_id %}
+          <input type="hidden" name="deal_id" value="{{ deal_id }}">
+        {% endif %}
       </div>
 
-      <div style="display:flex; gap:.5rem; flex-wrap:wrap;">
-        {# ✅ Save Deal Button (posts to investor.save_deal) #}
-        <button type="submit"
-                name="action"
-                value="save_deal"
-                class="dw-button"
-                formaction="{{ url_for('investor.save_deal') }}"
-                formmethod="POST">
-          💾 Save Deal
-        </button>
-
-       {# Optional: open Rehab Studio only if deal exists #}
-       {% if deal_id %}
-         <a class="dw-button" style="text-decoration:none;"
-            href="{{ url_for('investor.deal_rehab_studio', deal_id=deal_id) }}">
-           🏗️ Rehab Studio
-         </a>
-       {% else %}
-         <button type="button" class="dw-button" disabled>🏗️ Rehab Studio (Save Deal First)</button>
-       {% endif %}
-     </div>
-   </div>
- </div>
-
- {# --- REQUIRED: Hidden payload fields for save_deal route --- #}
- {# Put these ONCE inside the same <form> that contains your workspace inputs #}
-
- <input type="hidden" name="property_id" value="{{ property_id or selected_prop.id }}">
- <input type="hidden" name="saved_property_id" value="{{ selected_prop.id }}">
- <input type="hidden" name="mode" value="{{ mode or '' }}">
-
- {# If your save_deal expects strategy/title, include these too #}
- <input type="hidden" name="strategy" value="{{ mode or deal.strategy if deal else '' }}">
- <input type="hidden" name="title" value="{{ deal.title if deal and deal.title else (selected_prop.address if selected_prop else '') }}">
-
- {# Persist data snapshots #}
- <input type="hidden" name="inputs_json" value="{{ request.form|tojson }}">
- <input type="hidden" name="results_json" value="{{ results | tojson if results else '{}' }}">
- <input type="hidden" name="comps_json" value="{{ comps | tojson if comps else '{}' }}">
- <input type="hidden" name="resolved_json" value="{{ resolved | tojson if resolved else '{}' }}">
-
- {# If you already have deal_id and you want save_deal to update instead of create #}
- {% if deal_id %}
-   <input type="hidden" name="deal_id" value="{{ deal_id }}">
- {% endif %}
-      </div>
-      {% endif %}
-
-    </div>
+    </div>  {# end LEFT COLUMN #}
 
     <!-- RIGHT COLUMN -->
     <div>
@@ -583,7 +562,6 @@
       <div class="dw-card" style="margin-top:1.5rem;">
         <h3>📘 Strategy Summary</h3>
         <div class="ai-text">
-
           {% set prop = (resolved.property if resolved and resolved.property is not undefined else none) %}
           {% set v2 = (prop.valuation if prop and prop.valuation is not undefined else none) %}
           {% set arv_val = (v2.get('value') if v2 is mapping else (v2.value if v2 else none)) %}
@@ -610,7 +588,6 @@
             <strong>Occupancy:</strong> {% if comparison.airbnb.occupancy %}{{ "{:,.0f}".format(comparison.airbnb.occupancy * 100) }}%{% else %}{{ placeholder|safe }}{% endif %}<br>
             <strong>Nightly Rate:</strong> {% if comparison.airbnb.nightly_rate %}${{ "{:,.0f}".format(comparison.airbnb.nightly_rate|float) }}{% else %}{{ placeholder|safe }}{% endif %}
           </p>
-
         </div>
       </div>
       {% endif %}
@@ -628,6 +605,5 @@
 
 </form>
 
-{% endif %}   {# closes: {% if not selected_prop %} ... {% else %} ... #}
-
+{% endif %} {# closes: {% if not selected_prop %} ... {% else %} ... #}
 {% endblock %}
