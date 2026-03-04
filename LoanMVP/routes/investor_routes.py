@@ -249,7 +249,7 @@ def generate_renovation_images(before_url: str, prompt: str, n: int = 2) -> list
 # 👤 PROFILE FILTER (INVESTOR SAFE)
 # =========================================================
 
-def profile_id_filter(model, profile_id):
+def _profile_id_filter(model, profile_id):
     """
     Backwards-compatible filter:
     - prefers investor_profile_id
