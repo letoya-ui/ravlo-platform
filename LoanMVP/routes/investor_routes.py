@@ -2275,23 +2275,20 @@ def deal_rehab(deal_id):
         .order_by(RenovationMockup.created_at.desc())
         .all())
 
-    before_url = None
-    try:
-        if isinstance(deal.resolved_json, dict):
-            before_url = (deal.resolved_json.get("rehab") or {}).get("before_url")
-    except Exception:
-        before_url = None
+    # fallback (if you generated before attaching deal_id)
+    if not mockups and getattr(deal, "saved_property_id", None):
+        mockups = (RenovationMockup.query
+            .filter_by(saved_property_id=deal.saved_property_id, user_id=current_user.id)
+            .order_by(RenovationMockup.created_at.desc())
+            .all())
 
-    if not before_url and mockups:
-        before_url = mockups[0].before_url
-
+    featured = (deal.resolved_json or {}).get("rehab", {}).get("featured", {})
     return render_template(
         "investor/deal_rehab.html",
         deal=deal,
-        before_url=before_url,
-        mockups=mockups
+        mockups=mockups,
+        featured=featured
     )
-# investor_routes.py
 
 @investor_bp.route("/deals/<int:deal_id>/rehab", methods=["GET"])
 @login_required
