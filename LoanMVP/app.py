@@ -208,6 +208,10 @@ def create_app():
 
     app.jinja_env.globals["safe_url_for"] = safe_url_for
 
+    @app.before_request
+    def make_session_permanent():
+        session.permanent = True
+
     return app
 
 
