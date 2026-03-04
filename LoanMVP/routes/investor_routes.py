@@ -2148,7 +2148,33 @@ def deal_detail(deal_id):
     partners = Partner.query.filter_by(user_id=current_user.id).order_by(Partner.created_at.desc()).all()
 
     return render_template("investor/deal_detail.html", deal=deal, mockups=mockups, partners=partners)
+@investor_bp.route("/deals/<int:deal_id>/dealbook", methods=["GET"])
+@login_required
+@role_required("investor")
+def deal_book(deal_id):
+    deal = Deal.query.filter_by(id=deal_id, user_id=current_user.id).first_or_404()
 
+    results = deal.results_json or {}
+    comps = deal.comps_json or {}
+    resolved = deal.resolved_json or {}
+
+    rehab = (resolved.get("rehab") or {})
+    featured = rehab.get("featured") or {}
+
+    # Optional convenience pulls
+    prop = (resolved.get("property") or {})
+    address = prop.get("address") or deal.title or f"Deal #{deal.id}"
+
+    return render_template(
+        "investor/deal_book.html",
+        deal=deal,
+        results=results,
+        comps=comps,
+        resolved=resolved,
+        rehab=rehab,
+        featured=featured,
+        address=address,
+    )
 
 @investor_bp.route("/deals/<int:deal_id>/design/select", methods=["POST"])
 @investor_bp.route("/deals/<int:deal_id>/select_design", methods=["POST"])
