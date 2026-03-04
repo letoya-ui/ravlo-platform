@@ -156,10 +156,12 @@
           </div>
 
           {% block topbar_actions %}
-            <button class="ravlo-btn ghost sm" type="button"
-                    onclick="location.href='{{ url_for('investor.property_search') }}'">
-             Property Intelligence
-           </button>
+            <a class="dw-button"
+               href="{{ url_for('investor.property_tool') }}"
+              style="text-decoration:none;">
+             🔎 Deal Finder
+            </a>
+
 
            <button class="ravlo-btn ghost sm" type="button"
                    onclick="location.href='{{ url_for('investor.deals_list') }}'">
