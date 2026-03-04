@@ -169,7 +169,17 @@
             <span class="badge">BEFORE</span>
             <span class="badge">AFTER</span>
           </div>
+          <div class="dw-card" style="margin-bottom:1rem;">
+           <h3>📸 Upload Before Photo</h3>
+           <p class="muted">Upload a room photo to generate HGTV after concepts.</p>
 
+           <input id="uploadRoomPhoto" type="file" accept="image/*" class="dw-input">
+
+           <div id="beforePreviewWrap" style="display:none; margin-top:.75rem;">
+            <div class="muted" style="margin-bottom:.35rem;">Current Before</div>
+             <img id="beforePreviewImg" class="img" src="" alt="Before preview">
+          </div>
+        </div>
           <img id="sliderBeforeImg" src="{{ lead.before_url }}" alt="Before">
           <div class="after" id="baAfter">
             <img id="sliderAfterImg" src="{{ lead.after_url }}" alt="After">
