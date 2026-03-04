@@ -1,171 +1,11 @@
+{# investor/deal_workspace.html (FULL TEMPLATE) #}
 {% extends "layouts/ravlo_base.html" %}
 {% block title %}Ravlo • Deal Workspace{% endblock %}
 
 {% block page_title %}Deal Workspace{% endblock %}
-{% block page_subline %}Analyze Flip, Rental, and STR strategies with comps, rehab, and AI guidance.{% endblock %}
+{% block page_subline %}Analyze Flip, Rental, and Airbnb strategies with comps, rehab, and AI guidance.{% endblock %}
 
 {% block content %}
-
-{# ---------- Helpers ---------- #}
-{% macro money(val) -%}
-  {%- if val is not none and val is not undefined -%}
-    ${{ "{:,.0f}".format(val|float) }}
-  {%- else -%}
-    —
-  {%- endif -%}
-{%- endmacro %}
-
-{% macro money_mo(val) -%}
-  {%- if val is not none and val is not undefined -%}
-    ${{ "{:,.0f}".format(val|float) }}/mo
-  {%- else -%}
-    —
-  {%- endif -%}
-{%- endmacro %}
-
-{% set comps = comps or {} %}
-
-<style>
-  .dw-layout {
-    display: grid;
-    grid-template-columns: 2.1fr 1.4fr;
-    gap: 1.5rem;
-    margin-top: 1.5rem;
-  }
-  .dw-card {
-    background: #0b1016;
-    border-radius: 12px;
-    padding: 1.25rem 1.5rem;
-    border: 1px solid var(--line);
-    box-shadow: 0 0 18px rgba(0,0,0,0.45);
-  }
-  .dw-card h3 { color: var(--accent); margin-bottom: .75rem; }
-  .dw-label {
-    display: block;
-    margin-top: .75rem;
-    margin-bottom: .25rem;
-    font-size: .9rem;
-    color: var(--text-light, var(--text));
-  }
-  .dw-input {
-    width: 100%;
-    padding: .55rem .7rem;
-    border-radius: 8px;
-    border: 1px solid var(--line);
-    background: #0f141a;
-    color: var(--text);
-    font-size: .9rem;
-  }
-  .dw-row {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: .75rem 1rem;
-  }
-  .dw-button {
-    background: rgba(122,184,255,0.12);
-    border: 1px solid rgba(122,184,255,0.45);
-    color: #7ab8ff;
-    padding: .7rem 1.2rem;
-    border-radius: 8px;
-    cursor: pointer;
-    font-weight: 600;
-    transition: .2s;
-    font-size: .9rem;
-    letter-spacing: .3px;
-    display:inline-flex;
-    align-items:center;
-    justify-content:center;
-    gap:.5rem;
-  }
-  .dw-button:hover {
-    background: rgba(122,184,255,0.22);
-    border-color: #7ab8ff;
-    box-shadow: 0 0 12px rgba(122,184,255,0.45);
-  }
-
-  .intelligence-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr 1.3fr;
-    gap: 1.5rem;
-    margin-top: 1.5rem;
-  }
-  .photo-carousel img {
-    width: 100%;
-    border-radius: 8px;
-    margin-bottom: .5rem;
-  }
-
-  /* Rehab planner */
-  .rehab-visual-grid{
-    display:grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: .9rem;
-    margin-top: .75rem;
-  }
-  .rehab-visual-item{
-    border: 1px solid rgba(255,255,255,.08);
-    border-radius: 10px;
-    padding: .75rem;
-    background: rgba(255,255,255,.02);
-  }
-  .rehab-visual-item h4{ margin:0 0 .5rem; color: var(--text-light, var(--text)); }
-  .rehab-options{
-    display:flex;
-    gap:.5rem;
-    flex-wrap:wrap;
-  }
-  .rehab-tag{
-    display:inline-block;
-    padding:.25rem .5rem;
-    border-radius:999px;
-    border:1px solid rgba(122,184,255,.35);
-    background: rgba(122,184,255,.08);
-    color:#cfe4ff;
-    font-size:.8rem;
-    margin-left:.35rem;
-  }
-
-  /* Modals */
-  .modal-overlay {
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,0.65);
-    display: none;
-    align-items: center;
-    justify-content: center;
-    padding: 1rem;
-    z-index: 9999;
-  }
-  .modal-content {
-    width: min(980px, 100%);
-    background: #0b1016;
-    border: 1px solid var(--line);
-    border-radius: 12px;
-    padding: 1.25rem;
-    box-shadow: 0 0 24px rgba(0,0,0,0.6);
-  }
-  .style-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 1rem;
-    margin-top: .75rem;
-  }
-  .style-results-grid {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: .75rem;
-    margin-top: .75rem;
-  }
-  @media (max-width: 980px){
-    .intelligence-grid{grid-template-columns:1fr;}
-    .dw-layout{grid-template-columns:1fr;}
-    .style-grid{grid-template-columns:1fr;}
-    .style-results-grid{grid-template-columns:repeat(2, minmax(0, 1fr));}
-  }
-  @media (max-width: 560px){
-    .style-results-grid{grid-template-columns:1fr;}
-  }
-</style>
 
 <div class="page-header">
   <h2>Ravlo Deal Workspace</h2>
@@ -193,8 +33,8 @@
       <button type="submit" class="dw-button">Load Property</button>
 
       <a href="{{ url_for('investor.saved_properties') }}"
-          class="dw-button"
-          style="text-decoration:none;">
+         class="dw-button"
+         style="text-decoration:none;">
          View Saved Properties
        </a>
     </div>
@@ -269,8 +109,9 @@
     <div class="dw-card">
       <h3>📈 Valuation + Rent</h3>
 
-      {# valuation #}
-      {% set v = resolved.property.valuation if resolved and resolved.property and resolved.property.valuation is not undefined else none %}
+      {# valuation (supports dict OR object) #}
+      {% set prop = (resolved.property if resolved and resolved.property is not undefined else none) %}
+      {% set v = (prop.valuation if prop and prop.valuation is not undefined else none) %}
       {% set v_value = (v.get('value') if v is mapping else (v.value if v else none)) %}
       {% set v_low   = (v.get('low')   if v is mapping else (v.low   if v else none)) %}
       {% set v_high  = (v.get('high')  if v is mapping else (v.high  if v else none)) %}
@@ -288,8 +129,8 @@
         <strong>Confidence:</strong> {{ v_conf or '—' }}
       </div>
 
-      {# rent #}
-      {% set r = resolved.property.rent_estimate if resolved and resolved.property and resolved.property.rent_estimate is not undefined else none %}
+      {# rent (supports dict OR object) #}
+      {% set r = (prop.rent_estimate if prop and prop.rent_estimate is not undefined else none) %}
       {% set r_value = (r.get('value') if r is mapping else (r.value if r else none)) %}
       {% set r_low   = (r.get('low')   if r is mapping else (r.low   if r else none)) %}
       {% set r_high  = (r.get('high')  if r is mapping else (r.high  if r else none)) %}
@@ -308,13 +149,19 @@
       </div>
     </div>
 
-   <a class="dw-button" style="text-decoration:none;"
-      href="{{ url_for('investor.deal_rehab', deal_id=deal_id) if deal_id else '#' }}">
-     🏗️ Open Rehab Studio
-   </a>
-   {% if not deal_id %}
-     <p class="ai-text" style="margin-top:.5rem;">Save the deal first to open Rehab Studio.</p>
-   {% endif %}
+  </div> {# end .intelligence-grid #}
+  {% endif %} {# end if resolved #}
+
+  <div style="margin: .75rem 0 0;">
+    <a class="dw-button" style="text-decoration:none;"
+       href="{{ url_for('investor.deal_rehab_studio', deal_id=deal_id) if deal_id else '#' }}">
+      🏗️ Open Rehab Studio
+    </a>
+
+    {% if not deal_id %}
+      <p class="ai-text" style="margin-top:.5rem;">Save the deal first to open Rehab Studio.</p>
+    {% endif %}
+  </div>
 
   <!-- LEFT + RIGHT LAYOUT -->
   <div class="dw-layout">
@@ -560,18 +407,19 @@
       </div>
       {% endif %}
 
-            {% if ai_summary %}
-            <div class="dw-card" style="margin-top:1.5rem;">
-              <h3>🤖 AI Deal Insights</h3>
-              <p class="ai-text">{{ ai_summary }}</p>
-             </div>
-            {% endif %}
+      {% if ai_summary %}
+      <div class="dw-card" style="margin-top:1.5rem;">
+        <h3>🤖 AI Deal Insights</h3>
+        <p class="ai-text">{{ ai_summary }}</p>
+      </div>
+      {% endif %}
 
-          </div> {# end RIGHT COLUMN #}
+    </div> {# end RIGHT COLUMN #}
 
-        </div> {# end .dw-layout #}
+  </div> {# end .dw-layout #}
 
-      </form>
+</form>
 
-      {% endif %}   {# closes: {% if not selected_prop %} ... {% else %} ... #}
-      {% endblock %}
+{% endif %}   {# closes: {% if not selected_prop %} ... {% else %} ... #}
+
+{% endblock %}
