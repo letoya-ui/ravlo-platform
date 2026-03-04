@@ -2484,7 +2484,12 @@ def deal_open(deal_id):
 @role_required("investor")
 def deal_reveal(deal_id):
     deal = Deal.query.filter_by(id=deal_id, user_id=current_user.id).first_or_404()
-
+    
+    after_url = request.form.get("after_url")
+    resolved = deal.resolved_json or {}
+    rehab = resolved.get("rehab", {})
+    featured = rehab.get("featured")
+    
     # Pull mockups tied to deal first
     mockups = (RenovationMockup.query
         .filter_by(deal_id=deal_id, user_id=current_user.id)
@@ -2520,7 +2525,8 @@ def deal_reveal(deal_id):
         deal=deal,
         deal_id=deal_id,
         mockups=mockups,
-        featured_mockup=featured_mockup
+        featured_mockup=featured_mockup,
+        featured=featured
     )
 
 @investor_bp.route("/deals/visualizer", methods=["POST"])
