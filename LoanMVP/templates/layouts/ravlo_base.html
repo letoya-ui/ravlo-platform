@@ -85,8 +85,8 @@
         </a>
 
         {# ✅ Rehab Studio (needs a deal_id, so we route to deals list unless deal_id exists) #}
-        <a class="{% if ep in ['investor.rehab_studio','investor.deal_reveal'] %}active{% endif %}"
-           href="{% if deal_id is defined and deal_id %}{{ url_for('investor.rehab_studio', deal_id=deal_id) }}{% else %}{{ url_for('investor.deals_list') }}{% endif %}">
+        <a class="{% if ep in ['investor.deal_rehab_studio','investor.deal_reveal'] %}active{% endif %}"
+           href="{% if deal_id is defined and deal_id %}{{ url_for('investor.deal_rehab_studio', deal_id=deal_id) }}{% else %}{{ url_for('investor.deals_list') }}{% endif %}">
           <i class="lucide lucide-hammer icon"></i>
           Rehab Studio
         </a>
