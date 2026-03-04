@@ -505,10 +505,11 @@
               💾 Save Deal
             </button>
              
-            <a class="dw-button" style="text-decoration:none;"
-                href="{{ url_for('investor.deal_book', deal_id=deal.id) }}">
-               📘 Generate Deal Book
-            </a>
+            {% if deal_id %}
+              <a class="dw-button" href="{{ url_for('investor.deal_book', deal_id=deal_id) }}">📘 Deal Book</a>
+            {% else %}
+              <button class="dw-button" type="button" disabled>📘 Deal Book (Save Deal First)</button>
+            {% endif %}
             
             {% if deal_id %}
               <a class="dw-button" style="text-decoration:none;"
