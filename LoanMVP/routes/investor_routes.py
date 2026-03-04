@@ -1974,6 +1974,7 @@ def deal_workspace():
             prop_id=None,
             mode=mode,
             comps=comps,
+            deal=deal,
             resolved=resolved,
             comparison=None,
             recommendation=recommendation,
