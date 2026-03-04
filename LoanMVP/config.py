@@ -23,18 +23,23 @@ class Config:
 
     DEBUG = os.environ.get("FLASK_DEBUG", "false").lower() in ("1", "true", "yes")
 
-    PERMANENT_SESSION_LIFETIME = timedelta(days=30)
+    # Session timeout (auto logout after inactivity)
+    PERMANENT_SESSION_LIFETIME = timedelta(minutes=30)
+
+    # Remember login duration
     REMEMBER_COOKIE_DURATION = timedelta(days=30)
 
+    # Session cookies
     SESSION_COOKIE_SECURE = True
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = "Lax"
-    PERMANENT_SESSION_LIFETIME=timedelta(minutes=30)
- 
+
+    # Remember cookies
     REMEMBER_COOKIE_SECURE = True
     REMEMBER_COOKIE_HTTPONLY = True
     REMEMBER_COOKIE_SAMESITE = "Lax"
 
+    # Flask-Login protection
     SESSION_PROTECTION = "strong"
 
     # DATABASE
