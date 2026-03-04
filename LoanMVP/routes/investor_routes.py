@@ -1728,7 +1728,7 @@ def property_explore_plus(prop_id):
         flash("Profile not found.", "danger")
         return redirect(url_for("investor.property_search"))
 
-    prop = SavedProperty.query.filter_by(id=prop_id, **profile_id_filter(SavedProperty, ip.id)).first()
+    prop = SavedProperty.query.filter_by(id=prop_id, **_profile_id_filter(SavedProperty, ip.id)).first()
     if not prop:
         flash("Property not found.", "danger")
         return redirect(url_for("investor.property_search"))
