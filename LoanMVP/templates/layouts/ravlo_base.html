@@ -64,11 +64,12 @@
       </div>
 
       <nav class="ravlo-nav">
+
         <a class="{% if ep == 'investor.command_center' %}active{% endif %}"
            href="{{ url_for('investor.command_center') }}">
           <i class="lucide lucide-layout-dashboard icon"></i>
           Command Center
-        </a>
+       </a>
 
         <a class="{% if ep == 'investor.property_search' %}active{% endif %}"
            href="{{ url_for('investor.property_search') }}">
@@ -76,24 +77,32 @@
           Property Intelligence
         </a>
 
-        <a class="{% if ep == 'investor.deals' %}active{% endif %}"
+        {# ✅ Deal Workspace (list / picker) #}
+        <a class="{% if ep in ['investor.deals_list','investor.deal_workspace','investor.deal_open','investor.deal_detail'] %}active{% endif %}"
            href="{{ url_for('investor.deals_list') }}">
           <i class="lucide lucide-briefcase icon"></i>
-          Deals
+          Deal Workspace
+        </a>
+
+        {# ✅ Rehab Studio (needs a deal_id, so we route to deals list unless deal_id exists) #}
+        <a class="{% if ep in ['investor.rehab_studio','investor.deal_reveal'] %}active{% endif %}"
+           href="{% if deal_id is defined and deal_id %}{{ url_for('investor.rehab_studio', deal_id=deal_id) }}{% else %}{{ url_for('investor.deals_list') }}{% endif %}">
+          <i class="lucide lucide-hammer icon"></i>
+          Rehab Studio
         </a>
 
         <a class="{% if ep == 'investor.saved_properties' %}active{% endif %}"
            href="{{ url_for('investor.saved_properties') }}">
-          <i class="lucide lucide-pie-chart icon"></i>
+          <i class="lucide lucide-folder-heart icon"></i>
           Portfolio
         </a>
-        
+
         <a class="{% if ep == 'investor.apply' %}active{% endif %}"
            href="{{ url_for('investor.apply') }}">
           <i class="lucide lucide-landmark icon"></i>
           Apply
         </a>
- 
+
         <a class="{% if ep == 'investor.resource_center' %}active{% endif %}"
            href="{{ url_for('investor.resource_center') }}">
           <i class="lucide lucide-scroll-text icon"></i>
@@ -105,6 +114,7 @@
           <i class="lucide lucide-folder icon"></i>
           Documents
         </a>
+
       </nav>
 
       <div class="ravlo-sb-foot">
@@ -146,9 +156,21 @@
           </div>
 
           {% block topbar_actions %}
-          <button class="ravlo-btn ghost sm" type="button">View All</button>
-          <button class="ravlo-btn primary sm" type="button">New Deal</button>
-          {% endblock %}
+  <button class="ravlo-btn ghost sm" type="button"
+          onclick="location.href='{{ url_for('investor.property_search') }}'">
+    Property Intelligence
+  </button>
+
+  <button class="ravlo-btn ghost sm" type="button"
+          onclick="location.href='{{ url_for('investor.deals_list') }}'">
+    Deal Workspace
+  </button>
+
+  <button class="ravlo-btn primary sm" type="button"
+          onclick="location.href='{% if deal_id is defined and deal_id %}{{ url_for('investor.rehab_studio', deal_id=deal_id) }}{% else %}{{ url_for('investor.deals_list') }}{% endif %}'">
+    Rehab Studio
+  </button>
+{% endblock %}
         </div>
       </header>
 
