@@ -7,6 +7,168 @@
 
 {% block content %}
 
+{# ---------- Helpers ---------- #}
+{% macro money(val) -%}
+  {%- if val is not none and val is not undefined -%}
+    ${{ "{:,.0f}".format(val|float) }}
+  {%- else -%}
+    —
+  {%- endif -%}
+{%- endmacro %}
+
+{% macro money_mo(val) -%}
+  {%- if val is not none and val is not undefined -%}
+    ${{ "{:,.0f}".format(val|float) }}/mo
+  {%- else -%}
+    —
+  {%- endif -%}
+{%- endmacro %}
+
+{% set comps = comps or {} %}
+
+<style>
+  .dw-layout {
+    display: grid;
+    grid-template-columns: 2.1fr 1.4fr;
+    gap: 1.5rem;
+    margin-top: 1.5rem;
+  }
+  .dw-card {
+    background: #0b1016;
+    border-radius: 12px;
+    padding: 1.25rem 1.5rem;
+    border: 1px solid var(--line);
+    box-shadow: 0 0 18px rgba(0,0,0,0.45);
+  }
+  .dw-card h3 { color: var(--accent); margin-bottom: .75rem; }
+  .dw-label {
+    display: block;
+    margin-top: .75rem;
+    margin-bottom: .25rem;
+    font-size: .9rem;
+    color: var(--text-light, var(--text));
+  }
+  .dw-input {
+    width: 100%;
+    padding: .55rem .7rem;
+    border-radius: 8px;
+    border: 1px solid var(--line);
+    background: #0f141a;
+    color: var(--text);
+    font-size: .9rem;
+  }
+  .dw-row {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: .75rem 1rem;
+  }
+  .dw-button {
+    background: rgba(122,184,255,0.12);
+    border: 1px solid rgba(122,184,255,0.45);
+    color: #7ab8ff;
+    padding: .7rem 1.2rem;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: .2s;
+    font-size: .9rem;
+    letter-spacing: .3px;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    gap:.5rem;
+  }
+  .dw-button:hover {
+    background: rgba(122,184,255,0.22);
+    border-color: #7ab8ff;
+    box-shadow: 0 0 12px rgba(122,184,255,0.45);
+  }
+
+  .intelligence-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1.3fr;
+    gap: 1.5rem;
+    margin-top: 1.5rem;
+  }
+  .photo-carousel img {
+    width: 100%;
+    border-radius: 8px;
+    margin-bottom: .5rem;
+  }
+
+  /* Rehab planner */
+  .rehab-visual-grid{
+    display:grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: .9rem;
+    margin-top: .75rem;
+  }
+  .rehab-visual-item{
+    border: 1px solid rgba(255,255,255,.08);
+    border-radius: 10px;
+    padding: .75rem;
+    background: rgba(255,255,255,.02);
+  }
+  .rehab-visual-item h4{ margin:0 0 .5rem; color: var(--text-light, var(--text)); }
+  .rehab-options{
+    display:flex;
+    gap:.5rem;
+    flex-wrap:wrap;
+  }
+  .rehab-tag{
+    display:inline-block;
+    padding:.25rem .5rem;
+    border-radius:999px;
+    border:1px solid rgba(122,184,255,.35);
+    background: rgba(122,184,255,.08);
+    color:#cfe4ff;
+    font-size:.8rem;
+    margin-left:.35rem;
+  }
+
+  /* Modals */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.65);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    z-index: 9999;
+  }
+  .modal-content {
+    width: min(980px, 100%);
+    background: #0b1016;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 1.25rem;
+    box-shadow: 0 0 24px rgba(0,0,0,0.6);
+  }
+  .style-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin-top: .75rem;
+  }
+  .style-results-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: .75rem;
+    margin-top: .75rem;
+  }
+  @media (max-width: 980px){
+    .intelligence-grid{grid-template-columns:1fr;}
+    .dw-layout{grid-template-columns:1fr;}
+    .style-grid{grid-template-columns:1fr;}
+    .style-results-grid{grid-template-columns:repeat(2, minmax(0, 1fr));}
+  }
+  @media (max-width: 560px){
+    .style-results-grid{grid-template-columns:1fr;}
+  }
+</style>
+
+
 <div class="page-header">
   <h2>Ravlo Deal Workspace</h2>
   <p class="text-muted">Analyze Flip, Rental, and Airbnb strategies with comps, rehab, and AI guidance.</p>
