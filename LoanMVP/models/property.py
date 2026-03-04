@@ -79,7 +79,7 @@ class SavedProperty(db.Model):
     investor_profile_id = db.Column(
         db.Integer,
         db.ForeignKey("investor_profile.id"),
-        nullable=False,    # ✅ keep required for investor-only
+        nullable=True,    # ✅ keep required for investor-only
         index=True
     )
 
