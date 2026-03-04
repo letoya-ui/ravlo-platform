@@ -2208,6 +2208,7 @@ def deal_share_design(deal_id):
         return jsonify({"status": "error", "message": "No valid partners selected (must be approved + active + paid)."}), 400
 
     deal_link = url_for("investor.deal_detail", deal_id=deal.id, _external=True)
+    rehab_link = url_for("investor.deal_rehab", deal_id=deal.id, _external=True)
     reveal_link = url_for("investor.deal_reveal", deal_id=deal.id, _external=True)
 
     sent = 0
@@ -2215,6 +2216,7 @@ def deal_share_design(deal_id):
         msg = (
             (note + "\n\n" if note else "") +
             f"Selected renovation design:\n{image_url}\n\n"
+            f"Rehab Studio:\n{rehab_link}\n"
             f"Deal:\n{deal_link}\n"
             f"Reveal:\n{reveal_link}\n"
         )
@@ -2256,6 +2258,22 @@ def deal_share_design(deal_id):
     db.session.commit()
     return jsonify({"status": "ok", "sent": sent, "failed": 0})
 
+@investor_bp.route("/deals/<int:deal_id>/rehab", methods=["GET"])
+@login_required
+@role_required("investor")
+def deal_rehab(deal_id):
+    deal = Deal.query.filter_by(id=deal_id, user_id=current_user.id).first_or_404()
+
+    mockups = (RenovationMockup.query
+        .filter_by(deal_id=deal_id, user_id=current_user.id)
+        .order_by(RenovationMockup.created_at.desc())
+        .all())
+
+    return render_template(
+        "investor/deal_rehab.html",
+        deal=deal,
+        mockups=mockups
+    )
 
 @investor_bp.route("/deals/save", methods=["POST"])
 @investor_bp.route("/deals/save_deal", methods=["POST"])
