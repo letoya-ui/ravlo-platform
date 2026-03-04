@@ -1679,7 +1679,7 @@ def save_property_and_analyze():
     final_property_id = form_pid or resolved_property_id or None
     final_property_id = str(final_property_id).strip() if final_property_id else None
 
-    fk = _profile_id_filter(SavedProperty, ip.id)
+    fk = profile_id_filter(SavedProperty, ip.id)
 
     existing = None
     if final_property_id:
@@ -1722,7 +1722,7 @@ def property_explore_plus(prop_id):
         flash("Profile not found.", "danger")
         return redirect(url_for("investor.property_search"))
 
-    prop = SavedProperty.query.filter_by(id=prop_id, **_profile_id_filter(SavedProperty, ip.id)).first()
+    prop = SavedProperty.query.filter_by(id=prop_id, **profile_id_filter(SavedProperty, ip.id)).first()
     if not prop:
         flash("Property not found.", "danger")
         return redirect(url_for("investor.property_search"))
@@ -1822,7 +1822,7 @@ def api_property_tool_save():
     except Exception:
         sqft = None
 
-    fk = _profile_id_filter(SavedProperty, ip.id)
+    fk = profile_id_filter(SavedProperty, ip.id)
 
     existing = None
     if property_id:
@@ -1923,7 +1923,7 @@ def deal_workspace():
 
     saved_props = (
         SavedProperty.query
-        .filter_by(**_profile_id_filter(SavedProperty, ip.id))
+        .filter_by(**profile_id_filter(SavedProperty, ip.id))
         .order_by(SavedProperty.created_at.desc())
         .all()
     )
@@ -1935,7 +1935,7 @@ def deal_workspace():
         try:
             pid = int(prop_id)
             selected_prop = SavedProperty.query.filter_by(
-                id=pid, **_profile_id_filter(SavedProperty, ip.id)
+                id=pid, **profile_id_filter(SavedProperty, ip.id)
             ).first()
         except Exception:
             selected_prop = None
