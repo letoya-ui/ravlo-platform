@@ -236,13 +236,14 @@
     </div>
   {% else %}
 
-    {# Prefer a featured mockup if you store it. Fallback to latest mockup. #}
-    {% set featured_after = (deal.final_after_url if deal.final_after_url is defined else none) %}
-    {% set featured = none %}
+    {% set featured = (deal.resolved_json or {}).get('rehab', {}).get('featured', {}) %}
+    {% set featured_after = featured.get('after_url') %}
+    {% set lead = mockups[0] %}
+
     {% if featured_after %}
-      {% for m in mockups %}
-        {% if m.after_url == featured_after %}
-          {% set featured = m %}
+      {% for mm in mockups %}
+        {% if (mm.after_url or '') == featured_after %}
+          {% set lead = mm %}
         {% endif %}
       {% endfor %}
     {% endif %}
@@ -333,12 +334,11 @@
                    onclick="openLightbox('{{ m.after_url }}','After')" style="cursor:zoom-in;">
               <div class="thumb-meta">
                 <span class="chip">{{ m.style_preset or 'Concept' }}</span>
+                {% if is_featured %}<span class="chip">⭐ Featured</span>{% endif %}
                 <small>{{ m.created_at.strftime("%b %d, %Y %I:%M %p") if m.created_at else '' }}</small>
               </div>
 
-              <button type="button" class="btn pick" onclick="featureReveal('{{ m.after_url }}')">
-                ✅ Set as Featured Reveal
-              </button>
+              
             </div>
           {% endfor %}
         </div>
@@ -354,7 +354,16 @@
             This is saved internally to the deal (no public link).
           </div>
         </div>
-
+        <button type="button" class="btn pick"
+          onclick="featureReveal(
+           {{ deal.id }},
+           '{{ m.after_url }}',
+           '{{ m.before_url }}',
+           '{{ (m.style_preset or '')|e }}',
+           '{{ (m.style_prompt or '')|e }}'
+         )">
+         ✅ Feature This Reveal
+       </button>
         <p class="muted" style="margin-top:1rem;">
           Want more styles? Generate more concepts in Rehab Studio (Modern, Luxury, Airbnb, Flip, Budget).
         </p>
@@ -414,24 +423,27 @@
   }
 
   // Save featured reveal (internal-only)
-  async function featureReveal(afterUrl){
+  async function featureReveal(dealId, afterUrl, beforeUrl, stylePreset, stylePrompt){
     try{
       const fd = new FormData();
-      fd.append("after_url", afterUrl);
+      fd.append("after_url", afterUrl || "");
+      fd.append("before_url", beforeUrl || "");
+      fd.append("style_preset", stylePreset || "");
+      fd.append("style_prompt", stylePrompt || "");
 
-      const res = await fetch("{{ url_for('investor.deal_feature_reveal', deal_id=deal.id) }}", {
+      const res = await fetch(`/investor/deals/${dealId}/rehab/feature`, {
         method: "POST",
         body: fd,
         credentials: "include"
       });
 
       const data = await res.json();
-      if(!data || data.status !== "ok") throw new Error(data?.message || "Could not save featured reveal.");
+      if(!data || data.status !== "ok") throw new Error(data?.message || "Could not feature reveal.");
 
-      showSelected(afterUrl);
-      alert("Featured reveal saved ✅");
+      // simplest: reload so hero + slider update immediately
+      window.location.reload();
     }catch(e){
-      alert(e.message || "Could not save featured reveal.");
+      alert(e.message || "Failed to feature reveal.");
     }
   }
 
