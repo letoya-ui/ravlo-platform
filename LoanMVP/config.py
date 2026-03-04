@@ -41,7 +41,8 @@ class Config:
 
     # Flask-Login protection
     SESSION_PROTECTION = "strong"
-
+    SESSION_REFRESH_EACH_REQUEST = True
+ 
     # DATABASE
     SQLALCHEMY_DATABASE_URI = os.getenv("DATABASE_URL")
     SQLALCHEMY_TRACK_MODIFICATIONS = False
