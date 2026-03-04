@@ -1,133 +1,350 @@
-<form method="POST" action="{{ url_for('investor.deal_edit', deal_id=deal.id) }}">
-  {% if csrf_token is defined %}
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-  {% endif %}
+{# ============================================================
+   investor/deal_detail.html
+   Ravlo • Deal Details (Edit + Snapshot + Visuals + Share)
+   Requires: deal, (optional) mockups, (optional) partners
+   Routes used:
+     investor.deal_edit (POST)
+     investor.deal_open (GET)  — workspace
+     investor.deals_list (GET)
+     investor.deal_rehab_studio (GET)  — optional
+     investor.deal_reveal (GET)         — optional
+     investor.deal_select_design (POST) — persist selected design (you said you have a feature route too)
+     investor.deal_share_design (POST)
+   ============================================================ #}
 
-  <label class="dw-label">Title</label>
-  <input class="dw-input" name="title" value="{{ deal.title or '' }}">
+{% extends "layouts/ravlo_base.html" %}
+{% block title %}Ravlo • Deal Details{% endblock %}
 
-  <label class="dw-label">Status</label>
-  <select class="dw-input" name="status">
-    <option value="active" {% if deal.status == 'active' %}selected{% endif %}>Active</option>
-    <option value="archived" {% if deal.status == 'archived' %}selected{% endif %}>Archived</option>
-  </select>
+{% block page_title %}Deal Details{% endblock %}
+{% block page_subline %}Edit your deal, review results, and manage renovation visuals.{% endblock %}
 
-  <label class="dw-label">Notes</label>
-  <textarea class="dw-input" name="notes" rows="6">{{ deal.notes or '' }}</textarea>
+{% block content %}
+<style>
+  .dd-wrap{margin-top:1.1rem;}
+  .dd-hero{
+    background: rgba(255,255,255,.03);
+    border:1px solid rgba(255,255,255,.10);
+    border-radius: 18px;
+    padding: 1rem 1.1rem;
+    box-shadow: 0 0 22px rgba(0,0,0,.55);
+    display:flex; justify-content:space-between; gap:1rem; flex-wrap:wrap;
+    align-items:flex-start;
+  }
+  .dd-hero h2{margin:0}
+  .dd-sub{color:var(--muted); margin:.35rem 0 0}
 
-  <div style="margin-top:1rem; display:flex; gap:.75rem; flex-wrap:wrap;">
-    <button class="dw-button" type="submit">Save Changes</button>
+  .dd-actions{display:flex; gap:.5rem; flex-wrap:wrap;}
+  .btn{
+    background: rgba(122,184,255,0.12);
+    border: 1px solid rgba(122,184,255,0.45);
+    color: #7ab8ff;
+    padding: .6rem .9rem;
+    border-radius: 10px;
+    cursor: pointer;
+    font-weight: 750;
+    transition: .2s;
+    font-size: .9rem;
+    text-decoration:none;
+    display:inline-flex; align-items:center; gap:.45rem;
+  }
+  .btn:hover{background: rgba(122,184,255,0.22); border-color:#7ab8ff; box-shadow:0 0 12px rgba(122,184,255,0.35);}
+  .btn.ghost{background: rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.10); color: var(--text);}
+  .btn.danger{background: rgba(255,80,80,.10); border-color: rgba(255,80,80,.35); color: rgba(255,180,180,.95);}
+  .btn.danger:hover{background: rgba(255,80,80,.16); border-color: rgba(255,80,80,.55); box-shadow:0 0 12px rgba(255,80,80,.20);}
 
-    <a class="dw-button" href="{{ url_for('investor.deal_open', deal_id=deal.id) }}"
-       style="text-decoration:none; display:inline-flex; align-items:center; justify-content:center;">
-      Open in Workspace
-    </a>
+  .grid{
+    display:grid;
+    grid-template-columns: 1.1fr .9fr;
+    gap:1.1rem;
+    margin-top:1rem;
+  }
+  @media(max-width:1050px){ .grid{grid-template-columns:1fr;} }
 
-    <a class="dw-button" href="{{ url_for('investor.deals_list') }}"
-       style="text-decoration:none; display:inline-flex; align-items:center; justify-content:center;">
-      Back to List
-    </a>
-  </div>
-</form>
+  .dw-card{
+    background: var(--panel, #0b1016);
+    border: 1px solid var(--line, rgba(255,255,255,0.10));
+    border-radius: 16px;
+    padding: 1rem 1.05rem;
+    box-shadow: 0 0 18px rgba(0,0,0,0.45);
+  }
+  .dw-card h3{margin:.1rem 0 .8rem; color:var(--accent);}
+  .dw-row{display:grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap:.75rem;}
+  @media(max-width:700px){ .dw-row{grid-template-columns:1fr;} }
 
-  <!-- =======================
-       SNAPSHOT CARD
-  ======================== -->
-  <div class="dw-card">
-    <h3>📦 Snapshot</h3>
+  .dw-label{display:block; font-weight:800; font-size:.82rem; color:rgba(255,255,255,.82); margin:.6rem 0 .35rem;}
+  .dw-input{
+    width:100%;
+    background: rgba(255,255,255,0.03);
+    border:1px solid rgba(255,255,255,0.10);
+    border-radius: 12px;
+    padding: .7rem .8rem;
+    color: var(--text);
+    outline:none;
+  }
+  textarea.dw-input{min-height:140px; resize:vertical;}
+  .ai-text{color: rgba(255,255,255,.88); line-height:1.45;}
+  .muted{color:var(--muted);}
 
-    {% set r = deal.results_json or {} %}
-    <p class="ai-text">
-      {% if r.profit is defined %}
-        <strong>Profit:</strong> ${{ "{:,.0f}".format(r.profit|float) }}<br>
-      {% endif %}
-      {% if r.net_cashflow is defined %}
-        <strong>Net Cashflow:</strong> ${{ "{:,.0f}".format(r.net_cashflow|float) }}/mo<br>
-      {% endif %}
-      {% if r.net_monthly is defined %}
-        <strong>Airbnb Net:</strong> ${{ "{:,.0f}".format(r.net_monthly|float) }}/mo<br>
-      {% endif %}
-      {% if r.roi is defined and r.roi %}
-        {# r.roi might already be percent OR decimal; keep your existing behavior #}
-        <strong>ROI:</strong> {{ "{:,.1f}".format(r.roi * 100) }}%<br>
-      {% endif %}
-    </p>
+  .pill{
+    display:inline-flex; align-items:center; gap:.4rem;
+    padding:.25rem .55rem;
+    border-radius:999px;
+    border:1px solid rgba(255,255,255,.12);
+    background: rgba(255,255,255,.04);
+    color: rgba(255,255,255,.82);
+    font-size:.78rem;
+    font-weight:800;
+  }
+  .pill.on{border-color: rgba(122,184,255,.32); background: rgba(122,184,255,.10); color:#a9d2ff;}
 
-    <hr style="border-color: var(--line); margin: 1rem 0;">
+  .img{
+    width:100%;
+    border-radius:12px;
+    border:1px solid rgba(255,255,255,.08);
+    background:#0f141a;
+    display:block;
+  }
 
-    <details>
-      <summary style="cursor:pointer;">View raw JSON</summary>
-      <pre style="white-space:pre-wrap; font-size:.85rem; margin-top:.75rem;">{{ deal.results_json | tojson(indent=2) }}</pre>
-    </details>
-  </div>
-</div>
+  /* gallery */
+  .gallery{display:grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap:.75rem; margin-top:.75rem;}
+  @media(max-width:1100px){ .gallery{grid-template-columns: repeat(3, minmax(0,1fr));} }
+  @media(max-width:820px){ .gallery{grid-template-columns: repeat(2, minmax(0,1fr));} }
+  @media(max-width:520px){ .gallery{grid-template-columns: 1fr;} }
 
-{# =======================
-   RENOVATION VISUALS (SELECT + SHARE)
-======================= #}
-<div class="dw-card" style="margin-top:1.25rem;">
-  <h3>✨ Renovation Visuals</h3>
-  <p class="ai-text" style="margin-top:-.25rem;">
-    Your saved renovation mockups for this deal. Select a final design and send to partners.
-  </p>
+  .tile{border:1px solid rgba(255,255,255,.08); border-radius:12px; padding:.5rem; background: rgba(255,255,255,.02);}
+  .tile-meta{margin-top:.45rem; font-size:.85rem;}
+  .tile-meta strong{display:block;}
+  .tile-actions{display:flex; gap:.5rem; flex-wrap:wrap; margin-top:.55rem;}
 
-  {% if mockups is defined and mockups and mockups|length %}
-    <div style="display:grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap:.75rem; margin-top:.75rem;">
-      {% for m in mockups %}
-        <div style="border:1px solid rgba(255,255,255,.08); border-radius:12px; padding:.5rem;">
-          {% if m.after_url %}
-            <img src="{{ m.after_url }}" style="width:100%; border-radius:10px;">
-          {% endif %}
+  /* modal */
+  .modal-overlay{
+    display:none;
+    position:fixed; inset:0;
+    background: rgba(0,0,0,.65);
+    align-items:center; justify-content:center;
+    padding:1rem;
+    z-index:9999;
+  }
+  .modal-content{
+    width:min(980px, 100%);
+    background: var(--panel, #0b1016);
+    border:1px solid var(--line, rgba(255,255,255,0.10));
+    border-radius:14px;
+    padding:1.1rem;
+    box-shadow: 0 0 26px rgba(0,0,0,0.65);
+  }
+</style>
 
-          <div class="ai-text" style="margin-top:.4rem; font-size:.85rem;">
-            <strong>{{ (m.style_preset or m.preset or 'custom')|title }}</strong><br>
-            <span style="opacity:.85;">{{ m.created_at.strftime('%b %d, %Y') if m.created_at else '' }}</span>
-          </div>
+<div class="dd-wrap">
 
-          <div style="display:flex; gap:.5rem; flex-wrap:wrap; margin-top:.55rem;">
-            <button type="button"
-                    class="dw-button"
-                    style="flex:1;"
-                    onclick="selectDesign('{{ m.after_url }}','{{ m.before_url }}')">
-              ✅ Select
-            </button>
-
-            <button type="button"
-                    class="dw-button"
-                    style="flex:1;"
-                    onclick="openShareModal('{{ m.after_url }}')">
-              📤 Send
-            </button>
-          </div>
-        </div>
-      {% endfor %}
-    </div>
-
-    <!-- Selected preview -->
-    <div id="selectedDesignWrap" style="display:none; margin-top:1rem;">
-      <hr style="border-color: var(--line); margin: 1rem 0;">
-      <h3 style="margin:.25rem 0 .75rem;">Selected Design</h3>
-      <img id="selectedDesignImg" src="" style="width:100%; border-radius:12px; max-width:520px;">
-      <div class="ai-text" style="margin-top:.5rem;">
-        <span id="selectedDesignUrl" style="opacity:.9;"></span>
+  <!-- HERO -->
+  <div class="dd-hero">
+    <div>
+      <h2>🗂️ {{ deal.title or ('Deal #' ~ deal.id) }}</h2>
+      <div class="dd-sub">
+        <span class="pill">#{{ deal.id }}</span>
+        {% if deal.strategy %}<span class="pill on">Strategy: {{ deal.strategy }}</span>{% endif %}
+        {% if deal.status %}<span class="pill">Status: {{ deal.status }}</span>{% endif %}
+        {% if deal.reveal_is_public %}<span class="pill on">Reveal: Public</span>{% else %}<span class="pill">Reveal: Private</span>{% endif %}
+      </div>
+      <div class="dd-sub" style="margin-top:.5rem;">
+        <span class="muted">
+          Created: {{ deal.created_at.strftime("%b %d, %Y") if deal.created_at else "—" }}
+          • Updated: {{ deal.updated_at.strftime("%b %d, %Y %I:%M %p") if deal.updated_at else "—" }}
+        </span>
       </div>
     </div>
 
-  {% else %}
-    <p class="ai-text">No saved visuals yet. Generate mockups in the Deal Workspace and choose “Save to deal”.</p>
-  {% endif %}
+    <div class="dd-actions">
+      <a class="btn ghost" href="{{ url_for('investor.deal_open', deal_id=deal.id) }}">🧠 Workspace</a>
+
+      {% if 'investor.deal_rehab_studio' in current_app.view_functions %}
+        <a class="btn ghost" href="{{ url_for('investor.deal_rehab_studio', deal_id=deal.id) }}">🏗️ Rehab Studio</a>
+      {% endif %}
+
+      {% if 'investor.deal_reveal' in current_app.view_functions %}
+        <a class="btn ghost" href="{{ url_for('investor.deal_reveal', deal_id=deal.id) }}">✨ Reveal</a>
+      {% endif %}
+
+      <a class="btn ghost" href="{{ url_for('investor.deals_list') }}">↩ Back</a>
+    </div>
+  </div>
+
+  <div class="grid">
+
+    <!-- LEFT: EDIT + VISUALS -->
+    <div>
+
+      <!-- EDIT FORM -->
+      <div class="dw-card">
+        <h3>✏️ Edit Deal</h3>
+
+        <form method="POST" action="{{ url_for('investor.deal_edit', deal_id=deal.id) }}">
+          {% if csrf_token is defined %}
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          {% endif %}
+
+          <div class="dw-row">
+            <div>
+              <label class="dw-label">Title</label>
+              <input class="dw-input" name="title" value="{{ deal.title or '' }}" placeholder="e.g., Middletown Flip • 3/2 • 10940">
+            </div>
+
+            <div>
+              <label class="dw-label">Status</label>
+              <select class="dw-input" name="status">
+                <option value="active" {% if deal.status == 'active' %}selected{% endif %}>Active</option>
+                <option value="archived" {% if deal.status == 'archived' %}selected{% endif %}>Archived</option>
+              </select>
+            </div>
+          </div>
+
+          <label class="dw-label">Notes</label>
+          <textarea class="dw-input" name="notes" rows="6" placeholder="Scope notes, contractor bids, timeline, risks, lender notes...">{{ deal.notes or '' }}</textarea>
+
+          <div style="margin-top:1rem; display:flex; gap:.75rem; flex-wrap:wrap;">
+            <button class="btn" type="submit">Save Changes</button>
+
+            <a class="btn ghost" href="{{ url_for('investor.deal_open', deal_id=deal.id) }}"
+               style="text-decoration:none;">
+              Open in Workspace
+            </a>
+
+            <a class="btn ghost" href="{{ url_for('investor.deals_list') }}"
+               style="text-decoration:none;">
+              Back to List
+            </a>
+          </div>
+        </form>
+      </div>
+
+      <!-- RENOVATION VISUALS -->
+      <div class="dw-card" style="margin-top:1.1rem;">
+        <h3>✨ Renovation Visuals</h3>
+        <p class="ai-text" style="margin-top:-.25rem;">
+          Your saved renovation mockups for this deal. Select a final design and send it out.
+        </p>
+
+        {% if mockups is defined and mockups and mockups|length %}
+          <div class="gallery">
+            {% for m in mockups %}
+              <div class="tile">
+                {% if m.after_url %}
+                  <img src="{{ m.after_url }}" class="img" alt="After mockup">
+                {% endif %}
+
+                <div class="tile-meta ai-text">
+                  <strong>{{ (m.style_preset or m.preset or 'custom')|title }}</strong>
+                  <span class="muted">
+                    {{ m.created_at.strftime('%b %d, %Y %I:%M %p') if m.created_at else '' }}
+                  </span>
+                </div>
+
+                <div class="tile-actions">
+                  <button type="button"
+                          class="btn ghost"
+                          style="flex:1;"
+                          onclick="selectDesign('{{ m.after_url }}','{{ m.before_url }}','{{ (m.style_preset or '')|e }}','{{ (m.style_prompt or '')|e }}')">
+                    ✅ Select
+                  </button>
+
+                  <button type="button"
+                          class="btn"
+                          style="flex:1;"
+                          onclick="openShareModal('{{ m.after_url }}')">
+                    📤 Send
+                  </button>
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+
+          <!-- Selected preview -->
+          <div id="selectedDesignWrap" style="display:none; margin-top:1rem;">
+            <hr style="border:none; border-top:1px solid rgba(255,255,255,.08); margin: 1rem 0;">
+            <h3 style="margin:.25rem 0 .75rem;">Selected Design</h3>
+            <img id="selectedDesignImg" src="" class="img" style="max-width:560px;" alt="Selected design">
+            <div class="ai-text" style="margin-top:.5rem;">
+              <span id="selectedDesignUrl" style="opacity:.9;"></span>
+            </div>
+          </div>
+
+        {% else %}
+          <p class="ai-text">No saved visuals yet. Generate mockups in the Deal Workspace and choose “Save to deal”.</p>
+        {% endif %}
+      </div>
+
+    </div>
+
+    <!-- RIGHT: SNAPSHOT -->
+    <div>
+
+      <div class="dw-card">
+        <h3>📦 Snapshot</h3>
+
+        {% set r = deal.results_json or {} %}
+        <p class="ai-text">
+          {% if r.profit is defined and r.profit is not none %}
+            <strong>Profit:</strong> ${{ "{:,.0f}".format(r.profit|float) }}<br>
+          {% endif %}
+          {% if r.net_cashflow is defined and r.net_cashflow is not none %}
+            <strong>Net Cashflow:</strong> ${{ "{:,.0f}".format(r.net_cashflow|float) }}/mo<br>
+          {% endif %}
+          {% if r.net_monthly is defined and r.net_monthly is not none %}
+            <strong>Airbnb Net:</strong> ${{ "{:,.0f}".format(r.net_monthly|float) }}/mo<br>
+          {% endif %}
+          {% if r.roi is defined and r.roi %}
+            <strong>ROI:</strong> {{ "{:,.1f}".format((r.roi|float) * 100) }}%<br>
+          {% endif %}
+          {% if deal.strategy %}
+            <strong>Strategy:</strong> {{ deal.strategy }}<br>
+          {% endif %}
+        </p>
+
+        <hr style="border:none; border-top:1px solid rgba(255,255,255,.08); margin: 1rem 0;">
+
+        <details>
+          <summary style="cursor:pointer;">View raw JSON</summary>
+          <pre style="white-space:pre-wrap; font-size:.85rem; margin-top:.75rem;">{{ deal.results_json | tojson(indent=2) }}</pre>
+        </details>
+      </div>
+
+      {# Featured Reveal (if you saved into resolved_json["rehab"]["featured"]) #}
+      {% set rez = deal.resolved_json or {} %}
+      {% set feat = (rez.get("rehab", {}) or {}).get("featured") if rez is mapping else none %}
+
+      {% if feat and feat.get("after_url") %}
+        <div class="dw-card" style="margin-top:1.1rem;">
+          <h3>🏆 Featured Reveal</h3>
+          <img class="img" src="{{ feat.get('after_url') }}" alt="Featured after">
+          <div class="ai-text" style="margin-top:.65rem;">
+            {% if feat.get("style_preset") %}<strong>Style:</strong> {{ feat.get("style_preset") }}<br>{% endif %}
+            {% if feat.get("style_prompt") %}<strong>Prompt:</strong> {{ feat.get("style_prompt") }}{% endif %}
+          </div>
+          <div style="margin-top:.75rem; display:flex; gap:.5rem; flex-wrap:wrap;">
+            <a class="btn ghost" href="{{ feat.get('after_url') }}" target="_blank" rel="noopener">🔗 Open Full Size</a>
+            {% if 'investor.deal_reveal' in current_app.view_functions %}
+              <a class="btn" href="{{ url_for('investor.deal_reveal', deal_id=deal.id) }}">✨ Open Reveal</a>
+            {% endif %}
+          </div>
+        </div>
+      {% endif %}
+
+    </div>
+
+  </div>
 </div>
 
 <!-- Share Modal -->
-<div id="shareModal" class="modal-overlay" style="display:none;">
+<div id="shareModal" class="modal-overlay">
   <div class="modal-content">
-    <div style="display:flex; justify-content:space-between; align-items:center;">
-      <h3>📤 Send Selected Design to Partners</h3>
-      <button type="button" class="dw-button" onclick="closeShareModal()">Close</button>
+    <div style="display:flex; justify-content:space-between; align-items:center; gap:.75rem;">
+      <h3 style="margin:0;">📤 Send Selected Design</h3>
+      <button type="button" class="btn ghost" onclick="closeShareModal()">Close</button>
     </div>
 
     {% if partners is defined and partners and partners|length %}
-      <p class="ai-text">Choose partner(s):</p>
+      <p class="ai-text" style="margin-top:.75rem;">Choose partner(s):</p>
 
       <div style="display:grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap:.5rem; margin-top:.75rem;">
         {% for p in partners %}
@@ -141,14 +358,14 @@
         {% endfor %}
       </div>
     {% else %}
-      <p class="ai-text">No partners found yet. Add partners first, then share from here.</p>
+      <p class="ai-text" style="margin-top:.75rem;">No partners found yet. Add partners first, then share from here.</p>
     {% endif %}
 
     <label class="dw-label" style="margin-top:1rem;">Note (optional)</label>
-    <textarea id="partnerNote" class="dw-input" rows="4" placeholder="Quick note about scope, finishes, budget, or next steps..."></textarea>
+    <textarea id="partnerNote" class="dw-input" rows="4" placeholder="Budget, scope, finishes, timeline, next steps..."></textarea>
 
-    <div style="margin-top:1rem; display:flex; gap:.5rem; flex-wrap:wrap;">
-      <button type="button" class="dw-button" onclick="sendSelectedToPartners()">Send</button>
+    <div style="margin-top:1rem; display:flex; gap:.5rem; flex-wrap:wrap; align-items:center;">
+      <button type="button" class="btn" onclick="sendSelectedToPartners()">Send</button>
       <span id="shareStatus" class="ai-text" style="opacity:.85;"></span>
     </div>
   </div>
@@ -158,21 +375,27 @@
   let _selectedAfterUrl = "";
   let _selectedBeforeUrl = "";
 
-  function selectDesign(afterUrl, beforeUrl){
+  function selectDesign(afterUrl, beforeUrl, stylePreset, stylePrompt){
     _selectedAfterUrl = afterUrl || "";
     _selectedBeforeUrl = beforeUrl || "";
 
     // UI
     const wrap = document.getElementById("selectedDesignWrap");
-    document.getElementById("selectedDesignImg").src = _selectedAfterUrl;
-    document.getElementById("selectedDesignUrl").innerText = _selectedAfterUrl;
-    wrap.style.display = "block";
+    const img = document.getElementById("selectedDesignImg");
+    const urlEl = document.getElementById("selectedDesignUrl");
 
-    // Persist selection to deal
+    if (img) img.src = _selectedAfterUrl;
+    if (urlEl) urlEl.innerText = _selectedAfterUrl;
+    if (wrap) wrap.style.display = "block";
+
+    // Persist selection to deal (your route)
     const fd = new FormData();
     fd.append("after_url", _selectedAfterUrl);
     if (_selectedBeforeUrl) fd.append("before_url", _selectedBeforeUrl);
+    if (stylePreset) fd.append("style_preset", stylePreset);
+    if (stylePrompt) fd.append("style_prompt", stylePrompt);
 
+    // If you use CSRF protection on this endpoint, include CSRF header or exempt the route.
     fetch("{{ url_for('investor.deal_select_design', deal_id=deal.id) }}", {
       method: "POST",
       body: fd,
@@ -180,7 +403,7 @@
     })
     .then(r => r.json())
     .then(data => {
-      if (data.status !== "ok") alert(data.message || "Could not save selection.");
+      if (!data || data.status !== "ok") alert((data && data.message) ? data.message : "Could not save selection.");
     })
     .catch(() => alert("Could not save selection."));
   }
@@ -191,12 +414,15 @@
       alert("Select a design first.");
       return;
     }
-    document.getElementById("shareModal").style.display = "flex";
-    document.getElementById("shareStatus").innerText = "";
+    const modal = document.getElementById("shareModal");
+    if (modal) modal.style.display = "flex";
+    const status = document.getElementById("shareStatus");
+    if (status) status.innerText = "";
   }
 
   function closeShareModal(){
-    document.getElementById("shareModal").style.display = "none";
+    const modal = document.getElementById("shareModal");
+    if (modal) modal.style.display = "none";
   }
 
   function sendSelectedToPartners(){
@@ -208,7 +434,7 @@
     if (!_selectedAfterUrl) return alert("Select a design first.");
     if (!partnerIds) return alert("Choose at least one partner.");
 
-    status.innerText = "Sending...";
+    if (status) status.innerText = "Sending...";
 
     const fd = new FormData();
     fd.append("image_url", _selectedAfterUrl);
@@ -222,14 +448,18 @@
     })
     .then(r => r.json())
     .then(data => {
-      if (data.status !== "ok") {
-        status.innerText = data.message || "Send failed.";
+      if (!data || data.status !== "ok") {
+        if (status) status.innerText = (data && data.message) ? data.message : "Send failed.";
         return;
       }
-      status.innerText = `Sent: ${data.sent} • Failed: ${data.failed}`;
+      if (status) status.innerText = `Sent: ${data.sent} • Failed: ${data.failed}`;
     })
-    .catch(() => status.innerText = "Send failed.");
+    .catch(() => { if (status) status.innerText = "Send failed."; });
   }
-</script>
 
+  // Close modal when clicking outside content
+  document.getElementById("shareModal")?.addEventListener("click", (e) => {
+    if (e.target && e.target.id === "shareModal") closeShareModal();
+  });
+</script>
 {% endblock %}
