@@ -2530,12 +2530,22 @@ def renovation_upload():
         except Exception:
             saved_property_id = None
 
+    deal = None
     deal_id = None
     if deal_id_raw:
         try:
             deal_id = int(deal_id_raw)
         except Exception:
             deal_id = None
+
+    # ✅ If deal_id provided, validate ownership and auto-derive saved_property_id
+    if deal_id:
+        deal = Deal.query.filter_by(id=deal_id, user_id=current_user.id).first()
+        if not deal:
+            return jsonify({"status": "error", "message": "Deal not found or not authorized."}), 404
+
+        if saved_property_id is None and getattr(deal, "saved_property_id", None):
+            saved_property_id = deal.saved_property_id
 
     webp = _to_webp_bytes(raw, max_size=1600, quality=86)
     up = r2_put_bytes(
@@ -2545,14 +2555,34 @@ def renovation_upload():
         filename=f"{uuid.uuid4().hex}.webp",
     )
 
+    before_url = up["url"]
+
+    # ✅ OPTIONAL (recommended): persist a "default before" on the deal
+    # so Rehab Studio can always preload the latest room photo
+    if deal is not None:
+        # If you already have a field for this, use it:
+        # deal.rehab_before_url = before_url
+        # deal.updated_at = datetime.utcnow()
+
+        # If you DON'T have a field, you can still store it in resolved_json safely:
+        try:
+            payload = deal.resolved_json or {}
+            payload = payload if isinstance(payload, dict) else {}
+            payload.setdefault("rehab", {})
+            payload["rehab"]["before_url"] = before_url
+            deal.resolved_json = payload
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+            # not fatal — upload still succeeded
+
     return jsonify({
         "status": "ok",
-        "url": up["url"],
+        "url": before_url,
         "key": up["key"],
         "saved_property_id": saved_property_id,
         "deal_id": deal_id
     })
-
 
 @investor_bp.route("/deals/<int:deal_id>/mockups/save", methods=["POST"])
 @investor_bp.route("/deals/<int:deal_id>/mockups/save_legacy", methods=["POST"])
