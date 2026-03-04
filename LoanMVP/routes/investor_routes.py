@@ -2291,7 +2291,63 @@ def deal_rehab(deal_id):
         before_url=before_url,
         mockups=mockups
     )
+# investor_routes.py
 
+@investor_bp.route("/deals/<int:deal_id>/rehab", methods=["GET"])
+@login_required
+@role_required("investor")
+def deal_rehab_studio(deal_id):
+    deal = Deal.query.filter_by(id=deal_id, user_id=current_user.id).first_or_404()
+
+    mockups = (RenovationMockup.query
+        .filter_by(deal_id=deal_id, user_id=current_user.id)
+        .order_by(RenovationMockup.created_at.desc())
+        .all())
+
+    # "before" seed (best effort)
+    before_url = None
+    try:
+        before_url = (deal.resolved_json or {}).get("rehab", {}).get("before_url")
+    except Exception:
+        before_url = None
+    if not before_url and mockups:
+        before_url = mockups[0].before_url
+
+    return render_template(
+        "investor/deal_rehab_studio.html",
+        deal=deal,
+        mockups=mockups,
+        before_url=before_url
+    )
+
+
+@investor_bp.route("/deals/<int:deal_id>/rehab/feature", methods=["POST"])
+@csrf.exempt
+@login_required
+@role_required("investor")
+def deal_feature_reveal(deal_id):
+    """
+    Sets the featured "after" image for the deal (final reveal image).
+    """
+    deal = Deal.query.filter_by(id=deal_id, user_id=current_user.id).first_or_404()
+    after_url = (request.form.get("after_url") or "").strip()
+    if not after_url:
+        return jsonify({"status": "error", "message": "Missing after_url."}), 400
+
+    # store featured url on Deal (add this field if you don’t already have it)
+    if hasattr(deal, "final_after_url"):
+        deal.final_after_url = after_url
+    else:
+        # fallback: keep it in resolved_json
+        payload = deal.resolved_json or {}
+        payload = payload if isinstance(payload, dict) else {}
+        payload.setdefault("rehab", {})
+        payload["rehab"]["featured_after_url"] = after_url
+        deal.resolved_json = payload
+
+    db.session.commit()
+    return jsonify({"status": "ok"})
+    
 @investor_bp.route("/deals/save", methods=["POST"])
 @investor_bp.route("/deals/save_deal", methods=["POST"])
 @csrf.exempt
