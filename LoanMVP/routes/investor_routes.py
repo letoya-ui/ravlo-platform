@@ -1954,9 +1954,9 @@ def deal_workspace():
 
     comps = {}
     resolved = None
-    comparison = {}
+    comparison = None
     recommendation = None
-    results = {}
+    results = None
     ai_summary = None
     risk_flags = []
     timeline = {}
@@ -1975,9 +1975,9 @@ def deal_workspace():
             mode=mode,
             comps=comps,
             resolved=resolved,
-            comparison=comparison,
+            comparison=None,
             recommendation=recommendation,
-            results=results,
+            results=None,
             ai_summary=ai_summary,
             risk_flags=risk_flags,
             timeline=timeline,
@@ -2014,8 +2014,9 @@ def deal_workspace():
             }
             recommendation = recommend_strategy(comparison)
 
-    if request.method == "POST" and selected_prop and comps:
-        results = comparison.get(mode) or comparison.get("flip") or {}
+    if request.method == "POST" and selected_prop and comps and comparison:
+        base = comparison.get(mode) or comparison.get("flip") or {}
+        results = dict(base) if isinstance(base, dict) else base.__dict__.copy()
 
         try:
             ai_summary = generate_ai_insights(mode, results, comps)
