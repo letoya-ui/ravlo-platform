@@ -1,0 +1,259 @@
+{% extends "layouts/ravlo_base.html" %}
+{% block title %}Ravlo • Deal Book{% endblock %}
+
+{% block page_title %}Deal Book{% endblock %}
+{% block page_subline %}Investor-ready package: reveal + rehab + numbers.{% endblock %}
+
+{% block content %}
+<style>
+  .db-wrap{margin-top:1rem;}
+  .db-hero{
+    border-radius:18px;
+    border:1px solid var(--line, rgba(255,255,255,.10));
+    background: radial-gradient(1200px 600px at 20% 10%, rgba(122,184,255,.10), transparent 60%),
+                rgba(255,255,255,.03);
+    padding:1rem 1.1rem;
+    box-shadow: 0 0 22px rgba(0,0,0,.55);
+    display:flex; justify-content:space-between; gap:1rem; flex-wrap:wrap;
+    align-items:flex-start;
+  }
+  .db-hero h2{margin:0}
+  .muted{color:var(--muted);}
+  .db-actions{display:flex; gap:.5rem; flex-wrap:wrap;}
+  .btn{
+    background: rgba(122,184,255,0.12);
+    border: 1px solid rgba(122,184,255,0.45);
+    color: #7ab8ff;
+    padding: .6rem .9rem;
+    border-radius: 10px;
+    cursor: pointer;
+    font-weight: 750;
+    transition: .2s;
+    font-size: .9rem;
+    text-decoration:none;
+    display:inline-flex; align-items:center; gap:.45rem;
+  }
+  .btn:hover{background: rgba(122,184,255,0.22); border-color:#7ab8ff; box-shadow:0 0 12px rgba(122,184,255,0.35);}
+  .btn.ghost{background: rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.10); color: var(--text);}
+
+  .card{
+    background: var(--panel, #0b1016);
+    border: 1px solid var(--line, rgba(255,255,255,0.10));
+    border-radius: 16px;
+    padding: 1rem 1.05rem;
+    box-shadow: 0 0 18px rgba(0,0,0,0.45);
+  }
+  .card h3{margin:.1rem 0 .8rem; color:var(--accent);}
+
+  .grid{
+    display:grid;
+    grid-template-columns: 1.25fr 1.75fr;
+    gap:1rem;
+    margin-top:1rem;
+  }
+  @media(max-width:1050px){.grid{grid-template-columns:1fr;}}
+
+  .stats{
+    display:grid;
+    grid-template-columns: repeat(4, minmax(0,1fr));
+    gap:.75rem;
+    margin-top:1rem;
+  }
+  @media(max-width:900px){.stats{grid-template-columns: repeat(2, minmax(0,1fr));}}
+  .stat{
+    border-radius: 14px;
+    padding:.85rem .9rem;
+    background: rgba(255,255,255,.03);
+    border: 1px solid rgba(255,255,255,.10);
+  }
+  .stat .k{color:var(--muted); font-size:.78rem;}
+  .stat .v{font-size:1.05rem; font-weight:850; margin-top:.25rem;}
+  .img{width:100%; border-radius:14px; border:1px solid rgba(255,255,255,.08); background:#0f141a; display:block;}
+
+  .two{
+    display:grid;
+    grid-template-columns: 1fr 1fr;
+    gap:.75rem;
+  }
+  @media(max-width:900px){.two{grid-template-columns:1fr;}}
+
+  .pill{
+    display:inline-flex; gap:.45rem; align-items:center;
+    padding:.32rem .6rem;
+    border-radius:999px;
+    background: rgba(255,255,255,.06);
+    border:1px solid rgba(255,255,255,.12);
+    color: rgba(255,255,255,.88);
+    font-weight:700;
+    font-size:.78rem;
+  }
+
+  .ai-text{line-height:1.45;}
+  .hr{border:none; border-top:1px solid rgba(255,255,255,.08); margin:1rem 0;}
+  .mono{font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;}
+</style>
+
+{% set r = results or {} %}
+{% set rehab_summary = (r.get("rehab_summary") or {}) %}
+{% set risk_flags = (r.get("risk_flags") or []) %}
+{% set rehab_timeline = (r.get("rehab_timeline") or {}) %}
+{% set material_costs = (r.get("material_costs") or {}) %}
+{% set rehab_notes = (r.get("rehab_notes") or {}) %}
+{% set prop = (resolved.get("property") or {}) %}
+
+<div class="db-wrap">
+
+  <div class="db-hero">
+    <div>
+      <div class="pill">📘 DEAL BOOK • DEAL #{{ deal.id }}</div>
+      <h2 style="margin-top:.55rem;">{{ deal.title or address or ('Deal #' ~ deal.id) }}</h2>
+      <p class="muted" style="margin:.35rem 0 0;">
+        Strategy: <b>{{ deal.strategy or r.get("mode") or "—" }}</b>
+        {% if prop.get("city") %} • {{ prop.get("city") }}, {{ prop.get("state") }}{% endif %}
+      </p>
+    </div>
+
+    <div class="db-actions">
+      <a class="btn ghost" href="{{ url_for('investor.deal_open', deal_id=deal.id) }}">🧠 Workspace</a>
+      <a class="btn ghost" href="{{ url_for('investor.deal_rehab_studio', deal_id=deal.id) }}">🏗️ Rehab Studio</a>
+      <a class="btn ghost" href="{{ url_for('investor.deal_reveal', deal_id=deal.id) }}">✨ Reveal</a>
+      {# add PDF later; keep button placeholder #}
+      <button class="btn" type="button" onclick="window.print()">🖨️ Print / Save PDF</button>
+    </div>
+  </div>
+
+  <!-- STAT STRIP -->
+  <div class="stats">
+    <div class="stat">
+      <div class="k">Projected Profit</div>
+      <div class="v">
+        {% if r.get("profit") is not none %}${{ "{:,.0f}".format(r.get("profit")|float) }}{% else %}—{% endif %}
+      </div>
+    </div>
+    <div class="stat">
+      <div class="k">ARV</div>
+      <div class="v">
+        {% if r.get("arv") is not none %}${{ "{:,.0f}".format(r.get("arv")|float) }}{% else %}—{% endif %}
+      </div>
+    </div>
+    <div class="stat">
+      <div class="k">Rehab Budget</div>
+      <div class="v">
+        {% if rehab_summary.get("total") is not none %}${{ "{:,.0f}".format(rehab_summary.get("total")|float) }}{% else %}—{% endif %}
+      </div>
+    </div>
+    <div class="stat">
+      <div class="k">ROI</div>
+      <div class="v">
+        {% if r.get("roi") %}{{ "{:,.1f}".format((r.get("roi")|float) * 100) }}%{% else %}—{% endif %}
+      </div>
+    </div>
+  </div>
+
+  <div class="grid">
+
+    <!-- LEFT: Featured Reveal -->
+    <div class="card">
+      <h3>✨ Featured Reveal</h3>
+
+      {% if featured and featured.get("after_url") %}
+        <div class="two">
+          <div>
+            <div class="muted" style="font-size:.85rem; margin-bottom:.35rem;">Before</div>
+            <img class="img" src="{{ featured.get('before_url') or featured.get('after_url') }}" alt="Before">
+          </div>
+          <div>
+            <div class="muted" style="font-size:.85rem; margin-bottom:.35rem;">After</div>
+            <img class="img" src="{{ featured.get('after_url') }}" alt="After">
+          </div>
+        </div>
+
+        <div class="hr"></div>
+
+        <div class="ai-text">
+          <div><b>Style:</b> {{ featured.get("style_preset") or "—" }}</div>
+          <div class="muted" style="margin-top:.35rem;">
+            <b>Prompt:</b> {{ featured.get("style_prompt") or "—" }}
+          </div>
+        </div>
+      {% else %}
+        <p class="ai-text muted">No featured reveal yet. Go to Rehab Studio and click “✅ Feature”.</p>
+      {% endif %}
+    </div>
+
+    <!-- RIGHT: Rehab + Risks + Timeline -->
+    <div class="card">
+      <h3>🏗️ Rehab Summary</h3>
+
+      <div class="ai-text">
+        <b>Scope:</b> {{ rehab_summary.get("scope") or "—" }}<br>
+        <b>Cost / Sqft:</b>
+        {% if rehab_summary.get("cost_per_sqft") is not none %}
+          ${{ "{:,.0f}".format(rehab_summary.get("cost_per_sqft")|float) }}/sqft
+        {% else %}—{% endif %}
+        <br>
+        <b>Items:</b>
+        {% set items = rehab_summary.get("items") or {} %}
+        {% if items and items|length %}
+          <span class="mono">{{ items }}</span>
+        {% else %}
+          —
+        {% endif %}
+      </div>
+
+      <div class="hr"></div>
+
+      <h3 style="margin-top:0;">⚠️ Risk Flags</h3>
+      {% if risk_flags and risk_flags|length %}
+        <ul class="ai-text">
+          {% for f in risk_flags %}
+            <li>{{ f }}</li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p class="ai-text muted">No risk flags generated.</p>
+      {% endif %}
+
+      <div class="hr"></div>
+
+      <h3 style="margin-top:0;">⏱️ Timeline</h3>
+      {% if rehab_timeline and rehab_timeline|length %}
+        <div class="ai-text mono">{{ rehab_timeline }}</div>
+      {% else %}
+        <p class="ai-text muted">Timeline not available.</p>
+      {% endif %}
+    </div>
+
+  </div>
+
+  <div class="grid" style="margin-top:1rem;">
+
+    <div class="card">
+      <h3>📦 Materials Estimate</h3>
+      {% if material_costs and material_costs|length %}
+        <div class="ai-text mono">{{ material_costs }}</div>
+      {% else %}
+        <p class="ai-text muted">Materials not available.</p>
+      {% endif %}
+    </div>
+
+    <div class="card">
+      <h3>🧠 Rehab Notes</h3>
+      {% if rehab_notes and rehab_notes|length %}
+        <div class="ai-text mono">{{ rehab_notes }}</div>
+      {% else %}
+        <p class="ai-text muted">Notes not available.</p>
+      {% endif %}
+    </div>
+
+  </div>
+
+  {% if deal.notes %}
+    <div class="card" style="margin-top:1rem;">
+      <h3>🗒️ Deal Notes</h3>
+      <p class="ai-text">{{ deal.notes }}</p>
+    </div>
+  {% endif %}
+
+</div>
+{% endblock %}
