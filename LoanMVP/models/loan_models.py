@@ -93,7 +93,8 @@ class BorrowerProfile(db.Model):
     budgets = db.relationship("ProjectBudget", back_populates="borrower", cascade="all, delete-orphan")
     ai_conversations = db.relationship("LoanAIConversation", back_populates="borrower", cascade="all, delete-orphan")
     tasks = db.relationship("Task", back_populates="borrower", cascade="all, delete-orphan")
-
+    saved_properties = db.relationship("SavedProperty", back_populates="borrower", cascade="all, delete-orphan")
+    
     def __repr__(self):
         return f"<BorrowerProfile {self.full_name}>"
 
