@@ -1929,7 +1929,7 @@ def deal_workspace():
 
     saved_props = (
         SavedProperty.query
-        .filter_by(**profile_id_filter(SavedProperty, ip.id))
+        .filter_by(**_profile_id_filter(SavedProperty, ip.id))
         .order_by(SavedProperty.created_at.desc())
         .all()
     )
@@ -1941,7 +1941,7 @@ def deal_workspace():
         try:
             pid = int(prop_id)
             selected_prop = SavedProperty.query.filter_by(
-                id=pid, **profile_id_filter(SavedProperty, ip.id)
+                id=pid, **_profile_id_filter(SavedProperty, ip.id)
             ).first()
         except Exception:
             selected_prop = None
