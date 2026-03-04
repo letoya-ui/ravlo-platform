@@ -68,20 +68,8 @@ class SavedProperty(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
 
-    # ✅ allow investor-only rows
-    borrower_profile_id = db.Column(
-        db.Integer,
-        db.ForeignKey("borrower_profile.id"),
-        nullable=True,     # ✅ CHANGED
-        index=True
-    )
-
-    investor_profile_id = db.Column(
-        db.Integer,
-        db.ForeignKey("investor_profile.id"),
-        nullable=True,    # ✅ keep required for investor-only
-        index=True
-    )
+    borrower_profile_id = db.Column(db.Integer, db.ForeignKey("borrower_profile.id"), nullable=True, index=True)
+    investor_profile_id = db.Column(db.Integer, db.ForeignKey("investor_profile.id"), nullable=True, index=True)
 
     property_id = db.Column(db.String(50))
     address = db.Column(db.String(255))
@@ -94,6 +82,5 @@ class SavedProperty(db.Model):
     resolved_json = db.Column(db.Text, nullable=True)
     resolved_at = db.Column(db.DateTime, nullable=True)
 
-     # ✅ back_populates (no backref)
     investor_profile = db.relationship("InvestorProfile", back_populates="saved_properties")
-    
+    borrower = db.relationship("BorrowerProfile", back_populates="saved_properties")
