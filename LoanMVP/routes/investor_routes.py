@@ -2326,27 +2326,41 @@ def deal_rehab_studio(deal_id):
 @login_required
 @role_required("investor")
 def deal_feature_reveal(deal_id):
-    """
-    Sets the featured "after" image for the deal (final reveal image).
-    """
-    deal = Deal.query.filter_by(id=deal_id, user_id=current_user.id).first_or_404()
-    after_url = (request.form.get("after_url") or "").strip()
-    if not after_url:
-        return jsonify({"status": "error", "message": "Missing after_url."}), 400
+    deal = Deal.query.filter_by(id=deal_id, user_id=current_user.id).first()
+    if not deal:
+        return jsonify({"status": "error", "message": "Deal not found."}), 404
 
-    # store featured url on Deal (add this field if you don’t already have it)
-    if hasattr(deal, "final_after_url"):
-        deal.final_after_url = after_url
-    else:
-        # fallback: keep it in resolved_json
-        payload = deal.resolved_json or {}
-        payload = payload if isinstance(payload, dict) else {}
-        payload.setdefault("rehab", {})
-        payload["rehab"]["featured_after_url"] = after_url
-        deal.resolved_json = payload
+    after_url = (request.form.get("after_url") or "").strip()
+    before_url = (request.form.get("before_url") or "").strip()  # optional, but nice to store
+    style_preset = (request.form.get("style_preset") or "").strip()
+    style_prompt = (request.form.get("style_prompt") or "").strip()
+
+    if not after_url:
+        return jsonify({"status": "error", "message": "after_url is required."}), 400
+
+    # ✅ Keep internal only
+    deal.reveal_is_public = False
+
+    # ✅ Persist featured “HGTV reveal” info in resolved_json (no migration)
+    data = deal.resolved_json or {}
+    rehab = data.get("rehab") or {}
+    rehab["featured"] = {
+        "after_url": after_url,
+        "before_url": before_url or rehab.get("featured", {}).get("before_url"),
+        "style_preset": style_preset or rehab.get("featured", {}).get("style_preset"),
+        "style_prompt": style_prompt or rehab.get("featured", {}).get("style_prompt"),
+        "featured_at": datetime.utcnow().isoformat()
+    }
+    data["rehab"] = rehab
+    deal.resolved_json = data
 
     db.session.commit()
-    return jsonify({"status": "ok"})
+
+    return jsonify({
+        "status": "ok",
+        "deal_id": deal.id,
+        "featured": rehab["featured"]
+    })
     
 @investor_bp.route("/deals/save", methods=["POST"])
 @investor_bp.route("/deals/save_deal", methods=["POST"])
@@ -2473,19 +2487,41 @@ def deal_open(deal_id):
 def deal_reveal(deal_id):
     deal = Deal.query.filter_by(id=deal_id, user_id=current_user.id).first_or_404()
 
+    # Pull mockups tied to deal first
     mockups = (RenovationMockup.query
         .filter_by(deal_id=deal_id, user_id=current_user.id)
         .order_by(RenovationMockup.created_at.desc())
         .all())
 
+    # Fallback: if none tied to deal, use saved_property_id mockups
     if not mockups and getattr(deal, "saved_property_id", None):
         mockups = (RenovationMockup.query
             .filter_by(saved_property_id=deal.saved_property_id, user_id=current_user.id)
             .order_by(RenovationMockup.created_at.desc())
             .all())
 
-    return render_template("investor/deal_reveal.html", deal=deal, deal_id=deal_id, mockups=mockups)
+    # ✅ Featured reveal support (internal)
+    featured_after = None
+    try:
+        featured_after = (deal.resolved_json or {}).get("rehab", {}).get("featured", {}).get("after_url")
+    except Exception:
+        featured_after = None
 
+    featured_mockup = None
+    if featured_after and mockups:
+        for m in mockups:
+            if (m.after_url or "").strip() == (featured_after or "").strip():
+                featured_mockup = m
+                break
+
+    # Pass featured_mockup so template can use it as lead
+    return render_template(
+        "investor/deal_reveal.html",
+        deal=deal,
+        deal_id=deal_id,
+        mockups=mockups,
+        featured_mockup=featured_mockup
+    )
 
 @investor_bp.route("/deals/visualizer", methods=["POST"])
 @investor_bp.route("/renovation_visualizer", methods=["POST"])
