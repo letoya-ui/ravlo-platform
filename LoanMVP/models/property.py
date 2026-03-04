@@ -94,5 +94,6 @@ class SavedProperty(db.Model):
     resolved_json = db.Column(db.Text, nullable=True)
     resolved_at = db.Column(db.DateTime, nullable=True)
 
-    investor_profile = db.relationship("InvestorProfile", backref=db.backref("saved_properties", lazy=True))
-    borrower = db.relationship("BorrowerProfile", backref=db.backref("saved_properties", lazy=True))
+     # ✅ back_populates (no backref)
+    investor_profile = db.relationship("InvestorProfile", back_populates="saved_properties")
+    borrower = db.relationship("BorrowerProfile", back_populates="saved_properties")
