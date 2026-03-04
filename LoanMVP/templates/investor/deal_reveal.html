@@ -206,7 +206,7 @@
   .overlay-top h4{margin:0; color:var(--text);}
   .overlay-img{width:100%; border-radius: 12px; display:block;}
 
-  /* mini “episode stats” bar (optional if results_json exists) */
+  /* stats */
   .stats{
     display:grid;
     grid-template-columns: repeat(4, minmax(0,1fr));
@@ -229,14 +229,25 @@
   {% if not mockups %}
     <div class="card">
       <h3>No mockups yet</h3>
-      <p class="muted">Generate designs from the Deal Workspace Visualizer, then come back here to reveal.</p>
+      <p class="muted">Go to Rehab Studio to generate designs, then come back here to reveal.</p>
       {% if deal %}
-        <a class="btn" href="{{ url_for('investor.deal_open', deal_id=deal.id) }}">✨ Generate Designs</a>
+        <a class="btn" href="{{ url_for('investor.deal_rehab_studio', deal_id=deal.id) }}">🎬 Open Rehab Studio</a>
       {% endif %}
     </div>
   {% else %}
 
-    {% set lead = mockups[0] %}
+    {# Prefer a featured mockup if you store it. Fallback to latest mockup. #}
+    {% set featured_after = (deal.final_after_url if deal.final_after_url is defined else none) %}
+    {% set featured = none %}
+    {% if featured_after %}
+      {% for m in mockups %}
+        {% if m.after_url == featured_after %}
+          {% set featured = m %}
+        {% endif %}
+      {% endfor %}
+    {% endif %}
+
+    {% set lead = featured if featured else mockups[0] %}
     {% set hero_bg = lead.after_url or lead.before_url or '' %}
 
     <!-- HERO (episode cover) -->
@@ -252,21 +263,18 @@
           <div class="chip-row">
             {% if lead.style_preset %}<span class="chip">Style: {{ lead.style_preset }}</span>{% endif %}
             {% if lead.style_prompt %}<span class="chip">Prompt: {{ lead.style_prompt[:60] }}{% if lead.style_prompt|length > 60 %}…{% endif %}</span>{% endif %}
-            {% if deal.reveal_is_public %}<span class="chip">Public: ON</span>{% endif %}
+            {% if featured %}<span class="chip">Featured: ON</span>{% endif %}
           </div>
         </div>
 
         <div class="hero-actions">
-          <a class="btn btn-secondary" href="{{ url_for('investor.deal_open', deal_id=deal.id) }}">🧠 Workspace</a>
+          <a class="btn btn-secondary" href="{{ url_for('investor.deal_rehab_studio', deal_id=deal.id) }}">🎬 Rehab Studio</a>
           <a class="btn btn-secondary" href="{{ url_for('investor.deal_detail', deal_id=deal.id) }}">🗂️ Details</a>
-
-          <!-- Publish Reveal -->
-          <button class="btn" type="button" onclick="publishReveal({{ deal.id }})">🚀 Publish HGTV Reveal</button>
         </div>
       </div>
     </div>
 
-    <!-- Optional stats strip (reads from results_json if present) -->
+    <!-- Optional stats strip -->
     <div class="stats">
       <div class="stat">
         <div class="k">Projected Profit</div>
@@ -310,7 +318,7 @@
           </div>
           <p class="muted" style="margin-top:.75rem;">Drag left/right for the HGTV reveal moment.</p>
         {% else %}
-          <p class="muted">Missing before/after for the lead concept. Generate from the visualizer and save to the deal.</p>
+          <p class="muted">Missing before/after for the lead concept. Generate in Rehab Studio and save to the deal.</p>
         {% endif %}
       </div>
 
@@ -328,8 +336,8 @@
                 <small>{{ m.created_at.strftime("%b %d, %Y %I:%M %p") if m.created_at else '' }}</small>
               </div>
 
-              <button type="button" class="btn pick" onclick="setSelected('{{ m.after_url }}')">
-                ✅ Feature This Reveal
+              <button type="button" class="btn pick" onclick="featureReveal('{{ m.after_url }}')">
+                ✅ Set as Featured Reveal
               </button>
             </div>
           {% endfor %}
@@ -342,18 +350,13 @@
             <a id="openSelected" class="btn btn-secondary" href="#" target="_blank" rel="noopener">🔗 Open Full Size</a>
             <button type="button" class="btn" onclick="copySelected()">📋 Copy Image Link</button>
           </div>
-
-          <div id="publicLinkWrap" class="muted" style="margin-top:.65rem; display:none;">
-            <div style="margin-bottom:.35rem;">HGTV Share Link:</div>
-            <div style="display:flex; gap:.5rem; flex-wrap:wrap;">
-              <a id="publicLink" class="btn btn-secondary" href="#" target="_blank" rel="noopener">🌐 View Public Reveal</a>
-              <button type="button" class="btn" onclick="copyPublic()">📋 Copy Reveal Link</button>
-            </div>
+          <div class="muted" style="margin-top:.65rem;">
+            This is saved internally to the deal (no public link).
           </div>
         </div>
 
         <p class="muted" style="margin-top:1rem;">
-          Want more styles? Generate more concepts (Modern, Luxury, Airbnb, Flip, Budget) in the Workspace Visualizer.
+          Want more styles? Generate more concepts in Rehab Studio (Modern, Luxury, Airbnb, Flip, Budget).
         </p>
       </div>
 
@@ -391,8 +394,8 @@
     if (e.target && e.target.id === "lightbox") hideLightbox();
   }
 
-  // Featured selection (client-side)
-  function setSelected(url){
+  // Show featured selection UI after saving
+  function showSelected(url){
     const wrap = document.getElementById("selectedWrap");
     const img = document.getElementById("selectedImg");
     const open = document.getElementById("openSelected");
@@ -408,6 +411,28 @@
     if (!url) return alert("Select a reveal first.");
     try{ await navigator.clipboard.writeText(url); alert("Copied image link!"); }
     catch(e){ alert("Could not copy automatically. Open full size and copy the URL."); }
+  }
+
+  // Save featured reveal (internal-only)
+  async function featureReveal(afterUrl){
+    try{
+      const fd = new FormData();
+      fd.append("after_url", afterUrl);
+
+      const res = await fetch("{{ url_for('investor.deal_feature_reveal', deal_id=deal.id) }}", {
+        method: "POST",
+        body: fd,
+        credentials: "include"
+      });
+
+      const data = await res.json();
+      if(!data || data.status !== "ok") throw new Error(data?.message || "Could not save featured reveal.");
+
+      showSelected(afterUrl);
+      alert("Featured reveal saved ✅");
+    }catch(e){
+      alert(e.message || "Could not save featured reveal.");
+    }
   }
 
   // Before/After slider
@@ -426,45 +451,10 @@
     set(r.value);
   })();
 
-  // Publish reveal → gets public link from server
-  async function publishReveal(dealId){
-    try{
-      const res = await fetch(`/investor/deals/${dealId}/reveal/publish`, {
-        method: "POST",
-        headers: {"Content-Type":"application/json"},
-        body: "{}"
-      });
-      const data = await res.json();
-      if(!data || data.status !== "ok") throw new Error(data?.message || "Publish failed");
-
-      const wrap = document.getElementById("publicLinkWrap");
-      const link = document.getElementById("publicLink");
-      if(wrap && link){
-        link.href = data.public_url;
-        wrap.style.display = "block";
-        window._publicRevealUrl = data.public_url;
-      }
-      alert("Published! Your HGTV share link is ready.");
-    }catch(e){
-      alert(e.message || "Could not publish reveal.");
-    }
-  }
-
-  async function copyPublic(){
-    const url = window._publicRevealUrl || "";
-    if(!url) return alert("Publish first to generate a share link.");
-    try{ await navigator.clipboard.writeText(url); alert("Copied reveal link!"); }
-    catch(e){ alert("Could not copy automatically. Open Public Reveal and copy URL."); }
-  }
-
   // Stats (best-effort from deal.results_json)
   (function(){
     try{
       const results = {{ (deal.results_json or {})|tojson }};
-      const fmt = (v) => (v===null||v===undefined||v==="") ? "—" : (
-        (typeof v === "number") ? v.toLocaleString(undefined, {maximumFractionDigits:0}) : String(v)
-      );
-
       const profit = results.profit || results.projected_profit || results.net_profit;
       const arv = results.arv || results.after_repair_value;
       const rehab = results.rehab_budget || results.renovation_budget || results.total_rehab;
@@ -476,7 +466,7 @@
         if(val===null||val===undefined||val==="") return;
         if(typeof val === "number" && isMoney) el.textContent = "$" + val.toLocaleString();
         else if(typeof val === "number" && isPct) el.textContent = val.toFixed(1) + "%";
-        else el.textContent = fmt(val);
+        else el.textContent = String(val);
       };
 
       set("statProfit", profit, true, false);
