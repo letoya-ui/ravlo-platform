@@ -504,7 +504,12 @@
                     formmethod="POST">
               💾 Save Deal
             </button>
-
+             
+            <a class="dw-button" style="text-decoration:none;"
+                href="{{ url_for('investor.deal_book', deal_id=deal.id) }}">
+               📘 Generate Deal Book
+            </a>
+            
             {% if deal_id %}
               <a class="dw-button" style="text-decoration:none;"
                  href="{{ url_for('investor.deal_rehab_studio', deal_id=deal_id) }}">
