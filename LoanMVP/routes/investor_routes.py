@@ -2305,6 +2305,34 @@ def save_deal():
     flash("Deal saved.", "success")
     return redirect(url_for("investor.deal_detail", deal_id=deal.id))
 
+@investor_bp.route("/deals/<int:deal_id>/reveal/publish", methods=["POST"])
+@csrf.exempt
+@login_required
+@role_required("investor")
+def publish_reveal(deal_id):
+    deal = Deal.query.filter_by(id=deal_id, user_id=current_user.id).first_or_404()
+
+    if not deal.reveal_public_id:
+        deal.reveal_public_id = uuid.uuid4().hex[:16]  # short + shareable
+
+    deal.reveal_is_public = True
+    deal.reveal_published_at = datetime.utcnow()
+
+    db.session.commit()
+
+    public_url = url_for("investor.public_reveal", public_id=deal.reveal_public_id, _external=True)
+    return jsonify({"status": "ok", "public_url": public_url})
+
+@investor_bp.route("/reveal/<string:public_id>", methods=["GET"])
+def public_reveal(public_id):
+    deal = Deal.query.filter_by(reveal_public_id=public_id, reveal_is_public=True).first_or_404()
+
+    mockups = (RenovationMockup.query
+        .filter_by(deal_id=deal.id)
+        .order_by(RenovationMockup.created_at.desc())
+        .all())
+
+    return render_template("public/deal_reveal_public.html", deal=deal, mockups=mockups)
 
 @investor_bp.route("/deals/<int:deal_id>/edit", methods=["POST"])
 @csrf.exempt
