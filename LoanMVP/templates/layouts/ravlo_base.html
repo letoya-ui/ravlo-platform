@@ -156,21 +156,21 @@
           </div>
 
           {% block topbar_actions %}
-  <button class="ravlo-btn ghost sm" type="button"
-          onclick="location.href='{{ url_for('investor.property_search') }}'">
-    Property Intelligence
-  </button>
+            <button class="ravlo-btn ghost sm" type="button"
+                    onclick="location.href='{{ url_for('investor.property_search') }}'">
+             Property Intelligence
+           </button>
 
-  <button class="ravlo-btn ghost sm" type="button"
-          onclick="location.href='{{ url_for('investor.deals_list') }}'">
-    Deal Workspace
-  </button>
+           <button class="ravlo-btn ghost sm" type="button"
+                   onclick="location.href='{{ url_for('investor.deals_list') }}'">
+             Deal Workspace
+           </button>
 
-  <button class="ravlo-btn primary sm" type="button"
-          onclick="location.href='{% if deal_id is defined and deal_id %}{{ url_for('investor.rehab_studio', deal_id=deal_id) }}{% else %}{{ url_for('investor.deals_list') }}{% endif %}'">
-    Rehab Studio
-  </button>
-{% endblock %}
+           <button class="ravlo-btn primary sm" type="button"
+                   onclick="location.href='{% if deal_id is defined and deal_id %}{{ url_for('investor.rehab_studio', deal_id=deal_id) }}{% else %}{{ url_for('investor.deals_list') }}{% endif %}'">
+             Rehab Studio
+           </button>
+         {% endblock %}
         </div>
       </header>
 
