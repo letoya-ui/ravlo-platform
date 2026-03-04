@@ -67,8 +67,22 @@ class SavedProperty(db.Model):
     __tablename__ = "saved_properties"
 
     id = db.Column(db.Integer, primary_key=True)
-    borrower_profile_id = db.Column(db.Integer, db.ForeignKey("borrower_profile.id"), nullable=False)
-    investor_profile_id = db.Column(db.Integer, db.ForeignKey("investor_profile.id"), nullable=False)
+
+    # ✅ allow investor-only rows
+    borrower_profile_id = db.Column(
+        db.Integer,
+        db.ForeignKey("borrower_profile.id"),
+        nullable=True,     # ✅ CHANGED
+        index=True
+    )
+
+    investor_profile_id = db.Column(
+        db.Integer,
+        db.ForeignKey("investor_profile.id"),
+        nullable=False,    # ✅ keep required for investor-only
+        index=True
+    )
+
     property_id = db.Column(db.String(50))
     address = db.Column(db.String(255))
     price = db.Column(db.String(50))
@@ -77,9 +91,8 @@ class SavedProperty(db.Model):
     zipcode = db.Column(db.String(20))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
-    # ✅ NEW
-    resolved_json = db.Column(db.Text, nullable=True)   # stores unified property payload
+    resolved_json = db.Column(db.Text, nullable=True)
     resolved_at = db.Column(db.DateTime, nullable=True)
 
-    investor_profile = db.relationship("InvestorProfile", back_populates="saved_properties")
+    investor_profile = db.relationship("InvestorProfile", back_populates="saved_properties", lazy=True))
     borrower = db.relationship("BorrowerProfile", backref=db.backref("saved_properties", lazy=True))
