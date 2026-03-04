@@ -253,8 +253,377 @@
     // When you’re ready, POST to:
     // fetch("{{ url_for('investor.deal_share_design', deal_id=deal.id) }}", { method:"POST", body: formData })
   }
+<!-- Rehab Preview Modal -->
+<div id="rehabPreviewModal" class="modal-overlay">
+  <div class="modal-content">
+    <h3>Rehab Visual Preview</h3>
 
-  function openStyleModal(){ document.getElementById("styleModal").style.display="flex"; }
-  function closeStyleModal(){ document.getElementById("styleModal").style.display="none"; }
+    <p><strong>Before:</strong></p>
+    <p id="preview-before" class="preview-text"></p>
+
+    <hr style="border-color: var(--line); margin: 1rem 0;">
+
+    <p><strong>After (Based on Your Selections):</strong></p>
+    <p id="preview-after" class="preview-text"></p>
+
+    <button type="button" class="dw-button" onclick="closeRehabPreview()" style="margin-top:1rem;">Close</button>
+  </div>
+</div>
+
+<!-- Style Modal -->
+<div id="styleModal" class="modal-overlay">
+  <div class="modal-content">
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+      <h3>✨ AI Renovation Visualizer</h3>
+      <button type="button" class="dw-button" onclick="closeStyleModal()">Close</button>
+    </div>
+
+    <div class="style-grid">
+      <div>
+        <p class="dw-label">Before</p>
+        <img id="styleBeforeImage" src="" style="width:100%; border-radius:8px;">
+      </div>
+
+      <div>
+        <label class="dw-label">Style Prompt</label>
+        <input id="stylePrompt" class="dw-input" placeholder="e.g., modern minimalist kitchen with matte black fixtures">
+
+        <div style="display:flex; gap:.5rem; margin-top:.75rem; flex-wrap:wrap;">
+          <button type="button" class="dw-button" onclick="setStylePreset('luxury')">Luxury</button>
+          <button type="button" class="dw-button" onclick="setStylePreset('modern')">Modern</button>
+          <button type="button" class="dw-button" onclick="setStylePreset('airbnb')">Airbnb</button>
+          <button type="button" class="dw-button" onclick="setStylePreset('flip')">Flip</button>
+          <button type="button" class="dw-button" onclick="setStylePreset('budget')">Budget</button>
+        </div>
+
+        <div class="dw-row" style="margin-top:1rem;">
+          <div>
+            <label class="dw-label">Variations</label>
+            <select id="styleVariations" class="dw-input">
+              <option value="1">1</option>
+              <option value="2" selected>2</option>
+              <option value="3">3</option>
+              <option value="4">4</option>
+            </select>
+          </div>
+          <div style="display:flex; align-items:end;">
+            <label style="display:flex; gap:.5rem; align-items:center; margin-bottom:.2rem;">
+              <input id="styleSaveToDeal" type="checkbox">
+              <span class="dw-label" style="margin:0;">Save to deal</span>
+            </label>
+          </div>
+        </div>
+
+        <button type="button" class="dw-button" onclick="runStyleTransform()" style="margin-top:1rem; width:100%;">
+          Generate Designs
+        </button>
+
+        <div id="styleCostEstimate" style="margin-top:.75rem;"></div>
+      </div>
+    </div>
+
+    <div id="styleResults" style="display:none; margin-top:1rem;">
+      <h4 style="color:var(--accent); margin:.25rem 0;">Results</h4>
+      <div id="styleResultsGrid" class="style-results-grid"></div>
+    </div>
+
+    <div id="beforeAfterWrapper" style="display:none; margin-top:1rem;">
+      <h4 style="color:var(--accent); margin:.25rem 0;">Before / After</h4>
+      <div style="position:relative; width:100%; border-radius:8px; overflow:hidden;">
+        <img id="baBefore" src="" style="width:100%; display:block;">
+        <img id="baAfter" src="" style="width:100%; position:absolute; inset:0; clip-path: inset(0 50% 0 0);">
+      </div>
+      <input id="baSlider" type="range" min="0" max="100" value="50" style="width:100%; margin-top:.75rem;">
+    </div>
+  </div>
+</div>
+
+{% endif %}
+
+<script>
+/* ==========================
+   Rehab templates
+========================== */
+function applyRehabTemplate() {
+  const template = document.getElementById("rehab-template")?.value;
+  const templates = {
+    rental: { rehab_scope: "light", kitchen: "light", bathroom: "light", flooring: "medium", paint: "medium" },
+    flip:   { rehab_scope: "medium", kitchen: "medium", bathroom: "medium", flooring: "medium", paint: "medium" },
+    airbnb: { rehab_scope: "medium", kitchen: "medium", bathroom: "medium", flooring: "heavy",  paint: "medium" },
+    luxury: { rehab_scope: "heavy",  kitchen: "heavy",  bathroom: "heavy",  flooring: "heavy",  paint: "heavy" },
+    budget: { rehab_scope: "light",  kitchen: "",       bathroom: "",       flooring: "light",  paint: "light" }
+  };
+  if (!templates[template]) return;
+  const config = templates[template];
+
+  const scopeSel = document.querySelector('select[name="rehab_scope"]');
+  if (scopeSel) scopeSel.value = config.rehab_scope;
+
+  for (const key in config) {
+    if (key === "rehab_scope") continue;
+    const value = config[key];
+    if (!value) continue;
+    const input = document.querySelector(`input[name="${key}"][value="${value}"]`);
+    if (input) input.checked = true;
+  }
+}
+
+function openRehabPreview() {
+  const items = {
+    kitchen: document.querySelector('input[name="kitchen"]:checked')?.value,
+    bathroom: document.querySelector('input[name="bathroom"]:checked')?.value,
+    flooring: document.querySelector('input[name="flooring"]:checked')?.value,
+    paint: document.querySelector('input[name="paint"]:checked')?.value
+  };
+
+  const beforeEl = document.getElementById("preview-before");
+  const afterEl  = document.getElementById("preview-after");
+  if (beforeEl) beforeEl.innerText =
+    "Original property condition with dated finishes, worn surfaces, and standard builder-grade materials.";
+  if (afterEl) afterEl.innerText =
+    `Updated with ${items.kitchen || '—'} kitchen, ${items.bathroom || '—'} bathroom, ` +
+    `${items.flooring || '—'} flooring, and ${items.paint || '—'} paint.`;
+
+  const modal = document.getElementById("rehabPreviewModal");
+  if (modal) modal.style.display = "flex";
+}
+function closeRehabPreview() {
+  const modal = document.getElementById("rehabPreviewModal");
+  if (modal) modal.style.display = "none";
+}
+
+/* ==========================
+   Visualizer (file OR url)
+========================== */
+let _styleCurrentBefore = null;     // what we show in the modal (can be blob or url)
+let _styleCurrentFile = null;       // upload file bytes (preferred)
+let _styleCurrentUrl = null;        // property photo url (http/https)
+let _stylePreset = "";              // preset key like "luxury"
+let _styleUploadedUrl = "";         // URL returned from /renovation_upload
+
+// ✅ for Rehab Studio: use deal + saved_property_id
+const DEAL_ID = {{ deal.id }};
+const SAVED_PROPERTY_ID = {{ deal.saved_property_id or "null" }};
+
+document.getElementById("uploadRoomPhoto")?.addEventListener("change", (e) => {
+  const file = e.target.files?.[0];
+  if (!file) return;
+
+  _styleCurrentFile = file;
+  _styleCurrentUrl = null;
+
+  const previewUrl = URL.createObjectURL(file);
+  openStyleModal(previewUrl);
+});
+
+function setVisualizerSourceUrl(url) {
+  _styleCurrentUrl = url;
+  _styleCurrentFile = null;
+  openStyleModal(url);
+}
+
+function openStyleModal(photoUrl) {
+  _styleCurrentBefore = photoUrl || _styleCurrentBefore || null;
+
+  const img = document.getElementById("styleBeforeImage");
+  if (img) img.src = _styleCurrentBefore || "";
+
+  const modal = document.getElementById("styleModal");
+  if (modal) modal.style.display = "flex";
+
+  const results = document.getElementById("styleResults");
+  if (results) results.style.display = "none";
+
+  const grid = document.getElementById("styleResultsGrid");
+  if (grid) grid.innerHTML = "";
+
+  const cost = document.getElementById("styleCostEstimate");
+  if (cost) cost.innerHTML = "";
+
+  const ba = document.getElementById("beforeAfterWrapper");
+  if (ba) ba.style.display = "none";
+}
+
+function closeStyleModal() {
+  const modal = document.getElementById("styleModal");
+  if (modal) modal.style.display = "none";
+}
+
+function setStylePreset(preset) {
+  _stylePreset = preset || "";
+  const map = {
+    luxury: "luxury high-end finishes, marble, designer lighting, spa-like feel",
+    modern: "modern minimalist, clean lines, neutral palette, matte black fixtures",
+    airbnb: "Airbnb-ready, cozy, Instagrammable, layered textures, warm lighting",
+    flip: "flip-ready, durable mid-range finishes, bright, neutral, resale-friendly",
+    budget: "budget-friendly, clean, simple, fresh paint, basic but appealing finishes",
+  };
+  const el = document.getElementById("stylePrompt");
+  if (el) el.value = map[preset] || "";
+}
+
+/* ==========================
+   Upload helper (returns hosted URL)
+========================== */
+async function uploadRoomFileIfNeeded(){
+  if (!_styleCurrentFile) return "";
+
+  if (!SAVED_PROPERTY_ID){
+    // you can still upload without saved_property_id if your endpoint allows it
+    // but if yours REQUIRES it, enforce it here:
+    // throw new Error("This deal is not linked to a saved property yet.");
+  }
+
+  const fd = new FormData();
+  fd.append("photo", _styleCurrentFile);
+  if (SAVED_PROPERTY_ID) fd.append("saved_property_id", String(SAVED_PROPERTY_ID));
+
+  const res = await fetch("{{ url_for('investor.renovation_upload') }}", {
+    method: "POST",
+    body: fd,
+    credentials: "include"
+  });
+
+  const data = await res.json();
+  if (data.status !== "ok") throw new Error(data.message || "Upload failed");
+
+  _styleUploadedUrl = data.url || "";
+  return _styleUploadedUrl;
+}
+
+/* ==========================
+   Run visualizer (calls your route)
+========================== */
+async function runStyleTransform(){
+  const prompt = (document.getElementById("stylePrompt")?.value || "").trim();
+  const variations = parseInt(document.getElementById("styleVariations")?.value || "2", 10);
+  const saveToDeal = document.getElementById("styleSaveToDeal")?.checked ? "true" : "false";
+
+  if (!prompt && !_stylePreset){
+    alert("Add a style prompt or choose a preset.");
+    return;
+  }
+
+  const costBox = document.getElementById("styleCostEstimate");
+  if (costBox) costBox.innerHTML = "<span class='muted'>Generating…</span>";
+
+  try{
+    // Prefer file upload → hosted URL (prevents blob: issue)
+    let image_url = _styleCurrentUrl || "";
+    if (!image_url && _styleCurrentFile){
+      image_url = await uploadRoomFileIfNeeded();
+    }
+    if (!image_url){
+      alert("Upload a room photo or choose a property photo first.");
+      return;
+    }
+
+    const fd = new FormData();
+    fd.append("image_url", image_url);
+    fd.append("style_prompt", prompt);
+    fd.append("style_preset", _stylePreset || "");
+    fd.append("variations", String(variations));
+    fd.append("save_to_deal", saveToDeal);
+
+    if (SAVED_PROPERTY_ID) fd.append("saved_property_id", String(SAVED_PROPERTY_ID));
+    fd.append("deal_id", String(DEAL_ID));
+
+    const res = await fetch("{{ url_for('investor.renovation_visualizer') }}", {
+      method: "POST",
+      body: fd,
+      credentials: "include"
+    });
+    const data = await res.json();
+    if (data.status !== "ok") throw new Error(data.message || "Visualizer failed");
+
+    const before_url = data.before_url || image_url;
+    const images = Array.isArray(data.images) ? data.images : [];
+
+    if (costBox){
+      const note = data.note ? `<div class="muted" style="margin-top:.35rem;">${data.note}</div>` : "";
+      costBox.innerHTML = `<div class="muted">Before uploaded ✅</div>${note}`;
+    }
+
+    const resultsWrap = document.getElementById("styleResults");
+    const grid = document.getElementById("styleResultsGrid");
+    if (grid) grid.innerHTML = "";
+
+    if (resultsWrap) resultsWrap.style.display = "block";
+
+    if (!images.length){
+      if (grid) grid.innerHTML =
+        `<div class="muted">No generated after-images returned yet (route still in stub mode). Once the generator is wired, results will show here.</div>`;
+      const ba = document.getElementById("beforeAfterWrapper");
+      if (ba) ba.style.display = "none";
+      return;
+    }
+
+    images.forEach((img) => {
+      const card = document.createElement("div");
+      card.style.border = "1px solid rgba(255,255,255,.08)";
+      card.style.borderRadius = "10px";
+      card.style.padding = ".6rem";
+      card.style.background = "rgba(255,255,255,.02)";
+      card.innerHTML = `
+        <img src="${img}" style="width:100%; border-radius:8px; display:block;">
+        <div style="display:flex; gap:.5rem; margin-top:.55rem; flex-wrap:wrap;">
+          <button type="button" class="dw-button" style="flex:1;" onclick="selectBeforeAfter('${img}')">Compare</button>
+          <a class="dw-button" style="flex:1; text-decoration:none;" href="${img}" target="_blank" rel="noopener">Open</a>
+        </div>
+      `;
+      grid.appendChild(card);
+    });
+
+    selectBeforeAfter(images[0]);
+
+    // Save mockups only if route exists
+    if (saveToDeal === "true" && images.length){
+      fetch("{{ url_for('investor.save_renovation_mockups', deal_id=deal.id) }}", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          before_url: before_url,
+          images: images,
+          preset: _stylePreset || "",
+          prompt: prompt
+        })
+      }).catch(()=>{});
+    }
+
+  }catch(err){
+    if (costBox) costBox.innerHTML = `<span class="muted">${String(err.message || err)}</span>`;
+    alert(String(err.message || err));
+  }
+}
+
+/* ==========================
+   Before / After compare
+========================== */
+function selectBeforeAfter(afterImg) {
+  const wrapper = document.getElementById("beforeAfterWrapper");
+  const before = document.getElementById("baBefore");
+  const after  = document.getElementById("baAfter");
+  const slider = document.getElementById("baSlider");
+
+  if (!wrapper || !before || !after || !slider) return;
+
+  before.src = _styleCurrentUrl || _styleUploadedUrl || _styleCurrentBefore || "";
+  after.src = afterImg || "";
+  wrapper.style.display = "block";
+
+  slider.value = 50;
+  updateBeforeAfterClip(slider.value);
+
+  slider.oninput = function() {
+    updateBeforeAfterClip(this.value);
+  };
+}
+
+function updateBeforeAfterClip(val) {
+  const after = document.getElementById("baAfter");
+  if (!after) return;
+  after.style.clipPath = `inset(0 ${100 - val}% 0 0)`;
+}
 </script>
 {% endblock %}
