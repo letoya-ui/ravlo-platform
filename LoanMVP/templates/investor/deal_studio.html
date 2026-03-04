@@ -52,6 +52,17 @@
   .btn:hover{background: rgba(122,184,255,0.22); border-color:#7ab8ff; box-shadow:0 0 12px rgba(122,184,255,0.35);}
   .btn.ghost{background: rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.10); color: var(--text);}
 
+  /* Inputs */
+  .dw-input{
+    width:100%;
+    padding:.55rem .7rem;
+    border-radius:10px;
+    border: 1px solid rgba(255,255,255,.10);
+    background:#0f141a;
+    color: var(--text);
+    font-size:.92rem;
+  }
+
   /* Before/After slider */
   .ba{
     position:relative;
@@ -75,6 +86,36 @@
 
   .tile{padding:.6rem; border-radius:14px; background: rgba(255,255,255,.03); border:1px solid rgba(255,255,255,.08);}
   .muted{color:var(--muted);}
+  .chip{
+    display:inline-flex; align-items:center; gap:.35rem;
+    font-size:.78rem; border-radius:999px; padding:.28rem .55rem;
+    background: rgba(122,184,255,0.12);
+    border: 1px solid rgba(122,184,255,0.26);
+    color:#a9d2ff;
+  }
+
+  /* Modals */
+  .modal-overlay{
+    position:fixed; inset:0;
+    background:rgba(0,0,0,.65);
+    display:none;
+    align-items:center; justify-content:center;
+    padding:1rem;
+    z-index:9999;
+  }
+  .modal-content{
+    width:min(980px,100%);
+    background:#0b1016;
+    border:1px solid rgba(255,255,255,.10);
+    border-radius:12px;
+    padding:1.25rem;
+    box-shadow: 0 0 24px rgba(0,0,0,.6);
+  }
+  .style-grid{display:grid; grid-template-columns: 1fr 1fr; gap:1rem; margin-top:.75rem;}
+  @media(max-width:900px){ .style-grid{grid-template-columns: 1fr;} }
+  .style-results-grid{display:grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap:.75rem; margin-top:.75rem;}
+  @media(max-width:900px){ .style-results-grid{grid-template-columns: repeat(2, minmax(0, 1fr));} }
+  @media(max-width:560px){ .style-results-grid{grid-template-columns: 1fr;} }
 </style>
 
 <div class="rs-wrap">
@@ -85,7 +126,19 @@
       <div class="rs-sub">
         {{ deal.title or ('Deal #' ~ deal.id) }} • Strategy: {{ deal.strategy or '—' }}
       </div>
+
+      {% set featured = (deal.resolved_json or {}).get("rehab", {}).get("featured", {}) %}
+      {% if featured and featured.get("after_url") %}
+        <div class="rs-sub" style="margin-top:.35rem;">
+          <span class="chip">⭐ Featured</span>
+          <span class="muted" style="margin-left:.45rem;">
+            {{ featured.get("style_preset") or "Concept" }}
+            {% if featured.get("featured_at") %}• {{ featured.get("featured_at") }}{% endif %}
+          </span>
+        </div>
+      {% endif %}
     </div>
+
     <div class="rs-actions">
       <a class="btn ghost" href="{{ url_for('investor.deal_detail', deal_id=deal.id) }}">🗂️ Deal Details</a>
       <a class="btn ghost" href="{{ url_for('investor.deal_reveal', deal_id=deal.id) }}">✨ Reveal View</a>
@@ -93,10 +146,20 @@
     </div>
   </div>
 
+  {# ---------- pick LEAD = featured first, else newest ---------- #}
+  {% set featured_after = (featured.get("after_url") if featured else None) %}
   {% set lead = mockups[0] if mockups and mockups[0] else None %}
+  {% if featured_after and mockups %}
+    {% for mm in mockups %}
+      {% if (mm.after_url or '') == featured_after %}
+        {% set lead = mm %}
+      {% endif %}
+    {% endfor %}
+  {% endif %}
 
   <div class="rs-grid">
-    <!-- LEFT: HGTV slider + gallery -->
+
+    <!-- LEFT -->
     <div class="card">
       <h3>HGTV Reveal Slider</h3>
 
@@ -107,14 +170,14 @@
             <span class="badge">AFTER</span>
           </div>
 
-          <img src="{{ lead.before_url }}" alt="Before">
+          <img id="sliderBeforeImg" src="{{ lead.before_url }}" alt="Before">
           <div class="after" id="baAfter">
-            <img src="{{ lead.after_url }}" alt="After">
+            <img id="sliderAfterImg" src="{{ lead.after_url }}" alt="After">
           </div>
 
           <div class="handle" id="baHandle"></div>
           <div class="knob">↔</div>
-          <input id="baRange" type="range" min="0" max="100" value="50">
+          <input id="baRange" type="range" min="0" max="100" value="50" aria-label="Before after slider">
         </div>
         <p class="muted" style="margin-top:.65rem;">Drag left/right for the reveal moment.</p>
       {% else %}
@@ -122,19 +185,32 @@
       {% endif %}
 
       <h3 style="margin-top:1.1rem;">Design Gallery</h3>
+
       {% if not mockups %}
         <p class="muted">No designs yet.</p>
       {% else %}
         <div class="gallery">
           {% for m in mockups %}
+            {% set is_featured = featured_after and (m.after_url or '') == featured_after %}
             <div class="tile">
               <img class="img" src="{{ m.after_url }}" alt="After concept">
-              <div style="display:flex; gap:.5rem; flex-wrap:wrap; margin-top:.55rem;">
-                <button class="btn ghost" type="button" onclick="setSlider('{{ m.before_url }}','{{ m.after_url }}')">Compare</button>
-                <button class="btn" type="button" onclick="selectFeatured('{{ m.after_url }}')">✅ Feature</button>
+              <div style="display:flex; justify-content:space-between; gap:.5rem; align-items:center; margin-top:.5rem; flex-wrap:wrap;">
+                <span class="chip">{{ m.style_preset or 'Concept' }}</span>
+                {% if is_featured %}<span class="chip" style="background:rgba(255,255,255,.06); border-color:rgba(255,255,255,.12); color:rgba(255,255,255,.88);">⭐ Featured</span>{% endif %}
               </div>
+
+              <div style="display:flex; gap:.5rem; flex-wrap:wrap; margin-top:.55rem;">
+                <button class="btn ghost" type="button"
+                        onclick="setSlider('{{ m.before_url }}','{{ m.after_url }}')">Compare</button>
+
+                <button class="btn" type="button"
+                        onclick="featureDesign('{{ deal.id }}','{{ m.after_url }}','{{ m.before_url }}','{{ (m.style_preset or '')|e }}','{{ (m.style_prompt or '')|e }}')">
+                  ✅ Feature
+                </button>
+              </div>
+
               <div class="muted" style="margin-top:.45rem; font-size:.85rem;">
-                {{ m.style_preset or '' }} {% if m.created_at %}• {{ m.created_at.strftime("%b %d %I:%M %p") }}{% endif %}
+                {% if m.created_at %}{{ m.created_at.strftime("%b %d %I:%M %p") }}{% endif %}
               </div>
             </div>
           {% endfor %}
@@ -142,7 +218,7 @@
       {% endif %}
     </div>
 
-    <!-- RIGHT: Scope + Share -->
+    <!-- RIGHT -->
     <div class="card">
       <h3>Scope Planner</h3>
       <p class="muted">This is what you send to contractors (clean + visual).</p>
@@ -172,7 +248,7 @@
       <hr style="border:none; border-top:1px solid rgba(255,255,255,.08); margin:1rem 0;">
 
       <h3>Share With Contractor</h3>
-      <p class="muted" style="margin-top:-.2rem;">Pick a featured design first.</p>
+      <p class="muted" style="margin-top:-.2rem;">Feature a design first — then send the featured concept + scope.</p>
 
       <div style="display:flex; gap:.5rem; flex-wrap:wrap;">
         <button class="btn" type="button" onclick="shareToContractor()">📤 Send Featured + Scope</button>
@@ -184,121 +260,64 @@
   </div>
 </div>
 
-<!-- Reuse your existing Style Modal if you want (or keep it separate file). -->
-<div id="styleModal" class="modal-overlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.65); align-items:center; justify-content:center; padding:1rem; z-index:9999;">
-  <div class="modal-content" style="width:min(980px,100%); background:#0b1016; border:1px solid var(--line); border-radius:12px; padding:1.25rem;">
-    <div style="display:flex; justify-content:space-between; align-items:center;">
+<!-- =========================
+     REHAB PREVIEW MODAL
+========================= -->
+<div id="rehabPreviewModal" class="modal-overlay">
+  <div class="modal-content">
+    <h3 style="margin-top:0;">Rehab Visual Preview</h3>
+
+    <p><strong>Before:</strong></p>
+    <p id="preview-before" class="muted"></p>
+
+    <hr style="border-color: rgba(255,255,255,.10); margin: 1rem 0;">
+
+    <p><strong>After (Based on Your Selections):</strong></p>
+    <p id="preview-after" class="muted"></p>
+
+    <button type="button" class="btn ghost" onclick="closeRehabPreview()" style="margin-top:1rem;">Close</button>
+  </div>
+</div>
+
+<!-- =========================
+     STYLE MODAL (ONE ONLY)
+========================= -->
+<div id="styleModal" class="modal-overlay">
+  <div class="modal-content">
+    <div style="display:flex; justify-content:space-between; align-items:center; gap:.75rem;">
       <h3 style="margin:0;">✨ AI Renovation Visualizer</h3>
       <button type="button" class="btn ghost" onclick="closeStyleModal()">Close</button>
     </div>
 
-    <p class="muted" style="margin:.6rem 0 0;">Use your existing visualizer JS here (copied from Deal Workspace).</p>
-  </div>
-</div>
-
-<script>
-  // Slider
-  (function(){
-    const r = document.getElementById("baRange");
-    const after = document.getElementById("baAfter");
-    const handle = document.getElementById("baHandle");
-    if(!r || !after || !handle) return;
-    function set(v){
-      const pct = Math.max(0, Math.min(100, Number(v)||50));
-      after.style.clipPath = `inset(0 ${100-pct}% 0 0)`;
-      handle.style.left = pct + "%";
-    }
-    r.addEventListener("input", e => set(e.target.value));
-    set(r.value);
-  })();
-
-  // Update slider from gallery selection
-  function setSlider(beforeUrl, afterUrl){
-    const ba = document.getElementById("ba");
-    if(!ba) return;
-    const imgs = ba.querySelectorAll("img");
-    if(imgs.length >= 2){
-      imgs[0].src = beforeUrl;
-      const afterImg = document.querySelector("#baAfter img");
-      if(afterImg) afterImg.src = afterUrl;
-    }
-  }
-
-  // Featured selection (store client side for now)
-  window._featuredAfter = "";
-  function selectFeatured(url){
-    window._featuredAfter = url;
-    alert("Featured design selected ✅");
-  }
-
-  // Stub: share (you’ll wire to your existing deal_share_design route)
-  async function shareToContractor(){
-    const img = window._featuredAfter || "";
-    if(!img) return alert("Select a featured design first.");
-
-    const scope = {
-      kitchen: document.getElementById("scopeKitchen")?.value,
-      bathroom: document.getElementById("scopeBath")?.value,
-      flooring: document.getElementById("scopeFloor")?.value,
-      paint: document.getElementById("scopePaint")?.value
-    };
-
-    // You already have partner sharing route expecting partner_ids + image_url + note
-    // Here we just show how to package the note.
-    const note =
-      `Scope:\nKitchen: ${scope.kitchen}\nBathroom: ${scope.bathroom}\nFlooring: ${scope.flooring}\nPaint: ${scope.paint}`;
-
-    document.getElementById("shareStatus").innerText = "Ready to send — wire partner picker + POST.";
-
-    // When you’re ready, POST to:
-    // fetch("{{ url_for('investor.deal_share_design', deal_id=deal.id) }}", { method:"POST", body: formData })
-  }
-<!-- Rehab Preview Modal -->
-<div id="rehabPreviewModal" class="modal-overlay">
-  <div class="modal-content">
-    <h3>Rehab Visual Preview</h3>
-
-    <p><strong>Before:</strong></p>
-    <p id="preview-before" class="preview-text"></p>
-
-    <hr style="border-color: var(--line); margin: 1rem 0;">
-
-    <p><strong>After (Based on Your Selections):</strong></p>
-    <p id="preview-after" class="preview-text"></p>
-
-    <button type="button" class="dw-button" onclick="closeRehabPreview()" style="margin-top:1rem;">Close</button>
-  </div>
-</div>
-
-<!-- Style Modal -->
-<div id="styleModal" class="modal-overlay">
-  <div class="modal-content">
-    <div style="display:flex; justify-content:space-between; align-items:center;">
-      <h3>✨ AI Renovation Visualizer</h3>
-      <button type="button" class="dw-button" onclick="closeStyleModal()">Close</button>
+    <div style="display:flex; gap:.5rem; flex-wrap:wrap; margin-top:.8rem;">
+      <label class="btn ghost" style="cursor:pointer;">
+        📷 Upload Room Photo
+        <input type="file" id="uploadRoomPhoto" accept="image/*" style="display:none;">
+      </label>
+      <button type="button" class="btn ghost" onclick="openRehabPreview()">👀 Preview Scope Copy</button>
     </div>
 
     <div class="style-grid">
       <div>
-        <p class="dw-label">Before</p>
-        <img id="styleBeforeImage" src="" style="width:100%; border-radius:8px;">
+        <p class="muted" style="margin:.75rem 0 .4rem;">Before</p>
+        <img id="styleBeforeImage" src="" style="width:100%; border-radius:12px; border:1px solid rgba(255,255,255,.10); background:#0f141a;">
       </div>
 
       <div>
-        <label class="dw-label">Style Prompt</label>
+        <label class="muted" style="display:block; margin:.75rem 0 .35rem;">Style Prompt</label>
         <input id="stylePrompt" class="dw-input" placeholder="e.g., modern minimalist kitchen with matte black fixtures">
 
         <div style="display:flex; gap:.5rem; margin-top:.75rem; flex-wrap:wrap;">
-          <button type="button" class="dw-button" onclick="setStylePreset('luxury')">Luxury</button>
-          <button type="button" class="dw-button" onclick="setStylePreset('modern')">Modern</button>
-          <button type="button" class="dw-button" onclick="setStylePreset('airbnb')">Airbnb</button>
-          <button type="button" class="dw-button" onclick="setStylePreset('flip')">Flip</button>
-          <button type="button" class="dw-button" onclick="setStylePreset('budget')">Budget</button>
+          <button type="button" class="btn ghost" onclick="setStylePreset('luxury')">Luxury</button>
+          <button type="button" class="btn ghost" onclick="setStylePreset('modern')">Modern</button>
+          <button type="button" class="btn ghost" onclick="setStylePreset('airbnb')">Airbnb</button>
+          <button type="button" class="btn ghost" onclick="setStylePreset('flip')">Flip</button>
+          <button type="button" class="btn ghost" onclick="setStylePreset('budget')">Budget</button>
         </div>
 
-        <div class="dw-row" style="margin-top:1rem;">
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:.75rem; margin-top:1rem;">
           <div>
-            <label class="dw-label">Variations</label>
+            <label class="muted" style="display:block; margin:0 0 .35rem;">Variations</label>
             <select id="styleVariations" class="dw-input">
               <option value="1">1</option>
               <option value="2" selected>2</option>
@@ -307,149 +326,163 @@
             </select>
           </div>
           <div style="display:flex; align-items:end;">
-            <label style="display:flex; gap:.5rem; align-items:center; margin-bottom:.2rem;">
-              <input id="styleSaveToDeal" type="checkbox">
-              <span class="dw-label" style="margin:0;">Save to deal</span>
+            <label style="display:flex; gap:.5rem; align-items:center; margin-bottom:.1rem;">
+              <input id="styleSaveToDeal" type="checkbox" checked>
+              <span class="muted">Save to deal</span>
             </label>
           </div>
         </div>
 
-        <button type="button" class="dw-button" onclick="runStyleTransform()" style="margin-top:1rem; width:100%;">
+        <button type="button" class="btn" onclick="runStyleTransform()" style="margin-top:1rem; width:100%;">
           Generate Designs
         </button>
 
-        <div id="styleCostEstimate" style="margin-top:.75rem;"></div>
+        <div id="styleCostEstimate" class="muted" style="margin-top:.75rem;"></div>
       </div>
     </div>
 
     <div id="styleResults" style="display:none; margin-top:1rem;">
-      <h4 style="color:var(--accent); margin:.25rem 0;">Results</h4>
+      <h3 style="margin:.25rem 0 .5rem; color:var(--accent);">Results</h3>
       <div id="styleResultsGrid" class="style-results-grid"></div>
     </div>
 
     <div id="beforeAfterWrapper" style="display:none; margin-top:1rem;">
-      <h4 style="color:var(--accent); margin:.25rem 0;">Before / After</h4>
-      <div style="position:relative; width:100%; border-radius:8px; overflow:hidden;">
+      <h3 style="margin:.25rem 0 .5rem; color:var(--accent);">Before / After</h3>
+      <div style="position:relative; width:100%; border-radius:12px; overflow:hidden; border:1px solid rgba(255,255,255,.10);">
         <img id="baBefore" src="" style="width:100%; display:block;">
-        <img id="baAfter" src="" style="width:100%; position:absolute; inset:0; clip-path: inset(0 50% 0 0);">
+        <img id="baAfterCompare" src="" style="width:100%; position:absolute; inset:0; clip-path: inset(0 50% 0 0);">
       </div>
       <input id="baSlider" type="range" min="0" max="100" value="50" style="width:100%; margin-top:.75rem;">
     </div>
   </div>
 </div>
 
-{% endif %}
-
 <script>
 /* ==========================
-   Rehab templates
+   HGTV Slider (main page)
 ========================== */
-function applyRehabTemplate() {
-  const template = document.getElementById("rehab-template")?.value;
-  const templates = {
-    rental: { rehab_scope: "light", kitchen: "light", bathroom: "light", flooring: "medium", paint: "medium" },
-    flip:   { rehab_scope: "medium", kitchen: "medium", bathroom: "medium", flooring: "medium", paint: "medium" },
-    airbnb: { rehab_scope: "medium", kitchen: "medium", bathroom: "medium", flooring: "heavy",  paint: "medium" },
-    luxury: { rehab_scope: "heavy",  kitchen: "heavy",  bathroom: "heavy",  flooring: "heavy",  paint: "heavy" },
-    budget: { rehab_scope: "light",  kitchen: "",       bathroom: "",       flooring: "light",  paint: "light" }
-  };
-  if (!templates[template]) return;
-  const config = templates[template];
+(function(){
+  const r = document.getElementById("baRange");
+  const after = document.getElementById("baAfter");
+  const handle = document.getElementById("baHandle");
+  if(!r || !after || !handle) return;
 
-  const scopeSel = document.querySelector('select[name="rehab_scope"]');
-  if (scopeSel) scopeSel.value = config.rehab_scope;
+  function set(v){
+    const pct = Math.max(0, Math.min(100, Number(v)||50));
+    after.style.clipPath = `inset(0 ${100-pct}% 0 0)`;
+    handle.style.left = pct + "%";
+  }
+  r.addEventListener("input", e => set(e.target.value));
+  set(r.value);
+})();
 
-  for (const key in config) {
-    if (key === "rehab_scope") continue;
-    const value = config[key];
-    if (!value) continue;
-    const input = document.querySelector(`input[name="${key}"][value="${value}"]`);
-    if (input) input.checked = true;
+function setSlider(beforeUrl, afterUrl){
+  const b = document.getElementById("sliderBeforeImg");
+  const a = document.getElementById("sliderAfterImg");
+  if(b) b.src = beforeUrl || b.src;
+  if(a) a.src = afterUrl || a.src;
+}
+
+/* ==========================
+   Feature → SERVER (persist)
+========================== */
+async function featureDesign(dealId, afterUrl, beforeUrl, stylePreset, stylePrompt){
+  try{
+    if(!afterUrl) throw new Error("Missing after_url");
+
+    const fd = new FormData();
+    fd.append("after_url", afterUrl);
+    if(beforeUrl) fd.append("before_url", beforeUrl);
+    if(stylePreset) fd.append("style_preset", stylePreset);
+    if(stylePrompt) fd.append("style_prompt", stylePrompt);
+
+    const res = await fetch(`/investor/deals/${dealId}/rehab/feature`, {
+      method: "POST",
+      body: fd,
+      credentials: "include"
+    });
+    const data = await res.json();
+    if(!data || data.status !== "ok") throw new Error(data?.message || "Feature failed");
+
+    // Update slider instantly
+    if(beforeUrl && afterUrl) setSlider(beforeUrl, afterUrl);
+
+    alert("Featured reveal saved ✅");
+    window.location.reload();
+  }catch(e){
+    alert(e.message || "Feature failed");
   }
 }
 
-function openRehabPreview() {
-  const items = {
-    kitchen: document.querySelector('input[name="kitchen"]:checked')?.value,
-    bathroom: document.querySelector('input[name="bathroom"]:checked')?.value,
-    flooring: document.querySelector('input[name="flooring"]:checked')?.value,
-    paint: document.querySelector('input[name="paint"]:checked')?.value
+/* ==========================
+   Scope preview (modal text)
+========================== */
+function openRehabPreview(){
+  const scope = {
+    kitchen: document.getElementById("scopeKitchen")?.value,
+    bathroom: document.getElementById("scopeBath")?.value,
+    flooring: document.getElementById("scopeFloor")?.value,
+    paint: document.getElementById("scopePaint")?.value
   };
 
   const beforeEl = document.getElementById("preview-before");
   const afterEl  = document.getElementById("preview-after");
-  if (beforeEl) beforeEl.innerText =
-    "Original property condition with dated finishes, worn surfaces, and standard builder-grade materials.";
-  if (afterEl) afterEl.innerText =
-    `Updated with ${items.kitchen || '—'} kitchen, ${items.bathroom || '—'} bathroom, ` +
-    `${items.flooring || '—'} flooring, and ${items.paint || '—'} paint.`;
+
+  if(beforeEl) beforeEl.innerText =
+    "Original condition with dated finishes, worn surfaces, and builder-grade materials.";
+  if(afterEl) afterEl.innerText =
+    `Updated with ${scope.kitchen || '—'} kitchen, ${scope.bathroom || '—'} bathroom, ` +
+    `${scope.flooring || '—'} flooring, and ${scope.paint || '—'} paint.`;
 
   const modal = document.getElementById("rehabPreviewModal");
-  if (modal) modal.style.display = "flex";
+  if(modal) modal.style.display = "flex";
 }
-function closeRehabPreview() {
+function closeRehabPreview(){
   const modal = document.getElementById("rehabPreviewModal");
-  if (modal) modal.style.display = "none";
+  if(modal) modal.style.display = "none";
 }
 
 /* ==========================
-   Visualizer (file OR url)
+   Style modal open/close
 ========================== */
-let _styleCurrentBefore = null;     // what we show in the modal (can be blob or url)
-let _styleCurrentFile = null;       // upload file bytes (preferred)
-let _styleCurrentUrl = null;        // property photo url (http/https)
-let _stylePreset = "";              // preset key like "luxury"
-let _styleUploadedUrl = "";         // URL returned from /renovation_upload
+function openStyleModal(){
+  const modal = document.getElementById("styleModal");
+  if(modal) modal.style.display = "flex";
+}
+function closeStyleModal(){
+  const modal = document.getElementById("styleModal");
+  if(modal) modal.style.display = "none";
+}
 
-// ✅ for Rehab Studio: use deal + saved_property_id
+/* ==========================
+   Visualizer state
+========================== */
+let _styleCurrentBefore = null;
+let _styleCurrentFile = null;
+let _styleCurrentUrl = null;
+let _stylePreset = "";
+let _styleUploadedUrl = "";
+
 const DEAL_ID = {{ deal.id }};
 const SAVED_PROPERTY_ID = {{ deal.saved_property_id or "null" }};
 
+/* Upload selection */
 document.getElementById("uploadRoomPhoto")?.addEventListener("change", (e) => {
   const file = e.target.files?.[0];
-  if (!file) return;
-
+  if(!file) return;
   _styleCurrentFile = file;
   _styleCurrentUrl = null;
 
   const previewUrl = URL.createObjectURL(file);
-  openStyleModal(previewUrl);
-});
-
-function setVisualizerSourceUrl(url) {
-  _styleCurrentUrl = url;
-  _styleCurrentFile = null;
-  openStyleModal(url);
-}
-
-function openStyleModal(photoUrl) {
-  _styleCurrentBefore = photoUrl || _styleCurrentBefore || null;
+  _styleCurrentBefore = previewUrl;
 
   const img = document.getElementById("styleBeforeImage");
-  if (img) img.src = _styleCurrentBefore || "";
+  if(img) img.src = previewUrl;
 
-  const modal = document.getElementById("styleModal");
-  if (modal) modal.style.display = "flex";
+  openStyleModal();
+});
 
-  const results = document.getElementById("styleResults");
-  if (results) results.style.display = "none";
-
-  const grid = document.getElementById("styleResultsGrid");
-  if (grid) grid.innerHTML = "";
-
-  const cost = document.getElementById("styleCostEstimate");
-  if (cost) cost.innerHTML = "";
-
-  const ba = document.getElementById("beforeAfterWrapper");
-  if (ba) ba.style.display = "none";
-}
-
-function closeStyleModal() {
-  const modal = document.getElementById("styleModal");
-  if (modal) modal.style.display = "none";
-}
-
-function setStylePreset(preset) {
+function setStylePreset(preset){
   _stylePreset = preset || "";
   const map = {
     luxury: "luxury high-end finishes, marble, designer lighting, spa-like feel",
@@ -459,64 +492,44 @@ function setStylePreset(preset) {
     budget: "budget-friendly, clean, simple, fresh paint, basic but appealing finishes",
   };
   const el = document.getElementById("stylePrompt");
-  if (el) el.value = map[preset] || "";
+  if(el) el.value = map[preset] || "";
 }
 
-/* ==========================
-   Upload helper (returns hosted URL)
-========================== */
+/* Upload helper (returns hosted URL) */
 async function uploadRoomFileIfNeeded(){
-  if (!_styleCurrentFile) return "";
-
-  if (!SAVED_PROPERTY_ID){
-    // you can still upload without saved_property_id if your endpoint allows it
-    // but if yours REQUIRES it, enforce it here:
-    // throw new Error("This deal is not linked to a saved property yet.");
-  }
-
+  if(!_styleCurrentFile) return "";
   const fd = new FormData();
   fd.append("photo", _styleCurrentFile);
-  if (SAVED_PROPERTY_ID) fd.append("saved_property_id", String(SAVED_PROPERTY_ID));
+  if(SAVED_PROPERTY_ID) fd.append("saved_property_id", String(SAVED_PROPERTY_ID));
+  fd.append("deal_id", String(DEAL_ID));
 
   const res = await fetch("{{ url_for('investor.renovation_upload') }}", {
     method: "POST",
     body: fd,
     credentials: "include"
   });
-
   const data = await res.json();
-  if (data.status !== "ok") throw new Error(data.message || "Upload failed");
+  if(data.status !== "ok") throw new Error(data.message || "Upload failed");
 
   _styleUploadedUrl = data.url || "";
   return _styleUploadedUrl;
 }
 
-/* ==========================
-   Run visualizer (calls your route)
-========================== */
+/* Run visualizer */
 async function runStyleTransform(){
   const prompt = (document.getElementById("stylePrompt")?.value || "").trim();
   const variations = parseInt(document.getElementById("styleVariations")?.value || "2", 10);
   const saveToDeal = document.getElementById("styleSaveToDeal")?.checked ? "true" : "false";
 
-  if (!prompt && !_stylePreset){
-    alert("Add a style prompt or choose a preset.");
-    return;
-  }
+  if(!prompt && !_stylePreset) return alert("Add a style prompt or choose a preset.");
 
   const costBox = document.getElementById("styleCostEstimate");
-  if (costBox) costBox.innerHTML = "<span class='muted'>Generating…</span>";
+  if(costBox) costBox.innerHTML = "Generating…";
 
   try{
-    // Prefer file upload → hosted URL (prevents blob: issue)
     let image_url = _styleCurrentUrl || "";
-    if (!image_url && _styleCurrentFile){
-      image_url = await uploadRoomFileIfNeeded();
-    }
-    if (!image_url){
-      alert("Upload a room photo or choose a property photo first.");
-      return;
-    }
+    if(!image_url && _styleCurrentFile) image_url = await uploadRoomFileIfNeeded();
+    if(!image_url) return alert("Upload a room photo first.");
 
     const fd = new FormData();
     fd.append("image_url", image_url);
@@ -524,8 +537,7 @@ async function runStyleTransform(){
     fd.append("style_preset", _stylePreset || "");
     fd.append("variations", String(variations));
     fd.append("save_to_deal", saveToDeal);
-
-    if (SAVED_PROPERTY_ID) fd.append("saved_property_id", String(SAVED_PROPERTY_ID));
+    if(SAVED_PROPERTY_ID) fd.append("saved_property_id", String(SAVED_PROPERTY_ID));
     fd.append("deal_id", String(DEAL_ID));
 
     const res = await fetch("{{ url_for('investor.renovation_visualizer') }}", {
@@ -534,34 +546,29 @@ async function runStyleTransform(){
       credentials: "include"
     });
     const data = await res.json();
-    if (data.status !== "ok") throw new Error(data.message || "Visualizer failed");
+    if(data.status !== "ok") throw new Error(data.message || "Visualizer failed");
 
     const before_url = data.before_url || image_url;
     const images = Array.isArray(data.images) ? data.images : [];
 
-    if (costBox){
-      const note = data.note ? `<div class="muted" style="margin-top:.35rem;">${data.note}</div>` : "";
-      costBox.innerHTML = `<div class="muted">Before uploaded ✅</div>${note}`;
+    if(costBox){
+      costBox.innerHTML = data.note ? data.note : "Done ✅";
     }
 
     const resultsWrap = document.getElementById("styleResults");
     const grid = document.getElementById("styleResultsGrid");
-    if (grid) grid.innerHTML = "";
+    if(grid) grid.innerHTML = "";
+    if(resultsWrap) resultsWrap.style.display = "block";
 
-    if (resultsWrap) resultsWrap.style.display = "block";
-
-    if (!images.length){
-      if (grid) grid.innerHTML =
-        `<div class="muted">No generated after-images returned yet (route still in stub mode). Once the generator is wired, results will show here.</div>`;
-      const ba = document.getElementById("beforeAfterWrapper");
-      if (ba) ba.style.display = "none";
+    if(!images.length){
+      if(grid) grid.innerHTML = `<div class="muted">No generated after-images returned yet (route still stubbed). Wire generator to return images[] and they will appear here.</div>`;
       return;
     }
 
     images.forEach((img) => {
       const card = document.createElement("div");
       card.style.border = "1px solid rgba(255,255,255,.08)";
-      card.style.borderRadius = "10px";
+      card.style.borderRadius = "12px";
       card.style.padding = ".6rem";
       card.style.background = "rgba(255,255,255,.02)";
       card.innerHTML = `
