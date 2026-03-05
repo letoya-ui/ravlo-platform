@@ -3062,11 +3062,12 @@ def ai_rehab_scope():
 
     res = requests.post(
         engine_url,
-        json={"image_url": image_url, "strategy": "flip"},
+        json={"image_url": image_url},
         timeout=60
     )
 
     return jsonify(res.json())
+
 
 @investor_bp.route("/deals/send-to-team", methods=["POST"])
 @investor_bp.route("/deals/send-to-lo", methods=["POST"])
