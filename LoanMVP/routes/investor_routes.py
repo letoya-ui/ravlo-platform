@@ -2754,6 +2754,7 @@ def renovation_visualizer():
         }
 
         # ✅ point to your engine (local dev)
+        headers={"X-API-Key": os.getenv("RENOVATION_API_KEY","")}
         RENOVATION_ENGINE_URL = os.getenv("RENOVATION_ENGINE_URL", "http://localhost:8000/v1/renovate")
 
         engine_res = requests.post(
