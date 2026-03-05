@@ -84,3 +84,9 @@ class SavedProperty(db.Model):
 
     investor_profile = db.relationship("InvestorProfile", back_populates="saved_properties")
     borrower = db.relationship("BorrowerProfile", back_populates="saved_properties")
+
+@property
+def rehab_before_url(self):
+    payload = self.resolved_json or {}
+    payload = payload if isinstance(payload, dict) else {}
+    return (payload.get("rehab", {}) or {}).get("before_url") or ""
