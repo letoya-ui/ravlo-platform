@@ -39,3 +39,13 @@ def _load_image(url):
     r = requests.get(url)
     img = Image.open(BytesIO(r.content)).convert("RGB")
     return cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
+
+def infer_room_type(structure):
+    fixtures = structure.get("fixtures", [])
+
+    # MVP rules
+    if len(fixtures) >= 2:
+        return "bathroom"
+    if len(fixtures) == 1:
+        return "kitchen"
+    return "living_room"
