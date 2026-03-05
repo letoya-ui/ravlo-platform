@@ -2878,7 +2878,7 @@ def blueprint_to_room():
 
     # Extract structure (walls, doors, windows, fixtures, depth, mask)
     try:
-        structure = extract_blueprint_structure(blueprint_url)
+        structure = parse_blueprint_structure(blueprint_url)
     except Exception as e:
         return jsonify({"status": "error", "message": f"Blueprint parsing failed: {e}"}), 500
 
