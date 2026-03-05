@@ -2753,23 +2753,55 @@ def renovation_visualizer():
             "height": 1024,
         }
 
+        # ✅ point to your engine (local dev)
+        RENOVATION_ENGINE_URL = os.getenv("RENOVATION_ENGINE_URL", "http://localhost:8000/v1/renovate")
+
         engine_res = requests.post(
-            "http://localhost:8000/v1/renovate",
-            json=payload,
+            RENOVATION_ENGINE_URL,
+            json={
+                "image_url": before_url,          # ✅ use the R2-hosted before image
+                "mode": "photo",
+                "preset": "luxury_modern",        # or map from your Ravlo presets
+                "prompt": final_prompt,
+                "count": variations,
+                "steps": 28,
+                "strength": 0.38,
+                "controlnet_scale": 0.78,
+                "guidance": 6.5,
+                "width": 1024,
+                "height": 1024,
+            },
             timeout=900
         )
         engine_res.raise_for_status()
         engine_json = engine_res.json()
 
-        images_b64 = engine_json.get("images_base64", []) or []
-        if not isinstance(images_b64, list):
-            images_b64 = []
-
+        images_b64 = engine_json.get("images_base64", [])
         after_urls = []
-        for b64_img in images_b64:
-            url = _upload_after_from_b64(b64_img)
-            if url:
-                after_urls.append(url)
+
+        for b64 in images_b64:
+            try:
+                # decode base64 → bytes
+                raw_png = base64.b64decode(b64)
+
+                # open image
+                img = Image.open(io.BytesIO(raw_png)).convert("RGB")
+
+                # convert to WEBP for Ravlo (smaller + faster)
+                buf = io.BytesIO()
+                img.save(buf, format="WEBP", quality=90)
+
+                upload = r2_put_bytes(
+                    buf.getvalue(),
+                    subdir=f"visualizer/{current_user.id}/after",
+                    content_type="image/webp",
+                    filename=f"{uuid.uuid4().hex}_after.webp",
+                )
+
+                after_urls.append(upload["url"])
+
+            except Exception as e:
+                print("After image upload failed:", e)
 
         # ----------------------------
         # Save mockups to DB
