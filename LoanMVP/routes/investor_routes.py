@@ -2358,7 +2358,9 @@ def deal_share_design(deal_id):
 def deal_rehab(deal_id):
     deal = Deal.query.filter_by(id=deal_id, user_id=current_user.id).first_or_404()
 
-    before_url = deal.rehab_before_url or ""
+    payload = deal.resolved_json or {}
+    payload = payload if isinstance(payload, dict) else {}
+    before_url = (payload.get("rehab", {}) or {}).get("before_url") or ""
     
     mockups = (RenovationMockup.query
         .filter_by(deal_id=deal_id, user_id=current_user.id)
