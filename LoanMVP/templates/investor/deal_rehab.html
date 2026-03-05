@@ -180,6 +180,59 @@ async function featureReveal(dealId, afterUrl, beforeUrl, stylePreset, styleProm
     alert(e.message || "Failed to feature reveal.");
   }
 }
+async function startRehabJob() {
+    const imageUrl = document.getElementById("before-image-url").value;
+    const dealId = document.getElementById("deal-id").value;
+
+    const res = await fetch("/investor/ai/rehab_scope", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({ image_url: imageUrl, deal_id: dealId })
+    });
+
+    const data = await res.json();
+    const jobId = data.job_id;
+
+    document.getElementById("rehab-plan-box").innerHTML =
+        "Your rehab plan is being generated. You can leave this page.";
+
+    pollRehabJob(jobId);
+}
+async function pollRehabJob(jobId) {
+    const interval = setInterval(async () => {
+        const res = await fetch(`/investor/ai/rehab_scope/${jobId}`);
+        const data = await res.json();
+
+        if (data.status === "complete") {
+            clearInterval(interval);
+            renderRehabResults(data);
+        }
+
+        if (data.status === "failed") {
+            clearInterval(interval);
+            document.getElementById("rehab-plan-box").innerHTML =
+                "Something went wrong. Try again.";
+        }
+    }, 3000);
+}
+
+function renderRehabResults(data) {
+    const box = document.getElementById("rehab-plan-box");
+
+    box.innerHTML = `
+        <h3>Rehab Plan</h3>
+        <pre>${data.plan}</pre>
+
+        <h3>Estimated Cost</h3>
+        <p>$${data.cost_low} – $${data.cost_high}</p>
+
+        <h3>Estimated ARV</h3>
+        <p>$${data.arv}</p>
+
+        <h3>Generated Images</h3>
+        ${data.images ? data.images.map(img => `<img src="${img}" />`).join("") : ""}
+    `;
+}
 </script>
 
 {% endblock %}
