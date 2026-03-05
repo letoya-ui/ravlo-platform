@@ -35,7 +35,7 @@ from reportlab.lib.pagesizes import LETTER
 from LoanMVP.extensions import db, stripe, csrf
 
 from LoanMVP.utils.decorators import role_required
-from LoanMVP.utils.image_utils import _to_webp_bytes
+
 
 from LoanMVP.forms.investor_forms import InvestorSettingsForm, InvestorProfileForm
 # -------------------------
@@ -2859,11 +2859,11 @@ def blueprint_to_room():
 
     # Upload blueprint to R2
     try:
-        raw = blueprint_file.read() if blueprint_file else _download_image_bytes(blueprint_url)
+        raw = blueprint_file.read() if blueprint_file else download_image_bytes(blueprint_url)
         if not raw:
             return jsonify({"status": "error", "message": "Empty blueprint input."}), 400
 
-        blueprint_webp = _to_webp_bytes(raw, max_size=2000, quality=90)
+        blueprint_webp = to_webp_bytes(raw, max_size=2000, quality=90)
         up = r2_put_bytes(
             blueprint_webp,
             subdir=f"blueprints/{current_user.id}",
