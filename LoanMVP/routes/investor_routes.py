@@ -98,6 +98,7 @@ from LoanMVP.services.unified_resolver import resolve_property_unified
 from LoanMVP.services.property_tool import search_deals_for_zip
 from LoanMVP.services.notification_service import notify_team_on_conversion
 from LoanMVP.services.blueprint_parser import extract_blueprint_structure, infer_room_type
+from LoanMVP.services.prompt_builder import build_blueprint_prompt
 
 
 from LoanMVP.utils.r2_storage import r2_put_bytes
