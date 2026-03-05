@@ -462,6 +462,10 @@ def command_center():
         title="RAVLO • Command Center",
     )
 
+@investor_bp.route("/test_blueprint", methods=["GET"])
+@login_required
+def test_blueprint():
+    return render_template("test_blueprint.html")
 
 
 @investor_bp.route("/resources", methods=["GET"])
