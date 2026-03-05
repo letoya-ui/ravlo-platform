@@ -2420,7 +2420,9 @@ def deal_feature_reveal(deal_id):
 
     # ✅ Persist featured “HGTV reveal” info in resolved_json (no migration)
     data = deal.resolved_json or {}
-    rehab = data.get("rehab") or {}
+    data.setdefault("rehab", {})
+    rehab = data["rehab"]
+
     rehab["featured"] = {
         "after_url": after_url,
         "before_url": before_url or rehab.get("featured", {}).get("before_url"),
@@ -2650,7 +2652,7 @@ def renovation_visualizer():
     ).strip()
 
     # ----------------------------
-    # Parse IDs + deal-first linking
+    # Parse IDs + deal linking
     # ----------------------------
     saved_property_id = None
     if saved_property_id_raw:
@@ -2672,11 +2674,9 @@ def renovation_visualizer():
         if not deal:
             return jsonify({"status": "error", "message": "Deal not found or not authorized."}), 404
 
-        # Derive saved_property_id from deal if not provided
         if saved_property_id is None and getattr(deal, "saved_property_id", None):
             saved_property_id = deal.saved_property_id
 
-        # Derive property_id string too (optional)
         if not property_id and getattr(deal, "property_id", None):
             property_id = deal.property_id
 
@@ -2698,7 +2698,7 @@ def renovation_visualizer():
         before_url = before_up["url"]
 
         # ----------------------------
-        # Persist "current before" on deal (for Rehab Studio preload)
+        # Persist "current before" on deal
         # ----------------------------
         if deal is not None:
             try:
@@ -2710,24 +2710,29 @@ def renovation_visualizer():
                 db.session.commit()
             except Exception:
                 db.session.rollback()
-                # not fatal; continue
 
         # ----------------------------
-        # ✅ Generate AFTER images (YOU wire this)
-        # Must return a list of http(s) URLs: ["https://...after1.webp", ...]
+        # 🔥 CALL YOUR GPU RENOVATION ENGINE
         # ----------------------------
-        after_urls = generate_renovation_images(
-            before_url=before_url,
-            prompt=final_prompt,
-            n=variations
-        )  # <-- implement this
+        engine_res = requests.post(
+            "http://0.0.0.0:8000/renovate_sdxl",
+            json={
+                "image_url": before_url,
+                "style_prompt": final_prompt,
+                "style_preset": style_preset,
+                "variations": variations
+            },
+            timeout=600
+        )
+        engine_json = engine_res.json()
 
+        after_urls = engine_json.get("images", [])
         if not isinstance(after_urls, list):
             after_urls = []
         after_urls = [u for u in after_urls if isinstance(u, str) and u.startswith("http")]
 
         # ----------------------------
-        # Save to deal (create RenovationMockup rows)
+        # Save mockups to DB
         # ----------------------------
         if save_to_deal and deal is not None and after_urls:
             ip = InvestorProfile.query.filter_by(user_id=current_user.id).first()
@@ -2750,7 +2755,7 @@ def renovation_visualizer():
         return jsonify({
             "status": "ok",
             "before_url": before_url,
-            "images": after_urls,          # ✅ now real images
+            "images": after_urls,
             "prompt": final_prompt,
             "variations": variations,
             "save_to_deal": save_to_deal,
@@ -2759,90 +2764,39 @@ def renovation_visualizer():
             "property_id": property_id,
         })
 
-    except requests.RequestException as e:
-        return jsonify({"status": "error", "message": f"Could not download image: {e}"}), 400
     except Exception as e:
         return jsonify({"status": "error", "message": f"Renovation generator failed: {e}"}), 500
+
 # =========================================================
 # 📤 INVESTOR • UPLOADS + MOCKUPS + SEND TO TEAM + EXPORTS
 # =========================================================
 
-@investor_bp.route("/deals/upload", methods=["POST"])
 @investor_bp.route("/renovation_upload", methods=["POST"])
-@csrf.exempt
 @login_required
 @role_required("investor")
 def renovation_upload():
-    f = request.files.get("photo") or request.files.get("image_file")
-    if not f:
-        return jsonify({"status": "error", "message": "No file uploaded."}), 400
+    file = request.files.get("photo")
+    deal_id = request.form.get("deal_id")
+    saved_property_id = request.form.get("saved_property_id")
 
-    raw = f.read()
-    if not raw:
-        return jsonify({"status": "error", "message": "Empty upload."}), 400
+    if not file or not deal_id:
+        return jsonify({"status": "error", "message": "Missing file or deal ID"}), 400
 
-    saved_property_id_raw = (request.form.get("saved_property_id") or request.form.get("prop_id") or "").strip()
-    deal_id_raw = (request.form.get("deal_id") or "").strip()
+    # Upload to R2 (your existing helper)
+    try:
+        before_url = upload_to_r2(file, folder=f"deals/{deal_id}/before")
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
 
-    saved_property_id = None
-    if saved_property_id_raw:
-        try:
-            saved_property_id = int(saved_property_id_raw)
-        except Exception:
-            saved_property_id = None
-
-    deal = None
-    deal_id = None
-    if deal_id_raw:
-        try:
-            deal_id = int(deal_id_raw)
-        except Exception:
-            deal_id = None
-
-    # ✅ If deal_id provided, validate ownership and auto-derive saved_property_id
-    if deal_id:
-        deal = Deal.query.filter_by(id=deal_id, user_id=current_user.id).first()
-        if not deal:
-            return jsonify({"status": "error", "message": "Deal not found or not authorized."}), 404
-
-        if saved_property_id is None and getattr(deal, "saved_property_id", None):
-            saved_property_id = deal.saved_property_id
-
-    webp = _to_webp_bytes(raw, max_size=1600, quality=86)
-    up = r2_put_bytes(
-        webp,
-        subdir=f"uploads/{current_user.id}/rooms",
-        content_type="image/webp",
-        filename=f"{uuid.uuid4().hex}.webp",
-    )
-
-    before_url = up["url"]
-
-    # ✅ OPTIONAL (recommended): persist a "default before" on the deal
-    # so Rehab Studio can always preload the latest room photo
-    if deal is not None:
-        # If you already have a field for this, use it:
-        # deal.rehab_before_url = before_url
-        # deal.updated_at = datetime.utcnow()
-
-        # If you DON'T have a field, you can still store it in resolved_json safely:
-        try:
-            payload = deal.resolved_json or {}
-            payload = payload if isinstance(payload, dict) else {}
-            payload.setdefault("rehab", {})
-            payload["rehab"]["before_url"] = before_url
-            deal.resolved_json = payload
-            db.session.commit()
-        except Exception:
-            db.session.rollback()
-            # not fatal — upload still succeeded
+    # Save to deal
+    deal = Deal.query.filter_by(id=deal_id, user_id=current_user.id).first()
+    if deal:
+        deal.rehab_before_url = before_url
+        db.session.commit()
 
     return jsonify({
         "status": "ok",
-        "url": before_url,
-        "key": up["key"],
-        "saved_property_id": saved_property_id,
-        "deal_id": deal_id
+        "url": before_url
     })
 
 @investor_bp.route("/deals/<int:deal_id>/mockups/save", methods=["POST"])
