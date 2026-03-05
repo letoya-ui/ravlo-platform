@@ -2376,7 +2376,7 @@ def deal_rehab(deal_id):
 
     featured = (deal.resolved_json or {}).get("rehab", {}).get("featured", {})
     return render_template(
-        "investor/deal_rehab.html",
+        "investor/deal_rehab_studio.html",
         deal=deal,
         mockups=mockups,
         before_url=before_url,
