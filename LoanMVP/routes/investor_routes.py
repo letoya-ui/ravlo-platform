@@ -3049,6 +3049,7 @@ def blueprint_to_room():
     })
 
 @investor_bp.route("/ai/rehab_scope", methods=["POST"])
+@csrf.exempt
 @login_required
 @role_required("investor")
 def ai_rehab_scope():
