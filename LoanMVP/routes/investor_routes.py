@@ -102,7 +102,7 @@ from LoanMVP.utils.r2_storage import r2_put_bytes
 investor_bp = Blueprint("investor", __name__, url_prefix="/investor")
 
 client = OpenAI()
-
+GPU_BASE_URL = "http://your-4090-host:8000"
 # =========================================================
 # 🔢 SAFE NUMERIC HELPERS
 # =========================================================
@@ -240,40 +240,35 @@ def to_webp_bytes(img_bytes: bytes, max_size=1400, quality=86) -> bytes:
     im.save(out, format="WEBP", quality=int(quality), method=6)
     return out.getvalue()
 
+
 def generate_renovation_images(before_url: str, prompt: str, n: int = 2) -> list[str]:
-    """
-    Return a list of AFTER image URLs.
-    Wire your AI image generator here (OpenAI / Replicate / internal service).
-    """
-    if not before_url or not prompt: 
+    if not before_url or not prompt:
         return []
-    # 1. Download BEFORE image
-    try:
-        before_bytes = download_image_bytes(before_url)
-    except Exception as e:
-        print("Failed to download before image:", e)
-        return []
-    # 2. Convert to PNG (OpenAI prefers PNG input)
-    before_png = to_png_bytes(before_bytes, max_size=1400)
+
+    # 1) Download BEFORE
+    before_bytes = download_image_bytes(before_url)
+    before_png = to_png_bytes(before_bytes, max_size=1024)
     before_b64 = base64.b64encode(before_png).decode("utf-8")
-    # 3. Call OpenAI image-to-image
+
+    # 2) Call /renovate on your 4090 server
     try:
-        response = client.images.generate(
-            model="gpt-image-1",
-            prompt=prompt,
-            image=before_b64,
-            size="2048x2048",
-            n=n
+        resp = requests.post(
+            f"{GPU_BASE_URL}/renovate",
+            json={"image_b64": before_b64, "prompt": prompt, "n": n},
+            timeout=120,
         )
+        resp.raise_for_status()
     except Exception as e:
-        print("OpenAI image generation failed:", e)
+        print("GPU renovate failed:", e)
         return []
+
+    data = resp.json()
+    images_b64 = data.get("images", []) or []
+
     after_urls = []
-    # 4. Upload each AFTER image to R2
-    for item in response.data:
+    for b64 in images_b64:
         try:
-            img_bytes = base64.b64decode(item.b64_json)
-            # Convert to webp for storage (your standard)
+            img_bytes = base64.b64decode(b64)
             img_webp = to_webp_bytes(img_bytes, max_size=1600, quality=86)
             up = r2_put_bytes(
                 img_webp,
@@ -283,10 +278,11 @@ def generate_renovation_images(before_url: str, prompt: str, n: int = 2) -> list
             )
             after_urls.append(up["url"])
         except Exception as e:
-            print("Failed to upload after image:", e)
+            print("Upload after failed:", e)
             continue
-        
+
     return after_urls
+
 # =========================================================
 # 👤 PROFILE FILTER (INVESTOR SAFE)
 # =========================================================
