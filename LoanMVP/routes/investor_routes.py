@@ -290,6 +290,38 @@ def generate_renovation_images(before_url: str, prompt: str, n: int = 2) -> list
 
     return after_urls
 
+def process_pending_jobs():
+    jobs = RehabJob.query.filter_by(status="pending").all()
+
+    for job in jobs:
+        job.status = "processing"
+        db.session.commit()
+
+        try:
+            engine_url = os.getenv("RENOVATION_ENGINE_URL").replace(
+                "/v1/renovate",
+                "/v1/rehab_scope"
+            )
+
+            res = requests.post(
+                engine_url,
+                json={"image_url": job.plan_url},
+                timeout=180
+            )
+            data = res.json()
+
+            job.result_plan = data.get("plan")
+            job.result_cost_low = data.get("cost_low")
+            job.result_cost_high = data.get("cost_high")
+            job.result_arv = data.get("arv")
+            job.result_images = data.get("images")
+            job.status = "complete"
+
+        except Exception:
+            job.status = "failed"
+
+        db.session.commit()
+
 # =========================================================
 # 👤 PROFILE FILTER (INVESTOR SAFE)
 # =========================================================
@@ -3046,6 +3078,41 @@ def blueprint_to_room():
         "room_type": room_type,
         "structure": structure,
         "after": after_urls
+    })
+
+@investor_bp.route("/ai/rehab_scope", methods=["POST"])
+@csrf.exempt
+@login_required
+@role_required("investor")
+def create_rehab_job():
+    data = request.json
+    plan_url = data.get("image_url")
+    deal_id = data.get("deal_id")
+
+    job = RehabJob(
+        deal_id=deal_id,
+        user_id=current_user.id,
+        plan_url=plan_url,
+        status="pending"
+    )
+    db.session.add(job)
+    db.session.commit()
+
+    return jsonify({"ok": True, "job_id": job.id})
+
+@investor_bp.route("/ai/rehab_scope/<int:job_id>", methods=["GET"])
+@login_required
+@role_required("investor")
+def get_rehab_job(job_id):
+    job = RehabJob.query.get_or_404(job_id)
+
+    return jsonify({
+        "status": job.status,
+        "plan": job.result_plan,
+        "cost_low": job.result_cost_low,
+        "cost_high": job.result_cost_high,
+        "arv": job.result_arv,
+        "images": job.result_images
     })
 
 @investor_bp.route("/ai/rehab_scope", methods=["POST"])
