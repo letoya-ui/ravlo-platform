@@ -2816,42 +2816,47 @@ def renovation_visualizer():
 @login_required
 @role_required("investor")
 def renovation_upload():
+
     file = request.files.get("photo")
     deal_id_raw = (request.form.get("deal_id") or "").strip()
-    saved_property_id = (request.form.get("saved_property_id") or "").strip()
 
     if not file or not deal_id_raw:
         return jsonify({"status": "error", "message": "Missing photo or deal_id"}), 400
 
-    try:
-        deal_id = int(deal_id_raw)
-    except Exception:
-        return jsonify({"status": "error", "message": "Invalid deal_id"}), 400
+    deal_id = int(deal_id_raw)
 
-    # Upload BEFORE to R2
     try:
-        before_url = upload_to_r2(file, folder=f"deals/{deal_id}/before")
+        raw = file.read()
+
+        before_webp = _to_webp_bytes(raw, max_size=1600, quality=86)
+
+        up = r2_put_bytes(
+            before_webp,
+            subdir=f"visualizer/{current_user.id}/before",
+            content_type="image/webp",
+            filename=f"{uuid.uuid4().hex}_before.webp",
+        )
+
+        before_url = up["url"]
+
     except Exception as e:
-        return jsonify({"status": "error", "message": f"Upload failed: {e}"}), 500
+        return jsonify({"status": "error", "message": str(e)}), 500
 
-    # Save before_url into resolved_json (NO Deal column needed)
+
     deal = Deal.query.filter_by(id=deal_id, user_id=current_user.id).first()
-    if deal:
-        try:
-            payload = deal.resolved_json or {}
-            payload = payload if isinstance(payload, dict) else {}
-            payload.setdefault("rehab", {})
-            payload["rehab"]["before_url"] = before_url
-            if saved_property_id:
-                payload["rehab"]["saved_property_id"] = saved_property_id
-            deal.resolved_json = payload
-            db.session.commit()
-        except Exception as e:
-            db.session.rollback()
-            # still return ok because the upload succeeded
-            print("Could not persist rehab before_url:", e)
 
-    return jsonify({"status": "ok", "url": before_url})
+    if deal:
+        payload = deal.resolved_json or {}
+        payload = payload if isinstance(payload, dict) else {}
+        payload.setdefault("rehab", {})
+        payload["rehab"]["before_url"] = before_url
+        deal.resolved_json = payload
+        db.session.commit()
+
+    return jsonify({
+        "status": "ok",
+        "url": before_url
+    })
 
 @investor_bp.route("/deals/<int:deal_id>/mockups/save", methods=["POST"])
 @investor_bp.route("/deals/<int:deal_id>/mockups/save_legacy", methods=["POST"])
