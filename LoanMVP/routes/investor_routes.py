@@ -2828,7 +2828,7 @@ def renovation_upload():
     try:
         raw = file.read()
 
-        before_webp = _to_webp_bytes(raw, max_size=1600, quality=86)
+        before_webp = to_webp_bytes(raw, max_size=1600, quality=86)
 
         up = r2_put_bytes(
             before_webp,
