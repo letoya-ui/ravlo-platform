@@ -2634,7 +2634,7 @@ def renovation_visualizer():
 
     style_prompt = (request.form.get("style_prompt") or "").strip()
     style_preset = (request.form.get("style_preset") or "").strip()
-    variations = _safe_int(request.form.get("variations"), default=2, min_v=1, max_v=4)
+    variations = safe_int(request.form.get("variations"), default=2, min_v=1, max_v=4)
     save_to_deal = (request.form.get("save_to_deal") or "").lower() in ("1", "true", "yes", "on")
 
     saved_property_id_raw = (request.form.get("saved_property_id") or request.form.get("prop_id") or "").strip()
@@ -2701,7 +2701,7 @@ def renovation_visualizer():
         # ----------------------------
         # Upload BEFORE to R2
         # ----------------------------
-        before_webp = _to_webp_bytes(raw, max_size=1600, quality=86)
+        before_webp = to_webp_bytes(raw, max_size=1600, quality=86)
         before_up = r2_put_bytes(
             before_webp,
             subdir=f"visualizer/{current_user.id}/before",
