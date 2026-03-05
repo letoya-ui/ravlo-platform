@@ -2188,6 +2188,7 @@ def deal_detail(deal_id):
     partners = Partner.query.filter_by(user_id=current_user.id).order_by(Partner.created_at.desc()).all()
 
     return render_template("investor/deal_detail.html", deal=deal, mockups=mockups, partners=partners)
+    
 @investor_bp.route("/deals/<int:deal_id>/dealbook", methods=["GET"])
 @login_required
 @role_required("investor")
@@ -2354,6 +2355,7 @@ def deal_rehab(deal_id):
         "investor/deal_rehab.html",
         deal=deal,
         mockups=mockups,
+        before_url=before_url,
         featured=featured
     )
 
