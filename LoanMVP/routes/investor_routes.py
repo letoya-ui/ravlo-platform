@@ -2835,6 +2835,90 @@ def save_renovation_mockups(deal_id):
     db.session.commit()
     return jsonify({"status": "ok", "saved": saved})
 
+@investor_bp.route("/blueprint_to_room", methods=["POST"])
+@csrf.exempt
+@login_required
+@role_required("investor")
+def blueprint_to_room():
+    blueprint_file = request.files.get("blueprint_file")
+    blueprint_url = (request.form.get("blueprint_url") or "").strip()
+    style_preset = (request.form.get("style_preset") or "").strip()
+    renovation_level = (request.form.get("renovation_level") or "medium").lower()
+    deal_id = request.form.get("deal_id")
+    saved_property_id = request.form.get("saved_property_id")
+
+    if not blueprint_file and not blueprint_url:
+        return jsonify({"status": "error", "message": "Provide blueprint_file or blueprint_url."}), 400
+
+    # Upload blueprint to R2
+    try:
+        raw = blueprint_file.read() if blueprint_file else _download_image_bytes(blueprint_url)
+        if not raw:
+            return jsonify({"status": "error", "message": "Empty blueprint input."}), 400
+
+        blueprint_webp = _to_webp_bytes(raw, max_size=2000, quality=90)
+        up = r2_put_bytes(
+            blueprint_webp,
+            subdir=f"blueprints/{current_user.id}",
+            content_type="image/webp",
+            filename=f"{uuid.uuid4().hex}_blueprint.webp",
+        )
+        blueprint_url = up["url"]
+    except Exception as e:
+        return jsonify({"status": "error", "message": f"Blueprint upload failed: {e}"}), 500
+
+    # Extract structure (walls, doors, windows, fixtures, depth, mask)
+    try:
+        structure = extract_blueprint_structure(blueprint_url)
+    except Exception as e:
+        return jsonify({"status": "error", "message": f"Blueprint parsing failed: {e}"}), 500
+
+    # Infer room type
+    room_type = infer_room_type(structure)
+
+    # Generate photorealistic room
+    try:
+        engine_res = requests.post(
+            "http://0.0.0.0:8000/renovate_sdxl",
+            json={
+                "image_url": blueprint_url,
+                "style_prompt": build_blueprint_prompt(room_type, style_preset, renovation_level),
+                "style_preset": style_preset,
+                "variations": 2,
+                "mode": "blueprint"
+            },
+            timeout=600
+        )
+        engine_json = engine_res.json()
+        after_urls = engine_json.get("images", [])
+    except Exception as e:
+        return jsonify({"status": "error", "message": f"Renovation engine failed: {e}"}), 500
+
+    # Save to deal
+    if deal_id and after_urls:
+        try:
+            for url in after_urls:
+                db.session.add(RenovationMockup(
+                    user_id=current_user.id,
+                    deal_id=deal_id,
+                    saved_property_id=saved_property_id,
+                    before_url=blueprint_url,
+                    after_url=url,
+                    style_preset=style_preset,
+                    style_prompt=f"Blueprint → {room_type} ({renovation_level})",
+                    mode="blueprint"
+                ))
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+
+    return jsonify({
+        "status": "ok",
+        "blueprint_url": blueprint_url,
+        "room_type": room_type,
+        "structure": structure,
+        "after": after_urls
+    })
 
 @investor_bp.route("/deals/send-to-team", methods=["POST"])
 @investor_bp.route("/deals/send-to-lo", methods=["POST"])
