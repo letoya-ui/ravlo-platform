@@ -230,28 +230,30 @@
     <div class="card">
       <h3>No mockups yet</h3>
       <p class="muted">Go to Rehab Studio to generate designs, then come back here to reveal.</p>
-      {% if deal %}
-        <a class="btn" href="{{ url_for('investor.deal_rehab_studio', deal_id=deal.id) }}">🎬 Open Rehab Studio</a>
-      {% endif %}
+      <a class="btn" href="{{ url_for('investor.deal_rehab_studio', deal_id=deal.id) }}">🎬 Open Rehab Studio</a>
     </div>
+
   {% else %}
+
+    {# ------------------------------
+       FEATURED + LEAD SELECTION LOGIC
+       ------------------------------ #}
 
     {% set featured = (deal.resolved_json or {}).get('rehab', {}).get('featured', {}) %}
     {% set featured_after = featured.get('after_url') %}
-    {% set lead = mockups[0] %}
 
     {% if featured_after %}
-      {% for mm in mockups %}
-        {% if (mm.after_url or '') == featured_after %}
-          {% set lead = mm %}
-        {% endif %}
-      {% endfor %}
+      {% set lead = mockups | selectattr("after_url", "equalto", featured_after) | first %}
+    {% else %}
+      {% set lead = mockups[0] %}
     {% endif %}
 
-    {% set lead = featured if featured else mockups[0] %}
     {% set hero_bg = lead.after_url or lead.before_url or '' %}
 
-    <!-- HERO (episode cover) -->
+    {# ------------------------------
+       HERO SECTION
+       ------------------------------ #}
+
     <div class="hgtv-hero">
       <div class="hgtv-hero-bg" style="background-image:url('{{ hero_bg }}');"></div>
 
@@ -259,12 +261,20 @@
         <div>
           <div class="episode-tag">📺 REVEAL EPISODE • DEAL #{{ deal.id }}</div>
           <h2 class="hero-title">{{ deal.title or ('Deal #' ~ deal.id) }}</h2>
-          <div class="hero-sub">Strategy: <b>{{ deal.strategy or '—' }}</b> • {{ mockups|length }} concept{% if mockups|length != 1 %}s{% endif %}</div>
+          <div class="hero-sub">
+            Strategy: <b>{{ deal.strategy or '—' }}</b> • {{ mockups|length }} concept{% if mockups|length != 1 %}s{% endif %}
+          </div>
 
           <div class="chip-row">
-            {% if lead.style_preset %}<span class="chip">Style: {{ lead.style_preset }}</span>{% endif %}
-            {% if lead.style_prompt %}<span class="chip">Prompt: {{ lead.style_prompt[:60] }}{% if lead.style_prompt|length > 60 %}…{% endif %}</span>{% endif %}
-            {% if featured %}<span class="chip">Featured: ON</span>{% endif %}
+            {% if lead.style_preset %}
+              <span class="chip">Style: {{ lead.style_preset }}</span>
+            {% endif %}
+            {% if lead.style_prompt %}
+              <span class="chip">Prompt: {{ lead.style_prompt[:60] }}{% if lead.style_prompt|length > 60 %}…{% endif %}</span>
+            {% endif %}
+            {% if featured_after %}
+              <span class="chip">⭐ Featured</span>
+            {% endif %}
           </div>
         </div>
 
@@ -275,29 +285,38 @@
       </div>
     </div>
 
-    <!-- Optional stats strip -->
-    <div class="stats">
-      <div class="stat">
-        <div class="k">Projected Profit</div>
-        <div class="v" id="statProfit">—</div>
+    {# ------------------------------
+       DEAL STATS STRIP
+       ------------------------------ #}
+
+    {% if deal.results_json %}
+      <div class="stats">
+        <div class="stat">
+          <div class="k">Projected Profit</div>
+          <div class="v" id="statProfit">—</div>
+        </div>
+        <div class="stat">
+          <div class="k">ARV</div>
+          <div class="v" id="statARV">—</div>
+        </div>
+        <div class="stat">
+          <div class="k">Rehab Budget</div>
+          <div class="v" id="statRehab">—</div>
+        </div>
+        <div class="stat">
+          <div class="k">ROI</div>
+          <div class="v" id="statROI">—</div>
+        </div>
       </div>
-      <div class="stat">
-        <div class="k">ARV</div>
-        <div class="v" id="statARV">—</div>
-      </div>
-      <div class="stat">
-        <div class="k">Rehab Budget</div>
-        <div class="v" id="statRehab">—</div>
-      </div>
-      <div class="stat">
-        <div class="k">ROI</div>
-        <div class="v" id="statROI">—</div>
-      </div>
-    </div>
+    {% endif %}
+
+    {# ------------------------------
+       MAIN GRID
+       ------------------------------ #}
 
     <div class="grid">
 
-      <!-- BEFORE/AFTER SLIDER -->
+      {# BEFORE/AFTER SLIDER #}
       <div class="card">
         <h3>Before → After (HGTV Slider)</h3>
 
@@ -315,15 +334,17 @@
 
             <div class="handle" id="baHandle"></div>
             <div class="knob">↔</div>
-            <input id="baRange" type="range" min="0" max="100" value="50" aria-label="Before after slider">
+            <input id="baRange" type="range" min="0" max="100" value="50">
           </div>
+
           <p class="muted" style="margin-top:.75rem;">Drag left/right for the HGTV reveal moment.</p>
+
         {% else %}
           <p class="muted">Missing before/after for the lead concept. Generate in Rehab Studio and save to the deal.</p>
         {% endif %}
       </div>
 
-      <!-- AFTER VARIATIONS -->
+      {# VARIATIONS GRID #}
       <div class="card">
         <h3>Room Reveals (Concept Variations)</h3>
 
@@ -332,40 +353,35 @@
             <div class="thumb">
               <img class="img" src="{{ m.after_url }}" alt="After mockup"
                    onclick="openLightbox('{{ m.after_url }}','After')" style="cursor:zoom-in;">
+
               <div class="thumb-meta">
                 <span class="chip">{{ m.style_preset or 'Concept' }}</span>
-                {% if is_featured %}<span class="chip">⭐ Featured</span>{% endif %}
-                <small>{{ m.created_at.strftime("%b %d, %Y %I:%M %p") if m.created_at else '' }}</small>
+                {% if featured_after == m.after_url %}
+                  <span class="chip">⭐ Featured</span>
+                {% endif %}
+                <small>{{ m.created_at.strftime("%b %d, %Y %I:%M %p") }}</small>
               </div>
 
-              
+              <button type="button" class="btn pick"
+                onclick="featureReveal(
+                  {{ deal.id }},
+                  '{{ m.after_url }}',
+                  '{{ m.before_url }}',
+                  '{{ (m.style_preset or '')|e }}',
+                  '{{ (m.style_prompt or '')|e }}'
+                )">
+                {% if featured_after == m.after_url %}
+                  ⭐ Featured Reveal
+                {% else %}
+                  ✅ Feature This Reveal
+                {% endif %}
+              </button>
             </div>
           {% endfor %}
         </div>
 
-        <div id="selectedWrap" style="display:none;">
-          <h3 style="margin:.25rem 0 .75rem;">Featured Reveal</h3>
-          <img id="selectedImg" class="img" src="" alt="Selected design">
-          <div style="margin-top:.75rem; display:flex; gap:.5rem; flex-wrap:wrap;">
-            <a id="openSelected" class="btn btn-secondary" href="#" target="_blank" rel="noopener">🔗 Open Full Size</a>
-            <button type="button" class="btn" onclick="copySelected()">📋 Copy Image Link</button>
-          </div>
-          <div class="muted" style="margin-top:.65rem;">
-            This is saved internally to the deal (no public link).
-          </div>
-        </div>
-        <button type="button" class="btn pick"
-          onclick="featureReveal(
-           {{ deal.id }},
-           '{{ m.after_url }}',
-           '{{ m.before_url }}',
-           '{{ (m.style_preset or '')|e }}',
-           '{{ (m.style_prompt or '')|e }}'
-         )">
-         ✅ Feature This Reveal
-       </button>
         <p class="muted" style="margin-top:1rem;">
-          Want more styles? Generate more concepts in Rehab Studio (Modern, Luxury, Airbnb, Flip, Budget).
+          Want more styles? Generate more concepts in Rehab Studio.
         </p>
       </div>
 
@@ -375,7 +391,10 @@
 
 </div>
 
-<!-- Lightbox -->
+{# ------------------------------
+   LIGHTBOX
+   ------------------------------ #}
+
 <div id="lightbox" class="overlay" onclick="closeLightbox(event)">
   <div class="overlay-inner">
     <div class="overlay-top">
@@ -386,47 +405,28 @@
   </div>
 </div>
 
+{# ------------------------------
+   JS LOGIC
+   ------------------------------ #}
+
 <script>
-  // Lightbox
   function openLightbox(url, title){
-    const lb = document.getElementById("lightbox");
     document.getElementById("lbImg").src = url;
     document.getElementById("lbTitle").innerText = title || "Preview";
-    lb.style.display = "flex";
+    document.getElementById("lightbox").style.display = "flex";
   }
   function hideLightbox(){
-    const lb = document.getElementById("lightbox");
-    lb.style.display = "none";
+    document.getElementById("lightbox").style.display = "none";
     document.getElementById("lbImg").src = "";
   }
   function closeLightbox(e){
-    if (e.target && e.target.id === "lightbox") hideLightbox();
+    if (e.target.id === "lightbox") hideLightbox();
   }
 
-  // Show featured selection UI after saving
-  function showSelected(url){
-    const wrap = document.getElementById("selectedWrap");
-    const img = document.getElementById("selectedImg");
-    const open = document.getElementById("openSelected");
-    img.src = url;
-    open.href = url;
-    wrap.style.display = "block";
-    wrap.scrollIntoView({behavior:"smooth", block:"start"});
-    window._selectedDesignUrl = url;
-  }
-
-  async function copySelected(){
-    const url = window._selectedDesignUrl || "";
-    if (!url) return alert("Select a reveal first.");
-    try{ await navigator.clipboard.writeText(url); alert("Copied image link!"); }
-    catch(e){ alert("Could not copy automatically. Open full size and copy the URL."); }
-  }
-
-  // Save featured reveal (internal-only)
   async function featureReveal(dealId, afterUrl, beforeUrl, stylePreset, stylePrompt){
     try{
       const fd = new FormData();
-      fd.append("after_url", afterUrl || "");
+      fd.append("after_url", afterUrl);
       fd.append("before_url", beforeUrl || "");
       fd.append("style_preset", stylePreset || "");
       fd.append("style_prompt", stylePrompt || "");
@@ -438,16 +438,14 @@
       });
 
       const data = await res.json();
-      if(!data || data.status !== "ok") throw new Error(data?.message || "Could not feature reveal.");
+      if(data.status !== "ok") throw new Error(data.message || "Could not feature reveal.");
 
-      // simplest: reload so hero + slider update immediately
       window.location.reload();
     }catch(e){
-      alert(e.message || "Failed to feature reveal.");
+      alert(e.message);
     }
   }
 
-  // Before/After slider
   (function(){
     const r = document.getElementById("baRange");
     const after = document.getElementById("baAfter");
@@ -463,7 +461,6 @@
     set(r.value);
   })();
 
-  // Stats (best-effort from deal.results_json)
   (function(){
     try{
       const results = {{ (deal.results_json or {})|tojson }};
@@ -472,18 +469,17 @@
       const rehab = results.rehab_budget || results.renovation_budget || results.total_rehab;
       const roi = results.roi || results.projected_roi;
 
-      const set = (id, val, isMoney=false, isPct=false) => {
+      const set = (id, val, money=false, pct=false) => {
         const el = document.getElementById(id);
-        if(!el) return;
-        if(val===null||val===undefined||val==="") return;
-        if(typeof val === "number" && isMoney) el.textContent = "$" + val.toLocaleString();
-        else if(typeof val === "number" && isPct) el.textContent = val.toFixed(1) + "%";
-        else el.textContent = String(val);
+        if(!el || val==null) return;
+        if(money) el.textContent = "$" + val.toLocaleString();
+        else if(pct) el.textContent = val.toFixed(1) + "%";
+        else el.textContent = val;
       };
 
-      set("statProfit", profit, true, false);
-      set("statARV", arv, true, false);
-      set("statRehab", rehab, true, false);
+      set("statProfit", profit, true);
+      set("statARV", arv, true);
+      set("statRehab", rehab, true);
       set("statROI", roi, false, true);
     }catch(e){}
   })();
