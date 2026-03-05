@@ -168,6 +168,12 @@ def create_app():
         tb = traceback.format_exc()
         return Response(f"<pre>{tb}</pre>", mimetype="text/plain"), 500
 
+    @app.get("/robots.txt")
+    def robots_txt():
+        # Keep it simple: disallow indexing (you can change later)
+        return Response("User-agent: *\nDisallow: /\n", mimetype="text/plain")
+
+
     @app.route("/favicon.ico")
     def favicon():
         return send_from_directory(
