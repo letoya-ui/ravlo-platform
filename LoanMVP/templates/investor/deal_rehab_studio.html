@@ -187,9 +187,14 @@
         <div style="display:flex; align-items:end; gap:.5rem;">
           <button class="btn" type="button" onclick="generate()">✨ Generate</button>
           <button class="btn btn-secondary" type="button" onclick="useLastBefore()">↩ Use Last Before</button>
+          <button class="btn" onclick="generateScope()">
+          🧠 Generate Rehab Plan
+          </button>
         </div>
       </div>
-
+      <div id="scopeResults" class="card" style="margin-top:1rem;">
+      AI rehab plan will appear here.
+     </div>
       <div id="status" class="muted" style="margin-top:.75rem;"></div>
 
       <hr style="border:none; border-top:1px solid rgba(255,255,255,.10); margin: 1rem 0;">
@@ -239,7 +244,7 @@
               </div>
               <button class="btn pick" type="button" onclick="selectAfter('{{ m.after_url }}','{{ m.before_url }}')">👀 Preview</button>
             </div>
-          {% endfor %}
+      {% endfor %}
         </div>
       {% else %}
         <div class="muted">No saved concepts yet. Generate a set to start your reveal story.</div>
@@ -427,6 +432,41 @@
       showPreview(CURRENT_BEFORE, "");
     }
   })();
-</script>
 
+async function generateScope() {
+
+    if(!CURRENT_BEFORE){
+        alert("Upload a room photo first.");
+        return;
+    }
+
+    const res = await fetch("/investor/ai/rehab_scope",{
+        method:"POST",
+        headers:{ "Content-Type":"application/json"},
+        body: JSON.stringify({
+            image_url: CURRENT_BEFORE
+        })
+    });
+
+    const data = await res.json();
+
+    if(!data.ok){
+        alert("Scope generation failed.");
+        return;
+    }
+
+    let html = "<h3>AI Rehab Plan</h3><ul>";
+
+    data.scope.forEach(s=>{
+        html += `<li>${s}</li>`;
+    });
+
+    html += "</ul>";
+
+    html += `<p><b>Estimated Rehab:</b> $${data.estimated_cost.toLocaleString()}</p>`;
+    html += `<p><b>ARV Increase:</b> $${data.arv_increase.toLocaleString()}</p>`;
+
+    document.getElementById("scopeResults").innerHTML = html;
+}
+</script>
 {% endblock %}
