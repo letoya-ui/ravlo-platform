@@ -6,6 +6,7 @@ import base64
 import requests
 from datetime import datetime
 from io import BytesIO
+from openai import OpenAI
 
 from PIL import Image
 from werkzeug.utils import secure_filename
@@ -100,6 +101,7 @@ from LoanMVP.utils.r2_storage import r2_put_bytes
 # ---------------------------------------------------------
 investor_bp = Blueprint("investor", __name__, url_prefix="/investor")
 
+client = OpenAI()
 
 # =========================================================
 # 🔢 SAFE NUMERIC HELPERS
@@ -243,8 +245,48 @@ def generate_renovation_images(before_url: str, prompt: str, n: int = 2) -> list
     Return a list of AFTER image URLs.
     Wire your AI image generator here (OpenAI / Replicate / internal service).
     """
-    # TODO: implement generator
-    return []
+    if not before_url or not prompt: 
+        return []
+    # 1. Download BEFORE image
+    try:
+        before_bytes = download_image_bytes(before_url)
+    except Exception as e:
+        print("Failed to download before image:", e)
+        return []
+    # 2. Convert to PNG (OpenAI prefers PNG input)
+    before_png = to_png_bytes(before_bytes, max_size=1400)
+    before_b64 = base64.b64encode(before_png).decode("utf-8")
+    # 3. Call OpenAI image-to-image
+    try:
+        response = client.images.generate(
+            model="gpt-image-1",
+            prompt=prompt,
+            image=before_b64,
+            size="2048x2048",
+            n=n
+        )
+    except Exception as e:
+        print("OpenAI image generation failed:", e)
+        return []
+    after_urls = []
+    # 4. Upload each AFTER image to R2
+    for item in response.data:
+        try:
+            img_bytes = base64.b64decode(item.b64_json)
+            # Convert to webp for storage (your standard)
+            img_webp = to_webp_bytes(img_bytes, max_size=1600, quality=86)
+            up = r2_put_bytes(
+                img_webp,
+                subdir=f"visualizer/{uuid.uuid4().hex}/after",
+                content_type="image/webp",
+                filename=f"{uuid.uuid4().hex}_after.webp",
+            )
+            after_urls.append(up["url"])
+        except Exception as e:
+            print("Failed to upload after image:", e)
+            continue
+        
+    return after_urls
 # =========================================================
 # 👤 PROFILE FILTER (INVESTOR SAFE)
 # =========================================================
