@@ -1878,7 +1878,7 @@ def api_property_tool_save():
     except Exception:
         sqft = None
 
-    fk = _profile_id_filter(SavedProperty, ip.id)
+    fk = profile_id_filter(SavedProperty, ip.id)
 
     existing = None
     if property_id:
@@ -3047,6 +3047,26 @@ def blueprint_to_room():
         "structure": structure,
         "after": after_urls
     })
+
+@investor_bp.route("/ai/rehab_scope", methods=["POST"])
+@login_required
+@role_required("investor")
+def ai_rehab_scope():
+
+    image_url = request.json.get("image_url")
+
+    engine_url = os.getenv("RENOVATION_ENGINE_URL").replace(
+        "/v1/renovate",
+        "/v1/rehab_scope"
+    )
+
+    res = requests.post(
+        engine_url,
+        json={"image_url": image_url, "strategy": "flip"},
+        timeout=60
+    )
+
+    return jsonify(res.json())
 
 @investor_bp.route("/deals/send-to-team", methods=["POST"])
 @investor_bp.route("/deals/send-to-lo", methods=["POST"])
