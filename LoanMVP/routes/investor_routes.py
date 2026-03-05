@@ -2279,7 +2279,7 @@ def deal_share_design(deal_id):
     deal = Deal.query.filter_by(id=deal_id, user_id=current_user.id).first_or_404()
 
     image_url = (request.form.get("image_url") or "").strip() or (getattr(deal, "final_after_url", "") or "")
-    partner_ids = _split_ids(request.form.get("partner_ids") or "")
+    partner_ids = split_ids(request.form.get("partner_ids") or "")
     note = (request.form.get("note") or "").strip()
 
     if not image_url:
@@ -2694,7 +2694,7 @@ def renovation_visualizer():
             property_id = deal.property_id
 
     try:
-        raw = image_file.read() if image_file else _download_image_bytes(image_url)
+        raw = image_file.read() if image_file else download_image_bytes(image_url)
         if not raw:
             return jsonify({"status": "error", "message": "Empty image input."}), 400
 
