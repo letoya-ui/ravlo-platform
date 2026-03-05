@@ -1878,7 +1878,7 @@ def api_property_tool_save():
     except Exception:
         sqft = None
 
-    fk = profile_id_filter(SavedProperty, ip.id)
+    fk = _profile_id_filter(SavedProperty, ip.id)
 
     existing = None
     if property_id:
