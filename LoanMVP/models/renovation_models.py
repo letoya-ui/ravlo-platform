@@ -20,3 +20,23 @@ class RenovationMockup(db.Model):
     style_preset = db.Column(db.String(40), nullable=True)
 
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+class RehabJob(db.Model):
+    __tablename__ = "rehab_jobs"
+
+    id = db.Column(db.Integer, primary_key=True)
+    deal_id = db.Column(db.Integer, nullable=False)
+    user_id = db.Column(db.Integer, nullable=False)
+    plan_url = db.Column(db.Text, nullable=False)
+
+    status = db.Column(db.String(20), default="pending")  
+    # pending → processing → complete → failed
+
+    result_plan = db.Column(db.Text)
+    result_cost_low = db.Column(db.Integer)
+    result_cost_high = db.Column(db.Integer)
+    result_arv = db.Column(db.Integer)
+    result_images = db.Column(db.JSON)
+
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
