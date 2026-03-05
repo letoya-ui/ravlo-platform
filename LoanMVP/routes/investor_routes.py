@@ -97,7 +97,8 @@ from LoanMVP.services.ai_insights import generate_ai_insights
 from LoanMVP.services.unified_resolver import resolve_property_unified
 from LoanMVP.services.property_tool import search_deals_for_zip
 from LoanMVP.services.notification_service import notify_team_on_conversion
-from LoanMVP.services.blueprint_parser import parse_blueprint_structure
+from LoanMVP.services.blueprint_parser import extract_blueprint_structure, infer_room_type
+
 
 from LoanMVP.utils.r2_storage import r2_put_bytes
 
@@ -2878,7 +2879,7 @@ def blueprint_to_room():
 
     # Extract structure (walls, doors, windows, fixtures, depth, mask)
     try:
-        structure = parse_blueprint_structure(blueprint_url)
+        structure = extract_blueprint_structure(blueprint_url)
     except Exception as e:
         return jsonify({"status": "error", "message": f"Blueprint parsing failed: {e}"}), 500
 
