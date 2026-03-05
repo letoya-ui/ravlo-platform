@@ -32,6 +32,11 @@ pdfkit==1.0.0
 pdfrw==0.4
 
 openai==1.55.3
+
+# Critical scientific stack pins
+numpy==1.26.4
+opencv-python-headless==4.9.0.80
+
 httpx==0.27.0
 
 stripe==10.8.0
@@ -48,6 +53,3 @@ pydantic==2.7.4
 annotated-types==0.7.0
 
 waitress==3.0.0
-
-
-
