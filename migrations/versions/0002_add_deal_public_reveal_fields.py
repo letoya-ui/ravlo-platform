@@ -29,3 +29,24 @@ def downgrade():
     op.drop_column("deals", "reveal_published_at")
     op.drop_column("deals", "reveal_is_public")
     op.drop_column("deals", "reveal_public_id")
+
+def upgrade():
+    op.create_table(
+        'rehab_jobs',
+        sa.Column('id', sa.Integer(), primary_key=True),
+        sa.Column('deal_id', sa.Integer(), nullable=False),
+        sa.Column('user_id', sa.Integer(), nullable=False),
+        sa.Column('plan_url', sa.Text(), nullable=False),
+        sa.Column('status', sa.String(length=20), nullable=False, server_default='pending'),
+        sa.Column('result_plan', sa.Text(), nullable=True),
+        sa.Column('result_cost_low', sa.Integer(), nullable=True),
+        sa.Column('result_cost_high', sa.Integer(), nullable=True),
+        sa.Column('result_arv', sa.Integer(), nullable=True),
+        sa.Column('result_images', sa.JSON(), nullable=True),
+        sa.Column('created_at', sa.DateTime(), server_default=sa.func.now()),
+        sa.Column('updated_at', sa.DateTime(), server_default=sa.func.now(), onupdate=sa.func.now()),
+    )
+
+
+def downgrade():
+    op.drop_table('rehab_jobs')
