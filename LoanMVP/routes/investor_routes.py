@@ -2726,7 +2726,7 @@ def renovation_visualizer():
         # 🔥 CALL YOUR GPU RENOVATION ENGINE
         # ----------------------------
         engine_res = requests.post(
-            "http://0.0.0.0:8000/renovate_sdxl",
+            "http://localhost:8000/renovate_sdxl",
             json={
                 "image_url": before_url,
                 "style_prompt": final_prompt,
