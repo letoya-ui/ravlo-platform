@@ -4,7 +4,6 @@ import json
 import uuid
 import base64
 import requests
-from jiter import Jiter
 from datetime import datetime
 from io import BytesIO
 from openai import OpenAI
@@ -2724,24 +2723,51 @@ def renovation_visualizer():
                 db.session.rollback()
 
         # ----------------------------
-        # 🔥 CALL YOUR GPU RENOVATION ENGINE
+        # 🔥 CALL YOUR GPU RENOVATION ENGINE (NEW: /v1/renovate) 
         # ----------------------------
+        mode = (request.form.get("mode") or "photo").strip()  # "photo" or "blueprint"
+
+        # Engine preset should be one of your server presets
+        engine_preset = "luxury_modern"
+        if style_preset == "modern":
+            engine_preset = "clean_minimal"
+        elif style_preset == "luxury":
+            engine_preset = "luxury_modern"
+        elif style_preset in ("airbnb", "flip", "budget"):
+            engine_preset = "modern_farmhouse"
+
+        # Send either image_url OR base64. Since you already uploaded to R2, use image_url.
+        payload = {
+            "image_url": before_url,
+            "mode": mode,
+            "preset": engine_preset,
+            "prompt": final_prompt,
+            "count": variations,
+            "steps": 33 if mode == "photo" else 38,
+            "strength": 0.38 if mode == "photo" else 0.48,
+            "controlnet_scale": 0.78 if mode == "photo" else 0.93,
+            "guidance": 6.5,
+            "width": 1024,
+            "height": 1024,
+        }
+
         engine_res = requests.post(
-            "http://localhost:8000/renovate_sdxl",
-            json={
-                "image_url": before_url,
-                "style_prompt": final_prompt,
-                "style_preset": style_preset,
-                "variations": variations
-            },
-            timeout=600
+            "http://localhost:8000/v1/renovate",
+            json=payload,
+            timeout=900
         )
+        engine_res.raise_for_status()
         engine_json = engine_res.json()
 
-        after_urls = engine_json.get("images", [])
-        if not isinstance(after_urls, list):
-            after_urls = []
-        after_urls = [u for u in after_urls if isinstance(u, str) and u.startswith("http")]
+        images_b64 = engine_json.get("images_base64", []) or []
+        if not isinstance(images_b64, list):
+            images_b64 = []
+
+        after_urls = []
+        for b64_img in images_b64:
+            url = _upload_after_from_b64(b64_img)
+            if url:
+                after_urls.append(url)
 
         # ----------------------------
         # Save mockups to DB
@@ -2759,7 +2785,7 @@ def renovation_visualizer():
                     property_id=property_id,
                     before_url=before_url,
                     after_url=after_url,
-                    style_prompt=style_prompt,
+                    style_prompt=final_prompt,
                     style_preset=style_preset
                 ))
             db.session.commit()
@@ -2854,15 +2880,17 @@ def save_renovation_mockups(deal_id):
 def blueprint_to_room():
     blueprint_file = request.files.get("blueprint_file")
     blueprint_url = (request.form.get("blueprint_url") or "").strip()
-    style_preset = (request.form.get("style_preset") or "").strip()
+    
+    style_preset = (request.form.get("style_preset") or "luxury_modern").strip()
     renovation_level = (request.form.get("renovation_level") or "medium").lower()
+
     deal_id = request.form.get("deal_id")
     saved_property_id = request.form.get("saved_property_id")
 
     if not blueprint_file and not blueprint_url:
         return jsonify({"status": "error", "message": "Provide blueprint_file or blueprint_url."}), 400
 
-    # Upload blueprint to R2
+    # 1) Upload blueprint to R2
     try:
         raw = blueprint_file.read() if blueprint_file else download_image_bytes(blueprint_url)
         if not raw:
@@ -2879,34 +2907,67 @@ def blueprint_to_room():
     except Exception as e:
         return jsonify({"status": "error", "message": f"Blueprint upload failed: {e}"}), 500
 
-    # Extract structure (walls, doors, windows, fixtures, depth, mask)
+    # 2) Optional: Extract structure + infer room type (keep your current logic)
+    structure = None
+    room_type = "room"
     try:
         structure = extract_blueprint_structure(blueprint_url)
+        room_type = infer_room_type(structure) or "room"
+        ENGINE_PRESETS = {"luxury_modern","modern_farmhouse","clean_minimal"}
+        engine_preset = style_preset if style_preset in ENGINE_PRESETS else "luxury_modern"
     except Exception as e:
-        return jsonify({"status": "error", "message": f"Blueprint parsing failed: {e}"}), 500
+        # You can decide if blueprint parsing is REQUIRED or OPTIONAL.
+        # For now: optional (still generate even if parsing fails).
+        print("Blueprint parsing warning:", e)
 
-    # Infer room type
-    room_type = infer_room_type(structure)
+    # 3) Build prompt for the engine
+    # Make sure build_blueprint_prompt returns a strong SDXL-friendly description.
+    style_prompt = build_blueprint_prompt(room_type, style_preset, renovation_level)
 
-    # Generate photorealistic room
+    # 4) Call GPU engine: we can use image_url since your blueprint is hosted (R2)
+    # Engine returns base64 PNGs -> we upload them to R2 as webp for your app.
     try:
+        payload = {
+            "image_url": blueprint_url,
+            "preset": style_preset if style_preset in ("luxury_modern", "modern_farmhouse", "clean_minimal") else "luxury_modern",
+            "prompt": style_prompt,
+            "count": 2,
+            "steps": 35,
+            "strength": 0.40,           # blueprint -> render usually needs a bit more change
+            "controlnet_scale": 0.85,   # keep layout locked
+            "guidance": 6.5,
+            "width": 1024,
+            "height": 1024,
+        }
+
         engine_res = requests.post(
-            "http://0.0.0.0:8000/renovate_sdxl",
-            json={
-                "image_url": blueprint_url,
-                "style_prompt": build_blueprint_prompt(room_type, style_preset, renovation_level),
-                "style_preset": style_preset,
-                "variations": 2,
-                "mode": "blueprint"
-            },
-            timeout=600
+            f"{GPU_BASE_URL}/v1/renovate",
+            json=payload,
+            timeout=900
         )
+        engine_res.raise_for_status()
         engine_json = engine_res.json()
-        after_urls = engine_json.get("images", [])
+        images_b64 = engine_json.get("images_base64", []) or []
     except Exception as e:
         return jsonify({"status": "error", "message": f"Renovation engine failed: {e}"}), 500
 
-    # Save to deal
+    # 5) Upload AFTER images to R2
+    after_urls: list[str] = []
+    for b64 in images_b64:
+        try:
+            img_bytes = base64.b64decode(b64)
+            img_webp = to_webp_bytes(img_bytes, max_size=1600, quality=86)
+            up = r2_put_bytes(
+                img_webp,
+                subdir=f"visualizer/{uuid.uuid4().hex}/after",
+                content_type="image/webp",
+                filename=f"{uuid.uuid4().hex}_after.webp",
+            )
+            after_urls.append(up["url"])
+        except Exception as e:
+            print("Upload after failed:", e)
+
+    # 6) Save to deal (if provided)
     if deal_id and after_urls:
         try:
             for url in after_urls:
@@ -2921,8 +2982,9 @@ def blueprint_to_room():
                     mode="blueprint"
                 ))
             db.session.commit()
-        except Exception:
+        except Exception as e:
             db.session.rollback()
+            print("DB save failed:", e)
 
     return jsonify({
         "status": "ok",
