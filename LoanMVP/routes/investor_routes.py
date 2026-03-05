@@ -2213,8 +2213,7 @@ def deal_book(deal_id):
         user_id=current_user.id
     ).order_by(RenovationMockup.created_at.desc()).all()
 
-    dealbook_ready = bool(results or comps or rehab)
-
+   
     return render_template(
         "investor/deal_book.html",
         deal=deal,
