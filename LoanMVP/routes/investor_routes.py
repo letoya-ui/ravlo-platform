@@ -2205,6 +2205,15 @@ def deal_book(deal_id):
     # Optional convenience pulls
     prop = (resolved.get("property") or {})
     address = prop.get("address") or deal.title or f"Deal #{deal.id}"
+    
+    saved_property_id=deal.saved_property_id
+   
+    mockups = RenovationMockup.query.filter_by(
+        deal_id=deal_id,
+        user_id=current_user.id
+    ).order_by(RenovationMockup.created_at.desc()).all()
+
+    dealbook_ready = bool(results or comps or rehab)
 
     return render_template(
         "investor/deal_book.html",
@@ -2213,6 +2222,7 @@ def deal_book(deal_id):
         comps=comps,
         resolved=resolved,
         rehab=rehab,
+        mockups=mockups,
         featured=featured,
         address=address,
     )
