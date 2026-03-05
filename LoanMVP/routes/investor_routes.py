@@ -4,6 +4,7 @@ import json
 import uuid
 import base64
 import requests
+from jiter.jiter import Jiter
 from datetime import datetime
 from io import BytesIO
 from openai import OpenAI
