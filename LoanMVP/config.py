@@ -44,8 +44,9 @@ class Config:
     SESSION_REFRESH_EACH_REQUEST = True
  
     # DATABASE
-    SQLALCHEMY_DATABASE_URI = os.getenv("DATABASE_URL")
+    SQLALCHEMY_DATABASE_URI = os.getenv("DATABASE_URL") or "sqlite:///local.db"
     SQLALCHEMY_TRACK_MODIFICATIONS = False
+
 
     # STRIPE
     STRIPE_SECRET_KEY = os.environ.get("STRIPE_SECRET_KEY", "")
