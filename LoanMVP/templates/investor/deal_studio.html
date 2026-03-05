@@ -173,7 +173,7 @@
            <h3>📸 Upload Before Photo</h3>
            <p class="muted">Upload a room photo to generate HGTV after concepts.</p>
 
-           <input id="uploadRoomPhoto" type="file" accept="image/*" class="dw-input">
+          <input id="uploadRoomPhotoMain" type="file" accept="image/*" class="dw-input">
 
            <div id="beforePreviewWrap" style="display:none; margin-top:.75rem;">
             <div class="muted" style="margin-bottom:.35rem;">Current Before</div>
@@ -300,12 +300,16 @@
     </div>
 
     <div style="display:flex; gap:.5rem; flex-wrap:wrap; margin-top:.8rem;">
-      <label class="btn ghost" style="cursor:pointer;">
+      <!-- ✅ Hidden input lives OUTSIDE the label -->
+      <input type="file" id="uploadRoomPhotoModal" accept="image/*" style="display:none;">
+
+       <!-- ✅ Label points to the input (guaranteed click → file picker) -->
+       <label for="uploadRoomPhotoModal" class="btn ghost" style="cursor:pointer;">
         📷 Upload Room Photo
-        <input type="file" id="uploadRoomPhoto" accept="image/*" style="display:none;">
       </label>
-      <button type="button" class="btn ghost" onclick="openRehabPreview()">👀 Preview Scope Copy</button>
-    </div>
+
+  <button type="button" class="btn ghost" onclick="openRehabPreview()">👀 Preview Scope Copy</button>
+</div>
 
     <div class="style-grid">
       <div>
