@@ -2812,32 +2812,46 @@ def renovation_visualizer():
 # =========================================================
 
 @investor_bp.route("/renovation_upload", methods=["POST"])
+@csrf.exempt
 @login_required
 @role_required("investor")
 def renovation_upload():
     file = request.files.get("photo")
-    deal_id = request.form.get("deal_id")
-    saved_property_id = request.form.get("saved_property_id")
+    deal_id_raw = (request.form.get("deal_id") or "").strip()
+    saved_property_id = (request.form.get("saved_property_id") or "").strip()
 
-    if not file or not deal_id:
-        return jsonify({"status": "error", "message": "Missing file or deal ID"}), 400
+    if not file or not deal_id_raw:
+        return jsonify({"status": "error", "message": "Missing photo or deal_id"}), 400
 
-    # Upload to R2 (your existing helper)
+    try:
+        deal_id = int(deal_id_raw)
+    except Exception:
+        return jsonify({"status": "error", "message": "Invalid deal_id"}), 400
+
+    # Upload BEFORE to R2
     try:
         before_url = upload_to_r2(file, folder=f"deals/{deal_id}/before")
     except Exception as e:
-        return jsonify({"status": "error", "message": str(e)}), 500
+        return jsonify({"status": "error", "message": f"Upload failed: {e}"}), 500
 
-    # Save to deal
+    # Save before_url into resolved_json (NO Deal column needed)
     deal = Deal.query.filter_by(id=deal_id, user_id=current_user.id).first()
     if deal:
-        deal.rehab_before_url = before_url
-        db.session.commit()
+        try:
+            payload = deal.resolved_json or {}
+            payload = payload if isinstance(payload, dict) else {}
+            payload.setdefault("rehab", {})
+            payload["rehab"]["before_url"] = before_url
+            if saved_property_id:
+                payload["rehab"]["saved_property_id"] = saved_property_id
+            deal.resolved_json = payload
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            # still return ok because the upload succeeded
+            print("Could not persist rehab before_url:", e)
 
-    return jsonify({
-        "status": "ok",
-        "url": before_url
-    })
+    return jsonify({"status": "ok", "url": before_url})
 
 @investor_bp.route("/deals/<int:deal_id>/mockups/save", methods=["POST"])
 @investor_bp.route("/deals/<int:deal_id>/mockups/save_legacy", methods=["POST"])
