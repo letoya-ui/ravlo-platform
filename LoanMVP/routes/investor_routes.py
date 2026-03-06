@@ -1998,7 +1998,7 @@ def api_property_tool_save_and_analyze():
 # =========================================================
 # 💼 INVESTOR • DEAL STUDIO (workspace + deals + visualizer + exports)
 # =========================================================
-i 
+
 @investor_bp.route("/deals/workspace", methods=["GET", "POST"])
 @investor_bp.route("/deal_workspace", methods=["GET", "POST"])
 @login_required
