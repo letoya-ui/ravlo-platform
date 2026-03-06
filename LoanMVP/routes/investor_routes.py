@@ -3385,7 +3385,7 @@ def export_rehab_scope(deal_id):
 @login_required
 @role_required("investor")
 def new_concept_deal():
-    return render_template("investor/deal_builder_concept.html")
+    return render_template("investor/build_studio.html")
 
 
 @investor_bp.route("/deal-studio/build-studio/generate", methods=["POST"])
@@ -3456,7 +3456,7 @@ def generate_build_studio():
             "message": str(e)
         }), 500
 
-@investor_bp.route("/investor/deals/new/concept/save", methods=["POST"])
+@investor_bp.route("/deals/new/concept/save", methods=["POST"])
 @csrf.exempt
 @login_required
 @role_required("investor")
@@ -3464,6 +3464,7 @@ def save_build_studio():
     data = request.json
 
     deal = Deal(
+        user_id=current_user.id,
         address=data.get("address"),
         concept_image=data.get("concept_image"),
         blueprint_image=data.get("blueprint_image"),
