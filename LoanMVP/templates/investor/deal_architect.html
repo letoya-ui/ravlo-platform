@@ -1,0 +1,256 @@
+{% extends "layouts/ravlo_base.html" %}
+{% block title %}Ravlo • AI Deal Architect{% endblock %}
+
+{% block page_title %}AI Deal Architect{% endblock %}
+{% block page_subline %}Compare the smartest strategy for a property, lot, or investment concept.{% endblock %}
+
+{% block content %}
+<div class="ravlo-shell">
+
+  <section class="ravlo-hero-card">
+    <div>
+      <div class="eyebrow">DEAL INTELLIGENCE</div>
+      <h2>Let Ravlo architect the best play</h2>
+      <p class="muted">
+        Enter the basics of a property or lot and Ravlo will compare strategy options, projected upside, and the best next workspace.
+      </p>
+    </div>
+  </section>
+
+  <div class="architect-grid">
+
+    <section class="ravlo-card">
+      <div class="card-head">
+        <h3>Opportunity Inputs</h3>
+        <p class="muted">Tell Ravlo what you’re looking at.</p>
+      </div>
+
+      <div class="form-group">
+        <label>Property Address</label>
+        <input id="daPropertyAddress" class="ravlo-input" type="text" placeholder="123 Main St, Tampa, FL">
+      </div>
+
+      <div class="form-row-2">
+        <div class="form-group">
+          <label>ZIP Code</label>
+          <input id="daZip" class="ravlo-input" type="text" placeholder="33602">
+        </div>
+        <div class="form-group">
+          <label>Property Type</label>
+          <select id="daPropertyType" class="ravlo-input">
+            <option value="">Select type</option>
+            <option value="single family">Single Family</option>
+            <option value="multifamily">Multifamily</option>
+            <option value="fixer upper">Fixer Upper</option>
+            <option value="land">Land</option>
+            <option value="lot">Lot</option>
+            <option value="vacant land">Vacant Land</option>
+            <option value="development site">Development Site</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-row-2">
+        <div class="form-group">
+          <label>Lot Size</label>
+          <input id="daLotSize" class="ravlo-input" type="text" placeholder="0.32 acres">
+        </div>
+        <div class="form-group">
+          <label>Zoning</label>
+          <input id="daZoning" class="ravlo-input" type="text" placeholder="R2">
+        </div>
+      </div>
+
+      <div class="form-row-2">
+        <div class="form-group">
+          <label>Goal</label>
+          <select id="daStrategyGoal" class="ravlo-input">
+            <option value="">Select goal</option>
+            <option value="maximize profit">Maximize Profit</option>
+            <option value="cash flow">Cash Flow</option>
+            <option value="fast exit">Fast Exit</option>
+            <option value="development upside">Development Upside</option>
+            <option value="lowest complexity">Lowest Complexity</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Budget</label>
+          <input id="daBudget" class="ravlo-input" type="text" placeholder="$150,000">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Notes</label>
+        <textarea id="daNotes" class="ravlo-input" rows="5" placeholder="Anything Ravlo should consider: layout issues, neighborhood notes, investor goals, lender concerns, target exit, etc."></textarea>
+      </div>
+
+      <div class="quick-prompts-wrap">
+        <div class="quick-title">Quick scenarios</div>
+        <div class="quick-prompts">
+          <button type="button" class="qp-btn da-fill" data-type="land" data-goal="development upside">Analyze as land deal</button>
+          <button type="button" class="qp-btn da-fill" data-type="fixer upper" data-goal="maximize profit">Analyze as flip</button>
+          <button type="button" class="qp-btn da-fill" data-type="single family" data-goal="cash flow">Analyze as rental</button>
+          <button type="button" class="qp-btn da-fill" data-type="development site" data-goal="maximize profit">Compare build options</button>
+        </div>
+      </div>
+
+      <div class="btn-row">
+        <button id="dealArchitectAnalyzeBtn" type="button" class="ravlo-btn primary">
+          Analyze Opportunity
+        </button>
+      </div>
+    </section>
+
+    <section class="ravlo-card">
+      <div class="card-head">
+        <h3>Recommended Strategies</h3>
+        <p class="muted">Ravlo will compare the strongest paths for this opportunity.</p>
+      </div>
+
+      <div id="architectEmpty" class="empty-state architect-empty">
+        <div class="empty-icon">🧠</div>
+        <h4>No strategy analysis yet</h4>
+        <p class="muted">Run an opportunity analysis to see recommended plays, projected upside, and next actions.</p>
+      </div>
+
+      <div id="architectResults" class="hidden">
+        <div class="ravlo-soft-panel architect-summary-panel">
+          <div class="architect-context" id="architectContextLabel">Opportunity</div>
+          <h4>Ravlo Summary</h4>
+          <p id="architectSummaryText" class="muted" style="margin-bottom:0;"></p>
+        </div>
+
+        <div id="architectStrategies" class="architect-strategy-list"></div>
+      </div>
+    </section>
+
+  </div>
+</div>
+
+<script>
+(function () {
+  const analyzeBtn = document.getElementById("dealArchitectAnalyzeBtn");
+  const emptyState = document.getElementById("architectEmpty");
+  const resultsWrap = document.getElementById("architectResults");
+  const summaryText = document.getElementById("architectSummaryText");
+  const contextLabel = document.getElementById("architectContextLabel");
+  const strategiesWrap = document.getElementById("architectStrategies");
+
+  const propertyAddress = document.getElementById("daPropertyAddress");
+  const zipCode = document.getElementById("daZip");
+  const propertyType = document.getElementById("daPropertyType");
+  const lotSize = document.getElementById("daLotSize");
+  const zoning = document.getElementById("daZoning");
+  const strategyGoal = document.getElementById("daStrategyGoal");
+  const budget = document.getElementById("daBudget");
+  const notes = document.getElementById("daNotes");
+
+  function renderStrategies(strategies) {
+    strategiesWrap.innerHTML = "";
+
+    (strategies || []).forEach((item) => {
+      const card = document.createElement("div");
+      card.className = "architect-card";
+
+      const buttonsHtml = (item.buttons || []).map(btn => {
+        const url = btn.url || "#";
+        const label = btn.label || "Open";
+        const cls = label.toLowerCase().includes("open") ? "ravlo-btn primary sm" : "ravlo-btn ghost sm";
+        return `<button type="button" class="${cls}" data-url="${url}">${label}</button>`;
+      }).join("");
+
+      card.innerHTML = `
+        <div class="architect-card-top">
+          <div>
+            <div class="architect-tag">${item.tag || "Strategy"}</div>
+            <h4>${item.name || "Untitled Strategy"}</h4>
+            <p class="muted">${item.description || ""}</p>
+          </div>
+          <div class="architect-roi">${item.roi || "--"}</div>
+        </div>
+
+        <div class="architect-metrics">
+          <div class="metric-box">
+            <span>Cost</span>
+            <strong>${item.build_cost_label || "--"}</strong>
+          </div>
+          <div class="metric-box">
+            <span>Value</span>
+            <strong>${item.arv_label || "--"}</strong>
+          </div>
+          <div class="metric-box">
+            <span>Profit</span>
+            <strong>${item.profit_label || "--"}</strong>
+          </div>
+        </div>
+
+        <div class="btn-row">${buttonsHtml}</div>
+      `;
+
+      card.querySelectorAll("button[data-url]").forEach((btn) => {
+        btn.addEventListener("click", function () {
+          const url = btn.getAttribute("data-url");
+          if (url && url !== "#") {
+            window.location.href = url;
+          }
+        });
+      });
+
+      strategiesWrap.appendChild(card);
+    });
+  }
+
+  async function analyzeOpportunity() {
+    try {
+      const payload = {
+        property_address: propertyAddress.value.trim(),
+        zip_code: zipCode.value.trim(),
+        property_type: propertyType.value,
+        lot_size: lotSize.value.trim(),
+        zoning: zoning.value.trim(),
+        strategy_goal: strategyGoal.value,
+        budget: budget.value.trim(),
+        notes: notes.value.trim()
+      };
+
+      const response = await fetch('{{ url_for("investor.deal_architect_analyze") }}', {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(payload)
+      });
+
+      const data = await response.json();
+
+      if (!data.success) {
+        alert(data.message || "Analysis failed.");
+        return;
+      }
+
+      emptyState.classList.add("hidden");
+      resultsWrap.classList.remove("hidden");
+
+      contextLabel.textContent = data.context_label || "Opportunity";
+      summaryText.textContent = data.summary || "";
+      renderStrategies(data.strategies || []);
+
+    } catch (err) {
+      console.error(err);
+      alert("Failed to analyze opportunity.");
+    }
+  }
+
+  analyzeBtn.addEventListener("click", analyzeOpportunity);
+
+  document.querySelectorAll(".da-fill").forEach((btn) => {
+    btn.addEventListener("click", function () {
+      const type = btn.getAttribute("data-type") || "";
+      const goal = btn.getAttribute("data-goal") || "";
+      propertyType.value = type;
+      strategyGoal.value = goal;
+    });
+  });
+})();
+</script>
+{% endblock %}

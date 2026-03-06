@@ -253,3 +253,21 @@ class InvestmentDocument(db.Model, TimestampMixin):
 
     def __repr__(self):
         return f"<InvestmentDocument id={self.id} investment_id={self.investment_id}>"
+
+class DealConversation(db.Model):
+    __tablename__ = "deal_conversations"
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    deal_id = db.Column(db.Integer, nullable=True)
+    title = db.Column(db.String(255))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+class DealMessage(db.Model):
+    __tablename__ = "deal_messages"
+
+    id = db.Column(db.Integer, primary_key=True)
+    conversation_id = db.Column(db.Integer, db.ForeignKey("deal_conversations.id"), nullable=False)
+    role = db.Column(db.String(50))  # user / assistant / system
+    content = db.Column(db.Text, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)

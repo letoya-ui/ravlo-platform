@@ -1,0 +1,234 @@
+{% extends "layouts/ravlo_base.html" %}
+{% block title %}Ravlo • Deal Copilot{% endblock %}
+
+{% block page_title %}Deal Copilot{% endblock %}
+{% block page_subline %}Ask Ravlo what to do next with any property, lot, or investment idea.{% endblock %}
+
+{% block content %}
+<div class="ravlo-shell">
+
+  <section class="ravlo-hero-card">
+    <div>
+      <div class="eyebrow">AI GUIDANCE</div>
+      <h2>Your real estate strategy assistant</h2>
+      <p class="muted">
+        Ask Ravlo to compare strategies, summarize a deal, identify risks, or recommend the smartest next move.
+      </p>
+    </div>
+  </section>
+
+  <div class="copilot-grid">
+    <!-- LEFT PANEL -->
+    <section class="ravlo-card">
+      <div class="card-head">
+        <h3>Deal Context</h3>
+        <p class="muted">Give Ravlo the basics so it can guide the deal correctly.</p>
+      </div>
+
+      <div class="form-group">
+        <label>Property Address</label>
+        <input id="cpPropertyAddress" class="ravlo-input" type="text" placeholder="123 Main St, Tampa, FL">
+      </div>
+
+      <div class="form-row-2">
+        <div class="form-group">
+          <label>ZIP Code</label>
+          <input id="cpZip" class="ravlo-input" type="text" placeholder="33602">
+        </div>
+        <div class="form-group">
+          <label>Workspace</label>
+          <select id="cpWorkspace" class="ravlo-input">
+            <option value="deal">Deal</option>
+            <option value="rehab">Rehab</option>
+            <option value="build">Build</option>
+            <option value="funding">Funding</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-row-2">
+        <div class="form-group">
+          <label>Lot Size</label>
+          <input id="cpLotSize" class="ravlo-input" type="text" placeholder="0.32 acres">
+        </div>
+        <div class="form-group">
+          <label>Zoning</label>
+          <input id="cpZoning" class="ravlo-input" type="text" placeholder="R2">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Strategy Hint</label>
+        <select id="cpStrategyHint" class="ravlo-input">
+          <option value="">Select one</option>
+          <option value="flip">Flip</option>
+          <option value="rental">Rental</option>
+          <option value="brrrr">BRRRR</option>
+          <option value="ground_up">Ground-Up Build</option>
+          <option value="hold">Hold</option>
+          <option value="development">Development</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>Notes</label>
+        <textarea id="cpNotes" class="ravlo-input" rows="5" placeholder="Any deal notes, scope ideas, partner notes, lender concerns, or investor thoughts..."></textarea>
+      </div>
+
+      <div class="quick-prompts-wrap">
+        <div class="quick-title">Quick prompts</div>
+        <div class="quick-prompts">
+          <button class="qp-btn" type="button" data-prompt="What’s the best strategy here?">What’s the best strategy here?</button>
+          <button class="qp-btn" type="button" data-prompt="Should I flip this or rent it?">Should I flip this or rent it?</button>
+          <button class="qp-btn" type="button" data-prompt="What can I build on this lot?">What can I build on this lot?</button>
+          <button class="qp-btn" type="button" data-prompt="What are the top risks here?">What are the top risks here?</button>
+          <button class="qp-btn" type="button" data-prompt="Create a lender-ready summary.">Create a lender-ready summary.</button>
+          <button class="qp-btn" type="button" data-prompt="Show me the smartest next move.">Show me the smartest next move.</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- RIGHT PANEL -->
+    <section class="ravlo-card copilot-chat-card">
+      <div class="card-head">
+        <h3>Conversation</h3>
+        <p class="muted">Ask Ravlo to reason through the opportunity.</p>
+      </div>
+
+      <div id="copilotContextBar" class="copilot-context-bar">
+        No deal context provided yet.
+      </div>
+
+      <div id="copilotMessages" class="copilot-messages">
+        <div class="msg assistant">
+          <div class="msg-bubble">
+            Good morning Letoya — I’m ready. Ask me about strategy, rehab, development, risks, or how to position a deal for funding.
+          </div>
+        </div>
+      </div>
+
+      <div id="copilotActions" class="copilot-actions hidden"></div>
+
+      <form id="copilotForm" class="copilot-input-wrap">
+        <textarea id="copilotInput" class="copilot-input" rows="3" placeholder="Ask Ravlo something about this opportunity..."></textarea>
+        <div class="btn-row">
+          <button type="submit" class="ravlo-btn primary">Ask Copilot</button>
+        </div>
+      </form>
+    </section>
+  </div>
+</div>
+
+<script>
+(function () {
+  const form = document.getElementById("copilotForm");
+  const input = document.getElementById("copilotInput");
+  const messages = document.getElementById("copilotMessages");
+  const actionsWrap = document.getElementById("copilotActions");
+  const contextBar = document.getElementById("copilotContextBar");
+
+  const propertyAddress = document.getElementById("cpPropertyAddress");
+  const zipCode = document.getElementById("cpZip");
+  const workspace = document.getElementById("cpWorkspace");
+  const lotSize = document.getElementById("cpLotSize");
+  const zoning = document.getElementById("cpZoning");
+  const strategyHint = document.getElementById("cpStrategyHint");
+  const notes = document.getElementById("cpNotes");
+
+  function addMessage(role, text) {
+    const msg = document.createElement("div");
+    msg.className = `msg ${role}`;
+
+    const bubble = document.createElement("div");
+    bubble.className = "msg-bubble";
+    bubble.textContent = text;
+
+    msg.appendChild(bubble);
+    messages.appendChild(msg);
+    messages.scrollTop = messages.scrollHeight;
+  }
+
+  function setActions(actions) {
+    actionsWrap.innerHTML = "";
+
+    if (!actions || !actions.length) {
+      actionsWrap.classList.add("hidden");
+      return;
+    }
+
+    actions.forEach(action => {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "ravlo-btn ghost sm";
+      btn.textContent = action.label || "Open";
+
+      btn.addEventListener("click", function () {
+        if (action.url && action.url !== "#") {
+          window.location.href = action.url;
+        }
+      });
+
+      actionsWrap.appendChild(btn);
+    });
+
+    actionsWrap.classList.remove("hidden");
+  }
+
+  async function sendPrompt(messageText) {
+    if (!messageText.trim()) return;
+
+    addMessage("user", messageText);
+    input.value = "";
+
+    try {
+      const payload = {
+        message: messageText,
+        property_address: propertyAddress.value.trim(),
+        zip_code: zipCode.value.trim(),
+        workspace: workspace.value,
+        lot_size: lotSize.value.trim(),
+        zoning: zoning.value.trim(),
+        strategy_hint: strategyHint.value,
+        notes: notes.value.trim()
+      };
+
+      const response = await fetch('{{ url_for("investor.deal_copilot_chat") }}', {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(payload)
+      });
+
+      const data = await response.json();
+
+      if (!data.success) {
+        addMessage("assistant", data.message || "Something went wrong.");
+        return;
+      }
+
+      contextBar.textContent = data.context_summary || "No deal context provided yet.";
+      addMessage("assistant", data.reply || "No response returned.");
+      setActions(data.actions || []);
+
+    } catch (err) {
+      console.error(err);
+      addMessage("assistant", "Failed to reach Deal Copilot.");
+    }
+  }
+
+  form.addEventListener("submit", function (e) {
+    e.preventDefault();
+    sendPrompt(input.value);
+  });
+
+  document.querySelectorAll(".qp-btn").forEach(btn => {
+    btn.addEventListener("click", function () {
+      const prompt = btn.getAttribute("data-prompt") || "";
+      input.value = prompt;
+      sendPrompt(prompt);
+    });
+  });
+})();
+</script>
+{% endblock %}

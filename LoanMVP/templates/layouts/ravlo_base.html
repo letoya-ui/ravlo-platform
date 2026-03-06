@@ -113,6 +113,12 @@
           <i class="lucide lucide-folder-heart icon"></i>
           Saved Properties
         </a>
+        
+        <a class="ravlo-nav-item"
+           href="{{ url_for('investor.deal_architect') }}">
+          <i class="lucide lucide-brain-circuit"></i>
+          <span>AI Deal Architect</span>
+        </a>
 
         <a class="{% if ep in ['investor.deal_rehab_studio','investor.deal_reveal'] %}active{% endif %}"
            href="{% if deal_id is defined and deal_id %}{{ url_for('investor.deal_rehab_studio', deal_id=deal_id) }}{% else %}{{ url_for('investor.deals_list') }}{% endif %}">

@@ -1,214 +1,108 @@
 {% extends "layouts/ravlo_base.html" %}
-{% block title %}Ravlo • Rehab Studio{% endblock %}
+{% block title %}Ravlo • Deal Studio{% endblock %}
 
-{% block page_title %}Rehab Studio{% endblock %}
-{% block page_subline %}Your deals, concepts, rehabs, and insights — all in one command center.{% endblock %}
+{% block page_title %}Deal Studio{% endblock %}
+{% block page_subline %}
+Plan, analyze, renovate, or develop your next investment.
+{% endblock %}
 
 {% block content %}
-<style>
-  .rs-wrap{margin-top:1.25rem;}
-  .rs-hero{
-    background: rgba(255,255,255,.03);
-    border:1px solid rgba(255,255,255,.10);
-    border-radius: 18px;
-    padding: 1rem 1.1rem;
-    box-shadow: 0 0 22px rgba(0,0,0,.55);
-    display:flex; justify-content:space-between; gap:1rem; flex-wrap:wrap;
-    align-items:flex-start;
-  }
-  .rs-hero h2{margin:0}
-  .rs-sub{color:var(--muted); margin:.35rem 0 0}
-  .rs-actions{display:flex; gap:.5rem; flex-wrap:wrap;}
 
-  .rs-grid{
-    display:grid;
-    grid-template-columns: 1.35fr .85fr;
-    gap:1.1rem;
-    margin-top:1rem;
-  }
-  @media(max-width:1000px){ .rs-grid{grid-template-columns:1fr;} }
+<div class="ravlo-shell">
 
-  .card{
-    background: var(--panel, #0b1016);
-    border: 1px solid var(--line, rgba(255,255,255,0.10));
-    border-radius: 16px;
-    padding: 1rem 1.05rem;
-    box-shadow: 0 0 18px rgba(0,0,0,0.45);
-  }
-  .card h3{margin:.1rem 0 .8rem; color:var(--accent);}
-  .btn{
-    background: rgba(122,184,255,0.12);
-    border: 1px solid rgba(122,184,255,0.45);
-    color: #7ab8ff;
-    padding: .6rem .9rem;
-    border-radius: 10px;
-    cursor: pointer;
-    font-weight: 750;
-    transition: .2s;
-    font-size: .9rem;
-    text-decoration:none;
-    display:inline-flex; align-items:center; gap:.45rem;
-  }
-  .btn:hover{background: rgba(122,184,255,0.22); border-color:#7ab8ff; box-shadow:0 0 12px rgba(122,184,255,0.35);}
-  .btn.ghost{background: rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.10); color: var(--text);}
-
-  /* Inputs */
-  .dw-input{
-    width:100%;
-    padding:.55rem .7rem;
-    border-radius:10px;
-    border: 1px solid rgba(255,255,255,.10);
-    background:#0f141a;
-    color: var(--text);
-    font-size:.92rem;
-  }
-
-  /* Before/After slider */
-  .ba{
-    position:relative;
-    border-radius: 16px;
-    overflow:hidden;
-    border:1px solid rgba(255,255,255,.10);
-    background: rgba(255,255,255,.02);
-  }
-  .ba img{display:block; width:100%; height:auto;}
-  .ba .after{position:absolute; inset:0; clip-path: inset(0 50% 0 0);}
-  .ba .handle{position:absolute; top:0; bottom:0; left:50%; width:2px; background: rgba(122,184,255,.85); box-shadow: 0 0 18px rgba(122,184,255,.35);}
-  .ba .knob{position:absolute; top:50%; left:50%; transform: translate(-50%,-50%); width:46px; height:46px; border-radius:999px; background: rgba(0,0,0,.55); border:1px solid rgba(122,184,255,.55); display:flex; align-items:center; justify-content:center; color:#a9d2ff; font-weight:900;}
-  .ba input[type="range"]{position:absolute; inset:0; width:100%; opacity:0; cursor: ew-resize;}
-  .ba-badges{position:absolute; inset:12px 12px auto 12px; display:flex; justify-content:space-between; pointer-events:none;}
-  .badge{font-size:.78rem; padding:.28rem .55rem; border-radius:999px; background: rgba(0,0,0,.45); border: 1px solid rgba(255,255,255,.14); color: rgba(255,255,255,.88); backdrop-filter: blur(6px);}
-
-  .img{width:100%; border-radius:14px; border:1px solid rgba(255,255,255,.08); background:#0f141a; display:block;}
-  .gallery{display:grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap:.75rem;}
-  @media(max-width:900px){ .gallery{grid-template-columns: repeat(2, minmax(0,1fr));} }
-  @media(max-width:560px){ .gallery{grid-template-columns: 1fr;} }
-
-  .tile{padding:.6rem; border-radius:14px; background: rgba(255,255,255,.03); border:1px solid rgba(255,255,255,.08);}
-  .muted{color:var(--muted);}
-  .chip{
-    display:inline-flex; align-items:center; gap:.35rem;
-    font-size:.78rem; border-radius:999px; padding:.28rem .55rem;
-    background: rgba(122,184,255,0.12);
-    border: 1px solid rgba(122,184,255,0.26);
-    color:#a9d2ff;
-  }
-
-  /* Modals */
-  .modal-overlay{
-    position:fixed; inset:0;
-    background:rgba(0,0,0,.65);
-    display:none;
-    align-items:center; justify-content:center;
-    padding:1rem;
-    z-index:9999;
-  }
-  .modal-content{
-    width:min(980px,100%);
-    background:#0b1016;
-    border:1px solid rgba(255,255,255,.10);
-    border-radius:12px;
-    padding:1.25rem;
-    box-shadow: 0 0 24px rgba(0,0,0,.6);
-  }
-  .style-grid{display:grid; grid-template-columns: 1fr 1fr; gap:1rem; margin-top:.75rem;}
-  @media(max-width:900px){ .style-grid{grid-template-columns: 1fr;} }
-  .style-results-grid{display:grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap:.75rem; margin-top:.75rem;}
-  @media(max-width:900px){ .style-results-grid{grid-template-columns: repeat(2, minmax(0, 1fr));} }
-  @media(max-width:560px){ .style-results-grid{grid-template-columns: 1fr;} }
-</style>
+  <!-- HERO -->
+  <section class="ravlo-hero-card">
+      <div>
+        <div class="eyebrow">RAVLO WORKSPACE</div>
+        <h2>Your Investment Command Workspace</h2>
+        <p class="muted">
+          Find deals, analyze opportunities, plan renovations, or design new builds — all in one place.
+        </p>
+      </div>
+  </section>
 
 
-<div class="ravlo-card pad" style="margin-bottom:20px;">
-  <h2 style="margin-bottom:10px;">Deal Studio Dashboard</h2>
-  <p style="color:var(--muted);">
-    A unified view of your latest deal activity across all Ravlo modules.
-  </p>
-</div>
+  <!-- WORKSPACE GRID -->
+  <div class="deal-studio-grid">
 
-<div class="dashboard-grid">
+    <!-- DEAL FINDER -->
+    <div class="studio-card">
+        <div class="studio-icon">🔎</div>
+        <h3>Deal Finder</h3>
 
-  <!-- Workspace Snapshot -->
-  <div class="ravlo-card pad">
-    <h3>Deal Workspace</h3>
-    {% if snapshots.workspace %}
-      <img src="{{ snapshots.workspace.image_url }}" style="width:100%; border-radius:8px; margin-bottom:10px;">
-      <p><strong>{{ snapshots.workspace.address }}</strong></p>
-      <p>Flip ARV: ${{ snapshots.workspace.flip_arv }}</p>
-      <p>Flip Profit: ${{ snapshots.workspace.flip_profit }}</p>
-      <p>Rental Income: ${{ snapshots.workspace.rental_income }}</p>
-      <p>DSCR: {{ snapshots.workspace.dscr }}</p>
-      <p>Airbnb Income: ${{ snapshots.workspace.airbnb_income }}</p>
-      <a href="/investor/deals/{{ snapshots.workspace.id }}/workspace" class="ravlo-btn ghost sm" style="margin-top:10px;">Open Workspace</a>
-    {% else %}
-      <p>No deals yet.</p>
-    {% endif %}
-  </div>
+        <p class="muted">
+          Search fixer-uppers and investment opportunities by ZIP code and evaluate potential returns.
+        </p>
 
-  <!-- Concept Build Snapshot -->
-  <div class="ravlo-card pad">
-    <h3>Concept Build</h3>
-    {% if snapshots.concept %}
-      <img src="{{ snapshots.concept.concept_image }}" style="width:100%; border-radius:8px; margin-bottom:10px;">
-      <p><strong>{{ snapshots.concept.address }}</strong></p>
-      <p>Style: {{ snapshots.concept.style }}</p>
-      <a href="/investor/deals/{{ snapshots.concept.id }}/concept" class="ravlo-btn ghost sm" style="margin-top:10px;">Open Concept</a>
-    {% else %}
-      <p>No concept builds yet.</p>
-      <a href="/investor/deals/new/concept" class="ravlo-btn ghost sm" style="margin-top:10px;">Start Concept Build</a>
-    {% endif %}
-  </div>
+        <button class="ravlo-btn primary"
+                onclick="location.href='{{ url_for('borrower.property_tool') }}'">
+            Find Deals
+        </button>
+    </div>
 
-  <!-- Rehab Snapshot -->
-  <div class="ravlo-card pad">
-    <h3>Rehab Studio</h3>
-    {% if snapshots.rehab %}
-      <img src="{{ snapshots.rehab.rehab_image }}" style="width:100%; border-radius:8px; margin-bottom:10px;">
-      <p><strong>{{ snapshots.rehab.address }}</strong></p>
-      <p>Budget: ${{ snapshots.rehab.budget }}</p>
-      <a href="/investor/deals/{{ snapshots.rehab.id }}/rehab" class="ravlo-btn ghost sm" style="margin-top:10px;">Open Rehab</a>
-    {% else %}
-      <p>No rehab projects yet.</p>
-    {% endif %}
-  </div>
 
-  <!-- Saved Properties -->
-  <div class="ravlo-card pad">
-    <h3>Saved Properties</h3>
-    {% if snapshots.saved %}
-      <img src="{{ snapshots.saved.image_url }}" style="width:100%; border-radius:8px; margin-bottom:10px;">
-      <p><strong>{{ snapshots.saved.address }}</strong></p>
-      <a href="/investor/saved_properties" class="ravlo-btn ghost sm" style="margin-top:10px;">View Saved</a>
-    {% else %}
-      <p>No saved properties yet.</p>
-    {% endif %}
-  </div>
+    <!-- REHAB STUDIO -->
+    <div class="studio-card">
 
-  <!-- Deal Finder Snapshot -->
-  <div class="ravlo-card pad">
-    <h3>Deal Finder</h3>
-    {% if snapshots.finder %}
-      <img src="{{ snapshots.finder.image_url }}" style="width:100%; border-radius:8px; margin-bottom:10px;">
-      <p><strong>{{ snapshots.finder.address }}</strong></p>
-      <p>Price: ${{ snapshots.finder.price }}</p>
-      <a href="/investor/property_search" class="ravlo-btn ghost sm" style="margin-top:10px;">Open Finder</a>
-    {% else %}
-      <p>No recent searches.</p>
-    {% endif %}
-  </div>
+        <div class="studio-icon">🛠</div>
 
-  <!-- Deal Reveal Snapshot -->
-  <div class="ravlo-card pad">
-    <h3>Deal Reveal</h3>
-    {% if snapshots.reveal %}
-      <img src="{{ snapshots.reveal.thumbnail }}" style="width:100%; border-radius:8px; margin-bottom:10px;">
-      <p><strong>{{ snapshots.reveal.title }}</strong></p>
-      <a href="/investor/deal/{{ snapshots.reveal.id }}/reveal" class="ravlo-btn ghost sm" style="margin-top:10px;">Watch Reveal</a>
-    {% else %}
-      <p>No reveal episodes yet.</p>
-    {% endif %}
+        <h3>Rehab Studio</h3>
+
+        <p class="muted">
+          Upload property photos and generate renovation concepts, budgets, and improvement plans.
+        </p>
+
+        <button class="ravlo-btn primary"
+                onclick="location.href='{{ url_for('investor.rehab_studio') }}'">
+            Open Rehab Studio
+        </button>
+
+    </div>
+
+
+    <!-- BUILD STUDIO -->
+    <div class="studio-card">
+
+        <div class="studio-icon">🏗</div>
+
+        <h3>Build Studio</h3>
+
+        <p class="muted">
+          Turn land or development ideas into concept renders, floor plans, site layouts, and lender-ready presentations.
+        </p>
+
+        <button class="ravlo-btn primary"
+                onclick="location.href='{{ url_for('investor.build_studio') }}'">
+            Open Build Studio
+        </button>
+
+    </div>
+
   </div>
 
 </div>
+    <div class="studio-card">
+        <div class="studio-icon">🧭</div>
+        <h3>AI Deal Architect</h3>
+        <p class="muted">
+          Compare flip, rental, build, and development strategies to find the smartest play for the opportunity.
+        </p>
+        <button class="ravlo-btn primary"
+                onclick="location.href='{{ url_for("investor.deal_architect") }}'">
+            Open AI Deal Architect
+        </button>
+     </div>
+
+    <div class="studio-card">
+        <div class="studio-icon">🧠</div>
+        <h3>Deal Copilot</h3>
+        <p class="muted">
+         Ask Ravlo what to do next with any property, lot, renovation, or development scenario.
+    </p>
+        <button class="ravlo-btn primary"
+                onclick="location.href='{{ url_for("investor.deal_copilot") }}'">
+            Open Deal Copilot
+        </button>
+     </div>
 
 {% endblock %}

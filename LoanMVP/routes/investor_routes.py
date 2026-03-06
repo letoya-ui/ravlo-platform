@@ -100,6 +100,7 @@ from LoanMVP.services.notification_service import notify_team_on_conversion
 from LoanMVP.services.blueprint_parser import extract_blueprint_structure, infer_room_type
 from LoanMVP.services.prompt_builder import build_blueprint_prompt
 from LoanMVP.services.concept_build_service import run_concept_build
+from LoanMVP.services.renovation_engine_client import generate_concept
 
 from LoanMVP.utils.r2_storage import r2_put_bytes
 
@@ -3325,29 +3326,86 @@ def export_rehab_scope(deal_id):
     filename = f"ravlo_rehab_scope_{deal.id}_{datetime.utcnow().strftime('%Y%m%d')}.pdf"
     return send_file(buffer, as_attachment=True, download_name=filename, mimetype="application/pdf")
 
-@investor("/investor/deals/new/concept", methods=["GET"])
+@investor_bp("/deals/new/concept", methods=["GET"])
+@login_required
+@role_required("investor")
 def new_concept_deal():
     return render_template("investor/deal_builder_concept.html")
 
 
-@investor_bp.route("/investor/deals/new/concept/generate", methods=["POST"])
+@investor_bp.route("/deal-studio/build-studio/generate", methods=["POST"])
 @login_required
 @role_required("investor")
-def generate_concept():
-    data = request.json
-    result = run_concept_build(
-        land_image_url=data.get("land_image_url"),
-        description=data.get("description"),
-        style=data.get("style"),
-        lot_size=data.get("lot_size")
-    )
-    return jsonify(result)
+def generate_build_studio():
+    try:
+        project_name = request.form.get("project_name", "").strip()
+        property_type = request.form.get("property_type", "").strip()
+        description = request.form.get("description", "").strip()
+        lot_size = request.form.get("lot_size", "").strip()
+        zoning = request.form.get("zoning", "").strip()
+        location = request.form.get("location", "").strip()
+        notes = request.form.get("notes", "").strip()
 
+        land_image = request.files.get("land_image")
+        land_image_path = None
+
+        if land_image and land_image.filename:
+            import uuid, os
+            from flask import current_app
+
+            upload_dir = os.path.join(current_app.root_path, "static", "uploads", "build_studio")
+            os.makedirs(upload_dir, exist_ok=True)
+
+            ext = os.path.splitext(land_image.filename)[1].lower() or ".jpg"
+            filename = f"{uuid.uuid4().hex}{ext}"
+            full_path = os.path.join(upload_dir, filename)
+
+            land_image.save(full_path)
+            land_image_path = f"/static/uploads/build_studio/{filename}"
+
+        payload = {
+            "workspace": "build",
+            "project_name": project_name,
+            "property_type": property_type,
+            "description": description,
+            "lot_size": lot_size,
+            "zoning": zoning,
+            "location": location,
+            "notes": notes,
+            "land_image_path": land_image_path,
+            "user_id": current_user.id
+        }
+
+        ai_result = generate_concept(payload)
+
+        return jsonify({
+            "success": True,
+            "project_name": project_name,
+            "property_type": property_type,
+            "description": description,
+            "lot_size": lot_size,
+            "zoning": zoning,
+            "location": location,
+            "notes": notes,
+            "land_image_path": land_image_path,
+            "concept_render_url": ai_result.get("concept_render_url"),
+            "blueprint_url": ai_result.get("blueprint_url"),
+            "site_plan_url": ai_result.get("site_plan_url"),
+            "presentation_url": ai_result.get("presentation_url"),
+        })
+
+    except Exception as e:
+        current_app.logger.exception("Build Studio generation error")
+        return jsonify({
+            "success": False,
+            "message": str(e)
+        }), 500
 
 @investor_bp.route("/investor/deals/new/concept/save", methods=["POST"])
+@csrf.exempt
 @login_required
 @role_required("investor")
-def save_concept_deal():
+def save_build_studio():
     data = request.json
 
     deal = Deal(
@@ -3365,6 +3423,62 @@ def save_concept_deal():
     db.session.commit()
 
     return jsonify({"deal_id": deal.id})
+
+@investor_bp.route("/deal-studio/architect", methods=["GET"])
+@login_required
+@role_required("investor")
+def deal_architect():
+    return render_template(
+        "investor/deal_architect.html",
+        page_title="AI Deal Architect",
+        page_subtitle="Ask Ravlo to compare the best strategy for a property, lot, or development idea."
+    )
+
+
+@investor_bp.route("/deal-studio/architect/analyze", methods=["POST"])
+@login_required
+@role_required("investor")
+def deal_architect_analyze():
+    try:
+        data = request.get_json(silent=True) or {}
+
+        property_address = (data.get("property_address") or "").strip()
+        zip_code = (data.get("zip_code") or "").strip()
+        property_type = (data.get("property_type") or "").strip()
+        lot_size = (data.get("lot_size") or "").strip()
+        zoning = (data.get("zoning") or "").strip()
+        strategy_goal = (data.get("strategy_goal") or "").strip()
+        budget = (data.get("budget") or "").strip()
+        notes = (data.get("notes") or "").strip()
+
+        payload = {
+            "property_address": property_address,
+            "zip_code": zip_code,
+            "property_type": property_type,
+            "lot_size": lot_size,
+            "zoning": zoning,
+            "strategy_goal": strategy_goal,
+            "budget": budget,
+            "notes": notes,
+            "user_id": getattr(current_user, "id", None),
+        }
+
+        result = generate_deal_architect_strategies(payload)
+
+        return jsonify({
+            "success": True,
+            "summary": result.get("summary", ""),
+            "strategies": result.get("strategies", []),
+            "context_label": result.get("context_label", "Opportunity"),
+            "timestamp": datetime.utcnow().isoformat()
+        })
+
+    except Exception as e:
+        current_app.logger.exception("AI Deal Architect analyze error")
+        return jsonify({
+            "success": False,
+            "message": str(e)
+        }), 500
 
 # =========================================================
 # 💬 INVESTOR • MESSAGES
@@ -3583,6 +3697,73 @@ def ask_ai_response(chat_id):
         active_tab="ai"
     )
 
+
+@investor_bp.route("/deal-studio/copilot", methods=["GET"])
+@login_required
+@role_required("investor")
+def deal_copilot():
+    return render_template(
+        "investor/deal_copilot.html",
+        page_title="Deal Copilot",
+        page_subtitle="Ask Ravlo what to do next with any property, lot, or investment idea."
+    )
+
+
+@investor_bp.route("/deal-studio/copilot/chat", methods=["POST"])
+@login_required
+@role_required("investor")
+def deal_copilot_chat():
+    try:
+        data = request.get_json(silent=True) or {}
+
+        user_message = (data.get("message") or "").strip()
+        property_address = (data.get("property_address") or "").strip()
+        zip_code = (data.get("zip_code") or "").strip()
+        strategy_hint = (data.get("strategy_hint") or "").strip()
+        lot_size = (data.get("lot_size") or "").strip()
+        zoning = (data.get("zoning") or "").strip()
+        notes = (data.get("notes") or "").strip()
+        workspace = (data.get("workspace") or "deal").strip().lower()
+
+        if not user_message:
+            return jsonify({
+                "success": False,
+                "message": "Please enter a message for Deal Copilot."
+            }), 400
+
+        deal_context = build_deal_copilot_context(
+            property_address=property_address,
+            zip_code=zip_code,
+            strategy_hint=strategy_hint,
+            lot_size=lot_size,
+            zoning=zoning,
+            notes=notes,
+            workspace=workspace,
+            user_id=getattr(current_user, "id", None)
+        )
+
+        # -----------------------------------------
+        # Replace this with your real AI call later
+        # -----------------------------------------
+        ai_result = generate_deal_copilot_response(
+            user_message=user_message,
+            context=deal_context
+        )
+
+        return jsonify({
+            "success": True,
+            "reply": ai_result.get("reply"),
+            "actions": ai_result.get("actions", []),
+            "context_summary": ai_result.get("context_summary", ""),
+            "timestamp": datetime.utcnow().isoformat()
+        })
+
+    except Exception as e:
+        current_app.logger.exception("Deal Copilot chat error")
+        return jsonify({
+            "success": False,
+            "message": str(e)
+        }), 500
 
 # =========================================================
 # 📈 INVESTOR • ANALYTICS + ACTIVITY + BUDGET

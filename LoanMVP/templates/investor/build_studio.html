@@ -1,0 +1,175 @@
+{% extends "layouts/ravlo_base.html" %}
+{% block title %}Ravlo • Build Studio{% endblock %}
+
+{% block page_title %}Build Studio{% endblock %}
+{% block page_subline %}Turn land and development ideas into concept visuals, layout plans, and lender-ready presentation assets.{% endblock %}
+
+{% block content %}
+<div class="ravlo-shell">
+
+  <section class="ravlo-hero-card">
+    <div>
+      <div class="eyebrow">DEAL STUDIO</div>
+      <h2>Ground-Up Development Workspace</h2>
+      <p class="muted">
+        Describe what you want to build, upload a land photo if available, and generate concept outputs for architects, builders, partners, and lenders.
+      </p>
+    </div>
+  </section>
+
+  <div class="ravlo-grid ravlo-grid-2 build-studio-grid">
+    <!-- LEFT: INPUT PANEL -->
+    <section class="ravlo-card">
+      <div class="card-head">
+        <h3>Project Inputs</h3>
+        <p class="muted">Start with the build vision.</p>
+      </div>
+
+      <form id="buildStudioForm" enctype="multipart/form-data">
+        <div class="form-group">
+          <label>Project Name</label>
+          <input class="ravlo-input" type="text" name="project_name" placeholder="Oakwood Duplex Project">
+        </div>
+
+        <div class="form-group">
+          <label>Property Type</label>
+          <select class="ravlo-input" name="property_type">
+            <option value="">Select type</option>
+            <option>Single Family</option>
+            <option>Duplex</option>
+            <option>Townhome</option>
+            <option>Tiny Home Community</option>
+            <option>Small Multifamily</option>
+            <option>Custom Build</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Description</label>
+          <textarea class="ravlo-input" name="description" rows="5" placeholder="Example: Modern 3-bed ranch with open layout, oversized kitchen island, large rear windows, covered patio, and 2-car garage."></textarea>
+        </div>
+
+        <div class="form-row-2">
+          <div class="form-group">
+            <label>Lot Size</label>
+            <input class="ravlo-input" type="text" name="lot_size" placeholder="0.45 acres">
+          </div>
+          <div class="form-group">
+            <label>Zoning</label>
+            <input class="ravlo-input" type="text" name="zoning" placeholder="R2 Residential">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Location</label>
+          <input class="ravlo-input" type="text" name="location" placeholder="Tampa, FL">
+        </div>
+
+        <div class="form-group">
+          <label>Land / Lot Photo</label>
+          <input class="ravlo-input" type="file" name="land_image" accept="image/*">
+        </div>
+
+        <div class="form-group">
+          <label>Additional Notes</label>
+          <textarea class="ravlo-input" name="notes" rows="3" placeholder="Setbacks, driveway preference, parking, units, style cues, target square footage, lender notes, etc."></textarea>
+        </div>
+
+        <div class="btn-row">
+          <button type="submit" class="ravlo-btn primary">Generate Build Concept</button>
+        </div>
+      </form>
+    </section>
+
+    <!-- RIGHT: OUTPUT PANEL -->
+    <section class="ravlo-card">
+      <div class="card-head">
+        <h3>Generated Outputs</h3>
+        <p class="muted">Concept assets for project kickoff.</p>
+      </div>
+
+      <div id="buildStudioEmpty" class="empty-state">
+        <div class="empty-icon">🏗</div>
+        <h4>No concept generated yet</h4>
+        <p class="muted">Your render, blueprint, site layout, and presentation sheet will appear here.</p>
+      </div>
+
+      <div id="buildStudioResults" class="build-results hidden">
+        <div class="result-summary ravlo-soft-panel">
+          <h4 id="resultProjectName">Project</h4>
+          <p id="resultProjectMeta" class="muted"></p>
+          <p id="resultProjectDesc"></p>
+        </div>
+
+        <div class="output-grid">
+          <div class="output-card">
+            <h5>Concept Render</h5>
+            <img id="conceptRenderImg" src="" alt="Concept Render">
+          </div>
+
+          <div class="output-card">
+            <h5>Draft Blueprint</h5>
+            <img id="blueprintImg" src="" alt="Draft Blueprint">
+          </div>
+
+          <div class="output-card">
+            <h5>Site Plan</h5>
+            <img id="sitePlanImg" src="" alt="Site Plan">
+          </div>
+
+          <div class="output-card">
+            <h5>Presentation Sheet</h5>
+            <img id="presentationImg" src="" alt="Presentation Sheet">
+          </div>
+        </div>
+
+        <div class="btn-row">
+          <button class="ravlo-btn ghost" type="button">Download Package</button>
+          <button class="ravlo-btn ghost" type="button">Share with Architect</button>
+          <button class="ravlo-btn primary" type="button">Send to Funding</button>
+        </div>
+      </div>
+    </section>
+  </div>
+</div>
+
+<script>
+document.getElementById("buildStudioForm").addEventListener("submit", async function(e) {
+  e.preventDefault();
+
+  const form = e.target;
+  const formData = new FormData(form);
+
+  try {
+    const response = await fetch('{{ url_for("investor.generate_build_studio") }}', {
+      method: "POST",
+      body: formData
+    });
+
+    const data = await response.json();
+
+    if (!data.success) {
+      alert(data.message || "Something went wrong.");
+      return;
+    }
+
+    document.getElementById("buildStudioEmpty").classList.add("hidden");
+    document.getElementById("buildStudioResults").classList.remove("hidden");
+
+    document.getElementById("resultProjectName").textContent = data.project_name || "Untitled Project";
+    document.getElementById("resultProjectMeta").textContent =
+      `${data.property_type || "Project"} • ${data.location || "No location"} • ${data.lot_size || "Lot size not provided"} • ${data.zoning || "Zoning not provided"}`;
+    document.getElementById("resultProjectDesc").textContent = data.description || "";
+
+    document.getElementById("conceptRenderImg").src = data.concept_render_url;
+    document.getElementById("blueprintImg").src = data.blueprint_url;
+    document.getElementById("sitePlanImg").src = data.site_plan_url;
+    document.getElementById("presentationImg").src = data.presentation_url;
+
+  } catch (err) {
+    console.error(err);
+    alert("Failed to generate build concept.");
+  }
+});
+</script>
+{% endblock %}
