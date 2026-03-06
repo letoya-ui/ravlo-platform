@@ -221,6 +221,8 @@ def reset_password(token):
 @auth_bp.route("/register", methods=["GET", "POST"])
 @csrf.exempt
 def register():
+    form = RegisterForm()
+
     if request.method == "POST":
 
         full_name = (request.form.get("username") or "").strip()
@@ -293,7 +295,7 @@ def register():
         return redirect(url_for("investor.command_center"))
 
     # 🔥 THIS WAS MISSING
-    return render_template("auth/register.html", form=form)
+    return render_template("auth/register.html")
 
 
 

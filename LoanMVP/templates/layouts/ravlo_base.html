@@ -1,9 +1,9 @@
 {# ============================================================
    RAVLO BASE LAYOUT
    Investor-facing shell for Command Center / Deal Studio / Funding
+   CLEANED for investor-only flow
    ============================================================ #}
 
-{% set bp = request.blueprint or "" %}
 {% set ep = request.endpoint or "" %}
 {% set views = current_app.view_functions if current_app is defined else {} %}
 
@@ -19,18 +19,14 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
   <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
-  {# NEW: Page-specific CSS #}
   {% block styles %}{% endblock %}
-
   {% block head %}{% endblock %}
 </head>
 <body class="ravlo-body">
 
   <div class="ravlo-app">
 
-    {# =========================
-       SIDEBAR
-       ========================= #}
+    <!-- SIDEBAR -->
     <aside class="ravlo-sidebar" id="ravloSidebar">
       <div class="ravlo-sidebar-inner">
 
@@ -70,12 +66,6 @@
             <span>Projects</span>
           </a>
 
-          <a class="ravlo-nav-item {{ 'active' if ep.startswith('partners.') or ep == 'investor.marketplace' else '' }}"
-             href="{{ url_for('partners.center') if 'partners.center' in views else '#' }}">
-            <i data-lucide="users-round"></i>
-            <span>Marketplace</span>
-          </a>
-
           <a class="ravlo-nav-item {{ 'active' if ep in ['investor.profile', 'investor.settings'] else '' }}"
              href="{{ url_for('investor.settings') if 'investor.settings' in views else '#' }}">
             <i data-lucide="settings"></i>
@@ -94,12 +84,10 @@
       </div>
     </aside>
 
-    {# =========================
-       MAIN
-       ========================= #}
+    <!-- MAIN -->
     <div class="ravlo-main-wrap">
 
-      {# TOPBAR #}
+      <!-- TOPBAR -->
       <header class="ravlo-topbar">
         <div class="ravlo-topbar-left">
           <button class="ravlo-icon-btn mobile-only" type="button" id="ravloSidebarToggle" aria-label="Toggle navigation">
@@ -114,19 +102,21 @@
 
         <div class="ravlo-topbar-right">
           {% block topbar_actions %}
-          <a class="ravlo-btn ghost sm"
-             href="{{ url_for('investor.deal_studio') if 'investor.deal_studio' in views else '#' }}">
-            Deal Studio
-          </a>
-          <a class="ravlo-btn primary sm"
-             href="{{ url_for('investor.request_funding') if 'investor.request_funding' in views else '#' }}">
-            Request Funding
-          </a>
+            {% if 'investor.deal_studio' in views %}
+              <a class="ravlo-btn ghost sm" href="{{ url_for('investor.deal_studio') }}">
+                Deal Studio
+              </a>
+            {% endif %}
+            {% if 'investor.request_funding' in views %}
+              <a class="ravlo-btn primary sm" href="{{ url_for('investor.request_funding') }}">
+                Request Funding
+              </a>
+            {% endif %}
           {% endblock %}
         </div>
       </header>
 
-      {# CONTENT #}
+      <!-- CONTENT -->
       <main class="ravlo-main">
         {% with messages = get_flashed_messages(with_categories=true) %}
           {% if messages %}
@@ -161,9 +151,8 @@
       }
     })();
   </script>
-  {# NEW: Page-specific JS #}
-  {% block page_scripts %}{% endblock %}
 
+  {% block page_scripts %}{% endblock %}
   {% block scripts %}{% endblock %}
 </body>
 </html>
