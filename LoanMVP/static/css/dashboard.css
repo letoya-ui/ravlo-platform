@@ -1,564 +1,234 @@
-/* ============================================================
-   RAVLO — ENGRAVED STEEL UI (Base + Sidebar + Topbar + Buttons)
-   Palette: Midnight steel + grayish-blue metallic accents
-   ============================================================ */
-
-/* ---------- TOKENS ---------- */
-:root{
-  /* surfaces */
-  --bg0:#070A0E;
-  --bg1:#0B1016;        /* main */
-  --bg2:#0E141B;        /* panels */
-  --bg3:#121A23;        /* elevated */
-  --line:#1A2330;
-
-  /* text */
-  --text:#FFFFFF;
-  --muted:#A9B2BE;
-  --muted2:#7F8A99;
-
-  /* accent (grayish blue) */
-  --accent:#6B7F93;     /* primary */
-  --accent2:#7A8FA5;    /* hover */
-  --accent3:#3A5C7A;    /* deep */
-
-  /* shadows (engraved) */
-  --shadow-out: 0 18px 45px rgba(0,0,0,.55);
-  --shadow-soft: 0 10px 30px rgba(0,0,0,.45);
-
-  /* inset / engraved */
-  --inset-1: inset 0 1px 0 rgba(255,255,255,.06),
-             inset 0 -1px 0 rgba(0,0,0,.65),
-             inset 0 0 0 1px rgba(255,255,255,.03);
-
-  --inset-2: inset 0 2px 10px rgba(0,0,0,.70),
-             inset 0 1px 0 rgba(255,255,255,.05),
-             inset 0 0 0 1px rgba(255,255,255,.03);
-
-  /* metallic (for logo + hero moments) */
-  --metal-a:#8EA0B3;
-  --metal-b:#6B7F93;
-  --metal-c:#42586E;
-  --metal-d:#2B3B4C;
-
-  /* radius & spacing */
-  --r-sm:12px;
-  --r-md:16px;
-  --r-lg:22px;
-
-  --sidebar-w: 280px;
-  --topbar-h: 66px;
-  --pad: 22px;
-
-  /* focus */
-  --focus: 0 0 0 3px rgba(107,127,147,.22);
+/* GLOBAL RESET */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
 }
 
-/* ---------- GLOBAL ---------- */
-*{ box-sizing:border-box; }
-html,body{ height:100%; }
-body{
-  margin:0;
-  color:var(--text);
-  font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-  background:
-    radial-gradient(1200px 700px at 50% -180px, rgba(255,255,255,.10), transparent 55%),
-    radial-gradient(900px 520px at 60% 0px, rgba(107,127,147,.18), transparent 55%),
-    radial-gradient(900px 520px at 18% 12%, rgba(0,0,0,.75), transparent 60%),
-    linear-gradient(180deg, var(--bg0), var(--bg1) 30%, var(--bg1));
+body {
+    font-family: Inter, system-ui, sans-serif;
+    background: #f7f8fa;
+    color: #111827;
+    line-height: 1.5;
 }
 
-/* Subtle grain texture (safe fallback) */
-.ravlo-grain{
-  position:fixed;
-  inset:0;
-  pointer-events:none;
-  opacity:.08;
-  background-image:
-    repeating-linear-gradient(0deg, rgba(255,255,255,.03) 0 1px, transparent 1px 2px),
-    repeating-linear-gradient(90deg, rgba(255,255,255,.02) 0 1px, transparent 1px 3px);
-  mix-blend-mode: overlay;
+/* LINKS */
+a {
+    color: inherit;
+    text-decoration: none;
 }
 
-/* ---------- LAYOUT SHELL ---------- */
-.ravlo-shell{
-  min-height:100vh;
-  display:grid;
-  grid-template-columns: var(--sidebar-w) 1fr;
+.muted {
+    color: #6b7280;
 }
 
-.ravlo-main{
-  min-height:100vh;
-  display:flex;
-  flex-direction:column;
+/* MAIN CONTENT WRAPPER */
+.ravlo-shell {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 32px 0 60px;
 }
 
-/* ---------- SIDEBAR (ENGRAVED) ---------- */
-.ravlo-sidebar{
-  position:sticky;
-  top:0;
-  height:100vh;
-  padding:18px 14px;
-  background:
-    radial-gradient(900px 520px at 45% -120px, rgba(255,255,255,.10), transparent 60%),
-    radial-gradient(800px 520px at 35% 0px, rgba(107,127,147,.14), transparent 62%),
-    linear-gradient(180deg, #070A0E, #0B1016 40%, #0B1016);
-  border-right:1px solid rgba(255,255,255,.05);
-  box-shadow: 14px 0 40px rgba(0,0,0,.55);
+.sidebar {
+    width: 260px;
+    background: #111827;
+    color: white;
+    height: 100vh;
+    padding: 28px;
+    position: fixed;
+    left: 0;
+    top: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
 }
 
-.ravlo-sb-head{
-  padding:14px 12px 18px;
-  border-radius: var(--r-lg);
-  background:
-    radial-gradient(520px 220px at 40% -60px, rgba(255,255,255,.10), transparent 65%),
-    linear-gradient(180deg, rgba(255,255,255,.03), rgba(0,0,0,.45));
-  box-shadow: var(--inset-2);
-  margin-bottom:14px;
+.sidebar .logo {
+    font-size: 22px;
+    font-weight: 700;
+    margin-bottom: 20px;
 }
 
-.ravlo-brand{
-  display:flex;
-  align-items:center;
-  gap:12px;
+.sidebar a {
+    padding: 10px 0;
+    font-size: 15px;
+    color: #d1d5db;
+    transition: 0.2s;
 }
 
-.ravlo-mark{
-  width:44px;
-  height:44px;
-  border-radius:14px;
-  display:grid;
-  place-items:center;
-  background:
-    radial-gradient(140px 90px at 35% 25%, rgba(255,255,255,.10), transparent 60%),
-    linear-gradient(180deg, rgba(255,255,255,.03), rgba(0,0,0,.62));
-  box-shadow: var(--inset-2);
-  overflow:hidden;
+.sidebar a:hover,
+.sidebar a.active {
+    color: white;
 }
 
-/* Put your RV SVG inside this and it will look “engraved-metallic” */
-.ravlo-mark svg{
-  width:30px; height:30px;
-  filter: drop-shadow(0 10px 14px rgba(0,0,0,.45));
+.main-content {
+    margin-left: 260px;
+    padding: 32px;
+    width: calc(100% - 260px);
 }
 
-.ravlo-word{
-  display:flex;
-  flex-direction:column;
-  line-height:1.05;
-}
-.ravlo-word .name{
-  font-weight:700;
-  letter-spacing:.14em;
-  font-size:15px;
-}
-.ravlo-word .sub{
-  margin-top:5px;
-  font-size:12px;
-  letter-spacing:.02em;
-  color:var(--muted);
+.page-title {
+    font-size: 28px;
+    font-weight: 700;
+    margin-bottom: 8px;
 }
 
-.ravlo-nav{
-  padding:10px 8px;
-  display:flex;
-  flex-direction:column;
-  gap:8px;
+.page-subline {
+    font-size: 15px;
+    color: #6b7280;
+    margin-bottom: 28px;
 }
 
-.ravlo-nav a{
-  text-decoration:none;
-  color:var(--muted);
-  display:flex;
-  align-items:center;
-  gap:12px;
-  padding:12px 12px;
-  border-radius: 16px;
-  position:relative;
-  transition: .18s ease;
-  background: transparent;
+.ravlo-card {
+    background: white;
+    padding: 28px;
+    border-radius: 14px;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.06);
+    margin-bottom: 28px;
 }
 
-/* engraved “button” feel on hover */
-.ravlo-nav a:hover{
-  color:var(--text);
-  background:
-    radial-gradient(240px 90px at 30% 0%, rgba(255,255,255,.07), transparent 60%),
-    linear-gradient(180deg, rgba(255,255,255,.03), rgba(0,0,0,.40));
-  box-shadow: var(--inset-1);
+.card-head h3 {
+    font-size: 20px;
+    font-weight: 700;
 }
 
-/* Active = thin metallic indicator strip */
-.ravlo-nav a.active{
-  color:var(--text);
-  background:
-    radial-gradient(240px 90px at 30% 0%, rgba(255,255,255,.09), transparent 60%),
-    linear-gradient(180deg, rgba(255,255,255,.04), rgba(0,0,0,.48));
-  box-shadow: var(--inset-2);
+.card-head p {
+    margin-top: 4px;
 }
 
-.ravlo-nav a.active::before{
-  content:"";
-  position:absolute;
-  left:8px;
-  top:10px;
-  bottom:10px;
-  width:3px;
-  border-radius:999px;
-  background: linear-gradient(180deg, var(--metal-a), var(--metal-b), var(--metal-d));
-  box-shadow: 0 0 0 1px rgba(255,255,255,.08);
-  opacity:.95;
+.ravlo-hero-card {
+    background: white;
+    padding: 32px;
+    border-radius: 14px;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.06);
+    margin-bottom: 32px;
 }
 
-.ravlo-nav .icon{
-  width:18px; height:18px;
-  opacity:.9;
-  flex:0 0 auto;
+.eyebrow {
+    font-size: 12px;
+    font-weight: 700;
+    color: #6366f1;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-bottom: 6px;
 }
 
-/* Sidebar footer (logout/settings) */
-.ravlo-sb-foot{
-  margin-top:auto;
-  padding:10px 8px 8px;
-  border-top:1px solid rgba(255,255,255,.06);
-}
-.ravlo-sb-foot a{
-  display:flex;
-  gap:12px;
-  align-items:center;
-  color:var(--muted);
-  text-decoration:none;
-  padding:12px 12px;
-  border-radius:16px;
-  transition:.18s ease;
-}
-.ravlo-sb-foot a:hover{
-  color:var(--text);
-  background:
-    radial-gradient(260px 90px at 30% 0%, rgba(255,255,255,.06), transparent 60%),
-    linear-gradient(180deg, rgba(255,255,255,.03), rgba(0,0,0,.42));
-  box-shadow: var(--inset-1);
+.ravlo-grid {
+    display: grid;
+    gap: 28px;
 }
 
-/* ---------- TOPBAR ---------- */
-.ravlo-topbar{
-  height:var(--topbar-h);
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  padding: 0 var(--pad);
-  position:sticky;
-  top:0;
-  z-index:10;
-  background:
-    radial-gradient(900px 240px at 50% -120px, rgba(255,255,255,.10), transparent 62%),
-    linear-gradient(180deg, rgba(0,0,0,.55), rgba(0,0,0,.22));
-  border-bottom:1px solid rgba(255,255,255,.06);
-  backdrop-filter: blur(8px);
+.ravlo-grid-2 {
+    grid-template-columns: 1fr 1fr;
 }
 
-.ravlo-top-left{
-  display:flex;
-  align-items:baseline;
-  gap:14px;
-}
-.ravlo-title{
-  font-size:26px;
-  font-weight:700;
-  letter-spacing:.02em;
-  margin:0;
-}
-.ravlo-subline{
-  margin:0;
-  font-size:14px;
-  color: var(--accent2);
-  letter-spacing:.01em;
+.ravlo-grid-3 {
+    grid-template-columns: repeat(3, 1fr);
 }
 
-/* topbar actions */
-.ravlo-actions{
-  display:flex;
-  align-items:center;
-  gap:10px;
+@media (max-width: 900px) {
+    .ravlo-grid-2,
+    .ravlo-grid-3 {
+        grid-template-columns: 1fr;
+    }
 }
 
-.ravlo-search{
-  display:flex;
-  align-items:center;
-  gap:10px;
-  padding:10px 12px;
-  min-width: 280px;
-  border-radius: 16px;
-  color:var(--muted);
-  background:
-    radial-gradient(240px 90px at 30% 0%, rgba(255,255,255,.05), transparent 60%),
-    linear-gradient(180deg, rgba(255,255,255,.02), rgba(0,0,0,.50));
-  box-shadow: var(--inset-2);
-  border:1px solid rgba(255,255,255,.06);
-}
-.ravlo-search input{
-  width:100%;
-  border:none;
-  outline:none;
-  background:transparent;
-  color:var(--text);
-  font-size:14px;
+.form-group {
+    margin-bottom: 22px;
 }
 
-/* ---------- CONTENT WRAP ---------- */
-.ravlo-content{
-  padding: var(--pad);
+label {
+    font-weight: 600;
+    font-size: 14px;
+    margin-bottom: 6px;
+    display: block;
+    color: #374151;
 }
 
-/* ---------- CARDS / PANELS ---------- */
-.ravlo-card{
-  border-radius: var(--r-lg);
-  background:
-    radial-gradient(420px 200px at 45% -40px, rgba(255,255,255,.08), transparent 60%),
-    linear-gradient(180deg, rgba(255,255,255,.03), rgba(0,0,0,.55));
-  border:1px solid rgba(255,255,255,.06);
-  box-shadow: var(--inset-2), var(--shadow-soft);
+.ravlo-input {
+    width: 100%;
+    padding: 14px 16px;
+    border-radius: 12px;
+    border: 1px solid #d0d5dd;
+    background: #f9fafb;
+    font-size: 15px;
+    transition: all 0.25s ease;
 }
 
-.ravlo-card.pad{ padding:18px; }
-.ravlo-card-header{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  padding:16px 18px 10px;
-}
-.ravlo-card-title{
-  margin:0;
-  font-size:14px;
-  letter-spacing:.08em;
-  text-transform:uppercase;
-  color:var(--muted);
-}
-.ravlo-card-body{ padding: 0 18px 18px; }
-
-/* ---------- GRID HELPERS ---------- */
-.ravlo-grid{
-  display:grid;
-  gap:14px;
-}
-.ravlo-grid.cols-4{ grid-template-columns: repeat(4, minmax(0,1fr)); }
-.ravlo-grid.cols-3{ grid-template-columns: repeat(3, minmax(0,1fr)); }
-.ravlo-grid.cols-2{ grid-template-columns: repeat(2, minmax(0,1fr)); }
-
-@media (max-width:1200px){
-  :root{ --sidebar-w: 250px; }
-  .ravlo-grid.cols-4{ grid-template-columns: repeat(2, minmax(0,1fr)); }
-}
-@media (max-width:860px){
-  .ravlo-shell{ grid-template-columns: 1fr; }
-  .ravlo-sidebar{ display:none; } /* you can swap to a drawer later */
-  .ravlo-grid.cols-3,.ravlo-grid.cols-2,.ravlo-grid.cols-4{ grid-template-columns:1fr; }
-  .ravlo-search{ min-width: 180px; }
+.ravlo-input:hover {
+    background: #ffffff;
+    border-color: #bfc5d0;
 }
 
-/* ---------- KPI TILE ---------- */
-.ravlo-kpi{
-  padding:16px 16px 14px;
-  border-radius: var(--r-lg);
-  background:
-    radial-gradient(260px 140px at 35% 0%, rgba(255,255,255,.07), transparent 58%),
-    linear-gradient(180deg, rgba(255,255,255,.02), rgba(0,0,0,.58));
-  border:1px solid rgba(255,255,255,.06);
-  box-shadow: var(--inset-2);
-}
-.ravlo-kpi .value{
-  font-size:26px;
-  font-weight:700;
-  letter-spacing:.01em;
-}
-.ravlo-kpi .label{
-  margin-top:6px;
-  color:var(--muted);
-  font-size:13px;
+.ravlo-input:focus {
+    background: #ffffff;
+    border-color: #6366f1;
+    box-shadow: 0 0 0 4px rgba(99,102,241,0.15);
+    outline: none;
 }
 
-/* ---------- BUTTONS ---------- */
-.ravlo-btn{
-  border:none;
-  outline:none;
-  border-radius: 16px;
-  padding: 12px 14px;
-  font-weight:600;
-  letter-spacing:.01em;
-  cursor:pointer;
-  transition: .16s ease;
-  user-select:none;
+textarea.ravlo-input {
+    min-height: 120px;
+    resize: vertical;
 }
 
-.ravlo-btn:focus{ box-shadow: var(--focus); }
-
-/* primary (steel-blue) */
-.ravlo-btn.primary{
-  color:#EEF3F8;
-  background:
-    radial-gradient(220px 110px at 35% 0%, rgba(255,255,255,.10), transparent 60%),
-    linear-gradient(180deg, rgba(122,143,165,.35), rgba(58,92,122,.35));
-  border:1px solid rgba(255,255,255,.08);
-  box-shadow: var(--inset-2);
-}
-.ravlo-btn.primary:hover{
-  transform: translateY(-1px);
-  background:
-    radial-gradient(220px 110px at 35% 0%, rgba(255,255,255,.12), transparent 60%),
-    linear-gradient(180deg, rgba(122,143,165,.45), rgba(58,92,122,.42));
+select.ravlo-input {
+    background-image: url("data:image/svg+xml,%3Csvg width='14' height='14' viewBox='0 0 20 20' fill='none' stroke='%236b7280' stroke-width='2' xmlns='http://www.w3.org/2000/svg'%3E%3Cpolyline points='4 7 10 13 16 7'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 14px center;
+    background-size: 14px;
+    appearance: none;
+    cursor: pointer;
 }
 
-/* secondary / ghost */
-.ravlo-btn.ghost{
-  color:var(--text);
-  background:
-    radial-gradient(220px 110px at 35% 0%, rgba(255,255,255,.06), transparent 60%),
-    linear-gradient(180deg, rgba(255,255,255,.02), rgba(0,0,0,.55));
-  border:1px solid rgba(255,255,255,.06);
-  box-shadow: var(--inset-2);
-}
-.ravlo-btn.ghost:hover{ transform: translateY(-1px); }
-
-/* tiny */
-.ravlo-btn.sm{
-  padding:9px 11px;
-  border-radius: 14px;
-  font-size:13px;
+.ravlo-btn {
+    padding: 12px 20px;
+    border-radius: 10px;
+    font-size: 15px;
+    cursor: pointer;
+    border: none;
+    transition: 0.2s;
 }
 
-/* ---------- INPUTS ---------- */
-.ravlo-field{
-  width:100%;
-  padding:12px 12px;
-  border-radius: 16px;
-  border:1px solid rgba(255,255,255,.06);
-  background:
-    radial-gradient(260px 100px at 30% 0%, rgba(255,255,255,.04), transparent 60%),
-    linear-gradient(180deg, rgba(255,255,255,.02), rgba(0,0,0,.58));
-  box-shadow: var(--inset-2);
-  color:var(--text);
-  outline:none;
-  transition:.16s ease;
-}
-.ravlo-field::placeholder{ color: rgba(169,178,190,.55); }
-.ravlo-field:focus{ border-color: rgba(107,127,147,.55); box-shadow: var(--inset-2), var(--focus); }
-
-/* ---------- TABLES ---------- */
-.ravlo-table{
-  width:100%;
-  border-collapse: separate;
-  border-spacing:0;
-  overflow:hidden;
-  border-radius: var(--r-lg);
-  border:1px solid rgba(255,255,255,.06);
-  box-shadow: var(--inset-2);
-  background:
-    linear-gradient(180deg, rgba(255,255,255,.02), rgba(0,0,0,.62));
-}
-.ravlo-table th,
-.ravlo-table td{
-  padding:12px 12px;
-  border-bottom:1px solid rgba(255,255,255,.06);
-  font-size:13px;
-}
-.ravlo-table th{
-  text-align:left;
-  color:var(--muted);
-  font-weight:700;
-  letter-spacing:.08em;
-  text-transform:uppercase;
-  background: rgba(255,255,255,.02);
-}
-.ravlo-table tr:last-child td{ border-bottom:none; }
-
-/* ---------- BADGES / STATUS ---------- */
-.ravlo-badge{
-  display:inline-flex;
-  align-items:center;
-  gap:8px;
-  padding:6px 10px;
-  border-radius:999px;
-  font-size:12px;
-  letter-spacing:.02em;
-  border:1px solid rgba(255,255,255,.08);
-  background:
-    radial-gradient(160px 70px at 30% 0%, rgba(255,255,255,.06), transparent 60%),
-    linear-gradient(180deg, rgba(255,255,255,.02), rgba(0,0,0,.55));
-  box-shadow: var(--inset-1);
-  color: var(--muted);
-}
-.ravlo-badge.ok{ color:#DCE6F2; border-color: rgba(107,127,147,.35); }
-.ravlo-badge.watch{ color:#E7E2D6; border-color: rgba(186,170,120,.28); }
-.ravlo-badge.risk{ color:#F0D9D9; border-color: rgba(195,120,120,.28); }
-
-/* ---------- “RAVLO INSIGHT” CALLOUT ---------- */
-.ravlo-insight{
-  border-radius: var(--r-lg);
-  padding:14px 14px;
-  border:1px solid rgba(107,127,147,.28);
-  background:
-    radial-gradient(420px 160px at 25% 0%, rgba(107,127,147,.18), transparent 60%),
-    linear-gradient(180deg, rgba(255,255,255,.02), rgba(0,0,0,.62));
-  box-shadow: var(--inset-2);
-}
-.ravlo-insight .k{
-  font-size:12px;
-  letter-spacing:.10em;
-  text-transform:uppercase;
-  color:var(--accent2);
-  margin:0 0 8px 0;
-}
-.ravlo-insight .v{
-  margin:0;
-  color:var(--text);
-  line-height:1.4;
-  font-size:14px;
+.ravlo-btn.primary {
+    background: #4f46e5;
+    color: white;
 }
 
-/* ---------- LOGIN (engraved hero look) ---------- */
-.ravlo-login{
-  min-height:100vh;
-  display:grid;
-  place-items:center;
-  padding:24px;
-  background:
-    radial-gradient(1200px 740px at 50% -220px, rgba(255,255,255,.12), transparent 55%),
-    radial-gradient(900px 520px at 52% 12%, rgba(107,127,147,.16), transparent 58%),
-    linear-gradient(180deg, var(--bg0), var(--bg1) 35%, var(--bg1));
-}
-.ravlo-login-card{
-  width:min(440px, 96vw);
-  border-radius: 28px;
-  padding:22px;
-  border:1px solid rgba(255,255,255,.06);
-  background:
-    radial-gradient(560px 260px at 45% -80px, rgba(255,255,255,.10), transparent 62%),
-    linear-gradient(180deg, rgba(255,255,255,.03), rgba(0,0,0,.62));
-  box-shadow: var(--inset-2), var(--shadow-out);
-}
-.ravlo-login-hero{
-  display:grid;
-  justify-items:center;
-  gap:10px;
-  padding:10px 0 16px;
-}
-.ravlo-login-hero .rv{
-  width:120px;
-  filter: drop-shadow(0 18px 24px rgba(0,0,0,.55));
-}
-.ravlo-login-hero .brand{
-  font-size:28px;
-  letter-spacing:.16em;
-  font-weight:800;
-}
-.ravlo-login-hero .hint{
-  color:var(--muted);
-  font-size:13px;
+.ravlo-btn.primary:hover {
+    background: #4338ca;
 }
 
-/* ---------- UTIL ---------- */
-.mt-12{ margin-top:12px; }
-.mt-16{ margin-top:16px; }
-.mt-20{ margin-top:20px; }
-.row{ display:flex; gap:12px; align-items:center; }
-.row.between{ justify-content:space-between; }
+.ravlo-btn.ghost {
+    background: #f3f4f6;
+    color: #374151;
+}
+
+.ravlo-btn.ghost:hover {
+    background: #e5e7eb;
+}
+
+.btn-row {
+    display: flex;
+    gap: 12px;
+    margin-top: 20px;
+}
+
+.output-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 22px;
+}
+
+.output-card {
+    background: white;
+    padding: 16px;
+    border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+}
+
+.output-card img {
+    width: 100%;
+    border-radius: 10px;
+    background: #f3f4f6;
+}
