@@ -535,6 +535,13 @@ def resource_center():
         active_tab="resources"
     )
 
+@investor_bp.route("/resources/save", methods=["POST"])
+@login_required
+@role_required("investor")
+def resource_center_save():
+    payload = request.get_json(silent=True) or {}
+    return jsonify({"success": True, "payload": payload})
+
 @investor_bp.route("/dismiss_dashboard_tour", methods=["POST"])
 @csrf.exempt
 @login_required
