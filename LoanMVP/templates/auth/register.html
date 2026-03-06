@@ -1,36 +1,61 @@
 {% extends "layouts/ravlo_auth_base.html" %}
-{% block title %}Register | Ravlo{% endblock %}
+{% block title %}Create Account • Ravlo{% endblock %}
+
 {% block content %}
 
-<h2>Create Your Account</h2>
+<div class="ravlo-auth">
 
-{% with messages = get_flashed_messages(with_categories=true) %}
-  {% if messages %}
-    <div class="flashes">
-      {% for category, msg in messages %}
-        <div class="flash flash-{{ category }}">{{ msg }}</div>
-      {% endfor %}
+  <div class="ravlo-auth-card">
+
+    <div class="auth-header">
+        <h1>Create your Ravlo account</h1>
+        <p>Start analyzing deals, planning projects, and requesting funding.</p>
     </div>
-  {% endif %}
-{% endwith %}
 
-<form method="POST" action="{{ url_for('auth.register') }}">
-<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-  <input class="form-control" type="text" name="username" placeholder="Full Name" required>
-  <input class="form-control" type="email" name="email" placeholder="Email Address" required>
-  <input class="form-control" type="password" name="password" placeholder="Password" required>
+    <form method="POST" action="{{ url_for('auth.register') }}" class="auth-form">
 
-  <!-- optional -->
-  <select class="form-control" name="role">
-    <option value="investor">Investor</option>
-    <option value="partner">Partner</option>
-  </select>
+        {{ form.hidden_tag() }}
 
-  <button class="btn btn-primary" type="submit">Create Account</button>
-</form>
+        <div class="form-row">
 
-<div class="footer-links">
-  <a href="{{ url_for('auth.login') }}">Already have an account? Login</a>
+            <div class="form-group">
+                <label>Full Name</label>
+                {{ form.full_name(class="ravlo-input") }}
+            </div>
+
+           
+        </div>
+
+        <div class="form-group">
+            <label>Email</label>
+            {{ form.email(class="ravlo-input") }}
+        </div>
+
+        <div class="form-group">
+            <label>Password</label>
+            {{ form.password(class="ravlo-input") }}
+        </div>
+
+        <div class="form-group">
+            <label>Confirm Password</label>
+            {{ form.confirm_password(class="ravlo-input") }}
+        </div>
+
+        <button type="submit" class="ravlo-btn primary full">
+            Create Account
+        </button>
+
+    </form>
+
+    <div class="auth-footer">
+        <p>
+            Already have an account?
+            <a href="{{ url_for('auth.login') }}">Sign in</a>
+        </p>
+    </div>
+
+  </div>
+
 </div>
 
 {% endblock %}

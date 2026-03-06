@@ -3326,7 +3326,7 @@ def export_rehab_scope(deal_id):
     filename = f"ravlo_rehab_scope_{deal.id}_{datetime.utcnow().strftime('%Y%m%d')}.pdf"
     return send_file(buffer, as_attachment=True, download_name=filename, mimetype="application/pdf")
 
-@investor_bp("/deals/new/concept", methods=["GET"])
+@investor_bp.route("/deals/new/concept", methods=["GET"])
 @login_required
 @role_required("investor")
 def new_concept_deal():
