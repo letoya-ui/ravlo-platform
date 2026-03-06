@@ -3,6 +3,7 @@
    Investor-facing shell for Command Center / Deal Studio / Funding
    ============================================================ #}
 
+{% set bp = request.blueprint or "" %}
 {% set ep = request.endpoint or "" %}
 {% set views = current_app.view_functions if current_app is defined else {} %}
 
