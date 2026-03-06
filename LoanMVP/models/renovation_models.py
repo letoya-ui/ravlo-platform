@@ -40,3 +40,25 @@ class RehabJob(db.Model):
 
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+class BuildProject(db.Model):
+    __tablename__ = "build_projects"
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+
+    project_name = db.Column(db.String(255))
+    property_type = db.Column(db.String(100))
+    description = db.Column(db.Text)
+    lot_size = db.Column(db.String(100))
+    zoning = db.Column(db.String(100))
+    location = db.Column(db.String(255))
+    notes = db.Column(db.Text)
+
+    land_image_path = db.Column(db.String(500))
+    concept_render_url = db.Column(db.String(500))
+    blueprint_url = db.Column(db.String(500))
+    site_plan_url = db.Column(db.String(500))
+    presentation_url = db.Column(db.String(500))
+
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)

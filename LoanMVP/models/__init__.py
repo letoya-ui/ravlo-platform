@@ -88,7 +88,7 @@ from LoanMVP.models.payment_models import PaymentRecord
 
 from LoanMVP.models.credit_models import SoftCreditReport
 from LoanMVP.models.partner_models import  PartnerJob, PartnerConnectionRequest
-from LoanMVP.models.renovation_models import RenovationMockup, RehabJob
+from LoanMVP.models.renovation_models import RenovationMockup, RehabJob, BuildProject
 from LoanMVP.models.investor_models import TimestampMixin, InvestorProfile, Investment, InvestmentDocument 
 
 # ======================================================

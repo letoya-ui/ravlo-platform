@@ -3325,12 +3325,14 @@ def export_rehab_scope(deal_id):
     filename = f"ravlo_rehab_scope_{deal.id}_{datetime.utcnow().strftime('%Y%m%d')}.pdf"
     return send_file(buffer, as_attachment=True, download_name=filename, mimetype="application/pdf")
 
-@deal_builder.route("/investor/deals/new/concept", methods=["GET"])
+@investor("/investor/deals/new/concept", methods=["GET"])
 def new_concept_deal():
     return render_template("investor/deal_builder_concept.html")
 
 
-@deal_builder.route("/investor/deals/new/concept/generate", methods=["POST"])
+@investor_bp.route("/investor/deals/new/concept/generate", methods=["POST"])
+@login_required
+@role_required("investor")
 def generate_concept():
     data = request.json
     result = run_concept_build(
@@ -3342,7 +3344,9 @@ def generate_concept():
     return jsonify(result)
 
 
-@deal_builder.route("/investor/deals/new/concept/save", methods=["POST"])
+@investor_bp.route("/investor/deals/new/concept/save", methods=["POST"])
+@login_required
+@role_required("investor")
 def save_concept_deal():
     data = request.json
 
