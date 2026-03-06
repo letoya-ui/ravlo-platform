@@ -122,3 +122,121 @@
 .auth-links a:hover {
     color: var(--white);
 }
+
+/* ===== Ravlo Premium Login Screen ===== */
+
+body {
+  margin: 0;
+  padding: 0;
+  background: radial-gradient(circle at top, #111827 0%, #020617 55%, #000 100%);
+  font-family: "Inter", system-ui, sans-serif;
+  color: #F9FAFB;
+  -webkit-font-smoothing: antialiased;
+}
+
+.login-wrapper {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.login-card {
+  width: 360px;
+  padding: 36px 32px 30px;
+  border-radius: 26px;
+  background: radial-gradient(circle at top left, #111827 0%, #020617 70%);
+  border: 1px solid rgba(31, 41, 55, 0.9);
+  box-shadow: 0 26px 60px rgba(0, 0, 0, 0.75);
+}
+
+/* Logo block */
+.login-logo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 26px;
+}
+
+.login-logo img {
+  width: 72px;
+  height: 72px;
+  object-fit: contain;
+}
+
+.login-logo-text {
+  font-size: 20px;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: #E5E7EB;
+}
+
+/* Form fields */
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+
+.form-group label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: #6B7F93;
+}
+
+.form-group input {
+  border-radius: 999px;
+  border: 1px solid rgba(55, 65, 81, 0.9);
+  background: rgba(15, 23, 42, 0.9);
+  color: #F9FAFB;
+  padding: 10px 14px;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.16s ease, box-shadow 0.16s ease;
+}
+
+.form-group input:focus {
+  border-color: #3A5C7A;
+  box-shadow: 0 0 0 1px rgba(58, 92, 122, 0.7);
+}
+
+/* Sign in button */
+.btn-login {
+  width: 100%;
+  border-radius: 999px;
+  padding: 10px 0;
+  font-size: 14px;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  background: linear-gradient(135deg, #3A5C7A, #4C7AA3);
+  color: #F9FAFB;
+  box-shadow: 0 10px 25px rgba(37, 99, 235, 0.35);
+  transition: transform 0.12s ease, box-shadow 0.16s ease;
+}
+
+.btn-login:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 14px 30px rgba(37, 99, 235, 0.45);
+}
+
+/* Footer links */
+.login-footer {
+  margin-top: 14px;
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: #9CA3AF;
+}
+
+.login-footer a {
+  color: #4C7AA3;
+  text-decoration: none;
+}
+
+.login-footer a:hover {
+  text-decoration: underline;
+}
