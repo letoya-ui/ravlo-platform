@@ -3,13 +3,20 @@
    =========================================================== */
 
 :root {
-    --midnight: #0C1116;
-    --panel: #11161d;
-    --grayish-blue: #6B7F93;
-    --white: #FFFFFF;
-    --accent: #3A5C7A;
-    --line: #1d2530;
+  --midnight: #0C1116;
+  --panel: #11161d;
+  --grayish-blue: #6B7F93;
+  --white: #F9FAFB;
+  --accent: #3A5C7A;
+  --accent-strong: #4C7AA3;
+
+  /* Metallic gradient tones for your SVG */
+  --metal-a: #6B7F93;
+  --metal-b: #A7B4C2;
+  --metal-c: #3A5C7A;
+  --metal-d: #0C1116;
 }
+
 
 /* Background */
 .auth-wrapper {
@@ -128,21 +135,6 @@
 /* ===========================================================
    RAVLO — PREMIUM METALLIC LOGIN SCREEN (MATCHES YOUR HTML)
    =========================================================== */
-
-:root {
-  --midnight: #0C1116;
-  --panel: #11161d;
-  --grayish-blue: #6B7F93;
-  --white: #F9FAFB;
-  --accent: #3A5C7A;
-  --accent-strong: #4C7AA3;
-
-  /* Metallic gradient tones for your SVG */
-  --metal-a: #6B7F93;
-  --metal-b: #A7B4C2;
-  --metal-c: #3A5C7A;
-  --metal-d: #0C1116;
-}
 
 /* Background */
 .ravlo-login {
@@ -307,3 +299,4 @@
 .auth-footer a {
   color: var(--accent-strong);
 }
+
