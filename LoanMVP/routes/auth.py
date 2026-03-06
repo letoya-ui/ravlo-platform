@@ -293,7 +293,7 @@ def register():
         return redirect(url_for("investor.command_center"))
 
     # 🔥 THIS WAS MISSING
-    return render_template("auth/register.html")
+    return render_template("auth/register.html", form=form)
 
 
 
