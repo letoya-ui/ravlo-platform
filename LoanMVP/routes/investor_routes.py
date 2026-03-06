@@ -706,11 +706,10 @@ def update_profile():
 # 📝 INVESTOR • CAPITAL APPLICATION + STATUS
 # =========================================================
 
-@investor_bp.route("/capital/apply", methods=["GET", "POST"])
-@investor_bp.route("/apply", methods=["GET", "POST"])
+@investor_bp.route("/capital_application", methods=["GET", "POST"])
 @login_required
 @role_required("investor")
-def apply():
+def capital_application():
     ip = InvestorProfile.query.filter_by(user_id=current_user.id).first()
     if not ip:
         flash("Please create your investor profile before applying for capital.", "warning")
@@ -751,8 +750,39 @@ def apply():
         flash("✅ Capital request submitted successfully!", "success")
         return redirect(url_for("investor.status"))
 
-    return render_template("investor/apply.html", investor=ip, title="Apply for Capital")
+    return render_template("investor/capital_application.html", investor=ip, title="Apply for Capital")
 
+@investor_bp.route("/capital-application/submit", methods=["POST"])
+@login_required
+@role_required("investor")
+def submit_capital_application():
+    ip = InvestorProfile.query.filter_by(user_id=current_user.id).first()
+    if not ip:
+        return {"success": False, "message": "No investor profile found."}
+
+    # Extract fields from the new application
+    full_name = request.form.get("full_name")
+    loan_type = request.form.get("loan_type")
+    project_address = request.form.get("project_address")
+    project_description = request.form.get("project_description")
+
+    # Save a new LoanApplication record
+    profile_fk = _profile_id_filter(LoanApplication, ip.id)
+
+    loan = LoanApplication(
+        **profile_fk,
+        loan_type=loan_type,
+        property_address=project_address,
+        ai_summary=project_description,
+        status="Submitted",
+        is_active=True,
+        created_at=datetime.utcnow()
+    )
+
+    db.session.add(loan)
+    db.session.commit()
+
+    return {"success": True, "message": "Application submitted successfully."}
 
 @investor_bp.route("/capital/status", methods=["GET"])
 @investor_bp.route("/status", methods=["GET"])
