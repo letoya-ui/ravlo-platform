@@ -210,3 +210,73 @@ label {
     border-radius: 10px;
     background: #f3f4f6;
 }
+
+/* ------------------------------
+   RAVLO PREMIUM INPUTS
+------------------------------ */
+
+.ravlo-input {
+    width: 100%;
+    padding: 14px 16px;
+    border-radius: 12px;
+    border: 1px solid #d0d5dd;
+    background: #f9fafb;
+    font-size: 15px;
+    color: #111827;
+    transition: all 0.25s ease;
+    appearance: none;
+}
+
+.ravlo-input:hover {
+    background: #ffffff;
+    border-color: #bfc5d0;
+}
+
+.ravlo-input:focus {
+    background: #ffffff;
+    border-color: #6366f1;
+    box-shadow: 0 0 0 4px rgba(99,102,241,0.15);
+    outline: none;
+}
+
+/* Dropdowns */
+select.ravlo-input {
+    background-image: url("data:image/svg+xml,%3Csvg width='14' height='14' viewBox='0 0 20 20' fill='none' stroke='%236b7280' stroke-width='2' xmlns='http://www.w3.org/2000/svg'%3E%3Cpolyline points='4 7 10 13 16 7'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 14px center;
+    background-size: 14px;
+    cursor: pointer;
+}
+
+/* Textareas */
+textarea.ravlo-input {
+    min-height: 120px;
+    resize: vertical;
+}
+
+/* Labels */
+.form-group label {
+    font-weight: 600;
+    font-size: 14px;
+    margin-bottom: 6px;
+    display: block;
+    color: #374151;
+}
+
+/* Form group spacing */
+.form-group {
+    margin-bottom: 22px;
+}
+
+/* Two-column rows */
+.form-row-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 22px;
+}
+
+@media (max-width: 900px) {
+    .form-row-2 {
+        grid-template-columns: 1fr;
+    }
+}
