@@ -126,14 +126,14 @@
           Rehab Studio
         </a>
 
-        <a class="{% if ep == 'investor.deal_find' %}active{% endif %}"
-           href="{{ url_for('investor.property_tool') }}">
+        <a class="{% if ep == 'investor.deal_reveal' %}active{% endif %}"
+           href="{% if deal_id is defined and deal_id %}{{ url_for('investor.deal_reveal', deal_id=deal_id) }}">
           <i class="lucide lucide-film icon"></i>
-          Deal Find
+          Deal Reveal
         </a>
 
         <a class="{% if ep == 'investor.deal_book' %}active{% endif %}"
-           href="{{ url_for('investor.deal_book') }}">
+           href="{% if deal_id is defined and deal_id %}{{ url_for('investor.deal_book', deal_id=deal_id) }}">
           <i class="lucide lucide-book-open icon"></i>
           Deal Book
         </a>
@@ -189,12 +189,12 @@
             Deal Finder
           </button>
 
-          <button class="ravlo-btn ghost sm" onclick="location.href='{{ url_for('investor.deals_list') }}'">
+          <button class="ravlo-btn ghost sm" onclick="location.href='{% if deal_id is defined and deal_id %}{{ url_for('investor.deals_list', deal_id=deal_id) }}'">
             Deal Workspace
           </button>
 
           <button class="ravlo-btn primary sm"
-                  onclick="location.href='{% if deal_id is defined and deal_id %}{{ url_for('investor.deal_rehab_studio', deal_id=deal_id) }}{% else %}{{ url_for('investor.deals_list') }}{% endif %}'">
+                  onclick="location.href='{% if deal_id is defined and deal_id %}{{ url_for('investor.deal_rehab_studio', deal_id=deal_id) }}{% else %}{{ url_for('investor.deals_list', deal_id=deal_id) }}{% endif %}'">
             Rehab Studio
           </button>
           {% endblock %}
