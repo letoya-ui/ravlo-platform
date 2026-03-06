@@ -18,6 +18,9 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
   <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+  {# NEW: Page-specific CSS #}
+  {% block styles %}{% endblock %}
+
   {% block head %}{% endblock %}
 </head>
 <body class="ravlo-body">
@@ -157,6 +160,8 @@
       }
     })();
   </script>
+  {# NEW: Page-specific JS #}
+  {% block page_scripts %}{% endblock %}
 
   {% block scripts %}{% endblock %}
 </body>
