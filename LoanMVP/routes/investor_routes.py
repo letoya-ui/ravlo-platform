@@ -2000,6 +2000,61 @@ def api_property_tool_save_and_analyze():
 # 💼 INVESTOR • DEAL STUDIO (workspace + deals + visualizer + exports)
 # =========================================================
 
+@investor_bp.route("/deal-studio", methods=["GET"])
+@login_required
+@role_required("investor")
+def deal_studio():
+    """
+    Deal Studio is the main workspace where investors can:
+
+    • Find deals
+    • Analyze opportunities
+    • Plan rehabs
+    • Design new builds
+    • Package projects for funding
+    """
+
+    tools = [
+        {
+            "name": "Deal Finder",
+            "description": "Search off-market and listed properties by ZIP or strategy.",
+            "icon": "search",
+            "url": "investor.deal_finder"
+        },
+        {
+            "name": "AI Deal Architect",
+            "description": "Describe a deal idea and let Ravlo generate a concept strategy.",
+            "icon": "sparkles",
+            "url": "investor.deal_architect"
+        },
+        {
+            "name": "Rehab Studio",
+            "description": "Upload a property photo and generate renovation concepts.",
+            "icon": "hammer",
+            "url": "investor.rehab_studio"
+        },
+        {
+            "name": "Build Studio",
+            "description": "Design ground-up development concepts and site layouts.",
+            "icon": "home",
+            "url": "investor.build_studio"
+        },
+        {
+            "name": "Deal Copilot",
+            "description": "AI assistant for deal analysis, strategy, and funding prep.",
+            "icon": "bot",
+            "url": "ai.dashboard"
+        }
+    ]
+
+    return render_template(
+        "investor/deal_studio.html",
+        user=current_user,
+        tools=tools,
+        page_title="Deal Studio",
+        page_subtitle="Analyze opportunities, design projects, and prepare deals for funding."
+    )
+
 @investor_bp.route("/deals/workspace", methods=["GET", "POST"])
 @investor_bp.route("/deal_workspace", methods=["GET", "POST"])
 @login_required
