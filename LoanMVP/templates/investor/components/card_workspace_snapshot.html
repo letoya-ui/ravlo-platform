@@ -1,0 +1,16 @@
+<div class="dashboard-card">
+    <img src="{{ snapshots.workspace.image_url }}" class="card-thumb">
+
+    <h3>{{ snapshots.workspace.address }}</h3>
+
+    <p>Flip ARV: ${{ snapshots.workspace.flip_arv }}</p>
+    <p>Flip Profit: ${{ snapshots.workspace.flip_profit }}</p>
+    <p>Rental Income: ${{ snapshots.workspace.rental_income }}</p>
+    <p>DSCR: {{ snapshots.workspace.dscr }}</p>
+    <p>Airbnb Income: ${{ snapshots.workspace.airbnb_income }}</p>
+    <p>Occupancy: {{ snapshots.workspace.occupancy }}%</p>
+
+    <a href="/investor/deals/{{ snapshots.workspace.deal_id }}/workspace" class="btn">
+        Open Deal Workspace
+    </a>
+</div>

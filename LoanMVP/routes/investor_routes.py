@@ -99,7 +99,7 @@ from LoanMVP.services.property_tool import search_deals_for_zip
 from LoanMVP.services.notification_service import notify_team_on_conversion
 from LoanMVP.services.blueprint_parser import extract_blueprint_structure, infer_room_type
 from LoanMVP.services.prompt_builder import build_blueprint_prompt
-
+from LoanMVP.services.concept_build_service import run_concept_build
 
 from LoanMVP.utils.r2_storage import r2_put_bytes
 
@@ -1910,7 +1910,7 @@ def api_property_tool_save():
     except Exception:
         sqft = None
 
-    fk = profile_id_filter(SavedProperty, ip.id)
+    fk = _profile_id_filter(SavedProperty, ip.id)
 
     existing = None
     if property_id:
@@ -1998,7 +1998,7 @@ def api_property_tool_save_and_analyze():
 # =========================================================
 # 💼 INVESTOR • DEAL STUDIO (workspace + deals + visualizer + exports)
 # =========================================================
-
+i 
 @investor_bp.route("/deals/workspace", methods=["GET", "POST"])
 @investor_bp.route("/deal_workspace", methods=["GET", "POST"])
 @login_required
@@ -3324,6 +3324,43 @@ def export_rehab_scope(deal_id):
     buffer.seek(0)
     filename = f"ravlo_rehab_scope_{deal.id}_{datetime.utcnow().strftime('%Y%m%d')}.pdf"
     return send_file(buffer, as_attachment=True, download_name=filename, mimetype="application/pdf")
+
+@deal_builder.route("/investor/deals/new/concept", methods=["GET"])
+def new_concept_deal():
+    return render_template("investor/deal_builder_concept.html")
+
+
+@deal_builder.route("/investor/deals/new/concept/generate", methods=["POST"])
+def generate_concept():
+    data = request.json
+    result = run_concept_build(
+        land_image_url=data.get("land_image_url"),
+        description=data.get("description"),
+        style=data.get("style"),
+        lot_size=data.get("lot_size")
+    )
+    return jsonify(result)
+
+
+@deal_builder.route("/investor/deals/new/concept/save", methods=["POST"])
+def save_concept_deal():
+    data = request.json
+
+    deal = Deal(
+        address=data.get("address"),
+        concept_image=data.get("concept_image"),
+        blueprint_image=data.get("blueprint_image"),
+        site_plan_image=data.get("site_plan_image"),
+        idea_description=data.get("description"),
+        style=data.get("style"),
+        lot_size=data.get("lot_size"),
+        deal_type="new_construction"
+    )
+
+    db.session.add(deal)
+    db.session.commit()
+
+    return jsonify({"deal_id": deal.id})
 
 # =========================================================
 # 💬 INVESTOR • MESSAGES
