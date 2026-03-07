@@ -2822,6 +2822,7 @@ def deal_architect():
 
 
 @investor_bp.route("/deal-architect/analyze", methods=["POST"])
+@csrf.exempt
 @login_required
 @role_required("investor")
 def deal_architect_analyze():
