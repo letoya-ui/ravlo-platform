@@ -1,0 +1,301 @@
+{% extends "layouts/ravlo_base.html" %}
+{% block title %}Ravlo • Deal Pipeline{% endblock %}
+
+{% block page_title %}Deal Pipeline{% endblock %}
+{% block page_subline %}
+Track active opportunities, open saved deals, and move the best projects into execution.
+{% endblock %}
+
+{% block topbar_actions %}
+  <a href="{{ url_for('investor.deal_comparison') }}" class="ravlo-btn ghost sm">
+    Compare Deals
+  </a>
+  <a href="{{ url_for('investor.property_tool') }}" class="ravlo-btn primary sm">
+    Find Deals
+  </a>
+{% endblock %}
+
+{% block content %}
+<div class="pipeline-shell">
+
+  <section class="ravlo-hero-card">
+    <div>
+      <div class="eyebrow">RAVLO PIPELINE</div>
+      <h2>Your active investment opportunities</h2>
+      <p class="muted">
+        Review saved deals, track strategy and readiness, and move the strongest opportunities into Deal Studio.
+      </p>
+    </div>
+
+    <div class="pipeline-hero-actions">
+      <a href="{{ url_for('investor.deal_comparison') }}" class="ravlo-btn ghost">
+        Compare Deals
+      </a>
+      <a href="{{ url_for('investor.property_tool') }}" class="ravlo-btn primary">
+        Deal Finder
+      </a>
+    </div>
+  </section>
+
+  <div class="pipeline-kpi-grid">
+    <div class="ravlo-kpi premium">
+      <div class="value">{{ deals|length }}</div>
+      <div class="label">Total Deals</div>
+    </div>
+
+    <div class="ravlo-kpi premium">
+      <div class="value">
+        {{ deals|selectattr('submitted_for_funding')|list|length }}
+      </div>
+      <div class="label">Funding Requested</div>
+    </div>
+
+    <div class="ravlo-kpi premium">
+      <div class="value">
+        {{ deals|selectattr('deal_score')|list|length }}
+      </div>
+      <div class="label">Analyzed Deals</div>
+    </div>
+
+    <div class="ravlo-kpi premium">
+      <div class="value">
+        {{ deals|rejectattr('submitted_for_funding')|list|length }}
+      </div>
+      <div class="label">Active Pipeline</div>
+    </div>
+  </div>
+
+  <section class="ravlo-card pad" style="margin-top:20px;">
+    <div class="section-head">
+      <div>
+        <div class="eyebrow">PIPELINE VIEW</div>
+        <h3>All Deals</h3>
+      </div>
+    </div>
+
+    <div class="pipeline-table-wrap">
+      <table class="pipeline-table">
+        <thead>
+          <tr>
+            <th>Deal</th>
+            <th>Strategy</th>
+            <th>Score</th>
+            <th>Purchase</th>
+            <th>Rehab</th>
+            <th>ARV</th>
+            <th>Funding</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% if deals %}
+            {% for deal in deals %}
+            <tr>
+              <td>
+                <div class="pipeline-deal-title">
+                  {{ deal.title or deal.address or ("Deal #" ~ deal.id) }}
+                </div>
+                <div class="pipeline-deal-sub">
+                  {{ deal.address or "No address saved" }}
+                </div>
+              </td>
+
+              <td>
+                <span class="mini-pill">
+                  {{ deal.recommended_strategy or deal.strategy or "Pending" }}
+                </span>
+              </td>
+
+              <td>
+                {% if deal.deal_score %}
+                  <span class="score-pill">{{ deal.deal_score }}/100</span>
+                {% else %}
+                  <span class="muted">Pending</span>
+                {% endif %}
+              </td>
+
+              <td>${{ "{:,.0f}".format(deal.purchase_price or 0) }}</td>
+              <td>${{ "{:,.0f}".format(deal.rehab_cost or 0) }}</td>
+              <td>${{ "{:,.0f}".format(deal.arv or 0) }}</td>
+
+              <td>
+                {% if deal.submitted_for_funding %}
+                  <span class="status-pill funded">Requested</span>
+                {% else %}
+                  <span class="status-pill open">Open</span>
+                {% endif %}
+              </td>
+
+              <td>
+                <span class="status-pill neutral">
+                  {{ deal.status or "active" }}
+                </span>
+              </td>
+
+              <td>
+                <div class="pipeline-actions">
+                  <a href="{{ url_for('investor.deal_detail', deal_id=deal.id) }}" class="ravlo-btn ghost sm">
+                    Detail
+                  </a>
+
+                  <a href="{{ url_for('investor.deal_studio', deal_id=deal.id) }}" class="ravlo-btn ghost sm">
+                    Studio
+                  </a>
+
+                  <a href="{{ url_for('investor.deal_report', deal_id=deal.id) }}" class="ravlo-btn primary sm">
+                    Report
+                  </a>
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          {% else %}
+            <tr>
+              <td colspan="9" class="pipeline-empty">
+                No deals yet. Start by finding and saving your first opportunity.
+              </td>
+            </tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>
+
+<style>
+  .pipeline-shell{
+    display:grid;
+    gap:20px;
+  }
+
+  .pipeline-hero-actions{
+    display:grid;
+    gap:12px;
+    min-width:240px;
+  }
+
+  .pipeline-kpi-grid{
+    display:grid;
+    grid-template-columns:repeat(4, minmax(0, 1fr));
+    gap:16px;
+  }
+
+  .pipeline-table-wrap{
+    overflow:auto;
+    border-radius:18px;
+    border:1px solid rgba(255,255,255,.08);
+    background:rgba(255,255,255,.02);
+  }
+
+  .pipeline-table{
+    width:100%;
+    min-width:1100px;
+    border-collapse:collapse;
+  }
+
+  .pipeline-table thead th{
+    text-align:left;
+    padding:14px 16px;
+    font-size:12px;
+    text-transform:uppercase;
+    letter-spacing:.08em;
+    color:var(--muted);
+    background:rgba(255,255,255,.04);
+    border-bottom:1px solid rgba(255,255,255,.08);
+    white-space:nowrap;
+  }
+
+  .pipeline-table tbody td{
+    padding:14px 16px;
+    border-bottom:1px solid rgba(255,255,255,.06);
+    color:var(--text);
+    vertical-align:top;
+  }
+
+  .pipeline-table tbody tr:hover{
+    background:rgba(255,255,255,.03);
+  }
+
+  .pipeline-deal-title{
+    font-weight:700;
+    color:var(--text);
+  }
+
+  .pipeline-deal-sub{
+    margin-top:4px;
+    color:var(--muted);
+    font-size:13px;
+  }
+
+  .pipeline-actions{
+    display:flex;
+    gap:8px;
+    flex-wrap:wrap;
+  }
+
+  .score-pill{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    min-width:74px;
+    padding:7px 10px;
+    border-radius:999px;
+    background:rgba(107,127,147,.18);
+    border:1px solid rgba(107,127,147,.28);
+    font-weight:700;
+  }
+
+  .status-pill{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    padding:7px 10px;
+    border-radius:999px;
+    font-size:12px;
+    font-weight:700;
+    border:1px solid transparent;
+  }
+
+  .status-pill.open{
+    background:rgba(255,255,255,.05);
+    border-color:rgba(255,255,255,.10);
+    color:var(--text);
+  }
+
+  .status-pill.funded{
+    background:rgba(60,203,127,.12);
+    border-color:rgba(60,203,127,.24);
+    color:#D7FFE6;
+  }
+
+  .status-pill.neutral{
+    background:rgba(107,127,147,.14);
+    border-color:rgba(107,127,147,.24);
+    color:#DCE5EF;
+  }
+
+  .pipeline-empty{
+    color:var(--muted);
+    text-align:center;
+    padding:24px !important;
+  }
+
+  @media (max-width: 1100px){
+    .pipeline-kpi-grid{
+      grid-template-columns:repeat(2, minmax(0, 1fr));
+    }
+
+    .pipeline-hero-actions{
+      min-width:unset;
+      width:100%;
+    }
+  }
+
+  @media (max-width: 560px){
+    .pipeline-kpi-grid{
+      grid-template-columns:1fr;
+    }
+  }
+</style>
+{% endblock %}

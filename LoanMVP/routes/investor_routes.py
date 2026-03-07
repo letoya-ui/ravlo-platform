@@ -2271,45 +2271,45 @@ def api_property_tool_save_and_analyze():
 @role_required("investor")
 def deal_studio():
     """
-    Deal Studio is the main workspace where investors can:
+    Deal Studio is the investor workspace where users can:
 
     • Find deals
     • Analyze opportunities
     • Plan rehabs
     • Design new builds
-    • Package projects for funding
+    • Prepare deals for funding
     """
 
     tools = [
         {
             "name": "Deal Finder",
-            "description": "Search off-market and listed properties by ZIP or strategy.",
+            "description": "Search properties by ZIP, strategy, or market signals.",
             "icon": "search",
-            "url": "investor.deal_finder"
+            "endpoint": "investor.deal_finder"
         },
         {
             "name": "AI Deal Architect",
-            "description": "Describe a deal idea and let Ravlo generate a concept strategy.",
-            "icon": "sparkles",
-            "url": "investor.deal_architect"
+            "description": "Generate strategy analysis and deal scoring.",
+            "icon": "brain-circuit",
+            "endpoint": "investor.deal_architect"
         },
         {
             "name": "Rehab Studio",
-            "description": "Upload a property photo and generate renovation concepts.",
+            "description": "Create renovation scopes and visual concepts.",
             "icon": "hammer",
-            "url": "investor.rehab_studio"
+            "endpoint": "investor.rehab_studio"
         },
         {
             "name": "Build Studio",
-            "description": "Design ground-up development concepts and site layouts.",
+            "description": "Design ground-up development concepts.",
             "icon": "home",
-            "url": "investor.build_studio"
+            "endpoint": "investor.build_studio"
         },
         {
             "name": "Deal Copilot",
-            "description": "AI assistant for deal analysis, strategy, and funding prep.",
+            "description": "AI assistant for deal analysis and funding prep.",
             "icon": "bot",
-            "url": "ai.dashboard"
+            "endpoint": "ai.dashboard"
         }
     ]
 
