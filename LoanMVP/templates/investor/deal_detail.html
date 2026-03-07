@@ -59,6 +59,97 @@ Review the saved deal, check strategy and funding status, and launch the next to
     </div>
   </section>
 
+  <section class="ravlo-card pad">
+
+  <div class="section-head">
+    <div>
+      <div class="eyebrow">DEAL STUDIO</div>
+      <h3>Deal Development Tools</h3>
+    </div>
+  </div>
+
+  <p class="muted" style="margin:0 0 18px;">
+    Use Ravlo's tools to analyze, design, and plan your investment strategy.
+  </p>
+
+  <div class="studio-grid">
+
+    <!-- Renovation -->
+    <a href="{{ url_for('investor.deal_rehab', deal_id=deal.id) }}" class="studio-card">
+
+      <div class="studio-icon">🛠</div>
+
+      <div class="studio-title">
+        Renovation Studio
+      </div>
+
+      <div class="studio-sub">
+        Visualize renovations, generate mockups, and plan rehab scopes.
+      </div>
+
+    </a>
+
+
+    <!-- Build -->
+    <a href="{{ url_for('investor.build_studio', deal_id=deal.id) }}" class="studio-card">
+
+      <div class="studio-icon">🏗</div>
+
+      <div class="studio-title">
+        Build Studio
+      </div>
+
+      <div class="studio-sub">
+        Design ground-up development concepts and site plans.
+      </div>
+
+    </a>
+
+
+    <!-- Deal Architect -->
+    <a href="{{ url_for('investor.deal_architect') }}" class="studio-card">
+
+      <div class="studio-icon">📐</div>
+
+      <div class="studio-title">
+        Deal Architect
+      </div>
+
+      <div class="studio-sub">
+        Let Ravlo AI analyze the deal strategy and investment path.
+      </div>
+
+    </a>
+
+
+    <!-- Deal Report -->
+    <a href="{{ url_for('investor.deal_report', deal_id=deal.id) }}" class="studio-card">
+
+      <div class="studio-icon">📊</div>
+
+      <div class="studio-title">
+        Deal Report
+      </div>
+
+      <div class="studio-sub">
+        Generate investor-grade analysis and shareable reports.
+      </div>
+
+    </a>
+
+  </div>
+
+
+  <div style="margin-top:20px">
+
+    <button class="ravlo-btn primary"
+            onclick="requestFunding({{ deal.id }})">
+      Request Funding
+    </button>
+
+  </div>
+
+</section>
   <!-- KPI ROW -->
   <div class="detail-kpi-grid">
     <div class="ravlo-kpi premium">
