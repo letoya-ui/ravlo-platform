@@ -2826,22 +2826,19 @@ def deal_architect():
 @login_required
 @role_required("investor")
 def deal_architect_analyze():
-
     try:
-        address = request.form.get("address")
-        property_type = request.form.get("property_type")
+        address = (request.form.get("address") or "").strip()
+        property_type = (request.form.get("property_type") or "").strip().lower()
         price = safe_float(request.form.get("price"))
         rehab = safe_float(request.form.get("rehab"))
         arv = safe_float(request.form.get("arv"))
-        description = request.form.get("description")
+        description = (request.form.get("description") or "").strip()
 
-        # Basic strategy analysis
         flip_profit = arv - (price + rehab)
         rental_value = arv * 0.008
 
         strategies = []
 
-        # Flip
         if flip_profit > 20000:
             strategies.append({
                 "name": "Fix & Flip",
@@ -2850,7 +2847,6 @@ def deal_architect_analyze():
                 "summary": "Renovate and sell quickly for capital gain."
             })
 
-        # Rental
         strategies.append({
             "name": "Buy & Hold Rental",
             "rent_estimate": round(rental_value, 2),
@@ -2858,8 +2854,7 @@ def deal_architect_analyze():
             "summary": "Renovate and hold as long-term rental income."
         })
 
-        # Development
-        if property_type.lower() in ["land", "lot"]:
+        if property_type in ["land", "lot"]:
             strategies.append({
                 "name": "Ground-Up Development",
                 "risk": "High",
@@ -2869,6 +2864,8 @@ def deal_architect_analyze():
         return jsonify({
             "status": "ok",
             "address": address,
+            "property_type": property_type,
+            "description": description,
             "strategies": strategies
         })
 
