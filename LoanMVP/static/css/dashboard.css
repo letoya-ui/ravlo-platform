@@ -1,3 +1,157 @@
+/* ==========================================================
+   RAVLO CORE TOKENS
+========================================================== */
+:root{
+  --bg0:#070A0E;
+  --bg1:#0B1016;
+  --bg2:#0E141B;
+  --bg3:#121A23;
+
+  --line:#1A2330;
+
+  --text:#FFFFFF;
+  --muted:#A9B2BE;
+  --muted2:#7F8A99;
+
+  --accent:#6B7F93;
+  --accent2:#7A8FA5;
+  --accent3:#3A5C7A;
+
+  --metal-a:#F7FAFC;
+  --metal-b:#B7C4D2;
+  --metal-c:#6F8091;
+  --metal-d:#EAF1F7;
+
+  --success:#3CCB7F;
+  --danger:#F06B6B;
+
+  --radius-xl:28px;
+  --radius-lg:20px;
+  --radius-md:16px;
+  --radius-sm:12px;
+
+  --shadow-1:0 20px 60px rgba(0,0,0,.30);
+  --shadow-2:inset 0 1px 0 rgba(255,255,255,.04);
+}
+
+/* ==========================================================
+   RESET
+========================================================== */
+*,
+*::before,
+*::after{
+  box-sizing:border-box;
+}
+
+html,
+body{
+  margin:0;
+  padding:0;
+  min-height:100%;
+  font-family:'Inter',system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  background:
+    radial-gradient(circle at top left, rgba(122,143,165,.10), transparent 28%),
+    radial-gradient(circle at bottom right, rgba(58,92,122,.12), transparent 25%),
+    linear-gradient(180deg, var(--bg0) 0%, var(--bg1) 40%, var(--bg2) 100%);
+  color:var(--text);
+}
+
+/* ==========================================================
+   SHELL
+========================================================== */
+.ravlo-shell{
+  display:flex;
+  min-height:100vh;
+}
+
+.ravlo-main{
+  flex:1;
+  min-width:0;
+  padding:24px 28px;
+}
+
+.ravlo-content{
+  margin-top:18px;
+}
+
+.ravlo-grain{
+  position:fixed;
+  inset:0;
+  pointer-events:none;
+  opacity:.035;
+  background-image:
+    radial-gradient(circle at 20% 20%, rgba(255,255,255,.18) 0 1px, transparent 1px),
+    radial-gradient(circle at 80% 60%, rgba(255,255,255,.12) 0 1px, transparent 1px),
+    radial-gradient(circle at 40% 80%, rgba(255,255,255,.12) 0 1px, transparent 1px);
+  background-size:24px 24px, 32px 32px, 28px 28px;
+  z-index:0;
+}
+
+/* ==========================================================
+   SIDEBAR
+========================================================== */
+.ravlo-sidebar{
+  width:280px;
+  background:rgba(9,14,20,.94);
+  border-right:1px solid rgba(255,255,255,.06);
+  padding:22px 18px;
+  display:flex;
+  flex-direction:column;
+  gap:14px;
+  box-shadow:var(--shadow-2);
+}
+
+/* ==========================================================
+   BRAND / NAV
+========================================================== */
+.ravlo-sidebar-nav{
+  display:grid;
+  gap:8px;
+}
+
+.ravlo-nav-link{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  min-height:48px;
+  padding:12px 14px;
+  border-radius:16px;
+  color:var(--muted);
+  text-decoration:none;
+  border:1px solid transparent;
+  background:transparent;
+  transition:.2s ease;
+  font-size:14px;
+  font-weight:600;
+  letter-spacing:.01em;
+}
+
+.ravlo-nav-link i{
+  font-size:18px;
+  opacity:.95;
+}
+
+.ravlo-nav-link:hover{
+  color:var(--text);
+  background:rgba(255,255,255,.035);
+  border-color:rgba(255,255,255,.06);
+  transform:translateY(-1px);
+}
+
+.ravlo-nav-link.active{
+  color:var(--text);
+  background:linear-gradient(135deg, rgba(107,127,147,.18), rgba(58,92,122,.10));
+  border:1px solid rgba(107,127,147,.26);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.05);
+}
+
+.ravlo-nav-link.active i{
+  color:#D9E4EE;
+}
+
+/* ==========================================================
+   TOPBAR
+========================================================== */
 .ravlo-topbar{
   display:flex;
   align-items:center;
@@ -38,11 +192,6 @@
   justify-content:flex-end;
 }
 
-.ravlo-search{
-  min-width:220px;
-  max-width:280px;
-}
-
 .ravlo-topbar-actions-slot{
   display:flex;
   align-items:center;
@@ -50,6 +199,533 @@
   flex-wrap:wrap;
 }
 
+/* ==========================================================
+   SEARCH
+========================================================== */
+.ravlo-search{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  min-width:220px;
+  max-width:280px;
+  padding:10px 12px;
+  border-radius:14px;
+  background:rgba(255,255,255,.03);
+  border:1px solid rgba(255,255,255,.07);
+}
+
+.ravlo-search i{
+  color:var(--muted);
+  font-size:16px;
+}
+
+.ravlo-search input{
+  flex:1;
+  width:100%;
+  border:none;
+  outline:none;
+  background:transparent;
+  color:var(--text);
+  font-size:14px;
+}
+
+.ravlo-search input::placeholder{
+  color:var(--muted2);
+}
+
+/* ==========================================================
+   BUTTONS
+========================================================== */
+.ravlo-btn{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  min-height:42px;
+  padding:10px 14px;
+  border-radius:14px;
+  border:1px solid transparent;
+  cursor:pointer;
+  font-size:14px;
+  font-weight:700;
+  text-decoration:none;
+  transition:.2s ease;
+}
+
+.ravlo-btn.primary{
+  background:linear-gradient(135deg, var(--accent), var(--accent2));
+  color:#071018;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.18);
+}
+
+.ravlo-btn.primary:hover{
+  transform:translateY(-1px);
+  filter:brightness(1.03);
+}
+
+.ravlo-btn.ghost{
+  background:rgba(255,255,255,.03);
+  border-color:rgba(255,255,255,.08);
+  color:var(--text);
+}
+
+.ravlo-btn.ghost:hover{
+  background:rgba(255,255,255,.05);
+  border-color:rgba(255,255,255,.12);
+}
+
+.ravlo-btn.sm{
+  min-height:36px;
+  padding:8px 11px;
+  font-size:13px;
+}
+
+/* ==========================================================
+   GENERIC CARDS / PANELS
+========================================================== */
+.ravlo-card,
+.panel{
+  background:rgba(255,255,255,.025);
+  border:1px solid rgba(255,255,255,.07);
+  border-radius:20px;
+  box-shadow:var(--shadow-2);
+}
+
+.ravlo-card.pad,
+.panel{
+  padding:20px;
+}
+
+.ravlo-card-header,
+.section-head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:16px;
+  margin-bottom:18px;
+}
+
+.ravlo-card-title,
+.section-head h3{
+  margin:4px 0 0;
+  font-size:20px;
+  font-weight:700;
+}
+
+.eyebrow{
+  font-size:11px;
+  letter-spacing:.18em;
+  text-transform:uppercase;
+  color:var(--muted);
+}
+
+.muted{
+  color:var(--muted);
+}
+
+/* ==========================================================
+   HERO
+========================================================== */
+.ravlo-hero-card{
+  display:grid;
+  grid-template-columns:1.2fr .8fr;
+  gap:20px;
+  align-items:center;
+  padding:24px;
+  border-radius:24px;
+  background:
+    linear-gradient(135deg, rgba(107,127,147,.14), rgba(58,92,122,.08)),
+    rgba(255,255,255,.02);
+  border:1px solid rgba(255,255,255,.08);
+}
+
+.ravlo-hero-card h2{
+  margin:8px 0 0;
+  font-size:32px;
+  line-height:1.08;
+  letter-spacing:-.03em;
+}
+
+.hero-side-stat{
+  padding:18px 20px;
+  border-radius:20px;
+  background:rgba(255,255,255,.04);
+  border:1px solid rgba(255,255,255,.08);
+}
+
+.hero-side-stat span{
+  display:block;
+  color:var(--muted);
+  font-size:12px;
+  text-transform:uppercase;
+  letter-spacing:.08em;
+}
+
+.hero-side-stat strong{
+  display:block;
+  margin-top:8px;
+  font-size:32px;
+  font-weight:800;
+  color:var(--text);
+  letter-spacing:-.03em;
+}
+
+.hero-side-stat small{
+  display:block;
+  margin-top:8px;
+  color:var(--muted);
+  font-size:13px;
+  line-height:1.5;
+}
+
+/* ==========================================================
+   KPI
+========================================================== */
+.ravlo-kpi{
+  padding:18px;
+  border-radius:20px;
+  background:rgba(255,255,255,.03);
+  border:1px solid rgba(255,255,255,.07);
+}
+
+.ravlo-kpi.premium{
+  background:linear-gradient(135deg, rgba(107,127,147,.16), rgba(255,255,255,.03));
+  border:1px solid rgba(255,255,255,.08);
+}
+
+.ravlo-kpi .value{
+  font-size:30px;
+  font-weight:800;
+  color:var(--text);
+  letter-spacing:-.03em;
+}
+
+.ravlo-kpi .label{
+  margin-top:6px;
+  font-size:13px;
+  color:var(--muted);
+}
+
+/* ==========================================================
+   DASHBOARD
+========================================================== */
+.ravlo-dashboard{
+  display:grid;
+  gap:20px;
+}
+
+.command-hero{
+  grid-template-columns:1.3fr .7fr;
+}
+
+.dashboard-kpi-strip{
+  display:grid;
+  grid-template-columns:repeat(4, minmax(0, 1fr));
+  gap:16px;
+}
+
+.dashboard-mixed-grid{
+  display:grid;
+  grid-template-columns:1.2fr .8fr;
+  gap:20px;
+  align-items:start;
+}
+
+.panel-large{
+  min-height:240px;
+}
+
+.panel-small{
+  min-height:220px;
+}
+
+.panel-wide{
+  grid-column:1 / span 1;
+}
+
+/* ==========================================================
+   CHIPS / PILLS
+========================================================== */
+.ravlo-chip-row{
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px;
+}
+
+.ravlo-chip,
+.mini-pill{
+  display:inline-flex;
+  align-items:center;
+  padding:8px 12px;
+  border-radius:999px;
+  background:rgba(255,255,255,.04);
+  border:1px solid rgba(255,255,255,.08);
+  color:var(--text);
+  font-size:13px;
+  font-weight:600;
+}
+
+.mini-pill{
+  padding:7px 10px;
+  font-size:12px;
+}
+
+.mini-pill.status{
+  background:rgba(107,127,147,.18);
+  border-color:rgba(107,127,147,.28);
+}
+
+/* ==========================================================
+   FEATURE / PROGRESS
+========================================================== */
+.feature-highlight{
+  padding:18px;
+  border-radius:20px;
+  background:linear-gradient(135deg, rgba(107,127,147,.18), rgba(58,92,122,.10));
+  border:1px solid rgba(107,127,147,.24);
+}
+
+.feature-highlight-label{
+  color:var(--muted);
+  font-size:12px;
+  text-transform:uppercase;
+  letter-spacing:.08em;
+  margin-bottom:8px;
+}
+
+.feature-highlight-value{
+  color:var(--text);
+  font-size:18px;
+  line-height:1.6;
+  font-weight:600;
+}
+
+.progress-wrap{
+  display:grid;
+  gap:10px;
+}
+
+.progress-head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:16px;
+  font-size:14px;
+}
+
+.progress-head span{
+  color:var(--muted);
+}
+
+.progress-head strong{
+  color:var(--text);
+}
+
+.ravlo-progress{
+  width:100%;
+  height:10px;
+  border-radius:999px;
+  background:rgba(255,255,255,.06);
+  overflow:hidden;
+}
+
+.ravlo-progress-bar{
+  height:100%;
+  border-radius:999px;
+  background:linear-gradient(90deg, #6B7F93, #8AA0B7);
+}
+
+/* ==========================================================
+   LISTS / ROWS
+========================================================== */
+.recent-list,
+.alert-list,
+.insight-stack{
+  display:grid;
+  gap:12px;
+}
+
+.recent-row{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:16px;
+  padding:16px;
+  border-radius:18px;
+  background:rgba(255,255,255,.03);
+  border:1px solid rgba(255,255,255,.08);
+}
+
+.recent-title{
+  color:var(--text);
+  font-size:15px;
+  font-weight:700;
+}
+
+.recent-sub{
+  margin-top:4px;
+  color:var(--muted);
+  font-size:13px;
+}
+
+.recent-meta{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  flex-wrap:wrap;
+  justify-content:flex-end;
+}
+
+.alert-row{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:12px;
+  padding:14px 16px;
+  border-radius:16px;
+  background:rgba(255,255,255,.03);
+  border:1px solid rgba(255,255,255,.08);
+}
+
+/* ==========================================================
+   QUICK CARDS
+========================================================== */
+.quick-grid{
+  display:grid;
+  grid-template-columns:repeat(2, minmax(0, 1fr));
+  gap:14px;
+}
+
+.quick-grid.one-col{
+  grid-template-columns:1fr;
+}
+
+.quick-card{
+  display:block;
+  padding:18px;
+  border-radius:18px;
+  background:rgba(255,255,255,.03);
+  border:1px solid rgba(255,255,255,.08);
+  text-decoration:none;
+  transition:.2s ease;
+}
+
+.quick-card:hover{
+  transform:translateY(-1px);
+  border-color:rgba(107,127,147,.35);
+  background:rgba(255,255,255,.045);
+}
+
+.quick-title{
+  display:block;
+  color:var(--text);
+  font-size:16px;
+  font-weight:700;
+}
+
+.quick-sub{
+  display:block;
+  margin-top:8px;
+  color:var(--muted);
+  font-size:13px;
+  line-height:1.55;
+}
+
+/* ==========================================================
+   PORTFOLIO BOXES
+========================================================== */
+.portfolio-grid{
+  display:grid;
+  grid-template-columns:repeat(2, minmax(0, 1fr));
+  gap:14px;
+}
+
+.portfolio-box{
+  padding:18px;
+  border-radius:18px;
+  background:rgba(255,255,255,.03);
+  border:1px solid rgba(255,255,255,.08);
+}
+
+.portfolio-box span{
+  display:block;
+  color:var(--muted);
+  font-size:12px;
+  text-transform:uppercase;
+  letter-spacing:.08em;
+  margin-bottom:8px;
+}
+
+.portfolio-box strong{
+  color:var(--text);
+  font-size:28px;
+  font-weight:800;
+}
+
+/* ==========================================================
+   INSIGHTS
+========================================================== */
+.ravlo-insight{
+  padding:16px;
+  border-radius:18px;
+  background:rgba(255,255,255,.03);
+  border:1px solid rgba(255,255,255,.08);
+}
+
+.ravlo-insight .k{
+  margin:0;
+  color:var(--muted);
+  font-size:12px;
+  text-transform:uppercase;
+  letter-spacing:.08em;
+}
+
+.ravlo-insight .v{
+  margin:8px 0 0;
+  color:var(--text);
+  line-height:1.6;
+  font-weight:600;
+}
+
+/* ==========================================================
+   BADGES / LINKS / UTILITIES
+========================================================== */
+.ravlo-badge{
+  display:inline-flex;
+  align-items:center;
+  padding:5px 9px;
+  border-radius:10px;
+  font-size:12px;
+  font-weight:700;
+}
+
+.ravlo-badge.ok{
+  background:rgba(60,203,127,.12);
+  color:#CFFFE0;
+  border:1px solid rgba(60,203,127,.20);
+}
+
+.ravlo-badge.risk{
+  background:rgba(240,107,107,.12);
+  color:#FFD5D5;
+  border:1px solid rgba(240,107,107,.20);
+}
+
+.ravlo-link-btn{
+  color:var(--accent2);
+  text-decoration:none;
+  font-size:14px;
+  font-weight:700;
+}
+
+.empty-state-inline{
+  color:var(--muted);
+  padding:8px 0;
+}
+
+/* ==========================================================
+   SIMPLE SIDEBAR FOOTER
+========================================================== */
 .ravlo-sidebar-footer-simple{
   margin-top:auto;
   padding-top:16px;
@@ -60,6 +736,19 @@
 .ravlo-logout-btn{
   width:100%;
   justify-content:flex-start;
+}
+
+/* ==========================================================
+   RESPONSIVE
+========================================================== */
+@media (max-width: 1200px){
+  .dashboard-kpi-strip{
+    grid-template-columns:repeat(2, minmax(0, 1fr));
+  }
+
+  .dashboard-mixed-grid{
+    grid-template-columns:1fr;
+  }
 }
 
 @media (max-width: 980px){
@@ -76,5 +765,31 @@
   .ravlo-search{
     width:100%;
     max-width:none;
+  }
+
+  .ravlo-hero-card,
+  .command-hero{
+    grid-template-columns:1fr;
+  }
+}
+
+@media (max-width: 760px){
+  .dashboard-kpi-strip,
+  .portfolio-grid,
+  .quick-grid{
+    grid-template-columns:1fr;
+  }
+
+  .recent-row{
+    flex-direction:column;
+    align-items:flex-start;
+  }
+
+  .recent-meta{
+    justify-content:flex-start;
+  }
+
+  .ravlo-main{
+    padding:18px;
   }
 }
