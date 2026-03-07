@@ -1804,7 +1804,7 @@ def save_property_and_analyze():
     final_property_id = form_pid or resolved_property_id or None
     final_property_id = str(final_property_id).strip() if final_property_id else None
 
-    fk = profile_id_filter(SavedProperty, ip.id)
+    fk = _profile_id_filter(SavedProperty, ip.id)
 
     existing = None
     if final_property_id:
