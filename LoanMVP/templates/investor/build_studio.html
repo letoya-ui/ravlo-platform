@@ -6,501 +6,651 @@
 Design and visualize new construction projects.
 {% endblock %}
 
+{% block topbar_actions %}
+  {% if deal and deal.id %}
+    <a href="{{ url_for('investor.deal_detail', deal_id=deal.id) }}" class="ravlo-btn ghost sm">
+      Back to Deal
+    </a>
+    <a href="{{ url_for('investor.deal_report', deal_id=deal.id) }}" class="ravlo-btn ghost sm">
+      Deal Report
+    </a>
+  {% else %}
+    <a href="{{ url_for('investor.build_projects') }}" class="ravlo-btn ghost sm">
+      Build Projects
+    </a>
+  {% endif %}
+{% endblock %}
+
 {% block content %}
-<div class="ravlo-grid" style="grid-template-columns: 1.15fr .85fr; gap: 24px; align-items: start;">
+{% set build_data = ((deal.results_json or {}).get("build_analysis", {})) if deal else {} %}
+{% set build_project = ((deal.results_json or {}).get("build_project", {})) if deal else {} %}
 
-  <!-- LEFT: FORM -->
-  <section class="ravlo-card pad">
-    <div class="row between" style="align-items:flex-start; gap:16px; margin-bottom:18px;">
-      <div>
-        <div class="ravlo-eyebrow">Ground-Up Development</div>
-        <h2 class="ravlo-title" style="margin:6px 0 4px;">Create a build concept</h2>
-        <p class="ravlo-muted" style="margin:0;">
-          Enter the site details, project vision, and optional land image to generate a concept render for your next build.
-        </p>
-      </div>
-      <div class="badge soft">Build Studio</div>
-    </div>
+<div class="ravlo-shell-page">
 
-    <form id="buildStudioForm" enctype="multipart/form-data" class="ravlo-form-grid">
-      <div class="field">
-        <label>Project Name</label>
-        <input type="text" name="project_name" placeholder="Example: Ravlo Oak Ridge Townhomes">
-      </div>
-
-      <div class="field">
-        <label>Property Type</label>
-        <select name="property_type">
-          <option value="">Select type</option>
-          <option value="Single Family">Single Family</option>
-          <option value="Townhomes">Townhomes</option>
-          <option value="Multifamily">Multifamily</option>
-          <option value="Mixed Use">Mixed Use</option>
-          <option value="Retail Strip">Retail Strip</option>
-          <option value="Small Development">Small Development</option>
-        </select>
-      </div>
-
-      <div class="field field-span-2">
-        <label>Project Description</label>
-        <textarea name="description" rows="5" placeholder="Describe the vision, layout, finish level, target market, and overall development concept."></textarea>
-      </div>
-
-      <div class="field">
-        <label>Lot Size</label>
-        <input type="text" name="lot_size" placeholder="Example: 0.8 acres">
-      </div>
-
-      <div class="field">
-        <label>Zoning</label>
-        <input type="text" name="zoning" placeholder="Example: R-3, RMF, Mixed Use">
-      </div>
-
-      <div class="field">
-        <label>Location</label>
-        <input type="text" name="location" placeholder="City, State or project address">
-      </div>
-
-      <div class="field">
-        <label>Reference Image URL</label>
-        <input type="text" name="image_url" placeholder="Optional image URL">
-      </div>
-
-      <div class="field field-span-2">
-        <label>Notes</label>
-        <textarea name="notes" rows="3" placeholder="Any special requirements, density goals, design direction, investor goals, or constraints."></textarea>
-      </div>
-
-      <div class="field field-span-2">
-        <label>Upload Land / Site Image</label>
-        <div class="upload-shell">
-          <input type="file" name="land_image" id="land_image" accept="image/*">
-          <div class="upload-hint">Drop a site photo, lot image, or surrounding area reference here.</div>
-        </div>
-      </div>
-
-      <div class="field field-span-2">
-        <div class="row" style="gap:12px; flex-wrap:wrap;">
-          <button type="submit" class="ravlo-btn primary">
-            <i class="lucide lucide-sparkles"></i>
-            Generate Build Concept
-          </button>
-
-          <button type="button" id="saveBuildProjectBtn" class="ravlo-btn ghost" disabled>
-            <i class="lucide lucide-save"></i>
-            Save Project
-          </button>
-        </div>
-      </div>
-    </form>
-  </section>
-
-  <!-- RIGHT: OUTPUT / INFO -->
-  <aside class="stack" style="gap:24px;">
-    <section class="ravlo-card pad">
-      <div class="ravlo-eyebrow">Output</div>
-      <h3 class="ravlo-section-title" style="margin-top:6px;">Concept result</h3>
-      <p class="ravlo-muted" style="margin-top:0;">
-        Generated concepts, project metadata, and future build assets will appear here.
+  <!-- HERO -->
+  <section class="ravlo-hero-card">
+    <div>
+      <div class="eyebrow">RAVLO BUILD STUDIO</div>
+      <h2>
+        {% if deal and deal.title %}
+          {{ deal.title }}
+        {% else %}
+          New Construction Concept
+        {% endif %}
+      </h2>
+      <p class="muted">
+        {% if deal and deal.address %}
+          {{ deal.address }}
+        {% else %}
+          Shape a build concept, visualize the project, and save it into Ravlo.
+        {% endif %}
       </p>
 
-      <div id="buildStudioStatus" class="status-shell idle">
-        Ready to generate.
+      <div class="ravlo-chip-row" style="margin-top:16px;">
+        {% if deal and deal.id %}
+          <span class="ravlo-chip">Deal Linked</span>
+          <span class="ravlo-chip">Deal #{{ deal.id }}</span>
+        {% else %}
+          <span class="ravlo-chip">Standalone Mode</span>
+        {% endif %}
+
+        {% if build_project %}
+          <span class="ravlo-chip">Saved Project</span>
+        {% endif %}
       </div>
+    </div>
 
-      <div id="buildStudioPreview" class="build-preview empty">
-        <div class="preview-empty">
-          <i class="lucide lucide-home"></i>
-          <div>No concept generated yet</div>
-          <small>Your first concept render will appear here.</small>
-        </div>
-      </div>
+    <div class="build-hero-actions">
+      <button type="button" class="ravlo-btn primary" onclick="generateBuildConcept()">
+        Generate Concept
+      </button>
 
-      <div id="buildStudioMeta" class="meta-list" style="display:none;"></div>
-    </section>
+      <button type="button" class="ravlo-btn ghost" onclick="saveBuildProject()">
+        Save Project
+      </button>
+    </div>
+  </section>
 
-    <section class="ravlo-card pad">
-      <div class="ravlo-eyebrow">How it works</div>
-      <h3 class="ravlo-section-title" style="margin-top:6px;">Build Studio workflow</h3>
+  <!-- MAIN GRID -->
+  <div class="build-main-grid">
 
-      <div class="mini-steps">
-        <div class="mini-step">
-          <span>01</span>
+    <!-- LEFT -->
+    <div class="build-stack">
+
+      <!-- INPUTS -->
+      <section class="ravlo-card pad">
+        <div class="section-head">
           <div>
-            <strong>Describe the project</strong>
-            <p>Enter your build type, location, zoning, and development vision.</p>
+            <div class="eyebrow">PROJECT INPUTS</div>
+            <h3>Build Parameters</h3>
           </div>
         </div>
 
-        <div class="mini-step">
-          <span>02</span>
+        <form id="buildStudioForm" class="build-form-grid">
+          {% if deal and deal.id %}
+            <input type="hidden" name="deal_id" id="deal_id" value="{{ deal.id }}">
+          {% endif %}
+
+          <div class="ravlo-field">
+            <label class="ravlo-label">Project Name</label>
+            <input
+              id="project_name"
+              name="project_name"
+              class="ravlo-input"
+              type="text"
+              value="{{ build_project.get('project_name') or build_data.get('project_name') or deal.title if deal else '' }}"
+              placeholder="Ex: Ravlo Modern Duplex"
+            >
+          </div>
+
+          <div class="ravlo-field">
+            <label class="ravlo-label">Property Type</label>
+            <select id="property_type" name="property_type" class="ravlo-input">
+              {% set current_property_type = build_project.get('property_type') or build_data.get('property_type') or '' %}
+              <option value="single_family" {% if current_property_type == 'single_family' %}selected{% endif %}>Single Family</option>
+              <option value="duplex" {% if current_property_type == 'duplex' %}selected{% endif %}>Duplex</option>
+              <option value="triplex" {% if current_property_type == 'triplex' %}selected{% endif %}>Triplex</option>
+              <option value="quadplex" {% if current_property_type == 'quadplex' %}selected{% endif %}>Quadplex</option>
+              <option value="townhome" {% if current_property_type == 'townhome' %}selected{% endif %}>Townhome</option>
+              <option value="mixed_use" {% if current_property_type == 'mixed_use' %}selected{% endif %}>Mixed Use</option>
+              <option value="multifamily" {% if current_property_type == 'multifamily' %}selected{% endif %}>Multifamily</option>
+            </select>
+          </div>
+
+          <div class="ravlo-field full">
+            <label class="ravlo-label">Project Description</label>
+            <textarea
+              id="description"
+              name="description"
+              class="ravlo-input textarea"
+              placeholder="Describe the build vision, unit mix, size target, architectural direction, and end goal."
+            >{{ build_project.get('description') or build_data.get('description') or '' }}</textarea>
+          </div>
+
+          <div class="ravlo-field">
+            <label class="ravlo-label">Lot Size</label>
+            <input
+              id="lot_size"
+              name="lot_size"
+              class="ravlo-input"
+              type="text"
+              value="{{ build_project.get('lot_size') or build_data.get('lot_size') or '' }}"
+              placeholder="Ex: 0.25 acres"
+            >
+          </div>
+
+          <div class="ravlo-field">
+            <label class="ravlo-label">Zoning</label>
+            <input
+              id="zoning"
+              name="zoning"
+              class="ravlo-input"
+              type="text"
+              value="{{ build_project.get('zoning') or build_data.get('zoning') or '' }}"
+              placeholder="Ex: R2"
+            >
+          </div>
+
+          <div class="ravlo-field">
+            <label class="ravlo-label">Location</label>
+            <input
+              id="location"
+              name="location"
+              class="ravlo-input"
+              type="text"
+              value="{{ build_project.get('location') or build_data.get('location') or deal.address if deal else '' }}"
+              placeholder="Ex: Middletown, NY"
+            >
+          </div>
+
+          <div class="ravlo-field">
+            <label class="ravlo-label">Reference Image URL</label>
+            <input
+              id="image_url"
+              name="image_url"
+              class="ravlo-input"
+              type="text"
+              placeholder="Optional image URL"
+            >
+          </div>
+
+          <div class="ravlo-field full">
+            <label class="ravlo-label">Upload Land / Site / Inspiration Image</label>
+            <input id="land_image" name="land_image" class="ravlo-input file-input" type="file" accept="image/*">
+          </div>
+
+          <div class="ravlo-field full">
+            <label class="ravlo-label">Notes</label>
+            <textarea
+              id="notes"
+              name="notes"
+              class="ravlo-input textarea"
+              placeholder="Any build notes, style preferences, feasibility notes, or goals..."
+            >{{ build_project.get('notes') or build_data.get('notes') or '' }}</textarea>
+          </div>
+
+          {% if deal and deal.id %}
+          <div class="ravlo-field full">
+            <label class="ravlo-check">
+              <input type="checkbox" id="save_to_deal" name="save_to_deal" checked>
+              Save generated concept to this deal
+            </label>
+          </div>
+          {% endif %}
+        </form>
+      </section>
+
+      <!-- SAVED PROJECT META -->
+      {% if build_project %}
+      <section class="ravlo-card pad">
+        <div class="section-head">
           <div>
-            <strong>Add site context</strong>
-            <p>Upload a land image or include a reference image URL for better concept direction.</p>
+            <div class="eyebrow">SAVED PROJECT</div>
+            <h3>Saved Build Data</h3>
           </div>
         </div>
 
-        <div class="mini-step">
-          <span>03</span>
-          <div>
-            <strong>Generate a concept</strong>
-            <p>Ravlo returns a build concept you can save, present, and expand later.</p>
+        <div class="analysis-grid">
+          <div class="analysis-box">
+            <span>Project Name</span>
+            <strong>{{ build_project.get("project_name") or "—" }}</strong>
+          </div>
+
+          <div class="analysis-box">
+            <span>Property Type</span>
+            <strong>{{ build_project.get("property_type") or "—" }}</strong>
+          </div>
+
+          <div class="analysis-box">
+            <span>Lot Size</span>
+            <strong>{{ build_project.get("lot_size") or "—" }}</strong>
+          </div>
+
+          <div class="analysis-box">
+            <span>Zoning</span>
+            <strong>{{ build_project.get("zoning") or "—" }}</strong>
           </div>
         </div>
-      </div>
-    </section>
-  </aside>
+      </section>
+      {% endif %}
+
+    </div>
+
+    <!-- RIGHT -->
+    <div class="build-stack">
+
+      <!-- GENERATION STATUS -->
+      <section class="ravlo-card pad">
+        <div class="section-head">
+          <div>
+            <div class="eyebrow">OUTPUT</div>
+            <h3>Concept Results</h3>
+          </div>
+        </div>
+
+        <div class="feature-highlight">
+          <div class="feature-highlight-label">Engine Status</div>
+          <div class="feature-highlight-value" id="build_status_text">
+            Ready to generate build concept.
+          </div>
+        </div>
+
+        <div class="analysis-grid" style="margin-top:16px;">
+          <div class="analysis-box">
+            <span>Seed</span>
+            <strong id="build_seed">
+              {{ build_data.get("seed") or "—" }}
+            </strong>
+          </div>
+
+          <div class="analysis-box">
+            <span>Job ID</span>
+            <strong id="build_job_id">
+              {{ build_data.get("job_id") or "—" }}
+            </strong>
+          </div>
+        </div>
+      </section>
+
+      <!-- CONCEPT IMAGES -->
+      <section class="ravlo-card pad">
+        <div class="section-head">
+          <div>
+            <div class="eyebrow">RENDERS</div>
+            <h3>Concept Gallery</h3>
+          </div>
+        </div>
+
+        <div id="build_images_wrap" class="build-image-grid">
+          {% set existing_images = build_data.get("images_base64", []) %}
+          {% if existing_images %}
+            {% for img in existing_images %}
+            <div class="build-image-card">
+              <img src="data:image/png;base64,{{ img }}" alt="Build concept render">
+            </div>
+            {% endfor %}
+          {% else %}
+            <div class="empty-state-inline" id="build_empty_state">
+              No build concepts generated yet.
+            </div>
+          {% endif %}
+        </div>
+      </section>
+
+      <!-- SAVE ACTIONS -->
+      <section class="ravlo-card pad">
+        <div class="section-head">
+          <div>
+            <div class="eyebrow">WORKFLOW</div>
+            <h3>Next Actions</h3>
+          </div>
+        </div>
+
+        <div class="quick-grid one-col">
+          <button type="button" class="ravlo-btn primary" onclick="generateBuildConcept()">
+            Generate Concept
+          </button>
+
+          <button type="button" class="ravlo-btn ghost" onclick="saveBuildProject()">
+            Save Build Project
+          </button>
+
+          {% if deal and deal.id %}
+          <a href="{{ url_for('investor.deal_detail', deal_id=deal.id) }}" class="quick-card">
+            <span class="quick-title">Return to Deal Workspace</span>
+            <span class="quick-sub">Go back to the main deal and continue the investor workflow.</span>
+          </a>
+
+          <a href="{{ url_for('investor.deal_report', deal_id=deal.id) }}" class="quick-card">
+            <span class="quick-title">Open Deal Report</span>
+            <span class="quick-sub">Use this concept as part of the project strategy and funding story.</span>
+          </a>
+          {% else %}
+          <a href="{{ url_for('investor.build_projects') }}" class="quick-card">
+            <span class="quick-title">View Build Projects</span>
+            <span class="quick-sub">Review saved standalone concepts and build studies.</span>
+          </a>
+          {% endif %}
+        </div>
+      </section>
+
+    </div>
+  </div>
 </div>
 
 <style>
-  .ravlo-form-grid{
+  .ravlo-shell-page{
     display:grid;
-    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:20px;
+  }
+
+  .build-hero-actions{
+    min-width:250px;
+    display:grid;
+    gap:12px;
+  }
+
+  .build-main-grid{
+    display:grid;
+    grid-template-columns:1.1fr .9fr;
+    gap:20px;
+    align-items:start;
+  }
+
+  .build-stack{
+    display:grid;
+    gap:20px;
+  }
+
+  .build-form-grid{
+    display:grid;
+    grid-template-columns:repeat(2, minmax(0, 1fr));
     gap:16px;
   }
 
-  .field{
-    display:flex;
-    flex-direction:column;
+  .ravlo-field{
+    display:grid;
     gap:8px;
   }
 
-  .field label{
-    font-size:.92rem;
-    font-weight:600;
-    color:var(--text);
-    letter-spacing:.01em;
-  }
-
-  .field input,
-  .field textarea,
-  .field select{
-    width:100%;
-    border-radius:16px;
-    border:1px solid rgba(255,255,255,.08);
-    background:rgba(255,255,255,.03);
-    color:var(--text);
-    padding:14px 14px;
-    outline:none;
-    transition:border-color .18s ease, box-shadow .18s ease, background .18s ease;
-  }
-
-  .field textarea{
-    resize:vertical;
-    min-height:110px;
-  }
-
-  .field input:focus,
-  .field textarea:focus,
-  .field select:focus{
-    border-color:rgba(123,170,255,.45);
-    box-shadow:0 0 0 4px rgba(70,120,220,.12);
-    background:rgba(255,255,255,.045);
-  }
-
-  .field-span-2{
+  .ravlo-field.full{
     grid-column:1 / -1;
   }
 
-  .upload-shell{
-    border:1px dashed rgba(255,255,255,.15);
-    border-radius:18px;
-    padding:16px;
-    background:rgba(255,255,255,.02);
+  .ravlo-label{
+    font-size:13px;
+    font-weight:600;
+    color:#DCE5EF;
   }
 
-  .upload-shell input[type="file"]{
-    padding:0;
-    background:transparent;
-    border:none;
-    box-shadow:none;
-  }
-
-  .upload-hint{
-    margin-top:10px;
-    color:var(--muted);
-    font-size:.92rem;
-  }
-
-  .status-shell{
-    border-radius:16px;
-    padding:12px 14px;
-    margin:14px 0 16px;
-    font-size:.95rem;
-    border:1px solid rgba(255,255,255,.08);
-    background:rgba(255,255,255,.03);
-    color:var(--muted);
-  }
-
-  .status-shell.loading{
-    color:#d7e7ff;
-    border-color:rgba(95,145,255,.28);
-    background:rgba(68,110,210,.12);
-  }
-
-  .status-shell.success{
-    color:#dff7ea;
-    border-color:rgba(64,170,112,.28);
-    background:rgba(39,116,73,.14);
-  }
-
-  .status-shell.error{
-    color:#ffd7d7;
-    border-color:rgba(210,84,84,.28);
-    background:rgba(122,42,42,.16);
-  }
-
-  .build-preview{
-    min-height:340px;
-    border-radius:22px;
-    border:1px solid rgba(255,255,255,.08);
-    background:
-      linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.015)),
-      rgba(10,14,22,.72);
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    overflow:hidden;
-    position:relative;
-  }
-
-  .build-preview.empty{
-    padding:20px;
-  }
-
-  .preview-empty{
-    display:flex;
-    flex-direction:column;
-    align-items:center;
-    text-align:center;
-    gap:10px;
-    color:var(--muted);
-  }
-
-  .preview-empty i{
-    font-size:34px;
-    opacity:.9;
-  }
-
-  .preview-empty small{
-    color:var(--muted2, var(--muted));
-  }
-
-  .build-preview img{
+  .ravlo-input{
     width:100%;
-    height:100%;
+    min-height:52px;
+    border-radius:16px;
+    border:1px solid rgba(255,255,255,.08);
+    background:rgba(255,255,255,.04);
+    color:var(--text);
+    padding:0 14px;
+    font-size:15px;
+    outline:none;
+  }
+
+  .ravlo-input:focus{
+    border-color:rgba(107,127,147,.65);
+    box-shadow:0 0 0 4px rgba(107,127,147,.15);
+  }
+
+  .ravlo-input.textarea{
+    min-height:130px;
+    padding:14px;
+    resize:vertical;
+  }
+
+  .file-input{
+    padding:12px 14px;
+  }
+
+  .feature-highlight{
+    padding:18px;
+    border-radius:20px;
+    background:linear-gradient(135deg, rgba(107,127,147,.18), rgba(58,92,122,.10));
+    border:1px solid rgba(107,127,147,.24);
+  }
+
+  .feature-highlight-label{
+    color:var(--muted);
+    font-size:12px;
+    text-transform:uppercase;
+    letter-spacing:.08em;
+    margin-bottom:8px;
+  }
+
+  .feature-highlight-value{
+    color:var(--text);
+    font-size:18px;
+    line-height:1.6;
+    font-weight:600;
+  }
+
+  .analysis-grid{
+    display:grid;
+    grid-template-columns:repeat(2, minmax(0, 1fr));
+    gap:12px;
+  }
+
+  .analysis-box{
+    padding:16px;
+    border-radius:18px;
+    background:rgba(255,255,255,.03);
+    border:1px solid rgba(255,255,255,.08);
+  }
+
+  .analysis-box span{
+    display:block;
+    color:var(--muted);
+    font-size:12px;
+    text-transform:uppercase;
+    letter-spacing:.08em;
+    margin-bottom:8px;
+  }
+
+  .analysis-box strong{
+    color:var(--text);
+    font-size:20px;
+    font-weight:800;
+  }
+
+  .build-image-grid{
+    display:grid;
+    grid-template-columns:repeat(2, minmax(0, 1fr));
+    gap:14px;
+  }
+
+  .build-image-card{
+    overflow:hidden;
+    border-radius:18px;
+    background:rgba(255,255,255,.03);
+    border:1px solid rgba(255,255,255,.08);
+  }
+
+  .build-image-card img{
+    width:100%;
+    height:220px;
     object-fit:cover;
     display:block;
   }
 
-  .meta-list{
-    margin-top:16px;
+  .quick-grid{
     display:grid;
-    gap:10px;
+    grid-template-columns:repeat(2, minmax(0, 1fr));
+    gap:14px;
   }
 
-  .meta-item{
-    border:1px solid rgba(255,255,255,.07);
-    background:rgba(255,255,255,.025);
-    border-radius:14px;
-    padding:12px 14px;
+  .quick-grid.one-col{
+    grid-template-columns:1fr;
   }
 
-  .meta-item strong{
+  .quick-card{
     display:block;
-    font-size:.86rem;
-    color:var(--muted);
-    margin-bottom:4px;
-    text-transform:uppercase;
-    letter-spacing:.08em;
+    padding:18px;
+    border-radius:18px;
+    background:rgba(255,255,255,.03);
+    border:1px solid rgba(255,255,255,.08);
+    text-decoration:none;
+    transition:.2s ease;
   }
 
-  .meta-item span{
+  .quick-card:hover{
+    transform:translateY(-1px);
+    border-color:rgba(107,127,147,.35);
+    background:rgba(255,255,255,.045);
+  }
+
+  .quick-title{
+    display:block;
     color:var(--text);
-    font-size:.96rem;
-  }
-
-  .mini-steps{
-    display:grid;
-    gap:14px;
-    margin-top:14px;
-  }
-
-  .mini-step{
-    display:grid;
-    grid-template-columns:42px 1fr;
-    gap:14px;
-    align-items:start;
-    padding:12px 0;
-    border-bottom:1px solid rgba(255,255,255,.06);
-  }
-
-  .mini-step:last-child{
-    border-bottom:none;
-    padding-bottom:0;
-  }
-
-  .mini-step span{
-    width:42px;
-    height:42px;
-    border-radius:14px;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    background:rgba(88,132,220,.14);
-    border:1px solid rgba(123,170,255,.18);
-    color:#dbe8ff;
+    font-size:16px;
     font-weight:700;
-    font-size:.9rem;
   }
 
-  .mini-step p{
-    margin:5px 0 0;
+  .quick-sub{
+    display:block;
+    margin-top:8px;
     color:var(--muted);
-    line-height:1.5;
+    font-size:13px;
+    line-height:1.55;
   }
 
-  @media (max-width: 1024px){
-    .ravlo-grid{
-      grid-template-columns:1fr !important;
+  .empty-state-inline{
+    color:var(--muted);
+    padding:8px 0;
+  }
+
+  @media (max-width: 1100px){
+    .build-main-grid{
+      grid-template-columns:1fr;
     }
   }
 
-  @media (max-width: 700px){
-    .ravlo-form-grid{
+  @media (max-width: 760px){
+    .build-form-grid,
+    .analysis-grid,
+    .build-image-grid{
       grid-template-columns:1fr;
     }
 
-    .field-span-2{
+    .build-hero-actions{
+      width:100%;
+      min-width:unset;
+    }
+
+    .ravlo-field.full{
       grid-column:auto;
     }
   }
 </style>
 
 <script>
-  (() => {
+  let latestBuildImages = [];
+  let latestBuildMeta = {};
+  let latestBuildSeed = null;
+  let latestBuildJobId = null;
+
+  async function generateBuildConcept() {
     const form = document.getElementById("buildStudioForm");
-    const saveBtn = document.getElementById("saveBuildProjectBtn");
-    const statusBox = document.getElementById("buildStudioStatus");
-    const preview = document.getElementById("buildStudioPreview");
-    const metaBox = document.getElementById("buildStudioMeta");
+    const formData = new FormData(form);
 
-    let latestBuildResult = null;
+    const statusText = document.getElementById("build_status_text");
+    const imagesWrap = document.getElementById("build_images_wrap");
+    const seedEl = document.getElementById("build_seed");
+    const jobIdEl = document.getElementById("build_job_id");
 
-    function setStatus(type, text) {
-      statusBox.className = `status-shell ${type}`;
-      statusBox.textContent = text;
-    }
+    statusText.textContent = "Generating build concept...";
+    imagesWrap.innerHTML = `<div class="empty-state-inline">Generating concept renders...</div>`;
 
-    function renderMeta(meta = {}) {
-      const entries = Object.entries(meta).filter(([_, v]) => v !== null && v !== undefined && v !== "");
-      if (!entries.length) {
-        metaBox.style.display = "none";
-        metaBox.innerHTML = "";
+    try {
+      const res = await fetch("{{ url_for('investor.generate_build_studio') }}", {
+        method: "POST",
+        body: formData
+      });
+
+      const data = await res.json();
+
+      if (!res.ok || data.status !== "ok") {
+        statusText.textContent = "Build concept generation failed.";
+        imagesWrap.innerHTML = `<div class="empty-state-inline">${data.message || "Unable to generate build concept."}</div>`;
         return;
       }
 
-      metaBox.style.display = "grid";
-      metaBox.innerHTML = entries.map(([key, value]) => `
-        <div class="meta-item">
-          <strong>${String(key).replaceAll("_", " ")}</strong>
-          <span>${Array.isArray(value) ? value.join(", ") : value}</span>
+      latestBuildImages = data.images || [];
+      latestBuildMeta = data.meta || {};
+      latestBuildSeed = data.seed || null;
+      latestBuildJobId = data.job_id || null;
+
+      statusText.textContent = "Build concept generated successfully.";
+      seedEl.textContent = latestBuildSeed || "—";
+      jobIdEl.textContent = latestBuildJobId || "—";
+
+      if (!latestBuildImages.length) {
+        imagesWrap.innerHTML = `<div class="empty-state-inline">No images returned from engine.</div>`;
+        return;
+      }
+
+      imagesWrap.innerHTML = latestBuildImages.map(img => `
+        <div class="build-image-card">
+          <img src="data:image/png;base64,${img}" alt="Build concept render">
         </div>
       `).join("");
-    }
 
-    function renderPreview(result) {
-      const images = result.images || [];
-      if (!images.length) {
-        preview.className = "build-preview empty";
-        preview.innerHTML = `
-          <div class="preview-empty">
-            <i class="lucide lucide-home"></i>
-            <div>No concept generated</div>
-            <small>The engine returned no preview image.</small>
-          </div>
-        `;
+    } catch (err) {
+      console.error(err);
+      statusText.textContent = "Build concept generation failed.";
+      imagesWrap.innerHTML = `<div class="empty-state-inline">Something went wrong generating the build concept.</div>`;
+    }
+  }
+
+  async function saveBuildProject() {
+    const dealIdInput = document.getElementById("deal_id");
+
+    const payload = {
+      deal_id: dealIdInput ? dealIdInput.value : null,
+      project_name: document.getElementById("project_name").value || "",
+      property_type: document.getElementById("property_type").value || "",
+      description: document.getElementById("description").value || "",
+      lot_size: document.getElementById("lot_size").value || "",
+      zoning: document.getElementById("zoning").value || "",
+      location: document.getElementById("location").value || "",
+      notes: document.getElementById("notes").value || "",
+      concept_render_url: latestBuildImages.length ? `data:image/png;base64,${latestBuildImages[0]}` : null,
+      blueprint_url: null,
+      site_plan_url: null,
+      presentation_url: null
+    };
+
+    try {
+      const res = await fetch("{{ url_for('investor.save_build_studio') }}", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(payload)
+      });
+
+      const data = await res.json();
+
+      if (!res.ok || data.status !== "ok") {
+        alert(data.message || "Unable to save build project.");
         return;
       }
 
-      const first = images[0];
-      preview.className = "build-preview";
-      preview.innerHTML = `<img alt="Build concept preview" src="data:image/webp;base64,${first}">`;
+      alert("Build project saved successfully.");
+      if (data.deal_id) {
+        window.location.reload();
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Something went wrong saving the build project.");
     }
-
-    form.addEventListener("submit", async (e) => {
-      e.preventDefault();
-
-      const formData = new FormData(form);
-      setStatus("loading", "Generating build concept...");
-      saveBtn.disabled = true;
-
-      try {
-        const res = await fetch(`{{ url_for('investor.generate_build_studio') }}`, {
-          method: "POST",
-          body: formData
-        });
-
-        const data = await res.json();
-
-        if (!res.ok || data.status !== "ok") {
-          throw new Error(data.message || "Build concept generation failed.");
-        }
-
-        latestBuildResult = data;
-        renderPreview(data);
-        renderMeta(data.meta || {});
-        saveBtn.disabled = false;
-        setStatus("success", "Build concept generated successfully.");
-
-      } catch (err) {
-        console.error(err);
-        setStatus("error", err.message || "Something went wrong while generating the concept.");
-      }
-    });
-
-    saveBtn.addEventListener("click", async () => {
-      if (!latestBuildResult) return;
-
-      const payload = {
-        project_name: form.project_name.value,
-        property_type: form.property_type.value,
-        description: form.description.value,
-        lot_size: form.lot_size.value,
-        zoning: form.zoning.value,
-        location: form.location.value,
-        notes: form.notes.value,
-        concept_render_url: latestBuildResult.images?.[0]
-          ? `data:image/webp;base64,${latestBuildResult.images[0]}`
-          : null,
-        blueprint_url: null,
-        site_plan_url: null,
-        presentation_url: null
-      };
-
-      try {
-        setStatus("loading", "Saving build project...");
-
-        const res = await fetch(`{{ url_for('investor.save_build_studio') }}`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify(payload)
-        });
-
-        const data = await res.json();
-
-        if (!res.ok || data.status !== "ok") {
-          throw new Error(data.message || "Could not save build project.");
-        }
-
-        setStatus("success", "Build project saved successfully.");
-      } catch (err) {
-        console.error(err);
-        setStatus("error", err.message || "Could not save build project.");
-      }
-    });
-  })();
+  }
 </script>
 {% endblock %}
