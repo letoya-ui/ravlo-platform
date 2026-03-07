@@ -45,7 +45,14 @@ Manage opportunities, open studios, and move deals toward funding.
   {% if deals %}
     <div class="deals-grid">
       {% for deal in deals %}
-      <article class="deal-card">
+      <article
+        class="deal-card deal-filter-item"
+        data-title="{{ (deal.title or '')|lower }}"
+        data-address="{{ (deal.address or '')|lower }}"
+        data-strategy="{{ (deal.recommended_strategy or deal.strategy or '')|lower }}"
+        data-status="{{ (deal.status or '')|lower }}"
+        data-funding="{% if deal.submitted_for_funding %}requested{% else %}not_requested{% endif %}"
+      >
 
         <a href="{{ url_for('investor.deal_detail', deal_id=deal.id) }}" class="deal-card-main">
           <div class="deal-card-top">
@@ -200,51 +207,7 @@ Manage opportunities, open studios, and move deals toward funding.
     </div>
   </div>
 </section>
-<section class="ravlo-card pad">
-  <div class="section-head" style="margin-bottom:14px;">
-    <div>
-      <div class="eyebrow">FILTERS</div>
-      <h3>Refine Pipeline</h3>
-    </div>
-  </div>
 
-  <div class="deals-filter-bar">
-    <div class="ravlo-field">
-      <label class="ravlo-label">Search</label>
-      <input id="dealSearch" class="ravlo-input" type="text" placeholder="Search title or address">
-    </div>
-
-    <div class="ravlo-field">
-      <label class="ravlo-label">Strategy</label>
-      <select id="dealStrategyFilter" class="ravlo-input">
-        <option value="">All</option>
-        <option value="flip">Flip</option>
-        <option value="rental">Rental</option>
-        <option value="brrrr">BRRRR</option>
-        <option value="development">Development</option>
-      </select>
-    </div>
-
-    <div class="ravlo-field">
-      <label class="ravlo-label">Status</label>
-      <select id="dealStatusFilter" class="ravlo-input">
-        <option value="">All</option>
-        <option value="active">Active</option>
-        <option value="pending">Pending</option>
-        <option value="closed">Closed</option>
-      </select>
-    </div>
-
-    <div class="ravlo-field">
-      <label class="ravlo-label">Funding</label>
-      <select id="dealFundingFilter" class="ravlo-input">
-        <option value="">All</option>
-        <option value="requested">Funding Requested</option>
-        <option value="not_requested">Not Requested</option>
-      </select>
-    </div>
-  </div>
-</section>
 <style>
   .ravlo-deals-page{
     display:grid;
