@@ -2,255 +2,616 @@
 {% block title %}Ravlo • AI Deal Architect{% endblock %}
 
 {% block page_title %}AI Deal Architect{% endblock %}
-{% block page_subline %}Compare the smartest strategy for a property, lot, or investment concept.{% endblock %}
+{% block page_subline %}
+Analyze the opportunity, score the risk, and shape the best strategy for the deal.
+{% endblock %}
+
+{% block topbar_actions %}
+  <a href="{{ url_for('investor.deals_list') }}" class="ravlo-btn ghost sm">
+    Deal Pipeline
+  </a>
+  {% if deal is defined and deal %}
+  <a href="{{ url_for('investor.deal_detail', deal_id=deal.id) }}" class="ravlo-btn primary sm">
+    Open Deal Studio
+  </a>
+  {% endif %}
+{% endblock %}
 
 {% block content %}
-<div class="ravlo-shell">
+<div class="architect-shell">
 
-  <section class="ravlo-hero-card">
-    <div>
-      <div class="eyebrow">DEAL INTELLIGENCE</div>
-      <h2>Let Ravlo architect the best play</h2>
+  <!-- HERO -->
+  <section class="ravlo-hero-card architect-hero">
+    <div class="architect-hero-copy">
+      <div class="eyebrow">RAVLO INTELLIGENCE</div>
+      <h2>Strategy before capital.</h2>
       <p class="muted">
-        Enter the basics of a property or lot and Ravlo will compare strategy options, projected upside, and the best next workspace.
+        Run a clean analysis on acquisition cost, value spread, rent strength, and rehab burden to identify the best investment path.
       </p>
+
+      <div class="ravlo-chip-row" style="margin-top:16px;">
+        {% if deal is defined and deal %}
+          <span class="ravlo-chip">{{ deal.title or deal.address or ("Deal #" ~ deal.id) }}</span>
+          <span class="ravlo-chip">{{ deal.recommended_strategy or deal.strategy or "Strategy Pending" }}</span>
+          <span class="ravlo-chip">
+            {% if deal.deal_score %}
+              Score {{ deal.deal_score }}/100
+            {% else %}
+              Score Pending
+            {% endif %}
+          </span>
+        {% else %}
+          <span class="ravlo-chip">Standalone Analysis</span>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="architect-hero-side">
+      <div class="architect-highlight">
+        <span>AI Purpose</span>
+        <strong>Find the strongest path</strong>
+        <p>Flip, BRRRR, rental, or development — with a clearer decision framework.</p>
+      </div>
     </div>
   </section>
 
+  <!-- MAIN GRID -->
   <div class="architect-grid">
 
-    <section class="ravlo-card">
-      <div class="card-head">
-        <h3>Opportunity Inputs</h3>
-        <p class="muted">Tell Ravlo what you’re looking at.</p>
-      </div>
+    <!-- LEFT -->
+    <div class="architect-stack">
 
-      <div class="form-group">
-        <label>Property Address</label>
-        <input id="daPropertyAddress" class="ravlo-input" type="text" placeholder="123 Main St, Tampa, FL">
-      </div>
-
-      <div class="form-row-2">
-        <div class="form-group">
-          <label>ZIP Code</label>
-          <input id="daZip" class="ravlo-input" type="text" placeholder="33602">
-        </div>
-        <div class="form-group">
-          <label>Property Type</label>
-          <select id="daPropertyType" class="ravlo-input">
-            <option value="">Select type</option>
-            <option value="single family">Single Family</option>
-            <option value="multifamily">Multifamily</option>
-            <option value="fixer upper">Fixer Upper</option>
-            <option value="land">Land</option>
-            <option value="lot">Lot</option>
-            <option value="vacant land">Vacant Land</option>
-            <option value="development site">Development Site</option>
-          </select>
-        </div>
-      </div>
-
-      <div class="form-row-2">
-        <div class="form-group">
-          <label>Lot Size</label>
-          <input id="daLotSize" class="ravlo-input" type="text" placeholder="0.32 acres">
-        </div>
-        <div class="form-group">
-          <label>Zoning</label>
-          <input id="daZoning" class="ravlo-input" type="text" placeholder="R2">
-        </div>
-      </div>
-
-      <div class="form-row-2">
-        <div class="form-group">
-          <label>Goal</label>
-          <select id="daStrategyGoal" class="ravlo-input">
-            <option value="">Select goal</option>
-            <option value="maximize profit">Maximize Profit</option>
-            <option value="cash flow">Cash Flow</option>
-            <option value="fast exit">Fast Exit</option>
-            <option value="development upside">Development Upside</option>
-            <option value="lowest complexity">Lowest Complexity</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label>Budget</label>
-          <input id="daBudget" class="ravlo-input" type="text" placeholder="$150,000">
-        </div>
-      </div>
-
-      <div class="form-group">
-        <label>Notes</label>
-        <textarea id="daNotes" class="ravlo-input" rows="5" placeholder="Anything Ravlo should consider: layout issues, neighborhood notes, investor goals, lender concerns, target exit, etc."></textarea>
-      </div>
-
-      <div class="quick-prompts-wrap">
-        <div class="quick-title">Quick scenarios</div>
-        <div class="quick-prompts">
-          <button type="button" class="qp-btn da-fill" data-type="land" data-goal="development upside">Analyze as land deal</button>
-          <button type="button" class="qp-btn da-fill" data-type="fixer upper" data-goal="maximize profit">Analyze as flip</button>
-          <button type="button" class="qp-btn da-fill" data-type="single family" data-goal="cash flow">Analyze as rental</button>
-          <button type="button" class="qp-btn da-fill" data-type="development site" data-goal="maximize profit">Compare build options</button>
-        </div>
-      </div>
-
-      <div class="btn-row">
-        <button id="dealArchitectAnalyzeBtn" type="button" class="ravlo-btn primary">
-          Analyze Opportunity
-        </button>
-      </div>
-    </section>
-
-    <section class="ravlo-card">
-      <div class="card-head">
-        <h3>Recommended Strategies</h3>
-        <p class="muted">Ravlo will compare the strongest paths for this opportunity.</p>
-      </div>
-
-      <div id="architectEmpty" class="empty-state architect-empty">
-        <div class="empty-icon">🧠</div>
-        <h4>No strategy analysis yet</h4>
-        <p class="muted">Run an opportunity analysis to see recommended plays, projected upside, and next actions.</p>
-      </div>
-
-      <div id="architectResults" class="hidden">
-        <div class="ravlo-soft-panel architect-summary-panel">
-          <div class="architect-context" id="architectContextLabel">Opportunity</div>
-          <h4>Ravlo Summary</h4>
-          <p id="architectSummaryText" class="muted" style="margin-bottom:0;"></p>
+      <!-- INPUTS -->
+      <section class="ravlo-card pad">
+        <div class="section-head">
+          <div>
+            <div class="eyebrow">INPUTS</div>
+            <h3>Deal Assumptions</h3>
+          </div>
         </div>
 
-        <div id="architectStrategies" class="architect-strategy-list"></div>
-      </div>
-    </section>
+        <div class="architect-form-grid">
+          {% if deal is defined and deal %}
+          <input type="hidden" id="deal_id" value="{{ deal.id }}">
+          {% endif %}
 
+          <div class="ravlo-field">
+            <label class="ravlo-label">Purchase Price</label>
+            <input id="purchase_price" class="ravlo-input" type="number" step="0.01"
+                   value="{{ (deal.purchase_price if deal is defined and deal else 0) or 0 }}">
+          </div>
+
+          <div class="ravlo-field">
+            <label class="ravlo-label">ARV</label>
+            <input id="arv" class="ravlo-input" type="number" step="0.01"
+                   value="{{ (deal.arv if deal is defined and deal else 0) or 0 }}">
+          </div>
+
+          <div class="ravlo-field">
+            <label class="ravlo-label">Estimated Rent</label>
+            <input id="estimated_rent" class="ravlo-input" type="number" step="0.01"
+                   value="{{ (deal.estimated_rent if deal is defined and deal else 0) or 0 }}">
+          </div>
+
+          <div class="ravlo-field">
+            <label class="ravlo-label">Rehab Cost</label>
+            <input id="rehab_cost" class="ravlo-input" type="number" step="0.01"
+                   value="{{ (deal.rehab_cost if deal is defined and deal else 0) or 0 }}">
+          </div>
+
+          <div class="ravlo-field">
+            <label class="ravlo-label">Current Strategy</label>
+            <select id="current_strategy" class="ravlo-input">
+              {% set current_strategy = ((deal.strategy if deal is defined and deal else '') or '')|lower %}
+              <option value="">Select strategy</option>
+              <option value="flip" {% if current_strategy == 'flip' %}selected{% endif %}>Flip</option>
+              <option value="rental" {% if current_strategy == 'rental' %}selected{% endif %}>Rental</option>
+              <option value="brrrr" {% if current_strategy == 'brrrr' %}selected{% endif %}>BRRRR</option>
+              <option value="development" {% if current_strategy == 'development' %}selected{% endif %}>Development</option>
+            </select>
+          </div>
+
+          <div class="ravlo-field">
+            <label class="ravlo-label">Analysis Mode</label>
+            <select id="analysis_mode" class="ravlo-input">
+              <option value="balanced" selected>Balanced</option>
+              <option value="conservative">Conservative</option>
+              <option value="aggressive">Aggressive</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="architect-action-row">
+          <button class="ravlo-btn primary" type="button" onclick="runArchitectAnalysis()">
+            Run Analysis
+          </button>
+          <button class="ravlo-btn ghost" type="button" onclick="resetArchitectFields()">
+            Reset
+          </button>
+        </div>
+      </section>
+
+      <!-- REASONING -->
+      <section class="ravlo-card pad">
+        <div class="section-head">
+          <div>
+            <div class="eyebrow">AI REASONING</div>
+            <h3>Why This Strategy</h3>
+          </div>
+        </div>
+
+        <div class="feature-highlight">
+          <div class="feature-highlight-label">Recommended Strategy</div>
+          <div class="feature-highlight-value" id="recommended_strategy">
+            {{ strategy_analysis.get("recommended_strategy") if strategy_analysis is defined and strategy_analysis else ((deal.recommended_strategy if deal is defined and deal else None) or "Not generated yet") }}
+          </div>
+        </div>
+
+        <div class="report-note" style="margin-top:16px;">
+          <strong>Analysis Narrative</strong>
+          <p id="strategy_reason">
+            {{ strategy_analysis.get("reason") if strategy_analysis is defined and strategy_analysis else "Run the architect to generate a strategy narrative." }}
+          </p>
+        </div>
+      </section>
+
+    </div>
+
+    <!-- RIGHT -->
+    <div class="architect-stack">
+
+      <!-- OUTPUTS -->
+      <section class="ravlo-card pad">
+        <div class="section-head">
+          <div>
+            <div class="eyebrow">OUTPUTS</div>
+            <h3>Decision Snapshot</h3>
+          </div>
+        </div>
+
+        <div class="architect-metrics-grid">
+          <div class="architect-metric">
+            <span>Projected Profit</span>
+            <strong id="projected_profit">
+              ${{ "{:,.0f}".format((strategy_analysis.get("projected_profit", 0) if strategy_analysis is defined and strategy_analysis else 0) or 0) }}
+            </strong>
+          </div>
+
+          <div class="architect-metric">
+            <span>Deal Score</span>
+            <strong id="deal_score">
+              {% if strategy_analysis is defined and strategy_analysis and strategy_analysis.get("deal_score") %}
+                {{ strategy_analysis.get("deal_score") }}/100
+              {% elif deal is defined and deal and deal.deal_score %}
+                {{ deal.deal_score }}/100
+              {% else %}
+                Pending
+              {% endif %}
+            </strong>
+          </div>
+
+          <div class="architect-metric">
+            <span>Total Cost</span>
+            <strong id="total_cost_display">
+              ${{ "{:,.0f}".format((((deal.purchase_price if deal is defined and deal else 0) or 0) + ((deal.rehab_cost if deal is defined and deal else 0) or 0))) }}
+            </strong>
+          </div>
+
+          <div class="architect-metric">
+            <span>Rent Ratio</span>
+            <strong id="rent_ratio_display">—</strong>
+          </div>
+        </div>
+      </section>
+
+      <!-- STRATEGY FIT -->
+      <section class="ravlo-card pad">
+        <div class="section-head">
+          <div>
+            <div class="eyebrow">FIT</div>
+            <h3>Strategy Fit</h3>
+          </div>
+        </div>
+
+        <div class="fit-list">
+          <div class="fit-row">
+            <span>Flip Potential</span>
+            <strong id="flip_fit">—</strong>
+          </div>
+          <div class="fit-row">
+            <span>Rental Strength</span>
+            <strong id="rental_fit">—</strong>
+          </div>
+          <div class="fit-row">
+            <span>BRRRR Potential</span>
+            <strong id="brrrr_fit">—</strong>
+          </div>
+          <div class="fit-row">
+            <span>Execution Risk</span>
+            <strong id="risk_fit">—</strong>
+          </div>
+        </div>
+      </section>
+
+      <!-- NEXT ACTIONS -->
+      <section class="ravlo-card pad">
+        <div class="section-head">
+          <div>
+            <div class="eyebrow">WORKFLOW</div>
+            <h3>Next Moves</h3>
+          </div>
+        </div>
+
+        <div class="quick-grid one-col">
+          {% if deal is defined and deal %}
+          <a href="{{ url_for('investor.deal_detail', deal_id=deal.id) }}" class="quick-card">
+            <span class="quick-title">Open Deal Studio</span>
+            <span class="quick-sub">Continue into rehab scope, visuals, partners, and funding.</span>
+          </a>
+
+          <a href="{{ url_for('investor.deal_report', deal_id=deal.id) }}" class="quick-card">
+            <span class="quick-title">Open Deal Report</span>
+            <span class="quick-sub">Review the numbers in a cleaner investor summary.</span>
+          </a>
+          {% else %}
+          <div class="report-note">
+            <p>Save the analysis to a deal to continue into funding and reporting.</p>
+          </div>
+          {% endif %}
+        </div>
+      </section>
+
+    </div>
   </div>
 </div>
 
-<script>
-(function () {
-  const analyzeBtn = document.getElementById("dealArchitectAnalyzeBtn");
-  const emptyState = document.getElementById("architectEmpty");
-  const resultsWrap = document.getElementById("architectResults");
-  const summaryText = document.getElementById("architectSummaryText");
-  const contextLabel = document.getElementById("architectContextLabel");
-  const strategiesWrap = document.getElementById("architectStrategies");
-
-  const propertyAddress = document.getElementById("daPropertyAddress");
-  const zipCode = document.getElementById("daZip");
-  const propertyType = document.getElementById("daPropertyType");
-  const lotSize = document.getElementById("daLotSize");
-  const zoning = document.getElementById("daZoning");
-  const strategyGoal = document.getElementById("daStrategyGoal");
-  const budget = document.getElementById("daBudget");
-  const notes = document.getElementById("daNotes");
-
-  function renderStrategies(strategies) {
-    strategiesWrap.innerHTML = "";
-
-    (strategies || []).forEach((item) => {
-      const card = document.createElement("div");
-      card.className = "architect-card";
-
-      const buttonsHtml = (item.buttons || []).map(btn => {
-        const url = btn.url || "#";
-        const label = btn.label || "Open";
-        const cls = label.toLowerCase().includes("open") ? "ravlo-btn primary sm" : "ravlo-btn ghost sm";
-        return `<button type="button" class="${cls}" data-url="${url}">${label}</button>`;
-      }).join("");
-
-      card.innerHTML = `
-        <div class="architect-card-top">
-          <div>
-            <div class="architect-tag">${item.tag || "Strategy"}</div>
-            <h4>${item.name || "Untitled Strategy"}</h4>
-            <p class="muted">${item.description || ""}</p>
-          </div>
-          <div class="architect-roi">${item.roi || "--"}</div>
-        </div>
-
-        <div class="architect-metrics">
-          <div class="metric-box">
-            <span>Cost</span>
-            <strong>${item.build_cost_label || "--"}</strong>
-          </div>
-          <div class="metric-box">
-            <span>Value</span>
-            <strong>${item.arv_label || "--"}</strong>
-          </div>
-          <div class="metric-box">
-            <span>Profit</span>
-            <strong>${item.profit_label || "--"}</strong>
-          </div>
-        </div>
-
-        <div class="btn-row">${buttonsHtml}</div>
-      `;
-
-      card.querySelectorAll("button[data-url]").forEach((btn) => {
-        btn.addEventListener("click", function () {
-          const url = btn.getAttribute("data-url");
-          if (url && url !== "#") {
-            window.location.href = url;
-          }
-        });
-      });
-
-      strategiesWrap.appendChild(card);
-    });
+<style>
+  .architect-shell{
+    display:grid;
+    gap:20px;
   }
 
-  async function analyzeOpportunity() {
-    try {
-      const payload = {
-        property_address: propertyAddress.value.trim(),
-        zip_code: zipCode.value.trim(),
-        property_type: propertyType.value,
-        lot_size: lotSize.value.trim(),
-        zoning: zoning.value.trim(),
-        strategy_goal: strategyGoal.value,
-        budget: budget.value.trim(),
-        notes: notes.value.trim()
-      };
+  .architect-hero{
+    align-items:stretch;
+  }
 
-      const response = await fetch('{{ url_for("investor.deal_architect_analyze") }}', {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify(payload)
-      });
+  .architect-hero-copy{
+    flex:1;
+    min-width:0;
+  }
 
-      const data = await response.json();
+  .architect-hero-copy h2{
+    margin:8px 0 10px;
+    font-size:34px;
+    line-height:1.05;
+    letter-spacing:-.03em;
+  }
 
-      if (!data.success) {
-        alert(data.message || "Analysis failed.");
-        return;
-      }
+  .architect-hero-side{
+    width:320px;
+    max-width:100%;
+    display:flex;
+    align-items:stretch;
+  }
 
-      emptyState.classList.add("hidden");
-      resultsWrap.classList.remove("hidden");
+  .architect-highlight{
+    width:100%;
+    padding:18px;
+    border-radius:20px;
+    background:rgba(255,255,255,.04);
+    border:1px solid rgba(255,255,255,.08);
+  }
 
-      contextLabel.textContent = data.context_label || "Opportunity";
-      summaryText.textContent = data.summary || "";
-      renderStrategies(data.strategies || []);
+  .architect-highlight span{
+    display:block;
+    color:var(--muted);
+    font-size:12px;
+    text-transform:uppercase;
+    letter-spacing:.08em;
+  }
 
-    } catch (err) {
-      console.error(err);
-      alert("Failed to analyze opportunity.");
+  .architect-highlight strong{
+    display:block;
+    margin-top:8px;
+    font-size:22px;
+    line-height:1.2;
+    color:var(--text);
+  }
+
+  .architect-highlight p{
+    margin:10px 0 0;
+    color:var(--muted);
+    line-height:1.6;
+  }
+
+  .architect-grid{
+    display:grid;
+    grid-template-columns:1.12fr .88fr;
+    gap:20px;
+    align-items:start;
+  }
+
+  .architect-stack{
+    display:grid;
+    gap:20px;
+  }
+
+  .section-head{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:16px;
+    margin-bottom:18px;
+  }
+
+  .section-head h3{
+    margin:4px 0 0;
+    font-size:20px;
+  }
+
+  .architect-form-grid{
+    display:grid;
+    grid-template-columns:repeat(2, minmax(0, 1fr));
+    gap:14px;
+  }
+
+  .architect-action-row{
+    display:flex;
+    gap:12px;
+    flex-wrap:wrap;
+    margin-top:16px;
+  }
+
+  .architect-metrics-grid{
+    display:grid;
+    grid-template-columns:repeat(2, minmax(0, 1fr));
+    gap:12px;
+  }
+
+  .architect-metric{
+    padding:16px;
+    border-radius:18px;
+    background:rgba(255,255,255,.03);
+    border:1px solid rgba(255,255,255,.08);
+  }
+
+  .architect-metric span{
+    display:block;
+    color:var(--muted);
+    font-size:12px;
+    text-transform:uppercase;
+    letter-spacing:.08em;
+    margin-bottom:8px;
+  }
+
+  .architect-metric strong{
+    color:var(--text);
+    font-size:22px;
+    font-weight:800;
+    letter-spacing:-.02em;
+  }
+
+  .fit-list{
+    display:grid;
+    gap:12px;
+  }
+
+  .fit-row{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:14px;
+    padding:14px 16px;
+    border-radius:16px;
+    background:rgba(255,255,255,.03);
+    border:1px solid rgba(255,255,255,.08);
+  }
+
+  .fit-row span{
+    color:var(--muted);
+  }
+
+  .fit-row strong{
+    color:var(--text);
+    font-size:16px;
+  }
+
+  .quick-grid{
+    display:grid;
+    grid-template-columns:repeat(2, minmax(0, 1fr));
+    gap:14px;
+  }
+
+  .quick-grid.one-col{
+    grid-template-columns:1fr;
+  }
+
+  .quick-card{
+    display:block;
+    padding:18px;
+    border-radius:18px;
+    background:rgba(255,255,255,.03);
+    border:1px solid rgba(255,255,255,.08);
+    text-decoration:none;
+    transition:.2s ease;
+  }
+
+  .quick-card:hover{
+    transform:translateY(-1px);
+    border-color:rgba(107,127,147,.35);
+    background:rgba(255,255,255,.045);
+  }
+
+  .quick-title{
+    display:block;
+    color:var(--text);
+    font-size:16px;
+    font-weight:700;
+  }
+
+  .quick-sub{
+    display:block;
+    margin-top:8px;
+    color:var(--muted);
+    font-size:13px;
+    line-height:1.55;
+  }
+
+  @media (max-width: 1100px){
+    .architect-grid{
+      grid-template-columns:1fr;
+    }
+
+    .architect-hero{
+      flex-direction:column;
+    }
+
+    .architect-hero-side{
+      width:100%;
     }
   }
 
-  analyzeBtn.addEventListener("click", analyzeOpportunity);
+  @media (max-width: 700px){
+    .architect-form-grid,
+    .architect-metrics-grid{
+      grid-template-columns:1fr;
+    }
 
-  document.querySelectorAll(".da-fill").forEach((btn) => {
-    btn.addEventListener("click", function () {
-      const type = btn.getAttribute("data-type") || "";
-      const goal = btn.getAttribute("data-goal") || "";
-      propertyType.value = type;
-      strategyGoal.value = goal;
-    });
+    .fit-row{
+      flex-direction:column;
+      align-items:flex-start;
+    }
+  }
+</style>
+
+<script>
+  function money(value) {
+    const number = Number(value || 0);
+    return "$" + number.toLocaleString(undefined, { maximumFractionDigits: 0 });
+  }
+
+  function percent(value) {
+    const number = Number(value || 0);
+    return number.toLocaleString(undefined, { maximumFractionDigits: 2 }) + "%";
+  }
+
+  function safeNumber(id) {
+    return Number(document.getElementById(id)?.value || 0);
+  }
+
+  function setFitValues(purchasePrice, arv, rent, rehabCost) {
+    const totalCost = purchasePrice + rehabCost;
+    const profit = arv - totalCost;
+    const rentRatio = purchasePrice > 0 ? (rent / purchasePrice) * 100 : 0;
+    const rehabRatio = purchasePrice > 0 ? rehabCost / purchasePrice : 0;
+
+    let flipFit = "Low";
+    if (profit > 75000) flipFit = "High";
+    else if (profit > 30000) flipFit = "Moderate";
+
+    let rentalFit = "Low";
+    if (rentRatio >= 1.0) rentalFit = "High";
+    else if (rentRatio >= 0.8) rentalFit = "Moderate";
+
+    let brrrrFit = "Low";
+    if (arv > 0 && totalCost > 0 && arv >= totalCost * 1.25) brrrrFit = "High";
+    else if (arv > 0 && totalCost > 0 && arv >= totalCost * 1.12) brrrrFit = "Moderate";
+
+    let riskFit = "Moderate";
+    if (rehabRatio >= 0.30) riskFit = "Higher";
+    else if (rehabRatio < 0.15) riskFit = "Lower";
+
+    document.getElementById("flip_fit").textContent = flipFit;
+    document.getElementById("rental_fit").textContent = rentalFit;
+    document.getElementById("brrrr_fit").textContent = brrrrFit;
+    document.getElementById("risk_fit").textContent = riskFit;
+    document.getElementById("total_cost_display").textContent = money(totalCost);
+    document.getElementById("rent_ratio_display").textContent = purchasePrice > 0 ? percent(rentRatio) : "—";
+  }
+
+  async function runArchitectAnalysis() {
+    const dealId = document.getElementById("deal_id")?.value;
+
+    if (!dealId) {
+      alert("This architect screen needs a deal record to run analysis.");
+      return;
+    }
+
+    try {
+      const payload = {
+        deal_id: dealId,
+        purchase_price: safeNumber("purchase_price"),
+        arv: safeNumber("arv"),
+        estimated_rent: safeNumber("estimated_rent"),
+        rehab_cost: safeNumber("rehab_cost"),
+        current_strategy: document.getElementById("current_strategy")?.value || "",
+        analysis_mode: document.getElementById("analysis_mode")?.value || "balanced"
+      };
+
+      const res = await fetch("/investor/deal-architect/strategy", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify(payload)
+      });
+
+      let data;
+      try {
+        data = await res.json();
+      } catch {
+        const text = await res.text();
+        alert("Analysis failed. Server returned:\n\n" + text.slice(0, 300));
+        return;
+      }
+
+      if (!res.ok || !data.success) {
+        alert(data.error || "Analysis failed.");
+        return;
+      }
+
+      document.getElementById("recommended_strategy").textContent = data.recommended_strategy || "Pending";
+      document.getElementById("projected_profit").textContent = money(data.projected_profit || 0);
+      document.getElementById("deal_score").textContent = data.deal_score ? `${data.deal_score}/100` : "Pending";
+      document.getElementById("strategy_reason").textContent = data.reason || "No reasoning returned.";
+
+      setFitValues(
+        safeNumber("purchase_price"),
+        safeNumber("arv"),
+        safeNumber("estimated_rent"),
+        safeNumber("rehab_cost")
+      );
+    } catch (err) {
+      console.error(err);
+      alert("Analysis failed: " + err.message);
+    }
+  }
+
+  function resetArchitectFields() {
+    document.getElementById("purchase_price").value = 0;
+    document.getElementById("arv").value = 0;
+    document.getElementById("estimated_rent").value = 0;
+    document.getElementById("rehab_cost").value = 0;
+    document.getElementById("current_strategy").value = "";
+    document.getElementById("analysis_mode").value = "balanced";
+
+    document.getElementById("recommended_strategy").textContent = "Not generated yet";
+    document.getElementById("projected_profit").textContent = "$0";
+    document.getElementById("deal_score").textContent = "Pending";
+    document.getElementById("strategy_reason").textContent = "Run the architect to generate a strategy narrative.";
+    document.getElementById("total_cost_display").textContent = "$0";
+    document.getElementById("rent_ratio_display").textContent = "—";
+    document.getElementById("flip_fit").textContent = "—";
+    document.getElementById("rental_fit").textContent = "—";
+    document.getElementById("brrrr_fit").textContent = "—";
+    document.getElementById("risk_fit").textContent = "—";
+  }
+
+  window.addEventListener("load", function () {
+    setFitValues(
+      safeNumber("purchase_price"),
+      safeNumber("arv"),
+      safeNumber("estimated_rent"),
+      safeNumber("rehab_cost")
+    );
   });
-})();
 </script>
 {% endblock %}
