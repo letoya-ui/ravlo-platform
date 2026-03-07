@@ -1,7 +1,7 @@
 """update deals and add funding requests
 
 Revision ID: 9f3d2c7a4b10
-Revises: YOUR_PREVIOUS_REVISION_ID
+Revises: 0002
 Create Date: 2026-03-07 08:30:00.000000
 """
 
@@ -11,7 +11,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision = "9f3d2c7a4b10"
-down_revision = "YOUR_PREVIOUS_REVISION_ID"
+down_revision = "0002"
 branch_labels = None
 depends_on = None
 
