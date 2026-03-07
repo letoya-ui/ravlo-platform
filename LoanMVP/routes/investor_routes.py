@@ -2806,6 +2806,77 @@ def build_projects():
     )
 
 # =========================================================
+# 🧭 AI DEAL ARCHITECT
+# =========================================================
+
+@investor_bp.route("/deal-architect", methods=["GET"])
+@login_required
+@role_required("investor")
+def deal_architect():
+    return render_template(
+        "investor/deal_architect.html",
+        page_title="AI Deal Architect",
+        page_subtitle="Generate strategies and investment approaches for potential deals."
+    )
+
+
+@investor_bp.route("/deal-architect/analyze", methods=["POST"])
+@login_required
+@role_required("investor")
+def deal_architect_analyze():
+
+    try:
+        address = request.form.get("address")
+        property_type = request.form.get("property_type")
+        price = safe_float(request.form.get("price"))
+        rehab = safe_float(request.form.get("rehab"))
+        arv = safe_float(request.form.get("arv"))
+        description = request.form.get("description")
+
+        # Basic strategy analysis
+        flip_profit = arv - (price + rehab)
+        rental_value = arv * 0.008
+
+        strategies = []
+
+        # Flip
+        if flip_profit > 20000:
+            strategies.append({
+                "name": "Fix & Flip",
+                "profit": round(flip_profit, 2),
+                "risk": "Medium",
+                "summary": "Renovate and sell quickly for capital gain."
+            })
+
+        # Rental
+        strategies.append({
+            "name": "Buy & Hold Rental",
+            "rent_estimate": round(rental_value, 2),
+            "risk": "Low",
+            "summary": "Renovate and hold as long-term rental income."
+        })
+
+        # Development
+        if property_type.lower() in ["land", "lot"]:
+            strategies.append({
+                "name": "Ground-Up Development",
+                "risk": "High",
+                "summary": "Construct a new property for resale or rental."
+            })
+
+        return jsonify({
+            "status": "ok",
+            "address": address,
+            "strategies": strategies
+        })
+
+    except Exception as e:
+        return jsonify({
+            "status": "error",
+            "message": str(e)
+        }), 500
+
+# =========================================================
 # REHAB IMAGE UPLOAD
 # =========================================================
 
