@@ -46,13 +46,12 @@ Review the saved deal, check strategy and funding status, and launch the next to
     <div class="detail-hero-actions">
       <a href="{{ url_for('investor.deal_architect') }}" class="ravlo-btn ghost">
         AI Deal Architect
-      </a>
 
       {% if deal_id is defined and deal_id %}
       <a href="{{ url_for('investor.deal_rehab_studio', deal_id=deal.id) }}" class="ravlo-btn ghost">
         Rehab Studio
       </a>
-      {% endif %}
+        {% endif %}
 
       <button class="ravlo-btn primary" type="button" onclick="requestFunding({{ deal.id }})">
         Request Funding

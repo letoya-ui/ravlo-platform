@@ -2697,7 +2697,69 @@ def deal_book(deal_id):
 # =========================================================
 # DEAL CRUD
 # =========================================================
+@investor_bp.route("/deals/create", methods=["GET", "POST"])
+@login_required
+@role_required("investor")
+def create_deal():
+    investor_profile = InvestorProfile.query.filter_by(user_id=current_user.id).first()
 
+    if request.method == "POST":
+        title = (request.form.get("title") or "").strip()
+        address = (request.form.get("address") or "").strip()
+        city = (request.form.get("city") or "").strip()
+        state = (request.form.get("state") or "").strip()
+        zip_code = (request.form.get("zip_code") or "").strip()
+        strategy = (request.form.get("strategy") or "flip").strip().lower()
+
+        purchase_price = float(request.form.get("purchase_price") or 0)
+        arv = float(request.form.get("arv") or 0)
+        estimated_rent = float(request.form.get("estimated_rent") or 0)
+        rehab_cost = float(request.form.get("rehab_cost") or 0)
+
+        notes = (request.form.get("notes") or "").strip()
+
+        if not title and not address:
+            flash("Please add at least a deal title or property address.", "error")
+            return redirect(url_for("investor.create_deal"))
+
+        deal = Deal(
+            user_id=current_user.id,
+            investor_profile_id=investor_profile.id if investor_profile else None,
+            title=title or address or "Untitled Deal",
+            address=address or None,
+            city=city or None,
+            state=state or None,
+            zip_code=zip_code or None,
+            strategy=strategy,
+            purchase_price=purchase_price,
+            arv=arv,
+            estimated_rent=estimated_rent,
+            rehab_cost=rehab_cost,
+            notes=notes,
+            status="active",
+            inputs_json={
+                "title": title,
+                "address": address,
+                "city": city,
+                "state": state,
+                "zip_code": zip_code,
+                "strategy": strategy,
+                "purchase_price": purchase_price,
+                "arv": arv,
+                "estimated_rent": estimated_rent,
+                "rehab_cost": rehab_cost,
+                "notes": notes,
+            },
+        )
+
+        db.session.add(deal)
+        db.session.commit()
+
+        flash("Deal created successfully.", "success")
+        return redirect(url_for("investor.deal_detail", deal_id=deal.id))
+
+    return render_template("investor/create_deal.html")
+    
 @investor_bp.route("/deals/save", methods=["POST"])
 @investor_bp.route("/deals/save_deal", methods=["POST"])
 @csrf.exempt
