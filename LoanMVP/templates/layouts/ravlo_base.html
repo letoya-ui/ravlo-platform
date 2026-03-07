@@ -261,8 +261,8 @@
           <span>AI Deal Architect</span>
         </a>
 
-        <a href="{% if deal_id is defined and deal_id %}{{ url_for('investor.deal_rehab_studio', deal_id=deal_id) }}{% else %}{{ url_for('investor.deals_list') }}{% endif %}"
-           class="ravlo-nav-link {% if ep in ['investor.deal_rehab_studio', 'investor.deal_reveal'] %}active{% endif %}">
+        <a href="{% if deal_id is defined and deal_id %}{{ url_for('investor.deal_rehab', deal_id=deal_id) }}{% else %}{{ url_for('investor.deals_list') }}{% endif %}"
+           class="ravlo-nav-link {% if ep in ['investor.deal_rehab', 'investor.deal_reveal'] %}active{% endif %}">
           <i class="lucide lucide-hammer"></i>
           <span>Rehab Studio</span>
         </a>
