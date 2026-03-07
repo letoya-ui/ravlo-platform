@@ -1,301 +1,322 @@
 {% extends "layouts/ravlo_base.html" %}
-{% block title %}Ravlo • Deal Pipeline{% endblock %}
+{% block title %}Ravlo • Deals{% endblock %}
 
 {% block page_title %}Deal Pipeline{% endblock %}
 {% block page_subline %}
-Track active opportunities, open saved deals, and move the best projects into execution.
+Manage opportunities, open studios, and move deals toward funding.
 {% endblock %}
 
 {% block topbar_actions %}
   <a href="{{ url_for('investor.deal_comparison') }}" class="ravlo-btn ghost sm">
     Compare Deals
   </a>
-  <a href="{{ url_for('investor.property_tool') }}" class="ravlo-btn primary sm">
-    Find Deals
+  <a href="{{ url_for('investor.create_deal') }}" class="ravlo-btn primary sm">
+    New Deal
   </a>
 {% endblock %}
 
 {% block content %}
-<div class="pipeline-shell">
+<div class="ravlo-deals-page">
 
+  <!-- HERO -->
   <section class="ravlo-hero-card">
     <div>
-      <div class="eyebrow">RAVLO PIPELINE</div>
-      <h2>Your active investment opportunities</h2>
+      <div class="eyebrow">RAVLO DEAL PIPELINE</div>
+      <h2>Your active opportunities</h2>
       <p class="muted">
-        Review saved deals, track strategy and readiness, and move the strongest opportunities into Deal Studio.
+        Open any deal to access Renovation Studio, Build Studio, reporting, and funding workflows.
       </p>
+
+      <div class="ravlo-chip-row" style="margin-top:16px;">
+        <span class="ravlo-chip">{{ deals|length }} Total Deal{% if deals|length != 1 %}s{% endif %}</span>
+      </div>
     </div>
 
-    <div class="pipeline-hero-actions">
+    <div class="deals-hero-actions">
+      <a href="{{ url_for('investor.create_deal') }}" class="ravlo-btn primary">
+        Create Deal
+      </a>
       <a href="{{ url_for('investor.deal_comparison') }}" class="ravlo-btn ghost">
         Compare Deals
       </a>
-      <a href="{{ url_for('investor.property_tool') }}" class="ravlo-btn primary">
-        Deal Finder
-      </a>
     </div>
   </section>
 
-  <div class="pipeline-kpi-grid">
-    <div class="ravlo-kpi premium">
-      <div class="value">{{ deals|length }}</div>
-      <div class="label">Total Deals</div>
-    </div>
+  {% if deals %}
+    <div class="deals-grid">
+      {% for deal in deals %}
+      <article class="deal-card">
 
-    <div class="ravlo-kpi premium">
-      <div class="value">
-        {{ deals|selectattr('submitted_for_funding')|list|length }}
-      </div>
-      <div class="label">Funding Requested</div>
-    </div>
+        <a href="{{ url_for('investor.deal_detail', deal_id=deal.id) }}" class="deal-card-main">
+          <div class="deal-card-top">
+            <div>
+              <div class="deal-title">
+                {{ deal.title or deal.address or ("Deal #" ~ deal.id) }}
+              </div>
+              <div class="deal-address">
+                {{ deal.address or "No address saved" }}
+              </div>
+            </div>
 
-    <div class="ravlo-kpi premium">
-      <div class="value">
-        {{ deals|selectattr('deal_score')|list|length }}
-      </div>
-      <div class="label">Analyzed Deals</div>
-    </div>
+            <div class="deal-status-pill">
+              {{ deal.status or "active" }}
+            </div>
+          </div>
 
-    <div class="ravlo-kpi premium">
-      <div class="value">
-        {{ deals|rejectattr('submitted_for_funding')|list|length }}
-      </div>
-      <div class="label">Active Pipeline</div>
-    </div>
-  </div>
+          <div class="deal-metrics-grid">
+            <div class="deal-metric">
+              <span>Purchase</span>
+              <strong>${{ "{:,.0f}".format(deal.purchase_price or 0) }}</strong>
+            </div>
 
-  <section class="ravlo-card pad" style="margin-top:20px;">
-    <div class="section-head">
-      <div>
-        <div class="eyebrow">PIPELINE VIEW</div>
-        <h3>All Deals</h3>
-      </div>
-    </div>
+            <div class="deal-metric">
+              <span>Rehab</span>
+              <strong>${{ "{:,.0f}".format(deal.rehab_cost or 0) }}</strong>
+            </div>
 
-    <div class="pipeline-table-wrap">
-      <table class="pipeline-table">
-        <thead>
-          <tr>
-            <th>Deal</th>
-            <th>Strategy</th>
-            <th>Score</th>
-            <th>Purchase</th>
-            <th>Rehab</th>
-            <th>ARV</th>
-            <th>Funding</th>
-            <th>Status</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% if deals %}
-            {% for deal in deals %}
-            <tr>
-              <td>
-                <div class="pipeline-deal-title">
-                  {{ deal.title or deal.address or ("Deal #" ~ deal.id) }}
-                </div>
-                <div class="pipeline-deal-sub">
-                  {{ deal.address or "No address saved" }}
-                </div>
-              </td>
+            <div class="deal-metric">
+              <span>ARV</span>
+              <strong>${{ "{:,.0f}".format(deal.arv or 0) }}</strong>
+            </div>
 
-              <td>
-                <span class="mini-pill">
-                  {{ deal.recommended_strategy or deal.strategy or "Pending" }}
-                </span>
-              </td>
+            <div class="deal-metric">
+              <span>Rent</span>
+              <strong>${{ "{:,.0f}".format(deal.estimated_rent or 0) }}</strong>
+            </div>
+          </div>
 
-              <td>
-                {% if deal.deal_score %}
-                  <span class="score-pill">{{ deal.deal_score }}/100</span>
-                {% else %}
-                  <span class="muted">Pending</span>
-                {% endif %}
-              </td>
+          <div class="deal-card-foot">
+            <span class="mini-pill">
+              {{ deal.recommended_strategy or deal.strategy or "Pending Strategy" }}
+            </span>
 
-              <td>${{ "{:,.0f}".format(deal.purchase_price or 0) }}</td>
-              <td>${{ "{:,.0f}".format(deal.rehab_cost or 0) }}</td>
-              <td>${{ "{:,.0f}".format(deal.arv or 0) }}</td>
+            <span class="mini-pill">
+              {% if deal.deal_score %}
+                {{ deal.deal_score }}/100
+              {% else %}
+                Score Pending
+              {% endif %}
+            </span>
 
-              <td>
-                {% if deal.submitted_for_funding %}
-                  <span class="status-pill funded">Requested</span>
-                {% else %}
-                  <span class="status-pill open">Open</span>
-                {% endif %}
-              </td>
+            {% if deal.submitted_for_funding %}
+              <span class="mini-pill status">Funding Requested</span>
+            {% endif %}
+          </div>
+        </a>
 
-              <td>
-                <span class="status-pill neutral">
-                  {{ deal.status or "active" }}
-                </span>
-              </td>
+        <div class="deal-actions-grid">
+          <a href="{{ url_for('investor.deal_detail', deal_id=deal.id) }}" class="ravlo-btn ghost sm">
+            Open Deal
+          </a>
 
-              <td>
-                <div class="pipeline-actions">
-                  <a href="{{ url_for('investor.deal_detail', deal_id=deal.id) }}" class="ravlo-btn ghost sm">
-                    Detail
-                  </a>
+          <a href="{{ url_for('investor.deal_rehab', deal_id=deal.id) }}" class="ravlo-btn ghost sm">
+            Renovation Studio
+          </a>
 
-                  <a href="{{ url_for('investor.deal_studio', deal_id=deal.id) }}" class="ravlo-btn ghost sm">
-                    Studio
-                  </a>
+          <a href="{{ url_for('investor.build_studio', deal_id=deal.id) }}" class="ravlo-btn ghost sm">
+            Build Studio
+          </a>
 
-                  <a href="{{ url_for('investor.deal_report', deal_id=deal.id) }}" class="ravlo-btn primary sm">
-                    Report
-                  </a>
-                </div>
-              </td>
-            </tr>
-            {% endfor %}
+          <a href="{{ url_for('investor.deal_report', deal_id=deal.id) }}" class="ravlo-btn ghost sm">
+            Report
+          </a>
+
+          {% if not deal.submitted_for_funding %}
+          <button type="button" class="ravlo-btn primary sm" onclick="requestFunding({{ deal.id }})">
+            Request Funding
+          </button>
           {% else %}
-            <tr>
-              <td colspan="9" class="pipeline-empty">
-                No deals yet. Start by finding and saving your first opportunity.
-              </td>
-            </tr>
+          <span class="ravlo-btn ghost sm disabled-btn">
+            Funding Sent
+          </span>
           {% endif %}
-        </tbody>
-      </table>
+        </div>
+
+      </article>
+      {% endfor %}
     </div>
-  </section>
+  {% else %}
+    <section class="ravlo-card pad empty-state-card">
+      <div class="eyebrow">NO DEALS YET</div>
+      <h3 style="margin:8px 0 10px;">Start your first opportunity</h3>
+      <p class="muted" style="margin:0 0 18px;">
+        Create a deal manually or start from Property Intelligence and save one into your pipeline.
+      </p>
+
+      <div class="empty-actions">
+        <a href="{{ url_for('investor.create_deal') }}" class="ravlo-btn primary">
+          Create Deal
+        </a>
+        <a href="{{ url_for('investor.property_tool') }}" class="ravlo-btn ghost">
+          Open Deal Finder
+        </a>
+      </div>
+    </section>
+  {% endif %}
 </div>
 
 <style>
-  .pipeline-shell{
+  .ravlo-deals-page{
     display:grid;
     gap:20px;
   }
 
-  .pipeline-hero-actions{
+  .deals-hero-actions{
+    min-width:240px;
     display:grid;
     gap:12px;
-    min-width:240px;
   }
 
-  .pipeline-kpi-grid{
+  .deals-grid{
     display:grid;
-    grid-template-columns:repeat(4, minmax(0, 1fr));
-    gap:16px;
+    grid-template-columns:repeat(auto-fit, minmax(340px, 1fr));
+    gap:18px;
   }
 
-  .pipeline-table-wrap{
-    overflow:auto;
-    border-radius:18px;
-    border:1px solid rgba(255,255,255,.08);
-    background:rgba(255,255,255,.02);
-  }
-
-  .pipeline-table{
-    width:100%;
-    min-width:1100px;
-    border-collapse:collapse;
-  }
-
-  .pipeline-table thead th{
-    text-align:left;
-    padding:14px 16px;
-    font-size:12px;
-    text-transform:uppercase;
-    letter-spacing:.08em;
-    color:var(--muted);
-    background:rgba(255,255,255,.04);
-    border-bottom:1px solid rgba(255,255,255,.08);
-    white-space:nowrap;
-  }
-
-  .pipeline-table tbody td{
-    padding:14px 16px;
-    border-bottom:1px solid rgba(255,255,255,.06);
-    color:var(--text);
-    vertical-align:top;
-  }
-
-  .pipeline-table tbody tr:hover{
+  .deal-card{
+    display:grid;
+    gap:14px;
+    padding:18px;
+    border-radius:22px;
     background:rgba(255,255,255,.03);
+    border:1px solid rgba(255,255,255,.08);
   }
 
-  .pipeline-deal-title{
-    font-weight:700;
+  .deal-card-main{
+    display:grid;
+    gap:16px;
+    text-decoration:none;
+    color:inherit;
+  }
+
+  .deal-card-top{
+    display:flex;
+    align-items:flex-start;
+    justify-content:space-between;
+    gap:14px;
+  }
+
+  .deal-title{
     color:var(--text);
+    font-size:18px;
+    font-weight:800;
+    line-height:1.2;
   }
 
-  .pipeline-deal-sub{
-    margin-top:4px;
+  .deal-address{
+    margin-top:6px;
     color:var(--muted);
     font-size:13px;
+    line-height:1.5;
   }
 
-  .pipeline-actions{
-    display:flex;
-    gap:8px;
-    flex-wrap:wrap;
-  }
-
-  .score-pill{
-    display:inline-flex;
-    align-items:center;
-    justify-content:center;
-    min-width:74px;
+  .deal-status-pill{
+    white-space:nowrap;
     padding:7px 10px;
     border-radius:999px;
     background:rgba(107,127,147,.18);
     border:1px solid rgba(107,127,147,.28);
-    font-weight:700;
-  }
-
-  .status-pill{
-    display:inline-flex;
-    align-items:center;
-    justify-content:center;
-    padding:7px 10px;
-    border-radius:999px;
+    color:var(--text);
     font-size:12px;
     font-weight:700;
-    border:1px solid transparent;
+    text-transform:capitalize;
   }
 
-  .status-pill.open{
-    background:rgba(255,255,255,.05);
-    border-color:rgba(255,255,255,.10);
-    color:var(--text);
+  .deal-metrics-grid{
+    display:grid;
+    grid-template-columns:repeat(2, minmax(0, 1fr));
+    gap:12px;
   }
 
-  .status-pill.funded{
-    background:rgba(60,203,127,.12);
-    border-color:rgba(60,203,127,.24);
-    color:#D7FFE6;
+  .deal-metric{
+    padding:14px;
+    border-radius:16px;
+    background:rgba(255,255,255,.03);
+    border:1px solid rgba(255,255,255,.08);
   }
 
-  .status-pill.neutral{
-    background:rgba(107,127,147,.14);
-    border-color:rgba(107,127,147,.24);
-    color:#DCE5EF;
-  }
-
-  .pipeline-empty{
+  .deal-metric span{
+    display:block;
     color:var(--muted);
-    text-align:center;
-    padding:24px !important;
+    font-size:12px;
+    text-transform:uppercase;
+    letter-spacing:.08em;
+    margin-bottom:8px;
   }
 
-  @media (max-width: 1100px){
-    .pipeline-kpi-grid{
-      grid-template-columns:repeat(2, minmax(0, 1fr));
-    }
-
-    .pipeline-hero-actions{
-      min-width:unset;
-      width:100%;
-    }
+  .deal-metric strong{
+    color:var(--text);
+    font-size:18px;
+    font-weight:800;
   }
 
-  @media (max-width: 560px){
-    .pipeline-kpi-grid{
+  .deal-card-foot{
+    display:flex;
+    flex-wrap:wrap;
+    gap:10px;
+  }
+
+  .deal-actions-grid{
+    display:grid;
+    grid-template-columns:repeat(2, minmax(0, 1fr));
+    gap:10px;
+  }
+
+  .disabled-btn{
+    opacity:.72;
+    cursor:default;
+    pointer-events:none;
+  }
+
+  .empty-state-card{
+    text-align:left;
+  }
+
+  .empty-actions{
+    display:flex;
+    gap:12px;
+    flex-wrap:wrap;
+  }
+
+  @media (max-width: 760px){
+    .deal-metrics-grid,
+    .deal-actions-grid{
       grid-template-columns:1fr;
+    }
+
+    .deals-hero-actions{
+      width:100%;
+      min-width:unset;
+    }
+
+    .deal-card-top{
+      flex-direction:column;
+      align-items:flex-start;
     }
   }
 </style>
+
+<script>
+  async function requestFunding(dealId) {
+    try {
+      const res = await fetch(`/investor/deals/${dealId}/request-funding`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" }
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        alert(data.message || data.error || "Unable to submit funding request.");
+        return;
+      }
+
+      alert(data.message || "Funding request submitted successfully.");
+      window.location.reload();
+    } catch (err) {
+      console.error(err);
+      alert("Something went wrong submitting the funding request.");
+    }
+  }
+</script>
 {% endblock %}
