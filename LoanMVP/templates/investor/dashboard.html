@@ -1,705 +1,80 @@
-{% extends "layouts/ravlo_base.html" %}
-{% block title %}Ravlo • Command Center{% endblock %}
-
-{% block page_title %}Command Center{% endblock %}
-{% block page_subline %}
-Your capital, deals, and funding — in one place.
-{% endblock %}
-
-{% block topbar_actions %}
-  <a href="{{ url_for('investor.property_tool') }}" class="ravlo-btn ghost sm">
-    Deal Finder
-  </a>
-  <a href="{{ url_for('investor.deal_comparison') }}" class="ravlo-btn ghost sm">
-    Compare Deals
-  </a>
-  <a href="{{ url_for('investor.deals_list') }}" class="ravlo-btn primary sm">
-    Deal Pipeline
-  </a>
-{% endblock %}
-
-{% block content %}
-<div class="ravlo-shell">
-
-  <!-- =========================================================
-       IDENTITY / COMMAND HEADER
-  ========================================================== -->
-  <section class="ravlo-hero-card">
-    <div>
-      <div class="eyebrow">RAVLO COMMAND CENTER</div>
-      <h2>{{ current_user.first_name }} {{ current_user.last_name }}</h2>
-      <p class="muted">
-        {{ investor_profile.strategy or "No strategy selected yet" }}
-      </p>
-
-      <div class="ravlo-chip-row" style="margin-top:16px;">
-        <span class="ravlo-chip">
-          {% if snapshot.status %}
-            {{ snapshot.status }}
-          {% else %}
-            No active capital request
-          {% endif %}
-        </span>
-
-        <span class="ravlo-chip">
-          {{ total_deals or 0 }} Deal{% if (total_deals or 0) != 1 %}s{% endif %}
-        </span>
-
-        <span class="ravlo-chip">
-          {{ saved_props|length }} Saved Propert{% if (saved_props|length) == 1 %}y{% else %}ies{% endif %}
-        </span>
-      </div>
-    </div>
-
-    <div class="command-header-side">
-      <div class="ravlo-mark lg">
-        <span>{{ current_user.first_name[0] }}{{ current_user.last_name[0] }}</span>
-      </div>
-
-      <div class="capital-highlight">
-        <div class="capital-highlight-label">Capital Requested</div>
-        <div class="capital-highlight-value">${{ "{:,.0f}".format(snapshot.amount or 0) }}</div>
-        <div class="capital-highlight-sub">
-          {{ snapshot.address or "No active property tied to capital yet" }}
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- =========================================================
-       KPI GRID
-  ========================================================== -->
-  <div class="command-kpi-grid">
-
-    <div class="ravlo-kpi premium">
-      <div class="value">${{ "{:,.0f}".format(snapshot.amount or 0) }}</div>
-      <div class="label">Capital Requested</div>
-    </div>
-
-    <div class="ravlo-kpi premium">
-      <div class="value">{{ capital_requests|length }}</div>
-      <div class="label">Capital Requests</div>
-    </div>
-
-    <div class="ravlo-kpi premium">
-      <div class="value">{{ total_deals or 0 }}</div>
-      <div class="label">Total Deals</div>
-    </div>
-
-    <div class="ravlo-kpi premium">
-      <div class="value">{{ average_deal_score or 0 }}</div>
-      <div class="label">Avg Deal Score</div>
-    </div>
-
-    <div class="ravlo-kpi premium">
-      <div class="value">{{ ready_for_funding_count or 0 }}</div>
-      <div class="label">Ready for Funding</div>
-    </div>
-
-    <div class="ravlo-kpi premium">
-      <div class="value">{{ funding_requested_count or 0 }}</div>
-      <div class="label">Funding Requested</div>
-    </div>
-
-  </div>
-
-  <!-- =========================================================
-       MAIN LAYOUT
-  ========================================================== -->
-  <div class="command-main-grid">
-
-    <!-- LEFT COLUMN -->
-    <div class="command-stack">
-
-      <!-- NEXT STEP -->
-      <section class="ravlo-card pad">
-        <div class="section-head">
-          <div>
-            <div class="eyebrow">AI GUIDANCE</div>
-            <h3>Next Best Move</h3>
-          </div>
-        </div>
-
-        <div class="feature-highlight">
-          <div class="feature-highlight-label">Next Step</div>
-          <div class="feature-highlight-value">{{ next_step_ai }}</div>
-        </div>
-
-        <div class="progress-wrap" style="margin-top:16px;">
-          <div class="progress-head">
-            <span>Capital Progress</span>
-            <strong>{{ snapshot.progress_percent or 0 }}%</strong>
-          </div>
-          <div class="ravlo-progress">
-            <div class="ravlo-progress-bar" style="width: {{ snapshot.progress_percent or 0 }}%;"></div>
-          </div>
-        </div>
-      </section>
-
-      <!-- RECENT DEALS -->
-      <section class="ravlo-card pad">
-        <div class="section-head">
-          <div>
-            <div class="eyebrow">PIPELINE</div>
-            <h3>Recent Deals</h3>
-          </div>
-          <a href="{{ url_for('investor.deals_list') }}" class="ravlo-link-btn">View All</a>
-        </div>
-
-        {% if recent_deals %}
-          <div class="recent-list">
-            {% for deal in recent_deals %}
-            <div class="recent-row">
-              <div>
-                <div class="recent-title">
-                  {{ deal.title or deal.address or ("Deal #" ~ deal.id) }}
-                </div>
-                <div class="recent-sub">
-                  {{ deal.address or "No address saved" }}
-                </div>
-              </div>
-
-              <div class="recent-meta">
-                <span class="mini-pill">
-                  {{ deal.recommended_strategy or deal.strategy or "Pending" }}
-                </span>
-                <span class="mini-pill">
-                  {% if deal.deal_score %}
-                    {{ deal.deal_score }}/100
-                  {% else %}
-                    Score Pending
-                  {% endif %}
-                </span>
-                <a href="{{ url_for('investor.deal_detail', deal_id=deal.id) }}" class="ravlo-btn ghost sm">
-                  Open
-                </a>
-              </div>
-            </div>
-            {% endfor %}
-          </div>
-        {% else %}
-          <div class="empty-state-inline">
-            No deals yet. Start by adding or finding your first opportunity.
-          </div>
-        {% endif %}
-      </section>
-
-      <!-- ACTIVE CAPITAL REQUESTS -->
-      <section class="ravlo-card pad">
-        <div class="section-head">
-          <div>
-            <div class="eyebrow">CAPITAL</div>
-            <h3>Active Capital Requests</h3>
-          </div>
-          <a href="{{ url_for('investor.capital_application') }}" class="ravlo-btn primary sm">Apply</a>
-        </div>
-
-        {% if capital_requests %}
-          <div class="recent-list">
-            {% for req in capital_requests[:6] %}
-            <div class="recent-row">
-              <div>
-                <div class="recent-title">
-                  {{ req.property_address or "Unnamed Property" }}
-                </div>
-                <div class="recent-sub">
-                  {{ req.loan_type or "Capital Request" }}
-                </div>
-              </div>
-
-              <div class="recent-meta">
-                <span class="mini-pill status">{{ req.status or "Open" }}</span>
-                <span class="mini-pill">${{ "{:,.0f}".format(req.amount or 0) }}</span>
-              </div>
-            </div>
-            {% endfor %}
-          </div>
-        {% else %}
-          <div class="empty-state-inline">No capital requests yet.</div>
-        {% endif %}
-      </section>
-
-    </div>
-
-    <!-- RIGHT COLUMN -->
-    <div class="command-stack">
-
-      <!-- QUICK ACTIONS -->
-      <section class="ravlo-card pad">
-        <div class="section-head">
-          <div>
-            <div class="eyebrow">ACTIONS</div>
-            <h3>Move Faster</h3>
-          </div>
-        </div>
-
-        <div class="quick-grid">
-          <a href="{{ url_for('investor.property_tool') }}" class="quick-card">
-            <span class="quick-title">Deal Finder</span>
-            <span class="quick-sub">Search for new opportunities</span>
-          </a>
-
-          <a href="{{ url_for('investor.deal_studio') }}" class="quick-card">
-            <span class="quick-title">Deal Studio</span>
-            <span class="quick-sub">Open and work your pipeline</span>
-          </a>
-
-          <a href="{{ url_for('investor.deal_comparison') }}" class="quick-card">
-            <span class="quick-title">Compare Deals</span>
-            <span class="quick-sub">Prioritize the strongest opportunity</span>
-          </a>
-
-          <a href="{{ url_for('investor.capital_application') }}" class="quick-card">
-            <span class="quick-title">Request Capital</span>
-            <span class="quick-sub">Move a deal into funding</span>
-          </a>
-        </div>
-      </section>
-
-      <!-- ALERTS -->
-      <section class="ravlo-card pad">
-        <div class="section-head">
-          <div>
-            <div class="eyebrow">ALERTS</div>
-            <h3>Important Alerts</h3>
-          </div>
-        </div>
-
-        {% set pending_conditions = conditions | selectattr("status", "ne", "cleared") | list %}
-
-        {% if pending_conditions %}
-          <div class="alert-list">
-            {% for c in pending_conditions[:4] %}
-            <div class="alert-row">
-              <span class="ravlo-badge risk">Alert</span>
-              <span class="muted">{{ c.description }}</span>
-            </div>
-            {% endfor %}
-          </div>
-        {% else %}
-          <div class="empty-state-inline">No active alerts.</div>
-        {% endif %}
-      </section>
-
-      <!-- PORTFOLIO / WATCHLIST -->
-      <section class="ravlo-card pad">
-        <div class="section-head">
-          <div>
-            <div class="eyebrow">PORTFOLIO</div>
-            <h3>Snapshot</h3>
-          </div>
-        </div>
-
-        <div class="portfolio-grid">
-          <div class="portfolio-box">
-            <span>Saved Properties</span>
-            <strong>{{ saved_props|length }}</strong>
-          </div>
-
-          <div class="portfolio-box">
-            <span>Total Deals</span>
-            <strong>{{ total_deals or 0 }}</strong>
-          </div>
-
-          <div class="portfolio-box">
-            <span>Ready for Funding</span>
-            <strong>{{ ready_for_funding_count or 0 }}</strong>
-          </div>
-
-          <div class="portfolio-box">
-            <span>Funding Requested</span>
-            <strong>{{ funding_requested_count or 0 }}</strong>
-          </div>
-        </div>
-      </section>
-
-      <!-- AI INSIGHTS -->
-      <section class="ravlo-card pad">
-        <div class="section-head">
-          <div>
-            <div class="eyebrow">AI INSIGHTS</div>
-            <h3>Market + Risk</h3>
-          </div>
-        </div>
-
-        <div class="insight-stack">
-          <div class="ravlo-insight">
-            <p class="k">Market Signal</p>
-            <p class="v">AI indicates strong investor appetite for value-add multifamily.</p>
-          </div>
-
-          <div class="ravlo-insight">
-            <p class="k">Risk Note</p>
-            <p class="v">Underwriting delays may impact closing timelines.</p>
-          </div>
-
-          <div class="ravlo-insight">
-            <p class="k">Command Time</p>
-            <p class="v">{{ now_str }}</p>
-          </div>
-        </div>
-      </section>
-
-    </div>
-  </div>
-</div>
-
-<style>
-  .command-header-side{
-    display:flex;
-    align-items:center;
-    gap:16px;
-    min-width:280px;
-    justify-content:flex-end;
-  }
-
-  .ravlo-mark.lg{
-    width:70px;
-    height:70px;
-    border-radius:22px;
-  }
-
-  .ravlo-mark.lg span{
-    font-size:24px;
-    font-weight:800;
-  }
-
-  .capital-highlight{
-    min-width:210px;
-    padding:16px 18px;
-    border-radius:20px;
-    background:rgba(255,255,255,.04);
-    border:1px solid rgba(255,255,255,.08);
-  }
-
-  .capital-highlight-label{
-    color:var(--muted);
-    font-size:12px;
-    text-transform:uppercase;
-    letter-spacing:.08em;
-  }
-
-  .capital-highlight-value{
-    margin-top:8px;
-    color:var(--text);
-    font-size:30px;
-    font-weight:800;
-    letter-spacing:-.03em;
-  }
-
-  .capital-highlight-sub{
-    margin-top:6px;
-    color:var(--muted);
-    font-size:13px;
-    line-height:1.5;
-  }
-
-  .command-kpi-grid{
-    display:grid;
-    grid-template-columns:repeat(6, minmax(0, 1fr));
-    gap:16px;
-    margin-top:20px;
-  }
-
-  .ravlo-kpi.premium{
-    padding:18px;
-    border-radius:20px;
-    background:linear-gradient(135deg, rgba(107,127,147,.16), rgba(255,255,255,.03));
-    border:1px solid rgba(255,255,255,.08);
-  }
-
-  .command-main-grid{
-    display:grid;
-    grid-template-columns:1.2fr .9fr;
-    gap:20px;
-    margin-top:20px;
-    align-items:start;
-  }
-
-  .command-stack{
-    display:grid;
-    gap:20px;
-  }
-
-  .section-head{
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-    gap:16px;
-    margin-bottom:18px;
-  }
-
-  .section-head h3{
-    margin:4px 0 0;
-    font-size:20px;
-  }
-
-  .ravlo-chip-row{
-    display:flex;
-    flex-wrap:wrap;
-    gap:10px;
-  }
-
-  .ravlo-chip{
-    display:inline-flex;
-    align-items:center;
-    padding:8px 12px;
-    border-radius:999px;
-    background:rgba(255,255,255,.04);
-    border:1px solid rgba(255,255,255,.08);
-    color:var(--text);
-    font-size:13px;
-    font-weight:600;
-  }
-
-  .feature-highlight{
-    padding:18px;
-    border-radius:20px;
-    background:linear-gradient(135deg, rgba(107,127,147,.18), rgba(58,92,122,.10));
-    border:1px solid rgba(107,127,147,.24);
-  }
-
-  .feature-highlight-label{
-    color:var(--muted);
-    font-size:12px;
-    text-transform:uppercase;
-    letter-spacing:.08em;
-    margin-bottom:8px;
-  }
-
-  .feature-highlight-value{
-    color:var(--text);
-    font-size:18px;
-    line-height:1.6;
-    font-weight:600;
-  }
-
-  .progress-wrap{
-    display:grid;
-    gap:10px;
-  }
-
-  .progress-head{
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-    gap:16px;
-    font-size:14px;
-  }
-
-  .progress-head span{
-    color:var(--muted);
-  }
-
-  .progress-head strong{
-    color:var(--text);
-  }
-
-  .ravlo-progress{
-    width:100%;
-    height:10px;
-    border-radius:999px;
-    background:rgba(255,255,255,.06);
-    overflow:hidden;
-  }
-
-  .ravlo-progress-bar{
-    height:100%;
-    border-radius:999px;
-    background:linear-gradient(90deg, #6B7F93, #8AA0B7);
-  }
-
-  .recent-list{
-    display:grid;
-    gap:12px;
-  }
-
-  .recent-row{
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-    gap:16px;
-    padding:16px;
-    border-radius:18px;
-    background:rgba(255,255,255,.03);
-    border:1px solid rgba(255,255,255,.08);
-  }
-
-  .recent-title{
-    color:var(--text);
-    font-size:15px;
-    font-weight:700;
-  }
-
-  .recent-sub{
-    margin-top:4px;
-    color:var(--muted);
-    font-size:13px;
-  }
-
-  .recent-meta{
-    display:flex;
-    align-items:center;
-    gap:10px;
-    flex-wrap:wrap;
-    justify-content:flex-end;
-  }
-
-  .mini-pill{
-    display:inline-flex;
-    align-items:center;
-    padding:7px 10px;
-    border-radius:999px;
-    background:rgba(255,255,255,.04);
-    border:1px solid rgba(255,255,255,.08);
-    color:var(--text);
-    font-size:12px;
-    font-weight:600;
-  }
-
-  .mini-pill.status{
-    background:rgba(107,127,147,.18);
-    border-color:rgba(107,127,147,.28);
-  }
-
-  .quick-grid{
-    display:grid;
-    grid-template-columns:repeat(2, minmax(0, 1fr));
-    gap:14px;
-  }
-
-  .quick-card{
-    display:block;
-    padding:18px;
-    border-radius:18px;
-    background:rgba(255,255,255,.03);
-    border:1px solid rgba(255,255,255,.08);
-    text-decoration:none;
-    transition:.2s ease;
-  }
-
-  .quick-card:hover{
-    transform:translateY(-1px);
-    border-color:rgba(107,127,147,.35);
-    background:rgba(255,255,255,.045);
-  }
-
-  .quick-title{
-    display:block;
-    color:var(--text);
-    font-size:16px;
-    font-weight:700;
-  }
-
-  .quick-sub{
-    display:block;
-    margin-top:8px;
-    color:var(--muted);
-    font-size:13px;
-    line-height:1.55;
-  }
-
-  .alert-list{
-    display:grid;
-    gap:12px;
-  }
-
-  .alert-row{
-    display:flex;
-    justify-content:space-between;
+.ravlo-topbar{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:16px;
+  margin-bottom:20px;
+  padding-bottom:14px;
+  border-bottom:1px solid rgba(255,255,255,.06);
+}
+
+.ravlo-top-left{
+  min-width:0;
+  display:flex;
+  flex-direction:column;
+  gap:4px;
+}
+
+.ravlo-title{
+  margin:0;
+  font-size:28px;
+  font-weight:800;
+  letter-spacing:-.03em;
+  line-height:1.05;
+}
+
+.ravlo-subline{
+  margin:0;
+  color:var(--muted);
+  font-size:14px;
+  line-height:1.5;
+}
+
+.ravlo-actions{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  flex-wrap:wrap;
+  justify-content:flex-end;
+}
+
+.ravlo-search{
+  min-width:220px;
+  max-width:280px;
+}
+
+.ravlo-topbar-actions-slot{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  flex-wrap:wrap;
+}
+
+.ravlo-sidebar-footer-simple{
+  margin-top:auto;
+  padding-top:16px;
+  display:grid;
+  gap:10px;
+}
+
+.ravlo-logout-btn{
+  width:100%;
+  justify-content:flex-start;
+}
+
+@media (max-width: 980px){
+  .ravlo-topbar{
+    flex-direction:column;
     align-items:flex-start;
-    gap:12px;
-    padding:14px 16px;
-    border-radius:16px;
-    background:rgba(255,255,255,.03);
-    border:1px solid rgba(255,255,255,.08);
   }
 
-  .portfolio-grid{
-    display:grid;
-    grid-template-columns:repeat(2, minmax(0, 1fr));
-    gap:14px;
+  .ravlo-actions{
+    width:100%;
+    justify-content:flex-start;
   }
 
-  .portfolio-box{
-    padding:18px;
-    border-radius:18px;
-    background:rgba(255,255,255,.03);
-    border:1px solid rgba(255,255,255,.08);
+  .ravlo-search{
+    width:100%;
+    max-width:none;
   }
-
-  .portfolio-box span{
-    display:block;
-    color:var(--muted);
-    font-size:12px;
-    text-transform:uppercase;
-    letter-spacing:.08em;
-    margin-bottom:8px;
-  }
-
-  .portfolio-box strong{
-    color:var(--text);
-    font-size:28px;
-    font-weight:800;
-  }
-
-  .insight-stack{
-    display:grid;
-    gap:12px;
-  }
-
-  .ravlo-link-btn{
-    color:var(--accent2);
-    text-decoration:none;
-    font-size:14px;
-    font-weight:700;
-  }
-
-  .empty-state-inline{
-    color:var(--muted);
-    padding:8px 0;
-  }
-
-  @media (max-width: 1200px){
-    .command-kpi-grid{
-      grid-template-columns:repeat(3, minmax(0, 1fr));
-    }
-
-    .command-main-grid{
-      grid-template-columns:1fr;
-    }
-  }
-
-  @media (max-width: 760px){
-    .command-header-side{
-      width:100%;
-      justify-content:flex-start;
-      min-width:unset;
-    }
-
-    .command-kpi-grid{
-      grid-template-columns:repeat(2, minmax(0, 1fr));
-    }
-
-    .quick-grid,
-    .portfolio-grid{
-      grid-template-columns:1fr;
-    }
-
-    .recent-row{
-      flex-direction:column;
-      align-items:flex-start;
-    }
-
-    .recent-meta{
-      justify-content:flex-start;
-    }
-  }
-
-  @media (max-width: 560px){
-    .command-kpi-grid{
-      grid-template-columns:1fr;
-    }
-  }
-</style>
-{% endblock %}
+}
