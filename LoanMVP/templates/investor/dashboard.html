@@ -1,80 +1,276 @@
-.ravlo-topbar{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:16px;
-  margin-bottom:20px;
-  padding-bottom:14px;
-  border-bottom:1px solid rgba(255,255,255,.06);
-}
+{% extends "layouts/ravlo_base.html" %}
+{% block title %}Ravlo • Command Center{% endblock %}
 
-.ravlo-top-left{
-  min-width:0;
-  display:flex;
-  flex-direction:column;
-  gap:4px;
-}
+{% block page_title %}Command Center{% endblock %}
+{% block page_subline %}
+Your capital, deals, and funding — in one place.
+{% endblock %}
 
-.ravlo-title{
-  margin:0;
-  font-size:28px;
-  font-weight:800;
-  letter-spacing:-.03em;
-  line-height:1.05;
-}
+{% block topbar_actions %}
+  <a href="{{ url_for('investor.property_tool') }}" class="ravlo-btn ghost sm">
+    Deal Finder
+  </a>
+  <a href="{{ url_for('investor.deal_comparison') }}" class="ravlo-btn ghost sm">
+    Compare Deals
+  </a>
+  <a href="{{ url_for('investor.deals_list') }}" class="ravlo-btn primary sm">
+    Deal Pipeline
+  </a>
+{% endblock %}
 
-.ravlo-subline{
-  margin:0;
-  color:var(--muted);
-  font-size:14px;
-  line-height:1.5;
-}
+{% block content %}
+<div class="ravlo-dashboard">
 
-.ravlo-actions{
-  display:flex;
-  align-items:center;
-  gap:10px;
-  flex-wrap:wrap;
-  justify-content:flex-end;
-}
+  <!-- HERO -->
+  <section class="ravlo-hero-card command-hero">
+    <div>
+      <div class="eyebrow">RAVLO COMMAND CENTER</div>
+      <h2>{{ current_user.first_name }} {{ current_user.last_name }}</h2>
+      <p class="muted">
+        {{ investor_profile.strategy or "Your capital, deals, and funding in one command view." }}
+      </p>
 
-.ravlo-search{
-  min-width:220px;
-  max-width:280px;
-}
+      <div class="ravlo-chip-row" style="margin-top:16px;">
+        <span class="ravlo-chip">{{ total_deals or 0 }} Deal{% if (total_deals or 0) != 1 %}s{% endif %}</span>
+        <span class="ravlo-chip">{{ ready_for_funding_count or 0 }} Ready for Funding</span>
+        <span class="ravlo-chip">{{ capital_requests|length }} Capital Request{% if (capital_requests|length) != 1 %}s{% endif %}</span>
+      </div>
+    </div>
 
-.ravlo-topbar-actions-slot{
-  display:flex;
-  align-items:center;
-  gap:10px;
-  flex-wrap:wrap;
-}
+    <div class="hero-side-stat">
+      <span>Capital Requested</span>
+      <strong>${{ "{:,.0f}".format(snapshot.amount or 0) }}</strong>
+      <small>{{ snapshot.address or "No active property selected" }}</small>
+    </div>
+  </section>
 
-.ravlo-sidebar-footer-simple{
-  margin-top:auto;
-  padding-top:16px;
-  display:grid;
-  gap:10px;
-}
+  <!-- KPI STRIP -->
+  <section class="dashboard-kpi-strip">
+    <div class="ravlo-kpi premium">
+      <div class="value">{{ total_deals or 0 }}</div>
+      <div class="label">Total Deals</div>
+    </div>
 
-.ravlo-logout-btn{
-  width:100%;
-  justify-content:flex-start;
-}
+    <div class="ravlo-kpi premium">
+      <div class="value">{{ average_deal_score or 0 }}</div>
+      <div class="label">Avg Deal Score</div>
+    </div>
 
-@media (max-width: 980px){
-  .ravlo-topbar{
-    flex-direction:column;
-    align-items:flex-start;
-  }
+    <div class="ravlo-kpi premium">
+      <div class="value">{{ ready_for_funding_count or 0 }}</div>
+      <div class="label">Ready for Funding</div>
+    </div>
 
-  .ravlo-actions{
-    width:100%;
-    justify-content:flex-start;
-  }
+    <div class="ravlo-kpi premium">
+      <div class="value">{{ funding_requested_count or 0 }}</div>
+      <div class="label">Funding Requested</div>
+    </div>
+  </section>
 
-  .ravlo-search{
-    width:100%;
-    max-width:none;
-  }
-}
+  <!-- MIXED GRID -->
+  <section class="dashboard-mixed-grid">
+
+    <!-- AI GUIDANCE -->
+    <section class="panel panel-large">
+      <div class="section-head">
+        <div>
+          <div class="eyebrow">AI GUIDANCE</div>
+          <h3>Next Best Move</h3>
+        </div>
+      </div>
+
+      <div class="feature-highlight">
+        <div class="feature-highlight-label">Next Step</div>
+        <div class="feature-highlight-value">{{ next_step_ai }}</div>
+      </div>
+
+      <div class="progress-wrap" style="margin-top:16px;">
+        <div class="progress-head">
+          <span>Capital Progress</span>
+          <strong>{{ snapshot.progress_percent or 0 }}%</strong>
+        </div>
+
+        <div class="ravlo-progress">
+          <div class="ravlo-progress-bar" style="width: {{ snapshot.progress_percent or 0 }}%;"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- QUICK ACTIONS -->
+    <section class="panel panel-small">
+      <div class="section-head">
+        <div>
+          <div class="eyebrow">ACTIONS</div>
+          <h3>Quick Actions</h3>
+        </div>
+      </div>
+
+      <div class="quick-grid one-col">
+        <a href="{{ url_for('investor.property_tool') }}" class="quick-card">
+          <span class="quick-title">Deal Finder</span>
+          <span class="quick-sub">Search opportunities</span>
+        </a>
+
+        <a href="{{ url_for('investor.deals_list') }}" class="quick-card">
+          <span class="quick-title">Deal Pipeline</span>
+          <span class="quick-sub">Open your saved deals</span>
+        </a>
+
+        <a href="{{ url_for('investor.deal_comparison') }}" class="quick-card">
+          <span class="quick-title">Compare Deals</span>
+          <span class="quick-sub">Prioritize your best move</span>
+        </a>
+      </div>
+    </section>
+
+    <!-- RECENT DEALS -->
+    <section class="panel panel-wide">
+      <div class="section-head">
+        <div>
+          <div class="eyebrow">PIPELINE</div>
+          <h3>Recent Deals</h3>
+        </div>
+        <a href="{{ url_for('investor.deals_list') }}" class="ravlo-link-btn">View All</a>
+      </div>
+
+      {% if recent_deals %}
+        <div class="recent-list">
+          {% for deal in recent_deals %}
+          <div class="recent-row">
+            <div>
+              <div class="recent-title">
+                {{ deal.title or deal.address or ("Deal #" ~ deal.id) }}
+              </div>
+              <div class="recent-sub">
+                {{ deal.address or "No address saved" }}
+              </div>
+            </div>
+
+            <div class="recent-meta">
+              <span class="mini-pill">{{ deal.recommended_strategy or deal.strategy or "Pending" }}</span>
+              <span class="mini-pill">
+                {% if deal.deal_score %}
+                  {{ deal.deal_score }}/100
+                {% else %}
+                  Score Pending
+                {% endif %}
+              </span>
+              <a href="{{ url_for('investor.deal_detail', deal_id=deal.id) }}" class="ravlo-btn ghost sm">
+                Open
+              </a>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="empty-state-inline">No deals yet.</div>
+      {% endif %}
+    </section>
+
+    <!-- ALERTS -->
+    <section class="panel panel-small">
+      <div class="section-head">
+        <div>
+          <div class="eyebrow">ALERTS</div>
+          <h3>Important Alerts</h3>
+        </div>
+      </div>
+
+      {% set pending_conditions = conditions | selectattr("status", "ne", "cleared") | list %}
+      {% if pending_conditions %}
+        <div class="alert-list">
+          {% for c in pending_conditions[:4] %}
+          <div class="alert-row">
+            <span class="ravlo-badge risk">Alert</span>
+            <span class="muted">{{ c.description }}</span>
+          </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="empty-state-inline">No active alerts.</div>
+      {% endif %}
+    </section>
+
+    <!-- ACTIVE CAPITAL -->
+    <section class="panel panel-small">
+      <div class="section-head">
+        <div>
+          <div class="eyebrow">CAPITAL</div>
+          <h3>Active Requests</h3>
+        </div>
+        <a href="{{ url_for('investor.capital_application') }}" class="ravlo-link-btn">Apply</a>
+      </div>
+
+      {% if capital_requests %}
+        <div class="recent-list">
+          {% for req in capital_requests[:4] %}
+          <div class="recent-row">
+            <div>
+              <div class="recent-title">{{ req.property_address or "Unnamed Property" }}</div>
+              <div class="recent-sub">{{ req.loan_type or "Capital Request" }}</div>
+            </div>
+
+            <div class="recent-meta">
+              <span class="mini-pill status">{{ req.status or "Open" }}</span>
+              <span class="mini-pill">${{ "{:,.0f}".format(req.amount or 0) }}</span>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="empty-state-inline">No capital requests yet.</div>
+      {% endif %}
+    </section>
+
+    <!-- SAVED PROPERTIES -->
+    <section class="panel panel-small">
+      <div class="section-head">
+        <div>
+          <div class="eyebrow">WATCHLIST</div>
+          <h3>Saved Properties</h3>
+        </div>
+      </div>
+
+      <div class="portfolio-grid">
+        <div class="portfolio-box">
+          <span>Saved Properties</span>
+          <strong>{{ saved_props|length }}</strong>
+        </div>
+
+        <div class="portfolio-box">
+          <span>Total Deals</span>
+          <strong>{{ total_deals or 0 }}</strong>
+        </div>
+      </div>
+    </section>
+
+    <!-- AI INSIGHTS -->
+    <section class="panel panel-small">
+      <div class="section-head">
+        <div>
+          <div class="eyebrow">AI INSIGHTS</div>
+          <h3>Market + Risk</h3>
+        </div>
+      </div>
+
+      <div class="insight-stack">
+        <div class="ravlo-insight">
+          <p class="k">Market Signal</p>
+          <p class="v">AI indicates strong investor appetite for value-add multifamily.</p>
+        </div>
+
+        <div class="ravlo-insight">
+          <p class="k">Risk Note</p>
+          <p class="v">Underwriting delays may impact closing timelines.</p>
+        </div>
+
+        <div class="ravlo-insight">
+          <p class="k">Command Time</p>
+          <p class="v">{{ now_str }}</p>
+        </div>
+      </div>
+    </section>
+
+  </section>
+</div>
+{% endblock %}
