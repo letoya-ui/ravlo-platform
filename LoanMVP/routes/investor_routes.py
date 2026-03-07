@@ -656,6 +656,41 @@ def command_center():
         if total_conditions > 0:
             progress_percent = int((cleared_conditions / total_conditions) * 100)
 
+    # Ravlo deal intelligence
+    deals = []
+    recent_deals = []
+    total_deals = 0
+    average_deal_score = 0
+    ready_for_funding_count = 0
+    funding_requested_count = 0
+
+    if ip:
+        deals = (
+            Deal.query
+            .filter_by(user_id=current_user.id)
+            .order_by(Deal.updated_at.desc())
+            .all()
+        )
+
+        total_deals = len(deals)
+
+        scored_deals = [d.deal_score for d in deals if d.deal_score is not None]
+        average_deal_score = round(sum(scored_deals) / len(scored_deals), 1) if scored_deals else 0
+
+        ready_for_funding_count = len([
+            d for d in deals
+            if not d.submitted_for_funding
+            and ((d.recommended_strategy or d.strategy) is not None)
+            and (d.purchase_price or 0) > 0
+        ])
+
+        funding_requested_count = len([
+            d for d in deals
+            if d.submitted_for_funding
+        ])
+
+        recent_deals = deals[:5]
+
     snapshot = {
         "loan_type": getattr(active_request, "loan_type", None) if active_request else None,
         "amount": getattr(active_request, "amount", None) if active_request else None,
@@ -686,9 +721,14 @@ def command_center():
         next_step_ai=next_step_ai,
         primary_stage=primary_stage,
         now_str=now_str,
-        investor_profile=ip,   # ← FIXED
+        investor_profile=ip,
         active_tab="command",
         title="RAVLO • Command Center",
+        total_deals=total_deals,
+        average_deal_score=average_deal_score,
+        ready_for_funding_count=ready_for_funding_count,
+        funding_requested_count=funding_requested_count,
+        recent_deals=recent_deals,
     )
 
 @investor_bp.route("/test_blueprint", methods=["GET"])
@@ -2499,20 +2539,123 @@ def deals_list():
     return render_template("investor/deals_list.html", deals=deals, status=status, q=q)
 
 
+from flask import abort
+
 @investor_bp.route("/deals/<int:deal_id>", methods=["GET"])
 @login_required
 @role_required("investor")
 def deal_detail(deal_id):
-    deal = Deal.query.filter_by(id=deal_id, user_id=current_user.id).first_or_404()
 
-    mockups = (RenovationMockup.query
+    deal = Deal.query.get_or_404(deal_id)
+
+    if deal.user_id != current_user.id:
+        abort(403)
+
+    mockups = (
+        RenovationMockup.query
         .filter_by(deal_id=deal_id, user_id=current_user.id)
         .order_by(RenovationMockup.created_at.desc())
-        .all())
+        .all()
+    )
 
-    partners = Partner.query.filter_by(user_id=current_user.id).order_by(Partner.created_at.desc()).all()
+    partners = (
+        Partner.query
+        .filter_by(user_id=current_user.id)
+        .order_by(Partner.created_at.desc())
+        .all()
+    )
 
-    return render_template("investor/deal_detail.html", deal=deal, mockups=mockups, partners=partners)
+    results = deal.results_json or {}
+    strategy_analysis = results.get("strategy_analysis", {})
+    rehab_analysis = results.get("rehab_analysis", {})
+
+    return render_template(
+        "investor/deal_detail.html",
+        deal=deal,
+        mockups=mockups,
+        partners=partners,
+        strategy_analysis=strategy_analysis,
+        rehab_analysis=rehab_analysis
+    )
+
+@investor_bp.route("/deal-comparison", methods=["GET"])
+@login_required
+@role_required("investor")
+def deal_comparison():
+    deals = (
+        Deal.query
+        .filter_by(user_id=current_user.id)
+        .order_by(Deal.created_at.desc())
+        .all()
+    )
+    return render_template("investor/deal_comparison.html", deals=deals)
+
+@investor_bp.route("/deal-comparison/run", methods=["POST"])
+@login_required
+@role_required("investor")
+def run_deal_comparison():
+    data = request.get_json(silent=True) or request.form
+    deal_ids = data.get("deal_ids", [])
+
+    if not deal_ids:
+        return jsonify({"error": "Please select at least one deal."}), 400
+
+    deals = (
+        Deal.query
+        .filter(Deal.id.in_(deal_ids), Deal.user_id == current_user.id)
+        .all()
+    )
+
+    if not deals:
+        return jsonify({"error": "No deals found."}), 404
+
+    comparison = []
+    best_profit_deal = None
+    best_roi_deal = None
+    best_rental_deal = None
+    best_score_deal = None
+
+    for deal in deals:
+        total_cost = (deal.purchase_price or 0) + (deal.rehab_cost or 0)
+        projected_profit = (deal.arv or 0) - total_cost
+        projected_roi = round((projected_profit / total_cost) * 100, 2) if total_cost > 0 else 0
+
+        item = {
+            "id": deal.id,
+            "title": deal.title or deal.address or f"Deal {deal.id}",
+            "address": deal.address,
+            "purchase_price": deal.purchase_price or 0,
+            "arv": deal.arv or 0,
+            "rehab_cost": deal.rehab_cost or 0,
+            "estimated_rent": deal.estimated_rent or 0,
+            "total_cost": total_cost,
+            "projected_profit": projected_profit,
+            "projected_roi": projected_roi,
+            "recommended_strategy": deal.recommended_strategy or deal.strategy,
+            "deal_score": deal.deal_score or 0,
+        }
+        comparison.append(item)
+
+    if comparison:
+        best_profit_deal = max(comparison, key=lambda x: x["projected_profit"])
+        best_roi_deal = max(comparison, key=lambda x: x["projected_roi"])
+        best_score_deal = max(comparison, key=lambda x: x["deal_score"])
+        rental_candidates = [d for d in comparison if d["estimated_rent"] > 0]
+        if rental_candidates:
+            best_rental_deal = max(rental_candidates, key=lambda x: x["estimated_rent"])
+
+    summary = {
+        "best_profit_deal": best_profit_deal,
+        "best_roi_deal": best_roi_deal,
+        "best_score_deal": best_score_deal,
+        "best_rental_deal": best_rental_deal,
+    }
+
+    return jsonify({
+        "success": True,
+        "comparison": comparison,
+        "summary": summary
+    })
     
 @investor_bp.route("/deals/<int:deal_id>/dealbook", methods=["GET"])
 @login_required
@@ -2639,6 +2782,79 @@ def deal_open(deal_id):
 
     flash("This deal is not linked to a saved property yet.", "warning")
     return redirect(url_for("investor.deal_workspace"))
+
+@investor_bp.route("/deals/<int:deal_id>/report", methods=["GET"])
+@login_required
+def deal_report(deal_id):
+    deal = Deal.query.filter_by(id=deal_id, user_id=current_user.id).first_or_404()
+
+    total_cost = (deal.purchase_price or 0) + (deal.rehab_cost or 0)
+    projected_profit = (deal.arv or 0) - total_cost
+    projected_roi = 0
+
+    if total_cost > 0:
+        projected_roi = round((projected_profit / total_cost) * 100, 2)
+
+    strategy_analysis = (deal.results_json or {}).get("strategy_analysis", {})
+    rehab_analysis = (deal.results_json or {}).get("rehab_analysis", {})
+
+    report = {
+        "title": deal.title or "Deal Report",
+        "address": deal.address,
+        "strategy": deal.recommended_strategy or deal.strategy,
+        "purchase_price": deal.purchase_price or 0,
+        "arv": deal.arv or 0,
+        "estimated_rent": deal.estimated_rent or 0,
+        "rehab_cost": deal.rehab_cost or 0,
+        "total_cost": total_cost,
+        "projected_profit": projected_profit,
+        "projected_roi": projected_roi,
+        "deal_score": deal.deal_score,
+        "status": deal.status,
+        "notes": deal.notes,
+        "strategy_reason": strategy_analysis.get("reason"),
+        "rehab_scope": deal.rehab_scope_json or rehab_analysis.get("scope", {})
+    }
+
+    return render_template(
+        "investor/deal_report.html",
+        deal=deal,
+        report=report
+    )
+
+@investor_bp.route("/deals/<int:deal_id>/request-funding", methods=["POST"])
+@login_required
+def request_funding(deal_id):
+    deal = Deal.query.filter_by(id=deal_id, user_id=current_user.id).first_or_404()
+
+    if deal.submitted_for_funding:
+        return jsonify({
+            "success": False,
+            "message": "Funding has already been requested for this deal."
+        }), 400
+
+    requested_amount = (deal.purchase_price or 0) + (deal.rehab_cost or 0)
+
+    deal.submitted_for_funding = True
+    deal.funding_requested_at = datetime.utcnow()
+    deal.status = "funding_requested"
+
+    existing_results = deal.results_json or {}
+    existing_results["funding_request"] = {
+        "requested_amount": requested_amount,
+        "requested_at": deal.funding_requested_at.isoformat(),
+        "status": "submitted"
+    }
+    deal.results_json = existing_results
+
+    db.session.commit()
+
+    return jsonify({
+        "success": True,
+        "message": "Funding request submitted successfully.",
+        "deal_id": deal.id,
+        "requested_amount": requested_amount
+    })
 
 # =========================================================
 # REHAB STUDIO PAGE
@@ -2874,6 +3090,157 @@ def deal_architect_analyze():
             "status": "error",
             "message": str(e)
         }), 500
+
+@investor_bp.route("/deal-architect/strategy", methods=["POST"])
+@login_required
+def deal_architect_strategy():
+    data = request.get_json(silent=True) or request.form
+
+    deal_id = data.get("deal_id")
+    if not deal_id:
+        return jsonify({"error": "deal_id is required"}), 400
+
+    deal = Deal.query.filter_by(id=deal_id, user_id=current_user.id).first()
+    if not deal:
+        return jsonify({"error": "Deal not found"}), 404
+
+    purchase_price = float(data.get("purchase_price") or deal.purchase_price or 0)
+    arv = float(data.get("arv") or deal.arv or 0)
+    estimated_rent = float(data.get("estimated_rent") or deal.estimated_rent or 0)
+    rehab_cost = float(data.get("rehab_cost") or deal.rehab_cost or 0)
+
+    total_cost = purchase_price + rehab_cost
+    profit = arv - total_cost if arv else 0
+    rent_ratio = (estimated_rent / purchase_price) if purchase_price > 0 else 0
+
+    recommended_strategy = "Flip"
+    strategy_reason = "Strong resale orientation based on current inputs."
+
+    if estimated_rent > 0 and rent_ratio >= 0.009:
+        recommended_strategy = "Rental"
+        strategy_reason = "Rental income appears strong relative to acquisition cost."
+    elif arv > 0 and total_cost > 0 and arv >= total_cost * 1.25:
+        recommended_strategy = "BRRRR"
+        strategy_reason = "Value spread supports rehab and refinance potential."
+    elif deal.strategy and deal.strategy.lower() == "development":
+        recommended_strategy = "Development"
+        strategy_reason = "Deal is positioned as a development opportunity."
+    else:
+        recommended_strategy = "Flip"
+        strategy_reason = "Projected resale spread makes this best suited for a flip."
+
+    deal_score = 50
+
+    if profit > 75000:
+        deal_score += 20
+    elif profit > 40000:
+        deal_score += 12
+    elif profit > 20000:
+        deal_score += 6
+
+    if rent_ratio >= 0.01:
+        deal_score += 10
+    elif rent_ratio >= 0.008:
+        deal_score += 5
+
+    if rehab_cost > 0 and purchase_price > 0:
+        rehab_ratio = rehab_cost / purchase_price
+        if rehab_ratio < 0.15:
+            deal_score += 10
+        elif rehab_ratio < 0.30:
+            deal_score += 5
+        else:
+            deal_score -= 8
+
+    deal_score = max(1, min(100, deal_score))
+
+    deal.purchase_price = purchase_price
+    deal.arv = arv
+    deal.estimated_rent = estimated_rent
+    deal.rehab_cost = rehab_cost
+    deal.recommended_strategy = recommended_strategy
+    deal.deal_score = deal_score
+
+    existing_results = deal.results_json or {}
+    existing_results["strategy_analysis"] = {
+        "recommended_strategy": recommended_strategy,
+        "reason": strategy_reason,
+        "purchase_price": purchase_price,
+        "arv": arv,
+        "estimated_rent": estimated_rent,
+        "rehab_cost": rehab_cost,
+        "projected_profit": round(profit, 2),
+        "deal_score": deal_score,
+    }
+    deal.results_json = existing_results
+
+    db.session.commit()
+
+    return jsonify({
+        "success": True,
+        "deal_id": deal.id,
+        "recommended_strategy": recommended_strategy,
+        "reason": strategy_reason,
+        "deal_score": deal_score,
+        "projected_profit": round(profit, 2),
+    })
+
+@investor_bp.route("/rehab-architect/generate-scope", methods=["POST"])
+@login_required
+def rehab_architect_generate_scope():
+    data = request.get_json(silent=True) or request.form
+
+    deal_id = data.get("deal_id")
+    if not deal_id:
+        return jsonify({"error": "deal_id is required"}), 400
+
+    deal = Deal.query.filter_by(id=deal_id, user_id=current_user.id).first()
+    if not deal:
+        return jsonify({"error": "Deal not found"}), 404
+
+    sqft = int(float(data.get("sqft") or 1500))
+    rehab_level = (data.get("rehab_level") or "medium").lower()
+
+    cost_per_sqft = {
+        "light": 20,
+        "medium": 35,
+        "heavy": 60
+    }
+
+    selected_cost_per_sqft = cost_per_sqft.get(rehab_level, 35)
+    estimated_rehab_cost = sqft * selected_cost_per_sqft
+
+    scope = {
+        "rehab_level": rehab_level,
+        "sqft": sqft,
+        "cost_per_sqft": selected_cost_per_sqft,
+        "line_items": {
+            "kitchen": 18000 if rehab_level != "light" else 9000,
+            "bathroom": 9000 if rehab_level != "light" else 4500,
+            "flooring": 6500 if rehab_level != "light" else 3200,
+            "paint": 3000,
+            "exterior": 4500 if rehab_level == "heavy" else 2000,
+        }
+    }
+
+    deal.rehab_cost = estimated_rehab_cost
+    deal.rehab_scope_json = scope
+
+    existing_results = deal.results_json or {}
+    existing_results["rehab_analysis"] = {
+        "estimated_rehab_cost": estimated_rehab_cost,
+        "scope": scope
+    }
+    deal.results_json = existing_results
+
+    db.session.commit()
+
+    return jsonify({
+        "success": True,
+        "deal_id": deal.id,
+        "estimated_rehab_cost": estimated_rehab_cost,
+        "scope": scope
+    })
 
 # =========================================================
 # REHAB IMAGE UPLOAD

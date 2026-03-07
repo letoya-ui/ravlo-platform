@@ -271,3 +271,30 @@ class DealMessage(db.Model):
     role = db.Column(db.String(50))  # user / assistant / system
     content = db.Column(db.Text, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+
+class FundingRequest(db.Model):
+    __tablename__ = "funding_requests"
+
+    id = db.Column(db.Integer, primary_key=True)
+
+    investor_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False, index=True)
+    deal_id = db.Column(db.Integer, db.ForeignKey("deals.id"), nullable=False, index=True)
+
+    requested_amount = db.Column(db.Float, nullable=False, default=0)
+    status = db.Column(db.String(50), nullable=False, default="submitted")  # submitted / reviewing / approved / declined
+
+    notes = db.Column(db.Text, nullable=True)
+
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = db.Column(
+        db.DateTime,
+        default=datetime.utcnow,
+        onupdate=datetime.utcnow,
+        nullable=False
+    )
+
+    deal = db.relationship("Deal", backref=db.backref("funding_requests", lazy=True))
+
+    def __repr__(self):
+        return f"<FundingRequest {self.id} Deal {self.deal_id}>"

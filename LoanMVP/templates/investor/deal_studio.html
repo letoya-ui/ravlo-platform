@@ -3,165 +3,939 @@
 
 {% block page_title %}Deal Studio{% endblock %}
 {% block page_subline %}
-Plan, analyze, renovate, or develop your next investment.
+Analyze the opportunity, shape the rehab plan, and move the right deal into funding.
+{% endblock %}
+
+{% block topbar_actions %}
+  <a href="{{ url_for('investor.deal_report', deal_id=deal.id) }}" class="ravlo-btn ghost sm">
+    View Report
+  </a>
+  <button class="ravlo-btn primary sm" type="button" onclick="requestFunding({{ deal.id }})">
+    Request Funding
+  </button>
 {% endblock %}
 
 {% block content %}
+<div class="ravlo-shell-page">
 
-<div class="ravlo-shell">
-
-  <!-- HERO -->
+  <!-- =========================================================
+       HERO
+  ========================================================== -->
   <section class="ravlo-hero-card">
     <div>
-      <div class="eyebrow">RAVLO WORKSPACE</div>
-      <h2>Your Investment Command Workspace</h2>
+      <div class="eyebrow">RAVLO DEAL STUDIO</div>
+      <h2>{{ deal.title or "Untitled Deal" }}</h2>
       <p class="muted">
-        Find deals, analyze opportunities, plan renovations, or design new builds — all in one place.
+        {{ deal.address or "No property address saved yet" }}
       </p>
+
+      <div class="ravlo-chip-row" style="margin-top:16px;">
+        <span class="ravlo-chip">Status: {{ deal.status or "active" }}</span>
+        <span class="ravlo-chip">Strategy: {{ deal.recommended_strategy or deal.strategy or "Pending" }}</span>
+        <span class="ravlo-chip">
+          Deal Score:
+          {% if deal.deal_score %}
+            {{ deal.deal_score }}/100
+          {% else %}
+            Pending
+          {% endif %}
+        </span>
+      </div>
+    </div>
+
+    <div class="studio-hero-actions">
+      <button class="ravlo-btn primary" type="button" onclick="runStrategy({{ deal.id }})">
+        Run Strategy
+      </button>
+      <button class="ravlo-btn ghost" type="button" onclick="generateScope({{ deal.id }})">
+        Generate Rehab Scope
+      </button>
+      <a href="{{ url_for('investor.deal_report', deal_id=deal.id) }}" class="ravlo-btn ghost">
+        Open Report
+      </a>
     </div>
   </section>
 
-  <!-- WORKSPACE GRID -->
-  <div class="deal-studio-grid">
+  <!-- =========================================================
+       KPI ROW
+  ========================================================== -->
+  <div class="studio-kpi-grid">
 
-    <!-- DEAL FINDER -->
-    <div class="studio-card">
-      <div class="studio-icon">🔎</div>
-      <h3>Deal Finder</h3>
-      <p class="muted">
-        Search fixer-uppers and investment opportunities by ZIP code and evaluate potential returns.
-      </p>
-      <button class="ravlo-btn primary"
-              onclick="location.href='{{ url_for('investor.deal_finder') }}'">
-        Find Deals
-      </button>
+    <div class="ravlo-kpi premium">
+      <div class="value">${{ "{:,.0f}".format(deal.purchase_price or 0) }}</div>
+      <div class="label">Purchase Price</div>
     </div>
 
-    <!-- AI DEAL ARCHITECT -->
-    <div class="studio-card">
-      <div class="studio-icon">🧭</div>
-      <h3>AI Deal Architect</h3>
-      <p class="muted">
-        Compare flip, rental, build, and development strategies to find the smartest play for the opportunity.
-      </p>
-      <button class="ravlo-btn primary"
-              onclick="location.href='{{ url_for('investor.deal_architect') }}'">
-        Open AI Deal Architect
-      </button>
+    <div class="ravlo-kpi premium">
+      <div class="value">${{ "{:,.0f}".format(deal.rehab_cost or 0) }}</div>
+      <div class="label">Rehab Budget</div>
     </div>
 
-    <!-- REHAB STUDIO -->
-    <div class="studio-card">
-      <div class="studio-icon">🛠</div>
-      <h3>Rehab Studio</h3>
-      <p class="muted">
-        Upload property photos and generate renovation concepts, budgets, and improvement plans.
-      </p>
-      <button class="ravlo-btn primary"
-              onclick="location.href='{{ url_for('investor.rehab_studio') }}'">
-        Open Rehab Studio
-      </button>
+    <div class="ravlo-kpi premium">
+      <div class="value">${{ "{:,.0f}".format(deal.arv or 0) }}</div>
+      <div class="label">Projected ARV</div>
     </div>
 
-    <!-- BUILD STUDIO -->
-    <div class="studio-card">
-      <div class="studio-icon">🏗</div>
-      <h3>Build Studio</h3>
-      <p class="muted">
-        Turn land or development ideas into concept renders, floor plans, site layouts, and lender-ready presentations.
-      </p>
-      <button class="ravlo-btn primary"
-              onclick="location.href='{{ url_for('investor.build_studio') }}'">
-        Open Build Studio
-      </button>
+    <div class="ravlo-kpi premium">
+      <div class="value">${{ "{:,.0f}".format(deal.estimated_rent or 0) }}</div>
+      <div class="label">Estimated Rent</div>
     </div>
 
-    <!-- DEAL COPILOT -->
-    <div class="studio-card">
-      <div class="studio-icon">🧠</div>
-      <h3>Deal Copilot</h3>
-      <p class="muted">
-        Ask Ravlo what to do next with any property, lot, renovation, or development scenario.
-      </p>
-      <button class="ravlo-btn primary"
-              onclick="location.href='{{ url_for('investor.deal_copilot') }}'">
-        Open Deal Copilot
-      </button>
+  </div>
+
+  <!-- =========================================================
+       MAIN GRID
+  ========================================================== -->
+  <div class="studio-main-grid">
+
+    <!-- LEFT COLUMN -->
+    <div class="studio-stack">
+
+      <!-- DEAL INPUTS -->
+      <section class="ravlo-card pad">
+        <div class="section-head">
+          <div>
+            <div class="eyebrow">INPUTS</div>
+            <h3>Deal Overview</h3>
+          </div>
+        </div>
+
+        <div class="studio-form-grid">
+          <div class="ravlo-field">
+            <label class="ravlo-label">Purchase Price</label>
+            <input id="purchase_price" class="ravlo-input" type="number" step="0.01" value="{{ deal.purchase_price or 0 }}">
+          </div>
+
+          <div class="ravlo-field">
+            <label class="ravlo-label">ARV</label>
+            <input id="arv" class="ravlo-input" type="number" step="0.01" value="{{ deal.arv or 0 }}">
+          </div>
+
+          <div class="ravlo-field">
+            <label class="ravlo-label">Estimated Rent</label>
+            <input id="estimated_rent" class="ravlo-input" type="number" step="0.01" value="{{ deal.estimated_rent or 0 }}">
+          </div>
+
+          <div class="ravlo-field">
+            <label class="ravlo-label">Rehab Cost</label>
+            <input id="rehab_cost" class="ravlo-input" type="number" step="0.01" value="{{ deal.rehab_cost or 0 }}">
+          </div>
+
+          <div class="ravlo-field">
+            <label class="ravlo-label">Square Feet</label>
+            <input id="sqft" class="ravlo-input" type="number" step="1" value="{{ (deal.resolved_json or {}).get('sqft', 1500) }}">
+          </div>
+
+          <div class="ravlo-field">
+            <label class="ravlo-label">Rehab Level</label>
+            <select id="rehab_level" class="ravlo-input">
+              <option value="light">Light</option>
+              <option value="medium" selected>Medium</option>
+              <option value="heavy">Heavy</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="studio-action-row">
+          <button class="ravlo-btn primary" type="button" onclick="runStrategy({{ deal.id }})">
+            Run Deal Strategy
+          </button>
+          <button class="ravlo-btn ghost" type="button" onclick="generateScope({{ deal.id }})">
+            Generate Rehab Scope
+          </button>
+        </div>
+      </section>
+
+      <!-- STRATEGY ANALYSIS -->
+      <section class="ravlo-card pad">
+        <div class="section-head">
+          <div>
+            <div class="eyebrow">AI DEAL ARCHITECT</div>
+            <h3>Strategy Analysis</h3>
+          </div>
+        </div>
+
+        {% set strategy_data = strategy_analysis if strategy_analysis is defined else ((deal.results_json or {}).get("strategy_analysis", {})) %}
+
+        <div class="feature-highlight">
+          <div class="feature-highlight-label">Recommended Strategy</div>
+          <div class="feature-highlight-value" id="recommended_strategy">
+            {{ strategy_data.get("recommended_strategy") or deal.recommended_strategy or "Not generated yet" }}
+          </div>
+        </div>
+
+        <div class="analysis-grid">
+          <div class="analysis-box">
+            <span>Projected Profit</span>
+            <strong id="projected_profit">
+              ${{ "{:,.0f}".format(strategy_data.get("projected_profit", 0) or 0) }}
+            </strong>
+          </div>
+
+          <div class="analysis-box">
+            <span>Deal Score</span>
+            <strong id="deal_score">
+              {% if strategy_data.get("deal_score") or deal.deal_score %}
+                {{ strategy_data.get("deal_score") or deal.deal_score }}/100
+              {% else %}
+                Pending
+              {% endif %}
+            </strong>
+          </div>
+        </div>
+
+        <div class="report-note" style="margin-top:16px;">
+          <strong>AI Reasoning</strong>
+          <p id="strategy_reason">
+            {{ strategy_data.get("reason") or "Run strategy to generate Ravlo's recommendation." }}
+          </p>
+        </div>
+      </section>
+
+      <!-- REHAB SCOPE -->
+      <section class="ravlo-card pad">
+        <div class="section-head">
+          <div>
+            <div class="eyebrow">REHAB ARCHITECT</div>
+            <h3>Rehab Scope</h3>
+          </div>
+        </div>
+
+        {% set rehab_data = rehab_analysis if rehab_analysis is defined else ((deal.results_json or {}).get("rehab_analysis", {})) %}
+        {% set rehab_scope = deal.rehab_scope_json or rehab_data.get("scope", {}) %}
+        {% set line_items = rehab_scope.get("line_items", {}) if rehab_scope else {} %}
+
+        <div class="analysis-grid">
+          <div class="analysis-box">
+            <span>Estimated Rehab Cost</span>
+            <strong id="estimated_rehab_cost">
+              ${{ "{:,.0f}".format((rehab_data.get("estimated_rehab_cost") or deal.rehab_cost or 0)) }}
+            </strong>
+          </div>
+
+          <div class="analysis-box">
+            <span>Rehab Level</span>
+            <strong id="rehab_level_display">
+              {{ rehab_scope.get("rehab_level", "Pending") }}
+            </strong>
+          </div>
+
+          <div class="analysis-box">
+            <span>Square Feet</span>
+            <strong>{{ rehab_scope.get("sqft", "—") }}</strong>
+          </div>
+
+          <div class="analysis-box">
+            <span>Cost / Sq Ft</span>
+            <strong>
+              {% if rehab_scope.get("cost_per_sqft") %}
+                ${{ rehab_scope.get("cost_per_sqft") }}
+              {% else %}
+                —
+              {% endif %}
+            </strong>
+          </div>
+        </div>
+
+        <div class="report-line-items" style="margin-top:16px;">
+          <div class="report-line-items-head">
+            <span>Line Item</span>
+            <span>Estimate</span>
+          </div>
+
+          <div id="rehab_line_items">
+            {% if line_items %}
+              {% for item, value in line_items.items() %}
+              <div class="report-line-item">
+                <span>{{ item.replace("_", " ").title() }}</span>
+                <strong>${{ "{:,.0f}".format(value or 0) }}</strong>
+              </div>
+              {% endfor %}
+            {% else %}
+              <div class="empty-state-inline">No rehab scope generated yet.</div>
+            {% endif %}
+          </div>
+        </div>
+      </section>
+
+      <!-- MOCKUPS -->
+      <section class="ravlo-card pad">
+        <div class="section-head">
+          <div>
+            <div class="eyebrow">RENOVATION VISUALS</div>
+            <h3>Mockups & Concepts</h3>
+          </div>
+        </div>
+
+        {% if mockups %}
+          <div class="mockup-grid">
+            {% for mockup in mockups[:6] %}
+            <div class="mockup-card">
+              {% if mockup.image_url %}
+                <img src="{{ mockup.image_url }}" alt="Renovation mockup">
+              {% else %}
+                <div class="mockup-placeholder">No Preview</div>
+              {% endif %}
+              <div class="mockup-meta">
+                <strong>{{ mockup.title or "Concept Render" }}</strong>
+                <span>{{ mockup.created_at.strftime('%b %d, %Y') if mockup.created_at else "" }}</span>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="empty-state-inline">
+            No renovation mockups yet. Generate concepts to visualize the opportunity.
+          </div>
+        {% endif %}
+      </section>
+
     </div>
 
+    <!-- RIGHT COLUMN -->
+    <div class="studio-stack">
+
+      <!-- FUNDING -->
+      <section class="ravlo-card pad">
+        <div class="section-head">
+          <div>
+            <div class="eyebrow">CAPITAL</div>
+            <h3>Funding Readiness</h3>
+          </div>
+        </div>
+
+        <div class="funding-box">
+          <div class="funding-amount-label">Estimated Request Amount</div>
+          <div class="funding-amount-value" id="request_amount_display">
+            ${{ "{:,.0f}".format((deal.purchase_price or 0) + (deal.rehab_cost or 0)) }}
+          </div>
+
+          {% if deal.submitted_for_funding %}
+            <div class="funding-status success" style="margin-top:14px;">
+              Funding request already submitted.
+            </div>
+            {% if deal.funding_requested_at %}
+              <p class="muted" style="margin-top:10px;">
+                Requested on {{ deal.funding_requested_at.strftime('%b %d, %Y at %I:%M %p') }}
+              </p>
+            {% endif %}
+          {% else %}
+            <p class="muted" style="margin-top:14px;">
+              Submit this deal into your Ravlo capital workflow when numbers are ready.
+            </p>
+            <button class="ravlo-btn primary" type="button" style="margin-top:14px;" onclick="requestFunding({{ deal.id }})">
+              Request Funding
+            </button>
+          {% endif %}
+        </div>
+      </section>
+
+      <!-- PARTNERS -->
+      <section class="ravlo-card pad">
+        <div class="section-head">
+          <div>
+            <div class="eyebrow">PARTNERS</div>
+            <h3>Suggested Team</h3>
+          </div>
+        </div>
+
+        {% if partners %}
+          <div class="partner-list">
+            {% for partner in partners[:6] %}
+            <div class="partner-row">
+              <div>
+                <div class="partner-name">{{ partner.business_name or partner.name or "Partner" }}</div>
+                <div class="partner-sub">
+                  {{ partner.service_type or partner.category or "Service Provider" }}
+                </div>
+              </div>
+
+              <div class="partner-meta">
+                {% if partner.city or partner.state %}
+                <span class="mini-pill">{{ partner.city or "" }}{% if partner.city and partner.state %}, {% endif %}{{ partner.state or "" }}</span>
+                {% endif %}
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="empty-state-inline">
+            No partners available yet for this workspace.
+          </div>
+        {% endif %}
+      </section>
+
+      <!-- NOTES -->
+      <section class="ravlo-card pad">
+        <div class="section-head">
+          <div>
+            <div class="eyebrow">NOTES</div>
+            <h3>Investor Notes</h3>
+          </div>
+        </div>
+
+        <div class="report-note">
+          <p>{{ deal.notes or "No notes saved yet for this deal." }}</p>
+        </div>
+      </section>
+
+      <!-- QUICK LINKS -->
+      <section class="ravlo-card pad">
+        <div class="section-head">
+          <div>
+            <div class="eyebrow">WORKFLOW</div>
+            <h3>Next Actions</h3>
+          </div>
+        </div>
+
+        <div class="quick-grid one-col">
+          <a href="{{ url_for('investor.deal_report', deal_id=deal.id) }}" class="quick-card">
+            <span class="quick-title">Open Deal Report</span>
+            <span class="quick-sub">Review the full investment summary and export-ready numbers.</span>
+          </a>
+
+          <a href="{{ url_for('investor.deal_book', deal_id=deal.id) if deal_id is defined and deal_id else '#' }}" class="quick-card">
+            <span class="quick-title">Open Deal Book</span>
+            <span class="quick-sub">Package the opportunity into a cleaner lender or investor presentation.</span>
+          </a>
+
+          <a href="{{ url_for('investor.deal_rehab_studio', deal_id=deal.id) if deal_id is defined and deal_id else '#' }}" class="quick-card">
+            <span class="quick-title">Open Rehab Studio</span>
+            <span class="quick-sub">Go deeper on scope, finishes, and renovation direction.</span>
+          </a>
+        </div>
+      </section>
+
+    </div>
   </div>
 </div>
 
 <style>
-  .deal-studio-grid{
+  .ravlo-shell-page{
     display:grid;
-    grid-template-columns:repeat(3, minmax(0, 1fr));
-    gap:22px;
-    margin-top:24px;
+    gap:20px;
   }
 
-  .studio-card{
-    position:relative;
-    border-radius:24px;
-    padding:24px;
-    background:
-      linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.015)),
-      rgba(11,16,24,.92);
-    border:1px solid rgba(255,255,255,.06);
-    box-shadow:
-      inset 0 1px 0 rgba(255,255,255,.03),
-      0 18px 40px rgba(0,0,0,.28);
+  .studio-hero-actions{
+    min-width:260px;
+    display:grid;
+    gap:12px;
+  }
+
+  .studio-kpi-grid{
+    display:grid;
+    grid-template-columns:repeat(4, minmax(0, 1fr));
+    gap:16px;
+  }
+
+  .ravlo-kpi.premium{
+    padding:18px;
+    border-radius:20px;
+    background:linear-gradient(135deg, rgba(107,127,147,.16), rgba(255,255,255,.03));
+    border:1px solid rgba(255,255,255,.08);
+  }
+
+  .studio-main-grid{
+    display:grid;
+    grid-template-columns:1.2fr .9fr;
+    gap:20px;
+    align-items:start;
+  }
+
+  .studio-stack{
+    display:grid;
+    gap:20px;
+  }
+
+  .section-head{
     display:flex;
-    flex-direction:column;
-    min-height:250px;
+    align-items:center;
+    justify-content:space-between;
+    gap:16px;
+    margin-bottom:18px;
   }
 
-  .studio-icon{
-    width:56px;
-    height:56px;
+  .section-head h3{
+    margin:4px 0 0;
+    font-size:20px;
+  }
+
+  .ravlo-chip-row{
+    display:flex;
+    flex-wrap:wrap;
+    gap:10px;
+  }
+
+  .ravlo-chip{
+    display:inline-flex;
+    align-items:center;
+    padding:8px 12px;
+    border-radius:999px;
+    background:rgba(255,255,255,.04);
+    border:1px solid rgba(255,255,255,.08);
+    color:var(--text);
+    font-size:13px;
+    font-weight:600;
+  }
+
+  .studio-form-grid{
+    display:grid;
+    grid-template-columns:repeat(2, minmax(0, 1fr));
+    gap:14px;
+  }
+
+  .ravlo-field{
+    display:grid;
+    gap:8px;
+  }
+
+  .ravlo-label{
+    font-size:13px;
+    font-weight:600;
+    color:#DCE5EF;
+  }
+
+  .ravlo-input{
+    width:100%;
+    min-height:52px;
+    border-radius:16px;
+    border:1px solid rgba(255,255,255,.08);
+    background:rgba(255,255,255,.04);
+    color:var(--text);
+    padding:0 14px;
+    font-size:15px;
+    outline:none;
+  }
+
+  .ravlo-input:focus{
+    border-color:rgba(107,127,147,.65);
+    box-shadow:0 0 0 4px rgba(107,127,147,.15);
+  }
+
+  .studio-action-row{
+    display:flex;
+    gap:12px;
+    flex-wrap:wrap;
+    margin-top:16px;
+  }
+
+  .feature-highlight{
+    padding:18px;
+    border-radius:20px;
+    background:linear-gradient(135deg, rgba(107,127,147,.18), rgba(58,92,122,.10));
+    border:1px solid rgba(107,127,147,.24);
+  }
+
+  .feature-highlight-label{
+    color:var(--muted);
+    font-size:12px;
+    text-transform:uppercase;
+    letter-spacing:.08em;
+    margin-bottom:8px;
+  }
+
+  .feature-highlight-value{
+    color:var(--text);
+    font-size:28px;
+    line-height:1.2;
+    font-weight:800;
+    letter-spacing:-.02em;
+  }
+
+  .analysis-grid{
+    display:grid;
+    grid-template-columns:repeat(2, minmax(0, 1fr));
+    gap:12px;
+    margin-top:16px;
+  }
+
+  .analysis-box{
+    padding:16px;
     border-radius:18px;
+    background:rgba(255,255,255,.03);
+    border:1px solid rgba(255,255,255,.08);
+  }
+
+  .analysis-box span{
+    display:block;
+    color:var(--muted);
+    font-size:12px;
+    text-transform:uppercase;
+    letter-spacing:.08em;
+    margin-bottom:8px;
+  }
+
+  .analysis-box strong{
+    color:var(--text);
+    font-size:20px;
+    font-weight:800;
+  }
+
+  .report-note{
+    padding:16px;
+    border-radius:18px;
+    background:rgba(255,255,255,.025);
+    border:1px solid rgba(255,255,255,.07);
+  }
+
+  .report-note p{
+    margin:8px 0 0;
+    color:var(--muted);
+    line-height:1.65;
+  }
+
+  .report-line-items{
+    border-radius:18px;
+    overflow:hidden;
+    border:1px solid rgba(255,255,255,.07);
+    background:rgba(255,255,255,.02);
+  }
+
+  .report-line-items-head,
+  .report-line-item{
+    display:grid;
+    grid-template-columns:1fr auto;
+    gap:14px;
+    padding:14px 16px;
+  }
+
+  .report-line-items-head{
+    background:rgba(255,255,255,.04);
+    color:var(--muted);
+    font-size:12px;
+    text-transform:uppercase;
+    letter-spacing:.08em;
+  }
+
+  .report-line-item{
+    border-top:1px solid rgba(255,255,255,.06);
+  }
+
+  .empty-state-inline{
+    padding:14px 0;
+    color:var(--muted);
+  }
+
+  .mockup-grid{
+    display:grid;
+    grid-template-columns:repeat(2, minmax(0, 1fr));
+    gap:14px;
+  }
+
+  .mockup-card{
+    overflow:hidden;
+    border-radius:18px;
+    background:rgba(255,255,255,.03);
+    border:1px solid rgba(255,255,255,.08);
+  }
+
+  .mockup-card img{
+    width:100%;
+    height:180px;
+    object-fit:cover;
+    display:block;
+  }
+
+  .mockup-placeholder{
+    height:180px;
     display:flex;
     align-items:center;
     justify-content:center;
-    font-size:26px;
-    margin-bottom:16px;
-    background:rgba(82,128,219,.12);
-    border:1px solid rgba(123,170,255,.16);
-    box-shadow:inset 0 1px 0 rgba(255,255,255,.04);
+    color:var(--muted);
+    background:rgba(255,255,255,.03);
   }
 
-  .studio-card h3{
-    margin:0 0 10px;
-    font-size:1.15rem;
-    font-weight:700;
+  .mockup-meta{
+    padding:14px;
+    display:grid;
+    gap:5px;
+  }
+
+  .mockup-meta strong{
     color:var(--text);
+    font-size:14px;
   }
 
-  .studio-card p{
-    margin:0 0 18px;
-    line-height:1.6;
-    flex:1;
+  .mockup-meta span{
+    color:var(--muted);
+    font-size:12px;
   }
 
-  .studio-card .ravlo-btn{
-    align-self:flex-start;
+  .funding-box{
+    padding:18px;
+    border-radius:20px;
+    background:rgba(255,255,255,.03);
+    border:1px solid rgba(255,255,255,.08);
   }
 
-  @media (max-width: 1100px){
-    .deal-studio-grid{
+  .funding-amount-label{
+    color:var(--muted);
+    font-size:12px;
+    text-transform:uppercase;
+    letter-spacing:.08em;
+  }
+
+  .funding-amount-value{
+    margin-top:8px;
+    font-size:30px;
+    font-weight:800;
+    color:var(--text);
+    letter-spacing:-.02em;
+  }
+
+  .funding-status{
+    padding:12px 14px;
+    border-radius:14px;
+    font-size:14px;
+    font-weight:600;
+  }
+
+  .funding-status.success{
+    background:rgba(60,203,127,.12);
+    border:1px solid rgba(60,203,127,.24);
+    color:#D7FFE6;
+  }
+
+  .partner-list{
+    display:grid;
+    gap:12px;
+  }
+
+  .partner-row{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    gap:12px;
+    padding:14px 16px;
+    border-radius:16px;
+    background:rgba(255,255,255,.03);
+    border:1px solid rgba(255,255,255,.08);
+  }
+
+  .partner-name{
+    color:var(--text);
+    font-size:15px;
+    font-weight:700;
+  }
+
+  .partner-sub{
+    margin-top:4px;
+    color:var(--muted);
+    font-size:13px;
+  }
+
+  .partner-meta{
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+    justify-content:flex-end;
+  }
+
+  .mini-pill{
+    display:inline-flex;
+    align-items:center;
+    padding:7px 10px;
+    border-radius:999px;
+    background:rgba(255,255,255,.04);
+    border:1px solid rgba(255,255,255,.08);
+    color:var(--text);
+    font-size:12px;
+    font-weight:600;
+  }
+
+  .quick-grid{
+    display:grid;
+    grid-template-columns:repeat(2, minmax(0, 1fr));
+    gap:14px;
+  }
+
+  .quick-grid.one-col{
+    grid-template-columns:1fr;
+  }
+
+  .quick-card{
+    display:block;
+    padding:18px;
+    border-radius:18px;
+    background:rgba(255,255,255,.03);
+    border:1px solid rgba(255,255,255,.08);
+    text-decoration:none;
+    transition:.2s ease;
+  }
+
+  .quick-card:hover{
+    transform:translateY(-1px);
+    border-color:rgba(107,127,147,.35);
+    background:rgba(255,255,255,.045);
+  }
+
+  .quick-title{
+    display:block;
+    color:var(--text);
+    font-size:16px;
+    font-weight:700;
+  }
+
+  .quick-sub{
+    display:block;
+    margin-top:8px;
+    color:var(--muted);
+    font-size:13px;
+    line-height:1.55;
+  }
+
+  @media (max-width: 1200px){
+    .studio-kpi-grid{
       grid-template-columns:repeat(2, minmax(0, 1fr));
+    }
+
+    .studio-main-grid{
+      grid-template-columns:1fr;
     }
   }
 
-  @media (max-width: 720px){
-    .deal-studio-grid{
+  @media (max-width: 760px){
+    .studio-form-grid,
+    .analysis-grid,
+    .mockup-grid{
       grid-template-columns:1fr;
     }
 
-    .studio-card{
-      min-height:auto;
+    .studio-hero-actions{
+      width:100%;
+      min-width:unset;
+    }
+
+    .report-line-items-head,
+    .report-line-item{
+      grid-template-columns:1fr;
+    }
+
+    .partner-row{
+      flex-direction:column;
+    }
+
+    .partner-meta{
+      justify-content:flex-start;
+    }
+  }
+
+  @media (max-width: 560px){
+    .studio-kpi-grid{
+      grid-template-columns:1fr;
     }
   }
 </style>
 
+<script>
+  function money(value) {
+    const number = Number(value || 0);
+    return "$" + number.toLocaleString(undefined, { maximumFractionDigits: 0 });
+  }
+
+  async function runStrategy(dealId) {
+    try {
+      const payload = {
+        deal_id: dealId,
+        purchase_price: document.getElementById("purchase_price").value || 0,
+        arv: document.getElementById("arv").value || 0,
+        estimated_rent: document.getElementById("estimated_rent").value || 0,
+        rehab_cost: document.getElementById("rehab_cost").value || 0
+      };
+
+      const res = await fetch("/investor/deal-architect/strategy", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify(payload)
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        alert(data.error || "Unable to run deal strategy.");
+        return;
+      }
+
+      document.getElementById("recommended_strategy").textContent = data.recommended_strategy || "Pending";
+      document.getElementById("projected_profit").textContent = money(data.projected_profit || 0);
+      document.getElementById("deal_score").textContent = data.deal_score ? `${data.deal_score}/100` : "Pending";
+      document.getElementById("strategy_reason").textContent = data.reason || "No reasoning returned.";
+
+      alert("Deal strategy updated.");
+    } catch (err) {
+      console.error(err);
+      alert("Something went wrong running strategy.");
+    }
+  }
+
+  async function generateScope(dealId) {
+    try {
+      const payload = {
+        deal_id: dealId,
+        sqft: document.getElementById("sqft").value || 1500,
+        rehab_level: document.getElementById("rehab_level").value || "medium"
+      };
+
+      const res = await fetch("/investor/rehab-architect/generate-scope", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify(payload)
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        alert(data.error || "Unable to generate rehab scope.");
+        return;
+      }
+
+      document.getElementById("estimated_rehab_cost").textContent = money(data.estimated_rehab_cost || 0);
+      document.getElementById("rehab_cost").value = data.estimated_rehab_cost || 0;
+      document.getElementById("rehab_level_display").textContent = (data.scope && data.scope.rehab_level) ? data.scope.rehab_level : "Pending";
+      document.getElementById("request_amount_display").textContent =
+        money((Number(document.getElementById("purchase_price").value || 0)) + Number(data.estimated_rehab_cost || 0));
+
+      const lineItemsWrap = document.getElementById("rehab_line_items");
+      const lineItems = (data.scope && data.scope.line_items) ? data.scope.line_items : {};
+
+      if (Object.keys(lineItems).length) {
+        lineItemsWrap.innerHTML = Object.entries(lineItems).map(([item, value]) => `
+          <div class="report-line-item">
+            <span>${item.replaceAll("_", " ").replace(/\b\w/g, c => c.toUpperCase())}</span>
+            <strong>${money(value)}</strong>
+          </div>
+        `).join("");
+      } else {
+        lineItemsWrap.innerHTML = `<div class="empty-state-inline">No rehab scope generated yet.</div>`;
+      }
+
+      alert("Rehab scope generated.");
+    } catch (err) {
+      console.error(err);
+      alert("Something went wrong generating rehab scope.");
+    }
+  }
+
+  async function requestFunding(dealId) {
+    try {
+      const res = await fetch(`/investor/deals/${dealId}/request-funding`, {
+        method: "POST",
+        headers: {"Content-Type": "application/json"}
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        alert(data.message || data.error || "Unable to submit funding request.");
+        return;
+      }
+
+      alert(data.message || "Funding request submitted successfully.");
+      window.location.reload();
+    } catch (err) {
+      console.error(err);
+      alert("Something went wrong submitting the funding request.");
+    }
+  }
+</script>
 {% endblock %}

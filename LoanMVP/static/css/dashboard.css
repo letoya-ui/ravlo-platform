@@ -3,46 +3,305 @@
    Matches ravlo_base.html structure exactly
    ========================================================= */
 
+/* ==========================================================
+   RAVLO CORE LAYOUT
+========================================================== */
+
 :root{
-  --bg:#05080f;
-  --bg-2:#080d15;
-  --panel:#0c121b;
-  --panel-2:#101722;
-  --panel-3:#131c28;
 
-  --text:#eef3fb;
-  --muted:#97a3b5;
-  --muted-2:#748196;
+  /* surfaces */
+  --bg0:#070A0E;
+  --bg1:#0B1016;
+  --bg2:#0E141B;
+  --bg3:#121A23;
 
-  --line:rgba(165,188,220,.10);
-  --line-2:rgba(165,188,220,.16);
+  /* borders */
+  --line:#1A2330;
 
-  --steel:#6b7f93;
-  --steel-2:#8fa3bc;
-  --steel-3:#aebed3;
-  --steel-4:#425872;
+  /* text */
+  --text:#FFFFFF;
+  --muted:#A9B2BE;
 
-  --accent:#6b7f93;
-  --accent-2:#8fa3bc;
-  --accent-3:#3a5c7a;
+  /* accent */
+  --accent:#6B7F93;
+  --accent2:#7A8FA5;
 
-  --metal-a:#d8e1ee;
-  --metal-b:#aab9cc;
-  --metal-c:#7f91a8;
-  --metal-d:#4d6179;
-
-  --success:#7fb294;
-  --warning:#c9ab6d;
-  --danger:#cc7d7d;
-
-  --radius-sm:12px;
-  --radius-md:18px;
-  --radius-lg:24px;
-  --radius-xl:30px;
-
-  --shadow-soft:0 16px 34px rgba(0,0,0,.30);
-  --shadow-deep:0 28px 70px rgba(0,0,0,.48);
 }
+
+/* base */
+
+html,body{
+  margin:0;
+  padding:0;
+  font-family:'Inter',system-ui;
+  background:var(--bg0);
+  color:var(--text);
+}
+
+*{
+  box-sizing:border-box;
+}
+
+/* ==========================================================
+   SHELL
+========================================================== */
+
+.ravlo-shell{
+  display:flex;
+  min-height:100vh;
+}
+
+/* ==========================================================
+   SIDEBAR
+========================================================== */
+
+.ravlo-sidebar{
+  width:260px;
+  padding:24px 20px;
+  background:var(--bg1);
+  border-right:1px solid var(--line);
+  display:flex;
+  flex-direction:column;
+  gap:20px;
+}
+
+.ravlo-main{
+  flex:1;
+  padding:26px 28px;
+}
+
+/* ==========================================================
+   NAV
+========================================================== */
+
+.ravlo-nav-link{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  padding:12px 14px;
+  border-radius:14px;
+  color:var(--muted);
+  text-decoration:none;
+  font-weight:600;
+  border:1px solid transparent;
+  transition:.18s ease;
+}
+
+.ravlo-nav-link:hover{
+  background:rgba(255,255,255,.04);
+  color:var(--text);
+}
+
+.ravlo-nav-link.active{
+  background:rgba(107,127,147,.18);
+  border:1px solid rgba(107,127,147,.30);
+  color:var(--text);
+}
+
+/* ==========================================================
+   TOPBAR
+========================================================== */
+
+.ravlo-topbar{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  margin-bottom:22px;
+}
+
+.ravlo-title{
+  font-size:26px;
+  font-weight:700;
+}
+
+.ravlo-subline{
+  color:var(--muted);
+  font-size:14px;
+}
+
+/* ==========================================================
+   SEARCH
+========================================================== */
+
+.ravlo-search{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  background:var(--bg2);
+  border:1px solid var(--line);
+  padding:8px 12px;
+  border-radius:10px;
+}
+
+.ravlo-search input{
+  background:none;
+  border:none;
+  outline:none;
+  color:var(--text);
+  width:200px;
+}
+
+/* ==========================================================
+   CARDS
+========================================================== */
+
+.ravlo-card{
+  background:var(--bg2);
+  border:1px solid var(--line);
+  border-radius:18px;
+}
+
+.ravlo-card.pad{
+  padding:20px;
+}
+
+.ravlo-card-header{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  margin-bottom:14px;
+}
+
+.ravlo-card-title{
+  margin:0;
+  font-size:16px;
+  font-weight:700;
+}
+
+/* ==========================================================
+   GRID SYSTEM
+========================================================== */
+
+.ravlo-grid{
+  display:grid;
+  gap:20px;
+}
+
+.ravlo-grid.cols-2{
+  grid-template-columns:repeat(2,1fr);
+}
+
+.ravlo-grid.cols-3{
+  grid-template-columns:repeat(3,1fr);
+}
+
+.ravlo-grid.cols-4{
+  grid-template-columns:repeat(4,1fr);
+}
+
+/* ==========================================================
+   BUTTONS
+========================================================== */
+
+.ravlo-btn{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  padding:10px 14px;
+  border-radius:10px;
+  font-weight:600;
+  font-size:14px;
+  border:1px solid transparent;
+  cursor:pointer;
+}
+
+.ravlo-btn.primary{
+  background:var(--accent);
+  color:white;
+}
+
+.ravlo-btn.ghost{
+  background:transparent;
+  border:1px solid var(--line);
+  color:var(--muted);
+}
+
+.ravlo-btn.sm{
+  padding:7px 10px;
+  font-size:13px;
+}
+
+/* ==========================================================
+   KPI
+========================================================== */
+
+.ravlo-kpi{
+  background:var(--bg2);
+  border:1px solid var(--line);
+  padding:18px;
+  border-radius:16px;
+}
+
+.ravlo-kpi .value{
+  font-size:26px;
+  font-weight:700;
+}
+
+.ravlo-kpi .label{
+  font-size:13px;
+  color:var(--muted);
+}
+
+/* ==========================================================
+   TABLE
+========================================================== */
+
+.ravlo-table{
+  width:100%;
+  border-collapse:collapse;
+}
+
+.ravlo-table th{
+  text-align:left;
+  font-size:12px;
+  color:var(--muted);
+  padding:10px 6px;
+}
+
+.ravlo-table td{
+  padding:10px 6px;
+  border-top:1px solid var(--line);
+}
+
+/* ==========================================================
+   BADGES
+========================================================== */
+
+.ravlo-badge{
+  padding:4px 8px;
+  border-radius:8px;
+  font-size:12px;
+}
+
+.ravlo-badge.ok{
+  background:rgba(60,203,127,.12);
+  color:#8EE4A8;
+}
+
+.ravlo-badge.risk{
+  background:rgba(255,77,77,.14);
+  color:#FF9E9E;
+}
+
+/* ==========================================================
+   UTILITIES
+========================================================== */
+
+.row{
+  display:flex;
+  align-items:center;
+}
+
+.row.between{
+  justify-content:space-between;
+}
+
+.muted{
+  color:var(--muted);
+}
+
+.mt-12{margin-top:12px;}
+.mt-20{margin-top:20px;}
 
 /* -----------------------------
    RESET

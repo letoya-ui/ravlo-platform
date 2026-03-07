@@ -150,30 +150,53 @@ class BorrowerMessage(db.Model):
 
     borrower = db.relationship("BorrowerProfile", backref="messages")
 
-
 class Deal(db.Model):
     __tablename__ = "deals"
 
     id = db.Column(db.Integer, primary_key=True)
 
-    user_id = db.Column(db.Integer, nullable=False, index=True)
-    borrower_profile_id = db.Column(db.Integer, db.ForeignKey("borrower_profile.id"), nullable=True)
+    # owner
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False, index=True)
+
+    # profiles
     investor_profile_id = db.Column(db.Integer, db.ForeignKey("investor_profile.id"), nullable=True)
 
+    # property links
     saved_property_id = db.Column(db.Integer, db.ForeignKey("saved_properties.id"), nullable=True)
-
     property_id = db.Column(db.String(120), index=True)
-    title = db.Column(db.String(255))
-    strategy = db.Column(db.String(32))
 
+    # display / identity
+    title = db.Column(db.String(255))
+    address = db.Column(db.String(255), nullable=True)
+    city = db.Column(db.String(120), nullable=True)
+    state = db.Column(db.String(50), nullable=True)
+    zip_code = db.Column(db.String(20), nullable=True)
+
+    # strategy
+    strategy = db.Column(db.String(32))
+    recommended_strategy = db.Column(db.String(50), nullable=True)
+
+    # core numbers
+    purchase_price = db.Column(db.Float, default=0)
+    arv = db.Column(db.Float, default=0)
+    estimated_rent = db.Column(db.Float, default=0)
+    rehab_cost = db.Column(db.Float, default=0)
+    deal_score = db.Column(db.Integer, nullable=True)
+
+    # flexible storage
     inputs_json = db.Column(db.JSON)
     results_json = db.Column(db.JSON)
     comps_json = db.Column(db.JSON)
     resolved_json = db.Column(db.JSON)
+    rehab_scope_json = db.Column(db.JSON, nullable=True)
 
+    # notes / workflow
     notes = db.Column(db.Text)
     status = db.Column(db.String(32), default="active")
-    # 🔥 HGTV Reveal Sharing
+    submitted_for_funding = db.Column(db.Boolean, default=False, nullable=False)
+    funding_requested_at = db.Column(db.DateTime, nullable=True)
+
+    # public reveal / share
     reveal_public_id = db.Column(db.String(32), unique=True, index=True, nullable=True)
     reveal_is_public = db.Column(db.Boolean, default=False, nullable=False)
     reveal_published_at = db.Column(db.DateTime, nullable=True)
@@ -181,8 +204,28 @@ class Deal(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
-    # Relationships
+    # relationships
+    user = db.relationship("User", backref=db.backref("deals", lazy=True))
     investor_profile = db.relationship("InvestorProfile", backref="deals")
+
+    def __repr__(self):
+        return f"<Deal {self.id} {self.title or self.address or 'Untitled'}>"
+
+    @property
+    def total_project_cost(self):
+        return (self.purchase_price or 0) + (self.rehab_cost or 0)
+
+    @property
+    def estimated_profit(self):
+        return (self.arv or 0) - self.total_project_cost
+
+    @property
+    def estimated_roi_percent(self):
+        total_cost = self.total_project_cost
+        if total_cost <= 0:
+            return 0
+        return round((self.estimated_profit / total_cost) * 100, 2)
+
 
 
 

@@ -1,0 +1,512 @@
+{% extends "layouts/ravlo_base.html" %}
+{% block title %}Ravlo • Compare Deals{% endblock %}
+
+{% block page_title %}Compare Deals{% endblock %}
+{% block page_subline %}
+Compare multiple opportunities side by side to identify the best path for capital, strategy, and execution.
+{% endblock %}
+
+{% block topbar_actions %}
+  <a href="{{ url_for('investor.deals') }}" class="ravlo-btn ghost sm">
+    Back to Deals
+  </a>
+{% endblock %}
+
+{% block content %}
+<div class="ravlo-shell">
+
+  <!-- HERO -->
+  <section class="ravlo-hero-card">
+    <div>
+      <div class="eyebrow">RAVLO COMPARISON STUDIO</div>
+      <h2>Find the strongest opportunity faster</h2>
+      <p class="muted">
+        Select saved deals, compare core metrics, and let Ravlo highlight the strongest opportunities across profit, ROI, rental strength, and overall score.
+      </p>
+    </div>
+
+    <div class="hero-actions">
+      <button class="ravlo-btn primary" type="button" onclick="runComparison()">
+        Compare Selected Deals
+      </button>
+    </div>
+  </section>
+
+  <div class="ravlo-grid-2 compare-grid">
+
+    <!-- LEFT -->
+    <div class="ravlo-stack">
+      <section class="ravlo-card pad">
+        <div class="section-head">
+          <div>
+            <div class="eyebrow">SELECT DEALS</div>
+            <h3>Choose opportunities to compare</h3>
+          </div>
+        </div>
+
+        <div class="deal-picker-list">
+          {% if deals %}
+            {% for deal in deals %}
+            <label class="deal-picker-item">
+              <div class="deal-picker-check">
+                <input type="checkbox" class="deal-checkbox" value="{{ deal.id }}">
+              </div>
+
+              <div class="deal-picker-main">
+                <div class="deal-picker-title">
+                  {{ deal.title or deal.address or ("Deal #" ~ deal.id) }}
+                </div>
+
+                <div class="deal-picker-sub">
+                  {{ deal.address or "No address saved" }}
+                </div>
+
+                <div class="deal-picker-meta">
+                  <span>Strategy: {{ deal.recommended_strategy or deal.strategy or "Pending" }}</span>
+                  <span>Score:
+                    {% if deal.deal_score %}
+                      {{ deal.deal_score }}/100
+                    {% else %}
+                      Pending
+                    {% endif %}
+                  </span>
+                </div>
+              </div>
+            </label>
+            {% endfor %}
+          {% else %}
+            <div class="empty-state-inline">
+              No deals available yet. Save a few deals first, then compare them here.
+            </div>
+          {% endif %}
+        </div>
+
+        <div style="margin-top:16px;">
+          <button class="ravlo-btn primary" type="button" onclick="runComparison()">
+            Run Comparison
+          </button>
+        </div>
+      </section>
+    </div>
+
+    <!-- RIGHT -->
+    <div class="ravlo-stack">
+
+      <!-- SUMMARY -->
+      <section class="ravlo-card pad">
+        <div class="section-head">
+          <div>
+            <div class="eyebrow">SUMMARY</div>
+            <h3>Ravlo highlights</h3>
+          </div>
+        </div>
+
+        <div id="comparisonSummary" class="summary-grid">
+          <div class="summary-box">
+            <span>Best Profit Deal</span>
+            <strong id="best_profit_deal">—</strong>
+          </div>
+
+          <div class="summary-box">
+            <span>Best ROI Deal</span>
+            <strong id="best_roi_deal">—</strong>
+          </div>
+
+          <div class="summary-box">
+            <span>Best Score Deal</span>
+            <strong id="best_score_deal">—</strong>
+          </div>
+
+          <div class="summary-box">
+            <span>Best Rental Deal</span>
+            <strong id="best_rental_deal">—</strong>
+          </div>
+        </div>
+      </section>
+
+      <!-- TABLE -->
+      <section class="ravlo-card pad">
+        <div class="section-head">
+          <div>
+            <div class="eyebrow">COMPARISON TABLE</div>
+            <h3>Opportunity breakdown</h3>
+          </div>
+        </div>
+
+        <div class="comparison-table-wrap">
+          <table class="comparison-table">
+            <thead>
+              <tr>
+                <th>Deal</th>
+                <th>Purchase</th>
+                <th>Rehab</th>
+                <th>ARV</th>
+                <th>Rent</th>
+                <th>Total Cost</th>
+                <th>Profit</th>
+                <th>ROI</th>
+                <th>Strategy</th>
+                <th>Score</th>
+              </tr>
+            </thead>
+            <tbody id="comparisonTableBody">
+              <tr>
+                <td colspan="10" class="comparison-empty">
+                  Select at least 2 deals and run comparison.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- AI NARRATIVE PLACEHOLDER -->
+      <section class="ravlo-card pad">
+        <div class="section-head">
+          <div>
+            <div class="eyebrow">AI INSIGHT</div>
+            <h3>Comparison narrative</h3>
+          </div>
+        </div>
+
+        <div class="report-note">
+          <p id="comparisonNarrative">
+            Ravlo will summarize which deal appears strongest for flipping, rental potential, and overall capital efficiency once comparison is run.
+          </p>
+        </div>
+      </section>
+
+    </div>
+  </div>
+</div>
+
+<style>
+  .compare-grid{
+    margin-top:20px;
+    align-items:start;
+  }
+
+  .ravlo-stack{
+    display:grid;
+    gap:20px;
+  }
+
+  .section-head{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:16px;
+    margin-bottom:18px;
+  }
+
+  .section-head h3{
+    margin:4px 0 0;
+    font-size:20px;
+  }
+
+  .hero-actions{
+    min-width:260px;
+    display:grid;
+    gap:12px;
+  }
+
+  .deal-picker-list{
+    display:grid;
+    gap:12px;
+  }
+
+  .deal-picker-item{
+    display:grid;
+    grid-template-columns:auto 1fr;
+    gap:14px;
+    align-items:start;
+    padding:16px;
+    border-radius:18px;
+    background:rgba(255,255,255,.03);
+    border:1px solid rgba(255,255,255,.08);
+    cursor:pointer;
+  }
+
+  .deal-picker-item:hover{
+    border-color:rgba(107,127,147,.35);
+    background:rgba(255,255,255,.045);
+  }
+
+  .deal-picker-check{
+    padding-top:2px;
+  }
+
+  .deal-picker-check input{
+    transform:scale(1.15);
+    accent-color:#6B7F93;
+  }
+
+  .deal-picker-title{
+    font-size:16px;
+    font-weight:700;
+    color:var(--text);
+  }
+
+  .deal-picker-sub{
+    margin-top:4px;
+    color:var(--muted);
+    font-size:14px;
+  }
+
+  .deal-picker-meta{
+    display:flex;
+    flex-wrap:wrap;
+    gap:10px;
+    margin-top:10px;
+  }
+
+  .deal-picker-meta span{
+    display:inline-flex;
+    align-items:center;
+    padding:7px 10px;
+    border-radius:999px;
+    background:rgba(255,255,255,.04);
+    border:1px solid rgba(255,255,255,.08);
+    color:var(--text);
+    font-size:12px;
+    font-weight:600;
+  }
+
+  .summary-grid{
+    display:grid;
+    grid-template-columns:repeat(2, minmax(0, 1fr));
+    gap:14px;
+  }
+
+  .summary-box{
+    padding:18px;
+    border-radius:18px;
+    background:linear-gradient(135deg, rgba(107,127,147,.18), rgba(58,92,122,.10));
+    border:1px solid rgba(107,127,147,.24);
+  }
+
+  .summary-box span{
+    display:block;
+    color:var(--muted);
+    font-size:12px;
+    text-transform:uppercase;
+    letter-spacing:.08em;
+    margin-bottom:10px;
+  }
+
+  .summary-box strong{
+    display:block;
+    color:var(--text);
+    font-size:20px;
+    line-height:1.25;
+  }
+
+  .comparison-table-wrap{
+    overflow:auto;
+    border-radius:18px;
+    border:1px solid rgba(255,255,255,.08);
+    background:rgba(255,255,255,.02);
+  }
+
+  .comparison-table{
+    width:100%;
+    min-width:980px;
+    border-collapse:collapse;
+  }
+
+  .comparison-table thead th{
+    text-align:left;
+    padding:14px 16px;
+    font-size:12px;
+    text-transform:uppercase;
+    letter-spacing:.08em;
+    color:var(--muted);
+    background:rgba(255,255,255,.04);
+    border-bottom:1px solid rgba(255,255,255,.08);
+    white-space:nowrap;
+  }
+
+  .comparison-table tbody td{
+    padding:14px 16px;
+    border-bottom:1px solid rgba(255,255,255,.06);
+    color:var(--text);
+    vertical-align:top;
+  }
+
+  .comparison-table tbody tr:hover{
+    background:rgba(255,255,255,.03);
+  }
+
+  .comparison-empty{
+    color:var(--muted);
+    text-align:center;
+    padding:24px !important;
+  }
+
+  .table-deal-title{
+    font-weight:700;
+    color:var(--text);
+  }
+
+  .table-deal-sub{
+    margin-top:4px;
+    color:var(--muted);
+    font-size:13px;
+  }
+
+  .score-pill{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    min-width:68px;
+    padding:7px 10px;
+    border-radius:999px;
+    background:rgba(107,127,147,.18);
+    border:1px solid rgba(107,127,147,.28);
+    font-weight:700;
+  }
+
+  .report-note{
+    padding:16px;
+    border-radius:18px;
+    background:rgba(255,255,255,.025);
+    border:1px solid rgba(255,255,255,.07);
+  }
+
+  .report-note p{
+    margin:0;
+    color:var(--muted);
+    line-height:1.7;
+  }
+
+  .empty-state-inline{
+    padding:16px;
+    color:var(--muted);
+  }
+
+  @media (max-width: 980px){
+    .summary-grid{
+      grid-template-columns:1fr;
+    }
+
+    .hero-actions{
+      min-width:unset;
+      width:100%;
+    }
+  }
+</style>
+
+<script>
+  function formatMoney(value) {
+    const number = Number(value || 0);
+    return "$" + number.toLocaleString(undefined, { maximumFractionDigits: 0 });
+  }
+
+  function selectedDealIds() {
+    return Array.from(document.querySelectorAll(".deal-checkbox:checked")).map(el => Number(el.value));
+  }
+
+  function setSummaryText(id, deal, fallback = "—") {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.textContent = deal && deal.title ? deal.title : fallback;
+  }
+
+  function buildNarrative(summary) {
+    const bestProfit = summary.best_profit_deal?.title;
+    const bestROI = summary.best_roi_deal?.title;
+    const bestScore = summary.best_score_deal?.title;
+    const bestRental = summary.best_rental_deal?.title;
+
+    let parts = [];
+
+    if (bestProfit) {
+      parts.push(`${bestProfit} stands out for projected profit.`);
+    }
+    if (bestROI) {
+      parts.push(`${bestROI} leads on projected ROI efficiency.`);
+    }
+    if (bestRental) {
+      parts.push(`${bestRental} looks strongest for rental income potential.`);
+    }
+    if (bestScore) {
+      parts.push(`${bestScore} currently ranks highest overall by deal score.`);
+    }
+
+    if (!parts.length) {
+      return "Ravlo will summarize which deal appears strongest for flipping, rental potential, and overall capital efficiency once comparison is run.";
+    }
+
+    return parts.join(" ");
+  }
+
+  async function runComparison() {
+    const dealIds = selectedDealIds();
+
+    if (dealIds.length < 2) {
+      alert("Please select at least 2 deals to compare.");
+      return;
+    }
+
+    try {
+      const res = await fetch("/investor/deal-comparison/run", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ deal_ids: dealIds })
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        alert(data.error || "Unable to compare deals.");
+        return;
+      }
+
+      const summary = data.summary || {};
+      const comparison = data.comparison || [];
+
+      setSummaryText("best_profit_deal", summary.best_profit_deal, "—");
+      setSummaryText("best_roi_deal", summary.best_roi_deal, "—");
+      setSummaryText("best_score_deal", summary.best_score_deal, "—");
+      setSummaryText("best_rental_deal", summary.best_rental_deal, "—");
+
+      document.getElementById("comparisonNarrative").textContent = buildNarrative(summary);
+
+      const tbody = document.getElementById("comparisonTableBody");
+
+      if (!comparison.length) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="10" class="comparison-empty">No comparison results returned.</td>
+          </tr>
+        `;
+        return;
+      }
+
+      tbody.innerHTML = comparison.map(item => `
+        <tr>
+          <td>
+            <div class="table-deal-title">${item.title || "Untitled Deal"}</div>
+            <div class="table-deal-sub">${item.address || "No address saved"}</div>
+          </td>
+          <td>${formatMoney(item.purchase_price)}</td>
+          <td>${formatMoney(item.rehab_cost)}</td>
+          <td>${formatMoney(item.arv)}</td>
+          <td>${formatMoney(item.estimated_rent)}</td>
+          <td>${formatMoney(item.total_cost)}</td>
+          <td>${formatMoney(item.projected_profit)}</td>
+          <td>${Number(item.projected_roi || 0).toLocaleString(undefined, {maximumFractionDigits: 2})}%</td>
+          <td>${item.recommended_strategy || "Pending"}</td>
+          <td><span class="score-pill">${item.deal_score || 0}/100</span></td>
+        </tr>
+      `).join("");
+
+    } catch (err) {
+      console.error(err);
+      alert("Something went wrong running the comparison.");
+    }
+  }
+</script>
+{% endblock %}
