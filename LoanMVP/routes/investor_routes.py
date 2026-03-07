@@ -2973,7 +2973,7 @@ def build_studio(deal_id=None):
 # 🏗️ BUILD STUDIO — GENERATE CONCEPT
 # =========================================================
 
-@@investor_bp.route("/deal-studio/build-studio/generate", methods=["POST"])
+@investor_bp.route("/deal-studio/build-studio/generate", methods=["POST"])
 @csrf.exempt
 @login_required
 @role_required("investor")
