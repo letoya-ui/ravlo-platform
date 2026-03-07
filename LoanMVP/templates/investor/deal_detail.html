@@ -159,7 +159,7 @@
       <a class="btn ghost" href="{{ url_for('investor.deal_open', deal_id=deal.id) }}">🧠 Workspace</a>
 
       {% if 'investor.deal_rehab_studio' %}
-        <a class="btn ghost" href="{{ url_for('investor.deal_rehab_studio', deal_id=deal.id) }}">🏗️ Rehab Studio</a>
+        <a class="btn ghost" href="{{ url_for('investor.deal_rehab', deal_id=deal.id) }}">🏗️ Rehab Studio</a>
       {% endif %}
 
       {% if 'investor.deal_reveal' %}
