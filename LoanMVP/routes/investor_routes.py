@@ -3152,6 +3152,22 @@ def build_projects():
         page_title="Build Projects"
     )
 
+@investor_bp.route("/build-projects/<int:project_id>", methods=["GET"])
+@login_required
+@role_required("investor")
+def build_project_detail(project_id):
+    project = BuildProject.query.filter_by(
+        id=project_id,
+        user_id=current_user.id
+    ).first_or_404()
+
+    return render_template(
+        "investor/build_project_detail.html",
+        project=project,
+        page_title="Build Project",
+        page_subtitle="Review your saved development concept."
+    )
+    
 # =========================================================
 # 🧭 AI DEAL ARCHITECT
 # =========================================================
