@@ -3167,7 +3167,65 @@ def build_project_detail(project_id):
         page_title="Build Project",
         page_subtitle="Review your saved development concept."
     )
-    
+
+@investor_bp.route("/build-projects/<int:project_id>/convert-to-deal", methods=["POST"])
+@csrf.exempt
+@login_required
+@role_required("investor")
+def convert_build_project_to_deal(project_id):
+    project = BuildProject.query.filter_by(
+        id=project_id,
+        user_id=current_user.id
+    ).first_or_404()
+
+    investor_profile = InvestorProfile.query.filter_by(user_id=current_user.id).first()
+
+    deal = Deal(
+        user_id=current_user.id,
+        investor_profile_id=investor_profile.id if investor_profile else None,
+        title=project.project_name or "Build Project Deal",
+        address=project.location or None,
+        strategy="development",
+        notes=project.notes or project.description or "",
+        status="active",
+        inputs_json={
+            "source": "build_project",
+            "build_project_id": project.id,
+            "project_name": project.project_name,
+            "property_type": project.property_type,
+            "description": project.description,
+            "lot_size": project.lot_size,
+            "zoning": project.zoning,
+            "location": project.location,
+            "notes": project.notes,
+        },
+        results_json={
+            "build_project": {
+                "project_id": project.id,
+                "project_name": project.project_name,
+                "property_type": project.property_type,
+                "description": project.description,
+                "lot_size": project.lot_size,
+                "zoning": project.zoning,
+                "location": project.location,
+                "notes": project.notes,
+                "concept_render_url": project.concept_render_url,
+                "blueprint_url": project.blueprint_url,
+                "site_plan_url": project.site_plan_url,
+                "presentation_url": project.presentation_url,
+            }
+        }
+    )
+
+    db.session.add(deal)
+    db.session.commit()
+
+    flash("Build project converted into a deal.", "success")
+    return jsonify({
+        "status": "ok",
+        "deal_id": deal.id,
+        "redirect_url": url_for("investor.deal_detail", deal_id=deal.id)
+    })    
 # =========================================================
 # 🧭 AI DEAL ARCHITECT
 # =========================================================
