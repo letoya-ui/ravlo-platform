@@ -53,7 +53,6 @@
       pointer-events:auto;
     }
 
-    /* ---------- SIDEBAR BRAND HEADER ---------- */
     .ravlo-sidebar-brand{
       position:relative;
       margin-bottom:18px;
@@ -136,175 +135,6 @@
       z-index:1;
     }
 
-    /* ---------- NAV ---------- */
-    .ravlo-sidebar-nav{
-      display:grid;
-      gap:8px;
-      margin-top:8px;
-    }
-
-    .ravlo-nav-link{
-      display:flex;
-      align-items:center;
-      gap:12px;
-      min-height:48px;
-      padding:12px 14px;
-      border-radius:16px;
-      color:var(--muted);
-      text-decoration:none;
-      border:1px solid transparent;
-      background:transparent;
-      transition:.2s ease;
-      font-size:14px;
-      font-weight:600;
-      letter-spacing:.01em;
-    }
-
-    .ravlo-nav-link i{
-      font-size:18px;
-      opacity:.95;
-    }
-
-    .ravlo-nav-link:hover{
-      color:var(--text);
-      background:rgba(255,255,255,.035);
-      border-color:rgba(255,255,255,.06);
-      transform:translateY(-1px);
-    }
-
-    .ravlo-nav-link.active{
-      color:var(--text);
-      background:linear-gradient(135deg, rgba(107,127,147,.18), rgba(58,92,122,.10));
-      border:1px solid rgba(107,127,147,.26);
-      box-shadow:inset 0 1px 0 rgba(255,255,255,.05);
-    }
-
-    .ravlo-nav-link.active i{
-      color:#D9E4EE;
-    }
-
-    /* ---------- SIDEBAR FOOTER CARD ---------- */
-    .ravlo-sidebar-footer{
-      margin-top:auto;
-      padding-top:20px;
-    }
-
-    .ravlo-investor-card{
-      padding:18px;
-      border-radius:18px;
-      background:linear-gradient(135deg, rgba(107,127,147,.18), rgba(58,92,122,.10));
-      border:1px solid rgba(107,127,147,.26);
-    }
-
-    .investor-card-header{
-      display:flex;
-      align-items:center;
-      gap:12px;
-    }
-
-    .ravlo-mark.sm{
-      width:40px;
-      height:40px;
-      border-radius:12px;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      background:rgba(255,255,255,.08);
-      color:white;
-      font-weight:700;
-      flex:0 0 auto;
-    }
-
-    .investor-name{
-      font-size:14px;
-      font-weight:700;
-      color:var(--text);
-      line-height:1.25;
-    }
-
-    .investor-strategy{
-      margin-top:3px;
-      font-size:12px;
-      color:var(--muted);
-    }
-
-    .investor-stats{
-      display:flex;
-      justify-content:space-between;
-      gap:14px;
-      margin-top:14px;
-    }
-
-    .investor-stat span{
-      display:block;
-      font-size:11px;
-      color:var(--muted);
-      text-transform:uppercase;
-      letter-spacing:.05em;
-    }
-
-    .investor-stat strong{
-      display:block;
-      margin-top:4px;
-      font-size:16px;
-      color:var(--text);
-      font-weight:700;
-    }
-
-    .ravlo-btn.full{
-      width:100%;
-      margin-top:14px;
-    }
-
-    .ravlo-sidebar-bottom-actions{
-      margin-top:14px;
-      display:grid;
-      gap:10px;
-    }
-
-    /* ---------- TOPBAR ---------- */
-    .ravlo-topbar{
-      display:flex;
-      align-items:flex-start;
-      justify-content:space-between;
-      gap:18px;
-    }
-
-    .ravlo-top-left{
-      min-width:0;
-      display:flex;
-      flex-direction:column;
-      gap:6px;
-    }
-
-    .ravlo-title{
-      margin:0;
-    }
-
-    .ravlo-subline{
-      margin:0;
-    }
-
-    .ravlo-actions{
-      display:flex;
-      align-items:center;
-      gap:12px;
-      flex-wrap:wrap;
-      justify-content:flex-end;
-    }
-
-    .ravlo-search{
-      min-width:260px;
-    }
-
-    .ravlo-topbar-actions-slot{
-      display:flex;
-      align-items:center;
-      gap:10px;
-      flex-wrap:wrap;
-      justify-content:flex-end;
-    }
-
     .ravlo-flash-stack{
       display:grid;
       gap:8px;
@@ -322,26 +152,6 @@
     .ravlo-flash strong{
       color:var(--text);
       text-transform:capitalize;
-    }
-
-    @media (max-width: 980px){
-      .ravlo-topbar{
-        flex-direction:column;
-        align-items:stretch;
-      }
-
-      .ravlo-actions{
-        justify-content:flex-start;
-      }
-
-      .ravlo-topbar-actions-slot{
-        justify-content:flex-start;
-      }
-
-      .ravlo-search{
-        min-width:0;
-        width:100%;
-      }
     }
 
     @media (max-width: 768px){
@@ -384,9 +194,7 @@
 
     <aside class="ravlo-sidebar" id="sidebar">
 
-      <!-- =========================================================
-           BRAND HEADER
-      ========================================================== -->
+      <!-- BRAND -->
       <div class="ravlo-sidebar-brand">
         <a href="{{ url_for('investor.command_center') }}" class="ravlo-brand-link">
           <div class="ravlo-brand-mark">
@@ -402,9 +210,7 @@
         <div class="ravlo-brand-glow"></div>
       </div>
 
-      <!-- =========================================================
-           PRIMARY NAV
-      ========================================================== -->
+      <!-- NAV -->
       <nav class="ravlo-sidebar-nav">
 
         <a href="{{ url_for('investor.command_center') }}"
@@ -487,59 +293,20 @@
 
       </nav>
 
-      <!-- =========================================================
-           INVESTOR FOOTER CARD
-      ========================================================== -->
-      <div class="ravlo-sidebar-footer">
+      <!-- SIMPLE FOOTER -->
+      <div class="ravlo-sidebar-footer-simple">
+        <a href="{{ url_for('investor.settings') }}"
+           class="ravlo-nav-link {% if ep == 'investor.settings' %}active{% endif %}">
+          <i class="lucide lucide-settings"></i>
+          <span>Settings</span>
+        </a>
 
-        <div class="ravlo-investor-card">
-          <div class="investor-card-header">
-            <div class="ravlo-mark sm">
-              <span>{{ current_user.first_name[0] }}{{ current_user.last_name[0] }}</span>
-            </div>
-
-            <div>
-              <div class="investor-name">
-                {{ current_user.first_name }} {{ current_user.last_name }}
-              </div>
-              <div class="investor-strategy">
-                {{ investor_profile.strategy if investor_profile is defined and investor_profile else "Investor" }}
-              </div>
-            </div>
-          </div>
-
-          <div class="investor-stats">
-            <div class="investor-stat">
-              <span>Deals</span>
-              <strong>{{ total_deals or 0 }}</strong>
-            </div>
-
-            <div class="investor-stat">
-              <span>Ready</span>
-              <strong>{{ ready_for_funding_count or 0 }}</strong>
-            </div>
-          </div>
-
-          <a href="{{ url_for('investor.command_center') }}" class="ravlo-btn ghost sm full">
-            Open Command Center
-          </a>
-        </div>
-
-        <div class="ravlo-sidebar-bottom-actions">
-          <a href="{{ url_for('investor.settings') }}"
-             class="ravlo-nav-link {% if ep == 'investor.settings' %}active{% endif %}">
-            <i class="lucide lucide-settings"></i>
-            <span>Settings</span>
-          </a>
-
-          <form method="post" action="{{ url_for('auth.logout') }}" style="margin:0;">
-            <button type="submit" class="ravlo-btn ghost sm" style="width:100%; justify-content:flex-start;">
-              <i class="lucide lucide-log-out" style="margin-right:8px;"></i>
-              Logout
-            </button>
-          </form>
-        </div>
-
+        <form method="post" action="{{ url_for('auth.logout') }}" style="margin:0;">
+          <button type="submit" class="ravlo-btn ghost sm ravlo-logout-btn">
+            <i class="lucide lucide-log-out"></i>
+            Logout
+          </button>
+        </form>
       </div>
     </aside>
 
@@ -563,23 +330,15 @@
 
           <div class="ravlo-topbar-actions-slot">
             {% block topbar_actions %}
-              <button class="ravlo-btn ghost sm"
-                      type="button"
-                      onclick="location.href='{{ url_for('investor.property_search') }}'">
-                Property Intelligence
-              </button>
-
-              <button class="ravlo-btn ghost sm"
-                      type="button"
-                      onclick="location.href='{% if deal_id is defined and deal_id %}{{ url_for('investor.deal_workspace', deal_id=deal_id) }}{% else %}{{ url_for('investor.deals_list') }}{% endif %}'">
-                Deal Workspace
-              </button>
-
-              <button class="ravlo-btn primary sm"
-                      type="button"
-                      onclick="location.href='{% if deal_id is defined and deal_id %}{{ url_for('investor.deal_rehab_studio', deal_id=deal_id) }}{% else %}{{ url_for('investor.deals_list') }}{% endif %}'">
-                Rehab Studio
-              </button>
+              <a class="ravlo-btn ghost sm" href="{{ url_for('investor.property_tool') }}">
+                Deal Finder
+              </a>
+              <a class="ravlo-btn ghost sm" href="{{ url_for('investor.deals_list') }}">
+                Deal Pipeline
+              </a>
+              <a class="ravlo-btn primary sm" href="{{ url_for('investor.deal_comparison') }}">
+                Compare Deals
+              </a>
             {% endblock %}
           </div>
         </div>
