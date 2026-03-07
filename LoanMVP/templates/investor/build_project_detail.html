@@ -1,0 +1,347 @@
+{% extends "layouts/ravlo_base.html" %}
+{% block title %}Ravlo • Build Project{% endblock %}
+
+{% block page_title %}Build Project{% endblock %}
+{% block page_subline %}
+Review your saved build concept and development assumptions.
+{% endblock %}
+
+{% block topbar_actions %}
+  <a href="{{ url_for('investor.build_projects') }}" class="ravlo-btn ghost sm">
+    Back to Build Projects
+  </a>
+  <a href="{{ url_for('investor.build_studio') }}" class="ravlo-btn primary sm">
+    New Concept
+  </a>
+{% endblock %}
+
+{% block content %}
+<div class="ravlo-shell-page">
+
+  <!-- HERO -->
+  <section class="ravlo-hero-card">
+    <div>
+      <div class="eyebrow">RAVLO BUILD PROJECT</div>
+      <h2>{{ project.project_name or "Untitled Build Project" }}</h2>
+      <p class="muted">
+        {{ project.location or "No location saved" }}
+      </p>
+
+      <div class="ravlo-chip-row" style="margin-top:16px;">
+        <span class="ravlo-chip">{{ project.property_type or "No property type" }}</span>
+        {% if project.zoning %}
+        <span class="ravlo-chip">Zoning: {{ project.zoning }}</span>
+        {% endif %}
+        {% if project.lot_size %}
+        <span class="ravlo-chip">Lot: {{ project.lot_size }}</span>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="build-hero-actions">
+      <a href="{{ url_for('investor.build_studio') }}" class="ravlo-btn ghost">
+        Generate New Concept
+      </a>
+    </div>
+  </section>
+
+  <div class="build-detail-grid">
+
+    <!-- LEFT -->
+    <div class="build-detail-stack">
+
+      <section class="ravlo-card pad">
+        <div class="section-head">
+          <div>
+            <div class="eyebrow">PROJECT</div>
+            <h3>Project Overview</h3>
+          </div>
+        </div>
+
+        <div class="analysis-grid">
+          <div class="analysis-box">
+            <span>Project Name</span>
+            <strong>{{ project.project_name or "—" }}</strong>
+          </div>
+
+          <div class="analysis-box">
+            <span>Property Type</span>
+            <strong>{{ project.property_type or "—" }}</strong>
+          </div>
+
+          <div class="analysis-box">
+            <span>Lot Size</span>
+            <strong>{{ project.lot_size or "—" }}</strong>
+          </div>
+
+          <div class="analysis-box">
+            <span>Zoning</span>
+            <strong>{{ project.zoning or "—" }}</strong>
+          </div>
+        </div>
+      </section>
+
+      <section class="ravlo-card pad">
+        <div class="section-head">
+          <div>
+            <div class="eyebrow">DESCRIPTION</div>
+            <h3>Build Narrative</h3>
+          </div>
+        </div>
+
+        <div class="report-note">
+          <p>{{ project.description or "No project description saved." }}</p>
+        </div>
+      </section>
+
+      <section class="ravlo-card pad">
+        <div class="section-head">
+          <div>
+            <div class="eyebrow">NOTES</div>
+            <h3>Development Notes</h3>
+          </div>
+        </div>
+
+        <div class="report-note">
+          <p>{{ project.notes or "No additional notes saved." }}</p>
+        </div>
+      </section>
+
+    </div>
+
+    <!-- RIGHT -->
+    <div class="build-detail-stack">
+
+      <section class="ravlo-card pad">
+        <div class="section-head">
+          <div>
+            <div class="eyebrow">CONCEPT</div>
+            <h3>Featured Render</h3>
+          </div>
+        </div>
+
+        {% if project.concept_render_url %}
+          <div class="build-feature-image">
+            <img src="{{ project.concept_render_url }}" alt="Build concept render">
+          </div>
+        {% else %}
+          <div class="empty-state-inline">No concept render saved yet.</div>
+        {% endif %}
+      </section>
+
+      <section class="ravlo-card pad">
+        <div class="section-head">
+          <div>
+            <div class="eyebrow">FILES</div>
+            <h3>Attached Assets</h3>
+          </div>
+        </div>
+
+        <div class="quick-grid one-col">
+          {% if project.blueprint_url %}
+          <a href="{{ project.blueprint_url }}" target="_blank" class="quick-card">
+            <span class="quick-title">Blueprint</span>
+            <span class="quick-sub">Open uploaded blueprint file</span>
+          </a>
+          {% endif %}
+
+          {% if project.site_plan_url %}
+          <a href="{{ project.site_plan_url }}" target="_blank" class="quick-card">
+            <span class="quick-title">Site Plan</span>
+            <span class="quick-sub">Open uploaded site plan</span>
+          </a>
+          {% endif %}
+
+          {% if project.presentation_url %}
+          <a href="{{ project.presentation_url }}" target="_blank" class="quick-card">
+            <span class="quick-title">Presentation</span>
+            <span class="quick-sub">Open saved presentation file</span>
+          </a>
+          {% endif %}
+
+          {% if not project.blueprint_url and not project.site_plan_url and not project.presentation_url %}
+          <div class="empty-state-inline">No files attached yet.</div>
+          {% endif %}
+        </div>
+      </section>
+
+      <section class="ravlo-card pad">
+        <div class="section-head">
+          <div>
+            <div class="eyebrow">TIMELINE</div>
+            <h3>Project Meta</h3>
+          </div>
+        </div>
+
+        <div class="analysis-grid">
+          <div class="analysis-box">
+            <span>Created</span>
+            <strong>
+              {% if project.created_at %}
+                {{ project.created_at.strftime('%b %d, %Y') }}
+              {% else %}
+                —
+              {% endif %}
+            </strong>
+          </div>
+
+          <div class="analysis-box">
+            <span>Last Updated</span>
+            <strong>
+              {% if project.updated_at %}
+                {{ project.updated_at.strftime('%b %d, %Y') }}
+              {% else %}
+                —
+              {% endif %}
+            </strong>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </div>
+</div>
+
+<style>
+  .ravlo-shell-page{
+    display:grid;
+    gap:20px;
+  }
+
+  .build-hero-actions{
+    min-width:220px;
+    display:grid;
+    gap:12px;
+  }
+
+  .build-detail-grid{
+    display:grid;
+    grid-template-columns:1.05fr .95fr;
+    gap:20px;
+    align-items:start;
+  }
+
+  .build-detail-stack{
+    display:grid;
+    gap:20px;
+  }
+
+  .analysis-grid{
+    display:grid;
+    grid-template-columns:repeat(2, minmax(0, 1fr));
+    gap:12px;
+  }
+
+  .analysis-box{
+    padding:16px;
+    border-radius:18px;
+    background:rgba(255,255,255,.03);
+    border:1px solid rgba(255,255,255,.08);
+  }
+
+  .analysis-box span{
+    display:block;
+    color:var(--muted);
+    font-size:12px;
+    text-transform:uppercase;
+    letter-spacing:.08em;
+    margin-bottom:8px;
+  }
+
+  .analysis-box strong{
+    color:var(--text);
+    font-size:20px;
+    font-weight:800;
+  }
+
+  .report-note{
+    padding:16px;
+    border-radius:18px;
+    background:rgba(255,255,255,.025);
+    border:1px solid rgba(255,255,255,.07);
+  }
+
+  .report-note p{
+    margin:0;
+    color:var(--muted);
+    line-height:1.7;
+  }
+
+  .build-feature-image{
+    overflow:hidden;
+    border-radius:20px;
+    border:1px solid rgba(255,255,255,.08);
+    background:rgba(255,255,255,.03);
+  }
+
+  .build-feature-image img{
+    width:100%;
+    display:block;
+    object-fit:cover;
+    max-height:460px;
+  }
+
+  .quick-grid{
+    display:grid;
+    grid-template-columns:repeat(2, minmax(0, 1fr));
+    gap:14px;
+  }
+
+  .quick-grid.one-col{
+    grid-template-columns:1fr;
+  }
+
+  .quick-card{
+    display:block;
+    padding:18px;
+    border-radius:18px;
+    background:rgba(255,255,255,.03);
+    border:1px solid rgba(255,255,255,.08);
+    text-decoration:none;
+    transition:.2s ease;
+  }
+
+  .quick-card:hover{
+    transform:translateY(-1px);
+    border-color:rgba(107,127,147,.35);
+    background:rgba(255,255,255,.045);
+  }
+
+  .quick-title{
+    display:block;
+    color:var(--text);
+    font-size:16px;
+    font-weight:700;
+  }
+
+  .quick-sub{
+    display:block;
+    margin-top:8px;
+    color:var(--muted);
+    font-size:13px;
+    line-height:1.55;
+  }
+
+  .empty-state-inline{
+    color:var(--muted);
+    padding:8px 0;
+  }
+
+  @media (max-width: 1000px){
+    .build-detail-grid{
+      grid-template-columns:1fr;
+    }
+  }
+
+  @media (max-width: 700px){
+    .analysis-grid{
+      grid-template-columns:1fr;
+    }
+
+    .build-hero-actions{
+      width:100%;
+      min-width:unset;
+    }
+  }
+</style>
+{% endblock %}
