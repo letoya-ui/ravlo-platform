@@ -347,6 +347,52 @@ Manage opportunities, open studios, and move deals toward funding.
       align-items:flex-start;
     }
   }
+
+  .deals-filter-bar{
+  display:grid;
+  grid-template-columns:2fr 1fr 1fr 1fr;
+  gap:14px;
+}
+
+.ravlo-field{
+  display:grid;
+  gap:8px;
+}
+
+.ravlo-label{
+  font-size:13px;
+  font-weight:600;
+  color:#DCE5EF;
+}
+
+.ravlo-input{
+  width:100%;
+  min-height:48px;
+  border-radius:14px;
+  border:1px solid rgba(255,255,255,.08);
+  background:rgba(255,255,255,.04);
+  color:var(--text);
+  padding:0 14px;
+  font-size:14px;
+  outline:none;
+}
+
+.ravlo-input:focus{
+  border-color:rgba(107,127,147,.65);
+  box-shadow:0 0 0 4px rgba(107,127,147,.15);
+}
+
+@media (max-width: 900px){
+  .deals-filter-bar{
+    grid-template-columns:1fr 1fr;
+  }
+}
+
+@media (max-width: 640px){
+  .deals-filter-bar{
+    grid-template-columns:1fr;
+  }
+}
 </style>
 
 <script>
@@ -371,5 +417,59 @@ Manage opportunities, open studios, and move deals toward funding.
       alert("Something went wrong submitting the funding request.");
     }
   }
+<script>
+  async function requestFunding(dealId) {
+    try {
+      const res = await fetch(`/investor/deals/${dealId}/request-funding`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" }
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        alert(data.message || data.error || "Unable to submit funding request.");
+        return;
+      }
+
+      alert(data.message || "Funding request submitted successfully.");
+      window.location.reload();
+    } catch (err) {
+      console.error(err);
+      alert("Something went wrong submitting the funding request.");
+    }
+  }
+
+  function applyDealFilters() {
+    const search = (document.getElementById("dealSearch")?.value || "").toLowerCase().trim();
+    const strategy = (document.getElementById("dealStrategyFilter")?.value || "").toLowerCase();
+    const status = (document.getElementById("dealStatusFilter")?.value || "").toLowerCase();
+    const funding = (document.getElementById("dealFundingFilter")?.value || "").toLowerCase();
+
+    document.querySelectorAll(".deal-filter-item").forEach(card => {
+      const title = card.dataset.title || "";
+      const address = card.dataset.address || "";
+      const cardStrategy = card.dataset.strategy || "";
+      const cardStatus = card.dataset.status || "";
+      const cardFunding = card.dataset.funding || "";
+
+      const matchesSearch = !search || title.includes(search) || address.includes(search);
+      const matchesStrategy = !strategy || cardStrategy.includes(strategy);
+      const matchesStatus = !status || cardStatus === status;
+      const matchesFunding = !funding || cardFunding === funding;
+
+      card.style.display = (matchesSearch && matchesStrategy && matchesStatus && matchesFunding)
+        ? ""
+        : "none";
+    });
+  }
+
+  ["dealSearch", "dealStrategyFilter", "dealStatusFilter", "dealFundingFilter"].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.addEventListener("input", applyDealFilters);
+      el.addEventListener("change", applyDealFilters);
+    }
+  });
 </script>
 {% endblock %}
