@@ -321,6 +321,11 @@ Design and visualize new construction projects.
             <span class="quick-sub">Go back to the main deal and continue the investor workflow.</span>
           </a>
 
+          <a href="{{ url_for('investor.build_project_detail', project_id=project.id) }}"
+            class="ravlo-btn ghost sm">
+           Open
+          </a>
+
           <a href="{{ url_for('investor.deal_report', deal_id=deal.id) }}" class="quick-card">
             <span class="quick-title">Open Deal Report</span>
             <span class="quick-sub">Use this concept as part of the project strategy and funding story.</span>
