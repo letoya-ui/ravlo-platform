@@ -13,6 +13,10 @@ Review your saved build concept and development assumptions.
   <a href="{{ url_for('investor.build_studio') }}" class="ravlo-btn primary sm">
     New Concept
   </a>
+
+  <button type="button" class="ravlo-btn primary sm" onclick="convertToDeal({{ project.id }})">
+  Convert to Deal
+</button>
 {% endblock %}
 
 {% block content %}
@@ -344,4 +348,28 @@ Review your saved build concept and development assumptions.
     }
   }
 </style>
+<script>
+  async function convertToDeal(projectId) {
+    try {
+      const res = await fetch(`/investor/build-projects/${projectId}/convert-to-deal`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        }
+      });
+
+      const data = await res.json();
+
+      if (!res.ok || data.status !== "ok") {
+        alert(data.message || "Unable to convert build project into a deal.");
+        return;
+      }
+
+      window.location.href = data.redirect_url;
+    } catch (err) {
+      console.error(err);
+      alert("Something went wrong converting the project.");
+    }
+  }
+</script>
 {% endblock %}
