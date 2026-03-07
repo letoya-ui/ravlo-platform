@@ -90,8 +90,8 @@
           Command Center
         </a>
         
-        <a class="{% if ep == 'investor.property_search' %}active{% endif %}"
-           href="{{ url_for('investor.property_search') }}">
+        <a class="{% if ep == 'investor.property_tool' %}active{% endif %}"
+           href="{{ url_for('investor.property_tool') }}">
           <i class="lucide lucide-search icon"></i>
           Deal Finder
         </a>
@@ -180,7 +180,7 @@
 
           {% block topbar_actions %}
           <button class="ravlo-btn ghost sm"        onclick="location.href='{{ url_for('investor.property_search') }}'">
-            Deal Finder
+            Property Intelligence
           </button>
 
           <button class="ravlo-btn ghost sm"
