@@ -1,49 +1,44 @@
-/* ============================================================
+/* ==========================================================
    RAVLO AUTH UI
-   Login / Register / Reset
-   Clean alignment fix
-   ============================================================ */
+   Login / Register / Reset / Access
+========================================================== */
 
 :root{
-
-  /* Backgrounds */
   --bg0:#070A0E;
-  --bg1:#0C1116;
-  --bg2:#0F1721;
+  --bg1:#0B1016;
+  --bg2:#0E141B;
   --bg3:#121A23;
 
-  /* Borders */
-  --line:#1B2633;
+  --line:#1A2330;
 
-  /* Text */
   --text:#FFFFFF;
-  --muted:#9AA7B6;
-  --muted2:#738193;
+  --muted:#A9B2BE;
+  --muted2:#7F8A99;
 
-  /* Brand colors */
-  --accent:#6B7F93;     /* Grayish Blue */
-  --accent2:#7F95AB;    /* lighter hover */
-  --accent3:#3A5C7A;    /* accent */
+  --accent:#6B7F93;
+  --accent2:#7A8FA5;
+  --accent3:#3A5C7A;
 
-  /* Metallic logo tones */
-  --metal-a:#F5F7FA;
+  --metal-a:#F7FAFC;
   --metal-b:#B7C4D2;
   --metal-c:#6F8091;
   --metal-d:#EAF1F7;
 
-  /* Status */
   --success:#3CCB7F;
   --danger:#F06B6B;
 
-  --radius-xl:28px;
-  --radius-lg:20px;
-  --radius-md:14px;
+  --radius-xl:30px;
+  --radius-lg:22px;
+  --radius-md:16px;
+  --radius-sm:12px;
 
-  --shadow-1:0 20px 60px rgba(0,0,0,.35);
+  --shadow-1:0 24px 70px rgba(0,0,0,.35);
   --shadow-2:inset 0 1px 0 rgba(255,255,255,.05);
 }
 
-/* ---------- RESET ---------- */
+/* ==========================================================
+   RESET
+========================================================== */
 *,
 *::before,
 *::after{
@@ -55,52 +50,75 @@ body{
   margin:0;
   padding:0;
   min-height:100%;
-  font-family:'Inter',sans-serif;
+  font-family:'Inter',system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
   background:
-    radial-gradient(circle at top left, rgba(122,143,165,.16), transparent 30%),
-    radial-gradient(circle at bottom right, rgba(61,89,116,.18), transparent 28%),
-    linear-gradient(180deg, #070A0E 0%, #0B1016 40%, #0E141B 100%);
+    radial-gradient(circle at top left, rgba(122,143,165,.14), transparent 30%),
+    radial-gradient(circle at bottom right, rgba(58,92,122,.16), transparent 28%),
+    linear-gradient(180deg, var(--bg0) 0%, var(--bg1) 42%, var(--bg2) 100%);
   color:var(--text);
 }
 
-/* ---------- PAGE SHELL ---------- */
 body{
-  min-height:100vh;
+  position:relative;
+  overflow-x:hidden;
 }
 
+a{
+  color:inherit;
+}
+
+/* ==========================================================
+   SHELL
+========================================================== */
 .ravlo-auth-shell{
   min-height:100vh;
-  width:100%;
   display:flex;
   align-items:center;
   justify-content:center;
-  padding:40px 20px;
+  padding:28px;
+  position:relative;
+}
+
+.ravlo-auth-shell::before{
+  content:"";
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+  opacity:.06;
+  background-image:
+    radial-gradient(circle at 20% 20%, rgba(255,255,255,.18) 0 1px, transparent 1px),
+    radial-gradient(circle at 80% 60%, rgba(255,255,255,.12) 0 1px, transparent 1px);
+  background-size:26px 26px, 34px 34px;
 }
 
 .ravlo-auth-wrap{
   width:100%;
   max-width:1180px;
   display:grid;
-  grid-template-columns: 1.05fr .95fr;
-  gap:28px;
+  grid-template-columns:1.05fr .95fr;
+  gap:22px;
   align-items:stretch;
+  position:relative;
+  z-index:2;
 }
 
-/* ---------- LEFT BRAND PANEL ---------- */
+/* ==========================================================
+   LEFT BRAND PANEL
+========================================================== */
 .ravlo-auth-hero{
   position:relative;
+  min-height:700px;
+  padding:40px;
+  border-radius:32px;
+  overflow:hidden;
+  border:1px solid rgba(255,255,255,.06);
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.015)),
+    linear-gradient(180deg, #0E1520 0%, #0B1118 100%);
+  box-shadow:var(--shadow-1), var(--shadow-2);
   display:flex;
   flex-direction:column;
   justify-content:space-between;
-  min-height:680px;
-  padding:40px;
-  border:1px solid rgba(255,255,255,.06);
-  border-radius:32px;
-  background:
-    linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02)),
-    linear-gradient(180deg, #0F1721 0%, #0B1118 100%);
-  box-shadow:var(--shadow-1), var(--shadow-2);
-  overflow:hidden;
 }
 
 .ravlo-auth-hero::before{
@@ -109,13 +127,13 @@ body{
   inset:0;
   pointer-events:none;
   background:
-    radial-gradient(circle at 18% 18%, rgba(137,162,190,.18), transparent 22%),
-    radial-gradient(circle at 80% 72%, rgba(111,134,160,.12), transparent 26%);
+    radial-gradient(circle at 16% 18%, rgba(137,162,190,.18), transparent 22%),
+    radial-gradient(circle at 80% 76%, rgba(107,127,147,.14), transparent 28%);
 }
 
 .ravlo-auth-brand{
   position:relative;
-  z-index:1;
+  z-index:2;
 }
 
 .ravlo-auth-kicker{
@@ -131,9 +149,9 @@ body{
 
 .ravlo-auth-hero h1{
   margin:0 0 14px;
-  font-size:clamp(34px, 4vw, 56px);
+  font-size:clamp(34px, 4vw, 58px);
   line-height:1.02;
-  letter-spacing:-.03em;
+  letter-spacing:-.04em;
   max-width:10ch;
 }
 
@@ -147,7 +165,7 @@ body{
 
 .ravlo-auth-points{
   position:relative;
-  z-index:1;
+  z-index:2;
   display:grid;
   gap:14px;
   margin-top:28px;
@@ -155,86 +173,121 @@ body{
 
 .ravlo-auth-point{
   display:flex;
-  align-items:flex-start;
   gap:12px;
+  align-items:flex-start;
   padding:14px 16px;
-  border:1px solid rgba(255,255,255,.05);
-  border-radius:16px;
+  border-radius:18px;
   background:rgba(255,255,255,.03);
-  backdrop-filter: blur(10px);
+  border:1px solid rgba(255,255,255,.06);
+  backdrop-filter:blur(10px);
 }
 
 .ravlo-auth-point i{
-  color:var(--accent2);
   font-size:18px;
+  color:var(--accent2);
   margin-top:2px;
 }
 
 .ravlo-auth-point strong{
   display:block;
-  margin-bottom:4px;
+  color:var(--text);
   font-size:14px;
+  margin-bottom:4px;
 }
 
 .ravlo-auth-point span{
+  display:block;
   color:var(--muted);
   font-size:13px;
-  line-height:1.55;
+  line-height:1.6;
 }
 
-/* ---------- RIGHT FORM CARD ---------- */
+/* ==========================================================
+   RIGHT AUTH CARD
+========================================================== */
+.ravlo-auth-card,
 .ravlo-login-card{
-  display:flex;
-  flex-direction:column;
-  justify-content:center;
-  min-height:680px;
-  padding:42px;
-  border:1px solid rgba(255,255,255,.06);
+  min-height:700px;
+  padding:40px;
   border-radius:32px;
+  border:1px solid rgba(255,255,255,.06);
   background:
     linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.015)),
     linear-gradient(180deg, #101822 0%, #0C131B 100%);
   box-shadow:var(--shadow-1), var(--shadow-2);
+  display:flex;
+  align-items:center;
+  justify-content:center;
 }
 
+.ravlo-auth-inner,
 .ravlo-login-inner{
   width:100%;
   max-width:460px;
   margin:0 auto;
 }
 
-/* ---------- LOGO / MARK ---------- */
+/* ==========================================================
+   MARK / LOGO
+========================================================== */
 .ravlo-mark{
-  width:88px;
-  height:88px;
+  width:90px;
+  height:90px;
   border-radius:24px;
   display:flex;
   align-items:center;
   justify-content:center;
   margin:0 0 22px;
   position:relative;
+  overflow:hidden;
   background:
-    linear-gradient(145deg, rgba(255,255,255,.08), rgba(255,255,255,.02));
+    linear-gradient(145deg, rgba(255,255,255,.10), rgba(255,255,255,.03));
   border:1px solid rgba(255,255,255,.08);
   box-shadow:
-    inset 0 1px 0 rgba(255,255,255,.10),
+    inset 0 1px 0 rgba(255,255,255,.12),
     0 16px 40px rgba(0,0,0,.30);
 }
 
+.ravlo-mark::before{
+  content:"";
+  position:absolute;
+  inset:0;
+  background:linear-gradient(135deg, rgba(107,127,147,.22), rgba(58,92,122,.08));
+}
+
+.ravlo-mark svg,
+.ravlo-mark span{
+  position:relative;
+  z-index:2;
+}
+
 .ravlo-mark svg{
-  width:54px;
-  height:54px;
+  width:56px;
+  height:56px;
   display:block;
 }
 
-/* ---------- HEADINGS ---------- */
-.ravlo-login-title{
-  margin:0;
-  font-size:32px;
-  line-height:1.05;
-  letter-spacing:-.03em;
+.ravlo-mark span{
+  font-size:22px;
+  font-weight:800;
+  letter-spacing:.08em;
+  color:#F3F7FB;
+  text-shadow:0 2px 10px rgba(107,127,147,.35);
 }
 
+/* ==========================================================
+   HEADINGS
+========================================================== */
+.ravlo-auth-title,
+.ravlo-login-title{
+  margin:0;
+  font-size:34px;
+  line-height:1.05;
+  letter-spacing:-.03em;
+  text-shadow:0 6px 20px rgba(107,127,147,.18);
+}
+
+.ravlo-auth-subtitle,
 .ravlo-login-subtitle{
   margin:12px 0 28px;
   color:var(--muted);
@@ -242,7 +295,9 @@ body{
   line-height:1.65;
 }
 
-/* ---------- FORM ---------- */
+/* ==========================================================
+   FORM
+========================================================== */
 .ravlo-form{
   display:grid;
   gap:18px;
@@ -266,7 +321,7 @@ body{
 
 .ravlo-input{
   width:100%;
-  height:54px;
+  min-height:54px;
   border-radius:16px;
   border:1px solid rgba(255,255,255,.08);
   background:rgba(255,255,255,.04);
@@ -282,12 +337,20 @@ body{
 }
 
 .ravlo-input:focus{
-  border-color:rgba(137,162,190,.65);
-  box-shadow:0 0 0 4px rgba(111,134,160,.15);
+  border-color:rgba(107,127,147,.65);
+  box-shadow:0 0 0 4px rgba(107,127,147,.15);
   background:rgba(255,255,255,.05);
 }
 
-/* ---------- ROWS ---------- */
+textarea.ravlo-input{
+  min-height:120px;
+  padding:14px 16px;
+  resize:vertical;
+}
+
+/* ==========================================================
+   ROWS / LINKS / CHECKBOX
+========================================================== */
 .ravlo-row{
   display:flex;
   align-items:center;
@@ -311,24 +374,32 @@ body{
 .ravlo-link{
   color:var(--accent2);
   text-decoration:none;
-  font-weight:600;
+  font-weight:700;
+  transition:.2s ease;
 }
 
 .ravlo-link:hover{
-  color:#C8D7E7;
+  color:#DCE5EF;
 }
 
-/* ---------- BUTTONS ---------- */
+/* ==========================================================
+   BUTTONS
+========================================================== */
 .ravlo-btn{
-  width:100%;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
   min-height:54px;
+  width:100%;
   border:none;
   border-radius:16px;
   padding:14px 18px;
   font-size:15px;
-  font-weight:700;
+  font-weight:800;
   cursor:pointer;
   transition:.22s ease;
+  text-decoration:none;
 }
 
 .ravlo-btn.primary{
@@ -350,7 +421,13 @@ body{
   border:1px solid rgba(255,255,255,.08);
 }
 
-/* ---------- DIVIDERS ---------- */
+.ravlo-btn.ghost:hover{
+  background:rgba(255,255,255,.05);
+}
+
+/* ==========================================================
+   DIVIDER
+========================================================== */
 .ravlo-divider{
   display:flex;
   align-items:center;
@@ -370,21 +447,9 @@ body{
   background:rgba(255,255,255,.08);
 }
 
-/* ---------- HELP / FOOTER ---------- */
-.ravlo-login-foot{
-  margin-top:24px;
-  text-align:center;
-  color:var(--muted);
-  font-size:14px;
-}
-
-.ravlo-login-foot a{
-  color:var(--accent2);
-  text-decoration:none;
-  font-weight:700;
-}
-
-/* ---------- ALERTS ---------- */
+/* ==========================================================
+   ALERTS / FLASH
+========================================================== */
 .ravlo-alert{
   padding:12px 14px;
   border-radius:14px;
@@ -405,7 +470,47 @@ body{
   border-color:rgba(60,203,127,.22);
 }
 
-/* ---------- MOBILE ---------- */
+.ravlo-auth-flashes{
+  display:grid;
+  gap:10px;
+  margin-bottom:18px;
+}
+
+/* ==========================================================
+   FOOTER TEXT
+========================================================== */
+.ravlo-auth-foot,
+.ravlo-login-foot{
+  margin-top:24px;
+  text-align:center;
+  color:var(--muted);
+  font-size:14px;
+}
+
+.ravlo-auth-foot a,
+.ravlo-login-foot a{
+  color:var(--accent2);
+  text-decoration:none;
+  font-weight:700;
+}
+
+/* ==========================================================
+   SIMPLE SINGLE-CARD MODE
+========================================================== */
+.ravlo-auth-simple{
+  width:100%;
+  max-width:520px;
+  margin:0 auto;
+}
+
+.ravlo-auth-simple .ravlo-auth-card,
+.ravlo-auth-simple .ravlo-login-card{
+  min-height:auto;
+}
+
+/* ==========================================================
+   RESPONSIVE
+========================================================== */
 @media (max-width: 980px){
   .ravlo-auth-wrap{
     grid-template-columns:1fr;
@@ -417,11 +522,13 @@ body{
     padding:30px;
   }
 
+  .ravlo-auth-card,
   .ravlo-login-card{
     min-height:auto;
     padding:30px;
   }
 
+  .ravlo-auth-inner,
   .ravlo-login-inner{
     max-width:100%;
   }
@@ -433,18 +540,20 @@ body{
   }
 
   .ravlo-auth-hero,
+  .ravlo-auth-card,
   .ravlo-login-card{
     padding:22px;
     border-radius:24px;
   }
 
+  .ravlo-auth-title,
   .ravlo-login-title{
     font-size:28px;
   }
 
   .ravlo-mark{
-    width:74px;
-    height:74px;
+    width:76px;
+    height:76px;
     border-radius:20px;
   }
 

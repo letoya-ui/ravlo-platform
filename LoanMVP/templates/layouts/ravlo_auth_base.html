@@ -1,80 +1,171 @@
-{# ============================================================
-   RAVLO AUTH BASE LAYOUT
-   Investor Login / Register / Reset
-   ============================================================ #}
-
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{% block title %}Ravlo{% endblock %}</title>
 
-  <!-- Fonts -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
 
-  <!-- ✅ Auth-only Styles (recommended) -->
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/ravlo_auth.css') }}">
+<title>{% block title %}Ravlo{% endblock %}</title>
 
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 
-  {# Optional: page-specific head additions #}
-  {% block head %}{% endblock %}
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+<link rel="stylesheet" href="{{ url_for('static', filename='css/ravlo_auth.css') }}">
+
+<link rel="stylesheet" href="https://unpkg.com/lucide-static@latest/font/lucide.css">
+
+{% block head %}{% endblock %}
+
 </head>
 
 <body>
 
-  <div class="ravlo-auth-wrapper">
-    <div class="ravlo-auth-card">
+<div class="ravlo-auth-shell">
 
-      <!-- =========================
-           BRAND HEADER
-      ========================== -->
-      <div class="ravlo-auth-brand">
-        <div class="ravlo-auth-logo">RAVLO</div>
-        <div class="ravlo-auth-sub">Investor Command Center</div>
-      </div>
+<div class="ravlo-auth-wrap">
 
-      <!-- =========================
-           FLASH MESSAGES
-      ========================== -->
-      {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-          {% for category, msg in messages %}
-            <div class="
-              {% if category in ['error','danger'] %}
-                ravlo-auth-error
-              {% elif category == 'success' %}
-                ravlo-auth-success
-              {% elif category == 'warning' %}
-                ravlo-auth-warning
-              {% else %}
-                ravlo-auth-info
-              {% endif %}
-            ">
-              {{ msg }}
-            </div>
-          {% endfor %}
-        {% endif %}
-      {% endwith %}
+<!-- ========================================
+LEFT SIDE BRAND PANEL
+======================================== -->
 
-      <!-- =========================
-           PAGE CONTENT
-      ========================== -->
-      {% block content %}{% endblock %}
+<div class="ravlo-auth-hero">
 
-      <!-- =========================
-           FOOTER
-      ========================== -->
-      <div class="ravlo-auth-footer">
-        © {{ current_year if current_year else "2026" }} Ravlo.
-        Built for serious investors.
-      </div>
+<div class="ravlo-auth-brand">
 
-    </div>
-  </div>
+<div class="ravlo-auth-kicker">
+INVESTOR OPERATING SYSTEM
+</div>
 
-  {% block scripts %}{% endblock %}
+<h1>
+Build smarter<br>
+real estate deals
+</h1>
+
+<p>
+Ravlo helps investors analyze opportunities, plan renovations,
+compare deals, and request capital — all from one command center.
+</p>
+
+</div>
+
+<div class="ravlo-auth-points">
+
+<div class="ravlo-auth-point">
+
+<i class="lucide lucide-brain-circuit"></i>
+
+<div>
+<strong>AI Deal Architect</strong>
+<span>Analyze flips, rentals, and developments instantly.</span>
+</div>
+
+</div>
+
+<div class="ravlo-auth-point">
+
+<i class="lucide lucide-hammer"></i>
+
+<div>
+<strong>Renovation Studio</strong>
+<span>Generate scopes of work and construction plans.</span>
+</div>
+
+</div>
+
+<div class="ravlo-auth-point">
+
+<i class="lucide lucide-landmark"></i>
+
+<div>
+<strong>Capital Pipeline</strong>
+<span>Submit deals for funding and track capital progress.</span>
+</div>
+
+</div>
+
+</div>
+
+</div>
+
+<!-- ========================================
+RIGHT SIDE AUTH FORM
+======================================== -->
+
+<div class="ravlo-auth-card">
+
+<div class="ravlo-auth-inner">
+
+<!-- LOGO -->
+
+<div class="ravlo-mark">
+
+<svg viewBox="0 0 64 64">
+
+<defs>
+
+<linearGradient id="rvMetal" x1="0" y1="0" x2="1" y2="1">
+
+<stop offset="0%" stop-color="var(--metal-a)"/>
+<stop offset="35%" stop-color="var(--metal-b)"/>
+<stop offset="70%" stop-color="var(--metal-c)"/>
+<stop offset="100%" stop-color="var(--metal-d)"/>
+
+</linearGradient>
+
+</defs>
+
+<path fill="url(#rvMetal)"
+d="M18 14h18c7 0 12 4 12 10 0 5-3 8-8 9l10 17H38L30 36h-6v14H18V14zm6 6v10h11c4 0 6-2 6-5s-2-5-6-5H24z"/>
+
+</svg>
+
+</div>
+
+<!-- PAGE TITLE -->
+
+<h2 class="ravlo-auth-title">
+{% block auth_title %}Welcome to Ravlo{% endblock %}
+</h2>
+
+<p class="ravlo-auth-subtitle">
+{% block auth_subtitle %}
+Access your investor command center.
+{% endblock %}
+</p>
+
+<!-- FLASH MESSAGES -->
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+{% if messages %}
+
+<div class="ravlo-auth-flashes">
+
+{% for category, msg in messages %}
+
+<div class="ravlo-alert {{ category }}">
+{{ msg }}
+</div>
+
+{% endfor %}
+
+</div>
+
+{% endif %}
+{% endwith %}
+
+<!-- FORM CONTENT -->
+
+{% block auth_content %}{% endblock %}
+
+</div>
+
+</div>
+
+</div>
+
+</div>
+
 </body>
 </html>
