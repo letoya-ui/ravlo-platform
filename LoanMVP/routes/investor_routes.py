@@ -2688,6 +2688,7 @@ def build_studio():
 # =========================================================
 
 @investor_bp.route("/deal-studio/build-studio/generate", methods=["POST"])
+@csrf.exempt
 @login_required
 @role_required("investor")
 def generate_build_studio():
