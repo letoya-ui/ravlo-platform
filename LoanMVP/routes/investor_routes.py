@@ -2951,37 +2951,53 @@ def deal_rehab(deal_id):
 # =========================================================
 # 🏗️ BUILD STUDIO — PAGE
 # =========================================================
-
+@investor_bp.route("/deals/<int:deal_id>/build", methods=["GET"])
 @investor_bp.route("/deal-studio/build-studio", methods=["GET"])
 @login_required
 @role_required("investor")
-def build_studio():
+def build_studio(deal_id=None):
+    deal = None
+
+    if deal_id is not None:
+        deal = _get_owned_deal_or_404(deal_id)
+
     return render_template(
         "investor/build_studio.html",
+        deal=deal,
+        deal_id=deal.id if deal else None,
         page_title="Build Studio",
         page_subtitle="Design and visualize new construction projects."
     )
+    
 # =========================================================
 # 🏗️ BUILD STUDIO — GENERATE CONCEPT
 # =========================================================
 
-@investor_bp.route("/deal-studio/build-studio/generate", methods=["POST"])
+@@investor_bp.route("/deal-studio/build-studio/generate", methods=["POST"])
 @csrf.exempt
 @login_required
 @role_required("investor")
 def generate_build_studio():
-
     try:
-        project_name = request.form.get("project_name", "").strip()
-        property_type = request.form.get("property_type", "").strip()
-        description = request.form.get("description", "").strip()
-        lot_size = request.form.get("lot_size", "").strip()
-        zoning = request.form.get("zoning", "").strip()
-        location = request.form.get("location", "").strip()
-        notes = request.form.get("notes", "").strip()
+        deal_id = _normalize_int(request.form.get("deal_id"))
+        deal = None
+
+        if deal_id:
+            deal = Deal.query.filter_by(id=deal_id, user_id=current_user.id).first()
+            if not deal:
+                return jsonify({"status": "error", "message": "Deal not found or not authorized."}), 404
+
+        project_name = (request.form.get("project_name") or "").strip()
+        property_type = (request.form.get("property_type") or "").strip()
+        description = (request.form.get("description") or "").strip()
+        lot_size = (request.form.get("lot_size") or "").strip()
+        zoning = (request.form.get("zoning") or "").strip()
+        location = (request.form.get("location") or "").strip()
+        notes = (request.form.get("notes") or "").strip()
+        save_to_deal = (request.form.get("save_to_deal") or "").lower() in ("1", "true", "yes", "on")
 
         land_image = request.files.get("land_image")
-        image_url = request.form.get("image_url")
+        image_url = (request.form.get("image_url") or "").strip()
 
         if land_image:
             raw = land_image.read()
@@ -3008,19 +3024,43 @@ def generate_build_studio():
         res = requests.post(
             f"{RENOVATION_ENGINE_URL}/v1/build_concept",
             json=payload,
-            headers={"X-API-Key": os.getenv("RENOVATION_API_KEY","")},
+            headers={"X-API-Key": os.getenv("RENOVATION_API_KEY", "")},
             timeout=900
         )
-
         res.raise_for_status()
         data = res.json()
 
+        images = data.get("images_base64") or []
+        meta = data.get("meta") or {}
+        seed = data.get("seed")
+        job_id = data.get("job_id")
+
+        if save_to_deal and deal is not None:
+            results = deal.results_json or {}
+            results["build_analysis"] = {
+                "project_name": project_name,
+                "property_type": property_type,
+                "description": description,
+                "lot_size": lot_size,
+                "zoning": zoning,
+                "location": location,
+                "notes": notes,
+                "images_base64": images,
+                "meta": meta,
+                "seed": seed,
+                "job_id": job_id,
+            }
+            deal.results_json = results
+            db.session.commit()
+
         return jsonify({
             "status": "ok",
-            "images": data.get("images_base64"),
-            "meta": data.get("meta"),
-            "seed": data.get("seed"),
-            "job_id": data.get("job_id")
+            "images": images,
+            "meta": meta,
+            "seed": seed,
+            "job_id": job_id,
+            "deal_id": deal.id if deal else None,
+            "saved_to_deal": bool(save_to_deal and deal is not None),
         })
 
     except Exception as e:
@@ -3029,7 +3069,7 @@ def generate_build_studio():
             "status": "error",
             "message": str(e)
         }), 500
-
+        
 # =========================================================
 # 🏗️ BUILD STUDIO — SAVE PROJECT
 # =========================================================
@@ -3039,8 +3079,15 @@ def generate_build_studio():
 @login_required
 @role_required("investor")
 def save_build_studio():
+    data = request.get_json(silent=True) or {}
 
-    data = request.get_json()
+    deal_id = _normalize_int(data.get("deal_id"))
+    deal = None
+
+    if deal_id:
+        deal = Deal.query.filter_by(id=deal_id, user_id=current_user.id).first()
+        if not deal:
+            return jsonify({"status": "error", "message": "Deal not found or not authorized."}), 404
 
     project = BuildProject(
         user_id=current_user.id,
@@ -3058,13 +3105,34 @@ def save_build_studio():
     )
 
     db.session.add(project)
+    db.session.flush()
+
+    if deal is not None:
+        results = deal.results_json or {}
+        results["build_project"] = {
+            "project_id": project.id,
+            "project_name": project.project_name,
+            "property_type": project.property_type,
+            "description": project.description,
+            "lot_size": project.lot_size,
+            "zoning": project.zoning,
+            "location": project.location,
+            "notes": project.notes,
+            "concept_render_url": project.concept_render_url,
+            "blueprint_url": project.blueprint_url,
+            "site_plan_url": project.site_plan_url,
+            "presentation_url": project.presentation_url,
+        }
+        deal.results_json = results
+
     db.session.commit()
 
     return jsonify({
         "status": "ok",
-        "project_id": project.id
+        "project_id": project.id,
+        "deal_id": deal.id if deal else None,
     })
-
+    
 # =========================================================
 # 🏗️ BUILD PROJECTS — LIST
 # =========================================================
