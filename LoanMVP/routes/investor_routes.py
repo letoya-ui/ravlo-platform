@@ -3093,97 +3093,101 @@ def deal_architect_analyze():
 
 @investor_bp.route("/deal-architect/strategy", methods=["POST"])
 @login_required
+@role_required("investor")
 def deal_architect_strategy():
-    data = request.get_json(silent=True) or request.form
+    try:
+        data = request.get_json(silent=True) or request.form
 
-    deal_id = data.get("deal_id")
-    if not deal_id:
-        return jsonify({"error": "deal_id is required"}), 400
+        deal_id = data.get("deal_id")
+        if not deal_id:
+            return jsonify({"success": False, "error": "deal_id is required"}), 400
 
-    deal = Deal.query.filter_by(id=deal_id, user_id=current_user.id).first()
-    if not deal:
-        return jsonify({"error": "Deal not found"}), 404
+        deal = Deal.query.filter_by(id=deal_id, user_id=current_user.id).first()
+        if not deal:
+            return jsonify({"success": False, "error": "Deal not found"}), 404
 
-    purchase_price = float(data.get("purchase_price") or deal.purchase_price or 0)
-    arv = float(data.get("arv") or deal.arv or 0)
-    estimated_rent = float(data.get("estimated_rent") or deal.estimated_rent or 0)
-    rehab_cost = float(data.get("rehab_cost") or deal.rehab_cost or 0)
+        purchase_price = float(data.get("purchase_price") or deal.purchase_price or 0)
+        arv = float(data.get("arv") or deal.arv or 0)
+        estimated_rent = float(data.get("estimated_rent") or deal.estimated_rent or 0)
+        rehab_cost = float(data.get("rehab_cost") or deal.rehab_cost or 0)
 
-    total_cost = purchase_price + rehab_cost
-    profit = arv - total_cost if arv else 0
-    rent_ratio = (estimated_rent / purchase_price) if purchase_price > 0 else 0
+        total_cost = purchase_price + rehab_cost
+        projected_profit = (arv - total_cost) if arv else 0
+        rent_ratio = (estimated_rent / purchase_price) if purchase_price > 0 else 0
 
-    recommended_strategy = "Flip"
-    strategy_reason = "Strong resale orientation based on current inputs."
-
-    if estimated_rent > 0 and rent_ratio >= 0.009:
-        recommended_strategy = "Rental"
-        strategy_reason = "Rental income appears strong relative to acquisition cost."
-    elif arv > 0 and total_cost > 0 and arv >= total_cost * 1.25:
-        recommended_strategy = "BRRRR"
-        strategy_reason = "Value spread supports rehab and refinance potential."
-    elif deal.strategy and deal.strategy.lower() == "development":
-        recommended_strategy = "Development"
-        strategy_reason = "Deal is positioned as a development opportunity."
-    else:
         recommended_strategy = "Flip"
-        strategy_reason = "Projected resale spread makes this best suited for a flip."
+        reason = "Projected resale spread makes this best suited for a flip."
 
-    deal_score = 50
+        if estimated_rent > 0 and rent_ratio >= 0.009:
+            recommended_strategy = "Rental"
+            reason = "Rental income appears strong relative to acquisition cost."
+        elif arv > 0 and total_cost > 0 and arv >= total_cost * 1.25:
+            recommended_strategy = "BRRRR"
+            reason = "Value spread supports rehab and refinance potential."
+        elif (deal.strategy or "").lower() == "development":
+            recommended_strategy = "Development"
+            reason = "Deal is positioned as a development opportunity."
 
-    if profit > 75000:
-        deal_score += 20
-    elif profit > 40000:
-        deal_score += 12
-    elif profit > 20000:
-        deal_score += 6
+        deal_score = 50
 
-    if rent_ratio >= 0.01:
-        deal_score += 10
-    elif rent_ratio >= 0.008:
-        deal_score += 5
+        if projected_profit > 75000:
+            deal_score += 20
+        elif projected_profit > 40000:
+            deal_score += 12
+        elif projected_profit > 20000:
+            deal_score += 6
 
-    if rehab_cost > 0 and purchase_price > 0:
-        rehab_ratio = rehab_cost / purchase_price
-        if rehab_ratio < 0.15:
+        if rent_ratio >= 0.01:
             deal_score += 10
-        elif rehab_ratio < 0.30:
+        elif rent_ratio >= 0.008:
             deal_score += 5
-        else:
+
+        rehab_ratio = (rehab_cost / purchase_price) if purchase_price > 0 else 0
+        if rehab_ratio and rehab_ratio < 0.15:
+            deal_score += 10
+        elif rehab_ratio and rehab_ratio < 0.30:
+            deal_score += 5
+        elif rehab_ratio >= 0.30:
             deal_score -= 8
 
-    deal_score = max(1, min(100, deal_score))
+        deal_score = max(1, min(100, deal_score))
 
-    deal.purchase_price = purchase_price
-    deal.arv = arv
-    deal.estimated_rent = estimated_rent
-    deal.rehab_cost = rehab_cost
-    deal.recommended_strategy = recommended_strategy
-    deal.deal_score = deal_score
+        deal.purchase_price = purchase_price
+        deal.arv = arv
+        deal.estimated_rent = estimated_rent
+        deal.rehab_cost = rehab_cost
+        deal.recommended_strategy = recommended_strategy
+        deal.deal_score = deal_score
 
-    existing_results = deal.results_json or {}
-    existing_results["strategy_analysis"] = {
-        "recommended_strategy": recommended_strategy,
-        "reason": strategy_reason,
-        "purchase_price": purchase_price,
-        "arv": arv,
-        "estimated_rent": estimated_rent,
-        "rehab_cost": rehab_cost,
-        "projected_profit": round(profit, 2),
-        "deal_score": deal_score,
-    }
-    deal.results_json = existing_results
+        results = deal.results_json or {}
+        results["strategy_analysis"] = {
+            "recommended_strategy": recommended_strategy,
+            "reason": reason,
+            "purchase_price": purchase_price,
+            "arv": arv,
+            "estimated_rent": estimated_rent,
+            "rehab_cost": rehab_cost,
+            "projected_profit": round(projected_profit, 2),
+            "deal_score": deal_score,
+        }
+        deal.results_json = results
 
-    db.session.commit()
+        db.session.commit()
 
-    return jsonify({
-        "success": True,
-        "deal_id": deal.id,
-        "recommended_strategy": recommended_strategy,
-        "reason": strategy_reason,
-        "deal_score": deal_score,
-        "projected_profit": round(profit, 2),
-    })
+        return jsonify({
+            "success": True,
+            "recommended_strategy": recommended_strategy,
+            "reason": reason,
+            "projected_profit": round(projected_profit, 2),
+            "deal_score": deal_score,
+        })
+
+    except Exception as e:
+        current_app.logger.exception("Deal strategy analysis failed")
+        return jsonify({
+            "success": False,
+            "error": f"Analysis failed: {str(e)}"
+        }), 500
 
 @investor_bp.route("/rehab-architect/generate-scope", methods=["POST"])
 @login_required
