@@ -2,174 +2,505 @@
 {% block title %}Ravlo • Build Studio{% endblock %}
 
 {% block page_title %}Build Studio{% endblock %}
-{% block page_subline %}Turn land and development ideas into concept visuals, layout plans, and lender-ready presentation assets.{% endblock %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/build_studio.css') }}">
-{% block content %}
-<div class="ravlo-shell">
+{% block page_subline %}
+Design and visualize new construction projects.
+{% endblock %}
 
-  <section class="ravlo-hero-card">
-    <div>
-      <div class="eyebrow">DEAL STUDIO</div>
-      <h2>Ground-Up Development Workspace</h2>
-      <p class="muted">
-        Describe what you want to build, upload a land photo if available, and generate concept outputs for architects, builders, partners, and lenders.
-      </p>
+{% block content %}
+<div class="ravlo-grid" style="grid-template-columns: 1.15fr .85fr; gap: 24px; align-items: start;">
+
+  <!-- LEFT: FORM -->
+  <section class="ravlo-card pad">
+    <div class="row between" style="align-items:flex-start; gap:16px; margin-bottom:18px;">
+      <div>
+        <div class="ravlo-eyebrow">Ground-Up Development</div>
+        <h2 class="ravlo-title" style="margin:6px 0 4px;">Create a build concept</h2>
+        <p class="ravlo-muted" style="margin:0;">
+          Enter the site details, project vision, and optional land image to generate a concept render for your next build.
+        </p>
+      </div>
+      <div class="badge soft">Build Studio</div>
     </div>
+
+    <form id="buildStudioForm" enctype="multipart/form-data" class="ravlo-form-grid">
+      <div class="field">
+        <label>Project Name</label>
+        <input type="text" name="project_name" placeholder="Example: Ravlo Oak Ridge Townhomes">
+      </div>
+
+      <div class="field">
+        <label>Property Type</label>
+        <select name="property_type">
+          <option value="">Select type</option>
+          <option value="Single Family">Single Family</option>
+          <option value="Townhomes">Townhomes</option>
+          <option value="Multifamily">Multifamily</option>
+          <option value="Mixed Use">Mixed Use</option>
+          <option value="Retail Strip">Retail Strip</option>
+          <option value="Small Development">Small Development</option>
+        </select>
+      </div>
+
+      <div class="field field-span-2">
+        <label>Project Description</label>
+        <textarea name="description" rows="5" placeholder="Describe the vision, layout, finish level, target market, and overall development concept."></textarea>
+      </div>
+
+      <div class="field">
+        <label>Lot Size</label>
+        <input type="text" name="lot_size" placeholder="Example: 0.8 acres">
+      </div>
+
+      <div class="field">
+        <label>Zoning</label>
+        <input type="text" name="zoning" placeholder="Example: R-3, RMF, Mixed Use">
+      </div>
+
+      <div class="field">
+        <label>Location</label>
+        <input type="text" name="location" placeholder="City, State or project address">
+      </div>
+
+      <div class="field">
+        <label>Reference Image URL</label>
+        <input type="text" name="image_url" placeholder="Optional image URL">
+      </div>
+
+      <div class="field field-span-2">
+        <label>Notes</label>
+        <textarea name="notes" rows="3" placeholder="Any special requirements, density goals, design direction, investor goals, or constraints."></textarea>
+      </div>
+
+      <div class="field field-span-2">
+        <label>Upload Land / Site Image</label>
+        <div class="upload-shell">
+          <input type="file" name="land_image" id="land_image" accept="image/*">
+          <div class="upload-hint">Drop a site photo, lot image, or surrounding area reference here.</div>
+        </div>
+      </div>
+
+      <div class="field field-span-2">
+        <div class="row" style="gap:12px; flex-wrap:wrap;">
+          <button type="submit" class="ravlo-btn primary">
+            <i class="lucide lucide-sparkles"></i>
+            Generate Build Concept
+          </button>
+
+          <button type="button" id="saveBuildProjectBtn" class="ravlo-btn ghost" disabled>
+            <i class="lucide lucide-save"></i>
+            Save Project
+          </button>
+        </div>
+      </div>
+    </form>
   </section>
 
-  <div class="ravlo-grid ravlo-grid-2 build-studio-grid">
-    <!-- LEFT: INPUT PANEL -->
-    <section class="ravlo-card">
-      <div class="card-head">
-        <h3>Project Inputs</h3>
-        <p class="muted">Start with the build vision.</p>
+  <!-- RIGHT: OUTPUT / INFO -->
+  <aside class="stack" style="gap:24px;">
+    <section class="ravlo-card pad">
+      <div class="ravlo-eyebrow">Output</div>
+      <h3 class="ravlo-section-title" style="margin-top:6px;">Concept result</h3>
+      <p class="ravlo-muted" style="margin-top:0;">
+        Generated concepts, project metadata, and future build assets will appear here.
+      </p>
+
+      <div id="buildStudioStatus" class="status-shell idle">
+        Ready to generate.
       </div>
 
-      <form id="buildStudioForm" enctype="multipart/form-data">
-        <div class="form-group">
-          <label>Project Name</label>
-          <input class="ravlo-input" type="text" name="project_name" placeholder="Oakwood Duplex Project">
+      <div id="buildStudioPreview" class="build-preview empty">
+        <div class="preview-empty">
+          <i class="lucide lucide-home"></i>
+          <div>No concept generated yet</div>
+          <small>Your first concept render will appear here.</small>
         </div>
+      </div>
 
-        <div class="form-group">
-          <label>Property Type</label>
-          <select class="ravlo-input" name="property_type">
-            <option value="">Select type</option>
-            <option>Single Family</option>
-            <option>Duplex</option>
-            <option>Townhome</option>
-            <option>Tiny Home Community</option>
-            <option>Small Multifamily</option>
-            <option>Custom Build</option>
-          </select>
-        </div>
-
-        <div class="form-group">
-          <label>Description</label>
-          <textarea class="ravlo-input" name="description" rows="5" placeholder="Example: Modern 3-bed ranch with open layout, oversized kitchen island, large rear windows, covered patio, and 2-car garage."></textarea>
-        </div>
-
-        <div class="form-row-2">
-          <div class="form-group">
-            <label>Lot Size</label>
-            <input class="ravlo-input" type="text" name="lot_size" placeholder="0.45 acres">
-          </div>
-          <div class="form-group">
-            <label>Zoning</label>
-            <input class="ravlo-input" type="text" name="zoning" placeholder="R2 Residential">
-          </div>
-        </div>
-
-        <div class="form-group">
-          <label>Location</label>
-          <input class="ravlo-input" type="text" name="location" placeholder="Tampa, FL">
-        </div>
-
-        <div class="form-group">
-          <label>Land / Lot Photo</label>
-          <input class="ravlo-input" type="file" name="land_image" accept="image/*">
-        </div>
-
-        <div class="form-group">
-          <label>Additional Notes</label>
-          <textarea class="ravlo-input" name="notes" rows="3" placeholder="Setbacks, driveway preference, parking, units, style cues, target square footage, lender notes, etc."></textarea>
-        </div>
-
-        <div class="btn-row">
-          <button type="submit" class="ravlo-btn primary">Generate Build Concept</button>
-        </div>
-      </form>
+      <div id="buildStudioMeta" class="meta-list" style="display:none;"></div>
     </section>
 
-    <!-- RIGHT: OUTPUT PANEL -->
-    <section class="ravlo-card">
-      <div class="card-head">
-        <h3>Generated Outputs</h3>
-        <p class="muted">Concept assets for project kickoff.</p>
-      </div>
+    <section class="ravlo-card pad">
+      <div class="ravlo-eyebrow">How it works</div>
+      <h3 class="ravlo-section-title" style="margin-top:6px;">Build Studio workflow</h3>
 
-      <div id="buildStudioEmpty" class="empty-state">
-        <div class="empty-icon">🏗</div>
-        <h4>No concept generated yet</h4>
-        <p class="muted">Your render, blueprint, site layout, and presentation sheet will appear here.</p>
-      </div>
-
-      <div id="buildStudioResults" class="build-results hidden">
-        <div class="result-summary ravlo-soft-panel">
-          <h4 id="resultProjectName">Project</h4>
-          <p id="resultProjectMeta" class="muted"></p>
-          <p id="resultProjectDesc"></p>
-        </div>
-
-        <div class="output-grid">
-          <div class="output-card">
-            <h5>Concept Render</h5>
-            <img id="conceptRenderImg" src="" alt="Concept Render">
-          </div>
-
-          <div class="output-card">
-            <h5>Draft Blueprint</h5>
-            <img id="blueprintImg" src="" alt="Draft Blueprint">
-          </div>
-
-          <div class="output-card">
-            <h5>Site Plan</h5>
-            <img id="sitePlanImg" src="" alt="Site Plan">
-          </div>
-
-          <div class="output-card">
-            <h5>Presentation Sheet</h5>
-            <img id="presentationImg" src="" alt="Presentation Sheet">
+      <div class="mini-steps">
+        <div class="mini-step">
+          <span>01</span>
+          <div>
+            <strong>Describe the project</strong>
+            <p>Enter your build type, location, zoning, and development vision.</p>
           </div>
         </div>
 
-        <div class="btn-row">
-          <button class="ravlo-btn ghost" type="button">Download Package</button>
-          <button class="ravlo-btn ghost" type="button">Share with Architect</button>
-          <button class="ravlo-btn primary" type="button">Send to Funding</button>
+        <div class="mini-step">
+          <span>02</span>
+          <div>
+            <strong>Add site context</strong>
+            <p>Upload a land image or include a reference image URL for better concept direction.</p>
+          </div>
+        </div>
+
+        <div class="mini-step">
+          <span>03</span>
+          <div>
+            <strong>Generate a concept</strong>
+            <p>Ravlo returns a build concept you can save, present, and expand later.</p>
+          </div>
         </div>
       </div>
     </section>
-  </div>
+  </aside>
 </div>
 
-<script>
-document.getElementById("buildStudioForm").addEventListener("submit", async function(e) {
-  e.preventDefault();
+<style>
+  .ravlo-form-grid{
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:16px;
+  }
 
-  const form = e.target;
-  const formData = new FormData(form);
+  .field{
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+  }
 
-  try {
-    const response = await fetch('{{ url_for("investor.generate_build_studio") }}', {
-      method: "POST",
-      body: formData
-    });
+  .field label{
+    font-size:.92rem;
+    font-weight:600;
+    color:var(--text);
+    letter-spacing:.01em;
+  }
 
-    const data = await response.json();
+  .field input,
+  .field textarea,
+  .field select{
+    width:100%;
+    border-radius:16px;
+    border:1px solid rgba(255,255,255,.08);
+    background:rgba(255,255,255,.03);
+    color:var(--text);
+    padding:14px 14px;
+    outline:none;
+    transition:border-color .18s ease, box-shadow .18s ease, background .18s ease;
+  }
 
-    if (!data.success) {
-      alert(data.message || "Something went wrong.");
-      return;
+  .field textarea{
+    resize:vertical;
+    min-height:110px;
+  }
+
+  .field input:focus,
+  .field textarea:focus,
+  .field select:focus{
+    border-color:rgba(123,170,255,.45);
+    box-shadow:0 0 0 4px rgba(70,120,220,.12);
+    background:rgba(255,255,255,.045);
+  }
+
+  .field-span-2{
+    grid-column:1 / -1;
+  }
+
+  .upload-shell{
+    border:1px dashed rgba(255,255,255,.15);
+    border-radius:18px;
+    padding:16px;
+    background:rgba(255,255,255,.02);
+  }
+
+  .upload-shell input[type="file"]{
+    padding:0;
+    background:transparent;
+    border:none;
+    box-shadow:none;
+  }
+
+  .upload-hint{
+    margin-top:10px;
+    color:var(--muted);
+    font-size:.92rem;
+  }
+
+  .status-shell{
+    border-radius:16px;
+    padding:12px 14px;
+    margin:14px 0 16px;
+    font-size:.95rem;
+    border:1px solid rgba(255,255,255,.08);
+    background:rgba(255,255,255,.03);
+    color:var(--muted);
+  }
+
+  .status-shell.loading{
+    color:#d7e7ff;
+    border-color:rgba(95,145,255,.28);
+    background:rgba(68,110,210,.12);
+  }
+
+  .status-shell.success{
+    color:#dff7ea;
+    border-color:rgba(64,170,112,.28);
+    background:rgba(39,116,73,.14);
+  }
+
+  .status-shell.error{
+    color:#ffd7d7;
+    border-color:rgba(210,84,84,.28);
+    background:rgba(122,42,42,.16);
+  }
+
+  .build-preview{
+    min-height:340px;
+    border-radius:22px;
+    border:1px solid rgba(255,255,255,.08);
+    background:
+      linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.015)),
+      rgba(10,14,22,.72);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    overflow:hidden;
+    position:relative;
+  }
+
+  .build-preview.empty{
+    padding:20px;
+  }
+
+  .preview-empty{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    text-align:center;
+    gap:10px;
+    color:var(--muted);
+  }
+
+  .preview-empty i{
+    font-size:34px;
+    opacity:.9;
+  }
+
+  .preview-empty small{
+    color:var(--muted2, var(--muted));
+  }
+
+  .build-preview img{
+    width:100%;
+    height:100%;
+    object-fit:cover;
+    display:block;
+  }
+
+  .meta-list{
+    margin-top:16px;
+    display:grid;
+    gap:10px;
+  }
+
+  .meta-item{
+    border:1px solid rgba(255,255,255,.07);
+    background:rgba(255,255,255,.025);
+    border-radius:14px;
+    padding:12px 14px;
+  }
+
+  .meta-item strong{
+    display:block;
+    font-size:.86rem;
+    color:var(--muted);
+    margin-bottom:4px;
+    text-transform:uppercase;
+    letter-spacing:.08em;
+  }
+
+  .meta-item span{
+    color:var(--text);
+    font-size:.96rem;
+  }
+
+  .mini-steps{
+    display:grid;
+    gap:14px;
+    margin-top:14px;
+  }
+
+  .mini-step{
+    display:grid;
+    grid-template-columns:42px 1fr;
+    gap:14px;
+    align-items:start;
+    padding:12px 0;
+    border-bottom:1px solid rgba(255,255,255,.06);
+  }
+
+  .mini-step:last-child{
+    border-bottom:none;
+    padding-bottom:0;
+  }
+
+  .mini-step span{
+    width:42px;
+    height:42px;
+    border-radius:14px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    background:rgba(88,132,220,.14);
+    border:1px solid rgba(123,170,255,.18);
+    color:#dbe8ff;
+    font-weight:700;
+    font-size:.9rem;
+  }
+
+  .mini-step p{
+    margin:5px 0 0;
+    color:var(--muted);
+    line-height:1.5;
+  }
+
+  @media (max-width: 1024px){
+    .ravlo-grid{
+      grid-template-columns:1fr !important;
+    }
+  }
+
+  @media (max-width: 700px){
+    .ravlo-form-grid{
+      grid-template-columns:1fr;
     }
 
-    document.getElementById("buildStudioEmpty").classList.add("hidden");
-    document.getElementById("buildStudioResults").classList.remove("hidden");
-
-    document.getElementById("resultProjectName").textContent = data.project_name || "Untitled Project";
-    document.getElementById("resultProjectMeta").textContent =
-      `${data.property_type || "Project"} • ${data.location || "No location"} • ${data.lot_size || "Lot size not provided"} • ${data.zoning || "Zoning not provided"}`;
-    document.getElementById("resultProjectDesc").textContent = data.description || "";
-
-    document.getElementById("conceptRenderImg").src = data.concept_render_url;
-    document.getElementById("blueprintImg").src = data.blueprint_url;
-    document.getElementById("sitePlanImg").src = data.site_plan_url;
-    document.getElementById("presentationImg").src = data.presentation_url;
-
-  } catch (err) {
-    console.error(err);
-    alert("Failed to generate build concept.");
+    .field-span-2{
+      grid-column:auto;
+    }
   }
-});
+</style>
+
+<script>
+  (() => {
+    const form = document.getElementById("buildStudioForm");
+    const saveBtn = document.getElementById("saveBuildProjectBtn");
+    const statusBox = document.getElementById("buildStudioStatus");
+    const preview = document.getElementById("buildStudioPreview");
+    const metaBox = document.getElementById("buildStudioMeta");
+
+    let latestBuildResult = null;
+
+    function setStatus(type, text) {
+      statusBox.className = `status-shell ${type}`;
+      statusBox.textContent = text;
+    }
+
+    function renderMeta(meta = {}) {
+      const entries = Object.entries(meta).filter(([_, v]) => v !== null && v !== undefined && v !== "");
+      if (!entries.length) {
+        metaBox.style.display = "none";
+        metaBox.innerHTML = "";
+        return;
+      }
+
+      metaBox.style.display = "grid";
+      metaBox.innerHTML = entries.map(([key, value]) => `
+        <div class="meta-item">
+          <strong>${String(key).replaceAll("_", " ")}</strong>
+          <span>${Array.isArray(value) ? value.join(", ") : value}</span>
+        </div>
+      `).join("");
+    }
+
+    function renderPreview(result) {
+      const images = result.images || [];
+      if (!images.length) {
+        preview.className = "build-preview empty";
+        preview.innerHTML = `
+          <div class="preview-empty">
+            <i class="lucide lucide-home"></i>
+            <div>No concept generated</div>
+            <small>The engine returned no preview image.</small>
+          </div>
+        `;
+        return;
+      }
+
+      const first = images[0];
+      preview.className = "build-preview";
+      preview.innerHTML = `<img alt="Build concept preview" src="data:image/webp;base64,${first}">`;
+    }
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      const formData = new FormData(form);
+      setStatus("loading", "Generating build concept...");
+      saveBtn.disabled = true;
+
+      try {
+        const res = await fetch(`{{ url_for('investor.generate_build_studio') }}`, {
+          method: "POST",
+          body: formData
+        });
+
+        const data = await res.json();
+
+        if (!res.ok || data.status !== "ok") {
+          throw new Error(data.message || "Build concept generation failed.");
+        }
+
+        latestBuildResult = data;
+        renderPreview(data);
+        renderMeta(data.meta || {});
+        saveBtn.disabled = false;
+        setStatus("success", "Build concept generated successfully.");
+
+      } catch (err) {
+        console.error(err);
+        setStatus("error", err.message || "Something went wrong while generating the concept.");
+      }
+    });
+
+    saveBtn.addEventListener("click", async () => {
+      if (!latestBuildResult) return;
+
+      const payload = {
+        project_name: form.project_name.value,
+        property_type: form.property_type.value,
+        description: form.description.value,
+        lot_size: form.lot_size.value,
+        zoning: form.zoning.value,
+        location: form.location.value,
+        notes: form.notes.value,
+        concept_render_url: latestBuildResult.images?.[0]
+          ? `data:image/webp;base64,${latestBuildResult.images[0]}`
+          : null,
+        blueprint_url: null,
+        site_plan_url: null,
+        presentation_url: null
+      };
+
+      try {
+        setStatus("loading", "Saving build project...");
+
+        const res = await fetch(`{{ url_for('investor.save_build_studio') }}`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify(payload)
+        });
+
+        const data = await res.json();
+
+        if (!res.ok || data.status !== "ok") {
+          throw new Error(data.message || "Could not save build project.");
+        }
+
+        setStatus("success", "Build project saved successfully.");
+      } catch (err) {
+        console.error(err);
+        setStatus("error", err.message || "Could not save build project.");
+      }
+    });
+  })();
 </script>
 {% endblock %}

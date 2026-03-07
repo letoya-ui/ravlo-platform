@@ -12,97 +12,156 @@ Plan, analyze, renovate, or develop your next investment.
 
   <!-- HERO -->
   <section class="ravlo-hero-card">
-      <div>
-        <div class="eyebrow">RAVLO WORKSPACE</div>
-        <h2>Your Investment Command Workspace</h2>
-        <p class="muted">
-          Find deals, analyze opportunities, plan renovations, or design new builds — all in one place.
-        </p>
-      </div>
+    <div>
+      <div class="eyebrow">RAVLO WORKSPACE</div>
+      <h2>Your Investment Command Workspace</h2>
+      <p class="muted">
+        Find deals, analyze opportunities, plan renovations, or design new builds — all in one place.
+      </p>
+    </div>
   </section>
-
 
   <!-- WORKSPACE GRID -->
   <div class="deal-studio-grid">
 
     <!-- DEAL FINDER -->
     <div class="studio-card">
-        <div class="studio-icon">🔎</div>
-        <h3>Deal Finder</h3>
-
-        <p class="muted">
-          Search fixer-uppers and investment opportunities by ZIP code and evaluate potential returns.
-        </p>
-
-        <button class="ravlo-btn primary"
-                onclick="location.href='{{ url_for('borrower.property_tool') }}'">
-            Find Deals
-        </button>
+      <div class="studio-icon">🔎</div>
+      <h3>Deal Finder</h3>
+      <p class="muted">
+        Search fixer-uppers and investment opportunities by ZIP code and evaluate potential returns.
+      </p>
+      <button class="ravlo-btn primary"
+              onclick="location.href='{{ url_for('investor.deal_finder') }}'">
+        Find Deals
+      </button>
     </div>
 
+    <!-- AI DEAL ARCHITECT -->
+    <div class="studio-card">
+      <div class="studio-icon">🧭</div>
+      <h3>AI Deal Architect</h3>
+      <p class="muted">
+        Compare flip, rental, build, and development strategies to find the smartest play for the opportunity.
+      </p>
+      <button class="ravlo-btn primary"
+              onclick="location.href='{{ url_for('investor.deal_architect') }}'">
+        Open AI Deal Architect
+      </button>
+    </div>
 
     <!-- REHAB STUDIO -->
     <div class="studio-card">
-
-        <div class="studio-icon">🛠</div>
-
-        <h3>Rehab Studio</h3>
-
-        <p class="muted">
-          Upload property photos and generate renovation concepts, budgets, and improvement plans.
-        </p>
-
-        <button class="ravlo-btn primary"
-                onclick="location.href='{{ url_for('investor.rehab_studio') }}'">
-            Open Rehab Studio
-        </button>
-
+      <div class="studio-icon">🛠</div>
+      <h3>Rehab Studio</h3>
+      <p class="muted">
+        Upload property photos and generate renovation concepts, budgets, and improvement plans.
+      </p>
+      <button class="ravlo-btn primary"
+              onclick="location.href='{{ url_for('investor.rehab_studio') }}'">
+        Open Rehab Studio
+      </button>
     </div>
-
 
     <!-- BUILD STUDIO -->
     <div class="studio-card">
+      <div class="studio-icon">🏗</div>
+      <h3>Build Studio</h3>
+      <p class="muted">
+        Turn land or development ideas into concept renders, floor plans, site layouts, and lender-ready presentations.
+      </p>
+      <button class="ravlo-btn primary"
+              onclick="location.href='{{ url_for('investor.build_studio') }}'">
+        Open Build Studio
+      </button>
+    </div>
 
-        <div class="studio-icon">🏗</div>
-
-        <h3>Build Studio</h3>
-
-        <p class="muted">
-          Turn land or development ideas into concept renders, floor plans, site layouts, and lender-ready presentations.
-        </p>
-
-        <button class="ravlo-btn primary"
-                onclick="location.href='{{ url_for('investor.build_studio') }}'">
-            Open Build Studio
-        </button>
-
+    <!-- DEAL COPILOT -->
+    <div class="studio-card">
+      <div class="studio-icon">🧠</div>
+      <h3>Deal Copilot</h3>
+      <p class="muted">
+        Ask Ravlo what to do next with any property, lot, renovation, or development scenario.
+      </p>
+      <button class="ravlo-btn primary"
+              onclick="location.href='{{ url_for('investor.deal_copilot') }}'">
+        Open Deal Copilot
+      </button>
     </div>
 
   </div>
-
 </div>
-    <div class="studio-card">
-        <div class="studio-icon">🧭</div>
-        <h3>AI Deal Architect</h3>
-        <p class="muted">
-          Compare flip, rental, build, and development strategies to find the smartest play for the opportunity.
-        </p>
-        <button class="ravlo-btn primary"
-                onclick="location.href='{{ url_for("investor.deal_architect") }}'">
-            Open AI Deal Architect
-        </button>
-     </div>
 
-    <div class="studio-card">
-        <div class="studio-icon">🧠</div>
-        <h3>Deal Copilot</h3>
-        <p class="muted">
-         Ask Ravlo what to do next with any property, lot, renovation, or development scenario.
-    </p>
-        <button class="ravlo-btn primary"
-                onclick="location.href='{{ url_for("investor.deal_copilot") }}'">
-            Open Deal Copilot
-        </button>
-     </div>
+<style>
+  .deal-studio-grid{
+    display:grid;
+    grid-template-columns:repeat(3, minmax(0, 1fr));
+    gap:22px;
+    margin-top:24px;
+  }
+
+  .studio-card{
+    position:relative;
+    border-radius:24px;
+    padding:24px;
+    background:
+      linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.015)),
+      rgba(11,16,24,.92);
+    border:1px solid rgba(255,255,255,.06);
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,.03),
+      0 18px 40px rgba(0,0,0,.28);
+    display:flex;
+    flex-direction:column;
+    min-height:250px;
+  }
+
+  .studio-icon{
+    width:56px;
+    height:56px;
+    border-radius:18px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:26px;
+    margin-bottom:16px;
+    background:rgba(82,128,219,.12);
+    border:1px solid rgba(123,170,255,.16);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.04);
+  }
+
+  .studio-card h3{
+    margin:0 0 10px;
+    font-size:1.15rem;
+    font-weight:700;
+    color:var(--text);
+  }
+
+  .studio-card p{
+    margin:0 0 18px;
+    line-height:1.6;
+    flex:1;
+  }
+
+  .studio-card .ravlo-btn{
+    align-self:flex-start;
+  }
+
+  @media (max-width: 1100px){
+    .deal-studio-grid{
+      grid-template-columns:repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @media (max-width: 720px){
+    .deal-studio-grid{
+      grid-template-columns:1fr;
+    }
+
+    .studio-card{
+      min-height:auto;
+    }
+  }
+</style>
 
 {% endblock %}

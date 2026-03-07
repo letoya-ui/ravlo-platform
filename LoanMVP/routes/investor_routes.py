@@ -2671,6 +2671,141 @@ def deal_rehab(deal_id):
     )
 
 # =========================================================
+# 🏗️ BUILD STUDIO — PAGE
+# =========================================================
+
+@investor_bp.route("/deal-studio/build-studio", methods=["GET"])
+@login_required
+@role_required("investor")
+def build_studio():
+    return render_template(
+        "investor/build_studio.html",
+        page_title="Build Studio",
+        page_subtitle="Design and visualize new construction projects."
+    )
+# =========================================================
+# 🏗️ BUILD STUDIO — GENERATE CONCEPT
+# =========================================================
+
+@investor_bp.route("/deal-studio/build-studio/generate", methods=["POST"])
+@login_required
+@role_required("investor")
+def generate_build_studio():
+
+    try:
+        project_name = request.form.get("project_name", "").strip()
+        property_type = request.form.get("property_type", "").strip()
+        description = request.form.get("description", "").strip()
+        lot_size = request.form.get("lot_size", "").strip()
+        zoning = request.form.get("zoning", "").strip()
+        location = request.form.get("location", "").strip()
+        notes = request.form.get("notes", "").strip()
+
+        land_image = request.files.get("land_image")
+        image_url = request.form.get("image_url")
+
+        if land_image:
+            raw = land_image.read()
+            image_base64 = base64.b64encode(raw).decode()
+        else:
+            image_base64 = None
+
+        payload = {
+            "project_name": project_name,
+            "property_type": property_type,
+            "description": description,
+            "lot_size": lot_size,
+            "zoning": zoning,
+            "location": location,
+            "notes": notes,
+            "image_base64": image_base64,
+            "image_url": image_url,
+            "count": 2,
+            "steps": 32,
+            "width": 1024,
+            "height": 1024
+        }
+
+        res = requests.post(
+            f"{RENOVATION_ENGINE_URL}/v1/build_concept",
+            json=payload,
+            headers={"X-API-Key": os.getenv("RENOVATION_API_KEY","")},
+            timeout=900
+        )
+
+        res.raise_for_status()
+        data = res.json()
+
+        return jsonify({
+            "status": "ok",
+            "images": data.get("images_base64"),
+            "meta": data.get("meta"),
+            "seed": data.get("seed"),
+            "job_id": data.get("job_id")
+        })
+
+    except Exception as e:
+        current_app.logger.exception("Build Studio generation error")
+        return jsonify({
+            "status": "error",
+            "message": str(e)
+        }), 500
+
+# =========================================================
+# 🏗️ BUILD STUDIO — SAVE PROJECT
+# =========================================================
+
+@investor_bp.route("/deal-studio/build-studio/save", methods=["POST"])
+@csrf.exempt
+@login_required
+@role_required("investor")
+def save_build_studio():
+
+    data = request.get_json()
+
+    project = BuildProject(
+        user_id=current_user.id,
+        project_name=data.get("project_name"),
+        property_type=data.get("property_type"),
+        description=data.get("description"),
+        lot_size=data.get("lot_size"),
+        zoning=data.get("zoning"),
+        location=data.get("location"),
+        notes=data.get("notes"),
+        concept_render_url=data.get("concept_render_url"),
+        blueprint_url=data.get("blueprint_url"),
+        site_plan_url=data.get("site_plan_url"),
+        presentation_url=data.get("presentation_url")
+    )
+
+    db.session.add(project)
+    db.session.commit()
+
+    return jsonify({
+        "status": "ok",
+        "project_id": project.id
+    })
+
+# =========================================================
+# 🏗️ BUILD PROJECTS — LIST
+# =========================================================
+
+@investor_bp.route("/build-projects", methods=["GET"])
+@login_required
+@role_required("investor")
+def build_projects():
+
+    projects = BuildProject.query.filter_by(
+        user_id=current_user.id
+    ).order_by(BuildProject.created_at.desc()).all()
+
+    return render_template(
+        "investor/build_projects.html",
+        projects=projects,
+        page_title="Build Projects"
+    )
+
+# =========================================================
 # REHAB IMAGE UPLOAD
 # =========================================================
 
