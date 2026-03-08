@@ -162,53 +162,53 @@ def logout():
 @auth_bp.route("/register", methods=["GET", "POST"])
 @csrf.exempt
 def register():
-    if current_user.is_authenticated:
-        return redirect(url_for(_dashboard_for_role(getattr(current_user, "role", "investor"))))
 
     form = RegisterForm()
 
     if form.validate_on_submit():
-        full_name = (form.username.data or "").strip()
-        email = (form.email.data or "").strip().lower()
-        password = form.password.data or ""
-        role = (form.role.data or "investor").strip().lower()
+
+        full_name = form.username.data.strip()
+        email = form.email.data.lower().strip()
+        password = form.password.data
+        role = form.role.data
 
         existing = User.query.filter_by(email=email).first()
+
         if existing:
-            flash("An account already exists for that email. Please log in.", "error")
+            flash("Account already exists. Please login.", "error")
             return redirect(url_for("auth.login"))
 
         parts = full_name.split(" ", 1)
-        first = parts[0].strip() if parts else ""
-        last = parts[1].strip() if len(parts) > 1 else ""
+        first = parts[0]
+        last = parts[1] if len(parts) > 1 else ""
 
         user = User(
             username=email,
             email=email,
             first_name=first,
             last_name=last,
-            role=role,
+            role=role
         )
-
-        if hasattr(user, "full_name"):
-            user.full_name = full_name
 
         user.set_password(password)
 
         db.session.add(user)
         db.session.commit()
 
-        login_user(user, remember=True)
-        session.permanent = True
+        login_user(user)
 
         flash("Account created successfully.", "success")
+
         return redirect(url_for(_dashboard_for_role(user.role)))
 
+    # DEBUG so you see validation problems
     if request.method == "POST":
-        print("REGISTER FORM ERRORS:", form.errors)
-        flash("Please fix the form errors and try again.", "error")
+        print("REGISTER ERRORS:", form.errors)
 
-    return render_template("auth/register.html", form=form, title="Register • Ravlo")
+    return render_template(
+        "auth/register.html",
+        form=form
+    )
 
 # ============================================================
 # OPTIONAL BORROWER REGISTER
