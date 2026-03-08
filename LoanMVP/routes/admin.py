@@ -69,7 +69,7 @@ def dashboard():
         "admin/dashboard.html",
         stats=stats,
         logs=logs,
-        ai_summary=ai_summary
+        ai_summary=ai_summary,
         latest_lead=last_lead
     )
 
