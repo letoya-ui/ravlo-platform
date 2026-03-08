@@ -7,37 +7,6 @@
 <link rel="preconnect" href="https://cdn.jsdelivr.net" />
 <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
 
-<style>
-  :root{
-    --bg:#0f0f11; --panel:#15161a; --elev:#1b1d22;
-    --text:#e6e6e6; --muted:#a5a7ad; --line:#282b31;
-    --accent:#7ab8ff; --accent-soft:#2a4a62;
-    --success:#43d19e; --warn:#ffdf6e; --danger:#ff6b6b;
-    --glow:0 0 18px rgba(122,184,255,0.35);
-  }
-  body{background:var(--bg); color:var(--text);}
-  .wrap{display:flex; gap:1.25rem;}
-  .lhs{flex:1 1 68%;}
-  .rhs{flex:1 1 32%;}
-  .card{background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:1rem 1.1rem; box-shadow:var(--glow);}
-  .grid{display:grid; gap:1rem;}
-  .g-2{grid-template-columns:repeat(2,minmax(0,1fr));}
-  .g-3{grid-template-columns:repeat(3,minmax(0,1fr));}
-  h1,h2,h3,h4{color:var(--text); margin:0 0 .35rem;}
-  .muted{color:var(--muted);}
-  .btn{display:inline-flex; align-items:center; gap:.5rem; padding:.7rem 1rem; border-radius:10px; border:1px solid var(--line); color:var(--text); text-decoration:none; background:linear-gradient(180deg,#1c1f25,#15161a);}
-  .btn:hover{border-color:#35506a; box-shadow:var(--glow);}
-  .btn-primary{background:linear-gradient(180deg,#2a4a62,#1b2a38); border-color:#2a4a62; color:#cfe8ff;}
-  .table{width:100%; border-collapse:collapse;}
-  .table th,.table td{padding:.65rem .6rem; border-top:1px solid var(--line);}
-  .table th{color:#cfe0f5; font-weight:600; text-align:left;}
-  .status{padding:.25rem .6rem; border-radius:999px; font-size:.78rem; border:1px solid var(--line);}
-  .st-active{background:#1b2a23; color:#9af2c5;}
-  .st-inactive{background:#2a1b1b; color:#ff9d9d;}
-  .chip{display:inline-flex; gap:.35rem; padding:.35rem .6rem; border:1px solid var(--line); background:var(--elev); color:#c4d9f2; border-radius:999px; font-size:.78rem; margin:.2rem .25rem 0 0; cursor:pointer;}
-  .chip:hover{box-shadow:var(--glow);}
-  @media (max-width: 1100px){.wrap{flex-direction:column}}
-</style>
 
 <div class="wrap">
 
@@ -105,7 +74,7 @@
     <div class="card">
       <h3>Quick Actions</h3>
       <div style="display:flex; flex-wrap:wrap; gap:.5rem;">
-        <a class="btn" href="{{ url_for('crm.view_leads') }}">📞 Manage Leads</a>
+        <a class="btn" href="{{ url_for('crm.view_leads', lead_id=lead.id) }}">📞 Manage Leads</a>
         <a class="btn" href="{{ url_for('system.users') }}">👥 Users</a>
         <a class="btn" href="{{ url_for('property.manage') }}">🏠 Properties</a>
         <a class="btn" href="{{ url_for('admin.reports') }}">📑 Reports</a>
