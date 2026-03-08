@@ -38,12 +38,13 @@ class RegisterForm(FlaskForm):
     password = PasswordField("Password", validators=[DataRequired(), Length(min=6)])
     confirm_password = PasswordField("Confirm Password", validators=[DataRequired(), EqualTo("password")])
     role = SelectField("Role", choices=[
-        ("Borrower", "Borrower"),
-        ("Loan Officer", "Loan Officer"),
-        ("Processor", "Processor"),
-        ("Underwriter", "Underwriter"),
-        ("Executive", "Executive"),
-    ], default="Borrower")
+        ("investor", "Investor"),
+        ("borrower", "Borrower"),
+        ("loan_officer", "Loan Officer"),
+        ("processor", "Processor"),
+        ("underwriter", "Underwriter"),
+        ("admin", "Admin"),
+    ], default="investor")
     submit = SubmitField("Create Account")
 
 
