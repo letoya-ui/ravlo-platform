@@ -23,3 +23,5 @@ from .ai_forms import (
      AIIntakeForm,
     AIIntakeReviewForm,
 )
+
+from .investor_forms import InvestorProfileForm, InvestorSettingsForm, CapitalApplicationForm
