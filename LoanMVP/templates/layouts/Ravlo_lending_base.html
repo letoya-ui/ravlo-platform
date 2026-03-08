@@ -26,15 +26,15 @@
     <aside class="re-sidebar" id="reSidebar">
       {% if current_user.is_authenticated %}
         {% if current_user.role == "loan_officer" %}
-          {% include "includes/sidebars/_sidebar_loan_officer.html" %}
+          {% include "includes/layouts/sidebars/_sidebar_loan_officer.html" %}
         {% elif current_user.role == "processor" %}
-          {% include "includes/sidebars/_sidebar_processor.html" %}
+          {% include "includes/layouts/sidebars/_sidebar_processor.html" %}
         {% elif current_user.role == "underwriter" %}
-          {% include "includes/sidebars/_sidebar_underwriter.html" %}
+          {% include "includes/layouts/sidebars/_sidebar_underwriter.html" %}
         {% elif current_user.role == "admin" %}
-          {% include "includes/sidebars/_sidebar_admin.html" %}
+          {% include "includes/layouts/sidebars/_sidebar_admin.html" %}
         {% else %}
-          {% include "includes/sidebars/_sidebar_loan_officer.html" %}
+          {% include "includes/layouts/sidebars/_sidebar_loan_officer.html" %}
         {% endif %}
       {% endif %}
     </aside>
