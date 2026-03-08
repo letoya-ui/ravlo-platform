@@ -35,17 +35,19 @@ class ResetPasswordForm(FlaskForm):
 class RegisterForm(FlaskForm):
     username = StringField("Full Name", validators=[DataRequired(), Length(min=2, max=120)])
     email = StringField("Email", validators=[DataRequired(), Email()])
-    password = PasswordField("Password", validators=[DataRequired(), Length(min=6)])
-    confirm_password = PasswordField("Confirm Password", validators=[DataRequired(), EqualTo("password")])
-    role = SelectField("Role", choices=[
-        ("investor", "Investor"),
-        ("borrower", "Borrower"),
-        ("loan_officer", "Loan Officer"),
-        ("processor", "Processor"),
-        ("underwriter", "Underwriter"),
-        ("admin", "Admin"),
-    ], default="investor")
+    password = PasswordField("Password", validators=[DataRequired(), Length(min=8)])
+    confirm_password = PasswordField(
+        "Confirm Password",
+        validators=[DataRequired(), EqualTo("password", message="Passwords must match.")]
+    )
+    role = SelectField(
+        "Role",
+        choices=[
+            ("investor", "Investor"),
+            ("borrower", "Borrower"),
+        ],
+        default="investor"
+    )
     submit = SubmitField("Create Account")
-
 
 
