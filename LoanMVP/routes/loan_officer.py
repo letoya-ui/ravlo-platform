@@ -108,7 +108,7 @@ def dashboard():
     if not officer:
         officer = LoanOfficerProfile(
             user_id=current_user.id,
-            name=getattr(current_user, "username", None) or "Unnamed Officer",
+            name=f"{current_user.first_name} {current_user.last_name}",
             email=getattr(current_user, "email", None),
         )
         db.session.add(officer)
