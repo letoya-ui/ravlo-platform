@@ -1,72 +1,10 @@
-{% extends "layouts/base.html" %}
+{% extends "layouts/Ravlo_lending_base.html" %}
 {% block title %}Loan Officer • Dashboard{% endblock %}
 
 {% block content %}
 
 <link rel="stylesheet" href="https://unpkg.com/lucide-static@latest/font/lucide.css">
 
-<style>
-  :root {
-    --bg:#0f0f11;
-    --panel:#15161a;
-    --line:#2a2e36;
-    --text:#e6e6e6;
-    --muted:#a5a7ad;
-    --primary:#d3d3d3;
-  }
-
-  body { background:var(--bg); color:var(--text); }
-
-  .wrap { display:grid; grid-template-columns:2fr 1fr; gap:2rem; padding:2rem; max-width:1800px; margin:0 auto; }
-
-  .card {
-    background:var(--panel);
-    border:1px solid var(--line);
-    padding:1.4rem;
-    border-radius:10px;
-    box-shadow:0 0 12px rgba(0,0,0,0.45);
-    margin-bottom:1.5rem;
-  }
-
-  .section-title { font-size:1.05rem; color:var(--primary); margin-bottom:.65rem; font-weight:600; }
-
-  .kpi-grid {
-    display:grid;
-    grid-template-columns:repeat(6,1fr);
-    gap:1rem;
-    margin-bottom:2rem;
-  }
-  .kpi-card { text-align:center; }
-  .kpi-number { font-size:2rem; font-weight:700; color:var(--primary); }
-
-  .table { width:100%; border-collapse:collapse; }
-  .table th, .table td { padding:.6rem; border-bottom:1px solid var(--line); }
-  .table th { color:var(--primary); font-weight:600; }
-
-  .activity-list, .task-list, .quote-list { list-style:none; padding:0; margin:0; }
-  .activity-list li, .task-list li, .quote-list li { padding:.4rem 0; border-bottom:1px solid var(--line); }
-  .muted { color:var(--muted); font-size:.85rem; }
-
-  textarea#ai-input {
-    width:100%; padding:.6rem; border-radius:8px;
-    background:#1b1c20; border:1px solid var(--line); color:var(--text);
-    margin-bottom:.6rem;
-  }
-  .btn, .btn-sm {
-    background:#1b1c20; border:1px solid var(--line);
-    color:var(--primary); padding:.5rem 1rem;
-    border-radius:8px; text-decoration:none; transition:.25s;
-    display:inline-block;
-  }
-  .btn:hover, .btn-sm:hover { background:#242529; }
-  .btn-sm { font-size:.8rem; padding:.3rem .7rem; }
-
-  /* Timeline */
-  .timeline { margin-top:1rem; display:flex; justify-content:space-between; width:100%; }
-  .timeline-step { flex:1; text-align:center; font-size:.75rem; color:var(--muted); }
-  .timeline-bar { height:6px; background:#333; border-radius:5px; margin:.4rem 0; overflow:hidden; }
-  .timeline-progress { height:100%; background:var(--primary); transition:.4s; }
-</style>
 
 <div class="wrap">
 

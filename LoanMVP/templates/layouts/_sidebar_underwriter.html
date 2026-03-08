@@ -1,117 +1,45 @@
-<!-- UNDERWRITER SIDEBAR -->
-<aside class="sidebar">
-    <div class="sb-header">
-        <h2 class="sb-title">Underwriter</h2>
+<div class="re-brand">
+  <div class="re-mark"><span>RV</span></div>
+  <div>
+    <div class="re-brand-name">Ravlo</div>
+    <div class="re-brand-sub">Underwriter OS</div>
+  </div>
+</div>
+
+<nav class="re-nav">
+  <div class="re-nav-group">
+    <div class="re-nav-label">Workspace</div>
+
+    <a href="{{ url_for('underwriter.dashboard') }}" class="re-nav-link {% if active_tab == 'dashboard' %}active{% endif %}">
+      <i class="icon lucide lucide-layout-dashboard"></i>
+      <span>Dashboard</span>
+    </a>
+
+    <a href="{{ url_for('underwriter.pipeline') }}" class="re-nav-link {% if active_tab == 'pipeline' %}active{% endif %}">
+      <i class="icon lucide lucide-git-branch"></i>
+      <span>Pipeline</span>
+    </a>
+
+    <a href="{{ url_for('underwriter.tasks') }}" class="re-nav-link {% if active_tab == 'tasks' %}active{% endif %}">
+      <i class="icon lucide lucide-list-todo"></i>
+      <span>Tasks</span>
+    </a>
+
+    <a href="{{ url_for('underwriter.messages') }}" class="re-nav-link {% if active_tab == 'messages' %}active{% endif %}">
+      <i class="icon lucide lucide-messages-square"></i>
+      <span>Messages</span>
+    </a>
+  </div>
+</nav>
+
+<div class="re-sidebar-foot">
+  <div class="re-user-chip">
+    <div class="re-user-avatar">
+      {{ (current_user.first_name[0] if current_user.first_name else "U")|upper }}
     </div>
-
-    <nav class="sb-nav">
-
-        <a href="{{ url_for('underwriter.dashboard') }}"
-           class="sb-link {% if request.path.startswith('/underwriter/dashboard') %}active{% endif %}">
-            <i class="lucide lucide-home"></i>
-            Dashboard
-        </a>
-
-        <a href="{{ url_for('underwriter.queue') }}"
-           class="sb-link {% if request.path.startswith('/underwriter/queue') %}active{% endif %}">
-            <i class="lucide lucide-list-checks"></i>
-            Queue
-        </a>
-
-        <a href="{{ url_for('underwriter.review_loans') }}"
-           class="sb-link {% if request.path.startswith('/underwriter/review-loans') %}active{% endif %}">
-            <i class="lucide lucide-search"></i>
-            Review Loans
-        </a>
-
-        <a href="{{ url_for('underwriter.pipeline') }}"
-           class="sb-link {% if request.path.startswith('/underwriter/pipeline') %}active{% endif %}">
-            <i class="lucide lucide-layers"></i>
-            Pipeline
-        </a>
-
-        <a href="{{ url_for('underwriter.risk_reports') }}"
-           class="sb-link {% if request.path.startswith('/underwriter/risk-reports') %}active{% endif %}">
-            <i class="lucide lucide-alert-triangle"></i>
-            Risk Reports
-        </a>
-
-        <a href="{{ url_for('underwriter.tasks') }}"
-           class="sb-link {% if request.path.startswith('/underwriter/tasks') %}active{% endif %}">
-            <i class="lucide lucide-check-circle"></i>
-            Tasks
-        </a>
-
-        <a href="{{ url_for('underwriter.messages') }}"
-           class="sb-link {% if request.path.startswith('/underwriter/messages') %}active{% endif %}">
-            <i class="lucide lucide-message-square"></i>
-            Messages
-        </a>
-
-    </nav>
-</aside>
-
-<style>
-.sidebar {
-    width: 250px;
-    background: var(--panel);
-    border-right: 1px solid var(--line);
-    padding: 1.4rem 1rem;
-    height: 100vh;
-    position: fixed;
-    top: 0; left: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 1.5rem;
-    box-shadow: var(--glow);
-}
-
-.sb-header {
-    padding-bottom: .5rem;
-    border-bottom: 1px solid var(--line);
-}
-
-.sb-title {
-    font-size: 1.3rem;
-    font-weight: 700;
-    color: var(--text);
-}
-
-.sb-nav {
-    display: flex;
-    flex-direction: column;
-    gap: .4rem;
-}
-
-.sb-link {
-    display: flex;
-    align-items: center;
-    gap: .7rem;
-    padding: .65rem .8rem;
-    border-radius: 10px;
-    color: var(--text);
-    text-decoration: none;
-    font-size: .95rem;
-    transition: .2s ease;
-    border: 1px solid transparent;
-}
-
-.sb-link i {
-    width: 18px;
-    height: 18px;
-}
-
-.sb-link:hover {
-    background: #1a1a1d;
-    border-color: var(--accent);
-    box-shadow: var(--glow);
-}
-
-.sb-link.active {
-    background: var(--accent-soft);
-    border-color: var(--accent);
-    color: #dff1ff;
-    box-shadow: var(--glow);
-}
-</style>
-
+    <div class="re-user-meta">
+      <div class="re-user-name">{{ current_user.first_name or "" }} {{ current_user.last_name or "" }}</div>
+      <div class="re-user-role">Underwriter</div>
+    </div>
+  </div>
+</div>

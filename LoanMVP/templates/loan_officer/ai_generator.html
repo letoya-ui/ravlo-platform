@@ -1,63 +1,8 @@
-{% extends "layouts/base.html" %}
+{% extends "layouts/Ravlo_lending_base.html" %}
 {% block title %}Loan Officer • AI Generator{% endblock %}
 {% block content %}
 
-<style>
-:root {
-  --bg:#0f0f11; --panel:#15161a; --line:#2a2e36;
-  --text:#e6e6e6; --muted:#a5a7ad; --accent:#7ab8ff;
-  --glow:0 0 16px rgba(122,184,255,0.35);
-}
-.card {
-  background:var(--panel);
-  border:1px solid var(--line);
-  border-radius:14px;
-  box-shadow:var(--glow);
-  padding:1.5rem;
-  margin-bottom:1.2rem;
-}
-textarea {
-  width:100%;
-  min-height:120px;
-  background:#0f0f11;
-  border:1px solid var(--line);
-  border-radius:10px;
-  color:var(--text);
-  padding:.8rem;
-}
-.btn {
-  display:inline-flex; align-items:center; gap:.5rem;
-  padding:.6rem 1.1rem;
-  background:linear-gradient(180deg,#1b1d22,#15161a);
-  border:1px solid var(--line);
-  border-radius:10px;
-  color:var(--text);
-  transition:all .2s ease;
-}
-.btn:hover {
-  border-color:var(--accent);
-  color:#cfe8ff;
-  box-shadow:var(--glow);
-}
-.output-box {
-  margin-top:1rem;
-  padding:1rem;
-  background:#111214;
-  border:1px solid var(--line);
-  border-radius:10px;
-  white-space:pre-wrap;
-}
-.copy-btn {
-  float:right;
-  background:none;
-  border:none;
-  color:var(--accent);
-  cursor:pointer;
-}
-.copy-btn:hover {
-  text-shadow:var(--glow);
-}
-</style>
+<
 
 <div class="container py-4">
   <h2>🤖 AI Generator</h2>

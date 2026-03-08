@@ -1,0 +1,338 @@
+{# templates/borrower/apply.html #}
+{% extends "layouts/borrower_base.html" %}
+{% block title %}Apply for Funding • Ravlo{% endblock %}
+
+{% block page_title %}Apply for Funding{% endblock %}
+{% block page_subline %}
+Submit your deal details to start the funding review process.
+{% endblock %}
+
+{% block content %}
+
+<section class="apply-shell">
+
+  <div class="apply-main">
+
+    <section class="ravlo-card apply-hero">
+      <div class="eyebrow">Ravlo Borrower</div>
+      <h2>Start your funding request</h2>
+      <p class="muted">
+        Share the core details of your deal so your application can move into review.
+      </p>
+    </section>
+
+    <section class="ravlo-card apply-form-card">
+      <div class="section-head">
+        <div>
+          <h3>Application Details</h3>
+          <p class="muted">Complete the key information below to create your loan file.</p>
+        </div>
+      </div>
+
+      <form method="POST" class="ravlo-form-grid">
+
+        <div class="form-group">
+          <label for="loan_type">Loan Type</label>
+          <select name="loan_type" id="loan_type" class="ravlo-input" required>
+            <option value="">Select loan type</option>
+            <option value="Bridge">Bridge</option>
+            <option value="DSCR">DSCR</option>
+            <option value="Fix and Flip">Fix and Flip</option>
+            <option value="Rental">Rental</option>
+            <option value="Commercial">Commercial</option>
+            <option value="Construction">Construction</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="amount">Requested Loan Amount</label>
+          <input
+            type="number"
+            step="0.01"
+            min="0"
+            name="amount"
+            id="amount"
+            class="ravlo-input"
+            placeholder="250000"
+            required
+          >
+        </div>
+
+        <div class="form-group span-2">
+          <label for="property_address">Property Address</label>
+          <input
+            type="text"
+            name="property_address"
+            id="property_address"
+            class="ravlo-input"
+            placeholder="123 Main St, City, State ZIP"
+            required
+          >
+        </div>
+
+        <div class="form-group">
+          <label for="property_value">Property Value</label>
+          <input
+            type="number"
+            step="0.01"
+            min="0"
+            name="property_value"
+            id="property_value"
+            class="ravlo-input"
+            placeholder="350000"
+          >
+        </div>
+
+        <div class="form-group">
+          <label for="borrower_name">Borrower Name</label>
+          <input
+            type="text"
+            id="borrower_name"
+            class="ravlo-input"
+            value="{{ borrower.full_name if borrower else '' }}"
+            disabled
+          >
+        </div>
+
+        <div class="form-group span-2">
+          <label for="description">Deal Summary</label>
+          <textarea
+            name="description"
+            id="description"
+            class="ravlo-input ravlo-textarea"
+            rows="6"
+            placeholder="Tell us about the property, strategy, timeline, business purpose, rehab scope, exit plan, or anything else that will help your team review the request."
+          ></textarea>
+        </div>
+
+        <div class="span-2 form-actions">
+          <a href="{{ url_for('borrower.dashboard') }}" class="ravlo-btn ghost">
+            Back to Dashboard
+          </a>
+          <button type="submit" class="ravlo-btn primary">
+            Submit Application
+          </button>
+        </div>
+
+      </form>
+    </section>
+
+  </div>
+
+  <aside class="apply-side">
+
+    <section class="ravlo-card side-card">
+      <h3>What happens next</h3>
+      <div class="steps-list">
+        <div class="step-item">
+          <div class="step-dot"></div>
+          <div>
+            <div class="step-title">Application created</div>
+            <div class="muted">Your request enters the Ravlo Lending OS workflow.</div>
+          </div>
+        </div>
+
+        <div class="step-item">
+          <div class="step-dot"></div>
+          <div>
+            <div class="step-title">Team review</div>
+            <div class="muted">Your file is reviewed by the lending team for completeness and fit.</div>
+          </div>
+        </div>
+
+        <div class="step-item">
+          <div class="step-dot"></div>
+          <div>
+            <div class="step-title">Documents and conditions</div>
+            <div class="muted">You may be asked to upload supporting documents or satisfy conditions.</div>
+          </div>
+        </div>
+
+        <div class="step-item">
+          <div class="step-dot"></div>
+          <div>
+            <div class="step-title">Decision and next steps</div>
+            <div class="muted">You’ll be able to track status updates inside your borrower dashboard.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="ravlo-card side-card">
+      <h3>Tips for a stronger submission</h3>
+      <ul class="apply-tips">
+        <li>Use the exact property address.</li>
+        <li>Include the most realistic property value you have.</li>
+        <li>Summarize the deal clearly and simply.</li>
+        <li>Mention your strategy, timeline, and intended exit.</li>
+      </ul>
+    </section>
+
+    <section class="ravlo-card side-card">
+      <h3>Your current plan</h3>
+      <p class="muted" style="margin-top:8px;">
+        {{ borrower.subscription_plan if borrower and borrower.subscription_plan else "Free" }}
+      </p>
+      <div style="margin-top:14px;">
+        <a href="{{ url_for('borrower.subscription') }}" class="ravlo-btn ghost sm">
+          Manage Plan
+        </a>
+      </div>
+    </section>
+
+  </aside>
+
+</section>
+
+<style>
+  .apply-shell{
+    display:grid;
+    grid-template-columns: 2fr 1fr;
+    gap:20px;
+    align-items:start;
+  }
+
+  .apply-main,
+  .apply-side{
+    display:grid;
+    gap:20px;
+  }
+
+  .ravlo-card{
+    background: rgba(255,255,255,.03);
+    border: 1px solid rgba(255,255,255,.08);
+    border-radius: 22px;
+    box-shadow: 0 12px 30px rgba(0,0,0,.18);
+  }
+
+  .apply-hero,
+  .apply-form-card,
+  .side-card{
+    padding:24px;
+  }
+
+  .eyebrow{
+    font-size:12px;
+    letter-spacing:.12em;
+    text-transform:uppercase;
+    opacity:.72;
+    margin-bottom:8px;
+  }
+
+  .apply-hero h2,
+  .section-head h3,
+  .side-card h3{
+    margin:0 0 8px;
+  }
+
+  .ravlo-form-grid{
+    display:grid;
+    grid-template-columns:repeat(2, minmax(0,1fr));
+    gap:16px;
+    margin-top:18px;
+  }
+
+  .form-group{
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+  }
+
+  .form-group label{
+    font-size:14px;
+    font-weight:600;
+  }
+
+  .span-2{
+    grid-column:span 2;
+  }
+
+  .ravlo-input{
+    width:100%;
+    min-height:48px;
+    border-radius:14px;
+    border:1px solid rgba(255,255,255,.08);
+    background:rgba(255,255,255,.04);
+    color:inherit;
+    padding:12px 14px;
+    outline:none;
+    font:inherit;
+    box-sizing:border-box;
+  }
+
+  .ravlo-input::placeholder{
+    color:rgba(255,255,255,.45);
+  }
+
+  .ravlo-textarea{
+    min-height:140px;
+    resize:vertical;
+    padding-top:14px;
+  }
+
+  .form-actions{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:12px;
+    margin-top:6px;
+    flex-wrap:wrap;
+  }
+
+  .steps-list{
+    display:grid;
+    gap:16px;
+    margin-top:14px;
+  }
+
+  .step-item{
+    display:flex;
+    gap:12px;
+    align-items:flex-start;
+  }
+
+  .step-dot{
+    width:12px;
+    height:12px;
+    margin-top:5px;
+    border-radius:999px;
+    background:#8DA7C2;
+    flex:0 0 12px;
+  }
+
+  .step-title{
+    font-weight:600;
+    margin-bottom:4px;
+  }
+
+  .apply-tips{
+    margin:14px 0 0;
+    padding-left:18px;
+  }
+
+  .apply-tips li{
+    margin-bottom:10px;
+  }
+
+  @media (max-width: 1080px){
+    .apply-shell{
+      grid-template-columns:1fr;
+    }
+  }
+
+  @media (max-width: 780px){
+    .ravlo-form-grid{
+      grid-template-columns:1fr;
+    }
+
+    .span-2{
+      grid-column:span 1;
+    }
+
+    .form-actions{
+      justify-content:flex-start;
+    }
+  }
+</style>
+
+{% endblock %}

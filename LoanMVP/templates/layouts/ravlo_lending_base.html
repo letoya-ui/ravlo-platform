@@ -1,0 +1,111 @@
+{# templates/layouts/ravlo_employee_base.html #}
+{% set ep = request.endpoint or "" %}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>{% block title %}Ravlo Lending OS{% endblock %}</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="https://unpkg.com/lucide-static@latest/font/lucide.css">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/ravlo_employee.css') }}">
+
+  {# Optional favicon later #}
+  {# <link rel="icon" type="image/png" href="{{ url_for('static', filename='img/ravlo-favicon.png') }}"> #}
+
+  {% block head %}{% endblock %}
+</head>
+<body class="re-body role-{{ current_user.role if current_user.is_authenticated else 'guest' }}">
+
+  <div class="re-shell">
+
+    <aside class="re-sidebar" id="reSidebar">
+      {% if current_user.is_authenticated %}
+        {% if current_user.role == "loan_officer" %}
+          {% include "includes/sidebars/_loan_officer_sidebar.html" %}
+        {% elif current_user.role == "processor" %}
+          {% include "includes/sidebars/_processor_sidebar.html" %}
+        {% elif current_user.role == "underwriter" %}
+          {% include "includes/sidebars/_underwriter_sidebar.html" %}
+        {% elif current_user.role == "admin" %}
+          {% include "includes/sidebars/_admin_sidebar.html" %}
+        {% else %}
+          {% include "includes/sidebars/_loan_officer_sidebar.html" %}
+        {% endif %}
+      {% endif %}
+    </aside>
+
+    <div class="re-main">
+
+      <header class="re-topbar">
+        <div class="re-topbar-left">
+          <button class="re-menu-btn" type="button" aria-label="Toggle navigation" onclick="document.body.classList.toggle('re-sidebar-open')">
+            <i class="icon-menu-2"></i>
+          </button>
+
+          <div>
+            <div class="re-page-title">{% block page_title %}Ravlo Lending OS{% endblock %}</div>
+            <div class="re-page-subline">{% block page_subline %}Modern lending operations{% endblock %}</div>
+          </div>
+        </div>
+        
+        <div class="re-user-menu">
+
+         <div class="re-user-chip-top">
+           <div class="re-user-avatar">
+             {{ (current_user.first_name[0] if current_user.first_name else "U")|upper }}
+          </div>
+
+         <span>{{ current_user.first_name }}</span>
+       </div>
+
+       <div class="re-user-dropdown">
+
+        <a href="{{ url_for('auth.profile') }}">
+          <i class="icon lucide lucide-user"></i>
+          Profile
+        </a>
+
+        <a href="{{ url_for('auth.settings') }}">
+          <i class="icon lucide lucide-settings"></i>
+          Settings
+        </a>
+
+        <div class="re-divider"></div>
+
+        <a href="{{ url_for('auth.logout') }}" class="danger">
+          <i class="icon lucide lucide-log-out"></i>
+          Logout
+        </a>
+
+      </div>
+
+    </div>
+        <div class="re-topbar-actions">
+          {% block topbar_actions %}{% endblock %}
+        </div>
+      </header>
+
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          <div class="re-flashes">
+            {% for category, message in messages %}
+              <div class="re-alert {{ category }}">{{ message }}</div>
+            {% endfor %}
+          </div>
+        {% endif %}
+      {% endwith %}
+
+      <main class="re-content">
+        {% block content %}{% endblock %}
+      </main>
+
+    </div>
+  </div>
+
+</body>
+</html>

@@ -1,0 +1,392 @@
+{# templates/borrower/documents.html #}
+{% extends "layouts/borrower_base.html" %}
+{% block title %}Documents • Ravlo{% endblock %}
+
+{% block page_title %}Documents{% endblock %}
+{% block page_subline %}
+Upload, review, and manage the files tied to your funding request.
+{% endblock %}
+
+{% block content %}
+
+<section class="docs-shell">
+
+  <div class="docs-main">
+
+    <section class="ravlo-card docs-hero">
+      <div class="hero-copy">
+        <div class="eyebrow">Ravlo Borrower</div>
+        <h2>Your document center</h2>
+        <p class="muted">
+          Keep your file moving by uploading required documents and monitoring review status.
+        </p>
+      </div>
+
+      <div class="hero-actions">
+        <a href="{{ url_for('borrower.upload_document') }}" class="ravlo-btn primary">
+          Upload Document
+        </a>
+        <a href="{{ url_for('borrower.dashboard') }}" class="ravlo-btn ghost">
+          Back to Dashboard
+        </a>
+      </div>
+    </section>
+
+    <section class="docs-stats">
+      <div class="ravlo-card stat-card">
+        <div class="stat-label">Total Documents</div>
+        <div class="stat-value">{{ documents|length }}</div>
+      </div>
+
+      <div class="ravlo-card stat-card">
+        <div class="stat-label">Uploaded</div>
+        <div class="stat-value">
+          {{
+            documents
+            | selectattr("status")
+            | selectattr("status", "equalto", "Uploaded")
+            | list
+            | length
+          }}
+        </div>
+      </div>
+
+      <div class="ravlo-card stat-card">
+        <div class="stat-label">Submitted</div>
+        <div class="stat-value">
+          {{
+            documents
+            | selectattr("status")
+            | selectattr("status", "equalto", "Submitted")
+            | list
+            | length
+          }}
+        </div>
+      </div>
+
+      <div class="ravlo-card stat-card">
+        <div class="stat-label">Pending Review</div>
+        <div class="stat-value">
+          {{
+            documents
+            | selectattr("review_status")
+            | selectattr("review_status", "equalto", "Pending")
+            | list
+            | length
+          }}
+        </div>
+      </div>
+    </section>
+
+    <section class="ravlo-card table-card">
+      <div class="section-head">
+        <div>
+          <h3>Document Library</h3>
+          <p class="muted">Your most recent files and current review state.</p>
+        </div>
+
+        <a href="{{ url_for('borrower.upload_document') }}" class="ravlo-btn ghost sm">
+          Add New
+        </a>
+      </div>
+
+      {% if documents %}
+      <div class="table-wrap">
+        <table class="ravlo-table">
+          <thead>
+            <tr>
+              <th>Document</th>
+              <th>Type</th>
+              <th>Status</th>
+              <th>Review</th>
+              <th>Uploaded</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for doc in documents %}
+            <tr>
+              <td>
+                <div class="doc-name-wrap">
+                  <div class="doc-title">{{ doc.document_name or doc.file_name or "Untitled Document" }}</div>
+                  {% if doc.file_name and doc.file_name != doc.document_name %}
+                  <div class="doc-sub">{{ doc.file_name }}</div>
+                  {% endif %}
+                </div>
+              </td>
+              <td>{{ doc.document_type or "Other" }}</td>
+              <td>
+                <span class="status-pill">
+                  {{ doc.status or "Pending" }}
+                </span>
+              </td>
+              <td>
+                <span class="review-pill">
+                  {{ doc.review_status or "Pending" }}
+                </span>
+              </td>
+              <td>
+                {{ doc.created_at.strftime("%b %d, %Y") if doc.created_at else "—" }}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="empty-state">
+        <h4>No documents uploaded yet</h4>
+        <p class="muted">
+          Upload your first document to begin building your file.
+        </p>
+        <a href="{{ url_for('borrower.upload_document') }}" class="ravlo-btn primary">
+          Upload First Document
+        </a>
+      </div>
+      {% endif %}
+    </section>
+
+  </div>
+
+  <aside class="docs-side">
+
+    <section class="ravlo-card side-card">
+      <h3>Recommended document types</h3>
+      <div class="doc-list">
+        <div class="doc-item">
+          <div class="doc-dot"></div>
+          <div>Entity documents</div>
+        </div>
+        <div class="doc-item">
+          <div class="doc-dot"></div>
+          <div>Purchase contract</div>
+        </div>
+        <div class="doc-item">
+          <div class="doc-dot"></div>
+          <div>Scope of work / rehab budget</div>
+        </div>
+        <div class="doc-item">
+          <div class="doc-dot"></div>
+          <div>Bank statements / liquidity proof</div>
+        </div>
+        <div class="doc-item">
+          <div class="doc-dot"></div>
+          <div>Insurance / supporting property docs</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="ravlo-card side-card">
+      <h3>Document tips</h3>
+      <ul class="tips-list">
+        <li>Use clear file names before uploading.</li>
+        <li>Upload the most current version available.</li>
+        <li>Make sure scanned files are readable.</li>
+        <li>Keep your file organized by document type.</li>
+      </ul>
+    </section>
+
+    <section class="ravlo-card side-card">
+      <h3>Next step</h3>
+      <p class="muted" style="margin-top:10px;">
+        After uploading documents, check your conditions page for any additional items requested by the team.
+      </p>
+      <div style="margin-top:14px;">
+        <a href="{{ url_for('borrower.conditions') }}" class="ravlo-btn primary sm">
+          View Conditions
+        </a>
+      </div>
+    </section>
+
+  </aside>
+
+</section>
+
+<style>
+  .docs-shell{
+    display:grid;
+    grid-template-columns:2fr 1fr;
+    gap:20px;
+    align-items:start;
+  }
+
+  .docs-main,
+  .docs-side{
+    display:grid;
+    gap:20px;
+  }
+
+  .ravlo-card{
+    background: rgba(255,255,255,.03);
+    border: 1px solid rgba(255,255,255,.08);
+    border-radius: 22px;
+    box-shadow: 0 12px 30px rgba(0,0,0,.18);
+  }
+
+  .docs-hero,
+  .table-card,
+  .side-card{
+    padding:24px;
+  }
+
+  .docs-hero{
+    display:flex;
+    justify-content:space-between;
+    gap:20px;
+    flex-wrap:wrap;
+    align-items:flex-start;
+  }
+
+  .hero-actions{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+  }
+
+  .eyebrow{
+    font-size:12px;
+    letter-spacing:.12em;
+    text-transform:uppercase;
+    opacity:.72;
+    margin-bottom:8px;
+  }
+
+  .docs-hero h2,
+  .section-head h3,
+  .side-card h3{
+    margin:0 0 8px;
+  }
+
+  .docs-stats{
+    display:grid;
+    grid-template-columns:repeat(4,minmax(0,1fr));
+    gap:16px;
+  }
+
+  .stat-card{
+    padding:18px;
+  }
+
+  .stat-label{
+    font-size:12px;
+    text-transform:uppercase;
+    letter-spacing:.08em;
+    opacity:.72;
+    margin-bottom:8px;
+  }
+
+  .stat-value{
+    font-size:28px;
+    font-weight:800;
+  }
+
+  .section-head{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:12px;
+    flex-wrap:wrap;
+    margin-bottom:18px;
+  }
+
+  .table-wrap{
+    overflow:auto;
+  }
+
+  .ravlo-table{
+    width:100%;
+    border-collapse:collapse;
+  }
+
+  .ravlo-table th,
+  .ravlo-table td{
+    text-align:left;
+    padding:14px 10px;
+    border-bottom:1px solid rgba(255,255,255,.08);
+    vertical-align:top;
+    font-size:14px;
+  }
+
+  .doc-name-wrap{
+    display:grid;
+    gap:4px;
+  }
+
+  .doc-title{
+    font-weight:600;
+  }
+
+  .doc-sub{
+    font-size:12px;
+    opacity:.68;
+  }
+
+  .status-pill,
+  .review-pill{
+    display:inline-flex;
+    align-items:center;
+    padding:6px 10px;
+    border-radius:999px;
+    background:rgba(255,255,255,.05);
+    border:1px solid rgba(255,255,255,.08);
+    font-size:12px;
+    font-weight:600;
+  }
+
+  .empty-state{
+    padding:10px 4px 4px;
+  }
+
+  .empty-state h4{
+    margin:0 0 8px;
+  }
+
+  .doc-list{
+    display:grid;
+    gap:12px;
+    margin-top:14px;
+  }
+
+  .doc-item{
+    display:flex;
+    gap:10px;
+    align-items:flex-start;
+  }
+
+  .doc-dot{
+    width:12px;
+    height:12px;
+    margin-top:4px;
+    border-radius:999px;
+    background:#8DA7C2;
+    flex:0 0 12px;
+  }
+
+  .tips-list{
+    margin:14px 0 0;
+    padding-left:18px;
+  }
+
+  .tips-list li{
+    margin-bottom:10px;
+  }
+
+  @media (max-width: 1080px){
+    .docs-shell{
+      grid-template-columns:1fr;
+    }
+  }
+
+  @media (max-width: 780px){
+    .docs-stats{
+      grid-template-columns:repeat(2,minmax(0,1fr));
+    }
+  }
+
+  @media (max-width: 560px){
+    .docs-stats{
+      grid-template-columns:1fr;
+    }
+  }
+</style>
+
+{% endblock %}

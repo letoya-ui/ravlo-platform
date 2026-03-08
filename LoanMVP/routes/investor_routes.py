@@ -42,7 +42,7 @@ from LoanMVP.forms.investor_forms import InvestorSettingsForm, InvestorProfileFo
 # Models (updated for Investor)
 # -------------------------
 from LoanMVP.models.activity_models import BorrowerActivity  # ok to keep for now (schema-safe filter)
-from LoanMVP.models.loan_models import LoanApplication, LoanQuote
+from LoanMVP.models.loan_models import LoanApplication, LoanQuote, BorrowerProfile, LoanStatusEvent
 
 
 from LoanMVP.models.document_models import (
@@ -67,9 +67,9 @@ from LoanMVP.models.borrowers import (
     DealShare,
 )
 from LoanMVP.models.loan_officer_model import LoanOfficerProfile
-from LoanMVP.models.renovation_models import RenovationMockup
+from LoanMVP.models.renovation_models import RenovationMockup, RehabJob, BuildProject
 from LoanMVP.models.partner_models import PartnerConnectionRequest
-from LoanMVP.models.investor_models import InvestorProfile, Investment  # adjust import paths as needed
+from LoanMVP.models.investor_models import InvestorProfile, Investment, InvestmentDocument, DealMessage, DealConversation, FundingRequest  # adjust import paths as needed
 # -------------------------
 # AI / Assistants
 # -------------------------
@@ -939,14 +939,22 @@ def update_profile():
 @login_required
 @role_required("investor")
 def capital_application():
+
     ip = InvestorProfile.query.filter_by(user_id=current_user.id).first()
     if not ip:
         flash("Please create your investor profile before applying for capital.", "warning")
         return redirect(url_for("investor.create_profile"))
 
+    deal_id = request.args.get("deal_id")
+    deal = None
+
+    if deal_id:
+        deal = Deal.query.get(deal_id)
+
     assistant = AIAssistant()
 
     if request.method == "POST":
+
         loan_type = request.form.get("loan_type")
         amount = safe_float(request.form.get("amount"))
         property_address = request.form.get("property_address")
@@ -960,11 +968,11 @@ def capital_application():
         except Exception:
             ai_summary = None
 
-        # Build kwargs safely across schemas
         profile_fk = _profile_id_filter(LoanApplication, ip.id)
 
         loan = LoanApplication(
             **profile_fk,
+            deal_id=deal_id,  # 🔥 LINK DEAL TO LOAN
             loan_type=loan_type,
             loan_amount=amount,
             property_address=property_address,
@@ -973,45 +981,138 @@ def capital_application():
             status="Submitted",
             is_active=True
         )
+
         db.session.add(loan)
         db.session.commit()
 
         flash("✅ Capital request submitted successfully!", "success")
+
         return redirect(url_for("investor.status"))
 
-    return render_template("investor/capital_application.html", investor=ip, title="Apply for Capital")
+    return render_template(
+        "investor/capital_application.html",
+        investor=ip,
+        deal=deal,
+        title="Apply for Capital"
+    )
 
 @investor_bp.route("/capital-application/submit", methods=["POST"])
 @login_required
 @role_required("investor")
 def submit_capital_application():
-    ip = InvestorProfile.query.filter_by(user_id=current_user.id).first()
-    if not ip:
-        return {"success": False, "message": "No investor profile found."}
+    investor = InvestorProfile.query.filter_by(user_id=current_user.id).first()
+    if not investor:
+        return jsonify({"success": False, "message": "No investor profile found."}), 404
 
-    # Extract fields from the new application
-    full_name = request.form.get("full_name")
-    loan_type = request.form.get("loan_type")
-    project_address = request.form.get("project_address")
-    project_description = request.form.get("project_description")
+    # -----------------------------
+    # Form fields
+    # -----------------------------
+    full_name = (request.form.get("full_name") or getattr(investor, "full_name", None) or "").strip()
+    loan_type = (request.form.get("loan_type") or "Investor Capital").strip()
+    project_address = (request.form.get("project_address") or "").strip()
+    project_description = (request.form.get("project_description") or "").strip()
+    amount = float(request.form.get("amount") or 0)
+    property_value = float(request.form.get("property_value") or 0)
 
-    # Save a new LoanApplication record
-    profile_fk = _profile_id_filter(LoanApplication, ip.id)
+    # -----------------------------
+    # Bridge: Investor -> BorrowerProfile
+    # -----------------------------
+    borrower = None
 
+    # 1) If InvestorProfile already stores a borrower bridge, use it
+    if hasattr(investor, "borrower_profile_id") and investor.borrower_profile_id:
+        borrower = BorrowerProfile.query.get(investor.borrower_profile_id)
+
+    # 2) Else try by email
+    if not borrower and getattr(investor, "email", None):
+        borrower = BorrowerProfile.query.filter_by(email=investor.email).first()
+
+    # 3) Else create new borrower bridge profile
+    if not borrower:
+        borrower = BorrowerProfile(
+            user_id=getattr(investor, "user_id", None),
+            full_name=full_name or getattr(investor, "full_name", None),
+            email=getattr(investor, "email", None),
+            phone=getattr(investor, "phone", None),
+            address=getattr(investor, "address", None),
+            city=getattr(investor, "city", None),
+            state=getattr(investor, "state", None),
+            zip=getattr(investor, "zip", None),
+            annual_income=getattr(investor, "annual_income", None),
+            employment_status="Investor",
+            created_at=datetime.utcnow(),
+        )
+        db.session.add(borrower)
+        db.session.flush()
+
+        # optional backlink if InvestorProfile supports it
+        if hasattr(investor, "borrower_profile_id"):
+            investor.borrower_profile_id = borrower.id
+
+    # -----------------------------
+    # Optional investor FK mapping
+    # -----------------------------
+    profile_fk = _profile_id_filter(LoanApplication, investor.id)
+
+    # -----------------------------
+    # Create loan / capital request
+    # -----------------------------
     loan = LoanApplication(
         **profile_fk,
+        borrower_profile_id=borrower.id,
+        investor_profile_id=getattr(investor, "id", None),
         loan_type=loan_type,
+        amount=amount,
+        property_value=property_value,
         property_address=project_address,
+        description=project_description,
         ai_summary=project_description,
-        status="Submitted",
+        status="Capital Submitted",
         is_active=True,
         created_at=datetime.utcnow()
     )
 
     db.session.add(loan)
+    db.session.flush()
+
+    # -----------------------------
+    # Optional timeline event
+    # -----------------------------
+    db.session.add(
+        LoanStatusEvent(
+            loan_id=loan.id,
+            event_name="Capital Application Submitted",
+            description="Investor submitted a capital request through Ravlo."
+        )
+    )
+
+    # -----------------------------
+    # Optional AI summary refresh
+    # -----------------------------
+    try:
+        assistant = AIAssistant()
+        client_name = getattr(investor, "full_name", None) or borrower.full_name or "Unknown Client"
+
+        loan.ai_summary = assistant.generate_reply(
+            f"Summarize this capital request for {client_name}: "
+            f"{loan_type}, requested amount ${amount:,.0f}, "
+            f"property value ${property_value:,.0f}, "
+            f"project address {project_address}. "
+            f"Project notes: {project_description}",
+            "capital_application_summary"
+        )
+    except Exception:
+        pass
+
     db.session.commit()
 
-    return {"success": True, "message": "Application submitted successfully."}
+    return jsonify({
+        "success": True,
+        "message": "Application submitted successfully.",
+        "loan_id": loan.id,
+        "borrower_profile_id": borrower.id,
+        "redirect_url": url_for("investor.loan_view", loan_id=loan.id)
+    })
 
 @investor_bp.route("/capital/status", methods=["GET"])
 @investor_bp.route("/status", methods=["GET"])

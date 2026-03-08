@@ -1,0 +1,385 @@
+{# templates/borrower/conditions.html #}
+{% extends "layouts/borrower_base.html" %}
+{% block title %}Conditions • Ravlo{% endblock %}
+
+{% block page_title %}Conditions{% endblock %}
+{% block page_subline %}
+Track underwriting requirements and stay on top of what is still needed.
+{% endblock %}
+
+{% block content %}
+
+<section class="conditions-shell">
+
+  <div class="conditions-main">
+
+    <section class="ravlo-card conditions-hero">
+      <div>
+        <div class="eyebrow">Ravlo Borrower</div>
+        <h2>Underwriting conditions</h2>
+        <p class="muted">
+          Review open items, monitor status changes, and keep your file moving forward.
+        </p>
+      </div>
+
+      <div class="hero-actions">
+        <a href="{{ url_for('borrower.documents') }}" class="ravlo-btn ghost">View Documents</a>
+        <a href="{{ url_for('borrower.upload_document') }}" class="ravlo-btn primary">Upload Document</a>
+      </div>
+    </section>
+
+    <section class="conditions-stats">
+      <div class="ravlo-card stat-card">
+        <div class="stat-label">Total Conditions</div>
+        <div class="stat-value">{{ conditions|length }}</div>
+      </div>
+
+      <div class="ravlo-card stat-card">
+        <div class="stat-label">Open</div>
+        <div class="stat-value">
+          {{
+            conditions
+            | rejectattr("status", "equalto", "Cleared")
+            | rejectattr("status", "equalto", "Waived")
+            | list
+            | length
+          }}
+        </div>
+      </div>
+
+      <div class="ravlo-card stat-card">
+        <div class="stat-label">Cleared</div>
+        <div class="stat-value">
+          {{
+            conditions
+            | selectattr("status", "equalto", "Cleared")
+            | list
+            | length
+          }}
+        </div>
+      </div>
+
+      <div class="ravlo-card stat-card">
+        <div class="stat-label">Loan Status</div>
+        <div class="stat-value">{{ loan.status if loan else "No Active Loan" }}</div>
+      </div>
+    </section>
+
+    <section class="ravlo-card conditions-list-card">
+      <div class="section-head">
+        <div>
+          <h3>Condition List</h3>
+          <p class="muted">These are the current requirements on your active loan.</p>
+        </div>
+      </div>
+
+      {% if conditions %}
+      <div class="conditions-list">
+        {% for cond in conditions %}
+        <div class="condition-row">
+          <div class="condition-main">
+            <div class="condition-top">
+              <div class="condition-type">
+                {{ cond.condition_type or "Condition" }}
+              </div>
+              <div class="condition-status {{ (cond.status or 'open')|lower|replace(' ', '-') }}">
+                {{ cond.status or "Open" }}
+              </div>
+            </div>
+
+            <div class="condition-desc">
+              {{ cond.description or "No description provided." }}
+            </div>
+
+            <div class="condition-meta">
+              <span>Severity: {{ cond.severity or "Standard" }}</span>
+              {% if cond.requested_by %}
+                <span>Requested by: {{ cond.requested_by }}</span>
+              {% endif %}
+              {% if cond.created_at %}
+                <span>Created: {{ cond.created_at.strftime("%b %d, %Y") }}</span>
+              {% endif %}
+            </div>
+          </div>
+
+          <div class="condition-actions">
+            <a href="{{ url_for('borrower.view_condition', cond_id=cond.id) }}" class="ravlo-btn ghost sm">
+              View
+            </a>
+
+            <form method="POST" action="{{ url_for('borrower.upload_condition', cond_id=cond.id) }}" enctype="multipart/form-data" class="upload-inline-form">
+              <input type="file" name="file" class="upload-inline-input" required>
+              <button type="submit" class="ravlo-btn primary sm">Submit Item</button>
+            </form>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="empty-state">
+        <h4>No conditions yet</h4>
+        <p class="muted">
+          Your file does not currently have any underwriting conditions.
+        </p>
+      </div>
+      {% endif %}
+    </section>
+
+  </div>
+
+  <aside class="conditions-side">
+
+    <section class="ravlo-card side-card">
+      <h3>How conditions work</h3>
+      <div class="side-list">
+        <div class="side-item">
+          <div class="side-dot"></div>
+          <div>A condition is an item needed before the loan can move forward.</div>
+        </div>
+        <div class="side-item">
+          <div class="side-dot"></div>
+          <div>Some conditions are document-based, others may need clarification or updates.</div>
+        </div>
+        <div class="side-item">
+          <div class="side-dot"></div>
+          <div>Once reviewed and accepted, the condition can be marked cleared.</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="ravlo-card side-card">
+      <h3>Best practices</h3>
+      <ul class="tips-list">
+        <li>Upload the clearest and most current version of each file.</li>
+        <li>Name files clearly before uploading.</li>
+        <li>Check your messages for follow-up questions from the team.</li>
+        <li>Review your conditions often so nothing is missed.</li>
+      </ul>
+    </section>
+
+    <section class="ravlo-card side-card">
+      <h3>Need help?</h3>
+      <p class="muted" style="margin-top:10px;">
+        If you’re unsure what a condition means, send a message to your lending team for clarification.
+      </p>
+      <div style="margin-top:14px;">
+        <a href="{{ url_for('borrower.messages') }}" class="ravlo-btn primary sm">Message Team</a>
+      </div>
+    </section>
+
+  </aside>
+
+</section>
+
+<style>
+  .conditions-shell{
+    display:grid;
+    grid-template-columns:2fr 1fr;
+    gap:20px;
+    align-items:start;
+  }
+
+  .conditions-main,
+  .conditions-side{
+    display:grid;
+    gap:20px;
+  }
+
+  .ravlo-card{
+    background: rgba(255,255,255,.03);
+    border: 1px solid rgba(255,255,255,.08);
+    border-radius: 22px;
+    box-shadow: 0 12px 30px rgba(0,0,0,.18);
+  }
+
+  .conditions-hero,
+  .conditions-list-card,
+  .side-card{
+    padding:24px;
+  }
+
+  .conditions-hero{
+    display:flex;
+    justify-content:space-between;
+    gap:20px;
+    flex-wrap:wrap;
+    align-items:flex-start;
+  }
+
+  .hero-actions{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+  }
+
+  .eyebrow{
+    font-size:12px;
+    letter-spacing:.12em;
+    text-transform:uppercase;
+    opacity:.72;
+    margin-bottom:8px;
+  }
+
+  .conditions-hero h2,
+  .section-head h3,
+  .side-card h3{
+    margin:0 0 8px;
+  }
+
+  .conditions-stats{
+    display:grid;
+    grid-template-columns:repeat(4,minmax(0,1fr));
+    gap:16px;
+  }
+
+  .stat-card{
+    padding:18px;
+  }
+
+  .stat-label{
+    font-size:12px;
+    text-transform:uppercase;
+    letter-spacing:.08em;
+    opacity:.72;
+    margin-bottom:8px;
+  }
+
+  .stat-value{
+    font-size:24px;
+    font-weight:800;
+  }
+
+  .conditions-list{
+    display:grid;
+    gap:16px;
+    margin-top:18px;
+  }
+
+  .condition-row{
+    display:grid;
+    grid-template-columns:1.6fr 1fr;
+    gap:18px;
+    padding:18px;
+    border-radius:18px;
+    background:rgba(255,255,255,.03);
+    border:1px solid rgba(255,255,255,.06);
+  }
+
+  .condition-top{
+    display:flex;
+    justify-content:space-between;
+    gap:12px;
+    align-items:center;
+    flex-wrap:wrap;
+    margin-bottom:10px;
+  }
+
+  .condition-type{
+    font-weight:700;
+    font-size:16px;
+  }
+
+  .condition-status{
+    display:inline-flex;
+    align-items:center;
+    padding:6px 10px;
+    border-radius:999px;
+    font-size:12px;
+    font-weight:700;
+    background:rgba(255,255,255,.05);
+    border:1px solid rgba(255,255,255,.08);
+  }
+
+  .condition-desc{
+    font-size:14px;
+    line-height:1.55;
+    margin-bottom:10px;
+    opacity:.92;
+  }
+
+  .condition-meta{
+    display:flex;
+    gap:12px;
+    flex-wrap:wrap;
+    font-size:12px;
+    opacity:.72;
+  }
+
+  .condition-actions{
+    display:grid;
+    gap:12px;
+    align-content:start;
+  }
+
+  .upload-inline-form{
+    display:grid;
+    gap:10px;
+  }
+
+  .upload-inline-input{
+    width:100%;
+    border-radius:12px;
+    border:1px solid rgba(255,255,255,.08);
+    background:rgba(255,255,255,.03);
+    color:inherit;
+    padding:10px;
+  }
+
+  .empty-state{
+    padding-top:8px;
+  }
+
+  .side-list{
+    display:grid;
+    gap:12px;
+    margin-top:14px;
+  }
+
+  .side-item{
+    display:flex;
+    gap:10px;
+    align-items:flex-start;
+  }
+
+  .side-dot{
+    width:12px;
+    height:12px;
+    margin-top:4px;
+    border-radius:999px;
+    background:#8DA7C2;
+    flex:0 0 12px;
+  }
+
+  .tips-list{
+    margin:14px 0 0;
+    padding-left:18px;
+  }
+
+  .tips-list li{
+    margin-bottom:10px;
+  }
+
+  @media (max-width: 1080px){
+    .conditions-shell{
+      grid-template-columns:1fr;
+    }
+  }
+
+  @media (max-width: 780px){
+    .conditions-stats{
+      grid-template-columns:repeat(2,minmax(0,1fr));
+    }
+
+    .condition-row{
+      grid-template-columns:1fr;
+    }
+  }
+
+  @media (max-width: 560px){
+    .conditions-stats{
+      grid-template-columns:1fr;
+    }
+  }
+</style>
+
+{% endblock %}

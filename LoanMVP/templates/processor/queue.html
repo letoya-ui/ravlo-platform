@@ -1,60 +1,9 @@
-{% extends "layouts/base.html" %}
+{% extends "layouts/Ravlo_lending_base.html" %}
 {% block title %}Processor Queue{% endblock %}
 
 {% block content %}
 <link rel="stylesheet" href="https://unpkg.com/lucide-static@latest/font/lucide.css">
 
-<style>
-:root {
-    --bg:#0f0f11;
-    --panel:#15161a;
-    --line:#282b31;
-    --text:#e6e6e6;
-    --muted:#a5a7ad;
-    --accent:#7ab8ff;
-    --danger:#ff6565;
-}
-
-body { background:var(--bg); color:var(--text); }
-.card {
-    background:var(--panel);
-    border:1px solid var(--line);
-    border-radius:14px;
-    padding:1.3rem;
-    margin-bottom:1.5rem;
-    transition:0.2s ease;
-}
-.card:hover {
-    box-shadow:0 0 18px rgba(122,184,255,0.25);
-}
-
-.status-pill {
-    padding:4px 10px;
-    border-radius:10px;
-    font-size:0.8rem;
-    text-transform:uppercase;
-    letter-spacing:1px;
-}
-.status-pending { background:#3d3d3d; color:#fff; }
-.status-review { background:#7ab8ff; color:#000; }
-.status-submitted { background:#444; color:#7ab8ff; }
-
-.pipeline-grid {
-    display:grid;
-    grid-template-columns: repeat(auto-fill, minmax(310px, 1fr));
-    gap:1.5rem;
-    margin-top:2rem;
-}
-
-.metric {
-    background:var(--panel);
-    border:1px solid var(--line);
-    padding:1rem;
-    border-radius:12px;
-    margin-right:1rem;
-}
-.metric h3 { margin:0; }
-</style>
 
 <!-- ================================ -->
 <!--      Pipeline Summary Tiles      -->

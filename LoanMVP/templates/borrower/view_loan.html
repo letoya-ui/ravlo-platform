@@ -1,0 +1,39 @@
+{% extends "layouts/borrower_base.html" %}
+{% block title %}Loan Details • Ravlo{% endblock %}
+
+{% block page_title %}Loan #{{ loan.id }}{% endblock %}
+{% block page_subline %}
+View your loan details and status.
+{% endblock %}
+
+{% block content %}
+
+<section class="ravlo-card" style="padding:24px;max-width:900px;">
+
+<div class="ravlo-grid-2">
+
+<div>
+<label class="muted">Loan Type</label>
+<p>{{ loan.loan_type }}</p>
+</div>
+
+<div>
+<label class="muted">Status</label>
+<p>{{ loan.status }}</p>
+</div>
+
+<div>
+<label class="muted">Amount</label>
+<p>${{ "{:,.0f}".format(loan.amount) }}</p>
+</div>
+
+<div>
+<label class="muted">Property</label>
+<p>{{ loan.property_address }}</p>
+</div>
+
+</div>
+
+</section>
+
+{% endblock %}

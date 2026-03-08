@@ -1,0 +1,185 @@
+{% extends "layouts/borrower_base.html" %}
+{% block title %}Subscription • Ravlo{% endblock %}
+
+{% block page_title %}Subscription{% endblock %}
+{% block page_subline %}
+Manage your current access and upgrade options.
+{% endblock %}
+
+{% block content %}
+
+<section class="subscription-shell">
+
+  <section class="ravlo-card subscription-main">
+    <div class="eyebrow">Ravlo Borrower</div>
+    <h2>Manage your plan</h2>
+    <p class="muted">
+      Your current borrower access keeps you connected to your funding file. Upgrade any time for more Ravlo tools.
+    </p>
+
+    <div class="current-plan">
+      <div class="plan-label">Current Plan</div>
+      <div class="plan-value">{{ borrower.subscription_plan or "Free" }}</div>
+    </div>
+
+    <form method="POST" class="plan-grid">
+
+      <label class="plan-card">
+        <input type="radio" name="plan" value="Basic" {% if (borrower.subscription_plan or "Basic") == "Basic" %}checked{% endif %}>
+        <div class="plan-card-inner">
+          <h3>Borrower Basic</h3>
+          <p class="muted">Track your loan, upload documents, review conditions, and message your team.</p>
+        </div>
+      </label>
+
+      <label class="plan-card">
+        <input type="radio" name="plan" value="Premium" {% if borrower.subscription_plan == "Premium" %}checked{% endif %}>
+        <div class="plan-card-inner">
+          <h3>Investor Upgrade</h3>
+          <p class="muted">Upgrade access for more advanced Ravlo tools and a fuller investment workspace.</p>
+        </div>
+      </label>
+
+      <div class="plan-actions">
+        <button type="submit" class="ravlo-btn primary">Save Plan</button>
+        <a href="{{ url_for('borrower.dashboard') }}" class="ravlo-btn ghost">Back to Dashboard</a>
+      </div>
+    </form>
+  </section>
+
+  <aside class="subscription-side">
+    <section class="ravlo-card side-card">
+      <h3>What Borrower access includes</h3>
+      <ul class="tips-list">
+        <li>Application tracking</li>
+        <li>Document uploads</li>
+        <li>Condition monitoring</li>
+        <li>Messaging with your lending team</li>
+      </ul>
+    </section>
+
+    <section class="ravlo-card side-card">
+      <h3>Why upgrade later</h3>
+      <p class="muted" style="margin-top:10px;">
+        If you want deeper deal analysis and a broader Ravlo experience, you can upgrade from borrower access when you're ready.
+      </p>
+    </section>
+  </aside>
+
+</section>
+
+<style>
+  .subscription-shell{
+    display:grid;
+    grid-template-columns:2fr 1fr;
+    gap:20px;
+    align-items:start;
+  }
+
+  .ravlo-card{
+    background: rgba(255,255,255,.03);
+    border: 1px solid rgba(255,255,255,.08);
+    border-radius: 22px;
+    box-shadow: 0 12px 30px rgba(0,0,0,.18);
+  }
+
+  .subscription-main,
+  .side-card{
+    padding:24px;
+  }
+
+  .eyebrow{
+    font-size:12px;
+    letter-spacing:.12em;
+    text-transform:uppercase;
+    opacity:.72;
+    margin-bottom:8px;
+  }
+
+  .subscription-main h2,
+  .side-card h3{
+    margin:0 0 8px;
+  }
+
+  .current-plan{
+    margin-top:22px;
+    padding:18px;
+    border-radius:18px;
+    background:rgba(255,255,255,.03);
+    border:1px solid rgba(255,255,255,.06);
+  }
+
+  .plan-label{
+    font-size:12px;
+    text-transform:uppercase;
+    letter-spacing:.08em;
+    opacity:.72;
+    margin-bottom:8px;
+  }
+
+  .plan-value{
+    font-size:26px;
+    font-weight:800;
+  }
+
+  .plan-grid{
+    display:grid;
+    gap:16px;
+    margin-top:22px;
+  }
+
+  .plan-card{
+    display:block;
+    cursor:pointer;
+  }
+
+  .plan-card input{
+    display:none;
+  }
+
+  .plan-card-inner{
+    padding:18px;
+    border-radius:18px;
+    background:rgba(255,255,255,.03);
+    border:1px solid rgba(255,255,255,.06);
+    transition:.18s ease;
+  }
+
+  .plan-card input:checked + .plan-card-inner{
+    border-color:rgba(141,167,194,.35);
+    background:rgba(141,167,194,.10);
+  }
+
+  .plan-card-inner h3{
+    margin:0 0 8px;
+  }
+
+  .plan-actions{
+    display:flex;
+    gap:12px;
+    flex-wrap:wrap;
+    margin-top:6px;
+  }
+
+  .subscription-side{
+    display:grid;
+    gap:20px;
+  }
+
+  .tips-list{
+    margin:14px 0 0;
+    padding-left:18px;
+  }
+
+  .tips-list li{
+    margin-bottom:10px;
+  }
+
+  @media (max-width: 980px){
+    .subscription-shell{
+      grid-template-columns:1fr;
+    }
+  }
+</style>
+
+{% endblock %}

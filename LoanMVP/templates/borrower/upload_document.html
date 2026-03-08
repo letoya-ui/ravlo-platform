@@ -1,0 +1,48 @@
+{% extends "layouts/borrower_base.html" %}
+{% block title %}Upload Document • Ravlo{% endblock %}
+
+{% block page_title %}Upload Document{% endblock %}
+{% block page_subline %}
+Submit files requested by your lending team.
+{% endblock %}
+
+{% block content %}
+
+<section class="ravlo-card" style="max-width:700px;margin:auto;padding:28px;">
+
+<form method="POST" enctype="multipart/form-data" class="ravlo-form">
+
+<div class="ravlo-field">
+<label class="ravlo-label">Document Name</label>
+<input type="text" name="document_name" class="ravlo-input" required>
+</div>
+
+<div class="ravlo-field">
+<label class="ravlo-label">Document Type</label>
+
+<select name="document_type" class="ravlo-input">
+
+<option value="income">Income</option>
+<option value="bank">Bank Statement</option>
+<option value="id">Identification</option>
+<option value="property">Property Document</option>
+<option value="other">Other</option>
+
+</select>
+
+</div>
+
+<div class="ravlo-field">
+<label class="ravlo-label">Upload File</label>
+<input type="file" name="file" class="ravlo-input" required>
+</div>
+
+<button class="ravlo-btn primary">
+Upload Document
+</button>
+
+</form>
+
+</section>
+
+{% endblock %}

@@ -1,36 +1,10 @@
-{% extends "layouts/base.html" %}
+{% extends "layouts/Ravlo_lending_base.html" %}
 {% block title %}Loan Officer • Loan Search{% endblock %}
 {% block content %}
+
 <main class="dashboard-main">
 <link rel="stylesheet" href="https://unpkg.com/lucide-static@latest/font/lucide.css">
 
-<style>
-:root {
-  --panel:#15161a;--line:#2a2e36;--text:#e6e6e6;
-  --muted:#a5a7ad;--accent:#7ab8ff;--glow:0 0 18px rgba(122,184,255,.35);
-}
-.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:1.2rem;box-shadow:var(--glow);}
-.search-bar{display:flex;gap:.75rem;margin-bottom:1rem;align-items:center;}
-.search-bar input{flex:1;padding:.6rem;border:1px solid var(--line);border-radius:8px;background:#1b1d22;color:var(--text);}
-.search-bar button{background:var(--accent);border:none;padding:.6rem 1.2rem;border-radius:8px;color:#000;font-weight:600;cursor:pointer;}
-.search-bar button:hover{opacity:.85;}
-.table{width:100%;border-collapse:collapse;margin-top:1rem;}
-.table th,.table td{padding:.6rem;border-top:1px solid var(--line);}
-.table th{color:var(--accent);text-align:left;}
-.table tr:hover{background:#1c1e23;cursor:pointer;}
-.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:1rem;margin-top:1rem;}
-.stat-card{background:#1b1d22;border:1px solid var(--line);border-radius:10px;padding:.8rem;text-align:center;}
-.stat-card h3{margin:0;color:var(--accent);}
-.stat-card p{color:var(--muted);}
-.top-actions{display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;}
-.new-loan-btn{
-  display:flex;align-items:center;gap:.5rem;
-  background:#28a745;border:none;color:#fff;
-  padding:.6rem 1.2rem;border-radius:8px;
-  font-weight:600;cursor:pointer;text-decoration:none;
-}
-.new-loan-btn:hover{background:#23923c;}
-</style>
 
 <h1>🔍 Loan Search</h1>
 

@@ -1,607 +1,466 @@
 {% extends "layouts/base.html" %}
-{% block title %}Loan Officer • Loan File{% endblock %}
+{% block title %}Capital Funds • Ravlo{% endblock %}
+
 {% block content %}
 <link rel="stylesheet" href="https://unpkg.com/lucide-static@latest/font/lucide.css">
 
-<style>
-  :root {
-    --bg:#0f0f11;
-    --panel:rgba(21,22,26,0.55);
-    --line:rgba(122,184,255,0.25);
-    --text:#e6e6e6;
-    --muted:#a5a7ad;
-    --accent:#7ab8ff;
-    --hover:rgba(255,255,255,0.06);
-    --glow:0 0 18px rgba(122,184,255,0.20);
-    --radius:16px;
-    --success:#72d39c;
-    --warning:#f0c36b;
-    --danger:#ef7d7d;
-  }
-
-  body { background:var(--bg); color:var(--text); }
-  main { margin-left:260px; padding:2rem; min-height:100vh; overflow-y:auto; }
-
-  .page-wrap{display:grid;gap:1.4rem;}
-  .hero-card,
-  .card{
-    background:var(--panel);
-    backdrop-filter:blur(14px);
-    -webkit-backdrop-filter:blur(14px);
-    border:1px solid var(--line);
-    border-radius:var(--radius);
-    box-shadow:var(--glow);
-  }
-
-  .hero-card{
-    padding:1.4rem 1.5rem;
-    display:flex;
-    justify-content:space-between;
-    align-items:flex-start;
-    gap:1rem;
-    flex-wrap:wrap;
-  }
-
-  .grid{
-    display:grid;
-    grid-template-columns:1.15fr .85fr;
-    gap:1.4rem;
-  }
-
-  .stack{display:grid;gap:1.4rem;}
-  .card{padding:1.25rem;}
-  .full{grid-column:1 / -1;}
-
-  h1,h2,h3{margin:0;color:var(--accent);}
-  h1{font-size:1.6rem;}
-  h2{font-size:1.15rem;}
-  h3{font-size:1rem;}
-  .muted{color:var(--muted);}
-
-  .eyebrow{
-    color:var(--muted);
-    text-transform:uppercase;
-    font-size:.75rem;
-    letter-spacing:.08em;
-    margin-bottom:.35rem;
-  }
-
-  .chip-row{
-    display:flex;
-    flex-wrap:wrap;
-    gap:.55rem;
-    margin-top:.9rem;
-  }
-
-  .chip{
-    display:inline-flex;
-    align-items:center;
-    gap:.35rem;
-    padding:.38rem .7rem;
-    border-radius:999px;
-    background:rgba(255,255,255,.05);
-    border:1px solid var(--line);
-    color:var(--text);
-    font-size:.84rem;
-  }
-
-  .btn{
-    display:inline-flex;
-    align-items:center;
-    gap:.45rem;
-    background:var(--hover);
-    border:1px solid var(--line);
-    border-radius:10px;
-    padding:.6rem 1rem;
-    cursor:pointer;
-    text-decoration:none;
-    color:var(--text);
-    transition:.2s;
-    font-weight:600;
-  }
-
-  .btn:hover{
-    border-color:var(--accent);
-    box-shadow:var(--glow);
-  }
-
-  .btn-accent{
-    background:rgba(122,184,255,.95);
-    color:#000;
-  }
-
-  .section-head{
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-    gap:1rem;
-    margin-bottom:1rem;
-  }
-
-  .metric-grid{
-    display:grid;
-    grid-template-columns:repeat(2, minmax(0,1fr));
-    gap:.9rem;
-  }
-
-  .metric{
-    padding:.9rem;
-    border-radius:14px;
-    background:rgba(255,255,255,.04);
-    border:1px solid rgba(255,255,255,.08);
-  }
-
-  .metric span{
-    display:block;
-    color:var(--muted);
-    font-size:.76rem;
-    text-transform:uppercase;
-    letter-spacing:.08em;
-    margin-bottom:.35rem;
-  }
-
-  .metric strong{
-    display:block;
-    color:var(--text);
-    font-size:1.1rem;
-  }
-
-  .detail-list{display:grid;gap:.75rem;}
-  .detail-row{
-    display:flex;
-    justify-content:space-between;
-    gap:1rem;
-    padding:.8rem .9rem;
-    border-radius:12px;
-    background:rgba(255,255,255,.03);
-    border:1px solid rgba(255,255,255,.07);
-  }
-
-  .detail-row span{color:var(--muted);}
-  .detail-row strong{color:var(--text);}
-
-  .note-box{
-    padding:1rem;
-    border-radius:14px;
-    background:rgba(255,255,255,.03);
-    border:1px solid rgba(255,255,255,.08);
-    line-height:1.6;
-    color:var(--text);
-  }
-
-  .compare-grid{
-    display:grid;
-    grid-template-columns:repeat(2, minmax(0,1fr));
-    gap:1rem;
-  }
-
-  .compare-panel{
-    padding:.85rem;
-    border-radius:14px;
-    background:rgba(255,255,255,.03);
-    border:1px solid rgba(255,255,255,.08);
-  }
-
-  .compare-label{
-    font-size:.76rem;
-    text-transform:uppercase;
-    color:var(--muted);
-    margin-bottom:.55rem;
-    letter-spacing:.08em;
-  }
-
-  .compare-image{
-    width:100%;
-    height:220px;
-    object-fit:cover;
-    border-radius:12px;
-    display:block;
-    background:rgba(255,255,255,.02);
-  }
-
-  .placeholder{
-    width:100%;
-    height:220px;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    border-radius:12px;
-    background:rgba(255,255,255,.03);
-    color:var(--muted);
-  }
-
-  .mini-grid{
-    display:grid;
-    grid-template-columns:repeat(2, minmax(0,1fr));
-    gap:.9rem;
-  }
-
-  .line-items{
-    display:grid;
-    gap:.65rem;
-  }
-
-  .line-item{
-    display:flex;
-    justify-content:space-between;
-    gap:1rem;
-    padding:.75rem .85rem;
-    border-radius:12px;
-    background:rgba(255,255,255,.03);
-    border:1px solid rgba(255,255,255,.07);
-  }
-
-  .doc-list,
-  .task-list,
-  .condition-list{
-    display:grid;
-    gap:.7rem;
-  }
-
-  .list-card{
-    padding:.85rem .9rem;
-    border-radius:12px;
-    background:rgba(255,255,255,.03);
-    border:1px solid rgba(255,255,255,.07);
-  }
-
-  .list-title{
-    font-weight:700;
-    color:var(--text);
-  }
-
-  .list-sub{
-    color:var(--muted);
-    font-size:.9rem;
-    margin-top:.2rem;
-  }
-
-  .status-pill{
-    display:inline-flex;
-    align-items:center;
-    padding:.3rem .6rem;
-    border-radius:999px;
-    font-size:.78rem;
-    font-weight:700;
-    background:rgba(255,255,255,.06);
-    border:1px solid rgba(255,255,255,.10);
-  }
-
-  @media (max-width: 1100px){
-    .grid{grid-template-columns:1fr;}
-  }
-
-  @media (max-width: 760px){
-    main{margin-left:0;padding:1rem;}
-    .metric-grid,
-    .mini-grid,
-    .compare-grid{grid-template-columns:1fr;}
-    .detail-row,
-    .hero-card{flex-direction:column;}
-  }
-</style>
-
 <main>
-  <div class="page-wrap">
+<div class="page-wrap">
 
-    <!-- HERO -->
-    <section class="hero-card">
-      <div>
-        <div class="eyebrow">Loan File</div>
-        <h1>Loan #{{ loan.id }}</h1>
-        <p class="muted" style="margin:.45rem 0 0;">
-          {{ loan.loan_type or "Loan" }} • {{ borrower.full_name if borrower else "Unknown Borrower" }}
-        </p>
+<!-- HERO -->
+<section class="hero-card">
 
-        <div class="chip-row">
-          <span class="chip">Status: {{ loan.status or "Pending" }}</span>
-          <span class="chip">Amount: ${{ "{:,.0f}".format(loan.loan_amount or loan.amount or 0) }}</span>
-          {% if deal %}
-          <span class="chip">Deal Linked</span>
-          {% endif %}
-        </div>
-      </div>
+<div>
+<div class="eyebrow">Capital Funding File</div>
 
-      <div style="display:flex;gap:.65rem;flex-wrap:wrap;">
-        <a href="{{ url_for('loan_officer.loan_queue') }}" class="btn">← Loan Queue</a>
-        {% if deal %}
-        <a href="{{ url_for('investor.deal_detail', deal_id=deal.id) }}" class="btn">Open Deal</a>
-        {% endif %}
-      </div>
-    </section>
+<h1>Capital Request #{{ loan.id }}</h1>
 
-    <div class="grid">
+<p class="muted" style="margin:.45rem 0 0;">
+{% if investor %}
+{{ investor.full_name }}
+{% elif borrower %}
+{{ borrower.full_name }}
+{% else %}
+Unknown Client
+{% endif %}
+• {{ loan.loan_type or "Capital Request" }}
+</p>
 
-      <!-- LEFT -->
-      <div class="stack">
+<div class="chip-row">
 
-        <!-- BORROWER -->
-        <section class="card">
-          <div class="section-head">
-            <div>
-              <div class="eyebrow">Borrower</div>
-              <h2>Borrower Profile</h2>
-            </div>
-          </div>
+<span class="chip">
+Status: {{ loan.status or "Pending" }}
+</span>
 
-          {% if borrower %}
-          <div class="detail-list">
-            <div class="detail-row"><span>Name</span><strong>{{ borrower.full_name }}</strong></div>
-            <div class="detail-row"><span>Email</span><strong>{{ borrower.email or "—" }}</strong></div>
-            <div class="detail-row"><span>Phone</span><strong>{{ borrower.phone or "—" }}</strong></div>
-            <div class="detail-row"><span>Address</span><strong>{{ borrower.address or "—" }}</strong></div>
-          </div>
-          {% else %}
-          <div class="note-box">No borrower profile linked to this loan.</div>
-          {% endif %}
-        </section>
+<span class="chip">
+Amount: ${{ "{:,.0f}".format(loan.loan_amount or loan.amount or 0) }}
+</span>
 
-        <!-- LOAN + RATIOS -->
-        <section class="card">
-          <div class="section-head">
-            <div>
-              <div class="eyebrow">Loan Metrics</div>
-              <h2>Loan Snapshot</h2>
-            </div>
-          </div>
+{% if deal %}
+<span class="chip">Deal Linked</span>
+{% endif %}
 
-          <div class="metric-grid">
-            <div class="metric">
-              <span>Loan Amount</span>
-              <strong>${{ "{:,.0f}".format(loan.loan_amount or loan.amount or 0) }}</strong>
-            </div>
-            <div class="metric">
-              <span>Property Value</span>
-              <strong>${{ "{:,.0f}".format(loan.property_value or 0) }}</strong>
-            </div>
-            <div class="metric">
-              <span>Front DTI</span>
-              <strong>{{ ratios.get("front_end_dti", "—") }}</strong>
-            </div>
-            <div class="metric">
-              <span>Back DTI</span>
-              <strong>{{ ratios.get("back_end_dti", "—") }}</strong>
-            </div>
-            <div class="metric">
-              <span>LTV</span>
-              <strong>{{ ratios.get("ltv", "—") }}</strong>
-            </div>
-            <div class="metric">
-              <span>Engagement</span>
-              <strong>{{ engagement_score if engagement_score is not none else "—" }}</strong>
-            </div>
-          </div>
-        </section>
+{% if investor %}
+<span class="chip">Investor Capital</span>
+{% endif %}
 
-        <!-- INVESTOR DEAL CONTEXT -->
-        {% if deal %}
-        <section class="card">
-          <div class="section-head">
-            <div>
-              <div class="eyebrow">Ravlo Deal Context</div>
-              <h2>Investment Snapshot</h2>
-            </div>
-            <a href="{{ url_for('investor.deal_detail', deal_id=deal.id) }}" class="btn">Open Deal Record</a>
-          </div>
+</div>
+</div>
 
-          <div class="detail-list">
-            <div class="detail-row"><span>Deal</span><strong>{{ deal.title or ("Deal #" ~ deal.id) }}</strong></div>
-            <div class="detail-row"><span>Address</span><strong>{{ deal.address or "—" }}</strong></div>
-            <div class="detail-row"><span>Strategy</span><strong>{{ deal.recommended_strategy or deal.strategy or "Pending" }}</strong></div>
-            <div class="detail-row"><span>Purchase</span><strong>${{ "{:,.0f}".format(deal.purchase_price or 0) }}</strong></div>
-            <div class="detail-row"><span>Rehab</span><strong>${{ "{:,.0f}".format(deal.rehab_cost or 0) }}</strong></div>
-            <div class="detail-row"><span>ARV</span><strong>${{ "{:,.0f}".format(deal.arv or 0) }}</strong></div>
-          </div>
-        </section>
+<div style="display:flex;gap:.65rem;flex-wrap:wrap;">
 
-        <!-- FEATURED BEFORE/AFTER -->
-        <section class="card">
-          <div class="section-head">
-            <div>
-              <div class="eyebrow">Renovation</div>
-              <h2>Featured Before & After</h2>
-            </div>
-            <a href="{{ url_for('investor.deal_rehab', deal_id=deal.id) }}" class="btn">Open Renovation Studio</a>
-          </div>
+<a href="{{ url_for('loan_officer.loan_queue') }}" class="btn">
+← Capital Queue
+</a>
 
-          {% if featured_rehab.after_url %}
-          <div class="compare-grid">
-            <div class="compare-panel">
-              <div class="compare-label">Before</div>
-              {% if featured_rehab.before_url %}
-              <img src="{{ featured_rehab.before_url }}" alt="Before image" class="compare-image">
-              {% else %}
-              <div class="placeholder">No before image</div>
-              {% endif %}
-            </div>
+{% if deal %}
+<a href="{{ url_for('investor.deal_detail', deal_id=deal.id) }}" class="btn">
+Open Deal
+</a>
+{% endif %}
 
-            <div class="compare-panel">
-              <div class="compare-label">After</div>
-              <img src="{{ featured_rehab.after_url }}" alt="After image" class="compare-image">
-            </div>
-          </div>
+</div>
 
-          <div class="chip-row" style="margin-top:.9rem;">
-            <span class="chip">{{ featured_rehab.style_preset or "Featured Design" }}</span>
-            <a href="{{ url_for('investor.deal_reveal', deal_id=deal.id) }}" class="btn">View Reveal</a>
-          </div>
-          {% else %}
-          <div class="note-box">
-            No featured renovation selected yet. The investor can generate and feature a design in Renovation Studio.
-          </div>
-          {% endif %}
-        </section>
+</section>
 
-        <!-- REHAB SCOPE -->
-        <section class="card">
-          <div class="section-head">
-            <div>
-              <div class="eyebrow">Rehab</div>
-              <h2>Scope Summary</h2>
-            </div>
-          </div>
 
-          {% set line_items = rehab_scope.get("line_items", {}) if rehab_scope else {} %}
+<div class="grid">
 
-          <div class="mini-grid">
-            <div class="metric">
-              <span>Rehab Level</span>
-              <strong>{{ rehab_scope.get("rehab_level", "Pending") if rehab_scope else "Pending" }}</strong>
-            </div>
-            <div class="metric">
-              <span>Cost / Sq Ft</span>
-              <strong>{{ rehab_scope.get("cost_per_sqft", "—") if rehab_scope else "—" }}</strong>
-            </div>
-          </div>
+<!-- LEFT COLUMN -->
+<div class="stack">
 
-          <div class="line-items" style="margin-top:1rem;">
-            {% if line_items %}
-              {% for item, value in line_items.items() %}
-              <div class="line-item">
-                <span>{{ item.replace("_", " ").title() }}</span>
-                <strong>${{ "{:,.0f}".format(value or 0) }}</strong>
-              </div>
-              {% endfor %}
-            {% else %}
-              <div class="note-box">No rehab scope has been generated yet.</div>
-            {% endif %}
-          </div>
-        </section>
+<!-- CLIENT PROFILE -->
+<section class="card">
 
-        <!-- BUILD ANALYSIS -->
-        {% if build_analysis %}
-        <section class="card">
-          <div class="section-head">
-            <div>
-              <div class="eyebrow">Build Studio</div>
-              <h2>Development Concept</h2>
-            </div>
-          </div>
+<div class="section-head">
+<div>
+<div class="eyebrow">Client</div>
+<h2>Client / Borrower Profile</h2>
+</div>
+</div>
 
-          <div class="detail-list">
-            <div class="detail-row"><span>Project</span><strong>{{ build_analysis.get("project_name", "—") }}</strong></div>
-            <div class="detail-row"><span>Type</span><strong>{{ build_analysis.get("property_type", "—") }}</strong></div>
-            <div class="detail-row"><span>Lot Size</span><strong>{{ build_analysis.get("lot_size", "—") }}</strong></div>
-            <div class="detail-row"><span>Zoning</span><strong>{{ build_analysis.get("zoning", "—") }}</strong></div>
-          </div>
-        </section>
-        {% endif %}
-        {% endif %}
+{% if borrower %}
+<div class="detail-list">
 
-      </div>
+<div class="detail-row">
+<span>Name</span>
+<strong>{{ borrower.full_name }}</strong>
+</div>
 
-      <!-- RIGHT -->
-      <div class="stack">
+<div class="detail-row">
+<span>Email</span>
+<strong>{{ borrower.email or "—" }}</strong>
+</div>
 
-        <!-- CREDIT -->
-        <section class="card">
-          <div class="section-head">
-            <div>
-              <div class="eyebrow">Credit</div>
-              <h2>Credit Summary</h2>
-            </div>
-          </div>
+<div class="detail-row">
+<span>Phone</span>
+<strong>{{ borrower.phone or "—" }}</strong>
+</div>
 
-          {% if credit %}
-          <div class="detail-list">
-            <div class="detail-row"><span>Score</span><strong>{{ credit.score or credit.credit_score or "—" }}</strong></div>
-            <div class="detail-row"><span>Report Date</span><strong>{{ credit.report_date.strftime('%Y-%m-%d') if credit.report_date else "—" }}</strong></div>
-            <div class="detail-row"><span>Delinquencies</span><strong>{{ credit.delinquencies or 0 }}</strong></div>
-            <div class="detail-row"><span>Public Records</span><strong>{{ credit.public_records or 0 }}</strong></div>
-            <div class="detail-row"><span>Total Debt</span><strong>${{ "{:,.0f}".format(credit.total_debt or 0) }}</strong></div>
-          </div>
-          {% else %}
-          <div class="note-box">No credit report available.</div>
-          {% endif %}
-        </section>
+<div class="detail-row">
+<span>Address</span>
+<strong>{{ borrower.address or "—" }}</strong>
+</div>
 
-        <!-- DOCUMENTS -->
-        <section class="card">
-          <div class="section-head">
-            <div>
-              <div class="eyebrow">Documents</div>
-              <h2>Loan Documents</h2>
-            </div>
-          </div>
+</div>
+{% else %}
+<div class="note-box">
+No borrower profile linked to this capital request.
+</div>
+{% endif %}
 
-          {% if documents %}
-          <div class="doc-list">
-            {% for doc in documents %}
-            <div class="list-card">
-              <div class="list-title">{{ doc.document_name or doc.doc_type or doc.file_path or "Document" }}</div>
-              <div class="list-sub">Status: {{ doc.status or "uploaded" }}</div>
-            </div>
-            {% endfor %}
-          </div>
-          {% else %}
-          <div class="note-box">No documents attached yet.</div>
-          {% endif %}
-        </section>
+</section>
 
-        <!-- CONDITIONS -->
-        <section class="card">
-          <div class="section-head">
-            <div>
-              <div class="eyebrow">Conditions</div>
-              <h2>Underwriting Conditions</h2>
-            </div>
-          </div>
 
-          {% if conditions %}
-          <div class="condition-list">
-            {% for c in conditions %}
-            <div class="list-card">
-              <div class="list-title">{{ c.description or c.condition_type or "Condition" }}</div>
-              <div class="list-sub">Status: {{ c.status or "pending" }}</div>
-            </div>
-            {% endfor %}
-          </div>
-          {% else %}
-          <div class="note-box">No underwriting conditions yet.</div>
-          {% endif %}
-        </section>
+<!-- FUNDING METRICS -->
+<section class="card">
 
-        <!-- TASKS -->
-        <section class="card">
-          <div class="section-head">
-            <div>
-              <div class="eyebrow">Tasks</div>
-              <h2>Assigned Tasks</h2>
-            </div>
-          </div>
+<div class="section-head">
+<div>
+<div class="eyebrow">Funding Metrics</div>
+<h2>Funding Snapshot</h2>
+</div>
+</div>
 
-          {% if tasks %}
-          <div class="task-list">
-            {% for t in tasks %}
-            <div class="list-card">
-              <div class="list-title">{{ t.title }}</div>
-              <div class="list-sub">
-                {% if t.due_date %}Due {{ t.due_date.strftime('%Y-%m-%d') }}{% else %}No due date{% endif %}
-              </div>
-            </div>
-            {% endfor %}
-          </div>
-          {% else %}
-          <div class="note-box">No tasks assigned.</div>
-          {% endif %}
-        </section>
+<div class="metric-grid">
 
-        <!-- AI SUMMARY -->
-        <section class="card">
-          <div class="section-head">
-            <div>
-              <div class="eyebrow">AI Summary</div>
-              <h2>Loan Officer Insight</h2>
-            </div>
-          </div>
+<div class="metric">
+<span>Capital Requested</span>
+<strong>${{ "{:,.0f}".format(loan.loan_amount or loan.amount or 0) }}</strong>
+</div>
 
-          <div class="note-box" style="white-space:pre-wrap;">
-            {{ ai_summary or "No summary available." }}
-          </div>
-        </section>
+<div class="metric">
+<span>Property Value</span>
+<strong>${{ "{:,.0f}".format(loan.property_value or 0) }}</strong>
+</div>
 
-      </div>
-    </div>
-  </div>
+<div class="metric">
+<span>Front DTI</span>
+<strong>{{ ratios.get("front_end_dti","—") }}</strong>
+</div>
+
+<div class="metric">
+<span>Back DTI</span>
+<strong>{{ ratios.get("back_end_dti","—") }}</strong>
+</div>
+
+<div class="metric">
+<span>LTV</span>
+<strong>{{ ratios.get("ltv","—") }}</strong>
+</div>
+
+<div class="metric">
+<span>Engagement Score</span>
+<strong>{{ engagement_score if engagement_score is not none else "—" }}</strong>
+</div>
+
+</div>
+
+</section>
+
+
+<!-- DEAL CONTEXT -->
+{% if deal %}
+<section class="card">
+
+<div class="section-head">
+<div>
+<div class="eyebrow">Ravlo Deal</div>
+<h2>Investment Snapshot</h2>
+</div>
+
+<a href="{{ url_for('investor.deal_detail', deal_id=deal.id) }}" class="btn">
+Open Deal Record
+</a>
+
+</div>
+
+<div class="detail-list">
+
+<div class="detail-row">
+<span>Deal</span>
+<strong>{{ deal.title or ("Deal #" ~ deal.id) }}</strong>
+</div>
+
+<div class="detail-row">
+<span>Address</span>
+<strong>{{ deal.address or "—" }}</strong>
+</div>
+
+<div class="detail-row">
+<span>Strategy</span>
+<strong>{{ deal.recommended_strategy or deal.strategy or "Pending" }}</strong>
+</div>
+
+<div class="detail-row">
+<span>Purchase</span>
+<strong>${{ "{:,.0f}".format(deal.purchase_price or 0) }}</strong>
+</div>
+
+<div class="detail-row">
+<span>Rehab</span>
+<strong>${{ "{:,.0f}".format(deal.rehab_cost or 0) }}</strong>
+</div>
+
+<div class="detail-row">
+<span>ARV</span>
+<strong>${{ "{:,.0f}".format(deal.arv or 0) }}</strong>
+</div>
+
+</div>
+
+</section>
+{% endif %}
+
+
+<!-- REHAB SCOPE -->
+<section class="card">
+
+<div class="section-head">
+<div>
+<div class="eyebrow">Rehab Analysis</div>
+<h2>Scope Summary</h2>
+</div>
+</div>
+
+{% set line_items = rehab_scope.get("line_items", {}) if rehab_scope else {} %}
+
+<div class="mini-grid">
+
+<div class="metric">
+<span>Rehab Level</span>
+<strong>{{ rehab_scope.get("rehab_level","Pending") if rehab_scope else "Pending" }}</strong>
+</div>
+
+<div class="metric">
+<span>Cost / Sq Ft</span>
+<strong>{{ rehab_scope.get("cost_per_sqft","—") if rehab_scope else "—" }}</strong>
+</div>
+
+</div>
+
+<div class="line-items" style="margin-top:1rem;">
+
+{% if line_items %}
+
+{% for item,value in line_items.items() %}
+<div class="line-item">
+<span>{{ item.replace("_"," ").title() }}</span>
+<strong>${{ "{:,.0f}".format(value or 0) }}</strong>
+</div>
+{% endfor %}
+
+{% else %}
+
+<div class="note-box">
+No rehab scope generated yet.
+</div>
+
+{% endif %}
+
+</div>
+
+</section>
+
+</div>
+
+
+<!-- RIGHT COLUMN -->
+<div class="stack">
+
+<!-- CREDIT -->
+<section class="card">
+
+<div class="section-head">
+<div>
+<div class="eyebrow">Credit</div>
+<h2>Credit Overview</h2>
+</div>
+</div>
+
+{% if credit %}
+
+<div class="detail-list">
+
+<div class="detail-row">
+<span>Score</span>
+<strong>{{ credit.score or credit.credit_score or "—" }}</strong>
+</div>
+
+<div class="detail-row">
+<span>Report Date</span>
+<strong>{{ credit.report_date.strftime('%Y-%m-%d') if credit.report_date else "—" }}</strong>
+</div>
+
+<div class="detail-row">
+<span>Delinquencies</span>
+<strong>{{ credit.delinquencies or 0 }}</strong>
+</div>
+
+<div class="detail-row">
+<span>Total Debt</span>
+<strong>${{ "{:,.0f}".format(credit.total_debt or 0) }}</strong>
+</div>
+
+</div>
+
+{% else %}
+
+<div class="note-box">
+No credit report available.
+</div>
+
+{% endif %}
+
+</section>
+
+
+<!-- DOCUMENTS -->
+<section class="card">
+
+<div class="section-head">
+<div>
+<div class="eyebrow">Documents</div>
+<h2>Funding Documents</h2>
+</div>
+</div>
+
+{% if documents %}
+
+<div class="doc-list">
+
+{% for doc in documents %}
+<div class="list-card">
+
+<div class="list-title">
+{{ doc.document_name or doc.doc_type or "Document" }}
+</div>
+
+<div class="list-sub">
+Status: {{ doc.status or "uploaded" }}
+</div>
+
+</div>
+{% endfor %}
+
+</div>
+
+{% else %}
+
+<div class="note-box">
+No documents attached.
+</div>
+
+{% endif %}
+
+</section>
+
+
+<!-- CONDITIONS -->
+<section class="card">
+
+<div class="section-head">
+<div>
+<div class="eyebrow">Conditions</div>
+<h2>Funding Conditions</h2>
+</div>
+</div>
+
+{% if conditions %}
+
+<div class="condition-list">
+
+{% for c in conditions %}
+<div class="list-card">
+
+<div class="list-title">
+{{ c.description or c.condition_type or "Condition" }}
+</div>
+
+<div class="list-sub">
+Status: {{ c.status or "pending" }}
+</div>
+
+</div>
+{% endfor %}
+
+</div>
+
+{% else %}
+
+<div class="note-box">
+No conditions yet.
+</div>
+
+{% endif %}
+
+</section>
+
+
+<!-- TASKS -->
+<section class="card">
+
+<div class="section-head">
+<div>
+<div class="eyebrow">Tasks</div>
+<h2>Assigned Tasks</h2>
+</div>
+</div>
+
+{% if tasks %}
+
+<div class="task-list">
+
+{% for t in tasks %}
+<div class="list-card">
+
+<div class="list-title">{{ t.title }}</div>
+
+<div class="list-sub">
+{% if t.due_date %}
+Due {{ t.due_date.strftime('%Y-%m-%d') }}
+{% else %}
+No due date
+{% endif %}
+</div>
+
+</div>
+{% endfor %}
+
+</div>
+
+{% else %}
+
+<div class="note-box">
+No tasks assigned.
+</div>
+
+{% endif %}
+
+</section>
+
+
+<!-- AI SUMMARY -->
+<section class="card">
+
+<div class="section-head">
+<div>
+<div class="eyebrow">AI Insight</div>
+<h2>Capital Review Summary</h2>
+</div>
+</div>
+
+<div class="note-box" style="white-space:pre-wrap;">
+{{ ai_summary or "No summary available." }}
+</div>
+
+</section>
+
+</div>
+
+</div>
+
+</div>
 </main>
+
 {% endblock %}

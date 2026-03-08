@@ -1,52 +1,6 @@
-{% extends "layouts/base.html" %}
+{% extends "layouts/Ravlo_lending_base.html" %}
 {% block title %}New Loan{% endblock %}
 {% block content %}
-<style>
-  :root {
-    --bg:#0f0f11;
-    --panel:#15161a;
-    --line:#2a2e36;
-    --text:#e6e6e6;
-    --muted:#a5a7ad;
-    --accent:#7ab8ff;
-  }
-
-  .card {
-    background: var(--panel);
-    border: 1px solid var(--line);
-    border-radius: 14px;
-    padding: 2rem;
-    color: var(--text);
-    box-shadow: 0 0 16px rgba(0,0,0,0.4);
-    max-width: 720px;
-    margin: 2rem auto;
-  }
-
-  label { font-weight: 600; color: var(--accent); }
-  input, select {
-    background: #0f0f11;
-    border: 1px solid var(--line);
-    color: var(--text);
-    border-radius: 10px;
-    padding: .6rem .8rem;
-    width: 100%;
-    margin-bottom: 1rem;
-  }
-
-  .btn {
-    background: var(--accent);
-    color: #000;
-    border: none;
-    border-radius: 10px;
-    padding: .65rem 1.2rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: 0.2s ease;
-  }
-  .btn:hover { background: #98ccff; }
-
-  .header { text-align: center; margin-bottom: 1.5rem; }
-</style>
 
 <div class="card">
   <div class="header">

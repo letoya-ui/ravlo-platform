@@ -5,6 +5,141 @@
 {% block page_subline %}A streamlined, investor‑friendly application designed for fast underwriting and clean lender review.{% endblock %}
 
 {% block content %}
+
+<style>
+
+/* =========================================================
+RAVLO CAPITAL APPLICATION FORM STYLING
+Matches Ravlo OS investor dashboards
+========================================================= */
+
+.ravlo-shell{
+  max-width:1200px;
+  margin:0 auto;
+}
+
+.ravlo-card{
+  padding:28px;
+  margin-bottom:22px;
+}
+
+.ravlo-card h3{
+  margin-bottom:6px;
+  font-size:18px;
+}
+
+.ravlo-card .muted{
+  margin-bottom:18px;
+  display:block;
+}
+
+/* GRID SYSTEM */
+
+.ravlo-grid{
+  display:grid;
+  gap:20px;
+}
+
+.ravlo-grid-2{
+  grid-template-columns:1fr 1fr;
+}
+
+.ravlo-grid-3{
+  grid-template-columns:1fr 1fr 1fr;
+}
+
+@media (max-width:900px){
+
+  .ravlo-grid-2,
+  .ravlo-grid-3{
+    grid-template-columns:1fr;
+  }
+
+}
+
+/* FORM ELEMENTS */
+
+.form-group{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+}
+
+.form-group label{
+  font-size:13px;
+  color:var(--muted);
+}
+
+.ravlo-input{
+  width:100%;
+  padding:12px 14px;
+  border-radius:10px;
+  border:1px solid var(--line);
+  background:rgba(255,255,255,0.03);
+  color:var(--text);
+  font-size:14px;
+}
+
+.ravlo-input:focus{
+  outline:none;
+  border-color:var(--accent);
+  box-shadow:0 0 0 1px var(--accent);
+}
+
+textarea.ravlo-input{
+  resize:vertical;
+  min-height:100px;
+}
+
+/* FILE INPUT */
+
+input[type=file].ravlo-input{
+  padding:10px;
+  background:rgba(255,255,255,0.02);
+}
+
+/* BUTTON */
+
+.btn-row{
+  display:flex;
+  justify-content:flex-end;
+  gap:12px;
+}
+
+.ravlo-btn.primary{
+  padding:12px 22px;
+  font-weight:600;
+  border-radius:10px;
+}
+
+/* HERO FIX */
+
+.ravlo-hero-card{
+  margin-bottom:26px;
+}
+
+.ravlo-hero-card h2{
+  margin-top:4px;
+}
+
+/* SECTION DIVIDER LOOK */
+
+.ravlo-card{
+  position:relative;
+}
+
+.ravlo-card::after{
+  content:"";
+  position:absolute;
+  bottom:-12px;
+  left:0;
+  right:0;
+  height:1px;
+  background:linear-gradient(90deg, transparent, var(--line), transparent);
+}
+
+</style>
+
 <div class="ravlo-shell">
 
   <!-- HERO -->
@@ -206,8 +341,8 @@ document.getElementById("capitalAppForm").addEventListener("submit", async funct
 
   const data = await response.json();
   if (data.success) {
-    alert("Application submitted successfully.");
-  } else {
+    window.location.href = "/investor/capital/status";
+}else {
     alert(data.message || "Submission failed.");
   }
 });

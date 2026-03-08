@@ -1,0 +1,63 @@
+{% extends "layouts/borrower_base.html" %}
+{% block title %}Loans • Ravlo{% endblock %}
+
+{% block page_title %}Your Loans{% endblock %}
+{% block page_subline %}
+Track all funding requests in one place.
+{% endblock %}
+
+{% block content %}
+
+<section class="ravlo-card" style="padding:24px;">
+
+{% if loans %}
+
+<table class="ravlo-table">
+
+<thead>
+<tr>
+<th>ID</th>
+<th>Property</th>
+<th>Amount</th>
+<th>Status</th>
+<th></th>
+</tr>
+</thead>
+
+<tbody>
+
+{% for loan in loans %}
+
+<tr>
+
+<td>#{{ loan.id }}</td>
+
+<td>{{ loan.property_address }}</td>
+
+<td>${{ "{:,.0f}".format(loan.amount) }}</td>
+
+<td>{{ loan.status }}</td>
+
+<td>
+<a href="{{ url_for('borrower.view_loan', loan_id=loan.id) }}" class="ravlo-btn ghost sm">
+View
+</a>
+</td>
+
+</tr>
+
+{% endfor %}
+
+</tbody>
+
+</table>
+
+{% else %}
+
+<p class="muted">You have no loans yet.</p>
+
+{% endif %}
+
+</section>
+
+{% endblock %}

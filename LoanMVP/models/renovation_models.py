@@ -45,7 +45,7 @@ class BuildProject(db.Model):
     __tablename__ = "build_projects"
 
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
 
     project_name = db.Column(db.String(255))
     property_type = db.Column(db.String(100))
