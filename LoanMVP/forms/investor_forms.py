@@ -79,3 +79,34 @@ class InvestorSettingsForm(FlaskForm):
     confirm_password = PasswordField("Confirm Password", validators=[Optional()])
 
     submit = SubmitField("Save Changes")
+
+class CapitalApplicationForm(FlaskForm):
+    full_name = StringField("Full Name", validators=[DataRequired(), Length(max=120)])
+    loan_type = SelectField(
+        "Loan Type",
+        choices=[
+            ("Investor Capital", "Investor Capital"),
+            ("Fix & Flip", "Fix & Flip"),
+            ("Bridge Loan", "Bridge Loan"),
+            ("Rental Loan", "Rental Loan"),
+            ("New Construction", "New Construction"),
+        ],
+        validators=[DataRequired()],
+        default="Investor Capital"
+    )
+
+    project_address = StringField("Project Address", validators=[DataRequired(), Length(max=255)])
+    project_description = TextAreaField("Project Description", validators=[Optional(), Length(max=2000)])
+
+    amount = DecimalField("Requested Amount", validators=[DataRequired(), NumberRange(min=1)])
+    property_value = DecimalField("Property Value", validators=[Optional(), NumberRange(min=0)])
+
+    preferred_loan_officer_id = SelectField(
+        "Preferred Loan Officer (Optional)",
+        choices=[],
+        validators=[Optional()],
+        coerce=int,
+        default=0
+    )
+
+    submit = SubmitField("Submit Application")
