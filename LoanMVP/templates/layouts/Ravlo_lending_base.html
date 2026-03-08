@@ -32,7 +32,7 @@
         {% elif current_user.role == "underwriter" %}
           {% include "includes/layouts/_sidebar_underwriter.html" %}
         {% elif current_user.role == "admin" %}
-          {% include "includes/_sidebar_admin.html" %}
+          {% include "includes/layouts/_sidebar_admin.html" %}
         {% else %}
           {% include "includes/layouts/_sidebar_loan_officer.html" %}
         {% endif %}
