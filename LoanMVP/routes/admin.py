@@ -54,7 +54,7 @@ def dashboard():
 
     logs = SystemLog.query.order_by(SystemLog.created_at.desc()).limit(15).all()
     
-    latest_lead = Lead.query.order_by(Lead.created_at.desc()).limit(5).all()
+    lead = Lead.query.order_by(Lead.created_at.desc()).limit(5).all()
 
     # AI Summary
     try:
@@ -70,7 +70,7 @@ def dashboard():
         stats=stats,
         logs=logs,
         ai_summary=ai_summary,
-        latest_lead=last_lead
+        lead=lead
     )
 
 
