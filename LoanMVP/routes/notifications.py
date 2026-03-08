@@ -1,9 +1,8 @@
-# LoanMVP/routes/notifications.py
-
 from flask import Blueprint, render_template, jsonify
+from flask_login import login_required, current_user
+
 from LoanMVP.extensions import db
 from LoanMVP.models.loan_models import LoanNotification
-from flask_login import login_required, current_user
 
 notifications_bp = Blueprint("notifications", __name__, url_prefix="/notifications")
 
@@ -14,16 +13,16 @@ notifications_bp = Blueprint("notifications", __name__, url_prefix="/notificatio
 @notifications_bp.route("/")
 @login_required
 def dashboard():
+    role = getattr(current_user, "role", "all").lower()
 
-    # Pull newest 50 notifications
     notifications = (
         LoanNotification.query
+        .filter((LoanNotification.role == role) | (LoanNotification.role == "all"))
         .order_by(LoanNotification.created_at.desc())
         .limit(50)
         .all()
     )
 
-    # Icons per event type
     ICON_MAP = {
         "emailed": "📩",
         "opened": "📬",
@@ -37,7 +36,6 @@ def dashboard():
         "ai_summary": "🤖"
     }
 
-    # Color per event type
     COLOR_MAP = {
         "emailed": "#7ab8ff",
         "opened": "#9ad468",
@@ -55,7 +53,9 @@ def dashboard():
         "notifications/dashboard.html",
         notifications=notifications,
         ICON_MAP=ICON_MAP,
-        COLOR_MAP=COLOR_MAP
+        COLOR_MAP=COLOR_MAP,
+        active_tab="notifications",
+        title="Notifications"
     )
 
 
@@ -84,7 +84,13 @@ def api_latest():
 @notifications_bp.route("/mark_read/<int:notif_id>", methods=["POST"])
 @login_required
 def mark_read(notif_id):
+    role = getattr(current_user, "role", "all").lower()
+
     notif = LoanNotification.query.get_or_404(notif_id)
+
+    if notif.role not in [role, "all"]:
+        return jsonify({"success": False, "message": "Unauthorized"}), 403
+
     notif.is_read = True
     db.session.commit()
     return jsonify({"success": True})
@@ -103,29 +109,38 @@ def mark_all_read():
     ).update({"is_read": True})
 
     db.session.commit()
+
     return jsonify({"success": True, "message": "All notifications marked as read."})
 
 
 # =========================================================
-# 🧠 Global Context Processor for Unread Counts
+# Global Context Processor for Unread Counts
 # =========================================================
 @notifications_bp.app_context_processor
 def inject_notification_counts():
-
     if not current_user.is_authenticated:
         return {}
 
     try:
+        role = getattr(current_user, "role", "all").lower()
+
+        current_unread = LoanNotification.query.filter(
+            ((LoanNotification.role == role) | (LoanNotification.role == "all")) &
+            (LoanNotification.is_read == False)
+        ).count()
+
         crm_unread = LoanNotification.query.filter_by(role="crm", is_read=False).count()
         loan_unread = LoanNotification.query.filter_by(role="loan_officer", is_read=False).count()
         processor_unread = LoanNotification.query.filter_by(role="processor", is_read=False).count()
         compliance_unread = LoanNotification.query.filter_by(role="compliance", is_read=False).count()
         underwriter_unread = LoanNotification.query.filter_by(role="underwriter", is_read=False).count()
         executive_unread = LoanNotification.query.filter_by(role="executive", is_read=False).count()
+
     except Exception:
-        crm_unread = loan_unread = processor_unread = compliance_unread = underwriter_unread = executive_unread = 0
+        current_unread = crm_unread = loan_unread = processor_unread = compliance_unread = underwriter_unread = executive_unread = 0
 
     return dict(
+        current_unread=current_unread,
         crm_unread=crm_unread,
         loan_unread=loan_unread,
         processor_unread=processor_unread,

@@ -44,6 +44,7 @@ def admin_required(func):
 @admin_bp.route("/dashboard")
 @role_required("admin")
 def dashboard():
+
     stats = {
         "total_users": User.query.count(),
         "total_loans": LoanApplication.query.count(),
@@ -52,6 +53,8 @@ def dashboard():
     }
 
     logs = SystemLog.query.order_by(SystemLog.created_at.desc()).limit(15).all()
+    
+    latest_lead = Lead.query.order_by(Lead.created_at.desc()).limit(5).all()
 
     # AI Summary
     try:
@@ -67,6 +70,7 @@ def dashboard():
         stats=stats,
         logs=logs,
         ai_summary=ai_summary
+        latest_lead=last_lead
     )
 
 
