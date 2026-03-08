@@ -12,7 +12,7 @@ from LoanMVP.utils.decorators import role_required
 
 # MODELS
 from LoanMVP.models.user_model import User
-from LoanMVP.models.crm_models import Message, Task
+from LoanMVP.models.crm_models import Lead, Message, Task, 
 from LoanMVP.models.loan_models import LoanApplication, BorrowerProfile
 from LoanMVP.models.document_models import LoanDocument
 from LoanMVP.models.system_models import SystemLog
@@ -54,7 +54,7 @@ def dashboard():
 
     logs = SystemLog.query.order_by(SystemLog.created_at.desc()).limit(15).all()
     
-    lead = Lead.query.order_by(Lead.created_at.desc()).limit(5).all()
+    leads = Lead.query.order_by(Lead.created_at.desc()).limit(5).all()
 
     # AI Summary
     try:
@@ -70,7 +70,7 @@ def dashboard():
         stats=stats,
         logs=logs,
         ai_summary=ai_summary,
-        lead=lead
+        leads=leads
     )
 
 
