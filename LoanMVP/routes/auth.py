@@ -167,24 +167,12 @@ def register():
 
     form = RegisterForm()
 
-    if request.method == "POST":
-        full_name = (request.form.get("username") or request.form.get("full_name") or "").strip()
+    if form.validate_on_submit():
+        full_name = (request.form.get("full_name") or request.form.get("username") or "").strip()
         email = (request.form.get("email") or "").strip().lower()
         password = request.form.get("password") or ""
         confirm_password = request.form.get("confirm_password") or ""
         role = (request.form.get("role") or "investor").strip().lower()
-
-        if not full_name or not email or not password:
-            flash("Please complete all required fields.", "error")
-            return redirect(url_for("auth.register"))
-
-        if password != confirm_password and confirm_password:
-            flash("Passwords do not match.", "error")
-            return redirect(url_for("auth.register"))
-
-        if len(password) < 8:
-            flash("Password must be at least 8 characters.", "error")
-            return redirect(url_for("auth.register"))
 
         existing = User.query.filter_by(email=email).first()
         if existing:
@@ -192,7 +180,7 @@ def register():
             return redirect(url_for("auth.login"))
 
         parts = full_name.split(" ", 1)
-        first = parts[0].strip()
+        first = parts[0].strip() if parts else ""
         last = parts[1].strip() if len(parts) > 1 else ""
 
         user = User(
@@ -200,10 +188,9 @@ def register():
             email=email,
             first_name=first,
             last_name=last,
-            role=role or "investor",
+            role=role,
         )
 
-        # Optional compatibility for apps that still use full_name
         if hasattr(user, "full_name"):
             user.full_name = full_name
 
@@ -212,8 +199,8 @@ def register():
         db.session.add(user)
         db.session.commit()
 
-        session.permanent = True
         login_user(user, remember=True)
+        session.permanent = True
 
         flash("Account created successfully.", "success")
         return redirect(url_for(_dashboard_for_role(getattr(user, "role", "investor"))))
