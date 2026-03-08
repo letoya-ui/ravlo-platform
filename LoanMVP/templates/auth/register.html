@@ -1,5 +1,5 @@
 {% extends "layouts/ravlo_auth_base.html" %}
-{% block title %}Create Account • Ravlo{% endblock %}
+{% block title %}Register • Ravlo{% endblock %}
 
 {% block content %}
 
@@ -8,8 +8,8 @@
   <div class="ravlo-auth-card">
 
     <div class="auth-header">
-        <h1>Create your Ravlo account</h1>
-        <p>Start analyzing deals, planning projects, and requesting funding.</p>
+        <h1>Register your Ravlo account</h1>
+        <p>Begin analyzing deals, planning projects, and requesting funding.</p>
     </div>
 
     <form method="POST" action="{{ url_for('auth.register') }}" class="auth-form">
@@ -23,7 +23,6 @@
                 {{ form.full_name(class="ravlo-input") }}
             </div>
 
-           
         </div>
 
         <div class="form-group">
@@ -42,7 +41,7 @@
         </div>
 
         <button type="submit" class="ravlo-btn primary full">
-            Create Account
+            Register Account
         </button>
 
     </form>
@@ -50,7 +49,7 @@
     <div class="auth-footer">
         <p>
             Already have an account?
-            <a href="{{ url_for('auth.login') }}">Sign in</a>
+            <a href="{{ url_for('auth.login') }}">Log in</a>
         </p>
     </div>
 
