@@ -1,24 +1,47 @@
-{% extends "layouts/ravlo_base.html" %}
+{% extends "layouts/Ravlo_loan_base.html" %}
 
+{% block title %}Ravlo • My Profile{% endblock %}
 {% block page_title %}My Profile{% endblock %}
-{% block page_subline %}Your Ravlo account profile{% endblock %}
+{% block page_subline %}Your Ravlo account information{% endblock %}
 
 {% block content %}
+<div class="re-card pad">
+  <div class="row between mb-20">
+    <div>
+      <h2 class="re-section-title">{{ user.first_name or "" }} {{ user.last_name or "" }}</h2>
+      <p class="re-section-sub">{{ user.email }}</p>
+    </div>
 
-<div class="ravlo-card">
-
-  <h2>{{ user.first_name }} {{ user.last_name }}</h2>
-
-  <div class="muted">{{ user.email }}</div>
-
-  <div class="mt-20">
-
-    <div><strong>Role:</strong> {{ user.role }}</div>
-
-    <div><strong>Member since:</strong> {{ user.created_at }}</div>
-
+    <span class="re-badge neutral">{{ user.role|replace('_', ' ')|title }}</span>
   </div>
 
-</div>
+  <div class="re-form-grid">
+    <div class="re-field">
+      <label class="re-label">First Name</label>
+      <input class="re-input" type="text" value="{{ user.first_name or '' }}" disabled>
+    </div>
 
+    <div class="re-field">
+      <label class="re-label">Last Name</label>
+      <input class="re-input" type="text" value="{{ user.last_name or '' }}" disabled>
+    </div>
+
+    <div class="re-field">
+      <label class="re-label">Email</label>
+      <input class="re-input" type="email" value="{{ user.email or '' }}" disabled>
+    </div>
+
+    {% if user.username is defined %}
+    <div class="re-field">
+      <label class="re-label">Username</label>
+      <input class="re-input" type="text" value="{{ user.username or '' }}" disabled>
+    </div>
+    {% endif %}
+  </div>
+
+  <div class="mt-20">
+    <a href="{{ url_for('account.settings') }}" class="btn btn-primary">Edit Profile</a>
+    <a href="{{ url_for('account.security') }}" class="btn btn-secondary">Security</a>
+  </div>
+</div>
 {% endblock %}

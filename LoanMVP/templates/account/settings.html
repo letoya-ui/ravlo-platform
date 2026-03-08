@@ -1,41 +1,42 @@
-{% extends "layouts/ravlo_base.html" %}
+{% extends "layouts/Ravlo_loan_base.html" %}
 
+{% block title %}Ravlo • Account Settings{% endblock %}
 {% block page_title %}Account Settings{% endblock %}
-{% block page_subline %}Update your Ravlo account{% endblock %}
+{% block page_subline %}Update your personal account details{% endblock %}
 
 {% block content %}
+<div class="re-card pad">
+  <form method="POST">
+    {% if csrf_token %}
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    {% endif %}
 
-<div class="ravlo-card">
+    <div class="re-form-grid">
+      <div class="re-field">
+        <label class="re-label">First Name</label>
+        <input class="re-input" type="text" name="first_name" value="{{ user.first_name or '' }}" required>
+      </div>
 
-<form method="POST">
+      <div class="re-field">
+        <label class="re-label">Last Name</label>
+        <input class="re-input" type="text" name="last_name" value="{{ user.last_name or '' }}" required>
+      </div>
 
-<div class="form-row">
+      <div class="re-field">
+        <label class="re-label">Email</label>
+        <input class="re-input" type="email" name="email" value="{{ user.email or '' }}" required>
+      </div>
 
-<label>First Name</label>
-<input type="text" name="first_name" value="{{ user.first_name }}">
+      <div class="re-field">
+        <label class="re-label">Username</label>
+        <input class="re-input" type="text" name="username" value="{{ user.username or '' }}">
+      </div>
+    </div>
 
+    <div class="mt-20">
+      <button type="submit" class="btn btn-primary">Save Changes</button>
+      <a href="{{ url_for('account.profile') }}" class="btn btn-secondary">Back to Profile</a>
+    </div>
+  </form>
 </div>
-
-<div class="form-row">
-
-<label>Last Name</label>
-<input type="text" name="last_name" value="{{ user.last_name }}">
-
-</div>
-
-<div class="form-row">
-
-<label>Email</label>
-<input type="email" name="email" value="{{ user.email }}">
-
-</div>
-
-<button class="btn btn-primary mt-20">
-Save Changes
-</button>
-
-</form>
-
-</div>
-
 {% endblock %}

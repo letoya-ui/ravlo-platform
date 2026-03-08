@@ -1,0 +1,37 @@
+{% extends "layouts/ravlo_employee_base.html" %}
+
+{% block title %}Ravlo • Security{% endblock %}
+{% block page_title %}Security{% endblock %}
+{% block page_subline %}Update your password and account security{% endblock %}
+
+{% block content %}
+<div class="re-card pad">
+  <form method="POST">
+    {% if csrf_token %}
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    {% endif %}
+
+    <div class="re-form-grid">
+      <div class="re-field full">
+        <label class="re-label">Current Password</label>
+        <input class="re-input" type="password" name="current_password" required>
+      </div>
+
+      <div class="re-field">
+        <label class="re-label">New Password</label>
+        <input class="re-input" type="password" name="new_password" required>
+      </div>
+
+      <div class="re-field">
+        <label class="re-label">Confirm New Password</label>
+        <input class="re-input" type="password" name="confirm_password" required>
+      </div>
+    </div>
+
+    <div class="mt-20">
+      <button type="submit" class="btn btn-primary">Update Password</button>
+      <a href="{{ url_for('account.profile') }}" class="btn btn-secondary">Back to Profile</a>
+    </div>
+  </form>
+</div>
+{% endblock %}
