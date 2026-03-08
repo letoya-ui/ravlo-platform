@@ -361,6 +361,7 @@ def call_insights():
         values=values,        # ✅ added
         title="Call Intelligence Dashboard"
     )
+
 @crm_bp.route("/refresh_ai_summary", methods=["POST"])
 @role_required("crm")
 def refresh_ai_summary():
@@ -783,7 +784,7 @@ from sqlalchemy import func
 # 🧭 Lead Engine (Search / Filter / Analytics)
 # ==========================================================
 @crm_bp.route("/lead_engine")
-@role_required("crm")
+@role_required("crm", "admin")
 def lead_engine():
     query = request.args.get("q", "")
     leads = Lead.query.filter(Lead.name.ilike(f"%{query}%")).all() if query else []
@@ -793,7 +794,7 @@ def lead_engine():
 # 📋 View All Leads
 # ==========================================================
 @crm_bp.route("/leads")
-@role_required("crm")
+@role_required("crm", "admin")
 def leads():
     leads = Lead.query.order_by(Lead.created_at.desc()).all()
     return render_template("crm/leads.html", leads=leads, title="All Leads")
@@ -802,7 +803,7 @@ def leads():
 # 🧠 Lead Detail (Full View with AI + Communication)
 # ==========================================================
 @crm_bp.route("/details/<int:lead_id>")
-@role_required("crm")
+@role_required("crm", "admin")
 def lead_details(lead_id):
     """
     Detailed view for a single lead including AI insights,
