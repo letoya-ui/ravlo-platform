@@ -32,7 +32,7 @@ assistant = AIAssistant()
 # 🧭 CRM Dashboard
 # ---------------------------------------------------------
 @crm_bp.route("/dashboard")
-@role_required("crm")
+@role_required("crm", "loan_officer", "processor", "executive", "admin", "partners")
 def dashboard():
     """Central CRM Dashboard — unified adaptive view."""
     from datetime import datetime, timedelta
@@ -42,23 +42,35 @@ def dashboard():
     week_ago = now - timedelta(days=7)
 
     # ----------------------------------------
-    # 🔹 Role-based lead & task visibility
+    # Role-based lead & task visibility
     # ----------------------------------------
-    if role == "loan officer":
-        leads_list = Lead.query.filter_by(assigned_officer_id=current_user.id)\
-                               .order_by(Lead.created_at.desc()).all()
-        tasks_list = Task.query.filter_by(assigned_to=current_user.id)\
-                               .order_by(Task.due_date.asc()).all()
+    if role == "loan_officer":
+        leads_list = (
+            Lead.query.filter_by(assigned_officer_id=current_user.id)
+            .order_by(Lead.created_at.desc())
+            .all()
+        )
+        tasks_list = (
+            Task.query.filter_by(assigned_to=current_user.id)
+            .order_by(Task.due_date.asc())
+            .all()
+        )
         role_view = "Loan Officer CRM"
 
     elif role == "processor":
-        leads_list = Lead.query.filter(Lead.status.in_(["submitted", "processing"]))\
-                               .order_by(Lead.created_at.desc()).all()
-        tasks_list = Task.query.filter_by(assigned_to=current_user.id)\
-                               .order_by(Task.due_date.asc()).all()
+        leads_list = (
+            Lead.query.filter(Lead.status.in_(["submitted", "processing"]))
+            .order_by(Lead.created_at.desc())
+            .all()
+        )
+        tasks_list = (
+            Task.query.filter_by(assigned_to=current_user.id)
+            .order_by(Task.due_date.asc())
+            .all()
+        )
         role_view = "Processor CRM"
 
-    elif role in ["executive", "admin"]:
+    elif role in ["executive", "admin", "crm"]:
         leads_list = Lead.query.order_by(Lead.created_at.desc()).limit(50).all()
         tasks_list = Task.query.order_by(Task.due_date.asc()).limit(50).all()
         role_view = "Executive CRM Overview"
@@ -69,17 +81,30 @@ def dashboard():
         role_view = "Basic CRM View"
 
     # ----------------------------------------
-    # 📊 Additional Data Sets
+    # Additional Data Sets
     # ----------------------------------------
-    contacted_leads = Lead.query.filter(Lead.updated_at >= week_ago)\
-                                .order_by(Lead.updated_at.desc()).limit(5).all()
-    leads_recent = Lead.query.order_by(Lead.created_at.desc()).limit(5).all()
+    contacted_leads = (
+        Lead.query.filter(Lead.updated_at >= week_ago)
+        .order_by(Lead.updated_at.desc())
+        .limit(5)
+        .all()
+    )
+
+    leads_recent = (
+        Lead.query.order_by(Lead.created_at.desc())
+        .limit(5)
+        .all()
+    )
+
     total_calls = CallLog.query.count()
     total_messages = Message.query.count()
 
     stats = {
         "total_leads": len(leads_list),
-        "active_leads": sum(1 for l in leads_list if l.status and l.status.lower() in ["active", "new"]),
+        "active_leads": sum(
+            1 for l in leads_list
+            if l.status and l.status.lower() in ["active", "new"]
+        ),
         "recent_leads": len(leads_recent),
         "contacted_leads": len(contacted_leads),
         "tasks_due": len(tasks_list),
@@ -89,7 +114,7 @@ def dashboard():
     }
 
     # ----------------------------------------
-    # 🧠 AI Summary
+    # AI Summary
     # ----------------------------------------
     try:
         ai_summary = assistant.generate_reply(
@@ -97,11 +122,11 @@ def dashboard():
             f"crm_{role}_dashboard"
         )
     except Exception as e:
-        print(" AI summary error:", e)
+        print("AI summary error:", e)
         ai_summary = "AI CRM summary unavailable."
 
     # ----------------------------------------
-    # 🎨 Render Template
+    # Render Template
     # ----------------------------------------
     return render_template(
         "crm/dashboard.html",
@@ -111,9 +136,9 @@ def dashboard():
         tasks=tasks_list,
         stats=stats,
         ai_summary=ai_summary,
-        title=role_view
+        title=role_view,
+        active_tab="dashboard"
     )
-
 
 # ---------------------------------------------------------
 # ☎️ Smart Dialer
@@ -654,7 +679,7 @@ def lead_ai_followup(lead_id):
     return {"message": ai_text}
 
 @crm_bp.route("/add_lead", methods=["POST"])
-@role_required("crm")
+@role_required("crm", "admin" )
 def add_lead():
     """Add a new lead record."""
     full_name = request.form.get("full_name")
