@@ -1,0 +1,41 @@
+{% extends "layouts/ravlo_base.html" %}
+
+{% block page_title %}Account Settings{% endblock %}
+{% block page_subline %}Update your Ravlo account{% endblock %}
+
+{% block content %}
+
+<div class="ravlo-card">
+
+<form method="POST">
+
+<div class="form-row">
+
+<label>First Name</label>
+<input type="text" name="first_name" value="{{ user.first_name }}">
+
+</div>
+
+<div class="form-row">
+
+<label>Last Name</label>
+<input type="text" name="last_name" value="{{ user.last_name }}">
+
+</div>
+
+<div class="form-row">
+
+<label>Email</label>
+<input type="email" name="email" value="{{ user.email }}">
+
+</div>
+
+<button class="btn btn-primary mt-20">
+Save Changes
+</button>
+
+</form>
+
+</div>
+
+{% endblock %}

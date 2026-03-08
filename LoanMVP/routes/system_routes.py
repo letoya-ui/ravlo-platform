@@ -150,43 +150,6 @@ def audits():
     return render_template("system/audits.html", **ctx)
 
 
-# =========================================================
-# ⚙️ Settings Management
-# =========================================================
-@system_bp.route("/settings", methods=["GET", "POST"])
-@role_required("system")
-def settings():
-    ctx = get_system_context()
-    settings = SystemSettings.query.first()
-
-    if not settings:
-        settings = SystemSettings(
-            system_name="LoanMVP",
-            theme_color="#0f0f11",
-            ai_mode="standard"
-        )
-        db.session.add(settings)
-        db.session.commit()
-
-    if request.method == "POST":
-        try:
-            settings.system_name = request.form.get("system_name") or settings.system_name
-            settings.theme_color = request.form.get("theme_color") or settings.theme_color
-            settings.ai_mode = request.form.get("ai_mode") or settings.ai_mode
-            settings.maintenance_mode = bool(request.form.get("maintenance_mode"))
-
-            db.session.commit()
-            flash("✅ Settings updated successfully.", "success")
-
-        except Exception as e:
-            db.session.rollback()
-            flash(f"⚠️ Error updating settings: {str(e)}", "danger")
-
-        return redirect(url_for("system.settings"))
-
-    ctx["settings"] = settings
-    ctx["title"] = "System Settings"
-    return render_template("system/settings.html", **ctx)
 
 
 # =========================================================

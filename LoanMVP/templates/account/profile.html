@@ -1,0 +1,24 @@
+{% extends "layouts/ravlo_base.html" %}
+
+{% block page_title %}My Profile{% endblock %}
+{% block page_subline %}Your Ravlo account profile{% endblock %}
+
+{% block content %}
+
+<div class="ravlo-card">
+
+  <h2>{{ user.first_name }} {{ user.last_name }}</h2>
+
+  <div class="muted">{{ user.email }}</div>
+
+  <div class="mt-20">
+
+    <div><strong>Role:</strong> {{ user.role }}</div>
+
+    <div><strong>Member since:</strong> {{ user.created_at }}</div>
+
+  </div>
+
+</div>
+
+{% endblock %}
