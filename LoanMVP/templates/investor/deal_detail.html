@@ -10,15 +10,16 @@ Review the saved deal, check strategy and funding status, and launch the next to
   <a href="{{ url_for('investor.deals_list') }}" class="ravlo-btn ghost sm">
     Deal Pipeline
   </a>
-  <a href="{{ url_for('investor.deal_studio') }}" class="ravlo-btn ghost sm">
-    Deal Studio
-  </a>
   <a href="{{ url_for('investor.deal_report', deal_id=deal.id) }}" class="ravlo-btn primary sm">
     View Report
   </a>
 {% endblock %}
 
 {% block content %}
+{% set featured_after = (featured.get("after_url") if featured else "") or "" %}
+{% set featured_before = (featured.get("before_url") if featured else "") or "" %}
+{% set featured_style = (featured.get("style_preset") if featured else "") or "" %}
+
 <div class="deal-detail-shell">
 
   <!-- HERO -->
@@ -46,110 +47,80 @@ Review the saved deal, check strategy and funding status, and launch the next to
     <div class="detail-hero-actions">
       <a href="{{ url_for('investor.deal_architect') }}" class="ravlo-btn ghost">
         AI Deal Architect
-
-      {% if deal_id is defined and deal_id %}
-      <a href="{{ url_for('investor.deal_rehab_studio', deal_id=deal.id) }}" class="ravlo-btn ghost">
-        Rehab Studio
       </a>
-        {% endif %}
 
-      <button class="ravlo-btn primary" type="button" onclick="requestFunding({{ deal.id }})">
+      <a href="{{ url_for('investor.deal_rehab', deal_id=deal.id) }}" class="ravlo-btn ghost">
+        Renovation Studio
+      </a>
+
+      <a href="{{ url_for('investor.build_studio', deal_id=deal.id) }}" class="ravlo-btn ghost">
+        Build Studio
+      </a>
+
+     <a href="{{ url_for('investor.capital_application', deal_id=deal.id) }}"
+        class="ravlo-btn primary">
+        Request Funding
+     </a> 
+      </button>
+    </div>
+  </section>
+
+  <!-- DEAL STUDIO TOOLS -->
+  <section class="ravlo-card pad">
+    <div class="section-head">
+      <div>
+        <div class="eyebrow">DEAL STUDIO</div>
+        <h3>Deal Development Tools</h3>
+      </div>
+    </div>
+
+    <p class="muted" style="margin:0 0 18px;">
+      Use Ravlo's tools to analyze, design, and plan your investment strategy.
+    </p>
+
+    <div class="studio-grid">
+
+      <a href="{{ url_for('investor.deal_rehab', deal_id=deal.id) }}" class="studio-card">
+        <div class="studio-icon">🛠</div>
+        <div class="studio-title">Renovation Studio</div>
+        <div class="studio-sub">
+          Visualize renovations, generate mockups, and plan rehab scopes.
+        </div>
+      </a>
+
+      <a href="{{ url_for('investor.build_studio', deal_id=deal.id) }}" class="studio-card">
+        <div class="studio-icon">🏗</div>
+        <div class="studio-title">Build Studio</div>
+        <div class="studio-sub">
+          Design ground-up development concepts and site plans.
+        </div>
+      </a>
+
+      <a href="{{ url_for('investor.deal_architect') }}" class="studio-card">
+        <div class="studio-icon">📐</div>
+        <div class="studio-title">Deal Architect</div>
+        <div class="studio-sub">
+          Let Ravlo AI analyze the deal strategy and investment path.
+        </div>
+      </a>
+
+      <a href="{{ url_for('investor.deal_report', deal_id=deal.id) }}" class="studio-card">
+        <div class="studio-icon">📊</div>
+        <div class="studio-title">Deal Report</div>
+        <div class="studio-sub">
+          Generate investor-grade analysis and shareable reports.
+        </div>
+      </a>
+
+    </div>
+
+    <div style="margin-top:20px">
+      <button class="ravlo-btn primary" onclick="requestFunding({{ deal.id }})">
         Request Funding
       </button>
     </div>
   </section>
 
-  <section class="ravlo-card pad">
-
-  <div class="section-head">
-    <div>
-      <div class="eyebrow">DEAL STUDIO</div>
-      <h3>Deal Development Tools</h3>
-    </div>
-  </div>
-
-  <p class="muted" style="margin:0 0 18px;">
-    Use Ravlo's tools to analyze, design, and plan your investment strategy.
-  </p>
-
-  <div class="studio-grid">
-
-    <!-- Renovation -->
-    <a href="{{ url_for('investor.deal_rehab', deal_id=deal.id) }}" class="studio-card">
-
-      <div class="studio-icon">🛠</div>
-
-      <div class="studio-title">
-        Renovation Studio
-      </div>
-
-      <div class="studio-sub">
-        Visualize renovations, generate mockups, and plan rehab scopes.
-      </div>
-
-    </a>
-
-
-    <!-- Build -->
-    <a href="{{ url_for('investor.build_studio', deal_id=deal.id) }}" class="studio-card">
-
-      <div class="studio-icon">🏗</div>
-
-      <div class="studio-title">
-        Build Studio
-      </div>
-
-      <div class="studio-sub">
-        Design ground-up development concepts and site plans.
-      </div>
-
-    </a>
-
-
-    <!-- Deal Architect -->
-    <a href="{{ url_for('investor.deal_architect') }}" class="studio-card">
-
-      <div class="studio-icon">📐</div>
-
-      <div class="studio-title">
-        Deal Architect
-      </div>
-
-      <div class="studio-sub">
-        Let Ravlo AI analyze the deal strategy and investment path.
-      </div>
-
-    </a>
-
-
-    <!-- Deal Report -->
-    <a href="{{ url_for('investor.deal_report', deal_id=deal.id) }}" class="studio-card">
-
-      <div class="studio-icon">📊</div>
-
-      <div class="studio-title">
-        Deal Report
-      </div>
-
-      <div class="studio-sub">
-        Generate investor-grade analysis and shareable reports.
-      </div>
-
-    </a>
-
-  </div>
-
-
-  <div style="margin-top:20px">
-
-    <button class="ravlo-btn primary"
-            onclick="requestFunding({{ deal.id }})">
-      Request Funding
-    </button>
-
-  </div>
-
-</section>
   <!-- KPI ROW -->
   <div class="detail-kpi-grid">
     <div class="ravlo-kpi premium">
@@ -213,6 +184,46 @@ Review the saved deal, check strategy and funding status, and launch the next to
             <strong>{{ deal.zip_code or "—" }}</strong>
           </div>
         </div>
+      </section>
+
+      <!-- RENOVATION FEATURE -->
+      <section class="ravlo-card pad">
+        <div class="section-head">
+          <div>
+            <div class="eyebrow">RENOVATION STORY</div>
+            <h3>Featured Before & After</h3>
+          </div>
+          <a href="{{ url_for('investor.deal_rehab', deal_id=deal.id) }}" class="ravlo-link-btn">Open Studio</a>
+        </div>
+
+        {% if featured_after %}
+          <div class="featured-compare-grid">
+            <div class="featured-panel">
+              <div class="featured-label">Before</div>
+              {% if featured_before %}
+                <img src="{{ featured_before }}" alt="Before image" class="featured-image">
+              {% else %}
+                <div class="featured-placeholder">No before image saved</div>
+              {% endif %}
+            </div>
+
+            <div class="featured-panel">
+              <div class="featured-label">After</div>
+              <img src="{{ featured_after }}" alt="Featured after image" class="featured-image">
+            </div>
+          </div>
+
+          <div class="featured-meta-row">
+            <span class="mini-pill">{{ featured_style or "Featured Design" }}</span>
+            <a href="{{ url_for('investor.deal_reveal', deal_id=deal.id) }}" class="ravlo-btn ghost sm">
+              View Reveal
+            </a>
+          </div>
+        {% else %}
+          <div class="empty-state-inline">
+            No featured renovation selected yet. Generate concepts in Renovation Studio and set one as the featured reveal.
+          </div>
+        {% endif %}
       </section>
 
       <!-- FINANCIAL SNAPSHOT -->
@@ -284,13 +295,13 @@ Review the saved deal, check strategy and funding status, and launch the next to
           <div class="mockup-grid">
             {% for mockup in mockups[:4] %}
             <div class="mockup-card">
-              {% if mockup.image_url %}
-                <img src="{{ mockup.image_url }}" alt="Renovation mockup">
+              {% if mockup.after_url %}
+                <img src="{{ mockup.after_url }}" alt="Renovation mockup">
               {% else %}
                 <div class="mockup-placeholder">No Preview</div>
               {% endif %}
               <div class="mockup-meta">
-                <strong>{{ mockup.title or "Concept Render" }}</strong>
+                <strong>{{ mockup.style_preset or "Concept Render" }}</strong>
                 <span>{{ mockup.created_at.strftime('%b %d, %Y') if mockup.created_at else "" }}</span>
               </div>
             </div>
@@ -445,22 +456,20 @@ Review the saved deal, check strategy and funding status, and launch the next to
         </div>
 
         <div class="quick-grid one-col">
-          <a href="{{ url_for('investor.deal_studio') }}" class="quick-card">
-            <span class="quick-title">Open Deal Studio</span>
-            <span class="quick-sub">Launch the broader workspace and tool hub.</span>
-          </a>
-
           <a href="{{ url_for('investor.deal_architect') }}" class="quick-card">
             <span class="quick-title">Open AI Deal Architect</span>
             <span class="quick-sub">Run or refine strategy analysis for this opportunity.</span>
           </a>
 
-          {% if deal_id is defined and deal_id %}
-          <a href="{{ url_for('investor.deal_rehab_studio', deal_id=deal.id) }}" class="quick-card">
-            <span class="quick-title">Open Rehab Studio</span>
-            <span class="quick-sub">Go deeper into renovation scope and concepts.</span>
+          <a href="{{ url_for('investor.deal_rehab', deal_id=deal.id) }}" class="quick-card">
+            <span class="quick-title">Open Renovation Studio</span>
+            <span class="quick-sub">Go deeper into before/after design concepts and rehab scope.</span>
           </a>
-          {% endif %}
+
+          <a href="{{ url_for('investor.build_studio', deal_id=deal.id) }}" class="quick-card">
+            <span class="quick-title">Open Build Studio</span>
+            <span class="quick-sub">Design construction concepts and development scenarios.</span>
+          </a>
         </div>
       </section>
 
@@ -536,6 +545,46 @@ Review the saved deal, check strategy and funding status, and launch the next to
     font-size:20px;
   }
 
+  .studio-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+    gap:16px;
+  }
+
+  .studio-card{
+    padding:18px;
+    border-radius:16px;
+    border:1px solid rgba(255,255,255,.08);
+    background:rgba(255,255,255,.03);
+    display:block;
+    text-decoration:none;
+    transition:.2s ease;
+  }
+
+  .studio-card:hover{
+    transform:translateY(-2px);
+    border-color:rgba(107,127,147,.35);
+    background:rgba(255,255,255,.05);
+  }
+
+  .studio-icon{
+    font-size:22px;
+    margin-bottom:10px;
+  }
+
+  .studio-title{
+    font-size:16px;
+    font-weight:700;
+    color:var(--text);
+  }
+
+  .studio-sub{
+    margin-top:6px;
+    font-size:13px;
+    color:var(--muted);
+    line-height:1.5;
+  }
+
   .overview-grid{
     display:grid;
     grid-template-columns:repeat(2, minmax(0, 1fr));
@@ -597,6 +646,53 @@ Review the saved deal, check strategy and funding status, and launch the next to
     grid-template-columns:repeat(2, minmax(0, 1fr));
     gap:12px;
     margin-top:16px;
+  }
+
+  .featured-compare-grid{
+    display:grid;
+    grid-template-columns:repeat(2, minmax(0, 1fr));
+    gap:14px;
+  }
+
+  .featured-panel{
+    padding:12px;
+    border-radius:18px;
+    background:rgba(255,255,255,.03);
+    border:1px solid rgba(255,255,255,.08);
+  }
+
+  .featured-label{
+    color:var(--muted);
+    font-size:12px;
+    text-transform:uppercase;
+    letter-spacing:.08em;
+    margin-bottom:10px;
+  }
+
+  .featured-image{
+    width:100%;
+    height:240px;
+    object-fit:cover;
+    border-radius:14px;
+    display:block;
+  }
+
+  .featured-placeholder{
+    height:240px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    color:var(--muted);
+    border-radius:14px;
+    background:rgba(255,255,255,.02);
+  }
+
+  .featured-meta-row{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+    align-items:center;
+    margin-top:14px;
   }
 
   .mockup-grid{
@@ -761,7 +857,8 @@ Review the saved deal, check strategy and funding status, and launch the next to
   @media (max-width: 760px){
     .overview-grid,
     .analysis-grid,
-    .mockup-grid{
+    .mockup-grid,
+    .featured-compare-grid{
       grid-template-columns:1fr;
     }
 

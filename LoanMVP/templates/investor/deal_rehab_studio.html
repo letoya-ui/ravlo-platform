@@ -1,276 +1,371 @@
-{# investor/deal_rehab_studio.html #}
 {% extends "layouts/ravlo_base.html" %}
-{% block title %}Ravlo • Rehab Studio{% endblock %}
+{% block title %}Ravlo • Renovation Studio{% endblock %}
 
-{% block page_title %}Rehab Studio{% endblock %}
-{% block page_subline %}Create the HGTV before → after experience inside Ravlo.{% endblock %}
+{% block page_title %}Renovation Studio{% endblock %}
+{% block page_subline %}Create the before → after transformation inside Ravlo.{% endblock %}
 
 {% block content %}
-
 <style>
-  .studio-wrap{margin-top:1rem;}
+  .studio-wrap{display:grid;gap:20px;}
   .studio-hero{
-    border-radius: 18px;
-    padding: 1rem 1.1rem;
-    border: 1px solid var(--line, rgba(255,255,255,.10));
-    background: radial-gradient(900px 520px at 15% 10%, rgba(122,184,255,.12), transparent 55%),
-                rgba(255,255,255,.02);
-    box-shadow: 0 0 28px rgba(0,0,0,.55);
-    display:flex; justify-content:space-between; align-items:flex-end; gap:1rem; flex-wrap:wrap;
+    border-radius:22px;
+    padding:20px 22px;
+    border:1px solid rgba(255,255,255,.08);
+    background:
+      radial-gradient(900px 520px at 15% 10%, rgba(122,184,255,.12), transparent 55%),
+      rgba(255,255,255,.02);
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-end;
+    gap:18px;
+    flex-wrap:wrap;
   }
   .episode-tag{
-    display:inline-flex; gap:.5rem; align-items:center;
-    padding:.35rem .65rem; border-radius:999px;
-    background: rgba(255,255,255,.06);
+    display:inline-flex;
+    gap:.5rem;
+    align-items:center;
+    padding:.4rem .7rem;
+    border-radius:999px;
+    background:rgba(255,255,255,.06);
     border:1px solid rgba(255,255,255,.12);
-    color: rgba(255,255,255,.88);
-    font-weight:800; font-size:.78rem;
+    color:rgba(255,255,255,.88);
+    font-weight:800;
+    font-size:.78rem;
+    letter-spacing:.04em;
   }
-  .hero-title{margin:.55rem 0 0; font-size:1.35rem;}
-  .hero-sub{color: rgba(255,255,255,.75); margin:.25rem 0 0;}
-  .hero-actions{display:flex; gap:.5rem; flex-wrap:wrap;}
+  .hero-title{margin:.6rem 0 0;font-size:1.5rem;line-height:1.1;}
+  .hero-sub{color:rgba(255,255,255,.74);margin:.35rem 0 0;}
+  .hero-actions{display:flex;gap:.6rem;flex-wrap:wrap;}
 
   .btn{
-    background: rgba(122,184,255,0.12);
-    border: 1px solid rgba(122,184,255,0.45);
-    color: #7ab8ff;
-    padding: .62rem .95rem;
-    border-radius: 12px;
-    cursor: pointer;
-    font-weight: 800;
-    transition: .2s;
-    font-size: .9rem;
+    background:rgba(122,184,255,.12);
+    border:1px solid rgba(122,184,255,.42);
+    color:#7ab8ff;
+    padding:.7rem 1rem;
+    border-radius:14px;
+    cursor:pointer;
+    font-weight:800;
+    transition:.2s;
+    font-size:.92rem;
     text-decoration:none;
-    display:inline-flex; align-items:center; gap:.45rem;
+    display:inline-flex;
+    align-items:center;
+    gap:.45rem;
   }
-  .btn:hover{background: rgba(122,184,255,0.22); border-color:#7ab8ff; box-shadow:0 0 14px rgba(122,184,255,.35);}
+  .btn:hover{
+    background:rgba(122,184,255,.22);
+    border-color:#7ab8ff;
+    box-shadow:0 0 14px rgba(122,184,255,.25);
+  }
   .btn-secondary{
-    background: rgba(255,255,255,0.04);
-    border: 1px solid rgba(255,255,255,0.12);
-    color: var(--text);
+    background:rgba(255,255,255,.04);
+    border:1px solid rgba(255,255,255,.12);
+    color:var(--text);
   }
 
   .grid{
     display:grid;
-    grid-template-columns: 1.15fr 1.85fr;
-    gap:1.1rem;
-    margin-top:1.1rem;
+    grid-template-columns:1.05fr 1.95fr;
+    gap:20px;
   }
   @media (max-width: 1100px){ .grid{grid-template-columns:1fr;} }
 
   .card{
-    background: var(--panel, #0b1016);
-    border: 1px solid var(--line, rgba(255,255,255,0.10));
-    border-radius: 16px;
-    padding: 1rem 1.1rem;
-    box-shadow: 0 0 18px rgba(0,0,0,0.45);
+    background:var(--panel, rgba(255,255,255,.025));
+    border:1px solid rgba(255,255,255,.08);
+    border-radius:20px;
+    padding:18px;
   }
-  .card h3{margin:.1rem 0 .75rem; color:var(--accent, #7ab8ff); font-size:1.05rem;}
+  .card h3{margin:.1rem 0 .85rem;color:var(--accent, #7ab8ff);font-size:1.04rem;}
   .muted{color:var(--muted);}
 
-  .img{width:100%; border-radius: 14px; display:block; border: 1px solid rgba(255,255,255,0.07); background:#0f141a;}
-
-  /* Before/After compare */
-  .ba{
-    position:relative;
-    border-radius: 16px;
-    overflow:hidden;
-    border: 1px solid rgba(255,255,255,.10);
-    background: rgba(255,255,255,.02);
-  }
-  .ba img{display:block; width:100%; height:auto;}
-  .ba .after{position:absolute; inset:0; clip-path: inset(0 50% 0 0);}
-  .ba .handle{position:absolute; top:0; bottom:0; left:50%; width:2px; background: rgba(122,184,255,.85); box-shadow: 0 0 18px rgba(122,184,255,.35);}
-  .ba .knob{
-    position:absolute; top:50%; left:50%;
-    transform: translate(-50%, -50%);
-    width:46px; height:46px; border-radius:999px;
-    background: rgba(0,0,0,.55);
-    border:1px solid rgba(122,184,255,.55);
-    display:flex; align-items:center; justify-content:center;
-    color:#a9d2ff; font-weight:900;
-  }
-  .ba input[type="range"]{position:absolute; inset:0; width:100%; opacity:0; cursor: ew-resize;}
-  .ba-badges{
-    position:absolute; inset:12px 12px auto 12px;
-    display:flex; justify-content:space-between; gap:.5rem; pointer-events:none;
-  }
-  .badge{
-    font-size:.78rem; padding:.28rem .55rem; border-radius:999px;
-    background: rgba(0,0,0,.45);
-    border: 1px solid rgba(255,255,255,.14);
-    color: rgba(255,255,255,.88);
-    backdrop-filter: blur(6px);
+  .img{
+    width:100%;
+    border-radius:16px;
+    display:block;
+    border:1px solid rgba(255,255,255,.08);
+    background:#0f141a;
   }
 
-  /* Variations */
-  .after-grid{display:grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap:.75rem;}
-  @media (max-width: 900px){ .after-grid{grid-template-columns: repeat(2, minmax(0,1fr));} }
-  @media (max-width: 620px){ .after-grid{grid-template-columns: 1fr;} }
-  .thumb{padding:.6rem; border-radius: 16px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.10); transition:.15s;}
-  .thumb:hover{transform: translateY(-1px); border-color: rgba(122,184,255,0.28);}
-  .thumb-meta{margin-top:.45rem; display:flex; justify-content:space-between; gap:.35rem; align-items:center;}
-  .chip{
-    font-size:.78rem; border-radius:999px; padding:.35rem .6rem;
-    background: rgba(122,184,255,0.12);
-    border: 1px solid rgba(122,184,255,0.26);
-    color: #a9d2ff;
+  .row{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:14px;
   }
-  .pick{width:100%; margin-top:.55rem; justify-content:center;}
-
-  .row{display:grid; grid-template-columns: 1fr 1fr; gap:.75rem;}
   @media (max-width: 900px){ .row{grid-template-columns:1fr;} }
 
   .input{
     width:100%;
-    padding:.6rem .7rem;
-    border-radius: 12px;
-    border: 1px solid rgba(255,255,255,.10);
+    padding:.75rem .8rem;
+    border-radius:14px;
+    border:1px solid rgba(255,255,255,.10);
     background:#0f141a;
-    color: var(--text);
+    color:var(--text);
+    min-height:48px;
   }
+
+  .section-stack{display:grid;gap:16px;}
+  .action-row{display:flex;gap:10px;flex-wrap:wrap;}
+
+  /* Before/After */
+  .ba{
+    position:relative;
+    border-radius:18px;
+    overflow:hidden;
+    border:1px solid rgba(255,255,255,.10);
+    background:rgba(255,255,255,.02);
+  }
+  .ba img{display:block;width:100%;height:auto;}
+  .ba .after{position:absolute;inset:0;clip-path: inset(0 50% 0 0);}
+  .ba .handle{
+    position:absolute;
+    top:0; bottom:0; left:50%;
+    width:2px;
+    background:rgba(122,184,255,.85);
+    box-shadow:0 0 18px rgba(122,184,255,.35);
+  }
+  .ba .knob{
+    position:absolute;
+    top:50%; left:50%;
+    transform:translate(-50%, -50%);
+    width:46px; height:46px;
+    border-radius:999px;
+    background:rgba(0,0,0,.55);
+    border:1px solid rgba(122,184,255,.55);
+    display:flex; align-items:center; justify-content:center;
+    color:#a9d2ff; font-weight:900;
+  }
+  .ba input[type="range"]{
+    position:absolute; inset:0; width:100%;
+    opacity:0; cursor:ew-resize;
+  }
+  .ba-badges{
+    position:absolute; inset:12px 12px auto 12px;
+    display:flex; justify-content:space-between; gap:.5rem;
+    pointer-events:none;
+  }
+  .badge{
+    font-size:.78rem;
+    padding:.28rem .55rem;
+    border-radius:999px;
+    background:rgba(0,0,0,.45);
+    border:1px solid rgba(255,255,255,.14);
+    color:rgba(255,255,255,.88);
+    backdrop-filter: blur(6px);
+  }
+
+  /* Gallery */
+  .after-grid{
+    display:grid;
+    grid-template-columns:repeat(3, minmax(0,1fr));
+    gap:12px;
+  }
+  @media (max-width: 900px){ .after-grid{grid-template-columns:repeat(2, minmax(0,1fr));} }
+  @media (max-width: 620px){ .after-grid{grid-template-columns:1fr;} }
+
+  .thumb{
+    padding:.65rem;
+    border-radius:18px;
+    background:rgba(255,255,255,.03);
+    border:1px solid rgba(255,255,255,.10);
+    transition:.15s;
+  }
+  .thumb:hover{
+    transform:translateY(-1px);
+    border-color:rgba(122,184,255,.28);
+  }
+  .thumb-meta{
+    margin-top:.5rem;
+    display:flex;
+    justify-content:space-between;
+    gap:.35rem;
+    align-items:center;
+  }
+  .chip{
+    font-size:.78rem;
+    border-radius:999px;
+    padding:.35rem .6rem;
+    background:rgba(122,184,255,.12);
+    border:1px solid rgba(122,184,255,.26);
+    color:#a9d2ff;
+  }
+  .pick{
+    width:100%;
+    margin-top:.6rem;
+    justify-content:center;
+  }
+
+  .status-box{
+    padding:12px 14px;
+    border-radius:14px;
+    background:rgba(255,255,255,.03);
+    border:1px solid rgba(255,255,255,.08);
+    color:var(--muted);
+  }
+
+  .scope-box{
+    padding:16px;
+    border-radius:18px;
+    background:rgba(255,255,255,.025);
+    border:1px solid rgba(255,255,255,.08);
+  }
+  .scope-box ul{margin:.6rem 0 0 1rem;padding:0;}
+  .scope-box li{margin:.35rem 0;color:var(--text);}
 </style>
 
 <div class="studio-wrap">
 
   <div class="studio-hero">
     <div>
-      <div class="episode-tag">🎬 REHAB STUDIO • DEAL #{{ deal.id }}</div>
+      <div class="episode-tag">🎬 RENOVATION STUDIO • DEAL #{{ deal.id }}</div>
       <h2 class="hero-title">{{ deal.title or ('Deal #' ~ deal.id) }}</h2>
-      <div class="hero-sub">Build your before → after story, then hit Reveal when it’s ready.</div>
+      <div class="hero-sub">Build your before → after story, then feature the reveal for reports and funding.</div>
     </div>
+
     <div class="hero-actions">
-      <a class="btn btn-secondary" href="{{ url_for('investor.deal_detail', deal_id=deal.id) }}">🗂️ Deal Details</a>
-      <a class="btn btn-secondary" href="{{ url_for('investor.deal_reveal', deal_id=deal.id) }}">📺 View Reveal Episode</a>
+      <a class="btn btn-secondary" href="{{ url_for('investor.deal_detail', deal_id=deal.id) }}">🗂 Deal Workspace</a>
+      <a class="btn btn-secondary" href="{{ url_for('investor.deal_reveal', deal_id=deal.id) }}">📺 Reveal Page</a>
     </div>
   </div>
 
   <div class="grid">
 
-    <!-- LEFT: Studio controls -->
-    <div class="card">
-      <h3>🎥 Studio Controls</h3>
+    <!-- LEFT -->
+    <div class="section-stack">
 
-      <div class="row">
-        <div>
-          <label class="muted" style="display:block;margin-bottom:.35rem;">Before Image</label>
-          <input type="file" id="beforeFile" accept="image/*" class="input">
-          <div class="muted" style="margin-top:.45rem;">Upload a room photo (preferred) so we never hit blob: URLs.</div>
+      <div class="card">
+        <h3>Studio Controls</h3>
+
+        <div class="row">
+          <div>
+            <label class="muted" style="display:block;margin-bottom:.35rem;">Before Image</label>
+            <input type="file" id="beforeFile" accept="image/*" class="input">
+            <div class="muted" style="margin-top:.45rem;">Upload a room photo so Ravlo can generate realistic after concepts.</div>
+          </div>
+
+          <div>
+            <label class="muted" style="display:block;margin-bottom:.35rem;">Style Preset</label>
+            <select id="stylePreset" class="input">
+              <option value="">— choose —</option>
+              <option value="luxury">Luxury</option>
+              <option value="modern">Modern</option>
+              <option value="airbnb">Airbnb</option>
+              <option value="flip">Flip</option>
+              <option value="budget">Budget</option>
+            </select>
+          </div>
         </div>
 
-        <div>
-          <label class="muted" style="display:block;margin-bottom:.35rem;">Style Preset</label>
-          <select id="stylePreset" class="input">
-            <option value="">— choose —</option>
-            <option value="luxury">Luxury</option>
-            <option value="modern">Modern</option>
-            <option value="airbnb">Airbnb</option>
-            <option value="flip">Flip</option>
-            <option value="budget">Budget</option>
-          </select>
+        <label class="muted" style="display:block;margin-top:.85rem;margin-bottom:.35rem;">Style Prompt</label>
+        <input id="stylePrompt" class="input" placeholder="e.g. modern minimalist kitchen with matte black fixtures">
+
+        <div class="row" style="margin-top:.85rem;">
+          <div>
+            <label class="muted" style="display:block;margin-bottom:.35rem;">Variations</label>
+            <select id="variations" class="input">
+              <option value="1">1</option>
+              <option value="2" selected>2</option>
+              <option value="3">3</option>
+              <option value="4">4</option>
+            </select>
+          </div>
+
+          <div style="display:flex;align-items:end;">
+            <div class="action-row">
+              <button class="btn" type="button" onclick="generate()">✨ Generate</button>
+              <button class="btn btn-secondary" type="button" onclick="useLastBefore()">↩ Use Last Before</button>
+              <button class="btn btn-secondary" type="button" onclick="generateScope()">🧠 Rehab Plan</button>
+            </div>
+          </div>
         </div>
+
+        <div id="status" class="status-box" style="margin-top:14px;">Ready.</div>
       </div>
 
-      <label class="muted" style="display:block;margin-top:.75rem;margin-bottom:.35rem;">Style prompt</label>
-      <input id="stylePrompt" class="input" placeholder="e.g., modern minimalist kitchen with matte black fixtures">
+      <div class="card">
+        <h3>Featured Reveal</h3>
+        <div class="muted">Choose the best after image and mark it as the featured reveal for this deal.</div>
 
-      <div class="row" style="margin-top:.75rem;">
-        <div>
-          <label class="muted" style="display:block;margin-bottom:.35rem;">Variations</label>
-          <select id="variations" class="input">
-            <option value="1">1</option>
-            <option value="2" selected>2</option>
-            <option value="3">3</option>
-            <option value="4">4</option>
-          </select>
-        </div>
-        <div style="display:flex; align-items:end; gap:.5rem;">
-          <button class="btn" type="button" onclick="generate()">✨ Generate</button>
-          <button class="btn btn-secondary" type="button" onclick="useLastBefore()">↩ Use Last Before</button>
-          <button class="btn" onclick="generateScope()">
-          🧠 Generate Rehab Plan
+        <div style="margin-top:12px;">
+          <img id="featuredImg" class="img" src="" alt="Featured reveal" style="display:none;">
+          <button id="featureBtn" class="btn" type="button" onclick="feature()" style="display:none; margin-top:.75rem;">
+            ✅ Set as Featured Reveal
           </button>
         </div>
       </div>
-      <div id="scopeResults" class="card" style="margin-top:1rem;">
-      AI rehab plan will appear here.
-     </div>
-      <div id="status" class="muted" style="margin-top:.75rem;"></div>
 
-      <hr style="border:none; border-top:1px solid rgba(255,255,255,.10); margin: 1rem 0;">
-
-      <h3>🏁 Featured Reveal</h3>
-      <div class="muted">Pick one concept as the “final HGTV moment”.</div>
-      <div style="margin-top:.75rem;">
-        <img id="featuredImg" class="img" src="" alt="Featured reveal" style="display:none;">
-        <button id="featureBtn" class="btn" type="button" onclick="feature()" style="display:none; margin-top:.75rem;">
-          ✅ Set as Featured Reveal
-        </button>
+      <div class="card">
+        <h3>AI Rehab Plan</h3>
+        <div id="scopeResults" class="scope-box">
+          Rehab scope, cost range, and value-add guidance will appear here.
+        </div>
       </div>
+
     </div>
 
-    <!-- RIGHT: Preview + Variations -->
-    <div class="card">
-      <h3>📸 Live Preview</h3>
+    <!-- RIGHT -->
+    <div class="section-stack">
 
-      <div class="ba" id="baWrap" style="display:none;">
-        <div class="ba-badges">
-          <span class="badge">BEFORE</span>
-          <span class="badge">AFTER</span>
+      <div class="card">
+        <h3>Before / After Preview</h3>
+
+        <div class="ba" id="baWrap" style="display:none;">
+          <div class="ba-badges">
+            <span class="badge">BEFORE</span>
+            <span class="badge">AFTER</span>
+          </div>
+
+          <img id="baBefore" src="" alt="Before">
+          <div class="after" id="baAfter">
+            <img id="baAfterImg" src="" alt="After">
+          </div>
+          <div class="handle" id="baHandle"></div>
+          <div class="knob">↔</div>
+          <input id="baRange" type="range" min="0" max="100" value="50" aria-label="Before after slider">
         </div>
-        <img id="baBefore" src="" alt="Before">
-        <div class="after" id="baAfter">
-          <img id="baAfterImg" src="" alt="After">
-        </div>
-        <div class="handle" id="baHandle"></div>
-        <div class="knob">↔</div>
-        <input id="baRange" type="range" min="0" max="100" value="50" aria-label="Before after slider">
+
+        <div id="emptyPreview" class="muted">Upload a before image, then generate concepts.</div>
       </div>
 
-      <div id="emptyPreview" class="muted">Upload a before image, then generate concepts.</div>
+      <div class="card">
+        <h3>Concept Variations</h3>
 
-      <hr style="border:none; border-top:1px solid rgba(255,255,255,.10); margin: 1rem 0;">
-
-      <h3>Concept Variations</h3>
-
-      {% if mockups %}
-        <div class="after-grid" id="existingGrid">
-          {% for m in mockups %}
-            <div class="thumb">
-              <img class="img" src="{{ m.after_url }}" alt="After mockup" style="cursor:pointer;" onclick="selectAfter('{{ m.after_url }}','{{ m.before_url }}')">
-              <div class="thumb-meta">
-                <span class="chip">{{ m.style_preset or 'Concept' }}</span>
-                <small class="muted">{{ m.created_at.strftime("%b %d, %Y %I:%M %p") if m.created_at else '' }}</small>
+        {% if mockups %}
+          <div class="after-grid" id="existingGrid">
+            {% for m in mockups %}
+              <div class="thumb">
+                <img class="img" src="{{ m.after_url }}" alt="After mockup" style="cursor:pointer;" onclick="selectAfter('{{ m.after_url }}','{{ m.before_url }}')">
+                <div class="thumb-meta">
+                  <span class="chip">{{ m.style_preset or 'Concept' }}</span>
+                  <small class="muted">{{ m.created_at.strftime("%b %d, %Y %I:%M %p") if m.created_at else '' }}</small>
+                </div>
+                <button class="btn pick" type="button" onclick="selectAfter('{{ m.after_url }}','{{ m.before_url }}')">👀 Preview</button>
               </div>
-              <button class="btn pick" type="button" onclick="selectAfter('{{ m.after_url }}','{{ m.before_url }}')">👀 Preview</button>
-            </div>
-      {% endfor %}
-        </div>
-      {% else %}
-        <div class="muted">No saved concepts yet. Generate a set to start your reveal story.</div>
-      {% endif %}
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="muted">No saved concepts yet. Generate a set to start your reveal story.</div>
+        {% endif %}
 
-      <!-- New results injected here -->
-      <div class="after-grid" id="newGrid" style="margin-top:.75rem; display:none;"></div>
+        <div class="after-grid" id="newGrid" style="margin-top:.75rem; display:none;"></div>
+      </div>
 
     </div>
   </div>
-
 </div>
 
 <script>
-  // Seed "last before" from server best-effort
   let LAST_BEFORE = {{ (before_url or "")|tojson }};
   let CURRENT_BEFORE = "";
   let CURRENT_AFTER = "";
 
   document.getElementById("beforeFile")?.addEventListener("change", async (e) => {
     const file = e.target.files?.[0];
-    if(!file) return;
+    if (!file) return;
     await uploadBefore(file);
   });
 
-  async function uploadBefore(file){
+  async function uploadBefore(file) {
     const status = document.getElementById("status");
     status.textContent = "Uploading before image…";
 
@@ -284,31 +379,44 @@
       body: fd,
       credentials: "include"
     });
+
     const data = await res.json();
-    if(data.status !== "ok") {
-      status.textContent = data.message || "Upload failed";
+
+    if (data.status !== "ok") {
+      status.textContent = data.message || "Upload failed.";
       return;
     }
+
     CURRENT_BEFORE = data.url;
     LAST_BEFORE = data.url;
-    status.textContent = "Before uploaded ✅";
+    status.textContent = "Before image uploaded successfully.";
     showPreview(CURRENT_BEFORE, "");
   }
 
-  function useLastBefore(){
-    if(!LAST_BEFORE) return alert("No previous before image found yet.");
+  function useLastBefore() {
+    if (!LAST_BEFORE) {
+      alert("No previous before image found yet.");
+      return;
+    }
     CURRENT_BEFORE = LAST_BEFORE;
     showPreview(CURRENT_BEFORE, CURRENT_AFTER || "");
   }
 
-  async function generate(){
+  async function generate() {
     const status = document.getElementById("status");
     const preset = document.getElementById("stylePreset")?.value || "";
     const prompt = (document.getElementById("stylePrompt")?.value || "").trim();
     const variations = parseInt(document.getElementById("variations")?.value || "2", 10);
 
-    if(!CURRENT_BEFORE) return alert("Upload a before image first.");
-    if(!prompt && !preset) return alert("Add a prompt or choose a preset.");
+    if (!CURRENT_BEFORE) {
+      alert("Upload a before image first.");
+      return;
+    }
+
+    if (!prompt && !preset) {
+      alert("Add a prompt or choose a preset.");
+      return;
+    }
 
     status.textContent = "Generating concepts…";
 
@@ -317,7 +425,7 @@
     fd.append("style_prompt", prompt);
     fd.append("style_preset", preset);
     fd.append("variations", String(variations));
-    fd.append("save_to_deal", "true");         // ✅ studio always saves
+    fd.append("save_to_deal", "true");
     fd.append("deal_id", "{{ deal.id }}");
     fd.append("saved_property_id", "{{ deal.saved_property_id or '' }}");
 
@@ -326,24 +434,28 @@
       body: fd,
       credentials: "include"
     });
+
     const data = await res.json();
-    if(data.status !== "ok"){
-      status.textContent = data.message || "Visualizer failed";
+
+    if (data.status !== "ok") {
+      status.textContent = data.message || "Visualizer failed.";
       return;
     }
 
-    const before_url = data.before_url || CURRENT_BEFORE;
+    const beforeUrl = data.before_url || CURRENT_BEFORE;
     const images = Array.isArray(data.images) ? data.images : [];
 
-    status.textContent = images.length ? "Concepts generated ✅" : (data.note || "No images returned yet.");
+    status.textContent = images.length
+      ? "Concepts generated successfully."
+      : (data.note || "No images returned yet.");
 
-    if(images.length){
-      renderNew(images, before_url);
-      selectAfter(images[0], before_url);
+    if (images.length) {
+      renderNew(images, beforeUrl);
+      selectAfter(images[0], beforeUrl);
     }
   }
 
-  function renderNew(images, before_url){
+  function renderNew(images, beforeUrl) {
     const grid = document.getElementById("newGrid");
     grid.innerHTML = "";
     grid.style.display = "grid";
@@ -359,18 +471,17 @@
         </div>
         <button class="btn pick" type="button">👀 Preview</button>
       `;
-      div.querySelector("img").onclick = () => selectAfter(afterUrl, before_url);
-      div.querySelector("button").onclick = () => selectAfter(afterUrl, before_url);
+      div.querySelector("img").onclick = () => selectAfter(afterUrl, beforeUrl);
+      div.querySelector("button").onclick = () => selectAfter(afterUrl, beforeUrl);
       grid.appendChild(div);
     });
   }
 
-  function selectAfter(afterUrl, beforeUrl){
+  function selectAfter(afterUrl, beforeUrl) {
     CURRENT_AFTER = afterUrl;
     CURRENT_BEFORE = beforeUrl || CURRENT_BEFORE || LAST_BEFORE || "";
     showPreview(CURRENT_BEFORE, CURRENT_AFTER);
 
-    // featured UI
     const img = document.getElementById("featuredImg");
     const btn = document.getElementById("featureBtn");
     img.src = afterUrl;
@@ -378,7 +489,7 @@
     btn.style.display = "inline-flex";
   }
 
-  function showPreview(beforeUrl, afterUrl){
+  function showPreview(beforeUrl, afterUrl) {
     const wrap = document.getElementById("baWrap");
     const empty = document.getElementById("emptyPreview");
     const b = document.getElementById("baBefore");
@@ -390,18 +501,18 @@
     b.src = beforeUrl || "";
     a.src = afterUrl || "";
 
-    if(beforeUrl){
+    if (beforeUrl) {
       wrap.style.display = "block";
       empty.style.display = "none";
-    }else{
+    } else {
       wrap.style.display = "none";
       empty.style.display = "block";
       return;
     }
 
-    function set(v){
-      const pct = Math.max(0, Math.min(100, Number(v)||50));
-      afterLayer.style.clipPath = `inset(0 ${100-pct}% 0 0)`;
+    function set(v) {
+      const pct = Math.max(0, Math.min(100, Number(v) || 50));
+      afterLayer.style.clipPath = `inset(0 ${100 - pct}% 0 0)`;
       handle.style.left = pct + "%";
     }
 
@@ -410,63 +521,83 @@
     set(50);
   }
 
-  async function feature(){
-    if(!CURRENT_AFTER) return alert("Pick a concept first.");
+  async function feature() {
+    if (!CURRENT_AFTER) {
+      alert("Pick a concept first.");
+      return;
+    }
+
     const fd = new FormData();
     fd.append("after_url", CURRENT_AFTER);
+    fd.append("before_url", CURRENT_BEFORE);
 
     const res = await fetch("{{ url_for('investor.deal_feature_reveal', deal_id=deal.id) }}", {
       method: "POST",
       body: fd,
       credentials: "include"
     });
+
     const data = await res.json();
-    if(data.status !== "ok") return alert(data.message || "Could not feature reveal.");
-    alert("Featured reveal set ✅ Now go to Reveal Episode.");
+
+    if (data.status !== "ok") {
+      alert(data.message || "Could not feature reveal.");
+      return;
+    }
+
+    alert("Featured reveal set.");
   }
 
-  // If server gave us a before_url, preload preview container
-  (function(){
-    if(LAST_BEFORE){
+  async function generateScope() {
+    if (!CURRENT_BEFORE) {
+      alert("Upload a room photo first.");
+      return;
+    }
+
+    const box = document.getElementById("scopeResults");
+    box.innerHTML = "Generating rehab plan...";
+
+    const res = await fetch("{{ url_for('investor.ai_rehab_scope') }}", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        image_url: CURRENT_BEFORE
+      })
+    });
+
+    const data = await res.json();
+
+    if (data.status !== "ok") {
+      box.innerHTML = `<div class="muted">${data.message || "Scope generation failed."}</div>`;
+      return;
+    }
+
+    const scope = Array.isArray(data.scope) ? data.scope : [];
+    const estimatedCost = Number(data.estimated_cost || 0);
+    const arvIncrease = Number(data.arv_increase || 0);
+
+    let html = "<h4 style='margin:0 0 10px;'>AI Rehab Plan</h4>";
+
+    if (scope.length) {
+      html += "<ul>";
+      scope.forEach(item => {
+        html += `<li>${item}</li>`;
+      });
+      html += "</ul>";
+    } else {
+      html += "<div class='muted'>No line items returned.</div>";
+    }
+
+    html += `<p style="margin-top:12px;"><b>Estimated Rehab:</b> $${estimatedCost.toLocaleString()}</p>`;
+    html += `<p><b>ARV Increase:</b> $${arvIncrease.toLocaleString()}</p>`;
+
+    box.innerHTML = html;
+  }
+
+  (function() {
+    if (LAST_BEFORE) {
       CURRENT_BEFORE = LAST_BEFORE;
       showPreview(CURRENT_BEFORE, "");
     }
   })();
-
-async function generateScope() {
-
-    if(!CURRENT_BEFORE){
-        alert("Upload a room photo first.");
-        return;
-    }
-
-    const res = await fetch("/investor/ai/rehab_scope",{
-        method:"POST",
-        headers:{ "Content-Type":"application/json"},
-        body: JSON.stringify({
-            image_url: CURRENT_BEFORE
-        })
-    });
-
-    const data = await res.json();
-
-    if(!data.ok){
-        alert("Scope generation failed.");
-        return;
-    }
-
-    let html = "<h3>AI Rehab Plan</h3><ul>";
-
-    data.scope.forEach(s=>{
-        html += `<li>${s}</li>`;
-    });
-
-    html += "</ul>";
-
-    html += `<p><b>Estimated Rehab:</b> $${data.estimated_cost.toLocaleString()}</p>`;
-    html += `<p><b>ARV Increase:</b> $${data.arv_increase.toLocaleString()}</p>`;
-
-    document.getElementById("scopeResults").innerHTML = html;
-}
 </script>
 {% endblock %}
