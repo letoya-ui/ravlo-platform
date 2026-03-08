@@ -168,7 +168,6 @@ def dashboard():
 # =============================================================
 
 @loan_officer_bp.route("/ai/assistant", methods=["GET", "POST"])
-@login_required
 @role_required("loan_officer", "admin")
 def ai_assistant():
     """
