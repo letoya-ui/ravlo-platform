@@ -37,7 +37,8 @@ from LoanMVP.extensions import db, stripe, csrf
 from LoanMVP.utils.decorators import role_required
 
 
-from LoanMVP.forms.investor_forms import InvestorSettingsForm, InvestorProfileForm
+from LoanMVP.forms.investor_forms import InvestorSettingsForm, InvestorProfileForm, CapitalApplicationForm
+
 # -------------------------
 # Models (updated for Investor)
 # -------------------------
@@ -935,7 +936,7 @@ def update_profile():
 # 📝 INVESTOR • CAPITAL APPLICATION + STATUS
 # =========================================================
 
-@investor_bp.route("/capital_application", methods=["GET", "POST"])
+@investor_bp.route("/capital_application", methods=["GET"])
 @login_required
 @role_required("investor")
 def capital_application():
@@ -951,52 +952,17 @@ def capital_application():
     if deal_id:
         deal = Deal.query.get(deal_id)
 
-    assistant = AIAssistant()
-
-    if request.method == "POST":
-
-        loan_type = request.form.get("loan_type")
-        amount = safe_float(request.form.get("amount"))
-        property_address = request.form.get("property_address")
-
-        try:
-            ai_summary = assistant.generate_reply(
-                f"Create a short investor-facing capital request summary for {ip.full_name} "
-                f"for a {loan_type} at {property_address}.",
-                "investor_apply",
-            )
-        except Exception:
-            ai_summary = None
-
-        profile_fk = _profile_id_filter(LoanApplication, ip.id)
-
-        loan = LoanApplication(
-            **profile_fk,
-            deal_id=deal_id,  # 🔥 LINK DEAL TO LOAN
-            loan_type=loan_type,
-            loan_amount=amount,
-            property_address=property_address,
-            ai_summary=ai_summary,
-            created_at=datetime.utcnow(),
-            status="Submitted",
-            is_active=True
-        )
-
-        db.session.add(loan)
-        db.session.commit()
-
-        flash("✅ Capital request submitted successfully!", "success")
-
-        return redirect(url_for("investor.status"))
+    officers = LoanOfficerProfile.query.order_by(LoanOfficerProfile.name.asc()).all()
 
     return render_template(
         "investor/capital_application.html",
         investor=ip,
         deal=deal,
+        officers=officers,
         title="Apply for Capital"
     )
 
-@investor_bp.route("/capital-application/submit", methods=["POST"])
+@investor_bp.route("/capital_application/submit", methods=["POST"])
 @login_required
 @role_required("investor")
 def submit_capital_application():
@@ -1013,21 +979,19 @@ def submit_capital_application():
     project_description = (request.form.get("project_description") or "").strip()
     amount = float(request.form.get("amount") or 0)
     property_value = float(request.form.get("property_value") or 0)
+    preferred_loan_officer_id = request.form.get("preferred_loan_officer_id")
 
     # -----------------------------
     # Bridge: Investor -> BorrowerProfile
     # -----------------------------
     borrower = None
 
-    # 1) If InvestorProfile already stores a borrower bridge, use it
     if hasattr(investor, "borrower_profile_id") and investor.borrower_profile_id:
         borrower = BorrowerProfile.query.get(investor.borrower_profile_id)
 
-    # 2) Else try by email
     if not borrower and getattr(investor, "email", None):
         borrower = BorrowerProfile.query.filter_by(email=investor.email).first()
 
-    # 3) Else create new borrower bridge profile
     if not borrower:
         borrower = BorrowerProfile(
             user_id=getattr(investor, "user_id", None),
@@ -1045,7 +1009,6 @@ def submit_capital_application():
         db.session.add(borrower)
         db.session.flush()
 
-        # optional backlink if InvestorProfile supports it
         if hasattr(investor, "borrower_profile_id"):
             investor.borrower_profile_id = borrower.id
 
@@ -1055,12 +1018,30 @@ def submit_capital_application():
     profile_fk = _profile_id_filter(LoanApplication, investor.id)
 
     # -----------------------------
+    # Loan officer assignment
+    # -----------------------------
+    assigned_officer_id = None
+
+    if preferred_loan_officer_id:
+        try:
+            assigned_officer_id = int(preferred_loan_officer_id)
+        except (TypeError, ValueError):
+            assigned_officer_id = None
+
+    # Auto-assign if no preferred officer selected
+    if not assigned_officer_id:
+        auto_officer = LoanOfficerProfile.query.order_by(LoanOfficerProfile.joined_at.asc()).first()
+        if auto_officer:
+            assigned_officer_id = auto_officer.id
+
+    # -----------------------------
     # Create loan / capital request
     # -----------------------------
     loan = LoanApplication(
         **profile_fk,
         borrower_profile_id=borrower.id,
         investor_profile_id=getattr(investor, "id", None),
+        loan_officer_id=assigned_officer_id,
         loan_type=loan_type,
         amount=amount,
         property_value=property_value,
@@ -1076,7 +1057,7 @@ def submit_capital_application():
     db.session.flush()
 
     # -----------------------------
-    # Optional timeline event
+    # Timeline event
     # -----------------------------
     db.session.add(
         LoanStatusEvent(
@@ -1111,6 +1092,7 @@ def submit_capital_application():
         "message": "Application submitted successfully.",
         "loan_id": loan.id,
         "borrower_profile_id": borrower.id,
+        "loan_officer_id": assigned_officer_id,
         "redirect_url": url_for("investor.loan_view", loan_id=loan.id)
     })
 
