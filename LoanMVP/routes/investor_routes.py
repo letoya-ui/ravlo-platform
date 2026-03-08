@@ -2798,6 +2798,23 @@ def deal_book(deal_id):
 # =========================================================
 # DEAL CRUD
 # =========================================================
+@investor_bp.route("/deals")
+@login_required
+def deals():
+
+    # Fetch deals owned by the investor
+    deals = (
+        Deal.query
+        .filter_by(user_id=current_user.id)
+        .order_by(Deal.created_at.desc())
+        .all()
+    )
+
+    return render_template(
+        "investor/deals.html",
+        deals=deals
+    )
+    
 @investor_bp.route("/deals/create", methods=["GET", "POST"])
 @login_required
 @role_required("investor")

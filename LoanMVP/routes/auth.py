@@ -162,64 +162,53 @@ def logout():
 @auth_bp.route("/register", methods=["GET", "POST"])
 @csrf.exempt
 def register():
-    if current_user.is_authenticated:
-        return redirect(url_for(_dashboard_for_role(getattr(current_user, "role", "investor"))))
 
     form = RegisterForm()
 
-    if request.method == "POST":
-        full_name = (request.form.get("username") or request.form.get("full_name") or "").strip()
-        email = (request.form.get("email") or "").strip().lower()
-        password = request.form.get("password") or ""
-        confirm_password = request.form.get("confirm_password") or ""
-        role = (request.form.get("role") or "investor").strip().lower()
+    if form.validate_on_submit():
 
-        if not full_name or not email or not password:
-            flash("Please complete all required fields.", "error")
-            return redirect(url_for("auth.register"))
-
-        if password != confirm_password and confirm_password:
-            flash("Passwords do not match.", "error")
-            return redirect(url_for("auth.register"))
-
-        if len(password) < 8:
-            flash("Password must be at least 8 characters.", "error")
-            return redirect(url_for("auth.register"))
+        full_name = form.username.data.strip()
+        email = form.email.data.lower().strip()
+        password = form.password.data
+        role = form.role.data
 
         existing = User.query.filter_by(email=email).first()
+
         if existing:
-            flash("An account already exists for that email. Please log in.", "error")
+            flash("Account already exists. Please login.", "error")
             return redirect(url_for("auth.login"))
 
         parts = full_name.split(" ", 1)
-        first = parts[0].strip()
-        last = parts[1].strip() if len(parts) > 1 else ""
+        first = parts[0]
+        last = parts[1] if len(parts) > 1 else ""
 
         user = User(
             username=email,
             email=email,
             first_name=first,
             last_name=last,
-            role=role or "investor",
+            role=role
         )
-
-        # Optional compatibility for apps that still use full_name
-        if hasattr(user, "full_name"):
-            user.full_name = full_name
 
         user.set_password(password)
 
         db.session.add(user)
         db.session.commit()
 
-        session.permanent = True
-        login_user(user, remember=True)
+        login_user(user)
 
         flash("Account created successfully.", "success")
-        return redirect(url_for(_dashboard_for_role(getattr(user, "role", "investor"))))
 
-    return render_template("auth/register.html", form=form, title="Register | Ravlo")
+        return redirect(url_for(_dashboard_for_role(user.role)))
 
+    # DEBUG so you see validation problems
+    if request.method == "POST":
+        print("REGISTER ERRORS:", form.errors)
+
+    return render_template(
+        "auth/register.html",
+        form=form
+    )
 
 # ============================================================
 # OPTIONAL BORROWER REGISTER
