@@ -168,11 +168,10 @@ def register():
     form = RegisterForm()
 
     if form.validate_on_submit():
-        full_name = (request.form.get("full_name") or request.form.get("username") or "").strip()
-        email = (request.form.get("email") or "").strip().lower()
-        password = request.form.get("password") or ""
-        confirm_password = request.form.get("confirm_password") or ""
-        role = (request.form.get("role") or "investor").strip().lower()
+        full_name = (form.username.data or "").strip()
+        email = (form.email.data or "").strip().lower()
+        password = form.password.data or ""
+        role = (form.role.data or "investor").strip().lower()
 
         existing = User.query.filter_by(email=email).first()
         if existing:
@@ -203,10 +202,13 @@ def register():
         session.permanent = True
 
         flash("Account created successfully.", "success")
-        return redirect(url_for(_dashboard_for_role(getattr(user, "role", "investor"))))
+        return redirect(url_for(_dashboard_for_role(user.role)))
 
-    return render_template("auth/register.html", form=form, title="Register | Ravlo")
+    if request.method == "POST":
+        print("REGISTER FORM ERRORS:", form.errors)
+        flash("Please fix the form errors and try again.", "error")
 
+    return render_template("auth/register.html", form=form, title="Register • Ravlo")
 
 # ============================================================
 # OPTIONAL BORROWER REGISTER
