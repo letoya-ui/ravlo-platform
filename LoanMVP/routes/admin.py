@@ -12,7 +12,7 @@ from LoanMVP.utils.decorators import role_required
 
 # MODELS
 from LoanMVP.models.user_model import User
-from LoanMVP.models.crm_models import Lead, Message, Task, 
+from LoanMVP.models.crm_models import Lead, Message, Task 
 from LoanMVP.models.loan_models import LoanApplication, BorrowerProfile
 from LoanMVP.models.document_models import LoanDocument
 from LoanMVP.models.system_models import SystemLog
