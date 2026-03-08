@@ -166,24 +166,131 @@ def dashboard():
 # =============================================================
 # AI Assistant — Loan Officer
 # =============================================================
-@loan_officer_bp.route("/ai", methods=["POST"])
-@role_required("loan_officer")
-def ai_assistant():
-    data = request.get_json() or {}
-    message = (data.get("message") or "").strip()
 
-    if not message:
-        return jsonify({"reply": "Please enter a message."}), 400
+@loan_officer_bp.route("/ai/assistant", methods=["GET", "POST"])
+@login_required
+@role_required("loan_officer", "admin")
+def ai_assistant():
+    """
+    Loan Officer AI endpoint
+    GET  -> health check / usage instructions
+    POST -> generate AI summary, next steps, or conditions
+    """
+
+    if request.method == "GET":
+        return jsonify({
+            "status": "ready",
+            "endpoint": "loan_officer.ai_assistant",
+            "message": "Send POST with JSON: { loan_id, prompt(optional), mode(optional) }"
+        }), 200
+
+    data = request.get_json(silent=True) or {}
+
+    loan_id = data.get("loan_id")
+    prompt = (data.get("prompt") or "").strip()
+    mode = (data.get("mode") or "summary").strip().lower()
+
+    if not loan_id:
+        return jsonify({"success": False, "error": "loan_id is required"}), 400
+
+    loan = LoanApplication.query.get(loan_id)
+    if not loan:
+        return jsonify({"success": False, "error": f"Loan {loan_id} not found"}), 404
+
+    borrower = getattr(loan, "borrower_profile", None)
+    if not borrower:
+        return jsonify({"success": False, "error": "Borrower profile missing for this loan"}), 400
+
+    officer = LoanOfficerProfile.query.filter_by(user_id=current_user.id).first()
+
+    borrower_name = getattr(borrower, "full_name", None) or getattr(borrower, "name", None) or "Unknown Borrower"
+    borrower_email = getattr(borrower, "email", None) or "N/A"
+    loan_amount = getattr(loan, "amount", None) or 0
+    loan_type = getattr(loan, "loan_type", None) or "Unknown"
+    loan_status = getattr(loan, "status", None) or "Unknown"
+    property_address = (
+        getattr(loan, "property_address", None)
+        or getattr(borrower, "property_address", None)
+        or getattr(borrower, "address", None)
+        or "No property address provided"
+    )
+
+    officer_name = officer.name if officer else f"{current_user.first_name or ''} {current_user.last_name or ''}".strip()
+
+    context_packet = f"""
+    Loan Officer: {officer_name}
+    Borrower Name: {borrower_name}
+    Borrower Email: {borrower_email}
+    Loan ID: {loan.id}
+    Loan Type: {loan_type}
+    Loan Amount: {loan_amount}
+    Loan Status: {loan_status}
+    Property Address: {property_address}
+    """
+
+    if mode == "conditions":
+        system_prompt = f"""
+        You are an expert private lending loan officer assistant.
+
+        Based on the following loan context, generate:
+        1. A concise risk summary
+        2. Recommended underwriting or processing conditions
+        3. Clear next steps for the loan officer
+
+        Keep the response practical, lender-focused, and easy to read.
+
+        Context:
+        {context_packet}
+        """
+    elif mode == "next_steps":
+        system_prompt = f"""
+        You are an expert loan officer assistant.
+
+        Based on the loan context below, provide:
+        1. Current file status assessment
+        2. Recommended next actions
+        3. Potential borrower outreach message points
+
+        Keep it concise and actionable.
+
+        Context:
+        {context_packet}
+        """
+    else:
+        system_prompt = f"""
+        You are an expert loan officer AI assistant for Ravlo Lending OS.
+
+        Review the loan file context below and provide:
+        1. Executive summary
+        2. Key risks or missing items
+        3. Recommended next steps
+        4. Borrower communication guidance
+
+        Keep the answer polished, practical, and lender-friendly.
+
+        Context:
+        {context_packet}
+
+        Additional user prompt:
+        {prompt or "Provide a standard loan officer file summary."}
+        """
 
     try:
-        ai = AIAssistant()
-        reply = ai.generate_reply(message, "loan_officer")
-    except Exception:
-        reply = "AI assistant is temporarily unavailable."
+        ai_response = assistant.generate_reply(system_prompt, "loan_officer_ai")
+    except Exception as e:
+        return jsonify({
+            "success": False,
+            "error": f"AI generation failed: {str(e)}"
+        }), 500
 
-    return jsonify({"reply": reply})
-
-
+    return jsonify({
+        "success": True,
+        "loan_id": loan.id,
+        "mode": mode,
+        "borrower": borrower_name,
+        "loan_status": loan_status,
+        "ai_response": ai_response
+    }), 200
 @loan_officer_bp.route("/loan/<int:loan_id>")
 @role_required("loan_officer")
 def loan_file(loan_id):
