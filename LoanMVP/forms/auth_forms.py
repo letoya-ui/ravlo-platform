@@ -45,6 +45,10 @@ class RegisterForm(FlaskForm):
         choices=[
             ("investor", "Investor"),
             ("borrower", "Borrower"),
+            (Admin", "Admin"),
+            ("Loan_officer", "Loan_officer"),
+            ("Processor", "Processord"),
+            ("Underwriter", "Underwriter"),
         ],
         default="investor"
     )
