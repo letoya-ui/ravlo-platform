@@ -3057,10 +3057,15 @@ def deal_rehab(deal_id):
 @role_required("investor")
 def build_studio(deal_id=None):
     deal = None
-    project = Project.query.get(project_id)
+    project = None
 
+    # If a deal_id was provided, load the deal
     if deal_id is not None:
         deal = _get_owned_deal_or_404(deal_id)
+
+        # If the deal has an associated project, load it
+        if deal.project_id:
+            project = Project.query.get(deal.project_id)
 
     return render_template(
         "investor/build_studio.html",
@@ -3070,6 +3075,7 @@ def build_studio(deal_id=None):
         page_title="Build Studio",
         page_subtitle="Design and visualize new construction projects."
     )
+
    
 # =========================================================
 # 🏗️ BUILD STUDIO — GENERATE CONCEPT
