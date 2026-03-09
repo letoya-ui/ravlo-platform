@@ -3057,6 +3057,7 @@ def deal_rehab(deal_id):
 @role_required("investor")
 def build_studio(deal_id=None):
     deal = None
+    project = Project.query.get(project_id)
 
     if deal_id is not None:
         deal = _get_owned_deal_or_404(deal_id)
@@ -3064,6 +3065,7 @@ def build_studio(deal_id=None):
     return render_template(
         "investor/build_studio.html",
         deal=deal,
+        project=project,
         deal_id=deal.id if deal else None,
         page_title="Build Studio",
         page_subtitle="Design and visualize new construction projects."

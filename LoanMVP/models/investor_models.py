@@ -298,3 +298,37 @@ class FundingRequest(db.Model):
 
     def __repr__(self):
         return f"<FundingRequest {self.id} Deal {self.deal_id}>"
+
+class Project(db.Model):
+    __tablename__ = "projects"
+
+    id = db.Column(db.Integer, primary_key=True)
+
+    # Relationship to Deal
+    deal_id = db.Column(db.Integer, db.ForeignKey("deals.id"), nullable=False)
+
+    # Core project info
+    name = db.Column(db.String(255), nullable=False)
+    description = db.Column(db.Text, nullable=True)
+
+    # Renovation / Build Studio fields
+    status = db.Column(db.String(50), default="draft")  # draft, planning, active, completed
+    arv_estimate = db.Column(db.Float, nullable=True)
+    rehab_budget = db.Column(db.Float, nullable=True)
+    rehab_level = db.Column(db.String(50), nullable=True)  # light, medium, heavy
+    style_preset = db.Column(db.String(100), nullable=True)
+
+    # AI-generated content
+    ai_plan = db.Column(db.Text, nullable=True)
+    ai_summary = db.Column(db.Text, nullable=True)
+
+    # Timestamps
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    # Relationship back to Deal
+    deal = db.relationship("Deal", backref=db.backref("projects", lazy=True))
+
+    def __repr__(self):
+        return f"<Project {self.id} - {self.name}>"
+
