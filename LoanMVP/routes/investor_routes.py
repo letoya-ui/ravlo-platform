@@ -37,7 +37,7 @@ from LoanMVP.extensions import db, stripe, csrf
 from LoanMVP.utils.decorators import role_required
 
 
-from LoanMVP.forms.investor_forms import InvestorSettingsForm, InvestorProfileForm, CapitalApplicationForm
+from LoanMVP.forms.investor_forms import InvestorSettingsForm, InvestorProfileForm, CapitalApplicationForm, Project
 
 # -------------------------
 # Models (updated for Investor)
