@@ -321,10 +321,11 @@ Design and visualize new construction projects.
             <span class="quick-sub">Go back to the main deal and continue the investor workflow.</span>
           </a>
 
-          <a href="{{ url_for('investor.build_project_detail', project_id=project.id) }}"
-            class="ravlo-btn ghost sm">
-           Open
+          {% if project %}
+          <a href="{{ url_for('investor.build_project_detail', project_id=project.id) }}">
+            View Project Details
           </a>
+          {% endif %}
 
           <a href="{{ url_for('investor.deal_report', deal_id=deal.id) }}" class="quick-card">
             <span class="quick-title">Open Deal Report</span>
