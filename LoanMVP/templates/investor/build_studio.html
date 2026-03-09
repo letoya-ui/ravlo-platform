@@ -331,7 +331,7 @@ Design and visualize new construction projects.
             <span class="quick-sub">Use this concept as part of the project strategy and funding story.</span>
           </a>
           {% else %}
-          <a href="{{ url_for('investor.build_projects') }}" class="quick-card">
+          <a href="{{ url_for('investor.build_projects', project_id=project.id) }}" class="quick-card">
             <span class="quick-title">View Build Projects</span>
             <span class="quick-sub">Review saved standalone concepts and build studies.</span>
           </a>
