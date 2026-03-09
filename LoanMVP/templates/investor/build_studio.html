@@ -15,7 +15,7 @@ Design and visualize new construction projects.
       Deal Report
     </a>
   {% else %}
-    <a href="{{ url_for('investor.build_projects' ) }}" class="ravlo-btn ghost sm">
+    <a href="{{ url_for('investor.build_projects') }}" class="ravlo-btn ghost sm">
       Build Projects
     </a>
   {% endif %}
@@ -321,7 +321,7 @@ Design and visualize new construction projects.
             <span class="quick-sub">Go back to the main deal and continue the investor workflow.</span>
           </a>
 
-          <a href="{{ url_for('investor.build_project_detail', project_id=project.id) }}"
+          <a href="{{ url_for('investor.build_project_detail') }}"
             class="ravlo-btn ghost sm">
            Open
           </a>
