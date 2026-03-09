@@ -37,7 +37,7 @@ from LoanMVP.extensions import db, stripe, csrf
 from LoanMVP.utils.decorators import role_required
 
 
-from LoanMVP.forms.investor_forms import InvestorSettingsForm, InvestorProfileForm, CapitalApplicationForm, Project
+from LoanMVP.forms.investor_forms import InvestorSettingsForm, InvestorProfileForm, CapitalApplicationForm
 
 # -------------------------
 # Models (updated for Investor)
@@ -70,7 +70,7 @@ from LoanMVP.models.borrowers import (
 from LoanMVP.models.loan_officer_model import LoanOfficerProfile
 from LoanMVP.models.renovation_models import RenovationMockup, RehabJob, BuildProject
 from LoanMVP.models.partner_models import PartnerConnectionRequest
-from LoanMVP.models.investor_models import InvestorProfile, Investment, InvestmentDocument, DealMessage, DealConversation, FundingRequest  # adjust import paths as needed
+from LoanMVP.models.investor_models import InvestorProfile, Investment, InvestmentDocument, DealMessage, DealConversation, FundingRequest, Project # adjust import paths as needed
 # -------------------------
 # AI / Assistants
 # -------------------------
