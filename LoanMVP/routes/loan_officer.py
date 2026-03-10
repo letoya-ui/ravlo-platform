@@ -115,35 +115,84 @@ def dashboard():
         db.session.commit()
         flash("Temporary loan officer profile created.", "warning")
 
-    leads = Lead.query.filter_by(assigned_to=current_user.id).order_by(Lead.created_at.desc()).all()
+    leads = Lead.query.filter_by(
+        assigned_to=current_user.id
+    ).order_by(Lead.created_at.desc()).all()
 
     # IMPORTANT: loan_officer_id on LoanApplication points to LoanOfficerProfile.id
-    loans = LoanApplication.query.filter_by(loan_officer_id=officer.id).order_by(LoanApplication.created_at.desc()).all()
+    loans = LoanApplication.query.filter_by(
+        loan_officer_id=officer.id
+    ).order_by(LoanApplication.created_at.desc()).all()
 
     pending_intakes = LoanIntakeSession.query.filter(
         (LoanIntakeSession.assigned_officer_id == officer.id) |
         (LoanIntakeSession.status == "pending")
     ).order_by(LoanIntakeSession.created_at.desc()).all()
 
+    def _norm_status(val):
+        return (val or "").strip().lower()
+
+    def _norm_type(val):
+        return (val or "").strip().lower()
+
+    capital_loan_types = {
+        "investor capital",
+        "fix & flip",
+        "new construction",
+        "rental / dscr",
+        "bridge loan",
+        "land acquisition",
+        "development capital",
+    }
+
+    capital_loans = [
+        l for l in loans
+        if _norm_type(getattr(l, "loan_type", None)) in capital_loan_types
+        or _norm_status(getattr(l, "status", None)) == "capital submitted"
+    ]
+
     pipeline = {
-        "submitted": [l for l in loans if (l.status or "").lower() == "submitted"],
-        "in_review": [l for l in loans if (l.status or "").lower() in ["in_review", "in review", "processing"]],
-        "approved": [l for l in loans if (l.status or "").lower() == "approved"],
-        "declined": [l for l in loans if (l.status or "").lower() == "declined"],
+        "submitted": [
+            l for l in loans
+            if _norm_status(l.status) in ["submitted", "capital submitted"]
+        ],
+        "in_review": [
+            l for l in loans
+            if _norm_status(l.status) in ["in_review", "in review", "processing", "under review"]
+        ],
+        "approved": [
+            l for l in loans
+            if _norm_status(l.status) == "approved"
+        ],
+        "declined": [
+            l for l in loans
+            if _norm_status(l.status) == "declined"
+        ],
+        "capital_requests": capital_loans,
     }
 
     stats = {
         "total_leads": len(leads),
-        "active_loans": len([l for l in loans if (l.status or "").lower() not in ["declined", "closed"]]),
-        "approved": len([l for l in loans if (l.status or "").lower() == "approved"]),
-        "declined": len([l for l in loans if (l.status or "").lower() == "declined"]),
+        "active_loans": len([
+            l for l in loans
+            if _norm_status(l.status) not in ["declined", "closed"]
+        ]),
+        "approved": len([
+            l for l in loans
+            if _norm_status(l.status) == "approved"
+        ]),
+        "declined": len([
+            l for l in loans
+            if _norm_status(l.status) == "declined"
+        ]),
         "pending_intakes": len(pending_intakes),
+        "capital_requests": len(capital_loans),
     }
 
     try:
         assistant = AIAssistant()
         ai_summary = assistant.generate_reply(
-            "Summarize loan officer performance across leads, loans, and pipeline.",
+            "Summarize loan officer performance across leads, loans, pipeline, and capital applications.",
             "loan_officer_dashboard"
         )
     except Exception:
@@ -154,6 +203,7 @@ def dashboard():
         officer=officer,
         leads=leads,
         loans=loans,
+        capital_loans=capital_loans,
         pending_intakes=pending_intakes,
         pipeline=pipeline,
         stats=stats,
@@ -161,7 +211,6 @@ def dashboard():
         active_tab="dashboard",
         title="Loan Officer Dashboard",
     )
-
 
 # =============================================================
 # AI Assistant — Loan Officer
