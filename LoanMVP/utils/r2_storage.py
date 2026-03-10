@@ -5,7 +5,7 @@ from botocore.client import Config
 
 
 def _spaces_client():
-    endpoint_url = os.environ["SPACES_ENDPOINT"]  # ex: https://nyc3.digitaloceanspaces.com
+    endpoint_url = os.environ["SPACES_ENDPOINT"]  # ex: https://ravlo-images.sfo3.digitaloceanspaces.com
 
     return boto3.client(
         "s3",
