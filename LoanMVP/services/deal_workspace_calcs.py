@@ -1,7 +1,5 @@
-# LoanMVP/services/deal_workspace_calcs.py
 from __future__ import annotations
-from dataclasses import dataclass
-from typing import Dict, Any, Optional
+from typing import Dict, Any
 
 
 def safe_float(x, default=0.0):
@@ -28,7 +26,6 @@ def _get_prop_sqft(comps: Dict[str, Any]) -> int:
 
 
 def _get_purchase_price(form, comps: Dict[str, Any]) -> float:
-    # priority: form override, then saved price
     p_form = safe_float(form.get("purchase_price")) if form else 0.0
     if p_form > 0:
         return p_form
@@ -37,7 +34,6 @@ def _get_purchase_price(form, comps: Dict[str, Any]) -> float:
 
 
 def _get_arv(comps: Dict[str, Any], form=None) -> float:
-    # priority: form override, then arv_estimate, then median of resale comps
     arv_form = safe_float(form.get("arv")) if form else 0.0
     if arv_form > 0:
         return arv_form
@@ -63,7 +59,6 @@ def _get_market_rent(comps: Dict[str, Any], form=None) -> float:
     if rent > 0:
         return rent
 
-    # fallback: median from rental comps list (if you used Rentometer)
     rentals = comps.get("rental_comps") or []
     rents = [safe_float(r.get("rent")) for r in rentals if safe_float(r.get("rent")) > 0]
     if rents:
@@ -76,20 +71,17 @@ def calculate_flip_budget(form, comps: Dict[str, Any]) -> Dict[str, Any]:
     purchase_price = _get_purchase_price(form, comps)
     arv = _get_arv(comps, form=form)
 
-    # rehab inputs
     rehab_total = safe_float(form.get("rehab_total")) if form else safe_float(comps.get("rehab_total"))
     if rehab_total <= 0:
         rehab_total = safe_float((comps.get("rehab_summary") or {}).get("total"))
 
-    # holding + selling
     holding_months = safe_int(form.get("holding_months"), 6) if form else 6
     monthly_holding = safe_float(form.get("monthly_holding_cost"), 0.0) if form else 0.0
     holding_cost = monthly_holding * holding_months
 
-    selling_cost_rate = safe_float(form.get("selling_cost_rate"), 0.08) if form else 0.08  # 8% default
+    selling_cost_rate = safe_float(form.get("selling_cost_rate"), 0.08) if form else 0.08
     selling_costs = arv * selling_cost_rate
 
-    # financing
     down_payment_rate = safe_float(form.get("down_payment_rate"), 0.2) if form else 0.2
     down_payment = purchase_price * down_payment_rate
     loan_amount = max(purchase_price - down_payment, 0.0)
@@ -122,6 +114,10 @@ def calculate_flip_budget(form, comps: Dict[str, Any]) -> Dict[str, Any]:
         "total_investment": total_in,
         "profit": profit,
         "roi": roi,
+
+        # normalized aliases for Ravlo UI
+        "deal_score_base": roi,
+        "recommended_strategy": "Flip",
         "ok": True,
     }
 
@@ -134,7 +130,6 @@ def calculate_rental_budget(form, comps: Dict[str, Any]) -> Dict[str, Any]:
 
     monthly_rent = _get_market_rent(comps, form=form)
 
-    # expenses defaults
     taxes = safe_float(form.get("monthly_taxes"), 0.0) if form else 0.0
     insurance = safe_float(form.get("monthly_insurance"), 0.0) if form else 0.0
     hoa = safe_float(form.get("monthly_hoa"), 0.0) if form else 0.0
@@ -146,14 +141,12 @@ def calculate_rental_budget(form, comps: Dict[str, Any]) -> Dict[str, Any]:
     mgmt_cost = effective_rent * management
     total_expenses = taxes + insurance + hoa + maintenance + mgmt_cost
 
-    # mortgage assumptions (optional override)
     down_payment_rate = safe_float(form.get("down_payment_rate"), 0.25) if form else 0.25
     down_payment = purchase_price * down_payment_rate
     loan_amount = max(purchase_price - down_payment, 0.0)
     rate = safe_float(form.get("interest_rate"), 0.075) if form else 0.075
     term_years = safe_int(form.get("term_years"), 30) if form else 30
 
-    # rough amortized payment (safe approximation)
     r = rate / 12.0
     n = term_years * 12
     if loan_amount > 0 and r > 0:
@@ -173,25 +166,23 @@ def calculate_rental_budget(form, comps: Dict[str, Any]) -> Dict[str, Any]:
         "purchase_price": purchase_price,
         "rehab_total": rehab_total,
         "monthly_rent": monthly_rent,
+        "rent_est": monthly_rent,              # normalized alias
         "effective_rent": effective_rent,
         "monthly_expenses": total_expenses,
         "mortgage_payment": payment,
         "net_cashflow": net_cashflow,
+        "net_cashflow_mo": net_cashflow,       # normalized alias
         "annual_noi": annual_noi,
         "cap_rate": cap_rate,
         "dscr": dscr,
         "loan_amount": loan_amount,
         "down_payment": down_payment,
+        "recommended_strategy": "Rental",
         "ok": True,
     }
 
 
 def calculate_airbnb_budget(form, comps: Dict[str, Any]) -> Dict[str, Any]:
-    """
-    Beta version:
-    - nightly_rate and occupancy can be user inputs
-    - if not provided, we estimate from long-term rent as a proxy
-    """
     purchase_price = _get_purchase_price(form, comps)
     rehab_total = safe_float(form.get("rehab_total")) if form else safe_float(comps.get("rehab_total"))
     if rehab_total <= 0:
@@ -201,7 +192,6 @@ def calculate_airbnb_budget(form, comps: Dict[str, Any]) -> Dict[str, Any]:
     occupancy = safe_float(form.get("occupancy_rate"), 0.55) if form else 0.55
 
     if nightly_rate <= 0:
-        # proxy from long-term rent: assume STR monthly gross ~ 1.6x LTR gross in good markets (tunable)
         ltr = _get_market_rent(comps, form=form)
         nightly_rate = max((ltr * 1.6) / 30.0, 80.0)
 
@@ -234,31 +224,20 @@ def calculate_airbnb_budget(form, comps: Dict[str, Any]) -> Dict[str, Any]:
         "gross_monthly": gross,
         "monthly_expenses": total_expenses,
         "net_monthly": net,
+        "recommended_strategy": "Airbnb",
         "ok": True,
     }
 
 
 def recommend_strategy(comparison: Dict[str, Dict[str, Any]]) -> Dict[str, Any]:
-    """
-    Simple recommendation logic:
-    - prefer highest profit for flip
-    - prefer highest net cashflow for rental/airbnb
-    - add a basic risk score
-    """
     flip = comparison.get("flip") or {}
     rental = comparison.get("rental") or {}
     airbnb = comparison.get("airbnb") or {}
 
     score = {}
-
-    # Flip score: profit
     score["flip"] = safe_float(flip.get("profit"))
-
-    # Rental score: net cashflow * 12 + bonus for DSCR >= 1.15
     dscr = safe_float(rental.get("dscr"))
     score["rental"] = safe_float(rental.get("net_cashflow")) * 12 + (5000 if dscr >= 1.15 else 0)
-
-    # Airbnb score: net monthly * 12 but penalize low occupancy assumptions
     occ = safe_float(airbnb.get("occupancy_rate"), 0.55)
     score["airbnb"] = safe_float(airbnb.get("net_monthly")) * 12 - (3000 if occ < 0.45 else 0)
 
@@ -273,3 +252,33 @@ def recommend_strategy(comparison: Dict[str, Dict[str, Any]]) -> Dict[str, Any]:
             "airbnb": "High cashflow but occupancy sensitivity.",
         }
     }
+
+
+def generate_ai_deal_summary(metrics):
+    roi = metrics.get("roi") or 0
+    profit = metrics.get("profit") or 0
+    rent = metrics.get("rent_est") or metrics.get("monthly_rent") or 0
+    cashflow = metrics.get("net_cashflow_mo") or metrics.get("net_cashflow") or 0
+    airbnb_net = metrics.get("net_monthly") or 0
+    strategy = metrics.get("strategy") or "deal"
+
+    if strategy == "flip":
+        recommendation = "Flip" if roi > 0.20 else "Review Carefully"
+    elif strategy == "rental":
+        recommendation = "Rental" if cashflow > 250 else "Review Carefully"
+    elif strategy == "airbnb":
+        recommendation = "Airbnb" if airbnb_net > 500 else "Review Carefully"
+    else:
+        recommendation = "Review Carefully"
+
+    return f"""
+This property shows potential under the {strategy.title()} strategy.
+
+Estimated ROI: {round(roi * 100)}%
+Projected flip profit: ${profit:,.0f}
+Estimated monthly rent: ${rent:,.0f}
+Estimated monthly cash flow: ${cashflow:,.0f}
+Estimated Airbnb net monthly: ${airbnb_net:,.0f}
+
+Recommended strategy: {recommendation}.
+""".strip()

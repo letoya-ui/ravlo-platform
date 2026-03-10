@@ -299,3 +299,191 @@ def resolve_rentcast_investor_bundle(address: str, *, beds=None, baths=None, sqf
             "property_record": property_record_raw,
         },
     }
+
+def build_ravlo_property_card(address: str, *, beds=None, baths=None, sqft=None, property_type=None) -> dict:
+    """
+    Returns a Ravlo-normalized property card payload for Deal Finder / Deal Workspace.
+    """
+
+    bundle = resolve_rentcast_investor_bundle(
+        address=address,
+        beds=beds,
+        baths=baths,
+        sqft=sqft,
+        property_type=property_type,
+    )
+
+    if bundle.get("status") != "ok":
+        return bundle
+
+    prop = bundle.get("property") or {}
+    valuation = bundle.get("valuation") or {}
+    rent_estimate = bundle.get("rent_estimate") or {}
+    comps = bundle.get("comps") or {}
+
+    listing = prop.get("listing") or {}
+    photos = prop.get("photos") or []
+
+    # normalize photos into a clean list of strings
+    normalized_photos = []
+    if isinstance(photos, list):
+        for p in photos:
+            if isinstance(p, str) and p.strip():
+                normalized_photos.append(p.strip())
+            elif isinstance(p, dict):
+                url = p.get("url") or p.get("href") or p.get("src")
+                if url:
+                    normalized_photos.append(url)
+    elif isinstance(photos, str) and photos.strip():
+        normalized_photos = [photos.strip()]
+
+    # normalize sales comps
+    sales_comps = []
+    for comp in (comps.get("sales") or [])[:10]:
+        sales_comps.append({
+            "address": comp.get("formattedAddress") or comp.get("address") or comp.get("addressLine1"),
+            "price": _safe_float(comp.get("price") or comp.get("salePrice") or comp.get("closePrice")),
+            "beds": _safe_int(comp.get("bedrooms") or comp.get("beds")),
+            "baths": _safe_float(comp.get("bathrooms") or comp.get("baths")),
+            "sqft": _safe_int(comp.get("squareFootage") or comp.get("sqft")),
+            "distance": _safe_float(comp.get("distance")),
+            "days_old": _safe_int(comp.get("daysOld") or comp.get("days_old")),
+        })
+
+    # normalize rental comps
+    rental_comps = []
+    for comp in (comps.get("rentals") or [])[:10]:
+        rental_comps.append({
+            "address": comp.get("formattedAddress") or comp.get("address") or comp.get("addressLine1"),
+            "rent": _safe_float(comp.get("rent") or comp.get("price") or comp.get("monthlyRent")),
+            "beds": _safe_int(comp.get("bedrooms") or comp.get("beds")),
+            "baths": _safe_float(comp.get("bathrooms") or comp.get("baths")),
+            "sqft": _safe_int(comp.get("squareFootage") or comp.get("sqft")),
+            "distance": _safe_float(comp.get("distance")),
+            "days_old": _safe_int(comp.get("daysOld") or comp.get("days_old")),
+        })
+
+    # quick market snapshot from sales comps
+    sale_prices = [c["price"] for c in sales_comps if c.get("price") is not None]
+    avg_comp_price = round(sum(sale_prices) / len(sale_prices), 2) if sale_prices else None
+
+    rent_values = [c["rent"] for c in rental_comps if c.get("rent") is not None]
+    avg_comp_rent = round(sum(rent_values) / len(rent_values), 2) if rent_values else None
+
+    card = {
+        "status": "ok",
+        "source": "rentcast",
+        "property": {
+            "property_id": prop.get("property_id"),
+            "address": prop.get("address"),
+            "city": prop.get("city"),
+            "state": prop.get("state"),
+            "zip": prop.get("zip"),
+            "beds": prop.get("beds"),
+            "baths": prop.get("baths"),
+            "sqft": prop.get("sqft"),
+            "year_built": prop.get("year_built"),
+            "property_type": prop.get("property_type"),
+            "price": prop.get("price"),
+            "photos": normalized_photos,
+            "primary_photo": normalized_photos[0] if normalized_photos else None,
+            "listing": listing,
+        },
+        "valuation": {
+            "estimate": valuation.get("estimate"),
+            "low": valuation.get("low"),
+            "high": valuation.get("high"),
+            "confidence": valuation.get("confidence"),
+        },
+        "rent_estimate": {
+            "rent": rent_estimate.get("rent"),
+            "low": rent_estimate.get("low"),
+            "high": rent_estimate.get("high"),
+            "confidence": rent_estimate.get("confidence"),
+        },
+        "comps": {
+            "sales": sales_comps,
+            "rentals": rental_comps,
+            "meta": comps.get("meta") or {},
+        },
+        "market_snapshot": {
+            "avg_sale_comp_price": avg_comp_price,
+            "avg_rental_comp_rent": avg_comp_rent,
+            "sale_comp_count": len(sales_comps),
+            "rental_comp_count": len(rental_comps),
+            "days_old": (comps.get("meta") or {}).get("days_old"),
+            "max_radius": (comps.get("meta") or {}).get("max_radius"),
+        }
+    }
+
+    return card
+
+def calculate_deal_score(metrics: dict) -> dict:
+    """
+    Returns score + label for deal quality.
+    """
+
+    roi = metrics.get("roi") or 0
+    profit = metrics.get("profit") or 0
+    cashflow = metrics.get("net_cashflow_mo") or 0
+
+    score = 0
+
+    if roi >= 0.30:
+        score += 40
+    elif roi >= 0.20:
+        score += 30
+    elif roi >= 0.15:
+        score += 20
+
+    if profit >= 75000:
+        score += 30
+    elif profit >= 40000:
+        score += 20
+    elif profit >= 20000:
+        score += 10
+
+    if cashflow >= 500:
+        score += 30
+    elif cashflow >= 300:
+        score += 20
+    elif cashflow >= 150:
+        score += 10
+
+    label = "Pass"
+
+    if score >= 80:
+        label = "Strong Deal"
+    elif score >= 60:
+        label = "Good Deal"
+    elif score >= 40:
+        label = "Marginal"
+
+    return {
+        "score": score,
+        "label": label
+    }
+
+def generate_ai_deal_summary(metrics):
+    roi = metrics.get("roi") or 0
+    profit = metrics.get("profit") or 0
+    rent = metrics.get("rent_est") or 0
+    cashflow = metrics.get("net_cashflow_mo") or 0
+
+    if roi > 0.25:
+        recommendation = "Flip"
+    elif cashflow > 300:
+        recommendation = "Rental"
+    else:
+        recommendation = "Review Carefully"
+
+    return f"""
+This property shows potential with an estimated ROI of {round(roi*100)}%.
+
+Projected flip profit may reach approximately ${profit:,.0f}.
+Rental income may average around ${rent:,.0f} per month.
+
+Estimated monthly cash flow could be near ${cashflow:,.0f}.
+
+Recommended strategy: {recommendation}.
+"""

@@ -314,13 +314,13 @@ textarea.ravlo-input{
     </section>
 
     <!-- SUBMIT -->
-    <div class="btn-row">
-      <button class="ravlo-btn primary" type="submit" id="capitalSubmitBtn">
-        Submit Application
+    <form method="POST" action="{{ url_for('investor.submit_deal_for_funding', deal_id=deal.id) }}">
+      <button class="ravlo-btn primary">
+        Submit for Funding
       </button>
-    </div>
+    </form>
 
-  </form>
+ 
 
 </div>
 

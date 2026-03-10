@@ -1278,6 +1278,26 @@ def submit_capital_application():
         "redirect_url": url_for("investor.loan_view", loan_id=loan.id)
     })
 
+@investor_bp.route("/deals/<int:deal_id>/submit-funding", methods=["POST"])
+@login_required
+@role_required("investor")
+def submit_deal_for_funding(deal_id):
+
+    deal = Deal.query.filter_by(id=deal_id, user_id=current_user.id).first()
+
+    if not deal:
+        flash("Deal not found.", "danger")
+        return redirect(url_for("investor.deal_workspace"))
+
+    deal.submitted_for_funding = True
+    deal.funding_requested_at = datetime.utcnow()
+
+    db.session.commit()
+
+    flash("Deal submitted for funding review.", "success")
+
+    return redirect(url_for("investor.deal_detail", deal_id=deal.id))
+
 @investor_bp.route("/capital/status", methods=["GET"])
 @investor_bp.route("/status", methods=["GET"])
 @login_required
@@ -2374,8 +2394,13 @@ def property_explore_plus(prop_id):
 @login_required
 @role_required("investor")
 def property_tool():
-    return render_template("investor/property_tool.html", active_page="property_tool")
-
+    return render_template(
+        "investor/property_tool.html",
+        title="Ravlo Deal Finder",
+        active_page="property_tool",
+        page_name="Deal Finder",
+        page_subline="Search by ZIP, review investment potential, and send opportunities straight into Deal Workspace."
+    )
 
 # =========================================================
 # 🔌 INVESTOR • APIs (Property Tool)
@@ -2527,6 +2552,58 @@ def api_property_tool_save_and_analyze():
     deal_url = url_for("investor.deal_workspace", prop_id=existing.id, mode="flip")
     return jsonify({"status": "ok", "saved_id": existing.id, "deal_url": deal_url})
 
+@investor_bp.route("/api/intelligence/card", methods=["POST"])
+@investor_bp.route("/api/property_tool_card", methods=["POST"])
+@csrf.exempt
+@login_required
+@role_required("investor")
+def api_property_tool_card():
+    payload = request.get_json(force=True) or {}
+
+    address = (payload.get("address") or "").strip()
+    if not address:
+        return jsonify({"status": "error", "message": "Address is required."}), 400
+
+    def _num_or_none(v):
+        try:
+            if v in (None, "", "None"):
+                return None
+            return float(v)
+        except Exception:
+            return None
+
+    beds = _num_or_none(payload.get("beds"))
+    baths = _num_or_none(payload.get("baths"))
+    sqft = _num_or_none(payload.get("sqft"))
+    property_type = (payload.get("property_type") or "").strip() or None
+
+    if beds is not None:
+        try:
+            beds = int(beds)
+        except Exception:
+            beds = None
+
+    if sqft is not None:
+        try:
+            sqft = int(sqft)
+        except Exception:
+            sqft = None
+
+    card = build_ravlo_property_card(
+        address=address,
+        beds=beds,
+        baths=baths,
+        sqft=sqft,
+        property_type=property_type,
+    )
+
+    if card.get("status") != "ok":
+        return jsonify({
+            "status": "error",
+            "message": card.get("error") or "Unable to load property card."
+        }), 400
+
+    return jsonify(card)
 # =========================================================
 # 💼 INVESTOR • DEAL STUDIO (workspace + deals + visualizer + exports)
 # =========================================================
