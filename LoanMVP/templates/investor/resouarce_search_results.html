@@ -1,0 +1,249 @@
+{% extends "layouts/ravlo_base.html" %}
+
+{% block title %}Ravlo • Search{% endblock %}
+
+{% block page_title %}Search Results{% endblock %}
+{% block page_subline %}
+Search across Ravlo resources, FAQs, partners, and support tools.
+{% endblock %}
+
+{% block content %}
+<div class="ravlo-shell search-shell">
+
+  <section class="ravlo-hero-card">
+    <div>
+      <div class="eyebrow">RAVLO SEARCH</div>
+      <h2>
+        {% if query %}
+          Results for “{{ query }}”
+        {% else %}
+          Browse Ravlo resources
+        {% endif %}
+      </h2>
+      <p class="muted">
+        {{ total_results }} result{{ '' if total_results == 1 else 's' }} found.
+      </p>
+    </div>
+
+    <div>
+      <a href="{{ url_for('investor.resource_center') }}" class="ravlo-btn ghost">
+        Back to Resource Center
+      </a>
+    </div>
+  </section>
+
+  <section class="ravlo-card pad">
+    <form action="{{ url_for('investor.search') }}" method="get" class="search-form">
+      <input
+        type="text"
+        name="q"
+        class="ravlo-input"
+        placeholder="Search Ravlo resources..."
+        value="{{ query or '' }}"
+      >
+      <button type="submit" class="ravlo-btn primary">Search</button>
+    </form>
+  </section>
+
+  <div class="search-grid">
+
+    <div class="search-stack">
+
+      <section class="ravlo-card pad">
+        <div class="section-head">
+          <div>
+            <div class="eyebrow">RESOURCES</div>
+            <h3>Tools & Shortcuts</h3>
+          </div>
+        </div>
+
+        {% if resource_results %}
+          <div class="result-list">
+            {% for item in resource_results %}
+            <a href="{{ item.url }}" class="result-row">
+              <div>
+                <div class="result-title">{{ item.title }}</div>
+                <div class="result-sub">{{ item.description }}</div>
+              </div>
+              <span class="result-badge">{{ item.category }}</span>
+            </a>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="empty-state-inline">No matching tools found.</div>
+        {% endif %}
+      </section>
+
+      <section class="ravlo-card pad">
+        <div class="section-head">
+          <div>
+            <div class="eyebrow">FAQ</div>
+            <h3>Frequently Asked Questions</h3>
+          </div>
+        </div>
+
+        {% if faq_results %}
+          <div class="faq-list">
+            {% for item in faq_results %}
+            <div class="faq-card">
+              <div class="faq-q">{{ item.q }}</div>
+              <div class="faq-a">{{ item.a }}</div>
+            </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="empty-state-inline">No matching FAQ entries found.</div>
+        {% endif %}
+      </section>
+
+    </div>
+
+    <div class="search-stack">
+
+      <section class="ravlo-card pad">
+        <div class="section-head">
+          <div>
+            <div class="eyebrow">PARTNERS</div>
+            <h3>Partner Results</h3>
+          </div>
+        </div>
+
+        {% if partner_results %}
+          <div class="partner-list">
+            {% for partner in partner_results %}
+            <div class="partner-row">
+              <div>
+                <div class="partner-name">{{ partner.name }}</div>
+                <div class="partner-sub">{{ partner.category }}</div>
+                <div class="partner-meta">{{ partner.service_area }}</div>
+                <div class="partner-meta">{{ partner.description }}</div>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="empty-state-inline">No matching partners found.</div>
+        {% endif %}
+      </section>
+
+    </div>
+
+  </div>
+</div>
+
+<style>
+.search-shell{
+  display:grid;
+  gap:20px;
+}
+
+.search-form{
+  display:grid;
+  grid-template-columns:1fr auto;
+  gap:12px;
+}
+
+.search-grid{
+  display:grid;
+  grid-template-columns:1.05fr .95fr;
+  gap:20px;
+  align-items:start;
+}
+
+.search-stack{
+  display:grid;
+  gap:20px;
+}
+
+.section-head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:16px;
+  margin-bottom:18px;
+}
+
+.section-head h3{
+  margin:4px 0 0;
+  font-size:20px;
+}
+
+.result-list,
+.faq-list,
+.partner-list{
+  display:grid;
+  gap:12px;
+}
+
+.result-row{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:14px;
+  padding:16px;
+  border-radius:16px;
+  text-decoration:none;
+  background:rgba(255,255,255,.03);
+  border:1px solid rgba(255,255,255,.08);
+  transition:.2s ease;
+}
+
+.result-row:hover{
+  transform:translateY(-1px);
+  border-color:rgba(107,127,147,.35);
+  background:rgba(255,255,255,.045);
+}
+
+.result-title,
+.partner-name,
+.faq-q{
+  color:var(--text);
+  font-size:15px;
+  font-weight:700;
+}
+
+.result-sub,
+.partner-sub,
+.partner-meta,
+.faq-a{
+  margin-top:6px;
+  color:var(--muted);
+  font-size:13px;
+  line-height:1.55;
+}
+
+.result-badge{
+  white-space:nowrap;
+  padding:6px 10px;
+  border-radius:999px;
+  background:rgba(107,127,147,.16);
+  border:1px solid rgba(107,127,147,.28);
+  color:var(--text);
+  font-size:12px;
+}
+
+.faq-card,
+.partner-row{
+  padding:16px;
+  border-radius:16px;
+  background:rgba(255,255,255,.03);
+  border:1px solid rgba(255,255,255,.08);
+}
+
+@media (max-width: 960px){
+  .search-grid{
+    grid-template-columns:1fr;
+  }
+}
+
+@media (max-width: 700px){
+  .search-form{
+    grid-template-columns:1fr;
+  }
+
+  .result-row{
+    flex-direction:column;
+  }
+}
+</style>
+{% endblock %}

@@ -1,704 +1,667 @@
 {% extends "layouts/ravlo_base.html" %}
-{% block title %}Ravlo • Command Resource Center{% endblock %}
+{% block title %}Ravlo • Resource Center{% endblock %}
+
+{% block page_title %}Resource Center{% endblock %}
+{% block page_subline %}
+Guides, support, capital updates, trusted connections, and investor tools — all in one place.
+{% endblock %}
+
 {% block content %}
-
-<style>
-  /* ===== Resource Center (Ravlo) ===== */
-  .rc-wrap{margin-top:1rem;}
-  .rc-hero{
-    position:relative;
-    border-radius:18px;
-    overflow:hidden;
-    border:1px solid var(--line, rgba(255,255,255,.10));
-    background:
-      radial-gradient(900px 420px at 18% 12%, rgba(122,184,255,.14), transparent 55%),
-      radial-gradient(700px 400px at 85% 0%, rgba(122,184,255,.08), transparent 55%),
-      linear-gradient(180deg, rgba(255,255,255,.03), rgba(0,0,0,.25));
-    box-shadow: 0 0 26px rgba(0,0,0,.55);
-    padding: 1.05rem 1.1rem;
-    display:flex; align-items:flex-end; justify-content:space-between;
-    gap:1rem; flex-wrap:wrap;
-  }
-  .rc-hero h2{margin:0; font-size:1.35rem;}
-  .rc-hero p{margin:.35rem 0 0; color:var(--muted);}
-  .rc-actions{display:flex; gap:.5rem; flex-wrap:wrap; align-items:center;}
-
-  .rc-btn{
-    background: rgba(122,184,255,0.12);
-    border: 1px solid rgba(122,184,255,0.45);
-    color: #7ab8ff;
-    padding: .62rem .9rem;
-    border-radius: 12px;
-    cursor: pointer;
-    font-weight: 750;
-    transition: .18s;
-    font-size: .9rem;
-    text-decoration:none;
-    display:inline-flex; align-items:center; gap:.45rem;
-  }
-  .rc-btn:hover{
-    background: rgba(122,184,255,0.22);
-    border-color:#7ab8ff;
-    box-shadow:0 0 14px rgba(122,184,255,.35);
-  }
-  .rc-btn.ghost{
-    background: rgba(255,255,255,0.04);
-    border:1px solid rgba(255,255,255,0.12);
-    color: var(--text);
-  }
-  .rc-btn.danger{
-    background: rgba(255,80,80,0.10);
-    border-color: rgba(255,80,80,0.35);
-    color: rgba(255,200,200,0.95);
-  }
-  .rc-btn.danger:hover{
-    background: rgba(255,80,80,0.18);
-    border-color: rgba(255,80,80,0.55);
-    box-shadow:0 0 14px rgba(255,80,80,.18);
-  }
-
-  .rc-grid{
-    display:grid;
-    grid-template-columns: 1.05fr 1.95fr;
-    gap:1rem;
-    margin-top:1rem;
-  }
-  @media (max-width: 1100px){ .rc-grid{grid-template-columns:1fr;} }
-
-  .rc-card{
-    background: var(--panel, #0b1016);
-    border: 1px solid var(--line, rgba(255,255,255,0.10));
-    border-radius: 16px;
-    padding: 1rem 1.05rem;
-    box-shadow: 0 0 18px rgba(0,0,0,0.45);
-  }
-  .rc-card h3{margin:.1rem 0 .85rem; color:var(--accent, #7ab8ff); font-size:1.05rem;}
-  .rc-muted{color:var(--muted);}
-
-  /* Search */
-  .rc-search{
-    display:flex; gap:.6rem; align-items:center; flex-wrap:wrap;
-    padding:.7rem .75rem;
-    border-radius: 14px;
-    background: rgba(255,255,255,0.03);
-    border:1px solid rgba(255,255,255,0.10);
-  }
-  .rc-search input{
-    flex:1;
-    min-width: 220px;
-    background: transparent;
-    border: 0;
-    color: var(--text);
-    outline: none;
-    font-size:.95rem;
-  }
-  .rc-pill{
-    font-size:.78rem;
-    border-radius:999px;
-    padding:.3rem .55rem;
-    background: rgba(122,184,255,0.12);
-    border: 1px solid rgba(122,184,255,0.26);
-    color: #a9d2ff;
-    cursor:pointer;
-    user-select:none;
-    transition:.15s;
-    display:inline-flex; gap:.35rem; align-items:center;
-  }
-  .rc-pill:hover{background: rgba(122,184,255,0.18); border-color: rgba(122,184,255,0.35);}
-  .rc-pill.active{
-    background: rgba(122,184,255,0.24);
-    border-color:#7ab8ff;
-    box-shadow: 0 0 14px rgba(122,184,255,.18);
-  }
-  .rc-pill .x{opacity:.75; font-weight:900;}
-
-  /* Sections / items */
-  .rc-section{margin-top:1rem;}
-  .rc-section:first-child{margin-top:0;}
-  .rc-section-head{
-    display:flex; align-items:center; justify-content:space-between; gap:.75rem; flex-wrap:wrap;
-    margin-bottom:.6rem;
-  }
-  .rc-section-title{
-    display:flex; gap:.5rem; align-items:center;
-    margin:0;
-    font-size:1.02rem;
-    color: rgba(255,255,255,.92);
-  }
-  .rc-kicker{color:var(--muted); font-size:.82rem;}
-
-  .rc-list{display:grid; gap:.65rem;}
-  .rc-item{
-    padding:.85rem .9rem;
-    border-radius: 16px;
-    background: rgba(255,255,255,0.03);
-    border:1px solid rgba(255,255,255,0.10);
-    transition:.15s;
-    cursor:pointer;
-  }
-  .rc-item:hover{
-    transform: translateY(-1px);
-    border-color: rgba(122,184,255,0.22);
-    box-shadow: 0 0 18px rgba(0,0,0,0.35);
-  }
-  .rc-item-top{
-    display:flex; align-items:flex-start; justify-content:space-between; gap:.75rem;
-  }
-  .rc-item h4{margin:0; font-size:.98rem;}
-  .rc-meta{
-    display:flex; gap:.45rem; flex-wrap:wrap; justify-content:flex-end;
-  }
-  .rc-tag{
-    font-size:.74rem;
-    border-radius:999px;
-    padding:.24rem .5rem;
-    background: rgba(255,255,255,0.05);
-    border:1px solid rgba(255,255,255,0.10);
-    color: rgba(255,255,255,.85);
-  }
-  .rc-tag.blue{
-    background: rgba(122,184,255,0.12);
-    border-color: rgba(122,184,255,0.26);
-    color:#a9d2ff;
-  }
-  .rc-item p{margin:.35rem 0 0; color:var(--muted);}
-
-  /* Reader */
-  .rc-reader-title{margin:.15rem 0 .25rem; font-size:1.15rem;}
-  .rc-reader-sub{margin:0 0 .85rem; color:var(--muted);}
-  .rc-reader-body{
-    color: rgba(255,255,255,.92);
-    line-height:1.55;
-    white-space:pre-wrap;
-  }
-  .rc-reader-actions{display:flex; gap:.5rem; flex-wrap:wrap; margin-top:1rem;}
-
-  /* Modal */
-  .rc-modal{
-    position:fixed; inset:0;
-    display:none;
-    align-items:center; justify-content:center;
-    padding:1rem;
-    background: rgba(0,0,0,.65);
-    z-index:9999;
-  }
-  .rc-modal .box{
-    width:min(920px, 100%);
-    background: var(--panel, #0b1016);
-    border:1px solid var(--line, rgba(255,255,255,0.12));
-    border-radius:16px;
-    padding:1rem 1.05rem;
-    box-shadow: 0 0 26px rgba(0,0,0,0.65);
-  }
-  .rc-modal .top{
-    display:flex; justify-content:space-between; align-items:center; gap:.75rem;
-    margin-bottom:.65rem;
-  }
-  .rc-modal .top h4{margin:0;}
-  .rc-modal textarea{
-    width:100%;
-    min-height: 240px;
-    border-radius: 14px;
-    padding:.85rem .9rem;
-    background: rgba(255,255,255,0.03);
-    border:1px solid rgba(255,255,255,0.10);
-    color: var(--text);
-    outline:none;
-    resize: vertical;
-  }
-  .rc-row{display:grid; grid-template-columns: 1fr 1fr; gap:.75rem; margin-top:.75rem;}
-  @media(max-width:720px){ .rc-row{grid-template-columns:1fr;} }
-  .rc-field label{display:block; font-size:.82rem; color:var(--muted); margin:0 0 .35rem;}
-  .rc-field input, .rc-field select{
-    width:100%;
-    border-radius: 12px;
-    padding: .65rem .75rem;
-    background: rgba(255,255,255,0.03);
-    border:1px solid rgba(255,255,255,0.10);
-    color: var(--text);
-    outline:none;
-  }
-
-  /* Toast */
-  .rc-toast{
-    position:fixed;
-    right:18px; bottom:18px;
-    background: rgba(0,0,0,.70);
-    border:1px solid rgba(255,255,255,0.12);
-    border-radius: 14px;
-    padding:.75rem .9rem;
-    color: rgba(255,255,255,.92);
-    display:none;
-    z-index:10000;
-    box-shadow: 0 0 20px rgba(0,0,0,0.55);
-  }
-</style>
-
-
-<script>
-  
-(function(){
-  // ---- Helpers
-  const $ = (sel, root=document) => root.querySelector(sel);
-  const $$ = (sel, root=document) => Array.from(root.querySelectorAll(sel));
-  const esc = (s) => String(s||"").replace(/[&<>"']/g, m => ({
-    "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
-  }[m]));
-
-  function toast(msg){
-    const t = $("#rcToast");
-    if(!t) return alert(msg);
-    t.textContent = msg;
-    t.style.display = "block";
-    clearTimeout(window.__rc_toast);
-    window.__rc_toast = setTimeout(()=> t.style.display="none", 2200);
-  }
-
-  // ---- State
-  const state = {
-    q: "",
-    tag: "all",
-    items: [] // populated from DOM data attrs OR a window var
-  };
-
-  // ---- Read items from DOM
-  // Expect each .rc-item element has:
-  // data-title, data-body, data-tags (csv), data-type, data-id (optional)
-  function hydrate(){
-    const nodes = $$(".rc-item");
-    state.items = nodes.map(n => ({
-      el: n,
-      id: n.dataset.id || "",
-      title: n.dataset.title || n.querySelector("h4")?.innerText || "",
-      body: n.dataset.body || "",
-      type: n.dataset.type || "",
-      tags: (n.dataset.tags || "").split(",").map(s=>s.trim()).filter(Boolean)
-    }));
-  }
-
-  // ---- Filtering
-  function applyFilter(){
-    const q = state.q.trim().toLowerCase();
-    const tag = state.tag;
-
-    let shown = 0;
-    state.items.forEach(it => {
-      const hay = (it.title + " " + it.body + " " + it.tags.join(" ")).toLowerCase();
-      const matchQ = !q || hay.includes(q);
-      const matchTag = (tag === "all") || it.tags.includes(tag) || it.type === tag;
-      const ok = matchQ && matchTag;
-
-      it.el.style.display = ok ? "" : "none";
-      if(ok) shown++;
-    });
-
-    const count = $("#rcCount");
-    if(count) count.textContent = String(shown);
-  }
-
-  // ---- Reader
-  function openReader(it){
-    const title = $("#rcReaderTitle");
-    const sub = $("#rcReaderSub");
-    const body = $("#rcReaderBody");
-    const tags = $("#rcReaderTags");
-
-    if(title) title.textContent = it.title || "Resource";
-    if(sub) sub.textContent = it.type ? `${it.type}` : "Resource";
-    if(body) body.textContent = it.body || "—";
-
-    if(tags){
-      const chips = (it.tags || []).map(t => `<span class="rc-tag blue">${esc(t)}</span>`).join(" ");
-      tags.innerHTML = chips || `<span class="rc-tag">No tags</span>`;
-    }
-
-    // highlight active
-    state.items.forEach(x => x.el.classList.remove("active"));
-    it.el.classList.add("active");
-
-    // store selection
-    window.__rc_selected = it;
-  }
-
-  // ---- Tag pills
-  function setTag(tag){
-    state.tag = tag || "all";
-    $$(".rc-pill").forEach(p => p.classList.toggle("active", p.dataset.tag === state.tag));
-    applyFilter();
-  }
-
-  // ---- Modal (optional, client-side only)
-  function openModal(){
-    const m = $("#rcModal");
-    if(!m) return;
-    m.style.display = "flex";
-
-    // if editing existing selection, preload
-    const it = window.__rc_selected;
-    $("#rcMTitle").value = it?.title || "";
-    $("#rcMType").value = it?.type || "Playbook";
-    $("#rcMTags").value = (it?.tags || []).join(", ");
-    $("#rcMBody").value = it?.body || "";
-  }
-  function closeModal(){
-    const m = $("#rcModal");
-    if(m) m.style.display = "none";
-  }
-
-  // ---- Wire up events
-  function bind(){
-    // Search
-    const search = $("#rcSearchInput");
-    if(search){
-      search.addEventListener("input", (e)=>{
-        state.q = e.target.value || "";
-        applyFilter();
-      });
-    }
-
-    // Pills
-    $$(".rc-pill").forEach(p => {
-      p.addEventListener("click", ()=> setTag(p.dataset.tag || "all"));
-    });
-
-    // Items click → open reader
-    state.items.forEach(it => {
-      it.el.addEventListener("click", ()=> openReader(it));
-    });
-
-    // Modal buttons
-    $("#rcOpenModal")?.addEventListener("click", openModal);
-    $("#rcCloseModal")?.addEventListener("click", closeModal);
-    $("#rcModal")?.addEventListener("click", (e)=>{
-      if(e.target && e.target.id === "rcModal") closeModal();
-    });
-
-    // Save (client-side stub; wire to route later)
-    $("#rcSave")?.addEventListener("click", async ()=>{
-      // This is intentionally lightweight. Wire to your DB route when ready.
-      // Example:
-      // await fetch("{{ url_for('investor.resource_center_save') }}",{method:"POST",headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)})
-      toast("Saved (stub) — wire to your route when ready.");
-      closeModal();
-    });
-
-    // Copy button
-    $("#rcCopy")?.addEventListener("click", async ()=>{
-      const it = window.__rc_selected;
-      if(!it) return toast("Select a resource first.");
-      try{
-        await navigator.clipboard.writeText(`${it.title}\n\n${it.body}`);
-        toast("Copied!");
-      }catch(e){
-        toast("Could not copy automatically.");
-      }
-    });
-
-    // Print
-    $("#rcPrint")?.addEventListener("click", ()=>{
-      window.print();
-    });
-  }
-
-  // ---- Init
-  hydrate();
-  bind();
-  applyFilter();
-
-  // Auto-open first visible item
-  const first = state.items.find(x => x.el.style.display !== "none");
-  if(first) openReader(first);
-
-  // Expose minimal API if you want to hook from server-rendered buttons
-  window.RavloResourceCenter = { setTag, openModal, closeModal, toast };
-})();
-</script>
 
 {% set search_url = safe_url_for('investor.search') %}
 {% set partners_filter_url = safe_url_for('investor.partners_filter') %}
 {% set request_connection_url = safe_url_for('investor.request_connection') %}
 
-<div class="calm-header text-center mb-5">
-  <h1 class="fw-bold">Investor Command Center</h1>
-  <p class="text-muted">A calm space to manage your capital, deals, and funding journey.</p>
+<div class="ravlo-shell resource-shell">
 
-  <form action="{{ search_url or '#' }}" method="get" class="mt-4">
-    <input type="text"
-           class="form-control form-control-lg calm-search"
-           name="q"
-           placeholder="Search capital requests, documents, partners, FAQs…">
-  </form>
-</div>
-
-<div class="calm-container mx-auto">
-
-  <!-- CAPITAL -->
-  <div class="category-block mb-5">
-    <h3 class="category-title mb-4">Capital</h3>
-
-    <div class="row g-4">
-
-      <div class="col-md-6">
-        <div class="soft-card p-4">
-          <h5 class="fw-semibold mb-2">Capital Overview</h5>
-          <p class="text-muted small mb-3">See your request details, progress, and status.</p>
-
-          {% if loan %}
-            <a href="{{ url_for('investor.loan_view', loan_id=loan.id) }}" class="btn btn-primary w-100">
-              View My Request
-            </a>
-          {% else %}
-            <a href="{{ url_for('investor.capital_application') }}" class="btn btn-outline-light w-100">
-              Start a Capital Request
-            </a>
-          {% endif %}
-        </div>
-      </div>
-
-      <div class="col-md-6">
-        <div class="soft-card p-4">
-          <h5 class="fw-semibold mb-2">Conditions</h5>
-          <p class="text-muted small mb-3">Review outstanding items required for approval.</p>
-
-          <a href="{{ url_for('investor.conditions') }}" class="btn btn-outline-light w-100">
-            View Conditions
-          </a>
-        </div>
-      </div>
-
-      <div class="col-md-6">
-        <div class="soft-card p-4">
-          <h5 class="fw-semibold mb-2">Documents</h5>
-          <p class="text-muted small mb-3">Upload or download your funding documents.</p>
-
-          <a href="{{ url_for('investor.documents') }}" class="btn btn-outline-light w-100">
-            Document Library
-          </a>
-        </div>
-      </div>
-
-      <div class="col-md-6">
-        <div class="soft-card p-4">
-          <h5 class="fw-semibold mb-2">Capital Timeline</h5>
-          <p class="text-muted small mb-3">Track progress from submission to funding.</p>
-
-          <a href="#timeline-section" class="btn btn-outline-light w-100">
-            View Timeline
-          </a>
-        </div>
-      </div>
-
+  <!-- HERO -->
+  <section class="ravlo-hero-card">
+    <div>
+      <div class="eyebrow">RAVLO RESOURCE CENTER</div>
+      <h2>Your investor support library</h2>
+      <p class="muted">
+        Access funding guidance, support contacts, FAQs, partners, and investor tools built for your Ravlo workflow.
+      </p>
     </div>
-  </div>
 
-  <!-- SUPPORT TEAM -->
-  <div class="category-block mb-5">
-    <h3 class="category-title mb-4">My Support Team</h3>
-
-    <div class="row g-4">
-
-      <div class="col-md-6">
-        <div class="soft-card p-4">
-          <h5 class="fw-semibold mb-2">Loan Officer</h5>
-
-          {% if loan_officer %}
-            <p class="mb-1">{{ loan_officer.name }}</p>
-            <p class="text-muted small mb-1">{{ loan_officer.email }}</p>
-            <p class="text-muted small">{{ loan_officer.phone }}</p>
-
-            <a href="mailto:{{ loan_officer.email }}" class="btn btn-outline-light w-100 mt-3">
-              Contact Loan Officer
-            </a>
-          {% else %}
-            <p class="text-muted small">Not assigned yet.</p>
-          {% endif %}
-        </div>
-      </div>
-
-      <div class="col-md-6">
-        <div class="soft-card p-4">
-          <h5 class="fw-semibold mb-2">Processor</h5>
-
-          {% if processor %}
-            <p class="mb-1">{{ processor.name }}</p>
-            <p class="text-muted small mb-1">{{ processor.email }}</p>
-            <p class="text-muted small">{{ processor.phone }}</p>
-
-            <a href="mailto:{{ processor.email }}" class="btn btn-outline-light w-100 mt-3">
-              Contact Processor
-            </a>
-          {% else %}
-            <p class="text-muted small">Not assigned yet.</p>
-          {% endif %}
-        </div>
-      </div>
-
+    <div class="resource-hero-actions">
+      <a href="{{ url_for('investor.capital_application') }}" class="ravlo-btn primary">
+        Apply for Capital
+      </a>
+      <a href="{{ url_for('investor.deals_list') }}" class="ravlo-btn ghost">
+        View Deals
+      </a>
     </div>
-  </div>
+  </section>
 
-  <!-- TOOLS -->
-  <div class="category-block mb-5">
-    <h3 class="category-title mb-4">Tools & Resources</h3>
+  <!-- SEARCH -->
+  <section class="ravlo-card pad">
+    <div class="section-head">
+      <div>
+        <div class="eyebrow">SEARCH</div>
+        <h3>Find a resource fast</h3>
+      </div>
+    </div>
 
-    <div class="row g-4">
+    <form action="{{ search_url or '#' }}" method="get" class="resource-search-form">
+      <input
+        type="text"
+        class="ravlo-input"
+        name="q"
+        placeholder="Search funding, conditions, documents, partner help, FAQs…"
+      >
+      <button type="submit" class="ravlo-btn primary">Search</button>
+    </form>
+  </section>
 
-      <div class="col-md-6">
-        <div class="soft-card p-4">
-          <h5 class="fw-semibold mb-2">AI Support</h5>
-          <p class="text-muted small mb-3">Ask anything about funding, conditions, or deal strategy.</p>
+  <!-- QUICK ACCESS -->
+  <div class="resource-grid two-col">
 
-          <form id="ai-support-form">
-            <div class="input-group">
-              <input type="text" class="form-control" placeholder="Ask a question..." id="ai-question">
-              <button class="btn btn-primary" type="submit">Ask</button>
+    <!-- LEFT -->
+    <div class="resource-stack">
+
+      <!-- CAPITAL -->
+      <section class="ravlo-card pad">
+        <div class="section-head">
+          <div>
+            <div class="eyebrow">CAPITAL</div>
+            <h3>Funding Resources</h3>
+          </div>
+        </div>
+
+        <div class="resource-list">
+
+          <a href="{% if loan %}{{ url_for('investor.loan_view', loan_id=loan.id) }}{% else %}{{ url_for('investor.capital_application') }}{% endif %}" class="resource-row">
+            <div>
+              <div class="resource-title">{% if loan %}View My Capital Request{% else %}Start a Capital Request{% endif %}</div>
+              <div class="resource-sub">
+                {% if loan %}
+                  Review your request details, progress, and loan status.
+                {% else %}
+                  Launch a new application and submit your next funding request.
+                {% endif %}
+              </div>
             </div>
-          </form>
-
-          <div id="ai-response" class="mt-3 text-muted small"></div>
-        </div>
-      </div>
-
-      <div class="col-md-6">
-        <div class="soft-card p-4">
-          <h5 class="fw-semibold mb-2">Partner Directory</h5>
-          <p class="text-muted small mb-3">Find trusted pros for your project and deals.</p>
-
-          <a href="#partners-section" class="btn btn-outline-light w-100">
-            Browse Partners
+            <span class="resource-arrow">→</span>
           </a>
+
+          <a href="{{ url_for('investor.conditions') }}" class="resource-row">
+            <div>
+              <div class="resource-title">Conditions</div>
+              <div class="resource-sub">Review outstanding items needed for underwriting and approval.</div>
+            </div>
+            <span class="resource-arrow">→</span>
+          </a>
+
+          <a href="{{ url_for('investor.documents') }}" class="resource-row">
+            <div>
+              <div class="resource-title">Document Library</div>
+              <div class="resource-sub">Access uploads, downloads, and funding-related files.</div>
+            </div>
+            <span class="resource-arrow">→</span>
+          </a>
+
         </div>
-      </div>
+      </section>
+
+      <!-- INVESTOR GUIDES -->
+      <section class="ravlo-card pad">
+        <div class="section-head">
+          <div>
+            <div class="eyebrow">LEARNING</div>
+            <h3>Investor Guides</h3>
+          </div>
+        </div>
+
+        <div class="guide-grid">
+          <div class="guide-card">
+            <div class="guide-title">Fix & Flip Basics</div>
+            <div class="guide-sub">Understand acquisition, rehab planning, exit timing, and projected margins.</div>
+          </div>
+
+          <div class="guide-card">
+            <div class="guide-title">Rental / DSCR Strategy</div>
+            <div class="guide-sub">Review hold strategy, rental income thinking, and long-term financing flow.</div>
+          </div>
+
+          <div class="guide-card">
+            <div class="guide-title">Capital Readiness</div>
+            <div class="guide-sub">What lenders need before approving your request and how to prepare clean files.</div>
+          </div>
+
+          <div class="guide-card">
+            <div class="guide-title">Rehab Planning</div>
+            <div class="guide-sub">Build smart scopes, estimate costs, and create lender-friendly project summaries.</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- FAQ -->
+      <section class="ravlo-card pad">
+        <div class="section-head">
+          <div>
+            <div class="eyebrow">FAQ</div>
+            <h3>Frequently Asked Questions</h3>
+          </div>
+        </div>
+
+        {% if faqs %}
+          <div class="faq-list">
+            {% for item in faqs %}
+            <details class="faq-item">
+              <summary>{{ item.q }}</summary>
+              <div class="faq-answer">{{ item.a }}</div>
+            </details>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="empty-state-inline">No FAQs added yet.</div>
+        {% endif %}
+      </section>
 
     </div>
-  </div>
 
-  <!-- TIMELINE -->
-  <div id="timeline-section" class="soft-card p-5 mb-5">
-    <h4 class="mb-3">Your Capital Timeline</h4>
+    <!-- RIGHT -->
+    <div class="resource-stack">
 
-    <div class="timeline">
-      {% for item in (timeline or []) %}
-        <div class="timeline-step mb-4">
-          <div class="timeline-dot {{ item.status }}"></div>
-          <div class="timeline-content">
-            <h6 class="fw-semibold">{{ item.title }}</h6>
+      <!-- AI SUPPORT -->
+      <section class="ravlo-card pad">
+        <div class="section-head">
+          <div>
+            <div class="eyebrow">AI SUPPORT</div>
+            <h3>Ask Ravlo AI</h3>
+          </div>
+        </div>
 
-            {% if item.status == "current" %}
-              <p class="text-primary small">This is your current step.</p>
-            {% elif item.status == "completed" %}
-              <p class="text-muted small">Completed</p>
+        <p class="muted" style="margin:0 0 16px;">
+          Ask about capital requests, funding conditions, deal strategy, or next steps.
+        </p>
+
+        <form id="ai-support-form" class="ai-form">
+          <input type="text" class="ravlo-input" placeholder="Ask a question..." id="ai-question">
+          <button class="ravlo-btn primary" type="submit">Ask</button>
+        </form>
+
+        <div id="ai-response" class="ai-response">Your AI response status will appear here.</div>
+      </section>
+
+      <!-- MY SUPPORT TEAM -->
+      <section class="ravlo-card pad">
+        <div class="section-head">
+          <div>
+            <div class="eyebrow">TEAM</div>
+            <h3>My Support Team</h3>
+          </div>
+        </div>
+
+        <div class="team-grid">
+
+          <div class="team-card">
+            <div class="team-role">Loan Officer</div>
+            {% if loan_officer %}
+              <div class="team-name">{{ loan_officer.name }}</div>
+              <div class="team-meta">{{ loan_officer.email }}</div>
+              <div class="team-meta">{{ loan_officer.phone }}</div>
+              <a href="mailto:{{ loan_officer.email }}" class="ravlo-btn ghost sm" style="margin-top:14px;">
+                Contact
+              </a>
             {% else %}
-              <p class="text-muted small">Upcoming</p>
+              <div class="team-empty">Not assigned yet.</div>
             {% endif %}
           </div>
+
+          <div class="team-card">
+            <div class="team-role">Processor</div>
+            {% if processor %}
+              <div class="team-name">{{ processor.name }}</div>
+              <div class="team-meta">{{ processor.email }}</div>
+              <div class="team-meta">{{ processor.phone }}</div>
+              <a href="mailto:{{ processor.email }}" class="ravlo-btn ghost sm" style="margin-top:14px;">
+                Contact
+              </a>
+            {% else %}
+              <div class="team-empty">Not assigned yet.</div>
+            {% endif %}
+          </div>
+
         </div>
-      {% endfor %}
-    </div>
-  </div>
+      </section>
 
-  <!-- PARTNERS -->
-  <div id="partners-section" class="soft-card p-5 mb-5">
-    <h4 class="mb-3">Partner Directory</h4>
-
-    <form method="get" action="{{ partners_filter_url or '#' }}" class="mb-4">
-      <select name="category" class="form-select" onchange="this.form.submit()">
-        <option value="All">All Categories</option>
-        {% for cat in ['Contractor','Realtor','Inspector','Insurance Agent','Builder','Designer','Title Company','Attorney'] %}
-          <option value="{{ cat }}">{{ cat }}</option>
-        {% endfor %}
-      </select>
-    </form>
-
-    {% if partners %}
-      {% for partner in partners %}
-        <div class="partner-card p-3 mb-3 rounded">
-          <h5 class="fw-semibold">{{ partner.name }}</h5>
-          <p class="text-muted small mb-1">{{ partner.category }}</p>
-          <p class="text-muted small">{{ partner.service_area }}</p>
-          <p class="text-muted small">{{ partner.description }}</p>
-
-          <button type="button" class="btn btn-primary btn-sm mt-2"
-                  onclick="requestConnection({{ partner.id }})">
-            Request Connection
-          </button>
-        </div>
-      {% endfor %}
-    {% else %}
-      <p class="text-muted">No partners available yet.</p>
-    {% endif %}
-  </div>
-
-  <!-- FAQ -->
-  <div class="soft-card p-5 mb-5">
-    <h4 class="mb-3">Frequently Asked Questions</h4>
-
-    <div class="accordion" id="faqAccordion">
-      {% for item in (faqs or []) %}
-        <div class="accordion-item">
-          <h2 class="accordion-header" id="faqHead{{ loop.index }}">
-            <button class="accordion-button collapsed"
-                    data-bs-toggle="collapse"
-                    data-bs-target="#faq{{ loop.index }}">
-              {{ item.q }}
-            </button>
-          </h2>
-
-          <div id="faq{{ loop.index }}" class="accordion-collapse collapse">
-            <div class="accordion-body">
-              {{ item.a }}
-            </div>
+      <!-- TIMELINE -->
+      <section class="ravlo-card pad" id="timeline-section">
+        <div class="section-head">
+          <div>
+            <div class="eyebrow">TIMELINE</div>
+            <h3>Your Capital Timeline</h3>
           </div>
         </div>
-      {% endfor %}
+
+        {% if timeline %}
+          <div class="timeline-list">
+            {% for item in timeline %}
+            <div class="timeline-row">
+              <div class="timeline-dot {{ item.status }}"></div>
+              <div>
+                <div class="timeline-title">{{ item.title }}</div>
+                <div class="timeline-sub">
+                  {% if item.status == "current" %}
+                    This is your current step.
+                  {% elif item.status == "completed" %}
+                    Completed.
+                  {% else %}
+                    Upcoming.
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="empty-state-inline">No timeline available yet.</div>
+        {% endif %}
+      </section>
+
+      <!-- PARTNERS -->
+      <section class="ravlo-card pad" id="partners-section">
+        <div class="section-head">
+          <div>
+            <div class="eyebrow">PARTNERS</div>
+            <h3>Partner Directory</h3>
+          </div>
+        </div>
+
+        <form method="get" action="{{ partners_filter_url or '#' }}" class="partner-filter-form">
+          <select name="category" class="ravlo-input" onchange="this.form.submit()">
+            <option value="All">All Categories</option>
+            {% for cat in ['Contractor','Realtor','Inspector','Insurance Agent','Builder','Designer','Title Company','Attorney'] %}
+              <option value="{{ cat }}">{{ cat }}</option>
+            {% endfor %}
+          </select>
+        </form>
+
+        {% if partners %}
+          <div class="partner-list">
+            {% for partner in partners %}
+            <div class="partner-row">
+              <div>
+                <div class="partner-name">{{ partner.name }}</div>
+                <div class="partner-sub">{{ partner.category }}</div>
+                <div class="partner-meta">{{ partner.service_area }}</div>
+                <div class="partner-meta">{{ partner.description }}</div>
+              </div>
+
+              <button
+                type="button"
+                class="ravlo-btn primary sm"
+                onclick="requestConnection({{ partner.id }})">
+                Request Connection
+              </button>
+            </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="empty-state-inline">No partners available yet.</div>
+        {% endif %}
+      </section>
+
     </div>
   </div>
-
 </div>
 
-<script>
-  const form = document.getElementById("ai-support-form");
-  const input = document.getElementById("ai-question");
-  const out = document.getElementById("ai-response");
+<style>
+.resource-shell{
+  display:grid;
+  gap:20px;
+}
 
-  if (form) {
-    form.addEventListener("submit", async (e) => {
-      e.preventDefault();
-      const q = (input?.value || "").trim();
-      if (!q) return;
+.resource-grid.two-col{
+  display:grid;
+  grid-template-columns:1.08fr .92fr;
+  gap:20px;
+  align-items:start;
+}
 
-      out.innerText = "Thinking…";
+.resource-stack{
+  display:grid;
+  gap:20px;
+}
 
-      try {
-        const res = await fetch("{{ url_for('investor.ask_ai_post') }}", {
-          method: "POST",
-          headers: { "Content-Type": "application/x-www-form-urlencoded" },
-          body: new URLSearchParams({ question: q }).toString()
-        });
+.section-head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:16px;
+  margin-bottom:18px;
+}
 
-        await res.text();
-        out.innerText = "✅ Sent. View the full response in the AI Hub.";
-      } catch (err) {
-        out.innerText = "⚠️ AI is unavailable right now.";
-      }
-    });
+.section-head h3{
+  margin:4px 0 0;
+  font-size:20px;
+}
+
+.resource-hero-actions{
+  display:flex;
+  flex-wrap:wrap;
+  gap:12px;
+}
+
+.resource-search-form{
+  display:grid;
+  grid-template-columns:1fr auto;
+  gap:12px;
+}
+
+.resource-list{
+  display:grid;
+  gap:12px;
+}
+
+.resource-row{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:14px;
+  padding:16px 18px;
+  border-radius:16px;
+  background:rgba(255,255,255,.03);
+  border:1px solid rgba(255,255,255,.08);
+  text-decoration:none;
+  transition:.2s ease;
+}
+
+.resource-row:hover{
+  transform:translateY(-1px);
+  border-color:rgba(107,127,147,.35);
+  background:rgba(255,255,255,.045);
+}
+
+.resource-title{
+  color:var(--text);
+  font-size:15px;
+  font-weight:700;
+}
+
+.resource-sub{
+  margin-top:5px;
+  color:var(--muted);
+  font-size:13px;
+  line-height:1.55;
+}
+
+.resource-arrow{
+  color:var(--muted);
+  font-size:18px;
+}
+
+.guide-grid{
+  display:grid;
+  grid-template-columns:repeat(2, minmax(0, 1fr));
+  gap:14px;
+}
+
+.guide-card{
+  padding:16px;
+  border-radius:16px;
+  background:rgba(255,255,255,.03);
+  border:1px solid rgba(255,255,255,.08);
+}
+
+.guide-title{
+  color:var(--text);
+  font-size:15px;
+  font-weight:700;
+}
+
+.guide-sub{
+  margin-top:6px;
+  color:var(--muted);
+  font-size:13px;
+  line-height:1.55;
+}
+
+.ai-form{
+  display:grid;
+  grid-template-columns:1fr auto;
+  gap:12px;
+}
+
+.ai-response{
+  margin-top:14px;
+  padding:14px 16px;
+  border-radius:14px;
+  background:rgba(255,255,255,.03);
+  border:1px solid rgba(255,255,255,.08);
+  color:var(--muted);
+  font-size:13px;
+}
+
+.team-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:14px;
+}
+
+.team-card{
+  padding:16px;
+  border-radius:16px;
+  background:rgba(255,255,255,.03);
+  border:1px solid rgba(255,255,255,.08);
+}
+
+.team-role{
+  color:var(--muted);
+  font-size:12px;
+  text-transform:uppercase;
+  letter-spacing:.08em;
+}
+
+.team-name{
+  margin-top:8px;
+  color:var(--text);
+  font-size:16px;
+  font-weight:700;
+}
+
+.team-meta{
+  margin-top:6px;
+  color:var(--muted);
+  font-size:13px;
+}
+
+.team-empty{
+  margin-top:12px;
+  color:var(--muted);
+  font-size:13px;
+}
+
+.timeline-list{
+  display:grid;
+  gap:16px;
+}
+
+.timeline-row{
+  display:grid;
+  grid-template-columns:16px 1fr;
+  gap:14px;
+  align-items:start;
+}
+
+.timeline-dot{
+  width:12px;
+  height:12px;
+  border-radius:999px;
+  margin-top:4px;
+  background:rgba(255,255,255,.18);
+}
+
+.timeline-dot.completed{
+  background:#3ccb7f;
+  box-shadow:0 0 0 4px rgba(60,203,127,.12);
+}
+
+.timeline-dot.current{
+  background:#7ab8ff;
+  box-shadow:0 0 0 4px rgba(122,184,255,.14);
+}
+
+.timeline-dot.upcoming{
+  background:rgba(255,255,255,.28);
+}
+
+.timeline-title{
+  color:var(--text);
+  font-size:14px;
+  font-weight:700;
+}
+
+.timeline-sub{
+  margin-top:4px;
+  color:var(--muted);
+  font-size:13px;
+}
+
+.partner-filter-form{
+  margin-bottom:16px;
+}
+
+.partner-list{
+  display:grid;
+  gap:12px;
+}
+
+.partner-row{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:14px;
+  padding:16px;
+  border-radius:16px;
+  background:rgba(255,255,255,.03);
+  border:1px solid rgba(255,255,255,.08);
+}
+
+.partner-name{
+  color:var(--text);
+  font-size:15px;
+  font-weight:700;
+}
+
+.partner-sub{
+  margin-top:4px;
+  color:var(--muted);
+  font-size:13px;
+}
+
+.partner-meta{
+  margin-top:6px;
+  color:var(--muted);
+  font-size:12px;
+  line-height:1.5;
+}
+
+.faq-list{
+  display:grid;
+  gap:12px;
+}
+
+.faq-item{
+  border-radius:16px;
+  background:rgba(255,255,255,.03);
+  border:1px solid rgba(255,255,255,.08);
+  padding:0;
+  overflow:hidden;
+}
+
+.faq-item summary{
+  list-style:none;
+  cursor:pointer;
+  padding:16px 18px;
+  color:var(--text);
+  font-weight:700;
+}
+
+.faq-item summary::-webkit-details-marker{
+  display:none;
+}
+
+.faq-answer{
+  padding:0 18px 18px;
+  color:var(--muted);
+  line-height:1.6;
+  font-size:14px;
+}
+
+@media (max-width: 1100px){
+  .resource-grid.two-col{
+    grid-template-columns:1fr;
+  }
+}
+
+@media (max-width: 760px){
+  .resource-search-form,
+  .ai-form,
+  .team-grid,
+  .guide-grid{
+    grid-template-columns:1fr;
   }
 
-  async function requestConnection(partnerId) {
-    const reqUrl = "{{ request_connection_url or '' }}";
-    if (!reqUrl) { alert("Could not send request (route not connected yet)."); return; }
+  .partner-row,
+  .resource-row{
+    flex-direction:column;
+    align-items:flex-start;
+  }
+}
+</style>
+
+<script>
+const form = document.getElementById("ai-support-form");
+const input = document.getElementById("ai-question");
+const out = document.getElementById("ai-response");
+
+if (form) {
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const q = (input?.value || "").trim();
+    if (!q) return;
+
+    out.innerText = "Thinking...";
 
     try {
-      const res = await fetch(reqUrl, {
+      const res = await fetch("{{ url_for('investor.ask_ai_post') }}", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ partner_id: partnerId })
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({ question: q }).toString()
       });
-      if (!res.ok) throw new Error("request failed");
-      alert("Request sent!");
-    } catch (e) {
-      alert("Could not send request (route not connected yet).");
+
+      await res.text();
+      out.innerText = "✅ Sent. View the full response in the AI Hub.";
+      input.value = "";
+    } catch (err) {
+      out.innerText = "⚠️ AI is unavailable right now.";
     }
+  });
+}
+
+async function requestConnection(partnerId) {
+  const reqUrl = "{{ request_connection_url or '' }}";
+  if (!reqUrl) {
+    alert("Could not send request yet.");
+    return;
   }
+
+  try {
+    const res = await fetch(reqUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ partner_id: partnerId })
+    });
+
+    if (!res.ok) throw new Error("request failed");
+    alert("Request sent!");
+  } catch (e) {
+    alert("Could not send request yet.");
+  }
+}
 </script>
 
 {% endblock %}
