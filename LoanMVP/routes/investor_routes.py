@@ -220,22 +220,62 @@ def split_ids(csv_string: str):
 # 🌐 IMAGE UTILITIES
 # =========================================================
 
+# =========================================================
+# CONFIG
+# =========================================================
+
+RENOVATION_ENGINE_URL = os.getenv("RENOVATION_ENGINE_URL", "http://localhost:8000/v1/renovate")
+RENOVATION_API_KEY = os.getenv("RENOVATION_API_KEY", "")
+GPU_TIMEOUT = 900
+
+ENGINE_PRESETS = {"luxury_modern", "modern_farmhouse", "clean_minimal"}
+
+STYLE_PRESET_MAP = {
+    "luxury": "luxury_modern",
+    "modern": "clean_minimal",
+    "airbnb": "modern_farmhouse",
+    "flip": "modern_farmhouse",
+    "budget": "modern_farmhouse",
+    "luxury_modern": "luxury_modern",
+    "modern_farmhouse": "modern_farmhouse",
+    "clean_minimal": "clean_minimal",
+}
+
+STYLE_PROMPT_MAP = {
+    "luxury": "Luxury HGTV renovation: bright, high-end finishes, premium lighting, upscale materials, elegant staging.",
+    "modern": "Modern renovation: clean lines, minimal clutter, matte black fixtures, neutral palette, refined finishes.",
+    "airbnb": "Airbnb-ready renovation: cozy, warm lighting, durable finishes, photogenic styling, broad guest appeal.",
+    "flip": "Flip-ready renovation: resale-friendly neutrals, durable materials, bright and clean presentation.",
+    "budget": "Budget-friendly renovation: fresh paint, simple upgrades, clean and functional finishes.",
+}
+
+
+# =========================================================
+# IMAGE HELPERS
+# =========================================================
+
 def download_image_bytes(url: str, timeout=10) -> bytes:
-    """Secure image download with header check."""
+    """Secure image download with relaxed header check."""
+
     if not url.lower().startswith(("http://", "https://")):
         raise ValueError("Invalid image URL.")
 
     response = requests.get(url, timeout=timeout, stream=True)
     response.raise_for_status()
 
-    content_type = response.headers.get("Content-Type", "")
-    if "image" not in content_type:
-        raise ValueError("URL does not point to an image.")
+    content_type = response.headers.get("Content-Type", "").lower()
+
+    # Accept common CDN responses
+    if not (
+        content_type.startswith("image")
+        or "octet-stream" in content_type
+        or "binary" in content_type
+    ):
+        print("Warning: unexpected content type:", content_type)
 
     return response.content
 
-
-def to_png_bytes(img_bytes: bytes, max_size=1024) -> bytes:
+def to_png_bytes(img_bytes: bytes, max_size: int = 1024) -> bytes:
     im = Image.open(BytesIO(img_bytes)).convert("RGB")
     im.thumbnail((max_size, max_size))
     out = BytesIO()
@@ -243,7 +283,7 @@ def to_png_bytes(img_bytes: bytes, max_size=1024) -> bytes:
     return out.getvalue()
 
 
-def to_webp_bytes(img_bytes: bytes, max_size=1400, quality=86) -> bytes:
+def to_webp_bytes(img_bytes: bytes, max_size: int = 1400, quality: int = 86) -> bytes:
     im = Image.open(BytesIO(img_bytes)).convert("RGB")
     im.thumbnail((max_size, max_size))
     out = BytesIO()
@@ -251,16 +291,42 @@ def to_webp_bytes(img_bytes: bytes, max_size=1400, quality=86) -> bytes:
     return out.getvalue()
 
 
+# =========================================================
+# STYLE HELPERS
+# =========================================================
+
+def _normalize_style_preset(style_preset: str) -> str:
+    style_preset = (style_preset or "").strip().lower()
+    return STYLE_PRESET_MAP.get(style_preset, "luxury_modern")
+
+
+def _compose_style_prompt(style_prompt: str, style_preset: str, keep_layout: bool = True) -> str:
+    base = STYLE_PROMPT_MAP.get((style_preset or "").strip().lower(), "")
+    parts = [base.strip(), (style_prompt or "").strip()]
+    if keep_layout:
+        parts.append("Keep the same room layout. Produce an HGTV-style after image. No text overlays.")
+    return "\n".join([p for p in parts if p]).strip()
+
+
+# =========================================================
+# ENGINE HELPERS
+# =========================================================
+
+def _engine_headers() -> dict:
+    headers = {}
+    if RENOVATION_API_KEY:
+        headers["X-API-Key"] = RENOVATION_API_KEY
+    return headers
+
+
 def generate_renovation_images(before_url: str, prompt: str, n: int = 2) -> list[str]:
     if not before_url or not prompt:
         return []
 
-    # 1) Download BEFORE
     before_bytes = download_image_bytes(before_url)
     before_png = to_png_bytes(before_bytes, max_size=1024)
     before_b64 = base64.b64encode(before_png).decode("utf-8")
 
-    # 2) Call /renovate on your 4090 server
     try:
         resp = requests.post(
             f"{GPU_BASE_URL}/renovate",
@@ -269,7 +335,7 @@ def generate_renovation_images(before_url: str, prompt: str, n: int = 2) -> list
         )
         resp.raise_for_status()
     except Exception as e:
-        print("GPU renovate failed:", e)
+        current_app.logger.exception("GPU renovate failed: %s", e)
         return []
 
     data = resp.json()
@@ -288,10 +354,11 @@ def generate_renovation_images(before_url: str, prompt: str, n: int = 2) -> list
             )
             after_urls.append(up["url"])
         except Exception as e:
-            print("Upload after failed:", e)
+            current_app.logger.warning("Upload after failed: %s", e)
             continue
 
     return after_urls
+
 
 def process_pending_jobs():
     jobs = RehabJob.query.filter_by(status="pending").all()
@@ -301,16 +368,14 @@ def process_pending_jobs():
         db.session.commit()
 
         try:
-            engine_url = os.getenv("RENOVATION_ENGINE_URL").replace(
-                "/v1/renovate",
-                "/v1/rehab_scope"
-            )
+            engine_url = os.getenv("RENOVATION_ENGINE_URL", "").replace("/v1/renovate", "/v1/rehab_scope")
 
             res = requests.post(
                 engine_url,
                 json={"image_url": job.plan_url},
-                timeout=180
+                timeout=180,
             )
+            res.raise_for_status()
             data = res.json()
 
             job.result_plan = data.get("plan")
@@ -321,56 +386,19 @@ def process_pending_jobs():
             job.status = "complete"
 
         except Exception:
+            current_app.logger.exception("Pending rehab job failed for job_id=%s", job.id)
             job.status = "failed"
 
         db.session.commit()
 
-# =========================================================
-# 👤 PROFILE FILTER (INVESTOR SAFE)
-# =========================================================
-
-def _profile_id_filter(model, profile_id):
-    """
-    Backwards-compatible filter:
-    - prefers investor_profile_id
-    - falls back to borrower_profile_id
-    """
-    if hasattr(model, "investor_profile_id"):
-        return {"investor_profile_id": profile_id}
-    if hasattr(model, "borrower_profile_id"):
-        return {"borrower_profile_id": profile_id}
-    return {}
-
-
-RENOVATION_ENGINE_URL = os.getenv("RENOVATION_ENGINE_URL", "http://localhost:8000/v1/renovate")
-RENOVATION_API_KEY = os.getenv("RENOVATION_API_KEY", "")
-GPU_TIMEOUT = 900
-
-ENGINE_PRESETS = {"luxury_modern", "modern_farmhouse", "clean_minimal"}
-STYLE_PRESET_MAP = {
-    "luxury": "luxury_modern",
-    "modern": "clean_minimal",
-    "airbnb": "modern_farmhouse",
-    "flip": "modern_farmhouse",
-    "budget": "modern_farmhouse",
-    "luxury_modern": "luxury_modern",
-    "modern_farmhouse": "modern_farmhouse",
-    "clean_minimal": "clean_minimal",
-}
-STYLE_PROMPT_MAP = {
-    "luxury": "Luxury HGTV renovation: bright, high-end finishes, premium lighting, upscale materials, elegant staging.",
-    "modern": "Modern renovation: clean lines, minimal clutter, matte black fixtures, neutral palette, refined finishes.",
-    "airbnb": "Airbnb-ready renovation: cozy, warm lighting, durable finishes, photogenic styling, broad guest appeal.",
-    "flip": "Flip-ready renovation: resale-friendly neutrals, durable materials, bright and clean presentation.",
-    "budget": "Budget-friendly renovation: fresh paint, simple upgrades, clean and functional finishes.",
-}
 
 # =========================================================
-# HELPERS
+# GENERIC HELPERS
 # =========================================================
 
 def _json_default():
     return {}
+
 
 def _safe_json_loads_local(value, default=None):
     default = default if default is not None else {}
@@ -381,31 +409,29 @@ def _safe_json_loads_local(value, default=None):
     except Exception:
         return default
 
+
 def _normalize_int(value):
     try:
         return int(value) if value not in (None, "", "None") else None
     except Exception:
         return None
 
-def _normalize_style_preset(style_preset: str) -> str:
-    style_preset = (style_preset or "").strip().lower()
-    return STYLE_PRESET_MAP.get(style_preset, "luxury_modern")
 
-def _compose_style_prompt(style_prompt: str, style_preset: str, keep_layout: bool = True) -> str:
-    base = STYLE_PROMPT_MAP.get((style_preset or "").strip().lower(), "")
-    parts = [base.strip(), (style_prompt or "").strip()]
-    if keep_layout:
-        parts.append("Keep the same room layout. Produce an HGTV-style after image. No text overlays.")
-    return "\n".join([p for p in parts if p]).strip()
+def _profile_id_filter(model, profile_id):
+    if hasattr(model, "investor_profile_id"):
+        return {"investor_profile_id": profile_id}
+    if hasattr(model, "borrower_profile_id"):
+        return {"borrower_profile_id": profile_id}
+    return {}
 
-def _engine_headers():
-    headers = {}
-    if RENOVATION_API_KEY:
-        headers["X-API-Key"] = RENOVATION_API_KEY
-    return headers
+
+# =========================================================
+# DEAL / MOCKUP HELPERS
+# =========================================================
 
 def _get_owned_deal_or_404(deal_id: int):
     return Deal.query.filter_by(id=deal_id, user_id=current_user.id).first_or_404()
+
 
 def _save_before_url_to_deal(deal, before_url: str):
     try:
@@ -417,6 +443,7 @@ def _save_before_url_to_deal(deal, before_url: str):
         db.session.commit()
     except Exception:
         db.session.rollback()
+
 
 def _get_rehab_mockups_for_deal(deal):
     q = RenovationMockup.query.filter(
@@ -433,38 +460,6 @@ def _get_rehab_mockups_for_deal(deal):
 
     return q.all()
 
-def _upload_before_image(raw_bytes: bytes) -> str:
-    before_webp = to_webp_bytes(raw_bytes, max_size=1600, quality=86)
-    uploaded = r2_put_bytes(
-        before_webp,
-        subdir=f"visualizer/{current_user.id}/before",
-        content_type="image/webp",
-        filename=f"{uuid.uuid4().hex}_before.webp",
-    )
-    return uploaded["url"]
-
-def _upload_after_images_from_b64(images_b64, render_batch_id: str):
-    after_urls = []
-
-    for i, b64 in enumerate(images_b64 or [], start=1):
-        try:
-            raw_png = base64.b64decode(b64)
-            img = Image.open(io.BytesIO(raw_png)).convert("RGB")
-
-            buf = io.BytesIO()
-            img.save(buf, format="WEBP", quality=90)
-
-            uploaded = r2_put_bytes(
-                buf.getvalue(),
-                subdir=f"visualizer/{current_user.id}/{render_batch_id}/after",
-                content_type="image/webp",
-                filename=f"{render_batch_id}_after_{i}.webp",
-            )
-            after_urls.append(uploaded["url"])
-        except Exception as e:
-            current_app.logger.warning(f"After image upload failed ({i}): {e}")
-
-    return after_urls
 
 def _save_mockups_for_deal(
     deal,
@@ -501,6 +496,7 @@ def _save_mockups_for_deal(
     db.session.commit()
     return saved
 
+
 def _featured_rehab_data(deal):
     try:
         payload = deal.resolved_json or {}
@@ -509,6 +505,7 @@ def _featured_rehab_data(deal):
         return rehab.get("featured", {}) or {}
     except Exception:
         return {}
+
 
 def _set_featured_rehab(deal, after_url: str, before_url: str = "", style_preset: str = "", style_prompt: str = ""):
     payload = deal.resolved_json or {}
@@ -529,6 +526,44 @@ def _set_featured_rehab(deal, after_url: str, before_url: str = "", style_preset
     db.session.commit()
     return payload["rehab"]["featured"]
 
+
+# =========================================================
+# STORAGE HELPERS
+# =========================================================
+
+def _upload_before_image(raw_bytes: bytes) -> str:
+    before_webp = to_webp_bytes(raw_bytes, max_size=1600, quality=86)
+    uploaded = r2_put_bytes(
+        before_webp,
+        subdir=f"visualizer/{current_user.id}/before",
+        content_type="image/webp",
+        filename=f"{uuid.uuid4().hex}_before.webp",
+    )
+    return uploaded["url"]
+
+
+def _upload_after_images_from_b64(images_b64, render_batch_id: str):
+    after_urls = []
+
+    for i, b64 in enumerate(images_b64 or [], start=1):
+        try:
+            raw_png = base64.b64decode(b64)
+            img = Image.open(io.BytesIO(raw_png)).convert("RGB")
+
+            buf = io.BytesIO()
+            img.save(buf, format="WEBP", quality=90)
+
+            uploaded = r2_put_bytes(
+                buf.getvalue(),
+                subdir=f"visualizer/{current_user.id}/{render_batch_id}/after",
+                content_type="image/webp",
+                filename=f"{render_batch_id}_after_{i}.webp",
+            )
+            after_urls.append(uploaded["url"])
+        except Exception as e:
+            current_app.logger.warning("After image upload failed (%s): %s", i, e)
+
+    return after_urls
 
 # ---------------------------------------------------------
 # Investor Capital Timeline (used for progress UI)
