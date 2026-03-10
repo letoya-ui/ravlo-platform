@@ -3948,6 +3948,7 @@ def rehab_architect_generate_scope():
 
     sqft = int(float(data.get("sqft") or 1500))
     rehab_level = (data.get("rehab_level") or "medium").lower()
+    image_url = (data.get("image_url") or getattr(deal, "image_url", "") or "").strip()
 
     cost_per_sqft = {
         "light": 20,
@@ -3971,6 +3972,51 @@ def rehab_architect_generate_scope():
         }
     }
 
+    external_scope_result = None
+
+    # Optional: call Scope Engine if image_url is provided
+    if image_url:
+        try:
+            scope_engine_url = current_app.config.get("SCOPE_ENGINE_URL", "").rstrip("/")
+            scope_engine_api_key = current_app.config.get("SCOPE_ENGINE_API_KEY", "")
+           
+            if scope_engine_url:
+                resp = requests.post(
+                    f"{scope_engine_url}/v1/rehab_scope",
+                    json={"image_url": image_url},
+                    headers={"x-api-key": scope_engine_api_key},
+                    timeout=25
+                )
+
+                if resp.ok:
+                    external_scope_result = resp.json()
+
+                    # Prefer external numbers when available
+                    estimated_rehab_cost = (
+                        external_scope_result.get("cost_high")
+                        or external_scope_result.get("cost_low")
+                        or estimated_rehab_cost
+                    )
+
+                    scope = {
+                        "rehab_level": rehab_level,
+                        "sqft": sqft,
+                        "cost_per_sqft": round(estimated_rehab_cost / sqft, 2) if sqft else selected_cost_per_sqft,
+                        "rooms": external_scope_result.get("rooms", []),
+                        "plan": external_scope_result.get("plan", ""),
+                        "line_items": scope.get("line_items", {})
+                    }
+
+                else:
+                    current_app.logger.warning(
+                        "Scope engine returned %s: %s",
+                        resp.status_code,
+                        resp.text[:300]
+                    )
+
+        except Exception:
+            current_app.logger.exception("Scope engine rehab call failed")
+
     deal.rehab_cost = estimated_rehab_cost
     deal.rehab_scope_json = scope
 
@@ -3979,6 +4025,15 @@ def rehab_architect_generate_scope():
         "estimated_rehab_cost": estimated_rehab_cost,
         "scope": scope
     }
+
+    if external_scope_result:
+        existing_results["rehab_analysis_external"] = external_scope_result
+
+        # Save ARV from external scope if present and local ARV is blank
+        external_arv = external_scope_result.get("arv")
+        if external_arv and not deal.arv:
+            deal.arv = external_arv
+
     deal.results_json = existing_results
 
     db.session.commit()
@@ -3987,7 +4042,9 @@ def rehab_architect_generate_scope():
         "success": True,
         "deal_id": deal.id,
         "estimated_rehab_cost": estimated_rehab_cost,
-        "scope": scope
+        "scope": scope,
+        "external_scope_used": bool(external_scope_result),
+        "external_scope_result": external_scope_result
     })
 
 # =========================================================
