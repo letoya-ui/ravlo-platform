@@ -103,7 +103,7 @@ from LoanMVP.services.prompt_builder import build_blueprint_prompt
 from LoanMVP.services.concept_build_service import run_concept_build
 from LoanMVP.services.renovation_engine_client import generate_concept
 
-from LoanMVP.utils.r2_storage import r2_put_bytes
+from LoanMVP.utils.r2_storage import spaces_put_bytes
 
 # ---------------------------------------------------------
 # Blueprint (INVESTOR ONLY)
