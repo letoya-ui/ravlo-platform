@@ -16,17 +16,7 @@ def _r2_client():
         config=Config(signature_version="s3v4"),
     )
 
-def r2_put_bytes(
-    data: bytes,
-    *,
-    subdir: str,
-    content_type: str = "image/png",
-    filename: str | None = None
-) -> dict:
-    """
-    Upload bytes to R2.
-    Returns: {"key": "...", "url": "..."}
-    """
+def r2_put_bytes(data: bytes, *, subdir: str, content_type: str = "image/png", filename: str | None = None) -> dict:
     bucket = os.environ["R2_BUCKET"]
     public_base = os.environ.get("R2_PUBLIC_BASE_URL", "").rstrip("/")
 
