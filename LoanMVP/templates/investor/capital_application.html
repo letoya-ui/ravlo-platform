@@ -314,15 +314,22 @@ textarea.ravlo-input{
     </section>
 
     <!-- SUBMIT -->
-    <form method="POST" action="{{ url_for('investor.submit_deal_for_funding', deal_id=deal.id) }}">
-      <button class="ravlo-btn primary">
-        Submit for Funding
+    {% if deal and deal.id %}
+     <form method="POST" action="{{ url_for('investor.submit_deal_for_funding', deal_id=deal.id) }}">
+       <button class="ravlo-btn primary" type="submit">
+         Submit for Funding
+       </button>
+     </form>
+   {% else %}
+     <button class="ravlo-btn primary" type="button" disabled>
+       Submit for Funding
       </button>
-    </form>
+      <p class="muted" style="margin-top:8px;">
+        Save the deal first before submitting for funding.
+      </p>
+    {% endif %}
 
- 
-
-</div>
+ </div>
 
 <script>
 document.getElementById("capitalAppForm").addEventListener("submit", async function(e){
