@@ -12,7 +12,7 @@ def _spaces_client():
         endpoint_url=endpoint_url,
         aws_access_key_id=os.environ["SPACES_ACCESS_KEY_ID"],
         aws_secret_access_key=os.environ["SPACES_SECRET_ACCESS_KEY"],
-        region_name=os.environ.get("SPACES_REGION", "nyc3"),
+        region_name=os.environ.get("SPACES_REGION", "sfo3"),
         config=Config(signature_version="s3v4"),
     )
 
