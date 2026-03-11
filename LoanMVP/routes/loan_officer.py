@@ -3322,8 +3322,7 @@ def save_preapproval_snapshot(loan_id):
     return jsonify({"message": "Preapproval snapshot saved successfully!"})
 
 
-@loan_officer.route("/loan/<int:loan_id>")
-@login_required
+@loan_officer_bp.route("/loan/<int:loan_id>")
 @role_required("loan_officer", "admin", "master_admin", "lending_admin")
 def loan_detail(loan_id):
     """
