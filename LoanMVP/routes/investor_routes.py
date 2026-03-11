@@ -346,7 +346,7 @@ def generate_renovation_images(before_url: str, prompt: str, n: int = 2) -> list
         try:
             img_bytes = base64.b64decode(b64)
             img_webp = to_webp_bytes(img_bytes, max_size=1600, quality=86)
-            up = r2_put_bytes(
+            up = spaces_put_bytes(
                 img_webp,
                 subdir=f"visualizer/{uuid.uuid4().hex}/after",
                 content_type="image/webp",
@@ -533,7 +533,7 @@ def _set_featured_rehab(deal, after_url: str, before_url: str = "", style_preset
 
 def _upload_before_image(raw_bytes: bytes) -> str:
     before_webp = to_webp_bytes(raw_bytes, max_size=1600, quality=86)
-    uploaded = r2_put_bytes(
+    uploaded = spaces_put_bytes(
         before_webp,
         subdir=f"visualizer/{current_user.id}/before",
         content_type="image/webp",
@@ -553,7 +553,7 @@ def _upload_after_images_from_b64(images_b64, render_batch_id: str):
             buf = io.BytesIO()
             img.save(buf, format="WEBP", quality=90)
 
-            uploaded = r2_put_bytes(
+            uploaded = spaces_put_bytes(
                 buf.getvalue(),
                 subdir=f"visualizer/{current_user.id}/{render_batch_id}/after",
                 content_type="image/webp",
@@ -4284,7 +4284,7 @@ def blueprint_to_room():
             return jsonify({"status": "error", "message": "Empty blueprint input."}), 400
 
         blueprint_webp = to_webp_bytes(raw, max_size=2000, quality=90)
-        uploaded = r2_put_bytes(
+        uploaded = spaces_put_bytes(
             blueprint_webp,
             subdir=f"blueprints/{current_user.id}",
             content_type="image/webp",
