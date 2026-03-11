@@ -1548,16 +1548,14 @@ def loan_view(loan_id):
         title=f"Loan #{loan.id}",
     )
 
-
 @investor_bp.route("/capital/loan/<int:loan_id>/edit", methods=["GET", "POST"])
 @investor_bp.route("/loan/<int:loan_id>/edit", methods=["GET", "POST"])
 @login_required
 @role_required("investor")
-def edit_loan(loan_id):
+def loan_edit(loan_id):
     ip = InvestorProfile.query.filter_by(user_id=current_user.id).first()
     loan = LoanApplication.query.get_or_404(loan_id)
 
-    # Ownership check (supports both schemas)
     owns = False
     if ip:
         if hasattr(loan, "investor_profile_id") and loan.investor_profile_id == ip.id:
@@ -1569,18 +1567,36 @@ def edit_loan(loan_id):
         return "Unauthorized", 403
 
     if request.method == "POST":
-        loan.loan_amount = safe_float(request.form.get("amount"))
-        loan.status = request.form.get("status")
-        loan.loan_type = request.form.get("loan_type")
-        loan.property_address = request.form.get("property_address")
-        loan.interest_rate = safe_float(request.form.get("interest_rate"))
-        loan.term = request.form.get("term")
+        if hasattr(loan, "amount"):
+            loan.amount = safe_float(request.form.get("amount"))
+        if hasattr(loan, "loan_amount"):
+            loan.loan_amount = safe_float(request.form.get("amount"))
+
+        if hasattr(loan, "status"):
+            loan.status = request.form.get("status")
+        if hasattr(loan, "loan_type"):
+            loan.loan_type = request.form.get("loan_type")
+        if hasattr(loan, "property_address"):
+            loan.property_address = request.form.get("property_address")
+        if hasattr(loan, "interest_rate"):
+            loan.interest_rate = safe_float(request.form.get("interest_rate"))
+        if hasattr(loan, "term"):
+            loan.term = request.form.get("term")
+        if hasattr(loan, "property_value"):
+            loan.property_value = safe_float(request.form.get("property_value"))
+        if hasattr(loan, "description"):
+            loan.description = request.form.get("description")
 
         db.session.commit()
         flash("✅ Capital request updated successfully!", "success")
         return redirect(url_for("investor.loan_view", loan_id=loan.id))
 
-    return render_template("investor/edit_loan.html", loan=loan, investor=ip, title="Edit Loan")
+    return render_template(
+        "investor/edit_loan.html",
+        loan=loan,
+        investor=ip,
+        title="Edit Loan"
+    )
 
 
 # =========================================================
