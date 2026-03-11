@@ -112,7 +112,7 @@ from LoanMVP.utils.r2_storage import spaces_put_bytes
 investor_bp = Blueprint("investor", __name__, url_prefix="/investor")
 
 client = OpenAI()
-GPU_BASE_URL = "http://your-4090-host:8000"
+GPU_BASE_URL = "https://nondiscoverable-henry-metempirical.ngrok-free.dev"
 
 # =========================================================
 # 🔢 SAFE NUMERIC HELPERS
