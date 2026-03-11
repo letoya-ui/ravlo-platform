@@ -1266,9 +1266,8 @@ def submit_capital_application():
     # Create loan / capital request
     # -----------------------------
     loan = LoanApplication(
-        **profile_fk,
+        investor_profile_id=investor.id,
         borrower_profile_id=borrower.id,
-        investor_profile_id=getattr(investor, "id", None),
         loan_officer_id=assigned_officer_id,
         loan_type=loan_type,
         amount=amount,
