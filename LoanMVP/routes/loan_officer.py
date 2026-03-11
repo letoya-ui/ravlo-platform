@@ -3320,3 +3320,63 @@ def save_preapproval_snapshot(loan_id):
     db.session.commit()
 
     return jsonify({"message": "Preapproval snapshot saved successfully!"})
+
+
+@loan_officer.route("/loan/<int:loan_id>")
+@login_required
+@role_required("loan_officer", "admin", "master_admin", "lending_admin")
+def loan_detail(loan_id):
+    """
+    Detailed loan view for the loan officer.
+    Shows borrower profile, loan summary, docs, and underwriting conditions.
+    """
+
+    loan = (
+        db.session.query(LoanApplication)
+        .options(
+            joinedload(LoanApplication.borrower),
+            joinedload(LoanApplication.documents),
+            joinedload(LoanApplication.conditions),
+        )
+        .filter(LoanApplication.id == loan_id)
+        .first()
+    )
+
+    if not loan:
+        abort(404)
+
+    borrower = getattr(loan, "borrower", None)
+
+    # Safe fallbacks so template does not break
+    documents = getattr(loan, "documents", []) or []
+    conditions = getattr(loan, "conditions", []) or []
+
+    # Optional progress calculations
+    total_conditions = len(conditions)
+    cleared_conditions = len(
+        [c for c in conditions if (getattr(c, "status", "") or "").lower() in ["cleared", "complete", "completed", "satisfied"]]
+    )
+    pending_conditions = total_conditions - cleared_conditions
+
+    condition_progress = 0
+    if total_conditions > 0:
+        condition_progress = round((cleared_conditions / total_conditions) * 100)
+
+    # Optional document grouping
+    docs_by_type = {}
+    for doc in documents:
+        doc_type = getattr(doc, "document_type", None) or getattr(doc, "doc_type", None) or "Other"
+        docs_by_type.setdefault(doc_type, []).append(doc)
+
+    return render_template(
+        "loan_officer/loan_detail.html",
+        loan=loan,
+        borrower=borrower,
+        documents=documents,
+        docs_by_type=docs_by_type,
+        conditions=conditions,
+        total_conditions=total_conditions,
+        cleared_conditions=cleared_conditions,
+        pending_conditions=pending_conditions,
+        condition_progress=condition_progress,
+    )
