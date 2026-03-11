@@ -12,6 +12,7 @@ from PIL import Image
 from werkzeug.utils import secure_filename
 from werkzeug.datastructures import ImmutableMultiDict
 from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy import or_
 
 from flask import (
     Blueprint,
@@ -52,7 +53,7 @@ from LoanMVP.models.document_models import (
     ESignedDocument,
     ResourceDocument
 )
-from LoanMVP.models.crm_models import Message, Partner
+from LoanMVP.models.crm_models import Message, Partner, FollowUpItem
 from LoanMVP.models.payment_models import PaymentRecord
 from LoanMVP.models.ai_models import AIAssistantInteraction
 from LoanMVP.models.property import SavedProperty
@@ -5691,3 +5692,139 @@ def market_snapshot_page():
         title="Market Snapshot",
         active_tab="market"
     )
+
+from flask import render_template, request, redirect, url_for, flash
+from flask_login import login_required, current_user
+from sqlalchemy import or_
+
+@investor_bp.route("/partners", methods=["GET"])
+@login_required
+@role_required("investor")
+def partners():
+    ip = InvestorProfile.query.filter_by(user_id=current_user.id).first()
+    if not ip:
+        flash("Please complete your investor profile first.", "warning")
+        return redirect(url_for("investor.create_profile"))
+
+    q = (request.args.get("q") or "").strip()
+    category = (request.args.get("category") or "").strip()
+    service_area = (request.args.get("service_area") or "").strip()
+    relationship_level = (request.args.get("relationship_level") or "").strip()
+
+    query = Partner.query.filter_by(active=True, approved=True)
+
+    if q:
+        query = query.filter(
+            or_(
+                Partner.name.ilike(f"%{q}%"),
+                Partner.company.ilike(f"%{q}%"),
+                Partner.category.ilike(f"%{q}%"),
+                Partner.type.ilike(f"%{q}%"),
+                Partner.service_area.ilike(f"%{q}%"),
+                Partner.listing_description.ilike(f"%{q}%"),
+                Partner.notes.ilike(f"%{q}%"),
+            )
+        )
+
+    if category:
+        query = query.filter(Partner.category.ilike(f"%{category}%"))
+
+    if service_area:
+        query = query.filter(Partner.service_area.ilike(f"%{service_area}%"))
+
+    if relationship_level:
+        query = query.filter(Partner.relationship_level.ilike(f"%{relationship_level}%"))
+
+    query = query.order_by(
+        Partner.featured.desc(),
+        Partner.rating.desc(),
+        Partner.created_at.desc()
+    )
+
+    partners = query.all()
+
+    categories = [
+        "Contractor",
+        "Realtor",
+        "Lender",
+        "Broker",
+        "Vendor",
+        "Architect",
+        "Designer",
+        "Inspector",
+        "Attorney",
+        "Cleaner",
+        "Property Manager",
+        "Other",
+    ]
+
+    relationship_levels = ["Gold", "Silver", "Preferred", "Standard"]
+
+    return render_template(
+        "investor/partners.html",
+        investor=ip,
+        partners=partners,
+        categories=categories,
+        relationship_levels=relationship_levels,
+        selected_q=q,
+        selected_category=category,
+        selected_service_area=service_area,
+        selected_relationship_level=relationship_level,
+        title="Partner Network",
+    )
+
+
+@investor_bp.route("/partners/<int:partner_id>", methods=["GET"])
+@login_required
+@role_required("investor")
+def partner_detail(partner_id):
+    ip = InvestorProfile.query.filter_by(user_id=current_user.id).first()
+    if not ip:
+        flash("Please complete your investor profile first.", "warning")
+        return redirect(url_for("investor.create_profile"))
+
+    partner = Partner.query.get_or_404(partner_id)
+
+    if not partner.active or not partner.approved:
+        flash("This partner is not currently available.", "warning")
+        return redirect(url_for("investor.partners"))
+
+    return render_template(
+        "investor/partner_detail.html",
+        investor=ip,
+        partner=partner,
+        title="Partner Details",
+    )
+
+@investor_bp.route("/partners/<int:partner_id>/request-intro", methods=["POST"])
+@login_required
+@role_required("investor")
+def request_partner_intro(partner_id):
+    ip = InvestorProfile.query.filter_by(user_id=current_user.id).first()
+    if not ip:
+        flash("Please complete your investor profile first.", "warning")
+        return redirect(url_for("investor.create_profile"))
+
+    partner = Partner.query.get_or_404(partner_id)
+
+    if not partner.active or not partner.approved:
+        flash("This partner is not currently available.", "warning")
+        return redirect(url_for("investor.partners"))
+
+    message = (request.form.get("message") or "").strip()
+
+    followup = FollowUpItem(
+        investor_profile_id=ip.id,
+        description=(
+            f"Partner intro requested: {partner.company or partner.name}"
+            + (f" | Message: {message}" if message else "")
+        ),
+        is_done=False,
+        created_by=current_user.id,
+    )
+
+    db.session.add(followup)
+    db.session.commit()
+
+    flash(f"Intro request sent for {partner.company or partner.name}.", "success")
+    return redirect(url_for("investor.partner_detail", partner_id=partner.id))

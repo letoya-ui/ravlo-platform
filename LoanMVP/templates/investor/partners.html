@@ -1,0 +1,287 @@
+{% extends "layouts/ravlo_base.html" %}
+{% block title %}Ravlo • Partner Network{% endblock %}
+
+{% block page_title %}Partner Network{% endblock %}
+{% block page_subline %}
+Explore trusted professionals across lending, construction, brokerage, and project services.
+{% endblock %}
+
+{% block topbar_actions %}
+  <button class="ravlo-btn ghost sm" type="button"
+          onclick="location.href='{{ url_for('investor.command_center') }}'">
+    Back
+  </button>
+{% endblock %}
+
+{% block content %}
+
+<style>
+  .partner-shell{ margin-top:1rem; }
+  .partner-filter-card,
+  .partner-card,
+  .empty-state{
+    background:rgba(255,255,255,.03);
+    border:1px solid rgba(255,255,255,.10);
+    border-radius:18px;
+    padding:1rem;
+    box-shadow:0 0 18px rgba(0,0,0,.35);
+  }
+
+  .filter-grid{
+    display:grid;
+    grid-template-columns:2fr 1fr 1fr 1fr;
+    gap:.8rem;
+  }
+
+  .partner-grid{
+    display:grid;
+    grid-template-columns:repeat(2, minmax(0, 1fr));
+    gap:1rem;
+    margin-top:1rem;
+  }
+
+  @media (max-width: 980px){
+    .filter-grid,
+    .partner-grid{
+      grid-template-columns:1fr;
+    }
+  }
+
+  .field{
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+  }
+
+  .field label{
+    font-size:.82rem;
+    color:rgba(230,235,240,.68);
+    font-weight:700;
+  }
+
+  .partner-input,
+  .partner-select{
+    width:100%;
+    border-radius:14px;
+    border:1px solid rgba(255,255,255,.10);
+    background:rgba(255,255,255,.03);
+    color:rgba(230,235,240,.95);
+    padding:.85rem .9rem;
+    font-size:.95rem;
+    outline:none;
+  }
+
+  .partner-input:focus,
+  .partner-select:focus{
+    border-color:rgba(122,184,255,.55);
+    box-shadow:0 0 0 3px rgba(122,184,255,.10);
+  }
+
+  .partner-top{
+    display:flex;
+    justify-content:space-between;
+    gap:1rem;
+    align-items:flex-start;
+    flex-wrap:wrap;
+  }
+
+  .partner-name{
+    font-size:1.05rem;
+    font-weight:900;
+    color:rgba(230,235,240,.95);
+  }
+
+  .partner-sub{
+    margin-top:.35rem;
+    color:rgba(230,235,240,.68);
+    line-height:1.5;
+  }
+
+  .chip-row{
+    display:flex;
+    flex-wrap:wrap;
+    gap:.45rem;
+    margin-top:.75rem;
+  }
+
+  .chip{
+    display:inline-flex;
+    align-items:center;
+    padding:.35rem .6rem;
+    border-radius:999px;
+    border:1px solid rgba(122,184,255,.25);
+    background:rgba(122,184,255,.10);
+    color:#a9d2ff;
+    font-size:.76rem;
+    font-weight:800;
+  }
+
+  .muted{
+    color:rgba(230,235,240,.68);
+  }
+
+  .btn-row{
+    display:flex;
+    gap:.7rem;
+    flex-wrap:wrap;
+    margin-top:1rem;
+  }
+
+  .stat-row{
+    display:flex;
+    gap:1rem;
+    flex-wrap:wrap;
+    margin-top:.9rem;
+  }
+
+  .stat{
+    min-width:110px;
+  }
+
+  .stat .label{
+    font-size:.78rem;
+    color:rgba(230,235,240,.60);
+  }
+
+  .stat .value{
+    color:rgba(230,235,240,.95);
+    font-weight:800;
+    margin-top:.15rem;
+  }
+</style>
+
+<div class="partner-shell">
+
+  <div class="partner-filter-card">
+    <form method="GET" action="{{ url_for('investor.partners') }}">
+      <div class="filter-grid">
+        <div class="field">
+          <label>Search</label>
+          <input class="partner-input" type="text" name="q"
+                 value="{{ selected_q or '' }}"
+                 placeholder="Search lenders, contractors, brokers, vendors...">
+        </div>
+
+        <div class="field">
+          <label>Category</label>
+          <select class="partner-select" name="category">
+            <option value="">All</option>
+            {% for item in categories %}
+              <option value="{{ item }}" {% if selected_category == item %}selected{% endif %}>{{ item }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="field">
+          <label>Service Area</label>
+          <input class="partner-input" type="text" name="service_area"
+                 value="{{ selected_service_area or '' }}"
+                 placeholder="Tri-State Area">
+        </div>
+
+        <div class="field">
+          <label>Relationship</label>
+          <select class="partner-select" name="relationship_level">
+            <option value="">All</option>
+            {% for item in relationship_levels %}
+              <option value="{{ item }}" {% if selected_relationship_level == item %}selected{% endif %}>{{ item }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
+      <div class="btn-row">
+        <button class="ravlo-btn primary" type="submit">Search Partners</button>
+        <a class="ravlo-btn ghost" href="{{ url_for('investor.partners') }}">Reset</a>
+      </div>
+    </form>
+  </div>
+
+  {% if partners %}
+    <div class="partner-grid">
+      {% for partner in partners %}
+        <div class="partner-card">
+          <div class="partner-top">
+            <div>
+              <div class="partner-name">
+                {{ partner.company or partner.name }}
+              </div>
+
+              <div class="partner-sub">
+                {{ partner.type or partner.category or "Partner" }}
+                {% if partner.name and partner.company %}
+                  • {{ partner.name }}
+                {% endif %}
+              </div>
+            </div>
+
+            {% if partner.featured %}
+              <span class="chip">Featured</span>
+            {% endif %}
+          </div>
+
+          <div class="chip-row">
+            {% if partner.category %}
+              <span class="chip">{{ partner.category }}</span>
+            {% endif %}
+
+            {% if partner.service_area %}
+              <span class="chip">{{ partner.service_area }}</span>
+            {% endif %}
+
+            {% if partner.relationship_level %}
+              <span class="chip">{{ partner.relationship_level }}</span>
+            {% endif %}
+
+            {% if partner.subscription_tier %}
+              <span class="chip">{{ partner.subscription_tier }}</span>
+            {% endif %}
+          </div>
+
+          <div class="muted" style="margin-top:.9rem; line-height:1.65;">
+            {{ partner.listing_description or partner.notes or "Explore this partner for project support, local expertise, and execution help inside the Ravlo ecosystem." }}
+          </div>
+
+          <div class="stat-row">
+            <div class="stat">
+              <div class="label">Deals</div>
+              <div class="value">{{ partner.deals or 0 }}</div>
+            </div>
+
+            <div class="stat">
+              <div class="label">Volume</div>
+              <div class="value">${{ "{:,.0f}".format(partner.volume or 0) }}</div>
+            </div>
+
+            <div class="stat">
+              <div class="label">Rating</div>
+              <div class="value">{{ "{:.1f}".format(partner.rating or 0) }}</div>
+            </div>
+          </div>
+
+          <div class="btn-row">
+            <a class="ravlo-btn primary sm" href="{{ url_for('investor.partner_detail', partner_id=partner.id) }}">
+              View Profile
+            </a>
+
+            {% if partner.phone %}
+              <span class="ravlo-btn ghost sm" style="pointer-events:none;">
+                {{ partner.phone }}
+              </span>
+            {% endif %}
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="empty-state" style="margin-top:1rem;">
+      <div style="font-weight:900; color:rgba(230,235,240,.95);">No partners found</div>
+      <div class="muted" style="margin-top:.45rem;">
+        Try another category, service area, or broader search to explore the Ravlo partner network.
+      </div>
+    </div>
+  {% endif %}
+
+</div>
+
+{% endblock %}
