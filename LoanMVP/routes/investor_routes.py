@@ -101,7 +101,7 @@ from LoanMVP.services.notification_service import notify_team_on_conversion
 from LoanMVP.services.blueprint_parser import extract_blueprint_structure, infer_room_type
 from LoanMVP.services.prompt_builder import build_blueprint_prompt
 from LoanMVP.services.concept_build_service import run_concept_build
-from LoanMVP.services.renovation_engine_client import generate_concept
+from LoanMVP.services.renovation_engine_client import generate_concept, call_renovation_engine_upload, RenovationEngineError
 
 from LoanMVP.utils.r2_storage import spaces_put_bytes
 
@@ -219,6 +219,37 @@ def split_ids(csv_string: str):
 # =========================================================
 # 🌐 IMAGE UTILITIES
 # =========================================================
+
+def call_renovation_engine_upload(
+    file_storage,
+    prompt: str,
+    api_url: str,
+    style: str = "modern luxury",
+    strength: float = 0.75,
+    guidance_scale: float = 7.5,
+    num_inference_steps: int = 30,
+):
+    endpoint = f"{api_url.rstrip('/')}/v1/renovate-upload"
+
+    files = {
+        "image": (
+            file_storage.filename,
+            file_storage.stream,
+            file_storage.mimetype or "application/octet-stream"
+        )
+    }
+
+    data = {
+        "prompt": prompt,
+        "style": style,
+        "strength": str(strength),
+        "guidance_scale": str(guidance_scale),
+        "num_inference_steps": str(num_inference_steps),
+    }
+
+    response = requests.post(endpoint, files=files, data=data, timeout=300)
+    response.raise_for_status()
+    return response.json()
 
 # =========================================================
 # CONFIG
@@ -4179,36 +4210,86 @@ def renovation_visualizer():
         final_prompt = _compose_style_prompt(style_prompt, requested_style_preset, keep_layout=True)
         render_batch_id = uuid.uuid4().hex
 
-        payload = {
-            "image_url": before_url,
-            "mode": mode,
-            "preset": style_preset,
-            "prompt": final_prompt,
-            "count": variations,
-            "steps": 33 if mode == "photo" else 38,
-            "strength": 0.38 if mode == "photo" else 0.48,
-            "controlnet_scale": 0.78 if mode == "photo" else 0.93,
-            "guidance": 6.5,
-            "width": 1024,
-            "height": 1024,
-        }
+        engine_headers = _engine_headers()
 
-        engine_res = requests.post(
-            RENOVATION_ENGINE_URL,
-            json=payload,
-            headers=_engine_headers(),
-            timeout=GPU_TIMEOUT,
-        )
+        # --------------------------------------------------
+        # NEW: direct upload mode when a file was uploaded
+        # --------------------------------------------------
+        if image_file:
+            image_stream = io.BytesIO(raw)
+            filename = image_file.filename or f"{render_batch_id}_before.jpg"
+            mimetype = image_file.mimetype or "application/octet-stream"
+
+            files = {
+                "image": (filename, image_stream, mimetype)
+            }
+
+            data = {
+                "mode": mode,
+                "preset": style_preset,
+                "prompt": final_prompt,
+                "count": str(variations),
+                "steps": str(33 if mode == "photo" else 38),
+                "strength": str(0.38 if mode == "photo" else 0.48),
+                "controlnet_scale": str(0.78 if mode == "photo" else 0.93),
+                "guidance": "6.5",
+                "width": "1024",
+                "height": "1024",
+            }
+
+            engine_url = f"{RENOVATION_ENGINE_URL.rstrip('/')}/v1/renovate-upload"
+
+            engine_res = requests.post(
+                engine_url,
+                files=files,
+                data=data,
+                headers=engine_headers,
+                timeout=GPU_TIMEOUT,
+            )
+
+        # --------------------------------------------------
+        # URL mode fallback for existing image URLs
+        # --------------------------------------------------
+        else:
+            payload = {
+                "image_url": before_url,
+                "mode": mode,
+                "preset": style_preset,
+                "prompt": final_prompt,
+                "count": variations,
+                "steps": 33 if mode == "photo" else 38,
+                "strength": 0.38 if mode == "photo" else 0.48,
+                "controlnet_scale": 0.78 if mode == "photo" else 0.93,
+                "guidance": 6.5,
+                "width": 1024,
+                "height": 1024,
+            }
+
+            engine_url = f"{RENOVATION_ENGINE_URL.rstrip('/')}/v1/renovate"
+
+            engine_res = requests.post(
+                engine_url,
+                json=payload,
+                headers=engine_headers,
+                timeout=GPU_TIMEOUT,
+            )
+
         engine_res.raise_for_status()
         engine_json = engine_res.json()
 
+        # Prefer URLs returned by the generator if present
+        returned_urls = engine_json.get("saved_paths", []) or []
         images_b64 = engine_json.get("images_base64", []) or []
-        if not images_b64:
-            return jsonify({"status": "error", "message": "GPU engine returned no images."}), 502
 
-        after_urls = _upload_after_images_from_b64(images_b64, render_batch_id)
-        if not after_urls:
-            return jsonify({"status": "error", "message": "Render completed but uploads failed."}), 500
+        if returned_urls:
+            after_urls = returned_urls
+        else:
+            if not images_b64:
+                return jsonify({"status": "error", "message": "GPU engine returned no images."}), 502
+
+            after_urls = _upload_after_images_from_b64(images_b64, render_batch_id)
+            if not after_urls:
+                return jsonify({"status": "error", "message": "Render completed but uploads failed."}), 500
 
         saved_count = 0
         if save_to_deal and deal is not None:
