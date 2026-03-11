@@ -237,10 +237,10 @@
           <span>Compare Deals</span>
         </a>
 
-        <a href="{{ url_for('investor.capital_application') }}"
-           class="ravlo-nav-link {% if 'capital' in ep or 'funding' in ep %}active{% endif %}">
+        <a href="{{ url_for('investor.loans') }}"
+           class="ravlo-nav-link {% if 'loan' in ep or 'capital' in ep %}active{% endif %}">
           <i class="lucide lucide-landmark"></i>
-          <span>Capital</span>
+          <span>Capital Studio</span>
         </a>
 
         <a href="{{ url_for('investor.build_studio') }}"

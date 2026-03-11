@@ -1128,6 +1128,104 @@ def update_profile():
 # =========================================================
 # 📝 INVESTOR • CAPITAL APPLICATION + STATUS
 # =========================================================
+
+@investor_bp.route("/loans", methods=["GET"])
+@login_required
+@role_required("investor")
+def loans():
+    investor = InvestorProfile.query.filter_by(user_id=current_user.id).first()
+
+    if not investor:
+        flash("Please complete your investor profile first.", "warning")
+        return redirect(url_for("investor.create_profile"))
+
+    profile_fk = _profile_id_filter(LoanApplication, investor.id) or {}
+
+    loans = (
+        LoanApplication.query
+        .filter_by(**profile_fk)
+        .order_by(LoanApplication.created_at.desc())
+        .all()
+    )
+
+    return render_template(
+        "investor/loans.html",
+        investor=investor,
+        loans=loans,
+        title="Loan Center"
+    )
+
+@investor_bp.route("/loans/<int:loan_id>/summary", methods=["GET"])
+@login_required
+@role_required("investor")
+def loan_summary(loan_id):
+    investor = InvestorProfile.query.filter_by(user_id=current_user.id).first()
+
+    if not investor:
+        flash("Please complete your investor profile first.", "warning")
+        return redirect(url_for("investor.create_profile"))
+
+    loan = LoanApplication.query.filter_by(
+        id=loan_id,
+        investor_profile_id=investor.id
+    ).first()
+
+    if not loan:
+        flash("Loan not found.", "danger")
+        return redirect(url_for("investor.loans"))
+
+    conditions = (
+        UnderwritingCondition.query
+        .filter_by(loan_id=loan.id)
+        .order_by(UnderwritingCondition.id.desc())
+        .all()
+    )
+
+    ai_summary = getattr(loan, "ai_summary", None)
+
+    return render_template(
+        "investor/loan_view.html",
+        investor=investor,
+        loan=loan,
+        conditions=conditions,
+        ai_summary=ai_summary,
+        title="Loan Details"
+    )
+
+@investor_bp.route("/loans/<int:loan_id>/timeline", methods=["GET"])
+@login_required
+@role_required("investor")
+def loan_timeline(loan_id):
+    investor = InvestorProfile.query.filter_by(user_id=current_user.id).first()
+
+    if not investor:
+        flash("Please complete your investor profile first.", "warning")
+        return redirect(url_for("investor.create_profile"))
+
+    loan = LoanApplication.query.filter_by(
+        id=loan_id,
+        investor_profile_id=investor.id
+    ).first()
+
+    if not loan:
+        flash("Loan not found.", "danger")
+        return redirect(url_for("investor.loans"))
+
+    events = (
+        LoanStatusEvent.query
+        .filter_by(loan_id=loan.id)
+        .order_by(LoanStatusEvent.id.desc())
+        .all()
+    )
+
+    return render_template(
+        "investor/loan_timeline.html",
+        investor=investor,
+        loan=loan,
+        events=events,
+        title="Loan Timeline"
+    )
+
 @investor_bp.route("/capital_application", methods=["GET"])
 @login_required
 @role_required("investor")
