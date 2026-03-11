@@ -1128,7 +1128,6 @@ def update_profile():
 # =========================================================
 # 📝 INVESTOR • CAPITAL APPLICATION + STATUS
 # =========================================================
-
 @investor_bp.route("/capital_application", methods=["GET"])
 @login_required
 @role_required("investor")
@@ -1142,10 +1141,7 @@ def capital_application():
     deal = None
 
     if deal_id:
-        deal = Deal.query.filter_by(
-            id=deal_id,
-            user_id=current_user.id
-        ).first()
+        deal = Deal.query.filter_by(id=deal_id, user_id=current_user.id).first()
 
     officers = LoanOfficerProfile.query.order_by(LoanOfficerProfile.name.asc()).all()
 
@@ -1156,6 +1152,7 @@ def capital_application():
         officers=officers,
         title="Apply for Capital"
     )
+
 @investor_bp.route("/capital_application/submit", methods=["POST"])
 @login_required
 @role_required("investor")
@@ -1348,7 +1345,6 @@ def submit_capital_application():
 @login_required
 @role_required("investor")
 def submit_deal_for_funding(deal_id):
-
     deal = Deal.query.filter_by(id=deal_id, user_id=current_user.id).first()
 
     if not deal:
@@ -1357,12 +1353,10 @@ def submit_deal_for_funding(deal_id):
 
     deal.submitted_for_funding = True
     deal.funding_requested_at = datetime.utcnow()
-
     db.session.commit()
 
     flash("Deal submitted for funding review.", "success")
-
-    return redirect(url_for("investor.deal_detail", deal_id=deal.id))
+    return redirect(url_for("investor.capital_application", deal_id=deal.id))
 
 @investor_bp.route("/capital/status", methods=["GET"])
 @investor_bp.route("/status", methods=["GET"])
