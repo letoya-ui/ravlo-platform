@@ -1,0 +1,311 @@
+{% extends "layouts/Ravlo_lending_base.html" %}
+{% block title %}Loan Detail | Loan Officer{% endblock %}
+
+{% block content %}
+<main class="dashboard-main">
+  <div class="wrap">
+
+    <!-- HEADER -->
+    <section class="card mb-4">
+      <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:16px; flex-wrap:wrap;">
+        <div>
+          <h2 style="margin-bottom:6px;">🏦 Loan Detail</h2>
+          <p class="muted" style="margin:0;">
+            Review the borrower profile, loan structure, documentation, and outstanding conditions.
+          </p>
+        </div>
+
+        <div style="text-align:right;">
+          <div class="muted" style="font-size:13px;">Loan ID</div>
+          <div style="font-size:20px; font-weight:700;">#{{ loan.id }}</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TOP SUMMARY -->
+    <section class="grid-3 mb-4" style="display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:16px;">
+      <div class="card">
+        <div class="muted">Borrower</div>
+        <h3 style="margin-top:8px;">
+          {{ borrower.full_name if borrower and borrower.full_name else 'Unknown Borrower' }}
+        </h3>
+        <p class="muted" style="margin-bottom:0;">
+          {{ borrower.email if borrower and borrower.email else 'No email on file' }}
+        </p>
+      </div>
+
+      <div class="card">
+        <div class="muted">Loan Amount</div>
+        <h3 style="margin-top:8px;">
+          ${{ "{:,.2f}".format(loan.amount or 0) }}
+        </h3>
+        <p class="muted" style="margin-bottom:0;">
+          {{ loan.loan_type or 'Loan type not set' }}
+        </p>
+      </div>
+
+      <div class="card">
+        <div class="muted">Status</div>
+        <h3 style="margin-top:8px;">
+          {{ loan.status or 'N/A' }}
+        </h3>
+        <p class="muted" style="margin-bottom:0;">
+          Purpose: {{ loan.purpose or 'Not provided' }}
+        </p>
+      </div>
+    </section>
+
+    <!-- CONDITION PROGRESS -->
+    <section class="card mb-4">
+      <div style="display:flex; justify-content:space-between; align-items:center; gap:16px; flex-wrap:wrap;">
+        <div>
+          <h3 style="margin-bottom:6px;">📋 Underwriting Progress</h3>
+          <p class="muted" style="margin:0;">
+            {{ cleared_conditions }} cleared / {{ total_conditions }} total conditions
+          </p>
+        </div>
+        <div style="min-width:180px; text-align:right;">
+          <div style="font-size:24px; font-weight:700;">{{ condition_progress }}%</div>
+          <div class="muted">Complete</div>
+        </div>
+      </div>
+
+      <div style="margin-top:14px; background:#e9edf3; border-radius:999px; height:12px; overflow:hidden;">
+        <div style="width:{{ condition_progress }}%; height:12px; background:linear-gradient(90deg,#0d6efd,#4da3ff);"></div>
+      </div>
+
+      <div style="display:flex; gap:18px; flex-wrap:wrap; margin-top:14px;">
+        <span><strong>{{ total_conditions }}</strong> Total</span>
+        <span><strong>{{ cleared_conditions }}</strong> Cleared</span>
+        <span><strong>{{ pending_conditions }}</strong> Pending</span>
+      </div>
+    </section>
+
+    <!-- MAIN GRID -->
+    <section style="display:grid; grid-template-columns:1.15fr .85fr; gap:16px;" class="mb-4">
+      
+      <!-- LEFT COLUMN -->
+      <div style="display:flex; flex-direction:column; gap:16px;">
+
+        <!-- BORROWER PROFILE -->
+        <section class="card">
+          <h3>👤 Borrower Profile</h3>
+          <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:14px; margin-top:14px;">
+            <div>
+              <div class="muted">Full Name</div>
+              <div>{{ borrower.full_name if borrower and borrower.full_name else '—' }}</div>
+            </div>
+            <div>
+              <div class="muted">Email</div>
+              <div>{{ borrower.email if borrower and borrower.email else '—' }}</div>
+            </div>
+            <div>
+              <div class="muted">Phone</div>
+              <div>{{ borrower.phone if borrower and borrower.phone else '—' }}</div>
+            </div>
+            <div>
+              <div class="muted">Entity Name</div>
+              <div>{{ loan.entity_name or '—' }}</div>
+            </div>
+            <div>
+              <div class="muted">Experience</div>
+              <div>{{ borrower.experience_level if borrower and borrower.experience_level else '—' }}</div>
+            </div>
+            <div>
+              <div class="muted">Credit Score</div>
+              <div>{{ borrower.credit_score if borrower and borrower.credit_score else '—' }}</div>
+            </div>
+          </div>
+        </section>
+
+        <!-- LOAN OVERVIEW -->
+        <section class="card">
+          <h3>💼 Loan Overview</h3>
+          <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:14px; margin-top:14px;">
+            <div>
+              <div class="muted">Loan Type</div>
+              <div>{{ loan.loan_type or '—' }}</div>
+            </div>
+            <div>
+              <div class="muted">Purpose</div>
+              <div>{{ loan.purpose or '—' }}</div>
+            </div>
+            <div>
+              <div class="muted">Requested Amount</div>
+              <div>${{ "{:,.2f}".format(loan.amount or 0) }}</div>
+            </div>
+            <div>
+              <div class="muted">Purchase Price</div>
+              <div>${{ "{:,.2f}".format(loan.purchase_price or 0) }}</div>
+            </div>
+            <div>
+              <div class="muted">Rehab Budget</div>
+              <div>${{ "{:,.2f}".format(loan.rehab_budget or 0) }}</div>
+            </div>
+            <div>
+              <div class="muted">After Repair Value</div>
+              <div>${{ "{:,.2f}".format(loan.arv or 0) }}</div>
+            </div>
+            <div>
+              <div class="muted">Property Address</div>
+              <div>{{ loan.property_address or '—' }}</div>
+            </div>
+            <div>
+              <div class="muted">Occupancy</div>
+              <div>{{ loan.occupancy or '—' }}</div>
+            </div>
+          </div>
+
+          {% if loan.notes %}
+          <div style="margin-top:16px;">
+            <div class="muted">Loan Officer Notes</div>
+            <div style="margin-top:6px;">{{ loan.notes }}</div>
+          </div>
+          {% endif %}
+        </section>
+
+        <!-- DOCUMENTS -->
+        <section class="card">
+          <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap;">
+            <h3 style="margin:0;">📁 Documents</h3>
+            <span class="muted">{{ documents|length }} file(s)</span>
+          </div>
+
+          {% if documents %}
+            <div style="margin-top:16px; display:flex; flex-direction:column; gap:14px;">
+              {% for doc_type, docs in docs_by_type.items() %}
+                <div style="border:1px solid #e8edf5; border-radius:14px; padding:14px;">
+                  <div style="font-weight:700; margin-bottom:10px;">{{ doc_type }}</div>
+
+                  <div style="display:flex; flex-direction:column; gap:10px;">
+                    {% for doc in docs %}
+                      <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; padding:10px 12px; border-radius:10px; background:#f8fafc;">
+                        <div>
+                          <div style="font-weight:600;">
+                            {{ doc.file_name or doc.filename or 'Unnamed Document' }}
+                          </div>
+                          <div class="muted" style="font-size:13px;">
+                            Uploaded:
+                            {{ doc.created_at.strftime('%b %d, %Y %I:%M %p') if doc.created_at else 'Unknown' }}
+                          </div>
+                        </div>
+
+                        {% if doc.file_url %}
+                          <a href="{{ doc.file_url }}" target="_blank" class="btn btn-sm btn-primary">
+                            View
+                          </a>
+                        {% elif doc.url %}
+                          <a href="{{ doc.url }}" target="_blank" class="btn btn-sm btn-primary">
+                            View
+                          </a>
+                        {% else %}
+                          <span class="muted">No file link</span>
+                        {% endif %}
+                      </div>
+                    {% endfor %}
+                  </div>
+                </div>
+              {% endfor %}
+            </div>
+          {% else %}
+            <div class="muted" style="margin-top:14px;">No documents uploaded yet.</div>
+          {% endif %}
+        </section>
+      </div>
+
+      <!-- RIGHT COLUMN -->
+      <div style="display:flex; flex-direction:column; gap:16px;">
+
+        <!-- CONDITIONS -->
+        <section class="card">
+          <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap;">
+            <h3 style="margin:0;">✅ Conditions</h3>
+            <span class="muted">{{ conditions|length }} total</span>
+          </div>
+
+          {% if conditions %}
+            <div style="margin-top:14px; display:flex; flex-direction:column; gap:10px;">
+              {% for condition in conditions %}
+                {% set c_status = (condition.status or 'pending')|lower %}
+                <div style="border:1px solid #e8edf5; border-radius:14px; padding:14px;">
+                  <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:12px; flex-wrap:wrap;">
+                    <div>
+                      <div style="font-weight:700;">
+                        {{ condition.title or condition.name or 'Condition Item' }}
+                      </div>
+                      <div class="muted" style="margin-top:4px;">
+                        {{ condition.description or 'No description provided.' }}
+                      </div>
+                    </div>
+
+                    <div>
+                      <span class="badge 
+                        {% if c_status in ['cleared', 'complete', 'completed', 'satisfied'] %}
+                          bg-success
+                        {% elif c_status in ['waived'] %}
+                          bg-secondary
+                        {% else %}
+                          bg-warning
+                        {% endif %}
+                      ">
+                        {{ condition.status or 'Pending' }}
+                      </span>
+                    </div>
+                  </div>
+
+                  {% if condition.due_date %}
+                    <div class="muted" style="margin-top:10px; font-size:13px;">
+                      Due: {{ condition.due_date.strftime('%b %d, %Y') }}
+                    </div>
+                  {% endif %}
+                </div>
+              {% endfor %}
+            </div>
+          {% else %}
+            <div class="muted" style="margin-top:14px;">No conditions added yet.</div>
+          {% endif %}
+        </section>
+
+        <!-- QUICK ACTIONS -->
+        <section class="card">
+          <h3>⚡ Quick Actions</h3>
+          <div style="display:grid; gap:10px; margin-top:14px;">
+            <a href="{{ url_for('processor.condition_review', loan_id=loan.id) }}" class="btn btn-warning">
+              Manage Conditions
+            </a>
+
+            <a href="{{ url_for('loan_officer.loans_pipeline') }}" class="btn btn-outline-primary">
+              Back to Pipeline
+            </a>
+
+            {% if loan.borrower_id %}
+              <a href="{{ url_for('loan_officer.borrower_detail', borrower_id=loan.borrower_id) }}" class="btn btn-outline-secondary">
+                View Borrower Profile
+              </a>
+            {% endif %}
+          </div>
+        </section>
+
+        <!-- TIMELINE / META -->
+        <section class="card">
+          <h3>🕒 File Details</h3>
+          <div style="display:grid; gap:12px; margin-top:14px;">
+            <div>
+              <div class="muted">Created</div>
+              <div>{{ loan.created_at.strftime('%b %d, %Y %I:%M %p') if loan.created_at else '—' }}</div>
+            </div>
+            <div>
+              <div class="muted">Last Updated</div>
+              <div>{{ loan.updated_at.strftime('%b %d, %Y %I:%M %p') if loan.updated_at else '—' }}</div>
+            </div>
+            <div>
+              <div class="muted">Internal Status</div>
+              <div>{{ loan.status or '—' }}</div>
+            </div>
+          </div>
+        </section>
+      </div>
+    </section>
+  </div>
+</main>
+{% endblock %}
