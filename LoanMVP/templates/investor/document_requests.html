@@ -2,122 +2,101 @@
 {% block title %}Ravlo • Document Requests{% endblock %}
 
 {% block page_title %}Document Requests{% endblock %}
-{% block page_subline %}Documents and conditions your processor or underwriter needs from you.{% endblock %}
+{% block page_subline %}
+Upload requested documents for underwriting and funding review.
+{% endblock %}
 
 {% block topbar_actions %}
-  <button class="ravlo-btn ghost sm" type="button"
-          onclick="location.href='{{ url_for('investor.command_center') }}'">
-    Command Center
-  </button>
-
-    <button class="ravlo-btn ghost sm" type="button"
-            onclick="location.href='{{ url_for('investor.documents') }}'">
-      Document Library
-    </button>
-  {% endif %}
+<button class="ravlo-btn ghost sm"
+        onclick="location.href='{{ url_for('investor.loans') }}'">
+Back to Capital Studio
+</button>
 {% endblock %}
 
 {% block content %}
 
 <div class="ravlo-card pad">
-  <div class="row between" style="gap:1rem; flex-wrap:wrap;">
-    <div>
-      <div class="ravlo-card-title">🧾 Document Requests</div>
-      <div style="color:var(--muted); margin-top:.35rem;">
-        These are the documents and conditions your processor or underwriter needs from you.
+
+  <div class="ravlo-card-title">Requested Documents</div>
+
+  {% if documents %}
+
+  <div class="ravlo-grid cols-2 mt-16">
+
+  {% for doc in documents %}
+
+    <div class="ravlo-card pad">
+
+      <div class="row between">
+        <div>
+          <div style="font-weight:900">
+            {{ doc.document_name or "Document Request" }}
+          </div>
+
+          <div style="color:var(--muted); margin-top:4px;">
+            Status:
+            <span class="ravlo-badge
+            {% if doc.status == 'verified' %}ok
+            {% elif doc.status in ['uploaded','submitted'] %}watch
+            {% else %}risk{% endif %}">
+              {{ doc.status or "Pending" }}
+            </span>
+          </div>
+        </div>
+
       </div>
+
+      <div style="margin-top:12px; color:var(--muted)">
+        {{ doc.description or "Upload the requested document for underwriting." }}
+      </div>
+
+      <div class="row mt-16" style="gap:10px; flex-wrap:wrap;">
+
+        {% if doc.file_path %}
+        <a class="ravlo-btn ghost sm"
+           href="/uploads/{{ doc.file_path }}"
+           target="_blank">
+           View File
+        </a>
+        {% endif %}
+
+        <form method="POST"
+              enctype="multipart/form-data"
+              action="{{ url_for('investor.upload_request') }}">
+
+          <input type="hidden" name="document_id" value="{{ doc.id }}">
+
+          <input type="file"
+                 name="file"
+                 required
+                 style="margin-bottom:6px;">
+
+          <button class="ravlo-btn primary sm">
+            Upload
+          </button>
+
+        </form>
+
+      </div>
+
     </div>
+
+  {% endfor %}
+
   </div>
-</div>
-
-{% if ai_summary %}
-  <div class="ravlo-card pad mt-16">
-    <div class="ravlo-card-title">AI Summary</div>
-    <div style="color:var(--muted); margin-top:.5rem;">{{ ai_summary }}</div>
-  </div>
-{% endif %}
-
-<div class="ravlo-card pad mt-16">
-  <div class="ravlo-card-title">Requested Items</div>
-
-  {% if requests %}
-    <div class="mt-12">
-      <table class="ravlo-table" style="width:100%;">
-        <thead>
-          <tr>
-            <th>Item</th>
-            <th>Type</th>
-            <th>Requested By</th>
-            <th>Notes</th>
-            <th>Status</th>
-            <th style="text-align:right;">Action</th>
-          </tr>
-        </thead>
-
-        <tbody>
-          {% for req in requests %}
-            <tr>
-              <td style="font-weight:700; color:var(--text);">
-                {{ req.document_name }}
-              </td>
-
-              <td>
-                {% if (req.type or '')|lower == "document" %}
-                  <span class="ravlo-badge watch">Document</span>
-                {% else %}
-                  <span class="ravlo-badge ok">Condition</span>
-                {% endif %}
-              </td>
-
-              <td style="color:var(--muted);">{{ req.requested_by or "Processor" }}</td>
-              <td style="color:var(--muted);">{{ req.notes or "—" }}</td>
-
-              <td>
-                {% set s = (req.status or 'pending')|lower %}
-                {% if s in ["completed", "cleared"] %}
-                  <span class="ravlo-badge ok">Completed</span>
-                {% elif s == "flagged" %}
-                  <span class="ravlo-badge risk">Flagged</span>
-                {% elif s == "submitted" %}
-                  <span class="ravlo-badge watch">Submitted</span>
-                {% else %}
-                  <span class="ravlo-badge watch">Pending</span>
-                {% endif %}
-              </td>
-
-              <td style="text-align:right;">
-                {% if (req.status or '')|lower in ["pending", "requested"] %}
-
-                  {# Prefer a real route if you have one #}
-                    <button class="ravlo-btn primary sm" type="button"
-                            onclick="location.href='{{ url_for('investor.upload_request', item_id=req.id, type=req.type) }}'">
-                      Upload
-                    </button>
-
-                    <button class="ravlo-btn primary sm" type="button"
-                            onclick="location.href='{{ url_for('investor.upload_docs') }}?item_id={{ req.id }}&type={{ req.type }}'">
-                      Upload
-                    </button>
-
-                  {% else %}
-                    <span style="color:var(--muted);">Upload route not wired</span>
-                  {% endif %}
-
-                {% else %}
-                  <span style="color:var(--muted);">✔ Submitted</span>
-                {% endif %}
-              </td>
-            </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
 
   {% else %}
-    <div class="mt-12" style="color:var(--muted); text-align:center;">
-      No document requests or conditions at this time.
+
+  <div class="ravlo-card pad mt-16">
+    <div style="font-weight:800">No document requests yet</div>
+
+    <div style="color:var(--muted); margin-top:6px;">
+      Your loan officer will request documents as underwriting progresses.
     </div>
+  </div>
+
   {% endif %}
+
 </div>
 
 <div class="ravlo-card pad mt-16">
