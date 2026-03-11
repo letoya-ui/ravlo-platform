@@ -278,17 +278,23 @@
           <i class="lucide lucide-book-open"></i>
           <span>Deal Book</span>
         </a>
+        
+        <a href="{{ url_for('investor.partners') }}"
+           class="ravlo-nav-link {% if 'partner' in ep %}active{% endif %}">
+          <i class="lucide lucide-users"></i>
+          <span>Partner Network</span>
+        </a>
+        
+        <a href="{{ url_for('investor.documents') }}"
+           class="ravlo-nav-link {% if ep == 'investor.documents' %}active{% endif %}">
+          <i class="lucide lucide-folder"></i>
+          <span>Documents Vault</span>
+        </a>
 
         <a href="{{ url_for('investor.resource_center') }}"
            class="ravlo-nav-link {% if ep == 'investor.resource_center' %}active{% endif %}">
           <i class="lucide lucide-scroll-text"></i>
           <span>Resource Center</span>
-        </a>
-
-        <a href="{{ url_for('investor.documents') }}"
-           class="ravlo-nav-link {% if ep == 'investor.documents' %}active{% endif %}">
-          <i class="lucide lucide-folder"></i>
-          <span>Documents</span>
         </a>
 
       </nav>
