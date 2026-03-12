@@ -59,8 +59,6 @@ def dashboard():
         "total_loans": LoanApplication.query.count(),
         "total_docs": LoanDocument.query.count(),
         "pending_tasks": Task.query.filter_by(status="Pending").count(),
-
-        # new admin onboarding stats
         "pending_requests": AccessRequest.query.filter_by(status="pending").count(),
         "approved_requests": AccessRequest.query.filter_by(status="approved").count(),
         "total_companies": Company.query.count(),
@@ -69,22 +67,11 @@ def dashboard():
 
     logs = SystemLog.query.order_by(SystemLog.created_at.desc()).limit(15).all()
     leads = Lead.query.order_by(Lead.created_at.desc()).limit(5).all()
+    users = User.query.order_by(User.id.desc()).limit(8).all()
 
-    recent_requests = (
-        AccessRequest.query
-        .order_by(AccessRequest.created_at.desc())
-        .limit(5)
-        .all()
-    )
+    recent_requests = AccessRequest.query.order_by(AccessRequest.created_at.desc()).limit(5).all()
+    recent_invites = UserInvite.query.order_by(UserInvite.created_at.desc()).limit(5).all()
 
-    recent_invites = (
-        UserInvite.query
-        .order_by(UserInvite.created_at.desc())
-        .limit(5)
-        .all()
-    )
-
-    # AI Summary
     try:
         ai_prompt = f"""
         Summarize admin system activity for Ravlo.
@@ -98,8 +85,6 @@ def dashboard():
         - Approved Requests: {stats['approved_requests']}
         - Total Companies: {stats['total_companies']}
         - Pending Invites: {stats['pending_invites']}
-
-        Include operational insight around onboarding, staff setup, and lending workflow.
         """
         ai_summary = assistant.generate_reply(ai_prompt, "admin")
     except Exception:
@@ -110,11 +95,11 @@ def dashboard():
         stats=stats,
         logs=logs,
         leads=leads,
+        users=users,
         recent_requests=recent_requests,
         recent_invites=recent_invites,
         ai_summary=ai_summary,
     )
-
 
 @admin_bp.route("/requests")
 @login_required
