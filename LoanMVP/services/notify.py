@@ -6,7 +6,7 @@ from sendgrid.helpers.mail import Mail
 from LoanMVP.extensions import db
 from LoanMVP.app import socketio
 from LoanMVP.models.loan_models import LoanNotification
-from LoanMVP.models.user import User
+from LoanMVP.models.user_model import User
 
 
 def notify(

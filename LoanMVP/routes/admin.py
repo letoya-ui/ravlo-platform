@@ -6,6 +6,7 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash,
 from flask_login import current_user
 from datetime import datetime
 from LoanMVP.extensions import db
+from werkzeug.security import generate_password_hash
 
 from LoanMVP.ai.base_ai import AIAssistant     # ✅ Unified AI import
 from LoanMVP.utils.decorators import role_required
@@ -16,6 +17,9 @@ from LoanMVP.models.crm_models import Lead, Message, Task
 from LoanMVP.models.loan_models import LoanApplication, BorrowerProfile
 from LoanMVP.models.document_models import LoanDocument
 from LoanMVP.models.system_models import SystemLog
+from LoanMVP.models.admin import Company, AccessRequest, UserInvite
+
+from LoanMVP.services.notify import notify
 
 import io
 import csv
@@ -44,35 +48,270 @@ def admin_required(func):
 @admin_bp.route("/dashboard")
 @role_required("admin")
 def dashboard():
+    from LoanMVP.models.user import User
+    from LoanMVP.models.loan_models import LoanApplication, LoanDocument
+    from LoanMVP.models.admin import AccessRequest, Company, UserInvite
+    from LoanMVP.models.crm import Lead
+    from LoanMVP.models.system import SystemLog, Task
 
     stats = {
         "total_users": User.query.count(),
         "total_loans": LoanApplication.query.count(),
         "total_docs": LoanDocument.query.count(),
         "pending_tasks": Task.query.filter_by(status="Pending").count(),
+
+        # new admin onboarding stats
+        "pending_requests": AccessRequest.query.filter_by(status="pending").count(),
+        "approved_requests": AccessRequest.query.filter_by(status="approved").count(),
+        "total_companies": Company.query.count(),
+        "pending_invites": UserInvite.query.filter_by(status="pending").count(),
     }
 
     logs = SystemLog.query.order_by(SystemLog.created_at.desc()).limit(15).all()
-    
     leads = Lead.query.order_by(Lead.created_at.desc()).limit(5).all()
+
+    recent_requests = (
+        AccessRequest.query
+        .order_by(AccessRequest.created_at.desc())
+        .limit(5)
+        .all()
+    )
+
+    recent_invites = (
+        UserInvite.query
+        .order_by(UserInvite.created_at.desc())
+        .limit(5)
+        .all()
+    )
 
     # AI Summary
     try:
-        ai_summary = assistant.generate_reply(
-            "Summarize admin system activity including users, loans, documents, and system logs.",
-            "admin"
-        )
-    except:
+        ai_prompt = f"""
+        Summarize admin system activity for Ravlo.
+
+        Stats:
+        - Total Users: {stats['total_users']}
+        - Total Loans: {stats['total_loans']}
+        - Total Documents: {stats['total_docs']}
+        - Pending Tasks: {stats['pending_tasks']}
+        - Pending Access Requests: {stats['pending_requests']}
+        - Approved Requests: {stats['approved_requests']}
+        - Total Companies: {stats['total_companies']}
+        - Pending Invites: {stats['pending_invites']}
+
+        Include operational insight around onboarding, staff setup, and lending workflow.
+        """
+        ai_summary = assistant.generate_reply(ai_prompt, "admin")
+    except Exception:
         ai_summary = "⚠️ AI summary unavailable."
 
     return render_template(
         "admin/dashboard.html",
         stats=stats,
         logs=logs,
+        leads=leads,
+        recent_requests=recent_requests,
+        recent_invites=recent_invites,
         ai_summary=ai_summary,
-        leads=leads
     )
 
+
+@admin_bp.route("/requests")
+@login_required
+@admin_required
+def requests_dashboard():
+    status = request.args.get("status", "pending")
+
+    requests_q = AccessRequest.query.order_by(AccessRequest.created_at.desc())
+
+    if status:
+        requests_q = requests_q.filter_by(status=status)
+
+    requests_list = requests_q.all()
+
+    return render_template(
+        "admin/requests_dashboard.html",
+        requests_list=requests_list,
+        current_status=status,
+    )
+
+
+@admin_bp.route("/requests/<int:request_id>")
+@login_required
+@admin_required
+def request_detail(request_id):
+    access_request = AccessRequest.query.get_or_404(request_id)
+
+    return render_template(
+        "admin/request_detail.html",
+        access_request=access_request,
+    )
+
+
+@admin_bp.route("/requests/<int:request_id>/approve", methods=["POST"])
+@login_required
+@admin_required
+def approve_request(request_id):
+    access_request = AccessRequest.query.get_or_404(request_id)
+
+    if access_request.status == "approved":
+        flash("Request already approved.", "info")
+        return redirect(url_for("admin.request_detail", request_id=request_id))
+
+    company = None
+
+    if access_request.company_id:
+        company = Company.query.get(access_request.company_id)
+
+    if not company:
+        company = Company(
+            name=access_request.company_name or access_request.contact_name,
+            email_domain=(access_request.email.split("@")[-1].lower() if access_request.email and "@" in access_request.email else None),
+            is_active=True
+        )
+        db.session.add(company)
+        db.session.flush()
+
+    access_request.company_id = company.id
+    access_request.status = "approved"
+    access_request.reviewed_by = current_user.id
+    access_request.reviewed_at = datetime.utcnow()
+
+    db.session.commit()
+
+    notify(
+        loan=None,
+        role="admin",
+        title="Request Approved",
+        message=f"Access request #{access_request.id} was approved for {access_request.email}.",
+        channels=["socket", "inapp"]
+    )
+
+    flash("Request approved successfully.", "success")
+    return redirect(url_for("admin.company_team", company_id=company.id))
+
+
+@admin_bp.route("/requests/<int:request_id>/reject", methods=["POST"])
+@login_required
+@admin_required
+def reject_request(request_id):
+    access_request = AccessRequest.query.get_or_404(request_id)
+
+    if access_request.status == "rejected":
+        flash("Request already rejected.", "info")
+        return redirect(url_for("admin.request_detail", request_id=request_id))
+
+    access_request.status = "rejected"
+    access_request.reviewed_by = current_user.id
+    access_request.reviewed_at = datetime.utcnow()
+
+    db.session.commit()
+
+    flash("Request rejected.", "warning")
+    return redirect(url_for("admin.requests_dashboard"))
+
+
+@admin_bp.route("/company/<int:company_id>/team")
+@login_required
+@admin_required
+def company_team(company_id):
+    company = Company.query.get_or_404(company_id)
+    team_members = User.query.filter_by(company_id=company.id).order_by(User.role, User.first_name).all()
+    invites = UserInvite.query.filter_by(company_id=company.id).order_by(UserInvite.created_at.desc()).all()
+
+    return render_template(
+        "admin/company_team.html",
+        company=company,
+        team_members=team_members,
+        invites=invites,
+    )
+
+
+@admin_bp.route("/company/<int:company_id>/team/invite", methods=["GET", "POST"])
+@login_required
+@admin_required
+def invite_team_member(company_id):
+    company = Company.query.get_or_404(company_id)
+
+    if request.method == "POST":
+        first_name = (request.form.get("first_name") or "").strip()
+        last_name = (request.form.get("last_name") or "").strip()
+        email = (request.form.get("email") or "").strip().lower()
+        role = (request.form.get("role") or "").strip()
+
+        allowed_roles = ["admin", "loan_officer", "processor", "underwriter"]
+
+        if not email or not role:
+            flash("Email and role are required.", "danger")
+            return redirect(url_for("admin.invite_team_member", company_id=company.id))
+
+        if role not in allowed_roles:
+            flash("Invalid role selected.", "danger")
+            return redirect(url_for("admin.invite_team_member", company_id=company.id))
+
+        existing_user = User.query.filter_by(email=email).first()
+        if existing_user:
+            flash("A user with that email already exists.", "warning")
+            return redirect(url_for("admin.invite_team_member", company_id=company.id))
+
+        existing_invite = UserInvite.query.filter_by(email=email, company_id=company.id, status="pending").first()
+        if existing_invite and not existing_invite.is_expired():
+            flash("There is already an active invite for that email.", "warning")
+            return redirect(url_for("admin.invite_team_member", company_id=company.id))
+
+        invite = UserInvite(
+            company_id=company.id,
+            email=email,
+            first_name=first_name,
+            last_name=last_name,
+            role=role,
+            token=UserInvite.generate_token(),
+            invited_by=current_user.id,
+            expires_at=UserInvite.default_expiration(days=7),
+            status="pending",
+        )
+        db.session.add(invite)
+        db.session.commit()
+
+        invite_url = url_for("auth.register_from_invite", token=invite.token, _external=True)
+
+        try:
+            from sendgrid.helpers.mail import Mail
+            import sendgrid
+
+            sendgrid_api_key = current_app.config.get("SENDGRID_API_KEY")
+            from_email = current_app.config.get("NOTIFY_FROM_EMAIL", "noreply@ravlohq.com")
+
+            if sendgrid_api_key:
+                sg = sendgrid.SendGridAPIClient(sendgrid_api_key)
+                email_msg = Mail(
+                    from_email=from_email,
+                    to_emails=email,
+                    subject=f"You're invited to join {company.name} on Ravlo",
+                    html_content=f"""
+                    <div style="font-family:Inter,Arial,sans-serif;line-height:1.6;color:#111;">
+                      <h2>You're invited to Ravlo</h2>
+                      <p>Hello {first_name or 'there'},</p>
+                      <p>You have been invited to join <strong>{company.name}</strong> as a <strong>{role.replace('_', ' ').title()}</strong>.</p>
+                      <p>
+                        Complete your registration here:<br>
+                        <a href="{invite_url}">{invite_url}</a>
+                      </p>
+                      <p>This link expires in 7 days.</p>
+                    </div>
+                    """
+                )
+                sg.send(email_msg)
+        except Exception:
+            pass
+
+        flash("Invite created and email sent.", "success")
+        return redirect(url_for("admin.company_team", company_id=company.id))
+
+    return render_template(
+        "admin/invite_team_member.html",
+        company=company,
+    )
 
 # =========================================================
 # 📊 SYSTEM REPORTS (CSV EXPORT)
@@ -186,6 +425,7 @@ def analytics():
     }
 
     return render_template("admin/analytics.html", stats=stats)
+
 
 
 # =========================================================
