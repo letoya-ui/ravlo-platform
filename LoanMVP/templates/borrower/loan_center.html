@@ -1,63 +1,50 @@
 {% extends "layouts/Ravlo_lending_base.html" %}
-{% block title %}Loans • Ravlo{% endblock %}
 
-{% block page_title %}Your Loans{% endblock %}
-{% block page_subline %}
-Track all funding requests in one place.
-{% endblock %}
+{% block title %}Loan Center{% endblock %}
+{% block page_title %}Loan Center{% endblock %}
+{% block page_subline %}Track your application and funding progress{% endblock %}
 
 {% block content %}
+<div class="re-grid">
+  <section class="re-card">
+    <div class="re-card-head">
+      <h3>Your Loans</h3>
+      <p class="muted">View current applications, funding amounts, and status.</p>
+    </div>
 
-<section class="ravlo-card" style="padding:24px;">
-
-{% if loans %}
-
-<table class="ravlo-table">
-
-<thead>
-<tr>
-<th>ID</th>
-<th>Property</th>
-<th>Amount</th>
-<th>Status</th>
-<th></th>
-</tr>
-</thead>
-
-<tbody>
-
-{% for loan in loans %}
-
-<tr>
-
-<td>#{{ loan.id }}</td>
-
-<td>{{ loan.property_address }}</td>
-
-<td>${{ "{:,.0f}".format(loan.amount) }}</td>
-
-<td>{{ loan.status }}</td>
-
-<td>
-<a href="{{ url_for('borrower.view_loan', loan_id=loan.id) }}" class="ravlo-btn ghost sm">
-View
-</a>
-</td>
-
-</tr>
-
-{% endfor %}
-
-</tbody>
-
-</table>
-
-{% else %}
-
-<p class="muted">You have no loans yet.</p>
-
-{% endif %}
-
-</section>
-
+    {% if loans %}
+      <div class="re-table-wrap">
+        <table class="re-table">
+          <thead>
+            <tr>
+              <th>Loan ID</th>
+              <th>Property</th>
+              <th>Amount</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for loan in loans %}
+            <tr>
+              <td>#{{ loan.id }}</td>
+              <td>{{ loan.property }}</td>
+              <td>${{ "{:,.0f}".format(loan.amount or 0) }}</td>
+              <td>
+                <span class="re-status-chip">
+                  {{ loan.status }}
+                </span>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="re-empty-state">
+        <h4>No loans yet</h4>
+        <p>Your applications and funding requests will appear here.</p>
+      </div>
+    {% endif %}
+  </section>
+</div>
 {% endblock %}
