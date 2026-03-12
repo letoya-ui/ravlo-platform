@@ -6,15 +6,19 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash,
 from datetime import datetime
 import io
 from flask_login import current_user, login_required
-from LoanMVP.extensions import db
+from LoanMVP.extensions import db, csrf
+
 from LoanMVP.models.user_model import User
 from LoanMVP.models.loan_models import LoanApplication, BorrowerProfile
 from LoanMVP.models.document_models import LoanDocument
 from LoanMVP.models.underwriter_model import UnderwritingCondition, UnderwriterTask
 from LoanMVP.models.crm_models import MessageThread, Message
 from LoanMVP.models.credit_models import SoftCreditReport      # FIXED
+
 from LoanMVP.utils.notify import send_notification
 from LoanMVP.utils.pricing_engine import calculate_dti_ltv
+
+from LoanMVP.service.notify import notify
 
 # PDF GENERATION
 from reportlab.pdfgen import canvas
@@ -129,6 +133,7 @@ def verify_doc(doc_id):
 #   ADD CONDITION
 # ===============================================================
 @underwriter_bp.route("/add-condition/<int:loan_id>", methods=["POST"])
+@csrf.exempt
 def add_condition(loan_id):
     loan = LoanApplication.query.get_or_404(loan_id)
 
@@ -192,6 +197,7 @@ def send_condition(cond_id):
 #   UW DECISION
 # ===============================================================
 @underwriter_bp.route("/decision/<int:loan_id>", methods=["POST"])
+@csrf.exempt
 def decision(loan_id):
     loan = LoanApplication.query.get_or_404(loan_id)
 
@@ -214,6 +220,7 @@ def decision(loan_id):
 #   AI UNDERWRITING INSIGHT
 # ===============================================================
 @underwriter_bp.route("/ai", methods=["POST"])
+@csrf.exempt
 def ai():
     data = request.get_json()
     borrower_id = data.get("borrower_id")
@@ -287,6 +294,7 @@ def decision_sheet(loan_id):
 #   TASKS
 # ===============================================================
 @underwriter_bp.route("/tasks", methods=["GET", "POST"])
+@csrf.exempt
 def tasks():
     if request.method == "POST":
         t = UnderwriterTask(
