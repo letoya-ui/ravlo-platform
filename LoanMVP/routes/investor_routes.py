@@ -3945,15 +3945,86 @@ def convert_build_project_to_deal(project_id):
 # =========================================================
 
 @investor_bp.route("/deal-architect", methods=["GET"])
+@investor_bp.route("/deal-architect/<int:deal_id>", methods=["GET"])
 @login_required
 @role_required("investor")
-def deal_architect():
+def deal_architect(deal_id=None):
+    selected_deal = None
+
+    if deal_id:
+        selected_deal = Deal.query.filter_by(
+            id=deal_id,
+            user_id=current_user.id
+        ).first_or_404()
+    else:
+        query_deal_id = request.args.get("deal_id", type=int)
+        if query_deal_id:
+            selected_deal = Deal.query.filter_by(
+                id=query_deal_id,
+                user_id=current_user.id
+            ).first()
+
+    property_address = ""
+    city = ""
+    state = ""
+    zip_code = ""
+    property_type = ""
+    bedrooms = None
+    bathrooms = None
+    sqft = None
+    year_built = None
+
+    strategy_analysis = {}
+
+    if selected_deal:
+        property_address = (
+            getattr(selected_deal, "property_address", None)
+            or getattr(selected_deal, "address", None)
+            or getattr(selected_deal, "street_address", None)
+            or ""
+        )
+        city = getattr(selected_deal, "city", "") or ""
+        state = getattr(selected_deal, "state", "") or ""
+        zip_code = getattr(selected_deal, "zip_code", "") or ""
+        property_type = (
+            getattr(selected_deal, "property_type", None)
+            or getattr(selected_deal, "asset_type", None)
+            or ""
+        )
+        bedrooms = (
+            getattr(selected_deal, "bedrooms", None)
+            or getattr(selected_deal, "beds", None)
+        )
+        bathrooms = (
+            getattr(selected_deal, "bathrooms", None)
+            or getattr(selected_deal, "baths", None)
+        )
+        sqft = (
+            getattr(selected_deal, "square_feet", None)
+            or getattr(selected_deal, "sqft", None)
+        )
+        year_built = getattr(selected_deal, "year_built", None)
+
+        results = selected_deal.results_json or {}
+        strategy_analysis = results.get("strategy_analysis", {}) or {}
+
     return render_template(
         "investor/deal_architect.html",
         page_title="AI Deal Architect",
-        page_subtitle="Generate strategies and investment approaches for potential deals."
+        page_subtitle="Analyze the opportunity, score the risk, and shape the best strategy for the deal.",
+        deal=selected_deal,
+        deal_id=selected_deal.id if selected_deal else None,
+        property_address=property_address,
+        city=city,
+        state=state,
+        zip_code=zip_code,
+        property_type=property_type,
+        bedrooms=bedrooms,
+        bathrooms=bathrooms,
+        sqft=sqft,
+        year_built=year_built,
+        strategy_analysis=strategy_analysis,
     )
-
 
 @investor_bp.route("/deal-architect/analyze", methods=["POST"])
 @csrf.exempt

@@ -24,9 +24,23 @@ Analyze the opportunity, score the risk, and shape the best strategy for the dea
   <section class="ravlo-hero-card architect-hero">
     <div class="architect-hero-copy">
       <div class="eyebrow">RAVLO INTELLIGENCE</div>
-      <h2>Strategy before capital.</h2>
+      <h2>
+        {% if property_address %}
+          {{ property_address }}
+        {% elif deal is defined and deal %}
+          {{ deal.title or deal.address or ("Deal #" ~ deal.id) }}
+        {% else %}
+          Strategy before capital.
+        {% endif %}
+      </h2>
+
       <p class="muted">
-        Run a clean analysis on acquisition cost, value spread, rent strength, and rehab burden to identify the best investment path.
+        {% if city or state or property_type %}
+          {{ property_type or "Investment Property" }}
+          {% if city or state %} • {{ city }}{% if city and state %}, {% endif %}{{ state }}{% endif %}
+        {% else %}
+          Run a clean analysis on acquisition cost, value spread, rent strength, and rehab burden to identify the best investment path.
+        {% endif %}
       </p>
 
       <div class="ravlo-chip-row" style="margin-top:16px;">
@@ -54,6 +68,75 @@ Analyze the opportunity, score the risk, and shape the best strategy for the dea
       </div>
     </div>
   </section>
+   
+  {% if deal is defined and deal %}
+  <section class="ravlo-card pad">
+     <div class="section-head">
+       <div>
+         <div class="eyebrow">PROPERTY PROFILE</div>
+         <h3>Loaded Property Information</h3>
+       </div>
+     </div>
+
+     <div class="architect-property-grid">
+       <div class="architect-metric">
+         <span>Address</span>
+         <strong style="font-size:18px;">
+           {{ property_address or deal.address or "—" }}
+         </strong>
+       </div>
+
+       <div class="architect-metric">
+         <span>Property Type</span>
+         <strong style="font-size:18px;">
+           {{ property_type or "—" }}
+          </strong>
+        </div>
+
+       <div class="architect-metric">
+         <span>City / State</span>
+         <strong style="font-size:18px;">
+            {{ city or "—" }}{% if city and state %}, {% endif %}{{ state or "" }}
+         </strong>
+       </div>
+
+       <div class="architect-metric">
+         <span>ZIP Code</span>
+         <strong style="font-size:18px;">
+           {{ zip_code or "—" }}
+         </strong>
+        </div>
+
+        <div class="architect-metric">
+          <span>Beds / Baths</span>
+          <strong style="font-size:18px;">
+            {{ bedrooms or "—" }} / {{ bathrooms or "—" }}
+          </strong>
+        </div>
+
+        <div class="architect-metric">
+          <span>Square Feet</span>
+          <strong style="font-size:18px;">
+            {% if sqft %}{{ "{:,.0f}".format(sqft) }}{% else %}—{% endif %}
+          </strong>
+        </div>
+
+       <div class="architect-metric">
+         <span>Year Built</span>
+         <strong style="font-size:18px;">
+           {{ year_built or "—" }}
+         </strong>
+        </div>
+
+       <div class="architect-metric">
+         <span>Current Strategy</span>
+         <strong style="font-size:18px;">
+           {{ (deal.recommended_strategy or deal.strategy or "Pending") }}
+         </strong>
+       </div>
+     </div>
+    </section>
+    {% endif %}
 
   <!-- MAIN GRID -->
   <div class="architect-grid">
@@ -482,6 +565,24 @@ Analyze the opportunity, score the risk, and shape the best strategy for the dea
       align-items:flex-start;
     }
   }
+
+  .architect-property-grid{
+    display:grid;
+    grid-template-columns:repeat(4, minmax(0, 1fr));
+    gap:12px;
+  }
+
+  @media (max-width: 1100px){
+    .architect-property-grid{
+      grid-template-columns:repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @media (max-width: 700px){
+    .architect-property-grid{
+      grid-template-columns:1fr;
+     }
+   }
 </style>
 
 <script>
