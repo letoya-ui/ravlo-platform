@@ -289,7 +289,7 @@ def apply():
         title="Apply for Funding",
     )
 
-@borrower.route("/loan-center")
+@borrower_bp.route("/loan-center")
 @login_required
 def loan_center():
     """
@@ -312,7 +312,7 @@ def loan_center():
     )
 
 
-@borrower.route("/property-intelligence", methods=["GET", "POST"])
+@borrower_bp.route("/property-intelligence", methods=["GET", "POST"])
 @login_required
 def property_intelligence():
     """
