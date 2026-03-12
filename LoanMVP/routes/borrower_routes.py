@@ -290,7 +290,7 @@ def apply():
     )
 
 @borrower_bp.route("/loan-center")
-@login_required
+@role_required("borrower")
 def loan_center():
     """
     Borrower loan dashboard.
@@ -313,7 +313,7 @@ def loan_center():
 
 
 @borrower_bp.route("/property-intelligence", methods=["GET", "POST"])
-@login_required
+@role_required("borrower")
 def property_intelligence():
     """
     Borrower enters an address and Ravlo pulls:
