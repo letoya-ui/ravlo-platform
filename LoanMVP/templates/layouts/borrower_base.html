@@ -50,12 +50,6 @@
         <span>Dashboard</span>
       </a>
 
-      <a href="{{ url_for('borrower.create_profile') }}"
-         class="ravlo-nav-link {% if request.endpoint == 'borrower.create_profile' %}active{% endif %}">
-        <i class="icon" data-lucide="user-circle-2"></i>
-        <span>Profile</span>
-      </a>
-
       <a href="{{ url_for('borrower.apply') }}"
          class="ravlo-nav-link {% if request.endpoint == 'borrower.capital_application' %}active{% endif %}">
         <i class="icon" data-lucide="file-text"></i>
