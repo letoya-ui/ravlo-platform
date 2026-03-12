@@ -1,0 +1,50 @@
+/* =========================================================
+   RAVLO TOKENS
+   Shared brand foundation for all Ravlo products
+========================================================= */
+
+:root{
+  --rav-bg:#070c12;
+  --rav-bg-2:#0c1116;
+  --rav-bg-3:#101821;
+
+  --rav-panel:#101821;
+  --rav-panel-2:#131c26;
+  --rav-panel-3:#18232f;
+
+  --rav-brand:#6B7F93;
+  --rav-accent:#3A5C7A;
+  --rav-accent-2:#8EA7C0;
+
+  --rav-text:#FFFFFF;
+  --rav-text-soft:rgba(255,255,255,.82);
+  --rav-muted:rgba(255,255,255,.58);
+
+  --rav-line:rgba(255,255,255,.07);
+  --rav-line-2:rgba(107,127,147,.18);
+  --rav-line-strong:rgba(107,127,147,.28);
+
+  --rav-success:#2cb67d;
+  --rav-warning:#d1a246;
+  --rav-danger:#c46363;
+  --rav-info:#5FA8FF;
+
+  --rav-radius-sm:12px;
+  --rav-radius-md:16px;
+  --rav-radius-lg:22px;
+  --rav-radius-xl:28px;
+  --rav-radius-2xl:32px;
+  --rav-radius-pill:999px;
+
+  --rav-shadow-sm:0 10px 24px rgba(0,0,0,.18);
+  --rav-shadow-md:0 18px 40px rgba(0,0,0,.26);
+  --rav-shadow-lg:0 26px 60px rgba(0,0,0,.34);
+
+  --rav-pad-sm:12px;
+  --rav-pad-md:16px;
+  --rav-pad-lg:20px;
+  --rav-pad-xl:24px;
+  --rav-pad-2xl:30px;
+
+  --rav-ease:all .24s ease;
+}

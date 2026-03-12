@@ -1,52 +1,9 @@
 /* =========================================================
-   RAVLO INVESTOR / PARTNER DASHBOARD
-   Built specifically for your current base template
-   Brand: Midnight / Grayish Blue / White / Accent
+   RAVLO DASHBOARD
+   Investor OS / Partners / Command Center / Deal Workspace
+   Requires: ravlo_tokens.css
 ========================================================= */
 
-:root{
-  --bg:#070c12;
-  --bg-2:#0c1116;
-  --panel:#101821;
-  --panel-2:#121c26;
-  --panel-3:#16222d;
-
-  --line:rgba(255,255,255,.07);
-  --line-2:rgba(107,127,147,.18);
-  --line-strong:rgba(107,127,147,.30);
-
-  --text:#ffffff;
-  --text-soft:rgba(255,255,255,.82);
-  --muted:rgba(255,255,255,.58);
-
-  --brand:#6B7F93;
-  --accent:#3A5C7A;
-  --accent-2:#8FA7BE;
-
-  --success:#2cb67d;
-  --warning:#d2a74a;
-  --danger:#c56464;
-  --info:#5fa8ff;
-
-  --shadow-sm:0 10px 24px rgba(0,0,0,.18);
-  --shadow-md:0 18px 40px rgba(0,0,0,.28);
-  --shadow-lg:0 24px 60px rgba(0,0,0,.36);
-
-  --radius-sm:12px;
-  --radius-md:16px;
-  --radius-lg:22px;
-  --radius-xl:28px;
-
-  --sidebar-w:286px;
-  --topbar-h:86px;
-
-  --container-pad:22px;
-  --ease:all .24s ease;
-}
-
-/* =========================================================
-   RESET
-========================================================= */
 *,
 *::before,
 *::after{
@@ -61,12 +18,12 @@ html,body{
   margin:0;
   padding:0;
   min-height:100%;
-  background:
-    radial-gradient(circle at top center, rgba(58,92,122,.18), transparent 28%),
-    radial-gradient(circle at 18% 0%, rgba(107,127,147,.11), transparent 24%),
-    linear-gradient(180deg,#04080d 0%, #070c12 45%, #0b1118 100%);
-  color:var(--text);
   font-family:"Inter",sans-serif;
+  background:
+    radial-gradient(circle at 10% 0%, rgba(58,92,122,.18), transparent 30%),
+    radial-gradient(circle at 85% 8%, rgba(107,127,147,.12), transparent 36%),
+    linear-gradient(180deg, #04080d 0%, #091018 50%, #0c141c 100%);
+  color:var(--rav-text);
   -webkit-font-smoothing:antialiased;
   text-rendering:optimizeLegibility;
 }
@@ -79,6 +36,7 @@ body{
 a{
   color:inherit;
   text-decoration:none;
+  transition:var(--rav-ease);
 }
 
 img{
@@ -103,32 +61,25 @@ textarea{
   width:100%;
   border:none;
   outline:none;
-  color:var(--text);
+  color:var(--rav-text);
 }
 
-/* =========================================================
-   BACKGROUND DETAILS
-========================================================= */
 .ravlo-grain{
   position:fixed;
   inset:0;
   pointer-events:none;
   z-index:0;
-  opacity:.08;
-  background-image:
-    radial-gradient(rgba(255,255,255,.45) .45px, transparent .55px);
+  opacity:.06;
+  background-image:radial-gradient(rgba(255,255,255,.45) .4px, transparent .55px);
   background-size:6px 6px;
   mix-blend-mode:soft-light;
 }
 
-/* =========================================================
-   MAIN LAYOUT
-========================================================= */
 .ravlo-shell{
   position:relative;
   z-index:1;
   display:grid;
-  grid-template-columns:var(--sidebar-w) minmax(0,1fr);
+  grid-template-columns:286px minmax(0,1fr);
   min-height:100vh;
 }
 
@@ -137,27 +88,14 @@ textarea{
   top:0;
   height:100vh;
   padding:18px 16px;
-  background:
-    linear-gradient(180deg, rgba(10,15,21,.96), rgba(8,12,18,.98));
-  border-right:1px solid var(--line);
   overflow-y:auto;
   overflow-x:hidden;
+  background:
+    linear-gradient(180deg, rgba(10,15,21,.96), rgba(8,12,18,.98));
+  border-right:1px solid var(--rav-line);
   box-shadow:inset -1px 0 0 rgba(255,255,255,.02);
 }
 
-.ravlo-main{
-  min-width:0;
-  padding:var(--container-pad);
-}
-
-.ravlo-content{
-  display:grid;
-  gap:18px;
-}
-
-/* =========================================================
-   SIDEBAR
-========================================================= */
 .ravlo-sidebar::-webkit-scrollbar{
   width:8px;
 }
@@ -167,9 +105,19 @@ textarea{
   border-radius:999px;
 }
 
-.ravlo-sidebar::-webkit-scrollbar-track{
-  background:transparent;
+.ravlo-main{
+  min-width:0;
+  padding:22px;
 }
+
+.ravlo-content{
+  display:grid;
+  gap:18px;
+}
+
+/* =========================================================
+   SIDEBAR NAV
+========================================================= */
 
 .ravlo-sidebar-nav{
   display:grid;
@@ -185,24 +133,23 @@ textarea{
   min-height:48px;
   padding:12px 14px;
   border-radius:16px;
-  color:var(--text-soft);
+  color:var(--rav-text-soft);
   border:1px solid transparent;
-  transition:var(--ease);
+  transition:var(--rav-ease);
 }
 
 .ravlo-nav-link i{
   font-size:18px;
-  opacity:.92;
+  opacity:.95;
 }
 
 .ravlo-nav-link span{
   font-size:.96rem;
   font-weight:600;
-  line-height:1.1;
 }
 
 .ravlo-nav-link:hover{
-  color:var(--text);
+  color:var(--rav-text);
   background:
     linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
   border-color:rgba(255,255,255,.05);
@@ -210,13 +157,11 @@ textarea{
 }
 
 .ravlo-nav-link.active{
-  color:var(--text);
+  color:var(--rav-text);
   background:
     linear-gradient(180deg, rgba(107,127,147,.16), rgba(58,92,122,.10));
   border-color:rgba(107,127,147,.22);
-  box-shadow:
-    inset 0 1px 0 rgba(255,255,255,.06),
-    0 8px 24px rgba(0,0,0,.18);
+  box-shadow:0 8px 20px rgba(0,0,0,.16);
 }
 
 .ravlo-nav-link.active::before{
@@ -227,7 +172,7 @@ textarea{
   bottom:10px;
   width:3px;
   border-radius:999px;
-  background:linear-gradient(180deg, var(--accent-2), var(--accent));
+  background:linear-gradient(180deg, var(--rav-accent-2), var(--rav-accent));
 }
 
 .ravlo-sidebar-footer-simple{
@@ -246,20 +191,21 @@ textarea{
 /* =========================================================
    TOPBAR
 ========================================================= */
+
 .ravlo-topbar{
-  min-height:var(--topbar-h);
+  min-height:84px;
   display:flex;
   align-items:center;
   justify-content:space-between;
   gap:18px;
   margin-bottom:18px;
-  padding:18px 18px;
+  padding:18px;
   border-radius:24px;
-  border:1px solid var(--line);
+  border:1px solid var(--rav-line);
   background:
-    linear-gradient(180deg, rgba(13,18,25,.88), rgba(10,15,21,.86));
-  box-shadow:var(--shadow-sm);
-  backdrop-filter:blur(12px);
+    linear-gradient(180deg, rgba(13,18,25,.56), rgba(10,15,21,.62));
+  backdrop-filter:blur(18px);
+  box-shadow:var(--rav-shadow-sm);
 }
 
 .ravlo-top-left{
@@ -269,17 +215,17 @@ textarea{
 
 .ravlo-title{
   margin:0;
-  font-size:clamp(1.55rem, 2.2vw, 2.35rem);
+  font-size:clamp(1.6rem, 2.2vw, 2.5rem);
   line-height:1.02;
   font-weight:800;
-  letter-spacing:-.04em;
+  letter-spacing:-.05em;
 }
 
 .ravlo-subline{
   margin:8px 0 0;
-  color:var(--muted);
+  color:var(--rav-muted);
   max-width:720px;
-  font-size:.96rem;
+  font-size:.98rem;
 }
 
 .ravlo-actions{
@@ -300,42 +246,43 @@ textarea{
 /* =========================================================
    SEARCH
 ========================================================= */
+
 .ravlo-search{
   min-width:260px;
-  max-width:340px;
+  max-width:360px;
   height:46px;
   display:flex;
   align-items:center;
   gap:10px;
   padding:0 14px;
-  border-radius:14px;
-  border:1px solid rgba(255,255,255,.07);
-  background:rgba(255,255,255,.035);
-  transition:var(--ease);
+  border-radius:999px;
+  border:1px solid rgba(255,255,255,.06);
+  background:rgba(255,255,255,.03);
+  backdrop-filter:blur(14px);
+  transition:var(--rav-ease);
 }
 
 .ravlo-search:hover{
-  border-color:rgba(107,127,147,.22);
-  background:rgba(255,255,255,.045);
+  background:rgba(255,255,255,.04);
+  border-color:rgba(107,127,147,.18);
 }
 
 .ravlo-search:focus-within{
-  border-color:rgba(143,167,190,.36);
-  background:rgba(255,255,255,.055);
+  background:rgba(255,255,255,.05);
+  border-color:rgba(142,167,192,.34);
   box-shadow:0 0 0 4px rgba(58,92,122,.14);
 }
 
 .ravlo-search i{
-  color:var(--muted);
+  color:var(--rav-muted);
   font-size:16px;
   flex:0 0 auto;
 }
 
 .ravlo-search input{
-  height:100%;
   background:transparent;
-  color:var(--text);
   padding:0;
+  height:100%;
 }
 
 .ravlo-search input::placeholder{
@@ -345,6 +292,7 @@ textarea{
 /* =========================================================
    BUTTONS
 ========================================================= */
+
 .ravlo-btn,
 .btn{
   appearance:none;
@@ -355,11 +303,10 @@ textarea{
   justify-content:center;
   gap:9px;
   min-height:44px;
-  padding:0 16px;
-  border-radius:14px;
+  padding:0 18px;
+  border-radius:999px;
   font-weight:700;
-  transition:var(--ease);
-  text-decoration:none;
+  transition:var(--rav-ease);
   white-space:nowrap;
 }
 
@@ -372,63 +319,66 @@ textarea{
 .btn.sm{
   min-height:38px;
   padding:0 14px;
-  border-radius:12px;
   font-size:.9rem;
 }
 
 .ravlo-btn.primary,
 .btn.primary{
   color:#fff;
-  background:
-    linear-gradient(180deg, #6B7F93 0%, #536678 100%);
+  background:linear-gradient(180deg, #7d8fa2 0%, #5e7286 100%);
   border:1px solid rgba(255,255,255,.08);
   box-shadow:
-    inset 0 1px 0 rgba(255,255,255,.12),
-    0 12px 24px rgba(22,33,43,.28);
+    inset 0 1px 0 rgba(255,255,255,.18),
+    0 10px 20px rgba(0,0,0,.24);
 }
 
 .ravlo-btn.primary:hover,
 .btn.primary:hover{
   transform:translateY(-1px);
-  filter:brightness(1.05);
+  filter:brightness(1.04);
 }
 
 .ravlo-btn.ghost,
 .btn.ghost{
-  color:var(--text-soft);
+  color:var(--rav-text-soft);
   background:rgba(255,255,255,.03);
   border:1px solid rgba(255,255,255,.06);
+  backdrop-filter:blur(10px);
 }
 
 .ravlo-btn.ghost:hover,
 .btn.ghost:hover{
-  color:var(--text);
+  color:var(--rav-text);
   background:rgba(255,255,255,.05);
   border-color:rgba(107,127,147,.18);
 }
 
 .ravlo-btn.secondary,
 .btn.secondary{
-  color:#dce6ef;
-  background:linear-gradient(180deg, rgba(58,92,122,.22), rgba(58,92,122,.12));
+  color:#dde7f1;
+  background:rgba(58,92,122,.14);
   border:1px solid rgba(58,92,122,.28);
 }
 
 .ravlo-btn.success{ background:linear-gradient(180deg,#2cb67d,#1f8d60); color:#fff; }
-.ravlo-btn.warning{ background:linear-gradient(180deg,#d2a74a,#a57c26); color:#fff; }
-.ravlo-btn.danger{ background:linear-gradient(180deg,#c56464,#994646); color:#fff; }
+.ravlo-btn.warning{ background:linear-gradient(180deg,#d1a246,#a67a26); color:#fff; }
+.ravlo-btn.danger{ background:linear-gradient(180deg,#c46363,#974646); color:#fff; }
 
 /* =========================================================
-   CARDS / PANELS
+   CARDS
 ========================================================= */
+
 .ravlo-card,
 .card{
   position:relative;
-  border-radius:24px;
-  border:1px solid var(--line);
+  border-radius:26px;
+  border:1px solid rgba(255,255,255,.06);
   background:
-    linear-gradient(180deg, rgba(17,24,33,.94), rgba(11,17,23,.98));
-  box-shadow:var(--shadow-md);
+    linear-gradient(180deg, rgba(20,30,40,.52), rgba(12,18,26,.68));
+  backdrop-filter:blur(16px);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.05),
+    0 18px 40px rgba(0,0,0,.24);
   overflow:hidden;
 }
 
@@ -436,11 +386,11 @@ textarea{
 .card::before{
   content:"";
   position:absolute;
-  top:0;
-  left:0;
-  right:0;
-  height:1px;
-  background:linear-gradient(90deg, transparent, rgba(255,255,255,.10), transparent);
+  inset:0;
+  border-radius:inherit;
+  background:linear-gradient(120deg, rgba(255,255,255,.07), transparent 32%);
+  opacity:.34;
+  pointer-events:none;
 }
 
 .ravlo-card.pad,
@@ -449,31 +399,28 @@ textarea{
   padding:22px;
 }
 
-.ravlo-card.soft{
-  background:
-    linear-gradient(180deg, rgba(18,26,36,.84), rgba(11,17,23,.94));
-}
-
 .ravlo-hero-card{
   position:relative;
-  padding:28px;
-  border-radius:28px;
-  border:1px solid rgba(107,127,147,.22);
+  padding:34px;
+  border-radius:32px;
+  border:1px solid rgba(255,255,255,.06);
   background:
-    radial-gradient(circle at top left, rgba(143,167,190,.18), transparent 32%),
-    radial-gradient(circle at right center, rgba(58,92,122,.18), transparent 26%),
-    linear-gradient(145deg, rgba(19,28,38,.98), rgba(8,12,18,.98));
-  box-shadow:var(--shadow-lg);
+    radial-gradient(circle at top left, rgba(107,127,147,.18), transparent 38%),
+    radial-gradient(circle at right center, rgba(58,92,122,.14), transparent 30%),
+    linear-gradient(160deg, rgba(18,28,38,.68), rgba(10,15,22,.86));
+  backdrop-filter:blur(18px);
+  box-shadow:0 28px 68px rgba(0,0,0,.36);
   overflow:hidden;
 }
 
 .ravlo-hero-card::after{
   content:"";
   position:absolute;
-  inset:auto -10% -40% auto;
-  width:240px;
-  height:240px;
-  background:radial-gradient(circle, rgba(58,92,122,.22), transparent 65%);
+  right:-80px;
+  bottom:-90px;
+  width:260px;
+  height:260px;
+  background:radial-gradient(circle, rgba(58,92,122,.20), transparent 65%);
   filter:blur(30px);
   pointer-events:none;
 }
@@ -487,14 +434,14 @@ textarea{
   font-weight:700;
   text-transform:uppercase;
   letter-spacing:.22em;
-  color:var(--accent-2);
+  color:var(--rav-accent-2);
 }
 
 .eyebrow::before{
   content:"";
   width:28px;
   height:1px;
-  background:rgba(143,167,190,.65);
+  background:rgba(142,167,192,.65);
 }
 
 .ravlo-card h2,
@@ -504,21 +451,17 @@ textarea{
 .ravlo-hero-card h2,
 .ravlo-hero-card h3{
   margin:0 0 10px;
-  line-height:1.1;
-  letter-spacing:-.02em;
-}
-
-.ravlo-card p:last-child,
-.card p:last-child{
-  margin-bottom:0;
+  line-height:1.08;
+  letter-spacing:-.03em;
 }
 
 /* =========================================================
    TYPOGRAPHY HELPERS
 ========================================================= */
+
 .muted,
 .text-muted{
-  color:var(--muted);
+  color:var(--rav-muted);
 }
 
 .ravlo-kicker{
@@ -526,7 +469,7 @@ textarea{
   font-weight:700;
   text-transform:uppercase;
   letter-spacing:.16em;
-  color:var(--muted);
+  color:var(--rav-muted);
 }
 
 .ravlo-section-title{
@@ -537,8 +480,9 @@ textarea{
 }
 
 /* =========================================================
-   GRID / LAYOUT HELPERS
+   LAYOUT HELPERS
 ========================================================= */
+
 .ravlo-grid{
   display:grid;
   gap:18px;
@@ -546,19 +490,19 @@ textarea{
 
 .ravlo-grid-2{
   display:grid;
-  grid-template-columns:repeat(2, minmax(0,1fr));
+  grid-template-columns:repeat(2,minmax(0,1fr));
   gap:18px;
 }
 
 .ravlo-grid-3{
   display:grid;
-  grid-template-columns:repeat(3, minmax(0,1fr));
+  grid-template-columns:repeat(3,minmax(0,1fr));
   gap:18px;
 }
 
 .ravlo-grid-4{
   display:grid;
-  grid-template-columns:repeat(4, minmax(0,1fr));
+  grid-template-columns:repeat(4,minmax(0,1fr));
   gap:18px;
 }
 
@@ -581,20 +525,21 @@ textarea{
 }
 
 /* =========================================================
-   KPI / STAT CARDS
+   KPI / CHIPS
 ========================================================= */
+
 .kpi-card{
   padding:20px;
   border-radius:22px;
   border:1px solid rgba(255,255,255,.06);
   background:
-    linear-gradient(180deg, rgba(18,27,37,.94), rgba(10,15,21,.98));
-  box-shadow:var(--shadow-sm);
+    linear-gradient(180deg, rgba(20,30,40,.45), rgba(12,18,26,.60));
+  backdrop-filter:blur(14px);
 }
 
 .kpi-label{
   margin-bottom:8px;
-  color:var(--muted);
+  color:var(--rav-muted);
   font-size:.74rem;
   font-weight:700;
   text-transform:uppercase;
@@ -610,17 +555,18 @@ textarea{
 }
 
 .kpi-meta{
-  color:var(--text-soft);
+  color:var(--rav-text-soft);
   font-size:.92rem;
 }
 
 /* =========================================================
    FORMS
 ========================================================= */
+
 label{
   display:block;
   margin-bottom:8px;
-  color:var(--text-soft);
+  color:var(--rav-text-soft);
   font-size:.88rem;
   font-weight:600;
 }
@@ -629,11 +575,11 @@ input,
 select,
 textarea{
   background:rgba(255,255,255,.03);
-  border:1px solid rgba(255,255,255,.07);
-  color:var(--text);
-  border-radius:14px;
+  border:1px solid rgba(255,255,255,.06);
+  color:var(--rav-text);
+  border-radius:16px;
   padding:12px 14px;
-  transition:var(--ease);
+  transition:var(--rav-ease);
 }
 
 input::placeholder,
@@ -644,7 +590,7 @@ textarea::placeholder{
 input:focus,
 select:focus,
 textarea:focus{
-  border-color:rgba(143,167,190,.34);
+  border-color:rgba(142,167,192,.34);
   background:rgba(255,255,255,.05);
   box-shadow:0 0 0 4px rgba(58,92,122,.14);
 }
@@ -656,25 +602,27 @@ textarea{
 
 .form-grid{
   display:grid;
-  grid-template-columns:repeat(2, minmax(0,1fr));
+  grid-template-columns:repeat(2,minmax(0,1fr));
   gap:16px;
 }
 
 .form-grid-3{
   display:grid;
-  grid-template-columns:repeat(3, minmax(0,1fr));
+  grid-template-columns:repeat(3,minmax(0,1fr));
   gap:16px;
 }
 
 /* =========================================================
    TABLES
 ========================================================= */
+
 .table-wrap{
   width:100%;
   overflow-x:auto;
   border:1px solid rgba(255,255,255,.06);
-  border-radius:18px;
+  border-radius:20px;
   background:rgba(255,255,255,.015);
+  backdrop-filter:blur(10px);
 }
 
 table{
@@ -692,7 +640,7 @@ td{
 
 thead th{
   background:rgba(255,255,255,.02);
-  color:var(--muted);
+  color:var(--rav-muted);
   font-size:.76rem;
   font-weight:700;
   text-transform:uppercase;
@@ -704,8 +652,9 @@ tbody tr:hover td{
 }
 
 /* =========================================================
-   BADGES / STATUS
+   BADGES / ALERTS
 ========================================================= */
+
 .badge,
 .status-pill,
 .pill{
@@ -736,14 +685,14 @@ tbody tr:hover td{
 
 .badge-warning{
   color:#f1dfb1;
-  background:rgba(210,167,74,.12);
-  border-color:rgba(210,167,74,.28);
+  background:rgba(209,162,70,.12);
+  border-color:rgba(209,162,70,.28);
 }
 
 .badge-danger{
   color:#f2c1c1;
-  background:rgba(197,100,100,.12);
-  border-color:rgba(197,100,100,.28);
+  background:rgba(196,99,99,.12);
+  border-color:rgba(196,99,99,.28);
 }
 
 .badge-info{
@@ -752,12 +701,9 @@ tbody tr:hover td{
   border-color:rgba(95,168,255,.28);
 }
 
-/* =========================================================
-   ALERTS / FLASH
-========================================================= */
 .alert{
   padding:14px 16px;
-  border-radius:14px;
+  border-radius:16px;
   border:1px solid transparent;
 }
 
@@ -775,19 +721,20 @@ tbody tr:hover td{
 
 .alert-warning{
   color:#f0e0b8;
-  background:rgba(210,167,74,.10);
-  border-color:rgba(210,167,74,.24);
+  background:rgba(209,162,70,.10);
+  border-color:rgba(209,162,70,.24);
 }
 
 .alert-danger{
   color:#f2c8c8;
-  background:rgba(197,100,100,.10);
-  border-color:rgba(197,100,100,.24);
+  background:rgba(196,99,99,.10);
+  border-color:rgba(196,99,99,.24);
 }
 
 /* =========================================================
-   LISTS / SIMPLE ITEMS
+   UTILITIES
 ========================================================= */
+
 .list-clean{
   list-style:none;
   margin:0;
@@ -803,16 +750,13 @@ tbody tr:hover td{
   border-bottom:none;
 }
 
-/* =========================================================
-   COMMON CONTENT HELPERS
-========================================================= */
 .empty-state{
   text-align:center;
   padding:34px 24px;
-  border-radius:20px;
-  border:1px dashed rgba(107,127,147,.26);
+  border-radius:22px;
+  border:1px dashed rgba(107,127,147,.24);
   background:rgba(255,255,255,.02);
-  color:var(--muted);
+  color:var(--rav-muted);
 }
 
 .section-toolbar{
@@ -829,9 +773,6 @@ tbody tr:hover td{
   flex-wrap:wrap;
 }
 
-/* =========================================================
-   UTILITIES
-========================================================= */
 .w-full{ width:100%; }
 .text-center{ text-align:center; }
 .text-right{ text-align:right; }
@@ -855,19 +796,20 @@ tbody tr:hover td{
 .p-24{ padding:24px; }
 
 /* =========================================================
-   MOBILE / RESPONSIVE
+   RESPONSIVE
 ========================================================= */
-@media (max-width: 1280px){
+
+@media (max-width:1280px){
   .ravlo-grid-4{
-    grid-template-columns:repeat(2, minmax(0,1fr));
+    grid-template-columns:repeat(2,minmax(0,1fr));
   }
 
   .ravlo-grid-3{
-    grid-template-columns:repeat(2, minmax(0,1fr));
+    grid-template-columns:repeat(2,minmax(0,1fr));
   }
 }
 
-@media (max-width: 1080px){
+@media (max-width:1080px){
   .ravlo-topbar{
     align-items:flex-start;
     flex-direction:column;
@@ -885,7 +827,7 @@ tbody tr:hover td{
   }
 }
 
-@media (max-width: 768px){
+@media (max-width:768px){
   .ravlo-shell{
     grid-template-columns:1fr;
   }
@@ -895,12 +837,12 @@ tbody tr:hover td{
   }
 
   .ravlo-topbar{
-    border-radius:20px;
     padding:16px;
+    border-radius:20px;
   }
 
   .ravlo-title{
-    font-size:1.55rem;
+    font-size:1.6rem;
   }
 
   .ravlo-grid-2,
@@ -919,7 +861,7 @@ tbody tr:hover td{
   }
 }
 
-@media (max-width: 560px){
+@media (max-width:560px){
   th,
   td{
     padding:12px 12px;
