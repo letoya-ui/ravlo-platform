@@ -6,7 +6,7 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash,
 from flask_login import current_user
 from collections import defaultdict
 from datetime import datetime, timedelta
-from LoanMVP.extensions import db
+from LoanMVP.extensions import db, csrf
 from werkzeug.security import generate_password_hash
 
 from LoanMVP.ai.base_ai import AIAssistant     # ✅ Unified AI import
@@ -48,7 +48,6 @@ def admin_required(func):
 # =========================================================
 
 @admin.route("/dashboard")
-@login_required
 @role_required("admin", "master_admin", "lending_admin")
 def dashboard():
     # =========================
@@ -239,6 +238,7 @@ def request_detail(request_id):
 
 
 @admin_bp.route("/requests/<int:request_id>/approve", methods=["POST"])
+@csrf.exempt
 @role_required("admin")
 @admin_required
 def approve_request(request_id):
@@ -282,6 +282,7 @@ def approve_request(request_id):
 
 
 @admin_bp.route("/requests/<int:request_id>/reject", methods=["POST"])
+@csrf.exempt
 @role_required("admin")
 @admin_required
 def reject_request(request_id):
@@ -318,6 +319,7 @@ def company_team(company_id):
 
 
 @admin_bp.route("/company/<int:company_id>/team/invite", methods=["GET", "POST"])
+@csrf.exempt
 @role_required("admin")
 @admin_required
 def invite_team_member(company_id):
@@ -407,6 +409,7 @@ def invite_team_member(company_id):
 # 📊 SYSTEM REPORTS (CSV EXPORT)
 # =========================================================
 @admin_bp.route("/reports", methods=["GET", "POST"])
+@csrf.exempt
 @role_required("admin")
 def reports():
     report_type = request.form.get("report_type")
@@ -448,6 +451,7 @@ def reports():
 # 💬 ADMIN MESSAGE CENTER
 # =========================================================
 @admin_bp.route("/messages", methods=["GET", "POST"])
+@csrf.exempt
 @role_required("admin")
 def messages():
     if request.method == "POST":
