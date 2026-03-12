@@ -1,4 +1,4 @@
-from LoanMVP.services.notify import notify
+from LoanMVP.services.notify_service import notify
 from LoanMVP.models.loan_models import LoanApplication, BorrowerProfile
 from LoanMVP.models.investor_models import InvestorProfile
 
