@@ -313,8 +313,16 @@ class Partner(db.Model):
         lazy='dynamic'
     )
 
-    user = db.relationship("User", backref=db.backref("partner_profile", uselist=False))
-    
+    user = db.relationship("User", backref=db.backref("partner_profile", uselist=False))       
+
+    photos = db.relationship(
+        "PartnerPhoto",
+        backref="partner",
+        lazy="dynamic",
+        cascade="all, delete-orphan"
+    )   
+
+
     # === Utility Methods ===
     def is_active_listing(self):
         """Return True if the partner is active and payment is valid."""

@@ -58,7 +58,29 @@ class PartnerPhoto(db.Model):
     __tablename__ = "partner_photos"
 
     id = db.Column(db.Integer, primary_key=True)
-    partner_id = db.Column(db.Integer, db.ForeignKey("partners.id"))
-    url = db.Column(db.String(255), nullable=False)
 
-    partner = db.relationship("Partner", backref="photos")
+    # Foreign key → the partner who owns this photo
+    partner_id = db.Column(
+        db.Integer,
+        db.ForeignKey("partners.id", ondelete="CASCADE"),
+        nullable=False
+    )
+
+    # Public URL to the stored image (local or DO Spaces)
+    url = db.Column(db.String(500), nullable=False)
+
+    # Optional: timestamp for sorting
+    created_at = db.Column(
+        db.DateTime,
+        default=datetime.utcnow
+    )
+
+    # Relationship back to Partner
+    partner = db.relationship(
+        "Partner",
+        backref=db.backref(
+            "photos",
+            lazy="dynamic",
+            cascade="all, delete-orphan"
+        )
+    )
