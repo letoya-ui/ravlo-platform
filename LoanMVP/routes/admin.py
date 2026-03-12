@@ -152,7 +152,7 @@ def dashboard():
     # =========================
     # CHART DATA
     # =========================
-    if Loan and hasattr(Loan, "created_at"):
+    if LoanApplication and hasattr(Loan, "created_at"):
         loan_records = Loan.query.all()
         loan_volume_labels, loan_volume_series = monthly_series(
             loan_records, "created_at", 6
