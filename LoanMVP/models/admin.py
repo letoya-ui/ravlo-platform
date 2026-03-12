@@ -13,7 +13,7 @@ class Company(db.Model):
     is_active = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
-    users = db.relationship("User", backref="company", lazy=True)
+    users = db.relationship("User", back_populates="company", lazy=True)
     invites = db.relationship("UserInvite", backref="company", lazy=True)
 
 
