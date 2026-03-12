@@ -1,795 +1,645 @@
-/* ==========================================================
-   RAVLO CORE TOKENS
-========================================================== */
+/* =========================================================
+   RAVLO DASHBOARD CSS
+   Production-ready base for admin / lending dashboards
+========================================================= */
+
 :root{
-  --bg0:#070A0E;
-  --bg1:#0B1016;
-  --bg2:#0E141B;
-  --bg3:#121A23;
+  --bg: #0b1118;
+  --bg-soft: #101823;
+  --panel: #121c28;
+  --panel-2: #172231;
+  --panel-3: #1b2738;
 
-  --line:#1A2330;
+  --border: rgba(255,255,255,0.08);
+  --border-strong: rgba(255,255,255,0.14);
 
-  --text:#FFFFFF;
-  --muted:#A9B2BE;
-  --muted2:#7F8A99;
+  --text: #f5f8fc;
+  --text-soft: #c9d3df;
+  --text-muted: #93a4b7;
 
-  --accent:#6B7F93;
-  --accent2:#7A8FA5;
-  --accent3:#3A5C7A;
+  --primary: #7ab8ff;
+  --primary-strong: #4a97f3;
+  --primary-soft: rgba(122,184,255,0.12);
 
-  --metal-a:#F7FAFC;
-  --metal-b:#B7C4D2;
-  --metal-c:#6F8091;
-  --metal-d:#EAF1F7;
+  --success: #43d19e;
+  --success-soft: rgba(67,209,158,0.12);
 
-  --success:#3CCB7F;
-  --danger:#F06B6B;
+  --warning: #ffdf6e;
+  --warning-soft: rgba(255,223,110,0.14);
 
-  --radius-xl:28px;
-  --radius-lg:20px;
-  --radius-md:16px;
-  --radius-sm:12px;
+  --danger: #ff7f7f;
+  --danger-soft: rgba(255,127,127,0.12);
 
-  --shadow-1:0 20px 60px rgba(0,0,0,.30);
-  --shadow-2:inset 0 1px 0 rgba(255,255,255,.04);
+  --shadow-lg: 0 18px 50px rgba(0,0,0,0.28);
+  --shadow-md: 0 10px 30px rgba(0,0,0,0.22);
+  --radius-xl: 22px;
+  --radius-lg: 18px;
+  --radius-md: 14px;
+  --radius-sm: 10px;
+
+  --space-1: .35rem;
+  --space-2: .5rem;
+  --space-3: .75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-7: 2rem;
 }
 
-/* ==========================================================
-   RESET
-========================================================== */
+/* =========================================================
+   RESET / BASE
+========================================================= */
+
 *,
 *::before,
 *::after{
   box-sizing:border-box;
 }
 
-html,
+html{
+  scroll-behavior:smooth;
+}
+
 body{
   margin:0;
-  padding:0;
-  min-height:100%;
-  font-family:'Inter',system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
   background:
-    radial-gradient(circle at top left, rgba(122,143,165,.10), transparent 28%),
-    radial-gradient(circle at bottom right, rgba(58,92,122,.12), transparent 25%),
-    linear-gradient(180deg, var(--bg0) 0%, var(--bg1) 40%, var(--bg2) 100%);
+    radial-gradient(circle at top left, rgba(74,151,243,.10), transparent 30%),
+    radial-gradient(circle at top right, rgba(67,209,158,.06), transparent 28%),
+    linear-gradient(180deg, #091018 0%, #0b1118 100%);
   color:var(--text);
+  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  line-height:1.5;
 }
 
-/* ==========================================================
-   SHELL
-========================================================== */
-.ravlo-shell{
-  display:flex;
+a{
+  color:inherit;
+  text-decoration:none;
+}
+
+img{
+  max-width:100%;
+  display:block;
+}
+
+/* =========================================================
+   GLOBAL LAYOUT
+========================================================= */
+
+.dashboard-main{
   min-height:100vh;
+  padding: 1.2rem 1rem 2rem;
 }
 
-.ravlo-main{
-  flex:1;
-  min-width:0;
-  padding:24px 28px;
+.wrap{
+  width:min(1440px, 100%);
+  margin:0 auto;
 }
 
-.ravlo-content{
-  margin-top:18px;
-}
-
-.ravlo-grain{
-  position:fixed;
-  inset:0;
-  pointer-events:none;
-  opacity:.035;
-  background-image:
-    radial-gradient(circle at 20% 20%, rgba(255,255,255,.18) 0 1px, transparent 1px),
-    radial-gradient(circle at 80% 60%, rgba(255,255,255,.12) 0 1px, transparent 1px),
-    radial-gradient(circle at 40% 80%, rgba(255,255,255,.12) 0 1px, transparent 1px);
-  background-size:24px 24px, 32px 32px, 28px 28px;
-  z-index:0;
-}
-
-/* ==========================================================
-   SIDEBAR
-========================================================== */
-.ravlo-sidebar{
-  width:280px;
-  background:rgba(9,14,20,.94);
-  border-right:1px solid rgba(255,255,255,.06);
-  padding:22px 18px;
-  display:flex;
-  flex-direction:column;
-  gap:14px;
-  box-shadow:var(--shadow-2);
-}
-
-/* ==========================================================
-   BRAND / NAV
-========================================================== */
-.ravlo-sidebar-nav{
+.grid{
   display:grid;
-  gap:8px;
+  gap:1rem;
 }
 
-.ravlo-nav-link{
-  display:flex;
-  align-items:center;
-  gap:12px;
-  min-height:48px;
-  padding:12px 14px;
-  border-radius:16px;
-  color:var(--muted);
-  text-decoration:none;
-  border:1px solid transparent;
-  background:transparent;
-  transition:.2s ease;
-  font-size:14px;
-  font-weight:600;
-  letter-spacing:.01em;
+.g-2{
+  grid-template-columns:repeat(2, minmax(0, 1fr));
 }
 
-.ravlo-nav-link i{
-  font-size:18px;
-  opacity:.95;
+.g-3{
+  grid-template-columns:repeat(3, minmax(0, 1fr));
 }
 
-.ravlo-nav-link:hover{
-  color:var(--text);
-  background:rgba(255,255,255,.035);
-  border-color:rgba(255,255,255,.06);
-  transform:translateY(-1px);
-}
-
-.ravlo-nav-link.active{
-  color:var(--text);
-  background:linear-gradient(135deg, rgba(107,127,147,.18), rgba(58,92,122,.10));
-  border:1px solid rgba(107,127,147,.26);
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.05);
-}
-
-.ravlo-nav-link.active i{
-  color:#D9E4EE;
-}
-
-/* ==========================================================
-   TOPBAR
-========================================================== */
-.ravlo-topbar{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:16px;
-  margin-bottom:20px;
-  padding-bottom:14px;
-  border-bottom:1px solid rgba(255,255,255,.06);
-}
-
-.ravlo-top-left{
-  min-width:0;
-  display:flex;
-  flex-direction:column;
-  gap:4px;
-}
-
-.ravlo-title{
-  margin:0;
-  font-size:28px;
-  font-weight:800;
-  letter-spacing:-.03em;
-  line-height:1.05;
-}
-
-.ravlo-subline{
-  margin:0;
-  color:var(--muted);
-  font-size:14px;
-  line-height:1.5;
-}
-
-.ravlo-actions{
-  display:flex;
-  align-items:center;
-  gap:10px;
-  flex-wrap:wrap;
-  justify-content:flex-end;
-}
-
-.ravlo-topbar-actions-slot{
-  display:flex;
-  align-items:center;
-  gap:10px;
-  flex-wrap:wrap;
-}
-
-/* ==========================================================
-   SEARCH
-========================================================== */
-.ravlo-search{
-  display:flex;
-  align-items:center;
-  gap:10px;
-  min-width:220px;
-  max-width:280px;
-  padding:10px 12px;
-  border-radius:14px;
-  background:rgba(255,255,255,.03);
-  border:1px solid rgba(255,255,255,.07);
-}
-
-.ravlo-search i{
-  color:var(--muted);
-  font-size:16px;
-}
-
-.ravlo-search input{
-  flex:1;
-  width:100%;
-  border:none;
-  outline:none;
-  background:transparent;
-  color:var(--text);
-  font-size:14px;
-}
-
-.ravlo-search input::placeholder{
-  color:var(--muted2);
-}
-
-/* ==========================================================
-   BUTTONS
-========================================================== */
-.ravlo-btn{
-  display:inline-flex;
-  align-items:center;
-  justify-content:center;
-  gap:8px;
-  min-height:42px;
-  padding:10px 14px;
-  border-radius:14px;
-  border:1px solid transparent;
-  cursor:pointer;
-  font-size:14px;
-  font-weight:700;
-  text-decoration:none;
-  transition:.2s ease;
-}
-
-.ravlo-btn.primary{
-  background:linear-gradient(135deg, var(--accent), var(--accent2));
-  color:#071018;
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.18);
-}
-
-.ravlo-btn.primary:hover{
-  transform:translateY(-1px);
-  filter:brightness(1.03);
-}
-
-.ravlo-btn.ghost{
-  background:rgba(255,255,255,.03);
-  border-color:rgba(255,255,255,.08);
-  color:var(--text);
-}
-
-.ravlo-btn.ghost:hover{
-  background:rgba(255,255,255,.05);
-  border-color:rgba(255,255,255,.12);
-}
-
-.ravlo-btn.sm{
-  min-height:36px;
-  padding:8px 11px;
-  font-size:13px;
-}
-
-/* ==========================================================
-   GENERIC CARDS / PANELS
-========================================================== */
-.ravlo-card,
-.panel{
-  background:rgba(255,255,255,.025);
-  border:1px solid rgba(255,255,255,.07);
-  border-radius:20px;
-  box-shadow:var(--shadow-2);
-}
-
-.ravlo-card.pad,
-.panel{
-  padding:20px;
-}
-
-.ravlo-card-header,
-.section-head{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:16px;
-  margin-bottom:18px;
-}
-
-.ravlo-card-title,
-.section-head h3{
-  margin:4px 0 0;
-  font-size:20px;
-  font-weight:700;
-}
-
-.eyebrow{
-  font-size:11px;
-  letter-spacing:.18em;
-  text-transform:uppercase;
-  color:var(--muted);
-}
-
-.muted{
-  color:var(--muted);
-}
-
-/* ==========================================================
-   HERO
-========================================================== */
-.ravlo-hero-card{
-  display:grid;
-  grid-template-columns:1.2fr .8fr;
-  gap:20px;
-  align-items:center;
-  padding:24px;
-  border-radius:24px;
-  background:
-    linear-gradient(135deg, rgba(107,127,147,.14), rgba(58,92,122,.08)),
-    rgba(255,255,255,.02);
-  border:1px solid rgba(255,255,255,.08);
-}
-
-.ravlo-hero-card h2{
-  margin:8px 0 0;
-  font-size:32px;
-  line-height:1.08;
-  letter-spacing:-.03em;
-}
-
-.hero-side-stat{
-  padding:18px 20px;
-  border-radius:20px;
-  background:rgba(255,255,255,.04);
-  border:1px solid rgba(255,255,255,.08);
-}
-
-.hero-side-stat span{
-  display:block;
-  color:var(--muted);
-  font-size:12px;
-  text-transform:uppercase;
-  letter-spacing:.08em;
-}
-
-.hero-side-stat strong{
-  display:block;
-  margin-top:8px;
-  font-size:32px;
-  font-weight:800;
-  color:var(--text);
-  letter-spacing:-.03em;
-}
-
-.hero-side-stat small{
-  display:block;
-  margin-top:8px;
-  color:var(--muted);
-  font-size:13px;
-  line-height:1.5;
-}
-
-/* ==========================================================
-   KPI
-========================================================== */
-.ravlo-kpi{
-  padding:18px;
-  border-radius:20px;
-  background:rgba(255,255,255,.03);
-  border:1px solid rgba(255,255,255,.07);
-}
-
-.ravlo-kpi.premium{
-  background:linear-gradient(135deg, rgba(107,127,147,.16), rgba(255,255,255,.03));
-  border:1px solid rgba(255,255,255,.08);
-}
-
-.ravlo-kpi .value{
-  font-size:30px;
-  font-weight:800;
-  color:var(--text);
-  letter-spacing:-.03em;
-}
-
-.ravlo-kpi .label{
-  margin-top:6px;
-  font-size:13px;
-  color:var(--muted);
-}
-
-/* ==========================================================
-   DASHBOARD
-========================================================== */
-.ravlo-dashboard{
-  display:grid;
-  gap:20px;
-}
-
-.command-hero{
-  grid-template-columns:1.3fr .7fr;
-}
-
-.dashboard-kpi-strip{
-  display:grid;
+.g-4{
   grid-template-columns:repeat(4, minmax(0, 1fr));
-  gap:16px;
 }
 
-.dashboard-mixed-grid{
-  display:grid;
-  grid-template-columns:1.2fr .8fr;
-  gap:20px;
-  align-items:start;
+.lhs,
+.rhs{
+  align-content:start;
 }
 
-.panel-large{
-  min-height:240px;
+.rhs{
+  gap:1rem;
 }
 
-.panel-small{
-  min-height:220px;
-}
+/* =========================================================
+   CARD SYSTEM
+========================================================= */
 
-.panel-wide{
-  grid-column:1 / span 1;
-}
-
-/* ==========================================================
-   CHIPS / PILLS
-========================================================== */
-.ravlo-chip-row{
-  display:flex;
-  flex-wrap:wrap;
-  gap:10px;
-}
-
-.ravlo-chip,
-.mini-pill{
-  display:inline-flex;
-  align-items:center;
-  padding:8px 12px;
-  border-radius:999px;
-  background:rgba(255,255,255,.04);
-  border:1px solid rgba(255,255,255,.08);
-  color:var(--text);
-  font-size:13px;
-  font-weight:600;
-}
-
-.mini-pill{
-  padding:7px 10px;
-  font-size:12px;
-}
-
-.mini-pill.status{
-  background:rgba(107,127,147,.18);
-  border-color:rgba(107,127,147,.28);
-}
-
-/* ==========================================================
-   FEATURE / PROGRESS
-========================================================== */
-.feature-highlight{
-  padding:18px;
-  border-radius:20px;
-  background:linear-gradient(135deg, rgba(107,127,147,.18), rgba(58,92,122,.10));
-  border:1px solid rgba(107,127,147,.24);
-}
-
-.feature-highlight-label{
-  color:var(--muted);
-  font-size:12px;
-  text-transform:uppercase;
-  letter-spacing:.08em;
-  margin-bottom:8px;
-}
-
-.feature-highlight-value{
-  color:var(--text);
-  font-size:18px;
-  line-height:1.6;
-  font-weight:600;
-}
-
-.progress-wrap{
-  display:grid;
-  gap:10px;
-}
-
-.progress-head{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:16px;
-  font-size:14px;
-}
-
-.progress-head span{
-  color:var(--muted);
-}
-
-.progress-head strong{
-  color:var(--text);
-}
-
-.ravlo-progress{
-  width:100%;
-  height:10px;
-  border-radius:999px;
-  background:rgba(255,255,255,.06);
+.card{
+  position:relative;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,.01)),
+    var(--panel);
+  border:1px solid var(--border);
+  border-radius:var(--radius-xl);
+  box-shadow:var(--shadow-md);
+  padding:1.15rem;
   overflow:hidden;
 }
 
-.ravlo-progress-bar{
-  height:100%;
-  border-radius:999px;
-  background:linear-gradient(90deg, #6B7F93, #8AA0B7);
+.card::before{
+  content:"";
+  position:absolute;
+  inset:0 auto auto 0;
+  width:100%;
+  height:1px;
+  background:linear-gradient(90deg, rgba(122,184,255,.35), rgba(255,255,255,0));
+  pointer-events:none;
 }
 
-/* ==========================================================
-   LISTS / ROWS
-========================================================== */
-.recent-list,
-.alert-list,
-.insight-stack{
-  display:grid;
-  gap:12px;
-}
-
-.recent-row{
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  gap:16px;
-  padding:16px;
-  border-radius:18px;
-  background:rgba(255,255,255,.03);
-  border:1px solid rgba(255,255,255,.08);
-}
-
-.recent-title{
+.card h1,
+.card h2,
+.card h3,
+.card h4,
+.card h5{
+  margin:0;
   color:var(--text);
-  font-size:15px;
-  font-weight:700;
 }
 
-.recent-sub{
-  margin-top:4px;
-  color:var(--muted);
-  font-size:13px;
+.card p{
+  margin:0;
 }
 
-.recent-meta{
-  display:flex;
-  align-items:center;
-  gap:10px;
-  flex-wrap:wrap;
-  justify-content:flex-end;
-}
-
-.alert-row{
+.section-head{
   display:flex;
   justify-content:space-between;
   align-items:flex-start;
-  gap:12px;
-  padding:14px 16px;
-  border-radius:16px;
-  background:rgba(255,255,255,.03);
-  border:1px solid rgba(255,255,255,.08);
+  gap:.8rem;
+  margin-bottom:1rem;
 }
 
-/* ==========================================================
-   QUICK CARDS
-========================================================== */
-.quick-grid{
+.section-head h3{
+  font-size:1.02rem;
+  font-weight:700;
+  letter-spacing:.01em;
+}
+
+.eyebrow{
+  display:inline-flex;
+  align-items:center;
+  gap:.45rem;
+  margin-bottom:.55rem;
+  font-size:.76rem;
+  letter-spacing:.12em;
+  text-transform:uppercase;
+  font-weight:700;
+  color:var(--primary);
+}
+
+.muted{
+  color:var(--text-soft);
+}
+
+.subcopy{
+  font-size:.85rem;
+  color:var(--text-muted);
+}
+
+/* =========================================================
+   HERO
+========================================================= */
+
+.admin-dashboard .admin-hero{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:1rem;
+  flex-wrap:wrap;
+  padding:1.35rem 1.35rem;
+  margin-bottom:1rem;
+}
+
+.admin-dashboard .admin-hero__left{
+  max-width:760px;
+}
+
+.admin-dashboard .admin-hero__left h1{
+  font-size:clamp(1.5rem, 2vw, 2rem);
+  font-weight:800;
+  margin-bottom:.35rem;
+}
+
+.admin-dashboard .admin-hero__actions{
+  display:flex;
+  flex-wrap:wrap;
+  gap:.65rem;
+  align-items:center;
+}
+
+/* =========================================================
+   MAIN TWO-COLUMN ADMIN LAYOUT
+========================================================= */
+
+.admin-dashboard .admin-layout{
   display:grid;
-  grid-template-columns:repeat(2, minmax(0, 1fr));
-  gap:14px;
+  grid-template-columns:minmax(0, 2fr) minmax(320px, 1fr);
+  gap:1rem;
+  align-items:start;
 }
 
-.quick-grid.one-col{
-  grid-template-columns:1fr;
+/* =========================================================
+   STATS / KPI CARDS
+========================================================= */
+
+.stat-card{
+  min-height:138px;
+  display:flex;
+  flex-direction:column;
+  justify-content:space-between;
 }
 
-.quick-card{
-  display:block;
-  padding:18px;
-  border-radius:18px;
+.stat-card__label{
+  font-size:.88rem;
+  font-weight:700;
+  color:var(--text-soft);
+  margin-bottom:.4rem;
+}
+
+.stat-card__value{
+  font-size:2rem;
+  line-height:1;
+  font-weight:800;
+  letter-spacing:-0.03em;
+  margin-bottom:.35rem;
+  color:var(--text);
+}
+
+.stat-card .muted{
+  font-size:.9rem;
+  color:var(--text-muted);
+}
+
+/* =========================================================
+   BUTTONS
+========================================================= */
+
+.btn{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:.45rem;
+  min-height:40px;
+  padding:.7rem 1rem;
+  border-radius:12px;
+  border:1px solid var(--border-strong);
   background:rgba(255,255,255,.03);
-  border:1px solid rgba(255,255,255,.08);
-  text-decoration:none;
-  transition:.2s ease;
+  color:var(--text);
+  font-size:.92rem;
+  font-weight:600;
+  transition:all .18s ease;
+  cursor:pointer;
 }
 
-.quick-card:hover{
+.btn:hover{
   transform:translateY(-1px);
-  border-color:rgba(107,127,147,.35);
+  border-color:rgba(122,184,255,.35);
+  background:rgba(255,255,255,.05);
+}
+
+.btn:active{
+  transform:translateY(0);
+}
+
+.btn-primary{
+  background:linear-gradient(180deg, rgba(122,184,255,.22), rgba(74,151,243,.14));
+  border-color:rgba(122,184,255,.36);
+  color:#eef6ff;
+}
+
+.btn-primary:hover{
+  background:linear-gradient(180deg, rgba(122,184,255,.26), rgba(74,151,243,.18));
+}
+
+.btn-sm{
+  min-height:34px;
+  padding:.48rem .8rem;
+  font-size:.84rem;
+  border-radius:10px;
+}
+
+/* =========================================================
+   TABLES
+========================================================= */
+
+.table-wrap{
+  overflow-x:auto;
+  border-radius:14px;
+}
+
+.table{
+  width:100%;
+  border-collapse:separate;
+  border-spacing:0;
+  min-width:640px;
+  background:transparent;
+}
+
+.table thead th{
+  text-align:left;
+  font-size:.76rem;
+  text-transform:uppercase;
+  letter-spacing:.08em;
+  color:var(--text-muted);
+  padding:.85rem .9rem;
+  border-bottom:1px solid var(--border);
+  background:rgba(255,255,255,.01);
+  white-space:nowrap;
+}
+
+.table tbody td{
+  padding:.95rem .9rem;
+  border-bottom:1px solid rgba(255,255,255,.05);
+  color:var(--text-soft);
+  vertical-align:middle;
+}
+
+.table tbody tr:last-child td{
+  border-bottom:none;
+}
+
+.table tbody tr:hover td{
+  background:rgba(255,255,255,.02);
+}
+
+.table td strong{
+  color:var(--text);
+}
+
+/* =========================================================
+   STATUS PILLS
+========================================================= */
+
+.status{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:.35rem;
+  min-height:28px;
+  padding:.28rem .72rem;
+  border-radius:999px;
+  font-size:.78rem;
+  font-weight:700;
+  line-height:1;
+  border:1px solid transparent;
+  white-space:nowrap;
+}
+
+/* Generic states */
+.st-pending{
+  background:var(--warning-soft);
+  color:#ffe38a;
+  border-color:rgba(255,223,110,.26);
+}
+
+.st-approved,
+.st-active,
+.st-completed,
+.st-accepted{
+  background:var(--success-soft);
+  color:#86e8c1;
+  border-color:rgba(67,209,158,.25);
+}
+
+.st-inactive,
+.st-rejected,
+.st-denied,
+.st-failed,
+.st-expired{
+  background:var(--danger-soft);
+  color:#ffaaaa;
+  border-color:rgba(255,127,127,.22);
+}
+
+.st-review,
+.st-in-progress,
+.st-processing{
+  background:rgba(122,184,255,.11);
+  color:#9cd0ff;
+  border-color:rgba(122,184,255,.24);
+}
+
+/* =========================================================
+   QUICK ACTIONS
+========================================================= */
+
+.quick-actions{
+  display:flex;
+  flex-wrap:wrap;
+  gap:.55rem;
+}
+
+/* =========================================================
+   CHARTS
+========================================================= */
+
+.chart-box{
+  min-height:260px;
+}
+
+.chart-box--sm{
+  min-height:240px;
+}
+
+/* =========================================================
+   LOGS / FEEDS
+========================================================= */
+
+.log-stack{
+  display:flex;
+  flex-direction:column;
+  gap:.7rem;
+}
+
+.log-item{
+  padding:.85rem .9rem;
+  border:1px solid var(--border);
+  border-radius:14px;
+  background:linear-gradient(180deg, rgba(255,255,255,.025), rgba(255,255,255,.012));
+}
+
+.log-item__title{
+  font-weight:700;
+  color:var(--text);
+  margin-bottom:.18rem;
+}
+
+.log-item__meta{
+  font-size:.82rem;
+  color:var(--text-muted);
+}
+
+.log-item__body{
+  margin-top:.35rem;
+  color:var(--text-soft);
+  line-height:1.5;
+}
+
+/* =========================================================
+   AI INSIGHT
+========================================================= */
+
+.ai-insight{
+  min-height:78px;
+  font-size:.97rem;
+  line-height:1.65;
+  color:var(--text-soft);
+}
+
+.ai-msg{
+  padding:.9rem 1rem;
+  background:rgba(122,184,255,.08);
+  border:1px solid rgba(122,184,255,.18);
+  border-radius:14px;
+  color:#dfeeff;
+}
+
+/* =========================================================
+   EMPTY STATE
+========================================================= */
+
+.empty-state{
+  padding:.4rem 0 .15rem;
+}
+
+.empty-state .muted{
+  color:var(--text-muted);
+}
+
+/* =========================================================
+   FORM ELEMENTS
+========================================================= */
+
+input,
+select,
+textarea{
+  width:100%;
+  border-radius:12px;
+  border:1px solid var(--border);
+  background:rgba(255,255,255,.03);
+  color:var(--text);
+  padding:.8rem .9rem;
+  font:inherit;
+  outline:none;
+  transition:border-color .18s ease, box-shadow .18s ease, background .18s ease;
+}
+
+input:focus,
+select:focus,
+textarea:focus{
+  border-color:rgba(122,184,255,.45);
+  box-shadow:0 0 0 4px rgba(122,184,255,.10);
   background:rgba(255,255,255,.045);
 }
 
-.quick-title{
+label{
   display:block;
-  color:var(--text);
-  font-size:16px;
-  font-weight:700;
-}
-
-.quick-sub{
-  display:block;
-  margin-top:8px;
-  color:var(--muted);
-  font-size:13px;
-  line-height:1.55;
-}
-
-/* ==========================================================
-   PORTFOLIO BOXES
-========================================================== */
-.portfolio-grid{
-  display:grid;
-  grid-template-columns:repeat(2, minmax(0, 1fr));
-  gap:14px;
-}
-
-.portfolio-box{
-  padding:18px;
-  border-radius:18px;
-  background:rgba(255,255,255,.03);
-  border:1px solid rgba(255,255,255,.08);
-}
-
-.portfolio-box span{
-  display:block;
-  color:var(--muted);
-  font-size:12px;
-  text-transform:uppercase;
-  letter-spacing:.08em;
-  margin-bottom:8px;
-}
-
-.portfolio-box strong{
-  color:var(--text);
-  font-size:28px;
-  font-weight:800;
-}
-
-/* ==========================================================
-   INSIGHTS
-========================================================== */
-.ravlo-insight{
-  padding:16px;
-  border-radius:18px;
-  background:rgba(255,255,255,.03);
-  border:1px solid rgba(255,255,255,.08);
-}
-
-.ravlo-insight .k{
-  margin:0;
-  color:var(--muted);
-  font-size:12px;
-  text-transform:uppercase;
-  letter-spacing:.08em;
-}
-
-.ravlo-insight .v{
-  margin:8px 0 0;
-  color:var(--text);
-  line-height:1.6;
+  margin-bottom:.45rem;
+  font-size:.88rem;
   font-weight:600;
+  color:var(--text-soft);
 }
 
-/* ==========================================================
-   BADGES / LINKS / UTILITIES
-========================================================== */
-.ravlo-badge{
-  display:inline-flex;
+/* =========================================================
+   UTILITY
+========================================================= */
+
+.row{
+  display:flex;
   align-items:center;
-  padding:5px 9px;
-  border-radius:10px;
-  font-size:12px;
-  font-weight:700;
+  gap:.75rem;
 }
 
-.ravlo-badge.ok{
-  background:rgba(60,203,127,.12);
-  color:#CFFFE0;
-  border:1px solid rgba(60,203,127,.20);
+.row.between{
+  justify-content:space-between;
 }
 
-.ravlo-badge.risk{
-  background:rgba(240,107,107,.12);
-  color:#FFD5D5;
-  border:1px solid rgba(240,107,107,.20);
+.mt-20{
+  margin-top:20px;
 }
 
-.ravlo-link-btn{
-  color:var(--accent2);
-  text-decoration:none;
-  font-size:14px;
-  font-weight:700;
+.mb-4{
+  margin-bottom:1rem;
 }
 
-.empty-state-inline{
-  color:var(--muted);
-  padding:8px 0;
+.pad{
+  padding:1rem;
 }
 
-/* ==========================================================
-   SIMPLE SIDEBAR FOOTER
-========================================================== */
-.ravlo-sidebar-footer-simple{
-  margin-top:auto;
-  padding-top:16px;
-  display:grid;
-  gap:10px;
+.text-right{
+  text-align:right;
 }
 
-.ravlo-logout-btn{
+.w-full{
   width:100%;
-  justify-content:flex-start;
 }
 
-/* ==========================================================
-   RESPONSIVE
-========================================================== */
-@media (max-width: 1200px){
-  .dashboard-kpi-strip{
+/* =========================================================
+   MOBILE / RESPONSIVE
+========================================================= */
+
+@media (max-width: 1280px){
+  .g-4{
     grid-template-columns:repeat(2, minmax(0, 1fr));
   }
+}
 
-  .dashboard-mixed-grid{
+@media (max-width: 1120px){
+  .admin-dashboard .admin-layout{
     grid-template-columns:1fr;
   }
 }
 
-@media (max-width: 980px){
-  .ravlo-topbar{
-    flex-direction:column;
-    align-items:flex-start;
+@media (max-width: 820px){
+  .dashboard-main{
+    padding:1rem .8rem 1.5rem;
   }
 
-  .ravlo-actions{
-    width:100%;
-    justify-content:flex-start;
-  }
-
-  .ravlo-search{
-    width:100%;
-    max-width:none;
-  }
-
-  .ravlo-hero-card,
-  .command-hero{
+  .g-2,
+  .g-3,
+  .g-4{
     grid-template-columns:1fr;
+  }
+
+  .card{
+    padding:1rem;
+    border-radius:18px;
+  }
+
+  .admin-dashboard .admin-hero{
+    padding:1rem;
+  }
+
+  .admin-dashboard .admin-hero__actions{
+    width:100%;
+  }
+
+  .admin-dashboard .admin-hero__actions .btn{
+    flex:1 1 auto;
+  }
+
+  .table{
+    min-width:560px;
+  }
+
+  .stat-card__value{
+    font-size:1.7rem;
   }
 }
 
-@media (max-width: 760px){
-  .dashboard-kpi-strip,
-  .portfolio-grid,
-  .quick-grid{
-    grid-template-columns:1fr;
+@media (max-width: 560px){
+  .btn{
+    width:100%;
   }
 
-  .recent-row{
+  .quick-actions{
     flex-direction:column;
-    align-items:flex-start;
   }
 
-  .recent-meta{
-    justify-content:flex-start;
+  .quick-actions .btn{
+    width:100%;
   }
 
-  .ravlo-main{
-    padding:18px;
+  .table{
+    min-width:520px;
   }
 }

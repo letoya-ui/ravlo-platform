@@ -4,21 +4,21 @@
 {% block content %}
 <main class="dashboard-main admin-dashboard">
 
-  <link rel="preconnect" href="https://cdn.jsdelivr.net" />
+  <link rel="preconnect" href="https://cdn.jsdelivr.net">
   <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
 
   <div class="wrap">
 
-    <!-- =========================
-         PAGE HEADER
-    ========================== -->
+    <!-- =========================================================
+         HERO / HEADER
+    ========================================================== -->
     <section class="card admin-hero">
       <div class="admin-hero__left">
-        <p class="eyebrow">ADMIN COMMAND CENTER</p>
-        <h1>Welcome, {{ current_user.username or current_user.first_name or 'Admin' }}</h1>
-        <p class="muted">
-          Central system management for users, lending operations, onboarding, access control, and platform performance.
-        </p>
+        <div class="eyebrow">ADMIN COMMAND CENTER</div>
+        <h1>Welcome, {{ current_user.full_name or current_user.username or current_user.email or 'Admin' }}</h1>
+        <div class="muted">
+          Central system management for users, onboarding, invites, lending operations, and platform visibility.
+        </div>
       </div>
 
       <div class="admin-hero__actions">
@@ -30,12 +30,12 @@
 
     <div class="admin-layout">
 
-      <!-- =========================
-           LEFT COLUMN
-      ========================== -->
+      <!-- =========================================================
+           LEFT SIDE
+      ========================================================== -->
       <section class="lhs grid">
 
-        <!-- Core KPI Row -->
+        <!-- KPI ROW 1 -->
         <div class="grid g-4">
           <div class="card stat-card">
             <div class="stat-card__label">👥 Users</div>
@@ -46,34 +46,34 @@
           <div class="card stat-card">
             <div class="stat-card__label">💼 Loans</div>
             <div class="stat-card__value">{{ stats.total_loans or 0 }}</div>
-            <div class="muted">Active loan files</div>
+            <div class="muted">Loan files in system</div>
           </div>
 
           <div class="card stat-card">
             <div class="stat-card__label">📎 Documents</div>
             <div class="stat-card__value">{{ stats.total_docs or 0 }}</div>
-            <div class="muted">Uploaded files</div>
+            <div class="muted">Uploaded documents</div>
           </div>
 
           <div class="card stat-card">
             <div class="stat-card__label">✅ Tasks</div>
             <div class="stat-card__value">{{ stats.pending_tasks or 0 }}</div>
-            <div class="muted">Pending operational tasks</div>
+            <div class="muted">Pending operational items</div>
           </div>
         </div>
 
-        <!-- Secondary KPI Row -->
+        <!-- KPI ROW 2 -->
         <div class="grid g-4">
           <div class="card stat-card">
             <div class="stat-card__label">📥 Pending Requests</div>
             <div class="stat-card__value">{{ stats.pending_requests or 0 }}</div>
-            <div class="muted">New onboarding / access requests</div>
+            <div class="muted">Awaiting review</div>
           </div>
 
           <div class="card stat-card">
             <div class="stat-card__label">✔️ Approved Requests</div>
             <div class="stat-card__value">{{ stats.approved_requests or 0 }}</div>
-            <div class="muted">Reviewed and approved</div>
+            <div class="muted">Approved access submissions</div>
           </div>
 
           <div class="card stat-card">
@@ -85,35 +85,39 @@
           <div class="card stat-card">
             <div class="stat-card__label">✉️ Pending Invites</div>
             <div class="stat-card__value">{{ stats.pending_invites or 0 }}</div>
-            <div class="muted">Employee invites awaiting acceptance</div>
+            <div class="muted">Invites not yet accepted</div>
           </div>
         </div>
 
-        <!-- Charts -->
+        <!-- CHARTS -->
         <div class="grid g-2">
           <div class="card">
             <div class="section-head">
-              <h3>Loan Volume</h3>
-              <span class="muted">Originations / file growth</span>
+              <div>
+                <h3>Loan Volume</h3>
+                <div class="muted">Monthly file activity</div>
+              </div>
             </div>
             <div id="chart_volume" class="chart-box"></div>
           </div>
 
           <div class="card">
             <div class="section-head">
-              <h3>User Growth</h3>
-              <span class="muted">Platform adoption</span>
+              <div>
+                <h3>User Growth</h3>
+                <div class="muted">Monthly registration activity</div>
+              </div>
             </div>
             <div id="chart_users" class="chart-box"></div>
           </div>
         </div>
 
-        <!-- Recent Access Requests -->
+        <!-- RECENT ACCESS REQUESTS -->
         <div class="card">
           <div class="section-head">
             <div>
               <h3>Recent Access Requests</h3>
-              <div class="muted">Newest onboarding and platform access submissions</div>
+              <div class="muted">Newest onboarding and access submissions</div>
             </div>
             <a class="btn btn-sm" href="{{ url_for('admin.requests_dashboard') }}">View All</a>
           </div>
@@ -133,21 +137,19 @@
                 </thead>
                 <tbody>
                   {% for req in recent_requests %}
-                    {% set req_status = (req.status or 'pending')|lower %}
+                    {% set req_status = (req.status or 'pending')|lower|replace(' ', '-') %}
                     <tr>
                       <td>#{{ req.id }}</td>
                       <td>{{ req.contact_name or '—' }}</td>
                       <td>{{ req.email or '—' }}</td>
                       <td>{{ req.company_name or '—' }}</td>
                       <td>
-                        <span class="status st-{{ req_status|replace(' ', '-') }}">
+                        <span class="status st-{{ req_status }}">
                           {{ (req.status or 'Pending')|title }}
                         </span>
                       </td>
                       <td>
-                        <a class="btn btn-sm" href="{{ url_for('admin.request_detail', request_id=req.id) }}">
-                          Open
-                        </a>
+                        <a class="btn btn-sm" href="{{ url_for('admin.request_detail', request_id=req.id) }}">Open</a>
                       </td>
                     </tr>
                   {% endfor %}
@@ -161,7 +163,7 @@
           {% endif %}
         </div>
 
-        <!-- Recent Users -->
+        <!-- RECENT USERS -->
         <div class="card">
           <div class="section-head">
             <div>
@@ -178,20 +180,20 @@
                     <th>Name</th>
                     <th>Email</th>
                     <th>Role</th>
+                    <th>Company</th>
                     <th>Status</th>
                   </tr>
                 </thead>
                 <tbody>
                   {% for user in users[:5] %}
-                    {% set user_role = (user.role or 'user')|replace('_', ' ')|title %}
-                    {% set is_user_active = user.active if user.active is defined else (user.is_active if user.is_active is defined else False) %}
                     <tr>
-                      <td>{{ user.username or ((user.first_name or '') ~ ' ' ~ (user.last_name or '')) or '—' }}</td>
+                      <td>{{ user.full_name or user.username or user.email or '—' }}</td>
                       <td>{{ user.email or '—' }}</td>
-                      <td>{{ user_role }}</td>
+                      <td>{{ (user.role or 'user')|replace('_', ' ')|title }}</td>
+                      <td>{{ user.company.name if user.company else '—' }}</td>
                       <td>
-                        <span class="status st-{{ 'active' if is_user_active else 'inactive' }}">
-                          {{ 'Active' if is_user_active else 'Inactive' }}
+                        <span class="status st-{{ 'active' if user.is_active else 'inactive' }}">
+                          {{ 'Active' if user.is_active else 'Inactive' }}
                         </span>
                       </td>
                     </tr>
@@ -206,12 +208,12 @@
           {% endif %}
         </div>
 
-        <!-- AI / System Insight -->
+        <!-- AI INSIGHT -->
         <div class="card">
           <div class="section-head">
             <div>
               <h3>AI / System Insight</h3>
-              <div class="muted">Live operational summary and platform intelligence</div>
+              <div class="muted">Live operational summary</div>
             </div>
           </div>
 
@@ -221,17 +223,17 @@
         </div>
       </section>
 
-      <!-- =========================
-           RIGHT COLUMN
-      ========================== -->
+      <!-- =========================================================
+           RIGHT SIDE
+      ========================================================== -->
       <aside class="rhs grid">
 
-        <!-- Quick Actions -->
+        <!-- QUICK ACTIONS -->
         <div class="card">
           <div class="section-head">
             <div>
               <h3>Quick Actions</h3>
-              <div class="muted">Jump to core admin tools</div>
+              <div class="muted">Jump to core admin functions</div>
             </div>
           </div>
 
@@ -244,12 +246,12 @@
           </div>
         </div>
 
-        <!-- Recent Team Invites -->
+        <!-- RECENT TEAM INVITES -->
         <div class="card">
           <div class="section-head">
             <div>
               <h3>Recent Team Invites</h3>
-              <div class="muted">Outstanding and recently issued invitations</div>
+              <div class="muted">Latest company invitations</div>
             </div>
           </div>
 
@@ -259,18 +261,20 @@
                 <thead>
                   <tr>
                     <th>Email</th>
+                    <th>Name</th>
                     <th>Role</th>
                     <th>Status</th>
                   </tr>
                 </thead>
                 <tbody>
                   {% for invite in recent_invites %}
-                    {% set invite_status = (invite.status or 'pending')|lower %}
+                    {% set invite_status = (invite.status or 'pending')|lower|replace(' ', '-') %}
                     <tr>
                       <td>{{ invite.email or '—' }}</td>
+                      <td>{{ ((invite.first_name or '') ~ ' ' ~ (invite.last_name or ''))|trim or '—' }}</td>
                       <td>{{ (invite.role or 'user')|replace('_', ' ')|title }}</td>
                       <td>
-                        <span class="status st-{{ invite_status|replace(' ', '-') }}">
+                        <span class="status st-{{ invite_status }}">
                           {{ (invite.status or 'Pending')|title }}
                         </span>
                       </td>
@@ -286,7 +290,7 @@
           {% endif %}
         </div>
 
-        <!-- Recent Leads -->
+        <!-- RECENT LEADS -->
         <div class="card">
           <div class="section-head">
             <div>
@@ -321,27 +325,24 @@
           {% endif %}
         </div>
 
-        <!-- System Performance -->
+        <!-- SERVER LOAD -->
         <div class="card">
           <div class="section-head">
             <div>
               <h3>Server Load</h3>
-              <div class="muted">Current platform load and responsiveness</div>
+              <div class="muted">Current platform health snapshot</div>
             </div>
           </div>
-
           <div id="chart_system" class="chart-box chart-box--sm"></div>
-          <div class="muted subcopy">
-            System load and API latency snapshot.
-          </div>
+          <div class="muted subcopy">System load and API responsiveness.</div>
         </div>
 
-        <!-- Logs -->
+        <!-- SYSTEM LOGS -->
         <div class="card">
           <div class="section-head">
             <div>
               <h3>Recent System Logs</h3>
-              <div class="muted">Latest activity and platform events</div>
+              <div class="muted">Latest internal activity and events</div>
             </div>
           </div>
 
@@ -372,6 +373,7 @@
           {% endif %}
         </div>
       </aside>
+
     </div>
   </div>
 
@@ -521,10 +523,10 @@
       setInterval(updateInsight, 60000);
 
       const loanVolumeLabels = {{ (loan_volume_labels or ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'])|tojson }};
-      const loanVolumeSeries = {{ (loan_volume_series or [5, 8, 12, 18, 20, 25])|tojson }};
+      const loanVolumeSeries = {{ (loan_volume_series or [0, 0, 0, 0, 0, 0])|tojson }};
 
       const userGrowthLabels = {{ (user_growth_labels or ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'])|tojson }};
-      const userGrowthSeries = {{ (user_growth_series or [10, 14, 18, 22, 27, 32])|tojson }};
+      const userGrowthSeries = {{ (user_growth_series or [0, 0, 0, 0, 0, 0])|tojson }};
 
       const serverLoadValue = {{ (server_load_value or 68)|tojson }};
 

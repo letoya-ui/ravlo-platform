@@ -4,7 +4,8 @@
 
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, send_file
 from flask_login import current_user
-from datetime import datetime
+from collections import defaultdict
+from datetime import datetime, timedelta
 from LoanMVP.extensions import db
 from werkzeug.security import generate_password_hash
 
@@ -45,61 +46,154 @@ def admin_required(func):
 # =========================================================
 # 🏠 ADMIN DASHBOARD
 # =========================================================
-@admin_bp.route("/dashboard")
-@role_required("admin")
-def dashboard():
-    from LoanMVP.models.user_model import User
-    from LoanMVP.models.loan_models import LoanApplication
-    from LoanMVP.models.document_models import LoanDocument
-    from LoanMVP.models.admin import AccessRequest, Company, UserInvite
-    from LoanMVP.models.crm_models import Lead, Task
-    from LoanMVP.models.system_models import SystemLog
 
+@admin.route("/dashboard")
+@login_required
+@role_required("admin", "master_admin", "lending_admin")
+def dashboard():
+    # =========================
+    # KPI COUNTS
+    # =========================
     stats = {
         "total_users": User.query.count(),
-        "total_loans": LoanApplication.query.count(),
-        "total_docs": LoanDocument.query.count(),
-        "pending_tasks": Task.query.filter_by(status="Pending").count(),
-        "pending_requests": AccessRequest.query.filter_by(status="pending").count(),
-        "approved_requests": AccessRequest.query.filter_by(status="approved").count(),
+        "total_loans": Loan.query.count() if Loan else 0,
+        "total_docs": Document.query.count() if Document else 0,
+        "pending_tasks": (
+            Task.query.filter(db.func.lower(Task.status) == "pending").count()
+            if Task and hasattr(Task, "status")
+            else 0
+        ),
+        "pending_requests": AccessRequest.query.filter(
+            db.func.lower(AccessRequest.status) == "pending"
+        ).count(),
+        "approved_requests": AccessRequest.query.filter(
+            db.func.lower(AccessRequest.status) == "approved"
+        ).count(),
         "total_companies": Company.query.count(),
-        "pending_invites": UserInvite.query.filter_by(status="pending").count(),
+        "pending_invites": UserInvite.query.filter(
+            db.func.lower(UserInvite.status) == "pending"
+        ).count(),
     }
 
-    logs = SystemLog.query.order_by(SystemLog.created_at.desc()).limit(15).all()
-    leads = Lead.query.order_by(Lead.created_at.desc()).limit(5).all()
-    users = User.query.order_by(User.id.desc()).limit(8).all()
+    # =========================
+    # RECENT TABLE DATA
+    # =========================
+    recent_requests = (
+        AccessRequest.query
+        .order_by(AccessRequest.created_at.desc())
+        .limit(5)
+        .all()
+    )
 
-    recent_requests = AccessRequest.query.order_by(AccessRequest.created_at.desc()).limit(5).all()
-    recent_invites = UserInvite.query.order_by(UserInvite.created_at.desc()).limit(5).all()
+    users = (
+        User.query
+        .order_by(User.created_at.desc())
+        .limit(5)
+        .all()
+    )
 
-    try:
-        ai_prompt = f"""
-        Summarize admin system activity for Ravlo.
+    recent_invites = (
+        UserInvite.query
+        .order_by(UserInvite.created_at.desc())
+        .limit(5)
+        .all()
+    )
 
-        Stats:
-        - Total Users: {stats['total_users']}
-        - Total Loans: {stats['total_loans']}
-        - Total Documents: {stats['total_docs']}
-        - Pending Tasks: {stats['pending_tasks']}
-        - Pending Access Requests: {stats['pending_requests']}
-        - Approved Requests: {stats['approved_requests']}
-        - Total Companies: {stats['total_companies']}
-        - Pending Invites: {stats['pending_invites']}
-        """
-        ai_summary = assistant.generate_reply(ai_prompt, "admin")
-    except Exception:
-        ai_summary = "⚠️ AI summary unavailable."
+    leads = (
+        Lead.query
+        .order_by(Lead.created_at.desc())
+        .limit(5)
+        .all()
+        if Lead and hasattr(Lead, "created_at")
+        else []
+    )
+
+    logs = (
+        SystemLog.query
+        .order_by(SystemLog.created_at.desc())
+        .limit(8)
+        .all()
+        if SystemLog and hasattr(SystemLog, "created_at")
+        else []
+    )
+
+    # =========================
+    # CHART HELPERS
+    # =========================
+    def last_n_months(n=6):
+        now = datetime.utcnow()
+        months = []
+
+        year = now.year
+        month = now.month
+
+        for _ in range(n):
+            months.append((year, month))
+            month -= 1
+            if month == 0:
+                month = 12
+                year -= 1
+
+        months.reverse()
+        return months
+
+    def monthly_series(records, date_attr="created_at", months_back=6):
+        month_keys = last_n_months(months_back)
+        labels = [datetime(year, month, 1).strftime("%b") for year, month in month_keys]
+        counts = defaultdict(int)
+
+        for row in records:
+            dt = getattr(row, date_attr, None)
+            if dt:
+                counts[(dt.year, dt.month)] += 1
+
+        series = [counts.get((year, month), 0) for year, month in month_keys]
+        return labels, series
+
+    # =========================
+    # CHART DATA
+    # =========================
+    if Loan and hasattr(Loan, "created_at"):
+        loan_records = Loan.query.all()
+        loan_volume_labels, loan_volume_series = monthly_series(
+            loan_records, "created_at", 6
+        )
+    else:
+        loan_volume_labels = ["Jan", "Feb", "Mar", "Apr", "May", "Jun"]
+        loan_volume_series = [0, 0, 0, 0, 0, 0]
+
+    user_records = User.query.all()
+    user_growth_labels, user_growth_series = monthly_series(
+        user_records, "created_at", 6
+    )
+
+    # Replace later with real health/service metric
+    server_load_value = 68
+
+    # =========================
+    # AI SUMMARY
+    # =========================
+    ai_summary = (
+        f"Platform snapshot: {stats['pending_requests']} pending request(s), "
+        f"{stats['pending_invites']} pending invite(s), "
+        f"{stats['total_companies']} company account(s), "
+        f"and {stats['pending_tasks']} pending operational task(s)."
+    )
 
     return render_template(
         "admin/dashboard.html",
         stats=stats,
-        logs=logs,
-        leads=leads,
-        users=users,
         recent_requests=recent_requests,
+        users=users,
         recent_invites=recent_invites,
+        leads=leads,
+        logs=logs,
         ai_summary=ai_summary,
+        loan_volume_labels=loan_volume_labels,
+        loan_volume_series=loan_volume_series,
+        user_growth_labels=user_growth_labels,
+        user_growth_series=user_growth_series,
+        server_load_value=server_load_value,
     )
 
 @admin_bp.route("/companies")

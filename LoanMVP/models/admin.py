@@ -43,7 +43,7 @@ class AccessRequest(db.Model):
     company_id = db.Column(db.Integer, db.ForeignKey("companies.id"), nullable=True)
 
     reviewed_by = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=True)
-    reviewer = db.relationship("User", foreign_keys=[reviewed_by])
+    reviewer = db.relationship("User", foreign_keys=[reviewed_by], back_populates="access_requests")
 
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
@@ -63,7 +63,7 @@ class UserInvite(db.Model):
     status = db.Column(db.String(50), nullable=False, default="pending")
 
     invited_by = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=True)
-    inviter = db.relationship("User", foreign_keys=[invited_by])
+    inviter = db.relationship("User", foreign_keys=[invited_by], back_populates="invites_sent")
 
     expires_at = db.Column(db.DateTime, nullable=False)
     accepted_at = db.Column(db.DateTime, nullable=True)
