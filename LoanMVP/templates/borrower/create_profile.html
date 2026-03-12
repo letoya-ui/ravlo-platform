@@ -1,0 +1,214 @@
+{% extends "layouts/ravlo_auth_base.html" %}
+{% block title %}Create Borrower Profile | Ravlo{% endblock %}
+
+{% block content %}
+<div class="ravlo-login">
+  <div class="ravlo-login-card" style="max-width: 960px; width: 100%;">
+
+    <!-- Header -->
+    <div class="ravlo-login-hero" style="padding-bottom: 22px;">
+      <div class="ravlo-mark rv" style="width:84px;height:84px;border-radius:24px;">
+        <span style="font-size:28px;font-weight:800;letter-spacing:.08em;">RV</span>
+      </div>
+
+      <div style="margin-top: 18px;">
+        <div class="eyebrow">BORROWER LOAN CENTER</div>
+        <h1 style="margin: 8px 0 8px;">Create Your Borrower Profile</h1>
+        <p class="muted" style="max-width: 720px; margin: 0 auto;">
+          Complete your borrower profile so your loan applications, underwriting reviews,
+          and document workflow are organized inside Ravlo.
+        </p>
+      </div>
+    </div>
+
+    <!-- Flash / errors -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div style="margin-bottom: 18px;">
+          {% for category, message in messages %}
+            <div class="ravlo-alert ravlo-alert-{{ category }}" style="margin-bottom:10px;">
+              {{ message }}
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    {% if form.errors %}
+      <div class="ravlo-card" style="margin-bottom: 18px; border: 1px solid rgba(255,90,90,.25);">
+        <h3 style="margin-bottom:10px;">Please fix the following:</h3>
+        <ul style="margin:0; padding-left:18px;">
+          {% for field_name, errors in form.errors.items() %}
+            {% for error in errors %}
+              <li>{{ form[field_name].label.text if form[field_name] else field_name }} — {{ error }}</li>
+            {% endfor %}
+          {% endfor %}
+        </ul>
+      </div>
+    {% endif %}
+
+    <form method="POST" novalidate>
+      {{ form.hidden_tag() }}
+
+      <!-- Personal Information -->
+      <section class="ravlo-card">
+        <div class="row between" style="align-items:flex-start; gap:16px; margin-bottom:18px;">
+          <div>
+            <div class="eyebrow">SECTION 01</div>
+            <h2 style="margin:4px 0 6px;">Personal Information</h2>
+            <p class="muted" style="margin:0;">
+              Basic borrower details used throughout your loan file.
+            </p>
+          </div>
+        </div>
+
+        <div class="ravlo-grid ravlo-grid-2">
+          <div class="field">
+            <label for="{{ form.full_name.id }}">{{ form.full_name.label.text }}</label>
+            {{ form.full_name(class="ravlo-input", placeholder="Enter your full legal name") }}
+          </div>
+
+          <div class="field">
+            <label for="{{ form.email.id }}">{{ form.email.label.text }}</label>
+            {{ form.email(class="ravlo-input", placeholder="Enter your email address") }}
+          </div>
+
+          <div class="field">
+            <label for="{{ form.phone.id }}">{{ form.phone.label.text }}</label>
+            {{ form.phone(class="ravlo-input", placeholder="Enter your phone number") }}
+          </div>
+
+          <div class="field">
+            <label for="{{ form.address.id }}">{{ form.address.label.text }}</label>
+            {{ form.address(class="ravlo-input", placeholder="Street address") }}
+          </div>
+
+          <div class="field">
+            <label for="{{ form.city.id }}">{{ form.city.label.text }}</label>
+            {{ form.city(class="ravlo-input", placeholder="City") }}
+          </div>
+
+          <div class="field">
+            <label for="{{ form.state.id }}">{{ form.state.label.text }}</label>
+            {{ form.state(class="ravlo-input", placeholder="State") }}
+          </div>
+
+          <div class="field">
+            <label for="{{ form.zip_code.id }}">{{ form.zip_code.label.text }}</label>
+            {{ form.zip_code(class="ravlo-input", placeholder="ZIP code") }}
+          </div>
+        </div>
+      </section>
+
+      <!-- Financial Information -->
+      <section class="ravlo-card" style="margin-top:18px;">
+        <div class="row between" style="align-items:flex-start; gap:16px; margin-bottom:18px;">
+          <div>
+            <div class="eyebrow">SECTION 02</div>
+            <h2 style="margin:4px 0 6px;">Financial Snapshot</h2>
+            <p class="muted" style="margin:0;">
+              This helps your lender understand your current borrower profile.
+            </p>
+          </div>
+        </div>
+
+        <div class="ravlo-grid ravlo-grid-2">
+          <div class="field">
+            <label for="{{ form.employment_status.id }}">{{ form.employment_status.label.text }}</label>
+            {{ form.employment_status(class="ravlo-input") }}
+          </div>
+
+          <div class="field">
+            <label for="{{ form.annual_income.id }}">{{ form.annual_income.label.text }}</label>
+            {{ form.annual_income(class="ravlo-input", placeholder="Annual income") }}
+          </div>
+
+          <div class="field">
+            <label for="{{ form.credit_score.id }}">{{ form.credit_score.label.text }}</label>
+            {{ form.credit_score(class="ravlo-input", placeholder="Estimated credit score") }}
+          </div>
+        </div>
+      </section>
+
+      <!-- Footer actions -->
+      <div class="row between" style="margin-top: 22px; gap: 12px; flex-wrap: wrap;">
+        <div class="muted" style="font-size:.95rem;">
+          Your profile helps speed up future loan applications and underwriting review.
+        </div>
+
+        <div class="row" style="gap:12px; flex-wrap: wrap;">
+          <a href="{{ url_for('borrower.dashboard') }}" class="ravlo-btn ravlo-btn-secondary">
+            Cancel
+          </a>
+          <button type="submit" class="ravlo-btn ravlo-btn-primary">
+            Create Profile
+          </button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<style>
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .field label {
+    font-size: .92rem;
+    font-weight: 600;
+    color: var(--text);
+  }
+
+  .ravlo-input,
+  .ravlo-input select,
+  select.ravlo-input,
+  input.ravlo-input {
+    width: 100%;
+    min-height: 48px;
+    border-radius: 14px;
+    border: 1px solid rgba(255,255,255,.10);
+    background: rgba(255,255,255,.04);
+    color: var(--text);
+    padding: 12px 14px;
+    outline: none;
+    transition: .2s ease;
+  }
+
+  .ravlo-input:focus,
+  select.ravlo-input:focus,
+  input.ravlo-input:focus {
+    border-color: rgba(76,163,255,.65);
+    box-shadow: 0 0 0 4px rgba(76,163,255,.12);
+  }
+
+  .ravlo-alert {
+    padding: 12px 14px;
+    border-radius: 14px;
+    font-size: .95rem;
+  }
+
+  .ravlo-alert-success {
+    background: rgba(46, 204, 113, .10);
+    border: 1px solid rgba(46, 204, 113, .25);
+  }
+
+  .ravlo-alert-danger,
+  .ravlo-alert-error {
+    background: rgba(255, 90, 90, .10);
+    border: 1px solid rgba(255, 90, 90, .25);
+  }
+
+  @media (max-width: 768px) {
+    .ravlo-grid-2 {
+      grid-template-columns: 1fr !important;
+    }
+
+    .ravlo-login-card {
+      padding: 22px !important;
+    }
+  }
+</style>
+{% endblock %}
