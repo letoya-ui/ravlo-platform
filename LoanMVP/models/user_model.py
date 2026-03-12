@@ -18,6 +18,9 @@ class User(UserMixin, db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     last_login = db.Column(db.DateTime, default=None)
     timeline_status = db.Column(db.String(50), default="application_submitted")
+    company_id = db.Column(db.Integer, db.ForeignKey("companies.id"), nullable=True)
+    is_active = db.Column(db.Boolean, default=True)
+    invite_accepted = db.Column(db.Boolean, default=False)
 
     # ===============================
     # 🔗 Relationships

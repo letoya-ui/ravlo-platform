@@ -1,0 +1,43 @@
+{% extends "layouts/Ravlo_lending_base.html" %}
+
+{% block title %}Invite Team Member{% endblock %}
+{% block page_title %}Invite Team Member{% endblock %}
+{% block page_subline %}Send secure registration links to company staff{% endblock %}
+
+{% block content %}
+<div class="re-card" style="max-width:760px;">
+  <h3>Invite to {{ company.name }}</h3>
+
+  <form method="POST" class="re-form">
+    <div class="re-grid" style="grid-template-columns:1fr 1fr; gap:16px;">
+      <div>
+        <label>First Name</label>
+        <input type="text" name="first_name" class="re-input">
+      </div>
+
+      <div>
+        <label>Last Name</label>
+        <input type="text" name="last_name" class="re-input">
+      </div>
+    </div>
+
+    <div class="re-form-group">
+      <label>Email</label>
+      <input type="email" name="email" class="re-input" required>
+    </div>
+
+    <div class="re-form-group">
+      <label>Role</label>
+      <select name="role" class="re-input" required>
+        <option value="">Select role</option>
+        <option value="admin">Admin</option>
+        <option value="loan_officer">Loan Officer</option>
+        <option value="processor">Processor</option>
+        <option value="underwriter">Underwriter</option>
+      </select>
+    </div>
+
+    <button type="submit" class="btn btn-primary">Send Invite</button>
+  </form>
+</div>
+{% endblock %}

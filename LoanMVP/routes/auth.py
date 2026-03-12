@@ -18,6 +18,7 @@ from LoanMVP.app import login_manager, mail
 from LoanMVP.extensions import csrf, db
 from LoanMVP.forms import RegisterForm, ResetPasswordForm, ResetPasswordRequestForm
 from LoanMVP.models.user_model import User
+from LoanMVP.models.admin import UserInvite
 from flask_mail import Message as MailMessage
 
 
@@ -139,6 +140,66 @@ def login():
         return redirect(next_page)
 
     return redirect(url_for(_dashboard_for_role(getattr(user, "role", "investor"))))
+
+
+@auth_bp.route("/register/invite/<token>", methods=["GET", "POST"])
+def register_from_invite(token):
+    invite = UserInvite.query.filter_by(token=token).first_or_404()
+
+    if invite.status != "pending":
+        flash("This invite is no longer active.", "warning")
+        return redirect(url_for("auth.login"))
+
+    if invite.is_expired():
+        invite.status = "expired"
+        db.session.commit()
+        flash("This invite link has expired.", "warning")
+        return redirect(url_for("auth.login"))
+
+    existing_user = User.query.filter_by(email=invite.email).first()
+    if existing_user:
+        flash("An account already exists for this email. Please log in.", "info")
+        return redirect(url_for("auth.login"))
+
+    if request.method == "POST":
+        first_name = (request.form.get("first_name") or invite.first_name or "").strip()
+        last_name = (request.form.get("last_name") or invite.last_name or "").strip()
+        password = request.form.get("password") or ""
+        confirm_password = request.form.get("confirm_password") or ""
+
+        if not password or len(password) < 8:
+            flash("Password must be at least 8 characters.", "danger")
+            return render_template("auth/register_from_invite.html", invite=invite)
+
+        if password != confirm_password:
+            flash("Passwords do not match.", "danger")
+            return render_template("auth/register_from_invite.html", invite=invite)
+
+        user = User(
+            first_name=first_name,
+            last_name=last_name,
+            email=invite.email,
+            role=invite.role,
+            company_id=invite.company_id,
+            password_hash=generate_password_hash(password),
+            is_active=True,
+            invite_accepted=True,
+        )
+
+        db.session.add(user)
+
+        invite.status = "accepted"
+        invite.accepted_at = datetime.utcnow()
+
+        db.session.commit()
+
+        flash("Registration complete. You can now log in.", "success")
+        return redirect(url_for("auth.login"))
+
+    return render_template(
+        "auth/register_from_invite.html",
+        invite=invite,
+    )
 
 
 # ============================================================
