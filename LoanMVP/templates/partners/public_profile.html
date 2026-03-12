@@ -1,0 +1,84 @@
+{% extends "layouts/ravlo_base.html" %}
+{% block content %}
+
+<div class="public-profile-shell">
+
+    <!-- Header -->
+    <div class="public-profile-header">
+        <h1>{{ partner.name }}</h1>
+        <p class="role">{{ partner.role|capitalize }}</p>
+        <p class="location">{{ partner.service_area or "Service area not listed" }}</p>
+    </div>
+
+    <!-- Visible Photos -->
+    <div class="public-profile-photos">
+        {% if partner.photos and partner.photos|length > 0 %}
+            <img src="{{ partner.photos[0].url }}" class="photo-main" alt="Partner photo">
+        {% endif %}
+
+        <div class="photo-row">
+            {% if partner.photos and partner.photos|length > 1 %}
+                <img src="{{ partner.photos[1].url }}" class="photo-small" alt="Partner photo">
+            {% endif %}
+            {% if partner.photos and partner.photos|length > 2 %}
+                <img src="{{ partner.photos[2].url }}" class="photo-small" alt="Partner photo">
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Bio Snippet -->
+    <div class="public-profile-bio">
+        <h3>About</h3>
+        <p>
+            {{ partner.bio[:200] }}{% if partner.bio|length > 200 %}...{% endif %}
+        </p>
+    </div>
+
+    <!-- Specialties -->
+    {% if partner.specialty %}
+    <div class="public-profile-specialties">
+        <h3>Specialties</h3>
+        <p>{{ partner.specialty }}</p>
+    </div>
+    {% endif %}
+
+    <!-- LOCKED SECTIONS (Blurred) -->
+    <div class="locked-section">
+        <div class="locked-content">
+            <h3>Portfolio</h3>
+            <p>Full gallery, project history, and before/after photos.</p>
+
+            <h3>Reviews</h3>
+            <p>Verified ratings and client testimonials.</p>
+
+            <h3>Pricing & Availability</h3>
+            <p>Hourly rates, service packages, and booking calendar.</p>
+
+            <h3>Contact & Messaging</h3>
+            <p>Direct messaging, phone, and email.</p>
+        </div>
+
+        <div class="locked-overlay">
+            <div class="lock-icon">🔒</div>
+            <div class="locked-text">
+                Create a free account to unlock full partner details
+            </div>
+            <button onclick="window.location='/auth/register?next={{ request.path }}'">
+                Create Free Account
+            </button>
+        </div>
+    </div>
+
+    <!-- CTA Buttons -->
+    <div class="public-profile-actions">
+        <a href="/auth/register?next={{ request.path }}" class="btn-primary">
+            Request Service
+        </a>
+        <a href="/auth/register?next={{ request.path }}" class="btn-secondary">
+            Add to Deal
+        </a>
+    </div>
+
+</div>
+
+{% endblock %}

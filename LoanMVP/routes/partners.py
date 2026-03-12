@@ -227,3 +227,45 @@ def workspace_job(job_id):
         .order_by(Task.created_at.desc()).all()
 
     return render_template("partners/workspace/job.html", partner=partner, job=job, tasks=tasks)
+
+@partners_bp.route("/photos/upload", methods=["POST"])
+@role_required("partner")
+def upload_photo():
+    file = request.files.get("photo")
+
+    if not file:
+        flash("No file uploaded.", "danger")
+        return redirect(request.referrer)
+
+    # Save file to your storage (local or DigitalOcean Spaces)
+    filename = secure_filename(file.filename)
+    filepath = f"uploads/partners/{current_user.partner_profile.id}/{filename}"
+    file.save(filepath)
+
+    # Save DB record
+    photo = PartnerPhoto(
+        partner_id=current_user.partner_profile.id,
+        url=f"/static/{filepath}"
+    )
+    db.session.add(photo)
+    db.session.commit()
+
+    flash("Photo uploaded successfully.", "success")
+    return redirect(request.referrer)
+
+@partners_bp.route("/photos/<int:photo_id>/delete", methods=["POST"])
+@role_required("partner")
+def delete_photo(photo_id):
+    photo = PartnerPhoto.query.get_or_404(photo_id)
+
+    if photo.partner_id != current_user.partner_profile.id:
+        flash("Not authorized.", "danger")
+        return redirect(request.referrer)
+
+    db.session.delete(photo)
+    db.session.commit()
+
+    flash("Photo removed.", "success")
+    return redirect(request.referrer)
+
+

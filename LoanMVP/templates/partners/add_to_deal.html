@@ -1,0 +1,52 @@
+{% extends "layouts/ravlo_base.html" %}
+{% block content %}
+
+<div class="add-deal-shell">
+
+    <!-- Header -->
+    <div class="add-deal-header">
+        <h1>Add Partner to Deal</h1>
+        <p>You’re adding <strong>{{ partner.name }}</strong> to one of your deals.</p>
+        <p class="role">{{ partner.role|capitalize }}</p>
+    </div>
+
+    <!-- Partner Preview -->
+    <div class="add-deal-partner-preview">
+        <div class="preview-info">
+            <h3>{{ partner.name }}</h3>
+            <p class="location">{{ partner.service_area or "Service area not listed" }}</p>
+            <p class="bio-snippet">
+                {{ partner.bio[:160] }}{% if partner.bio|length > 160 %}...{% endif %}
+            </p>
+        </div>
+
+        <div class="preview-photos">
+            {% if partner.photos and partner.photos|length > 0 %}
+                <img src="{{ partner.photos[0].url }}" class="preview-photo" alt="Partner photo">
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Add to Deal Form -->
+    <form method="POST" class="add-deal-form">
+
+        <label for="deal_id">Select a Deal</label>
+        <select name="deal_id" id="deal_id" class="deal-select" required>
+            <option value="">Choose a deal...</option>
+
+            {% for d in deals %}
+            <option value="{{ d.id }}">
+                {{ d.address or "Unnamed Property" }} — {{ d.status or "Active" }}
+            </option>
+            {% endfor %}
+        </select>
+
+        <button type="submit" class="btn-primary add-deal-btn">
+            Add to Deal
+        </button>
+
+    </form>
+
+</div>
+
+{% endblock %}

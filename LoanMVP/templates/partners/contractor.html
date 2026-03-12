@@ -1,0 +1,21 @@
+{% extends "layouts/ravlo_base.html" %}
+{% block content %}
+
+<div class="dashboard-shell">
+    <h1>Contractor Dashboard</h1>
+    <p>Manage renovation jobs, bids, and project updates.</p>
+
+    <div class="dashboard-grid">
+        <a class="dash-card" href="{{ url_for('partners.requests_inbox') }}">
+            <h3>New Requests</h3>
+            <p>View homeowners seeking contractor services.</p>
+        </a>
+
+        <a class="dash-card" href="{{ url_for('partners.workspace_home') }}">
+            <h3>Workspace</h3>
+            <p>Active jobs, tasks, and project timelines.</p>
+        </a>
+    </div>
+</div>
+
+{% endblock %}

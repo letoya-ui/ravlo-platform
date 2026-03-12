@@ -53,3 +53,12 @@ class PartnerJob(db.Model):
     borrower = db.relationship("BorrowerProfile", backref=db.backref("partner_jobs", lazy=True))
     investor_profile = db.relationship("InvestorProfile", backref=db.backref("partner_jobs", lazy=True))
     property = db.relationship("Property", foreign_keys=[property_id])
+
+class PartnerPhoto(db.Model):
+    __tablename__ = "partner_photos"
+
+    id = db.Column(db.Integer, primary_key=True)
+    partner_id = db.Column(db.Integer, db.ForeignKey("partners.id"))
+    url = db.Column(db.String(255), nullable=False)
+
+    partner = db.relationship("Partner", backref="photos")

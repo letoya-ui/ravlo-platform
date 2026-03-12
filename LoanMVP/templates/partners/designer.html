@@ -1,0 +1,21 @@
+{% extends "layouts/ravlo_base.html" %}
+{% block content %}
+
+<div class="dashboard-shell">
+    <h1>Designer Dashboard</h1>
+    <p>Manage design requests, mood boards, and project deliverables.</p>
+
+    <div class="dashboard-grid">
+        <a class="dash-card" href="{{ url_for('partners.requests_inbox') }}">
+            <h3>Design Requests</h3>
+            <p>Homeowners seeking design concepts.</p>
+        </a>
+
+        <a class="dash-card" href="{{ url_for('partners.workspace_home') }}">
+            <h3>Workspace</h3>
+            <p>Active design jobs and revisions.</p>
+        </a>
+    </div>
+</div>
+
+{% endblock %}

@@ -1,0 +1,50 @@
+{% extends "layouts/ravlo_base.html" %}
+{% block content %}
+
+<div class="request-shell">
+
+    <!-- Header -->
+    <div class="request-header">
+        <h1>Request Service</h1>
+        <p>You're requesting a service from <strong>{{ partner.name }}</strong></p>
+        <p class="role">{{ partner.role|capitalize }}</p>
+    </div>
+
+    <!-- Partner Preview -->
+    <div class="request-partner-preview">
+        <div class="preview-info">
+            <h3>{{ partner.name }}</h3>
+            <p class="location">{{ partner.service_area or "Service area not listed" }}</p>
+            <p class="bio-snippet">
+                {{ partner.bio[:160] }}{% if partner.bio|length > 160 %}...{% endif %}
+            </p>
+        </div>
+
+        <div class="preview-photos">
+            {% if partner.photos and partner.photos|length > 0 %}
+                <img src="{{ partner.photos[0].url }}" class="preview-photo" alt="Partner photo">
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Request Form -->
+    <form method="POST" class="request-form">
+
+        <label for="message">Describe what you need</label>
+        <textarea
+            name="message"
+            id="message"
+            class="request-textarea"
+            placeholder="Tell the partner what you're looking for — project details, timeline, property info, etc."
+            required
+        ></textarea>
+
+        <button type="submit" class="btn-primary request-btn">
+            Send Request
+        </button>
+
+    </form>
+
+</div>
+
+{% endblock %}

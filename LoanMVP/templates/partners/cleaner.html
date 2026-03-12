@@ -1,0 +1,21 @@
+{% extends "layouts/ravlo_base.html" %}
+{% block content %}
+
+<div class="dashboard-shell">
+    <h1>Cleaning Services Dashboard</h1>
+    <p>Manage cleaning requests and scheduled jobs.</p>
+
+    <div class="dashboard-grid">
+        <a class="dash-card" href="{{ url_for('partners.requests_inbox') }}">
+            <h3>Cleaning Requests</h3>
+            <p>View new cleaning service inquiries.</p>
+        </a>
+
+        <a class="dash-card" href="{{ url_for('partners.workspace_home') }}">
+            <h3>Workspace</h3>
+            <p>Active cleaning jobs and schedules.</p>
+        </a>
+    </div>
+</div>
+
+{% endblock %}

@@ -1,0 +1,74 @@
+{% extends "layouts/ravlo_base.html" %}
+{% block content %}
+
+<div class="marketplace-shell">
+
+    <!-- Header -->
+    <div class="marketplace-header">
+        <h1>Partner Marketplace</h1>
+        <p>Browse trusted professionals across every category.</p>
+    </div>
+
+    <!-- Filters -->
+    <form method="GET" class="marketplace-filters">
+        <select name="role" class="filter-select" onchange="this.form.submit()">
+            <option value="">All Roles</option>
+            <option value="realtor" {% if role == 'realtor' %}selected{% endif %}>Realtors</option>
+            <option value="contractor" {% if role == 'contractor' %}selected{% endif %}>Contractors</option>
+            <option value="designer" {% if role == 'designer' %}selected{% endif %}>Designers</option>
+            <option value="inspector" {% if role == 'inspector' %}selected{% endif %}>Inspectors</option>
+            <option value="appraiser" {% if role == 'appraiser' %}selected{% endif %}>Appraisers</option>
+            <option value="title" {% if role == 'title' %}selected{% endif %}>Title</option>
+            <option value="insurance" {% if role == 'insurance' %}selected{% endif %}>Insurance</option>
+            <option value="attorney" {% if role == 'attorney' %}selected{% endif %}>Attorneys</option>
+            <option value="property_manager" {% if role == 'property_manager' %}selected{% endif %}>Property Managers</option>
+            <option value="cleaner" {% if role == 'cleaner' %}selected{% endif %}>Cleaners</option>
+        </select>
+    </form>
+
+    <!-- Grid -->
+    <div class="marketplace-grid">
+
+        {% for p in partners %}
+        <a href="{{ url_for('partners_public.public_profile', partner_id=p.id) }}" class="partner-card">
+
+            <!-- Partner Photos -->
+            <div class="partner-card-photos">
+                {% if p.photos and p.photos|length > 0 %}
+                    <img src="{{ p.photos[0].url }}" class="photo-main" alt="Partner photo">
+                {% endif %}
+
+                <div class="photo-row">
+                    {% if p.photos and p.photos|length > 1 %}
+                        <img src="{{ p.photos[1].url }}" class="photo-small" alt="Partner photo">
+                    {% endif %}
+                    {% if p.photos and p.photos|length > 2 %}
+                        <img src="{{ p.photos[2].url }}" class="photo-small" alt="Partner photo">
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Info -->
+            <div class="partner-card-info">
+                <h3>{{ p.name }}</h3>
+                <p class="role">{{ p.role|capitalize }}</p>
+                <p class="location">{{ p.service_area or "Service area not listed" }}</p>
+
+                <p class="bio-snippet">
+                    {{ p.bio[:120] }}{% if p.bio|length > 120 %}...{% endif %}
+                </p>
+            </div>
+
+            <!-- Locked Badge -->
+            <div class="locked-badge">
+                🔒 Full profile locked — create a free account to unlock
+            </div>
+
+        </a>
+        {% endfor %}
+
+    </div>
+
+</div>
+
+{% endblock %}

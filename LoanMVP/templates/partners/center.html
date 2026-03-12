@@ -1,0 +1,39 @@
+{% extends "layouts/ravlo_base.html" %}
+{% block content %}
+
+<div class="partner-center-shell">
+
+    <h1 class="page-title">Partner Center</h1>
+
+    <!-- Role Filter -->
+    <form method="GET" class="filter-bar">
+        <select name="role" onchange="this.form.submit()" class="filter-select">
+            <option value="">All Roles</option>
+            <option value="contractor" {% if role_filter=='contractor' %}selected{% endif %}>Contractors</option>
+            <option value="realtor" {% if role_filter=='realtor' %}selected{% endif %}>Realtors</option>
+            <option value="designer" {% if role_filter=='designer' %}selected{% endif %}>Designers</option>
+            <option value="inspector" {% if role_filter=='inspector' %}selected{% endif %}>Inspectors</option>
+            <option value="appraiser" {% if role_filter=='appraiser' %}selected{% endif %}>Appraisers</option>
+            <option value="title" {% if role_filter=='title' %}selected{% endif %}>Title</option>
+            <option value="insurance" {% if role_filter=='insurance' %}selected{% endif %}>Insurance</option>
+            <option value="attorney" {% if role_filter=='attorney' %}selected{% endif %}>Attorneys</option>
+            <option value="property_manager" {% if role_filter=='property_manager' %}selected{% endif %}>Property Managers</option>
+            <option value="cleaner" {% if role_filter=='cleaner' %}selected{% endif %}>Cleaners</option>
+        </select>
+    </form>
+
+    <!-- Partner Grid -->
+    <div class="partner-grid">
+        {% for p in partners %}
+        <a href="{{ url_for('partners.profile', partner_id=p.id) }}" class="partner-card">
+            <h3>{{ p.name }}</h3>
+            <p class="role">{{ p.role|capitalize }}</p>
+            <p class="company">{{ p.company }}</p>
+            <p class="service-area">{{ p.service_area }}</p>
+        </a>
+        {% endfor %}
+    </div>
+
+</div>
+
+{% endblock %}

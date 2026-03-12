@@ -1,0 +1,21 @@
+{% extends "layouts/ravlo_base.html" %}
+{% block content %}
+
+<div class="dashboard-shell">
+    <h1>Appraiser Dashboard</h1>
+    <p>Manage appraisal requests and valuation reports.</p>
+
+    <div class="dashboard-grid">
+        <a class="dash-card" href="{{ url_for('partners.requests_inbox') }}">
+            <h3>Appraisal Requests</h3>
+            <p>View new appraisal jobs.</p>
+        </a>
+
+        <a class="dash-card" href="{{ url_for('partners.workspace_home') }}">
+            <h3>Workspace</h3>
+            <p>Active appraisals and valuations.</p>
+        </a>
+    </div>
+</div>
+
+{% endblock %}
