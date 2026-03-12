@@ -4,137 +4,352 @@
 {% block content %}
 <main class="dashboard-main">
 
-<link rel="preconnect" href="https://cdn.jsdelivr.net" />
-<script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" />
+  <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
 
+  <div class="wrap">
 
-<div class="wrap">
+    <!-- Left Column -->
+    <section class="lhs grid">
 
-  <!-- Left Column -->
-  <section class="lhs grid">
-
-    <!-- Header -->
-    <div class="card" style="display:flex; justify-content:space-between; align-items:center;">
-      <div>
-        <h1>Welcome, {{ current_user.username or 'Admin' }}</h1>
-        <div class="muted">Central system management — monitor all platform activity in real time.</div>
+      <!-- Header -->
+      <div class="card" style="display:flex; justify-content:space-between; align-items:center; gap:1rem; flex-wrap:wrap;">
+        <div>
+          <h1>Welcome, {{ current_user.username or current_user.first_name or 'Admin' }}</h1>
+          <div class="muted">
+            Central system management — monitor platform activity, onboarding, and operations in real time.
+          </div>
+        </div>
+        <div style="display:flex; gap:.6rem; flex-wrap:wrap;">
+          <a class="btn btn-primary" href="{{ url_for('admin.analytics') }}">📊 View Analytics</a>
+          <a class="btn" href="{{ url_for('admin.requests_dashboard') }}">📥 Access Requests</a>
+          <a class="btn" href="{{ url_for('account.settings') }}">⚙️ Settings</a>
+        </div>
       </div>
-      <div style="display:flex; gap:.6rem; flex-wrap:wrap;">
-        <a class="btn btn-primary" href="{{ url_for('admin.analytics') }}">📊 View Analytics</a>
-        <a class="btn" href="{{ url_for('account.settings') }}">⚙️ Settings</a>
+
+      <!-- KPI Row -->
+      <div class="grid g-4">
+        <div class="card">
+          <h4>👥 Users</h4>
+          <h2>{{ stats.total_users or 0 }}</h2>
+          <div class="muted">Registered accounts</div>
+        </div>
+
+        <div class="card">
+          <h4>💼 Loans</h4>
+          <h2>{{ stats.total_loans or 0 }}</h2>
+          <div class="muted">Active loan files</div>
+        </div>
+
+        <div class="card">
+          <h4>📎 Documents</h4>
+          <h2>{{ stats.total_docs or 0 }}</h2>
+          <div class="muted">Uploaded files</div>
+        </div>
+
+        <div class="card">
+          <h4>✅ Tasks</h4>
+          <h2>{{ stats.pending_tasks or 0 }}</h2>
+          <div class="muted">Pending operational tasks</div>
+        </div>
       </div>
-    </div>
 
-    <!-- KPI Row -->
-    <div class="grid g-3">
-      <div class="card"><h4>👥 Users</h4><h2>{{ stats.users or 0 }}</h2><div class="muted">Registered accounts</div></div>
-      <div class="card"><h4>💼 Loans</h4><h2>{{ stats.loans or 0 }}</h2><div class="muted">Active loan files</div></div>
-      <div class="card"><h4>📎 Documents</h4><h2>{{ stats.documents or 0 }}</h2><div class="muted">Uploaded files</div></div>
-    </div>
+      <!-- New Admin KPI Row -->
+      <div class="grid g-4">
+        <div class="card">
+          <h4>📥 Pending Requests</h4>
+          <h2>{{ stats.pending_requests or 0 }}</h2>
+          <div class="muted">New onboarding/access requests</div>
+        </div>
 
-    <!-- Charts -->
-    <div class="grid g-2">
-      <div class="card"><h3>Loan Volume</h3><div id="chart_volume" style="height:260px;"></div></div>
-      <div class="card"><h3>User Growth</h3><div id="chart_users" style="height:260px;"></div></div>
-    </div>
+        <div class="card">
+          <h4>✔️ Approved Requests</h4>
+          <h2>{{ stats.approved_requests or 0 }}</h2>
+          <div class="muted">Reviewed and approved</div>
+        </div>
 
-    <!-- System Users -->
-    <div class="card">
-      <h3>Recent Users</h3>
-      {% if users %}
-      <table class="table">
-        <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Status</th></tr></thead>
-        <tbody>
-          {% for user in users[:5] %}
-          <tr>
-            <td>{{ user.username }}</td>
-            <td>{{ user.email }}</td>
-            <td>{{ user.role|capitalize }}</td>
-            <td><span class="status st-{{ 'active' if user.active else 'inactive' }}">{{ 'Active' if user.active else 'Inactive' }}</span></td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-      {% else %}
-        <p class="muted">No users found.</p>
-      {% endif %}
-    </div>
+        <div class="card">
+          <h4>🏢 Companies</h4>
+          <h2>{{ stats.total_companies or 0 }}</h2>
+          <div class="muted">Organizations onboarded</div>
+        </div>
 
-    <!-- System Alerts -->
-    <div class="card">
-      <h3>System Notifications</h3>
-      <div id="aiInsight" class="muted">Loading latest AI insight...</div>
-    </div>
-  </section>
-
-  <!-- Right Column -->
-  <aside class="rhs grid">
-
-    <!-- Quick Actions -->
-    <div class="card">
-      <h3>Quick Actions</h3>
-      <div style="display:flex; flex-wrap:wrap; gap:.5rem;">
-<<<<<<< HEAD
-        <a class="btn" href="{{ url_for('crm.dashboard') }}">📞 Manage Leads</a>
-        <a class="btn" href="{{ url_for('system.users') }}">👥 Users</a>
-        <a class="btn" href="{{ url_for('property.manage') }}">🏠 Properties</a>
-        <a class="btn" href="{{ url_for('admin.reports') }}">📑 Reports</a>
+        <div class="card">
+          <h4>✉️ Pending Invites</h4>
+          <h2>{{ stats.pending_invites or 0 }}</h2>
+          <div class="muted">Employee invites not accepted</div>
+        </div>
       </div>
-    </div>
 
-    <!-- System Performance -->
-    <div class="card">
-      <h3>Server Load</h3>
-      <div id="chart_system" style="height:240px;"></div>
-      <div class="muted" style="font-size:.85rem; margin-top:.4rem;">System load and API latency (demo data).</div>
-    </div>
-  </aside>
+      <!-- Charts -->
+      <div class="grid g-2">
+        <div class="card">
+          <h3>Loan Volume</h3>
+          <div id="chart_volume" style="height:260px;"></div>
+        </div>
+        <div class="card">
+          <h3>User Growth</h3>
+          <div id="chart_users" style="height:260px;"></div>
+        </div>
+      </div>
 
-</div>
+      <!-- Recent Access Requests -->
+      <div class="card">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:.75rem;">
+          <h3 style="margin:0;">Recent Access Requests</h3>
+          <a class="btn btn-sm" href="{{ url_for('admin.requests_dashboard') }}">View All</a>
+        </div>
 
-<!-- AI Insight Script -->
-<script>
-function updateInsight() {
-  fetch('{{ url_for("admin.ai_refresh", target="analytics") }}', { method: "POST" })
-    .then(res => res.json())
-    .then(data => {
-      document.getElementById('aiInsight').innerHTML =
-        `<div class='ai-msg'><strong>🤖 AI Insight:</strong> ${data.message}</div>`;
-    })
-    .catch(() => {
-      document.getElementById('aiInsight').innerHTML =
-        "<div class='ai-msg'>⚠️ Unable to fetch AI insight at this time.</div>";
-    });
-}
-updateInsight();
-setInterval(updateInsight, 60000);
+        {% if recent_requests %}
+        <table class="table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Contact</th>
+              <th>Email</th>
+              <th>Company</th>
+              <th>Status</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for req in recent_requests %}
+            <tr>
+              <td>#{{ req.id }}</td>
+              <td>{{ req.contact_name }}</td>
+              <td>{{ req.email }}</td>
+              <td>{{ req.company_name or "—" }}</td>
+              <td>
+                <span class="status st-{{ req.status|lower }}">
+                  {{ req.status|title }}
+                </span>
+              </td>
+              <td>
+                <a class="btn btn-sm" href="{{ url_for('admin.request_detail', request_id=req.id) }}">
+                  Open
+                </a>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% else %}
+          <p class="muted">No recent access requests.</p>
+        {% endif %}
+      </div>
 
-// Charts
-const baseOpt={chart:{toolbar:{show:false},foreColor:'#c9d3df',animations:{enabled:true}},
-grid:{borderColor:'#2a2e36'},dataLabels:{enabled:false},legend:{labels:{colors:'#c9d3df'}},
-theme:{mode:'dark'}};
+      <!-- Recent Users -->
+      <div class="card">
+        <h3>Recent Users</h3>
+        {% if users %}
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Email</th>
+              <th>Role</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for user in users[:5] %}
+            <tr>
+              <td>{{ user.username or ((user.first_name or '') ~ ' ' ~ (user.last_name or '')) }}</td>
+              <td>{{ user.email }}</td>
+              <td>{{ user.role|replace('_', ' ')|title }}</td>
+              <td>
+                <span class="status st-{{ 'active' if user.active or user.is_active else 'inactive' }}">
+                  {{ 'Active' if user.active or user.is_active else 'Inactive' }}
+                </span>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% else %}
+          <p class="muted">No users found.</p>
+        {% endif %}
+      </div>
 
-new ApexCharts(document.querySelector("#chart_volume"),{
-  ...baseOpt,chart:{...baseOpt.chart,type:'area',height:260},
-  stroke:{curve:'smooth',width:2},
-  series:[{name:'Loans',data:[5,8,12,18,20,25,28,30]}],
-  xaxis:{categories:['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug']},
-  colors:['#7ab8ff']
-}).render();
+      <!-- System Notifications -->
+      <div class="card">
+        <h3>AI / System Insight</h3>
+        <div id="aiInsight" class="muted">
+          {{ ai_summary or "Loading latest AI insight..." }}
+        </div>
+      </div>
+    </section>
 
-new ApexCharts(document.querySelector("#chart_users"),{
-  ...baseOpt,chart:{...baseOpt.chart,type:'line',height:260},
-  series:[{name:'Users',data:[10,14,18,22,27,32,38,45]}],
-  xaxis:{categories:['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug']},
-  colors:['#43d19e']
-}).render();
+    <!-- Right Column -->
+    <aside class="rhs grid">
 
-new ApexCharts(document.querySelector("#chart_system"),{
-  ...baseOpt,chart:{...baseOpt.chart,type:'radialBar',height:240},
-  series:[68],labels:['Server Load %'],colors:['#ffdf6e'],
-  plotOptions:{radialBar:{hollow:{size:'58%'},dataLabels:{value:{fontSize:'22px'}}}}
-}).render();
-</script>
+      <!-- Quick Actions -->
+      <div class="card">
+        <h3>Quick Actions</h3>
+        <div style="display:flex; flex-wrap:wrap; gap:.5rem;">
+          <a class="btn" href="{{ url_for('crm.dashboard') }}">📞 Manage Leads</a>
+          <a class="btn" href="{{ url_for('admin.requests_dashboard') }}">📥 Requests</a>
+          <a class="btn" href="{{ url_for('system.users') }}">👥 Users</a>
+          <a class="btn" href="{{ url_for('property.manage') }}">🏠 Properties</a>
+          <a class="btn" href="{{ url_for('admin.reports') }}">📑 Reports</a>
+        </div>
+      </div>
+
+      <!-- Pending Invites -->
+      <div class="card">
+        <h3>Recent Team Invites</h3>
+        {% if recent_invites %}
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Email</th>
+                <th>Role</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for invite in recent_invites %}
+              <tr>
+                <td>{{ invite.email }}</td>
+                <td>{{ invite.role|replace('_', ' ')|title }}</td>
+                <td>
+                  <span class="status st-{{ invite.status|lower }}">
+                    {{ invite.status|title }}
+                  </span>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        {% else %}
+          <p class="muted">No recent invites.</p>
+        {% endif %}
+      </div>
+
+      <!-- Leads -->
+      <div class="card">
+        <h3>Recent Leads</h3>
+        {% if leads %}
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for lead in leads %}
+              <tr>
+                <td>{{ lead.full_name if lead.full_name is defined else (lead.name if lead.name is defined else "—") }}</td>
+                <td>{{ lead.status if lead.status is defined else "—" }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        {% else %}
+          <p class="muted">No recent leads.</p>
+        {% endif %}
+      </div>
+
+      <!-- System Performance -->
+      <div class="card">
+        <h3>Server Load</h3>
+        <div id="chart_system" style="height:240px;"></div>
+        <div class="muted" style="font-size:.85rem; margin-top:.4rem;">
+          System load and API latency (demo data).
+        </div>
+      </div>
+
+      <!-- Logs -->
+      <div class="card">
+        <h3>Recent System Logs</h3>
+        {% if logs %}
+          <div style="display:flex; flex-direction:column; gap:.6rem;">
+            {% for log in logs[:8] %}
+              <div style="padding:.7rem .8rem; border:1px solid rgba(255,255,255,.08); border-radius:12px;">
+                <div style="font-weight:600;">
+                  {{ log.action if log.action is defined else (log.title if log.title is defined else "System Event") }}
+                </div>
+                <div class="muted" style="font-size:.85rem;">
+                  {{ log.created_at.strftime("%Y-%m-%d %I:%M %p") if log.created_at else "" }}
+                </div>
+                {% if log.description is defined and log.description %}
+                  <div class="muted" style="margin-top:.25rem;">{{ log.description }}</div>
+                {% elif log.message is defined and log.message %}
+                  <div class="muted" style="margin-top:.25rem;">{{ log.message }}</div>
+                {% endif %}
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <p class="muted">No recent logs.</p>
+        {% endif %}
+      </div>
+    </aside>
+
+  </div>
+
+  <!-- AI Insight Script -->
+  <script>
+    function updateInsight() {
+      fetch('{{ url_for("admin.ai_refresh", target="analytics") }}', { method: "POST" })
+        .then(res => res.json())
+        .then(data => {
+          document.getElementById('aiInsight').innerHTML =
+            `<div class='ai-msg'><strong>🤖 AI Insight:</strong> ${data.message}</div>`;
+        })
+        .catch(() => {
+          document.getElementById('aiInsight').innerHTML =
+            "{{ ai_summary or '⚠️ Unable to fetch AI insight at this time.' }}";
+        });
+    }
+
+    updateInsight();
+    setInterval(updateInsight, 60000);
+
+    const baseOpt = {
+      chart: {
+        toolbar: { show: false },
+        foreColor: '#c9d3df',
+        animations: { enabled: true }
+      },
+      grid: { borderColor: '#2a2e36' },
+      dataLabels: { enabled: false },
+      legend: { labels: { colors: '#c9d3df' } },
+      theme: { mode: 'dark' }
+    };
+
+    new ApexCharts(document.querySelector("#chart_volume"), {
+      ...baseOpt,
+      chart: { ...baseOpt.chart, type: 'area', height: 260 },
+      stroke: { curve: 'smooth', width: 2 },
+      series: [{ name: 'Loans', data: [5, 8, 12, 18, 20, 25, 28, 30] }],
+      xaxis: { categories: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug'] },
+      colors: ['#7ab8ff']
+    }).render();
+
+    new ApexCharts(document.querySelector("#chart_users"), {
+      ...baseOpt,
+      chart: { ...baseOpt.chart, type: 'line', height: 260 },
+      series: [{ name: 'Users', data: [10, 14, 18, 22, 27, 32, 38, 45] }],
+      xaxis: { categories: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug'] },
+      colors: ['#43d19e']
+    }).render();
+
+    new ApexCharts(document.querySelector("#chart_system"), {
+      ...baseOpt,
+      chart: { ...baseOpt.chart, type: 'radialBar', height: 240 },
+      series: [68],
+      labels: ['Server Load %'],
+      colors: ['#ffdf6e'],
+      plotOptions: {
+        radialBar: {
+          hollow: { size: '58%' },
+          dataLabels: { value: { fontSize: '22px' } }
+        }
+      }
+    }).render();
+  </script>
 
 </main>
 {% endblock %}
