@@ -53,7 +53,7 @@ def dashboard():
     from LoanMVP.models.document_models import LoanDocument
     from LoanMVP.models.admin import AccessRequest, Company, UserInvite
     from LoanMVP.models.crm_models import Lead, Task
-    from LoanMVP.models.system import SystemLog
+    from LoanMVP.models.system_models import SystemLog
 
     stats = {
         "total_users": User.query.count(),
