@@ -47,7 +47,7 @@ def admin_required(func):
 # 🏠 ADMIN DASHBOARD
 # =========================================================
 
-@admin.route("/dashboard")
+@admin_bp.route("/dashboard")
 @role_required("admin", "master_admin", "lending_admin")
 def dashboard():
     # =========================
