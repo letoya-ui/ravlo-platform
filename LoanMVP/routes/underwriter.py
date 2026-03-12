@@ -18,8 +18,6 @@ from LoanMVP.models.credit_models import SoftCreditReport      # FIXED
 from LoanMVP.utils.notify import send_notification
 from LoanMVP.utils.pricing_engine import calculate_dti_ltv
 
-from LoanMVP.services.notify import notify
-
 # PDF GENERATION
 from reportlab.pdfgen import canvas
 

@@ -48,11 +48,12 @@ def admin_required(func):
 @admin_bp.route("/dashboard")
 @role_required("admin")
 def dashboard():
-    from LoanMVP.models.user import User
-    from LoanMVP.models.loan_models import LoanApplication, LoanDocument
+    from LoanMVP.models.user_models import User
+    from LoanMVP.models.loan_models import LoanApplication
+    from LoanMVP.models.document_models import LoanDocument
     from LoanMVP.models.admin import AccessRequest, Company, UserInvite
-    from LoanMVP.models.crm import Lead
-    from LoanMVP.models.system import SystemLog, Task
+    from LoanMVP.models.crm_models import Lead, Task
+    from LoanMVP.models.system import SystemLog
 
     stats = {
         "total_users": User.query.count(),
@@ -101,8 +102,18 @@ def dashboard():
         ai_summary=ai_summary,
     )
 
+@admin_bp.route("/companies")
+@role_required("admin")
+def companies():
+    companies = Company.query.order_by(Company.created_at.desc()).all()
+
+    return render_template(
+        "admin/companies.html",
+        companies=companies,
+    )
+
 @admin_bp.route("/requests")
-@login_required
+@role_required("admin")
 @admin_required
 def requests_dashboard():
     status = request.args.get("status", "pending")
@@ -122,7 +133,7 @@ def requests_dashboard():
 
 
 @admin_bp.route("/requests/<int:request_id>")
-@login_required
+@role_required("admin")
 @admin_required
 def request_detail(request_id):
     access_request = AccessRequest.query.get_or_404(request_id)
@@ -134,7 +145,7 @@ def request_detail(request_id):
 
 
 @admin_bp.route("/requests/<int:request_id>/approve", methods=["POST"])
-@login_required
+@role_required("admin")
 @admin_required
 def approve_request(request_id):
     access_request = AccessRequest.query.get_or_404(request_id)
@@ -177,7 +188,7 @@ def approve_request(request_id):
 
 
 @admin_bp.route("/requests/<int:request_id>/reject", methods=["POST"])
-@login_required
+@role_required("admin")
 @admin_required
 def reject_request(request_id):
     access_request = AccessRequest.query.get_or_404(request_id)
@@ -197,7 +208,7 @@ def reject_request(request_id):
 
 
 @admin_bp.route("/company/<int:company_id>/team")
-@login_required
+@role_required("admin")
 @admin_required
 def company_team(company_id):
     company = Company.query.get_or_404(company_id)
@@ -213,7 +224,7 @@ def company_team(company_id):
 
 
 @admin_bp.route("/company/<int:company_id>/team/invite", methods=["GET", "POST"])
-@login_required
+@role_required("admin")
 @admin_required
 def invite_team_member(company_id):
     company = Company.query.get_or_404(company_id)
