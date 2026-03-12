@@ -213,6 +213,7 @@ def create_profile():
 # =========================================================
 
 @borrower_bp.route("/apply", methods=["GET", "POST"])
+@csrf.exempt
 @role_required("borrower")
 def apply():
     borrower = get_current_borrower()
@@ -359,6 +360,7 @@ def documents():
 
 
 @borrower_bp.route("/upload-document", methods=["GET", "POST"])
+@csrf.exempt
 @role_required("borrower")
 def upload_document():
     borrower = get_current_borrower()
@@ -458,6 +460,7 @@ def view_condition(cond_id):
 
 
 @borrower_bp.route("/conditions/upload/<int:cond_id>", methods=["POST"])
+@csrf.exempt
 @role_required("borrower")
 def upload_condition(cond_id):
     borrower = get_current_borrower()
@@ -500,6 +503,7 @@ def upload_condition(cond_id):
 # =========================================================
 
 @borrower_bp.route("/messages", methods=["GET", "POST"])
+@csrf.exempt
 @role_required("borrower")
 def messages():
     borrower = get_current_borrower()
@@ -560,6 +564,7 @@ def messages():
 # =========================================================
 
 @borrower_bp.route("/subscription", methods=["GET", "POST"])
+@csrf.exempt
 @role_required("borrower")
 def subscription():
     borrower = get_current_borrower()
