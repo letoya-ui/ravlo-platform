@@ -1,275 +1,344 @@
 {% extends "layouts/ravlo_base.html" %}
+
 {% block title %}Ravlo • Deal Workspace{% endblock %}
 
 {% block page_title %}Deal Workspace{% endblock %}
 {% block page_subline %}
-Review the deal, compare strategies, and move into architect, rehab, build, or capital.
+Compare exit paths, pressure-test returns, and move into architect, rehab, or capital.
 {% endblock %}
 
 {% block topbar_actions %}
-  <a href="{{ url_for('investor.deals_list') }}" class="ravlo-btn ghost sm">
-    Deal Pipeline
-  </a>
+<a href="{{ url_for('investor.deals_list') }}" class="ravlo-btn ghost sm">
+  Deal Pipeline
+</a>
 
-  {% if deal %}
-    <a href="{{ url_for('investor.deal_architect', deal_id=deal.id) }}" class="ravlo-btn ghost sm">
-      Deal Architect
-    </a>
-    <a href="{{ url_for('investor.deal_rehab', deal_id=deal.id) }}" class="ravlo-btn primary sm">
-      Rehab Studio
-    </a>
-  {% endif %}
+{% if deal %}
+<a href="{{ url_for('investor.deal_architect', deal_id=deal.id) }}" class="ravlo-btn ghost sm">
+  AI Architect
+</a>
+<a href="{{ url_for('investor.deal_rehab', deal_id=deal.id) }}" class="ravlo-btn primary sm">
+  Rehab Studio
+</a>
+{% endif %}
 {% endblock %}
 
 {% block content %}
 <div class="workspace-shell">
 
-  {% if deal or selected_prop %}
+  <section class="ravlo-card pad">
+    <div class="section-head">
+      <div>
+        <div class="eyebrow">PROPERTY</div>
+        <h3>Select Property</h3>
+      </div>
+    </div>
 
-  <!-- HERO -->
+    <form method="GET">
+      <select name="prop_id" class="ravlo-input" onchange="this.form.submit()">
+        <option value="">Choose saved property</option>
+        {% for p in saved_props %}
+        <option value="{{ p.id }}" {% if selected_prop and p.id == selected_prop.id %}selected{% endif %}>
+          {{ p.address }}
+        </option>
+        {% endfor %}
+      </select>
+    </form>
+  </section>
+
+  {% if selected_prop %}
+
+  {% set recommended = recommendation.best if recommendation else "" %}
+  {% set flip = comparison.get("flip", {}) if comparison else {} %}
+  {% set rental = comparison.get("rental", {}) if comparison else {} %}
+  {% set airbnb = comparison.get("airbnb", {}) if comparison else {} %}
+
+  {% set flip_profit = flip.get("profit", 0) or 0 %}
+  {% set flip_roi = (flip.get("roi", 0) or 0) * 100 %}
+  {% set flip_total = flip.get("total_investment", 0) or 0 %}
+
+  {% set rental_rent = rental.get("monthly_rent", 0) or 0 %}
+  {% set rental_cashflow = rental.get("net_cashflow", 0) or 0 %}
+  {% set rental_cap = (rental.get("cap_rate", 0) or 0) * 100 %}
+  {% set rental_dscr = rental.get("dscr", 0) or 0 %}
+
+  {% set airbnb_nightly = airbnb.get("nightly_rate", 0) or 0 %}
+  {% set airbnb_occ = (airbnb.get("occupancy_rate", 0) or 0) * 100 %}
+  {% set airbnb_gross = airbnb.get("gross_monthly", 0) or 0 %}
+  {% set airbnb_net = airbnb.get("net_monthly", 0) or 0 %}
+
+  {% set max_profit = [flip_profit, rental_cashflow * 12, airbnb_net * 12] | max %}
+  {% set max_profit = 1 if max_profit <= 0 else max_profit %}
+  {% set max_roi = [flip_roi, rental_cap, ((airbnb_net * 12 / ((selected_prop.price or 1) if selected_prop.price else 1)) * 100)] | max %}
+  {% set max_roi = 1 if max_roi <= 0 else max_roi %}
+
   <section class="ravlo-hero-card workspace-hero">
     <div class="workspace-hero-copy">
-      <div class="eyebrow">RAVLO WORKSPACE</div>
-
-      <h2>
-        {% if selected_prop %}
-          {{ selected_prop.address or selected_prop.property_address or selected_prop.street_address or ("Property #" ~ selected_prop.id) }}
-        {% elif deal %}
-          {{ deal.title or deal.address or ("Deal #" ~ deal.id) }}
-        {% else %}
-          Deal Workspace
-        {% endif %}
-      </h2>
-
+      <div class="eyebrow">RAVLO WORKSPACE V2</div>
+      <h2>{{ selected_prop.address }}</h2>
       <p class="muted">
-        {% if selected_prop %}
-          {{ selected_prop.city or "" }}{% if selected_prop.city and selected_prop.state %}, {% endif %}{{ selected_prop.state or "" }}
-          {% if selected_prop.property_type %} • {{ selected_prop.property_type }}{% endif %}
-        {% else %}
-          Review the strategy, numbers, and next action for this opportunity.
-        {% endif %}
+        {{ selected_prop.city or "" }}{% if selected_prop.city and selected_prop.state %}, {% endif %}{{ selected_prop.state or "" }}
+        {% if selected_prop.property_type %} • {{ selected_prop.property_type }}{% endif %}
       </p>
 
       <div class="ravlo-chip-row mt-16">
         <span class="ravlo-chip">
-          {{ recommendation.recommended_strategy if recommendation and recommendation.recommended_strategy else (strategy_analysis.get("recommended_strategy") or "Strategy Pending") }}
-        </span>
-
-        <span class="ravlo-chip">
-          {% if strategy_analysis.get("deal_score") %}
-            Score {{ strategy_analysis.get("deal_score") }}/100
-          {% elif deal and deal.deal_score %}
-            Score {{ deal.deal_score }}/100
+          Best Path:
+          {% if recommended == "flip" %}
+            Fix & Flip
+          {% elif recommended == "rental" %}
+            Buy & Hold Rental
+          {% elif recommended == "airbnb" %}
+            Airbnb
           {% else %}
-            Score Pending
+            Pending
           {% endif %}
         </span>
 
-        {% if deal %}
-        <span class="ravlo-chip">Deal #{{ deal.id }}</span>
-        {% endif %}
+        <span class="ravlo-chip">
+          {% if comps %}Comps Loaded{% else %}No Comps{% endif %}
+        </span>
+
+        <span class="ravlo-chip">
+          {% if deal %}Deal #{{ deal.id }}{% else %}Not Attached{% endif %}
+        </span>
       </div>
     </div>
 
     <div class="workspace-hero-side">
       <div class="workspace-highlight">
-        <span>Workspace Status</span>
-        <strong>Decision Ready</strong>
+        <span>Decision Lens</span>
+        <strong>
+          {% if recommended == "flip" %}
+            Fastest Equity Path
+          {% elif recommended == "rental" %}
+            Stable Long-Term Cash Flow
+          {% elif recommended == "airbnb" %}
+            Highest Revenue Potential
+          {% else %}
+            Compare Scenarios
+          {% endif %}
+        </strong>
         <p>
-          Review the comparison, confirm the strategy, then move into rehab, build, or capital.
+          Review path strength, margin, and execution pressure before moving forward.
         </p>
       </div>
     </div>
   </section>
 
-  <!-- TOP STATS -->
   <section class="workspace-grid-4">
     <div class="workspace-stat">
-      <span>Saved Property</span>
-      <strong>
-        {% if selected_prop %}Yes{% else %}No{% endif %}
-      </strong>
+      <span>Purchase Price</span>
+      <strong>${{ "{:,.0f}".format(selected_prop.price or 0) }}</strong>
     </div>
-
     <div class="workspace-stat">
-      <span>Recommended</span>
-      <strong>
-        {{ recommendation.recommended_strategy if recommendation and recommendation.recommended_strategy else (strategy_analysis.get("recommended_strategy") or "Pending") }}
-      </strong>
+      <span>Sq Ft</span>
+      <strong>{{ comps.property.sqft if comps.property and comps.property.sqft else "—" }}</strong>
     </div>
-
     <div class="workspace-stat">
-      <span>Comps Loaded</span>
-      <strong>
-        {% if comps %}Yes{% else %}No{% endif %}
-      </strong>
+      <span>ARV Estimate</span>
+      <strong>${{ "{:,.0f}".format(comps.arv_estimate or 0) if comps and comps.arv_estimate else "—" }}</strong>
     </div>
-
     <div class="workspace-stat">
-      <span>AI Summary</span>
-      <strong>
-        {% if ai_summary %}Ready{% else %}Pending{% endif %}
-      </strong>
+      <span>Market Rent</span>
+      <strong>${{ "{:,.0f}".format(comps.market_rent_estimate or 0) if comps and comps.market_rent_estimate else "—" }}</strong>
     </div>
   </section>
 
-  <!-- MAIN GRID -->
   <div class="workspace-main-grid">
 
-    <!-- LEFT -->
     <div class="workspace-stack">
 
-      <!-- PROPERTY SNAPSHOT -->
       <section class="ravlo-card pad">
         <div class="section-head">
           <div>
-            <div class="eyebrow">PROPERTY</div>
-            <h3>Property Snapshot</h3>
-          </div>
-        </div>
-
-        <div class="workspace-info-grid">
-          <div class="workspace-info-box">
-            <span>Address</span>
-            <strong>
-              {% if selected_prop %}
-                {{ selected_prop.address or selected_prop.property_address or selected_prop.street_address or "—" }}
-              {% else %}
-                {{ deal.address if deal and deal.address else "—" }}
-              {% endif %}
-            </strong>
-          </div>
-
-          <div class="workspace-info-box">
-            <span>City / State</span>
-            <strong>
-              {% if selected_prop %}
-                {{ selected_prop.city or "—" }}{% if selected_prop.city and selected_prop.state %}, {% endif %}{{ selected_prop.state or "" }}
-              {% else %}
-                —
-              {% endif %}
-            </strong>
-          </div>
-
-          <div class="workspace-info-box">
-            <span>ZIP</span>
-            <strong>
-              {{ selected_prop.zip_code if selected_prop and selected_prop.zip_code else "—" }}
-            </strong>
-          </div>
-
-          <div class="workspace-info-box">
-            <span>Type</span>
-            <strong>
-              {{ selected_prop.property_type if selected_prop and selected_prop.property_type else "—" }}
-            </strong>
-          </div>
-
-          <div class="workspace-info-box">
-            <span>Beds / Baths</span>
-            <strong>
-              {% if selected_prop %}
-                {{ selected_prop.bedrooms or selected_prop.beds or "—" }} / {{ selected_prop.bathrooms or selected_prop.baths or "—" }}
-              {% else %}
-                —
-              {% endif %}
-            </strong>
-          </div>
-
-          <div class="workspace-info-box">
-            <span>Sq Ft</span>
-            <strong>
-              {% if selected_prop and (selected_prop.sqft or selected_prop.square_feet) %}
-                {{ "{:,.0f}".format(selected_prop.sqft or selected_prop.square_feet) }}
-              {% else %}
-                —
-              {% endif %}
-            </strong>
-          </div>
-
-          <div class="workspace-info-box">
-            <span>Year Built</span>
-            <strong>
-              {{ selected_prop.year_built if selected_prop and selected_prop.year_built else "—" }}
-            </strong>
-          </div>
-
-          <div class="workspace-info-box">
-            <span>Deal Link</span>
-            <strong>
-              {% if deal %}Attached{% else %}Not Yet{% endif %}
-            </strong>
-          </div>
-        </div>
-      </section>
-
-      <!-- STRATEGY COMPARISON -->
-      <section class="ravlo-card pad">
-        <div class="section-head">
-          <div>
-            <div class="eyebrow">COMPARISON</div>
-            <h3>Strategy Comparison</h3>
+            <div class="eyebrow">STRATEGY BOARD</div>
+            <h3>Side-by-Side Comparison</h3>
           </div>
         </div>
 
         {% if comparison %}
         <div class="workspace-compare-grid">
-          {% for key, item in comparison.items() %}
-          <div class="workspace-compare-card {% if recommendation and recommendation.recommended_strategy and recommendation.recommended_strategy|lower == key|lower %}recommended{% endif %}">
-            <span class="workspace-compare-kicker">{{ key|upper }}</span>
 
-            <strong class="workspace-compare-title">
-              {% if key == "flip" %}Fix & Flip{% elif key == "rental" %}Rental{% elif key == "airbnb" %}Airbnb{% else %}{{ key|title }}{% endif %}
-            </strong>
+          <div class="workspace-compare-card {% if recommended == 'flip' %}recommended{% endif %}">
+            <span class="workspace-compare-kicker">FLIP</span>
+            <strong class="workspace-compare-title">Fix & Flip</strong>
 
             <div class="workspace-compare-meta">
-              {% if item.profit is defined %}
-                <div><span>Profit</span><strong>${{ "{:,.0f}".format(item.profit or 0) }}</strong></div>
-              {% elif item.net_profit is defined %}
-                <div><span>Profit</span><strong>${{ "{:,.0f}".format(item.net_profit or 0) }}</strong></div>
-              {% endif %}
-
-              {% if item.monthly_cashflow is defined %}
-                <div><span>Cash Flow</span><strong>${{ "{:,.0f}".format(item.monthly_cashflow or 0) }}</strong></div>
-              {% endif %}
-
-              {% if item.roi is defined %}
-                <div><span>ROI</span><strong>{{ "{:.1f}".format(item.roi or 0) }}%</strong></div>
-              {% endif %}
+              <div><span>Projected Profit</span><strong>${{ "{:,.0f}".format(flip_profit) }}</strong></div>
+              <div><span>Total Investment</span><strong>${{ "{:,.0f}".format(flip_total) }}</strong></div>
+              <div><span>ROI</span><strong>{{ "{:.1f}".format(flip_roi) }}%</strong></div>
+              <div><span>Best Use</span><strong>Resale Spread</strong></div>
             </div>
+
+            <div class="metric-bar-wrap">
+              <div class="metric-bar-label">
+                <span>Profit Strength</span>
+                <strong>{{ "{:.0f}".format((flip_profit / max_profit) * 100) if max_profit else 0 }}%</strong>
+              </div>
+              <div class="metric-bar"><div class="metric-bar-fill" style="width: {{ (flip_profit / max_profit) * 100 if max_profit else 0 }}%;"></div></div>
+            </div>
+
+            {% if recommendation and recommendation.notes and recommendation.notes.get("flip") %}
+            <div class="workspace-compare-note">{{ recommendation.notes.get("flip") }}</div>
+            {% endif %}
           </div>
-          {% endfor %}
+
+          <div class="workspace-compare-card {% if recommended == 'rental' %}recommended{% endif %}">
+            <span class="workspace-compare-kicker">RENTAL</span>
+            <strong class="workspace-compare-title">Buy & Hold Rental</strong>
+
+            <div class="workspace-compare-meta">
+              <div><span>Monthly Rent</span><strong>${{ "{:,.0f}".format(rental_rent) }}</strong></div>
+              <div><span>Monthly Cash Flow</span><strong>${{ "{:,.0f}".format(rental_cashflow) }}</strong></div>
+              <div><span>Annual NOI</span><strong>${{ "{:,.0f}".format(rental.get("annual_noi", 0) or 0) }}</strong></div>
+              <div><span>Cap Rate</span><strong>{{ "{:.1f}".format(rental_cap) }}%</strong></div>
+            </div>
+
+            <div class="metric-bar-wrap">
+              <div class="metric-bar-label">
+                <span>Cash Flow Strength</span>
+                <strong>{{ "{:.0f}".format(((rental_cashflow * 12) / max_profit) * 100) if max_profit else 0 }}%</strong>
+              </div>
+              <div class="metric-bar"><div class="metric-bar-fill" style="width: {{ ((rental_cashflow * 12) / max_profit) * 100 if max_profit else 0 }}%;"></div></div>
+            </div>
+
+            {% if recommendation and recommendation.notes and recommendation.notes.get("rental") %}
+            <div class="workspace-compare-note">{{ recommendation.notes.get("rental") }}</div>
+            {% endif %}
+          </div>
+
+          <div class="workspace-compare-card {% if recommended == 'airbnb' %}recommended{% endif %}">
+            <span class="workspace-compare-kicker">AIRBNB</span>
+            <strong class="workspace-compare-title">Short-Term Rental</strong>
+
+            <div class="workspace-compare-meta">
+              <div><span>Nightly Rate</span><strong>${{ "{:,.0f}".format(airbnb_nightly) }}</strong></div>
+              <div><span>Occupancy</span><strong>{{ "{:.0f}".format(airbnb_occ) }}%</strong></div>
+              <div><span>Gross Monthly</span><strong>${{ "{:,.0f}".format(airbnb_gross) }}</strong></div>
+              <div><span>Net Monthly</span><strong>${{ "{:,.0f}".format(airbnb_net) }}</strong></div>
+            </div>
+
+            <div class="metric-bar-wrap">
+              <div class="metric-bar-label">
+                <span>Income Strength</span>
+                <strong>{{ "{:.0f}".format(((airbnb_net * 12) / max_profit) * 100) if max_profit else 0 }}%</strong>
+              </div>
+              <div class="metric-bar"><div class="metric-bar-fill" style="width: {{ ((airbnb_net * 12) / max_profit) * 100 if max_profit else 0 }}%;"></div></div>
+            </div>
+
+            {% if recommendation and recommendation.notes and recommendation.notes.get("airbnb") %}
+            <div class="workspace-compare-note">{{ recommendation.notes.get("airbnb") }}</div>
+            {% endif %}
+          </div>
+
         </div>
         {% else %}
         <div class="empty-state">No comparison data loaded yet.</div>
         {% endif %}
       </section>
 
-      <!-- AI SUMMARY -->
       <section class="ravlo-card pad">
         <div class="section-head">
           <div>
             <div class="eyebrow">AI SUMMARY</div>
-            <h3>Workspace Summary</h3>
+            <h3>Opportunity Narrative</h3>
           </div>
         </div>
 
         <div class="feature-highlight">
-          <div class="feature-highlight-label">Narrative</div>
+          <div class="feature-highlight-label">AI Summary</div>
           <div class="feature-highlight-value">
             {{ ai_summary or workspace_analysis.get("summary") or "No AI summary yet." }}
           </div>
         </div>
 
-        <div class="report-note mt-16">
-          <strong>Risk View</strong>
-          <p>
-            {{ workspace_analysis.get("risk_summary") or strategy_analysis.get("reason") or "No saved risk summary yet." }}
-          </p>
+        <div class="workspace-fit-grid mt-16">
+          <div class="workspace-mini-stat">
+            <span>Best Strategy</span>
+            <strong>
+              {% if recommended == "flip" %}
+                Fix & Flip
+              {% elif recommended == "rental" %}
+                Buy & Hold
+              {% elif recommended == "airbnb" %}
+                Airbnb
+              {% else %}
+                Pending
+              {% endif %}
+            </strong>
+          </div>
+
+          <div class="workspace-mini-stat">
+            <span>Rental DSCR</span>
+            <strong>{{ "{:.2f}".format(rental_dscr) if rental_dscr else "—" }}</strong>
+          </div>
+
+          <div class="workspace-mini-stat">
+            <span>Flip ROI</span>
+            <strong>{{ "{:.1f}".format(flip_roi) }}%</strong>
+          </div>
+
+          <div class="workspace-mini-stat">
+            <span>Airbnb Occupancy</span>
+            <strong>{{ "{:.0f}".format(airbnb_occ) }}%</strong>
+          </div>
         </div>
       </section>
 
-      <!-- SAVED REHAB SUMMARY -->
+      <section class="ravlo-card pad">
+        <div class="section-head">
+          <div>
+            <div class="eyebrow">PROPERTY SNAPSHOT</div>
+            <h3>Property + Deal Context</h3>
+          </div>
+        </div>
+
+        <div class="workspace-info-grid">
+          <div class="workspace-info-box">
+            <span>Address</span>
+            <strong>{{ selected_prop.address or "—" }}</strong>
+          </div>
+          <div class="workspace-info-box">
+            <span>City / State</span>
+            <strong>{{ selected_prop.city or "—" }}{% if selected_prop.city and selected_prop.state %}, {% endif %}{{ selected_prop.state or "" }}</strong>
+          </div>
+          <div class="workspace-info-box">
+            <span>ZIP</span>
+            <strong>{{ selected_prop.zip_code or "—" }}</strong>
+          </div>
+          <div class="workspace-info-box">
+            <span>Type</span>
+            <strong>{{ selected_prop.property_type or "—" }}</strong>
+          </div>
+          <div class="workspace-info-box">
+            <span>Beds / Baths</span>
+            <strong>{{ selected_prop.bedrooms or selected_prop.beds or "—" }} / {{ selected_prop.bathrooms or selected_prop.baths or "—" }}</strong>
+          </div>
+          <div class="workspace-info-box">
+            <span>Sq Ft</span>
+            <strong>{{ "{:,.0f}".format(selected_prop.sqft or selected_prop.square_feet) if (selected_prop.sqft or selected_prop.square_feet) else "—" }}</strong>
+          </div>
+          <div class="workspace-info-box">
+            <span>Deal Attached</span>
+            <strong>{% if deal %}Yes{% else %}No{% endif %}</strong>
+          </div>
+          <div class="workspace-info-box">
+            <span>Recommended</span>
+            <strong>
+              {% if recommended == "flip" %}
+                Fix & Flip
+              {% elif recommended == "rental" %}
+                Rental
+              {% elif recommended == "airbnb" %}
+                Airbnb
+              {% else %}
+                Pending
+              {% endif %}
+            </strong>
+          </div>
+        </div>
+      </section>
+
       <section class="ravlo-card pad">
         <div class="section-head">
           <div>
@@ -290,23 +359,14 @@ Review the deal, compare strategies, and move into architect, rehab, build, or c
             <span>Estimated Rehab Cost</span>
             <strong>${{ "{:,.0f}".format(rehab_analysis.get("estimated_rehab_cost", 0) or 0) }}</strong>
           </div>
-
           <div class="workspace-mini-stat">
             <span>Scope</span>
             <strong>{{ rehab_scope.get("rehab_level") or "Pending" }}</strong>
           </div>
-
           <div class="workspace-mini-stat">
             <span>Cost / Sq Ft</span>
-            <strong>
-              {% if rehab_scope.get("cost_per_sqft") %}
-                ${{ "{:,.0f}".format(rehab_scope.get("cost_per_sqft")) }}
-              {% else %}
-                —
-              {% endif %}
-            </strong>
+            <strong>{% if rehab_scope.get("cost_per_sqft") %}${{ "{:,.0f}".format(rehab_scope.get("cost_per_sqft")) }}{% else %}—{% endif %}</strong>
           </div>
-
           <div class="workspace-mini-stat">
             <span>Sq Ft Basis</span>
             <strong>{{ rehab_scope.get("sqft") or "—" }}</strong>
@@ -330,34 +390,36 @@ Review the deal, compare strategies, and move into architect, rehab, build, or c
 
     </div>
 
-    <!-- RIGHT -->
     <div class="workspace-stack">
 
-      <!-- RECOMMENDATION -->
       <section class="ravlo-card pad">
         <div class="section-head">
           <div>
-            <div class="eyebrow">RECOMMENDATION</div>
-            <h3>Best Strategy</h3>
+            <div class="eyebrow">SCOREBOARD</div>
+            <h3>Performance Signals</h3>
           </div>
         </div>
 
-        <div class="feature-highlight">
-          <div class="feature-highlight-label">Recommended Strategy</div>
-          <div class="feature-highlight-value">
-            {{ recommendation.recommended_strategy if recommendation and recommendation.recommended_strategy else (strategy_analysis.get("recommended_strategy") or "Pending") }}
+        <div class="workspace-mini-stat-stack">
+          <div class="workspace-mini-stat">
+            <span>Flip Profit</span>
+            <strong>${{ "{:,.0f}".format(flip_profit) }}</strong>
           </div>
-        </div>
-
-        <div class="report-note mt-16">
-          <strong>Why</strong>
-          <p>
-            {{ strategy_analysis.get("reason") or "Run Deal Architect for a more detailed strategy explanation." }}
-          </p>
+          <div class="workspace-mini-stat">
+            <span>Rental Cash Flow</span>
+            <strong>${{ "{:,.0f}".format(rental_cashflow) }}/mo</strong>
+          </div>
+          <div class="workspace-mini-stat">
+            <span>Airbnb Net</span>
+            <strong>${{ "{:,.0f}".format(airbnb_net) }}/mo</strong>
+          </div>
+          <div class="workspace-mini-stat">
+            <span>Rental DSCR</span>
+            <strong>{{ "{:.2f}".format(rental_dscr) if rental_dscr else "—" }}</strong>
+          </div>
         </div>
       </section>
 
-      <!-- OPTIMIZATION -->
       <section class="ravlo-card pad">
         <div class="section-head">
           <div>
@@ -372,32 +434,17 @@ Review the deal, compare strategies, and move into architect, rehab, build, or c
             <span>Best Exit</span>
             <strong>{{ optimization.get("best_exit") or "—" }}</strong>
           </div>
-
           <div class="workspace-mini-stat">
             <span>Profit Gap To Target</span>
             <strong>${{ "{:,.0f}".format(optimization.get("profit_gap_to_target", 0) or 0) }}</strong>
           </div>
-
           <div class="workspace-mini-stat">
             <span>Rehab Pressure</span>
-            <strong>
-              {% if optimization.get("rehab_pressure") is not none %}
-                {{ "{:.1f}".format((optimization.get("rehab_pressure", 0) or 0) * 100) }}%
-              {% else %}
-                —
-              {% endif %}
-            </strong>
+            <strong>{% if optimization.get("rehab_pressure") is not none %}{{ "{:.1f}".format((optimization.get("rehab_pressure", 0) or 0) * 100) }}%{% else %}—{% endif %}</strong>
           </div>
-
           <div class="workspace-mini-stat">
             <span>Rent Ratio</span>
-            <strong>
-              {% if optimization.get("rent_ratio") is not none %}
-                {{ "{:.2f}".format((optimization.get("rent_ratio", 0) or 0) * 100) }}%
-              {% else %}
-                —
-              {% endif %}
-            </strong>
+            <strong>{% if optimization.get("rent_ratio") is not none %}{{ "{:.2f}".format((optimization.get("rent_ratio", 0) or 0) * 100) }}%{% else %}—{% endif %}</strong>
           </div>
         </div>
 
@@ -418,28 +465,6 @@ Review the deal, compare strategies, and move into architect, rehab, build, or c
         {% endif %}
       </section>
 
-      <!-- RESOLVED / PROPERTY INTELLIGENCE -->
-      <section class="ravlo-card pad">
-        <div class="section-head">
-          <div>
-            <div class="eyebrow">INTELLIGENCE</div>
-            <h3>Property Intelligence</h3>
-          </div>
-        </div>
-
-        {% if resolved %}
-        <div class="report-note">
-          <strong>Resolved Data</strong>
-          <p>
-            Property intelligence resolved successfully and is available for use in analysis and downstream decisions.
-          </p>
-        </div>
-        {% else %}
-        <div class="empty-state">No resolved property intelligence available yet.</div>
-        {% endif %}
-      </section>
-
-      <!-- NEXT ACTIONS -->
       <section class="ravlo-card pad">
         <div class="section-head">
           <div>
@@ -457,17 +482,17 @@ Review the deal, compare strategies, and move into architect, rehab, build, or c
 
           <a href="{{ url_for('investor.deal_rehab', deal_id=deal.id) }}" class="quick-card">
             <span class="quick-title">Open Rehab Studio</span>
-            <span class="quick-sub">Build scope, cost assumptions, and rehab optimization.</span>
+            <span class="quick-sub">Build scope, optimize budget, and pressure-test rehab.</span>
           </a>
 
           <a href="{{ url_for('investor.build_studio') }}" class="quick-card">
             <span class="quick-title">Open Build Studio</span>
-            <span class="quick-sub">Use development tools for build-focused opportunities.</span>
+            <span class="quick-sub">Use build tools for development-heavy opportunities.</span>
           </a>
 
           <a href="{{ url_for('investor.capital_application') }}" class="quick-card">
             <span class="quick-title">Move to Capital</span>
-            <span class="quick-sub">Prepare this deal for a funding request.</span>
+            <span class="quick-sub">Prepare this opportunity for funding.</span>
           </a>
           {% else %}
           <div class="empty-state">Attach or create a deal to continue the workflow.</div>
@@ -482,11 +507,10 @@ Review the deal, compare strategies, and move into architect, rehab, build, or c
   {% else %}
   <section class="ravlo-hero-card">
     <div class="eyebrow">RAVLO WORKSPACE</div>
-    <h2>No deal selected</h2>
+    <h2>No property selected</h2>
     <p class="muted">
-      Choose a saved property or open a deal from your pipeline to load the workspace.
+      Choose a saved property to compare Fix & Flip, Rental, and Airbnb paths.
     </p>
-
     <div class="mt-16">
       <a href="{{ url_for('investor.deals_list') }}" class="ravlo-btn primary">
         Open Deal Pipeline
@@ -632,54 +656,108 @@ Review the deal, compare strategies, and move into architect, rehab, build, or c
   .workspace-compare-grid{
     display:grid;
     grid-template-columns:repeat(3, minmax(0,1fr));
-    gap:12px;
+    gap:14px;
   }
 
   .workspace-compare-card{
-    padding:18px;
+    padding:20px;
     border-radius:20px;
     background:rgba(255,255,255,.03);
     border:1px solid rgba(255,255,255,.08);
   }
 
   .workspace-compare-card.recommended{
-    border-color:rgba(107,127,147,.38);
-    background:rgba(107,127,147,.10);
-    box-shadow:0 0 0 1px rgba(107,127,147,.16) inset;
+    border-color:rgba(107,127,147,.40);
+    background:linear-gradient(180deg, rgba(107,127,147,.10), rgba(255,255,255,.03));
+    box-shadow:0 0 0 1px rgba(107,127,147,.14) inset;
   }
 
   .workspace-compare-kicker{
-    display:block;
-    color:var(--muted);
-    font-size:12px;
+    font-size:11px;
+    letter-spacing:.1em;
     text-transform:uppercase;
-    letter-spacing:.08em;
-    margin-bottom:8px;
+    color:var(--muted);
   }
 
   .workspace-compare-title{
     display:block;
+    margin-top:6px;
+    font-size:19px;
+    font-weight:700;
     color:var(--text);
-    font-size:20px;
-    line-height:1.2;
-    margin-bottom:14px;
   }
 
   .workspace-compare-meta{
     display:grid;
     gap:10px;
+    margin-top:14px;
   }
 
   .workspace-compare-meta div{
     display:flex;
-    align-items:center;
     justify-content:space-between;
-    gap:10px;
+    align-items:center;
+    gap:12px;
+    padding:10px 0;
+    border-bottom:1px solid rgba(255,255,255,.06);
+  }
+
+  .workspace-compare-meta div:last-child{
+    border-bottom:none;
+    padding-bottom:0;
+  }
+
+  .workspace-compare-meta span{
     color:var(--muted);
+    font-size:12px;
+    text-transform:uppercase;
+    letter-spacing:.08em;
   }
 
   .workspace-compare-meta strong{
     color:var(--text);
+    font-size:15px;
+    font-weight:700;
+    text-align:right;
+  }
+
+  .workspace-compare-note{
+    margin-top:14px;
+    padding-top:14px;
+    border-top:1px solid rgba(255,255,255,.06);
+    color:var(--muted);
+    font-size:13px;
+    line-height:1.55;
+  }
+
+  .metric-bar-wrap{
+    margin-top:14px;
+  }
+
+  .metric-bar-label{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    margin-bottom:8px;
+    font-size:12px;
+    color:var(--muted);
+    text-transform:uppercase;
+    letter-spacing:.08em;
+  }
+
+  .metric-bar{
+    width:100%;
+    height:10px;
+    border-radius:999px;
+    background:rgba(255,255,255,.06);
+    overflow:hidden;
+  }
+
+  .metric-bar-fill{
+    height:100%;
+    border-radius:inherit;
+    background:linear-gradient(90deg, #6B7F93, #8EA7C0);
   }
 
   .workspace-fit-grid{

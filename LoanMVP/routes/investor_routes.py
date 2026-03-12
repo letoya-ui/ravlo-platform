@@ -2860,16 +2860,21 @@ def deal_workspace(deal_id=None):
     comps = {}
     resolved = None
     comparison = {}
-    recommendation = None
+    recommendation = {}
     ai_summary = None
+
+    workspace_analysis = {}
+    strategy_analysis = {}
+    rehab_analysis = {}
+    optimization = {}
 
     mode = (request.args.get("mode") or "flip").lower()
     if mode not in ("flip", "rental", "airbnb"):
         mode = "flip"
 
-    # ----------------------------------------
-    # 1. Load deal directly if deal_id passed
-    # ----------------------------------------
+    # -----------------------------------------
+    # 1) Load by deal_id if provided in URL
+    # -----------------------------------------
     if deal_id:
         deal = (
             Deal.query
@@ -2887,10 +2892,31 @@ def deal_workspace(deal_id=None):
                 .first()
             )
 
-    # ---------------------------------------------------
-    # 2. Otherwise allow property selection from prop_id
-    # ---------------------------------------------------
-    if not deal and not selected_prop:
+    # -----------------------------------------
+    # 2) Fallback: querystring deal_id
+    # -----------------------------------------
+    if not deal:
+        query_deal_id = request.args.get("deal_id", type=int)
+        if query_deal_id:
+            deal = (
+                Deal.query
+                .filter_by(id=query_deal_id, user_id=current_user.id)
+                .first()
+            )
+            if deal and getattr(deal, "saved_property_id", None):
+                selected_prop = (
+                    SavedProperty.query
+                    .filter_by(
+                        id=deal.saved_property_id,
+                        **_profile_id_filter(SavedProperty, ip.id)
+                    )
+                    .first()
+                )
+
+    # -----------------------------------------
+    # 3) Fallback: property selection by prop_id
+    # -----------------------------------------
+    if not selected_prop:
         prop_id = request.args.get("prop_id", type=int)
         if prop_id:
             selected_prop = (
@@ -2902,7 +2928,7 @@ def deal_workspace(deal_id=None):
                 .first()
             )
 
-            if selected_prop:
+            if selected_prop and not deal:
                 deal = (
                     Deal.query
                     .filter_by(
@@ -2913,9 +2939,9 @@ def deal_workspace(deal_id=None):
                     .first()
                 )
 
-    # ---------------------------------------------------
-    # 3. If deal exists but property still missing, try FK
-    # ---------------------------------------------------
+    # -----------------------------------------
+    # 4) If deal exists but prop not loaded, try FK
+    # -----------------------------------------
     if deal and not selected_prop and getattr(deal, "saved_property_id", None):
         selected_prop = (
             SavedProperty.query
@@ -2926,15 +2952,19 @@ def deal_workspace(deal_id=None):
             .first()
         )
 
-    # ----------------------------------------
-    # 4. Load comps + resolved intelligence
-    # ----------------------------------------
+    # -----------------------------------------
+    # 5) Load comps / property intelligence
+    # -----------------------------------------
     if selected_prop:
-        comps = get_saved_property_comps(
-            user_id=current_user.id,
-            saved_property_id=selected_prop.id,
-            rentometer_api_key=None,
-        ) or {}
+        try:
+            comps = get_saved_property_comps(
+                user_id=current_user.id,
+                saved_property_id=selected_prop.id,
+                rentometer_api_key=None,
+            ) or {}
+        except Exception as e:
+            current_app.logger.warning("Workspace comps error: %s", e)
+            comps = {}
 
         if comps:
             try:
@@ -2952,35 +2982,40 @@ def deal_workspace(deal_id=None):
                     recommend_strategy,
                 )
 
+                empty_form = ImmutableMultiDict()
+
                 comparison = {
-                    "flip": calculate_flip_budget(ImmutableMultiDict(), comps),
-                    "rental": calculate_rental_budget(ImmutableMultiDict(), comps),
-                    "airbnb": calculate_airbnb_budget(ImmutableMultiDict(), comps),
+                    "flip": calculate_flip_budget(empty_form, comps),
+                    "rental": calculate_rental_budget(empty_form, comps),
+                    "airbnb": calculate_airbnb_budget(empty_form, comps),
                 }
-                recommendation = recommend_strategy(comparison)
+
+                recommendation = recommend_strategy(comparison) or {}
             except Exception as e:
-                current_app.logger.warning("Workspace calc error: %s", e)
+                current_app.logger.warning("Workspace calculation error: %s", e)
                 comparison = {}
-                recommendation = None
+                recommendation = {}
 
-    # ----------------------------------------
-    # 5. Load saved results from deal
-    # ----------------------------------------
-    results_json = (deal.results_json or {}) if deal else {}
-    strategy_analysis = results_json.get("strategy_analysis", {}) or {}
-    rehab_analysis = results_json.get("rehab_analysis", {}) or {}
-    workspace_analysis = results_json.get("workspace_analysis", {}) or {}
-    optimization = results_json.get("optimization", {}) or {}
+    # -----------------------------------------
+    # 6) Load saved deal results
+    # -----------------------------------------
+    if deal:
+        results_json = deal.results_json or {}
+        strategy_analysis = results_json.get("strategy_analysis", {}) or {}
+        rehab_analysis = results_json.get("rehab_analysis", {}) or {}
+        workspace_analysis = results_json.get("workspace_analysis", {}) or {}
+        optimization = results_json.get("optimization", {}) or {}
 
-    # ----------------------------------------
-    # 6. Optional AI summary
-    # ----------------------------------------
-    if comparison:
-        try:
-            selected_results = comparison.get(mode) or comparison.get("flip") or {}
-            ai_summary = generate_ai_insights(mode, selected_results, comps)
-        except Exception:
-            ai_summary = "AI summary unavailable."
+    # -----------------------------------------
+    # 7) AI summary
+    # -----------------------------------------
+    try:
+        if comparison:
+            selected_metrics = comparison.get(mode) or comparison.get("flip") or {}
+            ai_summary = generate_ai_deal_summary(selected_metrics)
+    except Exception as e:
+        current_app.logger.warning("AI summary error: %s", e)
+        ai_summary = None
 
     return render_template(
         "investor/deal_workspace.html",
