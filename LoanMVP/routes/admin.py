@@ -19,7 +19,7 @@ from LoanMVP.models.document_models import LoanDocument
 from LoanMVP.models.system_models import SystemLog
 from LoanMVP.models.admin import Company, AccessRequest, UserInvite
 
-from LoanMVP.services.notify import notify
+from LoanMVP.services.notify_service import notify
 
 import io
 import csv
