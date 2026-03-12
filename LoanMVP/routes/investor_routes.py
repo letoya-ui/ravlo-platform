@@ -2837,12 +2837,12 @@ def deal_studio():
         page_subtitle="Analyze opportunities, design projects, and prepare deals for funding."
     )
 
-
-@investor_bp.route("/deals/workspace", methods=["GET", "POST"])
-@investor_bp.route("/deal_workspace", methods=["GET", "POST"])
+@investor_bp.route("/deals/workspace", methods=["GET"])
+@investor_bp.route("/deal_workspace", methods=["GET"])
+@investor_bp.route("/deal_workspace/<int:deal_id>", methods=["GET"])
 @login_required
 @role_required("investor")
-def deal_workspace():
+def deal_workspace(deal_id=None):
     ip = InvestorProfile.query.filter_by(user_id=current_user.id).first()
     if not ip:
         flash("Profile not found.", "danger")
@@ -2855,63 +2855,80 @@ def deal_workspace():
         .all()
     )
 
-    prop_id = request.values.get("prop_id")
     selected_prop = None
     deal = None
-    deal_id = None
+    comps = {}
+    resolved = None
+    comparison = {}
+    recommendation = None
+    ai_summary = None
 
-    if prop_id:
-        try:
-            pid = int(prop_id)
-            selected_prop = SavedProperty.query.filter_by(
-                id=pid,
-                **_profile_id_filter(SavedProperty, ip.id)
-            ).first()
-        except Exception:
-            selected_prop = None
-
-    mode = (request.values.get("mode") or "flip").lower()
+    mode = (request.args.get("mode") or "flip").lower()
     if mode not in ("flip", "rental", "airbnb"):
         mode = "flip"
 
-    inputs = request.form if request.method == "POST" else ImmutableMultiDict()
-
-    comps = {}
-    resolved = None
-    comparison = None
-    recommendation = None
-    results = None
-    ai_summary = None
-    risk_flags = []
-    timeline = {}
-    material_costs = {}
-    rehab_notes = {}
-
-    if request.method == "POST" and not selected_prop:
-        flash("Please select a saved property first.", "warning")
-        return render_template(
-            "investor/deal_workspace.html",
-            investor=ip,
-            saved_props=saved_props,
-            selected_prop=None,
-            prop_id=None,
-            property_id=None,
-            deal=None,
-            deal_id=None,
-            mode=mode,
-            comps=comps,
-            resolved=resolved,
-            comparison=None,
-            recommendation=recommendation,
-            results=None,
-            ai_summary=ai_summary,
-            risk_flags=risk_flags,
-            timeline=timeline,
-            material_costs=material_costs,
-            rehab_notes=rehab_notes,
-            active_page="deal_workspace",
+    # ----------------------------------------
+    # 1. Load deal directly if deal_id passed
+    # ----------------------------------------
+    if deal_id:
+        deal = (
+            Deal.query
+            .filter_by(id=deal_id, user_id=current_user.id)
+            .first_or_404()
         )
 
+        if getattr(deal, "saved_property_id", None):
+            selected_prop = (
+                SavedProperty.query
+                .filter_by(
+                    id=deal.saved_property_id,
+                    **_profile_id_filter(SavedProperty, ip.id)
+                )
+                .first()
+            )
+
+    # ---------------------------------------------------
+    # 2. Otherwise allow property selection from prop_id
+    # ---------------------------------------------------
+    if not deal and not selected_prop:
+        prop_id = request.args.get("prop_id", type=int)
+        if prop_id:
+            selected_prop = (
+                SavedProperty.query
+                .filter_by(
+                    id=prop_id,
+                    **_profile_id_filter(SavedProperty, ip.id)
+                )
+                .first()
+            )
+
+            if selected_prop:
+                deal = (
+                    Deal.query
+                    .filter_by(
+                        user_id=current_user.id,
+                        saved_property_id=selected_prop.id
+                    )
+                    .order_by(Deal.updated_at.desc(), Deal.id.desc())
+                    .first()
+                )
+
+    # ---------------------------------------------------
+    # 3. If deal exists but property still missing, try FK
+    # ---------------------------------------------------
+    if deal and not selected_prop and getattr(deal, "saved_property_id", None):
+        selected_prop = (
+            SavedProperty.query
+            .filter_by(
+                id=deal.saved_property_id,
+                **_profile_id_filter(SavedProperty, ip.id)
+            )
+            .first()
+        )
+
+    # ----------------------------------------
+    # 4. Load comps + resolved intelligence
+    # ----------------------------------------
     if selected_prop:
         comps = get_saved_property_comps(
             user_id=current_user.id,
@@ -2919,145 +2936,51 @@ def deal_workspace():
             rentometer_api_key=None,
         ) or {}
 
-        deal = (
-            Deal.query
-            .filter_by(user_id=current_user.id, saved_property_id=selected_prop.id)
-            .order_by(Deal.updated_at.desc(), Deal.id.desc())
-            .first()
-        )
-        if deal:
-            deal_id = deal.id
-
         if comps:
             try:
                 from LoanMVP.services.unified_property_resolver import resolve_property_intelligence
                 resolved = resolve_property_intelligence(selected_prop.id, comps)
             except Exception as e:
-                print("Resolver error:", e)
+                current_app.logger.warning("Resolver error: %s", e)
                 resolved = None
 
-            from LoanMVP.services.deal_workspace_calcs import (
-                calculate_flip_budget,
-                calculate_rental_budget,
-                calculate_airbnb_budget,
-                recommend_strategy,
-            )
+            try:
+                from LoanMVP.services.deal_workspace_calcs import (
+                    calculate_flip_budget,
+                    calculate_rental_budget,
+                    calculate_airbnb_budget,
+                    recommend_strategy,
+                )
 
-            comparison = {
-                "flip": calculate_flip_budget(inputs, comps),
-                "rental": calculate_rental_budget(inputs, comps),
-                "airbnb": calculate_airbnb_budget(inputs, comps),
-            }
-            recommendation = recommend_strategy(comparison)
+                comparison = {
+                    "flip": calculate_flip_budget(ImmutableMultiDict(), comps),
+                    "rental": calculate_rental_budget(ImmutableMultiDict(), comps),
+                    "airbnb": calculate_airbnb_budget(ImmutableMultiDict(), comps),
+                }
+                recommendation = recommend_strategy(comparison)
+            except Exception as e:
+                current_app.logger.warning("Workspace calc error: %s", e)
+                comparison = {}
+                recommendation = None
 
-    if request.method == "POST" and selected_prop and comps and comparison:
-        base = comparison.get(mode) or comparison.get("flip") or {}
-        results = dict(base) if isinstance(base, dict) else base.__dict__.copy()
+    # ----------------------------------------
+    # 5. Load saved results from deal
+    # ----------------------------------------
+    results_json = (deal.results_json or {}) if deal else {}
+    strategy_analysis = results_json.get("strategy_analysis", {}) or {}
+    rehab_analysis = results_json.get("rehab_analysis", {}) or {}
+    workspace_analysis = results_json.get("workspace_analysis", {}) or {}
+    optimization = results_json.get("optimization", {}) or {}
 
+    # ----------------------------------------
+    # 6. Optional AI summary
+    # ----------------------------------------
+    if comparison:
         try:
-            ai_summary = generate_ai_insights(mode, results, comps)
+            selected_results = comparison.get(mode) or comparison.get("flip") or {}
+            ai_summary = generate_ai_insights(mode, selected_results, comps)
         except Exception:
             ai_summary = "AI summary unavailable."
-
-        rehab_items = {
-            "kitchen": request.form.get("kitchen") or "",
-            "bathroom": request.form.get("bathroom") or "",
-            "flooring": request.form.get("flooring") or "",
-            "paint": request.form.get("paint") or "",
-            "roof": request.form.get("roof") or "",
-            "hvac": request.form.get("hvac") or "",
-        }
-        rehab_scope = request.form.get("rehab_scope", "medium")
-
-        sqft = (comps.get("property") or {}).get("sqft", 0)
-        try:
-            sqft = int(float(sqft or 0))
-        except Exception:
-            sqft = 0
-
-        rehab = estimate_rehab_cost(
-            property_sqft=sqft,
-            scope=rehab_scope,
-            items=rehab_items
-        )
-
-        action = request.form.get("action")
-        target_budget = request.form.get("target_rehab_budget")
-
-        if action == "optimize_rehab" and target_budget:
-            try:
-                rehab_items, rehab = optimize_rehab_to_budget(
-                    target_budget=float(target_budget),
-                    items=rehab_items,
-                    scope=rehab_scope,
-                    sqft=sqft,
-                )
-            except Exception as e:
-                print("Optimize rehab error:", e)
-
-        elif action == "optimize_roi":
-            try:
-                rehab_items, rehab = optimize_rehab_for_roi(
-                    items=rehab_items,
-                    scope=rehab_scope,
-                    sqft=sqft,
-                    comps=comps
-                )
-            except Exception as e:
-                print("Optimize ROI error:", e)
-
-        elif action == "optimize_timeline":
-            try:
-                rehab_items, rehab = optimize_rehab_for_timeline(
-                    items=rehab_items,
-                    scope=rehab_scope,
-                    sqft=sqft
-                )
-            except Exception as e:
-                print("Optimize timeline error:", e)
-
-        elif action == "optimize_arv":
-            try:
-                rehab_items, rehab = optimize_rehab_for_arv(
-                    items=rehab_items,
-                    scope=rehab_scope,
-                    sqft=sqft
-                )
-            except Exception as e:
-                print("Optimize ARV error:", e)
-
-        results["rehab_breakdown"] = rehab
-        results["rehab_total"] = rehab.get("total")
-        results["rehab_summary"] = {
-            "total": rehab.get("total"),
-            "cost_per_sqft": rehab.get("cost_per_sqft"),
-            "scope": rehab.get("scope"),
-            "items": {k: v for k, v in rehab_items.items() if v},
-        }
-
-        risk_flags = generate_rehab_risk_flags(results, comps) or []
-        results["risk_flags"] = risk_flags
-
-        timeline = estimate_rehab_timeline(rehab_items, rehab_scope) or {}
-        results["rehab_timeline"] = timeline
-
-        material_costs = estimate_material_costs(
-            property_sqft=sqft,
-            items=rehab_items
-        ) or {}
-        results["material_costs"] = material_costs
-
-        rehab_notes = generate_rehab_notes(results, comps, strategy=mode) or {}
-        results["rehab_notes"] = rehab_notes
-
-        session["latest_rehab_results"] = {
-            "rehab_summary": results.get("rehab_summary"),
-            "rehab_breakdown": results.get("rehab_breakdown"),
-            "risk_flags": risk_flags,
-            "rehab_timeline": timeline,
-            "material_costs": material_costs,
-            "rehab_notes": rehab_notes,
-        }
 
     return render_template(
         "investor/deal_workspace.html",
@@ -3067,18 +2990,17 @@ def deal_workspace():
         prop_id=(selected_prop.id if selected_prop else None),
         property_id=(selected_prop.id if selected_prop else None),
         deal=deal,
-        deal_id=deal_id,
+        deal_id=(deal.id if deal else None),
         mode=mode,
         comps=comps,
         resolved=resolved,
         comparison=comparison,
         recommendation=recommendation,
-        results=results,
         ai_summary=ai_summary,
-        risk_flags=risk_flags,
-        timeline=timeline,
-        material_costs=material_costs,
-        rehab_notes=rehab_notes,
+        strategy_analysis=strategy_analysis,
+        rehab_analysis=rehab_analysis,
+        workspace_analysis=workspace_analysis,
+        optimization=optimization,
         active_page="deal_workspace",
     )
 
@@ -3105,8 +3027,6 @@ def deals_list():
     deals = query.order_by(Deal.updated_at.desc()).all()
     return render_template("investor/deals_list.html", deals=deals, status=status, q=q)
 
-
-from flask import abort
 
 @investor_bp.route("/deals/<int:deal_id>", methods=["GET"])
 @login_required
