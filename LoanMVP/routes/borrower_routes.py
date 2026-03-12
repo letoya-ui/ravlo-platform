@@ -13,7 +13,7 @@ from flask import (
 from flask_login import current_user
 from werkzeug.utils import secure_filename
 
-from LoanMVP.extensions import db
+from LoanMVP.extensions import db, csrf
 from LoanMVP.utils.decorators import role_required
 from LoanMVP.forms import BorrowerProfileForm
 from LoanMVP.ai.base_ai import AIAssistant
