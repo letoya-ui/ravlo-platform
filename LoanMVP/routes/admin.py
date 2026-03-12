@@ -48,7 +48,7 @@ def admin_required(func):
 @admin_bp.route("/dashboard")
 @role_required("admin")
 def dashboard():
-    from LoanMVP.models.user_models import User
+    from LoanMVP.models.user_model import User
     from LoanMVP.models.loan_models import LoanApplication
     from LoanMVP.models.document_models import LoanDocument
     from LoanMVP.models.admin import AccessRequest, Company, UserInvite
