@@ -2,23 +2,75 @@ from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, SubmitField, SelectField, IntegerField, DecimalField,   BooleanField, DateField, TextAreaField
 from wtforms.validators import DataRequired, Optional, Length, Email, NumberRange
 
+from flask_wtf import FlaskForm
+from wtforms import StringField, SelectField, DecimalField, IntegerField, SubmitField
+from wtforms.validators import DataRequired, Optional, Length, Email, NumberRange
+
+
 class BorrowerProfileForm(FlaskForm):
-    full_name = StringField("Full Name", validators=[DataRequired(), Length(max=120)])
-    phone = StringField("Phone", validators=[Optional(), Length(max=20)])
-    email = StringField("Email", validators=[DataRequired(), Email()])
-    address = StringField("Address", validators=[Optional(), Length(max=255)])
-    city = StringField("City", validators=[Optional(), Length(max=100)])
-    state = StringField("State", validators=[Optional(), Length(max=50)])
-    zip_code = StringField("Zip Code", validators=[Optional(), Length(max=10)])
-    employment_status = SelectField("Employment Status", choices=[
-        ("Employed", "Employed"),
-        ("Self-Employed", "Self-Employed"),
-        ("Unemployed", "Unemployed"),
-        ("Retired", "Retired"),
-        ("Other", "Other")
-    ], validators=[Optional()])
-    annual_income = DecimalField("Annual Income ($)", validators=[Optional()])
-    credit_score = IntegerField("Credit Score", validators=[Optional()])
+
+    full_name = StringField(
+        "Full Name",
+        validators=[DataRequired(), Length(max=120)]
+    )
+
+    email = StringField(
+        "Email",
+        validators=[DataRequired(), Email(), Length(max=120)]
+    )
+
+    phone = StringField(
+        "Phone",
+        validators=[Optional(), Length(max=20)]
+    )
+
+    address = StringField(
+        "Address",
+        validators=[Optional(), Length(max=255)]
+    )
+
+    city = StringField(
+        "City",
+        validators=[Optional(), Length(max=100)]
+    )
+
+    state = StringField(
+        "State",
+        validators=[Optional(), Length(max=50)]
+    )
+
+    zip_code = StringField(
+        "Zip Code",
+        validators=[Optional(), Length(max=10)]
+    )
+
+    employment_status = SelectField(
+        "Employment Status",
+        choices=[
+            ("", "Select Status"),
+            ("Employed", "Employed"),
+            ("Self-Employed", "Self-Employed"),
+            ("Unemployed", "Unemployed"),
+            ("Retired", "Retired"),
+            ("Other", "Other")
+        ],
+        validators=[Optional()]
+    )
+
+    annual_income = DecimalField(
+        "Annual Income ($)",
+        places=2,
+        validators=[Optional(), NumberRange(min=0, message="Income must be positive")]
+    )
+
+    credit_score = IntegerField(
+        "Credit Score",
+        validators=[
+            Optional(),
+            NumberRange(min=300, max=850, message="Credit score must be between 300 and 850")
+        ]
+    )
+
     submit = SubmitField("Save Profile")
 
 class PreapprovalForm(FlaskForm):
