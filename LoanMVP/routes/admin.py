@@ -55,7 +55,7 @@ def dashboard():
     # =========================
     stats = {
         "total_users": User.query.count(),
-        "total_loans": LoanApplication.query.count() if Loan else 0,
+        "total_loans": LoanApplication.query.count() if LoanApplication else 0,
         "total_docs": Document.query.count() if Document else 0,
         "pending_tasks": (
             Task.query.filter(db.func.lower(Task.status) == "pending").count()
