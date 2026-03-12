@@ -9,12 +9,19 @@ class Company(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(255), nullable=False)
+
+    # These fields exist in your database but were missing in your model
+    address = db.Column(db.String(255), nullable=True)
+    city = db.Column(db.String(255), nullable=True)
+    state = db.Column(db.String(50), nullable=True)
+    zip = db.Column(db.String(20), nullable=True)
+
     email_domain = db.Column(db.String(255), nullable=True)
     is_active = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     users = db.relationship("User", back_populates="company", lazy=True)
-    invites = db.relationship("UserInvite", backref="company", lazy=True)
+    invites = db.relationship("UserInvite", back_populates="company", lazy=True)
 
 
 class AccessRequest(db.Model):
