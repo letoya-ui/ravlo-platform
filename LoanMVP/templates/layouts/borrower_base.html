@@ -5,108 +5,109 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>{% block title %}Ravlo Borrower{% endblock %}</title>
+
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
   <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+
   {% block head %}{% endblock %}
 </head>
 <body>
 
-<div class="ravlo-shell">
-  <aside class="ravlo-sidebar">
-    <div class="ravlo-brand">
-      <div class="ravlo-mark">R</div>
-      <div>
-        <div class="ravlo-brand-title">Ravlo</div>
-        <div class="ravlo-brand-sub">Borrower</div>
-      </div>
-    </div>
+<div class="ravlo-app-shell">
 
-    <nav class="ravlo-nav">
-      <<aside class="ravlo-sidebar" id="ravloSidebar">
-  <div class="ravlo-sidebar-top">
+  <aside class="ravlo-sidebar" id="ravloSidebar">
 
-    <a href="{{ url_for('borrower.dashboard') }}" class="ravlo-brand">
-      <div class="ravlo-brand-mark">RV</div>
-      <div class="ravlo-brand-text">
-        <div class="ravlo-brand-name">Ravlo</div>
-        <div class="ravlo-brand-sub">Borrower Loan Center</div>
-      </div>
-    </a>
-
-    <button class="ravlo-sidebar-toggle" id="ravloSidebarToggle" type="button" aria-label="Toggle Menu">
-      ☰
-    </button>
-  </div>
-
-  <div class="ravlo-sidebar-section">
-    <div class="ravlo-sidebar-label">Workspace</div>
-
-    <nav class="ravlo-nav">
-      <a href="{{ url_for('borrower.dashboard') }}"
-         class="ravlo-nav-link {% if request.endpoint == 'borrower.dashboard' %}active{% endif %}">
-        <i class="icon" data-lucide="layout-dashboard"></i>
-        <span>Dashboard</span>
-      </a>
-
-      <a href="{{ url_for('borrower.apply') }}"
-         class="ravlo-nav-link {% if request.endpoint == 'borrower.capital_application' %}active{% endif %}">
-        <i class="icon" data-lucide="file-text"></i>
-        <span>Capital Application</span>
-      </a>
-
-      <a href="{{ url_for('borrower.documents') }}"
-         class="ravlo-nav-link {% if request.endpoint == 'borrower.documents' %}active{% endif %}">
-        <i class="icon" data-lucide="folder-open"></i>
-        <span>Documents</span>
-      </a>
-
-      <a href="{{ url_for('borrower.conditions') }}"
-         class="ravlo-nav-link {% if request.endpoint == 'borrower.conditions' %}active{% endif %}">
-        <i class="icon" data-lucide="clipboard-list"></i>
-        <span>Conditions</span>
-      </a>
-
-      <a href="{{ url_for('borrower.messages') }}"
-         class="ravlo-nav-link {% if request.endpoint == 'borrower.messages' %}active{% endif %}">
-        <i class="icon" data-lucide="messages-square"></i>
-        <span>Messages</span>
-      </a>
-    </nav>
-  </div>
-
-  <div class="ravlo-sidebar-section">
-    <div class="ravlo-sidebar-label">Account</div>
-
-    <nav class="ravlo-nav">
-      <a href="{{ url_for('account.settings') }}"
-         class="ravlo-nav-link {% if request.endpoint == 'borrower.settings' %}active{% endif %}">
-        <i class="icon" data-lucide="settings"></i>
-        <span>Settings</span>
-      </a>
-
-      <a href="{{ url_for('auth.logout') }}" class="ravlo-nav-link">
-        <i class="icon" data-lucide="log-out"></i>
-        <span>Logout</span>
-      </a>
-    </nav>
-  </div>
-
-  <div class="ravlo-sidebar-footer">
-    <div class="ravlo-user-chip">
-      <div class="ravlo-user-avatar">
-        {{ current_user.first_name[0] if current_user.first_name else "R" }}{{ current_user.last_name[0] if current_user.last_name else "V" }}
-      </div>
-      <div class="ravlo-user-meta">
-        <div class="ravlo-user-name">
-          {{ current_user.first_name }} {{ current_user.last_name }}
+    <div class="ravlo-sidebar-top">
+      <a href="{{ url_for('borrower.dashboard') }}" class="ravlo-brand">
+        <div class="ravlo-brand-mark">RV</div>
+        <div class="ravlo-brand-text">
+          <div class="ravlo-brand-name">Ravlo</div>
+          <div class="ravlo-brand-sub">Borrower Loan Center</div>
         </div>
-        <div class="ravlo-user-role">Borrower</div>
+      </a>
+
+      <button class="ravlo-sidebar-toggle" id="ravloSidebarToggle" type="button" aria-label="Toggle Menu">
+        ☰
+      </button>
+    </div>
+
+    <div class="ravlo-sidebar-section">
+      <div class="ravlo-sidebar-label">Workspace</div>
+
+      <nav class="ravlo-nav">
+        <a href="{{ url_for('borrower.dashboard') }}"
+           class="ravlo-nav-link {% if request.endpoint == 'borrower.dashboard' %}active{% endif %}">
+          <i class="icon" data-lucide="layout-dashboard"></i>
+          <span>Dashboard</span>
+        </a>
+
+        <a href="{{ url_for('borrower.create_profile') }}"
+           class="ravlo-nav-link {% if request.endpoint == 'borrower.create_profile' %}active{% endif %}">
+          <i class="icon" data-lucide="user-circle-2"></i>
+          <span>Profile</span>
+        </a>
+
+        <a href="{{ url_for('borrower.apply') }}"
+           class="ravlo-nav-link {% if request.endpoint == 'borrower.apply' %}active{% endif %}">
+          <i class="icon" data-lucide="file-text"></i>
+          <span>Capital Application</span>
+        </a>
+
+        <a href="{{ url_for('borrower.documents') }}"
+           class="ravlo-nav-link {% if request.endpoint == 'borrower.documents' %}active{% endif %}">
+          <i class="icon" data-lucide="folder-open"></i>
+          <span>Documents</span>
+        </a>
+
+        <a href="{{ url_for('borrower.conditions') }}"
+           class="ravlo-nav-link {% if request.endpoint == 'borrower.conditions' %}active{% endif %}">
+          <i class="icon" data-lucide="clipboard-list"></i>
+          <span>Conditions</span>
+        </a>
+
+        <a href="{{ url_for('borrower.messages') }}"
+           class="ravlo-nav-link {% if request.endpoint == 'borrower.messages' %}active{% endif %}">
+          <i class="icon" data-lucide="message-square"></i>
+          <span>Messages</span>
+        </a>
+      </nav>
+    </div>
+
+    <div class="ravlo-sidebar-section">
+      <div class="ravlo-sidebar-label">Account</div>
+
+      <nav class="ravlo-nav">
+        <a href="{{ url_for('account.settings') }}"
+           class="ravlo-nav-link {% if request.endpoint == 'account.settings' %}active{% endif %}">
+          <i class="icon" data-lucide="settings"></i>
+          <span>Settings</span>
+        </a>
+
+        <a href="{{ url_for('auth.logout') }}" class="ravlo-nav-link">
+          <i class="icon" data-lucide="log-out"></i>
+          <span>Logout</span>
+        </a>
+      </nav>
+    </div>
+
+    <div class="ravlo-sidebar-footer">
+      <div class="ravlo-user-chip">
+        <div class="ravlo-user-avatar">
+          {{ current_user.first_name[0] if current_user.first_name else "R" }}{{ current_user.last_name[0] if current_user.last_name else "V" }}
+        </div>
+        <div class="ravlo-user-meta">
+          <div class="ravlo-user-name">
+            {{ current_user.first_name or "Ravlo" }} {{ current_user.last_name or "User" }}
+          </div>
+          <div class="ravlo-user-role">Borrower</div>
+        </div>
       </div>
     </div>
-  </div>
-</aside>
+
+  </aside>
 
   <main class="ravlo-main">
     <header class="ravlo-topbar">
@@ -128,7 +129,26 @@
 
     {% block content %}{% endblock %}
   </main>
+
 </div>
+
+<script src="https://unpkg.com/lucide@latest"></script>
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    const sidebar = document.getElementById("ravloSidebar");
+    const toggle = document.getElementById("ravloSidebarToggle");
+
+    if (toggle && sidebar) {
+      toggle.addEventListener("click", function () {
+        sidebar.classList.toggle("open");
+      });
+    }
+
+    if (window.lucide) {
+      lucide.createIcons();
+    }
+  });
+</script>
 
 </body>
 </html>
