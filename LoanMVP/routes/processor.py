@@ -11,7 +11,7 @@ from datetime import datetime
 import os
 from datetime import datetime
 # ✅ Always import db before model files
-from LoanMVP.extensions import db
+from LoanMVP.extensions import db, csrf
 
 # ✅ Safe model imports (no circular dependencies)
 from LoanMVP.models.loan_models import LoanApplication, BorrowerProfile, LoanStatusEvent
@@ -222,6 +222,7 @@ def api_loan_documents(loan_id):
 # 🧾 Loan Review
 # ---------------------------------------------------------
 @processor_bp.route("/loan_review/<int:loan_id>", methods=["GET", "POST"])
+@csrf.exempt
 @role_required("processor")
 def loan_review(loan_id):
     loan = LoanApplication.query.get_or_404(loan_id)
@@ -269,6 +270,7 @@ def loan_review(loan_id):
     )
     
 @processor_bp.route("/add_condition/<int:loan_id>", methods=["POST"])
+@csrf.exempt
 @role_required("processor")
 def add_condition(loan_id):
     loan = LoanApplication.query.get_or_404(loan_id)
@@ -303,6 +305,7 @@ def add_condition(loan_id):
 # ✏️ Edit Loan
 # ---------------------------------------------------------
 @processor_bp.route("/loan/<int:loan_id>/edit", methods=["GET", "POST"])
+@csrf.exempt
 @role_required("processor")
 def edit_loan(loan_id):
     loan = LoanApplication.query.get_or_404(loan_id)
@@ -322,6 +325,7 @@ def edit_loan(loan_id):
 # 📄 Document Management
 # ---------------------------------------------------------
 @processor_bp.route("/documents", methods=["GET", "POST"])
+@csrf.exempt
 @role_required("processor")
 def documents():
     docs = LoanDocument.query.order_by(LoanDocument.created_at.desc()).all()
@@ -373,6 +377,7 @@ def request_document(loan_id):
     return render_template("processor/request_doc.html", loan=loan)
 
 @processor_bp.route("/add-note/<int:loan_id>", methods=["GET", "POST"])
+@csrf.exempt
 def add_processor_note(loan_id):
     loan = LoanApplication.query.get_or_404(loan_id)
 
@@ -394,6 +399,7 @@ def add_processor_note(loan_id):
     return render_template("processor/add_note.html", loan=loan)
 
 @processor_bp.route("/update-status/<int:loan_id>", methods=["GET", "POST"])
+@csrf.exempt
 def update_loan_status(loan_id):
     loan = LoanApplication.query.get_or_404(loan_id)
 
@@ -452,6 +458,7 @@ def view_file(filename):
 # 📤 Upload Document
 # ---------------------------------------------------------
 @processor_bp.route("/upload_doc", methods=["GET", "POST"])
+@csrf.exempt
 @role_required("processor")
 def upload_doc():
     upload_folder = os.path.join(current_app.root_path, "uploads")
@@ -490,6 +497,7 @@ def upload_doc():
 # 🔍 Verify Documents
 # ---------------------------------------------------------
 @processor_bp.route("/verify_docs", methods=["GET", "POST"])
+@csrf.exempt
 @role_required("processor")
 def verify_docs():
     docs = LoanDocument.query.filter(
@@ -559,6 +567,7 @@ def reports():
     )
 
 @processor_bp.route("/messages/new", methods=["GET", "POST"])
+@csrf.exempt
 @role_required("processor")
 def new_message():
     # Get all users except the current one
@@ -706,6 +715,7 @@ def property_search():
 
 
 @processor_bp.route("/ai_conversations", methods=["GET", "POST"])
+@csrf.exempt
 @role_required("processor")
 def ai_conversations():
     """
@@ -786,6 +796,7 @@ def live_chat():
     )
 
 @processor_bp.route("/profile", methods=["GET", "POST"])
+@csrf.exempt
 @role_required("processor")
 def profile():
     """
