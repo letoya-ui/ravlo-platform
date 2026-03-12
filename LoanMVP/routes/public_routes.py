@@ -1,7 +1,6 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from LoanMVP.extensions import db
 from LoanMVP.models.admin import AccessRequest
-from LoanMVP.services.notify_service import notify
 
 public_bp = Blueprint("public", __name__)
 

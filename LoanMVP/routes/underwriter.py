@@ -15,10 +15,9 @@ from LoanMVP.models.underwriter_model import UnderwritingCondition, UnderwriterT
 from LoanMVP.models.crm_models import MessageThread, Message
 from LoanMVP.models.credit_models import SoftCreditReport      # FIXED
 
-from LoanMVP.utils.notify import send_notification
 from LoanMVP.utils.pricing_engine import calculate_dti_ltv
 
-from LoanMVP.services.notify_service import notify
+
 # PDF GENERATION
 from reportlab.pdfgen import canvas
 
