@@ -68,6 +68,8 @@ class UserInvite(db.Model):
     expires_at = db.Column(db.DateTime, nullable=False)
     accepted_at = db.Column(db.DateTime, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    company = db.relationship("Company", back_populates="invites")
 
     @staticmethod
     def generate_token():
