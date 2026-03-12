@@ -65,6 +65,8 @@ class User(UserMixin, db.Model):
         foreign_keys="[InvestorProfile.user_id]"
     )
     
+    invites_sent = db.relationship("UserInvite", back_populates="inviter", lazy=True)
+    access_requests = db.relationship("AccessRequest", back_populates="reviewer", lazy=True)
 
     # ===============================
     # 🧩 Methods

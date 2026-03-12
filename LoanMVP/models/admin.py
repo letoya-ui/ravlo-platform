@@ -30,16 +30,15 @@ class AccessRequest(db.Model):
     request_type = db.Column(db.String(50), nullable=False, default="company_setup")
     requested_role = db.Column(db.String(50), nullable=True)
 
-    status = db.Column(db.String(50), nullable=False, default="pending")  # pending, approved, rejected
+    status = db.Column(db.String(50), nullable=False, default="pending")
     notes = db.Column(db.Text, nullable=True)
 
     company_id = db.Column(db.Integer, db.ForeignKey("companies.id"), nullable=True)
 
-    reviewed_by = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
-    reviewed_at = db.Column(db.DateTime, nullable=True)
+    reviewed_by = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=True)
+    reviewer = db.relationship("User", foreign_keys=[reviewed_by])
 
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-
 
 class UserInvite(db.Model):
     __tablename__ = "user_invites"
@@ -54,9 +53,11 @@ class UserInvite(db.Model):
     role = db.Column(db.String(50), nullable=False)
 
     token = db.Column(db.String(255), unique=True, nullable=False, index=True)
-    status = db.Column(db.String(50), nullable=False, default="pending")  # pending, accepted, expired, revoked
+    status = db.Column(db.String(50), nullable=False, default="pending")
 
-    invited_by = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
+    invited_by = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=True)
+    inviter = db.relationship("User", foreign_keys=[invited_by])
+
     expires_at = db.Column(db.DateTime, nullable=False)
     accepted_at = db.Column(db.DateTime, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
