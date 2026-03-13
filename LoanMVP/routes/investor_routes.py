@@ -2813,7 +2813,7 @@ def deal_studio():
             "name": "Rehab Studio",
             "description": "Create renovation scopes and visual concepts.",
             "icon": "hammer",
-            "endpoint": "investor.deal_rehab"
+            "endpoint": "investor.deals_list"
         },
         {
             "name": "Build Studio",
