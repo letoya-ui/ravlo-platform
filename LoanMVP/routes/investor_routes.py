@@ -2813,7 +2813,7 @@ def deal_studio():
             "name": "Rehab Studio",
             "description": "Create renovation scopes and visual concepts.",
             "icon": "hammer",
-            "endpoint": "investor.rehab_studio"
+            "endpoint": "investor.deal_rehab"
         },
         {
             "name": "Build Studio",
@@ -3462,6 +3462,7 @@ def save_deal():
 
     flash("Deal saved.", "success")
     return redirect(url_for("investor.deal_detail", deal_id=deal.id))
+    
 @investor_bp.route("/deals/<int:deal_id>/edit", methods=["POST"])
 @csrf.exempt
 @login_required
