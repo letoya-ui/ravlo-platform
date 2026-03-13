@@ -9,99 +9,15 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>{% block title %}Ravlo{% endblock %}</title>
 
+  <!-- Fonts + Icons -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-
   <link rel="stylesheet" href="https://unpkg.com/lucide-static@latest/font/lucide.css">
+
+  <!-- Ravlo Core Styles -->
   <link rel="stylesheet" href="{{ url_for('static', filename='css/ravlo_tokens.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
-
-  <style>
-    .mobile-menu-button{
-      display:none;
-      align-items:center;
-      justify-content:center;
-      width:42px;
-      height:42px;
-      border-radius:12px;
-      border:1px solid rgba(255,255,255,.08);
-      background:rgba(255,255,255,.03);
-      color:var(--text);
-      cursor:pointer;
-      font-size:20px;
-      transition:.2s ease;
-    }
-
-    .mobile-menu-button:hover{
-      background:rgba(255,255,255,.05);
-      border-color:rgba(255,255,255,.12);
-    }
-
-    .ravlo-sidebar-overlay{
-      display:none;
-      position:fixed;
-      inset:0;
-      background:rgba(3,8,14,.56);
-      backdrop-filter:blur(4px);
-      z-index:9998;
-      opacity:0;
-      pointer-events:none;
-      transition:opacity .25s ease;
-    }
-
-    .ravlo-sidebar-overlay.show{
-      opacity:1;
-      pointer-events:auto;
-    }
-
-    .ravlo-flash-stack{
-      display:grid;
-      gap:8px;
-    }
-
-    .ravlo-flash{
-      padding:12px 14px;
-      border-radius:14px;
-      border:1px solid rgba(255,255,255,.08);
-      background:rgba(255,255,255,.03);
-      color:var(--muted);
-      line-height:1.55;
-    }
-
-    .ravlo-flash strong{
-      color:var(--text);
-      text-transform:capitalize;
-    }
-
-    @media (max-width: 768px){
-      .ravlo-sidebar{
-        position:fixed;
-        left:-280px;
-        top:0;
-        height:100%;
-        width:280px;
-        transition:left .28s ease;
-        z-index:9999;
-      }
-
-      .ravlo-sidebar.open{
-        left:0;
-      }
-
-      .ravlo-sidebar-overlay{
-        display:block;
-      }
-
-      .mobile-menu-button{
-        display:inline-flex;
-      }
-
-      .ravlo-main{
-        margin-left:0 !important;
-      }
-    }
-  </style>
 
   {% block head %}{% endblock %}
 </head>
@@ -111,7 +27,20 @@
   <div class="ravlo-sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
 
   <div class="ravlo-shell">
+
+    <!-- ===== SIDEBAR ===== -->
     <aside class="ravlo-sidebar" id="sidebar">
+
+      <!-- Sidebar Heading -->
+      <div class="ravlo-sidebar-heading">
+        {% if active_portal == "partner" %}
+          <span class="heading-label">Partner Portal</span>
+        {% else %}
+          <span class="heading-label">Investor Portal</span>
+        {% endif %}
+      </div>
+
+      <!-- Sidebar Menu -->
       {% if active_portal == "partner" %}
         {% include "layouts/_sidebar_partner.html" %}
       {% else %}
@@ -119,15 +48,16 @@
       {% endif %}
     </aside>
 
+    <!-- ===== MAIN CONTENT ===== -->
     <main class="ravlo-main">
+
+      <!-- ===== TOPBAR ===== -->
       <header class="ravlo-topbar">
         <div class="mobile-menu-button" onclick="toggleSidebar()">☰</div>
 
         <div class="ravlo-top-left">
           <h1 class="ravlo-title">{% block page_title %}RAVLO{% endblock %}</h1>
-          <p class="ravlo-subline">
-            {% block page_subline %}Welcome to Ravlo.{% endblock %}
-          </p>
+          <p class="ravlo-subline">{% block page_subline %}Welcome to Ravlo.{% endblock %}</p>
         </div>
 
         <div class="ravlo-actions">
@@ -137,11 +67,19 @@
           </div>
 
           <div class="ravlo-topbar-actions-slot">
-            {% block topbar_actions %}{% endblock %}
+
+              <!-- Logout Button -->
+              <a href="{{ url_for('auth.logout') }}" class="ravlo-logout-btn">
+                  <i class="lucide lucide-log-out"></i>
+                  <span>Logout</span>
+              </a>
+
+              {% block topbar_actions %}{% endblock %}
           </div>
-        </div>
+
       </header>
 
+      <!-- ===== PAGE CONTENT ===== -->
       <section class="ravlo-content">
         {% with messages = get_flashed_messages(with_categories=true) %}
           {% if messages %}
@@ -159,32 +97,28 @@
 
         {% block content %}{% endblock %}
       </section>
+
     </main>
   </div>
 
+  <!-- ===== JS ===== -->
   <script>
     function toggleSidebar() {
       const sidebar = document.getElementById("sidebar");
       const overlay = document.getElementById("sidebarOverlay");
       const isOpen = sidebar.classList.toggle("open");
-      if (overlay) {
-        overlay.classList.toggle("show", isOpen);
-      }
+      if (overlay) overlay.classList.toggle("show", isOpen);
     }
 
     function closeSidebar() {
       const sidebar = document.getElementById("sidebar");
       const overlay = document.getElementById("sidebarOverlay");
       sidebar.classList.remove("open");
-      if (overlay) {
-        overlay.classList.remove("show");
-      }
+      if (overlay) overlay.classList.remove("show");
     }
 
     window.addEventListener("resize", function () {
-      if (window.innerWidth > 768) {
-        closeSidebar();
-      }
+      if (window.innerWidth > 768) closeSidebar();
     });
   </script>
 
