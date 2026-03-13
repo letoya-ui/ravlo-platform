@@ -24,3 +24,12 @@ def role_required(*roles):
             return fn(*args, **kwargs)
         return decorated_view
     return decorator
+
+def partner_required(f):
+    @wraps(f)
+    def wrapper(*args, **kwargs):
+        if not current_user.is_authenticated or not current_user.partner_profile:
+            flash("You must be a partner to access this page.", "danger")
+            return redirect(url_for("auth.login"))
+        return f(*args, **kwargs)
+    return wrapper

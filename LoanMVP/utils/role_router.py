@@ -17,6 +17,7 @@ def _dashboard_for_role(role: str) -> str:
 
         "admin": "admin.dashboard",
         "executive": "admin.dashboard",
+        "partner": "partner.dashboard",
     }
 
     return role_map.get(role, "investor.command_center")
