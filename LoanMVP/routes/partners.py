@@ -4,7 +4,7 @@ from datetime import datetime
 from pathlib import Path
 from werkzeug.utils import secure_filename
 
-from LoanMVP.extensions import db
+from LoanMVP.extensions import db, csrf
 from LoanMVP.utils.decorators import role_required
 
 from LoanMVP.models.crm_models import Partner, Task, CRMNote
