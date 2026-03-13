@@ -126,7 +126,6 @@ def profile(partner_id):
 # ------------------------------------------------
 
 @partners_bp.route("/register", methods=["GET", "POST"])
-@csrf.exempt
 @role_required("partner")
 def register():
     partner = Partner.query.filter_by(user_id=current_user.id).first()
@@ -134,14 +133,12 @@ def register():
     if request.method == "POST":
         category = request.form.get("category") or request.form.get("role")
         company = request.form.get("company")
-        specialty = request.form.get("specialty")
         service_area = request.form.get("service_area")
         bio = request.form.get("bio")
 
         if partner:
             partner.category = category
             partner.company = company
-            partner.specialty = specialty
             partner.service_area = service_area
             partner.bio = bio
         else:
@@ -149,13 +146,13 @@ def register():
                 user_id=current_user.id,
                 category=category,
                 company=company,
-                specialty=specialty,
                 service_area=service_area,
                 bio=bio
             )
             db.session.add(partner)
 
         db.session.commit()
+        flash("Partner profile saved.", "success")
         return redirect(url_for("partners.dashboard"))
 
     return render_template("partners/register.html", partner=partner)
