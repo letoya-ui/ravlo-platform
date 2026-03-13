@@ -1,34 +1,72 @@
 {% extends "layouts/ravlo_base.html" %}
+
+{% block title %}Ravlo • Partner Requests{% endblock %}
+{% block page_title %}Requests Inbox{% endblock %}
+{% block page_subline %}Review incoming project requests from borrowers and investors.{% endblock %}
+
 {% block content %}
+<div class="ravlo-grid">
 
-<div class="page-title mb-4">
-  <h2>Partner Requests</h2>
-  <p class="text-muted">New borrower requests and active connections.</p>
+  <section class="ravlo-hero-card">
+    <div class="eyebrow">PARTNER REQUESTS</div>
+    <h2>Incoming Requests</h2>
+    <p class="muted">
+      Review project opportunities and move accepted work into your partner workspace.
+    </p>
+  </section>
+
+  <section class="ravlo-card pad">
+    {% if requests %}
+      <div class="stack">
+        {% for req in requests %}
+        <div class="ravlo-card pad">
+          <div class="section-toolbar mb-12">
+            <div>
+              <div class="ravlo-kicker">{{ req.category or "Service Request" }}</div>
+              <h3 class="mb-8">{{ req.partner.company if req.partner else "Partner Request" }}</h3>
+              <p class="muted mb-0">
+                Status:
+                <span class="badge {% if req.status == 'accepted' %}badge-success{% elif req.status == 'declined' %}badge-danger{% else %}badge-warning{% endif %}">
+                  {{ req.status }}
+                </span>
+              </p>
+            </div>
+
+            <div class="text-right muted">
+              {{ req.created_at.strftime('%m/%d/%Y %I:%M %p') if req.created_at else "" }}
+            </div>
+          </div>
+
+          {% if req.property %}
+          <div class="mb-12">
+            <label>Property</label>
+            <div class="muted">{{ req.property.address or ("Property #" ~ req.property.id) }}</div>
+          </div>
+          {% endif %}
+
+          <div class="mb-16">
+            <label>Message</label>
+            <div class="muted">{{ req.message or "No message provided." }}</div>
+          </div>
+
+          {% if req.status == "pending" %}
+          <div class="section-toolbar-actions">
+            <form method="POST" action="{{ url_for('partners.accept_request', req_id=req.id) }}">
+              <button type="submit" class="ravlo-btn primary">Accept</button>
+            </form>
+
+            <form method="POST" action="{{ url_for('partners.decline_request', req_id=req.id) }}">
+              <button type="submit" class="ravlo-btn ghost">Decline</button>
+            </form>
+          </div>
+          {% endif %}
+        </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="empty-state">No requests yet.</div>
+    {% endif %}
+  </section>
+
 </div>
-
-{% for r in requests %}
-  <div class="soft-card p-4 mb-3">
-    <div class="d-flex justify-content-between align-items-start">
-      <div>
-        <div class="fw-semibold">Request #{{ r.id }} • {{ (r.category or "General")|title }}</div>
-        <div class="text-muted small">Status: {{ r.status|title }} • {{ r.created_at.strftime("%b %d, %Y %I:%M %p") }}</div>
-        {% if r.message %}<div class="mt-2">{{ r.message }}</div>{% endif %}
-      </div>
-
-      <div class="d-flex gap-2">
-        {% if r.status == "pending" %}
-          <form method="POST" action="{{ url_for('partners.accept_request', request_id=r.id) }}">
-            <button class="btn btn-success btn-sm">Accept</button>
-          </form>
-          <form method="POST" action="{{ url_for('partners.decline_request', request_id=r.id) }}">
-            <button class="btn btn-outline-light btn-sm">Decline</button>
-          </form>
-        {% endif %}
-      </div>
-    </div>
-  </div>
-{% else %}
-  <div class="soft-card p-4">No requests yet.</div>
-{% endfor %}
-
 {% endblock %}
