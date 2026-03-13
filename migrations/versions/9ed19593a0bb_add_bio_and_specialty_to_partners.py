@@ -3,7 +3,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision = "add_partner_bio_specialty"
-down_revision = "PUT_YOUR_PREVIOUS_REVISION_HERE"
+down_revision = "b7c8d9e0f1a2"
 branch_labels = None
 depends_on = None
 
