@@ -399,6 +399,36 @@ def upload_photo():
 
     return redirect(request.referrer)
 
+@partners_bp.route("/listing", methods=["GET", "POST"])
+@csrf.exempt
+@role_required("partner")
+def listing():
+    partner = current_user.partner_profile
+
+    if not partner:
+        flash("Please complete your partner profile first.", "warning")
+        return redirect(url_for("partners.profile_setup"))
+
+    if request.method == "POST":
+        partner.listing_description = request.form.get("listing_description")
+        partner.bio = request.form.get("bio")
+        partner.specialty = request.form.get("specialty")
+        partner.service_area = request.form.get("service_area")
+        partner.logo_url = request.form.get("logo_url")
+        partner.featured = "featured" in request.form
+        partner.subscription_tier = request.form.get("subscription_tier")
+
+        db.session.commit()
+        flash("Your marketplace listing has been updated.", "success")
+        return redirect(url_for("partners.listing"))
+
+    return render_template(
+        "partners/listing.html",
+        partner=partner,
+        portal="partner",
+        page_title="Marketplace Listing",
+        page_subline="Manage how you appear in the Ravlo Partner Marketplace."
+    )
 
 # ------------------------------------------------
 # DELETE PHOTO
