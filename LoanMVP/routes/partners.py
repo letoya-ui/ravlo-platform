@@ -452,3 +452,41 @@ def delete_photo(photo_id):
     flash("Photo removed.", "success")
 
     return redirect(request.referrer)
+
+@partners_bp.route("/leads")
+@role_required("partner")
+def leads():
+    partner = current_user.partner_profile
+
+    if not partner:
+        flash("Please complete your partner profile first.", "warning")
+        return redirect(url_for("partners.profile_setup"))
+
+    # Leads linked through your partner_lead_link table
+    leads = partner.leads.order_by(Lead.created_at.desc()).all()
+
+    return render_template(
+        "partners/leads.html",
+        partner=partner,
+        leads=leads,
+        portal="partner",
+        page_title="Leads",
+        page_subline="Your incoming opportunities from the Ravlo ecosystem."
+    )
+
+@partners_bp.route("/lead/<int:lead_id>")
+@role_required("partner")
+def lead_detail(lead_id):
+    lead = Lead.query.get_or_404(lead_id)
+
+    if current_user.partner_profile not in lead.partners:
+        abort(403)
+
+    return render_template(
+        "partners/lead_detail.html",
+        lead=lead,
+        portal="partner",
+        page_title=lead.name,
+        page_subline="Lead details and activity"
+    )
+
