@@ -21,9 +21,10 @@
 </head>
 <body>
   <div class="ravlo-grain"></div>
-  <div class="ravlo-sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
 
   <div class="ravlo-shell">
+    <div class="ravlo-sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+
     <aside class="ravlo-sidebar" id="sidebar">
       <div class="ravlo-sidebar-heading">
         {% if active_portal == "partner" %}
@@ -92,9 +93,10 @@
     function toggleSidebar() {
       const sidebar = document.getElementById("sidebar");
       const overlay = document.getElementById("sidebarOverlay");
-      const isOpen = sidebar.classList.toggle("open");
+      if (!sidebar || !overlay) return;
 
-      if (overlay) overlay.classList.toggle("show", isOpen);
+      const isOpen = sidebar.classList.toggle("open");
+      overlay.classList.toggle("show", isOpen);
       document.body.classList.toggle("sidebar-open", isOpen);
     }
 
