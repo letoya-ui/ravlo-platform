@@ -37,49 +37,61 @@ def partner_has_premium_access(partner) -> bool:
 # DASHBOARD
 # ------------------------------------------------
 
-@partners_bp.route("/dashboard")
+@partners_bp.route("/register", methods=["GET", "POST"])
+@login_required
 @role_required("partner")
-def dashboard():
+def register():
+    existing_partner = Partner.query.filter_by(user_id=current_user.id).first()
+    if existing_partner:
+        flash("Your partner profile already exists.", "info")
+        return redirect(url_for("partners.dashboard"))
 
-    partner = Partner.query.filter_by(user_id=current_user.id).first()
+    if request.method == "POST":
+        name = (
+            request.form.get("name", "").strip()
+            or request.form.get("full_name", "").strip()
+            or request.form.get("contact_name", "").strip()
+            or request.form.get("company", "").strip()
+        )
 
-    if not partner:
-        flash("Partner profile not found. Please register.", "warning")
-        return redirect(url_for("partners.register"))
+        company = request.form.get("company", "").strip() or None
+        email = request.form.get("email", "").strip() or None
+        phone = request.form.get("phone", "").strip() or None
+        category = request.form.get("category", "").strip() or None
+        service_area = request.form.get("service_area", "").strip() or None
+        specialty = request.form.get("specialty", "").strip() or None
+        website = request.form.get("website", "").strip() or None
+        bio = request.form.get("bio", "").strip() or None
 
-    pending_count = PartnerConnectionRequest.query.filter_by(
-        partner_id=partner.id,
-        status="pending"
-    ).count()
+        if not name:
+            flash("Please enter a contact name or company name.", "danger")
+            return redirect(url_for("partners.register"))
 
-    dashboards = {
-        "contractor": "partners/dashboards/contractor.html",
-        "designer": "partners/dashboards/designer.html",
-        "cleaner": "partners/dashboards/cleaner.html",
-        "janitorial": "partners/dashboards/cleaner.html",
-        "realtor": "partners/dashboards/realtor.html",
-        "inspector": "partners/dashboards/inspector.html",
-        "appraiser": "partners/dashboards/appraiser.html",
-        "title": "partners/dashboards/title.html",
-        "insurance": "partners/dashboards/insurance.html",
-        "attorney": "partners/dashboards/attorney.html",
-        "property_manager": "partners/dashboards/property_manager.html",
-    }
+        partner = Partner(
+            user_id=current_user.id,
+            name=name,
+            company=company,
+            email=email,
+            phone=phone,
+            category=category,
+            service_area=service_area,
+            specialty=specialty,
+            website=website,
+            bio=bio,
+            active=True,
+            status="Active",
+            approved=False,
+            featured=False,
+            subscription_tier="Free",
+        )
 
-    template = dashboards.get(
-        (partner.category or "").lower(),
-        "partners/dashboards/default.html"
-    )
+        db.session.add(partner)
+        db.session.commit()
 
-    return render_template(
-        template,
-        partner=partner,
-        pending_count=pending_count,
-        portal="partner",
-        portal_name="Partner OS",
-        portal_home=url_for("partners.dashboard")
-    )
+        flash("Partner profile created successfully.", "success")
+        return redirect(url_for("partners.dashboard"))
 
+    return render_template("partners/register.html")
 
 # ------------------------------------------------
 # PARTNER DIRECTORY (internal)

@@ -1,81 +1,8 @@
-{% extends "layouts/base.html" %}
+{% extends "layouts/Ravlo_lending_base.html" %}}
 {% block title %}System Dashboard | LoanMVP{% endblock %}
 {% block content %}
 <main class="dashboard-main">
-  <style>
-    :root {
-      --bg:#0f0f11;
-      --panel:#15161a;
-      --line:#2a2e36;
-      --text:#e6e6e6;
-      --muted:#a5a7ad;
-      --accent:#7ab8ff;
-      --glow:0 0 14px rgba(122,184,255,0.35);
-    }
-
-    .dashboard-main {
-      padding: 2rem;
-      background: var(--bg);
-      color: var(--text);
-      min-height: 100vh;
-    }
-    .grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-      gap: 1.6rem;
-    }
-    .card {
-      background: var(--panel);
-      border: 1px solid var(--line);
-      border-radius: 14px;
-      padding: 1.3rem 1.5rem;
-      box-shadow: 0 0 16px rgba(0,0,0,0.4);
-      transition: all .25s ease;
-    }
-    .card:hover {
-      border-color: var(--accent);
-      box-shadow: var(--glow);
-    }
-    .card h4 {
-      margin-top: 0;
-      color: var(--accent);
-      margin-bottom: 1rem;
-      font-size: 1.1rem;
-    }
-    .stat {
-      font-size: 1.2rem;
-      color: var(--text);
-      margin: .3rem 0;
-    }
-    .muted { color: var(--muted); font-size: .9rem; }
-    .btn {
-      display:inline-block;
-      margin-top:.8rem;
-      background:#1a1d23;
-      color:var(--text);
-      border:1px solid var(--line);
-      border-radius:10px;
-      padding:.5rem .9rem;
-      font-size:.9rem;
-      text-decoration:none;
-      transition:all .25s ease;
-    }
-    .btn:hover {
-      border-color:var(--accent);
-      box-shadow:0 0 10px rgba(122,184,255,0.3);
-      color:var(--accent);
-    }
-    ul.clean {
-      list-style:none;
-      padding:0;
-      margin:0;
-    }
-    ul.clean li {
-      padding:.3rem 0;
-      border-bottom:1px solid #222;
-      font-size:.9rem;
-    }
-  </style>
+  
 
   <h2 class="mb-4">🧠 System Dashboard</h2>
 
