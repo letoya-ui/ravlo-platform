@@ -19,7 +19,7 @@
 
             <!-- Profile -->
             <li class="nav-item {{ 'active' if active_page == 'profile' else '' }}">
-                <a href="{{ url_for('partners.profile') }}">
+                <a href="{{ url_for('partners.profile', partner_id=current_user.partner_profile.id) }}">
                     <i class="icon lucide-user"></i>
                     <span>Profile</span>
                 </a>
