@@ -37,61 +37,49 @@ def partner_has_premium_access(partner) -> bool:
 # DASHBOARD
 # ------------------------------------------------
 
-@partners_bp.route("/register", methods=["GET", "POST"])
-@login_required
+@partners_bp.route("/dashboard")
 @role_required("partner")
-def register():
-    existing_partner = Partner.query.filter_by(user_id=current_user.id).first()
-    if existing_partner:
-        flash("Your partner profile already exists.", "info")
-        return redirect(url_for("partners.dashboard"))
+def dashboard():
 
-    if request.method == "POST":
-        name = (
-            request.form.get("name", "").strip()
-            or request.form.get("full_name", "").strip()
-            or request.form.get("contact_name", "").strip()
-            or request.form.get("company", "").strip()
-        )
+    partner = Partner.query.filter_by(user_id=current_user.id).first()
 
-        company = request.form.get("company", "").strip() or None
-        email = request.form.get("email", "").strip() or None
-        phone = request.form.get("phone", "").strip() or None
-        category = request.form.get("category", "").strip() or None
-        service_area = request.form.get("service_area", "").strip() or None
-        specialty = request.form.get("specialty", "").strip() or None
-        website = request.form.get("website", "").strip() or None
-        bio = request.form.get("bio", "").strip() or None
+    if not partner:
+        flash("Partner profile not found. Please register.", "warning")
+        return redirect(url_for("partners.register"))
 
-        if not name:
-            flash("Please enter a contact name or company name.", "danger")
-            return redirect(url_for("partners.register"))
+    pending_count = PartnerConnectionRequest.query.filter_by(
+        partner_id=partner.id,
+        status="pending"
+    ).count()
 
-        partner = Partner(
-            user_id=current_user.id,
-            name=name,
-            company=company,
-            email=email,
-            phone=phone,
-            category=category,
-            service_area=service_area,
-            specialty=specialty,
-            website=website,
-            bio=bio,
-            active=True,
-            status="Active",
-            approved=False,
-            featured=False,
-            subscription_tier="Free",
-        )
+    dashboards = {
+        "contractor": "partners/dashboards/contractor.html",
+        "designer": "partners/dashboards/designer.html",
+        "cleaner": "partners/dashboards/cleaner.html",
+        "janitorial": "partners/dashboards/cleaner.html",
+        "realtor": "partners/dashboards/realtor.html",
+        "inspector": "partners/dashboards/inspector.html",
+        "appraiser": "partners/dashboards/appraiser.html",
+        "title": "partners/dashboards/title.html",
+        "insurance": "partners/dashboards/insurance.html",
+        "attorney": "partners/dashboards/attorney.html",
+        "property_manager": "partners/dashboards/property_manager.html",
+    }
 
-        db.session.add(partner)
-        db.session.commit()
+    template = dashboards.get(
+        (partner.category or "").lower(),
+        "partners/dashboards/default.html"
+    )
 
-        flash("Partner profile created successfully.", "success")
-        return redirect(url_for("partners.dashboard"))
+    return render_template(
+        template,
+        partner=partner,
+        pending_count=pending_count,
+        portal="partner",
+        portal_name="Partner OS",
+        portal_home=url_for("partners.dashboard")
+    )
 
-    return render_template("partners/register.html")
 
 # ------------------------------------------------
 # PARTNER DIRECTORY (internal)
@@ -144,23 +132,38 @@ def register():
     partner = Partner.query.filter_by(user_id=current_user.id).first()
 
     if request.method == "POST":
-        category = request.form.get("category") or request.form.get("role")
-        company = request.form.get("company")
-        service_area = request.form.get("service_area")
-        bio = request.form.get("bio")
+        name = (request.form.get("name") or request.form.get("company") or "").strip() or None
+        category = (request.form.get("category") or request.form.get("role") or "").strip() or None
+        company = request.form.get("company", "").strip() or None
+        service_area = request.form.get("service_area", "").strip() or None
+        specialty = request.form.get("specialty", "").strip() or None
+        bio = request.form.get("bio", "").strip() or None
+
+        if not name:
+            flash("Please enter a contact name or company name.", "danger")
+            return render_template("partners/register.html", partner=partner)
 
         if partner:
+            partner.name = name
             partner.category = category
             partner.company = company
             partner.service_area = service_area
+            partner.specialty = specialty
             partner.bio = bio
         else:
             partner = Partner(
                 user_id=current_user.id,
+                name=name,
                 category=category,
                 company=company,
                 service_area=service_area,
-                bio=bio
+                specialty=specialty,
+                bio=bio,
+                active=True,
+                status="Active",
+                approved=False,
+                featured=False,
+                subscription_tier="Free",
             )
             db.session.add(partner)
 
