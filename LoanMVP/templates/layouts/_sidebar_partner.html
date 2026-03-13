@@ -1,0 +1,50 @@
+{% set ep = request.endpoint or "" %}
+
+<div class="ravlo-sidebar-brand">
+  <a href="{{ url_for('partners.dashboard') }}" class="ravlo-brand-link">
+    <div class="ravlo-brand-mark">
+      <span>RV</span>
+    </div>
+
+    <div class="ravlo-brand-copy">
+      <div class="ravlo-brand-name">RAVLO</div>
+      <div class="ravlo-brand-sub">Partner OS</div>
+    </div>
+  </a>
+  <div class="ravlo-brand-glow"></div>
+</div>
+
+<nav class="ravlo-sidebar-nav">
+  <a href="{{ url_for('partners.dashboard') }}"
+     class="ravlo-nav-link {% if ep == 'partners.dashboard' %}active{% endif %}">
+    <i class="lucide lucide-layout-dashboard"></i>
+    <span>Dashboard</span>
+  </a>
+
+  <a href="{{ url_for('partners.register') }}"
+     class="ravlo-nav-link {% if ep == 'partners.register' %}active{% endif %}">
+    <i class="lucide lucide-user-round-cog"></i>
+    <span>Profile</span>
+  </a>
+
+  <a href="{{ url_for('partners.register') }}"
+     class="ravlo-nav-link">
+    <i class="lucide lucide-image"></i>
+    <span>Portfolio</span>
+  </a>
+
+  <a href="{{ url_for('partners.register') }}"
+     class="ravlo-nav-link">
+    <i class="lucide lucide-store"></i>
+    <span>Marketplace Listing</span>
+  </a>
+</nav>
+
+<div class="ravlo-sidebar-footer-simple">
+  <form method="post" action="{{ url_for('auth.logout') }}" style="margin:0;">
+    <button type="submit" class="ravlo-btn ghost sm ravlo-logout-btn">
+      <i class="lucide lucide-log-out"></i>
+      Logout
+    </button>
+  </form>
+</div>
