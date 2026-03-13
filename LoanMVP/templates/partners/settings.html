@@ -1,0 +1,83 @@
+{% extends "layouts/ravlo_base.html" %}
+
+{% block title %}Ravlo • Partner Settings{% endblock %}
+{% block page_title %}Settings{% endblock %}
+{% block page_subline %}Manage your partner profile, service area, and account details.{% endblock %}
+
+{% block content %}
+<div class="ravlo-grid">
+
+  <section class="ravlo-hero-card">
+    <div class="eyebrow">PARTNER SETTINGS</div>
+    <h2>Manage Your Profile</h2>
+    <p class="muted">
+      Update your company details, category, service area, and public bio.
+    </p>
+  </section>
+
+  <section class="ravlo-card pad">
+    <form method="POST" class="stack">
+
+      <div class="form-grid">
+        <div>
+          <label>Company</label>
+          <input type="text" name="company" value="{{ partner.company or '' }}" required>
+        </div>
+
+        <div>
+          <label>Category</label>
+          <select name="category" required>
+            <option value="">Select category...</option>
+            <option value="contractor" {% if partner.category == "contractor" %}selected{% endif %}>Contractor</option>
+            <option value="realtor" {% if partner.category == "realtor" %}selected{% endif %}>Realtor</option>
+            <option value="designer" {% if partner.category == "designer" %}selected{% endif %}>Designer</option>
+            <option value="inspector" {% if partner.category == "inspector" %}selected{% endif %}>Inspector</option>
+            <option value="appraiser" {% if partner.category == "appraiser" %}selected{% endif %}>Appraiser</option>
+            <option value="title" {% if partner.category == "title" %}selected{% endif %}>Title</option>
+            <option value="insurance" {% if partner.category == "insurance" %}selected{% endif %}>Insurance</option>
+            <option value="attorney" {% if partner.category == "attorney" %}selected{% endif %}>Attorney</option>
+            <option value="property_manager" {% if partner.category == "property_manager" %}selected{% endif %}>Property Manager</option>
+            <option value="cleaner" {% if partner.category == "cleaner" %}selected{% endif %}>Cleaner</option>
+          </select>
+        </div>
+      </div>
+
+      <div>
+        <label>Service Area</label>
+        <input type="text" name="service_area" value="{{ partner.service_area or '' }}">
+      </div>
+
+      <div>
+        <label>Bio</label>
+        <textarea name="bio" rows="6">{{ partner.bio or '' }}</textarea>
+      </div>
+
+      <div class="section-toolbar-actions">
+        <button type="submit" class="ravlo-btn primary">Save Changes</button>
+        <a href="{{ url_for('partners.dashboard') }}" class="ravlo-btn ghost">Back to Dashboard</a>
+      </div>
+    </form>
+  </section>
+
+  <section class="ravlo-grid-3">
+    <div class="ravlo-card pad">
+      <div class="ravlo-kicker">Subscription</div>
+      <h3>{{ partner.subscription_tier or "Standard" }}</h3>
+      <p class="muted">Your current partner tier and marketplace level.</p>
+    </div>
+
+    <div class="ravlo-card pad">
+      <div class="ravlo-kicker">Approval Status</div>
+      <h3>{{ "Approved" if partner.approved else "Pending" }}</h3>
+      <p class="muted">Current review and listing approval status.</p>
+    </div>
+
+    <div class="ravlo-card pad">
+      <div class="ravlo-kicker">Listing</div>
+      <h3>{{ "Active" if partner.is_active_listing() else "Inactive" }}</h3>
+      <p class="muted">Whether your marketplace listing is currently active.</p>
+    </div>
+  </section>
+
+</div>
+{% endblock %}
