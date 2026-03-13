@@ -13,6 +13,7 @@ from werkzeug.utils import secure_filename
 from werkzeug.datastructures import ImmutableMultiDict
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy import or_
+from urllib.parse import urlencode
 
 from flask import (
     Blueprint,
@@ -2778,6 +2779,109 @@ def api_property_tool_card():
         }), 400
 
     return jsonify(card)
+
+
+@investor_bp.route("/property_tool/details", methods=["GET"])
+@login_required
+@role_required("investor")
+def property_tool_details():
+    address = (request.args.get("address") or "").strip()
+    if not address:
+        flash("Property address is required.", "warning")
+        return redirect(url_for("investor.property_tool"))
+
+    def _num_or_none(v):
+        try:
+            if v in (None, "", "None"):
+                return None
+            return float(v)
+        except Exception:
+            return None
+
+    beds = _num_or_none(request.args.get("beds"))
+    baths = _num_or_none(request.args.get("baths"))
+    sqft = _num_or_none(request.args.get("sqft"))
+    price = _num_or_none(request.args.get("price"))
+    property_type = (request.args.get("property_type") or "").strip() or None
+    zip_code = (request.args.get("zip") or "").strip() or None
+    property_id = (request.args.get("property_id") or "").strip() or None
+    city = (request.args.get("city") or "").strip() or None
+    state = (request.args.get("state") or "").strip() or None
+    photo = (request.args.get("photo") or "").strip() or None
+
+    if beds is not None:
+        try:
+            beds = int(beds)
+        except Exception:
+            beds = None
+
+    if sqft is not None:
+        try:
+            sqft = int(sqft)
+        except Exception:
+            sqft = None
+
+    card = build_ravlo_property_card(
+        address=address,
+        beds=beds,
+        baths=baths,
+        sqft=sqft,
+        property_type=property_type,
+    )
+
+    if card.get("status") != "ok":
+        flash(card.get("error") or "Unable to load property details.", "danger")
+        return redirect(url_for("investor.property_tool"))
+
+    return render_template(
+        "investor/property_tool_details.html",
+        title="Ravlo Property Details",
+        active_page="property_tool",
+        page_name="Property Details",
+        page_subline="Review details, market signals, and send this property into Deal Workspace.",
+        card=card,
+        address=address,
+        city=city,
+        state=state,
+        zip_code=zip_code,
+        price=price,
+        beds=beds,
+        baths=baths,
+        sqft=sqft,
+        property_type=property_type,
+        property_id=property_id,
+        photo=photo,
+    )
+
+@investor_bp.route("/api/property_tool_details_url", methods=["POST"])
+@csrf.exempt
+@login_required
+@role_required("investor")
+def api_property_tool_details_url():
+    payload = request.get_json(force=True) or {}
+
+    address = (payload.get("address") or "").strip()
+    if not address:
+        return jsonify({"status": "error", "message": "Address is required."}), 400
+
+    params = {
+        "address": address,
+        "city": payload.get("city"),
+        "state": payload.get("state"),
+        "zip": payload.get("zip"),
+        "price": payload.get("price"),
+        "beds": payload.get("beds"),
+        "baths": payload.get("baths"),
+        "sqft": payload.get("sqft"),
+        "property_type": payload.get("property_type"),
+        "property_id": payload.get("property_id"),
+        "photo": payload.get("photo"),
+    }
+
+    clean = {k: v for k, v in params.items() if v not in (None, "", "None")}
+    details_url = url_for("investor.property_tool_details") + "?" + urlencode(clean)
+
+    return jsonify({"status": "ok", "details_url": details_url})
 # =========================================================
 # 💼 INVESTOR • DEAL STUDIO (workspace + deals + visualizer + exports)
 # =========================================================
