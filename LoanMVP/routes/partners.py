@@ -519,3 +519,51 @@ def settings():
         partner=partner,
         portal="partner"
     )
+
+@partners_bp.route("/billing")
+@role_required("partner")
+def billing():
+    partner = Partner.query.filter_by(user_id=current_user.id).first()
+    if not partner:
+        flash("Partner profile not found.", "warning")
+        return redirect(url_for("partners.register"))
+
+    return render_template(
+        "partners/billing.html",
+        partner=partner,
+        portal="partner"
+    )
+
+
+@partners_bp.route("/deals")
+@role_required("partner")
+def deals():
+    partner = Partner.query.filter_by(user_id=current_user.id).first()
+    if not partner:
+        flash("Partner profile not found.", "warning")
+        return redirect(url_for("partners.register"))
+
+    jobs = PartnerJob.query.filter_by(partner_id=partner.id)\
+        .order_by(PartnerJob.created_at.desc()).all()
+
+    return render_template(
+        "partners/deals.html",
+        partner=partner,
+        jobs=jobs,
+        portal="partner"
+    )
+
+
+@partners_bp.route("/resources")
+@role_required("partner")
+def resources():
+    partner = Partner.query.filter_by(user_id=current_user.id).first()
+    if not partner:
+        flash("Partner profile not found.", "warning")
+        return redirect(url_for("partners.register"))
+
+    return render_template(
+        "partners/resources.html",
+        partner=partner,
+        portal="partner"
+    )
