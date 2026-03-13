@@ -47,7 +47,11 @@
       <span>Capital Studio</span>
     </a>
 
-  
+    <a href="{{ url_for('messages.inbox') }}"
+       class="ravlo-nav-item {% if active_page == 'messages' %}active{% endif %}">
+      <i data-lucide="message-square"></i>
+      <span>Messages</span>
+    </a>
 
     <a href="{{ url_for('investor.saved_properties') }}"
        class="ravlo-nav-link {% if ep == 'investor.saved_properties' %}active{% endif %}">
