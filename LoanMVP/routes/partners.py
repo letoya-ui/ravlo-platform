@@ -126,6 +126,7 @@ def profile(partner_id):
 # ------------------------------------------------
 
 @partners_bp.route("/register", methods=["GET", "POST"])
+@csrf.exempt
 @role_required("partner")
 def register():
     partner = Partner.query.filter_by(user_id=current_user.id).first()
@@ -197,6 +198,7 @@ def requests_inbox():
 # ------------------------------------------------
 
 @partners_bp.route("/requests/<int:req_id>/accept", methods=["POST"])
+@csrf.exempt
 @role_required("partner")
 def accept_request(req_id):
 
@@ -259,6 +261,7 @@ def accept_request(req_id):
 # ------------------------------------------------
 
 @partners_bp.route("/requests/<int:req_id>/decline", methods=["POST"])
+@csrf.exempt
 @role_required("partner")
 def decline_request(req_id):
 
@@ -340,6 +343,7 @@ def workspace_job(job_id):
 # ------------------------------------------------
 
 @partners_bp.route("/photos/upload", methods=["POST"])
+@csrf.exempt
 @role_required("partner")
 def upload_photo():
 
@@ -382,6 +386,7 @@ def upload_photo():
 # ------------------------------------------------
 
 @partners_bp.route("/photos/<int:photo_id>/delete", methods=["POST"])
+@csrf.exempt
 @role_required("partner")
 def delete_photo(photo_id):
 
