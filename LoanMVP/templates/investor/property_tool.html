@@ -22,7 +22,6 @@ Search by ZIP, uncover investor opportunities, and move deals directly into Work
 
 <div class="ravlo-grid cols-2 dealfinder-layout" style="grid-template-columns: 1fr 1.6fr; gap:1rem;">
 
-  <!-- LEFT: SEARCH PANEL -->
   <div class="ravlo-card pad">
     <div class="ravlo-card-title">Search</div>
 
@@ -76,7 +75,6 @@ Search by ZIP, uncover investor opportunities, and move deals directly into Work
     <div id="searchStatus" style="color:var(--muted); margin-top:.75rem;"></div>
   </div>
 
-  <!-- RIGHT: RESULTS -->
   <div>
     <div id="results" class="dealfinder-results-grid">
       <div class="ravlo-card pad dealfinder-empty">
@@ -108,22 +106,41 @@ function numOrNull(v){
   return Number.isNaN(n) ? null : n;
 }
 
-function viewDetails(item){
-  const params = new URLSearchParams();
+async function viewDetails(item){
+  try{
+    const resp = await fetch("{{ url_for('investor.api_property_tool_view_details') }}", {
+      method: "POST",
+      headers: {"Content-Type":"application/json"},
+      credentials: "include",
+      body: JSON.stringify({
+        address: item.address || "",
+        city: item.city || "",
+        state: item.state || "",
+        zip: item.zip || "",
+        price: item.price ?? null,
+        sqft: item.sqft ?? null,
+        photo: item.photo || null,
+        property_id: item.property_id || null
+      })
+    });
 
-  if (item.address) params.set("address", item.address);
-  if (item.city) params.set("city", item.city);
-  if (item.state) params.set("state", item.state);
-  if (item.zip) params.set("zip", item.zip);
-  if (item.price !== null && item.price !== undefined && item.price !== "") params.set("price", item.price);
-  if (item.beds !== null && item.beds !== undefined && item.beds !== "") params.set("beds", item.beds);
-  if (item.baths !== null && item.baths !== undefined && item.baths !== "") params.set("baths", item.baths);
-  if (item.sqft !== null && item.sqft !== undefined && item.sqft !== "") params.set("sqft", item.sqft);
-  if (item.property_type) params.set("property_type", item.property_type);
-  if (item.property_id) params.set("property_id", item.property_id);
-  if (item.photo) params.set("photo", item.photo);
+    const data = await resp.json();
 
-  window.location.href = "{{ url_for('investor.property_tool_details') }}" + "?" + params.toString();
+    if (data.status !== "ok"){
+      alert(data.message || "Could not open property details.");
+      return;
+    }
+
+    if (data.detail_url){
+      window.location.href = data.detail_url;
+      return;
+    }
+
+    alert("No property detail URL returned.");
+  } catch (e){
+    console.error(e);
+    alert("Network error while opening property details.");
+  }
 }
 
 async function saveAndAnalyze(item){
