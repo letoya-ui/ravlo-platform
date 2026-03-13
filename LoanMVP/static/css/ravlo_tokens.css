@@ -47,4 +47,11 @@
   --rav-pad-2xl:30px;
 
   --rav-ease:all .24s ease;
+
+  --text:var(--rav-text);
+  --text-soft:var(--rav-text-soft);
+  --muted:var(--rav-muted);
+  --line:var(--rav-line);
+  --accent:var(--rav-accent);
+  --accent-2:var(--rav-accent-2);
 }
