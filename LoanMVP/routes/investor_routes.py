@@ -2574,7 +2574,7 @@ def property_explore_plus(prop_id):
         source=source,
         back_url=url_for(fallback_endpoint),
     )
-}
+
 
 
 @investor_bp.route("/intelligence/tool", methods=["GET"])
@@ -2857,37 +2857,6 @@ def api_property_tool_view_details():
         "detail_url": detail_url
     })
          
-
-
-@investor_bp.route("/api/property_tool_details_url", methods=["POST"])
-@csrf.exempt
-@login_required
-@role_required("investor")
-def api_property_tool_details_url():
-    payload = request.get_json(force=True) or {}
-
-    address = (payload.get("address") or "").strip()
-    if not address:
-        return jsonify({"status": "error", "message": "Address is required."}), 400
-
-    params = {
-        "address": address,
-        "city": payload.get("city"),
-        "state": payload.get("state"),
-        "zip": payload.get("zip"),
-        "price": payload.get("price"),
-        "beds": payload.get("beds"),
-        "baths": payload.get("baths"),
-        "sqft": payload.get("sqft"),
-        "property_type": payload.get("property_type"),
-        "property_id": payload.get("property_id"),
-        "photo": payload.get("photo"),
-    }
-
-    clean = {k: v for k, v in params.items() if v not in (None, "", "None")}
-    details_url = url_for("investor.property_tool_details") + "?" + urlencode(clean)
-
-    return jsonify({"status": "ok", "details_url": details_url})
 # =========================================================
 # 💼 INVESTOR • DEAL STUDIO (workspace + deals + visualizer + exports)
 # =========================================================
