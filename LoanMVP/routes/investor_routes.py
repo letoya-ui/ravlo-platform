@@ -2781,77 +2781,65 @@ def api_property_tool_card():
     return jsonify(card)
 
 
-@investor_bp.route("/property_tool/details", methods=["GET"])
+@investor_bp.route("/api/property_tool_view_details", methods=["POST"])
+@csrf.exempt
 @login_required
 @role_required("investor")
-def property_tool_details():
-    address = (request.args.get("address") or "").strip()
+def api_property_tool_view_details():
+    payload = request.get_json(force=True) or {}
+    address = (payload.get("address") or "").strip()
+
     if not address:
-        flash("Property address is required.", "warning")
-        return redirect(url_for("investor.property_tool"))
+        return jsonify({"status": "error", "message": "Address is required."}), 400
 
-    def _num_or_none(v):
-        try:
-            if v in (None, "", "None"):
-                return None
-            return float(v)
-        except Exception:
-            return None
+    ip = InvestorProfile.query.filter_by(user_id=current_user.id).first()
+    if not ip:
+        return jsonify({"status": "error", "message": "Investor profile not found."}), 400
 
-    beds = _num_or_none(request.args.get("beds"))
-    baths = _num_or_none(request.args.get("baths"))
-    sqft = _num_or_none(request.args.get("sqft"))
-    price = _num_or_none(request.args.get("price"))
-    property_type = (request.args.get("property_type") or "").strip() or None
-    zip_code = (request.args.get("zip") or "").strip() or None
-    property_id = (request.args.get("property_id") or "").strip() or None
-    city = (request.args.get("city") or "").strip() or None
-    state = (request.args.get("state") or "").strip() or None
-    photo = (request.args.get("photo") or "").strip() or None
+    zipcode = (payload.get("zip") or "").strip() or None
+    price = payload.get("price")
+    sqft = payload.get("sqft")
+    property_id = payload.get("property_id")
 
-    if beds is not None:
-        try:
-            beds = int(beds)
-        except Exception:
-            beds = None
+    try:
+        sqft = int(float(sqft)) if sqft not in (None, "", "None") else None
+    except Exception:
+        sqft = None
 
-    if sqft is not None:
-        try:
-            sqft = int(sqft)
-        except Exception:
-            sqft = None
+    fk = _profile_id_filter(SavedProperty, ip.id)
 
-    card = build_ravlo_property_card(
-        address=address,
-        beds=beds,
-        baths=baths,
-        sqft=sqft,
-        property_type=property_type,
-    )
+    existing = None
+    if property_id:
+        existing = SavedProperty.query.filter_by(**fk, property_id=str(property_id)).first()
 
-    if card.get("status") != "ok":
-        flash(card.get("error") or "Unable to load property details.", "danger")
-        return redirect(url_for("investor.property_tool"))
+    if not existing:
+        existing = SavedProperty.query.filter(
+            getattr(SavedProperty, "investor_profile_id", SavedProperty.borrower_profile_id) == ip.id,
+            db.func.lower(SavedProperty.address) == address.lower()
+        ).first()
 
-    return render_template(
-        "investor/property_tool_details.html",
-        title="Ravlo Property Details",
-        active_page="property_tool",
-        page_name="Property Details",
-        page_subline="Review details, market signals, and send this property into Deal Workspace.",
-        card=card,
-        address=address,
-        city=city,
-        state=state,
-        zip_code=zip_code,
-        price=price,
-        beds=beds,
-        baths=baths,
-        sqft=sqft,
-        property_type=property_type,
-        property_id=property_id,
-        photo=photo,
-    )
+    if not existing:
+        existing = SavedProperty(
+            **fk,
+            property_id=str(property_id) if property_id else None,
+            address=address,
+            price=str(price or ""),
+            sqft=sqft,
+            zipcode=zipcode,
+            saved_at=datetime.utcnow(),
+            created_at=datetime.utcnow(),
+        )
+        db.session.add(existing)
+        db.session.commit()
+
+    detail_url = url_for("investor.property_explore_plus", prop_id=existing.id)
+
+    return jsonify({
+        "status": "ok",
+        "saved_id": existing.id,
+        "detail_url": detail_url
+    })
+
 
 @investor_bp.route("/api/property_tool_details_url", methods=["POST"])
 @csrf.exempt
