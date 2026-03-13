@@ -102,12 +102,7 @@ class User(UserMixin, db.Model):
         lazy=True
     )
 
-    partner_profile = db.relationship(
-        "Partner",
-        backref="user",
-        uselist=False
-    )
-
+    
     # ===============================
     # 🧩 Methods
     # ===============================
