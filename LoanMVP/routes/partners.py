@@ -171,7 +171,13 @@ def register():
         flash("Partner profile saved.", "success")
         return redirect(url_for("partners.dashboard"))
 
-    return render_template("partners/register.html", partner=partner)
+    return render_template(
+        "partners/register.html",
+        partner=partner,
+        portal="partner",
+        portal_name="Partner OS",
+        portal_home=url_for("partners.dashboard")
+    )
 
 # ------------------------------------------------
 # PARTNER REQUEST INBOX
