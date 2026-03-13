@@ -2801,7 +2801,7 @@ def deal_studio():
             "name": "Deal Finder",
             "description": "Search properties by ZIP, strategy, or market signals.",
             "icon": "search",
-            "endpoint": "investor.deal_finder"
+            "endpoint": "investor.property_tool"
         },
         {
             "name": "AI Deal Architect",
