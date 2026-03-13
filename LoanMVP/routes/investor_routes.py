@@ -2525,30 +2525,40 @@ def save_property_and_analyze():
     flash("🏠 Property saved! Opening Deal Studio…", "success")
     return redirect(url_for("investor.deal_workspace", prop_id=saved.id, mode="flip"))
 
-
 @investor_bp.route("/intelligence/saved/<int:prop_id>", methods=["GET"])
 @investor_bp.route("/property_explore_plus/<int:prop_id>", methods=["GET"])
 @login_required
 @role_required("investor")
 def property_explore_plus(prop_id):
+    source = request.args.get("source", "property_tool")
+    fallback_endpoint = "investor.property_search" if source == "property_search" else "investor.property_tool"
+
     ip = InvestorProfile.query.filter_by(user_id=current_user.id).first()
     if not ip:
         flash("Profile not found.", "danger")
-        return redirect(url_for("investor.property_search"))
+        return redirect(url_for(fallback_endpoint))
 
-    prop = SavedProperty.query.filter_by(id=prop_id, **_profile_id_filter(SavedProperty, ip.id)).first()
+    prop = SavedProperty.query.filter_by(
+        id=prop_id,
+        **_profile_id_filter(SavedProperty, ip.id)
+    ).first()
+
     if not prop:
         flash("Property not found.", "danger")
-        return redirect(url_for("investor.property_search"))
+        return redirect(url_for(fallback_endpoint))
 
     resolved = resolve_property_unified(prop.address)
     resolved_property = (resolved.get("property") or {}) if resolved.get("status") == "ok" else {}
     photos = resolved_property.get("photos") or []
 
     from LoanMVP.services.comps_service import get_comps_for_property
-    comps = get_comps_for_property(address=prop.address, zipcode=(prop.zipcode or ""), rentometer_api_key=None)
-    market = get_market_snapshot(zipcode=(prop.zipcode or "")) if prop.zipcode else {}
+    comps = get_comps_for_property(
+        address=prop.address,
+        zipcode=(prop.zipcode or ""),
+        rentometer_api_key=None
+    )
 
+    market = get_market_snapshot(zipcode=(prop.zipcode or "")) if prop.zipcode else {}
     ai_summary = resolved.get("ai_summary") or None
 
     return render_template(
@@ -2560,8 +2570,11 @@ def property_explore_plus(prop_id):
         comps=comps,
         market=market,
         photos=photos,
-        active_page="property_search",
+        active_page="property_search" if source == "property_search" else "property_tool",
+        source=source,
+        back_url=url_for(fallback_endpoint),
     )
+}
 
 
 @investor_bp.route("/intelligence/tool", methods=["GET"])
@@ -2832,13 +2845,18 @@ def api_property_tool_view_details():
         db.session.add(existing)
         db.session.commit()
 
-    detail_url = url_for("investor.property_explore_plus", prop_id=existing.id)
+    detail_url = url_for(
+        "investor.property_explore_plus",
+        prop_id=existing.id,
+        source="property_tool"
+    )
 
     return jsonify({
         "status": "ok",
         "saved_id": existing.id,
         "detail_url": detail_url
     })
+         
 
 
 @investor_bp.route("/api/property_tool_details_url", methods=["POST"])
