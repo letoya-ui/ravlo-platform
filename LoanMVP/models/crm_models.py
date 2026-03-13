@@ -281,6 +281,7 @@ class Partner(db.Model):
     phone = db.Column(db.String(50))
     category = db.Column(db.String(100))      # Contractor, Realtor, etc.
     service_area = db.Column(db.String(255))  # e.g. "Tri-State Area"
+    specialty = db.Column(db.String(255), nullable=True)
     active = db.Column(db.Boolean, default=True)
     type = db.Column(db.String(50))  # e.g., "Lender", "Broker", "Realtor", "Vendor"
     website = db.Column(db.String(255))
@@ -294,6 +295,7 @@ class Partner(db.Model):
     volume = db.Column(db.Float, default=0.0)
     rating = db.Column(db.Float, default=0.0)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    bio = db.Column(db.Text, nullable=True)
 
     # === Monetization & Resource Center ===
     listing_description = db.Column(db.Text)
