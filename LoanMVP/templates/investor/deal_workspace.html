@@ -52,28 +52,44 @@ Compare exit paths, pressure-test returns, and move into architect, rehab, or ca
   {% set rental = comparison.get("rental", {}) if comparison else {} %}
   {% set airbnb = comparison.get("airbnb", {}) if comparison else {} %}
 
-  {% set flip_profit = flip.get("profit", 0) or 0 %}
-  {% set flip_roi = (flip.get("roi", 0) or 0) * 100 %}
-  {% set flip_total = flip.get("total_investment", 0) or 0 %}
+  {# ---------- SAFE NUMERIC NORMALIZATION ---------- #}
+  {% set purchase_price = (selected_prop.price or 0) | float %}
+  {% set purchase_price_safe = purchase_price if purchase_price > 0 else 1 %}
 
-  {% set rental_rent = rental.get("monthly_rent", 0) or 0 %}
-  {% set rental_cashflow = rental.get("net_cashflow", 0) or 0 %}
-  {% set rental_cap = (rental.get("cap_rate", 0) or 0) * 100 %}
-  {% set rental_dscr = rental.get("dscr", 0) or 0 %}
+  {% set flip_profit = (flip.get("profit", 0) or 0) | float %}
+  {% set flip_roi = ((flip.get("roi", 0) or 0) | float) * 100 %}
+  {% set flip_total = (flip.get("total_investment", 0) or 0) | float %}
+  {% set flip_arv = (flip.get("arv", comps.arv_estimate if comps and comps.arv_estimate else 0) or 0) | float %}
 
-  {% set airbnb_nightly = airbnb.get("nightly_rate", 0) or 0 %}
-  {% set airbnb_occ = (airbnb.get("occupancy_rate", 0) or 0) * 100 %}
-  {% set airbnb_gross = airbnb.get("gross_monthly", 0) or 0 %}
-  {% set airbnb_net = airbnb.get("net_monthly", 0) or 0 %}
+  {% set rental_rent = (rental.get("monthly_rent", 0) or 0) | float %}
+  {% set rental_cashflow = (rental.get("net_cashflow", 0) or 0) | float %}
+  {% set rental_cap = ((rental.get("cap_rate", 0) or 0) | float) * 100 %}
+  {% set rental_dscr = (rental.get("dscr", 0) or 0) | float %}
+  {% set rental_noi = (rental.get("annual_noi", 0) or 0) | float %}
+
+  {% set airbnb_nightly = (airbnb.get("nightly_rate", 0) or 0) | float %}
+  {% set airbnb_occ = ((airbnb.get("occupancy_rate", 0) or 0) | float) * 100 %}
+  {% set airbnb_gross = (airbnb.get("gross_monthly", 0) or 0) | float %}
+  {% set airbnb_net = (airbnb.get("net_monthly", 0) or 0) | float %}
+  {% set airbnb_roi = ((airbnb_net * 12) / purchase_price_safe) * 100 if purchase_price_safe > 0 else 0 %}
 
   {% set max_profit = [flip_profit, rental_cashflow * 12, airbnb_net * 12] | max %}
   {% set max_profit = 1 if max_profit <= 0 else max_profit %}
-  {% set max_roi = [flip_roi, rental_cap, ((airbnb_net * 12 / ((selected_prop.price or 1) if selected_prop.price else 1)) * 100)] | max %}
+
+  {% set max_roi = [flip_roi, rental_cap, airbnb_roi] | max %}
   {% set max_roi = 1 if max_roi <= 0 else max_roi %}
+
+  {% set flip_profit_strength = ((flip_profit / max_profit) * 100) if max_profit else 0 %}
+  {% set rental_profit_strength = (((rental_cashflow * 12) / max_profit) * 100) if max_profit else 0 %}
+  {% set airbnb_profit_strength = (((airbnb_net * 12) / max_profit) * 100) if max_profit else 0 %}
+
+  {% set flip_roi_strength = ((flip_roi / max_roi) * 100) if max_roi else 0 %}
+  {% set rental_roi_strength = ((rental_cap / max_roi) * 100) if max_roi else 0 %}
+  {% set airbnb_roi_strength = ((airbnb_roi / max_roi) * 100) if max_roi else 0 %}
 
   <section class="ravlo-hero-card workspace-hero">
     <div class="workspace-hero-copy">
-      <div class="eyebrow">RAVLO WORKSPACE V2</div>
+      <div class="eyebrow">RAVLO WORKSPACE V3</div>
       <h2>{{ selected_prop.address }}</h2>
       <p class="muted">
         {{ selected_prop.city or "" }}{% if selected_prop.city and selected_prop.state %}, {% endif %}{{ selected_prop.state or "" }}
@@ -119,7 +135,7 @@ Compare exit paths, pressure-test returns, and move into architect, rehab, or ca
           {% endif %}
         </strong>
         <p>
-          Review path strength, margin, and execution pressure before moving forward.
+          Review path strength, return profile, and execution pressure before moving into rehab, architect, or capital.
         </p>
       </div>
     </div>
@@ -128,11 +144,19 @@ Compare exit paths, pressure-test returns, and move into architect, rehab, or ca
   <section class="workspace-grid-4">
     <div class="workspace-stat">
       <span>Purchase Price</span>
-      <strong>${{ "{:,.0f}".format(selected_prop.price or 0) }}</strong>
+      <strong>${{ "{:,.0f}".format(purchase_price) }}</strong>
     </div>
     <div class="workspace-stat">
       <span>Sq Ft</span>
-      <strong>{{ comps.property.sqft if comps.property and comps.property.sqft else "—" }}</strong>
+      <strong>
+        {% if selected_prop.sqft or selected_prop.square_feet %}
+          {{ "{:,.0f}".format((selected_prop.sqft or selected_prop.square_feet)|float) }}
+        {% elif comps and comps.property and comps.property.sqft %}
+          {{ "{:,.0f}".format(comps.property.sqft|float) }}
+        {% else %}
+          —
+        {% endif %}
+      </strong>
     </div>
     <div class="workspace-stat">
       <span>ARV Estimate</span>
@@ -160,22 +184,36 @@ Compare exit paths, pressure-test returns, and move into architect, rehab, or ca
         <div class="workspace-compare-grid">
 
           <div class="workspace-compare-card {% if recommended == 'flip' %}recommended{% endif %}">
-            <span class="workspace-compare-kicker">FLIP</span>
+            <div class="workspace-card-topline">
+              <span class="workspace-compare-kicker">FLIP</span>
+              {% if recommended == 'flip' %}
+              <span class="workspace-badge">Recommended</span>
+              {% endif %}
+            </div>
+
             <strong class="workspace-compare-title">Fix & Flip</strong>
 
             <div class="workspace-compare-meta">
               <div><span>Projected Profit</span><strong>${{ "{:,.0f}".format(flip_profit) }}</strong></div>
               <div><span>Total Investment</span><strong>${{ "{:,.0f}".format(flip_total) }}</strong></div>
+              <div><span>Projected ARV</span><strong>${{ "{:,.0f}".format(flip_arv) if flip_arv else "—" }}</strong></div>
               <div><span>ROI</span><strong>{{ "{:.1f}".format(flip_roi) }}%</strong></div>
-              <div><span>Best Use</span><strong>Resale Spread</strong></div>
             </div>
 
             <div class="metric-bar-wrap">
               <div class="metric-bar-label">
                 <span>Profit Strength</span>
-                <strong>{{ "{:.0f}".format((flip_profit / max_profit) * 100) if max_profit else 0 }}%</strong>
+                <strong>{{ "{:.0f}".format(flip_profit_strength) }}%</strong>
               </div>
-              <div class="metric-bar"><div class="metric-bar-fill" style="width: {{ (flip_profit / max_profit) * 100 if max_profit else 0 }}%;"></div></div>
+              <div class="metric-bar"><div class="metric-bar-fill" style="width: {{ flip_profit_strength }}%;"></div></div>
+            </div>
+
+            <div class="metric-bar-wrap">
+              <div class="metric-bar-label">
+                <span>ROI Strength</span>
+                <strong>{{ "{:.0f}".format(flip_roi_strength) }}%</strong>
+              </div>
+              <div class="metric-bar"><div class="metric-bar-fill alt" style="width: {{ flip_roi_strength }}%;"></div></div>
             </div>
 
             {% if recommendation and recommendation.notes and recommendation.notes.get("flip") %}
@@ -184,22 +222,36 @@ Compare exit paths, pressure-test returns, and move into architect, rehab, or ca
           </div>
 
           <div class="workspace-compare-card {% if recommended == 'rental' %}recommended{% endif %}">
-            <span class="workspace-compare-kicker">RENTAL</span>
+            <div class="workspace-card-topline">
+              <span class="workspace-compare-kicker">RENTAL</span>
+              {% if recommended == 'rental' %}
+              <span class="workspace-badge">Recommended</span>
+              {% endif %}
+            </div>
+
             <strong class="workspace-compare-title">Buy & Hold Rental</strong>
 
             <div class="workspace-compare-meta">
               <div><span>Monthly Rent</span><strong>${{ "{:,.0f}".format(rental_rent) }}</strong></div>
               <div><span>Monthly Cash Flow</span><strong>${{ "{:,.0f}".format(rental_cashflow) }}</strong></div>
-              <div><span>Annual NOI</span><strong>${{ "{:,.0f}".format(rental.get("annual_noi", 0) or 0) }}</strong></div>
+              <div><span>Annual NOI</span><strong>${{ "{:,.0f}".format(rental_noi) }}</strong></div>
               <div><span>Cap Rate</span><strong>{{ "{:.1f}".format(rental_cap) }}%</strong></div>
             </div>
 
             <div class="metric-bar-wrap">
               <div class="metric-bar-label">
                 <span>Cash Flow Strength</span>
-                <strong>{{ "{:.0f}".format(((rental_cashflow * 12) / max_profit) * 100) if max_profit else 0 }}%</strong>
+                <strong>{{ "{:.0f}".format(rental_profit_strength) }}%</strong>
               </div>
-              <div class="metric-bar"><div class="metric-bar-fill" style="width: {{ ((rental_cashflow * 12) / max_profit) * 100 if max_profit else 0 }}%;"></div></div>
+              <div class="metric-bar"><div class="metric-bar-fill" style="width: {{ rental_profit_strength }}%;"></div></div>
+            </div>
+
+            <div class="metric-bar-wrap">
+              <div class="metric-bar-label">
+                <span>Return Strength</span>
+                <strong>{{ "{:.0f}".format(rental_roi_strength) }}%</strong>
+              </div>
+              <div class="metric-bar"><div class="metric-bar-fill alt" style="width: {{ rental_roi_strength }}%;"></div></div>
             </div>
 
             {% if recommendation and recommendation.notes and recommendation.notes.get("rental") %}
@@ -208,7 +260,13 @@ Compare exit paths, pressure-test returns, and move into architect, rehab, or ca
           </div>
 
           <div class="workspace-compare-card {% if recommended == 'airbnb' %}recommended{% endif %}">
-            <span class="workspace-compare-kicker">AIRBNB</span>
+            <div class="workspace-card-topline">
+              <span class="workspace-compare-kicker">AIRBNB</span>
+              {% if recommended == 'airbnb' %}
+              <span class="workspace-badge">Recommended</span>
+              {% endif %}
+            </div>
+
             <strong class="workspace-compare-title">Short-Term Rental</strong>
 
             <div class="workspace-compare-meta">
@@ -216,14 +274,23 @@ Compare exit paths, pressure-test returns, and move into architect, rehab, or ca
               <div><span>Occupancy</span><strong>{{ "{:.0f}".format(airbnb_occ) }}%</strong></div>
               <div><span>Gross Monthly</span><strong>${{ "{:,.0f}".format(airbnb_gross) }}</strong></div>
               <div><span>Net Monthly</span><strong>${{ "{:,.0f}".format(airbnb_net) }}</strong></div>
+              <div><span>Annualized ROI</span><strong>{{ "{:.1f}".format(airbnb_roi) }}%</strong></div>
             </div>
 
             <div class="metric-bar-wrap">
               <div class="metric-bar-label">
                 <span>Income Strength</span>
-                <strong>{{ "{:.0f}".format(((airbnb_net * 12) / max_profit) * 100) if max_profit else 0 }}%</strong>
+                <strong>{{ "{:.0f}".format(airbnb_profit_strength) }}%</strong>
               </div>
-              <div class="metric-bar"><div class="metric-bar-fill" style="width: {{ ((airbnb_net * 12) / max_profit) * 100 if max_profit else 0 }}%;"></div></div>
+              <div class="metric-bar"><div class="metric-bar-fill" style="width: {{ airbnb_profit_strength }}%;"></div></div>
+            </div>
+
+            <div class="metric-bar-wrap">
+              <div class="metric-bar-label">
+                <span>Return Strength</span>
+                <strong>{{ "{:.0f}".format(airbnb_roi_strength) }}%</strong>
+              </div>
+              <div class="metric-bar"><div class="metric-bar-fill alt" style="width: {{ airbnb_roi_strength }}%;"></div></div>
             </div>
 
             {% if recommendation and recommendation.notes and recommendation.notes.get("airbnb") %}
@@ -279,8 +346,8 @@ Compare exit paths, pressure-test returns, and move into architect, rehab, or ca
           </div>
 
           <div class="workspace-mini-stat">
-            <span>Airbnb Occupancy</span>
-            <strong>{{ "{:.0f}".format(airbnb_occ) }}%</strong>
+            <span>Airbnb ROI</span>
+            <strong>{{ "{:.1f}".format(airbnb_roi) }}%</strong>
           </div>
         </div>
       </section>
@@ -316,7 +383,7 @@ Compare exit paths, pressure-test returns, and move into architect, rehab, or ca
           </div>
           <div class="workspace-info-box">
             <span>Sq Ft</span>
-            <strong>{{ "{:,.0f}".format(selected_prop.sqft or selected_prop.square_feet) if (selected_prop.sqft or selected_prop.square_feet) else "—" }}</strong>
+            <strong>{{ "{:,.0f}".format((selected_prop.sqft or selected_prop.square_feet)|float) if (selected_prop.sqft or selected_prop.square_feet) else "—" }}</strong>
           </div>
           <div class="workspace-info-box">
             <span>Deal Attached</span>
@@ -416,6 +483,10 @@ Compare exit paths, pressure-test returns, and move into architect, rehab, or ca
           <div class="workspace-mini-stat">
             <span>Rental DSCR</span>
             <strong>{{ "{:.2f}".format(rental_dscr) if rental_dscr else "—" }}</strong>
+          </div>
+          <div class="workspace-mini-stat">
+            <span>Top ROI</span>
+            <strong>{{ "{:.1f}".format(max_roi) }}%</strong>
           </div>
         </div>
       </section>
@@ -661,15 +732,37 @@ Compare exit paths, pressure-test returns, and move into architect, rehab, or ca
 
   .workspace-compare-card{
     padding:20px;
-    border-radius:20px;
+    border-radius:22px;
     background:rgba(255,255,255,.03);
     border:1px solid rgba(255,255,255,.08);
+    position:relative;
   }
 
   .workspace-compare-card.recommended{
     border-color:rgba(107,127,147,.40);
-    background:linear-gradient(180deg, rgba(107,127,147,.10), rgba(255,255,255,.03));
-    box-shadow:0 0 0 1px rgba(107,127,147,.14) inset;
+    background:linear-gradient(180deg, rgba(107,127,147,.11), rgba(255,255,255,.03));
+    box-shadow:0 0 0 1px rgba(107,127,147,.14) inset, 0 14px 34px rgba(0,0,0,.18);
+  }
+
+  .workspace-card-topline{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+  }
+
+  .workspace-badge{
+    display:inline-flex;
+    align-items:center;
+    padding:6px 10px;
+    border-radius:999px;
+    font-size:11px;
+    font-weight:700;
+    letter-spacing:.08em;
+    text-transform:uppercase;
+    background:rgba(142,167,192,.14);
+    border:1px solid rgba(142,167,192,.22);
+    color:#dce8f5;
   }
 
   .workspace-compare-kicker{
@@ -681,7 +774,7 @@ Compare exit paths, pressure-test returns, and move into architect, rehab, or ca
 
   .workspace-compare-title{
     display:block;
-    margin-top:6px;
+    margin-top:8px;
     font-size:19px;
     font-weight:700;
     color:var(--text);
@@ -758,6 +851,10 @@ Compare exit paths, pressure-test returns, and move into architect, rehab, or ca
     height:100%;
     border-radius:inherit;
     background:linear-gradient(90deg, #6B7F93, #8EA7C0);
+  }
+
+  .metric-bar-fill.alt{
+    background:linear-gradient(90deg, rgba(255,255,255,.45), #AFC5DB);
   }
 
   .workspace-fit-grid{
@@ -894,6 +991,14 @@ Compare exit paths, pressure-test returns, and move into architect, rehab, or ca
     .workspace-fit-grid,
     .workspace-compare-grid{
       grid-template-columns:1fr;
+    }
+
+    .workspace-hero-copy h2{
+      font-size:28px;
+    }
+
+    .workspace-highlight strong{
+      font-size:22px;
     }
   }
 </style>
