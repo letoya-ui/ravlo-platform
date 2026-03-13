@@ -129,3 +129,25 @@ def message_partner(partner_id):
         "messages.thread_with_partner",
         partner_id=partner.id
     ))
+
+@partners_bp.route("/requests")
+@role_required("partner")
+def requests_inbox():
+    partner = Partner.query.filter_by(user_id=current_user.id).first()
+
+    if not partner:
+        flash("Partner profile not found. Please register.", "warning")
+        return redirect(url_for("partners.register"))
+
+    requests_q = PartnerConnectionRequest.query.filter_by(
+        partner_id=partner.id
+    ).order_by(
+        PartnerConnectionRequest.created_at.desc()
+    ).all()
+
+    return render_template(
+        "partners/requests_inbox.html",
+        partner=partner,
+        requests=requests_q,
+        portal="partner"
+    )
