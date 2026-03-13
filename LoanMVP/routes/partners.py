@@ -126,6 +126,7 @@ def profile(partner_id):
 # ------------------------------------------------
 
 @partners_bp.route("/register", methods=["GET", "POST"])
+@csrf.exempt
 @role_required("partner")
 def register():
     partner = Partner.query.filter_by(user_id=current_user.id).first()
