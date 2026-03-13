@@ -49,6 +49,7 @@ class RegisterForm(FlaskForm):
             ("loan_officer", "Loan_officer"),
             ("processor", "Processor"),
             ("underwriter", "Underwriter"),
+            ("partner", "Partner"),
         ],
         default="investor"
     )
