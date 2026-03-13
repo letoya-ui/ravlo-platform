@@ -1,45 +1,9 @@
-{% extends "layouts/base.html" %}
+{% extends "layouts/Ravlo_lending_base.html" %}
 {% block title %}View Leads{% endblock %}
 {% block content %}
 
-<main style="margin-left:260px; padding:2rem; background:#0f0f11; color:#e6e6e6; min-height:100vh;">
-  <link rel="stylesheet" href="https://unpkg.com/lucide-static@latest/font/lucide.css">
-  <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
 
-  <style>
-    .card{
-      background:#15161a;border:1px solid #2b2f36;border-radius:14px;
-      padding:1.4rem;box-shadow:0 0 18px rgba(122,184,255,0.25);
-      margin-bottom:1.5rem;
-    }
-    h1,h2{color:#7ab8ff;margin-bottom:1rem;}
-    .muted{color:#a5a7ad;font-size:.9rem;}
-    .btn{
-      display:inline-flex;align-items:center;gap:.5rem;
-      background:linear-gradient(180deg,#2a4a62,#1b2a38);
-      border:1px solid #2a4a62;color:#cfe8ff;
-      border-radius:10px;padding:.6rem 1.1rem;text-decoration:none;
-      cursor:pointer;
-    }
-    .btn:hover{box-shadow:0 0 10px rgba(122,184,255,0.35);}
-    .grid{display:grid;gap:1rem;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));}
-    table{width:100%;border-collapse:collapse;}
-    th,td{padding:.65rem .8rem;border-top:1px solid #2b2f36;text-align:left;}
-    th{color:#9cb9d8;text-transform:uppercase;font-size:.8rem;}
-    tr:hover{background:#1c1f25;}
-    input,select{
-      background:#0f0f11;color:#e6e6e6;
-      border:1px solid #2b2f36;border-radius:10px;
-      padding:.6rem .8rem;width:100%;
-    }
-    .actions{display:flex;gap:.4rem;flex-wrap:wrap;}
-    .badge{padding:.25rem .6rem;border-radius:999px;font-size:.78rem;}
-    .b-new{background:#2a4a62;color:#cfe8ff;}
-    .b-contacted{background:#223f5a;color:#7ab8ff;}
-    .b-progress{background:#2a5a4a;color:#43d19e;}
-    .b-won{background:#3a3622;color:#ffdf6e;}
-    .b-lost{background:#5a2a2a;color:#ff6b6b;}
-  </style>
+  
 
   <div class="card">
     <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;">

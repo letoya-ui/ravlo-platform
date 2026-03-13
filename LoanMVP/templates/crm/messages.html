@@ -1,44 +1,8 @@
-{% extends "layouts/base.html" %}
+{% extends "layouts/Ravlo_lending_base.html" %}}
 {% block title %}CRM • Messages{% endblock %}
 {% block content %}
 <main class="dashboard-main">
 
-<style>
-  :root{
-    --bg:#0f0f11;--panel:#15161a;--line:#282b31;
-    --text:#e6e6e6;--muted:#a5a7ad;--accent:#7ab8ff;
-    --glow:0 0 18px rgba(122,184,255,.35);
-  }
-  body{background:var(--bg);color:var(--text);}
-  .wrap{display:flex;gap:1rem;flex-wrap:wrap;}
-  .lhs{flex:1 1 68%;min-width:400px;}
-  .rhs{flex:1 1 30%;min-width:300px;}
-  .card{background:var(--panel);border:1px solid var(--line);
-        border-radius:14px;padding:1rem;box-shadow:var(--glow);}
-  .muted{color:var(--muted);}
-  .btn{display:inline-flex;align-items:center;gap:.5rem;
-       padding:.6rem 1rem;border-radius:10px;border:1px solid var(--line);
-       color:var(--text);text-decoration:none;background:#1a1d23;}
-  .btn:hover{border-color:var(--accent);box-shadow:var(--glow);}
-  .chat-window{display:flex;flex-direction:column;gap:.6rem;
-               max-height:60vh;overflow-y:auto;padding-right:.5rem;}
-  .msg{padding:.6rem .8rem;border-radius:10px;max-width:80%;
-       word-wrap:break-word;}
-  .msg.user{background:linear-gradient(180deg,#2a4a62,#1b2a38);
-            color:#dcefff;align-self:flex-end;border:1px solid var(--accent);}
-  .msg.other{background:#1b1d22;border:1px solid var(--line);
-             color:var(--text);align-self:flex-start;}
-  .msg small{display:block;color:var(--muted);font-size:.7rem;margin-top:.25rem;}
-  .chat-input{display:flex;gap:.5rem;margin-top:1rem;}
-  .chat-input input{flex:1;background:#0f0f11;border:1px solid var(--line);
-                    color:var(--text);border-radius:10px;padding:.6rem .8rem;}
-  .ai-suggestions{margin-top:.5rem;}
-  .chip{display:inline-flex;gap:.3rem;padding:.3rem .6rem;
-        border:1px solid var(--line);background:var(--panel);
-        border-radius:999px;font-size:.78rem;color:#c4d9f2;
-        margin-right:.3rem;cursor:pointer;}
-  .chip:hover{box-shadow:var(--glow);}
-</style>
 
 <div class="wrap">
   <!-- LEFT PANEL: Conversation -->

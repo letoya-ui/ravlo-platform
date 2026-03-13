@@ -303,6 +303,8 @@ class Partner(db.Model):
     approved = db.Column(db.Boolean, default=False)
     featured = db.Column(db.Boolean, default=False)
     subscription_tier = db.Column(db.String(50), default="Free")  # Free, Featured, Premium
+    type = db.Column(db.String(255))
+    paid_until = db.Column(db.DateTime)
 
     # 🧩 Fix: datetime.utcnow should be callable (not executed at import)
     paid_until = db.Column(db.DateTime, default=lambda: datetime.utcnow() + timedelta(days=30))

@@ -1,4 +1,4 @@
-{% extends "layouts/base.html" %}
+{% extends "layouts/Ravlo_lending_base.html" %}
 {% block title %}Dialer Results{% endblock %}
 {% block content %}
 
@@ -6,34 +6,7 @@
   <link rel="stylesheet" href="https://unpkg.com/lucide-static@latest/font/lucide.css">
   <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
 
-  <style>
-    .card {
-      background:#15161a;border:1px solid #2b2f36;border-radius:14px;
-      padding:1.4rem;box-shadow:0 0 18px rgba(122,184,255,0.25);
-      margin-bottom:1.5rem;
-    }
-    h1,h2{color:#7ab8ff;margin-bottom:1rem;}
-    .muted{color:#a5a7ad;font-size:.9rem;}
-    .grid{display:grid;gap:1.2rem;}
-    .g-2{grid-template-columns:repeat(2,minmax(0,1fr));}
-    .btn{
-      display:inline-flex;align-items:center;gap:.4rem;
-      background:linear-gradient(180deg,#2a4a62,#1b2a38);
-      border:1px solid #2a4a62;color:#cfe8ff;
-      border-radius:10px;padding:.6rem 1.1rem;text-decoration:none;cursor:pointer;
-    }
-    .btn:hover{box-shadow:0 0 10px rgba(122,184,255,0.35);}
-    .btn-outline{background:transparent;border:1px solid #2b2f36;color:#e6e6e6;}
-    table{width:100%;border-collapse:collapse;}
-    th,td{padding:.6rem .8rem;border-top:1px solid #2b2f36;text-align:left;}
-    th{color:#9cb9d8;font-size:.85rem;text-transform:uppercase;}
-    tr:hover{background:#1c1f25;}
-    .badge{padding:.25rem .6rem;border-radius:999px;font-size:.78rem;}
-    .b-success{background:#1b2a23;color:#43d19e;}
-    .b-failed{background:#2a1b1b;color:#ff6b6b;}
-    .b-voicemail{background:#2a2a1b;color:#ffdf6e;}
-    .b-noanswer{background:#223f5a;color:#7ab8ff;}
-  </style>
+  
 
   <!-- Header -->
   <div class="card">

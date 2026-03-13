@@ -1,19 +1,8 @@
-{% extends "layouts/base.html" %}
+{% extends "layouts/Ravlo_lending_base.html" %}
 {% block title %}Call Log Details{% endblock %}
 {% block content %}
 <main class="dashboard-main">
 <link rel="stylesheet" href="https://unpkg.com/lucide-static@latest/font/lucide.css">
-<style>
-  :root{--panel:#15161a;--line:#2a2e36;--text:#e6e6e6;--muted:#a5a7ad;--accent:#7ab8ff;--glow:0 0 18px rgba(122,184,255,.3);}
-  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:1.2rem;box-shadow:var(--glow);}
-  .muted{color:var(--muted);}
-  .btn{display:inline-flex;align-items:center;gap:.4rem;background:linear-gradient(180deg,#2a4a62,#1b2a38);
-       border:1px solid #2a4a62;color:#cfe8ff;border-radius:10px;padding:.6rem 1.2rem;text-decoration:none;margin-top:1rem;}
-  .meta{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.5rem;}
-  .ai-box{background:#18222b;border:1px solid #2b2f36;border-radius:12px;padding:1rem;margin-top:1rem;}
-  .ai-box h3{color:var(--accent);}
-  .divider{border-top:1px solid var(--line);margin:1rem 0;}
-</style>
 
 <div class="card">
   <h2>📞 Call Details</h2>

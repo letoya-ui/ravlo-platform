@@ -1,32 +1,9 @@
-{% extends "layouts/base.html" %}
+{% extends "layouts/Ravlo_lending_base.html" %}
 {% block title %}CRM • Smart Dialer{% endblock %}
 {% block content %}
 <main class="dashboard-main">
 <link rel="stylesheet" href="https://unpkg.com/lucide-static@latest/font/lucide.css">
 
-<style>
-  :root {
-    --bg:#0f0f11;--panel:#15161a;--line:#2a2e36;
-    --text:#e6e6e6;--muted:#a5a7ad;--accent:#7ab8ff;
-    --glow:0 0 18px rgba(122,184,255,.35);
-  }
-  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:1.2rem;box-shadow:var(--glow);}
-  label{display:block;margin-top:.6rem;color:var(--accent);}
-  input,textarea,select{
-    width:100%;background:#0f0f11;color:var(--text);
-    border:1px solid var(--line);border-radius:10px;
-    padding:.6rem;margin-top:.3rem;
-  }
-  textarea{min-height:90px;}
-  .btn{background:linear-gradient(180deg,#2a4a62,#1b2a38);border:1px solid #2a4a62;color:#cfe8ff;
-       border-radius:10px;padding:.6rem 1.2rem;margin-top:1rem;cursor:pointer;}
-  .ai-box{background:#18222b;border:1px solid #2b2f36;border-radius:12px;padding:1rem;margin-top:1rem;}
-  .muted{color:var(--muted);}
-  table{width:100%;border-collapse:collapse;margin-top:1rem;}
-  th,td{padding:.65rem;border-top:1px solid var(--line);}
-  th{color:var(--accent);text-align:left;}
-  tr:hover{background:#1a1c20;}
-</style>
 
 <h1>📞 Smart Dialer</h1>
 <p class="muted">Log calls, capture notes, and get instant AI feedback on performance.</p>
