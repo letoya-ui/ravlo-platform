@@ -489,4 +489,33 @@ def lead_detail(lead_id):
         page_title=lead.name,
         page_subline="Lead details and activity"
     )
+    
+@partners_bp.route("/settings", methods=["GET", "POST"])
+@role_required("partner")
+def settings():
+    partner = Partner.query.filter_by(user_id=current_user.id).first()
 
+    if not partner:
+        flash("Partner profile not found.", "warning")
+        return redirect(url_for("partners.register"))
+
+    if request.method == "POST":
+        company = request.form.get("company")
+        category = request.form.get("category") or request.form.get("role")
+        service_area = request.form.get("service_area")
+        bio = request.form.get("bio")
+
+        partner.company = company
+        partner.category = category
+        partner.service_area = service_area
+        partner.bio = bio
+
+        db.session.commit()
+        flash("Settings updated.", "success")
+        return redirect(url_for("partners.settings"))
+
+    return render_template(
+        "partners/settings.html",
+        partner=partner,
+        portal="partner"
+    )
