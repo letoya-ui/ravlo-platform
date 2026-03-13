@@ -317,7 +317,7 @@ class Partner(db.Model):
 
     photos = db.relationship(
         "PartnerPhoto",
-        backref="owner",
+        backref="partner",
         lazy="dynamic",
         cascade="all, delete-orphan"
     )   
