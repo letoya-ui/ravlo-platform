@@ -1,12 +1,11 @@
-from flask import Blueprint, render_template
+from flask import redirect, url_for
+
+@marketing_bp.route("/home")
+def homepage_redirect():
+    return redirect(url_for("marketing.homepage"))
 
 marketing_bp = Blueprint("marketing", __name__, template_folder="templates")
 
-# HOME
-@marketing_bp.route("/")
-@marketing_bp.route("/home")
-def homepage():
-    return render_template("marketing/home.html")
 
 # ABOUT
 @marketing_bp.route("/about")
@@ -32,3 +31,7 @@ def enter():
 @marketing_bp.route("/tour")
 def tour():
     return render_template("marketing/tour.html")
+
+@marketing_bp.route("/contact")
+def contact():
+    return render_template("marketing/contact.html")
