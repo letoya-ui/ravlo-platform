@@ -3,228 +3,70 @@
 
 {% block page_title %}Partner Details{% endblock %}
 {% block page_subline %}
-Review experience, service coverage, and business details for this partner.
-{% endblock %}
-
-{% block topbar_actions %}
-  <button class="ravlo-btn ghost sm" type="button"
-          onclick="location.href='{{ url_for('investor.partners') }}'">
-    Back to Partner Network
-  </button>
+Review this partner and request an introduction.
 {% endblock %}
 
 {% block content %}
+<div class="ravlo-stack">
 
-<style>
-  .detail-wrap{ margin-top:1rem; max-width:980px; }
-  .detail-card{
-    background:rgba(255,255,255,.03);
-    border:1px solid rgba(255,255,255,.10);
-    border-radius:20px;
-    padding:1.2rem;
-    box-shadow:0 0 18px rgba(0,0,0,.35);
-  }
-  .chip-row{
-    display:flex;
-    gap:.5rem;
-    flex-wrap:wrap;
-    margin-top:.8rem;
-  }
-  .chip{
-    display:inline-flex;
-    align-items:center;
-    padding:.35rem .6rem;
-    border-radius:999px;
-    border:1px solid rgba(122,184,255,.25);
-    background:rgba(122,184,255,.10);
-    color:#a9d2ff;
-    font-size:.76rem;
-    font-weight:800;
-  }
-  .grid-2{
-    display:grid;
-    grid-template-columns:repeat(2, minmax(0,1fr));
-    gap:1rem;
-    margin-top:1rem;
-  }
-  @media (max-width: 900px){
-    .grid-2{ grid-template-columns:1fr; }
-  }
-  .info-card{
-    background:rgba(255,255,255,.02);
-    border:1px solid rgba(255,255,255,.08);
-    border-radius:16px;
-    padding:1rem;
-  }
-  .label{
-    font-size:.82rem;
-    color:rgba(230,235,240,.65);
-    margin-bottom:.25rem;
-  }
-  .value{
-    color:rgba(230,235,240,.95);
-    font-weight:800;
-  }
-  .muted{
-    color:rgba(230,235,240,.68);
-    line-height:1.7;
-  }
-  .intro-box{
-    margin-top:1rem;
-    padding:1rem;
-    border-radius:16px;
-    border:1px solid rgba(255,255,255,.08);
-    background:rgba(255,255,255,.02);
-  }
-  .intro-textarea{
-    width:100%;
-    min-height:120px;
-    border-radius:14px;
-    border:1px solid rgba(255,255,255,.10);
-    background:rgba(255,255,255,.03);
-    color:rgba(230,235,240,.95);
-    padding:.9rem;
-    resize:vertical;
-    outline:none;
-  }
-  .intro-textarea:focus{
-    border-color:rgba(122,184,255,.55);
-    box-shadow:0 0 0 3px rgba(122,184,255,.10);
-  }
-  .btn-row{
-    display:flex;
-    gap:.75rem;
-    flex-wrap:wrap;
-    margin-top:1rem;
-  }
-</style>
-
-<div class="detail-wrap">
-  <div class="detail-card">
-    <h2 style="margin:0;">
-      {{ partner.company or partner.name }}
-    </h2>
-
-    <div class="muted" style="margin-top:.45rem;">
-      {{ partner.type or partner.category or "Partner" }}
-      {% if partner.name and partner.company %}
-        • {{ partner.name }}
-      {% endif %}
-    </div>
-
-    <div class="chip-row">
-      {% if partner.category %}
-        <span class="chip">{{ partner.category }}</span>
-      {% endif %}
-      {% if partner.service_area %}
-        <span class="chip">{{ partner.service_area }}</span>
-      {% endif %}
-      {% if partner.relationship_level %}
-        <span class="chip">{{ partner.relationship_level }}</span>
-      {% endif %}
-      {% if partner.subscription_tier %}
-        <span class="chip">{{ partner.subscription_tier }}</span>
-      {% endif %}
-      {% if partner.featured %}
-        <span class="chip">Featured</span>
-      {% endif %}
-    </div>
-
-    <div class="grid-2">
-      <div class="info-card">
-        <div class="label">Contact</div>
-        <div class="value">{{ partner.name or '—' }}</div>
-      </div>
-
-      <div class="info-card">
-        <div class="label">Email</div>
-        <div class="value">{{ partner.email or '—' }}</div>
-      </div>
-
-      <div class="info-card">
-        <div class="label">Phone</div>
-        <div class="value">{{ partner.phone or '—' }}</div>
-      </div>
-
-      <div class="info-card">
-        <div class="label">Website</div>
-        <div class="value">
-          {% if partner.website %}
-            <a href="{{ partner.website }}" target="_blank" rel="noopener" style="color:#a9d2ff;">{{ partner.website }}</a>
-          {% else %}
-            —
-          {% endif %}
+  <div class="ravlo-card">
+    <div style="display:flex; justify-content:space-between; gap:16px; flex-wrap:wrap;">
+      <div>
+        <h2 style="margin:0;">{{ partner.company or partner.name }}</h2>
+        <div class="ravlo-muted" style="margin-top:6px;">
+          {{ partner.category or "Partner" }}
+          {% if partner.service_area %} • {{ partner.service_area }}{% endif %}
         </div>
       </div>
 
-      <div class="info-card">
-        <div class="label">Service Area</div>
-        <div class="value">{{ partner.service_area or '—' }}</div>
-      </div>
-
-      <div class="info-card">
-        <div class="label">Status</div>
-        <div class="value">{{ partner.status or 'Active' }}</div>
-      </div>
-
-      <div class="info-card">
-        <div class="label">Deals Completed</div>
-        <div class="value">{{ partner.deals or 0 }}</div>
-      </div>
-
-      <div class="info-card">
-        <div class="label">Volume</div>
-        <div class="value">${{ "{:,.0f}".format(partner.volume or 0) }}</div>
-      </div>
-
-      <div class="info-card">
-        <div class="label">Rating</div>
-        <div class="value">{{ "{:.1f}".format(partner.rating or 0) }}</div>
-      </div>
-
-      <div class="info-card">
-        <div class="label">Joined</div>
-        <div class="value">
-          {{ partner.joined_date.strftime('%b %d, %Y') if partner.joined_date else '—' }}
-        </div>
-      </div>
-    </div>
-
-    <div style="margin-top:1rem;">
-      <div class="label">Listing Description</div>
-      <div class="muted">
-        {{ partner.listing_description or 'No listing description available yet.' }}
-      </div>
-    </div>
-
-    <div class="intro-box">
-      <div class="label" style="margin-bottom:.5rem;">Request Introduction</div>
-      <div class="muted" style="margin-bottom:.75rem;">
-        Send a request to connect with this partner through Ravlo.
-      </div>
-
-      <form method="POST" action="{{ url_for('investor.request_partner_intro', partner_id=partner.id) }}">
-        {% if csrf_token is defined %}
-          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div style="display:flex; gap:8px; flex-wrap:wrap;">
+        {% if partner.relationship_level %}
+          <span class="ravlo-badge">{{ partner.relationship_level }}</span>
         {% endif %}
+        {% if partner.featured %}
+          <span class="ravlo-badge">Featured</span>
+        {% endif %}
+      </div>
+    </div>
 
-        <textarea
-          class="intro-textarea"
-          name="message"
-          placeholder="Hi, I’d like to connect regarding an upcoming deal, renovation, or service need."></textarea>
+    {% if partner.listing_description %}
+      <div style="margin-top:18px;">
+        <h4>About</h4>
+        <p>{{ partner.listing_description }}</p>
+      </div>
+    {% endif %}
 
-        <div class="btn-row">
-          <button class="ravlo-btn primary" type="submit">Request Intro</button>
+    <div class="ravlo-grid ravlo-grid-2" style="margin-top:18px;">
+      <div class="ravlo-subcard">
+        <h4>Company Info</h4>
+        <p><strong>Name:</strong> {{ partner.name or "—" }}</p>
+        <p><strong>Company:</strong> {{ partner.company or "—" }}</p>
+        <p><strong>Category:</strong> {{ partner.category or "—" }}</p>
+        <p><strong>Type:</strong> {{ partner.type or "—" }}</p>
+      </div>
 
-          {% if partner.website %}
-            <a class="ravlo-btn ghost" href="{{ partner.website }}" target="_blank" rel="noopener">
-              Visit Website
-            </a>
-          {% endif %}
-        </div>
-      </form>
+      <div class="ravlo-subcard">
+        <h4>Contact</h4>
+        <p><strong>Email:</strong> {{ partner.email or "—" }}</p>
+        <p><strong>Phone:</strong> {{ partner.phone or "—" }}</p>
+        <p><strong>Website:</strong> {{ partner.website or "—" }}</p>
+        <p><strong>Service Area:</strong> {{ partner.service_area or "—" }}</p>
+      </div>
     </div>
   </div>
-</div>
 
+  <div class="ravlo-card">
+    <h3>Request Introduction</h3>
+    <form method="POST" action="{{ url_for('investor.request_partner_intro', partner_id=partner.id) }}">
+      <label class="ravlo-label">Message</label>
+      <textarea name="message" class="ravlo-input" rows="5" placeholder="Tell us what kind of help you need for this project or property."></textarea>
+
+      <div style="margin-top:14px; display:flex; gap:10px; flex-wrap:wrap;">
+        <button type="submit" class="ravlo-btn">Request Intro</button>
+        <a href="{{ url_for('investor.partners') }}" class="ravlo-btn ghost">Back to Partners</a>
+      </div>
+    </form>
+  </div>
+
+</div>
 {% endblock %}
