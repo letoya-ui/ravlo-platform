@@ -50,6 +50,7 @@ Browse trusted professionals for your deals, projects, and portfolio growth.
 
   <div class="ravlo-grid ravlo-grid-3">
     {% for partner in partners %}
+      {% set partner_desc = partner.listing_description or partner.bio or "Trusted partner available through Ravlo." %}
       <div class="ravlo-card">
         <div style="display:flex; justify-content:space-between; gap:12px; align-items:flex-start;">
           <div>
@@ -66,9 +67,9 @@ Browse trusted professionals for your deals, projects, and portfolio growth.
           {{ partner.service_area or "Service area not listed" }}
         </div>
 
-        {% if partner.listing_description %}
-          <p style="margin-top:12px;">{{ partner.listing_description[:180] }}{% if partner.listing_description|length > 180 %}...{% endif %}</p>
-        {% endif %}
+        <p style="margin-top:12px;">
+          {{ partner_desc[:180] }}{% if partner_desc|length > 180 %}...{% endif %}
+        </p>
 
         <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:14px;">
           {% if partner.relationship_level %}
@@ -79,7 +80,7 @@ Browse trusted professionals for your deals, projects, and portfolio growth.
           {% endif %}
         </div>
 
-        <div style="margin-top:16px;">
+        <div style="margin-top:16px; display:flex; gap:8px; flex-wrap:wrap;">
           <a href="{{ url_for('investor.partner_detail', partner_id=partner.id) }}" class="ravlo-btn">
             View Partner
           </a>

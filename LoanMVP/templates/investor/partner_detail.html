@@ -9,6 +9,8 @@ Review this partner and request an introduction.
 {% block content %}
 <div class="ravlo-stack">
 
+  {% set partner_desc = partner.listing_description or partner.bio or "Trusted partner available through Ravlo." %}
+
   <div class="ravlo-card">
     <div style="display:flex; justify-content:space-between; gap:16px; flex-wrap:wrap;">
       <div>
@@ -29,12 +31,10 @@ Review this partner and request an introduction.
       </div>
     </div>
 
-    {% if partner.listing_description %}
-      <div style="margin-top:18px;">
-        <h4>About</h4>
-        <p>{{ partner.listing_description }}</p>
-      </div>
-    {% endif %}
+    <div style="margin-top:18px;">
+      <h4>About</h4>
+      <p>{{ partner_desc }}</p>
+    </div>
 
     <div class="ravlo-grid ravlo-grid-2" style="margin-top:18px;">
       <div class="ravlo-subcard">
