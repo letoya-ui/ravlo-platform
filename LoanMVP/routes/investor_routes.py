@@ -113,7 +113,6 @@ from LoanMVP.utils.r2_storage import spaces_put_bytes
 investor_bp = Blueprint("investor", __name__, url_prefix="/investor")
 
 client = OpenAI()
-GPU_BASE_URL = "https://nondiscoverable-henry-metempirical.ngrok-free.dev"
 
 # =========================================================
 # 🔢 SAFE NUMERIC HELPERS
@@ -256,9 +255,14 @@ def call_renovation_engine_upload(
 # =========================================================
 # CONFIG
 # =========================================================
+GPU_BASE_URL = "https://nondiscoverable-henry-metempirical.ngrok-free.dev"
 
-RENOVATION_ENGINE_URL = os.getenv("RENOVATION_ENGINE_URL", "http://localhost:8000/v1/renovate")
+RENOVATION_ENGINE_URL = "https://nondiscoverable-henry-metempirical.ngrok-free.dev"
 RENOVATION_API_KEY = os.getenv("RENOVATION_API_KEY", "")
+
+SCOPE_ENGINE_URL = os.getenv("SCOPE_ENGINE_URL", "").rstrip("/")
+SCOPE_ENGINE_API_KEY = os.getenv("SCOPE_ENGINE_API_KEY", "")
+
 GPU_TIMEOUT = 900
 
 ENGINE_PRESETS = {"luxury_modern", "modern_farmhouse", "clean_minimal"}
@@ -401,11 +405,11 @@ def process_pending_jobs():
         db.session.commit()
 
         try:
-            engine_url = os.getenv("RENOVATION_ENGINE_URL", "").replace("/v1/renovate", "/v1/rehab_scope")
-
+            engine_url = f"{SCOPE_ENGINE_URL}/v1/rehab_scope"
             res = requests.post(
                 engine_url,
                 json={"image_url": job.plan_url},
+                headers=_scope_engine_headers(),
                 timeout=180,
             )
             res.raise_for_status()
@@ -424,7 +428,46 @@ def process_pending_jobs():
 
         db.session.commit()
 
+def _scope_engine_headers() -> dict:
+    headers = {}
+    if SCOPE_ENGINE_API_KEY:
+        headers["X-API-Key"] = SCOPE_ENGINE_API_KEY
+    return headers
 
+def _renovation_engine_url(path=""):
+    return f"{RENOVATION_ENGINE_URL.rstrip('/')}{path}"
+
+def _scope_engine_url(path=""):
+    return f"{SCOPE_ENGINE_URL.rstrip('/')}{path}"
+
+def _deal_results(deal):
+    return deal.results_json or {}
+
+def _set_deal_results(deal, results):
+    deal.results_json = results or {}
+
+def _get_rehab_export_payload(deal):
+    r = deal.results_json or {}
+
+    rehab = (
+        r.get("rehab_summary")
+        or r.get("rehab_analysis")
+        or {}
+    )
+
+    if not rehab and getattr(deal, "rehab_scope_json", None):
+        rehab = {
+            "estimated_rehab_cost": getattr(deal, "rehab_cost", None),
+            "scope": getattr(deal, "rehab_scope_json", None),
+        }
+
+    return rehab or {}
+
+def _safe_first_related(obj, attr_name):
+    items = getattr(obj, attr_name, None) or []
+    return items[0] if items else None
+
+_fmt_money = fmt_money
 # =========================================================
 # GENERIC HELPERS
 # =========================================================
@@ -3691,9 +3734,11 @@ def deal_rehab(deal_id):
         featured=featured,
     )
 
+
 # =========================================================
 # 🏗️ BUILD STUDIO — PAGE
 # =========================================================
+
 @investor_bp.route("/deals/<int:deal_id>/build", methods=["GET"])
 @investor_bp.route("/deal-studio/build-studio", methods=["GET"])
 @login_required
@@ -3704,10 +3749,7 @@ def build_studio(deal_id=None):
 
     if deal_id is not None:
         deal = _get_owned_deal_or_404(deal_id)
-
-        # Deal has a relationship "projects"
-        if deal.projects:
-            project = deal.projects[0]  # load first project
+        project = _safe_first_related(deal, "projects")
 
     return render_template(
         "investor/build_studio.html",
@@ -3717,7 +3759,8 @@ def build_studio(deal_id=None):
         page_title="Build Studio",
         page_subtitle="Design and visualize new construction projects."
     )
-   
+
+
 # =========================================================
 # 🏗️ BUILD STUDIO — GENERATE CONCEPT
 # =========================================================
@@ -3748,11 +3791,11 @@ def generate_build_studio():
         land_image = request.files.get("land_image")
         image_url = (request.form.get("image_url") or "").strip()
 
+        image_base64 = None
         if land_image:
             raw = land_image.read()
-            image_base64 = base64.b64encode(raw).decode()
-        else:
-            image_base64 = None
+            if raw:
+                image_base64 = base64.b64encode(raw).decode()
 
         payload = {
             "project_name": project_name,
@@ -3771,9 +3814,9 @@ def generate_build_studio():
         }
 
         res = requests.post(
-            f"{RENOVATION_ENGINE_URL}/v1/build_concept",
+            _renovation_engine_url("/v1/build_concept"),
             json=payload,
-            headers={"X-API-Key": os.getenv("RENOVATION_API_KEY", "")},
+            headers=_engine_headers(),
             timeout=900
         )
         res.raise_for_status()
@@ -3785,7 +3828,7 @@ def generate_build_studio():
         job_id = data.get("job_id")
 
         if save_to_deal and deal is not None:
-            results = deal.results_json or {}
+            results = _deal_results(deal)
             results["build_analysis"] = {
                 "project_name": project_name,
                 "property_type": property_type,
@@ -3799,7 +3842,7 @@ def generate_build_studio():
                 "seed": seed,
                 "job_id": job_id,
             }
-            deal.results_json = results
+            _set_deal_results(deal, results)
             db.session.commit()
 
         return jsonify({
@@ -3818,7 +3861,8 @@ def generate_build_studio():
             "status": "error",
             "message": str(e)
         }), 500
-        
+
+
 # =========================================================
 # 🏗️ BUILD STUDIO — SAVE PROJECT
 # =========================================================
@@ -3838,6 +3882,8 @@ def save_build_studio():
         if not deal:
             return jsonify({"status": "error", "message": "Deal not found or not authorized."}), 404
 
+    investor_profile = InvestorProfile.query.filter_by(user_id=current_user.id).first()
+
     project = BuildProject(
         user_id=current_user.id,
         project_name=data.get("project_name"),
@@ -3853,11 +3899,17 @@ def save_build_studio():
         presentation_url=data.get("presentation_url")
     )
 
+    if hasattr(project, "investor_profile_id"):
+        project.investor_profile_id = investor_profile.id if investor_profile else None
+
+    if hasattr(project, "deal_id"):
+        project.deal_id = deal.id if deal else None
+
     db.session.add(project)
     db.session.flush()
 
     if deal is not None:
-        results = deal.results_json or {}
+        results = _deal_results(deal)
         results["build_project"] = {
             "project_id": project.id,
             "project_name": project.project_name,
@@ -3872,7 +3924,7 @@ def save_build_studio():
             "site_plan_url": project.site_plan_url,
             "presentation_url": project.presentation_url,
         }
-        deal.results_json = results
+        _set_deal_results(deal, results)
 
     db.session.commit()
 
@@ -3881,7 +3933,8 @@ def save_build_studio():
         "project_id": project.id,
         "deal_id": deal.id if deal else None,
     })
-    
+
+
 # =========================================================
 # 🏗️ BUILD PROJECTS — LIST
 # =========================================================
@@ -3890,7 +3943,6 @@ def save_build_studio():
 @login_required
 @role_required("investor")
 def build_projects():
-
     projects = BuildProject.query.filter_by(
         user_id=current_user.id
     ).order_by(BuildProject.created_at.desc()).all()
@@ -3900,6 +3952,7 @@ def build_projects():
         projects=projects,
         page_title="Build Projects"
     )
+
 
 @investor_bp.route("/build-projects/<int:project_id>", methods=["GET"])
 @login_required
@@ -3916,6 +3969,7 @@ def build_project_detail(project_id):
         page_title="Build Project",
         page_subtitle="Review your saved development concept."
     )
+
 
 @investor_bp.route("/build-projects/<int:project_id>/convert-to-deal", methods=["POST"])
 @csrf.exempt
@@ -3974,7 +4028,9 @@ def convert_build_project_to_deal(project_id):
         "status": "ok",
         "deal_id": deal.id,
         "redirect_url": url_for("investor.deal_detail", deal_id=deal.id)
-    })    
+    })
+
+
 # =========================================================
 # 🧭 AI DEAL ARCHITECT
 # =========================================================
@@ -4040,8 +4096,7 @@ def deal_architect(deal_id=None):
         )
         year_built = getattr(selected_deal, "year_built", None)
 
-        results = selected_deal.results_json or {}
-        strategy_analysis = results.get("strategy_analysis", {}) or {}
+        strategy_analysis = _deal_results(selected_deal).get("strategy_analysis", {}) or {}
 
     return render_template(
         "investor/deal_architect.html",
@@ -4061,12 +4116,21 @@ def deal_architect(deal_id=None):
         strategy_analysis=strategy_analysis,
     )
 
+
 @investor_bp.route("/deal-architect/analyze", methods=["POST"])
 @csrf.exempt
 @login_required
 @role_required("investor")
 def deal_architect_analyze():
     try:
+        deal_id = _normalize_int(request.form.get("deal_id"))
+        deal = None
+
+        if deal_id:
+            deal = Deal.query.filter_by(id=deal_id, user_id=current_user.id).first()
+            if not deal:
+                return jsonify({"status": "error", "message": "Deal not found"}), 404
+
         address = (request.form.get("address") or "").strip()
         property_type = (request.form.get("property_type") or "").strip().lower()
         price = safe_float(request.form.get("price"))
@@ -4075,7 +4139,7 @@ def deal_architect_analyze():
         description = (request.form.get("description") or "").strip()
 
         flip_profit = arv - (price + rehab)
-        rental_value = arv * 0.008
+        rental_value = arv * 0.008 if arv else 0
 
         strategies = []
 
@@ -4101,28 +4165,47 @@ def deal_architect_analyze():
                 "summary": "Construct a new property for resale or rental."
             })
 
+        if deal:
+            results = _deal_results(deal)
+            results["strategy_analysis"] = {
+                "address": address,
+                "property_type": property_type,
+                "description": description,
+                "price": price,
+                "rehab": rehab,
+                "arv": arv,
+                "strategies": strategies,
+            }
+            _set_deal_results(deal, results)
+            db.session.commit()
+
         return jsonify({
             "status": "ok",
             "address": address,
             "property_type": property_type,
             "description": description,
-            "strategies": strategies
+            "strategies": strategies,
+            "saved_to_deal": bool(deal),
+            "deal_id": deal.id if deal else None,
         })
 
     except Exception as e:
+        current_app.logger.exception("deal_architect_analyze failed")
         return jsonify({
             "status": "error",
             "message": str(e)
         }), 500
 
+
 @investor_bp.route("/deal-architect/strategy", methods=["POST"])
+@csrf.exempt
 @login_required
 @role_required("investor")
 def deal_architect_strategy():
     try:
         data = request.get_json(silent=True) or request.form
 
-        deal_id = data.get("deal_id")
+        deal_id = _normalize_int(data.get("deal_id"))
         if not deal_id:
             return jsonify({"success": False, "error": "deal_id is required"}), 400
 
@@ -4183,7 +4266,7 @@ def deal_architect_strategy():
         deal.recommended_strategy = recommended_strategy
         deal.deal_score = deal_score
 
-        results = deal.results_json or {}
+        results = _deal_results(deal)
         results["strategy_analysis"] = {
             "recommended_strategy": recommended_strategy,
             "reason": reason,
@@ -4194,7 +4277,7 @@ def deal_architect_strategy():
             "projected_profit": round(projected_profit, 2),
             "deal_score": deal_score,
         }
-        deal.results_json = results
+        _set_deal_results(deal, results)
 
         db.session.commit()
 
@@ -4213,8 +4296,11 @@ def deal_architect_strategy():
             "error": f"Analysis failed: {str(e)}"
         }), 500
 
+
 @investor_bp.route("/rehab-architect/generate-scope", methods=["POST"])
+@csrf.exempt
 @login_required
+@role_required("investor")
 def rehab_architect_generate_scope():
     data = request.get_json(silent=True) or request.form
 
@@ -4254,24 +4340,19 @@ def rehab_architect_generate_scope():
 
     external_scope_result = None
 
-    # Optional: call Scope Engine if image_url is provided
     if image_url:
         try:
-            scope_engine_url = current_app.config.get("SCOPE_ENGINE_URL", "").rstrip("/")
-            scope_engine_api_key = current_app.config.get("SCOPE_ENGINE_API_KEY", "")
-           
-            if scope_engine_url:
+            if SCOPE_ENGINE_URL:
                 resp = requests.post(
-                    f"{scope_engine_url}/v1/rehab_scope",
+                    _scope_engine_url("/v1/rehab_scope"),
                     json={"image_url": image_url},
-                    headers={"x-api-key": scope_engine_api_key},
+                    headers=_scope_engine_headers(),
                     timeout=25
                 )
 
                 if resp.ok:
                     external_scope_result = resp.json()
 
-                    # Prefer external numbers when available
                     estimated_rehab_cost = (
                         external_scope_result.get("cost_high")
                         or external_scope_result.get("cost_low")
@@ -4300,22 +4381,26 @@ def rehab_architect_generate_scope():
     deal.rehab_cost = estimated_rehab_cost
     deal.rehab_scope_json = scope
 
-    existing_results = deal.results_json or {}
+    existing_results = _deal_results(deal)
     existing_results["rehab_analysis"] = {
         "estimated_rehab_cost": estimated_rehab_cost,
         "scope": scope
+    }
+    existing_results["rehab_summary"] = {
+        "scope": rehab_level,
+        "total": estimated_rehab_cost,
+        "cost_per_sqft": round(estimated_rehab_cost / sqft, 2) if sqft else 0,
+        "items": scope.get("line_items", {})
     }
 
     if external_scope_result:
         existing_results["rehab_analysis_external"] = external_scope_result
 
-        # Save ARV from external scope if present and local ARV is blank
         external_arv = external_scope_result.get("arv")
         if external_arv and not deal.arv:
             deal.arv = external_arv
 
-    deal.results_json = existing_results
-
+    _set_deal_results(deal, existing_results)
     db.session.commit()
 
     return jsonify({
@@ -4326,6 +4411,7 @@ def rehab_architect_generate_scope():
         "external_scope_used": bool(external_scope_result),
         "external_scope_result": external_scope_result
     })
+
 
 # =========================================================
 # REHAB IMAGE UPLOAD
@@ -4361,6 +4447,7 @@ def renovation_upload():
     except Exception as e:
         current_app.logger.exception("renovation_upload failed")
         return jsonify({"status": "error", "message": str(e)}), 500
+
 
 # =========================================================
 # PHOTO RENOVATION VISUALIZER
@@ -4424,11 +4511,6 @@ def renovation_visualizer():
         final_prompt = _compose_style_prompt(style_prompt, requested_style_preset, keep_layout=True)
         render_batch_id = uuid.uuid4().hex
 
-        engine_headers = _engine_headers()
-
-        # --------------------------------------------------
-        # NEW: direct upload mode when a file was uploaded
-        # --------------------------------------------------
         if image_file:
             image_stream = io.BytesIO(raw)
             filename = image_file.filename or f"{render_batch_id}_before.jpg"
@@ -4451,19 +4533,14 @@ def renovation_visualizer():
                 "height": "1024",
             }
 
-            engine_url = f"{RENOVATION_ENGINE_URL.rstrip('/')}/v1/renovate-upload"
-
             engine_res = requests.post(
-                engine_url,
+                _renovation_engine_url("/v1/renovate-upload"),
                 files=files,
                 data=data,
-                headers=engine_headers,
+                headers=_engine_headers(),
                 timeout=GPU_TIMEOUT,
             )
 
-        # --------------------------------------------------
-        # URL mode fallback for existing image URLs
-        # --------------------------------------------------
         else:
             payload = {
                 "image_url": before_url,
@@ -4479,19 +4556,16 @@ def renovation_visualizer():
                 "height": 1024,
             }
 
-            engine_url = f"{RENOVATION_ENGINE_URL.rstrip('/')}/v1/renovate"
-
             engine_res = requests.post(
-                engine_url,
+                _renovation_engine_url("/v1/renovate"),
                 json=payload,
-                headers=engine_headers,
+                headers=_engine_headers(),
                 timeout=GPU_TIMEOUT,
             )
 
         engine_res.raise_for_status()
         engine_json = engine_res.json()
 
-        # Prefer URLs returned by the generator if present
         returned_urls = engine_json.get("saved_paths", []) or []
         images_b64 = engine_json.get("images_base64", []) or []
 
@@ -4514,6 +4588,7 @@ def renovation_visualizer():
                 style_prompt=style_prompt,
                 style_preset=style_preset,
                 saved_property_id=saved_property_id,
+                property_id=property_id,
             )
 
         return jsonify({
@@ -4535,6 +4610,7 @@ def renovation_visualizer():
     except Exception as e:
         current_app.logger.exception("renovation_visualizer failed")
         return jsonify({"status": "error", "message": f"Renovation generator failed: {e}"}), 500
+
 
 # =========================================================
 # BLUEPRINT TO CONCEPT
@@ -4611,7 +4687,7 @@ def blueprint_to_room():
         }
 
         engine_res = requests.post(
-            RENOVATION_ENGINE_URL,
+            _renovation_engine_url("/v1/renovate"),
             json=payload,
             headers=_engine_headers(),
             timeout=GPU_TIMEOUT,
@@ -4619,13 +4695,18 @@ def blueprint_to_room():
         engine_res.raise_for_status()
         engine_json = engine_res.json()
 
+        returned_urls = engine_json.get("saved_paths", []) or []
         images_b64 = engine_json.get("images_base64", []) or []
-        if not images_b64:
-            return jsonify({"status": "error", "message": "GPU engine returned no images."}), 502
 
-        after_urls = _upload_after_images_from_b64(images_b64, render_batch_id)
-        if not after_urls:
-            return jsonify({"status": "error", "message": "Render completed but uploads failed."}), 500
+        if returned_urls:
+            after_urls = returned_urls
+        else:
+            if not images_b64:
+                return jsonify({"status": "error", "message": "GPU engine returned no images."}), 502
+
+            after_urls = _upload_after_images_from_b64(images_b64, render_batch_id)
+            if not after_urls:
+                return jsonify({"status": "error", "message": "Render completed but uploads failed."}), 500
 
         saved_count = 0
         if deal is not None:
@@ -4659,6 +4740,7 @@ def blueprint_to_room():
     except Exception as e:
         current_app.logger.exception("blueprint_to_room failed")
         return jsonify({"status": "error", "message": f"Blueprint render failed: {e}"}), 500
+
 
 # =========================================================
 # SAVE MOCKUPS MANUALLY
@@ -4711,6 +4793,8 @@ def save_renovation_mockups(deal_id):
 
     db.session.commit()
     return jsonify({"status": "ok", "saved": saved})
+
+
 # =========================================================
 # SELECT DESIGN / FEATURE DESIGN
 # =========================================================
@@ -4753,6 +4837,7 @@ def deal_select_design(deal_id):
     db.session.commit()
     return jsonify({"status": "ok", "after_url": after_url})
 
+
 @investor_bp.route("/deals/<int:deal_id>/rehab/feature", methods=["POST"])
 @csrf.exempt
 @login_required
@@ -4781,6 +4866,7 @@ def deal_feature_reveal(deal_id):
         "deal_id": deal.id,
         "featured": featured,
     })
+
 
 # =========================================================
 # SHARE DESIGN TO PARTNERS
@@ -4873,6 +4959,7 @@ def deal_share_design(deal_id):
     db.session.commit()
     return jsonify({"status": "ok", "sent": sent, "failed": 0})
 
+
 # =========================================================
 # REVEAL
 # =========================================================
@@ -4908,6 +4995,7 @@ def deal_reveal(deal_id):
         featured=featured,
     )
 
+
 @investor_bp.route("/deals/<int:deal_id>/reveal/publish", methods=["POST"])
 @csrf.exempt
 @login_required
@@ -4924,6 +5012,7 @@ def publish_reveal(deal_id):
 
     public_url = url_for("investor.public_reveal", public_id=deal.reveal_public_id, _external=True)
     return jsonify({"status": "ok", "public_url": public_url})
+
 
 @investor_bp.route("/reveal/<string:public_id>", methods=["GET"])
 def public_reveal(public_id):
@@ -4944,6 +5033,7 @@ def public_reveal(public_id):
         mockups=mockups,
         featured=featured,
     )
+
 
 # =========================================================
 # AI REHAB SCOPE
@@ -4972,6 +5062,7 @@ def create_rehab_scope_job():
 
     return jsonify({"status": "ok", "job_id": job.id})
 
+
 @investor_bp.route("/ai/rehab-scope/jobs/<int:job_id>", methods=["GET"])
 @login_required
 @role_required("investor")
@@ -4987,6 +5078,7 @@ def get_rehab_scope_job(job_id):
         "images": getattr(job, "result_images", None),
     })
 
+
 @investor_bp.route("/ai/rehab-scope/analyze", methods=["POST"])
 @csrf.exempt
 @login_required
@@ -4999,11 +5091,13 @@ def ai_rehab_scope():
         return jsonify({"status": "error", "message": "image_url is required."}), 400
 
     try:
-        scope_url = RENOVATION_ENGINE_URL.replace("/v1/renovate", "/v1/rehab_scope")
+        if not SCOPE_ENGINE_URL:
+            return jsonify({"status": "error", "message": "Scope engine is not configured."}), 500
+
         res = requests.post(
-            scope_url,
+            _scope_engine_url("/v1/rehab_scope"),
             json={"image_url": image_url},
-            headers=_engine_headers(),
+            headers=_scope_engine_headers(),
             timeout=60,
         )
         res.raise_for_status()
@@ -5012,6 +5106,7 @@ def ai_rehab_scope():
     except Exception as e:
         current_app.logger.exception("ai_rehab_scope failed")
         return jsonify({"status": "error", "message": str(e)}), 500
+
 
 # =========================================================
 # EXPORTS
@@ -5026,6 +5121,7 @@ def export_deal_report_pro(deal_id):
 
     r = deal.results_json or {}
     resolved = deal.resolved_json or {}
+    rehab = _get_rehab_export_payload(deal)
 
     buffer = io.BytesIO()
     c = canvas.Canvas(buffer, pagesize=LETTER)
@@ -5061,21 +5157,35 @@ def export_deal_report_pro(deal_id):
     c.drawString(50, y, "Key Results"); y -= 16
     c.setFont("Helvetica", 10)
 
-    if "profit" in r: c.drawString(50, y, f"Flip Profit: {_fmt_money(r.get('profit'))}"); y -= 14
-    if "net_cashflow" in r: c.drawString(50, y, f"Rental Net Cashflow (mo): {_fmt_money(r.get('net_cashflow'))}"); y -= 14
-    if "net_monthly" in r: c.drawString(50, y, f"Airbnb Net Monthly: {_fmt_money(r.get('net_monthly'))}"); y -= 14
+    if "profit" in r:
+        c.drawString(50, y, f"Flip Profit: {_fmt_money(r.get('profit'))}")
+        y -= 14
+    if "net_cashflow" in r:
+        c.drawString(50, y, f"Rental Net Cashflow (mo): {_fmt_money(r.get('net_cashflow'))}")
+        y -= 14
+    if "net_monthly" in r:
+        c.drawString(50, y, f"Airbnb Net Monthly: {_fmt_money(r.get('net_monthly'))}")
+        y -= 14
 
     y -= 10
 
-    rehab = r.get("rehab_summary") if isinstance(r, dict) else None
     c.setFont("Helvetica-Bold", 12)
     c.drawString(50, y, "Rehab Summary"); y -= 16
     c.setFont("Helvetica", 10)
 
-    if isinstance(rehab, dict):
-        c.drawString(50, y, f"Scope: {rehab.get('scope') or '—'}"); y -= 14
-        c.drawString(50, y, f"Total Rehab: {_fmt_money(rehab.get('total'))}"); y -= 14
-        c.drawString(50, y, f"Cost per Sqft: {_fmt_money(rehab.get('cost_per_sqft'))}"); y -= 14
+    if isinstance(rehab, dict) and rehab:
+        total_rehab = rehab.get("total") or rehab.get("estimated_rehab_cost")
+        scope_value = rehab.get("scope")
+        cpsf = rehab.get("cost_per_sqft")
+
+        if isinstance(scope_value, dict):
+            scope_label = scope_value.get("rehab_level") or "Detailed scope"
+        else:
+            scope_label = scope_value or "—"
+
+        c.drawString(50, y, f"Scope: {scope_label}"); y -= 14
+        c.drawString(50, y, f"Total Rehab: {_fmt_money(total_rehab)}"); y -= 14
+        c.drawString(50, y, f"Cost per Sqft: {_fmt_money(cpsf)}"); y -= 14
     else:
         c.drawString(50, y, "No rehab summary available."); y -= 14
 
@@ -5086,6 +5196,7 @@ def export_deal_report_pro(deal_id):
     filename = f"ravlo_deal_report_{deal.id}_{datetime.utcnow().strftime('%Y%m%d')}.pdf"
     return send_file(buffer, as_attachment=True, download_name=filename, mimetype="application/pdf")
 
+
 @investor_bp.route("/deals/<int:deal_id>/export/rehab-scope", methods=["GET"])
 @investor_bp.route("/deals/<int:deal_id>/export-rehab-scope", methods=["GET"])
 @login_required
@@ -5093,8 +5204,7 @@ def export_deal_report_pro(deal_id):
 def export_rehab_scope(deal_id):
     deal = _get_owned_deal_or_404(deal_id)
 
-    r = deal.results_json or {}
-    rehab = r.get("rehab_summary") if isinstance(r, dict) else None
+    rehab = _get_rehab_export_payload(deal)
 
     buffer = io.BytesIO()
     c = canvas.Canvas(buffer, pagesize=LETTER)
@@ -5109,7 +5219,7 @@ def export_rehab_scope(deal_id):
     c.drawString(50, y, f"Property ID: {getattr(deal, 'property_id', None) or '—'}"); y -= 14
     c.drawString(50, y, f"Strategy: {getattr(deal, 'strategy', None) or '—'}"); y -= 22
 
-    if not isinstance(rehab, dict):
+    if not isinstance(rehab, dict) or not rehab:
         c.drawString(50, y, "No rehab summary available for this deal.")
         c.showPage()
         c.save()
@@ -5117,14 +5227,24 @@ def export_rehab_scope(deal_id):
         filename = f"ravlo_rehab_scope_{deal.id}_{datetime.utcnow().strftime('%Y%m%d')}.pdf"
         return send_file(buffer, as_attachment=True, download_name=filename, mimetype="application/pdf")
 
+    total_rehab = rehab.get("total") or rehab.get("estimated_rehab_cost")
+    cpsf = rehab.get("cost_per_sqft")
+
+    scope_value = rehab.get("scope")
+    if isinstance(scope_value, dict):
+        scope_label = scope_value.get("rehab_level") or "Detailed scope"
+        items = scope_value.get("line_items") or {}
+    else:
+        scope_label = scope_value or "—"
+        items = rehab.get("items") or {}
+
     c.setFont("Helvetica-Bold", 12)
     c.drawString(50, y, "Summary"); y -= 16
     c.setFont("Helvetica", 10)
-    c.drawString(50, y, f"Scope: {rehab.get('scope') or '—'}"); y -= 14
-    c.drawString(50, y, f"Total Rehab: {_fmt_money(rehab.get('total'))}"); y -= 14
-    c.drawString(50, y, f"Cost per Sqft: {_fmt_money(rehab.get('cost_per_sqft'))}"); y -= 18
+    c.drawString(50, y, f"Scope: {scope_label}"); y -= 14
+    c.drawString(50, y, f"Total Rehab: {_fmt_money(total_rehab)}"); y -= 14
+    c.drawString(50, y, f"Cost per Sqft: {_fmt_money(cpsf)}"); y -= 18
 
-    items = rehab.get("items") or {}
     c.setFont("Helvetica-Bold", 12)
     c.drawString(50, y, "Selected Items"); y -= 16
     c.setFont("Helvetica", 10)
@@ -5136,13 +5256,14 @@ def export_rehab_scope(deal_id):
                 y = height - 50
                 c.setFont("Helvetica", 10)
 
-            level = v.get("level") if isinstance(v, dict) else None
-            cost = v.get("cost") if isinstance(v, dict) else None
-            c.drawString(
-                50,
-                y,
-                f"- {str(k).capitalize()}: {str(level).capitalize() if level else '—'} | {_fmt_money(cost)}"
-            )
+            if isinstance(v, dict):
+                level = v.get("level")
+                cost = v.get("cost")
+                line = f"- {str(k).capitalize()}: {str(level).capitalize() if level else '—'} | {_fmt_money(cost)}"
+            else:
+                line = f"- {str(k).capitalize()}: {_fmt_money(v)}"
+
+            c.drawString(50, y, line)
             y -= 14
     else:
         c.drawString(50, y, "No item selections found.")
