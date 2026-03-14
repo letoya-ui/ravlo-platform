@@ -13,6 +13,7 @@ marketing_bp = Blueprint(
 def homepage():
     return render_template("marketing/home.html")
 
+
 # Redirect /home → /
 @marketing_bp.route("/home")
 def homepage_redirect():
