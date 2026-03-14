@@ -119,8 +119,9 @@ def create_app():
     # Routes
     # -----------------------------------------------------
     @app.route("/")
-    def home_redirect():
-        return redirect(url_for("investor.command_center"))
+    def marketing_home():
+        return redirect(url_for("marketing.homepage"))
+
 
     @app.route("/dashboard")
     def dashboard_redirect():
