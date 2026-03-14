@@ -1,50 +1,48 @@
 {% extends "layouts/ravlo_base.html" %}
+
+{% block title %}Ravlo • Request Partner{% endblock %}
+{% block page_title %}Request Partner{% endblock %}
+{% block page_subline %}Send a request and project details to this partner.{% endblock %}
+
 {% block content %}
+<div class="ravlo-grid">
 
-<div class="request-shell">
+  <section class="ravlo-hero-card">
+    <div class="eyebrow">PARTNER REQUEST</div>
+    <h2>Request {{ partner.company or "Partner" }}</h2>
+    <p class="muted">
+      Share the scope of work and any property context so the partner can respond quickly.
+    </p>
+  </section>
 
-    <!-- Header -->
-    <div class="request-header">
-        <h1>Request Service</h1>
-        <p>You're requesting a service from <strong>{{ partner.name }}</strong></p>
-        <p class="role">{{ partner.role|capitalize }}</p>
-    </div>
+  <section class="ravlo-card pad">
+    <form method="POST" class="stack">
 
-    <!-- Partner Preview -->
-    <div class="request-partner-preview">
-        <div class="preview-info">
-            <h3>{{ partner.name }}</h3>
-            <p class="location">{{ partner.service_area or "Service area not listed" }}</p>
-            <p class="bio-snippet">
-                {{ partner.bio[:160] }}{% if partner.bio|length > 160 %}...{% endif %}
-            </p>
-        </div>
+      {% if properties %}
+      <div>
+        <label>Property</label>
+        <select name="property_id">
+          <option value="">Select property...</option>
+          {% for prop in properties %}
+            <option value="{{ prop.id }}">
+              {{ prop.address or ("Property #" ~ prop.id) }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+      {% endif %}
 
-        <div class="preview-photos">
-            {% if partner.photos and partner.photos|length > 0 %}
-                <img src="{{ partner.photos[0].url }}" class="preview-photo" alt="Partner photo">
-            {% endif %}
-        </div>
-    </div>
+      <div>
+        <label>Message</label>
+        <textarea name="message" rows="6" placeholder="Describe the work you need, timeline, and any important project details." required></textarea>
+      </div>
 
-    <!-- Request Form -->
-    <form method="POST" class="request-form">
-
-        <label for="message">Describe what you need</label>
-        <textarea
-            name="message"
-            id="message"
-            class="request-textarea"
-            placeholder="Tell the partner what you're looking for — project details, timeline, property info, etc."
-            required
-        ></textarea>
-
-        <button type="submit" class="btn-primary request-btn">
-            Send Request
-        </button>
-
+      <div class="section-toolbar-actions">
+        <button type="submit" class="ravlo-btn primary">Send Request</button>
+        <a href="{{ url_for('partners_public.public_profile', partner_id=partner.id) }}" class="ravlo-btn ghost">Cancel</a>
+      </div>
     </form>
+  </section>
 
 </div>
-
 {% endblock %}

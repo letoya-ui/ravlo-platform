@@ -46,29 +46,43 @@ def request_partner(partner_id):
     partner = Partner.query.filter_by(id=partner_id, approved=True).first_or_404()
 
     borrower_profile = getattr(current_user, "borrower_profile", None)
-    if not borrower_profile:
-        flash("You need a borrower profile before sending a request.", "warning")
-        return redirect(url_for("borrower.dashboard"))
+    investor_profile = getattr(current_user, "investor_profile", None)
+
+    if not borrower_profile and not investor_profile:
+        flash("You need a borrower or investor profile before sending a request.", "warning")
+        return redirect(url_for("public.home"))
 
     if request.method == "POST":
-        message = request.form.get("message", "").strip()
+        message = (request.form.get("message") or "").strip()
+        property_id = request.form.get("property_id")
 
         req = PartnerConnectionRequest(
+            borrower_user_id=current_user.id,
+            investor_user_id=current_user.id,
+            borrower_profile_id=getattr(borrower_profile, "id", None),
+            investor_profile_id=getattr(investor_profile, "id", None),
+            property_id=property_id or None,
             partner_id=partner.id,
-            borrower_profile_id=borrower_profile.id,
+            category=partner.category,
             message=message,
-            category=partner.category
+            status="pending"
         )
 
         db.session.add(req)
         db.session.commit()
 
-        flash("Your request has been sent!", "success")
+        flash("Your request has been sent.", "success")
         return redirect(url_for("partners_public.public_profile", partner_id=partner.id))
+
+    properties = []
+    if borrower_profile:
+        properties = Property.query.join(LoanApplication, LoanApplication.property_id == Property.id) \
+            .filter(LoanApplication.borrower_profile_id == borrower_profile.id).all()
 
     return render_template(
         "partners/request_form.html",
-        partner=partner
+        partner=partner,
+        properties=properties
     )
 
 
@@ -115,3 +129,25 @@ def message_partner(partner_id):
         "messages.thread_with_partner",
         partner_id=partner.id
     ))
+
+@partners_bp.route("/requests")
+@role_required("partner")
+def requests_inbox():
+    partner = Partner.query.filter_by(user_id=current_user.id).first()
+
+    if not partner:
+        flash("Partner profile not found. Please register.", "warning")
+        return redirect(url_for("partners.register"))
+
+    requests_q = PartnerConnectionRequest.query.filter_by(
+        partner_id=partner.id
+    ).order_by(
+        PartnerConnectionRequest.created_at.desc()
+    ).all()
+
+    return render_template(
+        "partners/requests_inbox.html",
+        partner=partner,
+        requests=requests_q,
+        portal="partner"
+    )

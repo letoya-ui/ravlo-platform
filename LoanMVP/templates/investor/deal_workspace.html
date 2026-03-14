@@ -9,34 +9,34 @@ Compare exit paths, pressure-test returns, and move into architect, rehab, or ca
 
 {% block topbar_actions %}
 <a href="{{ url_for('investor.deals_list') }}" class="ravlo-btn ghost sm">
-  Deal Pipeline
+    Deal Pipeline
 </a>
 
 {% if selected_prop %}
-  {% if deal %}
-    <a href="{{ url_for('investor.deal_detail', deal_id=deal.id) }}" class="ravlo-btn ghost sm">
-      Save Deal
-    </a>
-    <a href="{{ url_for('investor.capital_application', deal_id=deal.id, prop_id=selected_prop.id) }}" class="ravlo-btn primary sm">
-      Apply
-    </a>
-  {% else %}
-    <form method="POST" action="{{ url_for('investor.save_deal_from_property', prop_id=selected_prop.id) }}" class="inline-form">
-      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-      <button type="submit" class="ravlo-btn ghost sm">Save Deal</button>
-    </form>
-    <a href="{{ url_for('investor.capital_application', prop_id=selected_prop.id) }}" class="ravlo-btn primary sm">
-      Apply
-    </a>
-  {% endif %}
+{% if deal %}
+<a href="{{ url_for('investor.deal_detail', deal_id=deal.id) }}" class="ravlo-btn ghost sm">
+    Open Deal
+</a>
+<a href="{{ url_for('investor.capital_application', deal_id=deal.id, prop_id=selected_prop.id) }}" class="ravlo-btn primary sm">
+    Apply
+</a>
+{% else %}
+<form method="POST" action="{{ url_for('investor.save_deal_from_property', prop_id=selected_prop.id) }}" class="inline-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <button type="submit" class="ravlo-btn ghost sm">Save Deal</button>
+</form>
+<a href="{{ url_for('investor.capital_application', prop_id=selected_prop.id) }}" class="ravlo-btn primary sm">
+    Apply
+</a>
+{% endif %}
 {% endif %}
 
 {% if deal %}
 <a href="{{ url_for('investor.deal_architect', deal_id=deal.id) }}" class="ravlo-btn ghost sm">
-  AI Architect
+    AI Architect
 </a>
 <a href="{{ url_for('investor.deal_rehab', deal_id=deal.id) }}" class="ravlo-btn primary sm">
-  Rehab Studio
+    Rehab Studio
 </a>
 {% endif %}
 {% endblock %}
@@ -44,62 +44,78 @@ Compare exit paths, pressure-test returns, and move into architect, rehab, or ca
 {% block content %}
 <div class="workspace-shell">
 
-  <section class="ravlo-card pad">
-    <div class="section-head">
-      <div>
-        <div class="eyebrow">PROPERTY</div>
-        <h3>Select Property</h3>
-      </div>
-    </div>
+    <section class="ravlo-card pad">
+        <div class="section-head">
+            <div>
+                <div class="eyebrow">PROPERTY</div>
+                <h3>Select Property</h3>
+            </div>
+        </div>
 
-    <form method="GET">
-      <select name="prop_id" class="ravlo-input" onchange="this.form.submit()">
-        <option value="">Choose saved property</option>
-        {% for p in saved_props %}
-        <option value="{{ p.id }}" {% if selected_prop and p.id == selected_prop.id %}selected{% endif %}>
-          {{ p.address }}
-        </option>
-        {% endfor %}
-      </select>
-    </form>
-  </section>
+        <form method="GET">
+            <select name="prop_id" class="ravlo-input" onchange="this.form.submit()">
+                <option value="">Choose saved property</option>
+                {% for p in saved_props %}
+                <option value="{{ p.id }}" {% if selected_prop and p.id == selected_prop.id %}selected{% endif %}>
+                    {{ p.address }}
+                </option>
+                {% endfor %}
+            </select>
+        </form>
+    </section>
 
-  {% if selected_prop %}
+    {% if selected_prop %}
 
-  {% set recommended = recommendation.best if recommendation else "" %}
-  {% set flip = comparison.get("flip", {}) if comparison else {} %}
-  {% set rental = comparison.get("rental", {}) if comparison else {} %}
-  {% set airbnb = comparison.get("airbnb", {}) if comparison else {} %}
+    {% set recommended = recommendation.best if recommendation else "" %}
+    {% set flip = comparison.get("flip", {}) if comparison else {} %}
+    {% set rental = comparison.get("rental", {}) if comparison else {} %}
+    {% set airbnb = comparison.get("airbnb", {}) if comparison else {} %}
 
-  {% set flip_profit = flip.get("profit", 0) or 0 %}
-  {% set flip_roi = (flip.get("roi", 0) or 0) * 100 %}
-  {% set flip_total = flip.get("total_investment", 0) or 0 %}
+    {# ---------- SAFE NUMERIC NORMALIZATION ---------- #}
+    {% set purchase_price = (selected_prop.price or 0) | float %}
+    {% set purchase_price_safe = purchase_price if purchase_price > 0 else 1 %}
 
-  {% set rental_rent = rental.get("monthly_rent", 0) or 0 %}
-  {% set rental_cashflow = rental.get("net_cashflow", 0) or 0 %}
-  {% set rental_cap = (rental.get("cap_rate", 0) or 0) * 100 %}
-  {% set rental_dscr = rental.get("dscr", 0) or 0 %}
+    {% set flip_profit = (flip.get("profit", 0) or 0) | float %}
+    {% set flip_roi = ((flip.get("roi", 0) or 0) | float) * 100 %}
+    {% set flip_total = (flip.get("total_investment", 0) or 0) | float %}
+    {% set flip_arv = (flip.get("arv", comps.arv_estimate if comps and comps.arv_estimate else 0) or 0) | float %}
 
-  {% set airbnb_nightly = airbnb.get("nightly_rate", 0) or 0 %}
-  {% set airbnb_occ = (airbnb.get("occupancy_rate", 0) or 0) * 100 %}
-  {% set airbnb_gross = airbnb.get("gross_monthly", 0) or 0 %}
-  {% set airbnb_net = airbnb.get("net_monthly", 0) or 0 %}
+    {% set rental_rent = (rental.get("monthly_rent", 0) or 0) | float %}
+    {% set rental_cashflow = (rental.get("net_cashflow", 0) or 0) | float %}
+    {% set rental_cap = ((rental.get("cap_rate", 0) or 0) | float) * 100 %}
+    {% set rental_dscr = (rental.get("dscr", 0) or 0) | float %}
+    {% set rental_noi = (rental.get("annual_noi", 0) or 0) | float %}
 
-  {% set max_profit = [flip_profit, rental_cashflow * 12, airbnb_net * 12] | max %}
-  {% set max_profit = 1 if max_profit <= 0 else max_profit %}
-  {% set max_roi = [flip_roi, rental_cap, ((airbnb_net * 12 / ((selected_prop.price or 1) if selected_prop.price else 1)) * 100)] | max %}
-  {% set max_roi = 1 if max_roi <= 0 else max_roi %}
+    {% set airbnb_nightly = (airbnb.get("nightly_rate", 0) or 0) | float %}
+    {% set airbnb_occ = ((airbnb.get("occupancy_rate", 0) or 0) | float) * 100 %}
+    {% set airbnb_gross = (airbnb.get("gross_monthly", 0) or 0) | float %}
+    {% set airbnb_net = (airbnb.get("net_monthly", 0) or 0) | float %}
+    {% set airbnb_roi = ((airbnb_net * 12) / purchase_price_safe) * 100 if purchase_price_safe > 0 else 0 %}
 
-  <section class="ravlo-hero-card workspace-hero">
-    <div class="workspace-hero-copy">
-      <div class="eyebrow">RAVLO WORKSPACE V2</div>
-      <h2>{{ selected_prop.address }}</h2>
-      <p class="muted">
-        {{ selected_prop.city or "" }}{% if selected_prop.city and selected_prop.state %}, {% endif %}{{ selected_prop.state or "" }}
-        {% if selected_prop.property_type %} • {{ selected_prop.property_type }}{% endif %}
-      </p>
+    {% set max_profit = [flip_profit, rental_cashflow * 12, airbnb_net * 12] | max %}
+    {% set max_profit = 1 if max_profit <= 0 else max_profit %}
 
-      <div class="ravlo-chip-row mt-16">
+    {% set max_roi = [flip_roi, rental_cap, airbnb_roi] | max %}
+    {% set max_roi = 1 if max_roi <= 0 else max_roi %}
+
+    {% set flip_profit_strength = ((flip_profit / max_profit) * 100) if max_profit else 0 %}
+    {% set rental_profit_strength = (((rental_cashflow * 12) / max_profit) * 100) if max_profit else 0 %}
+    {% set airbnb_profit_strength = (((airbnb_net * 12) / max_profit) * 100) if max_profit else 0 %}
+
+    {% set flip_roi_strength = ((flip_roi / max_roi) * 100) if max_roi else 0 %}
+    {% set rental_roi_strength = ((rental_cap / max_roi) * 100) if max_roi else 0 %}
+    {% set airbnb_roi_strength = ((airbnb_roi / max_roi) * 100) if max_roi else 0 %}
+
+    <section class="ravlo-hero-card workspace-hero">
+        <div class="workspace-hero-copy">
+            <div class="eyebrow">RAVLO WORKSPACE V3</div>
+            <h2>{{ selected_prop.address }}</h2>
+            <p class="muted">
+                {{ selected_prop.city or "" }}{% if selected_prop.city and selected_prop.state %}, {% endif %}{{ selected_prop.state or "" }}
+                {% if selected_prop.property_type %} • {{ selected_prop.property_type }}{% endif %}
+            </p>
+
+            <div class="ravlo-chip-row mt-16">
         <span class="ravlo-chip">
           Best Path:
           {% if recommended == "flip" %}
@@ -113,878 +129,967 @@ Compare exit paths, pressure-test returns, and move into architect, rehab, or ca
           {% endif %}
         </span>
 
-        <span class="ravlo-chip">
+                <span class="ravlo-chip">
           {% if comps %}Comps Loaded{% else %}No Comps{% endif %}
         </span>
 
-        <span class="ravlo-chip">
+                <span class="ravlo-chip">
           {% if deal %}Deal #{{ deal.id }}{% else %}Not Attached{% endif %}
         </span>
-      </div>
-
-      <div class="workspace-action-row mt-16">
-        {% if deal %}
-          <a href="{{ url_for('investor.deal_detail', deal_id=deal.id) }}" class="ravlo-btn ghost">
-            Save Deal
-          </a>
-          <a href="{{ url_for('investor.capital_application', deal_id=deal.id, prop_id=selected_prop.id) }}" class="ravlo-btn primary">
-            Apply
-          </a>
-        {% else %}
-          <form method="POST" action="{{ url_for('investor.save_deal_from_property', prop_id=selected_prop.id) }}" class="inline-form">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <button type="submit" class="ravlo-btn ghost">
-              Save Deal
-            </button>
-          </form>
-
-          <a href="{{ url_for('investor.capital_application', prop_id=selected_prop.id) }}" class="ravlo-btn primary">
-            Apply
-          </a>
-        {% endif %}
-      </div>
-    </div>
-
-    <div class="workspace-hero-side">
-      <div class="workspace-highlight">
-        <span>Decision Lens</span>
-        <strong>
-          {% if recommended == "flip" %}
-            Fastest Equity Path
-          {% elif recommended == "rental" %}
-            Stable Long-Term Cash Flow
-          {% elif recommended == "airbnb" %}
-            Highest Revenue Potential
-          {% else %}
-            Compare Scenarios
-          {% endif %}
-        </strong>
-        <p>
-          Review path strength, margin, and execution pressure before moving forward.
-        </p>
-      </div>
-    </div>
-  </section>
-
-  <section class="workspace-grid-4">
-    <div class="workspace-stat">
-      <span>Purchase Price</span>
-      <strong>${{ "{:,.0f}".format(selected_prop.price or 0) }}</strong>
-    </div>
-    <div class="workspace-stat">
-      <span>Sq Ft</span>
-      <strong>{{ comps.property.sqft if comps.property and comps.property.sqft else "—" }}</strong>
-    </div>
-    <div class="workspace-stat">
-      <span>ARV Estimate</span>
-      <strong>${{ "{:,.0f}".format(comps.arv_estimate or 0) if comps and comps.arv_estimate else "—" }}</strong>
-    </div>
-    <div class="workspace-stat">
-      <span>Market Rent</span>
-      <strong>${{ "{:,.0f}".format(comps.market_rent_estimate or 0) if comps and comps.market_rent_estimate else "—" }}</strong>
-    </div>
-  </section>
-
-  <div class="workspace-main-grid">
-
-    <div class="workspace-stack">
-
-      <section class="ravlo-card pad">
-        <div class="section-head">
-          <div>
-            <div class="eyebrow">STRATEGY BOARD</div>
-            <h3>Side-by-Side Comparison</h3>
-          </div>
-        </div>
-
-        {% if comparison %}
-        <div class="workspace-compare-grid">
-
-          <div class="workspace-compare-card {% if recommended == 'flip' %}recommended{% endif %}">
-            <span class="workspace-compare-kicker">FLIP</span>
-            <strong class="workspace-compare-title">Fix & Flip</strong>
-
-            <div class="workspace-compare-meta">
-              <div><span>Projected Profit</span><strong>${{ "{:,.0f}".format(flip_profit) }}</strong></div>
-              <div><span>Total Investment</span><strong>${{ "{:,.0f}".format(flip_total) }}</strong></div>
-              <div><span>ROI</span><strong>{{ "{:.1f}".format(flip_roi) }}%</strong></div>
-              <div><span>Best Use</span><strong>Resale Spread</strong></div>
             </div>
 
-            <div class="metric-bar-wrap">
-              <div class="metric-bar-label">
-                <span>Profit Strength</span>
-                <strong>{{ "{:.0f}".format((flip_profit / max_profit) * 100) if max_profit else 0 }}%</strong>
-              </div>
-              <div class="metric-bar"><div class="metric-bar-fill" style="width: {{ (flip_profit / max_profit) * 100 if max_profit else 0 }}%;"></div></div>
+            <div class="workspace-action-row mt-16">
+                {% if deal %}
+                <a href="{{ url_for('investor.deal_detail', deal_id=deal.id) }}" class="ravlo-btn ghost">
+                    Open Deal
+                </a>
+                <a href="{{ url_for('investor.capital_application', deal_id=deal.id, prop_id=selected_prop.id) }}" class="ravlo-btn primary">
+                    Apply
+                </a>
+                {% else %}
+                <form method="POST" action="{{ url_for('investor.save_deal_from_property', prop_id=selected_prop.id) }}" class="inline-form">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="ravlo-btn ghost">
+                        Save Deal
+                    </button>
+                </form>
+
+                <a href="{{ url_for('investor.capital_application', prop_id=selected_prop.id) }}" class="ravlo-btn primary">
+                    Apply
+                </a>
+                {% endif %}
             </div>
-
-            {% if recommendation and recommendation.notes and recommendation.notes.get("flip") %}
-            <div class="workspace-compare-note">{{ recommendation.notes.get("flip") }}</div>
-            {% endif %}
-          </div>
-
-          <div class="workspace-compare-card {% if recommended == 'rental' %}recommended{% endif %}">
-            <span class="workspace-compare-kicker">RENTAL</span>
-            <strong class="workspace-compare-title">Buy & Hold Rental</strong>
-
-            <div class="workspace-compare-meta">
-              <div><span>Monthly Rent</span><strong>${{ "{:,.0f}".format(rental_rent) }}</strong></div>
-              <div><span>Monthly Cash Flow</span><strong>${{ "{:,.0f}".format(rental_cashflow) }}</strong></div>
-              <div><span>Annual NOI</span><strong>${{ "{:,.0f}".format(rental.get("annual_noi", 0) or 0) }}</strong></div>
-              <div><span>Cap Rate</span><strong>{{ "{:.1f}".format(rental_cap) }}%</strong></div>
-            </div>
-
-            <div class="metric-bar-wrap">
-              <div class="metric-bar-label">
-                <span>Cash Flow Strength</span>
-                <strong>{{ "{:.0f}".format(((rental_cashflow * 12) / max_profit) * 100) if max_profit else 0 }}%</strong>
-              </div>
-              <div class="metric-bar"><div class="metric-bar-fill" style="width: {{ ((rental_cashflow * 12) / max_profit) * 100 if max_profit else 0 }}%;"></div></div>
-            </div>
-
-            {% if recommendation and recommendation.notes and recommendation.notes.get("rental") %}
-            <div class="workspace-compare-note">{{ recommendation.notes.get("rental") }}</div>
-            {% endif %}
-          </div>
-
-          <div class="workspace-compare-card {% if recommended == 'airbnb' %}recommended{% endif %}">
-            <span class="workspace-compare-kicker">AIRBNB</span>
-            <strong class="workspace-compare-title">Short-Term Rental</strong>
-
-            <div class="workspace-compare-meta">
-              <div><span>Nightly Rate</span><strong>${{ "{:,.0f}".format(airbnb_nightly) }}</strong></div>
-              <div><span>Occupancy</span><strong>{{ "{:.0f}".format(airbnb_occ) }}%</strong></div>
-              <div><span>Gross Monthly</span><strong>${{ "{:,.0f}".format(airbnb_gross) }}</strong></div>
-              <div><span>Net Monthly</span><strong>${{ "{:,.0f}".format(airbnb_net) }}</strong></div>
-            </div>
-
-            <div class="metric-bar-wrap">
-              <div class="metric-bar-label">
-                <span>Income Strength</span>
-                <strong>{{ "{:.0f}".format(((airbnb_net * 12) / max_profit) * 100) if max_profit else 0 }}%</strong>
-              </div>
-              <div class="metric-bar"><div class="metric-bar-fill" style="width: {{ ((airbnb_net * 12) / max_profit) * 100 if max_profit else 0 }}%;"></div></div>
-            </div>
-
-            {% if recommendation and recommendation.notes and recommendation.notes.get("airbnb") %}
-            <div class="workspace-compare-note">{{ recommendation.notes.get("airbnb") }}</div>
-            {% endif %}
-          </div>
-
-        </div>
-        {% else %}
-        <div class="empty-state">No comparison data loaded yet.</div>
-        {% endif %}
-      </section>
-
-      <section class="ravlo-card pad">
-        <div class="section-head">
-          <div>
-            <div class="eyebrow">AI SUMMARY</div>
-            <h3>Opportunity Narrative</h3>
-          </div>
         </div>
 
-        <div class="feature-highlight">
-          <div class="feature-highlight-label">AI Summary</div>
-          <div class="feature-highlight-value">
-            {{ ai_summary or workspace_analysis.get("summary") or "No AI summary yet." }}
-          </div>
+        <div class="workspace-hero-side">
+            <div class="workspace-highlight">
+                <span>Decision Lens</span>
+                <strong>
+                    {% if recommended == "flip" %}
+                    Fastest Equity Path
+                    {% elif recommended == "rental" %}
+                    Stable Long-Term Cash Flow
+                    {% elif recommended == "airbnb" %}
+                    Highest Revenue Potential
+                    {% else %}
+                    Compare Scenarios
+                    {% endif %}
+                </strong>
+                <p>
+                    Review path strength, return profile, and execution pressure before moving into rehab, architect, or capital.
+                </p>
+            </div>
         </div>
+    </section>
 
-        <div class="workspace-fit-grid mt-16">
-          <div class="workspace-mini-stat">
-            <span>Best Strategy</span>
-            <strong>
-              {% if recommended == "flip" %}
-                Fix & Flip
-              {% elif recommended == "rental" %}
-                Buy & Hold
-              {% elif recommended == "airbnb" %}
-                Airbnb
-              {% else %}
-                Pending
-              {% endif %}
-            </strong>
-          </div>
-
-          <div class="workspace-mini-stat">
-            <span>Rental DSCR</span>
-            <strong>{{ "{:.2f}".format(rental_dscr) if rental_dscr else "—" }}</strong>
-          </div>
-
-          <div class="workspace-mini-stat">
-            <span>Flip ROI</span>
-            <strong>{{ "{:.1f}".format(flip_roi) }}%</strong>
-          </div>
-
-          <div class="workspace-mini-stat">
-            <span>Airbnb Occupancy</span>
-            <strong>{{ "{:.0f}".format(airbnb_occ) }}%</strong>
-          </div>
+    <section class="workspace-grid-4">
+        <div class="workspace-stat">
+            <span>Purchase Price</span>
+            <strong>${{ "{:,.0f}".format(purchase_price) }}</strong>
         </div>
-      </section>
-
-      <section class="ravlo-card pad">
-        <div class="section-head">
-          <div>
-            <div class="eyebrow">PROPERTY SNAPSHOT</div>
-            <h3>Property + Deal Context</h3>
-          </div>
-        </div>
-
-        <div class="workspace-info-grid">
-          <div class="workspace-info-box">
-            <span>Address</span>
-            <strong>{{ selected_prop.address or "—" }}</strong>
-          </div>
-          <div class="workspace-info-box">
-            <span>City / State</span>
-            <strong>{{ selected_prop.city or "—" }}{% if selected_prop.city and selected_prop.state %}, {% endif %}{{ selected_prop.state or "" }}</strong>
-          </div>
-          <div class="workspace-info-box">
-            <span>ZIP</span>
-            <strong>{{ selected_prop.zip_code or "—" }}</strong>
-          </div>
-          <div class="workspace-info-box">
-            <span>Type</span>
-            <strong>{{ selected_prop.property_type or "—" }}</strong>
-          </div>
-          <div class="workspace-info-box">
-            <span>Beds / Baths</span>
-            <strong>{{ selected_prop.bedrooms or selected_prop.beds or "—" }} / {{ selected_prop.bathrooms or selected_prop.baths or "—" }}</strong>
-          </div>
-          <div class="workspace-info-box">
+        <div class="workspace-stat">
             <span>Sq Ft</span>
-            <strong>{{ "{:,.0f}".format(selected_prop.sqft or selected_prop.square_feet) if (selected_prop.sqft or selected_prop.square_feet) else "—" }}</strong>
-          </div>
-          <div class="workspace-info-box">
-            <span>Deal Attached</span>
-            <strong>{% if deal %}Yes{% else %}No{% endif %}</strong>
-          </div>
-          <div class="workspace-info-box">
-            <span>Recommended</span>
             <strong>
-              {% if recommended == "flip" %}
-                Fix & Flip
-              {% elif recommended == "rental" %}
-                Rental
-              {% elif recommended == "airbnb" %}
-                Airbnb
-              {% else %}
-                Pending
-              {% endif %}
+                {% if selected_prop.sqft or selected_prop.square_feet %}
+                {{ "{:,.0f}".format((selected_prop.sqft or selected_prop.square_feet)|float) }}
+                {% elif comps and comps.property and comps.property.sqft %}
+                {{ "{:,.0f}".format(comps.property.sqft|float) }}
+                {% else %}
+                —
+                {% endif %}
             </strong>
-          </div>
         </div>
-      </section>
+        <div class="workspace-stat">
+            <span>ARV Estimate</span>
+            <strong>${{ "{:,.0f}".format(comps.arv_estimate or 0) if comps and comps.arv_estimate else "—" }}</strong>
+        </div>
+        <div class="workspace-stat">
+            <span>Market Rent</span>
+            <strong>${{ "{:,.0f}".format(comps.market_rent_estimate or 0) if comps and comps.market_rent_estimate else "—" }}</strong>
+        </div>
+    </section>
 
-      <section class="ravlo-card pad">
-        <div class="section-head">
-          <div>
-            <div class="eyebrow">REHAB</div>
-            <h3>Saved Rehab Summary</h3>
-          </div>
-          {% if deal %}
-          <a href="{{ url_for('investor.deal_rehab', deal_id=deal.id) }}" class="ravlo-link-btn">
-            Open Rehab Studio
-          </a>
-          {% endif %}
+    <div class="workspace-main-grid">
+
+        <div class="workspace-stack">
+
+            <section class="ravlo-card pad">
+                <div class="section-head">
+                    <div>
+                        <div class="eyebrow">STRATEGY BOARD</div>
+                        <h3>Side-by-Side Comparison</h3>
+                    </div>
+                </div>
+
+                {% if comparison %}
+                <div class="workspace-compare-grid">
+
+                    <div class="workspace-compare-card {% if recommended == 'flip' %}recommended{% endif %}">
+                        <div class="workspace-card-topline">
+                            <span class="workspace-compare-kicker">FLIP</span>
+                            {% if recommended == 'flip' %}
+                            <span class="workspace-badge">Recommended</span>
+                            {% endif %}
+                        </div>
+
+                        <strong class="workspace-compare-title">Fix & Flip</strong>
+
+                        <div class="workspace-compare-meta">
+                            <div><span>Projected Profit</span><strong>${{ "{:,.0f}".format(flip_profit) }}</strong></div>
+                            <div><span>Total Investment</span><strong>${{ "{:,.0f}".format(flip_total) }}</strong></div>
+                            <div><span>Projected ARV</span><strong>${{ "{:,.0f}".format(flip_arv) if flip_arv else "—" }}</strong></div>
+                            <div><span>ROI</span><strong>{{ "{:.1f}".format(flip_roi) }}%</strong></div>
+                        </div>
+
+                        <div class="metric-bar-wrap">
+                            <div class="metric-bar-label">
+                                <span>Profit Strength</span>
+                                <strong>{{ "{:.0f}".format(flip_profit_strength) }}%</strong>
+                            </div>
+                            <div class="metric-bar"><div class="metric-bar-fill" style="width: {{ flip_profit_strength }}%;"></div></div>
+                        </div>
+
+                        <div class="metric-bar-wrap">
+                            <div class="metric-bar-label">
+                                <span>ROI Strength</span>
+                                <strong>{{ "{:.0f}".format(flip_roi_strength) }}%</strong>
+                            </div>
+                            <div class="metric-bar"><div class="metric-bar-fill alt" style="width: {{ flip_roi_strength }}%;"></div></div>
+                        </div>
+
+                        {% if recommendation and recommendation.notes and recommendation.notes.get("flip") %}
+                        <div class="workspace-compare-note">{{ recommendation.notes.get("flip") }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="workspace-compare-card {% if recommended == 'rental' %}recommended{% endif %}">
+                        <div class="workspace-card-topline">
+                            <span class="workspace-compare-kicker">RENTAL</span>
+                            {% if recommended == 'rental' %}
+                            <span class="workspace-badge">Recommended</span>
+                            {% endif %}
+                        </div>
+
+                        <strong class="workspace-compare-title">Buy & Hold Rental</strong>
+
+                        <div class="workspace-compare-meta">
+                            <div><span>Monthly Rent</span><strong>${{ "{:,.0f}".format(rental_rent) }}</strong></div>
+                            <div><span>Monthly Cash Flow</span><strong>${{ "{:,.0f}".format(rental_cashflow) }}</strong></div>
+                            <div><span>Annual NOI</span><strong>${{ "{:,.0f}".format(rental_noi) }}</strong></div>
+                            <div><span>Cap Rate</span><strong>{{ "{:.1f}".format(rental_cap) }}%</strong></div>
+                        </div>
+
+                        <div class="metric-bar-wrap">
+                            <div class="metric-bar-label">
+                                <span>Cash Flow Strength</span>
+                                <strong>{{ "{:.0f}".format(rental_profit_strength) }}%</strong>
+                            </div>
+                            <div class="metric-bar"><div class="metric-bar-fill" style="width: {{ rental_profit_strength }}%;"></div></div>
+                        </div>
+
+                        <div class="metric-bar-wrap">
+                            <div class="metric-bar-label">
+                                <span>Return Strength</span>
+                                <strong>{{ "{:.0f}".format(rental_roi_strength) }}%</strong>
+                            </div>
+                            <div class="metric-bar"><div class="metric-bar-fill alt" style="width: {{ rental_roi_strength }}%;"></div></div>
+                        </div>
+
+                        {% if recommendation and recommendation.notes and recommendation.notes.get("rental") %}
+                        <div class="workspace-compare-note">{{ recommendation.notes.get("rental") }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="workspace-compare-card {% if recommended == 'airbnb' %}recommended{% endif %}">
+                        <div class="workspace-card-topline">
+                            <span class="workspace-compare-kicker">AIRBNB</span>
+                            {% if recommended == 'airbnb' %}
+                            <span class="workspace-badge">Recommended</span>
+                            {% endif %}
+                        </div>
+
+                        <strong class="workspace-compare-title">Short-Term Rental</strong>
+
+                        <div class="workspace-compare-meta">
+                            <div><span>Nightly Rate</span><strong>${{ "{:,.0f}".format(airbnb_nightly) }}</strong></div>
+                            <div><span>Occupancy</span><strong>{{ "{:.0f}".format(airbnb_occ) }}%</strong></div>
+                            <div><span>Gross Monthly</span><strong>${{ "{:,.0f}".format(airbnb_gross) }}</strong></div>
+                            <div><span>Net Monthly</span><strong>${{ "{:,.0f}".format(airbnb_net) }}</strong></div>
+                            <div><span>Annualized ROI</span><strong>{{ "{:.1f}".format(airbnb_roi) }}%</strong></div>
+                        </div>
+
+                        <div class="metric-bar-wrap">
+                            <div class="metric-bar-label">
+                                <span>Income Strength</span>
+                                <strong>{{ "{:.0f}".format(airbnb_profit_strength) }}%</strong>
+                            </div>
+                            <div class="metric-bar"><div class="metric-bar-fill" style="width: {{ airbnb_profit_strength }}%;"></div></div>
+                        </div>
+
+                        <div class="metric-bar-wrap">
+                            <div class="metric-bar-label">
+                                <span>Return Strength</span>
+                                <strong>{{ "{:.0f}".format(airbnb_roi_strength) }}%</strong>
+                            </div>
+                            <div class="metric-bar"><div class="metric-bar-fill alt" style="width: {{ airbnb_roi_strength }}%;"></div></div>
+                        </div>
+
+                        {% if recommendation and recommendation.notes and recommendation.notes.get("airbnb") %}
+                        <div class="workspace-compare-note">{{ recommendation.notes.get("airbnb") }}</div>
+                        {% endif %}
+                    </div>
+
+                </div>
+                {% else %}
+                <div class="empty-state">No comparison data loaded yet.</div>
+                {% endif %}
+            </section>
+
+            <section class="ravlo-card pad">
+                <div class="section-head">
+                    <div>
+                        <div class="eyebrow">AI SUMMARY</div>
+                        <h3>Opportunity Narrative</h3>
+                    </div>
+                </div>
+
+                <div class="feature-highlight">
+                    <div class="feature-highlight-label">AI Summary</div>
+                    <div class="feature-highlight-value">
+                        {{ ai_summary or (workspace_analysis.get("summary") if workspace_analysis else None) or "No AI summary yet." }}
+                    </div>
+                </div>
+
+                <div class="workspace-fit-grid mt-16">
+                    <div class="workspace-mini-stat">
+                        <span>Best Strategy</span>
+                        <strong>
+                            {% if recommended == "flip" %}
+                            Fix & Flip
+                            {% elif recommended == "rental" %}
+                            Buy & Hold
+                            {% elif recommended == "airbnb" %}
+                            Airbnb
+                            {% else %}
+                            Pending
+                            {% endif %}
+                        </strong>
+                    </div>
+
+                    <div class="workspace-mini-stat">
+                        <span>Rental DSCR</span>
+                        <strong>{{ "{:.2f}".format(rental_dscr) if rental_dscr else "—" }}</strong>
+                    </div>
+
+                    <div class="workspace-mini-stat">
+                        <span>Flip ROI</span>
+                        <strong>{{ "{:.1f}".format(flip_roi) }}%</strong>
+                    </div>
+
+                    <div class="workspace-mini-stat">
+                        <span>Airbnb ROI</span>
+                        <strong>{{ "{:.1f}".format(airbnb_roi) }}%</strong>
+                    </div>
+                </div>
+            </section>
+
+            <section class="ravlo-card pad">
+                <div class="section-head">
+                    <div>
+                        <div class="eyebrow">PROPERTY SNAPSHOT</div>
+                        <h3>Property + Deal Context</h3>
+                    </div>
+                </div>
+
+                <div class="workspace-info-grid">
+                    <div class="workspace-info-box">
+                        <span>Address</span>
+                        <strong>{{ selected_prop.address or "—" }}</strong>
+                    </div>
+                    <div class="workspace-info-box">
+                        <span>City / State</span>
+                        <strong>{{ selected_prop.city or "—" }}{% if selected_prop.city and selected_prop.state %}, {% endif %}{{ selected_prop.state or "" }}</strong>
+                    </div>
+                    <div class="workspace-info-box">
+                        <span>ZIP</span>
+                        <strong>{{ selected_prop.zip_code or "—" }}</strong>
+                    </div>
+                    <div class="workspace-info-box">
+                        <span>Type</span>
+                        <strong>{{ selected_prop.property_type or "—" }}</strong>
+                    </div>
+                    <div class="workspace-info-box">
+                        <span>Beds / Baths</span>
+                        <strong>{{ selected_prop.bedrooms or selected_prop.beds or "—" }} / {{ selected_prop.bathrooms or selected_prop.baths or "—" }}</strong>
+                    </div>
+                    <div class="workspace-info-box">
+                        <span>Sq Ft</span>
+                        <strong>{{ "{:,.0f}".format((selected_prop.sqft or selected_prop.square_feet)|float) if (selected_prop.sqft or selected_prop.square_feet) else "—" }}</strong>
+                    </div>
+                    <div class="workspace-info-box">
+                        <span>Deal Attached</span>
+                        <strong>{% if deal %}Yes{% else %}No{% endif %}</strong>
+                    </div>
+                    <div class="workspace-info-box">
+                        <span>Recommended</span>
+                        <strong>
+                            {% if recommended == "flip" %}
+                            Fix & Flip
+                            {% elif recommended == "rental" %}
+                            Rental
+                            {% elif recommended == "airbnb" %}
+                            Airbnb
+                            {% else %}
+                            Pending
+                            {% endif %}
+                        </strong>
+                    </div>
+                </div>
+            </section>
+
+            <section class="ravlo-card pad">
+                <div class="section-head">
+                    <div>
+                        <div class="eyebrow">REHAB</div>
+                        <h3>Saved Rehab Summary</h3>
+                    </div>
+                    {% if deal %}
+                    <a href="{{ url_for('investor.deal_rehab', deal_id=deal.id) }}" class="ravlo-link-btn">
+                        Open Rehab Studio
+                    </a>
+                    {% endif %}
+                </div>
+
+                {% set rehab_scope = rehab_analysis.get("scope", {}) %}
+                {% if rehab_analysis %}
+                <div class="workspace-fit-grid">
+                    <div class="workspace-mini-stat">
+                        <span>Estimated Rehab Cost</span>
+                        <strong>${{ "{:,.0f}".format(rehab_analysis.get("estimated_rehab_cost", 0) or 0) }}</strong>
+                    </div>
+                    <div class="workspace-mini-stat">
+                        <span>Scope</span>
+                        <strong>{{ rehab_scope.get("rehab_level") or "Pending" }}</strong>
+                    </div>
+                    <div class="workspace-mini-stat">
+                        <span>Cost / Sq Ft</span>
+                        <strong>{% if rehab_scope.get("cost_per_sqft") %}${{ "{:,.0f}".format(rehab_scope.get("cost_per_sqft")) }}{% else %}—{% endif %}</strong>
+                    </div>
+                    <div class="workspace-mini-stat">
+                        <span>Sq Ft Basis</span>
+                        <strong>{{ rehab_scope.get("sqft") or "—" }}</strong>
+                    </div>
+                </div>
+
+                {% if rehab_scope.get("line_items") %}
+                <div class="workspace-line-items mt-16">
+                    {% for item, amount in rehab_scope.get("line_items", {}).items() %}
+                    <div class="workspace-line-row">
+                        <span>{{ item.replace("_", " ")|title }}</span>
+                        <strong>${{ "{:,.0f}".format(amount or 0) }}</strong>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+                {% else %}
+                <div class="empty-state">No rehab summary saved yet.</div>
+                {% endif %}
+            </section>
+
         </div>
 
-        {% set rehab_scope = rehab_analysis.get("scope", {}) %}
-        {% if rehab_analysis %}
-        <div class="workspace-fit-grid">
-          <div class="workspace-mini-stat">
-            <span>Estimated Rehab Cost</span>
-            <strong>${{ "{:,.0f}".format(rehab_analysis.get("estimated_rehab_cost", 0) or 0) }}</strong>
-          </div>
-          <div class="workspace-mini-stat">
-            <span>Scope</span>
-            <strong>{{ rehab_scope.get("rehab_level") or "Pending" }}</strong>
-          </div>
-          <div class="workspace-mini-stat">
-            <span>Cost / Sq Ft</span>
-            <strong>{% if rehab_scope.get("cost_per_sqft") %}${{ "{:,.0f}".format(rehab_scope.get("cost_per_sqft")) }}{% else %}—{% endif %}</strong>
-          </div>
-          <div class="workspace-mini-stat">
-            <span>Sq Ft Basis</span>
-            <strong>{{ rehab_scope.get("sqft") or "—" }}</strong>
-          </div>
-        </div>
+        <div class="workspace-stack">
 
-        {% if rehab_scope.get("line_items") %}
-        <div class="workspace-line-items mt-16">
-          {% for item, amount in rehab_scope.get("line_items", {}).items() %}
-          <div class="workspace-line-row">
-            <span>{{ item.replace("_", " ")|title }}</span>
-            <strong>${{ "{:,.0f}".format(amount or 0) }}</strong>
-          </div>
-          {% endfor %}
+            <section class="ravlo-card pad">
+                <div class="section-head">
+                    <div>
+                        <div class="eyebrow">SCOREBOARD</div>
+                        <h3>Performance Signals</h3>
+                    </div>
+                </div>
+
+                <div class="workspace-mini-stat-stack">
+                    <div class="workspace-mini-stat">
+                        <span>Flip Profit</span>
+                        <strong>${{ "{:,.0f}".format(flip_profit) }}</strong>
+                    </div>
+                    <div class="workspace-mini-stat">
+                        <span>Rental Cash Flow</span>
+                        <strong>${{ "{:,.0f}".format(rental_cashflow) }}/mo</strong>
+                    </div>
+                    <div class="workspace-mini-stat">
+                        <span>Airbnb Net</span>
+                        <strong>${{ "{:,.0f}".format(airbnb_net) }}/mo</strong>
+                    </div>
+                    <div class="workspace-mini-stat">
+                        <span>Rental DSCR</span>
+                        <strong>{{ "{:.2f}".format(rental_dscr) if rental_dscr else "—" }}</strong>
+                    </div>
+                    <div class="workspace-mini-stat">
+                        <span>Top ROI</span>
+                        <strong>{{ "{:.1f}".format(max_roi) }}%</strong>
+                    </div>
+                </div>
+            </section>
+
+            <section class="ravlo-card pad">
+                <div class="section-head">
+                    <div>
+                        <div class="eyebrow">OPTIMIZATION</div>
+                        <h3>Saved Optimization</h3>
+                    </div>
+                </div>
+
+                {% if optimization %}
+                <div class="workspace-mini-stat-stack">
+                    <div class="workspace-mini-stat">
+                        <span>Best Exit</span>
+                        <strong>{{ optimization.get("best_exit") or "—" }}</strong>
+                    </div>
+                    <div class="workspace-mini-stat">
+                        <span>Profit Gap To Target</span>
+                        <strong>${{ "{:,.0f}".format(optimization.get("profit_gap_to_target", 0) or 0) }}</strong>
+                    </div>
+                    <div class="workspace-mini-stat">
+                        <span>Rehab Pressure</span>
+                        <strong>{% if optimization.get("rehab_pressure") is not none %}{{ "{:.1f}".format((optimization.get("rehab_pressure", 0) or 0) * 100) }}%{% else %}—{% endif %}</strong>
+                    </div>
+                    <div class="workspace-mini-stat">
+                        <span>Rent Ratio</span>
+                        <strong>{% if optimization.get("rent_ratio") is not none %}{{ "{:.2f}".format((optimization.get("rent_ratio", 0) or 0) * 100) }}%{% else %}—{% endif %}</strong>
+                    </div>
+                </div>
+
+                <div class="report-note mt-16">
+                    <strong>Notes</strong>
+                    {% if optimization.get("notes") %}
+                    <ul class="workspace-note-list">
+                        {% for note in optimization.get("notes", []) %}
+                        <li>{{ note }}</li>
+                        {% endfor %}
+                    </ul>
+                    {% else %}
+                    <p>No optimization notes saved yet.</p>
+                    {% endif %}
+                </div>
+                {% else %}
+                <div class="empty-state">No optimization saved yet.</div>
+                {% endif %}
+            </section>
+
+            <section class="ravlo-card pad">
+                <div class="section-head">
+                    <div>
+                        <div class="eyebrow">NEXT ACTIONS</div>
+                        <h3>Continue Workflow</h3>
+                    </div>
+                </div>
+
+                <div class="quick-grid one-col">
+                    {% if deal %}
+                    <a href="{{ url_for('investor.deal_architect', deal_id=deal.id) }}" class="quick-card">
+                        <span class="quick-title">Open Deal Architect</span>
+                        <span class="quick-sub">Refine strategy, scoring, and recommendation.</span>
+                    </a>
+
+                    <a href="{{ url_for('investor.deal_rehab', deal_id=deal.id) }}" class="quick-card">
+                        <span class="quick-title">Open Rehab Studio</span>
+                        <span class="quick-sub">Build scope, optimize budget, and pressure-test rehab.</span>
+                    </a>
+
+                    <a href="{{ url_for('investor.build_studio') }}" class="quick-card">
+                        <span class="quick-title">Open Build Studio</span>
+                        <span class="quick-sub">Use build tools for development-heavy opportunities.</span>
+                    </a>
+
+                    <a href="{{ url_for('investor.capital_application', deal_id=deal.id, prop_id=selected_prop.id) }}" class="quick-card">
+                        <span class="quick-title">Apply for Capital</span>
+                        <span class="quick-sub">Send this deal into capital intake and funding workflow.</span>
+                    </a>
+                    {% else %}
+                    <form method="POST" action="{{ url_for('investor.save_deal_from_property', prop_id=selected_prop.id) }}" class="quick-save-form">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="quick-card quick-card-button">
+                            <span class="quick-title">Save Deal</span>
+                            <span class="quick-sub">Create and attach this property as a deal in your pipeline.</span>
+                        </button>
+                    </form>
+
+                    <a href="{{ url_for('investor.capital_application', prop_id=selected_prop.id) }}" class="quick-card">
+                        <span class="quick-title">Apply for Capital</span>
+                        <span class="quick-sub">Start a funding application using this property’s numbers.</span>
+                    </a>
+                    {% endif %}
+                </div>
+            </section>
+
         </div>
-        {% endif %}
-        {% else %}
-        <div class="empty-state">No rehab summary saved yet.</div>
-        {% endif %}
-      </section>
 
     </div>
 
-    <div class="workspace-stack">
-
-      <section class="ravlo-card pad">
-        <div class="section-head">
-          <div>
-            <div class="eyebrow">SCOREBOARD</div>
-            <h3>Performance Signals</h3>
-          </div>
+    {% else %}
+    <section class="ravlo-hero-card">
+        <div class="eyebrow">RAVLO WORKSPACE</div>
+        <h2>No property selected</h2>
+        <p class="muted">
+            Choose a saved property to compare Fix & Flip, Rental, and Airbnb paths.
+        </p>
+        <div class="mt-16">
+            <a href="{{ url_for('investor.deals_list') }}" class="ravlo-btn primary">
+                Open Deal Pipeline
+            </a>
         </div>
-
-        <div class="workspace-mini-stat-stack">
-          <div class="workspace-mini-stat">
-            <span>Flip Profit</span>
-            <strong>${{ "{:,.0f}".format(flip_profit) }}</strong>
-          </div>
-          <div class="workspace-mini-stat">
-            <span>Rental Cash Flow</span>
-            <strong>${{ "{:,.0f}".format(rental_cashflow) }}/mo</strong>
-          </div>
-          <div class="workspace-mini-stat">
-            <span>Airbnb Net</span>
-            <strong>${{ "{:,.0f}".format(airbnb_net) }}/mo</strong>
-          </div>
-          <div class="workspace-mini-stat">
-            <span>Rental DSCR</span>
-            <strong>{{ "{:.2f}".format(rental_dscr) if rental_dscr else "—" }}</strong>
-          </div>
-        </div>
-      </section>
-
-      <section class="ravlo-card pad">
-        <div class="section-head">
-          <div>
-            <div class="eyebrow">OPTIMIZATION</div>
-            <h3>Saved Optimization</h3>
-          </div>
-        </div>
-
-        {% if optimization %}
-        <div class="workspace-mini-stat-stack">
-          <div class="workspace-mini-stat">
-            <span>Best Exit</span>
-            <strong>{{ optimization.get("best_exit") or "—" }}</strong>
-          </div>
-          <div class="workspace-mini-stat">
-            <span>Profit Gap To Target</span>
-            <strong>${{ "{:,.0f}".format(optimization.get("profit_gap_to_target", 0) or 0) }}</strong>
-          </div>
-          <div class="workspace-mini-stat">
-            <span>Rehab Pressure</span>
-            <strong>{% if optimization.get("rehab_pressure") is not none %}{{ "{:.1f}".format((optimization.get("rehab_pressure", 0) or 0) * 100) }}%{% else %}—{% endif %}</strong>
-          </div>
-          <div class="workspace-mini-stat">
-            <span>Rent Ratio</span>
-            <strong>{% if optimization.get("rent_ratio") is not none %}{{ "{:.2f}".format((optimization.get("rent_ratio", 0) or 0) * 100) }}%{% else %}—{% endif %}</strong>
-          </div>
-        </div>
-
-        <div class="report-note mt-16">
-          <strong>Notes</strong>
-          {% if optimization.get("notes") %}
-          <ul class="workspace-note-list">
-            {% for note in optimization.get("notes", []) %}
-            <li>{{ note }}</li>
-            {% endfor %}
-          </ul>
-          {% else %}
-          <p>No optimization notes saved yet.</p>
-          {% endif %}
-        </div>
-        {% else %}
-        <div class="empty-state">No optimization saved yet.</div>
-        {% endif %}
-      </section>
-
-      <section class="ravlo-card pad">
-        <div class="section-head">
-          <div>
-            <div class="eyebrow">NEXT ACTIONS</div>
-            <h3>Continue Workflow</h3>
-          </div>
-        </div>
-
-        <div class="quick-grid one-col">
-          {% if deal %}
-          <a href="{{ url_for('investor.deal_architect', deal_id=deal.id) }}" class="quick-card">
-            <span class="quick-title">Open Deal Architect</span>
-            <span class="quick-sub">Refine strategy, scoring, and recommendation.</span>
-          </a>
-
-          <a href="{{ url_for('investor.deal_rehab', deal_id=deal.id) }}" class="quick-card">
-            <span class="quick-title">Open Rehab Studio</span>
-            <span class="quick-sub">Build scope, optimize budget, and pressure-test rehab.</span>
-          </a>
-
-          <a href="{{ url_for('investor.build_studio') }}" class="quick-card">
-            <span class="quick-title">Open Build Studio</span>
-            <span class="quick-sub">Use build tools for development-heavy opportunities.</span>
-          </a>
-
-          <a href="{{ url_for('investor.capital_application', deal_id=deal.id, prop_id=selected_prop.id) }}" class="quick-card">
-            <span class="quick-title">Apply for Capital</span>
-            <span class="quick-sub">Send this deal into capital intake and funding workflow.</span>
-          </a>
-          {% else %}
-          <form method="POST" action="{{ url_for('investor.save_deal_from_property', prop_id=selected_prop.id) }}" class="quick-save-form">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <button type="submit" class="quick-card quick-card-button">
-              <span class="quick-title">Save Deal</span>
-              <span class="quick-sub">Create and attach this property as a deal in your pipeline.</span>
-            </button>
-          </form>
-
-          <a href="{{ url_for('investor.capital_application', prop_id=selected_prop.id) }}" class="quick-card">
-            <span class="quick-title">Apply for Capital</span>
-            <span class="quick-sub">Start a funding application using this property’s numbers.</span>
-          </a>
-          {% endif %}
-        </div>
-      </section>
-
-    </div>
-
-  </div>
-
-  {% else %}
-  <section class="ravlo-hero-card">
-    <div class="eyebrow">RAVLO WORKSPACE</div>
-    <h2>No property selected</h2>
-    <p class="muted">
-      Choose a saved property to compare Fix & Flip, Rental, and Airbnb paths.
-    </p>
-    <div class="mt-16">
-      <a href="{{ url_for('investor.deals_list') }}" class="ravlo-btn primary">
-        Open Deal Pipeline
-      </a>
-    </div>
-  </section>
-  {% endif %}
+    </section>
+    {% endif %}
 
 </div>
 
 <style>
-  .workspace-shell{
-    display:grid;
-    gap:20px;
-  }
-
-  .workspace-hero{
-    align-items:stretch;
-  }
-
-  .workspace-hero-copy{
-    flex:1;
-    min-width:0;
-  }
-
-  .workspace-hero-copy h2{
-    margin:8px 0 10px;
-    font-size:34px;
-    line-height:1.05;
-    letter-spacing:-.03em;
-  }
-
-  .workspace-action-row{
-    display:flex;
-    flex-wrap:wrap;
-    gap:12px;
-    align-items:center;
-  }
-
-  .workspace-hero-side{
-    width:320px;
-    max-width:100%;
-    display:flex;
-    align-items:stretch;
-  }
-
-  .workspace-highlight{
-    width:100%;
-    padding:18px;
-    border-radius:20px;
-    background:rgba(255,255,255,.04);
-    border:1px solid rgba(255,255,255,.08);
-  }
-
-  .workspace-highlight span{
-    display:block;
-    color:var(--muted);
-    font-size:12px;
-    text-transform:uppercase;
-    letter-spacing:.08em;
-  }
-
-  .workspace-highlight strong{
-    display:block;
-    margin-top:8px;
-    font-size:28px;
-    line-height:1.1;
-    color:var(--text);
-  }
-
-  .workspace-highlight p{
-    margin:10px 0 0;
-    color:var(--muted);
-    line-height:1.6;
-  }
-
-  .workspace-grid-4{
-    display:grid;
-    grid-template-columns:repeat(4, minmax(0, 1fr));
-    gap:14px;
-  }
-
-  .workspace-stat{
-    padding:18px;
-    border-radius:20px;
-    background:rgba(255,255,255,.03);
-    border:1px solid rgba(255,255,255,.08);
-  }
-
-  .workspace-stat span{
-    display:block;
-    color:var(--muted);
-    font-size:12px;
-    text-transform:uppercase;
-    letter-spacing:.08em;
-    margin-bottom:8px;
-  }
-
-  .workspace-stat strong{
-    color:var(--text);
-    font-size:24px;
-    font-weight:800;
-    letter-spacing:-.02em;
-  }
-
-  .workspace-main-grid{
-    display:grid;
-    grid-template-columns:1.15fr .85fr;
-    gap:20px;
-    align-items:start;
-  }
-
-  .workspace-stack{
-    display:grid;
-    gap:20px;
-  }
-
-  .workspace-info-grid{
-    display:grid;
-    grid-template-columns:repeat(4, minmax(0,1fr));
-    gap:12px;
-  }
-
-  .workspace-info-box,
-  .workspace-mini-stat{
-    padding:16px;
-    border-radius:18px;
-    background:rgba(255,255,255,.03);
-    border:1px solid rgba(255,255,255,.08);
-  }
-
-  .workspace-info-box span,
-  .workspace-mini-stat span{
-    display:block;
-    color:var(--muted);
-    font-size:12px;
-    text-transform:uppercase;
-    letter-spacing:.08em;
-    margin-bottom:8px;
-  }
-
-  .workspace-info-box strong,
-  .workspace-mini-stat strong{
-    color:var(--text);
-    font-size:18px;
-    font-weight:700;
-    line-height:1.35;
-  }
-
-  .workspace-compare-grid{
-    display:grid;
-    grid-template-columns:repeat(3, minmax(0,1fr));
-    gap:14px;
-  }
-
-  .workspace-compare-card{
-    padding:20px;
-    border-radius:20px;
-    background:rgba(255,255,255,.03);
-    border:1px solid rgba(255,255,255,.08);
-  }
-
-  .workspace-compare-card.recommended{
-    border-color:rgba(107,127,147,.40);
-    background:linear-gradient(180deg, rgba(107,127,147,.10), rgba(255,255,255,.03));
-    box-shadow:0 0 0 1px rgba(107,127,147,.14) inset;
-  }
-
-  .workspace-compare-kicker{
-    font-size:11px;
-    letter-spacing:.1em;
-    text-transform:uppercase;
-    color:var(--muted);
-  }
-
-  .workspace-compare-title{
-    display:block;
-    margin-top:6px;
-    font-size:19px;
-    font-weight:700;
-    color:var(--text);
-  }
-
-  .workspace-compare-meta{
-    display:grid;
-    gap:10px;
-    margin-top:14px;
-  }
-
-  .workspace-compare-meta div{
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-    gap:12px;
-    padding:10px 0;
-    border-bottom:1px solid rgba(255,255,255,.06);
-  }
-
-  .workspace-compare-meta div:last-child{
-    border-bottom:none;
-    padding-bottom:0;
-  }
-
-  .workspace-compare-meta span{
-    color:var(--muted);
-    font-size:12px;
-    text-transform:uppercase;
-    letter-spacing:.08em;
-  }
-
-  .workspace-compare-meta strong{
-    color:var(--text);
-    font-size:15px;
-    font-weight:700;
-    text-align:right;
-  }
-
-  .workspace-compare-note{
-    margin-top:14px;
-    padding-top:14px;
-    border-top:1px solid rgba(255,255,255,.06);
-    color:var(--muted);
-    font-size:13px;
-    line-height:1.55;
-  }
-
-  .metric-bar-wrap{
-    margin-top:14px;
-  }
-
-  .metric-bar-label{
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-    gap:10px;
-    margin-bottom:8px;
-    font-size:12px;
-    color:var(--muted);
-    text-transform:uppercase;
-    letter-spacing:.08em;
-  }
-
-  .metric-bar{
-    width:100%;
-    height:10px;
-    border-radius:999px;
-    background:rgba(255,255,255,.06);
-    overflow:hidden;
-  }
-
-  .metric-bar-fill{
-    height:100%;
-    border-radius:inherit;
-    background:linear-gradient(90deg, #6B7F93, #8EA7C0);
-  }
-
-  .workspace-fit-grid{
-    display:grid;
-    grid-template-columns:repeat(2, minmax(0, 1fr));
-    gap:12px;
-  }
-
-  .workspace-mini-stat-stack{
-    display:grid;
-    gap:12px;
-  }
-
-  .workspace-line-items{
-    display:grid;
-    gap:10px;
-  }
-
-  .workspace-line-row{
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-    gap:14px;
-    padding:14px 16px;
-    border-radius:16px;
-    background:rgba(255,255,255,.03);
-    border:1px solid rgba(255,255,255,.08);
-  }
-
-  .workspace-line-row span{
-    color:var(--muted);
-  }
-
-  .workspace-line-row strong{
-    color:var(--text);
-  }
-
-  .workspace-note-list{
-    margin:10px 0 0;
-    padding-left:18px;
-    color:var(--muted);
-  }
-
-  .workspace-note-list li + li{
-    margin-top:8px;
-  }
-
-  .quick-grid{
-    display:grid;
-    grid-template-columns:repeat(2, minmax(0, 1fr));
-    gap:14px;
-  }
-
-  .quick-grid.one-col{
-    grid-template-columns:1fr;
-  }
-
-  .quick-card{
-    display:block;
-    width:100%;
-    text-align:left;
-    padding:18px;
-    border-radius:18px;
-    background:rgba(255,255,255,.03);
-    border:1px solid rgba(255,255,255,.08);
-    text-decoration:none;
-    transition:.2s ease;
-  }
-
-  .quick-card-button{
-    appearance:none;
-    cursor:pointer;
-    font:inherit;
-    color:inherit;
-  }
-
-  .quick-card:hover,
-  .quick-card-button:hover{
-    transform:translateY(-1px);
-    border-color:rgba(107,127,147,.35);
-    background:rgba(255,255,255,.045);
-  }
-
-  .quick-title{
-    display:block;
-    color:var(--text);
-    font-size:16px;
-    font-weight:700;
-  }
-
-  .quick-sub{
-    display:block;
-    margin-top:8px;
-    color:var(--muted);
-    font-size:13px;
-    line-height:1.55;
-  }
-
-  .inline-form,
-  .quick-save-form{
-    margin:0;
-  }
-
-  .ravlo-link-btn{
-    display:inline-flex;
-    align-items:center;
-    justify-content:center;
-    min-height:36px;
-    padding:0 14px;
-    border-radius:999px;
-    border:1px solid rgba(255,255,255,.06);
-    background:rgba(255,255,255,.03);
-    color:rgba(255,255,255,.88);
-    font-weight:700;
-    font-size:.9rem;
-    text-decoration:none;
-  }
-
-  .ravlo-link-btn:hover{
-    background:rgba(255,255,255,.05);
-    color:#fff;
-  }
-
-  @media (max-width: 1200px){
-    .workspace-grid-4,
-    .workspace-info-grid,
-    .workspace-compare-grid{
-      grid-template-columns:repeat(2, minmax(0,1fr));
-    }
-  }
-
-  @media (max-width: 1100px){
-    .workspace-main-grid{
-      grid-template-columns:1fr;
+    .workspace-shell{
+      display:grid;
+      gap:20px;
     }
 
     .workspace-hero{
-      flex-direction:column;
-    }
-
-    .workspace-hero-side{
-      width:100%;
-    }
-  }
-
-  @media (max-width: 700px){
-    .workspace-grid-4,
-    .workspace-info-grid,
-    .workspace-fit-grid,
-    .workspace-compare-grid{
-      grid-template-columns:1fr;
-    }
-
-    .workspace-action-row{
-      flex-direction:column;
       align-items:stretch;
     }
 
-    .workspace-action-row .ravlo-btn,
-    .workspace-action-row form{
-      width:100%;
+    .workspace-hero-copy{
+      flex:1;
+      min-width:0;
     }
 
-    .workspace-action-row .ravlo-btn,
-    .workspace-action-row button{
-      width:100%;
-      justify-content:center;
+    .workspace-hero-copy h2{
+      margin:8px 0 10px;
+      font-size:34px;
+      line-height:1.05;
+      letter-spacing:-.03em;
     }
-  }
+
+    .workspace-action-row{
+      display:flex;
+      flex-wrap:wrap;
+      gap:12px;
+      align-items:center;
+    }
+
+    .workspace-hero-side{
+      width:320px;
+      max-width:100%;
+      display:flex;
+      align-items:stretch;
+    }
+
+    .workspace-highlight{
+      width:100%;
+      padding:18px;
+      border-radius:20px;
+      background:rgba(255,255,255,.04);
+      border:1px solid rgba(255,255,255,.08);
+    }
+
+    .workspace-highlight span{
+      display:block;
+      color:var(--muted);
+      font-size:12px;
+      text-transform:uppercase;
+      letter-spacing:.08em;
+    }
+
+    .workspace-highlight strong{
+      display:block;
+      margin-top:8px;
+      font-size:28px;
+      line-height:1.1;
+      color:var(--text);
+    }
+
+    .workspace-highlight p{
+      margin:10px 0 0;
+      color:var(--muted);
+      line-height:1.6;
+    }
+
+    .workspace-grid-4{
+      display:grid;
+      grid-template-columns:repeat(4, minmax(0, 1fr));
+      gap:14px;
+    }
+
+    .workspace-stat{
+      padding:18px;
+      border-radius:20px;
+      background:rgba(255,255,255,.03);
+      border:1px solid rgba(255,255,255,.08);
+    }
+
+    .workspace-stat span{
+      display:block;
+      color:var(--muted);
+      font-size:12px;
+      text-transform:uppercase;
+      letter-spacing:.08em;
+      margin-bottom:8px;
+    }
+
+    .workspace-stat strong{
+      color:var(--text);
+      font-size:24px;
+      font-weight:800;
+      letter-spacing:-.02em;
+    }
+
+    .workspace-main-grid{
+      display:grid;
+      grid-template-columns:1.15fr .85fr;
+      gap:20px;
+      align-items:start;
+    }
+
+    .workspace-stack{
+      display:grid;
+      gap:20px;
+    }
+
+    .workspace-info-grid{
+      display:grid;
+      grid-template-columns:repeat(4, minmax(0,1fr));
+      gap:12px;
+    }
+
+    .workspace-info-box,
+    .workspace-mini-stat{
+      padding:16px;
+      border-radius:18px;
+      background:rgba(255,255,255,.03);
+      border:1px solid rgba(255,255,255,.08);
+    }
+
+    .workspace-info-box span,
+    .workspace-mini-stat span{
+      display:block;
+      color:var(--muted);
+      font-size:12px;
+      text-transform:uppercase;
+      letter-spacing:.08em;
+      margin-bottom:8px;
+    }
+
+    .workspace-info-box strong,
+    .workspace-mini-stat strong{
+      color:var(--text);
+      font-size:18px;
+      font-weight:700;
+      line-height:1.35;
+    }
+
+    .workspace-compare-grid{
+      display:grid;
+      grid-template-columns:repeat(3, minmax(0,1fr));
+      gap:14px;
+    }
+
+    .workspace-compare-card{
+      padding:20px;
+      border-radius:22px;
+      background:rgba(255,255,255,.03);
+      border:1px solid rgba(255,255,255,.08);
+      position:relative;
+    }
+
+    .workspace-compare-card.recommended{
+      border-color:rgba(107,127,147,.40);
+      background:linear-gradient(180deg, rgba(107,127,147,.11), rgba(255,255,255,.03));
+      box-shadow:0 0 0 1px rgba(107,127,147,.14) inset, 0 14px 34px rgba(0,0,0,.18);
+    }
+
+    .workspace-card-topline{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+    }
+
+    .workspace-badge{
+      display:inline-flex;
+      align-items:center;
+      padding:6px 10px;
+      border-radius:999px;
+      font-size:11px;
+      font-weight:700;
+      letter-spacing:.08em;
+      text-transform:uppercase;
+      background:rgba(142,167,192,.14);
+      border:1px solid rgba(142,167,192,.22);
+      color:#dce8f5;
+    }
+
+    .workspace-compare-kicker{
+      font-size:11px;
+      letter-spacing:.1em;
+      text-transform:uppercase;
+      color:var(--muted);
+    }
+
+    .workspace-compare-title{
+      display:block;
+      margin-top:8px;
+      font-size:19px;
+      font-weight:700;
+      color:var(--text);
+    }
+
+    .workspace-compare-meta{
+      display:grid;
+      gap:10px;
+      margin-top:14px;
+    }
+
+    .workspace-compare-meta div{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:12px;
+      padding:10px 0;
+      border-bottom:1px solid rgba(255,255,255,.06);
+    }
+
+    .workspace-compare-meta div:last-child{
+      border-bottom:none;
+      padding-bottom:0;
+    }
+
+    .workspace-compare-meta span{
+      color:var(--muted);
+      font-size:12px;
+      text-transform:uppercase;
+      letter-spacing:.08em;
+    }
+
+    .workspace-compare-meta strong{
+      color:var(--text);
+      font-size:15px;
+      font-weight:700;
+      text-align:right;
+    }
+
+    .workspace-compare-note{
+      margin-top:14px;
+      padding-top:14px;
+      border-top:1px solid rgba(255,255,255,.06);
+      color:var(--muted);
+      font-size:13px;
+      line-height:1.55;
+    }
+
+    .metric-bar-wrap{
+      margin-top:14px;
+    }
+
+    .metric-bar-label{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      margin-bottom:8px;
+      font-size:12px;
+      color:var(--muted);
+      text-transform:uppercase;
+      letter-spacing:.08em;
+    }
+
+    .metric-bar{
+      width:100%;
+      height:10px;
+      border-radius:999px;
+      background:rgba(255,255,255,.06);
+      overflow:hidden;
+    }
+
+    .metric-bar-fill{
+      height:100%;
+      border-radius:inherit;
+      background:linear-gradient(90deg, #6B7F93, #8EA7C0);
+    }
+
+    .metric-bar-fill.alt{
+      background:linear-gradient(90deg, rgba(255,255,255,.45), #AFC5DB);
+    }
+
+    .workspace-fit-grid{
+      display:grid;
+      grid-template-columns:repeat(2, minmax(0, 1fr));
+      gap:12px;
+    }
+
+    .workspace-mini-stat-stack{
+      display:grid;
+      gap:12px;
+    }
+
+    .workspace-line-items{
+      display:grid;
+      gap:10px;
+    }
+
+    .workspace-line-row{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:14px;
+      padding:14px 16px;
+      border-radius:16px;
+      background:rgba(255,255,255,.03);
+      border:1px solid rgba(255,255,255,.08);
+    }
+
+    .workspace-line-row span{
+      color:var(--muted);
+    }
+
+    .workspace-line-row strong{
+      color:var(--text);
+    }
+
+    .workspace-note-list{
+      margin:10px 0 0;
+      padding-left:18px;
+      color:var(--muted);
+    }
+
+    .workspace-note-list li + li{
+      margin-top:8px;
+    }
+
+    .quick-grid{
+      display:grid;
+      grid-template-columns:repeat(2, minmax(0, 1fr));
+      gap:14px;
+    }
+
+    .quick-grid.one-col{
+      grid-template-columns:1fr;
+    }
+
+    .quick-card{
+      display:block;
+      width:100%;
+      text-align:left;
+      padding:18px;
+      border-radius:18px;
+      background:rgba(255,255,255,.03);
+      border:1px solid rgba(255,255,255,.08);
+      text-decoration:none;
+      transition:.2s ease;
+    }
+
+    .quick-card-button{
+      appearance:none;
+      cursor:pointer;
+      font:inherit;
+      color:inherit;
+    }
+
+    .quick-card:hover,
+    .quick-card-button:hover{
+      transform:translateY(-1px);
+      border-color:rgba(107,127,147,.35);
+      background:rgba(255,255,255,.045);
+    }
+
+    .quick-title{
+      display:block;
+      color:var(--text);
+      font-size:16px;
+      font-weight:700;
+    }
+
+    .quick-sub{
+      display:block;
+      margin-top:8px;
+      color:var(--muted);
+      font-size:13px;
+      line-height:1.55;
+    }
+
+    .inline-form,
+    .quick-save-form{
+      margin:0;
+    }
+
+    .ravlo-link-btn{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      min-height:36px;
+      padding:0 14px;
+      border-radius:999px;
+      border:1px solid rgba(255,255,255,.06);
+      background:rgba(255,255,255,.03);
+      color:rgba(255,255,255,.88);
+      font-weight:700;
+      font-size:.9rem;
+      text-decoration:none;
+    }
+
+    .ravlo-link-btn:hover{
+      background:rgba(255,255,255,.05);
+      color:#fff;
+    }
+
+    @media (max-width: 1200px){
+      .workspace-grid-4,
+      .workspace-info-grid,
+      .workspace-compare-grid{
+        grid-template-columns:repeat(2, minmax(0,1fr));
+      }
+    }
+
+    @media (max-width: 1100px){
+      .workspace-main-grid{
+        grid-template-columns:1fr;
+      }
+
+      .workspace-hero{
+        flex-direction:column;
+      }
+
+      .workspace-hero-side{
+        width:100%;
+      }
+    }
+
+    @media (max-width: 700px){
+      .workspace-grid-4,
+      .workspace-info-grid,
+      .workspace-fit-grid,
+      .workspace-compare-grid{
+        grid-template-columns:1fr;
+      }
+
+      .workspace-action-row{
+        flex-direction:column;
+        align-items:stretch;
+      }
+
+      .workspace-action-row .ravlo-btn,
+      .workspace-action-row form{
+        width:100%;
+      }
+
+      .workspace-action-row .ravlo-btn,
+      .workspace-action-row button{
+        width:100%;
+        justify-content:center;
+      }
+
+      .workspace-hero-copy h2{
+        font-size:28px;
+      }
+
+      .workspace-highlight strong{
+        font-size:22px;
+      }
+    }
 </style>
 {% endblock %}

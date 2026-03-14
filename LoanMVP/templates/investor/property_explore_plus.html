@@ -1,0 +1,297 @@
+{% extends "layouts/ravlo_base.html" %}
+{% block title %}Ravlo • Property Intelligence{% endblock %}
+
+{% block page_title %}Property Intelligence{% endblock %}
+{% block page_subline %}
+Deep property analysis, comps, and AI insight.
+{% endblock %}
+
+{% block topbar_actions %}
+<a href="{{ back_url }}" class="ravlo-btn ghost sm">Back</a>
+
+<button class="ravlo-btn primary sm"
+onclick="sendToWorkspace()">
+Send to Deal Workspace
+</button>
+{% endblock %}
+
+{% block content %}
+
+<div class="ravlo-grid">
+
+<!-- HERO -->
+<section class="ravlo-hero-card">
+
+<div>
+<div class="eyebrow">RAVLO PROPERTY</div>
+
+<h2 style="margin-bottom:.4rem;">
+{{ prop.address }}
+</h2>
+
+<p class="muted">
+{{ prop.zipcode or "" }}
+</p>
+
+</div>
+
+</section>
+
+
+<!-- PHOTOS -->
+{% if photos %}
+<section class="ravlo-card pad">
+
+<div class="ravlo-card-title">Photos</div>
+
+<div class="photo-grid">
+
+{% for p in photos %}
+<img src="{{ p }}" class="photo-item">
+{% endfor %}
+
+</div>
+
+</section>
+{% endif %}
+
+
+<!-- PROPERTY FACTS -->
+<section class="ravlo-card pad">
+
+<div class="ravlo-card-title">Property Facts</div>
+
+<div class="facts-grid">
+
+<div>
+<span>Price</span>
+<strong>${{ prop.price }}</strong>
+</div>
+
+<div>
+<span>Sqft</span>
+<strong>{{ prop.sqft or "—" }}</strong>
+</div>
+
+<div>
+<span>Beds</span>
+<strong>{{ resolved.beds or "—" }}</strong>
+</div>
+
+<div>
+<span>Baths</span>
+<strong>{{ resolved.baths or "—" }}</strong>
+</div>
+
+</div>
+
+</section>
+
+
+<!-- AI SUMMARY -->
+{% if ai_summary %}
+<section class="ravlo-card pad">
+
+<div class="ravlo-card-title">AI Property Insight</div>
+
+<p class="muted" style="line-height:1.6;">
+{{ ai_summary }}
+</p>
+
+</section>
+{% endif %}
+
+
+<!-- MARKET SNAPSHOT -->
+{% if market %}
+<section class="ravlo-card pad">
+
+<div class="ravlo-card-title">Market Snapshot</div>
+
+<div class="facts-grid">
+
+<div>
+<span>Median Price</span>
+<strong>${{ market.median_price or "—" }}</strong>
+</div>
+
+<div>
+<span>Median Rent</span>
+<strong>${{ market.median_rent or "—" }}</strong>
+</div>
+
+<div>
+<span>Price / Sqft</span>
+<strong>${{ market.price_per_sqft or "—" }}</strong>
+</div>
+
+<div>
+<span>Days on Market</span>
+<strong>{{ market.dom or "—" }}</strong>
+</div>
+
+</div>
+
+</section>
+{% endif %}
+
+
+<!-- SALES COMPS -->
+{% if comps.sales %}
+<section class="ravlo-card pad">
+
+<div class="ravlo-card-title">Sales Comparables</div>
+
+<div class="comp-grid">
+
+{% for c in comps.sales %}
+
+<div class="comp-card">
+
+<div class="comp-address">
+{{ c.address }}
+</div>
+
+<div class="comp-stats">
+${{ c.price }} • {{ c.sqft }} sqft
+</div>
+
+</div>
+
+{% endfor %}
+
+</div>
+
+</section>
+{% endif %}
+
+
+<!-- RENT COMPS -->
+{% if comps.rentals %}
+<section class="ravlo-card pad">
+
+<div class="ravlo-card-title">Rental Comparables</div>
+
+<div class="comp-grid">
+
+{% for c in comps.rentals %}
+
+<div class="comp-card">
+
+<div class="comp-address">
+{{ c.address }}
+</div>
+
+<div class="comp-stats">
+${{ c.rent }}/mo
+</div>
+
+</div>
+
+{% endfor %}
+
+</div>
+
+</section>
+{% endif %}
+
+</div>
+
+
+<script>
+
+async function sendToWorkspace(){
+
+const resp = await fetch("{{ url_for('investor.api_property_tool_save_and_analyze') }}",{
+
+method:"POST",
+headers:{"Content-Type":"application/json"},
+credentials:"include",
+
+body:JSON.stringify({
+
+address:"{{ prop.address }}",
+zip:"{{ prop.zipcode }}",
+price:"{{ prop.price }}",
+sqft:"{{ prop.sqft }}"
+
+})
+
+})
+
+const data = await resp.json()
+
+if(data.deal_url){
+
+window.location.href = data.deal_url
+
+}
+
+}
+
+</script>
+
+
+<style>
+
+.photo-grid{
+display:grid;
+grid-template-columns:repeat(auto-fill,minmax(200px,1fr));
+gap:1rem;
+}
+
+.photo-item{
+width:100%;
+height:180px;
+object-fit:cover;
+border-radius:12px;
+}
+
+.facts-grid{
+display:grid;
+grid-template-columns:repeat(4,1fr);
+gap:1rem;
+margin-top:1rem;
+}
+
+.facts-grid div{
+background:rgba(255,255,255,.03);
+border:1px solid rgba(255,255,255,.08);
+padding:.9rem;
+border-radius:12px;
+}
+
+.facts-grid span{
+display:block;
+color:var(--muted);
+font-size:.8rem;
+margin-bottom:.2rem;
+}
+
+.comp-grid{
+display:grid;
+grid-template-columns:repeat(auto-fill,minmax(220px,1fr));
+gap:.8rem;
+margin-top:.8rem;
+}
+
+.comp-card{
+padding:.9rem;
+background:rgba(255,255,255,.03);
+border:1px solid rgba(255,255,255,.08);
+border-radius:12px;
+}
+
+.comp-address{
+font-weight:700;
+margin-bottom:.2rem;
+}
+
+.comp-stats{
+font-size:.85rem;
+color:var(--muted);
+}
+
+</style>
+
+{% endblock %}

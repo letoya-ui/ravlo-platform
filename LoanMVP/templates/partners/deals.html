@@ -1,0 +1,49 @@
+{% extends "layouts/ravlo_base.html" %}
+
+{% block page_title %}Deals{% endblock %}
+{% block page_subline %}Track your active partner jobs, accepted requests, and work pipeline.{% endblock %}
+
+{% block content %}
+<div class="ravlo-grid">
+  <section class="ravlo-hero-card">
+    <div class="eyebrow">PARTNER DEALS</div>
+    <h2>Your Active Deal Pipeline</h2>
+    <p class="muted">
+      View accepted partner requests, premium workspace jobs, and upcoming activity.
+    </p>
+  </section>
+
+  <section class="ravlo-card pad">
+    <div class="section-toolbar mb-16">
+      <h3 class="mb-0">Active Jobs</h3>
+    </div>
+
+    {% if jobs %}
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Title</th>
+              <th>Scope</th>
+              <th>Created</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for job in jobs %}
+            <tr>
+              <td>{{ job.title or "Untitled Job" }}</td>
+              <td>{{ job.scope or "No scope provided" }}</td>
+              <td>{{ job.created_at.strftime('%m/%d/%Y') if job.created_at else "—" }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="empty-state">
+        No active deals yet.
+      </div>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}

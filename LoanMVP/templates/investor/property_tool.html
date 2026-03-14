@@ -22,7 +22,6 @@ Search by ZIP, uncover investor opportunities, and move deals directly into Work
 
 <div class="ravlo-grid cols-2 dealfinder-layout" style="grid-template-columns: 1fr 1.6fr; gap:1rem;">
 
-  <!-- LEFT: SEARCH PANEL -->
   <div class="ravlo-card pad">
     <div class="ravlo-card-title">Search</div>
 
@@ -76,38 +75,19 @@ Search by ZIP, uncover investor opportunities, and move deals directly into Work
     <div id="searchStatus" style="color:var(--muted); margin-top:.75rem;"></div>
   </div>
 
-  <!-- RIGHT: RESULTS -->
   <div>
-           <div id="results" class="dealfinder-results-grid">
-           <div class="ravlo-card pad dealfinder-empty">
-           <div class="eyebrow">RAVLO DEAL FINDER</div>
-           <h3 style="margin:.35rem 0 .45rem;">Your search results will appear here</h3>
-            <p class="muted" style="margin:0;">
-                  Enter a ZIP code, choose your strategy, and Ravlo will surface opportunities
-                 with quick metrics, property details, and one-click access to Deal Workspace.
-          </p>
-       </div>
-  </div>
-</div>
-
-</div>
-
-<!-- DETAILS MODAL -->
-<div id="propertyModal" class="df-modal" aria-hidden="true">
-  <div class="df-modal-card">
-    <div class="df-modal-head">
-      <div>
-        <div class="eyebrow">RAVLO PROPERTY CARD</div>
-        <h3 id="modalTitle" style="margin:.2rem 0 0;">Property Details</h3>
-        <p id="modalSub" class="muted" style="margin:.35rem 0 0;">Loading…</p>
+    <div id="results" class="dealfinder-results-grid">
+      <div class="ravlo-card pad dealfinder-empty">
+        <div class="eyebrow">RAVLO DEAL FINDER</div>
+        <h3 style="margin:.35rem 0 .45rem;">Your search results will appear here</h3>
+        <p class="muted" style="margin:0;">
+          Enter a ZIP code, choose your strategy, and Ravlo will surface opportunities
+          with quick metrics, property details, and one-click access to Deal Workspace.
+        </p>
       </div>
-      <button type="button" class="ravlo-btn ghost sm" onclick="closePropertyModal()">Close</button>
-    </div>
-
-    <div id="modalBody" class="df-modal-body">
-      <div class="df-loading">Loading property details…</div>
     </div>
   </div>
+
 </div>
 
 <script>
@@ -118,13 +98,6 @@ function money(x){
   return "$" + n.toLocaleString(undefined, {maximumFractionDigits:0});
 }
 
-function percent(x){
-  if (x === null || x === undefined || x === "") return "—";
-  const n = Number(x);
-  if (Number.isNaN(n)) return "—";
-  return Math.round(n * 100) + "%";
-}
-
 function numOrNull(v){
   if (v === null || v === undefined) return null;
   const s = String(v).trim();
@@ -133,38 +106,42 @@ function numOrNull(v){
   return Number.isNaN(n) ? null : n;
 }
 
-function esc(str){
-  return String(str || "")
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#39;");
+async function viewDetails(item){
+  try{
+    const resp = await fetch("{{ url_for('investor.api_property_tool_view_details') }}", {
+      method: "POST",
+      headers: {"Content-Type":"application/json"},
+      credentials: "include",
+      body: JSON.stringify({
+        address: item.address || "",
+        city: item.city || "",
+        state: item.state || "",
+        zip: item.zip || "",
+        price: item.price ?? null,
+        sqft: item.sqft ?? null,
+        photo: item.photo || null,
+        property_id: item.property_id || null
+      })
+    });
+
+    const data = await resp.json();
+
+    if (data.status !== "ok"){
+      alert(data.message || "Could not open property details.");
+      return;
+    }
+
+    if (data.detail_url){
+      window.location.href = data.detail_url;
+      return;
+    }
+
+    alert("No property detail URL returned.");
+  } catch (e){
+    console.error(e);
+    alert("Network error while opening property details.");
+  }
 }
-
-function modalLoading(){
-  document.getElementById("modalTitle").innerText = "Property Details";
-  document.getElementById("modalSub").innerText = "Loading…";
-  document.getElementById("modalBody").innerHTML = `<div class="df-loading">Loading property details…</div>`;
-}
-
-function openPropertyModal(){
-  document.getElementById("propertyModal").classList.add("open");
-  document.body.classList.add("modal-open");
-}
-
-function closePropertyModal(){
-  document.getElementById("propertyModal").classList.remove("open");
-  document.body.classList.remove("modal-open");
-}
-
-document.addEventListener("keydown", function(e){
-  if (e.key === "Escape") closePropertyModal();
-});
-
-document.getElementById("propertyModal").addEventListener("click", function(e){
-  if (e.target.id === "propertyModal") closePropertyModal();
-});
 
 async function saveAndAnalyze(item){
   const btn = document.getElementById(item._btnId);
@@ -190,7 +167,7 @@ async function saveAndAnalyze(item){
     const data = await resp.json();
     if (data.status !== "ok"){
       alert(data.message || "Could not send property to Deal Workspace.");
-      if (btn){ btn.disabled = false; btn.innerText = "📈 Send to Deal Workspace"; }
+      if (btn){ btn.disabled = false; btn.innerText = "📈 Analyze"; }
       return;
     }
 
@@ -208,7 +185,7 @@ async function saveAndAnalyze(item){
   } catch (e){
     console.error(e);
     alert("Network error while saving. Try again.");
-    if (btn){ btn.disabled = false; btn.innerText = "📈 Send to Deal Workspace"; }
+    if (btn){ btn.disabled = false; btn.innerText = "📈 Analyze"; }
   }
 }
 
@@ -236,7 +213,7 @@ async function saveOnly(item){
     const data = await resp.json();
     if (data.status !== "ok"){
       alert(data.message || "Could not save property.");
-      if (btn){ btn.disabled = false; btn.innerText = "💾 Save Deal"; }
+      if (btn){ btn.disabled = false; btn.innerText = "💾 Save"; }
       return;
     }
 
@@ -244,181 +221,15 @@ async function saveOnly(item){
       btn.innerText = "✅ Saved";
       setTimeout(() => {
         btn.disabled = false;
-        btn.innerText = "💾 Save Deal";
+        btn.innerText = "💾 Save";
       }, 1200);
     }
 
   } catch (e){
     console.error(e);
     alert("Network error while saving. Try again.");
-    if (btn){ btn.disabled = false; btn.innerText = "💾 Save Deal"; }
+    if (btn){ btn.disabled = false; btn.innerText = "💾 Save"; }
   }
-}
-
-async function viewDetails(item){
-  modalLoading();
-  openPropertyModal();
-
-  try{
-    const resp = await fetch("{{ url_for('investor.api_property_tool_card') }}", {
-      method: "POST",
-      headers: {"Content-Type":"application/json"},
-      credentials: "include",
-      body: JSON.stringify({
-        address: item.address || "",
-        beds: item.beds ?? null,
-        baths: item.baths ?? null,
-        sqft: item.sqft ?? null,
-        property_type: item.property_type || null
-      })
-    });
-
-    const data = await resp.json();
-
-    if (data.status !== "ok"){
-      document.getElementById("modalTitle").innerText = "Property Details";
-      document.getElementById("modalSub").innerText = item.address || "";
-      document.getElementById("modalBody").innerHTML = `
-        <div class="df-error">Could not load property details.</div>
-      `;
-      return;
-    }
-
-    renderPropertyDetails(data, item);
-  } catch (e){
-    console.error(e);
-    document.getElementById("modalBody").innerHTML = `
-      <div class="df-error">Network error loading property details.</div>
-    `;
-  }
-}
-
-function renderPropertyDetails(card, fallbackItem){
-  const prop = card.property || {};
-  const valuation = card.valuation || {};
-  const rent = card.rent_estimate || {};
-  const comps = card.comps || {};
-  const market = card.market_snapshot || {};
-
-  const photos = Array.isArray(prop.photos) ? prop.photos : [];
-  const saleComps = Array.isArray(comps.sales) ? comps.sales.slice(0, 6) : [];
-  const rentalComps = Array.isArray(comps.rentals) ? comps.rentals.slice(0, 6) : [];
-
-  document.getElementById("modalTitle").innerText = prop.address || fallbackItem.address || "Property Details";
-  document.getElementById("modalSub").innerText =
-    [prop.city, prop.state, prop.zip].filter(Boolean).join(", ");
-
-  const photoHtml = photos.length
-    ? `
-      <div class="df-photo-rail">
-        ${photos.map(url => `
-          <div class="df-photo">
-            <img src="${esc(url)}" alt="Property photo">
-          </div>
-        `).join("")}
-      </div>
-    `
-    : `
-      <div class="df-photo-empty">No photos available yet.</div>
-    `;
-
-  const salesHtml = saleComps.length
-    ? saleComps.map(comp => `
-      <div class="df-comp-row">
-        <div>
-          <div class="df-comp-title">${esc(comp.address || "Comparable Sale")}</div>
-          <div class="df-comp-sub">
-            ${(comp.beds ?? "—")} bd • ${(comp.baths ?? "—")} ba • ${(comp.sqft ?? "—")} sqft
-          </div>
-        </div>
-        <div class="df-comp-value">${money(comp.price)}</div>
-      </div>
-    `).join("")
-    : `<div class="df-empty-inline">No sale comps returned.</div>`;
-
-  const rentalsHtml = rentalComps.length
-    ? rentalComps.map(comp => `
-      <div class="df-comp-row">
-        <div>
-          <div class="df-comp-title">${esc(comp.address || "Comparable Rental")}</div>
-          <div class="df-comp-sub">
-            ${(comp.beds ?? "—")} bd • ${(comp.baths ?? "—")} ba • ${(comp.sqft ?? "—")} sqft
-          </div>
-        </div>
-        <div class="df-comp-value">${money(comp.rent)}/mo</div>
-      </div>
-    `).join("")
-    : `<div class="df-empty-inline">No rental comps returned.</div>`;
-
-  document.getElementById("modalBody").innerHTML = `
-    ${photoHtml}
-
-    <div class="df-kpi-grid">
-      <div class="df-kpi">
-        <span>List Price</span>
-        <strong>${money(prop.price || fallbackItem.price)}</strong>
-      </div>
-      <div class="df-kpi">
-        <span>Value Estimate</span>
-        <strong>${money(valuation.estimate)}</strong>
-      </div>
-      <div class="df-kpi">
-        <span>Rent Estimate</span>
-        <strong>${money(rent.rent)}/mo</strong>
-      </div>
-      <div class="df-kpi">
-        <span>Property Type</span>
-        <strong>${esc(prop.property_type || fallbackItem.property_type || "—")}</strong>
-      </div>
-    </div>
-
-    <div class="df-two-col">
-      <div class="df-panel">
-        <h4>Property Facts</h4>
-        <div class="df-facts">
-          <div><span>Beds</span><strong>${prop.beds ?? fallbackItem.beds ?? "—"}</strong></div>
-          <div><span>Baths</span><strong>${prop.baths ?? fallbackItem.baths ?? "—"}</strong></div>
-          <div><span>Sqft</span><strong>${prop.sqft ?? fallbackItem.sqft ?? "—"}</strong></div>
-          <div><span>Year Built</span><strong>${prop.year_built ?? "—"}</strong></div>
-          <div><span>Valuation Range</span><strong>${money(valuation.low)} – ${money(valuation.high)}</strong></div>
-          <div><span>Rent Range</span><strong>${money(rent.low)} – ${money(rent.high)}</strong></div>
-        </div>
-      </div>
-
-      <div class="df-panel">
-        <h4>Listing Snapshot</h4>
-        <div class="df-facts">
-          <div><span>Status</span><strong>${esc((prop.listing && prop.listing.status) || "—")}</strong></div>
-          <div><span>Days on Market</span><strong>${(prop.listing && prop.listing.daysOnMarket) ?? "—"}</strong></div>
-          <div><span>MLS</span><strong>${esc((prop.listing && prop.listing.mlsName) || "—")}</strong></div>
-          <div><span>MLS #</span><strong>${esc((prop.listing && prop.listing.mlsNumber) || "—")}</strong></div>
-          <div><span>Sale Comp Count</span><strong>${market.sale_comp_count ?? 0}</strong></div>
-          <div><span>Rental Comp Count</span><strong>${market.rental_comp_count ?? 0}</strong></div>
-        </div>
-      </div>
-    </div>
-
-    <div class="df-two-col" style="margin-top:1rem;">
-      <div class="df-panel">
-        <h4>Sale Comps</h4>
-        <div class="df-comp-list">${salesHtml}</div>
-      </div>
-
-      <div class="df-panel">
-        <h4>Rental Comps</h4>
-        <div class="df-comp-list">${rentalsHtml}</div>
-      </div>
-    </div>
-
-    <div class="df-action-row">
-      <button type="button" class="ravlo-btn ghost" onclick='saveOnly(${JSON.stringify(fallbackItem)})'>
-        💾 Save
-      </button>
-      <button type="button" class="ravlo-btn primary" onclick='saveAndAnalyze(${JSON.stringify(fallbackItem)})'>
-        📈 Send to Deal Workspace
-      </button>
-    </div>
-  `;
 }
 
 async function runSearch(){
@@ -634,196 +445,13 @@ async function runSearch(){
 }
 
 .dealfinder-empty{
-    min-height:220px;
-    display:flex;
-    flex-direction:column;
-    justify-content:center;
-    align-items:flex-start;
-    border:1px dashed rgba(255,255,255,.12);
-    background:rgba(255,255,255,.02);
-}
-
-.df-modal{
-  position:fixed;
-  inset:0;
-  background:rgba(0,0,0,.72);
-  display:none;
-  align-items:center;
+  min-height:220px;
+  display:flex;
+  flex-direction:column;
   justify-content:center;
-  padding:1rem;
-  z-index:9999;
-}
-
-.df-modal.open{
-  display:flex;
-}
-
-.df-modal-card{
-  width:min(1120px, 100%);
-  max-height:90vh;
-  overflow:auto;
-  background:#0b1016;
-  border:1px solid rgba(255,255,255,.10);
-  border-radius:20px;
-  padding:1.1rem;
-  box-shadow:0 0 30px rgba(0,0,0,.55);
-}
-
-.df-modal-head{
-  display:flex;
-  justify-content:space-between;
   align-items:flex-start;
-  gap:1rem;
-  margin-bottom:1rem;
-}
-
-.df-modal-body{
-  display:grid;
-  gap:1rem;
-}
-
-.df-loading,
-.df-error,
-.df-photo-empty,
-.df-empty-inline{
-  padding:1rem;
-  border-radius:14px;
-  background:rgba(255,255,255,.03);
-  border:1px solid rgba(255,255,255,.08);
-  color:var(--muted);
-}
-
-.df-photo-rail{
-  display:grid;
-  grid-template-columns:repeat(auto-fit, minmax(220px, 1fr));
-  gap:.8rem;
-}
-
-.df-photo{
-  height:180px;
-  border-radius:16px;
-  overflow:hidden;
-  border:1px solid rgba(255,255,255,.08);
-  background:rgba(255,255,255,.03);
-}
-
-.df-photo img{
-  width:100%;
-  height:100%;
-  object-fit:cover;
-}
-
-.df-kpi-grid{
-  display:grid;
-  grid-template-columns:repeat(4, minmax(0, 1fr));
-  gap:.8rem;
-}
-
-.df-kpi{
-  padding:.9rem;
-  border-radius:14px;
-  background:rgba(255,255,255,.03);
-  border:1px solid rgba(255,255,255,.08);
-}
-
-.df-kpi span{
-  display:block;
-  color:var(--muted);
-  font-size:.75rem;
-  margin-bottom:.3rem;
-  text-transform:uppercase;
-  letter-spacing:.06em;
-}
-
-.df-kpi strong{
-  color:var(--text);
-  font-size:1rem;
-}
-
-.df-two-col{
-  display:grid;
-  grid-template-columns:1fr 1fr;
-  gap:1rem;
-}
-
-.df-panel{
-  padding:1rem;
-  border-radius:16px;
-  background:rgba(255,255,255,.03);
-  border:1px solid rgba(255,255,255,.08);
-}
-
-.df-panel h4{
-  margin:0 0 .8rem;
-  color:var(--text);
-}
-
-.df-facts{
-  display:grid;
-  grid-template-columns:repeat(2, minmax(0, 1fr));
-  gap:.75rem;
-}
-
-.df-facts div{
-  padding:.7rem;
-  border-radius:12px;
-  background:rgba(255,255,255,.025);
-  border:1px solid rgba(255,255,255,.06);
-}
-
-.df-facts span{
-  display:block;
-  color:var(--muted);
-  font-size:.75rem;
-  margin-bottom:.2rem;
-}
-
-.df-facts strong{
-  color:var(--text);
-}
-
-.df-comp-list{
-  display:grid;
-  gap:.7rem;
-}
-
-.df-comp-row{
-  display:flex;
-  justify-content:space-between;
-  align-items:flex-start;
-  gap:.75rem;
-  padding:.8rem;
-  border-radius:12px;
-  background:rgba(255,255,255,.025);
-  border:1px solid rgba(255,255,255,.06);
-}
-
-.df-comp-title{
-  color:var(--text);
-  font-weight:700;
-  font-size:.88rem;
-}
-
-.df-comp-sub{
-  color:var(--muted);
-  font-size:.76rem;
-  margin-top:.2rem;
-}
-
-.df-comp-value{
-  color:var(--text);
-  font-weight:700;
-  white-space:nowrap;
-}
-
-.df-action-row{
-  display:flex;
-  gap:.75rem;
-  flex-wrap:wrap;
-}
-
-body.modal-open{
-  overflow:hidden;
+  border:1px dashed rgba(255,255,255,.12);
+  background:rgba(255,255,255,.02);
 }
 
 @media (max-width: 1100px){
@@ -833,18 +461,6 @@ body.modal-open{
 
   .dealfinder-results-grid{
     grid-template-columns:1fr;
-  }
-}
-
-@media (max-width: 850px){
-  .df-kpi-grid,
-  .df-two-col,
-  .df-facts{
-    grid-template-columns:1fr;
-  }
-
-  .df-comp-row{
-    flex-direction:column;
   }
 }
 </style>
