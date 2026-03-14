@@ -255,15 +255,14 @@ def call_renovation_engine_upload(
 # =========================================================
 # CONFIG
 # =========================================================
-GPU_BASE_URL = "https://nondiscoverable-henry-metempirical.ngrok-free.dev"
-
-RENOVATION_ENGINE_URL = "https://nondiscoverable-henry-metempirical.ngrok-free.dev"
+GPU_BASE_URL = os.getenv("GPU_BASE_URL", "").rstrip("/")
+RENOVATION_ENGINE_URL = os.getenv("RENOVATION_ENGINE_URL", "").rstrip("/")
 RENOVATION_API_KEY = os.getenv("RENOVATION_API_KEY", "")
 
 SCOPE_ENGINE_URL = os.getenv("SCOPE_ENGINE_URL", "").rstrip("/")
 SCOPE_ENGINE_API_KEY = os.getenv("SCOPE_ENGINE_API_KEY", "")
 
-GPU_TIMEOUT = 900
+GPU_TIMEOUT = int(os.getenv("GPU_TIMEOUT", "900"))
 
 ENGINE_PRESETS = {"luxury_modern", "modern_farmhouse", "clean_minimal"}
 
