@@ -604,6 +604,91 @@ def _set_featured_rehab(deal, after_url: str, before_url: str = "", style_preset
 
 
 # =========================================================
+# ENGINE STABILITY HELPERS
+# =========================================================
+
+RENDER_TIMEOUT = 180
+SCOPE_TIMEOUT = 45
+UPLOAD_TIMEOUT = 180
+RENDER_LOCK_SECONDS = 180
+
+
+def _safe_engine_error_message(resp):
+    try:
+        payload = resp.json()
+        if isinstance(payload, dict):
+            return (
+                payload.get("detail")
+                or payload.get("message")
+                or payload.get("error")
+                or resp.text[:300]
+            )
+    except Exception:
+        pass
+    return resp.text[:300] or f"HTTP {resp.status_code}"
+
+
+def _post_renovation_engine_json(path, payload, timeout=RENDER_TIMEOUT):
+    res = requests.post(
+        _renovation_engine_url(path),
+        json=payload,
+        headers=_engine_headers(),
+        timeout=timeout,
+    )
+    if not res.ok:
+        raise RuntimeError(_safe_engine_error_message(res))
+    return res.json()
+
+
+def _post_renovation_engine_multipart(path, files, data, timeout=UPLOAD_TIMEOUT):
+    res = requests.post(
+        _renovation_engine_url(path),
+        files=files,
+        data=data,
+        headers=_engine_headers(),
+        timeout=timeout,
+    )
+    if not res.ok:
+        raise RuntimeError(_safe_engine_error_message(res))
+    return res.json()
+
+
+def _post_scope_engine_json(path, payload, timeout=SCOPE_TIMEOUT):
+    res = requests.post(
+        _scope_engine_url(path),
+        json=payload,
+        headers=_scope_engine_headers(),
+        timeout=timeout,
+    )
+    if not res.ok:
+        raise RuntimeError(_safe_engine_error_message(res))
+    return res.json()
+
+
+def _deal_render_lock_active(deal):
+    started = getattr(deal, "render_started_at", None)
+    status = getattr(deal, "render_status", None)
+
+    if status != "processing" or not started:
+        return False
+
+    age = (datetime.utcnow() - started).total_seconds()
+    return age < RENDER_LOCK_SECONDS
+
+
+def _set_deal_render_processing(deal):
+    if hasattr(deal, "render_status"):
+        deal.render_status = "processing"
+    if hasattr(deal, "render_started_at"):
+        deal.render_started_at = datetime.utcnow()
+
+
+def _clear_deal_render_processing(deal):
+    if hasattr(deal, "render_status"):
+        deal.render_status = "idle"
+    if hasattr(deal, "render_started_at"):
+        deal.render_started_at = None
+# =========================================================
 # STORAGE HELPERS
 # =========================================================
 
@@ -3770,14 +3855,24 @@ def build_studio(deal_id=None):
 @login_required
 @role_required("investor")
 def generate_build_studio():
+    deal = None
+
     try:
         deal_id = _normalize_int(request.form.get("deal_id"))
-        deal = None
 
         if deal_id:
             deal = Deal.query.filter_by(id=deal_id, user_id=current_user.id).first()
             if not deal:
                 return jsonify({"status": "error", "message": "Deal not found or not authorized."}), 404
+
+            if _deal_render_lock_active(deal):
+                return jsonify({
+                    "status": "error",
+                    "message": "A build render is already in progress for this deal."
+                }), 409
+
+            _set_deal_render_processing(deal)
+            db.session.commit()
 
         project_name = (request.form.get("project_name") or "").strip()
         property_type = (request.form.get("property_type") or "").strip()
@@ -3810,19 +3905,13 @@ def generate_build_studio():
             "count": 2,
             "steps": 32,
             "width": 1024,
-            "height": 1024
+            "height": 1024,
         }
 
-        res = requests.post(
-            _renovation_engine_url("/v1/build_concept"),
-            json=payload,
-            headers=_engine_headers(),
-            timeout=900
-        )
-        res.raise_for_status()
-        data = res.json()
+        data = _post_renovation_engine_json("/v1/build_concept", payload, timeout=RENDER_TIMEOUT)
 
         images = data.get("images_base64") or []
+        saved_paths = data.get("saved_paths") or []
         meta = data.get("meta") or {}
         seed = data.get("seed")
         job_id = data.get("job_id")
@@ -3838,32 +3927,183 @@ def generate_build_studio():
                 "location": location,
                 "notes": notes,
                 "images_base64": images,
+                "saved_paths": saved_paths,
                 "meta": meta,
                 "seed": seed,
                 "job_id": job_id,
             }
             _set_deal_results(deal, results)
-            db.session.commit()
+
+        if deal is not None:
+            _clear_deal_render_processing(deal)
+
+        db.session.commit()
 
         return jsonify({
             "status": "ok",
             "images": images,
+            "saved_paths": saved_paths,
             "meta": meta,
             "seed": seed,
             "job_id": job_id,
             "deal_id": deal.id if deal else None,
             "saved_to_deal": bool(save_to_deal and deal is not None),
+            "mode": "json",
         })
 
     except Exception as e:
         current_app.logger.exception("Build Studio generation error")
+
+        if deal is not None:
+            try:
+                _clear_deal_render_processing(deal)
+                db.session.commit()
+            except Exception:
+                db.session.rollback()
+
         return jsonify({
             "status": "error",
             "message": str(e)
         }), 500
 
+@investor_bp.route("/deal-studio/build-studio/generate-upload", methods=["POST"])
+@csrf.exempt
+@login_required
+@role_required("investor")
+def generate_build_studio_upload():
+    deal = None
 
-# =========================================================
+    try:
+        deal_id = _normalize_int(request.form.get("deal_id"))
+
+        if deal_id:
+            deal = Deal.query.filter_by(id=deal_id, user_id=current_user.id).first()
+            if not deal:
+                return jsonify({
+                    "status": "error",
+                    "message": "Deal not found or not authorized."
+                }), 404
+
+            if _deal_render_lock_active(deal):
+                return jsonify({
+                    "status": "error",
+                    "message": "A build render is already in progress for this deal."
+                }), 409
+
+            _set_deal_render_processing(deal)
+            db.session.commit()
+
+        project_name = (request.form.get("project_name") or "").strip()
+        property_type = (request.form.get("property_type") or "").strip()
+        description = (request.form.get("description") or "").strip()
+        lot_size = (request.form.get("lot_size") or "").strip()
+        zoning = (request.form.get("zoning") or "").strip()
+        location = (request.form.get("location") or "").strip()
+        notes = (request.form.get("notes") or "").strip()
+        style = (request.form.get("style") or "modern").strip()
+
+        save_to_deal = (request.form.get("save_to_deal") or "").lower() in ("1", "true", "yes", "on")
+
+        land_image = request.files.get("land_image")
+        if not land_image:
+            return jsonify({
+                "status": "error",
+                "message": "land_image is required."
+            }), 400
+
+        files = {
+            "image": (
+                land_image.filename or "build-site.jpg",
+                land_image.stream,
+                land_image.mimetype or "application/octet-stream",
+            )
+        }
+
+        data = {
+            "style": style,
+            "property_type": property_type,
+            "description": description,
+            "lot_size": lot_size,
+            "zoning": zoning,
+            "project_name": project_name,
+            "width": str(request.form.get("width") or 1024),
+            "height": str(request.form.get("height") or 1024),
+            "steps": str(request.form.get("steps") or 32),
+            "guidance": str(request.form.get("guidance") or 7.5),
+            "strength": str(request.form.get("strength") or 0.75),
+            "count": str(request.form.get("count") or 2),
+            "controlnet_scale": str(request.form.get("controlnet_scale") or 0.8),
+        }
+
+        seed = request.form.get("seed")
+        if seed not in (None, "", "None"):
+            data["seed"] = str(seed)
+
+        payload = _post_renovation_engine_multipart(
+            "/v1/build_concept-upload",
+            files=files,
+            data=data,
+            timeout=UPLOAD_TIMEOUT,
+        )
+
+        images = payload.get("images_base64") or []
+        saved_paths = payload.get("saved_paths") or []
+        meta = payload.get("meta") or {}
+        seed = payload.get("seed")
+        job_id = payload.get("job_id")
+
+        if save_to_deal and deal is not None:
+            results = _deal_results(deal)
+            results["build_analysis"] = {
+                "project_name": project_name,
+                "property_type": property_type,
+                "description": description,
+                "lot_size": lot_size,
+                "zoning": zoning,
+                "location": location,
+                "notes": notes,
+                "style": style,
+                "images_base64": images,
+                "saved_paths": saved_paths,
+                "meta": meta,
+                "seed": seed,
+                "job_id": job_id,
+            }
+            _set_deal_results(deal, results)
+
+        if deal is not None:
+            _clear_deal_render_processing(deal)
+
+        db.session.commit()
+
+        return jsonify({
+            "status": "ok",
+            "images": images,
+            "saved_paths": saved_paths,
+            "meta": meta,
+            "seed": seed,
+            "job_id": job_id,
+            "deal_id": deal.id if deal else None,
+            "saved_to_deal": bool(save_to_deal and deal is not None),
+            "mode": "upload",
+        })
+
+    except Exception as e:
+        current_app.logger.exception("Build Studio upload generation error")
+
+        if deal is not None:
+            try:
+                _clear_deal_render_processing(deal)
+                db.session.commit()
+            except Exception:
+                db.session.rollback()
+
+        return jsonify({
+            "status": "error",
+            "message": str(e)
+        }), 500# 
+
+=========================================================
 # 🏗️ BUILD STUDIO — SAVE PROJECT
 # =========================================================
 
@@ -4343,37 +4583,26 @@ def rehab_architect_generate_scope():
     if image_url:
         try:
             if SCOPE_ENGINE_URL:
-                resp = requests.post(
-                    _scope_engine_url("/v1/rehab_scope"),
-                    json={"image_url": image_url},
-                    headers=_scope_engine_headers(),
-                    timeout=25
+                external_scope_result = _post_scope_engine_json(
+                    "/v1/rehab_scope",
+                    {"image_url": image_url},
+                    timeout=SCOPE_TIMEOUT,
                 )
 
-                if resp.ok:
-                    external_scope_result = resp.json()
+                estimated_rehab_cost = (
+                    external_scope_result.get("cost_high")
+                    or external_scope_result.get("cost_low")
+                    or estimated_rehab_cost
+                )
 
-                    estimated_rehab_cost = (
-                        external_scope_result.get("cost_high")
-                        or external_scope_result.get("cost_low")
-                        or estimated_rehab_cost
-                    )
-
-                    scope = {
-                        "rehab_level": rehab_level,
-                        "sqft": sqft,
-                        "cost_per_sqft": round(estimated_rehab_cost / sqft, 2) if sqft else selected_cost_per_sqft,
-                        "rooms": external_scope_result.get("rooms", []),
-                        "plan": external_scope_result.get("plan", ""),
-                        "line_items": scope.get("line_items", {})
-                    }
-
-                else:
-                    current_app.logger.warning(
-                        "Scope engine returned %s: %s",
-                        resp.status_code,
-                        resp.text[:300]
-                    )
+                scope = {
+                    "rehab_level": rehab_level,
+                    "sqft": sqft,
+                    "cost_per_sqft": round(estimated_rehab_cost / sqft, 2) if sqft else selected_cost_per_sqft,
+                    "rooms": external_scope_result.get("rooms", []),
+                    "plan": external_scope_result.get("plan", ""),
+                    "line_items": scope.get("line_items", {})
+                }
 
         except Exception:
             current_app.logger.exception("Scope engine rehab call failed")
@@ -4411,7 +4640,6 @@ def rehab_architect_generate_scope():
         "external_scope_used": bool(external_scope_result),
         "external_scope_result": external_scope_result
     })
-
 
 # =========================================================
 # REHAB IMAGE UPLOAD
@@ -4460,44 +4688,54 @@ def renovation_upload():
 @login_required
 @role_required("investor")
 def renovation_visualizer():
-    image_file = request.files.get("image_file")
-    image_url = (request.form.get("image_url") or "").strip()
-
-    style_prompt = (request.form.get("style_prompt") or "").strip()
-    requested_style_preset = (request.form.get("style_preset") or "").strip()
-    variations = max(1, min(int(request.form.get("variations", 2)), 4))
-    save_to_deal = (request.form.get("save_to_deal") or "").lower() in ("1", "true", "yes", "on")
-    mode = (request.form.get("mode") or "photo").strip().lower()
-
-    saved_property_id = _normalize_int(request.form.get("saved_property_id") or request.form.get("prop_id"))
-    deal_id = _normalize_int(request.form.get("deal_id"))
-    property_id = (request.form.get("property_id") or "").strip() or None
-
-    if not image_file and not image_url:
-        return jsonify({"status": "error", "message": "Provide image_file or image_url."}), 400
-
-    if image_url.startswith("blob:"):
-        return jsonify({"status": "error", "message": "Browser preview URL detected. Please upload the image file."}), 400
-
-    if image_url and not (image_url.startswith("http://") or image_url.startswith("https://")):
-        return jsonify({"status": "error", "message": "image_url must start with http:// or https://"}), 400
-
-    if not style_prompt and not requested_style_preset:
-        return jsonify({"status": "error", "message": "Add a style prompt or choose a preset."}), 400
-
     deal = None
-    if deal_id:
-        deal = Deal.query.filter_by(id=deal_id, user_id=current_user.id).first()
-        if not deal:
-            return jsonify({"status": "error", "message": "Deal not found or not authorized."}), 404
-
-        if saved_property_id is None and getattr(deal, "saved_property_id", None):
-            saved_property_id = deal.saved_property_id
-
-        if not property_id and getattr(deal, "property_id", None):
-            property_id = deal.property_id
 
     try:
+        image_file = request.files.get("image_file")
+        image_url = (request.form.get("image_url") or "").strip()
+
+        style_prompt = (request.form.get("style_prompt") or "").strip()
+        requested_style_preset = (request.form.get("style_preset") or "").strip()
+        variations = max(1, min(int(request.form.get("variations", 2)), 4))
+        save_to_deal = (request.form.get("save_to_deal") or "").lower() in ("1", "true", "yes", "on")
+        mode = (request.form.get("mode") or "photo").strip().lower()
+
+        saved_property_id = _normalize_int(request.form.get("saved_property_id") or request.form.get("prop_id"))
+        deal_id = _normalize_int(request.form.get("deal_id"))
+        property_id = (request.form.get("property_id") or "").strip() or None
+
+        if not image_file and not image_url:
+            return jsonify({"status": "error", "message": "Provide image_file or image_url."}), 400
+
+        if image_url.startswith("blob:"):
+            return jsonify({"status": "error", "message": "Browser preview URL detected. Please upload the image file."}), 400
+
+        if image_url and not (image_url.startswith("http://") or image_url.startswith("https://")):
+            return jsonify({"status": "error", "message": "image_url must start with http:// or https://"}), 400
+
+        if not style_prompt and not requested_style_preset:
+            return jsonify({"status": "error", "message": "Add a style prompt or choose a preset."}), 400
+
+        if deal_id:
+            deal = Deal.query.filter_by(id=deal_id, user_id=current_user.id).first()
+            if not deal:
+                return jsonify({"status": "error", "message": "Deal not found or not authorized."}), 404
+
+            if _deal_render_lock_active(deal):
+                return jsonify({
+                    "status": "error",
+                    "message": "A renovation render is already in progress for this deal."
+                }), 409
+
+            _set_deal_render_processing(deal)
+            db.session.commit()
+
+            if saved_property_id is None and getattr(deal, "saved_property_id", None):
+                saved_property_id = deal.saved_property_id
+
+            if not property_id and getattr(deal, "property_id", None):
+                property_id = deal.property_id
+
         raw = image_file.read() if image_file else download_image_bytes(image_url)
         if not raw:
             return jsonify({"status": "error", "message": "Empty image input."}), 400
@@ -4533,12 +4771,11 @@ def renovation_visualizer():
                 "height": "1024",
             }
 
-            engine_res = requests.post(
-                _renovation_engine_url("/v1/renovate-upload"),
+            engine_json = _post_renovation_engine_multipart(
+                "/v1/renovate-upload",
                 files=files,
                 data=data,
-                headers=_engine_headers(),
-                timeout=GPU_TIMEOUT,
+                timeout=UPLOAD_TIMEOUT,
             )
 
         else:
@@ -4556,15 +4793,11 @@ def renovation_visualizer():
                 "height": 1024,
             }
 
-            engine_res = requests.post(
-                _renovation_engine_url("/v1/renovate"),
-                json=payload,
-                headers=_engine_headers(),
-                timeout=GPU_TIMEOUT,
+            engine_json = _post_renovation_engine_json(
+                "/v1/renovate",
+                payload,
+                timeout=RENDER_TIMEOUT,
             )
-
-        engine_res.raise_for_status()
-        engine_json = engine_res.json()
 
         returned_urls = engine_json.get("saved_paths", []) or []
         images_b64 = engine_json.get("images_base64", []) or []
@@ -4591,6 +4824,10 @@ def renovation_visualizer():
                 property_id=property_id,
             )
 
+        if deal is not None:
+            _clear_deal_render_processing(deal)
+            db.session.commit()
+
         return jsonify({
             "status": "ok",
             "render_batch_id": render_batch_id,
@@ -4609,8 +4846,15 @@ def renovation_visualizer():
 
     except Exception as e:
         current_app.logger.exception("renovation_visualizer failed")
-        return jsonify({"status": "error", "message": f"Renovation generator failed: {e}"}), 500
 
+        if deal is not None:
+            try:
+                _clear_deal_render_processing(deal)
+                db.session.commit()
+            except Exception:
+                db.session.rollback()
+
+        return jsonify({"status": "error", "message": f"Renovation generator failed: {e}"}), 500
 
 # =========================================================
 # BLUEPRINT TO CONCEPT
@@ -4622,34 +4866,44 @@ def renovation_visualizer():
 @login_required
 @role_required("investor")
 def blueprint_to_room():
-    blueprint_file = request.files.get("blueprint_file")
-    blueprint_url = (request.form.get("blueprint_url") or "").strip()
-
-    requested_style_preset = (request.form.get("style_preset") or "luxury_modern").strip().lower()
-    renovation_level = (request.form.get("renovation_level") or "medium").strip().lower()
-
-    deal_id = _normalize_int(request.form.get("deal_id"))
-    saved_property_id = _normalize_int(request.form.get("saved_property_id"))
-
-    if not blueprint_file and not blueprint_url:
-        return jsonify({"status": "error", "message": "Provide blueprint_file or blueprint_url."}), 400
-
-    style_preset = _normalize_style_preset(requested_style_preset)
-    render_batch_id = uuid.uuid4().hex
-    structure = None
-    room_type = "room"
-    parse_warning = None
     deal = None
 
-    if deal_id:
-        deal = Deal.query.filter_by(id=deal_id, user_id=current_user.id).first()
-        if not deal:
-            return jsonify({"status": "error", "message": "Deal not found or not authorized."}), 404
-
-        if saved_property_id is None and getattr(deal, "saved_property_id", None):
-            saved_property_id = deal.saved_property_id
-
     try:
+        blueprint_file = request.files.get("blueprint_file")
+        blueprint_url = (request.form.get("blueprint_url") or "").strip()
+
+        requested_style_preset = (request.form.get("style_preset") or "luxury_modern").strip().lower()
+        renovation_level = (request.form.get("renovation_level") or "medium").strip().lower()
+
+        deal_id = _normalize_int(request.form.get("deal_id"))
+        saved_property_id = _normalize_int(request.form.get("saved_property_id"))
+
+        if not blueprint_file and not blueprint_url:
+            return jsonify({"status": "error", "message": "Provide blueprint_file or blueprint_url."}), 400
+
+        style_preset = _normalize_style_preset(requested_style_preset)
+        render_batch_id = uuid.uuid4().hex
+        structure = None
+        room_type = "room"
+        parse_warning = None
+
+        if deal_id:
+            deal = Deal.query.filter_by(id=deal_id, user_id=current_user.id).first()
+            if not deal:
+                return jsonify({"status": "error", "message": "Deal not found or not authorized."}), 404
+
+            if _deal_render_lock_active(deal):
+                return jsonify({
+                    "status": "error",
+                    "message": "A blueprint render is already in progress for this deal."
+                }), 409
+
+            _set_deal_render_processing(deal)
+            db.session.commit()
+
+            if saved_property_id is None and getattr(deal, "saved_property_id", None):
+                saved_property_id = deal.saved_property_id
+
         raw = blueprint_file.read() if blueprint_file else download_image_bytes(blueprint_url)
         if not raw:
             return jsonify({"status": "error", "message": "Empty blueprint input."}), 400
@@ -4686,14 +4940,11 @@ def blueprint_to_room():
             "height": 1024,
         }
 
-        engine_res = requests.post(
-            _renovation_engine_url("/v1/renovate"),
-            json=payload,
-            headers=_engine_headers(),
-            timeout=GPU_TIMEOUT,
+        engine_json = _post_renovation_engine_json(
+            "/v1/renovate",
+            payload,
+            timeout=RENDER_TIMEOUT,
         )
-        engine_res.raise_for_status()
-        engine_json = engine_res.json()
 
         returned_urls = engine_json.get("saved_paths", []) or []
         images_b64 = engine_json.get("images_base64", []) or []
@@ -4720,6 +4971,10 @@ def blueprint_to_room():
                 saved_property_id=saved_property_id,
             )
 
+        if deal is not None:
+            _clear_deal_render_processing(deal)
+            db.session.commit()
+
         return jsonify({
             "status": "ok",
             "render_batch_id": render_batch_id,
@@ -4739,8 +4994,15 @@ def blueprint_to_room():
 
     except Exception as e:
         current_app.logger.exception("blueprint_to_room failed")
-        return jsonify({"status": "error", "message": f"Blueprint render failed: {e}"}), 500
 
+        if deal is not None:
+            try:
+                _clear_deal_render_processing(deal)
+                db.session.commit()
+            except Exception:
+                db.session.rollback()
+
+        return jsonify({"status": "error", "message": f"Blueprint render failed: {e}"}), 500
 
 # =========================================================
 # SAVE MOCKUPS MANUALLY

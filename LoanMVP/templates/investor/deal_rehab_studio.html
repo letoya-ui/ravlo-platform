@@ -510,6 +510,536 @@ thanks
                   <span class="chip">{{ m.style_preset or 'Concept' }}</span>
                   <small class="muted">{{ m.created_at.strftime("%b %d, %Y %I:%M %p") if m.created_at else '' }}</small>
                 </div>
+                <div class="action-row" style="margin-top:.7rem;">
+                  <button class="btn pick" type="button" onclick="selectAfter('{{ m.after_url }}','{{ m.before_url }}')">👀 Preview</button>
+                  <button class="btn btn-secondary pick" type="button" onclick="selectAfter('{{ m.after_url }}','{{ m.before_url }}'); feature();">⭐ Feature</button>
+                </div> 
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="muted">No saved concepts yet. Generate a set to start your reveal story.</div>
+        {% endif %}
+
+        <div class="after-grid" id="newGrid" style="margin-top:.75rem; display:none;"></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+{% extends "layouts/ravlo_base.html" %}
+{% block title %}Ravlo • Renovation Studio{% endblock %}
+
+{% block page_title %}Renovation Studio{% endblock %}
+{% block page_subline %}Create the before → after transformation inside Ravlo.{% endblock %}
+
+{% block content %}
+<style>
+  .studio-wrap{
+    display:grid;
+    gap:22px;
+  }
+
+  .studio-hero{
+    border-radius:24px;
+    padding:22px 24px;
+    border:1px solid rgba(255,255,255,.08);
+    background:
+      radial-gradient(900px 520px at 15% 10%, rgba(122,184,255,.12), transparent 55%),
+      rgba(255,255,255,.02);
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-end;
+    gap:18px;
+    flex-wrap:wrap;
+  }
+
+  .episode-tag{
+    display:inline-flex;
+    gap:.5rem;
+    align-items:center;
+    padding:.42rem .75rem;
+    border-radius:999px;
+    background:rgba(255,255,255,.06);
+    border:1px solid rgba(255,255,255,.12);
+    color:rgba(255,255,255,.88);
+    font-weight:800;
+    font-size:.78rem;
+    letter-spacing:.04em;
+  }
+
+  .hero-title{
+    margin:.65rem 0 0;
+    font-size:1.7rem;
+    line-height:1.08;
+    letter-spacing:-.02em;
+  }
+
+  .hero-sub{
+    color:rgba(255,255,255,.74);
+    margin:.4rem 0 0;
+    max-width:760px;
+  }
+
+  .hero-actions{
+    display:flex;
+    gap:.6rem;
+    flex-wrap:wrap;
+  }
+
+  .btn{
+    background:rgba(122,184,255,.12);
+    border:1px solid rgba(122,184,255,.42);
+    color:#7ab8ff;
+    padding:.76rem 1rem;
+    border-radius:14px;
+    cursor:pointer;
+    font-weight:800;
+    transition:.2s;
+    font-size:.92rem;
+    text-decoration:none;
+    display:inline-flex;
+    align-items:center;
+    gap:.45rem;
+  }
+
+  .btn:hover{
+    background:rgba(122,184,255,.22);
+    border-color:#7ab8ff;
+    box-shadow:0 0 14px rgba(122,184,255,.25);
+  }
+
+  .btn-secondary{
+    background:rgba(255,255,255,.04);
+    border:1px solid rgba(255,255,255,.12);
+    color:var(--text);
+  }
+
+  /* Give the preview stage more space */
+  .grid{
+    display:grid;
+    grid-template-columns:minmax(320px, .78fr) minmax(0, 1.22fr);
+    gap:20px;
+    align-items:start;
+  }
+
+  @media (max-width: 1100px){
+    .grid{
+      grid-template-columns:1fr;
+    }
+  }
+
+  .card{
+    background:var(--panel, rgba(255,255,255,.025));
+    border:1px solid rgba(255,255,255,.08);
+    border-radius:22px;
+    padding:18px;
+  }
+
+  .card h3{
+    margin:.1rem 0 .9rem;
+    color:var(--accent, #7ab8ff);
+    font-size:1.04rem;
+  }
+
+  .muted{
+    color:var(--muted);
+  }
+
+  /* Generic image style */
+  .img{
+    width:100%;
+    height:260px;
+    object-fit:cover;
+    border-radius:16px;
+    display:block;
+    border:1px solid rgba(255,255,255,.08);
+    background:#0f141a;
+  }
+
+  .row{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:14px;
+  }
+
+  @media (max-width: 900px){
+    .row{
+      grid-template-columns:1fr;
+    }
+  }
+
+  .input{
+    width:100%;
+    padding:.78rem .85rem;
+    border-radius:14px;
+    border:1px solid rgba(255,255,255,.10);
+    background:#0f141a;
+    color:var(--text);
+    min-height:48px;
+  }
+
+  .section-stack{
+    display:grid;
+    gap:16px;
+  }
+
+  .action-row{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+  }
+
+  /* BIG before/after stage */
+  .ba{
+    position:relative;
+    border-radius:22px;
+    overflow:hidden;
+    border:1px solid rgba(255,255,255,.10);
+    background:rgba(255,255,255,.02);
+    min-height:clamp(420px, 68vh, 860px);
+  }
+
+  .ba img{
+    display:block;
+    width:100%;
+    height:clamp(420px, 68vh, 860px);
+    object-fit:cover;
+  }
+
+  .ba .after{
+    position:absolute;
+    inset:0;
+    clip-path: inset(0 50% 0 0);
+  }
+
+  .ba .handle{
+    position:absolute;
+    top:0;
+    bottom:0;
+    left:50%;
+    width:2px;
+    background:rgba(122,184,255,.85);
+    box-shadow:0 0 18px rgba(122,184,255,.35);
+  }
+
+  .ba .knob{
+    position:absolute;
+    top:50%;
+    left:50%;
+    transform:translate(-50%, -50%);
+    width:50px;
+    height:50px;
+    border-radius:999px;
+    background:rgba(0,0,0,.55);
+    border:1px solid rgba(122,184,255,.55);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    color:#a9d2ff;
+    font-weight:900;
+    backdrop-filter:blur(6px);
+  }
+
+  .ba input[type="range"]{
+    position:absolute;
+    inset:0;
+    width:100%;
+    opacity:0;
+    cursor:ew-resize;
+  }
+
+  .ba-badges{
+    position:absolute;
+    inset:12px 12px auto 12px;
+    display:flex;
+    justify-content:space-between;
+    gap:.5rem;
+    pointer-events:none;
+    z-index:3;
+  }
+
+  .badge{
+    font-size:.78rem;
+    padding:.28rem .55rem;
+    border-radius:999px;
+    background:rgba(0,0,0,.45);
+    border:1px solid rgba(255,255,255,.14);
+    color:rgba(255,255,255,.88);
+    backdrop-filter:blur(6px);
+  }
+
+  /* Empty state for preview */
+  #emptyPreview{
+    min-height:clamp(420px, 68vh, 860px);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    text-align:center;
+    border-radius:22px;
+    border:1px dashed rgba(255,255,255,.10);
+    background:rgba(255,255,255,.02);
+    padding:24px;
+  }
+
+  /* Gallery */
+  .after-grid{
+    display:grid;
+    grid-template-columns:repeat(3, minmax(0,1fr));
+    gap:12px;
+  }
+
+  @media (max-width: 900px){
+    .after-grid{
+      grid-template-columns:repeat(2, minmax(0,1fr));
+    }
+  }
+
+  @media (max-width: 620px){
+    .after-grid{
+      grid-template-columns:1fr;
+    }
+  }
+
+  .thumb{
+    padding:.7rem;
+    border-radius:18px;
+    background:rgba(255,255,255,.03);
+    border:1px solid rgba(255,255,255,.10);
+    transition:.15s;
+  }
+
+  .thumb:hover{
+    transform:translateY(-1px);
+    border-color:rgba(122,184,255,.28);
+  }
+
+  .thumb .img{
+    height:240px;
+  }
+
+  .thumb-meta{
+    margin-top:.55rem;
+    display:flex;
+    justify-content:space-between;
+    gap:.35rem;
+    align-items:center;
+  }
+
+  .chip{
+    font-size:.78rem;
+    border-radius:999px;
+    padding:.35rem .6rem;
+    background:rgba(122,184,255,.12);
+    border:1px solid rgba(122,184,255,.26);
+    color:#a9d2ff;
+  }
+
+  .pick{
+    width:100%;
+    margin-top:.7rem;
+    justify-content:center;
+  }
+
+  .status-box{
+    padding:12px 14px;
+    border-radius:14px;
+    background:rgba(255,255,255,.03);
+    border:1px solid rgba(255,255,255,.08);
+    color:var(--muted);
+  }
+
+  .scope-box{
+    padding:16px;
+    border-radius:18px;
+    background:rgba(255,255,255,.025);
+    border:1px solid rgba(255,255,255,.08);
+  }
+
+  .scope-box ul{
+    margin:.6rem 0 0 1rem;
+    padding:0;
+  }
+
+  .scope-box li{
+    margin:.35rem 0;
+    color:var(--text);
+  }
+
+  @media (max-width: 900px){
+    .ba,
+    #emptyPreview{
+      min-height:clamp(320px, 52vh, 620px);
+    }
+
+    .ba img{
+      height:clamp(320px, 52vh, 620px);
+    }
+
+    .img{
+      height:220px;
+    }
+
+    .thumb .img{
+      height:210px;
+    }
+  }
+
+  @media (max-width: 640px){
+    .studio-hero{
+      padding:18px;
+    }
+
+    .hero-title{
+      font-size:1.4rem;
+    }
+
+    .ba,
+    #emptyPreview{
+      min-height:320px;
+    }
+
+    .ba img{
+      height:320px;
+    }
+
+    .img{
+      height:200px;
+    }
+
+    .thumb .img{
+      height:200px;
+    }
+  }
+</style>
+thanks 
+<div class="studio-wrap">
+
+  <div class="studio-hero">
+    <div>
+      <div class="episode-tag">🎬 RENOVATION STUDIO • DEAL #{{ deal.id }}</div>
+      <h2 class="hero-title">{{ deal.title or ('Deal #' ~ deal.id) }}</h2>
+      <div class="hero-sub">Build your before → after story, then feature the reveal for reports and funding.</div>
+    </div>
+
+    <div class="hero-actions">
+      <a class="btn btn-secondary" href="{{ url_for('investor.deal_detail', deal_id=deal.id) }}">🗂 Deal Workspace</a>
+      <a class="btn btn-secondary" href="{{ url_for('investor.deal_reveal', deal_id=deal.id) }}">📺 Reveal Page</a>
+    </div>
+  </div>
+
+  <div class="grid">
+
+    <!-- LEFT -->
+    <div class="section-stack">
+
+      <div class="card">
+        <h3>Studio Controls</h3>
+
+        <div class="row">
+          <div>
+            <label class="muted" style="display:block;margin-bottom:.35rem;">Before Image</label>
+            <input type="file" id="beforeFile" accept="image/*" class="input">
+            <div class="muted" style="margin-top:.45rem;">Upload a room photo so Ravlo can generate realistic after concepts.</div>
+          </div>
+
+          <div>
+            <label class="muted" style="display:block;margin-bottom:.35rem;">Style Preset</label>
+            <select id="stylePreset" class="input">
+              <option value="">— choose —</option>
+              <option value="luxury">Luxury</option>
+              <option value="modern">Modern</option>
+              <option value="airbnb">Airbnb</option>
+              <option value="flip">Flip</option>
+              <option value="budget">Budget</option>
+            </select>
+          </div>
+        </div>
+
+        <label class="muted" style="display:block;margin-top:.85rem;margin-bottom:.35rem;">Style Prompt</label>
+        <input id="stylePrompt" class="input" placeholder="e.g. modern minimalist kitchen with matte black fixtures">
+
+        <div class="row" style="margin-top:.85rem;">
+          <div>
+            <label class="muted" style="display:block;margin-bottom:.35rem;">Variations</label>
+            <select id="variations" class="input">
+              <option value="1">1</option>
+              <option value="2" selected>2</option>
+              <option value="3">3</option>
+              <option value="4">4</option>
+            </select>
+          </div>
+
+          <div style="display:flex;align-items:end;">
+            <div class="action-row">
+              <button class="btn" type="button" onclick="generate()">✨ Generate</button>
+              <button class="btn btn-secondary" type="button" onclick="useLastBefore()">↩ Use Last Before</button>
+              <button class="btn btn-secondary" type="button" onclick="generateScope()">🧠 Rehab Plan</button>
+            </div>
+          </div>
+        </div>
+
+        <div id="status" class="status-box" style="margin-top:14px;">Ready.</div>
+      </div>
+
+      <div class="card">
+        <h3>Featured Reveal</h3>
+        <div class="muted">Choose the best after image and mark it as the featured reveal for this deal.</div>
+
+        <div style="margin-top:12px;">
+          <img id="featuredImg" class="img" src="" alt="Featured reveal" style="display:none;">
+          <button id="featureBtn" class="btn" type="button" onclick="feature()" style="display:none; margin-top:.75rem;">
+            ✅ Set as Featured Reveal
+          </button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>AI Rehab Plan</h3>
+        <div id="scopeResults" class="scope-box">
+          Rehab scope, cost range, and value-add guidance will appear here.
+        </div>
+      </div>
+
+    </div>
+
+    <!-- RIGHT -->
+    <div class="section-stack">
+
+      <div class="card">
+        <h3>Before / After Preview</h3>
+
+        <div class="ba" id="baWrap" style="display:none;">
+          <div class="ba-badges">
+            <span class="badge">BEFORE</span>
+            <span class="badge">AFTER</span>
+          </div>
+
+          <img id="baBefore" src="" alt="Before">
+          <div class="after" id="baAfter">
+            <img id="baAfterImg" src="" alt="After">
+          </div>
+          <div class="handle" id="baHandle"></div>
+          <div class="knob">↔</div>
+          <input id="baRange" type="range" min="0" max="100" value="50" aria-label="Before after slider">
+        </div>
+
+        <div id="emptyPreview" class="muted">Upload a before image, then generate concepts.</div>
+      </div>
+
+      <div class="card">
+        <h3>Concept Variations</h3>
+
+        {% if mockups %}
+          <div class="after-grid" id="existingGrid">
+            {% for m in mockups %}
+              <div class="thumb">
+                <img class="img" src="{{ m.after_url }}" alt="After mockup" style="cursor:pointer;" onclick="selectAfter('{{ m.after_url }}','{{ m.before_url }}')">
+                <div class="thumb-meta">
+                  <span class="chip">{{ m.style_preset or 'Concept' }}</span>
+                  <small class="muted">{{ m.created_at.strftime("%b %d, %Y %I:%M %p") if m.created_at else '' }}</small>
+                </div>
                 <button class="btn pick" type="button" onclick="selectAfter('{{ m.after_url }}','{{ m.before_url }}')">👀 Preview</button>
               </div>
             {% endfor %}

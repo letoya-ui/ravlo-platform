@@ -632,10 +632,17 @@ Analyze the opportunity, score the risk, and shape the best strategy for the dea
 
   async function runArchitectAnalysis() {
     const dealId = document.getElementById("deal_id")?.value;
+    const runBtn = document.querySelector('button[onclick="runArchitectAnalysis()"]');
 
     if (!dealId) {
       alert("This architect screen needs a deal record to run analysis.");
       return;
+    }
+
+    const originalBtnText = runBtn ? runBtn.textContent : "";
+    if (runBtn) {
+      runBtn.disabled = true;
+      runBtn.textContent = "Running Analysis...";
     }
 
     try {
@@ -683,6 +690,11 @@ Analyze the opportunity, score the risk, and shape the best strategy for the dea
     } catch (err) {
       console.error(err);
       alert("Analysis failed: " + err.message);
+    } finally {
+      if (runBtn) {
+        runBtn.disabled = false;
+        runBtn.textContent = originalBtnText || "Run Analysis";
+      }
     }
   }
 
@@ -705,6 +717,20 @@ Analyze the opportunity, score the risk, and shape the best strategy for the dea
     document.getElementById("brrrr_fit").textContent = "—";
     document.getElementById("risk_fit").textContent = "—";
   }
+
+  ["purchase_price", "arv", "estimated_rent", "rehab_cost"].forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.addEventListener("input", () => {
+        setFitValues(
+          safeNumber("purchase_price"),
+          safeNumber("arv"),
+          safeNumber("estimated_rent"),
+          safeNumber("rehab_cost")
+        );
+      });
+    }
+  });
 
   window.addEventListener("load", function () {
     setFitValues(
