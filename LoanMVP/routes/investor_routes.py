@@ -6181,9 +6181,6 @@ def market_snapshot_page():
         active_tab="market"
     )
 
-from flask import render_template, request, redirect, url_for, flash
-from flask_login import login_required, current_user
-from sqlalchemy import or_
 
 @investor_bp.route("/partners", methods=["GET"])
 @login_required
