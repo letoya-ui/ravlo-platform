@@ -327,6 +327,16 @@ textarea{
   justify-content:center;
 }
 
+.ravlo-nav-section{
+  font-size:11px;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+  color:var(--muted);
+  padding:16px 14px 6px;
+  opacity:.75;
+  border-top:1px solid rgba(255,255,255,.06);
+  margin-top:10px;
+}
 /* =========================================================
    TOPBAR
 ========================================================= */

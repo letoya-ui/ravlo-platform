@@ -2,6 +2,7 @@
 
 <div class="ravlo-sidebar-inner">
 
+  <!-- BRAND -->
   <div class="ravlo-sidebar-brand">
     <a href="{{ url_for('investor.command_center') }}" class="ravlo-brand-link">
       <div class="ravlo-brand-mark">
@@ -17,32 +18,46 @@
   </div>
 
   <nav class="ravlo-sidebar-nav">
+
+    <!-- COMMAND -->
+    <div class="ravlo-nav-section">Command</div>
+
     <a href="{{ url_for('investor.command_center') }}"
        class="ravlo-nav-link {% if ep == 'investor.command_center' %}active{% endif %}">
       <i class="lucide lucide-layout-dashboard"></i>
       <span>Command Center</span>
     </a>
 
+    <a href="{{ url_for('investor.messages') }}"
+       class="ravlo-nav-link {% if ep == 'investor.messages' %}active{% endif %}">
+      <i class="lucide lucide-message-square"></i>
+      <span>Messages</span>
+    </a>
+
+
+    <!-- DEALS -->
+    <div class="ravlo-nav-section">Deals</div>
+
     <a href="{{ url_for('investor.property_tool') }}"
-       class="ravlo-nav-link {% if ep in ['investor.property_tool', 'investor.property_search'] %}active{% endif %}">
+       class="ravlo-nav-link {% if ep in ['investor.property_tool','investor.property_search'] %}active{% endif %}">
       <i class="lucide lucide-search"></i>
       <span>Deal Finder</span>
     </a>
 
     <a href="{{ url_for('investor.deals_list') }}"
-       class="ravlo-nav-link {% if ep in ['investor.deals_list', 'investor.deal_detail', 'investor.deal_report'] or 'deal_architect' in ep or 'rehab_architect' in ep %}active{% endif %}">
+       class="ravlo-nav-link {% if ep in ['investor.deals_list','investor.deal_detail','investor.deal_report'] %}active{% endif %}">
       <i class="lucide lucide-briefcase-business"></i>
       <span>Deal Pipeline</span>
     </a>
 
-    <a href="{{ url_for('investor.deal_workspace') }}"
-       class="ravlo-nav-link {% if ep in ['investor.deal_workspace', 'investor.deal_rehab', 'investor.build_studio'] or 'workspace' in ep or 'rehab' in ep or 'build_studio' in ep %}active{% endif %}">
+    <a href="{{ url_for('investor.deal_copilot') }}"
+       class="ravlo-nav-link {% if 'copilot' in ep or 'workspace' in ep or 'rehab' in ep or 'build_studio' in ep %}active{% endif %}">
       <i class="lucide lucide-box"></i>
       <span>Deal Studio</span>
     </a>
 
     <a href="{{ url_for('investor.ai_hub') }}"
-       class="ravlo-nav-link {% if ep in ['investor.ai_hub', 'investor.ask_ai_post'] or 'ai_hub' in ep or 'ask_ai' in ep %}active{% endif %}">
+       class="ravlo-nav-link {% if 'ai' in ep %}active{% endif %}">
       <i class="lucide lucide-sparkles"></i>
       <span>AI Hub</span>
     </a>
@@ -53,28 +68,14 @@
       <span>Compare Deals</span>
     </a>
 
+
+    <!-- CAPITAL -->
+    <div class="ravlo-nav-section">Capital</div>
+
     <a href="{{ url_for('investor.loans') }}"
        class="ravlo-nav-link {% if 'loan' in ep or 'capital' in ep %}active{% endif %}">
       <i class="lucide lucide-landmark"></i>
       <span>Capital Studio</span>
-    </a>
-
-    <a href="{{ url_for('investor.messages') }}"
-       class="ravlo-nav-link {% if ep == 'investor.messages' or active_page == 'messages' %}active{% endif %}">
-      <i class="lucide lucide-message-square"></i>
-      <span>Messages</span>
-    </a>
-
-    <a href="{{ url_for('investor.saved_properties') }}"
-       class="ravlo-nav-link {% if ep == 'investor.saved_properties' %}active{% endif %}">
-      <i class="lucide lucide-folder-heart"></i>
-      <span>Saved Properties</span>
-    </a>
-
-    <a href="{{ url_for('investor.partners') }}"
-       class="ravlo-nav-link {% if 'partner' in ep %}active{% endif %}">
-      <i class="lucide lucide-users"></i>
-      <span>Partner Network</span>
     </a>
 
     <a href="{{ url_for('investor.documents') }}"
@@ -83,14 +84,40 @@
       <span>Documents Vault</span>
     </a>
 
+
+    <!-- NETWORK -->
+    <div class="ravlo-nav-section">Network</div>
+
+    <a href="{{ url_for('investor.partners') }}"
+       class="ravlo-nav-link {% if 'partner' in ep %}active{% endif %}">
+      <i class="lucide lucide-users"></i>
+      <span>Partner Network</span>
+    </a>
+
+
+    <!-- RESOURCES -->
+    <div class="ravlo-nav-section">Resources</div>
+
+    <a href="{{ url_for('investor.saved_properties') }}"
+       class="ravlo-nav-link {% if ep == 'investor.saved_properties' %}active{% endif %}">
+      <i class="lucide lucide-folder-heart"></i>
+      <span>Saved Properties</span>
+    </a>
+
     <a href="{{ url_for('investor.resource_center') }}"
        class="ravlo-nav-link {% if ep == 'investor.resource_center' %}active{% endif %}">
       <i class="lucide lucide-scroll-text"></i>
       <span>Resource Center</span>
     </a>
+
   </nav>
 
+
+  <!-- SYSTEM -->
   <div class="ravlo-sidebar-footer-simple">
+
+    <div class="ravlo-nav-section">System</div>
+
     <a href="{{ url_for('investor.settings') }}"
        class="ravlo-nav-link {% if ep == 'investor.settings' %}active{% endif %}">
       <i class="lucide lucide-settings"></i>
@@ -103,6 +130,7 @@
         <span>Logout</span>
       </button>
     </form>
+
   </div>
 
 </div>
