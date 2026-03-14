@@ -1186,7 +1186,7 @@ def loan_summary(loan_id):
     ai_summary = getattr(loan, "ai_summary", None)
 
     return render_template(
-        "investor/loan_view.html",
+        "investor/view_loan.html",
         investor=investor,
         loan=loan,
         conditions=conditions,
