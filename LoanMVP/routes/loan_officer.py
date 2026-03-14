@@ -21,7 +21,7 @@ from flask import (
 from flask_login import current_user
 from werkzeug.utils import secure_filename
 
-from LoanMVP.extensions import db
+from LoanMVP.extensions import db, csrf
 from LoanMVP.utils.decorators import role_required
 
 # AI
@@ -217,6 +217,7 @@ def dashboard():
 # =============================================================
 
 @loan_officer_bp.route("/ai/assistant", methods=["GET", "POST"])
+@csrf.exempt
 @role_required("loan_officer", "admin")
 def ai_assistant():
     """
@@ -339,6 +340,7 @@ def ai_assistant():
         "loan_status": loan_status,
         "ai_response": ai_response
     }), 200
+    
 @loan_officer_bp.route("/loan/<int:loan_id>")
 @role_required("loan_officer")
 def loan_file(loan_id):
@@ -480,6 +482,7 @@ def lead_detail(lead_id):
 
 
 @loan_officer_bp.route("/lead/new", methods=["GET", "POST"])
+@csrf.exempt
 @role_required("loan_officer")
 def new_lead():
     sources = LeadSource.query.order_by(LeadSource.source_name.asc()).all()
@@ -509,6 +512,7 @@ def new_lead():
 
 
 @loan_officer_bp.route("/lead/<int:lead_id>/convert", methods=["POST"])
+@csrf.exempt
 @role_required("loan_officer")
 def convert_lead(lead_id):
     lead = Lead.query.get_or_404(lead_id)
@@ -530,6 +534,7 @@ def convert_lead(lead_id):
 
 
 @loan_officer_bp.route("/lead/update/<int:lead_id>", methods=["POST"])
+@csrf.exempt
 @role_required("loan_officer")
 def update_lead(lead_id):
     lead = Lead.query.get_or_404(lead_id)
@@ -546,6 +551,7 @@ def update_lead(lead_id):
 # AI Generator & Bulk Messaging
 # =========================================================
 @loan_officer_bp.route("/ai_generator", methods=["GET", "POST"])
+@csrf.exempt
 @role_required("loan_officer")
 def ai_generator():
     ai_reply = None
@@ -573,6 +579,7 @@ def ai_generator():
 
 
 @loan_officer_bp.route("/lead_messages", methods=["GET", "POST"])
+@csrf.exempt
 @role_required("loan_officer")
 def lead_messages():
     leads = Lead.query.filter_by(assigned_to=current_user.id).order_by(Lead.created_at.desc()).all()
@@ -593,6 +600,7 @@ def lead_messages():
 # Loan Applications
 # =========================================================
 @loan_officer_bp.route("/new_application", methods=["GET", "POST"])
+@csrf.exempt
 @role_required("loan_officer")
 def new_application():
     borrowers = BorrowerProfile.query.order_by(BorrowerProfile.full_name.asc()).all()
@@ -656,6 +664,7 @@ def new_application():
 # CREATE NEW LOAN
 # ===============================================================
 @loan_officer_bp.route("/create-loan", methods=["GET", "POST"])
+@csrf.exempt
 @role_required("loan_officer")
 def create_loan():
     borrowers = BorrowerProfile.query.order_by(BorrowerProfile.full_name.asc()).all()
@@ -695,6 +704,7 @@ def create_loan():
 
 
 @loan_officer_bp.route("/quick-1003", methods=["GET", "POST"])
+@csrf.exempt
 @role_required("loan_officer")
 def quick_1003():
     officer = LoanOfficerProfile.query.filter_by(user_id=current_user.id).first()
@@ -769,6 +779,7 @@ def quick_1003():
 # Quote Engine
 # =========================================================
 @loan_officer_bp.route("/quote_engine", methods=["GET", "POST"])
+@csrf.exempt
 @role_required("loan_officer")
 def quote_engine():
     officer = LoanOfficerProfile.query.filter_by(user_id=current_user.id).first()
@@ -826,6 +837,7 @@ def quote_engine():
 
 
 @loan_officer_bp.route("/quotes/new", methods=["GET", "POST"])
+@csrf.exempt
 @role_required("loan_officer")
 def new_quote():
     borrowers = BorrowerProfile.query.order_by(BorrowerProfile.full_name.asc()).all()
@@ -1000,6 +1012,7 @@ def ai_summary():
 # Task Manager
 # =========================================================
 @loan_officer_bp.route("/tasks", methods=["GET", "POST"])
+@csrf.exempt
 @role_required("loan_officer")
 def task():
     if request.method == "POST":
@@ -1036,6 +1049,7 @@ def task():
 
 
 @loan_officer_bp.route("/tasks/<int:task_id>/toggle", methods=["POST"])
+@csrf.exempt
 @role_required("loan_officer")
 def toggle_task(task_id):
     task = Task.query.get_or_404(task_id)
@@ -1045,6 +1059,7 @@ def toggle_task(task_id):
 
 
 @loan_officer_bp.route("/tasks/<int:task_id>/delete", methods=["POST"])
+@csrf.exempt
 @role_required("loan_officer")
 def delete_task(task_id):
     task = Task.query.get_or_404(task_id)
@@ -1056,6 +1071,7 @@ def delete_task(task_id):
 
 
 @loan_officer_bp.route("/tasks/complete/<int:task_id>", methods=["POST"])
+@csrf.exempt
 @role_required("loan_officer")
 def task_complete(task_id):
     task = Task.query.get_or_404(task_id)
@@ -1065,6 +1081,7 @@ def task_complete(task_id):
 
 
 @loan_officer_bp.route("/tasks/new", methods=["GET", "POST"])
+@csrf.exempt
 @role_required("loan_officer")
 def new_task():
     borrowers = BorrowerProfile.query.order_by(BorrowerProfile.full_name.asc()).all()
@@ -1121,6 +1138,7 @@ def borrower_ai_log(borrower_id):
 
 
 @loan_officer_bp.route("/credit-check", methods=["GET", "POST"])
+@csrf.exempt
 @role_required("loan_officer")
 def credit_check():
     borrowers = BorrowerProfile.query.order_by(BorrowerProfile.full_name.asc()).all()
@@ -1211,6 +1229,7 @@ def loan_queue():
 
 
 @loan_officer_bp.route("/crm-note/<int:lead_id>", methods=["GET", "POST"])
+@csrf.exempt
 @role_required("loan_officer")
 def crm_note(lead_id):
     lead = Lead.query.get_or_404(lead_id)
@@ -1249,6 +1268,7 @@ def crm_note(lead_id):
 # AI PRICING
 # ===============================================================
 @loan_officer_bp.route("/ai/pricing", methods=["GET", "POST"])
+@csrf.exempt
 @role_required("loan_officer")
 def ai_pricing():
     if request.method == "GET":
@@ -1307,6 +1327,7 @@ def ai_pricing():
 
 
 @loan_officer_bp.route("/ai/risk", methods=["GET", "POST"])
+@csrf.exempt
 @role_required("loan_officer")
 def ai_risk():
     if request.method == "GET":
@@ -1375,6 +1396,7 @@ def ai_risk():
     return jsonify({"reply": reply})
 
 @loan_officer_bp.route("/ai/conditions", methods=["GET", "POST"])
+@csrf.exempt
 @role_required("loan_officer")
 def ai_conditions():
     if request.method == "GET":
@@ -1438,6 +1460,7 @@ def ai_conditions():
 
 
 @loan_officer_bp.route("/intake-ai/<int:borrower_id>", methods=["GET", "POST"])
+@csrf.exempt
 @role_required("loan_officer")
 def intake_ai(borrower_id):
     borrower = BorrowerProfile.query.get_or_404(borrower_id)
@@ -1567,6 +1590,7 @@ def ai_intake_queue():
 
 # === Review View ===
 @loan_officer_bp.route("/ai-intake-review/<int:intake_id>", methods=["GET", "POST"])
+@csrf.exempt
 @role_required("loan_officer")
 def ai_intake_review(intake_id):
     intake = AIIntakeSummary.query.get_or_404(intake_id)
@@ -1592,6 +1616,7 @@ def ai_intake_review(intake_id):
 
 
 @loan_officer_bp.route("/auto-create-loan/<int:borrower_id>", methods=["POST"])
+@csrf.exempt
 @role_required("loan_officer")
 def auto_create_loan(borrower_id):
     borrower = BorrowerProfile.query.get_or_404(borrower_id)
@@ -1652,6 +1677,7 @@ def auto_create_loan(borrower_id):
 
 
 @loan_officer_bp.route("/followup-ai/<int:borrower_id>", methods=["GET", "POST"])
+@csrf.exempt
 @role_required("loan_officer")
 def followup_ai(borrower_id):
     borrower = BorrowerProfile.query.get_or_404(borrower_id)
@@ -1748,6 +1774,7 @@ Provide:
 
 
 @loan_officer_bp.route("/communication-ai/<int:borrower_id>", methods=["GET", "POST"])
+@csrf.exempt
 @role_required("loan_officer")
 def communication_ai(borrower_id):
     borrower = BorrowerProfile.query.get_or_404(borrower_id)
@@ -1871,6 +1898,7 @@ def call_center(borrower_id):
 
 
 @loan_officer_bp.route("/save_call_notes", methods=["POST"])
+@csrf.exempt
 @role_required("loan_officer")
 def save_call_notes():
     data = request.get_json() or {}
@@ -1923,6 +1951,7 @@ def save_call_notes():
 
 
 @loan_officer_bp.route("/edit-loan/<int:loan_id>", methods=["GET", "POST"])
+@csrf.exempt
 @role_required("loan_officer")
 def edit_loan(loan_id):
     loan = LoanApplication.query.get_or_404(loan_id)
@@ -1944,6 +1973,7 @@ def edit_loan(loan_id):
 
 
 @loan_officer_bp.route("/generate-quote/<int:loan_id>", methods=["GET", "POST"])
+@csrf.exempt
 @role_required("loan_officer")
 def generate_quote(loan_id):
     loan = LoanApplication.query.get_or_404(loan_id)
@@ -2094,6 +2124,7 @@ def borrower_messages(borrower_id):
 
 
 @loan_officer_bp.route("/profile/<int:borrower_id>", methods=["GET", "POST"])
+@csrf.exempt
 @role_required("loan_officer")
 def profile(borrower_id):
     borrower = BorrowerProfile.query.get_or_404(borrower_id)
@@ -2116,6 +2147,7 @@ def profile(borrower_id):
 
 
 @loan_officer_bp.route("/quote-plan/<int:loan_id>", methods=["GET", "POST"])
+@csrf.exempt
 @role_required("loan_officer")
 def quote_plan(loan_id):
     loan = LoanApplication.query.get_or_404(loan_id)
@@ -2187,6 +2219,7 @@ def quotes(borrower_id):
 # NEW LOAN CREATION
 # =========================================================
 @loan_officer_bp.route("/loan/new", methods=["GET", "POST"])
+@csrf.exempt
 @role_required("loan_officer")
 def new_loan():
     borrowers = BorrowerProfile.query.order_by(BorrowerProfile.full_name.asc()).all()
@@ -2312,6 +2345,7 @@ def capital_funds(loan_id):
     )
 
 @loan_officer_bp.route("/upload/<int:borrower_id>", methods=["GET", "POST"])
+@csrf.exempt
 @role_required("loan_officer")
 def upload(borrower_id):
     borrower = BorrowerProfile.query.get_or_404(borrower_id)
@@ -2370,6 +2404,7 @@ def upload(borrower_id):
 
 
 @loan_officer_bp.route("/follow-up/<int:borrower_id>", methods=["GET", "POST"])
+@csrf.exempt
 @role_required("loan_officer")
 def follow_up(borrower_id):
     borrower = BorrowerProfile.query.get_or_404(borrower_id)
@@ -2567,6 +2602,7 @@ def borrower_dashboard(borrower_id):
 
 
 @loan_officer_bp.route("/borrower-search", methods=["GET", "POST"])
+@csrf.exempt
 @role_required("loan_officer")
 def borrower_search():
     form = BorrowerSearchForm()
@@ -2601,6 +2637,7 @@ def borrower_search():
     )
 
 @loan_officer_bp.route("/borrower-intake", methods=["GET", "POST"])
+@csrf.exempt
 @role_required("loan_officer")
 def borrower_intake():
     form = BorrowerIntakeForm()
@@ -2656,6 +2693,7 @@ def borrower_intake():
 
 
 @loan_officer_bp.route("/resources", methods=["GET", "POST"])
+@csrf.exempt
 @role_required("loan_officer")
 def resources():
     resources = [
@@ -2691,6 +2729,7 @@ def resources():
 
 
 @loan_officer_bp.route("/resources/chat", methods=["POST"])
+@csrf.exempt
 @role_required("loan_officer")
 def resources_chat():
     data = request.get_json() or {}
@@ -2709,6 +2748,7 @@ def resources_chat():
 
 
 @loan_officer_bp.route("/campaigns/create", methods=["GET", "POST"])
+@csrf.exempt
 @role_required("loan_officer")
 def create_campaign():
     if request.method == "POST":
@@ -2738,6 +2778,7 @@ def create_campaign():
 
 
 @loan_officer_bp.route("/upload-call/<int:borrower_id>", methods=["POST"])
+@csrf.exempt
 @role_required("loan_officer")
 def upload_call(borrower_id):
     file = request.files.get("file")
@@ -3048,6 +3089,7 @@ Write a professional pre-approval narrative including:
 
 
 @loan_officer_bp.route("/ai_chat", methods=["POST"])
+@csrf.exempt
 @role_required("loan_officer")
 def ai_chat():
     data = request.get_json() or {}
@@ -3123,6 +3165,7 @@ def ai_chat_history():
 
 
 @loan_officer_bp.route("/loan/<int:loan_id>/scenarios", methods=["GET", "POST"])
+@csrf.exempt
 @role_required("loan_officer")
 def loan_scenarios(loan_id):
     loan = LoanApplication.query.get_or_404(loan_id)
@@ -3215,6 +3258,7 @@ def add_scenario(loan_id):
 
 
 @loan_officer_bp.route("/loan/<int:loan_id>/scenario/<int:id>/delete", methods=["POST"])
+@csrf.exempt
 @role_required("loan_officer")
 def delete_scenario(loan_id, id):
     s = LoanScenario.query.get_or_404(id)
@@ -3247,6 +3291,7 @@ def generate_1003(loan_id):
 
 
 @loan_officer_bp.route("/borrower/<int:borrower_id>/request-docs", methods=["GET", "POST"])
+@csrf.exempt
 @role_required("loan_officer")
 def request_documents(borrower_id):
     borrower = BorrowerProfile.query.get_or_404(borrower_id)
@@ -3278,6 +3323,7 @@ def request_documents(borrower_id):
 
 
 @loan_officer_bp.route("/loan/<int:loan_id>/generate_needs", methods=["POST"])
+@csrf.exempt
 @role_required("loan_officer")
 def generate_doc_needs(loan_id):
     loan = LoanApplication.query.get_or_404(loan_id)
@@ -3292,6 +3338,7 @@ def generate_doc_needs(loan_id):
 
 
 @loan_officer_bp.route("/save_preapproval_snapshot/<int:loan_id>", methods=["POST"])
+@csrf.exempt
 @role_required("loan_officer")
 def save_preapproval_snapshot(loan_id):
     loan = LoanApplication.query.get_or_404(loan_id)
