@@ -85,7 +85,7 @@ def dashboard():
 # PARTNER DIRECTORY (internal)
 # ------------------------------------------------
 
-@partners_bp.route("/")
+@partners_bp.route("/center")
 @role_required("partner")
 def center():
 
@@ -220,7 +220,6 @@ def requests_inbox():
 @csrf.exempt
 @role_required("partner")
 def accept_request(req_id):
-
     partner = Partner.query.filter_by(user_id=current_user.id).first()
     req = PartnerConnectionRequest.query.get_or_404(req_id)
 
@@ -234,7 +233,6 @@ def accept_request(req_id):
     req.status = "accepted"
     req.responded_at = datetime.utcnow()
 
-    # Create CRM Task
     task = Task(
         borrower_id=req.borrower_profile_id,
         title=f"{req.category or partner.category} • New Request",
@@ -243,37 +241,36 @@ def accept_request(req_id):
         status="Pending",
         priority="Normal"
     )
-
     db.session.add(task)
 
     if req.borrower_profile_id:
         db.session.add(CRMNote(
             borrower_id=req.borrower_profile_id,
             user_id=current_user.id,
-            content=f"Accepted partner request (Partner: {partner.company})."
+            content=f"Accepted partner request (Partner: {partner.company or partner.name})."
         ))
 
     if partner_has_premium_access(partner):
-
         job = PartnerJob(
             partner_id=partner.id,
             borrower_profile_id=req.borrower_profile_id,
+            investor_profile_id=req.investor_profile_id,
             property_id=req.property_id,
             title=f"{req.category or partner.category} Job",
-            scope=req.message
+            scope=req.message,
+            status="Open"
         )
 
         db.session.add(job)
         db.session.flush()
 
-        task.partner_job_id = job.id
+        if hasattr(task, "partner_job_id"):
+            task.partner_job_id = job.id
 
     db.session.commit()
 
     flash("Request accepted.", "success")
-
     return redirect(url_for("partners.requests_inbox"))
-
 
 # ------------------------------------------------
 # DECLINE REQUEST
