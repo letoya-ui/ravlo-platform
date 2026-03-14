@@ -668,3 +668,52 @@ a{
     padding:28px;
   }
 }
+
+/* RAVLO HERO GRID */
+
+.hero::before{
+content:"";
+position:absolute;
+inset:0;
+
+background-image:
+linear-gradient(rgba(255,255,255,.04) 1px, transparent 1px),
+linear-gradient(90deg, rgba(255,255,255,.04) 1px, transparent 1px);
+
+background-size:60px 60px;
+
+mask-image: radial-gradient(circle at center, black 30%, transparent 75%);
+pointer-events:none;
+}
+
+/* RAVLO BACKGROUND GLOW */
+
+body::before{
+content:"";
+position:fixed;
+inset:-40%;
+z-index:-1;
+
+background:
+radial-gradient(circle at 20% 20%, rgba(59,130,246,.20), transparent 40%),
+radial-gradient(circle at 80% 30%, rgba(96,165,250,.15), transparent 40%),
+radial-gradient(circle at 40% 80%, rgba(59,130,246,.12), transparent 40%);
+
+filter:blur(80px);
+animation:ravloGlow 18s ease-in-out infinite alternate;
+}
+
+@keyframes ravloGlow{
+0%{transform:translateY(0px)}
+100%{transform:translateY(-40px)}
+}
+
+.card{
+transition: all .35s ease;
+}
+
+.card:hover{
+transform: translateY(-6px);
+box-shadow:0 20px 60px rgba(0,0,0,.35);
+}
+
