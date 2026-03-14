@@ -41,4 +41,8 @@ def spaces_put_bytes(
     )
 
     url = f"{public_base}/{key}" if public_base else key
+    print("SPACES bucket:", bucket)
+    print("SPACES key:", key)
+    print("SPACES url:", url)
+
     return {"key": key, "url": url}
