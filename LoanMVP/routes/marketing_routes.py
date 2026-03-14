@@ -1,10 +1,6 @@
 from flask import Blueprint, render_template, redirect, url_for
 
-marketing_bp = Blueprint(
-    "marketing",
-    __name__,
-    template_folder="templates"
-)
+marketing_bp = Blueprint("marketing", __name__, url_prefix="/")
 
 # -----------------------------
 # HOME
