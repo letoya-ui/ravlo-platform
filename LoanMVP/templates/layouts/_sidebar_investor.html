@@ -35,6 +35,18 @@
       <span>Deal Pipeline</span>
     </a>
 
+    <a href="{{ url_for('investor.deal_workspace') }}"
+       class="ravlo-nav-link {% if ep in ['investor.deal_workspace', 'investor.deal_rehab', 'investor.build_studio'] or 'workspace' in ep or 'rehab' in ep or 'build_studio' in ep %}active{% endif %}">
+      <i class="lucide lucide-box"></i>
+      <span>Deal Studio</span>
+    </a>
+
+    <a href="{{ url_for('investor.ai_hub') }}"
+       class="ravlo-nav-link {% if ep in ['investor.ai_hub', 'investor.ask_ai_post'] or 'ai_hub' in ep or 'ask_ai' in ep %}active{% endif %}">
+      <i class="lucide lucide-sparkles"></i>
+      <span>AI Hub</span>
+    </a>
+
     <a href="{{ url_for('investor.deal_comparison') }}"
        class="ravlo-nav-link {% if 'deal_comparison' in ep %}active{% endif %}">
       <i class="lucide lucide-scale"></i>
@@ -48,8 +60,8 @@
     </a>
 
     <a href="{{ url_for('investor.messages') }}"
-       class="ravlo-nav-item {% if active_page == 'messages' %}active{% endif %}">
-      <i data-lucide="message-square"></i>
+       class="ravlo-nav-link {% if ep == 'investor.messages' or active_page == 'messages' %}active{% endif %}">
+      <i class="lucide lucide-message-square"></i>
       <span>Messages</span>
     </a>
 
