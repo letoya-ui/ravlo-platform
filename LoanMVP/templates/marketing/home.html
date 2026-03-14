@@ -4,144 +4,348 @@
 
 {% block content %}
 
-<section class="hero">
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Ravlo | A Presence for People Who Build</title>
 
-<div class="hero-inner">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
-<h1>
-A presence.
-<br>
-Not just a platform.
-</h1>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/marketing.css') }}">
+</head>
+<body>
 
-<p class="hero-text">
+  <div class="site-wrap">
 
-Ravlo connects investors, builders, borrowers, and partners
-inside one environment designed for real estate execution.
+    <!-- NAV -->
+    <header class="topbar">
+      <div class="container">
+        <div class="topbar-inner">
+          <a href="{{ url_for('marketing.homepage') }}" class="brand">
+            <div class="brand-mark">R</div>
+            <div>
+              <div class="brand-title">Ravlo</div>
+              <div class="brand-sub">Investor Operating System</div>
+            </div>
+          </a>
 
-</p>
+          <nav class="nav-links">
+            <a href="#philosophy">Philosophy</a>
+            <a href="#platform">Platform</a>
+            <a href="#ecosystem">Ecosystem</a>
+            <a href="#vision">Vision</a>
+          </nav>
 
-<div class="hero-buttons">
+          <div class="nav-actions">
+            <a href="/login" class="btn btn-ghost">Sign In</a>
+            <a href="/register" class="btn btn-primary">Enter Ravlo</a>
+          </div>
+        </div>
+      </div>
+    </header>
 
-<a href="/enter" class="btn-primary">
-Enter Ravlo
-</a>
+    <!-- HERO -->
+    <section class="hero">
+      <div class="hero-orb hero-orb-1"></div>
+      <div class="hero-orb hero-orb-2"></div>
 
-<a href="/about" class="btn-outline">
-See the Vision
-</a>
+      <div class="container hero-grid">
+        <div class="hero-copy">
+          <div class="eyebrow">
+            <span class="eyebrow-dot"></span>
+            For builders who move differently
+          </div>
 
-</div>
+          <h1>
+            A presence.<br>
+            Not just a platform.
+          </h1>
 
-</div>
+          <p class="hero-text">
+            Ravlo is where vision turns into property, strategy turns into assets,
+            and ideas turn into portfolios.
+          </p>
 
-</section>
+          <div class="hero-actions">
+            <a href="/register" class="btn btn-primary btn-lg">Enter the Ecosystem</a>
+            <a href="#platform" class="btn btn-ghost btn-lg">See the Vision</a>
+          </div>
+        </div>
 
+        <div class="hero-panel">
+          <div class="dashboard-card">
+            <div class="dashboard-top">
+              <div>
+                <div class="mini-label">Ravlo Command Center</div>
+                <div class="dashboard-title">Everything connected</div>
+              </div>
+              <div class="pill">Live System</div>
+            </div>
 
-<section class="section">
+            <div class="dashboard-stats">
+              <div class="stat-box">
+                <div class="stat-label">Deal Flow</div>
+                <div class="stat-value">Active</div>
+              </div>
+              <div class="stat-box">
+                <div class="stat-label">Build Planning</div>
+                <div class="stat-value">Ready</div>
+              </div>
+              <div class="stat-box">
+                <div class="stat-label">Partner Access</div>
+                <div class="stat-value">Connected</div>
+              </div>
+              <div class="stat-box">
+                <div class="stat-label">Portfolio View</div>
+                <div class="stat-value">Growing</div>
+              </div>
+            </div>
 
-<div class="section-inner">
+            <div class="dashboard-modules">
+              <span>Deal Architect</span>
+              <span>Renovation Studio</span>
+              <span>Build Studio</span>
+              <span>Investor Intelligence</span>
+              <span>Partner Network</span>
+              <span>Command Center</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
 
-<h2>Everything needed to build deals</h2>
+    <!-- QUIET AUTHORITY -->
+    <section class="section">
+      <div class="container narrow">
+        <div class="section-tag">Quiet Authority</div>
+        <h2>Not another real estate tool.</h2>
+        <p class="section-copy">
+          Most platforms track deals. Ravlo helps build them.
+          Investing, construction, strategy, execution — all connected inside one environment.
+        </p>
+      </div>
+    </section>
 
-<p class="section-sub">
+    <!-- PHILOSOPHY -->
+    <section class="section" id="philosophy">
+      <div class="container">
+        <div class="section-head">
+          <div class="section-tag">Philosophy</div>
+          <h2>Built by people who execute.</h2>
+          <p>
+            The right platform should feel like the person who built it:
+            disciplined, intentional, focused, and grounded in real work.
+          </p>
+        </div>
 
-Investing, construction, analysis, and partners connected inside one system.
+        <div class="grid grid-4">
+          <article class="card">
+            <div class="icon-badge">01</div>
+            <h3>Vision</h3>
+            <p>Seeing opportunity where others see property.</p>
+          </article>
 
-</p>
+          <article class="card">
+            <div class="icon-badge">02</div>
+            <h3>Execution</h3>
+            <p>Turning ideas into real assets through disciplined action.</p>
+          </article>
 
-<div class="platform-grid">
+          <article class="card">
+            <div class="icon-badge">03</div>
+            <h3>Strategy</h3>
+            <p>Every move designed to strengthen the portfolio.</p>
+          </article>
 
-<div class="platform-card">
+          <article class="card">
+            <div class="icon-badge">04</div>
+            <h3>Legacy</h3>
+            <p>Building something that lasts beyond the deal.</p>
+          </article>
+        </div>
+      </div>
+    </section>
 
-<h3>Deal Architect</h3>
-<p>Analyze flips, rentals, and development opportunities.</p>
+    <!-- PLATFORM -->
+    <section class="section section-alt" id="platform">
+      <div class="container">
+        <div class="section-head">
+          <div class="section-tag">Platform</div>
+          <h2>Everything needed to build deals.</h2>
+          <p>
+            Investing, renovation, construction, intelligence, and partners all connected in one environment.
+          </p>
+        </div>
 
-</div>
+        <div class="grid grid-3">
+          <article class="card">
+            <div class="icon-badge">DA</div>
+            <h3>Deal Architect</h3>
+            <p>Analyze flips, rentals, and development opportunities.</p>
+          </article>
 
-<div class="platform-card">
+          <article class="card">
+            <div class="icon-badge">RS</div>
+            <h3>Renovation Studio</h3>
+            <p>Design property transformations before construction begins.</p>
+          </article>
 
-<h3>Renovation Studio</h3>
-<p>Design transformations before construction begins.</p>
+          <article class="card">
+            <div class="icon-badge">BS</div>
+            <h3>Build Studio</h3>
+            <p>Plan new construction and development strategy.</p>
+          </article>
 
-</div>
+          <article class="card">
+            <div class="icon-badge">II</div>
+            <h3>Investor Intelligence</h3>
+            <p>Track ROI, portfolio metrics, and capital strategy.</p>
+          </article>
 
-<div class="platform-card">
+          <article class="card">
+            <div class="icon-badge">PN</div>
+            <h3>Partner Network</h3>
+            <p>Connect contractors, lenders, agents, and operators.</p>
+          </article>
 
-<h3>Build Studio</h3>
-<p>Plan new construction and development strategy.</p>
+          <article class="card">
+            <div class="icon-badge">CC</div>
+            <h3>Command Center</h3>
+            <p>Where deals, strategy, and execution live together.</p>
+          </article>
+        </div>
+      </div>
+    </section>
 
-</div>
+    <!-- HOW IT FLOWS -->
+    <section class="section">
+      <div class="container">
+        <div class="section-head">
+          <div class="section-tag">From Idea to Asset</div>
+          <h2>How builders use Ravlo.</h2>
+          <p>A clear path from opportunity to execution.</p>
+        </div>
 
-<div class="platform-card">
+        <div class="flow-row">
+          <div class="flow-step">Opportunity</div>
+          <div class="flow-line"></div>
+          <div class="flow-step">Analysis</div>
+          <div class="flow-line"></div>
+          <div class="flow-step">Plan</div>
+          <div class="flow-line"></div>
+          <div class="flow-step">Build</div>
+          <div class="flow-line"></div>
+          <div class="flow-step">Portfolio</div>
+        </div>
+      </div>
+    </section>
 
-<h3>Investor Intelligence</h3>
-<p>Track portfolio metrics and investment performance.</p>
+    <!-- ECOSYSTEM MAP -->
+    <section class="section" id="ecosystem">
+      <div class="container">
+        <div class="section-head">
+          <div class="section-tag">The Ravlo Ecosystem</div>
+          <h2>A platform designed to connect everything.</h2>
+          <p>
+            Ravlo is an operating environment where investors, builders, lenders,
+            partners, and opportunity can move together.
+          </p>
+        </div>
 
-</div>
+        <div class="ecosystem-map">
+          <div class="eco-node eco-left">
+            <h3>Investors</h3>
+            <p>Discover deals, analyze opportunities, grow portfolios.</p>
+          </div>
 
-<div class="platform-card">
+          <div class="eco-node eco-center">
+            <div class="eco-core-ring"></div>
+            <div class="eco-core">
+              <div class="eco-core-label">Ravlo</div>
+              <div class="eco-core-sub">Command Center</div>
+            </div>
+          </div>
 
-<h3>Partner Network</h3>
-<p>Connect with contractors, lenders, and operators.</p>
+          <div class="eco-node eco-right">
+            <h3>Partners</h3>
+            <p>Contractors, agents, lenders, and service providers.</p>
+          </div>
 
-</div>
+          <div class="eco-node eco-bottom">
+            <h3>Builders</h3>
+            <p>Plan renovations, manage construction, execute projects.</p>
+          </div>
+        </div>
+      </div>
+    </section>
 
-<div class="platform-card">
+    <!-- FOUNDER ENERGY -->
+    <section class="section section-alt">
+      <div class="container founder-grid">
+        <div>
+          <div class="section-tag">Founder Energy</div>
+          <h2>Built by someone who understands the work.</h2>
+          <p class="section-copy">
+            Ravlo was not imagined in a boardroom.
+            It was shaped by real deals, real properties, real projects, and real execution.
+            The platform reflects the mindset behind it — vision paired with discipline.
+          </p>
+        </div>
 
-<h3>Command Center</h3>
-<p>The control center for your real estate strategy.</p>
+        <div class="quote-card">
+          <div class="quote-label">Ravlo Philosophy</div>
+          <blockquote>
+            “Some people talk about building an empire.
+            Others quietly start laying the foundation.”
+          </blockquote>
+        </div>
+      </div>
+    </section>
 
-</div>
+    <!-- VISION -->
+    <section class="section" id="vision">
+      <div class="container">
+        <div class="vision-panel">
+          <div class="section-tag">The Direction</div>
+          <h2>This is only the beginning.</h2>
+          <p>
+            Ravlo is expanding into a full ecosystem for investors, builders,
+            lenders, partners, and operators — a place where deals are discovered,
+            analyzed, built, financed, and executed.
+          </p>
 
-</div>
+          <div class="hero-actions">
+            <a href="/register" class="btn btn-primary btn-lg">Enter the Ecosystem</a>
+            <a href="/contact" class="btn btn-ghost btn-lg">Follow the Build</a>
+          </div>
+        </div>
+      </div>
+    </section>
 
-</div>
+    <!-- FOOTER -->
+    <footer class="footer">
+      <div class="container footer-inner">
+        <div>
+          <div class="brand-title">Ravlo</div>
+          <div class="brand-sub">A presence for people who build.</div>
+        </div>
 
-</section>
+        <div class="footer-links">
+          <a href="#philosophy">Philosophy</a>
+          <a href="#platform">Platform</a>
+          <a href="#ecosystem">Ecosystem</a>
+          <a href="#vision">Vision</a>
+        </div>
+      </div>
+    </footer>
 
+  </div>
 
-<section class="section-dark">
-
-<div class="section-inner">
-
-<h2>The Ravlo Platform</h2>
-
-<p class="section-sub">
-Real dashboards from the Ravlo investor environment.
-</p>
-
-<div class="dashboard-grid">
-
-<img src="{{ url_for('static', filename='images/dashboard1.png') }}">
-<img src="{{ url_for('static', filename='images/dashboard2.png') }}">
-<img src="{{ url_for('static', filename='images/dashboard3.png') }}">
-
-</div>
-
-</div>
-
-</section>
-
-
-<section class="section">
-
-<div class="section-inner">
-
-<h2>Built for builders</h2>
-
-<div class="process">
-
-<div>Find opportunity</div>
-<div>Analyze the deal</div>
-<div>Plan the transformation</div>
-<div>Build with partners</div>
-<div>Scale the portfolio</div>
-
-</div>
-
-</div>
-
-</section>
+</body>
+</html>
 
 {% endblock %}
