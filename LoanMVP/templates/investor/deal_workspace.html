@@ -12,6 +12,25 @@ Compare exit paths, pressure-test returns, and move into architect, rehab, or ca
   Deal Pipeline
 </a>
 
+{% if selected_prop %}
+  {% if deal %}
+    <a href="{{ url_for('investor.deal_detail', deal_id=deal.id) }}" class="ravlo-btn ghost sm">
+      Save Deal
+    </a>
+    <a href="{{ url_for('investor.capital_application', deal_id=deal.id, prop_id=selected_prop.id) }}" class="ravlo-btn primary sm">
+      Apply
+    </a>
+  {% else %}
+    <form method="POST" action="{{ url_for('investor.save_deal_from_property', prop_id=selected_prop.id) }}" class="inline-form">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button type="submit" class="ravlo-btn ghost sm">Save Deal</button>
+    </form>
+    <a href="{{ url_for('investor.capital_application', prop_id=selected_prop.id) }}" class="ravlo-btn primary sm">
+      Apply
+    </a>
+  {% endif %}
+{% endif %}
+
 {% if deal %}
 <a href="{{ url_for('investor.deal_architect', deal_id=deal.id) }}" class="ravlo-btn ghost sm">
   AI Architect
@@ -101,6 +120,28 @@ Compare exit paths, pressure-test returns, and move into architect, rehab, or ca
         <span class="ravlo-chip">
           {% if deal %}Deal #{{ deal.id }}{% else %}Not Attached{% endif %}
         </span>
+      </div>
+
+      <div class="workspace-action-row mt-16">
+        {% if deal %}
+          <a href="{{ url_for('investor.deal_detail', deal_id=deal.id) }}" class="ravlo-btn ghost">
+            Save Deal
+          </a>
+          <a href="{{ url_for('investor.capital_application', deal_id=deal.id, prop_id=selected_prop.id) }}" class="ravlo-btn primary">
+            Apply
+          </a>
+        {% else %}
+          <form method="POST" action="{{ url_for('investor.save_deal_from_property', prop_id=selected_prop.id) }}" class="inline-form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="ravlo-btn ghost">
+              Save Deal
+            </button>
+          </form>
+
+          <a href="{{ url_for('investor.capital_application', prop_id=selected_prop.id) }}" class="ravlo-btn primary">
+            Apply
+          </a>
+        {% endif %}
       </div>
     </div>
 
@@ -490,12 +531,23 @@ Compare exit paths, pressure-test returns, and move into architect, rehab, or ca
             <span class="quick-sub">Use build tools for development-heavy opportunities.</span>
           </a>
 
-          <a href="{{ url_for('investor.capital_application') }}" class="quick-card">
-            <span class="quick-title">Move to Capital</span>
-            <span class="quick-sub">Prepare this opportunity for funding.</span>
+          <a href="{{ url_for('investor.capital_application', deal_id=deal.id, prop_id=selected_prop.id) }}" class="quick-card">
+            <span class="quick-title">Apply for Capital</span>
+            <span class="quick-sub">Send this deal into capital intake and funding workflow.</span>
           </a>
           {% else %}
-          <div class="empty-state">Attach or create a deal to continue the workflow.</div>
+          <form method="POST" action="{{ url_for('investor.save_deal_from_property', prop_id=selected_prop.id) }}" class="quick-save-form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="quick-card quick-card-button">
+              <span class="quick-title">Save Deal</span>
+              <span class="quick-sub">Create and attach this property as a deal in your pipeline.</span>
+            </button>
+          </form>
+
+          <a href="{{ url_for('investor.capital_application', prop_id=selected_prop.id) }}" class="quick-card">
+            <span class="quick-title">Apply for Capital</span>
+            <span class="quick-sub">Start a funding application using this property’s numbers.</span>
+          </a>
           {% endif %}
         </div>
       </section>
@@ -541,6 +593,13 @@ Compare exit paths, pressure-test returns, and move into architect, rehab, or ca
     font-size:34px;
     line-height:1.05;
     letter-spacing:-.03em;
+  }
+
+  .workspace-action-row{
+    display:flex;
+    flex-wrap:wrap;
+    gap:12px;
+    align-items:center;
   }
 
   .workspace-hero-side{
@@ -817,6 +876,8 @@ Compare exit paths, pressure-test returns, and move into architect, rehab, or ca
 
   .quick-card{
     display:block;
+    width:100%;
+    text-align:left;
     padding:18px;
     border-radius:18px;
     background:rgba(255,255,255,.03);
@@ -825,7 +886,15 @@ Compare exit paths, pressure-test returns, and move into architect, rehab, or ca
     transition:.2s ease;
   }
 
-  .quick-card:hover{
+  .quick-card-button{
+    appearance:none;
+    cursor:pointer;
+    font:inherit;
+    color:inherit;
+  }
+
+  .quick-card:hover,
+  .quick-card-button:hover{
     transform:translateY(-1px);
     border-color:rgba(107,127,147,.35);
     background:rgba(255,255,255,.045);
@@ -844,6 +913,11 @@ Compare exit paths, pressure-test returns, and move into architect, rehab, or ca
     color:var(--muted);
     font-size:13px;
     line-height:1.55;
+  }
+
+  .inline-form,
+  .quick-save-form{
+    margin:0;
   }
 
   .ravlo-link-btn{
@@ -894,6 +968,22 @@ Compare exit paths, pressure-test returns, and move into architect, rehab, or ca
     .workspace-fit-grid,
     .workspace-compare-grid{
       grid-template-columns:1fr;
+    }
+
+    .workspace-action-row{
+      flex-direction:column;
+      align-items:stretch;
+    }
+
+    .workspace-action-row .ravlo-btn,
+    .workspace-action-row form{
+      width:100%;
+    }
+
+    .workspace-action-row .ravlo-btn,
+    .workspace-action-row button{
+      width:100%;
+      justify-content:center;
     }
   }
 </style>

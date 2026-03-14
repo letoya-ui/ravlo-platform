@@ -6,8 +6,12 @@
 Compare multiple opportunities side by side to identify the best path for capital, strategy, and execution.
 {% endblock %}
 
+{% block head %}
+<meta name="csrf-token" content="{{ csrf_token() }}">
+{% endblock %}
+
 {% block topbar_actions %}
-  <a href="{{ url_for('investor.deals') }}" class="ravlo-btn ghost sm">
+  <a href="{{ url_for('investor.deals_list') }}" class="ravlo-btn ghost sm">
     Back to Deals
   </a>
 {% endblock %}
@@ -15,7 +19,6 @@ Compare multiple opportunities side by side to identify the best path for capita
 {% block content %}
 <div class="ravlo-shell">
 
-  <!-- HERO -->
   <section class="ravlo-hero-card">
     <div>
       <div class="eyebrow">RAVLO COMPARISON STUDIO</div>
@@ -34,7 +37,6 @@ Compare multiple opportunities side by side to identify the best path for capita
 
   <div class="ravlo-grid-2 compare-grid">
 
-    <!-- LEFT -->
     <div class="ravlo-stack">
       <section class="ravlo-card pad">
         <div class="section-head">
@@ -62,9 +64,9 @@ Compare multiple opportunities side by side to identify the best path for capita
                 </div>
 
                 <div class="deal-picker-meta">
-                  <span>Strategy: {{ deal.recommended_strategy or deal.strategy or "Pending" }}</span>
+                  <span>Strategy: {{ (deal.recommended_strategy or deal.strategy or "Pending")|replace("_", " ")|title }}</span>
                   <span>Score:
-                    {% if deal.deal_score %}
+                    {% if deal.deal_score is not none %}
                       {{ deal.deal_score }}/100
                     {% else %}
                       Pending
@@ -89,10 +91,7 @@ Compare multiple opportunities side by side to identify the best path for capita
       </section>
     </div>
 
-    <!-- RIGHT -->
     <div class="ravlo-stack">
-
-      <!-- SUMMARY -->
       <section class="ravlo-card pad">
         <div class="section-head">
           <div>
@@ -124,7 +123,6 @@ Compare multiple opportunities side by side to identify the best path for capita
         </div>
       </section>
 
-      <!-- TABLE -->
       <section class="ravlo-card pad">
         <div class="section-head">
           <div>
@@ -160,7 +158,6 @@ Compare multiple opportunities side by side to identify the best path for capita
         </div>
       </section>
 
-      <!-- AI NARRATIVE PLACEHOLDER -->
       <section class="ravlo-card pad">
         <div class="section-head">
           <div>
@@ -175,7 +172,6 @@ Compare multiple opportunities side by side to identify the best path for capita
           </p>
         </div>
       </section>
-
     </div>
   </div>
 </div>
@@ -230,6 +226,12 @@ Compare multiple opportunities side by side to identify the best path for capita
   .deal-picker-item:hover{
     border-color:rgba(107,127,147,.35);
     background:rgba(255,255,255,.045);
+  }
+
+  .deal-picker-item:has(input:checked){
+    border-color:rgba(107,127,147,.45);
+    background:rgba(107,127,147,.08);
+    box-shadow:0 0 0 1px rgba(107,127,147,.18) inset;
   }
 
   .deal-picker-check{
@@ -397,26 +399,39 @@ Compare multiple opportunities side by side to identify the best path for capita
 </style>
 
 <script>
+  const comparisonRunUrl = "{{ url_for('investor.run_deal_comparison') }}";
+
   function formatMoney(value) {
     const number = Number(value || 0);
     return "$" + number.toLocaleString(undefined, { maximumFractionDigits: 0 });
   }
 
+  function escapeHtml(value) {
+    return String(value ?? "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  }
+
   function selectedDealIds() {
-    return Array.from(document.querySelectorAll(".deal-checkbox:checked")).map(el => Number(el.value));
+    return Array.from(document.querySelectorAll(".deal-checkbox:checked"))
+      .map(el => Number(el.value))
+      .filter(Number.isFinite);
   }
 
   function setSummaryText(id, deal, fallback = "—") {
     const el = document.getElementById(id);
     if (!el) return;
-    el.textContent = deal && deal.title ? deal.title : fallback;
+    el.textContent = deal ? (deal.title || deal.address || fallback) : fallback;
   }
 
   function buildNarrative(summary) {
-    const bestProfit = summary.best_profit_deal?.title;
-    const bestROI = summary.best_roi_deal?.title;
-    const bestScore = summary.best_score_deal?.title;
-    const bestRental = summary.best_rental_deal?.title;
+    const bestProfit = summary.best_profit_deal?.title || summary.best_profit_deal?.address;
+    const bestROI = summary.best_roi_deal?.title || summary.best_roi_deal?.address;
+    const bestScore = summary.best_score_deal?.title || summary.best_score_deal?.address;
+    const bestRental = summary.best_rental_deal?.title || summary.best_rental_deal?.address;
 
     let parts = [];
 
@@ -448,11 +463,14 @@ Compare multiple opportunities side by side to identify the best path for capita
       return;
     }
 
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute("content") || "";
+
     try {
-      const res = await fetch("/investor/deal-comparison/run", {
+      const res = await fetch(comparisonRunUrl, {
         method: "POST",
         headers: {
-          "Content-Type": "application/json"
+          "Content-Type": "application/json",
+          "X-CSRFToken": csrfToken
         },
         body: JSON.stringify({ deal_ids: dealIds })
       });
@@ -485,23 +503,33 @@ Compare multiple opportunities side by side to identify the best path for capita
         return;
       }
 
-      tbody.innerHTML = comparison.map(item => `
-        <tr>
-          <td>
-            <div class="table-deal-title">${item.title || "Untitled Deal"}</div>
-            <div class="table-deal-sub">${item.address || "No address saved"}</div>
-          </td>
-          <td>${formatMoney(item.purchase_price)}</td>
-          <td>${formatMoney(item.rehab_cost)}</td>
-          <td>${formatMoney(item.arv)}</td>
-          <td>${formatMoney(item.estimated_rent)}</td>
-          <td>${formatMoney(item.total_cost)}</td>
-          <td>${formatMoney(item.projected_profit)}</td>
-          <td>${Number(item.projected_roi || 0).toLocaleString(undefined, {maximumFractionDigits: 2})}%</td>
-          <td>${item.recommended_strategy || "Pending"}</td>
-          <td><span class="score-pill">${item.deal_score || 0}/100</span></td>
-        </tr>
-      `).join("");
+      tbody.innerHTML = comparison.map(item => {
+        const scoreText = (item.deal_score !== null && item.deal_score !== undefined)
+          ? `${item.deal_score}/100`
+          : "Pending";
+
+        const strategyText = item.recommended_strategy
+          ? String(item.recommended_strategy).replaceAll("_", " ")
+          : "Pending";
+
+        return `
+          <tr>
+            <td>
+              <div class="table-deal-title">${escapeHtml(item.title || "Untitled Deal")}</div>
+              <div class="table-deal-sub">${escapeHtml(item.address || "No address saved")}</div>
+            </td>
+            <td>${formatMoney(item.purchase_price)}</td>
+            <td>${formatMoney(item.rehab_cost)}</td>
+            <td>${formatMoney(item.arv)}</td>
+            <td>${formatMoney(item.estimated_rent)}</td>
+            <td>${formatMoney(item.total_cost)}</td>
+            <td>${formatMoney(item.projected_profit)}</td>
+            <td>${Number(item.projected_roi || 0).toLocaleString(undefined, { maximumFractionDigits: 2 })}%</td>
+            <td>${escapeHtml(strategyText)}</td>
+            <td><span class="score-pill">${escapeHtml(scoreText)}</span></td>
+          </tr>
+        `;
+      }).join("");
 
     } catch (err) {
       console.error(err);

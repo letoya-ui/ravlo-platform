@@ -92,8 +92,7 @@ Your capital, deals, and funding — in one place.
     padding:26px;
     border-radius:24px;
     border:1px solid rgba(255,255,255,.06);
-    background:
-      linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
+    background:linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
     backdrop-filter:blur(14px);
     box-shadow:
       inset 0 1px 0 rgba(255,255,255,.05),
@@ -131,8 +130,7 @@ Your capital, deals, and funding — in one place.
     padding:22px;
     border-radius:24px;
     border:1px solid rgba(255,255,255,.06);
-    background:
-      linear-gradient(180deg, rgba(20,30,40,.48), rgba(12,18,26,.64));
+    background:linear-gradient(180deg, rgba(20,30,40,.48), rgba(12,18,26,.64));
     backdrop-filter:blur(16px);
     box-shadow:
       inset 0 1px 0 rgba(255,255,255,.05),
@@ -165,8 +163,7 @@ Your capital, deals, and funding — in one place.
     position:relative;
     border-radius:28px;
     border:1px solid rgba(255,255,255,.06);
-    background:
-      linear-gradient(180deg, rgba(20,30,40,.48), rgba(12,18,26,.64));
+    background:linear-gradient(180deg, rgba(20,30,40,.48), rgba(12,18,26,.64));
     backdrop-filter:blur(16px);
     box-shadow:
       inset 0 1px 0 rgba(255,255,255,.05),
@@ -212,8 +209,7 @@ Your capital, deals, and funding — in one place.
     padding:22px;
     border-radius:22px;
     border:1px solid rgba(255,255,255,.06);
-    background:
-      linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.02));
+    background:linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.02));
     backdrop-filter:blur(12px);
   }
 
@@ -282,6 +278,8 @@ Your capital, deals, and funding — in one place.
     border:1px solid rgba(255,255,255,.06);
     background:rgba(255,255,255,.025);
     transition:all .22s ease;
+    text-decoration:none;
+    color:inherit;
   }
 
   .command-center-page .quick-card:hover{
@@ -312,6 +310,7 @@ Your capital, deals, and funding — in one place.
     color:rgba(255,255,255,.88);
     font-weight:700;
     font-size:.9rem;
+    text-decoration:none;
   }
 
   .command-center-page .ravlo-link-btn:hover{
@@ -393,8 +392,7 @@ Your capital, deals, and funding — in one place.
     padding:18px;
     border-radius:20px;
     border:1px solid rgba(255,255,255,.06);
-    background:
-      linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.02));
+    background:linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.02));
     backdrop-filter:blur(12px);
   }
 
@@ -497,28 +495,32 @@ Your capital, deals, and funding — in one place.
 {% endblock %}
 
 {% block content %}
-<div class="ravlo-dashboard">
+{% set progress = snapshot.progress_percent if snapshot and snapshot.progress_percent is not none else 0 %}
+{% set progress = 100 if progress > 100 else progress %}
+{% set progress = 0 if progress < 0 else progress %}
+
+<div class="ravlo-dashboard command-center-page">
 
   <!-- HERO -->
   <section class="ravlo-hero-card command-hero">
     <div>
       <div class="eyebrow">RAVLO COMMAND CENTER</div>
-      <h2>{{ current_user.first_name }} {{ current_user.last_name }}</h2>
+      <h2>{{ ((current_user.first_name or "") ~ " " ~ (current_user.last_name or ""))|trim or "Investor" }}</h2>
       <p class="muted">
-        {{ investor_profile.strategy or "Your capital, deals, and funding in one command view." }}
+        {{ investor_profile.strategy if investor_profile and investor_profile.strategy else "Your capital, deals, and funding in one command view." }}
       </p>
 
       <div class="ravlo-chip-row" style="margin-top:16px;">
         <span class="ravlo-chip">{{ total_deals or 0 }} Deal{% if (total_deals or 0) != 1 %}s{% endif %}</span>
         <span class="ravlo-chip">{{ ready_for_funding_count or 0 }} Ready for Funding</span>
-        <span class="ravlo-chip">{{ capital_requests|length }} Capital Request{% if (capital_requests|length) != 1 %}s{% endif %}</span>
+        <span class="ravlo-chip">{{ (capital_requests or [])|length }} Capital Request{% if ((capital_requests or [])|length) != 1 %}s{% endif %}</span>
       </div>
     </div>
 
     <div class="hero-side-stat">
       <span>Capital Requested</span>
-      <strong>${{ "{:,.0f}".format(snapshot.amount or 0) }}</strong>
-      <small>{{ snapshot.address or "No active property selected" }}</small>
+      <strong>${{ "{:,.0f}".format((snapshot.amount if snapshot else 0) or 0) }}</strong>
+      <small>{{ snapshot.address if snapshot and snapshot.address else "No active property selected" }}</small>
     </div>
   </section>
 
@@ -548,7 +550,6 @@ Your capital, deals, and funding — in one place.
   <!-- MIXED GRID -->
   <section class="dashboard-mixed-grid">
 
-    <!-- AI GUIDANCE -->
     <section class="panel panel-large">
       <div class="section-head">
         <div>
@@ -559,22 +560,21 @@ Your capital, deals, and funding — in one place.
 
       <div class="feature-highlight">
         <div class="feature-highlight-label">Next Step</div>
-        <div class="feature-highlight-value">{{ next_step_ai }}</div>
+        <div class="feature-highlight-value">{{ next_step_ai or "Review your pipeline and prioritize the strongest funding-ready deal." }}</div>
       </div>
 
       <div class="progress-wrap" style="margin-top:16px;">
         <div class="progress-head">
           <span>Capital Progress</span>
-          <strong>{{ snapshot.progress_percent or 0 }}%</strong>
+          <strong>{{ progress }}%</strong>
         </div>
 
         <div class="ravlo-progress">
-          <div class="ravlo-progress-bar" style="width: {{ snapshot.progress_percent or 0 }}%;"></div>
+          <div class="ravlo-progress-bar" style="width: {{ progress }}%;"></div>
         </div>
       </div>
     </section>
 
-    <!-- QUICK ACTIONS -->
     <section class="panel panel-small">
       <div class="section-head">
         <div>
@@ -601,7 +601,6 @@ Your capital, deals, and funding — in one place.
       </div>
     </section>
 
-    <!-- RECENT DEALS -->
     <section class="panel panel-wide">
       <div class="section-head">
         <div>
@@ -625,9 +624,9 @@ Your capital, deals, and funding — in one place.
             </div>
 
             <div class="recent-meta">
-              <span class="mini-pill">{{ deal.recommended_strategy or deal.strategy or "Pending" }}</span>
+              <span class="mini-pill">{{ (deal.recommended_strategy or deal.strategy or "Pending")|replace("_", " ")|title }}</span>
               <span class="mini-pill">
-                {% if deal.deal_score %}
+                {% if deal.deal_score is not none %}
                   {{ deal.deal_score }}/100
                 {% else %}
                   Score Pending
@@ -645,7 +644,6 @@ Your capital, deals, and funding — in one place.
       {% endif %}
     </section>
 
-    <!-- ALERTS -->
     <section class="panel panel-small">
       <div class="section-head">
         <div>
@@ -654,13 +652,13 @@ Your capital, deals, and funding — in one place.
         </div>
       </div>
 
-      {% set pending_conditions = conditions | selectattr("status", "ne", "cleared") | list %}
+      {% set pending_conditions = (conditions or []) | selectattr("status", "ne", "cleared") | list %}
       {% if pending_conditions %}
         <div class="alert-list">
           {% for c in pending_conditions[:4] %}
           <div class="alert-row">
             <span class="ravlo-badge risk">Alert</span>
-            <span class="muted">{{ c.description }}</span>
+            <span class="muted">{{ c.description or "Condition requires review." }}</span>
           </div>
           {% endfor %}
         </div>
@@ -669,7 +667,6 @@ Your capital, deals, and funding — in one place.
       {% endif %}
     </section>
 
-    <!-- ACTIVE CAPITAL -->
     <section class="panel panel-small">
       <div class="section-head">
         <div>
@@ -700,7 +697,6 @@ Your capital, deals, and funding — in one place.
       {% endif %}
     </section>
 
-    <!-- SAVED PROPERTIES -->
     <section class="panel panel-small">
       <div class="section-head">
         <div>
@@ -712,7 +708,7 @@ Your capital, deals, and funding — in one place.
       <div class="portfolio-grid">
         <div class="portfolio-box">
           <span>Saved Properties</span>
-          <strong>{{ saved_props|length }}</strong>
+          <strong>{{ (saved_props or [])|length }}</strong>
         </div>
 
         <div class="portfolio-box">
@@ -722,7 +718,6 @@ Your capital, deals, and funding — in one place.
       </div>
     </section>
 
-    <!-- AI INSIGHTS -->
     <section class="panel panel-small">
       <div class="section-head">
         <div>
@@ -744,7 +739,7 @@ Your capital, deals, and funding — in one place.
 
         <div class="ravlo-insight">
           <p class="k">Command Time</p>
-          <p class="v">{{ now_str }}</p>
+          <p class="v">{{ now_str or "—" }}</p>
         </div>
       </div>
     </section>
