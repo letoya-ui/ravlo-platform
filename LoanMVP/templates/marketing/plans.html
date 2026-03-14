@@ -1,0 +1,192 @@
+{% extends "layouts/marketing_base.html" %}
+
+{% block title %}Plans — Ravlo{% endblock %}
+
+{% block content %}
+
+<section class="section">
+<div class="container narrow">
+
+<div class="section-tag">Choose Your Path</div>
+
+<h1 style="font-size:3rem;margin-bottom:20px">
+Plans for Every Stage of Your Capital Journey
+</h1>
+
+<p class="section-copy">
+Start free. Upgrade when you're ready for full intelligence, AI tools, and deal workflows.
+</p>
+
+</div>
+</section>
+
+<section class="section section-alt">
+<div class="container">
+
+<div class="grid grid-4 plans-grid">
+
+<!-- FREE PLAN -->
+<div class="plan-card">
+<div class="plan-name">Free</div>
+<div class="plan-price">$0</div>
+<p class="plan-desc">Get started with the essentials.</p>
+
+<ul class="plan-features">
+<li>Loan application workflow</li>
+<li>Basic dashboard</li>
+<li>No deals</li>
+<li>No AI tools</li>
+<li>No analytics</li>
+</ul>
+
+<a href="/auth/register?plan=free" class="plan-cta">Continue Free</a>
+</div>
+
+<!-- CORE PLAN -->
+<div class="plan-card highlight">
+<div class="plan-name">Core</div>
+<div class="plan-price">$49/mo</div>
+<p class="plan-desc">Unlock intelligence and deal workflows.</p>
+
+<ul class="plan-features">
+<li>Deal Workspace</li>
+<li>Property Intelligence (basic)</li>
+<li>AI Tools</li>
+<li>Document Intelligence</li>
+<li>Borrower OS</li>
+</ul>
+
+<a href="/auth/register?plan=core" class="plan-cta">Start 30‑Day Trial</a>
+</div>
+
+<!-- PRO PLAN -->
+<div class="plan-card highlight">
+<div class="plan-name">Pro</div>
+<div class="plan-price">$149/mo</div>
+<p class="plan-desc">Advanced intelligence for serious investors.</p>
+
+<ul class="plan-features">
+<li>Everything in Core</li>
+<li>Advanced Property Intelligence</li>
+<li>Investor Analytics</li>
+<li>Strategy Engine</li>
+<li>Multi‑deal Workspace</li>
+</ul>
+
+<a href="/auth/register?plan=pro" class="plan-cta">Start 30‑Day Trial</a>
+</div>
+
+<!-- ENTERPRISE PLAN -->
+<div class="plan-card">
+<div class="plan-name">Enterprise</div>
+<div class="plan-price">Custom</div>
+<p class="plan-desc">For teams and large‑scale operators.</p>
+
+<ul class="plan-features">
+<li>Everything in Pro</li>
+<li>Team Accounts</li>
+<li>Custom Workflows</li>
+<li>Dedicated Support</li>
+</ul>
+
+<a href="/contact" class="plan-cta">Contact Sales</a>
+</div>
+
+</div>
+
+</div>
+</section>
+
+<section class="section">
+<div class="container">
+
+<div class="section-tag">Comparison</div>
+<h2>What You Unlock When You Upgrade</h2>
+
+<div class="comparison-table">
+
+<table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>Free</th>
+<th>Core</th>
+<th>Pro</th>
+<th>Enterprise</th>
+</tr>
+</thead>
+
+<tbody>
+<tr>
+<td>Loan Application</td>
+<td>✔️</td>
+<td>✔️</td>
+<td>✔️</td>
+<td>✔️</td>
+</tr>
+
+<tr>
+<td>Dashboard Access</td>
+<td>✔️</td>
+<td>✔️</td>
+<td>✔️</td>
+<td>✔️</td>
+</tr>
+
+<tr>
+<td>Deal Workspace</td>
+<td>❌</td>
+<td>✔️</td>
+<td>✔️</td>
+<td>✔️</td>
+</tr>
+
+<tr>
+<td>Property Intelligence</td>
+<td>❌</td>
+<td>Basic</td>
+<td>Advanced</td>
+<td>Advanced</td>
+</tr>
+
+<tr>
+<td>AI Tools</td>
+<td>❌</td>
+<td>✔️</td>
+<td>✔️</td>
+<td>✔️</td>
+</tr>
+
+<tr>
+<td>Investor Analytics</td>
+<td>❌</td>
+<td>❌</td>
+<td>✔️</td>
+<td>✔️</td>
+</tr>
+
+<tr>
+<td>Strategy Engine</td>
+<td>❌</td>
+<td>❌</td>
+<td>✔️</td>
+<td>✔️</td>
+</tr>
+
+<tr>
+<td>Team Accounts</td>
+<td>❌</td>
+<td>❌</td>
+<td>❌</td>
+<td>✔️</td>
+</tr>
+
+</tbody>
+</table>
+
+</div>
+
+</div>
+</section>
+
+{% endblock %}

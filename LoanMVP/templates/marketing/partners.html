@@ -1,0 +1,145 @@
+{% extends "layouts/marketing_base.html" %}
+
+{% block title %}Ravlo Partners{% endblock %}
+
+{% block content %}
+
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+
+<title>Ravlo Partners</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+<link rel="stylesheet" href="{{ url_for('static', filename='css/marketing.css') }}">
+</head>
+
+<body>
+
+<header class="topbar">
+<div class="container topbar-inner">
+
+<div class="brand">
+<div class="brand-mark">R</div>
+<div>
+<div class="brand-title">Ravlo</div>
+<div class="brand-sub">Investor Operating System</div>
+</div>
+</div>
+
+</div>
+</header>
+
+
+<section class="hero">
+<div class="container narrow">
+
+<h1 style="font-size:3.5rem;margin-bottom:20px">
+Become a Ravlo Partner
+</h1>
+
+<p class="hero-text">
+Join a network of contractors, agents, lenders, and operators who support active real estate projects and connect directly with investors and borrowers.
+</p>
+
+</div>
+</section>
+
+
+<section class="section">
+<div class="container">
+
+<div class="section-head">
+<div class="section-tag">Why Partner With Ravlo</div>
+<h2>Connect with real opportunities, not cold leads.</h2>
+
+<p>
+Ravlo brings together investors, builders, and borrowers who are actively executing deals.  
+Partners gain visibility, credibility, and direct access to projects that need their expertise.
+</p>
+</div>
+
+<div class="grid grid-3">
+
+<div class="card">
+<h3>Contractors</h3>
+<p>Get matched with renovation and construction projects that align with your capabilities.</p>
+</div>
+
+<div class="card">
+<h3>Real Estate Agents</h3>
+<p>Connect with investors seeking acquisitions, dispositions, and market intelligence.</p>
+</div>
+
+<div class="card">
+<h3>Lenders & Capital Partners</h3>
+<p>Access qualified borrowers and vetted opportunities inside a structured workflow.</p>
+</div>
+
+</div>
+
+</div>
+</section>
+
+
+<section class="section section-alt">
+<div class="container narrow">
+
+<div class="section-tag">How It Works</div>
+
+<h2>A streamlined path to new business.</h2>
+
+<p class="section-copy">
+Ravlo integrates partners directly into the deal lifecycle — from acquisition to renovation to exit.  
+You’re not chasing leads. You’re joining a system where projects already exist.
+</p>
+
+<ul class="feature-list">
+<li>Showcase your services and capabilities</li>
+<li>Get discovered by investors and borrowers</li>
+<li>Receive project invitations and requests</li>
+<li>Collaborate inside a unified workflow</li>
+</ul>
+
+</div>
+</section>
+
+
+<section class="section">
+<div class="container narrow">
+
+<div class="section-tag">Join the Network</div>
+
+<h2>Become a Ravlo Partner Today</h2>
+
+<p class="section-copy">
+Whether you're a contractor, agent, lender, or operator, Ravlo gives you a presence inside the ecosystem where real estate work actually happens.
+</p>
+
+<a class="btn btn-primary btn-lg" href="/partners/register">
+Create Partner Account
+</a>
+
+</div>
+</section>
+
+
+<footer class="footer">
+<div class="container footer-inner">
+
+<div>
+<div class="brand-title">Ravlo</div>
+<div class="brand-sub">A presence for people who build.</div>
+</div>
+
+</div>
+</footer>
+
+</body>
+</html>
+
+{% endblock %}
