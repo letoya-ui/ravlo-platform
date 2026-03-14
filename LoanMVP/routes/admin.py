@@ -540,6 +540,7 @@ def ai_dashboard():
 
 
 @admin_bp.route("/ai/refresh/<string:target>", methods=["POST"])
+@csrf.exempt
 @role_required("admin")
 def ai_refresh(target):
     time.sleep(1.2)
