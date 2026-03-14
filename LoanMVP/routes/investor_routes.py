@@ -941,21 +941,55 @@ def resource_center():
     Investor Resource Center
     Tools, FAQs, Partners, AI Help
     """
-
     ip = InvestorProfile.query.filter_by(user_id=current_user.id).first()
+    if not ip:
+        flash("Please complete your investor profile first.", "warning")
+        return redirect(url_for("investor.create_profile"))
 
-    partners = Partner.query.order_by(Partner.name.asc()).all()
+    selected_category = (request.args.get("category") or "All").strip()
+
+    partner_query = Partner.query.filter(
+        Partner.active.is_(True),
+        Partner.approved.is_(True)
+    )
+
+    if selected_category != "All":
+        partner_query = partner_query.filter(Partner.category.ilike(f"%{selected_category}%"))
+
+    partners = partner_query.order_by(
+        Partner.featured.desc(),
+        Partner.rating.desc().nullslast(),
+        Partner.name.asc()
+    ).limit(8).all()
 
     faqs = [
         {"q": "How long does approval take?", "a": "Most approvals are 5–10 business days."},
         {"q": "What documents are required?", "a": "Purchase contract, scope, bank statements."},
+        {"q": "How do I request funding?", "a": "Open a deal and click Funding to launch the Capital Application."},
+        {"q": "Can I request a contractor or partner?", "a": "Yes. Use the Partner Directory in the Resource Center to request a connection."},
     ]
+
+    timeline = [
+        {"title": "Capital Request Started", "status": "completed"},
+        {"title": "File Review", "status": "current"},
+        {"title": "Conditions Cleared", "status": "upcoming"},
+        {"title": "Approval / Funding", "status": "upcoming"},
+    ]
+
+    loan = None
+    loan_officer = None
+    processor = None
 
     return render_template(
         "investor/resource_center.html",
         investor=ip,
         partners=partners,
         faqs=faqs,
+        selected_category=selected_category,
+        timeline=timeline,
+        loan=loan,
+        loan_officer=loan_officer,
+        processor=processor,
         title="RAVLO Resource Center",
         active_tab="resources"
     )
@@ -6196,7 +6230,10 @@ def partners():
     service_area = (request.args.get("service_area") or "").strip()
     relationship_level = (request.args.get("relationship_level") or "").strip()
 
-    query = Partner.query.filter_by(active=True, approved=True)
+    query = Partner.query.filter(
+        Partner.active.is_(True),
+        Partner.approved.is_(True)
+    )
 
     if q:
         query = query.filter(
@@ -6222,7 +6259,7 @@ def partners():
 
     query = query.order_by(
         Partner.featured.desc(),
-        Partner.rating.desc(),
+        Partner.rating.desc().nullslast(),
         Partner.created_at.desc()
     )
 
@@ -6256,6 +6293,7 @@ def partners():
         selected_service_area=service_area,
         selected_relationship_level=relationship_level,
         title="Partner Network",
+        active_tab="partners",
     )
 
 
@@ -6279,7 +6317,9 @@ def partner_detail(partner_id):
         investor=ip,
         partner=partner,
         title="Partner Details",
+        active_tab="partners",
     )
+
 
 @investor_bp.route("/partners/<int:partner_id>/request-intro", methods=["POST"])
 @login_required
@@ -6313,3 +6353,72 @@ def request_partner_intro(partner_id):
 
     flash(f"Intro request sent for {partner.company or partner.name}.", "success")
     return redirect(url_for("investor.partner_detail", partner_id=partner.id))
+
+@investor_bp.route("/resources/request-connection", methods=["POST"])
+@login_required
+@role_required("investor")
+def request_connection():
+    ip = InvestorProfile.query.filter_by(user_id=current_user.id).first()
+    if not ip:
+        return jsonify({
+            "success": False,
+            "message": "Please complete your investor profile first."
+        }), 400
+
+    data = request.get_json(silent=True) or {}
+
+    partner_id = data.get("partner_id")
+    message = (data.get("message") or "").strip()
+    property_id = data.get("property_id")
+    lead_id = data.get("lead_id")
+
+    if not partner_id:
+        return jsonify({
+            "success": False,
+            "message": "Missing partner_id."
+        }), 400
+
+    partner = Partner.query.get_or_404(partner_id)
+
+    if not partner.active or not partner.approved:
+        return jsonify({
+            "success": False,
+            "message": "This partner is not currently available."
+        }), 400
+
+    req = PartnerConnectionRequest(
+        borrower_user_id=None,
+        investor_user_id=current_user.id,
+        borrower_profile_id=None,
+        investor_profile_id=ip.id,
+        property_id=property_id if property_id else None,
+        lead_id=lead_id if lead_id else None,
+        partner_id=partner.id,
+        category=partner.category,
+        message=message or f"Investor requested connection with {partner.company or partner.name}.",
+        status="pending",
+    )
+
+    db.session.add(req)
+
+    followup = FollowUpItem(
+        investor_profile_id=ip.id,
+        description=f"Partner connection requested: {partner.company or partner.name}",
+        is_done=False,
+        created_by=current_user.id,
+    )
+    db.session.add(followup)
+
+    db.session.commit()
+
+    return jsonify({
+        "success": True,
+        "message": f"Request sent for {partner.company or partner.name}."
+    }), 200
+
+@investor_bp.route("/resources/partners/filter", methods=["GET"])
+@login_required
+@role_required("investor")
+def partners_filter():
+    category = (request.args.get("category") or "All").strip()
+    return redirect(url_for("investor.resource_center", category=category))
