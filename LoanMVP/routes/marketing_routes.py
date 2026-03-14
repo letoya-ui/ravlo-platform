@@ -73,3 +73,7 @@ def contact():
 @marketing_bp.route("/support")
 def support():
     return render_template("marketing/support.html")
+
+@marketing_bp.route("/faq")
+def faq():
+    return render_template("marketing/faq.html")
