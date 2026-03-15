@@ -1,18 +1,21 @@
 /* LoanMVP/static/css/marketing.css */
 
 :root{
-  --bg: #08101f;
-  --bg-2: #0d172b;
-  --panel: rgba(255,255,255,.05);
-  --panel-strong: #0f1b31;
-  --line: rgba(255,255,255,.10);
-  --text: #f8fbff;
-  --muted: #aab7cf;
-  --blue: #60a5fa;
-  --blue-2: #3b82f6;
-  --glow: rgba(96,165,250,.22);
+  --bg: #0C1116;              /* Midnight */
+  --bg-2: #11161C;            /* Deep Slate */
+  --panel: rgba(255,255,255,.04);
+  --panel-strong: #1A232C;    /* Steel */
+  --line: rgba(255,255,255,.08);
+
+  --text: #E6ECF2;            /* Soft white */
+  --muted: #6B7F93;           /* Gray-blue */
+
+  --blue: #3A5C7A;            /* Accent Blue */
+  --blue-2: #4A6F8F;          /* Slightly brighter accent */
+  --glow: rgba(58, 92, 122, .25);
+
   --radius: 24px;
-  --shadow: 0 20px 60px rgba(0,0,0,.28);
+  --shadow: 0 20px 60px rgba(0,0,0,.45);
 }
 
 *{box-sizing:border-box}
@@ -21,9 +24,9 @@ body{
   margin:0;
   font-family:'Inter',sans-serif;
   background:
-    radial-gradient(900px 500px at 10% 0%, rgba(59,130,246,.12), transparent 50%),
-    radial-gradient(900px 500px at 100% 10%, rgba(96,165,250,.10), transparent 40%),
-    linear-gradient(180deg, #07101d 0%, #091324 40%, #08101f 100%);
+    radial-gradient(900px 500px at 10% 0%, rgba(58,92,122,.12), transparent 50%),
+    radial-gradient(900px 500px at 100% 10%, rgba(58,92,122,.10), transparent 40%),
+    linear-gradient(180deg, #0C1116 0%, #11161C 40%, #0C1116 100%);
   color:var(--text);
 }
 
@@ -133,22 +136,22 @@ a{
 }
 
 .btn-primary{
-  background:linear-gradient(135deg, var(--blue-2), #6ea8ff);
+  background:linear-gradient(135deg, var(--blue), var(--blue-2));
   color:white;
-  box-shadow:0 12px 30px rgba(59,130,246,.25);
+  box-shadow:0 12px 30px var(--glow);
 }
 .btn-primary:hover{
   transform:translateY(-1px);
-  box-shadow:0 18px 36px rgba(59,130,246,.32);
+  box-shadow:0 18px 36px rgba(58,92,122,.32);
 }
 
 .btn-ghost{
-  background:rgba(255,255,255,.04);
-  border-color:rgba(255,255,255,.14);
-  color:white;
+  background:rgba(255,255,255,.03);
+  border-color:rgba(255,255,255,.10);
+  color:var(--text);
 }
 .btn-ghost:hover{
-  background:rgba(255,255,255,.08);
+  background:rgba(255,255,255,.06);
 }
 
 .hero{
@@ -326,13 +329,11 @@ a{
   border-bottom:1px solid rgba(255,255,255,.06);
 }
 
-.section-tag{
-  font-size:.82rem;
-  font-weight:700;
-  letter-spacing:.22em;
-  text-transform:uppercase;
-  color:#93c5fd;
-  margin-bottom:14px;
+.section-tag,
+.eyebrow{
+  color:var(--muted);
+  border-color:rgba(58,92,122,.35);
+  background:rgba(58,92,122,.12);
 }
 
 .section-head{
@@ -384,18 +385,11 @@ a{
 }
 
 .icon-badge{
-  width:48px;
-  height:48px;
-  border-radius:16px;
-  display:grid;
-  place-items:center;
-  font-weight:700;
-  font-size:.9rem;
-  color:#dbeafe;
-  margin-bottom:16px;
-  border:1px solid rgba(96,165,250,.20);
-  background:rgba(59,130,246,.12);
+  border:1px solid rgba(58,92,122,.35);
+  background:rgba(58,92,122,.18);
+  color:var(--text);
 }
+
 
 .card h3{
   margin:0 0 10px;
@@ -481,33 +475,16 @@ a{
 }
 
 .eco-center{
-  left:50%;
-  top:110px;
-  width:250px;
-  height:250px;
-  transform:translateX(-50%);
-  background:radial-gradient(circle at 50% 50%, rgba(59,130,246,.18), rgba(255,255,255,.03));
-  display:grid;
-  place-items:center;
+  background:radial-gradient(circle at 50% 50%, rgba(58,92,122,.22), rgba(255,255,255,.03));
 }
 
 .eco-core-ring{
-  position:absolute;
-  inset:18px;
-  border-radius:999px;
-  border:1px solid rgba(96,165,250,.24);
-  box-shadow:0 0 40px rgba(59,130,246,.12);
+  border:1px solid rgba(58,92,122,.35);
+  box-shadow:0 0 40px rgba(58,92,122,.18);
 }
 
 .eco-core{
-  width:150px;
-  height:150px;
-  border-radius:999px;
-  display:grid;
-  place-items:center;
-  text-align:center;
-  background:linear-gradient(180deg, rgba(59,130,246,.30), rgba(59,130,246,.10));
-  border:1px solid rgba(255,255,255,.14);
+  background:linear-gradient(180deg, rgba(58,92,122,.30), rgba(58,92,122,.10));
 }
 
 .eco-core-label{
