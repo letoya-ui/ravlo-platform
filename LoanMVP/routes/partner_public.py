@@ -130,7 +130,7 @@ def message_partner(partner_id):
         partner_id=partner.id
     ))
 
-@partners_bp.route("/requests")
+@partners_public_bp.route("/requests")
 @role_required("partner")
 def requests_inbox():
     partner = Partner.query.filter_by(user_id=current_user.id).first()
