@@ -1,107 +1,124 @@
 {% extends "layouts/marketing_base.html" %}
-
-{% block title %}About Ravlo{% endblock %}
-
 {% block content %}
 
-<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>About Ravlo</title>
+<!-- =========================
+     ABOUT — RAVLO
+========================= -->
 
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<!-- HERO -->
+<section class="about-hero">
+  <div class="container about-hero-inner">
 
-<link rel="stylesheet" href="{{ url_for('static', filename='css/marketing.css') }}">
-</head>
+    <div class="about-hero-copy">
+      <h1>The Story Behind Ravlo</h1>
+      <p class="about-hero-text">
+        Ravlo was built for the ones who see property as a medium — not just an asset class.
+        A cinematic operating system for builders who move differently.
+      </p>
+    </div>
 
-<body>
-
-
-<section class="section">
-<div class="container narrow">
-
-<div class="section-tag">The Story</div>
-
-<h1 style="font-size:3rem;margin-bottom:20px">
-The Purpose of Ravlo
-</h1>
-
-<p class="section-copy">
-Ravlo didn’t begin as software. It began as a way of working.
-</p>
-
-<p class="section-copy">
-It was shaped by real projects — acquisitions, renovations, construction timelines, budgets, lenders, contractors, and the discipline required to turn potential into performance.
-</p>
-
-<p class="section-copy">
-Most tools built for investors oversimplify the process. They miss the nuance, the sequencing, the reality of what it takes to build.
-</p>
-
-<p class="section-copy">
-Ravlo exists to close that gap — transforming the fragmented world of real estate into a unified operating system for people who create value.
-</p>
-
-</div>
+  </div>
 </section>
 
-<section class="section section-alt">
-<div class="container">
+<!-- ORIGIN -->
+<section class="about-origin">
+  <div class="container origin-grid">
 
-<div class="section-head">
-<div class="section-tag">The Mission</div>
-<h2>Create the operating system for real estate developers.</h2>
+    <div class="origin-text">
+      <h2>Where it started</h2>
+      <p>
+        Ravlo began with a simple belief: real estate deserves better tools.
+        Not spreadsheets. Not scattered apps. Not guesswork.
+      </p>
+      <p>
+        Builders, investors, and operators needed a place where vision, numbers,
+        design, and execution could live together — in one cinematic flow.
+      </p>
+    </div>
 
-<p>
-A platform where investors, builders, partners, and capital operate within a single environment — aligned, organized, and moving with clarity.
-</p>
+    <div class="origin-visual">
+      <div class="origin-card"></div>
+    </div>
 
-</div>
-
-<div class="grid grid-3">
-
-<div class="card">
-<h3>Investors</h3>
-<p>Evaluate opportunities, manage risk, and scale portfolios with precision.</p>
-</div>
-
-<div class="card">
-<h3>Builders</h3>
-<p>Organize renovations, streamline execution, and deliver projects with discipline.</p>
-</div>
-
-<div class="card">
-<h3>Partners</h3>
-<p>Connect lenders, contractors, agents, and operators into one unified workflow.</p>
-</div>
-
-</div>
-
-</div>
+  </div>
 </section>
 
-<section class="section">
-<div class="container narrow">
-
-<div class="section-tag">Founder Energy</div>
-
-<h2>Created by someone with firsthand experience.</h2>
-
-<p class="section-copy">
-Ravlo wasn’t imagined in a boardroom. It was forged through real work — the wins, the setbacks, the spreadsheets, the site visits, and the lessons learned the hard way.
-</p>
-
-<p class="section-copy">
-It represents a mindset: discipline, strategy, execution, and the belief that systems create freedom. Real estate, done right, builds generational stability.
-</p>
-
-</div>
+<!-- MISSION -->
+<section class="about-mission">
+  <div class="container mission-inner">
+    <h2>Our mission</h2>
+    <p>
+      To give every builder — from first‑time investors to seasoned operators —
+      a platform that amplifies their vision, sharpens their strategy,
+      and elevates the way they move through the world of real estate.
+    </p>
+  </div>
 </section>
 
-</body>
-</html>
+<!-- THE OS -->
+<section class="about-os">
+  <div class="container os-grid">
+
+    <div class="os-block">
+      <h3>A unified operating system</h3>
+      <p>
+        Ravlo connects deal modeling, design direction, renovation planning,
+        partner coordination, and portfolio intelligence into one seamless ecosystem.
+      </p>
+    </div>
+
+    <div class="os-block">
+      <h3>Built for clarity</h3>
+      <p>
+        Every screen, every workflow, every decision is designed to reduce noise,
+        increase confidence, and help you move with intention.
+      </p>
+    </div>
+
+    <div class="os-block">
+      <h3>Designed for momentum</h3>
+      <p>
+        Ravlo turns ideas into assets — and assets into long‑term, compounding stories.
+      </p>
+    </div>
+
+  </div>
+</section>
+
+<!-- FOUNDER SECTION -->
+<section class="about-founder">
+  <div class="container founder-grid">
+
+    <div class="founder-text">
+      <h2>From the founder</h2>
+      <p>
+        Ravlo is more than software — it’s a philosophy.
+        A belief that real estate is a canvas for creativity, discipline, and legacy.
+      </p>
+      <p>
+        We’re building tools for the next generation of investors:
+        the ones who want clarity, control, and a platform that moves at their speed.
+      </p>
+      <p class="founder-signature">— Letoya Mason, Founder</p>
+    </div>
+
+    <div class="founder-visual">
+      <div class="founder-card"></div>
+    </div>
+
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="about-cta">
+  <div class="container about-cta-inner">
+    <h2>Enter the Ravlo Ecosystem</h2>
+    <p>Bring your vision, your deals, and your partners into one cinematic operating system.</p>
+    <div class="cta-actions">
+      <a href="/auth/register" class="btn btn-primary btn-lg">Get Started</a>
+      <a href="/" class="btn btn-ghost btn-lg">Back to Home</a>
+    </div>
+  </div>
+</section>
 
 {% endblock %}
