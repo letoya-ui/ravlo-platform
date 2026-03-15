@@ -352,7 +352,7 @@ def ai_assistant():
 # MESSAGES LIST
 # -----------------------------
 @loan_officer_bp.route("/messages")
-@login_required
+@role_required("loan_officer")
 def messages():
     threads = MessageThread.query.filter_by(loan_officer_id=current_user.id)\
                                  .order_by(MessageThread.updated_at.desc())\
@@ -368,7 +368,7 @@ def messages():
 # MESSAGE THREAD VIEW
 # -----------------------------
 @loan_officer_bp.route("/messages/<int:thread_id>", methods=["GET", "POST"])
-@login_required
+@role_required("loan_officer")
 def message_thread(thread_id):
     thread = MessageThread.query.get_or_404(thread_id)
 
@@ -413,7 +413,7 @@ def message_thread(thread_id):
 # START NEW MESSAGE THREAD
 # -----------------------------
 @loan_officer_bp.route("/messages/new", methods=["GET", "POST"])
-@login_required
+@role_required("loan_officer")
 def new_message():
     borrowers = User.query.filter_by(role="borrower").all()
 
