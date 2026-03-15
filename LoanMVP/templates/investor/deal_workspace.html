@@ -607,7 +607,7 @@ Compare exit paths, pressure-test returns, and move into architect, rehab, or ca
                         <span class="quick-sub">Send this deal into capital intake and funding workflow.</span>
                     </a>
                     {% else %}
-                    <form method="POST" action="{{ url_for('investor.save_property', prop_id=selected_prop.id) }}" class="quick-save-form">
+                    <form method="POST" action="{{ url_for('investor.save_deal', prop_id=selected_prop.id) }}" class="quick-save-form">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <button type="submit" class="quick-card quick-card-button">
                             <span class="quick-title">Save Deal</span>
