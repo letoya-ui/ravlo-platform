@@ -1,40 +1,90 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ravlo</title>
 
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-
-<title>{% block title %}Ravlo{% endblock %}</title>
-
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-
-<link rel="stylesheet" href="{{ url_for('static', filename='css/marketing.css') }}">
-
+    <!-- Global Styles -->
+    <link rel="stylesheet" href="/static/css/marketing_base.css">
 </head>
 
 <body>
 
+    <!-- =========================
+         NAVIGATION
+    ========================== -->
+    <header class="nav">
+        <div class="container nav-inner">
 
+            <a href="/" class="nav-logo">
+                <img src="/static/images/logo-white.png" alt="Ravlo">
+            </a>
 
-<main>
+            <nav class="nav-links">
+                <a href="/#inside-os">OS</a>
+                <a href="/#ecosystem">Ecosystem</a>
+                <a href="/#studios">Studios</a>
+                <a href="/#direction">Vision</a>
+            </nav>
 
-{% block content %}{% endblock %}
+            <div class="nav-actions">
+                <a href="/auth/login" class="btn btn-ghost-sm">Sign In</a>
+                <a href="/auth/register" class="btn btn-primary-sm">Enter</a>
+            </div>
 
-</main>
+        </div>
+    </header>
 
+    <!-- =========================
+         PAGE CONTENT
+    ========================== -->
+    <main>
+        {% block content %}
+        {% endblock %}
+    </main>
 
-<footer class="footer">
+    <!-- =========================
+         FOOTER
+    ========================== -->
+    <footer class="footer">
+        <div class="container footer-grid">
 
-<div class="container footer-inner">
+            <div class="footer-brand">
+                <img src="/static/images/logo-white.png" alt="Ravlo">
+                <p class="footer-tagline">
+                    A cinematic operating system for builders who move differently.
+                </p>
+            </div>
 
-<div>
+            <div class="footer-col">
+                <h4>Ecosystem</h4>
+                <a href="/#ecosystem">Deal Architect</a>
+                <a href="/#ecosystem">Renovation Studio</a>
+                <a href="/#ecosystem">Build Studio</a>
+                <a href="/#ecosystem">Investor Intelligence</a>
+                <a href="/#ecosystem">Partner Network</a>
+            </div>
 
-<div class="brand-title">Ravlo</div>
-<div class="brand-sub">A presence for people who build.</div>
+            <div class="footer-col">
+                <h4>Company</h4>
+                <a href="/#direction">Vision</a>
+                <a href="/about">About</a>
+                <a href="/contact">Contact</a>
+            </div>
 
-</div>
+            <div class="footer-col">
+                <h4>Legal</h4>
+                <a href="/terms">Terms</a>
+                <a href="/privacy">Privacy</a>
+            </div>
+
+        </div>
+
+        <div class="footer-bottom">
+            <p>© {{ current_year }} Ravlo. All rights reserved.</p>
+        </div>
+    </footer>
 
 </body>
 </html>
