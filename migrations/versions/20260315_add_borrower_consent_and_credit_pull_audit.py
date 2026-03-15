@@ -1,6 +1,6 @@
 """add borrower consent and credit pull audit
 
-Revision ID: add_borrower_consent_credit_pull_audit
+Revision ID: 20260315
 Revises: add_partner_bio_specialty
 Create Date: 2026-03-15
 """
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = "add_borrower_consent_credit_pull_audit"
+revision = "20260315"
 down_revision = "add_partner_bio_specialty"
 branch_labels = None
 depends_on = None
