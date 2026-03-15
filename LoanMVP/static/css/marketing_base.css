@@ -1,0 +1,377 @@
+/* ============================
+   GLOBAL RESET + BASE
+============================ */
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  background: #05070a;
+  color: #f5f7fa;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
+  scroll-behavior: smooth;
+}
+
+img {
+  max-width: 100%;
+  display: block;
+}
+
+a {
+  text-decoration: none;
+  color: inherit;
+}
+
+/* ============================
+   CONTAINER SYSTEM
+============================ */
+
+.container {
+  width: 100%;
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+/* ============================
+   NAVIGATION
+============================ */
+
+.nav {
+  width: 100%;
+  padding: 22px 0;
+  background: rgba(5, 7, 10, 0.75);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  position: sticky;
+  top: 0;
+  z-index: 999;
+}
+
+.nav-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.nav-logo img {
+  height: 32px;
+  opacity: 0.95;
+}
+
+.nav-links {
+  display: flex;
+  gap: 32px;
+}
+
+.nav-links a {
+  font-size: 0.95rem;
+  color: #c7d0e4;
+  transition: 0.2s ease;
+}
+
+.nav-links a:hover {
+  color: #ffffff;
+}
+
+.nav-actions {
+  display: flex;
+  gap: 12px;
+}
+
+/* ============================
+   BUTTONS
+============================ */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 22px;
+  border-radius: 999px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition: 0.2s ease;
+}
+
+.btn-primary-sm {
+  background: linear-gradient(135deg, #4f8cff, #9f7bff);
+  color: #05070a;
+}
+
+.btn-primary-sm:hover {
+  opacity: 0.9;
+}
+
+.btn-ghost-sm {
+  border: 1px solid rgba(158, 173, 210, 0.4);
+  color: #e0e6f5;
+  background: transparent;
+}
+
+.btn-ghost-sm:hover {
+  border-color: rgba(255, 255, 255, 0.6);
+}
+
+/* ============================
+   FOOTER
+============================ */
+
+.footer {
+  padding: 80px 0 40px;
+  background: #05070a;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.footer-grid {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr 1fr 1fr;
+  gap: 40px;
+}
+
+.footer-brand img {
+  height: 32px;
+  margin-bottom: 16px;
+}
+
+.footer-tagline {
+  color: #a4afc6;
+  font-size: 0.95rem;
+  max-width: 260px;
+  line-height: 1.4;
+}
+
+.footer-col h4 {
+  margin-bottom: 12px;
+  font-size: 1rem;
+  color: #e0e6f5;
+}
+
+.footer-col a {
+  display: block;
+  margin-bottom: 8px;
+  color: #a4afc6;
+  font-size: 0.9rem;
+  transition: 0.2s ease;
+}
+
+.footer-col a:hover {
+  color: #ffffff;
+}
+
+.footer-bottom {
+  margin-top: 40px;
+  text-align: center;
+  color: #7f8aa3;
+  font-size: 0.85rem;
+}
+
+/* ============================
+   RESPONSIVE
+============================ */
+
+@media (max-width: 960px) {
+
+  .nav-links {
+    display: none;
+  }
+
+  .footer-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+
+  .footer-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .nav-inner {
+    justify-content: space-between;
+  }
+}
+
+/* ============================
+   CONTACT — HERO
+============================ */
+
+.contact-hero {
+  padding: 120px 0 60px;
+  background: #05070a;
+  text-align: center;
+}
+
+.contact-hero-inner h1 {
+  font-size: 3rem;
+  font-weight: 700;
+  margin-bottom: 16px;
+  color: #ffffff;
+}
+
+.contact-hero-text {
+  font-size: 1.15rem;
+  color: #b8c2d8;
+  max-width: 640px;
+  margin: 0 auto;
+  line-height: 1.6;
+}
+
+/* ============================
+   CONTACT — GRID
+============================ */
+
+.contact-section {
+  padding: 80px 0;
+}
+
+.contact-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 48px;
+  align-items: start;
+}
+
+/* ============================
+   CONTACT — INFO
+============================ */
+
+.contact-info h2 {
+  font-size: 2rem;
+  margin-bottom: 12px;
+  color: #ffffff;
+}
+
+.contact-subtext {
+  color: #a4afc6;
+  margin-bottom: 24px;
+  line-height: 1.5;
+}
+
+.contact-card {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 24px;
+  border-radius: 12px;
+  backdrop-filter: blur(10px);
+}
+
+.contact-card p {
+  margin-bottom: 10px;
+  color: #d0d7e6;
+}
+
+.contact-card a {
+  color: #8fb3ff;
+  transition: 0.2s ease;
+}
+
+.contact-card a:hover {
+  color: #ffffff;
+}
+
+/* ============================
+   CONTACT — FORM
+============================ */
+
+.contact-form-wrapper {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  padding: 32px;
+  border-radius: 12px;
+  backdrop-filter: blur(12px);
+}
+
+.contact-form .form-group {
+  margin-bottom: 20px;
+}
+
+.contact-form label {
+  display: block;
+  margin-bottom: 6px;
+  color: #e0e6f5;
+  font-size: 0.95rem;
+}
+
+.contact-form input,
+.contact-form textarea {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.04);
+  color: #ffffff;
+  font-size: 0.95rem;
+  outline: none;
+  transition: 0.2s ease;
+}
+
+.contact-form input:focus,
+.contact-form textarea:focus {
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+.contact-form button {
+  margin-top: 10px;
+}
+
+/* ============================
+   CONTACT — CTA
+============================ */
+
+.contact-cta {
+  padding: 100px 0;
+  text-align: center;
+  background: #05070a;
+}
+
+.contact-cta-inner h2 {
+  font-size: 2.4rem;
+  margin-bottom: 12px;
+  color: #ffffff;
+}
+
+.contact-cta-inner p {
+  color: #a4afc6;
+  max-width: 600px;
+  margin: 0 auto 32px;
+  line-height: 1.5;
+}
+
+.contact-cta .cta-actions {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+}
+
+/* ============================
+   RESPONSIVE
+============================ */
+
+@media (max-width: 960px) {
+  .contact-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .contact-hero-inner h1 {
+    font-size: 2.4rem;
+  }
+
+  .contact-cta-inner h2 {
+    font-size: 2rem;
+  }
+}
+
+.studio-image {
+  width: 100%;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.03);
+  object-fit: cover;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+}

@@ -9,12 +9,10 @@ marketing_bp = Blueprint("marketing", __name__, url_prefix="/")
 def homepage():
     return render_template("marketing/home.html")
 
-
 # Redirect /home → /
 @marketing_bp.route("/home")
 def homepage_alias():
     return redirect(url_for("marketing.homepage"))
-
 
 # -----------------------------
 # ABOUT
@@ -23,14 +21,12 @@ def homepage_alias():
 def about():
     return render_template("marketing/about.html")
 
-
 # -----------------------------
 # PLANS
 # -----------------------------
 @marketing_bp.route("/plans")
 def plans():
     return render_template("marketing/plans.html")
-
 
 # -----------------------------
 # PARTNERS
@@ -39,14 +35,12 @@ def plans():
 def partners():
     return render_template("marketing/partners.html")
 
-
 # -----------------------------
 # ENTER
 # -----------------------------
 @marketing_bp.route("/enter")
 def enter():
     return render_template("marketing/enter.html")
-
 
 # -----------------------------
 # PRODUCT TOUR
@@ -55,14 +49,12 @@ def enter():
 def tour():
     return render_template("marketing/tour.html")
 
-
 # -----------------------------
 # CONTACT
 # -----------------------------
 @marketing_bp.route("/contact")
 def contact():
     return render_template("marketing/contact.html")
-
 
 # -----------------------------
 # SUPPORT
@@ -74,3 +66,29 @@ def support():
 @marketing_bp.route("/faq")
 def faq():
     return render_template("marketing/faq.html")
+
+# -----------------------------
+# LEGAL
+# -----------------------------
+@marketing_bp.route("/terms")
+def terms():
+    return render_template("marketing/terms.html")
+
+@marketing_bp.route("/privacy")
+def privacy():
+    return render_template("marketing/privacy.html")
+
+# -----------------------------
+# STUDIOS
+# -----------------------------
+@marketing_bp.route("/studios/deal-architect")
+def studio_deal_architect():
+    return render_template("marketing/studio_deal_architect.html")
+
+@marketing_bp.route("/studios/renovation")
+def studio_renovation():
+    return render_template("marketing/studio_renovation.html")
+
+@marketing_bp.route("/studios/build")
+def studio_build():
+    return render_template("marketing/studio_build.html")
