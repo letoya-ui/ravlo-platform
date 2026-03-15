@@ -1,86 +1,129 @@
 {% extends "layouts/marketing_base.html" %}
 {% block content %}
 
-<!-- =========================
-     VISION — RAVLO
-========================= -->
-
-<!-- HERO -->
 <section class="vision-hero">
+  <div class="vision-hero-bg vision-hero-bg-1"></div>
+  <div class="vision-hero-bg vision-hero-bg-2"></div>
+
   <div class="container vision-hero-inner">
-    <h1>Our Vision</h1>
-    <p class="vision-hero-text">
-      Ravlo exists to give investors, builders, and partners a cinematic operating system
-      for capital, creativity, and generational opportunity.
-    </p>
+    <div class="vision-hero-copy">
+      <div class="vision-eyebrow">
+        <span class="vision-eyebrow-dot"></span>
+        The Ravlo Vision
+      </div>
+
+      <h1>Built for the next generation of real estate builders.</h1>
+
+      <p class="vision-hero-text">
+        Ravlo exists to give investors, builders, and partners a more connected way
+        to think, plan, and execute — with clarity, intelligence, and momentum.
+      </p>
+
+      <div class="vision-hero-actions">
+        <a href="{{ url_for('auth.register') }}" class="btn btn-primary btn-lg">Get Started</a>
+        <a href="{{ url_for('main.home') if false else '/' }}" class="btn btn-ghost btn-lg">Back to Home</a>
+      </div>
+    </div>
+
+    <div class="vision-hero-visual">
+      <div class="vision-frame">
+        <img
+          src="{{ url_for('static', filename='images/vision/vision_main.jpg') }}"
+          alt="Ravlo vision"
+          class="vision-image"
+        >
+      </div>
+    </div>
   </div>
 </section>
 
-<!-- FOUNDER STATEMENT -->
 <section class="vision-section">
   <div class="container vision-grid">
-
     <div class="vision-text">
-      <h2>Built with intention</h2>
+      <span class="section-kicker">Built with intention</span>
+      <h2>Software should create clarity, not confusion.</h2>
+
       <p>
-        Ravlo was created from a simple belief: real estate should feel clear, connected,
-        and empowering — not overwhelming. Investors deserve tools that think with them,
-        not against them. Builders deserve clarity. Partners deserve alignment.
+        Ravlo was created from a simple belief: real estate execution should feel
+        clear, connected, and empowering. Investors deserve tools that think with them.
+        Builders deserve better visibility. Partners deserve alignment.
       </p>
+
       <p>
-        This platform is more than software. It’s a system designed to help people build
-        stability, create opportunity, and shape the future of their communities.
+        This is more than software. It is an operating system for turning vision into
+        action, action into assets, and assets into long-term opportunity.
       </p>
     </div>
 
-    <!-- Placeholder Image -->
-    <div class="vision-visual">
-      <img src="/static/images/vision/vision_placeholder.png"
-           alt="Vision Placeholder"
-           class="vision-image">
+    <div class="vision-side-card">
+      <div class="vision-quote-card">
+        <p>
+          “We’re building a platform where strategy, design, capital, and execution
+          move together.”
+        </p>
+      </div>
     </div>
-
   </div>
 </section>
 
-<!-- PRINCIPLES -->
 <section class="vision-principles">
   <div class="container principles-inner">
-    <h2>Our Principles</h2>
+    <div class="section-header section-header-centered">
+      <span class="section-kicker">Principles</span>
+      <h2>What Ravlo stands on</h2>
+      <p>
+        Every part of the platform is shaped by a few core ideas.
+      </p>
+    </div>
 
     <div class="principles-grid">
-
       <div class="principle-block">
+        <div class="principle-icon">01</div>
         <h3>Clarity</h3>
-        <p>Every workflow, every screen, every decision should feel intentional and simple.</p>
+        <p>Every workflow, every screen, and every decision should feel intentional and usable.</p>
       </div>
 
       <div class="principle-block">
+        <div class="principle-icon">02</div>
         <h3>Momentum</h3>
-        <p>Tools should accelerate progress — not slow it down.</p>
+        <p>Technology should accelerate progress, not create friction and overwhelm.</p>
       </div>
 
       <div class="principle-block">
+        <div class="principle-icon">03</div>
         <h3>Alignment</h3>
-        <p>Investors, partners, and builders should operate from the same source of truth.</p>
+        <p>Investors, builders, and partners should work from one connected source of truth.</p>
       </div>
 
       <div class="principle-block">
+        <div class="principle-icon">04</div>
         <h3>Legacy</h3>
-        <p>Ravlo is built for long-term stability, generational opportunity, and real impact.</p>
+        <p>Ravlo is built for long-term stability, generational opportunity, and real-world impact.</p>
       </div>
-
     </div>
   </div>
 </section>
 
-<!-- CTA -->
+<section class="vision-bridge">
+  <div class="container vision-bridge-inner">
+    <div class="vision-bridge-copy">
+      <span class="section-kicker">Why it matters</span>
+      <h2>From scattered tools to one ecosystem.</h2>
+      <p>
+        Ravlo brings together deal thinking, transformation planning, intelligence,
+        and execution into one premium operating layer — so users can move with more
+        confidence and less chaos.
+      </p>
+    </div>
+  </div>
+</section>
+
 <section class="vision-cta">
   <div class="container vision-cta-inner">
     <h2>Build your future with Ravlo</h2>
-    <p>Join a platform designed to elevate your vision and empower your next move.</p>
+    <p>Join a platform designed to elevate your vision and strengthen your next move.</p>
     <div class="cta-actions">
-      <a href="/auth/register" class="btn btn-primary btn-lg">Get Started</a>
+      <a href="{{ url_for('auth.register') }}" class="btn btn-primary btn-lg">Create Your Account</a>
       <a href="/" class="btn btn-ghost btn-lg">Back to Home</a>
     </div>
   </div>
