@@ -9,7 +9,6 @@ marketing_bp = Blueprint("marketing", __name__, url_prefix="/")
 def homepage():
     return render_template("marketing/home.html")
 
-# Redirect /home → /
 @marketing_bp.route("/home")
 def homepage_alias():
     return redirect(url_for("marketing.homepage"))
@@ -92,3 +91,18 @@ def studio_renovation():
 @marketing_bp.route("/studios/build")
 def studio_build():
     return render_template("marketing/studio_build.html")
+
+# -----------------------------
+# BRAND STORY PAGES
+# -----------------------------
+@marketing_bp.route("/vision")
+def vision():
+    return render_template("marketing/vision.html")
+
+@marketing_bp.route("/mission")
+def mission():
+    return render_template("marketing/mission.html")
+
+@marketing_bp.route("/story")
+def story():
+    return render_template("marketing/story.html")
