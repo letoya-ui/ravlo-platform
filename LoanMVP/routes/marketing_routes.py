@@ -12,7 +12,7 @@ def homepage():
 
 # Redirect /home → /
 @marketing_bp.route("/home")
-def homepage_redirect():
+def homepage_alias():
     return redirect(url_for("marketing.homepage"))
 
 
