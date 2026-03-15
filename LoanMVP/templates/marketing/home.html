@@ -2,91 +2,180 @@
 {% block content %}
 
 <!-- =========================
-     RAVLO NEW HOMEPAGE
+     RAVLO HOMEPAGE
 ========================= -->
 
 <!-- HERO -->
-<section class="hero">
+<section class="hero hero-premium">
+  <div class="hero-bg-orb hero-bg-orb-1"></div>
+  <div class="hero-bg-orb hero-bg-orb-2"></div>
+
   <div class="container hero-grid">
     <div class="hero-copy">
       <div class="eyebrow">
         <span class="eyebrow-dot"></span>
-        For builders who move differently
+        Built for investors, builders, and operators
       </div>
 
       <h1>
-        A presence.<br>
-        Not just a platform.
+        Build deals.<br>
+        Design outcomes.<br>
+        Run the ecosystem.
       </h1>
 
       <p class="hero-text">
-        Ravlo is where vision turns into property, strategy turns into assets,
-        and ideas turn into portfolios.
+        Ravlo is the operating system for modern real estate execution —
+        where deal analysis, renovation planning, build strategy, investor intelligence,
+        and partner coordination live in one premium command center.
       </p>
 
       <div class="hero-actions">
-        <a href="/auth/register" class="btn btn-primary btn-lg">Enter the Ecosystem</a>
-        <a href="#inside-os" class="btn btn-ghost btn-lg">See the OS</a>
+        <a href="{{ url_for('auth.register') }}" class="btn btn-primary btn-lg">Get Started</a>
+        <a href="#inside-os" class="btn btn-ghost btn-lg">Explore the Platform</a>
+      </div>
+
+      <div class="hero-proof">
+        <div class="proof-item">
+          <strong>Deal Architect</strong>
+          <span>Analyze flips, rentals, and development strategy</span>
+        </div>
+        <div class="proof-item">
+          <strong>Studios</strong>
+          <span>Renovation Studio + Build Studio built in</span>
+        </div>
+        <div class="proof-item">
+          <strong>Command Center</strong>
+          <span>One place for deals, capital, and execution</span>
+        </div>
       </div>
     </div>
 
-    <div class="hero-panel">
-      <img
-        src="/static/images/hero/hero_combined.png"
-        alt="Ravlo cinematic hero"
-        class="hero-combined-img"
-      />
+    <div class="hero-visual">
+      <div class="hero-main-shot app-frame">
+        <img
+          src="{{ url_for('static', filename='images/hero/hero_combined.png') }}"
+          alt="Ravlo dashboard preview"
+          class="hero-combined-img"
+        >
+      </div>
+
+      <div class="floating-card floating-card-top">
+        <img src="{{ url_for('static', filename='images/hero/roi_chip.png') }}" alt="Ravlo ROI chip">
+        <div>
+          <strong>Portfolio Signals</strong>
+          <p>See performance, yield, and momentum at a glance.</p>
+        </div>
+      </div>
+
+      <div class="floating-card floating-card-bottom">
+        <img src="{{ url_for('static', filename='images/hero/intelligence_card.png') }}" alt="Ravlo intelligence">
+        <div>
+          <strong>Investor Intelligence</strong>
+          <p>Surface opportunity before everyone else does.</p>
+        </div>
+      </div>
     </div>
+  </div>
+</section>
+
+<!-- TRUST BAR -->
+<section class="trust-strip">
+  <div class="container trust-strip-inner">
+    <span>Deal Modeling</span>
+    <span>Renovation Planning</span>
+    <span>Build Coordination</span>
+    <span>Investor Intelligence</span>
+    <span>Partner Ecosystem</span>
+    <span>Command Center</span>
   </div>
 </section>
 
 <!-- INSIDE THE INVESTOR OS -->
 <section class="inside-os" id="inside-os">
   <div class="container">
-    <div class="section-header">
+    <div class="section-header section-header-centered">
       <h2>Inside the Ravlo Investor OS</h2>
-      <p>A cinematic operating system for builders who move differently.</p>
+      <p>
+        A connected operating system for real estate investors who need more than a spreadsheet,
+        more than a CRM, and more than a project tracker.
+      </p>
     </div>
 
     <div class="os-grid">
 
       <div class="os-item">
         <div class="os-text">
+          <span class="section-kicker">Command Layer</span>
           <h3>Command Center</h3>
-          <p>Your live operating room for deals, capital, and execution — all in one view.</p>
+          <p>
+            Your live operating room for deals, capital, tasks, and execution.
+            Ravlo gives you one place to see what matters now and what needs to happen next.
+          </p>
+          <ul class="feature-list">
+            <li>Live deal visibility</li>
+            <li>Portfolio-level oversight</li>
+            <li>Next-step workflow clarity</li>
+          </ul>
         </div>
-        <div class="os-image">
-          <img src="/static/images/hero/command_center.png" alt="Ravlo Command Center">
+        <div class="os-image app-frame">
+          <img src="{{ url_for('static', filename='images/hero/command_center.png') }}" alt="Ravlo Command Center">
         </div>
       </div>
 
       <div class="os-item reverse">
         <div class="os-text">
+          <span class="section-kicker">Strategy Layer</span>
           <h3>Deal Architect</h3>
-          <p>Turn rough ideas into modeled deals — flips, rentals, and developments with AI precision.</p>
+          <p>
+            Turn raw opportunities into structured decisions with scenario modeling,
+            return planning, renovation direction, and investment logic.
+          </p>
+          <ul class="feature-list">
+            <li>Flip, rental, and development analysis</li>
+            <li>Scenario planning</li>
+            <li>Faster investment decisions</li>
+          </ul>
         </div>
-        <div class="os-image">
-          <img src="/static/images/hero/deal_architect.png" alt="Ravlo Deal Architect">
+        <div class="os-image app-frame">
+          <img src="{{ url_for('static', filename='images/hero/deal_architect.png') }}" alt="Ravlo Deal Architect">
         </div>
       </div>
 
       <div class="os-item">
         <div class="os-text">
+          <span class="section-kicker">Intelligence Layer</span>
           <h3>Investor Intelligence</h3>
-          <p>See risk, yield, and momentum before everyone else — with live market and portfolio signals.</p>
+          <p>
+            Understand how risk, timing, market context, and portfolio performance work together
+            so you can move with better conviction.
+          </p>
+          <ul class="feature-list">
+            <li>Risk and opportunity signals</li>
+            <li>Portfolio performance insights</li>
+            <li>Better timing decisions</li>
+          </ul>
         </div>
-        <div class="os-image">
-          <img src="/static/images/hero/intelligence_card.png" alt="Ravlo Intelligence">
+        <div class="os-image app-frame">
+          <img src="{{ url_for('static', filename='images/hero/intelligence_card.png') }}" alt="Ravlo Intelligence">
         </div>
       </div>
 
       <div class="os-item reverse">
         <div class="os-text">
+          <span class="section-kicker">Execution Layer</span>
           <h3>Portfolio Performance</h3>
-          <p>Track growth, downside, and compounding — not just properties, but the story of your capital.</p>
+          <p>
+            Ravlo helps you see the story of your capital — not just isolated properties,
+            but how your decisions compound over time.
+          </p>
+          <ul class="feature-list">
+            <li>Return visibility</li>
+            <li>Progress tracking</li>
+            <li>Outcome-driven execution</li>
+          </ul>
         </div>
-        <div class="os-image">
-          <img src="/static/images/hero/roi_chip.png" alt="Ravlo ROI chip">
+        <div class="os-image app-frame">
+          <img src="{{ url_for('static', filename='images/hero/roi_chip.png') }}" alt="Ravlo ROI chip">
         </div>
       </div>
 
@@ -94,13 +183,27 @@
   </div>
 </section>
 
-<!-- QUIET AUTHORITY -->
-<section class="quiet-authority">
-  <div class="container qa-inner">
-    <div class="qa-text">
-      <p>
-        Ravlo is built for the ones who see cities as canvases, not just markets.
-      </p>
+<!-- VALUE CARDS -->
+<section class="value-band">
+  <div class="container">
+    <div class="section-header section-header-centered">
+      <h2>Why Ravlo feels different</h2>
+      <p>Because it was designed around execution, not just information.</p>
+    </div>
+
+    <div class="value-grid">
+      <div class="value-card">
+        <h3>From idea to execution</h3>
+        <p>Model the deal, plan the transformation, coordinate the work, and track the outcome in one system.</p>
+      </div>
+      <div class="value-card">
+        <h3>Visual, not chaotic</h3>
+        <p>Replace scattered notes, folders, and disconnected tools with one premium operating layer.</p>
+      </div>
+      <div class="value-card">
+        <h3>Built for real operators</h3>
+        <p>For investors, builders, project teams, and partners who actually move deals forward.</p>
+      </div>
     </div>
   </div>
 </section>
@@ -108,7 +211,7 @@
 <!-- ECOSYSTEM MAP -->
 <section class="ecosystem" id="ecosystem">
   <div class="container">
-    <div class="section-header">
+    <div class="section-header section-header-centered">
       <h2>The Ravlo Ecosystem</h2>
       <p>Every studio, every partner, every decision — connected.</p>
     </div>
@@ -116,27 +219,27 @@
     <div class="ecosystem-grid">
       <div class="ecosystem-node">
         <h3>Deal Architect</h3>
-        <p>Shape the financial and design DNA of every opportunity.</p>
+        <p>Shape the financial and strategic DNA of every opportunity.</p>
       </div>
       <div class="ecosystem-node">
         <h3>Renovation Studio</h3>
-        <p>Transform outdated spaces into cinematic, rentable assets.</p>
+        <p>Plan transformations, finishes, scopes, and visual direction.</p>
       </div>
       <div class="ecosystem-node">
         <h3>Build Studio</h3>
-        <p>Coordinate ground‑up and heavy‑lift projects with clarity.</p>
+        <p>Coordinate construction planning and heavy execution work with clarity.</p>
       </div>
       <div class="ecosystem-node">
         <h3>Investor Intelligence</h3>
-        <p>Portfolio, markets, and signals — all in one layer.</p>
+        <p>Connect portfolio, market, and timing signals in one layer.</p>
       </div>
       <div class="ecosystem-node">
         <h3>Partner Network</h3>
-        <p>Architects, contractors, lenders, and operators in one ecosystem.</p>
+        <p>Architects, contractors, lenders, and service providers in one ecosystem.</p>
       </div>
       <div class="ecosystem-node">
         <h3>Command Center</h3>
-        <p>Your single pane of glass for the entire system.</p>
+        <p>Your single pane of glass for strategy and action.</p>
       </div>
     </div>
   </div>
@@ -145,7 +248,7 @@
 <!-- FROM IDEA TO ASSET -->
 <section class="idea-to-asset">
   <div class="container">
-    <div class="section-header">
+    <div class="section-header section-header-centered">
       <h2>From idea to asset</h2>
       <p>Ravlo turns raw vision into structured, investable reality.</p>
     </div>
@@ -154,84 +257,112 @@
       <div class="timeline-step">
         <span class="step-label">01</span>
         <h3>Input the vision</h3>
-        <p>Describe the property, the neighborhood, and the outcome you’re chasing.</p>
+        <p>Start with the property, the market, and the outcome you’re trying to create.</p>
       </div>
       <div class="timeline-step">
         <span class="step-label">02</span>
         <h3>Model the deal</h3>
-        <p>Ravlo runs scenarios, budgets, and returns — so you see the shape of the play.</p>
+        <p>Run return scenarios, capital needs, and strategy paths before committing resources.</p>
       </div>
       <div class="timeline-step">
         <span class="step-label">03</span>
         <h3>Design the transformation</h3>
-        <p>Architectural direction, renovation paths, and partner alignment in one place.</p>
+        <p>Map renovation or build direction with visual tools and execution planning.</p>
       </div>
       <div class="timeline-step">
         <span class="step-label">04</span>
         <h3>Execute with confidence</h3>
-        <p>Track progress, capital, and performance as the asset comes to life.</p>
+        <p>Track the work, align partners, and monitor performance as the asset comes to life.</p>
       </div>
     </div>
   </div>
 </section>
 
-<!-- STUDIOS SHOWCASE -->
+<!-- STUDIOS -->
 <section class="studios" id="studios">
   <div class="container">
-    <div class="section-header">
+    <div class="section-header section-header-centered">
       <h2>The Ravlo Studios</h2>
-      <p>Three studios, one operating system.</p>
+      <p>Three studios. One operating system. One place to move the deal forward.</p>
     </div>
 
     <div class="studios-grid">
       <div class="studio-card">
         <h3>Deal Architect</h3>
-        <p>Where numbers, design, and narrative meet — before a single wall moves.</p>
+        <p>Model the opportunity before a single dollar or wall moves.</p>
       </div>
       <div class="studio-card">
         <h3>Renovation Studio</h3>
-        <p>Blueprints, finishes, and transformation paths for every property.</p>
+        <p>Plan the transformation from outdated to premium and rentable.</p>
       </div>
       <div class="studio-card">
         <h3>Build Studio</h3>
-        <p>From permits to punchlists — a clearer way to build.</p>
+        <p>Coordinate larger projects with more confidence and less friction.</p>
       </div>
     </div>
   </div>
 </section>
 
-<!-- INVESTOR INTELLIGENCE -->
-<section class="investor-intel">
-  <div class="container intel-grid">
-    <div class="intel-text">
-      <h2>Investor Intelligence</h2>
-      <p>
-        Ravlo doesn’t just show you properties — it shows you how your decisions compound.
-      </p>
-      <ul class="intel-list">
-        <li>Live portfolio performance and yield.</li>
-        <li>Signals on risk, timing, and opportunity.</li>
-        <li>A narrative view of your capital over time.</li>
-      </ul>
+<!-- WHO ITS FOR -->
+<section class="who-for">
+  <div class="container">
+    <div class="section-header section-header-centered">
+      <h2>Built for people who actually execute</h2>
+      <p>Ravlo is designed for operators, not observers.</p>
     </div>
-    <div class="intel-visual">
-      <img src="/static/images/hero/intelligence_card.png" alt="Ravlo Intelligence">
-      <img src="/static/images/hero/roi_chip.png" alt="Ravlo ROI" class="intel-chip">
+
+    <div class="audience-grid">
+      <div class="audience-card">
+        <h3>Investors</h3>
+        <p>Analyze deals, track returns, and manage the bigger picture across your portfolio.</p>
+      </div>
+      <div class="audience-card">
+        <h3>Builders</h3>
+        <p>Bring clarity to ground-up and heavy transformation projects with connected planning.</p>
+      </div>
+      <div class="audience-card">
+        <h3>Operators</h3>
+        <p>Keep teams, partners, and execution aligned from first vision to realized outcome.</p>
+      </div>
     </div>
   </div>
 </section>
 
-<!-- THE DIRECTION -->
+<!-- INVESTOR INTEL -->
+<section class="investor-intel">
+  <div class="container intel-grid">
+    <div class="intel-text">
+      <span class="section-kicker">Intelligence</span>
+      <h2>See how your decisions compound</h2>
+      <p>
+        Ravlo doesn’t just show you properties. It helps you understand momentum,
+        downside, returns, and the quality of your next move.
+      </p>
+      <ul class="intel-list">
+        <li>Portfolio performance visibility</li>
+        <li>Signals on risk, timing, and opportunity</li>
+        <li>A narrative view of capital over time</li>
+      </ul>
+    </div>
+    <div class="intel-visual">
+      <div class="app-frame">
+        <img src="{{ url_for('static', filename='images/hero/intelligence_card.png') }}" alt="Ravlo Intelligence">
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FINAL STATEMENT -->
 <section class="direction" id="direction">
   <div class="container direction-inner">
     <h2>The Direction</h2>
     <p>
-      Ravlo is for the next generation of builders — the ones who see property as a medium,
-      not just an asset class.
+      Ravlo is for the next generation of real estate builders — the ones who see property
+      as a medium for vision, execution, and long-term leverage.
     </p>
     <p>
-      We’re building an operating system where investors, architects, and operators can move
-      in sync — from the first sketch of an idea to the last dollar of realized return.
+      We’re building an operating system where investors, builders, partners, and operators
+      can move in sync from first concept to final return.
     </p>
   </div>
 </section>
@@ -240,10 +371,10 @@
 <section class="cta-final">
   <div class="container cta-inner">
     <h2>Enter the Ravlo Ecosystem</h2>
-    <p>Bring your vision, your deals, and your partners into one cinematic operating system.</p>
+    <p>Bring your deals, your vision, and your execution into one operating system.</p>
     <div class="cta-actions">
-      <a href="/auth/register" class="btn btn-primary btn-lg">Enter the Ecosystem</a>
-      <a href="#inside-os" class="btn btn-ghost btn-lg">See the OS</a>
+      <a href="{{ url_for('auth.register') }}" class="btn btn-primary btn-lg">Create Your Account</a>
+      <a href="#inside-os" class="btn btn-ghost btn-lg">See the Platform</a>
     </div>
   </div>
 </section>
