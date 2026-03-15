@@ -1,90 +1,108 @@
 {% extends "layouts/marketing_base.html" %}
+
+{% block hero %}
+<section class="mk-hero">
+  <div class="mk-container">
+    <div class="mk-hero-copy" style="max-width:920px;">
+      <div class="mk-eyebrow">Mission</div>
+      <h1 class="mk-title-xl">To make real estate investing feel more clear, connected, and actionable.</h1>
+      <p class="mk-copy-lg">
+        Ravlo exists to help investors move through opportunity, planning, and execution
+        with more structure and less confusion.
+      </p>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
 {% block content %}
+<section class="mk-section">
+  <div class="mk-container">
+    <div class="mk-grid-3">
+      <div class="mk-card">
+        <div class="mk-card-icon">C</div>
+        <h3>Clarity</h3>
+        <p>Reduce the scattered feeling of investor workflow and create a cleaner decision environment.</p>
+      </div>
 
-<!-- =========================
-     MISSION — RAVLO
-========================= -->
+      <div class="mk-card">
+        <div class="mk-card-icon">S</div>
+        <h3>Structure</h3>
+        <p>Support the process with focused experiences for deals, renovation strategy, and build thinking.</p>
+      </div>
 
-<!-- HERO -->
-<section class="mission-hero">
-  <div class="container mission-hero-inner">
-    <h1>Our Mission</h1>
-    <p class="mission-hero-text">
-      To empower investors, builders, and partners with a unified operating system
-      that brings clarity, momentum, and opportunity to every project.
-    </p>
+      <div class="mk-card">
+        <div class="mk-card-icon">A</div>
+        <h3>Action</h3>
+        <p>Help users move from concept to next step with more confidence and organization.</p>
+      </div>
+    </div>
   </div>
 </section>
 
-<!-- MISSION STATEMENT -->
-<section class="mission-section">
-  <div class="container mission-grid">
+<section class="mk-section-tight">
+  <div class="mk-container">
+    <div class="mk-split-panel">
+      <div class="mk-panel">
+        <div class="mk-kicker">Why this matters</div>
+        <h2 class="mk-title-lg">Investors need more than disconnected tools.</h2>
+        <p class="mk-copy">
+          Notes, calculators, screenshots, renovation concepts, build ideas, and next-step planning
+          often live in separate places. Ravlo is meant to bring those pieces into a more unified experience.
+        </p>
+      </div>
 
-    <div class="mission-text">
-      <h2>What drives us</h2>
+      <div class="mk-panel">
+        <div class="mk-kicker">What Ravlo is trying to do</div>
+        <h2 class="mk-title-lg">Create a better operating rhythm.</h2>
+        <p class="mk-copy">
+          The mission is not just to look modern. It is to make the workflow more usable,
+          more intentional, and easier to grow into a serious operating platform.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="mk-section">
+  <div class="mk-container">
+    <div class="mk-kicker">Mission in practice</div>
+    <h2 class="mk-title-lg">How the platform expresses that mission.</h2>
+
+    <div class="mk-grid-2" style="margin-top:28px;">
+      <div class="mk-card">
+        <h3>Home and tour pages</h3>
+        <p>Explain the platform in a polished way and make the brand feel credible immediately.</p>
+      </div>
+      <div class="mk-card">
+        <h3>Studios</h3>
+        <p>Separate experiences help users understand what each part of the platform is meant to do.</p>
+      </div>
+      <div class="mk-card">
+        <h3>Plans and entry flow</h3>
+        <p>Create a smoother path from interest to access without losing the premium feel.</p>
+      </div>
+      <div class="mk-card">
+        <h3>Future ecosystem</h3>
+        <p>Leave room for collaboration, support layers, partners, and more advanced workflows.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="mk-section">
+  <div class="mk-container">
+    <div class="mk-cta">
+      <div class="mk-kicker">Explore More</div>
+      <h2 class="mk-title-lg">See the mission reflected across the full site experience.</h2>
       <p>
-        Real estate is one of the most powerful vehicles for building stability and
-        generational wealth — yet the tools have been fragmented, outdated, and
-        overwhelming. Ravlo exists to change that.
+        Mission tells visitors why Ravlo exists. The tour and story pages help show how that purpose comes to life.
       </p>
-      <p>
-        Our mission is to create a platform where every investor, builder, and partner
-        can operate with confidence, clarity, and alignment. A place where decisions
-        feel informed, workflows feel connected, and opportunities feel within reach.
-      </p>
-    </div>
-
-    <!-- Placeholder Image -->
-    <div class="mission-visual">
-      <img src="/static/images/mission/mission_placeholder.png"
-           alt="Mission Placeholder"
-           class="mission-image">
-    </div>
-
-  </div>
-</section>
-
-<!-- PILLARS -->
-<section class="mission-pillars">
-  <div class="container pillars-inner">
-    <h2>Our Pillars</h2>
-
-    <div class="pillars-grid">
-
-      <div class="pillar-block">
-        <h3>Empowerment</h3>
-        <p>Give people the tools to make confident, informed decisions.</p>
+      <div class="mk-cta-actions">
+        <a href="{{ url_for('marketing.tour') }}" class="mk-btn mk-btn-primary">Take the Tour</a>
+        <a href="{{ url_for('marketing.vision') }}" class="mk-btn mk-btn-ghost">Read the Vision</a>
       </div>
-
-      <div class="pillar-block">
-        <h3>Connection</h3>
-        <p>Unify investors, partners, and builders through shared clarity.</p>
-      </div>
-
-      <div class="pillar-block">
-        <h3>Innovation</h3>
-        <p>Bring modern, cinematic, AI‑powered workflows to real estate.</p>
-      </div>
-
-      <div class="pillar-block">
-        <h3>Impact</h3>
-        <p>Help people build stability, opportunity, and long‑term legacy.</p>
-      </div>
-
     </div>
   </div>
 </section>
-
-<!-- CTA -->
-<section class="mission-cta">
-  <div class="container mission-cta-inner">
-    <h2>Join the movement</h2>
-    <p>Ravlo is building the future of real estate — one clear decision at a time.</p>
-    <div class="cta-actions">
-      <a href="/auth/register" class="btn btn-primary btn-lg">Get Started</a>
-      <a href="/" class="btn btn-ghost btn-lg">Back to Home</a>
-    </div>
-  </div>
-</section>
-
 {% endblock %}

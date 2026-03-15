@@ -1,194 +1,149 @@
 {% extends "layouts/marketing_base.html" %}
 
-{% block title %}Ravlo FAQ{% endblock %}
+{% block hero %}
+<section class="mk-hero">
+  <div class="mk-container">
+    <div class="mk-hero-copy" style="max-width:920px;">
+      <div class="mk-eyebrow">FAQ</div>
+      <h1 class="mk-title-xl">Answers to common questions about Ravlo.</h1>
+      <p class="mk-copy-lg">
+        Use this page to give visitors a quick understanding of what Ravlo is,
+        who it is for, and where to go next.
+      </p>
+    </div>
+  </div>
+</section>
+{% endblock %}
 
 {% block content %}
+<section class="mk-section-tight">
+  <div class="mk-container">
+    <div class="mk-split-panel">
+      <div class="mk-panel">
+        <div class="mk-kicker">Common questions</div>
+        <h2 class="mk-title-lg">What people usually want to know first.</h2>
 
-<section class="hero">
-  <div class="container narrow">
-    <h1 style="font-size:3.2rem;margin-bottom:20px">
-      Frequently Asked Questions
-    </h1>
+        <div class="mk-list">
+          <div class="mk-list-item">
+            <div>
+              <strong>What is Ravlo?</strong>
+              <div class="mk-copy" style="margin-top:8px;">
+                Ravlo is an investor-focused platform designed to help users think through deals,
+                renovation strategy, and build potential in a more organized ecosystem.
+              </div>
+            </div>
+          </div>
 
-    <p class="hero-text">
-      Clear answers to the most common questions from investors, builders, borrowers, and partners.
-    </p>
+          <div class="mk-list-item">
+            <div>
+              <strong>Who is Ravlo for?</strong>
+              <div class="mk-copy" style="margin-top:8px;">
+                Ravlo is built for real estate investors, operators, and eventually partners
+                who want a clearer way to evaluate and move opportunities forward.
+              </div>
+            </div>
+          </div>
+
+          <div class="mk-list-item">
+            <div>
+              <strong>What makes Ravlo different?</strong>
+              <div class="mk-copy" style="margin-top:8px;">
+                Ravlo is structured like an ecosystem, with focused experiences for deal analysis,
+                renovation planning, and build thinking rather than one generic dashboard.
+              </div>
+            </div>
+          </div>
+
+          <div class="mk-list-item">
+            <div>
+              <strong>Can I preview the platform?</strong>
+              <div class="mk-copy" style="margin-top:8px;">
+                Yes. The Tour page is the best place to preview the public-facing side of the platform.
+              </div>
+            </div>
+          </div>
+
+          <div class="mk-list-item">
+            <div>
+              <strong>How do I access Ravlo?</strong>
+              <div class="mk-copy" style="margin-top:8px;">
+                Start from the Enter page, then continue into the login flow.
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="mk-panel">
+        <div class="mk-kicker">Plans and support</div>
+        <h2 class="mk-title-lg">A few practical questions visitors may ask.</h2>
+
+        <div class="mk-list">
+          <div class="mk-list-item">
+            <div>
+              <strong>Are there different plans?</strong>
+              <div class="mk-copy" style="margin-top:8px;">
+                Yes. Ravlo can support different levels of access for emerging investors,
+                active operators, and growing teams.
+              </div>
+            </div>
+          </div>
+
+          <div class="mk-list-item">
+            <div>
+              <strong>Can I contact someone about partnerships?</strong>
+              <div class="mk-copy" style="margin-top:8px;">
+                Yes. Use the Contact page for partnership inquiries, demos, and general conversations.
+              </div>
+            </div>
+          </div>
+
+          <div class="mk-list-item">
+            <div>
+              <strong>Is Ravlo only for renovations?</strong>
+              <div class="mk-copy" style="margin-top:8px;">
+                No. Ravlo is intended to support deal strategy, renovation direction, and build planning.
+              </div>
+            </div>
+          </div>
+
+          <div class="mk-list-item">
+            <div>
+              <strong>Will Ravlo keep growing?</strong>
+              <div class="mk-copy" style="margin-top:8px;">
+                Yes. The platform is designed with room for future workflows, partners, and expanded capabilities.
+              </div>
+            </div>
+          </div>
+
+          <div class="mk-list-item">
+            <div>
+              <strong>Where should I start?</strong>
+              <div class="mk-copy" style="margin-top:8px;">
+                Start with the Home page, Tour page, or Plans page depending on whether you want overview,
+                product preview, or pricing direction.
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </section>
 
-
-<section class="section">
-  <div class="container narrow">
-
-    <div class="section-tag">General</div>
-    <h2>Understanding Ravlo</h2>
-
-    <div class="faq-list">
-
-      <div class="faq-item">
-        <h3>What is Ravlo?</h3>
-        <p>
-          Ravlo is an investor operating system — a unified environment where deals are analyzed,
-          planned, funded, and executed with clarity and discipline.
-        </p>
+<section class="mk-section">
+  <div class="mk-container">
+    <div class="mk-cta">
+      <div class="mk-kicker">Still have questions?</div>
+      <h2 class="mk-title-lg">Guide visitors toward the next best page.</h2>
+      <p>
+        FAQ works best when it keeps things simple and helps people move quickly to tour, plans, contact, or entry.
+      </p>
+      <div class="mk-cta-actions">
+        <a href="{{ url_for('marketing.tour') }}" class="mk-btn mk-btn-primary">Take the Tour</a>
+        <a href="{{ url_for('marketing.contact') }}" class="mk-btn mk-btn-ghost">Contact Us</a>
       </div>
-
-      <div class="faq-item">
-        <h3>Who is Ravlo for?</h3>
-        <p>
-          Investors, builders, lenders, partners, and operators who want a structured,
-          professional workflow for real estate execution.
-        </p>
-      </div>
-
-      <div class="faq-item">
-        <h3>Is Ravlo free to use?</h3>
-        <p>
-          Ravlo offers both free and premium plans depending on your workflow needs.
-          Visit the <a href="/plans">Plans</a> page for details.
-        </p>
-      </div>
-
     </div>
-
   </div>
 </section>
-
-
-<section class="section section-alt">
-  <div class="container narrow">
-
-    <div class="section-tag">Investor Questions</div>
-    <h2>Investors & Deal Analysis</h2>
-
-    <div class="faq-list">
-
-      <div class="faq-item">
-        <h3>What is the AI Deal Architect?</h3>
-        <p>
-          It’s an AI-powered analysis engine that evaluates flips, rentals, BRRRR,
-          and development opportunities with clean, investor-grade intelligence.
-        </p>
-      </div>
-
-      <div class="faq-item">
-        <h3>Can I save and compare deals?</h3>
-        <p>
-          Yes — the Deal Pipeline and Compare tools allow you to store, organize,
-          and evaluate opportunities side-by-side.
-        </p>
-      </div>
-
-      <div class="faq-item">
-        <h3>Does Ravlo help with construction planning?</h3>
-        <p>
-          Yes. Build Studio and Renovation Studio help you plan new construction,
-          visualize renovations, and prepare scopes before breaking ground.
-        </p>
-      </div>
-
-    </div>
-
-  </div>
-</section>
-
-
-<section class="section">
-  <div class="container narrow">
-
-    <div class="section-tag">Capital</div>
-    <h2>Borrowers & Funding</h2>
-
-    <div class="faq-list">
-
-      <div class="faq-item">
-        <h3>How do capital requests work?</h3>
-        <p>
-          Borrowers submit a capital request through Capital Studio, upload required documents,
-          and track underwriting progress in real time.
-        </p>
-      </div>
-
-      <div class="faq-item">
-        <h3>Does Ravlo provide funding?</h3>
-        <p>
-          Ravlo connects borrowers with lenders and capital partners inside a structured workflow.
-          Ravlo itself does not issue loans.
-        </p>
-      </div>
-
-      <div class="faq-item">
-        <h3>How long does underwriting take?</h3>
-        <p>
-          Timelines vary by lender, but most reviews begin within 24–48 hours of submission.
-        </p>
-      </div>
-
-    </div>
-
-  </div>
-</section>
-
-
-<section class="section section-alt">
-  <div class="container narrow">
-
-    <div class="section-tag">Partners</div>
-    <h2>Contractors, Agents & Service Providers</h2>
-
-    <div class="faq-list">
-
-      <div class="faq-item">
-        <h3>How do partners join Ravlo?</h3>
-        <p>
-          Contractors, agents, lenders, and operators can create a partner profile
-          through the <a href="/partners">Partners</a> page.
-        </p>
-      </div>
-
-      <div class="faq-item">
-        <h3>How do partners get matched with projects?</h3>
-        <p>
-          Partners become discoverable inside the ecosystem and can receive invitations
-          from investors and builders based on project needs.
-        </p>
-      </div>
-
-      <div class="faq-item">
-        <h3>Is there a cost to join the Partner Network?</h3>
-        <p>
-          Basic partner profiles are free. Premium placement and advanced tools
-          may be available in future updates.
-        </p>
-      </div>
-
-    </div>
-
-  </div>
-</section>
-
-
-<section class="section">
-  <div class="container narrow">
-
-    <div class="section-tag">Still Need Help?</div>
-    <h2>Contact Ravlo Support</h2>
-
-    <p class="section-copy">
-      If your question wasn’t answered here, reach out directly.
-    </p>
-
-    <div class="contact-card">
-      <p><strong>Name:</strong> Letoya Mason</p>
-      <p><strong>Email:</strong> <a href="mailto:letoya@ravlohq.com">letoya@ravlohq.com</a></p>
-    </div>
-
-    <div class="hero-actions" style="margin-top:20px;">
-      <a href="/support" class="btn btn-primary btn-lg">Visit Support</a>
-      <a href="/contact" class="btn btn-ghost btn-lg">Contact Us</a>
-    </div>
-
-  </div>
-</section>
-
 {% endblock %}

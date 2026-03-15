@@ -1,105 +1,112 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>{% block title %}Ravlo{% endblock %}</title>
-  <meta name="description" content="Ravlo is a premium operating system for investors, builders, and real estate operators.">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>{{ page_title|default("Ravlo") }}</title>
+  <meta name="description" content="{{ meta_description|default('Ravlo investor command center.') }}">
+  <link rel="canonical" href="{{ canonical_url|default(request.base_url) }}">
+
+  <meta property="og:title" content="{{ page_title|default('Ravlo') }}">
+  <meta property="og:description" content="{{ meta_description|default('Ravlo investor command center.') }}">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="{{ canonical_url|default(request.base_url) }}">
+  {% if hero_image %}
+  <meta property="og:image" content="{{ url_for('static', filename=hero_image, _external=True) }}">
+  {% endif %}
+
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="{{ page_title|default('Ravlo') }}">
+  <meta name="twitter:description" content="{{ meta_description|default('Ravlo investor command center.') }}">
+  {% if hero_image %}
+  <meta name="twitter:image" content="{{ url_for('static', filename=hero_image, _external=True) }}">
+  {% endif %}
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 
   <link rel="stylesheet" href="{{ url_for('static', filename='css/marketing.css') }}">
   {% block head %}{% endblock %}
 </head>
-<body>
+<body class="mk-body">
 
-  <!-- =========================
-       NAVIGATION
-  ========================== -->
-  <header class="nav">
-    <div class="container nav-inner">
+  <div class="mk-site-bg"></div>
 
-      <a href="{{ url_for('main.home') if false else '/' }}" class="nav-logo" aria-label="Ravlo Home">
-        <img src="{{ url_for('static', filename='images/logo-white.png') }}" alt="Ravlo">
+  <header class="mk-header">
+    <div class="mk-container mk-header-inner">
+      <a href="{{ url_for('marketing.homepage') }}" class="mk-brand" aria-label="Ravlo Home">
+        <div class="mk-brand-mark">R</div>
+        <div class="mk-brand-copy">
+          <span class="mk-brand-title">Ravlo</span>
+          <span class="mk-brand-sub">Investor Command Center</span>
+        </div>
       </a>
 
-      <nav class="nav-links" aria-label="Primary">
-        <a href="/#inside-os">OS</a>
-        <a href="/#ecosystem">Ecosystem</a>
-        <a href="/#studios">Studios</a>
-        <a href="/#direction">Vision</a>
+      <button class="mk-nav-toggle" type="button" aria-label="Open menu" onclick="document.body.classList.toggle('nav-open')">
+        ☰
+      </button>
+
+      <nav class="mk-nav">
+        <a href="{{ url_for('marketing.homepage') }}" class="{% if page_key == 'home' %}active{% endif %}">Home</a>
+        <a href="{{ url_for('marketing.about') }}" class="{% if page_key == 'about' %}active{% endif %}">About</a>
+        <a href="{{ url_for('marketing.tour') }}" class="{% if page_key == 'tour' %}active{% endif %}">Tour</a>
+        <a href="{{ url_for('marketing.plans') }}" class="{% if page_key == 'plans' %}active{% endif %}">Plans</a>
+        <a href="{{ url_for('marketing.partners') }}" class="{% if page_key == 'partners' %}active{% endif %}">Partners</a>
+        <a href="{{ url_for('marketing.contact') }}" class="{% if page_key == 'contact' %}active{% endif %}">Contact</a>
       </nav>
 
-      <div class="nav-actions">
-        <a href="{{ url_for('auth.login') }}" class="btn btn-ghost-sm">Sign In</a>
-        <a href="{{ url_for('auth.register') }}" class="btn btn-primary-sm">Enter</a>
+      <div class="mk-header-actions">
+        <a href="{{ url_for('marketing.enter') }}" class="mk-btn mk-btn-ghost">Enter</a>
+        <a href="{{ url_for('marketing.tour') }}" class="mk-btn mk-btn-primary">Take a Tour</a>
       </div>
-
-      <button class="mobile-menu-btn" type="button" aria-label="Open menu" onclick="document.body.classList.toggle('menu-open')">
-        <span></span>
-        <span></span>
-        <span></span>
-      </button>
-    </div>
-
-    <div class="mobile-nav">
-      <a href="/#inside-os" onclick="document.body.classList.remove('menu-open')">OS</a>
-      <a href="/#ecosystem" onclick="document.body.classList.remove('menu-open')">Ecosystem</a>
-      <a href="/#studios" onclick="document.body.classList.remove('menu-open')">Studios</a>
-      <a href="/#direction" onclick="document.body.classList.remove('menu-open')">Vision</a>
-      <a href="{{ url_for('auth.login') }}" onclick="document.body.classList.remove('menu-open')">Sign In</a>
-      <a href="{{ url_for('auth.register') }}" onclick="document.body.classList.remove('menu-open')">Enter</a>
     </div>
   </header>
 
-  <!-- =========================
-       PAGE CONTENT
-  ========================== -->
-  <main class="site-main">
+  <main class="mk-main">
+    {% block hero %}{% endblock %}
     {% block content %}{% endblock %}
   </main>
 
-  <!-- =========================
-       FOOTER
-  ========================== -->
-  <footer class="footer">
-    <div class="container footer-grid">
+  <footer class="mk-footer">
+    <div class="mk-container">
+      <div class="mk-footer-top">
+        <div>
+          <div class="mk-footer-brand">Ravlo</div>
+          <p class="mk-footer-copy">
+            A smarter operating system for investors managing deals, renovation strategy,
+            and build planning in one place.
+          </p>
+        </div>
 
-      <div class="footer-brand">
-        <img src="{{ url_for('static', filename='images/logo-white.png') }}" alt="Ravlo">
-        <p class="footer-tagline">
-          A premium operating system for investors, builders, and operators who move with vision.
-        </p>
+        <div class="mk-footer-grid">
+          <div>
+            <h4>Platform</h4>
+            <a href="{{ url_for('marketing.tour') }}">Tour</a>
+            <a href="{{ url_for('marketing.plans') }}">Plans</a>
+            <a href="{{ url_for('marketing.partners') }}">Partners</a>
+          </div>
+
+          <div>
+            <h4>Company</h4>
+            <a href="{{ url_for('marketing.about') }}">About</a>
+            <a href="{{ url_for('marketing.story') }}">Story</a>
+            <a href="{{ url_for('marketing.contact') }}">Contact</a>
+          </div>
+
+          <div>
+            <h4>Legal</h4>
+            <a href="{{ url_for('marketing.privacy') }}">Privacy</a>
+            <a href="{{ url_for('marketing.terms') }}">Terms</a>
+            <a href="{{ url_for('marketing.support') }}">Support</a>
+          </div>
+        </div>
       </div>
 
-      <div class="footer-col">
-        <h4>Platform</h4>
-        <a href="/#inside-os">Investor OS</a>
-        <a href="/#studios">Deal Architect</a>
-        <a href="/#studios">Renovation Studio</a>
-        <a href="/#studios">Build Studio</a>
-        <a href="/#ecosystem">Investor Intelligence</a>
+      <div class="mk-footer-bottom">
+        <span>© {{ site_name|default('Ravlo') }} {{ current_year|default(2026) }}</span>
+        <span>{{ site_tagline|default('Investor Command Center') }}</span>
       </div>
-
-      <div class="footer-col">
-        <h4>Company</h4>
-        <a href="/#direction">Vision</a>
-        <a href="/about">About</a>
-        <a href="/contact">Contact</a>
-      </div>
-
-      <div class="footer-col">
-        <h4>Legal</h4>
-        <a href="/terms">Terms</a>
-        <a href="/privacy">Privacy</a>
-      </div>
-
-    </div>
-
-    <div class="footer-bottom">
-      <p>© {{ current_year or 2026 }} Ravlo. All rights reserved.</p>
     </div>
   </footer>
 

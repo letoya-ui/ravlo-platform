@@ -1,132 +1,112 @@
 {% extends "layouts/marketing_base.html" %}
-{% block content %}
 
-<section class="vision-hero">
-  <div class="vision-hero-bg vision-hero-bg-1"></div>
-  <div class="vision-hero-bg vision-hero-bg-2"></div>
-
-  <div class="container vision-hero-inner">
-    <div class="vision-hero-copy">
-      <div class="vision-eyebrow">
-        <span class="vision-eyebrow-dot"></span>
-        The Ravlo Vision
-      </div>
-
-      <h1>Built for the next generation of real estate builders.</h1>
-
-      <p class="vision-hero-text">
-        Ravlo exists to give investors, builders, and partners a more connected way
-        to think, plan, and execute — with clarity, intelligence, and momentum.
+{% block hero %}
+<section class="mk-hero">
+  <div class="mk-container">
+    <div class="mk-hero-copy" style="max-width:920px;">
+      <div class="mk-eyebrow">Vision</div>
+      <h1 class="mk-title-xl">A smarter operating system for the investor journey.</h1>
+      <p class="mk-copy-lg">
+        Ravlo is built around the belief that investors should have a cleaner,
+        more connected way to move from opportunity to action.
       </p>
-
-      <div class="vision-hero-actions">
-        <a href="{{ url_for('auth.register') }}" class="btn btn-primary btn-lg">Get Started</a>
-        <a href="{{ url_for('main.home') if false else '/' }}" class="btn btn-ghost btn-lg">Back to Home</a>
-      </div>
-    </div>
-
-    <div class="vision-hero-visual">
-      <div class="vision-frame">
-        <img
-          src="{{ url_for('static', filename='images/vision/property.jpg') }}"
-          alt="Ravlo vision"
-          class="vision-image"
-        >
-      </div>
     </div>
   </div>
 </section>
+{% endblock %}
 
-<section class="vision-section">
-  <div class="container vision-grid">
-    <div class="vision-text">
-      <span class="section-kicker">Built with intention</span>
-      <h2>Software should create clarity, not confusion.</h2>
+{% block content %}
+<section class="mk-section">
+  <div class="mk-container">
+    <div class="mk-split-panel">
+      <div class="mk-panel">
+        <div class="mk-kicker">The future</div>
+        <h2 class="mk-title-lg">More than a dashboard. More like an ecosystem.</h2>
+        <p class="mk-copy">
+          The long-term vision for Ravlo is to create a platform where investors can evaluate,
+          plan, organize, and eventually collaborate inside one connected environment that feels intentional and premium.
+        </p>
+      </div>
 
-      <p>
-        Ravlo was created from a simple belief: real estate execution should feel
-        clear, connected, and empowering. Investors deserve tools that think with them.
-        Builders deserve better visibility. Partners deserve alignment.
-      </p>
-
-      <p>
-        This is more than software. It is an operating system for turning vision into
-        action, action into assets, and assets into long-term opportunity.
-      </p>
-    </div>
-
-    <div class="vision-side-card">
-      <div class="vision-quote-card">
-        <p>
-          “We’re building a platform where strategy, design, capital, and execution
-          move together.”
+      <div class="mk-panel">
+        <div class="mk-kicker">The experience</div>
+        <h2 class="mk-title-lg">Clearer decisions. Stronger execution.</h2>
+        <p class="mk-copy">
+          Ravlo is meant to support the full decision arc: understanding a deal, shaping a property,
+          planning next steps, and building toward something bigger than disconnected tools.
         </p>
       </div>
     </div>
   </div>
 </section>
 
-<section class="vision-principles">
-  <div class="container principles-inner">
-    <div class="section-header section-header-centered">
-      <span class="section-kicker">Principles</span>
-      <h2>What Ravlo stands on</h2>
+<section class="mk-section-tight">
+  <div class="mk-container">
+    <div class="mk-grid-3">
+      <div class="mk-card">
+        <div class="mk-card-icon">E</div>
+        <h3>Ecosystem</h3>
+        <p>Create a connected environment for investors, workflows, and future partnerships.</p>
+      </div>
+
+      <div class="mk-card">
+        <div class="mk-card-icon">I</div>
+        <h3>Intelligence</h3>
+        <p>Help users think through opportunity with more clarity and less fragmentation.</p>
+      </div>
+
+      <div class="mk-card">
+        <div class="mk-card-icon">G</div>
+        <h3>Growth</h3>
+        <p>Support a platform that can expand across studios, teams, and operational layers.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="mk-section">
+  <div class="mk-container">
+    <div class="mk-kicker">What this vision points toward</div>
+    <h2 class="mk-title-lg">A premium front door to a much larger platform story.</h2>
+    <p class="mk-copy-lg">
+      Your public site should communicate that Ravlo is being built with a broader future in mind:
+      product depth, stronger workflow, and a real investor-facing identity.
+    </p>
+
+    <div class="mk-grid-2" style="margin-top:28px;">
+      <div class="mk-card">
+        <h3>Focused studios</h3>
+        <p>Purpose-built experiences for specific parts of the investor workflow.</p>
+      </div>
+      <div class="mk-card">
+        <h3>Brand strength</h3>
+        <p>A platform presence that feels polished enough to grow into something substantial.</p>
+      </div>
+      <div class="mk-card">
+        <h3>Operator mindset</h3>
+        <p>Less browsing, more structured movement toward real execution.</p>
+      </div>
+      <div class="mk-card">
+        <h3>Expandable foundation</h3>
+        <p>Ready for future roles, capabilities, and ecosystem collaboration.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="mk-section">
+  <div class="mk-container">
+    <div class="mk-cta">
+      <div class="mk-kicker">Continue</div>
+      <h2 class="mk-title-lg">See how the vision connects to the product.</h2>
       <p>
-        Every part of the platform is shaped by a few core ideas.
+        Use this page to frame the bigger picture, then guide visitors into the tour, story, or entry experience.
       </p>
-    </div>
-
-    <div class="principles-grid">
-      <div class="principle-block">
-        <div class="principle-icon">01</div>
-        <h3>Clarity</h3>
-        <p>Every workflow, every screen, and every decision should feel intentional and usable.</p>
-      </div>
-
-      <div class="principle-block">
-        <div class="principle-icon">02</div>
-        <h3>Momentum</h3>
-        <p>Technology should accelerate progress, not create friction and overwhelm.</p>
-      </div>
-
-      <div class="principle-block">
-        <div class="principle-icon">03</div>
-        <h3>Alignment</h3>
-        <p>Investors, builders, and partners should work from one connected source of truth.</p>
-      </div>
-
-      <div class="principle-block">
-        <div class="principle-icon">04</div>
-        <h3>Legacy</h3>
-        <p>Ravlo is built for long-term stability, generational opportunity, and real-world impact.</p>
+      <div class="mk-cta-actions">
+        <a href="{{ url_for('marketing.tour') }}" class="mk-btn mk-btn-primary">Take the Tour</a>
+        <a href="{{ url_for('marketing.story') }}" class="mk-btn mk-btn-ghost">Read the Story</a>
       </div>
     </div>
   </div>
 </section>
-
-<section class="vision-bridge">
-  <div class="container vision-bridge-inner">
-    <div class="vision-bridge-copy">
-      <span class="section-kicker">Why it matters</span>
-      <h2>From scattered tools to one ecosystem.</h2>
-      <p>
-        Ravlo brings together deal thinking, transformation planning, intelligence,
-        and execution into one premium operating layer — so users can move with more
-        confidence and less chaos.
-      </p>
-    </div>
-  </div>
-</section>
-
-<section class="vision-cta">
-  <div class="container vision-cta-inner">
-    <h2>Build your future with Ravlo</h2>
-    <p>Join a platform designed to elevate your vision and strengthen your next move.</p>
-    <div class="cta-actions">
-      <a href="{{ url_for('auth.register') }}" class="btn btn-primary btn-lg">Create Your Account</a>
-      <a href="/" class="btn btn-ghost btn-lg">Back to Home</a>
-    </div>
-  </div>
-</section>
-
 {% endblock %}

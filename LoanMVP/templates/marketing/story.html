@@ -1,76 +1,125 @@
 {% extends "layouts/marketing_base.html" %}
+
+{% block hero %}
+<section class="mk-hero">
+  <div class="mk-container">
+    <div class="mk-hero-copy" style="max-width:900px;">
+      <div class="mk-eyebrow">Our Story</div>
+      <h1 class="mk-title-xl">Ravlo started with a bigger vision for how investors should work.</h1>
+      <p class="mk-copy-lg">
+        The platform was imagined as more than a dashboard. It was built around the idea
+        that investors need a cleaner, more powerful way to think through opportunities,
+        transformation, and growth.
+      </p>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
 {% block content %}
+<section class="mk-section">
+  <div class="mk-container">
+    <div class="mk-split-panel">
+      <div class="mk-panel">
+        <div class="mk-kicker">The beginning</div>
+        <h2 class="mk-title-lg">From scattered workflow to a real operating system.</h2>
+        <p class="mk-copy">
+          Real estate investing often involves too many disconnected steps. Notes live in one place,
+          screenshots in another, calculators somewhere else, and execution planning in pieces.
+          Ravlo was created to bring that process together into one stronger environment.
+        </p>
+      </div>
 
-<!-- =========================
-     OUR STORY — RAVLO
-========================= -->
-
-<!-- HERO -->
-<section class="story-hero">
-  <div class="container story-hero-inner">
-    <h1>Our Story</h1>
-    <p class="story-hero-text">
-      Ravlo was born from lived experience — the challenges, the uncertainty,
-      and the determination to build something better for investors and builders everywhere.
-    </p>
+      <div class="mk-panel">
+        <div class="mk-kicker">The idea behind the brand</div>
+        <h2 class="mk-title-lg">A premium platform with room to grow.</h2>
+        <p class="mk-copy">
+          Ravlo is designed to feel polished, credible, and expandable. It is meant to support
+          real work today while also growing into a broader ecosystem for investors, partners, and teams.
+        </p>
+      </div>
+    </div>
   </div>
 </section>
 
-<!-- ORIGIN STORY -->
-<section class="story-section">
-  <div class="container story-grid">
+<section class="mk-section-tight">
+  <div class="mk-container">
+    <div class="mk-grid-3">
+      <div class="mk-card">
+        <div class="mk-card-icon">1</div>
+        <h3>See the opportunity</h3>
+        <p>Help users understand the potential of a property before they move forward.</p>
+      </div>
 
-    <div class="story-text">
-      <h2>Where it began</h2>
+      <div class="mk-card">
+        <div class="mk-card-icon">2</div>
+        <h3>Shape the transformation</h3>
+        <p>Support renovation and build thinking with more confidence and more structure.</p>
+      </div>
+
+      <div class="mk-card">
+        <div class="mk-card-icon">3</div>
+        <h3>Expand the ecosystem</h3>
+        <p>Create a platform that can grow into something bigger than a single-use tool.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="mk-section">
+  <div class="mk-container">
+    <div class="mk-kicker">Narrative</div>
+    <h2 class="mk-title-lg">You can make this page more personal over time.</h2>
+    <p class="mk-copy-lg">
+      Right now, this story page works as a brand narrative. Later, you can deepen it with your founder story,
+      your real estate journey, why you built Ravlo, what problem you kept seeing, and what you want the platform to become.
+    </p>
+
+    <div class="mk-grid-2" style="margin-top:28px;">
+      <div class="mk-card">
+        <h3>What was missing</h3>
+        <p>
+          A more intentional place for investors to think, plan, and move with less friction.
+        </p>
+      </div>
+
+      <div class="mk-card">
+        <h3>What Ravlo changes</h3>
+        <p>
+          It creates a stronger front door, a clearer workflow, and a premium environment for execution.
+        </p>
+      </div>
+
+      <div class="mk-card">
+        <h3>What comes next</h3>
+        <p>
+          More studios, more workflows, more collaboration, and a stronger ecosystem over time.
+        </p>
+      </div>
+
+      <div class="mk-card">
+        <h3>Why the story matters</h3>
+        <p>
+          It helps people understand that Ravlo is being built with intention, not just assembled.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="mk-section">
+  <div class="mk-container">
+    <div class="mk-cta">
+      <div class="mk-kicker">Continue Exploring</div>
+      <h2 class="mk-title-lg">See the platform, the vision, and the next phase of Ravlo.</h2>
       <p>
-        Ravlo didn’t start as a company — it started as a need. A need for clarity.
-        A need for tools that made real estate feel less overwhelming and more empowering.
-        A need for a system that brought design, numbers, and execution into one place.
+        Use this story page to help visitors understand the thinking behind the brand before they step into the product.
       </p>
-      <p>
-        After years of navigating fragmented tools, scattered workflows, and
-        outdated systems, the vision became clear: build a platform that feels
-        cinematic, intuitive, and deeply supportive of the people doing the work.
-      </p>
-    </div>
-
-    <!-- Placeholder Image -->
-    <div class="story-visual">
-      <img src="/static/images/story/story_placeholder.png"
-           alt="Story Placeholder"
-           class="story-image">
-    </div>
-
-  </div>
-</section>
-
-<!-- JOURNEY -->
-<section class="story-journey">
-  <div class="container journey-inner">
-    <h2>The journey forward</h2>
-    <p>
-      Ravlo is evolving every day — shaped by real investors, real builders,
-      and real partners who believe in a better way to operate. Our journey
-      is grounded in intention, guided by clarity, and driven by the desire
-      to create generational opportunity.
-    </p>
-    <p>
-      This is more than software. It’s a movement toward stability, alignment,
-      and legacy. And we’re just getting started.
-    </p>
-  </div>
-</section>
-
-<!-- CTA -->
-<section class="story-cta">
-  <div class="container story-cta-inner">
-    <h2>Be part of the story</h2>
-    <p>Join a platform built with purpose, clarity, and a vision for the future.</p>
-    <div class="cta-actions">
-      <a href="/auth/register" class="btn btn-primary btn-lg">Get Started</a>
-      <a href="/" class="btn btn-ghost btn-lg">Back to Home</a>
+      <div class="mk-cta-actions">
+        <a href="{{ url_for('marketing.tour') }}" class="mk-btn mk-btn-primary">Take the Tour</a>
+        <a href="{{ url_for('marketing.mission') }}" class="mk-btn mk-btn-ghost">Read the Mission</a>
+      </div>
     </div>
   </div>
 </section>
-
 {% endblock %}

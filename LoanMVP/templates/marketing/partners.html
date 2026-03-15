@@ -1,145 +1,180 @@
 {% extends "layouts/marketing_base.html" %}
 
-{% block title %}Ravlo Partners{% endblock %}
+{% block hero %}
+<section class="mk-hero">
+  <div class="mk-container">
+    <div class="mk-hero-grid">
+      <div class="mk-hero-copy">
+        <div class="mk-eyebrow">Partners</div>
+        <h1 class="mk-title-xl">A platform built to connect investors with execution.</h1>
+        <p class="mk-copy-lg">
+          Ravlo is designed to grow beyond analysis alone. It creates space for investors,
+          service providers, and strategic partners to operate inside a more connected ecosystem.
+        </p>
+
+        <div class="mk-hero-actions">
+          <a href="{{ url_for('marketing.contact') }}" class="mk-btn mk-btn-primary">Become a Partner</a>
+          <a href="{{ url_for('marketing.tour') }}" class="mk-btn mk-btn-ghost">See the Platform</a>
+        </div>
+      </div>
+
+      <div class="mk-hero-visual">
+        <div class="mk-glow"></div>
+        <div class="mk-device">
+          <div class="mk-device-topbar">
+            <span class="mk-device-dot"></span>
+            <span class="mk-device-dot"></span>
+            <span class="mk-device-dot"></span>
+          </div>
+          {% if hero_image %}
+            <img src="{{ url_for('static', filename=hero_image) }}" alt="Ravlo partners ecosystem">
+          {% else %}
+            <img src="{{ url_for('static', filename='images/marketing/partners-hero.jpg') }}" alt="Ravlo partners ecosystem">
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}
 
 {% block content %}
+<section class="mk-section">
+  <div class="mk-container">
+    <div class="mk-kicker">Why partners matter</div>
+    <h2 class="mk-title-lg">Ravlo is meant to support the full investment workflow.</h2>
+    <p class="mk-copy-lg">
+      Investors do not operate alone. Deals move through contractors, designers, lenders,
+      agents, inspectors, property services, and operational support. Ravlo is structured
+      to become a stronger bridge between strategy and execution.
+    </p>
 
-<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+    <div class="mk-grid-3" style="margin-top:28px;">
+      <div class="mk-card">
+        <div class="mk-card-icon">C</div>
+        <h3>Contractors</h3>
+        <p>Support renovation and build execution with partner visibility inside the ecosystem.</p>
+      </div>
 
-<title>Ravlo Partners</title>
+      <div class="mk-card">
+        <div class="mk-card-icon">D</div>
+        <h3>Designers</h3>
+        <p>Help investors visualize property direction and improve the quality of transformation planning.</p>
+      </div>
 
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-
-<link rel="stylesheet" href="{{ url_for('static', filename='css/marketing.css') }}">
-</head>
-
-<body>
-
-<header class="topbar">
-<div class="container topbar-inner">
-
-<div class="brand">
-<div class="brand-mark">R</div>
-<div>
-<div class="brand-title">Ravlo</div>
-<div class="brand-sub">Investor Operating System</div>
-</div>
-</div>
-
-</div>
-</header>
-
-
-<section class="hero">
-<div class="container narrow">
-
-<h1 style="font-size:3.5rem;margin-bottom:20px">
-Become a Ravlo Partner
-</h1>
-
-<p class="hero-text">
-Join a network of contractors, agents, lenders, and operators who support active real estate projects and connect directly with investors and borrowers.
-</p>
-
-</div>
+      <div class="mk-card">
+        <div class="mk-card-icon">S</div>
+        <h3>Service Providers</h3>
+        <p>Create room for cleaners, inspectors, photographers, and other specialists to support the process.</p>
+      </div>
+    </div>
+  </div>
 </section>
 
+<section class="mk-section-tight">
+  <div class="mk-container">
+    <div class="mk-split-panel">
+      <div class="mk-panel">
+        <div class="mk-kicker">Who this can serve</div>
+        <h2 class="mk-title-lg">Built for growth across multiple categories.</h2>
 
-<section class="section">
-<div class="container">
+        <div class="mk-list">
+          <div class="mk-list-item">
+            <div class="mk-check">✓</div>
+            <div>
+              <strong>Investors</strong>
+              <div class="mk-copy">Find aligned services that help move projects forward.</div>
+            </div>
+          </div>
 
-<div class="section-head">
-<div class="section-tag">Why Partner With Ravlo</div>
-<h2>Connect with real opportunities, not cold leads.</h2>
+          <div class="mk-list-item">
+            <div class="mk-check">✓</div>
+            <div>
+              <strong>Vendors</strong>
+              <div class="mk-copy">Gain access to a platform centered around active real estate workflow.</div>
+            </div>
+          </div>
 
-<p>
-Ravlo brings together investors, builders, and borrowers who are actively executing deals.  
-Partners gain visibility, credibility, and direct access to projects that need their expertise.
-</p>
-</div>
+          <div class="mk-list-item">
+            <div class="mk-check">✓</div>
+            <div>
+              <strong>Operators</strong>
+              <div class="mk-copy">Build stronger collaboration between planning and execution.</div>
+            </div>
+          </div>
+        </div>
+      </div>
 
-<div class="grid grid-3">
+      <div class="mk-panel">
+        <div class="mk-kicker">Future direction</div>
+        <h2 class="mk-title-lg">More than a listing page.</h2>
+        <p class="mk-copy">
+          The long-term opportunity is bigger than a basic partner directory. Ravlo can evolve into
+          a true ecosystem where investors discover services, review fit, collaborate around projects,
+          and keep execution tied to the larger property workflow.
+        </p>
 
-<div class="card">
-<h3>Contractors</h3>
-<p>Get matched with renovation and construction projects that align with your capabilities.</p>
-</div>
+        <div class="mk-divider"></div>
 
-<div class="card">
-<h3>Real Estate Agents</h3>
-<p>Connect with investors seeking acquisitions, dispositions, and market intelligence.</p>
-</div>
-
-<div class="card">
-<h3>Lenders & Capital Partners</h3>
-<p>Access qualified borrowers and vetted opportunities inside a structured workflow.</p>
-</div>
-
-</div>
-
-</div>
+        <div class="mk-grid-2">
+          <div class="mk-card">
+            <h4>Partner visibility</h4>
+            <p>Highlight trusted categories and make the site feel more operationally complete.</p>
+          </div>
+          <div class="mk-card">
+            <h4>Ecosystem growth</h4>
+            <p>Create a path for future monetization, referrals, and stronger network effects.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 </section>
 
+<section class="mk-section">
+  <div class="mk-container">
+    <div class="mk-grid-3">
+      <div class="mk-card mk-media-card">
+        <img src="{{ url_for('static', filename='images/marketing/partner-contractors.jpg') }}" alt="Contractor partners">
+        <div class="mk-media-copy">
+          <h3>Renovation & Build</h3>
+          <p>Show how contractors and builders can support project execution inside the Ravlo vision.</p>
+        </div>
+      </div>
 
-<section class="section section-alt">
-<div class="container narrow">
+      <div class="mk-card mk-media-card">
+        <img src="{{ url_for('static', filename='images/marketing/partner-design.jpg') }}" alt="Design partners">
+        <div class="mk-media-copy">
+          <h3>Design & Planning</h3>
+          <p>Position designers and planners as valuable contributors to property transformation decisions.</p>
+        </div>
+      </div>
 
-<div class="section-tag">How It Works</div>
-
-<h2>A streamlined path to new business.</h2>
-
-<p class="section-copy">
-Ravlo integrates partners directly into the deal lifecycle — from acquisition to renovation to exit.  
-You’re not chasing leads. You’re joining a system where projects already exist.
-</p>
-
-<ul class="feature-list">
-<li>Showcase your services and capabilities</li>
-<li>Get discovered by investors and borrowers</li>
-<li>Receive project invitations and requests</li>
-<li>Collaborate inside a unified workflow</li>
-</ul>
-
-</div>
+      <div class="mk-card mk-media-card">
+        <img src="{{ url_for('static', filename='images/marketing/partner-services.jpg') }}" alt="Service partners">
+        <div class="mk-media-copy">
+          <h3>Operations & Services</h3>
+          <p>Bring in the support layer that helps investors move from idea to execution.</p>
+        </div>
+      </div>
+    </div>
+  </div>
 </section>
 
-
-<section class="section">
-<div class="container narrow">
-
-<div class="section-tag">Join the Network</div>
-
-<h2>Become a Ravlo Partner Today</h2>
-
-<p class="section-copy">
-Whether you're a contractor, agent, lender, or operator, Ravlo gives you a presence inside the ecosystem where real estate work actually happens.
-</p>
-
-<a class="btn btn-primary btn-lg" href="/partners/register">
-Create Partner Account
-</a>
-
-</div>
+<section class="mk-section">
+  <div class="mk-container">
+    <div class="mk-cta">
+      <div class="mk-kicker">Partnerships</div>
+      <h2 class="mk-title-lg">Want to grow with the Ravlo ecosystem?</h2>
+      <p>
+        Use this page as the public-facing invitation for vendors, collaborators, and strategic partners
+        to connect with your platform early.
+      </p>
+      <div class="mk-cta-actions">
+        <a href="{{ url_for('marketing.contact') }}" class="mk-btn mk-btn-primary">Become a Partner</a>
+        <a href="{{ url_for('marketing.about') }}" class="mk-btn mk-btn-ghost">Learn More</a>
+      </div>
+    </div>
+  </div>
 </section>
-
-
-<footer class="footer">
-<div class="container footer-inner">
-
-<div>
-<div class="brand-title">Ravlo</div>
-<div class="brand-sub">A presence for people who build.</div>
-</div>
-
-</div>
-</footer>
-
-</body>
-</html>
-
 {% endblock %}

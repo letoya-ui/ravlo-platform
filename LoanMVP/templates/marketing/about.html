@@ -1,109 +1,74 @@
 {% extends "layouts/marketing_base.html" %}
-{% block content %}
 
-<!-- =========================
-     ABOUT — RAVLO
-========================= -->
+{% block hero %}
+<section class="mk-hero">
+  <div class="mk-container">
+    <div class="mk-hero-grid">
+      <div class="mk-hero-copy">
+        <div class="mk-eyebrow">About Ravlo</div>
+        <h1 class="mk-title-xl">Built to bring more clarity to the investor journey.</h1>
+        <p class="mk-copy-lg">
+          Ravlo was created to make real estate investing feel less scattered and more intentional,
+          with tools that help investors think through opportunity, transformation, and execution in one ecosystem.
+        </p>
+      </div>
 
-<!-- HERO -->
-<section class="about-hero">
-  <div class="container about-hero-inner">
-
-    <div class="about-hero-copy">
-      <h1>The Story Behind Ravlo</h1>
-      <p class="about-hero-text">
-        Ravlo was built for the ones who see property as a medium — not just an asset class.
-        A cinematic operating system for builders who move differently.
-      </p>
-    </div>
-
-  </div>
-</section>
-
-<!-- ORIGIN -->
-<section class="about-origin">
-  <div class="container origin-grid">
-
-    <div class="origin-text">
-      <h2>Where it started</h2>
-      <p>
-        Ravlo began with a simple belief: real estate deserves better tools.
-        Not spreadsheets. Not scattered apps. Not guesswork.
-      </p>
-      <p>
-        Builders, investors, and operators needed a place where vision, numbers,
-        design, and execution could live together — in one cinematic flow.
-      </p>
-    </div>
-
-    <div class="content-image-card">
-      <img src="{{ url_for('static', filename='images/vision/property.jpg') }}" alt="Ravlo vision">
-    </div>
-
-  </div>
-</section>
-
-<!-- MISSION -->
-<section class="about-mission">
-  <div class="container mission-inner">
-    <h2>Our mission</h2>
-    <p>
-      To give every builder — from first‑time investors to seasoned operators —
-      a platform that amplifies their vision, sharpens their strategy,
-      and elevates the way they move through the world of real estate.
-    </p>
-  </div>
-</section>
-
-<!-- THE OS -->
-<section class="content-section">
-  <div class="container">
-    <div class="section-header">
-      <h2>What Ravlo brings together</h2>
-    </div>
-
-    <div class="value-grid">
-      <div class="value-card"><h3>Strategy</h3><p>Analyze and structure real estate opportunities.</p></div>
-      <div class="value-card"><h3>Design</h3><p>Guide renovations and transformations visually.</p></div>
-      <div class="value-card"><h3>Execution</h3><p>Coordinate projects, partners, and timelines in one place.</p></div>
+      <div class="mk-hero-visual">
+        <div class="mk-glow"></div>
+        <div class="mk-device">
+          <div class="mk-device-topbar">
+            <span class="mk-device-dot"></span>
+            <span class="mk-device-dot"></span>
+            <span class="mk-device-dot"></span>
+          </div>
+          {% if hero_image %}
+            <img src="{{ url_for('static', filename=hero_image) }}" alt="About Ravlo">
+          {% else %}
+            <img src="{{ url_for('static', filename='images/marketing/about-hero.jpg') }}" alt="About Ravlo">
+          {% endif %}
+        </div>
+      </div>
     </div>
   </div>
 </section>
-
-<!-- FOUNDER SECTION -->
-<section class="about-founder">
-  <div class="container founder-grid">
-
-    <div class="founder-text">
-      <h2>From the founder</h2>
-      <p>
-        Ravlo is more than software — it’s a philosophy.
-        A belief that real estate is a canvas for creativity, discipline, and legacy.
-      </p>
-      <p>
-        We’re building tools for the next generation of investors:
-        the ones who want clarity, control, and a platform that moves at their speed.
-      </p>
-      <p class="founder-signature">— Letoya Mason, Founder</p>
-    </div>
-
-    <div class="founder-visual">
-      <div class="founder-card"></div>
-    </div>
-
-  </div>
-</section>
-
-<!-- CTA -->
-<section class="about-cta">
-  <div class="container about-cta-inner">
-    <h2>Enter the Ravlo Ecosystem</h2>
-    <p>Bring your vision, your deals, and your partners into one cinematic operating system.</p>
-    <div class="cta-actions">
-      <a href="/auth/register" class="btn btn-primary btn-lg">Get Started</a>
-      <a href="/" class="btn btn-ghost btn-lg">Back to Home</a>
-    </div>
-  </div>
-</section>
-
 {% endblock %}
+
+{% block content %}
+<section class="mk-section">
+  <div class="mk-container">
+    <div class="mk-split-panel">
+      <div class="mk-panel">
+        <div class="mk-kicker">The idea</div>
+        <h2 class="mk-title-lg">A platform that feels like a true command center.</h2>
+        <p class="mk-copy">
+          Real estate investors often work across disconnected tools, scattered notes,
+          screenshots, calculators, and half-built workflows. Ravlo is designed to bring
+          those pieces into a cleaner, more premium environment.
+        </p>
+      </div>
+
+      <div class="mk-panel">
+        <div class="mk-kicker">The direction</div>
+        <h2 class="mk-title-lg">From deal analysis to execution thinking.</h2>
+        <p class="mk-copy">
+          Ravlo is not just about viewing data. It is about helping users understand what a property
+          could become, what direction makes sense, and how to move with more structure.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="mk-section-tight">
+  <div class="mk-container">
+    <div class="mk-grid-3">
+      <div class="mk-card">
+        <div class="mk-card-icon">C</div>
+        <h3>Clarity</h3>
+        <p>Make the investor workflow easier to understand and easier to act on.</p>
+      </div>
+
+      <div class="mk-card">
+        <div class="mk-card-icon">S</div>
+        <h3>Structure</h3>
+        <p>Organize deal, renovation, and
