@@ -44,7 +44,7 @@ from LoanMVP.utils.payment_engine import (
 )
 from LoanMVP.utils.emailer import send_email_with_attachment
 
-from services.equifax_api import EquifaxAPI
+from LoanMVP.services.equifax_api import EquifaxAPI
 
 # Optional AI helper / custom engine
 from LoanMVP.utils.ai import LoanMVPAI
