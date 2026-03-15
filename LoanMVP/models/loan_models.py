@@ -466,7 +466,6 @@ class LoanScenario(db.Model):
     monthly_payment = db.Column(db.Float)
 
     # Optional fields
-
     dti = db.Column(db.Float)
     ltv = db.Column(db.Float)
     apr = db.Column(db.Float)
@@ -479,22 +478,39 @@ class LoanScenario(db.Model):
     def __repr__(self):
         return f"<LoanScenario {self.title} Loan={self.loan_id}>"
 
+
 class CreditPullAudit(db.Model):
+    __tablename__ = "credit_pull_audits"
+
     id = db.Column(db.Integer, primary_key=True)
-    borrower_id = db.Column(db.Integer, db.ForeignKey("borrower_profile.id"))
-    loan_officer_id = db.Column(db.Integer, db.ForeignKey("user.id"))
-    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
-    permissible_purpose = db.Column(db.String(255))
-    result_status = db.Column(db.String(50))
-    raw_response = db.Column(db.JSON)
+    borrower_id = db.Column(db.Integer, db.ForeignKey("borrower_profile.id"), nullable=False, index=True)
+    loan_officer_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=True, index=True)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    permissible_purpose = db.Column(db.String(255), nullable=True)
+    result_status = db.Column(db.String(50), nullable=True)
+    raw_response = db.Column(db.JSON, nullable=True)
+
+    borrower = db.relationship("BorrowerProfile", backref=db.backref("credit_pull_audits", lazy=True))
+    loan_officer = db.relationship("User", backref=db.backref("credit_pull_audits_requested", lazy=True))
+
+    def __repr__(self):
+        return f"<CreditPullAudit borrower_id={self.borrower_id} status={self.result_status}>"
+
+
 
 class BorrowerConsent(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    borrower_id = db.Column(db.Integer, db.ForeignKey("borrower_profile.id"))
-    consent_type = db.Column(db.String(50))  # "credit_pull"
-    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
-    ip_address = db.Column(db.String(50))
+    __tablename__ = "borrower_consents"
 
+    id = db.Column(db.Integer, primary_key=True)
+    borrower_id = db.Column(db.Integer, db.ForeignKey("borrower_profile.id"), nullable=False, index=True)
+    consent_type = db.Column(db.String(50), nullable=False)  # "credit_pull"
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    ip_address = db.Column(db.String(50), nullable=True)
+
+    borrower = db.relationship("BorrowerProfile", backref=db.backref("borrower_consents", lazy=True))
+
+    def __repr__(self):
+        return f"<BorrowerConsent borrower_id={self.borrower_id} type={self.consent_type}>"
 
 from LoanMVP.models.ai_models import LoanAIConversation
 
