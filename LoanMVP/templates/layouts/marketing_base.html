@@ -1,90 +1,107 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ravlo</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Ravlo{% endblock %}</title>
+  <meta name="description" content="Ravlo is a premium operating system for investors, builders, and real estate operators.">
 
-    <!-- Global Styles -->
-    <link rel="stylesheet" href="/static/css/marketing.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/marketing.css') }}">
+  {% block head %}{% endblock %}
 </head>
-
 <body>
 
-    <!-- =========================
-         NAVIGATION
-    ========================== -->
-    <header class="nav">
-        <div class="container nav-inner">
+  <!-- =========================
+       NAVIGATION
+  ========================== -->
+  <header class="nav">
+    <div class="container nav-inner">
 
-            <a href="/" class="nav-logo">
-                <img src="/static/images/logo-white.png" alt="Ravlo">
-            </a>
+      <a href="{{ url_for('main.home') if false else '/' }}" class="nav-logo" aria-label="Ravlo Home">
+        <img src="{{ url_for('static', filename='images/logo-white.png') }}" alt="Ravlo">
+      </a>
 
-            <nav class="nav-links">
-                <a href="/#inside-os">OS</a>
-                <a href="/#ecosystem">Ecosystem</a>
-                <a href="/#studios">Studios</a>
-                <a href="/#direction">Vision</a>
-            </nav>
+      <nav class="nav-links" aria-label="Primary">
+        <a href="/#inside-os">OS</a>
+        <a href="/#ecosystem">Ecosystem</a>
+        <a href="/#studios">Studios</a>
+        <a href="/#direction">Vision</a>
+      </nav>
 
-            <div class="nav-actions">
-                <a href="/auth/login" class="btn btn-ghost-sm">Sign In</a>
-                <a href="/auth/register" class="btn btn-primary-sm">Enter</a>
-            </div>
+      <div class="nav-actions">
+        <a href="{{ url_for('auth.login') }}" class="btn btn-ghost-sm">Sign In</a>
+        <a href="{{ url_for('auth.register') }}" class="btn btn-primary-sm">Enter</a>
+      </div>
 
-        </div>
-    </header>
+      <button class="mobile-menu-btn" type="button" aria-label="Open menu" onclick="document.body.classList.toggle('menu-open')">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+    </div>
 
-    <!-- =========================
-         PAGE CONTENT
-    ========================== -->
-    <main>
-        {% block content %}
-        {% endblock %}
-    </main>
+    <div class="mobile-nav">
+      <a href="/#inside-os" onclick="document.body.classList.remove('menu-open')">OS</a>
+      <a href="/#ecosystem" onclick="document.body.classList.remove('menu-open')">Ecosystem</a>
+      <a href="/#studios" onclick="document.body.classList.remove('menu-open')">Studios</a>
+      <a href="/#direction" onclick="document.body.classList.remove('menu-open')">Vision</a>
+      <a href="{{ url_for('auth.login') }}" onclick="document.body.classList.remove('menu-open')">Sign In</a>
+      <a href="{{ url_for('auth.register') }}" onclick="document.body.classList.remove('menu-open')">Enter</a>
+    </div>
+  </header>
 
-    <!-- =========================
-         FOOTER
-    ========================== -->
-    <footer class="footer">
-        <div class="container footer-grid">
+  <!-- =========================
+       PAGE CONTENT
+  ========================== -->
+  <main class="site-main">
+    {% block content %}{% endblock %}
+  </main>
 
-            <div class="footer-brand">
-                <img src="/static/images/logo-white.png" alt="Ravlo">
-                <p class="footer-tagline">
-                    A cinematic operating system for builders who move differently.
-                </p>
-            </div>
+  <!-- =========================
+       FOOTER
+  ========================== -->
+  <footer class="footer">
+    <div class="container footer-grid">
 
-            <div class="footer-col">
-                <h4>Ecosystem</h4>
-                <a href="/#ecosystem">Deal Architect</a>
-                <a href="/#ecosystem">Renovation Studio</a>
-                <a href="/#ecosystem">Build Studio</a>
-                <a href="/#ecosystem">Investor Intelligence</a>
-                <a href="/#ecosystem">Partner Network</a>
-            </div>
+      <div class="footer-brand">
+        <img src="{{ url_for('static', filename='images/logo-white.png') }}" alt="Ravlo">
+        <p class="footer-tagline">
+          A premium operating system for investors, builders, and operators who move with vision.
+        </p>
+      </div>
 
-            <div class="footer-col">
-                <h4>Company</h4>
-                <a href="/#direction">Vision</a>
-                <a href="/about">About</a>
-                <a href="/contact">Contact</a>
-            </div>
+      <div class="footer-col">
+        <h4>Platform</h4>
+        <a href="/#inside-os">Investor OS</a>
+        <a href="/#studios">Deal Architect</a>
+        <a href="/#studios">Renovation Studio</a>
+        <a href="/#studios">Build Studio</a>
+        <a href="/#ecosystem">Investor Intelligence</a>
+      </div>
 
-            <div class="footer-col">
-                <h4>Legal</h4>
-                <a href="/terms">Terms</a>
-                <a href="/privacy">Privacy</a>
-            </div>
+      <div class="footer-col">
+        <h4>Company</h4>
+        <a href="/#direction">Vision</a>
+        <a href="/about">About</a>
+        <a href="/contact">Contact</a>
+      </div>
 
-        </div>
+      <div class="footer-col">
+        <h4>Legal</h4>
+        <a href="/terms">Terms</a>
+        <a href="/privacy">Privacy</a>
+      </div>
 
-        <div class="footer-bottom">
-            <p>© {{ current_year }} Ravlo. All rights reserved.</p>
-        </div>
-    </footer>
+    </div>
+
+    <div class="footer-bottom">
+      <p>© {{ current_year or 2026 }} Ravlo. All rights reserved.</p>
+    </div>
+  </footer>
 
 </body>
 </html>
