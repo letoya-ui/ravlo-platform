@@ -24,7 +24,7 @@
           {% if hero_image %}
             <img src="{{ url_for('static', filename=hero_image) }}" alt="About Ravlo">
           {% else %}
-            <img src="{{ url_for('static', filename='images/marketing/team_strategy.jpg') }}" alt="About Ravlo">
+            <img src="{{ url_for('static', filename='images/about/team_strategy.jpg') }}" alt="About Ravlo">
           {% endif %}
         </div>
       </div>
@@ -71,4 +71,72 @@
       <div class="mk-card">
         <div class="mk-card-icon">S</div>
         <h3>Structure</h3>
-        <p>Organize deal, renovation, and
+        <p>Organize deal, renovation, and build strategy in a way that feels connected.</p>
+      </div>
+
+      <div class="mk-card">
+        <div class="mk-card-icon">G</div>
+        <h3>Growth</h3>
+        <p>Create a strong foundation for future expansion, partners, teams, and advanced workflows.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="mk-section">
+  <div class="mk-container">
+    <div class="mk-kicker">What makes Ravlo different</div>
+    <h2 class="mk-title-lg">It is designed like an ecosystem, not just a tool.</h2>
+    <p class="mk-copy-lg">
+      Ravlo brings together strategic thinking, visual planning, and future growth potential in one branded experience.
+      That makes it easier to present, easier to use, and easier to expand.
+    </p>
+
+    <div class="mk-grid-2" style="margin-top:28px;">
+      <div class="mk-card">
+        <h3>Premium interface</h3>
+        <p>
+          Built to feel polished, modern, and strong enough to support a real investor-facing brand.
+        </p>
+      </div>
+
+      <div class="mk-card">
+        <h3>Studio model</h3>
+        <p>
+          Separate focused experiences make the platform easier to understand and easier to grow.
+        </p>
+      </div>
+
+      <div class="mk-card">
+        <h3>Expandable architecture</h3>
+        <p>
+          Ready for dashboards, partners, lenders, borrowers, and future role-based experiences.
+        </p>
+      </div>
+
+      <div class="mk-card">
+        <h3>Brand-first presentation</h3>
+        <p>
+          Public site, product screens, and internal workflows all work together to tell one story.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="mk-section">
+  <div class="mk-container">
+    <div class="mk-cta">
+      <div class="mk-kicker">See More</div>
+      <h2 class="mk-title-lg">Explore the platform and see how Ravlo comes together.</h2>
+      <p>
+        Use the tour page, screenshots, and studio pages to make the public site feel like a premium front door to the platform.
+      </p>
+      <div class="mk-cta-actions">
+        <a href="{{ url_for('marketing.tour') }}" class="mk-btn mk-btn-primary">Take the Tour</a>
+        <a href="{{ url_for('marketing.story') }}" class="mk-btn mk-btn-ghost">Read the Story</a>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}
