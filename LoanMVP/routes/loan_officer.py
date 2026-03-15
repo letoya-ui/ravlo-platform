@@ -44,6 +44,8 @@ from LoanMVP.utils.payment_engine import (
 )
 from LoanMVP.utils.emailer import send_email_with_attachment
 
+from services.equifax_api import EquifaxAPI
+
 # Optional AI helper / custom engine
 from LoanMVP.utils.ai import LoanMVPAI
 
@@ -56,7 +58,7 @@ from LoanMVP.models.loan_models import (
     LoanQuote,
     Upload,
     LoanStatusEvent,
-    LoanScenario,
+    LoanScenario,  
 )
 from LoanMVP.models.loan_officer_model import LoanOfficerProfile
 from LoanMVP.models.crm_models import (
@@ -66,6 +68,7 @@ from LoanMVP.models.crm_models import (
     Task,
     LeadSource,
     FollowUpItem,
+    MessageThread,
 )
 from LoanMVP.models.document_models import (
     LoanDocument,
@@ -94,6 +97,9 @@ from LoanMVP.forms.loan_officer_forms import (
 from LoanMVP.forms.ai_forms import AIIntakeReviewForm
 
 loan_officer_bp = Blueprint("loan_officer", __name__, url_prefix="/loan_officer")
+
+
+equifax = EquifaxAPI()
 
 assistant = AIAssistant()
 ai = LoanMVPAI()
@@ -340,6 +346,111 @@ def ai_assistant():
         "loan_status": loan_status,
         "ai_response": ai_response
     }), 200
+
+
+# -----------------------------
+# MESSAGES LIST
+# -----------------------------
+@loan_officer_bp.route("/messages")
+@login_required
+def messages():
+    threads = MessageThread.query.filter_by(loan_officer_id=current_user.id)\
+                                 .order_by(MessageThread.updated_at.desc())\
+                                 .all()
+
+    return render_template(
+        "loan_officer/messages/messages_list.html",
+        threads=threads,
+        active_page="messages"
+    )
+
+# -----------------------------
+# MESSAGE THREAD VIEW
+# -----------------------------
+@loan_officer_bp.route("/messages/<int:thread_id>", methods=["GET", "POST"])
+@login_required
+def message_thread(thread_id):
+    thread = MessageThread.query.get_or_404(thread_id)
+
+    # Permission check
+    if thread.loan_officer_id != current_user.id:
+        flash("You do not have access to this thread.", "danger")
+        return redirect(url_for("loan_officer.messages"))
+
+    # POST → send reply
+    if request.method == "POST":
+        body = request.form.get("body")
+
+        if not body.strip():
+            flash("Message cannot be empty.", "warning")
+            return redirect(url_for("loan_officer.message_thread", thread_id=thread_id))
+
+        new_msg = Message(
+            thread_id=thread.id,
+            sender_id=current_user.id,
+            body=body
+        )
+
+        thread.updated_at = db.func.now()
+
+        db.session.add(new_msg)
+        db.session.commit()
+
+        return redirect(url_for("loan_officer.message_thread", thread_id=thread_id))
+
+    messages = Message.query.filter_by(thread_id=thread.id)\
+                            .order_by(Message.created_at.asc())\
+                            .all()
+
+    return render_template(
+        "loan_officer/messages/message_thread.html",
+        thread=thread,
+        messages=messages,
+        active_page="messages"
+    )
+
+# -----------------------------
+# START NEW MESSAGE THREAD
+# -----------------------------
+@loan_officer_bp.route("/messages/new", methods=["GET", "POST"])
+@login_required
+def new_message():
+    borrowers = User.query.filter_by(role="borrower").all()
+
+    if request.method == "POST":
+        borrower_id = request.form.get("borrower_id")
+        subject = request.form.get("subject")
+        body = request.form.get("body")
+
+        if not borrower_id or not subject or not body:
+            flash("All fields are required.", "warning")
+            return redirect(url_for("loan_officer.new_message"))
+
+        # Create thread
+        thread = MessageThread(
+            borrower_id=borrower_id,
+            loan_officer_id=current_user.id,
+            subject=subject
+        )
+        db.session.add(thread)
+        db.session.commit()
+
+        # Create first message
+        msg = Message(
+            thread_id=thread.id,
+            sender_id=current_user.id,
+            body=body
+        )
+        db.session.add(msg)
+        db.session.commit()
+
+        return redirect(url_for("loan_officer.message_thread", thread_id=thread.id))
+
+    return render_template(
+        "loan_officer/messages/new_message.html",
+        borrowers=borrowers,
+        active_page="messages"
+    )
     
 @loan_officer_bp.route("/loan/<int:loan_id>")
 @role_required("loan_officer")
@@ -441,110 +552,6 @@ def loan_search():
     )
 
 
-# =========================================================
-# Lead Management
-# =========================================================
-@loan_officer_bp.route("/leads")
-@role_required("loan_officer")
-def leads():
-    leads = Lead.query.filter_by(assigned_to=current_user.id).order_by(Lead.created_at.desc()).all()
-    return render_template(
-        "loan_officer/leads.html",
-        leads=leads,
-        active_tab="leads",
-        title="Lead List"
-    )
-
-
-@loan_officer_bp.route("/lead/<int:lead_id>")
-@role_required("loan_officer")
-def lead_detail(lead_id):
-    lead = Lead.query.get_or_404(lead_id)
-    notes = CRMNote.query.filter_by(lead_id=lead.id).order_by(CRMNote.created_at.desc()).all()
-
-    try:
-        assistant = AIAssistant()
-        ai_summary = assistant.generate_reply(
-            f"Summarize borrower insights for lead: {lead.name}, {lead.email}",
-            "crm"
-        )
-    except Exception:
-        ai_summary = "AI summary unavailable."
-
-    return render_template(
-        "loan_officer/lead_detail.html",
-        lead=lead,
-        notes=notes,
-        ai_summary=ai_summary,
-        active_tab="leads",
-        title="Lead Details"
-    )
-
-
-@loan_officer_bp.route("/lead/new", methods=["GET", "POST"])
-@csrf.exempt
-@role_required("loan_officer")
-def new_lead():
-    sources = LeadSource.query.order_by(LeadSource.source_name.asc()).all()
-
-    if request.method == "POST":
-        lead = Lead(
-            name=request.form.get("name"),
-            email=request.form.get("email"),
-            phone=request.form.get("phone"),
-            source_id=request.form.get("source_id"),
-            status="new",
-            assigned_to=current_user.id,
-            created_at=datetime.utcnow(),
-        )
-        db.session.add(lead)
-        db.session.commit()
-
-        flash("Lead created successfully.", "success")
-        return redirect(url_for("loan_officer.leads"))
-
-    return render_template(
-        "loan_officer/lead_form.html",
-        sources=sources,
-        active_tab="leads",
-        title="Add New Lead"
-    )
-
-
-@loan_officer_bp.route("/lead/<int:lead_id>/convert", methods=["POST"])
-@csrf.exempt
-@role_required("loan_officer")
-def convert_lead(lead_id):
-    lead = Lead.query.get_or_404(lead_id)
-
-    borrower = BorrowerProfile(
-        full_name=lead.name,
-        email=lead.email,
-        phone=lead.phone,
-        lead_id=lead.id,
-        assigned_to=current_user.id
-    )
-    db.session.add(borrower)
-
-    lead.status = "converted"
-    db.session.commit()
-
-    flash("Lead converted to borrower successfully.", "success")
-    return redirect(url_for("loan_officer.leads"))
-
-
-@loan_officer_bp.route("/lead/update/<int:lead_id>", methods=["POST"])
-@csrf.exempt
-@role_required("loan_officer")
-def update_lead(lead_id):
-    lead = Lead.query.get_or_404(lead_id)
-
-    lead.status = request.form.get("status")
-    lead.notes = request.form.get("notes")
-
-    db.session.commit()
-
-    return redirect(url_for("loan_officer.lead_detail", lead_id=lead.id))
 
 
 # =========================================================
@@ -1137,38 +1144,87 @@ def borrower_ai_log(borrower_id):
     )
 
 
-@loan_officer_bp.route("/credit-check", methods=["GET", "POST"])
-@csrf.exempt
-@role_required("loan_officer")
-def credit_check():
-    borrowers = BorrowerProfile.query.order_by(BorrowerProfile.full_name.asc()).all()
-    credit_data = None
 
+@loan_officer_bp.route("/credit-check", methods=["GET", "POST"])
+def credit_check():
+    borrowers = BorrowerProfile.query.all()
+    borrower_id = request.args.get("borrower_id")
+
+    credit_data = None
+    credit_history = None
+
+    # POST → Run real Equifax pull
     if request.method == "POST":
         borrower_profile_id = request.form.get("borrower_profile_id")
-        borrower = BorrowerProfile.query.get_or_404(borrower_profile_id)
+        borrower = BorrowerProfile.query.get(borrower_profile_id)
 
-        credit_data = CreditProfile(
-            borrower_profile_id=borrower.id,
-            score=720,
-            credit_score=720,
-            report_date=datetime.utcnow(),
-            delinquencies=0,
-            public_records=0,
-            total_debt=5000
+        if not borrower:
+            flash("Borrower not found.", "danger")
+            return redirect(url_for("loan_officer.credit_check"))
+
+        # 1. Check consent
+        consent = BorrowerConsent.query.filter_by(
+            borrower_id=borrower.id,
+            consent_type="credit_pull"
+        ).first()
+
+        if not consent:
+            flash("Borrower has not provided credit pull consent.", "danger")
+            return redirect(url_for("loan_officer.credit_check"))
+
+        # 2. Call Equifax
+        result = equifax.pull_credit(borrower)
+
+        # 3. Log audit
+        audit = CreditPullAudit(
+            borrower_id=borrower.id,
+            loan_officer_id=current_user.id,
+            permissible_purpose="loan_underwriting",
+            result_status="success" if "error" not in result else "error",
+            raw_response=result
+        )
+        db.session.add(audit)
+
+        # 4. Handle error
+        if "error" in result:
+            db.session.commit()
+            flash("Equifax Error: " + result["error"], "danger")
+            return redirect(url_for("loan_officer.credit_check"))
+
+        # 5. Map Equifax → DB
+        report = result.get("creditReport", {})
+        score = report.get("score", {}).get("ficoScore", 0)
+        summary = report.get("summary", {})
+
+        new_report = CreditReport(
+            borrower_id=borrower.id,
+            credit_score=score,
+            delinquencies=summary.get("delinquencies", 0),
+            public_records=summary.get("publicRecords", 0),
+            total_debt=summary.get("totalDebt", 0),
+            report_date=datetime.utcnow()
         )
 
-        db.session.add(credit_data)
+        db.session.add(new_report)
         db.session.commit()
 
-        flash("Credit check saved.", "success")
+        return redirect(url_for("loan_officer.credit_check", borrower_id=borrower.id))
+
+    # GET → Show latest + history
+    if borrower_id:
+        credit_data = CreditReport.query.filter_by(borrower_id=borrower_id)\
+                                        .order_by(CreditReport.report_date.desc())\
+                                        .first()
+
+        credit_history = CreditReport.query.filter_by(borrower_id=borrower_id)\
+                                           .order_by(CreditReport.report_date.desc())\
+                                           .all()
 
     return render_template(
         "loan_officer/credit_check.html",
         borrowers=borrowers,
         credit_data=credit_data,
-        active_tab="tools",
-        title="Credit Check"
+        credit_history=credit_history
     )
 
 

@@ -23,6 +23,8 @@ from LoanMVP.models.loan_models import (
     LoanScenario,
     DocumentEvent,
     LoanStatusEvent,
+    CreditPullAudit,
+    BorrowerConsent,
 )
 
 # 📄 Loan Documents

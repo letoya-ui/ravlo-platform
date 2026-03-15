@@ -479,6 +479,16 @@ class LoanScenario(db.Model):
     def __repr__(self):
         return f"<LoanScenario {self.title} Loan={self.loan_id}>"
 
+class CreditPullAudit(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    borrower_id = db.Column(db.Integer, db.ForeignKey("borrower_profile.id"))
+    loan_officer_id = db.Column(db.Integer, db.ForeignKey("user.id"))
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+    permissible_purpose = db.Column(db.String(255))
+    result_status = db.Column(db.String(50))
+    raw_response = db.Column(db.JSON)
+
+
 
 from LoanMVP.models.ai_models import LoanAIConversation
 
