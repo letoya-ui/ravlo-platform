@@ -488,6 +488,12 @@ class CreditPullAudit(db.Model):
     result_status = db.Column(db.String(50))
     raw_response = db.Column(db.JSON)
 
+class BorrowerConsent(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    borrower_id = db.Column(db.Integer, db.ForeignKey("borrower_profile.id"))
+    consent_type = db.Column(db.String(50))  # "credit_pull"
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+    ip_address = db.Column(db.String(50))
 
 
 from LoanMVP.models.ai_models import LoanAIConversation
