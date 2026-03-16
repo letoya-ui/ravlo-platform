@@ -5965,6 +5965,94 @@ def budget():
         active_tab="budget"
     )
 
+@investor_bp.route("/deals/<int:deal_id>/rehab/budget", methods=["GET", "POST"])
+@csrf.exempt
+@login_required
+@role_required("investor")
+def rehab_budget_tracker(deal_id):
+    deal = _get_owned_deal_or_404(deal_id)
+
+    if request.method == "POST":
+        item = BudgetItem(
+            user_id=current_user.id,
+            deal_id=deal.id,
+            budget_type="rehab",
+            category=(request.form.get("category") or "").strip(),
+            item_name=(request.form.get("item_name") or "").strip(),
+            vendor=(request.form.get("vendor") or "").strip() or None,
+            estimated_cost=float(request.form.get("estimated_cost") or 0),
+            actual_cost=float(request.form.get("actual_cost") or 0),
+            paid_amount=float(request.form.get("paid_amount") or 0),
+            status=(request.form.get("status") or "planned").strip(),
+            notes=(request.form.get("notes") or "").strip() or None,
+        )
+        db.session.add(item)
+        db.session.commit()
+        flash("Budget item added.", "success")
+        return redirect(url_for("investor.rehab_budget_tracker", deal_id=deal.id))
+
+    items = BudgetItem.query.filter_by(
+        user_id=current_user.id,
+        deal_id=deal.id,
+        budget_type="rehab"
+    ).order_by(BudgetItem.created_at.desc()).all()
+
+    summary = budget_summary(items)
+
+    return render_template(
+        "investor/rehab_budget_tracker.html",
+        deal=deal,
+        items=items,
+        summary=summary,
+        page_title="Rehab Budget Tracker",
+        page_subtitle="Track projected vs actual renovation spend."
+    )
+
+@investor_bp.route("/build-projects/<int:project_id>/budget", methods=["GET", "POST"])
+@csrf.exempt
+@login_required
+@role_required("investor")
+def build_budget_tracker(project_id):
+    project = BuildProject.query.filter_by(
+        id=project_id,
+        user_id=current_user.id
+    ).first_or_404()
+
+    if request.method == "POST":
+        item = BudgetItem(
+            user_id=current_user.id,
+            build_project_id=project.id,
+            budget_type="build",
+            category=(request.form.get("category") or "").strip(),
+            item_name=(request.form.get("item_name") or "").strip(),
+            vendor=(request.form.get("vendor") or "").strip() or None,
+            estimated_cost=float(request.form.get("estimated_cost") or 0),
+            actual_cost=float(request.form.get("actual_cost") or 0),
+            paid_amount=float(request.form.get("paid_amount") or 0),
+            status=(request.form.get("status") or "planned").strip(),
+            notes=(request.form.get("notes") or "").strip() or None,
+        )
+        db.session.add(item)
+        db.session.commit()
+        flash("Build budget item added.", "success")
+        return redirect(url_for("investor.build_budget_tracker", project_id=project.id))
+
+    items = BudgetItem.query.filter_by(
+        user_id=current_user.id,
+        build_project_id=project.id,
+        budget_type="build"
+    ).order_by(BudgetItem.created_at.desc()).all()
+
+    summary = budget_summary(items)
+
+    return render_template(
+        "investor/build_budget_tracker.html",
+        project=project,
+        items=items,
+        summary=summary,
+        page_title="Build Budget Tracker",
+        page_subtitle="Track projected vs actual construction spend."
+    )
 
 @investor_bp.route("/ai/deal-insight", methods=["POST"])
 @investor_bp.route("/ai_deal_insight", methods=["POST"])
