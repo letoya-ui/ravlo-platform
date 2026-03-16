@@ -105,10 +105,6 @@ def _full_name_from_user(user: User) -> str:
 # LOGIN
 # ============================================================
 
-from sqlalchemy import func
-from flask import request, render_template, redirect, url_for, flash
-from flask_login import login_user, login_required, current_user
-
 @auth_bp.route("/login", methods=["GET", "POST"])
 @csrf.exempt
 def login():
