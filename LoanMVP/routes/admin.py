@@ -278,21 +278,6 @@ def deny_access_request(req_id):
     flash(f"Access request denied for {req.email}.", "warning")
     return redirect(url_for("admin.access_requests"))
     
-@admin_bp.route("/requests/<int:request_id>/approve", methods=["POST"])
-@admin_bp.route("/access-requests/<int:req_id>/deny", methods=["POST"])
-@csrf.exempt
-@role_required("admin")
-def deny_access_request(req_id):
-    req = AccessRequest.query.get_or_404(req_id)
-
-    req.status = "denied"
-    req.reviewed_by = current_user.id
-    req.reviewed_at = datetime.utcnow()
-
-    db.session.commit()
-
-    flash(f"Access request denied for {req.email}.", "warning")
-    return redirect(url_for("admin.access_requests"))
     
 @role_required("admin")
 @admin_required
