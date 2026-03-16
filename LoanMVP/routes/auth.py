@@ -101,45 +101,28 @@ def _full_name_from_user(user: User) -> str:
 # ============================================================
 
 @auth_bp.route("/login", methods=["GET", "POST"])
-@csrf.exempt
 def login():
-    if current_user.is_authenticated:
-        return redirect(url_for(_dashboard_for_role(getattr(current_user, "role", "investor"))))
+    form = LoginForm()
 
-    if request.method == "GET":
-        get_flashed_messages()
-        return render_template("auth/login.html", title="Login | Ravlo")
+    if form.validate_on_submit():
+        email = form.email.data.strip().lower()
+        password = form.password.data
 
-    email = (request.form.get("email") or "").strip().lower()
-    password = (request.form.get("password") or "").strip()
-    remember = bool(request.form.get("remember"))
+        user = User.query.filter(func.lower(User.email) == email).first()
 
-    if not email or not password:
-        flash("Please enter both email and password.", "error")
-        return redirect(url_for("auth.login"))
+        if not user or not user.check_password(password):
+            flash("Invalid email or password.", "danger")
+            return render_template("auth/login.html", form=form)
 
-    user = User.query.filter_by(email=email).first()
+        if user.role in RESTRICTED_STAFF_ROLES and not getattr(user, "is_active", True):
+            flash("Your account is pending approval.", "warning")
+            return render_template("auth/login.html", form=form)
 
-    if not user or not user.check_password(password):
-        flash("Invalid email or password.", "error")
-        return redirect(url_for("auth.login"))
+        login_user(user)
+        flash("Welcome back.", "success")
+        return redirect(url_for("auth.post_login_redirect"))
 
-    if hasattr(user, "is_active") and user.is_active is False:
-        flash("Your account is deactivated. Contact admin for access.", "error")
-        return redirect(url_for("auth.login"))
-
-    session.permanent = True
-    login_user(user, remember=remember)
-    user.last_login = datetime.utcnow()
-    db.session.commit()
-
-    flash("Welcome back.", "success")
-
-    next_page = (request.args.get("next") or "").strip()
-    if next_page.startswith("/"):
-        return redirect(next_page)
-
-    return redirect(url_for(_dashboard_for_role(getattr(user, "role", "investor"))))
+    return render_template("auth/login.html", form=form)
 
 
 @auth_bp.route("/register/invite/<token>", methods=["GET", "POST"])
@@ -220,56 +203,39 @@ def logout():
 # REGISTER
 # ============================================================
 
-@auth_bp.route("/register", methods=["GET", "POST"])
-@csrf.exempt
-def register():
 
+@auth_bp.route("/register", methods=["GET", "POST"])
+@@csrf.exempt 
+def register():
     form = RegisterForm()
 
     if form.validate_on_submit():
+        role = (form.role.data or "").strip().lower()
 
-        full_name = form.username.data.strip()
-        email = form.email.data.lower().strip()
-        password = form.password.data
-        role = form.role.data
+        if role in {"loan officer", "loan_officer"}:
+            role = "loan_officer"
 
-        existing = User.query.filter_by(email=email).first()
+        if role in RESTRICTED_STAFF_ROLES:
+            flash("This role requires approval before access is granted. Please submit an access request.", "warning")
+            return redirect(url_for("auth.request_access", requested_role=role))
 
-        if existing:
-            flash("Account already exists. Please login.", "error")
-            return redirect(url_for("auth.login"))
-
-        parts = full_name.split(" ", 1)
-        first = parts[0]
-        last = parts[1] if len(parts) > 1 else ""
-
+        # normal registration flow for allowed public roles
         user = User(
-            username=email,
-            email=email,
-            first_name=first,
-            last_name=last,
-            role=role
+            first_name=form.first_name.data.strip(),
+            last_name=form.last_name.data.strip(),
+            email=form.email.data.strip().lower(),
+            role=role,
+            is_active=True,
         )
-
-        user.set_password(password)
+        user.set_password(form.password.data)
 
         db.session.add(user)
         db.session.commit()
 
-        login_user(user)
+        flash("Account created successfully. Please sign in.", "success")
+        return redirect(url_for("auth.login"))
 
-        flash("Account created successfully.", "success")
-
-        return redirect(url_for(_dashboard_for_role(user.role)))
-
-    # DEBUG so you see validation problems
-    if request.method == "POST":
-        print("REGISTER ERRORS:", form.errors)
-
-    return render_template(
-        "auth/register.html",
-        form=form
-    )
+    return render_template("auth/register.html", form=form)
 
 # ============================================================
 # OPTIONAL BORROWER REGISTER
@@ -379,7 +345,63 @@ def forgot_password():
         title="Forgot Password | Ravlo",
     )
 
+@auth_bp.route("/request-access", methods=["GET", "POST"])
+def request_access():
+    requested_role = (request.args.get("requested_role") or request.form.get("requested_role") or "").strip().lower()
 
+    if requested_role == "loan officer":
+        requested_role = "loan_officer"
+
+    if request.method == "POST":
+        company_name = (request.form.get("company_name") or "").strip()
+        contact_name = (request.form.get("contact_name") or "").strip()
+        email = (request.form.get("email") or "").strip().lower()
+        phone = (request.form.get("phone") or "").strip()
+        notes = (request.form.get("notes") or "").strip()
+        requested_role = (request.form.get("requested_role") or "").strip().lower()
+
+        if requested_role == "loan officer":
+            requested_role = "loan_officer"
+
+        if requested_role not in RESTRICTED_STAFF_ROLES:
+            flash("Invalid restricted role selection.", "danger")
+            return redirect(url_for("auth.request_access"))
+
+        if not contact_name or not email:
+            flash("Please provide your name and email.", "warning")
+            return redirect(url_for("auth.request_access", requested_role=requested_role))
+
+        existing = AccessRequest.query.filter(
+            AccessRequest.email.ilike(email),
+            AccessRequest.requested_role == requested_role,
+            AccessRequest.status.in_(["pending", "approved"])
+        ).first()
+
+        if existing:
+            flash("An access request already exists for this email and role.", "info")
+            return redirect(url_for("auth.login"))
+
+        req = AccessRequest(
+            company_name=company_name or None,
+            contact_name=contact_name,
+            email=email,
+            phone=phone or None,
+            request_type="company_setup",
+            requested_role=requested_role,
+            status="pending",
+            notes=notes or None,
+        )
+
+        db.session.add(req)
+        db.session.commit()
+
+        flash("Your access request has been submitted. An admin will review it.", "success")
+        return redirect(url_for("auth.login"))
+
+    return render_template(
+        "auth/request_access.html",
+        requested_role=requested_role
+    )
 # ============================================================
 # RESET PASSWORD
 # ============================================================
