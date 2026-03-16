@@ -5580,18 +5580,33 @@ def export_rehab_scope(deal_id):
 @role_required("investor")
 def messages():
     ip = InvestorProfile.query.filter_by(user_id=current_user.id).first()
+
     from LoanMVP.models.user_model import User
 
-    officers = User.query.filter(User.role.in_(["loan_officer", "processor", "underwriter"])).all()
+    officers = User.query.filter(
+        User.role.in_(["loan_officer", "processor", "underwriter"])
+    ).order_by(User.first_name.asc(), User.last_name.asc()).all()
+
+    allowed_receiver_ids = {u.id for u in officers}
 
     receiver_id = request.args.get("receiver_id", type=int)
+    msgs = []
+
     if receiver_id:
+        if receiver_id not in allowed_receiver_ids:
+            flash("⚠️ You are not allowed to view that conversation.", "warning")
+            return redirect(url_for("investor.messages"))
+
         msgs = Message.query.filter(
-            ((Message.sender_id == current_user.id) & (Message.receiver_id == receiver_id))
-            | ((Message.sender_id == receiver_id) & (Message.receiver_id == current_user.id))
+            (
+                (Message.sender_id == current_user.id) &
+                (Message.receiver_id == receiver_id)
+            ) |
+            (
+                (Message.sender_id == receiver_id) &
+                (Message.receiver_id == current_user.id)
+            )
         ).order_by(Message.created_at.asc()).all()
-    else:
-        msgs = []
 
     return render_template(
         "investor/messages.html",
@@ -5605,20 +5620,32 @@ def messages():
 
 
 @investor_bp.route("/messages/send", methods=["POST"])
+@investor_bp.route("/messages/send", methods=["POST"])
 @csrf.exempt
 @login_required
 @role_required("investor")
 def send_message():
-    content = request.form.get("content") or ""
-    receiver_id = request.form.get("receiver_id")
+    content = (request.form.get("content") or "").strip()
+    receiver_id = request.form.get("receiver_id", type=int)
 
-    if not receiver_id or not content.strip():
+    from LoanMVP.models.user_model import User
+
+    if not receiver_id or not content:
         flash("⚠️ Please select a recipient and enter a message.", "warning")
+        return redirect(url_for("investor.messages"))
+
+    allowed_receiver = User.query.filter(
+        User.id == receiver_id,
+        User.role.in_(["loan_officer", "processor", "underwriter"])
+    ).first()
+
+    if not allowed_receiver:
+        flash("⚠️ Invalid message recipient.", "danger")
         return redirect(url_for("investor.messages"))
 
     db.session.add(Message(
         sender_id=current_user.id,
-        receiver_id=int(receiver_id),
+        receiver_id=receiver_id,
         content=content,
         created_at=datetime.utcnow(),
     ))
