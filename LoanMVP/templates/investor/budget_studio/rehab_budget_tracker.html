@@ -1,0 +1,250 @@
+{% extends "layouts/ravlo_base.html" %}
+
+{% block title %}Ravlo • Rehab Budget Tracker{% endblock %}
+{% block page_title %}{{ page_title }}{% endblock %}
+{% block page_subline %}{{ page_subtitle }}{% endblock %}
+
+{% block content %}
+<style>
+  .budget-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1rem;margin-bottom:1rem;}
+  .budget-card,.budget-form,.budget-table-wrap{
+    background:rgba(255,255,255,.03);
+    border:1px solid rgba(255,255,255,.08);
+    border-radius:22px;
+    padding:1rem;
+  }
+  .budget-stat{font-size:1.6rem;font-weight:800;color:#f4f8ff;}
+  .budget-label{font-size:.82rem;color:rgba(230,235,240,.7);}
+  .budget-form-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.8rem;}
+  .budget-input,.budget-select,.budget-textarea{
+    width:100%;
+    padding:.8rem .9rem;
+    border-radius:14px;
+    background:rgba(255,255,255,.04);
+    border:1px solid rgba(255,255,255,.09);
+    color:#eef4ff;
+  }
+  .budget-textarea{min-height:96px;resize:vertical;}
+  .budget-table{width:100%;border-collapse:collapse;}
+  .budget-table th,.budget-table td{
+    padding:.75rem;
+    border-bottom:1px solid rgba(255,255,255,.08);
+    text-align:left;
+    vertical-align:top;
+  }
+  .positive{color:#62d89f;}
+  .negative{color:#ff8b8b;}
+  .context-strip{
+    margin-bottom:1rem;
+    padding:1rem 1.1rem;
+    border-radius:22px;
+    border:1px solid rgba(255,255,255,.08);
+    background:
+      radial-gradient(900px 520px at 10% 0%, rgba(90,140,255,.12), transparent 50%),
+      rgba(255,255,255,.03);
+  }
+  .intel-grid{
+    display:grid;
+    grid-template-columns:repeat(4,minmax(0,1fr));
+    gap:1rem;
+    margin-bottom:1rem;
+  }
+  .intel-card{
+    padding:1rem;
+    border-radius:18px;
+    border:1px solid rgba(255,255,255,.08);
+    background:rgba(255,255,255,.03);
+  }
+  .intel-label{
+    font-size:.78rem;
+    color:rgba(230,235,240,.68);
+    margin-bottom:.25rem;
+  }
+  .intel-value{
+    font-size:1.1rem;
+    font-weight:800;
+    color:#f4f8ff;
+  }
+  .intel-note{
+    margin-top:.4rem;
+    font-size:.82rem;
+    color:rgba(230,235,240,.68);
+    line-height:1.45;
+  }
+  @media (max-width: 1100px){
+    .budget-grid,.budget-form-grid,.intel-grid{grid-template-columns:1fr;}
+  }
+</style>
+
+{% set estimated = summary.estimated_total or 0 %}
+{% set actual = summary.actual_total or 0 %}
+{% set paid = summary.paid_total or 0 %}
+{% set remaining = summary.remaining_balance or 0 %}
+{% set contingency = summary.contingency or 0 %}
+{% set total_budget = summary.total_budget or 0 %}
+{% set variance = actual - estimated %}
+{% set burn_rate = ((paid / total_budget) * 100) if total_budget > 0 else 0 %}
+
+<div class="context-strip">
+  <div class="eyebrow">REHAB BUDGET</div>
+  <h3 style="margin:.25rem 0 .35rem;">
+    {{ deal.title or deal.address or ('Deal #' ~ deal.id) }}
+  </h3>
+  <p class="muted" style="margin:0;">
+    Track projected vs actual renovation spend, contractor payments, and category-level budget movement.
+  </p>
+</div>
+
+<div class="budget-grid">
+  <div class="budget-card">
+    <div class="budget-label">Estimated</div>
+    <div class="budget-stat">${{ "{:,.2f}".format(estimated) }}</div>
+  </div>
+  <div class="budget-card">
+    <div class="budget-label">Actual</div>
+    <div class="budget-stat">${{ "{:,.2f}".format(actual) }}</div>
+  </div>
+  <div class="budget-card">
+    <div class="budget-label">Paid</div>
+    <div class="budget-stat">${{ "{:,.2f}".format(paid) }}</div>
+  </div>
+  <div class="budget-card">
+    <div class="budget-label">Remaining</div>
+    <div class="budget-stat {% if remaining > 0 %}positive{% else %}negative{% endif %}">
+      ${{ "{:,.2f}".format(remaining) }}
+    </div>
+  </div>
+</div>
+
+<div class="intel-grid">
+  <div class="intel-card">
+    <div class="intel-label">Variance</div>
+    <div class="intel-value">${{ "{:,.2f}".format(variance) }}</div>
+    <div class="intel-note">
+      {% if variance > 0 %}
+        Actual costs are currently above estimated spend.
+      {% elif variance < 0 %}
+        Actual costs are currently below estimated spend.
+      {% else %}
+        Actual and estimated costs are currently aligned.
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="intel-card">
+    <div class="intel-label">Paid vs Budget</div>
+    <div class="intel-value">{{ "{:,.1f}".format(burn_rate) }}%</div>
+    <div class="intel-note">
+      ${{ "{:,.2f}".format(paid) }} paid out of ${{ "{:,.2f}".format(total_budget) }} total budget.
+    </div>
+  </div>
+
+  <div class="intel-card">
+    <div class="intel-label">Contingency Cushion</div>
+    <div class="intel-value">${{ "{:,.2f}".format(contingency) }}</div>
+    <div class="intel-note">
+      {% if contingency <= 0 %}
+        No contingency has been added yet.
+      {% elif contingency < (estimated * 0.08) %}
+        Contingency looks light for an active rehab.
+      {% else %}
+        Contingency provides a reasonable cost buffer.
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="intel-card">
+    <div class="intel-label">Risk Signal</div>
+    <div class="intel-value">
+      {% if actual > total_budget and total_budget > 0 %}
+        High
+      {% elif actual > estimated and estimated > 0 %}
+        Moderate
+      {% else %}
+        Stable
+      {% endif %}
+    </div>
+    <div class="intel-note">
+      {% if actual > total_budget and total_budget > 0 %}
+        Rehab appears over total budget.
+      {% elif actual > estimated and estimated > 0 %}
+        Costs are trending above estimate.
+      {% else %}
+        Spending is currently within expected range.
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<div class="budget-form">
+  <h3>Add Rehab Budget Item</h3>
+  <form method="POST">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="budget-form-grid">
+      <input class="budget-input" type="text" name="category" placeholder="Category" required>
+      <input class="budget-input" type="text" name="item_name" placeholder="Item name" required>
+      <input class="budget-input" type="text" name="vendor" placeholder="Vendor">
+
+      <input class="budget-input" type="number" step="0.01" name="estimated_cost" placeholder="Estimated cost">
+      <input class="budget-input" type="number" step="0.01" name="actual_cost" placeholder="Actual cost">
+      <input class="budget-input" type="number" step="0.01" name="paid_amount" placeholder="Paid amount">
+
+      <select class="budget-select" name="status">
+        <option value="planned">Planned</option>
+        <option value="quoted">Quoted</option>
+        <option value="approved">Approved</option>
+        <option value="in_progress">In Progress</option>
+        <option value="completed">Completed</option>
+        <option value="paid">Paid</option>
+      </select>
+    </div>
+
+    <div style="margin-top:.8rem;">
+      <textarea class="budget-textarea" name="notes" placeholder="Notes"></textarea>
+    </div>
+
+    <div style="margin-top:.8rem;">
+      <button type="submit" class="ravlo-btn primary">Add Item</button>
+    </div>
+  </form>
+</div>
+
+<div class="budget-table-wrap" style="margin-top:1rem;">
+  <h3>Rehab Budget Items</h3>
+  <table class="budget-table">
+    <thead>
+      <tr>
+        <th>Category</th>
+        <th>Item</th>
+        <th>Vendor</th>
+        <th>Estimated</th>
+        <th>Actual</th>
+        <th>Paid</th>
+        <th>Status</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for item in items %}
+      <tr>
+        <td>{{ item.category }}</td>
+        <td>
+          <strong>{{ item.description }}</strong>
+          {% if item.notes %}
+            <div style="font-size:.82rem;color:rgba(230,235,240,.65);margin-top:.25rem;">{{ item.notes }}</div>
+          {% endif %}
+        </td>
+        <td>{{ item.vendor or "—" }}</td>
+        <td>${{ "{:,.2f}".format((item.estimated_amount or 0)|float) }}</td>
+        <td>${{ "{:,.2f}".format((item.actual_amount or 0)|float) }}</td>
+        <td>${{ "{:,.2f}".format((item.paid_amount or 0)|float) }}</td>
+        <td>{{ (item.status or "planned").replace("_", " ").title() }}</td>
+      </tr>
+      {% else %}
+      <tr>
+        <td colspan="7">No rehab budget items yet.</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}
