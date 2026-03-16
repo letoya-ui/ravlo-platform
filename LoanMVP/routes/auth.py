@@ -126,7 +126,12 @@ def login():
 
     return render_template("auth/login.html", form=form)
 
+@auth_bp.route("/post-login-redirect")
+@login_required
+def post_login_redirect():
+    return redirect(url_for(_dashboard_for_role(current_user.role)))
 
+@auth_bp.route("/register/invite/<token>", methods=["GET", "POST"])
 @auth_bp.route("/register/invite/<token>", methods=["GET", "POST"])
 @csrf.exempt
 def register_from_invite(token):
@@ -148,9 +153,13 @@ def register_from_invite(token):
         return redirect(url_for("auth.login"))
 
     if request.method == "POST":
-        full_name = f"{first} {last}".strip()
+        full_name = (request.form.get("full_name") or "").strip()
         password = request.form.get("password") or ""
         confirm_password = request.form.get("confirm_password") or ""
+
+        if not full_name:
+            flash("Please enter your full name.", "danger")
+            return render_template("auth/register_from_invite.html", invite=invite)
 
         if not password or len(password) < 8:
             flash("Password must be at least 8 characters.", "danger")
@@ -160,8 +169,14 @@ def register_from_invite(token):
             flash("Passwords do not match.", "danger")
             return render_template("auth/register_from_invite.html", invite=invite)
 
+        parts = full_name.split(None, 1)
+        first_name = parts[0] if parts else ""
+        last_name = parts[1] if len(parts) > 1 else ""
+
         user = User(
-            fullname=fullname,
+            first_name=first_name or None,
+            last_name=last_name or None,
+            username=full_name or None,
             email=invite.email,
             role=invite.role,
             company_id=invite.company_id,
@@ -180,10 +195,7 @@ def register_from_invite(token):
         flash("Registration complete. You can now log in.", "success")
         return redirect(url_for("auth.login"))
 
-    return render_template(
-        "auth/register_from_invite.html",
-        invite=invite,
-    )
+    return render_template("auth/register_from_invite.html", invite=invite)
 
 
 # ============================================================
@@ -263,17 +275,31 @@ def register_borrower():
             flash("An account with that email already exists.", "error")
             return redirect(url_for("auth.login"))
 
-        parts = full_name.split(" ", 1)
-        first = parts[0].strip()
-        last = parts[1].strip() if len(parts) > 1 else ""
+        parts = full_name.split(None, 1)
+        first = parts[0] if parts else ""
+        last = parts[1] if len(parts) > 1 else ""
 
         user = User(
-            username=email,
+            username=full_name or email,
             email=email,
-            first_name=first,
-            last_name=last,
+            first_name=first or None,
+            last_name=last or None,
             role="borrower",
+            is_active=True,
         )
+
+        user.set_password(password)
+
+        db.session.add(user)
+        db.session.commit()
+
+        session.permanent = True
+        login_user(user, remember=True)
+
+        flash("Borrower account created successfully.", "success")
+        return redirect(url_for("borrower.create_profile"))
+
+    return render_template("auth/register_borrower.html", title="Register Borrower | Ravlo")
 
         if hasattr(user, "full_name"):
             user.full_name = full_name
