@@ -237,8 +237,63 @@ def request_detail(request_id):
     )
 
 
-@admin_bp.route("/requests/<int:request_id>/approve", methods=["POST"])
+@admin_bp.route("/access-requests", methods=["GET"])
+@role_required("admin")
+def access_requests():
+    requests_ = AccessRequest.query.order_by(AccessRequest.created_at.desc()).all()
+    return render_template(
+        "admin/access_requests.html",
+        requests=requests_,
+        title="Access Requests",
+        active_tab="access_requests",
+    )
+
+@admin_bp.route("/access-requests/<int:req_id>/approve", methods=["POST"])
 @csrf.exempt
+@role_required("admin")
+def approve_access_request(req_id):
+    req = AccessRequest.query.get_or_404(req_id)
+
+    req.status = "approved"
+    req.reviewed_by = current_user.id
+    req.reviewed_at = datetime.utcnow()
+
+    db.session.commit()
+
+    flash(f"Access request approved for {req.email}.", "success")
+    return redirect(url_for("admin.access_requests"))
+
+@admin_bp.route("/access-requests/<int:req_id>/deny", methods=["POST"])
+@csrf.exempt
+@role_required("admin")
+def deny_access_request(req_id):
+    req = AccessRequest.query.get_or_404(req_id)
+
+    req.status = "denied"
+    req.reviewed_by = current_user.id
+    req.reviewed_at = datetime.utcnow()
+
+    db.session.commit()
+
+    flash(f"Access request denied for {req.email}.", "warning")
+    return redirect(url_for("admin.access_requests"))
+    
+@admin_bp.route("/requests/<int:request_id>/approve", methods=["POST"])
+@admin_bp.route("/access-requests/<int:req_id>/deny", methods=["POST"])
+@csrf.exempt
+@role_required("admin")
+def deny_access_request(req_id):
+    req = AccessRequest.query.get_or_404(req_id)
+
+    req.status = "denied"
+    req.reviewed_by = current_user.id
+    req.reviewed_at = datetime.utcnow()
+
+    db.session.commit()
+
+    flash(f"Access request denied for {req.email}.", "warning")
+    return redirect(url_for("admin.access_requests"))
+    
 @role_required("admin")
 @admin_required
 def approve_request(request_id):
