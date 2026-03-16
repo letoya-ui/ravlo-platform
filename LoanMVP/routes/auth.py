@@ -19,6 +19,7 @@ from LoanMVP.extensions import csrf, db
 from LoanMVP.forms import RegisterForm, ResetPasswordForm, ResetPasswordRequestForm, LoginForm
 from LoanMVP.models.user_model import User
 from LoanMVP.models.admin import UserInvite
+from LoanMVP.models.investor_models import InvestorProfile
 from flask_mail import Message as MailMessage
 
 
