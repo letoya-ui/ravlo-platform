@@ -525,17 +525,25 @@ def analytics():
 # =========================================================
 # 🤖 AI CONTROL PANEL
 # =========================================================
-@admin_bp.route("/ai_dashboard")
+@admin_bp.route("/analytics")
 @role_required("admin")
-def ai_dashboard():
+def analytics():
+    stats = {
+        "users": User.query.count(),
+        "loans": LoanApplication.query.count(),
+        "docs": LoanDocument.query.count(),
+        "borrowers": User.query.filter_by(role="borrower").count(),
+        "officers": User.query.filter_by(role="loan_officer").count()
+    }
+
+    loan_status_labels = []
+    loan_status_values = []
+
     return render_template(
-        "admin/ai_dashboard.html",
-        ai_status={
-            "Analytics Engine": "Active",
-            "Borrower AI": "Active",
-            "Loan Engine": "Active",
-        },
-        last_refresh=datetime.utcnow()
+        "admin/analytics.html",
+        stats=stats,
+        loan_status_labels=loan_status_labels,
+        loan_status_values=loan_status_values,
     )
 
 
