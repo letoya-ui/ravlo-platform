@@ -3908,7 +3908,8 @@ def generate_build_studio():
             db.session.commit()
 
         project_name = (request.form.get("project_name") or "").strip()
-        property_type = (request.form.get("property_type") or "").strip()
+        property_type = (request.form.get("property_type") or "single_family").strip()
+        style = (request.form.get("style") or "modern_farmhouse").strip()
         description = (request.form.get("description") or "").strip()
         lot_size = (request.form.get("lot_size") or "").strip()
         zoning = (request.form.get("zoning") or "").strip()
@@ -3919,24 +3920,25 @@ def generate_build_studio():
         land_image = request.files.get("land_image")
         image_url = (request.form.get("image_url") or "").strip()
 
-        image_base64 = None
+        image_base64 = ""
         if land_image:
             raw = land_image.read()
             if raw:
-                image_base64 = base64.b64encode(raw).decode()
+                image_base64 = base64.b64encode(raw).decode("utf-8")
 
         payload = {
             "project_name": project_name,
             "property_type": property_type,
+            "style": style,
             "description": description,
             "lot_size": lot_size,
             "zoning": zoning,
-            "location": location,
-            "notes": notes,
             "image_base64": image_base64,
-            "image_url": image_url,
+            "image_url": image_url or "",
             "count": 2,
             "steps": 32,
+            "guidance": 7.5,
+            "strength": 0.75,
             "width": 1024,
             "height": 1024,
         }
@@ -3954,6 +3956,7 @@ def generate_build_studio():
             results["build_analysis"] = {
                 "project_name": project_name,
                 "property_type": property_type,
+                "style": style,
                 "description": description,
                 "lot_size": lot_size,
                 "zoning": zoning,
@@ -4027,14 +4030,13 @@ def generate_build_studio_upload():
             db.session.commit()
 
         project_name = (request.form.get("project_name") or "").strip()
-        property_type = (request.form.get("property_type") or "").strip()
+        property_type = (request.form.get("property_type") or "single_family").strip()
         description = (request.form.get("description") or "").strip()
         lot_size = (request.form.get("lot_size") or "").strip()
         zoning = (request.form.get("zoning") or "").strip()
         location = (request.form.get("location") or "").strip()
         notes = (request.form.get("notes") or "").strip()
-        style = (request.form.get("style") or "modern").strip()
-
+        style = (request.form.get("style") or "modern_farmhouse").strip()
         save_to_deal = (request.form.get("save_to_deal") or "").lower() in ("1", "true", "yes", "on")
 
         land_image = request.files.get("land_image")
@@ -4044,46 +4046,45 @@ def generate_build_studio_upload():
                 "message": "land_image is required."
             }), 400
 
-        files = {
-            "image": (
-                land_image.filename or "build-site.jpg",
-                land_image.stream,
-                land_image.mimetype or "application/octet-stream",
-            )
-        }
+        raw = land_image.read()
+        if not raw:
+            return jsonify({
+                "status": "error",
+                "message": "Empty land image."
+            }), 400
 
-        data = {
-            "style": style,
+        payload = {
+            "project_name": project_name,
             "property_type": property_type,
+            "style": style,
             "description": description,
             "lot_size": lot_size,
             "zoning": zoning,
-            "project_name": project_name,
-            "width": str(request.form.get("width") or 1024),
-            "height": str(request.form.get("height") or 1024),
-            "steps": str(request.form.get("steps") or 32),
-            "guidance": str(request.form.get("guidance") or 7.5),
-            "strength": str(request.form.get("strength") or 0.75),
-            "count": str(request.form.get("count") or 2),
-            "controlnet_scale": str(request.form.get("controlnet_scale") or 0.8),
+            "image_base64": base64.b64encode(raw).decode("utf-8"),
+            "image_url": "",
+            "width": int(request.form.get("width") or 1024),
+            "height": int(request.form.get("height") or 1024),
+            "steps": int(request.form.get("steps") or 32),
+            "guidance": float(request.form.get("guidance") or 7.5),
+            "strength": float(request.form.get("strength") or 0.75),
+            "count": int(request.form.get("count") or 2),
         }
 
         seed = request.form.get("seed")
         if seed not in (None, "", "None"):
-            data["seed"] = str(seed)
+            payload["seed"] = int(seed)
 
-        payload = _post_renovation_engine_multipart(
-            "/v1/build_concept-upload",
-            files=files,
-            data=data,
+        result = _post_renovation_engine_json(
+            "/v1/build_concept",
+            payload,
             timeout=UPLOAD_TIMEOUT,
         )
 
-        images = payload.get("images_base64") or []
-        saved_paths = payload.get("saved_paths") or []
-        meta = payload.get("meta") or {}
-        seed = payload.get("seed")
-        job_id = payload.get("job_id")
+        images = result.get("images_base64") or []
+        saved_paths = result.get("saved_paths") or []
+        meta = result.get("meta") or {}
+        seed = result.get("seed")
+        job_id = result.get("job_id")
 
         if save_to_deal and deal is not None:
             results = _deal_results(deal)
@@ -4782,55 +4783,26 @@ def renovation_visualizer():
         final_prompt = _compose_style_prompt(style_prompt, requested_style_preset, keep_layout=True)
         render_batch_id = uuid.uuid4().hex
 
-        if image_file:
-            image_stream = io.BytesIO(raw)
-            filename = image_file.filename or f"{render_batch_id}_before.jpg"
-            mimetype = image_file.mimetype or "application/octet-stream"
+        payload = {
+            "image_base64": base64.b64encode(raw).decode("utf-8") if image_file else "",
+            "image_url": "" if image_file else before_url,
+            "mode": mode,
+            "preset": style_preset,
+            "prompt": final_prompt,
+            "count": variations,
+            "steps": 33 if mode == "photo" else 38,
+            "strength": 0.38 if mode == "photo" else 0.48,
+            "controlnet_scale": 0.78 if mode == "photo" else 0.93,
+            "guidance": 6.5,
+            "width": 1024,
+            "height": 1024,
+        }
 
-            files = {
-                "image": (filename, image_stream, mimetype)
-            }
-
-            data = {
-                "mode": mode,
-                "preset": style_preset,
-                "prompt": final_prompt,
-                "count": str(variations),
-                "steps": str(33 if mode == "photo" else 38),
-                "strength": str(0.38 if mode == "photo" else 0.48),
-                "controlnet_scale": str(0.78 if mode == "photo" else 0.93),
-                "guidance": "6.5",
-                "width": "1024",
-                "height": "1024",
-            }
-
-            engine_json = _post_renovation_engine_multipart(
-                "/v1/renovate-upload",
-                files=files,
-                data=data,
-                timeout=UPLOAD_TIMEOUT,
-            )
-
-        else:
-            payload = {
-                "image_url": before_url,
-                "mode": mode,
-                "preset": style_preset,
-                "prompt": final_prompt,
-                "count": variations,
-                "steps": 33 if mode == "photo" else 38,
-                "strength": 0.38 if mode == "photo" else 0.48,
-                "controlnet_scale": 0.78 if mode == "photo" else 0.93,
-                "guidance": 6.5,
-                "width": 1024,
-                "height": 1024,
-            }
-
-            engine_json = _post_renovation_engine_json(
-                "/v1/renovate",
-                payload,
-                timeout=RENDER_TIMEOUT,
-            )
+        engine_json = _post_renovation_engine_json(
+            "/v1/renovate",
+            payload,
+            timeout=UPLOAD_TIMEOUT if image_file else RENDER_TIMEOUT,
+        )
 
         returned_urls = engine_json.get("saved_paths", []) or []
         images_b64 = engine_json.get("images_base64", []) or []
