@@ -101,6 +101,7 @@ def _full_name_from_user(user: User) -> str:
 # ============================================================
 
 @auth_bp.route("/login", methods=["GET", "POST"])
+@csrf.exempt 
 def login():
     form = LoginForm()
 
@@ -126,6 +127,7 @@ def login():
 
 
 @auth_bp.route("/register/invite/<token>", methods=["GET", "POST"])
+@csrf.exempt
 def register_from_invite(token):
     invite = UserInvite.query.filter_by(token=token).first_or_404()
 
