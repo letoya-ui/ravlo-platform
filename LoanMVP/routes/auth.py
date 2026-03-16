@@ -226,8 +226,15 @@ def register():
             )
             return redirect(url_for("auth.request_access", requested_role=role))
 
+        full_name = (form.full_name.data or "").strip()
+        parts = full_name.split(None, 1)
+        first_name = parts[0] if parts else ""
+        last_name = parts[1] if len(parts) > 1 else ""
+
         user = User(
-            full_name=(form.full_name.data or "").strip(),
+            first_name=first_name or None,
+            last_name=last_name or None,
+            username=full_name or None,
             email=(form.email.data or "").strip().lower(),
             role=role,
             is_active=True,
