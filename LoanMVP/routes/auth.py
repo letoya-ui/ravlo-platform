@@ -24,7 +24,12 @@ from flask_mail import Message as MailMessage
 
 auth_bp = Blueprint("auth", __name__, url_prefix="/auth")
 
-
+# Roles that must request admin approval before activation
+RESTRICTED_STAFF_ROLES = {
+    "loan_officer",
+    "processor",
+    "underwriter",
+}
 # ============================================================
 # TOKEN HELPERS
 # ============================================================
