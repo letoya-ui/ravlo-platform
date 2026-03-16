@@ -38,7 +38,7 @@ def partner_has_premium_access(partner) -> bool:
 # ------------------------------------------------
 
 @partners_bp.route("/dashboard")
-@role_required("partner")
+@role_required("partner", "admin")
 def dashboard():
 
     partner = Partner.query.filter_by(user_id=current_user.id).first()
