@@ -584,7 +584,6 @@ def analytics():
     )
 
 @admin_bp.route("/ai-dashboard", methods=["GET"])
-@login_required
 @role_required("admin")
 def ai_dashboard():
     """
