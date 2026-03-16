@@ -105,46 +105,46 @@ def _full_name_from_user(user: User) -> str:
 # LOGIN
 # ============================================================
 
+from sqlalchemy import func
+from flask import Blueprint, render_template, request, redirect, url_for, flash
+from flask_login import login_user, login_required, current_user
+
 @auth_bp.route("/login", methods=["GET", "POST"])
 @csrf.exempt
 def login():
     form = LoginForm()
 
-    print("==== LOGIN DEBUG ====")
-    print("METHOD:", request.method)
-    print("RAW FORM:", dict(request.form))
+    if request.method == "POST":
+        email = (request.form.get("email") or "").strip().lower()
+        password = request.form.get("password") or ""
 
-    is_valid = form.validate_on_submit()
-    print("VALIDATE_ON_SUBMIT:", is_valid)
-    print("FORM ERRORS:", form.errors)
-
-    if is_valid:
-        email = (form.email.data or "").strip().lower()
-        password = form.password.data or ""
-
+        print("==== LOGIN TEST ====")
+        print("POST DATA:", dict(request.form))
         print("EMAIL:", email)
+        print("PASSWORD PRESENT:", bool(password))
 
         user = User.query.filter(func.lower(User.email) == email).first()
         print("USER FOUND:", bool(user))
 
-        password_ok = user.check_password(password) if user else False
-        print("PASSWORD OK:", password_ok)
+        if user:
+            print("PASSWORD OK:", user.check_password(password))
 
-        if not user or not password_ok:
+        if not user or not user.check_password(password):
             flash("Invalid email or password.", "danger")
-            print("RETURN: invalid credentials")
             return render_template("auth/login.html", form=form)
 
         login_user(user)
-        print("LOGIN_USER SUCCESS")
-        print("CURRENT USER AUTHENTICATED:", current_user.is_authenticated)
-
-        flash("Welcome back.", "success")
-        print("REDIRECTING TO post_login_redirect")
+        print("LOGIN SUCCESS")
         return redirect(url_for("auth.post_login_redirect"))
 
-    print("RETURN: form invalid or GET")
     return render_template("auth/login.html", form=form)
+
+
+@auth_bp.route("/post-login-redirect")
+@login_required
+def post_login_redirect():
+    print("POST LOGIN REDIRECT HIT:", current_user.role)
+    return redirect(url_for(_dashboard_for_role(current_user.role)))
 
 
 
