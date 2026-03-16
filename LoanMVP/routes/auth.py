@@ -149,13 +149,6 @@ def login():
     return render_template("auth/login.html", form=form)
 
 
-@auth_bp.route("/post-login-redirect")
-@login_required
-def post_login_redirect():
-    print("POST LOGIN REDIRECT HIT. ROLE:", current_user.role)
-    return redirect(url_for(_dashboard_for_role(current_user.role)))
-
-
 
 
 @auth_bp.route("/register/invite/<token>", methods=["GET", "POST"])
