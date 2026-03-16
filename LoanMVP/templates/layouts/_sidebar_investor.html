@@ -55,6 +55,18 @@
       <i class="lucide lucide-box"></i>
       <span>Deal Studio</span>
     </a>
+    <a href="{{ url_for('investor.budget_studio') }}"
+       class="ravlo-nav-link {% if ep in [
+         'investor.budget_studio',
+         'investor.create_budget',
+         'investor.budget_detail',
+         'investor.add_budget_expense',
+         'investor.rehab_budget_tracker',
+         'investor.build_budget_tracker'
+       ] %}active{% endif %}">
+      <i class="lucide lucide-wallet"></i>
+      <span>Budget Studio</span>
+    </a>
 
     <a href="{{ url_for('investor.ai_hub') }}"
        class="ravlo-nav-link {% if 'ai' in ep %}active{% endif %}">
