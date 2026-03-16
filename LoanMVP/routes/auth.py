@@ -110,34 +110,50 @@ def _full_name_from_user(user: User) -> str:
 def login():
     form = LoginForm()
 
-    print("LOGIN HIT:", form.is_submitted(), "METHOD:", request.method)
+    print("==== LOGIN DEBUG START ====")
+    print("METHOD:", request.method)
+    print("FORM SUBMITTED:", form.is_submitted())
+    print("RAW POST:", dict(request.form))
+
+    if request.method == "POST":
+        print("FORM VALIDATE_ON_SUBMIT:", form.validate_on_submit())
+        print("FORM ERRORS:", form.errors)
 
     if form.validate_on_submit():
-        print("FORM VALIDATED")
         email = (form.email.data or "").strip().lower()
         password = form.password.data or ""
 
-        print("EMAIL SUBMITTED:", email)
+        print("EMAIL:", email)
 
         user = User.query.filter(func.lower(User.email) == email).first()
         print("USER FOUND:", bool(user))
 
-        if user:
-            print("PASSWORD OK:", user.check_password(password))
+        password_ok = user.check_password(password) if user else False
+        print("PASSWORD OK:", password_ok)
 
-        if not user or not user.check_password(password):
+        if not user or not password_ok:
             flash("Invalid email or password.", "danger")
+            print("RETURNING LOGIN PAGE: BAD CREDENTIALS")
             return render_template("auth/login.html", form=form)
 
         login_user(user)
-        print("LOGIN_USER RAN. AUTHENTICATED:", current_user.is_authenticated)
+        print("LOGIN_USER RAN")
+        print("CURRENT USER AUTH:", current_user.is_authenticated)
+
         flash("Welcome back.", "success")
+        print("REDIRECTING TO POST LOGIN REDIRECT")
         return redirect(url_for("auth.post_login_redirect"))
 
-    if request.method == "POST":
-        print("FORM ERRORS:", form.errors)
-
+    print("RETURNING LOGIN PAGE: FORM INVALID OR GET")
+    print("==== LOGIN DEBUG END ====")
     return render_template("auth/login.html", form=form)
+
+
+@auth_bp.route("/post-login-redirect")
+@login_required
+def post_login_redirect():
+    print("POST LOGIN REDIRECT HIT. ROLE:", current_user.role)
+    return redirect(url_for(_dashboard_for_role(current_user.role)))
 
 @auth_bp.route("/post-login-redirect")
 @login_required
