@@ -105,21 +105,24 @@ def _full_name_from_user(user: User) -> str:
 # LOGIN
 # ============================================================
 
+from sqlalchemy import func
+from flask import request, render_template, redirect, url_for, flash
+from flask_login import login_user, login_required, current_user
+
 @auth_bp.route("/login", methods=["GET", "POST"])
 @csrf.exempt
 def login():
     form = LoginForm()
 
-    print("==== LOGIN DEBUG START ====")
+    print("==== LOGIN DEBUG ====")
     print("METHOD:", request.method)
-    print("FORM SUBMITTED:", form.is_submitted())
-    print("RAW POST:", dict(request.form))
+    print("RAW FORM:", dict(request.form))
 
-    if request.method == "POST":
-        print("FORM VALIDATE_ON_SUBMIT:", form.validate_on_submit())
-        print("FORM ERRORS:", form.errors)
+    is_valid = form.validate_on_submit()
+    print("VALIDATE_ON_SUBMIT:", is_valid)
+    print("FORM ERRORS:", form.errors)
 
-    if form.validate_on_submit():
+    if is_valid:
         email = (form.email.data or "").strip().lower()
         password = form.password.data or ""
 
@@ -133,21 +136,19 @@ def login():
 
         if not user or not password_ok:
             flash("Invalid email or password.", "danger")
-            print("RETURNING LOGIN PAGE: BAD CREDENTIALS")
+            print("RETURN: invalid credentials")
             return render_template("auth/login.html", form=form)
 
         login_user(user)
-        print("LOGIN_USER RAN")
-        print("CURRENT USER AUTH:", current_user.is_authenticated)
+        print("LOGIN_USER SUCCESS")
+        print("CURRENT USER AUTHENTICATED:", current_user.is_authenticated)
 
         flash("Welcome back.", "success")
-        print("REDIRECTING TO POST LOGIN REDIRECT")
+        print("REDIRECTING TO post_login_redirect")
         return redirect(url_for("auth.post_login_redirect"))
 
-    print("RETURNING LOGIN PAGE: FORM INVALID OR GET")
-    print("==== LOGIN DEBUG END ====")
+    print("RETURN: form invalid or GET")
     return render_template("auth/login.html", form=form)
-
 
 
 
