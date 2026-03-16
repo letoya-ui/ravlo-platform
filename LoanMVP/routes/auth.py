@@ -152,8 +152,7 @@ def register_from_invite(token):
         return redirect(url_for("auth.login"))
 
     if request.method == "POST":
-        first_name = (request.form.get("first_name") or invite.first_name or "").strip()
-        last_name = (request.form.get("last_name") or invite.last_name or "").strip()
+        full_name = f"{first} {last}".strip()
         password = request.form.get("password") or ""
         confirm_password = request.form.get("confirm_password") or ""
 
@@ -166,8 +165,7 @@ def register_from_invite(token):
             return render_template("auth/register_from_invite.html", invite=invite)
 
         user = User(
-            first_name=first_name,
-            last_name=last_name,
+            fullname=fullname,
             email=invite.email,
             role=invite.role,
             company_id=invite.company_id,
