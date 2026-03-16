@@ -9,9 +9,6 @@
 
   <div class="wrap">
 
-    <!-- =========================================================
-         HERO / HEADER
-    ========================================================== -->
     <section class="card admin-hero">
       <div class="admin-hero__left">
         <div class="eyebrow">ADMIN COMMAND CENTER</div>
@@ -30,13 +27,9 @@
 
     <div class="admin-layout">
 
-      <!-- =========================================================
-           LEFT SIDE
-      ========================================================== -->
       <section class="lhs grid">
 
-        <!-- KPI ROW 1 -->
-        <div class="grid g-4">
+        <div class="admin-kpi-grid">
           <div class="card stat-card">
             <div class="stat-card__label">👥 Users</div>
             <div class="stat-card__value">{{ stats.total_users or 0 }}</div>
@@ -60,10 +53,7 @@
             <div class="stat-card__value">{{ stats.pending_tasks or 0 }}</div>
             <div class="muted">Pending operational items</div>
           </div>
-        </div>
 
-        <!-- KPI ROW 2 -->
-        <div class="grid g-4">
           <div class="card stat-card">
             <div class="stat-card__label">📥 Pending Requests</div>
             <div class="stat-card__value">{{ stats.pending_requests or 0 }}</div>
@@ -89,8 +79,7 @@
           </div>
         </div>
 
-        <!-- CHARTS -->
-        <div class="grid g-2">
+        <div class="admin-chart-grid">
           <div class="card">
             <div class="section-head">
               <div>
@@ -112,7 +101,6 @@
           </div>
         </div>
 
-        <!-- RECENT ACCESS REQUESTS -->
         <div class="card">
           <div class="section-head">
             <div>
@@ -163,7 +151,6 @@
           {% endif %}
         </div>
 
-        <!-- RECENT USERS -->
         <div class="card">
           <div class="section-head">
             <div>
@@ -208,7 +195,6 @@
           {% endif %}
         </div>
 
-        <!-- AI INSIGHT -->
         <div class="card">
           <div class="section-head">
             <div>
@@ -223,12 +209,8 @@
         </div>
       </section>
 
-      <!-- =========================================================
-           RIGHT SIDE
-      ========================================================== -->
       <aside class="rhs grid">
 
-        <!-- QUICK ACTIONS -->
         <div class="card">
           <div class="section-head">
             <div>
@@ -246,7 +228,6 @@
           </div>
         </div>
 
-        <!-- RECENT TEAM INVITES -->
         <div class="card">
           <div class="section-head">
             <div>
@@ -290,7 +271,6 @@
           {% endif %}
         </div>
 
-        <!-- RECENT LEADS -->
         <div class="card">
           <div class="section-head">
             <div>
@@ -325,7 +305,6 @@
           {% endif %}
         </div>
 
-        <!-- SERVER LOAD -->
         <div class="card">
           <div class="section-head">
             <div>
@@ -337,7 +316,6 @@
           <div class="muted subcopy">System load and API responsiveness.</div>
         </div>
 
-        <!-- SYSTEM LOGS -->
         <div class="card">
           <div class="section-head">
             <div>
@@ -378,16 +356,36 @@
   </div>
 
   <style>
+    .admin-dashboard{
+      min-width:0;
+    }
+
+    .admin-dashboard .wrap{
+      display:grid;
+      gap:18px;
+      min-width:0;
+    }
+
     .admin-dashboard .admin-hero{
       display:flex;
       justify-content:space-between;
       align-items:center;
       gap:1rem;
       flex-wrap:wrap;
+      padding:20px;
+      border-radius:22px;
+      min-width:0;
     }
 
     .admin-dashboard .admin-hero__left{
       max-width:780px;
+      min-width:0;
+    }
+
+    .admin-dashboard .admin-hero__left h1{
+      margin:8px 0 10px;
+      line-height:1.05;
+      letter-spacing:-.03em;
     }
 
     .admin-dashboard .admin-hero__actions{
@@ -402,6 +400,34 @@
       grid-template-columns:minmax(0, 2fr) minmax(320px, 1fr);
       gap:1rem;
       align-items:start;
+      min-width:0;
+    }
+
+    .admin-dashboard .lhs,
+    .admin-dashboard .rhs{
+      min-width:0;
+      display:grid;
+      gap:16px;
+    }
+
+    .admin-dashboard .admin-kpi-grid{
+      display:grid;
+      grid-template-columns:repeat(4, minmax(0, 1fr));
+      gap:14px;
+      min-width:0;
+    }
+
+    .admin-dashboard .admin-chart-grid{
+      display:grid;
+      grid-template-columns:repeat(2, minmax(0, 1fr));
+      gap:14px;
+      min-width:0;
+    }
+
+    .admin-dashboard .stat-card{
+      min-width:0;
+      padding:18px;
+      border-radius:20px;
     }
 
     .admin-dashboard .stat-card__label{
@@ -417,6 +443,7 @@
       font-weight:800;
       margin-bottom:.35rem;
       color:var(--text, #fff);
+      letter-spacing:-.03em;
     }
 
     .admin-dashboard .section-head{
@@ -493,6 +520,42 @@
     @media (max-width: 1120px){
       .admin-dashboard .admin-layout{
         grid-template-columns:1fr;
+      }
+
+      .admin-dashboard .admin-kpi-grid{
+        grid-template-columns:repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 760px){
+      .admin-dashboard .admin-hero{
+        padding:16px;
+        border-radius:18px;
+      }
+
+      .admin-dashboard .admin-hero__actions{
+        flex-direction:column;
+        align-items:stretch;
+        width:100%;
+      }
+
+      .admin-dashboard .admin-hero__actions .btn{
+        width:100%;
+        justify-content:center;
+      }
+
+      .admin-dashboard .admin-kpi-grid,
+      .admin-dashboard .admin-chart-grid{
+        grid-template-columns:1fr;
+      }
+
+      .admin-dashboard .stat-card{
+        padding:16px;
+        border-radius:18px;
+      }
+
+      .admin-dashboard .stat-card__value{
+        font-size:1.8rem;
       }
     }
   </style>
