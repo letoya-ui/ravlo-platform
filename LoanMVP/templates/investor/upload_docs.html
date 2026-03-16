@@ -90,7 +90,7 @@
       </p>
 
       <form method="POST" enctype="multipart/form-data"
-            action="{{ url_for('investor.documents_upload') }}">
+            action="{{ url_for('investor.upload_document') }}">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
         <label class="muted" style="display:block;margin:.25rem 0 .35rem;">Choose file</label>
