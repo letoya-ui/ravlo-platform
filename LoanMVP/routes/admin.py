@@ -505,24 +505,6 @@ def verify_doc(doc_id):
 
 
 # =========================================================
-# 📊 BASIC ANALYTICS
-# =========================================================
-@admin_bp.route("/analytics")
-@role_required("admin")
-def analytics():
-    stats = {
-        "users": User.query.count(),
-        "loans": LoanApplication.query.count(),
-        "docs": LoanDocument.query.count(),
-        "borrowers": User.query.filter_by(role="borrower").count(),
-        "officers": User.query.filter_by(role="loan_officer").count()
-    }
-
-    return render_template("admin/analytics.html", stats=stats)
-
-
-
-# =========================================================
 # 🤖 AI CONTROL PANEL
 # =========================================================
 @admin_bp.route("/analytics")
@@ -546,6 +528,168 @@ def analytics():
         loan_status_values=loan_status_values,
     )
 
+
+@admin_bp.route("/ai-dashboard", methods=["GET"])
+@login_required
+@role_required("admin")
+def ai_dashboard():
+    """
+    Admin AI dashboard:
+    - platform-wide AI interaction stats
+    - usage by role
+    - usage by tool/context
+    - recent activity feed
+    """
+
+    # -----------------------------------
+    # Overall stats
+    # -----------------------------------
+    total_interactions = AIAssistantInteraction.query.count()
+    total_users_with_ai = (
+        db.session.query(func.count(func.distinct(AIAssistantInteraction.user_id)))
+        .scalar()
+        or 0
+    )
+
+    total_questions = (
+        AIAssistantInteraction.query
+        .filter(AIAssistantInteraction.question.isnot(None))
+        .count()
+    )
+
+    total_responses = (
+        AIAssistantInteraction.query
+        .filter(AIAssistantInteraction.response.isnot(None))
+        .count()
+    )
+
+    # -----------------------------------
+    # Recent AI activity
+    # -----------------------------------
+    recent_interactions = (
+        AIAssistantInteraction.query
+        .order_by(AIAssistantInteraction.timestamp.desc())
+        .limit(20)
+        .all()
+    )
+
+    # -----------------------------------
+    # Usage by user role
+    # -----------------------------------
+    interactions_by_role_rows = (
+        db.session.query(
+            User.role,
+            func.count(AIAssistantInteraction.id)
+        )
+        .join(AIAssistantInteraction, AIAssistantInteraction.user_id == User.id)
+        .group_by(User.role)
+        .order_by(desc(func.count(AIAssistantInteraction.id)))
+        .all()
+    )
+
+    interactions_by_role = [
+        {
+            "role": row[0] or "unknown",
+            "count": row[1] or 0
+        }
+        for row in interactions_by_role_rows
+    ]
+
+    role_labels = [row["role"] for row in interactions_by_role]
+    role_values = [row["count"] for row in interactions_by_role]
+
+    # -----------------------------------
+    # Usage by AI context / module
+    # Adjust field names if your model differs
+    # -----------------------------------
+    interactions_by_context = []
+    context_labels = []
+    context_values = []
+
+    if hasattr(AIAssistantInteraction, "context_type"):
+        context_rows = (
+            db.session.query(
+                AIAssistantInteraction.context_type,
+                func.count(AIAssistantInteraction.id)
+            )
+            .group_by(AIAssistantInteraction.context_type)
+            .order_by(desc(func.count(AIAssistantInteraction.id)))
+            .all()
+        )
+
+        interactions_by_context = [
+            {
+                "context": row[0] or "general",
+                "count": row[1] or 0
+            }
+            for row in context_rows
+        ]
+
+        context_labels = [row["context"] for row in interactions_by_context]
+        context_values = [row["count"] for row in interactions_by_context]
+
+    elif hasattr(AIAssistantInteraction, "assistant_type"):
+        context_rows = (
+            db.session.query(
+                AIAssistantInteraction.assistant_type,
+                func.count(AIAssistantInteraction.id)
+            )
+            .group_by(AIAssistantInteraction.assistant_type)
+            .order_by(desc(func.count(AIAssistantInteraction.id)))
+            .all()
+        )
+
+        interactions_by_context = [
+            {
+                "context": row[0] or "general",
+                "count": row[1] or 0
+            }
+            for row in context_rows
+        ]
+
+        context_labels = [row["context"] for row in interactions_by_context]
+        context_values = [row["count"] for row in interactions_by_context]
+
+    # -----------------------------------
+    # Most active AI users
+    # -----------------------------------
+    most_active_users_rows = (
+        db.session.query(
+            User.id,
+            User.first_name,
+            User.last_name,
+            User.email,
+            User.role,
+            func.count(AIAssistantInteraction.id).label("interaction_count")
+        )
+        .join(AIAssistantInteraction, AIAssistantInteraction.user_id == User.id)
+        .group_by(User.id, User.first_name, User.last_name, User.email, User.role)
+        .order_by(desc("interaction_count"))
+        .limit(10)
+        .all()
+    )
+
+    most_active_users = [
+        {
+            "user_id": row.id,
+            "name": f"{(row.first_name or '').strip()} {(row.last_name or '').strip()}".strip() or row.email,
+            "email": row.email,
+            "role": row.role or "unknown",
+            "interaction_count": row.interaction_count or 0,
+        }
+        for row in most_active_users_rows
+    ]
+
+    # -----------------------------------
+    # Response quality / completion metrics
+    # Safe optional fields
+    # -----------------------------------
+    failed_interactions = 0
+    avg_response_length = 0
+
+    if hasattr(AIAssistantInteraction, "status"):
+        failed_interactions = (
+            AIA
 
 @admin_bp.route("/ai/refresh/<string:target>", methods=["POST"])
 @csrf.exempt
