@@ -245,6 +245,7 @@ def register():
         return redirect(url_for("auth.login"))
 
     return render_template("auth/register.html", form=form)
+    
 # ============================================================
 # OPTIONAL BORROWER REGISTER
 # ============================================================
@@ -301,22 +302,7 @@ def register_borrower():
 
     return render_template("auth/register_borrower.html", title="Register Borrower | Ravlo")
 
-        if hasattr(user, "full_name"):
-        user.full_name = full_name
-
-        user.set_password(password)
-
-        db.session.add(user)
-        db.session.commit()
-
-        session.permanent = True
-        login_user(user, remember=True)
-
-        flash("Borrower account created successfully.", "success")
-        return redirect(url_for("borrower.create_profile"))
-
-    return render_template("auth/register_borrower.html", title="Register Borrower | Ravlo")
-
+        
 
 # ============================================================
 # FORGOT PASSWORD / RESET REQUEST
