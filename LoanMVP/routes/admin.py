@@ -562,6 +562,7 @@ def verify_doc(doc_id):
 # =========================================================
 # 🤖 AI CONTROL PANEL
 # =========================================================
+
 @admin_bp.route("/analytics")
 @role_required("admin")
 def analytics():
