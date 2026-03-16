@@ -155,12 +155,9 @@ def post_login_redirect():
     print("POST LOGIN REDIRECT HIT. ROLE:", current_user.role)
     return redirect(url_for(_dashboard_for_role(current_user.role)))
 
-@auth_bp.route("/post-login-redirect")
-@login_required
-def post_login_redirect():
-    return redirect(url_for(_dashboard_for_role(current_user.role)))
 
-@auth_bp.route("/register/invite/<token>", methods=["GET", "POST"])
+
+
 @auth_bp.route("/register/invite/<token>", methods=["GET", "POST"])
 @csrf.exempt
 def register_from_invite(token):
@@ -443,7 +440,7 @@ def request_access():
 # RESET PASSWORD
 # ============================================================
 
-@auth_bp.route("/reset-password/<token>", methods=["GET", "POST"])
+
 @auth_bp.route("/reset_password/<token>", methods=["GET", "POST"])
 @csrf.exempt
 def reset_password(token):
