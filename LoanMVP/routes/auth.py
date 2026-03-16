@@ -210,7 +210,7 @@ def logout():
 
 
 @auth_bp.route("/register", methods=["GET", "POST"])
-@csrf.exempt 
+@csrf.exempt
 def register():
     form = RegisterForm()
 
@@ -224,10 +224,9 @@ def register():
             flash("This role requires approval before access is granted. Please submit an access request.", "warning")
             return redirect(url_for("auth.request_access", requested_role=role))
 
-        # normal registration flow for allowed public roles
         user = User(
-            full_name = f"{first} {last}".strip(),
-            email=form.email.data.strip().lower(),
+            full_name=(form.full_name.data or "").strip(),
+            email=(form.email.data or "").strip().lower(),
             role=role,
             is_active=True,
         )
