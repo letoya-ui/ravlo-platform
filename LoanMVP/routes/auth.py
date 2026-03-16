@@ -136,14 +136,6 @@ def login():
     return render_template("auth/login.html", form=form)
 
 
-@auth_bp.route("/post-login-redirect")
-@login_required
-def post_login_redirect():
-    print("POST LOGIN REDIRECT HIT:", current_user.role)
-    return redirect(url_for(_dashboard_for_role(current_user.role)))
-
-
-
 @auth_bp.route("/register/invite/<token>", methods=["GET", "POST"])
 @csrf.exempt
 def register_from_invite(token):
@@ -231,6 +223,11 @@ def logout():
 @csrf.exempt
 def register():
     form = RegisterForm()
+    
+    existing = User.query.filter_by(email=form.email.data.lower()).first()
+    if existing:
+        flash("An account with that email already exists.", "danger")
+        return render_template("auth/register.html", form=form)
 
     if form.validate_on_submit():
         role = (form.role.data or "").strip().lower()
@@ -248,16 +245,38 @@ def register():
             role=role,
             is_active=True,
         )
+
         user.set_password(form.password.data)
 
         db.session.add(user)
         db.session.commit()
 
-        flash("Account created successfully. Please sign in.", "success")
-        return redirect(url_for("auth.login"))
+        # 🔐 log them in automatically
+        login_user(user)
+
+        flash("Welcome to Ravlo. Let's set up your profile.", "info")
+
+        # 👇 send investors to profile creation
+        if role == "investor":
+            return redirect(url_for("investor.create_profile"))
+
+        return redirect(url_for("auth.post_login_redirect"))
 
     return render_template("auth/register.html", form=form)
     
+@auth_bp.route("/post-login-redirect")
+@login_required
+def post_login_redirect():
+
+    if current_user.role == "investor":
+        profile = InvestorProfile.query.filter_by(user_id=current_user.id).first()
+
+        if not profile:
+            flash("Please complete your investor profile first.", "info")
+            return redirect(url_for("investor.create_profile"))
+
+    return redirect(url_for(_dashboard_for_role(current_user.role)))
+
 # ============================================================
 # OPTIONAL BORROWER REGISTER
 # ============================================================
