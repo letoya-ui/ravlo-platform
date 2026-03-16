@@ -583,7 +583,6 @@ def analytics():
         loan_status_values=loan_status_values,
     )
 
-
 @admin_bp.route("/ai-dashboard", methods=["GET"])
 @login_required
 @role_required("admin")
@@ -744,7 +743,46 @@ def ai_dashboard():
 
     if hasattr(AIAssistantInteraction, "status"):
         failed_interactions = (
-            AIA
+            AIAssistantInteraction.query
+            .filter(AIAssistantInteraction.status.in_(["failed", "error"]))
+            .count()
+        )
+
+    if hasattr(AIAssistantInteraction, "response"):
+        response_lengths = [
+            len(item.response or "")
+            for item in recent_interactions
+            if item.response
+        ]
+        if response_lengths:
+            avg_response_length = round(sum(response_lengths) / len(response_lengths), 1)
+
+    # -----------------------------------
+    # Summary cards
+    # -----------------------------------
+    ai_stats = {
+        "total_interactions": total_interactions,
+        "total_users_with_ai": total_users_with_ai,
+        "total_questions": total_questions,
+        "total_responses": total_responses,
+        "failed_interactions": failed_interactions,
+        "avg_response_length": avg_response_length,
+    }
+
+    return render_template(
+        "admin/ai_dashboard.html",
+        title="AI Dashboard",
+        active_tab="ai_dashboard",
+        ai_stats=ai_stats,
+        recent_interactions=recent_interactions,
+        interactions_by_role=interactions_by_role,
+        role_labels=role_labels,
+        role_values=role_values,
+        interactions_by_context=interactions_by_context,
+        context_labels=context_labels,
+        context_values=context_values,
+        most_active_users=most_active_users,
+    )
 
 @admin_bp.route("/ai/refresh/<string:target>", methods=["POST"])
 @csrf.exempt
