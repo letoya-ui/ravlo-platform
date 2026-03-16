@@ -1,31 +1,339 @@
 {% extends "layouts/Ravlo_lending_base.html" %}
-{% block title %}Admin | Messages{% endblock %}
-{% block content %}
-<div class="d-flex">
-  
-  <main class="flex-grow-1 p-4" style="margin-left:260px;background-color:#0f0f0f;color:#e0e0e0;">
-    <h2 class="mb-4">💬 Internal Messages</h2>
-    <div class="card bg-dark border-0 shadow p-3">
-      <form method="POST" class="mb-4">
-        <div class="d-flex gap-2">
-          <input type="text" name="recipient" class="form-control bg-dark text-light border-secondary" placeholder="Recipient email">
-          <input type="text" name="subject" class="form-control bg-dark text-light border-secondary" placeholder="Subject">
-        </div>
-        <textarea name="body" rows="4" class="form-control bg-dark text-light border-secondary mt-3" placeholder="Write your message..."></textarea>
-        <button type="submit" class="btn btn-outline-light mt-3">Send Message</button>
-      </form>
+{% block title %}Admin • Messages{% endblock %}
 
-      <h5 class="text-muted mb-3">Inbox</h5>
-      {% for msg in messages %}
-      <div class="border-bottom border-secondary pb-2 mb-3">
-        <strong>{{ msg.sender_email }}</strong> → <em>{{ msg.subject }}</em>
-        <p>{{ msg.body }}</p>
-        <small class="text-muted">{{ msg.sent_at.strftime('%b %d, %Y %I:%M %p') }}</small>
+{% block content %}
+<main class="dashboard-main admin-messages-page">
+  <div class="wrap">
+
+    <section class="card admin-msg-hero">
+      <div class="admin-msg-hero__left">
+        <div class="eyebrow">ADMIN COMMUNICATIONS</div>
+        <h1>Internal Messages</h1>
+        <div class="muted">
+          Review recent platform messages and send internal updates to users.
+        </div>
       </div>
-      {% else %}
-        <p class="text-muted text-center">No messages yet.</p>
-      {% endfor %}
+    </section>
+
+    <div class="admin-msg-layout">
+
+      <section class="card admin-msg-compose">
+        <div class="section-head">
+          <div>
+            <h3>Send Message</h3>
+            <div class="muted">Send an internal message to any user</div>
+          </div>
+        </div>
+
+        <form method="POST" action="{{ url_for('admin.messages') }}" class="admin-msg-form">
+          <div class="admin-msg-form-grid">
+            <div class="field">
+              <label class="label">Recipient</label>
+              <select name="recipient_id" class="input" required>
+                <option value="">Select a user</option>
+                {% for user in users %}
+                  <option value="{{ user.id }}">
+                    {{ user.full_name or user.username or user.email }}{% if user.role %} — {{ user.role|replace('_', ' ')|title }}{% endif %}
+                  </option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+
+          <div class="field">
+            <label class="label">Message</label>
+            <textarea
+              name="content"
+              class="input textarea"
+              rows="5"
+              placeholder="Type your message here..."
+              required
+            ></textarea>
+          </div>
+
+          <div class="admin-msg-actions">
+            <button type="submit" class="btn btn-primary">Send Message</button>
+          </div>
+        </form>
+      </section>
+
+      <section class="card admin-msg-feed">
+        <div class="section-head">
+          <div>
+            <h3>Recent Messages</h3>
+            <div class="muted">Latest 50 internal messages</div>
+          </div>
+        </div>
+
+        {% if messages %}
+          <div class="msg-stack">
+            {% for msg in messages %}
+              <article class="msg-item">
+                <div class="msg-item__top">
+                  <div class="msg-item__meta">
+                    <div class="msg-item__from">
+                      <strong>
+                        {{ msg.sender.full_name or msg.sender.username or msg.sender.email if msg.sender else "Unknown Sender" }}
+                      </strong>
+                      <span class="muted">→</span>
+                      <strong>
+                        {{ msg.receiver.full_name or msg.receiver.username or msg.receiver.email if msg.receiver else "Unknown Recipient" }}
+                      </strong>
+                    </div>
+
+                    <div class="muted msg-item__roles">
+                      {% if msg.sender_role %}
+                        <span>{{ msg.sender_role|replace('_', ' ')|title }}</span>
+                      {% endif %}
+                      {% if msg.receiver_role %}
+                        <span>to {{ msg.receiver_role|replace('_', ' ')|title }}</span>
+                      {% endif %}
+                    </div>
+                  </div>
+
+                  <div class="msg-item__time muted">
+                    {{ msg.created_at.strftime("%Y-%m-%d %I:%M %p") if msg.created_at else "" }}
+                  </div>
+                </div>
+
+                {% if msg.subject %}
+                  <div class="msg-item__subject">{{ msg.subject }}</div>
+                {% endif %}
+
+                <div class="msg-item__body">
+                  {{ msg.content }}
+                </div>
+
+                <div class="msg-item__flags">
+                  {% if msg.system_generated %}
+                    <span class="status-chip info">System</span>
+                  {% endif %}
+
+                  {% if msg.is_read %}
+                    <span class="status-chip success">Read</span>
+                  {% else %}
+                    <span class="status-chip warn">Unread</span>
+                  {% endif %}
+                </div>
+              </article>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="empty-state">
+            <p class="muted">No messages found.</p>
+          </div>
+        {% endif %}
+      </section>
+
     </div>
-  </main>
-</div>
+  </div>
+
+  <style>
+    .admin-messages-page{
+      min-width:0;
+    }
+
+    .admin-messages-page .wrap{
+      display:grid;
+      gap:18px;
+      min-width:0;
+    }
+
+    .admin-msg-hero{
+      padding:20px;
+      border-radius:22px;
+    }
+
+    .admin-msg-hero h1{
+      margin:8px 0 10px;
+      line-height:1.05;
+      letter-spacing:-.03em;
+    }
+
+    .admin-msg-layout{
+      display:grid;
+      grid-template-columns:minmax(320px, 420px) minmax(0, 1fr);
+      gap:16px;
+      align-items:start;
+      min-width:0;
+    }
+
+    .admin-msg-compose,
+    .admin-msg-feed{
+      min-width:0;
+    }
+
+    .admin-msg-form{
+      display:grid;
+      gap:14px;
+    }
+
+    .admin-msg-form-grid{
+      display:grid;
+      grid-template-columns:1fr;
+      gap:14px;
+    }
+
+    .field{
+      min-width:0;
+    }
+
+    .label{
+      display:block;
+      margin-bottom:8px;
+      font-size:.92rem;
+      font-weight:700;
+      color:var(--text-soft, #c9d3df);
+    }
+
+    .input{
+      width:100%;
+      min-width:0;
+      border:1px solid rgba(255,255,255,.08);
+      background:rgba(255,255,255,.03);
+      color:var(--text, #fff);
+      border-radius:14px;
+      padding:.85rem .95rem;
+      outline:none;
+    }
+
+    .textarea{
+      resize:vertical;
+      min-height:140px;
+    }
+
+    .admin-msg-actions{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      margin-top:4px;
+    }
+
+    .msg-stack{
+      display:flex;
+      flex-direction:column;
+      gap:12px;
+    }
+
+    .msg-item{
+      padding:16px;
+      border-radius:18px;
+      border:1px solid rgba(255,255,255,.08);
+      background:rgba(255,255,255,.025);
+    }
+
+    .msg-item__top{
+      display:flex;
+      justify-content:space-between;
+      align-items:flex-start;
+      gap:12px;
+      margin-bottom:10px;
+    }
+
+    .msg-item__from{
+      display:flex;
+      flex-wrap:wrap;
+      gap:8px;
+      align-items:center;
+      line-height:1.45;
+    }
+
+    .msg-item__roles{
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+      margin-top:4px;
+      font-size:.84rem;
+    }
+
+    .msg-item__time{
+      white-space:nowrap;
+      font-size:.84rem;
+    }
+
+    .msg-item__subject{
+      font-weight:700;
+      margin-bottom:8px;
+      color:var(--text, #fff);
+    }
+
+    .msg-item__body{
+      line-height:1.6;
+      color:var(--text, #fff);
+      white-space:pre-wrap;
+    }
+
+    .msg-item__flags{
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+      margin-top:12px;
+    }
+
+    .status-chip{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      padding:.35rem .6rem;
+      border-radius:999px;
+      font-size:.76rem;
+      font-weight:700;
+      border:1px solid rgba(255,255,255,.08);
+      background:rgba(255,255,255,.04);
+    }
+
+    .status-chip.success{
+      color:#7ee2a8;
+    }
+
+    .status-chip.warn{
+      color:#ffd56a;
+    }
+
+    .status-chip.info{
+      color:#7ab8ff;
+    }
+
+    .empty-state{
+      padding:8px 0 4px;
+    }
+
+    @media (max-width: 1100px){
+      .admin-msg-layout{
+        grid-template-columns:1fr;
+      }
+    }
+
+    @media (max-width: 720px){
+      .admin-msg-hero{
+        padding:16px;
+        border-radius:18px;
+      }
+
+      .admin-msg-actions{
+        flex-direction:column;
+        align-items:stretch;
+      }
+
+      .admin-msg-actions .btn{
+        width:100%;
+        justify-content:center;
+      }
+
+      .msg-item{
+        padding:14px;
+        border-radius:16px;
+      }
+
+      .msg-item__top{
+        flex-direction:column;
+        align-items:flex-start;
+      }
+
+      .msg-item__time{
+        white-space:normal;
+      }
+    }
+  </style>
+</main>
 {% endblock %}
