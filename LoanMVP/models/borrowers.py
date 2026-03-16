@@ -74,7 +74,12 @@ class ProjectBudget(db.Model):
         db.ForeignKey("deals.id"),
         nullable=True
     )
-   
+    build_project_id = db.Column(
+        db.Integer,
+        db.ForeignKey("build_projects.id"),
+        nullable=True
+    )
+
     budget_type = db.Column(db.String(50), nullable=False, default="rehab")
 
     name = db.Column(db.String(100), nullable=False)
