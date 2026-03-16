@@ -120,10 +120,6 @@ def login():
             flash("Invalid email or password.", "danger")
             return render_template("auth/login.html", form=form)
 
-        if user.role in RESTRICTED_STAFF_ROLES and not getattr(user, "is_active", True):
-            flash("Your account is pending approval.", "warning")
-            return render_template("auth/login.html", form=form)
-
         login_user(user)
         flash("Welcome back.", "success")
         return redirect(url_for("auth.post_login_redirect"))
@@ -208,23 +204,12 @@ def logout():
 # REGISTER
 # ============================================================
 @auth_bp.route("/register", methods=["GET", "POST"])
-@auth_bp.route("/register", methods=["GET", "POST"])
 @csrf.exempt
 def register():
     form = RegisterForm()
 
     if form.validate_on_submit():
         role = (form.role.data or "").strip().lower()
-
-        if role in {"loan officer", "loan_officer"}:
-            role = "loan_officer"
-
-        if role in RESTRICTED_STAFF_ROLES:
-            flash(
-                "This role requires approval before access is granted. Please submit an access request.",
-                "warning"
-            )
-            return redirect(url_for("auth.request_access", requested_role=role))
 
         full_name = (form.full_name.data or "").strip()
         parts = full_name.split(None, 1)
