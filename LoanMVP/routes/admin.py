@@ -490,34 +490,58 @@ def reports():
 # =========================================================
 # 💬 ADMIN MESSAGE CENTER
 # =========================================================
+
 @admin_bp.route("/messages", methods=["GET", "POST"])
 @csrf.exempt
 @role_required("admin")
 def messages():
     if request.method == "POST":
-        content = request.form.get("content")
-        recipient = request.form.get("recipient_id") or None
+        content = (request.form.get("content") or "").strip()
+        receiver_id = request.form.get("recipient_id", type=int)
 
         if not content:
             flash("⚠️ Message cannot be empty.", "warning")
             return redirect(url_for("admin.messages"))
 
+        if not receiver_id:
+            flash("⚠️ Please select a recipient.", "warning")
+            return redirect(url_for("admin.messages"))
+
+        recipient_user = User.query.get(receiver_id)
+        if not recipient_user:
+            flash("⚠️ Recipient not found.", "danger")
+            return redirect(url_for("admin.messages"))
+
         new_msg = Message(
             sender_id=current_user.id,
-            recipient_id=recipient,
+            receiver_id=receiver_id,
             content=content,
-            timestamp=datetime.utcnow()
+            created_at=datetime.utcnow(),
+            sender_role=getattr(current_user, "role", None),
+            receiver_role=getattr(recipient_user, "role", None),
         )
+
         db.session.add(new_msg)
         db.session.commit()
+
         flash("Message sent.", "success")
         return redirect(url_for("admin.messages"))
 
-    msgs = Message.query.order_by(Message.timestamp.desc()).limit(50).all()
-    users = User.query.all()
-    return render_template("admin/messages.html", messages=msgs, users=users)
+    msgs = (
+        Message.query
+        .order_by(Message.created_at.desc(), Message.id.desc())
+        .limit(50)
+        .all()
+    )
 
+    users = User.query.order_by(User.first_name.asc(), User.last_name.asc()).all()
 
+    return render_template(
+        "admin/messages.html",
+        messages=msgs,
+        users=users
+    )
+    
 # =========================================================
 # 📑 VERIFY DOCUMENTS
 # =========================================================
