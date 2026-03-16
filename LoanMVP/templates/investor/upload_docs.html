@@ -1,557 +1,180 @@
-{# templates/investor/resource_center.html #}
+{# templates/investor/documents_upload.html #}
 {% extends "layouts/ravlo_base.html" %}
+{% block title %}Ravlo • Upload Documents{% endblock %}
 
-{% block title %}Ravlo • Resource Center{% endblock %}
-
-{% block page_title %}Resource Center{% endblock %}
-{% block page_subline %}
-Guides, support, capital updates, trusted connections, and investor tools — all in one place.
-{% endblock %}
+{% block page_title %}Documents{% endblock %}
+{% block page_subline %}Upload and manage files related to your deal, loan, or underwriting conditions.{% endblock %}
 
 {% block topbar_actions %}
-  <form method="GET" action="{{ url_for('investor.resource_center') }}" style="display:flex; gap:.6rem; align-items:center;">
-    <input
-      type="text"
-      name="q"
-      value="{{ request.args.get('q', '') }}"
-      placeholder="Search resources, docs, FAQs, partners..."
-      class="rc-top-search"
-    >
-    <button type="submit" class="ravlo-btn ghost sm">Search</button>
-  </form>
+  <button class="ravlo-btn ghost sm" type="button"
+          onclick="location.href='{{ url_for('investor.documents') }}'">
+    View All
+  </button>
+
+  <button type="button" class="ravlo-btn ghost sm"
+          onclick="location.href='{{ url_for('investor.document_requests') }}'">
+    View Requests
+  </button>
 {% endblock %}
 
 {% block content %}
+
 <style>
-  .resource-page{
-    display:flex;
-    flex-direction:column;
-    gap:1.15rem;
+  .doc-wrap { margin-top: 1rem; }
+  .doc-grid {
+    display: grid;
+    grid-template-columns: 1.1fr 1.9fr;
+    gap: 1.25rem;
+    align-items: start;
+  }
+  @media (max-width: 980px) {
+    .doc-grid { grid-template-columns: 1fr; }
   }
 
-  .resource-hero{
-    display:grid;
-    grid-template-columns: 1.05fr 2fr;
-    gap:1rem;
-    width:100%;
+  .doc-card {
+    background: rgba(255, 255, 255, .03);
+    border: 1px solid rgba(255, 255, 255, .10);
+    border-radius: 18px;
+    padding: 1.05rem 1.05rem;
+    box-shadow: 0 0 18px rgba(0, 0, 0, .45);
+  }
+  .doc-card h3 {
+    margin: .1rem 0 .65rem;
+    color: var(--accent);
+    font-size: 1.05rem;
+  }
+  .muted { color: rgba(230, 235, 240, .70) !important; }
+
+  .dw-input {
+    width: 100%;
+    padding: .75rem .85rem;
+    border-radius: 14px;
+    background: rgba(255, 255, 255, .04);
+    border: 1px solid rgba(255, 255, 255, .10);
+    color: rgba(230, 235, 240, .92);
+    outline: none;
+  }
+  .dw-input::placeholder { color: rgba(230, 235, 240, .45); }
+  .dw-input:focus {
+    border-color: rgba(217, 221, 228, .35);
+    box-shadow: 0 0 0 4px rgba(217, 221, 228, .08);
   }
 
-  .resource-layout{
-    display:grid;
-    grid-template-columns: minmax(320px, 420px) minmax(0, 1fr);
-    gap:1rem;
-    width:100%;
-    align-items:start;
+  .doc-item {
+    padding: .9rem;
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, .08);
+    background: rgba(255, 255, 255, .02);
+    display: flex;
+    justify-content: space-between;
+    gap: .9rem;
+    align-items: flex-start;
   }
-
-  .resource-left,
-  .resource-right{
-    min-width:0;
-    display:flex;
-    flex-direction:column;
-    gap:1rem;
-  }
-
-  .rc-card{
-    background:
-      linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
-    border:1px solid rgba(255,255,255,.08);
-    border-radius:22px;
-    box-shadow: 0 12px 40px rgba(0,0,0,.28);
-    padding:1rem;
-    min-width:0;
-  }
-
-  .rc-card h3{
-    margin:0 0 .45rem;
-    font-size:1rem;
-    font-weight:800;
-    color:#f5f8fc;
-    letter-spacing:-.02em;
-  }
-
-  .rc-card p{
-    margin:0;
-    color:rgba(228,235,245,.72);
-    line-height:1.55;
-  }
-
-  .rc-eyebrow{
-    display:inline-flex;
-    align-items:center;
-    gap:.4rem;
-    font-size:.68rem;
-    text-transform:uppercase;
-    letter-spacing:.16em;
-    color:rgba(180,198,221,.62);
-    margin-bottom:.55rem;
-    font-weight:700;
-  }
-
-  .resource-library,
-  .resource-search-panel{
-    min-height:210px;
-  }
-
-  .resource-library{
-    display:flex;
-    flex-direction:column;
-    justify-content:space-between;
-    padding:1.2rem;
-  }
-
-  .resource-search-panel{
-    padding:1.15rem;
-    display:flex;
-    flex-direction:column;
-    gap:.85rem;
-  }
-
-  .resource-actions{
-    display:flex;
-    flex-wrap:wrap;
-    gap:.65rem;
-    margin-top:1rem;
-  }
-
-  .resource-search-box{
-    display:flex;
-    gap:.65rem;
-    align-items:center;
-    flex-wrap:wrap;
-  }
-
-  .resource-search-input,
-  .rc-top-search,
-  .partner-filter select{
-    background:rgba(255,255,255,.04);
-    border:1px solid rgba(255,255,255,.09);
-    border-radius:999px;
-    color:#eef4ff;
-    padding:.82rem 1rem;
-    outline:none;
-  }
-
-  .resource-search-input{
-    flex:1 1 540px;
-    min-width:220px;
-  }
-
-  .rc-top-search{
-    width:min(360px, 48vw);
-  }
-
-  .resource-search-input::placeholder,
-  .rc-top-search::placeholder{
-    color:rgba(228,235,245,.42);
-  }
-
-  .resource-search-input:focus,
-  .rc-top-search:focus,
-  .partner-filter select:focus{
-    border-color:rgba(132,172,255,.35);
-    box-shadow:0 0 0 4px rgba(90,140,255,.10);
-  }
-
-  .resource-grid,
-  .mini-grid{
-    display:grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap:1rem;
-  }
-
-  .resource-list,
-  .faq-list,
-  .timeline-list,
-  .guide-links{
-    display:flex;
-    flex-direction:column;
-    gap:.7rem;
-    margin-top:.8rem;
-  }
-
-  .resource-item,
-  .guide-link,
-  .faq-pill{
-    display:block;
-    padding:.85rem .9rem;
-    border-radius:16px;
-    background:rgba(255,255,255,.03);
-    border:1px solid rgba(255,255,255,.06);
-    color:inherit;
-    text-decoration:none;
-  }
-
-  .resource-item{
-    display:flex;
-    justify-content:space-between;
-    align-items:flex-start;
-    gap:.8rem;
-  }
-
-  .resource-item strong,
-  .guide-link strong{
-    display:block;
-    color:#f2f6fc;
-    margin-bottom:.18rem;
-    font-size:.94rem;
-  }
-
-  .resource-item span,
-  .guide-link span{
-    display:block;
-    color:rgba(225,232,242,.62);
-    font-size:.84rem;
-    line-height:1.45;
-  }
-
-  .faq-pill{
-    color:#edf3ff;
-    font-weight:700;
-  }
-
-  .faq-pill:hover,
-  .guide-link:hover{
-    background:rgba(255,255,255,.05);
-  }
-
-  .resource-actions-inline{
-    display:flex;
-    flex-wrap:wrap;
-    gap:.45rem;
-  }
-
-  .ai-box{
-    display:flex;
-    flex-direction:column;
-    gap:.8rem;
-  }
-
-  .ai-box textarea{
-    min-height:110px;
-    resize:vertical;
-    width:100%;
-    border-radius:18px;
-    border:1px solid rgba(255,255,255,.08);
-    background:rgba(255,255,255,.03);
-    color:#eef4ff;
-    padding:.9rem 1rem;
-    outline:none;
-  }
-
-  .ai-box textarea:focus{
-    border-color:rgba(132,172,255,.35);
-    box-shadow:0 0 0 4px rgba(90,140,255,.10);
-  }
-
-  .timeline-step{
-    display:flex;
-    align-items:flex-start;
-    gap:.7rem;
-    color:rgba(229,235,245,.74);
-    font-size:.9rem;
-    line-height:1.45;
-  }
-
-  .timeline-dot{
-    width:10px;
-    height:10px;
-    border-radius:999px;
-    margin-top:.38rem;
-    flex:0 0 10px;
-    background:rgba(255,255,255,.24);
-  }
-
-  .timeline-dot.completed{ background:#62d89f; }
-  .timeline-dot.current{ background:#83aefc; }
-  .timeline-dot.upcoming{ background:rgba(255,255,255,.24); }
-
-  .partner-filter{
-    display:flex;
-    gap:.55rem;
-    flex-wrap:wrap;
-    align-items:center;
-    margin-top:.8rem;
-  }
-
-  .empty-state{
-    padding:1.25rem;
-    border-radius:18px;
-    border:1px dashed rgba(255,255,255,.10);
-    background:rgba(255,255,255,.02);
-    color:rgba(228,235,245,.62);
-  }
-
-  .full-height{
-    min-height:540px;
-  }
-
-  @media (max-width: 1200px){
-    .resource-hero,
-    .resource-grid,
-    .mini-grid{
-      grid-template-columns:1fr;
-    }
-  }
-
-  @media (max-width: 980px){
-    .resource-layout{
-      grid-template-columns:1fr;
-    }
-
-    .rc-top-search{
-      width:100%;
-    }
+  .doc-name { font-weight: 900; color: rgba(230, 235, 240, .95); }
+  .doc-meta { margin-top: .2rem; font-size: .85rem; }
+  .doc-actions { display: flex; gap: .5rem; flex-wrap: wrap; justify-content: flex-end; }
+  .danger {
+    border-color: rgba(255, 100, 100, .55) !important;
+    color: #ff8b8b !important;
+    background: rgba(255, 100, 100, .10) !important;
   }
 </style>
 
-<div class="resource-page">
+<div class="doc-wrap">
+  <div class="doc-grid">
 
-  <section class="resource-hero">
-    <div class="rc-card resource-library">
-      <div>
-        <div class="rc-eyebrow">Ravlo Resource Center</div>
-        <h3>Your investor support library</h3>
-        <p>
-          Access funding guidance, support contacts, FAQs, partner tools, and investor resources built for your Ravlo workflow.
-        </p>
-      </div>
+    <div class="doc-card">
+      <h3>📤 Upload a Document</h3>
+      <p class="muted" style="margin:-.25rem 0 .75rem;">
+        Add paystubs, IDs, bank statements, insurance, scopes, bids, or any requested documents.
+      </p>
 
-      <div class="resource-actions">
-        <a href="{{ url_for('investor.capital_application') }}" class="ravlo-btn primary sm">Apply for Capital</a>
-        <a href="{{ url_for('investor.deal_pipeline') }}" class="ravlo-btn ghost sm">View Deals</a>
-      </div>
-    </div>
+      <form method="POST" enctype="multipart/form-data"
+            action="{{ url_for('investor.upload_document') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
-    <div class="rc-card resource-search-panel">
-      <div class="rc-eyebrow">Search</div>
-      <h3>Find a resource fast</h3>
-      <form method="GET" action="{{ url_for('investor.resource_center') }}" class="resource-search-box">
-        <input
-          class="resource-search-input"
-          type="text"
-          name="q"
-          value="{{ request.args.get('q', '') }}"
-          placeholder="Search funding, conditions, documents, partner help, FAQs..."
-        >
-        <button type="submit" class="ravlo-btn primary sm">Search</button>
+        <label class="muted" style="display:block;margin:.25rem 0 .35rem;">Choose file</label>
+        <input class="dw-input" type="file" name="file" required>
+
+        <div style="margin-top:.85rem; display:flex; gap:.6rem; flex-wrap:wrap;">
+          <button type="submit" class="ravlo-btn primary sm">
+            Upload
+          </button>
+
+          <button type="button" class="ravlo-btn ghost sm"
+                  onclick="location.href='{{ url_for('investor.document_requests') }}'">
+            View Requests
+          </button>
+        </div>
       </form>
-      <p>Search across support topics, document help, funding guidance, and investor education.</p>
-    </div>
-  </section>
-
-  <section class="resource-layout">
-    <div class="resource-left">
-
-      <div class="resource-grid">
-        <div class="rc-card">
-          <div class="rc-eyebrow">Capital</div>
-          <h3>Funding Resources</h3>
-          <div class="resource-list">
-            <div class="resource-item">
-              <div>
-                <strong>Start a Capital Request</strong>
-                <span>Launch a new application and submit your next funding request.</span>
-              </div>
-              <div class="resource-actions-inline">
-                <a href="{{ url_for('investor.capital_application') }}" class="ravlo-btn ghost xs">Open</a>
-              </div>
-            </div>
-
-            <div class="resource-item">
-              <div>
-                <strong>Conditions</strong>
-                <span>Review outstanding items needed for underwriting and approval.</span>
-              </div>
-              <div class="resource-actions-inline">
-                <a href="{{ url_for('investor.documents') }}" class="ravlo-btn ghost xs">Review</a>
-              </div>
-            </div>
-
-            <div class="resource-item">
-              <div>
-                <strong>Document Library</strong>
-                <span>Access uploads, downloads, and funding-related files.</span>
-              </div>
-              <div class="resource-actions-inline">
-                <a href="{{ url_for('investor.documents') }}" class="ravlo-btn ghost xs">Open</a>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="rc-card">
-          <div class="rc-eyebrow">AI Support</div>
-          <h3>Ask Ravlo AI</h3>
-          <form method="GET" action="{{ url_for('investor.ask_ai_page') }}" class="ai-box">
-            <textarea name="prefill" placeholder="Ask about capital requests, conditions, deal strategy, or next steps..."></textarea>
-            <div>
-              <button type="submit" class="ravlo-btn primary sm">Ask</button>
-            </div>
-          </form>
-        </div>
-      </div>
-
-      <div class="resource-grid">
-        <div class="rc-card">
-          <div class="rc-eyebrow">Learning</div>
-          <h3>Investor Guides</h3>
-          <div class="guide-links">
-            <a class="guide-link" href="{{ url_for('investor.compare_deals') }}">
-              <strong>Fix & Flip Basics</strong>
-              <span>Understand acquisition, rehab strategy, planning, exit timing, and project margins.</span>
-            </a>
-            <a class="guide-link" href="{{ url_for('investor.compare_deals') }}">
-              <strong>Rental / DSCR Strategy</strong>
-              <span>Review long-term rental thinking, cash flow, DSCR logic, and hold strategy.</span>
-            </a>
-            <a class="guide-link" href="{{ url_for('investor.deal_studio') }}">
-              <strong>Capital Readiness Planning</strong>
-              <span>Learn what lenders need before approval, what to upload, and how to present a clean file.</span>
-            </a>
-          </div>
-        </div>
-
-        <div class="rc-card">
-          <div class="rc-eyebrow">FAQ</div>
-          <h3>Frequently Asked Questions</h3>
-          <div class="faq-list">
-            {% for faq in faqs %}
-              <a class="faq-pill" href="{{ url_for('investor.ask_ai_page', prefill=faq.q) }}">
-                {{ faq.q }}
-              </a>
-            {% endfor %}
-          </div>
-        </div>
-      </div>
-
     </div>
 
-    <div class="resource-right">
+    <div class="doc-card">
+      <h3>📁 Uploaded Files</h3>
 
-      <div class="mini-grid">
-        <div class="rc-card">
-          <div class="rc-eyebrow">Team</div>
-          <h3>My Support Team</h3>
-          <div class="resource-list">
-            <div class="resource-item">
-              <div>
-                <strong>Loan Officer</strong>
-                <span>
-                  {{ loan_officer.name if loan_officer and loan_officer.name else 'Not assigned yet.' }}
-                </span>
-              </div>
-            </div>
-
-            <div class="resource-item">
-              <div>
-                <strong>Processor</strong>
-                <span>
-                  {{ processor.name if processor and processor.name else 'Not assigned yet.' }}
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="rc-card">
-          <div class="rc-eyebrow">Timeline</div>
-          <h3>Your Capital Timeline</h3>
-          <div class="timeline-list">
-            {% for step in timeline %}
-              <div class="timeline-step">
-                <span class="timeline-dot {{ step.status }}"></span>
-                <div>
-                  <strong>{{ step.title }}</strong><br>
-                  {% if step.status == 'completed' %}
-                    Completed
-                  {% elif step.status == 'current' %}
-                    Current step
-                  {% else %}
-                    Upcoming
-                  {% endif %}
+      {% if documents %}
+        <div style="margin-top:.75rem; display:flex; flex-direction:column; gap:.75rem;">
+          {% for doc in documents %}
+            <div class="doc-item">
+              <div style="min-width:0;">
+                <div class="doc-name" style="word-break:break-word;">
+                  {{ doc.name or doc.file_path or ('Document #' ~ doc.id) }}
+                </div>
+                <div class="doc-meta muted">
+                  Status: {{ doc.status or 'uploaded' }}
+                  • Uploaded:
+                  {{ doc.uploaded_at.strftime('%b %d, %Y') if doc.uploaded_at else (doc.created_at.strftime('%b %d, %Y') if doc.created_at else '—') }}
                 </div>
               </div>
-            {% endfor %}
-          </div>
-        </div>
-      </div>
 
-      <div class="rc-card">
-        <div class="rc-eyebrow">Partner Network</div>
-        <h3>Partner Directory</h3>
+              <div class="doc-actions">
+                <button type="button" class="ravlo-btn ghost sm"
+                        onclick="location.href='{{ url_for('investor.view_document', doc_id=doc.id) }}'">
+                  View
+                </button>
 
-        <form method="GET" action="{{ url_for('investor.resource_center') }}" class="partner-filter">
-          <select name="category">
-            <option value="All" {% if selected_category == 'All' %}selected{% endif %}>All</option>
-            <option value="Contractor" {% if selected_category == 'Contractor' %}selected{% endif %}>Contractor</option>
-            <option value="Designer" {% if selected_category == 'Designer' %}selected{% endif %}>Designer</option>
-            <option value="Cleaner" {% if selected_category == 'Cleaner' %}selected{% endif %}>Cleaner</option>
-            <option value="Realtor" {% if selected_category == 'Realtor' %}selected{% endif %}>Realtor</option>
-            <option value="Inspector" {% if selected_category == 'Inspector' %}selected{% endif %}>Inspector</option>
-            <option value="Lender" {% if selected_category == 'Lender' %}selected{% endif %}>Lender</option>
-          </select>
-          <button type="submit" class="ravlo-btn ghost sm">Browse</button>
-        </form>
+                <button type="button" class="ravlo-btn ghost sm"
+                        onclick="location.href='{{ url_for('investor.download_document', doc_id=doc.id) }}'">
+                  Download
+                </button>
 
-        {% if partners %}
-          <div class="resource-list">
-            {% for partner in partners %}
-              <div class="resource-item">
-                <div>
-                  <strong>{{ partner.business_name or partner.name or 'Partner' }}</strong>
-                  <span>
-                    {{ partner.category or 'Service provider' }}
-                    {% if partner.city or partner.state %}
-                      • {{ partner.city or '' }}{{ ', ' if partner.city and partner.state else '' }}{{ partner.state or '' }}
-                    {% endif %}
-                    {% if partner.rating %}
-                      • Rating: {{ '%.1f'|format(partner.rating) }}
-                    {% endif %}
-                  </span>
-                </div>
+                <button type="button" class="ravlo-btn ghost sm danger"
+                        onclick="deleteDocument({{ doc.id }})">
+                  Delete
+                </button>
               </div>
-            {% endfor %}
-          </div>
-        {% else %}
-          <div class="empty-state" style="margin-top:.85rem;">
-            No partners available for this category yet.
-          </div>
-        {% endif %}
-      </div>
-
-      <div class="rc-card full-height">
-        <div class="rc-eyebrow">Support</div>
-        <h3>Resource Notes & Next Steps</h3>
-        <div class="resource-list">
-          <div class="resource-item">
-            <div>
-              <strong>Upload clean documents early</strong>
-              <span>Bank statements, scopes, entity docs, and insurance help move reviews faster.</span>
             </div>
-          </div>
-          <div class="resource-item">
-            <div>
-              <strong>Use Ravlo AI for file prep</strong>
-              <span>Ask questions about required documents, approval timing, and next-step strategy.</span>
-            </div>
-          </div>
-          <div class="resource-item">
-            <div>
-              <strong>Build your local team</strong>
-              <span>Use the Partner Directory to find contractors, realtors, inspectors, and support services.</span>
-            </div>
-          </div>
-          <div class="resource-item">
-            <div>
-              <strong>Keep your deal package tight</strong>
-              <span>Strong purchase details, realistic rehab scope, and clear exit strategy improve funding readiness.</span>
-            </div>
-          </div>
+          {% endfor %}
         </div>
-      </div>
-
+      {% else %}
+        <p class="muted" style="margin-top:.75rem;">No documents uploaded yet.</p>
+      {% endif %}
     </div>
-  </section>
+
+  </div>
 </div>
+
+<script>
+  function deleteDocument(id) {
+    if (!confirm("Delete this document?")) return;
+
+    fetch(`/investor/documents/delete/${id}`, {
+      method: "DELETE",
+      credentials: "include",
+      headers: {
+        "X-CSRFToken": "{{ csrf_token() }}"
+      }
+    })
+      .then(r => r.json())
+      .then(data => {
+        if (data.success || data.status === "ok") {
+          location.reload();
+        } else {
+          alert(data.message || "Delete failed.");
+        }
+      })
+      .catch(() => alert("Delete failed."));
+  }
+</script>
+
 {% endblock %}
