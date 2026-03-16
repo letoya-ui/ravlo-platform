@@ -69,7 +69,6 @@ class ProjectBudget(db.Model):
         db.ForeignKey("loan_application.id"),
         nullable=True
     )
-
     deal_id = db.Column(
         db.Integer,
         db.ForeignKey("deals.id"),
@@ -103,19 +102,18 @@ class ProjectBudget(db.Model):
     borrower = db.relationship("BorrowerProfile", back_populates="budgets")
     investor_profile = db.relationship("InvestorProfile", back_populates="budgets")
     loan_application = db.relationship("LoanApplication", back_populates="project_budgets")
-
     deal = db.relationship("Deal", back_populates="budgets")
     build_project = db.relationship("BuildProject", back_populates="budgets")
 
     expenses = db.relationship(
         "ProjectExpense",
         back_populates="budget",
-        cascade="all, delete-orphan"
+        cascade="all, delete-orphan",
+        lazy=True,
     )
 
     def __repr__(self):
         return f"<ProjectBudget {self.budget_type} #{self.id} Total:${self.total_cost}>"
-
 
         
 # ====================================
