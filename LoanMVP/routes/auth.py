@@ -1,5 +1,5 @@
 from datetime import datetime
-
+from sqlalchemy import func
 from flask import (
     Blueprint,
     current_app,
