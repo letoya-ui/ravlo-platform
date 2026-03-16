@@ -60,5 +60,12 @@ class BuildProject(db.Model):
     blueprint_url = db.Column(db.String(500))
     site_plan_url = db.Column(db.String(500))
     presentation_url = db.Column(db.String(500))
-
+     
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    budgets = db.relationship(
+        "ProjectBudget",
+        back_populates="build_project",
+        cascade="all, delete-orphan",
+        lazy=True,
+    )
