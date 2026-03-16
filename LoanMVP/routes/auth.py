@@ -106,23 +106,36 @@ def _full_name_from_user(user: User) -> str:
 # ============================================================
 
 @auth_bp.route("/login", methods=["GET", "POST"])
-@csrf.exempt 
+@csrf.exempt
 def login():
     form = LoginForm()
 
+    print("LOGIN HIT:", form.is_submitted(), "METHOD:", request.method)
+
     if form.validate_on_submit():
-        email = form.email.data.strip().lower()
-        password = form.password.data
+        print("FORM VALIDATED")
+        email = (form.email.data or "").strip().lower()
+        password = form.password.data or ""
+
+        print("EMAIL SUBMITTED:", email)
 
         user = User.query.filter(func.lower(User.email) == email).first()
+        print("USER FOUND:", bool(user))
+
+        if user:
+            print("PASSWORD OK:", user.check_password(password))
 
         if not user or not user.check_password(password):
             flash("Invalid email or password.", "danger")
             return render_template("auth/login.html", form=form)
 
         login_user(user)
+        print("LOGIN_USER RAN. AUTHENTICATED:", current_user.is_authenticated)
         flash("Welcome back.", "success")
         return redirect(url_for("auth.post_login_redirect"))
+
+    if request.method == "POST":
+        print("FORM ERRORS:", form.errors)
 
     return render_template("auth/login.html", form=form)
 
