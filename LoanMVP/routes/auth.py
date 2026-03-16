@@ -205,7 +205,7 @@ def logout():
 
 
 @auth_bp.route("/register", methods=["GET", "POST"])
-@@csrf.exempt 
+@csrf.exempt 
 def register():
     form = RegisterForm()
 
