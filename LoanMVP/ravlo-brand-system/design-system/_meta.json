@@ -1,0 +1,106 @@
+{
+  "index": "Overview",
+  "foundations": {
+    "title": "Foundations",
+    "type": "folder",
+    "items": {
+      "index": "Foundations",
+      "philosophy": "Philosophy",
+      "principles": "Principles",
+      "architecture": "Architecture",
+      "blueprint-system": "Blueprint System",
+      "visual-language": "Visual Language"
+    }
+  },
+  "brand": {
+    "title": "Brand",
+    "type": "folder",
+    "items": {
+      "index": "Brand",
+      "logo": "Logo",
+      "color": "Color",
+      "typography": "Typography",
+      "imagery": "Imagery",
+      "voice-tone": "Voice & Tone"
+    }
+  },
+  "tokens": {
+    "title": "Tokens",
+    "type": "folder",
+    "items": {
+      "index": "Tokens",
+      "color-tokens": "Color Tokens",
+      "spacing-tokens": "Spacing Tokens",
+      "typography-tokens": "Typography Tokens",
+      "radii-tokens": "Radii Tokens",
+      "shadow-tokens": "Shadow Tokens",
+      "z-index-tokens": "Z‑Index Tokens",
+      "motion-tokens": "Motion Tokens",
+      "layout-tokens": "Layout Tokens"
+    }
+  },
+  "components": {
+    "title": "Components",
+    "type": "folder",
+    "items": {
+      "index": "Components",
+      "buttons": "Buttons",
+      "inputs": "Inputs",
+      "cards": "Cards",
+      "panels": "Panels",
+      "navigation": "Navigation",
+      "tables": "Tables",
+      "modals": "Modals",
+      "metrics": "Metrics",
+      "badges": "Badges",
+      "forms": "Forms",
+      "overlays": "Overlays",
+      "charts": "Charts"
+    }
+  },
+  "patterns": {
+    "title": "Patterns",
+    "type": "folder",
+    "items": {
+      "index": "Patterns",
+      "hero": "Hero",
+      "dashboard": "Dashboard",
+      "flows": "Flows",
+      "feature-blocks": "Feature Blocks",
+      "content": "Content",
+      "marketing": "Marketing",
+      "navigation-patterns": "Navigation Patterns"
+    }
+  },
+  "guidelines": {
+    "title": "Guidelines",
+    "type": "folder",
+    "items": {
+      "index": "Guidelines",
+      "accessibility": "Accessibility",
+      "writing": "Writing",
+      "interaction": "Interaction",
+      "responsiveness": "Responsiveness",
+      "motion": "Motion",
+      "theming": "Theming",
+      "layout-spacing": "Layout & Spacing",
+      "component-usage": "Component Usage",
+      "dos-donts": "Do’s & Don’ts"
+    }
+  },
+  "resources": {
+    "title": "Resources",
+    "type": "folder",
+    "items": {
+      "index": "Resources",
+      "assets": "Assets",
+      "downloads": "Downloads",
+      "templates": "Templates",
+      "icons": "Icons",
+      "components": "Component Examples",
+      "patterns": "Pattern Examples",
+      "code-examples": "Code Examples"
+    }
+  },
+  "changelog": "Changelog"
+}

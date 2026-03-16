@@ -1,133 +1,411 @@
 {% extends "layouts/Ravlo_lending_base.html" %}
-{% block title %}Loan Officer • Dashboard{% endblock %}
+{% block title %}Loan Officer Dashboard{% endblock %}
+
+{% block page_title %}Loan Officer Dashboard{% endblock %}
+{% block page_subline %}
+Manage leads, capital applications, active loans, and pipeline performance.
+{% endblock %}
 
 {% block content %}
 
-<link rel="stylesheet" href="https://unpkg.com/lucide-static@latest/font/lucide.css">
+<div class="dashboard-shell">
 
+  <!-- STATS -->
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-value">{{ stats.total_leads or 0 }}</div>
+      <div class="stat-label">Total Leads</div>
+    </div>
 
-<div class="wrap">
+    <div class="stat-card">
+      <div class="stat-value">{{ stats.active_loans or 0 }}</div>
+      <div class="stat-label">Active Loans</div>
+    </div>
 
-  <!-- 🔹 TOP KPI BAR -->
-  <section class="kpi-grid">
-    <div class="card kpi-card"><h3 class="section-title">Active Loans</h3><div class="kpi-number">{{ stats.active_loans }}</div></div>
-    <div class="card kpi-card"><h3 class="section-title">Borrowers</h3><div class="kpi-number">{{ stats.borrowers }}</div></div>
-    <div class="card kpi-card"><h3 class="section-title">New Leads</h3><div class="kpi-number">{{ stats.total_leads }}</div></div>
-    <div class="card kpi-card"><h3 class="section-title">Approved</h3><div class="kpi-number">{{ stats.approved }}</div></div>
-    <div class="card kpi-card"><h3 class="section-title">Declined</h3><div class="kpi-number">{{ stats.declined }}</div></div>
-    <div class="card kpi-card"><h3 class="section-title">Pending Intakes</h3><div class="kpi-number">{{ stats.pending_intakes }}</div></div>
+    <div class="stat-card">
+      <div class="stat-value">{{ stats.capital_requests or 0 }}</div>
+      <div class="stat-label">Capital Requests</div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-value">{{ stats.pending_intakes or 0 }}</div>
+      <div class="stat-label">Pending Intakes</div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-value">{{ stats.approved or 0 }}</div>
+      <div class="stat-label">Approved</div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-value">{{ stats.declined or 0 }}</div>
+      <div class="stat-label">Declined</div>
+    </div>
+  </div>
+
+  <!-- AI SUMMARY -->
+  <section class="dashboard-card">
+    <div class="section-head">
+      <div>
+        <div class="eyebrow">AI SUMMARY</div>
+        <h3>Officer Overview</h3>
+      </div>
+    </div>
+
+    <div class="ai-summary">
+      {{ ai_summary or "AI summary unavailable." }}
+    </div>
   </section>
 
-  <!-- LHS -->
-  <div class="lhs">
-
-    <!-- 📊 Pipeline Overview -->
-    {% for stage, loans_in_stage in pipeline.items() %}
-    <div class="card">
-      <h3 class="section-title">📊 {{ stage|capitalize }} Loans</h3>
-      <table class="table">
-        <thead>
-          <tr><th>Borrower</th><th>Amount</th><th>Status</th><th>Stage</th><th>Progress</th><th></th></tr>
-        </thead>
-        <tbody>
-          {% for loan in loans_in_stage %}
-          <tr>
-            <td>{{ loan.borrower_profile.full_name }}</td>
-            <td>${{ "{:,.0f}".format(loan.amount or 0) }}</td>
-            <td>{{ loan.status }}</td>
-            <td>{{ loan.milestone_stage }}</td>
-            <td>
-              <div class="timeline-bar">
-                <div class="timeline-progress" style="width:{{ loan.progress_percent }}%"></div>
-              </div>
-            </td>
-            <td><a class="btn-sm" href="{{ url_for('loan_officer.view_loan', loan_id=loan.id) }}">Open</a></td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
+  <!-- CAPITAL APPLICATIONS -->
+  <section class="dashboard-card">
+    <div class="section-head">
+      <div>
+        <div class="eyebrow">CAPITAL APPLICATIONS</div>
+        <h3>Assigned Capital Requests</h3>
+      </div>
     </div>
-    {% endfor %}
 
-    <!-- 🔥 Hot Leads -->
-    <div class="card">
-      <h3 class="section-title">🔥 Hot Leads</h3>
-      <table class="table">
-        <thead><tr><th>Name</th><th>Source</th><th>Status</th><th>Last Activity</th><th></th></tr></thead>
-        <tbody>
-          {% for lead in hot_leads %}
-          <tr>
-            <td>{{ lead.name }}</td>
-            <td>{{ lead.lead_source }}</td>
-            <td>{{ lead.status }}</td>
-            <td>{{ lead.last_update }}</td>
-            <td><a class="btn-sm" href="{{ url_for('crm.view_lead', lead_id=lead.id) }}">Open</a></td>
-          </tr>
+    {% if capital_loans %}
+      <div class="table-wrap">
+        <table class="dashboard-table">
+          <thead>
+            <tr>
+              <th>Borrower</th>
+              <th>Property</th>
+              <th>Loan Type</th>
+              <th>Amount</th>
+              <th>Status</th>
+              <th>Submitted</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for loan in capital_loans %}
+            <tr>
+              <td>
+                {% if loan.borrower_profile %}
+                  {{ loan.borrower_profile.full_name or "Unknown" }}
+                {% else %}
+                  Unknown
+                {% endif %}
+              </td>
+              <td>{{ loan.property_address or "—" }}</td>
+              <td>{{ loan.loan_type or "—" }}</td>
+              <td>${{ "{:,.0f}".format(loan.amount or 0) }}</td>
+              <td>
+                <span class="status-pill">{{ loan.status or "—" }}</span>
+              </td>
+              <td>{{ loan.created_at.strftime('%b %d, %Y') if loan.created_at else "—" }}</td>
+              <td>
+                <a href="{{ url_for('loan_officer.loan_detail', loan_id=loan.id) }}" class="ravlo-btn ghost sm">
+                  Open
+                </a>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="empty-state-inline">No capital applications assigned yet.</div>
+    {% endif %}
+  </section>
+
+  <!-- PIPELINE -->
+  <div class="two-col-grid">
+
+    <section class="dashboard-card">
+      <div class="section-head">
+        <div>
+          <div class="eyebrow">PIPELINE</div>
+          <h3>Submitted</h3>
+        </div>
+      </div>
+
+      {% if pipeline.submitted %}
+        <div class="mini-list">
+          {% for loan in pipeline.submitted %}
+          <a href="{{ url_for('loan_officer.loan_detail', loan_id=loan.id) }}" class="mini-row">
+            <div>
+              <div class="mini-title">{{ loan.property_address or "Unnamed Property" }}</div>
+              <div class="mini-sub">{{ loan.loan_type or "Loan" }}</div>
+            </div>
+            <div class="mini-meta">${{ "{:,.0f}".format(loan.amount or 0) }}</div>
+          </a>
           {% endfor %}
-        </tbody>
-      </table>
-    </div>
+        </div>
+      {% else %}
+        <div class="empty-state-inline">No submitted loans.</div>
+      {% endif %}
+    </section>
+
+    <section class="dashboard-card">
+      <div class="section-head">
+        <div>
+          <div class="eyebrow">PIPELINE</div>
+          <h3>In Review</h3>
+        </div>
+      </div>
+
+      {% if pipeline.in_review %}
+        <div class="mini-list">
+          {% for loan in pipeline.in_review %}
+          <a href="{{ url_for('loan_officer.loan_detail', loan_id=loan.id) }}" class="mini-row">
+            <div>
+              <div class="mini-title">{{ loan.property_address or "Unnamed Property" }}</div>
+              <div class="mini-sub">{{ loan.loan_type or "Loan" }}</div>
+            </div>
+            <div class="mini-meta">{{ loan.status or "—" }}</div>
+          </a>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="empty-state-inline">No loans in review.</div>
+      {% endif %}
+    </section>
 
   </div>
 
-  <!-- RHS -->
-  <div class="rhs">
+  <!-- LEADS -->
+  <section class="dashboard-card">
+    <div class="section-head">
+      <div>
+        <div class="eyebrow">LEADS</div>
+        <h3>Assigned Leads</h3>
+      </div>
+    </div>
 
-    <!-- 📁 Borrower Activity -->
-    <div class="card">
-      <h3 class="section-title">📁 Borrower Activity</h3>
-      <ul class="activity-list">
-        {% for ev in recent_activity %}
-        <li><span class="time">{{ ev.time }}</span> — {{ ev.msg }}</li>
+    {% if leads %}
+      <div class="table-wrap">
+        <table class="dashboard-table">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Status</th>
+              <th>Source</th>
+              <th>Created</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for lead in leads %}
+            <tr>
+              <td>{{ lead.full_name or lead.name or "Unknown" }}</td>
+              <td>{{ lead.status or "—" }}</td>
+              <td>{{ lead.source or "—" }}</td>
+              <td>{{ lead.created_at.strftime('%b %d, %Y') if lead.created_at else "—" }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="empty-state-inline">No assigned leads yet.</div>
+    {% endif %}
+  </section>
+
+  <!-- PENDING INTAKES -->
+  <section class="dashboard-card">
+    <div class="section-head">
+      <div>
+        <div class="eyebrow">INTAKES</div>
+        <h3>Pending Intake Sessions</h3>
+      </div>
+    </div>
+
+    {% if pending_intakes %}
+      <div class="mini-list">
+        {% for intake in pending_intakes %}
+        <div class="mini-row">
+          <div>
+            <div class="mini-title">{{ intake.full_name or intake.name or "Intake Session" }}</div>
+            <div class="mini-sub">{{ intake.status or "pending" }}</div>
+          </div>
+          <div class="mini-meta">
+            {{ intake.created_at.strftime('%b %d, %Y') if intake.created_at else "—" }}
+          </div>
+        </div>
         {% endfor %}
-      </ul>
-    </div>
-
-    <!-- 📝 Tasks -->
-    <div class="card">
-      <h3 class="section-title">📝 Tasks</h3>
-      <ul class="task-list">
-        {% for t in tasks %}
-        <li><strong>{{ t.title }}</strong><div class="muted">Due: {{ t.due_date }}</div></li>
-        {% endfor %}
-      </ul>
-    </div>
-
-    <!-- 💼 Recent Quotes -->
-    <div class="card">
-      <h3 class="section-title">💼 Recent Quotes</h3>
-      <ul class="quote-list">
-        {% for q in quotes %}
-        <li>${{ "{:,.0f}".format(q.amount) }} — {{ q.lender_name }}</li>
-        {% endfor %}
-      </ul>
-    </div>
-
-    <!-- 🤖 AI Assistant -->
-    <div class="card">
-      <h3 class="section-title">🤖 AI Loan Officer Assistant</h3>
-      <textarea id="ai-input" placeholder="Ask: 'Which borrower should I follow up with?'"></textarea>
-      <button onclick="sendAI()" class="btn">Ask AI</button>
-      <div id="ai-response" class="ai-response"></div>
-    </div>
-
-  </div>
+      </div>
+    {% else %}
+      <div class="empty-state-inline">No pending intake sessions.</div>
+    {% endif %}
+  </section>
 
 </div>
 
-<script>
-function sendAI(){
-  let msg = document.getElementById("ai-input").value;
-  fetch("{{ url_for('loan_officer.ai_assistant') }}", {
-    method:"POST",
-    headers:{ "Content-Type":"application/json" },
-    body:JSON.stringify({ message:msg })
-  })
-  .then(res => res.json())
-  .then(data => {
-    document.getElementById("ai-response").innerHTML = data.reply;
-  });
+<style>
+.dashboard-shell{
+  display:grid;
+  gap:20px;
 }
-</script>
+
+.stats-grid{
+  display:grid;
+  grid-template-columns:repeat(6, minmax(0, 1fr));
+  gap:14px;
+}
+
+.stat-card{
+  padding:18px;
+  border-radius:18px;
+  background:rgba(255,255,255,.03);
+  border:1px solid rgba(255,255,255,.08);
+}
+
+.stat-value{
+  font-size:28px;
+  font-weight:800;
+  color:var(--text);
+}
+
+.stat-label{
+  margin-top:6px;
+  font-size:13px;
+  color:var(--muted);
+}
+
+.dashboard-card{
+  padding:22px;
+  border-radius:20px;
+  background:rgba(255,255,255,.03);
+  border:1px solid rgba(255,255,255,.08);
+}
+
+.section-head{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:16px;
+  margin-bottom:16px;
+}
+
+.section-head h3{
+  margin:4px 0 0;
+  font-size:20px;
+}
+
+.eyebrow{
+  font-size:11px;
+  color:var(--muted);
+  text-transform:uppercase;
+  letter-spacing:.08em;
+}
+
+.ai-summary{
+  color:var(--text);
+  line-height:1.65;
+}
+
+.table-wrap{
+  overflow:auto;
+}
+
+.dashboard-table{
+  width:100%;
+  border-collapse:collapse;
+}
+
+.dashboard-table th,
+.dashboard-table td{
+  padding:12px 10px;
+  border-bottom:1px solid rgba(255,255,255,.08);
+  text-align:left;
+  vertical-align:top;
+}
+
+.dashboard-table th{
+  color:var(--muted);
+  font-size:12px;
+  text-transform:uppercase;
+  letter-spacing:.06em;
+}
+
+.status-pill{
+  display:inline-flex;
+  padding:6px 10px;
+  border-radius:999px;
+  background:rgba(107,127,147,.16);
+  border:1px solid rgba(107,127,147,.28);
+  font-size:12px;
+}
+
+.two-col-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:20px;
+}
+
+.mini-list{
+  display:grid;
+  gap:12px;
+}
+
+.mini-row{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:14px;
+  padding:14px 16px;
+  border-radius:16px;
+  background:rgba(255,255,255,.03);
+  border:1px solid rgba(255,255,255,.08);
+  text-decoration:none;
+}
+
+.mini-title{
+  color:var(--text);
+  font-weight:700;
+  font-size:14px;
+}
+
+.mini-sub{
+  margin-top:4px;
+  color:var(--muted);
+  font-size:13px;
+}
+
+.mini-meta{
+  color:var(--muted);
+  font-size:13px;
+  white-space:nowrap;
+}
+
+.empty-state-inline{
+  padding:16px;
+  border-radius:14px;
+  background:rgba(255,255,255,.02);
+  border:1px dashed rgba(255,255,255,.12);
+  color:var(--muted);
+}
+
+@media (max-width: 1200px){
+  .stats-grid{
+    grid-template-columns:repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 900px){
+  .two-col-grid{
+    grid-template-columns:1fr;
+  }
+}
+
+@media (max-width: 700px){
+  .stats-grid{
+    grid-template-columns:repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 560px){
+  .stats-grid{
+    grid-template-columns:1fr;
+  }
+
+  .mini-row{
+    flex-direction:column;
+  }
+}
+</style>
 
 {% endblock %}

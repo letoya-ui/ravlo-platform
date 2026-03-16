@@ -1,0 +1,39 @@
+{% extends "layouts/Ravlo_lending_base.html" %}}
+
+{% block title %}Request Detail{% endblock %}
+{% block page_title %}Request #{{ access_request.id }}{% endblock %}
+{% block page_subline %}Review and take action{% endblock %}
+
+{% block content %}
+<div class="re-grid">
+
+  <section class="re-card">
+    <h3>Request Info</h3>
+    <p><strong>Contact:</strong> {{ access_request.contact_name }}</p>
+    <p><strong>Email:</strong> {{ access_request.email }}</p>
+    <p><strong>Phone:</strong> {{ access_request.phone or "—" }}</p>
+    <p><strong>Company:</strong> {{ access_request.company_name or "—" }}</p>
+    <p><strong>Request Type:</strong> {{ access_request.request_type }}</p>
+    <p><strong>Requested Role:</strong> {{ access_request.requested_role or "—" }}</p>
+    <p><strong>Status:</strong> {{ access_request.status }}</p>
+    <p><strong>Notes:</strong><br>{{ access_request.notes or "No notes submitted." }}</p>
+  </section>
+
+  <section class="re-card">
+    <h3>Actions</h3>
+
+    {% if access_request.status == "pending" %}
+      <form method="POST" action="{{ url_for('admin.approve_request', request_id=access_request.id) }}" style="margin-bottom: 12px;">
+        <button type="submit" class="btn btn-success">Approve Request</button>
+      </form>
+
+      <form method="POST" action="{{ url_for('admin.reject_request', request_id=access_request.id) }}">
+        <button type="submit" class="btn btn-danger">Reject Request</button>
+      </form>
+    {% else %}
+      <p>This request has already been reviewed.</p>
+    {% endif %}
+  </section>
+
+</div>
+{% endblock %}

@@ -281,8 +281,9 @@ class Partner(db.Model):
     phone = db.Column(db.String(50))
     category = db.Column(db.String(100))      # Contractor, Realtor, etc.
     service_area = db.Column(db.String(255))  # e.g. "Tri-State Area"
+    specialty = db.Column(db.String(255), nullable=True)
     active = db.Column(db.Boolean, default=True)
-    type = db.Column(db.String(50))  # e.g., "Lender", "Broker", "Realtor", "Vendor"
+    type = db.Column(db.String(255))  # e.g., "Lender", "Broker", "Realtor", "Vendor"
     website = db.Column(db.String(255))
     status = db.Column(db.String(50), default="Active")
     relationship_level = db.Column(db.String(50))  # e.g., "Gold", "Silver", "Preferred"
@@ -294,6 +295,7 @@ class Partner(db.Model):
     volume = db.Column(db.Float, default=0.0)
     rating = db.Column(db.Float, default=0.0)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    bio = db.Column(db.Text, nullable=True)
 
     # === Monetization & Resource Center ===
     listing_description = db.Column(db.Text)
@@ -301,6 +303,7 @@ class Partner(db.Model):
     approved = db.Column(db.Boolean, default=False)
     featured = db.Column(db.Boolean, default=False)
     subscription_tier = db.Column(db.String(50), default="Free")  # Free, Featured, Premium
+   
 
     # 🧩 Fix: datetime.utcnow should be callable (not executed at import)
     paid_until = db.Column(db.DateTime, default=lambda: datetime.utcnow() + timedelta(days=30))
@@ -313,8 +316,16 @@ class Partner(db.Model):
         lazy='dynamic'
     )
 
-    user = db.relationship("User", backref=db.backref("partner_profile", uselist=False))
-    
+    user = db.relationship("User", backref=db.backref("partner_profile", uselist=False))       
+
+    photos = db.relationship(
+        "PartnerPhoto",
+        back_populates="partner",
+        lazy="dynamic",
+        cascade="all, delete-orphan"
+    )   
+
+
     # === Utility Methods ===
     def is_active_listing(self):
         """Return True if the partner is active and payment is valid."""

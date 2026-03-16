@@ -1,0 +1,60 @@
+{% extends "layouts/Ravlo_lending_base.html" %}
+{% block title %}Admin • Companies{% endblock %}
+
+{% block content %}
+<main class="dashboard-main">
+  <div class="wrap">
+
+    <div class="card" style="display:flex; justify-content:space-between; align-items:center; gap:1rem; flex-wrap:wrap;">
+      <div>
+        <h1>Companies</h1>
+        <div class="muted">Manage organizations onboarded into Ravlo Lending OS.</div>
+      </div>
+      <div style="display:flex; gap:.6rem; flex-wrap:wrap;">
+        <a class="btn" href="{{ url_for('admin.requests_dashboard') }}">📥 Access Requests</a>
+        <a class="btn btn-primary" href="{{ url_for('admin.dashboard') }}">🏠 Dashboard</a>
+      </div>
+    </div>
+
+    <div class="card">
+      {% if companies %}
+        <table class="table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Company</th>
+              <th>Email Domain</th>
+              <th>Status</th>
+              <th>Created</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for company in companies %}
+            <tr>
+              <td>#{{ company.id }}</td>
+              <td>{{ company.name }}</td>
+              <td>{{ company.email_domain or "—" }}</td>
+              <td>
+                <span class="status st-{{ 'active' if company.is_active else 'inactive' }}">
+                  {{ 'Active' if company.is_active else 'Inactive' }}
+                </span>
+              </td>
+              <td>{{ company.created_at.strftime("%Y-%m-%d") if company.created_at else "—" }}</td>
+              <td>
+                <a class="btn btn-sm" href="{{ url_for('admin.company_team', company_id=company.id) }}">
+                  Open Team
+                </a>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      {% else %}
+        <p class="muted">No companies have been created yet.</p>
+      {% endif %}
+    </div>
+
+  </div>
+</main>
+{% endblock %}

@@ -56,7 +56,7 @@
           <tr>
             <td>{{ c.report_date.strftime('%Y-%m-%d') }}</td>
             <td>
-              <span class="{% if c.credit_score > 700 %}score-high{% elif c.credit_score > 600 %}score-mid{% else %}score-low{% endif %}">
+              <span class="{% if credit_data.credit_score > 700 %}score-high{% elif credit_data.credit_score > 600 %}score-mid{% else %}score-low{% endif %}">
                 {{ c.credit_score }}
               </span>
             </td>

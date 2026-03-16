@@ -1,0 +1,108 @@
+{% extends "layouts/marketing_base.html" %}
+
+{% block hero %}
+<section class="mk-hero">
+  <div class="mk-container">
+    <div class="mk-hero-copy" style="max-width:920px;">
+      <div class="mk-eyebrow">Mission</div>
+      <h1 class="mk-title-xl">To make real estate investing feel more clear, connected, and actionable.</h1>
+      <p class="mk-copy-lg">
+        Ravlo exists to help investors move through opportunity, planning, and execution
+        with more structure and less confusion.
+      </p>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block content %}
+<section class="mk-section">
+  <div class="mk-container">
+    <div class="mk-grid-3">
+      <div class="mk-card">
+        <div class="mk-card-icon">C</div>
+        <h3>Clarity</h3>
+        <p>Reduce the scattered feeling of investor workflow and create a cleaner decision environment.</p>
+      </div>
+
+      <div class="mk-card">
+        <div class="mk-card-icon">S</div>
+        <h3>Structure</h3>
+        <p>Support the process with focused experiences for deals, renovation strategy, and build thinking.</p>
+      </div>
+
+      <div class="mk-card">
+        <div class="mk-card-icon">A</div>
+        <h3>Action</h3>
+        <p>Help users move from concept to next step with more confidence and organization.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="mk-section-tight">
+  <div class="mk-container">
+    <div class="mk-split-panel">
+      <div class="mk-panel">
+        <div class="mk-kicker">Why this matters</div>
+        <h2 class="mk-title-lg">Investors need more than disconnected tools.</h2>
+        <p class="mk-copy">
+          Notes, calculators, screenshots, renovation concepts, build ideas, and next-step planning
+          often live in separate places. Ravlo is meant to bring those pieces into a more unified experience.
+        </p>
+      </div>
+
+      <div class="mk-panel">
+        <div class="mk-kicker">What Ravlo is trying to do</div>
+        <h2 class="mk-title-lg">Create a better operating rhythm.</h2>
+        <p class="mk-copy">
+          The mission is not just to look modern. It is to make the workflow more usable,
+          more intentional, and easier to grow into a serious operating platform.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="mk-section">
+  <div class="mk-container">
+    <div class="mk-kicker">Mission in practice</div>
+    <h2 class="mk-title-lg">How the platform expresses that mission.</h2>
+
+    <div class="mk-grid-2" style="margin-top:28px;">
+      <div class="mk-card">
+        <h3>Home and tour pages</h3>
+        <p>Explain the platform in a polished way and make the brand feel credible immediately.</p>
+      </div>
+      <div class="mk-card">
+        <h3>Studios</h3>
+        <p>Separate experiences help users understand what each part of the platform is meant to do.</p>
+      </div>
+      <div class="mk-card">
+        <h3>Plans and entry flow</h3>
+        <p>Create a smoother path from interest to access without losing the premium feel.</p>
+      </div>
+      <div class="mk-card">
+        <h3>Future ecosystem</h3>
+        <p>Leave room for collaboration, support layers, partners, and more advanced workflows.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="mk-section">
+  <div class="mk-container">
+    <div class="mk-cta">
+      <div class="mk-kicker">Explore More</div>
+      <h2 class="mk-title-lg">See the mission reflected across the full site experience.</h2>
+      <p>
+        Mission tells visitors why Ravlo exists. The tour and story pages help show how that purpose comes to life.
+      </p>
+      <div class="mk-cta-actions">
+        <a href="{{ url_for('marketing.tour') }}" class="mk-btn mk-btn-primary">Take the Tour</a>
+        <a href="{{ url_for('marketing.vision') }}" class="mk-btn mk-btn-ghost">Read the Vision</a>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}

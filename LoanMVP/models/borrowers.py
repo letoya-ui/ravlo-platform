@@ -48,36 +48,76 @@ class PropertyAnalysis(db.Model):
 # ====================================
 # 💵 PROJECT BUDGET
 # ====================================
+
 class ProjectBudget(db.Model):
     __tablename__ = "project_budgets"
 
     id = db.Column(db.Integer, primary_key=True)
-    borrower_profile_id = db.Column(db.Integer, db.ForeignKey("borrower_profile.id"), nullable=False)
-    investor_profile_id = db.Column( db.Integer, db.ForeignKey("investor_profile.id"), nullable=True)
-    loan_app_id = db.Column(db.Integer, db.ForeignKey("loan_application.id"), nullable=True)
+
+    borrower_profile_id = db.Column(
+        db.Integer,
+        db.ForeignKey("borrower_profile.id"),
+        nullable=True
+    )
+    investor_profile_id = db.Column(
+        db.Integer,
+        db.ForeignKey("investor_profile.id"),
+        nullable=True
+    )
+    loan_app_id = db.Column(
+        db.Integer,
+        db.ForeignKey("loan_application.id"),
+        nullable=True
+    )
+
+    deal_id = db.Column(
+        db.Integer,
+        db.ForeignKey("deals.id"),
+        nullable=True
+    )
+    build_project_id = db.Column(
+        db.Integer,
+        db.ForeignKey("build_projects.id"),
+        nullable=True
+    )
+
+    budget_type = db.Column(db.String(50), nullable=False, default="rehab")
 
     name = db.Column(db.String(100), nullable=False)
     project_name = db.Column(db.String(120))
-    total_amount = db.Column(db.Numeric(12, 2), nullable=False)
+
+    total_amount = db.Column(db.Numeric(12, 2), nullable=True)
     total_budget = db.Column(db.Numeric(12, 2), nullable=True)
+
     total_cost = db.Column(db.Float, default=0.0)
     materials_cost = db.Column(db.Float, default=0.0)
     labor_cost = db.Column(db.Float, default=0.0)
     contingency = db.Column(db.Float, default=0.0)
+    paid_amount = db.Column(db.Float, default=0.0)
+
     notes = db.Column(db.Text)
+
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
-    # ✅ Relationships
     borrower = db.relationship("BorrowerProfile", back_populates="budgets")
-    investor_profile = db.relationship( "InvestorProfile", back_populates="budgets" )
+    investor_profile = db.relationship("InvestorProfile", back_populates="budgets")
     loan_application = db.relationship("LoanApplication", back_populates="project_budgets")
-    expenses = db.relationship("ProjectExpense", back_populates="budget", cascade="all, delete-orphan")
+
+    deal = db.relationship("Deal", back_populates="budgets")
+    build_project = db.relationship("BuildProject", back_populates="budgets")
+
+    expenses = db.relationship(
+        "ProjectExpense",
+        back_populates="budget",
+        cascade="all, delete-orphan"
+    )
 
     def __repr__(self):
-        return f"<ProjectBudget Loan:{self.loan_app_id} Total:${self.total_cost}>"
+        return f"<ProjectBudget {self.budget_type} #{self.id} Total:${self.total_cost}>"
 
 
+        
 # ====================================
 # 💰 PROJECT EXPENSE
 # ====================================
@@ -85,17 +125,32 @@ class ProjectExpense(db.Model):
     __tablename__ = "project_expenses"
 
     id = db.Column(db.Integer, primary_key=True)
-    budget_id = db.Column(db.Integer, db.ForeignKey("project_budgets.id", ondelete="CASCADE"))
+    budget_id = db.Column(
+        db.Integer,
+        db.ForeignKey("project_budgets.id", ondelete="CASCADE"),
+        nullable=False
+    )
+
     category = db.Column(db.String(100), nullable=False)
-    description = db.Column(db.String(255))
-    amount = db.Column(db.Numeric(12, 2), default=0.00)
+    description = db.Column(db.String(255), nullable=False)
+
+    vendor = db.Column(db.String(255), nullable=True)
+
+    estimated_amount = db.Column(db.Numeric(12, 2), default=0.00)
+    actual_amount = db.Column(db.Numeric(12, 2), default=0.00)
+    paid_amount = db.Column(db.Numeric(12, 2), default=0.00)
+
+    status = db.Column(db.String(50), default="planned")
+    notes = db.Column(db.Text, nullable=True)
+
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     budget = db.relationship("ProjectBudget", back_populates="expenses")
 
     def __repr__(self):
-        return f"<ProjectExpense {self.category}: ${self.amount}>"
-
+        return f"<ProjectExpense {self.category}: est=${self.estimated_amount} actual=${self.actual_amount}>"
+        
 # ====================================
 # 💳 SUBSCRIPTION PLAN
 # ====================================
@@ -207,6 +262,12 @@ class Deal(db.Model):
     # relationships
     user = db.relationship("User", backref=db.backref("deals", lazy=True))
     investor_profile = db.relationship("InvestorProfile", backref="deals")
+    budgets = db.relationship(
+        "ProjectBudget",
+        back_populates="deal",
+        lazy=True,
+        cascade="all, delete-orphan"
+    )
 
     def __repr__(self):
         return f"<Deal {self.id} {self.title or self.address or 'Untitled'}>"

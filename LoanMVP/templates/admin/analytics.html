@@ -54,10 +54,10 @@
   new Chart(document.getElementById('loanStatusChart'), {
     type: 'bar',
     data: {
-      labels: {{ loan_status_labels|tojson }},
+      labels: {{ (loan_status_labels|default([], true))|tojson }},
       datasets: [{
         label: 'Loans',
-        data: {{ loan_status_values|tojson }},
+        data: {{ (loan_status_values|default([], true))|tojson }},
         backgroundColor: '#7ab8ff'
       }]
     },
@@ -68,9 +68,9 @@
   new Chart(document.getElementById('userRolesChart'), {
     type: 'pie',
     data: {
-      labels: {{ role_labels|tojson }},
+      labels: {{ (role_labels|default([], true))|tojson }},
       datasets: [{
-        data: {{ role_counts|tojson }},
+        data: {{ (role_values|default([], true))|tojson }},
         backgroundColor: ['#4ade80','#60a5fa','#facc15','#f87171','#a78bfa']
       }]
     },

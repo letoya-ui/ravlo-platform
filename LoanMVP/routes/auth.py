@@ -1,5 +1,5 @@
 from datetime import datetime
-
+from sqlalchemy import func
 from flask import (
     Blueprint,
     current_app,
@@ -16,14 +16,21 @@ from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
 
 from LoanMVP.app import login_manager, mail
 from LoanMVP.extensions import csrf, db
-from LoanMVP.forms import RegisterForm, ResetPasswordForm, ResetPasswordRequestForm
+from LoanMVP.forms import RegisterForm, ResetPasswordForm, ResetPasswordRequestForm, LoginForm
 from LoanMVP.models.user_model import User
+from LoanMVP.models.admin import UserInvite
+from LoanMVP.models.investor_models import InvestorProfile
 from flask_mail import Message as MailMessage
 
 
 auth_bp = Blueprint("auth", __name__, url_prefix="/auth")
 
-
+# Roles that must request admin approval before activation
+RESTRICTED_STAFF_ROLES = {
+    "loan_officer",
+    "processor",
+    "underwriter",
+}
 # ============================================================
 # TOKEN HELPERS
 # ============================================================
@@ -102,43 +109,98 @@ def _full_name_from_user(user: User) -> str:
 @auth_bp.route("/login", methods=["GET", "POST"])
 @csrf.exempt
 def login():
-    if current_user.is_authenticated:
-        return redirect(url_for(_dashboard_for_role(getattr(current_user, "role", "investor"))))
+    form = LoginForm()
 
-    if request.method == "GET":
-        get_flashed_messages()
-        return render_template("auth/login.html", title="Login | Ravlo")
+    if request.method == "POST":
+        email = (request.form.get("email") or "").strip().lower()
+        password = request.form.get("password") or ""
 
-    email = (request.form.get("email") or "").strip().lower()
-    password = (request.form.get("password") or "").strip()
-    remember = bool(request.form.get("remember"))
+        print("==== LOGIN TEST ====")
+        print("POST DATA:", dict(request.form))
+        print("EMAIL:", email)
+        print("PASSWORD PRESENT:", bool(password))
 
-    if not email or not password:
-        flash("Please enter both email and password.", "error")
+        user = User.query.filter(func.lower(User.email) == email).first()
+        print("USER FOUND:", bool(user))
+
+        if user:
+            print("PASSWORD OK:", user.check_password(password))
+
+        if not user or not user.check_password(password):
+            flash("Invalid email or password.", "danger")
+            return render_template("auth/login.html", form=form)
+
+        login_user(user)
+        print("LOGIN SUCCESS")
+        return redirect(url_for("auth.post_login_redirect"))
+
+    return render_template("auth/login.html", form=form)
+
+
+@auth_bp.route("/register/invite/<token>", methods=["GET", "POST"])
+@csrf.exempt
+def register_from_invite(token):
+    invite = UserInvite.query.filter_by(token=token).first_or_404()
+
+    if invite.status != "pending":
+        flash("This invite is no longer active.", "warning")
         return redirect(url_for("auth.login"))
 
-    user = User.query.filter_by(email=email).first()
-
-    if not user or not user.check_password(password):
-        flash("Invalid email or password.", "error")
+    if invite.is_expired():
+        invite.status = "expired"
+        db.session.commit()
+        flash("This invite link has expired.", "warning")
         return redirect(url_for("auth.login"))
 
-    if hasattr(user, "is_active") and user.is_active is False:
-        flash("Your account is deactivated. Contact admin for access.", "error")
+    existing_user = User.query.filter_by(email=invite.email).first()
+    if existing_user:
+        flash("An account already exists for this email. Please log in.", "info")
         return redirect(url_for("auth.login"))
 
-    session.permanent = True
-    login_user(user, remember=remember)
-    user.last_login = datetime.utcnow()
-    db.session.commit()
+    if request.method == "POST":
+        full_name = (request.form.get("full_name") or "").strip()
+        password = request.form.get("password") or ""
+        confirm_password = request.form.get("confirm_password") or ""
 
-    flash("Welcome back.", "success")
+        if not full_name:
+            flash("Please enter your full name.", "danger")
+            return render_template("auth/register_from_invite.html", invite=invite)
 
-    next_page = (request.args.get("next") or "").strip()
-    if next_page.startswith("/"):
-        return redirect(next_page)
+        if not password or len(password) < 8:
+            flash("Password must be at least 8 characters.", "danger")
+            return render_template("auth/register_from_invite.html", invite=invite)
 
-    return redirect(url_for(_dashboard_for_role(getattr(user, "role", "investor"))))
+        if password != confirm_password:
+            flash("Passwords do not match.", "danger")
+            return render_template("auth/register_from_invite.html", invite=invite)
+
+        parts = full_name.split(None, 1)
+        first_name = parts[0] if parts else ""
+        last_name = parts[1] if len(parts) > 1 else ""
+
+        user = User(
+            first_name=first_name or None,
+            last_name=last_name or None,
+            username=full_name or None,
+            email=invite.email,
+            role=invite.role,
+            company_id=invite.company_id,
+            password_hash=generate_password_hash(password),
+            is_active=True,
+            invite_accepted=True,
+        )
+
+        db.session.add(user)
+
+        invite.status = "accepted"
+        invite.accepted_at = datetime.utcnow()
+
+        db.session.commit()
+
+        flash("Registration complete. You can now log in.", "success")
+        return redirect(url_for("auth.login"))
+
+    return render_template("auth/register_from_invite.html", invite=invite)
 
 
 # ============================================================
@@ -158,57 +220,63 @@ def logout():
 # ============================================================
 # REGISTER
 # ============================================================
-
 @auth_bp.route("/register", methods=["GET", "POST"])
 @csrf.exempt
 def register():
-
     form = RegisterForm()
+    
+    existing = User.query.filter_by(email=form.email.data.lower()).first()
+    if existing:
+        flash("An account with that email already exists.", "danger")
+        return render_template("auth/register.html", form=form)
 
     if form.validate_on_submit():
+        role = (form.role.data or "").strip().lower()
 
-        full_name = form.username.data.strip()
-        email = form.email.data.lower().strip()
-        password = form.password.data
-        role = form.role.data
-
-        existing = User.query.filter_by(email=email).first()
-
-        if existing:
-            flash("Account already exists. Please login.", "error")
-            return redirect(url_for("auth.login"))
-
-        parts = full_name.split(" ", 1)
-        first = parts[0]
-        last = parts[1] if len(parts) > 1 else ""
+        full_name = (form.full_name.data or "").strip()
+        parts = full_name.split(None, 1)
+        first_name = parts[0] if parts else ""
+        last_name = parts[1] if len(parts) > 1 else ""
 
         user = User(
-            username=email,
-            email=email,
-            first_name=first,
-            last_name=last,
-            role=role
+            first_name=first_name or None,
+            last_name=last_name or None,
+            username=full_name or None,
+            email=(form.email.data or "").strip().lower(),
+            role=role,
+            is_active=True,
         )
 
-        user.set_password(password)
+        user.set_password(form.password.data)
 
         db.session.add(user)
         db.session.commit()
 
+        # 🔐 log them in automatically
         login_user(user)
 
-        flash("Account created successfully.", "success")
+        flash("Welcome to Ravlo. Let's set up your profile.", "info")
 
-        return redirect(url_for(_dashboard_for_role(user.role)))
+        # 👇 send investors to profile creation
+        if role == "investor":
+            return redirect(url_for("investor.create_profile"))
 
-    # DEBUG so you see validation problems
-    if request.method == "POST":
-        print("REGISTER ERRORS:", form.errors)
+        return redirect(url_for("auth.post_login_redirect"))
 
-    return render_template(
-        "auth/register.html",
-        form=form
-    )
+    return render_template("auth/register.html", form=form)
+    
+@auth_bp.route("/post-login-redirect")
+@login_required
+def post_login_redirect():
+
+    if current_user.role == "investor":
+        profile = InvestorProfile.query.filter_by(user_id=current_user.id).first()
+
+        if not profile:
+            flash("Please complete your investor profile first.", "info")
+            return redirect(url_for("investor.create_profile"))
+
+    return redirect(url_for(_dashboard_for_role(current_user.role)))
 
 # ============================================================
 # OPTIONAL BORROWER REGISTER
@@ -240,20 +308,18 @@ def register_borrower():
             flash("An account with that email already exists.", "error")
             return redirect(url_for("auth.login"))
 
-        parts = full_name.split(" ", 1)
-        first = parts[0].strip()
-        last = parts[1].strip() if len(parts) > 1 else ""
+        parts = full_name.split(None, 1)
+        first = parts[0] if parts else ""
+        last = parts[1] if len(parts) > 1 else ""
 
         user = User(
-            username=email,
+            username=full_name or email,
             email=email,
-            first_name=first,
-            last_name=last,
+            first_name=first or None,
+            last_name=last or None,
             role="borrower",
+            is_active=True,
         )
-
-        if hasattr(user, "full_name"):
-            user.full_name = full_name
 
         user.set_password(password)
 
@@ -268,6 +334,7 @@ def register_borrower():
 
     return render_template("auth/register_borrower.html", title="Register Borrower | Ravlo")
 
+        
 
 # ============================================================
 # FORGOT PASSWORD / RESET REQUEST
@@ -279,11 +346,10 @@ def register_borrower():
 def forgot_password():
     form = ResetPasswordRequestForm()
 
-    if request.method == "POST":
-        email = (request.form.get("email") or "").strip().lower()
-        user = User.query.filter_by(email=email).first()
+    if form.validate_on_submit():
+        email = (form.email.data or "").strip().lower()
+        user = User.query.filter(func.lower(User.email) == email).first()
 
-        # Do not reveal whether account exists
         if not user:
             flash("If that email exists, a reset link has been sent.", "success")
             return redirect(url_for("auth.login"))
@@ -306,24 +372,84 @@ def forgot_password():
             mail.send(msg)
         except Exception as e:
             print("Mail error:", e)
-            flash("Could not send email right now. Please try again.", "error")
+            flash("Could not send email right now. Please try again.", "danger")
             return redirect(url_for("auth.forgot_password"))
 
         flash("Reset link sent. Check your email.", "success")
         return redirect(url_for("auth.login"))
+
+    if request.method == "POST":
+        print("FORGOT PASSWORD FORM ERRORS:", form.errors)
 
     return render_template(
         "auth/forgot_password.html",
         form=form,
         title="Forgot Password | Ravlo",
     )
+    
 
+@auth_bp.route("/request-access", methods=["GET", "POST"])
+def request_access():
+    requested_role = (request.args.get("requested_role") or request.form.get("requested_role") or "").strip().lower()
 
+    if requested_role == "loan officer":
+        requested_role = "loan_officer"
+
+    if request.method == "POST":
+        company_name = (request.form.get("company_name") or "").strip()
+        contact_name = (request.form.get("contact_name") or "").strip()
+        email = (request.form.get("email") or "").strip().lower()
+        phone = (request.form.get("phone") or "").strip()
+        notes = (request.form.get("notes") or "").strip()
+        requested_role = (request.form.get("requested_role") or "").strip().lower()
+
+        if requested_role == "loan officer":
+            requested_role = "loan_officer"
+
+        if requested_role not in RESTRICTED_STAFF_ROLES:
+            flash("Invalid restricted role selection.", "danger")
+            return redirect(url_for("auth.request_access"))
+
+        if not contact_name or not email:
+            flash("Please provide your name and email.", "warning")
+            return redirect(url_for("auth.request_access", requested_role=requested_role))
+
+        existing = AccessRequest.query.filter(
+            AccessRequest.email.ilike(email),
+            AccessRequest.requested_role == requested_role,
+            AccessRequest.status.in_(["pending", "approved"])
+        ).first()
+
+        if existing:
+            flash("An access request already exists for this email and role.", "info")
+            return redirect(url_for("auth.login"))
+
+        req = AccessRequest(
+            company_name=company_name or None,
+            contact_name=contact_name,
+            email=email,
+            phone=phone or None,
+            request_type="company_setup",
+            requested_role=requested_role,
+            status="pending",
+            notes=notes or None,
+        )
+
+        db.session.add(req)
+        db.session.commit()
+
+        flash("Your access request has been submitted. An admin will review it.", "success")
+        return redirect(url_for("auth.login"))
+
+    return render_template(
+        "auth/request_access.html",
+        requested_role=requested_role
+    )
 # ============================================================
 # RESET PASSWORD
 # ============================================================
 
-@auth_bp.route("/reset-password/<token>", methods=["GET", "POST"])
+
 @auth_bp.route("/reset_password/<token>", methods=["GET", "POST"])
 @csrf.exempt
 def reset_password(token):

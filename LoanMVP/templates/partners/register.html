@@ -1,0 +1,77 @@
+{% extends "layouts/ravlo_base.html" %}
+
+{% block page_title %}Partner Profile{% endblock %}
+{% block page_subline %}Create and manage your Ravlo partner profile.{% endblock %}
+
+{% block content %}
+
+<div class="partner-register-shell">
+
+    <h1>{{ "Edit Your Partner Profile" if partner else "Create Your Partner Profile" }}</h1>
+
+    <form method="POST" class="partner-register-form">
+
+        <label>Contact Name</label>
+        <input type="text" name="name" value="{{ partner.name if partner else '' }}" required>
+
+        <label>Category</label>
+        <select name="category" required>
+            <option value="">Select category...</option>
+            <option value="contractor" {% if partner and partner.category == "contractor" %}selected{% endif %}>Contractor</option>
+            <option value="realtor" {% if partner and partner.category == "realtor" %}selected{% endif %}>Realtor</option>
+            <option value="designer" {% if partner and partner.category == "designer" %}selected{% endif %}>Designer</option>
+            <option value="inspector" {% if partner and partner.category == "inspector" %}selected{% endif %}>Inspector</option>
+            <option value="appraiser" {% if partner and partner.category == "appraiser" %}selected{% endif %}>Appraiser</option>
+            <option value="title" {% if partner and partner.category == "title" %}selected{% endif %}>Title</option>
+            <option value="insurance" {% if partner and partner.category == "insurance" %}selected{% endif %}>Insurance</option>
+            <option value="attorney" {% if partner and partner.category == "attorney" %}selected{% endif %}>Attorney</option>
+            <option value="property_manager" {% if partner and partner.category == "property_manager" %}selected{% endif %}>Property Manager</option>
+            <option value="cleaner" {% if partner and partner.category == "cleaner" %}selected{% endif %}>Cleaner</option>
+            <option value="janitorial" {% if partner and partner.category == "janitorial" %}selected{% endif %}>Janitorial</option>
+        </select>
+
+        <label>Company</label>
+        <input type="text" name="company" value="{{ partner.company if partner else '' }}" required>
+
+        <label>Specialty</label>
+        <input type="text" name="specialty" value="{{ partner.specialty if partner else '' }}">
+
+        <label>Service Area</label>
+        <input type="text" name="service_area" value="{{ partner.service_area if partner else '' }}">
+
+        <label>Bio</label>
+        <textarea name="bio" rows="5">{{ partner.bio if partner else '' }}</textarea>
+
+        <button type="submit" class="btn-primary">
+            {{ "Save Profile" if partner else "Create Profile" }}
+        </button>
+    </form>
+
+    {% if partner %}
+    <hr style="margin: 28px 0; opacity: .15;">
+
+    <h3>Photos</h3>
+
+    <form method="POST" action="{{ url_for('partners.upload_photo') }}" enctype="multipart/form-data">
+        <input type="file" name="photo" required>
+        <button type="submit" class="btn-primary">Upload Photo</button>
+    </form>
+
+    <div class="photo-grid" style="margin-top:16px;">
+        {% for photo in partner.photos.all() %}
+        <div class="photo-item">
+            <img src="{{ photo.url }}" alt="Partner photo">
+
+            <form method="POST" action="{{ url_for('partners.delete_photo', photo_id=photo.id) }}">
+                <button type="submit" class="btn-secondary small">Delete</button>
+            </form>
+        </div>
+        {% else %}
+        <p>No photos uploaded yet.</p>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+</div>
+
+{% endblock %}

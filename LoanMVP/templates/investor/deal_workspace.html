@@ -1,615 +1,1095 @@
-{# investor/deal_workspace.html (FULL TEMPLATE) #}
 {% extends "layouts/ravlo_base.html" %}
+
 {% block title %}Ravlo • Deal Workspace{% endblock %}
 
 {% block page_title %}Deal Workspace{% endblock %}
-{% block page_subline %}Analyze Flip, Rental, and Airbnb strategies with comps, rehab, and AI guidance.{% endblock %}
+{% block page_subline %}
+Compare exit paths, pressure-test returns, and move into architect, rehab, or capital.
+{% endblock %}
+
+{% block topbar_actions %}
+<a href="{{ url_for('investor.deals_list') }}" class="ravlo-btn ghost sm">
+    Deal Pipeline
+</a>
+
+{% if selected_prop %}
+{% if deal %}
+<a href="{{ url_for('investor.deal_detail', deal_id=deal.id) }}" class="ravlo-btn ghost sm">
+    Open Deal
+</a>
+<a href="{{ url_for('investor.capital_application', deal_id=deal.id, prop_id=selected_prop.id) }}" class="ravlo-btn primary sm">
+    Apply
+</a>
+{% else %}
+<form method="POST" action="{{ url_for('investor.save_deal', prop_id=selected_prop.id) }}" class="inline-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <button type="submit" class="ravlo-btn ghost sm">Save Deal</button>
+</form>
+<a href="{{ url_for('investor.capital_application', prop_id=selected_prop.id) }}" class="ravlo-btn primary sm">
+    Apply
+</a>
+{% endif %}
+{% endif %}
+
+{% if deal %}
+<a href="{{ url_for('investor.deal_architect', deal_id=deal.id) }}" class="ravlo-btn ghost sm">
+    AI Architect
+</a>
+<a href="{{ url_for('investor.deal_rehab', deal_id=deal.id) }}" class="ravlo-btn primary sm">
+    Rehab Studio
+</a>
+{% endif %}
+{% endblock %}
 
 {% block content %}
+<div class="workspace-shell">
 
-{# ---------- Helpers ---------- #}
-{% macro money(val) -%}
-  {%- if val is not none and val is not undefined -%}
-    ${{ "{:,.0f}".format(val|float) }}
-  {%- else -%}
-    —
-  {%- endif -%}
-{%- endmacro %}
+    <section class="ravlo-card pad">
+        <div class="section-head">
+            <div>
+                <div class="eyebrow">PROPERTY</div>
+                <h3>Select Property</h3>
+            </div>
+        </div>
 
-{% macro money_mo(val) -%}
-  {%- if val is not none and val is not undefined -%}
-    ${{ "{:,.0f}".format(val|float) }}/mo
-  {%- else -%}
-    —
-  {%- endif -%}
-{%- endmacro %}
+        <form method="GET">
+            <select name="prop_id" class="ravlo-input" onchange="this.form.submit()">
+                <option value="">Choose saved property</option>
+                {% for p in saved_props %}
+                <option value="{{ p.id }}" {% if selected_prop and p.id == selected_prop.id %}selected{% endif %}>
+                    {{ p.address }}
+                </option>
+                {% endfor %}
+            </select>
+        </form>
+    </section>
 
-{% set comps = comps or {} %}
+    {% if selected_prop %}
+
+    {% set recommended = recommendation.best if recommendation else "" %}
+    {% set flip = comparison.get("flip", {}) if comparison else {} %}
+    {% set rental = comparison.get("rental", {}) if comparison else {} %}
+    {% set airbnb = comparison.get("airbnb", {}) if comparison else {} %}
+
+    {# ---------- SAFE NUMERIC NORMALIZATION ---------- #}
+    {% set purchase_price = (selected_prop.price or 0) | float %}
+    {% set purchase_price_safe = purchase_price if purchase_price > 0 else 1 %}
+
+    {% set flip_profit = (flip.get("profit", 0) or 0) | float %}
+    {% set flip_roi = ((flip.get("roi", 0) or 0) | float) * 100 %}
+    {% set flip_total = (flip.get("total_investment", 0) or 0) | float %}
+    {% set flip_arv = (flip.get("arv", comps.arv_estimate if comps and comps.arv_estimate else 0) or 0) | float %}
+
+    {% set rental_rent = (rental.get("monthly_rent", 0) or 0) | float %}
+    {% set rental_cashflow = (rental.get("net_cashflow", 0) or 0) | float %}
+    {% set rental_cap = ((rental.get("cap_rate", 0) or 0) | float) * 100 %}
+    {% set rental_dscr = (rental.get("dscr", 0) or 0) | float %}
+    {% set rental_noi = (rental.get("annual_noi", 0) or 0) | float %}
+
+    {% set airbnb_nightly = (airbnb.get("nightly_rate", 0) or 0) | float %}
+    {% set airbnb_occ = ((airbnb.get("occupancy_rate", 0) or 0) | float) * 100 %}
+    {% set airbnb_gross = (airbnb.get("gross_monthly", 0) or 0) | float %}
+    {% set airbnb_net = (airbnb.get("net_monthly", 0) or 0) | float %}
+    {% set airbnb_roi = ((airbnb_net * 12) / purchase_price_safe) * 100 if purchase_price_safe > 0 else 0 %}
+
+    {% set max_profit = [flip_profit, rental_cashflow * 12, airbnb_net * 12] | max %}
+    {% set max_profit = 1 if max_profit <= 0 else max_profit %}
+
+    {% set max_roi = [flip_roi, rental_cap, airbnb_roi] | max %}
+    {% set max_roi = 1 if max_roi <= 0 else max_roi %}
+
+    {% set flip_profit_strength = ((flip_profit / max_profit) * 100) if max_profit else 0 %}
+    {% set rental_profit_strength = (((rental_cashflow * 12) / max_profit) * 100) if max_profit else 0 %}
+    {% set airbnb_profit_strength = (((airbnb_net * 12) / max_profit) * 100) if max_profit else 0 %}
+
+    {% set flip_roi_strength = ((flip_roi / max_roi) * 100) if max_roi else 0 %}
+    {% set rental_roi_strength = ((rental_cap / max_roi) * 100) if max_roi else 0 %}
+    {% set airbnb_roi_strength = ((airbnb_roi / max_roi) * 100) if max_roi else 0 %}
+
+    <section class="ravlo-hero-card workspace-hero">
+        <div class="workspace-hero-copy">
+            <div class="eyebrow">RAVLO WORKSPACE V3</div>
+            <h2>{{ selected_prop.address }}</h2>
+            <p class="muted">
+                {{ selected_prop.city or "" }}{% if selected_prop.city and selected_prop.state %}, {% endif %}{{ selected_prop.state or "" }}
+                {% if selected_prop.property_type %} • {{ selected_prop.property_type }}{% endif %}
+            </p>
+
+            <div class="ravlo-chip-row mt-16">
+        <span class="ravlo-chip">
+          Best Path:
+          {% if recommended == "flip" %}
+            Fix & Flip
+          {% elif recommended == "rental" %}
+            Buy & Hold Rental
+          {% elif recommended == "airbnb" %}
+            Airbnb
+          {% else %}
+            Pending
+          {% endif %}
+        </span>
+
+                <span class="ravlo-chip">
+          {% if comps %}Comps Loaded{% else %}No Comps{% endif %}
+        </span>
+
+                <span class="ravlo-chip">
+          {% if deal %}Deal #{{ deal.id }}{% else %}Not Attached{% endif %}
+        </span>
+            </div>
+
+            <div class="workspace-action-row mt-16">
+                {% if deal %}
+                <a href="{{ url_for('investor.deal_detail', deal_id=deal.id) }}" class="ravlo-btn ghost">
+                    Open Deal
+                </a>
+                <a href="{{ url_for('investor.capital_application', deal_id=deal.id, prop_id=selected_prop.id) }}" class="ravlo-btn primary">
+                    Apply
+                </a>
+                {% else %}
+                <form method="POST" action="{{ url_for('investor.save_deal', prop_id=selected_prop.id) }}" class="inline-form">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="ravlo-btn ghost">
+                        Save Deal
+                    </button>
+                </form>
+
+                <a href="{{ url_for('investor.capital_application', prop_id=selected_prop.id) }}" class="ravlo-btn primary">
+                    Apply
+                </a>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="workspace-hero-side">
+            <div class="workspace-highlight">
+                <span>Decision Lens</span>
+                <strong>
+                    {% if recommended == "flip" %}
+                    Fastest Equity Path
+                    {% elif recommended == "rental" %}
+                    Stable Long-Term Cash Flow
+                    {% elif recommended == "airbnb" %}
+                    Highest Revenue Potential
+                    {% else %}
+                    Compare Scenarios
+                    {% endif %}
+                </strong>
+                <p>
+                    Review path strength, return profile, and execution pressure before moving into rehab, architect, or capital.
+                </p>
+            </div>
+        </div>
+    </section>
+
+    <section class="workspace-grid-4">
+        <div class="workspace-stat">
+            <span>Purchase Price</span>
+            <strong>${{ "{:,.0f}".format(purchase_price) }}</strong>
+        </div>
+        <div class="workspace-stat">
+            <span>Sq Ft</span>
+            <strong>
+                {% if selected_prop.sqft or selected_prop.square_feet %}
+                {{ "{:,.0f}".format((selected_prop.sqft or selected_prop.square_feet)|float) }}
+                {% elif comps and comps.property and comps.property.sqft %}
+                {{ "{:,.0f}".format(comps.property.sqft|float) }}
+                {% else %}
+                —
+                {% endif %}
+            </strong>
+        </div>
+        <div class="workspace-stat">
+            <span>ARV Estimate</span>
+            <strong>${{ "{:,.0f}".format(comps.arv_estimate or 0) if comps and comps.arv_estimate else "—" }}</strong>
+        </div>
+        <div class="workspace-stat">
+            <span>Market Rent</span>
+            <strong>${{ "{:,.0f}".format(comps.market_rent_estimate or 0) if comps and comps.market_rent_estimate else "—" }}</strong>
+        </div>
+    </section>
+
+    <div class="workspace-main-grid">
+
+        <div class="workspace-stack">
+
+            <section class="ravlo-card pad">
+                <div class="section-head">
+                    <div>
+                        <div class="eyebrow">STRATEGY BOARD</div>
+                        <h3>Side-by-Side Comparison</h3>
+                    </div>
+                </div>
+
+                {% if comparison %}
+                <div class="workspace-compare-grid">
+
+                    <div class="workspace-compare-card {% if recommended == 'flip' %}recommended{% endif %}">
+                        <div class="workspace-card-topline">
+                            <span class="workspace-compare-kicker">FLIP</span>
+                            {% if recommended == 'flip' %}
+                            <span class="workspace-badge">Recommended</span>
+                            {% endif %}
+                        </div>
+
+                        <strong class="workspace-compare-title">Fix & Flip</strong>
+
+                        <div class="workspace-compare-meta">
+                            <div><span>Projected Profit</span><strong>${{ "{:,.0f}".format(flip_profit) }}</strong></div>
+                            <div><span>Total Investment</span><strong>${{ "{:,.0f}".format(flip_total) }}</strong></div>
+                            <div><span>Projected ARV</span><strong>${{ "{:,.0f}".format(flip_arv) if flip_arv else "—" }}</strong></div>
+                            <div><span>ROI</span><strong>{{ "{:.1f}".format(flip_roi) }}%</strong></div>
+                        </div>
+
+                        <div class="metric-bar-wrap">
+                            <div class="metric-bar-label">
+                                <span>Profit Strength</span>
+                                <strong>{{ "{:.0f}".format(flip_profit_strength) }}%</strong>
+                            </div>
+                            <div class="metric-bar"><div class="metric-bar-fill" style="width: {{ flip_profit_strength }}%;"></div></div>
+                        </div>
+
+                        <div class="metric-bar-wrap">
+                            <div class="metric-bar-label">
+                                <span>ROI Strength</span>
+                                <strong>{{ "{:.0f}".format(flip_roi_strength) }}%</strong>
+                            </div>
+                            <div class="metric-bar"><div class="metric-bar-fill alt" style="width: {{ flip_roi_strength }}%;"></div></div>
+                        </div>
+
+                        {% if recommendation and recommendation.notes and recommendation.notes.get("flip") %}
+                        <div class="workspace-compare-note">{{ recommendation.notes.get("flip") }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="workspace-compare-card {% if recommended == 'rental' %}recommended{% endif %}">
+                        <div class="workspace-card-topline">
+                            <span class="workspace-compare-kicker">RENTAL</span>
+                            {% if recommended == 'rental' %}
+                            <span class="workspace-badge">Recommended</span>
+                            {% endif %}
+                        </div>
+
+                        <strong class="workspace-compare-title">Buy & Hold Rental</strong>
+
+                        <div class="workspace-compare-meta">
+                            <div><span>Monthly Rent</span><strong>${{ "{:,.0f}".format(rental_rent) }}</strong></div>
+                            <div><span>Monthly Cash Flow</span><strong>${{ "{:,.0f}".format(rental_cashflow) }}</strong></div>
+                            <div><span>Annual NOI</span><strong>${{ "{:,.0f}".format(rental_noi) }}</strong></div>
+                            <div><span>Cap Rate</span><strong>{{ "{:.1f}".format(rental_cap) }}%</strong></div>
+                        </div>
+
+                        <div class="metric-bar-wrap">
+                            <div class="metric-bar-label">
+                                <span>Cash Flow Strength</span>
+                                <strong>{{ "{:.0f}".format(rental_profit_strength) }}%</strong>
+                            </div>
+                            <div class="metric-bar"><div class="metric-bar-fill" style="width: {{ rental_profit_strength }}%;"></div></div>
+                        </div>
+
+                        <div class="metric-bar-wrap">
+                            <div class="metric-bar-label">
+                                <span>Return Strength</span>
+                                <strong>{{ "{:.0f}".format(rental_roi_strength) }}%</strong>
+                            </div>
+                            <div class="metric-bar"><div class="metric-bar-fill alt" style="width: {{ rental_roi_strength }}%;"></div></div>
+                        </div>
+
+                        {% if recommendation and recommendation.notes and recommendation.notes.get("rental") %}
+                        <div class="workspace-compare-note">{{ recommendation.notes.get("rental") }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="workspace-compare-card {% if recommended == 'airbnb' %}recommended{% endif %}">
+                        <div class="workspace-card-topline">
+                            <span class="workspace-compare-kicker">AIRBNB</span>
+                            {% if recommended == 'airbnb' %}
+                            <span class="workspace-badge">Recommended</span>
+                            {% endif %}
+                        </div>
+
+                        <strong class="workspace-compare-title">Short-Term Rental</strong>
+
+                        <div class="workspace-compare-meta">
+                            <div><span>Nightly Rate</span><strong>${{ "{:,.0f}".format(airbnb_nightly) }}</strong></div>
+                            <div><span>Occupancy</span><strong>{{ "{:.0f}".format(airbnb_occ) }}%</strong></div>
+                            <div><span>Gross Monthly</span><strong>${{ "{:,.0f}".format(airbnb_gross) }}</strong></div>
+                            <div><span>Net Monthly</span><strong>${{ "{:,.0f}".format(airbnb_net) }}</strong></div>
+                            <div><span>Annualized ROI</span><strong>{{ "{:.1f}".format(airbnb_roi) }}%</strong></div>
+                        </div>
+
+                        <div class="metric-bar-wrap">
+                            <div class="metric-bar-label">
+                                <span>Income Strength</span>
+                                <strong>{{ "{:.0f}".format(airbnb_profit_strength) }}%</strong>
+                            </div>
+                            <div class="metric-bar"><div class="metric-bar-fill" style="width: {{ airbnb_profit_strength }}%;"></div></div>
+                        </div>
+
+                        <div class="metric-bar-wrap">
+                            <div class="metric-bar-label">
+                                <span>Return Strength</span>
+                                <strong>{{ "{:.0f}".format(airbnb_roi_strength) }}%</strong>
+                            </div>
+                            <div class="metric-bar"><div class="metric-bar-fill alt" style="width: {{ airbnb_roi_strength }}%;"></div></div>
+                        </div>
+
+                        {% if recommendation and recommendation.notes and recommendation.notes.get("airbnb") %}
+                        <div class="workspace-compare-note">{{ recommendation.notes.get("airbnb") }}</div>
+                        {% endif %}
+                    </div>
+
+                </div>
+                {% else %}
+                <div class="empty-state">No comparison data loaded yet.</div>
+                {% endif %}
+            </section>
+
+            <section class="ravlo-card pad">
+                <div class="section-head">
+                    <div>
+                        <div class="eyebrow">AI SUMMARY</div>
+                        <h3>Opportunity Narrative</h3>
+                    </div>
+                </div>
+
+                <div class="feature-highlight">
+                    <div class="feature-highlight-label">AI Summary</div>
+                    <div class="feature-highlight-value">
+                        {{ ai_summary or (workspace_analysis.get("summary") if workspace_analysis else None) or "No AI summary yet." }}
+                    </div>
+                </div>
+
+                <div class="workspace-fit-grid mt-16">
+                    <div class="workspace-mini-stat">
+                        <span>Best Strategy</span>
+                        <strong>
+                            {% if recommended == "flip" %}
+                            Fix & Flip
+                            {% elif recommended == "rental" %}
+                            Buy & Hold
+                            {% elif recommended == "airbnb" %}
+                            Airbnb
+                            {% else %}
+                            Pending
+                            {% endif %}
+                        </strong>
+                    </div>
+
+                    <div class="workspace-mini-stat">
+                        <span>Rental DSCR</span>
+                        <strong>{{ "{:.2f}".format(rental_dscr) if rental_dscr else "—" }}</strong>
+                    </div>
+
+                    <div class="workspace-mini-stat">
+                        <span>Flip ROI</span>
+                        <strong>{{ "{:.1f}".format(flip_roi) }}%</strong>
+                    </div>
+
+                    <div class="workspace-mini-stat">
+                        <span>Airbnb ROI</span>
+                        <strong>{{ "{:.1f}".format(airbnb_roi) }}%</strong>
+                    </div>
+                </div>
+            </section>
+
+            <section class="ravlo-card pad">
+                <div class="section-head">
+                    <div>
+                        <div class="eyebrow">PROPERTY SNAPSHOT</div>
+                        <h3>Property + Deal Context</h3>
+                    </div>
+                </div>
+
+                <div class="workspace-info-grid">
+                    <div class="workspace-info-box">
+                        <span>Address</span>
+                        <strong>{{ selected_prop.address or "—" }}</strong>
+                    </div>
+                    <div class="workspace-info-box">
+                        <span>City / State</span>
+                        <strong>{{ selected_prop.city or "—" }}{% if selected_prop.city and selected_prop.state %}, {% endif %}{{ selected_prop.state or "" }}</strong>
+                    </div>
+                    <div class="workspace-info-box">
+                        <span>ZIP</span>
+                        <strong>{{ selected_prop.zip_code or "—" }}</strong>
+                    </div>
+                    <div class="workspace-info-box">
+                        <span>Type</span>
+                        <strong>{{ selected_prop.property_type or "—" }}</strong>
+                    </div>
+                    <div class="workspace-info-box">
+                        <span>Beds / Baths</span>
+                        <strong>{{ selected_prop.bedrooms or selected_prop.beds or "—" }} / {{ selected_prop.bathrooms or selected_prop.baths or "—" }}</strong>
+                    </div>
+                    <div class="workspace-info-box">
+                        <span>Sq Ft</span>
+                        <strong>{{ "{:,.0f}".format((selected_prop.sqft or selected_prop.square_feet)|float) if (selected_prop.sqft or selected_prop.square_feet) else "—" }}</strong>
+                    </div>
+                    <div class="workspace-info-box">
+                        <span>Deal Attached</span>
+                        <strong>{% if deal %}Yes{% else %}No{% endif %}</strong>
+                    </div>
+                    <div class="workspace-info-box">
+                        <span>Recommended</span>
+                        <strong>
+                            {% if recommended == "flip" %}
+                            Fix & Flip
+                            {% elif recommended == "rental" %}
+                            Rental
+                            {% elif recommended == "airbnb" %}
+                            Airbnb
+                            {% else %}
+                            Pending
+                            {% endif %}
+                        </strong>
+                    </div>
+                </div>
+            </section>
+
+            <section class="ravlo-card pad">
+                <div class="section-head">
+                    <div>
+                        <div class="eyebrow">REHAB</div>
+                        <h3>Saved Rehab Summary</h3>
+                    </div>
+                    {% if deal %}
+                    <a href="{{ url_for('investor.deal_rehab', deal_id=deal.id) }}" class="ravlo-link-btn">
+                        Open Rehab Studio
+                    </a>
+                    {% endif %}
+                </div>
+
+                {% set rehab_scope = rehab_analysis.get("scope", {}) %}
+                {% if rehab_analysis %}
+                <div class="workspace-fit-grid">
+                    <div class="workspace-mini-stat">
+                        <span>Estimated Rehab Cost</span>
+                        <strong>${{ "{:,.0f}".format(rehab_analysis.get("estimated_rehab_cost", 0) or 0) }}</strong>
+                    </div>
+                    <div class="workspace-mini-stat">
+                        <span>Scope</span>
+                        <strong>{{ rehab_scope.get("rehab_level") or "Pending" }}</strong>
+                    </div>
+                    <div class="workspace-mini-stat">
+                        <span>Cost / Sq Ft</span>
+                        <strong>{% if rehab_scope.get("cost_per_sqft") %}${{ "{:,.0f}".format(rehab_scope.get("cost_per_sqft")) }}{% else %}—{% endif %}</strong>
+                    </div>
+                    <div class="workspace-mini-stat">
+                        <span>Sq Ft Basis</span>
+                        <strong>{{ rehab_scope.get("sqft") or "—" }}</strong>
+                    </div>
+                </div>
+
+                {% if rehab_scope.get("line_items") %}
+                <div class="workspace-line-items mt-16">
+                    {% for item, amount in rehab_scope.get("line_items", {}).items() %}
+                    <div class="workspace-line-row">
+                        <span>{{ item.replace("_", " ")|title }}</span>
+                        <strong>${{ "{:,.0f}".format(amount or 0) }}</strong>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+                {% else %}
+                <div class="empty-state">No rehab summary saved yet.</div>
+                {% endif %}
+            </section>
+
+        </div>
+
+        <div class="workspace-stack">
+
+            <section class="ravlo-card pad">
+                <div class="section-head">
+                    <div>
+                        <div class="eyebrow">SCOREBOARD</div>
+                        <h3>Performance Signals</h3>
+                    </div>
+                </div>
+
+                <div class="workspace-mini-stat-stack">
+                    <div class="workspace-mini-stat">
+                        <span>Flip Profit</span>
+                        <strong>${{ "{:,.0f}".format(flip_profit) }}</strong>
+                    </div>
+                    <div class="workspace-mini-stat">
+                        <span>Rental Cash Flow</span>
+                        <strong>${{ "{:,.0f}".format(rental_cashflow) }}/mo</strong>
+                    </div>
+                    <div class="workspace-mini-stat">
+                        <span>Airbnb Net</span>
+                        <strong>${{ "{:,.0f}".format(airbnb_net) }}/mo</strong>
+                    </div>
+                    <div class="workspace-mini-stat">
+                        <span>Rental DSCR</span>
+                        <strong>{{ "{:.2f}".format(rental_dscr) if rental_dscr else "—" }}</strong>
+                    </div>
+                    <div class="workspace-mini-stat">
+                        <span>Top ROI</span>
+                        <strong>{{ "{:.1f}".format(max_roi) }}%</strong>
+                    </div>
+                </div>
+            </section>
+
+            <section class="ravlo-card pad">
+                <div class="section-head">
+                    <div>
+                        <div class="eyebrow">OPTIMIZATION</div>
+                        <h3>Saved Optimization</h3>
+                    </div>
+                </div>
+
+                {% if optimization %}
+                <div class="workspace-mini-stat-stack">
+                    <div class="workspace-mini-stat">
+                        <span>Best Exit</span>
+                        <strong>{{ optimization.get("best_exit") or "—" }}</strong>
+                    </div>
+                    <div class="workspace-mini-stat">
+                        <span>Profit Gap To Target</span>
+                        <strong>${{ "{:,.0f}".format(optimization.get("profit_gap_to_target", 0) or 0) }}</strong>
+                    </div>
+                    <div class="workspace-mini-stat">
+                        <span>Rehab Pressure</span>
+                        <strong>{% if optimization.get("rehab_pressure") is not none %}{{ "{:.1f}".format((optimization.get("rehab_pressure", 0) or 0) * 100) }}%{% else %}—{% endif %}</strong>
+                    </div>
+                    <div class="workspace-mini-stat">
+                        <span>Rent Ratio</span>
+                        <strong>{% if optimization.get("rent_ratio") is not none %}{{ "{:.2f}".format((optimization.get("rent_ratio", 0) or 0) * 100) }}%{% else %}—{% endif %}</strong>
+                    </div>
+                </div>
+
+                <div class="report-note mt-16">
+                    <strong>Notes</strong>
+                    {% if optimization.get("notes") %}
+                    <ul class="workspace-note-list">
+                        {% for note in optimization.get("notes", []) %}
+                        <li>{{ note }}</li>
+                        {% endfor %}
+                    </ul>
+                    {% else %}
+                    <p>No optimization notes saved yet.</p>
+                    {% endif %}
+                </div>
+                {% else %}
+                <div class="empty-state">No optimization saved yet.</div>
+                {% endif %}
+            </section>
+
+            <section class="ravlo-card pad">
+                <div class="section-head">
+                    <div>
+                        <div class="eyebrow">NEXT ACTIONS</div>
+                        <h3>Continue Workflow</h3>
+                    </div>
+                </div>
+
+                <div class="quick-grid one-col">
+                    {% if deal %}
+                    <a href="{{ url_for('investor.deal_architect', deal_id=deal.id) }}" class="quick-card">
+                        <span class="quick-title">Open Deal Architect</span>
+                        <span class="quick-sub">Refine strategy, scoring, and recommendation.</span>
+                    </a>
+
+                    <a href="{{ url_for('investor.deal_rehab', deal_id=deal.id) }}" class="quick-card">
+                        <span class="quick-title">Open Rehab Studio</span>
+                        <span class="quick-sub">Build scope, optimize budget, and pressure-test rehab.</span>
+                    </a>
+
+                    <a href="{{ url_for('investor.build_studio') }}" class="quick-card">
+                        <span class="quick-title">Open Build Studio</span>
+                        <span class="quick-sub">Use build tools for development-heavy opportunities.</span>
+                    </a>
+
+                    <a href="{{ url_for('investor.capital_application', deal_id=deal.id, prop_id=selected_prop.id) }}" class="quick-card">
+                        <span class="quick-title">Apply for Capital</span>
+                        <span class="quick-sub">Send this deal into capital intake and funding workflow.</span>
+                    </a>
+                    {% else %}
+                    <form method="POST" action="{{ url_for('investor.save_deal', prop_id=selected_prop.id) }}" class="quick-save-form">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="quick-card quick-card-button">
+                            <span class="quick-title">Save Deal</span>
+                            <span class="quick-sub">Create and attach this property as a deal in your pipeline.</span>
+                        </button>
+                    </form>
+
+                    <a href="{{ url_for('investor.capital_application', prop_id=selected_prop.id) }}" class="quick-card">
+                        <span class="quick-title">Apply for Capital</span>
+                        <span class="quick-sub">Start a funding application using this property’s numbers.</span>
+                    </a>
+                    {% endif %}
+                </div>
+            </section>
+
+        </div>
+
+    </div>
+
+    {% else %}
+    <section class="ravlo-hero-card">
+        <div class="eyebrow">RAVLO WORKSPACE</div>
+        <h2>No property selected</h2>
+        <p class="muted">
+            Choose a saved property to compare Fix & Flip, Rental, and Airbnb paths.
+        </p>
+        <div class="mt-16">
+            <a href="{{ url_for('investor.deals_list') }}" class="ravlo-btn primary">
+                Open Deal Pipeline
+            </a>
+        </div>
+    </section>
+    {% endif %}
+
+</div>
 
 <style>
-  .dw-layout {
-    display: grid;
-    grid-template-columns: 2.1fr 1.4fr;
-    gap: 1.5rem;
-    margin-top: 1.5rem;
-  }
-  .dw-card {
-    background: #0b1016;
-    border-radius: 12px;
-    padding: 1.25rem 1.5rem;
-    border: 1px solid var(--line);
-    box-shadow: 0 0 18px rgba(0,0,0,0.45);
-  }
-  .dw-card h3 { color: var(--accent); margin-bottom: .75rem; }
-  .dw-label {
-    display: block;
-    margin-top: .75rem;
-    margin-bottom: .25rem;
-    font-size: .9rem;
-    color: var(--text-light, var(--text));
-  }
-  .dw-input {
-    width: 100%;
-    padding: .55rem .7rem;
-    border-radius: 8px;
-    border: 1px solid var(--line);
-    background: #0f141a;
-    color: var(--text);
-    font-size: .9rem;
-  }
-  .dw-row {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: .75rem 1rem;
-  }
-  .dw-button {
-    background: rgba(122,184,255,0.12);
-    border: 1px solid rgba(122,184,255,0.45);
-    color: #7ab8ff;
-    padding: .7rem 1.2rem;
-    border-radius: 8px;
-    cursor: pointer;
-    font-weight: 600;
-    transition: .2s;
-    font-size: .9rem;
-    letter-spacing: .3px;
-    display:inline-flex;
-    align-items:center;
-    justify-content:center;
-    gap:.5rem;
-  }
-  .dw-button:hover {
-    background: rgba(122,184,255,0.22);
-    border-color: #7ab8ff;
-    box-shadow: 0 0 12px rgba(122,184,255,0.45);
-  }
+    .workspace-shell{
+      display:grid;
+      gap:20px;
+    }
 
-  .intelligence-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr 1.3fr;
-    gap: 1.5rem;
-    margin-top: 1.5rem;
-  }
-  .photo-carousel img {
-    width: 100%;
-    border-radius: 8px;
-    margin-bottom: .5rem;
-  }
+    .workspace-hero{
+      align-items:stretch;
+    }
 
-  /* Rehab planner */
-  .rehab-visual-grid{
-    display:grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: .9rem;
-    margin-top: .75rem;
-  }
-  .rehab-visual-item{
-    border: 1px solid rgba(255,255,255,.08);
-    border-radius: 10px;
-    padding: .75rem;
-    background: rgba(255,255,255,.02);
-  }
-  .rehab-visual-item h4{ margin:0 0 .5rem; color: var(--text-light, var(--text)); }
-  .rehab-options{
-    display:flex;
-    gap:.5rem;
-    flex-wrap:wrap;
-  }
-  .rehab-tag{
-    display:inline-block;
-    padding:.25rem .5rem;
-    border-radius:999px;
-    border:1px solid rgba(122,184,255,.35);
-    background: rgba(122,184,255,.08);
-    color:#cfe4ff;
-    font-size:.8rem;
-    margin-left:.35rem;
-  }
+    .workspace-hero-copy{
+      flex:1;
+      min-width:0;
+    }
 
-  /* Modals */
-  .modal-overlay {
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,0.65);
-    display: none;
-    align-items: center;
-    justify-content: center;
-    padding: 1rem;
-    z-index: 9999;
-  }
-  .modal-content {
-    width: min(980px, 100%);
-    background: #0b1016;
-    border: 1px solid var(--line);
-    border-radius: 12px;
-    padding: 1.25rem;
-    box-shadow: 0 0 24px rgba(0,0,0,0.6);
-  }
-  .style-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 1rem;
-    margin-top: .75rem;
-  }
-  .style-results-grid {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: .75rem;
-    margin-top: .75rem;
-  }
-  @media (max-width: 980px){
-    .intelligence-grid{grid-template-columns:1fr;}
-    .dw-layout{grid-template-columns:1fr;}
-    .style-grid{grid-template-columns:1fr;}
-    .style-results-grid{grid-template-columns:repeat(2, minmax(0, 1fr));}
-  }
-  @media (max-width: 560px){
-    .style-results-grid{grid-template-columns:1fr;}
-  }
+    .workspace-hero-copy h2{
+      margin:8px 0 10px;
+      font-size:34px;
+      line-height:1.05;
+      letter-spacing:-.03em;
+    }
+
+    .workspace-action-row{
+      display:flex;
+      flex-wrap:wrap;
+      gap:12px;
+      align-items:center;
+    }
+
+    .workspace-hero-side{
+      width:320px;
+      max-width:100%;
+      display:flex;
+      align-items:stretch;
+    }
+
+    .workspace-highlight{
+      width:100%;
+      padding:18px;
+      border-radius:20px;
+      background:rgba(255,255,255,.04);
+      border:1px solid rgba(255,255,255,.08);
+    }
+
+    .workspace-highlight span{
+      display:block;
+      color:var(--muted);
+      font-size:12px;
+      text-transform:uppercase;
+      letter-spacing:.08em;
+    }
+
+    .workspace-highlight strong{
+      display:block;
+      margin-top:8px;
+      font-size:28px;
+      line-height:1.1;
+      color:var(--text);
+    }
+
+    .workspace-highlight p{
+      margin:10px 0 0;
+      color:var(--muted);
+      line-height:1.6;
+    }
+
+    .workspace-grid-4{
+      display:grid;
+      grid-template-columns:repeat(4, minmax(0, 1fr));
+      gap:14px;
+    }
+
+    .workspace-stat{
+      padding:18px;
+      border-radius:20px;
+      background:rgba(255,255,255,.03);
+      border:1px solid rgba(255,255,255,.08);
+    }
+
+    .workspace-stat span{
+      display:block;
+      color:var(--muted);
+      font-size:12px;
+      text-transform:uppercase;
+      letter-spacing:.08em;
+      margin-bottom:8px;
+    }
+
+    .workspace-stat strong{
+      color:var(--text);
+      font-size:24px;
+      font-weight:800;
+      letter-spacing:-.02em;
+    }
+
+    .workspace-main-grid{
+      display:grid;
+      grid-template-columns:1.15fr .85fr;
+      gap:20px;
+      align-items:start;
+    }
+
+    .workspace-stack{
+      display:grid;
+      gap:20px;
+    }
+
+    .workspace-info-grid{
+      display:grid;
+      grid-template-columns:repeat(4, minmax(0,1fr));
+      gap:12px;
+    }
+
+    .workspace-info-box,
+    .workspace-mini-stat{
+      padding:16px;
+      border-radius:18px;
+      background:rgba(255,255,255,.03);
+      border:1px solid rgba(255,255,255,.08);
+    }
+
+    .workspace-info-box span,
+    .workspace-mini-stat span{
+      display:block;
+      color:var(--muted);
+      font-size:12px;
+      text-transform:uppercase;
+      letter-spacing:.08em;
+      margin-bottom:8px;
+    }
+
+    .workspace-info-box strong,
+    .workspace-mini-stat strong{
+      color:var(--text);
+      font-size:18px;
+      font-weight:700;
+      line-height:1.35;
+    }
+
+    .workspace-compare-grid{
+      display:grid;
+      grid-template-columns:repeat(3, minmax(0,1fr));
+      gap:14px;
+    }
+
+    .workspace-compare-card{
+      padding:20px;
+      border-radius:22px;
+      background:rgba(255,255,255,.03);
+      border:1px solid rgba(255,255,255,.08);
+      position:relative;
+    }
+
+    .workspace-compare-card.recommended{
+      border-color:rgba(107,127,147,.40);
+      background:linear-gradient(180deg, rgba(107,127,147,.11), rgba(255,255,255,.03));
+      box-shadow:0 0 0 1px rgba(107,127,147,.14) inset, 0 14px 34px rgba(0,0,0,.18);
+    }
+
+    .workspace-card-topline{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+    }
+
+    .workspace-badge{
+      display:inline-flex;
+      align-items:center;
+      padding:6px 10px;
+      border-radius:999px;
+      font-size:11px;
+      font-weight:700;
+      letter-spacing:.08em;
+      text-transform:uppercase;
+      background:rgba(142,167,192,.14);
+      border:1px solid rgba(142,167,192,.22);
+      color:#dce8f5;
+    }
+
+    .workspace-compare-kicker{
+      font-size:11px;
+      letter-spacing:.1em;
+      text-transform:uppercase;
+      color:var(--muted);
+    }
+
+    .workspace-compare-title{
+      display:block;
+      margin-top:8px;
+      font-size:19px;
+      font-weight:700;
+      color:var(--text);
+    }
+
+    .workspace-compare-meta{
+      display:grid;
+      gap:10px;
+      margin-top:14px;
+    }
+
+    .workspace-compare-meta div{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:12px;
+      padding:10px 0;
+      border-bottom:1px solid rgba(255,255,255,.06);
+    }
+
+    .workspace-compare-meta div:last-child{
+      border-bottom:none;
+      padding-bottom:0;
+    }
+
+    .workspace-compare-meta span{
+      color:var(--muted);
+      font-size:12px;
+      text-transform:uppercase;
+      letter-spacing:.08em;
+    }
+
+    .workspace-compare-meta strong{
+      color:var(--text);
+      font-size:15px;
+      font-weight:700;
+      text-align:right;
+    }
+
+    .workspace-compare-note{
+      margin-top:14px;
+      padding-top:14px;
+      border-top:1px solid rgba(255,255,255,.06);
+      color:var(--muted);
+      font-size:13px;
+      line-height:1.55;
+    }
+
+    .metric-bar-wrap{
+      margin-top:14px;
+    }
+
+    .metric-bar-label{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      margin-bottom:8px;
+      font-size:12px;
+      color:var(--muted);
+      text-transform:uppercase;
+      letter-spacing:.08em;
+    }
+
+    .metric-bar{
+      width:100%;
+      height:10px;
+      border-radius:999px;
+      background:rgba(255,255,255,.06);
+      overflow:hidden;
+    }
+
+    .metric-bar-fill{
+      height:100%;
+      border-radius:inherit;
+      background:linear-gradient(90deg, #6B7F93, #8EA7C0);
+    }
+
+    .metric-bar-fill.alt{
+      background:linear-gradient(90deg, rgba(255,255,255,.45), #AFC5DB);
+    }
+
+    .workspace-fit-grid{
+      display:grid;
+      grid-template-columns:repeat(2, minmax(0, 1fr));
+      gap:12px;
+    }
+
+    .workspace-mini-stat-stack{
+      display:grid;
+      gap:12px;
+    }
+
+    .workspace-line-items{
+      display:grid;
+      gap:10px;
+    }
+
+    .workspace-line-row{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:14px;
+      padding:14px 16px;
+      border-radius:16px;
+      background:rgba(255,255,255,.03);
+      border:1px solid rgba(255,255,255,.08);
+    }
+
+    .workspace-line-row span{
+      color:var(--muted);
+    }
+
+    .workspace-line-row strong{
+      color:var(--text);
+    }
+
+    .workspace-note-list{
+      margin:10px 0 0;
+      padding-left:18px;
+      color:var(--muted);
+    }
+
+    .workspace-note-list li + li{
+      margin-top:8px;
+    }
+
+    .quick-grid{
+      display:grid;
+      grid-template-columns:repeat(2, minmax(0, 1fr));
+      gap:14px;
+    }
+
+    .quick-grid.one-col{
+      grid-template-columns:1fr;
+    }
+
+    .quick-card{
+      display:block;
+      width:100%;
+      text-align:left;
+      padding:18px;
+      border-radius:18px;
+      background:rgba(255,255,255,.03);
+      border:1px solid rgba(255,255,255,.08);
+      text-decoration:none;
+      transition:.2s ease;
+    }
+
+    .quick-card-button{
+      appearance:none;
+      cursor:pointer;
+      font:inherit;
+      color:inherit;
+    }
+
+    .quick-card:hover,
+    .quick-card-button:hover{
+      transform:translateY(-1px);
+      border-color:rgba(107,127,147,.35);
+      background:rgba(255,255,255,.045);
+    }
+
+    .quick-title{
+      display:block;
+      color:var(--text);
+      font-size:16px;
+      font-weight:700;
+    }
+
+    .quick-sub{
+      display:block;
+      margin-top:8px;
+      color:var(--muted);
+      font-size:13px;
+      line-height:1.55;
+    }
+
+    .inline-form,
+    .quick-save-form{
+      margin:0;
+    }
+
+    .ravlo-link-btn{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      min-height:36px;
+      padding:0 14px;
+      border-radius:999px;
+      border:1px solid rgba(255,255,255,.06);
+      background:rgba(255,255,255,.03);
+      color:rgba(255,255,255,.88);
+      font-weight:700;
+      font-size:.9rem;
+      text-decoration:none;
+    }
+
+    .ravlo-link-btn:hover{
+      background:rgba(255,255,255,.05);
+      color:#fff;
+    }
+
+    @media (max-width: 1200px){
+      .workspace-grid-4,
+      .workspace-info-grid,
+      .workspace-compare-grid{
+        grid-template-columns:repeat(2, minmax(0,1fr));
+      }
+    }
+
+    @media (max-width: 1100px){
+      .workspace-main-grid{
+        grid-template-columns:1fr;
+      }
+
+      .workspace-hero{
+        flex-direction:column;
+      }
+
+      .workspace-hero-side{
+        width:100%;
+      }
+    }
+
+    @media (max-width: 700px){
+      .workspace-grid-4,
+      .workspace-info-grid,
+      .workspace-fit-grid,
+      .workspace-compare-grid{
+        grid-template-columns:1fr;
+      }
+
+      .workspace-action-row{
+        flex-direction:column;
+        align-items:stretch;
+      }
+
+      .workspace-action-row .ravlo-btn,
+      .workspace-action-row form{
+        width:100%;
+      }
+
+      .workspace-action-row .ravlo-btn,
+      .workspace-action-row button{
+        width:100%;
+        justify-content:center;
+      }
+
+      .workspace-hero-copy h2{
+        font-size:28px;
+      }
+
+      .workspace-highlight strong{
+        font-size:22px;
+      }
+    }
 </style>
-
-
-<div class="page-header">
-  <h2>Ravlo Deal Workspace</h2>
-  <p class="text-muted">Analyze Flip, Rental, and Airbnb strategies with comps, rehab, and AI guidance.</p>
-</div>
-
-{# =========================
-   PROPERTY PICKER (GET)
-========================= #}
-<div class="dw-card" style="margin-bottom:1rem;">
-  <h3>🏠 Select a Saved Property</h3>
-
-  <form method="GET" action="{{ url_for('investor.deal_workspace') }}">
-    <label class="dw-label">Saved Properties</label>
-    <select name="prop_id" class="dw-input" onchange="this.form.submit()">
-      <option value="">— Choose a property —</option>
-      {% for p in saved_props %}
-        <option value="{{ p.id }}" {% if selected_prop and selected_prop.id == p.id %}selected{% endif %}>
-          {{ p.address }}{% if p.price %} — ${{ "{:,.0f}".format(p.price|float) }}{% endif %}
-        </option>
-      {% endfor %}
-    </select>
-
-    <div style="margin-top:.75rem; display:flex; gap:.5rem; flex-wrap:wrap;">
-      <button type="submit" class="dw-button">Load Property</button>
-
-      <a href="{{ url_for('investor.saved_properties') }}"
-         class="dw-button"
-         style="text-decoration:none;">
-         View Saved Properties
-       </a>
-    </div>
-  </form>
-</div>
-
-{% if not selected_prop %}
-  <div class="dw-card">
-    <p class="ai-text">Select a saved property to load comps and run strategy analysis.</p>
-  </div>
-{% else %}
-
-{# =========================
-   MAIN ANALYSIS FORM (POST)
-========================= #}
-<form method="POST" action="{{ url_for('investor.deal_workspace', prop_id=selected_prop.id) }}">
-  {% if csrf_token is defined %}
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-  {% endif %}
-  <input type="hidden" name="prop_id" value="{{ selected_prop.id }}">
-
-  <!-- DEAL SETUP -->
-  <div class="dw-card">
-    <h3>🏠 Deal Setup</h3>
-
-    <div class="dw-row">
-      <div>
-        <label class="dw-label">Strategy</label>
-        <select name="mode" class="dw-input" onchange="this.form.submit()">
-          <option value="flip" {% if mode == 'flip' %}selected{% endif %}>Flip</option>
-          <option value="rental" {% if mode == 'rental' %}selected{% endif %}>Rental</option>
-          <option value="airbnb" {% if mode == 'airbnb' %}selected{% endif %}>Airbnb</option>
-        </select>
-      </div>
-
-      <div>
-        <label class="dw-label">Property</label>
-        <input type="text" class="dw-input" value="{{ selected_prop.address }}" readonly>
-      </div>
-    </div>
-
-    <div style="margin-top:1rem;">
-      <button type="submit" class="dw-button">Run Analysis</button>
-    </div>
-  </div>
-
-  {# =========================
-     PROPERTY INTELLIGENCE GRID
-  ========================= #}
-  {% if resolved %}
-  <div class="intelligence-grid">
-
-    <!-- 1) Property Summary -->
-    <div class="dw-card">
-      <h3>🏡 Property Summary</h3>
-      {% if resolved.property %}
-        <p class="ai-text">
-          <strong>{{ resolved.property.address }}</strong><br>
-          {{ resolved.property.city }}, {{ resolved.property.state }} {{ resolved.property.zip }}<br><br>
-          <strong>Beds:</strong> {{ resolved.property.beds or '—' }}<br>
-          <strong>Baths:</strong> {{ resolved.property.baths or '—' }}<br>
-          <strong>Sqft:</strong> {{ resolved.property.sqft or '—' }}<br>
-          <strong>Year Built:</strong> {{ resolved.property.year_built or '—' }}<br>
-          <strong>Type:</strong> {{ resolved.property.property_type or '—' }}
-        </p>
-      {% else %}
-        <p class="ai-text">No property data available.</p>
-      {% endif %}
-    </div>
-
-    <!-- 2) Valuation + Rent -->
-    <div class="dw-card">
-      <h3>📈 Valuation + Rent</h3>
-
-      {# valuation (supports dict OR object) #}
-      {% set prop = (resolved.property if resolved and resolved.property is not undefined else none) %}
-      {% set v = (prop.valuation if prop and prop.valuation is not undefined else none) %}
-      {% set v_value = (v.get('value') if v is mapping else (v.value if v else none)) %}
-      {% set v_low   = (v.get('low')   if v is mapping else (v.low   if v else none)) %}
-      {% set v_high  = (v.get('high')  if v is mapping else (v.high  if v else none)) %}
-      {% set v_conf  = (v.get('confidence') if v is mapping else (v.confidence if v else none)) %}
-
-      <div class="ai-text" style="margin-bottom:1rem;">
-        <strong>Value:</strong> {{ money(v_value) }}<br>
-        <strong>Range:</strong>
-        {% if v_low is not none and v_high is not none %}
-          {{ money(v_low) }} – {{ money(v_high) }}
-        {% else %}
-          —
-        {% endif %}
-        <br>
-        <strong>Confidence:</strong> {{ v_conf or '—' }}
-      </div>
-
-      {# rent (supports dict OR object) #}
-      {% set r = (prop.rent_estimate if prop and prop.rent_estimate is not undefined else none) %}
-      {% set r_value = (r.get('value') if r is mapping else (r.value if r else none)) %}
-      {% set r_low   = (r.get('low')   if r is mapping else (r.low   if r else none)) %}
-      {% set r_high  = (r.get('high')  if r is mapping else (r.high  if r else none)) %}
-      {% set r_conf  = (r.get('confidence') if r is mapping else (r.confidence if r else none)) %}
-
-      <div class="ai-text">
-        <strong>Rent:</strong> {{ money_mo(r_value) }}<br>
-        <strong>Range:</strong>
-        {% if r_low is not none and r_high is not none %}
-          {{ money_mo(r_low) }} – {{ money_mo(r_high) }}
-        {% else %}
-          —
-        {% endif %}
-        <br>
-        <strong>Confidence:</strong> {{ r_conf or '—' }}
-      </div>
-    </div>
-
-  </div> {# end .intelligence-grid #}
-  {% endif %} {# end if resolved #}
-
-  <div style="margin: .75rem 0 0;">
-    <a class="dw-button" style="text-decoration:none;"
-       href="{{ url_for('investor.deal_rehab_studio', deal_id=deal_id) if deal_id else '#' }}">
-      🏗️ Open Rehab Studio
-    </a>
-
-    {% if not deal_id %}
-      <p class="ai-text" style="margin-top:.5rem;">Save the deal first to open Rehab Studio.</p>
-    {% endif %}
-  </div>
-
-  <!-- LEFT + RIGHT LAYOUT -->
-  <div class="dw-layout">
-
-    <!-- LEFT COLUMN -->
-    <div>
-
-      {% if mode == "flip" %}
-      <div class="dw-card" style="margin-top:1.5rem;">
-        <h3>📊 Flip Inputs</h3>
-        <div class="dw-row">
-          <div>
-            <label class="dw-label">Purchase Price</label>
-            <input type="number" name="purchase_price" class="dw-input"
-                   value="{{ request.form.purchase_price or comps.get('property', {}).get('price', '') }}">
-          </div>
-          <div>
-            <label class="dw-label">ARV</label>
-            <input type="number" name="arv" class="dw-input"
-                   value="{{ request.form.arv or comps.get('arv_estimate', '') }}">
-          </div>
-          <div>
-            <label class="dw-label">Holding Months</label>
-            <input type="number" name="holding_months" class="dw-input"
-                   value="{{ request.form.holding_months or 6 }}">
-          </div>
-          <div>
-            <label class="dw-label">Monthly Holding Cost</label>
-            <input type="number" name="monthly_holding_cost" class="dw-input"
-                   value="{{ request.form.monthly_holding_cost or '' }}" placeholder="Optional">
-          </div>
-        </div>
-
-        <div class="dw-row" style="margin-top:.5rem;">
-          <div>
-            <label class="dw-label">Selling Cost Rate (0.08 = 8%)</label>
-            <input type="number" step="0.01" name="selling_cost_rate" class="dw-input"
-                   value="{{ request.form.selling_cost_rate or 0.08 }}">
-          </div>
-          <div>
-            <label class="dw-label">Down Payment Rate (0.20 = 20%)</label>
-            <input type="number" step="0.01" name="down_payment_rate" class="dw-input"
-                   value="{{ request.form.down_payment_rate or 0.20 }}">
-          </div>
-        </div>
-      </div>
-
-      {% elif mode == "rental" %}
-      <div class="dw-card" style="margin-top:1.5rem;">
-        <h3>🏢 Rental Inputs</h3>
-        <div class="dw-row">
-          <div>
-            <label class="dw-label">Purchase Price</label>
-            <input type="number" name="purchase_price" class="dw-input"
-                   value="{{ request.form.purchase_price or comps.get('property', {}).get('price', '') }}">
-          </div>
-          <div>
-            <label class="dw-label">Monthly Rent</label>
-            <input type="number" name="monthly_rent" class="dw-input"
-                   value="{{ request.form.monthly_rent or comps.get('market_rent_estimate', '') }}">
-          </div>
-          <div>
-            <label class="dw-label">Monthly Taxes</label>
-            <input type="number" name="monthly_taxes" class="dw-input"
-                   value="{{ request.form.monthly_taxes or '' }}" placeholder="Optional">
-          </div>
-          <div>
-            <label class="dw-label">Monthly Insurance</label>
-            <input type="number" name="monthly_insurance" class="dw-input"
-                   value="{{ request.form.monthly_insurance or '' }}" placeholder="Optional">
-          </div>
-        </div>
-
-        <div class="dw-row" style="margin-top:.5rem;">
-          <div>
-            <label class="dw-label">Down Payment Rate (0.25 = 25%)</label>
-            <input type="number" step="0.01" name="down_payment_rate" class="dw-input"
-                   value="{{ request.form.down_payment_rate or 0.25 }}">
-          </div>
-          <div>
-            <label class="dw-label">Interest Rate (0.075 = 7.5%)</label>
-            <input type="number" step="0.001" name="interest_rate" class="dw-input"
-                   value="{{ request.form.interest_rate or 0.075 }}">
-          </div>
-        </div>
-      </div>
-
-      {% elif mode == "airbnb" %}
-      <div class="dw-card" style="margin-top:1.5rem;">
-        <h3>🌙 STR / Airbnb Inputs</h3>
-        <div class="dw-row">
-          <div>
-            <label class="dw-label">Purchase Price</label>
-            <input type="number" name="purchase_price" class="dw-input"
-                   value="{{ request.form.purchase_price or comps.get('property', {}).get('price', '') }}">
-          </div>
-          <div>
-            <label class="dw-label">Nightly Rate</label>
-            <input type="number" name="nightly_rate" class="dw-input"
-                   value="{{ request.form.nightly_rate or comps.get('airbnb_rate_estimate', '') }}">
-          </div>
-          <div>
-            <label class="dw-label">Occupancy Rate (0.55 = 55%)</label>
-            <input type="number" step="0.01" name="occupancy_rate" class="dw-input"
-                   value="{{ request.form.occupancy_rate or (comps.get('airbnb_occupancy_estimate', '') if comps else '') }}">
-          </div>
-          <div>
-            <label class="dw-label">Cleaning Cost per Stay</label>
-            <input type="number" name="cleaning_fee_cost" class="dw-input"
-                   value="{{ request.form.cleaning_fee_cost or '' }}">
-          </div>
-        </div>
-      </div>
-      {% endif %}
-
-      <!-- OPTIMIZATION BUTTONS -->
-      <div style="margin-top:1rem;">
-        <button type="submit" name="action" value="optimize_roi" class="dw-button" style="margin-top:.75rem;">
-          📈 Optimize for Highest ROI
-        </button>
-
-        <button type="submit" name="action" value="optimize_timeline" class="dw-button" style="margin-top:.75rem;">
-          ⏱️ Optimize for Fastest Timeline
-        </button>
-
-        <button type="submit" name="action" value="optimize_arv" class="dw-button" style="margin-top:.75rem;">
-          🏡 Optimize for Highest ARV Impact
-        </button>
-      </div>
-
-      <div style="margin-top:1rem;">
-        <label class="dw-label">Target Rehab Budget</label>
-        <input type="number" name="target_rehab_budget" class="dw-input"
-               placeholder="Enter target budget (optional)"
-               value="{{ request.form.target_rehab_budget or '' }}">
-
-        <button type="submit" name="action" value="optimize_rehab" class="dw-button" style="margin-top:.75rem;">
-          🎯 Optimize Rehab to Fit Budget
-        </button>
-      </div>
-
-             <!-- RESULTS -->
-      {% if request.method == 'POST' and results %}
-        <div class="dw-card" style="margin-top:1.5rem;">
-          <h3>📈 Deal Results</h3>
-          <p class="ai-text">
-            {% if results.profit is defined and results.profit is not none %}
-              <strong>Profit (Flip):</strong> ${{ "{:,.0f}".format(results.profit|float) }}<br>
-            {% endif %}
-
-            {% if results.net_cashflow is defined and results.net_cashflow is not none %}
-              <strong>Monthly Cash Flow (Rental):</strong> ${{ "{:,.0f}".format(results.net_cashflow|float) }}<br>
-            {% endif %}
-
-            {% if results.net_monthly is defined and results.net_monthly is not none %}
-              <strong>Net Monthly (Airbnb):</strong> ${{ "{:,.0f}".format(results.net_monthly|float) }}<br>
-            {% endif %}
-
-            {% if results.roi is defined and results.roi %}
-              <strong>ROI:</strong> {{ "{:,.1f}".format(results.roi * 100) }}%
-            {% endif %}
-          </p>
-        </div>
-      {% endif %}
-
-      <!-- SAVE DEAL (Workspace Actions) -->
-      <div class="dw-card" style="margin-top:1rem;">
-        <div style="display:flex; justify-content:space-between; gap:.75rem; flex-wrap:wrap; align-items:center;">
-          <div class="ai-text" style="margin:0;">
-            <strong>Workspace Actions</strong><br>
-            <span class="muted">Save this deal so Rehab Studio + Reveal can attach to it.</span>
-          </div>
-
-          <div style="display:flex; gap:.5rem; flex-wrap:wrap;">
-            <button type="submit"
-                    class="dw-button"
-                    formaction="{{ url_for('investor.save_deal') }}"
-                    formmethod="POST">
-              💾 Save Deal
-            </button>
-             
-            {% if deal_id %}
-              <a class="dw-button" href="{{ url_for('investor.deal_book', deal_id=deal_id) }}">📘 Deal Book</a>
-            {% else %}
-              <button class="dw-button" type="button" disabled>📘 Deal Book (Save Deal First)</button>
-            {% endif %}
-            
-            {% if deal_id %}
-              <a class="dw-button" style="text-decoration:none;"
-                 href="{{ url_for('investor.deal_rehab_studio', deal_id=deal_id) }}">
-                🏗️ Rehab Studio
-              </a>
-            {% else %}
-              <button type="button" class="dw-button" disabled>🏗️ Rehab Studio (Save Deal First)</button>
-            {% endif %}
-          </div>
-        </div>
-
-        {# Hidden payload fields for save_deal #}
-        <input type="hidden" name="property_id" value="{{ property_id or selected_prop.id }}">
-        <input type="hidden" name="saved_property_id" value="{{ selected_prop.id }}">
-        <input type="hidden" name="mode" value="{{ mode or '' }}">
-        <input type="hidden" name="strategy" value="{{ mode }}">
-        <input type="hidden" name="title" value="{{ (selected_prop.address if selected_prop else '') }}">
-
-        <input type="hidden" name="results_json" value="{{ results | tojson if results else '{}' }}">
-        <input type="hidden" name="comps_json" value="{{ comps | tojson if comps else '{}' }}">
-        <input type="hidden" name="resolved_json" value="{{ resolved | tojson if resolved else '{}' }}">
-
-        {% if deal_id %}
-          <input type="hidden" name="deal_id" value="{{ deal_id }}">
-        {% endif %}
-      </div>
-
-    </div>  {# end LEFT COLUMN #}
-
-    <!-- RIGHT COLUMN -->
-    <div>
-      {% set placeholder = '<span class="placeholder">Not available at this time</span>' %}
-
-      {% if comps %}
-      <div class="dw-card">
-        <h3>📍 Market Snapshot</h3>
-        <p class="ai-text">
-          {% if comps.market_snapshot %}
-            <strong>Median Price:</strong>
-            {% if comps.market_snapshot.median_price %}${{ "{:,.0f}".format(comps.market_snapshot.median_price|float) }}{% else %}{{ placeholder|safe }}{% endif %}
-            <br>
-            <strong>YoY Change:</strong>
-            {% if comps.market_snapshot.yoy_change is not none %}{{ comps.market_snapshot.yoy_change }}%{% else %}{{ placeholder|safe }}{% endif %}
-            <br>
-            <strong>Days on Market:</strong>
-            {% if comps.market_snapshot.days_on_market %}{{ comps.market_snapshot.days_on_market }}{% else %}{{ placeholder|safe }}{% endif %}
-          {% else %}
-            {{ placeholder|safe }}
-          {% endif %}
-        </p>
-      </div>
-      {% endif %}
-
-      {% if comparison %}
-      <div class="dw-card" style="margin-top:1.5rem;">
-        <h3>📘 Strategy Summary</h3>
-        <div class="ai-text">
-          {% set prop = (resolved.property if resolved and resolved.property is not undefined else none) %}
-          {% set v2 = (prop.valuation if prop and prop.valuation is not undefined else none) %}
-          {% set arv_val = (v2.get('value') if v2 is mapping else (v2.value if v2 else none)) %}
-          {% set r2 = (prop.rent_estimate if prop and prop.rent_estimate is not undefined else none) %}
-          {% set rent_val = (r2.get('value') if r2 is mapping else (r2.value if r2 else none)) %}
-
-          <h4 style="color:var(--accent); margin-top:.5rem;">Flip</h4>
-          <p>
-            <strong>Profit:</strong> {% if comparison.flip.profit is not none %}${{ "{:,.0f}".format(comparison.flip.profit|float) }}{% else %}{{ placeholder|safe }}{% endif %}<br>
-            <strong>ROI:</strong> {% if comparison.flip.roi %}{{ "{:,.1f}".format(comparison.flip.roi * 100) }}%{% else %}{{ placeholder|safe }}{% endif %}<br>
-            <strong>ARV:</strong> {% if arv_val is not none %}${{ "{:,.0f}".format(arv_val|float) }}{% else %}{{ placeholder|safe }}{% endif %}
-          </p>
-
-          <h4 style="color:var(--accent); margin-top:1rem;">Rental</h4>
-          <p>
-            <strong>Cash Flow:</strong> {% if comparison.rental.net_cashflow is not none %}${{ "{:,.0f}".format(comparison.rental.net_cashflow|float) }}/mo{% else %}{{ placeholder|safe }}{% endif %}<br>
-            <strong>DSCR:</strong> {% if comparison.rental.dscr %}{{ "{:,.2f}".format(comparison.rental.dscr|float) }}{% else %}{{ placeholder|safe }}{% endif %}<br>
-            <strong>Rent Estimate:</strong> {% if rent_val is not none %}${{ "{:,.0f}".format(rent_val|float) }}/mo{% else %}{{ placeholder|safe }}{% endif %}
-          </p>
-
-          <h4 style="color:var(--accent); margin-top:1rem;">Airbnb</h4>
-          <p>
-            <strong>Net Monthly:</strong> {% if comparison.airbnb.net_monthly is not none %}${{ "{:,.0f}".format(comparison.airbnb.net_monthly|float) }}/mo{% else %}{{ placeholder|safe }}{% endif %}<br>
-            <strong>Occupancy:</strong> {% if comparison.airbnb.occupancy %}{{ "{:,.0f}".format(comparison.airbnb.occupancy * 100) }}%{% else %}{{ placeholder|safe }}{% endif %}<br>
-            <strong>Nightly Rate:</strong> {% if comparison.airbnb.nightly_rate %}${{ "{:,.0f}".format(comparison.airbnb.nightly_rate|float) }}{% else %}{{ placeholder|safe }}{% endif %}
-          </p>
-        </div>
-      </div>
-      {% endif %}
-
-      {% if ai_summary %}
-      <div class="dw-card" style="margin-top:1.5rem;">
-        <h3>🤖 AI Deal Insights</h3>
-        <p class="ai-text">{{ ai_summary }}</p>
-      </div>
-      {% endif %}
-
-    </div> {# end RIGHT COLUMN #}
-
-  </div> {# end .dw-layout #}
-
-</form>
-
-{% endif %} {# closes: {% if not selected_prop %} ... {% else %} ... #}
 {% endblock %}

@@ -11,7 +11,7 @@ from datetime import datetime
 import os
 from datetime import datetime
 # ✅ Always import db before model files
-from LoanMVP.extensions import db
+from LoanMVP.extensions import db, csrf
 
 # ✅ Safe model imports (no circular dependencies)
 from LoanMVP.models.loan_models import LoanApplication, BorrowerProfile, LoanStatusEvent
@@ -40,40 +40,135 @@ assistant = AIAssistant()
 @processor_bp.route("/dashboard")
 @role_required("processor")
 def dashboard():
-    """Main Processor Dashboard — AI summary, metrics, and insights."""
+    """Main Processor Dashboard — AI summary, metrics, and capital application queue."""
     try:
-        loans = (
+        assigned_loans = (
             LoanApplication.query
             .filter_by(processor_id=current_user.id)
             .order_by(LoanApplication.created_at.desc())
             .all()
         )
     except Exception as e:
-        print(" Error fetching loans:", e)
-        loans = []
+        print("Error fetching assigned loans:", e)
+        assigned_loans = []
 
-    in_review = len([l for l in loans if l.status and l.status.lower() in ["in_review", "under_review"]])
-    cleared = len([l for l in loans if l.status and l.status.lower() == "cleared"])
-    pending_docs = LoanDocument.query.filter_by(status="pending").count()
+    def _norm_status(val):
+        return (val or "").strip().lower()
+
+    def _norm_type(val):
+        return (val or "").strip().lower()
+
+    capital_loan_types = {
+        "investor capital",
+        "fix & flip",
+        "new construction",
+        "rental / dscr",
+        "bridge loan",
+        "land acquisition",
+        "development capital",
+    }
+
+    capital_statuses = {
+        "capital submitted",
+        "submitted",
+        "processing",
+        "under review",
+        "conditions pending",
+    }
 
     try:
+        capital_queue = (
+            LoanApplication.query
+            .filter(
+                LoanApplication.status.in_([
+                    "Capital Submitted",
+                    "Submitted",
+                    "Processing",
+                    "Under Review",
+                    "Conditions Pending"
+                ])
+            )
+            .order_by(LoanApplication.created_at.desc())
+            .all()
+        )
+    except Exception as e:
+        print("Error fetching capital queue:", e)
+        capital_queue = []
+
+    capital_loans = [
+        l for l in capital_queue
+        if _norm_type(getattr(l, "loan_type", None)) in capital_loan_types
+        or _norm_status(getattr(l, "status", None)) in capital_statuses
+    ]
+
+    # combine assigned + capital queue without duplicates
+    seen_ids = set()
+    loans = []
+    for loan in capital_loans + assigned_loans:
+        if loan and loan.id not in seen_ids:
+            loans.append(loan)
+            seen_ids.add(loan.id)
+
+    in_review = len([
+        l for l in loans
+        if _norm_status(l.status) in ["in_review", "under_review", "in review", "under review", "processing"]
+    ])
+
+    cleared = len([
+        l for l in loans
+        if _norm_status(l.status) == "cleared"
+    ])
+
+    submitted = len([
+        l for l in loans
+        if _norm_status(l.status) in ["submitted", "capital submitted"]
+    ])
+
+    pending_conditions = len([
+        l for l in loans
+        if _norm_status(l.status) == "conditions pending"
+    ])
+
+    try:
+        pending_docs = LoanDocument.query.filter_by(status="pending").count()
+    except Exception as e:
+        print("Error fetching pending documents:", e)
+        pending_docs = 0
+
+    stats = {
+        "total_loans": len(loans),
+        "capital_requests": len(capital_loans),
+        "submitted": submitted,
+        "in_review": in_review,
+        "cleared": cleared,
+        "pending_conditions": pending_conditions,
+        "pending_docs": pending_docs,
+    }
+
+    try:
+        assistant = AIAssistant()
         prompt = (
-            f"Summarize processor workload for {current_user.username}. "
-            f"There are {len(loans)} active loans, {in_review} in review, "
-            f"{cleared} cleared, and {pending_docs} pending documents. "
+            f"Summarize processor workload for {getattr(current_user, 'username', 'processor')}. "
+            f"There are {len(loans)} loans in the pipeline, including {len(capital_loans)} capital applications, "
+            f"{submitted} submitted, {in_review} in review, {cleared} cleared, "
+            f"{pending_conditions} with conditions pending, and {pending_docs} pending documents. "
             "Provide a motivational summary and highlight bottlenecks or efficiency tips."
         )
         ai_summary = assistant.generate_reply(prompt, "processor")
     except Exception as e:
-        print(" AI summary failed:", e)
+        print("AI summary failed:", e)
         ai_summary = "⚠️ AI summary unavailable."
 
     return render_template(
         "processor/dashboard.html",
         loans=loans,
+        capital_loans=capital_loans,
         in_review=in_review,
         cleared=cleared,
+        submitted=submitted,
+        pending_conditions=pending_conditions,
         pending_docs=pending_docs,
+        stats=stats,
         ai_summary=ai_summary,
         title="Processor Dashboard"
     )
@@ -127,6 +222,7 @@ def api_loan_documents(loan_id):
 # 🧾 Loan Review
 # ---------------------------------------------------------
 @processor_bp.route("/loan_review/<int:loan_id>", methods=["GET", "POST"])
+@csrf.exempt
 @role_required("processor")
 def loan_review(loan_id):
     loan = LoanApplication.query.get_or_404(loan_id)
@@ -174,6 +270,7 @@ def loan_review(loan_id):
     )
     
 @processor_bp.route("/add_condition/<int:loan_id>", methods=["POST"])
+@csrf.exempt
 @role_required("processor")
 def add_condition(loan_id):
     loan = LoanApplication.query.get_or_404(loan_id)
@@ -208,6 +305,7 @@ def add_condition(loan_id):
 # ✏️ Edit Loan
 # ---------------------------------------------------------
 @processor_bp.route("/loan/<int:loan_id>/edit", methods=["GET", "POST"])
+@csrf.exempt
 @role_required("processor")
 def edit_loan(loan_id):
     loan = LoanApplication.query.get_or_404(loan_id)
@@ -227,6 +325,7 @@ def edit_loan(loan_id):
 # 📄 Document Management
 # ---------------------------------------------------------
 @processor_bp.route("/documents", methods=["GET", "POST"])
+@csrf.exempt
 @role_required("processor")
 def documents():
     docs = LoanDocument.query.order_by(LoanDocument.created_at.desc()).all()
@@ -278,6 +377,7 @@ def request_document(loan_id):
     return render_template("processor/request_doc.html", loan=loan)
 
 @processor_bp.route("/add-note/<int:loan_id>", methods=["GET", "POST"])
+@csrf.exempt
 def add_processor_note(loan_id):
     loan = LoanApplication.query.get_or_404(loan_id)
 
@@ -299,6 +399,7 @@ def add_processor_note(loan_id):
     return render_template("processor/add_note.html", loan=loan)
 
 @processor_bp.route("/update-status/<int:loan_id>", methods=["GET", "POST"])
+@csrf.exempt
 def update_loan_status(loan_id):
     loan = LoanApplication.query.get_or_404(loan_id)
 
@@ -357,6 +458,7 @@ def view_file(filename):
 # 📤 Upload Document
 # ---------------------------------------------------------
 @processor_bp.route("/upload_doc", methods=["GET", "POST"])
+@csrf.exempt
 @role_required("processor")
 def upload_doc():
     upload_folder = os.path.join(current_app.root_path, "uploads")
@@ -395,6 +497,7 @@ def upload_doc():
 # 🔍 Verify Documents
 # ---------------------------------------------------------
 @processor_bp.route("/verify_docs", methods=["GET", "POST"])
+@csrf.exempt
 @role_required("processor")
 def verify_docs():
     docs = LoanDocument.query.filter(
@@ -464,6 +567,7 @@ def reports():
     )
 
 @processor_bp.route("/messages/new", methods=["GET", "POST"])
+@csrf.exempt
 @role_required("processor")
 def new_message():
     # Get all users except the current one
@@ -611,6 +715,7 @@ def property_search():
 
 
 @processor_bp.route("/ai_conversations", methods=["GET", "POST"])
+@csrf.exempt
 @role_required("processor")
 def ai_conversations():
     """
@@ -691,6 +796,7 @@ def live_chat():
     )
 
 @processor_bp.route("/profile", methods=["GET", "POST"])
+@csrf.exempt
 @role_required("processor")
 def profile():
     """

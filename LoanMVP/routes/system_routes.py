@@ -156,7 +156,7 @@ def audits():
 # 👥 User Management
 # =========================================================
 @system_bp.route("/users")
-@role_required("system")
+@role_required("system", "admin")
 def users():
     ctx = get_system_context()
     ctx["users"] = User.query.order_by(User.created_at.desc()).all()

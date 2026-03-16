@@ -1,0 +1,162 @@
+{% extends "layouts/Ravlo_lending_base.html" %}
+
+{% block title %}Property Intelligence{% endblock %}
+{% block page_title %}Property Intelligence{% endblock %}
+{% block page_subline %}Enter an address to review property, value, and rent insights{% endblock %}
+
+{% block content %}
+<div class="re-grid">
+
+  <section class="re-card">
+    <div class="re-card-head">
+      <h3>Analyze a Property</h3>
+      <p class="muted">Enter the property address below to pull intelligence from RentCast.</p>
+    </div>
+
+    <form method="POST" class="re-form">
+      <div class="re-form-group">
+        <label for="address">Property Address</label>
+        <input
+          id="address"
+          name="address"
+          type="text"
+          class="re-input"
+          placeholder="123 Main St, Tampa, FL"
+          value="{{ address or '' }}"
+          required
+        >
+      </div>
+
+      <button type="submit" class="re-btn">
+        Analyze Property
+      </button>
+    </form>
+  </section>
+
+  {% if property_data %}
+  <section class="re-card">
+    <div class="re-card-head">
+      <h3>Property Record</h3>
+      <p class="muted">{{ property_data.formattedAddress or address }}</p>
+    </div>
+
+    <div class="re-stats-grid">
+      <div class="re-stat">
+        <div class="re-stat-label">Property Type</div>
+        <div class="re-stat-value">{{ property_data.propertyType or "—" }}</div>
+      </div>
+      <div class="re-stat">
+        <div class="re-stat-label">Bedrooms</div>
+        <div class="re-stat-value">{{ property_data.bedrooms or "—" }}</div>
+      </div>
+      <div class="re-stat">
+        <div class="re-stat-label">Bathrooms</div>
+        <div class="re-stat-value">{{ property_data.bathrooms or "—" }}</div>
+      </div>
+      <div class="re-stat">
+        <div class="re-stat-label">Square Feet</div>
+        <div class="re-stat-value">
+          {% if property_data.squareFootage %}
+            {{ "{:,.0f}".format(property_data.squareFootage) }}
+          {% else %}
+            —
+          {% endif %}
+        </div>
+      </div>
+      <div class="re-stat">
+        <div class="re-stat-label">Lot Size</div>
+        <div class="re-stat-value">
+          {% if property_data.lotSize %}
+            {{ "{:,.0f}".format(property_data.lotSize) }}
+          {% else %}
+            —
+          {% endif %}
+        </div>
+      </div>
+      <div class="re-stat">
+        <div class="re-stat-label">Year Built</div>
+        <div class="re-stat-value">{{ property_data.yearBuilt or "—" }}</div>
+      </div>
+    </div>
+  </section>
+  {% endif %}
+
+  {% if value_data or rent_data %}
+  <section class="re-card">
+    <div class="re-card-head">
+      <h3>Valuation Insights</h3>
+      <p class="muted">Estimated value and rent potential.</p>
+    </div>
+
+    <div class="re-stats-grid">
+      <div class="re-stat">
+        <div class="re-stat-label">Estimated Value</div>
+        <div class="re-stat-value">
+          {% if value_data and value_data.price %}
+            ${{ "{:,.0f}".format(value_data.price) }}
+          {% else %}
+            —
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="re-stat">
+        <div class="re-stat-label">Value Range Low</div>
+        <div class="re-stat-value">
+          {% if value_data and value_data.priceRangeLow %}
+            ${{ "{:,.0f}".format(value_data.priceRangeLow) }}
+          {% else %}
+            —
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="re-stat">
+        <div class="re-stat-label">Value Range High</div>
+        <div class="re-stat-value">
+          {% if value_data and value_data.priceRangeHigh %}
+            ${{ "{:,.0f}".format(value_data.priceRangeHigh) }}
+          {% else %}
+            —
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="re-stat">
+        <div class="re-stat-label">Rent Estimate</div>
+        <div class="re-stat-value">
+          {% if rent_data and rent_data.rent %}
+            ${{ "{:,.0f}".format(rent_data.rent) }}/mo
+          {% else %}
+            —
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="re-stat">
+        <div class="re-stat-label">Rent Range Low</div>
+        <div class="re-stat-value">
+          {% if rent_data and rent_data.rentRangeLow %}
+            ${{ "{:,.0f}".format(rent_data.rentRangeLow) }}/mo
+          {% else %}
+            —
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="re-stat">
+        <div class="re-stat-label">Rent Range High</div>
+        <div class="re-stat-value">
+          {% if rent_data and rent_data.rentRangeHigh %}
+            ${{ "{:,.0f}".format(rent_data.rentRangeHigh) }}/mo
+          {% else %}
+            —
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </section>
+  {% endif %}
+
+</div>
+{% endblock %}

@@ -377,7 +377,7 @@ function runPreapproval() {
 function askLOAI() {
     let message = document.getElementById("aiInput").value;
 
-    fetch("{{ url_for('loan_officer.ai') }}", {
+    fetch("{{ url_for('loan_officer.ai_assistant') }}", {
         method: "POST",
         headers: {"Content-Type":"application/json"},
         body: JSON.stringify({

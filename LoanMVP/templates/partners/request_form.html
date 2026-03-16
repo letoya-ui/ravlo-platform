@@ -1,0 +1,48 @@
+{% extends "layouts/ravlo_base.html" %}
+
+{% block title %}Ravlo • Request Partner{% endblock %}
+{% block page_title %}Request Partner{% endblock %}
+{% block page_subline %}Send a request and project details to this partner.{% endblock %}
+
+{% block content %}
+<div class="ravlo-grid">
+
+  <section class="ravlo-hero-card">
+    <div class="eyebrow">PARTNER REQUEST</div>
+    <h2>Request {{ partner.company or "Partner" }}</h2>
+    <p class="muted">
+      Share the scope of work and any property context so the partner can respond quickly.
+    </p>
+  </section>
+
+  <section class="ravlo-card pad">
+    <form method="POST" class="stack">
+
+      {% if properties %}
+      <div>
+        <label>Property</label>
+        <select name="property_id">
+          <option value="">Select property...</option>
+          {% for prop in properties %}
+            <option value="{{ prop.id }}">
+              {{ prop.address or ("Property #" ~ prop.id) }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+      {% endif %}
+
+      <div>
+        <label>Message</label>
+        <textarea name="message" rows="6" placeholder="Describe the work you need, timeline, and any important project details." required></textarea>
+      </div>
+
+      <div class="section-toolbar-actions">
+        <button type="submit" class="ravlo-btn primary">Send Request</button>
+        <a href="{{ url_for('partners_public.public_profile', partner_id=partner.id) }}" class="ravlo-btn ghost">Cancel</a>
+      </div>
+    </form>
+  </section>
+
+</div>
+{% endblock %}

@@ -1,0 +1,44 @@
+{% extends "layouts/ravlo_auth_base.html" %}
+
+{% block title %}Complete Registration{% endblock %}
+
+{% block content %}
+<div class="auth-shell">
+  <div class="auth-card" style="max-width: 560px; margin: 40px auto;">
+    <h2>Complete Registration</h2>
+    <p>
+      You are joining <strong>{{ invite.company.name }}</strong> as
+      <strong>{{ invite.role.replace('_', ' ').title() }}</strong>.
+    </p>
+
+    <form method="POST">
+      <div class="form-group">
+        <label>First Name</label>
+        <input type="text" name="first_name" value="{{ invite.first_name or '' }}" required>
+      </div>
+
+      <div class="form-group">
+        <label>Last Name</label>
+        <input type="text" name="last_name" value="{{ invite.last_name or '' }}" required>
+      </div>
+
+      <div class="form-group">
+        <label>Email</label>
+        <input type="email" value="{{ invite.email }}" disabled>
+      </div>
+
+      <div class="form-group">
+        <label>Create Password</label>
+        <input type="password" name="password" required>
+      </div>
+
+      <div class="form-group">
+        <label>Confirm Password</label>
+        <input type="password" name="confirm_password" required>
+      </div>
+
+      <button type="submit" class="btn btn-primary">Complete Registration</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

@@ -1,66 +1,198 @@
 {% extends "layouts/Ravlo_lending_base.html" %}
-{% block title %}AI Intelligence Control Center{% endblock %}
+
+{% block title %}Ravlo • AI Dashboard{% endblock %}
+
+{% block page_title %}AI Command Center{% endblock %}
+
+{% block page_subline %}
+Monitor AI activity across the Ravlo platform.
+{% endblock %}
+
 {% block content %}
-<main class="dashboard-main">
-  <div class="wrap">
-    <header>
-      <h2>🤖 AI Intelligence Control Center</h2>
-      <p class="muted">Monitor and refresh system-wide AI models and summaries.</p>
-    </header>
 
-    <!-- === AI HEALTH OVERVIEW === -->
-    <div class="grid grid-2">
-      {% for name, status in ai_health.items() %}
-      <div class="card">
-        <h4>{{ name }}</h4>
-        <p class="muted">{{ status }}</p>
-      </div>
-      {% endfor %}
+<div class="ravlo-stack">
+
+  <!-- AI STAT CARDS -->
+  <div class="ravlo-grid ravlo-grid-4">
+
+    <div class="ravlo-card">
+      <div class="ravlo-muted">Total AI Interactions</div>
+      <h2>{{ ai_stats.total_interactions }}</h2>
     </div>
 
-    <!-- === REFRESH TIMESTAMPS === -->
-    <div class="card mt-2">
-      <h4>🕒 Last Refresh Summary</h4>
-      <table>
-        <tr><th>Module</th><th>Last Updated</th><th>Action</th></tr>
-        {% for key, ts in last_refresh.items() %}
-          <tr>
-            <td>{{ key.capitalize() }}</td>
-            <td>{{ ts.strftime("%b %d, %Y %I:%M %p") }}</td>
-            <td>
-              <form method="POST" action="{{ url_for('admin.ai_refresh', target=key) }}">
-                <button class="btn btn-sm btn-glow">🔄 Refresh</button>
-              </form>
-            </td>
-          </tr>
-        {% endfor %}
-      </table>
+    <div class="ravlo-card">
+      <div class="ravlo-muted">Users Using AI</div>
+      <h2>{{ ai_stats.total_users_with_ai }}</h2>
     </div>
 
-    <!-- === AI LOG / SUMMARY PANEL === -->
-    <div class="card mt-2">
-      <h4>AI System Log</h4>
-      <p>🧩 Current AI modules are functioning normally.</p>
-      <ul class="muted">
-        <li>Analytics Engine is up-to-date and learning from borrower trends.</li>
-        <li>Partner Insights are synced with financial deal metrics.</li>
-        <li>Loan Predictor actively recalculates risk and LTV scores.</li>
-        <li>Borrower Risk Model is retrained weekly.</li>
-      </ul>
+    <div class="ravlo-card">
+      <div class="ravlo-muted">Questions Asked</div>
+      <h2>{{ ai_stats.total_questions }}</h2>
     </div>
+
+    <div class="ravlo-card">
+      <div class="ravlo-muted">Responses Generated</div>
+      <h2>{{ ai_stats.total_responses }}</h2>
+    </div>
+
   </div>
-</main>
 
-<style>
-.grid { display:grid; gap:1.5rem; }
-.grid-2 { grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
-table {
-  width:100%; border-collapse:collapse; margin-top:1rem;
-}
-th, td {
-  border-bottom:1px solid var(--line); padding:0.7rem; text-align:left;
-}
-.btn-sm { padding:0.4rem 0.8rem; font-size:0.85rem; }
-.card ul { margin:0.8rem 0 0 1.2rem; }
-</style>
+
+  <!-- AI CHARTS -->
+  <div class="ravlo-grid ravlo-grid-2">
+
+    <div class="ravlo-card">
+      <h3>AI Usage by Role</h3>
+
+      <canvas id="roleChart"></canvas>
+
+    </div>
+
+    <div class="ravlo-card">
+      <h3>AI Module Usage</h3>
+
+      <canvas id="contextChart"></canvas>
+
+    </div>
+
+  </div>
+
+
+  <!-- MOST ACTIVE USERS -->
+  <div class="ravlo-card">
+
+    <h3>Most Active AI Users</h3>
+
+    <table class="ravlo-table">
+
+      <thead>
+        <tr>
+          <th>User</th>
+          <th>Email</th>
+          <th>Role</th>
+          <th>Interactions</th>
+        </tr>
+      </thead>
+
+      <tbody>
+
+      {% for user in most_active_users %}
+        <tr>
+          <td>{{ user.name }}</td>
+          <td>{{ user.email }}</td>
+          <td>{{ user.role }}</td>
+          <td>{{ user.interaction_count }}</td>
+        </tr>
+      {% endfor %}
+
+      </tbody>
+
+    </table>
+
+  </div>
+
+
+  <!-- RECENT AI ACTIVITY -->
+  <div class="ravlo-card">
+
+    <h3>Recent AI Interactions</h3>
+
+    <table class="ravlo-table">
+
+      <thead>
+        <tr>
+          <th>User</th>
+          <th>Question</th>
+          <th>Time</th>
+        </tr>
+      </thead>
+
+      <tbody>
+
+      {% for interaction in recent_interactions %}
+
+      <tr>
+
+        <td>{{ interaction.user_id }}</td>
+
+        <td>
+          {{ interaction.question[:120] if interaction.question else "—" }}
+        </td>
+
+        <td>
+          {{ interaction.timestamp.strftime("%Y-%m-%d %H:%M") if interaction.timestamp else "" }}
+        </td>
+
+      </tr>
+
+      {% endfor %}
+
+      </tbody>
+
+    </table>
+
+  </div>
+
+
+</div>
+
+
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+
+const roleLabels = {{ role_labels|default([], true)|tojson }};
+const roleValues = {{ role_values|default([], true)|tojson }};
+
+const contextLabels = {{ context_labels|default([], true)|tojson }};
+const contextValues = {{ context_values|default([], true)|tojson }};
+
+
+const roleChart = new Chart(document.getElementById('roleChart'), {
+
+  type: 'bar',
+
+  data: {
+
+    labels: roleLabels,
+
+    datasets: [{
+      label: 'AI Interactions',
+      data: roleValues,
+      backgroundColor: '#5a8dee'
+    }]
+
+  }
+
+});
+
+
+const contextChart = new Chart(document.getElementById('contextChart'), {
+
+  type: 'doughnut',
+
+  data: {
+
+    labels: contextLabels,
+
+    datasets: [{
+      data: contextValues,
+      backgroundColor: [
+        '#5a8dee',
+        '#34c38f',
+        '#f6c343',
+        '#e5533d',
+        '#7f8c8d'
+      ]
+    }]
+
+  }
+
+});
+
+</script>
+
+
 {% endblock %}

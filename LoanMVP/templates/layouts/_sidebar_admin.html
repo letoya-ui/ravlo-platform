@@ -1,40 +1,107 @@
-<div class="re-brand">
-  <div class="re-mark"><span>RV</span></div>
-  <div>
-    <div class="re-brand-name">Ravlo</div>
-    <div class="re-brand-sub">Admin OS</div>
+{% set ep = request.endpoint or "" %}
+
+<div class="re-sidebar-inner">
+
+  <div class="re-brand">
+    <a href="{{ url_for('admin.dashboard') }}" class="re-brand-link">
+      <div class="re-brand-mark">R</div>
+      <div>
+        <div class="re-brand-title">Ravlo</div>
+        <div class="re-brand-sub">Admin OS</div>
+      </div>
+    </a>
   </div>
-</div>
 
-<nav class="re-nav">
-  <div class="re-nav-group">
-    <div class="re-nav-label">Admin</div>
+  <nav class="re-nav">
 
-    <a href="{{ url_for('admin.dashboard') }}" class="re-nav-link {% if active_tab == 'dashboard' %}active{% endif %}">
+    <div class="re-nav-section-label">Overview</div>
+
+    <a href="{{ url_for('admin.dashboard') }}"
+       class="re-nav-link {% if ep == 'admin.dashboard' %}active{% endif %}">
       <i class="icon lucide lucide-layout-dashboard"></i>
       <span>Dashboard</span>
     </a>
 
-    <a href="{{ url_for('admin.reports') }}" class="re-nav-link {% if active_tab == 'reports' %}active{% endif %}">
+    <a href="{{ url_for('admin.analytics') }}"
+       class="re-nav-link {% if ep == 'admin.analytics' %}active{% endif %}">
       <i class="icon lucide lucide-bar-chart-3"></i>
-      <span>Reports</span>
+      <span>Analytics</span>
     </a>
 
-    <a href="{{ url_for('admin.messages') }}" class="re-nav-link {% if active_tab == 'messages' %}active{% endif %}">
+    <a href="{{ url_for('admin.ai_dashboard') }}"
+       class="re-nav-link {% if ep == 'admin.ai_dashboard' %}active{% endif %}">
+      <i class="icon lucide lucide-sparkles"></i>
+      <span>AI Control</span>
+    </a>
+
+    <div class="re-nav-section-label">Onboarding</div>
+
+    <a href="{{ url_for('admin.requests_dashboard') }}"
+       class="re-nav-link {% if ep in [
+          'admin.requests_dashboard',
+          'admin.request_detail',
+          'admin.company_team',
+          'admin.invite_team_member'
+       ] %}active{% endif %}">
+      <i class="icon lucide lucide-inbox"></i>
+      <span>Access Requests</span>
+    </a>
+
+    <a href="{{ url_for('admin.companies') }}"
+       class="re-nav-link {% if ep == 'admin.companies' %}active{% endif %}">
+      <i class="icon lucide lucide-building-2"></i>
+      <span>Companies</span>
+    </a>
+
+    <div class="re-nav-section-label">Operations</div>
+
+    <a href="{{ url_for('admin.verify_data') }}"
+       class="re-nav-link {% if ep in ['admin.verify_data', 'admin.verify_doc'] %}active{% endif %}">
+      <i class="icon lucide lucide-badge-check"></i>
+      <span>Verify Documents</span>
+    </a>
+
+    <a href="{{ url_for('admin.messages') }}"
+       class="re-nav-link {% if ep == 'admin.messages' %}active{% endif %}">
       <i class="icon lucide lucide-messages-square"></i>
       <span>Messages</span>
     </a>
-  </div>
-</nav>
 
-<div class="re-sidebar-foot">
-  <div class="re-user-chip">
-    <div class="re-user-avatar">
-      {{ (current_user.first_name[0] if current_user.first_name else "A")|upper }}
-    </div>
-    <div class="re-user-meta">
-      <div class="re-user-name">{{ current_user.first_name or "" }} {{ current_user.last_name or "" }}</div>
-      <div class="re-user-role">Admin</div>
+    <a href="{{ url_for('admin.reports') }}"
+       class="re-nav-link {% if ep == 'admin.reports' %}active{% endif %}">
+      <i class="icon lucide lucide-file-spreadsheet"></i>
+      <span>Reports</span>
+    </a>
+
+    <div class="re-nav-section-label">Linked Systems</div>
+
+    <a href="{{ url_for('crm.dashboard') }}" class="re-nav-link">
+      <i class="icon lucide lucide-users"></i>
+      <span>CRM</span>
+    </a>
+
+    <a href="{{ url_for('system.users') }}" class="re-nav-link">
+      <i class="icon lucide lucide-user-cog"></i>
+      <span>Users</span>
+    </a>
+
+    <a href="{{ url_for('property.manage') }}" class="re-nav-link">
+      <i class="icon lucide lucide-building"></i>
+      <span>Properties</span>
+    </a>
+
+  </nav>
+
+  <div class="re-sidebar-footer">
+    <div class="re-user-chip">
+      <div class="re-user-avatar">
+        {{ (current_user.first_name[0] if current_user.first_name else "A")|upper }}
+      </div>
+      <div>
+        <div class="re-user-name">{{ current_user.first_name or current_user.username or "Admin" }}</div>
+        <div class="re-user-role">Administrator</div>
+      </div>
     </div>
   </div>
+
 </div>

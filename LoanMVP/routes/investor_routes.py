@@ -12,6 +12,8 @@ from PIL import Image
 from werkzeug.utils import secure_filename
 from werkzeug.datastructures import ImmutableMultiDict
 from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy import or_
+from urllib.parse import urlencode
 
 from flask import (
     Blueprint,
@@ -52,7 +54,7 @@ from LoanMVP.models.document_models import (
     ESignedDocument,
     ResourceDocument
 )
-from LoanMVP.models.crm_models import Message, Partner
+from LoanMVP.models.crm_models import Message, Partner, FollowUpItem
 from LoanMVP.models.payment_models import PaymentRecord
 from LoanMVP.models.ai_models import AIAssistantInteraction
 from LoanMVP.models.property import SavedProperty
@@ -70,7 +72,7 @@ from LoanMVP.models.borrowers import (
 from LoanMVP.models.loan_officer_model import LoanOfficerProfile
 from LoanMVP.models.renovation_models import RenovationMockup, RehabJob, BuildProject
 from LoanMVP.models.partner_models import PartnerConnectionRequest
-from LoanMVP.models.investor_models import InvestorProfile, Investment, InvestmentDocument, DealMessage, DealConversation, FundingRequest, Project  # adjust import paths as needed
+from LoanMVP.models.investor_models import InvestorProfile, Investment, InvestmentDocument, DealMessage, DealConversation, FundingRequest, Project # adjust import paths as needed
 # -------------------------
 # AI / Assistants
 # -------------------------
@@ -101,9 +103,9 @@ from LoanMVP.services.notification_service import notify_team_on_conversion
 from LoanMVP.services.blueprint_parser import extract_blueprint_structure, infer_room_type
 from LoanMVP.services.prompt_builder import build_blueprint_prompt
 from LoanMVP.services.concept_build_service import run_concept_build
-from LoanMVP.services.renovation_engine_client import generate_concept
+from LoanMVP.services.renovation_engine_client import generate_concept, call_renovation_engine_upload, RenovationEngineError
 
-from LoanMVP.utils.r2_storage import r2_put_bytes
+from LoanMVP.utils.r2_storage import spaces_put_bytes
 
 # ---------------------------------------------------------
 # Blueprint (INVESTOR ONLY)
@@ -111,7 +113,6 @@ from LoanMVP.utils.r2_storage import r2_put_bytes
 investor_bp = Blueprint("investor", __name__, url_prefix="/investor")
 
 client = OpenAI()
-GPU_BASE_URL = "http://your-4090-host:8000"
 
 # =========================================================
 # 🔢 SAFE NUMERIC HELPERS
@@ -220,133 +221,51 @@ def split_ids(csv_string: str):
 # 🌐 IMAGE UTILITIES
 # =========================================================
 
-def download_image_bytes(url: str, timeout=10) -> bytes:
-    """Secure image download with header check."""
-    if not url.lower().startswith(("http://", "https://")):
-        raise ValueError("Invalid image URL.")
+def call_renovation_engine_upload(
+    file_storage,
+    prompt: str,
+    api_url: str,
+    style: str = "modern luxury",
+    strength: float = 0.75,
+    guidance_scale: float = 7.5,
+    num_inference_steps: int = 30,
+):
+    endpoint = f"{api_url.rstrip('/')}/v1/renovate-upload"
 
-    response = requests.get(url, timeout=timeout, stream=True)
-    response.raise_for_status()
-
-    content_type = response.headers.get("Content-Type", "")
-    if "image" not in content_type:
-        raise ValueError("URL does not point to an image.")
-
-    return response.content
-
-
-def to_png_bytes(img_bytes: bytes, max_size=1024) -> bytes:
-    im = Image.open(BytesIO(img_bytes)).convert("RGB")
-    im.thumbnail((max_size, max_size))
-    out = BytesIO()
-    im.save(out, format="PNG", optimize=True)
-    return out.getvalue()
-
-
-def to_webp_bytes(img_bytes: bytes, max_size=1400, quality=86) -> bytes:
-    im = Image.open(BytesIO(img_bytes)).convert("RGB")
-    im.thumbnail((max_size, max_size))
-    out = BytesIO()
-    im.save(out, format="WEBP", quality=int(quality), method=6)
-    return out.getvalue()
-
-
-def generate_renovation_images(before_url: str, prompt: str, n: int = 2) -> list[str]:
-    if not before_url or not prompt:
-        return []
-
-    # 1) Download BEFORE
-    before_bytes = download_image_bytes(before_url)
-    before_png = to_png_bytes(before_bytes, max_size=1024)
-    before_b64 = base64.b64encode(before_png).decode("utf-8")
-
-    # 2) Call /renovate on your 4090 server
-    try:
-        resp = requests.post(
-            f"{GPU_BASE_URL}/renovate",
-            json={"image_b64": before_b64, "prompt": prompt, "n": n},
-            timeout=120,
+    files = {
+        "image": (
+            file_storage.filename,
+            file_storage.stream,
+            file_storage.mimetype or "application/octet-stream"
         )
-        resp.raise_for_status()
-    except Exception as e:
-        print("GPU renovate failed:", e)
-        return []
+    }
 
-    data = resp.json()
-    images_b64 = data.get("images", []) or []
+    data = {
+        "prompt": prompt,
+        "style": style,
+        "strength": str(strength),
+        "guidance_scale": str(guidance_scale),
+        "num_inference_steps": str(num_inference_steps),
+    }
 
-    after_urls = []
-    for b64 in images_b64:
-        try:
-            img_bytes = base64.b64decode(b64)
-            img_webp = to_webp_bytes(img_bytes, max_size=1600, quality=86)
-            up = r2_put_bytes(
-                img_webp,
-                subdir=f"visualizer/{uuid.uuid4().hex}/after",
-                content_type="image/webp",
-                filename=f"{uuid.uuid4().hex}_after.webp",
-            )
-            after_urls.append(up["url"])
-        except Exception as e:
-            print("Upload after failed:", e)
-            continue
-
-    return after_urls
-
-def process_pending_jobs():
-    jobs = RehabJob.query.filter_by(status="pending").all()
-
-    for job in jobs:
-        job.status = "processing"
-        db.session.commit()
-
-        try:
-            engine_url = os.getenv("RENOVATION_ENGINE_URL").replace(
-                "/v1/renovate",
-                "/v1/rehab_scope"
-            )
-
-            res = requests.post(
-                engine_url,
-                json={"image_url": job.plan_url},
-                timeout=180
-            )
-            data = res.json()
-
-            job.result_plan = data.get("plan")
-            job.result_cost_low = data.get("cost_low")
-            job.result_cost_high = data.get("cost_high")
-            job.result_arv = data.get("arv")
-            job.result_images = data.get("images")
-            job.status = "complete"
-
-        except Exception:
-            job.status = "failed"
-
-        db.session.commit()
+    response = requests.post(endpoint, files=files, data=data, timeout=300)
+    response.raise_for_status()
+    return response.json()
 
 # =========================================================
-# 👤 PROFILE FILTER (INVESTOR SAFE)
+# CONFIG
 # =========================================================
-
-def _profile_id_filter(model, profile_id):
-    """
-    Backwards-compatible filter:
-    - prefers investor_profile_id
-    - falls back to borrower_profile_id
-    """
-    if hasattr(model, "investor_profile_id"):
-        return {"investor_profile_id": profile_id}
-    if hasattr(model, "borrower_profile_id"):
-        return {"borrower_profile_id": profile_id}
-    return {}
-
-
-RENOVATION_ENGINE_URL = os.getenv("RENOVATION_ENGINE_URL", "http://localhost:8000/v1/renovate")
+GPU_BASE_URL = os.getenv("GPU_BASE_URL", "").rstrip("/")
+RENOVATION_ENGINE_URL = os.getenv("RENOVATION_ENGINE_URL", "").rstrip("/")
 RENOVATION_API_KEY = os.getenv("RENOVATION_API_KEY", "")
-GPU_TIMEOUT = 900
+
+SCOPE_ENGINE_URL = os.getenv("SCOPE_ENGINE_URL", "").rstrip("/")
+SCOPE_ENGINE_API_KEY = os.getenv("SCOPE_ENGINE_API_KEY", "")
+
+GPU_TIMEOUT = int(os.getenv("GPU_TIMEOUT", "900"))
 
 ENGINE_PRESETS = {"luxury_modern", "modern_farmhouse", "clean_minimal"}
+
 STYLE_PRESET_MAP = {
     "luxury": "luxury_modern",
     "modern": "clean_minimal",
@@ -357,6 +276,7 @@ STYLE_PRESET_MAP = {
     "modern_farmhouse": "modern_farmhouse",
     "clean_minimal": "clean_minimal",
 }
+
 STYLE_PROMPT_MAP = {
     "luxury": "Luxury HGTV renovation: bright, high-end finishes, premium lighting, upscale materials, elegant staging.",
     "modern": "Modern renovation: clean lines, minimal clutter, matte black fixtures, neutral palette, refined finishes.",
@@ -365,12 +285,195 @@ STYLE_PROMPT_MAP = {
     "budget": "Budget-friendly renovation: fresh paint, simple upgrades, clean and functional finishes.",
 }
 
+
 # =========================================================
-# HELPERS
+# IMAGE HELPERS
+# =========================================================
+
+def download_image_bytes(url: str, timeout=10) -> bytes:
+    """Secure image download with relaxed header check."""
+
+    if not url.lower().startswith(("http://", "https://")):
+        raise ValueError("Invalid image URL.")
+
+    response = requests.get(url, timeout=timeout, stream=True)
+    response.raise_for_status()
+
+    content_type = response.headers.get("Content-Type", "").lower()
+
+    # Accept common CDN responses
+    if not (
+        content_type.startswith("image")
+        or "octet-stream" in content_type
+        or "binary" in content_type
+    ):
+        print("Warning: unexpected content type:", content_type)
+
+    return response.content
+
+def to_png_bytes(img_bytes: bytes, max_size: int = 1024) -> bytes:
+    im = Image.open(BytesIO(img_bytes)).convert("RGB")
+    im.thumbnail((max_size, max_size))
+    out = BytesIO()
+    im.save(out, format="PNG", optimize=True)
+    return out.getvalue()
+
+
+def to_webp_bytes(img_bytes: bytes, max_size: int = 1400, quality: int = 86) -> bytes:
+    im = Image.open(BytesIO(img_bytes)).convert("RGB")
+    im.thumbnail((max_size, max_size))
+    out = BytesIO()
+    im.save(out, format="WEBP", quality=int(quality), method=6)
+    return out.getvalue()
+
+
+# =========================================================
+# STYLE HELPERS
+# =========================================================
+
+def _normalize_style_preset(style_preset: str) -> str:
+    style_preset = (style_preset or "").strip().lower()
+    return STYLE_PRESET_MAP.get(style_preset, "luxury_modern")
+
+
+def _compose_style_prompt(style_prompt: str, style_preset: str, keep_layout: bool = True) -> str:
+    base = STYLE_PROMPT_MAP.get((style_preset or "").strip().lower(), "")
+    parts = [base.strip(), (style_prompt or "").strip()]
+    if keep_layout:
+        parts.append("Keep the same room layout. Produce an HGTV-style after image. No text overlays.")
+    return "\n".join([p for p in parts if p]).strip()
+
+
+# =========================================================
+# ENGINE HELPERS
+# =========================================================
+
+def _engine_headers() -> dict:
+    headers = {}
+    if RENOVATION_API_KEY:
+        headers["X-API-Key"] = RENOVATION_API_KEY
+    return headers
+
+
+def generate_renovation_images(before_url: str, prompt: str, n: int = 2) -> list[str]:
+    if not before_url or not prompt:
+        return []
+
+    before_bytes = download_image_bytes(before_url)
+    before_png = to_png_bytes(before_bytes, max_size=1024)
+    before_b64 = base64.b64encode(before_png).decode("utf-8")
+
+    try:
+        resp = requests.post(
+            f"{GPU_BASE_URL}/renovate",
+            json={"image_b64": before_b64, "prompt": prompt, "n": n},
+            timeout=120,
+        )
+        resp.raise_for_status()
+    except Exception as e:
+        current_app.logger.exception("GPU renovate failed: %s", e)
+        return []
+
+    data = resp.json()
+    images_b64 = data.get("images", []) or []
+
+    after_urls = []
+    for b64 in images_b64:
+        try:
+            img_bytes = base64.b64decode(b64)
+            img_webp = to_webp_bytes(img_bytes, max_size=1600, quality=86)
+            up = spaces_put_bytes(
+                img_webp,
+                subdir=f"visualizer/{uuid.uuid4().hex}/after",
+                content_type="image/webp",
+                filename=f"{uuid.uuid4().hex}_after.webp",
+            )
+            after_urls.append(up["url"])
+        except Exception as e:
+            current_app.logger.warning("Upload after failed: %s", e)
+            continue
+
+    return after_urls
+
+
+def process_pending_jobs():
+    jobs = RehabJob.query.filter_by(status="pending").all()
+
+    for job in jobs:
+        job.status = "processing"
+        db.session.commit()
+
+        try:
+            engine_url = f"{SCOPE_ENGINE_URL}/v1/rehab_scope"
+            res = requests.post(
+                engine_url,
+                json={"image_url": job.plan_url},
+                headers=_scope_engine_headers(),
+                timeout=180,
+            )
+            res.raise_for_status()
+            data = res.json()
+
+            job.result_plan = data.get("plan")
+            job.result_cost_low = data.get("cost_low")
+            job.result_cost_high = data.get("cost_high")
+            job.result_arv = data.get("arv")
+            job.result_images = data.get("images")
+            job.status = "complete"
+
+        except Exception:
+            current_app.logger.exception("Pending rehab job failed for job_id=%s", job.id)
+            job.status = "failed"
+
+        db.session.commit()
+
+def _scope_engine_headers() -> dict:
+    headers = {}
+    if SCOPE_ENGINE_API_KEY:
+        headers["X-API-Key"] = SCOPE_ENGINE_API_KEY
+    return headers
+
+def _renovation_engine_url(path=""):
+    return f"{RENOVATION_ENGINE_URL.rstrip('/')}{path}"
+
+def _scope_engine_url(path=""):
+    return f"{SCOPE_ENGINE_URL.rstrip('/')}{path}"
+
+def _deal_results(deal):
+    return deal.results_json or {}
+
+def _set_deal_results(deal, results):
+    deal.results_json = results or {}
+
+def _get_rehab_export_payload(deal):
+    r = deal.results_json or {}
+
+    rehab = (
+        r.get("rehab_summary")
+        or r.get("rehab_analysis")
+        or {}
+    )
+
+    if not rehab and getattr(deal, "rehab_scope_json", None):
+        rehab = {
+            "estimated_rehab_cost": getattr(deal, "rehab_cost", None),
+            "scope": getattr(deal, "rehab_scope_json", None),
+        }
+
+    return rehab or {}
+
+def _safe_first_related(obj, attr_name):
+    items = getattr(obj, attr_name, None) or []
+    return items[0] if items else None
+
+_fmt_money = fmt_money
+# =========================================================
+# GENERIC HELPERS
 # =========================================================
 
 def _json_default():
     return {}
+
 
 def _safe_json_loads_local(value, default=None):
     default = default if default is not None else {}
@@ -381,31 +484,29 @@ def _safe_json_loads_local(value, default=None):
     except Exception:
         return default
 
+
 def _normalize_int(value):
     try:
         return int(value) if value not in (None, "", "None") else None
     except Exception:
         return None
 
-def _normalize_style_preset(style_preset: str) -> str:
-    style_preset = (style_preset or "").strip().lower()
-    return STYLE_PRESET_MAP.get(style_preset, "luxury_modern")
 
-def _compose_style_prompt(style_prompt: str, style_preset: str, keep_layout: bool = True) -> str:
-    base = STYLE_PROMPT_MAP.get((style_preset or "").strip().lower(), "")
-    parts = [base.strip(), (style_prompt or "").strip()]
-    if keep_layout:
-        parts.append("Keep the same room layout. Produce an HGTV-style after image. No text overlays.")
-    return "\n".join([p for p in parts if p]).strip()
+def _profile_id_filter(model, profile_id):
+    if hasattr(model, "investor_profile_id"):
+        return {"investor_profile_id": profile_id}
+    if hasattr(model, "borrower_profile_id"):
+        return {"borrower_profile_id": profile_id}
+    return {}
 
-def _engine_headers():
-    headers = {}
-    if RENOVATION_API_KEY:
-        headers["X-API-Key"] = RENOVATION_API_KEY
-    return headers
+
+# =========================================================
+# DEAL / MOCKUP HELPERS
+# =========================================================
 
 def _get_owned_deal_or_404(deal_id: int):
     return Deal.query.filter_by(id=deal_id, user_id=current_user.id).first_or_404()
+
 
 def _save_before_url_to_deal(deal, before_url: str):
     try:
@@ -417,6 +518,7 @@ def _save_before_url_to_deal(deal, before_url: str):
         db.session.commit()
     except Exception:
         db.session.rollback()
+
 
 def _get_rehab_mockups_for_deal(deal):
     q = RenovationMockup.query.filter(
@@ -433,38 +535,6 @@ def _get_rehab_mockups_for_deal(deal):
 
     return q.all()
 
-def _upload_before_image(raw_bytes: bytes) -> str:
-    before_webp = to_webp_bytes(raw_bytes, max_size=1600, quality=86)
-    uploaded = r2_put_bytes(
-        before_webp,
-        subdir=f"visualizer/{current_user.id}/before",
-        content_type="image/webp",
-        filename=f"{uuid.uuid4().hex}_before.webp",
-    )
-    return uploaded["url"]
-
-def _upload_after_images_from_b64(images_b64, render_batch_id: str):
-    after_urls = []
-
-    for i, b64 in enumerate(images_b64 or [], start=1):
-        try:
-            raw_png = base64.b64decode(b64)
-            img = Image.open(io.BytesIO(raw_png)).convert("RGB")
-
-            buf = io.BytesIO()
-            img.save(buf, format="WEBP", quality=90)
-
-            uploaded = r2_put_bytes(
-                buf.getvalue(),
-                subdir=f"visualizer/{current_user.id}/{render_batch_id}/after",
-                content_type="image/webp",
-                filename=f"{render_batch_id}_after_{i}.webp",
-            )
-            after_urls.append(uploaded["url"])
-        except Exception as e:
-            current_app.logger.warning(f"After image upload failed ({i}): {e}")
-
-    return after_urls
 
 def _save_mockups_for_deal(
     deal,
@@ -501,6 +571,7 @@ def _save_mockups_for_deal(
     db.session.commit()
     return saved
 
+
 def _featured_rehab_data(deal):
     try:
         payload = deal.resolved_json or {}
@@ -509,6 +580,7 @@ def _featured_rehab_data(deal):
         return rehab.get("featured", {}) or {}
     except Exception:
         return {}
+
 
 def _set_featured_rehab(deal, after_url: str, before_url: str = "", style_preset: str = "", style_prompt: str = ""):
     payload = deal.resolved_json or {}
@@ -529,6 +601,129 @@ def _set_featured_rehab(deal, after_url: str, before_url: str = "", style_preset
     db.session.commit()
     return payload["rehab"]["featured"]
 
+
+# =========================================================
+# ENGINE STABILITY HELPERS
+# =========================================================
+
+RENDER_TIMEOUT = 180
+SCOPE_TIMEOUT = 45
+UPLOAD_TIMEOUT = 180
+RENDER_LOCK_SECONDS = 180
+
+
+def _safe_engine_error_message(resp):
+    try:
+        payload = resp.json()
+        if isinstance(payload, dict):
+            return (
+                payload.get("detail")
+                or payload.get("message")
+                or payload.get("error")
+                or resp.text[:300]
+            )
+    except Exception:
+        pass
+    return resp.text[:300] or f"HTTP {resp.status_code}"
+
+
+def _post_renovation_engine_json(path, payload, timeout=RENDER_TIMEOUT):
+    res = requests.post(
+        _renovation_engine_url(path),
+        json=payload,
+        headers=_engine_headers(),
+        timeout=timeout,
+    )
+    if not res.ok:
+        raise RuntimeError(_safe_engine_error_message(res))
+    return res.json()
+
+
+def _post_renovation_engine_multipart(path, files, data, timeout=UPLOAD_TIMEOUT):
+    res = requests.post(
+        _renovation_engine_url(path),
+        files=files,
+        data=data,
+        headers=_engine_headers(),
+        timeout=timeout,
+    )
+    if not res.ok:
+        raise RuntimeError(_safe_engine_error_message(res))
+    return res.json()
+
+
+def _post_scope_engine_json(path, payload, timeout=SCOPE_TIMEOUT):
+    res = requests.post(
+        _scope_engine_url(path),
+        json=payload,
+        headers=_scope_engine_headers(),
+        timeout=timeout,
+    )
+    if not res.ok:
+        raise RuntimeError(_safe_engine_error_message(res))
+    return res.json()
+
+
+def _deal_render_lock_active(deal):
+    started = getattr(deal, "render_started_at", None)
+    status = getattr(deal, "render_status", None)
+
+    if status != "processing" or not started:
+        return False
+
+    age = (datetime.utcnow() - started).total_seconds()
+    return age < RENDER_LOCK_SECONDS
+
+
+def _set_deal_render_processing(deal):
+    if hasattr(deal, "render_status"):
+        deal.render_status = "processing"
+    if hasattr(deal, "render_started_at"):
+        deal.render_started_at = datetime.utcnow()
+
+
+def _clear_deal_render_processing(deal):
+    if hasattr(deal, "render_status"):
+        deal.render_status = "idle"
+    if hasattr(deal, "render_started_at"):
+        deal.render_started_at = None
+# =========================================================
+# STORAGE HELPERS
+# =========================================================
+
+def _upload_before_image(raw_bytes: bytes) -> str:
+    before_webp = to_webp_bytes(raw_bytes, max_size=1600, quality=86)
+    uploaded = spaces_put_bytes(
+        before_webp,
+        subdir=f"visualizer/{current_user.id}/before",
+        content_type="image/webp",
+        filename=f"{uuid.uuid4().hex}_before.webp",
+    )
+    return uploaded["url"]
+
+
+def _upload_after_images_from_b64(images_b64, render_batch_id: str):
+    after_urls = []
+
+    for i, b64 in enumerate(images_b64 or [], start=1):
+        try:
+            raw_png = base64.b64decode(b64)
+            img = Image.open(io.BytesIO(raw_png)).convert("RGB")
+
+            buf = io.BytesIO()
+            img.save(buf, format="WEBP", quality=90)
+
+            uploaded = spaces_put_bytes(
+                buf.getvalue(),
+                subdir=f"visualizer/{current_user.id}/{render_batch_id}/after",
+                content_type="image/webp",
+                filename=f"{render_batch_id}_after_{i}.webp",
+            )
+            after_urls.append(uploaded["url"])
+        except Exception as e:
+            current_app.logger.warning("After image upload failed (%s): %s", i, e)
+
+    return after_urls
 
 # ---------------------------------------------------------
 # Investor Capital Timeline (used for progress UI)
@@ -746,21 +941,55 @@ def resource_center():
     Investor Resource Center
     Tools, FAQs, Partners, AI Help
     """
-
     ip = InvestorProfile.query.filter_by(user_id=current_user.id).first()
+    if not ip:
+        flash("Please complete your investor profile first.", "warning")
+        return redirect(url_for("investor.create_profile"))
 
-    partners = Partner.query.order_by(Partner.name.asc()).all()
+    selected_category = (request.args.get("category") or "All").strip()
+
+    partner_query = Partner.query.filter(
+        Partner.active.is_(True),
+        Partner.approved.is_(True)
+    )
+
+    if selected_category != "All":
+        partner_query = partner_query.filter(Partner.category.ilike(f"%{selected_category}%"))
+
+    partners = partner_query.order_by(
+        Partner.featured.desc(),
+        Partner.rating.desc().nullslast(),
+        Partner.name.asc()
+    ).limit(8).all()
 
     faqs = [
         {"q": "How long does approval take?", "a": "Most approvals are 5–10 business days."},
         {"q": "What documents are required?", "a": "Purchase contract, scope, bank statements."},
+        {"q": "How do I request funding?", "a": "Open a deal and click Funding to launch the Capital Application."},
+        {"q": "Can I request a contractor or partner?", "a": "Yes. Use the Partner Directory in the Resource Center to request a connection."},
     ]
+
+    timeline = [
+        {"title": "Capital Request Started", "status": "completed"},
+        {"title": "File Review", "status": "current"},
+        {"title": "Conditions Cleared", "status": "upcoming"},
+        {"title": "Approval / Funding", "status": "upcoming"},
+    ]
+
+    loan = None
+    loan_officer = None
+    processor = None
 
     return render_template(
         "investor/resource_center.html",
         investor=ip,
         partners=partners,
         faqs=faqs,
+        selected_category=selected_category,
+        timeline=timeline,
+        loan=loan,
+        loan_officer=loan_officer,
+        processor=processor,
         title="RAVLO Resource Center",
         active_tab="resources"
     )
@@ -771,6 +1000,133 @@ def resource_center():
 def resource_center_save():
     payload = request.get_json(silent=True) or {}
     return jsonify({"success": True, "payload": payload})
+
+@investor_bp.route("/search", methods=["GET"])
+@login_required
+@role_required("investor")
+def search():
+    """
+    Investor Resource Center search
+    Searches FAQs, partners, and built-in resource links.
+    """
+
+    ip = InvestorProfile.query.filter_by(user_id=current_user.id).first()
+    q = (request.args.get("q") or "").strip()
+    q_lower = q.lower()
+
+    # -----------------------------
+    # FAQ data
+    # -----------------------------
+    faqs = [
+        {"q": "How long does approval take?", "a": "Most approvals are 5–10 business days."},
+        {"q": "What documents are required?", "a": "Purchase contract, scope, bank statements."},
+        {"q": "How do I request funding?", "a": "Open a deal and click Funding to launch the Capital Application."},
+        {"q": "Can I request a contractor or partner?", "a": "Yes. Use the Partner Directory in the Resource Center to request a connection."},
+    ]
+
+    # -----------------------------
+    # Static resource shortcuts
+    # -----------------------------
+    resources = [
+        {
+            "title": "Capital Application",
+            "description": "Start a new funding request for your deal.",
+            "url": url_for("investor.capital_application"),
+            "category": "Capital"
+        },
+        {
+            "title": "Conditions",
+            "description": "Review items needed for underwriting and approval.",
+            "url": url_for("investor.conditions"),
+            "category": "Capital"
+        },
+        {
+            "title": "Documents",
+            "description": "View and manage your funding documents.",
+            "url": url_for("investor.documents"),
+            "category": "Capital"
+        },
+        {
+            "title": "Deals List",
+            "description": "Review your saved deals and move them into funding.",
+            "url": url_for("investor.deals_list"),
+            "category": "Deals"
+        },
+        {
+            "title": "Deal Finder",
+            "description": "Search for investment opportunities and fixer uppers.",
+            "url": url_for("investor.property_tool"),
+            "category": "Deals"
+        },
+        {
+            "title": "Resource Center",
+            "description": "Investor help hub for funding, team support, and partners.",
+            "url": url_for("investor.resource_center"),
+            "category": "Support"
+        },
+    ]
+
+    # -----------------------------
+    # Search partners
+    # -----------------------------
+    all_partners = Partner.query.order_by(Partner.name.asc()).all()
+    partner_results = []
+
+    if q_lower:
+        for partner in all_partners:
+            haystack = " ".join([
+                str(getattr(partner, "name", "") or ""),
+                str(getattr(partner, "category", "") or ""),
+                str(getattr(partner, "service_area", "") or ""),
+                str(getattr(partner, "description", "") or ""),
+            ]).lower()
+
+            if q_lower in haystack:
+                partner_results.append(partner)
+
+    # -----------------------------
+    # Search FAQs
+    # -----------------------------
+    faq_results = []
+    if q_lower:
+        faq_results = [
+            item for item in faqs
+            if q_lower in item["q"].lower() or q_lower in item["a"].lower()
+        ]
+
+    # -----------------------------
+    # Search resource shortcuts
+    # -----------------------------
+    resource_results = []
+    if q_lower:
+        resource_results = [
+            item for item in resources
+            if q_lower in item["title"].lower()
+            or q_lower in item["description"].lower()
+            or q_lower in item["category"].lower()
+        ]
+
+    # -----------------------------
+    # Empty query behavior
+    # -----------------------------
+    if not q:
+        faq_results = faqs
+        resource_results = resources
+        partner_results = all_partners[:8]
+
+    total_results = len(faq_results) + len(resource_results) + len(partner_results)
+
+    return render_template(
+        "investor/search_results.html",
+        investor=ip,
+        query=q,
+        faq_results=faq_results,
+        resource_results=resource_results,
+        partner_results=partner_results,
+        total_results=total_results,
+        title="Search Results",
+        active_tab="resources"
+    )
 
 @investor_bp.route("/dismiss_dashboard_tour", methods=["POST"])
 @csrf.exempt
@@ -936,21 +1292,117 @@ def update_profile():
 # 📝 INVESTOR • CAPITAL APPLICATION + STATUS
 # =========================================================
 
+@investor_bp.route("/loans", methods=["GET"])
+@login_required
+@role_required("investor")
+def loans():
+    investor = InvestorProfile.query.filter_by(user_id=current_user.id).first()
+
+    if not investor:
+        flash("Please complete your investor profile first.", "warning")
+        return redirect(url_for("investor.create_profile"))
+
+    profile_fk = _profile_id_filter(LoanApplication, investor.id) or {}
+
+    loans = (
+        LoanApplication.query
+        .filter_by(**profile_fk)
+        .order_by(LoanApplication.created_at.desc())
+        .all()
+    )
+
+    return render_template(
+        "investor/loans.html",
+        investor=investor,
+        loans=loans,
+        title="Loan Center"
+    )
+
+@investor_bp.route("/loans/<int:loan_id>/summary", methods=["GET"])
+@login_required
+@role_required("investor")
+def loan_summary(loan_id):
+    investor = InvestorProfile.query.filter_by(user_id=current_user.id).first()
+
+    if not investor:
+        flash("Please complete your investor profile first.", "warning")
+        return redirect(url_for("investor.create_profile"))
+
+    loan = LoanApplication.query.filter_by(
+        id=loan_id,
+        investor_profile_id=investor.id
+    ).first()
+
+    if not loan:
+        flash("Loan not found.", "danger")
+        return redirect(url_for("investor.loans"))
+
+    conditions = (
+        UnderwritingCondition.query
+        .filter_by(loan_id=loan.id)
+        .order_by(UnderwritingCondition.id.desc())
+        .all()
+    )
+
+    ai_summary = getattr(loan, "ai_summary", None)
+
+    return render_template(
+        "investor/view_loan.html",
+        investor=investor,
+        loan=loan,
+        conditions=conditions,
+        ai_summary=ai_summary,
+        title="Loan Details"
+    )
+
+@investor_bp.route("/loans/<int:loan_id>/timeline", methods=["GET"])
+@login_required
+@role_required("investor")
+def loan_timeline(loan_id):
+    investor = InvestorProfile.query.filter_by(user_id=current_user.id).first()
+
+    if not investor:
+        flash("Please complete your investor profile first.", "warning")
+        return redirect(url_for("investor.create_profile"))
+
+    loan = LoanApplication.query.filter_by(
+        id=loan_id,
+        investor_profile_id=investor.id
+    ).first()
+
+    if not loan:
+        flash("Loan not found.", "danger")
+        return redirect(url_for("investor.loans"))
+
+    events = (
+        LoanStatusEvent.query
+        .filter_by(loan_id=loan.id)
+        .order_by(LoanStatusEvent.id.desc())
+        .all()
+    )
+
+    return render_template(
+        "investor/loan_timeline.html",
+        investor=investor,
+        loan=loan,
+        events=events,
+        title="Loan Timeline"
+    )
+
 @investor_bp.route("/capital_application", methods=["GET"])
 @login_required
 @role_required("investor")
 def capital_application():
-
     ip = InvestorProfile.query.filter_by(user_id=current_user.id).first()
     if not ip:
         flash("Please create your investor profile before applying for capital.", "warning")
         return redirect(url_for("investor.create_profile"))
 
-    deal_id = request.args.get("deal_id")
+    deal_id = request.args.get("deal_id", type=int)
     deal = None
 
     if deal_id:
-        deal = Deal.query.get(deal_id)
+        deal = Deal.query.filter_by(id=deal_id, user_id=current_user.id).first()
 
     officers = LoanOfficerProfile.query.order_by(LoanOfficerProfile.name.asc()).all()
 
@@ -971,15 +1423,53 @@ def submit_capital_application():
         return jsonify({"success": False, "message": "No investor profile found."}), 404
 
     # -----------------------------
+    # Deal lookup
+    # -----------------------------
+    deal_id = request.form.get("deal_id", type=int)
+    deal = None
+
+    if deal_id:
+        deal = Deal.query.filter_by(
+            id=deal_id,
+            user_id=current_user.id
+        ).first()
+
+    # -----------------------------
     # Form fields
     # -----------------------------
     full_name = (request.form.get("full_name") or getattr(investor, "full_name", None) or "").strip()
     loan_type = (request.form.get("loan_type") or "Investor Capital").strip()
-    project_address = (request.form.get("project_address") or "").strip()
-    project_description = (request.form.get("project_description") or "").strip()
-    amount = float(request.form.get("amount") or 0)
-    property_value = float(request.form.get("property_value") or 0)
+
+    project_address = (
+        request.form.get("project_address")
+        or (deal.address if deal else "")
+        or ""
+    ).strip()
+
+    project_description = (
+        request.form.get("project_description")
+        or (deal.notes if deal else "")
+        or ""
+    ).strip()
+
+    try:
+        amount = float(request.form.get("amount") or 0)
+    except (TypeError, ValueError):
+        amount = 0
+
+    try:
+        property_value = float(request.form.get("property_value") or 0)
+    except (TypeError, ValueError):
+        property_value = 0
+
     preferred_loan_officer_id = request.form.get("preferred_loan_officer_id")
+
+    # fallback values from deal
+    if not amount and deal:
+        amount = float((deal.purchase_price or 0) + (deal.rehab_cost or 0))
+
+    if not property_value and deal:
+        property_value = float(deal.arv or 0)
 
     # -----------------------------
     # Bridge: Investor -> BorrowerProfile
@@ -1028,7 +1518,6 @@ def submit_capital_application():
         except (TypeError, ValueError):
             assigned_officer_id = None
 
-    # Auto-assign if no preferred officer selected
     if not assigned_officer_id:
         auto_officer = LoanOfficerProfile.query.order_by(LoanOfficerProfile.joined_at.asc()).first()
         if auto_officer:
@@ -1038,9 +1527,8 @@ def submit_capital_application():
     # Create loan / capital request
     # -----------------------------
     loan = LoanApplication(
-        **profile_fk,
+        investor_profile_id=investor.id,
         borrower_profile_id=borrower.id,
-        investor_profile_id=getattr(investor, "id", None),
         loan_officer_id=assigned_officer_id,
         loan_type=loan_type,
         amount=amount,
@@ -1053,8 +1541,25 @@ def submit_capital_application():
         created_at=datetime.utcnow()
     )
 
+    # optional link back to deal if your model supports it
+    if hasattr(loan, "deal_id"):
+        loan.deal_id = deal.id if deal else None
+
     db.session.add(loan)
     db.session.flush()
+
+    # -----------------------------
+    # Update deal funding status
+    # -----------------------------
+    if deal:
+        if hasattr(deal, "submitted_for_funding"):
+            deal.submitted_for_funding = True
+        if hasattr(deal, "funding_requested_at"):
+            deal.funding_requested_at = datetime.utcnow()
+        if hasattr(deal, "funding_status"):
+            deal.funding_status = "Capital Submitted"
+        if hasattr(deal, "loan_application_id"):
+            deal.loan_application_id = loan.id
 
     # -----------------------------
     # Timeline event
@@ -1095,6 +1600,23 @@ def submit_capital_application():
         "loan_officer_id": assigned_officer_id,
         "redirect_url": url_for("investor.loan_view", loan_id=loan.id)
     })
+
+@investor_bp.route("/deals/<int:deal_id>/submit-funding", methods=["POST"])
+@login_required
+@role_required("investor")
+def submit_deal_for_funding(deal_id):
+    deal = Deal.query.filter_by(id=deal_id, user_id=current_user.id).first()
+
+    if not deal:
+        flash("Deal not found.", "danger")
+        return redirect(url_for("investor.deal_workspace"))
+
+    deal.submitted_for_funding = True
+    deal.funding_requested_at = datetime.utcnow()
+    db.session.commit()
+
+    flash("Deal submitted for funding review.", "success")
+    return redirect(url_for("investor.capital_application", deal_id=deal.id))
 
 @investor_bp.route("/capital/status", methods=["GET"])
 @investor_bp.route("/status", methods=["GET"])
@@ -1189,16 +1711,14 @@ def loan_view(loan_id):
         title=f"Loan #{loan.id}",
     )
 
-
 @investor_bp.route("/capital/loan/<int:loan_id>/edit", methods=["GET", "POST"])
 @investor_bp.route("/loan/<int:loan_id>/edit", methods=["GET", "POST"])
 @login_required
 @role_required("investor")
-def edit_loan(loan_id):
+def loan_edit(loan_id):
     ip = InvestorProfile.query.filter_by(user_id=current_user.id).first()
     loan = LoanApplication.query.get_or_404(loan_id)
 
-    # Ownership check (supports both schemas)
     owns = False
     if ip:
         if hasattr(loan, "investor_profile_id") and loan.investor_profile_id == ip.id:
@@ -1210,18 +1730,36 @@ def edit_loan(loan_id):
         return "Unauthorized", 403
 
     if request.method == "POST":
-        loan.loan_amount = safe_float(request.form.get("amount"))
-        loan.status = request.form.get("status")
-        loan.loan_type = request.form.get("loan_type")
-        loan.property_address = request.form.get("property_address")
-        loan.interest_rate = safe_float(request.form.get("interest_rate"))
-        loan.term = request.form.get("term")
+        if hasattr(loan, "amount"):
+            loan.amount = safe_float(request.form.get("amount"))
+        if hasattr(loan, "loan_amount"):
+            loan.loan_amount = safe_float(request.form.get("amount"))
+
+        if hasattr(loan, "status"):
+            loan.status = request.form.get("status")
+        if hasattr(loan, "loan_type"):
+            loan.loan_type = request.form.get("loan_type")
+        if hasattr(loan, "property_address"):
+            loan.property_address = request.form.get("property_address")
+        if hasattr(loan, "interest_rate"):
+            loan.interest_rate = safe_float(request.form.get("interest_rate"))
+        if hasattr(loan, "term"):
+            loan.term = request.form.get("term")
+        if hasattr(loan, "property_value"):
+            loan.property_value = safe_float(request.form.get("property_value"))
+        if hasattr(loan, "description"):
+            loan.description = request.form.get("description")
 
         db.session.commit()
         flash("✅ Capital request updated successfully!", "success")
         return redirect(url_for("investor.loan_view", loan_id=loan.id))
 
-    return render_template("investor/edit_loan.html", loan=loan, investor=ip, title="Edit Loan")
+    return render_template(
+        "investor/edit_loan.html",
+        loan=loan,
+        investor=ip,
+        title="Edit Loan"
+    )
 
 
 # =========================================================
@@ -1545,7 +2083,7 @@ def upload_document():
             return redirect(url_for("investor.documents"))
 
     return render_template(
-        "investor/upload_document.html",
+        "investor/upload_docs.html",
         investor=ip,
         title="Upload Document",
         active_tab="documents"
@@ -2148,30 +2686,40 @@ def save_property_and_analyze():
     flash("🏠 Property saved! Opening Deal Studio…", "success")
     return redirect(url_for("investor.deal_workspace", prop_id=saved.id, mode="flip"))
 
-
 @investor_bp.route("/intelligence/saved/<int:prop_id>", methods=["GET"])
 @investor_bp.route("/property_explore_plus/<int:prop_id>", methods=["GET"])
 @login_required
 @role_required("investor")
 def property_explore_plus(prop_id):
+    source = request.args.get("source", "property_tool")
+    fallback_endpoint = "investor.property_search" if source == "property_search" else "investor.property_tool"
+
     ip = InvestorProfile.query.filter_by(user_id=current_user.id).first()
     if not ip:
         flash("Profile not found.", "danger")
-        return redirect(url_for("investor.property_search"))
+        return redirect(url_for(fallback_endpoint))
 
-    prop = SavedProperty.query.filter_by(id=prop_id, **_profile_id_filter(SavedProperty, ip.id)).first()
+    prop = SavedProperty.query.filter_by(
+        id=prop_id,
+        **_profile_id_filter(SavedProperty, ip.id)
+    ).first()
+
     if not prop:
         flash("Property not found.", "danger")
-        return redirect(url_for("investor.property_search"))
+        return redirect(url_for(fallback_endpoint))
 
     resolved = resolve_property_unified(prop.address)
     resolved_property = (resolved.get("property") or {}) if resolved.get("status") == "ok" else {}
     photos = resolved_property.get("photos") or []
 
     from LoanMVP.services.comps_service import get_comps_for_property
-    comps = get_comps_for_property(address=prop.address, zipcode=(prop.zipcode or ""), rentometer_api_key=None)
-    market = get_market_snapshot(zipcode=(prop.zipcode or "")) if prop.zipcode else {}
+    comps = get_comps_for_property(
+        address=prop.address,
+        zipcode=(prop.zipcode or ""),
+        rentometer_api_key=None
+    )
 
+    market = get_market_snapshot(zipcode=(prop.zipcode or "")) if prop.zipcode else {}
     ai_summary = resolved.get("ai_summary") or None
 
     return render_template(
@@ -2183,8 +2731,11 @@ def property_explore_plus(prop_id):
         comps=comps,
         market=market,
         photos=photos,
-        active_page="property_search",
+        active_page="property_search" if source == "property_search" else "property_tool",
+        source=source,
+        back_url=url_for(fallback_endpoint),
     )
+
 
 
 @investor_bp.route("/intelligence/tool", methods=["GET"])
@@ -2192,8 +2743,13 @@ def property_explore_plus(prop_id):
 @login_required
 @role_required("investor")
 def property_tool():
-    return render_template("investor/property_tool.html", active_page="property_tool")
-
+    return render_template(
+        "investor/property_tool.html",
+        title="Ravlo Deal Finder",
+        active_page="property_tool",
+        page_name="Deal Finder",
+        page_subline="Search by ZIP, review investment potential, and send opportunities straight into Deal Workspace."
+    )
 
 # =========================================================
 # 🔌 INVESTOR • APIs (Property Tool)
@@ -2345,6 +2901,123 @@ def api_property_tool_save_and_analyze():
     deal_url = url_for("investor.deal_workspace", prop_id=existing.id, mode="flip")
     return jsonify({"status": "ok", "saved_id": existing.id, "deal_url": deal_url})
 
+@investor_bp.route("/api/intelligence/card", methods=["POST"])
+@investor_bp.route("/api/property_tool_card", methods=["POST"])
+@csrf.exempt
+@login_required
+@role_required("investor")
+def api_property_tool_card():
+    payload = request.get_json(force=True) or {}
+
+    address = (payload.get("address") or "").strip()
+    if not address:
+        return jsonify({"status": "error", "message": "Address is required."}), 400
+
+    def _num_or_none(v):
+        try:
+            if v in (None, "", "None"):
+                return None
+            return float(v)
+        except Exception:
+            return None
+
+    beds = _num_or_none(payload.get("beds"))
+    baths = _num_or_none(payload.get("baths"))
+    sqft = _num_or_none(payload.get("sqft"))
+    property_type = (payload.get("property_type") or "").strip() or None
+
+    if beds is not None:
+        try:
+            beds = int(beds)
+        except Exception:
+            beds = None
+
+    if sqft is not None:
+        try:
+            sqft = int(sqft)
+        except Exception:
+            sqft = None
+
+    card = build_ravlo_property_card(
+        address=address,
+        beds=beds,
+        baths=baths,
+        sqft=sqft,
+        property_type=property_type,
+    )
+
+    if card.get("status") != "ok":
+        return jsonify({
+            "status": "error",
+            "message": card.get("error") or "Unable to load property card."
+        }), 400
+
+    return jsonify(card)
+
+
+@investor_bp.route("/api/property_tool_view_details", methods=["POST"])
+@csrf.exempt
+@login_required
+@role_required("investor")
+def api_property_tool_view_details():
+    payload = request.get_json(force=True) or {}
+    address = (payload.get("address") or "").strip()
+
+    if not address:
+        return jsonify({"status": "error", "message": "Address is required."}), 400
+
+    ip = InvestorProfile.query.filter_by(user_id=current_user.id).first()
+    if not ip:
+        return jsonify({"status": "error", "message": "Investor profile not found."}), 400
+
+    zipcode = (payload.get("zip") or "").strip() or None
+    price = payload.get("price")
+    sqft = payload.get("sqft")
+    property_id = payload.get("property_id")
+
+    try:
+        sqft = int(float(sqft)) if sqft not in (None, "", "None") else None
+    except Exception:
+        sqft = None
+
+    fk = _profile_id_filter(SavedProperty, ip.id)
+
+    existing = None
+    if property_id:
+        existing = SavedProperty.query.filter_by(**fk, property_id=str(property_id)).first()
+
+    if not existing:
+        existing = SavedProperty.query.filter(
+            getattr(SavedProperty, "investor_profile_id", SavedProperty.borrower_profile_id) == ip.id,
+            db.func.lower(SavedProperty.address) == address.lower()
+        ).first()
+
+    if not existing:
+        existing = SavedProperty(
+            **fk,
+            property_id=str(property_id) if property_id else None,
+            address=address,
+            price=str(price or ""),
+            sqft=sqft,
+            zipcode=zipcode,
+            saved_at=datetime.utcnow(),
+            created_at=datetime.utcnow(),
+        )
+        db.session.add(existing)
+        db.session.commit()
+
+    detail_url = url_for(
+        "investor.property_explore_plus",
+        prop_id=existing.id,
+        source="property_tool"
+    )
+
+    return jsonify({
+        "status": "ok",
+        "saved_id": existing.id,
+        "detail_url": detail_url
+    })
+         
 # =========================================================
 # 💼 INVESTOR • DEAL STUDIO (workspace + deals + visualizer + exports)
 # =========================================================
@@ -2368,7 +3041,7 @@ def deal_studio():
             "name": "Deal Finder",
             "description": "Search properties by ZIP, strategy, or market signals.",
             "icon": "search",
-            "endpoint": "investor.deal_finder"
+            "endpoint": "investor.property_tool"
         },
         {
             "name": "AI Deal Architect",
@@ -2380,7 +3053,7 @@ def deal_studio():
             "name": "Rehab Studio",
             "description": "Create renovation scopes and visual concepts.",
             "icon": "hammer",
-            "endpoint": "investor.rehab_studio"
+            "endpoint": "investor.deals_list"
         },
         {
             "name": "Build Studio",
@@ -2404,11 +3077,12 @@ def deal_studio():
         page_subtitle="Analyze opportunities, design projects, and prepare deals for funding."
     )
 
-@investor_bp.route("/deals/workspace", methods=["GET", "POST"])
-@investor_bp.route("/deal_workspace", methods=["GET", "POST"])
+@investor_bp.route("/deals/workspace", methods=["GET"])
+@investor_bp.route("/deal_workspace", methods=["GET"])
+@investor_bp.route("/deal_workspace/<int:deal_id>", methods=["GET"])
 @login_required
 @role_required("investor")
-def deal_workspace():
+def deal_workspace(deal_id=None):
     ip = InvestorProfile.query.filter_by(user_id=current_user.id).first()
     if not ip:
         flash("Profile not found.", "danger")
@@ -2421,160 +3095,167 @@ def deal_workspace():
         .all()
     )
 
-    prop_id = request.values.get("prop_id")
     selected_prop = None
+    deal = None
+    comps = {}
+    resolved = None
+    comparison = {}
+    recommendation = {}
+    ai_summary = None
 
-    if prop_id:
-        try:
-            pid = int(prop_id)
-            selected_prop = SavedProperty.query.filter_by(
-                id=pid, **_profile_id_filter(SavedProperty, ip.id)
-            ).first()
-        except Exception:
-            selected_prop = None
+    workspace_analysis = {}
+    strategy_analysis = {}
+    rehab_analysis = {}
+    optimization = {}
 
-    mode = (request.values.get("mode") or "flip").lower()
+    mode = (request.args.get("mode") or "flip").lower()
     if mode not in ("flip", "rental", "airbnb"):
         mode = "flip"
 
-    inputs = request.form if request.method == "POST" else ImmutableMultiDict()
-
-    comps = {}
-    resolved = None
-    comparison = None
-    recommendation = None
-    results = None
-    ai_summary = None
-    risk_flags = []
-    timeline = {}
-    material_costs = {}
-    rehab_notes = {}
-
-    # POST with no property selected (keep behavior)
-    if request.method == "POST" and not selected_prop:
-        flash("Please select a saved property first.", "warning")
-        return render_template(
-            "investor/deal_workspace.html",
-            investor=ip,
-            saved_props=saved_props,
-            selected_prop=None,
-            prop_id=None,
-            mode=mode,
-            comps=comps,
-            deal=deal,
-            resolved=resolved,
-            comparison=None,
-            recommendation=recommendation,
-            results=None,
-            ai_summary=ai_summary,
-            risk_flags=risk_flags,
-            timeline=timeline,
-            material_costs=material_costs,
-            rehab_notes=rehab_notes,
-            active_page="deal_workspace",
+    # -----------------------------------------
+    # 1) Load by deal_id if provided in URL
+    # -----------------------------------------
+    if deal_id:
+        deal = (
+            Deal.query
+            .filter_by(id=deal_id, user_id=current_user.id)
+            .first_or_404()
         )
 
+        if getattr(deal, "saved_property_id", None):
+            selected_prop = (
+                SavedProperty.query
+                .filter_by(
+                    id=deal.saved_property_id,
+                    **_profile_id_filter(SavedProperty, ip.id)
+                )
+                .first()
+            )
+
+    # -----------------------------------------
+    # 2) Fallback: querystring deal_id
+    # -----------------------------------------
+    if not deal:
+        query_deal_id = request.args.get("deal_id", type=int)
+        if query_deal_id:
+            deal = (
+                Deal.query
+                .filter_by(id=query_deal_id, user_id=current_user.id)
+                .first()
+            )
+            if deal and getattr(deal, "saved_property_id", None):
+                selected_prop = (
+                    SavedProperty.query
+                    .filter_by(
+                        id=deal.saved_property_id,
+                        **_profile_id_filter(SavedProperty, ip.id)
+                    )
+                    .first()
+                )
+
+    # -----------------------------------------
+    # 3) Fallback: property selection by prop_id
+    # -----------------------------------------
+    if not selected_prop:
+        prop_id = request.args.get("prop_id", type=int)
+        if prop_id:
+            selected_prop = (
+                SavedProperty.query
+                .filter_by(
+                    id=prop_id,
+                    **_profile_id_filter(SavedProperty, ip.id)
+                )
+                .first()
+            )
+
+            if selected_prop and not deal:
+                deal = (
+                    Deal.query
+                    .filter_by(
+                        user_id=current_user.id,
+                        saved_property_id=selected_prop.id
+                    )
+                    .order_by(Deal.updated_at.desc(), Deal.id.desc())
+                    .first()
+                )
+
+    # -----------------------------------------
+    # 4) If deal exists but prop not loaded, try FK
+    # -----------------------------------------
+    if deal and not selected_prop and getattr(deal, "saved_property_id", None):
+        selected_prop = (
+            SavedProperty.query
+            .filter_by(
+                id=deal.saved_property_id,
+                **_profile_id_filter(SavedProperty, ip.id)
+            )
+            .first()
+        )
+
+    # -----------------------------------------
+    # 5) Load comps / property intelligence
+    # -----------------------------------------
     if selected_prop:
-        comps = get_saved_property_comps(
-            user_id=current_user.id,
-            saved_property_id=selected_prop.id,
-            rentometer_api_key=None,
-        ) or {}
+        try:
+            comps = get_saved_property_comps(
+                user_id=current_user.id,
+                saved_property_id=selected_prop.id,
+                rentometer_api_key=None,
+            ) or {}
+        except Exception as e:
+            current_app.logger.warning("Workspace comps error: %s", e)
+            comps = {}
 
         if comps:
             try:
                 from LoanMVP.services.unified_property_resolver import resolve_property_intelligence
                 resolved = resolve_property_intelligence(selected_prop.id, comps)
             except Exception as e:
-                print("Resolver error:", e)
+                current_app.logger.warning("Resolver error: %s", e)
                 resolved = None
 
-            from LoanMVP.services.deal_workspace_calcs import (
-                calculate_flip_budget,
-                calculate_rental_budget,
-                calculate_airbnb_budget,
-                recommend_strategy,
-            )
-            comparison = {
-                "flip": calculate_flip_budget(inputs, comps),
-                "rental": calculate_rental_budget(inputs, comps),
-                "airbnb": calculate_airbnb_budget(inputs, comps),
-            }
-            recommendation = recommend_strategy(comparison)
+            try:
+                from LoanMVP.services.deal_workspace_calcs import (
+                    calculate_flip_budget,
+                    calculate_rental_budget,
+                    calculate_airbnb_budget,
+                    recommend_strategy,
+                )
 
-    if request.method == "POST" and selected_prop and comps and comparison:
-        base = comparison.get(mode) or comparison.get("flip") or {}
-        results = dict(base) if isinstance(base, dict) else base.__dict__.copy()
+                empty_form = ImmutableMultiDict()
 
-        try:
-            ai_summary = generate_ai_insights(mode, results, comps)
-        except Exception:
-            ai_summary = "AI summary unavailable."
+                comparison = {
+                    "flip": calculate_flip_budget(empty_form, comps),
+                    "rental": calculate_rental_budget(empty_form, comps),
+                    "airbnb": calculate_airbnb_budget(empty_form, comps),
+                }
 
-        rehab_items = {
-            "kitchen": request.form.get("kitchen") or "",
-            "bathroom": request.form.get("bathroom") or "",
-            "flooring": request.form.get("flooring") or "",
-            "paint": request.form.get("paint") or "",
-            "roof": request.form.get("roof") or "",
-            "hvac": request.form.get("hvac") or "",
-        }
-        rehab_scope = request.form.get("rehab_scope", "medium")
+                recommendation = recommend_strategy(comparison) or {}
+            except Exception as e:
+                current_app.logger.warning("Workspace calculation error: %s", e)
+                comparison = {}
+                recommendation = {}
 
-        sqft = (comps.get("property") or {}).get("sqft", 0)
-        try:
-            sqft = int(float(sqft or 0))
-        except Exception:
-            sqft = 0
+    # -----------------------------------------
+    # 6) Load saved deal results
+    # -----------------------------------------
+    if deal:
+        results_json = deal.results_json or {}
+        strategy_analysis = results_json.get("strategy_analysis", {}) or {}
+        rehab_analysis = results_json.get("rehab_analysis", {}) or {}
+        workspace_analysis = results_json.get("workspace_analysis", {}) or {}
+        optimization = results_json.get("optimization", {}) or {}
 
-        rehab = estimate_rehab_cost(property_sqft=sqft, scope=rehab_scope, items=rehab_items)
-
-        action = request.form.get("action")
-        target_budget = request.form.get("target_rehab_budget")
-
-        if action == "optimize_rehab" and target_budget:
-            rehab_items, rehab = optimize_rehab_to_budget(
-                target_budget=float(target_budget),
-                items=rehab_items,
-                scope=rehab_scope,
-                sqft=sqft,
-            )
-        elif action == "optimize_roi":
-            rehab_items, rehab = optimize_rehab_for_roi(items=rehab_items, scope=rehab_scope, sqft=sqft, comps=comps)
-        elif action == "optimize_timeline":
-            rehab_items, rehab = optimize_rehab_for_timeline(items=rehab_items, scope=rehab_scope, sqft=sqft)
-        elif action == "optimize_arv":
-            rehab_items, rehab = optimize_rehab_for_arv(items=rehab_items, scope=rehab_scope, sqft=sqft)
-
-        results["rehab_breakdown"] = rehab
-        results["rehab_total"] = rehab.get("total")
-        results["rehab_summary"] = {
-            "total": rehab.get("total"),
-            "cost_per_sqft": rehab.get("cost_per_sqft"),
-            "scope": rehab.get("scope"),
-            "items": {k: v for k, v in rehab_items.items() if v},
-        }
-
-        risk_flags = generate_rehab_risk_flags(results, comps) or []
-        results["risk_flags"] = risk_flags
-
-        timeline = estimate_rehab_timeline(rehab_items, rehab_scope) or {}
-        results["rehab_timeline"] = timeline
-
-        material_costs = estimate_material_costs(property_sqft=sqft, items=rehab_items) or {}
-        results["material_costs"] = material_costs
-
-        rehab_notes = generate_rehab_notes(results, comps, strategy=mode) or {}
-        results["rehab_notes"] = rehab_notes
-
-        session["latest_rehab_results"] = {
-            "rehab_summary": results.get("rehab_summary"),
-            "rehab_breakdown": results.get("rehab_breakdown"),
-            "risk_flags": risk_flags,
-            "rehab_timeline": timeline,
-            "material_costs": material_costs,
-            "rehab_notes": rehab_notes,
-        }
+    # -----------------------------------------
+    # 7) AI summary
+    # -----------------------------------------
+    try:
+        if comparison:
+            selected_metrics = comparison.get(mode) or comparison.get("flip") or {}
+            ai_summary = generate_ai_deal_summary(selected_metrics)
+    except Exception as e:
+        current_app.logger.warning("AI summary error: %s", e)
+        ai_summary = None
 
     return render_template(
         "investor/deal_workspace.html",
@@ -2583,20 +3264,20 @@ def deal_workspace():
         selected_prop=selected_prop,
         prop_id=(selected_prop.id if selected_prop else None),
         property_id=(selected_prop.id if selected_prop else None),
+        deal=deal,
+        deal_id=(deal.id if deal else None),
         mode=mode,
         comps=comps,
         resolved=resolved,
         comparison=comparison,
         recommendation=recommendation,
-        results=results,
         ai_summary=ai_summary,
-        risk_flags=risk_flags,
-        timeline=timeline,
-        material_costs=material_costs,
-        rehab_notes=rehab_notes,
+        strategy_analysis=strategy_analysis,
+        rehab_analysis=rehab_analysis,
+        workspace_analysis=workspace_analysis,
+        optimization=optimization,
         active_page="deal_workspace",
     )
-
 
 @investor_bp.route("/deals", methods=["GET"])
 @investor_bp.route("/deals/list", methods=["GET"])
@@ -2621,8 +3302,6 @@ def deals_list():
     deals = query.order_by(Deal.updated_at.desc()).all()
     return render_template("investor/deals_list.html", deals=deals, status=status, q=q)
 
-
-from flask import abort
 
 @investor_bp.route("/deals/<int:deal_id>", methods=["GET"])
 @login_required
@@ -2866,39 +3545,164 @@ def create_deal():
 @login_required
 @role_required("investor")
 def save_deal():
+    ip = InvestorProfile.query.filter_by(user_id=current_user.id).first()
+    if not ip:
+        flash("Investor profile not found.", "danger")
+        return redirect(url_for("investor.command_center"))
+
     property_id = request.form.get("property_id") or None
     strategy = request.form.get("mode") or request.form.get("strategy") or None
     title = request.form.get("title") or None
     saved_property_id = _normalize_int(request.form.get("saved_property_id"))
+    deal_id = _normalize_int(request.form.get("deal_id"))
 
     results_json = _safe_json_loads_local(request.form.get("results_json"), default={})
     inputs_json = _safe_json_loads_local(request.form.get("inputs_json"), default={})
     comps_json = _safe_json_loads_local(request.form.get("comps_json"), default={})
     resolved_json = _safe_json_loads_local(request.form.get("resolved_json"), default={})
 
-    if not title:
-        addr = ((resolved_json or {}).get("property") or {}).get("address")
-        title = addr or (property_id and f"Deal {property_id}") or "Saved Deal"
+    prop = (resolved_json or {}).get("property") or {}
+    comp_prop = (comps_json or {}).get("property") or {}
 
-    deal = Deal(
-        user_id=current_user.id,
-        saved_property_id=saved_property_id,
-        property_id=property_id,
-        title=title,
-        strategy=strategy,
-        inputs_json=inputs_json or None,
-        results_json=results_json or None,
-        comps_json=comps_json or None,
-        resolved_json=resolved_json or None,
-        status="active",
+    address = prop.get("address") or title
+    city = prop.get("city")
+    state = prop.get("state")
+    zip_code = prop.get("zip") or prop.get("zipCode") or prop.get("postalCode")
+
+    purchase_price = (
+        inputs_json.get("purchase_price")
+        or comp_prop.get("price")
+        or prop.get("price")
+        or 0
     )
 
-    db.session.add(deal)
+    rehab_cost = (
+        (results_json.get("rehab_total") if isinstance(results_json, dict) else 0)
+        or 0
+    )
+
+    arv = (
+        comp_prop.get("arv_estimate")
+        or ((prop.get("valuation") or {}).get("value") if isinstance(prop.get("valuation"), dict) else None)
+        or 0
+    )
+
+    estimated_rent = (
+        comp_prop.get("market_rent_estimate")
+        or ((prop.get("rent_estimate") or {}).get("value") if isinstance(prop.get("rent_estimate"), dict) else None)
+        or 0
+    )
+
+    recommended_strategy = strategy
+    rehab_scope_json = None
+    deal_score = None
+
+    if isinstance(results_json, dict):
+        rehab_scope_json = results_json.get("rehab_summary") or None
+        raw_score = results_json.get("deal_score")
+        try:
+            deal_score = int(round(float(raw_score))) if raw_score not in (None, "", "None") else None
+        except (TypeError, ValueError):
+            deal_score = None
+
+    notes_parts = []
+
+    if isinstance(results_json, dict):
+        rehab_summary = results_json.get("rehab_summary") or {}
+        risk_flags = results_json.get("risk_flags") or []
+        rehab_notes = results_json.get("rehab_notes") or {}
+
+        if rehab_summary:
+            notes_parts.append(f"Rehab Scope: {rehab_summary.get('scope') or 'N/A'}")
+            if rehab_summary.get("total") is not None:
+                try:
+                    notes_parts.append(f"Estimated Rehab Total: ${float(rehab_summary.get('total')):,.0f}")
+                except (TypeError, ValueError):
+                    notes_parts.append("Estimated Rehab Total: N/A")
+
+        if risk_flags:
+            notes_parts.append("Risk Flags: " + ", ".join(str(x) for x in risk_flags))
+
+        if rehab_notes:
+            for k, v in rehab_notes.items():
+                notes_parts.append(f"{str(k).replace('_', ' ').title()}: {v}")
+
+    notes = "\n".join(notes_parts).strip() or None
+
+    if not title:
+        title = address or (property_id and f"Deal {property_id}") or "Saved Deal"
+
+    def to_float(val):
+        try:
+            return float(val)
+        except (TypeError, ValueError):
+            return 0.0
+
+    purchase_price = to_float(purchase_price)
+    rehab_cost = to_float(rehab_cost)
+    arv = to_float(arv)
+    estimated_rent = to_float(estimated_rent)
+
+    deal = None
+    if deal_id:
+        deal = Deal.query.filter_by(id=deal_id, user_id=current_user.id).first()
+
+    if deal:
+        deal.investor_profile_id = ip.id
+        deal.saved_property_id = saved_property_id
+        deal.property_id = property_id
+        deal.title = title
+        deal.address = address
+        deal.city = city
+        deal.state = state
+        deal.zip_code = zip_code
+        deal.strategy = strategy
+        deal.recommended_strategy = recommended_strategy
+        deal.purchase_price = purchase_price
+        deal.arv = arv
+        deal.estimated_rent = estimated_rent
+        deal.rehab_cost = rehab_cost
+        deal.deal_score = deal_score
+        deal.inputs_json = inputs_json or None
+        deal.results_json = results_json or None
+        deal.comps_json = comps_json or None
+        deal.resolved_json = resolved_json or None
+        deal.rehab_scope_json = rehab_scope_json
+        deal.notes = notes
+        deal.status = deal.status or "active"
+    else:
+        deal = Deal(
+            user_id=current_user.id,
+            investor_profile_id=ip.id,
+            saved_property_id=saved_property_id,
+            property_id=property_id,
+            title=title,
+            address=address,
+            city=city,
+            state=state,
+            zip_code=zip_code,
+            strategy=strategy,
+            recommended_strategy=recommended_strategy,
+            purchase_price=purchase_price,
+            arv=arv,
+            estimated_rent=estimated_rent,
+            rehab_cost=rehab_cost,
+            deal_score=deal_score,
+            inputs_json=inputs_json or None,
+            results_json=results_json or None,
+            comps_json=comps_json or None,
+            resolved_json=resolved_json or None,
+            rehab_scope_json=rehab_scope_json,
+            notes=notes,
+            status="active",
+        )
+        db.session.add(deal)
+
     db.session.commit()
 
     flash("Deal saved.", "success")
     return redirect(url_for("investor.deal_detail", deal_id=deal.id))
-
+    
 @investor_bp.route("/deals/<int:deal_id>/edit", methods=["POST"])
 @csrf.exempt
 @login_required
@@ -3048,19 +3852,22 @@ def deal_rehab(deal_id):
         featured=featured,
     )
 
+
 # =========================================================
 # 🏗️ BUILD STUDIO — PAGE
 # =========================================================
+
 @investor_bp.route("/deals/<int:deal_id>/build", methods=["GET"])
 @investor_bp.route("/deal-studio/build-studio", methods=["GET"])
 @login_required
 @role_required("investor")
 def build_studio(deal_id=None):
     deal = None
-    project = Project.query.get(project_id)
+    project = None
 
     if deal_id is not None:
         deal = _get_owned_deal_or_404(deal_id)
+        project = _safe_first_related(deal, "projects")
 
     return render_template(
         "investor/build_studio.html",
@@ -3070,7 +3877,8 @@ def build_studio(deal_id=None):
         page_title="Build Studio",
         page_subtitle="Design and visualize new construction projects."
     )
-    
+
+
 # =========================================================
 # 🏗️ BUILD STUDIO — GENERATE CONCEPT
 # =========================================================
@@ -3080,17 +3888,28 @@ def build_studio(deal_id=None):
 @login_required
 @role_required("investor")
 def generate_build_studio():
+    deal = None
+
     try:
         deal_id = _normalize_int(request.form.get("deal_id"))
-        deal = None
 
         if deal_id:
             deal = Deal.query.filter_by(id=deal_id, user_id=current_user.id).first()
             if not deal:
                 return jsonify({"status": "error", "message": "Deal not found or not authorized."}), 404
 
+            if _deal_render_lock_active(deal):
+                return jsonify({
+                    "status": "error",
+                    "message": "A build render is already in progress for this deal."
+                }), 409
+
+            _set_deal_render_processing(deal)
+            db.session.commit()
+
         project_name = (request.form.get("project_name") or "").strip()
-        property_type = (request.form.get("property_type") or "").strip()
+        property_type = (request.form.get("property_type") or "single_family").strip()
+        style = (request.form.get("style") or "modern_farmhouse").strip()
         description = (request.form.get("description") or "").strip()
         lot_size = (request.form.get("lot_size") or "").strip()
         zoning = (request.form.get("zoning") or "").strip()
@@ -3101,44 +3920,174 @@ def generate_build_studio():
         land_image = request.files.get("land_image")
         image_url = (request.form.get("image_url") or "").strip()
 
+        image_base64 = ""
         if land_image:
             raw = land_image.read()
-            image_base64 = base64.b64encode(raw).decode()
-        else:
-            image_base64 = None
+            if raw:
+                image_base64 = base64.b64encode(raw).decode("utf-8")
 
         payload = {
             "project_name": project_name,
             "property_type": property_type,
+            "style": style,
             "description": description,
             "lot_size": lot_size,
             "zoning": zoning,
-            "location": location,
-            "notes": notes,
             "image_base64": image_base64,
-            "image_url": image_url,
+            "image_url": image_url or "",
             "count": 2,
             "steps": 32,
+            "guidance": 7.5,
+            "strength": 0.75,
             "width": 1024,
-            "height": 1024
+            "height": 1024,
         }
 
-        res = requests.post(
-            f"{RENOVATION_ENGINE_URL}/v1/build_concept",
-            json=payload,
-            headers={"X-API-Key": os.getenv("RENOVATION_API_KEY", "")},
-            timeout=900
-        )
-        res.raise_for_status()
-        data = res.json()
+        data = _post_renovation_engine_json("/v1/build_concept", payload, timeout=RENDER_TIMEOUT)
 
         images = data.get("images_base64") or []
+        saved_paths = data.get("saved_paths") or []
         meta = data.get("meta") or {}
         seed = data.get("seed")
         job_id = data.get("job_id")
 
         if save_to_deal and deal is not None:
-            results = deal.results_json or {}
+            results = _deal_results(deal)
+            results["build_analysis"] = {
+                "project_name": project_name,
+                "property_type": property_type,
+                "style": style,
+                "description": description,
+                "lot_size": lot_size,
+                "zoning": zoning,
+                "location": location,
+                "notes": notes,
+                "images_base64": images,
+                "saved_paths": saved_paths,
+                "meta": meta,
+                "seed": seed,
+                "job_id": job_id,
+            }
+            _set_deal_results(deal, results)
+
+        if deal is not None:
+            _clear_deal_render_processing(deal)
+
+        db.session.commit()
+
+        return jsonify({
+            "status": "ok",
+            "images": images,
+            "saved_paths": saved_paths,
+            "meta": meta,
+            "seed": seed,
+            "job_id": job_id,
+            "deal_id": deal.id if deal else None,
+            "saved_to_deal": bool(save_to_deal and deal is not None),
+            "mode": "json",
+        })
+
+    except Exception as e:
+        current_app.logger.exception("Build Studio generation error")
+
+        if deal is not None:
+            try:
+                _clear_deal_render_processing(deal)
+                db.session.commit()
+            except Exception:
+                db.session.rollback()
+
+        return jsonify({
+            "status": "error",
+            "message": str(e)
+        }), 500
+
+@investor_bp.route("/deal-studio/build-studio/generate-upload", methods=["POST"])
+@csrf.exempt
+@login_required
+@role_required("investor")
+def generate_build_studio_upload():
+    deal = None
+
+    try:
+        deal_id = _normalize_int(request.form.get("deal_id"))
+
+        if deal_id:
+            deal = Deal.query.filter_by(id=deal_id, user_id=current_user.id).first()
+            if not deal:
+                return jsonify({
+                    "status": "error",
+                    "message": "Deal not found or not authorized."
+                }), 404
+
+            if _deal_render_lock_active(deal):
+                return jsonify({
+                    "status": "error",
+                    "message": "A build render is already in progress for this deal."
+                }), 409
+
+            _set_deal_render_processing(deal)
+            db.session.commit()
+
+        project_name = (request.form.get("project_name") or "").strip()
+        property_type = (request.form.get("property_type") or "single_family").strip()
+        description = (request.form.get("description") or "").strip()
+        lot_size = (request.form.get("lot_size") or "").strip()
+        zoning = (request.form.get("zoning") or "").strip()
+        location = (request.form.get("location") or "").strip()
+        notes = (request.form.get("notes") or "").strip()
+        style = (request.form.get("style") or "modern_farmhouse").strip()
+        save_to_deal = (request.form.get("save_to_deal") or "").lower() in ("1", "true", "yes", "on")
+
+        land_image = request.files.get("land_image")
+        if not land_image:
+            return jsonify({
+                "status": "error",
+                "message": "land_image is required."
+            }), 400
+
+        raw = land_image.read()
+        if not raw:
+            return jsonify({
+                "status": "error",
+                "message": "Empty land image."
+            }), 400
+
+        payload = {
+            "project_name": project_name,
+            "property_type": property_type,
+            "style": style,
+            "description": description,
+            "lot_size": lot_size,
+            "zoning": zoning,
+            "image_base64": base64.b64encode(raw).decode("utf-8"),
+            "image_url": "",
+            "width": int(request.form.get("width") or 1024),
+            "height": int(request.form.get("height") or 1024),
+            "steps": int(request.form.get("steps") or 32),
+            "guidance": float(request.form.get("guidance") or 7.5),
+            "strength": float(request.form.get("strength") or 0.75),
+            "count": int(request.form.get("count") or 2),
+        }
+
+        seed = request.form.get("seed")
+        if seed not in (None, "", "None"):
+            payload["seed"] = int(seed)
+
+        result = _post_renovation_engine_json(
+            "/v1/build_concept",
+            payload,
+            timeout=UPLOAD_TIMEOUT,
+        )
+
+        images = result.get("images_base64") or []
+        saved_paths = result.get("saved_paths") or []
+        meta = result.get("meta") or {}
+        seed = result.get("seed")
+        job_id = result.get("job_id")
+
+        if save_to_deal and deal is not None:
+            results = _deal_results(deal)
             results["build_analysis"] = {
                 "project_name": project_name,
                 "property_type": property_type,
@@ -3147,31 +4096,47 @@ def generate_build_studio():
                 "zoning": zoning,
                 "location": location,
                 "notes": notes,
+                "style": style,
                 "images_base64": images,
+                "saved_paths": saved_paths,
                 "meta": meta,
                 "seed": seed,
                 "job_id": job_id,
             }
-            deal.results_json = results
-            db.session.commit()
+            _set_deal_results(deal, results)
+
+        if deal is not None:
+            _clear_deal_render_processing(deal)
+
+        db.session.commit()
 
         return jsonify({
             "status": "ok",
             "images": images,
+            "saved_paths": saved_paths,
             "meta": meta,
             "seed": seed,
             "job_id": job_id,
             "deal_id": deal.id if deal else None,
             "saved_to_deal": bool(save_to_deal and deal is not None),
+            "mode": "upload",
         })
 
     except Exception as e:
-        current_app.logger.exception("Build Studio generation error")
+        current_app.logger.exception("Build Studio upload generation error")
+
+        if deal is not None:
+            try:
+                _clear_deal_render_processing(deal)
+                db.session.commit()
+            except Exception:
+                db.session.rollback()
+
         return jsonify({
             "status": "error",
             "message": str(e)
         }), 500
-        
+
 # =========================================================
 # 🏗️ BUILD STUDIO — SAVE PROJECT
 # =========================================================
@@ -3191,6 +4156,8 @@ def save_build_studio():
         if not deal:
             return jsonify({"status": "error", "message": "Deal not found or not authorized."}), 404
 
+    investor_profile = InvestorProfile.query.filter_by(user_id=current_user.id).first()
+
     project = BuildProject(
         user_id=current_user.id,
         project_name=data.get("project_name"),
@@ -3206,11 +4173,17 @@ def save_build_studio():
         presentation_url=data.get("presentation_url")
     )
 
+    if hasattr(project, "investor_profile_id"):
+        project.investor_profile_id = investor_profile.id if investor_profile else None
+
+    if hasattr(project, "deal_id"):
+        project.deal_id = deal.id if deal else None
+
     db.session.add(project)
     db.session.flush()
 
     if deal is not None:
-        results = deal.results_json or {}
+        results = _deal_results(deal)
         results["build_project"] = {
             "project_id": project.id,
             "project_name": project.project_name,
@@ -3225,7 +4198,7 @@ def save_build_studio():
             "site_plan_url": project.site_plan_url,
             "presentation_url": project.presentation_url,
         }
-        deal.results_json = results
+        _set_deal_results(deal, results)
 
     db.session.commit()
 
@@ -3234,7 +4207,8 @@ def save_build_studio():
         "project_id": project.id,
         "deal_id": deal.id if deal else None,
     })
-    
+
+
 # =========================================================
 # 🏗️ BUILD PROJECTS — LIST
 # =========================================================
@@ -3243,7 +4217,6 @@ def save_build_studio():
 @login_required
 @role_required("investor")
 def build_projects():
-
     projects = BuildProject.query.filter_by(
         user_id=current_user.id
     ).order_by(BuildProject.created_at.desc()).all()
@@ -3253,6 +4226,7 @@ def build_projects():
         projects=projects,
         page_title="Build Projects"
     )
+
 
 @investor_bp.route("/build-projects/<int:project_id>", methods=["GET"])
 @login_required
@@ -3269,6 +4243,7 @@ def build_project_detail(project_id):
         page_title="Build Project",
         page_subtitle="Review your saved development concept."
     )
+
 
 @investor_bp.route("/build-projects/<int:project_id>/convert-to-deal", methods=["POST"])
 @csrf.exempt
@@ -3327,19 +4302,92 @@ def convert_build_project_to_deal(project_id):
         "status": "ok",
         "deal_id": deal.id,
         "redirect_url": url_for("investor.deal_detail", deal_id=deal.id)
-    })    
+    })
+
+
 # =========================================================
 # 🧭 AI DEAL ARCHITECT
 # =========================================================
 
 @investor_bp.route("/deal-architect", methods=["GET"])
+@investor_bp.route("/deal-architect/<int:deal_id>", methods=["GET"])
 @login_required
 @role_required("investor")
-def deal_architect():
+def deal_architect(deal_id=None):
+    selected_deal = None
+
+    if deal_id:
+        selected_deal = Deal.query.filter_by(
+            id=deal_id,
+            user_id=current_user.id
+        ).first_or_404()
+    else:
+        query_deal_id = request.args.get("deal_id", type=int)
+        if query_deal_id:
+            selected_deal = Deal.query.filter_by(
+                id=query_deal_id,
+                user_id=current_user.id
+            ).first()
+
+    property_address = ""
+    city = ""
+    state = ""
+    zip_code = ""
+    property_type = ""
+    bedrooms = None
+    bathrooms = None
+    sqft = None
+    year_built = None
+
+    strategy_analysis = {}
+
+    if selected_deal:
+        property_address = (
+            getattr(selected_deal, "property_address", None)
+            or getattr(selected_deal, "address", None)
+            or getattr(selected_deal, "street_address", None)
+            or ""
+        )
+        city = getattr(selected_deal, "city", "") or ""
+        state = getattr(selected_deal, "state", "") or ""
+        zip_code = getattr(selected_deal, "zip_code", "") or ""
+        property_type = (
+            getattr(selected_deal, "property_type", None)
+            or getattr(selected_deal, "asset_type", None)
+            or ""
+        )
+        bedrooms = (
+            getattr(selected_deal, "bedrooms", None)
+            or getattr(selected_deal, "beds", None)
+        )
+        bathrooms = (
+            getattr(selected_deal, "bathrooms", None)
+            or getattr(selected_deal, "baths", None)
+        )
+        sqft = (
+            getattr(selected_deal, "square_feet", None)
+            or getattr(selected_deal, "sqft", None)
+        )
+        year_built = getattr(selected_deal, "year_built", None)
+
+        strategy_analysis = _deal_results(selected_deal).get("strategy_analysis", {}) or {}
+
     return render_template(
         "investor/deal_architect.html",
         page_title="AI Deal Architect",
-        page_subtitle="Generate strategies and investment approaches for potential deals."
+        page_subtitle="Analyze the opportunity, score the risk, and shape the best strategy for the deal.",
+        deal=selected_deal,
+        deal_id=selected_deal.id if selected_deal else None,
+        property_address=property_address,
+        city=city,
+        state=state,
+        zip_code=zip_code,
+        property_type=property_type,
+        bedrooms=bedrooms,
+        bathrooms=bathrooms,
+        sqft=sqft,
+        year_built=year_built,
+        strategy_analysis=strategy_analysis,
     )
 
 
@@ -3349,6 +4397,14 @@ def deal_architect():
 @role_required("investor")
 def deal_architect_analyze():
     try:
+        deal_id = _normalize_int(request.form.get("deal_id"))
+        deal = None
+
+        if deal_id:
+            deal = Deal.query.filter_by(id=deal_id, user_id=current_user.id).first()
+            if not deal:
+                return jsonify({"status": "error", "message": "Deal not found"}), 404
+
         address = (request.form.get("address") or "").strip()
         property_type = (request.form.get("property_type") or "").strip().lower()
         price = safe_float(request.form.get("price"))
@@ -3357,7 +4413,7 @@ def deal_architect_analyze():
         description = (request.form.get("description") or "").strip()
 
         flip_profit = arv - (price + rehab)
-        rental_value = arv * 0.008
+        rental_value = arv * 0.008 if arv else 0
 
         strategies = []
 
@@ -3383,28 +4439,47 @@ def deal_architect_analyze():
                 "summary": "Construct a new property for resale or rental."
             })
 
+        if deal:
+            results = _deal_results(deal)
+            results["strategy_analysis"] = {
+                "address": address,
+                "property_type": property_type,
+                "description": description,
+                "price": price,
+                "rehab": rehab,
+                "arv": arv,
+                "strategies": strategies,
+            }
+            _set_deal_results(deal, results)
+            db.session.commit()
+
         return jsonify({
             "status": "ok",
             "address": address,
             "property_type": property_type,
             "description": description,
-            "strategies": strategies
+            "strategies": strategies,
+            "saved_to_deal": bool(deal),
+            "deal_id": deal.id if deal else None,
         })
 
     except Exception as e:
+        current_app.logger.exception("deal_architect_analyze failed")
         return jsonify({
             "status": "error",
             "message": str(e)
         }), 500
 
+
 @investor_bp.route("/deal-architect/strategy", methods=["POST"])
+@csrf.exempt
 @login_required
 @role_required("investor")
 def deal_architect_strategy():
     try:
         data = request.get_json(silent=True) or request.form
 
-        deal_id = data.get("deal_id")
+        deal_id = _normalize_int(data.get("deal_id"))
         if not deal_id:
             return jsonify({"success": False, "error": "deal_id is required"}), 400
 
@@ -3465,7 +4540,7 @@ def deal_architect_strategy():
         deal.recommended_strategy = recommended_strategy
         deal.deal_score = deal_score
 
-        results = deal.results_json or {}
+        results = _deal_results(deal)
         results["strategy_analysis"] = {
             "recommended_strategy": recommended_strategy,
             "reason": reason,
@@ -3476,7 +4551,7 @@ def deal_architect_strategy():
             "projected_profit": round(projected_profit, 2),
             "deal_score": deal_score,
         }
-        deal.results_json = results
+        _set_deal_results(deal, results)
 
         db.session.commit()
 
@@ -3495,8 +4570,11 @@ def deal_architect_strategy():
             "error": f"Analysis failed: {str(e)}"
         }), 500
 
+
 @investor_bp.route("/rehab-architect/generate-scope", methods=["POST"])
+@csrf.exempt
 @login_required
+@role_required("investor")
 def rehab_architect_generate_scope():
     data = request.get_json(silent=True) or request.form
 
@@ -3510,6 +4588,7 @@ def rehab_architect_generate_scope():
 
     sqft = int(float(data.get("sqft") or 1500))
     rehab_level = (data.get("rehab_level") or "medium").lower()
+    image_url = (data.get("image_url") or getattr(deal, "image_url", "") or "").strip()
 
     cost_per_sqft = {
         "light": 20,
@@ -3533,23 +4612,67 @@ def rehab_architect_generate_scope():
         }
     }
 
+    external_scope_result = None
+
+    if image_url:
+        try:
+            if SCOPE_ENGINE_URL:
+                external_scope_result = _post_scope_engine_json(
+                    "/v1/rehab_scope",
+                    {"image_url": image_url},
+                    timeout=SCOPE_TIMEOUT,
+                )
+
+                estimated_rehab_cost = (
+                    external_scope_result.get("cost_high")
+                    or external_scope_result.get("cost_low")
+                    or estimated_rehab_cost
+                )
+
+                scope = {
+                    "rehab_level": rehab_level,
+                    "sqft": sqft,
+                    "cost_per_sqft": round(estimated_rehab_cost / sqft, 2) if sqft else selected_cost_per_sqft,
+                    "rooms": external_scope_result.get("rooms", []),
+                    "plan": external_scope_result.get("plan", ""),
+                    "line_items": scope.get("line_items", {})
+                }
+
+        except Exception:
+            current_app.logger.exception("Scope engine rehab call failed")
+
     deal.rehab_cost = estimated_rehab_cost
     deal.rehab_scope_json = scope
 
-    existing_results = deal.results_json or {}
+    existing_results = _deal_results(deal)
     existing_results["rehab_analysis"] = {
         "estimated_rehab_cost": estimated_rehab_cost,
         "scope": scope
     }
-    deal.results_json = existing_results
+    existing_results["rehab_summary"] = {
+        "scope": rehab_level,
+        "total": estimated_rehab_cost,
+        "cost_per_sqft": round(estimated_rehab_cost / sqft, 2) if sqft else 0,
+        "items": scope.get("line_items", {})
+    }
 
+    if external_scope_result:
+        existing_results["rehab_analysis_external"] = external_scope_result
+
+        external_arv = external_scope_result.get("arv")
+        if external_arv and not deal.arv:
+            deal.arv = external_arv
+
+    _set_deal_results(deal, existing_results)
     db.session.commit()
 
     return jsonify({
         "success": True,
         "deal_id": deal.id,
         "estimated_rehab_cost": estimated_rehab_cost,
-        "scope": scope
+        "scope": scope,
+        "external_scope_used": bool(external_scope_result),
+        "external_scope_result": external_scope_result
     })
 
 # =========================================================
@@ -3587,6 +4710,7 @@ def renovation_upload():
         current_app.logger.exception("renovation_upload failed")
         return jsonify({"status": "error", "message": str(e)}), 500
 
+
 # =========================================================
 # PHOTO RENOVATION VISUALIZER
 # =========================================================
@@ -3598,44 +4722,54 @@ def renovation_upload():
 @login_required
 @role_required("investor")
 def renovation_visualizer():
-    image_file = request.files.get("image_file")
-    image_url = (request.form.get("image_url") or "").strip()
-
-    style_prompt = (request.form.get("style_prompt") or "").strip()
-    requested_style_preset = (request.form.get("style_preset") or "").strip()
-    variations = max(1, min(int(request.form.get("variations", 2)), 4))
-    save_to_deal = (request.form.get("save_to_deal") or "").lower() in ("1", "true", "yes", "on")
-    mode = (request.form.get("mode") or "photo").strip().lower()
-
-    saved_property_id = _normalize_int(request.form.get("saved_property_id") or request.form.get("prop_id"))
-    deal_id = _normalize_int(request.form.get("deal_id"))
-    property_id = (request.form.get("property_id") or "").strip() or None
-
-    if not image_file and not image_url:
-        return jsonify({"status": "error", "message": "Provide image_file or image_url."}), 400
-
-    if image_url.startswith("blob:"):
-        return jsonify({"status": "error", "message": "Browser preview URL detected. Please upload the image file."}), 400
-
-    if image_url and not (image_url.startswith("http://") or image_url.startswith("https://")):
-        return jsonify({"status": "error", "message": "image_url must start with http:// or https://"}), 400
-
-    if not style_prompt and not requested_style_preset:
-        return jsonify({"status": "error", "message": "Add a style prompt or choose a preset."}), 400
-
     deal = None
-    if deal_id:
-        deal = Deal.query.filter_by(id=deal_id, user_id=current_user.id).first()
-        if not deal:
-            return jsonify({"status": "error", "message": "Deal not found or not authorized."}), 404
-
-        if saved_property_id is None and getattr(deal, "saved_property_id", None):
-            saved_property_id = deal.saved_property_id
-
-        if not property_id and getattr(deal, "property_id", None):
-            property_id = deal.property_id
 
     try:
+        image_file = request.files.get("image_file")
+        image_url = (request.form.get("image_url") or "").strip()
+
+        style_prompt = (request.form.get("style_prompt") or "").strip()
+        requested_style_preset = (request.form.get("style_preset") or "").strip()
+        variations = max(1, min(int(request.form.get("variations", 2)), 4))
+        save_to_deal = (request.form.get("save_to_deal") or "").lower() in ("1", "true", "yes", "on")
+        mode = (request.form.get("mode") or "photo").strip().lower()
+
+        saved_property_id = _normalize_int(request.form.get("saved_property_id") or request.form.get("prop_id"))
+        deal_id = _normalize_int(request.form.get("deal_id"))
+        property_id = (request.form.get("property_id") or "").strip() or None
+
+        if not image_file and not image_url:
+            return jsonify({"status": "error", "message": "Provide image_file or image_url."}), 400
+
+        if image_url.startswith("blob:"):
+            return jsonify({"status": "error", "message": "Browser preview URL detected. Please upload the image file."}), 400
+
+        if image_url and not (image_url.startswith("http://") or image_url.startswith("https://")):
+            return jsonify({"status": "error", "message": "image_url must start with http:// or https://"}), 400
+
+        if not style_prompt and not requested_style_preset:
+            return jsonify({"status": "error", "message": "Add a style prompt or choose a preset."}), 400
+
+        if deal_id:
+            deal = Deal.query.filter_by(id=deal_id, user_id=current_user.id).first()
+            if not deal:
+                return jsonify({"status": "error", "message": "Deal not found or not authorized."}), 404
+
+            if _deal_render_lock_active(deal):
+                return jsonify({
+                    "status": "error",
+                    "message": "A renovation render is already in progress for this deal."
+                }), 409
+
+            _set_deal_render_processing(deal)
+            db.session.commit()
+
+            if saved_property_id is None and getattr(deal, "saved_property_id", None):
+                saved_property_id = deal.saved_property_id
+
+            if not property_id and getattr(deal, "property_id", None):
+                property_id = deal.property_id
+
         raw = image_file.read() if image_file else download_image_bytes(image_url)
         if not raw:
             return jsonify({"status": "error", "message": "Empty image input."}), 400
@@ -3650,7 +4784,8 @@ def renovation_visualizer():
         render_batch_id = uuid.uuid4().hex
 
         payload = {
-            "image_url": before_url,
+            "image_base64": base64.b64encode(raw).decode("utf-8") if image_file else "",
+            "image_url": "" if image_file else before_url,
             "mode": mode,
             "preset": style_preset,
             "prompt": final_prompt,
@@ -3663,22 +4798,24 @@ def renovation_visualizer():
             "height": 1024,
         }
 
-        engine_res = requests.post(
-            RENOVATION_ENGINE_URL,
-            json=payload,
-            headers=_engine_headers(),
-            timeout=GPU_TIMEOUT,
+        engine_json = _post_renovation_engine_json(
+            "/v1/renovate",
+            payload,
+            timeout=UPLOAD_TIMEOUT if image_file else RENDER_TIMEOUT,
         )
-        engine_res.raise_for_status()
-        engine_json = engine_res.json()
 
+        returned_urls = engine_json.get("saved_paths", []) or []
         images_b64 = engine_json.get("images_base64", []) or []
-        if not images_b64:
-            return jsonify({"status": "error", "message": "GPU engine returned no images."}), 502
 
-        after_urls = _upload_after_images_from_b64(images_b64, render_batch_id)
-        if not after_urls:
-            return jsonify({"status": "error", "message": "Render completed but uploads failed."}), 500
+        if returned_urls:
+            after_urls = returned_urls
+        else:
+            if not images_b64:
+                return jsonify({"status": "error", "message": "GPU engine returned no images."}), 502
+
+            after_urls = _upload_after_images_from_b64(images_b64, render_batch_id)
+            if not after_urls:
+                return jsonify({"status": "error", "message": "Render completed but uploads failed."}), 500
 
         saved_count = 0
         if save_to_deal and deal is not None:
@@ -3689,7 +4826,12 @@ def renovation_visualizer():
                 style_prompt=style_prompt,
                 style_preset=style_preset,
                 saved_property_id=saved_property_id,
+                property_id=property_id,
             )
+
+        if deal is not None:
+            _clear_deal_render_processing(deal)
+            db.session.commit()
 
         return jsonify({
             "status": "ok",
@@ -3709,6 +4851,14 @@ def renovation_visualizer():
 
     except Exception as e:
         current_app.logger.exception("renovation_visualizer failed")
+
+        if deal is not None:
+            try:
+                _clear_deal_render_processing(deal)
+                db.session.commit()
+            except Exception:
+                db.session.rollback()
+
         return jsonify({"status": "error", "message": f"Renovation generator failed: {e}"}), 500
 
 # =========================================================
@@ -3721,40 +4871,50 @@ def renovation_visualizer():
 @login_required
 @role_required("investor")
 def blueprint_to_room():
-    blueprint_file = request.files.get("blueprint_file")
-    blueprint_url = (request.form.get("blueprint_url") or "").strip()
-
-    requested_style_preset = (request.form.get("style_preset") or "luxury_modern").strip().lower()
-    renovation_level = (request.form.get("renovation_level") or "medium").strip().lower()
-
-    deal_id = _normalize_int(request.form.get("deal_id"))
-    saved_property_id = _normalize_int(request.form.get("saved_property_id"))
-
-    if not blueprint_file and not blueprint_url:
-        return jsonify({"status": "error", "message": "Provide blueprint_file or blueprint_url."}), 400
-
-    style_preset = _normalize_style_preset(requested_style_preset)
-    render_batch_id = uuid.uuid4().hex
-    structure = None
-    room_type = "room"
-    parse_warning = None
     deal = None
 
-    if deal_id:
-        deal = Deal.query.filter_by(id=deal_id, user_id=current_user.id).first()
-        if not deal:
-            return jsonify({"status": "error", "message": "Deal not found or not authorized."}), 404
-
-        if saved_property_id is None and getattr(deal, "saved_property_id", None):
-            saved_property_id = deal.saved_property_id
-
     try:
+        blueprint_file = request.files.get("blueprint_file")
+        blueprint_url = (request.form.get("blueprint_url") or "").strip()
+
+        requested_style_preset = (request.form.get("style_preset") or "luxury_modern").strip().lower()
+        renovation_level = (request.form.get("renovation_level") or "medium").strip().lower()
+
+        deal_id = _normalize_int(request.form.get("deal_id"))
+        saved_property_id = _normalize_int(request.form.get("saved_property_id"))
+
+        if not blueprint_file and not blueprint_url:
+            return jsonify({"status": "error", "message": "Provide blueprint_file or blueprint_url."}), 400
+
+        style_preset = _normalize_style_preset(requested_style_preset)
+        render_batch_id = uuid.uuid4().hex
+        structure = None
+        room_type = "room"
+        parse_warning = None
+
+        if deal_id:
+            deal = Deal.query.filter_by(id=deal_id, user_id=current_user.id).first()
+            if not deal:
+                return jsonify({"status": "error", "message": "Deal not found or not authorized."}), 404
+
+            if _deal_render_lock_active(deal):
+                return jsonify({
+                    "status": "error",
+                    "message": "A blueprint render is already in progress for this deal."
+                }), 409
+
+            _set_deal_render_processing(deal)
+            db.session.commit()
+
+            if saved_property_id is None and getattr(deal, "saved_property_id", None):
+                saved_property_id = deal.saved_property_id
+
         raw = blueprint_file.read() if blueprint_file else download_image_bytes(blueprint_url)
         if not raw:
             return jsonify({"status": "error", "message": "Empty blueprint input."}), 400
 
         blueprint_webp = to_webp_bytes(raw, max_size=2000, quality=90)
-        uploaded = r2_put_bytes(
+        uploaded = spaces_put_bytes(
             blueprint_webp,
             subdir=f"blueprints/{current_user.id}",
             content_type="image/webp",
@@ -3785,22 +4945,24 @@ def blueprint_to_room():
             "height": 1024,
         }
 
-        engine_res = requests.post(
-            RENOVATION_ENGINE_URL,
-            json=payload,
-            headers=_engine_headers(),
-            timeout=GPU_TIMEOUT,
+        engine_json = _post_renovation_engine_json(
+            "/v1/renovate",
+            payload,
+            timeout=RENDER_TIMEOUT,
         )
-        engine_res.raise_for_status()
-        engine_json = engine_res.json()
 
+        returned_urls = engine_json.get("saved_paths", []) or []
         images_b64 = engine_json.get("images_base64", []) or []
-        if not images_b64:
-            return jsonify({"status": "error", "message": "GPU engine returned no images."}), 502
 
-        after_urls = _upload_after_images_from_b64(images_b64, render_batch_id)
-        if not after_urls:
-            return jsonify({"status": "error", "message": "Render completed but uploads failed."}), 500
+        if returned_urls:
+            after_urls = returned_urls
+        else:
+            if not images_b64:
+                return jsonify({"status": "error", "message": "GPU engine returned no images."}), 502
+
+            after_urls = _upload_after_images_from_b64(images_b64, render_batch_id)
+            if not after_urls:
+                return jsonify({"status": "error", "message": "Render completed but uploads failed."}), 500
 
         saved_count = 0
         if deal is not None:
@@ -3813,6 +4975,10 @@ def blueprint_to_room():
                 mode="blueprint",
                 saved_property_id=saved_property_id,
             )
+
+        if deal is not None:
+            _clear_deal_render_processing(deal)
+            db.session.commit()
 
         return jsonify({
             "status": "ok",
@@ -3833,6 +4999,14 @@ def blueprint_to_room():
 
     except Exception as e:
         current_app.logger.exception("blueprint_to_room failed")
+
+        if deal is not None:
+            try:
+                _clear_deal_render_processing(deal)
+                db.session.commit()
+            except Exception:
+                db.session.rollback()
+
         return jsonify({"status": "error", "message": f"Blueprint render failed: {e}"}), 500
 
 # =========================================================
@@ -3886,6 +5060,8 @@ def save_renovation_mockups(deal_id):
 
     db.session.commit()
     return jsonify({"status": "ok", "saved": saved})
+
+
 # =========================================================
 # SELECT DESIGN / FEATURE DESIGN
 # =========================================================
@@ -3928,6 +5104,7 @@ def deal_select_design(deal_id):
     db.session.commit()
     return jsonify({"status": "ok", "after_url": after_url})
 
+
 @investor_bp.route("/deals/<int:deal_id>/rehab/feature", methods=["POST"])
 @csrf.exempt
 @login_required
@@ -3956,6 +5133,7 @@ def deal_feature_reveal(deal_id):
         "deal_id": deal.id,
         "featured": featured,
     })
+
 
 # =========================================================
 # SHARE DESIGN TO PARTNERS
@@ -4048,6 +5226,7 @@ def deal_share_design(deal_id):
     db.session.commit()
     return jsonify({"status": "ok", "sent": sent, "failed": 0})
 
+
 # =========================================================
 # REVEAL
 # =========================================================
@@ -4083,6 +5262,7 @@ def deal_reveal(deal_id):
         featured=featured,
     )
 
+
 @investor_bp.route("/deals/<int:deal_id>/reveal/publish", methods=["POST"])
 @csrf.exempt
 @login_required
@@ -4099,6 +5279,7 @@ def publish_reveal(deal_id):
 
     public_url = url_for("investor.public_reveal", public_id=deal.reveal_public_id, _external=True)
     return jsonify({"status": "ok", "public_url": public_url})
+
 
 @investor_bp.route("/reveal/<string:public_id>", methods=["GET"])
 def public_reveal(public_id):
@@ -4119,6 +5300,7 @@ def public_reveal(public_id):
         mockups=mockups,
         featured=featured,
     )
+
 
 # =========================================================
 # AI REHAB SCOPE
@@ -4147,6 +5329,7 @@ def create_rehab_scope_job():
 
     return jsonify({"status": "ok", "job_id": job.id})
 
+
 @investor_bp.route("/ai/rehab-scope/jobs/<int:job_id>", methods=["GET"])
 @login_required
 @role_required("investor")
@@ -4162,6 +5345,7 @@ def get_rehab_scope_job(job_id):
         "images": getattr(job, "result_images", None),
     })
 
+
 @investor_bp.route("/ai/rehab-scope/analyze", methods=["POST"])
 @csrf.exempt
 @login_required
@@ -4174,11 +5358,13 @@ def ai_rehab_scope():
         return jsonify({"status": "error", "message": "image_url is required."}), 400
 
     try:
-        scope_url = RENOVATION_ENGINE_URL.replace("/v1/renovate", "/v1/rehab_scope")
+        if not SCOPE_ENGINE_URL:
+            return jsonify({"status": "error", "message": "Scope engine is not configured."}), 500
+
         res = requests.post(
-            scope_url,
+            _scope_engine_url("/v1/rehab_scope"),
             json={"image_url": image_url},
-            headers=_engine_headers(),
+            headers=_scope_engine_headers(),
             timeout=60,
         )
         res.raise_for_status()
@@ -4187,6 +5373,7 @@ def ai_rehab_scope():
     except Exception as e:
         current_app.logger.exception("ai_rehab_scope failed")
         return jsonify({"status": "error", "message": str(e)}), 500
+
 
 # =========================================================
 # EXPORTS
@@ -4201,6 +5388,7 @@ def export_deal_report_pro(deal_id):
 
     r = deal.results_json or {}
     resolved = deal.resolved_json or {}
+    rehab = _get_rehab_export_payload(deal)
 
     buffer = io.BytesIO()
     c = canvas.Canvas(buffer, pagesize=LETTER)
@@ -4236,21 +5424,35 @@ def export_deal_report_pro(deal_id):
     c.drawString(50, y, "Key Results"); y -= 16
     c.setFont("Helvetica", 10)
 
-    if "profit" in r: c.drawString(50, y, f"Flip Profit: {_fmt_money(r.get('profit'))}"); y -= 14
-    if "net_cashflow" in r: c.drawString(50, y, f"Rental Net Cashflow (mo): {_fmt_money(r.get('net_cashflow'))}"); y -= 14
-    if "net_monthly" in r: c.drawString(50, y, f"Airbnb Net Monthly: {_fmt_money(r.get('net_monthly'))}"); y -= 14
+    if "profit" in r:
+        c.drawString(50, y, f"Flip Profit: {_fmt_money(r.get('profit'))}")
+        y -= 14
+    if "net_cashflow" in r:
+        c.drawString(50, y, f"Rental Net Cashflow (mo): {_fmt_money(r.get('net_cashflow'))}")
+        y -= 14
+    if "net_monthly" in r:
+        c.drawString(50, y, f"Airbnb Net Monthly: {_fmt_money(r.get('net_monthly'))}")
+        y -= 14
 
     y -= 10
 
-    rehab = r.get("rehab_summary") if isinstance(r, dict) else None
     c.setFont("Helvetica-Bold", 12)
     c.drawString(50, y, "Rehab Summary"); y -= 16
     c.setFont("Helvetica", 10)
 
-    if isinstance(rehab, dict):
-        c.drawString(50, y, f"Scope: {rehab.get('scope') or '—'}"); y -= 14
-        c.drawString(50, y, f"Total Rehab: {_fmt_money(rehab.get('total'))}"); y -= 14
-        c.drawString(50, y, f"Cost per Sqft: {_fmt_money(rehab.get('cost_per_sqft'))}"); y -= 14
+    if isinstance(rehab, dict) and rehab:
+        total_rehab = rehab.get("total") or rehab.get("estimated_rehab_cost")
+        scope_value = rehab.get("scope")
+        cpsf = rehab.get("cost_per_sqft")
+
+        if isinstance(scope_value, dict):
+            scope_label = scope_value.get("rehab_level") or "Detailed scope"
+        else:
+            scope_label = scope_value or "—"
+
+        c.drawString(50, y, f"Scope: {scope_label}"); y -= 14
+        c.drawString(50, y, f"Total Rehab: {_fmt_money(total_rehab)}"); y -= 14
+        c.drawString(50, y, f"Cost per Sqft: {_fmt_money(cpsf)}"); y -= 14
     else:
         c.drawString(50, y, "No rehab summary available."); y -= 14
 
@@ -4261,6 +5463,7 @@ def export_deal_report_pro(deal_id):
     filename = f"ravlo_deal_report_{deal.id}_{datetime.utcnow().strftime('%Y%m%d')}.pdf"
     return send_file(buffer, as_attachment=True, download_name=filename, mimetype="application/pdf")
 
+
 @investor_bp.route("/deals/<int:deal_id>/export/rehab-scope", methods=["GET"])
 @investor_bp.route("/deals/<int:deal_id>/export-rehab-scope", methods=["GET"])
 @login_required
@@ -4268,8 +5471,7 @@ def export_deal_report_pro(deal_id):
 def export_rehab_scope(deal_id):
     deal = _get_owned_deal_or_404(deal_id)
 
-    r = deal.results_json or {}
-    rehab = r.get("rehab_summary") if isinstance(r, dict) else None
+    rehab = _get_rehab_export_payload(deal)
 
     buffer = io.BytesIO()
     c = canvas.Canvas(buffer, pagesize=LETTER)
@@ -4284,7 +5486,7 @@ def export_rehab_scope(deal_id):
     c.drawString(50, y, f"Property ID: {getattr(deal, 'property_id', None) or '—'}"); y -= 14
     c.drawString(50, y, f"Strategy: {getattr(deal, 'strategy', None) or '—'}"); y -= 22
 
-    if not isinstance(rehab, dict):
+    if not isinstance(rehab, dict) or not rehab:
         c.drawString(50, y, "No rehab summary available for this deal.")
         c.showPage()
         c.save()
@@ -4292,14 +5494,24 @@ def export_rehab_scope(deal_id):
         filename = f"ravlo_rehab_scope_{deal.id}_{datetime.utcnow().strftime('%Y%m%d')}.pdf"
         return send_file(buffer, as_attachment=True, download_name=filename, mimetype="application/pdf")
 
+    total_rehab = rehab.get("total") or rehab.get("estimated_rehab_cost")
+    cpsf = rehab.get("cost_per_sqft")
+
+    scope_value = rehab.get("scope")
+    if isinstance(scope_value, dict):
+        scope_label = scope_value.get("rehab_level") or "Detailed scope"
+        items = scope_value.get("line_items") or {}
+    else:
+        scope_label = scope_value or "—"
+        items = rehab.get("items") or {}
+
     c.setFont("Helvetica-Bold", 12)
     c.drawString(50, y, "Summary"); y -= 16
     c.setFont("Helvetica", 10)
-    c.drawString(50, y, f"Scope: {rehab.get('scope') or '—'}"); y -= 14
-    c.drawString(50, y, f"Total Rehab: {_fmt_money(rehab.get('total'))}"); y -= 14
-    c.drawString(50, y, f"Cost per Sqft: {_fmt_money(rehab.get('cost_per_sqft'))}"); y -= 18
+    c.drawString(50, y, f"Scope: {scope_label}"); y -= 14
+    c.drawString(50, y, f"Total Rehab: {_fmt_money(total_rehab)}"); y -= 14
+    c.drawString(50, y, f"Cost per Sqft: {_fmt_money(cpsf)}"); y -= 18
 
-    items = rehab.get("items") or {}
     c.setFont("Helvetica-Bold", 12)
     c.drawString(50, y, "Selected Items"); y -= 16
     c.setFont("Helvetica", 10)
@@ -4311,13 +5523,14 @@ def export_rehab_scope(deal_id):
                 y = height - 50
                 c.setFont("Helvetica", 10)
 
-            level = v.get("level") if isinstance(v, dict) else None
-            cost = v.get("cost") if isinstance(v, dict) else None
-            c.drawString(
-                50,
-                y,
-                f"- {str(k).capitalize()}: {str(level).capitalize() if level else '—'} | {_fmt_money(cost)}"
-            )
+            if isinstance(v, dict):
+                level = v.get("level")
+                cost = v.get("cost")
+                line = f"- {str(k).capitalize()}: {str(level).capitalize() if level else '—'} | {_fmt_money(cost)}"
+            else:
+                line = f"- {str(k).capitalize()}: {_fmt_money(v)}"
+
+            c.drawString(50, y, line)
             y -= 14
     else:
         c.drawString(50, y, "No item selections found.")
@@ -4339,18 +5552,33 @@ def export_rehab_scope(deal_id):
 @role_required("investor")
 def messages():
     ip = InvestorProfile.query.filter_by(user_id=current_user.id).first()
+
     from LoanMVP.models.user_model import User
 
-    officers = User.query.filter(User.role.in_(["loan_officer", "processor", "underwriter"])).all()
+    officers = User.query.filter(
+        User.role.in_(["loan_officer", "processor", "underwriter"])
+    ).order_by(User.first_name.asc(), User.last_name.asc()).all()
+
+    allowed_receiver_ids = {u.id for u in officers}
 
     receiver_id = request.args.get("receiver_id", type=int)
+    msgs = []
+
     if receiver_id:
+        if receiver_id not in allowed_receiver_ids:
+            flash("⚠️ You are not allowed to view that conversation.", "warning")
+            return redirect(url_for("investor.messages"))
+
         msgs = Message.query.filter(
-            ((Message.sender_id == current_user.id) & (Message.receiver_id == receiver_id))
-            | ((Message.sender_id == receiver_id) & (Message.receiver_id == current_user.id))
+            (
+                (Message.sender_id == current_user.id) &
+                (Message.receiver_id == receiver_id)
+            ) |
+            (
+                (Message.sender_id == receiver_id) &
+                (Message.receiver_id == current_user.id)
+            )
         ).order_by(Message.created_at.asc()).all()
-    else:
-        msgs = []
 
     return render_template(
         "investor/messages.html",
@@ -4364,20 +5592,32 @@ def messages():
 
 
 @investor_bp.route("/messages/send", methods=["POST"])
+@investor_bp.route("/messages/send", methods=["POST"])
 @csrf.exempt
 @login_required
 @role_required("investor")
 def send_message():
-    content = request.form.get("content") or ""
-    receiver_id = request.form.get("receiver_id")
+    content = (request.form.get("content") or "").strip()
+    receiver_id = request.form.get("receiver_id", type=int)
 
-    if not receiver_id or not content.strip():
+    from LoanMVP.models.user_model import User
+
+    if not receiver_id or not content:
         flash("⚠️ Please select a recipient and enter a message.", "warning")
+        return redirect(url_for("investor.messages"))
+
+    allowed_receiver = User.query.filter(
+        User.id == receiver_id,
+        User.role.in_(["loan_officer", "processor", "underwriter"])
+    ).first()
+
+    if not allowed_receiver:
+        flash("⚠️ Invalid message recipient.", "danger")
         return redirect(url_for("investor.messages"))
 
     db.session.add(Message(
         sender_id=current_user.id,
-        receiver_id=int(receiver_id),
+        receiver_id=receiver_id,
         content=content,
         created_at=datetime.utcnow(),
     ))
@@ -4725,6 +5965,94 @@ def budget():
         active_tab="budget"
     )
 
+@investor_bp.route("/deals/<int:deal_id>/rehab/budget", methods=["GET", "POST"])
+@csrf.exempt
+@login_required
+@role_required("investor")
+def rehab_budget_tracker(deal_id):
+    deal = _get_owned_deal_or_404(deal_id)
+
+    if request.method == "POST":
+        item = BudgetItem(
+            user_id=current_user.id,
+            deal_id=deal.id,
+            budget_type="rehab",
+            category=(request.form.get("category") or "").strip(),
+            item_name=(request.form.get("item_name") or "").strip(),
+            vendor=(request.form.get("vendor") or "").strip() or None,
+            estimated_cost=float(request.form.get("estimated_cost") or 0),
+            actual_cost=float(request.form.get("actual_cost") or 0),
+            paid_amount=float(request.form.get("paid_amount") or 0),
+            status=(request.form.get("status") or "planned").strip(),
+            notes=(request.form.get("notes") or "").strip() or None,
+        )
+        db.session.add(item)
+        db.session.commit()
+        flash("Budget item added.", "success")
+        return redirect(url_for("investor.rehab_budget_tracker", deal_id=deal.id))
+
+    items = BudgetItem.query.filter_by(
+        user_id=current_user.id,
+        deal_id=deal.id,
+        budget_type="rehab"
+    ).order_by(BudgetItem.created_at.desc()).all()
+
+    summary = budget_summary(items)
+
+    return render_template(
+        "investor/rehab_budget_tracker.html",
+        deal=deal,
+        items=items,
+        summary=summary,
+        page_title="Rehab Budget Tracker",
+        page_subtitle="Track projected vs actual renovation spend."
+    )
+
+@investor_bp.route("/build-projects/<int:project_id>/budget", methods=["GET", "POST"])
+@csrf.exempt
+@login_required
+@role_required("investor")
+def build_budget_tracker(project_id):
+    project = BuildProject.query.filter_by(
+        id=project_id,
+        user_id=current_user.id
+    ).first_or_404()
+
+    if request.method == "POST":
+        item = BudgetItem(
+            user_id=current_user.id,
+            build_project_id=project.id,
+            budget_type="build",
+            category=(request.form.get("category") or "").strip(),
+            item_name=(request.form.get("item_name") or "").strip(),
+            vendor=(request.form.get("vendor") or "").strip() or None,
+            estimated_cost=float(request.form.get("estimated_cost") or 0),
+            actual_cost=float(request.form.get("actual_cost") or 0),
+            paid_amount=float(request.form.get("paid_amount") or 0),
+            status=(request.form.get("status") or "planned").strip(),
+            notes=(request.form.get("notes") or "").strip() or None,
+        )
+        db.session.add(item)
+        db.session.commit()
+        flash("Build budget item added.", "success")
+        return redirect(url_for("investor.build_budget_tracker", project_id=project.id))
+
+    items = BudgetItem.query.filter_by(
+        user_id=current_user.id,
+        build_project_id=project.id,
+        budget_type="build"
+    ).order_by(BudgetItem.created_at.desc()).all()
+
+    summary = budget_summary(items)
+
+    return render_template(
+        "investor/build_budget_tracker.html",
+        project=project,
+        items=items,
+        summary=summary,
+        page_title="Build Budget Tracker",
+        page_subtitle="Track projected vs actual construction spend."
+    )
 
 @investor_bp.route("/ai/deal-insight", methods=["POST"])
 @investor_bp.route("/ai_deal_insight", methods=["POST"])
@@ -4973,3 +6301,211 @@ def market_snapshot_page():
         title="Market Snapshot",
         active_tab="market"
     )
+
+
+@investor_bp.route("/partners", methods=["GET"])
+@login_required
+@role_required("investor")
+def partners():
+    ip = InvestorProfile.query.filter_by(user_id=current_user.id).first()
+    if not ip:
+        flash("Please complete your investor profile first.", "warning")
+        return redirect(url_for("investor.create_profile"))
+
+    q = (request.args.get("q") or "").strip()
+    category = (request.args.get("category") or "").strip()
+    service_area = (request.args.get("service_area") or "").strip()
+    relationship_level = (request.args.get("relationship_level") or "").strip()
+
+    query = Partner.query.filter(
+        Partner.active.is_(True),
+        Partner.approved.is_(True)
+    )
+
+    if q:
+        query = query.filter(
+            or_(
+                Partner.name.ilike(f"%{q}%"),
+                Partner.company.ilike(f"%{q}%"),
+                Partner.category.ilike(f"%{q}%"),
+                Partner.type.ilike(f"%{q}%"),
+                Partner.service_area.ilike(f"%{q}%"),
+                Partner.listing_description.ilike(f"%{q}%"),
+                Partner.notes.ilike(f"%{q}%"),
+            )
+        )
+
+    if category:
+        query = query.filter(Partner.category.ilike(f"%{category}%"))
+
+    if service_area:
+        query = query.filter(Partner.service_area.ilike(f"%{service_area}%"))
+
+    if relationship_level:
+        query = query.filter(Partner.relationship_level.ilike(f"%{relationship_level}%"))
+
+    query = query.order_by(
+        Partner.featured.desc(),
+        Partner.rating.desc().nullslast(),
+        Partner.created_at.desc()
+    )
+
+    partners = query.all()
+
+    categories = [
+        "Contractor",
+        "Realtor",
+        "Lender",
+        "Broker",
+        "Vendor",
+        "Architect",
+        "Designer",
+        "Inspector",
+        "Attorney",
+        "Cleaner",
+        "Property Manager",
+        "Other",
+    ]
+
+    relationship_levels = ["Gold", "Silver", "Preferred", "Standard"]
+
+    return render_template(
+        "investor/partners.html",
+        investor=ip,
+        partners=partners,
+        categories=categories,
+        relationship_levels=relationship_levels,
+        selected_q=q,
+        selected_category=category,
+        selected_service_area=service_area,
+        selected_relationship_level=relationship_level,
+        title="Partner Network",
+        active_tab="partners",
+    )
+
+
+@investor_bp.route("/partners/<int:partner_id>", methods=["GET"])
+@login_required
+@role_required("investor")
+def partner_detail(partner_id):
+    ip = InvestorProfile.query.filter_by(user_id=current_user.id).first()
+    if not ip:
+        flash("Please complete your investor profile first.", "warning")
+        return redirect(url_for("investor.create_profile"))
+
+    partner = Partner.query.get_or_404(partner_id)
+
+    if not partner.active or not partner.approved:
+        flash("This partner is not currently available.", "warning")
+        return redirect(url_for("investor.partners"))
+
+    return render_template(
+        "investor/partner_detail.html",
+        investor=ip,
+        partner=partner,
+        title="Partner Details",
+        active_tab="partners",
+    )
+
+
+@investor_bp.route("/partners/<int:partner_id>/request-intro", methods=["POST"])
+@login_required
+@role_required("investor")
+def request_partner_intro(partner_id):
+    ip = InvestorProfile.query.filter_by(user_id=current_user.id).first()
+    if not ip:
+        flash("Please complete your investor profile first.", "warning")
+        return redirect(url_for("investor.create_profile"))
+
+    partner = Partner.query.get_or_404(partner_id)
+
+    if not partner.active or not partner.approved:
+        flash("This partner is not currently available.", "warning")
+        return redirect(url_for("investor.partners"))
+
+    message = (request.form.get("message") or "").strip()
+
+    followup = FollowUpItem(
+        investor_profile_id=ip.id,
+        description=(
+            f"Partner intro requested: {partner.company or partner.name}"
+            + (f" | Message: {message}" if message else "")
+        ),
+        is_done=False,
+        created_by=current_user.id,
+    )
+
+    db.session.add(followup)
+    db.session.commit()
+
+    flash(f"Intro request sent for {partner.company or partner.name}.", "success")
+    return redirect(url_for("investor.partner_detail", partner_id=partner.id))
+
+@investor_bp.route("/resources/request-connection", methods=["POST"])
+@login_required
+@role_required("investor")
+def request_connection():
+    ip = InvestorProfile.query.filter_by(user_id=current_user.id).first()
+    if not ip:
+        return jsonify({
+            "success": False,
+            "message": "Please complete your investor profile first."
+        }), 400
+
+    data = request.get_json(silent=True) or {}
+
+    partner_id = data.get("partner_id")
+    message = (data.get("message") or "").strip()
+    property_id = data.get("property_id")
+    lead_id = data.get("lead_id")
+
+    if not partner_id:
+        return jsonify({
+            "success": False,
+            "message": "Missing partner_id."
+        }), 400
+
+    partner = Partner.query.get_or_404(partner_id)
+
+    if not partner.active or not partner.approved:
+        return jsonify({
+            "success": False,
+            "message": "This partner is not currently available."
+        }), 400
+
+    req = PartnerConnectionRequest(
+        borrower_user_id=None,
+        investor_user_id=current_user.id,
+        borrower_profile_id=None,
+        investor_profile_id=ip.id,
+        property_id=property_id if property_id else None,
+        lead_id=lead_id if lead_id else None,
+        partner_id=partner.id,
+        category=partner.category,
+        message=message or f"Investor requested connection with {partner.company or partner.name}.",
+        status="pending",
+    )
+
+    db.session.add(req)
+
+    followup = FollowUpItem(
+        investor_profile_id=ip.id,
+        description=f"Partner connection requested: {partner.company or partner.name}",
+        is_done=False,
+        created_by=current_user.id,
+    )
+    db.session.add(followup)
+
+    db.session.commit()
+
+    return jsonify({
+        "success": True,
+        "message": f"Request sent for {partner.company or partner.name}."
+    }), 200
+
+@investor_bp.route("/resources/partners/filter", methods=["GET"])
+@login_required
+@role_required("investor")
+def partners_filter():
+    category = (request.args.get("category") or "All").strip()
+    return redirect(url_for("investor.resource_center", category=category))

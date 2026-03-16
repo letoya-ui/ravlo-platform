@@ -1,0 +1,116 @@
+{% extends "layouts/marketing_base.html" %}
+
+{% block hero %}
+<section class="mk-hero">
+  <div class="mk-container">
+    <div class="mk-hero-copy" style="max-width:900px;">
+      <div class="mk-eyebrow">Contact</div>
+      <h1 class="mk-title-xl">Let’s talk about Ravlo.</h1>
+      <p class="mk-copy-lg">
+        Reach out for platform questions, partnership opportunities, demos,
+        support, or early conversations about how Ravlo fits your workflow.
+      </p>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block content %}
+<section class="mk-section-tight">
+  <div class="mk-container">
+    <div class="mk-split-panel">
+      <div class="mk-panel">
+        <div class="mk-kicker">Get in touch</div>
+        <h2 class="mk-title-lg">Use a simple contact form to capture interest cleanly.</h2>
+        <p class="mk-copy">
+          If you already have a backend form handler, connect this form to it. If not,
+          keep the layout and wire it up later. This still makes the page feel complete now.
+        </p>
+
+        <form method="post" action="#" class="mk-contact-form" style="margin-top:24px; display:grid; gap:14px;">
+          <div class="mk-grid-2">
+            <div>
+              <label for="name" style="display:block; margin-bottom:8px; color:var(--soft); font-weight:600;">Name</label>
+              <input id="name" name="name" type="text" placeholder="Your name"
+                     style="width:100%; min-height:52px; border-radius:16px; border:1px solid rgba(255,255,255,.08); background:rgba(255,255,255,.04); color:#fff; padding:0 16px;">
+            </div>
+            <div>
+              <label for="email" style="display:block; margin-bottom:8px; color:var(--soft); font-weight:600;">Email</label>
+              <input id="email" name="email" type="email" placeholder="you@example.com"
+                     style="width:100%; min-height:52px; border-radius:16px; border:1px solid rgba(255,255,255,.08); background:rgba(255,255,255,.04); color:#fff; padding:0 16px;">
+            </div>
+          </div>
+
+          <div>
+            <label for="subject" style="display:block; margin-bottom:8px; color:var(--soft); font-weight:600;">Subject</label>
+            <input id="subject" name="subject" type="text" placeholder="How can we help?"
+                   style="width:100%; min-height:52px; border-radius:16px; border:1px solid rgba(255,255,255,.08); background:rgba(255,255,255,.04); color:#fff; padding:0 16px;">
+          </div>
+
+          <div>
+            <label for="message" style="display:block; margin-bottom:8px; color:var(--soft); font-weight:600;">Message</label>
+            <textarea id="message" name="message" rows="6" placeholder="Tell us more..."
+                      style="width:100%; border-radius:16px; border:1px solid rgba(255,255,255,.08); background:rgba(255,255,255,.04); color:#fff; padding:14px 16px; resize:vertical;"></textarea>
+          </div>
+
+          <div>
+            <button type="submit" class="mk-btn mk-btn-primary">Send Message</button>
+          </div>
+        </form>
+      </div>
+
+      <div class="mk-panel">
+        <div class="mk-kicker">Best uses</div>
+        <h2 class="mk-title-lg">This page can capture multiple types of interest.</h2>
+
+        <div class="mk-list">
+          <div class="mk-list-item">
+            <div class="mk-check">✓</div>
+            <div>
+              <strong>General inquiries</strong>
+              <div class="mk-copy">Questions about the platform, roadmap, or availability.</div>
+            </div>
+          </div>
+
+          <div class="mk-list-item">
+            <div class="mk-check">✓</div>
+            <div>
+              <strong>Partnerships</strong>
+              <div class="mk-copy">Vendors, collaborators, and aligned service providers.</div>
+            </div>
+          </div>
+
+          <div class="mk-list-item">
+            <div class="mk-check">✓</div>
+            <div>
+              <strong>Support</strong>
+              <div class="mk-copy">Help users get directed to the right part of the Ravlo experience.</div>
+            </div>
+          </div>
+
+          <div class="mk-list-item">
+            <div class="mk-check">✓</div>
+            <div>
+              <strong>Demos & access</strong>
+              <div class="mk-copy">A clean place for users to request next-step conversation.</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="mk-divider"></div>
+
+        <div class="mk-grid-2">
+          <div class="mk-card">
+            <h4>Clean first impression</h4>
+            <p>Simple layout, premium style, and easy to wire into your real form flow later.</p>
+          </div>
+          <div class="mk-card">
+            <h4>Flexible use</h4>
+            <p>Works for product questions, partner interest, and support handoff.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}

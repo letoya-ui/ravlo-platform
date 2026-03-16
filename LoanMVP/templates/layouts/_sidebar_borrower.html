@@ -1,198 +1,72 @@
-<style>
-/* Slim sidebar */
-.b-sidebar {
-  width: 64px;
-  background: #0b0c0f;
-  border-right: 1px solid var(--line);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 0.75rem 0;
-  gap: 0.75rem;
+{% set ep = request.endpoint or "" %}
 
-  /* THE FIX */
-  position: fixed;
-  top: 0;
-  left: 0;
-  height: 100vh; /* full height */
-  z-index: 999;  /* stays above content */
-}
-
-.b-sidebar-logo {
-  width:36px;
-  height:36px;
-  border-radius:12px;
-  background:radial-gradient(circle at 20% 0%, #7ab8ff 0, transparent 55%),
-             radial-gradient(circle at 80% 100%, #4a7fff 0, transparent 55%);
-  border:1px solid var(--accent-border);
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  color:#fff;
-  font-size:.8rem;
-  font-weight:700;
-  margin-bottom:.5rem;
-}
-
-.b-sidebar-group {
-  display:flex;
-  flex-direction:column;
-  gap:.4rem;
-  margin-top:.5rem;
-}
-
-.b-sidebar-item {
-  width:40px;
-  height:40px;
-  border-radius:12px;
-  border:1px solid transparent;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  cursor:pointer;
-  position:relative;
-  transition:.2s;
-}
-
-.b-sidebar-item svg {
-  width:18px;
-  height:18px;
-  stroke:#8f94a3;
-}
-
-.b-sidebar-item.active,
-.b-sidebar-item:hover {
-  background:var(--accent-soft);
-  border-color:var(--accent-border);
-  box-shadow:0 0 14px rgba(122,184,255,0.45);
-}
-
-.b-sidebar-item.active svg,
-.b-sidebar-item:hover svg {
-  stroke:var(--accent);
-}
-
-.b-sidebar-footer {
-    margin-top: auto;
-    padding: 1rem;
-}
-
-.b-sidebar-logout {
-    display: flex;
-    align-items: center;
-    gap: .75rem;
-    padding: .75rem 1rem;
-    border-radius: var(--radius);
-    background: var(--panel);
-    border: 1px solid var(--line);
-    color: var(--text);
-    text-decoration: none;
-    transition: .25s ease;
-}
-
-.b-sidebar-logout:hover {
-    background: var(--hover);
-    box-shadow: var(--glow-soft);
-}
-
-
-/* Tooltip text color fix */
-.b-tooltip {
-  color: var(--text) !important;
-  background: #0b0c0f;
-  padding: 4px 8px;
-  border-radius: 6px;
-  font-size: 0.75rem;
-  white-space: nowrap;
-  position: absolute;
-  left: 50px;
-  opacity: 0;
-  pointer-events: none;
-  transition: 0.2s ease;
-}
-
-/* Show tooltip on hover */
-.b-sidebar-item:hover .b-tooltip {
-  opacity: 1;
-}
-
-</style>
-
-<!-- SIDEBAR (TOOLS) -->
-<aside class="b-sidebar">
-  <div class="b-sidebar-logo">CM</div>
-
-  <div class="b-sidebar-group">
-
-  <!-- Dashboard -->
-  <a href="{{ url_for('borrower.dashboard') }}"
-     class="b-sidebar-item {% if active_page=='dashboard' %}active{% endif %}">
-    <svg viewBox="0 0 24 24" fill="none">
-      <path d="M3 12h7V3H3v9Zm11 9h7V3h-7v18ZM3 21h7v-7H3v7Z"/>
-    </svg>
-    <div class="b-tooltip">Dashboard</div>
-  </a>
-
-  <!-- Property Search -->
-  <a href="{{ url_for('borrower.property_search') }}"
-     class="b-sidebar-item {% if active_page=='property_finder' %}active{% endif %}">
-    <svg viewBox="0 0 24 24" fill="none">
-      <circle cx="11" cy="11" r="7"></circle>
-      <line x1="16.65" y1="16.65" x2="21" y2="21"></line>
-    </svg>
-    <div class="b-tooltip">Property Search</div>
-  </a>
-
-  <!-- Saved Properties (UPGRADED ICON) -->
-  <a href="{{ url_for('borrower.saved_properties') }}"
-     class="b-sidebar-item {% if active_page=='saved_properties' %}active{% endif %}">
-    <svg viewBox="0 0 24 24" fill="none">
-      <path d="M6 3h12a2 2 0 0 1 2 2v16l-8-4-8 4V5a2 2 0 0 1 2-2Z"></path>
-    </svg>
-    <div class="b-tooltip">Saved Properties</div>
-  </a>
-
-  <!-- Deal Workspace -->
-  <a href="{{ url_for('borrower.deal_workspace') }}"
-     class="b-sidebar-item {% if active_page=='deal_workspace' %}active{% endif %}">
-    <svg viewBox="0 0 24 24" fill="none">
-      <polyline points="4 14 8 10 12 14 20 6"></polyline>
-      <polyline points="14 6 20 6 20 12"></polyline>
-    </svg>
-    <div class="b-tooltip">Deal Workspace</div>
-  </a>
-
-  <!-- Loan View (NEW) -->
-  <a href="{{ url_for('borrower.status') }}"
-     class="b-sidebar-item {% if active_page=='loan_view' %}active{% endif %}">
-    <svg viewBox="0 0 24 24" fill="none">
-      <rect x="4" y="3" width="16" height="18" rx="2"></rect>
-      <line x1="8" y1="8" x2="16" y2="8"></line>
-      <line x1="8" y1="12" x2="16" y2="12"></line>
-      <line x1="8" y1="16" x2="13" y2="16"></line>
-    </svg>
-    <div class="b-tooltip">Loan View</div>
-  </a>
-
-  <!-- Partner Network -->
-  <a href="{{ url_for('borrower.borrower_command_center') }}"
-     class="b-sidebar-item {% if active_page=='partner_network' %}active{% endif %}">
-    <svg viewBox="0 0 24 24" fill="none">
-      <circle cx="9" cy="7" r="3"></circle>
-      <circle cx="17" cy="7" r="3"></circle>
-      <path d="M2 21c1-4 4-6 7-6s6 2 7 6"></path>
-    </svg>
-    <div class="b-tooltip">Partners</div>
-  </a>
-
-</div>
-
-  <!-- ✅ FOOTER INSIDE SIDEBAR -->
-  <div class="b-sidebar-footer">
-    <a href="{{ url_for('auth.logout') }}" class="b-sidebar-logout">
-      <span style="font-size:1rem;">⟲</span>
-      <span>Logout</span>
+<aside class="ravlo-sidebar">
+  <div class="ravlo-brand">
+    <a href="{{ url_for('borrower.dashboard') }}" class="ravlo-brand-link">
+      <div class="ravlo-mark">R</div>
+      <div>
+        <div class="ravlo-brand-title">Ravlo</div>
+        <div class="ravlo-brand-sub">Borrower OS</div>
+      </div>
     </a>
   </div>
 
+  <nav class="ravlo-nav">
+
+    <a href="{{ url_for('borrower.dashboard') }}"
+       class="ravlo-nav-link {% if ep == 'borrower.dashboard' %}active{% endif %}">
+      <i data-lucide="layout-dashboard"></i>
+      <span>Dashboard</span>
+    </a>
+
+    <a href="{{ url_for('borrower.apply') }}"
+       class="ravlo-nav-link {% if ep == 'borrower.apply' %}active{% endif %}">
+      <i data-lucide="landmark"></i>
+      <span>Apply</span>
+    </a>
+
+    <a href="{{ url_for('borrower.documents') }}"
+       class="ravlo-nav-link {% if ep == 'borrower.documents' %}active{% endif %}">
+      <i data-lucide="file-text"></i>
+      <span>Capital Application</span>
+    </a>
+
+    <a href="{{ url_for('borrower.conditions') }}"
+       class="ravlo-nav-link {% if ep == 'borrower.conditions' %}active{% endif %}">
+      <i data-lucide="folder-open"></i>
+      <span>Documents</span>
+    </a>
+
+       <a href="{{ url_for('borrower.property_intelligence') }}"
+       class="ravlo-nav-link {% if ep == 'borrower.property_intelligence' %}active{% endif %}">
+      <i data-lucide="search"></i>
+      <span>Property Intelligence</span>
+    </a>
+
+    <a href="{{ url_for('borrower.messages') }}"
+       class="ravlo-nav-link {% if ep == 'borrower.messages' %}active{% endif %}">
+      <i data-lucide="message-square"></i>
+      <span>Messages</span>
+    </a>
+
+  </nav>
+
+  <div class="ravlo-sidebar-footer">
+    <div class="ravlo-user-card">
+      <div class="ravlo-user-avatar">
+        {{ current_user.first_name[0] if current_user.first_name else "B" }}
+      </div>
+      <div class="ravlo-user-meta">
+        <div class="ravlo-user-name">
+          {{ current_user.first_name }} {{ current_user.last_name }}
+        </div>
+        <div class="ravlo-user-role">Borrower</div>
+      </div>
+    </div>
+
+    <a href="{{ url_for('auth.logout') }}" class="ravlo-logout-btn">
+      <i data-lucide="log-out"></i>
+      <span>Logout</span>
+    </a>
+  </div>
 </aside>

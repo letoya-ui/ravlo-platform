@@ -1,46 +1,305 @@
 {% extends "layouts/ravlo_base.html" %}
-{% block title %}AI Hub | Investor{% endblock %}
+{% block title %}Ravlo • AI Hub{% endblock %}
+
+{% block page_title %}AI Hub{% endblock %}
+{% block page_subline %}
+Ask Ravlo AI for capital guidance, deal strategy, underwriting clarity, or portfolio insight.
+{% endblock %}
+
+{% block topbar_actions %}
+<a href="{{ url_for('investor.deals_list') }}" class="ravlo-btn ghost sm">
+  Deal Pipeline
+</a>
+<a href="{{ url_for('investor.capital_application') }}" class="ravlo-btn primary sm">
+  Apply
+</a>
+{% endblock %}
+
 {% block content %}
+<div class="aihub-shell">
 
-<!-- MAIN CONTENT -->
-<main class="b-main">
-
-  <!-- AI HUB CONTENT -->
-  <h2>🧠 Ravlo AI Hub</h2>
-  <p class="muted">
-    Ask Ravlo AI for capital guidance, deal strategy, underwriting clarity, or portfolio insight.
-  </p>
-
-  <div class="panel" style="margin-top:1rem;">
-    <form method="POST" action="{{ url_for('investor.ask_ai_post') }}">
-      <textarea name="question" placeholder="Ask about funding, ROI, conditions, strategy..." required></textarea>
-      <button type="submit" class="ravlo-btn primary">Send</button>
-    </form>
-  </div>
-
-  {% if ai_reply %}
-    <div class="card ai-hint" style="margin-top:1rem;">
-      <strong>Ravlo AI:</strong> {{ ai_reply }}
+  <section class="ravlo-hero-card aihub-hero">
+    <div>
+      <div class="eyebrow">RAVLO AI</div>
+      <h2>Investor Intelligence Hub</h2>
+      <p class="muted">
+        Get quick guidance on funding strategy, deal structure, underwriting logic,
+        exit paths, and portfolio decisions.
+      </p>
     </div>
-  {% endif %}
 
-  <section style="margin-top:2rem;">
-    <h3>📜 Recent Conversations</h3>
-
-    {% for convo in interactions %}
-      <div class="card" style="margin-bottom:.6rem;">
-        <p><strong>You:</strong> {{ convo.question }}</p>
-        <p><strong>AI:</strong> {{ convo.response }}</p>
-        <small class="muted">
-          {{ convo.timestamp.strftime('%b %d, %I:%M %p') }}
-        </small>
-      </div>
-    {% else %}
-      <p class="muted">No AI conversations yet.</p>
-    {% endfor %}
-
+    <div class="aihub-hero-badge">
+      <span>Mode</span>
+      <strong>Investor AI</strong>
+      <p>Ask questions and keep a running decision trail.</p>
+    </div>
   </section>
 
-</main>
+  <section class="ravlo-card pad">
+    <div class="section-head">
+      <div>
+        <div class="eyebrow">ASK RAVLO</div>
+        <h3>New Question</h3>
+      </div>
+    </div>
 
+    <form method="POST" action="{{ url_for('investor.ask_ai_post') }}" class="aihub-form">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+      <label for="question" class="sr-only">Ask Ravlo AI</label>
+      <textarea
+        id="question"
+        name="question"
+        class="ravlo-textarea aihub-textarea"
+        placeholder="Ask about funding, ROI, conditions, strategy, rental viability, rehab budget, or next steps..."
+        required
+      ></textarea>
+
+      <div class="aihub-form-actions">
+        <button type="submit" class="ravlo-btn primary">
+          Send
+        </button>
+      </div>
+    </form>
+  </section>
+
+  {% if ai_reply %}
+  <section class="ravlo-card pad">
+    <div class="section-head">
+      <div>
+        <div class="eyebrow">LATEST RESPONSE</div>
+        <h3>Ravlo AI Output</h3>
+      </div>
+    </div>
+
+    <div class="aihub-reply">
+      {{ ai_reply }}
+    </div>
+  </section>
+  {% endif %}
+
+  <section class="ravlo-card pad">
+    <div class="section-head">
+      <div>
+        <div class="eyebrow">HISTORY</div>
+        <h3>Recent Conversations</h3>
+      </div>
+    </div>
+
+    {% if interactions %}
+      <div class="aihub-history">
+        {% for convo in interactions %}
+          <article class="aihub-history-card">
+            <div class="aihub-history-row">
+              <span class="aihub-label">You</span>
+              <div class="aihub-bubble user">
+                {{ convo.question or "—" }}
+              </div>
+            </div>
+
+            <div class="aihub-history-row">
+              <span class="aihub-label">AI</span>
+              <div class="aihub-bubble ai">
+                {{ convo.response or "No response saved." }}
+              </div>
+            </div>
+
+            <div class="aihub-time">
+              {% if convo.timestamp %}
+                {{ convo.timestamp.strftime('%b %d, %Y • %I:%M %p') }}
+              {% else %}
+                Timestamp unavailable
+              {% endif %}
+            </div>
+          </article>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="empty-state">
+        No AI conversations yet.
+      </div>
+    {% endif %}
+  </section>
+
+</div>
+
+<style>
+  .aihub-shell{
+    display:grid;
+    gap:20px;
+  }
+
+  .aihub-hero{
+    display:flex;
+    justify-content:space-between;
+    gap:18px;
+    align-items:stretch;
+    flex-wrap:wrap;
+  }
+
+  .aihub-hero h2{
+    margin:8px 0 10px;
+    font-size:32px;
+    line-height:1.05;
+    letter-spacing:-.03em;
+  }
+
+  .aihub-hero-badge{
+    width:300px;
+    max-width:100%;
+    padding:18px;
+    border-radius:20px;
+    background:rgba(255,255,255,.04);
+    border:1px solid rgba(255,255,255,.08);
+  }
+
+  .aihub-hero-badge span{
+    display:block;
+    color:var(--muted);
+    font-size:12px;
+    text-transform:uppercase;
+    letter-spacing:.08em;
+  }
+
+  .aihub-hero-badge strong{
+    display:block;
+    margin-top:8px;
+    font-size:24px;
+    line-height:1.1;
+    color:var(--text);
+  }
+
+  .aihub-hero-badge p{
+    margin:10px 0 0;
+    color:var(--muted);
+    line-height:1.6;
+  }
+
+  .aihub-form{
+    display:grid;
+    gap:14px;
+  }
+
+  .aihub-textarea{
+    min-height:160px;
+    width:100%;
+    resize:vertical;
+  }
+
+  .aihub-form-actions{
+    display:flex;
+    justify-content:flex-end;
+  }
+
+  .aihub-reply{
+    padding:18px;
+    border-radius:18px;
+    background:rgba(255,255,255,.03);
+    border:1px solid rgba(255,255,255,.08);
+    color:var(--text);
+    line-height:1.7;
+    white-space:pre-wrap;
+  }
+
+  .aihub-history{
+    display:grid;
+    gap:14px;
+  }
+
+  .aihub-history-card{
+    padding:18px;
+    border-radius:20px;
+    background:rgba(255,255,255,.03);
+    border:1px solid rgba(255,255,255,.08);
+  }
+
+  .aihub-history-row{
+    display:grid;
+    grid-template-columns:52px 1fr;
+    gap:12px;
+    align-items:start;
+  }
+
+  .aihub-history-row + .aihub-history-row{
+    margin-top:12px;
+  }
+
+  .aihub-label{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    min-height:36px;
+    padding:0 10px;
+    border-radius:999px;
+    background:rgba(255,255,255,.05);
+    border:1px solid rgba(255,255,255,.08);
+    color:var(--muted);
+    font-size:11px;
+    font-weight:700;
+    text-transform:uppercase;
+    letter-spacing:.08em;
+  }
+
+  .aihub-bubble{
+    padding:14px 16px;
+    border-radius:16px;
+    line-height:1.65;
+    white-space:pre-wrap;
+  }
+
+  .aihub-bubble.user{
+    background:rgba(255,255,255,.035);
+    border:1px solid rgba(255,255,255,.08);
+    color:var(--text);
+  }
+
+  .aihub-bubble.ai{
+    background:rgba(107,127,147,.10);
+    border:1px solid rgba(107,127,147,.22);
+    color:var(--text);
+  }
+
+  .aihub-time{
+    margin-top:14px;
+    color:var(--muted);
+    font-size:12px;
+  }
+
+  .sr-only{
+    position:absolute;
+    width:1px;
+    height:1px;
+    padding:0;
+    margin:-1px;
+    overflow:hidden;
+    clip:rect(0,0,0,0);
+    white-space:nowrap;
+    border:0;
+  }
+
+  @media (max-width: 900px){
+    .aihub-hero{
+      flex-direction:column;
+    }
+
+    .aihub-hero-badge{
+      width:100%;
+    }
+  }
+
+  @media (max-width: 640px){
+    .aihub-history-row{
+      grid-template-columns:1fr;
+    }
+
+    .aihub-form-actions{
+      justify-content:stretch;
+    }
+
+    .aihub-form-actions .ravlo-btn{
+      width:100%;
+      justify-content:center;
+    }
+  }
+</style>
 {% endblock %}

@@ -12,9 +12,9 @@ Begin analyzing deals, planning projects, and requesting funding.
   {{ form.hidden_tag() }}
 
   <div class="ravlo-field">
-    <label class="ravlo-label">{{ form.username.label.text }}</label>
-    {{ form.username(class="ravlo-input", placeholder="Full Name") }}
-    {% for error in form.username.errors %}
+    <label class="ravlo-label">{{ form.full_name.label.text }}</label>
+    {{ form.full_name(class="ravlo-input", placeholder="Full Name") }}
+    {% for error in form.full_name.errors %}
       <div class="ravlo-alert error">{{ error }}</div>
     {% endfor %}
   </div>

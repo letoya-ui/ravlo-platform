@@ -1,0 +1,149 @@
+{% extends "layouts/marketing_base.html" %}
+
+{% block hero %}
+<section class="mk-hero">
+  <div class="mk-container">
+    <div class="mk-hero-copy" style="max-width:920px;">
+      <div class="mk-eyebrow">FAQ</div>
+      <h1 class="mk-title-xl">Answers to common questions about Ravlo.</h1>
+      <p class="mk-copy-lg">
+        Use this page to give visitors a quick understanding of what Ravlo is,
+        who it is for, and where to go next.
+      </p>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block content %}
+<section class="mk-section-tight">
+  <div class="mk-container">
+    <div class="mk-split-panel">
+      <div class="mk-panel">
+        <div class="mk-kicker">Common questions</div>
+        <h2 class="mk-title-lg">What people usually want to know first.</h2>
+
+        <div class="mk-list">
+          <div class="mk-list-item">
+            <div>
+              <strong>What is Ravlo?</strong>
+              <div class="mk-copy" style="margin-top:8px;">
+                Ravlo is an investor-focused platform designed to help users think through deals,
+                renovation strategy, and build potential in a more organized ecosystem.
+              </div>
+            </div>
+          </div>
+
+          <div class="mk-list-item">
+            <div>
+              <strong>Who is Ravlo for?</strong>
+              <div class="mk-copy" style="margin-top:8px;">
+                Ravlo is built for real estate investors, operators, and eventually partners
+                who want a clearer way to evaluate and move opportunities forward.
+              </div>
+            </div>
+          </div>
+
+          <div class="mk-list-item">
+            <div>
+              <strong>What makes Ravlo different?</strong>
+              <div class="mk-copy" style="margin-top:8px;">
+                Ravlo is structured like an ecosystem, with focused experiences for deal analysis,
+                renovation planning, and build thinking rather than one generic dashboard.
+              </div>
+            </div>
+          </div>
+
+          <div class="mk-list-item">
+            <div>
+              <strong>Can I preview the platform?</strong>
+              <div class="mk-copy" style="margin-top:8px;">
+                Yes. The Tour page is the best place to preview the public-facing side of the platform.
+              </div>
+            </div>
+          </div>
+
+          <div class="mk-list-item">
+            <div>
+              <strong>How do I access Ravlo?</strong>
+              <div class="mk-copy" style="margin-top:8px;">
+                Start from the Enter page, then continue into the login flow.
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="mk-panel">
+        <div class="mk-kicker">Plans and support</div>
+        <h2 class="mk-title-lg">A few practical questions visitors may ask.</h2>
+
+        <div class="mk-list">
+          <div class="mk-list-item">
+            <div>
+              <strong>Are there different plans?</strong>
+              <div class="mk-copy" style="margin-top:8px;">
+                Yes. Ravlo can support different levels of access for emerging investors,
+                active operators, and growing teams.
+              </div>
+            </div>
+          </div>
+
+          <div class="mk-list-item">
+            <div>
+              <strong>Can I contact someone about partnerships?</strong>
+              <div class="mk-copy" style="margin-top:8px;">
+                Yes. Use the Contact page for partnership inquiries, demos, and general conversations.
+              </div>
+            </div>
+          </div>
+
+          <div class="mk-list-item">
+            <div>
+              <strong>Is Ravlo only for renovations?</strong>
+              <div class="mk-copy" style="margin-top:8px;">
+                No. Ravlo is intended to support deal strategy, renovation direction, and build planning.
+              </div>
+            </div>
+          </div>
+
+          <div class="mk-list-item">
+            <div>
+              <strong>Will Ravlo keep growing?</strong>
+              <div class="mk-copy" style="margin-top:8px;">
+                Yes. The platform is designed with room for future workflows, partners, and expanded capabilities.
+              </div>
+            </div>
+          </div>
+
+          <div class="mk-list-item">
+            <div>
+              <strong>Where should I start?</strong>
+              <div class="mk-copy" style="margin-top:8px;">
+                Start with the Home page, Tour page, or Plans page depending on whether you want overview,
+                product preview, or pricing direction.
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="mk-section">
+  <div class="mk-container">
+    <div class="mk-cta">
+      <div class="mk-kicker">Still have questions?</div>
+      <h2 class="mk-title-lg">Guide visitors toward the next best page.</h2>
+      <p>
+        FAQ works best when it keeps things simple and helps people move quickly to tour, plans, contact, or entry.
+      </p>
+      <div class="mk-cta-actions">
+        <a href="{{ url_for('marketing.tour') }}" class="mk-btn mk-btn-primary">Take the Tour</a>
+        <a href="{{ url_for('marketing.contact') }}" class="mk-btn mk-btn-ghost">Contact Us</a>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}

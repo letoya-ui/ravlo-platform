@@ -1,0 +1,142 @@
+{% extends "layouts/marketing_base.html" %}
+
+{% block hero %}
+<section class="mk-hero">
+  <div class="mk-container">
+    <div class="mk-hero-grid">
+      <div class="mk-hero-copy">
+        <div class="mk-eyebrow">About Ravlo</div>
+        <h1 class="mk-title-xl">Built to bring more clarity to the investor journey.</h1>
+        <p class="mk-copy-lg">
+          Ravlo was created to make real estate investing feel less scattered and more intentional,
+          with tools that help investors think through opportunity, transformation, and execution in one ecosystem.
+        </p>
+      </div>
+
+      <div class="mk-hero-visual">
+        <div class="mk-glow"></div>
+        <div class="mk-device">
+          <div class="mk-device-topbar">
+            <span class="mk-device-dot"></span>
+            <span class="mk-device-dot"></span>
+            <span class="mk-device-dot"></span>
+          </div>
+          {% if hero_image %}
+            <img src="{{ url_for('static', filename=hero_image) }}" alt="About Ravlo">
+          {% else %}
+            <img src="{{ url_for('static', filename='images/about/team_strategy.jpg') }}" alt="About Ravlo">
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block content %}
+<section class="mk-section">
+  <div class="mk-container">
+    <div class="mk-split-panel">
+      <div class="mk-panel">
+        <div class="mk-kicker">The idea</div>
+        <h2 class="mk-title-lg">A platform that feels like a true command center.</h2>
+        <p class="mk-copy">
+          Real estate investors often work across disconnected tools, scattered notes,
+          screenshots, calculators, and half-built workflows. Ravlo is designed to bring
+          those pieces into a cleaner, more premium environment.
+        </p>
+      </div>
+
+      <div class="mk-panel">
+        <div class="mk-kicker">The direction</div>
+        <h2 class="mk-title-lg">From deal analysis to execution thinking.</h2>
+        <p class="mk-copy">
+          Ravlo is not just about viewing data. It is about helping users understand what a property
+          could become, what direction makes sense, and how to move with more structure.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="mk-section-tight">
+  <div class="mk-container">
+    <div class="mk-grid-3">
+      <div class="mk-card">
+        <div class="mk-card-icon">C</div>
+        <h3>Clarity</h3>
+        <p>Make the investor workflow easier to understand and easier to act on.</p>
+      </div>
+
+      <div class="mk-card">
+        <div class="mk-card-icon">S</div>
+        <h3>Structure</h3>
+        <p>Organize deal, renovation, and build strategy in a way that feels connected.</p>
+      </div>
+
+      <div class="mk-card">
+        <div class="mk-card-icon">G</div>
+        <h3>Growth</h3>
+        <p>Create a strong foundation for future expansion, partners, teams, and advanced workflows.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="mk-section">
+  <div class="mk-container">
+    <div class="mk-kicker">What makes Ravlo different</div>
+    <h2 class="mk-title-lg">It is designed like an ecosystem, not just a tool.</h2>
+    <p class="mk-copy-lg">
+      Ravlo brings together strategic thinking, visual planning, and future growth potential in one branded experience.
+      That makes it easier to present, easier to use, and easier to expand.
+    </p>
+
+    <div class="mk-grid-2" style="margin-top:28px;">
+      <div class="mk-card">
+        <h3>Premium interface</h3>
+        <p>
+          Built to feel polished, modern, and strong enough to support a real investor-facing brand.
+        </p>
+      </div>
+
+      <div class="mk-card">
+        <h3>Studio model</h3>
+        <p>
+          Separate focused experiences make the platform easier to understand and easier to grow.
+        </p>
+      </div>
+
+      <div class="mk-card">
+        <h3>Expandable architecture</h3>
+        <p>
+          Ready for dashboards, partners, lenders, borrowers, and future role-based experiences.
+        </p>
+      </div>
+
+      <div class="mk-card">
+        <h3>Brand-first presentation</h3>
+        <p>
+          Public site, product screens, and internal workflows all work together to tell one story.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="mk-section">
+  <div class="mk-container">
+    <div class="mk-cta">
+      <div class="mk-kicker">See More</div>
+      <h2 class="mk-title-lg">Explore the platform and see how Ravlo comes together.</h2>
+      <p>
+        Use the tour page, screenshots, and studio pages to make the public site feel like a premium front door to the platform.
+      </p>
+      <div class="mk-cta-actions">
+        <a href="{{ url_for('marketing.tour') }}" class="mk-btn mk-btn-primary">Take the Tour</a>
+        <a href="{{ url_for('marketing.story') }}" class="mk-btn mk-btn-ghost">Read the Story</a>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}

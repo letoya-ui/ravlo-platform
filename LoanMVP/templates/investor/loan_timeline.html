@@ -1,152 +1,258 @@
-{# investor/loan_timeline.html #}
 {% extends "layouts/ravlo_base.html" %}
 {% block title %}Ravlo • Loan Timeline{% endblock %}
 
 {% block page_title %}Loan Timeline{% endblock %}
-{% block page_subline %}Track your loan from application to closing.{% endblock %}
+{% block page_subline %}Track milestones, underwriting updates, and next steps for this file.{% endblock %}
 
 {% block topbar_actions %}
-  <button class="ravlo-btn ghost sm" type="button"
-          onclick="location.href='{{ url_for('investor.loan_summary', loan_id=loan.id) }}'">
-    Back
+  <button
+    class="ravlo-btn ghost sm"
+    type="button"
+    onclick="location.href='{{ url_for('investor.loans') }}'">
+    Back to Loans
   </button>
 
-  {% if loan and loan.id %}
-    <button class="ravlo-btn ghost sm" type="button"
-            onclick="location.href='{{ url_for('investor.loan_summary', loan_id=loan.id) }}'">
-      Summary
-    </button>
-  {% endif %}
+  <button
+    class="ravlo-btn primary sm"
+    type="button"
+    onclick="location.href='{{ url_for('investor.loan_summary', loan_id=loan.id) }}'">
+    View Loan
+  </button>
 {% endblock %}
 
 {% block content %}
 
-  {# ---------- status helpers ---------- #}
-  {% set status = (loan.status or "In Progress")|string %}
-  {% set status_l = status|lower %}
+<style>
+  .timeline-wrap{
+    margin-top:1rem;
+  }
 
-  <div class="ravlo-grid cols-2">
+  .timeline-card{
+    background:rgba(255,255,255,.03);
+    border:1px solid rgba(255,255,255,.10);
+    border-radius:20px;
+    padding:1.15rem;
+    box-shadow:0 0 18px rgba(0,0,0,.45);
+  }
 
-    {# AI Summary #}
-    {% if ai_summary %}
-      <div class="ravlo-card pad" style="grid-column: 1 / -1;">
-        <div class="ravlo-card-title">Ravlo Insight</div>
-        <div style="color:var(--muted); margin-top:10px;">{{ ai_summary }}</div>
+  .timeline-header{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    gap:1rem;
+    flex-wrap:wrap;
+    margin-bottom:1rem;
+  }
+
+  .timeline-title{
+    font-size:1.1rem;
+    font-weight:900;
+    color:rgba(230,235,240,.95);
+  }
+
+  .timeline-sub{
+    color:rgba(230,235,240,.68);
+    margin-top:.35rem;
+    line-height:1.6;
+  }
+
+  .meta-row{
+    display:flex;
+    gap:.5rem;
+    flex-wrap:wrap;
+    margin-top:.75rem;
+  }
+
+  .chip{
+    display:inline-flex;
+    align-items:center;
+    gap:.35rem;
+    padding:.35rem .6rem;
+    border-radius:999px;
+    border:1px solid rgba(122,184,255,.25);
+    background:rgba(122,184,255,.10);
+    color:#a9d2ff;
+    font-size:.78rem;
+    font-weight:800;
+  }
+
+  .chip.success{
+    border-color:rgba(0,255,170,.25);
+    background:rgba(0,255,170,.10);
+    color:#7dffd6;
+  }
+
+  .chip.warn{
+    border-color:rgba(255,210,120,.25);
+    background:rgba(255,210,120,.10);
+    color:#ffdba1;
+  }
+
+  .chip.danger{
+    border-color:rgba(255,90,90,.28);
+    background:rgba(255,90,90,.10);
+    color:#ffb3b3;
+  }
+
+  .timeline-list{
+    position:relative;
+    margin-top:1.25rem;
+    padding-left:1rem;
+  }
+
+  .timeline-list::before{
+    content:"";
+    position:absolute;
+    left:12px;
+    top:0;
+    bottom:0;
+    width:2px;
+    background:linear-gradient(
+      to bottom,
+      rgba(122,184,255,.40),
+      rgba(122,184,255,.10)
+    );
+  }
+
+  .timeline-item{
+    position:relative;
+    padding-left:2.2rem;
+    margin-bottom:1rem;
+  }
+
+  .timeline-item:last-child{
+    margin-bottom:0;
+  }
+
+  .timeline-dot{
+    position:absolute;
+    left:0;
+    top:.35rem;
+    width:26px;
+    height:26px;
+    border-radius:999px;
+    border:1px solid rgba(122,184,255,.28);
+    background:rgba(15,23,42,.95);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    box-shadow:0 0 0 4px rgba(122,184,255,.06);
+    color:#a9d2ff;
+    font-size:.8rem;
+    font-weight:900;
+  }
+
+  .event-card{
+    background:rgba(255,255,255,.02);
+    border:1px solid rgba(255,255,255,.08);
+    border-radius:16px;
+    padding:1rem;
+  }
+
+  .event-top{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    gap:1rem;
+    flex-wrap:wrap;
+  }
+
+  .event-title{
+    font-weight:850;
+    color:rgba(230,235,240,.95);
+  }
+
+  .event-time{
+    color:rgba(230,235,240,.60);
+    font-size:.84rem;
+    white-space:nowrap;
+  }
+
+  .event-desc{
+    margin-top:.55rem;
+    color:rgba(230,235,240,.72);
+    line-height:1.65;
+  }
+
+  .empty{
+    padding:1.2rem;
+    border-radius:16px;
+    border:1px solid rgba(255,255,255,.08);
+    background:rgba(255,255,255,.02);
+    color:rgba(230,235,240,.72);
+    margin-top:1rem;
+  }
+</style>
+
+<div class="timeline-wrap">
+
+  {% set ls = (loan.status or 'pending')|lower %}
+
+  <div class="timeline-card">
+    <div class="timeline-header">
+      <div>
+        <div class="timeline-title">
+          {{ loan.loan_type or "Loan" }} Timeline{% if loan.id %} • #{{ loan.id }}{% endif %}
+        </div>
+        <div class="timeline-sub">
+          Follow your file through submission, underwriting, conditions, and funding milestones.
+        </div>
+
+        <div class="meta-row">
+          {% if ls in ['funded', 'closed', 'clear to close', 'clear_to_close'] %}
+            <span class="chip success">{{ loan.status or 'Funded' }}</span>
+          {% elif ls in ['submitted', 'in review', 'in_review', 'processing', 'underwriting', 'capital submitted'] %}
+            <span class="chip">{{ loan.status or 'In Review' }}</span>
+          {% elif ls in ['denied', 'declined', 'rejected'] %}
+            <span class="chip danger">{{ loan.status or 'Declined' }}</span>
+          {% else %}
+            <span class="chip warn">{{ loan.status or 'Pending' }}</span>
+          {% endif %}
+
+          {% if loan.created_at %}
+            <span class="chip">Opened {{ loan.created_at.strftime('%b %d, %Y') }}</span>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    {% if events %}
+      <div class="timeline-list">
+        {% for event in events %}
+          <div class="timeline-item">
+            <div class="timeline-dot">{{ loop.index }}</div>
+
+            <div class="event-card">
+              <div class="event-top">
+                <div class="event-title">
+                  {{ event.event_name or "Loan Update" }}
+                </div>
+
+                <div class="event-time">
+                  {% if event.created_at %}
+                    {{ event.created_at.strftime('%b %d, %Y • %I:%M %p') }}
+                  {% else %}
+                    Timeline update
+                  {% endif %}
+                </div>
+              </div>
+
+              {% if event.description %}
+                <div class="event-desc">
+                  {{ event.description }}
+                </div>
+              {% endif %}
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="empty">
+        No timeline events yet. Once your file moves through underwriting and review, updates will appear here.
       </div>
     {% endif %}
-
-    {# KPI strip #}
-    <div class="ravlo-card pad">
-      <div class="ravlo-card-title">Snapshot</div>
-
-      <div class="ravlo-grid cols-2 mt-16">
-        <div class="ravlo-kpi" style="min-height:92px;">
-          <div class="value">
-            {% if loan and loan.created_at %}{{ loan.created_at.strftime('%b %d, %Y') }}{% else %}—{% endif %}
-          </div>
-          <div class="label">Submitted</div>
-        </div>
-
-        <div class="ravlo-kpi" style="min-height:92px;">
-          <div class="value">{{ documents_count if documents_count is not none else 0 }}</div>
-          <div class="label">Docs Uploaded</div>
-        </div>
-
-        <div class="ravlo-kpi" style="min-height:92px;">
-          <div class="value">{{ conditions_count if conditions_count is not none else 0 }}</div>
-          <div class="label">Conditions</div>
-        </div>
-
-        <div class="ravlo-kpi" style="min-height:92px;">
-          <div class="value">
-            <span class="ravlo-badge
-              {% if status_l in ['approved','clear to close','cleared','completed','funded','closed'] %}ok
-              {% elif status_l in ['pending','in progress','processing','underwriting','review','submitted'] %}watch
-              {% else %}risk{% endif %}">
-              {{ status }}
-            </span>
-          </div>
-          <div class="label">Underwriting</div>
-        </div>
-      </div>
-    </div>
-
-    {# Timeline #}
-    <div class="ravlo-card pad">
-      <div class="ravlo-card-title">Loan Progress</div>
-
-      <div style="margin-top:12px; display:grid; gap:12px;">
-
-        <div style="padding:12px; border:1px solid rgba(255,255,255,.08); border-radius:14px;">
-          <div style="font-weight:800;">1) Application Submitted</div>
-          <div style="color:var(--muted); margin-top:6px;">
-            {% if loan and loan.created_at %}{{ loan.created_at.strftime('%b %d, %Y') }}{% else %}—{% endif %}
-          </div>
-        </div>
-
-        <div style="padding:12px; border:1px solid rgba(255,255,255,.08); border-radius:14px;">
-          <div style="font-weight:800;">2) Documents Uploaded</div>
-          <div style="color:var(--muted); margin-top:6px;">
-            {{ documents_count if documents_count is not none else 0 }} uploaded
-          </div>
-        </div>
-
-        <div style="padding:12px; border:1px solid rgba(255,255,255,.08); border-radius:14px;">
-          <div style="font-weight:800;">3) Conditions</div>
-          <div style="margin-top:6px;">
-            {% if (conditions_count or 0) == 0 %}
-              <span class="ravlo-badge ok">All Cleared</span>
-            {% else %}
-              <span class="ravlo-badge watch">{{ conditions_count }} Outstanding</span>
-            {% endif %}
-          </div>
-        </div>
-
-        <div style="padding:12px; border:1px solid rgba(255,255,255,.08); border-radius:14px;">
-          <div style="font-weight:800;">4) Underwriting Status</div>
-          <div style="color:var(--muted); margin-top:6px;">{{ status }}</div>
-        </div>
-
-        {% if status_l == "clear to close" %}
-          <div style="padding:12px; border:1px solid rgba(255,255,255,.08); border-radius:14px;">
-            <div style="font-weight:800;">5) Clear to Close</div>
-            <div style="margin-top:6px;">
-              <span class="ravlo-badge ok">Ready for Closing</span>
-            </div>
-          </div>
-        {% endif %}
-
-        {% if status_l == "closed" %}
-          <div style="padding:12px; border:1px solid rgba(255,255,255,.08); border-radius:14px;">
-            <div style="font-weight:800;">6) Closing Completed</div>
-            <div style="margin-top:6px;">
-              <span class="ravlo-badge ok">Loan Closed</span>
-            </div>
-          </div>
-        {% endif %}
-
-      </div>
-
-      <div class="row" style="gap:10px; flex-wrap:wrap; margin-top:16px;">
-          <button class="ravlo-btn ghost sm" type="button"
-                  onclick="location.href='{{ url_for('investor.loan_summary', loan_id=loan.id) }}'">
-            View Summary
-          </button>
-        {% endif %}       
-          <button class="ravlo-btn ghost sm" type="button"
-                  onclick="location.href='{{ url_for('investor.documents') }}'">
-            Documents
-          </button>
-        {% endif %}
-          <button class="ravlo-btn ghost sm" type="button"
-                  onclick="location.href='{{ url_for('investor.conditions') }}'">
-            Conditions
-          </button>
-        {% endif %}
-      </div>
-
-    </div>
-
   </div>
+
+</div>
 
 {% endblock %}

@@ -10,11 +10,6 @@ A streamlined investor-friendly application designed for fast underwriting and c
 {% block content %}
 
 <style>
-
-/* ============================================
-RAVLO CAPITAL APPLICATION FORM
-============================================ */
-
 .ravlo-shell{
   max-width:1100px;
   margin:0 auto;
@@ -82,14 +77,20 @@ textarea.ravlo-input{
   margin-top:30px;
 }
 
-.ravlo-btn.primary{
-  padding:12px 22px;
-  font-weight:600;
-  border-radius:10px;
+.prefill-banner{
+  margin-bottom:18px;
+  padding:14px 16px;
+  border-radius:14px;
+  border:1px solid rgba(107,127,147,.22);
+  background:rgba(107,127,147,.08);
 }
 
+.section-sub{
+  margin:6px 0 0;
+  color:var(--muted);
+  font-size:13px;
+}
 </style>
-
 
 <div class="ravlo-shell">
 
@@ -105,56 +106,77 @@ textarea.ravlo-input{
   </div>
 </section>
 
+{% if deal %}
+<div class="prefill-banner">
+  <strong>Deal connected:</strong>
+  {{ deal.title or deal.address or ("Deal #" ~ deal.id) }}
+  <div class="muted">
+    This application has been prefilled from your Ravlo Deal Studio.
+  </div>
+</div>
+{% endif %}
 
-<form id="capitalAppForm">
+<form id="capitalAppForm"
+      method="POST"
+      action="{{ url_for('investor.submit_capital_application') }}">
+
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
 {% if deal %}
 <input type="hidden" name="deal_id" value="{{ deal.id }}">
 {% endif %}
 
-<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-
-
 <!-- BORROWER INFO -->
 <section class="ravlo-card">
 
 <h3>Borrower Profile</h3>
+<p class="section-sub">Investor contact information for underwriting.</p>
 
 <div class="ravlo-grid ravlo-grid-2">
 
 <div class="form-group">
 <label>Full Name</label>
-<input class="ravlo-input" name="full_name" value="{{ investor.full_name or '' }}">
+<input class="ravlo-input"
+       name="full_name"
+       value="{{ investor.full_name or '' }}">
 </div>
 
 <div class="form-group">
 <label>Email</label>
-<input class="ravlo-input" name="email" value="{{ investor.email or '' }}">
+<input class="ravlo-input"
+       name="email"
+       value="{{ investor.email or '' }}">
 </div>
 
 <div class="form-group">
 <label>Phone</label>
-<input class="ravlo-input" name="phone" value="{{ investor.phone or '' }}">
+<input class="ravlo-input"
+       name="phone"
+       value="{{ investor.phone or '' }}">
 </div>
 
 <div class="form-group">
 <label>Credit Score (estimate)</label>
-<input class="ravlo-input" name="credit_score" placeholder="680">
+<input class="ravlo-input"
+       name="credit_score"
+       placeholder="680">
 </div>
 
 </div>
-
 </section>
-
 
 <!-- PROJECT -->
 <section class="ravlo-card">
 
 <h3>Project Details</h3>
+<p class="section-sub">Property and loan request details.</p>
 
 <div class="form-group">
 <label>Project Address</label>
-<input class="ravlo-input" name="project_address" placeholder="123 Oakwood Dr Tampa FL">
+<input class="ravlo-input"
+       name="project_address"
+       placeholder="123 Oakwood Dr Tampa FL"
+       value="{{ deal.address if deal else '' }}">
 </div>
 
 <div class="ravlo-grid ravlo-grid-3">
@@ -163,150 +185,102 @@ textarea.ravlo-input{
 <label>Loan Type</label>
 <select class="ravlo-input" name="loan_type">
 <option value="">Select</option>
-<option>Fix & Flip</option>
-<option>New Construction</option>
-<option>Rental / DSCR</option>
-<option>Bridge Loan</option>
-<option>Land Acquisition</option>
-<option>Development Capital</option>
+<option value="Fix & Flip">Fix & Flip</option>
+<option value="New Construction">New Construction</option>
+<option value="Rental / DSCR">Rental / DSCR</option>
+<option value="Bridge Loan">Bridge Loan</option>
+<option value="Development Capital">Development Capital</option>
 </select>
 </div>
 
 <div class="form-group">
 <label>Requested Amount</label>
-<input class="ravlo-input" name="amount" type="number" step="0.01" placeholder="350000">
+<input class="ravlo-input"
+       name="amount"
+       type="number"
+       step="0.01"
+       placeholder="350000"
+       value="{{ ((deal.purchase_price or 0) + (deal.rehab_cost or 0)) if deal else '' }}">
 </div>
 
 <div class="form-group">
 <label>Property Value</label>
-<input class="ravlo-input" name="property_value" type="number" step="0.01" placeholder="575000">
+<input class="ravlo-input"
+       name="property_value"
+       type="number"
+       step="0.01"
+       placeholder="575000"
+       value="{{ deal.arv if deal else '' }}">
 </div>
 
 </div>
-
 
 <div class="form-group">
 <label>Project Description</label>
-<textarea class="ravlo-input" name="project_description"
-placeholder="Scope, renovation plan, timeline, exit strategy"></textarea>
+<textarea class="ravlo-input"
+          name="project_description"
+          placeholder="Renovation scope, timeline, exit strategy">{% if deal %}{{ deal.notes or '' }}{% endif %}</textarea>
 </div>
 
-
 <div class="form-group">
-<label>Preferred Loan Officer (Optional)</label>
+<label>Preferred Loan Officer</label>
 <select class="ravlo-input" name="preferred_loan_officer_id">
-
 <option value="">No preference</option>
-
 {% for officer in officers %}
 <option value="{{ officer.id }}">{{ officer.name }}</option>
 {% endfor %}
-
 </select>
 </div>
 
 </section>
 
-
-
-<!-- EXPERIENCE -->
-<section class="ravlo-card">
-
-<h3>Investor Experience</h3>
-
-<div class="ravlo-grid ravlo-grid-3">
-
-<div class="form-group">
-<label>Completed Flips</label>
-<input class="ravlo-input" name="completed_flips">
-</div>
-
-<div class="form-group">
-<label>New Construction Projects</label>
-<input class="ravlo-input" name="new_construction">
-</div>
-
-<div class="form-group">
-<label>Rental Units Owned</label>
-<input class="ravlo-input" name="rental_units">
-</div>
-
-</div>
-
-</section>
-
-
-
-<!-- FINANCIAL SNAPSHOT -->
-<section class="ravlo-card">
-
-<h3>Financial Snapshot</h3>
-
-<div class="ravlo-grid ravlo-grid-3">
-
-<div class="form-group">
-<label>Cash on Hand</label>
-<input class="ravlo-input" name="cash_on_hand">
-</div>
-
-<div class="form-group">
-<label>Annual Income</label>
-<input class="ravlo-input" name="annual_income">
-</div>
-
-<div class="form-group">
-<label>Total Debt</label>
-<input class="ravlo-input" name="total_debt">
-</div>
-
-</div>
-
-</section>
-
-
-
 <!-- SUBMIT -->
 <div class="btn-row">
-
-<button class="ravlo-btn primary" type="submit">
-Submit Application
+<button id="capitalSubmitBtn"
+        class="ravlo-btn primary"
+        type="submit">
+Submit Capital Application
 </button>
-
 </div>
 
 </form>
 
 </div>
 
-
-
 <script>
 
-document.getElementById("capitalAppForm").addEventListener("submit", async function(e){
+document.addEventListener("DOMContentLoaded", function(){
+
+const form = document.getElementById("capitalAppForm");
+const submitBtn = document.getElementById("capitalSubmitBtn");
+
+if(!form) return;
+
+form.addEventListener("submit", async function(e){
 
 e.preventDefault();
 
-const formData = new FormData(this);
+submitBtn.disabled = true;
+submitBtn.textContent = "Submitting...";
+
+const formData = new FormData(form);
 
 try{
 
-const response = await fetch('{{ url_for("investor.submit_capital_application") }}', {
-
+const response = await fetch(form.action,{
 method:"POST",
 body:formData
-
 });
 
 const data = await response.json();
 
 if(data.success){
-
 window.location.href = data.redirect_url;
-
-}else{
-
+}
+else{
 alert(data.message || "Submission failed.");
-
+submitBtn.disabled=false;
+submitBtn.textContent="Submit Capital Application";
 }
 
 }catch(err){
@@ -314,7 +288,12 @@ alert(data.message || "Submission failed.");
 console.error(err);
 alert("Something went wrong submitting the application.");
 
+submitBtn.disabled=false;
+submitBtn.textContent="Submit Capital Application";
+
 }
+
+});
 
 });
 

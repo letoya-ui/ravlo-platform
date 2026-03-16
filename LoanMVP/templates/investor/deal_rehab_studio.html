@@ -6,10 +6,14 @@
 
 {% block content %}
 <style>
-  .studio-wrap{display:grid;gap:20px;}
+  .studio-wrap{
+    display:grid;
+    gap:22px;
+  }
+
   .studio-hero{
-    border-radius:22px;
-    padding:20px 22px;
+    border-radius:24px;
+    padding:22px 24px;
     border:1px solid rgba(255,255,255,.08);
     background:
       radial-gradient(900px 520px at 15% 10%, rgba(122,184,255,.12), transparent 55%),
@@ -20,11 +24,12 @@
     gap:18px;
     flex-wrap:wrap;
   }
+
   .episode-tag{
     display:inline-flex;
     gap:.5rem;
     align-items:center;
-    padding:.4rem .7rem;
+    padding:.42rem .75rem;
     border-radius:999px;
     background:rgba(255,255,255,.06);
     border:1px solid rgba(255,255,255,.12);
@@ -33,15 +38,31 @@
     font-size:.78rem;
     letter-spacing:.04em;
   }
-  .hero-title{margin:.6rem 0 0;font-size:1.5rem;line-height:1.1;}
-  .hero-sub{color:rgba(255,255,255,.74);margin:.35rem 0 0;}
-  .hero-actions{display:flex;gap:.6rem;flex-wrap:wrap;}
+
+  .hero-title{
+    margin:.65rem 0 0;
+    font-size:1.7rem;
+    line-height:1.08;
+    letter-spacing:-.02em;
+  }
+
+  .hero-sub{
+    color:rgba(255,255,255,.74);
+    margin:.4rem 0 0;
+    max-width:760px;
+  }
+
+  .hero-actions{
+    display:flex;
+    gap:.6rem;
+    flex-wrap:wrap;
+  }
 
   .btn{
     background:rgba(122,184,255,.12);
     border:1px solid rgba(122,184,255,.42);
     color:#7ab8ff;
-    padding:.7rem 1rem;
+    padding:.76rem 1rem;
     border-radius:14px;
     cursor:pointer;
     font-weight:800;
@@ -50,13 +71,16 @@
     text-decoration:none;
     display:inline-flex;
     align-items:center;
+    justify-content:center;
     gap:.45rem;
   }
+
   .btn:hover{
     background:rgba(122,184,255,.22);
     border-color:#7ab8ff;
     box-shadow:0 0 14px rgba(122,184,255,.25);
   }
+
   .btn-secondary{
     background:rgba(255,255,255,.04);
     border:1px solid rgba(255,255,255,.12);
@@ -65,22 +89,38 @@
 
   .grid{
     display:grid;
-    grid-template-columns:1.05fr 1.95fr;
+    grid-template-columns:minmax(320px, .78fr) minmax(0, 1.22fr);
     gap:20px;
+    align-items:start;
   }
-  @media (max-width: 1100px){ .grid{grid-template-columns:1fr;} }
+
+  @media (max-width: 1100px){
+    .grid{
+      grid-template-columns:1fr;
+    }
+  }
 
   .card{
     background:var(--panel, rgba(255,255,255,.025));
     border:1px solid rgba(255,255,255,.08);
-    border-radius:20px;
+    border-radius:22px;
     padding:18px;
   }
-  .card h3{margin:.1rem 0 .85rem;color:var(--accent, #7ab8ff);font-size:1.04rem;}
-  .muted{color:var(--muted);}
+
+  .card h3{
+    margin:.1rem 0 .9rem;
+    color:var(--accent, #7ab8ff);
+    font-size:1.04rem;
+  }
+
+  .muted{
+    color:var(--muted);
+  }
 
   .img{
     width:100%;
+    height:260px;
+    object-fit:cover;
     border-radius:16px;
     display:block;
     border:1px solid rgba(255,255,255,.08);
@@ -92,11 +132,16 @@
     grid-template-columns:1fr 1fr;
     gap:14px;
   }
-  @media (max-width: 900px){ .row{grid-template-columns:1fr;} }
+
+  @media (max-width: 900px){
+    .row{
+      grid-template-columns:1fr;
+    }
+  }
 
   .input{
     width:100%;
-    padding:.75rem .8rem;
+    padding:.78rem .85rem;
     border-radius:14px;
     border:1px solid rgba(255,255,255,.10);
     background:#0f141a;
@@ -104,46 +149,86 @@
     min-height:48px;
   }
 
-  .section-stack{display:grid;gap:16px;}
-  .action-row{display:flex;gap:10px;flex-wrap:wrap;}
+  .section-stack{
+    display:grid;
+    gap:16px;
+  }
 
-  /* Before/After */
+  .action-row{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+  }
+
   .ba{
     position:relative;
-    border-radius:18px;
+    border-radius:22px;
     overflow:hidden;
     border:1px solid rgba(255,255,255,.10);
     background:rgba(255,255,255,.02);
+    min-height:clamp(420px, 68vh, 860px);
   }
-  .ba img{display:block;width:100%;height:auto;}
-  .ba .after{position:absolute;inset:0;clip-path: inset(0 50% 0 0);}
+
+  .ba img{
+    display:block;
+    width:100%;
+    height:clamp(420px, 68vh, 860px);
+    object-fit:cover;
+  }
+
+  .ba .after{
+    position:absolute;
+    inset:0;
+    clip-path: inset(0 50% 0 0);
+  }
+
   .ba .handle{
     position:absolute;
-    top:0; bottom:0; left:50%;
+    top:0;
+    bottom:0;
+    left:50%;
     width:2px;
     background:rgba(122,184,255,.85);
     box-shadow:0 0 18px rgba(122,184,255,.35);
   }
+
   .ba .knob{
     position:absolute;
-    top:50%; left:50%;
+    top:50%;
+    left:50%;
     transform:translate(-50%, -50%);
-    width:46px; height:46px;
+    width:50px;
+    height:50px;
     border-radius:999px;
     background:rgba(0,0,0,.55);
     border:1px solid rgba(122,184,255,.55);
-    display:flex; align-items:center; justify-content:center;
-    color:#a9d2ff; font-weight:900;
-  }
-  .ba input[type="range"]{
-    position:absolute; inset:0; width:100%;
-    opacity:0; cursor:ew-resize;
-  }
-  .ba-badges{
-    position:absolute; inset:12px 12px auto 12px;
-    display:flex; justify-content:space-between; gap:.5rem;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    color:#a9d2ff;
+    font-weight:900;
+    backdrop-filter:blur(6px);
     pointer-events:none;
   }
+
+  .ba input[type="range"]{
+    position:absolute;
+    inset:0;
+    width:100%;
+    opacity:0;
+    cursor:ew-resize;
+  }
+
+  .ba-badges{
+    position:absolute;
+    inset:12px 12px auto 12px;
+    display:flex;
+    justify-content:space-between;
+    gap:.5rem;
+    pointer-events:none;
+    z-index:3;
+  }
+
   .badge{
     font-size:.78rem;
     padding:.28rem .55rem;
@@ -151,36 +236,64 @@
     background:rgba(0,0,0,.45);
     border:1px solid rgba(255,255,255,.14);
     color:rgba(255,255,255,.88);
-    backdrop-filter: blur(6px);
+    backdrop-filter:blur(6px);
   }
 
-  /* Gallery */
+  #emptyPreview{
+    min-height:clamp(420px, 68vh, 860px);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    text-align:center;
+    border-radius:22px;
+    border:1px dashed rgba(255,255,255,.10);
+    background:rgba(255,255,255,.02);
+    padding:24px;
+  }
+
   .after-grid{
     display:grid;
     grid-template-columns:repeat(3, minmax(0,1fr));
     gap:12px;
   }
-  @media (max-width: 900px){ .after-grid{grid-template-columns:repeat(2, minmax(0,1fr));} }
-  @media (max-width: 620px){ .after-grid{grid-template-columns:1fr;} }
+
+  @media (max-width: 900px){
+    .after-grid{
+      grid-template-columns:repeat(2, minmax(0,1fr));
+    }
+  }
+
+  @media (max-width: 620px){
+    .after-grid{
+      grid-template-columns:1fr;
+    }
+  }
 
   .thumb{
-    padding:.65rem;
+    padding:.7rem;
     border-radius:18px;
     background:rgba(255,255,255,.03);
     border:1px solid rgba(255,255,255,.10);
     transition:.15s;
   }
+
   .thumb:hover{
     transform:translateY(-1px);
     border-color:rgba(122,184,255,.28);
   }
+
+  .thumb .img{
+    height:240px;
+  }
+
   .thumb-meta{
-    margin-top:.5rem;
+    margin-top:.55rem;
     display:flex;
     justify-content:space-between;
     gap:.35rem;
     align-items:center;
   }
+
   .chip{
     font-size:.78rem;
     border-radius:999px;
@@ -189,10 +302,10 @@
     border:1px solid rgba(122,184,255,.26);
     color:#a9d2ff;
   }
+
   .pick{
     width:100%;
-    margin-top:.6rem;
-    justify-content:center;
+    margin-top:.7rem;
   }
 
   .status-box{
@@ -209,8 +322,62 @@
     background:rgba(255,255,255,.025);
     border:1px solid rgba(255,255,255,.08);
   }
-  .scope-box ul{margin:.6rem 0 0 1rem;padding:0;}
-  .scope-box li{margin:.35rem 0;color:var(--text);}
+
+  .scope-box ul{
+    margin:.6rem 0 0 1rem;
+    padding:0;
+  }
+
+  .scope-box li{
+    margin:.35rem 0;
+    color:var(--text);
+  }
+
+  @media (max-width: 900px){
+    .ba,
+    #emptyPreview{
+      min-height:clamp(320px, 52vh, 620px);
+    }
+
+    .ba img{
+      height:clamp(320px, 52vh, 620px);
+    }
+
+    .img{
+      height:220px;
+    }
+
+    .thumb .img{
+      height:210px;
+    }
+  }
+
+  @media (max-width: 640px){
+    .studio-hero{
+      padding:18px;
+    }
+
+    .hero-title{
+      font-size:1.4rem;
+    }
+
+    .ba,
+    #emptyPreview{
+      min-height:320px;
+    }
+
+    .ba img{
+      height:320px;
+    }
+
+    .img{
+      height:200px;
+    }
+
+    .thumb .img{
+      height:200px;
+    }
+  }
 </style>
 
 <div class="studio-wrap">
@@ -219,7 +386,9 @@
     <div>
       <div class="episode-tag">🎬 RENOVATION STUDIO • DEAL #{{ deal.id }}</div>
       <h2 class="hero-title">{{ deal.title or ('Deal #' ~ deal.id) }}</h2>
-      <div class="hero-sub">Build your before → after story, then feature the reveal for reports and funding.</div>
+      <div class="hero-sub">
+        Build your before → after story, then feature the reveal for reports and funding.
+      </div>
     </div>
 
     <div class="hero-actions">
@@ -230,7 +399,6 @@
 
   <div class="grid">
 
-    <!-- LEFT -->
     <div class="section-stack">
 
       <div class="card">
@@ -240,7 +408,9 @@
           <div>
             <label class="muted" style="display:block;margin-bottom:.35rem;">Before Image</label>
             <input type="file" id="beforeFile" accept="image/*" class="input">
-            <div class="muted" style="margin-top:.45rem;">Upload a room photo so Ravlo can generate realistic after concepts.</div>
+            <div class="muted" style="margin-top:.45rem;">
+              Upload a room photo so Ravlo can generate realistic after concepts.
+            </div>
           </div>
 
           <div>
@@ -284,11 +454,19 @@
 
       <div class="card">
         <h3>Featured Reveal</h3>
-        <div class="muted">Choose the best after image and mark it as the featured reveal for this deal.</div>
+        <div class="muted">
+          Choose the best after image and mark it as the featured reveal for this deal.
+        </div>
 
         <div style="margin-top:12px;">
           <img id="featuredImg" class="img" src="" alt="Featured reveal" style="display:none;">
-          <button id="featureBtn" class="btn" type="button" onclick="feature()" style="display:none; margin-top:.75rem;">
+          <button
+            id="featureBtn"
+            class="btn"
+            type="button"
+            onclick="feature()"
+            style="display:none; margin-top:.75rem;"
+          >
             ✅ Set as Featured Reveal
           </button>
         </div>
@@ -303,7 +481,6 @@
 
     </div>
 
-    <!-- RIGHT -->
     <div class="section-stack">
 
       <div class="card">
@@ -324,7 +501,9 @@
           <input id="baRange" type="range" min="0" max="100" value="50" aria-label="Before after slider">
         </div>
 
-        <div id="emptyPreview" class="muted">Upload a before image, then generate concepts.</div>
+        <div id="emptyPreview" class="muted">
+          Upload a before image, then generate concepts.
+        </div>
       </div>
 
       <div class="card">
@@ -334,12 +513,38 @@
           <div class="after-grid" id="existingGrid">
             {% for m in mockups %}
               <div class="thumb">
-                <img class="img" src="{{ m.after_url }}" alt="After mockup" style="cursor:pointer;" onclick="selectAfter('{{ m.after_url }}','{{ m.before_url }}')">
+                <img
+                  class="img"
+                  src="{{ m.after_url }}"
+                  alt="After mockup"
+                  style="cursor:pointer;"
+                  onclick="selectAfter('{{ m.after_url }}', '{{ m.before_url }}')"
+                >
+
                 <div class="thumb-meta">
                   <span class="chip">{{ m.style_preset or 'Concept' }}</span>
-                  <small class="muted">{{ m.created_at.strftime("%b %d, %Y %I:%M %p") if m.created_at else '' }}</small>
+                  <small class="muted">
+                    {{ m.created_at.strftime("%b %d, %Y %I:%M %p") if m.created_at else '' }}
+                  </small>
                 </div>
-                <button class="btn pick" type="button" onclick="selectAfter('{{ m.after_url }}','{{ m.before_url }}')">👀 Preview</button>
+
+                <div class="action-row" style="margin-top:.7rem;">
+                  <button
+                    class="btn pick"
+                    type="button"
+                    onclick="selectAfter('{{ m.after_url }}', '{{ m.before_url }}')"
+                  >
+                    👀 Preview
+                  </button>
+
+                  <button
+                    class="btn btn-secondary pick"
+                    type="button"
+                    onclick="selectAfter('{{ m.after_url }}', '{{ m.before_url }}'); feature();"
+                  >
+                    ⭐ Feature
+                  </button>
+                </div>
               </div>
             {% endfor %}
           </div>
@@ -355,7 +560,7 @@
 </div>
 
 <script>
-  let LAST_BEFORE = {{ (before_url or "")|tojson }};
+  let LAST_BEFORE = {{ before_url|default('', true)|tojson }};
   let CURRENT_BEFORE = "";
   let CURRENT_AFTER = "";
 
@@ -369,28 +574,33 @@
     const status = document.getElementById("status");
     status.textContent = "Uploading before image…";
 
-    const fd = new FormData();
-    fd.append("photo", file);
-    fd.append("deal_id", "{{ deal.id }}");
-    fd.append("saved_property_id", "{{ deal.saved_property_id or '' }}");
+    try {
+      const fd = new FormData();
+      fd.append("photo", file);
+      fd.append("deal_id", "{{ deal.id }}");
+      fd.append("saved_property_id", "{{ deal.saved_property_id or '' }}");
 
-    const res = await fetch("{{ url_for('investor.renovation_upload') }}", {
-      method: "POST",
-      body: fd,
-      credentials: "include"
-    });
+      const res = await fetch("{{ url_for('investor.renovation_upload') }}", {
+        method: "POST",
+        body: fd,
+        credentials: "include"
+      });
 
-    const data = await res.json();
+      const data = await res.json();
 
-    if (data.status !== "ok") {
-      status.textContent = data.message || "Upload failed.";
-      return;
+      if (data.status !== "ok") {
+        status.textContent = data.message || "Upload failed.";
+        return;
+      }
+
+      CURRENT_BEFORE = data.url;
+      LAST_BEFORE = data.url;
+      status.textContent = "Before image uploaded successfully.";
+      showPreview(CURRENT_BEFORE, CURRENT_AFTER || "");
+    } catch (err) {
+      console.error(err);
+      status.textContent = "Upload failed.";
     }
-
-    CURRENT_BEFORE = data.url;
-    LAST_BEFORE = data.url;
-    status.textContent = "Before image uploaded successfully.";
-    showPreview(CURRENT_BEFORE, "");
   }
 
   function useLastBefore() {
@@ -398,6 +608,7 @@
       alert("No previous before image found yet.");
       return;
     }
+
     CURRENT_BEFORE = LAST_BEFORE;
     showPreview(CURRENT_BEFORE, CURRENT_AFTER || "");
   }
@@ -420,38 +631,43 @@
 
     status.textContent = "Generating concepts…";
 
-    const fd = new FormData();
-    fd.append("image_url", CURRENT_BEFORE);
-    fd.append("style_prompt", prompt);
-    fd.append("style_preset", preset);
-    fd.append("variations", String(variations));
-    fd.append("save_to_deal", "true");
-    fd.append("deal_id", "{{ deal.id }}");
-    fd.append("saved_property_id", "{{ deal.saved_property_id or '' }}");
+    try {
+      const fd = new FormData();
+      fd.append("image_url", CURRENT_BEFORE);
+      fd.append("style_prompt", prompt);
+      fd.append("style_preset", preset);
+      fd.append("variations", String(variations));
+      fd.append("save_to_deal", "true");
+      fd.append("deal_id", "{{ deal.id }}");
+      fd.append("saved_property_id", "{{ deal.saved_property_id or '' }}");
 
-    const res = await fetch("{{ url_for('investor.renovation_visualizer') }}", {
-      method: "POST",
-      body: fd,
-      credentials: "include"
-    });
+      const res = await fetch("{{ url_for('investor.renovation_visualizer') }}", {
+        method: "POST",
+        body: fd,
+        credentials: "include"
+      });
 
-    const data = await res.json();
+      const data = await res.json();
 
-    if (data.status !== "ok") {
-      status.textContent = data.message || "Visualizer failed.";
-      return;
-    }
+      if (data.status !== "ok") {
+        status.textContent = data.message || "Visualizer failed.";
+        return;
+      }
 
-    const beforeUrl = data.before_url || CURRENT_BEFORE;
-    const images = Array.isArray(data.images) ? data.images : [];
+      const beforeUrl = data.before_url || CURRENT_BEFORE;
+      const images = Array.isArray(data.images) ? data.images : [];
 
-    status.textContent = images.length
-      ? "Concepts generated successfully."
-      : (data.note || "No images returned yet.");
+      status.textContent = images.length
+        ? "Concepts generated successfully."
+        : (data.note || "No images returned yet.");
 
-    if (images.length) {
-      renderNew(images, beforeUrl);
-      selectAfter(images[0], beforeUrl);
+      if (images.length) {
+        renderNew(images, beforeUrl);
+        selectAfter(images[0], beforeUrl);
+      }
+    } catch (err) {
+      console.error(err);
+      status.textContent = "Visualizer failed.";
     }
   }
 
@@ -469,10 +685,20 @@
           <span class="chip">New</span>
           <small class="muted">just now</small>
         </div>
-        <button class="btn pick" type="button">👀 Preview</button>
+        <div class="action-row" style="margin-top:.7rem;">
+          <button class="btn pick" type="button">👀 Preview</button>
+          <button class="btn btn-secondary pick" type="button">⭐ Feature</button>
+        </div>
       `;
+
+      const buttons = div.querySelectorAll("button");
       div.querySelector("img").onclick = () => selectAfter(afterUrl, beforeUrl);
-      div.querySelector("button").onclick = () => selectAfter(afterUrl, beforeUrl);
+      buttons[0].onclick = () => selectAfter(afterUrl, beforeUrl);
+      buttons[1].onclick = async () => {
+        selectAfter(afterUrl, beforeUrl);
+        await feature();
+      };
+
       grid.appendChild(div);
     });
   }
@@ -480,10 +706,12 @@
   function selectAfter(afterUrl, beforeUrl) {
     CURRENT_AFTER = afterUrl;
     CURRENT_BEFORE = beforeUrl || CURRENT_BEFORE || LAST_BEFORE || "";
+
     showPreview(CURRENT_BEFORE, CURRENT_AFTER);
 
     const img = document.getElementById("featuredImg");
     const btn = document.getElementById("featureBtn");
+
     img.src = afterUrl;
     img.style.display = "block";
     btn.style.display = "inline-flex";
@@ -492,33 +720,33 @@
   function showPreview(beforeUrl, afterUrl) {
     const wrap = document.getElementById("baWrap");
     const empty = document.getElementById("emptyPreview");
-    const b = document.getElementById("baBefore");
-    const a = document.getElementById("baAfterImg");
+    const beforeImg = document.getElementById("baBefore");
+    const afterImg = document.getElementById("baAfterImg");
     const slider = document.getElementById("baRange");
     const afterLayer = document.getElementById("baAfter");
     const handle = document.getElementById("baHandle");
 
-    b.src = beforeUrl || "";
-    a.src = afterUrl || "";
+    beforeImg.src = beforeUrl || "";
+    afterImg.src = afterUrl || "";
 
-    if (beforeUrl) {
-      wrap.style.display = "block";
-      empty.style.display = "none";
-    } else {
+    if (!beforeUrl) {
       wrap.style.display = "none";
-      empty.style.display = "block";
+      empty.style.display = "flex";
       return;
     }
 
-    function set(v) {
-      const pct = Math.max(0, Math.min(100, Number(v) || 50));
+    wrap.style.display = "block";
+    empty.style.display = "none";
+
+    function setSlider(value) {
+      const pct = Math.max(0, Math.min(100, Number(value) || 50));
       afterLayer.style.clipPath = `inset(0 ${100 - pct}% 0 0)`;
       handle.style.left = pct + "%";
     }
 
     slider.value = "50";
-    slider.oninput = (e) => set(e.target.value);
-    set(50);
+    slider.oninput = (e) => setSlider(e.target.value);
+    setSlider(50);
   }
 
   async function feature() {
@@ -527,24 +755,29 @@
       return;
     }
 
-    const fd = new FormData();
-    fd.append("after_url", CURRENT_AFTER);
-    fd.append("before_url", CURRENT_BEFORE);
+    try {
+      const fd = new FormData();
+      fd.append("after_url", CURRENT_AFTER);
+      fd.append("before_url", CURRENT_BEFORE);
 
-    const res = await fetch("{{ url_for('investor.deal_feature_reveal', deal_id=deal.id) }}", {
-      method: "POST",
-      body: fd,
-      credentials: "include"
-    });
+      const res = await fetch("{{ url_for('investor.deal_feature_reveal', deal_id=deal.id) }}", {
+        method: "POST",
+        body: fd,
+        credentials: "include"
+      });
 
-    const data = await res.json();
+      const data = await res.json();
 
-    if (data.status !== "ok") {
-      alert(data.message || "Could not feature reveal.");
-      return;
+      if (data.status !== "ok") {
+        alert(data.message || "Could not feature reveal.");
+        return;
+      }
+
+      alert("Featured reveal set.");
+    } catch (err) {
+      console.error(err);
+      alert("Could not feature reveal.");
     }
-
-    alert("Featured reveal set.");
   }
 
   async function generateScope() {
@@ -556,44 +789,50 @@
     const box = document.getElementById("scopeResults");
     box.innerHTML = "Generating rehab plan...";
 
-    const res = await fetch("{{ url_for('investor.ai_rehab_scope') }}", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        image_url: CURRENT_BEFORE
-      })
-    });
-
-    const data = await res.json();
-
-    if (data.status !== "ok") {
-      box.innerHTML = `<div class="muted">${data.message || "Scope generation failed."}</div>`;
-      return;
-    }
-
-    const scope = Array.isArray(data.scope) ? data.scope : [];
-    const estimatedCost = Number(data.estimated_cost || 0);
-    const arvIncrease = Number(data.arv_increase || 0);
-
-    let html = "<h4 style='margin:0 0 10px;'>AI Rehab Plan</h4>";
-
-    if (scope.length) {
-      html += "<ul>";
-      scope.forEach(item => {
-        html += `<li>${item}</li>`;
+    try {
+      const res = await fetch("{{ url_for('investor.ai_rehab_scope') }}", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          image_url: CURRENT_BEFORE
+        })
       });
-      html += "</ul>";
-    } else {
-      html += "<div class='muted'>No line items returned.</div>";
+
+      const data = await res.json();
+
+      if (data.status !== "ok") {
+        box.innerHTML = `<div class="muted">${data.message || "Scope generation failed."}</div>`;
+        return;
+      }
+
+      const scope = Array.isArray(data.scope) ? data.scope : [];
+      const estimatedCost = Number(data.estimated_cost || 0);
+      const arvIncrease = Number(data.arv_increase || 0);
+
+      let html = "<h4 style='margin:0 0 10px;'>AI Rehab Plan</h4>";
+
+      if (scope.length) {
+        html += "<ul>";
+        scope.forEach((item) => {
+          html += `<li>${item}</li>`;
+        });
+        html += "</ul>";
+      } else {
+        html += "<div class='muted'>No line items returned.</div>";
+      }
+
+      html += `<p style="margin-top:12px;"><b>Estimated Rehab:</b> $${estimatedCost.toLocaleString()}</p>`;
+      html += `<p><b>ARV Increase:</b> $${arvIncrease.toLocaleString()}</p>`;
+
+      box.innerHTML = html;
+    } catch (err) {
+      console.error(err);
+      box.innerHTML = `<div class="muted">Scope generation failed.</div>`;
     }
-
-    html += `<p style="margin-top:12px;"><b>Estimated Rehab:</b> $${estimatedCost.toLocaleString()}</p>`;
-    html += `<p><b>ARV Increase:</b> $${arvIncrease.toLocaleString()}</p>`;
-
-    box.innerHTML = html;
   }
 
-  (function() {
+  (function initStudio() {
     if (LAST_BEFORE) {
       CURRENT_BEFORE = LAST_BEFORE;
       showPreview(CURRENT_BEFORE, "");

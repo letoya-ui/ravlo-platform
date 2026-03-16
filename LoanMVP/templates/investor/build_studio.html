@@ -86,7 +86,7 @@ Design and visualize new construction projects.
           </div>
         </div>
 
-        <form id="buildStudioForm" class="build-form-grid">
+        <form id="buildStudioForm" class="build-form-grid" enctype="multipart/form-data">
           {% if deal and deal.id %}
             <input type="hidden" name="deal_id" id="deal_id" value="{{ deal.id }}">
           {% endif %}
@@ -161,6 +161,15 @@ Design and visualize new construction projects.
               value="{{ build_project.get('location') or build_data.get('location') or deal.address if deal else '' }}"
               placeholder="Ex: Middletown, NY"
             >
+          </div>
+          
+          <div class="ravlo-field">
+            <label class="ravlo-label">Style</label>
+            <select id="style" name="style" class="ravlo-input">
+              <option value="modern" selected>Modern</option>
+              <option value="luxury">Luxury</option>
+              <option value="contemporary">Contemporary</option>
+            </select>
           </div>
 
           <div class="ravlo-field">
@@ -283,7 +292,15 @@ Design and visualize new construction projects.
 
         <div id="build_images_wrap" class="build-image-grid">
           {% set existing_images = build_data.get("images_base64", []) %}
-          {% if existing_images %}
+          {% set existing_saved_paths = build_data.get("saved_paths", []) %}
+
+          {% if existing_saved_paths %}
+            {% for img in existing_saved_paths %}
+            <div class="build-image-card">
+              <img src="{{ img }}" alt="Build concept render">
+            </div>
+            {% endfor %}
+          {% elif existing_images %}
             {% for img in existing_images %}
             <div class="build-image-card">
               <img src="data:image/png;base64,{{ img }}" alt="Build concept render">
@@ -321,10 +338,11 @@ Design and visualize new construction projects.
             <span class="quick-sub">Go back to the main deal and continue the investor workflow.</span>
           </a>
 
-          <a href="{{ url_for('investor.build_project_detail', project_id=project.id) }}"
-            class="ravlo-btn ghost sm">
-           Open
+          {% if project %}
+          <a href="{{ url_for('investor.build_project_detail', project_id=project.id) }}">
+            View Project Details
           </a>
+          {% endif %}
 
           <a href="{{ url_for('investor.deal_report', deal_id=deal.id) }}" class="quick-card">
             <span class="quick-title">Open Deal Report</span>
@@ -557,9 +575,47 @@ Design and visualize new construction projects.
 
 <script>
   let latestBuildImages = [];
+  let latestBuildImageUrls = [];
   let latestBuildMeta = {};
   let latestBuildSeed = null;
   let latestBuildJobId = null;
+
+  function getBuildImageSources(data) {
+    const urls = Array.isArray(data.saved_paths) ? data.saved_paths.filter(Boolean) : [];
+    const b64s = Array.isArray(data.images) ? data.images.filter(Boolean) : [];
+
+    if (urls.length) {
+      return {
+        displaySources: urls,
+        rawBase64: b64s,
+        savedPaths: urls
+      };
+    }
+
+    return {
+      displaySources: b64s.map(img => `data:image/png;base64,${img}`),
+      rawBase64: b64s,
+      savedPaths: []
+    };
+  }
+
+  function clearImageUrlIfFileSelected() {
+    const fileInput = document.getElementById("land_image");
+    const urlInput = document.getElementById("image_url");
+
+    if (fileInput && urlInput && fileInput.files && fileInput.files.length > 0) {
+      urlInput.value = "";
+    }
+  }
+
+  function clearFileIfUrlEntered() {
+    const fileInput = document.getElementById("land_image");
+    const urlInput = document.getElementById("image_url");
+
+    if (fileInput && urlInput && urlInput.value.trim()) {
+      fileInput.value = "";
+    }
+  }
 
   async function generateBuildConcept() {
     const form = document.getElementById("buildStudioForm");
@@ -569,12 +625,35 @@ Design and visualize new construction projects.
     const imagesWrap = document.getElementById("build_images_wrap");
     const seedEl = document.getElementById("build_seed");
     const jobIdEl = document.getElementById("build_job_id");
+    const fileInput = document.getElementById("land_image");
+    const urlInput = document.getElementById("image_url");
+    const runButtons = document.querySelectorAll('button[onclick="generateBuildConcept()"]');
 
-    statusText.textContent = "Generating build concept...";
+    const hasFile = !!(fileInput && fileInput.files && fileInput.files.length > 0);
+    const hasUrl = !!(urlInput && urlInput.value.trim());
+
+    if (hasFile && hasUrl) {
+      urlInput.value = "";
+    }
+
+    runButtons.forEach(btn => {
+      btn.disabled = true;
+      btn.dataset.originalText = btn.textContent;
+      btn.textContent = "Generating...";
+    });
+
+    statusText.textContent = hasFile
+      ? "Uploading site image and generating build concept..."
+      : "Generating build concept...";
+
     imagesWrap.innerHTML = `<div class="empty-state-inline">Generating concept renders...</div>`;
 
     try {
-      const res = await fetch("{{ url_for('investor.generate_build_studio') }}", {
+      const endpoint = hasFile
+        ? "{{ url_for('investor.generate_build_studio_upload') }}"
+        : "{{ url_for('investor.generate_build_studio') }}";
+
+      const res = await fetch(endpoint, {
         method: "POST",
         body: formData
       });
@@ -587,23 +666,26 @@ Design and visualize new construction projects.
         return;
       }
 
-      latestBuildImages = data.images || [];
       latestBuildMeta = data.meta || {};
       latestBuildSeed = data.seed || null;
       latestBuildJobId = data.job_id || null;
 
-      statusText.textContent = "Build concept generated successfully.";
+      const imageState = getBuildImageSources(data);
+      latestBuildImages = imageState.rawBase64;
+      latestBuildImageUrls = imageState.savedPaths.length ? imageState.savedPaths : imageState.displaySources;
+
+      statusText.textContent = `Build concept generated successfully${data.mode ? " (" + data.mode + " mode)" : ""}.`;
       seedEl.textContent = latestBuildSeed || "—";
       jobIdEl.textContent = latestBuildJobId || "—";
 
-      if (!latestBuildImages.length) {
+      if (!imageState.displaySources.length) {
         imagesWrap.innerHTML = `<div class="empty-state-inline">No images returned from engine.</div>`;
         return;
       }
 
-      imagesWrap.innerHTML = latestBuildImages.map(img => `
+      imagesWrap.innerHTML = imageState.displaySources.map(src => `
         <div class="build-image-card">
-          <img src="data:image/png;base64,${img}" alt="Build concept render">
+          <img src="${src}" alt="Build concept render">
         </div>
       `).join("");
 
@@ -611,11 +693,20 @@ Design and visualize new construction projects.
       console.error(err);
       statusText.textContent = "Build concept generation failed.";
       imagesWrap.innerHTML = `<div class="empty-state-inline">Something went wrong generating the build concept.</div>`;
+    } finally {
+      runButtons.forEach(btn => {
+        btn.disabled = false;
+        btn.textContent = btn.dataset.originalText || "Generate Concept";
+      });
     }
   }
 
   async function saveBuildProject() {
     const dealIdInput = document.getElementById("deal_id");
+    const saveButtons = document.querySelectorAll('button[onclick="saveBuildProject()"]');
+
+    const firstConceptUrl = latestBuildImageUrls.length ? latestBuildImageUrls[0] : null;
+    const firstBase64 = latestBuildImages.length ? `data:image/png;base64,${latestBuildImages[0]}` : null;
 
     const payload = {
       deal_id: dealIdInput ? dealIdInput.value : null,
@@ -626,11 +717,17 @@ Design and visualize new construction projects.
       zoning: document.getElementById("zoning").value || "",
       location: document.getElementById("location").value || "",
       notes: document.getElementById("notes").value || "",
-      concept_render_url: latestBuildImages.length ? `data:image/png;base64,${latestBuildImages[0]}` : null,
+      concept_render_url: firstConceptUrl || firstBase64,
       blueprint_url: null,
       site_plan_url: null,
       presentation_url: null
     };
+
+    saveButtons.forEach(btn => {
+      btn.disabled = true;
+      btn.dataset.originalText = btn.textContent;
+      btn.textContent = "Saving...";
+    });
 
     try {
       const res = await fetch("{{ url_for('investor.save_build_studio') }}", {
@@ -655,7 +752,25 @@ Design and visualize new construction projects.
     } catch (err) {
       console.error(err);
       alert("Something went wrong saving the build project.");
+    } finally {
+      saveButtons.forEach(btn => {
+        btn.disabled = false;
+        btn.textContent = btn.dataset.originalText || "Save Build Project";
+      });
     }
   }
+
+  document.addEventListener("DOMContentLoaded", () => {
+    const fileInput = document.getElementById("land_image");
+    const urlInput = document.getElementById("image_url");
+
+    if (fileInput) {
+      fileInput.addEventListener("change", clearImageUrlIfFileSelected);
+    }
+
+    if (urlInput) {
+      urlInput.addEventListener("input", clearFileIfUrlEntered);
+    }
+  });
 </script>
 {% endblock %}

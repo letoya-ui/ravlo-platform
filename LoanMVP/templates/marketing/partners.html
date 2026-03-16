@@ -1,0 +1,180 @@
+{% extends "layouts/marketing_base.html" %}
+
+{% block hero %}
+<section class="mk-hero">
+  <div class="mk-container">
+    <div class="mk-hero-grid">
+      <div class="mk-hero-copy">
+        <div class="mk-eyebrow">Partners</div>
+        <h1 class="mk-title-xl">A platform built to connect investors with execution.</h1>
+        <p class="mk-copy-lg">
+          Ravlo is designed to grow beyond analysis alone. It creates space for investors,
+          service providers, and strategic partners to operate inside a more connected ecosystem.
+        </p>
+
+        <div class="mk-hero-actions">
+          <a href="{{ url_for('marketing.contact') }}" class="mk-btn mk-btn-primary">Become a Partner</a>
+          <a href="{{ url_for('marketing.tour') }}" class="mk-btn mk-btn-ghost">See the Platform</a>
+        </div>
+      </div>
+
+      <div class="mk-hero-visual">
+        <div class="mk-glow"></div>
+        <div class="mk-device">
+          <div class="mk-device-topbar">
+            <span class="mk-device-dot"></span>
+            <span class="mk-device-dot"></span>
+            <span class="mk-device-dot"></span>
+          </div>
+          {% if hero_image %}
+            <img src="{{ url_for('static', filename=hero_image) }}" alt="Ravlo partners ecosystem">
+          {% else %}
+            <img src="{{ url_for('static', filename='images/marketing/partners-hero.jpg') }}" alt="Ravlo partners ecosystem">
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block content %}
+<section class="mk-section">
+  <div class="mk-container">
+    <div class="mk-kicker">Why partners matter</div>
+    <h2 class="mk-title-lg">Ravlo is meant to support the full investment workflow.</h2>
+    <p class="mk-copy-lg">
+      Investors do not operate alone. Deals move through contractors, designers, lenders,
+      agents, inspectors, property services, and operational support. Ravlo is structured
+      to become a stronger bridge between strategy and execution.
+    </p>
+
+    <div class="mk-grid-3" style="margin-top:28px;">
+      <div class="mk-card">
+        <div class="mk-card-icon">C</div>
+        <h3>Contractors</h3>
+        <p>Support renovation and build execution with partner visibility inside the ecosystem.</p>
+      </div>
+
+      <div class="mk-card">
+        <div class="mk-card-icon">D</div>
+        <h3>Designers</h3>
+        <p>Help investors visualize property direction and improve the quality of transformation planning.</p>
+      </div>
+
+      <div class="mk-card">
+        <div class="mk-card-icon">S</div>
+        <h3>Service Providers</h3>
+        <p>Create room for cleaners, inspectors, photographers, and other specialists to support the process.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="mk-section-tight">
+  <div class="mk-container">
+    <div class="mk-split-panel">
+      <div class="mk-panel">
+        <div class="mk-kicker">Who this can serve</div>
+        <h2 class="mk-title-lg">Built for growth across multiple categories.</h2>
+
+        <div class="mk-list">
+          <div class="mk-list-item">
+            <div class="mk-check">✓</div>
+            <div>
+              <strong>Investors</strong>
+              <div class="mk-copy">Find aligned services that help move projects forward.</div>
+            </div>
+          </div>
+
+          <div class="mk-list-item">
+            <div class="mk-check">✓</div>
+            <div>
+              <strong>Vendors</strong>
+              <div class="mk-copy">Gain access to a platform centered around active real estate workflow.</div>
+            </div>
+          </div>
+
+          <div class="mk-list-item">
+            <div class="mk-check">✓</div>
+            <div>
+              <strong>Operators</strong>
+              <div class="mk-copy">Build stronger collaboration between planning and execution.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="mk-panel">
+        <div class="mk-kicker">Future direction</div>
+        <h2 class="mk-title-lg">More than a listing page.</h2>
+        <p class="mk-copy">
+          The long-term opportunity is bigger than a basic partner directory. Ravlo can evolve into
+          a true ecosystem where investors discover services, review fit, collaborate around projects,
+          and keep execution tied to the larger property workflow.
+        </p>
+
+        <div class="mk-divider"></div>
+
+        <div class="mk-grid-2">
+          <div class="mk-card">
+            <h4>Partner visibility</h4>
+            <p>Highlight trusted categories and make the site feel more operationally complete.</p>
+          </div>
+          <div class="mk-card">
+            <h4>Ecosystem growth</h4>
+            <p>Create a path for future monetization, referrals, and stronger network effects.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="mk-section">
+  <div class="mk-container">
+    <div class="mk-grid-3">
+      <div class="mk-card mk-media-card">
+        <img src="{{ url_for('static', filename='images/marketing/partner-contractors.jpg') }}" alt="Contractor partners">
+        <div class="mk-media-copy">
+          <h3>Renovation & Build</h3>
+          <p>Show how contractors and builders can support project execution inside the Ravlo vision.</p>
+        </div>
+      </div>
+
+      <div class="mk-card mk-media-card">
+        <img src="{{ url_for('static', filename='images/marketing/partner-design.jpg') }}" alt="Design partners">
+        <div class="mk-media-copy">
+          <h3>Design & Planning</h3>
+          <p>Position designers and planners as valuable contributors to property transformation decisions.</p>
+        </div>
+      </div>
+
+      <div class="mk-card mk-media-card">
+        <img src="{{ url_for('static', filename='images/marketing/partner-services.jpg') }}" alt="Service partners">
+        <div class="mk-media-copy">
+          <h3>Operations & Services</h3>
+          <p>Bring in the support layer that helps investors move from idea to execution.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="mk-section">
+  <div class="mk-container">
+    <div class="mk-cta">
+      <div class="mk-kicker">Partnerships</div>
+      <h2 class="mk-title-lg">Want to grow with the Ravlo ecosystem?</h2>
+      <p>
+        Use this page as the public-facing invitation for vendors, collaborators, and strategic partners
+        to connect with your platform early.
+      </p>
+      <div class="mk-cta-actions">
+        <a href="{{ url_for('marketing.contact') }}" class="mk-btn mk-btn-primary">Become a Partner</a>
+        <a href="{{ url_for('marketing.about') }}" class="mk-btn mk-btn-ghost">Learn More</a>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}

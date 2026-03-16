@@ -1,0 +1,72 @@
+{% extends "layouts/ravlo_base.html" %}
+{% block title %}Ravlo • Partner Details{% endblock %}
+
+{% block page_title %}Partner Details{% endblock %}
+{% block page_subline %}
+Review this partner and request an introduction.
+{% endblock %}
+
+{% block content %}
+<div class="ravlo-stack">
+
+  {% set partner_desc = partner.listing_description or partner.bio or "Trusted partner available through Ravlo." %}
+
+  <div class="ravlo-card">
+    <div style="display:flex; justify-content:space-between; gap:16px; flex-wrap:wrap;">
+      <div>
+        <h2 style="margin:0;">{{ partner.company or partner.name }}</h2>
+        <div class="ravlo-muted" style="margin-top:6px;">
+          {{ partner.category or "Partner" }}
+          {% if partner.service_area %} • {{ partner.service_area }}{% endif %}
+        </div>
+      </div>
+
+      <div style="display:flex; gap:8px; flex-wrap:wrap;">
+        {% if partner.relationship_level %}
+          <span class="ravlo-badge">{{ partner.relationship_level }}</span>
+        {% endif %}
+        {% if partner.featured %}
+          <span class="ravlo-badge">Featured</span>
+        {% endif %}
+      </div>
+    </div>
+
+    <div style="margin-top:18px;">
+      <h4>About</h4>
+      <p>{{ partner_desc }}</p>
+    </div>
+
+    <div class="ravlo-grid ravlo-grid-2" style="margin-top:18px;">
+      <div class="ravlo-subcard">
+        <h4>Company Info</h4>
+        <p><strong>Name:</strong> {{ partner.name or "—" }}</p>
+        <p><strong>Company:</strong> {{ partner.company or "—" }}</p>
+        <p><strong>Category:</strong> {{ partner.category or "—" }}</p>
+        <p><strong>Type:</strong> {{ partner.type or "—" }}</p>
+      </div>
+
+      <div class="ravlo-subcard">
+        <h4>Contact</h4>
+        <p><strong>Email:</strong> {{ partner.email or "—" }}</p>
+        <p><strong>Phone:</strong> {{ partner.phone or "—" }}</p>
+        <p><strong>Website:</strong> {{ partner.website or "—" }}</p>
+        <p><strong>Service Area:</strong> {{ partner.service_area or "—" }}</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="ravlo-card">
+    <h3>Request Introduction</h3>
+    <form method="POST" action="{{ url_for('investor.request_partner_intro', partner_id=partner.id) }}">
+      <label class="ravlo-label">Message</label>
+      <textarea name="message" class="ravlo-input" rows="5" placeholder="Tell us what kind of help you need for this project or property."></textarea>
+
+      <div style="margin-top:14px; display:flex; gap:10px; flex-wrap:wrap;">
+        <button type="submit" class="ravlo-btn">Request Intro</button>
+        <a href="{{ url_for('investor.partners') }}" class="ravlo-btn ghost">Back to Partners</a>
+      </div>
+    </form>
+  </div>
+
+</div>
+{% endblock %}

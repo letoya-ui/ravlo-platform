@@ -1,0 +1,21 @@
+{% extends "layouts/ravlo_base.html" %}
+{% block content %}
+
+<div class="dashboard-shell">
+    <h1>Insurance Dashboard</h1>
+    <p>Manage insurance quote requests and policy submissions.</p>
+
+    <div class="dashboard-grid">
+        <a class="dash-card" href="{{ url_for('partners.requests_inbox') }}">
+            <h3>Insurance Requests</h3>
+            <p>View new insurance inquiries.</p>
+        </a>
+
+        <a class="dash-card" href="{{ url_for('partners.workspace_home') }}">
+            <h3>Workspace</h3>
+            <p>Active insurance jobs and documents.</p>
+        </a>
+    </div>
+</div>
+
+{% endblock %}

@@ -1,0 +1,99 @@
+{% extends "layouts/marketing_base.html" %}
+
+{% block hero %}
+<section class="mk-hero">
+  <div class="mk-container">
+    <div class="mk-split-panel">
+      <div class="mk-panel">
+        <div class="mk-eyebrow">Enter Ravlo</div>
+        <h1 class="mk-title-lg" style="font-size:clamp(2.2rem,4vw,4rem);">
+          Step into your investor command center.
+        </h1>
+        <p class="mk-copy-lg" style="max-width:620px;">
+          Access the Ravlo ecosystem and continue your workflow inside the platform.
+          Use this page as a premium gateway before users reach the login screen.
+        </p>
+
+        <div class="mk-hero-actions">
+          <a href="/login" class="mk-btn mk-btn-primary">Go to Login</a>
+          <a href="{{ url_for('marketing.tour') }}" class="mk-btn mk-btn-ghost">Preview the Platform</a>
+        </div>
+
+        <div class="mk-list" style="margin-top:28px;">
+          <div class="mk-list-item">
+            <div class="mk-check">✓</div>
+            <div>
+              <strong>Deal-focused workflow</strong>
+              <div class="mk-copy">Move from public site to platform with a stronger sense of purpose.</div>
+            </div>
+          </div>
+          <div class="mk-list-item">
+            <div class="mk-check">✓</div>
+            <div>
+              <strong>Studio-powered planning</strong>
+              <div class="mk-copy">Step into a system designed around how investors actually think and work.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="mk-panel">
+        <div class="mk-device">
+          <div class="mk-device-topbar">
+            <span class="mk-device-dot"></span>
+            <span class="mk-device-dot"></span>
+            <span class="mk-device-dot"></span>
+          </div>
+          {% if hero_image %}
+            <img src="{{ url_for('static', filename=hero_image) }}" alt="Enter Ravlo">
+          {% else %}
+            <img src="{{ url_for('static', filename='images/marketing/hero_combined.jpg') }}" alt="Enter Ravlo">
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block content %}
+<section class="mk-section-tight">
+  <div class="mk-container">
+    <div class="mk-grid-3">
+      <div class="mk-card">
+        <div class="mk-card-icon">A</div>
+        <h3>Access</h3>
+        <p>Guide users cleanly toward login without dropping them abruptly into the app.</p>
+      </div>
+
+      <div class="mk-card">
+        <div class="mk-card-icon">P</div>
+        <h3>Preview</h3>
+        <p>Let visitors understand what Ravlo is before they commit to entering the platform.</p>
+      </div>
+
+      <div class="mk-card">
+        <div class="mk-card-icon">B</div>
+        <h3>Brand</h3>
+        <p>Keep the premium public-site feel intact all the way to the point of entry.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="mk-section">
+  <div class="mk-container">
+    <div class="mk-cta">
+      <div class="mk-kicker">Ready</div>
+      <h2 class="mk-title-lg">Continue into Ravlo when you are ready to work.</h2>
+      <p>
+        This page gives the platform a more polished handoff from public marketing to private workflow.
+      </p>
+      <div class="mk-cta-actions">
+        <a href="/login" class="mk-btn mk-btn-primary">Go to Login</a>
+        <a href="{{ url_for('marketing.contact') }}" class="mk-btn mk-btn-ghost">Contact Us</a>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}

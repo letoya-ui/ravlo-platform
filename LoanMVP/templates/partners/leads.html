@@ -1,0 +1,45 @@
+{% extends "layouts/ravlo_base.html" %}
+{% set active_page = "leads" %}
+
+{% block page_title %}Leads{% endblock %}
+{% block page_subline %}Your incoming opportunities from the Ravlo ecosystem.{% endblock %}
+
+{% block content %}
+<div class="ravlo-card pad">
+
+    {% if leads %}
+        <div class="ravlo-table">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Type</th>
+                        <th>Status</th>
+                        <th>Created</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for lead in leads %}
+                    <tr>
+                        <td>{{ lead.name }}</td>
+                        <td>{{ lead.type }}</td>
+                        <td>{{ lead.status }}</td>
+                        <td>{{ lead.created_at.strftime('%b %d, %Y') }}</td>
+                        <td>
+                            <a href="{{ url_for('crm.view_lead', lead_id=lead.id) }}" class="ravlo-link">
+                                View →
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+    {% else %}
+        <p class="muted">No leads yet. Leads will appear here as investors interact with your listing.</p>
+    {% endif %}
+
+</div>
+{% endblock %}

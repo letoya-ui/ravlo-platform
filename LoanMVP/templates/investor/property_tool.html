@@ -1,9 +1,10 @@
-{# templates/investor/property_tool.html #}
 {% extends "layouts/ravlo_base.html" %}
-{% block title %}Ravlo • Property Tool{% endblock %}
+{% block title %}Ravlo • Deal Finder{% endblock %}
 
-{% block page_title %}Property Tool{% endblock %}
-{% block page_subline %}Search by ZIP and get deal metrics for flips or rentals.{% endblock %}
+{% block page_title %}Deal Finder{% endblock %}
+{% block page_subline %}
+Search by ZIP, uncover investor opportunities, and move deals directly into Workspace.
+{% endblock %}
 
 {% block topbar_actions %}
   <button class="ravlo-btn ghost sm" type="button"
@@ -19,9 +20,8 @@
 
 {% block content %}
 
-<div class="ravlo-grid cols-2" style="grid-template-columns: 1fr 1.6fr; gap:1rem;">
+<div class="ravlo-grid cols-2 dealfinder-layout" style="grid-template-columns: 1fr 1.6fr; gap:1rem;">
 
-  <!-- LEFT: SEARCH PANEL -->
   <div class="ravlo-card pad">
     <div class="ravlo-card-title">Search</div>
 
@@ -75,9 +75,17 @@
     <div id="searchStatus" style="color:var(--muted); margin-top:.75rem;"></div>
   </div>
 
-  <!-- RIGHT: RESULTS -->
   <div>
-    <div id="results" class="ravlo-grid cols-2"></div>
+    <div id="results" class="dealfinder-results-grid">
+      <div class="ravlo-card pad dealfinder-empty">
+        <div class="eyebrow">RAVLO DEAL FINDER</div>
+        <h3 style="margin:.35rem 0 .45rem;">Your search results will appear here</h3>
+        <p class="muted" style="margin:0;">
+          Enter a ZIP code, choose your strategy, and Ravlo will surface opportunities
+          with quick metrics, property details, and one-click access to Deal Workspace.
+        </p>
+      </div>
+    </div>
   </div>
 
 </div>
@@ -98,12 +106,49 @@ function numOrNull(v){
   return Number.isNaN(n) ? null : n;
 }
 
+async function viewDetails(item){
+  try{
+    const resp = await fetch("{{ url_for('investor.api_property_tool_view_details') }}", {
+      method: "POST",
+      headers: {"Content-Type":"application/json"},
+      credentials: "include",
+      body: JSON.stringify({
+        address: item.address || "",
+        city: item.city || "",
+        state: item.state || "",
+        zip: item.zip || "",
+        price: item.price ?? null,
+        sqft: item.sqft ?? null,
+        photo: item.photo || null,
+        property_id: item.property_id || null
+      })
+    });
+
+    const data = await resp.json();
+
+    if (data.status !== "ok"){
+      alert(data.message || "Could not open property details.");
+      return;
+    }
+
+    if (data.detail_url){
+      window.location.href = data.detail_url;
+      return;
+    }
+
+    alert("No property detail URL returned.");
+  } catch (e){
+    console.error(e);
+    alert("Network error while opening property details.");
+  }
+}
+
 async function saveAndAnalyze(item){
   const btn = document.getElementById(item._btnId);
   if (btn){ btn.disabled = true; btn.innerText = "Saving…"; }
 
   try{
-    const resp = await fetch("{{ url_for('investor.api_property_tool_save') }}", {
+    const resp = await fetch("{{ url_for('investor.api_property_tool_save_and_analyze') }}", {
       method: "POST",
       headers: {"Content-Type":"application/json"},
       credentials: "include",
@@ -121,29 +166,26 @@ async function saveAndAnalyze(item){
 
     const data = await resp.json();
     if (data.status !== "ok"){
-      alert(data.message || "Could not save property.");
-      if (btn){ btn.disabled = false; btn.innerText = "📈 Send to Deal Workspace"; }
+      alert(data.message || "Could not send property to Deal Workspace.");
+      if (btn){ btn.disabled = false; btn.innerText = "📈 Analyze"; }
       return;
     }
 
-    // server returns deal_url (preferred)
     if (data.deal_url){
       window.location.href = data.deal_url;
       return;
     }
 
-    // fallback if server returns saved_id only
     if (data.saved_id){
       window.location.href = "{{ url_for('investor.deal_workspace') }}" + "?prop_id=" + data.saved_id + "&mode=flip";
       return;
     }
 
     alert("Saved, but no redirect URL returned.");
-
   } catch (e){
     console.error(e);
     alert("Network error while saving. Try again.");
-    if (btn){ btn.disabled = false; btn.innerText = "📈 Send to Deal Workspace"; }
+    if (btn){ btn.disabled = false; btn.innerText = "📈 Analyze"; }
   }
 }
 
@@ -177,7 +219,10 @@ async function saveOnly(item){
 
     if (btn){
       btn.innerText = "✅ Saved";
-      setTimeout(() => { btn.disabled = false; btn.innerText = "💾 Save"; }, 1200);
+      setTimeout(() => {
+        btn.disabled = false;
+        btn.innerText = "💾 Save";
+      }, 1200);
     }
 
   } catch (e){
@@ -211,7 +256,7 @@ async function runSearch(){
     limit: 20
   };
 
-  status.innerText = "Searching…";
+  status.innerText = "Ravlo is scanning this market…";
   results.innerHTML = "";
 
   try{
@@ -228,12 +273,13 @@ async function runSearch(){
       return;
     }
 
-    status.innerText = `Found ${data.results.length} opportunities in ${data.zip}.`;
+    status.innerText = `Ravlo found ${data.results.length} opportunity${data.results.length === 1 ? "" : "ies"} in ${data.zip}.`;
 
     results.innerHTML = data.results.map((r, idx) => {
       const m = r.metrics || {};
-      const safeId = `dw_${idx}_${Date.now()}`;
-      const saveId = `sv_${idx}_${Date.now()}`;
+      const ts = Date.now() + idx;
+      const analyzeId = `dw_${idx}_${ts}`;
+      const saveId = `sv_${idx}_${ts}`;
       const propertyId = r.property_id || r.propertyId || r.id || null;
 
       const payloadObj = {
@@ -244,54 +290,62 @@ async function runSearch(){
         price: r.price ?? null,
         sqft: r.sqft ?? null,
         photo: r.photo || null,
+        beds: r.beds ?? null,
+        baths: r.baths ?? null,
+        property_type: r.property_type || null,
         property_id: propertyId,
-        _btnId: safeId,
+        _btnId: analyzeId,
         _saveBtnId: saveId
       };
 
       const encoded = encodeURIComponent(JSON.stringify(payloadObj));
 
       return `
-        <div class="ravlo-card pad">
-          <div class="row" style="gap:.8rem; align-items:flex-start;">
-            <div style="width:64px;height:64px;border-radius:14px;overflow:hidden;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03);flex:0 0 auto;">
-              ${r.photo ? `<img src="${r.photo}" style="width:100%;height:100%;object-fit:cover;">` : ``}
+        <div class="ravlo-card pad dealfinder-card">
+          <div class="dealfinder-thumb">
+            ${r.photo ? `<img src="${r.photo}" alt="Property photo">` : `<div class="dealfinder-noimg">No Photo</div>`}
+          </div>
+
+          <div style="margin-top:.8rem;">
+            <div style="font-weight:900;color:var(--text);font-size:.98rem;line-height:1.25;">
+              ${r.address || "—"}
             </div>
-            <div style="min-width:0;">
-              <div style="font-weight:900;color:var(--text);font-size:.95rem;line-height:1.2;">
-                ${r.address || "—"}
-              </div>
-              <div style="color:var(--muted);font-size:.78rem;margin-top:.2rem;">
-                ${r.city || ""} ${r.state || ""} ${r.zip || ""}
-              </div>
+            <div style="color:var(--muted);font-size:.8rem;margin-top:.2rem;">
+              ${r.city || ""} ${r.state || ""} ${r.zip || ""}
             </div>
           </div>
 
-          <div style="margin-top:.75rem;display:grid;grid-template-columns:1fr 1fr;gap:.5rem;font-size:.78rem;">
-            <div><span style="color:var(--muted);">Price</span><br><strong>${money(r.price)}</strong></div>
-            <div><span style="color:var(--muted);">Sqft</span><br><strong>${r.sqft || "—"}</strong></div>
-            <div><span style="color:var(--muted);">Flip Profit</span><br><strong>${money(m.profit)}</strong></div>
-            <div><span style="color:var(--muted);">Flip ROI</span><br><strong>${(m.roi !== undefined && m.roi !== null) ? Math.round(m.roi*100) + "%" : "—"}</strong></div>
-            <div><span style="color:var(--muted);">Rent Est</span><br><strong>${money(m.rent_est)}</strong></div>
-            <div><span style="color:var(--muted);">Cashflow</span><br><strong>${money(m.net_cashflow_mo)}</strong></div>
+          <div class="dealfinder-metrics">
+            <div><span>Price</span><strong>${money(r.price)}</strong></div>
+            <div><span>Sqft</span><strong>${r.sqft || "—"}</strong></div>
+            <div><span>Flip Profit</span><strong>${money(m.profit)}</strong></div>
+            <div><span>Flip ROI</span><strong>${(m.roi !== undefined && m.roi !== null) ? Math.round(m.roi * 100) + "%" : "—"}</strong></div>
+            <div><span>Rent Est</span><strong>${money(m.rent_est)}</strong></div>
+            <div><span>Cashflow</span><strong>${money(m.net_cashflow_mo)}</strong></div>
           </div>
 
-          <div style="margin-top:.75rem;display:flex;gap:.5rem;flex-wrap:wrap;">
+          <div class="dealfinder-actions">
             <button
-              id="${safeId}"
               type="button"
               class="ravlo-btn ghost"
-              onclick='saveAndAnalyze(JSON.parse(decodeURIComponent("${encoded}")))'>
-              📈 Send to Deal Workspace
+              onclick='viewDetails(JSON.parse(decodeURIComponent("${encoded}")))'>
+              View Details
             </button>
 
             <button
               id="${saveId}"
               type="button"
               class="ravlo-btn ghost"
-              style="opacity:.92;"
               onclick='saveOnly(JSON.parse(decodeURIComponent("${encoded}")))'>
               💾 Save
+            </button>
+
+            <button
+              id="${analyzeId}"
+              type="button"
+              class="ravlo-btn primary"
+              onclick='saveAndAnalyze(JSON.parse(decodeURIComponent("${encoded}")))'>
+              📈 Analyze
             </button>
           </div>
         </div>
@@ -300,13 +354,12 @@ async function runSearch(){
 
   } catch (e){
     console.error(e);
-    status.innerText = "Search failed (network).";
+    status.innerText = "Ravlo could not load this market right now.";
   }
 }
 </script>
 
 <style>
-/* Keep your inputs readable inside Ravlo base */
 .ravlo-input{
   width:100%;
   padding:.75rem .85rem;
@@ -320,6 +373,95 @@ async function runSearch(){
 .ravlo-input:focus{
   border-color: rgba(122,184,255,.45);
   box-shadow: 0 0 0 4px rgba(122,184,255,.10);
+}
+
+.dealfinder-results-grid{
+  display:grid;
+  grid-template-columns:repeat(2, minmax(0, 1fr));
+  gap:1rem;
+}
+
+.dealfinder-card{
+  display:flex;
+  flex-direction:column;
+}
+
+.dealfinder-thumb{
+  width:100%;
+  height:180px;
+  border-radius:16px;
+  overflow:hidden;
+  background:rgba(255,255,255,.03);
+  border:1px solid rgba(255,255,255,.08);
+}
+
+.dealfinder-thumb img{
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  display:block;
+}
+
+.dealfinder-noimg{
+  width:100%;
+  height:100%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  color:var(--muted);
+  font-size:.85rem;
+}
+
+.dealfinder-metrics{
+  margin-top:.8rem;
+  display:grid;
+  grid-template-columns:repeat(2, minmax(0, 1fr));
+  gap:.6rem;
+  font-size:.8rem;
+}
+
+.dealfinder-metrics div{
+  padding:.65rem .7rem;
+  border-radius:12px;
+  background:rgba(255,255,255,.03);
+  border:1px solid rgba(255,255,255,.08);
+}
+
+.dealfinder-metrics span{
+  display:block;
+  color:var(--muted);
+  margin-bottom:.2rem;
+}
+
+.dealfinder-metrics strong{
+  color:var(--text);
+}
+
+.dealfinder-actions{
+  margin-top:.85rem;
+  display:flex;
+  gap:.5rem;
+  flex-wrap:wrap;
+}
+
+.dealfinder-empty{
+  min-height:220px;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  align-items:flex-start;
+  border:1px dashed rgba(255,255,255,.12);
+  background:rgba(255,255,255,.02);
+}
+
+@media (max-width: 1100px){
+  .dealfinder-layout{
+    grid-template-columns:1fr !important;
+  }
+
+  .dealfinder-results-grid{
+    grid-template-columns:1fr;
+  }
 }
 </style>
 

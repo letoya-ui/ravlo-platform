@@ -1,0 +1,178 @@
+{% extends "layouts/ravlo_base.html" %}
+{% block title %}Ravlo • Property Details{% endblock %}
+
+{% block page_title %}Property Details{% endblock %}
+{% block page_subline %}
+Review the property, market signals, and next steps.
+{% endblock %}
+
+{% block topbar_actions %}
+  <a href="{{ url_for('investor.property_tool') }}" class="ravlo-btn ghost sm">
+    Back to Deal Finder
+  </a>
+  <a href="{{ url_for('investor.saved_properties') }}" class="ravlo-btn primary sm">
+    Saved Properties
+  </a>
+{% endblock %}
+
+{% block content %}
+<div class="ravlo-grid">
+
+  <section class="ravlo-hero-card">
+    <div class="eyebrow">RAVLO PROPERTY DETAILS</div>
+    <h2>{{ address }}</h2>
+    <p class="muted">
+      {{ city or "" }}{% if city and state %}, {% endif %}{{ state or "" }} {{ zip_code or "" }}
+      {% if property_type %} • {{ property_type }}{% endif %}
+    </p>
+  </section>
+
+  <section class="ravlo-grid-3">
+    <div class="ravlo-card pad">
+      <div class="ravlo-kicker">Price</div>
+      <h3>
+        {% if price %}
+          ${{ "{:,.0f}".format(price) }}
+        {% else %}
+          Not Available
+        {% endif %}
+      </h3>
+      <p class="muted">Current pricing from the search result.</p>
+    </div>
+
+    <div class="ravlo-card pad">
+      <div class="ravlo-kicker">Property Facts</div>
+      <h3>
+        {{ beds or "—" }} bd • {{ baths or "—" }} ba
+      </h3>
+      <p class="muted">
+        {% if sqft %}{{ "{:,}".format(sqft) }} sqft{% else %}Square footage unavailable{% endif %}
+      </p>
+    </div>
+
+    <div class="ravlo-card pad">
+      <div class="ravlo-kicker">Strategy Fit</div>
+      <h3>{{ card.strategy_fit or "Review Needed" }}</h3>
+      <p class="muted">AI-assisted opportunity positioning.</p>
+    </div>
+  </section>
+
+  <section class="ravlo-card pad">
+    <div class="section-toolbar mb-16">
+      <h3 class="mb-0">Property Intelligence</h3>
+    </div>
+
+    <div class="ravlo-grid-2">
+      <div class="ravlo-card pad">
+        <div class="ravlo-kicker">Summary</div>
+        <p class="muted">{{ card.summary or "No summary available." }}</p>
+      </div>
+
+      <div class="ravlo-card pad">
+        <div class="ravlo-kicker">Market Signal</div>
+        <p class="muted">{{ card.market_signal or "No market signal available." }}</p>
+      </div>
+
+      <div class="ravlo-card pad">
+        <div class="ravlo-kicker">Opportunity Notes</div>
+        <p class="muted">{{ card.opportunity_notes or "No opportunity notes available." }}</p>
+      </div>
+
+      <div class="ravlo-card pad">
+        <div class="ravlo-kicker">Risk Notes</div>
+        <p class="muted">{{ card.risk_notes or "No risk notes available." }}</p>
+      </div>
+    </div>
+
+    <div class="section-toolbar-actions mt-20">
+      <button
+        class="ravlo-btn ghost"
+        id="saveOnlyBtn"
+        data-address="{{ address }}"
+        data-city="{{ city or '' }}"
+        data-state="{{ state or '' }}"
+        data-zip="{{ zip_code or '' }}"
+        data-price="{{ price or '' }}"
+        data-sqft="{{ sqft or '' }}"
+        data-photo="{{ photo or '' }}"
+        data-property-id="{{ property_id or '' }}"
+      >
+        💾 Save
+      </button>
+
+      <button
+        class="ravlo-btn primary"
+        id="saveAnalyzeBtn"
+        data-address="{{ address }}"
+        data-city="{{ city or '' }}"
+        data-state="{{ state or '' }}"
+        data-zip="{{ zip_code or '' }}"
+        data-price="{{ price or '' }}"
+        data-sqft="{{ sqft or '' }}"
+        data-photo="{{ photo or '' }}"
+        data-property-id="{{ property_id or '' }}"
+      >
+        📈 Send to Deal Workspace
+      </button>
+    </div>
+  </section>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function postJson(url, payload) {
+  const res = await fetch(url, {
+    method: "POST",
+    headers: {"Content-Type":"application/json"},
+    credentials: "include",
+    body: JSON.stringify(payload)
+  });
+  return res.json();
+}
+
+const saveAnalyzeBtn = document.getElementById("saveAnalyzeBtn");
+const saveOnlyBtn = document.getElementById("saveOnlyBtn");
+
+if (saveAnalyzeBtn) {
+  saveAnalyzeBtn.addEventListener("click", async function () {
+    const payload = {
+      address: this.dataset.address,
+      city: this.dataset.city,
+      state: this.dataset.state,
+      zip: this.dataset.zip,
+      price: this.dataset.price,
+      sqft: this.dataset.sqft,
+      photo: this.dataset.photo,
+      property_id: this.dataset.propertyId
+    };
+
+    const data = await postJson("{{ url_for('investor.api_property_tool_save_and_analyze') }}", payload);
+    if (data.status === "ok" && data.deal_url) {
+      window.location.href = data.deal_url;
+    } else {
+      alert(data.message || "Unable to save and analyze.");
+    }
+  });
+}
+
+if (saveOnlyBtn) {
+  saveOnlyBtn.addEventListener("click", async function () {
+    const payload = {
+      address: this.dataset.address,
+      city: this.dataset.city,
+      state: this.dataset.state,
+      zip: this.dataset.zip,
+      price: this.dataset.price,
+      sqft: this.dataset.sqft,
+      photo: this.dataset.photo,
+      property_id: this.dataset.propertyId
+    };
+
+    const data = await postJson("{{ url_for('investor.api_property_tool_save') }}", payload);
+    alert(data.message || "Property saved.");
+  });
+}
+</script>
+{% endblock %}

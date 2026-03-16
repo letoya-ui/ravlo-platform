@@ -1,5 +1,6 @@
 {% set bp = request.blueprint or "" %}
 {% set ep = request.endpoint or "" %}
+{% set active_portal = portal|default('investor') %}
 
 <!doctype html>
 <html lang="en">
@@ -11,335 +12,59 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-
   <link rel="stylesheet" href="https://unpkg.com/lucide-static@latest/font/lucide.css">
+
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/ravlo_tokens.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
-
-  <style>
-    .mobile-menu-button{
-      display:none;
-      align-items:center;
-      justify-content:center;
-      width:42px;
-      height:42px;
-      border-radius:12px;
-      border:1px solid rgba(255,255,255,.08);
-      background:rgba(255,255,255,.03);
-      color:var(--text);
-      cursor:pointer;
-      font-size:20px;
-      transition:.2s ease;
-    }
-
-    .mobile-menu-button:hover{
-      background:rgba(255,255,255,.05);
-      border-color:rgba(255,255,255,.12);
-    }
-
-    .ravlo-sidebar-overlay{
-      display:none;
-      position:fixed;
-      inset:0;
-      background:rgba(3,8,14,.56);
-      backdrop-filter:blur(4px);
-      z-index:9998;
-      opacity:0;
-      pointer-events:none;
-      transition:opacity .25s ease;
-    }
-
-    .ravlo-sidebar-overlay.show{
-      opacity:1;
-      pointer-events:auto;
-    }
-
-    .ravlo-sidebar-brand{
-      position:relative;
-      margin-bottom:18px;
-      padding:4px 0 8px;
-    }
-
-    .ravlo-brand-link{
-      position:relative;
-      display:flex;
-      align-items:center;
-      gap:14px;
-      text-decoration:none;
-      z-index:2;
-    }
-
-    .ravlo-brand-mark{
-      width:48px;
-      height:48px;
-      border-radius:16px;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      position:relative;
-      overflow:hidden;
-      background:linear-gradient(145deg, rgba(255,255,255,.12), rgba(255,255,255,.03));
-      border:1px solid rgba(255,255,255,.08);
-      box-shadow:
-        inset 0 1px 0 rgba(255,255,255,.12),
-        0 10px 26px rgba(0,0,0,.24);
-    }
-
-    .ravlo-brand-mark::before{
-      content:"";
-      position:absolute;
-      inset:0;
-      background:linear-gradient(135deg, rgba(107,127,147,.22), rgba(58,92,122,.10));
-    }
-
-    .ravlo-brand-mark span{
-      position:relative;
-      z-index:2;
-      font-size:16px;
-      font-weight:800;
-      letter-spacing:.08em;
-      color:#F3F7FB;
-      text-shadow:0 2px 10px rgba(107,127,147,.35);
-    }
-
-    .ravlo-brand-copy{
-      display:flex;
-      flex-direction:column;
-      min-width:0;
-    }
-
-    .ravlo-brand-name{
-      font-size:18px;
-      font-weight:800;
-      letter-spacing:.18em;
-      color:var(--text);
-      line-height:1;
-    }
-
-    .ravlo-brand-sub{
-      margin-top:6px;
-      font-size:12px;
-      color:var(--muted);
-      letter-spacing:.08em;
-      text-transform:uppercase;
-    }
-
-    .ravlo-brand-glow{
-      position:absolute;
-      top:-10px;
-      left:-8px;
-      width:120px;
-      height:70px;
-      background:radial-gradient(circle, rgba(107,127,147,.20) 0%, rgba(107,127,147,0) 70%);
-      filter:blur(12px);
-      pointer-events:none;
-      z-index:1;
-    }
-
-    .ravlo-flash-stack{
-      display:grid;
-      gap:8px;
-    }
-
-    .ravlo-flash{
-      padding:12px 14px;
-      border-radius:14px;
-      border:1px solid rgba(255,255,255,.08);
-      background:rgba(255,255,255,.03);
-      color:var(--muted);
-      line-height:1.55;
-    }
-
-    .ravlo-flash strong{
-      color:var(--text);
-      text-transform:capitalize;
-    }
-
-    @media (max-width: 768px){
-      .ravlo-sidebar{
-        position:fixed;
-        left:-280px;
-        top:0;
-        height:100%;
-        width:280px;
-        transition:left .28s ease;
-        z-index:9999;
-      }
-
-      .ravlo-sidebar.open{
-        left:0;
-      }
-
-      .ravlo-sidebar-overlay{
-        display:block;
-      }
-
-      .mobile-menu-button{
-        display:inline-flex;
-      }
-
-      .ravlo-main{
-        margin-left:0 !important;
-      }
-    }
-  </style>
 
   {% block head %}{% endblock %}
 </head>
-
 <body>
   <div class="ravlo-grain"></div>
-  <div class="ravlo-sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
 
   <div class="ravlo-shell">
+    <div class="ravlo-sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
 
     <aside class="ravlo-sidebar" id="sidebar">
-
-      <!-- BRAND -->
-      <div class="ravlo-sidebar-brand">
-        <a href="{{ url_for('investor.command_center') }}" class="ravlo-brand-link">
-          <div class="ravlo-brand-mark">
-            <span>RV</span>
-          </div>
-
-          <div class="ravlo-brand-copy">
-            <div class="ravlo-brand-name">RAVLO</div>
-            <div class="ravlo-brand-sub">Investor OS</div>
-          </div>
-        </a>
-
-        <div class="ravlo-brand-glow"></div>
+      <div class="ravlo-sidebar-heading">
+        {% if active_portal == "partner" %}
+          <span class="heading-label">Partner Portal</span>
+        {% else %}
+          <span class="heading-label">Investor Portal</span>
+        {% endif %}
       </div>
 
-      <!-- NAV -->
-      <nav class="ravlo-sidebar-nav">
-
-        <a href="{{ url_for('investor.command_center') }}"
-           class="ravlo-nav-link {% if ep == 'investor.command_center' %}active{% endif %}">
-          <i class="lucide lucide-layout-dashboard"></i>
-          <span>Command Center</span>
-        </a>
-
-        <a href="{{ url_for('investor.property_tool') }}"
-           class="ravlo-nav-link {% if ep in ['investor.property_tool', 'investor.property_search'] %}active{% endif %}">
-          <i class="lucide lucide-search"></i>
-          <span>Deal Finder</span>
-        </a>
-
-        <a href="{{ url_for('investor.deals_list') }}"
-           class="ravlo-nav-link {% if ep in ['investor.deals_list', 'investor.deal_detail', 'investor.deal_report'] or 'deal_architect' in ep or 'rehab_architect' in ep %}active{% endif %}">
-          <i class="lucide lucide-briefcase-business"></i>
-          <span>Deal Pipeline</span>
-        </a>
-
-        <a href="{{ url_for('investor.deal_comparison') }}"
-           class="ravlo-nav-link {% if 'deal_comparison' in ep %}active{% endif %}">
-          <i class="lucide lucide-scale"></i>
-          <span>Compare Deals</span>
-        </a>
-
-        <a href="{{ url_for('investor.capital_application') }}"
-           class="ravlo-nav-link {% if 'capital' in ep or 'funding' in ep %}active{% endif %}">
-          <i class="lucide lucide-landmark"></i>
-          <span>Capital</span>
-        </a>
-
-        <a href="{{ url_for('investor.build_studio') }}"
-           class="ravlo-nav-link {% if ep == 'investor.build_studio' %}active{% endif %}">
-          <i class="lucide lucide-cpu"></i>
-          <span>Concept Build Studio</span>
-        </a>
-
-        <a href="{{ url_for('investor.saved_properties') }}"
-           class="ravlo-nav-link {% if ep == 'investor.saved_properties' %}active{% endif %}">
-          <i class="lucide lucide-folder-heart"></i>
-          <span>Saved Properties</span>
-        </a>
-
-        <a href="{{ url_for('investor.deal_architect') }}"
-           class="ravlo-nav-link {% if ep == 'investor.deal_architect' %}active{% endif %}">
-          <i class="lucide lucide-brain-circuit"></i>
-          <span>AI Deal Architect</span>
-        </a>
-
-        <a href="{% if deal_id is defined and deal_id %}{{ url_for('investor.deal_rehab', deal_id=deal_id) }}{% else %}{{ url_for('investor.deals_list') }}{% endif %}"
-           class="ravlo-nav-link {% if ep in ['investor.deal_rehab', 'investor.deal_reveal'] %}active{% endif %}">
-          <i class="lucide lucide-hammer"></i>
-          <span>Rehab Studio</span>
-        </a>
-
-        <a href="{% if deal_id is defined and deal_id %}{{ url_for('investor.deal_reveal', deal_id=deal_id) }}{% else %}{{ url_for('investor.deals_list') }}{% endif %}"
-           class="ravlo-nav-link {% if ep == 'investor.deal_reveal' %}active{% endif %}">
-          <i class="lucide lucide-film"></i>
-          <span>Deal Reveal</span>
-        </a>
-
-        <a href="{% if deal_id is defined and deal_id %}{{ url_for('investor.deal_book', deal_id=deal_id) }}{% else %}{{ url_for('investor.deals_list') }}{% endif %}"
-           class="ravlo-nav-link {% if ep == 'investor.deal_book' %}active{% endif %}">
-          <i class="lucide lucide-book-open"></i>
-          <span>Deal Book</span>
-        </a>
-
-        <a href="{{ url_for('investor.resource_center') }}"
-           class="ravlo-nav-link {% if ep == 'investor.resource_center' %}active{% endif %}">
-          <i class="lucide lucide-scroll-text"></i>
-          <span>Resource Center</span>
-        </a>
-
-        <a href="{{ url_for('investor.documents') }}"
-           class="ravlo-nav-link {% if ep == 'investor.documents' %}active{% endif %}">
-          <i class="lucide lucide-folder"></i>
-          <span>Documents</span>
-        </a>
-
-      </nav>
-
-      <!-- SIMPLE FOOTER -->
-      <div class="ravlo-sidebar-footer-simple">
-        <a href="{{ url_for('investor.settings') }}"
-           class="ravlo-nav-link {% if ep == 'investor.settings' %}active{% endif %}">
-          <i class="lucide lucide-settings"></i>
-          <span>Settings</span>
-        </a>
-
-        <form method="post" action="{{ url_for('auth.logout') }}" style="margin:0;">
-          <button type="submit" class="ravlo-btn ghost sm ravlo-logout-btn">
-            <i class="lucide lucide-log-out"></i>
-            Logout
-          </button>
-        </form>
-      </div>
+      {% if active_portal == "partner" %}
+        {% include "layouts/_sidebar_partner.html" %}
+      {% else %}
+        {% include "layouts/_sidebar_investor.html" %}
+      {% endif %}
     </aside>
 
     <main class="ravlo-main">
-
       <header class="ravlo-topbar">
-        <div class="mobile-menu-button" onclick="toggleSidebar()">☰</div>
+        <button class="mobile-menu-button" type="button" onclick="toggleSidebar()" aria-label="Open menu">
+          ☰
+        </button>
 
         <div class="ravlo-top-left">
           <h1 class="ravlo-title">{% block page_title %}RAVLO{% endblock %}</h1>
-          <p class="ravlo-subline">
-            {% block page_subline %}Your capital, deals, and funding — in one place.{% endblock %}
-          </p>
+          <p class="ravlo-subline">{% block page_subline %}Welcome to Ravlo.{% endblock %}</p>
         </div>
 
         <div class="ravlo-actions">
           <div class="ravlo-search">
             <i class="lucide lucide-search"></i>
-            <input placeholder="Search deals, properties, docs…" />
+            <input placeholder="{% block search_placeholder %}Search…{% endblock %}" />
           </div>
 
           <div class="ravlo-topbar-actions-slot">
-            {% block topbar_actions %}
-              <a class="ravlo-btn ghost sm" href="{{ url_for('investor.property_tool') }}">
-                Deal Finder
-              </a>
-              <a class="ravlo-btn ghost sm" href="{{ url_for('investor.deals_list') }}">
-                Deal Pipeline
-              </a>
-              <a class="ravlo-btn primary sm" href="{{ url_for('investor.deal_comparison') }}">
-                Compare Deals
-              </a>
-            {% endblock %}
+            {% block topbar_actions %}{% endblock %}
+
+            <a href="{{ url_for('auth.logout') }}" class="ravlo-btn ghost sm">
+              <i class="lucide lucide-log-out"></i>
+              <span>Logout</span>
+            </a>
           </div>
         </div>
       </header>
@@ -361,7 +86,6 @@
 
         {% block content %}{% endblock %}
       </section>
-
     </main>
   </div>
 
@@ -369,25 +93,34 @@
     function toggleSidebar() {
       const sidebar = document.getElementById("sidebar");
       const overlay = document.getElementById("sidebarOverlay");
+      if (!sidebar || !overlay) return;
+
       const isOpen = sidebar.classList.toggle("open");
-      if (overlay) {
-        overlay.classList.toggle("show", isOpen);
-      }
+      overlay.classList.toggle("show", isOpen);
+      document.body.classList.toggle("sidebar-open", isOpen);
     }
 
     function closeSidebar() {
       const sidebar = document.getElementById("sidebar");
       const overlay = document.getElementById("sidebarOverlay");
-      sidebar.classList.remove("open");
-      if (overlay) {
-        overlay.classList.remove("show");
-      }
+
+      if (sidebar) sidebar.classList.remove("open");
+      if (overlay) overlay.classList.remove("show");
+      document.body.classList.remove("sidebar-open");
     }
 
     window.addEventListener("resize", function () {
-      if (window.innerWidth > 768) {
-        closeSidebar();
-      }
+      if (window.innerWidth > 1100) closeSidebar();
+    });
+
+    document.addEventListener("keydown", function(e){
+      if (e.key === "Escape") closeSidebar();
+    });
+
+    document.querySelectorAll("#sidebar a").forEach(link => {
+      link.addEventListener("click", function(){
+        if (window.innerWidth <= 1100) closeSidebar();
+      });
     });
   </script>
 

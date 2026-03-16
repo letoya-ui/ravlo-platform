@@ -13,7 +13,7 @@ from flask import (
 from flask_login import current_user
 from werkzeug.utils import secure_filename
 
-from LoanMVP.extensions import db
+from LoanMVP.extensions import db, csrf
 from LoanMVP.utils.decorators import role_required
 from LoanMVP.forms import BorrowerProfileForm
 from LoanMVP.ai.base_ai import AIAssistant
@@ -26,10 +26,32 @@ from LoanMVP.models.crm_models import Message
 
 borrower_bp = Blueprint("borrower", __name__, url_prefix="/borrower")
 
-
+RENTCAST_API_KEY = os.getenv("RENTCAST_API_KEY", "").strip()
+RENTCAST_BASE_URL = "https://api.rentcast.io/v1"
 # =========================================================
 # Helpers
 # =========================================================
+
+
+def _rentcast_headers():
+    return {
+        "Accept": "application/json",
+        "X-Api-Key": RENTCAST_API_KEY,
+    }
+
+
+def _safe_request(url, params=None, timeout=20):
+    """
+    Small helper so your route stays clean.
+    """
+    resp = requests.get(
+        url,
+        headers=_rentcast_headers(),
+        params=params or {},
+        timeout=timeout,
+    )
+    resp.raise_for_status()
+    return resp.json()
 
 def get_current_borrower():
     return BorrowerProfile.query.filter_by(user_id=current_user.id).first()
@@ -213,6 +235,7 @@ def create_profile():
 # =========================================================
 
 @borrower_bp.route("/apply", methods=["GET", "POST"])
+@csrf.exempt
 @role_required("borrower")
 def apply():
     borrower = get_current_borrower()
@@ -266,29 +289,160 @@ def apply():
         title="Apply for Funding",
     )
 
-
-@borrower_bp.route("/loans")
+@borrower_bp.route("/loan-center")
 @role_required("borrower")
 def loan_center():
-    borrower = get_current_borrower()
-    if not borrower:
-        flash("Please complete your borrower profile first.", "warning")
-        return redirect(url_for("borrower.create_profile"))
+    """
+    Borrower loan dashboard.
+    Replace placeholder loan data with your real DB query later.
+    """
 
-    loans = (
-        LoanApplication.query.filter_by(borrower_profile_id=borrower.id)
-        .order_by(LoanApplication.created_at.desc())
-        .all()
-    )
+    loans = [
+        {
+            "id": 1001,
+            "property": "123 Main St, Tampa, FL",
+            "amount": 250000,
+            "status": "Under Review",
+        }
+    ]
 
     return render_template(
         "borrower/loan_center.html",
-        borrower=borrower,
         loans=loans,
-        active_tab="loans",
-        title="My Loans",
     )
 
+
+@borrower_bp.route("/property-intelligence", methods=["GET", "POST"])
+@role_required("borrower")
+def property_intelligence():
+    """
+    Borrower enters an address and Ravlo pulls:
+    - property record
+    - value estimate
+    - rent estimate
+    from RentCast
+    """
+
+    property_data = None
+    value_data = None
+    rent_data = None
+    address = ""
+
+    if request.method == "POST":
+        address = (request.form.get("address") or "").strip()
+
+        if not address:
+            flash("Please enter a property address.", "warning")
+            return render_template(
+                "borrower/property_intelligence.html",
+                property_data=None,
+                value_data=None,
+                rent_data=None,
+                address=address,
+            )
+
+        if not RENTCAST_API_KEY:
+            flash("RentCast API key is missing. Add RENTCAST_API_KEY to your environment variables.", "danger")
+            return render_template(
+                "borrower/property_intelligence.html",
+                property_data=None,
+                value_data=None,
+                rent_data=None,
+                address=address,
+            )
+
+        try:
+            # 1) Property record lookup by address
+            properties = _safe_request(
+                f"{RENTCAST_BASE_URL}/properties",
+                params={
+                    "address": address,
+                    "limit": 1,
+                },
+            )
+
+            if isinstance(properties, list) and properties:
+                property_data = properties[0]
+            else:
+                flash("No property record was found for that address.", "warning")
+                return render_template(
+                    "borrower/property_intelligence.html",
+                    property_data=None,
+                    value_data=None,
+                    rent_data=None,
+                    address=address,
+                )
+
+            # Pull best available fields for valuation calls
+            formatted_address = property_data.get("formattedAddress") or address
+            city = property_data.get("city")
+            state = property_data.get("state")
+            zip_code = property_data.get("zipCode")
+            bedrooms = property_data.get("bedrooms")
+            bathrooms = property_data.get("bathrooms")
+            square_footage = property_data.get("squareFootage")
+            property_type = property_data.get("propertyType")
+
+            avm_params = {
+                "address": formatted_address,
+            }
+
+            # Add optional fields when present
+            if city:
+                avm_params["city"] = city
+            if state:
+                avm_params["state"] = state
+            if zip_code:
+                avm_params["zipCode"] = zip_code
+            if bedrooms is not None:
+                avm_params["bedrooms"] = bedrooms
+            if bathrooms is not None:
+                avm_params["bathrooms"] = bathrooms
+            if square_footage is not None:
+                avm_params["squareFootage"] = square_footage
+            if property_type:
+                avm_params["propertyType"] = property_type
+
+            # 2) Value estimate
+            try:
+                value_data = _safe_request(
+                    f"{RENTCAST_BASE_URL}/avm/value",
+                    params=avm_params,
+                )
+            except requests.HTTPError:
+                value_data = None
+
+            # 3) Rent estimate (long-term)
+            try:
+                rent_data = _safe_request(
+                    f"{RENTCAST_BASE_URL}/avm/rent/long-term",
+                    params=avm_params,
+                )
+            except requests.HTTPError:
+                rent_data = None
+
+        except requests.HTTPError as e:
+            status_code = getattr(e.response, "status_code", None)
+            if status_code == 401:
+                flash("RentCast authentication failed. Check your API key.", "danger")
+            elif status_code == 404:
+                flash("The property could not be found.", "warning")
+            else:
+                flash(f"RentCast request failed ({status_code or 'unknown error'}).", "danger")
+
+        except requests.RequestException:
+            flash("Unable to reach RentCast right now. Please try again.", "danger")
+
+        except Exception:
+            flash("Something went wrong while analyzing this property.", "danger")
+
+    return render_template(
+        "borrower/property_intelligence.html",
+        property_data=property_data,
+        value_data=value_data,
+        rent_data=rent_data,
+        address=address,
+    )
 
 @borrower_bp.route("/loan/<int:loan_id>")
 @role_required("borrower")
@@ -359,6 +513,7 @@ def documents():
 
 
 @borrower_bp.route("/upload-document", methods=["GET", "POST"])
+@csrf.exempt
 @role_required("borrower")
 def upload_document():
     borrower = get_current_borrower()
@@ -458,6 +613,7 @@ def view_condition(cond_id):
 
 
 @borrower_bp.route("/conditions/upload/<int:cond_id>", methods=["POST"])
+@csrf.exempt
 @role_required("borrower")
 def upload_condition(cond_id):
     borrower = get_current_borrower()
@@ -500,6 +656,7 @@ def upload_condition(cond_id):
 # =========================================================
 
 @borrower_bp.route("/messages", methods=["GET", "POST"])
+@csrf.exempt
 @role_required("borrower")
 def messages():
     borrower = get_current_borrower()
@@ -554,12 +711,16 @@ def messages():
         title="Messages",
     )
 
+from flask import request
+
+
 
 # =========================================================
 # Subscription
 # =========================================================
 
 @borrower_bp.route("/subscription", methods=["GET", "POST"])
+@csrf.exempt
 @role_required("borrower")
 def subscription():
     borrower = get_current_borrower()
@@ -581,3 +742,15 @@ def subscription():
         active_tab="subscription",
         title="Subscription",
     )
+
+@borrower_bp.route("/consent/credit", methods=["POST"])
+def consent_credit():
+    consent = BorrowerConsent(
+        borrower_id=current_user.borrower_profile.id,
+        consent_type="credit_pull",
+        ip_address=request.remote_addr
+    )
+    db.session.add(consent)
+    db.session.commit()
+    flash("Credit pull consent recorded.", "success")
+    return redirect(url_for("borrower.dashboard"))

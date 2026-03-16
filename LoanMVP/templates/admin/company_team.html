@@ -1,0 +1,72 @@
+{% extends "layouts/Ravlo_lending_base.html" %}}
+
+{% block title %}Company Team{% endblock %}
+{% block page_title %}{{ company.name }}{% endblock %}
+{% block page_subline %}Manage team members and pending invites{% endblock %}
+
+{% block content %}
+<div class="re-grid">
+
+  <section class="re-card">
+    <div class="row between">
+      <h3>Team Members</h3>
+      <a href="{{ url_for('admin.invite_team_member', company_id=company.id) }}" class="btn btn-primary">
+        Invite Team Member
+      </a>
+    </div>
+
+    {% if team_members %}
+      <table class="re-table">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Email</th>
+            <th>Role</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for user in team_members %}
+          <tr>
+            <td>{{ user.first_name }} {{ user.last_name }}</td>
+            <td>{{ user.email }}</td>
+            <td>{{ user.role }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <p>No team members added yet.</p>
+    {% endif %}
+  </section>
+
+  <section class="re-card">
+    <h3>Pending Invites</h3>
+
+    {% if invites %}
+      <table class="re-table">
+        <thead>
+          <tr>
+            <th>Email</th>
+            <th>Role</th>
+            <th>Status</th>
+            <th>Expires</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for invite in invites %}
+          <tr>
+            <td>{{ invite.email }}</td>
+            <td>{{ invite.role }}</td>
+            <td>{{ invite.status }}</td>
+            <td>{{ invite.expires_at.strftime("%Y-%m-%d") if invite.expires_at else "" }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <p>No invites yet.</p>
+    {% endif %}
+  </section>
+
+</div>
+{% endblock %}

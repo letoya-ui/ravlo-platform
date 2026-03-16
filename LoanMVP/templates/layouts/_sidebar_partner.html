@@ -1,0 +1,78 @@
+<aside class="sidebar">
+    <div class="sidebar-header">
+        <div class="brand">
+            <span class="brand-icon">⚡</span>
+            <span class="brand-text">Partner Center</span>
+        </div>
+    </div>
+
+    <nav class="sidebar-nav">
+        <ul>
+
+            <!-- Dashboard -->
+            <li class="nav-item {{ 'active' if active_page == 'dashboard' else '' }}">
+                <a href="{{ url_for('partners.dashboard') }}">
+                    <i class="icon lucide-home"></i>
+                    <span>Dashboard</span>
+                </a>
+            </li>
+
+            <!-- Profile -->
+            <li class="nav-item {{ 'active' if active_page == 'profile' else '' }}">
+                <a href="{{ url_for('partners.profile', partner_id=current_user.partner_profile.id) }}">
+                    <i class="icon lucide-user"></i>
+                    <span>Profile</span>
+                </a>
+            </li>
+
+            <!-- Marketplace Listing -->
+            <li class="nav-item {{ 'active' if active_page == 'listing' else '' }}">
+                <a href="{{ url_for('partners.listing') }}">
+                    <i class="icon lucide-store"></i>
+                    <span>Marketplace Listing</span>
+                </a>
+            </li>
+
+            <!-- Leads -->
+            <li class="nav-item {{ 'active' if active_page == 'leads' else '' }}">
+                <a href="{{ url_for('partners.leads') }}">
+                    <i class="icon lucide-inbox"></i>
+                    <span>Leads</span>
+                </a>
+            </li>
+
+            <!-- Deals -->
+            <li class="nav-item {{ 'active' if active_page == 'deals' else '' }}">
+                <a href="{{ url_for('partners.deals') }}">
+                    <i class="icon lucide-briefcase"></i>
+                    <span>Deals</span>
+                </a>
+            </li>
+
+            <!-- Resources -->
+            <li class="nav-item {{ 'active' if active_page == 'resources' else '' }}">
+                <a href="{{ url_for('partners.resources') }}">
+                    <i class="icon lucide-book-open"></i>
+                    <span>Resources</span>
+                </a>
+            </li>
+
+            <!-- Billing -->
+            <li class="nav-item {{ 'active' if active_page == 'billing' else '' }}">
+                <a href="{{ url_for('partners.billing') }}">
+                    <i class="icon lucide-credit-card"></i>
+                    <span>Billing</span>
+                </a>
+            </li>
+
+            <!-- Settings -->
+            <li class="nav-item {{ 'active' if active_page == 'settings' else '' }}">
+                <a href="{{ url_for('partners.settings') }}">
+                    <i class="icon lucide-settings"></i>
+                    <span>Settings</span>
+                </a>
+            </li>
+
+        </ul>
+    </nav>
+</aside>

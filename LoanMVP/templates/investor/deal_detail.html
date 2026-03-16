@@ -45,7 +45,7 @@ Review the saved deal, check strategy and funding status, and launch the next to
     </div>
 
     <div class="detail-hero-actions">
-      <a href="{{ url_for('investor.deal_architect') }}" class="ravlo-btn ghost">
+      <a href="{{ url_for('investor.deal_architect', deal_id=deal.id) }}" class="ravlo-btn ghost">
         AI Deal Architect
       </a>
 
@@ -57,11 +57,9 @@ Review the saved deal, check strategy and funding status, and launch the next to
         Build Studio
       </a>
 
-     <a href="{{ url_for('investor.capital_application', deal_id=deal.id) }}"
-        class="ravlo-btn primary">
+      <a href="{{ url_for('investor.capital_application', deal_id=deal.id) }}" class="ravlo-btn primary">
         Request Funding
-     </a> 
-      </button>
+      </a>
     </div>
   </section>
 
@@ -96,7 +94,7 @@ Review the saved deal, check strategy and funding status, and launch the next to
         </div>
       </a>
 
-      <a href="{{ url_for('investor.deal_architect') }}" class="studio-card">
+      <a href="{{ url_for('investor.deal_architect', deal_id=deal.id) }}" class="studio-card">
         <div class="studio-icon">📐</div>
         <div class="studio-title">Deal Architect</div>
         <div class="studio-sub">
@@ -115,9 +113,9 @@ Review the saved deal, check strategy and funding status, and launch the next to
     </div>
 
     <div style="margin-top:20px">
-      <button class="ravlo-btn primary" onclick="requestFunding({{ deal.id }})">
+      <a href="{{ url_for('investor.capital_application', deal_id=deal.id) }}" class="ravlo-btn primary">
         Request Funding
-      </button>
+      </a>
     </div>
   </section>
 
@@ -439,9 +437,11 @@ Review the saved deal, check strategy and funding status, and launch the next to
             <p class="muted" style="margin-top:14px;">
               This deal is still open for capital submission.
             </p>
-            <button class="ravlo-btn primary" type="button" style="margin-top:14px;" onclick="requestFunding({{ deal.id }})">
+            <a href="{{ url_for('investor.capital_application', deal_id=deal.id) }}"
+               class="ravlo-btn primary"
+               style="margin-top:14px;">
               Request Funding
-            </button>
+            </a>
           {% endif %}
         </div>
       </section>
@@ -456,7 +456,7 @@ Review the saved deal, check strategy and funding status, and launch the next to
         </div>
 
         <div class="quick-grid one-col">
-          <a href="{{ url_for('investor.deal_architect') }}" class="quick-card">
+          <a href="{{ url_for('investor.deal_architect', deal_id=deal.id) }}" class="quick-card">
             <span class="quick-title">Open AI Deal Architect</span>
             <span class="quick-sub">Run or refine strategy analysis for this opportunity.</span>
           </a>
@@ -880,28 +880,4 @@ Review the saved deal, check strategy and funding status, and launch the next to
     }
   }
 </style>
-
-<script>
-  async function requestFunding(dealId) {
-    try {
-      const res = await fetch(`/investor/deals/${dealId}/request-funding`, {
-        method: "POST",
-        headers: {"Content-Type": "application/json"}
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        alert(data.message || data.error || "Unable to submit funding request.");
-        return;
-      }
-
-      alert(data.message || "Funding request submitted successfully.");
-      window.location.reload();
-    } catch (err) {
-      console.error(err);
-      alert("Something went wrong submitting the funding request.");
-    }
-  }
-</script>
 {% endblock %}
