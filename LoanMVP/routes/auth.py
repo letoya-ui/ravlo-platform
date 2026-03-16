@@ -302,7 +302,7 @@ def register_borrower():
     return render_template("auth/register_borrower.html", title="Register Borrower | Ravlo")
 
         if hasattr(user, "full_name"):
-            user.full_name = full_name
+        user.full_name = full_name
 
         user.set_password(password)
 
