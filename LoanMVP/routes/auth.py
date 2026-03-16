@@ -226,7 +226,7 @@ def register():
 
         # normal registration flow for allowed public roles
         user = User(
-            full_name = f"{first} {last}".strip()
+            full_name = f"{first} {last}".strip(),
             email=form.email.data.strip().lower(),
             role=role,
             is_active=True,
