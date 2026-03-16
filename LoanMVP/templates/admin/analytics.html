@@ -54,10 +54,10 @@
   new Chart(document.getElementById('loanStatusChart'), {
     type: 'bar',
     data: {
-      labels: {{ loan_status_labels|tojson }},
+      labels: {{ (loan_status_labels|default([], true))|tojson }},
       datasets: [{
         label: 'Loans',
-        data: {{ loan_status_values|tojson }},
+        data: {{ (loan_status_values|default([], true))|tojson }},
         backgroundColor: '#7ab8ff'
       }]
     },
