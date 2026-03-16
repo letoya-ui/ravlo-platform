@@ -2083,7 +2083,7 @@ def upload_document():
             return redirect(url_for("investor.documents"))
 
     return render_template(
-        "investor/upload_document.html",
+        "investor/upload_docs.html",
         investor=ip,
         title="Upload Document",
         active_tab="documents"
