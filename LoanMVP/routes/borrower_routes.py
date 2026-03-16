@@ -742,3 +742,15 @@ def subscription():
         active_tab="subscription",
         title="Subscription",
     )
+
+@borrower_bp.route("/consent/credit", methods=["POST"])
+def consent_credit():
+    consent = BorrowerConsent(
+        borrower_id=current_user.borrower_profile.id,
+        consent_type="credit_pull",
+        ip_address=request.remote_addr
+    )
+    db.session.add(consent)
+    db.session.commit()
+    flash("Credit pull consent recorded.", "success")
+    return redirect(url_for("borrower.dashboard"))
