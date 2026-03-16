@@ -74,12 +74,7 @@ class ProjectBudget(db.Model):
         db.ForeignKey("deals.id"),
         nullable=True
     )
-    build_project_id = db.Column(
-        db.Integer,
-        db.ForeignKey("build_projects.id"),
-        nullable=True
-    )
-
+   
     budget_type = db.Column(db.String(50), nullable=False, default="rehab")
 
     name = db.Column(db.String(100), nullable=False)
@@ -98,12 +93,7 @@ class ProjectBudget(db.Model):
 
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    budgets = db.relationship(
-        "ProjectBudget",
-        back_populates="build_project",
-        cascade="all, delete-orphan",
-        lazy=True,
-    )
+    
     borrower = db.relationship("BorrowerProfile", back_populates="budgets")
     investor_profile = db.relationship("InvestorProfile", back_populates="budgets")
     loan_application = db.relationship("LoanApplication", back_populates="project_budgets")
