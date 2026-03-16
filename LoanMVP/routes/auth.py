@@ -16,7 +16,7 @@ from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
 
 from LoanMVP.app import login_manager, mail
 from LoanMVP.extensions import csrf, db
-from LoanMVP.forms import RegisterForm, ResetPasswordForm, ResetPasswordRequestForm
+from LoanMVP.forms import RegisterForm, ResetPasswordForm, ResetPasswordRequestForm, LoginForm
 from LoanMVP.models.user_model import User
 from LoanMVP.models.admin import UserInvite
 from flask_mail import Message as MailMessage
