@@ -1,0 +1,202 @@
+{% extends "layouts/ravlo_base.html" %}
+
+{% block title %}Partner Profile{% endblock %}
+{% block page_title %}Partner Profile{% endblock %}
+{% block page_subline %}
+Connect with investors and showcase your services inside Ravlo.
+{% endblock %}
+
+{% block content %}
+
+<div class="ravlo-grid ravlo-grid-2">
+
+  <!-- LEFT COLUMN -->
+  <div class="ravlo-card">
+
+    <div class="profile-header">
+
+      <div class="profile-avatar">
+        {% if partner.logo_url %}
+        <img src="{{ partner.logo_url }}">
+        {% else %}
+        <div class="avatar-placeholder">
+          <i data-lucide="user"></i>
+        </div>
+        {% endif %}
+      </div>
+
+      <div>
+        <h2>{{ partner.company_name }}</h2>
+        <p class="muted">{{ partner.category }}</p>
+
+        <div class="partner-tags">
+
+          {% if partner.verified %}
+          <span class="ravlo-badge success">
+            <i data-lucide="shield-check"></i> Verified
+          </span>
+          {% endif %}
+
+          {% if partner.premium %}
+          <span class="ravlo-badge gold">
+            <i data-lucide="star"></i> Preferred Partner
+          </span>
+          {% endif %}
+
+        </div>
+
+      </div>
+
+    </div>
+
+    <hr>
+
+    <h4>About</h4>
+    <p class="muted">
+      {{ partner.description or "No description provided yet." }}
+    </p>
+
+  </div>
+
+  <!-- RIGHT COLUMN -->
+  <div class="ravlo-card">
+
+    <h4>Contact</h4>
+
+    <div class="info-grid">
+
+      <div>
+        <label>Email</label>
+        <p>{{ partner.email }}</p>
+      </div>
+
+      <div>
+        <label>Phone</label>
+        <p>{{ partner.phone }}</p>
+      </div>
+
+      <div>
+        <label>Website</label>
+        {% if partner.website %}
+        <a href="{{ partner.website }}" target="_blank">
+          {{ partner.website }}
+        </a>
+        {% else %}
+        <p class="muted">Not provided</p>
+        {% endif %}
+      </div>
+
+      <div>
+        <label>Service Area</label>
+        <p>{{ partner.service_area }}</p>
+      </div>
+
+    </div>
+
+  </div>
+
+</div>
+
+
+<!-- SERVICES -->
+<div class="ravlo-card mt-4">
+
+  <h3>Services</h3>
+
+  <div class="services-grid">
+
+    {% for service in partner.services %}
+    <div class="service-card">
+
+      <h4>{{ service.name }}</h4>
+      <p class="muted">{{ service.description }}</p>
+
+      {% if service.price_range %}
+      <div class="price-range">
+        {{ service.price_range }}
+      </div>
+      {% endif %}
+
+    </div>
+    {% endfor %}
+
+  </div>
+
+</div>
+
+
+<!-- PORTFOLIO -->
+<div class="ravlo-card mt-4">
+
+  <h3>Project Portfolio</h3>
+
+  <div class="portfolio-grid">
+
+    {% for project in partner.projects %}
+    <div class="portfolio-item">
+
+      <img src="{{ project.image_url }}">
+
+      <div class="portfolio-info">
+        <h4>{{ project.title }}</h4>
+        <p class="muted">{{ project.location }}</p>
+      </div>
+
+    </div>
+    {% endfor %}
+
+  </div>
+
+</div>
+
+
+<!-- REVIEWS -->
+<div class="ravlo-card mt-4">
+
+  <h3>Investor Reviews</h3>
+
+  {% if reviews %}
+    {% for review in reviews %}
+    <div class="review">
+
+      <div class="review-header">
+        <strong>{{ review.investor_name }}</strong>
+
+        <span class="stars">
+          ⭐ {{ review.rating }}/5
+        </span>
+      </div>
+
+      <p>{{ review.comment }}</p>
+
+    </div>
+    {% endfor %}
+  {% else %}
+
+    <p class="muted">No reviews yet.</p>
+
+  {% endif %}
+
+</div>
+
+
+<!-- ACTION BUTTONS -->
+<div class="ravlo-actions">
+
+  <form method="POST" action="{{ url_for('investor.partner_request', partner_id=partner.id) }}">
+
+    <button class="ravlo-btn primary">
+      <i data-lucide="send"></i>
+      Request Quote
+    </button>
+
+  </form>
+
+  <button class="ravlo-btn ghost">
+    <i data-lucide="bookmark"></i>
+    Save Partner
+  </button>
+
+</div>
+
+{% endblock %}
