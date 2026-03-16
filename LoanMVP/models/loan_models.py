@@ -1,6 +1,6 @@
 from datetime import datetime
 from LoanMVP.extensions import db
-from sqlalchemy.dialects import postgresql
+from sqlalchemy import JSON
 
 
 # =========================================================
@@ -57,10 +57,10 @@ class BorrowerProfile(db.Model):
     dependents = db.Column(db.Integer)
 
     # 🏠 Real Estate Owned (JSON)
-    reo_properties = db.Column(postgresql.JSONB)
+    reo_properties = db.Column(JSON, nullable=True)
 
     # ⚠️ Declarations (JSON)
-    declarations_flags = db.Column(postgresql.JSONB)
+    declarations_flags = db.Column(JSON, nullable=True)
 
     # 📄 Loan Info (legacy)
     credit_score = db.Column(db.Integer)

@@ -1,6 +1,6 @@
 from LoanMVP.extensions import db
 from datetime import datetime
-from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy import JSON
 
 class SoftCreditReport(db.Model):
     __tablename__ = "soft_credit_report"
@@ -12,7 +12,7 @@ class SoftCreditReport(db.Model):
     bureau = db.Column(db.String(50), default="Equifax")
 
     # Full JSON response from Equifax
-    credit_data = db.Column(JSONB)
+    credit_data = db.Column(JSON, nullable=True)
     monthly_debt_total = db.Column(db.Float)
 
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
