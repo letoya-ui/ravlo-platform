@@ -340,11 +340,10 @@ def register_borrower():
 def forgot_password():
     form = ResetPasswordRequestForm()
 
-    if request.method == "POST":
-        email = (request.form.get("email") or "").strip().lower()
-        user = User.query.filter_by(email=email).first()
+    if form.validate_on_submit():
+        email = (form.email.data or "").strip().lower()
+        user = User.query.filter(func.lower(User.email) == email).first()
 
-        # Do not reveal whether account exists
         if not user:
             flash("If that email exists, a reset link has been sent.", "success")
             return redirect(url_for("auth.login"))
@@ -367,17 +366,21 @@ def forgot_password():
             mail.send(msg)
         except Exception as e:
             print("Mail error:", e)
-            flash("Could not send email right now. Please try again.", "error")
+            flash("Could not send email right now. Please try again.", "danger")
             return redirect(url_for("auth.forgot_password"))
 
         flash("Reset link sent. Check your email.", "success")
         return redirect(url_for("auth.login"))
+
+    if request.method == "POST":
+        print("FORGOT PASSWORD FORM ERRORS:", form.errors)
 
     return render_template(
         "auth/forgot_password.html",
         form=form,
         title="Forgot Password | Ravlo",
     )
+    
 
 @auth_bp.route("/request-access", methods=["GET", "POST"])
 def request_access():
