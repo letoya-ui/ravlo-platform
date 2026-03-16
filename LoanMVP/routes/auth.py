@@ -208,6 +208,7 @@ def logout():
 # REGISTER
 # ============================================================
 @auth_bp.route("/register", methods=["GET", "POST"])
+@auth_bp.route("/register", methods=["GET", "POST"])
 @csrf.exempt
 def register():
     form = RegisterForm()
@@ -215,15 +216,9 @@ def register():
     if form.validate_on_submit():
         role = (form.role.data or "").strip().lower()
 
-        # normalize loan officer
         if role in {"loan officer", "loan_officer"}:
             role = "loan_officer"
 
-        # prevent public admin creation
-        if role == "admin":
-            role = "investor"
-
-        # restricted staff must request approval
         if role in RESTRICTED_STAFF_ROLES:
             flash(
                 "This role requires approval before access is granted. Please submit an access request.",
@@ -232,12 +227,11 @@ def register():
             return redirect(url_for("auth.request_access", requested_role=role))
 
         user = User(
-            full_name=(form.username.data or "").strip(),
+            full_name=(form.full_name.data or "").strip(),
             email=(form.email.data or "").strip().lower(),
             role=role,
-            is_active=True
+            is_active=True,
         )
-
         user.set_password(form.password.data)
 
         db.session.add(user)
@@ -247,7 +241,6 @@ def register():
         return redirect(url_for("auth.login"))
 
     return render_template("auth/register.html", form=form)
-
 # ============================================================
 # OPTIONAL BORROWER REGISTER
 # ============================================================
