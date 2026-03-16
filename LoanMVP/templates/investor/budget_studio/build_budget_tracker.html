@@ -1,6 +1,6 @@
 {% extends "layouts/ravlo_base.html" %}
 
-{% block title %}Ravlo • Budget Tracker{% endblock %}
+{% block title %}Ravlo • Build Budget Tracker{% endblock %}
 {% block page_title %}{{ page_title }}{% endblock %}
 {% block page_subline %}{{ page_subtitle }}{% endblock %}
 
@@ -61,7 +61,7 @@
 </div>
 
 <div class="budget-form">
-  <h3>Add Budget Item</h3>
+  <h3>Add Build Budget Item</h3>
   <form method="POST">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <div class="budget-form-grid">
@@ -94,7 +94,7 @@
 </div>
 
 <div class="budget-table-wrap" style="margin-top:1rem;">
-  <h3>Budget Items</h3>
+  <h3>Build Budget Items</h3>
   <table class="budget-table">
     <thead>
       <tr>
@@ -125,7 +125,7 @@
       </tr>
       {% else %}
       <tr>
-        <td colspan="7">No budget items yet.</td>
+        <td colspan="7">No build budget items yet.</td>
       </tr>
       {% endfor %}
     </tbody>

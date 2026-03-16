@@ -1,0 +1,127 @@
+{% extends "layouts/ravlo_base.html" %}
+
+{% block title %}Ravlo • Create Budget{% endblock %}
+{% block page_title %}Create Budget{% endblock %}
+{% block page_subline %}Set up a new rehab or build budget inside Budget Studio.{% endblock %}
+
+{% block content %}
+<style>
+  .budget-create-wrap{
+    max-width:980px;
+    display:grid;
+    gap:1rem;
+  }
+  .budget-create-card{
+    padding:1.1rem;
+    border-radius:22px;
+    border:1px solid rgba(255,255,255,.08);
+    background:rgba(255,255,255,.03);
+  }
+  .budget-create-grid{
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:1rem;
+  }
+  .budget-field label{
+    display:block;
+    margin-bottom:.45rem;
+    font-size:.84rem;
+    color:rgba(230,235,240,.75);
+  }
+  .budget-input,.budget-select,.budget-textarea{
+    width:100%;
+    padding:.85rem .95rem;
+    border-radius:16px;
+    border:1px solid rgba(255,255,255,.08);
+    background:rgba(255,255,255,.04);
+    color:#eef4ff;
+  }
+  .budget-textarea{
+    min-height:130px;
+    resize:vertical;
+  }
+  .budget-actions{
+    display:flex;
+    gap:.75rem;
+    flex-wrap:wrap;
+    margin-top:.5rem;
+  }
+  @media (max-width: 900px){
+    .budget-create-grid{grid-template-columns:1fr;}
+  }
+</style>
+
+<form method="POST" class="budget-create-wrap">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+  <section class="budget-create-card">
+    <div class="eyebrow">NEW BUDGET</div>
+    <h2 style="margin:.25rem 0 .35rem;">Budget setup</h2>
+    <p class="muted">Create a workspace for rehab or build expense tracking.</p>
+  </section>
+
+  <section class="budget-create-card">
+    <div class="budget-create-grid">
+      <div class="budget-field">
+        <label>Budget Name</label>
+        <input class="budget-input" type="text" name="name" placeholder="Ex: 158 Whitlock Rehab Budget" required>
+      </div>
+
+      <div class="budget-field">
+        <label>Project Name</label>
+        <input class="budget-input" type="text" name="project_name" placeholder="Ex: Whitlock Renovation">
+      </div>
+
+      <div class="budget-field">
+        <label>Budget Type</label>
+        <select class="budget-select" name="budget_type">
+          <option value="rehab">Rehab</option>
+          <option value="build">Build</option>
+          <option value="turn">Turn</option>
+          <option value="capex">CapEx</option>
+          <option value="general">General</option>
+        </select>
+      </div>
+
+      <div class="budget-field">
+        <label>Contingency Amount</label>
+        <input class="budget-input" type="number" step="0.01" name="contingency" placeholder="Ex: 15000">
+      </div>
+
+      <div class="budget-field">
+        <label>Link to Deal</label>
+        <select class="budget-select" name="deal_id">
+          <option value="">No linked deal</option>
+          {% for deal in deals %}
+            <option value="{{ deal.id }}">
+              {{ deal.title or deal.address or ('Deal #' ~ deal.id) }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="budget-field">
+        <label>Link to Build Project</label>
+        <select class="budget-select" name="build_project_id">
+          <option value="">No linked build project</option>
+          {% for project in build_projects %}
+            <option value="{{ project.id }}">
+              {{ project.project_name or project.name or ('Project #' ~ project.id) }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+
+    <div class="budget-field" style="margin-top:1rem;">
+      <label>Notes</label>
+      <textarea class="budget-textarea" name="notes" placeholder="Assumptions, scope notes, contractor notes, or plan details..."></textarea>
+    </div>
+
+    <div class="budget-actions">
+      <button type="submit" class="ravlo-btn primary">Create Budget</button>
+      <a href="{{ url_for('investor.budget_studio') }}" class="ravlo-btn ghost">Cancel</a>
+    </div>
+  </section>
+</form>
+{% endblock %}

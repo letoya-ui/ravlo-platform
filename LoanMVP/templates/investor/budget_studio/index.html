@@ -1,0 +1,159 @@
+{% extends "layouts/ravlo_base.html" %}
+
+{% block title %}Ravlo • Budget Studio{% endblock %}
+{% block page_title %}Budget Studio{% endblock %}
+{% block page_subline %}Track rehab and build budgets across your deals and projects.{% endblock %}
+
+{% block topbar_actions %}
+  <a href="{{ url_for('investor.create_budget') }}" class="ravlo-btn primary">
+    New Budget
+  </a>
+{% endblock %}
+
+{% block content %}
+<style>
+  .budget-studio-wrap{display:grid;gap:1rem;}
+  .budget-hero{
+    padding:1.1rem 1.2rem;
+    border-radius:22px;
+    border:1px solid rgba(255,255,255,.08);
+    background:
+      radial-gradient(900px 520px at 0% 0%, rgba(90,140,255,.14), transparent 50%),
+      rgba(255,255,255,.03);
+  }
+  .budget-grid{
+    display:grid;
+    grid-template-columns:repeat(3,minmax(0,1fr));
+    gap:1rem;
+  }
+  .budget-card{
+    padding:1rem;
+    border-radius:20px;
+    border:1px solid rgba(255,255,255,.08);
+    background:rgba(255,255,255,.03);
+  }
+  .budget-card h3{margin:0 0 .35rem;}
+  .budget-meta{
+    display:flex;
+    flex-wrap:wrap;
+    gap:.45rem;
+    margin:.55rem 0 .75rem;
+  }
+  .budget-pill{
+    display:inline-flex;
+    align-items:center;
+    padding:.28rem .6rem;
+    border-radius:999px;
+    font-size:.78rem;
+    background:rgba(255,255,255,.06);
+    border:1px solid rgba(255,255,255,.08);
+    color:#dce6f8;
+  }
+  .budget-stats{
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:.7rem;
+    margin-top:.7rem;
+  }
+  .budget-stat{
+    padding:.8rem .9rem;
+    border-radius:16px;
+    background:rgba(255,255,255,.03);
+    border:1px solid rgba(255,255,255,.06);
+  }
+  .budget-stat-label{
+    font-size:.75rem;
+    color:rgba(230,235,240,.65);
+    margin-bottom:.2rem;
+  }
+  .budget-stat-value{
+    font-size:1.05rem;
+    font-weight:800;
+    color:#f4f8ff;
+  }
+  .budget-card-actions{
+    display:flex;
+    gap:.6rem;
+    flex-wrap:wrap;
+    margin-top:1rem;
+  }
+  .empty-state{
+    padding:1.4rem;
+    border-radius:22px;
+    border:1px dashed rgba(255,255,255,.12);
+    background:rgba(255,255,255,.02);
+  }
+  @media (max-width: 1100px){
+    .budget-grid{grid-template-columns:1fr;}
+  }
+</style>
+
+<div class="budget-studio-wrap">
+  <section class="budget-hero">
+    <div class="eyebrow">BUDGET STUDIO</div>
+    <h2 style="margin:.25rem 0 .35rem;">Your centralized project budget workspace</h2>
+    <p class="muted" style="max-width:900px;">
+      Create rehab and build budgets, track expenses, compare estimated vs actual spend,
+      and keep each deal organized inside Ravlo.
+    </p>
+  </section>
+
+  {% if budgets %}
+    <section class="budget-grid">
+      {% for budget in budgets %}
+        <article class="budget-card">
+          <h3>{{ budget.name }}</h3>
+          <div class="muted">
+            {{ budget.project_name or "No project name yet" }}
+          </div>
+
+          <div class="budget-meta">
+            <span class="budget-pill">{{ (budget.budget_type or "budget").replace("_"," ").title() }}</span>
+            {% if budget.deal_id %}
+              <span class="budget-pill">Linked Deal</span>
+            {% endif %}
+            {% if budget.build_project_id %}
+              <span class="budget-pill">Linked Build</span>
+            {% endif %}
+          </div>
+
+          <div class="budget-stats">
+            <div class="budget-stat">
+              <div class="budget-stat-label">Estimated</div>
+              <div class="budget-stat-value">${{ "{:,.2f}".format(budget.estimated_subtotal or 0) }}</div>
+            </div>
+            <div class="budget-stat">
+              <div class="budget-stat-label">Paid</div>
+              <div class="budget-stat-value">${{ "{:,.2f}".format(budget.paid_total or 0) }}</div>
+            </div>
+            <div class="budget-stat">
+              <div class="budget-stat-label">Contingency</div>
+              <div class="budget-stat-value">${{ "{:,.2f}".format(budget.contingency_amount or 0) }}</div>
+            </div>
+            <div class="budget-stat">
+              <div class="budget-stat-label">Total Budget</div>
+              <div class="budget-stat-value">${{ "{:,.2f}".format(budget.estimated_total_with_contingency or 0) }}</div>
+            </div>
+          </div>
+
+          <div class="budget-card-actions">
+            <a href="{{ url_for('investor.budget_detail', budget_id=budget.id) }}" class="ravlo-btn primary sm">
+              Open Budget
+            </a>
+          </div>
+        </article>
+      {% endfor %}
+    </section>
+  {% else %}
+    <section class="empty-state">
+      <h3 style="margin-top:0;">No budgets yet</h3>
+      <p class="muted">
+        Start your first rehab or build budget and begin tracking estimated, actual, and paid expenses.
+      </p>
+      <a href="{{ url_for('investor.create_budget') }}" class="ravlo-btn primary">
+        Create First Budget
+      </a>
+    </section>
+  {% endif %}
+</div>
+{% endblock %}

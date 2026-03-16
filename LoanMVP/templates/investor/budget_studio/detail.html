@@ -1,0 +1,199 @@
+{% extends "layouts/ravlo_base.html" %}
+
+{% block title %}Ravlo • {{ budget.name }}{% endblock %}
+{% block page_title %}{{ budget.name }}{% endblock %}
+{% block page_subline %}Track line-item spend, progress, and variance for this budget.{% endblock %}
+
+{% block topbar_actions %}
+  <a href="{{ url_for('investor.budget_studio') }}" class="ravlo-btn ghost sm">Back to Budget Studio</a>
+{% endblock %}
+
+{% block content %}
+<style>
+  .budget-detail-wrap{display:grid;gap:1rem;}
+  .budget-summary-grid{
+    display:grid;
+    grid-template-columns:repeat(5,minmax(0,1fr));
+    gap:1rem;
+  }
+  .budget-panel{
+    background:rgba(255,255,255,.03);
+    border:1px solid rgba(255,255,255,.08);
+    border-radius:22px;
+    padding:1rem;
+  }
+  .budget-stat{
+    font-size:1.45rem;
+    font-weight:800;
+    color:#f4f8ff;
+  }
+  .budget-label{
+    font-size:.78rem;
+    color:rgba(230,235,240,.68);
+    margin-bottom:.2rem;
+  }
+  .budget-meta-grid{
+    display:grid;
+    grid-template-columns:1.2fr .8fr;
+    gap:1rem;
+  }
+  .budget-form-grid{
+    display:grid;
+    grid-template-columns:repeat(3,minmax(0,1fr));
+    gap:.8rem;
+  }
+  .budget-input,.budget-select,.budget-textarea{
+    width:100%;
+    padding:.8rem .9rem;
+    border-radius:14px;
+    background:rgba(255,255,255,.04);
+    border:1px solid rgba(255,255,255,.09);
+    color:#eef4ff;
+  }
+  .budget-textarea{min-height:100px;resize:vertical;}
+  .budget-table{width:100%;border-collapse:collapse;}
+  .budget-table th,.budget-table td{
+    padding:.78rem;
+    border-bottom:1px solid rgba(255,255,255,.08);
+    text-align:left;
+    vertical-align:top;
+  }
+  .budget-pill{
+    display:inline-flex;
+    padding:.3rem .6rem;
+    border-radius:999px;
+    font-size:.78rem;
+    background:rgba(255,255,255,.06);
+    border:1px solid rgba(255,255,255,.08);
+  }
+  @media (max-width: 1200px){
+    .budget-summary-grid{grid-template-columns:repeat(2,minmax(0,1fr));}
+    .budget-meta-grid,.budget-form-grid{grid-template-columns:1fr;}
+  }
+</style>
+
+<div class="budget-detail-wrap">
+  <section class="budget-summary-grid">
+    <div class="budget-panel">
+      <div class="budget-label">Estimated</div>
+      <div class="budget-stat">${{ "{:,.2f}".format(budget.estimated_subtotal or 0) }}</div>
+    </div>
+    <div class="budget-panel">
+      <div class="budget-label">Actual</div>
+      <div class="budget-stat">${{ "{:,.2f}".format(budget.actual_total or 0) }}</div>
+    </div>
+    <div class="budget-panel">
+      <div class="budget-label">Paid</div>
+      <div class="budget-stat">${{ "{:,.2f}".format(budget.paid_total or 0) }}</div>
+    </div>
+    <div class="budget-panel">
+      <div class="budget-label">Contingency</div>
+      <div class="budget-stat">${{ "{:,.2f}".format(budget.contingency_amount or 0) }}</div>
+    </div>
+    <div class="budget-panel">
+      <div class="budget-label">Total Budget</div>
+      <div class="budget-stat">${{ "{:,.2f}".format(budget.estimated_total_with_contingency or 0) }}</div>
+    </div>
+  </section>
+
+  <section class="budget-meta-grid">
+    <div class="budget-panel">
+      <div class="eyebrow">BUDGET DETAILS</div>
+      <h3 style="margin:.25rem 0 .45rem;">{{ budget.project_name or budget.name }}</h3>
+      <div style="display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:.85rem;">
+        <span class="budget-pill">{{ (budget.budget_type or "budget").replace("_"," ").title() }}</span>
+        {% if budget.deal_id %}<span class="budget-pill">Deal Linked</span>{% endif %}
+        {% if budget.build_project_id %}<span class="budget-pill">Build Linked</span>{% endif %}
+      </div>
+      <p class="muted" style="margin:0;">
+        {{ budget.notes or "No notes added yet." }}
+      </p>
+    </div>
+
+    <div class="budget-panel">
+      <div class="budget-label">Remaining Balance</div>
+      <div class="budget-stat">${{ "{:,.2f}".format(budget.remaining_balance or 0) }}</div>
+      <div class="muted" style="margin-top:.45rem;">
+        Based on estimated total plus contingency minus paid amount.
+      </div>
+    </div>
+  </section>
+
+  <section class="budget-panel">
+    <div class="eyebrow">ADD EXPENSE</div>
+    <h3 style="margin:.25rem 0 .9rem;">New budget item</h3>
+
+    <form method="POST" action="{{ url_for('investor.add_budget_expense', budget_id=budget.id) }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+      <div class="budget-form-grid">
+        <input class="budget-input" type="text" name="category" placeholder="Category" required>
+        <input class="budget-input" type="text" name="description" placeholder="Description" required>
+        <input class="budget-input" type="text" name="vendor" placeholder="Vendor">
+
+        <input class="budget-input" type="number" step="0.01" name="estimated_amount" placeholder="Estimated amount">
+        <input class="budget-input" type="number" step="0.01" name="actual_amount" placeholder="Actual amount">
+        <input class="budget-input" type="number" step="0.01" name="paid_amount" placeholder="Paid amount">
+
+        <select class="budget-select" name="status">
+          <option value="planned">Planned</option>
+          <option value="quoted">Quoted</option>
+          <option value="approved">Approved</option>
+          <option value="in_progress">In Progress</option>
+          <option value="completed">Completed</option>
+          <option value="paid">Paid</option>
+        </select>
+      </div>
+
+      <div style="margin-top:.8rem;">
+        <textarea class="budget-textarea" name="notes" placeholder="Notes"></textarea>
+      </div>
+
+      <div style="margin-top:.8rem;">
+        <button type="submit" class="ravlo-btn primary">Add Expense</button>
+      </div>
+    </form>
+  </section>
+
+  <section class="budget-panel">
+    <div class="eyebrow">EXPENSES</div>
+    <h3 style="margin:.25rem 0 .9rem;">Budget line items</h3>
+
+    <table class="budget-table">
+      <thead>
+        <tr>
+          <th>Category</th>
+          <th>Description</th>
+          <th>Vendor</th>
+          <th>Estimated</th>
+          <th>Actual</th>
+          <th>Paid</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in budget.expenses %}
+          <tr>
+            <td>{{ item.category }}</td>
+            <td>
+              <strong>{{ item.description }}</strong>
+              {% if item.notes %}
+                <div class="muted" style="margin-top:.25rem;font-size:.82rem;">{{ item.notes }}</div>
+              {% endif %}
+            </td>
+            <td>{{ item.vendor or "—" }}</td>
+            <td>${{ "{:,.2f}".format((item.estimated_amount or 0)|float) }}</td>
+            <td>${{ "{:,.2f}".format((item.actual_amount or 0)|float) }}</td>
+            <td>${{ "{:,.2f}".format((item.paid_amount or 0)|float) }}</td>
+            <td>{{ (item.status or "planned").replace("_"," ").title() }}</td>
+          </tr>
+        {% else %}
+          <tr>
+            <td colspan="7">No expenses added yet.</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
+</div>
+{% endblock %}

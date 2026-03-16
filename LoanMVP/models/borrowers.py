@@ -112,9 +112,47 @@ class ProjectBudget(db.Model):
         lazy=True,
     )
 
+    @property
+    def estimated_subtotal(self):
+        return float(sum((expense.estimated_amount or 0) for expense in self.expenses))
+
+    @property
+    def actual_total(self):
+        return float(sum((expense.actual_amount or 0) for expense in self.expenses))
+
+    @property
+    def paid_total(self):
+        return float(sum((expense.paid_amount or 0) for expense in self.expenses))
+
+    @property
+    def contingency_amount(self):
+        return float(self.contingency or 0)
+
+    @property
+    def estimated_total_with_contingency(self):
+        return self.estimated_subtotal + self.contingency_amount
+
+    @property
+    def remaining_balance(self):
+        return self.estimated_total_with_contingency - self.paid_total
+
+    def recalculate_totals(self):
+        estimated = float(sum((expense.estimated_amount or 0) for expense in self.expenses))
+        paid = float(sum((expense.paid_amount or 0) for expense in self.expenses))
+
+        self.total_cost = estimated
+        self.paid_amount = paid
+        self.total_budget = estimated + float(self.contingency or 0)
+
+        return {
+            "estimated": estimated,
+            "paid": paid,
+            "contingency": float(self.contingency or 0),
+            "total_budget": float(self.total_budget or 0),
+        }
+
     def __repr__(self):
         return f"<ProjectBudget {self.budget_type} #{self.id} Total:${self.total_cost}>"
-
         
 # ====================================
 # 💰 PROJECT EXPENSE
@@ -145,6 +183,18 @@ class ProjectExpense(db.Model):
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     budget = db.relationship("ProjectBudget", back_populates="expenses")
+    
+    @property
+    def item_name(self):
+        return self.description
+
+    @property
+    def estimated_cost(self):
+        return self.estimated_amount
+
+    @property
+    def actual_cost(self):
+        return self.actual_amount
 
     def __repr__(self):
         return f"<ProjectExpense {self.category}: est=${self.estimated_amount} actual=${self.actual_amount}>"

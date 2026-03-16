@@ -40,7 +40,7 @@ class Config:
     REMEMBER_COOKIE_SAMESITE = "Lax"
 
     # Flask-Login protection
-    SESSION_PROTECTION = "strong"
+    SESSION_PROTECTION = "basic"
     SESSION_REFRESH_EACH_REQUEST = True
  
     # DATABASE

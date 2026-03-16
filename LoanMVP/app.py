@@ -21,6 +21,7 @@ from flask_cors import CORS
 from flask_socketio import SocketIO
 from flask_migrate import Migrate
 from flask_login import LoginManager, current_user
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 from LoanMVP.config import Config
 from LoanMVP.extensions import db, login_manager, migrate, mail, stripe, csrf
@@ -99,11 +100,14 @@ def create_app():
     socketio.init_app(app)
     app.socketio = socketio
     csrf.init_app(app)
+     
+
+    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
 
     # Login manager settings
     login_manager.login_view = "auth.login"
     login_manager.login_message = "Please log in to continue."
-
+     
     @login_manager.user_loader
     def load_user(user_id):
         try:

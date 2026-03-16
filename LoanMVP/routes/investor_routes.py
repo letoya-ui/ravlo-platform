@@ -5965,6 +5965,113 @@ def budget():
         active_tab="budget"
     )
 
+@investor_bp.route("/budget-studio")
+@login_required
+@role_required("investor")
+def budget_studio():
+    ip = InvestorProfile.query.filter_by(user_id=current_user.id).first_or_404()
+
+    budgets = ProjectBudget.query.filter_by(
+        investor_profile_id=ip.id
+    ).order_by(ProjectBudget.updated_at.desc()).all()
+
+    return render_template(
+        "investor/budget_studio/index.html",
+        budgets=budgets,
+        investor=ip,
+        title="Budget Studio",
+        active_tab="budget"
+    )
+
+
+@investor_bp.route("/budget-studio/create", methods=["GET", "POST"])
+@login_required
+@role_required("investor")
+def create_budget():
+    ip = InvestorProfile.query.filter_by(user_id=current_user.id).first_or_404()
+
+    if request.method == "POST":
+        budget = ProjectBudget(
+            name=request.form.get("name") or "Untitled Budget",
+            project_name=request.form.get("project_name") or None,
+            budget_type=request.form.get("budget_type") or "rehab",
+            contingency=float(request.form.get("contingency") or 0),
+            notes=request.form.get("notes"),
+            investor_profile_id=ip.id,
+            deal_id=request.form.get("deal_id") or None,
+            build_project_id=request.form.get("build_project_id") or None,
+        )
+        db.session.add(budget)
+        db.session.commit()
+
+        flash("Budget created.", "success")
+        return redirect(url_for("investor.budget_detail", budget_id=budget.id))
+
+    deals = Deal.query.filter_by(investor_profile_id=ip.id).order_by(Deal.updated_at.desc()).all()
+    build_projects = BuildProject.query.filter_by(investor_profile_id=ip.id).all()
+
+    return render_template(
+        "investor/budget_studio/create.html",
+        investor=ip,
+        deals=deals,
+        build_projects=build_projects,
+        title="Create Budget",
+        active_tab="budget"
+    )
+
+
+@investor_bp.route("/budget-studio/<int:budget_id>")
+@login_required
+@role_required("investor")
+def budget_detail(budget_id):
+    ip = InvestorProfile.query.filter_by(user_id=current_user.id).first_or_404()
+
+    budget = ProjectBudget.query.filter_by(
+        id=budget_id,
+        investor_profile_id=ip.id
+    ).first_or_404()
+
+    return render_template(
+        "investor/budget_studio/detail.html",
+        investor=ip,
+        budget=budget,
+        title=budget.name,
+        active_tab="budget"
+    )
+
+
+@investor_bp.route("/budget-studio/<int:budget_id>/expense/add", methods=["POST"])
+@login_required
+@role_required("investor")
+def add_budget_expense(budget_id):
+    ip = InvestorProfile.query.filter_by(user_id=current_user.id).first_or_404()
+
+    budget = ProjectBudget.query.filter_by(
+        id=budget_id,
+        investor_profile_id=ip.id
+    ).first_or_404()
+
+    expense = ProjectExpense(
+        budget_id=budget.id,
+        category=request.form.get("category") or "General",
+        description=request.form.get("description") or "New Expense",
+        vendor=request.form.get("vendor") or None,
+        estimated_amount=float(request.form.get("estimated_amount") or 0),
+        actual_amount=float(request.form.get("actual_amount") or 0),
+        paid_amount=float(request.form.get("paid_amount") or 0),
+        status=request.form.get("status") or "planned",
+        notes=request.form.get("notes") or None,
+    )
+
+    db.session.add(expense)
+    db.session.flush()
+
+    budget.recalculate_totals()
+    db.session.commit()
+
+    flash("Expense added.", "success")
+    return redirect(url_for("investor.budget_detail", budget_id=budget.id))
+
 @investor_bp.route("/deals/<int:deal_id>/rehab/budget", methods=["GET", "POST"])
 @csrf.exempt
 @login_required
@@ -5972,36 +6079,64 @@ def budget():
 def rehab_budget_tracker(deal_id):
     deal = _get_owned_deal_or_404(deal_id)
 
-    if request.method == "POST":
-        item = BudgetItem(
-            user_id=current_user.id,
-            deal_id=deal.id,
+    ip = InvestorProfile.query.filter_by(user_id=current_user.id).first()
+
+    budget = ProjectBudget.query.filter_by(
+        deal_id=deal.id,
+        investor_profile_id=ip.id,
+        budget_type="rehab"
+    ).first()
+
+    if not budget:
+        budget = ProjectBudget(
+            name=f"Rehab Budget - {deal.title or deal.address or f'Deal #{deal.id}'}",
+            project_name=deal.title or deal.address,
             budget_type="rehab",
-            category=(request.form.get("category") or "").strip(),
-            item_name=(request.form.get("item_name") or "").strip(),
+            investor_profile_id=ip.id if ip else None,
+            deal_id=deal.id,
+            notes="Auto-created rehab budget."
+        )
+        db.session.add(budget)
+        db.session.commit()
+
+    if request.method == "POST":
+        expense = ProjectExpense(
+            budget_id=budget.id,
+            category=(request.form.get("category") or "General").strip(),
+            description=(request.form.get("item_name") or request.form.get("description") or "New Expense").strip(),
             vendor=(request.form.get("vendor") or "").strip() or None,
-            estimated_cost=float(request.form.get("estimated_cost") or 0),
-            actual_cost=float(request.form.get("actual_cost") or 0),
+            estimated_amount=float(request.form.get("estimated_cost") or request.form.get("estimated_amount") or 0),
+            actual_amount=float(request.form.get("actual_cost") or request.form.get("actual_amount") or 0),
             paid_amount=float(request.form.get("paid_amount") or 0),
             status=(request.form.get("status") or "planned").strip(),
             notes=(request.form.get("notes") or "").strip() or None,
         )
-        db.session.add(item)
+        db.session.add(expense)
+        db.session.flush()
+
+        budget.recalculate_totals()
         db.session.commit()
-        flash("Budget item added.", "success")
+
+        flash("Budget expense added.", "success")
         return redirect(url_for("investor.rehab_budget_tracker", deal_id=deal.id))
 
-    items = BudgetItem.query.filter_by(
-        user_id=current_user.id,
-        deal_id=deal.id,
-        budget_type="rehab"
-    ).order_by(BudgetItem.created_at.desc()).all()
+    items = ProjectExpense.query.filter_by(
+        budget_id=budget.id
+    ).order_by(ProjectExpense.created_at.desc()).all()
 
-    summary = budget_summary(items)
+    summary = {
+        "estimated_total": budget.estimated_subtotal,
+        "actual_total": budget.actual_total,
+        "paid_total": budget.paid_total,
+        "contingency": budget.contingency_amount,
+        "total_budget": budget.estimated_total_with_contingency,
+        "remaining_balance": budget.remaining_balance,
+    }
 
     return render_template(
         "investor/rehab_budget_tracker.html",
         deal=deal,
+        budget=budget,
         items=items,
         summary=summary,
         page_title="Rehab Budget Tracker",
@@ -6018,36 +6153,64 @@ def build_budget_tracker(project_id):
         user_id=current_user.id
     ).first_or_404()
 
-    if request.method == "POST":
-        item = BudgetItem(
-            user_id=current_user.id,
-            build_project_id=project.id,
+    ip = InvestorProfile.query.filter_by(user_id=current_user.id).first()
+
+    budget = ProjectBudget.query.filter_by(
+        build_project_id=project.id,
+        investor_profile_id=ip.id if ip else None,
+        budget_type="build"
+    ).first()
+
+    if not budget:
+        budget = ProjectBudget(
+            name=f"Build Budget - {getattr(project, 'project_name', None) or getattr(project, 'name', None) or f'Project #{project.id}'}",
+            project_name=getattr(project, "project_name", None) or getattr(project, "name", None),
             budget_type="build",
-            category=(request.form.get("category") or "").strip(),
-            item_name=(request.form.get("item_name") or "").strip(),
+            investor_profile_id=ip.id if ip else None,
+            build_project_id=project.id,
+            notes="Auto-created build budget."
+        )
+        db.session.add(budget)
+        db.session.commit()
+
+    if request.method == "POST":
+        expense = ProjectExpense(
+            budget_id=budget.id,
+            category=(request.form.get("category") or "General").strip(),
+            description=(request.form.get("item_name") or request.form.get("description") or "New Expense").strip(),
             vendor=(request.form.get("vendor") or "").strip() or None,
-            estimated_cost=float(request.form.get("estimated_cost") or 0),
-            actual_cost=float(request.form.get("actual_cost") or 0),
+            estimated_amount=float(request.form.get("estimated_cost") or request.form.get("estimated_amount") or 0),
+            actual_amount=float(request.form.get("actual_cost") or request.form.get("actual_amount") or 0),
             paid_amount=float(request.form.get("paid_amount") or 0),
             status=(request.form.get("status") or "planned").strip(),
             notes=(request.form.get("notes") or "").strip() or None,
         )
-        db.session.add(item)
+        db.session.add(expense)
+        db.session.flush()
+
+        budget.recalculate_totals()
         db.session.commit()
-        flash("Build budget item added.", "success")
+
+        flash("Build budget expense added.", "success")
         return redirect(url_for("investor.build_budget_tracker", project_id=project.id))
 
-    items = BudgetItem.query.filter_by(
-        user_id=current_user.id,
-        build_project_id=project.id,
-        budget_type="build"
-    ).order_by(BudgetItem.created_at.desc()).all()
+    items = ProjectExpense.query.filter_by(
+        budget_id=budget.id
+    ).order_by(ProjectExpense.created_at.desc()).all()
 
-    summary = budget_summary(items)
+    summary = {
+        "estimated_total": budget.estimated_subtotal,
+        "actual_total": budget.actual_total,
+        "paid_total": budget.paid_total,
+        "contingency": budget.contingency_amount,
+        "total_budget": budget.estimated_total_with_contingency,
+        "remaining_balance": budget.remaining_balance,
+    }
 
     return render_template(
         "investor/build_budget_tracker.html",
         project=project,
+        budget=budget,
         items=items,
         summary=summary,
         page_title="Build Budget Tracker",
