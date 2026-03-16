@@ -6,43 +6,157 @@
 
 {% block content %}
 <div class="re-card">
-  <h3>Requests</h3>
+  <div class="re-head">
+    <div>
+      <h3>Requests</h3>
+      <p class="re-sub">Review pending staff and platform access requests.</p>
+    </div>
+  </div>
 
   {% if requests_list %}
-    <table class="re-table">
-      <thead>
-        <tr>
-          <th>ID</th>
-          <th>Contact</th>
-          <th>Email</th>
-          <th>Company</th>
-          <th>Type</th>
-          <th>Status</th>
-          <th>Created</th>
-          <th></th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for item in requests_list %}
-        <tr>
-          <td>#{{ item.id }}</td>
-          <td>{{ item.contact_name }}</td>
-          <td>{{ item.email }}</td>
-          <td>{{ item.company_name or "—" }}</td>
-          <td>{{ item.request_type }}</td>
-          <td>{{ item.status }}</td>
-          <td>{{ item.created_at.strftime("%Y-%m-%d") if item.created_at else "" }}</td>
-          <td>
-            <a href="{{ url_for('admin.request_detail', request_id=item.id) }}" class="btn btn-sm btn-primary">
-              View
-            </a>
-          </td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
+    <div class="re-table-wrap">
+      <table class="re-table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Contact</th>
+            <th>Email</th>
+            <th>Company</th>
+            <th>Type</th>
+            <th>Status</th>
+            <th>Created</th>
+            <th class="text-right"></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in requests_list %}
+          {% set status_slug = (item.status or 'pending')|lower|replace(' ', '-') %}
+          <tr>
+            <td>#{{ item.id }}</td>
+            <td>{{ item.contact_name or "—" }}</td>
+            <td>{{ item.email or "—" }}</td>
+            <td>{{ item.company_name or "—" }}</td>
+            <td>{{ item.request_type or "—" }}</td>
+            <td>
+              <span class="status-pill st-{{ status_slug }}">
+                {{ (item.status or "Pending")|title }}
+              </span>
+            </td>
+            <td>{{ item.created_at.strftime("%Y-%m-%d") if item.created_at else "" }}</td>
+            <td>
+              <div class="re-actions">
+                <a href="{{ url_for('admin.request_detail', request_id=item.id) }}" class="btn btn-sm btn-primary">
+                  View
+                </a>
+
+                {% if (item.status or 'pending')|lower == 'pending' %}
+                <form method="POST" action="{{ url_for('admin.approve_access_request', req_id=item.id) }}">
+                  <button type="submit" class="btn btn-sm btn-success">
+                    Approve
+                  </button>
+                </form>
+
+                <form method="POST" action="{{ url_for('admin.deny_access_request', req_id=item.id) }}">
+                  <button type="submit" class="btn btn-sm btn-ghost">
+                    Deny
+                  </button>
+                </form>
+                {% endif %}
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
   {% else %}
-    <p>No requests found.</p>
+    <div class="re-empty">
+      <p>No requests found.</p>
+    </div>
   {% endif %}
 </div>
+
+<style>
+  .re-card{
+    padding:20px;
+    border-radius:22px;
+  }
+
+  .re-head{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    gap:12px;
+    margin-bottom:16px;
+  }
+
+  .re-head h3{
+    margin:0 0 4px;
+  }
+
+  .re-sub{
+    margin:0;
+    color:var(--text-soft, #c9d3df);
+  }
+
+  .re-table-wrap{
+    overflow-x:auto;
+  }
+
+  .re-actions{
+    display:flex;
+    gap:8px;
+    flex-wrap:wrap;
+    justify-content:flex-end;
+  }
+
+  .re-actions form{
+    margin:0;
+  }
+
+  .status-pill{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    padding:.35rem .65rem;
+    border-radius:999px;
+    font-size:.75rem;
+    font-weight:700;
+    border:1px solid rgba(255,255,255,.08);
+    background:rgba(255,255,255,.04);
+  }
+
+  .status-pill.st-pending{
+    color:#ffd56a;
+  }
+
+  .status-pill.st-approved{
+    color:#7ee2a8;
+  }
+
+  .status-pill.st-denied,
+  .status-pill.st-rejected{
+    color:#ff9c8f;
+  }
+
+  .re-empty{
+    padding:10px 0 4px;
+    color:var(--text-soft, #c9d3df);
+  }
+
+  .text-right{
+    text-align:right;
+  }
+
+  @media (max-width: 760px){
+    .re-card{
+      padding:16px;
+      border-radius:18px;
+    }
+
+    .re-actions{
+      justify-content:flex-start;
+    }
+  }
+</style>
 {% endblock %}
