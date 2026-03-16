@@ -6008,7 +6008,7 @@ def create_budget():
         return redirect(url_for("investor.budget_detail", budget_id=budget.id))
 
     deals = Deal.query.filter_by(investor_profile_id=ip.id).order_by(Deal.updated_at.desc()).all()
-    build_projects = BuildProject.query.filter_by(investor_profile_id=ip.id).all()
+    build_projects = BuildProject.query.filter_by(user_id=current_user.id).all()
 
     return render_template(
         "investor/budget_studio/create.html",
@@ -6078,8 +6078,7 @@ def add_budget_expense(budget_id):
 @role_required("investor")
 def rehab_budget_tracker(deal_id):
     deal = _get_owned_deal_or_404(deal_id)
-
-    ip = InvestorProfile.query.filter_by(user_id=current_user.id).first()
+    ip = InvestorProfile.query.filter_by(user_id=current_user.id).first_or_404()
 
     budget = ProjectBudget.query.filter_by(
         deal_id=deal.id,
@@ -6092,7 +6091,7 @@ def rehab_budget_tracker(deal_id):
             name=f"Rehab Budget - {deal.title or deal.address or f'Deal #{deal.id}'}",
             project_name=deal.title or deal.address,
             budget_type="rehab",
-            investor_profile_id=ip.id if ip else None,
+            investor_profile_id=ip.id,
             deal_id=deal.id,
             notes="Auto-created rehab budget."
         )
@@ -6131,6 +6130,7 @@ def rehab_budget_tracker(deal_id):
         "contingency": budget.contingency_amount,
         "total_budget": budget.estimated_total_with_contingency,
         "remaining_balance": budget.remaining_balance,
+        "variance": budget.actual_total - budget.estimated_subtotal,
     }
 
     return render_template(
@@ -6153,11 +6153,11 @@ def build_budget_tracker(project_id):
         user_id=current_user.id
     ).first_or_404()
 
-    ip = InvestorProfile.query.filter_by(user_id=current_user.id).first()
+    ip = InvestorProfile.query.filter_by(user_id=current_user.id).first_or_404()
 
     budget = ProjectBudget.query.filter_by(
         build_project_id=project.id,
-        investor_profile_id=ip.id if ip else None,
+        investor_profile_id=ip.id,
         budget_type="build"
     ).first()
 
@@ -6166,7 +6166,7 @@ def build_budget_tracker(project_id):
             name=f"Build Budget - {getattr(project, 'project_name', None) or getattr(project, 'name', None) or f'Project #{project.id}'}",
             project_name=getattr(project, "project_name", None) or getattr(project, "name", None),
             budget_type="build",
-            investor_profile_id=ip.id if ip else None,
+            investor_profile_id=ip.id,
             build_project_id=project.id,
             notes="Auto-created build budget."
         )
@@ -6205,6 +6205,7 @@ def build_budget_tracker(project_id):
         "contingency": budget.contingency_amount,
         "total_budget": budget.estimated_total_with_contingency,
         "remaining_balance": budget.remaining_balance,
+        "variance": budget.actual_total - budget.estimated_subtotal,
     }
 
     return render_template(
