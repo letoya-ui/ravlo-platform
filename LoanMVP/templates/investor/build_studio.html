@@ -1,0 +1,570 @@
+{% extends "layouts/ravlo_base.html" %}
+{% block title %}Ravlo • Build Studio{% endblock %}
+
+{% block page_title %}Build Studio{% endblock %}
+{% block page_subline %}Explore development potential and shape a build concept inside Ravlo.{% endblock %}
+
+{% block topbar_actions %}
+  {% if deal %}
+    <a class="ravlo-btn ghost sm" href="{{ url_for('investor.deal_detail', deal_id=deal.id) }}">Deal Workspace</a>
+    <a class="ravlo-btn ghost sm" href="{{ url_for('investor.deal_architect', deal_id=deal.id) }}">Deal Architect</a>
+    <a class="ravlo-btn ghost sm" href="{{ url_for('investor.budget_studio', deal_id=deal.id) }}">Budget Studio</a>
+  {% endif %}
+{% endblock %}
+
+{% block content %}
+<style>
+  .studio-wrap{
+    display:grid;
+    gap:22px;
+  }
+
+  .studio-hero{
+    border-radius:24px;
+    padding:22px 24px;
+    border:1px solid rgba(255,255,255,.08);
+    background:
+      radial-gradient(900px 520px at 15% 10%, rgba(122,184,255,.12), transparent 55%),
+      rgba(255,255,255,.02);
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-end;
+    gap:18px;
+    flex-wrap:wrap;
+  }
+
+  .episode-tag{
+    display:inline-flex;
+    gap:.5rem;
+    align-items:center;
+    padding:.42rem .75rem;
+    border-radius:999px;
+    background:rgba(255,255,255,.06);
+    border:1px solid rgba(255,255,255,.12);
+    color:rgba(255,255,255,.88);
+    font-weight:800;
+    font-size:.78rem;
+    letter-spacing:.04em;
+  }
+
+  .hero-title{
+    margin:.65rem 0 0;
+    font-size:1.7rem;
+    line-height:1.08;
+    letter-spacing:-.02em;
+  }
+
+  .hero-sub{
+    color:rgba(255,255,255,.74);
+    margin:.4rem 0 0;
+    max-width:760px;
+  }
+
+  .hero-actions{
+    display:flex;
+    gap:.6rem;
+    flex-wrap:wrap;
+  }
+
+  .btn{
+    background:rgba(122,184,255,.12);
+    border:1px solid rgba(122,184,255,.42);
+    color:#7ab8ff;
+    padding:.76rem 1rem;
+    border-radius:14px;
+    cursor:pointer;
+    font-weight:800;
+    transition:.2s;
+    font-size:.92rem;
+    text-decoration:none;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    gap:.45rem;
+  }
+
+  .btn:hover{
+    background:rgba(122,184,255,.22);
+    border-color:#7ab8ff;
+    box-shadow:0 0 14px rgba(122,184,255,.25);
+  }
+
+  .btn-secondary{
+    background:rgba(255,255,255,.04);
+    border:1px solid rgba(255,255,255,.12);
+    color:var(--text);
+  }
+
+  .btn-success{
+    background:rgba(104,211,160,.12);
+    border:1px solid rgba(104,211,160,.34);
+    color:#7ee8b1;
+  }
+
+  .btn-success:hover{
+    background:rgba(104,211,160,.2);
+    border-color:rgba(104,211,160,.5);
+    box-shadow:0 0 14px rgba(104,211,160,.18);
+  }
+
+  .grid{
+    display:grid;
+    grid-template-columns:minmax(320px, .82fr) minmax(0, 1.18fr);
+    gap:20px;
+    align-items:start;
+  }
+
+  @media (max-width: 1100px){
+    .grid{
+      grid-template-columns:1fr;
+    }
+  }
+
+  .card{
+    background:var(--panel, rgba(255,255,255,.025));
+    border:1px solid rgba(255,255,255,.08);
+    border-radius:22px;
+    padding:18px;
+  }
+
+  .card h3{
+    margin:.1rem 0 .9rem;
+    color:var(--accent, #7ab8ff);
+    font-size:1.04rem;
+  }
+
+  .muted{
+    color:var(--muted);
+  }
+
+  .img{
+    width:100%;
+    height:260px;
+    object-fit:cover;
+    border-radius:16px;
+    display:block;
+    border:1px solid rgba(255,255,255,.08);
+    background:#0f141a;
+  }
+
+  .preview-img{
+    width:100%;
+    height:clamp(380px, 62vh, 760px);
+    object-fit:cover;
+    border-radius:18px;
+    display:block;
+    border:1px solid rgba(255,255,255,.08);
+    background:#0f141a;
+  }
+
+  .placeholder{
+    min-height:clamp(380px, 62vh, 760px);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    text-align:center;
+    border-radius:18px;
+    border:1px dashed rgba(255,255,255,.12);
+    background:rgba(255,255,255,.02);
+    color:rgba(255,255,255,.52);
+    padding:24px;
+  }
+
+  .row{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:14px;
+  }
+
+  @media (max-width: 900px){
+    .row{
+      grid-template-columns:1fr;
+    }
+  }
+
+  .input{
+    width:100%;
+    padding:.78rem .85rem;
+    border-radius:14px;
+    border:1px solid rgba(255,255,255,.10);
+    background:#0f141a;
+    color:var(--text);
+    min-height:48px;
+  }
+
+  textarea.input{
+    min-height:130px;
+    resize:vertical;
+  }
+
+  .section-stack{
+    display:grid;
+    gap:16px;
+  }
+
+  .action-row{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+  }
+
+  .thumb-grid{
+    display:grid;
+    grid-template-columns:repeat(3, minmax(0,1fr));
+    gap:12px;
+  }
+
+  @media (max-width: 900px){
+    .thumb-grid{
+      grid-template-columns:repeat(2, minmax(0,1fr));
+    }
+  }
+
+  @media (max-width: 620px){
+    .thumb-grid{
+      grid-template-columns:1fr;
+    }
+  }
+
+  .thumb{
+    padding:.7rem;
+    border-radius:18px;
+    background:rgba(255,255,255,.03);
+    border:1px solid rgba(255,255,255,.10);
+    transition:.15s;
+  }
+
+  .thumb:hover{
+    transform:translateY(-1px);
+    border-color:rgba(122,184,255,.28);
+  }
+
+  .thumb .img{
+    height:220px;
+  }
+
+  .thumb-meta{
+    margin-top:.55rem;
+    display:flex;
+    justify-content:space-between;
+    gap:.35rem;
+    align-items:center;
+  }
+
+  .chip{
+    font-size:.78rem;
+    border-radius:999px;
+    padding:.35rem .6rem;
+    background:rgba(122,184,255,.12);
+    border:1px solid rgba(122,184,255,.26);
+    color:#a9d2ff;
+  }
+
+  .scope-box{
+    padding:16px;
+    border-radius:18px;
+    background:rgba(255,255,255,.025);
+    border:1px solid rgba(255,255,255,.08);
+  }
+
+  .scope-box ul{
+    margin:.6rem 0 0 1rem;
+    padding:0;
+  }
+
+  .scope-box li{
+    margin:.35rem 0;
+    color:var(--text);
+  }
+
+  .workflow-grid{
+    display:grid;
+    grid-template-columns:repeat(3, minmax(0,1fr));
+    gap:12px;
+  }
+
+  .workflow-card{
+    display:block;
+    padding:18px;
+    border-radius:18px;
+    background:rgba(255,255,255,.03);
+    border:1px solid rgba(255,255,255,.08);
+    transition:.15s ease;
+  }
+
+  .workflow-card:hover{
+    transform:translateY(-1px);
+    border-color:rgba(122,184,255,.25);
+    background:rgba(255,255,255,.045);
+  }
+
+  .workflow-card h4{
+    margin:0 0 8px;
+  }
+
+  .workflow-card p{
+    margin:0;
+    color:var(--muted);
+    line-height:1.6;
+  }
+
+  .status-box{
+    padding:12px 14px;
+    border-radius:14px;
+    background:rgba(255,255,255,.03);
+    border:1px solid rgba(255,255,255,.08);
+    color:var(--muted);
+  }
+
+  @media (max-width: 900px){
+    .workflow-grid{
+      grid-template-columns:1fr;
+    }
+
+    .preview-img{
+      height:320px;
+    }
+
+    .placeholder{
+      min-height:320px;
+    }
+
+    .img{
+      height:220px;
+    }
+
+    .thumb .img{
+      height:210px;
+    }
+  }
+
+  @media (max-width: 640px){
+    .studio-hero{
+      padding:18px;
+    }
+
+    .hero-title{
+      font-size:1.4rem;
+    }
+
+    .preview-img{
+      height:300px;
+    }
+
+    .placeholder{
+      min-height:300px;
+    }
+
+    .img{
+      height:200px;
+    }
+
+    .thumb .img{
+      height:200px;
+    }
+  }
+</style>
+
+{% set build_preview = build_preview or "" %}
+{% set build_analysis = build_analysis or {} %}
+{% set build_mockups = build_mockups or [] %}
+
+<div class="studio-wrap">
+
+  <div class="studio-hero">
+    <div>
+      <div class="episode-tag">
+        🏗 BUILD STUDIO
+        {% if deal %}• DEAL #{{ deal.id }}{% endif %}
+      </div>
+      <h2 class="hero-title">
+        {% if deal %}{{ deal.title or ('Deal #' ~ deal.id) }}{% else %}Build Studio{% endif %}
+      </h2>
+      <div class="hero-sub">
+        Explore development potential, shape a concept, and move the build plan into budget control.
+      </div>
+    </div>
+
+    <div class="hero-actions">
+      {% if deal %}
+        <a class="btn btn-secondary" href="{{ url_for('investor.deal_detail', deal_id=deal.id) }}">🗂 Deal Workspace</a>
+        <a class="btn btn-secondary" href="{{ url_for('investor.deal_architect', deal_id=deal.id) }}">🧠 Deal Architect</a>
+        <a class="btn btn-secondary" href="{{ url_for('investor.deal_rehab', deal_id=deal.id) }}">🎬 Renovation Studio</a>
+        <a class="btn btn-success" href="{{ url_for('investor.budget_studio', deal_id=deal.id) }}">💰 Budget Studio</a>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="grid">
+
+    <div class="section-stack">
+
+      <div class="card">
+        <h3>Build Controls</h3>
+
+        <div class="row">
+          <div>
+            <label class="muted" style="display:block;margin-bottom:.35rem;">Project Name</label>
+            <input id="projectName" class="input" placeholder="e.g. Ravlo Estates Concept">
+          </div>
+
+          <div>
+            <label class="muted" style="display:block;margin-bottom:.35rem;">Property Type</label>
+            <select id="propertyType" class="input">
+              <option value="">Select property type</option>
+              <option value="single_family">Single Family</option>
+              <option value="duplex">Duplex</option>
+              <option value="triplex">Triplex</option>
+              <option value="multifamily">Multifamily</option>
+              <option value="townhome">Townhome</option>
+              <option value="mixed_use">Mixed Use</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="row" style="margin-top:.85rem;">
+          <div>
+            <label class="muted" style="display:block;margin-bottom:.35rem;">Style</label>
+            <select id="style" class="input">
+              <option value="modern_farmhouse">Modern Farmhouse</option>
+              <option value="modern_luxury">Modern Luxury</option>
+              <option value="contemporary">Contemporary</option>
+              <option value="traditional">Traditional</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="muted" style="display:block;margin-bottom:.35rem;">Lot Size</label>
+            <input id="lotSize" class="input" placeholder="e.g. 0.25 acre">
+          </div>
+        </div>
+
+        <div class="row" style="margin-top:.85rem;">
+          <div>
+            <label class="muted" style="display:block;margin-bottom:.35rem;">Zoning</label>
+            <input id="zoning" class="input" placeholder="e.g. R2 / residential">
+          </div>
+
+          <div>
+            <label class="muted" style="display:block;margin-bottom:.35rem;">Location</label>
+            <input id="location" class="input" placeholder="e.g. Tampa, FL">
+          </div>
+        </div>
+
+        <label class="muted" style="display:block;margin-top:.85rem;margin-bottom:.35rem;">Build Description</label>
+        <textarea id="description" class="input" placeholder="Describe the concept, style, layout, and development direction..."></textarea>
+
+        <label class="muted" style="display:block;margin-top:.85rem;margin-bottom:.35rem;">Optional Land Image</label>
+        <input id="landImage" class="input" type="file" accept="image/*">
+
+        <div class="action-row" style="margin-top:14px;">
+          <button class="btn" type="button" onclick="generateBuildConcept()">✨ Generate Build Concept</button>
+          <button class="btn btn-secondary" type="button" onclick="generateBuildScope()">🧠 Analyze Build Scope</button>
+        </div>
+
+        <div id="buildStatus" class="status-box" style="margin-top:14px;">Ready.</div>
+      </div>
+
+      <div class="card">
+        <h3>Build Scope Summary</h3>
+        <div id="buildScopeResults" class="scope-box">
+          Zoning context, concept summary, and build guidance will appear here.
+        </div>
+      </div>
+
+    </div>
+
+    <div class="section-stack">
+
+      <div class="card">
+        <h3>Build Concept Preview</h3>
+
+        {% if build_preview %}
+          <img id="buildPreviewImg" class="preview-img" src="data:image/webp;base64,{{ build_preview }}" alt="Build concept preview">
+        {% else %}
+          <div id="buildPreviewEmpty" class="placeholder">Generate a build concept to preview the direction.</div>
+          <img id="buildPreviewImg" class="preview-img" src="" alt="Build concept preview" style="display:none;">
+        {% endif %}
+
+        <div class="action-row" style="margin-top:14px;">
+          <button id="saveBuildBtn" class="btn btn-secondary" type="button" style="display:none;" onclick="saveBuildToProject()">
+            💾 Save Build Project
+          </button>
+
+          {% if deal %}
+          <a id="budgetBuildBtn" class="btn btn-success" href="{{ url_for('investor.budget_studio', deal_id=deal.id) }}" style="display:none;">
+            💰 Send to Budget
+          </a>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Recent Build Concepts</h3>
+
+        {% if build_mockups %}
+          <div class="thumb-grid" id="existingBuildGrid">
+            {% for m in build_mockups %}
+              <div class="thumb">
+                <img
+                  class="img"
+                  src="data:image/webp;base64,{{ m }}"
+                  alt="Build mockup"
+                  style="cursor:pointer;"
+                  onclick="selectBuildPreview('data:image/webp;base64,{{ m }}')"
+                >
+
+                <div class="thumb-meta">
+                  <span class="chip">Build Concept</span>
+                  <small class="muted">saved</small>
+                </div>
+
+                <div class="action-row" style="margin-top:.7rem;">
+                  <button class="btn pick" type="button" onclick="selectBuildPreview('data:image/webp;base64,{{ m }}')">
+                    👀 Preview
+                  </button>
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="muted">No saved build concepts yet. Generate one to start shaping the development vision.</div>
+        {% endif %}
+
+        <div class="thumb-grid" id="newBuildGrid" style="margin-top:.75rem; display:none;"></div>
+      </div>
+
+      <div class="card">
+        <h3>Continue Workflow</h3>
+        <div class="workflow-grid">
+          {% if deal %}
+          <a href="{{ url_for('investor.deal_architect', deal_id=deal.id) }}" class="workflow-card">
+            <h4>Deal Architect</h4>
+            <p>Go back to strategy, numbers, and highest-best-use logic.</p>
+          </a>
+
+          <a href="{{ url_for('investor.deal_rehab', deal_id=deal.id) }}" class="workflow-card">
+            <h4>Renovation Studio</h4>
+            <p>Compare rehab direction against build / development potential.</p>
+          </a>
+
+          <a href="{{ url_for('investor.budget_studio', deal_id=deal.id) }}" class="workflow-card">
+            <h4>Budget Studio</h4>
+            <p>Track projected development cost and control execution.</p>
+          </a>
+          {% endif %}
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+  let CURRENT_BUILD_PREVIEW = document.getElementById("buildPreviewImg")?.src || "";
+  let BUILD_LOADING = false;
+
+  function formPayload() {
+    return {
+      deal_id: "{{ deal.id if deal else '' }}",
+      project_name: (document.getElementById("
