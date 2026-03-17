@@ -20,13 +20,13 @@ PAGE_META = {
         "title": "About Ravlo",
         "description": "Learn about Ravlo’s mission to give investors a smarter, clearer way to evaluate and execute real estate deals.",
         "template": "marketing/about.html",
-        "hero_image": "images/marketing/city_skyline.jpg.PNG",
+        "hero_image": "images/marketing/city_skyline.jpg.",
     },
     "plans": {
         "title": "Plans | Ravlo",
         "description": "Explore Ravlo plans for investors, teams, and growing real estate operators.",
         "template": "marketing/plans.html",
-        "hero_image": "images/marketing/luxury_property.jpg.PNG",
+        "hero_image": "images/marketing/luxury_property.jpg.",
     },
     "partners": {
         "title": "Partners | Ravlo",
@@ -102,19 +102,19 @@ PAGE_META = {
         "title": "Vision | Ravlo",
         "description": "Discover the long-term vision behind Ravlo and the future of investor operating systems.",
         "template": "marketing/vision.html",
-        "hero_image": "images/vision/vision_placeholder.png",
+        "hero_image": "images/vision/property.jpg",
     },
     "mission": {
         "title": "Mission | Ravlo",
         "description": "See Ravlo’s mission to simplify and elevate real estate investing workflows.",
         "template": "marketing/mission.html",
-        "hero_image": "images/marketing/city_skyline.jpg.PNG",
+        "hero_image": "images/marketing/city_skyline.jpg",
     },
     "story": {
         "title": "Our Story | Ravlo",
         "description": "Read the story behind Ravlo and why it was built.",
         "template": "marketing/story.html",
-        "hero_image": "images/marketing/interior_luxury.jpg.PNG",
+        "hero_image": "images/about/team_strategy.jpg",
     },
 }
 
