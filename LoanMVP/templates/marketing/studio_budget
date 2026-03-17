@@ -1,0 +1,176 @@
+{% extends "layouts/marketing_base.html" %}
+
+{% block hero %}
+<section class="mk-hero">
+  <div class="mk-container">
+    <div class="mk-hero-grid">
+
+      <div class="mk-hero-copy">
+        <div class="mk-eyebrow">Budget Studio</div>
+        <h1 class="mk-title-xl">Bring the numbers into the same ecosystem.</h1>
+        <p class="mk-copy-lg">
+          Budget Studio helps investors move from idea to execution with more control.
+          Estimate costs, organize line items, compare projected vs actual spend,
+          and keep your project financially grounded in one place.
+        </p>
+
+        <div class="mk-hero-actions">
+          <a href="{{ url_for('auth.register') }}" class="mk-btn mk-btn-primary">Create Account</a>
+          <a href="{{ url_for('marketing.tour') }}" class="mk-btn mk-btn-ghost">See the Platform</a>
+        </div>
+      </div>
+
+      <div class="mk-hero-visual">
+        <div class="mk-glow"></div>
+        <div class="mk-device">
+          <div class="mk-device-topbar">
+            <span class="mk-device-dot"></span>
+            <span class="mk-device-dot"></span>
+            <span class="mk-device-dot"></span>
+          </div>
+          <img src="{{ url_for('static', filename=hero_image or 'images/marketing/studios/budget_studio.jpg') }}" alt="Budget Studio preview">
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block content %}
+
+<section class="mk-section">
+  <div class="mk-container">
+    <div class="mk-kicker">Why Budget Studio matters</div>
+    <h2 class="mk-title-lg">Because investors do not just need ideas — they need control.</h2>
+    <p class="mk-copy-lg">
+      Ravlo’s Budget Studio connects financial planning to the rest of the platform,
+      helping users understand what a project is expected to cost and how that compares
+      to what is actually happening in execution.
+    </p>
+
+    <div class="mk-grid-3" style="margin-top:28px;">
+      <div class="mk-card">
+        <div class="mk-card-icon">$</div>
+        <h3>Estimate smarter</h3>
+        <p>Turn deal and rehab strategy into a structured cost plan.</p>
+      </div>
+
+      <div class="mk-card">
+        <div class="mk-card-icon">%</div>
+        <h3>Track variance</h3>
+        <p>See how projected vs actual numbers compare as the project moves.</p>
+      </div>
+
+      <div class="mk-card">
+        <div class="mk-card-icon">✓</div>
+        <h3>Stay grounded</h3>
+        <p>Keep the financial side of execution visible instead of buried in spreadsheets.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="mk-section-tight">
+  <div class="mk-container">
+    <div class="mk-split-panel">
+      <div class="mk-card mk-media-card">
+        <img src="{{ url_for('static', filename='images/marketing/studios/budget_studio.jpg') }}" alt="Budget Studio dashboard">
+        <div class="mk-media-copy">
+          <h3>Budget Dashboard</h3>
+          <p>Show category totals, estimated vs actual costs, paid amounts, and budget health in one place.</p>
+        </div>
+      </div>
+
+      <div class="mk-panel">
+        <div class="mk-kicker">What users can do here</div>
+        <h2 class="mk-title-lg">A financial command layer for execution.</h2>
+
+        <div class="mk-list">
+          <div class="mk-list-item">
+            <div class="mk-check">✓</div>
+            <div>
+              <strong>Create project budgets</strong>
+              <div class="mk-copy">Build rehab or construction budgets tied to real deals and projects.</div>
+            </div>
+          </div>
+
+          <div class="mk-list-item">
+            <div class="mk-check">✓</div>
+            <div>
+              <strong>Track line items</strong>
+              <div class="mk-copy">Organize expense categories, vendor details, and status updates.</div>
+            </div>
+          </div>
+
+          <div class="mk-list-item">
+            <div class="mk-check">✓</div>
+            <div>
+              <strong>See budget health</strong>
+              <div class="mk-copy">Understand overages, remaining balance, and spending concentration.</div>
+            </div>
+          </div>
+
+          <div class="mk-list-item">
+            <div class="mk-check">✓</div>
+            <div>
+              <strong>Connect planning to reality</strong>
+              <div class="mk-copy">Tie AI-generated estimates into real-world financial tracking.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="mk-section">
+  <div class="mk-container">
+    <div class="mk-kicker">How it fits into Ravlo</div>
+    <h2 class="mk-title-lg">Budget Studio completes the investor workflow.</h2>
+
+    <div class="mk-grid-4" style="margin-top:28px;">
+      <div class="mk-card">
+        <div class="mk-card-icon">1</div>
+        <h3>Deal Architect</h3>
+        <p>Understand the opportunity and shape strategy.</p>
+      </div>
+
+      <div class="mk-card">
+        <div class="mk-card-icon">2</div>
+        <h3>Renovation Studio</h3>
+        <p>Visualize the rehab direction and scope.</p>
+      </div>
+
+      <div class="mk-card">
+        <div class="mk-card-icon">3</div>
+        <h3>Build Studio</h3>
+        <p>Plan new construction and future development paths.</p>
+      </div>
+
+      <div class="mk-card">
+        <div class="mk-card-icon">4</div>
+        <h3>Budget Studio</h3>
+        <p>Bring cost, tracking, and execution into the same ecosystem.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="mk-section">
+  <div class="mk-container">
+    <div class="mk-cta">
+      <div class="mk-kicker">Ready to bring the numbers in?</div>
+      <h2 class="mk-title-lg">Budgeting should live inside the platform, not outside of it.</h2>
+      <p>
+        Ravlo’s Budget Studio helps investors turn planning into a controlled, visible financial workflow.
+      </p>
+      <div class="mk-cta-actions">
+        <a href="{{ url_for('auth.register') }}" class="mk-btn mk-btn-primary">Create Account</a>
+        <a href="{{ url_for('marketing.tour') }}" class="mk-btn mk-btn-ghost">See the Platform</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+{% endblock %}
