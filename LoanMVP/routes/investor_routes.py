@@ -3865,15 +3865,33 @@ def build_studio(deal_id=None):
     deal = None
     project = None
 
+    if deal_id is None:
+        query_deal_id = request.args.get("deal_id", type=int)
+        if query_deal_id:
+            deal_id = query_deal_id
+
     if deal_id is not None:
         deal = _get_owned_deal_or_404(deal_id)
         project = _safe_first_related(deal, "projects")
+
+    build_analysis = {}
+    build_preview = ""
+    build_mockups = []
+
+    if deal:
+        results = (deal.results_json or {})
+        build_analysis = results.get("build_analysis", {}) or {}
+        build_preview = results.get("build_preview_url", "") or ""
+        build_mockups = results.get("build_mockups", []) or []
 
     return render_template(
         "investor/build_studio.html",
         deal=deal,
         project=project,
         deal_id=deal.id if deal else None,
+        build_analysis=build_analysis,
+        build_preview=build_preview,
+        build_mockups=build_mockups,
         page_title="Build Studio",
         page_subtitle="Design and visualize new construction projects."
     )
