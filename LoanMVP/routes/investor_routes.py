@@ -4019,7 +4019,55 @@ def generate_build_studio():
             "status": "error",
             "message": str(e)
         }), 500
+        
+@investor_bp.route("/ai/build-scope/analyze", methods=["POST"])
+@csrf.exempt
+@login_required
+@role_required("investor")
+def ai_build_scope():
+    data = request.get_json(silent=True) or {}
 
+    description = (data.get("description") or "").strip()
+    property_type = (data.get("property_type") or "").strip()
+    lot_size = (data.get("lot_size") or "").strip()
+    zoning = (data.get("zoning") or "").strip()
+
+    if not description:
+        return jsonify({"status": "error", "message": "description is required."}), 400
+
+    try:
+        if not SCOPE_ENGINE_URL:
+            return jsonify({"status": "error", "message": "Scope engine is not configured."}), 500
+
+        res = requests.post(
+            _scope_engine_url("/v1/build_scope"),
+            json={
+                "description": description,
+                "property_type": property_type,
+                "lot_size": lot_size,
+                "zoning": zoning,
+            },
+            headers=_scope_engine_headers(),
+            timeout=60,
+        )
+        res.raise_for_status()
+
+        engine_data = res.json() or {}
+        build_analysis = engine_data.get("build_analysis") or {}
+
+        return jsonify({
+            "status": "ok",
+            "build_analysis": {
+                "summary": build_analysis.get("summary", ""),
+                "key_points": build_analysis.get("key_points", []),
+                "estimated_build_cost": build_analysis.get("estimated_build_cost", 0),
+            }
+        })
+
+    except Exception as e:
+        current_app.logger.exception("ai_build_scope failed")
+        return jsonify({"status": "error", "message": str(e)}), 500
+        
 @investor_bp.route("/deal-studio/build-studio/generate-upload", methods=["POST"])
 @csrf.exempt
 @login_required
