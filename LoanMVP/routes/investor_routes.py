@@ -14,7 +14,7 @@ from werkzeug.datastructures import ImmutableMultiDict
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy import or_
 from urllib.parse import urlencode
-
+from collections import defaultdict
 from flask import (
     Blueprint,
     render_template,
@@ -6041,6 +6041,7 @@ def create_budget():
         active_tab="budget"
     )
 
+
 @investor_bp.route("/budget-studio/<int:budget_id>")
 @login_required
 @role_required("investor")
@@ -6052,10 +6053,39 @@ def budget_detail(budget_id):
         investor_profile_id=ip.id
     ).first_or_404()
 
+    category_totals = defaultdict(lambda: {
+        "estimated": 0.0,
+        "actual": 0.0,
+        "paid": 0.0,
+        "count": 0,
+    })
+
+    for item in budget.expenses:
+        cat = (item.category or "General").strip() or "General"
+        category_totals[cat]["estimated"] += float(item.estimated_amount or 0)
+        category_totals[cat]["actual"] += float(item.actual_amount or 0)
+        category_totals[cat]["paid"] += float(item.paid_amount or 0)
+        category_totals[cat]["count"] += 1
+
+    category_rows = []
+    for category, vals in category_totals.items():
+        variance = vals["actual"] - vals["estimated"]
+        category_rows.append({
+            "category": category,
+            "estimated": vals["estimated"],
+            "actual": vals["actual"],
+            "paid": vals["paid"],
+            "variance": variance,
+            "count": vals["count"],
+        })
+
+    category_rows.sort(key=lambda x: x["estimated"], reverse=True)
+
     return render_template(
         "investor/budget_studio/detail.html",
         investor=ip,
         budget=budget,
+        category_rows=category_rows,
         title=budget.name,
         active_tab="budget"
     )
@@ -6207,7 +6237,6 @@ def generate_budget_from_ai(deal_id):
     return redirect(url_for("investor.budget_detail", budget_id=budget.id))
 
 @investor_bp.route("/budget-studio/<int:budget_id>/expense/add", methods=["POST"])
-@csrf.exempt
 @login_required
 @role_required("investor")
 def add_budget_expense(budget_id):
@@ -6221,10 +6250,14 @@ def add_budget_expense(budget_id):
     expense = ProjectExpense(
         budget_id=budget.id,
         category=request.form.get("category") or "General",
-        description=request.form.get("description") or "New Expense",
+        description=(
+            request.form.get("description")
+            or request.form.get("item_name")
+            or "New Expense"
+        ),
         vendor=request.form.get("vendor") or None,
-        estimated_amount=float(request.form.get("estimated_amount") or 0),
-        actual_amount=float(request.form.get("actual_amount") or 0),
+        estimated_amount=float(request.form.get("estimated_amount") or request.form.get("estimated_cost") or 0),
+        actual_amount=float(request.form.get("actual_amount") or request.form.get("actual_cost") or 0),
         paid_amount=float(request.form.get("paid_amount") or 0),
         status=request.form.get("status") or "planned",
         notes=request.form.get("notes") or None,
@@ -6238,7 +6271,7 @@ def add_budget_expense(budget_id):
 
     flash("Expense added.", "success")
     return redirect(url_for("investor.budget_detail", budget_id=budget.id))
-
+    
 @investor_bp.route("/deals/<int:deal_id>/rehab/budget", methods=["GET", "POST"])
 @csrf.exempt
 @login_required
