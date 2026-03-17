@@ -13,7 +13,7 @@
         </p>
 
         <div class="mk-hero-actions">
-          <a href="{{ url_for('marketing.contact') }}" class="mk-btn mk-btn-primary">Become a Partner</a>
+          <a href="{{ url_for('marketing.partner_plans') }}" class="mk-btn mk-btn-primary">Become a Partner</a>
           <a href="{{ url_for('marketing.tour') }}" class="mk-btn mk-btn-ghost">See the Platform</a>
         </div>
       </div>
@@ -29,7 +29,7 @@
           {% if hero_image %}
             <img src="{{ url_for('static', filename=hero_image) }}" alt="Ravlo partners ecosystem">
           {% else %}
-            <img src="{{ url_for('static', filename='images/partners/partners-hero.jpg') }}" alt="Ravlo partners ecosystem">
+            <img src="{{ url_for('static', filename='images/marketing/interior_luxury.jpg.PNG') }}" alt="Ravlo partners ecosystem">
           {% endif %}
         </div>
       </div>
@@ -171,7 +171,7 @@
         to connect with your platform early.
       </p>
       <div class="mk-cta-actions">
-        <a href="{{ url_for('marketing.contact') }}" class="mk-btn mk-btn-primary">Become a Partner</a>
+        <a href="{{ url_for('marketing.partner_plans') }}" class="mk-btn mk-btn-primary">View Partner Plans</a>
         <a href="{{ url_for('marketing.about') }}" class="mk-btn mk-btn-ghost">Learn More</a>
       </div>
     </div>
