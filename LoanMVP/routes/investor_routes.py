@@ -4,6 +4,7 @@ import json
 import uuid
 import base64
 import requests
+import zipfile
 from datetime import datetime
 from io import BytesIO
 from openai import OpenAI
@@ -2181,7 +2182,56 @@ def delete_document(doc_id):
     db.session.commit()
     return redirect(url_for("investor.documents"))
 
+@investor_bp.route("/documents/download/<int:doc_id>", methods=["GET"])
+@login_required
+def download_document(doc_id):
+    doc = LoanDocument.query.filter_by(
+        id=doc_id,
+        user_id=current_user.id
+    ).first()
 
+    if not doc:
+        abort(404)
+
+    file_path = doc.file_path  # make sure this is stored in DB
+
+    if not file_path or not os.path.exists(file_path):
+        abort(404)
+
+    return send_file(
+        file_path,
+        as_attachment=True,
+        download_name=os.path.basename(file_path)
+    )
+
+@investor_bp.route("/documents/download-all/<int:deal_id>", methods=["GET"])
+@login_required
+def download_all_documents(deal_id):
+    deal = Deal.query.filter_by(
+        id=deal_id,
+        user_id=current_user.id
+    ).first_or_404()
+
+    documents = LoanDocument.query.filter_by(
+        deal_id=deal.id,
+        user_id=current_user.id
+    ).all()
+
+    memory_file = BytesIO()
+
+    with zipfile.ZipFile(memory_file, "w") as zf:
+        for doc in documents:
+            if doc.file_path and os.path.exists(doc.file_path):
+                zf.write(doc.file_path, arcname=os.path.basename(doc.file_path))
+
+    memory_file.seek(0)
+
+    return send_file(
+        memory_file,
+        mimetype="application/zip",
+        as_attachment=True,
+        download_name=f"deal_{deal.id}_documents.zip"
+    )
 # =========================================================
 # ✅ INVESTOR • CONDITIONS (capital requirements)
 # =========================================================
