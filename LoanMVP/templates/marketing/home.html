@@ -16,7 +16,8 @@
         </p>
 
         <div class="mk-hero-actions">
-          <a href="{{ url_for('marketing.enter') }}" class="mk-btn mk-btn-primary">Enter Ravlo</a>
+          <a href="{{ url_for('auth.register') }}" class="mk-btn mk-btn-primary">Create Account</a>
+          <a href="{{ url_for('auth.login') }}" class="mk-btn mk-btn-ghost">Login</a>
           <a href="{{ url_for('marketing.tour') }}" class="mk-btn mk-btn-ghost">See the Platform</a>
         </div>
 
@@ -46,9 +47,9 @@
           </div>
 
           {% if hero_image %}
-            <img src="{{ url_for('static', filename=dashboard) }}" alt="Ravlo dashboard preview">
+            <img src="{{ url_for('static', filename=hero_image) }}" alt="Ravlo dashboard preview">
           {% else %}
-            <img src="{{ url_for('images/marketing/dashboard.jpg') }}" alt="Ravlo dashboard preview">
+            <img src="{{ url_for('static', filename='images/marketing/dashboard.jpg') }}" alt="Ravlo dashboard preview">
           {% endif %}
         </div>
       </div>
@@ -294,7 +295,7 @@
 
       <div class="mk-cta-actions">
         <a href="{{ url_for('marketing.tour') }}" class="mk-btn mk-btn-primary">Take the Tour</a>
-        <a href="{{ url_for('marketing.enter') }}" class="mk-btn mk-btn-ghost">Enter Ravlo</a>
+        <a href="{{ url_for('auth.register') }}" class="mk-btn mk-btn-ghost">Create Account</a>
       </div>
     </div>
   </div>
