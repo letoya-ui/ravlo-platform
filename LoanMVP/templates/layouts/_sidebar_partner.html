@@ -1,87 +1,131 @@
 {% set partner = current_user.partner_profile if current_user.is_authenticated and current_user.partner_profile else None %}
+{% set ep = request.endpoint or "" %}
 
-<aside class="sidebar">
-    <div class="sidebar-header">
-        <div class="brand">
-            <span class="brand-icon">⚡</span>
-            <span class="brand-text">Partner Center</span>
+<aside class="ravlo-sidebar">
+  <div class="ravlo-sidebar-inner">
+
+    <!-- Brand -->
+    <div class="ravlo-sidebar-brand">
+      <a href="{{ url_for('partners.dashboard') }}" class="ravlo-sidebar-brand-link">
+        <div class="ravlo-sidebar-brand-mark">⚡</div>
+        <div>
+          <div class="ravlo-sidebar-brand-title">Partner OS</div>
+          <div class="ravlo-sidebar-brand-subtitle">Ravlo Partner Center</div>
         </div>
+      </a>
     </div>
 
-    <nav class="sidebar-nav">
-        <ul>
+    <!-- Profile Card -->
+    <div class="ravlo-sidebar-profile-card">
+      <div class="ravlo-sidebar-profile-avatar">
+        {{ (partner.company or partner.name or 'P')[:1] if partner else 'P' }}
+      </div>
+      <div class="ravlo-sidebar-profile-meta">
+        <div class="ravlo-sidebar-profile-name">
+          {{ partner.company or partner.name or "Partner Account" }}
+        </div>
+        <div class="ravlo-sidebar-profile-tier">
+          {{ partner.subscription_tier or "Free" }} Plan
+        </div>
+      </div>
+    </div>
 
-            <!-- Dashboard -->
-            <li class="nav-item {{ 'active' if active_page == 'dashboard' else '' }}">
-                <a href="{{ url_for('partners.dashboard') }}">
-                    <i class="icon lucide-home"></i>
-                    <span>Dashboard</span>
-                </a>
-            </li>
+    <!-- Navigation -->
+    <nav class="ravlo-sidebar-nav">
 
-            <!-- Profile -->
-            <li class="nav-item {{ 'active' if active_page in ['profile', 'register'] else '' }}">
-                {% if partner %}
-                    <a href="{{ url_for('partners.profile', partner_id=partner.id) }}">
-                        <i class="icon lucide-user"></i>
-                        <span>Profile</span>
-                    </a>
-                {% else %}
-                    <a href="{{ url_for('partners.register') }}">
-                        <i class="icon lucide-user-plus"></i>
-                        <span>Create Profile</span>
-                    </a>
-                {% endif %}
-            </li>
+      <div class="ravlo-sidebar-label">Workspace</div>
 
-            <!-- Marketplace Listing -->
-            <li class="nav-item {{ 'active' if active_page == 'listing' else '' }}">
-                <a href="{{ url_for('partners.listing') }}">
-                    <i class="icon lucide-store"></i>
-                    <span>Marketplace Listing</span>
-                </a>
-            </li>
+      <a
+        href="{{ url_for('partners.dashboard') }}"
+        class="ravlo-sidebar-link {{ 'active' if active_page == 'dashboard' or ep == 'partners.dashboard' else '' }}"
+      >
+        <i class="icon lucide-home"></i>
+        <span>Dashboard</span>
+      </a>
 
-            <!-- Leads -->
-            <li class="nav-item {{ 'active' if active_page == 'leads' else '' }}">
-                <a href="{{ url_for('partners.lead') }}">
-                    <i class="icon lucide-inbox"></i>
-                    <span>Leads</span>
-                </a>
-            </li>
+      {% if partner %}
+        <a
+          href="{{ url_for('partners.profile', partner_id=partner.id) }}"
+          class="ravlo-sidebar-link {{ 'active' if active_page == 'profile' or ep == 'partners.profile' else '' }}"
+        >
+          <i class="icon lucide-user"></i>
+          <span>Profile</span>
+        </a>
+      {% else %}
+        <a
+          href="{{ url_for('partners.register') }}"
+          class="ravlo-sidebar-link {{ 'active' if active_page == 'register' or ep == 'partners.register' else '' }}"
+        >
+          <i class="icon lucide-user-plus"></i>
+          <span>Create Profile</span>
+        </a>
+      {% endif %}
 
-            <!-- Deals -->
-            <li class="nav-item {{ 'active' if active_page == 'deals' else '' }}">
-                <a href="{{ url_for('partners.deals') }}">
-                    <i class="icon lucide-briefcase"></i>
-                    <span>Deals</span>
-                </a>
-            </li>
+      <a
+        href="{{ url_for('partners.listing') }}"
+        class="ravlo-sidebar-link {{ 'active' if active_page == 'listing' or ep == 'partners.listing' else '' }}"
+      >
+        <i class="icon lucide-store"></i>
+        <span>Marketplace Listing</span>
+      </a>
 
-            <!-- Resources -->
-            <li class="nav-item {{ 'active' if active_page == 'resources' else '' }}">
-                <a href="{{ url_for('partners.resources') }}">
-                    <i class="icon lucide-book-open"></i>
-                    <span>Resources</span>
-                </a>
-            </li>
+      <a
+        href="{{ url_for('partners.leads') }}"
+        class="ravlo-sidebar-link {{ 'active' if active_page == 'leads' or ep == 'partners.leads' else '' }}"
+      >
+        <i class="icon lucide-inbox"></i>
+        <span>Leads</span>
+      </a>
 
-            <!-- Billing -->
-            <li class="nav-item {{ 'active' if active_page == 'billing' else '' }}">
-                <a href="{{ url_for('partners.billing') }}">
-                    <i class="icon lucide-credit-card"></i>
-                    <span>Billing</span>
-                </a>
-            </li>
+      <a
+        href="{{ url_for('partners.deals') }}"
+        class="ravlo-sidebar-link {{ 'active' if active_page == 'deals' or ep == 'partners.deals' else '' }}"
+      >
+        <i class="icon lucide-briefcase"></i>
+        <span>Deals</span>
+      </a>
 
-            <!-- Settings -->
-            <li class="nav-item {{ 'active' if active_page == 'settings' else '' }}">
-                <a href="{{ url_for('partners.settings') }}">
-                    <i class="icon lucide-settings"></i>
-                    <span>Settings</span>
-                </a>
-            </li>
+      <div class="ravlo-sidebar-label">Growth</div>
 
-        </ul>
+      <a
+        href="{{ url_for('partners.resources') }}"
+        class="ravlo-sidebar-link {{ 'active' if active_page == 'resources' or ep == 'partners.resources' else '' }}"
+      >
+        <i class="icon lucide-book-open"></i>
+        <span>Resources</span>
+      </a>
+
+      <a
+        href="{{ url_for('partners.billing') }}"
+        class="ravlo-sidebar-link {{ 'active' if active_page == 'billing' or ep == 'partners.billing' or ep == 'partners.subscribe' else '' }}"
+      >
+        <i class="icon lucide-credit-card"></i>
+        <span>Billing</span>
+      </a>
+
+      <a
+        href="{{ url_for('partners.settings') }}"
+        class="ravlo-sidebar-link {{ 'active' if active_page == 'settings' or ep == 'partners.settings' else '' }}"
+      >
+        <i class="icon lucide-settings"></i>
+        <span>Settings</span>
+      </a>
     </nav>
+
+    <!-- Footer -->
+    <div class="ravlo-sidebar-footer">
+      {% if partner and partner.featured %}
+        <div class="ravlo-sidebar-status is-featured">
+          <i class="icon lucide-badge-check"></i>
+          <span>Featured Partner</span>
+        </div>
+      {% else %}
+        <div class="ravlo-sidebar-status">
+          <i class="icon lucide-sparkles"></i>
+          <span>Growing in Ravlo</span>
+        </div>
+      {% endif %}
+    </div>
+
+  </div>
 </aside>
