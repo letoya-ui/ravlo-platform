@@ -5985,6 +5985,7 @@ def budget_studio():
 
 
 @investor_bp.route("/budget-studio/create", methods=["GET", "POST"])
+@csrf.exempt
 @login_required
 @role_required("investor")
 def create_budget():
@@ -6061,6 +6062,7 @@ def budget_detail(budget_id):
 
 
 @investor_bp.route("/budget-studio/<int:budget_id>/expense/add", methods=["POST"])
+@csrf.exempt
 @login_required
 @role_required("investor")
 def add_budget_expense(budget_id):
