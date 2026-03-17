@@ -38,7 +38,7 @@ PAGE_META = {
         "title": "Enter Ravlo",
         "description": "Access your Ravlo workspace and step into your investor command center.",
         "template": "marketing/enter.html",
-        "hero_image": "images/marketing/command_center.jpg",
+        "hero_image": "images/marketing/dashboard.jpg",
     },
     "tour": {
         "title": "Product Tour | Ravlo",
