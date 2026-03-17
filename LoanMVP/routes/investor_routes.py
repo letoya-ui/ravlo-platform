@@ -6052,22 +6052,40 @@ def budget():
         active_tab="budget"
     )
 
-@investor_bp.route("/budget-studio")
+@investor_bp.route("/deal-studio/budget", methods=["GET"])
+@investor_bp.route("/deal-studio/budget/<int:deal_id>", methods=["GET"])
 @login_required
 @role_required("investor")
-def budget_studio():
-    ip = InvestorProfile.query.filter_by(user_id=current_user.id).first_or_404()
+def budget_studio(deal_id=None):
+    deal = None
+    results = {}
 
-    budgets = ProjectBudget.query.filter_by(
-        investor_profile_id=ip.id
-    ).order_by(ProjectBudget.updated_at.desc()).all()
+    if deal_id is None:
+        query_deal_id = request.args.get("deal_id", type=int)
+        if query_deal_id:
+            deal_id = query_deal_id
+
+    if deal_id:
+        deal = Deal.query.filter_by(
+            id=deal_id,
+            user_id=current_user.id
+        ).first_or_404()
+
+        results = deal.results_json or {}
+
+    purchase_price = float(getattr(deal, "purchase_price", 0) or 0) if deal else 0
+    arv = float(getattr(deal, "arv", 0) or 0) if deal else 0
+    rehab_cost = float(getattr(deal, "rehab_cost", 0) or 0) if deal else 0
 
     return render_template(
-        "investor/budget_studio/index.html",
-        budgets=budgets,
-        investor=ip,
-        title="Budget Studio",
-        active_tab="budget"
+        "investor/budget_studio.html",
+        deal=deal,
+        results=results,
+        purchase_price=purchase_price,
+        arv=arv,
+        rehab_cost=rehab_cost,
+        page_title="Budget Studio",
+        page_subtitle="Control your numbers, track execution, and stay profitable."
     )
 
 
