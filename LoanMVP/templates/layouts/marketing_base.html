@@ -1,138 +1,198 @@
-<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>{{ page_title|default("Ravlo") }}</title>
-  <meta name="description" content="{{ meta_description|default('Ravlo investor command center.') }}">
-  <link rel="canonical" href="{{ canonical_url|default(request.base_url) }}">
+{% extends "layouts/marketing_base.html" %}
 
-  <meta property="og:title" content="{{ page_title|default('Ravlo') }}">
-  <meta property="og:description" content="{{ meta_description|default('Ravlo investor command center.') }}">
-  <meta property="og:type" content="website">
-  <meta property="og:url" content="{{ canonical_url|default(request.base_url) }}">
-  {% if hero_image %}
-  <meta property="og:image" content="{{ url_for('static', filename=hero_image, _external=True) }}">
-  {% endif %}
+{% block hero %}
+<section class="mk-hero">
+  <div class="mk-container">
+    <div class="mk-hero-grid">
+      <div class="mk-hero-copy">
+        <div class="mk-eyebrow">About Ravlo</div>
+        <h1 class="mk-title-xl">Built to bring more clarity to the investor journey.</h1>
+        <p class="mk-copy-lg">
+          Ravlo was created to make real estate investing feel less scattered and more intentional,
+          with tools that help investors think through opportunity, transformation, budgeting, and execution
+          in one connected ecosystem.
+        </p>
+      </div>
 
-  <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="{{ page_title|default('Ravlo') }}">
-  <meta name="twitter:description" content="{{ meta_description|default('Ravlo investor command center.') }}">
-  {% if hero_image %}
-  <meta name="twitter:image" content="{{ url_for('static', filename=hero_image, _external=True) }}">
-  {% endif %}
-
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/marketing.css') }}">
-  {% block head %}{% endblock %}
-</head>
-<body class="mk-body">
-
-  <div class="mk-site-bg"></div>
-
-  <header class="mk-header">
-    <div class="mk-header-glow"></div>
-
-    <div class="mk-container mk-header-inner">
-      <a href="{{ url_for('marketing.homepage') }}" class="mk-brand" aria-label="Ravlo Home">
-        <div class="mk-brand-mark-wrap">
-          <div class="mk-brand-mark">R</div>
-          <div class="mk-brand-mark-ring"></div>
+      <div class="mk-hero-visual">
+        <div class="mk-glow"></div>
+        <div class="mk-device">
+          <div class="mk-device-topbar">
+            <span class="mk-device-dot"></span>
+            <span class="mk-device-dot"></span>
+            <span class="mk-device-dot"></span>
+          </div>
+          {% if hero_image %}
+            <img src="{{ url_for('static', filename=hero_image) }}" alt="About Ravlo">
+          {% else %}
+            <img src="{{ url_for('static', filename='images/marketing/city_skyline.jpg.PNG') }}" alt="About Ravlo">
+          {% endif %}
         </div>
-
-        <div class="mk-brand-copy">
-          <span class="mk-brand-title">Ravlo</span>
-          <span class="mk-brand-sub">Investor Command Center</span>
-        </div>
-      </a>
-
-      <button
-        class="mk-nav-toggle"
-        type="button"
-        aria-label="Open menu"
-        aria-expanded="false"
-        onclick="
-          document.body.classList.toggle('nav-open');
-          this.setAttribute('aria-expanded', document.body.classList.contains('nav-open') ? 'true' : 'false');
-        ">
-        <span></span>
-        <span></span>
-        <span></span>
-      </button>
-
-      <nav class="mk-nav">
-        <a href="{{ url_for('marketing.homepage') }}" class="{% if page_key == 'home' %}active{% endif %}">Home</a>
-        <a href="{{ url_for('marketing.about') }}" class="{% if page_key == 'about' %}active{% endif %}">About</a>
-        <a href="{{ url_for('marketing.tour') }}" class="{% if page_key == 'tour' %}active{% endif %}">Tour</a>
-        <a href="{{ url_for('marketing.plans') }}" class="{% if page_key == 'plans' %}active{% endif %}">Plans</a>
-        <a href="{{ url_for('marketing.partners') }}" class="{% if page_key == 'partners' %}active{% endif %}">Partners</a>
-        <a href="{{ url_for('marketing.contact') }}" class="{% if page_key == 'contact' %}active{% endif %}">Contact</a>
-        <a href="{{ url_for('marketing.enter') }}" class="{% if page_key == 'enter' %}active{% endif %}">Enter</a>
-
-        <div class="mk-nav-mobile-cta">
-          <a href="{{ url_for('auth.login') }}" class="mk-btn mk-btn-ghost">Login</a>
-          <a href="{{ url_for('auth.register') }}" class="mk-btn mk-btn-primary">Create Account</a>
-        </div>
-      </nav>
-
-      <div class="mk-header-actions">
-        <a href="{{ url_for('auth.login') }}" class="mk-btn mk-btn-ghost mk-btn-header">Login</a>
-        <a href="{{ url_for('auth.register') }}" class="mk-btn mk-btn-primary mk-btn-header">Create Account</a>
       </div>
     </div>
-  </header>
+  </div>
+</section>
+{% endblock %}
 
-  <main class="mk-main">
-    {% block hero %}{% endblock %}
-    {% block content %}{% endblock %}
-  </main>
-
-  <footer class="mk-footer">
-    <div class="mk-footer-bg"></div>
-
-    <div class="mk-container">
-      <div class="mk-footer-top">
-        <div>
-          <div class="mk-footer-brand">Ravlo</div>
-          <p class="mk-footer-copy">
-            A smarter operating system for investors managing deals, renovation strategy,
-            and build planning in one place.
-          </p>
-        </div>
-
-        <div class="mk-footer-grid">
-          <div>
-            <h4>Platform</h4>
-            <a href="{{ url_for('marketing.tour') }}">Tour</a>
-            <a href="{{ url_for('marketing.plans') }}">Plans</a>
-            <a href="{{ url_for('marketing.partners') }}">Partners</a>
-          </div>
-
-          <div>
-            <h4>Company</h4>
-            <a href="{{ url_for('marketing.about') }}">About</a>
-            <a href="{{ url_for('marketing.story') }}">Story</a>
-            <a href="{{ url_for('marketing.contact') }}">Contact</a>
-          </div>
-
-          <div>
-            <h4>Legal</h4>
-            <a href="{{ url_for('marketing.privacy') }}">Privacy</a>
-            <a href="{{ url_for('marketing.terms') }}">Terms</a>
-            <a href="{{ url_for('marketing.support') }}">Support</a>
-          </div>
-        </div>
+{% block content %}
+<section class="mk-section">
+  <div class="mk-container">
+    <div class="mk-split-panel">
+      <div class="mk-panel">
+        <div class="mk-kicker">The idea</div>
+        <h2 class="mk-title-lg">A platform that feels like a true command center.</h2>
+        <p class="mk-copy">
+          Real estate investors often work across disconnected tools, scattered notes,
+          screenshots, calculators, and half-built workflows. Ravlo is designed to bring
+          those pieces into a cleaner, more premium environment where the process feels
+          more focused and easier to manage.
+        </p>
       </div>
 
-      <div class="mk-footer-bottom">
-        <span>© {{ site_name|default('Ravlo') }} {{ current_year|default(2026) }}</span>
-        <span>{{ site_tagline|default('Investor Command Center') }}</span>
+      <div class="mk-panel">
+        <div class="mk-kicker">The direction</div>
+        <h2 class="mk-title-lg">From deal analysis to execution thinking.</h2>
+        <p class="mk-copy">
+          Ravlo is not just about viewing data. It is about helping users understand what a property
+          could become, what direction makes sense, what the project may cost, and how to move with
+          more structure from planning into execution.
+        </p>
       </div>
     </div>
-  </footer>
+  </div>
+</section>
 
-</body>
-</html>
+<section class="mk-section-tight">
+  <div class="mk-container">
+    <div class="mk-grid-4">
+      <div class="mk-card">
+        <div class="mk-card-icon">C</div>
+        <h3>Clarity</h3>
+        <p>Make the investor workflow easier to understand and easier to act on.</p>
+      </div>
+
+      <div class="mk-card">
+        <div class="mk-card-icon">S</div>
+        <h3>Structure</h3>
+        <p>Organize deal, renovation, build, and budget strategy in a way that feels connected.</p>
+      </div>
+
+      <div class="mk-card">
+        <div class="mk-card-icon">E</div>
+        <h3>Execution</h3>
+        <p>Bring real project costs and decision-making into the same environment as the planning.</p>
+      </div>
+
+      <div class="mk-card">
+        <div class="mk-card-icon">G</div>
+        <h3>Growth</h3>
+        <p>Create a strong foundation for future expansion, partners, teams, and advanced workflows.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="mk-section">
+  <div class="mk-container">
+    <div class="mk-kicker">What makes Ravlo different</div>
+    <h2 class="mk-title-lg">It is designed like an ecosystem, not just a tool.</h2>
+    <p class="mk-copy-lg">
+      Ravlo brings together strategy, visual planning, budgeting, and future growth potential in one branded experience.
+      That makes it easier to present, easier to use, and easier to expand into a true investor operating system.
+    </p>
+
+    <div class="mk-grid-2" style="margin-top:28px;">
+      <div class="mk-card">
+        <h3>Premium interface</h3>
+        <p>
+          Built to feel polished, modern, and strong enough to support a real investor-facing brand.
+        </p>
+      </div>
+
+      <div class="mk-card">
+        <h3>Studio model</h3>
+        <p>
+          Separate focused experiences make the platform easier to understand and easier to grow.
+        </p>
+      </div>
+
+      <div class="mk-card">
+        <h3>Execution layer</h3>
+        <p>
+          Ravlo does not stop at planning — Budget Studio helps bring real financial control into the workflow.
+        </p>
+      </div>
+
+      <div class="mk-card">
+        <h3>Expandable architecture</h3>
+        <p>
+          Ready for dashboards, partners, lenders, borrowers, and future role-based experiences.
+        </p>
+      </div>
+
+      <div class="mk-card">
+        <h3>Connected workflow</h3>
+        <p>
+          Deal Architect, Renovation Studio, Build Studio, and Budget Studio are designed to work together.
+        </p>
+      </div>
+
+      <div class="mk-card">
+        <h3>Brand-first presentation</h3>
+        <p>
+          Public site, product screens, and internal workflows all work together to tell one clear story.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="mk-section">
+  <div class="mk-container">
+    <div class="mk-kicker">How Ravlo comes together</div>
+    <h2 class="mk-title-lg">A workflow that supports real investor movement.</h2>
+
+    <div class="mk-grid-4" style="margin-top:28px;">
+      <div class="mk-card">
+        <div class="mk-card-icon">1</div>
+        <h3>Deal Architect</h3>
+        <p>Analyze the opportunity and understand the strategy before moving forward.</p>
+      </div>
+
+      <div class="mk-card">
+        <div class="mk-card-icon">2</div>
+        <h3>Renovation Studio</h3>
+        <p>Visualize the rehab direction and shape the transformation path.</p>
+      </div>
+
+      <div class="mk-card">
+        <div class="mk-card-icon">3</div>
+        <h3>Build Studio</h3>
+        <p>Explore new construction possibilities and long-term development thinking.</p>
+      </div>
+
+      <div class="mk-card">
+        <div class="mk-card-icon">4</div>
+        <h3>Budget Studio</h3>
+        <p>Bring cost, control, and execution into the same investor ecosystem.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="mk-section">
+  <div class="mk-container">
+    <div class="mk-cta">
+      <div class="mk-kicker">See More</div>
+      <h2 class="mk-title-lg">Explore the platform and see how Ravlo comes together.</h2>
+      <p>
+        Use the tour page, screenshots, and studio pages to make the public site feel like a premium front door to the platform.
+      </p>
+      <div class="mk-cta-actions">
+        <a href="{{ url_for('marketing.tour') }}" class="mk-btn mk-btn-primary">Take the Tour</a>
+        <a href="{{ url_for('marketing.story') }}" class="mk-btn mk-btn-ghost">Read the Story</a>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}
