@@ -5991,15 +5991,31 @@ def create_budget():
     ip = InvestorProfile.query.filter_by(user_id=current_user.id).first_or_404()
 
     if request.method == "POST":
+        deal_id = request.form.get("deal_id") or None
+        build_project_id = request.form.get("build_project_id") or None
+        budget_type = request.form.get("budget_type") or "rehab"
+        contingency = float(request.form.get("contingency") or 0)
+
+        if build_project_id:
+            budget_type = "build"
+
         budget = ProjectBudget(
+            borrower_profile_id=None,
+            investor_profile_id=ip.id,
+            loan_app_id=None,
+            deal_id=deal_id,
+            build_project_id=build_project_id,
+            budget_type=budget_type,
             name=request.form.get("name") or "Untitled Budget",
             project_name=request.form.get("project_name") or None,
-            budget_type=request.form.get("budget_type") or "rehab",
-            contingency=float(request.form.get("contingency") or 0),
-            notes=request.form.get("notes"),
-            investor_profile_id=ip.id,
-            deal_id=request.form.get("deal_id") or None,
-            build_project_id=request.form.get("build_project_id") or None,
+            total_amount=0,
+            total_budget=contingency,
+            total_cost=0.0,
+            materials_cost=0.0,
+            labor_cost=0.0,
+            contingency=contingency,
+            paid_amount=0.0,
+            notes=request.form.get("notes") or None,
         )
         db.session.add(budget)
         db.session.commit()
@@ -6007,8 +6023,13 @@ def create_budget():
         flash("Budget created.", "success")
         return redirect(url_for("investor.budget_detail", budget_id=budget.id))
 
-    deals = Deal.query.filter_by(investor_profile_id=ip.id).order_by(Deal.updated_at.desc()).all()
-    build_projects = BuildProject.query.filter_by(user_id=current_user.id).all()
+    deals = Deal.query.filter_by(
+        investor_profile_id=ip.id
+    ).order_by(Deal.updated_at.desc()).all()
+
+    build_projects = BuildProject.query.filter_by(
+        user_id=current_user.id
+    ).all()
 
     return render_template(
         "investor/budget_studio/create.html",
@@ -6018,7 +6039,6 @@ def create_budget():
         title="Create Budget",
         active_tab="budget"
     )
-
 
 @investor_bp.route("/budget-studio/<int:budget_id>")
 @login_required
