@@ -44,7 +44,7 @@
       <span>Leads</span>
     </a>
 
-    <a href="{{ url_for('loan_officer.borrowers') }}"
+    <a href="{{ url_for('loan_officer.borrowers' borrower_id=borrower.id) }}"
        class="ravlo-nav-link {% if ep == 'loan_officer.borrowers' %}active{% endif %}">
       <i class="lucide lucide-user-round"></i>
       <span>Borrowers</span>
