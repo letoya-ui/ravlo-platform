@@ -56,7 +56,7 @@ PAGE_META = {
         "title": "Support | Ravlo",
         "description": "Get help using Ravlo, find answers, and access support resources.",
         "template": "marketing/support.html",
-        "hero_image": "images/marketing/command_center.jpg",
+        "hero_image": "images/marketing/command_center.jpeg",
     },
     "faq": {
         "title": "FAQ | Ravlo",
