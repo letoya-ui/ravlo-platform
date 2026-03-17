@@ -411,6 +411,7 @@
           <div>
             <label class="muted" style="display:block;margin-bottom:.35rem;">Property Type</label>
             <select id="propertyType" class="input">
+              <option value="">Select property type</option>
               <option value="single_family">Single Family</option>
               <option value="duplex">Duplex</option>
               <option value="triplex">Triplex</option>
@@ -561,6 +562,7 @@
 
 <script>
   let CURRENT_BUILD_PREVIEW = document.getElementById("buildPreviewImg")?.src || "";
+  let BUILD_LOADING = false;
 
   function formPayload() {
     return {
@@ -578,6 +580,9 @@
   }
 
   async function generateBuildConcept() {
+    if (BUILD_LOADING) return;
+    BUILD_LOADING = true;
+
     const status = document.getElementById("buildStatus");
     status.textContent = "Generating build concept…";
 
@@ -622,6 +627,8 @@
     } catch (err) {
       console.error(err);
       status.textContent = "Build concept generation failed.";
+    } finally {
+      BUILD_LOADING = false;
     }
   }
 
@@ -658,6 +665,8 @@
           html += `<li>${item}</li>`;
         });
         html += "</ul>";
+      } else {
+        html += "<div class='muted'>No build analysis points returned.</div>";
       }
 
       if (analysis.summary) {
@@ -758,5 +767,30 @@
       alert("Could not save build project.");
     }
   }
+
+  (function initFromDeal(){
+    {% if deal %}
+      const projectName = document.getElementById("projectName");
+      const location = document.getElementById("location");
+      const propertyType = document.getElementById("propertyType");
+      const description = document.getElementById("description");
+
+      if (projectName && !projectName.value) {
+        projectName.value = {{ (deal.title or "")|tojson }};
+      }
+
+      if (location && !location.value) {
+        location.value = {{ (((deal.city or "") ~ (", " if deal.city and deal.state else "") ~ (deal.state or "")))|tojson }};
+      }
+
+      if (propertyType && !propertyType.value) {
+        propertyType.value = {{ (deal.property_type or "single_family")|tojson }};
+      }
+
+      if (description && !description.value) {
+        description.value = {{ (deal.notes or "")|tojson }};
+      }
+    {% endif %}
+  })();
 </script>
 {% endblock %}
