@@ -2064,7 +2064,7 @@ def upload_document():
 
     if request.method == "POST":
         file = request.files.get("file")
-        doc_type = request.form.get("doc_type")
+        document_type = request.form.get("doc_type")
 
         if file and ip:
             filename = secure_filename(file.filename)
@@ -2076,7 +2076,7 @@ def upload_document():
             db.session.add(LoanDocument(
                 **doc_fk,
                 file_path=filename,
-                doc_type=doc_type,
+                document_type=document_type,
                 status="uploaded"
             ))
             db.session.commit()
