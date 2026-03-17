@@ -44,7 +44,7 @@
       <span>Leads</span>
     </a>
 
-    <a href="{{ url_for('loan_officer.borrowers' borrower_id=borrower.id) }}"
+    <a href="{{ url_for('loan_officer.borrowers') }}"
        class="ravlo-nav-link {% if ep == 'loan_officer.borrowers' %}active{% endif %}">
       <i class="lucide lucide-user-round"></i>
       <span>Borrowers</span>
@@ -72,7 +72,7 @@
       <span>Tasks</span>
     </a>
 
-    <a href="{{ url_for('loan_officer.request_documents') }}"
+    <a href="{{ url_for('loan_officer.request_documents' borrower_id=borrower.id) }}"
        class="ravlo-nav-link {% if ep == 'loan_officer.request_documents' %}active{% endif %}">
       <i class="lucide lucide-folder"></i>
       <span>Documents</span>
