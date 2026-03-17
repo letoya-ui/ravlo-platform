@@ -118,5 +118,8 @@ class Config:
     ENABLE_CONSTRUCTION_MODE = False
     ENABLE_DEVELOPER_TOOLS = True
 
+    BYPASS_PARTNER_SUBSCRIPTION = True
+    FREE_PARTNER_MODE = True
+
 def get_config():
     return Config
