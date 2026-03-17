@@ -20,16 +20,23 @@ partners_bp = Blueprint("partners", __name__, url_prefix="/partners")
 # ------------------------------------------------
 # ACCESS TIERS
 # ------------------------------------------------
-
 def partner_has_pro_access(partner) -> bool:
+    if current_app.config.get("FREE_PARTNER_MODE", False):
+        return bool(partner)
+
     if not partner or not partner.approved:
         return False
+
     return partner.subscription_tier in ("Featured", "Premium", "Enterprise") and partner.is_active_listing()
 
 
 def partner_has_premium_access(partner) -> bool:
+    if current_app.config.get("FREE_PARTNER_MODE", False):
+        return bool(partner)
+
     if not partner or not partner.approved:
         return False
+
     return partner.subscription_tier in ("Premium", "Enterprise") and partner.is_active_listing()
 
 
@@ -161,8 +168,8 @@ def register():
                 bio=bio,
                 active=True,
                 status="Active",
-                approved=False,
-                featured=False,
+                approved=True,
+                featured=True,
                 subscription_tier="Premium",
             )
             db.session.add(partner)
