@@ -14,8 +14,8 @@
         </p>
 
         <div class="mk-hero-actions">
-          <a href="{{ url_for('marketing.enter') }}" class="mk-btn mk-btn-primary">Enter Ravlo</a>
-          <a href="{{ url_for('marketing.plans') }}" class="mk-btn mk-btn-ghost">View Plans</a>
+          <a href="{{ url_for('auth.register') }}" class="mk-btn mk-btn-primary">Create Account</a>
+          <a href="{{ url_for('auth.login') }}" class="mk-btn mk-btn-ghost">Login</a>
         </div>
       </div>
 
@@ -27,7 +27,7 @@
             <span class="mk-device-dot"></span>
             <span class="mk-device-dot"></span>
           </div>
-          <img src="{{ url_for('static', filename=hero_image or 'images/market/dashboard.png') }}" alt="Ravlo product tour preview">
+          <img src="{{ url_for('static', filename=hero_image or 'images/marketing/dashboard.png') }}" alt="Ravlo product tour preview">
         </div>
       </div>
 
@@ -76,104 +76,4 @@
             <div class="mk-check">✓</div>
             <div>
               <strong>Premium investor interface</strong>
-              <div class="mk-copy">The product should feel polished, serious, and ready for real use.</div>
-            </div>
-          </div>
-
-          <div class="mk-list-item">
-            <div class="mk-check">✓</div>
-            <div>
-              <strong>Scalable navigation</strong>
-              <div class="mk-copy">Make it clear the system can grow into a larger operating platform.</div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<section class="mk-section-tight">
-  <div class="mk-container">
-    <div class="mk-kicker">Studios</div>
-    <h2 class="mk-title-lg">Purpose-built spaces for each major decision type.</h2>
-
-    <div class="mk-grid-3" style="margin-top:28px;">
-      <div class="mk-card mk-media-card">
-        <img src="{{ url_for('static', filename='images/studios/deal-architect.jpg') }}" alt="Deal Architect">
-        <div class="mk-media-copy">
-          <h3>Deal Architect</h3>
-          <p>
-            Position this as the strategic analysis layer where users compare opportunities and shape the best move.
-          </p>
-        </div>
-      </div>
-
-      <div class="mk-card mk-media-card">
-        <img src="{{ url_for('static', filename='images/studios/renovation_studio.jpg') }}" alt="Renovation Studio">
-        <div class="mk-media-copy">
-          <h3>Renovation Studio</h3>
-          <p>
-            Highlight transformation planning, visual direction, and a more intuitive way to think through rehab potential.
-          </p>
-        </div>
-      </div>
-
-      <div class="mk-card mk-media-card">
-        <img src="{{ url_for('static', filename='images/studios/build_studio.jpg') }}" alt="Build Studio">
-        <div class="mk-media-copy">
-          <h3>Build Studio</h3>
-          <p>
-            Show visitors that Ravlo also supports new construction thinking and future-facing project planning.
-          </p>
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<section class="mk-section">
-  <div class="mk-container">
-    <div class="mk-kicker">How it works</div>
-    <h2 class="mk-title-lg">A simple story your visitors can understand fast.</h2>
-
-    <div class="mk-grid-3" style="margin-top:28px;">
-      <div class="mk-card">
-        <div class="mk-card-icon">1</div>
-        <h3>Explore the opportunity</h3>
-        <p>Start with the property, the concept, or the deal you are evaluating.</p>
-      </div>
-
-      <div class="mk-card">
-        <div class="mk-card-icon">2</div>
-        <h3>Use the right studio</h3>
-        <p>Move into the workflow that matches the kind of planning you need to do next.</p>
-      </div>
-
-      <div class="mk-card">
-        <div class="mk-card-icon">3</div>
-        <h3>Move with more confidence</h3>
-        <p>Use a clearer, more organized process to shape your strategy and next steps.</p>
-      </div>
-    </div>
-  </div>
-</section>
-
-<section class="mk-section">
-  <div class="mk-container">
-    <div class="mk-cta">
-      <div class="mk-kicker">See the full experience</div>
-      <h2 class="mk-title-lg">Use real screenshots here so the product speaks for itself.</h2>
-      <p>
-        The more actual platform images you place on this page, the faster Ravlo starts to feel like
-        a serious, living product instead of a concept.
-      </p>
-      <div class="mk-cta-actions">
-        <a href="{{ url_for('marketing.enter') }}" class="mk-btn mk-btn-primary">Enter Ravlo</a>
-        <a href="{{ url_for('marketing.contact') }}" class="mk-btn mk-btn-ghost">Contact Us</a>
-      </div>
-    </div>
-  </div>
-</section>
-
-{% endblock %}
+              <
