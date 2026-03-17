@@ -1,0 +1,25 @@
+{% extends "layouts/ravlo_base.html" %}
+
+{% block title %}Confirm Subscription{% endblock %}
+
+{% block content %}
+<div class="ravlo-shell">
+  <section class="ravlo-card" style="max-width:720px; margin:auto;">
+    <h2>Confirm {{ selected_tier }} Plan</h2>
+    <p class="muted">
+      This is a test subscription flow for now. Payment integration will be added later.
+    </p>
+
+    <form method="POST" action="{{ url_for('partners.confirm_subscription', tier=selected_tier) }}">
+      <div style="margin-top:18px;">
+        <button type="submit" class="ravlo-btn">
+          Confirm {{ selected_tier }}
+        </button>
+        <a href="{{ url_for('partners.billing') }}" class="ravlo-btn ghost">
+          Cancel
+        </a>
+      </div>
+    </form>
+  </section>
+</div>
+{% endblock %}
