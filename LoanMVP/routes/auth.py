@@ -224,16 +224,17 @@ def logout():
 @csrf.exempt
 def register():
     form = RegisterForm()
-    
-    existing = User.query.filter_by(email=form.email.data.lower()).first()
-    if existing:
-        flash("An account with that email already exists.", "danger")
-        return render_template("auth/register.html", form=form)
 
     if form.validate_on_submit():
         role = (form.role.data or "").strip().lower()
-
         full_name = (form.full_name.data or "").strip()
+        email = (form.email.data or "").strip().lower()
+
+        existing = User.query.filter_by(email=email).first()
+        if existing:
+            flash("An account with that email already exists.", "danger")
+            return render_template("auth/register.html", form=form)
+
         parts = full_name.split(None, 1)
         first_name = parts[0] if parts else ""
         last_name = parts[1] if len(parts) > 1 else ""
@@ -242,7 +243,7 @@ def register():
             first_name=first_name or None,
             last_name=last_name or None,
             username=full_name or None,
-            email=(form.email.data or "").strip().lower(),
+            email=email,
             role=role,
             is_active=True,
         )
@@ -252,23 +253,24 @@ def register():
         db.session.add(user)
         db.session.commit()
 
-        # 🔐 log them in automatically
         login_user(user)
 
         flash("Welcome to Ravlo. Let's set up your profile.", "info")
 
-        # 👇 send investors to profile creation
         if role == "investor":
             return redirect(url_for("investor.create_profile"))
 
         return redirect(url_for("auth.post_login_redirect"))
 
+    if request.method == "POST":
+        flash("Please correct the errors in the form.", "danger")
+
     return render_template("auth/register.html", form=form)
-    
+
+
 @auth_bp.route("/post-login-redirect")
 @login_required
 def post_login_redirect():
-
     if current_user.role == "investor":
         profile = InvestorProfile.query.filter_by(user_id=current_user.id).first()
 
