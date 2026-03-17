@@ -163,7 +163,7 @@ def register():
                 status="Active",
                 approved=False,
                 featured=False,
-                subscription_tier="Free",
+                subscription_tier="Premium",
             )
             db.session.add(partner)
 
