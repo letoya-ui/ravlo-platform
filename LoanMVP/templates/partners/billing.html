@@ -1,36 +1,55 @@
-{% extends "layouts/ravlo_base.html" %}
+@partners_bp.route("/billing")
+@role_required("partner")
+def billing():
+    partner = Partner.query.filter_by(user_id=current_user.id).first()
+    if not partner:
+        flash("Partner profile not found.", "warning")
+        return redirect(url_for("partners.register"))
 
-{% block page_title %}Billing{% endblock %}
-{% block page_subline %}Manage your partner subscription, plan, and payments.{% endblock %}
+    plans = [
+        {
+            "name": "Free",
+            "price": "$0",
+            "features": [
+                "Basic partner profile",
+                "Starter marketplace presence",
+                "Limited access"
+            ]
+        },
+        {
+            "name": "Featured",
+            "price": "$49/mo",
+            "features": [
+                "Featured marketplace listing",
+                "More visibility",
+                "Partner request inbox access"
+            ]
+        },
+        {
+            "name": "Premium",
+            "price": "$99/mo",
+            "features": [
+                "Premium workspace access",
+                "Priority placement",
+                "Advanced partner tools"
+            ]
+        },
+        {
+            "name": "Enterprise",
+            "price": "Custom",
+            "features": [
+                "Full partner suite",
+                "High-priority support",
+                "Custom onboarding"
+            ]
+        },
+    ]
 
-{% block content %}
-<div class="ravlo-grid">
-  <section class="ravlo-hero-card">
-    <div class="eyebrow">PARTNER BILLING</div>
-    <h2>Subscription & Account Billing</h2>
-    <p class="muted">
-      Manage your listing tier, active subscription, invoices, and payment method.
-    </p>
-  </section>
-
-  <section class="ravlo-grid-3">
-    <div class="ravlo-card pad">
-      <div class="ravlo-kicker">Current Plan</div>
-      <h3>{{ partner.subscription_tier or "Standard" }}</h3>
-      <p class="muted">Your current marketplace visibility and access tier.</p>
-    </div>
-
-    <div class="ravlo-card pad">
-      <div class="ravlo-kicker">Listing Status</div>
-      <h3>{{ "Active" if partner.approved else "Pending" }}</h3>
-      <p class="muted">Approval and marketplace status for your partner profile.</p>
-    </div>
-
-    <div class="ravlo-card pad">
-      <div class="ravlo-kicker">Next Step</div>
-      <h3>Upgrade Available</h3>
-      <p class="muted">Move to Featured or Premium for more visibility and workspace tools.</p>
-    </div>
-  </section>
-</div>
-{% endblock %}
+    return render_template(
+        "partners/billing.html",
+        partner=partner,
+        plans=plans,
+        portal="partner",
+        page_title="Billing",
+        page_subline="Manage your Ravlo Partner plan."
+    )
