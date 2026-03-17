@@ -72,7 +72,7 @@
       <span>Tasks</span>
     </a>
 
-    <a href="{{ url_for('loan_officer.request_documents' borrower_id=borrower.id) }}"
+    <a href="{{ url_for('loan_officer.request_documents', borrower_id=borrower.id) }}"
        class="ravlo-nav-link {% if ep == 'loan_officer.request_documents' %}active{% endif %}">
       <i class="lucide lucide-folder"></i>
       <span>Documents</span>
