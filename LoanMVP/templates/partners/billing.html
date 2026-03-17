@@ -42,71 +42,7 @@
             {% endfor %}
           </ul>
         </div>
-                     {% extends "layouts/ravlo_base.html" %}
 
-{% block title %}Ravlo • Partner Billing{% endblock %}
-
-{% block page_title %}Billing{% endblock %}
-{% block page_subline %}Manage your Ravlo Partner subscription and unlock more tools.{% endblock %}
-
-{% block content %}
-<div class="ravlo-shell">
-
-  <section class="ravlo-card">
-    <div style="display:flex; justify-content:space-between; align-items:center; gap:16px; flex-wrap:wrap;">
-      <div>
-        <div class="eyebrow">CURRENT PLAN</div>
-        <h3 style="margin:6px 0 4px;">{{ partner.subscription_tier or 'Free' }}</h3>
-        <p class="muted" style="margin:0;">
-          This is your current subscription tier for Partner OS.
-        </p>
-      </div>
-
-      <div>
-        {% if partner.featured %}
-          <span class="ravlo-badge success">Featured Active</span>
-        {% else %}
-          <span class="ravlo-badge">Standard Access</span>
-        {% endif %}
-      </div>
-    </div>
-  </section>
-
-  <section class="ravlo-grid ravlo-grid-3" style="align-items:stretch;">
-    {% for plan in plans %}
-      <article class="ravlo-card" style="display:flex; flex-direction:column; justify-content:space-between; gap:18px;">
-        <div>
-          <div class="eyebrow">{{ plan.name|upper }}</div>
-          <h3 style="margin:8px 0 6px;">{{ plan.name }}</h3>
-          <div style="font-size:1.4rem; font-weight:800; margin-bottom:12px;">{{ plan.price }}</div>
-
-          <ul style="margin:0; padding-left:18px; color:var(--muted, #94a3b8);">
-            {% for feature in plan.features %}
-              <li style="margin-bottom:8px;">{{ feature }}</li>
-            {% endfor %}
-          </ul>
-        </div>
-
-        <div>
-          {% if (partner.subscription_tier or 'Free') == plan.name %}
-            <button class="ravlo-btn ghost" disabled>Current Plan</button>
-          {% else %}
-            <a href="{{ url_for('partners.subscribe', tier=plan.name) }}" class="ravlo-btn">
-              Select {{ plan.name }}
-            </a>
-          {% endif %}
-        </div>
-      </article>
-    {% endfor %}
-  </section>
-
-</div>
-{% endblock %}{% if config.FREE_PARTNER_MODE %}
-  <div class="ravlo-card" style="border:1px solid rgba(122,184,255,.25);">
-    <strong>🚧 Test Mode Active</strong><br>
-    All partner features are currently unlocked. Billing is not active yet.
-  </div>
-{% endif %}
         <div>
           {% if (partner.subscription_tier or 'Free') == plan.name %}
             <button class="ravlo-btn ghost" disabled>Current Plan</button>
