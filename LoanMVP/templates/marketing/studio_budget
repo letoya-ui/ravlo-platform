@@ -28,7 +28,7 @@
             <span class="mk-device-dot"></span>
             <span class="mk-device-dot"></span>
           </div>
-          <img src="{{ url_for('static', filename=hero_image or 'images/marketing/studios/budget_studio.jpg') }}" alt="Budget Studio preview">
+          <img src="{{ url_for('static', filename=hero_image or 'images/studios/budget_studio.jpg') }}" alt="Budget Studio preview">
         </div>
       </div>
 
@@ -75,7 +75,7 @@
   <div class="mk-container">
     <div class="mk-split-panel">
       <div class="mk-card mk-media-card">
-        <img src="{{ url_for('static', filename='images/marketing/studios/budget_studio.jpg') }}" alt="Budget Studio dashboard">
+        <img src="{{ url_for('static', filename='images/studios/budget_studio.jpg') }}" alt="Budget Studio dashboard">
         <div class="mk-media-copy">
           <h3>Budget Dashboard</h3>
           <p>Show category totals, estimated vs actual costs, paid amounts, and budget health in one place.</p>
