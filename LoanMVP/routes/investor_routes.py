@@ -6375,11 +6375,21 @@ def rehab_budget_tracker(deal_id):
 
     if not budget:
         budget = ProjectBudget(
+            borrower_profile_id=None,
+            investor_profile_id=ip.id,
+            loan_app_id=None,
+            deal_id=deal.id,
+            build_project_id=None,
+            budget_type="rehab",
             name=f"Rehab Budget - {deal.title or deal.address or f'Deal #{deal.id}'}",
             project_name=deal.title or deal.address,
-            budget_type="rehab",
-            investor_profile_id=ip.id,
-            deal_id=deal.id,
+            total_amount=0.0,
+            total_budget=0.0,
+            total_cost=0.0,
+            materials_cost=0.0,
+            labor_cost=0.0,
+            contingency=0.0,
+            paid_amount=0.0,
             notes="Auto-created rehab budget."
         )
         db.session.add(budget)
@@ -6450,11 +6460,21 @@ def build_budget_tracker(project_id):
 
     if not budget:
         budget = ProjectBudget(
+            borrower_profile_id=None,
+            investor_profile_id=ip.id,
+            loan_app_id=None,
+            deal_id=None,
+            build_project_id=project.id,
+            budget_type="build",
             name=f"Build Budget - {getattr(project, 'project_name', None) or getattr(project, 'name', None) or f'Project #{project.id}'}",
             project_name=getattr(project, "project_name", None) or getattr(project, "name", None),
-            budget_type="build",
-            investor_profile_id=ip.id,
-            build_project_id=project.id,
+            total_amount=0.0,
+            total_budget=0.0,
+            total_cost=0.0,
+            materials_cost=0.0,
+            labor_cost=0.0,
+            contingency=0.0,
+            paid_amount=0.0,
             notes="Auto-created build budget."
         )
         db.session.add(budget)
