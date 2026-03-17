@@ -5,9 +5,11 @@
 {% block page_subline %}Explore development potential and shape a build concept inside Ravlo.{% endblock %}
 
 {% block topbar_actions %}
-  <a class="ravlo-btn ghost sm" href="{{ url_for('investor.deal_detail', deal_id=deal.id) }}">Deal Workspace</a>
-  <a class="ravlo-btn ghost sm" href="{{ url_for('investor.deal_architect', deal_id=deal.id) }}">Deal Architect</a>
-  <a class="ravlo-btn ghost sm" href="{{ url_for('investor.budget_studio', deal_id=deal.id) }}">Budget Studio</a>
+  {% if deal %}
+    <a class="ravlo-btn ghost sm" href="{{ url_for('investor.deal_detail', deal_id=deal.id) }}">Deal Workspace</a>
+    <a class="ravlo-btn ghost sm" href="{{ url_for('investor.deal_architect', deal_id=deal.id) }}">Deal Architect</a>
+    <a class="ravlo-btn ghost sm" href="{{ url_for('investor.budget_studio', deal_id=deal.id) }}">Budget Studio</a>
+  {% endif %}
 {% endblock %}
 
 {% block content %}
@@ -363,25 +365,33 @@
   }
 </style>
 
-{% set build_preview = ((deal.results_json or {}).get("build_preview_url") if deal else "") or "" %}
-{% set build_analysis = ((deal.results_json or {}).get("build_analysis") if deal else {}) or {} %}
+{% set build_preview = build_preview or "" %}
+{% set build_analysis = build_analysis or {} %}
+{% set build_mockups = build_mockups or [] %}
 
 <div class="studio-wrap">
 
   <div class="studio-hero">
     <div>
-      <div class="episode-tag">🏗 BUILD STUDIO • DEAL #{{ deal.id }}</div>
-      <h2 class="hero-title">{{ deal.title or ('Deal #' ~ deal.id) }}</h2>
+      <div class="episode-tag">
+        🏗 BUILD STUDIO
+        {% if deal %}• DEAL #{{ deal.id }}{% endif %}
+      </div>
+      <h2 class="hero-title">
+        {% if deal %}{{ deal.title or ('Deal #' ~ deal.id) }}{% else %}Build Studio{% endif %}
+      </h2>
       <div class="hero-sub">
         Explore development potential, shape a concept, and move the build plan into budget control.
       </div>
     </div>
 
     <div class="hero-actions">
-      <a class="btn btn-secondary" href="{{ url_for('investor.deal_detail', deal_id=deal.id) }}">🗂 Deal Workspace</a>
-      <a class="btn btn-secondary" href="{{ url_for('investor.deal_architect', deal_id=deal.id) }}">🧠 Deal Architect</a>
-      <a class="btn btn-secondary" href="{{ url_for('investor.deal_rehab', deal_id=deal.id) }}">🎬 Renovation Studio</a>
-      <a class="btn btn-success" href="{{ url_for('investor.budget_studio', deal_id=deal.id) }}">💰 Budget Studio</a>
+      {% if deal %}
+        <a class="btn btn-secondary" href="{{ url_for('investor.deal_detail', deal_id=deal.id) }}">🗂 Deal Workspace</a>
+        <a class="btn btn-secondary" href="{{ url_for('investor.deal_architect', deal_id=deal.id) }}">🧠 Deal Architect</a>
+        <a class="btn btn-secondary" href="{{ url_for('investor.deal_rehab', deal_id=deal.id) }}">🎬 Renovation Studio</a>
+        <a class="btn btn-success" href="{{ url_for('investor.budget_studio', deal_id=deal.id) }}">💰 Budget Studio</a>
+      {% endif %}
     </div>
   </div>
 
@@ -394,6 +404,11 @@
 
         <div class="row">
           <div>
+            <label class="muted" style="display:block;margin-bottom:.35rem;">Project Name</label>
+            <input id="projectName" class="input" placeholder="e.g. Ravlo Estates Concept">
+          </div>
+
+          <div>
             <label class="muted" style="display:block;margin-bottom:.35rem;">Property Type</label>
             <select id="propertyType" class="input">
               <option value="single_family">Single Family</option>
@@ -404,29 +419,17 @@
               <option value="mixed_use">Mixed Use</option>
             </select>
           </div>
-
-          <div>
-            <label class="muted" style="display:block;margin-bottom:.35rem;">Stories</label>
-            <input id="stories" class="input" type="number" min="1" max="6" placeholder="e.g. 2">
-          </div>
         </div>
 
         <div class="row" style="margin-top:.85rem;">
           <div>
-            <label class="muted" style="display:block;margin-bottom:.35rem;">Bedrooms</label>
-            <input id="bedrooms" class="input" type="number" min="0" placeholder="e.g. 4">
-          </div>
-
-          <div>
-            <label class="muted" style="display:block;margin-bottom:.35rem;">Bathrooms</label>
-            <input id="bathrooms" class="input" type="number" min="0" step="0.5" placeholder="e.g. 3.5">
-          </div>
-        </div>
-
-        <div class="row" style="margin-top:.85rem;">
-          <div>
-            <label class="muted" style="display:block;margin-bottom:.35rem;">Square Feet Target</label>
-            <input id="squareFeet" class="input" type="number" min="0" placeholder="e.g. 2800">
+            <label class="muted" style="display:block;margin-bottom:.35rem;">Style</label>
+            <select id="style" class="input">
+              <option value="modern_farmhouse">Modern Farmhouse</option>
+              <option value="modern_luxury">Modern Luxury</option>
+              <option value="contemporary">Contemporary</option>
+              <option value="traditional">Traditional</option>
+            </select>
           </div>
 
           <div>
@@ -442,13 +445,16 @@
           </div>
 
           <div>
-            <label class="muted" style="display:block;margin-bottom:.35rem;">Exterior Material</label>
-            <input id="exteriorMaterial" class="input" placeholder="e.g. Hardie + stone accents">
+            <label class="muted" style="display:block;margin-bottom:.35rem;">Location</label>
+            <input id="location" class="input" placeholder="e.g. Tampa, FL">
           </div>
         </div>
 
         <label class="muted" style="display:block;margin-top:.85rem;margin-bottom:.35rem;">Build Description</label>
-        <textarea id="buildDescription" class="input" placeholder="Describe the concept, style, layout, and development direction..."></textarea>
+        <textarea id="description" class="input" placeholder="Describe the concept, style, layout, and development direction..."></textarea>
+
+        <label class="muted" style="display:block;margin-top:.85rem;margin-bottom:.35rem;">Optional Land Image</label>
+        <input id="landImage" class="input" type="file" accept="image/*">
 
         <div class="action-row" style="margin-top:14px;">
           <button class="btn" type="button" onclick="generateBuildConcept()">✨ Generate Build Concept</button>
@@ -473,46 +479,47 @@
         <h3>Build Concept Preview</h3>
 
         {% if build_preview %}
-          <img id="buildPreviewImg" class="preview-img" src="{{ build_preview }}" alt="Build concept preview">
+          <img id="buildPreviewImg" class="preview-img" src="data:image/webp;base64,{{ build_preview }}" alt="Build concept preview">
         {% else %}
           <div id="buildPreviewEmpty" class="placeholder">Generate a build concept to preview the direction.</div>
           <img id="buildPreviewImg" class="preview-img" src="" alt="Build concept preview" style="display:none;">
         {% endif %}
 
         <div class="action-row" style="margin-top:14px;">
-          <button id="saveBuildBtn" class="btn btn-secondary" type="button" style="display:none;" onclick="saveBuildToDeal()">
-            💾 Save to Deal
+          <button id="saveBuildBtn" class="btn btn-secondary" type="button" style="display:none;" onclick="saveBuildToProject()">
+            💾 Save Build Project
           </button>
 
+          {% if deal %}
           <a id="budgetBuildBtn" class="btn btn-success" href="{{ url_for('investor.budget_studio', deal_id=deal.id) }}" style="display:none;">
             💰 Send to Budget
           </a>
+          {% endif %}
         </div>
       </div>
 
       <div class="card">
         <h3>Recent Build Concepts</h3>
 
-        {% set build_mockups = ((deal.results_json or {}).get("build_mockups") if deal else []) or [] %}
         {% if build_mockups %}
           <div class="thumb-grid" id="existingBuildGrid">
             {% for m in build_mockups %}
               <div class="thumb">
                 <img
                   class="img"
-                  src="{{ m.preview_url }}"
+                  src="data:image/webp;base64,{{ m }}"
                   alt="Build mockup"
                   style="cursor:pointer;"
-                  onclick="selectBuildPreview('{{ m.preview_url }}')"
+                  onclick="selectBuildPreview('data:image/webp;base64,{{ m }}')"
                 >
 
                 <div class="thumb-meta">
-                  <span class="chip">{{ m.style or 'Build Concept' }}</span>
-                  <small class="muted">{{ m.created_at if m.created_at else '' }}</small>
+                  <span class="chip">Build Concept</span>
+                  <small class="muted">saved</small>
                 </div>
 
                 <div class="action-row" style="margin-top:.7rem;">
-                  <button class="btn pick" type="button" onclick="selectBuildPreview('{{ m.preview_url }}')">
+                  <button class="btn pick" type="button" onclick="selectBuildPreview('data:image/webp;base64,{{ m }}')">
                     👀 Preview
                   </button>
                 </div>
@@ -529,6 +536,7 @@
       <div class="card">
         <h3>Continue Workflow</h3>
         <div class="workflow-grid">
+          {% if deal %}
           <a href="{{ url_for('investor.deal_architect', deal_id=deal.id) }}" class="workflow-card">
             <h4>Deal Architect</h4>
             <p>Go back to strategy, numbers, and highest-best-use logic.</p>
@@ -543,6 +551,7 @@
             <h4>Budget Studio</h4>
             <p>Track projected development cost and control execution.</p>
           </a>
+          {% endif %}
         </div>
       </div>
 
@@ -551,19 +560,20 @@
 </div>
 
 <script>
-  let CURRENT_BUILD_PREVIEW = "{{ build_preview }}";
+  let CURRENT_BUILD_PREVIEW = document.getElementById("buildPreviewImg")?.src || "";
 
-  function buildPayload() {
+  function formPayload() {
     return {
+      deal_id: "{{ deal.id if deal else '' }}",
+      project_name: (document.getElementById("projectName")?.value || "").trim(),
       property_type: document.getElementById("propertyType")?.value || "single_family",
-      stories: parseInt(document.getElementById("stories")?.value || "0", 10) || null,
-      bedrooms: parseInt(document.getElementById("bedrooms")?.value || "0", 10) || null,
-      bathrooms: parseFloat(document.getElementById("bathrooms")?.value || "0") || null,
-      square_feet_target: parseInt(document.getElementById("squareFeet")?.value || "0", 10) || null,
+      style: document.getElementById("style")?.value || "modern_farmhouse",
+      description: (document.getElementById("description")?.value || "").trim(),
       lot_size: (document.getElementById("lotSize")?.value || "").trim(),
       zoning: (document.getElementById("zoning")?.value || "").trim(),
-      exterior_material: (document.getElementById("exteriorMaterial")?.value || "").trim(),
-      build_description: (document.getElementById("buildDescription")?.value || "").trim()
+      location: (document.getElementById("location")?.value || "").trim(),
+      notes: "",
+      save_to_deal: "true"
     };
   }
 
@@ -572,13 +582,24 @@
     status.textContent = "Generating build concept…";
 
     try {
-      const payload = buildPayload();
+      const fd = new FormData();
+      const payload = formPayload();
 
-      const res = await fetch("{{ url_for('investor.build_concept_generate', deal_id=deal.id) }}", {
+      Object.entries(payload).forEach(([k, v]) => fd.append(k, v));
+
+      const file = document.getElementById("landImage")?.files?.[0];
+      if (file) {
+        fd.append("land_image", file);
+      }
+
+      const endpoint = file
+        ? "{{ url_for('investor.generate_build_studio_upload') }}"
+        : "{{ url_for('investor.generate_build_studio') }}";
+
+      const res = await fetch(endpoint, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify(payload)
+        body: fd,
+        credentials: "include"
       });
 
       const data = await res.json();
@@ -588,12 +609,13 @@
         return;
       }
 
-      const previewUrl = data.preview_url || data.image_url || "";
-      if (!previewUrl) {
+      const images = Array.isArray(data.images) ? data.images : [];
+      if (!images.length) {
         status.textContent = "No build image returned.";
         return;
       }
 
+      const previewUrl = "data:image/webp;base64," + images[0];
       status.textContent = "Build concept generated successfully.";
       renderBuildPreview(previewUrl);
       renderBuildThumb(previewUrl, payload.property_type || "Concept");
@@ -608,7 +630,7 @@
     box.innerHTML = "Analyzing build scope...";
 
     try {
-      const payload = buildPayload();
+      const payload = formPayload();
 
       const res = await fetch("{{ url_for('investor.ai_build_scope') }}", {
         method: "POST",
@@ -665,7 +687,7 @@
     img.src = previewUrl;
     img.style.display = "block";
     saveBtn.style.display = "inline-flex";
-    budgetBtn.style.display = "inline-flex";
+    if (budgetBtn) budgetBtn.style.display = "inline-flex";
   }
 
   function selectBuildPreview(previewUrl) {
@@ -695,34 +717,45 @@
     grid.prepend(div);
   }
 
-  async function saveBuildToDeal() {
+  async function saveBuildToProject() {
     if (!CURRENT_BUILD_PREVIEW) {
       alert("Generate or select a build preview first.");
       return;
     }
 
     try {
-      const res = await fetch("{{ url_for('investor.save_build_preview', deal_id=deal.id) }}", {
+      const payload = formPayload();
+      const res = await fetch("{{ url_for('investor.save_build_studio') }}", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
         body: JSON.stringify({
-          preview_url: CURRENT_BUILD_PREVIEW,
-          build_inputs: buildPayload()
+          deal_id: payload.deal_id,
+          project_name: payload.project_name,
+          property_type: payload.property_type,
+          description: payload.description,
+          lot_size: payload.lot_size,
+          zoning: payload.zoning,
+          location: payload.location,
+          notes: payload.notes,
+          concept_render_url: CURRENT_BUILD_PREVIEW,
+          blueprint_url: "",
+          site_plan_url: "",
+          presentation_url: ""
         })
       });
 
       const data = await res.json();
 
       if (data.status !== "ok") {
-        alert(data.message || "Could not save build preview.");
+        alert(data.message || "Could not save build project.");
         return;
       }
 
-      alert("Build preview saved to deal.");
+      alert("Build project saved.");
     } catch (err) {
       console.error(err);
-      alert("Could not save build preview.");
+      alert("Could not save build project.");
     }
   }
 </script>
