@@ -6525,8 +6525,9 @@ def build_budget_tracker(project_id):
         page_subtitle="Track projected vs actual construction spend."
     )
 
-@investor_bp.route("/ai/deal-insight", methods=["POST"])
+
 @investor_bp.route("/ai_deal_insight", methods=["POST"])
+@csrf.exempt
 @login_required
 @role_required("investor")
 def ai_deal_insight():

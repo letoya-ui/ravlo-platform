@@ -1,0 +1,392 @@
+{% extends "layouts/ravlo_base.html" %}
+{% block title %}Ravlo • Build Budget Tracker{% endblock %}
+
+{% block page_title %}Build Budget Tracker{% endblock %}
+{% block page_subline %}
+Track projected vs actual construction spend for this build project.
+{% endblock %}
+
+{% block topbar_actions %}
+  <a href="{{ url_for('investor.build_projects') }}" class="ravlo-btn ghost sm">
+    Build Projects
+  </a>
+  <a href="{{ url_for('investor.budget_studio') }}" class="ravlo-btn ghost sm">
+    Budget Studio
+  </a>
+{% endblock %}
+
+{% block content %}
+<style>
+  .budget-wrap{display:grid;gap:20px;}
+  .budget-hero{
+    border-radius:24px;
+    padding:22px;
+    border:1px solid rgba(255,255,255,.08);
+    background:
+      radial-gradient(900px 420px at 10% 10%, rgba(110,168,255,.16), transparent 55%),
+      rgba(255,255,255,.03);
+    display:grid;
+    gap:14px;
+  }
+  .budget-hero-top{
+    display:flex;
+    justify-content:space-between;
+    gap:18px;
+    align-items:flex-start;
+    flex-wrap:wrap;
+  }
+  .budget-hero h2{
+    margin:0;
+    font-size:1.4rem;
+  }
+  .muted{color:rgba(255,255,255,.68);}
+  .eyebrow{
+    display:inline-flex;
+    align-items:center;
+    gap:.45rem;
+    padding:.4rem .7rem;
+    border-radius:999px;
+    font-size:.75rem;
+    font-weight:700;
+    letter-spacing:.08em;
+    text-transform:uppercase;
+    color:#8bb8ff;
+    background:rgba(91,141,239,.12);
+    border:1px solid rgba(139,184,255,.18);
+    margin-bottom:10px;
+  }
+  .stats-grid{
+    display:grid;
+    grid-template-columns:repeat(6, minmax(0,1fr));
+    gap:14px;
+  }
+  .stat-card{
+    border-radius:20px;
+    padding:16px;
+    border:1px solid rgba(255,255,255,.08);
+    background:rgba(10,16,30,.48);
+    min-height:108px;
+  }
+  .stat-label{
+    color:rgba(255,255,255,.62);
+    font-size:.82rem;
+    margin-bottom:8px;
+  }
+  .stat-value{
+    font-size:1.3rem;
+    font-weight:800;
+    line-height:1.1;
+  }
+  .stat-sub{
+    margin-top:8px;
+    color:rgba(255,255,255,.56);
+    font-size:.82rem;
+  }
+
+  .budget-grid{
+    display:grid;
+    grid-template-columns:380px minmax(0,1fr);
+    gap:20px;
+    align-items:start;
+  }
+
+  .panel{
+    border-radius:22px;
+    padding:20px;
+    border:1px solid rgba(255,255,255,.08);
+    background:rgba(255,255,255,.03);
+    box-shadow:0 10px 30px rgba(0,0,0,.18);
+  }
+  .panel h3{
+    margin:0 0 6px;
+    font-size:1.05rem;
+  }
+  .panel p{
+    margin:0 0 16px;
+    color:rgba(255,255,255,.66);
+  }
+
+  .form-grid{
+    display:grid;
+    gap:12px;
+  }
+  .form-row-2{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:12px;
+  }
+  .field{
+    display:grid;
+    gap:7px;
+  }
+  .field label{
+    font-size:.88rem;
+    color:rgba(255,255,255,.75);
+    font-weight:600;
+  }
+  .field input,
+  .field select,
+  .field textarea{
+    width:100%;
+    border-radius:14px;
+    border:1px solid rgba(255,255,255,.1);
+    background:rgba(255,255,255,.04);
+    color:#fff;
+    padding:12px 13px;
+    outline:none;
+  }
+  .field textarea{
+    min-height:96px;
+    resize:vertical;
+  }
+
+  .ravlo-btn{
+    appearance:none;
+    border:none;
+    cursor:pointer;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    gap:.5rem;
+    border-radius:14px;
+    padding:.85rem 1rem;
+    font-weight:700;
+    text-decoration:none;
+  }
+  .ravlo-btn.primary{
+    background:linear-gradient(135deg, #6ea8ff, #3e6df6);
+    color:#fff;
+  }
+  .ravlo-btn.ghost{
+    background:rgba(255,255,255,.06);
+    color:#fff;
+    border:1px solid rgba(255,255,255,.08);
+  }
+  .ravlo-btn.sm{
+    padding:.62rem .9rem;
+    border-radius:12px;
+    font-size:.92rem;
+  }
+
+  .table-wrap{
+    overflow:auto;
+    border-radius:18px;
+    border:1px solid rgba(255,255,255,.08);
+  }
+  table{
+    width:100%;
+    border-collapse:collapse;
+    min-width:900px;
+  }
+  thead th{
+    text-align:left;
+    font-size:.82rem;
+    letter-spacing:.03em;
+    color:rgba(255,255,255,.65);
+    background:rgba(255,255,255,.04);
+    padding:13px 14px;
+    border-bottom:1px solid rgba(255,255,255,.08);
+  }
+  tbody td{
+    padding:14px;
+    border-bottom:1px solid rgba(255,255,255,.06);
+    vertical-align:top;
+  }
+  tbody tr:hover{
+    background:rgba(255,255,255,.03);
+  }
+
+  .badge{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    padding:.35rem .65rem;
+    border-radius:999px;
+    font-size:.78rem;
+    font-weight:700;
+    background:rgba(91,141,239,.16);
+    color:#bdd3ff;
+  }
+
+  .empty-state{
+    text-align:center;
+    padding:42px 18px;
+    border-radius:20px;
+    border:1px dashed rgba(255,255,255,.12);
+    color:rgba(255,255,255,.68);
+  }
+
+  @media (max-width: 1180px){
+    .stats-grid{grid-template-columns:repeat(3, minmax(0,1fr));}
+    .budget-grid{grid-template-columns:1fr;}
+  }
+  @media (max-width: 760px){
+    .stats-grid{grid-template-columns:repeat(2, minmax(0,1fr));}
+    .form-row-2{grid-template-columns:1fr;}
+  }
+</style>
+
+<div class="budget-wrap">
+
+  <section class="budget-hero">
+    <div class="budget-hero-top">
+      <div>
+        <div class="eyebrow">Build Budget</div>
+        <h2>{{ project.project_name or project.name or ("Project #" ~ project.id) }}</h2>
+        <div class="muted">
+          {{ budget.name }}{% if budget.project_name %} • {{ budget.project_name }}{% endif %}
+        </div>
+      </div>
+
+      <div>
+        <span class="badge">{{ budget.budget_type|title }}</span>
+      </div>
+    </div>
+
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-label">Estimated Total</div>
+        <div class="stat-value">${{ "{:,.2f}".format(summary.estimated_total or 0) }}</div>
+        <div class="stat-sub">Projected construction cost</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Actual Total</div>
+        <div class="stat-value">${{ "{:,.2f}".format(summary.actual_total or 0) }}</div>
+        <div class="stat-sub">Actual recorded spend</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Paid Total</div>
+        <div class="stat-value">${{ "{:,.2f}".format(summary.paid_total or 0) }}</div>
+        <div class="stat-sub">Amount already disbursed</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Contingency</div>
+        <div class="stat-value">${{ "{:,.2f}".format(summary.contingency or 0) }}</div>
+        <div class="stat-sub">Reserve for overages</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Total Budget</div>
+        <div class="stat-value">${{ "{:,.2f}".format(summary.total_budget or 0) }}</div>
+        <div class="stat-sub">Estimated + contingency</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Remaining Balance</div>
+        <div class="stat-value">${{ "{:,.2f}".format(summary.remaining_balance or 0) }}</div>
+        <div class="stat-sub">Construction budget available</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="budget-grid">
+    <aside class="panel">
+      <h3>Add Build Expense</h3>
+      <p>Add a construction line item to track labor, materials, and draw activity.</p>
+
+      <form method="POST" class="form-grid">
+        <div class="form-row-2">
+          <div class="field">
+            <label>Category</label>
+            <input type="text" name="category" placeholder="Site Work, Framing, Roofing">
+          </div>
+          <div class="field">
+            <label>Status</label>
+            <select name="status">
+              <option value="planned">Planned</option>
+              <option value="quoted">Quoted</option>
+              <option value="ordered">Ordered</option>
+              <option value="in_progress">In Progress</option>
+              <option value="completed">Completed</option>
+              <option value="paid">Paid</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Description</label>
+          <input type="text" name="item_name" placeholder="Pour slab foundation and prep forms">
+        </div>
+
+        <div class="form-row-2">
+          <div class="field">
+            <label>Vendor</label>
+            <input type="text" name="vendor" placeholder="GC, sub, or supplier">
+          </div>
+          <div class="field">
+            <label>Paid Amount</label>
+            <input type="number" step="0.01" min="0" name="paid_amount" placeholder="0.00">
+          </div>
+        </div>
+
+        <div class="form-row-2">
+          <div class="field">
+            <label>Estimated Cost</label>
+            <input type="number" step="0.01" min="0" name="estimated_cost" placeholder="0.00">
+          </div>
+          <div class="field">
+            <label>Actual Cost</label>
+            <input type="number" step="0.01" min="0" name="actual_cost" placeholder="0.00">
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Notes</label>
+          <textarea name="notes" placeholder="Scope notes, phase details, vendor comments, draw notes..."></textarea>
+        </div>
+
+        <button type="submit" class="ravlo-btn primary">Add Build Expense</button>
+      </form>
+    </aside>
+
+    <section class="panel">
+      <h3>Construction Expense Ledger</h3>
+      <p>See each build phase line item and monitor estimate-to-actual variance.</p>
+
+      {% if items %}
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Category</th>
+                <th>Description</th>
+                <th>Vendor</th>
+                <th>Status</th>
+                <th>Estimated</th>
+                <th>Actual</th>
+                <th>Paid</th>
+                <th>Variance</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for item in items %}
+                {% set est = item.estimated_amount or 0 %}
+                {% set act = item.actual_amount or 0 %}
+                {% set variance = act - est %}
+                <tr>
+                  <td>{{ item.category or "General" }}</td>
+                  <td>
+                    <div style="font-weight:700;">{{ item.description or "Expense" }}</div>
+                    {% if item.notes %}
+                      <div class="muted" style="margin-top:5px;">{{ item.notes }}</div>
+                    {% endif %}
+                  </td>
+                  <td>{{ item.vendor or "—" }}</td>
+                  <td><span class="badge">{{ (item.status or "planned").replace("_", " ")|title }}</span></td>
+                  <td>${{ "{:,.2f}".format(est) }}</td>
+                  <td>${{ "{:,.2f}".format(act) }}</td>
+                  <td>${{ "{:,.2f}".format(item.paid_amount or 0) }}</td>
+                  <td>${{ "{:,.2f}".format(variance) }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <div class="empty-state">
+          <h4 style="margin:0 0 8px;">No build expenses yet</h4>
+          <div>Start by adding your first construction line item on the left.</div>
+        </div>
+      {% endif %}
+    </section>
+  </section>
+</div>
+{% endblock %}
