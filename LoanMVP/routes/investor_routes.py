@@ -4309,13 +4309,19 @@ def convert_build_project_to_deal(project_id):
 # 🧭 AI DEAL ARCHITECT
 # =========================================================
 
-@investor_bp.route("/deal-architect", methods=["GET"])
-@investor_bp.route("/deal-architect/<int:deal_id>", methods=["GET"])
+
+            
+
+@investor_bp.route("/deal-architect", methods=["GET", "POST"])
+@investor_bp.route("/deal-architect/<int:deal_id>", methods=["GET", "POST"])
 @login_required
 @role_required("investor")
 def deal_architect(deal_id=None):
     selected_deal = None
 
+    # -------------------------------------------------
+    # LOAD DEAL
+    # -------------------------------------------------
     if deal_id:
         selected_deal = Deal.query.filter_by(
             id=deal_id,
@@ -4329,6 +4335,9 @@ def deal_architect(deal_id=None):
                 user_id=current_user.id
             ).first()
 
+    # -------------------------------------------------
+    # DEFAULT VALUES
+    # -------------------------------------------------
     property_address = ""
     city = ""
     state = ""
@@ -4341,6 +4350,9 @@ def deal_architect(deal_id=None):
 
     strategy_analysis = {}
 
+    # -------------------------------------------------
+    # LOAD DEAL DATA
+    # -------------------------------------------------
     if selected_deal:
         property_address = (
             getattr(selected_deal, "property_address", None)
@@ -4356,26 +4368,36 @@ def deal_architect(deal_id=None):
             or getattr(selected_deal, "asset_type", None)
             or ""
         )
-        bedrooms = (
-            getattr(selected_deal, "bedrooms", None)
-            or getattr(selected_deal, "beds", None)
-        )
-        bathrooms = (
-            getattr(selected_deal, "bathrooms", None)
-            or getattr(selected_deal, "baths", None)
-        )
-        sqft = (
-            getattr(selected_deal, "square_feet", None)
-            or getattr(selected_deal, "sqft", None)
-        )
+        bedrooms = getattr(selected_deal, "bedrooms", None) or getattr(selected_deal, "beds", None)
+        bathrooms = getattr(selected_deal, "bathrooms", None) or getattr(selected_deal, "baths", None)
+        sqft = getattr(selected_deal, "square_feet", None) or getattr(selected_deal, "sqft", None)
         year_built = getattr(selected_deal, "year_built", None)
 
         strategy_analysis = _deal_results(selected_deal).get("strategy_analysis", {}) or {}
 
+    # -------------------------------------------------
+    # HANDLE FORM SUBMIT (POST)
+    # -------------------------------------------------
+    if request.method == "POST" and selected_deal:
+
+        selected_deal.purchase_price = request.form.get("purchase_price") or selected_deal.purchase_price
+        selected_deal.arv = request.form.get("arv") or selected_deal.arv
+        selected_deal.estimated_rent = request.form.get("estimated_rent") or selected_deal.estimated_rent
+        selected_deal.rehab_cost = request.form.get("rehab_cost") or selected_deal.rehab_cost
+        selected_deal.strategy = request.form.get("strategy") or selected_deal.strategy
+        selected_deal.notes = request.form.get("notes") or selected_deal.notes
+
+        db.session.commit()
+
+        return redirect(url_for("investor.deal_architect", deal_id=selected_deal.id))
+
+    # -------------------------------------------------
+    # RENDER
+    # -------------------------------------------------
     return render_template(
         "investor/deal_architect.html",
-        page_title="AI Deal Architect",
-        page_subtitle="Analyze the opportunity, score the risk, and shape the best strategy for the deal.",
+        page_title="Deal Architect",
+        page_subtitle="Analyze the opportunity, score the risk, and shape the best strategy.",
         deal=selected_deal,
         deal_id=selected_deal.id if selected_deal else None,
         property_address=property_address,
@@ -4389,8 +4411,7 @@ def deal_architect(deal_id=None):
         year_built=year_built,
         strategy_analysis=strategy_analysis,
     )
-
-
+    
 @investor_bp.route("/deal-architect/analyze", methods=["POST"])
 @csrf.exempt
 @login_required
