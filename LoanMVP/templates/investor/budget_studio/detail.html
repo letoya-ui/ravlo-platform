@@ -2,7 +2,7 @@
 
 {% block title %}Ravlo • {{ budget.name }}{% endblock %}
 {% block page_title %}{{ budget.name }}{% endblock %}
-{% block page_subline %}Track line-item spend, progress, and variance for this budget.{% endblock %}
+{% block page_subline %}Budget control center for this project.{% endblock %}
 
 {% block topbar_actions %}
   <a href="{{ url_for('investor.budget_studio') }}" class="ravlo-btn ghost sm">Back to Budget Studio</a>
@@ -22,19 +22,11 @@
     border-radius:22px;
     padding:1rem;
   }
-  .budget-stat{
-    font-size:1.45rem;
-    font-weight:800;
-    color:#f4f8ff;
-  }
-  .budget-label{
-    font-size:.78rem;
-    color:rgba(230,235,240,.68);
-    margin-bottom:.2rem;
-  }
-  .budget-meta-grid{
+  .budget-stat{font-size:1.45rem;font-weight:800;color:#f4f8ff;}
+  .budget-label{font-size:.78rem;color:rgba(230,235,240,.68);margin-bottom:.2rem;}
+  .budget-grid-2{
     display:grid;
-    grid-template-columns:1.2fr .8fr;
+    grid-template-columns:1.08fr .92fr;
     gap:1rem;
   }
   .budget-form-grid{
@@ -66,172 +58,209 @@
     background:rgba(255,255,255,.06);
     border:1px solid rgba(255,255,255,.08);
   }
+  .intel-grid{
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:.8rem;
+  }
+  .intel-card{
+    padding:.9rem;
+    border-radius:18px;
+    background:rgba(255,255,255,.03);
+    border:1px solid rgba(255,255,255,.08);
+  }
+  .intel-value{font-size:1.05rem;font-weight:800;color:#f4f8ff;}
+  .intel-note{margin-top:.35rem;font-size:.82rem;color:rgba(230,235,240,.66);line-height:1.45;}
+  .category-row{
+    display:grid;
+    grid-template-columns:1.2fr repeat(4,.8fr);
+    gap:.75rem;
+    padding:.85rem 0;
+    border-bottom:1px solid rgba(255,255,255,.08);
+    align-items:center;
+  }
+  .bar-wrap{
+    height:10px;
+    border-radius:999px;
+    background:rgba(255,255,255,.06);
+    overflow:hidden;
+    margin-top:.55rem;
+  }
+  .bar-fill{
+    height:100%;
+    border-radius:999px;
+    background:linear-gradient(90deg, rgba(95,160,255,.95), rgba(116,229,186,.95));
+  }
+  .muted-sm{font-size:.82rem;color:rgba(230,235,240,.66);}
   @media (max-width: 1200px){
     .budget-summary-grid{grid-template-columns:repeat(2,minmax(0,1fr));}
-    .budget-meta-grid,.budget-form-grid{grid-template-columns:1fr;}
+    .budget-grid-2,.budget-form-grid{grid-template-columns:1fr;}
+    .intel-grid{grid-template-columns:1fr;}
   }
 </style>
+
+{% set est = budget.estimated_subtotal or 0 %}
+{% set actual = budget.actual_total or 0 %}
+{% set paid = budget.paid_total or 0 %}
+{% set contingency = budget.contingency_amount or 0 %}
+{% set total_budget = budget.estimated_total_with_contingency or 0 %}
+{% set remaining = budget.remaining_balance or 0 %}
+{% set variance = actual - est %}
+{% set burn_rate = ((paid / total_budget) * 100) if total_budget > 0 else 0 %}
+{% set actual_vs_est = ((actual / est) * 100) if est > 0 else 0 %}
 
 <div class="budget-detail-wrap">
   <section class="budget-summary-grid">
     <div class="budget-panel">
       <div class="budget-label">Estimated</div>
-      <div class="budget-stat">${{ "{:,.2f}".format(budget.estimated_subtotal or 0) }}</div>
+      <div class="budget-stat">${{ "{:,.2f}".format(est) }}</div>
     </div>
     <div class="budget-panel">
       <div class="budget-label">Actual</div>
-      <div class="budget-stat">${{ "{:,.2f}".format(budget.actual_total or 0) }}</div>
+      <div class="budget-stat">${{ "{:,.2f}".format(actual) }}</div>
     </div>
     <div class="budget-panel">
       <div class="budget-label">Paid</div>
-      <div class="budget-stat">${{ "{:,.2f}".format(budget.paid_total or 0) }}</div>
+      <div class="budget-stat">${{ "{:,.2f}".format(paid) }}</div>
     </div>
     <div class="budget-panel">
       <div class="budget-label">Contingency</div>
-      <div class="budget-stat">${{ "{:,.2f}".format(budget.contingency_amount or 0) }}</div>
+      <div class="budget-stat">${{ "{:,.2f}".format(contingency) }}</div>
     </div>
     <div class="budget-panel">
       <div class="budget-label">Total Budget</div>
-      <div class="budget-stat">${{ "{:,.2f}".format(budget.estimated_total_with_contingency or 0) }}</div>
+      <div class="budget-stat">${{ "{:,.2f}".format(total_budget) }}</div>
     </div>
   </section>
 
-  <section class="budget-meta-grid">
+  <section class="budget-grid-2">
     <div class="budget-panel">
-      <div class="eyebrow">BUDGET DETAILS</div>
-      <h3 style="margin:.25rem 0 .45rem;">{{ budget.project_name or budget.name }}</h3>
+      <div class="eyebrow">PROJECT</div>
+      <h3 style="margin:.25rem 0 .4rem;">{{ budget.project_name or budget.name }}</h3>
+
       <div style="display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:.85rem;">
         <span class="budget-pill">{{ (budget.budget_type or "budget").replace("_"," ").title() }}</span>
         {% if budget.deal_id %}<span class="budget-pill">Deal Linked</span>{% endif %}
         {% if budget.build_project_id %}<span class="budget-pill">Build Linked</span>{% endif %}
       </div>
-      <p class="muted" style="margin:0;">
-        {{ budget.notes or "No notes added yet." }}
-      </p>
-    </div>
 
-    <div class="budget-panel">
-      <div class="budget-label">Remaining Balance</div>
-      <div class="budget-stat">${{ "{:,.2f}".format(budget.remaining_balance or 0) }}</div>
-      <div class="muted" style="margin-top:.45rem;">
-        Based on estimated total plus contingency minus paid amount.
-      </div>
-    </div>
-  </section>
-<section class="budget-panel">
-  <style>
-    .intel-grid{
-      display:grid;
-      grid-template-columns:repeat(4,minmax(0,1fr));
-      gap:1rem;
-    }
-    .intel-card{
-      padding:1rem;
-      border-radius:18px;
-      border:1px solid rgba(255,255,255,.08);
-      background:rgba(255,255,255,.03);
-    }
-    .intel-label{
-      font-size:.78rem;
-      color:rgba(230,235,240,.68);
-      margin-bottom:.25rem;
-    }
-    .intel-value{
-      font-size:1.15rem;
-      font-weight:800;
-      color:#f4f8ff;
-    }
-    .intel-note{
-      margin-top:.4rem;
-      font-size:.82rem;
-      color:rgba(230,235,240,.68);
-      line-height:1.45;
-    }
-    @media (max-width: 1200px){
-      .intel-grid{grid-template-columns:repeat(2,minmax(0,1fr));}
-    }
-    @media (max-width: 700px){
-      .intel-grid{grid-template-columns:1fr;}
-    }
-  </style>
-
-  {% set est = budget.estimated_subtotal or 0 %}
-  {% set actual = budget.actual_total or 0 %}
-  {% set paid = budget.paid_total or 0 %}
-  {% set contingency = budget.contingency_amount or 0 %}
-  {% set total_budget = budget.estimated_total_with_contingency or 0 %}
-  {% set variance = actual - est %}
-  {% set burn_rate = ((paid / total_budget) * 100) if total_budget > 0 else 0 %}
-
-  <div class="eyebrow">BUDGET INTELLIGENCE</div>
-  <h3 style="margin:.25rem 0 .9rem;">AI-style budget insights</h3>
-
-  <div class="intel-grid">
-    <div class="intel-card">
-      <div class="intel-label">Variance</div>
-      <div class="intel-value">
-        ${{ "{:,.2f}".format(variance) }}
-      </div>
-      <div class="intel-note">
-        {% if variance > 0 %}
-          Actual costs are currently above estimated spend.
-        {% elif variance < 0 %}
-          Actual costs are currently below estimated spend.
-        {% else %}
-          Actual and estimated costs are currently aligned.
-        {% endif %}
-      </div>
-    </div>
-
-    <div class="intel-card">
-      <div class="intel-label">Paid vs Budget</div>
-      <div class="intel-value">
-        {{ "{:,.1f}".format(burn_rate) }}%
-      </div>
-      <div class="intel-note">
-        {{ "{:,.2f}".format(paid) }} paid out of {{ "{:,.2f}".format(total_budget) }} total budget.
-      </div>
-    </div>
-
-    <div class="intel-card">
-      <div class="intel-label">Contingency Cushion</div>
-      <div class="intel-value">
-        ${{ "{:,.2f}".format(contingency) }}
-      </div>
-      <div class="intel-note">
-        {% if contingency <= 0 %}
-          No contingency has been added yet.
-        {% elif contingency < (est * 0.08) %}
-          Contingency looks light for an active project.
-        {% else %}
-          Contingency provides a reasonable cost buffer.
-        {% endif %}
-      </div>
-    </div>
-
-    <div class="intel-card">
-      <div class="intel-label">Risk Signal</div>
-      <div class="intel-value">
+      <div class="budget-label">Budget Health</div>
+      <div class="budget-stat" style="font-size:1.2rem;">
         {% if actual > total_budget and total_budget > 0 %}
-          High
+          Over Budget
         {% elif actual > est and est > 0 %}
-          Moderate
+          Watch Closely
         {% else %}
           Stable
         {% endif %}
       </div>
-      <div class="intel-note">
-        {% if actual > total_budget and total_budget > 0 %}
-          Project appears over total budget.
-        {% elif actual > est and est > 0 %}
-          Costs are trending above estimate.
-        {% else %}
-          Spending is currently within expected range.
-        {% endif %}
+
+      <div class="bar-wrap">
+        <div class="bar-fill" style="width: {{ [burn_rate, 100]|min }}%;"></div>
+      </div>
+      <div class="muted-sm">{{ "{:,.1f}".format(burn_rate) }}% of budget paid out</div>
+
+      <div style="margin-top:1rem;" class="muted-sm">
+        {{ budget.notes or "No notes added yet." }}
       </div>
     </div>
-  </div>
-</section>
+
+    <div class="budget-panel">
+      <div class="eyebrow">AI INSIGHTS</div>
+      <h3 style="margin:.25rem 0 .9rem;">Budget intelligence</h3>
+
+      <div class="intel-grid">
+        <div class="intel-card">
+          <div class="budget-label">Variance</div>
+          <div class="intel-value">${{ "{:,.2f}".format(variance) }}</div>
+          <div class="intel-note">
+            {% if variance > 0 %}
+              Actual costs are running above estimated spend.
+            {% elif variance < 0 %}
+              Actual costs are below estimate so far.
+            {% else %}
+              Actual and estimated costs are aligned.
+            {% endif %}
+          </div>
+        </div>
+
+        <div class="intel-card">
+          <div class="budget-label">Remaining</div>
+          <div class="intel-value">${{ "{:,.2f}".format(remaining) }}</div>
+          <div class="intel-note">
+            Amount remaining after paid spend is applied to the budget.
+          </div>
+        </div>
+
+        <div class="intel-card">
+          <div class="budget-label">Actual vs Estimate</div>
+          <div class="intel-value">{{ "{:,.1f}".format(actual_vs_est) if est > 0 else "0.0" }}%</div>
+          <div class="intel-note">
+            {% if actual_vs_est > 110 %}
+              Current actuals are materially above estimate.
+            {% elif actual_vs_est > 100 %}
+              Actuals are slightly above estimate.
+            {% else %}
+              Actuals remain within or below estimate.
+            {% endif %}
+          </div>
+        </div>
+
+        <div class="intel-card">
+          <div class="budget-label">Contingency Cushion</div>
+          <div class="intel-value">${{ "{:,.2f}".format(contingency) }}</div>
+          <div class="intel-note">
+            {% if contingency <= 0 %}
+              No contingency is set yet.
+            {% elif contingency < (est * 0.08) %}
+              Contingency looks light for an active project.
+            {% else %}
+              Contingency appears reasonably sized.
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="budget-panel">
+    <div class="section-head" style="display:flex;justify-content:space-between;align-items:center;gap:1rem;margin-bottom:1rem;">
+      <div>
+        <div class="eyebrow">CATEGORY BREAKDOWN</div>
+        <h3 style="margin:.25rem 0 0;">Where the budget is concentrated</h3>
+      </div>
+    </div>
+
+    {% if category_rows %}
+      <div class="category-row" style="font-weight:700;color:#dfe8f7;">
+        <div>Category</div>
+        <div>Estimated</div>
+        <div>Actual</div>
+        <div>Paid</div>
+        <div>Variance</div>
+      </div>
+
+      {% for row in category_rows %}
+        <div class="category-row">
+          <div>
+            <strong>{{ row.category }}</strong>
+            <div class="muted-sm">{{ row.count }} item{{ '' if row.count == 1 else 's' }}</div>
+          </div>
+          <div>${{ "{:,.2f}".format(row.estimated) }}</div>
+          <div>${{ "{:,.2f}".format(row.actual) }}</div>
+          <div>${{ "{:,.2f}".format(row.paid) }}</div>
+          <div>
+            <span style="color:{% if row.variance > 0 %}#ff9b9b{% else %}#7ef0b2{% endif %};">
+              ${{ "{:,.2f}".format(row.variance) }}
+            </span>
+          </div>
+        </div>
+      {% endfor %}
+    {% else %}
+      <div class="muted-sm">No category data yet.</div>
+    {% endif %}
+  </section>
+
   <section class="budget-panel">
     <div class="eyebrow">ADD EXPENSE</div>
     <h3 style="margin:.25rem 0 .9rem;">New budget item</h3>
@@ -291,7 +320,7 @@
             <td>
               <strong>{{ item.description }}</strong>
               {% if item.notes %}
-                <div class="muted" style="margin-top:.25rem;font-size:.82rem;">{{ item.notes }}</div>
+                <div class="muted-sm" style="margin-top:.25rem;">{{ item.notes }}</div>
               {% endif %}
             </td>
             <td>{{ item.vendor or "—" }}</td>
