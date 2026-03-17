@@ -3865,15 +3865,33 @@ def build_studio(deal_id=None):
     deal = None
     project = None
 
+    if deal_id is None:
+        query_deal_id = request.args.get("deal_id", type=int)
+        if query_deal_id:
+            deal_id = query_deal_id
+
     if deal_id is not None:
         deal = _get_owned_deal_or_404(deal_id)
         project = _safe_first_related(deal, "projects")
+
+    build_analysis = {}
+    build_preview = ""
+    build_mockups = []
+
+    if deal:
+        results = (deal.results_json or {})
+        build_analysis = results.get("build_analysis", {}) or {}
+        build_preview = results.get("build_preview_url", "") or ""
+        build_mockups = results.get("build_mockups", []) or []
 
     return render_template(
         "investor/build_studio.html",
         deal=deal,
         project=project,
         deal_id=deal.id if deal else None,
+        build_analysis=build_analysis,
+        build_preview=build_preview,
+        build_mockups=build_mockups,
         page_title="Build Studio",
         page_subtitle="Design and visualize new construction projects."
     )
@@ -4001,7 +4019,55 @@ def generate_build_studio():
             "status": "error",
             "message": str(e)
         }), 500
+        
+@investor_bp.route("/ai/build-scope/analyze", methods=["POST"])
+@csrf.exempt
+@login_required
+@role_required("investor")
+def ai_build_scope():
+    data = request.get_json(silent=True) or {}
 
+    description = (data.get("description") or "").strip()
+    property_type = (data.get("property_type") or "").strip()
+    lot_size = (data.get("lot_size") or "").strip()
+    zoning = (data.get("zoning") or "").strip()
+
+    if not description:
+        return jsonify({"status": "error", "message": "description is required."}), 400
+
+    try:
+        if not SCOPE_ENGINE_URL:
+            return jsonify({"status": "error", "message": "Scope engine is not configured."}), 500
+
+        res = requests.post(
+            _scope_engine_url("/v1/build_scope"),
+            json={
+                "description": description,
+                "property_type": property_type,
+                "lot_size": lot_size,
+                "zoning": zoning,
+            },
+            headers=_scope_engine_headers(),
+            timeout=60,
+        )
+        res.raise_for_status()
+
+        engine_data = res.json() or {}
+        build_analysis = engine_data.get("build_analysis") or {}
+
+        return jsonify({
+            "status": "ok",
+            "build_analysis": {
+                "summary": build_analysis.get("summary", ""),
+                "key_points": build_analysis.get("key_points", []),
+                "estimated_build_cost": build_analysis.get("estimated_build_cost", 0),
+            }
+        })
+
+    except Exception as e:
+        current_app.logger.exception("ai_build_scope failed")
+        return jsonify({"status": "error", "message": str(e)}), 500
+        
 @investor_bp.route("/deal-studio/build-studio/generate-upload", methods=["POST"])
 @csrf.exempt
 @login_required
@@ -4309,13 +4375,19 @@ def convert_build_project_to_deal(project_id):
 # 🧭 AI DEAL ARCHITECT
 # =========================================================
 
-@investor_bp.route("/deal-architect", methods=["GET"])
-@investor_bp.route("/deal-architect/<int:deal_id>", methods=["GET"])
+
+            
+
+@investor_bp.route("/deal-architect", methods=["GET", "POST"])
+@investor_bp.route("/deal-architect/<int:deal_id>", methods=["GET", "POST"])
 @login_required
 @role_required("investor")
 def deal_architect(deal_id=None):
     selected_deal = None
 
+    # -------------------------------------------------
+    # LOAD DEAL
+    # -------------------------------------------------
     if deal_id:
         selected_deal = Deal.query.filter_by(
             id=deal_id,
@@ -4329,6 +4401,9 @@ def deal_architect(deal_id=None):
                 user_id=current_user.id
             ).first()
 
+    # -------------------------------------------------
+    # DEFAULT VALUES
+    # -------------------------------------------------
     property_address = ""
     city = ""
     state = ""
@@ -4341,6 +4416,9 @@ def deal_architect(deal_id=None):
 
     strategy_analysis = {}
 
+    # -------------------------------------------------
+    # LOAD DEAL DATA
+    # -------------------------------------------------
     if selected_deal:
         property_address = (
             getattr(selected_deal, "property_address", None)
@@ -4356,26 +4434,36 @@ def deal_architect(deal_id=None):
             or getattr(selected_deal, "asset_type", None)
             or ""
         )
-        bedrooms = (
-            getattr(selected_deal, "bedrooms", None)
-            or getattr(selected_deal, "beds", None)
-        )
-        bathrooms = (
-            getattr(selected_deal, "bathrooms", None)
-            or getattr(selected_deal, "baths", None)
-        )
-        sqft = (
-            getattr(selected_deal, "square_feet", None)
-            or getattr(selected_deal, "sqft", None)
-        )
+        bedrooms = getattr(selected_deal, "bedrooms", None) or getattr(selected_deal, "beds", None)
+        bathrooms = getattr(selected_deal, "bathrooms", None) or getattr(selected_deal, "baths", None)
+        sqft = getattr(selected_deal, "square_feet", None) or getattr(selected_deal, "sqft", None)
         year_built = getattr(selected_deal, "year_built", None)
 
         strategy_analysis = _deal_results(selected_deal).get("strategy_analysis", {}) or {}
 
+    # -------------------------------------------------
+    # HANDLE FORM SUBMIT (POST)
+    # -------------------------------------------------
+    if request.method == "POST" and selected_deal:
+
+        selected_deal.purchase_price = request.form.get("purchase_price") or selected_deal.purchase_price
+        selected_deal.arv = request.form.get("arv") or selected_deal.arv
+        selected_deal.estimated_rent = request.form.get("estimated_rent") or selected_deal.estimated_rent
+        selected_deal.rehab_cost = request.form.get("rehab_cost") or selected_deal.rehab_cost
+        selected_deal.strategy = request.form.get("strategy") or selected_deal.strategy
+        selected_deal.notes = request.form.get("notes") or selected_deal.notes
+
+        db.session.commit()
+
+        return redirect(url_for("investor.deal_architect", deal_id=selected_deal.id))
+
+    # -------------------------------------------------
+    # RENDER
+    # -------------------------------------------------
     return render_template(
         "investor/deal_architect.html",
-        page_title="AI Deal Architect",
-        page_subtitle="Analyze the opportunity, score the risk, and shape the best strategy for the deal.",
+        page_title="Deal Architect",
+        page_subtitle="Analyze the opportunity, score the risk, and shape the best strategy.",
         deal=selected_deal,
         deal_id=selected_deal.id if selected_deal else None,
         property_address=property_address,
@@ -4389,8 +4477,7 @@ def deal_architect(deal_id=None):
         year_built=year_built,
         strategy_analysis=strategy_analysis,
     )
-
-
+    
 @investor_bp.route("/deal-architect/analyze", methods=["POST"])
 @csrf.exempt
 @login_required

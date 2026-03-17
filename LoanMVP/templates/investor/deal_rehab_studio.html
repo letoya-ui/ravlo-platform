@@ -4,6 +4,12 @@
 {% block page_title %}Renovation Studio{% endblock %}
 {% block page_subline %}Create the before → after transformation inside Ravlo.{% endblock %}
 
+{% block topbar_actions %}
+  <a class="ravlo-btn ghost sm" href="{{ url_for('investor.deal_detail', deal_id=deal.id) }}">Deal Workspace</a>
+  <a class="ravlo-btn ghost sm" href="{{ url_for('investor.deal_architect', deal_id=deal.id) }}">Deal Architect</a>
+  <a class="ravlo-btn ghost sm" href="{{ url_for('investor.budget_studio', deal_id=deal.id) }}">Budget Studio</a>
+{% endblock %}
+
 {% block content %}
 <style>
   .studio-wrap{
@@ -85,6 +91,18 @@
     background:rgba(255,255,255,.04);
     border:1px solid rgba(255,255,255,.12);
     color:var(--text);
+  }
+
+  .btn-success{
+    background:rgba(104,211,160,.12);
+    border:1px solid rgba(104,211,160,.34);
+    color:#7ee8b1;
+  }
+
+  .btn-success:hover{
+    background:rgba(104,211,160,.2);
+    border-color:rgba(104,211,160,.5);
+    box-shadow:0 0 14px rgba(104,211,160,.18);
   }
 
   .grid{
@@ -333,7 +351,42 @@
     color:var(--text);
   }
 
+  .workflow-grid{
+    display:grid;
+    grid-template-columns:repeat(3, minmax(0,1fr));
+    gap:12px;
+  }
+
+  .workflow-card{
+    display:block;
+    padding:18px;
+    border-radius:18px;
+    background:rgba(255,255,255,.03);
+    border:1px solid rgba(255,255,255,.08);
+    transition:.15s ease;
+  }
+
+  .workflow-card:hover{
+    transform:translateY(-1px);
+    border-color:rgba(122,184,255,.25);
+    background:rgba(255,255,255,.045);
+  }
+
+  .workflow-card h4{
+    margin:0 0 8px;
+  }
+
+  .workflow-card p{
+    margin:0;
+    color:var(--muted);
+    line-height:1.6;
+  }
+
   @media (max-width: 900px){
+    .workflow-grid{
+      grid-template-columns:1fr;
+    }
+
     .ba,
     #emptyPreview{
       min-height:clamp(320px, 52vh, 620px);
@@ -387,13 +440,15 @@
       <div class="episode-tag">🎬 RENOVATION STUDIO • DEAL #{{ deal.id }}</div>
       <h2 class="hero-title">{{ deal.title or ('Deal #' ~ deal.id) }}</h2>
       <div class="hero-sub">
-        Build your before → after story, then feature the reveal for reports and funding.
+        Build your before → after story, define the rehab direction, and send the project into budget control.
       </div>
     </div>
 
     <div class="hero-actions">
       <a class="btn btn-secondary" href="{{ url_for('investor.deal_detail', deal_id=deal.id) }}">🗂 Deal Workspace</a>
+      <a class="btn btn-secondary" href="{{ url_for('investor.deal_architect', deal_id=deal.id) }}">🧠 Deal Architect</a>
       <a class="btn btn-secondary" href="{{ url_for('investor.deal_reveal', deal_id=deal.id) }}">📺 Reveal Page</a>
+      <a class="btn btn-success" href="{{ url_for('investor.budget_studio', deal_id=deal.id) }}">💰 Budget Studio</a>
     </div>
   </div>
 
@@ -460,15 +515,26 @@
 
         <div style="margin-top:12px;">
           <img id="featuredImg" class="img" src="" alt="Featured reveal" style="display:none;">
-          <button
-            id="featureBtn"
-            class="btn"
-            type="button"
-            onclick="feature()"
-            style="display:none; margin-top:.75rem;"
-          >
-            ✅ Set as Featured Reveal
-          </button>
+          <div class="action-row" style="margin-top:.75rem;">
+            <button
+              id="featureBtn"
+              class="btn"
+              type="button"
+              onclick="feature()"
+              style="display:none;"
+            >
+              ✅ Set as Featured Reveal
+            </button>
+
+            <a
+              id="budgetBtn"
+              class="btn btn-success"
+              href="{{ url_for('investor.budget_studio', deal_id=deal.id) }}"
+              style="display:none;"
+            >
+              💰 Send to Budget
+            </a>
+          </div>
         </div>
       </div>
 
@@ -553,6 +619,26 @@
         {% endif %}
 
         <div class="after-grid" id="newGrid" style="margin-top:.75rem; display:none;"></div>
+      </div>
+
+      <div class="card">
+        <h3>Continue Workflow</h3>
+        <div class="workflow-grid">
+          <a href="{{ url_for('investor.deal_architect', deal_id=deal.id) }}" class="workflow-card">
+            <h4>Deal Architect</h4>
+            <p>Go back to strategy, numbers, and recommendation logic.</p>
+          </a>
+
+          <a href="{{ url_for('investor.build_studio', deal_id=deal.id) }}" class="workflow-card">
+            <h4>Build Studio</h4>
+            <p>Explore ground-up concepts and development direction.</p>
+          </a>
+
+          <a href="{{ url_for('investor.budget_studio', deal_id=deal.id) }}" class="workflow-card">
+            <h4>Budget Studio</h4>
+            <p>Track projected vs actual cost and control execution.</p>
+          </a>
+        </div>
       </div>
 
     </div>
@@ -711,10 +797,12 @@
 
     const img = document.getElementById("featuredImg");
     const btn = document.getElementById("featureBtn");
+    const budgetBtn = document.getElementById("budgetBtn");
 
     img.src = afterUrl;
     img.style.display = "block";
     btn.style.display = "inline-flex";
+    budgetBtn.style.display = "inline-flex";
   }
 
   function showPreview(beforeUrl, afterUrl) {

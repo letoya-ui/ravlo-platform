@@ -2,775 +2,761 @@
 {% block title %}Ravlo • Build Studio{% endblock %}
 
 {% block page_title %}Build Studio{% endblock %}
-{% block page_subline %}
-Design and visualize new construction projects.
-{% endblock %}
+{% block page_subline %}Explore development potential and shape a build concept inside Ravlo.{% endblock %}
 
 {% block topbar_actions %}
-  {% if deal and deal.id %}
-    <a href="{{ url_for('investor.deal_detail', deal_id=deal.id) }}" class="ravlo-btn ghost sm">
-      Back to Deal
-    </a>
-    <a href="{{ url_for('investor.deal_report', deal_id=deal.id) }}" class="ravlo-btn ghost sm">
-      Deal Report
-    </a>
-  {% else %}
-    <a href="{{ url_for('investor.build_projects') }}" class="ravlo-btn ghost sm">
-      Build Projects
-    </a>
+  {% if deal %}
+    <a class="ravlo-btn ghost sm" href="{{ url_for('investor.deal_detail', deal_id=deal.id) }}">Deal Workspace</a>
+    <a class="ravlo-btn ghost sm" href="{{ url_for('investor.deal_architect', deal_id=deal.id) }}">Deal Architect</a>
+    <a class="ravlo-btn ghost sm" href="{{ url_for('investor.budget_studio', deal_id=deal.id) }}">Budget Studio</a>
   {% endif %}
 {% endblock %}
 
 {% block content %}
-{% set build_data = ((deal.results_json or {}).get("build_analysis", {})) if deal else {} %}
-{% set build_project = ((deal.results_json or {}).get("build_project", {})) if deal else {} %}
+<style>
+  .studio-wrap{
+    display:grid;
+    gap:22px;
+  }
 
-<div class="ravlo-shell-page">
+  .studio-hero{
+    border-radius:24px;
+    padding:22px 24px;
+    border:1px solid rgba(255,255,255,.08);
+    background:
+      radial-gradient(900px 520px at 15% 10%, rgba(122,184,255,.12), transparent 55%),
+      rgba(255,255,255,.02);
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-end;
+    gap:18px;
+    flex-wrap:wrap;
+  }
 
-  <!-- HERO -->
-  <section class="ravlo-hero-card">
+  .episode-tag{
+    display:inline-flex;
+    gap:.5rem;
+    align-items:center;
+    padding:.42rem .75rem;
+    border-radius:999px;
+    background:rgba(255,255,255,.06);
+    border:1px solid rgba(255,255,255,.12);
+    color:rgba(255,255,255,.88);
+    font-weight:800;
+    font-size:.78rem;
+    letter-spacing:.04em;
+  }
+
+  .hero-title{
+    margin:.65rem 0 0;
+    font-size:1.7rem;
+    line-height:1.08;
+    letter-spacing:-.02em;
+  }
+
+  .hero-sub{
+    color:rgba(255,255,255,.74);
+    margin:.4rem 0 0;
+    max-width:760px;
+  }
+
+  .hero-actions{
+    display:flex;
+    gap:.6rem;
+    flex-wrap:wrap;
+  }
+
+  .btn{
+    background:rgba(122,184,255,.12);
+    border:1px solid rgba(122,184,255,.42);
+    color:#7ab8ff;
+    padding:.76rem 1rem;
+    border-radius:14px;
+    cursor:pointer;
+    font-weight:800;
+    transition:.2s;
+    font-size:.92rem;
+    text-decoration:none;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    gap:.45rem;
+  }
+
+  .btn:hover{
+    background:rgba(122,184,255,.22);
+    border-color:#7ab8ff;
+    box-shadow:0 0 14px rgba(122,184,255,.25);
+  }
+
+  .btn-secondary{
+    background:rgba(255,255,255,.04);
+    border:1px solid rgba(255,255,255,.12);
+    color:var(--text);
+  }
+
+  .btn-success{
+    background:rgba(104,211,160,.12);
+    border:1px solid rgba(104,211,160,.34);
+    color:#7ee8b1;
+  }
+
+  .btn-success:hover{
+    background:rgba(104,211,160,.2);
+    border-color:rgba(104,211,160,.5);
+    box-shadow:0 0 14px rgba(104,211,160,.18);
+  }
+
+  .grid{
+    display:grid;
+    grid-template-columns:minmax(320px, .82fr) minmax(0, 1.18fr);
+    gap:20px;
+    align-items:start;
+  }
+
+  @media (max-width: 1100px){
+    .grid{
+      grid-template-columns:1fr;
+    }
+  }
+
+  .card{
+    background:var(--panel, rgba(255,255,255,.025));
+    border:1px solid rgba(255,255,255,.08);
+    border-radius:22px;
+    padding:18px;
+  }
+
+  .card h3{
+    margin:.1rem 0 .9rem;
+    color:var(--accent, #7ab8ff);
+    font-size:1.04rem;
+  }
+
+  .muted{
+    color:var(--muted);
+  }
+
+  .img{
+    width:100%;
+    height:260px;
+    object-fit:cover;
+    border-radius:16px;
+    display:block;
+    border:1px solid rgba(255,255,255,.08);
+    background:#0f141a;
+  }
+
+  .preview-img{
+    width:100%;
+    height:clamp(380px, 62vh, 760px);
+    object-fit:cover;
+    border-radius:18px;
+    display:block;
+    border:1px solid rgba(255,255,255,.08);
+    background:#0f141a;
+  }
+
+  .placeholder{
+    min-height:clamp(380px, 62vh, 760px);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    text-align:center;
+    border-radius:18px;
+    border:1px dashed rgba(255,255,255,.12);
+    background:rgba(255,255,255,.02);
+    color:rgba(255,255,255,.52);
+    padding:24px;
+  }
+
+  .row{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:14px;
+  }
+
+  @media (max-width: 900px){
+    .row{
+      grid-template-columns:1fr;
+    }
+  }
+
+  .input{
+    width:100%;
+    padding:.78rem .85rem;
+    border-radius:14px;
+    border:1px solid rgba(255,255,255,.10);
+    background:#0f141a;
+    color:var(--text);
+    min-height:48px;
+  }
+
+  textarea.input{
+    min-height:130px;
+    resize:vertical;
+  }
+
+  .section-stack{
+    display:grid;
+    gap:16px;
+  }
+
+  .action-row{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+  }
+
+  .thumb-grid{
+    display:grid;
+    grid-template-columns:repeat(3, minmax(0,1fr));
+    gap:12px;
+  }
+
+  @media (max-width: 900px){
+    .thumb-grid{
+      grid-template-columns:repeat(2, minmax(0,1fr));
+    }
+  }
+
+  @media (max-width: 620px){
+    .thumb-grid{
+      grid-template-columns:1fr;
+    }
+  }
+
+  .thumb{
+    padding:.7rem;
+    border-radius:18px;
+    background:rgba(255,255,255,.03);
+    border:1px solid rgba(255,255,255,.10);
+    transition:.15s;
+  }
+
+  .thumb:hover{
+    transform:translateY(-1px);
+    border-color:rgba(122,184,255,.28);
+  }
+
+  .thumb .img{
+    height:220px;
+  }
+
+  .thumb-meta{
+    margin-top:.55rem;
+    display:flex;
+    justify-content:space-between;
+    gap:.35rem;
+    align-items:center;
+  }
+
+  .chip{
+    font-size:.78rem;
+    border-radius:999px;
+    padding:.35rem .6rem;
+    background:rgba(122,184,255,.12);
+    border:1px solid rgba(122,184,255,.26);
+    color:#a9d2ff;
+  }
+
+  .scope-box{
+    padding:16px;
+    border-radius:18px;
+    background:rgba(255,255,255,.025);
+    border:1px solid rgba(255,255,255,.08);
+  }
+
+  .scope-box ul{
+    margin:.6rem 0 0 1rem;
+    padding:0;
+  }
+
+  .scope-box li{
+    margin:.35rem 0;
+    color:var(--text);
+  }
+
+  .workflow-grid{
+    display:grid;
+    grid-template-columns:repeat(3, minmax(0,1fr));
+    gap:12px;
+  }
+
+  .workflow-card{
+    display:block;
+    padding:18px;
+    border-radius:18px;
+    background:rgba(255,255,255,.03);
+    border:1px solid rgba(255,255,255,.08);
+    transition:.15s ease;
+  }
+
+  .workflow-card:hover{
+    transform:translateY(-1px);
+    border-color:rgba(122,184,255,.25);
+    background:rgba(255,255,255,.045);
+  }
+
+  .workflow-card h4{
+    margin:0 0 8px;
+  }
+
+  .workflow-card p{
+    margin:0;
+    color:var(--muted);
+    line-height:1.6;
+  }
+
+  .status-box{
+    padding:12px 14px;
+    border-radius:14px;
+    background:rgba(255,255,255,.03);
+    border:1px solid rgba(255,255,255,.08);
+    color:var(--muted);
+  }
+
+  @media (max-width: 900px){
+    .workflow-grid{
+      grid-template-columns:1fr;
+    }
+
+    .preview-img{
+      height:320px;
+    }
+
+    .placeholder{
+      min-height:320px;
+    }
+
+    .img{
+      height:220px;
+    }
+
+    .thumb .img{
+      height:210px;
+    }
+  }
+
+  @media (max-width: 640px){
+    .studio-hero{
+      padding:18px;
+    }
+
+    .hero-title{
+      font-size:1.4rem;
+    }
+
+    .preview-img{
+      height:300px;
+    }
+
+    .placeholder{
+      min-height:300px;
+    }
+
+    .img{
+      height:200px;
+    }
+
+    .thumb .img{
+      height:200px;
+    }
+  }
+</style>
+
+{% set build_preview = build_preview or "" %}
+{% set build_analysis = build_analysis or {} %}
+{% set build_mockups = build_mockups or [] %}
+
+<div class="studio-wrap">
+
+  <div class="studio-hero">
     <div>
-      <div class="eyebrow">RAVLO BUILD STUDIO</div>
-      <h2>
-        {% if deal and deal.title %}
-          {{ deal.title }}
-        {% else %}
-          New Construction Concept
-        {% endif %}
+      <div class="episode-tag">
+        🏗 BUILD STUDIO
+        {% if deal %}• DEAL #{{ deal.id }}{% endif %}
+      </div>
+      <h2 class="hero-title">
+        {% if deal %}{{ deal.title or ('Deal #' ~ deal.id) }}{% else %}Build Studio{% endif %}
       </h2>
-      <p class="muted">
-        {% if deal and deal.address %}
-          {{ deal.address }}
-        {% else %}
-          Shape a build concept, visualize the project, and save it into Ravlo.
-        {% endif %}
-      </p>
-
-      <div class="ravlo-chip-row" style="margin-top:16px;">
-        {% if deal and deal.id %}
-          <span class="ravlo-chip">Deal Linked</span>
-          <span class="ravlo-chip">Deal #{{ deal.id }}</span>
-        {% else %}
-          <span class="ravlo-chip">Standalone Mode</span>
-        {% endif %}
-
-        {% if build_project %}
-          <span class="ravlo-chip">Saved Project</span>
-        {% endif %}
+      <div class="hero-sub">
+        Explore development potential, shape a concept, and move the build plan into budget control.
       </div>
     </div>
 
-    <div class="build-hero-actions">
-      <button type="button" class="ravlo-btn primary" onclick="generateBuildConcept()">
-        Generate Concept
-      </button>
-
-      <button type="button" class="ravlo-btn ghost" onclick="saveBuildProject()">
-        Save Project
-      </button>
-    </div>
-  </section>
-
-  <!-- MAIN GRID -->
-  <div class="build-main-grid">
-
-    <!-- LEFT -->
-    <div class="build-stack">
-
-      <!-- INPUTS -->
-      <section class="ravlo-card pad">
-        <div class="section-head">
-          <div>
-            <div class="eyebrow">PROJECT INPUTS</div>
-            <h3>Build Parameters</h3>
-          </div>
-        </div>
-
-        <form id="buildStudioForm" class="build-form-grid" enctype="multipart/form-data">
-          {% if deal and deal.id %}
-            <input type="hidden" name="deal_id" id="deal_id" value="{{ deal.id }}">
-          {% endif %}
-
-          <div class="ravlo-field">
-            <label class="ravlo-label">Project Name</label>
-            <input
-              id="project_name"
-              name="project_name"
-              class="ravlo-input"
-              type="text"
-              value="{{ build_project.get('project_name') or build_data.get('project_name') or deal.title if deal else '' }}"
-              placeholder="Ex: Ravlo Modern Duplex"
-            >
-          </div>
-
-          <div class="ravlo-field">
-            <label class="ravlo-label">Property Type</label>
-            <select id="property_type" name="property_type" class="ravlo-input">
-              {% set current_property_type = build_project.get('property_type') or build_data.get('property_type') or '' %}
-              <option value="single_family" {% if current_property_type == 'single_family' %}selected{% endif %}>Single Family</option>
-              <option value="duplex" {% if current_property_type == 'duplex' %}selected{% endif %}>Duplex</option>
-              <option value="triplex" {% if current_property_type == 'triplex' %}selected{% endif %}>Triplex</option>
-              <option value="quadplex" {% if current_property_type == 'quadplex' %}selected{% endif %}>Quadplex</option>
-              <option value="townhome" {% if current_property_type == 'townhome' %}selected{% endif %}>Townhome</option>
-              <option value="mixed_use" {% if current_property_type == 'mixed_use' %}selected{% endif %}>Mixed Use</option>
-              <option value="multifamily" {% if current_property_type == 'multifamily' %}selected{% endif %}>Multifamily</option>
-            </select>
-          </div>
-
-          <div class="ravlo-field full">
-            <label class="ravlo-label">Project Description</label>
-            <textarea
-              id="description"
-              name="description"
-              class="ravlo-input textarea"
-              placeholder="Describe the build vision, unit mix, size target, architectural direction, and end goal."
-            >{{ build_project.get('description') or build_data.get('description') or '' }}</textarea>
-          </div>
-
-          <div class="ravlo-field">
-            <label class="ravlo-label">Lot Size</label>
-            <input
-              id="lot_size"
-              name="lot_size"
-              class="ravlo-input"
-              type="text"
-              value="{{ build_project.get('lot_size') or build_data.get('lot_size') or '' }}"
-              placeholder="Ex: 0.25 acres"
-            >
-          </div>
-
-          <div class="ravlo-field">
-            <label class="ravlo-label">Zoning</label>
-            <input
-              id="zoning"
-              name="zoning"
-              class="ravlo-input"
-              type="text"
-              value="{{ build_project.get('zoning') or build_data.get('zoning') or '' }}"
-              placeholder="Ex: R2"
-            >
-          </div>
-
-          <div class="ravlo-field">
-            <label class="ravlo-label">Location</label>
-            <input
-              id="location"
-              name="location"
-              class="ravlo-input"
-              type="text"
-              value="{{ build_project.get('location') or build_data.get('location') or deal.address if deal else '' }}"
-              placeholder="Ex: Middletown, NY"
-            >
-          </div>
-          
-          <div class="ravlo-field">
-            <label class="ravlo-label">Style</label>
-            <select id="style" name="style" class="ravlo-input">
-              <option value="modern" selected>Modern</option>
-              <option value="luxury">Luxury</option>
-              <option value="contemporary">Contemporary</option>
-            </select>
-          </div>
-
-          <div class="ravlo-field">
-            <label class="ravlo-label">Reference Image URL</label>
-            <input
-              id="image_url"
-              name="image_url"
-              class="ravlo-input"
-              type="text"
-              placeholder="Optional image URL"
-            >
-          </div>
-
-          <div class="ravlo-field full">
-            <label class="ravlo-label">Upload Land / Site / Inspiration Image</label>
-            <input id="land_image" name="land_image" class="ravlo-input file-input" type="file" accept="image/*">
-          </div>
-
-          <div class="ravlo-field full">
-            <label class="ravlo-label">Notes</label>
-            <textarea
-              id="notes"
-              name="notes"
-              class="ravlo-input textarea"
-              placeholder="Any build notes, style preferences, feasibility notes, or goals..."
-            >{{ build_project.get('notes') or build_data.get('notes') or '' }}</textarea>
-          </div>
-
-          {% if deal and deal.id %}
-          <div class="ravlo-field full">
-            <label class="ravlo-check">
-              <input type="checkbox" id="save_to_deal" name="save_to_deal" checked>
-              Save generated concept to this deal
-            </label>
-          </div>
-          {% endif %}
-        </form>
-      </section>
-
-      <!-- SAVED PROJECT META -->
-      {% if build_project %}
-      <section class="ravlo-card pad">
-        <div class="section-head">
-          <div>
-            <div class="eyebrow">SAVED PROJECT</div>
-            <h3>Saved Build Data</h3>
-          </div>
-        </div>
-
-        <div class="analysis-grid">
-          <div class="analysis-box">
-            <span>Project Name</span>
-            <strong>{{ build_project.get("project_name") or "—" }}</strong>
-          </div>
-
-          <div class="analysis-box">
-            <span>Property Type</span>
-            <strong>{{ build_project.get("property_type") or "—" }}</strong>
-          </div>
-
-          <div class="analysis-box">
-            <span>Lot Size</span>
-            <strong>{{ build_project.get("lot_size") or "—" }}</strong>
-          </div>
-
-          <div class="analysis-box">
-            <span>Zoning</span>
-            <strong>{{ build_project.get("zoning") or "—" }}</strong>
-          </div>
-        </div>
-      </section>
+    <div class="hero-actions">
+      {% if deal %}
+        <a class="btn btn-secondary" href="{{ url_for('investor.deal_detail', deal_id=deal.id) }}">🗂 Deal Workspace</a>
+        <a class="btn btn-secondary" href="{{ url_for('investor.deal_architect', deal_id=deal.id) }}">🧠 Deal Architect</a>
+        <a class="btn btn-secondary" href="{{ url_for('investor.deal_rehab', deal_id=deal.id) }}">🎬 Renovation Studio</a>
+        <a class="btn btn-success" href="{{ url_for('investor.budget_studio', deal_id=deal.id) }}">💰 Budget Studio</a>
       {% endif %}
+    </div>
+  </div>
+
+  <div class="grid">
+
+    <div class="section-stack">
+
+      <div class="card">
+        <h3>Build Controls</h3>
+
+        <div class="row">
+          <div>
+            <label class="muted" style="display:block;margin-bottom:.35rem;">Project Name</label>
+            <input id="projectName" class="input" placeholder="e.g. Ravlo Estates Concept">
+          </div>
+
+          <div>
+            <label class="muted" style="display:block;margin-bottom:.35rem;">Property Type</label>
+            <select id="propertyType" class="input">
+              <option value="single_family">Single Family</option>
+              <option value="duplex">Duplex</option>
+              <option value="triplex">Triplex</option>
+              <option value="multifamily">Multifamily</option>
+              <option value="townhome">Townhome</option>
+              <option value="mixed_use">Mixed Use</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="row" style="margin-top:.85rem;">
+          <div>
+            <label class="muted" style="display:block;margin-bottom:.35rem;">Style</label>
+            <select id="style" class="input">
+              <option value="modern_farmhouse">Modern Farmhouse</option>
+              <option value="modern_luxury">Modern Luxury</option>
+              <option value="contemporary">Contemporary</option>
+              <option value="traditional">Traditional</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="muted" style="display:block;margin-bottom:.35rem;">Lot Size</label>
+            <input id="lotSize" class="input" placeholder="e.g. 0.25 acre">
+          </div>
+        </div>
+
+        <div class="row" style="margin-top:.85rem;">
+          <div>
+            <label class="muted" style="display:block;margin-bottom:.35rem;">Zoning</label>
+            <input id="zoning" class="input" placeholder="e.g. R2 / residential">
+          </div>
+
+          <div>
+            <label class="muted" style="display:block;margin-bottom:.35rem;">Location</label>
+            <input id="location" class="input" placeholder="e.g. Tampa, FL">
+          </div>
+        </div>
+
+        <label class="muted" style="display:block;margin-top:.85rem;margin-bottom:.35rem;">Build Description</label>
+        <textarea id="description" class="input" placeholder="Describe the concept, style, layout, and development direction..."></textarea>
+
+        <label class="muted" style="display:block;margin-top:.85rem;margin-bottom:.35rem;">Optional Land Image</label>
+        <input id="landImage" class="input" type="file" accept="image/*">
+
+        <div class="action-row" style="margin-top:14px;">
+          <button class="btn" type="button" onclick="generateBuildConcept()">✨ Generate Build Concept</button>
+          <button class="btn btn-secondary" type="button" onclick="generateBuildScope()">🧠 Analyze Build Scope</button>
+        </div>
+
+        <div id="buildStatus" class="status-box" style="margin-top:14px;">Ready.</div>
+      </div>
+
+      <div class="card">
+        <h3>Build Scope Summary</h3>
+        <div id="buildScopeResults" class="scope-box">
+          Zoning context, concept summary, and build guidance will appear here.
+        </div>
+      </div>
 
     </div>
 
-    <!-- RIGHT -->
-    <div class="build-stack">
+    <div class="section-stack">
 
-      <!-- GENERATION STATUS -->
-      <section class="ravlo-card pad">
-        <div class="section-head">
-          <div>
-            <div class="eyebrow">OUTPUT</div>
-            <h3>Concept Results</h3>
-          </div>
-        </div>
+      <div class="card">
+        <h3>Build Concept Preview</h3>
 
-        <div class="feature-highlight">
-          <div class="feature-highlight-label">Engine Status</div>
-          <div class="feature-highlight-value" id="build_status_text">
-            Ready to generate build concept.
-          </div>
-        </div>
+        {% if build_preview %}
+          <img id="buildPreviewImg" class="preview-img" src="data:image/webp;base64,{{ build_preview }}" alt="Build concept preview">
+        {% else %}
+          <div id="buildPreviewEmpty" class="placeholder">Generate a build concept to preview the direction.</div>
+          <img id="buildPreviewImg" class="preview-img" src="" alt="Build concept preview" style="display:none;">
+        {% endif %}
 
-        <div class="analysis-grid" style="margin-top:16px;">
-          <div class="analysis-box">
-            <span>Seed</span>
-            <strong id="build_seed">
-              {{ build_data.get("seed") or "—" }}
-            </strong>
-          </div>
-
-          <div class="analysis-box">
-            <span>Job ID</span>
-            <strong id="build_job_id">
-              {{ build_data.get("job_id") or "—" }}
-            </strong>
-          </div>
-        </div>
-      </section>
-
-      <!-- CONCEPT IMAGES -->
-      <section class="ravlo-card pad">
-        <div class="section-head">
-          <div>
-            <div class="eyebrow">RENDERS</div>
-            <h3>Concept Gallery</h3>
-          </div>
-        </div>
-
-        <div id="build_images_wrap" class="build-image-grid">
-          {% set existing_images = build_data.get("images_base64", []) %}
-          {% set existing_saved_paths = build_data.get("saved_paths", []) %}
-
-          {% if existing_saved_paths %}
-            {% for img in existing_saved_paths %}
-            <div class="build-image-card">
-              <img src="{{ img }}" alt="Build concept render">
-            </div>
-            {% endfor %}
-          {% elif existing_images %}
-            {% for img in existing_images %}
-            <div class="build-image-card">
-              <img src="data:image/png;base64,{{ img }}" alt="Build concept render">
-            </div>
-            {% endfor %}
-          {% else %}
-            <div class="empty-state-inline" id="build_empty_state">
-              No build concepts generated yet.
-            </div>
-          {% endif %}
-        </div>
-      </section>
-
-      <!-- SAVE ACTIONS -->
-      <section class="ravlo-card pad">
-        <div class="section-head">
-          <div>
-            <div class="eyebrow">WORKFLOW</div>
-            <h3>Next Actions</h3>
-          </div>
-        </div>
-
-        <div class="quick-grid one-col">
-          <button type="button" class="ravlo-btn primary" onclick="generateBuildConcept()">
-            Generate Concept
+        <div class="action-row" style="margin-top:14px;">
+          <button id="saveBuildBtn" class="btn btn-secondary" type="button" style="display:none;" onclick="saveBuildToProject()">
+            💾 Save Build Project
           </button>
 
-          <button type="button" class="ravlo-btn ghost" onclick="saveBuildProject()">
-            Save Build Project
-          </button>
-
-          {% if deal and deal.id %}
-          <a href="{{ url_for('investor.deal_detail', deal_id=deal.id) }}" class="quick-card">
-            <span class="quick-title">Return to Deal Workspace</span>
-            <span class="quick-sub">Go back to the main deal and continue the investor workflow.</span>
-          </a>
-
-          {% if project %}
-          <a href="{{ url_for('investor.build_project_detail', project_id=project.id) }}">
-            View Project Details
-          </a>
-          {% endif %}
-
-          <a href="{{ url_for('investor.deal_report', deal_id=deal.id) }}" class="quick-card">
-            <span class="quick-title">Open Deal Report</span>
-            <span class="quick-sub">Use this concept as part of the project strategy and funding story.</span>
-          </a>
-          {% else %}
-          <a href="{{ url_for('investor.build_projects') }}" class="quick-card">
-            <span class="quick-title">View Build Projects</span>
-            <span class="quick-sub">Review saved standalone concepts and build studies.</span>
+          {% if deal %}
+          <a id="budgetBuildBtn" class="btn btn-success" href="{{ url_for('investor.budget_studio', deal_id=deal.id) }}" style="display:none;">
+            💰 Send to Budget
           </a>
           {% endif %}
         </div>
-      </section>
+      </div>
+
+      <div class="card">
+        <h3>Recent Build Concepts</h3>
+
+        {% if build_mockups %}
+          <div class="thumb-grid" id="existingBuildGrid">
+            {% for m in build_mockups %}
+              <div class="thumb">
+                <img
+                  class="img"
+                  src="data:image/webp;base64,{{ m }}"
+                  alt="Build mockup"
+                  style="cursor:pointer;"
+                  onclick="selectBuildPreview('data:image/webp;base64,{{ m }}')"
+                >
+
+                <div class="thumb-meta">
+                  <span class="chip">Build Concept</span>
+                  <small class="muted">saved</small>
+                </div>
+
+                <div class="action-row" style="margin-top:.7rem;">
+                  <button class="btn pick" type="button" onclick="selectBuildPreview('data:image/webp;base64,{{ m }}')">
+                    👀 Preview
+                  </button>
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="muted">No saved build concepts yet. Generate one to start shaping the development vision.</div>
+        {% endif %}
+
+        <div class="thumb-grid" id="newBuildGrid" style="margin-top:.75rem; display:none;"></div>
+      </div>
+
+      <div class="card">
+        <h3>Continue Workflow</h3>
+        <div class="workflow-grid">
+          {% if deal %}
+          <a href="{{ url_for('investor.deal_architect', deal_id=deal.id) }}" class="workflow-card">
+            <h4>Deal Architect</h4>
+            <p>Go back to strategy, numbers, and highest-best-use logic.</p>
+          </a>
+
+          <a href="{{ url_for('investor.deal_rehab', deal_id=deal.id) }}" class="workflow-card">
+            <h4>Renovation Studio</h4>
+            <p>Compare rehab direction against build / development potential.</p>
+          </a>
+
+          <a href="{{ url_for('investor.budget_studio', deal_id=deal.id) }}" class="workflow-card">
+            <h4>Budget Studio</h4>
+            <p>Track projected development cost and control execution.</p>
+          </a>
+          {% endif %}
+        </div>
+      </div>
 
     </div>
   </div>
 </div>
 
-<style>
-  .ravlo-shell-page{
-    display:grid;
-    gap:20px;
-  }
-
-  .build-hero-actions{
-    min-width:250px;
-    display:grid;
-    gap:12px;
-  }
-
-  .build-main-grid{
-    display:grid;
-    grid-template-columns:1.1fr .9fr;
-    gap:20px;
-    align-items:start;
-  }
-
-  .build-stack{
-    display:grid;
-    gap:20px;
-  }
-
-  .build-form-grid{
-    display:grid;
-    grid-template-columns:repeat(2, minmax(0, 1fr));
-    gap:16px;
-  }
-
-  .ravlo-field{
-    display:grid;
-    gap:8px;
-  }
-
-  .ravlo-field.full{
-    grid-column:1 / -1;
-  }
-
-  .ravlo-label{
-    font-size:13px;
-    font-weight:600;
-    color:#DCE5EF;
-  }
-
-  .ravlo-input{
-    width:100%;
-    min-height:52px;
-    border-radius:16px;
-    border:1px solid rgba(255,255,255,.08);
-    background:rgba(255,255,255,.04);
-    color:var(--text);
-    padding:0 14px;
-    font-size:15px;
-    outline:none;
-  }
-
-  .ravlo-input:focus{
-    border-color:rgba(107,127,147,.65);
-    box-shadow:0 0 0 4px rgba(107,127,147,.15);
-  }
-
-  .ravlo-input.textarea{
-    min-height:130px;
-    padding:14px;
-    resize:vertical;
-  }
-
-  .file-input{
-    padding:12px 14px;
-  }
-
-  .feature-highlight{
-    padding:18px;
-    border-radius:20px;
-    background:linear-gradient(135deg, rgba(107,127,147,.18), rgba(58,92,122,.10));
-    border:1px solid rgba(107,127,147,.24);
-  }
-
-  .feature-highlight-label{
-    color:var(--muted);
-    font-size:12px;
-    text-transform:uppercase;
-    letter-spacing:.08em;
-    margin-bottom:8px;
-  }
-
-  .feature-highlight-value{
-    color:var(--text);
-    font-size:18px;
-    line-height:1.6;
-    font-weight:600;
-  }
-
-  .analysis-grid{
-    display:grid;
-    grid-template-columns:repeat(2, minmax(0, 1fr));
-    gap:12px;
-  }
-
-  .analysis-box{
-    padding:16px;
-    border-radius:18px;
-    background:rgba(255,255,255,.03);
-    border:1px solid rgba(255,255,255,.08);
-  }
-
-  .analysis-box span{
-    display:block;
-    color:var(--muted);
-    font-size:12px;
-    text-transform:uppercase;
-    letter-spacing:.08em;
-    margin-bottom:8px;
-  }
-
-  .analysis-box strong{
-    color:var(--text);
-    font-size:20px;
-    font-weight:800;
-  }
-
-  .build-image-grid{
-    display:grid;
-    grid-template-columns:repeat(2, minmax(0, 1fr));
-    gap:14px;
-  }
-
-  .build-image-card{
-    overflow:hidden;
-    border-radius:18px;
-    background:rgba(255,255,255,.03);
-    border:1px solid rgba(255,255,255,.08);
-  }
-
-  .build-image-card img{
-    width:100%;
-    height:220px;
-    object-fit:cover;
-    display:block;
-  }
-
-  .quick-grid{
-    display:grid;
-    grid-template-columns:repeat(2, minmax(0, 1fr));
-    gap:14px;
-  }
-
-  .quick-grid.one-col{
-    grid-template-columns:1fr;
-  }
-
-  .quick-card{
-    display:block;
-    padding:18px;
-    border-radius:18px;
-    background:rgba(255,255,255,.03);
-    border:1px solid rgba(255,255,255,.08);
-    text-decoration:none;
-    transition:.2s ease;
-  }
-
-  .quick-card:hover{
-    transform:translateY(-1px);
-    border-color:rgba(107,127,147,.35);
-    background:rgba(255,255,255,.045);
-  }
-
-  .quick-title{
-    display:block;
-    color:var(--text);
-    font-size:16px;
-    font-weight:700;
-  }
-
-  .quick-sub{
-    display:block;
-    margin-top:8px;
-    color:var(--muted);
-    font-size:13px;
-    line-height:1.55;
-  }
-
-  .empty-state-inline{
-    color:var(--muted);
-    padding:8px 0;
-  }
-
-  @media (max-width: 1100px){
-    .build-main-grid{
-      grid-template-columns:1fr;
-    }
-  }
-
-  @media (max-width: 760px){
-    .build-form-grid,
-    .analysis-grid,
-    .build-image-grid{
-      grid-template-columns:1fr;
-    }
-
-    .build-hero-actions{
-      width:100%;
-      min-width:unset;
-    }
-
-    .ravlo-field.full{
-      grid-column:auto;
-    }
-  }
-</style>
-
 <script>
-  let latestBuildImages = [];
-  let latestBuildImageUrls = [];
-  let latestBuildMeta = {};
-  let latestBuildSeed = null;
-  let latestBuildJobId = null;
+  let CURRENT_BUILD_PREVIEW = document.getElementById("buildPreviewImg")?.src || "";
 
-  function getBuildImageSources(data) {
-    const urls = Array.isArray(data.saved_paths) ? data.saved_paths.filter(Boolean) : [];
-    const b64s = Array.isArray(data.images) ? data.images.filter(Boolean) : [];
-
-    if (urls.length) {
-      return {
-        displaySources: urls,
-        rawBase64: b64s,
-        savedPaths: urls
-      };
-    }
-
+  function formPayload() {
     return {
-      displaySources: b64s.map(img => `data:image/png;base64,${img}`),
-      rawBase64: b64s,
-      savedPaths: []
+      deal_id: "{{ deal.id if deal else '' }}",
+      project_name: (document.getElementById("projectName")?.value || "").trim(),
+      property_type: document.getElementById("propertyType")?.value || "single_family",
+      style: document.getElementById("style")?.value || "modern_farmhouse",
+      description: (document.getElementById("description")?.value || "").trim(),
+      lot_size: (document.getElementById("lotSize")?.value || "").trim(),
+      zoning: (document.getElementById("zoning")?.value || "").trim(),
+      location: (document.getElementById("location")?.value || "").trim(),
+      notes: "",
+      save_to_deal: "true"
     };
   }
 
-  function clearImageUrlIfFileSelected() {
-    const fileInput = document.getElementById("land_image");
-    const urlInput = document.getElementById("image_url");
-
-    if (fileInput && urlInput && fileInput.files && fileInput.files.length > 0) {
-      urlInput.value = "";
-    }
-  }
-
-  function clearFileIfUrlEntered() {
-    const fileInput = document.getElementById("land_image");
-    const urlInput = document.getElementById("image_url");
-
-    if (fileInput && urlInput && urlInput.value.trim()) {
-      fileInput.value = "";
-    }
-  }
-
   async function generateBuildConcept() {
-    const form = document.getElementById("buildStudioForm");
-    const formData = new FormData(form);
-
-    const statusText = document.getElementById("build_status_text");
-    const imagesWrap = document.getElementById("build_images_wrap");
-    const seedEl = document.getElementById("build_seed");
-    const jobIdEl = document.getElementById("build_job_id");
-    const fileInput = document.getElementById("land_image");
-    const urlInput = document.getElementById("image_url");
-    const runButtons = document.querySelectorAll('button[onclick="generateBuildConcept()"]');
-
-    const hasFile = !!(fileInput && fileInput.files && fileInput.files.length > 0);
-    const hasUrl = !!(urlInput && urlInput.value.trim());
-
-    if (hasFile && hasUrl) {
-      urlInput.value = "";
-    }
-
-    runButtons.forEach(btn => {
-      btn.disabled = true;
-      btn.dataset.originalText = btn.textContent;
-      btn.textContent = "Generating...";
-    });
-
-    statusText.textContent = hasFile
-      ? "Uploading site image and generating build concept..."
-      : "Generating build concept...";
-
-    imagesWrap.innerHTML = `<div class="empty-state-inline">Generating concept renders...</div>`;
+    const status = document.getElementById("buildStatus");
+    status.textContent = "Generating build concept…";
 
     try {
-      const endpoint = hasFile
+      const fd = new FormData();
+      const payload = formPayload();
+
+      Object.entries(payload).forEach(([k, v]) => fd.append(k, v));
+
+      const file = document.getElementById("landImage")?.files?.[0];
+      if (file) {
+        fd.append("land_image", file);
+      }
+
+      const endpoint = file
         ? "{{ url_for('investor.generate_build_studio_upload') }}"
         : "{{ url_for('investor.generate_build_studio') }}";
 
       const res = await fetch(endpoint, {
         method: "POST",
-        body: formData
+        body: fd,
+        credentials: "include"
       });
 
       const data = await res.json();
 
-      if (!res.ok || data.status !== "ok") {
-        statusText.textContent = "Build concept generation failed.";
-        imagesWrap.innerHTML = `<div class="empty-state-inline">${data.message || "Unable to generate build concept."}</div>`;
+      if (data.status !== "ok") {
+        status.textContent = data.message || "Build concept generation failed.";
         return;
       }
 
-      latestBuildMeta = data.meta || {};
-      latestBuildSeed = data.seed || null;
-      latestBuildJobId = data.job_id || null;
-
-      const imageState = getBuildImageSources(data);
-      latestBuildImages = imageState.rawBase64;
-      latestBuildImageUrls = imageState.savedPaths.length ? imageState.savedPaths : imageState.displaySources;
-
-      statusText.textContent = `Build concept generated successfully${data.mode ? " (" + data.mode + " mode)" : ""}.`;
-      seedEl.textContent = latestBuildSeed || "—";
-      jobIdEl.textContent = latestBuildJobId || "—";
-
-      if (!imageState.displaySources.length) {
-        imagesWrap.innerHTML = `<div class="empty-state-inline">No images returned from engine.</div>`;
+      const images = Array.isArray(data.images) ? data.images : [];
+      if (!images.length) {
+        status.textContent = "No build image returned.";
         return;
       }
 
-      imagesWrap.innerHTML = imageState.displaySources.map(src => `
-        <div class="build-image-card">
-          <img src="${src}" alt="Build concept render">
-        </div>
-      `).join("");
-
+      const previewUrl = "data:image/webp;base64," + images[0];
+      status.textContent = "Build concept generated successfully.";
+      renderBuildPreview(previewUrl);
+      renderBuildThumb(previewUrl, payload.property_type || "Concept");
     } catch (err) {
       console.error(err);
-      statusText.textContent = "Build concept generation failed.";
-      imagesWrap.innerHTML = `<div class="empty-state-inline">Something went wrong generating the build concept.</div>`;
-    } finally {
-      runButtons.forEach(btn => {
-        btn.disabled = false;
-        btn.textContent = btn.dataset.originalText || "Generate Concept";
-      });
+      status.textContent = "Build concept generation failed.";
     }
   }
 
-  async function saveBuildProject() {
-    const dealIdInput = document.getElementById("deal_id");
-    const saveButtons = document.querySelectorAll('button[onclick="saveBuildProject()"]');
-
-    const firstConceptUrl = latestBuildImageUrls.length ? latestBuildImageUrls[0] : null;
-    const firstBase64 = latestBuildImages.length ? `data:image/png;base64,${latestBuildImages[0]}` : null;
-
-    const payload = {
-      deal_id: dealIdInput ? dealIdInput.value : null,
-      project_name: document.getElementById("project_name").value || "",
-      property_type: document.getElementById("property_type").value || "",
-      description: document.getElementById("description").value || "",
-      lot_size: document.getElementById("lot_size").value || "",
-      zoning: document.getElementById("zoning").value || "",
-      location: document.getElementById("location").value || "",
-      notes: document.getElementById("notes").value || "",
-      concept_render_url: firstConceptUrl || firstBase64,
-      blueprint_url: null,
-      site_plan_url: null,
-      presentation_url: null
-    };
-
-    saveButtons.forEach(btn => {
-      btn.disabled = true;
-      btn.dataset.originalText = btn.textContent;
-      btn.textContent = "Saving...";
-    });
+  async function generateBuildScope() {
+    const box = document.getElementById("buildScopeResults");
+    box.innerHTML = "Analyzing build scope...";
 
     try {
-      const res = await fetch("{{ url_for('investor.save_build_studio') }}", {
+      const payload = formPayload();
+
+      const res = await fetch("{{ url_for('investor.ai_build_scope') }}", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify(payload)
       });
 
       const data = await res.json();
 
-      if (!res.ok || data.status !== "ok") {
-        alert(data.message || "Unable to save build project.");
+      if (data.status !== "ok") {
+        box.innerHTML = `<div class="muted">${data.message || "Build scope failed."}</div>`;
         return;
       }
 
-      alert("Build project saved successfully.");
-      if (data.deal_id) {
-        window.location.reload();
+      const analysis = data.build_analysis || {};
+      const keyPoints = Array.isArray(analysis.key_points) ? analysis.key_points : [];
+      const estimatedBuildCost = Number(analysis.estimated_build_cost || 0);
+
+      let html = "<h4 style='margin:0 0 10px;'>AI Build Scope</h4>";
+
+      if (keyPoints.length) {
+        html += "<ul>";
+        keyPoints.forEach((item) => {
+          html += `<li>${item}</li>`;
+        });
+        html += "</ul>";
       }
+
+      if (analysis.summary) {
+        html += `<p style="margin-top:12px;">${analysis.summary}</p>`;
+      }
+
+      if (estimatedBuildCost) {
+        html += `<p style="margin-top:12px;"><b>Estimated Build Cost:</b> $${estimatedBuildCost.toLocaleString()}</p>`;
+      }
+
+      box.innerHTML = html;
     } catch (err) {
       console.error(err);
-      alert("Something went wrong saving the build project.");
-    } finally {
-      saveButtons.forEach(btn => {
-        btn.disabled = false;
-        btn.textContent = btn.dataset.originalText || "Save Build Project";
-      });
+      box.innerHTML = `<div class="muted">Build scope failed.</div>`;
     }
   }
 
-  document.addEventListener("DOMContentLoaded", () => {
-    const fileInput = document.getElementById("land_image");
-    const urlInput = document.getElementById("image_url");
+  function renderBuildPreview(previewUrl) {
+    CURRENT_BUILD_PREVIEW = previewUrl;
 
-    if (fileInput) {
-      fileInput.addEventListener("change", clearImageUrlIfFileSelected);
+    const img = document.getElementById("buildPreviewImg");
+    const empty = document.getElementById("buildPreviewEmpty");
+    const saveBtn = document.getElementById("saveBuildBtn");
+    const budgetBtn = document.getElementById("budgetBuildBtn");
+
+    if (empty) empty.style.display = "none";
+    img.src = previewUrl;
+    img.style.display = "block";
+    saveBtn.style.display = "inline-flex";
+    if (budgetBtn) budgetBtn.style.display = "inline-flex";
+  }
+
+  function selectBuildPreview(previewUrl) {
+    renderBuildPreview(previewUrl);
+  }
+
+  function renderBuildThumb(previewUrl, label) {
+    const grid = document.getElementById("newBuildGrid");
+    grid.style.display = "grid";
+
+    const div = document.createElement("div");
+    div.className = "thumb";
+    div.innerHTML = `
+      <img class="img" src="${previewUrl}" alt="Build concept" style="cursor:pointer;">
+      <div class="thumb-meta">
+        <span class="chip">${label || "Build Concept"}</span>
+        <small class="muted">just now</small>
+      </div>
+      <div class="action-row" style="margin-top:.7rem;">
+        <button class="btn pick" type="button">👀 Preview</button>
+      </div>
+    `;
+
+    div.querySelector("img").onclick = () => selectBuildPreview(previewUrl);
+    div.querySelector("button").onclick = () => selectBuildPreview(previewUrl);
+
+    grid.prepend(div);
+  }
+
+  async function saveBuildToProject() {
+    if (!CURRENT_BUILD_PREVIEW) {
+      alert("Generate or select a build preview first.");
+      return;
     }
 
-    if (urlInput) {
-      urlInput.addEventListener("input", clearFileIfUrlEntered);
+    try {
+      const payload = formPayload();
+      const res = await fetch("{{ url_for('investor.save_build_studio') }}", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          deal_id: payload.deal_id,
+          project_name: payload.project_name,
+          property_type: payload.property_type,
+          description: payload.description,
+          lot_size: payload.lot_size,
+          zoning: payload.zoning,
+          location: payload.location,
+          notes: payload.notes,
+          concept_render_url: CURRENT_BUILD_PREVIEW,
+          blueprint_url: "",
+          site_plan_url: "",
+          presentation_url: ""
+        })
+      });
+
+      const data = await res.json();
+
+      if (data.status !== "ok") {
+        alert(data.message || "Could not save build project.");
+        return;
+      }
+
+      alert("Build project saved.");
+    } catch (err) {
+      console.error(err);
+      alert("Could not save build project.");
     }
-  });
+  }
 </script>
 {% endblock %}
