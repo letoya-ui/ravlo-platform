@@ -6060,6 +6060,151 @@ def budget_detail(budget_id):
         active_tab="budget"
     )
 
+@investor_bp.route("/deals/<int:deal_id>/budget/generate-from-ai", methods=["POST"])
+@login_required
+@role_required("investor")
+def generate_budget_from_ai(deal_id):
+    deal = _get_owned_deal_or_404(deal_id)
+    ip = InvestorProfile.query.filter_by(user_id=current_user.id).first_or_404()
+
+    existing_budget = ProjectBudget.query.filter_by(
+        deal_id=deal.id,
+        investor_profile_id=ip.id,
+        budget_type="rehab"
+    ).first()
+
+    if existing_budget:
+        flash("A rehab budget already exists for this deal.", "info")
+        return redirect(url_for("investor.budget_detail", budget_id=existing_budget.id))
+
+    results = deal.results_json or {}
+    rehab_scope = results.get("rehab_scope") or {}
+    build_analysis = results.get("build_analysis") or {}
+
+    # Try a few likely places for line items
+    raw_items = (
+        rehab_scope.get("line_items")
+        or rehab_scope.get("budget_items")
+        or rehab_scope.get("items")
+        or build_analysis.get("line_items")
+        or []
+    )
+
+    budget_type = "build" if build_analysis and not rehab_scope else "rehab"
+
+    budget = ProjectBudget(
+        borrower_profile_id=None,
+        investor_profile_id=ip.id,
+        loan_app_id=None,
+        deal_id=deal.id,
+        build_project_id=None,
+        budget_type=budget_type,
+        name=f"AI Budget - {deal.title or deal.address or f'Deal #{deal.id}'}",
+        project_name=deal.title or deal.address,
+        total_amount=0,
+        total_budget=0,
+        total_cost=0.0,
+        materials_cost=0.0,
+        labor_cost=0.0,
+        contingency=0.0,
+        paid_amount=0.0,
+        notes="Auto-generated from Deal Architect / AI analysis.",
+    )
+    db.session.add(budget)
+    db.session.flush()
+
+    created_count = 0
+    estimated_total = 0.0
+
+    for item in raw_items:
+        if not isinstance(item, dict):
+            continue
+
+        category = (
+            item.get("category")
+            or item.get("section")
+            or "General"
+        )
+
+        description = (
+            item.get("description")
+            or item.get("name")
+            or item.get("item")
+            or "Budget Item"
+        )
+
+        amount = (
+            item.get("estimated_amount")
+            or item.get("cost")
+            or item.get("amount")
+            or item.get("estimate")
+            or 0
+        )
+
+        try:
+            amount = float(amount or 0)
+        except (TypeError, ValueError):
+            amount = 0.0
+
+        expense = ProjectExpense(
+            budget_id=budget.id,
+            category=str(category).strip() or "General",
+            description=str(description).strip() or "Budget Item",
+            vendor=None,
+            estimated_amount=amount,
+            actual_amount=0,
+            paid_amount=0,
+            status="planned",
+            notes="Imported from AI deal analysis.",
+        )
+        db.session.add(expense)
+        created_count += 1
+        estimated_total += amount
+
+    # Fallback: if no line items, try total rehab estimate only
+    if created_count == 0:
+        fallback_total = (
+            rehab_scope.get("estimated_total")
+            or rehab_scope.get("total_estimated_cost")
+            or rehab_scope.get("rehab_total")
+            or results.get("rehab_cost")
+            or deal.rehab_cost
+            or 0
+        )
+
+        try:
+            fallback_total = float(fallback_total or 0)
+        except (TypeError, ValueError):
+            fallback_total = 0.0
+
+        if fallback_total > 0:
+            expense = ProjectExpense(
+                budget_id=budget.id,
+                category="General",
+                description="AI Estimated Rehab Budget",
+                vendor=None,
+                estimated_amount=fallback_total,
+                actual_amount=0,
+                paid_amount=0,
+                status="planned",
+                notes="Fallback total imported from AI analysis.",
+            )
+            db.session.add(expense)
+            created_count = 1
+            estimated_total = fallback_total
+
+    budget.total_cost = estimated_total
+    budget.total_amount = estimated_total
+    budget.total_budget = estimated_total + float(budget.contingency or 0)
+
+    db.session.commit()
+
+    if created_count:
+        flash(f"AI budget created with {created_count} imported item(s).", "success")
+    else:
+        flash("Budget created, but no AI line items were found to import.", "warning")
+
+    return redirect(url_for("investor.budget_detail", budget_id=budget.id))
 
 @investor_bp.route("/budget-studio/<int:budget_id>/expense/add", methods=["POST"])
 @csrf.exempt

@@ -56,7 +56,14 @@ Review the saved deal, check strategy and funding status, and launch the next to
       <a href="{{ url_for('investor.build_studio', deal_id=deal.id) }}" class="ravlo-btn ghost">
         Build Studio
       </a>
-
+      <form method="POST"
+            action="{{ url_for('investor.generate_budget_from_ai', deal_id=deal.id) }}"
+            style="display:block;">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="ravlo-btn ghost" style="width:100%;">
+          Generate Budget from AI
+        </button>
+      </form>
       <a href="{{ url_for('investor.capital_application', deal_id=deal.id) }}" class="ravlo-btn primary">
         Request Funding
       </a>
@@ -408,7 +415,43 @@ Review the saved deal, check strategy and funding status, and launch the next to
           {% endif %}
         </div>
       </section>
+      <section class="ravlo-card pad">
+        <div class="section-head">
+          <div>
+            <div class="eyebrow">BUDGET</div>
+            <h3>Budget Studio</h3>
+          </div>
+        </div>
 
+        <div class="detail-list">
+          <div class="detail-row">
+            <span>Current Rehab Estimate</span>
+            <strong>${{ "{:,.0f}".format(deal.rehab_cost or 0) }}</strong>
+          </div>
+
+          <div class="detail-row">
+            <span>Total Project Cost</span>
+            <strong>${{ "{:,.0f}".format((deal.purchase_price or 0) + (deal.rehab_cost or 0)) }}</strong>
+          </div>
+        </div>
+
+        <div style="display:grid;gap:12px;margin-top:16px;">
+          <form method="POST"
+                action="{{ url_for('investor.generate_budget_from_ai', deal_id=deal.id) }}"
+                style="margin:0;">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="ravlo-btn primary" style="width:100%;">
+              Generate Budget from AI
+            </button>
+          </form>
+
+          <a href="{{ url_for('investor.rehab_budget_tracker', deal_id=deal.id) }}"
+             class="ravlo-btn ghost"
+             style="width:100%;text-align:center;">
+            Open Rehab Budget Tracker
+          </a>
+        </div>
+      </section>
       <!-- FUNDING -->
       <section class="ravlo-card pad">
         <div class="section-head">
@@ -470,6 +513,16 @@ Review the saved deal, check strategy and funding status, and launch the next to
             <span class="quick-title">Open Build Studio</span>
             <span class="quick-sub">Design construction concepts and development scenarios.</span>
           </a>
+          
+          <form method="POST"
+                action="{{ url_for('investor.generate_budget_from_ai', deal_id=deal.id) }}"
+                style="margin:0;">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="quick-card" style="width:100%;text-align:left;cursor:pointer;">
+              <span class="quick-title">Generate Budget from AI</span>
+              <span class="quick-sub">Turn Deal Architect estimates into a working Budget Studio file.</span>
+            </button>
+          </form>
         </div>
       </section>
 
