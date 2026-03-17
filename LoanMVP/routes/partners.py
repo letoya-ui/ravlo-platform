@@ -564,3 +564,100 @@ def resources():
         partner=partner,
         portal="partner"
     )
+
+@partners_bp.route("/subscribe/<tier>")
+@role_required("partner")
+def subscribe(tier):
+    partner = Partner.query.filter_by(user_id=current_user.id).first()
+    if not partner:
+        flash("Partner profile not found.", "warning")
+        return redirect(url_for("partners.register"))
+
+    allowed_tiers = {"Free", "Featured", "Premium", "Enterprise"}
+    normalized = tier.strip().title()
+
+    if normalized not in allowed_tiers:
+        flash("Invalid subscription tier.", "danger")
+        return redirect(url_for("partners.billing"))
+
+    return render_template(
+        "partners/subscribe.html",
+        partner=partner,
+        selected_tier=normalized,
+        portal="partner",
+        page_title="Choose Plan",
+        page_subline="Confirm your Ravlo Partner subscription tier."
+    )
+
+
+@partners_bp.route("/subscribe/<tier>/confirm", methods=["POST"])
+@csrf.exempt
+@role_required("partner")
+def confirm_subscription(tier):
+    partner = Partner.query.filter_by(user_id=current_user.id).first()
+    if not partner:
+        flash("Partner profile not found.", "warning")
+        return redirect(url_for("partners.register"))
+
+    allowed_tiers = {"Free", "Featured", "Premium", "Enterprise"}
+    normalized = tier.strip().title()
+
+    if normalized not in allowed_tiers:
+        flash("Invalid subscription tier.", "danger")
+        return redirect(url_for("partners.billing"))
+
+    # placeholder subscription logic for testing
+    partner.subscription_tier = normalized
+    partner.approved = True
+    partner.active = True
+    partner.status = "Active"
+
+    if normalized in {"Featured", "Premium", "Enterprise"}:
+        partner.featured = True
+    else:
+        partner.featured = False
+
+    db.session.commit()
+
+    flash(f"Your subscription has been updated to {normalized}.", "success")
+    return redirect(url_for("partners.billing"))
+
+@partners_bp.route("/billing")
+@role_required("partner")
+def billing():
+    partner = Partner.query.filter_by(user_id=current_user.id).first()
+    if not partner:
+        flash("Partner profile not found.", "warning")
+        return redirect(url_for("partners.register"))
+
+    plans = [
+        {
+            "name": "Free",
+            "price": "$0",
+            "features": ["Basic profile", "Limited visibility", "Starter access"]
+        },
+        {
+            "name": "Featured",
+            "price": "$49/mo",
+            "features": ["Featured listing", "More visibility", "Pro request access"]
+        },
+        {
+            "name": "Premium",
+            "price": "$99/mo",
+            "features": ["Workspace access", "Priority visibility", "Advanced tools"]
+        },
+        {
+            "name": "Enterprise",
+            "price": "Custom",
+            "features": ["Full suite", "Priority support", "Custom partner setup"]
+        },
+    ]
+
+    return render_template(
+        "partners/billing.html",
+        partner=partner,
+        plans=plans,
+        portal="partner",
+        page_title="Billing",
+        page_subline="Manage your Ravlo Partner plan."
+    )
