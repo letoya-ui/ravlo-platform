@@ -20,19 +20,19 @@ PAGE_META = {
         "title": "About Ravlo",
         "description": "Learn about Ravlo’s mission to give investors a smarter, clearer way to evaluate and execute real estate deals.",
         "template": "marketing/about.html",
-        "hero_image": "images/marketing/city_skyline.jpg.",
+        "hero_image": "images/marketing/city_skyline.jpg",
     },
     "plans": {
         "title": "Plans | Ravlo",
         "description": "Explore Ravlo plans for investors, teams, and growing real estate operators.",
         "template": "marketing/plans.html",
-        "hero_image": "images/marketing/luxury_property.jpg.",
+        "hero_image": "images/marketing/luxury_property.jpg",
     },
     "partners": {
         "title": "Partners | Ravlo",
         "description": "Connect with trusted real estate partners, vendors, and services through the Ravlo ecosystem.",
         "template": "marketing/partners.html",
-        "hero_image": "images/marketing/interior_luxury.jpg.PNG",
+        "hero_image": "images/partners/partners-hero.jpg",
     },
     "enter": {
         "title": "Enter Ravlo",
@@ -50,7 +50,7 @@ PAGE_META = {
         "title": "Contact Ravlo",
         "description": "Get in touch with Ravlo for questions, demos, partnerships, or support.",
         "template": "marketing/contact.html",
-        "hero_image": "images/marketing/city_skyline.jpg.PNG",
+        "hero_image": "images/marketing/city_skyline.jpg",
     },
     "support": {
         "title": "Support | Ravlo",
