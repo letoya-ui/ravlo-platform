@@ -15,9 +15,6 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='css/ravlo_tokens.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/ravlo_employee.css') }}">
 
-  {# Optional favicon later #}
-  {# <link rel="icon" type="image/png" href="{{ url_for('static', filename='img/ravlo-favicon.png') }}"> #}
-
   {% block head %}{% endblock %}
 </head>
 <body class="re-body role-{{ current_user.role if current_user.is_authenticated else 'guest' }}">
@@ -26,26 +23,19 @@
 
     <aside class="re-sidebar" id="reSidebar">
       {% if current_user.is_authenticated %}
-
         {% if current_user.role == "borrower" %}
           {% include "layouts/_sidebar_borrower.html" %}
-
         {% elif current_user.role == "loan_officer" %}
           {% include "layouts/_sidebar_loan_officer.html" %}
-
         {% elif current_user.role == "processor" %}
           {% include "layouts/_sidebar_processor.html" %}
-
         {% elif current_user.role == "underwriter" %}
           {% include "layouts/_sidebar_underwriter.html" %}
-
         {% elif current_user.role == "admin" %}
           {% include "layouts/_sidebar_admin.html" %}
-
         {% else %}
           {% include "layouts/_sidebar_loan_officer.html" %}
         {% endif %}
-
       {% endif %}
     </aside>
 
@@ -53,8 +43,13 @@
 
       <header class="re-topbar">
         <div class="re-topbar-left">
-          <button class="re-menu-btn" type="button" aria-label="Toggle navigation" onclick="document.body.classList.toggle('re-sidebar-open')">
-            <i class="icon-menu-2"></i>
+          <button
+            class="re-menu-btn"
+            type="button"
+            aria-label="Toggle navigation"
+            onclick="document.body.classList.toggle('re-sidebar-open')"
+          >
+            <i class="lucide lucide-menu"></i>
           </button>
 
           <div>
@@ -62,41 +57,41 @@
             <div class="re-page-subline">{% block page_subline %}Modern lending operations{% endblock %}</div>
           </div>
         </div>
-        
-        <div class="re-user-menu">
 
-         <div class="re-user-chip-top">
-           <div class="re-user-avatar">
-             {{ (current_user.first_name[0] if current_user.first_name else "U")|upper }}
+        <div class="re-topbar-right">
+          <div class="re-topbar-actions">
+            {% block topbar_actions %}{% endblock %}
           </div>
 
-         <span>{{ current_user.first_name }}</span>
-       </div>
+          {% if current_user.is_authenticated %}
+          <div class="re-user-menu">
+            <div class="re-user-chip-top">
+              <div class="re-user-avatar">
+                {{ (current_user.first_name[0] if current_user.first_name else "U")|upper }}
+              </div>
+              <span>{{ current_user.first_name or "User" }}</span>
+            </div>
 
-       <div class="re-user-dropdown">
+            <div class="re-user-dropdown">
+              <a href="{{ url_for('account.profile') }}">
+                <i class="icon lucide lucide-user"></i>
+                Profile
+              </a>
 
-        <a href="{{ url_for('account.profile') }}">
-          <i class="icon lucide lucide-user"></i>
-          Profile
-        </a>
+              <a href="{{ url_for('account.settings') }}">
+                <i class="icon lucide lucide-settings"></i>
+                Settings
+              </a>
 
-        <a href="{{ url_for('account.settings') }}">
-          <i class="icon lucide lucide-settings"></i>
-          Settings
-        </a>
+              <div class="re-divider"></div>
 
-        <div class="re-divider"></div>
-
-        <a href="{{ url_for('auth.logout') }}" class="danger">
-          <i class="icon lucide lucide-log-out"></i>
-          Logout
-        </a>
-
-      </div>
-
-    </div>
-        <div class="re-topbar-actions">
-          {% block topbar_actions %}{% endblock %}
+              <a href="{{ url_for('auth.logout') }}" class="danger">
+                <i class="icon lucide lucide-log-out"></i>
+                Logout
+              </a>
+            </div>
+          </div>
+          {% endif %}
         </div>
       </header>
 
@@ -117,5 +112,6 @@
     </div>
   </div>
 
+  {% block scripts %}{% endblock %}
 </body>
 </html>
