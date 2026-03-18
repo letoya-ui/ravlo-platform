@@ -2413,37 +2413,30 @@ def property_search():
     valuation = {}
     rent_estimate = {}
     comps = {}
+    market_snapshot = {}
     ai_summary = None
     error = None
     debug = None
     saved_id = None
-
-    def normalize_property(p: dict) -> dict:
-        if not isinstance(p, dict):
-            return {}
-        p.setdefault("zip", p.get("zipcode") or p.get("zipCode") or p.get("postalCode"))
-        p.setdefault("city", p.get("city") or p.get("locality"))
-        p.setdefault("state", p.get("state") or p.get("region") or p.get("stateCode"))
-        p.setdefault("address", p.get("address") or p.get("formattedAddress") or query)
-        if p.get("price") is not None:
-            try:
-                p["price"] = float(p["price"])
-            except Exception:
-                pass
-        if p.get("photos") in ({}, []):
-            p["photos"] = None
-        return p
+    primary_photo = None
+    photos = []
 
     if query:
         resolved = resolve_property_unified(query)
+
         if resolved.get("status") == "ok":
             raw_prop = resolved.get("property") or {}
-            property_data = normalize_property(raw_prop)
 
-            valuation = raw_prop.get("valuation") or {}
-            rent_estimate = raw_prop.get("rent_estimate") or raw_prop.get("rentEstimate") or {}
-            comps = raw_prop.get("comps") or {}
+            # Pull already-normalized bundle if your unified resolver now returns it
+            property_data = raw_prop
+            valuation = resolved.get("valuation") or raw_prop.get("valuation") or {}
+            rent_estimate = resolved.get("rent_estimate") or raw_prop.get("rent_estimate") or raw_prop.get("rentEstimate") or {}
+            comps = resolved.get("comps") or raw_prop.get("comps") or {}
+            market_snapshot = resolved.get("market_snapshot") or raw_prop.get("market_snapshot") or {}
             ai_summary = resolved.get("ai_summary") or resolved.get("summary") or None
+
+            photos = property_data.get("photos") or []
+            primary_photo = property_data.get("primary_photo")
 
             if ip and property_data.get("address"):
                 try:
@@ -2455,14 +2448,18 @@ def property_search():
                         saved_id = existing.id
                 except Exception:
                     saved_id = None
+
         else:
             error = resolved.get("error") or "unknown_error"
-            debug = {"provider": resolved.get("provider"), "stage": resolved.get("stage")}
+            debug = {
+                "provider": resolved.get("provider"),
+                "stage": resolved.get("stage")
+            }
 
     return render_template(
         "investor/property_search.html",
         investor=ip,
-        title="Property Intelligence",
+        title="Property Search",
         active_page="property_search",
         query=query,
         error=error,
@@ -2471,8 +2468,11 @@ def property_search():
         valuation=valuation,
         rent_estimate=rent_estimate,
         comps=comps,
+        market_snapshot=market_snapshot,
         ai_summary=ai_summary,
         saved_id=saved_id,
+        photos=photos,
+        primary_photo=primary_photo,
     )
 
 
@@ -2744,6 +2744,9 @@ def save_property_and_analyze():
     flash("🏠 Property saved! Opening Deal Studio…", "success")
     return redirect(url_for("investor.deal_workspace", prop_id=saved.id, mode="flip"))
 
+
+        
+
 @investor_bp.route("/intelligence/saved/<int:prop_id>", methods=["GET"])
 @investor_bp.route("/property_explore_plus/<int:prop_id>", methods=["GET"])
 @login_required
@@ -2767,34 +2770,36 @@ def property_explore_plus(prop_id):
         return redirect(url_for(fallback_endpoint))
 
     resolved = resolve_property_unified(prop.address)
-    resolved_property = (resolved.get("property") or {}) if resolved.get("status") == "ok" else {}
+
+    if resolved.get("status") != "ok":
+        flash("Could not load property intelligence.", "warning")
+        return redirect(url_for(fallback_endpoint))
+
+    resolved_property = resolved.get("property") or {}
+    valuation = resolved.get("valuation") or {}
+    rent_estimate = resolved.get("rent_estimate") or {}
+    comps = resolved.get("comps") or {}
+    market_snapshot = resolved.get("market_snapshot") or {}
+    ai_summary = resolved.get("ai_summary") or resolved.get("summary") or None
     photos = resolved_property.get("photos") or []
-
-    from LoanMVP.services.comps_service import get_comps_for_property
-    comps = get_comps_for_property(
-        address=prop.address,
-        zipcode=(prop.zipcode or ""),
-        rentometer_api_key=None
-    )
-
-    market = get_market_snapshot(zipcode=(prop.zipcode or "")) if prop.zipcode else {}
-    ai_summary = resolved.get("ai_summary") or None
+    primary_photo = resolved_property.get("primary_photo")
 
     return render_template(
         "investor/property_explore_plus.html",
         investor=ip,
         prop=prop,
         resolved=resolved_property,
+        valuation=valuation,
+        rent_estimate=rent_estimate,
         ai_summary=ai_summary,
         comps=comps,
-        market=market,
+        market=market_snapshot,
         photos=photos,
+        primary_photo=primary_photo,
         active_page="property_search" if source == "property_search" else "property_tool",
         source=source,
         back_url=url_for(fallback_endpoint),
     )
-
-
 
 @investor_bp.route("/intelligence/tool", methods=["GET"])
 @investor_bp.route("/property_tool", methods=["GET"])
