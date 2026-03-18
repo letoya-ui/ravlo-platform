@@ -314,7 +314,7 @@ def search_deals_for_zip(
 
         photo = _listing_photo(l)
 
-       if not photo and addr and idx < 8:
+        if not photo and addr and idx < 8:
            try:
                bundle = resolve_rentcast_investor_bundle(
                address=addr,
