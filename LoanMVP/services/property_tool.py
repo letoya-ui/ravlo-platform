@@ -40,7 +40,34 @@ def _keyword_fixer_score(text: str) -> int:
     ]
     return sum(1 for w in hits if w in t)
 
+def _listing_photo(listing: dict):
+    if not isinstance(listing, dict):
+        return None
 
+    candidates = [
+        listing.get("imageUrl"),
+        listing.get("primaryPhoto"),
+        listing.get("photo"),
+        listing.get("photos"),
+        listing.get("imageUrls"),
+        listing.get("photoUrls"),
+        listing.get("images"),
+    ]
+
+    for val in candidates:
+        if isinstance(val, str) and val.strip():
+            return val.strip()
+        if isinstance(val, list) and val:
+            first = val[0]
+            if isinstance(first, str) and first.strip():
+                return first.strip()
+            if isinstance(first, dict):
+                url = first.get("url") or first.get("href") or first.get("src")
+                if isinstance(url, str) and url.strip():
+                    return url.strip()
+
+    return None
+    
 def _estimate_rehab_from_score(score: int, sqft: float | None) -> float:
     if not sqft:
         sqft = 1400
@@ -157,6 +184,8 @@ def _rentcast_rent_estimate(address: str, city: str, state: str, zip_code: str):
     return r.json()
 
 
+
+            
 def search_deals_for_zip(
     zip_code: str,
     strategy: str = "flip",
@@ -186,9 +215,10 @@ def search_deals_for_zip(
         z = (l.get("zipCode") or zip_code or "").strip()
 
         price = _as_float(l.get("price"))
-        beds = l.get("bedrooms")
-        baths = l.get("bathrooms")
-        sqft = _as_float(l.get("squareFootage"))
+        beds = _safe_int(l.get("bedrooms") or l.get("beds"))
+        baths = _safe_float(l.get("bathrooms") or l.get("baths"))
+        sqft = _as_float(l.get("squareFootage") or l.get("sqft"))
+        year_built = _safe_int(l.get("yearBuilt") or l.get("year_built"))
         remarks = l.get("description") or l.get("remarks") or ""
 
         fixer_score = _keyword_fixer_score(remarks)
@@ -219,6 +249,8 @@ def search_deals_for_zip(
                 "zip": z,
                 "beds": beds,
                 "baths": baths,
+                "year_built": year_built,
+                "property_type": l.get("propertyType") or l.get("propertySubType"),
             },
             "arv_estimate": arv,
             "market_rent_estimate": rent,
@@ -290,13 +322,9 @@ def search_deals_for_zip(
             "price": price,
             "beds": beds,
             "baths": baths,
-            "sqft": sqft,
-            "photo": (
-                l.get("imageUrl")
-                or l.get("primaryPhoto")
-                or l.get("photo")
-                or None
-            ),
+            "sqft": _safe_int(sqft),
+            "year_built": year_built,
+            "photo": _listing_photo(l),
             "property_id": l.get("id") or l.get("propertyId") or None,
             "property_type": l.get("propertyType") or l.get("propertySubType") or None,
             "fixer_score": fixer_score,
@@ -304,19 +332,23 @@ def search_deals_for_zip(
             "comparison": comparison,
             "recommendation": recommendation,
             "recommended_strategy": recommended_strategy,
-            "deal_score": score_data["score"],
-            "deal_label": score_data["label"],
+            "deal_score": {
+                "score": score_data["score"],
+                "label": score_data["label"],
+            },
             "ai_summary": ai_summary,
         })
 
     out.sort(
         key=lambda x: (
-            x.get("deal_score", 0),
+            (x.get("deal_score") or {}).get("score", 0),
             x.get("metrics", {}).get("roi", 0) or 0,
             x.get("metrics", {}).get("profit", 0) or 0,
-            x.get("metrics", {}).get("net_cashflow_mo", 0) or x.get("metrics", {}).get("net_cashflow", 0) or 0,
+            x.get("metrics", {}).get("net_cashflow_mo", 0)
+            or x.get("metrics", {}).get("net_cashflow", 0)
+            or 0,
         ),
         reverse=True,
     )
 
-    return out
+    return out           
