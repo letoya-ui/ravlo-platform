@@ -7,29 +7,63 @@
 </div>
 
 <nav class="re-nav">
+
   <div class="re-nav-group">
-    <div class="re-nav-label">Workspace</div>
+    <div class="re-nav-label">Command</div>
 
-    <a href="{{ url_for('processor.dashboard') }}" class="re-nav-link {% if active_tab == 'dashboard' %}active{% endif %}">
+    <a href="{{ url_for('processor.dashboard') }}"
+       class="re-nav-link {% if active_tab == 'dashboard' %}active{% endif %}">
       <i class="icon lucide lucide-layout-dashboard"></i>
-      <span>Dashboard</span>
+      <span>Command Center</span>
     </a>
 
-    <a href="{{ url_for('processor.loan_queue') }}" class="re-nav-link {% if active_tab == 'pipeline' %}active{% endif %}">
-      <i class="icon lucide lucide-git-branch"></i>
-      <span>Queue</span>
+    <a href="{{ url_for('processor.loan_queue') }}"
+       class="re-nav-link {% if active_tab == 'queue' %}active{% endif %}">
+      <i class="icon lucide lucide-list-todo"></i>
+      <span>Loan Queue</span>
     </a>
 
-    <a href="{{ url_for('processor.documents') }}" class="re-nav-link {% if active_tab == 'documents' %}active{% endif %}">
+    <a href="{{ url_for('processor.documents') }}"
+       class="re-nav-link {% if active_tab == 'documents' %}active{% endif %}">
       <i class="icon lucide lucide-folder-open"></i>
       <span>Documents</span>
     </a>
 
-    <a href="{{ url_for('processor.messages') }}" class="re-nav-link {% if active_tab == 'messages' %}active{% endif %}">
+    <a href="{{ url_for('processor.verify_docs') }}"
+       class="re-nav-link {% if active_tab == 'verify_docs' %}active{% endif %}">
+      <i class="icon lucide lucide-badge-check"></i>
+      <span>Verify Docs</span>
+    </a>
+  </div>
+
+  <div class="re-nav-group">
+    <div class="re-nav-label">Workflow</div>
+
+    <a href="{{ url_for('processor.reports') }}"
+       class="re-nav-link {% if active_tab == 'reports' %}active{% endif %}">
+      <i class="icon lucide lucide-bar-chart-3"></i>
+      <span>Reports</span>
+    </a>
+
+    <a href="{{ url_for('processor.messages') }}"
+       class="re-nav-link {% if active_tab == 'messages' %}active{% endif %}">
       <i class="icon lucide lucide-messages-square"></i>
       <span>Messages</span>
     </a>
+
+    <a href="{{ url_for('processor.ai_conversations') }}"
+       class="re-nav-link {% if active_tab == 'ai' %}active{% endif %}">
+      <i class="icon lucide lucide-bot"></i>
+      <span>AI Assistant</span>
+    </a>
+
+    <a href="{{ url_for('processor.profile') }}"
+       class="re-nav-link {% if active_tab == 'profile' %}active{% endif %}">
+      <i class="icon lucide lucide-user-round"></i>
+      <span>Profile</span>
+    </a>
   </div>
+
 </nav>
 
 <div class="re-sidebar-foot">
