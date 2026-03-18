@@ -1,4 +1,5 @@
 import os
+import requests
 from datetime import datetime
 
 from flask import (
@@ -10,7 +11,7 @@ from flask import (
     flash,
     current_app,
 )
-from flask_login import current_user
+from flask_login import current_user, login_required
 from werkzeug.utils import secure_filename
 
 from LoanMVP.extensions import db, csrf
@@ -18,11 +19,10 @@ from LoanMVP.utils.decorators import role_required
 from LoanMVP.forms import BorrowerProfileForm
 from LoanMVP.ai.base_ai import AIAssistant
 
-from LoanMVP.models.loan_models import BorrowerProfile, LoanApplication
+from LoanMVP.models.loan_models import BorrowerProfile, LoanApplication, BorrowerConsent
 from LoanMVP.models.document_models import LoanDocument
 from LoanMVP.models.underwriter_model import UnderwritingCondition
 from LoanMVP.models.crm_models import Message
-
 
 borrower_bp = Blueprint("borrower", __name__, url_prefix="/borrower")
 
@@ -744,13 +744,21 @@ def subscription():
     )
 
 @borrower_bp.route("/consent/credit", methods=["POST"])
+@login_required
+@role_required("borrower")
 def consent_credit():
+    borrower = get_current_borrower()
+    if not borrower:
+        flash("Please complete your borrower profile first.", "warning")
+        return redirect(url_for("borrower.create_profile"))
+
     consent = BorrowerConsent(
-        borrower_id=current_user.borrower_profile.id,
+        borrower_id=borrower.id,
         consent_type="credit_pull",
-        ip_address=request.remote_addr
+        ip_address=request.remote_addr,
     )
     db.session.add(consent)
     db.session.commit()
+
     flash("Credit pull consent recorded.", "success")
     return redirect(url_for("borrower.dashboard"))
