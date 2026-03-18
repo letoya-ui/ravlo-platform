@@ -475,7 +475,7 @@ def messages():
     )
 
 @underwriter_bp.route("/messages/thread/<int:partner_id>", methods=["GET", "POST"])
-@@csrf.exempt 
+@csrf.exempt 
 @login_required
 @role_required("underwriter")
 def message_thread(partner_id):
@@ -515,7 +515,7 @@ def message_thread(partner_id):
     )
 
 @underwriter_bp.route("/messages/new", methods=["GET", "POST"])
-@@csrf.exempt 
+@csrf.exempt 
 @login_required
 @role_required("underwriter")
 def new_message():
