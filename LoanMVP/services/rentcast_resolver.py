@@ -1,7 +1,31 @@
 from flask import current_app
 from LoanMVP.services.rentcast_client import rentcast_get
 
+def _normalize_photos(photos) -> list:
+    normalized = []
 
+    if isinstance(photos, list):
+        for p in photos:
+            if isinstance(p, str) and p.strip():
+                normalized.append(p.strip())
+            elif isinstance(p, dict):
+                url = p.get("url") or p.get("href") or p.get("src")
+                if isinstance(url, str) and url.strip():
+                    normalized.append(url.strip())
+
+    elif isinstance(photos, str) and photos.strip():
+        normalized.append(photos.strip())
+
+    # dedupe while preserving order
+    seen = set()
+    clean = []
+    for url in normalized:
+        if url not in seen:
+            clean.append(url)
+            seen.add(url)
+
+    return clean
+    
 def _safe_float(x):
     try:
         return float(x)
