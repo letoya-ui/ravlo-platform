@@ -33,19 +33,25 @@ print(">>> UNDERWRITER ROUTE LOADED FROM:", __file__)
 #   DASHBOARD
 # ===============================================================
 @underwriter_bp.route("/dashboard")
+@login_required
+@role_required("underwriter")
 def dashboard():
-    # Recent loans
-    loans = LoanApplication.query.order_by(LoanApplication.created_at.desc()).limit(10).all()
+    loans = (
+        LoanApplication.query
+        .order_by(LoanApplication.created_at.desc())
+        .limit(10)
+        .all()
+    )
 
-    # KPI counts
     pending = LoanApplication.query.filter(
         LoanApplication.status.in_(["Submitted", "In Review", "UW Review"])
     ).count()
 
     approved = LoanApplication.query.filter_by(status="Approved").count()
     declined = LoanApplication.query.filter_by(status="Declined").count()
+    clear_to_close = LoanApplication.query.filter_by(status="Clear to Close").count()
+    conditional = LoanApplication.query.filter_by(status="Approved with Conditions").count()
 
-    # Open conditions
     open_conditions = UnderwritingCondition.query.filter_by(status="Open").all()
 
     return render_template(
@@ -55,7 +61,10 @@ def dashboard():
         pending=pending,
         approved=approved,
         declined=declined,
-        title="Underwriter Dashboard"
+        clear_to_close=clear_to_close,
+        conditional=conditional,
+        title="Underwriter Command Center",
+        active_tab="dashboard",
     )
 
 
@@ -79,17 +88,26 @@ def queue():
 #   LOAN FILE REVIEW
 # ===============================================================
 @underwriter_bp.route("/file/<int:loan_id>")
+@login_required
+@role_required("underwriter")
 def file_review(loan_id):
     loan = LoanApplication.query.get_or_404(loan_id)
     borrower = loan.borrower_profile
 
-    credit = SoftCreditReport.query.filter_by(borrower_profile_id=borrower.id)\
-        .order_by(SoftCreditReport.created_at.desc()).first()
+    credit = (
+        SoftCreditReport.query
+        .filter_by(borrower_profile_id=borrower.id)
+        .order_by(SoftCreditReport.created_at.desc())
+        .first()
+    )
 
     ratios = calculate_dti_ltv(borrower, loan, credit)
 
-    docs = LoanDocument.query.filter_by(loan_id=loan.id).all()
-    conditions = UnderwritingCondition.query.filter_by(loan_id=loan_id).all()
+    docs = LoanDocument.query.filter_by(loan_id=loan.id).order_by(LoanDocument.created_at.desc()).all()
+    conditions = UnderwritingCondition.query.filter_by(loan_id=loan.id).order_by(UnderwritingCondition.created_at.desc()).all()
+
+    open_conditions = [c for c in conditions if (c.status or "").strip().lower() == "open"]
+    cleared_conditions = [c for c in conditions if (c.status or "").strip().lower() == "cleared"]
 
     return render_template(
         "underwriter/file_review.html",
@@ -99,32 +117,25 @@ def file_review(loan_id):
         ratios=ratios,
         docs=docs,
         conditions=conditions,
-        title="Underwriter File Review"
+        open_conditions=open_conditions,
+        cleared_conditions=cleared_conditions,
+        title="Underwriter File Review",
+        active_tab="queue",
     )
-
 
 # ===============================================================
 #   DOCUMENT VERIFICATION
 # ===============================================================
 @underwriter_bp.route("/document/<int:doc_id>/verify")
+@login_required
+@role_required("underwriter")
 def verify_doc(doc_id):
     doc = LoanDocument.query.get_or_404(doc_id)
     doc.status = "Verified"
     db.session.commit()
 
-    loan = LoanApplication.query.get(doc.loan_id)
-    borrower = loan.borrower_profile
-
-    notify(
-        borrower=borrower,
-        loan=loan,
-        role="processor",
-        title="Document Verified",
-        message=f"Document verified by Underwriter: {doc.document_name}"
-    )
-
+    flash("Document verified successfully.", "success")
     return redirect(url_for("underwriter.file_review", loan_id=doc.loan_id))
-
 
 
 # ===============================================================
