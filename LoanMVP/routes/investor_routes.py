@@ -106,7 +106,7 @@ from LoanMVP.services.prompt_builder import build_blueprint_prompt
 from LoanMVP.services.concept_build_service import run_concept_build
 from LoanMVP.services.renovation_engine_client import generate_concept, call_renovation_engine_upload, RenovationEngineError
 # 🔥 Property intelligence (IMPORTANT)
-from LoanMVP.services.property_service import resolve_rentcast_investor_bundle
+from LoanMVP.services.property_service import resolve_rentcast_investor_bundle, build_ravlo_property_card
 from LoanMVP.utils.r2_storage import spaces_put_bytes
 
 # ---------------------------------------------------------
