@@ -1,244 +1,566 @@
-{% extends "layouts/Ravlo_lending_base.html" %}
+{% extends "layouts/ravlo_employee_base.html" %}
 {% block title %}Underwriter File Review{% endblock %}
+
+{% block page_title %}Underwriter File Review{% endblock %}
+{% block page_subline %}
+Analyze borrower strength, collateral, documents, conditions, and final decisioning from one underwriting workspace.
+{% endblock %}
+
+{% block topbar_actions %}
+  <a class="re-btn ghost sm" href="{{ url_for('underwriter.queue') }}">
+    <i class="lucide lucide-list-checks"></i>
+    Decision Queue
+  </a>
+  <a class="re-btn ghost sm" href="{{ url_for('underwriter.risk_reports') }}">
+    <i class="lucide lucide-shield-alert"></i>
+    Risk Reports
+  </a>
+{% endblock %}
+
 {% block content %}
 
 <link rel="stylesheet" href="https://unpkg.com/lucide-static@latest/font/lucide.css">
 
-<style>
-.section {
-    background: var(--panel);
-    border: 1px solid var(--line);
-    padding: 1.5rem;
-    border-radius: 16px;
-    margin-bottom: 2rem;
-}
+<div class="uw-file-shell">
 
-.section h2 { margin-bottom: .75rem; }
+  <!-- HERO -->
+  <section class="uw-file-hero">
+    <div>
+      <div class="uw-eyebrow">CREDIT DECISION WORKSPACE</div>
+      <h2>{{ borrower.full_name or "Borrower File" }}</h2>
+      <div class="uw-hero-sub">
+        <span>Loan #{{ loan.id }}</span>
+        <span>•</span>
+        <span>{{ loan.loan_type or "Loan File" }}</span>
+        {% if loan.property_address %}
+          <span>•</span>
+          <span>{{ loan.property_address }}</span>
+        {% endif %}
+      </div>
+    </div>
 
-.item {
-    border-bottom: 1px solid var(--line);
-    padding: .5rem 0;
-}
+    <div class="uw-hero-status">
+      <div class="uw-status-label">Current Status</div>
+      <div class="uw-status-pill">{{ loan.status or "Unknown" }}</div>
+    </div>
+  </section>
 
-.item:last-child {
-    border-bottom: none;
-}
+  <!-- KPI STRIP -->
+  <section class="uw-kpi-grid">
+    <div class="uw-kpi-card">
+      <div class="uw-kpi-label">Loan Amount</div>
+      <div class="uw-kpi-value">${{ "{:,.0f}".format(loan.amount or 0) }}</div>
+    </div>
 
-.btn-outline {
-    border: 1px solid var(--accent);
-    padding: .4rem 1rem;
-    border-radius: 10px;
-    color: var(--accent);
-    text-decoration: none;
-}
-</style>
-<style>
-@media (max-width: 850px) {
-    .sidebar { 
-        position: relative; 
-        width: 100%; 
-        height: auto; 
-        display: flex; 
-        overflow-x: auto;
-    }
-    .dashboard-main { margin-left: 0 !important; padding-top: 2rem; }
-    .section { padding: 1rem; }
-}
-</style>
+    <div class="uw-kpi-card">
+      <div class="uw-kpi-label">Property Value</div>
+      <div class="uw-kpi-value">${{ "{:,.0f}".format(loan.property_value or 0) }}</div>
+    </div>
 
-<main class="dashboard-main">
+    <div class="uw-kpi-card">
+      <div class="uw-kpi-label">Credit Score</div>
+      <div class="uw-kpi-value">{{ credit.credit_score if credit else "N/A" }}</div>
+    </div>
 
-<!-- ======================================================= -->
-<!-- Borrower Summary -->
-<!-- ======================================================= -->
-<div class="section">
-    <h2><i class="lucide lucide-user"></i> Borrower Profile</h2>
-    <p><strong>{{ borrower.full_name }}</strong></p>
-    <p>{{ borrower.email }} · {{ borrower.phone }}</p>
-    <p>{{ borrower.address }}, {{ borrower.city }}, {{ borrower.state }} {{ borrower.zip }}</p>
-</div>
+    <div class="uw-kpi-card">
+      <div class="uw-kpi-label">LTV</div>
+      <div class="uw-kpi-value">
+        {% if ratios.ltv is not none %}
+          {{ (ratios.ltv * 100)|round(2) }}%
+        {% else %}
+          N/A
+        {% endif %}
+      </div>
+    </div>
+  </section>
 
-<!-- ======================================================= -->
-<!-- Loan Summary -->
-<!-- ======================================================= -->
-<div class="section">
-    <h2><i class="lucide lucide-file-text"></i> Loan Details</h2>
-    <p>Amount: ${{ loan.amount }}</p>
-    <p>Property Value: ${{ loan.property_value }}</p>
-    <p>LTV: 
-        {% if ratios.ltv %}
-            {{ (ratios.ltv * 100)|round(2) }}%
-        {% else %}N/A{% endif %}
-    </p>
+  <!-- MAIN GRID -->
+  <section class="uw-file-grid">
 
-    <p>Status: {{ loan.status }}</p>
-</div>
+    <!-- LEFT -->
+    <div class="uw-file-col">
 
-
-<!-- ======================================================= -->
-<!-- Documents -->
-<!-- ======================================================= -->
-<div class="section">
-    <h2><i class="lucide lucide-folder"></i> Documents</h2>
-
-    {% for d in docs %}
-        <div class="item">
-            <strong>{{ d.name }}</strong> — {{ d.status }}
-
-            {% if d.status != 'Verified' %}
-            <a href="/underwriter/document/{{ d.id }}/verify"
-               class="btn-outline" style="margin-left:1rem;">
-                Verify
-            </a>
-            {% endif %}
+      <div class="re-card pad">
+        <div class="uw-card-head">
+          <div>
+            <div class="uw-eyebrow">BORROWER</div>
+            <h3>Borrower Profile</h3>
+          </div>
         </div>
-    {% else %}
-        <p class="muted">No documents uploaded.</p>
-    {% endfor %}
-</div>
 
+        <div class="uw-info-grid">
+          <div class="uw-info-item">
+            <span class="uw-info-label">Full Name</span>
+            <strong>{{ borrower.full_name or "—" }}</strong>
+          </div>
+          <div class="uw-info-item">
+            <span class="uw-info-label">Email</span>
+            <strong>{{ borrower.email or "—" }}</strong>
+          </div>
+          <div class="uw-info-item">
+            <span class="uw-info-label">Phone</span>
+            <strong>{{ borrower.phone or "—" }}</strong>
+          </div>
+          <div class="uw-info-item">
+            <span class="uw-info-label">Address</span>
+            <strong>
+              {{ borrower.address or "" }}
+              {% if borrower.city or borrower.state or borrower.zip %}
+                {{ borrower.city or "" }}{% if borrower.city and borrower.state %}, {% endif %}{{ borrower.state or "" }} {{ borrower.zip or "" }}
+              {% endif %}
+            </strong>
+          </div>
+        </div>
+      </div>
 
-<!-- ======================================================= -->
-<!-- Credit & DTI/LTV Analysis -->
-<!-- ======================================================= -->
-<div class="section">
-    <h2><i class="lucide lucide-bar-chart-2"></i> Credit & Income Analysis</h2>
+      <div class="re-card pad">
+        <div class="uw-card-head">
+          <div>
+            <div class="uw-eyebrow">LOAN</div>
+            <h3>Loan Details</h3>
+          </div>
+        </div>
 
-    <p><strong>Credit Score:</strong> {{ credit.credit_score if credit else "N/A" }}</p>
-    <p><strong>Total Income:</strong> ${{ ratios.income_total }}</p>
-    <p><strong>Monthly Debts:</strong> ${{ ratios.monthly_debts }}</p>
+        <div class="uw-info-grid">
+          <div class="uw-info-item">
+            <span class="uw-info-label">Amount</span>
+            <strong>${{ "{:,.2f}".format(loan.amount or 0) }}</strong>
+          </div>
+          <div class="uw-info-item">
+            <span class="uw-info-label">Property Value</span>
+            <strong>${{ "{:,.2f}".format(loan.property_value or 0) }}</strong>
+          </div>
+          <div class="uw-info-item">
+            <span class="uw-info-label">LTV</span>
+            <strong>
+              {% if ratios.ltv is not none %}
+                {{ (ratios.ltv * 100)|round(2) }}%
+              {% else %}N/A{% endif %}
+            </strong>
+          </div>
+          <div class="uw-info-item">
+            <span class="uw-info-label">Status</span>
+            <strong>{{ loan.status or "—" }}</strong>
+          </div>
+        </div>
+      </div>
 
-    <p><strong>Front-End DTI:</strong>
-        {% if ratios.front_end_dti %}
-            {{ (ratios.front_end_dti * 100)|round(2) }}%
-        {% else %}N/A{% endif %}
-    </p>
+      <div class="re-card pad">
+        <div class="uw-card-head">
+          <div>
+            <div class="uw-eyebrow">DOCUMENTS</div>
+            <h3>Document Review</h3>
+          </div>
+        </div>
 
-    <p><strong>Back-End DTI:</strong>
-        {% if ratios.back_end_dti %}
-            {{ (ratios.back_end_dti * 100)|round(2) }}%
-        {% else %}N/A{% endif %}
-    </p>
-</div>
+        {% if docs %}
+          <div class="uw-list">
+            {% for d in docs %}
+              <div class="uw-list-item">
+                <div>
+                  <div class="uw-list-title">{{ d.document_name or d.name or "Untitled Document" }}</div>
+                  <div class="uw-list-sub">Status: {{ d.status or "Pending" }}</div>
+                </div>
 
+                {% if d.status != "Verified" %}
+                  <a href="{{ url_for('underwriter.verify_doc', doc_id=d.id) }}" class="re-btn ghost sm">
+                    Verify
+                  </a>
+                {% endif %}
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="re-empty">No documents uploaded.</div>
+        {% endif %}
+      </div>
 
-<!-- ======================================================= -->
-<!-- Conditions -->
-<!-- ======================================================= -->
-<div class="section">
-    <h2><i class="lucide lucide-alert-circle"></i> Conditions</h2>
+      <div class="re-card pad">
+        <div class="uw-card-head">
+          <div>
+            <div class="uw-eyebrow">ANALYSIS</div>
+            <h3>Credit & Income Analysis</h3>
+          </div>
+        </div>
 
-    <form method="POST" action="/underwriter/add-condition/{{ loan.id }}">
-        <form method="POST" action="/underwriter/add-condition/{{ loan.id }}">
-    
-    <label>Condition Type(s)</label>
-    <select name="type" multiple required class="multi-select">
-        <option value="W-2s (Last 2 Years)">W‑2s (Last 2 Years)</option>
-        <option value="30 Days of Paystubs">30 Days of Paystubs</option>
-        <option value="1040 Tax Returns (2 Years)">1040 Tax Returns (2 Years)</option>
-        <option value="Bank Statements (2 Months)">Bank Statements (2 Months)</option>
-        <option value="VOE">Verification of Employment (VOE)</option>
-        <option value="LOE">Letter of Explanation (LOE)</option>
-        <option value="Asset Documentation">Asset Documentation</option>
-        <option value="Credit LOE">Credit Letter of Explanation</option>
-        <option value="Divorce Decree">Divorce Decree</option>
-        <option value="Bankruptcy Discharge">Bankruptcy Discharge</option>
-        <option value="Gift Letter">Gift Letter</option>
-        <option value="Purchase Contract">Purchase Contract</option>
-        <option value="Appraisal">Appraisal</option>
-        <option value="Hazard Insurance">Hazard Insurance</option>
-        <option value="Title Commitment">Title Commitment</option>
-    </select>
+        <div class="uw-metric-stack">
+          <div class="uw-metric-row">
+            <span>Credit Score</span>
+            <strong>{{ credit.credit_score if credit else "N/A" }}</strong>
+          </div>
+          <div class="uw-metric-row">
+            <span>Total Income</span>
+            <strong>${{ "{:,.2f}".format(ratios.income_total or 0) }}</strong>
+          </div>
+          <div class="uw-metric-row">
+            <span>Monthly Debts</span>
+            <strong>${{ "{:,.2f}".format(ratios.monthly_debts or 0) }}</strong>
+          </div>
+          <div class="uw-metric-row">
+            <span>Front-End DTI</span>
+            <strong>
+              {% if ratios.front_end_dti is not none %}
+                {{ (ratios.front_end_dti * 100)|round(2) }}%
+              {% else %}N/A{% endif %}
+            </strong>
+          </div>
+          <div class="uw-metric-row">
+            <span>Back-End DTI</span>
+            <strong>
+              {% if ratios.back_end_dti is not none %}
+                {{ (ratios.back_end_dti * 100)|round(2) }}%
+              {% else %}N/A{% endif %}
+            </strong>
+          </div>
+        </div>
+      </div>
 
-    <textarea name="description" placeholder="Description"></textarea>
+    </div>
 
-    <select name="severity">
-        <option>Standard</option>
-        <option>High</option>
-        <option>Low</option>
-    </select>
+    <!-- RIGHT -->
+    <div class="uw-file-col">
 
-    <button class="btn-outline">Add Condition</button>
-</form>
+      <div class="re-card pad">
+        <div class="uw-card-head">
+          <div>
+            <div class="uw-eyebrow">CONDITIONS</div>
+            <h3>Add Conditions</h3>
+          </div>
+        </div>
 
-        <textarea name="description" placeholder="Description"></textarea>
-        <select name="severity">
+        <form method="POST" action="{{ url_for('underwriter.add_condition', loan_id=loan.id) }}" class="uw-form-stack">
+          <label class="uw-label">Condition Type(s)</label>
+          <select name="type" multiple required>
+            <option value="W-2s (Last 2 Years)">W-2s (Last 2 Years)</option>
+            <option value="30 Days of Paystubs">30 Days of Paystubs</option>
+            <option value="1040 Tax Returns (2 Years)">1040 Tax Returns (2 Years)</option>
+            <option value="Bank Statements (2 Months)">Bank Statements (2 Months)</option>
+            <option value="VOE">Verification of Employment (VOE)</option>
+            <option value="LOE">Letter of Explanation (LOE)</option>
+            <option value="Asset Documentation">Asset Documentation</option>
+            <option value="Credit LOE">Credit Letter of Explanation</option>
+            <option value="Divorce Decree">Divorce Decree</option>
+            <option value="Bankruptcy Discharge">Bankruptcy Discharge</option>
+            <option value="Gift Letter">Gift Letter</option>
+            <option value="Purchase Contract">Purchase Contract</option>
+            <option value="Appraisal">Appraisal</option>
+            <option value="Hazard Insurance">Hazard Insurance</option>
+            <option value="Title Commitment">Title Commitment</option>
+          </select>
+
+          <textarea name="description" placeholder="Description"></textarea>
+
+          <select name="severity">
             <option>Standard</option>
             <option>High</option>
             <option>Low</option>
-        </select>
-        <button class="btn-outline">Add Condition</button>
-    </form>
+          </select>
 
-    <hr>
+          <button type="submit" class="re-btn primary">Add Condition</button>
+        </form>
 
-    {% for c in conditions %}
-        <div class="item">
-            <strong>{{ c.condition_type }}</strong><br>
-            {{ c.description }}
+        <div class="uw-divider"></div>
 
-            {% if c.status != "Cleared" %}
-            <a href="/underwriter/clear-condition/{{ c.id }}" class="btn-outline">
-                Clear
-            </a>
-            {% endif %}
+        {% if conditions %}
+          <div class="uw-list">
+            {% for c in conditions %}
+              <div class="uw-list-item vertical">
+                <div class="uw-list-title">{{ c.condition_type }}</div>
+                <div class="uw-list-sub">{{ c.description }}</div>
+                <div class="uw-inline-actions">
+                  <span class="uw-mini-status">{{ c.status or "Open" }}</span>
+                  {% if c.status != "Cleared" %}
+                    <a href="{{ url_for('underwriter.clear_condition', cond_id=c.id) }}" class="re-btn ghost sm">
+                      Clear
+                    </a>
+                  {% endif %}
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="re-empty">No conditions added.</div>
+        {% endif %}
+      </div>
+
+      <div class="re-card pad">
+        <div class="uw-card-head">
+          <div>
+            <div class="uw-eyebrow">DECISION</div>
+            <h3>Final Underwriting Decision</h3>
+          </div>
         </div>
-    {% else %}
-        <p class="muted">No conditions added.</p>
-    {% endfor %}
-</div>
 
-
-<!-- ======================================================= -->
-<!-- UW Decision -->
-<!-- ======================================================= -->
-<div class="section">
-    <h2><i class="lucide lucide-check-circle"></i> Decision</h2>
-
-    <form method="POST" action="/underwriter/decision/{{ loan.id }}">
-        <select name="decision">
+        <form method="POST" action="{{ url_for('underwriter.decision', loan_id=loan.id) }}" class="uw-form-stack">
+          <select name="decision">
             <option value="Approved">Approve</option>
             <option value="Suspended">Suspend</option>
             <option value="Declined">Decline</option>
-        </select>
+          </select>
 
-        <textarea name="notes" placeholder="Decision Notes" required></textarea>
+          <textarea name="notes" placeholder="Decision notes" required></textarea>
 
-        <button class="btn-outline">Submit Decision</button>
-    </form>
+          <button type="submit" class="re-btn primary">Submit Decision</button>
+        </form>
+      </div>
+
+      <div class="re-card pad">
+        <div class="uw-card-head">
+          <div>
+            <div class="uw-eyebrow">AI INSIGHT</div>
+            <h3>AI Underwriting Assistant</h3>
+          </div>
+        </div>
+
+        <div class="uw-form-stack">
+          <textarea id="ai-input" placeholder="Ask: What risks should I consider?"></textarea>
+          <button class="re-btn ghost" type="button" onclick="sendAI()">Ask AI</button>
+          <div id="ai-response" class="uw-ai-response"></div>
+        </div>
+      </div>
+
+    </div>
+  </section>
 </div>
 
+<style>
+.uw-file-shell{
+  display:grid;
+  gap:20px;
+}
 
-<!-- ======================================================= -->
-<!-- AI Underwriting Assistant -->
-<!-- ======================================================= -->
-<div class="section">
-    <h2><i class="lucide lucide-brain"></i> AI Underwriting Insight</h2>
+.uw-file-hero{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-end;
+  gap:18px;
+  flex-wrap:wrap;
+  padding:24px;
+  border-radius:24px;
+  border:1px solid rgba(255,255,255,.08);
+  background:
+    radial-gradient(900px 420px at 10% 0%, rgba(122,184,255,.12), transparent 50%),
+    rgba(255,255,255,.03);
+}
 
-    <textarea id="ai-input" placeholder="Ask: What risks should I consider?"></textarea>
-    <button class="btn-outline" onclick="sendAI()">Ask AI</button>
+.uw-eyebrow{
+  font-size:11px;
+  color:var(--rav-muted);
+  text-transform:uppercase;
+  letter-spacing:.08em;
+}
 
-    <div id="ai-response" style="margin-top:1rem;"></div>
-</div>
+.uw-file-hero h2{
+  margin:6px 0 8px;
+  font-size:clamp(1.55rem, 2.2vw, 2.15rem);
+}
 
+.uw-hero-sub{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+  color:var(--rav-muted);
+  font-size:14px;
+}
+
+.uw-hero-status{
+  display:grid;
+  gap:8px;
+}
+
+.uw-status-label{
+  font-size:12px;
+  color:var(--rav-muted);
+  text-transform:uppercase;
+  letter-spacing:.06em;
+}
+
+.uw-status-pill,
+.uw-mini-status{
+  display:inline-flex;
+  align-items:center;
+  padding:6px 10px;
+  border-radius:999px;
+  font-size:12px;
+  border:1px solid rgba(107,127,147,.28);
+  background:rgba(107,127,147,.16);
+  color:var(--rav-text);
+}
+
+.uw-kpi-grid{
+  display:grid;
+  grid-template-columns:repeat(4, minmax(0,1fr));
+  gap:14px;
+}
+
+.uw-kpi-card{
+  padding:18px;
+  border-radius:18px;
+  background:rgba(255,255,255,.03);
+  border:1px solid rgba(255,255,255,.08);
+}
+
+.uw-kpi-label{
+  color:var(--rav-muted);
+  font-size:12px;
+  text-transform:uppercase;
+  letter-spacing:.06em;
+}
+
+.uw-kpi-value{
+  margin-top:10px;
+  font-size:28px;
+  font-weight:800;
+  color:var(--rav-text);
+}
+
+.uw-file-grid{
+  display:grid;
+  grid-template-columns:1.2fr .8fr;
+  gap:20px;
+}
+
+.uw-file-col{
+  display:grid;
+  gap:20px;
+}
+
+.uw-card-head{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:16px;
+  margin-bottom:16px;
+}
+
+.uw-card-head h3{
+  margin:4px 0 0;
+}
+
+.uw-info-grid,
+.uw-metric-stack,
+.uw-list,
+.uw-form-stack{
+  display:grid;
+  gap:12px;
+}
+
+.uw-info-item,
+.uw-metric-row,
+.uw-list-item{
+  display:flex;
+  justify-content:space-between;
+  gap:14px;
+  align-items:flex-start;
+  padding:12px 14px;
+  border-radius:14px;
+  background:rgba(255,255,255,.02);
+  border:1px solid rgba(255,255,255,.08);
+}
+
+.uw-list-item.vertical{
+  display:grid;
+}
+
+.uw-info-label{
+  color:var(--rav-muted);
+  min-width:120px;
+}
+
+.uw-list-title{
+  color:var(--rav-text);
+  font-weight:700;
+  font-size:14px;
+}
+
+.uw-list-sub{
+  margin-top:4px;
+  color:var(--rav-muted);
+  font-size:13px;
+}
+
+.uw-inline-actions{
+  display:flex;
+  gap:10px;
+  align-items:center;
+  flex-wrap:wrap;
+  margin-top:8px;
+}
+
+.uw-divider{
+  height:1px;
+  margin:18px 0;
+  background:rgba(255,255,255,.08);
+}
+
+.uw-label{
+  font-size:13px;
+  color:var(--rav-muted);
+}
+
+.uw-ai-response{
+  min-height:60px;
+  padding:12px 14px;
+  border-radius:14px;
+  background:rgba(255,255,255,.02);
+  border:1px solid rgba(255,255,255,.08);
+  color:var(--rav-text);
+  line-height:1.6;
+}
+
+@media (max-width:1100px){
+  .uw-file-grid{
+    grid-template-columns:1fr;
+  }
+
+  .uw-kpi-grid{
+    grid-template-columns:repeat(2, minmax(0,1fr));
+  }
+}
+
+@media (max-width:700px){
+  .uw-kpi-grid{
+    grid-template-columns:1fr;
+  }
+
+  .uw-info-item,
+  .uw-metric-row,
+  .uw-list-item{
+    flex-direction:column;
+  }
+}
+</style>
+
+{% block scripts %}
 <script>
 function sendAI() {
-    let message = document.getElementById("ai-input").value;
+  const message = document.getElementById("ai-input").value.trim();
+  const responseBox = document.getElementById("ai-response");
 
-    fetch("/underwriter/ai", {
-        method:"POST",
-        headers: {"Content-Type":"application/json"},
-        body: JSON.stringify({
-            borrower_id: {{ borrower.id }},
-            message: message
-        })
+  if (!message) {
+    responseBox.innerHTML = "Please enter a question first.";
+    return;
+  }
+
+  responseBox.innerHTML = "Thinking...";
+
+  fetch("{{ url_for('underwriter.ai') }}", {
+    method: "POST",
+    headers: {"Content-Type":"application/json"},
+    body: JSON.stringify({
+      borrower_id: {{ borrower.id }},
+      message: message
     })
-    .then(r => r.json())
-    .then(data => {
-        document.getElementById("ai-response").innerHTML = data.reply;
-    });
+  })
+  .then(r => r.json())
+  .then(data => {
+    responseBox.innerHTML = data.reply || "No AI response available.";
+  })
+  .catch(() => {
+    responseBox.innerHTML = "Unable to get AI insight right now.";
+  });
 }
 </script>
+{% endblock %}
 
-</main>
 {% endblock %}

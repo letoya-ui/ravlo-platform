@@ -6,6 +6,7 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash,
 from datetime import datetime
 import io
 from flask_login import current_user, login_required
+from LoanMVP.utils.decorators import role_required
 from LoanMVP.extensions import db, csrf
 
 from LoanMVP.models.user_model import User
@@ -33,19 +34,25 @@ print(">>> UNDERWRITER ROUTE LOADED FROM:", __file__)
 #   DASHBOARD
 # ===============================================================
 @underwriter_bp.route("/dashboard")
+@login_required
+@role_required("underwriter")
 def dashboard():
-    # Recent loans
-    loans = LoanApplication.query.order_by(LoanApplication.created_at.desc()).limit(10).all()
+    loans = (
+        LoanApplication.query
+        .order_by(LoanApplication.created_at.desc())
+        .limit(10)
+        .all()
+    )
 
-    # KPI counts
     pending = LoanApplication.query.filter(
         LoanApplication.status.in_(["Submitted", "In Review", "UW Review"])
     ).count()
 
     approved = LoanApplication.query.filter_by(status="Approved").count()
     declined = LoanApplication.query.filter_by(status="Declined").count()
+    clear_to_close = LoanApplication.query.filter_by(status="Clear to Close").count()
+    conditional = LoanApplication.query.filter_by(status="Approved with Conditions").count()
 
-    # Open conditions
     open_conditions = UnderwritingCondition.query.filter_by(status="Open").all()
 
     return render_template(
@@ -55,7 +62,10 @@ def dashboard():
         pending=pending,
         approved=approved,
         declined=declined,
-        title="Underwriter Dashboard"
+        clear_to_close=clear_to_close,
+        conditional=conditional,
+        title="Underwriter Command Center",
+        active_tab="dashboard",
     )
 
 
@@ -63,6 +73,8 @@ def dashboard():
 #   LOAN QUEUE
 # ===============================================================
 @underwriter_bp.route("/queue")
+@login_required
+@role_required("underwriter")
 def queue():
     pending = LoanApplication.query.filter(
         LoanApplication.status.in_(["Submitted", "In Review", "UW Review"])
@@ -71,7 +83,8 @@ def queue():
     return render_template(
         "underwriter/queue.html",
         queue=pending,
-        title="Underwriting Queue"
+        title="Decision Queue",
+        active_tab="queue",
     )
 
 
@@ -79,17 +92,26 @@ def queue():
 #   LOAN FILE REVIEW
 # ===============================================================
 @underwriter_bp.route("/file/<int:loan_id>")
+@login_required
+@role_required("underwriter")
 def file_review(loan_id):
     loan = LoanApplication.query.get_or_404(loan_id)
     borrower = loan.borrower_profile
 
-    credit = SoftCreditReport.query.filter_by(borrower_profile_id=borrower.id)\
-        .order_by(SoftCreditReport.created_at.desc()).first()
+    credit = (
+        SoftCreditReport.query
+        .filter_by(borrower_profile_id=borrower.id)
+        .order_by(SoftCreditReport.created_at.desc())
+        .first()
+    )
 
     ratios = calculate_dti_ltv(borrower, loan, credit)
 
-    docs = LoanDocument.query.filter_by(loan_id=loan.id).all()
-    conditions = UnderwritingCondition.query.filter_by(loan_id=loan_id).all()
+    docs = LoanDocument.query.filter_by(loan_id=loan.id).order_by(LoanDocument.created_at.desc()).all()
+    conditions = UnderwritingCondition.query.filter_by(loan_id=loan.id).order_by(UnderwritingCondition.created_at.desc()).all()
+
+    open_conditions = [c for c in conditions if (c.status or "").strip().lower() == "open"]
+    cleared_conditions = [c for c in conditions if (c.status or "").strip().lower() == "cleared"]
 
     return render_template(
         "underwriter/file_review.html",
@@ -99,41 +121,34 @@ def file_review(loan_id):
         ratios=ratios,
         docs=docs,
         conditions=conditions,
-        title="Underwriter File Review"
+        open_conditions=open_conditions,
+        cleared_conditions=cleared_conditions,
+        title="Underwriter File Review",
+        active_tab="queue",
     )
-
 
 # ===============================================================
 #   DOCUMENT VERIFICATION
 # ===============================================================
 @underwriter_bp.route("/document/<int:doc_id>/verify")
+@login_required
+@role_required("underwriter")
 def verify_doc(doc_id):
     doc = LoanDocument.query.get_or_404(doc_id)
     doc.status = "Verified"
     db.session.commit()
 
-    loan = LoanApplication.query.get(doc.loan_id)
-    borrower = loan.borrower_profile
-
-    notify(
-        borrower=borrower,
-        loan=loan,
-        role="processor",
-        title="Document Verified",
-        message=f"Document verified by Underwriter: {doc.document_name}"
-    )
-
+    flash("Document verified successfully.", "success")
     return redirect(url_for("underwriter.file_review", loan_id=doc.loan_id))
-
 
 
 # ===============================================================
 #   ADD CONDITION
 # ===============================================================
 @underwriter_bp.route("/add-condition/<int:loan_id>", methods=["POST"])
+@@csrf.exempt 
 @login_required
 @role_required("underwriter")
-@csrf.exempt
 def add_condition(loan_id):
     loan = LoanApplication.query.get_or_404(loan_id)
 
@@ -164,21 +179,20 @@ def add_condition(loan_id):
 #   CLEAR CONDITION
 # ===============================================================
 @underwriter_bp.route("/clear-condition/<int:cond_id>")
+@login_required
+@role_required("underwriter")
 def clear_condition(cond_id):
     c = UnderwritingCondition.query.get_or_404(cond_id)
     c.status = "Cleared"
     c.cleared_at = datetime.utcnow()
     db.session.commit()
 
-    send_notification(
-        c.loan_id,
-        "processor",
-        f"Condition Cleared: {c.condition_type}"
-    )
-
+    flash("Condition cleared successfully.", "success")
     return redirect(url_for("underwriter.file_review", loan_id=c.loan_id))
 
 @underwriter_bp.route("/send-condition/<int:cond_id>")
+@login_required
+@role_required("underwriter")
 def send_condition(cond_id):
     c = UnderwritingCondition.query.get_or_404(cond_id)
 
@@ -195,7 +209,7 @@ def send_condition(cond_id):
 # ===============================================================
 #   UW DECISION
 # ===============================================================
-@underwriter_bp.route("/decision/<int:loan_id>", methods=["POST"])
+
 @underwriter_bp.route("/decision/<int:loan_id>", methods=["POST"])
 @login_required
 @role_required("underwriter")
@@ -218,6 +232,8 @@ def decision(loan_id):
 # ===============================================================
 @underwriter_bp.route("/ai", methods=["POST"])
 @csrf.exempt
+@login_required
+@role_required("underwriter")
 def ai():
     data = request.get_json()
     borrower_id = data.get("borrower_id")
@@ -257,6 +273,8 @@ Question:
 #   DECISION PDF SHEET
 # ===============================================================
 @underwriter_bp.route("/decision-sheet/<int:loan_id>")
+@login_required
+@role_required("underwriter")
 def decision_sheet(loan_id):
     loan = LoanApplication.query.get_or_404(loan_id)
     borrower = loan.borrower_profile
@@ -292,6 +310,8 @@ def decision_sheet(loan_id):
 # ===============================================================
 @underwriter_bp.route("/tasks", methods=["GET", "POST"])
 @csrf.exempt
+@login_required
+@role_required("underwriter")
 def tasks():
     if request.method == "POST":
         t = UnderwriterTask(
@@ -314,6 +334,8 @@ def tasks():
 #   RED FLAGS
 # ===============================================================
 @underwriter_bp.route("/redflags/<int:loan_id>")
+@login_required
+@role_required("underwriter")
 def redflags(loan_id):
     loan = LoanApplication.query.get_or_404(loan_id)
     borrower = loan.borrower_profile
@@ -346,6 +368,8 @@ def redflags(loan_id):
     )
 
 @underwriter_bp.route("/review-loans")
+@login_required
+@role_required("underwriter")
 def review_loans():
     status_filter = request.args.get("status", "all")
 
@@ -364,6 +388,8 @@ def review_loans():
     )
 
 @underwriter_bp.route("/risk-reports")
+@login_required
+@role_required("underwriter")
 def risk_reports():
     # Pull all loans for portfolio‑level analysis
     loans = LoanApplication.query.order_by(LoanApplication.created_at.desc()).all()
@@ -413,6 +439,8 @@ def risk_reports():
     )
 
 @underwriter_bp.route("/pipeline")
+@login_required
+@role_required("underwriter")
 def pipeline():
     # Group loans by underwriting stage
     submitted = LoanApplication.query.filter_by(status="Submitted").all()
@@ -432,6 +460,8 @@ def pipeline():
     )
 
 @underwriter_bp.route("/messages")
+@login_required
+@role_required("underwriter")
 def messages():
     
     threads = MessageThread.query.filter_by(
@@ -445,6 +475,9 @@ def messages():
     )
 
 @underwriter_bp.route("/messages/thread/<int:partner_id>", methods=["GET", "POST"])
+@@csrf.exempt 
+@login_required
+@role_required("underwriter")
 def message_thread(partner_id):
     user_id = current_user.id
 
@@ -482,6 +515,9 @@ def message_thread(partner_id):
     )
 
 @underwriter_bp.route("/messages/new", methods=["GET", "POST"])
+@@csrf.exempt 
+@login_required
+@role_required("underwriter")
 def new_message():
     users = User.query.filter(User.id != current_user.id).all()
 
