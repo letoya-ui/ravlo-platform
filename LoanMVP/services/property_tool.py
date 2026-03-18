@@ -2,6 +2,7 @@
 import os
 import requests
 
+from LoanMVP.services.property_service import resolve_rentcast_investor_bundle
 from LoanMVP.services.deal_workspace_calcs import (
     calculate_flip_budget,
     calculate_rental_budget,
@@ -195,8 +196,6 @@ def _rentcast_rent_estimate(address: str, city: str, state: str, zip_code: str):
     return r.json()
 
 
-
-            
 def search_deals_for_zip(
     zip_code: str,
     strategy: str = "flip",
@@ -219,7 +218,7 @@ def search_deals_for_zip(
 
     out = []
 
-    for l in listings:
+    for idx, l in enumerate(listings):
         addr = (l.get("addressLine1") or l.get("address") or "").strip()
         city = (l.get("city") or "").strip()
         state = (l.get("state") or "").strip()
@@ -313,6 +312,22 @@ def search_deals_for_zip(
         recommended_strategy = determine_strategy(metrics, recommendation)
         ai_summary = generate_ai_deal_summary(metrics)
 
+        photo = _listing_photo(l)
+
+        if not photo and addr and idx < 8:
+            try:
+                bundle = resolve_rentcast_investor_bundle(
+                    address=addr,
+                    beds=beds,
+                    baths=baths,
+                    sqft=sqft,
+                    property_type=l.get("propertyType") or l.get("propertySubType"),
+                )
+                if bundle.get("status") == "ok":
+                    photo = (bundle.get("property") or {}).get("primary_photo")
+            except Exception:
+                photo = None
+
         if min_roi is not None and metrics.get("roi") is not None:
             if float(metrics["roi"]) < float(min_roi):
                 continue
@@ -335,7 +350,7 @@ def search_deals_for_zip(
             "baths": baths,
             "sqft": _safe_int(sqft),
             "year_built": year_built,
-            "photo": _listing_photo(l),
+            "photo": photo,
             "property_id": l.get("id") or l.get("propertyId") or None,
             "property_type": l.get("propertyType") or l.get("propertySubType") or None,
             "fixer_score": fixer_score,
@@ -362,4 +377,4 @@ def search_deals_for_zip(
         reverse=True,
     )
 
-    return out           
+    return out
