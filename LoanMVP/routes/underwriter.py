@@ -131,33 +131,34 @@ def verify_doc(doc_id):
 #   ADD CONDITION
 # ===============================================================
 @underwriter_bp.route("/add-condition/<int:loan_id>", methods=["POST"])
+@login_required
+@role_required("underwriter")
 @csrf.exempt
 def add_condition(loan_id):
     loan = LoanApplication.query.get_or_404(loan_id)
 
     condition_types = request.form.getlist("type")
+    description = request.form.get("description")
+    severity = request.form.get("severity")
+
+    if not condition_types:
+        flash("Please select at least one condition type.", "warning")
+        return redirect(url_for("underwriter.file_review", loan_id=loan.id))
 
     for ct in condition_types:
         new_cond = UnderwritingCondition(
             loan_id=loan.id,
             borrower_profile_id=loan.borrower_profile_id,
             condition_type=ct,
-            description=request.form.get("description"),
-            severity=request.form.get("severity"),
+            description=description,
+            severity=severity,
             status="Open"
         )
         db.session.add(new_cond)
 
     db.session.commit()
-
-    send_notification(
-        loan.id,
-        "processor",
-        f"New underwriting condition: {new_cond.condition_type}"
-    )
-
+    flash("Condition(s) added successfully.", "success")
     return redirect(url_for("underwriter.file_review", loan_id=loan.id))
-
 
 # ===============================================================
 #   CLEAR CONDITION
@@ -195,6 +196,9 @@ def send_condition(cond_id):
 #   UW DECISION
 # ===============================================================
 @underwriter_bp.route("/decision/<int:loan_id>", methods=["POST"])
+@underwriter_bp.route("/decision/<int:loan_id>", methods=["POST"])
+@login_required
+@role_required("underwriter")
 @csrf.exempt
 def decision(loan_id):
     loan = LoanApplication.query.get_or_404(loan_id)
@@ -205,12 +209,7 @@ def decision(loan_id):
 
     db.session.commit()
 
-    send_notification(
-        loan.id,
-        "processor",
-        f"Underwriter Decision: {loan.status}"
-    )
-
+    flash(f"Loan decision updated to {loan.status}.", "success")
     return redirect(url_for("underwriter.file_review", loan_id=loan_id))
 
 
