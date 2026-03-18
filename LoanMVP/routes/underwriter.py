@@ -146,7 +146,7 @@ def verify_doc(doc_id):
 #   ADD CONDITION
 # ===============================================================
 @underwriter_bp.route("/add-condition/<int:loan_id>", methods=["POST"])
-@@csrf.exempt 
+@csrf.exempt 
 @login_required
 @role_required("underwriter")
 def add_condition(loan_id):
