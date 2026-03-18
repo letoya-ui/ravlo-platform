@@ -1,214 +1,641 @@
-{% extends "layouts/Ravlo_lending_base.html" %}
-{% block title %}Underwriter • Dashboard{% endblock %}
-{% block content %}
-<main class="dashboard-main">
+{% extends "layouts/ravlo_employee_base.html" %}
+{% block title %}Underwriter Command Center{% endblock %}
 
-<link rel="preconnect" href="https://cdn.jsdelivr.net" />
+{% block page_title %}Underwriter Command Center{% endblock %}
+{% block page_subline %}
+Review risk, analyze loan quality, manage conditions, and drive final credit decisions.
+{% endblock %}
+
+{% block topbar_actions %}
+  <a class="re-btn ghost sm" href="{{ url_for('underwriter.review_loans') }}">
+    <i class="lucide lucide-search"></i>
+    Review Loans
+  </a>
+  <a class="re-btn ghost sm" href="{{ url_for('underwriter.risk_reports') }}">
+    <i class="lucide lucide-shield-alert"></i>
+    Risk Reports
+  </a>
+{% endblock %}
+
+{% block content %}
+
 <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
 
-<style>
-  :root{
-    --bg:#0f0f11; --panel:#15161a; --elev:#1b1d22;
-    --text:#e6e6e6; --muted:#a5a7ad; --line:#282b31;
-    --accent:#7ab8ff; --accent-soft:#2a4a62;
-    --success:#43d19e; --warn:#ffdf6e; --danger:#ff6b6b;
-    --glow:0 0 18px rgba(122,184,255,0.35);
-  }
-  body{background:var(--bg);color:var(--text);}
-  .wrap{display:flex;gap:1.25rem;flex-wrap:wrap;}
-  .lhs{flex:1 1 68%;}
-  .rhs{flex:1 1 30%;min-width:300px;}
-  .card{background:var(--panel);border:1px solid var(--line);
-        border-radius:14px;padding:1rem 1.1rem;box-shadow:var(--glow);}
-  .grid{display:grid;gap:1rem;}
-  .g-2{grid-template-columns:repeat(2,minmax(0,1fr));}
-  .g-3{grid-template-columns:repeat(3,minmax(0,1fr));}
-  h1,h2,h3,h4{color:var(--text);margin:0 0 .35rem}
-  .muted{color:var(--muted)}
-  .btn{display:inline-flex;align-items:center;gap:.5rem;padding:.7rem 1rem;
-       border-radius:10px;border:1px solid var(--line);color:var(--text);
-       text-decoration:none;background:linear-gradient(180deg,#1c1f25,#15161a);
-       transition:all .2s ease;}
-  .btn:hover{border-color:var(--accent);box-shadow:var(--glow);}
-  .btn-primary{background:linear-gradient(180deg,#2a4a62,#1b2a38);
-               border-color:#2a4a62;color:#cfe8ff}
-  .kpi{display:flex;align-items:flex-start;gap:.8rem}
-  .kpi .num{font-size:1.9rem;font-weight:700;color:#dfe9f7}
-  .kpi .badge{font-size:.8rem;padding:.15rem .5rem;border-radius:8px;
-              background:var(--elev);border:1px solid var(--line);
-              color:var(--muted)}
-  .table{width:100%;border-collapse:collapse}
-  .table th,.table td{padding:.65rem .6rem;border-top:1px solid var(--line);}
-  .table th{color:#cfe0f5;font-weight:600;text-align:left}
-  .status{padding:.2rem .55rem;border-radius:999px;font-size:.78rem;
-          border:1px solid var(--line)}
-  .st-pending{background:#1e2430;color:#a9c7ff}
-  .st-review{background:#23251e;color:#e7f28f}
-  .st-approved{background:#1b2a23;color:#9af2c5}
-  .st-declined{background:#2a1b1b;color:#ff9d9d}
+<div class="uw-shell">
 
-  /* AI Panel */
-  .ai-panel{position:fixed;right:22px;top:88px;width:360px;
-    max-width:calc(100vw - 40px);background:var(--panel);
-    border:1px solid var(--line);border-radius:16px;
-    box-shadow:var(--glow);z-index:40}
-  .ai-h{display:flex;align-items:center;justify-content:space-between;
-        padding:.8rem 1rem;border-bottom:1px solid var(--line)}
-  .ai-body{padding:1rem;max-height:58vh;overflow:auto}
-  .ai-msg{background:var(--elev);border:1px solid var(--line);
-          padding:.6rem .75rem;border-radius:12px;color:var(--text);
-          margin-bottom:.6rem}
-  .ai-input{display:flex;gap:.5rem;padding:.8rem 1rem;
-            border-top:1px solid var(--line)}
-  .ai-input input{flex:1;background:#0f0f11;border:1px solid var(--line);
-                  color:var(--text);border-radius:10px;padding:.6rem .7rem}
-  .chip{display:inline-flex;gap:.35rem;padding:.35rem .6rem;
-        border:1px solid var(--line);background:var(--elev);
-        color:#c4d9f2;border-radius:999px;font-size:.78rem;
-        margin:.2rem .25rem 0 0;cursor:pointer}
-  .chip:hover{box-shadow:var(--glow)}
-  @media(max-width:1100px){
-    .wrap{flex-direction:column}
-    .ai-panel{bottom:18px;top:auto;width:min(680px,calc(100vw - 36px))}
-  }
-</style>
-
-<div class="wrap">
-  <!-- LEFT -->
-  <section class="lhs grid">
-    <div class="card" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;">
-      <div>
-        <h1>Welcome, {{ current_user.username or 'Underwriter' }}</h1>
-        <div class="muted">Analyze risk, validate loan data, and issue underwriting approvals.</div>
-      </div>
-      <div style="display:flex;gap:.6rem;flex-wrap:wrap;">
-        <a class="btn btn-primary" href="{{ url_for('underwriter.review_loans') }}">🔍 Review Loans</a>
-        <a class="btn" href="{{ url_for('underwriter.risk_reports') }}">⚠️ Risk Reports</a>
-      </div>
+  <!-- HERO -->
+  <section class="uw-hero">
+    <div class="uw-hero-copy">
+      <div class="uw-eyebrow">RISK & DECISION</div>
+      <h2>Welcome, {{ current_user.username or 'Underwriter' }}</h2>
+      <p>
+        Analyze borrower strength, validate loan structure, review open conditions, and move files toward final disposition.
+      </p>
     </div>
 
-    <div class="grid g-3">
-      <div class="card"><div class="kpi"><div><div class="muted">Pending</div><div class="num">{{ pending or 0 }}</div></div><span class="badge">Queue</span></div></div>
-      <div class="card"><div class="kpi"><div><div class="muted">Approved</div><div class="num">{{ approved or 0 }}</div></div><span class="badge">This Month</span></div></div>
-      <div class="card"><div class="kpi"><div><div class="muted">Declined</div><div class="num">{{ declined or 0 }}</div></div><span class="badge">High Risk</span></div></div>
-    </div>
-
-    <div class="grid g-2">
-      <div class="card"><h3>Approval Trend</h3><div id="chart_approval" style="height:260px;"></div></div>
-      <div class="card"><h3>Risk Mix</h3><div id="chart_risk" style="height:260px;"></div></div>
-    </div>
-
-    <div class="card">
-      <h3>Recent Reviews</h3>
-      {% if loans %}
-      <table class="table">
-        <thead><tr><th>ID</th><th>Borrower</th><th>Amount</th><th>Status</th><th>Date</th></tr></thead>
-        <tbody>
-          {% for loan in loans[:6] %}
-          <tr>
-            <td>#{{ loan.id }}</td>
-            <td>{{ loan.borrower_profile.full_name if loan.borrower_profile else '—' }}</td>
-            <td>${{ "{:,.2f}".format(loan.amount or 0) }}</td>
-            <td><span class="status st-{{ loan.status|lower }}">{{ loan.status|capitalize }}</span></td>
-            <td>{{ loan.created_at.strftime('%b %d, %Y') if loan.created_at else '—' }}</td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-      {% else %}
-      <p class="muted">No reviews processed yet.</p>
-      {% endif %}
+    <div class="uw-hero-actions">
+      <a class="re-btn primary" href="{{ url_for('underwriter.queue') }}">
+        <i class="lucide lucide-list-checks"></i>
+        Decision Queue
+      </a>
+      <a class="re-btn ghost" href="{{ url_for('underwriter.pipeline') }}">
+        <i class="lucide lucide-git-branch"></i>
+        Pipeline
+      </a>
+      <button class="re-btn ghost" type="button" onclick="toggleAI()">
+        <i class="lucide lucide-bot"></i>
+        AI Assistant
+      </button>
     </div>
   </section>
 
-  <!-- RIGHT -->
-  <aside class="rhs grid">
-    <div class="card">
-      <h3>Quick Tools</h3>
-      <div style="display:flex;flex-wrap:wrap;gap:.5rem;">
-        <a class="btn" href="{{ url_for('underwriter.pipeline') }}">📂 Loan Pipeline</a>
-        <a class="btn" href="{{ url_for('underwriter.risk_reports') }}">📊 Reports</a>
-        <a class="btn" href="{{ url_for('underwriter.messages') }}">💬 Messages</a>
+  <!-- KPI GRID -->
+  <section class="uw-kpis">
+    <div class="uw-kpi-card">
+      <div class="uw-kpi-label">Pending Review</div>
+      <div class="uw-kpi-value">{{ pending or 0 }}</div>
+      <div class="uw-kpi-meta">Files awaiting underwriting action</div>
+    </div>
+
+    <div class="uw-kpi-card">
+      <div class="uw-kpi-label">Approved</div>
+      <div class="uw-kpi-value">{{ approved or 0 }}</div>
+      <div class="uw-kpi-meta">Approved decisions currently counted</div>
+    </div>
+
+    <div class="uw-kpi-card">
+      <div class="uw-kpi-label">Declined</div>
+      <div class="uw-kpi-value">{{ declined or 0 }}</div>
+      <div class="uw-kpi-meta">Files declined or not supportable</div>
+    </div>
+
+    <div class="uw-kpi-card">
+      <div class="uw-kpi-label">Open Conditions</div>
+      <div class="uw-kpi-value">{{ open_conditions|length if open_conditions else 0 }}</div>
+      <div class="uw-kpi-meta">Conditions still unresolved</div>
+    </div>
+  </section>
+
+  <!-- CHARTS -->
+  <section class="uw-grid uw-grid-2">
+    <div class="re-card pad">
+      <div class="uw-card-head">
+        <div>
+          <div class="uw-eyebrow">TRENDS</div>
+          <h3>Approval Trend</h3>
+        </div>
+      </div>
+      <div id="chart_approval" class="uw-chart"></div>
+    </div>
+
+    <div class="re-card pad">
+      <div class="uw-card-head">
+        <div>
+          <div class="uw-eyebrow">PORTFOLIO MIX</div>
+          <h3>Risk Mix</h3>
+        </div>
+      </div>
+      <div id="chart_risk" class="uw-chart"></div>
+    </div>
+  </section>
+
+  <!-- MAIN GRID -->
+  <section class="uw-grid uw-main-grid">
+
+    <!-- LEFT -->
+    <div class="uw-col">
+      <div class="re-card pad">
+        <div class="uw-card-head">
+          <div>
+            <div class="uw-eyebrow">RECENT REVIEWS</div>
+            <h3>Recent Loan Reviews</h3>
+          </div>
+        </div>
+
+        {% if loans %}
+          <div class="re-table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Borrower</th>
+                  <th>Amount</th>
+                  <th>Status</th>
+                  <th>Date</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for loan in loans[:8] %}
+                <tr>
+                  <td>#{{ loan.id }}</td>
+                  <td>{{ loan.borrower_profile.full_name if loan.borrower_profile else '—' }}</td>
+                  <td>${{ "{:,.2f}".format(loan.amount or 0) }}</td>
+                  <td>
+                    {% set st = (loan.status or '')|lower %}
+                    <span class="uw-status
+                      {% if 'approved' in st %}good
+                      {% elif 'declined' in st %}bad
+                      {% elif 'review' in st or 'submitted' in st %}warn
+                      {% else %}neutral{% endif %}">
+                      {{ loan.status or '—' }}
+                    </span>
+                  </td>
+                  <td>{{ loan.created_at.strftime('%b %d, %Y') if loan.created_at else '—' }}</td>
+                  <td>
+                    <a class="re-btn ghost sm" href="{{ url_for('underwriter.file_review', loan_id=loan.id) }}">
+                      Open File
+                    </a>
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% else %}
+          <div class="re-empty">No reviews processed yet.</div>
+        {% endif %}
       </div>
     </div>
 
-    <div class="card">
-      <h3>Risk Summary</h3>
-      <div id="chart_summary" style="height:240px;"></div>
-      <div class="muted" style="font-size:.85rem;margin-top:.4rem;">Updated daily from executive risk model.</div>
+    <!-- RIGHT -->
+    <div class="uw-col">
+      <div class="re-card pad">
+        <div class="uw-card-head">
+          <div>
+            <div class="uw-eyebrow">QUICK TOOLS</div>
+            <h3>Workflow Tools</h3>
+          </div>
+        </div>
+
+        <div class="uw-tool-list">
+          <a class="uw-tool" href="{{ url_for('underwriter.queue') }}">
+            <span class="uw-tool-title">Decision Queue</span>
+            <span class="uw-tool-sub">Review all loans pending underwriting action</span>
+          </a>
+
+          <a class="uw-tool" href="{{ url_for('underwriter.pipeline') }}">
+            <span class="uw-tool-title">Loan Pipeline</span>
+            <span class="uw-tool-sub">View submitted, review, approved, and declined stages</span>
+          </a>
+
+          <a class="uw-tool" href="{{ url_for('underwriter.risk_reports') }}">
+            <span class="uw-tool-title">Risk Reports</span>
+            <span class="uw-tool-sub">Analyze portfolio quality, DTI, LTV, and condition mix</span>
+          </a>
+
+          <a class="uw-tool" href="{{ url_for('underwriter.messages') }}">
+            <span class="uw-tool-title">Messages</span>
+            <span class="uw-tool-sub">Coordinate with processor and lending team</span>
+          </a>
+        </div>
+      </div>
+
+      <div class="re-card pad">
+        <div class="uw-card-head">
+          <div>
+            <div class="uw-eyebrow">QUALITY INDEX</div>
+            <h3>Portfolio Summary</h3>
+          </div>
+        </div>
+        <div id="chart_summary" class="uw-chart uw-chart-sm"></div>
+        <div class="uw-footnote">Updated from current underwriting dashboard metrics.</div>
+      </div>
+
+      <div class="re-card pad">
+        <div class="uw-card-head">
+          <div>
+            <div class="uw-eyebrow">OPEN CONDITIONS</div>
+            <h3>Conditions Snapshot</h3>
+          </div>
+        </div>
+
+        {% if open_conditions %}
+          <div class="uw-condition-list">
+            {% for cond in open_conditions[:5] %}
+            <div class="uw-condition-item">
+              <div class="uw-condition-title">{{ cond.condition_type or "Condition" }}</div>
+              <div class="uw-condition-sub">{{ cond.description or "No description" }}</div>
+            </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="re-empty">No open conditions right now.</div>
+        {% endif %}
+      </div>
     </div>
-  </aside>
+  </section>
+
 </div>
 
-<!-- AI Panel -->
-<div class="ai-panel" id="aiPanel" aria-label="AI Underwriter Assistant">
-  <div class="ai-h">
+<!-- AI PANEL -->
+<div class="uw-ai-panel" id="aiPanel">
+  <div class="uw-ai-head">
     <strong>AI Underwriter</strong>
-    <button class="btn btn-sm" type="button" onclick="toggleAI()">✖</button>
+    <button class="re-btn ghost sm" type="button" onclick="toggleAI()">
+      <i class="lucide lucide-x"></i>
+    </button>
   </div>
-  <div class="ai-body" id="aiBody">
-    <div class="ai-msg">Hi {{ current_user.username or 'Underwriter' }}! I can summarize risk, identify anomalies, or pre-score approvals.</div>
-    <div>
-      <span class="chip" onclick="aiAsk('Show pending high-risk loans')">High Risk</span>
-      <span class="chip" onclick="aiAsk('Generate underwriting summary')">Summary</span>
-      <span class="chip" onclick="aiAsk('Show approval ratios for NY loans')">Approval Ratios</span>
+
+  <div class="uw-ai-body" id="aiBody">
+    <div class="uw-ai-msg">
+      Hi {{ current_user.username or 'Underwriter' }}. I can summarize risk, identify anomalies, or help pre-score files.
+    </div>
+
+    <div class="uw-chip-row">
+      <span class="uw-chip" onclick="aiAsk('Show pending high-risk loans')">High Risk</span>
+      <span class="uw-chip" onclick="aiAsk('Generate underwriting summary')">Summary</span>
+      <span class="uw-chip" onclick="aiAsk('Show approval ratios for current loans')">Approval Ratios</span>
     </div>
   </div>
-  <div class="ai-input">
+
+  <div class="uw-ai-input">
     <input id="aiInput" placeholder="Ask anything about your reviews…" />
-    <button class="btn btn-primary" type="button" onclick="aiSend()">Ask</button>
+    <button class="re-btn primary sm" type="button" onclick="aiSend()">Ask</button>
   </div>
 </div>
+
+<style>
+.uw-shell{
+  display:grid;
+  gap:20px;
+}
+
+.uw-hero{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-end;
+  gap:18px;
+  flex-wrap:wrap;
+  padding:24px;
+  border-radius:24px;
+  border:1px solid rgba(255,255,255,.08);
+  background:
+    radial-gradient(900px 440px at 10% 0%, rgba(122,184,255,.12), transparent 50%),
+    rgba(255,255,255,.03);
+}
+
+.uw-eyebrow{
+  font-size:11px;
+  color:var(--rav-muted);
+  text-transform:uppercase;
+  letter-spacing:.08em;
+}
+
+.uw-hero h2{
+  margin:6px 0 10px;
+  font-size:clamp(1.6rem, 2.4vw, 2.2rem);
+}
+
+.uw-hero-copy p{
+  margin:0;
+  max-width:760px;
+  color:var(--rav-muted);
+  line-height:1.7;
+}
+
+.uw-hero-actions{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+}
+
+.uw-kpis{
+  display:grid;
+  grid-template-columns:repeat(4, minmax(0,1fr));
+  gap:16px;
+}
+
+.uw-kpi-card{
+  padding:18px;
+  border-radius:20px;
+  border:1px solid rgba(255,255,255,.07);
+  background:linear-gradient(180deg, rgba(17,24,33,.96), rgba(11,17,23,.98));
+  box-shadow:var(--rav-shadow-md);
+}
+
+.uw-kpi-label{
+  color:var(--rav-muted);
+  font-size:.74rem;
+  font-weight:700;
+  text-transform:uppercase;
+  letter-spacing:.16em;
+}
+
+.uw-kpi-value{
+  margin-top:10px;
+  font-size:clamp(1.5rem, 2vw, 2rem);
+  font-weight:800;
+  line-height:1;
+}
+
+.uw-kpi-meta{
+  margin-top:8px;
+  color:var(--rav-text-soft);
+  font-size:.9rem;
+}
+
+.uw-grid{
+  display:grid;
+  gap:20px;
+}
+
+.uw-grid-2{
+  grid-template-columns:repeat(2, minmax(0,1fr));
+}
+
+.uw-main-grid{
+  grid-template-columns:1.35fr .95fr;
+}
+
+.uw-col{
+  display:grid;
+  gap:20px;
+}
+
+.uw-card-head{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:12px;
+  margin-bottom:14px;
+}
+
+.uw-card-head h3{
+  margin:4px 0 0;
+}
+
+.uw-chart{
+  height:260px;
+}
+
+.uw-chart-sm{
+  height:240px;
+}
+
+.uw-status{
+  display:inline-flex;
+  align-items:center;
+  padding:6px 10px;
+  border-radius:999px;
+  font-size:12px;
+  border:1px solid rgba(255,255,255,.08);
+}
+
+.uw-status.good{
+  color:#c7f1df;
+  background:rgba(44,182,125,.12);
+  border-color:rgba(44,182,125,.28);
+}
+
+.uw-status.warn{
+  color:#f1dfb1;
+  background:rgba(209,162,70,.12);
+  border-color:rgba(209,162,70,.28);
+}
+
+.uw-status.bad{
+  color:#f2c1c1;
+  background:rgba(196,99,99,.12);
+  border-color:rgba(196,99,99,.28);
+}
+
+.uw-status.neutral{
+  color:#dce5ee;
+  background:rgba(107,127,147,.14);
+  border-color:rgba(107,127,147,.24);
+}
+
+.uw-tool-list,
+.uw-condition-list{
+  display:grid;
+  gap:12px;
+}
+
+.uw-tool{
+  display:block;
+  padding:14px 16px;
+  border-radius:16px;
+  border:1px solid rgba(255,255,255,.08);
+  background:rgba(255,255,255,.02);
+  transition:.2s ease;
+}
+
+.uw-tool:hover{
+  transform:translateY(-1px);
+  border-color:rgba(120,160,255,.28);
+  background:rgba(255,255,255,.04);
+}
+
+.uw-tool-title{
+  display:block;
+  color:var(--rav-text);
+  font-weight:700;
+  font-size:14px;
+}
+
+.uw-tool-sub{
+  display:block;
+  margin-top:4px;
+  color:var(--rav-muted);
+  font-size:13px;
+  line-height:1.5;
+}
+
+.uw-condition-item{
+  padding:14px;
+  border-radius:16px;
+  background:rgba(255,255,255,.02);
+  border:1px solid rgba(255,255,255,.08);
+}
+
+.uw-condition-title{
+  font-weight:700;
+}
+
+.uw-condition-sub{
+  margin-top:4px;
+  color:var(--rav-muted);
+  font-size:13px;
+}
+
+.uw-footnote{
+  margin-top:8px;
+  color:var(--rav-muted);
+  font-size:.85rem;
+}
+
+.uw-ai-panel{
+  position:fixed;
+  right:22px;
+  top:96px;
+  width:360px;
+  max-width:calc(100vw - 40px);
+  background:linear-gradient(180deg, rgba(16,24,33,.98), rgba(10,15,21,.99));
+  border:1px solid rgba(255,255,255,.07);
+  border-radius:18px;
+  box-shadow:var(--rav-shadow-md);
+  z-index:40;
+}
+
+.uw-ai-panel.hidden{
+  display:none;
+}
+
+.uw-ai-head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:.85rem 1rem;
+  border-bottom:1px solid rgba(255,255,255,.07);
+}
+
+.uw-ai-body{
+  padding:1rem;
+  max-height:58vh;
+  overflow:auto;
+}
+
+.uw-ai-msg{
+  background:rgba(255,255,255,.03);
+  border:1px solid rgba(255,255,255,.07);
+  padding:.7rem .8rem;
+  border-radius:12px;
+  color:var(--rav-text);
+  margin-bottom:.7rem;
+}
+
+.uw-chip-row{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+}
+
+.uw-chip{
+  display:inline-flex;
+  padding:.35rem .6rem;
+  border:1px solid rgba(255,255,255,.07);
+  background:rgba(255,255,255,.03);
+  color:#c4d9f2;
+  border-radius:999px;
+  font-size:.78rem;
+  cursor:pointer;
+}
+
+.uw-chip:hover{
+  background:rgba(255,255,255,.05);
+}
+
+.uw-ai-input{
+  display:flex;
+  gap:.5rem;
+  padding:.85rem 1rem;
+  border-top:1px solid rgba(255,255,255,.07);
+}
+
+.uw-ai-input input{
+  flex:1;
+}
+
+@media (max-width:1200px){
+  .uw-kpis{
+    grid-template-columns:repeat(2, minmax(0,1fr));
+  }
+
+  .uw-main-grid,
+  .uw-grid-2{
+    grid-template-columns:1fr;
+  }
+}
+
+@media (max-width:960px){
+  .uw-ai-panel{
+    bottom:18px;
+    top:auto;
+    width:min(680px, calc(100vw - 36px));
+  }
+}
+
+@media (max-width:640px){
+  .uw-kpis{
+    grid-template-columns:1fr;
+  }
+}
+</style>
 
 <script>
-  const baseOpt={
-    chart:{toolbar:{show:false},foreColor:'#c9d3df',background:'transparent'},
-    grid:{borderColor:'#2a2e36'},dataLabels:{enabled:false},
-    theme:{mode:'dark'}
-  };
+const baseOpt = {
+  chart: {
+    toolbar: { show: false },
+    foreColor: '#c9d3df',
+    background: 'transparent'
+  },
+  grid: { borderColor: '#2a2e36' },
+  dataLabels: { enabled: false },
+  theme: { mode: 'dark' }
+};
 
-  new ApexCharts(document.querySelector("#chart_approval"),{
-    ...baseOpt,chart:{...baseOpt.chart,type:'line',height:260},
-    stroke:{curve:'smooth',width:2},
-    series:[{name:'Approvals',data:[10,14,20,18,25,29,31]}],
-    xaxis:{categories:['Jan','Feb','Mar','Apr','May','Jun','Jul']},
-    colors:['#43d19e']
-  }).render();
+new ApexCharts(document.querySelector("#chart_approval"), {
+  ...baseOpt,
+  chart: { ...baseOpt.chart, type: 'line', height: 260 },
+  stroke: { curve: 'smooth', width: 2 },
+  series: [{ name: 'Approvals', data: [10,14,20,18,25,29,31] }],
+  xaxis: { categories: ['Jan','Feb','Mar','Apr','May','Jun','Jul'] },
+  colors: ['#43d19e']
+}).render();
 
-  new ApexCharts(document.querySelector("#chart_risk"),{
-    ...baseOpt,chart:{...baseOpt.chart,type:'donut',height:260},
-    series:[55,30,15],
-    labels:['Low','Moderate','High'],
-    colors:['#43d19e','#ffdf6e','#ff9d9d'],
-    legend:{position:'bottom'}
-  }).render();
+new ApexCharts(document.querySelector("#chart_risk"), {
+  ...baseOpt,
+  chart: { ...baseOpt.chart, type: 'donut', height: 260 },
+  series: [55, 30, 15],
+  labels: ['Low', 'Moderate', 'High'],
+  colors: ['#43d19e', '#ffdf6e', '#ff9d9d'],
+  legend: { position: 'bottom' }
+}).render();
 
-  new ApexCharts(document.querySelector("#chart_summary"),{
-    ...baseOpt,chart:{...baseOpt.chart,type:'radialBar',height:240},
-    series:[78],labels:['Portfolio Quality'],
-    colors:['#7ab8ff'],
-    plotOptions:{radialBar:{hollow:{size:'58%'},dataLabels:{value:{fontSize:'22px'}}}}
-  }).render();
-
-  function aiAsk(q){document.getElementById('aiInput').value=q;aiSend();}
-  function aiSend(){
-    const box=document.getElementById('aiInput');
-    const body=document.getElementById('aiBody');
-    const q=box.value.trim();if(!q)return;
-    const you=document.createElement('div');
-    you.className='ai-msg';you.textContent='You: '+q;
-    body.appendChild(you);
-    box.value='';
-    setTimeout(()=>{
-      const bot=document.createElement('div');
-      bot.className='ai-msg';
-      bot.textContent='AI: Preliminary analysis suggests low risk in 62% of current loans.';
-      body.appendChild(bot);
-      body.scrollTop=body.scrollHeight;
-    },600);
+new ApexCharts(document.querySelector("#chart_summary"), {
+  ...baseOpt,
+  chart: { ...baseOpt.chart, type: 'radialBar', height: 240 },
+  series: [78],
+  labels: ['Portfolio Quality'],
+  colors: ['#7ab8ff'],
+  plotOptions: {
+    radialBar: {
+      hollow: { size: '58%' },
+      dataLabels: { value: { fontSize: '22px' } }
+    }
   }
-  function toggleAI(){
-    document.getElementById('aiPanel').classList.toggle('hidden');
-  }
+}).render();
+
+function aiAsk(q){
+  document.getElementById('aiInput').value = q;
+  aiSend();
+}
+
+function aiSend(){
+  const box = document.getElementById('aiInput');
+  const body = document.getElementById('aiBody');
+  const q = box.value.trim();
+  if(!q) return;
+
+  const you = document.createElement('div');
+  you.className = 'uw-ai-msg';
+  you.textContent = 'You: ' + q;
+  body.appendChild(you);
+  box.value = '';
+
+  setTimeout(() => {
+    const bot = document.createElement('div');
+    bot.className = 'uw-ai-msg';
+    bot.textContent = 'AI: Preliminary analysis suggests low risk in 62% of current loans.';
+    body.appendChild(bot);
+    body.scrollTop = body.scrollHeight;
+  }, 500);
+}
+
+function toggleAI(){
+  document.getElementById('aiPanel').classList.toggle('hidden');
+}
 </script>
+
 {% endblock %}
