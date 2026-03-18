@@ -38,8 +38,8 @@
     <!-- PIPELINE -->
     <div class="ravlo-nav-section">Pipeline</div>
 
-    <a href="{{ url_for('loan_officer.leads') }}"
-       class="ravlo-nav-link {% if ep == 'loan_officer.leads' %}active{% endif %}">
+    <a href="{{ url_for( 'crm.leads') }}"
+       class="ravlo-nav-link {% if ep == 'crm.leads' %}active{% endif %}">
       <i class="lucide lucide-flame"></i>
       <span>Leads</span>
     </a>
@@ -50,8 +50,8 @@
       <span>Borrowers</span>
     </a>
 
-    <a href="{{ url_for('loan_officer.loans') }}"
-       class="ravlo-nav-link {% if ep == 'loan_officer.loans' %}active{% endif %}">
+    <a href="{{ url_for('loan_officer.loan_queue') }}"
+       class="ravlo-nav-link {% if ep == 'loan_officer.loan_queue' %}active{% endif %}">
       <i class="lucide lucide-landmark"></i>
       <span>Loans</span>
     </a>
@@ -66,16 +66,10 @@
     <!-- WORKFLOW -->
     <div class="ravlo-nav-section">Workflow</div>
 
-    <a href="{{ url_for('loan_officer.tasks') }}"
-       class="ravlo-nav-link {% if ep == 'loan_officer.tasks' %}active{% endif %}">
+    <a href="{{ url_for('loan_officer.task') }}"
+       class="ravlo-nav-link {% if ep == 'loan_officer.task' %}active{% endif %}">
       <i class="lucide lucide-list-checks"></i>
       <span>Tasks</span>
-    </a>
-
-    <a href="{{ url_for('loan_officer.documents') }}"
-       class="ravlo-nav-link {% if ep == 'loan_officer.documents' %}active{% endif %}">
-      <i class="lucide lucide-folder"></i>
-      <span>Documents</span>
     </a>
 
 
@@ -96,8 +90,8 @@
 
     <div class="ravlo-nav-section">System</div>
 
-    <a href="{{ url_for('loan_officer.settings') }}"
-       class="ravlo-nav-link {% if ep == 'loan_officer.settings' %}active{% endif %}">
+    <a href="{{ url_for('account.settings') }}"
+       class="ravlo-nav-link {% if ep == 'account.settings' %}active{% endif %}">
       <i class="lucide lucide-settings"></i>
       <span>Settings</span>
     </a>

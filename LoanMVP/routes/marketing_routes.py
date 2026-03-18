@@ -38,7 +38,7 @@ PAGE_META = {
         "title": "Enter Ravlo",
         "description": "Access your Ravlo workspace and step into your investor command center.",
         "template": "marketing/enter.html",
-        "hero_image": "images/marketing/command_center.jpeg",
+        "hero_image": "images/marketing/dashboard.jpg",
     },
     "tour": {
         "title": "Product Tour | Ravlo",
@@ -115,6 +115,12 @@ PAGE_META = {
         "description": "Read the story behind Ravlo and why it was built.",
         "template": "marketing/story.html",
         "hero_image": "images/about/team_strategy.jpg",
+    },
+    "partner_plans": {
+         "title": "Partner Plans | Ravlo",
+         "description": "Choose the Ravlo partner plan that fits your business and connect with investors through the platform.",
+         "template": "marketing/partner_plans.html",
+         "hero_image": "images/marketing/interior_luxury.jpg.PNG",
     },
 }
 
@@ -307,3 +313,7 @@ def mission():
 @marketing_bp.route("/story")
 def story():
     return render_marketing_page("story")
+
+@marketing_bp.route("/partners/plans")
+def partner_plans():
+    return render_marketing_page("partner_plans")

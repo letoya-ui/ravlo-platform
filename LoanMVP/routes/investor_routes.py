@@ -4,6 +4,7 @@ import json
 import uuid
 import base64
 import requests
+import zipfile
 from datetime import datetime
 from io import BytesIO
 from openai import OpenAI
@@ -2064,7 +2065,7 @@ def upload_document():
 
     if request.method == "POST":
         file = request.files.get("file")
-        doc_type = request.form.get("doc_type")
+        document_type = request.form.get("doc_type")
 
         if file and ip:
             filename = secure_filename(file.filename)
@@ -2076,7 +2077,7 @@ def upload_document():
             db.session.add(LoanDocument(
                 **doc_fk,
                 file_path=filename,
-                doc_type=doc_type,
+                document_type=document_type,
                 status="uploaded"
             ))
             db.session.commit()
@@ -2181,7 +2182,56 @@ def delete_document(doc_id):
     db.session.commit()
     return redirect(url_for("investor.documents"))
 
+@investor_bp.route("/documents/download/<int:doc_id>", methods=["GET"])
+@login_required
+def download_document(doc_id):
+    doc = LoanDocument.query.filter_by(
+        id=doc_id,
+        user_id=current_user.id
+    ).first()
 
+    if not doc:
+        abort(404)
+
+    file_path = doc.file_path  # make sure this is stored in DB
+
+    if not file_path or not os.path.exists(file_path):
+        abort(404)
+
+    return send_file(
+        file_path,
+        as_attachment=True,
+        download_name=os.path.basename(file_path)
+    )
+
+@investor_bp.route("/documents/download-all/<int:deal_id>", methods=["GET"])
+@login_required
+def download_all_documents(deal_id):
+    deal = Deal.query.filter_by(
+        id=deal_id,
+        user_id=current_user.id
+    ).first_or_404()
+
+    documents = LoanDocument.query.filter_by(
+        deal_id=deal.id,
+        user_id=current_user.id
+    ).all()
+
+    memory_file = BytesIO()
+
+    with zipfile.ZipFile(memory_file, "w") as zf:
+        for doc in documents:
+            if doc.file_path and os.path.exists(doc.file_path):
+                zf.write(doc.file_path, arcname=os.path.basename(doc.file_path))
+
+    memory_file.seek(0)
+
+    return send_file(
+        memory_file,
+        mimetype="application/zip",
+        as_attachment=True,
+        download_name=f"deal_{deal.id}_documents.zip"
+    )
 # =========================================================
 # ✅ INVESTOR • CONDITIONS (capital requirements)
 # =========================================================
@@ -6052,22 +6102,40 @@ def budget():
         active_tab="budget"
     )
 
-@investor_bp.route("/budget-studio")
+@investor_bp.route("/deal-studio/budget", methods=["GET"])
+@investor_bp.route("/deal-studio/budget/<int:deal_id>", methods=["GET"])
 @login_required
 @role_required("investor")
-def budget_studio():
-    ip = InvestorProfile.query.filter_by(user_id=current_user.id).first_or_404()
+def budget_studio(deal_id=None):
+    deal = None
+    results = {}
 
-    budgets = ProjectBudget.query.filter_by(
-        investor_profile_id=ip.id
-    ).order_by(ProjectBudget.updated_at.desc()).all()
+    if deal_id is None:
+        query_deal_id = request.args.get("deal_id", type=int)
+        if query_deal_id:
+            deal_id = query_deal_id
+
+    if deal_id:
+        deal = Deal.query.filter_by(
+            id=deal_id,
+            user_id=current_user.id
+        ).first_or_404()
+
+        results = deal.results_json or {}
+
+    purchase_price = float(getattr(deal, "purchase_price", 0) or 0) if deal else 0
+    arv = float(getattr(deal, "arv", 0) or 0) if deal else 0
+    rehab_cost = float(getattr(deal, "rehab_cost", 0) or 0) if deal else 0
 
     return render_template(
-        "investor/budget_studio/index.html",
-        budgets=budgets,
-        investor=ip,
-        title="Budget Studio",
-        active_tab="budget"
+        "investor/budget_studio.html",
+        deal=deal,
+        results=results,
+        purchase_price=purchase_price,
+        arv=arv,
+        rehab_cost=rehab_cost,
+        page_title="Budget Studio",
+        page_subtitle="Control your numbers, track execution, and stay profitable."
     )
 
 

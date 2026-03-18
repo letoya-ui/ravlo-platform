@@ -1,0 +1,566 @@
+{% extends "layouts/ravlo_base.html" %}
+{% block title %}Ravlo • Budget Studio{% endblock %}
+
+{% block page_title %}Budget Studio{% endblock %}
+{% block page_subline %}Control your numbers, track execution, and protect deal profitability.{% endblock %}
+
+{% block topbar_actions %}
+  {% if deal %}
+    <a class="ravlo-btn ghost sm" href="{{ url_for('investor.deal_detail', deal_id=deal.id) }}">Deal Workspace</a>
+    <a class="ravlo-btn ghost sm" href="{{ url_for('investor.deal_architect', deal_id=deal.id) }}">Deal Architect</a>
+    <a class="ravlo-btn ghost sm" href="{{ url_for('investor.deal_rehab', deal_id=deal.id) }}">Renovation Studio</a>
+    <a class="ravlo-btn ghost sm" href="{{ url_for('investor.build_studio', deal_id=deal.id) }}">Build Studio</a>
+  {% endif %}
+{% endblock %}
+
+{% block content %}
+<style>
+  .budget-shell{
+    display:grid;
+    gap:20px;
+  }
+
+  .budget-hero{
+    border-radius:24px;
+    padding:22px 24px;
+    border:1px solid rgba(255,255,255,.08);
+    background:
+      radial-gradient(900px 500px at 10% 10%, rgba(122,184,255,.12), transparent 55%),
+      rgba(255,255,255,.03);
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-end;
+    gap:18px;
+    flex-wrap:wrap;
+  }
+
+  .budget-tag{
+    display:inline-flex;
+    gap:.5rem;
+    align-items:center;
+    padding:.42rem .75rem;
+    border-radius:999px;
+    background:rgba(255,255,255,.06);
+    border:1px solid rgba(255,255,255,.12);
+    color:rgba(255,255,255,.88);
+    font-weight:800;
+    font-size:.78rem;
+    letter-spacing:.04em;
+  }
+
+  .budget-hero h2{
+    margin:.65rem 0 0;
+    font-size:1.7rem;
+    line-height:1.08;
+    letter-spacing:-.02em;
+  }
+
+  .budget-hero-sub{
+    color:rgba(255,255,255,.74);
+    margin:.4rem 0 0;
+    max-width:760px;
+  }
+
+  .budget-actions{
+    display:flex;
+    gap:.6rem;
+    flex-wrap:wrap;
+  }
+
+  .budget-grid{
+    display:grid;
+    grid-template-columns:.98fr 1.02fr;
+    gap:20px;
+    align-items:start;
+  }
+
+  .budget-card{
+    background:rgba(255,255,255,.02);
+    border:1px solid rgba(255,255,255,.08);
+    border-radius:22px;
+    padding:18px;
+  }
+
+  .budget-card h3{
+    margin:.1rem 0 .85rem;
+    color:#7ab8ff;
+    font-size:1.04rem;
+  }
+
+  .budget-kpi-grid{
+    display:grid;
+    grid-template-columns:repeat(4, minmax(0,1fr));
+    gap:12px;
+  }
+
+  .budget-kpi{
+    border-radius:18px;
+    padding:16px;
+    background:rgba(255,255,255,.03);
+    border:1px solid rgba(255,255,255,.08);
+  }
+
+  .budget-kpi-label{
+    color:rgba(224,233,246,.66);
+    font-size:.78rem;
+    margin-bottom:6px;
+    text-transform:uppercase;
+    letter-spacing:.06em;
+  }
+
+  .budget-kpi-value{
+    font-size:1.35rem;
+    font-weight:800;
+    color:#f4f8ff;
+    letter-spacing:-.02em;
+  }
+
+  .budget-kpi-value.positive{ color:#7ee8b1; }
+  .budget-kpi-value.negative{ color:#ff9a9a; }
+
+  .budget-section-note{
+    color:rgba(224,233,246,.72);
+    line-height:1.65;
+    margin:0 0 12px;
+  }
+
+  .budget-line-list{
+    display:grid;
+    gap:10px;
+    margin-top:12px;
+  }
+
+  .budget-line-item{
+    display:grid;
+    grid-template-columns:2fr 1fr auto;
+    gap:10px;
+    padding:12px;
+    border-radius:16px;
+    background:rgba(255,255,255,.025);
+    border:1px solid rgba(255,255,255,.08);
+  }
+
+  .budget-input{
+    width:100%;
+    padding:.82rem .9rem;
+    border-radius:12px;
+    background:#0f141a;
+    border:1px solid rgba(255,255,255,.10);
+    color:#fff;
+    min-height:48px;
+  }
+
+  .budget-btn{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    gap:.45rem;
+    padding:.76rem 1rem;
+    border-radius:12px;
+    cursor:pointer;
+    font-weight:800;
+    font-size:.92rem;
+    text-decoration:none;
+    transition:.18s ease;
+    border:1px solid rgba(122,184,255,.42);
+    background:rgba(122,184,255,.12);
+    color:#7ab8ff;
+  }
+
+  .budget-btn:hover{
+    background:rgba(122,184,255,.22);
+    box-shadow:0 0 14px rgba(122,184,255,.22);
+  }
+
+  .budget-btn.secondary{
+    background:rgba(255,255,255,.04);
+    border:1px solid rgba(255,255,255,.12);
+    color:#eef4ff;
+  }
+
+  .budget-btn.success{
+    background:rgba(104,211,160,.12);
+    border:1px solid rgba(104,211,160,.34);
+    color:#7ee8b1;
+  }
+
+  .budget-btn.danger{
+    background:rgba(255,255,255,.03);
+    border:1px solid rgba(255,255,255,.1);
+    color:#fff;
+  }
+
+  .budget-toolbar{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+    margin-top:12px;
+  }
+
+  .budget-summary{
+    display:grid;
+    gap:10px;
+    margin-top:12px;
+  }
+
+  .budget-summary-row{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:14px;
+    padding:14px 0;
+    border-bottom:1px solid rgba(255,255,255,.08);
+  }
+
+  .budget-summary-row:last-child{
+    border-bottom:none;
+  }
+
+  .budget-summary-label{
+    color:rgba(224,233,246,.66);
+  }
+
+  .budget-summary-value{
+    color:#f4f8ff;
+    font-weight:800;
+  }
+
+  .budget-summary-value.total{
+    font-size:1.45rem;
+    letter-spacing:-.02em;
+    color:#7ab8ff;
+  }
+
+  .budget-summary-value.positive{ color:#7ee8b1; }
+  .budget-summary-value.negative{ color:#ff9a9a; }
+
+  .budget-health{
+    margin-top:14px;
+    padding:14px 16px;
+    border-radius:16px;
+    border:1px solid rgba(255,255,255,.08);
+    background:rgba(255,255,255,.03);
+  }
+
+  .budget-health-title{
+    font-size:.84rem;
+    color:rgba(224,233,246,.68);
+    margin-bottom:8px;
+    text-transform:uppercase;
+    letter-spacing:.06em;
+  }
+
+  .budget-health-value{
+    font-size:1.15rem;
+    font-weight:800;
+  }
+
+  .budget-health-value.good{ color:#7ee8b1; }
+  .budget-health-value.watch{ color:#ffd37a; }
+  .budget-health-value.risk{ color:#ff9a9a; }
+
+  .workflow-grid{
+    display:grid;
+    grid-template-columns:repeat(4, minmax(0,1fr));
+    gap:12px;
+  }
+
+  .workflow-card{
+    display:block;
+    padding:18px;
+    border-radius:18px;
+    background:rgba(255,255,255,.03);
+    border:1px solid rgba(255,255,255,.08);
+    transition:.15s ease;
+  }
+
+  .workflow-card:hover{
+    transform:translateY(-1px);
+    border-color:rgba(122,184,255,.25);
+    background:rgba(255,255,255,.045);
+  }
+
+  .workflow-card h4{
+    margin:0 0 8px;
+  }
+
+  .workflow-card p{
+    margin:0;
+    color:var(--muted);
+    line-height:1.6;
+  }
+
+  .muted{ color:var(--muted); }
+
+  @media (max-width: 1180px){
+    .budget-kpi-grid{ grid-template-columns:repeat(2, minmax(0,1fr)); }
+    .workflow-grid{ grid-template-columns:repeat(2, minmax(0,1fr)); }
+  }
+
+  @media (max-width: 980px){
+    .budget-grid{ grid-template-columns:1fr; }
+  }
+
+  @media (max-width: 700px){
+    .budget-line-item{ grid-template-columns:1fr; }
+    .budget-kpi-grid{ grid-template-columns:1fr; }
+    .workflow-grid{ grid-template-columns:1fr; }
+  }
+</style>
+
+{% set seed = results.get("budget_seed", {}) %}
+
+<div class="budget-shell">
+
+  <section class="budget-hero">
+    <div>
+      <div class="budget-tag">
+        💰 BUDGET STUDIO
+        {% if deal %}• DEAL #{{ deal.id }}{% endif %}
+      </div>
+      <h2>{% if deal %}{{ deal.title or ('Deal #' ~ deal.id) }}{% else %}Budget Studio{% endif %}</h2>
+      <div class="budget-hero-sub">
+        Convert your strategy, rehab scope, and build concepts into a live financial command layer.
+      </div>
+    </div>
+
+    <div class="budget-actions">
+      {% if deal %}
+        <a class="budget-btn secondary" href="{{ url_for('investor.deal_detail', deal_id=deal.id) }}">🗂 Deal Workspace</a>
+        <a class="budget-btn secondary" href="{{ url_for('investor.deal_architect', deal_id=deal.id) }}">🧠 Deal Architect</a>
+        <a class="budget-btn secondary" href="{{ url_for('investor.deal_rehab', deal_id=deal.id) }}">🎬 Renovation Studio</a>
+        <a class="budget-btn secondary" href="{{ url_for('investor.build_studio', deal_id=deal.id) }}">🏗 Build Studio</a>
+      {% endif %}
+    </div>
+  </section>
+
+  <section class="budget-kpi-grid">
+    <div class="budget-kpi">
+      <div class="budget-kpi-label">Purchase Price</div>
+      <div class="budget-kpi-value" id="purchasePriceDisplay">${{ "{:,.0f}".format(purchase_price or 0) }}</div>
+    </div>
+
+    <div class="budget-kpi">
+      <div class="budget-kpi-label">ARV</div>
+      <div class="budget-kpi-value" id="arvDisplay">${{ "{:,.0f}".format(arv or 0) }}</div>
+    </div>
+
+    <div class="budget-kpi">
+      <div class="budget-kpi-label">Budget Total</div>
+      <div class="budget-kpi-value" id="budgetTotalDisplay">$0</div>
+    </div>
+
+    <div class="budget-kpi">
+      <div class="budget-kpi-label">Projected Profit</div>
+      <div class="budget-kpi-value" id="projectedProfitDisplay">$0</div>
+    </div>
+  </section>
+
+  <div class="budget-grid">
+
+    <section class="budget-card">
+      <h3>Line Items</h3>
+      <p class="budget-section-note">
+        Add, remove, and shape the real cost structure of the deal. Ravlo can auto-seed this from Build Studio and rehab planning.
+      </p>
+
+      <div id="lineItems" class="budget-line-list"></div>
+
+      <div class="budget-toolbar">
+        <button class="budget-btn" type="button" onclick="addItem()">+ Add Line Item</button>
+        <button class="budget-btn secondary" type="button" onclick="seedDefaults()">Seed Defaults</button>
+        <button class="budget-btn success" type="button" onclick="sortItems()">Sort by Cost</button>
+      </div>
+    </section>
+
+    <section class="budget-card">
+      <h3>Financial Summary</h3>
+
+      <div class="budget-summary">
+        <div class="budget-summary-row">
+          <span class="budget-summary-label">Purchase Price</span>
+          <strong class="budget-summary-value" id="purchasePriceSummary">${{ "{:,.0f}".format(purchase_price or 0) }}</strong>
+        </div>
+
+        <div class="budget-summary-row">
+          <span class="budget-summary-label">Budget Total</span>
+          <strong class="budget-summary-value" id="budgetTotal">$0</strong>
+        </div>
+
+        <div class="budget-summary-row">
+          <span class="budget-summary-label">Total Project Cost</span>
+          <strong class="budget-summary-value" id="totalProjectCost">$0</strong>
+        </div>
+
+        <div class="budget-summary-row">
+          <span class="budget-summary-label">ARV</span>
+          <strong class="budget-summary-value" id="arvSummary">${{ "{:,.0f}".format(arv or 0) }}</strong>
+        </div>
+
+        <div class="budget-summary-row">
+          <span class="budget-summary-label">Projected Profit</span>
+          <strong class="budget-summary-value total" id="projectedProfit">$0</strong>
+        </div>
+
+        <div class="budget-summary-row">
+          <span class="budget-summary-label">Margin %</span>
+          <strong class="budget-summary-value total" id="marginPct">0%</strong>
+        </div>
+      </div>
+
+      <div class="budget-health">
+        <div class="budget-health-title">Budget Health</div>
+        <div id="budgetHealth" class="budget-health-value">Waiting for numbers…</div>
+      </div>
+    </section>
+
+  </div>
+
+  <section class="budget-card">
+    <h3>Continue Workflow</h3>
+    <div class="workflow-grid">
+      {% if deal %}
+      <a href="{{ url_for('investor.deal_architect', deal_id=deal.id) }}" class="workflow-card">
+        <h4>Deal Architect</h4>
+        <p>Return to strategy, risk, and investment direction.</p>
+      </a>
+
+      <a href="{{ url_for('investor.deal_rehab', deal_id=deal.id) }}" class="workflow-card">
+        <h4>Renovation Studio</h4>
+        <p>Compare scope and rehab concepts against your budget plan.</p>
+      </a>
+
+      <a href="{{ url_for('investor.build_studio', deal_id=deal.id) }}" class="workflow-card">
+        <h4>Build Studio</h4>
+        <p>Bring development scenarios and construction concepts into the cost model.</p>
+      </a>
+
+      <a href="{{ url_for('investor.deal_detail', deal_id=deal.id) }}" class="workflow-card">
+        <h4>Deal Workspace</h4>
+        <p>Return to the main deal record and see the bigger picture.</p>
+      </a>
+      {% endif %}
+    </div>
+  </section>
+
+</div>
+
+<script>
+let items = [];
+
+const PURCHASE_PRICE = Number({{ purchase_price|default(0)|tojson }}) || 0;
+const ARV = Number({{ arv|default(0)|tojson }}) || 0;
+const REHAB_COST = Number({{ rehab_cost|default(0)|tojson }}) || 0;
+
+function money(value){
+  return "$" + Number(value || 0).toLocaleString();
+}
+
+function addItem(name="", cost=0){
+  const id = Date.now() + Math.floor(Math.random() * 1000);
+  items.push({ id, name, cost: Number(cost) || 0 });
+  render();
+}
+
+function updateItem(id, field, value){
+  const item = items.find(i => i.id === id);
+  if(item){
+    item[field] = field === "cost" ? Number(value || 0) : value;
+  }
+  calculate();
+}
+
+function removeItem(id){
+  items = items.filter(i => i.id !== id);
+  render();
+}
+
+function sortItems(){
+  items.sort((a, b) => (Number(b.cost) || 0) - (Number(a.cost) || 0));
+  render();
+}
+
+function seedDefaults(){
+  if (items.length > 0) return;
+  addItem("Permits / Planning", 8000);
+  addItem("Labor", 35000);
+  addItem("Materials", 45000);
+  addItem("Contingency", 12000);
+}
+
+function render(){
+  const container = document.getElementById("lineItems");
+  container.innerHTML = "";
+
+  items.forEach(i => {
+    const row = document.createElement("div");
+    row.className = "budget-line-item";
+    row.innerHTML = `
+      <input class="budget-input" placeholder="Item name" value="${i.name}" oninput="updateItem(${i.id}, 'name', this.value)">
+      <input class="budget-input" type="number" value="${i.cost}" oninput="updateItem(${i.id}, 'cost', this.value)">
+      <button class="budget-btn danger" type="button" onclick="removeItem(${i.id})">Remove</button>
+    `;
+    container.appendChild(row);
+  });
+
+  calculate();
+}
+
+function calculate(){
+  const budgetTotal = items.reduce((sum, i) => sum + (Number(i.cost) || 0), 0);
+  const totalProjectCost = PURCHASE_PRICE + budgetTotal;
+  const projectedProfit = ARV - totalProjectCost;
+  const marginPct = ARV > 0 ? (projectedProfit / ARV) * 100 : 0;
+
+  document.getElementById("budgetTotalDisplay").innerText = money(budgetTotal);
+  document.getElementById("projectedProfitDisplay").innerText = money(projectedProfit);
+
+  document.getElementById("budgetTotal").innerText = money(budgetTotal);
+  document.getElementById("totalProjectCost").innerText = money(totalProjectCost);
+
+  const profitEl = document.getElementById("projectedProfit");
+  profitEl.innerText = money(projectedProfit);
+  profitEl.classList.remove("positive", "negative");
+  profitEl.classList.add(projectedProfit >= 0 ? "positive" : "negative");
+
+  const profitKpi = document.getElementById("projectedProfitDisplay");
+  profitKpi.classList.remove("positive", "negative");
+  profitKpi.classList.add(projectedProfit >= 0 ? "positive" : "negative");
+
+  const marginEl = document.getElementById("marginPct");
+  marginEl.innerText = marginPct.toFixed(1) + "%";
+  marginEl.classList.remove("positive", "negative");
+  marginEl.classList.add(marginPct >= 0 ? "positive" : "negative");
+
+  const health = document.getElementById("budgetHealth");
+  health.classList.remove("good", "watch", "risk");
+
+  if (marginPct >= 18){
+    health.innerText = "Healthy margin — strong room for execution.";
+    health.classList.add("good");
+  } else if (marginPct >= 8){
+    health.innerText = "Watch closely — margin is workable but tighter.";
+    health.classList.add("watch");
+  } else {
+    health.innerText = "High risk — budget pressure may hurt profitability.";
+    health.classList.add("risk");
+  }
+}
+
+render();
+
+// Auto-seed from build / rehab / AI
+{% if seed %}
+  const breakdown = {{ seed.get("suggested_breakdown", [])|tojson }};
+  if (Array.isArray(breakdown) && breakdown.length){
+    breakdown.forEach(item => addItem(item.name || "Line Item", item.cost || 0));
+  }
+{% endif %}
+
+// Fallback seed from rehab
+if (items.length === 0 && REHAB_COST > 0){
+  addItem("Rehab Scope", REHAB_COST);
+}
+</script>
+
+{% endblock %}

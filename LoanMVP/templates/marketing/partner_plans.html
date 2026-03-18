@@ -1,0 +1,186 @@
+{% extends "layouts/marketing_base.html" %}
+
+{% block hero %}
+<section class="mk-hero">
+  <div class="mk-container">
+    <div class="mk-hero-grid">
+
+      <div class="mk-hero-copy">
+        <div class="mk-eyebrow">Partner Plans</div>
+        <h1 class="mk-title-xl">Choose the Ravlo partner plan that fits your business.</h1>
+        <p class="mk-copy-lg">
+          Ravlo helps contractors, designers, cleaners, inspectors, agents, and service providers
+          connect with active investors through a premium real estate ecosystem.
+        </p>
+
+        <div class="mk-hero-actions">
+          <a href="{{ url_for('marketing.contact') }}" class="mk-btn mk-btn-primary">Apply Now</a>
+          <a href="{{ url_for('marketing.partners') }}" class="mk-btn mk-btn-ghost">Back to Partners</a>
+        </div>
+      </div>
+
+      <div class="mk-hero-visual">
+        <div class="mk-glow"></div>
+        <div class="mk-device">
+          <div class="mk-device-topbar">
+            <span class="mk-device-dot"></span>
+            <span class="mk-device-dot"></span>
+            <span class="mk-device-dot"></span>
+          </div>
+          <img src="{{ url_for('static', filename=hero_image or 'images/marketing/interior_luxury.jpg.PNG') }}" alt="Ravlo Partner Plans">
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block content %}
+
+<section class="mk-section">
+  <div class="mk-container">
+    <div class="mk-kicker">Why Join</div>
+    <h2 class="mk-title-lg">Get in front of investors who are already moving deals forward.</h2>
+    <p class="mk-copy-lg">
+      Ravlo is built to connect real estate projects with the professionals needed to execute them.
+      Partner plans give your business visibility inside a serious investor workflow.
+    </p>
+  </div>
+</section>
+
+<section class="mk-section-tight">
+  <div class="mk-container">
+    <div class="mk-grid-3">
+
+      <div class="mk-plan">
+        <div class="mk-plan-badge">Starter</div>
+        <h3>Basic Listing</h3>
+        <div class="mk-plan-price">$49<span style="font-size:1rem;font-weight:600;">/mo</span></div>
+        <div class="mk-plan-note">A clean entry point for service providers who want visibility in the Ravlo ecosystem.</div>
+
+        <div class="mk-list">
+          <div class="mk-list-item">
+            <div class="mk-check">✓</div>
+            <div class="mk-copy">Business profile</div>
+          </div>
+          <div class="mk-list-item">
+            <div class="mk-check">✓</div>
+            <div class="mk-copy">Service category listing</div>
+          </div>
+          <div class="mk-list-item">
+            <div class="mk-check">✓</div>
+            <div class="mk-copy">Partner directory visibility</div>
+          </div>
+        </div>
+
+        <div style="margin-top:18px;">
+          <a href="{{ url_for('marketing.contact') }}" class="mk-btn mk-btn-ghost" style="width:100%;">Choose Starter</a>
+        </div>
+      </div>
+
+      <div class="mk-plan featured">
+        <div class="mk-plan-badge">Most Popular</div>
+        <h3>Preferred Partner</h3>
+        <div class="mk-plan-price">$99<span style="font-size:1rem;font-weight:600;">/mo</span></div>
+        <div class="mk-plan-note">Best for businesses that want stronger visibility and more direct investor exposure.</div>
+
+        <div class="mk-list">
+          <div class="mk-list-item">
+            <div class="mk-check">✓</div>
+            <div class="mk-copy">Everything in Starter</div>
+          </div>
+          <div class="mk-list-item">
+            <div class="mk-check">✓</div>
+            <div class="mk-copy">Priority placement</div>
+          </div>
+          <div class="mk-list-item">
+            <div class="mk-check">✓</div>
+            <div class="mk-copy">Enhanced profile branding</div>
+          </div>
+          <div class="mk-list-item">
+            <div class="mk-check">✓</div>
+            <div class="mk-copy">Preferred partner badge</div>
+          </div>
+        </div>
+
+        <div style="margin-top:18px;">
+          <a href="{{ url_for('marketing.contact') }}" class="mk-btn mk-btn-primary" style="width:100%;">Choose Preferred</a>
+        </div>
+      </div>
+
+      <div class="mk-plan">
+        <div class="mk-plan-badge">Premium</div>
+        <h3>Featured Partner</h3>
+        <div class="mk-plan-price">$199<span style="font-size:1rem;font-weight:600;">/mo</span></div>
+        <div class="mk-plan-note">For businesses ready to stand out as a top-tier provider inside the Ravlo network.</div>
+
+        <div class="mk-list">
+          <div class="mk-list-item">
+            <div class="mk-check">✓</div>
+            <div class="mk-copy">Everything in Preferred</div>
+          </div>
+          <div class="mk-list-item">
+            <div class="mk-check">✓</div>
+            <div class="mk-copy">Featured placement</div>
+          </div>
+          <div class="mk-list-item">
+            <div class="mk-check">✓</div>
+            <div class="mk-copy">Premium exposure across partner sections</div>
+          </div>
+          <div class="mk-list-item">
+            <div class="mk-check">✓</div>
+            <div class="mk-copy">Higher visibility to active investors</div>
+          </div>
+        </div>
+
+        <div style="margin-top:18px;">
+          <a href="{{ url_for('marketing.contact') }}" class="mk-btn mk-btn-ghost" style="width:100%;">Choose Featured</a>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<section class="mk-section">
+  <div class="mk-container">
+    <div class="mk-kicker">Best Fit For</div>
+    <h2 class="mk-title-lg">Built for real estate service providers across the project lifecycle.</h2>
+
+    <div class="mk-grid-3" style="margin-top:28px;">
+      <div class="mk-card">
+        <h3>Construction & Trades</h3>
+        <p>General contractors, subcontractors, electricians, plumbers, roofers, painters, flooring teams, and rehab crews.</p>
+      </div>
+
+      <div class="mk-card">
+        <h3>Property Services</h3>
+        <p>Cleaners, inspectors, photographers, staging teams, landscapers, junk removal, and maintenance providers.</p>
+      </div>
+
+      <div class="mk-card">
+        <h3>Professional Services</h3>
+        <p>Agents, designers, architects, engineers, title professionals, insurance contacts, and project advisors.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="mk-section">
+  <div class="mk-container">
+    <div class="mk-cta">
+      <div class="mk-kicker">Ready to join?</div>
+      <h2 class="mk-title-lg">Position your business inside the Ravlo investor ecosystem.</h2>
+      <p>
+        Choose a plan, apply to become a partner, and start building visibility with investors looking for trusted execution support.
+      </p>
+      <div class="mk-cta-actions">
+        <a href="{{ url_for('marketing.contact') }}" class="mk-btn mk-btn-primary">Apply to Become a Partner</a>
+        <a href="{{ url_for('marketing.partners') }}" class="mk-btn mk-btn-ghost">Back to Partners</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+{% endblock %}

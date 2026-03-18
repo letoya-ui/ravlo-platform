@@ -1,134 +1,314 @@
 {% extends "layouts/ravlo_base.html" %}
+{% block title %}Ravlo • Budget Studio{% endblock %}
 
-{% block title %}Ravlo • Budget Tracker{% endblock %}
-{% block page_title %}{{ page_title }}{% endblock %}
-{% block page_subline %}{{ page_subtitle }}{% endblock %}
+{% block page_title %}Budget Studio{% endblock %}
+{% block page_subline %}Track costs, compare projections, and control your deal financially.{% endblock %}
+
+{% block topbar_actions %}
+  {% if deal %}
+    <a class="ravlo-btn ghost sm" href="{{ url_for('investor.deal_detail', deal_id=deal.id) }}">Deal Workspace</a>
+    <a class="ravlo-btn ghost sm" href="{{ url_for('investor.deal_architect', deal_id=deal.id) }}">Deal Architect</a>
+    <a class="ravlo-btn ghost sm" href="{{ url_for('investor.build_studio', deal_id=deal.id) }}">Build Studio</a>
+  {% endif %}
+{% endblock %}
 
 {% block content %}
 <style>
-  .budget-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1rem;margin-bottom:1rem;}
-  .budget-card,.budget-form,.budget-table-wrap{
+  .budget-wrap{display:grid;gap:20px;}
+  .budget-hero{
+    border-radius:22px;
+    padding:22px 24px;
+    border:1px solid rgba(255,255,255,.08);
+    background:
+      radial-gradient(900px 420px at 10% 10%, rgba(122,184,255,.12), transparent 55%),
+      rgba(255,255,255,.03);
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-end;
+    gap:18px;
+    flex-wrap:wrap;
+  }
+  .budget-grid{
+    display:grid;
+    grid-template-columns:.95fr 1.05fr;
+    gap:20px;
+    align-items:start;
+  }
+  @media(max-width:980px){
+    .budget-grid{grid-template-columns:1fr;}
+  }
+
+  .card{
+    background:rgba(255,255,255,.02);
+    border:1px solid rgba(255,255,255,.08);
+    border-radius:18px;
+    padding:18px;
+  }
+
+  .kpi-grid{
+    display:grid;
+    grid-template-columns:repeat(3,minmax(0,1fr));
+    gap:12px;
+  }
+  @media(max-width:900px){
+    .kpi-grid{grid-template-columns:1fr;}
+  }
+
+  .kpi{
+    padding:16px;
+    border-radius:16px;
     background:rgba(255,255,255,.03);
     border:1px solid rgba(255,255,255,.08);
-    border-radius:22px;
-    padding:1rem;
   }
-  .budget-stat{font-size:1.6rem;font-weight:800;color:#f4f8ff;}
-  .budget-label{font-size:.82rem;color:rgba(230,235,240,.7);}
-  .budget-form-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.8rem;}
-  .budget-input,.budget-select,.budget-textarea{
+  .kpi .label{
+    color:rgba(224,233,246,.68);
+    font-size:.78rem;
+    margin-bottom:6px;
+    text-transform:uppercase;
+    letter-spacing:.06em;
+  }
+  .kpi .value{
+    font-size:1.35rem;
+    font-weight:800;
+    color:#f4f8ff;
+  }
+
+  .input{
     width:100%;
-    padding:.8rem .9rem;
-    border-radius:14px;
+    padding:.78rem .85rem;
+    border-radius:12px;
+    background:#0f141a;
+    border:1px solid rgba(255,255,255,.1);
+    color:#fff;
+  }
+
+  .btn{
+    padding:.72rem 1rem;
+    border-radius:12px;
+    background:rgba(122,184,255,.15);
+    border:1px solid rgba(122,184,255,.4);
+    color:#7ab8ff;
+    cursor:pointer;
+    font-weight:700;
+  }
+
+  .btn:hover{
+    background:rgba(122,184,255,.22);
+  }
+
+  .btn-danger{
     background:rgba(255,255,255,.04);
-    border:1px solid rgba(255,255,255,.09);
-    color:#eef4ff;
+    border:1px solid rgba(255,255,255,.12);
+    color:#fff;
   }
-  .budget-textarea{min-height:96px;resize:vertical;}
-  .budget-table{width:100%;border-collapse:collapse;}
-  .budget-table th,.budget-table td{
-    padding:.75rem;
+
+  .line-item{
+    display:grid;
+    grid-template-columns:2fr 1fr auto;
+    gap:10px;
+    margin-bottom:10px;
+  }
+  @media(max-width:700px){
+    .line-item{grid-template-columns:1fr;}
+  }
+
+  .summary-row{
+    display:flex;
+    justify-content:space-between;
+    gap:14px;
+    padding:12px 0;
     border-bottom:1px solid rgba(255,255,255,.08);
-    text-align:left;
-    vertical-align:top;
   }
-  .positive{color:#62d89f;}
-  .negative{color:#ff8b8b;}
-  @media (max-width: 1100px){
-    .budget-grid,.budget-form-grid{grid-template-columns:1fr;}
+  .summary-row:last-child{border-bottom:none;}
+
+  .total{
+    font-size:1.5rem;
+    font-weight:900;
+    color:#7ab8ff;
+  }
+
+  .profit-positive{color:#7ee8b1;}
+  .profit-negative{color:#ff8c8c;}
+
+  .muted{color:var(--muted);}
+  .section-note{
+    color:rgba(224,233,246,.7);
+    line-height:1.65;
   }
 </style>
 
-<div class="budget-grid">
-  <div class="budget-card">
-    <div class="budget-label">Estimated</div>
-    <div class="budget-stat">${{ "{:,.2f}".format(summary.estimated_total or 0) }}</div>
-  </div>
-  <div class="budget-card">
-    <div class="budget-label">Actual</div>
-    <div class="budget-stat">${{ "{:,.2f}".format(summary.actual_total or 0) }}</div>
-  </div>
-  <div class="budget-card">
-    <div class="budget-label">Paid</div>
-    <div class="budget-stat">${{ "{:,.2f}".format(summary.paid_total or 0) }}</div>
-  </div>
-  <div class="budget-card">
-    <div class="budget-label">Remaining</div>
-    <div class="budget-stat {% if (summary.remaining_balance or 0) > 0 %}positive{% else %}negative{% endif %}">
-      ${{ "{:,.2f}".format(summary.remaining_balance or 0) }}
+{% set seed = results.get("budget_seed", {}) %}
+<div class="budget-wrap">
+
+  <section class="budget-hero">
+    <div>
+      <div class="eyebrow">RAVLO STUDIO</div>
+      <h2 style="margin:.55rem 0 0;">
+        {% if deal %}{{ deal.title or ('Deal #' ~ deal.id) }}{% else %}Budget Studio{% endif %}
+      </h2>
+      <p class="muted" style="margin:.4rem 0 0;">
+        Turn strategy and project planning into a real financial view.
+      </p>
     </div>
+    {% if deal %}
+    <div style="display:flex;gap:10px;flex-wrap:wrap;">
+      <a class="ravlo-btn ghost" href="{{ url_for('investor.deal_rehab', deal_id=deal.id) }}">Renovation Studio</a>
+      <a class="ravlo-btn ghost" href="{{ url_for('investor.build_studio', deal_id=deal.id) }}">Build Studio</a>
+    </div>
+    {% endif %}
+  </section>
+
+  <div class="kpi-grid">
+    <div class="kpi">
+      <div class="label">Purchase Price</div>
+      <div class="value" id="purchasePriceDisplay">${{ "{:,.0f}".format(purchase_price or 0) }}</div>
+    </div>
+
+    <div class="kpi">
+      <div class="label">ARV</div>
+      <div class="value" id="arvDisplay">${{ "{:,.0f}".format(arv or 0) }}</div>
+    </div>
+
+    <div class="kpi">
+      <div class="label">Existing Rehab Estimate</div>
+      <div class="value" id="rehabDisplay">${{ "{:,.0f}".format(rehab_cost or 0) }}</div>
+    </div>
+  </div>
+
+  <div class="budget-grid">
+
+    <section class="card">
+      <h3 style="margin-top:0;">Budget Inputs</h3>
+      <p class="section-note">
+        Build your cost plan line by line. Ravlo can seed this from Build Studio or rehab planning.
+      </p>
+
+      <div id="lineItems" style="margin-top:14px;"></div>
+
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px;">
+        <button class="btn" onclick="addItem()">+ Add Line Item</button>
+      </div>
+    </section>
+
+    <section class="card">
+      <h3 style="margin-top:0;">Financial Summary</h3>
+
+      <div class="summary-row">
+        <span class="muted">Purchase Price</span>
+        <strong id="purchasePriceSummary">${{ "{:,.0f}".format(purchase_price or 0) }}</strong>
+      </div>
+
+      <div class="summary-row">
+        <span class="muted">Budget Total</span>
+        <strong id="budgetTotal">$0</strong>
+      </div>
+
+      <div class="summary-row">
+        <span class="muted">Total Project Cost</span>
+        <strong id="totalProjectCost">$0</strong>
+      </div>
+
+      <div class="summary-row">
+        <span class="muted">ARV</span>
+        <strong id="arvSummary">${{ "{:,.0f}".format(arv or 0) }}</strong>
+      </div>
+
+      <div class="summary-row">
+        <span class="muted">Projected Profit</span>
+        <strong id="projectedProfit" class="total">$0</strong>
+      </div>
+
+      <div class="summary-row">
+        <span class="muted">Margin %</span>
+        <strong id="marginPct" class="total">0%</strong>
+      </div>
+    </section>
+
   </div>
 </div>
 
-<div class="budget-form">
-  <h3>Add Budget Item</h3>
-  <form method="POST">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-    <div class="budget-form-grid">
-      <input class="budget-input" type="text" name="category" placeholder="Category" required>
-      <input class="budget-input" type="text" name="item_name" placeholder="Item name" required>
-      <input class="budget-input" type="text" name="vendor" placeholder="Vendor">
+<script>
+let items = [];
 
-      <input class="budget-input" type="number" step="0.01" name="estimated_cost" placeholder="Estimated cost">
-      <input class="budget-input" type="number" step="0.01" name="actual_cost" placeholder="Actual cost">
-      <input class="budget-input" type="number" step="0.01" name="paid_amount" placeholder="Paid amount">
+const PURCHASE_PRICE = Number({{ purchase_price|default(0)|tojson }}) || 0;
+const ARV = Number({{ arv|default(0)|tojson }}) || 0;
+const REHAB_COST = Number({{ rehab_cost|default(0)|tojson }}) || 0;
 
-      <select class="budget-select" name="status">
-        <option value="planned">Planned</option>
-        <option value="quoted">Quoted</option>
-        <option value="approved">Approved</option>
-        <option value="in_progress">In Progress</option>
-        <option value="completed">Completed</option>
-        <option value="paid">Paid</option>
-      </select>
-    </div>
+function money(value){
+  return "$" + Number(value || 0).toLocaleString();
+}
 
-    <div style="margin-top:.8rem;">
-      <textarea class="budget-textarea" name="notes" placeholder="Notes"></textarea>
-    </div>
+function addItem(name="", cost=0){
+  const id = Date.now() + Math.floor(Math.random() * 1000);
+  items.push({id, name, cost: Number(cost) || 0});
+  render();
+}
 
-    <div style="margin-top:.8rem;">
-      <button type="submit" class="ravlo-btn primary">Add Item</button>
-    </div>
-  </form>
-</div>
+function updateItem(id, field, value){
+  const item = items.find(i => i.id === id);
+  if(item){
+    item[field] = field === "cost" ? Number(value || 0) : value;
+  }
+  calculate();
+}
 
-<div class="budget-table-wrap" style="margin-top:1rem;">
-  <h3>Budget Items</h3>
-  <table class="budget-table">
-    <thead>
-      <tr>
-        <th>Category</th>
-        <th>Item</th>
-        <th>Vendor</th>
-        <th>Estimated</th>
-        <th>Actual</th>
-        <th>Paid</th>
-        <th>Status</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for item in items %}
-      <tr>
-        <td>{{ item.category }}</td>
-        <td>
-          <strong>{{ item.description }}</strong>
-          {% if item.notes %}
-            <div style="font-size:.82rem;color:rgba(230,235,240,.65);margin-top:.25rem;">{{ item.notes }}</div>
-          {% endif %}
-        </td>
-        <td>{{ item.vendor or "—" }}</td>
-        <td>${{ "{:,.2f}".format((item.estimated_amount or 0)|float) }}</td>
-        <td>${{ "{:,.2f}".format((item.actual_amount or 0)|float) }}</td>
-        <td>${{ "{:,.2f}".format((item.paid_amount or 0)|float) }}</td>
-        <td>{{ (item.status or "planned").replace("_", " ").title() }}</td>
-      </tr>
-      {% else %}
-      <tr>
-        <td colspan="7">No budget items yet.</td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
-</div>
+function removeItem(id){
+  items = items.filter(i => i.id !== id);
+  render();
+}
+
+function render(){
+  const container = document.getElementById("lineItems");
+  container.innerHTML = "";
+
+  items.forEach(i => {
+    const row = document.createElement("div");
+    row.className = "line-item";
+    row.innerHTML = `
+      <input class="input" placeholder="Item name" value="${i.name}" oninput="updateItem(${i.id}, 'name', this.value)">
+      <input class="input" type="number" value="${i.cost}" oninput="updateItem(${i.id}, 'cost', this.value)">
+      <button class="btn btn-danger" onclick="removeItem(${i.id})" type="button">Remove</button>
+    `;
+    container.appendChild(row);
+  });
+
+  calculate();
+}
+
+function calculate(){
+  const budgetTotal = items.reduce((sum, i) => sum + (Number(i.cost) || 0), 0);
+  const totalProjectCost = PURCHASE_PRICE + budgetTotal;
+  const projectedProfit = ARV - totalProjectCost;
+  const marginPct = ARV > 0 ? (projectedProfit / ARV) * 100 : 0;
+
+  document.getElementById("budgetTotal").innerText = money(budgetTotal);
+  document.getElementById("totalProjectCost").innerText = money(totalProjectCost);
+
+  const profitEl = document.getElementById("projectedProfit");
+  profitEl.innerText = money(projectedProfit);
+  profitEl.classList.remove("profit-positive", "profit-negative");
+  profitEl.classList.add(projectedProfit >= 0 ? "profit-positive" : "profit-negative");
+
+  const marginEl = document.getElementById("marginPct");
+  marginEl.innerText = marginPct.toFixed(1) + "%";
+  marginEl.classList.remove("profit-positive", "profit-negative");
+  marginEl.classList.add(marginPct >= 0 ? "profit-positive" : "profit-negative");
+}
+
+render();
+
+// Auto-seed from build / rehab / prior AI
+{% if seed %}
+  const breakdown = {{ seed.get("suggested_breakdown", [])|tojson }};
+  if (Array.isArray(breakdown) && breakdown.length){
+    breakdown.forEach(item => addItem(item.name || "Line Item", item.cost || 0));
+  }
+{% endif %}
+
+// Fallback seed from rehab cost if nothing exists
+if (items.length === 0 && REHAB_COST > 0){
+  addItem("Rehab Scope", REHAB_COST);
+}
+</script>
+
 {% endblock %}
