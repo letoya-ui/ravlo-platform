@@ -331,6 +331,7 @@ function renderCards(results){
             <span class="dfv2-chip">${safeText(r.beds)} bd</span>
             <span class="dfv2-chip">${safeText(r.baths)} ba</span>
             <span class="dfv2-chip">${safeText(r.sqft)} sqft</span>
+            <span class="dfv2-chip">${safeText(r.recommended_strategy || "Review")}</span>
           </div>
 
           <div class="dfv2-metrics">
@@ -340,6 +341,10 @@ function renderCards(results){
             <div><span>ROI</span><strong>${pct(m.roi)}</strong></div>
             <div><span>Cashflow</span><strong>${money(m.net_cashflow_mo)}</strong></div>
             <div><span>Year</span><strong>${safeText(r.year_built)}</strong></div>
+          </div>
+
+          <div class="dfv2-ai-snippet">
+            ${safeText(r.ai_summary || "No AI summary available.")}
           </div>
 
           <div class="dfv2-actions">
@@ -620,6 +625,16 @@ async function runSearch(){
 .dfv2-metrics strong{
   color:var(--text);
   font-size:.92rem;
+}
+
+.dfv2-ai-snippet{
+  padding:.8rem .9rem;
+  border-radius:12px;
+  background:rgba(255,255,255,.02);
+  border:1px solid rgba(255,255,255,.08);
+  color:var(--muted);
+  font-size:.82rem;
+  line-height:1.55;
 }
 
 .dfv2-actions{
