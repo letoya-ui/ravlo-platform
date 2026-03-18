@@ -3,295 +3,540 @@
 
 {% block page_title %}Property Intelligence{% endblock %}
 {% block page_subline %}
-Deep property analysis, comps, and AI insight.
+Deep property analysis, comps, market context, and AI-backed investor insight.
 {% endblock %}
 
 {% block topbar_actions %}
 <a href="{{ back_url }}" class="ravlo-btn ghost sm">Back</a>
 
-<button class="ravlo-btn primary sm"
-onclick="sendToWorkspace()">
-Send to Deal Workspace
+<button class="ravlo-btn primary sm" onclick="sendToWorkspace()">
+  Send to Deal Workspace
 </button>
 {% endblock %}
 
 {% block content %}
 
-<div class="ravlo-grid">
+{% set hero_photo = photos[0] if photos and photos|length > 0 else None %}
 
-<!-- HERO -->
-<section class="ravlo-hero-card">
+<div class="pi-shell">
 
-<div>
-<div class="eyebrow">RAVLO PROPERTY</div>
+  <!-- HERO -->
+  <section class="pi-hero">
+    <div class="pi-hero-copy">
+      <div class="eyebrow">RAVLO PROPERTY DOSSIER</div>
+      <h2>{{ prop.address or "Property" }}</h2>
+      <p class="muted">
+        {{ resolved.city or "" }}{% if resolved.city and resolved.state %}, {% endif %}{{ resolved.state or "" }} {{ prop.zipcode or resolved.zip or "" }}
+      </p>
 
-<h2 style="margin-bottom:.4rem;">
-{{ prop.address }}
-</h2>
+      <div class="pi-chip-row">
+        <span class="pi-chip">{{ resolved.propertyType or resolved.property_type or "Property" }}</span>
+        <span class="pi-chip">{{ resolved.beds or "—" }} bd</span>
+        <span class="pi-chip">{{ resolved.baths or "—" }} ba</span>
+        <span class="pi-chip">{{ prop.sqft or resolved.sqft or resolved.squareFootage or "—" }} sqft</span>
+      </div>
+    </div>
 
-<p class="muted">
-{{ prop.zipcode or "" }}
-</p>
+    <div class="pi-hero-media">
+      {% if hero_photo %}
+        <img src="{{ hero_photo }}" alt="Property photo">
+      {% else %}
+        <div class="pi-no-photo">No Photo Available</div>
+      {% endif %}
+    </div>
+  </section>
+
+  <!-- METRIC STRIP -->
+  <section class="pi-metric-grid">
+    <div class="pi-metric-card">
+      <span>Price</span>
+      <strong>
+        {% if prop.price %}
+          ${{ prop.price }}
+        {% else %}
+          —
+        {% endif %}
+      </strong>
+    </div>
+
+    <div class="pi-metric-card">
+      <span>Sqft</span>
+      <strong>{{ prop.sqft or resolved.sqft or resolved.squareFootage or "—" }}</strong>
+    </div>
+
+    <div class="pi-metric-card">
+      <span>Beds / Baths</span>
+      <strong>{{ resolved.beds or "—" }} / {{ resolved.baths or "—" }}</strong>
+    </div>
+
+    <div class="pi-metric-card">
+      <span>Year Built</span>
+      <strong>{{ resolved.yearBuilt or resolved.year_built or "—" }}</strong>
+    </div>
+  </section>
+
+  <!-- MAIN GRID -->
+  <section class="pi-main-grid">
+
+    <!-- LEFT -->
+    <div class="pi-col">
+
+      {% if photos %}
+      <section class="ravlo-card pad">
+        <div class="ravlo-card-title">Photo Gallery</div>
+
+        <div class="photo-grid">
+          {% for p in photos %}
+          <img src="{{ p }}" class="photo-item" alt="Property photo {{ loop.index }}">
+          {% endfor %}
+        </div>
+      </section>
+      {% endif %}
+
+      <section class="ravlo-card pad">
+        <div class="ravlo-card-title">Property Facts</div>
+
+        <div class="facts-grid">
+          <div>
+            <span>Price</span>
+            <strong>
+              {% if prop.price %}
+                ${{ prop.price }}
+              {% else %}
+                —
+              {% endif %}
+            </strong>
+          </div>
+
+          <div>
+            <span>Sqft</span>
+            <strong>{{ prop.sqft or resolved.sqft or resolved.squareFootage or "—" }}</strong>
+          </div>
+
+          <div>
+            <span>Beds</span>
+            <strong>{{ resolved.beds or "—" }}</strong>
+          </div>
+
+          <div>
+            <span>Baths</span>
+            <strong>{{ resolved.baths or "—" }}</strong>
+          </div>
+
+          <div>
+            <span>Property Type</span>
+            <strong>{{ resolved.propertyType or resolved.property_type or "—" }}</strong>
+          </div>
+
+          <div>
+            <span>Year Built</span>
+            <strong>{{ resolved.yearBuilt or resolved.year_built or "—" }}</strong>
+          </div>
+
+          <div>
+            <span>ZIP</span>
+            <strong>{{ prop.zipcode or resolved.zip or "—" }}</strong>
+          </div>
+
+          <div>
+            <span>Address</span>
+            <strong>{{ prop.address or "—" }}</strong>
+          </div>
+        </div>
+      </section>
+
+      {% if comps.sales %}
+      <section class="ravlo-card pad">
+        <div class="section-head">
+          <div class="ravlo-card-title">Sales Comparables</div>
+          <div class="comp-count">{{ comps.sales|length }} found</div>
+        </div>
+
+        <div class="comp-grid">
+          {% for c in comps.sales %}
+          <div class="comp-card">
+            <div class="comp-address">{{ c.address or "Comparable" }}</div>
+            <div class="comp-stats">
+              <div><span>Price</span><strong>${{ c.price or "—" }}</strong></div>
+              <div><span>Sqft</span><strong>{{ c.sqft or "—" }}</strong></div>
+              <div><span>Beds</span><strong>{{ c.beds or "—" }}</strong></div>
+              <div><span>Baths</span><strong>{{ c.baths or "—" }}</strong></div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </section>
+      {% endif %}
+
+      {% if comps.rentals %}
+      <section class="ravlo-card pad">
+        <div class="section-head">
+          <div class="ravlo-card-title">Rental Comparables</div>
+          <div class="comp-count">{{ comps.rentals|length }} found</div>
+        </div>
+
+        <div class="comp-grid">
+          {% for c in comps.rentals %}
+          <div class="comp-card">
+            <div class="comp-address">{{ c.address or "Rental Comparable" }}</div>
+            <div class="comp-stats">
+              <div><span>Rent</span><strong>${{ c.rent or "—" }}/mo</strong></div>
+              <div><span>Sqft</span><strong>{{ c.sqft or "—" }}</strong></div>
+              <div><span>Beds</span><strong>{{ c.beds or "—" }}</strong></div>
+              <div><span>Baths</span><strong>{{ c.baths or "—" }}</strong></div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </section>
+      {% endif %}
+
+    </div>
+
+    <!-- RIGHT -->
+    <div class="pi-col">
+
+      {% if ai_summary %}
+      <section class="ravlo-card pad">
+        <div class="ravlo-card-title">AI Property Insight</div>
+        <div class="pi-ai-summary">
+          {{ ai_summary }}
+        </div>
+      </section>
+      {% endif %}
+
+      {% if market %}
+      <section class="ravlo-card pad">
+        <div class="ravlo-card-title">Market Snapshot</div>
+
+        <div class="facts-grid facts-grid-2">
+          <div>
+            <span>Median Price</span>
+            <strong>
+              {% if market.median_price %}
+                ${{ market.median_price }}
+              {% else %}
+                —
+              {% endif %}
+            </strong>
+          </div>
+
+          <div>
+            <span>Median Rent</span>
+            <strong>
+              {% if market.median_rent %}
+                ${{ market.median_rent }}
+              {% else %}
+                —
+              {% endif %}
+            </strong>
+          </div>
+
+          <div>
+            <span>Price / Sqft</span>
+            <strong>
+              {% if market.price_per_sqft %}
+                ${{ market.price_per_sqft }}
+              {% else %}
+                —
+              {% endif %}
+            </strong>
+          </div>
+
+          <div>
+            <span>Days on Market</span>
+            <strong>{{ market.dom or "—" }}</strong>
+          </div>
+        </div>
+      </section>
+      {% endif %}
+
+      <section class="ravlo-card pad">
+        <div class="ravlo-card-title">Next Actions</div>
+
+        <div class="pi-action-stack">
+          <button class="ravlo-btn primary" onclick="sendToWorkspace()">Open in Deal Workspace</button>
+          <a href="{{ url_for('investor.saved_properties') }}" class="ravlo-btn ghost">View Saved Properties</a>
+          <a href="{{ back_url }}" class="ravlo-btn ghost">Back to Search</a>
+        </div>
+      </section>
+
+    </div>
+  </section>
 
 </div>
 
-</section>
-
-
-<!-- PHOTOS -->
-{% if photos %}
-<section class="ravlo-card pad">
-
-<div class="ravlo-card-title">Photos</div>
-
-<div class="photo-grid">
-
-{% for p in photos %}
-<img src="{{ p }}" class="photo-item">
-{% endfor %}
-
-</div>
-
-</section>
-{% endif %}
-
-
-<!-- PROPERTY FACTS -->
-<section class="ravlo-card pad">
-
-<div class="ravlo-card-title">Property Facts</div>
-
-<div class="facts-grid">
-
-<div>
-<span>Price</span>
-<strong>${{ prop.price }}</strong>
-</div>
-
-<div>
-<span>Sqft</span>
-<strong>{{ prop.sqft or "—" }}</strong>
-</div>
-
-<div>
-<span>Beds</span>
-<strong>{{ resolved.beds or "—" }}</strong>
-</div>
-
-<div>
-<span>Baths</span>
-<strong>{{ resolved.baths or "—" }}</strong>
-</div>
-
-</div>
-
-</section>
-
-
-<!-- AI SUMMARY -->
-{% if ai_summary %}
-<section class="ravlo-card pad">
-
-<div class="ravlo-card-title">AI Property Insight</div>
-
-<p class="muted" style="line-height:1.6;">
-{{ ai_summary }}
-</p>
-
-</section>
-{% endif %}
-
-
-<!-- MARKET SNAPSHOT -->
-{% if market %}
-<section class="ravlo-card pad">
-
-<div class="ravlo-card-title">Market Snapshot</div>
-
-<div class="facts-grid">
-
-<div>
-<span>Median Price</span>
-<strong>${{ market.median_price or "—" }}</strong>
-</div>
-
-<div>
-<span>Median Rent</span>
-<strong>${{ market.median_rent or "—" }}</strong>
-</div>
-
-<div>
-<span>Price / Sqft</span>
-<strong>${{ market.price_per_sqft or "—" }}</strong>
-</div>
-
-<div>
-<span>Days on Market</span>
-<strong>{{ market.dom or "—" }}</strong>
-</div>
-
-</div>
-
-</section>
-{% endif %}
-
-
-<!-- SALES COMPS -->
-{% if comps.sales %}
-<section class="ravlo-card pad">
-
-<div class="ravlo-card-title">Sales Comparables</div>
-
-<div class="comp-grid">
-
-{% for c in comps.sales %}
-
-<div class="comp-card">
-
-<div class="comp-address">
-{{ c.address }}
-</div>
-
-<div class="comp-stats">
-${{ c.price }} • {{ c.sqft }} sqft
-</div>
-
-</div>
-
-{% endfor %}
-
-</div>
-
-</section>
-{% endif %}
-
-
-<!-- RENT COMPS -->
-{% if comps.rentals %}
-<section class="ravlo-card pad">
-
-<div class="ravlo-card-title">Rental Comparables</div>
-
-<div class="comp-grid">
-
-{% for c in comps.rentals %}
-
-<div class="comp-card">
-
-<div class="comp-address">
-{{ c.address }}
-</div>
-
-<div class="comp-stats">
-${{ c.rent }}/mo
-</div>
-
-</div>
-
-{% endfor %}
-
-</div>
-
-</section>
-{% endif %}
-
-</div>
-
-
+{% block scripts %}
 <script>
-
 async function sendToWorkspace(){
+  try{
+    const resp = await fetch("{{ url_for('investor.api_property_tool_save_and_analyze') }}", {
+      method: "POST",
+      headers: {"Content-Type":"application/json"},
+      credentials: "include",
+      body: JSON.stringify({
+        address: "{{ prop.address or '' }}",
+        zip: "{{ prop.zipcode or '' }}",
+        price: "{{ prop.price or '' }}",
+        sqft: "{{ prop.sqft or '' }}"
+      })
+    });
 
-const resp = await fetch("{{ url_for('investor.api_property_tool_save_and_analyze') }}",{
+    const data = await resp.json();
 
-method:"POST",
-headers:{"Content-Type":"application/json"},
-credentials:"include",
+    if (data.deal_url){
+      window.location.href = data.deal_url;
+      return;
+    }
 
-body:JSON.stringify({
-
-address:"{{ prop.address }}",
-zip:"{{ prop.zipcode }}",
-price:"{{ prop.price }}",
-sqft:"{{ prop.sqft }}"
-
-})
-
-})
-
-const data = await resp.json()
-
-if(data.deal_url){
-
-window.location.href = data.deal_url
-
+    alert(data.message || "Unable to open Deal Workspace.");
+  } catch (e){
+    console.error(e);
+    alert("Network error while sending this property to Deal Workspace.");
+  }
 }
-
-}
-
 </script>
-
+{% endblock %}
 
 <style>
+.pi-shell{
+  display:grid;
+  gap:20px;
+}
+
+.pi-hero{
+  display:grid;
+  grid-template-columns:1.1fr .9fr;
+  gap:20px;
+  align-items:stretch;
+  padding:24px;
+  border-radius:24px;
+  border:1px solid rgba(255,255,255,.08);
+  background:
+    radial-gradient(900px 420px at 10% 0%, rgba(122,184,255,.12), transparent 50%),
+    rgba(255,255,255,.03);
+}
+
+.pi-hero-copy h2{
+  margin:.35rem 0 .45rem;
+  font-size:clamp(1.6rem, 2.4vw, 2.35rem);
+}
+
+.pi-chip-row{
+  display:flex;
+  gap:.5rem;
+  flex-wrap:wrap;
+  margin-top:1rem;
+}
+
+.pi-chip{
+  display:inline-flex;
+  align-items:center;
+  padding:.38rem .65rem;
+  border-radius:999px;
+  background:rgba(255,255,255,.03);
+  border:1px solid rgba(255,255,255,.08);
+  color:var(--text);
+  font-size:.78rem;
+}
+
+.pi-hero-media{
+  min-height:280px;
+  border-radius:18px;
+  overflow:hidden;
+  border:1px solid rgba(255,255,255,.08);
+  background:rgba(255,255,255,.03);
+}
+
+.pi-hero-media img{
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  display:block;
+}
+
+.pi-no-photo{
+  width:100%;
+  height:100%;
+  min-height:280px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  color:var(--muted);
+}
+
+.pi-metric-grid{
+  display:grid;
+  grid-template-columns:repeat(4, minmax(0,1fr));
+  gap:14px;
+}
+
+.pi-metric-card{
+  padding:16px 18px;
+  border-radius:18px;
+  background:rgba(255,255,255,.03);
+  border:1px solid rgba(255,255,255,.08);
+}
+
+.pi-metric-card span{
+  display:block;
+  color:var(--muted);
+  font-size:.78rem;
+  margin-bottom:.25rem;
+}
+
+.pi-metric-card strong{
+  color:var(--text);
+  font-size:1.1rem;
+}
+
+.pi-main-grid{
+  display:grid;
+  grid-template-columns:1.2fr .8fr;
+  gap:20px;
+  align-items:start;
+}
+
+.pi-col{
+  display:grid;
+  gap:20px;
+}
+
+.section-head{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:12px;
+  margin-bottom:12px;
+}
+
+.comp-count{
+  color:var(--muted);
+  font-size:.8rem;
+}
 
 .photo-grid{
-display:grid;
-grid-template-columns:repeat(auto-fill,minmax(200px,1fr));
-gap:1rem;
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(180px,1fr));
+  gap:1rem;
+  margin-top:1rem;
 }
 
 .photo-item{
-width:100%;
-height:180px;
-object-fit:cover;
-border-radius:12px;
+  width:100%;
+  height:180px;
+  object-fit:cover;
+  border-radius:12px;
+  border:1px solid rgba(255,255,255,.08);
 }
 
 .facts-grid{
-display:grid;
-grid-template-columns:repeat(4,1fr);
-gap:1rem;
-margin-top:1rem;
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:1rem;
+  margin-top:1rem;
+}
+
+.facts-grid-2{
+  grid-template-columns:repeat(2,1fr);
 }
 
 .facts-grid div{
-background:rgba(255,255,255,.03);
-border:1px solid rgba(255,255,255,.08);
-padding:.9rem;
-border-radius:12px;
+  background:rgba(255,255,255,.03);
+  border:1px solid rgba(255,255,255,.08);
+  padding:.95rem;
+  border-radius:14px;
 }
 
 .facts-grid span{
-display:block;
-color:var(--muted);
-font-size:.8rem;
-margin-bottom:.2rem;
+  display:block;
+  color:var(--muted);
+  font-size:.8rem;
+  margin-bottom:.2rem;
+}
+
+.facts-grid strong{
+  color:var(--text);
 }
 
 .comp-grid{
-display:grid;
-grid-template-columns:repeat(auto-fill,minmax(220px,1fr));
-gap:.8rem;
-margin-top:.8rem;
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(220px,1fr));
+  gap:.9rem;
+  margin-top:.8rem;
 }
 
 .comp-card{
-padding:.9rem;
-background:rgba(255,255,255,.03);
-border:1px solid rgba(255,255,255,.08);
-border-radius:12px;
+  padding:1rem;
+  background:rgba(255,255,255,.03);
+  border:1px solid rgba(255,255,255,.08);
+  border-radius:14px;
 }
 
 .comp-address{
-font-weight:700;
-margin-bottom:.2rem;
+  font-weight:800;
+  margin-bottom:.5rem;
+  color:var(--text);
 }
 
 .comp-stats{
-font-size:.85rem;
-color:var(--muted);
+  display:grid;
+  grid-template-columns:repeat(2, minmax(0,1fr));
+  gap:.55rem;
 }
 
+.comp-stats div{
+  background:rgba(255,255,255,.02);
+  border:1px solid rgba(255,255,255,.06);
+  border-radius:10px;
+  padding:.55rem .6rem;
+}
+
+.comp-stats span{
+  display:block;
+  color:var(--muted);
+  font-size:.76rem;
+  margin-bottom:.15rem;
+}
+
+.comp-stats strong{
+  color:var(--text);
+  font-size:.86rem;
+}
+
+.pi-ai-summary{
+  color:var(--text);
+  line-height:1.7;
+}
+
+.pi-action-stack{
+  display:grid;
+  gap:.75rem;
+  margin-top:1rem;
+}
+
+@media (max-width: 1100px){
+  .pi-hero,
+  .pi-main-grid{
+    grid-template-columns:1fr;
+  }
+
+  .pi-metric-grid{
+    grid-template-columns:repeat(2, minmax(0,1fr));
+  }
+
+  .facts-grid{
+    grid-template-columns:repeat(2,1fr);
+  }
+}
+
+@media (max-width: 640px){
+  .pi-metric-grid,
+  .facts-grid,
+  .facts-grid-2{
+    grid-template-columns:1fr;
+  }
+}
 </style>
 
 {% endblock %}
