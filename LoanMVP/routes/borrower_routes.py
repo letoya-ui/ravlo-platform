@@ -91,6 +91,7 @@ def save_uploaded_file(file_storage):
 # =========================================================
 
 @borrower_bp.route("/dashboard")
+@login_required
 @role_required("borrower")
 def dashboard():
     borrower = get_current_borrower()
@@ -193,6 +194,8 @@ def dashboard():
 # =========================================================
 
 @borrower_bp.route("/create-profile", methods=["GET", "POST"])
+@csrf.exempt
+@login_required
 @role_required("borrower")
 def create_profile():
     existing = get_current_borrower()
@@ -236,6 +239,7 @@ def create_profile():
 
 @borrower_bp.route("/apply", methods=["GET", "POST"])
 @csrf.exempt
+@login_required
 @role_required("borrower")
 def apply():
     borrower = get_current_borrower()
@@ -290,6 +294,7 @@ def apply():
     )
 
 @borrower_bp.route("/loan-center")
+@login_required
 @role_required("borrower")
 def loan_center():
     """
@@ -313,6 +318,8 @@ def loan_center():
 
 
 @borrower_bp.route("/property-intelligence", methods=["GET", "POST"])
+@csrf.exempt
+@login_required
 @role_required("borrower")
 def property_intelligence():
     """
@@ -445,6 +452,7 @@ def property_intelligence():
     )
 
 @borrower_bp.route("/loan/<int:loan_id>")
+@login_required
 @role_required("borrower")
 def loan_view(loan_id):
     borrower = get_current_borrower()
@@ -490,6 +498,7 @@ def loan_view(loan_id):
 # =========================================================
 
 @borrower_bp.route("/documents")
+@login_required
 @role_required("borrower")
 def documents():
     borrower = get_current_borrower()
@@ -514,6 +523,7 @@ def documents():
 
 @borrower_bp.route("/upload-document", methods=["GET", "POST"])
 @csrf.exempt
+@login_required
 @role_required("borrower")
 def upload_document():
     borrower = get_current_borrower()
@@ -564,7 +574,9 @@ def upload_document():
 # =========================================================
 
 @borrower_bp.route("/conditions")
+@login_required
 @role_required("borrower")
+
 def conditions():
     borrower = get_current_borrower()
     if not borrower:
@@ -595,6 +607,7 @@ def conditions():
 
 
 @borrower_bp.route("/condition/<int:cond_id>")
+@login_required
 @role_required("borrower")
 def view_condition(cond_id):
     borrower = get_current_borrower()
@@ -614,6 +627,7 @@ def view_condition(cond_id):
 
 @borrower_bp.route("/conditions/upload/<int:cond_id>", methods=["POST"])
 @csrf.exempt
+@login_required
 @role_required("borrower")
 def upload_condition(cond_id):
     borrower = get_current_borrower()
@@ -657,6 +671,7 @@ def upload_condition(cond_id):
 
 @borrower_bp.route("/messages", methods=["GET", "POST"])
 @csrf.exempt
+@login_required
 @role_required("borrower")
 def messages():
     borrower = get_current_borrower()
@@ -721,6 +736,7 @@ from flask import request
 
 @borrower_bp.route("/subscription", methods=["GET", "POST"])
 @csrf.exempt
+@login_required
 @role_required("borrower")
 def subscription():
     borrower = get_current_borrower()
@@ -744,6 +760,7 @@ def subscription():
     )
 
 @borrower_bp.route("/consent/credit", methods=["POST"])
+@csrf.exempt
 @login_required
 @role_required("borrower")
 def consent_credit():
