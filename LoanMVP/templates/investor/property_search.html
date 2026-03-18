@@ -3,7 +3,9 @@
 {% block title %}Ravlo • Property Search{% endblock %}
 
 {% block page_title %}Property Search{% endblock %}
-{% block page_subline %}Search any address and instantly see property details. Analyze will auto-save first.{% endblock %}
+{% block page_subline %}
+Search any address and instantly see property details, investor signals, comps, and next actions.
+{% endblock %}
 
 {% block topbar_actions %}
   <button class="ravlo-btn ghost sm" type="button"
@@ -19,206 +21,322 @@
 
 {% block content %}
 
-<div class="ravlo-card pad">
+<div class="ps-shell">
 
-  <!-- Search Bar -->
-  <form method="GET" action="{{ url_for('investor.property_search') }}">
-    <label class="ravlo-label">Search address</label>
-    <input
-      class="ravlo-input"
-      type="text"
-      name="query"
-      placeholder="Enter an address..."
-      value="{{ query or '' }}"
-      autocomplete="street-address"
-    >
-    <button type="submit" class="ravlo-btn primary" style="margin-top:.75rem;">Search</button>
-  </form>
-
-</div>
-
-<!-- Error -->
-{% if error %}
-  <div class="ravlo-card pad" style="margin-top:1rem; border-left:4px solid rgba(255,101,101,.9);">
-    <div style="font-weight:850;">Lookup Error</div>
-    <div style="color:var(--muted); margin-top:.45rem;">
-      {{ error }}
-      {% if debug %}
-        <div style="margin-top:.35rem; font-size:.85rem;">
-          Provider: {{ debug.provider or "—" }} • Stage: {{ debug.stage or "—" }}
-        </div>
-      {% endif %}
+  <!-- SEARCH -->
+  <section class="ravlo-card pad ps-search-card">
+    <div class="ps-search-head">
+      <div>
+        <div class="eyebrow">RAVLO PROPERTY LOOKUP</div>
+        <h3>Search a Property</h3>
+        <p class="muted">Enter an address to pull photos, value signals, rent estimates, comps, and investor insight.</p>
+      </div>
     </div>
-  </div>
-{% endif %}
 
-{% if property %}
-  <div class="ravlo-card pad" style="margin-top:1rem;">
+    <form method="GET" action="{{ url_for('investor.property_search') }}" class="ps-search-form">
+      <label class="ravlo-label">Search address</label>
+      <input
+        class="ravlo-input"
+        type="text"
+        name="query"
+        placeholder="Enter an address..."
+        value="{{ query or '' }}"
+        autocomplete="street-address"
+      >
+      <button type="submit" class="ravlo-btn primary">Search</button>
+    </form>
+  </section>
 
-    {# ---- safe locals ---- #}
+  {% if error %}
+    <section class="ravlo-card pad ps-error-card">
+      <div class="ps-error-title">Lookup Error</div>
+      <div class="ps-error-copy">
+        {{ error }}
+        {% if debug %}
+          <div class="ps-debug">
+            Provider: {{ debug.provider or "—" }} • Stage: {{ debug.stage or "—" }}
+          </div>
+        {% endif %}
+      </div>
+    </section>
+  {% endif %}
+
+  {% if property %}
     {% set valuation = valuation if valuation is defined else (property.valuation if property and property.valuation is defined else {}) %}
     {% set rent_estimate = rent_estimate if rent_estimate is defined else (property.rent_estimate if property and property.rent_estimate is defined else {}) %}
     {% set comps = comps if comps is defined else (property.comps if property and property.comps is defined else {}) %}
+    {% set hero_photo = property.photos[0] if property.photos and property.photos is not string else property.photos if property.photos else None %}
 
-    {# Photos #}
-    {% if property.photos %}
-      {% if property.photos is string %}
-        <img
-          src="{{ property.photos }}"
-          alt="Property photo"
-          style="width:100%; max-height:340px; object-fit:cover; border-radius:14px; margin-bottom:1rem; border:1px solid rgba(255,255,255,.06);"
-        >
-      {% else %}
-        <div style="display:flex; gap:.75rem; overflow-x:auto; margin-bottom:1rem; padding-bottom:.25rem;">
-          {% for photo in property.photos[:10] %}
-            <img
-              src="{{ photo }}"
-              alt="Property photo"
-              style="height:210px; border-radius:12px; object-fit:cover; border:1px solid rgba(255,255,255,.06);"
-            >
-          {% endfor %}
-        </div>
-      {% endif %}
-    {% endif %}
+    <!-- HERO -->
+    <section class="ps-hero">
+      <div class="ps-hero-copy">
+        <div class="eyebrow">PROPERTY DOSSIER</div>
 
-    {# Address #}
-    <div style="font-size:18px; font-weight:900; margin-bottom:.25rem;">
-      {{ property.address }}
-      {% if property.city %}, {{ property.city }}{% endif %}
-      {% if property.state %}, {{ property.state }}{% endif %}
-      {% if property.zip %} {{ property.zip }}{% endif %}
-    </div>
+        <h2>
+          {{ property.address }}
+          {% if property.city %}, {{ property.city }}{% endif %}
+          {% if property.state %}, {{ property.state }}{% endif %}
+          {% if property.zip %} {{ property.zip }}{% endif %}
+        </h2>
 
-    {# Price / Value #}
-    <div style="font-size:22px; font-weight:950; margin-bottom:.35rem;">
-      {% if property.price %}
-        ${{ "{:,.0f}".format(property.price) }}
-        <span style="color:var(--muted); font-size:.85rem; font-weight:650;">(Listed)</span>
-      {% elif valuation and (valuation.estimate is defined and valuation.estimate) %}
-        ${{ "{:,.0f}".format(valuation.estimate) }}
-        <span style="color:var(--muted); font-size:.85rem; font-weight:650;">(Estimated)</span>
-      {% else %}
-        <span style="color:var(--muted); font-weight:700;">Off-market • showing investor estimates when available</span>
-      {% endif %}
-    </div>
-
-    {# Specs #}
-    <div style="color:var(--muted); font-weight:650;">
-      {{ property.beds or "—" }} 🛏 &nbsp;|&nbsp;
-      {{ property.baths or "—" }} 🛁 &nbsp;|&nbsp;
-      {{ property.sqft or "—" }} sq ft &nbsp;|&nbsp;
-      Built {{ property.year_built or "—" }}
-    </div>
-
-    {# Snapshot #}
-    <div class="ravlo-card pad" style="margin-top:1rem; background: rgba(255,255,255,.02);">
-      <div class="ravlo-card-title">Deal Snapshot</div>
-
-      <div class="ravlo-grid cols-4 mt-12">
-        <div class="ravlo-kpi">
-          <div class="label">Estimated Value</div>
-          <div class="value">
-            {% if valuation and valuation.estimate is defined and valuation.estimate %}
-              ${{ "{:,.0f}".format(valuation.estimate|float) }}
-            {% else %}
-              —
-            {% endif %}
-          </div>
+        <div class="ps-price-line">
+          {% if property.price %}
+            ${{ "{:,.0f}".format(property.price) }}
+            <span>(Listed)</span>
+          {% elif valuation and (valuation.estimate is defined and valuation.estimate) %}
+            ${{ "{:,.0f}".format(valuation.estimate|float) }}
+            <span>(Estimated)</span>
+          {% else %}
+            <span class="ps-offmarket">Off-market • showing investor estimates when available</span>
+          {% endif %}
         </div>
 
-        <div class="ravlo-kpi">
-          <div class="label">Est. Rent</div>
-          <div class="value">
-            {% if rent_estimate and (rent_estimate.rent is defined and rent_estimate.rent) %}
-              ${{ "{:,.0f}".format(rent_estimate.rent|float) }}/mo
-            {% else %}
-              —
-            {% endif %}
-          </div>
-        </div>
-
-        <div class="ravlo-kpi">
-          <div class="label">Sales Comps</div>
-          <div class="value">
-            {% if comps and comps.sales is defined and comps.sales %}
-              {{ comps.sales|length }}
-            {% else %}
-              —
-            {% endif %}
-          </div>
-        </div>
-
-        <div class="ravlo-kpi">
-          <div class="label">Rental Comps</div>
-          <div class="value">
-            {% if comps and comps.rentals is defined and comps.rentals %}
-              {{ comps.rentals|length }}
-            {% else %}
-              —
-            {% endif %}
-          </div>
+        <div class="ps-chip-row">
+          <span class="ps-chip">{{ property.beds or "—" }} bd</span>
+          <span class="ps-chip">{{ property.baths or "—" }} ba</span>
+          <span class="ps-chip">{{ property.sqft or "—" }} sqft</span>
+          <span class="ps-chip">Built {{ property.year_built or "—" }}</span>
         </div>
       </div>
-    </div>
 
-    {# AI Summary #}
-    {% if ai_summary %}
-      <div class="ravlo-card pad" style="margin-top:1rem;">
-        <div class="ravlo-card-title">Ravlo Insight</div>
-        <div style="color:var(--muted); margin-top:.5rem; line-height:1.6;">
-          {{ ai_summary }}
+      <div class="ps-hero-media">
+        {% if hero_photo %}
+          <img src="{{ hero_photo }}" alt="Property photo">
+        {% else %}
+          <div class="ps-no-photo">No Photo Available</div>
+        {% endif %}
+      </div>
+    </section>
+
+    <!-- SNAPSHOT -->
+    <section class="ps-kpi-grid">
+      <div class="ps-kpi-card">
+        <div class="label">Estimated Value</div>
+        <div class="value">
+          {% if valuation and valuation.estimate is defined and valuation.estimate %}
+            ${{ "{:,.0f}".format(valuation.estimate|float) }}
+          {% else %}
+            —
+          {% endif %}
         </div>
       </div>
-    {% endif %}
 
-    {# Actions #}
-    <div class="row" style="gap:.65rem; flex-wrap:wrap; margin-top:1.1rem; align-items:center;">
+      <div class="ps-kpi-card">
+        <div class="label">Est. Rent</div>
+        <div class="value">
+          {% if rent_estimate and (rent_estimate.rent is defined and rent_estimate.rent) %}
+            ${{ "{:,.0f}".format(rent_estimate.rent|float) }}/mo
+          {% else %}
+            —
+          {% endif %}
+        </div>
+      </div>
 
-      {# SAVE ONLY (AJAX) #}
-      <form method="POST"
-            action="{{ url_for('investor.save_property') }}"
-            id="savePropertyForm"
-            style="margin:0;">
-        {{ csrf_token() if csrf_token is defined }}
+      <div class="ps-kpi-card">
+        <div class="label">Sales Comps</div>
+        <div class="value">
+          {% if comps and comps.sales is defined and comps.sales %}
+            {{ comps.sales|length }}
+          {% else %}
+            —
+          {% endif %}
+        </div>
+      </div>
 
-        <input type="hidden" name="property_id" value="{{ property.property_id or property.id or '' }}">
-        <input type="hidden" name="address" value="{{ property.address }}">
-        <input type="hidden" name="price" value="{{ property.price or (valuation.estimate if valuation and valuation.estimate is defined else 0) or 0 }}">
-        <input type="hidden" name="zipcode" value="{{ property.zip or '' }}">
-        <input type="hidden" name="sqft" value="{{ property.sqft or '' }}">
+      <div class="ps-kpi-card">
+        <div class="label">Rental Comps</div>
+        <div class="value">
+          {% if comps and comps.rentals is defined and comps.rentals %}
+            {{ comps.rentals|length }}
+          {% else %}
+            —
+          {% endif %}
+        </div>
+      </div>
+    </section>
 
-        <button type="submit" class="ravlo-btn ghost" id="btnSaveOnly">Save Property</button>
-      </form>
+    <!-- MAIN GRID -->
+    <section class="ps-main-grid">
 
-      {# ANALYZE (AUTO-SAVE + REDIRECT) #}
-      <form method="POST"
-            action="{{ url_for('investor.save_property_and_analyze') }}"
-            id="analyzeForm"
-            style="margin:0;">
-        {{ csrf_token() if csrf_token is defined }}
+      <!-- LEFT -->
+      <div class="ps-col">
 
-        <input type="hidden" name="property_id" value="{{ property.property_id or property.id or '' }}">
-        <input type="hidden" name="address" value="{{ property.address }}">
-        <input type="hidden" name="price" value="{{ property.price or (valuation.estimate if valuation and valuation.estimate is defined else 0) or 0 }}">
-        <input type="hidden" name="zipcode" value="{{ property.zip or '' }}">
-        <input type="hidden" name="sqft" value="{{ property.sqft or '' }}">
+        {% if property.photos %}
+        <section class="ravlo-card pad">
+          <div class="ravlo-card-title">Photo Gallery</div>
 
-        <button type="submit" class="ravlo-btn primary" id="btnAnalyze">Analyze Deal ➜</button>
-      </form>
+          {% if property.photos is string %}
+            <div class="ps-photo-grid single">
+              <img src="{{ property.photos }}" alt="Property photo" class="ps-photo-item">
+            </div>
+          {% else %}
+            <div class="ps-photo-grid">
+              {% for photo in property.photos[:10] %}
+                <img src="{{ photo }}" alt="Property photo" class="ps-photo-item">
+              {% endfor %}
+            </div>
+          {% endif %}
+        </section>
+        {% endif %}
 
-      {# already-saved direct open #}
-      {% if saved_id %}
-        <button class="ravlo-btn ghost" type="button"
-          onclick="location.href='{{ url_for("investor.deal_workspace", prop_id=saved_id, mode="flip") }}'">
-          Open Deal Workspace ➜
-        </button>
-      {% endif %}
+        <section class="ravlo-card pad">
+          <div class="ravlo-card-title">Property Snapshot</div>
 
-      <span id="saveStatus" style="color:var(--muted); font-size:.9rem;"></span>
-    </div>
+          <div class="ps-facts-grid">
+            <div>
+              <span>Address</span>
+              <strong>{{ property.address or "—" }}</strong>
+            </div>
+            <div>
+              <span>ZIP</span>
+              <strong>{{ property.zip or "—" }}</strong>
+            </div>
+            <div>
+              <span>Price</span>
+              <strong>
+                {% if property.price %}
+                  ${{ "{:,.0f}".format(property.price) }}
+                {% else %}
+                  —
+                {% endif %}
+              </strong>
+            </div>
+            <div>
+              <span>Sqft</span>
+              <strong>{{ property.sqft or "—" }}</strong>
+            </div>
+            <div>
+              <span>Beds</span>
+              <strong>{{ property.beds or "—" }}</strong>
+            </div>
+            <div>
+              <span>Baths</span>
+              <strong>{{ property.baths or "—" }}</strong>
+            </div>
+            <div>
+              <span>Year Built</span>
+              <strong>{{ property.year_built or "—" }}</strong>
+            </div>
+            <div>
+              <span>Status</span>
+              <strong>{% if property.price %}Listed{% else %}Off Market{% endif %}</strong>
+            </div>
+          </div>
+        </section>
 
-  </div>
-{% endif %}
+        {% if comps and comps.sales is defined and comps.sales %}
+        <section class="ravlo-card pad">
+          <div class="section-head">
+            <div class="ravlo-card-title">Sales Comps</div>
+            <div class="ps-comp-count">{{ comps.sales|length }} found</div>
+          </div>
+
+          <div class="ps-comp-grid">
+            {% for c in comps.sales[:6] %}
+            <div class="ps-comp-card">
+              <div class="ps-comp-address">{{ c.address or "Comparable" }}</div>
+              <div class="ps-comp-stats">
+                <div><span>Price</span><strong>${{ c.price or "—" }}</strong></div>
+                <div><span>Sqft</span><strong>{{ c.sqft or "—" }}</strong></div>
+                <div><span>Beds</span><strong>{{ c.beds or "—" }}</strong></div>
+                <div><span>Baths</span><strong>{{ c.baths or "—" }}</strong></div>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+        </section>
+        {% endif %}
+
+        {% if comps and comps.rentals is defined and comps.rentals %}
+        <section class="ravlo-card pad">
+          <div class="section-head">
+            <div class="ravlo-card-title">Rental Comps</div>
+            <div class="ps-comp-count">{{ comps.rentals|length }} found</div>
+          </div>
+
+          <div class="ps-comp-grid">
+            {% for c in comps.rentals[:6] %}
+            <div class="ps-comp-card">
+              <div class="ps-comp-address">{{ c.address or "Rental Comparable" }}</div>
+              <div class="ps-comp-stats">
+                <div><span>Rent</span><strong>${{ c.rent or "—" }}/mo</strong></div>
+                <div><span>Sqft</span><strong>{{ c.sqft or "—" }}</strong></div>
+                <div><span>Beds</span><strong>{{ c.beds or "—" }}</strong></div>
+                <div><span>Baths</span><strong>{{ c.baths or "—" }}</strong></div>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+        </section>
+        {% endif %}
+
+      </div>
+
+      <!-- RIGHT -->
+      <div class="ps-col">
+
+        {% if ai_summary %}
+        <section class="ravlo-card pad">
+          <div class="ravlo-card-title">Ravlo Insight</div>
+          <div class="ps-ai-copy">
+            {{ ai_summary }}
+          </div>
+        </section>
+        {% endif %}
+
+        <section class="ravlo-card pad">
+          <div class="ravlo-card-title">Next Actions</div>
+
+          <div class="ps-action-stack">
+            <form method="POST"
+                  action="{{ url_for('investor.save_property') }}"
+                  id="savePropertyForm"
+                  style="margin:0;">
+              {{ csrf_token() if csrf_token is defined }}
+
+              <input type="hidden" name="property_id" value="{{ property.property_id or property.id or '' }}">
+              <input type="hidden" name="address" value="{{ property.address }}">
+              <input type="hidden" name="price" value="{{ property.price or (valuation.estimate if valuation and valuation.estimate is defined else 0) or 0 }}">
+              <input type="hidden" name="zipcode" value="{{ property.zip or '' }}">
+              <input type="hidden" name="sqft" value="{{ property.sqft or '' }}">
+
+              <button type="submit" class="ravlo-btn ghost" id="btnSaveOnly" style="width:100%;">
+                Save Property
+              </button>
+            </form>
+
+            <form method="POST"
+                  action="{{ url_for('investor.save_property_and_analyze') }}"
+                  id="analyzeForm"
+                  style="margin:0;">
+              {{ csrf_token() if csrf_token is defined }}
+
+              <input type="hidden" name="property_id" value="{{ property.property_id or property.id or '' }}">
+              <input type="hidden" name="address" value="{{ property.address }}">
+              <input type="hidden" name="price" value="{{ property.price or (valuation.estimate if valuation and valuation.estimate is defined else 0) or 0 }}">
+              <input type="hidden" name="zipcode" value="{{ property.zip or '' }}">
+              <input type="hidden" name="sqft" value="{{ property.sqft or '' }}">
+
+              <button type="submit" class="ravlo-btn primary" id="btnAnalyze" style="width:100%;">
+                Analyze Deal
+              </button>
+            </form>
+
+            {% if saved_id %}
+              <button class="ravlo-btn ghost" type="button" style="width:100%;"
+                onclick="location.href='{{ url_for("investor.deal_workspace", prop_id=saved_id, mode="flip") }}'">
+                Open Deal Workspace
+              </button>
+            {% endif %}
+
+            <span id="saveStatus" class="ps-save-status"></span>
+          </div>
+        </section>
+
+      </div>
+    </section>
+  {% endif %}
+</div>
 
 <script>
 (function () {
@@ -259,14 +377,299 @@
     });
   }
 
-  // Analyze should post normally so Flask can redirect
   if (analyzeForm && analyzeForm.action && !analyzeForm.action.endsWith("#")) {
     analyzeForm.addEventListener("submit", function () {
-      if (statusEl) statusEl.textContent = "Saving & opening Deal Workspace...";
+      if (statusEl) statusEl.textContent = "Saving and opening Deal Workspace...";
       if (btnAnalyze) btnAnalyze.disabled = true;
     });
   }
 })();
 </script>
+
+<style>
+.ps-shell{
+  display:grid;
+  gap:20px;
+}
+
+.ps-search-card h3{
+  margin:.35rem 0 .35rem;
+}
+
+.ps-search-form{
+  display:grid;
+  gap:.75rem;
+  margin-top:.75rem;
+}
+
+.ps-error-card{
+  border-left:4px solid rgba(255,101,101,.9);
+}
+
+.ps-error-title{
+  font-weight:850;
+}
+
+.ps-error-copy{
+  color:var(--muted);
+  margin-top:.45rem;
+}
+
+.ps-debug{
+  margin-top:.35rem;
+  font-size:.85rem;
+}
+
+.ps-hero{
+  display:grid;
+  grid-template-columns:1.1fr .9fr;
+  gap:20px;
+  align-items:stretch;
+  padding:24px;
+  border-radius:24px;
+  border:1px solid rgba(255,255,255,.08);
+  background:
+    radial-gradient(900px 420px at 10% 0%, rgba(122,184,255,.12), transparent 50%),
+    rgba(255,255,255,.03);
+}
+
+.ps-hero-copy h2{
+  margin:.35rem 0 .45rem;
+  font-size:clamp(1.6rem, 2.4vw, 2.35rem);
+}
+
+.ps-price-line{
+  font-size:22px;
+  font-weight:950;
+  margin-bottom:.8rem;
+}
+
+.ps-price-line span{
+  color:var(--muted);
+  font-size:.85rem;
+  font-weight:650;
+}
+
+.ps-offmarket{
+  color:var(--muted);
+  font-weight:700;
+}
+
+.ps-chip-row{
+  display:flex;
+  gap:.5rem;
+  flex-wrap:wrap;
+}
+
+.ps-chip{
+  display:inline-flex;
+  align-items:center;
+  padding:.38rem .65rem;
+  border-radius:999px;
+  background:rgba(255,255,255,.03);
+  border:1px solid rgba(255,255,255,.08);
+  color:var(--text);
+  font-size:.78rem;
+}
+
+.ps-hero-media{
+  min-height:280px;
+  border-radius:18px;
+  overflow:hidden;
+  border:1px solid rgba(255,255,255,.08);
+  background:rgba(255,255,255,.03);
+}
+
+.ps-hero-media img{
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  display:block;
+}
+
+.ps-no-photo{
+  width:100%;
+  height:100%;
+  min-height:280px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  color:var(--muted);
+}
+
+.ps-kpi-grid{
+  display:grid;
+  grid-template-columns:repeat(4, minmax(0,1fr));
+  gap:14px;
+}
+
+.ps-kpi-card{
+  padding:16px 18px;
+  border-radius:18px;
+  background:rgba(255,255,255,.03);
+  border:1px solid rgba(255,255,255,.08);
+}
+
+.ps-kpi-card .label{
+  color:var(--muted);
+  font-size:.78rem;
+  margin-bottom:.25rem;
+}
+
+.ps-kpi-card .value{
+  color:var(--text);
+  font-size:1.1rem;
+  font-weight:800;
+}
+
+.ps-main-grid{
+  display:grid;
+  grid-template-columns:1.2fr .8fr;
+  gap:20px;
+  align-items:start;
+}
+
+.ps-col{
+  display:grid;
+  gap:20px;
+}
+
+.section-head{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:12px;
+  margin-bottom:12px;
+}
+
+.ps-comp-count{
+  color:var(--muted);
+  font-size:.8rem;
+}
+
+.ps-photo-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(180px,1fr));
+  gap:1rem;
+  margin-top:1rem;
+}
+
+.ps-photo-grid.single{
+  grid-template-columns:1fr;
+}
+
+.ps-photo-item{
+  width:100%;
+  height:180px;
+  object-fit:cover;
+  border-radius:12px;
+  border:1px solid rgba(255,255,255,.08);
+}
+
+.ps-facts-grid{
+  display:grid;
+  grid-template-columns:repeat(2,1fr);
+  gap:1rem;
+  margin-top:1rem;
+}
+
+.ps-facts-grid div{
+  background:rgba(255,255,255,.03);
+  border:1px solid rgba(255,255,255,.08);
+  padding:.95rem;
+  border-radius:14px;
+}
+
+.ps-facts-grid span{
+  display:block;
+  color:var(--muted);
+  font-size:.8rem;
+  margin-bottom:.2rem;
+}
+
+.ps-facts-grid strong{
+  color:var(--text);
+}
+
+.ps-comp-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(220px,1fr));
+  gap:.9rem;
+  margin-top:.8rem;
+}
+
+.ps-comp-card{
+  padding:1rem;
+  background:rgba(255,255,255,.03);
+  border:1px solid rgba(255,255,255,.08);
+  border-radius:14px;
+}
+
+.ps-comp-address{
+  font-weight:800;
+  margin-bottom:.5rem;
+  color:var(--text);
+}
+
+.ps-comp-stats{
+  display:grid;
+  grid-template-columns:repeat(2, minmax(0,1fr));
+  gap:.55rem;
+}
+
+.ps-comp-stats div{
+  background:rgba(255,255,255,.02);
+  border:1px solid rgba(255,255,255,.06);
+  border-radius:10px;
+  padding:.55rem .6rem;
+}
+
+.ps-comp-stats span{
+  display:block;
+  color:var(--muted);
+  font-size:.76rem;
+  margin-bottom:.15rem;
+}
+
+.ps-comp-stats strong{
+  color:var(--text);
+  font-size:.86rem;
+}
+
+.ps-ai-copy{
+  color:var(--muted);
+  margin-top:.5rem;
+  line-height:1.7;
+}
+
+.ps-action-stack{
+  display:grid;
+  gap:.75rem;
+  margin-top:1rem;
+}
+
+.ps-save-status{
+  color:var(--muted);
+  font-size:.9rem;
+}
+
+@media (max-width: 1100px){
+  .ps-hero,
+  .ps-main-grid{
+    grid-template-columns:1fr;
+  }
+
+  .ps-kpi-grid{
+    grid-template-columns:repeat(2, minmax(0,1fr));
+  }
+}
+
+@media (max-width: 640px){
+  .ps-kpi-grid,
+  .ps-facts-grid{
+    grid-template-columns:1fr;
+  }
+}
+</style>
 
 {% endblock %}
