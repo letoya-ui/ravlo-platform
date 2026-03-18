@@ -1,35 +1,67 @@
 <div class="re-brand">
   <div class="re-mark"><span>RV</span></div>
   <div>
-    <div class="re-brand-name">Ravlo</div>
+    <div class="re-brand-name">RAVLO</div>
     <div class="re-brand-sub">Underwriter OS</div>
   </div>
 </div>
 
 <nav class="re-nav">
-  <div class="re-nav-group">
-    <div class="re-nav-label">Workspace</div>
 
-    <a href="{{ url_for('underwriter.dashboard') }}" class="re-nav-link {% if active_tab == 'dashboard' %}active{% endif %}">
+  <div class="re-nav-group">
+    <div class="re-nav-label">Command</div>
+
+    <a href="{{ url_for('underwriter.dashboard') }}"
+       class="re-nav-link {% if active_tab == 'dashboard' %}active{% endif %}">
       <i class="icon lucide lucide-layout-dashboard"></i>
-      <span>Dashboard</span>
+      <span>Command Center</span>
     </a>
 
-    <a href="{{ url_for('underwriter.pipeline') }}" class="re-nav-link {% if active_tab == 'pipeline' %}active{% endif %}">
+    <a href="{{ url_for('underwriter.queue') }}"
+       class="re-nav-link {% if active_tab == 'queue' %}active{% endif %}">
+      <i class="icon lucide lucide-list-checks"></i>
+      <span>Decision Queue</span>
+    </a>
+
+    <a href="{{ url_for('underwriter.pipeline') }}"
+       class="re-nav-link {% if active_tab == 'pipeline' %}active{% endif %}">
       <i class="icon lucide lucide-git-branch"></i>
       <span>Pipeline</span>
     </a>
+  </div>
 
-    <a href="{{ url_for('underwriter.tasks') }}" class="re-nav-link {% if active_tab == 'tasks' %}active{% endif %}">
+  <div class="re-nav-group">
+    <div class="re-nav-label">Risk</div>
+
+    <a href="{{ url_for('underwriter.review_loans') }}"
+       class="re-nav-link {% if active_tab == 'review_loans' %}active{% endif %}">
+      <i class="icon lucide lucide-search"></i>
+      <span>Review Loans</span>
+    </a>
+
+    <a href="{{ url_for('underwriter.risk_reports') }}"
+       class="re-nav-link {% if active_tab == 'risk_reports' %}active{% endif %}">
+      <i class="icon lucide lucide-shield-alert"></i>
+      <span>Risk Reports</span>
+    </a>
+
+    <a href="{{ url_for('underwriter.tasks') }}"
+       class="re-nav-link {% if active_tab == 'tasks' %}active{% endif %}">
       <i class="icon lucide lucide-list-todo"></i>
       <span>Tasks</span>
     </a>
+  </div>
 
-    <a href="{{ url_for('underwriter.messages') }}" class="re-nav-link {% if active_tab == 'messages' %}active{% endif %}">
+  <div class="re-nav-group">
+    <div class="re-nav-label">Communication</div>
+
+    <a href="{{ url_for('underwriter.messages') }}"
+       class="re-nav-link {% if active_tab == 'messages' %}active{% endif %}">
       <i class="icon lucide lucide-messages-square"></i>
       <span>Messages</span>
     </a>
   </div>
+
 </nav>
 
 <div class="re-sidebar-foot">
