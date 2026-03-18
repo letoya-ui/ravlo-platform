@@ -120,7 +120,7 @@ PAGE_META = {
          "title": "Partner Plans | Ravlo",
          "description": "Choose the Ravlo partner plan that fits your business and connect with investors through the platform.",
          "template": "marketing/partner_plans.html",
-         "hero_image": "images/marketing/interior_luxury.jpg.PNG",
+         "hero_image": "images/marketing/interior_luxury.jpg",
     },
 }
 
