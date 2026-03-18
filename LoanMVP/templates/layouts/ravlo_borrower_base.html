@@ -9,6 +9,7 @@
   <title>{% block title %}Ravlo Borrower OS{% endblock %}</title>
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
   <link rel="stylesheet" href="{{ url_for('static', filename='css/ravlo_tokens.css') }}">
@@ -21,29 +22,87 @@
 
 <div class="rb-shell">
 
-  <!-- TOPBAR -->
   <header class="rb-topbar">
-    <div class="rb-brand">
-      <div class="rb-mark">RV</div>
-      <div>
-        <div class="rb-name">RAVLO</div>
-        <div class="rb-sub">Borrower OS</div>
+    <div class="rb-topbar-left">
+      <div class="rb-brand">
+        <div class="rb-mark">RV</div>
+        <div>
+          <div class="rb-name">RAVLO</div>
+          <div class="rb-sub">Borrower OS</div>
+        </div>
+      </div>
+
+      <div class="rb-page-copy">
+        <div class="rb-page-title">{% block page_title %}Borrower Dashboard{% endblock %}</div>
+        <div class="rb-page-subline">{% block page_subline %}Track your loan, documents, and next steps{% endblock %}</div>
       </div>
     </div>
 
-    <div class="rb-user">
-      <div class="rb-avatar">
-        {{ (current_user.first_name[0] if current_user.first_name else "U")|upper }}
+    <div class="rb-topbar-right">
+      <div class="rb-topbar-actions">
+        {% block topbar_actions %}{% endblock %}
       </div>
+
+      {% if current_user.is_authenticated %}
+      <div class="rb-user-menu">
+        <div class="rb-user-chip">
+          <div class="rb-avatar">
+            {{ (current_user.first_name[0] if current_user.first_name else "U")|upper }}
+          </div>
+          <span>{{ current_user.first_name or "User" }}</span>
+        </div>
+
+        <div class="rb-user-dropdown">
+          <a href="{{ url_for('account.profile') }}">Profile</a>
+          <a href="{{ url_for('account.settings') }}">Settings</a>
+          <div class="rb-divider"></div>
+          <a href="{{ url_for('auth.logout') }}" class="danger">Logout</a>
+        </div>
+      </div>
+      {% endif %}
     </div>
   </header>
 
-  <!-- CONTENT -->
+  <nav class="rb-nav">
+    <a href="{{ url_for('borrower.dashboard') }}" class="rb-nav-link {% if active_tab == 'dashboard' %}active{% endif %}">
+      Dashboard
+    </a>
+    <a href="{{ url_for('borrower.apply') }}" class="rb-nav-link {% if active_tab == 'apply' %}active{% endif %}">
+      Apply
+    </a>
+    <a href="{{ url_for('borrower.loan_center') }}" class="rb-nav-link {% if active_tab == 'loans' %}active{% endif %}">
+      Loans
+    </a>
+    <a href="{{ url_for('borrower.documents') }}" class="rb-nav-link {% if active_tab == 'documents' %}active{% endif %}">
+      Documents
+    </a>
+    <a href="{{ url_for('borrower.conditions') }}" class="rb-nav-link {% if active_tab == 'conditions' %}active{% endif %}">
+      Conditions
+    </a>
+    <a href="{{ url_for('borrower.messages') }}" class="rb-nav-link {% if active_tab == 'messages' %}active{% endif %}">
+      Messages
+    </a>
+    <a href="{{ url_for('borrower.subscription') }}" class="rb-nav-link {% if active_tab == 'subscription' %}active{% endif %}">
+      Subscription
+    </a>
+  </nav>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      <div class="rb-flashes">
+        {% for category, message in messages %}
+          <div class="rb-alert {{ category }}">{{ message }}</div>
+        {% endfor %}
+      </div>
+    {% endif %}
+  {% endwith %}
+
   <main class="rb-content">
     {% block content %}{% endblock %}
   </main>
 
 </div>
 
+{% block scripts %}{% endblock %}
 </body>
 </html>
