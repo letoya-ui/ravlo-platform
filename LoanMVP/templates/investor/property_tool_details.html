@@ -3,7 +3,7 @@
 
 {% block page_title %}Property Details{% endblock %}
 {% block page_subline %}
-Review the property, market signals, and next steps.
+Review the property, market signals, strategy fit, and next steps.
 {% endblock %}
 
 {% block topbar_actions %}
@@ -16,19 +16,47 @@ Review the property, market signals, and next steps.
 {% endblock %}
 
 {% block content %}
-<div class="ravlo-grid">
 
-  <section class="ravlo-hero-card">
-    <div class="eyebrow">RAVLO PROPERTY DETAILS</div>
-    <h2>{{ address }}</h2>
-    <p class="muted">
-      {{ city or "" }}{% if city and state %}, {% endif %}{{ state or "" }} {{ zip_code or "" }}
-      {% if property_type %} • {{ property_type }}{% endif %}
-    </p>
+<div class="pd-shell">
+
+  <!-- HERO -->
+  <section class="pd-hero">
+    <div class="pd-hero-copy">
+      <div class="eyebrow">RAVLO PROPERTY DETAILS</div>
+
+      <h2>{{ address }}</h2>
+
+      <p class="muted">
+        {{ city or "" }}{% if city and state %}, {% endif %}{{ state or "" }} {{ zip_code or "" }}
+        {% if property_type %} • {{ property_type }}{% endif %}
+      </p>
+
+      <div class="pd-chip-row">
+        <span class="pd-chip">{{ beds or "—" }} bd</span>
+        <span class="pd-chip">{{ baths or "—" }} ba</span>
+        <span class="pd-chip">
+          {% if sqft %}
+            {{ "{:,}".format(sqft) }} sqft
+          {% else %}
+            — sqft
+          {% endif %}
+        </span>
+        <span class="pd-chip">{{ card.strategy_fit or "Review Needed" }}</span>
+      </div>
+    </div>
+
+    <div class="pd-hero-media">
+      {% if photo %}
+        <img src="{{ photo }}" alt="Property photo">
+      {% else %}
+        <div class="pd-no-photo">No Photo Available</div>
+      {% endif %}
+    </div>
   </section>
 
-  <section class="ravlo-grid-3">
-    <div class="ravlo-card pad">
+  <!-- KPI STRIP -->
+  <section class="pd-kpi-grid">
+    <div class="pd-kpi-card">
       <div class="ravlo-kicker">Price</div>
       <h3>
         {% if price %}
@@ -40,81 +68,111 @@ Review the property, market signals, and next steps.
       <p class="muted">Current pricing from the search result.</p>
     </div>
 
-    <div class="ravlo-card pad">
+    <div class="pd-kpi-card">
       <div class="ravlo-kicker">Property Facts</div>
-      <h3>
-        {{ beds or "—" }} bd • {{ baths or "—" }} ba
-      </h3>
+      <h3>{{ beds or "—" }} bd • {{ baths or "—" }} ba</h3>
       <p class="muted">
-        {% if sqft %}{{ "{:,}".format(sqft) }} sqft{% else %}Square footage unavailable{% endif %}
+        {% if sqft %}
+          {{ "{:,}".format(sqft) }} sqft
+        {% else %}
+          Square footage unavailable
+        {% endif %}
       </p>
     </div>
 
-    <div class="ravlo-card pad">
+    <div class="pd-kpi-card">
       <div class="ravlo-kicker">Strategy Fit</div>
       <h3>{{ card.strategy_fit or "Review Needed" }}</h3>
       <p class="muted">AI-assisted opportunity positioning.</p>
     </div>
   </section>
 
-  <section class="ravlo-card pad">
-    <div class="section-toolbar mb-16">
-      <h3 class="mb-0">Property Intelligence</h3>
+  <!-- MAIN GRID -->
+  <section class="pd-main-grid">
+
+    <!-- LEFT -->
+    <div class="pd-col">
+      <section class="ravlo-card pad">
+        <div class="section-head">
+          <div class="ravlo-card-title">Property Intelligence</div>
+        </div>
+
+        <div class="pd-intel-grid">
+          <div class="ravlo-card pad pd-inner-card">
+            <div class="ravlo-kicker">Summary</div>
+            <p class="muted">{{ card.summary or "No summary available." }}</p>
+          </div>
+
+          <div class="ravlo-card pad pd-inner-card">
+            <div class="ravlo-kicker">Market Signal</div>
+            <p class="muted">{{ card.market_signal or "No market signal available." }}</p>
+          </div>
+
+          <div class="ravlo-card pad pd-inner-card">
+            <div class="ravlo-kicker">Opportunity Notes</div>
+            <p class="muted">{{ card.opportunity_notes or "No opportunity notes available." }}</p>
+          </div>
+
+          <div class="ravlo-card pad pd-inner-card">
+            <div class="ravlo-kicker">Risk Notes</div>
+            <p class="muted">{{ card.risk_notes or "No risk notes available." }}</p>
+          </div>
+        </div>
+      </section>
     </div>
 
-    <div class="ravlo-grid-2">
-      <div class="ravlo-card pad">
-        <div class="ravlo-kicker">Summary</div>
-        <p class="muted">{{ card.summary or "No summary available." }}</p>
-      </div>
+    <!-- RIGHT -->
+    <div class="pd-col">
+      <section class="ravlo-card pad">
+        <div class="ravlo-card-title">Next Actions</div>
 
-      <div class="ravlo-card pad">
-        <div class="ravlo-kicker">Market Signal</div>
-        <p class="muted">{{ card.market_signal or "No market signal available." }}</p>
-      </div>
+        <div class="pd-action-stack">
+          <button
+            class="ravlo-btn ghost"
+            id="saveOnlyBtn"
+            data-address="{{ address }}"
+            data-city="{{ city or '' }}"
+            data-state="{{ state or '' }}"
+            data-zip="{{ zip_code or '' }}"
+            data-price="{{ price or '' }}"
+            data-sqft="{{ sqft or '' }}"
+            data-photo="{{ photo or '' }}"
+            data-property-id="{{ property_id or '' }}"
+          >
+            Save Property
+          </button>
 
-      <div class="ravlo-card pad">
-        <div class="ravlo-kicker">Opportunity Notes</div>
-        <p class="muted">{{ card.opportunity_notes or "No opportunity notes available." }}</p>
-      </div>
+          <button
+            class="ravlo-btn primary"
+            id="saveAnalyzeBtn"
+            data-address="{{ address }}"
+            data-city="{{ city or '' }}"
+            data-state="{{ state or '' }}"
+            data-zip="{{ zip_code or '' }}"
+            data-price="{{ price or '' }}"
+            data-sqft="{{ sqft or '' }}"
+            data-photo="{{ photo or '' }}"
+            data-property-id="{{ property_id or '' }}"
+          >
+            Send to Deal Workspace
+          </button>
+        </div>
 
-      <div class="ravlo-card pad">
-        <div class="ravlo-kicker">Risk Notes</div>
-        <p class="muted">{{ card.risk_notes or "No risk notes available." }}</p>
-      </div>
+        <div id="pdStatus" class="pd-status"></div>
+      </section>
+
+      <section class="ravlo-card pad">
+        <div class="ravlo-card-title">Quick Review</div>
+
+        <div class="pd-facts-list">
+          <div><span>Address</span><strong>{{ address or "—" }}</strong></div>
+          <div><span>City / State</span><strong>{{ city or "—" }}{% if state %}, {{ state }}{% endif %}</strong></div>
+          <div><span>ZIP</span><strong>{{ zip_code or "—" }}</strong></div>
+          <div><span>Property Type</span><strong>{{ property_type or "—" }}</strong></div>
+        </div>
+      </section>
     </div>
 
-    <div class="section-toolbar-actions mt-20">
-      <button
-        class="ravlo-btn ghost"
-        id="saveOnlyBtn"
-        data-address="{{ address }}"
-        data-city="{{ city or '' }}"
-        data-state="{{ state or '' }}"
-        data-zip="{{ zip_code or '' }}"
-        data-price="{{ price or '' }}"
-        data-sqft="{{ sqft or '' }}"
-        data-photo="{{ photo or '' }}"
-        data-property-id="{{ property_id or '' }}"
-      >
-        💾 Save
-      </button>
-
-      <button
-        class="ravlo-btn primary"
-        id="saveAnalyzeBtn"
-        data-address="{{ address }}"
-        data-city="{{ city or '' }}"
-        data-state="{{ state or '' }}"
-        data-zip="{{ zip_code or '' }}"
-        data-price="{{ price or '' }}"
-        data-sqft="{{ sqft or '' }}"
-        data-photo="{{ photo or '' }}"
-        data-property-id="{{ property_id or '' }}"
-      >
-        📈 Send to Deal Workspace
-      </button>
-    </div>
   </section>
 
 </div>
@@ -134,6 +192,7 @@ async function postJson(url, payload) {
 
 const saveAnalyzeBtn = document.getElementById("saveAnalyzeBtn");
 const saveOnlyBtn = document.getElementById("saveOnlyBtn");
+const pdStatus = document.getElementById("pdStatus");
 
 if (saveAnalyzeBtn) {
   saveAnalyzeBtn.addEventListener("click", async function () {
@@ -148,11 +207,23 @@ if (saveAnalyzeBtn) {
       property_id: this.dataset.propertyId
     };
 
-    const data = await postJson("{{ url_for('investor.api_property_tool_save_and_analyze') }}", payload);
-    if (data.status === "ok" && data.deal_url) {
-      window.location.href = data.deal_url;
-    } else {
-      alert(data.message || "Unable to save and analyze.");
+    if (pdStatus) pdStatus.textContent = "Saving and sending to Deal Workspace...";
+    saveAnalyzeBtn.disabled = true;
+
+    try {
+      const data = await postJson("{{ url_for('investor.api_property_tool_save_and_analyze') }}", payload);
+      if (data.status === "ok" && data.deal_url) {
+        window.location.href = data.deal_url;
+      } else {
+        if (pdStatus) pdStatus.textContent = data.message || "Unable to save and analyze.";
+        alert(data.message || "Unable to save and analyze.");
+      }
+    } catch (e) {
+      console.error(e);
+      if (pdStatus) pdStatus.textContent = "Network error while sending to workspace.";
+      alert("Network error while sending to workspace.");
+    } finally {
+      saveAnalyzeBtn.disabled = false;
     }
   });
 }
@@ -170,9 +241,173 @@ if (saveOnlyBtn) {
       property_id: this.dataset.propertyId
     };
 
-    const data = await postJson("{{ url_for('investor.api_property_tool_save') }}", payload);
-    alert(data.message || "Property saved.");
+    if (pdStatus) pdStatus.textContent = "Saving property...";
+    saveOnlyBtn.disabled = true;
+
+    try {
+      const data = await postJson("{{ url_for('investor.api_property_tool_save') }}", payload);
+      if (pdStatus) pdStatus.textContent = data.message || "Property saved.";
+    } catch (e) {
+      console.error(e);
+      if (pdStatus) pdStatus.textContent = "Unable to save property right now.";
+      alert("Unable to save property right now.");
+    } finally {
+      saveOnlyBtn.disabled = false;
+    }
   });
 }
 </script>
+
+<style>
+.pd-shell{
+  display:grid;
+  gap:20px;
+}
+
+.pd-hero{
+  display:grid;
+  grid-template-columns:1.1fr .9fr;
+  gap:20px;
+  align-items:stretch;
+  padding:24px;
+  border-radius:24px;
+  border:1px solid rgba(255,255,255,.08);
+  background:
+    radial-gradient(900px 420px at 10% 0%, rgba(122,184,255,.12), transparent 50%),
+    rgba(255,255,255,.03);
+}
+
+.pd-hero-copy h2{
+  margin:.35rem 0 .45rem;
+  font-size:clamp(1.6rem, 2.4vw, 2.3rem);
+}
+
+.pd-chip-row{
+  display:flex;
+  gap:.5rem;
+  flex-wrap:wrap;
+  margin-top:1rem;
+}
+
+.pd-chip{
+  display:inline-flex;
+  align-items:center;
+  padding:.38rem .65rem;
+  border-radius:999px;
+  background:rgba(255,255,255,.03);
+  border:1px solid rgba(255,255,255,.08);
+  color:var(--text);
+  font-size:.78rem;
+}
+
+.pd-hero-media{
+  min-height:280px;
+  border-radius:18px;
+  overflow:hidden;
+  border:1px solid rgba(255,255,255,.08);
+  background:rgba(255,255,255,.03);
+}
+
+.pd-hero-media img{
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  display:block;
+}
+
+.pd-no-photo{
+  width:100%;
+  height:100%;
+  min-height:280px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  color:var(--muted);
+}
+
+.pd-kpi-grid{
+  display:grid;
+  grid-template-columns:repeat(3, minmax(0,1fr));
+  gap:16px;
+}
+
+.pd-kpi-card{
+  background:rgba(255,255,255,.03);
+  border:1px solid rgba(255,255,255,.08);
+  border-radius:20px;
+  padding:18px;
+}
+
+.pd-main-grid{
+  display:grid;
+  grid-template-columns:1.15fr .85fr;
+  gap:20px;
+  align-items:start;
+}
+
+.pd-col{
+  display:grid;
+  gap:20px;
+}
+
+.pd-intel-grid{
+  display:grid;
+  grid-template-columns:repeat(2, minmax(0,1fr));
+  gap:16px;
+  margin-top:1rem;
+}
+
+.pd-inner-card{
+  background:rgba(255,255,255,.02);
+}
+
+.pd-action-stack{
+  display:grid;
+  gap:.75rem;
+  margin-top:1rem;
+}
+
+.pd-status{
+  margin-top:.85rem;
+  color:var(--muted);
+  font-size:.9rem;
+  min-height:20px;
+}
+
+.pd-facts-list{
+  display:grid;
+  gap:12px;
+  margin-top:1rem;
+}
+
+.pd-facts-list div{
+  display:grid;
+  gap:4px;
+  padding:12px 14px;
+  border-radius:14px;
+  background:rgba(255,255,255,.03);
+  border:1px solid rgba(255,255,255,.08);
+}
+
+.pd-facts-list span{
+  color:var(--muted);
+  font-size:.78rem;
+}
+
+.pd-facts-list strong{
+  color:var(--text);
+}
+
+@media (max-width: 1100px){
+  .pd-hero,
+  .pd-main-grid{
+    grid-template-columns:1fr;
+  }
+
+  .pd-kpi-grid,
+  .pd-intel-grid{
+    grid-template-columns:1fr;
+  }
+}
+</style>
 {% endblock %}
