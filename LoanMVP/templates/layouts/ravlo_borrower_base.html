@@ -1,0 +1,49 @@
+{# templates/layouts/ravlo_borrower_base.html #}
+{% set ep = request.endpoint or "" %}
+
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>{% block title %}Ravlo Borrower OS{% endblock %}</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/ravlo_tokens.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/ravlo_borrower.css') }}">
+
+  {% block head %}{% endblock %}
+</head>
+
+<body class="rb-body">
+
+<div class="rb-shell">
+
+  <!-- TOPBAR -->
+  <header class="rb-topbar">
+    <div class="rb-brand">
+      <div class="rb-mark">RV</div>
+      <div>
+        <div class="rb-name">RAVLO</div>
+        <div class="rb-sub">Borrower OS</div>
+      </div>
+    </div>
+
+    <div class="rb-user">
+      <div class="rb-avatar">
+        {{ (current_user.first_name[0] if current_user.first_name else "U")|upper }}
+      </div>
+    </div>
+  </header>
+
+  <!-- CONTENT -->
+  <main class="rb-content">
+    {% block content %}{% endblock %}
+  </main>
+
+</div>
+
+</body>
+</html>
