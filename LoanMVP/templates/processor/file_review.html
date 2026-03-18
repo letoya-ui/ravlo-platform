@@ -1,281 +1,712 @@
 {% extends "layouts/Ravlo_lending_base.html" %}
 {% block title %}Processor • Loan File Review{% endblock %}
+
+{% block page_title %}Loan File Review{% endblock %}
+{% block page_subline %}
+Review documents, conditions, borrower details, risk signals, and underwriting readiness from one command center.
+{% endblock %}
+
 {% block content %}
 
 <link rel="stylesheet" href="https://unpkg.com/lucide-static@latest/font/lucide.css">
 
+<div class="file-review-shell">
 
-<main class="dashboard-main">
+  <!-- HERO -->
+  <section class="file-hero">
+    <div class="file-hero-main">
+      <div class="eyebrow">PROCESSOR WORKSPACE</div>
+      <h2>{{ borrower.full_name or "Borrower File" }}</h2>
+      <div class="hero-subline">
+        <span>{{ loan.loan_type or "Loan File" }}</span>
+        <span>•</span>
+        <span>{{ loan.property_address or "No property address" }}</span>
+        <span>•</span>
+        <span>Loan #{{ loan.id }}</span>
+      </div>
+    </div>
 
-<!-- ========================================================= -->
-<!-- 🔧 Processor Action Toolbar -->
-<!-- ========================================================= -->
-<div class="section" style="display:flex; gap:1rem; flex-wrap:wrap;">
-    
-    <a href="/processor/request-doc/{{ loan.id }}" class="btn-outline">
-        <i class="lucide lucide-file-plus"></i> Request Document
+    <div class="hero-status-wrap">
+      <div class="status-label">Current Status</div>
+      <div class="status-pill status-neutral">
+        {{ loan.status or "Unknown" }}
+      </div>
+    </div>
+  </section>
+
+  <!-- ACTION BAR -->
+  <section class="action-bar">
+    <a href="{{ url_for('processor.request_document', loan_id=loan.id) }}" class="ravlo-btn ghost">
+      <i class="lucide lucide-file-plus"></i>
+      <span>Request Document</span>
     </a>
 
-    <a href="/processor/add-note/{{ loan.id }}" class="btn-outline">
-        <i class="lucide lucide-sticky-note"></i> Add Note
+    <a href="{{ url_for('processor.add_processor_note', loan_id=loan.id) }}" class="ravlo-btn ghost">
+      <i class="lucide lucide-sticky-note"></i>
+      <span>Add Note</span>
     </a>
 
-    <a href="/processor/update-status/{{ loan.id }}" class="btn-outline">
-        <i class="lucide lucide-arrow-up-circle"></i> Update Loan Status
+    <a href="{{ url_for('processor.update_loan_status', loan_id=loan.id) }}" class="ravlo-btn ghost">
+      <i class="lucide lucide-arrow-up-circle"></i>
+      <span>Update Status</span>
     </a>
 
-    <a href="/processor/assign/{{ loan.id }}" class="btn-outline">
-        <i class="lucide lucide-users"></i> Assign Loan
+    <a href="{{ url_for('processor.assign_loan', loan_id=loan.id) }}" class="ravlo-btn ghost">
+      <i class="lucide lucide-users"></i>
+      <span>Assign Loan</span>
     </a>
 
-    <a href="/processor/submit-underwriter/{{ loan.id }}" class="btn-outline" style="border-color:var(--success); color:var(--success);">
-        <i class="lucide lucide-badge-check"></i> Submit to Underwriter
-    </a>
-    
-    <a href="#" class="btn-outline" onclick="runAIRisk()">
-      <i class="lucide lucide-bot"></i> AI Risk Summary
+    <a href="{{ url_for('processor.submit_underwriter', loan_id=loan.id) }}" class="ravlo-btn primary">
+      <i class="lucide lucide-badge-check"></i>
+      <span>Submit to Underwriter</span>
     </a>
 
-</div>
+    <button type="button" class="ravlo-btn ghost" onclick="runAIRisk()">
+      <i class="lucide lucide-bot"></i>
+      <span>AI Risk Summary</span>
+    </button>
+  </section>
 
+  <!-- KPI STRIP -->
+  <section class="kpi-grid">
+    <div class="kpi-card">
+      <div class="kpi-label">Loan Amount</div>
+      <div class="kpi-value">${{ "{:,.0f}".format(loan.amount or 0) }}</div>
+    </div>
 
-<!-- ========================================================= -->
-<!-- 👤 Borrower Summary -->
-<!-- ========================================================= -->
-<div class="section">
-    <h2><i class="lucide lucide-user"></i> Borrower Summary</h2>
-    <p><strong>{{ borrower.full_name }}</strong></p>
-    <p>{{ borrower.email }} · {{ borrower.phone }}</p>
-    <p>{{ borrower.address }}, {{ borrower.city }}, {{ borrower.state }} {{ borrower.zip }}</p>
-</div>
+    <div class="kpi-card">
+      <div class="kpi-label">Property Value</div>
+      <div class="kpi-value">${{ "{:,.0f}".format(loan.property_value or 0) }}</div>
+    </div>
 
+    <div class="kpi-card">
+      <div class="kpi-label">Pending Docs</div>
+      <div class="kpi-value">{{ docs_pending|length }}</div>
+    </div>
 
-<!-- ========================================================= -->
-<!-- 🏦 Loan Summary -->
-<!-- ========================================================= -->
-<div class="section">
-    <h2><i class="lucide lucide-file-text"></i> Loan Details</h2>
+    <div class="kpi-card">
+      <div class="kpi-label">Open Conditions</div>
+      <div class="kpi-value">{{ cond_open|length }}</div>
+    </div>
+  </section>
 
-    <p>Amount: <strong>${{ loan.amount }}</strong></p>
-    <p>Loan Type: <strong>{{ loan.loan_type }}</strong></p>
-    <p>Property Value: <strong>${{ loan.property_value }}</strong></p>
-    <p>LTV Ratio: <strong>{{ loan.ltv_ratio }}%</strong></p>
+  <!-- MAIN GRID -->
+  <section class="review-grid">
 
-    <p>Status:
-        <span class="status-pill status-{{ loan.status|lower }}">
-            {{ loan.status }}
-        </span>
-    </p>
+    <!-- LEFT -->
+    <div class="review-col">
 
-    <br>
-
-    <a href="#" class="btn-outline">Update Status</a>
-    <a href="#" class="btn-outline">Submit to Underwriter</a>
-</div>
-
-
-<!-- ========================================================= -->
-<!-- 📁 Document Review -->
-<!-- ========================================================= -->
-<div class="section">
-    <h2><i class="lucide lucide-folder-open"></i> Documents</h2>
-
-    <h3>Pending</h3>
-    {% if docs_pending %}
-        {% for d in docs_pending %}
-            <div class="item">
-                {{ d.name }} — <span style="color:var(--accent)">Pending</span>
-                <a href="/processor/doc/{{ d.id }}/verify" class="btn-outline" style="margin-left:1rem;">
-                    Verify
-                </a>
-            </div>
-        {% endfor %}
-    {% else %}
-        <p class="muted">No pending documents.</p>
-    {% endif %}
-
-    <h3 style="margin-top:1.5rem;">Verified</h3>
-    {% for d in docs_verified %}
-        <div class="item">
-            {{ d.name }} — <span style="color:var(--success)">Verified ✔</span>
+      <section class="review-card">
+        <div class="section-head">
+          <div>
+            <div class="eyebrow">BORROWER</div>
+            <h3>Borrower Summary</h3>
+          </div>
         </div>
-    {% endfor %}
 
-    <br>
-    <a href="/processor/request-doc/{{ loan.id }}" class="btn-outline">Request Additional Document</a>
-</div>
-
-
-<!-- ========================================================= -->
-<!-- ⚠ Underwriting Conditions -->
-<!-- ========================================================= -->
-<div class="section">
-    <h2><i class="lucide lucide-alert-circle"></i> Underwriting Conditions</h2>
-
-    <h3>Open Conditions</h3>
-    {% if cond_open %}
-        {% for c in cond_open %}
-            <div class="item">
-                <strong>{{ c.condition_type }}</strong><br>
-                {{ c.description }}<br>
-                <a href="/processor/clear-condition/{{ c.id }}" class="btn-outline" style="margin-top:.5rem;">
-                    Clear Condition
-                </a>
-            </div>
-        {% endfor %}
-    {% else %}
-        <p class="muted">No open conditions.</p>
-    {% endif %}
-
-    <h3 style="margin-top:1.5rem;">Cleared</h3>
-    {% for c in cond_cleared %}
-        <div class="item">
-            {{ c.condition_type }} — <span style="color:var(--success)">Cleared ✔</span>
+        <div class="info-stack">
+          <div class="info-row">
+            <span class="info-label">Name</span>
+            <span class="info-value">{{ borrower.full_name or "—" }}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Email</span>
+            <span class="info-value">{{ borrower.email or "—" }}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Phone</span>
+            <span class="info-value">{{ borrower.phone or "—" }}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Address</span>
+            <span class="info-value">
+              {{ borrower.address or "" }}
+              {% if borrower.city or borrower.state or borrower.zip %}
+                {{ borrower.city or "" }}{% if borrower.city and borrower.state %}, {% endif %}{{ borrower.state or "" }} {{ borrower.zip or "" }}
+              {% endif %}
+            </span>
+          </div>
         </div>
-    {% endfor %}
-</div>
+      </section>
 
+      <section class="review-card">
+        <div class="section-head">
+          <div>
+            <div class="eyebrow">LOAN</div>
+            <h3>Loan Details</h3>
+          </div>
+        </div>
 
-<!-- ========================================================= -->
-<!-- 💳 Payment Records -->
-<!-- ========================================================= -->
-<div class="section">
-    <h2><i class="lucide lucide-credit-card"></i> Payments</h2>
+        <div class="info-stack">
+          <div class="info-row">
+            <span class="info-label">Loan Type</span>
+            <span class="info-value">{{ loan.loan_type or "—" }}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Amount</span>
+            <span class="info-value">${{ "{:,.0f}".format(loan.amount or 0) }}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Property Value</span>
+            <span class="info-value">${{ "{:,.0f}".format(loan.property_value or 0) }}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">LTV Ratio</span>
+            <span class="info-value">
+              {% if loan.ltv_ratio is not none %}
+                {{ loan.ltv_ratio }}%
+              {% else %}
+                —
+              {% endif %}
+            </span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Status</span>
+            <span class="info-value">
+              <span class="status-pill status-neutral">{{ loan.status or "—" }}</span>
+            </span>
+          </div>
+        </div>
+      </section>
 
-    {% if payments %}
-        {% for p in payments %}
-            <div class="item">
-                {{ p.payment_type }} — ${{ p.amount }}
-                {% if p.status == "Paid" %}
-                    <span style="color:var(--success)">Paid ✔</span>
-                {% else %}
-                    <span style="color:var(--accent)">Pending</span>
-                {% endif %}
-            </div>
-        {% endfor %}
-    {% else %}
-        <p class="muted">No payments yet.</p>
-    {% endif %}
-</div>
-<!-- ========================================================= -->
-<!-- 📊 Processor Credit & Income Analysis -->
-<!-- ========================================================= -->
-<div class="section">
-    <h2><i class="lucide lucide-bar-chart-2"></i> Credit & Income Analysis</h2>
+      <section class="review-card">
+        <div class="section-head">
+          <div>
+            <div class="eyebrow">DOCUMENTS</div>
+            <h3>Document Review</h3>
+          </div>
+        </div>
 
-    <p><strong>Total Monthly Income:</strong> ${{ ratios.income_total }}</p>
-    <p><strong>Monthly Debts:</strong> ${{ ratios.monthly_debts }}</p>
-    <p><strong>Housing Payment:</strong> ${{ borrower.monthly_housing_payment or 0 }}</p>
-
-    <hr>
-
-    <p><strong>LTV:</strong>
-        {% if ratios.ltv %}
-            {{ (ratios.ltv * 100)|round(2) }}%
-            {% if ratios.ltv > 0.80 %}
-                <span style="color:var(--danger)"> (High)</span>
-            {% elif ratios.ltv > 0.65 %}
-                <span style="color:var(--accent)"> (Moderate)</span>
-            {% else %}
-                <span style="color:var(--success)"> (Strong)</span>
-            {% endif %}
+        <div class="subsection-title">Pending</div>
+        {% if docs_pending %}
+          <div class="entity-list">
+            {% for d in docs_pending %}
+              <div class="entity-row">
+                <div>
+                  <div class="entity-title">
+                    {{ d.document_name or d.name or "Untitled Document" }}
+                  </div>
+                  <div class="entity-sub">Awaiting verification</div>
+                </div>
+              </div>
+            {% endfor %}
+          </div>
         {% else %}
-            N/A
+          <div class="empty-inline">No pending documents.</div>
         {% endif %}
-    </p>
 
-    <p><strong>Front-End DTI:</strong>
-        {% if ratios.front_end_dti %}
-            {{ (ratios.front_end_dti * 100)|round(2) }}%
-            {% if ratios.front_end_dti > 0.45 %}
-                <span style="color:var(--danger)"> (High)</span>
-            {% elif ratios.front_end_dti > 0.35 %}
-                <span style="color:var(--accent)"> (Moderate)</span>
-            {% else %}
-                <span style="color:var(--success)"> (Strong)</span>
-            {% endif %}
+        <div class="subsection-title spaced">Verified</div>
+        {% if docs_verified %}
+          <div class="entity-list">
+            {% for d in docs_verified %}
+              <div class="entity-row">
+                <div>
+                  <div class="entity-title">
+                    {{ d.document_name or d.name or "Untitled Document" }}
+                  </div>
+                  <div class="entity-sub success-text">Verified</div>
+                </div>
+              </div>
+            {% endfor %}
+          </div>
         {% else %}
-            N/A
+          <div class="empty-inline">No verified documents yet.</div>
         {% endif %}
-    </p>
+      </section>
 
-    <p><strong>Back-End DTI:</strong>
-        {% if ratios.back_end_dti %}
-            {{ (ratios.back_end_dti * 100)|round(2) }}%
-            {% if ratios.back_end_dti > 0.50 %}
-                <span style="color:var(--danger)"> (High)</span>
-            {% elif ratios.back_end_dti > 0.43 %}
-                <span style="color:var(--accent)"> (Borderline)</span>
-            {% else %}
-                <span style="color:var(--success)"> (Strong)</span>
-            {% endif %}
-        {% else %}
-            N/A
-        {% endif %}
-    </p>
+      <section class="review-card">
+        <div class="section-head">
+          <div>
+            <div class="eyebrow">CONDITIONS</div>
+            <h3>Underwriting Conditions</h3>
+          </div>
+        </div>
 
-</div>
-<!-- ========================================================= -->
-<!-- 🔥 Risk Indicators -->
-<!-- ========================================================= -->
-<div class="section">
-    <h2><i class="lucide lucide-alert-triangle"></i> Risk Indicators</h2>
-
-    <ul>
-        {% if credit and credit.credit_score < 620 %}
-            <li style="color:var(--danger)">Low credit score (Non-QM)</li>
-        {% endif %}
-
-        {% if ratios.back_end_dti and ratios.back_end_dti > 0.50 %}
-            <li style="color:var(--danger)">Back-end DTI above 50% (High risk)</li>
-        {% endif %}
-
-        {% if ratios.ltv and ratios.ltv > 0.85 %}
-            <li style="color:var(--danger)">LTV above 85% (High risk)</li>
-        {% endif %}
-
-        {% if ratios.front_end_dti and ratios.front_end_dti > 0.40 %}
-            <li style="color:var(--accent)">Front-end DTI elevated</li>
-        {% endif %}
-
-        {% if borrower.income == 0 %}
-            <li style="color:var(--danger)">No verifiable income</li>
-        {% endif %}
-
-        {% if not docs_verified %}
-            <li style="color:var(--accent)">Documents still pending review</li>
-        {% endif %}
-
+        <div class="subsection-title">Open Conditions</div>
         {% if cond_open %}
-            <li style="color:var(--accent)">Open underwriting conditions</li>
+          <div class="entity-list">
+            {% for c in cond_open %}
+              <div class="entity-row vertical">
+                <div class="entity-title">{{ c.condition_type or "Condition" }}</div>
+                <div class="entity-sub">{{ c.description or "No description" }}</div>
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="empty-inline">No open conditions.</div>
         {% endif %}
-    </ul>
+
+        <div class="subsection-title spaced">Cleared</div>
+        {% if cond_cleared %}
+          <div class="entity-list">
+            {% for c in cond_cleared %}
+              <div class="entity-row">
+                <div>
+                  <div class="entity-title">{{ c.condition_type or "Condition" }}</div>
+                  <div class="entity-sub success-text">Cleared</div>
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="empty-inline">No cleared conditions yet.</div>
+        {% endif %}
+      </section>
+
+    </div>
+
+    <!-- RIGHT -->
+    <div class="review-col">
+
+      <section class="review-card">
+        <div class="section-head">
+          <div>
+            <div class="eyebrow">PAYMENTS</div>
+            <h3>Payment Records</h3>
+          </div>
+        </div>
+
+        {% if payments %}
+          <div class="entity-list">
+            {% for p in payments %}
+              <div class="entity-row">
+                <div>
+                  <div class="entity-title">{{ p.payment_type or "Payment" }}</div>
+                  <div class="entity-sub">${{ "{:,.2f}".format(p.amount or 0) }}</div>
+                </div>
+                <div>
+                  {% if p.status == "Paid" %}
+                    <span class="status-pill status-good">Paid</span>
+                  {% else %}
+                    <span class="status-pill status-warn">{{ p.status or "Pending" }}</span>
+                  {% endif %}
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="empty-inline">No payments yet.</div>
+        {% endif %}
+      </section>
+
+      {% if ratios is defined %}
+      <section class="review-card">
+        <div class="section-head">
+          <div>
+            <div class="eyebrow">ANALYSIS</div>
+            <h3>Credit & Income Analysis</h3>
+          </div>
+        </div>
+
+        <div class="metric-stack">
+          <div class="metric-row">
+            <span>Total Monthly Income</span>
+            <strong>${{ "{:,.2f}".format(ratios.income_total or 0) }}</strong>
+          </div>
+          <div class="metric-row">
+            <span>Monthly Debts</span>
+            <strong>${{ "{:,.2f}".format(ratios.monthly_debts or 0) }}</strong>
+          </div>
+          <div class="metric-row">
+            <span>Housing Payment</span>
+            <strong>${{ "{:,.2f}".format(borrower.monthly_housing_payment or 0) }}</strong>
+          </div>
+          <div class="metric-row">
+            <span>LTV</span>
+            <strong>
+              {% if ratios.ltv is not none %}
+                {{ (ratios.ltv * 100)|round(2) }}%
+              {% else %}
+                N/A
+              {% endif %}
+            </strong>
+          </div>
+          <div class="metric-row">
+            <span>Front-End DTI</span>
+            <strong>
+              {% if ratios.front_end_dti is not none %}
+                {{ (ratios.front_end_dti * 100)|round(2) }}%
+              {% else %}
+                N/A
+              {% endif %}
+            </strong>
+          </div>
+          <div class="metric-row">
+            <span>Back-End DTI</span>
+            <strong>
+              {% if ratios.back_end_dti is not none %}
+                {{ (ratios.back_end_dti * 100)|round(2) }}%
+              {% else %}
+                N/A
+              {% endif %}
+            </strong>
+          </div>
+        </div>
+      </section>
+      {% endif %}
+
+      <section class="review-card">
+        <div class="section-head">
+          <div>
+            <div class="eyebrow">RISK SIGNALS</div>
+            <h3>Risk Indicators</h3>
+          </div>
+        </div>
+
+        <div class="risk-list">
+          {% set has_risks = false %}
+
+          {% if credit and credit.credit_score < 620 %}
+            {% set has_risks = true %}
+            <div class="risk-item danger">Low credit score</div>
+          {% endif %}
+
+          {% if ratios is defined and ratios.back_end_dti and ratios.back_end_dti > 0.50 %}
+            {% set has_risks = true %}
+            <div class="risk-item danger">Back-end DTI above 50%</div>
+          {% endif %}
+
+          {% if ratios is defined and ratios.ltv and ratios.ltv > 0.85 %}
+            {% set has_risks = true %}
+            <div class="risk-item danger">LTV above 85%</div>
+          {% endif %}
+
+          {% if ratios is defined and ratios.front_end_dti and ratios.front_end_dti > 0.40 %}
+            {% set has_risks = true %}
+            <div class="risk-item warn">Front-end DTI elevated</div>
+          {% endif %}
+
+          {% if borrower.income == 0 %}
+            {% set has_risks = true %}
+            <div class="risk-item danger">No verifiable income</div>
+          {% endif %}
+
+          {% if not docs_verified %}
+            {% set has_risks = true %}
+            <div class="risk-item warn">Documents still pending review</div>
+          {% endif %}
+
+          {% if cond_open %}
+            {% set has_risks = true %}
+            <div class="risk-item warn">Open underwriting conditions</div>
+          {% endif %}
+
+          {% if not has_risks %}
+            <div class="empty-inline">No major risk indicators flagged.</div>
+          {% endif %}
+        </div>
+      </section>
+
+      {% if ai_summary %}
+      <section class="review-card">
+        <div class="section-head">
+          <div>
+            <div class="eyebrow">AI SUMMARY</div>
+            <h3>Processor Insight</h3>
+          </div>
+        </div>
+
+        <div class="ai-summary">
+          {{ ai_summary }}
+        </div>
+      </section>
+      {% endif %}
+
+    </div>
+  </section>
+
 </div>
 
+<style>
+.file-review-shell{
+  display:grid;
+  gap:20px;
+}
 
-<!-- ========================================================= -->
-<!-- 🤖 AI Summary -->
-<!-- ========================================================= -->
-{% if ai_summary %}
-<div class="section">
-    <h2><i class="lucide lucide-brain"></i> AI Summary</h2>
-    <p>{{ ai_summary }}</p>
-</div>
-{% endif %}
+.file-hero{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-end;
+  gap:18px;
+  flex-wrap:wrap;
+  padding:24px;
+  border-radius:24px;
+  border:1px solid rgba(255,255,255,.08);
+  background:
+    radial-gradient(850px 420px at 10% 0%, rgba(88,140,255,.14), transparent 50%),
+    rgba(255,255,255,.03);
+}
 
-</main>
+.file-hero h2{
+  margin:6px 0 8px;
+  font-size:clamp(1.55rem, 2.2vw, 2.15rem);
+}
+
+.hero-subline{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+  color:var(--muted);
+  font-size:14px;
+}
+
+.hero-status-wrap{
+  display:grid;
+  gap:8px;
+}
+
+.status-label{
+  font-size:12px;
+  color:var(--muted);
+  text-transform:uppercase;
+  letter-spacing:.06em;
+}
+
+.action-bar{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+}
+
+.kpi-grid{
+  display:grid;
+  grid-template-columns:repeat(4, minmax(0, 1fr));
+  gap:14px;
+}
+
+.kpi-card{
+  padding:18px;
+  border-radius:18px;
+  background:rgba(255,255,255,.03);
+  border:1px solid rgba(255,255,255,.08);
+}
+
+.kpi-label{
+  color:var(--muted);
+  font-size:12px;
+  text-transform:uppercase;
+  letter-spacing:.06em;
+}
+
+.kpi-value{
+  margin-top:10px;
+  font-size:28px;
+  font-weight:800;
+  color:var(--text);
+}
+
+.review-grid{
+  display:grid;
+  grid-template-columns:1.15fr .85fr;
+  gap:20px;
+}
+
+.review-col{
+  display:grid;
+  gap:20px;
+}
+
+.review-card{
+  padding:22px;
+  border-radius:20px;
+  background:rgba(255,255,255,.03);
+  border:1px solid rgba(255,255,255,.08);
+}
+
+.section-head{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:16px;
+  margin-bottom:16px;
+}
+
+.section-head h3{
+  margin:4px 0 0;
+  font-size:19px;
+}
+
+.eyebrow{
+  font-size:11px;
+  color:var(--muted);
+  text-transform:uppercase;
+  letter-spacing:.08em;
+}
+
+.info-stack,
+.metric-stack,
+.entity-list,
+.risk-list{
+  display:grid;
+  gap:12px;
+}
+
+.info-row,
+.metric-row,
+.entity-row{
+  display:flex;
+  justify-content:space-between;
+  gap:14px;
+  align-items:flex-start;
+  padding:12px 14px;
+  border-radius:14px;
+  background:rgba(255,255,255,.02);
+  border:1px solid rgba(255,255,255,.08);
+}
+
+.entity-row.vertical{
+  display:grid;
+}
+
+.info-label{
+  color:var(--muted);
+  min-width:120px;
+}
+
+.info-value{
+  color:var(--text);
+  text-align:right;
+}
+
+.metric-row span{
+  color:var(--muted);
+}
+
+.metric-row strong{
+  color:var(--text);
+}
+
+.entity-title{
+  color:var(--text);
+  font-weight:700;
+  font-size:14px;
+}
+
+.entity-sub{
+  margin-top:4px;
+  color:var(--muted);
+  font-size:13px;
+}
+
+.subsection-title{
+  margin-bottom:12px;
+  font-size:12px;
+  color:var(--muted);
+  text-transform:uppercase;
+  letter-spacing:.06em;
+}
+
+.subsection-title.spaced{
+  margin-top:18px;
+}
+
+.status-pill{
+  display:inline-flex;
+  align-items:center;
+  padding:6px 10px;
+  border-radius:999px;
+  font-size:12px;
+  border:1px solid rgba(107,127,147,.28);
+  background:rgba(107,127,147,.16);
+  color:var(--text);
+}
+
+.status-good{
+  border-color:rgba(34,197,94,.25);
+  background:rgba(34,197,94,.12);
+}
+
+.status-warn{
+  border-color:rgba(245,158,11,.25);
+  background:rgba(245,158,11,.12);
+}
+
+.status-neutral{
+  border-color:rgba(107,127,147,.28);
+  background:rgba(107,127,147,.16);
+}
+
+.risk-item{
+  padding:12px 14px;
+  border-radius:14px;
+  border:1px solid rgba(255,255,255,.08);
+  font-size:14px;
+}
+
+.risk-item.danger{
+  background:rgba(239,68,68,.10);
+  border-color:rgba(239,68,68,.18);
+  color:#ffb3b3;
+}
+
+.risk-item.warn{
+  background:rgba(245,158,11,.10);
+  border-color:rgba(245,158,11,.18);
+  color:#ffd48a;
+}
+
+.success-text{
+  color:#86efac;
+}
+
+.ai-summary{
+  color:var(--text);
+  line-height:1.75;
+  white-space:pre-line;
+}
+
+.empty-inline{
+  padding:14px 16px;
+  border-radius:14px;
+  background:rgba(255,255,255,.02);
+  border:1px dashed rgba(255,255,255,.12);
+  color:var(--muted);
+}
+
+@media (max-width: 1100px){
+  .review-grid{
+    grid-template-columns:1fr;
+  }
+
+  .kpi-grid{
+    grid-template-columns:repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 700px){
+  .kpi-grid{
+    grid-template-columns:1fr;
+  }
+
+  .info-row,
+  .metric-row,
+  .entity-row{
+    flex-direction:column;
+  }
+
+  .info-value{
+    text-align:left;
+  }
+}
+</style>
+
 <script>
 function runAIRisk() {
-    fetch("/ai/ask", {
-        method: "POST",
-        headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({
-            message: "Provide underwriting risk summary for this loan.",
-            borrower_id: {{ borrower.id }}
-        })
+  fetch("/ai/ask", {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({
+      message: "Provide underwriting risk summary for this loan.",
+      borrower_id: {{ borrower.id }}
     })
-    .then(r => r.json())
-    .then(data => alert(data.reply));
+  })
+  .then(r => r.json())
+  .then(data => {
+    alert(data.reply || "AI summary unavailable.");
+  })
+  .catch(() => {
+    alert("Unable to generate AI risk summary right now.");
+  });
 }
 </script>
 
