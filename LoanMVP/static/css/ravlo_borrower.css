@@ -1,58 +1,512 @@
-/* Ravlo Borrower OS */
+/* =========================================================
+   RAVLO BORROWER OS
+   Calm / guided / borrower-facing
+   Requires: ravlo_tokens.css
+========================================================= */
 
-.rb-body{
+*,
+*::before,
+*::after{
+  box-sizing:border-box;
+}
+
+html,
+body{
   margin:0;
+  padding:0;
+  min-height:100%;
+}
+
+body{
   font-family:"Inter",sans-serif;
   background:
     radial-gradient(circle at top, rgba(95,168,255,.12), transparent 40%),
-    #0b1118;
+    linear-gradient(180deg, #0b1118 0%, #0d131b 55%, #101721 100%);
   color:#EAF2FA;
+  -webkit-font-smoothing:antialiased;
+  text-rendering:optimizeLegibility;
+  line-height:1.5;
+}
+
+a{
+  color:inherit;
+  text-decoration:none;
+  transition:.2s ease;
+}
+
+img{
+  display:block;
+  max-width:100%;
+}
+
+button,
+input,
+select,
+textarea{
+  font:inherit;
+}
+
+button{
+  cursor:pointer;
+}
+
+.rb-body{
+  min-height:100vh;
 }
 
 .rb-shell{
-  max-width:1100px;
+  max-width:1180px;
   margin:0 auto;
   padding:20px;
+  display:grid;
+  gap:18px;
 }
+
+/* =========================================================
+   TOPBAR
+========================================================= */
 
 .rb-topbar{
   display:flex;
   justify-content:space-between;
   align-items:center;
+  gap:16px;
   padding:16px 20px;
-  border-radius:20px;
+  border-radius:22px;
   background:rgba(255,255,255,.03);
   border:1px solid rgba(255,255,255,.08);
-  margin-bottom:20px;
+  box-shadow:0 12px 30px rgba(0,0,0,.18);
+}
+
+.rb-topbar-left{
+  display:flex;
+  align-items:center;
+  gap:16px;
+  min-width:0;
 }
 
 .rb-brand{
   display:flex;
   gap:10px;
   align-items:center;
+  flex:0 0 auto;
 }
 
 .rb-mark{
-  width:36px;
-  height:36px;
-  border-radius:10px;
+  width:38px;
+  height:38px;
+  border-radius:12px;
   display:grid;
   place-items:center;
   font-weight:800;
-  background:rgba(95,168,255,.18);
+  letter-spacing:.08em;
+  color:#F4F8FC;
+  background:
+    linear-gradient(180deg, rgba(95,168,255,.22), rgba(95,168,255,.10));
+  border:1px solid rgba(255,255,255,.10);
 }
 
 .rb-name{
   font-weight:800;
-  letter-spacing:.12em;
+  letter-spacing:.14em;
+  line-height:1;
 }
 
 .rb-sub{
-  font-size:.7rem;
+  margin-top:4px;
+  font-size:.72rem;
   color:#9fb3c8;
+  text-transform:uppercase;
+  letter-spacing:.12em;
 }
+
+.rb-page-copy{
+  min-width:0;
+}
+
+.rb-page-title{
+  font-size:clamp(1.25rem, 2vw, 1.8rem);
+  font-weight:800;
+  line-height:1.05;
+  letter-spacing:-.03em;
+}
+
+.rb-page-subline{
+  margin-top:5px;
+  color:#9fb3c8;
+  font-size:.94rem;
+}
+
+.rb-topbar-right{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  margin-left:auto;
+  flex:0 0 auto;
+}
+
+.rb-topbar-actions{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  flex-wrap:wrap;
+}
+
+/* =========================================================
+   USER MENU
+========================================================= */
+
+.rb-user-menu{
+  position:relative;
+}
+
+.rb-user-chip{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  min-height:44px;
+  padding:6px 12px 6px 8px;
+  border-radius:999px;
+  border:1px solid rgba(255,255,255,.06);
+  background:rgba(255,255,255,.03);
+  color:#EAF2FA;
+  cursor:pointer;
+}
+
+.rb-user-chip:hover{
+  background:rgba(255,255,255,.05);
+  border-color:rgba(141,167,194,.20);
+}
+
+.rb-avatar{
+  width:30px;
+  height:30px;
+  flex:0 0 30px;
+  display:grid;
+  place-items:center;
+  border-radius:50%;
+  font-weight:800;
+  font-size:.84rem;
+  color:#F4F8FC;
+  background:
+    linear-gradient(180deg, rgba(95,168,255,.24), rgba(95,168,255,.12));
+  border:1px solid rgba(255,255,255,.10);
+}
+
+.rb-user-dropdown{
+  position:absolute;
+  right:0;
+  top:calc(100% + 10px);
+  min-width:210px;
+  padding:10px;
+  border-radius:18px;
+  border:1px solid rgba(255,255,255,.08);
+  background:
+    linear-gradient(180deg, rgba(18,25,35,.98), rgba(12,18,27,.99));
+  box-shadow:0 20px 45px rgba(0,0,0,.28);
+  opacity:0;
+  visibility:hidden;
+  transform:translateY(8px);
+  transition:.2s ease;
+  z-index:50;
+}
+
+.rb-user-menu:hover .rb-user-dropdown,
+.rb-user-menu:focus-within .rb-user-dropdown{
+  opacity:1;
+  visibility:visible;
+  transform:translateY(0);
+}
+
+.rb-user-dropdown a{
+  display:flex;
+  align-items:center;
+  min-height:42px;
+  padding:10px 12px;
+  border-radius:12px;
+  color:#d9e6f3;
+}
+
+.rb-user-dropdown a:hover{
+  background:rgba(255,255,255,.04);
+  color:#fff;
+}
+
+.rb-user-dropdown a.danger{
+  color:#f0c7c7;
+}
+
+.rb-user-dropdown a.danger:hover{
+  background:rgba(196,99,99,.12);
+  color:#fff;
+}
+
+.rb-divider{
+  height:1px;
+  margin:8px 4px;
+  background:rgba(255,255,255,.08);
+}
+
+/* =========================================================
+   NAV
+========================================================= */
+
+.rb-nav{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  padding:10px 12px;
+  border-radius:18px;
+  background:rgba(255,255,255,.025);
+  border:1px solid rgba(255,255,255,.06);
+}
+
+.rb-nav-link{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-height:38px;
+  padding:0 14px;
+  border-radius:999px;
+  color:#c9d9e8;
+  font-size:.92rem;
+  font-weight:600;
+  border:1px solid transparent;
+}
+
+.rb-nav-link:hover{
+  background:rgba(255,255,255,.05);
+  color:#fff;
+}
+
+.rb-nav-link.active{
+  background:rgba(95,168,255,.14);
+  color:#fff;
+  border-color:rgba(141,167,194,.24);
+}
+
+/* =========================================================
+   FLASHES
+========================================================= */
+
+.rb-flashes{
+  display:grid;
+  gap:10px;
+}
+
+.rb-alert{
+  padding:14px 16px;
+  border-radius:14px;
+  border:1px solid rgba(255,255,255,.07);
+  background:rgba(255,255,255,.03);
+  color:#d9e6f3;
+}
+
+.rb-alert.success{
+  color:#d0f3e2;
+  background:rgba(44,182,125,.10);
+  border-color:rgba(44,182,125,.24);
+}
+
+.rb-alert.warning{
+  color:#f1dfb4;
+  background:rgba(209,162,70,.10);
+  border-color:rgba(209,162,70,.24);
+}
+
+.rb-alert.danger,
+.rb-alert.error{
+  color:#f2c7c7;
+  background:rgba(196,99,99,.10);
+  border-color:rgba(196,99,99,.24);
+}
+
+.rb-alert.info,
+.rb-alert.message{
+  color:#d8ebff;
+  background:rgba(95,168,255,.10);
+  border-color:rgba(95,168,255,.24);
+}
+
+/* =========================================================
+   CONTENT + FORMS
+========================================================= */
 
 .rb-content{
   display:grid;
   gap:18px;
+  min-width:0;
+}
+
+.rb-card{
+  background:rgba(255,255,255,.03);
+  border:1px solid rgba(255,255,255,.08);
+  border-radius:22px;
+  box-shadow:0 12px 30px rgba(0,0,0,.18);
+}
+
+.rb-btn{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  min-height:42px;
+  padding:0 16px;
+  border-radius:12px;
+  font-weight:700;
+  border:1px solid transparent;
+  white-space:nowrap;
+}
+
+.rb-btn-sm{
+  min-height:36px;
+  padding:0 12px;
+  font-size:.9rem;
+}
+
+.rb-btn-primary{
+  color:#fff;
+  background:linear-gradient(180deg, #607487 0%, #45586B 100%);
+  border-color:rgba(255,255,255,.08);
+}
+
+.rb-btn-primary:hover{
+  filter:brightness(1.05);
+  transform:translateY(-1px);
+}
+
+.rb-btn-ghost{
+  color:#EAF2FA;
+  background:rgba(255,255,255,.03);
+  border-color:rgba(255,255,255,.06);
+}
+
+.rb-btn-ghost:hover{
+  background:rgba(255,255,255,.05);
+  border-color:rgba(141,167,194,.22);
+}
+
+input,
+select,
+textarea{
+  width:100%;
+  border:none;
+  outline:none;
+  color:#EAF2FA;
+  background:rgba(255,255,255,.03);
+  border:1px solid rgba(255,255,255,.07);
+  border-radius:14px;
+  padding:12px 14px;
+  transition:.2s ease;
+}
+
+input::placeholder,
+textarea::placeholder{
+  color:rgba(255,255,255,.42);
+}
+
+input:focus,
+select:focus,
+textarea:focus{
+  border-color:rgba(141,167,194,.34);
+  background:rgba(255,255,255,.05);
+  box-shadow:0 0 0 4px rgba(95,168,255,.12);
+}
+
+textarea{
+  min-height:120px;
+  resize:vertical;
+}
+
+.rb-table-wrap{
+  overflow:auto;
+}
+
+.rb-table{
+  width:100%;
+  border-collapse:collapse;
+}
+
+.rb-table th,
+.rb-table td{
+  text-align:left;
+  padding:12px 10px;
+  border-bottom:1px solid rgba(255,255,255,.08);
+  font-size:14px;
+}
+
+.rb-table th{
+  color:#9fb3c8;
+  text-transform:uppercase;
+  letter-spacing:.08em;
+  font-size:12px;
+}
+
+/* =========================================================
+   RESPONSIVE
+========================================================= */
+
+@media (max-width: 920px){
+  .rb-topbar{
+    flex-direction:column;
+    align-items:stretch;
+  }
+
+  .rb-topbar-left,
+  .rb-topbar-right{
+    width:100%;
+  }
+
+  .rb-topbar-right{
+    justify-content:space-between;
+    margin-left:0;
+  }
+}
+
+@media (max-width: 640px){
+  .rb-shell{
+    padding:14px;
+  }
+
+  .rb-topbar{
+    padding:14px 16px;
+    border-radius:18px;
+  }
+
+  .rb-topbar-left{
+    flex-direction:column;
+    align-items:flex-start;
+  }
+
+  .rb-topbar-right{
+    flex-direction:column;
+    align-items:stretch;
+  }
+
+  .rb-topbar-actions{
+    width:100%;
+    justify-content:flex-start;
+  }
+
+  .rb-user-chip{
+    width:100%;
+    justify-content:flex-start;
+  }
+
+  .rb-user-dropdown{
+    right:auto;
+    left:0;
+    min-width:100%;
+  }
+
+  .rb-nav{
+    gap:8px;
+    padding:10px;
+  }
+
+  .rb-nav-link{
+    width:100%;
+    justify-content:flex-start;
+    border-radius:14px;
+  }
 }
