@@ -1230,41 +1230,49 @@ def notifications_settings():
 @role_required("investor")
 def create_profile():
     from LoanMVP.forms.investor_forms import InvestorProfileForm
-    form = InvestorProfileForm()
+
+    existing = InvestorProfile.query.filter_by(user_id=current_user.id).first()
+
+    if existing:
+        form = InvestorProfileForm(obj=existing)
+    else:
+        form = InvestorProfileForm()
 
     if form.validate_on_submit():
-        ip = InvestorProfile(
-            user_id=current_user.id,
-            full_name=form.full_name.data,
-            email=form.email.data,
-            phone=form.phone.data,
-            address=form.address.data,
-            city=form.city.data,
-            state=form.state.data,
-            zip_code=form.zip_code.data,
-            employment_status=form.employment_status.data,
-            annual_income=form.annual_income.data,
-            credit_score=form.credit_score.data,
+        if existing:
+            ip = existing
+        else:
+            ip = InvestorProfile(user_id=current_user.id)
+            db.session.add(ip)
 
-            strategy=form.strategy.data,
-            experience_level=form.experience_level.data,
-            target_markets=form.target_markets.data,
-            property_types=form.property_types.data,
-            min_price=form.min_price.data,
-            max_price=form.max_price.data,
-            min_sqft=form.min_sqft.data,
-            max_sqft=form.max_sqft.data,
-            capital_available=form.capital_available.data,
-            min_cash_on_cash=form.min_cash_on_cash.data,
-            min_roi=form.min_roi.data,
-            timeline_days=form.timeline_days.data,
-            risk_tolerance=form.risk_tolerance.data,
-        )
+        ip.full_name = form.full_name.data
+        ip.email = form.email.data
+        ip.phone = form.phone.data
+        ip.address = form.address.data
+        ip.city = form.city.data
+        ip.state = form.state.data
+        ip.zip_code = form.zip_code.data
+        ip.employment_status = form.employment_status.data
+        ip.annual_income = form.annual_income.data
+        ip.credit_score = form.credit_score.data
 
-        db.session.add(ip)
+        ip.strategy = form.strategy.data
+        ip.experience_level = form.experience_level.data
+        ip.target_markets = form.target_markets.data
+        ip.property_types = form.property_types.data
+        ip.min_price = form.min_price.data
+        ip.max_price = form.max_price.data
+        ip.min_sqft = form.min_sqft.data
+        ip.max_sqft = form.max_sqft.data
+        ip.capital_available = form.capital_available.data
+        ip.min_cash_on_cash = form.min_cash_on_cash.data
+        ip.min_roi = form.min_roi.data
+        ip.timeline_days = form.timeline_days.data
+        ip.risk_tolerance = form.risk_tolerance.data
+
         db.session.commit()
 
-        flash("Investor profile created successfully!", "success")
+        flash("Investor profile saved successfully!", "success")
         return redirect(url_for("investor.command_center"))
 
     return render_template(
