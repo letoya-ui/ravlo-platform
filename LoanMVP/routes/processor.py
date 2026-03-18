@@ -1054,6 +1054,7 @@ def processor_reply(data):
 
 
 @processor_bp.route("/file/<int:loan_id>")
+@login_required
 @role_required("processor")
 def file_review(loan_id):
     """Unified Processor Loan File Review — Command Center"""
@@ -1064,15 +1065,27 @@ def file_review(loan_id):
     # Documents
     # ------------------------------
     docs = LoanDocument.query.filter_by(loan_id=loan.id).all()
-    docs_pending = [d for d in docs if d.status.lower() in ["pending", "requested"]]
-    docs_verified = [d for d in docs if d.status.lower() == "verified"]
+    docs_pending = [
+        d for d in docs
+        if (d.status or "").strip().lower() in ["pending", "requested", "under review", "uploaded"]
+    ]
+    docs_verified = [
+        d for d in docs
+        if (d.status or "").strip().lower() == "verified"
+    ]
 
     # ------------------------------
     # Conditions
     # ------------------------------
     conditions = UnderwritingCondition.query.filter_by(loan_id=loan.id).all()
-    cond_open = [c for c in conditions if c.status.lower() == "open"]
-    cond_cleared = [c for c in conditions if c.status.lower() == "cleared"]
+    cond_open = [
+        c for c in conditions
+        if (c.status or "").strip().lower() in ["open", "pending", "requested"]
+    ]
+    cond_cleared = [
+        c for c in conditions
+        if (c.status or "").strip().lower() in ["cleared", "verified", "complete", "completed"]
+    ]
 
     # ------------------------------
     # Payments
@@ -1080,9 +1093,36 @@ def file_review(loan_id):
     payments = PaymentRecord.query.filter_by(loan_id=loan.id).all()
 
     # ------------------------------
+    # Credit + Ratios
+    # ------------------------------
+    credit = None
+    ratios = None
+
+    try:
+        if hasattr(borrower, "credit_reports") and borrower.credit_reports:
+            credit = borrower.credit_reports[-1]
+        elif hasattr(borrower, "credit_profiles") and borrower.credit_profiles:
+            credit = borrower.credit_profiles[-1]
+    except Exception as e:
+        print("Error loading credit profile:", e)
+        credit = None
+
+    try:
+        ratios = calculate_dti_ltv(borrower, loan, credit)
+    except Exception as e:
+        print("Error calculating DTI/LTV:", e)
+        ratios = {
+            "front_end_dti": None,
+            "back_end_dti": None,
+            "ltv": None,
+            "monthly_debts": 0,
+            "income_total": 0,
+        }
+
+    # ------------------------------
     # AI Summary
     # ------------------------------
-    ai_summary = loan.ai_summary
+    ai_summary = getattr(loan, "ai_summary", None)
 
     return render_template(
         "processor/file_review.html",
@@ -1093,8 +1133,10 @@ def file_review(loan_id):
         cond_open=cond_open,
         cond_cleared=cond_cleared,
         payments=payments,
+        credit=credit,
+        ratios=ratios,
         ai_summary=ai_summary,
-        title=f"Loan File Review — {borrower.full_name}"
+        title=f"Loan File Review — {borrower.full_name or 'Borrower'}"
     )
 
 def calculate_dti_ltv(borrower, loan, credit):
