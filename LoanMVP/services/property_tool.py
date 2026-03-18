@@ -70,6 +70,13 @@ def _listing_photo(listing: dict):
                 if isinstance(url, str) and url.strip():
                     return url.strip()
 
+    for key in ("media", "assets", "listing", "property", "details"):
+        nested = listing.get(key)
+        if isinstance(nested, dict):
+            nested_photo = _listing_photo(nested)
+            if nested_photo:
+                return nested_photo
+
     return None
     
 def _estimate_rehab_from_score(score: int, sqft: float | None) -> float:
