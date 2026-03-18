@@ -314,19 +314,23 @@ def search_deals_for_zip(
 
         photo = _listing_photo(l)
 
-        if not photo and addr and idx < 8:
-            try:
-                bundle = resolve_rentcast_investor_bundle(
-                    address=addr,
-                    beds=beds,
-                    baths=baths,
-                    sqft=sqft,
-                    property_type=l.get("propertyType") or l.get("propertySubType"),
-                )
-                if bundle.get("status") == "ok":
-                    photo = (bundle.get("property") or {}).get("primary_photo")
-            except Exception:
-                photo = None
+       if not photo and addr and idx < 8:
+           try:
+               bundle = resolve_rentcast_investor_bundle(
+               address=addr,
+               beds=beds,
+               baths=baths,
+               sqft=sqft,
+               property_type=l.get("propertyType") or l.get("propertySubType"),
+            )
+            if bundle.get("status") == "ok":
+               photo = (bundle.get("property") or {}).get("primary_photo")
+        except Exception:
+            photo = None
+
+        #🔥 FINAL FALLBACK (always show something)
+        if not photo:
+        photo = "/static/images/placeholder_property.jpg"
 
         if min_roi is not None and metrics.get("roi") is not None:
             if float(metrics["roi"]) < float(min_roi):
