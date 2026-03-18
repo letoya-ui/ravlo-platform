@@ -219,10 +219,10 @@ def search_deals_for_zip(
         z = (l.get("zipCode") or zip_code or "").strip()
 
         price = _as_float(l.get("price"))
-        beds = safe_int(l.get("bedrooms") or l.get("beds"))
+        beds = _safe_int(l.get("bedrooms") or l.get("beds"))
         baths = safe_float(l.get("bathrooms") or l.get("baths"))
         sqft = _as_float(l.get("squareFootage") or l.get("sqft"))
-        year_built = safe_int(l.get("yearBuilt") or l.get("year_built"))
+        year_built = _safe_int(l.get("yearBuilt") or l.get("year_built"))
         remarks = l.get("description") or l.get("remarks") or ""
 
         fixer_score = _keyword_fixer_score(remarks)
