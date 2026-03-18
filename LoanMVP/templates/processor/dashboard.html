@@ -1,72 +1,192 @@
 {% extends "layouts/Ravlo_lending_base.html" %}
-{% block title %}Processor Dashboard{% endblock %}
+{% block title %}Processor Command Center{% endblock %}
 
-{% block page_title %}Processor Dashboard{% endblock %}
+{% block page_title %}Processor Command Center{% endblock %}
 {% block page_subline %}
-Review capital submissions, track conditions, and move files toward underwriting readiness.
+Review submissions, verify documents, clear conditions, and move files toward underwriting readiness.
 {% endblock %}
 
 {% block content %}
 
-<div class="dashboard-shell">
+<div class="processor-shell">
 
-  <!-- STATS -->
-  <div class="stats-grid">
-    <div class="stat-card">
-      <div class="stat-value">{{ stats.total_loans or 0 }}</div>
-      <div class="stat-label">Pipeline Loans</div>
+  <!-- HERO -->
+  <section class="processor-hero">
+    <div class="processor-hero-copy">
+      <div class="eyebrow">LENDING OS</div>
+      <h2>Operational visibility across every active file.</h2>
+      <p>
+        Stay ahead of conditions, borrower uploads, and underwriting handoff with a cleaner processing workflow.
+      </p>
     </div>
 
-    <div class="stat-card">
-      <div class="stat-value">{{ stats.capital_requests or 0 }}</div>
-      <div class="stat-label">Capital Requests</div>
-    </div>
-
-    <div class="stat-card">
-      <div class="stat-value">{{ stats.submitted or 0 }}</div>
-      <div class="stat-label">Submitted</div>
-    </div>
-
-    <div class="stat-card">
-      <div class="stat-value">{{ stats.in_review or 0 }}</div>
-      <div class="stat-label">In Review</div>
-    </div>
-
-    <div class="stat-card">
-      <div class="stat-value">{{ stats.pending_conditions or 0 }}</div>
-      <div class="stat-label">Conditions Pending</div>
-    </div>
-
-    <div class="stat-card">
-      <div class="stat-value">{{ stats.pending_docs or 0 }}</div>
-      <div class="stat-label">Pending Docs</div>
-    </div>
-  </div>
-
-  <!-- AI SUMMARY -->
-  <section class="dashboard-card">
-    <div class="section-head">
-      <div>
-        <div class="eyebrow">AI SUMMARY</div>
-        <h3>Processor Workload Overview</h3>
-      </div>
-    </div>
-
-    <div class="ai-summary">
-      {{ ai_summary or "AI summary unavailable." }}
+    <div class="processor-hero-actions">
+      <a href="{{ url_for('processor.loan_queue') }}" class="ravlo-btn ghost">Open Queue</a>
+      <a href="{{ url_for('processor.documents') }}" class="ravlo-btn ghost">Documents</a>
+      <a href="{{ url_for('processor.verify_docs') }}" class="ravlo-btn primary">Verify Docs</a>
     </div>
   </section>
 
-  <!-- CAPITAL QUEUE -->
-  <section class="dashboard-card">
-    <div class="section-head">
-      <div>
-        <div class="eyebrow">CAPITAL SUBMISSIONS</div>
-        <h3>Capital Submission Queue</h3>
+  <!-- KPI GRID -->
+  <section class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-label">Pipeline Loans</div>
+      <div class="stat-value">{{ stats.total_loans or 0 }}</div>
+      <div class="stat-foot">All active files in processor view</div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-label">Capital Requests</div>
+      <div class="stat-value">{{ stats.capital_requests or 0 }}</div>
+      <div class="stat-foot">Investor-facing submissions in queue</div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-label">Submitted</div>
+      <div class="stat-value">{{ stats.submitted or 0 }}</div>
+      <div class="stat-foot">New files waiting to advance</div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-label">In Review</div>
+      <div class="stat-value">{{ stats.in_review or 0 }}</div>
+      <div class="stat-foot">Currently being processed</div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-label">Conditions Pending</div>
+      <div class="stat-value">{{ stats.pending_conditions or 0 }}</div>
+      <div class="stat-foot">Need follow-up or document resolution</div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-label">Pending Docs</div>
+      <div class="stat-value">{{ stats.pending_docs or 0 }}</div>
+      <div class="stat-foot">Documents awaiting processor review</div>
+    </div>
+  </section>
+
+  <!-- AI + OPS -->
+  <section class="ops-grid">
+    <div class="dashboard-card">
+      <div class="section-head">
+        <div>
+          <div class="eyebrow">AI SUMMARY</div>
+          <h3>Processor Workload Overview</h3>
+        </div>
+      </div>
+
+      <div class="ai-summary">
+        {{ ai_summary or "AI summary unavailable." }}
       </div>
     </div>
 
-    {% if capital_loans %}
+    <div class="dashboard-card">
+      <div class="section-head">
+        <div>
+          <div class="eyebrow">QUICK ACTIONS</div>
+          <h3>Operations Panel</h3>
+        </div>
+      </div>
+
+      <div class="quick-actions">
+        <a href="{{ url_for('processor.loan_queue') }}" class="quick-action-card">
+          <span class="qa-title">Loan Queue</span>
+          <span class="qa-sub">Review all assigned and active files</span>
+        </a>
+
+        <a href="{{ url_for('processor.documents') }}" class="quick-action-card">
+          <span class="qa-title">Document Pipeline</span>
+          <span class="qa-sub">Manage uploads, flags, and document flow</span>
+        </a>
+
+        <a href="{{ url_for('processor.verify_docs') }}" class="quick-action-card">
+          <span class="qa-title">Verification Center</span>
+          <span class="qa-sub">Approve, reject, and resolve pending docs</span>
+        </a>
+
+        <a href="{{ url_for('processor.reports') }}" class="quick-action-card">
+          <span class="qa-title">Reports & Insights</span>
+          <span class="qa-sub">View processor activity and pipeline metrics</span>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- PRIORITY + BOTTLENECKS -->
+  <section class="ops-grid">
+    <div class="dashboard-card">
+      <div class="section-head">
+        <div>
+          <div class="eyebrow">PRIORITY QUEUE</div>
+          <h3>Capital Submission Queue</h3>
+        </div>
+      </div>
+
+      {% if capital_loans %}
+        <div class="priority-list">
+          {% for loan in capital_loans[:6] %}
+          <a href="{{ url_for('processor.file_review', loan_id=loan.id) }}" class="priority-row">
+            <div class="priority-main">
+              <div class="priority-title">
+                {{ loan.borrower_profile.full_name if loan.borrower_profile else "Unknown Borrower" }}
+              </div>
+              <div class="priority-sub">
+                {{ loan.property_address or "No property address" }}
+              </div>
+            </div>
+
+            <div class="priority-meta">
+              <div class="priority-pill">{{ loan.status or "—" }}</div>
+              <div class="priority-amount">${{ "{:,.0f}".format(loan.amount or 0) }}</div>
+            </div>
+          </a>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="empty-state-inline">No capital applications in queue.</div>
+      {% endif %}
+    </div>
+
+    <div class="dashboard-card">
+      <div class="section-head">
+        <div>
+          <div class="eyebrow">BOTTLENECKS</div>
+          <h3>What Needs Attention</h3>
+        </div>
+      </div>
+
+      <div class="signal-stack">
+        <div class="signal-row">
+          <span class="signal-name">Pending Documents</span>
+          <span class="signal-value">{{ stats.pending_docs or 0 }}</span>
+        </div>
+        <div class="signal-row">
+          <span class="signal-name">Conditions Pending</span>
+          <span class="signal-value">{{ stats.pending_conditions or 0 }}</span>
+        </div>
+        <div class="signal-row">
+          <span class="signal-name">Files In Review</span>
+          <span class="signal-value">{{ stats.in_review or 0 }}</span>
+        </div>
+        <div class="signal-row">
+          <span class="signal-name">Recently Submitted</span>
+          <span class="signal-value">{{ stats.submitted or 0 }}</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ACTIVE PIPELINE TABLE -->
+  <section class="dashboard-card">
+    <div class="section-head">
+      <div>
+        <div class="eyebrow">ACTIVE PIPELINE</div>
+        <h3>All Active Files</h3>
+      </div>
+    </div>
+
+    {% if loans %}
       <div class="table-wrap">
         <table class="dashboard-table">
           <thead>
@@ -76,19 +196,15 @@ Review capital submissions, track conditions, and move files toward underwriting
               <th>Loan Type</th>
               <th>Amount</th>
               <th>Status</th>
-              <th>Submitted</th>
-              <th></th>
+              <th>Created</th>
+              <th>Action</th>
             </tr>
           </thead>
           <tbody>
-            {% for loan in capital_loans %}
+            {% for loan in loans %}
             <tr>
               <td>
-                {% if loan.borrower_profile %}
-                  {{ loan.borrower_profile.full_name or "Unknown" }}
-                {% else %}
-                  Unknown
-                {% endif %}
+                {{ loan.borrower_profile.full_name if loan.borrower_profile else "Unknown" }}
               </td>
               <td>{{ loan.property_address or "—" }}</td>
               <td>{{ loan.loan_type or "—" }}</td>
@@ -98,47 +214,14 @@ Review capital submissions, track conditions, and move files toward underwriting
               </td>
               <td>{{ loan.created_at.strftime('%b %d, %Y') if loan.created_at else "—" }}</td>
               <td>
-                <a href="{{ url_for('processor.loan_review', loan_id=loan.id) }}" class="ravlo-btn ghost sm">
-                  Review
+                <a href="{{ url_for('processor.file_review', loan_id=loan.id) }}" class="ravlo-btn ghost sm">
+                  Open File
                 </a>
               </td>
             </tr>
             {% endfor %}
           </tbody>
         </table>
-      </div>
-    {% else %}
-      <div class="empty-state-inline">No capital applications in queue.</div>
-    {% endif %}
-  </section>
-
-  <!-- PIPELINE LIST -->
-  <section class="dashboard-card">
-    <div class="section-head">
-      <div>
-        <div class="eyebrow">PROCESSING PIPELINE</div>
-        <h3>All Active Files</h3>
-      </div>
-    </div>
-
-    {% if loans %}
-      <div class="mini-list">
-        {% for loan in loans %}
-        <a href="{{ url_for('processor.loan_review', loan_id=loan.id) }}" class="mini-row">
-          <div>
-            <div class="mini-title">{{ loan.property_address or "Unnamed Property" }}</div>
-            <div class="mini-sub">
-              {{ loan.loan_type or "Loan" }}
-              {% if loan.borrower_profile and loan.borrower_profile.full_name %}
-                • {{ loan.borrower_profile.full_name }}
-              {% endif %}
-            </div>
-          </div>
-          <div class="mini-meta">
-            {{ loan.status or "—" }}
-          </div>
-        </a>
-        {% endfor %}
       </div>
     {% else %}
       <div class="empty-state-inline">No files in the processor pipeline yet.</div>
@@ -148,9 +231,41 @@ Review capital submissions, track conditions, and move files toward underwriting
 </div>
 
 <style>
-.dashboard-shell{
+.processor-shell{
   display:grid;
   gap:20px;
+}
+
+.processor-hero{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-end;
+  gap:20px;
+  flex-wrap:wrap;
+  padding:24px;
+  border-radius:24px;
+  border:1px solid rgba(255,255,255,.08);
+  background:
+    radial-gradient(900px 500px at 10% 0%, rgba(88,140,255,.14), transparent 50%),
+    rgba(255,255,255,.03);
+}
+
+.processor-hero-copy h2{
+  margin:6px 0 10px;
+  font-size:clamp(1.5rem, 2.4vw, 2.2rem);
+}
+
+.processor-hero-copy p{
+  margin:0;
+  max-width:760px;
+  color:var(--muted);
+  line-height:1.7;
+}
+
+.processor-hero-actions{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
 }
 
 .stats-grid{
@@ -166,16 +281,31 @@ Review capital submissions, track conditions, and move files toward underwriting
   border:1px solid rgba(255,255,255,.08);
 }
 
+.stat-label{
+  font-size:12px;
+  color:var(--muted);
+  text-transform:uppercase;
+  letter-spacing:.06em;
+}
+
 .stat-value{
-  font-size:28px;
+  margin-top:10px;
+  font-size:30px;
   font-weight:800;
   color:var(--text);
 }
 
-.stat-label{
-  margin-top:6px;
-  font-size:13px;
+.stat-foot{
+  margin-top:8px;
+  font-size:12px;
   color:var(--muted);
+  line-height:1.5;
+}
+
+.ops-grid{
+  display:grid;
+  grid-template-columns:1.35fr .95fr;
+  gap:20px;
 }
 
 .dashboard-card{
@@ -207,7 +337,125 @@ Review capital submissions, track conditions, and move files toward underwriting
 
 .ai-summary{
   color:var(--text);
-  line-height:1.65;
+  line-height:1.75;
+  white-space:pre-line;
+}
+
+.quick-actions{
+  display:grid;
+  gap:12px;
+}
+
+.quick-action-card{
+  display:block;
+  padding:14px 16px;
+  border-radius:16px;
+  border:1px solid rgba(255,255,255,.08);
+  background:rgba(255,255,255,.02);
+  text-decoration:none;
+  transition:.2s ease;
+}
+
+.quick-action-card:hover,
+.priority-row:hover{
+  transform:translateY(-1px);
+  border-color:rgba(120,160,255,.28);
+  background:rgba(255,255,255,.04);
+}
+
+.qa-title{
+  display:block;
+  color:var(--text);
+  font-weight:700;
+  font-size:14px;
+}
+
+.qa-sub{
+  display:block;
+  margin-top:4px;
+  color:var(--muted);
+  font-size:13px;
+  line-height:1.5;
+}
+
+.priority-list{
+  display:grid;
+  gap:12px;
+}
+
+.priority-row{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:14px;
+  padding:14px 16px;
+  border-radius:16px;
+  background:rgba(255,255,255,.02);
+  border:1px solid rgba(255,255,255,.08);
+  text-decoration:none;
+  transition:.2s ease;
+}
+
+.priority-title{
+  color:var(--text);
+  font-weight:700;
+  font-size:14px;
+}
+
+.priority-sub{
+  margin-top:4px;
+  color:var(--muted);
+  font-size:13px;
+}
+
+.priority-meta{
+  display:grid;
+  gap:8px;
+  justify-items:end;
+}
+
+.priority-amount{
+  color:var(--text);
+  font-weight:700;
+  font-size:13px;
+}
+
+.priority-pill,
+.status-pill{
+  display:inline-flex;
+  align-items:center;
+  padding:6px 10px;
+  border-radius:999px;
+  background:rgba(107,127,147,.16);
+  border:1px solid rgba(107,127,147,.28);
+  font-size:12px;
+  color:var(--text);
+}
+
+.signal-stack{
+  display:grid;
+  gap:12px;
+}
+
+.signal-row{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  padding:12px 14px;
+  border-radius:14px;
+  background:rgba(255,255,255,.02);
+  border:1px solid rgba(255,255,255,.08);
+}
+
+.signal-name{
+  color:var(--muted);
+  font-size:13px;
+}
+
+.signal-value{
+  color:var(--text);
+  font-size:15px;
+  font-weight:800;
 }
 
 .table-wrap{
@@ -234,50 +482,6 @@ Review capital submissions, track conditions, and move files toward underwriting
   letter-spacing:.06em;
 }
 
-.status-pill{
-  display:inline-flex;
-  padding:6px 10px;
-  border-radius:999px;
-  background:rgba(107,127,147,.16);
-  border:1px solid rgba(107,127,147,.28);
-  font-size:12px;
-}
-
-.mini-list{
-  display:grid;
-  gap:12px;
-}
-
-.mini-row{
-  display:flex;
-  justify-content:space-between;
-  align-items:flex-start;
-  gap:14px;
-  padding:14px 16px;
-  border-radius:16px;
-  background:rgba(255,255,255,.03);
-  border:1px solid rgba(255,255,255,.08);
-  text-decoration:none;
-}
-
-.mini-title{
-  color:var(--text);
-  font-weight:700;
-  font-size:14px;
-}
-
-.mini-sub{
-  margin-top:4px;
-  color:var(--muted);
-  font-size:13px;
-}
-
-.mini-meta{
-  color:var(--muted);
-  font-size:13px;
-  white-space:nowrap;
-}
-
 .empty-state-inline{
   padding:16px;
   border-radius:14px;
@@ -290,21 +494,29 @@ Review capital submissions, track conditions, and move files toward underwriting
   .stats-grid{
     grid-template-columns:repeat(3, minmax(0, 1fr));
   }
+
+  .ops-grid{
+    grid-template-columns:1fr;
+  }
 }
 
 @media (max-width: 700px){
   .stats-grid{
     grid-template-columns:repeat(2, minmax(0, 1fr));
   }
+
+  .priority-row{
+    flex-direction:column;
+  }
+
+  .priority-meta{
+    justify-items:start;
+  }
 }
 
 @media (max-width: 560px){
   .stats-grid{
     grid-template-columns:1fr;
-  }
-
-  .mini-row{
-    flex-direction:column;
   }
 }
 </style>
