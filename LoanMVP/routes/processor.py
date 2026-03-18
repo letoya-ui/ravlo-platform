@@ -1,15 +1,15 @@
 # =========================================================
 # ⚙️ LoanMVP Processor Routes — 2025 Unified Final Version
 # =========================================================
-
+import os
 from flask import (
     Blueprint, render_template, request, redirect,
     url_for, flash, jsonify, current_app, send_from_directory
 )
 from flask_login import login_required, current_user
 from datetime import datetime
-import os
-from datetime import datetime
+fromwerkzeug.utils improt secure_filename
+
 # ✅ Always import db before model files
 from LoanMVP.extensions import db, csrf
 
@@ -170,7 +170,7 @@ def dashboard():
         pending_docs=pending_docs,
         stats=stats,
         ai_summary=ai_summary,
-        title="Processor Dashboard"
+        title="Processor Command Center"
     )
 
 # ---------------------------------------------------------
@@ -362,7 +362,7 @@ def request_document(loan_id):
         new_req = DocumentRequest(
             borrower_id=loan.borrower_profile_id,
             loan_id=loan.id,
-            name=doc_name,
+            document_name=doc_name,
             status="requested",
             notes=notes
         )
