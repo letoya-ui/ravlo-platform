@@ -27,7 +27,11 @@ def _as_float(x):
         return float(x)
     except Exception:
         return None
-
+def _safe_int(x):
+    try:
+        return int(float(x))
+    except Exception:
+        return None
 
 def _keyword_fixer_score(text: str) -> int:
     if not text:
