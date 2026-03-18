@@ -314,9 +314,7 @@ function renderCards(results){
     return `
       <article class="ravlo-card pad dfv2-card">
         <div class="dfv2-thumb">
-          ${payloadObj.photo
-            ? `<img src="${payloadObj.photo}" alt="Property photo">`
-            : `<div class="dfv2-noimg">No Photo</div>`}
+          <img src="${payloadObj.photo || '/static/images/placeholder_property.jpg'}" alt="Property photo">
           <div class="dfv2-score-badge ${tone}">
             ${score}${r?.deal_score?.score ? ` • ${r.deal_score.score}` : ""}
           </div>
