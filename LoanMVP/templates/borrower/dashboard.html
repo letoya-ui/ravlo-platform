@@ -1,360 +1,608 @@
 {# templates/borrower/dashboard.html #}
-{% extends "layouts/Ravlo_lending_base.html" %}
+{% extends "layouts/ravlo_borrower_base.html" %}
 {% block title %}Borrower Dashboard • Ravlo{% endblock %}
-
-{% block page_title %}Borrower Dashboard{% endblock %}
-{% block page_subline %}
-Track your application, upload documents, and stay on top of next steps.
-{% endblock %}
 
 {% block content %}
 
-<section class="ravlo-grid" style="display:grid;grid-template-columns:2fr 1fr;gap:20px;align-items:start;">
+<div class="rb-dashboard">
 
-  <!-- LEFT -->
-  <div style="display:grid;gap:20px;">
+  <!-- HERO -->
+  <section class="rb-hero">
+    <div class="rb-hero-copy">
+      <div class="rb-eyebrow">Borrower OS</div>
+      <h1>
+        Welcome back{% if borrower and borrower.full_name %}, {{ borrower.full_name.split(' ')[0] }}{% endif %}
+      </h1>
+      <p>
+        {% if ai_message %}
+          {{ ai_message }}
+        {% elif loan %}
+          Your active file is in progress. Review your loan details, upload missing documents, and stay on top of conditions.
+        {% else %}
+          Start your funding application to begin tracking your deal, documents, and underwriting progress.
+        {% endif %}
+      </p>
+    </div>
 
-    <!-- HERO / STATUS -->
-    <section class="ravlo-card" style="padding:24px;">
-      <div style="display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap;align-items:flex-start;">
-        <div>
-          <div class="eyebrow" style="font-size:12px;letter-spacing:.12em;text-transform:uppercase;opacity:.75;">
-            Ravlo Borrower
-          </div>
-          <h2 style="margin:8px 0 8px;font-size:28px;">
-            Welcome back{% if borrower and borrower.full_name %}, {{ borrower.full_name.split(' ')[0] }}{% endif %}
-          </h2>
-          <p class="muted" style="margin:0;max-width:720px;">
-            {% if ai_message %}
-              {{ ai_message }}
-            {% elif loan %}
-              Your active file is in progress. Review your loan details, upload any missing documents, and check your conditions.
-            {% else %}
-              Start your funding application to begin tracking your deal, documents, and underwriting progress.
-            {% endif %}
-          </p>
-        </div>
+    <div class="rb-hero-actions">
+      <a href="{{ url_for('borrower.apply') }}" class="rb-btn rb-btn-primary">Apply for Funding</a>
+      <a href="{{ url_for('borrower.upload_document') }}" class="rb-btn rb-btn-ghost">Upload Document</a>
+    </div>
+  </section>
 
-        <div style="display:flex;gap:10px;flex-wrap:wrap;">
-          <a href="{{ url_for('borrower.apply') }}" class="ravlo-btn primary">Apply for Funding</a>
-          <a href="{{ url_for('borrower.upload_document') }}" class="ravlo-btn ghost">Upload Document</a>
-        </div>
+  <!-- STATUS STRIP -->
+  <section class="rb-stat-grid">
+    <div class="rb-stat-card">
+      <div class="rb-stat-label">Active Status</div>
+      <div class="rb-stat-value">{{ loan.status if loan else "No Active Loan" }}</div>
+    </div>
+
+    <div class="rb-stat-card">
+      <div class="rb-stat-label">Loan Type</div>
+      <div class="rb-stat-value">{{ loan.loan_type if loan else "—" }}</div>
+    </div>
+
+    <div class="rb-stat-card">
+      <div class="rb-stat-label">Loan Amount</div>
+      <div class="rb-stat-value">
+        {% if loan and loan.amount %}
+          ${{ "{:,.0f}".format(loan.amount) }}
+        {% else %}
+          —
+        {% endif %}
       </div>
+    </div>
 
-      <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-top:22px;">
-        <div class="mini-stat">
-          <div class="mini-label">Active Status</div>
-          <div class="mini-value">{{ loan.status if loan else "No Active Loan" }}</div>
-        </div>
-        <div class="mini-stat">
-          <div class="mini-label">Loan Type</div>
-          <div class="mini-value">{{ loan.loan_type if loan else "—" }}</div>
-        </div>
-        <div class="mini-stat">
-          <div class="mini-label">Loan Amount</div>
-          <div class="mini-value">
-            {% if loan and loan.amount %}
-              ${{ "{:,.0f}".format(loan.amount) }}
-            {% else %}
-              —
-            {% endif %}
+    <div class="rb-stat-card">
+      <div class="rb-stat-label">Progress</div>
+      <div class="rb-stat-value">{{ progress_percent }}%</div>
+    </div>
+  </section>
+
+  <!-- MAIN GRID -->
+  <section class="rb-main-grid">
+
+    <!-- LEFT -->
+    <div class="rb-col">
+
+      <section class="rb-card">
+        <div class="rb-card-head">
+          <div>
+            <div class="rb-eyebrow">Progress</div>
+            <h3>Application Progress</h3>
           </div>
         </div>
-        <div class="mini-stat">
-          <div class="mini-label">Progress</div>
-          <div class="mini-value">{{ progress_percent }}%</div>
-        </div>
-      </div>
 
-      {% if loan %}
-      <div style="margin-top:18px;">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-          <span class="muted">Application Progress</span>
-          <span class="muted">{{ progress_percent }}%</span>
-        </div>
-        <div style="height:10px;background:rgba(255,255,255,.08);border-radius:999px;overflow:hidden;">
-          <div style="height:100%;width:{{ progress_percent }}%;border-radius:999px;background:linear-gradient(90deg,#6B7F93,#8DA7C2);"></div>
-        </div>
-        <div style="margin-top:10px;font-size:14px;" class="muted">
+        {% if loan %}
+          <div class="rb-progress-row">
+            <span>Your file progress</span>
+            <span>{{ progress_percent }}%</span>
+          </div>
+
+          <div class="rb-progress">
+            <div class="rb-progress-bar" style="width: {{ progress_percent }}%;"></div>
+          </div>
+
           {% if loan.property_address %}
-            Property: {{ loan.property_address }}
+            <div class="rb-card-note">Property: {{ loan.property_address }}</div>
           {% endif %}
-        </div>
-      </div>
-      {% endif %}
-    </section>
+        {% else %}
+          <div class="rb-empty">No active loan yet. Start your first application to begin the funding process.</div>
+        {% endif %}
+      </section>
 
-    <!-- QUICK STATS -->
-    <section style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px;">
-      <div class="ravlo-card" style="padding:18px;">
-        <div class="mini-label">Loans</div>
-        <div class="mini-value" style="font-size:26px;">{{ loans|length }}</div>
-      </div>
-      <div class="ravlo-card" style="padding:18px;">
-        <div class="mini-label">Documents</div>
-        <div class="mini-value" style="font-size:26px;">{{ documents|length }}</div>
-      </div>
-      <div class="ravlo-card" style="padding:18px;">
-        <div class="mini-label">Conditions</div>
-        <div class="mini-value" style="font-size:26px;">{{ conditions|length }}</div>
-      </div>
-      <div class="ravlo-card" style="padding:18px;">
-        <div class="mini-label">Open Conditions</div>
-        <div class="mini-value" style="font-size:26px;">{{ open_conditions|length }}</div>
-      </div>
-    </section>
+      <section class="rb-mini-grid">
+        <div class="rb-card rb-card-mini">
+          <div class="rb-stat-label">Loans</div>
+          <div class="rb-stat-big">{{ loans|length }}</div>
+        </div>
 
-    <!-- ACTIVE LOAN -->
-    <section class="ravlo-card" style="padding:24px;">
-      <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
-        <div>
-          <h3 style="margin:0 0 6px;">Active Loan</h3>
-          <p class="muted" style="margin:0;">Your current application snapshot.</p>
+        <div class="rb-card rb-card-mini">
+          <div class="rb-stat-label">Documents</div>
+          <div class="rb-stat-big">{{ documents|length }}</div>
         </div>
-        <a href="{{ url_for('borrower.loan_center') }}" class="ravlo-btn ghost sm">View All Loans</a>
-      </div>
 
-      {% if loan %}
-      <div style="margin-top:18px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;">
-        <div class="info-block">
-          <div class="mini-label">Loan ID</div>
-          <div class="mini-value">#{{ loan.id }}</div>
+        <div class="rb-card rb-card-mini">
+          <div class="rb-stat-label">Conditions</div>
+          <div class="rb-stat-big">{{ conditions|length }}</div>
         </div>
-        <div class="info-block">
-          <div class="mini-label">Status</div>
-          <div class="mini-value">{{ loan.status or "—" }}</div>
+
+        <div class="rb-card rb-card-mini">
+          <div class="rb-stat-label">Open Conditions</div>
+          <div class="rb-stat-big">{{ open_conditions|length }}</div>
         </div>
-        <div class="info-block">
-          <div class="mini-label">Property Address</div>
-          <div class="mini-value">{{ loan.property_address or "—" }}</div>
+      </section>
+
+      <section class="rb-card">
+        <div class="rb-card-head">
+          <div>
+            <div class="rb-eyebrow">Loan File</div>
+            <h3>Active Loan</h3>
+          </div>
+          <a href="{{ url_for('borrower.loan_center') }}" class="rb-btn rb-btn-ghost rb-btn-sm">View All Loans</a>
         </div>
-        <div class="info-block">
-          <div class="mini-label">Property Value</div>
-          <div class="mini-value">
-            {% if loan.property_value %}
-              ${{ "{:,.0f}".format(loan.property_value) }}
-            {% else %}
-              —
-            {% endif %}
+
+        {% if loan %}
+          <div class="rb-info-grid">
+            <div class="rb-info-block">
+              <div class="rb-stat-label">Loan ID</div>
+              <div class="rb-info-value">#{{ loan.id }}</div>
+            </div>
+
+            <div class="rb-info-block">
+              <div class="rb-stat-label">Status</div>
+              <div class="rb-info-value">{{ loan.status or "—" }}</div>
+            </div>
+
+            <div class="rb-info-block">
+              <div class="rb-stat-label">Property Address</div>
+              <div class="rb-info-value">{{ loan.property_address or "—" }}</div>
+            </div>
+
+            <div class="rb-info-block">
+              <div class="rb-stat-label">Property Value</div>
+              <div class="rb-info-value">
+                {% if loan.property_value %}
+                  ${{ "{:,.0f}".format(loan.property_value) }}
+                {% else %}
+                  —
+                {% endif %}
+              </div>
+            </div>
+          </div>
+
+          <div class="rb-card-actions">
+            <a href="{{ url_for('borrower.loan_view', loan_id=loan.id) }}" class="rb-btn rb-btn-primary rb-btn-sm">
+              Open Loan File
+            </a>
+          </div>
+        {% else %}
+          <div class="rb-empty">No active loan yet.</div>
+        {% endif %}
+      </section>
+
+      <section class="rb-card">
+        <div class="rb-card-head">
+          <div>
+            <div class="rb-eyebrow">Documents</div>
+            <h3>Recent Documents</h3>
+          </div>
+          <a href="{{ url_for('borrower.documents') }}" class="rb-btn rb-btn-ghost rb-btn-sm">View Documents</a>
+        </div>
+
+        {% if documents %}
+          <div class="rb-table-wrap">
+            <table class="rb-table">
+              <thead>
+                <tr>
+                  <th>Document</th>
+                  <th>Type</th>
+                  <th>Status</th>
+                  <th>Uploaded</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for doc in documents[:5] %}
+                <tr>
+                  <td>{{ doc.document_name or doc.file_name or "Untitled Document" }}</td>
+                  <td>{{ doc.document_type or "Other" }}</td>
+                  <td>{{ doc.status or "Pending" }}</td>
+                  <td>{{ doc.created_at.strftime("%b %d, %Y") if doc.created_at else "—" }}</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% else %}
+          <div class="rb-empty">No documents uploaded yet.</div>
+        {% endif %}
+      </section>
+
+    </div>
+
+    <!-- RIGHT -->
+    <div class="rb-col">
+
+      <section class="rb-card">
+        <div class="rb-card-head">
+          <div>
+            <div class="rb-eyebrow">Next Steps</div>
+            <h3>Actions</h3>
           </div>
         </div>
-      </div>
 
-      <div style="margin-top:18px;">
-        <a href="{{ url_for('borrower.loan_view', loan_id=loan.id) }}" class="ravlo-btn primary sm">Open Loan File</a>
-      </div>
-      {% else %}
-      <div style="margin-top:18px;" class="muted">
-        No active loan yet. Start your first application to begin the funding process.
-      </div>
-      {% endif %}
-    </section>
-
-    <!-- RECENT DOCUMENTS -->
-    <section class="ravlo-card" style="padding:24px;">
-      <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
-        <div>
-          <h3 style="margin:0 0 6px;">Recent Documents</h3>
-          <p class="muted" style="margin:0;">Your latest uploaded files.</p>
+        <div class="rb-action-list">
+          <a href="{{ url_for('borrower.apply') }}" class="rb-action-link">Start or update application</a>
+          <a href="{{ url_for('borrower.upload_document') }}" class="rb-action-link">Upload supporting documents</a>
+          <a href="{{ url_for('borrower.conditions') }}" class="rb-action-link">Review conditions</a>
+          <a href="{{ url_for('borrower.messages') }}" class="rb-action-link">Message your team</a>
+          <a href="{{ url_for('borrower.subscription') }}" class="rb-action-link">Manage subscription</a>
         </div>
-        <a href="{{ url_for('borrower.documents') }}" class="ravlo-btn ghost sm">View Documents</a>
-      </div>
+      </section>
 
-      {% if documents %}
-      <div style="margin-top:18px;overflow:auto;">
-        <table class="ravlo-table">
-          <thead>
-            <tr>
-              <th>Document</th>
-              <th>Type</th>
-              <th>Status</th>
-              <th>Uploaded</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for doc in documents[:5] %}
-            <tr>
-              <td>{{ doc.document_name or doc.file_name or "Untitled Document" }}</td>
-              <td>{{ doc.document_type or "Other" }}</td>
-              <td>{{ doc.status or "Pending" }}</td>
-              <td>{{ doc.created_at.strftime("%b %d, %Y") if doc.created_at else "—" }}</td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
-      {% else %}
-      <div style="margin-top:18px;" class="muted">
-        No documents uploaded yet.
-      </div>
-      {% endif %}
-    </section>
+      <section class="rb-card">
+        <div class="rb-card-head">
+          <div>
+            <div class="rb-eyebrow">Checklist</div>
+            <h3>Your Next Items</h3>
+          </div>
+        </div>
 
-  </div>
-
-  <!-- RIGHT -->
-  <div style="display:grid;gap:20px;">
-
-    <!-- NEXT ACTIONS -->
-    <section class="ravlo-card" style="padding:24px;">
-      <h3 style="margin-top:0;">Next Actions</h3>
-      <div style="display:grid;gap:10px;margin-top:14px;">
-        <a href="{{ url_for('borrower.apply') }}" class="action-link">Start / Update Application</a>
-        <a href="{{ url_for('borrower.upload_document') }}" class="action-link">Upload Supporting Documents</a>
-        <a href="{{ url_for('borrower.conditions') }}" class="action-link">Review Conditions</a>
-        <a href="{{ url_for('borrower.messages') }}" class="action-link">Message Your Team</a>
-        <a href="{{ url_for('borrower.subscription') }}" class="action-link">Manage Subscription</a>
-      </div>
-    </section>
-
-    <!-- CHECKLIST -->
-    <section class="ravlo-card" style="padding:24px;">
-      <h3 style="margin-top:0;">Checklist</h3>
-
-      <div style="display:grid;gap:12px;margin-top:14px;">
         {% if checklist_items %}
-          {% for item in checklist_items %}
-          <div class="check-item">
-            <div class="check-dot {% if item.done %}done{% endif %}"></div>
-            <div>{{ item.label }}</div>
+          <div class="rb-checklist">
+            {% for item in checklist_items %}
+            <div class="rb-check-item">
+              <div class="rb-check-dot {% if item.done %}done{% endif %}"></div>
+              <div>{{ item.label }}</div>
+            </div>
+            {% endfor %}
           </div>
-          {% endfor %}
         {% else %}
-          <div class="muted">No checklist items yet.</div>
+          <div class="rb-empty">No checklist items yet.</div>
         {% endif %}
-      </div>
-    </section>
+      </section>
 
-    <!-- OPEN CONDITIONS -->
-    <section class="ravlo-card" style="padding:24px;">
-      <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;">
-        <h3 style="margin:0;">Open Conditions</h3>
-        <a href="{{ url_for('borrower.conditions') }}" class="ravlo-btn ghost sm">View All</a>
-      </div>
+      <section class="rb-card">
+        <div class="rb-card-head">
+          <div>
+            <div class="rb-eyebrow">Conditions</div>
+            <h3>Open Conditions</h3>
+          </div>
+          <a href="{{ url_for('borrower.conditions') }}" class="rb-btn rb-btn-ghost rb-btn-sm">View All</a>
+        </div>
 
-      <div style="display:grid;gap:12px;margin-top:14px;">
         {% if open_conditions %}
-          {% for cond in open_conditions[:4] %}
-          <div class="condition-item">
-            <div style="font-weight:600;">{{ cond.condition_type or "Condition" }}</div>
-            <div class="muted" style="font-size:14px;margin-top:4px;">{{ cond.description }}</div>
-            <div style="margin-top:8px;font-size:13px;opacity:.8;">Status: {{ cond.status }}</div>
+          <div class="rb-condition-list">
+            {% for cond in open_conditions[:4] %}
+            <div class="rb-condition-item">
+              <div class="rb-condition-title">{{ cond.condition_type or "Condition" }}</div>
+              <div class="rb-condition-desc">{{ cond.description }}</div>
+              <div class="rb-condition-meta">Status: {{ cond.status }}</div>
+            </div>
+            {% endfor %}
           </div>
-          {% endfor %}
         {% else %}
-          <div class="muted">No open conditions right now.</div>
+          <div class="rb-empty">No open conditions right now.</div>
         {% endif %}
-      </div>
-    </section>
+      </section>
 
-    <!-- SUBSCRIPTION -->
-    <section class="ravlo-card" style="padding:24px;">
-      <h3 style="margin-top:0;">Plan</h3>
-      <div class="muted" style="margin-top:8px;">
-        Current plan: <strong>{{ borrower.subscription_plan or "Free" }}</strong>
-      </div>
-      <div style="margin-top:14px;">
-        <a href="{{ url_for('borrower.subscription') }}" class="ravlo-btn primary sm">Manage Plan</a>
-      </div>
-    </section>
+      <section class="rb-card">
+        <div class="rb-card-head">
+          <div>
+            <div class="rb-eyebrow">Subscription</div>
+            <h3>Your Plan</h3>
+          </div>
+        </div>
 
-  </div>
+        <div class="rb-plan-copy">
+          Current plan: <strong>{{ borrower.subscription_plan or "Free" }}</strong>
+        </div>
 
-</section>
+        <div class="rb-card-actions">
+          <a href="{{ url_for('borrower.subscription') }}" class="rb-btn rb-btn-primary rb-btn-sm">Manage Plan</a>
+        </div>
+      </section>
+
+    </div>
+  </section>
+
+</div>
 
 <style>
-  .ravlo-card{
-    background: rgba(255,255,255,.03);
-    border: 1px solid rgba(255,255,255,.08);
-    border-radius: 22px;
-    box-shadow: 0 12px 30px rgba(0,0,0,.18);
+.rb-dashboard{
+  display:grid;
+  gap:20px;
+}
+
+.rb-hero{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:18px;
+  flex-wrap:wrap;
+  padding:24px;
+  border-radius:24px;
+  border:1px solid rgba(255,255,255,.08);
+  background:
+    radial-gradient(800px 420px at 10% 0%, rgba(95,168,255,.14), transparent 50%),
+    rgba(255,255,255,.03);
+}
+
+.rb-eyebrow{
+  font-size:12px;
+  letter-spacing:.12em;
+  text-transform:uppercase;
+  opacity:.75;
+}
+
+.rb-hero h1{
+  margin:8px 0;
+  font-size:clamp(1.9rem, 3vw, 2.4rem);
+}
+
+.rb-hero p{
+  margin:0;
+  max-width:760px;
+  color:#9fb3c8;
+  line-height:1.7;
+}
+
+.rb-hero-actions{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+}
+
+.rb-stat-grid{
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:16px;
+}
+
+.rb-stat-card,
+.rb-card{
+  background:rgba(255,255,255,.03);
+  border:1px solid rgba(255,255,255,.08);
+  border-radius:22px;
+  box-shadow:0 12px 30px rgba(0,0,0,.18);
+}
+
+.rb-stat-card{
+  padding:18px;
+}
+
+.rb-stat-label{
+  font-size:12px;
+  text-transform:uppercase;
+  letter-spacing:.08em;
+  opacity:.7;
+  margin-bottom:8px;
+}
+
+.rb-stat-value{
+  font-size:18px;
+  font-weight:700;
+}
+
+.rb-stat-big{
+  font-size:28px;
+  font-weight:800;
+}
+
+.rb-main-grid{
+  display:grid;
+  grid-template-columns:2fr 1fr;
+  gap:20px;
+  align-items:start;
+}
+
+.rb-col{
+  display:grid;
+  gap:20px;
+}
+
+.rb-card{
+  padding:24px;
+}
+
+.rb-card-head{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:12px;
+  flex-wrap:wrap;
+  margin-bottom:16px;
+}
+
+.rb-card-head h3{
+  margin:0 0 6px;
+}
+
+.rb-progress-row{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  margin-bottom:8px;
+  color:#9fb3c8;
+  font-size:14px;
+}
+
+.rb-progress{
+  height:10px;
+  background:rgba(255,255,255,.08);
+  border-radius:999px;
+  overflow:hidden;
+}
+
+.rb-progress-bar{
+  height:100%;
+  border-radius:999px;
+  background:linear-gradient(90deg,#6B7F93,#8DA7C2);
+}
+
+.rb-card-note{
+  margin-top:10px;
+  font-size:14px;
+  color:#9fb3c8;
+}
+
+.rb-mini-grid{
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:16px;
+}
+
+.rb-card-mini{
+  padding:18px;
+}
+
+.rb-info-grid{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:16px;
+}
+
+.rb-info-block{
+  background:rgba(255,255,255,.025);
+  border:1px solid rgba(255,255,255,.06);
+  border-radius:18px;
+  padding:16px;
+}
+
+.rb-info-value{
+  font-size:18px;
+  font-weight:700;
+}
+
+.rb-card-actions{
+  margin-top:18px;
+}
+
+.rb-table-wrap{
+  overflow:auto;
+}
+
+.rb-table{
+  width:100%;
+  border-collapse:collapse;
+}
+
+.rb-table th,
+.rb-table td{
+  text-align:left;
+  padding:12px 10px;
+  border-bottom:1px solid rgba(255,255,255,.08);
+  font-size:14px;
+}
+
+.rb-action-list,
+.rb-checklist,
+.rb-condition-list{
+  display:grid;
+  gap:12px;
+}
+
+.rb-action-link{
+  display:block;
+  padding:12px 14px;
+  border-radius:14px;
+  background:rgba(255,255,255,.03);
+  border:1px solid rgba(255,255,255,.06);
+  transition:.2s ease;
+}
+
+.rb-action-link:hover{
+  background:rgba(255,255,255,.05);
+  border-color:rgba(141,167,194,.22);
+}
+
+.rb-check-item{
+  display:flex;
+  gap:10px;
+  align-items:flex-start;
+}
+
+.rb-check-dot{
+  width:12px;
+  height:12px;
+  border-radius:999px;
+  margin-top:4px;
+  background:rgba(255,255,255,.18);
+  flex:0 0 12px;
+}
+
+.rb-check-dot.done{
+  background:#8DA7C2;
+}
+
+.rb-condition-item{
+  padding:14px;
+  border-radius:16px;
+  background:rgba(255,255,255,.03);
+  border:1px solid rgba(255,255,255,.06);
+}
+
+.rb-condition-title{
+  font-weight:700;
+}
+
+.rb-condition-desc{
+  font-size:14px;
+  margin-top:4px;
+  color:#9fb3c8;
+}
+
+.rb-condition-meta{
+  margin-top:8px;
+  font-size:13px;
+  opacity:.8;
+}
+
+.rb-plan-copy{
+  color:#9fb3c8;
+}
+
+.rb-empty{
+  padding:14px 16px;
+  border-radius:16px;
+  background:rgba(255,255,255,.02);
+  border:1px dashed rgba(255,255,255,.12);
+  color:#9fb3c8;
+}
+
+.rb-btn{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  min-height:42px;
+  padding:0 16px;
+  border-radius:12px;
+  font-weight:700;
+  border:1px solid transparent;
+}
+
+.rb-btn-sm{
+  min-height:36px;
+  padding:0 12px;
+  font-size:.9rem;
+}
+
+.rb-btn-primary{
+  color:#fff;
+  background:linear-gradient(180deg, #607487 0%, #45586B 100%);
+  border-color:rgba(255,255,255,.08);
+}
+
+.rb-btn-ghost{
+  color:#EAF2FA;
+  background:rgba(255,255,255,.03);
+  border-color:rgba(255,255,255,.06);
+}
+
+@media (max-width: 1080px){
+  .rb-main-grid{
+    grid-template-columns:1fr;
+  }
+}
+
+@media (max-width: 780px){
+  .rb-stat-grid,
+  .rb-mini-grid{
+    grid-template-columns:repeat(2,minmax(0,1fr));
   }
 
-  .mini-stat,
-  .info-block{
-    background: rgba(255,255,255,.025);
-    border: 1px solid rgba(255,255,255,.06);
-    border-radius: 18px;
-    padding: 16px;
+  .rb-info-grid{
+    grid-template-columns:1fr;
   }
+}
 
-  .mini-label{
-    font-size: 12px;
-    text-transform: uppercase;
-    letter-spacing: .08em;
-    opacity: .7;
-    margin-bottom: 8px;
+@media (max-width: 560px){
+  .rb-stat-grid,
+  .rb-mini-grid{
+    grid-template-columns:1fr;
   }
-
-  .mini-value{
-    font-size: 18px;
-    font-weight: 700;
-  }
-
-  .ravlo-table{
-    width:100%;
-    border-collapse: collapse;
-  }
-
-  .ravlo-table th,
-  .ravlo-table td{
-    text-align:left;
-    padding:12px 10px;
-    border-bottom:1px solid rgba(255,255,255,.08);
-    font-size:14px;
-  }
-
-  .action-link{
-    display:block;
-    padding:12px 14px;
-    border-radius:14px;
-    text-decoration:none;
-    color:inherit;
-    background:rgba(255,255,255,.03);
-    border:1px solid rgba(255,255,255,.06);
-  }
-
-  .check-item{
-    display:flex;
-    gap:10px;
-    align-items:flex-start;
-  }
-
-  .check-dot{
-    width:12px;
-    height:12px;
-    border-radius:999px;
-    margin-top:4px;
-    background:rgba(255,255,255,.18);
-    flex:0 0 12px;
-  }
-
-  .check-dot.done{
-    background:#8DA7C2;
-  }
-
-  .condition-item{
-    padding:14px;
-    border-radius:16px;
-    background:rgba(255,255,255,.03);
-    border:1px solid rgba(255,255,255,.06);
-  }
-
-  @media (max-width: 1080px){
-    .ravlo-grid{
-      grid-template-columns:1fr !important;
-    }
-  }
-
-  @media (max-width: 780px){
-    section[style*="grid-template-columns:repeat(4"]{
-      grid-template-columns:repeat(2,minmax(0,1fr)) !important;
-    }
-
-    div[style*="grid-template-columns:repeat(2"]{
-      grid-template-columns:1fr !important;
-    }
-  }
+}
 </style>
 
 {% endblock %}
