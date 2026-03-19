@@ -359,7 +359,7 @@ def messages():
     ).order_by(MessageThread.sent_at.desc()).all()
 
     return render_template(
-        "loan_officer/messages_thread.html",
+        "loan_officer/messages.html",
         threads=threads,
         active_page="messages"
     )
@@ -403,7 +403,7 @@ def message_thread(thread_id):
                             .all()
 
     return render_template(
-        "loan_officer/messages/message_thread.html",
+        "loan_officer/messages/message.html",
         thread=thread,
         messages=messages,
         active_page="messages"
@@ -447,7 +447,7 @@ def new_message():
         return redirect(url_for("loan_officer.message_thread", thread_id=thread.id))
 
     return render_template(
-        "loan_officer/messages/new_message.html",
+        "loan_officer/messages.html",
         borrowers=borrowers,
         active_page="messages"
     )
