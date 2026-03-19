@@ -4,67 +4,140 @@
 {% block page_title %}{{ company.name }}{% endblock %}
 {% block page_subline %}Manage team members and pending invites{% endblock %}
 
+{% block topbar_actions %}
+  <a href="{{ url_for('admin.invite_team_member', company_id=company.id) }}" class="re-btn primary sm">
+    <i class="lucide lucide-user-plus"></i>
+    Invite Team Member
+  </a>
+{% endblock %}
+
 {% block content %}
+{% set member_count = team_members|length %}
+{% set invite_count = invites|length %}
+
 <div class="re-grid">
 
-  <section class="re-card">
-    <div class="row between">
-      <h3>Team Members</h3>
-      <a href="{{ url_for('admin.invite_team_member', company_id=company.id) }}" class="btn btn-primary">
+  <section class="re-grid-3">
+    <div class="re-stat">
+      <div class="re-stat-label">Company</div>
+      <div class="re-stat-value" style="font-size:1.05rem;">{{ company.name }}</div>
+      <div class="re-stat-meta">Organization workspace</div>
+    </div>
+
+    <div class="re-stat">
+      <div class="re-stat-label">Team Members</div>
+      <div class="re-stat-value">{{ member_count }}</div>
+      <div class="re-stat-meta">Active assigned users</div>
+    </div>
+
+    <div class="re-stat">
+      <div class="re-stat-label">Pending Invites</div>
+      <div class="re-stat-value">{{ invite_count }}</div>
+      <div class="re-stat-meta">Outstanding registration links</div>
+    </div>
+  </section>
+
+  <section class="re-card pad">
+    <div class="section-head">
+      <div>
+        <div class="eyebrow">TEAM</div>
+        <h3 style="margin:.35rem 0 .2rem;">Team Members</h3>
+        <div class="re-card-subtitle">Current users connected to {{ company.name }}.</div>
+      </div>
+
+      <a href="{{ url_for('admin.invite_team_member', company_id=company.id) }}" class="re-btn primary sm">
+        <i class="lucide lucide-user-plus"></i>
         Invite Team Member
       </a>
     </div>
 
     {% if team_members %}
-      <table class="re-table">
-        <thead>
-          <tr>
-            <th>Name</th>
-            <th>Email</th>
-            <th>Role</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for user in team_members %}
-          <tr>
-            <td>{{ user.first_name }} {{ user.last_name }}</td>
-            <td>{{ user.email }}</td>
-            <td>{{ user.role }}</td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
+      <div class="re-table-wrap mt-16">
+        <table class="re-table">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Email</th>
+              <th>Role</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for user in team_members %}
+            <tr>
+              <td>
+                <div style="display:grid; gap:4px;">
+                  <strong>{{ ((user.first_name or "") ~ " " ~ (user.last_name or "")).strip() or user.username or "Unnamed User" }}</strong>
+                  <span class="text-muted" style="font-size:.82rem;">ID #{{ user.id }}</span>
+                </div>
+              </td>
+              <td>{{ user.email or "—" }}</td>
+              <td>
+                <span class="badge badge-info">
+                  {{ (user.role or "unknown")|replace('_', ' ')|title }}
+                </span>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
     {% else %}
-      <p>No team members added yet.</p>
+      <div class="re-empty mt-16">
+        No team members added yet.
+      </div>
     {% endif %}
   </section>
 
-  <section class="re-card">
-    <h3>Pending Invites</h3>
+  <section class="re-card pad">
+    <div class="section-head">
+      <div>
+        <div class="eyebrow">INVITES</div>
+        <h3 style="margin:.35rem 0 .2rem;">Pending Invites</h3>
+        <div class="re-card-subtitle">Registration links created for this company team.</div>
+      </div>
+    </div>
 
     {% if invites %}
-      <table class="re-table">
-        <thead>
-          <tr>
-            <th>Email</th>
-            <th>Role</th>
-            <th>Status</th>
-            <th>Expires</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for invite in invites %}
-          <tr>
-            <td>{{ invite.email }}</td>
-            <td>{{ invite.role }}</td>
-            <td>{{ invite.status }}</td>
-            <td>{{ invite.expires_at.strftime("%Y-%m-%d") if invite.expires_at else "" }}</td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
+      <div class="re-table-wrap mt-16">
+        <table class="re-table">
+          <thead>
+            <tr>
+              <th>Email</th>
+              <th>Role</th>
+              <th>Status</th>
+              <th>Expires</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for invite in invites %}
+            <tr>
+              <td>{{ invite.email }}</td>
+              <td>
+                <span class="badge badge-info">
+                  {{ (invite.role or "unknown")|replace('_', ' ')|title }}
+                </span>
+              </td>
+              <td>
+                {% if invite.status == "pending" %}
+                  <span class="badge badge-warning">Pending</span>
+                {% elif invite.status == "accepted" %}
+                  <span class="badge badge-success">Accepted</span>
+                {% elif invite.status == "expired" %}
+                  <span class="badge badge-danger">Expired</span>
+                {% else %}
+                  <span class="badge badge-neutral">{{ invite.status or "Unknown" }}</span>
+                {% endif %}
+              </td>
+              <td>{{ invite.expires_at.strftime("%Y-%m-%d") if invite.expires_at else "—" }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
     {% else %}
-      <p>No invites yet.</p>
+      <div class="re-empty mt-16">
+        No invites yet.
+      </div>
     {% endif %}
   </section>
 
