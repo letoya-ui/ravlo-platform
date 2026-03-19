@@ -354,9 +354,9 @@ def ai_assistant():
 @loan_officer_bp.route("/messages")
 @role_required("loan_officer")
 def messages():
-    threads = MessageThread.query.filter_by(loan_officer_id=current_user.id)\
-                                 .order_by(MessageThread.updated_at.desc())\
-                                 .all()
+    threads = MessageThread.query.filter(
+        MessageThread.sender_id == current_user.id
+    ).order_by(MessageThread.sent_at.desc()).all()
 
     return render_template(
         "loan_officer/messages/messages_list.html",
