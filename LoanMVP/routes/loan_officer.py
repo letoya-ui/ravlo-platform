@@ -5,6 +5,7 @@
 # =============================================================
 
 import os
+import json
 from datetime import datetime
 
 from flask import (
@@ -2629,6 +2630,13 @@ def view_borrower(borrower_id):
     tasks = Task.query.filter_by(borrower_id=borrower_id).order_by(Task.due_date.asc()).all()
     documents = LoanDocument.query.filter_by(borrower_profile_id=borrower_id).all()
 
+    safe_credit_data = None
+    if credit and getattr(credit, "credit_data", None):
+        try:
+            safe_credit_data = json.dumps(credit.credit_data, indent=2, default=str)
+        except Exception:
+            safe_credit_data = str(credit.credit_data)
+
     return render_template(
         "loan_officer/borrower_view.html",
         borrower=borrower,
@@ -2636,10 +2644,10 @@ def view_borrower(borrower_id):
         credit=credit,
         tasks=tasks,
         documents=documents,
+        safe_credit_data=safe_credit_data,
         active_tab="borrowers",
         title="Borrower View"
     )
-
 
 @loan_officer_bp.route("/borrower-dashboard/<int:borrower_id>")
 @role_required("loan_officer")
