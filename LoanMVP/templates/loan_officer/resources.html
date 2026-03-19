@@ -1,73 +1,577 @@
 {% extends "layouts/ravlo_employee_base.html" %}
-{% block title %}Resource Center{% endblock %}
+{% block title %}Resource Center • Loan Officer{% endblock %}
+
+{% block page_title %}Resource Center{% endblock %}
+{% block page_subline %}
+Your lending playbook for scripts, loan products, borrower checklists, workflow guidance, and live AI support.
+{% endblock %}
+
+{% block topbar_actions %}
+  <a class="rv-btn secondary sm" href="{{ url_for('loan_officer.loan_queue') }}">
+    <i class="lucide lucide-briefcase-business"></i>
+    Loan Queue
+  </a>
+  <a class="rv-btn secondary sm" href="{{ url_for('loan_officer.messages') }}">
+    <i class="lucide lucide-message-square"></i>
+    Messages
+  </a>
+{% endblock %}
+
 {% block content %}
+<div class="resource-shell">
 
-<div style="display:flex;">
- 
-  <main class="dashboard-main" style="margin-left:260px; width:calc(100% - 260px);">
-
-    <h2>📚 Resource Center</h2>
-    <p class="muted">Search or ask the AI for underwriting, compliance, or marketing resources.</p>
-
-    <!-- ======== Quick Resource Links ======== -->
-    <div class="grid g-2 mt-2">
-      {% for item in resources %}
-        <div class="card">
-          <h4>{{ item.title }}</h4>
-          <a href="{{ item.link }}" class="btn btn-glow mt-1">Open</a>
-        </div>
-      {% endfor %}
+  <!-- HERO -->
+  <section class="rv-card resource-hero">
+    <div>
+      <div class="eyebrow">Loan Officer Playbook</div>
+      <h2>Ravlo Resource Center</h2>
+      <p class="muted">
+        Keep files moving, communicate clearly, and use AI to get faster answers while working your pipeline.
+      </p>
     </div>
 
-    <!-- ======== AI Search Assistant ======== -->
-    <div class="card mt-2">
-      <h3>🤖 Ask the AI Assistant</h3>
-      <form method="POST" id="aiForm">
-        <textarea name="query" placeholder="e.g. What are DSCR loan requirements for mixed-use properties?" required></textarea>
-        <button type="submit" class="btn btn-glow mt-1">Ask</button>
-      </form>
-
-      {% if ai_reply %}
-        <div class="ai-hint mt-2">
-          <h4>AI Response:</h4>
-          <p>{{ ai_reply | safe }}</p>
-        </div>
-      {% elif query %}
-        <div class="ai-hint mt-2">⚠️ No AI response available at this moment.</div>
-      {% endif %}
-    </div>
-
-    <!-- Optional: Live chat version (AJAX-based) -->
-    <div class="card mt-2" id="liveChatCard">
-      <h3>💬 Live Resource Chat</h3>
-      <div id="chatLog" style="max-height:300px; overflow-y:auto; padding:0.5rem; background:#111; border-radius:10px; border:1px solid var(--line);"></div>
-      <div style="display:flex; gap:0.5rem; margin-top:0.5rem;">
-        <input type="text" id="chatInput" placeholder="Type a question..." style="flex:1;">
-        <button class="btn btn-glow" id="sendChat">Send</button>
+    <div class="hero-stat-grid">
+      <div class="mini-stat">
+        <span class="mini-stat__label">Scripts</span>
+        <span class="mini-stat__value">4</span>
+      </div>
+      <div class="mini-stat">
+        <span class="mini-stat__label">Products</span>
+        <span class="mini-stat__value">4</span>
+      </div>
+      <div class="mini-stat">
+        <span class="mini-stat__label">Checklists</span>
+        <span class="mini-stat__value">2</span>
       </div>
     </div>
-  </main>
+  </section>
+
+  <!-- AI ASSISTANT -->
+  <section class="rv-card ai-card">
+    <div class="section-head">
+      <div>
+        <div class="eyebrow">AI Support</div>
+        <h3>Ask the AI Assistant</h3>
+      </div>
+    </div>
+
+    <p class="muted">
+      Ask about borrower communication, document needs, loan products, scenario ideas, or next-step workflow.
+    </p>
+
+    <textarea
+      id="aiInput"
+      class="ai-input"
+      placeholder="Example: What documents do I need for a DSCR borrower?"></textarea>
+
+    <div class="ai-actions">
+      <button class="rv-btn primary" onclick="askLOAI()">
+        <i class="lucide lucide-sparkles"></i>
+        Ask AI
+      </button>
+    </div>
+
+    <div id="aiResponse" class="ai-response">
+      <span class="muted">AI response will appear here.</span>
+    </div>
+  </section>
+
+  <!-- QUICK LINKS -->
+  <section class="rv-card">
+    <div class="section-head">
+      <div>
+        <div class="eyebrow">Quick Access</div>
+        <h3>Daily Navigation</h3>
+      </div>
+    </div>
+
+    <div class="quick-link-grid">
+      <a class="quick-link-card" href="{{ url_for('loan_officer.loan_queue') }}">
+        <i class="lucide lucide-layout-list"></i>
+        <div>
+          <strong>Loan Queue</strong>
+          <p>View and manage active files.</p>
+        </div>
+      </a>
+
+      <a class="quick-link-card" href="{{ url_for('loan_officer.borrowers') }}">
+        <i class="lucide lucide-users"></i>
+        <div>
+          <strong>Borrowers</strong>
+          <p>Review borrower profiles and open files.</p>
+        </div>
+      </a>
+
+      <a class="quick-link-card" href="{{ url_for('loan_officer.messages') }}">
+        <i class="lucide lucide-message-circle"></i>
+        <div>
+          <strong>Messages</strong>
+          <p>Follow up with borrowers and contacts.</p>
+        </div>
+      </a>
+
+      <a class="quick-link-card" href="{{ url_for('loan_officer.new_task') }}">
+        <i class="lucide lucide-list-todo"></i>
+        <div>
+          <strong>New Task</strong>
+          <p>Create follow-ups and reminders.</p>
+        </div>
+      </a>
+    </div>
+  </section>
+
+  <!-- SCRIPTS -->
+  <section class="rv-card">
+    <div class="section-head">
+      <div>
+        <div class="eyebrow">Communication</div>
+        <h3>Scripts</h3>
+      </div>
+    </div>
+
+    <div class="resource-grid">
+      <div class="resource-card">
+        <h4>Borrower Welcome Script</h4>
+        <p>Hello [Name], we received your loan request and I’ll be your main point of contact. I’ll help guide your file and next steps.</p>
+      </div>
+
+      <div class="resource-card">
+        <h4>Missing Documents Script</h4>
+        <p>Hello [Name], to continue moving forward we still need the following items: [Docs]. Please upload them at your earliest convenience.</p>
+      </div>
+
+      <div class="resource-card">
+        <h4>Follow-Up Script</h4>
+        <p>Hello [Name], just checking in on the remaining items for your file. Once received, we can continue processing immediately.</p>
+      </div>
+
+      <div class="resource-card">
+        <h4>Preapproval Update Script</h4>
+        <p>Good news — your file has been reviewed and we’re preparing the next phase. I’ll send your official update shortly.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- PRODUCTS -->
+  <section class="rv-card">
+    <div class="section-head">
+      <div>
+        <div class="eyebrow">Loan Products</div>
+        <h3>Program Reference</h3>
+      </div>
+    </div>
+
+    <div class="resource-grid">
+      <div class="resource-card">
+        <h4>DSCR Loan</h4>
+        <p>Investor loan based on rental cash flow rather than personal income.</p>
+      </div>
+
+      <div class="resource-card">
+        <h4>Fix & Flip</h4>
+        <p>Short-term financing for acquisition and renovation of investment properties.</p>
+      </div>
+
+      <div class="resource-card">
+        <h4>Bridge Loan</h4>
+        <p>Fast capital for transitional properties or time-sensitive opportunities.</p>
+      </div>
+
+      <div class="resource-card">
+        <h4>Construction Loan</h4>
+        <p>Funding for ground-up construction or major rebuild projects.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- CHECKLISTS + WORKFLOW -->
+  <section class="resource-two-col">
+
+    <div class="rv-card">
+      <div class="section-head">
+        <div>
+          <div class="eyebrow">Checklists</div>
+          <h3>Borrower & File Prep</h3>
+        </div>
+      </div>
+
+      <div class="checklist-stack">
+        <div class="checklist-card">
+          <h4>Initial Intake Checklist</h4>
+          <ul>
+            <li>Borrower contact information</li>
+            <li>Entity / ownership details</li>
+            <li>Purchase contract or scenario details</li>
+            <li>Property address</li>
+            <li>Exit strategy</li>
+            <li>Income or rent support</li>
+          </ul>
+        </div>
+
+        <div class="checklist-card">
+          <h4>Common Document Checklist</h4>
+          <ul>
+            <li>ID / entity docs</li>
+            <li>Bank statements</li>
+            <li>Purchase contract</li>
+            <li>Scope of work</li>
+            <li>Insurance</li>
+            <li>Credit authorization if needed</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="rv-card">
+      <div class="section-head">
+        <div>
+          <div class="eyebrow">Execution</div>
+          <h3>Daily Workflow</h3>
+        </div>
+      </div>
+
+      <div class="workflow-list">
+        <div class="workflow-row"><span class="workflow-bullet"></span><div>Review new lead activity</div></div>
+        <div class="workflow-row"><span class="workflow-bullet"></span><div>Follow up on incomplete files</div></div>
+        <div class="workflow-row"><span class="workflow-bullet"></span><div>Check document uploads</div></div>
+        <div class="workflow-row"><span class="workflow-bullet"></span><div>Update CRM notes</div></div>
+        <div class="workflow-row"><span class="workflow-bullet"></span><div>Move loans to next stage daily</div></div>
+        <div class="workflow-row"><span class="workflow-bullet"></span><div>Flag files needing processor or underwriting attention</div></div>
+      </div>
+    </div>
+
+  </section>
+
+  <!-- STANDARDS -->
+  <section class="rv-card">
+    <div class="section-head">
+      <div>
+        <div class="eyebrow">Best Practices</div>
+        <h3>Loan Officer Standards</h3>
+      </div>
+    </div>
+
+    <div class="standards-grid">
+      <div class="standard-card">
+        <h4>Move files daily</h4>
+        <p>No active file should sit without action, follow-up, or notes.</p>
+      </div>
+      <div class="standard-card">
+        <h4>Keep communication clear</h4>
+        <p>Borrowers should always know current status and next step.</p>
+      </div>
+      <div class="standard-card">
+        <h4>Document everything</h4>
+        <p>Every call, request, and status change should be reflected in the system.</p>
+      </div>
+      <div class="standard-card">
+        <h4>Escalate blockers early</h4>
+        <p>Flag missing docs, slow responses, or underwriting issues immediately.</p>
+      </div>
+    </div>
+  </section>
+
 </div>
 
+<style>
+.resource-shell{
+  display:grid;
+  gap:18px;
+}
+
+.resource-hero{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-end;
+  gap:1rem;
+  flex-wrap:wrap;
+}
+
+.hero-stat-grid{
+  display:flex;
+  gap:12px;
+  flex-wrap:wrap;
+}
+
+.mini-stat{
+  min-width:130px;
+  padding:12px 14px;
+  border-radius:16px;
+  background:rgba(255,255,255,.04);
+  border:1px solid rgba(255,255,255,.08);
+}
+
+.mini-stat__label{
+  display:block;
+  font-size:.74rem;
+  text-transform:uppercase;
+  letter-spacing:.08em;
+  color:#8fa4b7;
+  margin-bottom:5px;
+}
+
+.mini-stat__value{
+  color:#fff;
+  font-weight:800;
+}
+
+.resource-two-col{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:18px;
+}
+
+.resource-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit, minmax(240px, 1fr));
+  gap:14px;
+}
+
+.resource-card,
+.checklist-card,
+.standard-card{
+  padding:16px;
+  border-radius:16px;
+  border:1px solid rgba(255,255,255,.07);
+  background:rgba(255,255,255,.03);
+}
+
+.resource-card h4,
+.checklist-card h4,
+.standard-card h4{
+  margin:0 0 .5rem;
+  color:#fff;
+}
+
+.resource-card p,
+.standard-card p{
+  margin:0;
+  color:#cdd9e4;
+  line-height:1.5;
+}
+
+.quick-link-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit, minmax(220px, 1fr));
+  gap:14px;
+}
+
+.quick-link-card{
+  display:flex;
+  gap:12px;
+  align-items:flex-start;
+  text-decoration:none;
+  padding:16px;
+  border-radius:16px;
+  border:1px solid rgba(255,255,255,.07);
+  background:rgba(255,255,255,.03);
+  color:#e7eef5;
+  transition:.18s ease;
+}
+
+.quick-link-card:hover{
+  transform:translateY(-2px);
+  background:rgba(255,255,255,.05);
+}
+
+.quick-link-card i{
+  color:#7ab8ff;
+  margin-top:2px;
+}
+
+.quick-link-card strong{
+  display:block;
+  margin-bottom:4px;
+}
+
+.quick-link-card p{
+  margin:0;
+  color:#99adbf;
+  font-size:.92rem;
+}
+
+.checklist-stack{
+  display:grid;
+  gap:14px;
+}
+
+.checklist-card ul{
+  margin:0;
+  padding-left:1.1rem;
+  color:#d8e3ee;
+}
+
+.checklist-card li + li{
+  margin-top:.35rem;
+}
+
+.workflow-list{
+  display:grid;
+  gap:12px;
+}
+
+.workflow-row{
+  display:flex;
+  gap:12px;
+  align-items:flex-start;
+  padding:14px;
+  border-radius:14px;
+  border:1px solid rgba(255,255,255,.07);
+  background:rgba(255,255,255,.03);
+  color:#d8e3ee;
+}
+
+.workflow-bullet{
+  width:10px;
+  height:10px;
+  border-radius:999px;
+  background:#7ab8ff;
+  margin-top:6px;
+  flex:0 0 10px;
+}
+
+.standards-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit, minmax(220px, 1fr));
+  gap:14px;
+}
+
+.ai-card{
+  display:grid;
+  gap:12px;
+}
+
+.ai-input{
+  width:100%;
+  min-height:120px;
+  resize:vertical;
+  border-radius:14px;
+  border:1px solid rgba(255,255,255,.10);
+  background:rgba(255,255,255,.04);
+  color:#fff;
+  padding:14px;
+  outline:none;
+}
+
+.ai-actions{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+}
+
+.ai-response{
+  min-height:80px;
+  border-radius:14px;
+  border:1px solid rgba(255,255,255,.07);
+  background:rgba(255,255,255,.03);
+  padding:14px;
+  white-space:pre-wrap;
+  color:#dbe7f2;
+}
+
+.rv-card{
+  border-radius:22px;
+  padding:20px 22px;
+  border:1px solid rgba(255,255,255,.08);
+  background:
+    radial-gradient(900px 520px at 15% 10%, rgba(122,184,255,.08), transparent 55%),
+    rgba(255,255,255,.02);
+  box-shadow:0 14px 34px rgba(0,0,0,.18);
+}
+
+.section-head{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:1rem;
+  margin-bottom:.8rem;
+}
+
+.eyebrow{
+  display:inline-flex;
+  padding:.35rem .7rem;
+  border-radius:999px;
+  font-size:.74rem;
+  font-weight:700;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+  color:#cfe2f3;
+  background:rgba(58,92,122,.25);
+  border:1px solid rgba(122,184,255,.15);
+}
+
+.muted{
+  color:#95a8ba;
+}
+
+.rv-btn{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:.45rem;
+  padding:.72rem 1rem;
+  border-radius:12px;
+  text-decoration:none;
+  font-weight:700;
+  border:1px solid rgba(255,255,255,.08);
+  transition:.18s ease;
+  cursor:pointer;
+}
+
+.rv-btn.primary{
+  background:#3A5C7A;
+  color:#fff;
+}
+
+.rv-btn.secondary{
+  background:rgba(255,255,255,.05);
+  color:#e7eef5;
+}
+
+.rv-btn.sm{
+  padding:.55rem .9rem;
+  font-size:.86rem;
+}
+
+.rv-btn:hover{
+  transform:translateY(-1px);
+}
+
+@media (max-width: 980px){
+  .resource-two-col{
+    grid-template-columns:1fr;
+  }
+}
+</style>
+
 <script>
-document.getElementById("sendChat").addEventListener("click", async () => {
-  const input = document.getElementById("chatInput");
-  const log = document.getElementById("chatLog");
-  const query = input.value.trim();
-  if (!query) return;
+function askLOAI() {
+  const message = document.getElementById("aiInput").value.trim();
+  const responseBox = document.getElementById("aiResponse");
 
-  log.innerHTML += `<p><strong>You:</strong> ${query}</p>`;
-  input.value = "";
+  if (!message) {
+    responseBox.innerHTML = "<span class='muted'>Please enter a question first.</span>";
+    return;
+  }
 
-  const res = await fetch("{{ url_for('loan_officer.resources_chat') }}", {
+  responseBox.innerHTML = "<span class='muted'>Thinking...</span>";
+
+  fetch("{{ url_for('loan_officer.ai_assistant') }}", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ query })
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      message: message
+    })
+  })
+  .then(r => r.json())
+  .then(data => {
+    responseBox.innerHTML = data.reply || "No response returned.";
+  })
+  .catch(() => {
+    responseBox.innerHTML = "There was an error talking to the AI assistant.";
   });
-  const data = await res.json();
-  log.innerHTML += `<p><strong>AI:</strong> ${data.reply}</p>`;
-  log.scrollTop = log.scrollHeight;
-});
+}
 </script>
-
 {% endblock %}
