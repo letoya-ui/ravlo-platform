@@ -1,21 +1,83 @@
-{% extends "layouts/Ravlo_lending_base.html" %}
+{% extends "layouts/ravlo_employee_base.html" %}
+
 {% block title %}Audit Logs{% endblock %}
+{% block page_title %}Audit Logs{% endblock %}
+{% block page_subline %}Track user actions, module changes, and system-level events{% endblock %}
+
 {% block content %}
-<h1 class="text-xl mb-4">🕵️ Audit Logs</h1>
-<div class="card p-3">
-  <table class="table-auto w-full text-sm">
-    <thead><tr><th>Module</th><th>Action</th><th>Object</th><th>User</th><th>Date</th></tr></thead>
-    <tbody>
-    {% for a in audits %}
-      <tr>
-        <td>{{ a.module }}</td>
-        <td>{{ a.action }}</td>
-        <td>{{ a.object_type }} #{{ a.object_id }}</td>
-        <td>{{ a.user_id or 'System' }}</td>
-        <td>{{ a.created_at.strftime('%b %d, %Y %H:%M') }}</td>
-      </tr>
-    {% endfor %}
-    </tbody>
-  </table>
+
+<div class="re-grid">
+
+  <section class="re-card pad">
+    <div class="section-head">
+      <div>
+        <div class="eyebrow">SYSTEM TRACE</div>
+        <h3 style="margin:.35rem 0 .2rem;">Audit Trail</h3>
+        <div class="re-card-subtitle">
+          Review recorded actions across modules, users, and protected system areas.
+        </div>
+      </div>
+    </div>
+
+    {% if audits %}
+      <div class="re-table-wrap mt-16">
+        <table class="re-table">
+          <thead>
+            <tr>
+              <th>Module</th>
+              <th>Action</th>
+              <th>Object</th>
+              <th>User</th>
+              <th>Date</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for a in audits %}
+            <tr>
+              <td>
+                <span class="badge badge-neutral">
+                  {{ a.module or "—" }}
+                </span>
+              </td>
+
+              <td>
+                <span class="badge badge-info">
+                  {{ a.action or "—" }}
+                </span>
+              </td>
+
+              <td>
+                {{ a.object_type or "—" }}
+                {% if a.object_id %}
+                  #{{ a.object_id }}
+                {% endif %}
+              </td>
+
+              <td>
+                {% if a.user is defined and a.user %}
+                  {{ a.user.full_name or a.user.username or a.user.email }}
+                {% elif a.user_id %}
+                  User #{{ a.user_id }}
+                {% else %}
+                  <span class="text-muted">System</span>
+                {% endif %}
+              </td>
+
+              <td>
+                {{ a.created_at.strftime('%b %d, %Y %I:%M %p') if a.created_at else "" }}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="re-empty mt-16">
+        No audit activity found.
+      </div>
+    {% endif %}
+  </section>
+
 </div>
+
 {% endblock %}
