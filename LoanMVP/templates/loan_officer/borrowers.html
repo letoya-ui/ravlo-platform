@@ -380,7 +380,7 @@ Search, review, and open active borrower files from your lending pipeline.
         {% endif %}
 
         <div class="borrower-actions">
-          <a class="btn-open" href="{{ url_for('loan_officer.borrower_detail', borrower_id=b.id) }}">
+          <a class="btn-open" href="{{ url_for('loan_officer.view_borrower', borrower_id=b.id) }}">
             <i class="lucide lucide-folder-open"></i>
             Open Loan File
           </a>
