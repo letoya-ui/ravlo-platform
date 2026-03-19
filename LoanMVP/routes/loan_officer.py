@@ -359,7 +359,7 @@ def messages():
     ).order_by(MessageThread.sent_at.desc()).all()
 
     return render_template(
-        "loan_officer/messages/messages_list.html",
+        "loan_officer/messages_thread.html",
         threads=threads,
         active_page="messages"
     )
