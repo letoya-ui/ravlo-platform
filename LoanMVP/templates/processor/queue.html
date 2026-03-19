@@ -1,73 +1,270 @@
-{% extends "layouts/Ravlo_lending_base.html" %}
-{% block title %}Processor Queue{% endblock %}
+{% extends "layouts/ravlo_employee_base.html" %}
+{% block title %}Ravlo Lending OS • Processor Queue{% endblock %}
+
+{% block page_title %}Processor Queue{% endblock %}
+{% block page_subline %}
+Monitor active files, document gaps, and underwriting conditions across the pipeline.
+{% endblock %}
+
+{% block topbar_actions %}
+  <a href="{{ url_for('processor.dashboard') }}" class="re-btn ghost sm">
+    <i class="lucide lucide-layout-dashboard"></i>
+    Dashboard
+  </a>
+  <a href="{{ url_for('processor.documents') }}" class="re-btn primary sm">
+    <i class="lucide lucide-folder-open"></i>
+    Documents
+  </a>
+{% endblock %}
 
 {% block content %}
-<link rel="stylesheet" href="https://unpkg.com/lucide-static@latest/font/lucide.css">
 
+<div class="re-grid">
 
-<!-- ================================ -->
-<!--      Pipeline Summary Tiles      -->
-<!-- ================================ -->
-
-<div style="display:flex; gap:1rem;">
-    <div class="metric">
-        <p class="muted">Active Loans</p>
-        <h3>{{ total_loans }}</h3>
+  <!-- KPI STRIP -->
+  <section class="re-grid-3">
+    <div class="re-stat">
+      <div class="re-stat-label">Active Loans</div>
+      <div class="re-stat-value">{{ total_loans or 0 }}</div>
+      <div class="re-stat-meta">Files currently assigned or in pipeline</div>
     </div>
 
-    <div class="metric">
-        <p class="muted">Docs Pending</p>
-        <h3>{{ docs_pending }}</h3>
+    <div class="re-stat">
+      <div class="re-stat-label">Docs Pending</div>
+      <div class="re-stat-value">{{ docs_pending or 0 }}</div>
+      <div class="re-stat-meta">Documents still needing review</div>
     </div>
 
-    <div class="metric">
-        <p class="muted">Conditions Open</p>
-        <h3>{{ cond_open }}</h3>
+    <div class="re-stat">
+      <div class="re-stat-label">Conditions Open</div>
+      <div class="re-stat-value">{{ cond_open or 0 }}</div>
+      <div class="re-stat-meta">Outstanding conditions across files</div>
     </div>
-</div>
+  </section>
 
-<!-- ================================ -->
-<!--          Pipeline Grid           -->
-<!-- ================================ -->
+  <!-- PIPELINE GRID -->
+  <section class="processor-queue-grid">
+    {% if pipeline %}
+      {% for item in pipeline %}
+        <article class="processor-file-card">
+          <div class="processor-file-head">
+            <div>
+              <div class="processor-file-kicker">Loan #{{ item.loan.id }}</div>
+              <h3 class="processor-file-name">
+                {{ item.borrower.full_name if item.borrower else "Unknown Borrower" }}
+              </h3>
+              <div class="processor-file-sub">
+                {{ item.borrower.email if item.borrower and item.borrower.email else "No email" }}
+                {% if item.borrower and item.borrower.phone %}
+                  • {{ item.borrower.phone }}
+                {% endif %}
+              </div>
+            </div>
 
-<div class="pipeline-grid">
-{% for item in pipeline %}
-    <div class="card">
-        <h2>{{ item.borrower.full_name }}</h2>
-
-        <p class="muted">{{ item.borrower.email }} · {{ item.borrower.phone }}</p>
-
-        <p>
-            Loan Amount: <strong>${{ item.amount }}</strong><br>
-            LTV: <strong>{{ item.ltv }}%</strong><br>
-            Risk: <strong>{{ item.risk }}</strong>
-        </p>
-
-        <div style="margin:.5rem 0;">
-            <span class="status-pill status-{{ item.loan.status|lower }}">
-                {{ item.loan.status }}
+            <span class="processor-status-pill">
+              {{ item.loan.status or "—" }}
             </span>
-        </div>
+          </div>
 
-        <p>
-            Docs: {{ item.docs_pending }}/{{ item.docs_total }} pending<br>
-            Conditions: {{ item.cond_open }}/{{ item.cond_total }} open
-        </p>
+          <div class="processor-metric-grid">
+            <div>
+              <span>Loan Amount</span>
+              <strong>
+                {% if item.amount %}
+                  ${{ "{:,.0f}".format(item.amount) }}
+                {% else %}
+                  —
+                {% endif %}
+              </strong>
+            </div>
 
-        <a href="/processor/loan/{{ item.loan.id }}" class="btn">
-            Review File
-        </a>
-    </div>
-{% endfor %}
+            <div>
+              <span>LTV</span>
+              <strong>
+                {% if item.ltv is not none %}
+                  {{ item.ltv }}%
+                {% else %}
+                  —
+                {% endif %}
+              </strong>
+            </div>
+
+            <div>
+              <span>Risk</span>
+              <strong>{{ item.risk or "Review" }}</strong>
+            </div>
+
+            <div>
+              <span>File Status</span>
+              <strong>{{ item.loan.status or "—" }}</strong>
+            </div>
+          </div>
+
+          <div class="processor-progress-grid">
+            <div class="processor-progress-card">
+              <span>Documents</span>
+              <strong>{{ item.docs_pending or 0 }}/{{ item.docs_total or 0 }} pending</strong>
+            </div>
+
+            <div class="processor-progress-card">
+              <span>Conditions</span>
+              <strong>{{ item.cond_open or 0 }}/{{ item.cond_total or 0 }} open</strong>
+            </div>
+          </div>
+
+          <div class="processor-file-actions">
+            <a href="{{ url_for('processor.file_review', loan_id=item.loan.id) }}" class="re-btn primary sm">
+              <i class="lucide lucide-folder-search"></i>
+              Review File
+            </a>
+
+            <a href="{{ url_for('processor.condition_review', loan_id=item.loan.id) }}" class="re-btn ghost sm">
+              <i class="lucide lucide-list-checks"></i>
+              Conditions
+            </a>
+          </div>
+        </article>
+      {% endfor %}
+    {% else %}
+      <div class="re-empty">
+        No files are currently showing in the processor queue.
+      </div>
+    {% endif %}
+  </section>
+
 </div>
+
 <script src="//cdnjs.cloudflare.com/ajax/libs/socket.io/4.5.4/socket.io.min.js"></script>
 <script>
-const socket = io();
+  const socket = io();
 
-// Loan changed, new docs, new conditions, new payment, etc.
-socket.on("new_notification", function(data) {
-    location.reload(); // auto-refresh pipeline
-});
+  socket.on("new_notification", function(data) {
+    location.reload();
+  });
 </script>
+
+<style>
+.processor-queue-grid{
+  display:grid;
+  grid-template-columns:repeat(3, minmax(0, 1fr));
+  gap:16px;
+}
+
+.processor-file-card{
+  display:grid;
+  gap:14px;
+  padding:18px;
+  border-radius:22px;
+  border:1px solid rgba(255,255,255,.07);
+  background:
+    linear-gradient(180deg, rgba(17,24,33,.96), rgba(11,17,23,.98));
+  box-shadow:var(--rav-shadow-md);
+}
+
+.processor-file-head{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:12px;
+}
+
+.processor-file-kicker{
+  font-size:.72rem;
+  text-transform:uppercase;
+  letter-spacing:.14em;
+  color:var(--rav-muted);
+  margin-bottom:6px;
+  font-weight:700;
+}
+
+.processor-file-name{
+  margin:0;
+  font-size:1.05rem;
+  font-weight:800;
+  color:var(--rav-text);
+  line-height:1.2;
+}
+
+.processor-file-sub{
+  margin-top:6px;
+  font-size:.86rem;
+  color:var(--rav-muted);
+}
+
+.processor-status-pill{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-height:28px;
+  padding:0 10px;
+  border-radius:999px;
+  font-size:.72rem;
+  font-weight:700;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+  color:#dce5ee;
+  background:rgba(107,127,147,.14);
+  border:1px solid rgba(107,127,147,.24);
+  white-space:nowrap;
+}
+
+.processor-metric-grid{
+  display:grid;
+  grid-template-columns:repeat(2, minmax(0, 1fr));
+  gap:10px;
+}
+
+.processor-metric-grid div,
+.processor-progress-card{
+  display:grid;
+  gap:4px;
+  padding:12px 14px;
+  border-radius:14px;
+  background:rgba(255,255,255,.03);
+  border:1px solid rgba(255,255,255,.07);
+}
+
+.processor-metric-grid span,
+.processor-progress-card span{
+  color:var(--rav-muted);
+  font-size:.72rem;
+  font-weight:700;
+  letter-spacing:.12em;
+  text-transform:uppercase;
+}
+
+.processor-metric-grid strong,
+.processor-progress-card strong{
+  color:var(--rav-text);
+  font-size:.92rem;
+  font-weight:700;
+}
+
+.processor-progress-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:10px;
+}
+
+.processor-file-actions{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+}
+
+@media (max-width: 1200px){
+  .processor-queue-grid{
+    grid-template-columns:repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px){
+  .processor-queue-grid,
+  .processor-metric-grid,
+  .processor-progress-grid{
+    grid-template-columns:1fr;
+  }
+}
+</style>
 
 {% endblock %}
