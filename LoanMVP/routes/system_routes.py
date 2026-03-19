@@ -181,14 +181,23 @@ def toggle_user(user_id):
 # =========================================================
 # 🗑️ Delete User
 # =========================================================
-@system_bp.route("/delete_user/<int:user_id>")
-@role_required("system")
+@system_bp.route("/delete_user/<int:user_id>", methods=["POST"])
+@role_required("system", "admin")
 def delete_user(user_id):
     user = User.query.get_or_404(user_id)
-    db.session.delete(user)
-    db.session.commit()
 
-    flash(f"🗑️ Deleted user {user.email}.", "info")
+    if user.id == current_user.id:
+        flash("You cannot delete your own account from this screen.", "warning")
+        return redirect(url_for("system.users"))
+
+    try:
+        db.session.delete(user)
+        db.session.commit()
+        flash(f"Deleted user {user.email}.", "success")
+    except Exception as e:
+        db.session.rollback()
+        flash(f"Could not delete user: {e}", "danger")
+
     return redirect(url_for("system.users"))
 
 
