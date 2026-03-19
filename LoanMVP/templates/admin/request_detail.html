@@ -2,36 +2,142 @@
 
 {% block title %}Request Detail{% endblock %}
 {% block page_title %}Request #{{ access_request.id }}{% endblock %}
-{% block page_subline %}Review and take action{% endblock %}
+{% block page_subline %}Review submission details and take action{% endblock %}
+
+{% block topbar_actions %}
+  <a href="{{ url_for('admin.access_requests') }}" class="re-btn ghost sm">
+    <i class="lucide lucide-arrow-left"></i>
+    Back to Requests
+  </a>
+{% endblock %}
 
 {% block content %}
+{% set raw_status = (access_request.status or 'pending')|lower %}
+
 <div class="re-grid">
 
-  <section class="re-card">
-    <h3>Request Info</h3>
-    <p><strong>Contact:</strong> {{ access_request.contact_name }}</p>
-    <p><strong>Email:</strong> {{ access_request.email }}</p>
-    <p><strong>Phone:</strong> {{ access_request.phone or "—" }}</p>
-    <p><strong>Company:</strong> {{ access_request.company_name or "—" }}</p>
-    <p><strong>Request Type:</strong> {{ access_request.request_type }}</p>
-    <p><strong>Requested Role:</strong> {{ access_request.requested_role or "—" }}</p>
-    <p><strong>Status:</strong> {{ access_request.status }}</p>
-    <p><strong>Notes:</strong><br>{{ access_request.notes or "No notes submitted." }}</p>
+  <section class="re-grid-3">
+    <div class="re-stat">
+      <div class="re-stat-label">Request ID</div>
+      <div class="re-stat-value" style="font-size:1.05rem;">#{{ access_request.id }}</div>
+      <div class="re-stat-meta">Submission record</div>
+    </div>
+
+    <div class="re-stat">
+      <div class="re-stat-label">Type</div>
+      <div class="re-stat-value" style="font-size:1.05rem;">
+        {{ (access_request.request_type or "general")|replace('_', ' ')|title }}
+      </div>
+      <div class="re-stat-meta">Requested access category</div>
+    </div>
+
+    <div class="re-stat">
+      <div class="re-stat-label">Status</div>
+      <div class="re-stat-value" style="font-size:1.05rem;">
+        {% if raw_status == 'pending' %}
+          <span class="badge badge-warning">Pending</span>
+        {% elif raw_status == 'approved' %}
+          <span class="badge badge-success">Approved</span>
+        {% elif raw_status in ['denied', 'rejected'] %}
+          <span class="badge badge-danger">{{ raw_status|title }}</span>
+        {% else %}
+          <span class="badge badge-neutral">{{ (access_request.status or "Unknown")|title }}</span>
+        {% endif %}
+      </div>
+      <div class="re-stat-meta">Current review state</div>
+    </div>
   </section>
 
-  <section class="re-card">
-    <h3>Actions</h3>
+  <section class="re-card pad">
+    <div class="section-head">
+      <div>
+        <div class="eyebrow">REQUEST INFORMATION</div>
+        <h3 style="margin:.35rem 0 .2rem;">Submission Details</h3>
+        <div class="re-card-subtitle">Review applicant, company, and request context.</div>
+      </div>
+    </div>
 
-    {% if access_request.status == "pending" %}
-      <form method="POST" action="{{ url_for('admin.approve_request', request_id=access_request.id) }}" style="margin-bottom: 12px;">
-        <button type="submit" class="btn btn-success">Approve Request</button>
-      </form>
+    <div class="re-grid-2 mt-16">
+      <div class="re-card pad">
+        <div class="eyebrow">CONTACT</div>
+        <div class="stack mt-12">
+          <div>
+            <div class="text-muted">Contact Name</div>
+            <strong>{{ access_request.contact_name or "—" }}</strong>
+          </div>
+          <div>
+            <div class="text-muted">Email</div>
+            <strong>{{ access_request.email or "—" }}</strong>
+          </div>
+          <div>
+            <div class="text-muted">Phone</div>
+            <strong>{{ access_request.phone or "—" }}</strong>
+          </div>
+        </div>
+      </div>
 
-      <form method="POST" action="{{ url_for('admin.reject_request', request_id=access_request.id) }}">
-        <button type="submit" class="btn btn-danger">Reject Request</button>
-      </form>
+      <div class="re-card pad">
+        <div class="eyebrow">REQUEST</div>
+        <div class="stack mt-12">
+          <div>
+            <div class="text-muted">Company</div>
+            <strong>{{ access_request.company_name or "—" }}</strong>
+          </div>
+          <div>
+            <div class="text-muted">Request Type</div>
+            <strong>{{ (access_request.request_type or "—")|replace('_', ' ')|title }}</strong>
+          </div>
+          <div>
+            <div class="text-muted">Requested Role</div>
+            <strong>{{ (access_request.requested_role or "—")|replace('_', ' ')|title }}</strong>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="re-card pad mt-16">
+      <div class="eyebrow">NOTES</div>
+      <div style="margin-top:10px; line-height:1.65;" class="text-muted">
+        {{ access_request.notes or "No notes submitted." }}
+      </div>
+    </div>
+  </section>
+
+  <section class="re-card pad">
+    <div class="section-head">
+      <div>
+        <div class="eyebrow">ACTIONS</div>
+        <h3 style="margin:.35rem 0 .2rem;">Review Actions</h3>
+        <div class="re-card-subtitle">Approve or deny this request.</div>
+      </div>
+    </div>
+
+    {% if raw_status == "pending" %}
+      <div class="row" style="gap:12px; flex-wrap:wrap; margin-top:16px;">
+
+        <form method="POST"
+              action="{{ url_for('admin.approve_access_request', req_id=access_request.id) }}"
+              style="margin:0;">
+          <button type="submit" class="re-btn success">
+            <i class="lucide lucide-check"></i>
+            Approve Request
+          </button>
+        </form>
+
+        <form method="POST"
+              action="{{ url_for('admin.deny_access_request', req_id=access_request.id) }}"
+              style="margin:0;">
+          <button type="submit" class="re-btn danger">
+            <i class="lucide lucide-x"></i>
+            Deny Request
+          </button>
+        </form>
+
+      </div>
     {% else %}
-      <p>This request has already been reviewed.</p>
+      <div class="re-empty mt-16">
+        This request has already been reviewed.
+      </div>
     {% endif %}
   </section>
 
