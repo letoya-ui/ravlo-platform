@@ -1200,6 +1200,8 @@ def borrower_ai_log(borrower_id):
 
 
 @loan_officer_bp.route("/credit-check", methods=["GET", "POST"])
+@csrf.exempt
+@role_required("loan_officer")
 def credit_check():
     borrowers = BorrowerProfile.query.all()
     borrower_id = request.args.get("borrower_id")
