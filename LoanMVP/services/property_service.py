@@ -16,6 +16,41 @@ def _safe_int(x):
         return None
 
 
+def _normalize_photos(photos) -> list:
+    """
+    Normalize photo payloads into a clean list of URL strings.
+    Supports:
+    - ["https://..."]
+    - [{"url": "https://..."}]
+    - [{"href": "https://..."}]
+    - [{"src": "https://..."}]
+    - "https://..."
+    """
+    normalized = []
+
+    if isinstance(photos, list):
+        for p in photos:
+            if isinstance(p, str) and p.strip():
+                normalized.append(p.strip())
+            elif isinstance(p, dict):
+                url = p.get("url") or p.get("href") or p.get("src")
+                if isinstance(url, str) and url.strip():
+                    normalized.append(url.strip())
+
+    elif isinstance(photos, str) and photos.strip():
+        normalized.append(photos.strip())
+
+    # dedupe while preserving order
+    seen = set()
+    clean = []
+    for url in normalized:
+        if url not in seen:
+            clean.append(url)
+            seen.add(url)
+
+    return clean
+
+
 def _pick_first_listing(resp: dict):
     data = (resp or {}).get("data")
     if isinstance(data, list):
@@ -38,6 +73,15 @@ def _pick_first_property_record(data):
 
 
 def _normalize_subject(subject: dict, fallback_address: str) -> dict:
+    subject = subject or {}
+    raw_photos = (
+        subject.get("photos")
+        or subject.get("imageUrls")
+        or subject.get("images")
+        or subject.get("photoUrls")
+    )
+    photos = _normalize_photos(raw_photos)
+
     return {
         "property_id": subject.get("id") or subject.get("propertyId") or subject.get("property_id"),
         "address": subject.get("formattedAddress") or subject.get("address") or subject.get("addressLine1") or fallback_address,
@@ -49,33 +93,120 @@ def _normalize_subject(subject: dict, fallback_address: str) -> dict:
         "sqft": _safe_int(subject.get("squareFootage") or subject.get("sqft")),
         "year_built": _safe_int(subject.get("yearBuilt") or subject.get("year_built")),
         "property_type": subject.get("propertyType") or subject.get("property_type"),
-        "photos": subject.get("photos") or subject.get("imageUrls") or subject.get("images") or subject.get("photoUrls") or None,
-        "price": None,     # ensure always present
-        "listing": None,   # ensure always present
-    }
-
-
-def _normalize_from_comp(comp: dict, fallback_address: str) -> dict:
-    comp = comp or {}
-    return {
-        "property_id": comp.get("id") or None,
-        "address": comp.get("formattedAddress") or comp.get("address") or comp.get("addressLine1") or fallback_address,
-        "city": comp.get("city"),
-        "state": comp.get("state"),
-        "zip": comp.get("zipCode") or comp.get("zip") or comp.get("postalCode"),
-        "beds": _safe_int(comp.get("bedrooms")),
-        "baths": _safe_float(comp.get("bathrooms")),
-        "sqft": _safe_int(comp.get("squareFootage")),
-        "year_built": _safe_int(comp.get("yearBuilt")),
-        "property_type": comp.get("propertyType"),
-        "photos": comp.get("photos") or comp.get("imageUrls") or comp.get("images") or comp.get("photoUrls") or None,
+        "photos": photos,
+        "primary_photo": photos[0] if photos else None,
         "price": None,
         "listing": None,
     }
 
 
-def resolve_rentcast_investor_bundle(address: str, *, beds=None, baths=None, sqft=None, property_type=None) -> dict:
+def _normalize_from_comp(comp: dict, fallback_address: str) -> dict:
+    comp = comp or {}
+    raw_photos = (
+        comp.get("photos")
+        or comp.get("imageUrls")
+        or comp.get("images")
+        or comp.get("photoUrls")
+    )
+    photos = _normalize_photos(raw_photos)
 
+    return {
+        "property_id": comp.get("id") or comp.get("propertyId") or comp.get("property_id"),
+        "address": comp.get("formattedAddress") or comp.get("address") or comp.get("addressLine1") or fallback_address,
+        "city": comp.get("city"),
+        "state": comp.get("state"),
+        "zip": comp.get("zipCode") or comp.get("zip") or comp.get("postalCode"),
+        "beds": _safe_int(comp.get("bedrooms") or comp.get("beds")),
+        "baths": _safe_float(comp.get("bathrooms") or comp.get("baths")),
+        "sqft": _safe_int(comp.get("squareFootage") or comp.get("sqft")),
+        "year_built": _safe_int(comp.get("yearBuilt") or comp.get("year_built")),
+        "property_type": comp.get("propertyType") or comp.get("property_type"),
+        "photos": photos,
+        "primary_photo": photos[0] if photos else None,
+        "price": None,
+        "listing": None,
+    }
+
+
+def _normalize_sale_comp(comp: dict) -> dict:
+    comp = comp or {}
+    return {
+        "address": comp.get("formattedAddress") or comp.get("address") or comp.get("addressLine1"),
+        "price": _safe_float(comp.get("price") or comp.get("salePrice") or comp.get("closePrice")),
+        "beds": _safe_int(comp.get("bedrooms") or comp.get("beds")),
+        "baths": _safe_float(comp.get("bathrooms") or comp.get("baths")),
+        "sqft": _safe_int(comp.get("squareFootage") or comp.get("sqft")),
+        "distance": _safe_float(comp.get("distance")),
+        "days_old": _safe_int(comp.get("daysOld") or comp.get("days_old")),
+        "year_built": _safe_int(comp.get("yearBuilt") or comp.get("year_built")),
+        "property_type": comp.get("propertyType") or comp.get("property_type"),
+        "photos": _normalize_photos(
+            comp.get("photos") or comp.get("imageUrls") or comp.get("images") or comp.get("photoUrls")
+        ),
+    }
+
+
+def _normalize_rental_comp(comp: dict) -> dict:
+    comp = comp or {}
+    return {
+        "address": comp.get("formattedAddress") or comp.get("address") or comp.get("addressLine1"),
+        "rent": _safe_float(comp.get("rent") or comp.get("price") or comp.get("monthlyRent")),
+        "beds": _safe_int(comp.get("bedrooms") or comp.get("beds")),
+        "baths": _safe_float(comp.get("bathrooms") or comp.get("baths")),
+        "sqft": _safe_int(comp.get("squareFootage") or comp.get("sqft")),
+        "distance": _safe_float(comp.get("distance")),
+        "days_old": _safe_int(comp.get("daysOld") or comp.get("days_old")),
+        "year_built": _safe_int(comp.get("yearBuilt") or comp.get("year_built")),
+        "property_type": comp.get("propertyType") or comp.get("property_type"),
+        "photos": _normalize_photos(
+            comp.get("photos") or comp.get("imageUrls") or comp.get("images") or comp.get("photoUrls")
+        ),
+    }
+
+
+def _calculate_market_snapshot(sales_comps: list, rental_comps: list, meta: dict | None = None) -> dict:
+    sales = sales_comps or []
+    rentals = rental_comps or []
+    meta = meta or {}
+
+    sale_prices = [c["price"] for c in sales if c.get("price") is not None]
+    rental_values = [c["rent"] for c in rentals if c.get("rent") is not None]
+
+    sale_ppsf = []
+    for c in sales:
+        price = c.get("price")
+        sqft = c.get("sqft")
+        if price is not None and sqft:
+            try:
+                sale_ppsf.append(round(price / sqft, 2))
+            except Exception:
+                pass
+
+    avg_sale_comp_price = round(sum(sale_prices) / len(sale_prices), 2) if sale_prices else None
+    avg_rental_comp_rent = round(sum(rental_values) / len(rental_values), 2) if rental_values else None
+    avg_sale_ppsf = round(sum(sale_ppsf) / len(sale_ppsf), 2) if sale_ppsf else None
+
+    return {
+        "avg_sale_comp_price": avg_sale_comp_price,
+        "avg_rental_comp_rent": avg_rental_comp_rent,
+        "avg_sale_ppsf": avg_sale_ppsf,
+        "sale_comp_count": len(sales),
+        "rental_comp_count": len(rentals),
+        "days_old": meta.get("days_old"),
+        "max_radius": meta.get("max_radius"),
+    }
+
+
+def resolve_rentcast_investor_bundle(address: str, *, beds=None, baths=None, sqft=None, property_type=None) -> dict:
+    """
+    Resolve one property into a Ravlo-normalized bundle:
+    - property
+    - valuation
+    - rent_estimate
+    - comps
+    - market_snapshot
+    - raw payloads
+    """
     address = (address or "").strip()
     if not address:
         return {"status": "error", "error": "address_required"}
@@ -102,9 +233,7 @@ def resolve_rentcast_investor_bundle(address: str, *, beds=None, baths=None, sqf
     if property_type:
         base_params["propertyType"] = property_type
 
-    # --------------------------------------------------
-    # 1️⃣ VALUE AVM
-    # --------------------------------------------------
+    # 1) VALUE AVM
     value_resp = rentcast_get("/avm/value", base_params)
     if value_resp.get("status") != "ok":
         return {
@@ -117,9 +246,7 @@ def resolve_rentcast_investor_bundle(address: str, *, beds=None, baths=None, sqf
     value = value_resp.get("data") or {}
     subject_v = value.get("subject") or {}
 
-    # --------------------------------------------------
-    # 2️⃣ RENT AVM
-    # --------------------------------------------------
+    # 2) RENT AVM
     rent_resp = rentcast_get("/avm/rent/long-term", base_params)
     if rent_resp.get("status") != "ok":
         return {
@@ -132,15 +259,13 @@ def resolve_rentcast_investor_bundle(address: str, *, beds=None, baths=None, sqf
     rent = rent_resp.get("data") or {}
     subject_r = rent.get("subject") or {}
 
-    sales_comps = value.get("comparables") or value.get("comps") or []
-    rental_comps = rent.get("comparables") or rent.get("comps") or []
+    raw_sales_comps = value.get("comparables") or value.get("comps") or []
+    raw_rental_comps = rent.get("comparables") or rent.get("comps") or []
 
-    # --------------------------------------------------
-    # 3️⃣ SUBJECT RESOLUTION
-    # --------------------------------------------------
+    # 3) SUBJECT RESOLUTION
     subject = subject_v or subject_r or {}
-
     property_record_raw = None
+
     if not subject:
         prop_resp = rentcast_get("/properties", {"address": address})
         if prop_resp.get("status") == "ok":
@@ -148,45 +273,22 @@ def resolve_rentcast_investor_bundle(address: str, *, beds=None, baths=None, sqf
             if property_record_raw:
                 subject = property_record_raw
 
-    # Normalize ONCE
     if subject:
         prop = _normalize_subject(subject, address)
     else:
-        first_comp = (
-            (sales_comps[0] if sales_comps else None)
-            or (rental_comps[0] if rental_comps else None)
-        )
-        prop = (
-            _normalize_from_comp(first_comp, address)
-            if first_comp
-            else _normalize_subject({}, address)
-        )
+        first_comp = (raw_sales_comps[0] if raw_sales_comps else None) or (raw_rental_comps[0] if raw_rental_comps else None)
+        prop = _normalize_from_comp(first_comp, address) if first_comp else _normalize_subject({}, address)
 
-    # Ensure safe keys exist
-    prop.setdefault("price", None)
-    prop.setdefault("photos", None)
-    prop.setdefault("listing", None)
-
-    # --------------------------------------------------
-    # 4️⃣ MLS LISTING LOOKUP (MERGED LAST)
-    # --------------------------------------------------
+    # 4) MLS LISTING LOOKUP
     listing_resp = rentcast_get("/listings/sale", {"address": address})
-    listing = (
-        _pick_first_listing(listing_resp)
-        if listing_resp.get("status") == "ok"
-        else None
-    )
+    listing = _pick_first_listing(listing_resp) if listing_resp.get("status") == "ok" else None
 
     if listing:
+        list_price = listing.get("price") or listing.get("listPrice") or listing.get("listedPrice")
+        list_price_num = _safe_float(list_price)
 
-        list_price = (
-            listing.get("price")
-            or listing.get("listPrice")
-            or listing.get("listedPrice")
-        )
-
-        if list_price is not None:
-            prop["price"] = _safe_float(list_price)
+        if list_price_num is not None:
+            prop["price"] = list_price_num
 
         prop["listing"] = {
             "id": listing.get("id"),
@@ -194,97 +296,87 @@ def resolve_rentcast_investor_bundle(address: str, *, beds=None, baths=None, sqf
             "listedDate": listing.get("listedDate"),
             "removedDate": listing.get("removedDate"),
             "daysOnMarket": listing.get("daysOnMarket"),
-            "price": _safe_float(list_price) if list_price is not None else None,
+            "price": list_price_num,
             "mlsName": listing.get("mlsName"),
             "mlsNumber": listing.get("mlsNumber"),
         }
 
-        # Try photos from listing search
-        photos = (
+        listing_photos = _normalize_photos(
             listing.get("photos")
             or listing.get("images")
             or listing.get("photoUrls")
             or listing.get("imageUrls")
         )
+        if listing_photos:
+            prop["photos"] = listing_photos
+            prop["primary_photo"] = listing_photos[0]
 
-        if isinstance(photos, str) and not photos.strip():
-            photos = None
-        if isinstance(photos, list) and not photos:
-            photos = None
-
-        if photos:
-            prop["photos"] = photos
-
-        # Try listing detail endpoint for richer photos
         listing_id = listing.get("id")
         if listing_id:
             detail_resp = rentcast_get(f"/listings/sale/{listing_id}", {})
             if detail_resp.get("status") == "ok":
                 detail = detail_resp.get("data") or {}
 
-                more_photos = (
+                detail_photos = _normalize_photos(
                     detail.get("photos")
                     or detail.get("images")
                     or detail.get("photoUrls")
                     or detail.get("imageUrls")
                 )
 
-                # Check common nested structures
-                if not more_photos:
+                if not detail_photos:
                     for key in ("media", "assets", "listing", "property", "details"):
                         nested = detail.get(key)
                         if isinstance(nested, dict):
-                            more_photos = (
+                            detail_photos = _normalize_photos(
                                 nested.get("photos")
                                 or nested.get("images")
                                 or nested.get("photoUrls")
                                 or nested.get("imageUrls")
                             )
-                            if more_photos:
+                            if detail_photos:
                                 break
 
-                if isinstance(more_photos, str) and not more_photos.strip():
-                    more_photos = None
-                if isinstance(more_photos, list) and not more_photos:
-                    more_photos = None
+                if detail_photos:
+                    prop["photos"] = detail_photos
+                    prop["primary_photo"] = detail_photos[0]
 
-                if more_photos:
-                    prop["photos"] = more_photos
+    # 5) FINAL PHOTO SAFETY PASS
+    prop["photos"] = _normalize_photos(prop.get("photos"))
+    prop["primary_photo"] = prop["photos"][0] if prop["photos"] else None
 
-    # --------------------------------------------------
-    # 5️⃣ VALUE + RENT ESTIMATES
-    # --------------------------------------------------
+    # 6) VALUE + RENT ESTIMATES
     valuation = {
-        "estimate": _safe_float(value.get("value"))
-        or _safe_float(value.get("estimate"))
-        or _safe_float(value.get("price")),
-        "low": _safe_float(value.get("valueRangeLow"))
-        or _safe_float(value.get("rangeLow")),
-        "high": _safe_float(value.get("valueRangeHigh"))
-        or _safe_float(value.get("rangeHigh")),
+        "estimate": _safe_float(value.get("value")) or _safe_float(value.get("estimate")) or _safe_float(value.get("price")),
+        "low": _safe_float(value.get("valueRangeLow")) or _safe_float(value.get("rangeLow")),
+        "high": _safe_float(value.get("valueRangeHigh")) or _safe_float(value.get("rangeHigh")),
         "confidence": value.get("confidence"),
     }
 
     rent_estimate = {
-        "rent": _safe_float(rent.get("rent"))
-        or _safe_float(rent.get("estimate"))
-        or _safe_float(rent.get("monthlyRent")),
-        "low": _safe_float(rent.get("rentRangeLow"))
-        or _safe_float(rent.get("rangeLow")),
-        "high": _safe_float(rent.get("rentRangeHigh"))
-        or _safe_float(rent.get("rangeHigh")),
+        "rent": _safe_float(rent.get("rent")) or _safe_float(rent.get("estimate")) or _safe_float(rent.get("monthlyRent")),
+        "low": _safe_float(rent.get("rentRangeLow")) or _safe_float(rent.get("rangeLow")),
+        "high": _safe_float(rent.get("rentRangeHigh")) or _safe_float(rent.get("rangeHigh")),
         "confidence": rent.get("confidence"),
+    }
+
+    # 7) NORMALIZED COMPS
+    sales_comps = [_normalize_sale_comp(comp) for comp in raw_sales_comps[:10]]
+    rental_comps = [_normalize_rental_comp(comp) for comp in raw_rental_comps[:10]]
+
+    comps_meta = {
+        "comp_count": comp_count,
+        "max_radius": max_radius,
+        "days_old": days_old,
     }
 
     comps = {
         "sales": sales_comps,
         "rentals": rental_comps,
-        "meta": {
-            "comp_count": comp_count,
-            "max_radius": max_radius,
-            "days_old": days_old,
-        },
+        "meta": comps_meta,
     }
+
+    market_snapshot = _calculate_market_snapshot(sales_comps, rental_comps, comps_meta)
 
     return {
         "status": "ok",
@@ -293,18 +385,20 @@ def resolve_rentcast_investor_bundle(address: str, *, beds=None, baths=None, sqf
         "valuation": valuation,
         "rent_estimate": rent_estimate,
         "comps": comps,
+        "market_snapshot": market_snapshot,
         "raw": {
             "value_avm": value,
             "rent_avm": rent,
             "property_record": property_record_raw,
+            "listing_search": listing,
         },
     }
+
 
 def build_ravlo_property_card(address: str, *, beds=None, baths=None, sqft=None, property_type=None) -> dict:
     """
     Returns a Ravlo-normalized property card payload for Deal Finder / Deal Workspace.
     """
-
     bundle = resolve_rentcast_investor_bundle(
         address=address,
         beds=beds,
@@ -320,57 +414,12 @@ def build_ravlo_property_card(address: str, *, beds=None, baths=None, sqft=None,
     valuation = bundle.get("valuation") or {}
     rent_estimate = bundle.get("rent_estimate") or {}
     comps = bundle.get("comps") or {}
+    market_snapshot = bundle.get("market_snapshot") or {}
 
-    listing = prop.get("listing") or {}
-    photos = prop.get("photos") or []
+    normalized_photos = prop.get("photos") or []
+    primary_photo = prop.get("primary_photo") or (normalized_photos[0] if normalized_photos else None)
 
-    # normalize photos into a clean list of strings
-    normalized_photos = []
-    if isinstance(photos, list):
-        for p in photos:
-            if isinstance(p, str) and p.strip():
-                normalized_photos.append(p.strip())
-            elif isinstance(p, dict):
-                url = p.get("url") or p.get("href") or p.get("src")
-                if url:
-                    normalized_photos.append(url)
-    elif isinstance(photos, str) and photos.strip():
-        normalized_photos = [photos.strip()]
-
-    # normalize sales comps
-    sales_comps = []
-    for comp in (comps.get("sales") or [])[:10]:
-        sales_comps.append({
-            "address": comp.get("formattedAddress") or comp.get("address") or comp.get("addressLine1"),
-            "price": _safe_float(comp.get("price") or comp.get("salePrice") or comp.get("closePrice")),
-            "beds": _safe_int(comp.get("bedrooms") or comp.get("beds")),
-            "baths": _safe_float(comp.get("bathrooms") or comp.get("baths")),
-            "sqft": _safe_int(comp.get("squareFootage") or comp.get("sqft")),
-            "distance": _safe_float(comp.get("distance")),
-            "days_old": _safe_int(comp.get("daysOld") or comp.get("days_old")),
-        })
-
-    # normalize rental comps
-    rental_comps = []
-    for comp in (comps.get("rentals") or [])[:10]:
-        rental_comps.append({
-            "address": comp.get("formattedAddress") or comp.get("address") or comp.get("addressLine1"),
-            "rent": _safe_float(comp.get("rent") or comp.get("price") or comp.get("monthlyRent")),
-            "beds": _safe_int(comp.get("bedrooms") or comp.get("beds")),
-            "baths": _safe_float(comp.get("bathrooms") or comp.get("baths")),
-            "sqft": _safe_int(comp.get("squareFootage") or comp.get("sqft")),
-            "distance": _safe_float(comp.get("distance")),
-            "days_old": _safe_int(comp.get("daysOld") or comp.get("days_old")),
-        })
-
-    # quick market snapshot from sales comps
-    sale_prices = [c["price"] for c in sales_comps if c.get("price") is not None]
-    avg_comp_price = round(sum(sale_prices) / len(sale_prices), 2) if sale_prices else None
-
-    rent_values = [c["rent"] for c in rental_comps if c.get("rent") is not None]
-    avg_comp_rent = round(sum(rent_values) / len(rent_values), 2) if rent_values else None
-
-    card = {
+    return {
         "status": "ok",
         "source": "rentcast",
         "property": {
@@ -386,8 +435,8 @@ def build_ravlo_property_card(address: str, *, beds=None, baths=None, sqft=None,
             "property_type": prop.get("property_type"),
             "price": prop.get("price"),
             "photos": normalized_photos,
-            "primary_photo": normalized_photos[0] if normalized_photos else None,
-            "listing": listing,
+            "primary_photo": primary_photo,
+            "listing": prop.get("listing") or {},
         },
         "valuation": {
             "estimate": valuation.get("estimate"),
@@ -401,27 +450,16 @@ def build_ravlo_property_card(address: str, *, beds=None, baths=None, sqft=None,
             "high": rent_estimate.get("high"),
             "confidence": rent_estimate.get("confidence"),
         },
-        "comps": {
-            "sales": sales_comps,
-            "rentals": rental_comps,
-            "meta": comps.get("meta") or {},
-        },
-        "market_snapshot": {
-            "avg_sale_comp_price": avg_comp_price,
-            "avg_rental_comp_rent": avg_comp_rent,
-            "sale_comp_count": len(sales_comps),
-            "rental_comp_count": len(rental_comps),
-            "days_old": (comps.get("meta") or {}).get("days_old"),
-            "max_radius": (comps.get("meta") or {}).get("max_radius"),
-        }
+        "comps": comps,
+        "market_snapshot": market_snapshot,
     }
 
-    return card
 
 def calculate_deal_score(metrics: dict) -> dict:
     """
     Returns score + label for deal quality.
     """
+    metrics = metrics or {}
 
     roi = metrics.get("roi") or 0
     profit = metrics.get("profit") or 0
@@ -451,7 +489,6 @@ def calculate_deal_score(metrics: dict) -> dict:
         score += 10
 
     label = "Pass"
-
     if score >= 80:
         label = "Strong Deal"
     elif score >= 60:
@@ -464,7 +501,10 @@ def calculate_deal_score(metrics: dict) -> dict:
         "label": label
     }
 
+
 def generate_ai_deal_summary(metrics):
+    metrics = metrics or {}
+
     roi = metrics.get("roi") or 0
     profit = metrics.get("profit") or 0
     rent = metrics.get("rent_est") or 0
@@ -478,7 +518,7 @@ def generate_ai_deal_summary(metrics):
         recommendation = "Review Carefully"
 
     return f"""
-This property shows potential with an estimated ROI of {round(roi*100)}%.
+This property shows potential with an estimated ROI of {round(roi * 100)}%.
 
 Projected flip profit may reach approximately ${profit:,.0f}.
 Rental income may average around ${rent:,.0f} per month.
@@ -486,4 +526,4 @@ Rental income may average around ${rent:,.0f} per month.
 Estimated monthly cash flow could be near ${cashflow:,.0f}.
 
 Recommended strategy: {recommendation}.
-"""
+""".strip()

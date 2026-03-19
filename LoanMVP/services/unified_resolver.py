@@ -1,6 +1,6 @@
 import time
 import hashlib
-from LoanMVP.services.rentcast_resolver import resolve_rentcast_investor_bundle
+from LoanMVP.services.property_service import resolve_rentcast_investor_bundle
 from LoanMVP.services.ai_summary import generate_property_summary
 
 _CACHE = {}

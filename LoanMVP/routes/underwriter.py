@@ -146,7 +146,7 @@ def verify_doc(doc_id):
 #   ADD CONDITION
 # ===============================================================
 @underwriter_bp.route("/add-condition/<int:loan_id>", methods=["POST"])
-@@csrf.exempt 
+@csrf.exempt 
 @login_required
 @role_required("underwriter")
 def add_condition(loan_id):
@@ -442,7 +442,6 @@ def risk_reports():
 @login_required
 @role_required("underwriter")
 def pipeline():
-    # Group loans by underwriting stage
     submitted = LoanApplication.query.filter_by(status="Submitted").all()
     in_review = LoanApplication.query.filter_by(status="In Review").all()
     uw_review = LoanApplication.query.filter_by(status="UW Review").all()
@@ -456,9 +455,10 @@ def pipeline():
         uw_review=uw_review,
         approved=approved,
         declined=declined,
-        title="Underwriter Pipeline"
+        title="Underwriter Pipeline",
+        active_tab="pipeline",
     )
-
+    
 @underwriter_bp.route("/messages")
 @login_required
 @role_required("underwriter")
@@ -475,7 +475,7 @@ def messages():
     )
 
 @underwriter_bp.route("/messages/thread/<int:partner_id>", methods=["GET", "POST"])
-@@csrf.exempt 
+@csrf.exempt 
 @login_required
 @role_required("underwriter")
 def message_thread(partner_id):
@@ -515,7 +515,7 @@ def message_thread(partner_id):
     )
 
 @underwriter_bp.route("/messages/new", methods=["GET", "POST"])
-@@csrf.exempt 
+@csrf.exempt 
 @login_required
 @role_required("underwriter")
 def new_message():

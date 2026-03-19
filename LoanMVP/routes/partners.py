@@ -524,20 +524,6 @@ def settings():
         portal="partner"
     )
 
-@partners_bp.route("/billing")
-@role_required("partner")
-def billing():
-    partner = Partner.query.filter_by(user_id=current_user.id).first()
-    if not partner:
-        flash("Partner profile not found.", "warning")
-        return redirect(url_for("partners.register"))
-
-    return render_template(
-        "partners/billing.html",
-        partner=partner,
-        portal="partner"
-    )
-
 
 @partners_bp.route("/deals")
 @role_required("partner")

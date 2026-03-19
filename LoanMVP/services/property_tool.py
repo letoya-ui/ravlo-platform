@@ -2,6 +2,7 @@
 import os
 import requests
 
+from LoanMVP.services.property_service import resolve_rentcast_investor_bundle
 from LoanMVP.services.deal_workspace_calcs import (
     calculate_flip_budget,
     calculate_rental_budget,
@@ -27,7 +28,11 @@ def _as_float(x):
         return float(x)
     except Exception:
         return None
-
+def _safe_int(x):
+    try:
+        return int(float(x))
+    except Exception:
+        return None
 
 def _keyword_fixer_score(text: str) -> int:
     if not text:
@@ -40,7 +45,41 @@ def _keyword_fixer_score(text: str) -> int:
     ]
     return sum(1 for w in hits if w in t)
 
+def _listing_photo(listing: dict):
+    if not isinstance(listing, dict):
+        return None
 
+    candidates = [
+        listing.get("imageUrl"),
+        listing.get("primaryPhoto"),
+        listing.get("photo"),
+        listing.get("photos"),
+        listing.get("imageUrls"),
+        listing.get("photoUrls"),
+        listing.get("images"),
+    ]
+
+    for val in candidates:
+        if isinstance(val, str) and val.strip():
+            return val.strip()
+        if isinstance(val, list) and val:
+            first = val[0]
+            if isinstance(first, str) and first.strip():
+                return first.strip()
+            if isinstance(first, dict):
+                url = first.get("url") or first.get("href") or first.get("src")
+                if isinstance(url, str) and url.strip():
+                    return url.strip()
+
+    for key in ("media", "assets", "listing", "property", "details"):
+        nested = listing.get(key)
+        if isinstance(nested, dict):
+            nested_photo = _listing_photo(nested)
+            if nested_photo:
+                return nested_photo
+
+    return None
+    
 def _estimate_rehab_from_score(score: int, sqft: float | None) -> float:
     if not sqft:
         sqft = 1400
@@ -179,16 +218,17 @@ def search_deals_for_zip(
 
     out = []
 
-    for l in listings:
+    for idx, l in enumerate(listings):
         addr = (l.get("addressLine1") or l.get("address") or "").strip()
         city = (l.get("city") or "").strip()
         state = (l.get("state") or "").strip()
         z = (l.get("zipCode") or zip_code or "").strip()
 
         price = _as_float(l.get("price"))
-        beds = l.get("bedrooms")
-        baths = l.get("bathrooms")
-        sqft = _as_float(l.get("squareFootage"))
+        beds = _safe_int(l.get("bedrooms") or l.get("beds"))
+        baths = safe_float(l.get("bathrooms") or l.get("baths"))
+        sqft = _as_float(l.get("squareFootage") or l.get("sqft"))
+        year_built = _safe_int(l.get("yearBuilt") or l.get("year_built"))
         remarks = l.get("description") or l.get("remarks") or ""
 
         fixer_score = _keyword_fixer_score(remarks)
@@ -219,6 +259,8 @@ def search_deals_for_zip(
                 "zip": z,
                 "beds": beds,
                 "baths": baths,
+                "year_built": year_built,
+                "property_type": l.get("propertyType") or l.get("propertySubType"),
             },
             "arv_estimate": arv,
             "market_rent_estimate": rent,
@@ -270,6 +312,26 @@ def search_deals_for_zip(
         recommended_strategy = determine_strategy(metrics, recommendation)
         ai_summary = generate_ai_deal_summary(metrics)
 
+        photo = _listing_photo(l)
+
+        if not photo and addr and idx < 8:
+            try:
+                bundle = resolve_rentcast_investor_bundle(
+                    address=addr,
+                    beds=beds,
+                    baths=baths,
+                    sqft=sqft,
+                    property_type=l.get("propertyType") or l.get("propertySubType"),
+                )
+                if bundle.get("status") == "ok":
+                    photo = (bundle.get("property") or {}).get("primary_photo")
+            except Exception:
+                photo = None
+
+        #🔥 FINAL FALLBACK (always show something)
+        if not photo:
+            photo = "/static/images/placeholder_property.jpg"
+
         if min_roi is not None and metrics.get("roi") is not None:
             if float(metrics["roi"]) < float(min_roi):
                 continue
@@ -290,13 +352,9 @@ def search_deals_for_zip(
             "price": price,
             "beds": beds,
             "baths": baths,
-            "sqft": sqft,
-            "photo": (
-                l.get("imageUrl")
-                or l.get("primaryPhoto")
-                or l.get("photo")
-                or None
-            ),
+            "sqft": _safe_int(sqft),
+            "year_built": year_built,
+            "photo": photo,
             "property_id": l.get("id") or l.get("propertyId") or None,
             "property_type": l.get("propertyType") or l.get("propertySubType") or None,
             "fixer_score": fixer_score,
@@ -304,17 +362,21 @@ def search_deals_for_zip(
             "comparison": comparison,
             "recommendation": recommendation,
             "recommended_strategy": recommended_strategy,
-            "deal_score": score_data["score"],
-            "deal_label": score_data["label"],
+            "deal_score": {
+                "score": score_data["score"],
+                "label": score_data["label"],
+            },
             "ai_summary": ai_summary,
         })
 
     out.sort(
         key=lambda x: (
-            x.get("deal_score", 0),
+            (x.get("deal_score") or {}).get("score", 0),
             x.get("metrics", {}).get("roi", 0) or 0,
             x.get("metrics", {}).get("profit", 0) or 0,
-            x.get("metrics", {}).get("net_cashflow_mo", 0) or x.get("metrics", {}).get("net_cashflow", 0) or 0,
+            x.get("metrics", {}).get("net_cashflow_mo", 0)
+            or x.get("metrics", {}).get("net_cashflow", 0)
+            or 0,
         ),
         reverse=True,
     )

@@ -8,7 +8,7 @@ from flask import (
 )
 from flask_login import login_required, current_user
 from datetime import datetime
-fromwerkzeug.utils import secure_filename
+from werkzeug.utils import secure_filename
 
 # ✅ Always import db before model files
 from LoanMVP.extensions import db, csrf
