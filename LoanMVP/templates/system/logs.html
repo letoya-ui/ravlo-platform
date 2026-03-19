@@ -1,21 +1,80 @@
-{% extends "layouts/Ravlo_lending_base.html" %}
+{% extends "layouts/ravlo_employee_base.html" %}
+
 {% block title %}System Logs{% endblock %}
+{% block page_title %}System Logs{% endblock %}
+{% block page_subline %}Track recent platform activity, events, and operational logs{% endblock %}
+
 {% block content %}
-<h1 class="text-xl mb-4">📜 System Logs</h1>
-<div class="card p-3">
-  <table class="table-auto w-full text-sm">
-    <thead><tr><th>Level</th><th>Message</th><th>Origin</th><th>User</th><th>Date</th></tr></thead>
-    <tbody>
-    {% for log in logs %}
-      <tr>
-        <td>{{ log.level }}</td>
-        <td>{{ log.message }}</td>
-        <td>{{ log.origin }}</td>
-        <td>{{ log.user }}</td>
-        <td>{{ log.created_at.strftime('%b %d, %Y %H:%M') }}</td>
-      </tr>
-    {% endfor %}
-    </tbody>
-  </table>
+
+<div class="re-grid">
+
+  <section class="re-card pad">
+    <div class="section-head">
+      <div>
+        <div class="eyebrow">PLATFORM ACTIVITY</div>
+        <h3 style="margin:.35rem 0 .2rem;">Recent Logs</h3>
+        <div class="re-card-subtitle">
+          Review the latest recorded system events across Ravlo.
+        </div>
+      </div>
+    </div>
+
+    {% if logs %}
+      <div class="admin-log-stack mt-16">
+        {% for log in logs %}
+        <div class="admin-log-item">
+          <div class="admin-log-item__title">
+            {{ log.action if log.action is defined and log.action else (log.title if log.title is defined and log.title else "System Event") }}
+          </div>
+
+          <div class="text-muted admin-log-item__meta">
+            {{ log.created_at.strftime("%Y-%m-%d %I:%M %p") if log.created_at else "" }}
+          </div>
+
+          {% if log.description is defined and log.description %}
+            <div class="text-muted admin-log-item__body">{{ log.description }}</div>
+          {% elif log.message is defined and log.message %}
+            <div class="text-muted admin-log-item__body">{{ log.message }}</div>
+          {% endif %}
+        </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="re-empty mt-16">
+        No logs found.
+      </div>
+    {% endif %}
+  </section>
+
 </div>
+
+<style>
+  .admin-log-stack{
+    display:flex;
+    flex-direction:column;
+    gap:.75rem;
+  }
+
+  .admin-log-item{
+    padding:.9rem 1rem;
+    border:1px solid rgba(255,255,255,.08);
+    border-radius:14px;
+    background:rgba(255,255,255,.02);
+  }
+
+  .admin-log-item__title{
+    font-weight:700;
+    margin-bottom:.2rem;
+  }
+
+  .admin-log-item__meta{
+    font-size:.84rem;
+  }
+
+  .admin-log-item__body{
+    margin-top:.4rem;
+    line-height:1.5;
+  }
+</style>
+
 {% endblock %}
