@@ -19,7 +19,7 @@ from LoanMVP.models.loan_models import LoanApplication, BorrowerProfile
 from LoanMVP.models.document_models import LoanDocument
 from LoanMVP.models.system_models import SystemLog
 from LoanMVP.models.admin import Company, AccessRequest, UserInvite
-
+from LoanMVP.models.ai_models import AIAssistantInteraction
 from LoanMVP.services.notify_service import notify
 
 import io
