@@ -5,10 +5,12 @@
 {% block page_subline %}Manage platform accounts, status, and employee access{% endblock %}
 
 {% block topbar_actions %}
-  <a href="{{ url_for('admin.invite_team_member') }}" class="re-btn primary sm">
-    <i class="lucide lucide-user-plus"></i>
-    Send Register Request
-  </a>
+  {% if company %}
+    <a class="re-btn primary sm" href="{{ url_for('admin.invite_team_member', company_id=company.id) }}">
+      <i class="lucide lucide-send"></i>
+      Send Invite
+     </a>
+   {% endif %}
 {% endblock %}
 
 {% block content %}
