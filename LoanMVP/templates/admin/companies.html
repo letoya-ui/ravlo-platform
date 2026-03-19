@@ -1,24 +1,59 @@
 {% extends "layouts/ravlo_employee_base.html" %}
 {% block title %}Admin • Companies{% endblock %}
+{% block page_title %}Companies{% endblock %}
+{% block page_subline %}Manage organizations onboarded into Ravlo Lending OS{% endblock %}
+
+{% block topbar_actions %}
+  <a class="re-btn ghost sm" href="{{ url_for('admin.access_requests') }}">
+    <i class="lucide lucide-inbox"></i>
+    Access Requests
+  </a>
+  <a class="re-btn primary sm" href="{{ url_for('admin.dashboard') }}">
+    <i class="lucide lucide-layout-dashboard"></i>
+    Dashboard
+  </a>
+{% endblock %}
 
 {% block content %}
-<main class="dashboard-main">
-  <div class="wrap">
 
-    <div class="card" style="display:flex; justify-content:space-between; align-items:center; gap:1rem; flex-wrap:wrap;">
+{% set total_companies = companies|length %}
+{% set active_companies = companies|selectattr('is_active')|list|length %}
+{% set inactive_companies = total_companies - active_companies %}
+
+<div class="re-grid">
+
+  <section class="re-grid-3">
+    <div class="re-stat">
+      <div class="re-stat-label">Total Companies</div>
+      <div class="re-stat-value">{{ total_companies }}</div>
+      <div class="re-stat-meta">Organizations in Ravlo</div>
+    </div>
+
+    <div class="re-stat">
+      <div class="re-stat-label">Active</div>
+      <div class="re-stat-value">{{ active_companies }}</div>
+      <div class="re-stat-meta">Currently enabled</div>
+    </div>
+
+    <div class="re-stat">
+      <div class="re-stat-label">Inactive</div>
+      <div class="re-stat-value">{{ inactive_companies }}</div>
+      <div class="re-stat-meta">Not currently active</div>
+    </div>
+  </section>
+
+  <section class="re-card pad">
+    <div class="section-head">
       <div>
-        <h1>Companies</h1>
-        <div class="muted">Manage organizations onboarded into Ravlo Lending OS.</div>
-      </div>
-      <div style="display:flex; gap:.6rem; flex-wrap:wrap;">
-        <a class="btn" href="{{ url_for('admin.requests_dashboard') }}">📥 Access Requests</a>
-        <a class="btn btn-primary" href="{{ url_for('admin.dashboard') }}">🏠 Dashboard</a>
+        <div class="eyebrow">ORGANIZATIONS</div>
+        <h3 style="margin:.35rem 0 .2rem;">Company Directory</h3>
+        <div class="re-card-subtitle">View and manage onboarded organizations.</div>
       </div>
     </div>
 
-    <div class="card">
-      {% if companies %}
-        <table class="table">
+    {% if companies %}
+      <div class="re-table-wrap mt-16">
+        <table class="re-table">
           <thead>
             <tr>
               <th>ID</th>
@@ -26,7 +61,7 @@
               <th>Email Domain</th>
               <th>Status</th>
               <th>Created</th>
-              <th></th>
+              <th class="text-right">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -36,25 +71,41 @@
               <td>{{ company.name }}</td>
               <td>{{ company.email_domain or "—" }}</td>
               <td>
-                <span class="status st-{{ 'active' if company.is_active else 'inactive' }}">
-                  {{ 'Active' if company.is_active else 'Inactive' }}
-                </span>
+                {% if company.is_active %}
+                  <span class="badge badge-success">Active</span>
+                {% else %}
+                  <span class="badge badge-danger">Inactive</span>
+                {% endif %}
               </td>
               <td>{{ company.created_at.strftime("%Y-%m-%d") if company.created_at else "—" }}</td>
-              <td>
-                <a class="btn btn-sm" href="{{ url_for('admin.company_team', company_id=company.id) }}">
-                  Open Team
-                </a>
+              <td class="text-right">
+                <div class="row" style="justify-content:flex-end; gap:8px; flex-wrap:wrap;">
+                  <a class="re-btn ghost sm" href="{{ url_for('admin.company_team', company_id=company.id) }}">
+                    <i class="lucide lucide-users"></i>
+                    Team
+                  </a>
+
+                  {# use this once company dashboard route exists #}
+                  {# 
+                  <a class="re-btn primary sm" href="{{ url_for('admin.company_dashboard', company_id=company.id) }}">
+                    <i class="lucide lucide-building-2"></i>
+                    Dashboard
+                  </a>
+                  #}
+                </div>
               </td>
             </tr>
             {% endfor %}
           </tbody>
         </table>
-      {% else %}
-        <p class="muted">No companies have been created yet.</p>
-      {% endif %}
-    </div>
+      </div>
+    {% else %}
+      <div class="re-empty mt-16">
+        No companies have been created yet.
+      </div>
+    {% endif %}
+  </section>
 
-  </div>
-</main>
+</div>
+
 {% endblock %}
