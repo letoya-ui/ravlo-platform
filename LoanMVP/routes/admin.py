@@ -56,17 +56,16 @@ def dashboard():
     company = None
 
     if current_user.role == "master_admin":
-        company = Company.query.order_by(Company.created_at.desc()).first()
+        company = Company.query.order_by(Company.id.asc()).first()
     else:
-        company = Company.query.filter_by(owner_id=current_user.id).first()
-
-        if not company:
-            company_access = CompanyAccess.query.filter_by(
-                user_id=current_user.id,
-                is_active=True
-            ).first()
-            if company_access:
-                company = Company.query.get(company_access.company_id)
+        access = (
+            CompanyAccess.query
+            .filter_by(user_id=current_user.id, is_active=True)
+            .order_by(CompanyAccess.id.desc())
+            .first()
+        )
+        if access:
+            company = Company.query.get(access.company_id)
 
     # =========================
     # KPI COUNTS
@@ -92,9 +91,6 @@ def dashboard():
         ).count(),
     }
 
-    # =========================
-    # RECENT TABLE DATA
-    # =========================
     recent_requests = (
         AccessRequest.query
         .order_by(AccessRequest.created_at.desc())
@@ -134,13 +130,9 @@ def dashboard():
         else []
     )
 
-    # =========================
-    # CHART HELPERS
-    # =========================
     def last_n_months(n=6):
         now = datetime.utcnow()
         months = []
-
         year = now.year
         month = now.month
 
@@ -167,9 +159,6 @@ def dashboard():
         series = [counts.get((year, month), 0) for year, month in month_keys]
         return labels, series
 
-    # =========================
-    # CHART DATA
-    # =========================
     if LoanApplication and hasattr(LoanApplication, "created_at"):
         loan_records = LoanApplication.query.all()
         loan_volume_labels, loan_volume_series = monthly_series(
@@ -186,9 +175,6 @@ def dashboard():
 
     server_load_value = 68
 
-    # =========================
-    # AI SUMMARY
-    # =========================
     ai_summary = (
         f"Platform snapshot: {stats['pending_requests']} pending request(s), "
         f"{stats['pending_invites']} pending invite(s), "

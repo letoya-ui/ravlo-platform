@@ -1,42 +1,105 @@
 {% extends "layouts/ravlo_employee_base.html" %}
 {% block title %}Loan Quote Engine{% endblock %}
+
+{% block page_title %}Loan Quote Engine{% endblock %}
+{% block page_subline %}
+Compare lender options, review estimated terms, and help borrowers choose the strongest fit.
+{% endblock %}
+
+{% block topbar_actions %}
+  <a class="rv-btn secondary sm" href="{{ url_for('loan_officer.loan_queue') }}">
+    <i class="lucide lucide-briefcase-business"></i>
+    Loan Queue
+  </a>
+  <button class="rv-btn primary sm" type="button" onclick="generateAIQuote()">
+    <i class="lucide lucide-sparkles"></i>
+    Generate AI Quote
+  </button>
+{% endblock %}
+
 {% block content %}
+<div class="quote-shell">
 
-
- <div class="container-fluid py-4 text-light">
-  <h3 class="mb-4" style="color:#73b7ff;">
-    <i class="fas fa-percentage"></i> Loan Quote Engine
-  </h3>
-  <p class="text-muted mb-4">
-    Instantly compare lender options and estimated loan terms for your borrowers.
-  </p>
-
-  <!-- Loan Details Summary -->
-  <div class="card mb-4 p-4" style="background-color:#181a1b;border:1px solid #2b2b2b;border-radius:10px;">
-    <h5 class="text-secondary mb-3">Borrower Loan Overview</h5>
-    <div class="row">
-      <div class="col-md-4">
-        <p><strong>Borrower:</strong> {{ borrower_name or 'N/A' }}</p>
-      </div>
-      <div class="col-md-4">
-        <p><strong>Loan Type:</strong> {{ loan_type or 'Unknown' }}</p>
-      </div>
-      <div class="col-md-4">
-        <p><strong>Requested Amount:</strong> ${{ "{:,.2f}".format(amount or 0) }}</p>
-      </div>
-    </div>
-  </div>
-
-  <!-- Quote Comparison Table -->
-  <div class="card p-4" style="background-color:#181a1b;border:1px solid #2b2b2b;border-radius:10px;">
-    <div class="d-flex justify-content-between align-items-center mb-3">
-      <h5 class="text-secondary">Available Quotes</h5>
-      <button class="btn btn-outline-info btn-sm" onclick="generateAIQuote()">🤖 Generate AI Quote</button>
+  <!-- HERO -->
+  <section class="rv-card quote-hero">
+    <div>
+      <div class="eyebrow">Pricing & Terms</div>
+      <h2>Borrower Loan Overview</h2>
+      <p class="muted">
+        Instantly compare lender options and estimated loan terms for your borrowers.
+      </p>
     </div>
 
-    <div class="table-responsive">
-      <table class="table table-dark table-hover align-middle mb-0">
-        <thead class="table-secondary text-dark">
+    <div class="hero-stats">
+      <div class="mini-stat">
+        <span class="mini-stat__label">Borrower</span>
+        <span class="mini-stat__value">{{ borrower_name or 'N/A' }}</span>
+      </div>
+      <div class="mini-stat">
+        <span class="mini-stat__label">Loan Type</span>
+        <span class="mini-stat__value">{{ loan_type or 'Unknown' }}</span>
+      </div>
+      <div class="mini-stat">
+        <span class="mini-stat__label">Requested Amount</span>
+        <span class="mini-stat__value">${{ "{:,.2f}".format(amount or 0) }}</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- KPI STRIP -->
+  <section class="quote-kpi-grid">
+    <div class="rv-stat">
+      <div class="rv-stat__label">Available Quotes</div>
+      <div class="rv-stat__value" id="quoteCount">{{ quotes|length if quotes else 0 }}</div>
+      <div class="rv-stat__meta">Current comparison set</div>
+    </div>
+
+    <div class="rv-stat">
+      <div class="rv-stat__label">Best Rate</div>
+      <div class="rv-stat__value" id="bestRate">
+        {% if quotes %}
+          {{ quotes|map(attribute='rate')|list|first or 'N/A' }}
+        {% else %}
+          N/A
+        {% endif %}
+      </div>
+      <div class="rv-stat__meta">Lowest visible rate</div>
+    </div>
+
+    <div class="rv-stat">
+      <div class="rv-stat__label">Highest LTV</div>
+      <div class="rv-stat__value" id="bestLTV">N/A</div>
+      <div class="rv-stat__meta">Most leverage offered</div>
+    </div>
+
+    <div class="rv-stat">
+      <div class="rv-stat__label">Recommendation</div>
+      <div class="rv-stat__value" id="quoteRecommendation">Review Quotes</div>
+      <div class="rv-stat__meta">Best-fit summary</div>
+    </div>
+  </section>
+
+  <!-- TABLE -->
+  <section class="rv-card">
+    <div class="section-head">
+      <div>
+        <div class="eyebrow">Comparison</div>
+        <h3>Available Quotes</h3>
+      </div>
+
+      <div class="section-actions">
+        <button class="rv-btn secondary sm" type="button" onclick="sortQuotesByRate()">
+          Sort by Rate
+        </button>
+        <button class="rv-btn secondary sm" type="button" onclick="sortQuotesByLTV()">
+          Sort by LTV
+        </button>
+      </div>
+    </div>
+
+    <div class="table-wrap">
+      <table class="rv-table" id="quotesTable">
+        <thead>
           <tr>
             <th>Lender</th>
             <th>Interest Rate</th>
@@ -47,77 +110,439 @@
           </tr>
         </thead>
         <tbody id="quoteTable">
-          {% for quote in quotes %}
-          <tr>
-            <td>{{ quote.lender }}</td>
-            <td>{{ quote.rate }}</td>
-            <td>{{ quote.ltv }}</td>
-            <td>{{ quote.term if quote.term else '30 years' }}</td>
-            <td>${{ quote.monthly_payment if quote.monthly_payment else 'N/A' }}</td>
-            <td>
-              <button class="btn btn-sm btn-outline-success" onclick="selectQuote('{{ quote.lender }}')">
-                Select
-              </button>
-            </td>
-          </tr>
-          {% endfor %}
+          {% if quotes %}
+            {% for quote in quotes %}
+              <tr>
+                <td>{{ quote.lender or 'Unknown Lender' }}</td>
+                <td>{{ quote.rate or 'N/A' }}</td>
+                <td>{{ quote.ltv or 'N/A' }}</td>
+                <td>{{ quote.term if quote.term else '30 years' }}</td>
+                <td>
+                  {% if quote.monthly_payment %}
+                    ${{ quote.monthly_payment }}
+                  {% else %}
+                    N/A
+                  {% endif %}
+                </td>
+                <td>
+                  <button class="rv-btn success sm" type="button" onclick="selectQuote('{{ quote.lender or 'Lender' }}')">
+                    Select
+                  </button>
+                </td>
+              </tr>
+            {% endfor %}
+          {% else %}
+            <tr>
+              <td colspan="6" class="empty-cell">No quotes available yet.</td>
+            </tr>
+          {% endif %}
         </tbody>
       </table>
     </div>
-  </div>
+  </section>
 
-  <!-- Dynamic Chart -->
-  <div class="card mt-4 p-4" style="background-color:#181a1b;border:1px solid #2b2b2b;border-radius:10px;">
-    <h5 class="text-secondary mb-3">Quote Comparison Chart</h5>
-    <div id="quoteChart" style="height: 280px;"></div>
-  </div>
+  <!-- CHART + AI BOX -->
+  <section class="quote-grid-2">
+
+    <div class="rv-card">
+      <div class="section-head">
+        <div>
+          <div class="eyebrow">Visual Compare</div>
+          <h3>Quote Comparison Chart</h3>
+        </div>
+      </div>
+      <div id="quoteChart" class="chart-box"></div>
+    </div>
+
+    <div class="rv-card">
+      <div class="section-head">
+        <div>
+          <div class="eyebrow">AI Insight</div>
+          <h3>Quote Notes</h3>
+        </div>
+      </div>
+
+      <div class="ai-note-box" id="quoteAiNote">
+        Generate an AI quote or select a lender to build a quick recommendation summary.
+      </div>
+
+      <div class="selection-box" id="selectionBox">
+        No quote selected yet.
+      </div>
+    </div>
+
+  </section>
+
 </div>
+
+<style>
+.quote-shell{
+  display:grid;
+  gap:18px;
+}
+
+.quote-hero{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-end;
+  gap:1rem;
+  flex-wrap:wrap;
+}
+
+.hero-stats{
+  display:flex;
+  gap:12px;
+  flex-wrap:wrap;
+}
+
+.quote-kpi-grid{
+  display:grid;
+  grid-template-columns:repeat(4, minmax(0, 1fr));
+  gap:14px;
+}
+
+.quote-grid-2{
+  display:grid;
+  grid-template-columns:1.25fr .9fr;
+  gap:18px;
+}
+
+.rv-card{
+  border-radius:22px;
+  padding:20px 22px;
+  border:1px solid rgba(255,255,255,.08);
+  background:
+    radial-gradient(900px 520px at 15% 10%, rgba(122,184,255,.08), transparent 55%),
+    rgba(255,255,255,.02);
+  box-shadow:0 14px 34px rgba(0,0,0,.18);
+}
+
+.eyebrow{
+  display:inline-flex;
+  padding:.35rem .7rem;
+  border-radius:999px;
+  font-size:.74rem;
+  font-weight:700;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+  color:#cfe2f3;
+  background:rgba(58,92,122,.25);
+  border:1px solid rgba(122,184,255,.15);
+}
+
+.muted{
+  color:#95a8ba;
+}
+
+.mini-stat{
+  min-width:150px;
+  padding:12px 14px;
+  border-radius:16px;
+  background:rgba(255,255,255,.04);
+  border:1px solid rgba(255,255,255,.08);
+}
+
+.mini-stat__label{
+  display:block;
+  font-size:.74rem;
+  text-transform:uppercase;
+  letter-spacing:.08em;
+  color:#8fa4b7;
+  margin-bottom:5px;
+}
+
+.mini-stat__value{
+  color:#fff;
+  font-weight:800;
+}
+
+.rv-stat{
+  padding:16px;
+  border-radius:18px;
+  border:1px solid rgba(255,255,255,.08);
+  background:rgba(255,255,255,.03);
+}
+
+.rv-stat__label{
+  font-size:.78rem;
+  text-transform:uppercase;
+  letter-spacing:.08em;
+  color:#8fa4b7;
+  margin-bottom:8px;
+}
+
+.rv-stat__value{
+  color:#fff;
+  font-size:1.25rem;
+  font-weight:800;
+}
+
+.rv-stat__meta{
+  color:#96aabc;
+  margin-top:6px;
+  font-size:.88rem;
+}
+
+.section-head{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:1rem;
+  margin-bottom:.9rem;
+}
+
+.section-actions{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+}
+
+.table-wrap{
+  overflow-x:auto;
+}
+
+.rv-table{
+  width:100%;
+  border-collapse:collapse;
+}
+
+.rv-table th,
+.rv-table td{
+  padding:.95rem .75rem;
+  border-bottom:1px solid rgba(255,255,255,.06);
+  text-align:left;
+}
+
+.rv-table th{
+  color:#8fa4b7;
+  font-size:.82rem;
+  text-transform:uppercase;
+  letter-spacing:.06em;
+}
+
+.rv-table td{
+  color:#e7eef5;
+}
+
+.empty-cell{
+  text-align:center;
+  color:#8fa4b7;
+  padding:1.25rem;
+}
+
+.chart-box{
+  min-height:320px;
+}
+
+.ai-note-box,
+.selection-box{
+  padding:14px;
+  border-radius:16px;
+  background:rgba(255,255,255,.04);
+  border:1px solid rgba(255,255,255,.08);
+  color:#dce7f1;
+  line-height:1.55;
+}
+
+.selection-box{
+  margin-top:12px;
+}
+
+.rv-btn{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:.45rem;
+  padding:.72rem 1rem;
+  border-radius:12px;
+  text-decoration:none;
+  font-weight:700;
+  border:1px solid rgba(255,255,255,.08);
+  transition:.18s ease;
+  cursor:pointer;
+}
+
+.rv-btn.primary{
+  background:#3A5C7A;
+  color:#fff;
+}
+
+.rv-btn.secondary{
+  background:rgba(255,255,255,.05);
+  color:#e7eef5;
+}
+
+.rv-btn.success{
+  background:rgba(38,208,124,.16);
+  color:#9ef2c3;
+  border-color:rgba(38,208,124,.28);
+}
+
+.rv-btn.sm{
+  padding:.55rem .9rem;
+  font-size:.86rem;
+}
+
+.rv-btn:hover{
+  transform:translateY(-1px);
+}
+
+@media (max-width: 1080px){
+  .quote-kpi-grid{
+    grid-template-columns:repeat(2, minmax(0, 1fr));
+  }
+
+  .quote-grid-2{
+    grid-template-columns:1fr;
+  }
+}
+
+@media (max-width: 700px){
+  .quote-kpi-grid{
+    grid-template-columns:1fr;
+  }
+}
+</style>
 
 <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
 <script>
 let chart;
 
+function getQuoteRows() {
+  return Array.from(document.querySelectorAll("#quoteTable tr")).filter(row => row.children.length >= 5);
+}
+
+function parseRate(text) {
+  return parseFloat((text || "").replace("%", "").trim()) || 0;
+}
+
+function parseLTV(text) {
+  return parseFloat((text || "").replace("%", "").trim()) || 0;
+}
+
+function parseMoney(text) {
+  return parseFloat((text || "").replace("$", "").replace(/,/g, "").trim()) || 0;
+}
+
+function updateSummaryStats() {
+  const rows = getQuoteRows();
+
+  document.getElementById("quoteCount").innerText = rows.length;
+
+  if (!rows.length) {
+    document.getElementById("bestRate").innerText = "N/A";
+    document.getElementById("bestLTV").innerText = "N/A";
+    document.getElementById("quoteRecommendation").innerText = "No Quotes";
+    return;
+  }
+
+  const rates = rows.map(r => parseRate(r.children[1].innerText)).filter(v => v > 0);
+  const ltvs = rows.map(r => parseLTV(r.children[2].innerText)).filter(v => v > 0);
+
+  const bestRate = rates.length ? Math.min(...rates).toFixed(2) + "%" : "N/A";
+  const bestLTV = ltvs.length ? Math.max(...ltvs).toFixed(0) + "%" : "N/A";
+
+  document.getElementById("bestRate").innerText = bestRate;
+  document.getElementById("bestLTV").innerText = bestLTV;
+  document.getElementById("quoteRecommendation").innerText = rates.length ? "Compare Lowest Rate" : "Review Quotes";
+}
+
 function updateChart() {
-  const rows = Array.from(document.querySelectorAll("#quoteTable tr"));
+  const rows = getQuoteRows();
   const lenders = rows.map(r => r.children[0].innerText);
-  const rates = rows.map(r => parseFloat(r.children[1].innerText.replace('%', '')) || 0);
+  const rates = rows.map(r => parseRate(r.children[1].innerText));
 
   const options = {
-    chart: { type: 'bar', height: 280, background: 'transparent', foreColor: '#ccc' },
-    series: [{ name: 'Interest Rate (%)', data: rates }],
-    xaxis: { categories: lenders },
-    plotOptions: { bar: { borderRadius: 6, columnWidth: '55%' } },
-    fill: { gradient: { shade: 'dark', type: 'vertical', shadeIntensity: 0.3, gradientToColors: ['#73b7ff'], opacityFrom: 0.9, opacityTo: 0.5 } },
-    colors: ['#3fa7ff']
+    chart: {
+      type: 'bar',
+      height: 320,
+      background: 'transparent',
+      foreColor: '#cfd7e3',
+      toolbar: { show: false }
+    },
+    series: [{
+      name: 'Interest Rate (%)',
+      data: rates
+    }],
+    xaxis: {
+      categories: lenders
+    },
+    plotOptions: {
+      bar: {
+        borderRadius: 6,
+        columnWidth: '55%'
+      }
+    },
+    dataLabels: {
+      enabled: false
+    },
+    grid: {
+      borderColor: '#2a2e36'
+    },
+    theme: {
+      mode: 'dark'
+    },
+    colors: ['#7ab8ff']
   };
 
   if (!chart) {
     chart = new ApexCharts(document.querySelector("#quoteChart"), options);
     chart.render();
   } else {
+    chart.updateOptions({ xaxis: { categories: lenders } });
     chart.updateSeries([{ data: rates }]);
   }
+
+  updateSummaryStats();
 }
 
 function selectQuote(lender) {
-  alert(`✅ Quote selected from ${lender}`);
+  const selectionBox = document.getElementById("selectionBox");
+  const quoteAiNote = document.getElementById("quoteAiNote");
+
+  selectionBox.innerHTML = `✅ Selected quote from <strong>${lender}</strong>.`;
+  quoteAiNote.innerHTML = `AI Note: <strong>${lender}</strong> is currently selected for review. Compare rate, leverage, payment, and term before final recommendation.`;
 }
 
 function generateAIQuote() {
   const table = document.getElementById("quoteTable");
   const newRow = table.insertRow();
+
   newRow.innerHTML = `
     <td>AI Generated Capital</td>
     <td>7.08%</td>
     <td>81%</td>
     <td>30 years</td>
     <td>$2,089</td>
-    <td><button class="btn btn-sm btn-outline-success" onclick="selectQuote('AI Generated Capital')">Select</button></td>`;
+    <td>
+      <button class="rv-btn success sm" type="button" onclick="selectQuote('AI Generated Capital')">
+        Select
+      </button>
+    </td>
+  `;
+
   updateChart();
-  alert('🤖 AI-generated quote added successfully.');
+
+  document.getElementById("quoteAiNote").innerHTML =
+    "AI Note: A synthetic lender option was added for comparison. Review whether the rate, payment, and leverage improve the borrower’s fit.";
+}
+
+function sortQuotesByRate() {
+  const tbody = document.getElementById("quoteTable");
+  const rows = getQuoteRows().sort((a, b) => parseRate(a.children[1].innerText) - parseRate(b.children[1].innerText));
+  tbody.innerHTML = "";
+  rows.forEach(row => tbody.appendChild(row));
+  updateChart();
+}
+
+function sortQuotesByLTV() {
+  const tbody = document.getElementById("quoteTable");
+  const rows = getQuoteRows().sort((a, b) => parseLTV(b.children[2].innerText) - parseLTV(a.children[2].innerText));
+  tbody.innerHTML = "";
+  rows.forEach(row => tbody.appendChild(row));
+  updateChart();
 }
 
 window.onload = updateChart;
 </script>
-
 {% endblock %}

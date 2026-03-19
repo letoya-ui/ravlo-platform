@@ -847,40 +847,14 @@ def quick_1003():
 @role_required("loan_officer")
 def quote_engine():
     officer = LoanOfficerProfile.query.filter_by(user_id=current_user.id).first()
+
     selected_loan = None
     quotes = []
+    borrower_name = None
+    loan_type = None
+    amount = 0
 
-    if request.method == "POST":
-        loan_id = request.form.get("loan_id")
-        selected_loan = LoanApplication.query.get(loan_id)
-
-        if not selected_loan:
-            flash("Loan not found.", "danger")
-            return redirect(url_for("loan_officer.quote_engine"))
-
-        amount = float(selected_loan.amount or 0)
-
-        quotes = [
-            {
-                "lender": "Lima One",
-                "rate": "7.25%",
-                "ltv": "80%",
-                "monthly_payment": round((amount * 0.0725) / 12, 2)
-            },
-            {
-                "lender": "ROC Capital",
-                "rate": "7.50%",
-                "ltv": "78%",
-                "monthly_payment": round((amount * 0.0750) / 12, 2)
-            },
-            {
-                "lender": "Lev Capital",
-                "rate": "7.10%",
-                "ltv": "82%",
-                "monthly_payment": round((amount * 0.0710) / 12, 2)
-            },
-        ]
-
+    # Load all loans assigned to this loan officer
     loans = []
     if officer:
         loans = (
@@ -890,15 +864,77 @@ def quote_engine():
             .all()
         )
 
+    # Support both POST form submit and GET query param
+    loan_id = None
+    if request.method == "POST":
+        loan_id = request.form.get("loan_id")
+    else:
+        loan_id = request.args.get("loan_id")
+
+    if loan_id:
+        selected_loan = LoanApplication.query.get(loan_id)
+
+        if not selected_loan:
+            flash("Loan not found.", "danger")
+            return redirect(url_for("loan_officer.quote_engine"))
+
+        amount = float(selected_loan.amount or 0)
+        loan_type = getattr(selected_loan, "loan_type", None) or "Unknown"
+
+        borrower = None
+        if getattr(selected_loan, "borrower_profile_id", None):
+            borrower = BorrowerProfile.query.get(selected_loan.borrower_profile_id)
+
+        borrower_name = (
+            getattr(borrower, "full_name", None)
+            if borrower else None
+        ) or "N/A"
+
+        # Basic sample quote engine
+        quotes = [
+            {
+                "lender": "Lima One",
+                "rate": "7.25%",
+                "ltv": "80%",
+                "term": "30 years",
+                "monthly_payment": f"{round((amount * 0.0725) / 12, 2):,.2f}",
+            },
+            {
+                "lender": "ROC Capital",
+                "rate": "7.50%",
+                "ltv": "78%",
+                "term": "30 years",
+                "monthly_payment": f"{round((amount * 0.0750) / 12, 2):,.2f}",
+            },
+            {
+                "lender": "Lev Capital",
+                "rate": "7.10%",
+                "ltv": "82%",
+                "term": "30 years",
+                "monthly_payment": f"{round((amount * 0.0710) / 12, 2):,.2f}",
+            },
+        ]
+
+        # Sort by lowest rate so best option appears first
+        def parse_rate(q):
+            try:
+                return float(str(q.get("rate", "0")).replace("%", "").strip())
+            except Exception:
+                return 999.0
+
+        quotes = sorted(quotes, key=parse_rate)
+
     return render_template(
         "loan_officer/quote_engine.html",
         loans=loans,
         selected_loan=selected_loan,
+        borrower_name=borrower_name,
+        loan_type=loan_type,
+        amount=amount,
         quotes=quotes,
         active_tab="tools",
         title="Quote Engine"
     )
-
 
 @loan_officer_bp.route("/quotes/new", methods=["GET", "POST"])
 @csrf.exempt
@@ -2779,41 +2815,86 @@ def borrower_intake():
     )
 
 
-@loan_officer_bp.route("/resources", methods=["GET", "POST"])
-@csrf.exempt
+@loan_officer_bp.route("/resource-center")
 @role_required("loan_officer")
-def resources():
-    resources = [
-        {"title": "Underwriting Guidelines", "link": "#"},
-        {"title": "Marketing Templates", "link": "#"},
-        {"title": "Compliance Checklist", "link": "#"},
-        {"title": "Bridge Loan DSCR Worksheet", "link": "#"},
-    ]
-
-    ai_reply = None
-    query = None
-
-    if request.method == "POST":
-        query = request.form.get("query")
-        if query:
-            try:
-                assistant = AIAssistant()
-                ai_reply = assistant.generate_reply(
-                    f"Loan officer resource request: {query}. Provide a clear, professional response.",
-                    "loan_officer"
-                )
-            except Exception:
-                ai_reply = "AI resource assistant unavailable."
+def resource_center():
+    resources = {
+        "scripts": [
+            {
+                "title": "Borrower Welcome Script",
+                "body": "Hello [Name], we received your loan request and I’ll be your main point of contact. I’ll help guide your file and next steps."
+            },
+            {
+                "title": "Missing Documents Script",
+                "body": "Hello [Name], to continue moving forward we still need the following items: [Docs]. Please upload them at your earliest convenience."
+            },
+            {
+                "title": "Follow-Up Script",
+                "body": "Hello [Name], just checking in on the remaining items for your file. Once received, we can continue processing immediately."
+            },
+            {
+                "title": "Preapproval Update Script",
+                "body": "Good news — your file has been reviewed and we’re preparing the next phase. I’ll send your official update shortly."
+            },
+        ],
+        "products": [
+            {
+                "name": "DSCR Loan",
+                "summary": "Investor loan based on rental cash flow rather than personal income."
+            },
+            {
+                "name": "Fix & Flip",
+                "summary": "Short-term financing for acquisition and renovation of investment properties."
+            },
+            {
+                "name": "Bridge Loan",
+                "summary": "Fast capital for transitional properties or time-sensitive opportunities."
+            },
+            {
+                "name": "Construction Loan",
+                "summary": "Funding for ground-up construction or major rebuild projects."
+            },
+        ],
+        "checklists": [
+            {
+                "title": "Initial Intake Checklist",
+                "items": [
+                    "Borrower contact information",
+                    "Entity / ownership details",
+                    "Purchase contract or scenario details",
+                    "Property address",
+                    "Exit strategy",
+                    "Income or rent support",
+                ],
+            },
+            {
+                "title": "Common Document Checklist",
+                "items": [
+                    "ID / entity docs",
+                    "Bank statements",
+                    "Purchase contract",
+                    "Scope of work",
+                    "Insurance",
+                    "Credit authorization if needed",
+                ],
+            },
+        ],
+        "workflow": [
+            "Review new lead activity",
+            "Follow up on incomplete files",
+            "Check document uploads",
+            "Update CRM notes",
+            "Move loans to next stage daily",
+            "Flag files needing processor or underwriting attention",
+        ],
+    }
 
     return render_template(
-        "loan_officer/resources.html",
+        "loan_officer/resource_center.html",
         resources=resources,
-        ai_reply=ai_reply,
-        query=query,
-        active_tab="resources",
-        title="Resources"
+        active_tab="resource_center",
+        title="Resource Center",
     )
-
 
 @loan_officer_bp.route("/resources/chat", methods=["POST"])
 @csrf.exempt
