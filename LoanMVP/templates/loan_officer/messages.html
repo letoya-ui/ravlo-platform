@@ -1,41 +1,322 @@
 {% extends "layouts/ravlo_employee_base.html" %}
-{% block title %}Message Thread • {{ recipient_type|capitalize }} #{{ recipient_id }}{% endblock %}
-{% block content %}
 
-<div class="thread-container text-light">
-  <h2 class="mb-4">📡 Message Thread</h2>
-  <p class="text-muted">Conversation with <strong>{{ recipient_type|capitalize }} #{{ recipient_id }}</strong></p>
+{% block title %}Loan Officer • Messages{% endblock %}
 
-  <!-- Message Bubbles -->
-  <div class="d-flex flex-column">
-    {% for msg in messages %}
-    <div class="message-bubble {{ msg.direction }}">
-      <div>{{ msg.content }}</div>
-      <div class="meta">{{ msg.sent_at.strftime('%b %d, %Y %I:%M %p') }} • {{ msg.message_type|capitalize }}</div>
-    </div>
-    {% endfor %}
-  </div>
+{% block page_title %}Messages{% endblock %}
+{% block page_subline %}
+Manage borrower, lead, and realtor communication from one place.
+{% endblock %}
 
-  <!-- AI Suggestion -->
-  {% if ai_suggestion %}
-  <div class="ai-box">
-    <h5>🤖 AI Suggested Reply</h5>
-    <p class="text-muted">{{ ai_suggestion }}</p>
-  </div>
-  {% endif %}
-
-  <!-- Compose Box -->
-  <form method="POST" class="compose-box">
-    <select name="recipient_id" required>
-  <option value="">Select recipient...</option>
-  {% for r in recipients %}
-  <option value="{{ r.id }}">{{ r.full_name }} ({{ r.role|capitalize }})</option>
-  {% endfor %}
-</select>
-
-<textarea name="content" rows="4" placeholder="Type your reply..."></textarea>
-
-    <button type="submit" class="btn">Send Message</button>
+{% block topbar_actions %}
+  <form method="GET" action="{{ url_for('loan_officer.messages') }}" style="display:flex; gap:10px; align-items:center;">
+    <input
+      type="text"
+      name="q"
+      value="{{ search or '' }}"
+      placeholder="Search messages..."
+      class="re-input"
+      style="min-width:240px;"
+    >
+    <button class="re-btn ghost sm" type="submit">Search</button>
   </form>
+{% endblock %}
+
+{% block content %}
+<style>
+  .msg-shell{
+    display:grid;
+    grid-template-columns: 360px minmax(0,1fr);
+    gap:18px;
+    min-height:72vh;
+  }
+  .msg-panel{
+    border-radius:22px;
+    border:1px solid rgba(255,255,255,.08);
+    background:rgba(255,255,255,.03);
+    overflow:hidden;
+    backdrop-filter:blur(10px);
+  }
+  .msg-panel-head{
+    padding:16px 18px;
+    border-bottom:1px solid rgba(255,255,255,.06);
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+  }
+  .msg-panel-title{
+    font-size:1rem;
+    font-weight:700;
+    color:#fff;
+  }
+  .msg-panel-sub{
+    color:#9db0c3;
+    font-size:.88rem;
+    margin-top:4px;
+  }
+  .msg-list{
+    display:flex;
+    flex-direction:column;
+    max-height:72vh;
+    overflow:auto;
+  }
+  .msg-list a{
+    text-decoration:none;
+    color:inherit;
+  }
+  .msg-list-item{
+    padding:14px 16px;
+    border-bottom:1px solid rgba(255,255,255,.05);
+    transition:.18s ease;
+  }
+  .msg-list-item:hover{
+    background:rgba(255,255,255,.03);
+  }
+  .msg-list-item.active{
+    background:rgba(58,92,122,.20);
+    border-left:3px solid #3A5C7A;
+  }
+  .msg-name{
+    display:flex;
+    justify-content:space-between;
+    gap:12px;
+    font-weight:700;
+    color:#fff;
+    margin-bottom:6px;
+  }
+  .msg-meta{
+    font-size:.82rem;
+    color:#8ca0b3;
+    margin-bottom:6px;
+  }
+  .msg-preview{
+    font-size:.9rem;
+    color:#d8e0e8;
+    line-height:1.4;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+  .msg-count{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    min-width:26px;
+    height:26px;
+    padding:0 8px;
+    border-radius:999px;
+    background:rgba(255,255,255,.08);
+    color:#fff;
+    font-size:.78rem;
+    font-weight:700;
+  }
+
+  .thread-wrap{
+    display:flex;
+    flex-direction:column;
+    height:100%;
+    min-height:72vh;
+  }
+  .thread-head{
+    padding:18px 20px;
+    border-bottom:1px solid rgba(255,255,255,.06);
+  }
+  .thread-title{
+    font-size:1.06rem;
+    font-weight:800;
+    color:#fff;
+  }
+  .thread-sub{
+    color:#90a4b8;
+    margin-top:4px;
+    font-size:.88rem;
+  }
+  .thread-messages{
+    flex:1;
+    padding:18px;
+    display:flex;
+    flex-direction:column;
+    gap:14px;
+    overflow:auto;
+    background:
+      radial-gradient(900px 500px at 10% 0%, rgba(58,92,122,.12), transparent 45%),
+      rgba(255,255,255,.01);
+  }
+  .bubble{
+    max-width:78%;
+    padding:12px 14px;
+    border-radius:18px;
+    line-height:1.45;
+    font-size:.95rem;
+    border:1px solid rgba(255,255,255,.07);
+  }
+  .bubble.outbound{
+    align-self:flex-end;
+    background:rgba(58,92,122,.26);
+    color:#fff;
+  }
+  .bubble.inbound{
+    align-self:flex-start;
+    background:rgba(255,255,255,.05);
+    color:#e7edf4;
+  }
+  .bubble-meta{
+    margin-top:7px;
+    font-size:.76rem;
+    color:#95a8ba;
+  }
+  .thread-compose{
+    padding:16px 18px;
+    border-top:1px solid rgba(255,255,255,.06);
+    background:rgba(12,17,22,.65);
+  }
+  .compose-grid{
+    display:grid;
+    gap:12px;
+  }
+  .compose-row{
+    display:grid;
+    grid-template-columns: 180px 1fr;
+    gap:12px;
+  }
+  .re-input, .re-textarea, .re-select{
+    width:100%;
+    border-radius:14px;
+    border:1px solid rgba(255,255,255,.10);
+    background:rgba(255,255,255,.04);
+    color:#fff;
+    padding:12px 14px;
+    outline:none;
+  }
+  .re-textarea{
+    min-height:120px;
+    resize:vertical;
+  }
+  .empty-state{
+    display:grid;
+    place-items:center;
+    min-height:72vh;
+    color:#9db0c3;
+    padding:30px;
+    text-align:center;
+  }
+
+  @media (max-width: 1080px){
+    .msg-shell{
+      grid-template-columns:1fr;
+    }
+    .msg-panel,
+    .thread-wrap{
+      min-height:auto;
+    }
+    .msg-list{
+      max-height:360px;
+    }
+  }
+</style>
+
+<div class="msg-shell">
+
+  <!-- LEFT: CONVERSATIONS -->
+  <section class="msg-panel">
+    <div class="msg-panel-head">
+      <div>
+        <div class="msg-panel-title">Inbox</div>
+        <div class="msg-panel-sub">{{ conversations|length }} conversation{{ '' if conversations|length == 1 else 's' }}</div>
+      </div>
+    </div>
+
+    <div class="msg-list">
+      {% if conversations %}
+        {% for convo in conversations %}
+          {% set is_active = active_conversation
+              and active_conversation.recipient_type == convo.recipient_type
+              and active_conversation.recipient_id == convo.recipient_id %}
+          <a href="{{ url_for('loan_officer.messages', recipient_type=convo.recipient_type, recipient_id=convo.recipient_id) }}">
+            <div class="msg-list-item {% if is_active %}active{% endif %}">
+              <div class="msg-name">
+                <span>{{ convo.recipient_name }}</span>
+                <span class="msg-count">{{ convo.message_count }}</span>
+              </div>
+              <div class="msg-meta">
+                {{ convo.recipient_type|title }} • {{ convo.last_message.message_type|upper }}
+                {% if convo.last_message.sent_at %}
+                  • {{ convo.last_message.sent_at.strftime('%b %d, %Y %I:%M %p') }}
+                {% endif %}
+              </div>
+              <div class="msg-preview">
+                {{ convo.last_message.content or "No content" }}
+              </div>
+            </div>
+          </a>
+        {% endfor %}
+      {% else %}
+        <div class="msg-list-item">
+          <div class="msg-meta">No messages found yet.</div>
+        </div>
+      {% endif %}
+    </div>
+  </section>
+
+  <!-- RIGHT: ACTIVE THREAD -->
+  <section class="msg-panel">
+    {% if active_conversation %}
+      <div class="thread-wrap">
+        <div class="thread-head">
+          <div class="thread-title">{{ active_conversation.recipient_name }}</div>
+          <div class="thread-sub">
+            {{ active_conversation.recipient_type|title }} #{{ active_conversation.recipient_id }}
+            • {{ active_conversation.message_count }} message{{ '' if active_conversation.message_count == 1 else 's' }}
+          </div>
+        </div>
+
+        <div class="thread-messages">
+          {% for msg in active_conversation.messages %}
+            <div class="bubble {% if msg.direction == 'outbound' %}outbound{% else %}inbound{% endif %}">
+              <div>{{ msg.content }}</div>
+              <div class="bubble-meta">
+                {{ msg.message_type|upper }}
+                {% if msg.status %} • {{ msg.status|title }}{% endif %}
+                {% if msg.sent_at %} • {{ msg.sent_at.strftime('%b %d, %Y %I:%M %p') }}{% endif %}
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+
+        <div class="thread-compose">
+          <form method="POST" action="{{ url_for('loan_officer.send_message') }}" class="compose-grid">
+            <input type="hidden" name="recipient_type" value="{{ active_conversation.recipient_type }}">
+            <input type="hidden" name="recipient_id" value="{{ active_conversation.recipient_id }}">
+
+            <div class="compose-row">
+              <select name="message_type" class="re-select">
+                <option value="internal">Internal</option>
+                <option value="sms">SMS</option>
+                <option value="email">Email</option>
+              </select>
+
+              <button type="submit" class="re-btn primary">
+                Send Message
+              </button>
+            </div>
+
+            <textarea
+              name="content"
+              class="re-textarea"
+              placeholder="Type your message here..."
+              required
+            ></textarea>
+          </form>
+        </div>
+      </div>
+    {% else %}
+      <div class="empty-state">
+        <div>
+          <h3 style="color:#fff; margin-bottom:8px;">No conversation selected</h3>
+          <p>Select a message thread from the left to view and reply.</p>
+        </div>
+      </div>
+    {% endif %}
+  </section>
+
 </div>
 {% endblock %}

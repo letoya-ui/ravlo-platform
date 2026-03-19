@@ -103,6 +103,32 @@ equifax = EquifaxAPI()
 
 assistant = AIAssistant()
 ai = LoanMVPAI()
+
+def _resolve_recipient_name(recipient_type, recipient_id):
+    """
+    Best-effort display name resolver for inbox UI.
+    Safe fallback if a model is missing or record not found.
+    """
+    try:
+        if recipient_type == "borrower" and BorrowerProfile:
+            borrower = BorrowerProfile.query.get(recipient_id)
+            if borrower:
+                return getattr(borrower, "full_name", None) or getattr(borrower, "name", None) or f"Borrower #{recipient_id}"
+
+        if recipient_type == "lead" and Lead:
+            lead = Lead.query.get(recipient_id)
+            if lead:
+                return getattr(lead, "full_name", None) or getattr(lead, "name", None) or f"Lead #{recipient_id}"
+
+        if recipient_type == "realtor" and Realtor:
+            realtor = Realtor.query.get(recipient_id)
+            if realtor:
+                return getattr(realtor, "full_name", None) or getattr(realtor, "name", None) or f"Realtor #{recipient_id}"
+    except Exception:
+        pass
+
+    return f"{recipient_type.title()} #{recipient_id}"
+
 # =============================================================
 # 1. DASHBOARD
 # =============================================================
@@ -348,110 +374,154 @@ def ai_assistant():
     }), 200
 
 
-# -----------------------------
-# MESSAGES LIST
-# -----------------------------
-@loan_officer_bp.route("/messages")
+
+@loan_officer_bp.route("/messages", methods=["GET"])
 @role_required("loan_officer")
 def messages():
-    threads = MessageThread.query.filter(
-        MessageThread.sender_id == current_user.id
-    ).order_by(MessageThread.sent_at.desc()).all()
+    """
+    Loan officer inbox page.
+    Groups messages into conversation buckets by recipient_type + recipient_id.
+    """
+    search = (request.args.get("q") or "").strip().lower()
+    selected_type = (request.args.get("recipient_type") or "").strip()
+    selected_id = request.args.get("recipient_id", type=int)
+
+    all_messages = (
+        MessageThread.query
+        .filter(MessageThread.sender_id == current_user.id)
+        .order_by(MessageThread.sent_at.desc())
+        .all()
+    )
+
+    grouped = {}
+    grouped_messages = defaultdict(list)
+
+    for msg in all_messages:
+        key = (msg.recipient_type, msg.recipient_id)
+        grouped_messages[key].append(msg)
+
+    conversations = []
+    for (recipient_type, recipient_id), msgs in grouped_messages.items():
+        msgs_sorted = sorted(msgs, key=lambda m: m.sent_at or datetime.min, reverse=True)
+        last_msg = msgs_sorted[0]
+        recipient_name = _resolve_recipient_name(recipient_type, recipient_id)
+
+        conversations.append({
+            "recipient_type": recipient_type,
+            "recipient_id": recipient_id,
+            "recipient_name": recipient_name,
+            "last_message": last_msg,
+            "message_count": len(msgs_sorted),
+            "messages": sorted(msgs, key=lambda m: m.sent_at or datetime.min),
+        })
+
+    # Optional search filter
+    if search:
+        conversations = [
+            c for c in conversations
+            if search in (c["recipient_name"] or "").lower()
+            or search in (c["recipient_type"] or "").lower()
+            or any(search in (m.content or "").lower() for m in c["messages"])
+        ]
+
+    # Sort newest first
+    conversations = sorted(
+        conversations,
+        key=lambda c: c["last_message"].sent_at or datetime.min,
+        reverse=True,
+    )
+
+    active_conversation = None
+    if selected_type and selected_id:
+        for convo in conversations:
+            if convo["recipient_type"] == selected_type and convo["recipient_id"] == selected_id:
+                active_conversation = convo
+                break
+
+    # Default to first conversation if none selected
+    if not active_conversation and conversations:
+        active_conversation = conversations[0]
 
     return render_template(
         "loan_officer/messages.html",
-        threads=threads,
-        active_page="messages"
+        conversations=conversations,
+        active_conversation=active_conversation,
+        search=search,
+        title="Messages",
+        active_tab="messages",
     )
 
-# -----------------------------
-# MESSAGE THREAD VIEW
-# -----------------------------
-@loan_officer_bp.route("/messages/<int:thread_id>", methods=["GET", "POST"])
-@role_required("loan_officer")
-def message_thread(thread_id):
-    thread = MessageThread.query.get_or_404(thread_id)
 
-    # Permission check
-    if thread.loan_officer_id != current_user.id:
-        flash("You do not have access to this thread.", "danger")
+@loan_officer_bp.route("/messages/send", methods=["POST"])
+@csrf.exempt
+@role_required("loan_officer")
+def send_message():
+    """
+    Sends/saves a new outbound message record.
+    This stores the message in your DB.
+    If later you integrate Twilio/SendGrid, send from here too.
+    """
+    recipient_type = (request.form.get("recipient_type") or "").strip().lower()
+    recipient_id = request.form.get("recipient_id", type=int)
+    message_type = (request.form.get("message_type") or "internal").strip().lower()
+    content = (request.form.get("content") or "").strip()
+
+    allowed_recipient_types = {"lead", "borrower", "realtor"}
+    allowed_message_types = {"sms", "email", "internal"}
+
+    if recipient_type not in allowed_recipient_types:
+        flash("Invalid recipient type.", "danger")
         return redirect(url_for("loan_officer.messages"))
 
-    # POST → send reply
-    if request.method == "POST":
-        body = request.form.get("body")
+    if not recipient_id:
+        flash("Recipient is required.", "danger")
+        return redirect(url_for("loan_officer.messages"))
 
-        if not body.strip():
-            flash("Message cannot be empty.", "warning")
-            return redirect(url_for("loan_officer.message_thread", thread_id=thread_id))
-
-        new_msg = Message(
-            thread_id=thread.id,
-            sender_id=current_user.id,
-            body=body
+    if message_type not in allowed_message_types:
+        flash("Invalid message type.", "danger")
+        return redirect(
+            url_for(
+                "loan_officer.messages",
+                recipient_type=recipient_type,
+                recipient_id=recipient_id,
+            )
         )
 
-        thread.updated_at = db.func.now()
+    if not content:
+        flash("Message content cannot be empty.", "danger")
+        return redirect(
+            url_for(
+                "loan_officer.messages",
+                recipient_type=recipient_type,
+                recipient_id=recipient_id,
+            )
+        )
 
-        db.session.add(new_msg)
-        db.session.commit()
-
-        return redirect(url_for("loan_officer.message_thread", thread_id=thread_id))
-
-    messages = Message.query.filter_by(thread_id=thread.id)\
-                            .order_by(Message.created_at.asc())\
-                            .all()
-
-    return render_template(
-        "loan_officer/messages/message.html",
-        thread=thread,
-        messages=messages,
-        active_page="messages"
+    msg = MessageThread(
+        sender_id=current_user.id,
+        recipient_type=recipient_type,
+        recipient_id=recipient_id,
+        message_type=message_type,
+        content=content,
+        sent_at=datetime.utcnow(),
+        direction="outbound",
+        status="sent",
     )
+    db.session.add(msg)
+    db.session.commit()
 
-# -----------------------------
-# START NEW MESSAGE THREAD
-# -----------------------------
-@loan_officer_bp.route("/messages/new", methods=["GET", "POST"])
-@role_required("loan_officer")
-def new_message():
-    borrowers = User.query.filter_by(role="borrower").all()
+    # Future integration point:
+    # if message_type == "sms": send via Twilio
+    # if message_type == "email": send via SendGrid
 
-    if request.method == "POST":
-        borrower_id = request.form.get("borrower_id")
-        subject = request.form.get("subject")
-        body = request.form.get("body")
-
-        if not borrower_id or not subject or not body:
-            flash("All fields are required.", "warning")
-            return redirect(url_for("loan_officer.new_message"))
-
-        # Create thread
-        thread = MessageThread(
-            borrower_id=borrower_id,
-            loan_officer_id=current_user.id,
-            subject=subject
+    flash("Message sent successfully.", "success")
+    return redirect(
+        url_for(
+            "loan_officer.messages",
+            recipient_type=recipient_type,
+            recipient_id=recipient_id,
         )
-        db.session.add(thread)
-        db.session.commit()
-
-        # Create first message
-        msg = Message(
-            thread_id=thread.id,
-            sender_id=current_user.id,
-            body=body
-        )
-        db.session.add(msg)
-        db.session.commit()
-
-        return redirect(url_for("loan_officer.message_thread", thread_id=thread.id))
-
-    return render_template(
-        "loan_officer/messages.html",
-        borrowers=borrowers,
-        active_page="messages"
-    )
-    
+    )    
 @loan_officer_bp.route("/loan/<int:loan_id>")
 @role_required("loan_officer")
 def loan_file(loan_id):
