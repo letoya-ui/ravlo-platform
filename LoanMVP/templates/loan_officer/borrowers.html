@@ -1,90 +1,415 @@
 {% extends "layouts/ravlo_employee_base.html" %}
-{% block title %}Clients • Loan Officer{% endblock %}
+{% block title %}Borrowers • Loan Officer{% endblock %}
+
+{% block page_title %}Borrowers{% endblock %}
+{% block page_subline %}
+Search, review, and open active borrower files from your lending pipeline.
+{% endblock %}
+
+{% block topbar_actions %}
+<div class="lo-top-actions">
+  <div class="lo-search-wrap">
+    <i class="lucide lucide-search"></i>
+    <input
+      type="text"
+      id="searchBox"
+      class="lo-search-input"
+      placeholder="Search borrowers by name, email, phone, or location..."
+      onkeyup="filterBorrowers()"
+    >
+  </div>
+</div>
+{% endblock %}
 
 {% block content %}
+<style>
+  .borrowers-shell{
+    display:grid;
+    gap:20px;
+  }
 
+  .borrowers-hero{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-end;
+    gap:16px;
+    flex-wrap:wrap;
+    padding:20px 22px;
+    border-radius:24px;
+    border:1px solid rgba(255,255,255,.08);
+    background:
+      radial-gradient(900px 480px at 10% 0%, rgba(122,184,255,.12), transparent 42%),
+      rgba(255,255,255,.025);
+    box-shadow:0 18px 40px rgba(0,0,0,.18);
+  }
 
+  .borrowers-hero h2{
+    margin:0;
+    font-size:1.35rem;
+    font-weight:800;
+    color:#fff;
+    letter-spacing:.01em;
+  }
 
-<!-- ===========================
-      PAGE TITLE
-=========================== -->
-<h1 style="font-size:2rem; margin-bottom:1.2rem; text-shadow:0 0 16px rgba(122,184,255,0.45);">
-    Borrowers
-</h1>
+  .borrowers-hero p{
+    margin:.45rem 0 0;
+    color:#9db0c3;
+    max-width:760px;
+  }
 
+  .borrower-stats{
+    display:flex;
+    gap:12px;
+    flex-wrap:wrap;
+  }
 
+  .borrower-stat{
+    min-width:140px;
+    padding:14px 16px;
+    border-radius:18px;
+    background:rgba(255,255,255,.04);
+    border:1px solid rgba(255,255,255,.07);
+  }
 
-<!-- ===========================
-      SEARCH BAR
-=========================== -->
-<div class="search-bar">
-    <input 
-        type="text"
-        id="searchBox"
-        class="search-input"
-        placeholder="Search borrowers by name, email, or phone..."
-        onkeyup="filterBorrowers()"
-    >
-</div>
+  .borrower-stat .label{
+    display:block;
+    font-size:.76rem;
+    text-transform:uppercase;
+    letter-spacing:.08em;
+    color:#89a0b6;
+    margin-bottom:6px;
+  }
 
+  .borrower-stat .value{
+    font-size:1.15rem;
+    font-weight:800;
+    color:#fff;
+  }
 
+  .lo-top-actions{
+    width:100%;
+    display:flex;
+    justify-content:flex-end;
+  }
 
-<!-- ===========================
-      BORROWER GRID
-=========================== -->
-<div class="borrower-grid" id="borrowerGrid">
+  .lo-search-wrap{
+    position:relative;
+    width:min(100%, 420px);
+  }
 
+  .lo-search-wrap i{
+    position:absolute;
+    left:14px;
+    top:50%;
+    transform:translateY(-50%);
+    color:#8ea5ba;
+    font-size:16px;
+  }
+
+  .lo-search-input{
+    width:100%;
+    padding:12px 14px 12px 40px;
+    border-radius:14px;
+    border:1px solid rgba(255,255,255,.10);
+    background:rgba(255,255,255,.05);
+    color:#fff;
+    outline:none;
+  }
+
+  .lo-search-input::placeholder{
+    color:#8ea5ba;
+  }
+
+  .borrower-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fit, minmax(280px, 1fr));
+    gap:18px;
+  }
+
+  .borrower-card{
+    position:relative;
+    display:grid;
+    gap:14px;
+    padding:20px;
+    border-radius:22px;
+    border:1px solid rgba(255,255,255,.08);
+    background:
+      linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02)),
+      rgba(12,17,22,.78);
+    box-shadow:0 14px 34px rgba(0,0,0,.18);
+    transition:transform .18s ease, border-color .18s ease, box-shadow .18s ease;
+  }
+
+  .borrower-card:hover{
+    transform:translateY(-3px);
+    border-color:rgba(122,184,255,.22);
+    box-shadow:0 20px 42px rgba(0,0,0,.24);
+  }
+
+  .borrower-top{
+    display:flex;
+    align-items:flex-start;
+    justify-content:space-between;
+    gap:14px;
+  }
+
+  .borrower-name{
+    font-size:1.05rem;
+    font-weight:800;
+    color:#fff;
+    line-height:1.25;
+  }
+
+  .borrower-location{
+    margin-top:5px;
+    font-size:.88rem;
+    color:#8ea5ba;
+  }
+
+  .borrower-score{
+    min-width:66px;
+    text-align:center;
+    padding:9px 10px;
+    border-radius:14px;
+    background:rgba(255,255,255,.05);
+    border:1px solid rgba(255,255,255,.08);
+  }
+
+  .borrower-score .score-label{
+    display:block;
+    font-size:.68rem;
+    color:#8ea5ba;
+    text-transform:uppercase;
+    letter-spacing:.08em;
+    margin-bottom:4px;
+  }
+
+  .borrower-score .score-value{
+    font-size:1rem;
+    font-weight:800;
+  }
+
+  .score-high{ color:#67e8a5; }
+  .score-mid{ color:#f6d365; }
+  .score-low{ color:#ff8f8f; }
+  .score-na{ color:#9aa9b8; }
+
+  .borrower-info{
+    display:grid;
+    gap:10px;
+  }
+
+  .borrower-row{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    color:#dce6ef;
+    font-size:.92rem;
+    line-height:1.4;
+    word-break:break-word;
+  }
+
+  .borrower-row i{
+    color:#8fb7d8;
+    width:16px;
+    flex:0 0 16px;
+  }
+
+  .credit-tag{
+    display:inline-flex;
+    align-items:center;
+    justify-content:flex-start;
+    gap:8px;
+    width:max-content;
+    max-width:100%;
+    padding:8px 12px;
+    border-radius:999px;
+    background:rgba(58,92,122,.22);
+    border:1px solid rgba(122,184,255,.14);
+    color:#dbe8f4;
+    font-size:.84rem;
+    font-weight:600;
+  }
+
+  .borrower-actions{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+    margin-top:2px;
+  }
+
+  .btn-open,
+  .btn-ghost{
+    appearance:none;
+    border:none;
+    cursor:pointer;
+    text-decoration:none;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    gap:8px;
+    padding:11px 14px;
+    border-radius:14px;
+    font-weight:700;
+    transition:.18s ease;
+  }
+
+  .btn-open{
+    background:#3A5C7A;
+    color:#fff;
+    box-shadow:0 10px 24px rgba(58,92,122,.28);
+  }
+
+  .btn-open:hover{
+    background:#466c8d;
+    transform:translateY(-1px);
+  }
+
+  .btn-ghost{
+    background:rgba(255,255,255,.05);
+    border:1px solid rgba(255,255,255,.08);
+    color:#d8e4ef;
+  }
+
+  .btn-ghost:hover{
+    background:rgba(255,255,255,.08);
+  }
+
+  .empty-state{
+    padding:34px 24px;
+    text-align:center;
+    border-radius:22px;
+    border:1px dashed rgba(255,255,255,.12);
+    background:rgba(255,255,255,.02);
+    color:#8ea5ba;
+  }
+
+  @media (max-width: 768px){
+    .borrowers-hero{
+      padding:18px;
+    }
+    .borrower-card{
+      padding:18px;
+    }
+  }
+</style>
+
+<div class="borrowers-shell">
+
+  <section class="borrowers-hero">
+    <div>
+      <h2>Borrower Pipeline</h2>
+      <p>
+        Open files, review borrower details, and move each deal forward with a cleaner lending workflow.
+      </p>
+    </div>
+
+    <div class="borrower-stats">
+      <div class="borrower-stat">
+        <span class="label">Total Borrowers</span>
+        <span class="value">{{ borrowers|length }}</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="borrower-grid" id="borrowerGrid">
     {% for b in borrowers %}
-    <div class="borrower-card" data-name="{{ b.full_name|lower }}">
-        <div class="borrower-name">{{ b.full_name }}</div>
+      {% set credit = b.credit_profiles[-1] if b.credit_profiles else None %}
+      {% set score = b.credit_score if b.credit_score is not none else (credit.score if credit and credit.score is not none else none) %}
 
-        <div class="borrower-info">
-            📧 {{ b.email }}<br>
-            📞 {{ b.phone }}<br>
-            🏡 {{ b.city }}, {{ b.state }}
+      <article
+        class="borrower-card"
+        data-search="{{ (
+          (b.full_name or '') ~ ' ' ~
+          (b.email or '') ~ ' ' ~
+          (b.phone or '') ~ ' ' ~
+          (b.city or '') ~ ' ' ~
+          (b.state or '')
+        )|lower }}"
+      >
+        <div class="borrower-top">
+          <div>
+            <div class="borrower-name">{{ b.full_name or 'Unnamed Borrower' }}</div>
+            <div class="borrower-location">
+              {{ b.city or 'Unknown City' }}{% if b.city and b.state %}, {% endif %}{{ b.state or '' }}
+            </div>
+          </div>
+
+          <div class="borrower-score">
+            <span class="score-label">Score</span>
+            <span class="score-value
+              {% if score is none %}score-na
+              {% elif score > 70 %}score-high
+              {% elif score > 40 %}score-mid
+              {% else %}score-low
+              {% endif %}">
+              {{ score if score is not none else 'N/A' }}
+            </span>
+          </div>
         </div>
 
-        {% set credit = b.credit_profiles[-1] if b.credit_profiles else None %}
+        <div class="borrower-info">
+          <div class="borrower-row">
+            <i class="lucide lucide-mail"></i>
+            <span>{{ b.email or 'No email on file' }}</span>
+          </div>
+
+          <div class="borrower-row">
+            <i class="lucide lucide-phone"></i>
+            <span>{{ b.phone or 'No phone on file' }}</span>
+          </div>
+
+          <div class="borrower-row">
+            <i class="lucide lucide-map-pin"></i>
+            <span>
+              {{ b.city or 'Unknown City' }}{% if b.city and b.state %}, {% endif %}{{ b.state or 'Unknown State' }}
+            </span>
+          </div>
+        </div>
+
         {% if credit %}
-        <div class="credit-tag">Credit Score: {{ credit.score }}</div>
+          <div class="credit-tag">
+            <i class="lucide lucide-badge-dollar-sign"></i>
+            Credit Pulled • Score: {{ credit.score }}
+          </div>
         {% else %}
-        <div class="credit-tag" style="opacity:.6;">No Credit Pull Yet</div>
+          <div class="credit-tag" style="opacity:.68;">
+            <i class="lucide lucide-circle-alert"></i>
+            No Credit Pull Yet
+          </div>
         {% endif %}
 
-        <button class="btn-open" onclick="location.href='/loan_officer/borrower/{{ b.id }}'">
+        <div class="borrower-actions">
+          <a class="btn-open" href="{{ url_for('loan_officer.borrower_detail', borrower_id=b.id) }}">
+            <i class="lucide lucide-folder-open"></i>
             Open Loan File
-        </button>
-    </div>
-    <td>
-      <span style="
-          color: {{
-            'lime' if b.credit_score is not none and b.credit_score > 70
-            else 'gold' if b.credit_score is not none and b.credit_score > 40
-            else 'tomato'
-         }};
-         font-weight:600;">
-       {{ b.credit_score if b.credit_score is not none else 'N/A' }}
-     </span>
-   </td>
-   {% endfor %}
+          </a>
+
+          <a class="btn-ghost" href="{{ url_for('loan_officer.messages') }}">
+            <i class="lucide lucide-message-square"></i>
+            Messages
+          </a>
+        </div>
+      </article>
+    {% else %}
+      <div class="empty-state">
+        No borrowers found yet.
+      </div>
+    {% endfor %}
+  </section>
 
 </div>
 
-
-
-<!-- ===========================
-      SEARCH FILTER SCRIPT
-=========================== -->
 <script>
 function filterBorrowers() {
-    let input = document.getElementById("searchBox").value.toLowerCase();
-    let cards = document.querySelectorAll("#borrowerGrid .borrower-card");
+  const input = document.getElementById("searchBox");
+  const filter = (input.value || "").toLowerCase();
+  const cards = document.querySelectorAll("#borrowerGrid .borrower-card");
 
-    cards.forEach(card => {
-        let name = card.getAttribute("data-name");
-        card.style.display = name.includes(input) ? "" : "none";
-    });
+  cards.forEach(card => {
+    const haystack = card.getAttribute("data-search") || "";
+    card.style.display = haystack.includes(filter) ? "" : "none";
+  });
 }
 </script>
-
 {% endblock %}
