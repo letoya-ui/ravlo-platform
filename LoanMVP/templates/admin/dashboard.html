@@ -1,654 +1,651 @@
 {% extends "layouts/ravlo_employee_base.html" %}
 {% block title %}Admin • Dashboard{% endblock %}
 
+{% block page_title %}Admin Command Center{% endblock %}
+{% block page_subline %}
+Central system management for users, onboarding, invites, lending operations, and platform visibility.
+{% endblock %}
+
+{% block topbar_actions %}
+  <a class="re-btn primary sm" href="{{ url_for('admin.invite_employee') }}">
+    <i class="lucide lucide-user-plus"></i>
+    Send Register Request
+  </a>
+  <a class="re-btn ghost sm" href="{{ url_for('system.users') }}">
+    <i class="lucide lucide-users"></i>
+    Manage Users
+  </a>
+  <a class="re-btn ghost sm" href="{{ url_for('admin.access_requests') }}">
+    <i class="lucide lucide-inbox"></i>
+    Access Requests
+  </a>
+{% endblock %}
+
 {% block content %}
-<main class="dashboard-main admin-dashboard">
+<link rel="preconnect" href="https://cdn.jsdelivr.net">
+<script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
 
-  <link rel="preconnect" href="https://cdn.jsdelivr.net">
-  <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+<div class="admin-dashboard-wrap">
 
-  <div class="wrap">
-
-    <section class="card admin-hero">
-      <div class="admin-hero__left">
-        <div class="eyebrow">ADMIN COMMAND CENTER</div>
-        <h1>Welcome, {{ current_user.full_name or current_user.username or current_user.email or 'Admin' }}</h1>
-        <div class="muted">
-          Central system management for users, onboarding, invites, lending operations, and platform visibility.
-        </div>
+  <section class="re-card pad admin-hero">
+    <div class="admin-hero__left">
+      <div class="eyebrow">ADMIN COMMAND CENTER</div>
+      <h1 class="admin-hero__title">
+        Welcome, {{ current_user.full_name or current_user.username or current_user.email or 'Admin' }}
+      </h1>
+      <div class="text-muted admin-hero__copy">
+        Central system management for users, onboarding, invites, lending operations, and platform visibility.
       </div>
+    </div>
 
-      <div class="admin-hero__actions">
-        <a class="btn btn-primary" href="{{ url_for('admin.analytics') }}">📊 View Analytics</a>
-        <a class="btn" href="{{ url_for('admin.requests_dashboard') }}">📥 Access Requests</a>
-        <a class="btn" href="{{ url_for('account.settings') }}">⚙️ Settings</a>
-      </div>
-    </section>
+    <div class="admin-hero__actions">
+      <a class="re-btn primary" href="{{ url_for('admin.analytics') }}">
+        <i class="lucide lucide-bar-chart-3"></i>
+        View Analytics
+      </a>
+      <a class="re-btn ghost" href="{{ url_for('admin.access_requests') }}">
+        <i class="lucide lucide-inbox"></i>
+        Access Requests
+      </a>
+      <a class="re-btn ghost" href="{{ url_for('account.settings') }}">
+        <i class="lucide lucide-settings"></i>
+        Settings
+      </a>
+    </div>
+  </section>
 
-    <div class="admin-layout">
+  <div class="admin-layout">
 
-      <section class="lhs grid">
+    <section class="admin-main-col">
 
-        <div class="admin-kpi-grid">
-          <div class="card stat-card">
-            <div class="stat-card__label">👥 Users</div>
-            <div class="stat-card__value">{{ stats.total_users or 0 }}</div>
-            <div class="muted">Registered accounts</div>
-          </div>
-
-          <div class="card stat-card">
-            <div class="stat-card__label">💼 Loans</div>
-            <div class="stat-card__value">{{ stats.total_loans or 0 }}</div>
-            <div class="muted">Loan files in system</div>
-          </div>
-
-          <div class="card stat-card">
-            <div class="stat-card__label">📎 Documents</div>
-            <div class="stat-card__value">{{ stats.total_docs or 0 }}</div>
-            <div class="muted">Uploaded documents</div>
-          </div>
-
-          <div class="card stat-card">
-            <div class="stat-card__label">✅ Tasks</div>
-            <div class="stat-card__value">{{ stats.pending_tasks or 0 }}</div>
-            <div class="muted">Pending operational items</div>
-          </div>
-
-          <div class="card stat-card">
-            <div class="stat-card__label">📥 Pending Requests</div>
-            <div class="stat-card__value">{{ stats.pending_requests or 0 }}</div>
-            <div class="muted">Awaiting review</div>
-          </div>
-
-          <div class="card stat-card">
-            <div class="stat-card__label">✔️ Approved Requests</div>
-            <div class="stat-card__value">{{ stats.approved_requests or 0 }}</div>
-            <div class="muted">Approved access submissions</div>
-          </div>
-
-          <div class="card stat-card">
-            <div class="stat-card__label">🏢 Companies</div>
-            <div class="stat-card__value">{{ stats.total_companies or 0 }}</div>
-            <div class="muted">Organizations onboarded</div>
-          </div>
-
-          <div class="card stat-card">
-            <div class="stat-card__label">✉️ Pending Invites</div>
-            <div class="stat-card__value">{{ stats.pending_invites or 0 }}</div>
-            <div class="muted">Invites not yet accepted</div>
-          </div>
+      <section class="re-grid-4 admin-kpi-grid">
+        <div class="re-stat">
+          <div class="re-stat-label">Users</div>
+          <div class="re-stat-value">{{ stats.total_users or 0 }}</div>
+          <div class="re-stat-meta">Registered accounts</div>
         </div>
 
-        <div class="admin-chart-grid">
-          <div class="card">
-            <div class="section-head">
-              <div>
-                <h3>Loan Volume</h3>
-                <div class="muted">Monthly file activity</div>
-              </div>
-            </div>
-            <div id="chart_volume" class="chart-box"></div>
-          </div>
-
-          <div class="card">
-            <div class="section-head">
-              <div>
-                <h3>User Growth</h3>
-                <div class="muted">Monthly registration activity</div>
-              </div>
-            </div>
-            <div id="chart_users" class="chart-box"></div>
-          </div>
+        <div class="re-stat">
+          <div class="re-stat-label">Loans</div>
+          <div class="re-stat-value">{{ stats.total_loans or 0 }}</div>
+          <div class="re-stat-meta">Loan files in system</div>
         </div>
 
-        <div class="card">
-          <div class="section-head">
-            <div>
-              <h3>Recent Access Requests</h3>
-              <div class="muted">Newest onboarding and access submissions</div>
-            </div>
-            <a class="btn btn-sm" href="{{ url_for('admin.requests_dashboard') }}">View All</a>
-          </div>
-
-          {% if recent_requests %}
-            <div class="table-wrap">
-              <table class="table">
-                <thead>
-                  <tr>
-                    <th>ID</th>
-                    <th>Contact</th>
-                    <th>Email</th>
-                    <th>Company</th>
-                    <th>Status</th>
-                    <th></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {% for req in recent_requests %}
-                    {% set req_status = (req.status or 'pending')|lower|replace(' ', '-') %}
-                    <tr>
-                      <td>#{{ req.id }}</td>
-                      <td>{{ req.contact_name or '—' }}</td>
-                      <td>{{ req.email or '—' }}</td>
-                      <td>{{ req.company_name or '—' }}</td>
-                      <td>
-                        <span class="status st-{{ req_status }}">
-                          {{ (req.status or 'Pending')|title }}
-                        </span>
-                      </td>
-                      <td>
-                        <a class="btn btn-sm" href="{{ url_for('admin.request_detail', request_id=req.id) }}">Open</a>
-                      </td>
-                    </tr>
-                  {% endfor %}
-                </tbody>
-              </table>
-            </div>
-          {% else %}
-            <div class="empty-state">
-              <p class="muted">No recent access requests.</p>
-            </div>
-          {% endif %}
+        <div class="re-stat">
+          <div class="re-stat-label">Documents</div>
+          <div class="re-stat-value">{{ stats.total_docs or 0 }}</div>
+          <div class="re-stat-meta">Uploaded documents</div>
         </div>
 
-        <div class="card">
-          <div class="section-head">
-            <div>
-              <h3>Recent Users</h3>
-              <div class="muted">Latest users added to the platform</div>
-            </div>
-          </div>
-
-          {% if users %}
-            <div class="table-wrap">
-              <table class="table">
-                <thead>
-                  <tr>
-                    <th>Name</th>
-                    <th>Email</th>
-                    <th>Role</th>
-                    <th>Company</th>
-                    <th>Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {% for user in users[:5] %}
-                    <tr>
-                      <td>{{ user.full_name or user.username or user.email or '—' }}</td>
-                      <td>{{ user.email or '—' }}</td>
-                      <td>{{ (user.role or 'user')|replace('_', ' ')|title }}</td>
-                      <td>{{ user.company.name if user.company else '—' }}</td>
-                      <td>
-                        <span class="status st-{{ 'active' if user.is_active else 'inactive' }}">
-                          {{ 'Active' if user.is_active else 'Inactive' }}
-                        </span>
-                      </td>
-                    </tr>
-                  {% endfor %}
-                </tbody>
-              </table>
-            </div>
-          {% else %}
-            <div class="empty-state">
-              <p class="muted">No users found.</p>
-            </div>
-          {% endif %}
+        <div class="re-stat">
+          <div class="re-stat-label">Pending Tasks</div>
+          <div class="re-stat-value">{{ stats.pending_tasks or 0 }}</div>
+          <div class="re-stat-meta">Operational items</div>
         </div>
 
-        <div class="card">
-          <div class="section-head">
-            <div>
-              <h3>AI / System Insight</h3>
-              <div class="muted">Live operational summary</div>
-            </div>
-          </div>
+        <div class="re-stat">
+          <div class="re-stat-label">Pending Requests</div>
+          <div class="re-stat-value">{{ stats.pending_requests or 0 }}</div>
+          <div class="re-stat-meta">Awaiting review</div>
+        </div>
 
-          <div id="aiInsight" class="ai-insight">
-            {{ ai_summary or "Loading latest AI insight..." }}
-          </div>
+        <div class="re-stat">
+          <div class="re-stat-label">Approved Requests</div>
+          <div class="re-stat-value">{{ stats.approved_requests or 0 }}</div>
+          <div class="re-stat-meta">Approved submissions</div>
+        </div>
+
+        <div class="re-stat">
+          <div class="re-stat-label">Companies</div>
+          <div class="re-stat-value">{{ stats.total_companies or 0 }}</div>
+          <div class="re-stat-meta">Organizations onboarded</div>
+        </div>
+
+        <div class="re-stat">
+          <div class="re-stat-label">Pending Invites</div>
+          <div class="re-stat-value">{{ stats.pending_invites or 0 }}</div>
+          <div class="re-stat-meta">Not yet accepted</div>
         </div>
       </section>
 
-      <aside class="rhs grid">
-
-        <div class="card">
+      <section class="admin-chart-grid">
+        <div class="re-card pad">
           <div class="section-head">
             <div>
-              <h3>Quick Actions</h3>
-              <div class="muted">Jump to core admin functions</div>
+              <h3>Loan Volume</h3>
+              <div class="re-card-subtitle">Monthly file activity</div>
             </div>
           </div>
+          <div id="chart_volume" class="chart-box"></div>
+        </div>
 
-          <div class="quick-actions">
-            <a class="btn" href="{{ url_for('crm.dashboard') }}">📞 Manage Leads</a>
-            <a class="btn" href="{{ url_for('admin.requests_dashboard') }}">📥 Requests</a>
-            <a class="btn" href="{{ url_for('system.users') }}">👥 Users</a>
-            <a class="btn" href="{{ url_for('property.manage') }}">🏠 Properties</a>
-            <a class="btn" href="{{ url_for('admin.reports') }}">📑 Reports</a>
+        <div class="re-card pad">
+          <div class="section-head">
+            <div>
+              <h3>User Growth</h3>
+              <div class="re-card-subtitle">Monthly registration activity</div>
+            </div>
+          </div>
+          <div id="chart_users" class="chart-box"></div>
+        </div>
+      </section>
+
+      <section class="re-card pad">
+        <div class="section-head">
+          <div>
+            <div class="eyebrow">REQUESTS</div>
+            <h3 style="margin:.35rem 0 .2rem;">Recent Access Requests</h3>
+            <div class="re-card-subtitle">Newest onboarding and access submissions</div>
+          </div>
+          <a class="re-btn ghost sm" href="{{ url_for('admin.access_requests') }}">View All</a>
+        </div>
+
+        {% if recent_requests %}
+          <div class="re-table-wrap mt-16">
+            <table class="re-table">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Contact</th>
+                  <th>Email</th>
+                  <th>Company</th>
+                  <th>Status</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for req in recent_requests %}
+                {% set req_status = (req.status or 'pending')|lower %}
+                <tr>
+                  <td>#{{ req.id }}</td>
+                  <td>{{ req.contact_name or '—' }}</td>
+                  <td>{{ req.email or '—' }}</td>
+                  <td>{{ req.company_name or '—' }}</td>
+                  <td>
+                    {% if req_status == 'pending' %}
+                      <span class="badge badge-warning">Pending</span>
+                    {% elif req_status == 'approved' %}
+                      <span class="badge badge-success">Approved</span>
+                    {% elif req_status in ['denied', 'rejected'] %}
+                      <span class="badge badge-danger">{{ req_status|title }}</span>
+                    {% else %}
+                      <span class="badge badge-neutral">{{ (req.status or 'Unknown')|title }}</span>
+                    {% endif %}
+                  </td>
+                  <td>
+                    <a class="re-btn ghost sm" href="{{ url_for('admin.request_detail', request_id=req.id) }}">
+                      Open
+                    </a>
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% else %}
+          <div class="re-empty mt-16">No recent access requests.</div>
+        {% endif %}
+      </section>
+
+      <section class="re-card pad">
+        <div class="section-head">
+          <div>
+            <div class="eyebrow">USERS</div>
+            <h3 style="margin:.35rem 0 .2rem;">Recent Users</h3>
+            <div class="re-card-subtitle">Latest users added to the platform</div>
+          </div>
+          <a class="re-btn ghost sm" href="{{ url_for('system.users') }}">Manage Users</a>
+        </div>
+
+        {% if users %}
+          <div class="re-table-wrap mt-16">
+            <table class="re-table">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Email</th>
+                  <th>Role</th>
+                  <th>Company</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for user in users[:5] %}
+                <tr>
+                  <td>{{ user.full_name or user.username or user.email or '—' }}</td>
+                  <td>{{ user.email or '—' }}</td>
+                  <td>
+                    <span class="badge badge-info">
+                      {{ (user.role or 'user')|replace('_', ' ')|title }}
+                    </span>
+                  </td>
+                  <td>{{ user.company.name if user.company else '—' }}</td>
+                  <td>
+                    {% if user.is_active %}
+                      <span class="badge badge-success">Active</span>
+                    {% else %}
+                      <span class="badge badge-danger">Inactive</span>
+                    {% endif %}
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% else %}
+          <div class="re-empty mt-16">No users found.</div>
+        {% endif %}
+      </section>
+
+      <section class="re-card pad">
+        <div class="section-head">
+          <div>
+            <div class="eyebrow">AI / SYSTEM</div>
+            <h3 style="margin:.35rem 0 .2rem;">AI / System Insight</h3>
+            <div class="re-card-subtitle">Live operational summary</div>
           </div>
         </div>
 
-        <div class="card">
-          <div class="section-head">
-            <div>
-              <h3>Recent Team Invites</h3>
-              <div class="muted">Latest company invitations</div>
-            </div>
-          </div>
+        <div id="aiInsight" class="admin-ai-insight">
+          {{ ai_summary or "Loading latest AI insight..." }}
+        </div>
+      </section>
+    </section>
 
-          {% if recent_invites %}
-            <div class="table-wrap">
-              <table class="table">
-                <thead>
-                  <tr>
-                    <th>Email</th>
-                    <th>Name</th>
-                    <th>Role</th>
-                    <th>Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {% for invite in recent_invites %}
-                    {% set invite_status = (invite.status or 'pending')|lower|replace(' ', '-') %}
-                    <tr>
-                      <td>{{ invite.email or '—' }}</td>
-                      <td>{{ ((invite.first_name or '') ~ ' ' ~ (invite.last_name or ''))|trim or '—' }}</td>
-                      <td>{{ (invite.role or 'user')|replace('_', ' ')|title }}</td>
-                      <td>
-                        <span class="status st-{{ invite_status }}">
-                          {{ (invite.status or 'Pending')|title }}
-                        </span>
-                      </td>
-                    </tr>
-                  {% endfor %}
-                </tbody>
-              </table>
-            </div>
-          {% else %}
-            <div class="empty-state">
-              <p class="muted">No recent invites.</p>
-            </div>
-          {% endif %}
+    <aside class="admin-side-col">
+
+      <section class="re-card pad">
+        <div class="section-head">
+          <div>
+            <div class="eyebrow">ACTIONS</div>
+            <h3 style="margin:.35rem 0 .2rem;">Quick Actions</h3>
+            <div class="re-card-subtitle">Jump to core admin functions</div>
+          </div>
         </div>
 
-        <div class="card">
-          <div class="section-head">
-            <div>
-              <h3>Recent Leads</h3>
-              <div class="muted">New or active CRM records</div>
-            </div>
-          </div>
+        <div class="admin-quick-actions">
+          <a class="re-btn ghost" href="{{ url_for('crm.dashboard') }}">
+            <i class="lucide lucide-phone-call"></i>
+            Manage Leads
+          </a>
+          <a class="re-btn ghost" href="{{ url_for('admin.access_requests') }}">
+            <i class="lucide lucide-inbox"></i>
+            Requests
+          </a>
+          <a class="re-btn ghost" href="{{ url_for('system.users') }}">
+            <i class="lucide lucide-users"></i>
+            Users
+          </a>
+          <a class="re-btn ghost" href="{{ url_for('admin.reports') }}">
+            <i class="lucide lucide-file-text"></i>
+            Reports
+          </a>
+          <a class="re-btn primary" href="{{ url_for('admin.invite_employee') }}">
+            <i class="lucide lucide-send"></i>
+            Send Invite
+          </a>
+        </div>
+      </section>
 
-          {% if leads %}
-            <div class="table-wrap">
-              <table class="table">
-                <thead>
-                  <tr>
-                    <th>Name</th>
-                    <th>Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {% for lead in leads %}
-                    <tr>
-                      <td>{{ lead.full_name if lead.full_name is defined else (lead.name if lead.name is defined else "—") }}</td>
-                      <td>{{ lead.status if lead.status is defined and lead.status else "—" }}</td>
-                    </tr>
-                  {% endfor %}
-                </tbody>
-              </table>
-            </div>
-          {% else %}
-            <div class="empty-state">
-              <p class="muted">No recent leads.</p>
-            </div>
-          {% endif %}
+      <section class="re-card pad">
+        <div class="section-head">
+          <div>
+            <div class="eyebrow">INVITES</div>
+            <h3 style="margin:.35rem 0 .2rem;">Recent Team Invites</h3>
+            <div class="re-card-subtitle">Latest company invitations</div>
+          </div>
         </div>
 
-        <div class="card">
-          <div class="section-head">
-            <div>
-              <h3>Server Load</h3>
-              <div class="muted">Current platform health snapshot</div>
-            </div>
+        {% if recent_invites %}
+          <div class="re-table-wrap mt-16">
+            <table class="re-table">
+              <thead>
+                <tr>
+                  <th>Email</th>
+                  <th>Name</th>
+                  <th>Role</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for invite in recent_invites %}
+                {% set invite_status = (invite.status or 'pending')|lower %}
+                <tr>
+                  <td>{{ invite.email or '—' }}</td>
+                  <td>{{ ((invite.first_name or '') ~ ' ' ~ (invite.last_name or ''))|trim or '—' }}</td>
+                  <td>
+                    <span class="badge badge-info">
+                      {{ (invite.role or 'user')|replace('_', ' ')|title }}
+                    </span>
+                  </td>
+                  <td>
+                    {% if invite_status == 'pending' %}
+                      <span class="badge badge-warning">Pending</span>
+                    {% elif invite_status == 'approved' or invite_status == 'accepted' %}
+                      <span class="badge badge-success">{{ invite_status|title }}</span>
+                    {% elif invite_status in ['denied', 'rejected', 'expired'] %}
+                      <span class="badge badge-danger">{{ invite_status|title }}</span>
+                    {% else %}
+                      <span class="badge badge-neutral">{{ (invite.status or 'Unknown')|title }}</span>
+                    {% endif %}
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
           </div>
-          <div id="chart_system" class="chart-box chart-box--sm"></div>
-          <div class="muted subcopy">System load and API responsiveness.</div>
+        {% else %}
+          <div class="re-empty mt-16">No recent invites.</div>
+        {% endif %}
+      </section>
+
+      <section class="re-card pad">
+        <div class="section-head">
+          <div>
+            <div class="eyebrow">CRM</div>
+            <h3 style="margin:.35rem 0 .2rem;">Recent Leads</h3>
+            <div class="re-card-subtitle">New or active CRM records</div>
+          </div>
         </div>
 
-        <div class="card">
-          <div class="section-head">
-            <div>
-              <h3>Recent System Logs</h3>
-              <div class="muted">Latest internal activity and events</div>
-            </div>
+        {% if leads %}
+          <div class="re-table-wrap mt-16">
+            <table class="re-table">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for lead in leads %}
+                <tr>
+                  <td>{{ lead.full_name if lead.full_name is defined else (lead.name if lead.name is defined else "—") }}</td>
+                  <td>{{ lead.status if lead.status is defined and lead.status else "—" }}</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
           </div>
+        {% else %}
+          <div class="re-empty mt-16">No recent leads.</div>
+        {% endif %}
+      </section>
 
-          {% if logs %}
-            <div class="log-stack">
-              {% for log in logs[:8] %}
-                <div class="log-item">
-                  <div class="log-item__title">
-                    {{ log.action if log.action is defined and log.action else (log.title if log.title is defined and log.title else "System Event") }}
-                  </div>
-
-                  <div class="muted log-item__meta">
-                    {{ log.created_at.strftime("%Y-%m-%d %I:%M %p") if log.created_at else "" }}
-                  </div>
-
-                  {% if log.description is defined and log.description %}
-                    <div class="muted log-item__body">{{ log.description }}</div>
-                  {% elif log.message is defined and log.message %}
-                    <div class="muted log-item__body">{{ log.message }}</div>
-                  {% endif %}
-                </div>
-              {% endfor %}
-            </div>
-          {% else %}
-            <div class="empty-state">
-              <p class="muted">No recent logs.</p>
-            </div>
-          {% endif %}
+      <section class="re-card pad">
+        <div class="section-head">
+          <div>
+            <div class="eyebrow">HEALTH</div>
+            <h3 style="margin:.35rem 0 .2rem;">Server Load</h3>
+            <div class="re-card-subtitle">Current platform health snapshot</div>
+          </div>
         </div>
-      </aside>
+        <div id="chart_system" class="chart-box chart-box--sm"></div>
+        <div class="text-muted admin-subcopy">System load and API responsiveness.</div>
+      </section>
 
-    </div>
+      <section class="re-card pad">
+        <div class="section-head">
+          <div>
+            <div class="eyebrow">SYSTEM</div>
+            <h3 style="margin:.35rem 0 .2rem;">Recent System Logs</h3>
+            <div class="re-card-subtitle">Latest internal activity and events</div>
+          </div>
+        </div>
+
+        {% if logs %}
+          <div class="admin-log-stack">
+            {% for log in logs[:8] %}
+            <div class="admin-log-item">
+              <div class="admin-log-item__title">
+                {{ log.action if log.action is defined and log.action else (log.title if log.title is defined and log.title else "System Event") }}
+              </div>
+              <div class="text-muted admin-log-item__meta">
+                {{ log.created_at.strftime("%Y-%m-%d %I:%M %p") if log.created_at else "" }}
+              </div>
+              {% if log.description is defined and log.description %}
+                <div class="text-muted admin-log-item__body">{{ log.description }}</div>
+              {% elif log.message is defined and log.message %}
+                <div class="text-muted admin-log-item__body">{{ log.message }}</div>
+              {% endif %}
+            </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="re-empty mt-16">No recent logs.</div>
+        {% endif %}
+      </section>
+
+    </aside>
   </div>
+</div>
 
-  <style>
-    .admin-dashboard{
-      min-width:0;
+<style>
+  .admin-dashboard-wrap{
+    display:grid;
+    gap:18px;
+    min-width:0;
+  }
+
+  .admin-hero{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:1rem;
+    flex-wrap:wrap;
+  }
+
+  .admin-hero__left{
+    max-width:780px;
+    min-width:0;
+  }
+
+  .admin-hero__title{
+    margin:8px 0 10px;
+    line-height:1.05;
+    letter-spacing:-.03em;
+  }
+
+  .admin-hero__actions{
+    display:flex;
+    gap:.65rem;
+    flex-wrap:wrap;
+    align-items:center;
+  }
+
+  .admin-layout{
+    display:grid;
+    grid-template-columns:minmax(0, 2fr) minmax(320px, 1fr);
+    gap:1rem;
+    align-items:start;
+    min-width:0;
+  }
+
+  .admin-main-col,
+  .admin-side-col{
+    min-width:0;
+    display:grid;
+    gap:16px;
+  }
+
+  .admin-kpi-grid{
+    gap:14px;
+  }
+
+  .admin-chart-grid{
+    display:grid;
+    grid-template-columns:repeat(2, minmax(0, 1fr));
+    gap:14px;
+    min-width:0;
+  }
+
+  .chart-box{
+    min-height:260px;
+  }
+
+  .chart-box--sm{
+    min-height:240px;
+  }
+
+  .admin-quick-actions{
+    display:flex;
+    flex-wrap:wrap;
+    gap:.5rem;
+  }
+
+  .admin-log-stack{
+    display:flex;
+    flex-direction:column;
+    gap:.65rem;
+  }
+
+  .admin-log-item{
+    padding:.8rem .9rem;
+    border:1px solid rgba(255,255,255,.08);
+    border-radius:14px;
+    background:rgba(255,255,255,.02);
+  }
+
+  .admin-log-item__title{
+    font-weight:700;
+    margin-bottom:.15rem;
+  }
+
+  .admin-log-item__meta{
+    font-size:.84rem;
+  }
+
+  .admin-log-item__body{
+    margin-top:.35rem;
+    line-height:1.45;
+  }
+
+  .admin-ai-insight{
+    line-height:1.6;
+    font-size:.97rem;
+  }
+
+  .admin-subcopy{
+    font-size:.85rem;
+    margin-top:.35rem;
+  }
+
+  @media (max-width: 1120px){
+    .admin-layout{
+      grid-template-columns:1fr;
     }
 
-    .admin-dashboard .wrap{
-      display:grid;
-      gap:18px;
-      min-width:0;
-    }
-
-    .admin-dashboard .admin-hero{
-      display:flex;
-      justify-content:space-between;
-      align-items:center;
-      gap:1rem;
-      flex-wrap:wrap;
-      padding:20px;
-      border-radius:22px;
-      min-width:0;
-    }
-
-    .admin-dashboard .admin-hero__left{
-      max-width:780px;
-      min-width:0;
-    }
-
-    .admin-dashboard .admin-hero__left h1{
-      margin:8px 0 10px;
-      line-height:1.05;
-      letter-spacing:-.03em;
-    }
-
-    .admin-dashboard .admin-hero__actions{
-      display:flex;
-      gap:.65rem;
-      flex-wrap:wrap;
-      align-items:center;
-    }
-
-    .admin-dashboard .admin-layout{
-      display:grid;
-      grid-template-columns:minmax(0, 2fr) minmax(320px, 1fr);
-      gap:1rem;
-      align-items:start;
-      min-width:0;
-    }
-
-    .admin-dashboard .lhs,
-    .admin-dashboard .rhs{
-      min-width:0;
-      display:grid;
-      gap:16px;
-    }
-
-    .admin-dashboard .admin-kpi-grid{
-      display:grid;
-      grid-template-columns:repeat(4, minmax(0, 1fr));
-      gap:14px;
-      min-width:0;
-    }
-
-    .admin-dashboard .admin-chart-grid{
-      display:grid;
+    .admin-kpi-grid{
       grid-template-columns:repeat(2, minmax(0, 1fr));
-      gap:14px;
-      min-width:0;
     }
+  }
 
-    .admin-dashboard .stat-card{
-      min-width:0;
-      padding:18px;
-      border-radius:20px;
-    }
-
-    .admin-dashboard .stat-card__label{
-      font-size:.9rem;
-      font-weight:600;
-      margin-bottom:.35rem;
-      color:var(--text-soft, #c9d3df);
-    }
-
-    .admin-dashboard .stat-card__value{
-      font-size:2rem;
-      line-height:1;
-      font-weight:800;
-      margin-bottom:.35rem;
-      color:var(--text, #fff);
-      letter-spacing:-.03em;
-    }
-
-    .admin-dashboard .section-head{
-      display:flex;
-      justify-content:space-between;
-      align-items:flex-start;
-      gap:.75rem;
-      margin-bottom:.9rem;
-    }
-
-    .admin-dashboard .section-head h3{
-      margin:0 0 .2rem;
-    }
-
-    .admin-dashboard .table-wrap{
-      overflow-x:auto;
-    }
-
-    .admin-dashboard .chart-box{
-      min-height:260px;
-    }
-
-    .admin-dashboard .chart-box--sm{
-      min-height:240px;
-    }
-
-    .admin-dashboard .quick-actions{
-      display:flex;
-      flex-wrap:wrap;
-      gap:.5rem;
-    }
-
-    .admin-dashboard .log-stack{
-      display:flex;
+  @media (max-width: 760px){
+    .admin-hero__actions{
       flex-direction:column;
-      gap:.65rem;
+      align-items:stretch;
+      width:100%;
     }
 
-    .admin-dashboard .log-item{
-      padding:.8rem .9rem;
-      border:1px solid rgba(255,255,255,.08);
-      border-radius:14px;
-      background:rgba(255,255,255,.02);
+    .admin-hero__actions .re-btn{
+      width:100%;
+      justify-content:center;
     }
 
-    .admin-dashboard .log-item__title{
-      font-weight:700;
-      margin-bottom:.15rem;
+    .admin-kpi-grid,
+    .admin-chart-grid{
+      grid-template-columns:1fr;
     }
+  }
+</style>
 
-    .admin-dashboard .log-item__meta{
-      font-size:.84rem;
-    }
+<script>
+  (function () {
+    const aiInsightEl = document.getElementById("aiInsight");
 
-    .admin-dashboard .log-item__body{
-      margin-top:.35rem;
-      line-height:1.45;
-    }
-
-    .admin-dashboard .empty-state{
-      padding:.5rem 0 .15rem;
-    }
-
-    .admin-dashboard .ai-insight{
-      line-height:1.6;
-      font-size:.97rem;
-    }
-
-    .admin-dashboard .subcopy{
-      font-size:.85rem;
-      margin-top:.35rem;
-    }
-
-    @media (max-width: 1120px){
-      .admin-dashboard .admin-layout{
-        grid-template-columns:1fr;
-      }
-
-      .admin-dashboard .admin-kpi-grid{
-        grid-template-columns:repeat(2, minmax(0, 1fr));
-      }
-    }
-
-    @media (max-width: 760px){
-      .admin-dashboard .admin-hero{
-        padding:16px;
-        border-radius:18px;
-      }
-
-      .admin-dashboard .admin-hero__actions{
-        flex-direction:column;
-        align-items:stretch;
-        width:100%;
-      }
-
-      .admin-dashboard .admin-hero__actions .btn{
-        width:100%;
-        justify-content:center;
-      }
-
-      .admin-dashboard .admin-kpi-grid,
-      .admin-dashboard .admin-chart-grid{
-        grid-template-columns:1fr;
-      }
-
-      .admin-dashboard .stat-card{
-        padding:16px;
-        border-radius:18px;
-      }
-
-      .admin-dashboard .stat-card__value{
-        font-size:1.8rem;
-      }
-    }
-  </style>
-
-  <script>
-    (function () {
-      const aiInsightEl = document.getElementById("aiInsight");
-
-      function updateInsight() {
-        fetch('{{ url_for("admin.ai_refresh", target="analytics") }}', {
-          method: "POST",
-          headers: { "X-Requested-With": "XMLHttpRequest" }
+    function updateInsight() {
+      fetch('{{ url_for("admin.ai_refresh", target="analytics") }}', {
+        method: "POST",
+        headers: { "X-Requested-With": "XMLHttpRequest" }
+      })
+        .then(res => {
+          if (!res.ok) throw new Error("Failed to fetch AI insight");
+          return res.json();
         })
-          .then(res => {
-            if (!res.ok) throw new Error("Failed to fetch AI insight");
-            return res.json();
-          })
-          .then(data => {
-            const message = (data && data.message) ? data.message : "No new insight available.";
-            aiInsightEl.innerHTML = `<div class="ai-msg"><strong>🤖 AI Insight:</strong> ${message}</div>`;
-          })
-          .catch(() => {
-            aiInsightEl.textContent = {{ (ai_summary or 'Unable to fetch AI insight at this time.')|tojson }};
-          });
-      }
+        .then(data => {
+          const message = (data && data.message) ? data.message : "No new insight available.";
+          aiInsightEl.innerHTML = `<div><strong>AI Insight:</strong> ${message}</div>`;
+        })
+        .catch(() => {
+          aiInsightEl.textContent = {{ (ai_summary or 'Unable to fetch AI insight at this time.')|tojson }};
+        });
+    }
 
-      updateInsight();
-      setInterval(updateInsight, 60000);
+    updateInsight();
+    setInterval(updateInsight, 60000);
 
-      const loanVolumeLabels = {{ (loan_volume_labels or ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'])|tojson }};
-      const loanVolumeSeries = {{ (loan_volume_series or [0, 0, 0, 0, 0, 0])|tojson }};
+    const loanVolumeLabels = {{ (loan_volume_labels or ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'])|tojson }};
+    const loanVolumeSeries = {{ (loan_volume_series or [0, 0, 0, 0, 0, 0])|tojson }};
 
-      const userGrowthLabels = {{ (user_growth_labels or ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'])|tojson }};
-      const userGrowthSeries = {{ (user_growth_series or [0, 0, 0, 0, 0, 0])|tojson }};
+    const userGrowthLabels = {{ (user_growth_labels or ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'])|tojson }};
+    const userGrowthSeries = {{ (user_growth_series or [0, 0, 0, 0, 0, 0])|tojson }};
 
-      const serverLoadValue = {{ (server_load_value or 68)|tojson }};
+    const serverLoadValue = {{ (server_load_value or 68)|tojson }};
 
-      const baseOpt = {
-        chart: {
-          toolbar: { show: false },
-          foreColor: '#c9d3df',
-          animations: { enabled: true }
-        },
-        grid: { borderColor: '#2a2e36' },
-        dataLabels: { enabled: false },
-        legend: { labels: { colors: '#c9d3df' } },
-        theme: { mode: 'dark' }
-      };
+    const baseOpt = {
+      chart: {
+        toolbar: { show: false },
+        foreColor: '#c9d3df',
+        animations: { enabled: true }
+      },
+      grid: { borderColor: '#2a2e36' },
+      dataLabels: { enabled: false },
+      legend: { labels: { colors: '#c9d3df' } },
+      theme: { mode: 'dark' }
+    };
 
-      const volumeEl = document.querySelector("#chart_volume");
-      if (volumeEl) {
-        new ApexCharts(volumeEl, {
-          ...baseOpt,
-          chart: { ...baseOpt.chart, type: 'area', height: 260 },
-          stroke: { curve: 'smooth', width: 2 },
-          series: [{ name: 'Loans', data: loanVolumeSeries }],
-          xaxis: { categories: loanVolumeLabels },
-          colors: ['#7ab8ff']
-        }).render();
-      }
+    const volumeEl = document.querySelector("#chart_volume");
+    if (volumeEl) {
+      new ApexCharts(volumeEl, {
+        ...baseOpt,
+        chart: { ...baseOpt.chart, type: 'area', height: 260 },
+        stroke: { curve: 'smooth', width: 2 },
+        series: [{ name: 'Loans', data: loanVolumeSeries }],
+        xaxis: { categories: loanVolumeLabels },
+        colors: ['#7ab8ff']
+      }).render();
+    }
 
-      const usersEl = document.querySelector("#chart_users");
-      if (usersEl) {
-        new ApexCharts(usersEl, {
-          ...baseOpt,
-          chart: { ...baseOpt.chart, type: 'line', height: 260 },
-          stroke: { curve: 'smooth', width: 3 },
-          series: [{ name: 'Users', data: userGrowthSeries }],
-          xaxis: { categories: userGrowthLabels },
-          colors: ['#43d19e']
-        }).render();
-      }
+    const usersEl = document.querySelector("#chart_users");
+    if (usersEl) {
+      new ApexCharts(usersEl, {
+        ...baseOpt,
+        chart: { ...baseOpt.chart, type: 'line', height: 260 },
+        stroke: { curve: 'smooth', width: 3 },
+        series: [{ name: 'Users', data: userGrowthSeries }],
+        xaxis: { categories: userGrowthLabels },
+        colors: ['#43d19e']
+      }).render();
+    }
 
-      const systemEl = document.querySelector("#chart_system");
-      if (systemEl) {
-        new ApexCharts(systemEl, {
-          ...baseOpt,
-          chart: { ...baseOpt.chart, type: 'radialBar', height: 240 },
-          series: [serverLoadValue],
-          labels: ['Server Load %'],
-          colors: ['#ffdf6e'],
-          plotOptions: {
-            radialBar: {
-              hollow: { size: '58%' },
-              dataLabels: {
-                value: { fontSize: '22px' }
-              }
+    const systemEl = document.querySelector("#chart_system");
+    if (systemEl) {
+      new ApexCharts(systemEl, {
+        ...baseOpt,
+        chart: { ...baseOpt.chart, type: 'radialBar', height: 240 },
+        series: [serverLoadValue],
+        labels: ['Server Load %'],
+        colors: ['#ffdf6e'],
+        plotOptions: {
+          radialBar: {
+            hollow: { size: '58%' },
+            dataLabels: {
+              value: { fontSize: '22px' }
             }
           }
-        }).render();
-      }
-    })();
-  </script>
-
-</main>
+        }
+      }).render();
+    }
+  })();
+</script>
 {% endblock %}
