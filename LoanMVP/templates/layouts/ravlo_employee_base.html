@@ -23,9 +23,7 @@
 
     <aside class="re-sidebar" id="reSidebar">
       {% if current_user.is_authenticated %}
-        {% if current_user.role == "borrower" %}
-          {% include "layouts/_sidebar_borrower.html" %}
-        {% elif current_user.role == "loan_officer" %}
+        {% if current_user.role == "loan_officer" %}
           {% include "layouts/_sidebar_loan_officer.html" %}
         {% elif current_user.role == "processor" %}
           {% include "layouts/_sidebar_processor.html" %}
