@@ -7,6 +7,7 @@
 import os
 import json
 from datetime import datetime
+from collections import defaultdict
 
 from flask import (
     Blueprint,
