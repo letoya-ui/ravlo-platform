@@ -1,48 +1,192 @@
-{% extends "layouts/Ravlo_lending_base.html" %}
-{% block title %}System Dashboard{% endblock %}
+{% extends "layouts/ravlo_employee_base.html" %}
+{% block title %}System • User Management{% endblock %}
+
+{% block page_title %}User Management{% endblock %}
+{% block page_subline %}
+Manage platform users, account status, and employee invitations.
+{% endblock %}
+
+{% block topbar_actions %}
+  <a href="{{ url_for('admin.invite_employee') }}" class="re-btn primary sm">
+    <i class="lucide lucide-user-plus"></i>
+    Send Register Request
+  </a>
+{% endblock %}
+
 {% block content %}
 
-<div class="container-fluid py-4 text-light">
-  <h2 class="mb-4">🧠 System Dashboard</h2>
-  <div class="row g-4">
-    <div class="col-md-4">
-      <div class="card">
-        <h5>🛠 System Info</h5>
-        <p><strong>Name:</strong> {{ system.name }}</p>
-        <p><strong>Version:</strong> {{ system.version }}</p>
-        <p><strong>Environment:</strong> {{ system.environment or '—' }}</p>
-        <p><strong>Uptime:</strong> {{ uptime }} days</p>
-        <a href="{{ url_for('account.settings') }}" class="btn mt-2">⚙️ Edit Settings</a>
-      </div>
-    </div>
-    <div class="col-md-4">
-      <div class="card">
-        <h5>📜 Recent Logs</h5>
-        <ul class="list-unstyled">
-          {% for log in logs %}
-          <li><small>{{ log.created_at.strftime('%b %d %I:%M %p') }} — {{ log.message }}</small></li>
-          {% endfor %}
-        </ul>
-        <a href="{{ url_for('system.logs') }}" class="btn mt-2">View All Logs</a>
-      </div>
-    </div>
-    <div class="col-md-4">
-      <div class="card">
-        <h5>🧾 Audit Trail</h5>
-        <ul class="list-unstyled">
-          {% for audit in audits %}
-          <li><small>{{ audit.created_at.strftime('%b %d %I:%M %p') }} — {{ audit.action }}</small></li>
-          {% endfor %}
-        </ul>
-        <a href="{{ url_for('system.audits') }}" class="btn mt-2">View Audits</a>
-      </div>
-    </div>
-  </div>
+{% set total_users = users|length %}
+{% set active_users = users|selectattr('is_active')|list|length %}
+{% set inactive_users = total_users - active_users %}
+{% set employee_users = users|selectattr('role', 'in', ['admin', 'loan_officer', 'processor', 'underwriter'])|list|length %}
 
-  <div class="card mt-4">
-    <h5>👥 Users</h5>
-    <p class="text-muted">Manage system users and roles.</p>
-    <a href="{{ url_for('system.users') }}" class="btn">Manage Users</a>
-  </div>
+<div class="re-grid">
+
+  <!-- SUMMARY -->
+  <section class="re-grid-4">
+    <div class="re-stat">
+      <div class="re-stat-label">Total Users</div>
+      <div class="re-stat-value">{{ total_users }}</div>
+      <div class="re-stat-meta">All accounts in system</div>
+    </div>
+
+    <div class="re-stat">
+      <div class="re-stat-label">Active</div>
+      <div class="re-stat-value">{{ active_users }}</div>
+      <div class="re-stat-meta">Currently enabled</div>
+    </div>
+
+    <div class="re-stat">
+      <div class="re-stat-label">Inactive</div>
+      <div class="re-stat-value">{{ inactive_users }}</div>
+      <div class="re-stat-meta">Disabled accounts</div>
+    </div>
+
+    <div class="re-stat">
+      <div class="re-stat-label">Employees</div>
+      <div class="re-stat-value">{{ employee_users }}</div>
+      <div class="re-stat-meta">Internal team roles</div>
+    </div>
+  </section>
+
+  <!-- USERS TABLE -->
+  <section class="re-card pad">
+    <div class="section-head">
+      <div>
+        <div class="re-card-title">System Users</div>
+        <div class="re-card-subtitle">Control status, remove users, and invite employees.</div>
+      </div>
+    </div>
+
+    {% if users %}
+      <div class="re-table-wrap mt-16">
+        <table>
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Email</th>
+              <th>Role</th>
+              <th>Status</th>
+              <th>Created</th>
+              <th class="text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for user in users %}
+            <tr>
+              <td>
+                <div style="display:grid; gap:4px;">
+                  <strong>
+                    {{ ((user.first_name or "") ~ " " ~ (user.last_name or "")).strip() or user.username or "Unnamed User" }}
+                  </strong>
+                  <span class="text-muted" style="font-size:.82rem;">
+                    ID #{{ user.id }}
+                  </span>
+                </div>
+              </td>
+
+              <td>{{ user.email or "—" }}</td>
+
+              <td>
+                <span class="badge badge-info">
+                  {{ (user.role or "unknown")|replace('_', ' ')|title }}
+                </span>
+              </td>
+
+              <td>
+                {% if user.is_active %}
+                  <span class="badge badge-success">Active</span>
+                {% else %}
+                  <span class="badge badge-danger">Inactive</span>
+                {% endif %}
+              </td>
+
+              <td>
+                {{ user.created_at.strftime("%b %d, %Y") if user.created_at else "—" }}
+              </td>
+
+              <td class="text-right">
+                <div class="row" style="justify-content:flex-end; gap:8px; flex-wrap:wrap;">
+
+                  <form method="POST"
+                        action="{{ url_for('system.toggle_user', user_id=user.id) }}"
+                        style="display:inline;">
+                    <button type="submit" class="re-btn ghost sm">
+                      <i class="lucide lucide-power"></i>
+                      {% if user.is_active %}Deactivate{% else %}Activate{% endif %}
+                    </button>
+                  </form>
+
+                  {% if user.role in ['loan_officer', 'processor', 'underwriter', 'admin'] %}
+                    <a href="{{ url_for('admin.invite_employee') }}" class="re-btn secondary sm">
+                      <i class="lucide lucide-send"></i>
+                      Invite
+                    </a>
+                  {% endif %}
+
+                  {% if user.id != current_user.id %}
+                  <form method="POST"
+                        action="{{ url_for('system.delete_user', user_id=user.id) }}"
+                        onsubmit="return confirm('Delete this account permanently? This action cannot be undone.');"
+                        style="display:inline;">
+                    <button type="submit" class="re-btn danger sm">
+                      <i class="lucide lucide-trash-2"></i>
+                      Delete
+                    </button>
+                  </form>
+                  {% else %}
+                    <button type="button" class="re-btn ghost sm" disabled title="You cannot delete your own account here">
+                      <i class="lucide lucide-lock"></i>
+                      Protected
+                    </button>
+                  {% endif %}
+
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="re-empty mt-16">
+        No users found.
+      </div>
+    {% endif %}
+  </section>
+
+  <!-- QUICK ACTIONS -->
+  <section class="re-card pad">
+    <div class="re-card-title">Quick Actions</div>
+    <div class="re-card-subtitle">Fast access to account administration tools.</div>
+
+    <div class="re-grid-3 mt-16">
+      <a href="{{ url_for('admin.invite_employee') }}" class="re-card pad" style="display:block;">
+        <div class="eyebrow">ACCESS</div>
+        <h3 style="margin:.35rem 0 .25rem;">Send Register Request</h3>
+        <p class="text-muted" style="margin:0;">
+          Create and send a new employee invitation link.
+        </p>
+      </a>
+
+      <a href="{{ url_for('admin.access_requests') }}" class="re-card pad" style="display:block;">
+        <div class="eyebrow">APPROVALS</div>
+        <h3 style="margin:.35rem 0 .25rem;">Access Requests</h3>
+        <p class="text-muted" style="margin:0;">
+          Review pending access requests and approve or deny them.
+        </p>
+      </a>
+
+      <a href="{{ url_for('system.logs') }}" class="re-card pad" style="display:block;">
+        <div class="eyebrow">MONITORING</div>
+        <h3 style="margin:.35rem 0 .25rem;">System Logs</h3>
+        <p class="text-muted" style="margin:0;">
+          Review recent activity, events, and platform actions.
+        </p>
+      </a>
+    </div>
+  </section>
+
 </div>
+
 {% endblock %}
