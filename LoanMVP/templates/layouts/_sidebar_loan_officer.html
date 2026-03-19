@@ -1,108 +1,147 @@
 {% set ep = request.endpoint or "" %}
 
-<div class="ravlo-sidebar-inner">
-
-  <!-- BRAND -->
-  <div class="ravlo-sidebar-brand">
-    <a href="{{ url_for('loan_officer.dashboard') }}" class="ravlo-brand-link">
-      <div class="ravlo-brand-mark">
-        <span>RV</span>
-      </div>
-
-      <div class="ravlo-brand-copy">
-        <div class="ravlo-brand-name">RAVLO</div>
-        <div class="ravlo-brand-sub">Lending OS</div>
-      </div>
-    </a>
-    <div class="ravlo-brand-glow"></div>
+<div class="re-brand">
+  <div class="re-mark"><span>RV</span></div>
+  <div>
+    <div class="re-brand-name">RAVLO</div>
+    <div class="re-brand-sub">Lending OS</div>
   </div>
+</div>
 
-  <nav class="ravlo-sidebar-nav">
+<nav class="re-nav">
 
-    <!-- COMMAND -->
-    <div class="ravlo-nav-section">Command</div>
+  <div class="re-nav-group">
+    <div class="re-nav-label">Command</div>
 
     <a href="{{ url_for('loan_officer.dashboard') }}"
-       class="ravlo-nav-link {% if ep == 'loan_officer.dashboard' %}active{% endif %}">
-      <i class="lucide lucide-layout-dashboard"></i>
+       class="re-nav-link {% if ep == 'loan_officer.dashboard' %}active{% endif %}">
+      <i class="icon lucide lucide-layout-dashboard"></i>
       <span>Dashboard</span>
     </a>
 
     <a href="{{ url_for('loan_officer.messages') }}"
-       class="ravlo-nav-link {% if ep == 'loan_officer.messages' %}active{% endif %}">
-      <i class="lucide lucide-message-square"></i>
+       class="re-nav-link {% if ep in ['loan_officer.messages', 'loan_officer.message_thread', 'loan_officer.new_message'] %}active{% endif %}">
+      <i class="icon lucide lucide-messages-square"></i>
       <span>Messages</span>
     </a>
+  </div>
 
+  <div class="re-nav-group">
+    <div class="re-nav-label">Pipeline</div>
 
-    <!-- PIPELINE -->
-    <div class="ravlo-nav-section">Pipeline</div>
-
-    <a href="{{ url_for( 'crm.leads') }}"
-       class="ravlo-nav-link {% if ep == 'crm.leads' %}active{% endif %}">
-      <i class="lucide lucide-flame"></i>
+    <a href="{{ url_for('crm.leads') }}"
+       class="re-nav-link {% if ep == 'crm.leads' %}active{% endif %}">
+      <i class="icon lucide lucide-flame"></i>
       <span>Leads</span>
     </a>
 
     <a href="{{ url_for('loan_officer.borrowers') }}"
-       class="ravlo-nav-link {% if ep == 'loan_officer.borrowers' %}active{% endif %}">
-      <i class="lucide lucide-user-round"></i>
+       class="re-nav-link {% if ep in [
+         'loan_officer.borrowers',
+         'loan_officer.view_borrower',
+         'loan_officer.borrower_dashboard',
+         'loan_officer.borrower_search',
+         'loan_officer.borrower_intake',
+         'loan_officer.profile',
+         'loan_officer.upload',
+         'loan_officer.follow_up',
+         'loan_officer.timeline',
+         'loan_officer.request_documents',
+         'loan_officer.intake_review'
+       ] %}active{% endif %}">
+      <i class="icon lucide lucide-user-round"></i>
       <span>Borrowers</span>
     </a>
 
     <a href="{{ url_for('loan_officer.loan_queue') }}"
-       class="ravlo-nav-link {% if ep == 'loan_officer.loan_queue' %}active{% endif %}">
-      <i class="lucide lucide-landmark"></i>
+       class="re-nav-link {% if ep in [
+         'loan_officer.loan_queue',
+         'loan_officer.pipeline',
+         'loan_officer.loan_file',
+         'loan_officer.loan_detail',
+         'loan_officer.capital_funds',
+         'loan_officer.loan_search',
+         'loan_officer.new_application',
+         'loan_officer.create_loan',
+         'loan_officer.quick_1003',
+         'loan_officer.new_loan',
+         'loan_officer.edit_loan',
+         'loan_officer.loan_summary'
+       ] %}active{% endif %}">
+      <i class="icon lucide lucide-landmark"></i>
       <span>Loans</span>
     </a>
 
     <a href="{{ url_for('loan_officer.credit_check') }}"
-       class="ravlo-nav-link {% if 'credit' in ep %}active{% endif %}">
-      <i class="lucide lucide-badge-check"></i>
+       class="re-nav-link {% if 'credit' in ep %}active{% endif %}">
+      <i class="icon lucide lucide-badge-check"></i>
       <span>Credit Check</span>
     </a>
+  </div>
 
-
-    <!-- WORKFLOW -->
-    <div class="ravlo-nav-section">Workflow</div>
+  <div class="re-nav-group">
+    <div class="re-nav-label">Workflow</div>
 
     <a href="{{ url_for('loan_officer.task') }}"
-       class="ravlo-nav-link {% if ep == 'loan_officer.task' %}active{% endif %}">
-      <i class="lucide lucide-list-checks"></i>
+       class="re-nav-link {% if ep in [
+         'loan_officer.task',
+         'loan_officer.new_task',
+         'loan_officer.toggle_task',
+         'loan_officer.delete_task',
+         'loan_officer.task_complete'
+       ] %}active{% endif %}">
+      <i class="icon lucide lucide-list-checks"></i>
       <span>Tasks</span>
     </a>
 
+    <a href="{{ url_for('loan_officer.quote_engine') }}"
+       class="re-nav-link {% if ep in [
+         'loan_officer.quote_engine',
+         'loan_officer.new_quote',
+         'loan_officer.generate_quote',
+         'loan_officer.quote_plan',
+         'loan_officer.quotes',
+         'loan_officer.loan_scenarios',
+         'loan_officer.add_scenario',
+         'loan_officer.delete_scenario',
+         'loan_officer.ai_generator',
+         'loan_officer.ai_chat_history',
+         'loan_officer.borrower_ai_log',
+         'loan_officer.ai_intake_queue',
+         'loan_officer.ai_intake_review',
+         'loan_officer.call_center'
+       ] %}active{% endif %}">
+      <i class="icon lucide lucide-sparkles"></i>
+      <span>Tools</span>
+    </a>
+  </div>
 
-    <!-- RESOURCES -->
-    <div class="ravlo-nav-section">Resources</div>
+  <div class="re-nav-group">
+    <div class="re-nav-label">Resources</div>
 
     <a href="{{ url_for('loan_officer.resources') }}"
-       class="ravlo-nav-link {% if ep == 'loan_officer.resources' %}active{% endif %}">
-      <i class="lucide lucide-book-open"></i>
+       class="re-nav-link {% if ep in ['loan_officer.resources', 'loan_officer.resources_chat'] %}active{% endif %}">
+      <i class="icon lucide lucide-book-open"></i>
       <span>Resource Center</span>
     </a>
 
-  </nav>
-
-
-  <!-- SYSTEM -->
-  <div class="ravlo-sidebar-footer-simple">
-
-    <div class="ravlo-nav-section">System</div>
-
-    <a href="{{ url_for('account.settings') }}"
-       class="ravlo-nav-link {% if ep == 'account.settings' %}active{% endif %}">
-      <i class="lucide lucide-settings"></i>
-      <span>Settings</span>
+    <a href="{{ url_for('loan_officer.campaigns') }}"
+       class="re-nav-link {% if ep in ['loan_officer.campaigns', 'loan_officer.create_campaign'] %}active{% endif %}">
+      <i class="icon lucide lucide-megaphone"></i>
+      <span>Campaigns</span>
     </a>
-
-    <form method="post" action="{{ url_for('auth.logout') }}" class="ravlo-sidebar-logout-form">
-      <button type="submit" class="ravlo-btn ghost sm ravlo-logout-btn sidebar-logout-full">
-        <i class="lucide lucide-log-out"></i>
-        <span>Logout</span>
-      </button>
-    </form>
-
   </div>
 
+</nav>
+
+<div class="re-sidebar-foot">
+  <div class="re-user-chip">
+    <div class="re-user-avatar">
+      {{ (current_user.first_name[0] if current_user.first_name else "L")|upper }}
+    </div>
+    <div class="re-user-meta">
+      <div class="re-user-name">{{ current_user.first_name or "" }} {{ current_user.last_name or "" }}</div>
+      <div class="re-user-role">Loan Officer</div>
+    </div>
+  </div>
 </div>
