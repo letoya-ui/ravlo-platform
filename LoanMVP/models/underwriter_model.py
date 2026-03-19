@@ -73,7 +73,7 @@ class UnderwritingCondition(db.Model):
     investor_profile_id = db.Column(
         db.Integer,
         db.ForeignKey("investor_profile.id", name="fk_condition_investor_id"),
-        nullable=False
+        nullable=True
     )
 
     loan_id = db.Column(
