@@ -7,7 +7,7 @@ Central system management for users, onboarding, invites, lending operations, an
 {% endblock %}
 
 {% block topbar_actions %}
-  <a class="re-btn primary sm" href="{{ url_for('admin.invite_team_member', company_id=company.id) }}">
+  <a class="re-btn primary sm" href="{{ url_for('admin.invite_team_member', company_id=company_id) }}">
     <i class="lucide lucide-user-plus"></i>
     Send Register Request
   </a>
@@ -280,7 +280,7 @@ Central system management for users, onboarding, invites, lending operations, an
             <i class="lucide lucide-file-text"></i>
             Reports
           </a>
-          <a class="re-btn primary sm" href="{{ url_for('admin.invite_team_member', company_id=company.id) }}">
+          <a class="re-btn primary sm" href="{{ url_for('admin.invite_team_member', company_id=company_id) }}">
             <i class="lucide lucide-send"></i>
             Send Invite
           </a>
