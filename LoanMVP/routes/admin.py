@@ -800,3 +800,34 @@ def ai_refresh(target):
     time.sleep(1.2)
     flash(f"{target} refreshed successfully.", "success")
     return jsonify({"success": True, "target": target})
+
+@admin_bp.route("/company/<int:company_id>/dashboard")
+@role_required("admin", "master_admin", "lending_admin")
+def company_dashboard(company_id):
+    company = Company.query.get_or_404(company_id)
+
+    team_members = User.query.filter_by(company_id=company.id).all()
+    invites = UserInvite.query.filter_by(company_id=company.id).all()
+    loans = LoanApplication.query.filter_by(company_id=company.id).all() if hasattr(LoanApplication, "company_id") else []
+    borrowers = BorrowerProfile.query.filter_by(company_id=company.id).all() if hasattr(BorrowerProfile, "company_id") else []
+    docs = LoanDocument.query.filter_by(company_id=company.id).all() if hasattr(LoanDocument, "company_id") else []
+
+    stats = {
+        "team_members": len(team_members),
+        "pending_invites": len([i for i in invites if (i.status or "").lower() == "pending"]),
+        "loans": len(loans),
+        "borrowers": len(borrowers),
+        "documents": len(docs),
+    }
+
+    return render_template(
+        "admin/company_dashboard.html",
+        company=company,
+        team_members=team_members[:5],
+        invites=invites[:5],
+        loans=loans[:5],
+        borrowers=borrowers[:5],
+        stats=stats,
+        title=f"{company.name} Dashboard",
+        active_tab="companies",
+    )
