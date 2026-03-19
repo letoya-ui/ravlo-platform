@@ -1,164 +1,281 @@
 {% extends "layouts/ravlo_employee_base.html" %}
-{% block title %}Loan File • {{ borrower.full_name }}{% endblock %}
+{% block title %}Loan File • {{ borrower.full_name if borrower else ('Loan #' ~ loan.id) }}{% endblock %}
+
+{% block page_title %}Loan File{% endblock %}
+{% block page_subline %}
+Review borrower details, underwriting ratios, documents, timeline, engagement, scenarios, and AI assistance for this file.
+{% endblock %}
+
+{% block topbar_actions %}
+  {% if borrower %}
+    <a href="{{ url_for('loan_officer.view_borrower', borrower_id=borrower.id) }}" class="rv-btn secondary sm">
+      <i class="lucide lucide-user-round"></i>
+      Borrower Profile
+    </a>
+  {% endif %}
+
+  <a href="{{ url_for('loan_officer.preapproval_letter', loan_id=loan.id) }}" class="rv-btn primary sm">
+    <i class="lucide lucide-file-check"></i>
+    Generate Pre-Approval
+  </a>
+
+  <a href="{{ url_for('loan_officer.generate_1003', loan_id=loan.id) }}" class="rv-btn secondary sm">
+    <i class="lucide lucide-file-text"></i>
+    Generate 1003
+  </a>
+{% endblock %}
 
 {% block content %}
+{% set ratio_front = ratios.front_end_dti if ratios is defined and ratios and ratios.front_end_dti is defined else "N/A" %}
+{% set ratio_back = ratios.back_end_dti if ratios is defined and ratios and ratios.back_end_dti is defined else "N/A" %}
+{% set ratio_ltv = ratios.ltv if ratios is defined and ratios and ratios.ltv is defined else "N/A" %}
+{% set score = engagement_score if engagement_score is defined and engagement_score is not none else 0 %}
 
+<div class="loanfile-shell">
 
-<!-- ====================================
-         PAGE TITLE
-==================================== -->
-<h1 style="font-size:2rem; margin-bottom:1.2rem; text-shadow:0 0 14px rgba(122,184,255,.45);">
-    Loan File — {{ borrower.full_name }}
-</h1>
-
-<!-- ====================================
-         BORROWER SECTION
-==================================== -->
-<div class="section-box">
-    <div class="section-title">Borrower Information</div>
-
-    <div class="info-grid">
-        <div><span class="label">Name:</span> <span class="value">{{ borrower.full_name }}</span></div>
-        <div><span class="label">Email:</span> <span class="value">{{ borrower.email }}</span></div>
-
-        <div><span class="label">Phone:</span> <span class="value">{{ borrower.phone }}</span></div>
-        <div><span class="label">Address:</span> 
-            <span class="value">
-                {{ borrower.address }}, {{ borrower.city }}, {{ borrower.state }} {{ borrower.zip }}
-            </span>
-        </div>
-
-        <div><span class="label">Employer:</span> <span class="value">{{ borrower.employer_name }}</span></div>
-        <div><span class="label">Income:</span> 
-            <span class="value">${{ '{:,.0f}'.format(borrower.income or 0) }}</span>
-        </div>
-    </div>
-</div>
-
-<!-- ====================================
-         LOAN SECTION
-==================================== -->
-<div class="section-box">
-    <div class="section-title">Loan Information</div>
-
-    <div class="info-grid">
-        <div><span class="label">Amount:</span> 
-            <span class="value">${{ '{:,.0f}'.format(loan.amount or 0) }}</span>
-        </div>
-        <div><span class="label">Loan Type:</span> <span class="value">{{ loan.loan_type }}</span></div>
-
-        <div><span class="label">Property Value:</span> 
-            <span class="value">${{ '{:,.0f}'.format(loan.property_value or 0) }}</span>
-        </div>
-        <div><span class="label">Address:</span> <span class="value">{{ loan.property_address }}</span></div>
-    </div>
-</div>
-
-<!-- ====================================
-         RATIOS (DTI / LTV)
-==================================== -->
-<div class="section-box">
-    <div class="section-title">Underwriting Ratios</div>
-
-    <div class="ratio-badge">Front-End DTI: {{ ratios.front_end_dti|default("N/A") }}</div>
-    <div class="ratio-badge">Back-End DTI: {{ ratios.back_end_dti|default("N/A") }}</div>
-    <div class="ratio-badge">LTV: {{ ratios.ltv|default("N/A") }}</div>
-</div>
-
-<!-- ====================================
-         DOCUMENTS
-==================================== -->
-<div class="section-box">
-    <div class="section-title">Documents</div>
-
-    <h4 style="color:var(--accent); margin-bottom:.7rem;">Uploaded</h4>
-
-    {% for doc in uploaded_docs %}
-    <div class="doc-item">
-        <a href="{{ url_for('processor.download', filename=doc.file_name) }}">{{ doc.name }}</a>
-        <br>
-        <span class="label">{{ doc.status }}</span>
-
-       <a href="{{ url_for('loan_officer.preapproval_letter', loan_id=loan.id) }}"
-   class="btn glow">
-    📝 Generate Pre-Approval Letter
-</a>
-    </div>
-    {% endfor %}
-
-    <h4 style="color:#ff6f6f; margin-top:1rem;">Missing</h4>
-
-    {% for m in missing_docs %}
-    <div class="doc-item" style="border-color:#ff6f6f;">
-        ❗ {{ m }}
-    </div>
-    {% endfor %}
-</div>
-
-<!-- ====================================
-         TIMELINE
-==================================== -->
-<section class="timeline">
-    <h3 style="margin-bottom:1rem;">📊 Loan Activity Timeline</h3>
-
-    {% for e in loan.doc_events|sort(attribute='timestamp', reverse=True) %}
-    <div class="timeline-item">
-
-        <div class="timeline-icon"
-             style="background: {{ COLOR_MAP.get(e.event_type, '#7ab8ff') }}20;
-                    color: {{ COLOR_MAP.get(e.event_type, '#7ab8ff') }};">
-            {{ ICON_MAP.get(e.event_type, '📄') }}
-        </div>
-
-        <div class="timeline-content">
-            <h4>{{ e.event_type|replace("_", " ")|capitalize }}</h4>
-
-            <p style="margin:0;">{{ e.document_name }}</p>
-
-            <div class="time">
-                {{ e.timestamp.strftime("%b %d, %Y %I:%M %p") }} ·
-                <span style="opacity:0.6;">
-                    {{ e.user_agent.split("(")[0] }}
-                </span>
-            </div>
-        </div>
-
-    </div>
-    {% endfor %}
-</section>
-
-<!-- ====================================
-         ENGAGEMENT SCORE
-==================================== -->
-<div class="card" style="padding:1.2rem; margin-bottom:1.5rem;">
-    <h3>🔥 Engagement Heat Score</h3>
-
-    <div class="heat-score"
-         style="font-size:2.4rem;
-                font-weight:600;
-                color: {{ 'lime' if engagement_score > 70
-                           else 'gold' if engagement_score > 40
-                           else 'tomato' }};">
-        {{ engagement_score }}
+  <!-- HERO -->
+  <section class="rv-card loanfile-hero">
+    <div>
+      <div class="eyebrow">Loan Command Center</div>
+      <h2>
+        Loan File — {{ borrower.full_name if borrower else ('Loan #' ~ loan.id) }}
+      </h2>
+      <p class="muted">
+        {{ loan.loan_type or "Loan Type N/A" }} • {{ loan.status or "Status N/A" }}
+      </p>
     </div>
 
-    <p style="opacity:0.7;">
+    <div class="hero-stats">
+      <div class="mini-stat">
+        <span class="mini-stat__label">Loan Amount</span>
+        <span class="mini-stat__value">${{ '{:,.0f}'.format(loan.amount or 0) }}</span>
+      </div>
+      <div class="mini-stat">
+        <span class="mini-stat__label">Property Value</span>
+        <span class="mini-stat__value">${{ '{:,.0f}'.format(loan.property_value or 0) }}</span>
+      </div>
+      <div class="mini-stat">
+        <span class="mini-stat__label">Status</span>
+        <span class="mini-stat__value">{{ loan.status or "N/A" }}</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- BORROWER + LOAN INFO -->
+  <section class="loanfile-grid-2">
+
+    <div class="rv-card">
+      <div class="section-head">
+        <div>
+          <div class="eyebrow">Borrower</div>
+          <h3>Borrower Information</h3>
+        </div>
+      </div>
+
+      {% if borrower %}
+        <div class="detail-list">
+          <div class="detail-row">
+            <span>Name</span>
+            <strong>{{ borrower.full_name or "N/A" }}</strong>
+          </div>
+          <div class="detail-row">
+            <span>Email</span>
+            <strong>{{ borrower.email or "N/A" }}</strong>
+          </div>
+          <div class="detail-row">
+            <span>Phone</span>
+            <strong>{{ borrower.phone or "N/A" }}</strong>
+          </div>
+          <div class="detail-row">
+            <span>Address</span>
+            <strong>
+              {{ borrower.address or "" }}
+              {% if borrower.address and (borrower.city or borrower.state or borrower.zip) %}<br>{% endif %}
+              {{ borrower.city or "" }}{% if borrower.city and borrower.state %}, {% endif %}{{ borrower.state or "" }} {{ borrower.zip or "" }}
+            </strong>
+          </div>
+          <div class="detail-row">
+            <span>Employer</span>
+            <strong>{{ borrower.employer_name or "N/A" }}</strong>
+          </div>
+          <div class="detail-row">
+            <span>Income</span>
+            <strong>${{ '{:,.0f}'.format(borrower.income or 0) }}</strong>
+          </div>
+        </div>
+      {% else %}
+        <p class="muted">No borrower profile linked to this loan.</p>
+      {% endif %}
+    </div>
+
+    <div class="rv-card">
+      <div class="section-head">
+        <div>
+          <div class="eyebrow">Loan</div>
+          <h3>Loan Information</h3>
+        </div>
+      </div>
+
+      <div class="detail-list">
+        <div class="detail-row">
+          <span>Amount</span>
+          <strong>${{ '{:,.0f}'.format(loan.amount or 0) }}</strong>
+        </div>
+        <div class="detail-row">
+          <span>Loan Type</span>
+          <strong>{{ loan.loan_type or "N/A" }}</strong>
+        </div>
+        <div class="detail-row">
+          <span>Property Value</span>
+          <strong>${{ '{:,.0f}'.format(loan.property_value or 0) }}</strong>
+        </div>
+        <div class="detail-row">
+          <span>Property Address</span>
+          <strong>{{ loan.property_address or "N/A" }}</strong>
+        </div>
+      </div>
+    </div>
+
+  </section>
+
+  <!-- RATIOS + ENGAGEMENT -->
+  <section class="loanfile-grid-2">
+
+    <div class="rv-card">
+      <div class="section-head">
+        <div>
+          <div class="eyebrow">Underwriting</div>
+          <h3>Ratios</h3>
+        </div>
+      </div>
+
+      <div class="ratio-grid">
+        <div class="ratio-pill">Front-End DTI: {{ ratio_front }}</div>
+        <div class="ratio-pill">Back-End DTI: {{ ratio_back }}</div>
+        <div class="ratio-pill">LTV: {{ ratio_ltv }}</div>
+      </div>
+    </div>
+
+    <div class="rv-card">
+      <div class="section-head">
+        <div>
+          <div class="eyebrow">Engagement</div>
+          <h3>Engagement Heat Score</h3>
+        </div>
+      </div>
+
+      <div class="engagement-score
+          {% if score > 70 %}hot
+          {% elif score > 40 %}warm
+          {% else %}cold
+          {% endif %}">
+        {{ score }}
+      </div>
+
+      <p class="muted">
         {{
-            '🔥 Highly Engaged — Hot Lead' if engagement_score > 70 else
-            '⚡ Moderately Engaged — Warm Lead' if engagement_score > 40 else
-            '❄ Low Engagement — Follow Up Needed'
+          '🔥 Highly Engaged — Hot Lead' if score > 70 else
+          '⚡ Moderately Engaged — Warm Lead' if score > 40 else
+          '❄ Low Engagement — Follow Up Needed'
         }}
-    </p>
-</div>
+      </p>
+    </div>
 
-<!-- ====================================
-         SCENARIOS — ADD
-==================================== -->
-<div class="card scenario-card">
-    <h3>➕ Add Scenario</h3>
+  </section>
 
-    <form method="POST" action="{{ url_for('loan_officer.add_scenario', loan_id=loan.id) }}">
+  <!-- DOCUMENTS -->
+  <section class="rv-card">
+    <div class="section-head">
+      <div>
+        <div class="eyebrow">File</div>
+        <h3>Documents</h3>
+      </div>
+    </div>
 
+    <h4 class="subhead good">Uploaded</h4>
+
+    {% if uploaded_docs %}
+      <div class="stack-list">
+        {% for doc in uploaded_docs %}
+          <div class="stack-row">
+            <div>
+              <strong>
+                <a href="{{ url_for('processor.download', filename=doc.file_name) }}">
+                  {{ doc.name or doc.file_name or "Document" }}
+                </a>
+              </strong>
+              <div class="row-sub">{{ doc.status or "Uploaded" }}</div>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <p class="muted">No uploaded documents yet.</p>
+    {% endif %}
+
+    <h4 class="subhead danger">Missing</h4>
+
+    {% if missing_docs %}
+      <div class="stack-list">
+        {% for m in missing_docs %}
+          <div class="stack-row danger-row">
+            <div><strong>❗ {{ m }}</strong></div>
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <p class="muted">No missing documents flagged.</p>
+    {% endif %}
+  </section>
+
+  <!-- TIMELINE -->
+  <section class="rv-card">
+    <div class="section-head">
+      <div>
+        <div class="eyebrow">Activity</div>
+        <h3>Loan Activity Timeline</h3>
+      </div>
+    </div>
+
+    {% if loan.doc_events %}
+      <div class="timeline-stack">
+        {% for e in loan.doc_events|sort(attribute='timestamp', reverse=True) %}
+          <div class="timeline-item">
+            <div class="timeline-icon"
+                 style="background: {{ COLOR_MAP.get(e.event_type, '#7ab8ff') }}20; color: {{ COLOR_MAP.get(e.event_type, '#7ab8ff') }};">
+              {{ ICON_MAP.get(e.event_type, '📄') }}
+            </div>
+
+            <div class="timeline-content">
+              <h4>{{ e.event_type|replace("_", " ")|capitalize }}</h4>
+              <p>{{ e.document_name or "Document Event" }}</p>
+              <div class="time">
+                {{ e.timestamp.strftime("%b %d, %Y %I:%M %p") if e.timestamp else "N/A" }}
+                {% if e.user_agent %}
+                  · <span style="opacity:.65;">{{ e.user_agent.split("(")[0] }}</span>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <p class="muted">No timeline activity yet.</p>
+    {% endif %}
+  </section>
+
+  <!-- SCENARIOS -->
+  <section class="loanfile-grid-2">
+
+    <div class="rv-card">
+      <div class="section-head">
+        <div>
+          <div class="eyebrow">Scenario Builder</div>
+          <h3>Add Scenario</h3>
+        </div>
+      </div>
+
+      <form method="POST" action="{{ url_for('loan_officer.add_scenario', loan_id=loan.id) }}" class="form-grid">
         <label>Scenario Title</label>
         <input name="title" required placeholder="FHA Option 1">
 
@@ -183,235 +300,549 @@
         <label>Monthly Payment</label>
         <input name="monthly_payment" type="number">
 
-        <button class="btn">Save Scenario</button>
-    </form>
-</div>
-
-<!-- ====================================
-         SCENARIOS — LIST
-==================================== -->
-<h3>📊 Saved Scenarios</h3>
-
-<div class="scenario-grid">
-    {% for s in loan.scenarios %}
-    <div class="card">
-        <h4>{{ s.title }}</h4>
-
-        <p><strong>Amount:</strong> ${{ s.amount }}</p>
-        <p><strong>Rate:</strong> {{ s.rate }}%</p>
-        <p><strong>Term:</strong> {{ s.term_months }} months</p>
-        <p><strong>Payment:</strong> ${{ s.monthly_payment }}</p>
-        <p><strong>LTV:</strong> {{ s.ltv }}%</p>
-        <p><strong>APR:</strong> {{ s.apr }}%</p>
-
-        <form method="POST" action="{{ url_for('loan_officer.delete_scenario', id=s.id, loan_id=loan.id) }}">
-            <button class="btn-danger">Delete</button>
-        </form>
+        <button class="rv-btn primary" type="submit">Save Scenario</button>
+      </form>
     </div>
-    {% endfor %}
-</div>
-<!-- ====================================
-         AI LO FILE ANALYSIS BOX
-==================================== -->
-<div class="ai-box">
-    <div class="section-title">AI Loan Assistant</div>
+
+    <div class="rv-card">
+      <div class="section-head">
+        <div>
+          <div class="eyebrow">Saved</div>
+          <h3>Scenario List</h3>
+        </div>
+      </div>
+
+      {% if loan.scenarios %}
+        <div class="scenario-grid">
+          {% for s in loan.scenarios %}
+            <div class="scenario-card">
+              <h4>{{ s.title or "Scenario" }}</h4>
+              <p><strong>Amount:</strong> ${{ s.amount or 0 }}</p>
+              <p><strong>Rate:</strong> {{ s.rate or 0 }}%</p>
+              <p><strong>Term:</strong> {{ s.term_months or 0 }} months</p>
+              <p><strong>Payment:</strong> ${{ s.monthly_payment or 0 }}</p>
+              <p><strong>LTV:</strong> {{ s.ltv or 0 }}%</p>
+              <p><strong>APR:</strong> {{ s.apr or 0 }}%</p>
+
+              <form method="POST" action="{{ url_for('loan_officer.delete_scenario', id=s.id, loan_id=loan.id) }}">
+                <button class="btn-danger" type="submit">Delete</button>
+              </form>
+            </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <p class="muted">No saved scenarios yet.</p>
+      {% endif %}
+    </div>
+
+  </section>
+
+  <!-- AI ASSISTANT -->
+  <section class="rv-card">
+    <div class="section-head">
+      <div>
+        <div class="eyebrow">AI</div>
+        <h3>AI Loan Assistant</h3>
+      </div>
+    </div>
 
     <textarea class="ai-input" id="aiInput" placeholder="Ask: What program fits this borrower?"></textarea>
+    <button class="rv-btn primary" onclick="askLOAI()">Ask AI</button>
 
-    <button class="ai-btn" onclick="askLOAI()">Ask AI</button>
+    <div id="aiResponse" class="ai-response"></div>
+  </section>
 
-    <div id="aiResponse" style="margin-top:1rem;"></div>
-</div>
+  <!-- PREAPPROVAL -->
+  <section class="rv-card preapproval-box">
+    <div class="section-head">
+      <div>
+        <div class="eyebrow">AI Preapproval</div>
+        <h3>Preapproval Engine</h3>
+      </div>
+    </div>
 
-<!-- ====================================
-         AI PREAPPROVAL ENGINE
-==================================== -->
-<div class="preapproval-box">
-    <h3>🏦 AI Preapproval Engine</h3>
-
-    <button onclick="runPreapproval()" class="pre-btn">Run Preapproval</button>
+    {% if borrower %}
+      <button onclick="runPreapproval()" class="rv-btn primary">Run Preapproval</button>
+    {% else %}
+      <p class="muted">No borrower linked, so preapproval cannot run.</p>
+    {% endif %}
 
     <div id="preResult" class="pre-result hidden">
-        <p><strong>Front DTI:</strong> <span id="preFE"></span></p>
-        <p><strong>Back DTI:</strong> <span id="preBE"></span></p>
-        <p><strong>LTV:</strong> <span id="preLTV"></span></p>
-        <p><strong>Program Fit:</strong> <span id="preFit"></span></p>
+      <p><strong>Front DTI:</strong> <span id="preFE"></span></p>
+      <p><strong>Back DTI:</strong> <span id="preBE"></span></p>
+      <p><strong>LTV:</strong> <span id="preLTV"></span></p>
+      <p><strong>Program Fit:</strong> <span id="preFit"></span></p>
 
-        <p><strong>Red Flags:</strong></p>
-        <ul id="preFlags"></ul>
+      <p><strong>Red Flags:</strong></p>
+      <ul id="preFlags"></ul>
 
-        <p><strong>Conditions:</strong></p>
-        <ul id="preConds"></ul>
+      <p><strong>Conditions:</strong></p>
+      <ul id="preConds"></ul>
 
-        <h4>AI Summary:</h4>
-        <div id="preSummary" class="ai-box"></div>
+      <h4>AI Summary:</h4>
+      <div id="preSummary" class="ai-summary-box"></div>
 
+      {% if borrower %}
         <a href="{{ url_for('loan_officer.ai_chat_history', borrower_id=borrower.id, loan_id=loan.id) }}"
-           class="btn btn-secondary">
-            Chat About This Loan
+           class="rv-btn secondary sm">
+          Chat About This Loan
         </a>
-        <button onclick="saveSnapshot()" class="btn glow" style="margin-top: 1rem;">
-            Save Preapproval Snapshot
-        </button>
+      {% endif %}
 
-        <a href="{{ url_for('loan_officer.preapproval_letter', loan_id=loan.id) }}"
-           class="btn glow" style="margin-top: 0.5rem; display: block; text-align: center;">
-            Generate Preapproval Letter
-        </a>
+      <button onclick="saveSnapshot()" class="rv-btn primary sm" style="margin-top:1rem;">
+        Save Preapproval Snapshot
+      </button>
+
+      <a href="{{ url_for('loan_officer.preapproval_letter', loan_id=loan.id) }}"
+         class="rv-btn secondary sm"
+         style="margin-top:.75rem;">
+        Generate Preapproval Letter
+      </a>
     </div>
+  </section>
+
+  <!-- REQUIRED DOCS -->
+  <section class="rv-card">
+    <div class="section-head">
+      <div>
+        <div class="eyebrow">Requirements</div>
+        <h3>Required Documents</h3>
+      </div>
+    </div>
+
+    <form method="POST" action="{{ url_for('loan_officer.generate_doc_needs', loan_id=loan.id) }}" style="margin-bottom:1rem;">
+      <button class="rv-btn primary" type="submit">Generate Required Docs (AI)</button>
+    </form>
+
+    {% if loan.doc_needs %}
+      <ul class="doc-list">
+        {% for d in loan.doc_needs %}
+          <li>
+            <strong>{{ d.name }}</strong>
+            <p class="reason">{{ d.reason }}</p>
+            <span class="status">{{ d.status }}</span>
+
+            {% if d.status != "uploaded" %}
+              <form method="POST" action="{{ url_for('loan_officer.request_doc', id=d.id) }}">
+                <button class="rv-btn secondary sm" type="submit">Request from Borrower</button>
+              </form>
+            {% endif %}
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p class="muted">No required document list generated yet.</p>
+    {% endif %}
+  </section>
+
 </div>
 
 <style>
-.preapproval-box {
-    background: var(--panel);
-    padding: 1.5rem;
-    margin-top: 1rem;
-    border-radius: 16px;
-    border: 1px solid var(--accent);
-    box-shadow: 0 0 18px rgba(122,184,255,0.35);
+.loanfile-shell{
+  display:grid;
+  gap:18px;
 }
 
-.pre-btn {
-    width: 100%;
-    padding: 1rem;
-    background: var(--accent);
-    border-radius: 8px;
-    border: none;
-    color: white;
-    font-size: 1.1rem;
-    cursor: pointer;
+.loanfile-hero{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-end;
+  gap:1rem;
+  flex-wrap:wrap;
 }
 
-.btn.glow {
-    background: var(--accent);
-    border: 1px solid var(--accent);
-    color: white;
-    padding: 0.8rem 1.2rem;
-    border-radius: 8px;
-    box-shadow: 0 0 12px rgba(122,184,255,0.5);
-    transition: 0.2s;
+.hero-stats{
+  display:flex;
+  gap:12px;
+  flex-wrap:wrap;
 }
 
-.btn.glow:hover {
-    box-shadow: 0 0 18px rgba(122,184,255,0.9);
+.mini-stat{
+  min-width:140px;
+  padding:12px 14px;
+  border-radius:16px;
+  background:rgba(255,255,255,.04);
+  border:1px solid rgba(255,255,255,.08);
 }
 
-.ai-box {
-    margin-top: 1rem;
-    white-space: pre-wrap;
+.mini-stat__label{
+  display:block;
+  font-size:.74rem;
+  text-transform:uppercase;
+  letter-spacing:.08em;
+  color:#8fa4b7;
+  margin-bottom:5px;
+}
+
+.mini-stat__value{
+  color:#fff;
+  font-weight:800;
+}
+
+.loanfile-grid-2{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:18px;
+}
+
+.rv-card{
+  border-radius:22px;
+  padding:20px 22px;
+  border:1px solid rgba(255,255,255,.08);
+  background:
+    radial-gradient(900px 520px at 15% 10%, rgba(122,184,255,.08), transparent 55%),
+    rgba(255,255,255,.02);
+  box-shadow:0 14px 34px rgba(0,0,0,.18);
+}
+
+.section-head{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:1rem;
+  margin-bottom:.8rem;
+}
+
+.eyebrow{
+  display:inline-flex;
+  padding:.35rem .7rem;
+  border-radius:999px;
+  font-size:.74rem;
+  font-weight:700;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+  color:#cfe2f3;
+  background:rgba(58,92,122,.25);
+  border:1px solid rgba(122,184,255,.15);
+}
+
+.muted{
+  color:#95a8ba;
+}
+
+.detail-list{
+  display:grid;
+  gap:.75rem;
+}
+
+.detail-row{
+  display:flex;
+  justify-content:space-between;
+  gap:1rem;
+  padding:.8rem .95rem;
+  border-radius:14px;
+  background:rgba(255,255,255,.04);
+  border:1px solid rgba(255,255,255,.06);
+}
+
+.detail-row span{
+  color:#8fa4b7;
+}
+
+.detail-row strong{
+  color:#fff;
+  text-align:right;
+  line-height:1.45;
+}
+
+.ratio-grid{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+}
+
+.ratio-pill{
+  display:inline-flex;
+  padding:10px 14px;
+  border-radius:999px;
+  background:rgba(122,184,255,.12);
+  border:1px solid rgba(122,184,255,.16);
+  color:#dce9f5;
+  font-weight:600;
+}
+
+.engagement-score{
+  font-size:2.4rem;
+  font-weight:700;
+  margin-bottom:.55rem;
+}
+.engagement-score.hot{ color:lime; }
+.engagement-score.warm{ color:gold; }
+.engagement-score.cold{ color:tomato; }
+
+.stack-list{
+  display:grid;
+  gap:.85rem;
+}
+
+.stack-row{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:1rem;
+  padding:.95rem 1rem;
+  border-radius:14px;
+  background:rgba(255,255,255,.04);
+  border:1px solid rgba(255,255,255,.06);
+}
+
+.danger-row{
+  border-color:rgba(255,111,111,.45);
+}
+
+.row-sub{
+  margin-top:.25rem;
+  font-size:.84rem;
+  color:#8fa4b7;
+}
+
+.timeline-stack{
+  display:grid;
+  gap:12px;
+}
+
+.timeline-item{
+  display:flex;
+  gap:12px;
+  align-items:flex-start;
+  padding:14px;
+  border-radius:16px;
+  border:1px solid rgba(255,255,255,.07);
+  background:rgba(255,255,255,.03);
+}
+
+.timeline-icon{
+  width:42px;
+  height:42px;
+  border-radius:12px;
+  display:grid;
+  place-items:center;
+  font-size:1.1rem;
+  flex:0 0 42px;
+}
+
+.timeline-content h4{
+  margin:0 0 4px;
+  color:#fff;
+}
+
+.timeline-content p{
+  margin:0;
+  color:#d7e3ee;
+}
+
+.time{
+  margin-top:4px;
+  font-size:.82rem;
+  color:#8fa4b7;
+}
+
+.form-grid{
+  display:grid;
+  gap:.55rem;
+}
+
+.form-grid label{
+  color:#c9d7e4;
+  font-size:.9rem;
+  margin-top:.35rem;
+}
+
+.form-grid input,
+.ai-input{
+  width:100%;
+  border-radius:12px;
+  border:1px solid rgba(255,255,255,.10);
+  background:rgba(255,255,255,.04);
+  color:#fff;
+  padding:12px 14px;
+  outline:none;
+}
+
+.ai-input{
+  min-height:120px;
+  resize:vertical;
+  margin-bottom:12px;
+}
+
+.scenario-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill, minmax(240px, 1fr));
+  gap:14px;
+}
+
+.scenario-card{
+  padding:14px;
+  border-radius:16px;
+  border:1px solid rgba(255,255,255,.07);
+  background:rgba(255,255,255,.03);
+}
+
+.ai-response{
+  margin-top:1rem;
+  white-space:pre-wrap;
+}
+
+.preapproval-box .pre-result{
+  margin-top:1rem;
+}
+
+.ai-summary-box{
+  margin-top:.5rem;
+  padding:14px;
+  border-radius:16px;
+  background:#0c1116;
+  border:1px solid rgba(255,255,255,.08);
+  white-space:pre-wrap;
+}
+
+.doc-list{
+  display:grid;
+  gap:12px;
+  padding-left:0;
+  list-style:none;
+}
+
+.doc-list li{
+  padding:14px;
+  border-radius:14px;
+  border:1px solid rgba(255,255,255,.07);
+  background:rgba(255,255,255,.03);
+}
+
+.reason{
+  margin:.35rem 0;
+  color:#9db0c3;
+}
+
+.status{
+  display:inline-block;
+  margin:.35rem 0 .75rem;
+  color:#fff;
+  font-weight:600;
+}
+
+.rv-btn{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:.45rem;
+  padding:.72rem 1rem;
+  border-radius:12px;
+  text-decoration:none;
+  font-weight:700;
+  border:1px solid rgba(255,255,255,.08);
+  transition:.18s ease;
+  cursor:pointer;
+}
+
+.rv-btn.primary{
+  background:#3A5C7A;
+  color:#fff;
+}
+
+.rv-btn.secondary{
+  background:rgba(255,255,255,.05);
+  color:#e7eef5;
+}
+
+.rv-btn.sm{
+  padding:.55rem .9rem;
+  font-size:.86rem;
+}
+
+.rv-btn:hover{
+  transform:translateY(-1px);
+}
+
+.btn-danger{
+  margin-top:.75rem;
+  padding:.6rem .9rem;
+  border-radius:10px;
+  border:none;
+  background:#7a1f1f;
+  color:#fff;
+  cursor:pointer;
+}
+
+.hidden{
+  display:none;
+}
+
+.subhead{
+  margin:0 0 .75rem;
+  font-size:.95rem;
+}
+.subhead.good{ color:var(--accent, #7ab8ff); }
+.subhead.danger{ color:#ff6f6f; }
+
+@media (max-width: 980px){
+  .loanfile-grid-2{
+    grid-template-columns:1fr;
+  }
 }
 </style>
 
-<script>
-function runPreapproval() {
-    fetch("/loan_officer/preapprove/{{ borrower.id }}")
-        .then(r => r.json())
-        .then(data => {
-
-            document.getElementById("preResult").classList.remove("hidden");
-
-            document.getElementById("preFE").innerText = data.front_dti;
-            document.getElementById("preBE").innerText = data.back_dti;
-            document.getElementById("preLTV").innerText = (data.ltv * 100).toFixed(2) + "%";
-            document.getElementById("preFit").innerText = data.fits.join(", ");
-
-            let flagsList = document.getElementById("preFlags");
-            flagsList.innerHTML = "";
-            data.flags.forEach(f => {
-                let li = document.createElement("li");
-                li.innerText = f;
-                flagsList.appendChild(li);
-            });
-
-            let condList = document.getElementById("preConds");
-            condList.innerHTML = "";
-            data.conditions.forEach(c => {
-                let li = document.createElement("li");
-                li.innerText = c;
-                condList.appendChild(li);
-            });
-
-            document.getElementById("preSummary").innerText = data.ai_summary;
-        });
-}
-</script>
-
-<!-- ====================================
-         PDF + REQUIRED DOCS BUTTONS
-==================================== -->
-<a href="{{ url_for('loan_officer.generate_1003', loan_id=loan.id) }}"
-   class="btn btn-glow" style="margin-top: 1rem;">
-   📄 Generate 1003 (PDF)
-</a>
-
-<form method="POST" action="{{ url_for('loan_officer.generate_doc_needs', loan_id=loan.id) }}">
-    <button class="btn btn-glow">⚡ Generate Required Docs (AI)</button>
-</form>
-
-<!-- ====================================
-         REQUIRED DOCUMENTS LIST
-==================================== -->
-<h3>📁 Required Documents</h3>
-
-<ul class="doc-list">
-    {% for d in loan.doc_needs %}
-    <li>
-        <strong>{{ d.name }}</strong>
-        <p class="reason">{{ d.reason }}</p>
-
-        <span class="status">{{ d.status }}</span>
-
-        {% if d.status != "uploaded" %}
-        <form method="POST" action="{{ url_for('loan_officer.request_doc', id=d.id) }}">
-            <button class="btn-small">Request from Borrower</button>
-        </form>
-        {% endif %}
-    </li>
-    {% endfor %}
-</ul>
-
-<!-- ====================================
-         AI SCRIPT
-==================================== -->
 <script>
 function askLOAI() {
-    let message = document.getElementById("aiInput").value;
+  const message = document.getElementById("aiInput").value;
 
-    fetch("{{ url_for('loan_officer.ai_assistant') }}", {
-        method: "POST",
-        headers: {"Content-Type":"application/json"},
-        body: JSON.stringify({
-            message: message,
-            borrower_id: {{ borrower.id }},
-            loan_id: {{ loan.id }}
-        })
+  fetch("{{ url_for('loan_officer.ai_assistant') }}", {
+    method: "POST",
+    headers: {"Content-Type":"application/json"},
+    body: JSON.stringify({
+      message: message,
+      borrower_id: {{ borrower.id if borrower else 'null' }},
+      loan_id: {{ loan.id }}
     })
+  })
+  .then(r => r.json())
+  .then(data => {
+    document.getElementById("aiResponse").innerHTML = data.reply || "No response returned.";
+  });
+}
+
+function runPreapproval() {
+  fetch("/loan_officer/preapprove/{{ borrower.id if borrower else 0 }}")
     .then(r => r.json())
     .then(data => {
-        document.getElementById("aiResponse").innerHTML = data.reply;
+      document.getElementById("preResult").classList.remove("hidden");
+      document.getElementById("preFE").innerText = data.front_dti ?? "N/A";
+      document.getElementById("preBE").innerText = data.back_dti ?? "N/A";
+      document.getElementById("preLTV").innerText = data.ltv ? (data.ltv * 100).toFixed(2) + "%" : "N/A";
+      document.getElementById("preFit").innerText = (data.fits || []).join(", ");
+
+      let flagsList = document.getElementById("preFlags");
+      flagsList.innerHTML = "";
+      (data.flags || []).forEach(f => {
+        let li = document.createElement("li");
+        li.innerText = f;
+        flagsList.appendChild(li);
+      });
+
+      let condList = document.getElementById("preConds");
+      condList.innerHTML = "";
+      (data.conditions || []).forEach(c => {
+        let li = document.createElement("li");
+        li.innerText = c;
+        condList.appendChild(li);
+      });
+
+      document.getElementById("preSummary").innerText = data.ai_summary || "No summary returned.";
     });
 }
-</script>
-<script>
+
 function saveSnapshot() {
-    fetch("/loan_officer/save_preapproval_snapshot/{{ loan.id }}", {
-        method: "POST"
-    })
-    .then(r => r.json())
-    .then(data => {
-        alert(data.message);
-    })
-    .catch(err => {
-        alert("Error saving snapshot.");
-    });
+  fetch("/loan_officer/save_preapproval_snapshot/{{ loan.id }}", {
+    method: "POST"
+  })
+  .then(r => r.json())
+  .then(data => {
+    alert(data.message || "Snapshot saved.");
+  })
+  .catch(() => {
+    alert("Error saving snapshot.");
+  });
 }
 </script>
-<style>
-.scenario-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-    gap: 1.5rem;
-}
-</style>
-
 {% endblock %}
