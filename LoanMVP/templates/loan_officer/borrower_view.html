@@ -1,148 +1,424 @@
 {% extends "layouts/ravlo_employee_base.html" %}
 {% block title %}Borrower Profile{% endblock %}
 
+{% block page_title %}Borrower Profile{% endblock %}
+{% block page_subline %}
+Review borrower details, active loan files, documents, tasks, and latest credit information.
+{% endblock %}
+
 {% block content %}
-<div class="wrap">
+<div class="borrower-view-shell">
 
   <!-- HEADER -->
-  <div class="card">
-    <h2>👤 {{ borrower.full_name }}</h2>
-    <p class="muted">
-      Borrower Profile • Created {{ borrower.created_at.strftime("%b %d, %Y") }}
-    </p>
-  </div>
-
-  <!-- ACTIONS -->
-  <div class="card" style="margin-top:1rem; display:flex; gap:1rem;">
-    <a href="{{ url_for('loan_officer.new_task') }}?borrower_id={{ borrower.id }}" class="btn btn-glow">➕ Add Task</a>
-    <a href="/loan_officer/quick-1003?borrower_id={{ borrower.id }}" class="btn btn-glow">📝 Start Loan</a>
-    <a href="{{ url_for('loan_officer.request_documents', borrower_id=borrower.id) }}" class="btn btn-glow">📄 Request Docs</a>
-    <a href="{{ url_for('loan_officer.credit_check', borrower_id=borrower.id) }}" class="btn btn-glow">📊 Pull Soft Credit</a>
-  </div>
-
-  <!-- GRID LAYOUT -->
-  <div class="grid-2" style="margin-top:1.5rem;">
-
-    <!-- LEFT COLUMN: BORROWER INFO -->
-    <div class="card">
-      <h3>📋 Borrower Details</h3>
-      <p>Email: {{ borrower.email }}</p>
-      <p>Phone: {{ borrower.phone }}</p>
-
-      <h4 class="section-title">Address</h4>
-      <p>{{ borrower.address }}<br>
-         {{ borrower.city }}, {{ borrower.state }} {{ borrower.zip }}</p>
-
-      <h4 class="section-title">Employment</h4>
-      <p>{{ borrower.employer_name }}</p>
-
-      <h4 class="section-title">Income</h4>
-      <p>Primary Income: ${{ borrower.income }}</p>
-      <p>Secondary Income: ${{ borrower.monthly_income_secondary or 0 }}</p>
+  <section class="rv-card borrower-hero">
+    <div>
+      <div class="eyebrow">Borrower Profile</div>
+      <h2>{{ borrower.full_name }}</h2>
+      <p class="muted">
+        Created {{ borrower.created_at.strftime("%b %d, %Y") if borrower.created_at else "N/A" }}
+      </p>
     </div>
 
-    <!-- RIGHT COLUMN: CREDIT -->
-    <div class="card">
-      <h3>📊 Credit Report (Latest)</h3>
+    <div class="hero-actions">
+      <a href="{{ url_for('loan_officer.new_task') }}?borrower_id={{ borrower.id }}" class="rv-btn primary">
+        Add Task
+      </a>
+      <a href="/loan_officer/quick-1003?borrower_id={{ borrower.id }}" class="rv-btn secondary">
+        Start Loan
+      </a>
+      <a href="{{ url_for('loan_officer.request_documents', borrower_id=borrower.id) }}" class="rv-btn secondary">
+        Request Docs
+      </a>
+      <a href="{{ url_for('loan_officer.credit_check', borrower_id=borrower.id) }}" class="rv-btn secondary">
+        Pull Soft Credit
+      </a>
+    </div>
+  </section>
+
+  <!-- TOP GRID -->
+  <section class="borrower-grid-2">
+
+    <!-- LEFT COLUMN -->
+    <div class="rv-card">
+      <h3>Borrower Details</h3>
+
+      <div class="detail-group">
+        <div class="detail-row"><span>Email</span><strong>{{ borrower.email or "N/A" }}</strong></div>
+        <div class="detail-row"><span>Phone</span><strong>{{ borrower.phone or "N/A" }}</strong></div>
+      </div>
+
+      <h4 class="section-title">Address</h4>
+      <p class="muted-block">
+        {{ borrower.address or "N/A" }}<br>
+        {{ borrower.city or "" }}{% if borrower.city and borrower.state %}, {% endif %}{{ borrower.state or "" }} {{ borrower.zip or "" }}
+      </p>
+
+      <h4 class="section-title">Employment</h4>
+      <p class="muted-block">{{ borrower.employer_name or "N/A" }}</p>
+
+      <h4 class="section-title">Income</h4>
+      <div class="detail-group">
+        <div class="detail-row">
+          <span>Primary Income</span>
+          <strong>${{ borrower.income or 0 }}</strong>
+        </div>
+        <div class="detail-row">
+          <span>Secondary Income</span>
+          <strong>${{ borrower.monthly_income_secondary or 0 }}</strong>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT COLUMN -->
+    <div class="rv-card">
+      <h3>Latest Credit Report</h3>
 
       {% if credit %}
-        <p>Score: <strong>{{ credit.credit_score }}</strong></p>
-        <p>Monthly Debt: ${{ credit.monthly_debt_total }}</p>
+        <div class="detail-group">
+          <div class="detail-row">
+            <span>Score</span>
+            <strong>{{ credit.credit_score or credit.score or "N/A" }}</strong>
+          </div>
+          <div class="detail-row">
+            <span>Monthly Debt</span>
+            <strong>${{ credit.monthly_debt_total or 0 }}</strong>
+          </div>
+        </div>
 
-        <details style="margin-top:1rem;">
-          <summary>View Full Credit JSON</summary>
-          <pre>{{ credit.credit_data | tojson(indent=2) }}</pre>
+        <details class="credit-details">
+          <summary>View Full Credit Data</summary>
+          <pre class="json-box">{{ safe_credit_data or "No credit data available." }}</pre>
         </details>
       {% else %}
         <p class="muted">No credit report yet.</p>
       {% endif %}
     </div>
 
-  </div>
+  </section>
 
-  <!-- LOANS SECTION -->
-  <div class="card" style="margin-top:1.5rem;">
-    <h3>🏠 Loan Files</h3>
+  <!-- LOANS -->
+  <section class="rv-card" style="margin-top:1.5rem;">
+    <h3>Loan Files</h3>
 
     {% if loans %}
-    <table class="table">
-      <thead>
-        <tr>
-          <th>Loan #</th>
-          <th>Amount</th>
-          <th>Type</th>
-          <th>Status</th>
-          <th></th>
-        </tr>
-      </thead>
-
-      <tbody>
-        {% for loan in loans %}
-        <tr>
-          <td>{{ loan.id }}</td>
-          <td>${{ loan.amount }}</td>
-          <td>{{ loan.loan_type }}</td>
-          <td>{{ loan.status }}</td>
-          <td>
-            <a class="btn-sm" href="{{ url_for('loan_officer.loan_file', loan_id=loan.id) }}">Open</a>
-          </td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
+      <div class="table-wrap">
+        <table class="rv-table">
+          <thead>
+            <tr>
+              <th>Loan #</th>
+              <th>Amount</th>
+              <th>Type</th>
+              <th>Status</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for loan in loans %}
+              <tr>
+                <td>{{ loan.id }}</td>
+                <td>${{ loan.amount or 0 }}</td>
+                <td>{{ loan.loan_type or "N/A" }}</td>
+                <td>{{ loan.status or "N/A" }}</td>
+                <td>
+                  <a class="rv-btn xs secondary" href="{{ url_for('loan_officer.loan_file', loan_id=loan.id) }}">
+                    Open
+                  </a>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
     {% else %}
       <p class="muted">No loans yet.</p>
     {% endif %}
-  </div>
+  </section>
 
   <!-- DOCUMENTS -->
-  <div class="card" style="margin-top:1.5rem;">
-    <h3>📄 Documents</h3>
+  <section class="rv-card" style="margin-top:1.5rem;">
+    <h3>Documents</h3>
 
     {% if documents %}
-      <ul>
+      <div class="stack-list">
         {% for d in documents %}
-          <li>{{ d.name }} – {{ d.status }}</li>
+          <div class="stack-row">
+            <div>
+              <strong>{{ d.name or d.document_name or "Unnamed Document" }}</strong>
+            </div>
+            <div class="row-status">{{ d.status or "Pending" }}</div>
+          </div>
         {% endfor %}
-      </ul>
+      </div>
     {% else %}
       <p class="muted">No documents yet.</p>
     {% endif %}
-  </div>
+  </section>
 
-  <!-- TASK LIST -->
-  <div class="card" style="margin-top:1.5rem;">
-    <h3>📋 Tasks</h3>
+  <!-- TASKS -->
+  <section class="rv-card" style="margin-top:1.5rem;">
+    <h3>Tasks</h3>
 
     {% if tasks %}
-      <ul>
-      {% for t in tasks %}
-        <li>
-          {{ t.title }} — 
-          {% if t.status == "Completed" %}
-            <span class="badge badge-good">Done</span>
-          {% else %}
-            <span class="badge badge-warn">Open</span>
-          {% endif %}
-        </li>
-      {% endfor %}
-      </ul>
+      <div class="stack-list">
+        {% for t in tasks %}
+          <div class="stack-row">
+            <div>
+              <strong>{{ t.title }}</strong>
+              {% if t.due_date %}
+                <div class="row-sub">Due {{ t.due_date.strftime("%b %d, %Y") }}</div>
+              {% endif %}
+            </div>
+            <div>
+              {% if t.status == "Completed" %}
+                <span class="badge badge-good">Done</span>
+              {% else %}
+                <span class="badge badge-warn">Open</span>
+              {% endif %}
+            </div>
+          </div>
+        {% endfor %}
+      </div>
     {% else %}
       <p class="muted">No tasks for this borrower.</p>
     {% endif %}
-  </div>
+  </section>
 
 </div>
 
 <style>
-.grid-2 { 
+.borrower-view-shell{
+  display:grid;
+  gap:1.5rem;
+}
+
+.borrower-hero{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-end;
+  gap:1rem;
+  flex-wrap:wrap;
+}
+
+.borrower-hero h2{
+  margin:.3rem 0 0;
+  font-size:1.8rem;
+  color:#fff;
+}
+
+.eyebrow{
+  display:inline-flex;
+  padding:.35rem .7rem;
+  border-radius:999px;
+  font-size:.74rem;
+  font-weight:700;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+  color:#cfe2f3;
+  background:rgba(58,92,122,.25);
+  border:1px solid rgba(122,184,255,.15);
+}
+
+.hero-actions{
+  display:flex;
+  gap:.75rem;
+  flex-wrap:wrap;
+}
+
+.borrower-grid-2{
   display:grid;
   grid-template-columns:1fr 1fr;
   gap:1.5rem;
 }
-.badge { padding:3px 8px; border-radius:10px; font-size:.75rem; }
-.badge-good { background:#26d07c; color:#000; }
-.badge-warn { background:#ffb84d; color:#000; }
-</style>
 
+.rv-card{
+  border-radius:22px;
+  padding:20px 22px;
+  border:1px solid rgba(255,255,255,.08);
+  background:
+    radial-gradient(900px 520px at 15% 10%, rgba(122,184,255,.08), transparent 55%),
+    rgba(255,255,255,.02);
+  box-shadow:0 14px 34px rgba(0,0,0,.18);
+}
+
+.rv-card h3{
+  margin:0 0 1rem;
+  color:#fff;
+}
+
+.section-title{
+  margin:1.15rem 0 .45rem;
+  color:#dce7f1;
+  font-size:.95rem;
+}
+
+.muted{
+  color:#95a8ba;
+}
+
+.muted-block{
+  color:#d7e1ea;
+  line-height:1.55;
+}
+
+.detail-group{
+  display:grid;
+  gap:.7rem;
+}
+
+.detail-row{
+  display:flex;
+  justify-content:space-between;
+  gap:1rem;
+  padding:.75rem .9rem;
+  border-radius:14px;
+  background:rgba(255,255,255,.04);
+  border:1px solid rgba(255,255,255,.06);
+}
+
+.detail-row span{
+  color:#8fa4b7;
+}
+
+.detail-row strong{
+  color:#fff;
+  text-align:right;
+}
+
+.credit-details{
+  margin-top:1rem;
+}
+
+.credit-details summary{
+  cursor:pointer;
+  color:#dce7f1;
+  font-weight:600;
+}
+
+.json-box{
+  margin-top:.85rem;
+  padding:14px;
+  border-radius:16px;
+  background:#0c1116;
+  border:1px solid rgba(255,255,255,.08);
+  color:#dbe7f2;
+  max-height:360px;
+  overflow:auto;
+  white-space:pre-wrap;
+  word-break:break-word;
+  font-size:.84rem;
+  line-height:1.45;
+}
+
+.table-wrap{
+  overflow-x:auto;
+}
+
+.rv-table{
+  width:100%;
+  border-collapse:collapse;
+}
+
+.rv-table th,
+.rv-table td{
+  padding:.9rem .7rem;
+  border-bottom:1px solid rgba(255,255,255,.06);
+  text-align:left;
+}
+
+.rv-table th{
+  color:#8fa4b7;
+  font-size:.82rem;
+  text-transform:uppercase;
+  letter-spacing:.06em;
+}
+
+.rv-table td{
+  color:#e7eef5;
+}
+
+.stack-list{
+  display:grid;
+  gap:.85rem;
+}
+
+.stack-row{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:1rem;
+  padding:.95rem 1rem;
+  border-radius:14px;
+  background:rgba(255,255,255,.04);
+  border:1px solid rgba(255,255,255,.06);
+}
+
+.row-sub{
+  margin-top:.25rem;
+  font-size:.84rem;
+  color:#8fa4b7;
+}
+
+.row-status{
+  color:#dce7f1;
+  font-weight:600;
+}
+
+.badge{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  padding:4px 10px;
+  border-radius:999px;
+  font-size:.75rem;
+  font-weight:700;
+}
+
+.badge-good{
+  background:#26d07c;
+  color:#04120b;
+}
+
+.badge-warn{
+  background:#ffb84d;
+  color:#231400;
+}
+
+.rv-btn{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:.45rem;
+  padding:.7rem 1rem;
+  border-radius:12px;
+  text-decoration:none;
+  font-weight:700;
+  border:1px solid rgba(255,255,255,.08);
+  transition:.18s ease;
+}
+
+.rv-btn.primary{
+  background:#3A5C7A;
+  color:#fff;
+}
+
+.rv-btn.secondary{
+  background:rgba(255,255,255,.05);
+  color:#e7eef5;
+}
+
+.rv-btn.xs{
+  padding:.45rem .8rem;
+  font-size:.82rem;
+}
+
+.rv-btn:hover{
+  transform:translateY(-1px);
+}
+
+@media (max-width: 980px){
+  .borrower-grid-2{
+    grid-template-columns:1fr;
+  }
+}
+</style>
 {% endblock %}
