@@ -1,0 +1,322 @@
+{% extends "layouts/ravlo_employee_base.html" %}
+{% block title %}Ravlo Lending OS • Pipeline{% endblock %}
+
+{% block page_title %}Loan Pipeline{% endblock %}
+{% block page_subline %}
+Track files across each stage of the lending workflow.
+{% endblock %}
+
+{% block topbar_actions %}
+  <a href="{{ url_for('underwriter.dashboard') }}" class="re-btn ghost sm">
+    <i class="lucide lucide-layout-dashboard"></i>
+    Dashboard
+  </a>
+  <a href="{{ url_for('underwriter.review_loans') }}" class="re-btn primary sm">
+    <i class="lucide lucide-search"></i>
+    Review Loans
+  </a>
+{% endblock %}
+
+{% block content %}
+
+<div class="re-grid">
+
+  <!-- KPI STRIP -->
+  <section class="re-grid-4">
+    <div class="re-stat">
+      <div class="re-stat-label">Submitted</div>
+      <div class="re-stat-value">{{ submitted|length }}</div>
+      <div class="re-stat-meta">New files entering pipeline</div>
+    </div>
+
+    <div class="re-stat">
+      <div class="re-stat-label">In Review</div>
+      <div class="re-stat-value">{{ in_review|length }}</div>
+      <div class="re-stat-meta">Actively being reviewed</div>
+    </div>
+
+    <div class="re-stat">
+      <div class="re-stat-label">UW Review</div>
+      <div class="re-stat-value">{{ uw_review|length }}</div>
+      <div class="re-stat-meta">Awaiting underwriting decision</div>
+    </div>
+
+    <div class="re-stat">
+      <div class="re-stat-label">Approved / Declined</div>
+      <div class="re-stat-value">{{ approved|length + declined|length }}</div>
+      <div class="re-stat-meta">Completed decision outcomes</div>
+    </div>
+  </section>
+
+  <!-- PIPELINE BOARD -->
+  <section class="pipeline-board">
+
+    {% macro stage_column(title, loans, tone, empty_text) %}
+      <div class="pipeline-column">
+        <div class="pipeline-column-head {{ tone }}">
+          <div>
+            <div class="pipeline-column-label">{{ title }}</div>
+            <div class="pipeline-column-count">{{ loans|length }} file{{ '' if loans|length == 1 else 's' }}</div>
+          </div>
+        </div>
+
+        <div class="pipeline-column-body">
+          {% if loans %}
+            {% for loan in loans %}
+              <article class="pipeline-card">
+                <div class="pipeline-card-top">
+                  <div>
+                    <div class="pipeline-loan-id">Loan #{{ loan.id }}</div>
+                    <div class="pipeline-borrower">
+                      {{ loan.borrower_profile.full_name if loan.borrower_profile else "Unknown Borrower" }}
+                    </div>
+                  </div>
+
+                  <span class="pipeline-status-pill">
+                    {{ loan.status or "—" }}
+                  </span>
+                </div>
+
+                <div class="pipeline-card-meta">
+                  <div>
+                    <span>Amount</span>
+                    <strong>
+                      {% if loan.amount %}
+                        ${{ "{:,.0f}".format(loan.amount) }}
+                      {% else %}
+                        —
+                      {% endif %}
+                    </strong>
+                  </div>
+
+                  <div>
+                    <span>Loan Type</span>
+                    <strong>{{ loan.loan_type or "—" }}</strong>
+                  </div>
+
+                  <div>
+                    <span>Property</span>
+                    <strong>{{ loan.property_address or "—" }}</strong>
+                  </div>
+
+                  <div>
+                    <span>Created</span>
+                    <strong>{{ loan.created_at.strftime('%b %d, %Y') if loan.created_at else "—" }}</strong>
+                  </div>
+                </div>
+
+                <div class="pipeline-card-actions">
+                  <a href="{{ url_for('underwriter.file_review', loan_id=loan.id) }}" class="re-btn ghost sm">
+                    <i class="lucide lucide-folder-search"></i>
+                    Open File
+                  </a>
+
+                  <a href="{{ url_for('underwriter.redflags', loan_id=loan.id) }}" class="re-btn ghost sm">
+                    <i class="lucide lucide-shield-alert"></i>
+                    Risk
+                  </a>
+                </div>
+              </article>
+            {% endfor %}
+          {% else %}
+            <div class="pipeline-empty">
+              {{ empty_text }}
+            </div>
+          {% endif %}
+        </div>
+      </div>
+    {% endmacro %}
+
+    {{ stage_column("Submitted", submitted, "tone-info", "No newly submitted files.") }}
+    {{ stage_column("In Review", in_review, "tone-warning", "No files currently in review.") }}
+    {{ stage_column("UW Review", uw_review, "tone-accent", "No files awaiting underwriting review.") }}
+    {{ stage_column("Approved", approved, "tone-success", "No approved files yet.") }}
+    {{ stage_column("Declined", declined, "tone-danger", "No declined files yet.") }}
+
+  </section>
+
+</div>
+
+<style>
+.pipeline-board{
+  display:grid;
+  grid-template-columns:repeat(5, minmax(280px, 1fr));
+  gap:16px;
+  align-items:start;
+  overflow-x:auto;
+  padding-bottom:4px;
+}
+
+.pipeline-column{
+  min-width:280px;
+  display:grid;
+  gap:12px;
+}
+
+.pipeline-column-head{
+  padding:14px 16px;
+  border-radius:18px;
+  border:1px solid rgba(255,255,255,.08);
+  background:
+    linear-gradient(180deg, rgba(16,24,33,.96), rgba(10,15,22,.98));
+  box-shadow:var(--rav-shadow-sm);
+}
+
+.pipeline-column-label{
+  font-size:.76rem;
+  font-weight:800;
+  letter-spacing:.16em;
+  text-transform:uppercase;
+  color:var(--rav-muted);
+  margin-bottom:6px;
+}
+
+.pipeline-column-count{
+  font-size:1rem;
+  font-weight:700;
+  color:var(--rav-text);
+}
+
+.pipeline-column-head.tone-info{
+  border-color:rgba(95,168,255,.20);
+}
+
+.pipeline-column-head.tone-warning{
+  border-color:rgba(209,162,70,.22);
+}
+
+.pipeline-column-head.tone-accent{
+  border-color:rgba(107,127,147,.26);
+}
+
+.pipeline-column-head.tone-success{
+  border-color:rgba(44,182,125,.22);
+}
+
+.pipeline-column-head.tone-danger{
+  border-color:rgba(196,99,99,.22);
+}
+
+.pipeline-column-body{
+  display:grid;
+  gap:12px;
+}
+
+.pipeline-card{
+  border-radius:18px;
+  border:1px solid rgba(255,255,255,.07);
+  background:
+    linear-gradient(180deg, rgba(17,24,33,.96), rgba(11,17,23,.98));
+  box-shadow:var(--rav-shadow-md);
+  padding:14px;
+  display:grid;
+  gap:14px;
+}
+
+.pipeline-card-top{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:12px;
+}
+
+.pipeline-loan-id{
+  font-size:.74rem;
+  color:var(--rav-muted);
+  text-transform:uppercase;
+  letter-spacing:.14em;
+  margin-bottom:5px;
+}
+
+.pipeline-borrower{
+  font-size:.96rem;
+  font-weight:700;
+  color:var(--rav-text);
+  line-height:1.25;
+}
+
+.pipeline-status-pill{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-height:28px;
+  padding:0 10px;
+  border-radius:999px;
+  font-size:.72rem;
+  font-weight:700;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+  color:#dce5ee;
+  background:rgba(107,127,147,.14);
+  border:1px solid rgba(107,127,147,.24);
+  white-space:nowrap;
+}
+
+.pipeline-card-meta{
+  display:grid;
+  gap:10px;
+}
+
+.pipeline-card-meta div{
+  display:grid;
+  gap:4px;
+  padding:10px 12px;
+  border-radius:14px;
+  background:rgba(255,255,255,.025);
+  border:1px solid rgba(255,255,255,.06);
+}
+
+.pipeline-card-meta span{
+  font-size:.72rem;
+  font-weight:700;
+  letter-spacing:.12em;
+  text-transform:uppercase;
+  color:var(--rav-muted);
+}
+
+.pipeline-card-meta strong{
+  font-size:.88rem;
+  color:var(--rav-text);
+  font-weight:700;
+}
+
+.pipeline-card-actions{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+}
+
+.pipeline-empty{
+  padding:22px 16px;
+  border-radius:18px;
+  border:1px dashed rgba(107,127,147,.24);
+  background:rgba(255,255,255,.02);
+  color:var(--rav-muted);
+  text-align:center;
+  font-size:.92rem;
+}
+
+@media (max-width: 1200px){
+  .pipeline-board{
+    grid-template-columns:repeat(3, minmax(280px, 1fr));
+  }
+}
+
+@media (max-width: 960px){
+  .pipeline-board{
+    grid-template-columns:repeat(2, minmax(280px, 1fr));
+  }
+}
+
+@media (max-width: 640px){
+  .pipeline-board{
+    grid-template-columns:1fr;
+  }
+
+  .pipeline-column{
+    min-width:unset;
+  }
+}
+</style>
+
+{% endblock %}
