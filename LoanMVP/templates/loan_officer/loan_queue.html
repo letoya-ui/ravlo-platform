@@ -37,7 +37,7 @@
             </td>
             <td>{{ loan.created_at.strftime("%Y-%m-%d") if loan.created_at else '—' }}</td>
             <td>
-              <a href="{{ url_for('loan_officer.view_loan', loan_id=loan.id) }}" class="btn btn-sm btn-outline-light">
+              <a href="{{ url_for('loan_officer.loan_file', loan_id=loan.id) }}" class="btn btn-sm btn-outline-light">
                 👁 View
               </a>
               <a href="{{ url_for('loan_officer.edit_loan', loan_id=loan.id) }}" class="btn btn-sm btn-outline-light">
