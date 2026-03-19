@@ -51,6 +51,24 @@ def admin_required(func):
 @role_required("admin", "master_admin", "lending_admin")
 def dashboard():
     # =========================
+    # COMPANY CONTEXT
+    # =========================
+    company = None
+
+    if current_user.role == "master_admin":
+        company = Company.query.order_by(Company.created_at.desc()).first()
+    else:
+        company = Company.query.filter_by(owner_id=current_user.id).first()
+
+        if not company:
+            company_access = CompanyAccess.query.filter_by(
+                user_id=current_user.id,
+                is_active=True
+            ).first()
+            if company_access:
+                company = Company.query.get(company_access.company_id)
+
+    # =========================
     # KPI COUNTS
     # =========================
     stats = {
@@ -166,7 +184,6 @@ def dashboard():
         user_records, "created_at", 6
     )
 
-    # Replace later with real health/service metric
     server_load_value = 68
 
     # =========================
@@ -181,6 +198,7 @@ def dashboard():
 
     return render_template(
         "admin/dashboard.html",
+        company=company,
         stats=stats,
         recent_requests=recent_requests,
         users=users,
@@ -242,7 +260,7 @@ def request_detail(request_id):
 def access_requests():
     requests_ = AccessRequest.query.order_by(AccessRequest.created_at.desc()).all()
     return render_template(
-        "admin/access_requests.html",
+        "admin//requests_dashboard.html",
         requests=requests_,
         title="Access Requests",
         active_tab="access_requests",
