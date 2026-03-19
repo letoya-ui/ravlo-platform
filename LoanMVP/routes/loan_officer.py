@@ -585,22 +585,6 @@ def ai_generator():
     )
 
 
-@loan_officer_bp.route("/lead_messages", methods=["GET", "POST"])
-@csrf.exempt
-@role_required("loan_officer")
-def lead_messages():
-    leads = Lead.query.filter_by(assigned_to=current_user.id).order_by(Lead.created_at.desc()).all()
-
-    if request.method == "POST":
-        flash(f"Message sent to {len(leads)} leads.", "info")
-        return redirect(url_for("loan_officer.lead_messages"))
-
-    return render_template(
-        "loan_officer/lead_messages.html",
-        leads=leads,
-        active_tab="leads",
-        title="Bulk Messaging"
-    )
 
 
 # =========================================================
@@ -1283,41 +1267,6 @@ def loan_queue():
         title="Loan Queue"
     )
 
-
-@loan_officer_bp.route("/crm-note/<int:lead_id>", methods=["GET", "POST"])
-@csrf.exempt
-@role_required("loan_officer")
-def crm_note(lead_id):
-    lead = Lead.query.get_or_404(lead_id)
-    borrower = lead.borrower_profile
-    form = CRMNoteForm()
-
-    notes = (
-        CRMNote.query.filter_by(borrower_id=borrower.id)
-        .order_by(CRMNote.created_at.desc())
-        .all()
-    )
-
-    if form.validate_on_submit():
-        note = CRMNote(
-            borrower_id=borrower.id,
-            author_id=current_user.id,
-            content=form.content.data
-        )
-        db.session.add(note)
-        db.session.commit()
-
-        flash("Note saved.", "success")
-        return redirect(url_for("loan_officer.crm_note", lead_id=lead_id))
-
-    return render_template(
-        "loan_officer/crm_note.html",
-        borrower=borrower,
-        form=form,
-        notes=notes,
-        active_tab="leads",
-        title="CRM Notes"
-    )
 
 
 # ===============================================================
