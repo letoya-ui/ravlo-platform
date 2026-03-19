@@ -60,7 +60,8 @@ from LoanMVP.models.loan_models import (
     LoanQuote,
     Upload,
     LoanStatusEvent,
-    LoanScenario,  
+    LoanScenario,
+    BorrowerConsent,  
 )
 from LoanMVP.models.loan_officer_model import LoanOfficerProfile
 from LoanMVP.models.crm_models import (
