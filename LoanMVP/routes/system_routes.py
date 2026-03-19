@@ -167,8 +167,8 @@ def users():
 # =========================================================
 # 🟢 Toggle User Active Status
 # =========================================================
-@system_bp.route("/toggle_user/<int:user_id>")
-@role_required("system")
+@system_bp.route("/toggle_user/<int:user_id>", methods=["POST"])
+@role_required("system", "admin")
 def toggle_user(user_id):
     user = User.query.get_or_404(user_id)
     user.is_active = not user.is_active
@@ -176,7 +176,6 @@ def toggle_user(user_id):
 
     flash(f"{'Deactivated' if not user.is_active else 'Activated'} user {user.email}.", "info")
     return redirect(url_for("system.users"))
-
 
 # =========================================================
 # 🗑️ Delete User
