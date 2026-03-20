@@ -13,8 +13,12 @@ class PartnerConnectionRequest(db.Model):
 
     borrower_profile_id = db.Column(db.Integer, db.ForeignKey("borrower_profile.id"), nullable=True)
     investor_profile_id = db.Column(db.Integer, db.ForeignKey("investor_profile.id"), nullable=True)
+
     property_id = db.Column(db.Integer, db.ForeignKey("property.id"), nullable=True)
     lead_id = db.Column(db.Integer, db.ForeignKey("lead.id"), nullable=True)
+
+    deal_id = db.Column(db.Integer, db.ForeignKey("deals.id"), nullable=True)
+    saved_property_id = db.Column(db.Integer, db.ForeignKey("saved_properties.id"), nullable=True)
 
     partner_id = db.Column(db.Integer, db.ForeignKey("partners.id"), nullable=True)
     external_partner_lead_id = db.Column(db.Integer, db.ForeignKey("external_partner_leads.id"), nullable=True)
@@ -38,11 +42,6 @@ class PartnerConnectionRequest(db.Model):
     investor_profile = db.relationship("InvestorProfile", foreign_keys=[investor_profile_id])
     property = db.relationship("Property", foreign_keys=[property_id])
 
-    # Relationships
-    partner = db.relationship("Partner", backref=db.backref("connection_requests", lazy=True))
-    borrower = db.relationship("BorrowerProfile", foreign_keys=[borrower_profile_id])
-    investor_profile = db.relationship("InvestorProfile", foreign_keys=[investor_profile_id])
-    property = db.relationship("Property", foreign_keys=[property_id])
 
 
 class PartnerJob(db.Model):
@@ -98,14 +97,13 @@ class ExternalPartnerLead(db.Model):
     borrower_profile_id = db.Column(db.Integer, db.ForeignKey("borrower_profile.id"), nullable=True)
 
     partner_id = db.Column(db.Integer, db.ForeignKey("partners.id"), nullable=True)
-    # if they later become a real Partner record, link it here
 
     name = db.Column(db.String(255), nullable=False)
     business_name = db.Column(db.String(255), nullable=True)
     category = db.Column(db.String(100), nullable=True)
 
-    source = db.Column(db.String(50), nullable=True)   # google / yelp / manual / other
-    external_id = db.Column(db.String(255), nullable=True)  # Google place_id, Yelp id, etc.
+    source = db.Column(db.String(50), nullable=True)       # google / yelp / manual
+    external_id = db.Column(db.String(255), nullable=True) # Google place_id etc.
 
     phone = db.Column(db.String(50), nullable=True)
     email = db.Column(db.String(255), nullable=True)
@@ -119,14 +117,14 @@ class ExternalPartnerLead(db.Model):
     latitude = db.Column(db.Float, nullable=True)
     longitude = db.Column(db.Float, nullable=True)
 
-    rating = db.Column(db.Float, nullable=True)
+    rating = db.Column(db.Float, default=0.0)
     review_count = db.Column(db.Integer, default=0)
-
-    notes = db.Column(db.Text, nullable=True)
-    raw_json = db.Column(db.JSON, nullable=True)
 
     invite_status = db.Column(db.String(30), default="new")
     # new / saved / invited / contacted / joined / ignored
+
+    notes = db.Column(db.Text, nullable=True)
+    raw_json = db.Column(db.JSON, nullable=True)
 
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
