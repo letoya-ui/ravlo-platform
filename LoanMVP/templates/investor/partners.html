@@ -118,7 +118,11 @@ Browse trusted professionals for your deals, projects, and portfolio growth.
       </div>
     </section>
   {% endif %}
-
+{% if fallback_used %}
+  <div class="ravlo-alert warning">
+    No Ravlo partners found in this area yet — showing recommended professionals nearby.
+  </div>
+{% endif %}
   <section class="partner-results-grid">
     {% for partner in partners %}
       {% set partner_desc = partner.listing_description or partner.bio or "Trusted partner available through Ravlo." %}
@@ -237,7 +241,34 @@ Browse trusted professionals for your deals, projects, and portfolio growth.
       </div>
     {% endfor %}
   </section>
+{% if external_partners %}
+  {% for partner in external_partners %}
+    <article class="ravlo-card partner-card">
+      <h3>{{ partner.name }}</h3>
+      <div class="ravlo-muted">{{ selected_category }}</div>
 
+      <p class="partner-card-desc">
+        {{ partner.address }}
+      </p>
+
+      <div class="partner-chip-row">
+        {% if partner.rating %}
+          <span class="ravlo-chip">⭐ {{ partner.rating }}</span>
+        {% endif %}
+      </div>
+
+      <div class="partner-card-actions">
+        <form method="POST" action="{{ url_for('investor.save_external_partner_lead') }}">
+          <input type="hidden" name="name" value="{{ partner.name }}">
+          <input type="hidden" name="category" value="{{ selected_category }}">
+          <input type="hidden" name="address" value="{{ partner.address }}">
+          <input type="hidden" name="external_id" value="{{ partner.external_id }}">
+          <button class="ravlo-btn primary sm">Save to Ravlo</button>
+        </form>
+      </div>
+    </article>
+  {% endfor %}
+{% endif %}
 </div>
 
 <style>
