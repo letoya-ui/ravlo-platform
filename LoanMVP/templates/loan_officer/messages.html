@@ -39,8 +39,8 @@
       </div>
 
       <div style="margin-top:16px;">
-        <label for="body">Message</label>
-        <textarea name="body" id="body" class="ravlo-input" rows="6" placeholder="Write your message..." required></textarea>
+        <label for="content">Message</label>
+        <textarea name="content" id="content" class="ravlo-input" rows="6" placeholder="Write your message..." required></textarea>
       </div>
 
       <div style="margin-top:16px;">
@@ -64,7 +64,7 @@
                 {{ msg.sender.full_name or ((msg.sender.first_name or "") ~ " " ~ (msg.sender.last_name or ""))|trim }}
               </strong>
               <p class="muted" style="margin:4px 0 0 0;">{{ msg.subject or "No Subject" }}</p>
-              <p style="margin:6px 0 0 0;">{{ msg.body[:160] }}{% if msg.body and msg.body|length > 160 %}...{% endif %}</p>
+              <p style="margin:6px 0 0 0;">{{ msg.content[:160] }}{% if msg.content and msg.content|length > 160 %}...{% endif %}</p>
             </div>
             <div class="muted">
               {{ msg.created_at.strftime("%m/%d/%Y %I:%M %p") }}
@@ -90,7 +90,7 @@
                 {{ msg.receiver.full_name or ((msg.receiver.first_name or "") ~ " " ~ (msg.receiver.last_name or ""))|trim }}
               </strong>
               <p class="muted" style="margin:4px 0 0 0;">{{ msg.subject or "No Subject" }}</p>
-              <p style="margin:6px 0 0 0;">{{ msg.body[:160] }}{% if msg.body and msg.body|length > 160 %}...{% endif %}</p>
+              <p style="margin:6px 0 0 0;">{{ msg.content[:160] }}{% if msg.content and msg.content|length > 160 %}...{% endif %}</p>
             </div>
             <div class="muted">
               {{ msg.created_at.strftime("%m/%d/%Y %I:%M %p") }}
