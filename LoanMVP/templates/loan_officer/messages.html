@@ -405,19 +405,16 @@ function toggleRecipientSelect() {
 
   const borrowerWrap = document.getElementById("borrowerWrap");
   const leadWrap = document.getElementById("leadWrap");
-  const realtorWrap = document.getElementById("realtorWrap");
   const userWrap = document.getElementById("userWrap");
 
   borrowerWrap.style.display = "none";
   leadWrap.style.display = "none";
-  realtorWrap.style.display = "none";
   userWrap.style.display = "none";
 
   document.getElementById("hiddenType").value = type;
 
   if (type === "borrower") borrowerWrap.style.display = "block";
   if (type === "lead") leadWrap.style.display = "block";
-  if (type === "realtor") realtorWrap.style.display = "block";
   if (type === "user") userWrap.style.display = "block";
 }
 
@@ -429,7 +426,6 @@ document.getElementById("newMessageForm").addEventListener("submit", function(e)
 
   if (type === "borrower") selectedId = document.getElementById("borrowerSelect").value;
   if (type === "lead") selectedId = document.getElementById("leadSelect").value;
-  if (type === "realtor") selectedId = document.getElementById("realtorSelect").value;
   if (type === "user") selectedId = document.getElementById("userSelect").value;
 
   if (!type || !selectedId) {
