@@ -2815,9 +2815,9 @@ def borrower_intake():
     )
 
 
-@loan_officer_bp.route("/resource-center")
+@loan_officer_bp.route("/resource")
 @role_required("loan_officer")
-def resource_center():
+def resource():
     resources = {
         "scripts": [
             {
