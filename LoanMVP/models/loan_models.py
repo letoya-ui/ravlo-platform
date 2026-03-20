@@ -429,7 +429,7 @@ class DocumentEvent(db.Model):
     investor_profile_id = db.Column(
         db.Integer,
         db.ForeignKey("investor_profile.id"),
-        nullable=False
+        nullable=True
     )
 
     document_name = db.Column(db.String(200))
