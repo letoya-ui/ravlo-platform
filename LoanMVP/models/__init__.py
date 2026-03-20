@@ -89,7 +89,7 @@ from LoanMVP.models.activity_models import BorrowerActivity
 from LoanMVP.models.payment_models import PaymentRecord
 
 from LoanMVP.models.credit_models import SoftCreditReport
-from LoanMVP.models.partner_models import  PartnerJob, PartnerConnectionRequest, PartnerPhoto
+from LoanMVP.models.partner_models import  PartnerJob, PartnerConnectionRequest, PartnerPhoto, ExternalPartnerLead
 from LoanMVP.models.renovation_models import RenovationMockup, RehabJob, BuildProject
 from LoanMVP.models.investor_models import TimestampMixin, InvestorProfile, Investment, InvestmentDocument, DealMessage, DealConversation, FundingRequest, Project
 from LoanMVP.models.admin import UserInvite, AccessRequest, Company
