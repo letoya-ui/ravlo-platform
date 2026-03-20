@@ -87,7 +87,7 @@
             <div>
               <strong>
                 To:
-                {{ msg.recipient.full_name or ((msg.recipient.first_name or "") ~ " " ~ (msg.recipient.last_name or ""))|trim }}
+                {{ msg.receiver.full_name or ((msg.receiver.first_name or "") ~ " " ~ (msg.receiver.last_name or ""))|trim }}
               </strong>
               <p class="muted" style="margin:4px 0 0 0;">{{ msg.subject or "No Subject" }}</p>
               <p style="margin:6px 0 0 0;">{{ msg.body[:160] }}{% if msg.body and msg.body|length > 160 %}...{% endif %}</p>
