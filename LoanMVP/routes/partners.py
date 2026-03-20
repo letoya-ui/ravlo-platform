@@ -7,6 +7,9 @@ from werkzeug.utils import secure_filename
 from LoanMVP.extensions import db, csrf
 from LoanMVP.utils.decorators import role_required
 
+
+from LoanMVP.services.partner_search_service import search_external_partners
+
 from LoanMVP.models.crm_models import Partner, Task, CRMNote
 from LoanMVP.models.partner_models import (
     PartnerConnectionRequest,
@@ -653,4 +656,31 @@ def billing():
         portal="partner",
         page_title="Billing",
         page_subline="Manage your Ravlo Partner plan."
+    )
+
+
+@investor_bp.route("/partners/search")
+@login_required
+@role_required("investor")
+def partner_search():
+
+    service = request.args.get("service")
+    location = request.args.get("location")
+
+    internal = Partner.query.filter(
+        Partner.service_type.ilike(f"%{service}%"),
+        Partner.city.ilike(f"%{location}%")
+    ).all()
+
+    if internal:
+        partners = internal
+        source = "internal"
+    else:
+        partners = search_external_partners(location, service)
+        source = "external"
+
+    return render_template(
+        "investor/partner_results.html",
+        partners=partners,
+        source=source
     )
