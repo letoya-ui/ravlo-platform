@@ -1,3 +1,21 @@
+import os
+import uuid
+from flask import current_app
+
+
+def save_generated_image(image_bytes, folder="uploads/studios"):
+    filename = f"{uuid.uuid4().hex}.png"
+    relative_path = f"{folder}/{filename}"
+    absolute_path = os.path.join(current_app.root_path, "static", relative_path)
+
+    os.makedirs(os.path.dirname(absolute_path), exist_ok=True)
+
+    with open(absolute_path, "wb") as f:
+        f.write(image_bytes)
+
+    return relative_path
+
+
 def run_build_concept(payload):
     """
     payload keys:
@@ -11,10 +29,6 @@ def run_build_concept(payload):
       - land_image_path
     """
 
-    # -----------------------------------
-    # Replace this with your real AI flow
-    # -----------------------------------
-
     concept_prompt = f"""
     Create a polished exterior concept rendering for a {payload.get('property_type', 'residential project')}.
     Project name: {payload.get('project_name', '')}
@@ -25,31 +39,45 @@ def run_build_concept(payload):
     Notes: {payload.get('notes', '')}
     """
 
-    blueprint_prompt = f"""
-    Create a draft floor plan for a {payload.get('property_type', 'residential project')}.
-    Description: {payload.get('description', '')}
-    """
+    # -------------------------------
+    # CONTROLNET / IMAGE GENERATION
+    # -------------------------------
 
-    site_plan_prompt = f"""
-    Create a conceptual site layout showing building placement, driveway, access, open space, and orientation.
-    Lot size: {payload.get('lot_size', '')}
-    Zoning: {payload.get('zoning', '')}
-    """
+    land_image_path = payload.get("land_image_path")
+    generated_concept_path = None
 
-    presentation_prompt = f"""
-    Create an architect-ready presentation board summarizing the project concept, build type, lot details, and visuals.
-    """
+    try:
+        if land_image_path:
+            # 👉 replace this block with your real ControlNet call
+            # Example placeholder for now:
 
-    # Placeholder returns
+            with open(os.path.join(current_app.root_path, "static", land_image_path), "rb") as f:
+                input_image = f.read()
+
+            # ⚠️ Replace this with real AI response
+            fake_ai_output = input_image  # placeholder
+
+            generated_concept_path = save_generated_image(fake_ai_output)
+
+    except Exception as e:
+        print("Build Studio generation error:", str(e))
+
+    # -------------------------------
+    # FALLBACKS
+    # -------------------------------
+
+    concept_render_url = (
+        f"/static/{generated_concept_path}"
+        if generated_concept_path
+        else "/static/img/placeholders/build_render_placeholder.jpg"
+    )
+
     return {
-        "concept_render_url": "/static/img/placeholders/build_render_placeholder.jpg",
+        "concept_render_url": concept_render_url,
         "blueprint_url": "/static/img/placeholders/blueprint_placeholder.jpg",
         "site_plan_url": "/static/img/placeholders/siteplan_placeholder.jpg",
         "presentation_url": "/static/img/placeholders/presentation_placeholder.jpg",
         "prompts": {
             "concept_prompt": concept_prompt,
-            "blueprint_prompt": blueprint_prompt,
-            "site_plan_prompt": site_plan_prompt,
-            "presentation_prompt": presentation_prompt,
         }
     }
