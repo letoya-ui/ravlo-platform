@@ -273,57 +273,105 @@ class Partner(db.Model):
     __tablename__ = "partners"
 
     id = db.Column(db.Integer, primary_key=True)
-    # in Partner model:
-    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=True, unique=True)
-    name = db.Column(db.String(120), nullable=False)
-    company = db.Column(db.String(120))
-    email = db.Column(db.String(120))
-    phone = db.Column(db.String(50))
-    category = db.Column(db.String(100))      # Contractor, Realtor, etc.
-    service_area = db.Column(db.String(255))  # e.g. "Tri-State Area"
-    specialty = db.Column(db.String(255), nullable=True)
-    active = db.Column(db.Boolean, default=True)
-    type = db.Column(db.String(255))  # e.g., "Lender", "Broker", "Realtor", "Vendor"
-    website = db.Column(db.String(255))
-    status = db.Column(db.String(50), default="Active")
-    relationship_level = db.Column(db.String(50))  # e.g., "Gold", "Silver", "Preferred"
-    joined_date = db.Column(db.DateTime, default=datetime.utcnow)
-    last_contacted = db.Column(db.DateTime)
-    last_deal = db.Column(db.DateTime, nullable=True)
-    notes = db.Column(db.Text)
-    deals = db.Column(db.Integer, default=0)
-    volume = db.Column(db.Float, default=0.0)
-    rating = db.Column(db.Float, default=0.0)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    bio = db.Column(db.Text, nullable=True)
 
-    # === Monetization & Resource Center ===
-    listing_description = db.Column(db.Text)
-    logo_url = db.Column(db.String(255))
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=True, unique=True)
+
+    # Core identity
+    name = db.Column(db.String(120), nullable=False)
+    company = db.Column(db.String(120), nullable=True)
+    email = db.Column(db.String(120), nullable=True)
+    phone = db.Column(db.String(50), nullable=True)
+    website = db.Column(db.String(255), nullable=True)
+
+    # Marketplace classification
+    category = db.Column(db.String(100), nullable=True)      # Contractor, Realtor, Cleaner, etc.
+    type = db.Column(db.String(255), nullable=True)          # Lender, Broker, Realtor, Vendor
+    specialty = db.Column(db.String(255), nullable=True)
+    service_area = db.Column(db.String(255), nullable=True)  # display text, ex: "Tri-State Area"
+
+    # Real searchable location fields
+    address = db.Column(db.String(255), nullable=True)
+    city = db.Column(db.String(120), nullable=True)
+    state = db.Column(db.String(20), nullable=True)
+    zip_code = db.Column(db.String(20), nullable=True)
+    latitude = db.Column(db.Float, nullable=True)
+    longitude = db.Column(db.Float, nullable=True)
+
+    # Profile + business info
+    bio = db.Column(db.Text, nullable=True)
+    notes = db.Column(db.Text, nullable=True)
+    listing_description = db.Column(db.Text, nullable=True)
+    logo_url = db.Column(db.String(255), nullable=True)
+
+    # Status / business relationship
+    active = db.Column(db.Boolean, default=True)
     approved = db.Column(db.Boolean, default=False)
     featured = db.Column(db.Boolean, default=False)
-    subscription_tier = db.Column(db.String(50), default="Free")  # Free, Featured, Premium
-   
+    status = db.Column(db.String(50), default="Active")
+    relationship_level = db.Column(db.String(50), nullable=True)   # Gold, Silver, Preferred
+    subscription_tier = db.Column(db.String(50), default="Free")   # Free, Featured, Premium
 
-    # 🧩 Fix: datetime.utcnow should be callable (not executed at import)
-    paid_until = db.Column(db.DateTime, default=lambda: datetime.utcnow() + timedelta(days=30))
+    # Quality / ranking
+    rating = db.Column(db.Float, default=0.0)
+    review_count = db.Column(db.Integer, default=0)
+    is_verified = db.Column(db.Boolean, default=False)
 
-    # === Relationships ===
-    leads = db.relationship(
-        'Lead',
-        secondary='partner_lead_link',
-        backref=db.backref('partners', lazy='dynamic'),
-        lazy='dynamic'
+    # Business metrics
+    deals = db.Column(db.Integer, default=0)
+    volume = db.Column(db.Float, default=0.0)
+
+    # Dates
+    joined_date = db.Column(db.DateTime, default=datetime.utcnow)
+    last_contacted = db.Column(db.DateTime, nullable=True)
+    last_deal = db.Column(db.DateTime, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    paid_until = db.Column(
+        db.DateTime,
+        default=lambda: datetime.utcnow() + timedelta(days=30)
     )
 
-    user = db.relationship("User", backref=db.backref("partner_profile", uselist=False))       
+    # Relationships
+    leads = db.relationship(
+        "Lead",
+        secondary="partner_lead_link",
+        backref=db.backref("partners", lazy="dynamic"),
+        lazy="dynamic",
+    )
+
+    user = db.relationship(
+        "User",
+        backref=db.backref("partner_profile", uselist=False)
+    )
 
     photos = db.relationship(
         "PartnerPhoto",
         back_populates="partner",
         lazy="dynamic",
         cascade="all, delete-orphan"
-    )   
+    )
+
+    def display_name(self):
+        return self.company or self.name or "Partner"
+
+    def partner_score(self):
+        score = 0
+        score += float(self.rating or 0) * 20
+        score += min(int(self.review_count or 0), 100) * 0.35
+
+        if self.featured:
+            score += 20
+        if self.is_verified:
+            score += 15
+        if self.approved:
+            score += 10
+
+        tier = (self.subscription_tier or "").strip().lower()
+        if tier == "premium":
+            score += 10
+        elif tier == "featured":
+            score += 6
+
+        return round(score, 2)
 
 
     # === Utility Methods ===
