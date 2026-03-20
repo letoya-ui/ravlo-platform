@@ -283,11 +283,11 @@ Central system management for users, onboarding, invites, lending operations, an
           <a class="re-btn ghost" href="{{ url_for('admin.reports') }}">
             <i class="lucide lucide-file-text"></i>
             Reports
-                <a class="re-btn primary sm"
-   href="{% if company %}{{ url_for('admin.invite_team_member', company_id=company.id) }}{% else %}#{% endif %}">
-  <i class="lucide lucide-send"></i>
-  Send Invite
-</a>             
+          <a class="re-btn primary sm"
+             href="{% if company %}{{ url_for('admin.invite_team_member', company_id=company.id) }}{% else %}#{% endif %}">
+            <i class="lucide lucide-send"></i>
+            Send Invite
+          </a>             
         </div>
       </section>
 

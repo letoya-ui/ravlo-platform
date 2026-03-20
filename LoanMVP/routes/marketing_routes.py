@@ -317,3 +317,7 @@ def story():
 @marketing_bp.route("/partners/plans")
 def partner_plans():
     return render_marketing_page("partner_plans")
+
+@marketing_bp.route("/lending-os")
+def lending_os():
+    return render_template("marketing/lending_os.html")

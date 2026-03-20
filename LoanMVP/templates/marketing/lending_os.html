@@ -1,0 +1,304 @@
+{% extends "layouts/marketing_base.html" %}
+
+{% block hero %}
+<section class="mk-hero">
+  <div class="mk-container">
+    <div class="mk-hero-grid">
+      <div class="mk-hero-copy">
+        <div class="mk-eyebrow">Ravlo Platform</div>
+        <h1 class="mk-title-xl">Lending OS built for modern lending execution.</h1>
+        <p class="mk-copy-lg">
+          Ravlo Lending OS gives private lending teams a unified workspace for borrower intake,
+          pipeline visibility, conditions management, team coordination, and cleaner execution
+          from inquiry to close.
+        </p>
+
+        <div class="mk-hero-actions">
+          <a href="{{ url_for('marketing.contact') }}" class="mk-btn mk-btn-primary">Request a Demo</a>
+          <a href="#licensing" class="mk-btn mk-btn-ghost">Explore Licensing</a>
+        </div>
+
+        <div class="mk-inline-metrics">
+          <div class="mk-inline-metric">
+            <strong>Borrower Intake</strong>
+            <span>Clean application workflows and document flow</span>
+          </div>
+          <div class="mk-inline-metric">
+            <strong>Team Visibility</strong>
+            <span>Loan officers, processors, and ops in one system</span>
+          </div>
+          <div class="mk-inline-metric">
+            <strong>Licensable Platform</strong>
+            <span>Deployable for teams building their own lending operation</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="mk-hero-visual">
+        <div class="mk-glow"></div>
+        <div class="mk-device mk-device-lg">
+          <div class="mk-device-topbar">
+            <span></span><span></span><span></span>
+          </div>
+
+          <div class="mk-device-screen">
+            <div class="mk-dashboard-preview">
+              <div class="mk-preview-header">
+                <div>
+                  <div class="mk-preview-kicker">LENDING COMMAND</div>
+                  <h3>Ravlo Lending OS</h3>
+                </div>
+                <div class="mk-status-pill">Active Pipeline</div>
+              </div>
+
+              <div class="mk-preview-stats">
+                <div class="mk-stat-card">
+                  <span>Applications</span>
+                  <strong>124</strong>
+                </div>
+                <div class="mk-stat-card">
+                  <span>In Review</span>
+                  <strong>38</strong>
+                </div>
+                <div class="mk-stat-card">
+                  <span>Conditions</span>
+                  <strong>57</strong>
+                </div>
+              </div>
+
+              <div class="mk-preview-grid">
+                <div class="mk-preview-panel">
+                  <h4>Workflow</h4>
+                  <ul>
+                    <li>Borrower Intake</li>
+                    <li>Loan Officer Review</li>
+                    <li>Processing</li>
+                    <li>Underwriting</li>
+                    <li>Clear to Close</li>
+                  </ul>
+                </div>
+
+                <div class="mk-preview-panel">
+                  <h4>Team Roles</h4>
+                  <ul>
+                    <li>Loan Officers</li>
+                    <li>Processors</li>
+                    <li>Underwriters</li>
+                    <li>Admins</li>
+                    <li>Operations</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="mk-device-reflection"></div>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block content %}
+<section class="mk-section">
+  <div class="mk-container">
+    <div class="mk-section-head">
+      <div class="mk-eyebrow">What it does</div>
+      <h2 class="mk-title-lg">A connected operating system for the lending side of the deal.</h2>
+      <p class="mk-copy-lg">
+        Lending OS helps teams centralize the workflow between borrower engagement, internal review,
+        document handling, conditions tracking, and operational follow-through.
+      </p>
+    </div>
+
+    <div class="mk-feature-grid mk-feature-grid-3">
+      <article class="mk-feature-card">
+        <div class="mk-feature-icon"><i class="lucide lucide-file-text"></i></div>
+        <h3>Borrower Intake</h3>
+        <p>
+          Capture borrower details, project information, financial data, and supporting documents
+          through a cleaner front-end experience.
+        </p>
+      </article>
+
+      <article class="mk-feature-card">
+        <div class="mk-feature-icon"><i class="lucide lucide-layout-dashboard"></i></div>
+        <h3>Pipeline Visibility</h3>
+        <p>
+          Track loan movement across stages with internal dashboards designed for lending teams
+          that need clarity and speed.
+        </p>
+      </article>
+
+      <article class="mk-feature-card">
+        <div class="mk-feature-icon"><i class="lucide lucide-check-check"></i></div>
+        <h3>Conditions & Review</h3>
+        <p>
+          Manage underwriting conditions, next steps, and team handoff points in a more organized
+          and consistent environment.
+        </p>
+      </article>
+
+      <article class="mk-feature-card">
+        <div class="mk-feature-icon"><i class="lucide lucide-users"></i></div>
+        <h3>Role-Based Workflows</h3>
+        <p>
+          Support loan officers, processors, underwriters, and operational leadership with role-aware
+          visibility and task flow.
+        </p>
+      </article>
+
+      <article class="mk-feature-card">
+        <div class="mk-feature-icon"><i class="lucide lucide-message-square-text"></i></div>
+        <h3>Communication Support</h3>
+        <p>
+          Keep teams aligned with clearer borrower communication, internal updates, and centralized
+          process flow.
+        </p>
+      </article>
+
+      <article class="mk-feature-card">
+        <div class="mk-feature-icon"><i class="lucide lucide-brain-circuit"></i></div>
+        <h3>AI-Ready Foundation</h3>
+        <p>
+          Built to support intelligent guidance, workflow support, and future automation across the
+          lending lifecycle.
+        </p>
+      </article>
+    </div>
+  </div>
+</section>
+
+<section id="licensing" class="mk-section mk-section-dark">
+  <div class="mk-container">
+    <div class="mk-split-panel">
+      <div class="mk-panel">
+        <div class="mk-eyebrow">Software Licensing</div>
+        <h2 class="mk-title-lg">License the system behind your lending operation.</h2>
+        <p class="mk-copy-lg">
+          Ravlo Lending OS is being built as more than an internal workflow tool. It is designed
+          to become a licensable platform for lenders, operators, and growing teams who want a
+          more modern foundation for borrower intake, pipeline management, and team execution.
+        </p>
+        <p class="mk-copy">
+          Whether you are building a private lending brand, expanding your internal operations,
+          or modernizing legacy process flow, Lending OS creates a stronger digital backbone for
+          the work.
+        </p>
+
+        <div class="mk-hero-actions">
+          <a href="{{ url_for('marketing.contact') }}" class="mk-btn mk-btn-primary">Ask About Licensing</a>
+        </div>
+      </div>
+
+      <div class="mk-panel mk-panel-soft">
+        <div class="mk-check-list">
+          <div class="mk-check-item">
+            <i class="lucide lucide-check"></i>
+            <span>Brandable lender-facing experience</span>
+          </div>
+          <div class="mk-check-item">
+            <i class="lucide lucide-check"></i>
+            <span>Role-based internal dashboards</span>
+          </div>
+          <div class="mk-check-item">
+            <i class="lucide lucide-check"></i>
+            <span>Operational workflow framework</span>
+          </div>
+          <div class="mk-check-item">
+            <i class="lucide lucide-check"></i>
+            <span>Scalable foundation for team growth</span>
+          </div>
+          <div class="mk-check-item">
+            <i class="lucide lucide-check"></i>
+            <span>Designed for future AI and process automation</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="mk-section">
+  <div class="mk-container">
+    <div class="mk-section-head">
+      <div class="mk-eyebrow">Built for the team</div>
+      <h2 class="mk-title-lg">Designed for the roles that keep lending moving.</h2>
+      <p class="mk-copy-lg">
+        Lending OS supports the real people behind lending execution — from front-end relationship
+        management to back-end processing and review.
+      </p>
+    </div>
+
+    <div class="mk-role-grid">
+      <article class="mk-role-card">
+        <h3>Loan Officers</h3>
+        <p>
+          Manage borrower relationships, track application movement, and keep pipeline visibility
+          front and center.
+        </p>
+      </article>
+
+      <article class="mk-role-card">
+        <h3>Processors</h3>
+        <p>
+          Organize files, manage conditions, coordinate next steps, and keep transactions moving
+          with more control.
+        </p>
+      </article>
+
+      <article class="mk-role-card">
+        <h3>Underwriters</h3>
+        <p>
+          Review submissions, evaluate documentation, and work within a cleaner operational flow.
+        </p>
+      </article>
+
+      <article class="mk-role-card">
+        <h3>Operations Teams</h3>
+        <p>
+          Gain better process visibility, cleaner handoff structure, and a stronger system for
+          scaling execution.
+        </p>
+      </article>
+    </div>
+  </div>
+</section>
+
+<section class="mk-section">
+  <div class="mk-container">
+    <div class="mk-mini-cta">
+      <div>
+        <div class="mk-eyebrow">Careers & Opportunities</div>
+        <h3>We’re also open to connecting with experienced loan officers and processors.</h3>
+        <p>
+          As Ravlo grows, we may expand opportunities for professionals who understand clean lending
+          execution and borrower-facing service.
+        </p>
+      </div>
+
+      <div class="mk-mini-cta-actions">
+        <a href="{{ url_for('marketing.contact') }}" class="mk-btn mk-btn-ghost">Apply Interest</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="mk-section mk-final-cta">
+  <div class="mk-container">
+    <div class="mk-final-card">
+      <div class="mk-eyebrow">Ravlo Lending OS</div>
+      <h2 class="mk-title-lg">Bring lending workflow, team execution, and platform vision into one system.</h2>
+      <p class="mk-copy-lg">
+        Explore the platform, ask about licensing, or connect with us to see how Lending OS fits
+        into your lending operation.
+      </p>
+
+      <div class="mk-hero-actions" style="justify-content:center;">
+        <a href="{{ url_for('marketing.contact') }}" class="mk-btn mk-btn-primary">Request a Demo</a>
+        <a href="{{ url_for('marketing.tour') }}" class="mk-btn mk-btn-ghost">See the Platform</a>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}
