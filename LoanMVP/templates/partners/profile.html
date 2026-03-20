@@ -1,0 +1,45 @@
+{% extends "layouts/ravlo_base.html" %}
+{% block title %}My Partner Profile • Ravlo{% endblock %}
+
+{% block page_title %}My Partner Profile{% endblock %}
+{% block page_subline %}
+Review how your business appears inside the Ravlo network.
+{% endblock %}
+
+{% block content %}
+<div class="partner-profile-page">
+  <section class="ravlo-card">
+    <div class="section-head">
+      <div>
+        <div class="eyebrow">PROFILE</div>
+        <h3>{{ partner.company or partner.name }}</h3>
+      </div>
+
+      <a href="{{ url_for('partner.edit_profile') }}" class="ravlo-btn primary">Edit Profile</a>
+    </div>
+
+    <div class="partner-meta-grid">
+      <div class="partner-meta-item">
+        <span>Category</span>
+        <strong>{{ partner.category or "Not set" }}</strong>
+      </div>
+      <div class="partner-meta-item">
+        <span>Specialty</span>
+        <strong>{{ partner.specialty or "Not set" }}</strong>
+      </div>
+      <div class="partner-meta-item">
+        <span>Service Area</span>
+        <strong>{{ partner.service_area or ((partner.city ~ ', ' ~ partner.state) if partner.city and partner.state else partner.city or partner.state or partner.zip_code or 'Not set') }}</strong>
+      </div>
+      <div class="partner-meta-item">
+        <span>Status</span>
+        <strong>{{ "Approved" if partner.approved else "Pending Review" }}</strong>
+      </div>
+    </div>
+
+    <div style="margin-top:16px;">
+      <p class="ravlo-muted">{{ partner.listing_description or partner.bio or "No profile description yet." }}</p>
+    </div>
+  </section>
+</div>
+{% endblock %}
