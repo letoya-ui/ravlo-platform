@@ -387,12 +387,12 @@ def messages():
         content = (request.form.get("content") or "").strip()
 
         if not receiver_id or not content:
-            flash("Recipient and message body are required.", "danger")
+            flash("Receiver and message content are required.", "danger")
             return redirect(url_for("loan_officer.messages"))
 
         receiver = User.query.get(receiver_id)
         if not receiver:
-            flash("Recipient not found.", "danger")
+            flash("Receiver not found.", "danger")
             return redirect(url_for("loan_officer.messages"))
 
         message = Message(
@@ -449,7 +449,7 @@ def send_message():
     
 
     if not receiver_id:
-        flash("Please select a recipient.", "danger")
+        flash("Please select a receiver.", "danger")
         return redirect(url_for("loan_officer.messages"))
 
     if not content:
