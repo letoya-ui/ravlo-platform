@@ -12,7 +12,7 @@ import csv
 
 from io import StringIO
 from LoanMVP.app import socketio
-from LoanMVP.extensions import db
+from LoanMVP.extensions import db, csrm
 from LoanMVP.ai.base_ai import AIAssistant
 from LoanMVP.models.crm_models import Lead, Task, Message, Partner, LeadSource
 from LoanMVP.models.call_model import CallLog
@@ -144,7 +144,8 @@ def dashboard():
 # ☎️ Smart Dialer
 
 @crm_bp.route("/dialer", methods=["GET", "POST"])
-@role_required("crm")
+@csrm.exempt
+@role_required("crm", "loan_officer", "processor", "executive", "admin", "partners")
 def dialer():
     """Manual & AI-assisted call logging system."""
     calls = CallLog.query.order_by(CallLog.created_at.desc()).limit(10).all()
@@ -210,7 +211,7 @@ def dialer():
     return render_template("crm/dialer.html", calls=calls, title="Smart Dialer")
 
 @crm_bp.route("/call_log/<int:call_id>")
-@role_required("crm")
+@role_required("crm", "loan_officer", "processor", "executive", "admin", "partners")
 def view_call(call_id):
     """Detailed view for a single call log entry."""
     call = CallLog.query.get_or_404(call_id)
@@ -229,7 +230,8 @@ def view_call(call_id):
 # 🤖 AI Call Assistant
 # -----------------------------------------
 @crm_bp.route("/call_ai", methods=["GET", "POST"])
-@role_required("crm")
+@csrm.exempt
+@role_required("crm", "loan_officer", "processor", "executive", "admin", "partners")
 def call_ai():
     """Logs calls and provides AI summaries & next-action prompts."""
     summary = None
@@ -261,7 +263,8 @@ def call_ai():
 # ✉️ AI Follow-Up Generator
 # -----------------------------------------
 @crm_bp.route("/ai_followup", methods=["GET", "POST"])
-@role_required("crm")
+@csrm.exempt
+@role_required("crm", "loan_officer", "processor", "executive", "admin", "partners")
 def ai_followup():
     """Generate custom follow-up messages from context."""
     message = None
@@ -280,7 +283,8 @@ def ai_followup():
     return render_template("crm/ai_followup.html", message=message, title="AI Follow-Up Generator")
 
 @crm_bp.route("/call_insights", methods=["GET", "POST"])
-@role_required("crm")
+@csrm.exempt
+@role_required("crm", "loan_officer", "processor", "executive", "admin", "partners")
 def call_insights():
     from datetime import timedelta
     now = datetime.utcnow()
@@ -388,7 +392,8 @@ def call_insights():
     )
 
 @crm_bp.route("/refresh_ai_summary", methods=["POST"])
-@role_required("crm")
+@csrm.exempt
+@role_required("crm", "loan_officer", "processor", "executive", "admin", "partners")
 def refresh_ai_summary():
     """Refreshes the AI leaderboard summary dynamically via AJAX."""
     try:
@@ -433,14 +438,15 @@ def refresh_ai_summary():
         return jsonify({"message": "AI summary unavailable."})
 
 @crm_bp.route("/call_table_refresh", methods=["GET"])
-@role_required("crm")
+@role_required("crm", "loan_officer", "processor", "executive", "admin", "partners")
 def call_table_refresh():
     """Return updated HTML table of recent calls (for async refresh)."""
     recent_calls = CallLog.query.order_by(CallLog.created_at.desc()).limit(20).all()
     return render_template("crm/_call_table.html", calls=recent_calls)
 
 @crm_bp.route("/generate_ai_summaries_async", methods=["POST"])
-@role_required("crm")
+@csrm.exempt
+@role_required("crm", "loan_officer", "processor", "executive", "admin", "partners")
 def generate_ai_summaries_async():
     """Asynchronous AI summary generation (AJAX version)."""
     from LoanMVP.ai.assistant import assistant
@@ -472,7 +478,8 @@ def generate_ai_summaries_async():
     return jsonify({"processed": processed_count})
 
 @crm_bp.route("/export_call_report", methods=["POST"])
-@role_required("crm")
+@csrm.exempt
+@role_required("crm", "loan_officer", "processor", "executive", "admin", "partners")
 def export_call_report():
     """Exports filtered call log data as CSV including AI summaries."""
     user_filter = request.form.get("user_filter", "All")
@@ -527,7 +534,8 @@ def export_call_report():
 # 💬 Message Center
 # ---------------------------------------------------------
 @crm_bp.route("/messages", methods=["GET", "POST"])
-@role_required("crm")
+@csrm.exempt
+@role_required("crm", "loan_officer", "processor", "executive", "admin", "partners")
 def messages():
     """Unified message thread across email/SMS/chat."""
     all_messages = Message.query.order_by(Message.timestamp.desc()).limit(50).all()
@@ -560,7 +568,7 @@ def messages():
 # 🤝 Partner CRM
 # ---------------------------------------------------------
 @crm_bp.route("/partners")
-@role_required("crm")
+@role_required("crm", "loan_officer", "processor", "executive", "admin")
 def partners():
     """Displays and manages partner contacts and referral networks."""
     partner_list = Partner.query.order_by(Partner.name.asc()).all()
@@ -577,7 +585,7 @@ def partners():
 # 📣 Campaign Management
 # ---------------------------------------------------------
 @crm_bp.route("/campaigns")
-@role_required("crm")
+@role_required("crm", "loan_officer", "processor", "executive", "admin", "partners")
 def campaigns():
     """Show all campaigns created by current user."""
     campaign_list = Campaign.query.filter_by(created_by_id=current_user.id).order_by(Campaign.created_at.desc()).all()
@@ -593,7 +601,8 @@ def campaigns():
 # 🧩 Leads Management
 # ---------------------------------------------------------
 @crm_bp.route("/leads/<int:lead_id>", methods=["GET", "POST"])
-@role_required("crm")
+@csrm.exempt
+@role_required("crm", "loan_officer", "processor", "executive", "admin", "partners")
 def view_lead(lead_id):
     lead = Lead.query.get_or_404(lead_id)
     calls = CallLog.query.filter_by(related_lead_id=lead.id).order_by(CallLog.created_at.desc()).all()
@@ -659,7 +668,7 @@ def view_lead(lead_id):
     )
 
 @crm_bp.route("/leads/<int:lead_id>/ai_followup", methods=["GET"])
-@role_required("crm")
+@role_required("crm", "loan_officer", "processor", "executive", "admin", "partners")
 def lead_ai_followup(lead_id):
     """Returns updated AI follow-up text for the latest call (AJAX)."""
     lead = Lead.query.get_or_404(lead_id)
@@ -679,7 +688,8 @@ def lead_ai_followup(lead_id):
     return {"message": ai_text}
 
 @crm_bp.route("/add_lead", methods=["POST"])
-@role_required("crm", "admin" )
+@csrm.exempt
+@role_required("crm", "loan_officer", "processor", "executive", "admin", "partners")
 def add_lead():
     """Add a new lead record."""
     full_name = request.form.get("full_name")
@@ -703,7 +713,8 @@ def add_lead():
     return redirect(url_for("crm.dashboard"))
 
 @crm_bp.route("/leads/<int:lead_id>", methods=["GET", "POST"])
-@role_required("crm")
+@csrm.exempt
+@role_required("crm", "loan_officer", "processor", "executive", "admin", "partners")
 def update_lead(lead_id):
     """Update or assign a lead."""
     lead = Lead.query.get_or_404(lead_id)
@@ -727,7 +738,7 @@ def update_lead(lead_id):
 # 🧭 Communication Hub + AI Summary
 # ---------------------------------------------------------
 @crm_bp.route("/hub")
-@role_required("crm")
+@role_required("crm", "loan_officer", "processor", "executive", "admin", "partners")
 def hub():
     """Visualizes live CRM communications between key user roles."""
     communication_data = [
@@ -787,13 +798,14 @@ def ai_summary():
     })
 
 @crm_bp.route("/dialer_results")
-@role_required("crm")
+@role_required("crm", "loan_officer", "processor", "executive", "admin")
 def dialer_results():
     leads = Lead.query.order_by(Lead.created_at.desc()).limit(15).all()
     return render_template("crm/leads.html", leads=leads, title="Dialer Results")
 
 @crm_bp.route("/call_log/delete/<int:call_id>", methods=["POST"])
-@role_required("crm")
+@csrm.exempt
+@role_required("crm", "loan_officer", "processor", "executive", "admin")
 def delete_call(call_id):
     call = CallLog.query.get_or_404(call_id)
     db.session.delete(call)
@@ -859,7 +871,7 @@ def lead_details(lead_id):
 # 🤝 Partner Detail View
 # -----------------------------------------------------
 @crm_bp.route("/partners/<int:partner_id>", methods=["GET"])
-@role_required("crm")
+@role_required("crm", "admin")
 def partner_detail(partner_id):
     from LoanMVP.models.crm_models import Partner, PartnerNote
     partner = Partner.query.get_or_404(partner_id)
@@ -875,7 +887,8 @@ def partner_detail(partner_id):
     return render_template("crm/partner_detail.html", partner=partner, ai_summary=ai_summary, notes=notes, activities=activities, deals=deals)
 
 @crm_bp.route("/partners/<int:partner_id>/note", methods=["POST"])
-@role_required("crm")
+@csrm.exempt
+@role_required("crm" , "admin")
 def add_partner_note(partner_id):
     from LoanMVP.models.crm_models import PartnerNote
     content = request.form.get("content")
@@ -893,7 +906,7 @@ def add_partner_note(partner_id):
 # 🧠 Quick AI Tip Endpoint
 # ---------------------------------------------------------
 @crm_bp.route("/ai_tip")
-@role_required("crm")
+@role_required("crm", "admin")
 def ai_tip():
     """Quick AI tip or query endpoint for CRM components."""
     query = request.args.get("query", "")
