@@ -110,7 +110,7 @@ Browse trusted professionals for your deals, projects, and portfolio growth.
           </p>
         </div>
 
-        {% if not partners %}
+        {% if not partners and not external_partners %}
           <div class="partner-network-callout">
             No approved Ravlo partner matched this search yet.
           </div>
@@ -118,11 +118,13 @@ Browse trusted professionals for your deals, projects, and portfolio growth.
       </div>
     </section>
   {% endif %}
-{% if fallback_used %}
-  <div class="ravlo-alert warning">
-    No Ravlo partners found in this area yet — showing recommended professionals nearby.
-  </div>
-{% endif %}
+
+  {% if fallback_used %}
+    <div class="ravlo-alert warning">
+      No Ravlo partners found in this area yet — showing recommended professionals nearby.
+    </div>
+  {% endif %}
+
   <section class="partner-results-grid">
     {% for partner in partners %}
       {% set partner_desc = partner.listing_description or partner.bio or "Trusted partner available through Ravlo." %}
@@ -226,7 +228,9 @@ Browse trusted professionals for your deals, projects, and portfolio growth.
           {% endif %}
         </div>
       </article>
-    {% else %}
+    {% endfor %}
+
+    {% if not partners and not external_partners %}
       <div class="ravlo-card partner-empty-state">
         <div class="eyebrow">NO MATCHES</div>
         <h3>No partners found in this search</h3>
@@ -239,36 +243,83 @@ Browse trusted professionals for your deals, projects, and portfolio growth.
           <a href="{{ url_for('investor.partners') }}" class="ravlo-btn ghost">Reset Search</a>
         </div>
       </div>
-    {% endfor %}
+    {% endif %}
   </section>
-{% if external_partners %}
-  {% for partner in external_partners %}
-    <article class="ravlo-card partner-card">
-      <h3>{{ partner.name }}</h3>
-      <div class="ravlo-muted">{{ selected_category }}</div>
 
-      <p class="partner-card-desc">
-        {{ partner.address }}
-      </p>
-
-      <div class="partner-chip-row">
-        {% if partner.rating %}
-          <span class="ravlo-chip">⭐ {{ partner.rating }}</span>
-        {% endif %}
+  {% if external_partners %}
+    <section class="ravlo-card partner-search-summary external-partners-intro">
+      <div>
+        <div class="eyebrow">RECOMMENDED NEARBY</div>
+        <h3>External professionals near your search area</h3>
+        <p class="ravlo-muted">
+          These are suggested professionals outside the Ravlo approved network. You can review them and save promising options into Ravlo for follow-up.
+        </p>
       </div>
+    </section>
 
-      <div class="partner-card-actions">
-        <form method="POST" action="{{ url_for('investor.save_external_partner_lead') }}">
-          <input type="hidden" name="name" value="{{ partner.name }}">
-          <input type="hidden" name="category" value="{{ selected_category }}">
-          <input type="hidden" name="address" value="{{ partner.address }}">
-          <input type="hidden" name="external_id" value="{{ partner.external_id }}">
-          <button class="ravlo-btn primary sm">Save to Ravlo</button>
-        </form>
-      </div>
-    </article>
-  {% endfor %}
-{% endif %}
+    <section class="partner-results-grid">
+      {% for partner in external_partners %}
+        <article class="ravlo-card partner-card external-partner-card">
+          <div class="partner-card-topglow"></div>
+
+          <div class="partner-card-head">
+            <div class="partner-card-title-wrap">
+              <div class="partner-identity-row">
+                <h3 class="partner-card-title">{{ partner.name }}</h3>
+                <span class="partner-badge external">External</span>
+              </div>
+
+              <div class="ravlo-muted partner-card-sub">
+                {{ selected_category or "Recommended Partner" }}
+              </div>
+            </div>
+
+            {% if partner.rating %}
+              <div class="partner-rating-pill">
+                ★ {{ partner.rating }}
+              </div>
+            {% endif %}
+          </div>
+
+          <div class="partner-meta-grid">
+            <div class="partner-meta-item">
+              <span>Address</span>
+              <strong>{{ partner.address or "Not listed" }}</strong>
+            </div>
+
+            <div class="partner-meta-item">
+              <span>Source</span>
+              <strong>Recommended Nearby</strong>
+            </div>
+          </div>
+
+          <p class="partner-card-desc">
+            Suggested based on your current area and category search. Save this lead into Ravlo to review, qualify, and potentially onboard into your execution network.
+          </p>
+
+          <div class="partner-chip-row">
+            <span class="ravlo-chip">{{ selected_category or "Partner" }}</span>
+            {% if partner.rating %}
+              <span class="ravlo-chip">Rated {{ partner.rating }}</span>
+            {% endif %}
+          </div>
+
+          <div class="partner-card-actions">
+            <form method="POST" action="{{ url_for('investor.save_external_partner_lead') }}" class="external-partner-form">
+              {% if csrf_token is defined %}
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              {% endif %}
+              <input type="hidden" name="name" value="{{ partner.name }}">
+              <input type="hidden" name="category" value="{{ selected_category or '' }}">
+              <input type="hidden" name="address" value="{{ partner.address }}">
+              <input type="hidden" name="external_id" value="{{ partner.external_id }}">
+              <button type="submit" class="ravlo-btn primary sm">Save to Ravlo</button>
+            </form>
+          </div>
+        </article>
+      {% endfor %}
+    </section>
+  {% endif %}
 </div>
 
 <style>
@@ -501,6 +552,12 @@ Browse trusted professionals for your deals, projects, and portfolio growth.
     border:1px solid rgba(103,188,255,.2);
   }
 
+  .partner-badge.external{
+    background:rgba(255,255,255,.08);
+    color:rgba(255,255,255,.86);
+    border:1px solid rgba(255,255,255,.12);
+  }
+
   .partner-rating-pill{
     position:relative;
     z-index:2;
@@ -539,6 +596,7 @@ Browse trusted professionals for your deals, projects, and portfolio growth.
   .partner-meta-item strong{
     font-size:.96rem;
     line-height:1.35;
+    word-break:break-word;
   }
 
   .partner-card-desc{
@@ -585,6 +643,15 @@ Browse trusted professionals for your deals, projects, and portfolio growth.
     flex-wrap:wrap;
   }
 
+  .external-partner-form{
+    width:100%;
+  }
+
+  .external-partner-form .ravlo-btn{
+    width:100%;
+    justify-content:center;
+  }
+
   .partner-empty-state{
     grid-column:1 / -1;
     padding:28px;
@@ -601,6 +668,10 @@ Browse trusted professionals for your deals, projects, and portfolio growth.
     gap:10px;
     flex-wrap:wrap;
     margin-top:8px;
+  }
+
+  .external-partners-intro{
+    margin-top:2px;
   }
 
   @media (max-width: 1180px){
