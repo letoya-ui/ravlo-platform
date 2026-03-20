@@ -379,7 +379,6 @@ def ai_assistant():
 
 @loan_officer_bp.route("/messages", methods=["GET", "POST"])
 @csrf.exempt
-@login_required
 @role_required("loan_officer")
 def messages():
     if request.method == "POST":
