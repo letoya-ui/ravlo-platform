@@ -657,3 +657,50 @@ def billing():
         page_title="Billing",
         page_subline="Manage your Ravlo Partner plan."
     )
+    
+@partner_bp.route("/profile/edit", methods=["GET", "POST"])
+@login_required
+@role_required("partner")
+def edit_profile():
+    partner = Partner.query.filter_by(user_id=current_user.id).first()
+
+    if not partner:
+        partner = Partner(user_id=current_user.id, name=current_user.name or "Partner")
+
+    if request.method == "POST":
+        name = (request.form.get("name") or "").strip()
+        if not name:
+            flash("Contact name is required.", "warning")
+            return render_template("partner/partner_form.html", partner=partner)
+
+        partner.name = name
+        partner.company = (request.form.get("company") or "").strip() or None
+        partner.email = (request.form.get("email") or "").strip() or None
+        partner.phone = (request.form.get("phone") or "").strip() or None
+        partner.website = (request.form.get("website") or "").strip() or None
+        partner.category = (request.form.get("category") or "").strip() or None
+        partner.type = (request.form.get("type") or "").strip() or None
+        partner.specialty = (request.form.get("specialty") or "").strip() or None
+        partner.service_area = (request.form.get("service_area") or "").strip() or None
+        partner.address = (request.form.get("address") or "").strip() or None
+        partner.city = (request.form.get("city") or "").strip() or None
+        partner.state = (request.form.get("state") or "").strip() or None
+        partner.zip_code = (request.form.get("zip_code") or "").strip() or None
+        partner.listing_description = (request.form.get("listing_description") or "").strip() or None
+        partner.bio = (request.form.get("bio") or "").strip() or None
+
+        # usually these should not be partner-controlled unless you want them to be
+        # partner.relationship_level = ...
+        # partner.subscription_tier = ...
+        # partner.approved = ...
+        # partner.featured = ...
+        # partner.is_verified = ...
+
+        if not partner.id:
+            db.session.add(partner)
+
+        db.session.commit()
+        flash("Your partner profile was updated successfully.", "success")
+        return redirect(url_for("partner.profile"))
+
+    return render_template("partner/partner_form.html", partner=partner)
