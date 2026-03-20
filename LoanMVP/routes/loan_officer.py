@@ -381,10 +381,6 @@ def ai_assistant():
 @loan_officer_bp.route("/messages", methods=["GET"])
 @role_required("loan_officer")
 def messages():
-    """
-    Loan officer inbox page.
-    Groups messages into conversation buckets by recipient_type + recipient_id.
-    """
     search = (request.args.get("q") or "").strip().lower()
     selected_type = (request.args.get("recipient_type") or "").strip()
     selected_id = request.args.get("recipient_id", type=int)
@@ -396,9 +392,7 @@ def messages():
         .all()
     )
 
-    grouped = {}
     grouped_messages = defaultdict(list)
-
     for msg in all_messages:
         key = (msg.recipient_type, msg.recipient_id)
         grouped_messages[key].append(msg)
@@ -418,7 +412,6 @@ def messages():
             "messages": sorted(msgs, key=lambda m: m.sent_at or datetime.min),
         })
 
-    # Optional search filter
     if search:
         conversations = [
             c for c in conversations
@@ -427,7 +420,6 @@ def messages():
             or any(search in (m.content or "").lower() for m in c["messages"])
         ]
 
-    # Sort newest first
     conversations = sorted(
         conversations,
         key=lambda c: c["last_message"].sent_at or datetime.min,
@@ -441,35 +433,43 @@ def messages():
                 active_conversation = convo
                 break
 
-    # Default to first conversation if none selected
     if not active_conversation and conversations:
         active_conversation = conversations[0]
+
+    borrowers = BorrowerProfile.query.order_by(BorrowerProfile.full_name.asc()).all() if BorrowerProfile else []
+    leads = Lead.query.order_by(Lead.created_at.desc()).all() if Lead and hasattr(Lead, "created_at") else []
+    realtors = Realtor.query.order_by(Realtor.name.asc()).all() if Realtor and hasattr(Realtor, "name") else []
+
+    users = (
+        User.query
+        .filter(User.id != current_user.id)
+        .order_by(User.first_name.asc(), User.last_name.asc())
+        .all()
+        if User else []
+    )
 
     return render_template(
         "loan_officer/messages.html",
         conversations=conversations,
         active_conversation=active_conversation,
+        borrowers=borrowers,
+        leads=leads,
+        realtors=realtors,
+        users=users,
         search=search,
         title="Messages",
         active_tab="messages",
     )
 
-
 @loan_officer_bp.route("/messages/send", methods=["POST"])
-@csrf.exempt
 @role_required("loan_officer")
 def send_message():
-    """
-    Sends/saves a new outbound message record.
-    This stores the message in your DB.
-    If later you integrate Twilio/SendGrid, send from here too.
-    """
     recipient_type = (request.form.get("recipient_type") or "").strip().lower()
     recipient_id = request.form.get("recipient_id", type=int)
     message_type = (request.form.get("message_type") or "internal").strip().lower()
     content = (request.form.get("content") or "").strip()
 
-    allowed_recipient_types = {"lead", "borrower", "realtor"}
+    allowed_recipient_types = {"lead", "borrower", "realtor", "user"}
     allowed_message_types = {"sms", "email", "internal"}
 
     if recipient_type not in allowed_recipient_types:
@@ -477,28 +477,16 @@ def send_message():
         return redirect(url_for("loan_officer.messages"))
 
     if not recipient_id:
-        flash("Recipient is required.", "danger")
+        flash("Please select a recipient.", "danger")
         return redirect(url_for("loan_officer.messages"))
 
     if message_type not in allowed_message_types:
         flash("Invalid message type.", "danger")
-        return redirect(
-            url_for(
-                "loan_officer.messages",
-                recipient_type=recipient_type,
-                recipient_id=recipient_id,
-            )
-        )
+        return redirect(url_for("loan_officer.messages"))
 
     if not content:
         flash("Message content cannot be empty.", "danger")
-        return redirect(
-            url_for(
-                "loan_officer.messages",
-                recipient_type=recipient_type,
-                recipient_id=recipient_id,
-            )
-        )
+        return redirect(url_for("loan_officer.messages"))
 
     msg = MessageThread(
         sender_id=current_user.id,
@@ -513,10 +501,6 @@ def send_message():
     db.session.add(msg)
     db.session.commit()
 
-    # Future integration point:
-    # if message_type == "sms": send via Twilio
-    # if message_type == "email": send via SendGrid
-
     flash("Message sent successfully.", "success")
     return redirect(
         url_for(
@@ -524,7 +508,8 @@ def send_message():
             recipient_type=recipient_type,
             recipient_id=recipient_id,
         )
-    )    
+    )
+ 
 @loan_officer_bp.route("/loan/<int:loan_id>")
 @role_required("loan_officer")
 def loan_file(loan_id):

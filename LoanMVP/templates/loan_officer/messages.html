@@ -313,7 +313,22 @@ Manage borrower, lead, and realtor communication from one place.
           {% endfor %}
         </select>
       </div>
-
+      <!-- USER -->
+      <div id="userWrap" style="display:none;">
+       <select id="userSelect" class="re-select">
+         <option value="">Select user</option>
+         {% for u in users %}
+           <option value="{{ u.id }}">
+             {{
+               u.full_name
+               or ((u.first_name or '') ~ ' ' ~ (u.last_name or ''))|trim
+               or u.username
+               or u.email
+             }}
+           </option>
+         {% endfor %}
+       </select>
+     </div>
       <!-- HIDDEN FIELDS -->
       <input type="hidden" name="recipient_type" id="hiddenType">
       <input type="hidden" name="recipient_id" id="hiddenId">
@@ -394,4 +409,46 @@ Manage borrower, lead, and realtor communication from one place.
   </section>
 
 </div>
+<script>
+function toggleRecipientSelect() {
+  const type = document.getElementById("recipientType").value;
+
+  const borrowerWrap = document.getElementById("borrowerWrap");
+  const leadWrap = document.getElementById("leadWrap");
+  const realtorWrap = document.getElementById("realtorWrap");
+  const userWrap = document.getElementById("userWrap");
+
+  borrowerWrap.style.display = "none";
+  leadWrap.style.display = "none";
+  realtorWrap.style.display = "none";
+  userWrap.style.display = "none";
+
+  document.getElementById("hiddenType").value = type;
+
+  if (type === "borrower") borrowerWrap.style.display = "block";
+  if (type === "lead") leadWrap.style.display = "block";
+  if (type === "realtor") realtorWrap.style.display = "block";
+  if (type === "user") userWrap.style.display = "block";
+}
+
+// Submit handler
+document.getElementById("newMessageForm").addEventListener("submit", function(e){
+  const type = document.getElementById("recipientType").value;
+
+  let selectedId = null;
+
+  if (type === "borrower") selectedId = document.getElementById("borrowerSelect").value;
+  if (type === "lead") selectedId = document.getElementById("leadSelect").value;
+  if (type === "realtor") selectedId = document.getElementById("realtorSelect").value;
+  if (type === "user") selectedId = document.getElementById("userSelect").value;
+
+  if (!type || !selectedId) {
+    e.preventDefault();
+    alert("Please select a recipient.");
+    return;
+  }
+
+  document.getElementById("hiddenId").value = selectedId;
+});
+</script>
 {% endblock %}
