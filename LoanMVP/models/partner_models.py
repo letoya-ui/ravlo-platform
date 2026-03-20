@@ -8,24 +8,35 @@ class PartnerConnectionRequest(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
 
-    # ✅ Correct table name for User is "user"
-    borrower_user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
-    investor_user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    borrower_user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=True)
+    investor_user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=True)
 
-    # ✅ Add these so your relationships actually work + so requests can link to a workspace context
     borrower_profile_id = db.Column(db.Integer, db.ForeignKey("borrower_profile.id"), nullable=True)
     investor_profile_id = db.Column(db.Integer, db.ForeignKey("investor_profile.id"), nullable=True)
     property_id = db.Column(db.Integer, db.ForeignKey("property.id"), nullable=True)
     lead_id = db.Column(db.Integer, db.ForeignKey("lead.id"), nullable=True)
 
-    partner_id = db.Column(db.Integer, db.ForeignKey("partners.id"), nullable=False)
+    partner_id = db.Column(db.Integer, db.ForeignKey("partners.id"), nullable=True)
+    external_partner_lead_id = db.Column(db.Integer, db.ForeignKey("external_partner_leads.id"), nullable=True)
 
-    category = db.Column(db.String(100), nullable=True)  # match Partner.category size
+    category = db.Column(db.String(100), nullable=True)
     message = db.Column(db.Text, nullable=True)
 
-    status = db.Column(db.String(20), default="pending")  # pending | accepted | declined | canceled | completed
+    source = db.Column(db.String(30), default="internal")
+    # internal / external / fallback_search
+
+    status = db.Column(db.String(20), default="pending")
+    # pending | accepted | declined | canceled | completed | awaiting_match
+
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     responded_at = db.Column(db.DateTime, nullable=True)
+
+    partner = db.relationship("Partner", backref=db.backref("connection_requests", lazy=True))
+    external_partner_lead = db.relationship("ExternalPartnerLead", foreign_keys=[external_partner_lead_id])
+
+    borrower = db.relationship("BorrowerProfile", foreign_keys=[borrower_profile_id])
+    investor_profile = db.relationship("InvestorProfile", foreign_keys=[investor_profile_id])
+    property = db.relationship("Property", foreign_keys=[property_id])
 
     # Relationships
     partner = db.relationship("Partner", backref=db.backref("connection_requests", lazy=True))
@@ -76,3 +87,51 @@ class PartnerPhoto(db.Model):
         "Partner",
         back_populates="photos"
     )
+
+class ExternalPartnerLead(db.Model):
+    __tablename__ = "external_partner_leads"
+
+    id = db.Column(db.Integer, primary_key=True)
+
+    created_by_user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    investor_profile_id = db.Column(db.Integer, db.ForeignKey("investor_profile.id"), nullable=True)
+    borrower_profile_id = db.Column(db.Integer, db.ForeignKey("borrower_profile.id"), nullable=True)
+
+    partner_id = db.Column(db.Integer, db.ForeignKey("partners.id"), nullable=True)
+    # if they later become a real Partner record, link it here
+
+    name = db.Column(db.String(255), nullable=False)
+    business_name = db.Column(db.String(255), nullable=True)
+    category = db.Column(db.String(100), nullable=True)
+
+    source = db.Column(db.String(50), nullable=True)   # google / yelp / manual / other
+    external_id = db.Column(db.String(255), nullable=True)  # Google place_id, Yelp id, etc.
+
+    phone = db.Column(db.String(50), nullable=True)
+    email = db.Column(db.String(255), nullable=True)
+    website = db.Column(db.String(255), nullable=True)
+
+    address = db.Column(db.String(255), nullable=True)
+    city = db.Column(db.String(120), nullable=True)
+    state = db.Column(db.String(20), nullable=True)
+    zip_code = db.Column(db.String(20), nullable=True)
+
+    latitude = db.Column(db.Float, nullable=True)
+    longitude = db.Column(db.Float, nullable=True)
+
+    rating = db.Column(db.Float, nullable=True)
+    review_count = db.Column(db.Integer, default=0)
+
+    notes = db.Column(db.Text, nullable=True)
+    raw_json = db.Column(db.JSON, nullable=True)
+
+    invite_status = db.Column(db.String(30), default="new")
+    # new / saved / invited / contacted / joined / ignored
+
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    created_by = db.relationship("User", foreign_keys=[created_by_user_id])
+    investor_profile = db.relationship("InvestorProfile", foreign_keys=[investor_profile_id])
+    borrower_profile = db.relationship("BorrowerProfile", foreign_keys=[borrower_profile_id])
+    partner = db.relationship("Partner", foreign_keys=[partner_id])
