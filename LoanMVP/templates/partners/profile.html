@@ -1,202 +1,172 @@
 {% extends "layouts/ravlo_base.html" %}
+{% block title %}Partner Profile • Ravlo{% endblock %}
 
-{% block title %}Partner Profile{% endblock %}
 {% block page_title %}Partner Profile{% endblock %}
 {% block page_subline %}
-Connect with investors and showcase your services inside Ravlo.
+Build your public Ravlo profile so investors can find and trust your business.
 {% endblock %}
 
 {% block content %}
+<div class="partner-form-page">
 
-<div class="ravlo-grid ravlo-grid-2">
+  <section class="ravlo-hero-card partner-form-hero">
+    <div class="partner-form-hero-copy">
+      <div class="eyebrow">RAVLO PARTNER NETWORK</div>
+      <h2>Manage your business profile.</h2>
+      <p class="ravlo-muted">
+        Keep your company details, service area, specialties, and public listing information current so the right investors can find you.
+      </p>
+    </div>
+  </section>
 
-  <!-- LEFT COLUMN -->
-  <div class="ravlo-card">
+  <form method="POST" class="ravlo-card partner-form-card">
+    {% if csrf_token is defined %}
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    {% endif %}
 
-    <div class="profile-header">
-
-      <div class="profile-avatar">
-        {% if partner.logo_url %}
-        <img src="{{ partner.logo_url }}">
-        {% else %}
-        <div class="avatar-placeholder">
-          <i data-lucide="user"></i>
+    <div class="partner-form-section">
+      <div class="section-head">
+        <div>
+          <div class="eyebrow">IDENTITY</div>
+          <h3>Business Information</h3>
         </div>
-        {% endif %}
       </div>
 
-      <div>
-        <h2>{{ partner.company_name }}</h2>
-        <p class="muted">{{ partner.category }}</p>
-
-        <div class="partner-tags">
-
-          {% if partner.verified %}
-          <span class="ravlo-badge success">
-            <i data-lucide="shield-check"></i> Verified
-          </span>
-          {% endif %}
-
-          {% if partner.premium %}
-          <span class="ravlo-badge gold">
-            <i data-lucide="star"></i> Preferred Partner
-          </span>
-          {% endif %}
-
+      <div class="ravlo-form-grid">
+        <div class="form-field">
+          <label class="ravlo-label">Company</label>
+          <input type="text" name="company" value="{{ partner.company or '' }}" class="ravlo-input" placeholder="Company name">
         </div>
 
-      </div>
+        <div class="form-field">
+          <label class="ravlo-label">Contact Name *</label>
+          <input type="text" name="name" value="{{ partner.name or '' }}" class="ravlo-input" placeholder="Primary contact" required>
+        </div>
 
+        <div class="form-field">
+          <label class="ravlo-label">Category</label>
+          <input type="text" name="category" value="{{ partner.category or '' }}" class="ravlo-input" placeholder="Contractor, Realtor, Cleaner...">
+        </div>
+
+        <div class="form-field">
+          <label class="ravlo-label">Type</label>
+          <input type="text" name="type" value="{{ partner.type or '' }}" class="ravlo-input" placeholder="Vendor, Broker, Lender...">
+        </div>
+
+        <div class="form-field form-field-span-2">
+          <label class="ravlo-label">Specialty</label>
+          <input type="text" name="specialty" value="{{ partner.specialty or '' }}" class="ravlo-input" placeholder="Kitchen remodels, DSCR loans, inspections...">
+        </div>
+      </div>
     </div>
 
-    <hr>
-
-    <h4>About</h4>
-    <p class="muted">
-      {{ partner.description or "No description provided yet." }}
-    </p>
-
-  </div>
-
-  <!-- RIGHT COLUMN -->
-  <div class="ravlo-card">
-
-    <h4>Contact</h4>
-
-    <div class="info-grid">
-
-      <div>
-        <label>Email</label>
-        <p>{{ partner.email }}</p>
+    <div class="partner-form-section">
+      <div class="section-head">
+        <div>
+          <div class="eyebrow">CONTACT</div>
+          <h3>Contact Details</h3>
+        </div>
       </div>
 
-      <div>
-        <label>Phone</label>
-        <p>{{ partner.phone }}</p>
-      </div>
+      <div class="ravlo-form-grid">
+        <div class="form-field">
+          <label class="ravlo-label">Email</label>
+          <input type="email" name="email" value="{{ partner.email or '' }}" class="ravlo-input" placeholder="name@company.com">
+        </div>
 
-      <div>
-        <label>Website</label>
-        {% if partner.website %}
-        <a href="{{ partner.website }}" target="_blank">
-          {{ partner.website }}
-        </a>
-        {% else %}
-        <p class="muted">Not provided</p>
-        {% endif %}
-      </div>
+        <div class="form-field">
+          <label class="ravlo-label">Phone</label>
+          <input type="text" name="phone" value="{{ partner.phone or '' }}" class="ravlo-input" placeholder="(555) 555-5555">
+        </div>
 
-      <div>
-        <label>Service Area</label>
-        <p>{{ partner.service_area }}</p>
+        <div class="form-field form-field-span-2">
+          <label class="ravlo-label">Website</label>
+          <input type="text" name="website" value="{{ partner.website or '' }}" class="ravlo-input" placeholder="https://example.com">
+        </div>
       </div>
-
     </div>
 
-  </div>
-
-</div>
-
-
-<!-- SERVICES -->
-<div class="ravlo-card mt-4">
-
-  <h3>Services</h3>
-
-  <div class="services-grid">
-
-    {% for service in partner.services %}
-    <div class="service-card">
-
-      <h4>{{ service.name }}</h4>
-      <p class="muted">{{ service.description }}</p>
-
-      {% if service.price_range %}
-      <div class="price-range">
-        {{ service.price_range }}
-      </div>
-      {% endif %}
-
-    </div>
-    {% endfor %}
-
-  </div>
-
-</div>
-
-
-<!-- PORTFOLIO -->
-<div class="ravlo-card mt-4">
-
-  <h3>Project Portfolio</h3>
-
-  <div class="portfolio-grid">
-
-    {% for project in partner.projects %}
-    <div class="portfolio-item">
-
-      <img src="{{ project.image_url }}">
-
-      <div class="portfolio-info">
-        <h4>{{ project.title }}</h4>
-        <p class="muted">{{ project.location }}</p>
+    <div class="partner-form-section">
+      <div class="section-head">
+        <div>
+          <div class="eyebrow">LOCATION</div>
+          <h3>Service Footprint</h3>
+        </div>
       </div>
 
+      <div class="ravlo-form-grid">
+        <div class="form-field form-field-span-2">
+          <label class="ravlo-label">Service Area (Display)</label>
+          <input type="text" name="service_area" value="{{ partner.service_area or '' }}" class="ravlo-input" placeholder="Tampa Bay, Central Florida, Tri-State Area...">
+        </div>
+
+        <div class="form-field form-field-span-2">
+          <label class="ravlo-label">Address</label>
+          <input type="text" name="address" value="{{ partner.address or '' }}" class="ravlo-input" placeholder="123 Main St">
+        </div>
+
+        <div class="form-field">
+          <label class="ravlo-label">City</label>
+          <input type="text" name="city" value="{{ partner.city or '' }}" class="ravlo-input" placeholder="Tampa">
+        </div>
+
+        <div class="form-field">
+          <label class="ravlo-label">State</label>
+          <input type="text" name="state" value="{{ partner.state or '' }}" class="ravlo-input" placeholder="FL">
+        </div>
+
+        <div class="form-field">
+          <label class="ravlo-label">ZIP Code</label>
+          <input type="text" name="zip_code" value="{{ partner.zip_code or '' }}" class="ravlo-input" placeholder="33602">
+        </div>
+      </div>
     </div>
-    {% endfor %}
 
-  </div>
-
-</div>
-
-
-<!-- REVIEWS -->
-<div class="ravlo-card mt-4">
-
-  <h3>Investor Reviews</h3>
-
-  {% if reviews %}
-    {% for review in reviews %}
-    <div class="review">
-
-      <div class="review-header">
-        <strong>{{ review.investor_name }}</strong>
-
-        <span class="stars">
-          ⭐ {{ review.rating }}/5
-        </span>
+    <div class="partner-form-section">
+      <div class="section-head">
+        <div>
+          <div class="eyebrow">PUBLIC PROFILE</div>
+          <h3>Listing Information</h3>
+        </div>
       </div>
 
-      <p>{{ review.comment }}</p>
+      <div class="ravlo-form-grid">
+        <div class="form-field form-field-span-2">
+          <label class="ravlo-label">Listing Description</label>
+          <textarea name="listing_description" class="ravlo-input" rows="4" placeholder="Short public-facing summary...">{{ partner.listing_description or '' }}</textarea>
+        </div>
 
+        <div class="form-field form-field-span-2">
+          <label class="ravlo-label">Bio</label>
+          <textarea name="bio" class="ravlo-input" rows="6" placeholder="Tell investors about your business, experience, and services...">{{ partner.bio or '' }}</textarea>
+        </div>
+      </div>
     </div>
-    {% endfor %}
-  {% else %}
 
-    <p class="muted">No reviews yet.</p>
-
-  {% endif %}
-
-</div>
-
-
-<!-- ACTION BUTTONS -->
-<div class="ravlo-actions">
-
-  <form method="POST" action="{{ url_for('investor.partner_request', partner_id=partner.id) }}">
-
-    <button class="ravlo-btn primary">
-      <i data-lucide="send"></i>
-      Request Quote
-    </button>
-
+    <div class="partner-form-actions">
+      <button type="submit" class="ravlo-btn primary">Save Profile</button>
+      <a href="{{ url_for('partner.profile') }}" class="ravlo-btn ghost">Cancel</a>
+    </div>
   </form>
-
-  <button class="ravlo-btn ghost">
-    <i data-lucide="bookmark"></i>
-    Save Partner
-  </button>
-
 </div>
 
+<style>
+  .partner-form-page{display:grid;gap:20px;min-width:0;}
+  .partner-form-hero{display:grid;gap:20px;}
+  .partner-form-card{display:grid;gap:22px;}
+  .partner-form-section{display:grid;gap:14px;}
+  .ravlo-form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;}
+  .form-field{display:grid;gap:8px;min-width:0;}
+  .form-field-span-2{grid-column:span 2;}
+  .form-field .ravlo-input{width:100%;min-width:0;}
+  textarea.ravlo-input{resize:vertical;min-height:120px;}
+  .partner-form-actions{display:flex;gap:10px;flex-wrap:wrap;padding-top:8px;}
+
+  @media (max-width: 820px){
+    .ravlo-form-grid{grid-template-columns:1fr;}
+    .form-field-span-2{grid-column:span 1;}
+    .partner-form-actions{flex-direction:column;align-items:stretch;}
+    .partner-form-actions .ravlo-btn{width:100%;justify-content:center;}
+  }
+</style>
 {% endblock %}
