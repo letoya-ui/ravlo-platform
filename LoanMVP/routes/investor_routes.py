@@ -6895,7 +6895,6 @@ def create_external_partner_request(lead_id):
     flash("External partner request created.", "success")
     return redirect(url_for("investor.partner_marketplace"))
 
-
 @investor_bp.route("/partners", methods=["GET"])
 @login_required
 @role_required("investor")
@@ -6957,7 +6956,8 @@ def partners():
     ).all()
 
     categories = [
-        row[0] for row in db.session.query(Partner.category)
+        row[0]
+        for row in db.session.query(Partner.category)
         .filter(Partner.category.isnot(None))
         .distinct()
         .order_by(Partner.category.asc())
@@ -6966,7 +6966,8 @@ def partners():
     ]
 
     relationship_levels = [
-        row[0] for row in db.session.query(Partner.relationship_level)
+        row[0]
+        for row in db.session.query(Partner.relationship_level)
         .filter(Partner.relationship_level.isnot(None))
         .distinct()
         .order_by(Partner.relationship_level.asc())
@@ -6974,11 +6975,14 @@ def partners():
         if row[0]
     ]
 
+    external_partners = []
+    fallback_used = False
+
     return render_template(
         "investor/partners.html",
         partners=partners,
-        external_partners=[],
-        fallback_used=False,
+        external_partners=external_partners,
+        fallback_used=fallback_used,
         categories=categories,
         relationship_levels=relationship_levels,
         selected_company=selected_company,
