@@ -382,12 +382,12 @@ def ai_assistant():
 @role_required("loan_officer")
 def messages():
     if request.method == "POST":
-        recipient_id = request.form.get("recipient_id", type=int)
+        receiver_id = request.form.get("receiver_id", type=int)
         subject = (request.form.get("subject") or "").strip()
         body = (request.form.get("body") or "").strip()
 
         if not recipient_id or not body:
-            flash("Recipient and message body are required.", "danger")
+            flash("Receiver and message body are required.", "danger")
             return redirect(url_for("loan_officer.messages"))
 
         recipient = User.query.filter_by(id=recipient_id).first()
@@ -397,7 +397,7 @@ def messages():
 
         msg = Message(
             sender_id=current_user.id,
-            recipient_id=recipient.id,
+            receiver_id=receiver.id,
             subject=subject,
             body=body,
         )
@@ -443,24 +443,14 @@ def messages():
 @csrf.exempt
 @role_required("loan_officer")
 def send_message():
-    recipient_type = (request.form.get("recipient_type") or "").strip().lower()
-    recipient_id = request.form.get("recipient_id", type=int)
-    message_type = (request.form.get("message_type") or "internal").strip().lower()
+    receiver_id = request.form.get("receiver_id", type=int)
+    subject = (request.form.get("subject") or "internal").strip().lower()
     content = (request.form.get("content") or "").strip()
 
-    allowed_recipient_types = {"lead", "borrower", "realtor", "user"}
-    allowed_message_types = {"sms", "email", "internal"}
+    
 
-    if recipient_type not in allowed_recipient_types:
-        flash("Invalid recipient type.", "danger")
-        return redirect(url_for("loan_officer.messages"))
-
-    if not recipient_id:
+    if not receiver_id:
         flash("Please select a recipient.", "danger")
-        return redirect(url_for("loan_officer.messages"))
-
-    if message_type not in allowed_message_types:
-        flash("Invalid message type.", "danger")
         return redirect(url_for("loan_officer.messages"))
 
     if not content:
@@ -469,9 +459,7 @@ def send_message():
 
     msg = MessageThread(
         sender_id=current_user.id,
-        recipient_type=recipient_type,
-        recipient_id=recipient_id,
-        message_type=message_type,
+        receiver_id=receiver_id,
         content=content,
         sent_at=datetime.utcnow(),
         direction="outbound",
@@ -484,8 +472,7 @@ def send_message():
     return redirect(
         url_for(
             "loan_officer.messages",
-            recipient_type=recipient_type,
-            recipient_id=recipient_id,
+            receiver_id=receiver_id,
         )
     )
  
