@@ -444,7 +444,7 @@ def messages():
     )
 
 @loan_officer_bp.route("/messages/send", methods=["POST"])
-csrf.exempt
+@csrf.exempt
 @role_required("loan_officer")
 def send_message():
     recipient_type = (request.form.get("recipient_type") or "").strip().lower()
