@@ -84,7 +84,7 @@ from LoanMVP.models.ai_models import (
 from LoanMVP.models.borrowers import BorrowerInteraction
 from LoanMVP.models.payment_models import PaymentRecord
 from LoanMVP.models.campaign_model import Campaign
-
+from LoanMVP.models.user_model import User
 # Forms
 from LoanMVP.forms import BorrowerProfileForm
 from LoanMVP.forms.loan_officer_forms import (
