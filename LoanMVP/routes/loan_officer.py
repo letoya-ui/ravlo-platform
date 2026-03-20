@@ -377,11 +377,8 @@ def ai_assistant():
     }), 200
 
 
-
-from LoanMVP.models.user_model import User
-from LoanMVP.models.message import Message
-
 @loan_officer_bp.route("/messages", methods=["GET", "POST"])
+@csrf.exempt
 @login_required
 @role_required("loan_officer")
 def messages():
