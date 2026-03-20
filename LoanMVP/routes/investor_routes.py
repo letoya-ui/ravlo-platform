@@ -6872,85 +6872,87 @@ def market_snapshot_page():
         active_tab="market"
     )
 
+@investor_bp.route("/partners/request-external/<int:lead_id>", methods=["POST"])
+@login_required
+@role_required("investor")
+def create_external_partner_request(lead_id):
+    ip = InvestorProfile.query.filter_by(user_id=current_user.id).first()
+    lead = ExternalPartnerLead.query.get_or_404(lead_id)
+
+    req = PartnerConnectionRequest(
+        investor_user_id=current_user.id,
+        investor_profile_id=ip.id if ip else None,
+        external_partner_lead_id=lead.id,
+        category=lead.category,
+        message=f"Fallback marketplace request for external provider: {lead.name}",
+        source="external",
+        status="awaiting_match",
+    )
+
+    db.session.add(req)
+    db.session.commit()
+
+    flash("External partner request created.", "success")
+    return redirect(url_for("investor.partner_marketplace"))
 
 @investor_bp.route("/partners", methods=["GET"])
 @login_required
 @role_required("investor")
 def partners():
-    ip = InvestorProfile.query.filter_by(user_id=current_user.id).first()
-    if not ip:
-        flash("Please complete your investor profile first.", "warning")
-        return redirect(url_for("investor.create_profile"))
 
-    q = (request.args.get("q") or "").strip()
-    category = (request.args.get("category") or "").strip()
-    service_area = (request.args.get("service_area") or "").strip()
-    relationship_level = (request.args.get("relationship_level") or "").strip()
+    selected_q = (request.args.get("q") or "").strip()
+    selected_category = (request.args.get("category") or "").strip()
+    selected_service_area = (request.args.get("service_area") or "").strip()
+    selected_relationship_level = (request.args.get("relationship_level") or "").strip()
 
-    query = Partner.query.filter(
-        Partner.active.is_(True),
-        Partner.approved.is_(True)
+    # Internal search
+    partners = search_internal_partners(
+        Partner,
+        category=selected_category,
+        city=selected_service_area,
     )
 
-    if q:
-        query = query.filter(
-            or_(
-                Partner.name.ilike(f"%{q}%"),
-                Partner.company.ilike(f"%{q}%"),
-                Partner.category.ilike(f"%{q}%"),
-                Partner.type.ilike(f"%{q}%"),
-                Partner.service_area.ilike(f"%{q}%"),
-                Partner.listing_description.ilike(f"%{q}%"),
-                Partner.notes.ilike(f"%{q}%"),
-            )
+    # Filter by search text
+    if selected_q:
+        q = selected_q.lower()
+        partners = [
+            p for p in partners
+            if q in (p.get("name") or "").lower()
+            or q in (p.get("business_name") or "").lower()
+            or q in (p.get("category") or "").lower()
+        ]
+
+    # Relationship filter
+    if selected_relationship_level:
+        partners = [
+            p for p in partners
+            if (p.get("relationship_level") or "").lower() == selected_relationship_level.lower()
+        ]
+
+    fallback_used = False
+    external_partners = []
+
+    # 🚨 KEY: fallback logic
+    if not partners and selected_service_area and selected_category:
+        fallback_used = True
+        external_partners = search_google_places(
+            selected_service_area,
+            selected_category
         )
-
-    if category:
-        query = query.filter(Partner.category.ilike(f"%{category}%"))
-
-    if service_area:
-        query = query.filter(Partner.service_area.ilike(f"%{service_area}%"))
-
-    if relationship_level:
-        query = query.filter(Partner.relationship_level.ilike(f"%{relationship_level}%"))
-
-    query = query.order_by(
-        Partner.featured.desc(),
-        Partner.rating.desc().nullslast(),
-        Partner.created_at.desc()
-    )
-
-    partners = query.all()
-
-    categories = [
-        "Contractor",
-        "Realtor",
-        "Lender",
-        "Broker",
-        "Vendor",
-        "Architect",
-        "Designer",
-        "Inspector",
-        "Attorney",
-        "Cleaner",
-        "Property Manager",
-        "Other",
-    ]
-
-    relationship_levels = ["Gold", "Silver", "Preferred", "Standard"]
 
     return render_template(
         "investor/partners.html",
-        investor=ip,
         partners=partners,
-        categories=categories,
-        relationship_levels=relationship_levels,
-        selected_q=q,
-        selected_category=category,
-        selected_service_area=service_area,
-        selected_relationship_level=relationship_level,
-        title="Partner Network",
+        external_partners=external_partners,
+        fallback_used=fallback_used,
+        selected_q=selected_q,
+        selected_category=selected_category,
+        selected_service_area=selected_service_area,
+        selected_relationship_level=selected_relationship_level,
+        categories=["Contractor","Realtor","Lender","Inspector","Cleaner"],
+        relationship_levels=["Gold","Silver","Preferred"],
         active_tab="partners",
+        title="Partner Network"
     )
 
 
