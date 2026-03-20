@@ -390,7 +390,7 @@ def messages():
             flash("Receiver and message body are required.", "danger")
             return redirect(url_for("loan_officer.messages"))
 
-        recipient = User.query.filter_by(id=recipient_id).first()
+        recipient = User.query.filter_by(id=receiver_id).first()
         if not recipient:
             flash("Recipient not found.", "danger")
             return redirect(url_for("loan_officer.messages"))
