@@ -6895,64 +6895,99 @@ def create_external_partner_request(lead_id):
     flash("External partner request created.", "success")
     return redirect(url_for("investor.partner_marketplace"))
 
+
 @investor_bp.route("/partners", methods=["GET"])
 @login_required
 @role_required("investor")
 def partners():
-
-    selected_q = (request.args.get("q") or "").strip()
+    selected_company = (request.args.get("company") or "").strip()
+    selected_keyword = (request.args.get("keyword") or "").strip()
     selected_category = (request.args.get("category") or "").strip()
-    selected_service_area = (request.args.get("service_area") or "").strip()
+    selected_city = (request.args.get("city") or "").strip()
+    selected_state = (request.args.get("state") or "").strip()
+    selected_zip_code = (request.args.get("zip_code") or "").strip()
     selected_relationship_level = (request.args.get("relationship_level") or "").strip()
 
-    # Internal search
-    partners = search_internal_partners(
-        Partner,
-        category=selected_category,
-        city=selected_service_area,
+    query = Partner.query.filter(
+        Partner.active.is_(True),
+        Partner.approved.is_(True)
     )
 
-    # Filter by search text
-    if selected_q:
-        q = selected_q.lower()
-        partners = [
-            p for p in partners
-            if q in (p.get("name") or "").lower()
-            or q in (p.get("business_name") or "").lower()
-            or q in (p.get("category") or "").lower()
-        ]
-
-    # Relationship filter
-    if selected_relationship_level:
-        partners = [
-            p for p in partners
-            if (p.get("relationship_level") or "").lower() == selected_relationship_level.lower()
-        ]
-
-    fallback_used = False
-    external_partners = []
-
-    # 🚨 KEY: fallback logic
-    if not partners and selected_service_area and selected_category:
-        fallback_used = True
-        external_partners = search_google_places(
-            selected_service_area,
-            selected_category
+    if selected_company:
+        query = query.filter(
+            or_(
+                Partner.company.ilike(f"%{selected_company}%"),
+                Partner.name.ilike(f"%{selected_company}%")
+            )
         )
+
+    if selected_keyword:
+        query = query.filter(
+            or_(
+                Partner.category.ilike(f"%{selected_keyword}%"),
+                Partner.type.ilike(f"%{selected_keyword}%"),
+                Partner.specialty.ilike(f"%{selected_keyword}%"),
+                Partner.listing_description.ilike(f"%{selected_keyword}%"),
+                Partner.bio.ilike(f"%{selected_keyword}%")
+            )
+        )
+
+    if selected_category:
+        query = query.filter(Partner.category == selected_category)
+
+    if selected_city:
+        query = query.filter(Partner.city.ilike(f"%{selected_city}%"))
+
+    if selected_state:
+        query = query.filter(Partner.state.ilike(f"%{selected_state}%"))
+
+    if selected_zip_code:
+        query = query.filter(Partner.zip_code.ilike(f"%{selected_zip_code}%"))
+
+    if selected_relationship_level:
+        query = query.filter(Partner.relationship_level == selected_relationship_level)
+
+    partners = query.order_by(
+        Partner.featured.desc(),
+        Partner.is_verified.desc(),
+        Partner.rating.desc().nullslast(),
+        Partner.review_count.desc().nullslast(),
+        Partner.company.asc().nullslast(),
+        Partner.name.asc()
+    ).all()
+
+    categories = [
+        row[0] for row in db.session.query(Partner.category)
+        .filter(Partner.category.isnot(None))
+        .distinct()
+        .order_by(Partner.category.asc())
+        .all()
+        if row[0]
+    ]
+
+    relationship_levels = [
+        row[0] for row in db.session.query(Partner.relationship_level)
+        .filter(Partner.relationship_level.isnot(None))
+        .distinct()
+        .order_by(Partner.relationship_level.asc())
+        .all()
+        if row[0]
+    ]
 
     return render_template(
         "investor/partners.html",
         partners=partners,
-        external_partners=external_partners,
-        fallback_used=fallback_used,
-        selected_q=selected_q,
+        external_partners=[],
+        fallback_used=False,
+        categories=categories,
+        relationship_levels=relationship_levels,
+        selected_company=selected_company,
+        selected_keyword=selected_keyword,
         selected_category=selected_category,
-        selected_service_area=selected_service_area,
+        selected_city=selected_city,
+        selected_state=selected_state,
+        selected_zip_code=selected_zip_code,
         selected_relationship_level=selected_relationship_level,
-        categories=["Contractor","Realtor","Lender","Inspector","Cleaner"],
-        relationship_levels=["Gold","Silver","Preferred"],
-        active_tab="partners",
-        title="Partner Network"
     )
 
 
