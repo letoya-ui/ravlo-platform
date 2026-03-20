@@ -3109,27 +3109,38 @@ def deal_studio():
         },
         {
             "name": "AI Deal Architect",
-            "description": "Generate strategy analysis and deal scoring.",
+            "description": "Generate strategy insights, risk scoring, and execution guidance.",
             "icon": "brain-circuit",
             "endpoint": "investor.deal_architect"
         },
+
+        # 🔵 NEW — BUDGET STUDIO
+        {
+            "name": "Budget Studio",
+            "description": "Build renovation budgets, define scope, and pressure-test deal assumptions.",
+            "icon": "calculator",
+            "endpoint": "investor.budget_studio"
+        },
+
+        # 🟠 FIXED — REHAB STUDIO
         {
             "name": "Rehab Studio",
-            "description": "Create renovation scopes and visual concepts.",
-            "icon": "hammer",
+            "description": "Visualize before-and-after transformations and bring your renovation vision to life.",
+            "icon": "image",
             "endpoint": "investor.deals_list"
         },
+
         {
             "name": "Build Studio",
-            "description": "Design ground-up development concepts.",
+            "description": "Design ground-up development scenarios and construction plans.",
             "icon": "home",
             "endpoint": "investor.build_studio"
         },
         {
             "name": "Deal Copilot",
-            "description": "AI assistant for deal analysis and funding prep.",
+            "description": "AI assistant for deal analysis, structuring, and funding preparation.",
             "icon": "bot",
-            "endpoint": "ai.dashboard"
+            "endpoint": "investor.ask_ai_page"  # (adjust if different)
         }
     ]
 

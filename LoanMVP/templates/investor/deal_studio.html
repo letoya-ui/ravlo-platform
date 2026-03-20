@@ -10,20 +10,25 @@ Analyze opportunities, design projects, and prepare deals for funding.
 
 <div class="ravlo-shell">
 
+  <!-- HERO -->
   <section class="ravlo-hero-card">
     <div>
       <div class="eyebrow">RAVLO WORKSPACE</div>
       <h2>Your Investment Command Workspace</h2>
       <p class="muted">
-        Find deals, analyze opportunities, plan renovations, or design new builds — all from one place.
+        Analyze deals, build budgets, visualize renovations, and design new construction — all in one place.
       </p>
     </div>
   </section>
 
+  <!-- TOOL GRID -->
   <div class="ravlo-grid cols-3 mt-20">
 
     {% for tool in tools %}
-    <a href="{{ url_for(tool.endpoint) }}" class="studio-card">
+    <a href="{{ url_for(tool.endpoint) }}"
+       class="studio-card
+       {% if tool.name == 'Budget Studio' %}studio-card-primary{% endif %}
+       {% if tool.name == 'Rehab Studio' %}studio-card-visual{% endif %}">
 
       <div class="studio-icon">
         <i class="lucide lucide-{{ tool.icon }}"></i>
@@ -37,6 +42,14 @@ Analyze opportunities, design projects, and prepare deals for funding.
         {{ tool.description }}
       </div>
 
+      {% if tool.name == "Budget Studio" %}
+        <div class="studio-badge">Core Engine</div>
+      {% endif %}
+
+      {% if tool.name == "Rehab Studio" %}
+        <div class="studio-badge studio-badge-visual">Visual Engine</div>
+      {% endif %}
+
     </a>
     {% endfor %}
 
@@ -46,7 +59,12 @@ Analyze opportunities, design projects, and prepare deals for funding.
 
 <style>
 
+/* ============================= */
+/* BASE CARD */
+/* ============================= */
+
 .studio-card{
+  position:relative;
   display:block;
   padding:26px;
   border-radius:18px;
@@ -54,12 +72,17 @@ Analyze opportunities, design projects, and prepare deals for funding.
   border:1px solid rgba(255,255,255,.08);
   text-decoration:none;
   transition:.18s ease;
+  overflow:hidden;
 }
 
 .studio-card:hover{
   transform:translateY(-3px);
   border-color:rgba(107,127,147,.35);
 }
+
+/* ============================= */
+/* ICON + TEXT */
+/* ============================= */
 
 .studio-icon{
   font-size:26px;
@@ -75,6 +98,50 @@ Analyze opportunities, design projects, and prepare deals for funding.
 .studio-desc{
   font-size:14px;
   color:var(--muted);
+}
+
+/* ============================= */
+/* BUDGET STUDIO (CORE ENGINE) */
+/* ============================= */
+
+.studio-card-primary{
+  border-color:rgba(122,184,255,.35);
+  background:
+    radial-gradient(600px 220px at 0% 0%, rgba(122,184,255,.12), transparent 60%),
+    rgba(255,255,255,.04);
+}
+
+/* ============================= */
+/* REHAB STUDIO (VISUAL ENGINE) */
+/* ============================= */
+
+.studio-card-visual{
+  border-color:rgba(255,180,120,.35);
+  background:
+    radial-gradient(600px 220px at 100% 0%, rgba(255,180,120,.12), transparent 60%),
+    rgba(255,255,255,.04);
+}
+
+/* ============================= */
+/* BADGES */
+/* ============================= */
+
+.studio-badge{
+  position:absolute;
+  top:14px;
+  right:14px;
+  font-size:11px;
+  padding:4px 8px;
+  border-radius:999px;
+  background:rgba(122,184,255,.15);
+  border:1px solid rgba(122,184,255,.35);
+  color:#9ecbff;
+}
+
+.studio-badge-visual{
+  background:rgba(255,180,120,.15);
+  border:1px solid rgba(255,180,120,.35);
+  color:#ffc999;
 }
 
 </style>
