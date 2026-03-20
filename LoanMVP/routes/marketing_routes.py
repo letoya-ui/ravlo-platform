@@ -320,4 +320,10 @@ def partner_plans():
 
 @marketing_bp.route("/lending-os")
 def lending_os():
-    return render_template("marketing/lending_os.html")
+    return render_template(
+        "marketing/lending_os.html",
+        page_title="Ravlo Lending OS",
+        meta_description="Ravlo Lending OS for modern lending workflow, borrower intake, team execution, and software licensing.",
+        page_key="lending_os",
+        hero_image="images/marketing/lending_os_hero.jpg",
+    )
