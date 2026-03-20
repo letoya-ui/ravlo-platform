@@ -101,69 +101,89 @@
 {% block content %}
 <section class="mk-section">
   <div class="mk-container">
+
     <div class="mk-section-head">
       <div class="mk-eyebrow">Platform Overview</div>
-      <h2 class="mk-title-lg">A connected lending workspace built for speed, visibility, and cleaner execution.</h2>
+      <h2 class="mk-title-lg">
+        The operating layer behind lending execution.
+      </h2>
       <p class="mk-copy-lg">
-        Lending OS supports the real workflow behind modern lending teams, from borrower entry point
-        to processing, conditions, review, and operational handoff.
+        Lending OS connects borrower intake, pipeline movement, conditions tracking,
+        and team coordination into one unified system designed for speed and clarity.
       </p>
     </div>
 
+    <!-- ===================== -->
+    <!-- SPLIT PANEL (MAIN MOMENT) -->
+    <!-- ===================== -->
+    <div class="mk-split-panel">
+
+      <div class="mk-panel">
+        <h3>From borrower entry to clear-to-close</h3>
+        <p>
+          Lending OS creates a connected workflow between front-end borrower intake
+          and back-end execution, helping teams move faster without losing visibility.
+        </p>
+
+        <ul class="mk-bullet-list">
+          <li>Borrower intake & application flow</li>
+          <li>Loan pipeline & stage tracking</li>
+          <li>Conditions & document management</li>
+          <li>Internal team coordination</li>
+          <li>Borrower communication support</li>
+        </ul>
+      </div>
+
+      <div class="mk-panel mk-panel-soft">
+        <div class="mk-flow-stack">
+
+          <div class="mk-flow-step">Borrower Intake</div>
+          <div class="mk-flow-step">Loan Review</div>
+          <div class="mk-flow-step">Processing</div>
+          <div class="mk-flow-step">Underwriting</div>
+          <div class="mk-flow-step">Clear to Close</div>
+
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ===================== -->
+    <!-- 3 CORE CAPABILITIES -->
+    <!-- ===================== -->
     <div class="mk-feature-grid mk-feature-grid-3">
-      <article class="mk-feature-card">
-        <div class="mk-feature-icon"><i class="lucide lucide-file-text"></i></div>
-        <h3>Borrower Intake</h3>
-        <p>
-          Capture borrower information, project details, financial inputs, and supporting files
-          through a cleaner front-end experience.
-        </p>
-      </article>
 
       <article class="mk-feature-card">
-        <div class="mk-feature-icon"><i class="lucide lucide-layout-dashboard"></i></div>
-        <h3>Pipeline Visibility</h3>
+        <div class="mk-feature-icon"><i class="lucide lucide-clipboard-list"></i></div>
+        <h3>Origination Flow</h3>
         <p>
-          Centralize application movement and give teams a better operational view of active loans,
-          review stages, and next actions.
-        </p>
-      </article>
-
-      <article class="mk-feature-card">
-        <div class="mk-feature-icon"><i class="lucide lucide-check-check"></i></div>
-        <h3>Conditions Management</h3>
-        <p>
-          Organize underwriting conditions, documentation gaps, and task follow-up in a more structured environment.
+          Streamline borrower intake, applications, and document collection into a
+          cleaner, more controlled entry point.
         </p>
       </article>
 
       <article class="mk-feature-card">
         <div class="mk-feature-icon"><i class="lucide lucide-users"></i></div>
-        <h3>Role-Based Team Flow</h3>
+        <h3>Team Execution</h3>
         <p>
-          Support loan officers, processors, underwriters, and operations teams with clearer responsibility and cleaner handoff.
-        </p>
-      </article>
-
-      <article class="mk-feature-card">
-        <div class="mk-feature-icon"><i class="lucide lucide-message-square-text"></i></div>
-        <h3>Borrower Communication</h3>
-        <p>
-          Create a better experience around status movement, next steps, and communication throughout the lending journey.
+          Align loan officers, processors, and operations teams through structured
+          workflow and better handoff visibility.
         </p>
       </article>
 
       <article class="mk-feature-card">
         <div class="mk-feature-icon"><i class="lucide lucide-brain-circuit"></i></div>
-        <h3>AI-Ready Foundation</h3>
+        <h3>Operational Intelligence</h3>
         <p>
-          Built with room for intelligent workflow support, guidance layers, and future automation across the lending lifecycle.
+          Support decision-making, communication, and future automation through a
+          centralized lending environment.
         </p>
       </article>
+
     </div>
+
   </div>
 </section>
-
 <section id="licensing" class="mk-section mk-section-dark">
   <div class="mk-container">
     <div class="mk-split-panel">
@@ -184,29 +204,39 @@
         </div>
       </div>
 
-      <div class="mk-panel mk-panel-soft">
-        <div class="mk-check-list">
-          <div class="mk-check-item">
-            <i class="lucide lucide-check"></i>
-            <span>Brandable lender-facing experience</span>
+      <div class="mk-panel mk-panel-soft mk-license-panel">
+        <div class="mk-license-kicker">Licensing Snapshot</div>
+        <h3>Built to be branded, deployed, and expanded.</h3>
+        <p class="mk-license-copy">
+          Lending OS is designed as a foundation for lenders and operators who want
+          a modern platform layer they can shape around their own workflow, team structure,
+          and market presence.
+        </p>
+
+        <div class="mk-license-grid">
+          <div class="mk-license-stat">
+            <span>Use Case</span>
+            <strong>Lender Platform</strong>
           </div>
-          <div class="mk-check-item">
-            <i class="lucide lucide-check"></i>
-            <span>Role-aware internal dashboards</span>
+          <div class="mk-license-stat">
+            <span>Structure</span>
+            <strong>Role-Based</strong>
           </div>
-          <div class="mk-check-item">
-            <i class="lucide lucide-check"></i>
-            <span>Pipeline, review, and conditions structure</span>
+          <div class="mk-license-stat">
+            <span>Branding</span>
+            <strong>White-Label Ready</strong>
           </div>
-          <div class="mk-check-item">
-            <i class="lucide lucide-check"></i>
-            <span>Flexible foundation for growth and expansion</span>
-          </div>
-          <div class="mk-check-item">
-            <i class="lucide lucide-check"></i>
-            <span>Prepared for future AI and workflow automation</span>
-          </div>
+          <div class="mk-license-stat">
+            <span>Expansion</span>
+            <strong>AI + Workflow</strong>
+           </div>
+         </div>
+
+        <div class="mk-license-note">
+          Designed for borrower intake, pipeline management, internal execution,
+    and future automation.
         </div>
+       </div>
       </div>
     </div>
   </div>
