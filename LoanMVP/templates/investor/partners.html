@@ -1,732 +1,92 @@
-{% extends "layouts/ravlo_base.html" %}
-{% block title %}Ravlo • Partner Network{% endblock %}
-
-{% block page_title %}Partner Network{% endblock %}
-{% block page_subline %}
-Browse trusted professionals for your deals, projects, and portfolio growth.
-{% endblock %}
-
-{% block content %}
-<div class="partner-network-page">
-
-  <section class="ravlo-hero-card partner-network-hero">
-    <div class="partner-hero-copy">
-      <div class="eyebrow">RAVLO EXECUTION NETWORK</div>
-      <h2>Connect your deal to the right people.</h2>
-      <p class="ravlo-muted">
-        Search Ravlo’s growing network of approved professionals across lending, design,
-        construction, inspections, management, and more. As coverage expands, this becomes
-        the execution layer behind every Ravlo deal.
-      </p>
-
-      <div class="partner-hero-chips">
-        <span class="ravlo-chip">Search by category</span>
-        <span class="ravlo-chip">Filter by service area</span>
-        <span class="ravlo-chip">Preferred + featured partners</span>
-      </div>
-    </div>
-
-    <div class="partner-hero-side">
-      <div class="partner-side-stat">
-        <span>Network</span>
-        <strong>{{ partners|length }}</strong>
-        <small>Partners in current search</small>
-      </div>
-    </div>
-  </section>
-
-  <section class="ravlo-card partner-filter-card">
-    <form method="GET" action="{{ url_for('investor.partners') }}" class="partner-filter-form">
-      <div class="section-head">
-        <div>
-          <div class="eyebrow">DISCOVER</div>
-          <h3>Find a Partner</h3>
-        </div>
-      </div>
-
-      <div class="partner-filter-grid">
-        <div class="partner-field partner-field-wide">
-          <label class="ravlo-label">Search</label>
-          <input
-            type="text"
-            name="q"
-            value="{{ selected_q }}"
-            class="ravlo-input"
-            placeholder="Name, company, category, specialty, area..."
-          >
-        </div>
-
-        <div class="partner-field">
-          <label class="ravlo-label">Category</label>
-          <select name="category" class="ravlo-input">
-            <option value="">All</option>
-            {% for item in categories %}
-              <option value="{{ item }}" {% if selected_category == item %}selected{% endif %}>{{ item }}</option>
-            {% endfor %}
-          </select>
-        </div>
-
-        <div class="partner-field">
-          <label class="ravlo-label">Service Area</label>
-          <input
-            type="text"
-            name="service_area"
-            value="{{ selected_service_area }}"
-            class="ravlo-input"
-            placeholder="Tampa, Orlando, Orange County..."
-          >
-        </div>
-
-        <div class="partner-field">
-          <label class="ravlo-label">Relationship</label>
-          <select name="relationship_level" class="ravlo-input">
-            <option value="">All</option>
-            {% for item in relationship_levels %}
-              <option value="{{ item }}" {% if selected_relationship_level == item %}selected{% endif %}>{{ item }}</option>
-            {% endfor %}
-          </select>
-        </div>
-      </div>
-
-      <div class="partner-action-row">
-        <button type="submit" class="ravlo-btn primary">Search Partners</button>
-        <a href="{{ url_for('investor.partners') }}" class="ravlo-btn ghost">Reset</a>
-      </div>
-    </form>
-  </section>
-
-  {% if selected_service_area or selected_category or selected_q or selected_relationship_level %}
-    <section class="ravlo-card partner-search-summary">
-      <div class="partner-search-summary-row">
-        <div>
-          <div class="eyebrow">SEARCH SNAPSHOT</div>
-          <h3>{{ partners|length }} match{% if partners|length != 1 %}es{% endif %} found</h3>
-          <p class="ravlo-muted">
-            {% if selected_category %}<strong>Category:</strong> {{ selected_category }}{% endif %}
-            {% if selected_category and selected_service_area %} • {% endif %}
-            {% if selected_service_area %}<strong>Area:</strong> {{ selected_service_area }}{% endif %}
-            {% if (selected_category or selected_service_area) and selected_relationship_level %} • {% endif %}
-            {% if selected_relationship_level %}<strong>Relationship:</strong> {{ selected_relationship_level }}{% endif %}
-          </p>
-        </div>
-
-        {% if not partners and not external_partners %}
-          <div class="partner-network-callout">
-            No approved Ravlo partner matched this search yet.
-          </div>
-        {% endif %}
-      </div>
-    </section>
-  {% endif %}
-
-  {% if fallback_used %}
-    <div class="ravlo-alert warning">
-      No Ravlo partners found in this area yet — showing recommended professionals nearby.
-    </div>
-  {% endif %}
-
-  <section class="partner-results-grid">
-    {% for partner in partners %}
-      {% set partner_desc = partner.listing_description or partner.bio or "Trusted partner available through Ravlo." %}
-      {% set partner_name = partner.company or partner.name %}
-      {% set partner_tier = partner.subscription_tier or "Free" %}
-      {% set partner_relationship = partner.relationship_level or "Network" %}
-      {% set partner_status = partner.status or "Active" %}
-
-      <article class="ravlo-card partner-card">
-        <div class="partner-card-topglow"></div>
-
-        <div class="partner-card-head">
-          <div class="partner-card-title-wrap">
-            <div class="partner-identity-row">
-              <h3 class="partner-card-title">{{ partner_name }}</h3>
-
-              {% if partner.featured %}
-                <span class="partner-badge featured">Featured</span>
-              {% endif %}
-
-              {% if partner.approved %}
-                <span class="partner-badge approved">Approved</span>
-              {% endif %}
-            </div>
-
-            <div class="ravlo-muted partner-card-sub">
-              {{ partner.category or "Partner" }}
-              {% if partner.specialty %} • {{ partner.specialty }}{% endif %}
-            </div>
-          </div>
-
-          {% if partner.rating %}
-            <div class="partner-rating-pill">
-              ★ {{ "%.1f"|format(partner.rating) }}
-            </div>
-          {% endif %}
-        </div>
-
-        <div class="partner-meta-grid">
-          <div class="partner-meta-item">
-            <span>Service Area</span>
-            <strong>{{ partner.service_area or "Not listed" }}</strong>
-          </div>
-
-          <div class="partner-meta-item">
-            <span>Relationship</span>
-            <strong>{{ partner_relationship }}</strong>
-          </div>
-
-          <div class="partner-meta-item">
-            <span>Status</span>
-            <strong>{{ partner_status }}</strong>
-          </div>
-
-          <div class="partner-meta-item">
-            <span>Tier</span>
-            <strong>{{ partner_tier }}</strong>
-          </div>
-        </div>
-
-        <p class="partner-card-desc">
-          {{ partner_desc[:190] }}{% if partner_desc|length > 190 %}...{% endif %}
-        </p>
-
-        <div class="partner-chip-row">
-          {% if partner.type %}
-            <span class="ravlo-chip">{{ partner.type }}</span>
-          {% endif %}
-          {% if partner.relationship_level %}
-            <span class="ravlo-chip">{{ partner.relationship_level }}</span>
-          {% endif %}
-          {% if partner.rating %}
-            <span class="ravlo-chip">Rated {{ "%.1f"|format(partner.rating) }}</span>
-          {% endif %}
-        </div>
-
-        <div class="partner-contact-row">
-          {% if partner.email %}
-            <div class="partner-contact-item">
-              <span>Email</span>
-              <strong>{{ partner.email }}</strong>
-            </div>
-          {% endif %}
-          {% if partner.phone %}
-            <div class="partner-contact-item">
-              <span>Phone</span>
-              <strong>{{ partner.phone }}</strong>
-            </div>
-          {% endif %}
-        </div>
-
-        <div class="partner-card-actions">
-          <a href="{{ url_for('investor.partner_detail', partner_id=partner.id) }}" class="ravlo-btn primary">
-            View Partner
-          </a>
-
-          {% if partner.website %}
-            <a href="{{ partner.website }}" target="_blank" rel="noopener noreferrer" class="ravlo-btn ghost">
-              Visit Site
-            </a>
-          {% endif %}
-        </div>
-      </article>
-    {% endfor %}
-
-    {% if not partners and not external_partners %}
-      <div class="ravlo-card partner-empty-state">
-        <div class="eyebrow">NO MATCHES</div>
-        <h3>No partners found in this search</h3>
-        <p class="ravlo-muted">
-          Try adjusting your filters, broadening the service area, or continue building out Ravlo’s approved network.
-          This is also the perfect place to later trigger an external fallback search when no local partner exists.
-        </p>
-
-        <div class="partner-empty-actions">
-          <a href="{{ url_for('investor.partners') }}" class="ravlo-btn ghost">Reset Search</a>
-        </div>
-      </div>
-    {% endif %}
-  </section>
-
-  {% if external_partners %}
-    <section class="ravlo-card partner-search-summary external-partners-intro">
+<section class="ravlo-card partner-filter-card">
+  <form method="GET" action="{{ url_for('investor.partners') }}" class="partner-filter-form">
+    <div class="section-head">
       <div>
-        <div class="eyebrow">RECOMMENDED NEARBY</div>
-        <h3>External professionals near your search area</h3>
-        <p class="ravlo-muted">
-          These are suggested professionals outside the Ravlo approved network. You can review them and save promising options into Ravlo for follow-up.
-        </p>
+        <div class="eyebrow">DISCOVER</div>
+        <h3>Find a Partner</h3>
       </div>
-    </section>
-
-    <section class="partner-results-grid">
-      {% for partner in external_partners %}
-        <article class="ravlo-card partner-card external-partner-card">
-          <div class="partner-card-topglow"></div>
-
-          <div class="partner-card-head">
-            <div class="partner-card-title-wrap">
-              <div class="partner-identity-row">
-                <h3 class="partner-card-title">{{ partner.name }}</h3>
-                <span class="partner-badge external">External</span>
-              </div>
-
-              <div class="ravlo-muted partner-card-sub">
-                {{ selected_category or "Recommended Partner" }}
-              </div>
-            </div>
-
-            {% if partner.rating %}
-              <div class="partner-rating-pill">
-                ★ {{ partner.rating }}
-              </div>
-            {% endif %}
-          </div>
-
-          <div class="partner-meta-grid">
-            <div class="partner-meta-item">
-              <span>Address</span>
-              <strong>{{ partner.address or "Not listed" }}</strong>
-            </div>
-
-            <div class="partner-meta-item">
-              <span>Source</span>
-              <strong>Recommended Nearby</strong>
-            </div>
-          </div>
-
-          <p class="partner-card-desc">
-            Suggested based on your current area and category search. Save this lead into Ravlo to review, qualify, and potentially onboard into your execution network.
-          </p>
-
-          <div class="partner-chip-row">
-            <span class="ravlo-chip">{{ selected_category or "Partner" }}</span>
-            {% if partner.rating %}
-              <span class="ravlo-chip">Rated {{ partner.rating }}</span>
-            {% endif %}
-          </div>
-
-          <div class="partner-card-actions">
-            <form method="POST" action="{{ url_for('investor.save_external_partner_lead') }}" class="external-partner-form">
-              {% if csrf_token is defined %}
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-              {% endif %}
-              <input type="hidden" name="name" value="{{ partner.name }}">
-              <input type="hidden" name="category" value="{{ selected_category or '' }}">
-              <input type="hidden" name="address" value="{{ partner.address }}">
-              <input type="hidden" name="external_id" value="{{ partner.external_id }}">
-              <button type="submit" class="ravlo-btn primary sm">Save to Ravlo</button>
-            </form>
-          </div>
-        </article>
-      {% endfor %}
-    </section>
-  {% endif %}
-</div>
-
-<style>
-  .partner-network-page{
-    display:grid;
-    gap:20px;
-    min-width:0;
-  }
-
-  .partner-network-hero{
-    position:relative;
-    display:grid;
-    grid-template-columns:minmax(0,1.3fr) minmax(260px,.7fr);
-    gap:20px;
-    align-items:end;
-    overflow:hidden;
-  }
-
-  .partner-network-hero::after{
-    content:"";
-    position:absolute;
-    right:-80px;
-    bottom:-100px;
-    width:260px;
-    height:260px;
-    background:radial-gradient(circle, rgba(86,132,184,.18), transparent 65%);
-    filter:blur(24px);
-    pointer-events:none;
-  }
-
-  .partner-hero-copy{
-    position:relative;
-    z-index:2;
-    display:grid;
-    gap:14px;
-  }
-
-  .partner-hero-copy h2{
-    margin:0;
-    line-height:1.03;
-    letter-spacing:-.04em;
-    font-size:clamp(2rem, 3vw, 3.2rem);
-  }
-
-  .partner-hero-chips{
-    display:flex;
-    flex-wrap:wrap;
-    gap:10px;
-    margin-top:4px;
-  }
-
-  .partner-hero-side{
-    display:grid;
-    align-self:stretch;
-  }
-
-  .partner-side-stat{
-    display:grid;
-    gap:10px;
-    padding:24px;
-    border-radius:24px;
-    border:1px solid rgba(255,255,255,.08);
-    background:linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02));
-    box-shadow:
-      inset 0 1px 0 rgba(255,255,255,.04),
-      0 12px 28px rgba(0,0,0,.22);
-  }
-
-  .partner-side-stat span{
-    color:rgba(255,255,255,.62);
-    font-size:.8rem;
-    text-transform:uppercase;
-    letter-spacing:.18em;
-    font-weight:700;
-  }
-
-  .partner-side-stat strong{
-    font-size:clamp(2.4rem, 4vw, 4rem);
-    line-height:1;
-    letter-spacing:-.06em;
-  }
-
-  .partner-side-stat small{
-    color:rgba(255,255,255,.72);
-  }
-
-  .partner-filter-card,
-  .partner-card,
-  .partner-empty-state,
-  .partner-search-summary{
-    min-width:0;
-  }
-
-  .partner-filter-form{
-    display:grid;
-    gap:16px;
-  }
-
-  .partner-filter-grid{
-    display:grid;
-    grid-template-columns:repeat(4, minmax(0, 1fr));
-    gap:14px;
-    min-width:0;
-  }
-
-  .partner-field{
-    min-width:0;
-  }
-
-  .partner-field-wide{
-    grid-column:span 2;
-  }
-
-  .partner-field .ravlo-input{
-    width:100%;
-    min-width:0;
-  }
-
-  .partner-action-row{
-    display:flex;
-    gap:10px;
-    flex-wrap:wrap;
-  }
-
-  .partner-search-summary{
-    padding:20px 22px;
-  }
-
-  .partner-search-summary-row{
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-    gap:16px;
-    flex-wrap:wrap;
-  }
-
-  .partner-search-summary h3{
-    margin:4px 0 6px;
-  }
-
-  .partner-network-callout{
-    padding:.7rem .95rem;
-    border-radius:999px;
-    background:rgba(255,196,0,.12);
-    border:1px solid rgba(255,196,0,.2);
-    color:#ffd977;
-    font-weight:700;
-    white-space:nowrap;
-  }
-
-  .partner-results-grid{
-    display:grid;
-    grid-template-columns:repeat(3, minmax(0, 1fr));
-    gap:16px;
-    min-width:0;
-  }
-
-  .partner-card{
-    position:relative;
-    display:flex;
-    flex-direction:column;
-    min-height:100%;
-    overflow:hidden;
-    border:1px solid rgba(255,255,255,.08);
-    background:
-      linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.02)),
-      linear-gradient(160deg, rgba(15,22,30,.72), rgba(10,15,22,.82));
-  }
-
-  .partner-card-topglow{
-    position:absolute;
-    inset:0 auto auto 0;
-    width:100%;
-    height:120px;
-    background:linear-gradient(180deg, rgba(92,130,170,.14), transparent);
-    pointer-events:none;
-  }
-
-  .partner-card-head{
-    position:relative;
-    display:flex;
-    justify-content:space-between;
-    align-items:flex-start;
-    gap:12px;
-  }
-
-  .partner-card-title-wrap{
-    min-width:0;
-    position:relative;
-    z-index:2;
-  }
-
-  .partner-identity-row{
-    display:flex;
-    gap:8px;
-    flex-wrap:wrap;
-    align-items:center;
-  }
-
-  .partner-card-title{
-    margin:0;
-    line-height:1.2;
-  }
-
-  .partner-card-sub{
-    margin-top:8px;
-  }
-
-  .partner-badge{
-    display:inline-flex;
-    align-items:center;
-    justify-content:center;
-    min-height:28px;
-    padding:0 .75rem;
-    border-radius:999px;
-    font-size:.72rem;
-    font-weight:800;
-    letter-spacing:.04em;
-  }
-
-  .partner-badge.featured{
-    background:rgba(255,208,102,.16);
-    color:#ffd977;
-    border:1px solid rgba(255,208,102,.22);
-  }
-
-  .partner-badge.approved{
-    background:rgba(103,188,255,.14);
-    color:#9fd0ff;
-    border:1px solid rgba(103,188,255,.2);
-  }
-
-  .partner-badge.external{
-    background:rgba(255,255,255,.08);
-    color:rgba(255,255,255,.86);
-    border:1px solid rgba(255,255,255,.12);
-  }
-
-  .partner-rating-pill{
-    position:relative;
-    z-index:2;
-    padding:.55rem .8rem;
-    border-radius:999px;
-    background:rgba(255,255,255,.08);
-    border:1px solid rgba(255,255,255,.08);
-    font-weight:800;
-    white-space:nowrap;
-  }
-
-  .partner-meta-grid{
-    display:grid;
-    grid-template-columns:repeat(2, minmax(0,1fr));
-    gap:10px;
-    margin-top:16px;
-  }
-
-  .partner-meta-item{
-    display:grid;
-    gap:5px;
-    padding:12px 13px;
-    border-radius:16px;
-    background:rgba(255,255,255,.03);
-    border:1px solid rgba(255,255,255,.05);
-  }
-
-  .partner-meta-item span{
-    color:rgba(255,255,255,.58);
-    font-size:.75rem;
-    text-transform:uppercase;
-    letter-spacing:.12em;
-    font-weight:700;
-  }
-
-  .partner-meta-item strong{
-    font-size:.96rem;
-    line-height:1.35;
-    word-break:break-word;
-  }
-
-  .partner-card-desc{
-    margin-top:14px;
-    line-height:1.68;
-    color:rgba(255,255,255,.82);
-  }
-
-  .partner-chip-row{
-    display:flex;
-    gap:8px;
-    flex-wrap:wrap;
-    margin-top:14px;
-  }
-
-  .partner-contact-row{
-    display:grid;
-    gap:10px;
-    margin-top:14px;
-  }
-
-  .partner-contact-item{
-    display:grid;
-    gap:4px;
-  }
-
-  .partner-contact-item span{
-    color:rgba(255,255,255,.55);
-    font-size:.74rem;
-    text-transform:uppercase;
-    letter-spacing:.14em;
-    font-weight:700;
-  }
-
-  .partner-contact-item strong{
-    word-break:break-word;
-    line-height:1.4;
-  }
-
-  .partner-card-actions{
-    margin-top:18px;
-    display:flex;
-    gap:10px;
-    flex-wrap:wrap;
-  }
-
-  .external-partner-form{
-    width:100%;
-  }
-
-  .external-partner-form .ravlo-btn{
-    width:100%;
-    justify-content:center;
-  }
-
-  .partner-empty-state{
-    grid-column:1 / -1;
-    padding:28px;
-    display:grid;
-    gap:10px;
-  }
-
-  .partner-empty-state h3{
-    margin:0;
-  }
-
-  .partner-empty-actions{
-    display:flex;
-    gap:10px;
-    flex-wrap:wrap;
-    margin-top:8px;
-  }
-
-  .external-partners-intro{
-    margin-top:2px;
-  }
-
-  @media (max-width: 1180px){
-    .partner-network-hero{
-      grid-template-columns:1fr;
-    }
-
-    .partner-filter-grid{
-      grid-template-columns:repeat(2, minmax(0, 1fr));
-    }
-
-    .partner-field-wide{
-      grid-column:span 2;
-    }
-
-    .partner-results-grid{
-      grid-template-columns:repeat(2, minmax(0, 1fr));
-    }
-  }
-
-  @media (max-width: 820px){
-    .partner-filter-grid{
-      grid-template-columns:1fr;
-    }
-
-    .partner-field-wide{
-      grid-column:span 1;
-    }
-
-    .partner-results-grid{
-      grid-template-columns:1fr;
-    }
-
-    .partner-meta-grid{
-      grid-template-columns:1fr;
-    }
-
-    .partner-action-row{
-      flex-direction:column;
-      align-items:stretch;
-    }
-
-    .partner-action-row .ravlo-btn{
-      width:100%;
-      justify-content:center;
-    }
-
-    .partner-card-actions{
-      flex-direction:column;
-    }
-
-    .partner-card-actions .ravlo-btn{
-      width:100%;
-      justify-content:center;
-    }
-  }
-</style>
-{% endblock %}
+    </div>
+
+    <div class="partner-filter-grid partner-filter-grid-v2">
+      <div class="partner-field">
+        <label class="ravlo-label">Company / Partner Name</label>
+        <input
+          type="text"
+          name="company"
+          value="{{ selected_company }}"
+          class="ravlo-input"
+          placeholder="Company or partner name..."
+        >
+      </div>
+
+      <div class="partner-field">
+        <label class="ravlo-label">Keyword</label>
+        <input
+          type="text"
+          name="keyword"
+          value="{{ selected_keyword }}"
+          class="ravlo-input"
+          placeholder="Specialty, service, type..."
+        >
+      </div>
+
+      <div class="partner-field">
+        <label class="ravlo-label">Category</label>
+        <select name="category" class="ravlo-input">
+          <option value="">All</option>
+          {% for item in categories %}
+            <option value="{{ item }}" {% if selected_category == item %}selected{% endif %}>{{ item }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="partner-field">
+        <label class="ravlo-label">Relationship</label>
+        <select name="relationship_level" class="ravlo-input">
+          <option value="">All</option>
+          {% for item in relationship_levels %}
+            <option value="{{ item }}" {% if selected_relationship_level == item %}selected{% endif %}>{{ item }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="partner-field">
+        <label class="ravlo-label">City</label>
+        <input
+          type="text"
+          name="city"
+          value="{{ selected_city }}"
+          class="ravlo-input"
+          placeholder="Tampa, Orlando..."
+        >
+      </div>
+
+      <div class="partner-field">
+        <label class="ravlo-label">State</label>
+        <input
+          type="text"
+          name="state"
+          value="{{ selected_state }}"
+          class="ravlo-input"
+          placeholder="FL, NY..."
+        >
+      </div>
+
+      <div class="partner-field">
+        <label class="ravlo-label">ZIP Code</label>
+        <input
+          type="text"
+          name="zip_code"
+          value="{{ selected_zip_code }}"
+          class="ravlo-input"
+          placeholder="33602..."
+        >
+      </div>
+    </div>
+
+    <div class="partner-action-row">
+      <button type="submit" class="ravlo-btn primary">Search Partners</button>
+      <a href="{{ url_for('investor.partners') }}" class="ravlo-btn ghost">Reset</a>
+    </div>
+  </form>
+</section>
