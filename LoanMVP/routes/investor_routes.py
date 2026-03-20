@@ -72,7 +72,7 @@ from LoanMVP.models.borrowers import (
 )
 from LoanMVP.models.loan_officer_model import LoanOfficerProfile
 from LoanMVP.models.renovation_models import RenovationMockup, RehabJob, BuildProject
-from LoanMVP.models.partner_models import PartnerConnectionRequest
+from LoanMVP.models.partner_models import PartnerConnectionRequest, ExternalPartnerLead
 from LoanMVP.models.investor_models import InvestorProfile, Investment, InvestmentDocument, DealMessage, DealConversation, FundingRequest, Project # adjust import paths as needed
 # -------------------------
 # AI / Assistants
@@ -109,6 +109,8 @@ from LoanMVP.services.renovation_engine_client import generate_concept, call_ren
 from LoanMVP.services.property_service import resolve_rentcast_investor_bundle, build_ravlo_property_card
 from LoanMVP.utils.r2_storage import spaces_put_bytes
 
+
+from LoanMVP.services.partner_marketplace_service import search_internal_partners, search_google_places
 # ---------------------------------------------------------
 # Blueprint (INVESTOR ONLY)
 # ---------------------------------------------------------
@@ -7084,60 +7086,48 @@ def partners_filter():
 def partner_marketplace():
     ip = InvestorProfile.query.filter_by(user_id=current_user.id).first()
 
-    service_type = (request.args.get("service_type") or "").strip()
+    category = (request.args.get("category") or "").strip()
     city = (request.args.get("city") or "").strip()
     state = (request.args.get("state") or "").strip()
     zip_code = (request.args.get("zip_code") or "").strip()
 
-    deal_id = request.args.get("deal_id", type=int)
-    saved_property_id = request.args.get("saved_property_id", type=int)
+    internal_results = []
+    external_results = []
+    fallback_used = False
 
-    partners = (
-        Partner.query
-        .filter_by(is_active=True)
-        .order_by(Partner.is_preferred.desc(), Partner.is_verified.desc(), Partner.review_count.desc())
-        .all()
-    )
-
-    results = {
-        "source": "internal",
-        "partners": [],
-        "fallback_used": False,
-    }
-
-    if service_type and (city or state or zip_code):
-        location_text = ", ".join([p for p in [city, state, zip_code] if p])
-        results = build_partner_search_results(
-            internal_partners=partners,
-            service_type=service_type,
+    if category and (city or state or zip_code):
+        internal_results = search_internal_partners(
+            Partner,
+            category=category,
             city=city,
             state=state,
             zip_code=zip_code,
-            external_location_text=location_text,
         )
+
+        if not internal_results:
+            fallback_used = True
+            location_text = ", ".join([x for x in [city, state, zip_code] if x])
+            external_results = search_google_places(location_text, category)
 
     recent_requests = []
     if ip:
         recent_requests = (
-            PartnerRequest.query
+            PartnerConnectionRequest.query
             .filter_by(investor_profile_id=ip.id)
-            .order_by(PartnerRequest.created_at.desc())
+            .order_by(PartnerConnectionRequest.created_at.desc())
             .limit(10)
             .all()
         )
 
     return render_template(
         "investor/partner_marketplace.html",
-        investor=ip,
-        service_type=service_type,
+        category=category,
         city=city,
         state=state,
         zip_code=zip_code,
-        deal_id=deal_id,
-        saved_property_id=saved_property_id,
-        result_source=results["source"],
-        partners=results["partners"],
-        fallback_used=results["fallback_used"],
+        internal_results=internal_results,
+        external_results=external_results,
+        fallback_used=fallback_used,
         recent_requests=recent_requests,
         active_tab="partners",
         title="Ravlo Partner Marketplace",
@@ -7278,4 +7268,122 @@ def invite_external_partner(lead_id):
     db.session.commit()
 
     flash("External provider marked as invited.", "success")
+    return redirect(url_for("investor.partner_marketplace"))
+
+@investor_bp.route("/partners/request", methods=["POST"])
+@login_required
+@role_required("investor")
+def create_partner_connection_request():
+    ip = InvestorProfile.query.filter_by(user_id=current_user.id).first()
+
+    partner_id = request.form.get("partner_id", type=int)
+    category = (request.form.get("category") or "").strip()
+    message = (request.form.get("message") or "").strip()
+
+    if not partner_id:
+        flash("Partner selection is required.", "danger")
+        return redirect(url_for("investor.partner_marketplace"))
+
+    req = PartnerConnectionRequest(
+        investor_user_id=current_user.id,
+        investor_profile_id=ip.id if ip else None,
+        partner_id=partner_id,
+        category=category,
+        message=message,
+        source="internal",
+        status="pending",
+    )
+
+    db.session.add(req)
+    db.session.commit()
+
+    flash("Partner request sent successfully.", "success")
+    return redirect(url_for("investor.partner_marketplace"))
+
+@investor_bp.route("/partners/save-external", methods=["POST"])
+@login_required
+@role_required("investor")
+def save_external_partner_lead():
+    ip = InvestorProfile.query.filter_by(user_id=current_user.id).first()
+
+    name = (request.form.get("name") or "").strip()
+    category = (request.form.get("category") or "").strip()
+    address = (request.form.get("address") or "").strip()
+    city = (request.form.get("city") or "").strip()
+    state = (request.form.get("state") or "").strip()
+    zip_code = (request.form.get("zip_code") or "").strip()
+    external_id = (request.form.get("external_id") or "").strip()
+    source = (request.form.get("source") or "google").strip()
+
+    rating = request.form.get("rating", type=float)
+    review_count = request.form.get("review_count", type=int)
+
+    if not name:
+        flash("Provider name is required.", "danger")
+        return redirect(url_for("investor.partner_marketplace"))
+
+    existing = None
+    if external_id:
+        existing = ExternalPartnerLead.query.filter_by(external_id=external_id).first()
+
+    if existing:
+        flash("That provider is already saved.", "info")
+        return redirect(url_for("investor.partner_marketplace"))
+
+    lead = ExternalPartnerLead(
+        created_by_user_id=current_user.id,
+        investor_profile_id=ip.id if ip else None,
+        name=name,
+        business_name=name,
+        category=category,
+        address=address,
+        city=city,
+        state=state,
+        zip_code=zip_code,
+        external_id=external_id,
+        source=source,
+        rating=rating,
+        review_count=review_count or 0,
+        invite_status="saved",
+        raw_json={
+            "name": name,
+            "category": category,
+            "address": address,
+            "city": city,
+            "state": state,
+            "zip_code": zip_code,
+            "external_id": external_id,
+            "source": source,
+            "rating": rating,
+            "review_count": review_count or 0,
+        }
+    )
+
+    db.session.add(lead)
+    db.session.commit()
+
+    flash("External provider saved to the Ravlo lead pipeline.", "success")
+    return redirect(url_for("investor.partner_marketplace"))
+
+@investor_bp.route("/partners/request-external/<int:lead_id>", methods=["POST"])
+@login_required
+@role_required("investor")
+def create_external_partner_request(lead_id):
+    ip = InvestorProfile.query.filter_by(user_id=current_user.id).first()
+    lead = ExternalPartnerLead.query.get_or_404(lead_id)
+
+    req = PartnerConnectionRequest(
+        investor_user_id=current_user.id,
+        investor_profile_id=ip.id if ip else None,
+        external_partner_lead_id=lead.id,
+        category=lead.category,
+        message=f"Fallback marketplace request for external provider: {lead.name}",
+        source="external",
+        status="awaiting_match",
+    )
+
+    db.session.add(req)
+    db.session.commit()
+
+    flash("External partner request created.", "success")
     return redirect(url_for("investor.partner_marketplace"))
