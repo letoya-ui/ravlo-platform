@@ -386,7 +386,7 @@ def messages():
         subject = (request.form.get("subject") or "").strip()
         body = (request.form.get("body") or "").strip()
 
-        if not recipient_id or not body:
+        if not receiver_id or not body:
             flash("Receiver and message body are required.", "danger")
             return redirect(url_for("loan_officer.messages"))
 
