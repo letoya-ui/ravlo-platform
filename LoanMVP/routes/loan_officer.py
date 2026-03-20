@@ -454,7 +454,6 @@ def messages():
         active_conversation=active_conversation,
         borrowers=borrowers,
         leads=leads,
-        realtors=realtors,
         users=users,
         search=search,
         title="Messages",
