@@ -19,8 +19,8 @@
       <div class="ravlo-grid ravlo-grid-2">
 
         <div>
-          <label for="recipient_id">Recipient</label>
-          <select name="recipient_id" id="recipient_id" class="ravlo-input" required>
+          <label for="receiver_id">Receiver</label>
+          <select name="receiver_id" id="receiver_id" class="ravlo-input" required>
             <option value="">Select an active user</option>
             {% for user in active_users %}
               <option value="{{ user.id }}">
