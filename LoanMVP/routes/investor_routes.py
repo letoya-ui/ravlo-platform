@@ -4951,13 +4951,13 @@ def renovation_visualizer():
             "mode": mode,
             "preset": style_preset,
             "prompt": final_prompt,
-            "count": variations,
-            "steps": 33 if mode == "photo" else 38,
+            "count": 1,
+            "steps": 12 if mode == "photo" else 38,
             "strength": 0.38 if mode == "photo" else 0.48,
-            "controlnet_scale": 0.78 if mode == "photo" else 0.93,
-            "guidance": 6.5,
-            "width": 1024,
-            "height": 1024,
+            "controlnet_scale": 0.65 if mode == "photo" else 0.93,
+            "guidance":56.5,
+            "width": 768,
+            "height": 768,
         }
 
         engine_json = _post_renovation_engine_json(
@@ -4965,7 +4965,10 @@ def renovation_visualizer():
             payload,
             timeout=UPLOAD_TIMEOUT if image_file else RENDER_TIMEOUT,
         )
-
+        
+        current_app.logger.warning(f"ENGINE JSON: {engine_json}")
+        current_app.logger.warning(f"saved_paths: {engine_json.get('saved_paths')}")
+        current_app.logger.warning(f"images_base64 count: {len(engine_json.get('images_base64', []) or [])}")
         returned_urls = engine_json.get("saved_paths", []) or []
         images_b64 = engine_json.get("images_base64", []) or []
 
