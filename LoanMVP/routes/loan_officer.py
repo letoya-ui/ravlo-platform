@@ -2890,7 +2890,7 @@ def resources():
     }
 
     return render_template(
-        "loan_officer/resource_center.html",
+        "loan_officer/resources.html",
         resources=resources,
         active_tab="resource_center",
         title="Resource Center",

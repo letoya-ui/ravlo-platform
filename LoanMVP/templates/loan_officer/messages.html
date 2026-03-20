@@ -256,7 +256,82 @@ Manage borrower, lead, and realtor communication from one place.
       {% endif %}
     </div>
   </section>
+ <!-- NEW MESSAGE COMPOSER -->
+<section class="msg-panel" style="margin-bottom:18px;">
+  <div class="msg-panel-head">
+    <div>
+      <div class="msg-panel-title">Start New Message</div>
+      <div class="msg-panel-sub">Choose a recipient and start a conversation</div>
+    </div>
+  </div>
 
+  <div class="thread-compose" style="border-top:none;">
+    <form method="POST" action="{{ url_for('loan_officer.send_message') }}" class="compose-grid">
+
+      <!-- TYPE + MESSAGE TYPE -->
+      <div class="compose-row">
+        <select id="recipientType" class="re-select" required onchange="toggleRecipientSelect()">
+          <option value="">Recipient Type</option>
+          <option value="borrower">Borrower</option>
+          <option value="lead">Lead</option>
+          <option value="realtor">Realtor</option>
+        </select>
+
+        <select name="message_type" class="re-select">
+          <option value="internal">Internal</option>
+          <option value="sms">SMS</option>
+          <option value="email">Email</option>
+        </select>
+      </div>
+
+      <!-- BORROWER -->
+      <div id="borrowerWrap" style="display:none;">
+        <select id="borrowerSelect" class="re-select">
+          <option value="">Select borrower</option>
+          {% for b in borrowers %}
+            <option value="{{ b.id }}">{{ b.full_name or b.email }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <!-- LEAD -->
+      <div id="leadWrap" style="display:none;">
+        <select id="leadSelect" class="re-select">
+          <option value="">Select lead</option>
+          {% for l in leads %}
+            <option value="{{ l.id }}">{{ l.full_name if l.full_name is defined else l.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <!-- REALTOR -->
+      <div id="realtorWrap" style="display:none;">
+        <select id="realtorSelect" class="re-select">
+          <option value="">Select realtor</option>
+          {% for r in realtors %}
+            <option value="{{ r.id }}">{{ r.full_name if r.full_name is defined else r.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <!-- HIDDEN FIELDS -->
+      <input type="hidden" name="recipient_type" id="hiddenType">
+      <input type="hidden" name="recipient_id" id="hiddenId">
+
+      <!-- MESSAGE -->
+      <textarea
+        name="content"
+        class="re-textarea"
+        placeholder="Type your message..."
+        required
+      ></textarea>
+
+      <button type="submit" class="re-btn primary">
+        Send Message
+      </button>
+    </form>
+  </div>
+</section>
   <!-- RIGHT: ACTIVE THREAD -->
   <section class="msg-panel">
     {% if active_conversation %}
