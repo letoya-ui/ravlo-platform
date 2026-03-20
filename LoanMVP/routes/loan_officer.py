@@ -419,7 +419,7 @@ def messages():
 
     inbox = (
         Message.query
-        .filter_by(recipient_id=current_user.id)
+        .filter_by(receiver_id=current_user.id)
         .order_by(Message.created_at.desc())
         .all()
     )
