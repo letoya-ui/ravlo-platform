@@ -438,7 +438,7 @@ def messages():
 
     borrowers = BorrowerProfile.query.order_by(BorrowerProfile.full_name.asc()).all() if BorrowerProfile else []
     leads = Lead.query.order_by(Lead.created_at.desc()).all() if Lead and hasattr(Lead, "created_at") else []
-    realtors = Realtor.query.order_by(Realtor.name.asc()).all() if Realtor and hasattr(Realtor, "name") else []
+    
 
     users = (
         User.query

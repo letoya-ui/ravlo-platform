@@ -303,16 +303,6 @@ Manage borrower, lead, and realtor communication from one place.
           {% endfor %}
         </select>
       </div>
-
-      <!-- REALTOR -->
-      <div id="realtorWrap" style="display:none;">
-        <select id="realtorSelect" class="re-select">
-          <option value="">Select realtor</option>
-          {% for r in realtors %}
-            <option value="{{ r.id }}">{{ r.full_name if r.full_name is defined else r.name }}</option>
-          {% endfor %}
-        </select>
-      </div>
       <!-- USER -->
       <div id="userWrap" style="display:none;">
        <select id="userSelect" class="re-select">
