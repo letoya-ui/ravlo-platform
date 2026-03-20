@@ -1,440 +1,107 @@
-{% extends "layouts/ravlo_employee_base.html" %}
+{% extends "layouts/ravlo_lending_base.html" %}
 
-{% block title %}Loan Officer • Messages{% endblock %}
-
+{% block title %}Messages | Lending OS{% endblock %}
 {% block page_title %}Messages{% endblock %}
-{% block page_subline %}
-Manage borrower, lead, and realtor communication from one place.
-{% endblock %}
-
-{% block topbar_actions %}
-  <form method="GET" action="{{ url_for('loan_officer.messages') }}" style="display:flex; gap:10px; align-items:center;">
-    <input
-      type="text"
-      name="q"
-      value="{{ search or '' }}"
-      placeholder="Search messages..."
-      class="re-input"
-      style="min-width:240px;"
-    >
-    <button class="re-btn ghost sm" type="submit">Search</button>
-  </form>
-{% endblock %}
+{% block page_subline %}Connect with active users across the platform.{% endblock %}
 
 {% block content %}
-<style>
-  .msg-shell{
-    display:grid;
-    grid-template-columns: 360px minmax(0,1fr);
-    gap:18px;
-    min-height:72vh;
-  }
-  .msg-panel{
-    border-radius:22px;
-    border:1px solid rgba(255,255,255,.08);
-    background:rgba(255,255,255,.03);
-    overflow:hidden;
-    backdrop-filter:blur(10px);
-  }
-  .msg-panel-head{
-    padding:16px 18px;
-    border-bottom:1px solid rgba(255,255,255,.06);
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-  }
-  .msg-panel-title{
-    font-size:1rem;
-    font-weight:700;
-    color:#fff;
-  }
-  .msg-panel-sub{
-    color:#9db0c3;
-    font-size:.88rem;
-    margin-top:4px;
-  }
-  .msg-list{
-    display:flex;
-    flex-direction:column;
-    max-height:72vh;
-    overflow:auto;
-  }
-  .msg-list a{
-    text-decoration:none;
-    color:inherit;
-  }
-  .msg-list-item{
-    padding:14px 16px;
-    border-bottom:1px solid rgba(255,255,255,.05);
-    transition:.18s ease;
-  }
-  .msg-list-item:hover{
-    background:rgba(255,255,255,.03);
-  }
-  .msg-list-item.active{
-    background:rgba(58,92,122,.20);
-    border-left:3px solid #3A5C7A;
-  }
-  .msg-name{
-    display:flex;
-    justify-content:space-between;
-    gap:12px;
-    font-weight:700;
-    color:#fff;
-    margin-bottom:6px;
-  }
-  .msg-meta{
-    font-size:.82rem;
-    color:#8ca0b3;
-    margin-bottom:6px;
-  }
-  .msg-preview{
-    font-size:.9rem;
-    color:#d8e0e8;
-    line-height:1.4;
-    white-space:nowrap;
-    overflow:hidden;
-    text-overflow:ellipsis;
-  }
-  .msg-count{
-    display:inline-flex;
-    align-items:center;
-    justify-content:center;
-    min-width:26px;
-    height:26px;
-    padding:0 8px;
-    border-radius:999px;
-    background:rgba(255,255,255,.08);
-    color:#fff;
-    font-size:.78rem;
-    font-weight:700;
-  }
+<div class="ravlo-shell">
 
-  .thread-wrap{
-    display:flex;
-    flex-direction:column;
-    height:100%;
-    min-height:72vh;
-  }
-  .thread-head{
-    padding:18px 20px;
-    border-bottom:1px solid rgba(255,255,255,.06);
-  }
-  .thread-title{
-    font-size:1.06rem;
-    font-weight:800;
-    color:#fff;
-  }
-  .thread-sub{
-    color:#90a4b8;
-    margin-top:4px;
-    font-size:.88rem;
-  }
-  .thread-messages{
-    flex:1;
-    padding:18px;
-    display:flex;
-    flex-direction:column;
-    gap:14px;
-    overflow:auto;
-    background:
-      radial-gradient(900px 500px at 10% 0%, rgba(58,92,122,.12), transparent 45%),
-      rgba(255,255,255,.01);
-  }
-  .bubble{
-    max-width:78%;
-    padding:12px 14px;
-    border-radius:18px;
-    line-height:1.45;
-    font-size:.95rem;
-    border:1px solid rgba(255,255,255,.07);
-  }
-  .bubble.outbound{
-    align-self:flex-end;
-    background:rgba(58,92,122,.26);
-    color:#fff;
-  }
-  .bubble.inbound{
-    align-self:flex-start;
-    background:rgba(255,255,255,.05);
-    color:#e7edf4;
-  }
-  .bubble-meta{
-    margin-top:7px;
-    font-size:.76rem;
-    color:#95a8ba;
-  }
-  .thread-compose{
-    padding:16px 18px;
-    border-top:1px solid rgba(255,255,255,.06);
-    background:rgba(12,17,22,.65);
-  }
-  .compose-grid{
-    display:grid;
-    gap:12px;
-  }
-  .compose-row{
-    display:grid;
-    grid-template-columns: 180px 1fr;
-    gap:12px;
-  }
-  .re-input, .re-textarea, .re-select{
-    width:100%;
-    border-radius:14px;
-    border:1px solid rgba(255,255,255,.10);
-    background:rgba(255,255,255,.04);
-    color:#fff;
-    padding:12px 14px;
-    outline:none;
-  }
-  .re-textarea{
-    min-height:120px;
-    resize:vertical;
-  }
-  .empty-state{
-    display:grid;
-    place-items:center;
-    min-height:72vh;
-    color:#9db0c3;
-    padding:30px;
-    text-align:center;
-  }
-
-  @media (max-width: 1080px){
-    .msg-shell{
-      grid-template-columns:1fr;
-    }
-    .msg-panel,
-    .thread-wrap{
-      min-height:auto;
-    }
-    .msg-list{
-      max-height:360px;
-    }
-  }
-</style>
-
-<div class="msg-shell">
-
-  <!-- LEFT: CONVERSATIONS -->
-  <section class="msg-panel">
-    <div class="msg-panel-head">
+  <section class="ravlo-card">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
       <div>
-        <div class="msg-panel-title">Inbox</div>
-        <div class="msg-panel-sub">{{ conversations|length }} conversation{{ '' if conversations|length == 1 else 's' }}</div>
+        <h3 style="margin-bottom:6px;">Send Message</h3>
+        <p class="muted" style="margin:0;">Only active users are shown here.</p>
       </div>
     </div>
 
-    <div class="msg-list">
-      {% if conversations %}
-        {% for convo in conversations %}
-          {% set is_active = active_conversation
-              and active_conversation.recipient_type == convo.recipient_type
-              and active_conversation.recipient_id == convo.recipient_id %}
-          <a href="{{ url_for('loan_officer.messages', recipient_type=convo.recipient_type, recipient_id=convo.recipient_id) }}">
-            <div class="msg-list-item {% if is_active %}active{% endif %}">
-              <div class="msg-name">
-                <span>{{ convo.recipient_name }}</span>
-                <span class="msg-count">{{ convo.message_count }}</span>
-              </div>
-              <div class="msg-meta">
-                {{ convo.recipient_type|title }} • {{ convo.last_message.message_type|upper }}
-                {% if convo.last_message.sent_at %}
-                  • {{ convo.last_message.sent_at.strftime('%b %d, %Y %I:%M %p') }}
-                {% endif %}
-              </div>
-              <div class="msg-preview">
-                {{ convo.last_message.content or "No content" }}
-              </div>
-            </div>
-          </a>
-        {% endfor %}
-      {% else %}
-        <div class="msg-list-item">
-          <div class="msg-meta">No messages found yet.</div>
+    <form method="POST" style="margin-top:18px;">
+      <div class="ravlo-grid ravlo-grid-2">
+
+        <div>
+          <label for="recipient_id">Recipient</label>
+          <select name="recipient_id" id="recipient_id" class="ravlo-input" required>
+            <option value="">Select an active user</option>
+            {% for user in active_users %}
+              <option value="{{ user.id }}">
+                {{ user.full_name or ((user.first_name or "") ~ " " ~ (user.last_name or ""))|trim }}
+                {% if user.role %} • {{ user.role|replace('_', ' ')|title }}{% endif %}
+              </option>
+            {% endfor %}
+          </select>
         </div>
-      {% endif %}
-    </div>
-  </section>
- <!-- NEW MESSAGE COMPOSER -->
-<section class="msg-panel" style="margin-bottom:18px;">
-  <div class="msg-panel-head">
-    <div>
-      <div class="msg-panel-title">Start New Message</div>
-      <div class="msg-panel-sub">Choose a recipient and start a conversation</div>
-    </div>
-  </div>
 
-  <div class="thread-compose" style="border-top:none;">
-    <form method="POST" action="{{ url_for('loan_officer.send_message') }}" class="compose-grid">
+        <div>
+          <label for="subject">Subject</label>
+          <input type="text" name="subject" id="subject" class="ravlo-input" placeholder="Subject">
+        </div>
 
-      <!-- TYPE + MESSAGE TYPE -->
-      <div class="compose-row">
-        <select id="recipientType" class="re-select" required onchange="toggleRecipientSelect()">
-          <option value="">Recipient Type</option>
-          <option value="borrower">Borrower</option>
-          <option value="lead">Lead</option>
-          <option value="realtor">Realtor</option>
-        </select>
-
-        <select name="message_type" class="re-select">
-          <option value="internal">Internal</option>
-          <option value="sms">SMS</option>
-          <option value="email">Email</option>
-        </select>
       </div>
 
-      <!-- BORROWER -->
-      <div id="borrowerWrap" style="display:none;">
-        <select id="borrowerSelect" class="re-select">
-          <option value="">Select borrower</option>
-          {% for b in borrowers %}
-            <option value="{{ b.id }}">{{ b.full_name or b.email }}</option>
-          {% endfor %}
-        </select>
+      <div style="margin-top:16px;">
+        <label for="body">Message</label>
+        <textarea name="body" id="body" class="ravlo-input" rows="6" placeholder="Write your message..." required></textarea>
       </div>
 
-      <!-- LEAD -->
-      <div id="leadWrap" style="display:none;">
-        <select id="leadSelect" class="re-select">
-          <option value="">Select lead</option>
-          {% for l in leads %}
-            <option value="{{ l.id }}">{{ l.full_name if l.full_name is defined else l.name }}</option>
-          {% endfor %}
-        </select>
+      <div style="margin-top:16px;">
+        <button type="submit" class="ravlo-btn primary">
+          <i class="lucide lucide-send"></i>
+          <span>Send Message</span>
+        </button>
       </div>
-      <!-- USER -->
-      <div id="userWrap" style="display:none;">
-       <select id="userSelect" class="re-select">
-         <option value="">Select user</option>
-         {% for u in users %}
-           <option value="{{ u.id }}">
-             {{
-               u.full_name
-               or ((u.first_name or '') ~ ' ' ~ (u.last_name or ''))|trim
-               or u.username
-               or u.email
-             }}
-           </option>
-         {% endfor %}
-       </select>
-     </div>
-      <!-- HIDDEN FIELDS -->
-      <input type="hidden" name="recipient_type" id="hiddenType">
-      <input type="hidden" name="recipient_id" id="hiddenId">
-
-      <!-- MESSAGE -->
-      <textarea
-        name="content"
-        class="re-textarea"
-        placeholder="Type your message..."
-        required
-      ></textarea>
-
-      <button type="submit" class="re-btn primary">
-        Send Message
-      </button>
     </form>
-  </div>
-</section>
-  <!-- RIGHT: ACTIVE THREAD -->
-  <section class="msg-panel">
-    {% if active_conversation %}
-      <div class="thread-wrap">
-        <div class="thread-head">
-          <div class="thread-title">{{ active_conversation.recipient_name }}</div>
-          <div class="thread-sub">
-            {{ active_conversation.recipient_type|title }} #{{ active_conversation.recipient_id }}
-            • {{ active_conversation.message_count }} message{{ '' if active_conversation.message_count == 1 else 's' }}
+  </section>
+
+  <section class="ravlo-card">
+    <h3>Inbox</h3>
+
+    {% if inbox %}
+      <div class="ravlo-list">
+        {% for msg in inbox %}
+          <div class="ravlo-list-item {% if not msg.is_read %}unread{% endif %}">
+            <div>
+              <strong>
+                {{ msg.sender.full_name or ((msg.sender.first_name or "") ~ " " ~ (msg.sender.last_name or ""))|trim }}
+              </strong>
+              <p class="muted" style="margin:4px 0 0 0;">{{ msg.subject or "No Subject" }}</p>
+              <p style="margin:6px 0 0 0;">{{ msg.body[:160] }}{% if msg.body and msg.body|length > 160 %}...{% endif %}</p>
+            </div>
+            <div class="muted">
+              {{ msg.created_at.strftime("%m/%d/%Y %I:%M %p") }}
+            </div>
           </div>
-        </div>
-
-        <div class="thread-messages">
-          {% for msg in active_conversation.messages %}
-            <div class="bubble {% if msg.direction == 'outbound' %}outbound{% else %}inbound{% endif %}">
-              <div>{{ msg.content }}</div>
-              <div class="bubble-meta">
-                {{ msg.message_type|upper }}
-                {% if msg.status %} • {{ msg.status|title }}{% endif %}
-                {% if msg.sent_at %} • {{ msg.sent_at.strftime('%b %d, %Y %I:%M %p') }}{% endif %}
-              </div>
-            </div>
-          {% endfor %}
-        </div>
-
-        <div class="thread-compose">
-          <form method="POST" action="{{ url_for('loan_officer.send_message') }}" class="compose-grid">
-            <input type="hidden" name="recipient_type" value="{{ active_conversation.recipient_type }}">
-            <input type="hidden" name="recipient_id" value="{{ active_conversation.recipient_id }}">
-
-            <div class="compose-row">
-              <select name="message_type" class="re-select">
-                <option value="internal">Internal</option>
-                <option value="sms">SMS</option>
-                <option value="email">Email</option>
-              </select>
-
-              <button type="submit" class="re-btn primary">
-                Send Message
-              </button>
-            </div>
-
-            <textarea
-              name="content"
-              class="re-textarea"
-              placeholder="Type your message here..."
-              required
-            ></textarea>
-          </form>
-        </div>
+        {% endfor %}
       </div>
     {% else %}
-      <div class="empty-state">
-        <div>
-          <h3 style="color:#fff; margin-bottom:8px;">No conversation selected</h3>
-          <p>Select a message thread from the left to view and reply.</p>
-        </div>
+      <p class="muted">No messages yet.</p>
+    {% endif %}
+  </section>
+
+  <section class="ravlo-card">
+    <h3>Sent</h3>
+
+    {% if sent %}
+      <div class="ravlo-list">
+        {% for msg in sent %}
+          <div class="ravlo-list-item">
+            <div>
+              <strong>
+                To:
+                {{ msg.recipient.full_name or ((msg.recipient.first_name or "") ~ " " ~ (msg.recipient.last_name or ""))|trim }}
+              </strong>
+              <p class="muted" style="margin:4px 0 0 0;">{{ msg.subject or "No Subject" }}</p>
+              <p style="margin:6px 0 0 0;">{{ msg.body[:160] }}{% if msg.body and msg.body|length > 160 %}...{% endif %}</p>
+            </div>
+            <div class="muted">
+              {{ msg.created_at.strftime("%m/%d/%Y %I:%M %p") }}
+            </div>
+          </div>
+        {% endfor %}
       </div>
+    {% else %}
+      <p class="muted">No sent messages.</p>
     {% endif %}
   </section>
 
 </div>
-<script>
-function toggleRecipientSelect() {
-  const type = document.getElementById("recipientType").value;
-
-  const borrowerWrap = document.getElementById("borrowerWrap");
-  const leadWrap = document.getElementById("leadWrap");
-  const userWrap = document.getElementById("userWrap");
-
-  borrowerWrap.style.display = "none";
-  leadWrap.style.display = "none";
-  userWrap.style.display = "none";
-
-  document.getElementById("hiddenType").value = type;
-
-  if (type === "borrower") borrowerWrap.style.display = "block";
-  if (type === "lead") leadWrap.style.display = "block";
-  if (type === "user") userWrap.style.display = "block";
-}
-
-// Submit handler
-document.getElementById("newMessageForm").addEventListener("submit", function(e){
-  const type = document.getElementById("recipientType").value;
-
-  let selectedId = null;
-
-  if (type === "borrower") selectedId = document.getElementById("borrowerSelect").value;
-  if (type === "lead") selectedId = document.getElementById("leadSelect").value;
-  if (type === "user") selectedId = document.getElementById("userSelect").value;
-
-  if (!type || !selectedId) {
-    e.preventDefault();
-    alert("Please select a recipient.");
-    return;
-  }
-
-  document.getElementById("hiddenId").value = selectedId;
-});
-</script>
 {% endblock %}

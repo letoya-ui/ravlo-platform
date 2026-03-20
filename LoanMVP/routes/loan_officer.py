@@ -378,89 +378,73 @@ def ai_assistant():
 
 
 
-@loan_officer_bp.route("/messages", methods=["GET"])
+from LoanMVP.models.user_model import User
+from LoanMVP.models.message import Message
+
+@loan_officer_bp.route("/messages", methods=["GET", "POST"])
+@login_required
 @role_required("loan_officer")
 def messages():
-    search = (request.args.get("q") or "").strip().lower()
-    selected_type = (request.args.get("recipient_type") or "").strip()
-    selected_id = request.args.get("recipient_id", type=int)
+    if request.method == "POST":
+        recipient_id = request.form.get("recipient_id", type=int)
+        subject = (request.form.get("subject") or "").strip()
+        body = (request.form.get("body") or "").strip()
 
-    all_messages = (
-        MessageThread.query
-        .filter(MessageThread.sender_id == current_user.id)
-        .order_by(MessageThread.sent_at.desc())
-        .all()
-    )
+        if not recipient_id or not body:
+            flash("Recipient and message body are required.", "danger")
+            return redirect(url_for("loan_officer.messages"))
 
-    grouped_messages = defaultdict(list)
-    for msg in all_messages:
-        key = (msg.recipient_type, msg.recipient_id)
-        grouped_messages[key].append(msg)
+        recipient = User.query.filter_by(id=recipient_id).first()
+        if not recipient:
+            flash("Recipient not found.", "danger")
+            return redirect(url_for("loan_officer.messages"))
 
-    conversations = []
-    for (recipient_type, recipient_id), msgs in grouped_messages.items():
-        msgs_sorted = sorted(msgs, key=lambda m: m.sent_at or datetime.min, reverse=True)
-        last_msg = msgs_sorted[0]
-        recipient_name = _resolve_recipient_name(recipient_type, recipient_id)
+        msg = Message(
+            sender_id=current_user.id,
+            recipient_id=recipient.id,
+            subject=subject,
+            body=body,
+        )
+        db.session.add(msg)
+        db.session.commit()
 
-        conversations.append({
-            "recipient_type": recipient_type,
-            "recipient_id": recipient_id,
-            "recipient_name": recipient_name,
-            "last_message": last_msg,
-            "message_count": len(msgs_sorted),
-            "messages": sorted(msgs, key=lambda m: m.sent_at or datetime.min),
-        })
+        flash("Message sent successfully.", "success")
+        return redirect(url_for("loan_officer.messages"))
 
-    if search:
-        conversations = [
-            c for c in conversations
-            if search in (c["recipient_name"] or "").lower()
-            or search in (c["recipient_type"] or "").lower()
-            or any(search in (m.content or "").lower() for m in c["messages"])
-        ]
-
-    conversations = sorted(
-        conversations,
-        key=lambda c: c["last_message"].sent_at or datetime.min,
-        reverse=True,
-    )
-
-    active_conversation = None
-    if selected_type and selected_id:
-        for convo in conversations:
-            if convo["recipient_type"] == selected_type and convo["recipient_id"] == selected_id:
-                active_conversation = convo
-                break
-
-    if not active_conversation and conversations:
-        active_conversation = conversations[0]
-
-    borrowers = BorrowerProfile.query.order_by(BorrowerProfile.full_name.asc()).all() if BorrowerProfile else []
-    leads = Lead.query.order_by(Lead.created_at.desc()).all() if Lead and hasattr(Lead, "created_at") else []
-    
-
-    users = (
+    # Active users only
+    # If your model uses `active=True` instead of `is_active=True`, swap that line below.
+    active_users = (
         User.query
         .filter(User.id != current_user.id)
+        .filter_by(is_active=True)
         .order_by(User.first_name.asc(), User.last_name.asc())
         .all()
-        if User else []
+    )
+
+    inbox = (
+        Message.query
+        .filter_by(recipient_id=current_user.id)
+        .order_by(Message.created_at.desc())
+        .all()
+    )
+
+    sent = (
+        Message.query
+        .filter_by(sender_id=current_user.id)
+        .order_by(Message.created_at.desc())
+        .all()
     )
 
     return render_template(
         "loan_officer/messages.html",
-        conversations=conversations,
-        active_conversation=active_conversation,
-        borrowers=borrowers,
-        leads=leads,
-        users=users,
-        search=search,
-        title="Messages",
+        active_users=active_users,
+        inbox=inbox,
+        sent=sent,
         active_tab="messages",
     )
 
 @loan_officer_bp.route("/messages/send", methods=["POST"])
+csrf.exempt
 @role_required("loan_officer")
 def send_message():
     recipient_type = (request.form.get("recipient_type") or "").strip().lower()
