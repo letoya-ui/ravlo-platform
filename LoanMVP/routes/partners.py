@@ -657,30 +657,3 @@ def billing():
         page_title="Billing",
         page_subline="Manage your Ravlo Partner plan."
     )
-
-
-@investor_bp.route("/partners/search")
-@login_required
-@role_required("investor")
-def partner_search():
-
-    service = request.args.get("service")
-    location = request.args.get("location")
-
-    internal = Partner.query.filter(
-        Partner.service_type.ilike(f"%{service}%"),
-        Partner.city.ilike(f"%{location}%")
-    ).all()
-
-    if internal:
-        partners = internal
-        source = "internal"
-    else:
-        partners = search_external_partners(location, service)
-        source = "external"
-
-    return render_template(
-        "investor/partner_results.html",
-        partners=partners,
-        source=source
-    )
