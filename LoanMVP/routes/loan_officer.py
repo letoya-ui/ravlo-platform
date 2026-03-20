@@ -384,7 +384,7 @@ def messages():
     if request.method == "POST":
         receiver_id = request.form.get("receiver_id", type=int)
         subject = (request.form.get("subject") or "").strip()
-        body = (request.form.get("body") or "").strip()
+        content = (request.form.get("content") or "").strip()
 
         if not receiver_id or not body:
             flash("Recipient and message body are required.", "danger")
@@ -399,7 +399,7 @@ def messages():
             sender_id=current_user.id,
             receiver_id=receiver.id,
             subject=subject,
-            body=body,
+            content=content,
         )
 
         db.session.add(message)
