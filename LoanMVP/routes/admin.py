@@ -50,26 +50,11 @@ def admin_required(func):
 @admin_bp.route("/dashboard")
 @role_required("admin", "master_admin", "lending_admin")
 def dashboard():
-    # =========================
-    # COMPANY CONTEXT
-    # =========================
     company = None
 
     if current_user.role == "master_admin":
         company = Company.query.order_by(Company.id.asc()).first()
-    else:
-        access = (
-            CompanyAccess.query
-            .filter_by(user_id=current_user.id, is_active=True)
-            .order_by(CompanyAccess.id.desc())
-            .first()
-        )
-        if access:
-            company = Company.query.get(access.company_id)
 
-    # =========================
-    # KPI COUNTS
-    # =========================
     stats = {
         "total_users": User.query.count(),
         "total_loans": LoanApplication.query.count() if LoanApplication else 0,
