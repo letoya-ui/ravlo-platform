@@ -9,7 +9,7 @@ from flask import (
 from flask_login import current_user
 from datetime import datetime
 
-from LoanMVP.extensions import db
+from LoanMVP.extensions import db, csrf
 from LoanMVP.models.system_models import System, SystemLog, AuditLog, SystemSettings
 from LoanMVP.models.crm_models import Lead
 from LoanMVP.models.loan_models import LoanApplication, LoanNotification
