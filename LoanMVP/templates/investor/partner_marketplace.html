@@ -1,0 +1,329 @@
+{# templates/investor/partner_marketplace.html #}
+{% extends "layouts/ravlo_base.html" %}
+
+{% block title %}Ravlo • Partner Marketplace{% endblock %}
+{% block page_title %}Partner Marketplace{% endblock %}
+{% block page_subline %}
+Connect deals to trusted execution partners — and expand the network when coverage is missing.
+{% endblock %}
+
+{% block content %}
+<div class="partner-marketplace-page">
+
+  <section class="ravlo-hero-card marketplace-hero">
+    <div>
+      <div class="eyebrow">RAVLO EXECUTION NETWORK</div>
+      <h2>Find the right partner for the deal.</h2>
+      <p class="muted">
+        Search Ravlo’s internal network first. If no partner is available in the target area,
+        Ravlo will surface external professionals you can save, invite, and route into the network.
+      </p>
+    </div>
+  </section>
+
+  <section class="ravlo-card pad">
+    <div class="section-head">
+      <div>
+        <div class="eyebrow">SEARCH</div>
+        <h3>Search Partners</h3>
+      </div>
+    </div>
+
+    <form method="GET" action="{{ url_for('investor.partner_marketplace') }}" class="marketplace-search-grid">
+      <input type="hidden" name="deal_id" value="{{ deal_id or '' }}">
+      <input type="hidden" name="saved_property_id" value="{{ saved_property_id or '' }}">
+
+      <div>
+        <label class="ravlo-label">Service Type</label>
+        <select name="service_type" class="ravlo-input" required>
+          <option value="">Select service</option>
+          {% for item in [
+            "general contractor",
+            "realtor",
+            "lender",
+            "property manager",
+            "cleaner",
+            "designer",
+            "home inspector",
+            "appraiser",
+            "photographer",
+            "attorney",
+            "insurance agent",
+            "title company",
+            "handyman"
+          ] %}
+            <option value="{{ item }}" {% if service_type == item %}selected{% endif %}>{{ item|title }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div>
+        <label class="ravlo-label">City</label>
+        <input type="text" name="city" class="ravlo-input" value="{{ city or '' }}" placeholder="Tampa">
+      </div>
+
+      <div>
+        <label class="ravlo-label">State</label>
+        <input type="text" name="state" class="ravlo-input" value="{{ state or '' }}" placeholder="FL">
+      </div>
+
+      <div>
+        <label class="ravlo-label">ZIP</label>
+        <input type="text" name="zip_code" class="ravlo-input" value="{{ zip_code or '' }}" placeholder="33602">
+      </div>
+
+      <div class="search-actions">
+        <button type="submit" class="ravlo-btn primary">Search Marketplace</button>
+      </div>
+    </form>
+  </section>
+
+  {% if service_type and (city or state or zip_code) %}
+    <section class="ravlo-card pad">
+      <div class="section-head">
+        <div>
+          <div class="eyebrow">RESULTS</div>
+          <h3>
+            {% if result_source == "internal" %}
+              Ravlo Partners
+            {% else %}
+              External Providers
+            {% endif %}
+          </h3>
+        </div>
+      </div>
+
+      {% if fallback_used %}
+        <div class="ravlo-alert warning mb-16">
+          No Ravlo partners were found in this area yet. Ravlo searched externally so you can still move the deal forward.
+        </div>
+      {% endif %}
+
+      {% if partners %}
+        <div class="partner-results-grid">
+          {% for p in partners %}
+            <article class="partner-card">
+              <div class="partner-card-top">
+                <div>
+                  <div class="partner-name-row">
+                    <h4>{{ p.name }}</h4>
+
+                    {% if p.is_internal %}
+                      <span class="partner-badge internal">Ravlo</span>
+                      {% if p.is_verified %}
+                        <span class="partner-badge verified">Verified</span>
+                      {% endif %}
+                      {% if p.is_preferred %}
+                        <span class="partner-badge preferred">Preferred</span>
+                      {% endif %}
+                    {% else %}
+                      <span class="partner-badge external">External</span>
+                    {% endif %}
+                  </div>
+
+                  <div class="muted small">
+                    {{ p.service_type or service_type|title }}
+                  </div>
+                </div>
+
+                <div class="score-pill">
+                  Score {{ p.score or "—" }}
+                </div>
+              </div>
+
+              <div class="partner-meta">
+                <div><strong>Address:</strong> {{ p.address or "Not provided" }}</div>
+                {% if p.city or p.state or p.zip_code %}
+                  <div><strong>Area:</strong> {{ p.city or "" }}{% if p.city and p.state %}, {% endif %}{{ p.state or "" }} {{ p.zip_code or "" }}</div>
+                {% endif %}
+                {% if p.rating %}
+                  <div><strong>Rating:</strong> {{ p.rating }} {% if p.reviews %}({{ p.reviews }} reviews){% endif %}</div>
+                {% endif %}
+                {% if p.distance_miles is not none %}
+                  <div><strong>Distance:</strong> {{ p.distance_miles }} miles</div>
+                {% endif %}
+                {% if p.phone %}
+                  <div><strong>Phone:</strong> {{ p.phone }}</div>
+                {% endif %}
+                {% if p.email %}
+                  <div><strong>Email:</strong> {{ p.email }}</div>
+                {% endif %}
+                {% if p.website %}
+                  <div><strong>Website:</strong> <a href="{{ p.website }}" target="_blank">{{ p.website }}</a></div>
+                {% endif %}
+                {% if p.bio %}
+                  <div class="partner-bio">{{ p.bio }}</div>
+                {% endif %}
+              </div>
+
+              <div class="partner-actions">
+                {% if p.is_internal %}
+                  <form method="POST" action="{{ url_for('investor.create_partner_request') }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="service_type" value="{{ service_type }}">
+                    <input type="hidden" name="city" value="{{ city }}">
+                    <input type="hidden" name="state" value="{{ state }}">
+                    <input type="hidden" name="zip_code" value="{{ zip_code }}">
+                    <input type="hidden" name="deal_id" value="{{ deal_id or '' }}">
+                    <input type="hidden" name="saved_property_id" value="{{ saved_property_id or '' }}">
+                    <input type="hidden" name="partner_id" value="{{ p.id }}">
+                    <button type="submit" class="ravlo-btn primary sm">Request Connection</button>
+                  </form>
+                {% else %}
+                  <form method="POST" action="{{ url_for('investor.save_external_partner') }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="name" value="{{ p.name }}">
+                    <input type="hidden" name="service_type" value="{{ service_type }}">
+                    <input type="hidden" name="address" value="{{ p.address or '' }}">
+                    <input type="hidden" name="city" value="{{ city }}">
+                    <input type="hidden" name="state" value="{{ state }}">
+                    <input type="hidden" name="zip_code" value="{{ zip_code }}">
+                    <input type="hidden" name="website" value="{{ p.website or '' }}">
+                    <input type="hidden" name="external_id" value="{{ p.place_id or '' }}">
+                    <input type="hidden" name="rating" value="{{ p.rating or '' }}">
+                    <input type="hidden" name="review_count" value="{{ p.reviews or 0 }}">
+                    <input type="hidden" name="source" value="{{ p.source or 'external' }}">
+                    <button type="submit" class="ravlo-btn ghost sm">Save to Leads</button>
+                  </form>
+
+                  <form method="POST" action="{{ url_for('investor.create_partner_request') }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="service_type" value="{{ service_type }}">
+                    <input type="hidden" name="city" value="{{ city }}">
+                    <input type="hidden" name="state" value="{{ state }}">
+                    <input type="hidden" name="zip_code" value="{{ zip_code }}">
+                    <input type="hidden" name="deal_id" value="{{ deal_id or '' }}">
+                    <input type="hidden" name="saved_property_id" value="{{ saved_property_id or '' }}">
+                    <button type="submit" class="ravlo-btn primary sm">Request Help Anyway</button>
+                  </form>
+                {% endif %}
+              </div>
+            </article>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="empty-state">
+          No partners found yet. Try broadening the location or service type.
+        </div>
+      {% endif %}
+    </section>
+  {% endif %}
+
+  <section class="ravlo-card pad">
+    <div class="section-head">
+      <div>
+        <div class="eyebrow">RECENT</div>
+        <h3>Recent Partner Requests</h3>
+      </div>
+    </div>
+
+    {% if recent_requests %}
+      <div class="ravlo-table-wrap">
+        <table class="ravlo-table">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Service</th>
+              <th>Area</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for r in recent_requests %}
+              <tr>
+                <td>{{ r.created_at.strftime("%b %d, %Y") if r.created_at else "—" }}</td>
+                <td>{{ r.service_type|title }}</td>
+                <td>{{ r.city or "" }}{% if r.city and r.state %}, {% endif %}{{ r.state or "" }} {{ r.zip_code or "" }}</td>
+                <td>{{ r.request_status.replace("_", " ")|title }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="empty-state">
+        No partner requests yet.
+      </div>
+    {% endif %}
+  </section>
+
+</div>
+
+<style>
+.partner-marketplace-page{display:grid;gap:20px;}
+.marketplace-hero{padding:30px;border-radius:28px;}
+.marketplace-search-grid{
+  display:grid;
+  grid-template-columns:repeat(5,minmax(0,1fr));
+  gap:14px;
+  align-items:end;
+}
+.search-actions{display:flex;justify-content:flex-end;}
+.partner-results-grid{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:18px;
+}
+.partner-card{
+  border:1px solid rgba(255,255,255,.08);
+  border-radius:24px;
+  padding:20px;
+  background:linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.02));
+  display:grid;
+  gap:16px;
+}
+.partner-card-top{
+  display:flex;
+  justify-content:space-between;
+  gap:12px;
+  align-items:flex-start;
+}
+.partner-name-row{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+  align-items:center;
+}
+.partner-name-row h4{margin:0;}
+.partner-badge{
+  display:inline-flex;
+  align-items:center;
+  padding:.35rem .65rem;
+  border-radius:999px;
+  font-size:.72rem;
+  font-weight:700;
+}
+.partner-badge.internal{background:rgba(77,163,255,.16);color:#9cccff;}
+.partner-badge.external{background:rgba(255,255,255,.08);color:#dfe7f3;}
+.partner-badge.verified{background:rgba(59,196,122,.15);color:#83e7ab;}
+.partner-badge.preferred{background:rgba(247,194,61,.18);color:#ffd875;}
+.score-pill{
+  padding:.45rem .7rem;
+  border-radius:999px;
+  background:rgba(255,255,255,.06);
+  font-weight:700;
+  white-space:nowrap;
+}
+.partner-meta{display:grid;gap:8px;}
+.partner-bio{color:rgba(255,255,255,.76);}
+.partner-actions{
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px;
+}
+.empty-state{
+  border:1px dashed rgba(255,255,255,.12);
+  border-radius:20px;
+  padding:22px;
+  color:rgba(255,255,255,.72);
+}
+.small{font-size:.9rem;}
+@media (max-width: 1100px){
+  .marketplace-search-grid{grid-template-columns:repeat(2,minmax(0,1fr));}
+  .partner-results-grid{grid-template-columns:1fr;}
+}
+@media (max-width: 700px){
+  .marketplace-search-grid{grid-template-columns:1fr;}
+}
+</style>
+{% endblock %}
