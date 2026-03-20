@@ -380,6 +380,9 @@ def ai_assistant():
 @loan_officer_bp.route("/messages", methods=["GET", "POST"])
 @csrf.exempt
 @role_required("loan_officer")
+@loan_officer_bp.route("/messages", methods=["GET", "POST"])
+@login_required
+@role_required("loan_officer")
 def messages():
     if request.method == "POST":
         receiver_id = request.form.get("receiver_id", type=int)
@@ -387,28 +390,27 @@ def messages():
         body = (request.form.get("body") or "").strip()
 
         if not receiver_id or not body:
-            flash("Receiver and message body are required.", "danger")
+            flash("Recipient and message body are required.", "danger")
             return redirect(url_for("loan_officer.messages"))
 
-        recipient = User.query.filter_by(id=receiver_id).first()
-        if not recipient:
+        receiver = User.query.get(receiver_id)
+        if not receiver:
             flash("Recipient not found.", "danger")
             return redirect(url_for("loan_officer.messages"))
 
-        msg = Message(
+        message = Message(
             sender_id=current_user.id,
             receiver_id=receiver.id,
             subject=subject,
             body=body,
         )
-        db.session.add(msg)
+
+        db.session.add(message)
         db.session.commit()
 
         flash("Message sent successfully.", "success")
         return redirect(url_for("loan_officer.messages"))
 
-    # Active users only
-    # If your model uses `active=True` instead of `is_active=True`, swap that line below.
     active_users = (
         User.query
         .filter(User.id != current_user.id)
