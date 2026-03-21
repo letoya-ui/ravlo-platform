@@ -6872,28 +6872,7 @@ def market_snapshot_page():
         active_tab="market"
     )
 
-@investor_bp.route("/partners/request-external/<int:lead_id>", methods=["POST"])
-@login_required
-@role_required("investor")
-def create_external_partner_request(lead_id):
-    ip = InvestorProfile.query.filter_by(user_id=current_user.id).first()
-    lead = ExternalPartnerLead.query.get_or_404(lead_id)
 
-    req = PartnerConnectionRequest(
-        investor_user_id=current_user.id,
-        investor_profile_id=ip.id if ip else None,
-        external_partner_lead_id=lead.id,
-        category=lead.category,
-        message=f"Fallback marketplace request for external provider: {lead.name}",
-        source="external",
-        status="awaiting_match",
-    )
-
-    db.session.add(req)
-    db.session.commit()
-
-    flash("External partner request created.", "success")
-    return redirect(url_for("investor.partner_marketplace"))
 
 @investor_bp.route("/partners", methods=["GET"])
 @login_required
