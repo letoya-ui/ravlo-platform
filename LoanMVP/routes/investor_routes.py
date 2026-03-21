@@ -6904,8 +6904,7 @@ def market_snapshot_page():
 
 
 
-
-        PARTNER_CATEGORIES = [
+PARTNER_CATEGORIES = [
     "Contractor",
     "General Contractor",
     "Subcontractor",
