@@ -175,7 +175,62 @@ def safe_json_loads(data, default=None):
     except Exception:
         return default
 
+def search_external_partners_google(category=None, city=None, state=None):
+    import os
+    import requests
+    from flask import current_app
 
+    api_key = os.getenv("GOOGLE_API_KEY")
+    if not api_key:
+        current_app.logger.warning("GOOGLE_API_KEY is missing")
+        return []
+
+    query_parts = []
+    if category:
+        query_parts.append(category)
+    else:
+        query_parts.append("professional")
+
+    location_bits = [x for x in [city, state] if x]
+    if location_bits:
+        query_parts.append("in " + ", ".join(location_bits))
+
+    search_query = " ".join(query_parts).strip()
+
+    current_app.logger.warning(f"External Google query: {search_query}")
+
+    url = "https://maps.googleapis.com/maps/api/place/textsearch/json"
+    params = {
+        "query": search_query,
+        "key": api_key,
+    }
+
+    try:
+        resp = requests.get(url, params=params, timeout=15)
+        data = resp.json()
+
+        current_app.logger.warning(
+            f"Google Places status={data.get('status')} results={len(data.get('results', []))}"
+        )
+
+        if data.get("status") not in ("OK", "ZERO_RESULTS"):
+            current_app.logger.warning(f"Google error: {data.get('error_message')}")
+            return []
+
+        results = []
+        for item in data.get("results", [])[:8]:
+            results.append({
+                "name": item.get("name"),
+                "address": item.get("formatted_address"),
+                "rating": item.get("rating"),
+                "external_id": item.get("place_id"),
+            })
+
+        return results
+
+    except Exception as e:
+        current_app.logger.exception(f"External Google search failed: {e}")
+        return []
 # =========================================================
 # 💰 MONEY FORMATTER
 # =========================================================
