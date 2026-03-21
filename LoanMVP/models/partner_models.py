@@ -133,3 +133,27 @@ class ExternalPartnerLead(db.Model):
     investor_profile = db.relationship("InvestorProfile", foreign_keys=[investor_profile_id])
     borrower_profile = db.relationship("BorrowerProfile", foreign_keys=[borrower_profile_id])
     partner = db.relationship("Partner", foreign_keys=[partner_id])
+
+class PartnerInviteEvent(db.Model):
+    __tablename__ = "partner_invite_event"
+
+    id = db.Column(db.Integer, primary_key=True)
+
+    partner_id = db.Column(
+        db.Integer,
+        db.ForeignKey("partners.id"),
+        nullable=False
+    )
+
+    invite_token = db.Column(db.String(255), nullable=True)
+    request_id = db.Column(db.Integer, nullable=True)
+
+    event_type = db.Column(db.String(50))
+    # values: "emailed", "opened", "clicked", "claimed", "responded"
+
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+
+    user_agent = db.Column(db.String(300), nullable=True)
+    ip_address = db.Column(db.String(50), nullable=True)
+
+    partner = db.relationship("Partner", backref="invite_events")
