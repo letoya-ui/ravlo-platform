@@ -658,7 +658,7 @@ def billing():
         page_subline="Manage your Ravlo Partner plan."
     )
     
-@partner_bp.route("/profile/edit", methods=["GET", "POST"])
+@partners_bp.route("/profile/edit", methods=["GET", "POST"])
 @login_required
 @role_required("partner")
 def edit_profile():
