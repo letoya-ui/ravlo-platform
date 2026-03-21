@@ -7057,7 +7057,7 @@ def partners():
         Partner.name.asc()
     ).all()
 
-    db_categories = [
+    categories = [
         row[0]
         for row in db.session.query(Partner.category)
         .filter(Partner.category.isnot(None))
@@ -7067,10 +7067,16 @@ def partners():
         if row[0]
     ]
 
-    categories = sorted(set(PARTNER_CATEGORIES + db_categories))
-
     external_partners = []
     fallback_used = False
+
+    if include_external and not partners:
+        external_partners = search_external_partners_google(
+            category=selected_category,
+            city=selected_city,
+            state=selected_state,
+        )
+        fallback_used = bool(external_partners)
 
     return render_template(
         "investor/partners.html",
