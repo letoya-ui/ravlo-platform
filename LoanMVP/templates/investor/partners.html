@@ -21,8 +21,8 @@ Browse trusted professionals for your deals, projects, and portfolio growth.
 
       <div class="partner-hero-chips">
         <span class="ravlo-chip">Search by company</span>
-        <span class="ravlo-chip">Filter by city, state, ZIP</span>
-        <span class="ravlo-chip">Preferred + featured partners</span>
+        <span class="ravlo-chip">Filter by city + state</span>
+        <span class="ravlo-chip">Search outside Ravlo</span>
       </div>
     </div>
 
@@ -37,16 +37,28 @@ Browse trusted professionals for your deals, projects, and portfolio growth.
 
   <section class="ravlo-card partner-filter-card">
     <form method="GET" action="{{ url_for('investor.partners') }}" class="partner-filter-form">
-      <div class="section-head">
+      <div class="section-head partner-filter-head">
         <div>
           <div class="eyebrow">DISCOVER</div>
           <h3>Find a Partner</h3>
         </div>
+
+        <div class="partner-filter-toggle">
+          <label class="partner-check-inline">
+            <input
+              type="checkbox"
+              name="include_external"
+              value="1"
+              {% if include_external %}checked{% endif %}
+            >
+            <span>Search outside Ravlo network</span>
+          </label>
+        </div>
       </div>
 
-      <div class="partner-filter-grid partner-filter-grid-v2">
+      <div class="partner-filter-grid partner-filter-grid-simple">
         <div class="partner-field">
-          <label class="ravlo-label">Company / Partner Name</label>
+          <label class="ravlo-label">Search</label>
           <input
             type="text"
             name="company"
@@ -57,32 +69,11 @@ Browse trusted professionals for your deals, projects, and portfolio growth.
         </div>
 
         <div class="partner-field">
-          <label class="ravlo-label">Keyword</label>
-          <input
-            type="text"
-            name="keyword"
-            value="{{ selected_keyword }}"
-            class="ravlo-input"
-            placeholder="Specialty, service, type..."
-          >
-        </div>
-
-        <div class="partner-field">
           <label class="ravlo-label">Category</label>
           <select name="category" class="ravlo-input">
             <option value="">All</option>
             {% for item in categories %}
               <option value="{{ item }}" {% if selected_category == item %}selected{% endif %}>{{ item }}</option>
-            {% endfor %}
-          </select>
-        </div>
-
-        <div class="partner-field">
-          <label class="ravlo-label">Relationship</label>
-          <select name="relationship_level" class="ravlo-input">
-            <option value="">All</option>
-            {% for item in relationship_levels %}
-              <option value="{{ item }}" {% if selected_relationship_level == item %}selected{% endif %}>{{ item }}</option>
             {% endfor %}
           </select>
         </div>
@@ -108,17 +99,6 @@ Browse trusted professionals for your deals, projects, and portfolio growth.
             placeholder="FL, NY..."
           >
         </div>
-
-        <div class="partner-field">
-          <label class="ravlo-label">ZIP Code</label>
-          <input
-            type="text"
-            name="zip_code"
-            value="{{ selected_zip_code }}"
-            class="ravlo-input"
-            placeholder="33602..."
-          >
-        </div>
       </div>
 
       <div class="partner-action-row">
@@ -128,7 +108,7 @@ Browse trusted professionals for your deals, projects, and portfolio growth.
     </form>
   </section>
 
-  {% if selected_company or selected_keyword or selected_category or selected_city or selected_state or selected_zip_code or selected_relationship_level %}
+  {% if selected_company or selected_category or selected_city or selected_state or include_external %}
     <section class="ravlo-card partner-search-summary">
       <div class="partner-search-summary-row">
         <div>
@@ -138,29 +118,21 @@ Browse trusted professionals for your deals, projects, and portfolio growth.
             {% if selected_company %}
               <strong>Name:</strong> {{ selected_company }}
             {% endif %}
-            {% if selected_keyword %}
-              {% if selected_company %} • {% endif %}
-              <strong>Keyword:</strong> {{ selected_keyword }}
-            {% endif %}
             {% if selected_category %}
-              {% if selected_company or selected_keyword %} • {% endif %}
+              {% if selected_company %} • {% endif %}
               <strong>Category:</strong> {{ selected_category }}
             {% endif %}
             {% if selected_city %}
-              {% if selected_company or selected_keyword or selected_category %} • {% endif %}
+              {% if selected_company or selected_category %} • {% endif %}
               <strong>City:</strong> {{ selected_city }}
             {% endif %}
             {% if selected_state %}
-              {% if selected_company or selected_keyword or selected_category or selected_city %} • {% endif %}
+              {% if selected_company or selected_category or selected_city %} • {% endif %}
               <strong>State:</strong> {{ selected_state }}
             {% endif %}
-            {% if selected_zip_code %}
-              {% if selected_company or selected_keyword or selected_category or selected_city or selected_state %} • {% endif %}
-              <strong>ZIP:</strong> {{ selected_zip_code }}
-            {% endif %}
-            {% if selected_relationship_level %}
-              {% if selected_company or selected_keyword or selected_category or selected_city or selected_state or selected_zip_code %} • {% endif %}
-              <strong>Relationship:</strong> {{ selected_relationship_level }}
+            {% if include_external %}
+              {% if selected_company or selected_category or selected_city or selected_state %} • {% endif %}
+              <strong>External Search:</strong> On
             {% endif %}
           </p>
         </div>
@@ -311,7 +283,7 @@ Browse trusted professionals for your deals, projects, and portfolio growth.
         <div class="eyebrow">NO MATCHES</div>
         <h3>No partners found in this search</h3>
         <p class="ravlo-muted">
-          Try adjusting your filters, broadening the city or state, or continue building out Ravlo’s approved network.
+          Try adjusting your filters, broadening the city or state, or enable external search to explore options outside the Ravlo network.
         </p>
 
         <div class="partner-empty-actions">
@@ -493,7 +465,15 @@ Browse trusted professionals for your deals, projects, and portfolio growth.
     gap:16px;
   }
 
-  .partner-filter-grid-v2{
+  .partner-filter-head{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:14px;
+    flex-wrap:wrap;
+  }
+
+  .partner-filter-grid-simple{
     display:grid;
     grid-template-columns:repeat(4, minmax(0, 1fr));
     gap:14px;
@@ -507,6 +487,26 @@ Browse trusted professionals for your deals, projects, and portfolio growth.
   .partner-field .ravlo-input{
     width:100%;
     min-width:0;
+  }
+
+  .partner-check-inline{
+    display:inline-flex;
+    align-items:center;
+    gap:10px;
+    padding:.7rem .95rem;
+    border-radius:14px;
+    border:1px solid rgba(255,255,255,.08);
+    background:rgba(255,255,255,.03);
+    cursor:pointer;
+  }
+
+  .partner-check-inline input{
+    accent-color:#6ea8ff;
+  }
+
+  .partner-check-inline span{
+    color:rgba(255,255,255,.88);
+    font-weight:600;
   }
 
   .partner-action-row{
@@ -756,7 +756,7 @@ Browse trusted professionals for your deals, projects, and portfolio growth.
       grid-template-columns:1fr;
     }
 
-    .partner-filter-grid-v2{
+    .partner-filter-grid-simple{
       grid-template-columns:repeat(2, minmax(0, 1fr));
     }
 
@@ -766,7 +766,7 @@ Browse trusted professionals for your deals, projects, and portfolio growth.
   }
 
   @media (max-width: 820px){
-    .partner-filter-grid-v2{
+    .partner-filter-grid-simple{
       grid-template-columns:1fr;
     }
 
