@@ -6874,17 +6874,68 @@ def market_snapshot_page():
 
 
 
+
+        PARTNER_CATEGORIES = [
+    "Contractor",
+    "General Contractor",
+    "Subcontractor",
+    "Realtor",
+    "Real Estate Agent",
+    "Broker",
+    "Lender",
+    "Loan Officer",
+    "Mortgage Broker",
+    "Hard Money Lender",
+    "Private Lender",
+    "Inspector",
+    "Appraiser",
+    "Insurance Agent",
+    "Title Company",
+    "Closing Attorney",
+    "Property Manager",
+    "Cleaner",
+    "Janitorial",
+    "Designer",
+    "Architect",
+    "Engineer",
+    "Photographer",
+    "Videographer",
+    "Stager",
+    "Handyman",
+    "Electrician",
+    "Plumber",
+    "HVAC",
+    "Roofing",
+    "Flooring",
+    "Painter",
+    "Landscaper",
+    "Pool Contractor",
+    "Cabinet Supplier",
+    "Kitchen & Bath",
+    "Demolition",
+    "Restoration",
+    "Solar",
+    "Window & Door",
+    "Security",
+    "Moving Company",
+    "Attorney",
+    "CPA",
+    "Bookkeeper",
+    "Notary",
+    "Credit Specialist",
+    "Surveyor",
+    "Permit Expeditor",
+]
+
 @investor_bp.route("/partners", methods=["GET"])
 @login_required
 @role_required("investor")
 def partners():
     selected_company = (request.args.get("company") or "").strip()
-    selected_keyword = (request.args.get("keyword") or "").strip()
     selected_category = (request.args.get("category") or "").strip()
     selected_city = (request.args.get("city") or "").strip()
     selected_state = (request.args.get("state") or "").strip()
-    selected_zip_code = (request.args.get("zip_code") or "").strip()
-    selected_relationship_level = (request.args.get("relationship_level") or "").strip()
+    include_external = request.args.get("include_external") == "1"
 
     query = Partner.query.filter(
         Partner.active.is_(True),
@@ -6899,31 +6950,19 @@ def partners():
             )
         )
 
-    if selected_keyword:
+    if selected_category:
         query = query.filter(
             or_(
-                Partner.category.ilike(f"%{selected_keyword}%"),
-                Partner.type.ilike(f"%{selected_keyword}%"),
-                Partner.specialty.ilike(f"%{selected_keyword}%"),
-                Partner.listing_description.ilike(f"%{selected_keyword}%"),
-                Partner.bio.ilike(f"%{selected_keyword}%")
+                Partner.category.ilike(f"%{selected_category}%"),
+                Partner.type.ilike(f"%{selected_category}%")
             )
         )
-
-    if selected_category:
-        query = query.filter(Partner.category == selected_category)
 
     if selected_city:
         query = query.filter(Partner.city.ilike(f"%{selected_city}%"))
 
     if selected_state:
         query = query.filter(Partner.state.ilike(f"%{selected_state}%"))
-
-    if selected_zip_code:
-        query = query.filter(Partner.zip_code.ilike(f"%{selected_zip_code}%"))
-
-    if selected_relationship_level:
-        query = query.filter(Partner.relationship_level == selected_relationship_level)
 
     partners = query.order_by(
         Partner.featured.desc(),
@@ -6934,7 +6973,7 @@ def partners():
         Partner.name.asc()
     ).all()
 
-    categories = [
+    db_categories = [
         row[0]
         for row in db.session.query(Partner.category)
         .filter(Partner.category.isnot(None))
@@ -6944,15 +6983,7 @@ def partners():
         if row[0]
     ]
 
-    relationship_levels = [
-        row[0]
-        for row in db.session.query(Partner.relationship_level)
-        .filter(Partner.relationship_level.isnot(None))
-        .distinct()
-        .order_by(Partner.relationship_level.asc())
-        .all()
-        if row[0]
-    ]
+    categories = sorted(set(PARTNER_CATEGORIES + db_categories))
 
     external_partners = []
     fallback_used = False
@@ -6963,16 +6994,12 @@ def partners():
         external_partners=external_partners,
         fallback_used=fallback_used,
         categories=categories,
-        relationship_levels=relationship_levels,
         selected_company=selected_company,
-        selected_keyword=selected_keyword,
         selected_category=selected_category,
         selected_city=selected_city,
         selected_state=selected_state,
-        selected_zip_code=selected_zip_code,
-        selected_relationship_level=selected_relationship_level,
+        include_external=include_external,
     )
-
 
 @investor_bp.route("/partners/<int:partner_id>", methods=["GET"])
 @login_required
