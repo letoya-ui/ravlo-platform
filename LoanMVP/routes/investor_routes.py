@@ -759,6 +759,36 @@ TIMELINES = {
 # Investor Command Center Routes
 # ---------------------------------------------------------
 
+@investor_bp.route("/debug/google-test")
+@login_required
+def debug_google_test():
+    import os
+    import requests
+
+    key = os.getenv("GOOGLE_API_KEY")
+    if not key:
+        return {"ok": False, "error": "Missing GOOGLE_API_KEY"}, 500
+
+    url = "https://maps.googleapis.com/maps/api/place/textsearch/json"
+    params = {
+        "query": "contractor in Tampa FL",
+        "key": key,
+    }
+
+    try:
+        resp = requests.get(url, params=params, timeout=15)
+        data = resp.json()
+        return {
+            "ok": True,
+            "status_code": resp.status_code,
+            "google_status": data.get("status"),
+            "results_found": len(data.get("results", [])),
+            "sample_names": [r.get("name") for r in data.get("results", [])[:5]],
+            "error_message": data.get("error_message"),
+        }
+    except Exception as e:
+        return {"ok": False, "error": str(e)}, 500
+        
 @investor_bp.route("/", methods=["GET"], endpoint="command_center")
 @investor_bp.route("/index", methods=["GET"])
 @investor_bp.route("/command", methods=["GET"])
