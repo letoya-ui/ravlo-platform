@@ -659,7 +659,7 @@ def billing():
     )
     
 @partners_bp.route("/profile/edit", methods=["GET", "POST"])
-@login_required
+@csrf.exempt
 @role_required("partner")
 def edit_profile():
     partner = Partner.query.filter_by(user_id=current_user.id).first()
