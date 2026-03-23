@@ -65,16 +65,24 @@
       <span>Leads</span>
     </a>
 
+    <!-- NEW: Lead Inbox (Requests) -->
+    <a href="{{ url_for('partners.requests_inbox') }}"
+       class="ravlo-nav-link {% if ep in ['partners.requests_inbox', 'partners.request_detail', 'partners.update_request_status'] %}active{% endif %}">
+      <i class="lucide lucide-mail-check"></i>
+      <span>Lead Inbox</span>
+    </a>
+
+    <!-- NEW: Proposals -->
+    <a href="{{ url_for('partners.proposals') }}"
+       class="ravlo-nav-link {% if ep in ['partners.proposals', 'partners.create_proposal', 'partners.proposal_detail'] %}active{% endif %}">
+      <i class="lucide lucide-file-text"></i>
+      <span>Proposals</span>
+    </a>
+
     <a href="{{ url_for('partners.deals') }}"
        class="ravlo-nav-link {% if ep == 'partners.deals' %}active{% endif %}">
       <i class="lucide lucide-briefcase-business"></i>
       <span>Deals</span>
-    </a>
-
-    <a href="{{ url_for('partners.requests_inbox') }}"
-       class="ravlo-nav-link {% if ep in ['partners.requests_inbox', 'partners.accept_request', 'partners.decline_request'] %}active{% endif %}">
-      <i class="lucide lucide-mail-check"></i>
-      <span>Requests</span>
     </a>
 
     <a href="{{ url_for('partners.workspace_home') }}"
@@ -86,6 +94,13 @@
 
     <!-- GROWTH -->
     <div class="ravlo-nav-section">Growth</div>
+
+    <!-- NEW: Growth Plans -->
+    <a href="{{ url_for('partners.upgrade') }}"
+       class="ravlo-nav-link {% if ep == 'partners.upgrade' %}active{% endif %}">
+      <i class="lucide lucide-badge-dollar-sign"></i>
+      <span>Growth Plans</span>
+    </a>
 
     <a href="{{ url_for('partners.resources') }}"
        class="ravlo-nav-link {% if ep == 'partners.resources' %}active{% endif %}">
