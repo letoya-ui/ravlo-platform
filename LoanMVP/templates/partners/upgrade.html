@@ -1,0 +1,635 @@
+{% extends "layouts/ravlo_base.html" %}
+
+{% block title %}Ravlo • Growth Plans{% endblock %}
+
+{% block page_title %}Growth Plans{% endblock %}
+
+{% block page_subline %}
+Unlock tools that help partners respond faster, stand out, and win more work inside Ravlo.
+{% endblock %}
+
+{% block topbar_actions %}
+  <a href="{{ url_for('partners.dashboard') }}" class="ravlo-btn ghost sm">
+    Back to Dashboard
+  </a>
+{% endblock %}
+
+{% block head %}
+  <style>
+    .partner-upgrade-page{
+      display:flex;
+      flex-direction:column;
+      gap:24px;
+    }
+
+    .partner-upgrade-hero,
+    .partner-plan-card,
+    .partner-feature-status-card,
+    .partner-addon-card{
+      border-radius:24px;
+      padding:24px;
+    }
+
+    .partner-upgrade-hero{
+      position:relative;
+      overflow:hidden;
+    }
+
+    .partner-upgrade-hero::before{
+      content:"";
+      position:absolute;
+      inset:0;
+      background:
+        radial-gradient(circle at top right, rgba(56,189,248,.14), transparent 32%),
+        radial-gradient(circle at bottom left, rgba(59,130,246,.10), transparent 28%);
+      pointer-events:none;
+    }
+
+    .partner-upgrade-hero-inner{
+      position:relative;
+      z-index:1;
+      display:grid;
+      grid-template-columns:1.35fr .8fr;
+      gap:24px;
+      align-items:stretch;
+    }
+
+    .partner-tier-pill{
+      display:inline-flex;
+      align-items:center;
+      padding:7px 12px;
+      border-radius:999px;
+      font-size:.78rem;
+      font-weight:800;
+      letter-spacing:.02em;
+      border:1px solid rgba(255,255,255,.08);
+      background:rgba(255,255,255,.05);
+      margin-bottom:14px;
+    }
+
+    .partner-upgrade-title{
+      margin:0 0 12px;
+      font-size:2rem;
+      line-height:1.08;
+      font-weight:800;
+      letter-spacing:-0.02em;
+    }
+
+    .partner-upgrade-copy{
+      margin:0;
+      color:var(--ravlo-muted);
+      line-height:1.68;
+      max-width:760px;
+    }
+
+    .partner-upgrade-actions{
+      display:flex;
+      gap:12px;
+      flex-wrap:wrap;
+      margin-top:20px;
+    }
+
+    .partner-hero-side{
+      display:flex;
+      flex-direction:column;
+      gap:14px;
+    }
+
+    .partner-hero-metric{
+      flex:1;
+      border:1px solid rgba(255,255,255,.08);
+      border-radius:20px;
+      padding:20px;
+      background:rgba(255,255,255,.03);
+    }
+
+    .partner-hero-metric-label{
+      font-size:.82rem;
+      color:var(--ravlo-muted);
+      text-transform:uppercase;
+      letter-spacing:.07em;
+      margin-bottom:8px;
+    }
+
+    .partner-hero-metric-value{
+      font-size:2rem;
+      font-weight:800;
+      line-height:1;
+      margin-bottom:8px;
+    }
+
+    .partner-hero-metric-sub{
+      color:var(--ravlo-muted);
+      line-height:1.55;
+    }
+
+    .partner-plan-grid{
+      display:grid;
+      grid-template-columns:repeat(3, minmax(0, 1fr));
+      gap:18px;
+    }
+
+    .partner-plan-card{
+      position:relative;
+      border:1px solid rgba(255,255,255,.08);
+      background:rgba(255,255,255,.02);
+      display:flex;
+      flex-direction:column;
+      gap:18px;
+      min-height:100%;
+    }
+
+    .partner-plan-card.recommended{
+      border-color:rgba(56,189,248,.35);
+      box-shadow:0 0 0 1px rgba(56,189,248,.1) inset;
+      background:linear-gradient(180deg, rgba(56,189,248,.07), rgba(255,255,255,.02));
+    }
+
+    .partner-plan-badge{
+      position:absolute;
+      top:16px;
+      right:16px;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      padding:6px 10px;
+      border-radius:999px;
+      font-size:.72rem;
+      font-weight:800;
+      letter-spacing:.02em;
+      background:rgba(56,189,248,.14);
+      color:#96ddff;
+      border:1px solid rgba(56,189,248,.24);
+    }
+
+    .partner-plan-name{
+      margin:0;
+      font-size:1.2rem;
+      font-weight:800;
+      letter-spacing:-0.01em;
+    }
+
+    .partner-plan-price{
+      display:flex;
+      align-items:flex-end;
+      gap:6px;
+      margin-top:6px;
+    }
+
+    .partner-plan-price strong{
+      font-size:2rem;
+      line-height:1;
+      font-weight:800;
+    }
+
+    .partner-plan-price span{
+      color:var(--ravlo-muted);
+      font-size:.95rem;
+      margin-bottom:2px;
+    }
+
+    .partner-plan-desc{
+      margin:0;
+      color:var(--ravlo-muted);
+      line-height:1.6;
+    }
+
+    .partner-plan-list{
+      margin:0;
+      padding-left:18px;
+      display:flex;
+      flex-direction:column;
+      gap:8px;
+      color:var(--ravlo-muted);
+    }
+
+    .partner-plan-list li{
+      line-height:1.55;
+    }
+
+    .partner-plan-actions{
+      margin-top:auto;
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+    }
+
+    .partner-current-pill{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      padding:7px 12px;
+      border-radius:999px;
+      font-size:.76rem;
+      font-weight:800;
+      border:1px solid rgba(34,197,94,.22);
+      background:rgba(34,197,94,.12);
+      color:#7ef0a5;
+    }
+
+    .partner-section-head{
+      display:flex;
+      justify-content:space-between;
+      align-items:flex-start;
+      gap:16px;
+      margin-bottom:18px;
+    }
+
+    .partner-section-head h3{
+      margin:0 0 6px;
+      font-size:1.05rem;
+      font-weight:800;
+      letter-spacing:-0.01em;
+    }
+
+    .partner-section-head p{
+      margin:0;
+      color:var(--ravlo-muted);
+      line-height:1.55;
+    }
+
+    .partner-feature-status-grid{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:24px;
+    }
+
+    .partner-feature-group{
+      display:flex;
+      flex-direction:column;
+      gap:12px;
+    }
+
+    .partner-feature-row{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:14px;
+      border:1px solid rgba(255,255,255,.08);
+      border-radius:16px;
+      padding:14px 16px;
+      background:rgba(255,255,255,.02);
+    }
+
+    .partner-feature-row strong{
+      font-size:.96rem;
+    }
+
+    .partner-feature-row span{
+      color:var(--ravlo-muted);
+      font-size:.9rem;
+    }
+
+    .feature-status{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      min-width:76px;
+      padding:6px 10px;
+      border-radius:999px;
+      font-size:.72rem;
+      font-weight:800;
+      letter-spacing:.02em;
+      white-space:nowrap;
+    }
+
+    .feature-status.enabled{
+      background:rgba(34,197,94,.12);
+      color:#7ef0a5;
+      border:1px solid rgba(34,197,94,.22);
+    }
+
+    .feature-status.locked{
+      background:rgba(255,255,255,.06);
+      color:var(--ravlo-muted);
+      border:1px solid rgba(255,255,255,.08);
+    }
+
+    .partner-addon-grid{
+      display:grid;
+      grid-template-columns:repeat(3, minmax(0, 1fr));
+      gap:18px;
+    }
+
+    .partner-addon-card{
+      border:1px solid rgba(255,255,255,.08);
+      background:rgba(255,255,255,.02);
+      display:flex;
+      flex-direction:column;
+      gap:12px;
+    }
+
+    .partner-addon-card h4{
+      margin:0;
+      font-size:1rem;
+      font-weight:800;
+    }
+
+    .partner-addon-card p{
+      margin:0;
+      color:var(--ravlo-muted);
+      line-height:1.58;
+    }
+
+    .partner-addon-price{
+      font-size:1.15rem;
+      font-weight:800;
+    }
+
+    .ravlo-btn.full{
+      width:100%;
+      justify-content:center;
+    }
+
+    @media (max-width: 1180px){
+      .partner-upgrade-hero-inner,
+      .partner-plan-grid,
+      .partner-addon-grid,
+      .partner-feature-status-grid{
+        grid-template-columns:1fr;
+      }
+    }
+  </style>
+{% endblock %}
+
+{% block content %}
+<div class="partner-upgrade-page">
+
+  <section class="ravlo-card partner-upgrade-hero">
+    <div class="partner-upgrade-hero-inner">
+      <div>
+        <div class="partner-tier-pill">
+          Current Tier: {{ partner.subscription_tier or "Free" }}
+        </div>
+
+        <h2 class="partner-upgrade-title">
+          Build a stronger presence inside the Ravlo network.
+        </h2>
+
+        <p class="partner-upgrade-copy">
+          Upgrade into tools that help you respond faster, showcase your work, improve visibility,
+          and convert more opportunities into real business.
+        </p>
+
+        <div class="partner-upgrade-actions">
+          <a href="{{ url_for('partners.dashboard') }}" class="ravlo-btn ghost">
+            Return to Partner OS
+          </a>
+          <a href="{{ url_for('partners.contact') if false else url_for('partners.upgrade') }}" class="ravlo-btn primary">
+            Request Upgrade
+          </a>
+        </div>
+      </div>
+
+      <div class="partner-hero-side">
+        <div class="partner-hero-metric">
+          <div class="partner-hero-metric-label">Active tools</div>
+          <div class="partner-hero-metric-value">
+            {{ 8 - (locked_feature_count or 0) }}
+          </div>
+          <div class="partner-hero-metric-sub">
+            Features currently enabled for your partner account.
+          </div>
+        </div>
+
+        <div class="partner-hero-metric">
+          <div class="partner-hero-metric-label">Locked tools</div>
+          <div class="partner-hero-metric-value">
+            {{ locked_feature_count or 0 }}
+          </div>
+          <div class="partner-hero-metric-sub">
+            Additional growth tools available to unlock.
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="partner-plan-grid">
+    <div class="ravlo-card partner-plan-card">
+      <div>
+        <h3 class="partner-plan-name">Free</h3>
+        <div class="partner-plan-price">
+          <strong>$0</strong>
+          <span>/ month</span>
+        </div>
+      </div>
+
+      <p class="partner-plan-desc">
+        A simple entry point for partners who want a live profile and basic lead access.
+      </p>
+
+      <ul class="partner-plan-list">
+        <li>CRM access</li>
+        <li>Basic profile listing</li>
+        <li>Lead inbox access</li>
+        <li>Standard marketplace visibility</li>
+      </ul>
+
+      <div class="partner-plan-actions">
+        {% if (partner.subscription_tier or "Free")|lower == "free" %}
+          <span class="partner-current-pill">Current Plan</span>
+        {% else %}
+          <a href="{{ url_for('partners.upgrade') }}" class="ravlo-btn ghost full">
+            Switch to Free
+          </a>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="ravlo-card partner-plan-card recommended">
+      <div class="partner-plan-badge">Most Popular</div>
+
+      <div>
+        <h3 class="partner-plan-name">Featured</h3>
+        <div class="partner-plan-price">
+          <strong>$49</strong>
+          <span>/ month</span>
+        </div>
+      </div>
+
+      <p class="partner-plan-desc">
+        Best for partners who want stronger visibility and better conversion tools.
+      </p>
+
+      <ul class="partner-plan-list">
+        <li>Everything in Free</li>
+        <li>Deal visibility</li>
+        <li>Portfolio showcase</li>
+        <li>Smart notifications</li>
+        <li>Priority placement</li>
+      </ul>
+
+      <div class="partner-plan-actions">
+        {% if (partner.subscription_tier or "")|lower == "featured" %}
+          <span class="partner-current-pill">Current Plan</span>
+        {% else %}
+          <a href="{{ url_for('partners.upgrade') }}" class="ravlo-btn primary full">
+            Choose Featured
+          </a>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="ravlo-card partner-plan-card">
+      <div>
+        <h3 class="partner-plan-name">Premium</h3>
+        <div class="partner-plan-price">
+          <strong>$99</strong>
+          <span>/ month</span>
+        </div>
+      </div>
+
+      <p class="partner-plan-desc">
+        Full access for partners who want premium workflow, brand presence, and execution tools.
+      </p>
+
+      <ul class="partner-plan-list">
+        <li>Everything in Featured</li>
+        <li>Proposal builder</li>
+        <li>Instant quote generator</li>
+        <li>AI assist</li>
+        <li>Advanced premium visibility</li>
+      </ul>
+
+      <div class="partner-plan-actions">
+        {% if (partner.subscription_tier or "")|lower == "premium" %}
+          <span class="partner-current-pill">Current Plan</span>
+        {% else %}
+          <a href="{{ url_for('partners.upgrade') }}" class="ravlo-btn primary full">
+            Choose Premium
+          </a>
+        {% endif %}
+      </div>
+    </div>
+  </section>
+
+  <section class="ravlo-card partner-feature-status-card">
+    <div class="partner-section-head">
+      <div>
+        <h3>Current Feature Access</h3>
+        <p>See what is active now and what can be unlocked through a higher plan.</p>
+      </div>
+    </div>
+
+    <div class="partner-feature-status-grid">
+      <div class="partner-feature-group">
+        <div class="partner-feature-row">
+          <div>
+            <strong>CRM</strong>
+            <span>Manage contacts and lead follow-up</span>
+          </div>
+          <span class="feature-status {% if partner.crm_enabled %}enabled{% else %}locked{% endif %}">
+            {% if partner.crm_enabled %}Active{% else %}Locked{% endif %}
+          </span>
+        </div>
+
+        <div class="partner-feature-row">
+          <div>
+            <strong>Deal Visibility</strong>
+            <span>See project and opportunity context</span>
+          </div>
+          <span class="feature-status {% if partner.deal_visibility_enabled %}enabled{% else %}locked{% endif %}">
+            {% if partner.deal_visibility_enabled %}Active{% else %}Locked{% endif %}
+          </span>
+        </div>
+
+        <div class="partner-feature-row">
+          <div>
+            <strong>Proposal Builder</strong>
+            <span>Create polished scopes and responses</span>
+          </div>
+          <span class="feature-status {% if partner.proposal_builder_enabled %}enabled{% else %}locked{% endif %}">
+            {% if partner.proposal_builder_enabled %}Active{% else %}Locked{% endif %}
+          </span>
+        </div>
+
+        <div class="partner-feature-row">
+          <div>
+            <strong>Instant Quote</strong>
+            <span>Generate quick estimates</span>
+          </div>
+          <span class="feature-status {% if partner.instant_quote_enabled %}enabled{% else %}locked{% endif %}">
+            {% if partner.instant_quote_enabled %}Active{% else %}Locked{% endif %}
+          </span>
+        </div>
+      </div>
+
+      <div class="partner-feature-group">
+        <div class="partner-feature-row">
+          <div>
+            <strong>AI Assist</strong>
+            <span>Draft pricing, timelines, and responses</span>
+          </div>
+          <span class="feature-status {% if partner.ai_assist_enabled %}enabled{% else %}locked{% endif %}">
+            {% if partner.ai_assist_enabled %}Active{% else %}Locked{% endif %}
+          </span>
+        </div>
+
+        <div class="partner-feature-row">
+          <div>
+            <strong>Priority Placement</strong>
+            <span>Appear higher in partner discovery</span>
+          </div>
+          <span class="feature-status {% if partner.priority_placement_enabled %}enabled{% else %}locked{% endif %}">
+            {% if partner.priority_placement_enabled %}Active{% else %}Locked{% endif %}
+          </span>
+        </div>
+
+        <div class="partner-feature-row">
+          <div>
+            <strong>Smart Notifications</strong>
+            <span>Get alerts for matching requests</span>
+          </div>
+          <span class="feature-status {% if partner.smart_notifications_enabled %}enabled{% else %}locked{% endif %}">
+            {% if partner.smart_notifications_enabled %}Active{% else %}Locked{% endif %}
+          </span>
+        </div>
+
+        <div class="partner-feature-row">
+          <div>
+            <strong>Portfolio Showcase</strong>
+            <span>Display project photos and completed work</span>
+          </div>
+          <span class="feature-status {% if partner.portfolio_showcase_enabled %}enabled{% else %}locked{% endif %}">
+            {% if partner.portfolio_showcase_enabled %}Active{% else %}Locked{% endif %}
+          </span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="partner-section-head">
+      <div>
+        <h3>A La Carte Add-Ons</h3>
+        <p>Optional extras for partners who want targeted upgrades without a full tier jump.</p>
+      </div>
+    </div>
+
+    <div class="partner-addon-grid">
+      <div class="ravlo-card partner-addon-card">
+        <h4>Priority Placement</h4>
+        <div class="partner-addon-price">+$19 / month</div>
+        <p>Boost your visibility in partner search and recommendations.</p>
+        <a href="{{ url_for('partners.upgrade') }}" class="ravlo-btn ghost full">Add This</a>
+      </div>
+
+      <div class="ravlo-card partner-addon-card">
+        <h4>Portfolio Showcase</h4>
+        <div class="partner-addon-price">+$15 / month</div>
+        <p>Display photos and work samples to build faster trust with investors.</p>
+        <a href="{{ url_for('partners.upgrade') }}" class="ravlo-btn ghost full">Add This</a>
+      </div>
+
+      <div class="ravlo-card partner-addon-card">
+        <h4>AI Assist</h4>
+        <div class="partner-addon-price">+$29 / month</div>
+        <p>Use AI for estimates, proposal writing, and timeline suggestions.</p>
+        <a href="{{ url_for('partners.upgrade') }}" class="ravlo-btn ghost full">Add This</a>
+      </div>
+    </div>
+  </section>
+
+</div>
+{% endblock %}

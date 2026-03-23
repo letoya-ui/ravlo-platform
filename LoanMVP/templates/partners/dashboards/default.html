@@ -1,0 +1,885 @@
+{% extends "layouts/ravlo_base.html" %}
+
+{% block title %}Ravlo • Partner OS{% endblock %}
+
+{% block page_title %}
+  {{ partner.display_name() if partner else "Partner OS" }}
+{% endblock %}
+
+{% block page_subline %}
+  Manage requests, visibility, and premium tools inside the Ravlo partner network.
+{% endblock %}
+
+{% block topbar_actions %}
+  <a href="{{ url_for('partners.dashboard') }}" class="ravlo-btn ghost sm">
+    Refresh
+  </a>
+  <a href="{{ url_for('partners.upgrade') }}" class="ravlo-btn primary sm">
+    Unlock Features
+  </a>
+{% endblock %}
+
+{% block head %}
+  <style>
+    .partner-dashboard-page{
+      display:flex;
+      flex-direction:column;
+      gap:24px;
+    }
+
+    .partner-hero-card,
+    .partner-stat-card,
+    .partner-section-card,
+    .partner-profile-card{
+      border-radius:24px;
+    }
+
+    .partner-hero-card{
+      padding:28px;
+      position:relative;
+      overflow:hidden;
+    }
+
+    .partner-hero-card::before{
+      content:"";
+      position:absolute;
+      inset:0;
+      background:
+        radial-gradient(circle at top right, rgba(56, 189, 248, 0.14), transparent 32%),
+        radial-gradient(circle at bottom left, rgba(59, 130, 246, 0.12), transparent 28%);
+      pointer-events:none;
+    }
+
+    .partner-hero-grid{
+      position:relative;
+      z-index:1;
+      display:grid;
+      grid-template-columns:1.55fr .8fr;
+      gap:24px;
+      align-items:stretch;
+    }
+
+    .partner-badge-row{
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px;
+      margin-bottom:14px;
+    }
+
+    .partner-pill{
+      display:inline-flex;
+      align-items:center;
+      padding:6px 12px;
+      border-radius:999px;
+      font-size:.76rem;
+      font-weight:700;
+      letter-spacing:.03em;
+      border:1px solid rgba(255,255,255,.08);
+      background:rgba(255,255,255,.04);
+      color:var(--ravlo-text);
+    }
+
+    .partner-pill.verified{
+      background:rgba(34,197,94,.12);
+      color:#7ef0a5;
+      border-color:rgba(34,197,94,.22);
+    }
+
+    .partner-pill.featured{
+      background:rgba(250,204,21,.12);
+      color:#ffe082;
+      border-color:rgba(250,204,21,.24);
+    }
+
+    .partner-pill.premium{
+      background:rgba(56,189,248,.12);
+      color:#8edcff;
+      border-color:rgba(56,189,248,.22);
+    }
+
+    .partner-company-title{
+      margin:0 0 10px;
+      font-size:2rem;
+      line-height:1.1;
+      font-weight:800;
+      letter-spacing:-0.02em;
+    }
+
+    .partner-company-meta{
+      margin:0 0 14px;
+      color:var(--ravlo-muted);
+      font-weight:600;
+    }
+
+    .partner-hero-copy p{
+      margin:0;
+      color:var(--ravlo-muted);
+      line-height:1.65;
+      max-width:820px;
+    }
+
+    .partner-hero-actions{
+      display:flex;
+      flex-wrap:wrap;
+      gap:12px;
+      margin-top:20px;
+    }
+
+    .partner-highlight-panel{
+      display:flex;
+      flex-direction:column;
+      gap:14px;
+      height:100%;
+    }
+
+    .partner-highlight-box{
+      flex:1;
+      padding:22px;
+      border-radius:22px;
+      border:1px solid rgba(255,255,255,.08);
+      background:linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
+    }
+
+    .partner-highlight-label{
+      font-size:.82rem;
+      text-transform:uppercase;
+      letter-spacing:.08em;
+      color:var(--ravlo-muted);
+      margin-bottom:8px;
+    }
+
+    .partner-highlight-value{
+      font-size:2.3rem;
+      font-weight:800;
+      line-height:1;
+      margin-bottom:8px;
+    }
+
+    .partner-highlight-sub{
+      color:var(--ravlo-muted);
+      line-height:1.5;
+    }
+
+    .partner-stat-grid{
+      display:grid;
+      grid-template-columns:repeat(5, 1fr);
+      gap:16px;
+    }
+
+    .partner-stat-card{
+      padding:20px;
+    }
+
+    .partner-stat-label{
+      font-size:.82rem;
+      color:var(--ravlo-muted);
+      margin-bottom:8px;
+      text-transform:uppercase;
+      letter-spacing:.05em;
+    }
+
+    .partner-stat-value{
+      font-size:1.9rem;
+      font-weight:800;
+      line-height:1;
+      margin-bottom:6px;
+    }
+
+    .partner-stat-sub{
+      color:var(--ravlo-muted);
+      font-size:.92rem;
+    }
+
+    .partner-main-grid{
+      display:grid;
+      grid-template-columns:1.5fr .82fr;
+      gap:24px;
+      align-items:start;
+    }
+
+    .partner-main-col,
+    .partner-side-col{
+      display:flex;
+      flex-direction:column;
+      gap:24px;
+    }
+
+    .partner-section-card,
+    .partner-profile-card{
+      padding:24px;
+    }
+
+    .partner-section-head{
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:16px;
+      margin-bottom:18px;
+    }
+
+    .partner-section-head h3{
+      margin:0 0 6px;
+      font-size:1.05rem;
+      font-weight:800;
+      letter-spacing:-0.01em;
+    }
+
+    .partner-section-head p{
+      margin:0;
+      color:var(--ravlo-muted);
+      line-height:1.55;
+    }
+
+    .partner-inline-link{
+      color:var(--ravlo-accent, #7cc8ff);
+      text-decoration:none;
+      font-weight:700;
+      white-space:nowrap;
+    }
+
+    .partner-feature-grid{
+      display:grid;
+      grid-template-columns:repeat(2, minmax(0, 1fr));
+      gap:16px;
+    }
+
+    .partner-feature-card{
+      border:1px solid rgba(255,255,255,.08);
+      border-radius:20px;
+      padding:18px;
+      background:rgba(255,255,255,.025);
+      min-height:196px;
+      display:flex;
+      flex-direction:column;
+      justify-content:space-between;
+      gap:14px;
+    }
+
+    .partner-feature-card.locked{
+      background:rgba(255,255,255,.018);
+    }
+
+    .partner-feature-head{
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:14px;
+    }
+
+    .partner-feature-head h4{
+      margin:0 0 8px;
+      font-size:1rem;
+      font-weight:800;
+    }
+
+    .feature-badge{
+      display:inline-flex;
+      align-items:center;
+      padding:5px 10px;
+      border-radius:999px;
+      font-size:.72rem;
+      font-weight:700;
+      background:rgba(255,255,255,.06);
+      color:var(--ravlo-muted);
+      border:1px solid rgba(255,255,255,.08);
+    }
+
+    .feature-status{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      min-width:72px;
+      padding:6px 10px;
+      border-radius:999px;
+      font-size:.72rem;
+      font-weight:800;
+      letter-spacing:.02em;
+      white-space:nowrap;
+    }
+
+    .feature-status.enabled{
+      background:rgba(34,197,94,.12);
+      color:#7ef0a5;
+      border:1px solid rgba(34,197,94,.2);
+    }
+
+    .feature-status.locked{
+      background:rgba(255,255,255,.06);
+      color:var(--ravlo-muted);
+      border:1px solid rgba(255,255,255,.08);
+    }
+
+    .partner-feature-card p{
+      margin:0;
+      color:var(--ravlo-muted);
+      line-height:1.6;
+    }
+
+    .partner-request-list{
+      display:flex;
+      flex-direction:column;
+      gap:14px;
+    }
+
+    .partner-request-row{
+      border:1px solid rgba(255,255,255,.08);
+      border-radius:18px;
+      padding:16px;
+      background:rgba(255,255,255,.02);
+      display:flex;
+      justify-content:space-between;
+      gap:16px;
+    }
+
+    .partner-request-copy{
+      flex:1;
+      min-width:0;
+    }
+
+    .partner-request-title{
+      margin:0 0 6px;
+      font-size:1rem;
+      font-weight:800;
+    }
+
+    .partner-request-meta{
+      color:var(--ravlo-muted);
+      font-size:.9rem;
+      margin-bottom:8px;
+      line-height:1.45;
+    }
+
+    .partner-request-copy p{
+      margin:0;
+      color:var(--ravlo-muted);
+      line-height:1.58;
+    }
+
+    .partner-request-actions{
+      display:flex;
+      flex-direction:column;
+      align-items:flex-end;
+      justify-content:space-between;
+      gap:10px;
+    }
+
+    .request-badge{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      padding:6px 11px;
+      border-radius:999px;
+      font-size:.74rem;
+      font-weight:800;
+      letter-spacing:.02em;
+      border:1px solid transparent;
+      text-transform:capitalize;
+    }
+
+    .request-badge.pending{
+      background:rgba(250,204,21,.12);
+      color:#ffe082;
+      border-color:rgba(250,204,21,.22);
+    }
+
+    .request-badge.accepted{
+      background:rgba(56,189,248,.12);
+      color:#8edcff;
+      border-color:rgba(56,189,248,.22);
+    }
+
+    .request-badge.completed{
+      background:rgba(34,197,94,.12);
+      color:#7ef0a5;
+      border-color:rgba(34,197,94,.2);
+    }
+
+    .request-badge.awaiting_match{
+      background:rgba(168,85,247,.12);
+      color:#d0b1ff;
+      border-color:rgba(168,85,247,.22);
+    }
+
+    .request-badge.declined,
+    .request-badge.canceled{
+      background:rgba(239,68,68,.12);
+      color:#ffb0b0;
+      border-color:rgba(239,68,68,.2);
+    }
+
+    .partner-empty-state{
+      border:1px dashed rgba(255,255,255,.12);
+      border-radius:18px;
+      padding:24px;
+      text-align:center;
+      background:rgba(255,255,255,.015);
+    }
+
+    .partner-empty-state h4{
+      margin:0 0 8px;
+      font-size:1rem;
+      font-weight:800;
+    }
+
+    .partner-empty-state p{
+      margin:0;
+      color:var(--ravlo-muted);
+      line-height:1.55;
+    }
+
+    .partner-profile-list{
+      display:flex;
+      flex-direction:column;
+      gap:14px;
+      margin-top:6px;
+    }
+
+    .partner-profile-item{
+      display:flex;
+      justify-content:space-between;
+      gap:16px;
+      padding:12px 0;
+      border-bottom:1px solid rgba(255,255,255,.06);
+    }
+
+    .partner-profile-item:last-child{
+      border-bottom:none;
+      padding-bottom:0;
+    }
+
+    .partner-profile-label{
+      color:var(--ravlo-muted);
+      font-size:.9rem;
+      min-width:120px;
+    }
+
+    .partner-profile-value{
+      text-align:right;
+      font-weight:600;
+      color:var(--ravlo-text);
+      word-break:break-word;
+    }
+
+    .partner-progress-wrap{
+      margin-top:18px;
+    }
+
+    .partner-progress-top{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:12px;
+      margin-bottom:10px;
+      font-size:.92rem;
+    }
+
+    .partner-progress-top span:first-child{
+      color:var(--ravlo-muted);
+    }
+
+    .partner-progress-top strong{
+      font-size:.95rem;
+    }
+
+    .partner-progress-bar{
+      height:10px;
+      width:100%;
+      border-radius:999px;
+      background:rgba(255,255,255,.06);
+      overflow:hidden;
+      border:1px solid rgba(255,255,255,.05);
+    }
+
+    .partner-progress-fill{
+      height:100%;
+      border-radius:999px;
+      background:linear-gradient(90deg, rgba(56,189,248,.8), rgba(59,130,246,.95));
+    }
+
+    .partner-upgrade-card{
+      background:
+        linear-gradient(180deg, rgba(56,189,248,.08), rgba(255,255,255,.02));
+    }
+
+    .partner-upgrade-list{
+      margin:0;
+      padding-left:18px;
+      display:flex;
+      flex-direction:column;
+      gap:8px;
+      color:var(--ravlo-muted);
+    }
+
+    .partner-upgrade-list li{
+      line-height:1.55;
+    }
+
+    .ravlo-btn.full{
+      width:100%;
+      justify-content:center;
+    }
+
+    @media (max-width: 1180px){
+      .partner-hero-grid,
+      .partner-main-grid{
+        grid-template-columns:1fr;
+      }
+
+      .partner-stat-grid{
+        grid-template-columns:repeat(2, 1fr);
+      }
+    }
+
+    @media (max-width: 768px){
+      .partner-stat-grid,
+      .partner-feature-grid{
+        grid-template-columns:1fr;
+      }
+
+      .partner-request-row{
+        flex-direction:column;
+      }
+
+      .partner-request-actions{
+        align-items:stretch;
+      }
+
+      .partner-profile-item{
+        flex-direction:column;
+      }
+
+      .partner-profile-value{
+        text-align:left;
+      }
+    }
+  </style>
+{% endblock %}
+
+{% block content %}
+<div class="partner-dashboard-page">
+
+  <section class="ravlo-card partner-hero-card">
+    <div class="partner-hero-grid">
+      <div class="partner-hero-copy">
+        <div class="partner-badge-row">
+          <span class="partner-pill">
+            {{ partner.category|default("Partner", true)|replace('_', ' ')|title }}
+          </span>
+
+          <span class="partner-pill {% if (partner.subscription_tier or '')|lower == 'premium' %}premium{% endif %}">
+            {{ partner.subscription_tier or "Free" }}
+          </span>
+
+          {% if partner.is_verified %}
+            <span class="partner-pill verified">Verified</span>
+          {% endif %}
+
+          {% if partner.featured %}
+            <span class="partner-pill featured">Featured</span>
+          {% endif %}
+        </div>
+
+        <h2 class="partner-company-title">
+          {{ partner.display_name() }}
+        </h2>
+
+        <div class="partner-company-meta">
+          {% if partner.specialty %}{{ partner.specialty }}{% endif %}
+          {% if partner.city or partner.state %}
+            {% if partner.specialty %} • {% endif %}
+            {{ partner.city }}{% if partner.city and partner.state %}, {% endif %}{{ partner.state }}
+          {% endif %}
+          {% if partner.service_area %}
+            • {{ partner.service_area }}
+          {% endif %}
+        </div>
+
+        <p>
+          {{ partner.bio or partner.listing_description or "Grow your visibility, manage incoming requests, and unlock premium partner tools inside Ravlo." }}
+        </p>
+
+        <div class="partner-hero-actions">
+          <a href="{{ url_for('partners.requests') }}" class="ravlo-btn primary">
+            Open Lead Inbox
+          </a>
+          <a href="{{ url_for('partners.upgrade') }}" class="ravlo-btn ghost">
+            Growth Tools
+          </a>
+        </div>
+      </div>
+
+      <div class="partner-highlight-panel">
+        <div class="partner-highlight-box">
+          <div class="partner-highlight-label">Pending requests</div>
+          <div class="partner-highlight-value">{{ pending_count or 0 }}</div>
+          <div class="partner-highlight-sub">
+            New opportunities waiting for review in your Ravlo inbox.
+          </div>
+        </div>
+
+        <div class="partner-highlight-box">
+          <div class="partner-highlight-label">Locked tools</div>
+          <div class="partner-highlight-value">{{ locked_feature_count or 0 }}</div>
+          <div class="partner-highlight-sub">
+            Premium features available to help you win more deals.
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="partner-stat-grid">
+    <div class="ravlo-card partner-stat-card">
+      <div class="partner-stat-label">Pending</div>
+      <div class="partner-stat-value">{{ stats.pending if stats else 0 }}</div>
+      <div class="partner-stat-sub">Awaiting review</div>
+    </div>
+
+    <div class="ravlo-card partner-stat-card">
+      <div class="partner-stat-label">Accepted</div>
+      <div class="partner-stat-value">{{ stats.accepted if stats else 0 }}</div>
+      <div class="partner-stat-sub">Active opportunities</div>
+    </div>
+
+    <div class="ravlo-card partner-stat-card">
+      <div class="partner-stat-label">Completed</div>
+      <div class="partner-stat-value">{{ stats.completed if stats else 0 }}</div>
+      <div class="partner-stat-sub">Finished work</div>
+    </div>
+
+    <div class="ravlo-card partner-stat-card">
+      <div class="partner-stat-label">Deals</div>
+      <div class="partner-stat-value">{{ stats.deals if stats else 0 }}</div>
+      <div class="partner-stat-sub">Recorded partner deals</div>
+    </div>
+
+    <div class="ravlo-card partner-stat-card">
+      <div class="partner-stat-label">Rating</div>
+      <div class="partner-stat-value">
+        {{ "%.1f"|format(stats.rating if stats and stats.rating is not none else 0) }}
+      </div>
+      <div class="partner-stat-sub">
+        {{ stats.review_count if stats else 0 }} reviews
+      </div>
+    </div>
+  </section>
+
+  <div class="partner-main-grid">
+
+    <div class="partner-main-col">
+
+      <section class="ravlo-card partner-section-card">
+        <div class="partner-section-head">
+          <div>
+            <h3>Growth Tools</h3>
+            <p>
+              Premium tools that help partners respond faster, look stronger, and win more business inside Ravlo.
+            </p>
+          </div>
+          <a href="{{ url_for('partners.upgrade') }}" class="partner-inline-link">
+            View plans
+          </a>
+        </div>
+
+        <div class="partner-feature-grid">
+          {% for feature in feature_cards %}
+            <div class="partner-feature-card {% if not feature.enabled %}locked{% endif %}">
+              <div>
+                <div class="partner-feature-head">
+                  <div>
+                    <h4>{{ feature.title }}</h4>
+                    <span class="feature-badge">{{ feature.badge }}</span>
+                  </div>
+
+                  <span class="feature-status {% if feature.enabled %}enabled{% else %}locked{% endif %}">
+                    {% if feature.enabled %}Active{% else %}Locked{% endif %}
+                  </span>
+                </div>
+
+                <p>{{ feature.description }}</p>
+              </div>
+
+              <div>
+                {% if feature.enabled %}
+                  <a href="{{ url_for(feature.endpoint) }}" class="ravlo-btn ghost sm">
+                    {{ feature.cta }}
+                  </a>
+                {% else %}
+                  <a href="{{ url_for('partners.upgrade') }}" class="ravlo-btn primary sm">
+                    Unlock
+                  </a>
+                {% endif %}
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      </section>
+
+      <section class="ravlo-card partner-section-card">
+        <div class="partner-section-head">
+          <div>
+            <h3>Recent Requests</h3>
+            <p>
+              Your latest service and connection opportunities across the Ravlo network.
+            </p>
+          </div>
+          <a href="{{ url_for('partners.requests') }}" class="partner-inline-link">
+            View all
+          </a>
+        </div>
+
+        <div class="partner-request-list">
+          {% if recent_requests %}
+            {% for req in recent_requests %}
+              <div class="partner-request-row">
+                <div class="partner-request-copy">
+                  <div class="partner-request-title">
+                    {{ req.category or "Connection Request" }}
+                  </div>
+
+                  <div class="partner-request-meta">
+                    {{ req.status|replace('_', ' ')|title }}
+                    {% if req.source %}
+                      • {{ req.source|replace('_', ' ')|title }}
+                    {% endif %}
+                    {% if req.created_at %}
+                      • {{ req.created_at.strftime('%b %d, %Y') }}
+                    {% endif %}
+                  </div>
+
+                  {% if req.message %}
+                    <p>
+                      {{ req.message[:180] }}{% if req.message|length > 180 %}...{% endif %}
+                    </p>
+                  {% else %}
+                    <p>
+                      A new request was sent through Ravlo and is ready for your review.
+                    </p>
+                  {% endif %}
+                </div>
+
+                <div class="partner-request-actions">
+                  <span class="request-badge {{ (req.status or 'pending')|lower }}">
+                    {{ req.status|default("pending", true)|replace('_', ' ')|title }}
+                  </span>
+
+                  <a href="{{ url_for('partners.request_detail', request_id=req.id) }}" class="ravlo-btn ghost xs">
+                    Open
+                  </a>
+                </div>
+              </div>
+            {% endfor %}
+          {% else %}
+            <div class="partner-empty-state">
+              <h4>No requests yet</h4>
+              <p>
+                When investors or borrowers send service requests, they’ll show up here.
+              </p>
+            </div>
+          {% endif %}
+        </div>
+      </section>
+
+    </div>
+
+    <aside class="partner-side-col">
+
+      <section class="ravlo-card partner-profile-card">
+        <div class="partner-section-head">
+          <div>
+            <h3>Profile Snapshot</h3>
+            <p>Your current public business profile inside Ravlo.</p>
+          </div>
+        </div>
+
+        <div class="partner-profile-list">
+          <div class="partner-profile-item">
+            <div class="partner-profile-label">Business</div>
+            <div class="partner-profile-value">{{ partner.display_name() }}</div>
+          </div>
+
+          <div class="partner-profile-item">
+            <div class="partner-profile-label">Category</div>
+            <div class="partner-profile-value">
+              {{ partner.category|default("Not set", true)|replace('_', ' ')|title }}
+            </div>
+          </div>
+
+          <div class="partner-profile-item">
+            <div class="partner-profile-label">Type</div>
+            <div class="partner-profile-value">
+              {{ partner.type or "Not set" }}
+            </div>
+          </div>
+
+          <div class="partner-profile-item">
+            <div class="partner-profile-label">Specialty</div>
+            <div class="partner-profile-value">
+              {{ partner.specialty or "Not set" }}
+            </div>
+          </div>
+
+          <div class="partner-profile-item">
+            <div class="partner-profile-label">Service Area</div>
+            <div class="partner-profile-value">
+              {{ partner.service_area or "Not set" }}
+            </div>
+          </div>
+
+          <div class="partner-profile-item">
+            <div class="partner-profile-label">Tier</div>
+            <div class="partner-profile-value">
+              {{ partner.subscription_tier or "Free" }}
+            </div>
+          </div>
+
+          <div class="partner-profile-item">
+            <div class="partner-profile-label">Status</div>
+            <div class="partner-profile-value">
+              {{ partner.status or "Active" }}
+            </div>
+          </div>
+        </div>
+
+        <div class="partner-progress-wrap">
+          <div class="partner-progress-top">
+            <span>Profile completion</span>
+            <strong>{{ stats.profile_completion if stats else 0 }}%</strong>
+          </div>
+          <div class="partner-progress-bar">
+            <div
+              class="partner-progress-fill"
+              style="width: {{ stats.profile_completion if stats else 0 }}%;"
+            ></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="ravlo-card partner-section-card partner-upgrade-card">
+        <div class="partner-section-head">
+          <div>
+            <h3>Upgrade Your Presence</h3>
+            <p>
+              Unlock tools that improve your response speed, trust, and visibility inside Ravlo.
+            </p>
+          </div>
+        </div>
+
+        <ul class="partner-upgrade-list">
+          <li>Proposal Builder for polished responses</li>
+          <li>Priority Placement in partner search</li>
+          <li>AI Assist for pricing and timelines</li>
+          <li>Portfolio Showcase for trust and conversion</li>
+          <li>Smart notifications for matching requests</li>
+        </ul>
+
+        <a href="{{ url_for('partners.upgrade') }}" class="ravlo-btn primary full">
+          Explore Growth Plans
+        </a>
+      </section>
+
+    </aside>
+
+  </div>
+</div>
+{% endblock %}

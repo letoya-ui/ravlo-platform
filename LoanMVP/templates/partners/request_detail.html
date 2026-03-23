@@ -1,0 +1,494 @@
+{% extends "layouts/ravlo_base.html" %}
+
+{% block title %}Ravlo • Request Detail{% endblock %}
+
+{% block page_title %}Request Detail{% endblock %}
+
+{% block page_subline %}
+Review request details, update status, and manage the next step.
+{% endblock %}
+
+{% block topbar_actions %}
+  <a href="{{ url_for('partners.requests') }}" class="ravlo-btn ghost sm">
+    Back to Inbox
+  </a>
+{% endblock %}
+
+{% block head %}
+  <style>
+    .partner-request-detail-page{
+      display:flex;
+      flex-direction:column;
+      gap:24px;
+    }
+
+    .partner-detail-grid{
+      display:grid;
+      grid-template-columns:1.45fr .8fr;
+      gap:24px;
+      align-items:start;
+    }
+
+    .partner-detail-main,
+    .partner-detail-side{
+      display:flex;
+      flex-direction:column;
+      gap:24px;
+    }
+
+    .partner-detail-card{
+      border-radius:24px;
+      padding:24px;
+    }
+
+    .partner-request-hero{
+      position:relative;
+      overflow:hidden;
+    }
+
+    .partner-request-hero::before{
+      content:"";
+      position:absolute;
+      inset:0;
+      background:
+        radial-gradient(circle at top right, rgba(56,189,248,.12), transparent 34%),
+        radial-gradient(circle at bottom left, rgba(59,130,246,.10), transparent 28%);
+      pointer-events:none;
+    }
+
+    .partner-request-hero-inner{
+      position:relative;
+      z-index:1;
+      display:flex;
+      justify-content:space-between;
+      gap:20px;
+      align-items:flex-start;
+    }
+
+    .partner-request-title{
+      margin:0 0 10px;
+      font-size:1.8rem;
+      line-height:1.1;
+      font-weight:800;
+      letter-spacing:-0.02em;
+    }
+
+    .partner-request-meta{
+      color:var(--ravlo-muted);
+      line-height:1.6;
+      font-size:.95rem;
+    }
+
+    .request-badge{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      padding:7px 12px;
+      border-radius:999px;
+      font-size:.76rem;
+      font-weight:800;
+      letter-spacing:.02em;
+      border:1px solid transparent;
+      text-transform:capitalize;
+      white-space:nowrap;
+    }
+
+    .request-badge.pending{
+      background:rgba(250,204,21,.12);
+      color:#ffe082;
+      border-color:rgba(250,204,21,.22);
+    }
+
+    .request-badge.accepted{
+      background:rgba(56,189,248,.12);
+      color:#8edcff;
+      border-color:rgba(56,189,248,.22);
+    }
+
+    .request-badge.completed{
+      background:rgba(34,197,94,.12);
+      color:#7ef0a5;
+      border-color:rgba(34,197,94,.2);
+    }
+
+    .request-badge.awaiting_match{
+      background:rgba(168,85,247,.12);
+      color:#d0b1ff;
+      border-color:rgba(168,85,247,.22);
+    }
+
+    .request-badge.declined,
+    .request-badge.canceled{
+      background:rgba(239,68,68,.12);
+      color:#ffb0b0;
+      border-color:rgba(239,68,68,.2);
+    }
+
+    .partner-section-head{
+      display:flex;
+      justify-content:space-between;
+      align-items:flex-start;
+      gap:16px;
+      margin-bottom:18px;
+    }
+
+    .partner-section-head h3{
+      margin:0 0 6px;
+      font-size:1.05rem;
+      font-weight:800;
+      letter-spacing:-0.01em;
+    }
+
+    .partner-section-head p{
+      margin:0;
+      color:var(--ravlo-muted);
+      line-height:1.55;
+    }
+
+    .partner-detail-list{
+      display:flex;
+      flex-direction:column;
+      gap:12px;
+    }
+
+    .partner-detail-item{
+      display:flex;
+      justify-content:space-between;
+      gap:16px;
+      padding:12px 0;
+      border-bottom:1px solid rgba(255,255,255,.06);
+    }
+
+    .partner-detail-item:last-child{
+      border-bottom:none;
+      padding-bottom:0;
+    }
+
+    .partner-detail-label{
+      color:var(--ravlo-muted);
+      min-width:130px;
+      font-size:.9rem;
+    }
+
+    .partner-detail-value{
+      text-align:right;
+      font-weight:600;
+      color:var(--ravlo-text);
+      word-break:break-word;
+    }
+
+    .partner-message-box{
+      border:1px solid rgba(255,255,255,.08);
+      border-radius:18px;
+      background:rgba(255,255,255,.02);
+      padding:18px;
+      color:var(--ravlo-text);
+      line-height:1.68;
+      white-space:pre-wrap;
+    }
+
+    .partner-status-form{
+      display:flex;
+      flex-direction:column;
+      gap:16px;
+    }
+
+    .partner-field{
+      display:flex;
+      flex-direction:column;
+      gap:8px;
+    }
+
+    .partner-label{
+      font-size:.84rem;
+      font-weight:700;
+      color:var(--ravlo-muted);
+      letter-spacing:.02em;
+    }
+
+    .partner-select{
+      min-height:46px;
+      border-radius:14px;
+    }
+
+    .partner-form-actions{
+      display:flex;
+      gap:12px;
+      flex-wrap:wrap;
+    }
+
+    .partner-quick-actions{
+      display:flex;
+      flex-direction:column;
+      gap:12px;
+    }
+
+    .partner-note{
+      color:var(--ravlo-muted);
+      font-size:.92rem;
+      line-height:1.58;
+    }
+
+    .partner-empty-copy{
+      color:var(--ravlo-muted);
+      line-height:1.58;
+      margin:0;
+    }
+
+    @media (max-width: 1080px){
+      .partner-detail-grid{
+        grid-template-columns:1fr;
+      }
+    }
+
+    @media (max-width: 768px){
+      .partner-request-hero-inner,
+      .partner-detail-item{
+        flex-direction:column;
+      }
+
+      .partner-detail-value{
+        text-align:left;
+      }
+    }
+  </style>
+{% endblock %}
+
+{% block content %}
+<div class="partner-request-detail-page">
+
+  <section class="ravlo-card partner-detail-card partner-request-hero">
+    <div class="partner-request-hero-inner">
+      <div>
+        <h2 class="partner-request-title">
+          {{ req.category or "Connection Request" }}
+        </h2>
+
+        <div class="partner-request-meta">
+          {% if req.created_at %}
+            Submitted {{ req.created_at.strftime('%B %d, %Y at %I:%M %p') }}
+          {% endif %}
+          {% if req.source %}
+            • {{ req.source|replace('_', ' ')|title }}
+          {% endif %}
+          {% if req.responded_at %}
+            • Responded {{ req.responded_at.strftime('%B %d, %Y at %I:%M %p') }}
+          {% endif %}
+        </div>
+      </div>
+
+      <div>
+        <span class="request-badge {{ (req.status or 'pending')|lower }}">
+          {{ req.status|default("pending", true)|replace('_', ' ')|title }}
+        </span>
+      </div>
+    </div>
+  </section>
+
+  <div class="partner-detail-grid">
+
+    <div class="partner-detail-main">
+
+      <section class="ravlo-card partner-detail-card">
+        <div class="partner-section-head">
+          <div>
+            <h3>Request Message</h3>
+            <p>Review the message and service context submitted through Ravlo.</p>
+          </div>
+        </div>
+
+        {% if req.message %}
+          <div class="partner-message-box">{{ req.message }}</div>
+        {% else %}
+          <p class="partner-empty-copy">
+            No message was included with this request.
+          </p>
+        {% endif %}
+      </section>
+
+      <section class="ravlo-card partner-detail-card">
+        <div class="partner-section-head">
+          <div>
+            <h3>Request Details</h3>
+            <p>Core request information and related references.</p>
+          </div>
+        </div>
+
+        <div class="partner-detail-list">
+          <div class="partner-detail-item">
+            <div class="partner-detail-label">Request ID</div>
+            <div class="partner-detail-value">{{ req.id }}</div>
+          </div>
+
+          <div class="partner-detail-item">
+            <div class="partner-detail-label">Category</div>
+            <div class="partner-detail-value">{{ req.category or "—" }}</div>
+          </div>
+
+          <div class="partner-detail-item">
+            <div class="partner-detail-label">Status</div>
+            <div class="partner-detail-value">
+              {{ req.status|default("pending", true)|replace('_', ' ')|title }}
+            </div>
+          </div>
+
+          <div class="partner-detail-item">
+            <div class="partner-detail-label">Source</div>
+            <div class="partner-detail-value">
+              {{ req.source|default("internal", true)|replace('_', ' ')|title }}
+            </div>
+          </div>
+
+          <div class="partner-detail-item">
+            <div class="partner-detail-label">Partner</div>
+            <div class="partner-detail-value">
+              {{ partner.display_name() if partner else "—" }}
+            </div>
+          </div>
+
+          <div class="partner-detail-item">
+            <div class="partner-detail-label">Created</div>
+            <div class="partner-detail-value">
+              {{ req.created_at.strftime('%b %d, %Y %I:%M %p') if req.created_at else "—" }}
+            </div>
+          </div>
+
+          <div class="partner-detail-item">
+            <div class="partner-detail-label">Responded</div>
+            <div class="partner-detail-value">
+              {{ req.responded_at.strftime('%b %d, %Y %I:%M %p') if req.responded_at else "Not yet" }}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="ravlo-card partner-detail-card">
+        <div class="partner-section-head">
+          <div>
+            <h3>Connected Records</h3>
+            <p>Linked entities associated with this opportunity.</p>
+          </div>
+        </div>
+
+        <div class="partner-detail-list">
+          <div class="partner-detail-item">
+            <div class="partner-detail-label">Deal ID</div>
+            <div class="partner-detail-value">{{ req.deal_id or "—" }}</div>
+          </div>
+
+          <div class="partner-detail-item">
+            <div class="partner-detail-label">Lead ID</div>
+            <div class="partner-detail-value">{{ req.lead_id or "—" }}</div>
+          </div>
+
+          <div class="partner-detail-item">
+            <div class="partner-detail-label">Property ID</div>
+            <div class="partner-detail-value">{{ req.property_id or "—" }}</div>
+          </div>
+
+          <div class="partner-detail-item">
+            <div class="partner-detail-label">Saved Property ID</div>
+            <div class="partner-detail-value">{{ req.saved_property_id or "—" }}</div>
+          </div>
+
+          <div class="partner-detail-item">
+            <div class="partner-detail-label">Borrower Profile</div>
+            <div class="partner-detail-value">{{ req.borrower_profile_id or "—" }}</div>
+          </div>
+
+          <div class="partner-detail-item">
+            <div class="partner-detail-label">Investor Profile</div>
+            <div class="partner-detail-value">{{ req.investor_profile_id or "—" }}</div>
+          </div>
+
+          <div class="partner-detail-item">
+            <div class="partner-detail-label">External Lead</div>
+            <div class="partner-detail-value">{{ req.external_partner_lead_id or "—" }}</div>
+          </div>
+        </div>
+      </section>
+
+    </div>
+
+    <aside class="partner-detail-side">
+
+      <section class="ravlo-card partner-detail-card">
+        <div class="partner-section-head">
+          <div>
+            <h3>Update Status</h3>
+            <p>Move this request forward and keep your pipeline accurate.</p>
+          </div>
+        </div>
+
+        <form method="POST" action="{{ url_for('partners.update_request_status', request_id=req.id) }}" class="partner-status-form">
+          <div class="partner-field">
+            <label class="partner-label">Request Status</label>
+            <select name="status" class="ravlo-input partner-select">
+              <option value="pending" {% if (req.status or "") == "pending" %}selected{% endif %}>Pending</option>
+              <option value="accepted" {% if (req.status or "") == "accepted" %}selected{% endif %}>Accepted</option>
+              <option value="awaiting_match" {% if (req.status or "") == "awaiting_match" %}selected{% endif %}>Awaiting Match</option>
+              <option value="completed" {% if (req.status or "") == "completed" %}selected{% endif %}>Completed</option>
+              <option value="declined" {% if (req.status or "") == "declined" %}selected{% endif %}>Declined</option>
+              <option value="canceled" {% if (req.status or "") == "canceled" %}selected{% endif %}>Canceled</option>
+            </select>
+          </div>
+
+          <div class="partner-form-actions">
+            <button type="submit" class="ravlo-btn primary">
+              Save Status
+            </button>
+            <a href="{{ url_for('partners.requests') }}" class="ravlo-btn ghost">
+              Cancel
+            </a>
+          </div>
+        </form>
+      </section>
+
+      <section class="ravlo-card partner-detail-card">
+        <div class="partner-section-head">
+          <div>
+            <h3>Quick Actions</h3>
+            <p>Fast access to your most common partner workflow actions.</p>
+          </div>
+        </div>
+
+        <div class="partner-quick-actions">
+          <a href="{{ url_for('partners.requests') }}" class="ravlo-btn ghost">
+            Back to Lead Inbox
+          </a>
+
+          <a href="{{ url_for('partners.dashboard') }}" class="ravlo-btn ghost">
+            Return to Dashboard
+          </a>
+
+          {% if partner and partner.proposal_builder_enabled %}
+            <a href="{{ url_for('partners.create_proposal', request_id=req.id) }}
+              Create Proposal
+            </a>
+          {% else %}
+            <a href="{{ url_for('partners.upgrade') }}" class="ravlo-btn primary">
+              Unlock Proposal Builder
+            </a>
+          {% endif %}
+        </div>
+      </section>
+
+      <section class="ravlo-card partner-detail-card">
+        <div class="partner-section-head">
+          <div>
+            <h3>Partner Notes</h3>
+            <p>Use this request to decide your next business move.</p>
+          </div>
+        </div>
+
+        <p class="partner-note">
+          Keep this pipeline current so Ravlo can surface the right opportunities, improve response workflows,
+          and support future premium tools like proposals, quotes, and smart matching.
+        </p>
+      </section>
+
+    </aside>
+
+  </div>
+</div>
+{% endblock %}

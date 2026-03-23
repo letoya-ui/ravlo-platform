@@ -267,6 +267,8 @@ class MessageThread(db.Model):
 # -----------------------------
 # 🤝 Partner Model
 # -----------------------------
+from datetime import datetime, timedelta
+from LoanMVP.extensions import db
 
 
 class Partner(db.Model):
@@ -310,6 +312,16 @@ class Partner(db.Model):
     status = db.Column(db.String(50), default="Active")
     relationship_level = db.Column(db.String(50), nullable=True)   # Gold, Silver, Preferred
     subscription_tier = db.Column(db.String(50), default="Free")   # Free, Featured, Premium
+
+    # Feature access
+    crm_enabled = db.Column(db.Boolean, default=True)
+    deal_visibility_enabled = db.Column(db.Boolean, default=False)
+    proposal_builder_enabled = db.Column(db.Boolean, default=False)
+    instant_quote_enabled = db.Column(db.Boolean, default=False)
+    ai_assist_enabled = db.Column(db.Boolean, default=False)
+    priority_placement_enabled = db.Column(db.Boolean, default=False)
+    smart_notifications_enabled = db.Column(db.Boolean, default=False)
+    portfolio_showcase_enabled = db.Column(db.Boolean, default=False)
 
     # Quality / ranking
     rating = db.Column(db.Float, default=0.0)
@@ -373,15 +385,68 @@ class Partner(db.Model):
 
         return round(score, 2)
 
-
-    # === Utility Methods ===
     def is_active_listing(self):
-        """Return True if the partner is active and payment is valid."""
         return self.approved and self.paid_until and self.paid_until >= datetime.utcnow()
 
     def last_active(self):
-        """Return the most recent activity (contact or deal)."""
         return max(filter(None, [self.last_contacted, self.last_deal, self.joined_date]))
+
+    # -----------------------------
+    # Dashboard / feature helpers
+    # -----------------------------
+    def has_feature(self, feature_name):
+        feature_map = {
+            "crm": self.crm_enabled,
+            "deal_visibility": self.deal_visibility_enabled,
+            "proposal_builder": self.proposal_builder_enabled,
+            "instant_quote": self.instant_quote_enabled,
+            "ai_assist": self.ai_assist_enabled,
+            "priority_placement": self.priority_placement_enabled,
+            "smart_notifications": self.smart_notifications_enabled,
+            "portfolio_showcase": self.portfolio_showcase_enabled,
+        }
+        return bool(feature_map.get(feature_name, False))
+
+    def enabled_features(self):
+        return {
+            "crm": self.crm_enabled,
+            "deal_visibility": self.deal_visibility_enabled,
+            "proposal_builder": self.proposal_builder_enabled,
+            "instant_quote": self.instant_quote_enabled,
+            "ai_assist": self.ai_assist_enabled,
+            "priority_placement": self.priority_placement_enabled,
+            "smart_notifications": self.smart_notifications_enabled,
+            "portfolio_showcase": self.portfolio_showcase_enabled,
+        }
+
+    def locked_feature_count(self):
+        return sum(1 for _, enabled in self.enabled_features().items() if not enabled)
+
+    def dashboard_tier_label(self):
+        if self.subscription_tier:
+            return self.subscription_tier
+        if self.featured:
+            return "Featured"
+        return "Free"
+
+    def profile_completion(self):
+        fields = [
+            self.name,
+            self.company,
+            self.email,
+            self.phone,
+            self.category,
+            self.type,
+            self.specialty,
+            self.service_area,
+            self.bio,
+            self.city,
+            self.state,
+            self.logo_url,
+        ]
+        filled = sum(1 for f in fields if f)
+        total = len(fields)
+        return int((filled / total) * 100) if total else 0
 
     def __repr__(self):
         return f"<Partner {self.name} ({self.type or 'N/A'})>"

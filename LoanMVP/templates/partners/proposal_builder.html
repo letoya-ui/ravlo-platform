@@ -1,0 +1,142 @@
+{% extends "layouts/ravlo_base.html" %}
+
+{% block title %}Ravlo • New Proposal{% endblock %}
+{% block page_title %}New Proposal{% endblock %}
+{% block page_subline %}
+Create a polished proposal with scope, pricing, and timeline.
+{% endblock %}
+
+{% block topbar_actions %}
+  <a href="{{ url_for('partners.proposals') }}" class="ravlo-btn ghost sm">
+    Back to Proposals
+  </a>
+{% endblock %}
+
+{% block head %}
+<style>
+  .proposal-builder-page{display:flex;flex-direction:column;gap:24px;}
+  .builder-card{padding:24px;border-radius:24px;}
+  .builder-grid{display:grid;grid-template-columns:1.2fr .8fr;gap:24px;}
+  .builder-col{display:flex;flex-direction:column;gap:24px;}
+  .builder-field{display:flex;flex-direction:column;gap:8px;}
+  .builder-label{font-size:.84rem;font-weight:700;color:var(--ravlo-muted);}
+  .builder-card h3{margin:0 0 16px;font-size:1.05rem;font-weight:800;}
+  .builder-note{color:var(--ravlo-muted);line-height:1.6;}
+  .builder-actions{display:flex;gap:12px;flex-wrap:wrap;}
+  .summary-box{
+    border:1px solid rgba(255,255,255,.08);
+    border-radius:18px;padding:18px;background:rgba(255,255,255,.02);
+  }
+  .summary-row{
+    display:flex;justify-content:space-between;gap:12px;padding:10px 0;
+    border-bottom:1px solid rgba(255,255,255,.06);
+  }
+  .summary-row:last-child{border-bottom:none;}
+  .summary-label{color:var(--ravlo-muted);}
+  .summary-value{font-weight:700;}
+  @media (max-width: 980px){
+    .builder-grid{grid-template-columns:1fr;}
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="proposal-builder-page">
+  <form method="POST" action="{{ url_for('partners.create_proposal') }}">
+    {% if linked_request %}
+      <input type="hidden" name="request_id" value="{{ linked_request.id }}">
+    {% endif %}
+
+    <div class="builder-grid">
+      <div class="builder-col">
+        <section class="ravlo-card builder-card">
+          <h3>Proposal Information</h3>
+
+          <div class="builder-field">
+            <label class="builder-label">Title</label>
+            <input type="text" name="title" class="ravlo-input" placeholder="Kitchen Renovation Proposal" required>
+          </div>
+
+          <div class="builder-field" style="margin-top:14px;">
+            <label class="builder-label">Estimated Timeline</label>
+            <input type="text" name="estimated_timeline" class="ravlo-input" placeholder="3 to 4 weeks">
+          </div>
+
+          <div class="builder-field" style="margin-top:14px;">
+            <label class="builder-label">Proposal Summary</label>
+            <textarea name="proposal_text" class="ravlo-input" rows="6" placeholder="Write your proposal introduction, deliverables, and client-facing summary."></textarea>
+          </div>
+
+          <div class="builder-field" style="margin-top:14px;">
+            <label class="builder-label">Scope of Work</label>
+            <textarea name="scope_of_work" class="ravlo-input" rows="8" placeholder="Describe labor, materials, stages, and included work."></textarea>
+          </div>
+        </section>
+
+        <section class="ravlo-card builder-card">
+          <h3>Pricing</h3>
+
+          <div class="builder-field">
+            <label class="builder-label">Labor Cost</label>
+            <input type="number" step="0.01" min="0" name="labor_cost" class="ravlo-input" placeholder="0.00">
+          </div>
+
+          <div class="builder-field" style="margin-top:14px;">
+            <label class="builder-label">Materials Cost</label>
+            <input type="number" step="0.01" min="0" name="materials_cost" class="ravlo-input" placeholder="0.00">
+          </div>
+
+          <div class="builder-field" style="margin-top:14px;">
+            <label class="builder-label">Other Cost</label>
+            <input type="number" step="0.01" min="0" name="other_cost" class="ravlo-input" placeholder="0.00">
+          </div>
+        </section>
+
+        <section class="builder-actions">
+          <button type="submit" class="ravlo-btn primary">Save Draft</button>
+          <a href="{{ url_for('partners.proposals') }}" class="ravlo-btn ghost">Cancel</a>
+        </section>
+      </div>
+
+      <div class="builder-col">
+        <section class="ravlo-card builder-card">
+          <h3>Linked Request</h3>
+
+          {% if linked_request %}
+            <div class="summary-box">
+              <div class="summary-row">
+                <div class="summary-label">Request ID</div>
+                <div class="summary-value">#{{ linked_request.id }}</div>
+              </div>
+              <div class="summary-row">
+                <div class="summary-label">Category</div>
+                <div class="summary-value">{{ linked_request.category or "Request" }}</div>
+              </div>
+              <div class="summary-row">
+                <div class="summary-label">Status</div>
+                <div class="summary-value">{{ linked_request.status|default("pending", true)|title }}</div>
+              </div>
+              <div class="summary-row">
+                <div class="summary-label">Source</div>
+                <div class="summary-value">{{ linked_request.source|default("internal", true)|replace('_',' ')|title }}</div>
+              </div>
+            </div>
+          {% else %}
+            <p class="builder-note">
+              This proposal is not linked to a specific request yet. You can still save it as a reusable draft.
+            </p>
+          {% endif %}
+        </section>
+
+        <section class="ravlo-card builder-card">
+          <h3>Proposal Tips</h3>
+          <p class="builder-note">
+            Keep the proposal clear, specific, and outcome-focused. Strong proposals usually define scope,
+            set expectations, and make pricing easy to understand.
+          </p>
+        </section>
+      </div>
+    </div>
+  </form>
+</div>
+{% endblock %}

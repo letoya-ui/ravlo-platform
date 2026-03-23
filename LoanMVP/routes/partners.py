@@ -3,6 +3,7 @@ from flask_login import current_user
 from datetime import datetime
 from pathlib import Path
 from werkzeug.utils import secure_filename
+from sqlalchemy import desc
 
 from LoanMVP.extensions import db, csrf
 from LoanMVP.utils.decorators import role_required
@@ -47,20 +48,119 @@ def partner_has_premium_access(partner) -> bool:
 # DASHBOARD
 # ------------------------------------------------
 
+
 @partners_bp.route("/dashboard")
 @role_required("partner", "admin")
 def dashboard():
-
     partner = Partner.query.filter_by(user_id=current_user.id).first()
 
     if not partner:
         flash("Partner profile not found. Please register.", "warning")
         return redirect(url_for("partners.register"))
 
-    pending_count = PartnerConnectionRequest.query.filter_by(
-        partner_id=partner.id,
-        status="pending"
-    ).count()
+    base_query = PartnerConnectionRequest.query.filter_by(partner_id=partner.id)
+
+    pending_count = base_query.filter_by(status="pending").count()
+    accepted_count = base_query.filter_by(status="accepted").count()
+    completed_count = base_query.filter_by(status="completed").count()
+    awaiting_match_count = base_query.filter_by(status="awaiting_match").count()
+    declined_count = base_query.filter_by(status="declined").count()
+
+    recent_requests = (
+        base_query.order_by(desc(PartnerConnectionRequest.created_at))
+        .limit(8)
+        .all()
+    )
+
+    feature_cards = [
+        {
+            "key": "crm",
+            "title": "CRM",
+            "description": "Manage contacts, follow-up, and lead activity inside Ravlo.",
+            "enabled": getattr(partner, "crm_enabled", True),
+            "cta": "Open CRM",
+            "endpoint": "partners.crm",
+            "badge": "Core",
+        },
+        {
+            "key": "deal_visibility",
+            "title": "Deal Visibility",
+            "description": "See project, deal, and property context tied to requests.",
+            "enabled": getattr(partner, "deal_visibility_enabled", False),
+            "cta": "View Opportunities",
+            "endpoint": "partners.requests",
+            "badge": "Growth Tool",
+        },
+        {
+            "key": "proposal_builder",
+            "title": "Proposal Builder",
+            "description": "Create scopes, service proposals, and branded responses.",
+            "enabled": getattr(partner, "proposal_builder_enabled", False),
+            "cta": "Build Proposal",
+            "endpoint": "partners.proposals",
+            "badge": "Premium",
+        },
+        {
+            "key": "instant_quote",
+            "title": "Instant Quote",
+            "description": "Generate pricing quickly for incoming work opportunities.",
+            "enabled": getattr(partner, "instant_quote_enabled", False),
+            "cta": "Create Quote",
+            "endpoint": "partners.quotes",
+            "badge": "Premium",
+        },
+        {
+            "key": "ai_assist",
+            "title": "AI Assist",
+            "description": "Use AI to help draft responses, estimates, and timelines.",
+            "enabled": getattr(partner, "ai_assist_enabled", False),
+            "cta": "Open AI",
+            "endpoint": "partners.ai",
+            "badge": "Premium",
+        },
+        {
+            "key": "priority_placement",
+            "title": "Priority Placement",
+            "description": "Appear higher in Ravlo search and partner recommendations.",
+            "enabled": getattr(partner, "priority_placement_enabled", False),
+            "cta": "Boost Visibility",
+            "endpoint": "partners.upgrade",
+            "badge": "Visibility",
+        },
+        {
+            "key": "smart_notifications",
+            "title": "Smart Notifications",
+            "description": "Get alerts when new requests match your service area.",
+            "enabled": getattr(partner, "smart_notifications_enabled", False),
+            "cta": "Manage Alerts",
+            "endpoint": "partners.notifications",
+            "badge": "Automation",
+        },
+        {
+            "key": "portfolio_showcase",
+            "title": "Portfolio Showcase",
+            "description": "Display photos and project work to help investors trust faster.",
+            "enabled": getattr(partner, "portfolio_showcase_enabled", False),
+            "cta": "Manage Portfolio",
+            "endpoint": "partners.portfolio",
+            "badge": "Brand",
+        },
+    ]
+
+    locked_feature_count = sum(1 for item in feature_cards if not item["enabled"])
+
+    stats = {
+        "pending": pending_count,
+        "accepted": accepted_count,
+        "completed": completed_count,
+        "awaiting_match": awaiting_match_count,
+        "declined": declined_count,
+        "deals": partner.deals or 0,
+        "volume": partner.volume or 0.0,
+        "rating": partner.rating or 0.0,
+        "review_count": partner.review_count or 0,
+        "profile_completion": partner.profile_completion() if hasattr(partner, "profile_completion") else 0,
+    }
 
     dashboards = {
         "contractor": "partners/dashboards/contractor.html",
@@ -74,10 +174,13 @@ def dashboard():
         "insurance": "partners/dashboards/insurance.html",
         "attorney": "partners/dashboards/attorney.html",
         "property_manager": "partners/dashboards/property_manager.html",
+        "lender": "partners/dashboards/lender.html",
+        "broker": "partners/dashboards/broker.html",
+        "vendor": "partners/dashboards/vendor.html",
     }
 
     template = dashboards.get(
-        (partner.category or "").lower(),
+        (partner.category or "").strip().lower(),
         "partners/dashboards/default.html"
     )
 
@@ -85,12 +188,18 @@ def dashboard():
         template,
         partner=partner,
         pending_count=pending_count,
+        accepted_count=accepted_count,
+        completed_count=completed_count,
+        awaiting_match_count=awaiting_match_count,
+        declined_count=declined_count,
+        recent_requests=recent_requests,
+        feature_cards=feature_cards,
+        locked_feature_count=locked_feature_count,
+        stats=stats,
         portal="partner",
         portal_name="Partner OS",
         portal_home=url_for("partners.dashboard")
     )
-
-
 # ------------------------------------------------
 # PARTNER DIRECTORY (internal)
 # ------------------------------------------------
@@ -187,6 +296,60 @@ def register():
         portal="partner",
         portal_name="Partner OS",
         portal_home=url_for("partners.dashboard")
+    )
+
+@partners_bp.route("/requests", methods=["GET"])
+@role_required("partner")
+def requests():
+    partner = Partner.query.filter_by(user_id=current_user.id).first()
+
+    if not partner:
+        flash("Partner profile not found.", "danger")
+        return redirect(url_for("auth.login"))
+
+    selected_status = request.args.get("status", "").strip()
+    selected_source = request.args.get("source", "").strip()
+
+    query = PartnerConnectionRequest.query.filter_by(partner_id=partner.id)
+
+    if selected_status:
+        query = query.filter(PartnerConnectionRequest.status == selected_status)
+
+    if selected_source:
+        query = query.filter(PartnerConnectionRequest.source == selected_source)
+
+    requests_list = query.order_by(desc(PartnerConnectionRequest.created_at)).all()
+
+    return render_template(
+        "partners/requests.html",
+        partner=partner,
+        requests_list=requests_list,
+        selected_status=selected_status,
+        selected_source=selected_source,
+        page_title="Lead Inbox",
+        page_subline="Review incoming partner connection requests and respond quickly.",
+    )
+
+@partners_bp.route("/requests/<int:request_id>", methods=["GET"])
+@role_required("partner")
+def request_detail(request_id):
+    partner = Partner.query.filter_by(user_id=current_user.id).first()
+
+    if not partner:
+        flash("Partner profile not found.", "danger")
+        return redirect(url_for("auth.login"))
+
+    req = PartnerConnectionRequest.query.filter_by(
+        id=request_id,
+        partner_id=partner.id
+    ).first_or_404()
+
+    return render_template(
+        "partners/request_detail.html",
+        partner=partner,
+        req=req,
+        page_title="Request Detail",
+        page_subline="Review opportunity details and next steps.",
     )
 
 # ------------------------------------------------
@@ -310,6 +473,36 @@ def decline_request(req_id):
 
     return redirect(url_for("partners.requests_inbox"))
 
+
+@partners_bp.route("/requests/<int:request_id>/status", methods=["POST"])
+@csrf.exempt
+@role_required("partner")
+def update_request_status(request_id):
+    partner = Partner.query.filter_by(user_id=current_user.id).first()
+
+    if not partner:
+        flash("Partner profile not found.", "danger")
+        return redirect(url_for("auth.login"))
+
+    req = PartnerConnectionRequest.query.filter_by(
+        id=request_id,
+        partner_id=partner.id
+    ).first_or_404()
+
+    new_status = (request.form.get("status") or "").strip().lower()
+    allowed = {"pending", "accepted", "declined", "canceled", "completed", "awaiting_match"}
+
+    if new_status not in allowed:
+        flash("Invalid request status.", "danger")
+        return redirect(url_for("partner.request_detail", request_id=req.id))
+
+    req.status = new_status
+    req.responded_at = datetime.utcnow()
+
+    db.session.commit()
+
+    flash("Request status updated.", "success")
+    return redirect(url_for("partner.request_detail", request_id=req.id))
 
 # ------------------------------------------------
 # PREMIUM WORKSPACE
@@ -704,3 +897,113 @@ def edit_profile():
         return redirect(url_for("partners.profile"))
 
     return render_template("partners/partner_form.html", partner=partner)
+
+@partners_bp.route("/upgrade")
+@role_required("partner", "admin")
+def upgrade():
+    partner = Partner.query.filter_by(user_id=current_user.id).first()
+
+    if not partner:
+        flash("Partner profile not found. Please register.", "warning")
+        return redirect(url_for("partners.register"))
+
+    locked_feature_count = 0
+    feature_flags = [
+        getattr(partner, "crm_enabled", True),
+        getattr(partner, "deal_visibility_enabled", False),
+        getattr(partner, "proposal_builder_enabled", False),
+        getattr(partner, "instant_quote_enabled", False),
+        getattr(partner, "ai_assist_enabled", False),
+        getattr(partner, "priority_placement_enabled", False),
+        getattr(partner, "smart_notifications_enabled", False),
+        getattr(partner, "portfolio_showcase_enabled", False),
+    ]
+    locked_feature_count = sum(1 for item in feature_flags if not item)
+
+    return render_template(
+        "partners/upgrade.html",
+        partner=partner,
+        locked_feature_count=locked_feature_count,
+        portal="partner",
+        portal_name="Partner OS",
+        portal_home=url_for("partners.dashboard"),
+    )
+
+@partners_bp.route("/proposals")
+@role_required("partner", "admin")
+def proposals():
+    partner = Partner.query.filter_by(user_id=current_user.id).first()
+
+    if not partner:
+        flash("Partner profile not found. Please register.", "warning")
+        return redirect(url_for("partners.register"))
+
+    if not getattr(partner, "proposal_builder_enabled", False):
+        flash("Proposal Builder is available on an upgraded plan.", "warning")
+        return redirect(url_for("partners.upgrade"))
+
+    proposals_list = (
+        PartnerProposal.query
+        .filter_by(partner_id=partner.id)
+        .order_by(desc(PartnerProposal.created_at))
+        .all()
+    )
+
+    return render_template(
+        "partners/proposals.html",
+        partner=partner,
+        proposals_list=proposals_list,
+        portal="partner",
+        portal_name="Partner OS",
+        portal_home=url_for("partners.dashboard"),
+    )
+
+@partners_bp.route("/proposals/<int:proposal_id>", methods=["GET", "POST"])
+@role_required("partner", "admin")
+def proposal_detail(proposal_id):
+    partner = Partner.query.filter_by(user_id=current_user.id).first()
+
+    if not partner:
+        flash("Partner profile not found. Please register.", "warning")
+        return redirect(url_for("partners.register"))
+
+    proposal = PartnerProposal.query.filter_by(
+        id=proposal_id,
+        partner_id=partner.id
+    ).first_or_404()
+
+    if request.method == "POST":
+        proposal.title = (request.form.get("title") or "").strip()
+        proposal.proposal_text = (request.form.get("proposal_text") or "").strip()
+        proposal.scope_of_work = (request.form.get("scope_of_work") or "").strip()
+        proposal.estimated_timeline = (request.form.get("estimated_timeline") or "").strip()
+
+        proposal.labor_cost = request.form.get("labor_cost", type=float) or 0.0
+        proposal.materials_cost = request.form.get("materials_cost", type=float) or 0.0
+        proposal.other_cost = request.form.get("other_cost", type=float) or 0.0
+
+        proposal.calculate_total()
+
+        action = (request.form.get("action") or "save").strip().lower()
+        if action == "send":
+            proposal.status = "sent"
+            proposal.sent_at = datetime.utcnow()
+        elif action == "accept":
+            proposal.status = "accepted"
+        elif action == "decline":
+            proposal.status = "declined"
+        else:
+            proposal.status = proposal.status or "draft"
+
+        db.session.commit()
+        flash("Proposal updated.", "success")
+        return redirect(url_for("partners.proposal_detail", proposal_id=proposal.id))
+
+    return render_template(
+        "partners/proposal_detail.html",
+        partner=partner,
+        proposal=proposal,
+        portal="partner",
+        portal_name="Partner OS",
+        portal_home=url_for("partners.dashboard"),
+    )

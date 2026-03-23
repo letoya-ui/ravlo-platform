@@ -42,6 +42,42 @@ class PartnerConnectionRequest(db.Model):
     investor_profile = db.relationship("InvestorProfile", foreign_keys=[investor_profile_id])
     property = db.relationship("Property", foreign_keys=[property_id])
 
+    def requester_name(self):
+        if self.investor_profile:
+            if hasattr(self.investor_profile, "full_name") and self.investor_profile.full_name:
+                return self.investor_profile.full_name
+            if hasattr(self.investor_profile, "name") and self.investor_profile.name:
+                return self.investor_profile.name
+
+        if self.borrower:
+            if hasattr(self.borrower, "full_name") and self.borrower.full_name:
+                return self.borrower.full_name
+            if hasattr(self.borrower, "name") and self.borrower.name:
+                return self.borrower.name
+
+        return "Ravlo User"
+
+    def related_address(self):
+        if self.property and hasattr(self.property, "address"):
+            return self.property.address
+        return None
+
+    def is_open(self):
+        return self.status in {"pending", "accepted", "awaiting_match"}
+
+    def badge_class(self):
+        mapping = {
+            "pending": "warning",
+            "accepted": "info",
+            "declined": "danger",
+            "canceled": "muted",
+            "completed": "success",
+            "awaiting_match": "accent",
+        }
+        return mapping.get((self.status or "").lower(), "muted")
+
+    def __repr__(self):
+        return f"<PartnerConnectionRequest {self.id} partner={self.partner_id} status={self.status}>"
 
 
 class PartnerJob(db.Model):
@@ -157,3 +193,46 @@ class PartnerInviteEvent(db.Model):
     ip_address = db.Column(db.String(50), nullable=True)
 
     partner = db.relationship("Partner", backref="invite_events")
+
+
+class PartnerProposal(db.Model):
+    __tablename__ = "partner_proposals"
+
+    id = db.Column(db.Integer, primary_key=True)
+
+    partner_id = db.Column(db.Integer, db.ForeignKey("partners.id"), nullable=False)
+    request_id = db.Column(db.Integer, db.ForeignKey("partner_connection_requests.id"), nullable=True)
+
+    title = db.Column(db.String(255), nullable=False)
+    proposal_text = db.Column(db.Text, nullable=True)
+    scope_of_work = db.Column(db.Text, nullable=True)
+
+    labor_cost = db.Column(db.Float, default=0.0)
+    materials_cost = db.Column(db.Float, default=0.0)
+    other_cost = db.Column(db.Float, default=0.0)
+    total_cost = db.Column(db.Float, default=0.0)
+
+    estimated_timeline = db.Column(db.String(120), nullable=True)
+    status = db.Column(db.String(30), default="draft")
+    # draft | sent | accepted | declined
+
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    sent_at = db.Column(db.DateTime, nullable=True)
+
+    partner = db.relationship(
+        "Partner",
+        backref=db.backref("proposals", lazy=True)
+    )
+
+    request = db.relationship(
+        "PartnerConnectionRequest",
+        backref=db.backref("proposals", lazy=True)
+    )
+
+    def calculate_total(self):
+        self.total_cost = float(self.labor_cost or 0) + float(self.materials_cost or 0) + float(self.other_cost or 0)
+        return self.total_cost
+
+    def __repr__(self):
+        return f"<PartnerProposal {self.id} partner={self.partner_id} status={self.status}>"

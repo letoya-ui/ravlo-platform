@@ -1,0 +1,416 @@
+{% extends "layouts/ravlo_base.html" %}
+
+{% block title %}Ravlo • Lead Inbox{% endblock %}
+
+{% block page_title %}Lead Inbox{% endblock %}
+
+{% block page_subline %}
+Review incoming partner connection requests and respond quickly.
+{% endblock %}
+
+{% block topbar_actions %}
+  <a href="{{ url_for('partners.dashboard') }}" class="ravlo-btn ghost sm">
+    Back to Dashboard
+  </a>
+{% endblock %}
+
+{% block head %}
+  <style>
+    .partner-requests-page{
+      display:flex;
+      flex-direction:column;
+      gap:24px;
+    }
+
+    .partner-filter-card,
+    .partner-list-card{
+      border-radius:24px;
+    }
+
+    .partner-filter-card,
+    .partner-list-card{
+      padding:24px;
+    }
+
+    .partner-filter-form{
+      display:flex;
+      flex-direction:column;
+      gap:18px;
+    }
+
+    .partner-filter-grid{
+      display:grid;
+      grid-template-columns:1fr 1fr auto;
+      gap:16px;
+      align-items:end;
+    }
+
+    .partner-field{
+      display:flex;
+      flex-direction:column;
+      gap:8px;
+    }
+
+    .partner-label{
+      font-size:.84rem;
+      font-weight:700;
+      color:var(--ravlo-muted);
+      letter-spacing:.02em;
+    }
+
+    .partner-select{
+      min-height:46px;
+      border-radius:14px;
+    }
+
+    .partner-filter-actions{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      align-items:center;
+    }
+
+    .partner-filter-summary{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+    }
+
+    .partner-pill{
+      display:inline-flex;
+      align-items:center;
+      padding:7px 12px;
+      border-radius:999px;
+      font-size:.78rem;
+      font-weight:700;
+      border:1px solid rgba(255,255,255,.08);
+      background:rgba(255,255,255,.04);
+      color:var(--ravlo-text);
+    }
+
+    .partner-section-head{
+      display:flex;
+      justify-content:space-between;
+      align-items:flex-start;
+      gap:16px;
+      margin-bottom:18px;
+    }
+
+    .partner-section-head h3{
+      margin:0 0 6px;
+      font-size:1.05rem;
+      font-weight:800;
+      letter-spacing:-0.01em;
+    }
+
+    .partner-section-head p{
+      margin:0;
+      color:var(--ravlo-muted);
+      line-height:1.55;
+    }
+
+    .partner-request-list{
+      display:flex;
+      flex-direction:column;
+      gap:16px;
+    }
+
+    .partner-request-row{
+      border:1px solid rgba(255,255,255,.08);
+      border-radius:20px;
+      padding:18px;
+      background:rgba(255,255,255,.02);
+      display:grid;
+      grid-template-columns:1.35fr .85fr auto;
+      gap:18px;
+      align-items:start;
+    }
+
+    .partner-request-title{
+      margin:0 0 8px;
+      font-size:1rem;
+      font-weight:800;
+    }
+
+    .partner-request-meta{
+      color:var(--ravlo-muted);
+      font-size:.92rem;
+      line-height:1.5;
+      margin-bottom:10px;
+    }
+
+    .partner-request-message{
+      margin:0;
+      color:var(--ravlo-muted);
+      line-height:1.62;
+    }
+
+    .partner-request-detail-list{
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+    }
+
+    .partner-detail-item{
+      display:flex;
+      justify-content:space-between;
+      gap:12px;
+      padding-bottom:8px;
+      border-bottom:1px solid rgba(255,255,255,.06);
+    }
+
+    .partner-detail-item:last-child{
+      border-bottom:none;
+      padding-bottom:0;
+    }
+
+    .partner-detail-label{
+      color:var(--ravlo-muted);
+      font-size:.88rem;
+      min-width:110px;
+    }
+
+    .partner-detail-value{
+      text-align:right;
+      color:var(--ravlo-text);
+      font-weight:600;
+      word-break:break-word;
+    }
+
+    .partner-request-actions{
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+      align-items:stretch;
+      min-width:130px;
+    }
+
+    .request-badge{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      padding:7px 11px;
+      border-radius:999px;
+      font-size:.74rem;
+      font-weight:800;
+      letter-spacing:.02em;
+      border:1px solid transparent;
+      text-transform:capitalize;
+      width:100%;
+    }
+
+    .request-badge.pending{
+      background:rgba(250,204,21,.12);
+      color:#ffe082;
+      border-color:rgba(250,204,21,.22);
+    }
+
+    .request-badge.accepted{
+      background:rgba(56,189,248,.12);
+      color:#8edcff;
+      border-color:rgba(56,189,248,.22);
+    }
+
+    .request-badge.completed{
+      background:rgba(34,197,94,.12);
+      color:#7ef0a5;
+      border-color:rgba(34,197,94,.2);
+    }
+
+    .request-badge.awaiting_match{
+      background:rgba(168,85,247,.12);
+      color:#d0b1ff;
+      border-color:rgba(168,85,247,.22);
+    }
+
+    .request-badge.declined,
+    .request-badge.canceled{
+      background:rgba(239,68,68,.12);
+      color:#ffb0b0;
+      border-color:rgba(239,68,68,.2);
+    }
+
+    .partner-empty-state{
+      border:1px dashed rgba(255,255,255,.12);
+      border-radius:18px;
+      padding:30px;
+      text-align:center;
+      background:rgba(255,255,255,.015);
+    }
+
+    .partner-empty-state h4{
+      margin:0 0 8px;
+      font-size:1rem;
+      font-weight:800;
+    }
+
+    .partner-empty-state p{
+      margin:0;
+      color:var(--ravlo-muted);
+      line-height:1.6;
+    }
+
+    @media (max-width: 1100px){
+      .partner-request-row{
+        grid-template-columns:1fr;
+      }
+
+      .partner-request-actions{
+        min-width:unset;
+      }
+    }
+
+    @media (max-width: 768px){
+      .partner-filter-grid{
+        grid-template-columns:1fr;
+      }
+
+      .partner-detail-item{
+        flex-direction:column;
+      }
+
+      .partner-detail-value{
+        text-align:left;
+      }
+    }
+  </style>
+{% endblock %}
+
+{% block content %}
+<div class="partner-requests-page">
+
+  <section class="ravlo-card partner-filter-card">
+    <form method="GET" action="{{ url_for('partners.requests') }}" class="partner-filter-form">
+      <div class="partner-filter-grid">
+        <div class="partner-field">
+          <label class="partner-label">Status</label>
+          <select name="status" class="ravlo-input partner-select">
+            <option value="">All statuses</option>
+            <option value="pending" {% if selected_status == "pending" %}selected{% endif %}>Pending</option>
+            <option value="accepted" {% if selected_status == "accepted" %}selected{% endif %}>Accepted</option>
+            <option value="completed" {% if selected_status == "completed" %}selected{% endif %}>Completed</option>
+            <option value="awaiting_match" {% if selected_status == "awaiting_match" %}selected{% endif %}>Awaiting Match</option>
+            <option value="declined" {% if selected_status == "declined" %}selected{% endif %}>Declined</option>
+            <option value="canceled" {% if selected_status == "canceled" %}selected{% endif %}>Canceled</option>
+          </select>
+        </div>
+
+        <div class="partner-field">
+          <label class="partner-label">Source</label>
+          <select name="source" class="ravlo-input partner-select">
+            <option value="">All sources</option>
+            <option value="internal" {% if selected_source == "internal" %}selected{% endif %}>Internal</option>
+            <option value="external" {% if selected_source == "external" %}selected{% endif %}>External</option>
+            <option value="fallback_search" {% if selected_source == "fallback_search" %}selected{% endif %}>Fallback Search</option>
+          </select>
+        </div>
+
+        <div class="partner-filter-actions">
+          <button type="submit" class="ravlo-btn primary">Apply Filters</button>
+          <a href="{{ url_for('partners.requests') }}" class="ravlo-btn ghost">Reset</a>
+        </div>
+      </div>
+
+      <div class="partner-filter-summary">
+        <span class="partner-pill">{{ partner.display_name() }}</span>
+
+        {% if selected_status %}
+          <span class="partner-pill">Status: {{ selected_status|replace('_', ' ')|title }}</span>
+        {% endif %}
+
+        {% if selected_source %}
+          <span class="partner-pill">Source: {{ selected_source|replace('_', ' ')|title }}</span>
+        {% endif %}
+
+        <span class="partner-pill">{{ requests_list|length }} Request{% if requests_list|length != 1 %}s{% endif %}</span>
+      </div>
+    </form>
+  </section>
+
+  <section class="ravlo-card partner-list-card">
+    <div class="partner-section-head">
+      <div>
+        <h3>Incoming Requests</h3>
+        <p>
+          Review opportunities, check context, and open each request for next steps.
+        </p>
+      </div>
+    </div>
+
+    <div class="partner-request-list">
+      {% if requests_list %}
+        {% for req in requests_list %}
+          <div class="partner-request-row">
+            <div>
+              <h4 class="partner-request-title">
+                {{ req.category or "Connection Request" }}
+              </h4>
+
+              <div class="partner-request-meta">
+                {% if req.created_at %}
+                  {{ req.created_at.strftime('%b %d, %Y • %I:%M %p') }}
+                {% endif %}
+                {% if req.source %}
+                  • {{ req.source|replace('_', ' ')|title }}
+                {% endif %}
+              </div>
+
+              <p class="partner-request-message">
+                {{ req.message or "A new request was submitted through Ravlo and is ready for your review." }}
+              </p>
+            </div>
+
+            <div class="partner-request-detail-list">
+              <div class="partner-detail-item">
+                <div class="partner-detail-label">Status</div>
+                <div class="partner-detail-value">
+                  {{ req.status|default("pending", true)|replace('_', ' ')|title }}
+                </div>
+              </div>
+
+              <div class="partner-detail-item">
+                <div class="partner-detail-label">Deal ID</div>
+                <div class="partner-detail-value">
+                  {{ req.deal_id or "—" }}
+                </div>
+              </div>
+
+              <div class="partner-detail-item">
+                <div class="partner-detail-label">Lead ID</div>
+                <div class="partner-detail-value">
+                  {{ req.lead_id or "—" }}
+                </div>
+              </div>
+
+              <div class="partner-detail-item">
+                <div class="partner-detail-label">Property ID</div>
+                <div class="partner-detail-value">
+                  {{ req.property_id or "—" }}
+                </div>
+              </div>
+            </div>
+
+            <div class="partner-request-actions">
+              <span class="request-badge {{ (req.status or 'pending')|lower }}">
+                {{ req.status|default("pending", true)|replace('_', ' ')|title }}
+              </span>
+
+              <a href="{{ url_for('partners.request_detail', request_id=req.id) }}" class="ravlo-btn ghost sm">
+                Open
+              </a>
+            </div>
+          </div>
+        {% endfor %}
+      {% else %}
+        <div class="partner-empty-state">
+          <h4>No matching requests</h4>
+          <p>
+            There are no requests in your inbox for the current filter selection.
+          </p>
+        </div>
+      {% endif %}
+    </div>
+  </section>
+
+</div>
+{% endblock %}
