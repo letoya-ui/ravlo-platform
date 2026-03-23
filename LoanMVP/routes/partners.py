@@ -204,26 +204,64 @@ def dashboard():
 # PARTNER DIRECTORY (internal)
 # ------------------------------------------------
 
+from flask import Blueprint, render_template
+from flask_login import login_required, current_user
+
+from LoanMVP.extensions import db
+from LoanMVP.utils.decorators import role_required
+
+from LoanMVP.models.partner_models import Partner, PartnerJob, PartnerConnectionRequest
+
+partners_bp = Blueprint("partners", __name__, url_prefix="/partners")
+
+
 @partners_bp.route("/center")
 @role_required("partner")
 def center():
+    # ✅ Get SINGLE partner (fixes your error)
+    partner = Partner.query.filter_by(user_id=current_user.id).first()
 
-    category = request.args.get("category")
+    # --- Safe defaults ---
+    jobs = []
+    connections = []
+    stats = {
+        "active_jobs": 0,
+        "completed_jobs": 0,
+        "connection_requests": 0,
+    }
 
-    query = Partner.query
+    if partner:
+        # --- Jobs ---
+        jobs = (
+            PartnerJob.query
+            .filter_by(partner_id=partner.id)
+            .order_by(PartnerJob.created_at.desc())
+            .limit(10)
+            .all()
+        )
 
-    if category:
-        query = query.filter_by(category=category)
+        stats["active_jobs"] = len([j for j in jobs if j.status in ["new", "in_progress"]])
+        stats["completed_jobs"] = len([j for j in jobs if j.status == "completed"])
 
-    partner = query.all()
+        # --- Connection Requests ---
+        connections = (
+            PartnerConnectionRequest.query
+            .filter_by(partner_id=partner.id)
+            .order_by(PartnerConnectionRequest.created_at.desc())
+            .limit(10)
+            .all()
+        )
 
+        stats["connection_requests"] = len(connections)
+
+    # --- Render ---
     return render_template(
         "partners/center.html",
         partner=partner,
-        category=category,
-        portal="partner",
-        portal_name="Partner OS",
-        portal_home=url_for("partners.dashboard"),
+        jobs=jobs,
+        connections=connections,
+        stats=stats,
+        active_tab="center",
     )
 
 
