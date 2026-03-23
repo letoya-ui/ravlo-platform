@@ -219,7 +219,7 @@ def center():
     return render_template(
         "partners/center.html",
         partners=partners,
-        category=category
+        category=category,
         portal="partner",
         portal_name="Partner OS",
         portal_home=url_for("partners.dashboard"),
@@ -238,7 +238,7 @@ def profile(partner_id):
 
     return render_template(
         "partners/profile.html",
-        partner=partner
+        partner=partner,
         portal="partner",
         portal_name="Partner OS",
         portal_home=url_for("partners.dashboard"),
@@ -300,7 +300,7 @@ def register():
         partner=partner,
         portal="partner",
         portal_name="Partner OS",
-        portal_home=url_for("partners.dashboard")
+        portal_home=url_for("partners.dashboard"),
     )
 
 
@@ -521,7 +521,7 @@ def workspace_home():
     return render_template(
         "partners/workspace/home.html",
         partner=partner,
-        jobs=jobs
+        jobs=jobs,
         portal="partner",
         portal_name="Partner OS",
         portal_home=url_for("partners.dashboard"),
@@ -715,7 +715,7 @@ def settings():
     return render_template(
         "partners/settings.html",
         partner=partner,
-        portal="partner"
+        portal="partner",
         portal_name="Partner OS",
         portal_home=url_for("partners.dashboard"),
     )
@@ -736,7 +736,7 @@ def deals():
         "partners/deals.html",
         partner=partner,
         jobs=jobs,
-        portal="partner"
+        portal="partner",
         portal_name="Partner OS",
         portal_home=url_for("partners.dashboard"),
     )
