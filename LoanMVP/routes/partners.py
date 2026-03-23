@@ -962,6 +962,13 @@ def proposals():
         portal_home=url_for("partners.dashboard"),
     )
 
+from datetime import datetime
+from flask import render_template, redirect, url_for, flash, request
+from flask_login import current_user
+
+from LoanMVP.extensions import db
+from LoanMVP.models.partner_models import Partner, PartnerProposal, PartnerConnectionRequest
+from LoanMVP.utils.decorators import role_required
 
 
 @partners_bp.route("/proposals/<int:proposal_id>", methods=["GET", "POST"])
@@ -982,6 +989,8 @@ def proposal_detail(proposal_id):
         partner_id=partner.id
     ).first_or_404()
 
+    linked_request = proposal.request
+
     if request.method == "POST":
         proposal.title = (request.form.get("title") or "").strip()
         proposal.proposal_text = (request.form.get("proposal_text") or "").strip()
@@ -999,18 +1008,15 @@ def proposal_detail(proposal_id):
             proposal.status = "sent"
             proposal.sent_at = datetime.utcnow()
 
-            if proposal.request_id:
-                linked_request = PartnerConnectionRequest.query.filter_by(
-                    id=proposal.request_id,
-                    partner_id=partner.id
-                ).first()
-
-                if linked_request:
-                    linked_request.status = "accepted"
-                    linked_request.responded_at = datetime.utcnow()
+            if linked_request:
+                linked_request.status = "accepted"
+                linked_request.responded_at = datetime.utcnow()
 
             db.session.commit()
             flash("Proposal sent and request updated.", "success")
+
+            if linked_request:
+                return redirect(url_for("partners.request_detail", request_id=linked_request.id))
             return redirect(url_for("partners.proposal_detail", proposal_id=proposal.id))
 
         elif action == "accept":
@@ -1038,7 +1044,6 @@ def proposal_detail(proposal_id):
         portal_name="Partner OS",
         portal_home=url_for("partners.dashboard"),
     )
-
 
 @partners_bp.route("/proposals/new", methods=["GET", "POST"])
 @role_required("partner", "admin")
