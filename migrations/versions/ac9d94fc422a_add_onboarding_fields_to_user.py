@@ -49,8 +49,6 @@ sa.ForeignKeyConstraint(['partner_id'], ['partners.id'], ),
                existing_server_default=sa.text('false'))
         batch_op.alter_column('ai_assist_enabled',
                existing_type=sa.BOOLEAN(),
-
-existing_type=sa.BOOLEAN(),
                nullable=True,
                existing_server_default=sa.text('false'))
         batch_op.alter_column('priority_placement_enabled',

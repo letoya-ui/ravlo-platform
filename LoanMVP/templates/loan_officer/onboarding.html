@@ -142,8 +142,8 @@ Learn how to generate, manage, and close deals using the Ravlo ecosystem.
 
 </div>
 <form method="POST" action="{{ url_for('loan_officer.complete_onboarding') }}">
+  {{ csrf_token() }}
   <button type="submit" class="ravlo-btn primary">
     Complete Onboarding
   </button>
-</form>
-{% endblock %}
+</form>{% endblock %}

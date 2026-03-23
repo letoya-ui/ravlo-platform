@@ -132,6 +132,18 @@ def _resolve_recipient_name(recipient_type, recipient_id):
 
     return f"{recipient_type.title()} #{recipient_id}"
 
+def enforce_onboarding_flow():
+    if not current_user.ica_accepted:
+        return redirect(url_for("loan_officer.agreement"))
+
+    if not current_user.nda_accepted:
+        return redirect(url_for("loan_officer.nda"))
+
+    if not current_user.onboarding_complete:
+        return redirect(url_for("loan_officer.onboarding"))
+
+    return None
+
 # =============================================================
 # 1. DASHBOARD
 # =============================================================
@@ -139,14 +151,9 @@ def _resolve_recipient_name(recipient_type, recipient_id):
 @role_required("loan_officer")
 @loan_officer_onboarding_required
 def dashboard():
-    if not current_user.ica_accepted:
-        return redirect(url_for("loan_officer.agreement"))
-
-    if not current_user.nda_accepted:
-        return redirect(url_for("loan_officer.nda"))
-
-    if not current_user.loan_officer_onboarding_complete:
-        return redirect(url_for("loan_officer.onboarding"))
+    redirect_response = enforce_onboarding_flow()
+    if redirect_response:
+        return redirect_response
 
     officer = LoanOfficerProfile.query.filter_by(user_id=current_user.id).first()
 

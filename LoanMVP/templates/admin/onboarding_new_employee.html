@@ -1,0 +1,274 @@
+{% extends "layouts/ravlo_employee_base.html" %}
+
+{% block title %}Ravlo • New Team Onboarding{% endblock %}
+
+{% block page_title %}New Team Onboarding{% endblock %}
+{% block page_subline %}
+Welcome to Caughman Mason and Ravlo. Complete your onboarding steps, review expectations, and get ready to operate inside the ecosystem.
+{% endblock %}
+
+{% block topbar_actions %}
+  <a href="{{ url_for('main.dashboard') if false else '#' }}" class="ravlo-btn ghost sm">
+    Back to Dashboard
+  </a>
+  <a href="#onboarding-checklist" class="ravlo-btn primary sm">
+    Start Onboarding
+  </a>
+{% endblock %}
+
+{% block content %}
+<div class="partner-dashboard-page onboarding-dashboard">
+
+  <!-- HERO -->
+  <section class="ravlo-card partner-hero-card">
+    <div class="partner-hero-grid">
+      <div class="partner-hero-copy">
+        <span class="partner-eyebrow">Welcome to the Team</span>
+        <h2 class="partner-hero-title">Start strong inside the Caughman Mason and Ravlo ecosystem.</h2>
+        <p class="partner-hero-text">
+          This onboarding center will help you understand the company, your role, platform expectations,
+          communication standards, and the workflow tools you’ll use day to day.
+        </p>
+
+        <div class="partner-hero-actions">
+          <a href="#onboarding-checklist" class="ravlo-btn primary">Begin Checklist</a>
+          <a href="#company-overview" class="ravlo-btn ghost">Review Overview</a>
+        </div>
+      </div>
+
+      <div class="partner-hero-panel">
+        <div class="partner-mini-stat">
+          <span class="label">Primary Goal</span>
+          <strong>Get set up, understand your role, and begin operating with confidence</strong>
+        </div>
+        <div class="partner-mini-stat">
+          <span class="label">Focus Areas</span>
+          <strong>Company, platform, workflow, expectations, communication</strong>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- STATS -->
+  <section class="partner-stats-grid">
+    <article class="ravlo-card partner-stat-card">
+      <div class="partner-stat-label">Assigned Role</div>
+      <div class="partner-stat-value">{{ assigned_role or "New Team Member" }}</div>
+      <div class="partner-stat-note">Your current onboarding track</div>
+    </article>
+
+    <article class="ravlo-card partner-stat-card">
+      <div class="partner-stat-label">Checklist Progress</div>
+      <div class="partner-stat-value">{{ onboarding_progress|default("0%") }}</div>
+      <div class="partner-stat-note">Your onboarding completion status</div>
+    </article>
+
+    <article class="ravlo-card partner-stat-card">
+      <div class="partner-stat-label">Resources</div>
+      <div class="partner-stat-value">{{ resource_count|default(0) }}</div>
+      <div class="partner-stat-note">Guides and materials available to review</div>
+    </article>
+
+    <article class="ravlo-card partner-stat-card">
+      <div class="partner-stat-label">Required Steps</div>
+      <div class="partner-stat-value">{{ required_steps|default(6) }}</div>
+      <div class="partner-stat-note">Tasks to complete before full activation</div>
+    </article>
+  </section>
+
+  <section class="partner-dashboard-grid">
+    <div class="partner-dashboard-main">
+
+      <!-- CHECKLIST -->
+      <article class="ravlo-card partner-section-card" id="onboarding-checklist">
+        <div class="section-head">
+          <div>
+            <h3>Onboarding Checklist</h3>
+            <p>Complete these steps to get fully activated in the system.</p>
+          </div>
+        </div>
+
+        <div class="partner-checklist">
+          <div class="partner-check-item">Review company overview and mission</div>
+          <div class="partner-check-item">Confirm your role and service responsibilities</div>
+          <div class="partner-check-item">Set up your profile and contact details</div>
+          <div class="partner-check-item">Learn the Ravlo dashboard and workspace flow</div>
+          <div class="partner-check-item">Review communication and response expectations</div>
+          <div class="partner-check-item">Read compensation / agreement documents</div>
+        </div>
+      </article>
+
+      <!-- COMPANY OVERVIEW -->
+      <article class="ravlo-card partner-section-card" id="company-overview">
+        <div class="section-head">
+          <div>
+            <h3>Company Overview</h3>
+            <p>Understand the business and the ecosystem you are joining.</p>
+          </div>
+        </div>
+
+        <div class="partner-tool-list">
+          <div class="partner-tool-item">
+            <strong>Caughman Mason</strong>
+            <span>The parent brand focused on building a connected real estate, lending, and service ecosystem.</span>
+          </div>
+          <div class="partner-tool-item">
+            <strong>Ravlo</strong>
+            <span>The operating platform used to organize workflows, requests, communication, and execution.</span>
+          </div>
+          <div class="partner-tool-item">
+            <strong>Our Mission</strong>
+            <span>Create a more connected, efficient, and scalable experience for investors, borrowers, partners, and internal team members.</span>
+          </div>
+        </div>
+      </article>
+
+      <!-- ROLE EXPECTATIONS -->
+      <article class="ravlo-card partner-section-card">
+        <div class="section-head">
+          <div>
+            <h3>Role Expectations</h3>
+            <p>Know how your role creates value inside the ecosystem.</p>
+          </div>
+        </div>
+
+        <div class="workflow-grid">
+          <div class="workflow-step">
+            <span class="step-no">01</span>
+            <h4>Understand Your Role</h4>
+            <p>Learn what you are responsible for and how your work supports clients, borrowers, or internal operations.</p>
+          </div>
+          <div class="workflow-step">
+            <span class="step-no">02</span>
+            <h4>Use the Platform</h4>
+            <p>Get comfortable using your dashboard, requests inbox, and workspace tools.</p>
+          </div>
+          <div class="workflow-step">
+            <span class="step-no">03</span>
+            <h4>Communicate Clearly</h4>
+            <p>Maintain professional communication, timely responses, and accurate updates.</p>
+          </div>
+          <div class="workflow-step">
+            <span class="step-no">04</span>
+            <h4>Execute Consistently</h4>
+            <p>Follow through on assigned work, keep progress visible, and uphold the brand standard.</p>
+          </div>
+        </div>
+      </article>
+
+      <!-- PLATFORM BASICS -->
+      <article class="ravlo-card partner-section-card">
+        <div class="section-head">
+          <div>
+            <h3>Platform Basics</h3>
+            <p>The core areas you’ll use most often inside Ravlo.</p>
+          </div>
+        </div>
+
+        <div class="quick-action-grid">
+          <div class="partner-action-card">
+            <div class="partner-action-icon">
+              <i class="lucide lucide-layout-dashboard"></i>
+            </div>
+            <div class="partner-action-copy">
+              <h4>Dashboard</h4>
+              <p>Your central command area for visibility, tasks, and priorities.</p>
+            </div>
+          </div>
+
+          <div class="partner-action-card">
+            <div class="partner-action-icon">
+              <i class="lucide lucide-inbox"></i>
+            </div>
+            <div class="partner-action-copy">
+              <h4>Requests Inbox</h4>
+              <p>Where new opportunities, tasks, or service requests first appear.</p>
+            </div>
+          </div>
+
+          <div class="partner-action-card">
+            <div class="partner-action-icon">
+              <i class="lucide lucide-briefcase-business"></i>
+            </div>
+            <div class="partner-action-copy">
+              <h4>Workspace</h4>
+              <p>Where active work, updates, and next-step execution are managed.</p>
+            </div>
+          </div>
+
+          <div class="partner-action-card">
+            <div class="partner-action-icon">
+              <i class="lucide lucide-library"></i>
+            </div>
+            <div class="partner-action-copy">
+              <h4>Resources</h4>
+              <p>Guides, templates, onboarding materials, and internal support content.</p>
+            </div>
+          </div>
+        </div>
+      </article>
+
+    </div>
+
+    <aside class="partner-dashboard-side">
+
+      <article class="ravlo-card partner-section-card">
+        <div class="section-head">
+          <div>
+            <h3>Communication Standards</h3>
+            <p>How we work with professionalism and consistency.</p>
+          </div>
+        </div>
+
+        <div class="partner-checklist">
+          <div class="partner-check-item">Respond to assigned work and messages promptly</div>
+          <div class="partner-check-item">Communicate clearly and professionally</div>
+          <div class="partner-check-item">Keep updates visible in the system</div>
+          <div class="partner-check-item">Do not leave requests or tasks unresolved without communication</div>
+        </div>
+      </article>
+
+      <article class="ravlo-card partner-section-card">
+        <div class="section-head">
+          <div>
+            <h3>Required Documents</h3>
+            <p>Review and complete all required onboarding materials.</p>
+          </div>
+        </div>
+
+        <div class="partner-tool-list">
+          <div class="partner-tool-item">
+            <strong>Agreement Packet</strong>
+            <span>Role agreement, expectations, and onboarding acknowledgment</span>
+          </div>
+          <div class="partner-tool-item">
+            <strong>Compensation Overview</strong>
+            <span>General outline of commission, payment flow, or assignment terms</span>
+          </div>
+          <div class="partner-tool-item">
+            <strong>Tax / Setup Docs</strong>
+            <span>W9 or any role-specific setup forms needed for activation</span>
+          </div>
+        </div>
+      </article>
+
+      <article class="ravlo-card partner-section-card">
+        <div class="section-head">
+          <div>
+            <h3>Next Step</h3>
+            <p>What to do after onboarding is complete.</p>
+          </div>
+        </div>
+
+        <div class="partner-checklist">
+          <div class="partner-check-item">Finish your checklist</div>
+          <div class="partner-check-item">Confirm system access</div>
+          <div class="partner-check-item">Review your role dashboard</div>
+          <div class="partner-check-item">Begin active work assignments</div>
+        </div>
+      </article>
+
+    </aside>
+  </section>
+</div>
+{% endblock %}
