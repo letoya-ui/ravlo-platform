@@ -11,11 +11,12 @@ from LoanMVP.utils.decorators import role_required
 
 from LoanMVP.services.partner_search_service import search_external_partners
 
-from LoanMVP.models.crm_models import Partner, Task, CRMNote
+from LoanMVP.models.crm_models import Partner, Task, CRMNote, Lead
 from LoanMVP.models.partner_models import (
     PartnerConnectionRequest,
     PartnerJob,
-    PartnerPhoto
+    PartnerPhoto,
+    PartnerProposal,
 )
 
 partners_bp = Blueprint("partners", __name__, url_prefix="/partners")
