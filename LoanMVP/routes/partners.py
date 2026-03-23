@@ -199,6 +199,7 @@ def dashboard():
         portal_name="Partner OS",
         portal_home=url_for("partners.dashboard")
     )
+
 # ------------------------------------------------
 # PARTNER DIRECTORY (internal)
 # ------------------------------------------------
@@ -961,14 +962,6 @@ def proposals():
         portal_name="Partner OS",
         portal_home=url_for("partners.dashboard"),
     )
-
-from datetime import datetime
-from flask import render_template, redirect, url_for, flash, request
-from flask_login import current_user
-
-from LoanMVP.extensions import db
-from LoanMVP.models.partner_models import Partner, PartnerProposal, PartnerConnectionRequest
-from LoanMVP.utils.decorators import role_required
 
 
 @partners_bp.route("/proposals/<int:proposal_id>", methods=["GET", "POST"])

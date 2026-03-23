@@ -1,39 +1,254 @@
 {% extends "layouts/ravlo_base.html" %}
+
+{% block title %}Ravlo • Partner Center{% endblock %}
+
+{% block page_title %}Partner Center{% endblock %}
+
+{% block page_subline %}
+Track your visibility, subscription, and business growth inside Ravlo.
+{% endblock %}
+
+{% block topbar_actions %}
+  <a href="{{ url_for('partners.upgrade') }}" class="ravlo-btn primary sm">Growth Plans</a>
+{% endblock %}
+
+{% block head %}
+<style>
+  .center-page{display:flex;flex-direction:column;gap:24px;}
+  .center-hero,.center-card{padding:24px;border-radius:24px;}
+  .center-hero-grid{display:grid;grid-template-columns:1.35fr .85fr;gap:24px;align-items:stretch;}
+  .center-title{margin:0 0 10px;font-size:2rem;font-weight:800;letter-spacing:-.02em;}
+  .center-copy{margin:0;color:var(--ravlo-muted);line-height:1.65;}
+  .center-actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:18px;}
+  .center-side{display:flex;flex-direction:column;gap:16px;}
+  .center-metric{
+    flex:1;padding:20px;border-radius:20px;border:1px solid rgba(255,255,255,.08);
+    background:linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
+  }
+  .center-metric-label{font-size:.82rem;color:var(--ravlo-muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:8px;}
+  .center-metric-value{font-size:2rem;font-weight:800;line-height:1;margin-bottom:8px;}
+  .center-metric-sub{color:var(--ravlo-muted);line-height:1.55;}
+  .center-grid{display:grid;grid-template-columns:1.2fr .9fr;gap:24px;align-items:start;}
+  .center-col{display:flex;flex-direction:column;gap:24px;}
+  .section-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:18px;}
+  .section-head h3{margin:0 0 6px;font-size:1.05rem;font-weight:800;}
+  .section-head p{margin:0;color:var(--ravlo-muted);line-height:1.55;}
+  .status-list,.steps-list,.resource-list{display:flex;flex-direction:column;gap:14px;}
+  .status-row,.step-row,.resource-row{
+    border:1px solid rgba(255,255,255,.08);border-radius:18px;
+    padding:16px;background:rgba(255,255,255,.02);
+  }
+  .status-title,.step-title,.resource-title{font-weight:800;margin-bottom:6px;}
+  .status-copy,.step-copy,.resource-copy{color:var(--ravlo-muted);line-height:1.58;}
+  .inline-badge{
+    display:inline-flex;align-items:center;padding:7px 12px;border-radius:999px;
+    font-size:.75rem;font-weight:800;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);
+  }
+  .inline-badge.good{background:rgba(34,197,94,.12);color:#7ef0a5;border-color:rgba(34,197,94,.22);}
+  .inline-badge.warn{background:rgba(250,204,21,.12);color:#ffe082;border-color:rgba(250,204,21,.22);}
+  .info-list{display:flex;flex-direction:column;gap:12px;}
+  .info-row{
+    display:flex;justify-content:space-between;gap:16px;padding:12px 0;
+    border-bottom:1px solid rgba(255,255,255,.06);
+  }
+  .info-row:last-child{border-bottom:none;padding-bottom:0;}
+  .info-label{color:var(--ravlo-muted);font-size:.9rem;}
+  .info-value{text-align:right;font-weight:700;word-break:break-word;}
+  @media (max-width:1180px){
+    .center-hero-grid,.center-grid{grid-template-columns:1fr;}
+  }
+  @media (max-width:768px){
+    .info-row{flex-direction:column;}
+    .info-value{text-align:left;}
+  }
+</style>
+{% endblock %}
+
 {% block content %}
+<div class="center-page">
 
-<div class="partner-center-shell">
+  <section class="ravlo-card center-hero">
+    <div class="center-hero-grid">
+      <div>
+        <h2 class="center-title">Grow your business inside Ravlo.</h2>
+        <p class="center-copy">
+          Partner Center gives you a high-level view of your visibility, listing health, subscription status,
+          and next actions to strengthen your presence across the network.
+        </p>
 
-    <h1 class="page-title">Partner Center</h1>
+        <div class="center-actions">
+          <a href="{{ url_for('partners.profile', partner_id=partner.id) if partner else url_for('partners.register') }}" class="ravlo-btn ghost">Update Profile</a>
+          <a href="{{ url_for('partners.upgrade') }}" class="ravlo-btn primary">Upgrade Visibility</a>
+        </div>
+      </div>
 
-    <!-- Role Filter -->
-    <form method="GET" class="filter-bar">
-        <select name="role" onchange="this.form.submit()" class="filter-select">
-            <option value="">All Roles</option>
-            <option value="contractor" {% if role_filter=='contractor' %}selected{% endif %}>Contractors</option>
-            <option value="realtor" {% if role_filter=='realtor' %}selected{% endif %}>Realtors</option>
-            <option value="designer" {% if role_filter=='designer' %}selected{% endif %}>Designers</option>
-            <option value="inspector" {% if role_filter=='inspector' %}selected{% endif %}>Inspectors</option>
-            <option value="appraiser" {% if role_filter=='appraiser' %}selected{% endif %}>Appraisers</option>
-            <option value="title" {% if role_filter=='title' %}selected{% endif %}>Title</option>
-            <option value="insurance" {% if role_filter=='insurance' %}selected{% endif %}>Insurance</option>
-            <option value="attorney" {% if role_filter=='attorney' %}selected{% endif %}>Attorneys</option>
-            <option value="property_manager" {% if role_filter=='property_manager' %}selected{% endif %}>Property Managers</option>
-            <option value="cleaner" {% if role_filter=='cleaner' %}selected{% endif %}>Cleaners</option>
-        </select>
-    </form>
+      <div class="center-side">
+        <div class="center-metric">
+          <div class="center-metric-label">Listing Status</div>
+          <div class="center-metric-value">{{ "Active" if partner and partner.is_active_listing() else "Inactive" }}</div>
+          <div class="center-metric-sub">Visibility depends on approval, payment, and listing completeness.</div>
+        </div>
 
-    <!-- Partner Grid -->
-    <div class="partner-grid">
-        {% for p in partners %}
-        <a href="{{ url_for('partners.profile', partner_id=p.id) }}" class="partner-card">
-            <h3>{{ p.name }}</h3>
-            <p class="role">{{ p.role|capitalize }}</p>
-            <p class="company">{{ p.company }}</p>
-            <p class="service-area">{{ p.service_area }}</p>
-        </a>
-        {% endfor %}
+        <div class="center-metric">
+          <div class="center-metric-label">Current Plan</div>
+          <div class="center-metric-value">{{ partner.subscription_tier or "Free" }}</div>
+          <div class="center-metric-sub">Upgrade to unlock premium response and visibility tools.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="center-grid">
+
+    <div class="center-col">
+
+      <section class="ravlo-card center-card">
+        <div class="section-head">
+          <div>
+            <h3>Marketplace Status</h3>
+            <p>Your current business standing inside the Ravlo ecosystem.</p>
+          </div>
+        </div>
+
+        <div class="status-list">
+          <div class="status-row">
+            <div class="status-title">Approval</div>
+            <div class="status-copy">
+              {% if partner and partner.approved %}
+                <span class="inline-badge good">Approved</span>
+              {% else %}
+                <span class="inline-badge warn">Pending Approval</span>
+              {% endif %}
+            </div>
+          </div>
+
+          <div class="status-row">
+            <div class="status-title">Verification</div>
+            <div class="status-copy">
+              {% if partner and partner.is_verified %}
+                <span class="inline-badge good">Verified</span>
+              {% else %}
+                <span class="inline-badge warn">Not Verified</span>
+              {% endif %}
+            </div>
+          </div>
+
+          <div class="status-row">
+            <div class="status-title">Featured Placement</div>
+            <div class="status-copy">
+              {% if partner and partner.featured %}
+                <span class="inline-badge good">Featured</span>
+              {% else %}
+                <span class="inline-badge warn">Standard Placement</span>
+              {% endif %}
+            </div>
+          </div>
+
+          <div class="status-row">
+            <div class="status-title">Profile Health</div>
+            <div class="status-copy">
+              {% if profile_completion is defined and profile_completion >= 80 %}
+                <span class="inline-badge good">{{ profile_completion }}% Complete</span>
+              {% else %}
+                <span class="inline-badge warn">{{ profile_completion if profile_completion is defined else 0 }}% Complete</span>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="ravlo-card center-card">
+        <div class="section-head">
+          <div>
+            <h3>Recommended Next Steps</h3>
+            <p>Simple actions that can improve visibility and conversion.</p>
+          </div>
+        </div>
+
+        <div class="steps-list">
+          <div class="step-row">
+            <div class="step-title">Complete your profile</div>
+            <div class="step-copy">Add any missing business details, service area, and listing copy.</div>
+          </div>
+          <div class="step-row">
+            <div class="step-title">Upload portfolio images</div>
+            <div class="step-copy">Show real work samples to build trust faster with investors and borrowers.</div>
+          </div>
+          <div class="step-row">
+            <div class="step-title">Unlock proposal tools</div>
+            <div class="step-copy">Move from basic listing visibility into active deal conversion.</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="ravlo-card center-card">
+        <div class="section-head">
+          <div>
+            <h3>Resources</h3>
+            <p>Helpful tools and content for growing your partner presence.</p>
+          </div>
+        </div>
+
+        <div class="resource-list">
+          <div class="resource-row">
+            <div class="resource-title">Proposal Best Practices</div>
+            <div class="resource-copy">Improve how you respond to incoming requests with cleaner scopes and pricing.</div>
+          </div>
+          <div class="resource-row">
+            <div class="resource-title">Profile Optimization</div>
+            <div class="resource-copy">Learn how to strengthen your listing, trust signals, and service presentation.</div>
+          </div>
+          <div class="resource-row">
+            <div class="resource-title">Growth Plan Benefits</div>
+            <div class="resource-copy">Understand how featured placement and premium tools support better outcomes.</div>
+          </div>
+        </div>
+      </section>
+
     </div>
 
-</div>
+    <aside class="center-col">
 
+      <section class="ravlo-card center-card">
+        <div class="section-head">
+          <div>
+            <h3>Subscription Summary</h3>
+            <p>Your current billing and plan status.</p>
+          </div>
+        </div>
+
+        <div class="info-list">
+          <div class="info-row"><div class="info-label">Plan</div><div class="info-value">{{ partner.subscription_tier or "Free" }}</div></div>
+          <div class="info-row"><div class="info-label">Paid Until</div><div class="info-value">{{ partner.paid_until.strftime('%b %d, %Y') if partner.paid_until else "—" }}</div></div>
+          <div class="info-row"><div class="info-label">Listing Active</div><div class="info-value">{{ "Yes" if partner.is_active_listing() else "No" }}</div></div>
+        </div>
+
+        <div style="margin-top:16px;">
+          <a href="{{ url_for('partners.billing') if false else url_for('partners.upgrade') }}" class="ravlo-btn primary">
+            Manage Plan
+          </a>
+        </div>
+      </section>
+
+      <section class="ravlo-card center-card">
+        <div class="section-head">
+          <div>
+            <h3>Performance Snapshot</h3>
+            <p>Your current marketplace traction.</p>
+          </div>
+        </div>
+
+        <div class="info-list">
+          <div class="info-row"><div class="info-label">Deals</div><div class="info-value">{{ partner.deals or 0 }}</div></div>
+          <div class="info-row"><div class="info-label">Volume</div><div class="info-value">${{ "{:,.0f}".format(partner.volume or 0) }}</div></div>
+          <div class="info-row"><div class="info-label">Rating</div><div class="info-value">{{ "%.1f"|format(partner.rating or 0) }}</div></div>
+          <div class="info-row"><div class="info-label">Reviews</div><div class="info-value">{{ partner.review_count or 0 }}</div></div>
+        </div>
+      </section>
+
+    </aside>
+
+  </div>
+
+</div>
 {% endblock %}

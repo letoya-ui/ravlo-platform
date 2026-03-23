@@ -1,142 +1,136 @@
 {% extends "layouts/ravlo_base.html" %}
 
-{% block title %}Ravlo • Proposal Detail{% endblock %}
-{% block page_title %}Proposal Detail{% endblock %}
+{% block title %}Ravlo • Proposal{% endblock %}
+
+{% block page_title %}Proposal Builder{% endblock %}
 {% block page_subline %}
-Edit, send, and manage your proposal from one place.
+Create, edit, and send a professional proposal.
 {% endblock %}
 
 {% block topbar_actions %}
-  <a href="{{ url_for('partners.proposals') }}" class="ravlo-btn ghost sm">
-    Back to Proposals
-  </a>
-{% endblock %}
-
-{% block head %}
-<style>
-  .proposal-detail-page{display:flex;flex-direction:column;gap:24px;}
-  .proposal-detail-grid{display:grid;grid-template-columns:1.2fr .8fr;gap:24px;}
-  .detail-card{padding:24px;border-radius:24px;}
-  .detail-card h3{margin:0 0 16px;font-size:1.05rem;font-weight:800;}
-  .detail-field{display:flex;flex-direction:column;gap:8px;margin-bottom:14px;}
-  .detail-label{font-size:.84rem;font-weight:700;color:var(--ravlo-muted);}
-  .summary-box{
-    border:1px solid rgba(255,255,255,.08);
-    border-radius:18px;padding:18px;background:rgba(255,255,255,.02);
-  }
-  .summary-row{
-    display:flex;justify-content:space-between;gap:12px;padding:10px 0;
-    border-bottom:1px solid rgba(255,255,255,.06);
-  }
-  .summary-row:last-child{border-bottom:none;}
-  .status-badge{
-    display:inline-flex;align-items:center;justify-content:center;padding:7px 12px;border-radius:999px;
-    font-size:.74rem;font-weight:800;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.05);
-  }
-  .status-badge.sent{background:rgba(56,189,248,.12);color:#8edcff;border-color:rgba(56,189,248,.22);}
-  .status-badge.accepted{background:rgba(34,197,94,.12);color:#7ef0a5;border-color:rgba(34,197,94,.22);}
-  .status-badge.declined{background:rgba(239,68,68,.12);color:#ffb0b0;border-color:rgba(239,68,68,.22);}
-  .status-badge.draft{background:rgba(255,255,255,.06);color:var(--ravlo-muted);}
-  .detail-actions{display:flex;gap:12px;flex-wrap:wrap;}
-  @media (max-width: 980px){
-    .proposal-detail-grid{grid-template-columns:1fr;}
-  }
-</style>
+  {% if proposal.request_id %}
+    <a href="{{ url_for('partners.request_detail', request_id=proposal.request_id) }}" class="ravlo-btn ghost sm">
+      Back to Request
+    </a>
+  {% endif %}
 {% endblock %}
 
 {% block content %}
-<div class="proposal-detail-page">
-  <form method="POST" action="{{ url_for('partners.proposal_detail', proposal_id=proposal.id) }}">
-    <div class="proposal-detail-grid">
-      <div>
-        <section class="ravlo-card detail-card">
-          <h3>Edit Proposal</h3>
 
-          <div class="detail-field">
-            <label class="detail-label">Title</label>
-            <input type="text" name="title" class="ravlo-input" value="{{ proposal.title }}" required>
-          </div>
+<div class="ravlo-card pad" style="margin-bottom:16px;">
+  <h3 style="margin:0 0 10px;">Proposal Overview</h3>
 
-          <div class="detail-field">
-            <label class="detail-label">Estimated Timeline</label>
-            <input type="text" name="estimated_timeline" class="ravlo-input" value="{{ proposal.estimated_timeline or '' }}">
-          </div>
-
-          <div class="detail-field">
-            <label class="detail-label">Proposal Summary</label>
-            <textarea name="proposal_text" class="ravlo-input" rows="6">{{ proposal.proposal_text or '' }}</textarea>
-          </div>
-
-          <div class="detail-field">
-            <label class="detail-label">Scope of Work</label>
-            <textarea name="scope_of_work" class="ravlo-input" rows="8">{{ proposal.scope_of_work or '' }}</textarea>
-          </div>
-
-          <div class="detail-field">
-            <label class="detail-label">Labor Cost</label>
-            <input type="number" step="0.01" min="0" name="labor_cost" class="ravlo-input" value="{{ proposal.labor_cost or 0 }}">
-          </div>
-
-          <div class="detail-field">
-            <label class="detail-label">Materials Cost</label>
-            <input type="number" step="0.01" min="0" name="materials_cost" class="ravlo-input" value="{{ proposal.materials_cost or 0 }}">
-          </div>
-
-          <div class="detail-field">
-            <label class="detail-label">Other Cost</label>
-            <input type="number" step="0.01" min="0" name="other_cost" class="ravlo-input" value="{{ proposal.other_cost or 0 }}">
-          </div>
-
-          <div class="detail-actions">
-            <button type="submit" name="action" value="save" class="ravlo-btn primary">Save Changes</button>
-            <button type="submit" name="action" value="send" class="ravlo-btn ghost">Mark Sent</button>
-          </div>
-        </section>
-      </div>
-
-      <div>
-        <section class="ravlo-card detail-card">
-          <h3>Proposal Summary</h3>
-
-          <div style="margin-bottom:16px;">
-            <span class="status-badge {{ (proposal.status or 'draft')|lower }}">
-              {{ proposal.status|default("draft", true)|title }}
-            </span>
-          </div>
-
-          <div class="summary-box">
-            <div class="summary-row">
-              <div>Total Cost</div>
-              <div><strong>${{ "{:,.2f}".format(proposal.total_cost or 0) }}</strong></div>
-            </div>
-            <div class="summary-row">
-              <div>Labor</div>
-              <div>${{ "{:,.2f}".format(proposal.labor_cost or 0) }}</div>
-            </div>
-            <div class="summary-row">
-              <div>Materials</div>
-              <div>${{ "{:,.2f}".format(proposal.materials_cost or 0) }}</div>
-            </div>
-            <div class="summary-row">
-              <div>Other</div>
-              <div>${{ "{:,.2f}".format(proposal.other_cost or 0) }}</div>
-            </div>
-            <div class="summary-row">
-              <div>Timeline</div>
-              <div>{{ proposal.estimated_timeline or "—" }}</div>
-            </div>
-            <div class="summary-row">
-              <div>Request ID</div>
-              <div>{{ proposal.request_id or "—" }}</div>
-            </div>
-            <div class="summary-row">
-              <div>Created</div>
-              <div>{{ proposal.created_at.strftime('%b %d, %Y') if proposal.created_at else "—" }}</div>
-            </div>
-          </div>
-        </section>
-      </div>
+  <div class="summary-row">
+    <div>Status</div>
+    <div>
+      <span class="badge badge-{{ proposal.status or 'draft' }}">
+        {{ (proposal.status or "draft")|replace('_',' ')|title }}
+      </span>
     </div>
-  </form>
+  </div>
+
+  <div class="summary-row">
+    <div>Total Cost</div>
+    <div>${{ "{:,.0f}".format(proposal.total_cost or 0) }}</div>
+  </div>
+
+  <div class="summary-row">
+    <div>Timeline</div>
+    <div>{{ proposal.estimated_timeline or "—" }}</div>
+  </div>
+
+  {% if proposal.request_id %}
+  <div class="summary-row">
+    <div>Request ID</div>
+    <div>#{{ proposal.request_id }}</div>
+  </div>
+  {% endif %}
+
+  {% if proposal.request %}
+  <div class="summary-row">
+    <div>Request Status</div>
+    <div>{{ proposal.request.status|replace('_',' ')|title }}</div>
+  </div>
+  {% endif %}
+
 </div>
+
+<form method="POST" class="ravlo-card pad">
+
+  <div class="form-grid">
+
+    <div class="form-group">
+      <label class="ravlo-label">Proposal Title</label>
+      <input type="text" name="title" class="ravlo-input"
+             value="{{ proposal.title or '' }}"
+             placeholder="Kitchen Renovation, Full Rehab, etc.">
+    </div>
+
+    <div class="form-group">
+      <label class="ravlo-label">Estimated Timeline</label>
+      <input type="text" name="estimated_timeline" class="ravlo-input"
+             value="{{ proposal.estimated_timeline or '' }}"
+             placeholder="2–4 weeks">
+    </div>
+
+    <div class="form-group full">
+      <label class="ravlo-label">Scope of Work</label>
+      <textarea name="scope_of_work" class="ravlo-input" rows="4"
+        placeholder="Describe the full scope of work...">{{ proposal.scope_of_work or '' }}</textarea>
+    </div>
+
+    <div class="form-group full">
+      <label class="ravlo-label">Proposal Details</label>
+      <textarea name="proposal_text" class="ravlo-input" rows="5"
+        placeholder="Detailed explanation for client...">{{ proposal.proposal_text or '' }}</textarea>
+    </div>
+
+    <div class="form-group">
+      <label class="ravlo-label">Labor Cost</label>
+      <input type="number" step="0.01" name="labor_cost" class="ravlo-input"
+             value="{{ proposal.labor_cost or 0 }}">
+    </div>
+
+    <div class="form-group">
+      <label class="ravlo-label">Materials Cost</label>
+      <input type="number" step="0.01" name="materials_cost" class="ravlo-input"
+             value="{{ proposal.materials_cost or 0 }}">
+    </div>
+
+    <div class="form-group">
+      <label class="ravlo-label">Other Cost</label>
+      <input type="number" step="0.01" name="other_cost" class="ravlo-input"
+             value="{{ proposal.other_cost or 0 }}">
+    </div>
+
+    <div class="form-group">
+      <label class="ravlo-label">Total</label>
+      <input type="text" class="ravlo-input" disabled
+             value="${{ '{:,.0f}'.format(proposal.total_cost or 0) }}">
+    </div>
+
+  </div>
+
+  <div class="detail-actions">
+
+    <button type="submit" name="action" value="save" class="ravlo-btn primary">
+      Save Changes
+    </button>
+
+    <button type="submit" name="action" value="send" class="ravlo-btn ghost">
+      Send Proposal
+    </button>
+
+    <button type="submit" name="action" value="accept" class="ravlo-btn ghost">
+      Mark Accepted
+    </button>
+
+    <button type="submit" name="action" value="decline" class="ravlo-btn ghost">
+      Mark Declined
+    </button>
+
+  </div>
+
+</form>
+
 {% endblock %}
