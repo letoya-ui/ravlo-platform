@@ -22,9 +22,6 @@ from LoanMVP.models.partner_models import (
 partners_bp = Blueprint("partners", __name__, url_prefix="/partners")
 
 
-# ------------------------------------------------
-# ACCESS TIERS
-# ------------------------------------------------
 def partner_has_pro_access(partner) -> bool:
     if current_app.config.get("FREE_PARTNER_MODE", False):
         return bool(partner)
@@ -32,7 +29,8 @@ def partner_has_pro_access(partner) -> bool:
     if not partner or not partner.approved:
         return False
 
-    return partner.subscription_tier in ("Featured", "Premium", "Enterprise") and partner.is_active_listing()
+    tier = (partner.subscription_tier or "").strip()
+    return tier in ("Featured", "Premium", "Enterprise") and partner.is_active_listing()
 
 
 def partner_has_premium_access(partner) -> bool:
@@ -42,8 +40,8 @@ def partner_has_premium_access(partner) -> bool:
     if not partner or not partner.approved:
         return False
 
-    return partner.subscription_tier in ("Premium", "Enterprise") and partner.is_active_listing()
-
+    tier = (partner.subscription_tier or "").strip()
+    return tier in ("Premium", "Enterprise") and partner.is_active_listing()
 
 # ------------------------------------------------
 # DASHBOARD
@@ -299,17 +297,27 @@ def register():
         portal_home=url_for("partners.dashboard")
     )
 
-@partners_bp.route("/requests", methods=["GET"])
-@role_required("partner")
-def requests():
+
+@partners_bp.route("/requests")
+@role_required("partner", "admin")
+def requests_inbox():
     partner = Partner.query.filter_by(user_id=current_user.id).first()
 
     if not partner:
-        flash("Partner profile not found.", "danger")
-        return redirect(url_for("auth.login"))
+        flash("Partner profile not found.", "warning")
+        return redirect(url_for("partners.register"))
 
-    selected_status = request.args.get("status", "").strip()
-    selected_source = request.args.get("source", "").strip()
+    if not partner_has_pro_access(partner):
+        return render_template(
+            "partners/upgrade_required.html",
+            partner=partner,
+            portal="partner",
+            portal_name="Partner OS",
+            portal_home=url_for("partners.dashboard"),
+        ), 403
+
+    selected_status = (request.args.get("status") or "").strip()
+    selected_source = (request.args.get("source") or "").strip()
 
     query = PartnerConnectionRequest.query.filter_by(partner_id=partner.id)
 
@@ -319,7 +327,9 @@ def requests():
     if selected_source:
         query = query.filter(PartnerConnectionRequest.source == selected_source)
 
-    requests_list = query.order_by(desc(PartnerConnectionRequest.created_at)).all()
+    requests_list = query.order_by(
+        PartnerConnectionRequest.created_at.desc()
+    ).all()
 
     return render_template(
         "partners/requests.html",
@@ -327,30 +337,9 @@ def requests():
         requests_list=requests_list,
         selected_status=selected_status,
         selected_source=selected_source,
-        page_title="Lead Inbox",
-        page_subline="Review incoming partner connection requests and respond quickly.",
-    )
-
-@partners_bp.route("/requests/<int:request_id>", methods=["GET"])
-@role_required("partner")
-def request_detail(request_id):
-    partner = Partner.query.filter_by(user_id=current_user.id).first()
-
-    if not partner:
-        flash("Partner profile not found.", "danger")
-        return redirect(url_for("auth.login"))
-
-    req = PartnerConnectionRequest.query.filter_by(
-        id=request_id,
-        partner_id=partner.id
-    ).first_or_404()
-
-    return render_template(
-        "partners/request_detail.html",
-        partner=partner,
-        req=req,
-        page_title="Request Detail",
-        page_subline="Review opportunity details and next steps.",
+        portal="partner",
+        portal_name="Partner OS",
+        portal_home=url_for("partners.dashboard"),
     )
 
 # ------------------------------------------------
