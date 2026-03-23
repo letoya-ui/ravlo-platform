@@ -1084,6 +1084,7 @@ def resource_center():
     )
 
 @investor_bp.route("/resources/save", methods=["POST"])
+@csrf.exempt
 @login_required
 @role_required("investor")
 def resource_center_save():
@@ -1233,6 +1234,7 @@ def dismiss_dashboard_tour():
 # 👤 INVESTOR ACCOUNT (profile/settings/privacy/notifications)
 # =========================================================
 @investor_bp.route("/account", methods=["GET", "POST"])
+@csrf.exempt
 @login_required
 @role_required("investor")
 def account():
@@ -1283,6 +1285,7 @@ def settings():
     )
 
 @investor_bp.route("/privacy", methods=["GET", "POST"])
+@csrf.exempt
 @login_required
 @role_required("investor")
 def privacy():
@@ -1296,6 +1299,7 @@ def privacy():
 
 
 @investor_bp.route("/notifications-settings", methods=["GET", "POST"])
+@csrf.exempt
 @login_required
 @role_required("investor")
 def notifications_settings():
@@ -1314,6 +1318,7 @@ def notifications_settings():
 # =========================================================
 
 @investor_bp.route("/create_profile", methods=["GET", "POST"])
+@csrf.exempt
 @login_required
 @role_required("investor")
 def create_profile():
@@ -1370,6 +1375,7 @@ def create_profile():
     )
 
 @investor_bp.route("/update_profile", methods=["POST"])
+@csrf.exempt
 @login_required
 @role_required("investor")
 def update_profile():
@@ -1512,6 +1518,7 @@ def capital_application():
     )
 
 @investor_bp.route("/capital_application/submit", methods=["POST"])
+@csrf.exempt
 @login_required
 @role_required("investor")
 def submit_capital_application():
@@ -1699,6 +1706,7 @@ def submit_capital_application():
     })
 
 @investor_bp.route("/deals/<int:deal_id>/submit-funding", methods=["POST"])
+@csrf.exempt
 @login_required
 @role_required("investor")
 def submit_deal_for_funding(deal_id):
@@ -1810,6 +1818,7 @@ def loan_view(loan_id):
 
 @investor_bp.route("/capital/loan/<int:loan_id>/edit", methods=["GET", "POST"])
 @investor_bp.route("/loan/<int:loan_id>/edit", methods=["GET", "POST"])
+@csrf.exempt
 @login_required
 @role_required("investor")
 def loan_edit(loan_id):
@@ -1865,6 +1874,7 @@ def loan_edit(loan_id):
 
 @investor_bp.route("/capital/quote", methods=["GET", "POST"])
 @investor_bp.route("/quote", methods=["GET", "POST"])
+@csrf.exempt
 @login_required
 @role_required("investor")
 def quote():
@@ -1950,6 +1960,7 @@ def quote():
 
 @investor_bp.route("/capital/quote/convert/<int:quote_id>", methods=["POST"])
 @investor_bp.route("/quote/convert/<int:quote_id>", methods=["POST"])
+@csrf.exempt
 @login_required
 @role_required("investor")
 def convert_quote_to_application(quote_id):
@@ -2154,6 +2165,7 @@ def document_requests():
 
 
 @investor_bp.route("/upload_document", methods=["GET", "POST"])
+@csrf.exempt
 @login_required
 @role_required("investor")
 def upload_document():
@@ -2188,6 +2200,7 @@ def upload_document():
 
 
 @investor_bp.route("/upload_request", methods=["GET", "POST"])
+@csrf.exempt
 @login_required
 @role_required("investor")
 def upload_request():
@@ -2252,6 +2265,7 @@ def upload_request():
 
 
 @investor_bp.route("/delete_document/<int:doc_id>", methods=["POST"])
+@csrf.exempt
 @login_required
 @role_required("investor")
 def delete_document(doc_id):
@@ -2456,6 +2470,7 @@ def investor_condition_ai(condition_id):
 
 
 @investor_bp.route("/conditions/upload/<int:cond_id>", methods=["POST"])
+@csrf.exempt
 @login_required
 @role_required("investor")
 def upload_condition(cond_id):
@@ -2566,6 +2581,7 @@ def property_search():
 
 @investor_bp.route("/intelligence/save", methods=["POST"])
 @investor_bp.route("/save_property", methods=["POST"])
+@csrf.exempt
 @login_required
 @role_required("investor")
 def save_property():
@@ -3515,6 +3531,7 @@ def deal_comparison():
     return render_template("investor/deal_comparison.html", deals=deals)
 
 @investor_bp.route("/deal-comparison/run", methods=["POST"])
+@csrf.exempt
 @login_required
 @role_required("investor")
 def run_deal_comparison():
@@ -3639,6 +3656,7 @@ def deals():
     )
     
 @investor_bp.route("/deals/create", methods=["GET", "POST"])
+@csrf.exempt
 @login_required
 @role_required("investor")
 def create_deal():
@@ -3951,6 +3969,7 @@ def deal_report(deal_id):
     )
 
 @investor_bp.route("/deals/<int:deal_id>/request-funding", methods=["POST"])
+@csrf.exempt
 @login_required
 def request_funding(deal_id):
     deal = Deal.query.filter_by(id=deal_id, user_id=current_user.id).first_or_404()
@@ -4542,6 +4561,7 @@ def convert_build_project_to_deal(project_id):
 
 @investor_bp.route("/deal-architect", methods=["GET", "POST"])
 @investor_bp.route("/deal-architect/<int:deal_id>", methods=["GET", "POST"])
+@csrf.exempt
 @login_required
 @role_required("investor")
 def deal_architect(deal_id=None):
@@ -5918,6 +5938,7 @@ def ask_ai_page():
 
 @investor_bp.route("/ai", methods=["POST"])
 @investor_bp.route("/ask-ai", methods=["POST"])
+@csrf.exempt
 @login_required
 @role_required("investor")
 def ask_ai_post():
@@ -6052,6 +6073,7 @@ def deal_copilot():
 
 
 @investor_bp.route("/deal-studio/copilot/chat", methods=["POST"])
+@csrf.exempt
 @login_required
 @role_required("investor")
 def deal_copilot_chat():
@@ -6190,6 +6212,7 @@ def activity():
 
 @investor_bp.route("/planning/budget", methods=["GET", "POST"])
 @investor_bp.route("/budget", methods=["GET", "POST"])
+@csrf.exempt
 @login_required
 @role_required("investor")
 def budget():
@@ -6361,6 +6384,7 @@ def budget_detail(budget_id):
     )
 
 @investor_bp.route("/deals/<int:deal_id>/budget/generate-from-ai", methods=["POST"])
+@csrf.exempt
 @login_required
 @role_required("investor")
 def generate_budget_from_ai(deal_id):
@@ -6507,6 +6531,7 @@ def generate_budget_from_ai(deal_id):
     return redirect(url_for("investor.budget_detail", budget_id=budget.id))
 
 @investor_bp.route("/budget-studio/<int:budget_id>/expense/add", methods=["POST"])
+@csrf.exempt
 @login_required
 @role_required("investor")
 def add_budget_expense(budget_id):
@@ -6751,6 +6776,7 @@ def investor_esign():
 
 @investor_bp.route("/sign/<int:doc_id>", methods=["POST"])
 @investor_bp.route("/esign/sign/<int:doc_id>", methods=["POST"])
+@csrf.exempt
 @login_required
 @role_required("investor")
 def investor_esign_sign(doc_id):
@@ -7116,6 +7142,7 @@ def partner_detail(partner_id):
 
 
 @investor_bp.route("/partners/<int:partner_id>/request-intro", methods=["POST"])
+@csrf.exempt
 @login_required
 @role_required("investor")
 def request_partner_intro(partner_id):
@@ -7149,6 +7176,7 @@ def request_partner_intro(partner_id):
     return redirect(url_for("investor.partner_detail", partner_id=partner.id))
 
 @investor_bp.route("/resources/request-connection", methods=["POST"])
+@csrf.exempt
 @login_required
 @role_required("investor")
 def request_connection():
@@ -7272,6 +7300,7 @@ def partner_marketplace():
 
 
 @investor_bp.route("/partners/request", methods=["POST"])
+@csrf.exempt
 @login_required
 @role_required("investor")
 def create_partner_request():
@@ -7323,6 +7352,7 @@ def create_partner_request():
 
 
 @investor_bp.route("/partners/save-external", methods=["POST"])
+@csrf.exempt
 @login_required
 @role_required("investor")
 def save_external_partner():
@@ -7391,6 +7421,7 @@ def save_external_partner():
 
 
 @investor_bp.route("/partners/invite-external/<int:lead_id>", methods=["POST"])
+@csrf.exempt
 @login_required
 @role_required("investor", "admin")
 def invite_external_partner(lead_id):
@@ -7408,6 +7439,7 @@ def invite_external_partner(lead_id):
     return redirect(url_for("investor.partner_marketplace"))
 
 @investor_bp.route("/partners/request", methods=["POST"])
+@csrf.exempt
 @login_required
 @role_required("investor")
 def create_partner_connection_request():
@@ -7438,6 +7470,7 @@ def create_partner_connection_request():
     return redirect(url_for("investor.partner_marketplace"))
 
 @investor_bp.route("/partners/save-external", methods=["POST"])
+@csrf.exempt
 @login_required
 @role_required("investor")
 def save_external_partner_lead():
@@ -7503,6 +7536,7 @@ def save_external_partner_lead():
     return redirect(url_for("investor.partner_marketplace"))
 
 @investor_bp.route("/partners/request-external/<int:lead_id>", methods=["POST"])
+@csrf.exempt
 @login_required
 @role_required("investor")
 def create_external_partner_request(lead_id):
