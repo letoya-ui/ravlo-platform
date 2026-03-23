@@ -1,0 +1,102 @@
+{% extends "layouts/ravlo_employee_base.html" %}
+
+{% block title %}Ravlo • Independent Contractor Agreement{% endblock %}
+
+{% block page_title %}Independent Contractor Agreement{% endblock %}
+{% block page_subline %}
+Define your role, responsibilities, and relationship with Caughman Mason.
+{% endblock %}
+
+{% block content %}
+<div class="partner-dashboard-page ica-page">
+
+  <!-- HERO -->
+  <section class="ravlo-card partner-hero-card">
+    <div class="partner-hero-grid">
+      <div class="partner-hero-copy">
+        <span class="partner-eyebrow">Agreement</span>
+        <h2 class="partner-hero-title">
+          Operate independently while contributing to the ecosystem.
+        </h2>
+        <p class="partner-hero-text">
+          This agreement outlines your role as an independent contractor,
+          including expectations, responsibilities, and compensation structure.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- SUMMARY -->
+  <section class="ravlo-card partner-section-card">
+    <div class="section-head">
+      <h3>Agreement Summary</h3>
+    </div>
+
+    <div class="partner-tool-list">
+      <div class="partner-tool-item">
+        <strong>Independent Status</strong>
+        <span>You are not an employee. You operate independently and control your work.</span>
+      </div>
+
+      <div class="partner-tool-item">
+        <strong>Compensation</strong>
+        <span>You are compensated based on performance and production, not salary.</span>
+      </div>
+
+      <div class="partner-tool-item">
+        <strong>Use of Platform</strong>
+        <span>Ravlo is the system used to manage deals, communication, and workflow.</span>
+      </div>
+
+      <div class="partner-tool-item">
+        <strong>No Guarantees</strong>
+        <span>The company does not guarantee income, leads, or deal flow.</span>
+      </div>
+
+      <div class="partner-tool-item">
+        <strong>Professional Standards</strong>
+        <span>You are expected to maintain professionalism and proper communication.</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ACCEPT -->
+  <section class="ravlo-card partner-section-card">
+    <div class="section-head">
+      <h3>Agreement Confirmation</h3>
+      <p>You must accept this agreement to continue.</p>
+    </div>
+
+    <form method="POST" action="{{ url_for('loan_officer.accept_ica') }}">
+
+      <div class="partner-checklist" style="margin-bottom:1rem;">
+        <label class="partner-check-item">
+          <input type="checkbox" name="status_ack" required>
+          I understand I am an independent contractor and not an employee.
+        </label>
+
+        <label class="partner-check-item">
+          <input type="checkbox" name="comp_ack" required>
+          I understand compensation is performance-based.
+        </label>
+
+        <label class="partner-check-item">
+          <input type="checkbox" name="no_guarantee" required>
+          I understand there are no guaranteed earnings or leads.
+        </label>
+
+        <label class="partner-check-item">
+          <input type="checkbox" name="agree_terms" required>
+          I agree to the terms of this Independent Contractor Agreement.
+        </label>
+      </div>
+
+      <button type="submit" class="ravlo-btn primary">
+        Accept & Continue
+      </button>
+
+    </form>
+  </section>
+
+</div>
+{% endblock %}

@@ -1,0 +1,93 @@
+{% extends "layouts/ravlo_employee_base.html" %}
+
+{% block title %}Ravlo • Confidentiality Agreement{% endblock %}
+
+{% block page_title %}Confidentiality Agreement (NDA){% endblock %}
+{% block page_subline %}
+Protect company information, deal data, and borrower relationships.
+{% endblock %}
+
+{% block content %}
+<div class="partner-dashboard-page nda-page">
+
+  <!-- HERO -->
+  <section class="ravlo-card partner-hero-card">
+    <div class="partner-hero-grid">
+      <div class="partner-hero-copy">
+        <span class="partner-eyebrow">Confidentiality</span>
+        <h2 class="partner-hero-title">
+          Protect sensitive information and operate with discretion.
+        </h2>
+        <p class="partner-hero-text">
+          As part of your role, you will have access to confidential business,
+          borrower, and operational information. This agreement ensures that
+          all information is handled responsibly and securely.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- TERMS -->
+  <section class="ravlo-card partner-section-card">
+    <div class="section-head">
+      <h3>Agreement Summary</h3>
+    </div>
+
+    <div class="partner-tool-list">
+      <div class="partner-tool-item">
+        <strong>Confidential Information</strong>
+        <span>Includes borrower data, deal information, financial details, internal processes, and platform-related data.</span>
+      </div>
+
+      <div class="partner-tool-item">
+        <strong>Non-Disclosure</strong>
+        <span>You agree not to share or distribute confidential information outside of authorized business use.</span>
+      </div>
+
+      <div class="partner-tool-item">
+        <strong>Use Limitation</strong>
+        <span>Information may only be used for purposes directly related to your role and responsibilities.</span>
+      </div>
+
+      <div class="partner-tool-item">
+        <strong>Data Protection</strong>
+        <span>You agree to take reasonable steps to protect data and prevent unauthorized access.</span>
+      </div>
+
+      <div class="partner-tool-item">
+        <strong>Ongoing Obligation</strong>
+        <span>This responsibility continues even after your role or relationship ends.</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- CONFIRM -->
+  <section class="ravlo-card partner-section-card">
+    <div class="section-head">
+      <h3>Agreement Confirmation</h3>
+      <p>You must accept this agreement before continuing.</p>
+    </div>
+
+    <form method="POST" action="{{ url_for('loan_officer.accept_nda') }}">
+
+      <div class="partner-checklist" style="margin-bottom:1rem;">
+        <label class="partner-check-item">
+          <input type="checkbox" name="nda_ack" required>
+          I understand that I will have access to confidential information.
+        </label>
+
+        <label class="partner-check-item">
+          <input type="checkbox" name="nda_agree" required>
+          I agree not to disclose or misuse confidential information.
+        </label>
+      </div>
+
+      <button type="submit" class="ravlo-btn primary">
+        Accept & Continue
+      </button>
+
+    </form>
+  </section>
+
+</div>
+{% endblock %}

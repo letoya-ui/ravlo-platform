@@ -1,0 +1,95 @@
+{% extends "layouts/ravlo_employee_base.html" %}
+
+{% block title %}Ravlo • Onboarding Acknowledgment{% endblock %}
+
+{% block page_title %}Onboarding Acknowledgment{% endblock %}
+{% block page_subline %}
+Confirm your understanding of your role, responsibilities, and expectations within the Caughman Mason and Ravlo ecosystem.
+{% endblock %}
+
+{% block content %}
+<div class="partner-dashboard-page onboarding-acknowledgment">
+
+  <!-- HERO -->
+  <section class="ravlo-card partner-hero-card">
+    <div class="partner-hero-grid">
+      <div class="partner-hero-copy">
+        <span class="partner-eyebrow">Final Step</span>
+        <h2 class="partner-hero-title">Confirm your onboarding and begin operating.</h2>
+        <p class="partner-hero-text">
+          By completing this step, you acknowledge your understanding of your role,
+          platform expectations, communication standards, and general compensation structure.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- AGREEMENT -->
+  <section class="ravlo-card partner-section-card">
+    <div class="section-head">
+      <h3>Onboarding Acknowledgment</h3>
+    </div>
+
+    <div class="partner-tool-list">
+      <div class="partner-tool-item">
+        <strong>Role Understanding</strong>
+        <span>I understand my responsibilities as a Loan Officer, including generating deals, managing borrowers, and contributing to closed production.</span>
+      </div>
+
+      <div class="partner-tool-item">
+        <strong>Platform Usage</strong>
+        <span>I understand that Ravlo is the primary system for managing workflows, communication, and deal progress.</span>
+      </div>
+
+      <div class="partner-tool-item">
+        <strong>Communication Standards</strong>
+        <span>I agree to maintain professional communication, timely responses, and visible updates within the system.</span>
+      </div>
+
+      <div class="partner-tool-item">
+        <strong>Performance Expectations</strong>
+        <span>I understand that my success is based on consistent activity, deal flow, and execution.</span>
+      </div>
+
+      <div class="partner-tool-item">
+        <strong>Compensation Understanding</strong>
+        <span>I understand that compensation is performance-based and governed by a separate agreement.</span>
+      </div>
+
+      <div class="partner-tool-item">
+        <strong>Independent Status</strong>
+        <span>I understand that my role may be structured as an independent contractor unless otherwise specified.</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- CONFIRMATION FORM -->
+  <section class="ravlo-card partner-section-card">
+    <div class="section-head">
+      <h3>Confirm & Complete</h3>
+      <p>Please confirm to activate your account and access your dashboard.</p>
+    </div>
+
+    <form method="POST" action="{{ url_for('loan_officer.complete_onboarding') }}">
+      
+      <div class="partner-checklist" style="margin-bottom:1rem;">
+        <label class="partner-check-item">
+          <input type="checkbox" name="acknowledged" required>
+          I confirm that I have reviewed and understand the onboarding materials.
+        </label>
+
+        <label class="partner-check-item">
+          <input type="checkbox" name="agreement" required>
+          I agree to operate within the standards and expectations of Caughman Mason and Ravlo.
+        </label>
+      </div>
+
+      <button type="submit" class="ravlo-btn primary">
+        Complete Onboarding
+      </button>
+
+    </form>
+  </section>
+
+</div>
+{% endblock %}

@@ -29,6 +29,10 @@ class User(UserMixin, db.Model):
     # Activation + onboarding
     is_active = db.Column(db.Boolean, default=True)
     invite_accepted = db.Column(db.Boolean, default=False)
+    nda_accepted = db.Column(db.Boolean, default=False)
+    onboarding_complete = db.Column(db.Boolean, default=False)
+    ica_accepted = db.Column(db.Boolean, default=False)
+    onboarding_step = db.Column(db.String(50), default="ica")
 
     # Timestamps
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
@@ -36,7 +40,7 @@ class User(UserMixin, db.Model):
 
     # Borrower timeline
     timeline_status = db.Column(db.String(50), default="application_submitted")
-
+   
     # ===============================
     # 🔗 Relationships
     # ===============================

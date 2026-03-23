@@ -24,7 +24,7 @@ from flask_login import current_user
 from werkzeug.utils import secure_filename
 
 from LoanMVP.extensions import db, csrf
-from LoanMVP.utils.decorators import role_required
+from LoanMVP.utils.decorators import role_required, loan_officer_onboarding_required
 
 # AI
 from LoanMVP.ai.base_ai import AIAssistant
@@ -137,7 +137,17 @@ def _resolve_recipient_name(recipient_type, recipient_id):
 # =============================================================
 @loan_officer_bp.route("/dashboard")
 @role_required("loan_officer")
+@loan_officer_onboarding_required
 def dashboard():
+    if not current_user.ica_accepted:
+        return redirect(url_for("loan_officer.agreement"))
+
+    if not current_user.nda_accepted:
+        return redirect(url_for("loan_officer.nda"))
+
+    if not current_user.loan_officer_onboarding_complete:
+        return redirect(url_for("loan_officer.onboarding"))
+
     officer = LoanOfficerProfile.query.filter_by(user_id=current_user.id).first()
 
     if not officer:
@@ -246,6 +256,90 @@ def dashboard():
         active_tab="dashboard",
         title="Loan Officer Dashboard",
     )
+
+
+
+@loan_officer_bp.route("/onboarding", methods=["GET"])
+@role_required("loan_officer")
+def onboarding():
+    if getattr(current_user, "loan_officer_onboarding_complete", False):
+        return redirect(url_for("loan_officer.dashboard"))
+
+    return render_template(
+        "loan_officer/onboarding.html",
+        assigned_role="Loan Officer",
+        onboarding_progress="15%",
+        resource_count=6,
+        required_steps=6,
+    )
+
+
+@loan_officer_bp.route("/onboarding/complete", methods=["POST"])
+@csrf.exempt
+@role_required("loan_officer")
+def complete_onboarding():
+    acknowledged = request.form.get("acknowledged")
+    agreement = request.form.get("agreement")
+
+    if not acknowledged or not agreement:
+        flash("You must confirm all acknowledgment items before continuing.", "danger")
+        return redirect(url_for("loan_officer.onboarding"))
+
+    current_user.onboarding_complete = True
+    db.session.commit()
+
+    flash("Onboarding completed. Welcome to your dashboard.", "success")
+    return redirect(url_for("loan_officer.dashboard"))
+
+@loan_officer_bp.route("/nda", methods=["GET"])
+@role_required("loan_officer")
+def nda():
+    if getattr(current_user, "nda_accepted", False):
+        return redirect(url_for("loan_officer.onboarding"))
+
+    return render_template("loan_officer/nda.html")
+
+@loan_officer_bp.route("/nda/accept", methods=["POST"])
+@csrf.exempt
+@role_required("loan_officer")
+def accept_nda():
+    nda_ack = request.form.get("nda_ack")
+    nda_agree = request.form.get("nda_agree")
+
+    if not nda_ack or not nda_agree:
+        flash("You must accept the NDA to continue.", "danger")
+        return redirect(url_for("loan_officer.nda"))
+
+    current_user.nda_accepted = True
+    db.session.commit()
+
+    return redirect(url_for("loan_officer.onboarding"))
+
+@loan_officer_bp.route("/agreement", methods=["GET"])
+@role_required("loan_officer")
+def agreement():
+    if getattr(current_user, "ica_accepted", False):
+        return redirect(url_for("loan_officer.onboarding"))
+
+    return render_template("loan_officer/agreement.html")
+
+@loan_officer_bp.route("/agreement/accept", methods=["POST"])
+@csrf.exempt
+@role_required("loan_officer")
+def accept_ica():
+    if not all([
+        request.form.get("status_ack"),
+        request.form.get("comp_ack"),
+        request.form.get("no_guarantee"),
+        request.form.get("agree_terms")
+    ]):
+        flash("You must accept all terms before continuing.", "danger")
+        return redirect(url_for("loan_officer.agreement"))
+
+    current_user.ica_accepted = True
+    db.session.commit()
+
+    return redirect(url_for("loan_officer.nda"))
 
 # =============================================================
 # AI Assistant — Loan Officer
@@ -380,6 +474,7 @@ def ai_assistant():
 @loan_officer_bp.route("/messages", methods=["GET", "POST"])
 @csrf.exempt
 @role_required("loan_officer")
+@loan_officer_onboarding_required
 def messages():
     if request.method == "POST":
         receiver_id = request.form.get("receiver_id", type=int)

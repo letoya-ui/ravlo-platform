@@ -821,3 +821,15 @@ def company_dashboard(company_id):
         title=f"{company.name} Dashboard",
         active_tab="companies",
     )
+
+
+@admin_bp.route("/onboarding", methods=["GET"])
+@login_required
+def onboarding_center():
+    return render_template(
+        "admin/onboarding_center.html",
+        assigned_role=getattr(current_user, "role", "New Team Member"),
+        onboarding_progress="15%",
+        resource_count=8,
+        required_steps=6,
+    )

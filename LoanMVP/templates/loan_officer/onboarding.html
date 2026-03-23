@@ -1,0 +1,149 @@
+{% extends "layouts/ravlo_employee_base.html" %}
+
+{% block title %}Ravlo • Loan Officer Onboarding{% endblock %}
+
+{% block page_title %}Loan Officer Onboarding{% endblock %}
+{% block page_subline %}
+Learn how to generate, manage, and close deals using the Ravlo ecosystem.
+{% endblock %}
+
+{% block content %}
+<div class="partner-dashboard-page loan-officer-onboarding">
+
+  <!-- HERO -->
+  <section class="ravlo-card partner-hero-card">
+    <div class="partner-hero-grid">
+      <div class="partner-hero-copy">
+        <span class="partner-eyebrow">Loan Officer Track</span>
+        <h2 class="partner-hero-title">
+          Build pipeline, manage borrowers, and close deals through Ravlo.
+        </h2>
+        <p class="partner-hero-text">
+          As a Loan Officer, your role is to generate opportunities, guide borrowers,
+          and move deals from inquiry to closing using the Ravlo platform.
+        </p>
+      </div>
+
+      <div class="partner-hero-panel">
+        <div class="partner-mini-stat">
+          <span class="label">Primary Role</span>
+          <strong>Deal generation + borrower management</strong>
+        </div>
+        <div class="partner-mini-stat">
+          <span class="label">Goal</span>
+          <strong>Move deals from inquiry → approval → funding</strong>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CHECKLIST -->
+  <section class="partner-section-card">
+    <div class="section-head">
+      <h3>Onboarding Checklist</h3>
+      <p>Complete these steps before actively working deals.</p>
+    </div>
+
+    <div class="partner-checklist">
+      <div class="partner-check-item">Set up your Loan Officer profile</div>
+      <div class="partner-check-item">Understand deal flow and pipeline stages</div>
+      <div class="partner-check-item">Learn how to submit and manage deals</div>
+      <div class="partner-check-item">Review communication expectations</div>
+      <div class="partner-check-item">Understand compensation structure</div>
+      <div class="partner-check-item">Review borrower interaction standards</div>
+    </div>
+  </section>
+
+  <!-- WORKFLOW -->
+  <section class="partner-section-card">
+    <div class="section-head">
+      <h3>Loan Officer Workflow</h3>
+      <p>Your daily operating process inside Ravlo.</p>
+    </div>
+
+    <div class="workflow-grid">
+      <div class="workflow-step">
+        <span class="step-no">01</span>
+        <h4>Generate Leads</h4>
+        <p>Find borrowers, investors, or referrals looking for funding.</p>
+      </div>
+
+      <div class="workflow-step">
+        <span class="step-no">02</span>
+        <h4>Submit Deal</h4>
+        <p>Enter borrower and property details into Ravlo.</p>
+      </div>
+
+      <div class="workflow-step">
+        <span class="step-no">03</span>
+        <h4>Guide Borrower</h4>
+        <p>Help borrower provide documents and move forward.</p>
+      </div>
+
+      <div class="workflow-step">
+        <span class="step-no">04</span>
+        <h4>Close Deal</h4>
+        <p>Move deal through approval → closing → funding.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- PLATFORM USE -->
+  <section class="partner-section-card">
+    <div class="section-head">
+      <h3>Platform Usage</h3>
+      <p>Key areas you will use daily.</p>
+    </div>
+
+    <div class="quick-action-grid">
+      <div class="partner-action-card">
+        <div class="partner-action-copy">
+          <h4>Dashboard</h4>
+          <p>Track deals, pipeline, and priorities.</p>
+        </div>
+      </div>
+
+      <div class="partner-action-card">
+        <div class="partner-action-copy">
+          <h4>Loan Submissions</h4>
+          <p>Enter and manage borrower deals.</p>
+        </div>
+      </div>
+
+      <div class="partner-action-card">
+        <div class="partner-action-copy">
+          <h4>Workspace</h4>
+          <p>Track deal progress and updates.</p>
+        </div>
+      </div>
+
+      <div class="partner-action-card">
+        <div class="partner-action-copy">
+          <h4>Communication</h4>
+          <p>Stay connected with borrowers and team.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PERFORMANCE -->
+  <section class="partner-section-card">
+    <div class="section-head">
+      <h3>Performance Expectations</h3>
+    </div>
+
+    <div class="partner-checklist">
+      <div class="partner-check-item">Generate consistent deal flow</div>
+      <div class="partner-check-item">Respond quickly to borrowers</div>
+      <div class="partner-check-item">Keep deals moving forward</div>
+      <div class="partner-check-item">Maintain professionalism</div>
+    </div>
+  </section>
+
+</div>
+<form method="POST" action="{{ url_for('loan_officer.complete_onboarding') }}">
+  <button type="submit" class="ravlo-btn primary">
+    Complete Onboarding
+  </button>
+</form>
+{% endblock %}

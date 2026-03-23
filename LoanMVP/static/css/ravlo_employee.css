@@ -1140,3 +1140,7 @@ tbody tr:hover td,
     padding:16px;
   }
 }
+
+.onboarding-dashboard .partner-hero-card::before {
+  background: radial-gradient(circle, rgba(96, 170, 255, 0.22), transparent 70%);
+}
