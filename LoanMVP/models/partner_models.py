@@ -34,6 +34,13 @@ class PartnerConnectionRequest(db.Model):
 
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     responded_at = db.Column(db.DateTime, nullable=True)
+    
+    title = db.Column(db.String(255), nullable=True)
+    budget = db.Column(db.Float, nullable=True)
+    timeline = db.Column(db.String(120), nullable=True)
+    priority = db.Column(db.String(30), nullable=True)
+    request_type = db.Column(db.String(50), nullable=True)
+    internal_notes = db.Column(db.Text, nullable=True)
 
     partner = db.relationship("Partner", backref=db.backref("connection_requests", lazy=True))
     external_partner_lead = db.relationship("ExternalPartnerLead", foreign_keys=[external_partner_lead_id])
