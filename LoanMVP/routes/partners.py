@@ -204,17 +204,6 @@ def dashboard():
 # PARTNER DIRECTORY (internal)
 # ------------------------------------------------
 
-from flask import Blueprint, render_template
-from flask_login import login_required, current_user
-
-from LoanMVP.extensions import db
-from LoanMVP.utils.decorators import role_required
-
-from LoanMVP.models.partner_models import Partner, PartnerJob, PartnerConnectionRequest
-
-partners_bp = Blueprint("partners", __name__, url_prefix="/partners")
-
-
 @partners_bp.route("/center")
 @role_required("partner")
 def center():
