@@ -1,6 +1,6 @@
 {% set bp = request.blueprint or "" %}
 {% set ep = request.endpoint or "" %}
-{% set active_portal = portal|default('investor') %}
+{% set active_portal = portal|default('partner' if bp == 'partners' else 'investor') %}
 
 <!doctype html>
 <html lang="en">
