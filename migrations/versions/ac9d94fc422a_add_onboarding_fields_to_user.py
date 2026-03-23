@@ -1,4 +1,4 @@
-""add onboarding fields to user
+"""add onboarding fields to user
 
 Revision ID: ac9d94fc422a
 Revises: 3ecb242d3c57
