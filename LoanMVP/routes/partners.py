@@ -701,6 +701,6 @@ def edit_profile():
 
         db.session.commit()
         flash("Your partner profile was updated successfully.", "success")
-        return redirect(url_for("partner.profile"))
+        return redirect(url_for("partners.profile"))
 
-    return render_template("partner/partner_form.html", partner=partner)
+    return render_template("partners/partner_form.html", partner=partner)
