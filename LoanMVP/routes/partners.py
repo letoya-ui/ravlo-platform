@@ -298,6 +298,32 @@ def register():
     )
 
 
+@partners_bp.route("/requests/<int:request_id>", methods=["GET"])
+@role_required("partner")
+def request_detail(request_id):
+    partner = Partner.query.filter_by(user_id=current_user.id).first()
+
+    if not partner:
+        flash("Partner profile not found.", "danger")
+        return redirect(url_for("auth.login"))
+
+    req = PartnerConnectionRequest.query.filter_by(
+        id=request_id,
+        partner_id=partner.id
+    ).first_or_404()
+
+    return render_template(
+        "partners/request_detail.html",
+        partner=partner,
+        req=req,
+        page_title="Request Detail",
+        page_subline="Review opportunity details and next steps.",
+    )
+
+# ------------------------------------------------
+# PARTNER REQUEST INBOX
+# ------------------------------------------------
+
 @partners_bp.route("/requests")
 @role_required("partner", "admin")
 def requests_inbox():
@@ -341,39 +367,6 @@ def requests_inbox():
         portal_name="Partner OS",
         portal_home=url_for("partners.dashboard"),
     )
-
-# ------------------------------------------------
-# PARTNER REQUEST INBOX
-# ------------------------------------------------
-
-@partners_bp.route("/requests")
-@role_required("partner")
-def requests_inbox():
-
-    partner = Partner.query.filter_by(user_id=current_user.id).first()
-
-    if not partner:
-        flash("Partner profile not found.", "warning")
-        return redirect(url_for("partners.register"))
-
-    if not partner_has_pro_access(partner):
-        return render_template(
-            "partners/upgrade_required.html",
-            partner=partner
-        ), 403
-
-    requests_q = PartnerConnectionRequest.query.filter_by(
-        partner_id=partner.id
-    ).order_by(
-        PartnerConnectionRequest.created_at.desc()
-    ).all()
-
-    return render_template(
-        "partners/requests_inbox.html",
-        partner=partner,
-        requests=requests_q
-    )
-
 
 # ------------------------------------------------
 # ACCEPT REQUEST
