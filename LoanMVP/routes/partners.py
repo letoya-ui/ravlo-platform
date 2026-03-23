@@ -215,11 +215,11 @@ def center():
     if category:
         query = query.filter_by(category=category)
 
-    partners = query.all()
+    partner = query.all()
 
     return render_template(
         "partners/center.html",
-        partners=partners,
+        partner=partner,
         category=category,
         portal="partner",
         portal_name="Partner OS",
