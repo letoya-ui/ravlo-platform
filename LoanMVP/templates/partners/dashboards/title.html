@@ -1,21 +1,134 @@
 {% extends "layouts/ravlo_base.html" %}
+
+{% block title %}Ravlo • Title Dashboard{% endblock %}
+
+{% block page_title %}Title Dashboard{% endblock %}
+{% block page_subline %}
+Manage title requests, active searches, clear-to-close status, and completed closings from one workspace.
+{% endblock %}
+
+{% block topbar_actions %}
+  <a href="{{ url_for('partners.requests_inbox') }}" class="ravlo-btn ghost sm">
+    View Title Requests
+  </a>
+  <a href="{{ url_for('partners.workspace_home') }}" class="ravlo-btn primary sm">
+    Open Workspace
+  </a>
+{% endblock %}
+
 {% block content %}
+<div class="partner-dashboard-page title-dashboard">
 
-<div class="dashboard-shell">
-    <h1>Title Services Dashboard</h1>
-    <p>Manage title requests and closing workflows.</p>
+  <section class="ravlo-card partner-hero-card">
+    <div class="partner-hero-grid">
+      <div class="partner-hero-copy">
+        <span class="partner-eyebrow">Partner Command</span>
+        <h2 class="partner-hero-title">Coordinate title flow, clear conditions, and move closings forward.</h2>
+        <p class="partner-hero-text">
+          Review incoming title opportunities, manage search and curative activity, and maintain visibility
+          across closing readiness and final title completion.
+        </p>
 
-    <div class="dashboard-grid">
-        <a class="dash-card" href="{{ url_for('partners.requests_inbox') }}">
-            <h3>Title Requests</h3>
-            <p>View new title service inquiries.</p>
-        </a>
+        <div class="partner-hero-actions">
+          <a href="{{ url_for('partners.requests_inbox') }}" class="ravlo-btn primary">
+            Review Title Requests
+          </a>
+          <a href="{{ url_for('partners.workspace_home') }}" class="ravlo-btn ghost">
+            Go to Workspace
+          </a>
+        </div>
+      </div>
 
-        <a class="dash-card" href="{{ url_for('partners.workspace_home') }}">
-            <h3>Workspace</h3>
-            <p>Active title jobs and closing tasks.</p>
-        </a>
+      <div class="partner-hero-panel">
+        <div class="partner-mini-stat">
+          <span class="label">Priority Focus</span>
+          <strong>Searches, curative work, clear-to-close readiness</strong>
+        </div>
+        <div class="partner-mini-stat">
+          <span class="label">Best Use</span>
+          <strong>Keep title progress visible from intake to close</strong>
+        </div>
+      </div>
     </div>
-</div>
+  </section>
 
+  <section class="partner-stats-grid">
+    <article class="ravlo-card partner-stat-card">
+      <div class="partner-stat-label">New Orders</div>
+      <div class="partner-stat-value">{{ new_orders|default(0) }}</div>
+      <div class="partner-stat-note">Incoming title requests awaiting review</div>
+    </article>
+    <article class="ravlo-card partner-stat-card">
+      <div class="partner-stat-label">Searches</div>
+      <div class="partner-stat-value">{{ searches|default(0) }}</div>
+      <div class="partner-stat-note">Title searches and examinations in progress</div>
+    </article>
+    <article class="ravlo-card partner-stat-card">
+      <div class="partner-stat-label">Clear to Close</div>
+      <div class="partner-stat-value">{{ clear_to_close|default(0) }}</div>
+      <div class="partner-stat-note">Files approaching final closing readiness</div>
+    </article>
+    <article class="ravlo-card partner-stat-card">
+      <div class="partner-stat-label">Closed</div>
+      <div class="partner-stat-value">{{ closed|default(0) }}</div>
+      <div class="partner-stat-note">Completed title files and finished closings</div>
+    </article>
+  </section>
+
+  <section class="partner-dashboard-grid">
+    <div class="partner-dashboard-main">
+      <article class="ravlo-card partner-section-card">
+        <div class="section-head"><div><h3>Quick Actions</h3><p>Move quickly through your title workflow.</p></div></div>
+        <div class="quick-action-grid">
+          <a class="partner-action-card" href="{{ url_for('partners.requests_inbox') }}">
+            <div class="partner-action-icon"><i class="lucide lucide-file-badge"></i></div>
+            <div class="partner-action-copy">
+              <h4>Title Requests</h4>
+              <p>Review new title orders, file openings, and closing-related title matters.</p>
+            </div>
+          </a>
+          <a class="partner-action-card" href="{{ url_for('partners.workspace_home') }}">
+            <div class="partner-action-icon"><i class="lucide lucide-scroll-text"></i></div>
+            <div class="partner-action-copy">
+              <h4>Closing Workspace</h4>
+              <p>Track searches, curative tasks, clear-to-close status, and file movement.</p>
+            </div>
+          </a>
+        </div>
+      </article>
+
+      <article class="ravlo-card partner-section-card">
+        <div class="section-head"><div><h3>Title Workflow</h3><p>Recommended process for title partners inside Ravlo.</p></div></div>
+        <div class="workflow-grid">
+          <div class="workflow-step"><span class="step-no">01</span><h4>Open Order</h4><p>Review the title request and confirm property, parties, and file setup details.</p></div>
+          <div class="workflow-step"><span class="step-no">02</span><h4>Search & Review</h4><p>Run title searches, review findings, and identify any issues needing resolution.</p></div>
+          <div class="workflow-step"><span class="step-no">03</span><h4>Clear Conditions</h4><p>Address curative items and move the file toward closing readiness.</p></div>
+          <div class="workflow-step"><span class="step-no">04</span><h4>Coordinate Close</h4><p>Advance the file to final close and maintain visibility through completion.</p></div>
+        </div>
+      </article>
+    </div>
+
+    <aside class="partner-dashboard-side">
+      <article class="ravlo-card partner-section-card">
+        <div class="section-head"><div><h3>Title Tools</h3><p>Core areas you’ll use most often.</p></div></div>
+        <div class="partner-tool-list">
+          <div class="partner-tool-item"><strong>Title Requests</strong><span>New title openings and file intake</span></div>
+          <div class="partner-tool-item"><strong>Workspace</strong><span>Track search activity, curative work, and closing progress</span></div>
+          <div class="partner-tool-item"><strong>Clear-to-Close</strong><span>Keep readiness status visible and current</span></div>
+          <div class="partner-tool-item"><strong>Completed Closings</strong><span>Monitor final outcomes and closed files</span></div>
+        </div>
+      </article>
+
+      <article class="ravlo-card partner-section-card">
+        <div class="section-head"><div><h3>Performance Focus</h3><p>What matters most for title partner success on Ravlo.</p></div></div>
+        <div class="partner-checklist">
+          <div class="partner-check-item">Open and review files quickly</div>
+          <div class="partner-check-item">Keep title issues visible and organized</div>
+          <div class="partner-check-item">Reduce curative delays</div>
+          <div class="partner-check-item">Help closings move cleanly to completion</div>
+        </div>
+      </article>
+    </aside>
+  </section>
+</div>
 {% endblock %}

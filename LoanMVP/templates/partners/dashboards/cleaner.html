@@ -1,21 +1,205 @@
 {% extends "layouts/ravlo_base.html" %}
+
+{% block title %}Ravlo • Cleaning Services Dashboard{% endblock %}
+
+{% block page_title %}Cleaning Services Dashboard{% endblock %}
+{% block page_subline %}
+Manage incoming cleaning requests, scheduled service jobs, active turnovers, and completion updates from one workspace.
+{% endblock %}
+
+{% block topbar_actions %}
+  <a href="{{ url_for('partners.requests_inbox') }}" class="ravlo-btn ghost sm">
+    View Cleaning Requests
+  </a>
+  <a href="{{ url_for('partners.workspace_home') }}" class="ravlo-btn primary sm">
+    Open Workspace
+  </a>
+{% endblock %}
+
 {% block content %}
+<div class="partner-dashboard-page cleaning-dashboard">
 
-<div class="dashboard-shell">
-    <h1>Cleaning Services Dashboard</h1>
-    <p>Manage cleaning requests and scheduled jobs.</p>
+  <!-- HERO / SUMMARY -->
+  <section class="ravlo-card partner-hero-card">
+    <div class="partner-hero-grid">
+      <div class="partner-hero-copy">
+        <span class="partner-eyebrow">Partner Command</span>
+        <h2 class="partner-hero-title">Organize service requests, manage schedules, and keep properties ready.</h2>
+        <p class="partner-hero-text">
+          Review incoming cleaning opportunities, manage active service jobs,
+          and keep turnovers, recurring visits, and property-ready tasks moving efficiently across Ravlo.
+        </p>
 
-    <div class="dashboard-grid">
-        <a class="dash-card" href="{{ url_for('partners.requests_inbox') }}">
-            <h3>Cleaning Requests</h3>
-            <p>View new cleaning service inquiries.</p>
-        </a>
+        <div class="partner-hero-actions">
+          <a href="{{ url_for('partners.requests_inbox') }}" class="ravlo-btn primary">
+            Review Cleaning Requests
+          </a>
+          <a href="{{ url_for('partners.workspace_home') }}" class="ravlo-btn ghost">
+            Go to Workspace
+          </a>
+        </div>
+      </div>
 
-        <a class="dash-card" href="{{ url_for('partners.workspace_home') }}">
-            <h3>Workspace</h3>
-            <p>Active cleaning jobs and schedules.</p>
-        </a>
+      <div class="partner-hero-panel">
+        <div class="partner-mini-stat">
+          <span class="label">Priority Focus</span>
+          <strong>Scheduling, turnovers, job completion</strong>
+        </div>
+        <div class="partner-mini-stat">
+          <span class="label">Best Use</span>
+          <strong>Keep service flow organized and visible</strong>
+        </div>
+      </div>
     </div>
-</div>
+  </section>
 
+  <!-- STATS -->
+  <section class="partner-stats-grid">
+    <article class="ravlo-card partner-stat-card">
+      <div class="partner-stat-label">New Requests</div>
+      <div class="partner-stat-value">{{ new_requests_count|default(0) }}</div>
+      <div class="partner-stat-note">Incoming cleaning inquiries awaiting review</div>
+    </article>
+
+    <article class="ravlo-card partner-stat-card">
+      <div class="partner-stat-label">Scheduled Jobs</div>
+      <div class="partner-stat-value">{{ scheduled_jobs_count|default(0) }}</div>
+      <div class="partner-stat-note">Confirmed service appointments on the calendar</div>
+    </article>
+
+    <article class="ravlo-card partner-stat-card">
+      <div class="partner-stat-label">Active Turnovers</div>
+      <div class="partner-stat-value">{{ turnover_jobs_count|default(0) }}</div>
+      <div class="partner-stat-note">Property-ready and transition cleaning jobs in motion</div>
+    </article>
+
+    <article class="ravlo-card partner-stat-card">
+      <div class="partner-stat-label">Completed Jobs</div>
+      <div class="partner-stat-value">{{ completed_jobs_count|default(0) }}</div>
+      <div class="partner-stat-note">Services completed and ready for closeout</div>
+    </article>
+  </section>
+
+  <!-- MAIN GRID -->
+  <section class="partner-dashboard-grid">
+
+    <div class="partner-dashboard-main">
+
+      <article class="ravlo-card partner-section-card">
+        <div class="section-head">
+          <div>
+            <h3>Quick Actions</h3>
+            <p>Move quickly through your cleaning workflow.</p>
+          </div>
+        </div>
+
+        <div class="quick-action-grid">
+          <a class="partner-action-card" href="{{ url_for('partners.requests_inbox') }}">
+            <div class="partner-action-icon">
+              <i class="lucide lucide-sparkles"></i>
+            </div>
+            <div class="partner-action-copy">
+              <h4>Cleaning Requests</h4>
+              <p>Review new service inquiries from investors, owners, and property teams.</p>
+            </div>
+          </a>
+
+          <a class="partner-action-card" href="{{ url_for('partners.workspace_home') }}">
+            <div class="partner-action-icon">
+              <i class="lucide lucide-calendar-check-2"></i>
+            </div>
+            <div class="partner-action-copy">
+              <h4>Workspace</h4>
+              <p>Manage active jobs, schedules, service notes, and completion progress.</p>
+            </div>
+          </a>
+        </div>
+      </article>
+
+      <article class="ravlo-card partner-section-card">
+        <div class="section-head">
+          <div>
+            <h3>Cleaning Workflow</h3>
+            <p>Recommended process for handling cleaning opportunities inside Ravlo.</p>
+          </div>
+        </div>
+
+        <div class="workflow-grid">
+          <div class="workflow-step">
+            <span class="step-no">01</span>
+            <h4>Review Request</h4>
+            <p>Open incoming cleaning requests and confirm service type, location, and timing needs.</p>
+          </div>
+
+          <div class="workflow-step">
+            <span class="step-no">02</span>
+            <h4>Schedule Service</h4>
+            <p>Set appointment timing, organize team availability, and prepare job details.</p>
+          </div>
+
+          <div class="workflow-step">
+            <span class="step-no">03</span>
+            <h4>Complete Job</h4>
+            <p>Execute the cleaning service, turnover, or refresh and track the job through completion.</p>
+          </div>
+
+          <div class="workflow-step">
+            <span class="step-no">04</span>
+            <h4>Close Out & Update</h4>
+            <p>Mark the service complete, record updates, and maintain visibility for the property team.</p>
+          </div>
+        </div>
+      </article>
+
+    </div>
+
+    <aside class="partner-dashboard-side">
+
+      <article class="ravlo-card partner-section-card">
+        <div class="section-head">
+          <div>
+            <h3>Cleaning Tools</h3>
+            <p>Core areas you’ll use most often.</p>
+          </div>
+        </div>
+
+        <div class="partner-tool-list">
+          <div class="partner-tool-item">
+            <strong>Cleaning Requests</strong>
+            <span>New service opportunities and property inquiries</span>
+          </div>
+          <div class="partner-tool-item">
+            <strong>Workspace</strong>
+            <span>Schedules, active jobs, notes, and progress tracking</span>
+          </div>
+          <div class="partner-tool-item">
+            <strong>Turnover Tracking</strong>
+            <span>Monitor move-in, move-out, and ready-state service work</span>
+          </div>
+          <div class="partner-tool-item">
+            <strong>Completion Updates</strong>
+            <span>Keep investors and teams informed when jobs are done</span>
+          </div>
+        </div>
+      </article>
+
+      <article class="ravlo-card partner-section-card">
+        <div class="section-head">
+          <div>
+            <h3>Performance Focus</h3>
+            <p>What matters most for cleaning partner success on Ravlo.</p>
+          </div>
+        </div>
+
+        <div class="partner-checklist">
+          <div class="partner-check-item">Respond quickly to incoming cleaning opportunities</div>
+          <div class="partner-check-item">Keep schedules accurate and organized</div>
+          <div class="partner-check-item">Complete turnovers and service jobs on time</div>
+          <div class="partner-check-item">Provide clear completion visibility for the team</div>
+        </div>
+      </article>
+
+    </aside>
+  </section>
+</div>
 {% endblock %}

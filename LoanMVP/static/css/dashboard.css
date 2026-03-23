@@ -586,3 +586,571 @@ textarea.ravlo-input{
 .badge-sent{ background:#2f7dff; }
 .badge-accepted{ background:#2aa96b; }
 .badge-declined{ background:#aa3b3b; }
+
+/* =========================================================
+   RAVLO PARTNER PREMIUM DASHBOARDS
+   Shared styling for partner profession dashboards
+   ========================================================= */
+
+.partner-dashboard-page {
+  display: flex;
+  flex-direction: column;
+  gap: 1.35rem;
+}
+
+.partner-dashboard-page .ravlo-card {
+  position: relative;
+  overflow: hidden;
+}
+
+/* =========================================================
+   HERO
+   ========================================================= */
+
+.partner-hero-card {
+  padding: 1.5rem;
+  border-radius: 24px;
+  background: linear-gradient(180deg, rgba(18, 25, 43, 0.95), rgba(11, 17, 31, 0.94));
+  border: 1px solid rgba(122, 162, 255, 0.18);
+  box-shadow:
+    0 18px 50px rgba(0, 0, 0, 0.30),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.partner-hero-card::before {
+  content: "";
+  position: absolute;
+  inset: -20% auto auto -10%;
+  width: 260px;
+  height: 260px;
+  background: radial-gradient(circle, rgba(71, 133, 255, 0.18), transparent 70%);
+  pointer-events: none;
+}
+
+.partner-hero-grid {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: minmax(0, 1.8fr) minmax(280px, 0.9fr);
+  gap: 1.25rem;
+  align-items: stretch;
+}
+
+.partner-hero-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.partner-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  padding: 0.38rem 0.72rem;
+  border-radius: 999px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #d9e6ff;
+  background: rgba(76, 125, 255, 0.14);
+  border: 1px solid rgba(126, 162, 255, 0.22);
+}
+
+.partner-hero-title {
+  margin: 0;
+  font-size: clamp(1.5rem, 2vw, 2.3rem);
+  line-height: 1.08;
+  font-weight: 800;
+  color: #f8fbff;
+  letter-spacing: -0.03em;
+}
+
+.partner-hero-text {
+  margin: 0;
+  max-width: 760px;
+  color: rgba(225, 234, 255, 0.82);
+  font-size: 0.98rem;
+  line-height: 1.7;
+}
+
+.partner-hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 0.25rem;
+}
+
+.partner-hero-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  justify-content: center;
+}
+
+.partner-mini-stat {
+  padding: 1rem 1rem 1.05rem;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(132, 157, 255, 0.16);
+  backdrop-filter: blur(12px);
+}
+
+.partner-mini-stat .label {
+  display: block;
+  margin-bottom: 0.38rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(180, 201, 255, 0.7);
+}
+
+.partner-mini-stat strong {
+  display: block;
+  color: #f7fbff;
+  font-size: 0.98rem;
+  line-height: 1.5;
+  font-weight: 700;
+}
+
+/* =========================================================
+   STATS
+   ========================================================= */
+
+.partner-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.partner-stat-card {
+  padding: 1.15rem 1.1rem;
+  border-radius: 22px;
+  background: linear-gradient(180deg, rgba(18, 24, 42, 0.96), rgba(12, 18, 32, 0.96));
+  border: 1px solid rgba(115, 145, 225, 0.14);
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.22);
+}
+
+.partner-stat-label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: rgba(171, 192, 245, 0.76);
+}
+
+.partner-stat-value {
+  margin-top: 0.55rem;
+  font-size: clamp(1.45rem, 2vw, 2rem);
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.04em;
+  color: #ffffff;
+}
+
+.partner-stat-note {
+  margin-top: 0.6rem;
+  font-size: 0.86rem;
+  line-height: 1.55;
+  color: rgba(215, 225, 245, 0.68);
+}
+
+/* =========================================================
+   MAIN GRID
+   ========================================================= */
+
+.partner-dashboard-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.55fr) minmax(280px, 0.82fr);
+  gap: 1rem;
+  align-items: start;
+}
+
+.partner-dashboard-main,
+.partner-dashboard-side {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.partner-section-card {
+  padding: 1.2rem;
+  border-radius: 22px;
+  background: linear-gradient(180deg, rgba(18, 24, 42, 0.96), rgba(11, 16, 30, 0.96));
+  border: 1px solid rgba(113, 147, 231, 0.14);
+  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.22);
+}
+
+.section-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.section-head h3 {
+  margin: 0;
+  color: #f5f8ff;
+  font-size: 1.02rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.section-head p {
+  margin: 0.35rem 0 0;
+  color: rgba(214, 224, 244, 0.68);
+  font-size: 0.9rem;
+  line-height: 1.55;
+}
+
+/* =========================================================
+   QUICK ACTIONS
+   ========================================================= */
+
+.quick-action-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.95rem;
+}
+
+.partner-action-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.9rem;
+  padding: 1rem;
+  border-radius: 18px;
+  text-decoration: none;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(123, 155, 237, 0.14);
+  transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease, box-shadow 0.18s ease;
+}
+
+.partner-action-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(122, 165, 255, 0.32);
+  background: rgba(82, 122, 255, 0.08);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.16);
+}
+
+.partner-action-icon {
+  width: 46px;
+  height: 46px;
+  min-width: 46px;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(180deg, rgba(77, 125, 255, 0.18), rgba(77, 125, 255, 0.08));
+  border: 1px solid rgba(118, 155, 255, 0.18);
+  color: #dbe7ff;
+}
+
+.partner-action-icon i {
+  font-size: 1.1rem;
+}
+
+.partner-action-copy h4 {
+  margin: 0 0 0.3rem;
+  color: #f6f9ff;
+  font-size: 0.96rem;
+  font-weight: 700;
+}
+
+.partner-action-copy p {
+  margin: 0;
+  color: rgba(218, 228, 247, 0.72);
+  font-size: 0.88rem;
+  line-height: 1.55;
+}
+
+/* =========================================================
+   WORKFLOW
+   ========================================================= */
+
+.workflow-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.95rem;
+}
+
+.workflow-step {
+  position: relative;
+  padding: 1rem 1rem 1rem 1rem;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(118, 148, 226, 0.12);
+}
+
+.step-no {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  margin-bottom: 0.75rem;
+  border-radius: 12px;
+  background: rgba(79, 127, 255, 0.14);
+  border: 1px solid rgba(128, 164, 255, 0.16);
+  color: #e4ecff;
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.workflow-step h4 {
+  margin: 0 0 0.35rem;
+  color: #f6f9ff;
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.workflow-step p {
+  margin: 0;
+  color: rgba(214, 224, 243, 0.72);
+  font-size: 0.88rem;
+  line-height: 1.58;
+}
+
+/* =========================================================
+   TOOLS / LISTS / CHECKLISTS
+   ========================================================= */
+
+.partner-tool-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+
+.partner-tool-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.28rem;
+  padding: 0.9rem 0.95rem;
+  border-radius: 16px;
+  text-decoration: none;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(116, 150, 231, 0.12);
+  transition: border-color 0.18s ease, background 0.18s ease, transform 0.18s ease;
+}
+
+.partner-tool-item:hover {
+  border-color: rgba(129, 166, 255, 0.26);
+  background: rgba(73, 118, 255, 0.07);
+  transform: translateY(-1px);
+}
+
+.partner-tool-item strong {
+  color: #f6f9ff;
+  font-size: 0.92rem;
+  font-weight: 700;
+}
+
+.partner-tool-item span {
+  color: rgba(215, 225, 244, 0.7);
+  font-size: 0.86rem;
+  line-height: 1.55;
+}
+
+.partner-checklist {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+}
+
+.partner-check-item {
+  position: relative;
+  padding: 0.78rem 0.88rem 0.78rem 2.2rem;
+  border-radius: 15px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(113, 145, 225, 0.12);
+  color: rgba(236, 243, 255, 0.84);
+  font-size: 0.89rem;
+  line-height: 1.5;
+}
+
+.partner-check-item::before {
+  content: "";
+  position: absolute;
+  left: 0.88rem;
+  top: 50%;
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  transform: translateY(-50%);
+  background: rgba(97, 152, 255, 0.95);
+  box-shadow: 0 0 0 5px rgba(97, 152, 255, 0.12);
+}
+
+/* =========================================================
+   UPDATE FEED / RESOURCES
+   ========================================================= */
+
+.partner-update-feed {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.partner-update-item {
+  padding: 1rem 1rem 1.05rem;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(112, 146, 232, 0.12);
+}
+
+.partner-update-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.55rem;
+  margin-bottom: 0.7rem;
+}
+
+.partner-update-date {
+  font-size: 0.78rem;
+  color: rgba(184, 200, 236, 0.66);
+}
+
+.partner-update-item h4 {
+  margin: 0 0 0.4rem;
+  color: #f7fbff;
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.partner-update-item p {
+  margin: 0;
+  color: rgba(219, 228, 246, 0.73);
+  font-size: 0.88rem;
+  line-height: 1.6;
+}
+
+.partner-resource-item strong {
+  font-size: 0.95rem;
+}
+
+.partner-resource-item span {
+  font-size: 0.87rem;
+}
+
+/* =========================================================
+   EMPTY STATES
+   ========================================================= */
+
+.partner-empty-state {
+  padding: 1.15rem;
+  border-radius: 18px;
+  text-align: left;
+  background: rgba(255, 255, 255, 0.025);
+  border: 1px dashed rgba(129, 161, 237, 0.2);
+}
+
+.partner-empty-state.compact {
+  padding: 0.95rem;
+}
+
+.partner-empty-state h4 {
+  margin: 0 0 0.35rem;
+  color: #f5f8ff;
+  font-size: 0.92rem;
+  font-weight: 700;
+}
+
+.partner-empty-state p {
+  margin: 0;
+  color: rgba(213, 223, 243, 0.68);
+  font-size: 0.87rem;
+  line-height: 1.55;
+}
+
+/* =========================================================
+   BADGES
+   ========================================================= */
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.34rem 0.62rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.03em;
+}
+
+.badge-sent {
+  color: #ddebff;
+  background: rgba(78, 124, 255, 0.14);
+  border: 1px solid rgba(128, 165, 255, 0.16);
+}
+
+/* =========================================================
+   PROFESSION ACCENT HELPERS
+   Optional light accents by dashboard type
+   ========================================================= */
+
+.contractor-dashboard .partner-hero-card,
+.realtor-dashboard .partner-hero-card,
+.cleaning-dashboard .partner-hero-card,
+.designer-dashboard .partner-hero-card,
+.appraiser-dashboard .partner-hero-card,
+.attorney-dashboard .partner-hero-card,
+.inspector-dashboard .partner-hero-card,
+.insurance-dashboard .partner-hero-card,
+.property-manager-dashboard .partner-hero-card,
+.title-dashboard .partner-hero-card,
+.resource-dashboard .partner-hero-card {
+  isolation: isolate;
+}
+
+/* =========================================================
+   RESPONSIVE
+   ========================================================= */
+
+@media (max-width: 1200px) {
+  .partner-stats-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .partner-dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 980px) {
+  .partner-hero-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .quick-action-grid,
+  .workflow-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .partner-hero-card,
+  .partner-section-card,
+  .partner-stat-card {
+    padding: 1rem;
+    border-radius: 18px;
+  }
+
+  .partner-stats-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .partner-hero-title {
+    font-size: 1.4rem;
+  }
+
+  .partner-hero-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .partner-action-card {
+    padding: 0.9rem;
+  }
+}

@@ -1,21 +1,134 @@
 {% extends "layouts/ravlo_base.html" %}
+
+{% block title %}Ravlo • Attorney Dashboard{% endblock %}
+
+{% block page_title %}Attorney Dashboard{% endblock %}
+{% block page_subline %}
+Manage legal requests, active files, document review, and transaction support from one workspace.
+{% endblock %}
+
+{% block topbar_actions %}
+  <a href="{{ url_for('partners.requests_inbox') }}" class="ravlo-btn ghost sm">
+    View Legal Requests
+  </a>
+  <a href="{{ url_for('partners.workspace_home') }}" class="ravlo-btn primary sm">
+    Open Workspace
+  </a>
+{% endblock %}
+
 {% block content %}
+<div class="partner-dashboard-page attorney-dashboard">
 
-<div class="dashboard-shell">
-    <h1>Attorney Dashboard</h1>
-    <p>Manage legal service requests and case files.</p>
+  <section class="ravlo-card partner-hero-card">
+    <div class="partner-hero-grid">
+      <div class="partner-hero-copy">
+        <span class="partner-eyebrow">Partner Command</span>
+        <h2 class="partner-hero-title">Support transactions, manage files, and keep legal workflows moving.</h2>
+        <p class="partner-hero-text">
+          Review legal matters, organize transaction support, and maintain visibility across document review,
+          file activity, and closing-related legal coordination.
+        </p>
 
-    <div class="dashboard-grid">
-        <a class="dash-card" href="{{ url_for('partners.requests_inbox') }}">
-            <h3>Legal Requests</h3>
-            <p>View new legal service inquiries.</p>
-        </a>
+        <div class="partner-hero-actions">
+          <a href="{{ url_for('partners.requests_inbox') }}" class="ravlo-btn primary">
+            Review Legal Requests
+          </a>
+          <a href="{{ url_for('partners.workspace_home') }}" class="ravlo-btn ghost">
+            Go to Workspace
+          </a>
+        </div>
+      </div>
 
-        <a class="dash-card" href="{{ url_for('partners.workspace_home') }}">
-            <h3>Workspace</h3>
-            <p>Active cases and legal tasks.</p>
-        </a>
+      <div class="partner-hero-panel">
+        <div class="partner-mini-stat">
+          <span class="label">Priority Focus</span>
+          <strong>File clarity, document review, legal progress</strong>
+        </div>
+        <div class="partner-mini-stat">
+          <span class="label">Best Use</span>
+          <strong>Keep legal work structured and transaction-ready</strong>
+        </div>
+      </div>
     </div>
-</div>
+  </section>
 
+  <section class="partner-stats-grid">
+    <article class="ravlo-card partner-stat-card">
+      <div class="partner-stat-label">New Cases</div>
+      <div class="partner-stat-value">{{ new_cases|default(0) }}</div>
+      <div class="partner-stat-note">New legal requests awaiting review</div>
+    </article>
+    <article class="ravlo-card partner-stat-card">
+      <div class="partner-stat-label">Active Files</div>
+      <div class="partner-stat-value">{{ active_cases|default(0) }}</div>
+      <div class="partner-stat-note">Current legal matters in motion</div>
+    </article>
+    <article class="ravlo-card partner-stat-card">
+      <div class="partner-stat-label">Pending Docs</div>
+      <div class="partner-stat-value">{{ pending_docs|default(0) }}</div>
+      <div class="partner-stat-note">Documents awaiting review or completion</div>
+    </article>
+    <article class="ravlo-card partner-stat-card">
+      <div class="partner-stat-label">Closed Files</div>
+      <div class="partner-stat-value">{{ closed_cases|default(0) }}</div>
+      <div class="partner-stat-note">Completed legal matters and transactions</div>
+    </article>
+  </section>
+
+  <section class="partner-dashboard-grid">
+    <div class="partner-dashboard-main">
+      <article class="ravlo-card partner-section-card">
+        <div class="section-head"><div><h3>Quick Actions</h3><p>Move quickly through your legal workflow.</p></div></div>
+        <div class="quick-action-grid">
+          <a class="partner-action-card" href="{{ url_for('partners.requests_inbox') }}">
+            <div class="partner-action-icon"><i class="lucide lucide-scale"></i></div>
+            <div class="partner-action-copy">
+              <h4>Legal Requests</h4>
+              <p>Review new legal support matters, file requests, and transaction issues.</p>
+            </div>
+          </a>
+          <a class="partner-action-card" href="{{ url_for('partners.workspace_home') }}">
+            <div class="partner-action-icon"><i class="lucide lucide-folder-open"></i></div>
+            <div class="partner-action-copy">
+              <h4>Legal Workspace</h4>
+              <p>Track active files, document progress, and legal coordination tasks.</p>
+            </div>
+          </a>
+        </div>
+      </article>
+
+      <article class="ravlo-card partner-section-card">
+        <div class="section-head"><div><h3>Attorney Workflow</h3><p>Recommended process for legal partners inside Ravlo.</p></div></div>
+        <div class="workflow-grid">
+          <div class="workflow-step"><span class="step-no">01</span><h4>Review Matter</h4><p>Confirm the request, transaction stage, and legal support needed.</p></div>
+          <div class="workflow-step"><span class="step-no">02</span><h4>Organize File</h4><p>Gather documentation, identify issues, and structure next-step legal work.</p></div>
+          <div class="workflow-step"><span class="step-no">03</span><h4>Resolve & Coordinate</h4><p>Support negotiations, legal review, document handling, and transaction movement.</p></div>
+          <div class="workflow-step"><span class="step-no">04</span><h4>Close Out</h4><p>Finalize the file, document the outcome, and maintain visibility through completion.</p></div>
+        </div>
+      </article>
+    </div>
+
+    <aside class="partner-dashboard-side">
+      <article class="ravlo-card partner-section-card">
+        <div class="section-head"><div><h3>Attorney Tools</h3><p>Core areas you’ll use most often.</p></div></div>
+        <div class="partner-tool-list">
+          <div class="partner-tool-item"><strong>Legal Requests</strong><span>New matters, transaction support, and legal intake</span></div>
+          <div class="partner-tool-item"><strong>Workspace</strong><span>Track files, outstanding documents, and progress</span></div>
+          <div class="partner-tool-item"><strong>Document Review</strong><span>Stay ahead of pending legal paperwork and updates</span></div>
+          <div class="partner-tool-item"><strong>Transaction Support</strong><span>Keep deals moving with organized legal coordination</span></div>
+        </div>
+      </article>
+
+      <article class="ravlo-card partner-section-card">
+        <div class="section-head"><div><h3>Performance Focus</h3><p>What matters most for attorney success on Ravlo.</p></div></div>
+        <div class="partner-checklist">
+          <div class="partner-check-item">Respond promptly to legal matters</div>
+          <div class="partner-check-item">Keep files structured and current</div>
+          <div class="partner-check-item">Reduce document bottlenecks</div>
+          <div class="partner-check-item">Support clean, visible transaction progress</div>
+        </div>
+      </article>
+    </aside>
+  </section>
+</div>
 {% endblock %}

@@ -1,21 +1,205 @@
 {% extends "layouts/ravlo_base.html" %}
+
+{% block title %}Ravlo • Realtor Dashboard{% endblock %}
+
+{% block page_title %}Realtor Dashboard{% endblock %}
+{% block page_subline %}
+Manage client inquiries, investor property interest, active opportunities, and follow-up tasks from one workspace.
+{% endblock %}
+
+{% block topbar_actions %}
+  <a href="{{ url_for('partners.requests_inbox') }}" class="ravlo-btn ghost sm">
+    View Client Requests
+  </a>
+  <a href="{{ url_for('partners.workspace_home') }}" class="ravlo-btn primary sm">
+    Open Workspace
+  </a>
+{% endblock %}
+
 {% block content %}
+<div class="partner-dashboard-page realtor-dashboard">
 
-<div class="dashboard-shell">
-    <h1>Realtor Dashboard</h1>
-    <p>Manage buyer/seller requests and property inquiries.</p>
+  <!-- HERO / SUMMARY -->
+  <section class="ravlo-card partner-hero-card">
+    <div class="partner-hero-grid">
+      <div class="partner-hero-copy">
+        <span class="partner-eyebrow">Partner Command</span>
+        <h2 class="partner-hero-title">Organize leads, manage property interest, and keep deals moving.</h2>
+        <p class="partner-hero-text">
+          Review incoming buyer and seller opportunities, respond to investor inquiries,
+          and manage active client relationships inside the Ravlo partner ecosystem.
+        </p>
 
-    <div class="dashboard-grid">
-        <a class="dash-card" href="{{ url_for('partners.requests_inbox') }}">
-            <h3>Client Requests</h3>
-            <p>View new real estate inquiries.</p>
-        </a>
+        <div class="partner-hero-actions">
+          <a href="{{ url_for('partners.requests_inbox') }}" class="ravlo-btn primary">
+            Review Client Requests
+          </a>
+          <a href="{{ url_for('partners.workspace_home') }}" class="ravlo-btn ghost">
+            Go to Workspace
+          </a>
+        </div>
+      </div>
 
-        <a class="dash-card" href="{{ url_for('partners.workspace_home') }}">
-            <h3>Workspace</h3>
-            <p>Active clients and property tasks.</p>
-        </a>
+      <div class="partner-hero-panel">
+        <div class="partner-mini-stat">
+          <span class="label">Priority Focus</span>
+          <strong>Lead response, property matching, active follow-up</strong>
+        </div>
+        <div class="partner-mini-stat">
+          <span class="label">Best Use</span>
+          <strong>Turn inquiries into active opportunities</strong>
+        </div>
+      </div>
     </div>
-</div>
+  </section>
 
+  <!-- STATS -->
+  <section class="partner-stats-grid">
+    <article class="ravlo-card partner-stat-card">
+      <div class="partner-stat-label">New Inquiries</div>
+      <div class="partner-stat-value">{{ new_requests_count|default(0) }}</div>
+      <div class="partner-stat-note">Fresh buyer, seller, or investor requests</div>
+    </article>
+
+    <article class="ravlo-card partner-stat-card">
+      <div class="partner-stat-label">Active Clients</div>
+      <div class="partner-stat-value">{{ active_clients_count|default(0) }}</div>
+      <div class="partner-stat-note">Leads currently being worked</div>
+    </article>
+
+    <article class="ravlo-card partner-stat-card">
+      <div class="partner-stat-label">Property Matches</div>
+      <div class="partner-stat-value">{{ property_matches_count|default(0) }}</div>
+      <div class="partner-stat-note">Potential fit opportunities in motion</div>
+    </article>
+
+    <article class="ravlo-card partner-stat-card">
+      <div class="partner-stat-label">Closed Deals</div>
+      <div class="partner-stat-value">{{ closed_deals_count|default(0) }}</div>
+      <div class="partner-stat-note">Completed transactions and wins</div>
+    </article>
+  </section>
+
+  <!-- MAIN GRID -->
+  <section class="partner-dashboard-grid">
+
+    <div class="partner-dashboard-main">
+
+      <article class="ravlo-card partner-section-card">
+        <div class="section-head">
+          <div>
+            <h3>Quick Actions</h3>
+            <p>Move quickly through your realtor workflow.</p>
+          </div>
+        </div>
+
+        <div class="quick-action-grid">
+          <a class="partner-action-card" href="{{ url_for('partners.requests_inbox') }}">
+            <div class="partner-action-icon">
+              <i class="lucide lucide-users"></i>
+            </div>
+            <div class="partner-action-copy">
+              <h4>Client Requests</h4>
+              <p>View incoming buyer, seller, and investor real estate inquiries.</p>
+            </div>
+          </a>
+
+          <a class="partner-action-card" href="{{ url_for('partners.workspace_home') }}">
+            <div class="partner-action-icon">
+              <i class="lucide lucide-building-2"></i>
+            </div>
+            <div class="partner-action-copy">
+              <h4>Workspace</h4>
+              <p>Track active clients, property tasks, notes, and follow-up activity.</p>
+            </div>
+          </a>
+        </div>
+      </article>
+
+      <article class="ravlo-card partner-section-card">
+        <div class="section-head">
+          <div>
+            <h3>Realtor Workflow</h3>
+            <p>Recommended process for managing real estate opportunities inside Ravlo.</p>
+          </div>
+        </div>
+
+        <div class="workflow-grid">
+          <div class="workflow-step">
+            <span class="step-no">01</span>
+            <h4>Review Inquiry</h4>
+            <p>Open new buyer, seller, or investor requests and verify the opportunity details.</p>
+          </div>
+
+          <div class="workflow-step">
+            <span class="step-no">02</span>
+            <h4>Qualify & Organize</h4>
+            <p>Clarify client goals, timeline, location, and property criteria for next steps.</p>
+          </div>
+
+          <div class="workflow-step">
+            <span class="step-no">03</span>
+            <h4>Match Opportunity</h4>
+            <p>Connect the client with listings, investor opportunities, or follow-up actions.</p>
+          </div>
+
+          <div class="workflow-step">
+            <span class="step-no">04</span>
+            <h4>Manage Progress</h4>
+            <p>Track communications, active tasks, and deal momentum from the workspace.</p>
+          </div>
+        </div>
+      </article>
+
+    </div>
+
+    <aside class="partner-dashboard-side">
+
+      <article class="ravlo-card partner-section-card">
+        <div class="section-head">
+          <div>
+            <h3>Realtor Tools</h3>
+            <p>Core areas you’ll use most often.</p>
+          </div>
+        </div>
+
+        <div class="partner-tool-list">
+          <div class="partner-tool-item">
+            <strong>Client Requests</strong>
+            <span>New buyer, seller, and investor inquiries</span>
+          </div>
+          <div class="partner-tool-item">
+            <strong>Workspace</strong>
+            <span>Client progress, property tasks, and follow-up notes</span>
+          </div>
+          <div class="partner-tool-item">
+            <strong>Property Matching</strong>
+            <span>Track opportunities aligned with client needs</span>
+          </div>
+          <div class="partner-tool-item">
+            <strong>Lead Management</strong>
+            <span>Stay on top of outreach and conversion activity</span>
+          </div>
+        </div>
+      </article>
+
+      <article class="ravlo-card partner-section-card">
+        <div class="section-head">
+          <div>
+            <h3>Performance Focus</h3>
+            <p>What matters most for realtor success on Ravlo.</p>
+          </div>
+        </div>
+
+        <div class="partner-checklist">
+          <div class="partner-check-item">Respond quickly to new client inquiries</div>
+          <div class="partner-check-item">Keep follow-up organized and visible</div>
+          <div class="partner-check-item">Match opportunities efficiently</div>
+          <div class="partner-check-item">Maintain strong deal momentum and communication</div>
+        </div>
+      </article>
+
+    </aside>
+  </section>
+</div>
 {% endblock %}

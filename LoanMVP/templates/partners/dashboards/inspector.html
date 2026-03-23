@@ -1,21 +1,134 @@
 {% extends "layouts/ravlo_base.html" %}
+
+{% block title %}Ravlo • Inspector Dashboard{% endblock %}
+
+{% block page_title %}Inspector Dashboard{% endblock %}
+{% block page_subline %}
+Manage inspection requests, scheduled appointments, pending reports, and completed findings from one workspace.
+{% endblock %}
+
+{% block topbar_actions %}
+  <a href="{{ url_for('partners.requests_inbox') }}" class="ravlo-btn ghost sm">
+    View Inspection Requests
+  </a>
+  <a href="{{ url_for('partners.workspace_home') }}" class="ravlo-btn primary sm">
+    Open Workspace
+  </a>
+{% endblock %}
+
 {% block content %}
+<div class="partner-dashboard-page inspector-dashboard">
 
-<div class="dashboard-shell">
-    <h1>Inspector Dashboard</h1>
-    <p>Manage inspection requests and reports.</p>
+  <section class="ravlo-card partner-hero-card">
+    <div class="partner-hero-grid">
+      <div class="partner-hero-copy">
+        <span class="partner-eyebrow">Partner Command</span>
+        <h2 class="partner-hero-title">Track inspections, document findings, and keep reports on schedule.</h2>
+        <p class="partner-hero-text">
+          Review inspection opportunities, manage scheduled appointments, and maintain visibility across
+          findings, report status, and completed inspection work.
+        </p>
 
-    <div class="dashboard-grid">
-        <a class="dash-card" href="{{ url_for('partners.requests_inbox') }}">
-            <h3>Inspection Requests</h3>
-            <p>View new inspection jobs.</p>
-        </a>
+        <div class="partner-hero-actions">
+          <a href="{{ url_for('partners.requests_inbox') }}" class="ravlo-btn primary">
+            Review Inspection Requests
+          </a>
+          <a href="{{ url_for('partners.workspace_home') }}" class="ravlo-btn ghost">
+            Go to Workspace
+          </a>
+        </div>
+      </div>
 
-        <a class="dash-card" href="{{ url_for('partners.workspace_home') }}">
-            <h3>Workspace</h3>
-            <p>Active inspections and reports.</p>
-        </a>
+      <div class="partner-hero-panel">
+        <div class="partner-mini-stat">
+          <span class="label">Priority Focus</span>
+          <strong>Scheduling, findings, reporting, turnaround</strong>
+        </div>
+        <div class="partner-mini-stat">
+          <span class="label">Best Use</span>
+          <strong>Keep inspections organized from request to report</strong>
+        </div>
+      </div>
     </div>
-</div>
+  </section>
 
+  <section class="partner-stats-grid">
+    <article class="ravlo-card partner-stat-card">
+      <div class="partner-stat-label">New Requests</div>
+      <div class="partner-stat-value">{{ new_requests|default(0) }}</div>
+      <div class="partner-stat-note">Incoming inspection orders awaiting review</div>
+    </article>
+    <article class="ravlo-card partner-stat-card">
+      <div class="partner-stat-label">Scheduled</div>
+      <div class="partner-stat-value">{{ scheduled|default(0) }}</div>
+      <div class="partner-stat-note">Confirmed inspections on the calendar</div>
+    </article>
+    <article class="ravlo-card partner-stat-card">
+      <div class="partner-stat-label">Reports Pending</div>
+      <div class="partner-stat-value">{{ pending_reports|default(0) }}</div>
+      <div class="partner-stat-note">Completed inspections awaiting final reports</div>
+    </article>
+    <article class="ravlo-card partner-stat-card">
+      <div class="partner-stat-label">Completed</div>
+      <div class="partner-stat-value">{{ completed|default(0) }}</div>
+      <div class="partner-stat-note">Finished inspections and delivered findings</div>
+    </article>
+  </section>
+
+  <section class="partner-dashboard-grid">
+    <div class="partner-dashboard-main">
+      <article class="ravlo-card partner-section-card">
+        <div class="section-head"><div><h3>Quick Actions</h3><p>Move quickly through your inspection workflow.</p></div></div>
+        <div class="quick-action-grid">
+          <a class="partner-action-card" href="{{ url_for('partners.requests_inbox') }}">
+            <div class="partner-action-icon"><i class="lucide lucide-search-check"></i></div>
+            <div class="partner-action-copy">
+              <h4>Inspection Requests</h4>
+              <p>Review new orders, property details, and incoming inspection opportunities.</p>
+            </div>
+          </a>
+          <a class="partner-action-card" href="{{ url_for('partners.workspace_home') }}">
+            <div class="partner-action-icon"><i class="lucide lucide-clipboard-check"></i></div>
+            <div class="partner-action-copy">
+              <h4>Inspection Workspace</h4>
+              <p>Track appointments, field notes, findings, and report progress.</p>
+            </div>
+          </a>
+        </div>
+      </article>
+
+      <article class="ravlo-card partner-section-card">
+        <div class="section-head"><div><h3>Inspector Workflow</h3><p>Recommended process for inspection partners inside Ravlo.</p></div></div>
+        <div class="workflow-grid">
+          <div class="workflow-step"><span class="step-no">01</span><h4>Review Request</h4><p>Confirm inspection type, property details, and scheduling needs.</p></div>
+          <div class="workflow-step"><span class="step-no">02</span><h4>Schedule Visit</h4><p>Set the inspection appointment and prepare for on-site review.</p></div>
+          <div class="workflow-step"><span class="step-no">03</span><h4>Document Findings</h4><p>Capture observations, risk items, deficiencies, and property condition notes.</p></div>
+          <div class="workflow-step"><span class="step-no">04</span><h4>Deliver Report</h4><p>Complete the report and keep the requesting team updated through final delivery.</p></div>
+        </div>
+      </article>
+    </div>
+
+    <aside class="partner-dashboard-side">
+      <article class="ravlo-card partner-section-card">
+        <div class="section-head"><div><h3>Inspector Tools</h3><p>Core areas you’ll use most often.</p></div></div>
+        <div class="partner-tool-list">
+          <div class="partner-tool-item"><strong>Inspection Requests</strong><span>Incoming inspection opportunities and assignment intake</span></div>
+          <div class="partner-tool-item"><strong>Workspace</strong><span>Manage scheduling, findings, and report flow</span></div>
+          <div class="partner-tool-item"><strong>Reports</strong><span>Keep pending and completed reporting visible</span></div>
+          <div class="partner-tool-item"><strong>Status Tracking</strong><span>Monitor appointments and work completion clearly</span></div>
+        </div>
+      </article>
+
+      <article class="ravlo-card partner-section-card">
+        <div class="section-head"><div><h3>Performance Focus</h3><p>What matters most for inspector success on Ravlo.</p></div></div>
+        <div class="partner-checklist">
+          <div class="partner-check-item">Respond quickly to inspection requests</div>
+          <div class="partner-check-item">Keep scheduling precise and visible</div>
+          <div class="partner-check-item">Document findings clearly</div>
+          <div class="partner-check-item">Deliver reports with reliable turnaround</div>
+        </div>
+      </article>
+    </aside>
+  </section>
+</div>
 {% endblock %}

@@ -1,22 +1,134 @@
 {% extends "layouts/ravlo_base.html" %}
-{% block content %}
 
-<div class="dashboard-shell">
-    <h1>Property Manager Dashboard</h1>
-    <p>Manage rental onboarding, maintenance requests, and tenant tasks.</p>
+{% block title %}Ravlo • Property Manager Dashboard{% endblock %}
 
-    <div class="dashboard-grid">
-        <a class="dash-card" href="{{ url_for('partners.requests_inbox') }}">
-            <h3>Management Requests</h3>
-            <p>View new property management inquiries.</p>
-        </a>
-
-        <a class="dash-card" href="{{ url_for('partners.workspace_home') }}">
-            <h3>Workspace</h3>
-            <p>Active properties and maintenance tasks.</p>
-        </a>
-    </div>
-</div>
-
+{% block page_title %}Property Manager Dashboard{% endblock %}
+{% block page_subline %}
+Manage property operations, service requests, maintenance activity, and portfolio readiness from one workspace.
 {% endblock %}
-co
+
+{% block topbar_actions %}
+  <a href="{{ url_for('partners.requests_inbox') }}" class="ravlo-btn ghost sm">
+    View Service Requests
+  </a>
+  <a href="{{ url_for('partners.workspace_home') }}" class="ravlo-btn primary sm">
+    Open Workspace
+  </a>
+{% endblock %}
+
+{% block content %}
+<div class="partner-dashboard-page property-manager-dashboard">
+
+  <section class="ravlo-card partner-hero-card">
+    <div class="partner-hero-grid">
+      <div class="partner-hero-copy">
+        <span class="partner-eyebrow">Partner Command</span>
+        <h2 class="partner-hero-title">Oversee properties, manage issues, and keep operations running smoothly.</h2>
+        <p class="partner-hero-text">
+          Stay on top of service needs, maintenance coordination, and day-to-day property activity while
+          keeping investors and portfolio teams informed through Ravlo.
+        </p>
+
+        <div class="partner-hero-actions">
+          <a href="{{ url_for('partners.requests_inbox') }}" class="ravlo-btn primary">
+            Review Service Requests
+          </a>
+          <a href="{{ url_for('partners.workspace_home') }}" class="ravlo-btn ghost">
+            Go to Workspace
+          </a>
+        </div>
+      </div>
+
+      <div class="partner-hero-panel">
+        <div class="partner-mini-stat">
+          <span class="label">Priority Focus</span>
+          <strong>Operations, maintenance, readiness, property visibility</strong>
+        </div>
+        <div class="partner-mini-stat">
+          <span class="label">Best Use</span>
+          <strong>Keep property workflows organized and responsive</strong>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="partner-stats-grid">
+    <article class="ravlo-card partner-stat-card">
+      <div class="partner-stat-label">Managed Units</div>
+      <div class="partner-stat-value">{{ units|default(0) }}</div>
+      <div class="partner-stat-note">Properties or units under active management</div>
+    </article>
+    <article class="ravlo-card partner-stat-card">
+      <div class="partner-stat-label">Open Requests</div>
+      <div class="partner-stat-value">{{ requests|default(0) }}</div>
+      <div class="partner-stat-note">Current service or issue requests awaiting action</div>
+    </article>
+    <article class="ravlo-card partner-stat-card">
+      <div class="partner-stat-label">Maintenance</div>
+      <div class="partner-stat-value">{{ maintenance|default(0) }}</div>
+      <div class="partner-stat-note">Repairs or upkeep items currently in progress</div>
+    </article>
+    <article class="ravlo-card partner-stat-card">
+      <div class="partner-stat-label">Resolved</div>
+      <div class="partner-stat-value">{{ resolved|default(0) }}</div>
+      <div class="partner-stat-note">Completed service work and operational closes</div>
+    </article>
+  </section>
+
+  <section class="partner-dashboard-grid">
+    <div class="partner-dashboard-main">
+      <article class="ravlo-card partner-section-card">
+        <div class="section-head"><div><h3>Quick Actions</h3><p>Move quickly through your property management workflow.</p></div></div>
+        <div class="quick-action-grid">
+          <a class="partner-action-card" href="{{ url_for('partners.requests_inbox') }}">
+            <div class="partner-action-icon"><i class="lucide lucide-building"></i></div>
+            <div class="partner-action-copy">
+              <h4>Service Requests</h4>
+              <p>Review incoming operational needs, property issues, and service tickets.</p>
+            </div>
+          </a>
+          <a class="partner-action-card" href="{{ url_for('partners.workspace_home') }}">
+            <div class="partner-action-icon"><i class="lucide lucide-wrench"></i></div>
+            <div class="partner-action-copy">
+              <h4>Management Workspace</h4>
+              <p>Track maintenance, readiness, task flow, and property operations.</p>
+            </div>
+          </a>
+        </div>
+      </article>
+
+      <article class="ravlo-card partner-section-card">
+        <div class="section-head"><div><h3>Property Manager Workflow</h3><p>Recommended process for property management partners inside Ravlo.</p></div></div>
+        <div class="workflow-grid">
+          <div class="workflow-step"><span class="step-no">01</span><h4>Review Request</h4><p>Open the issue, confirm the property details, and prioritize the operational need.</p></div>
+          <div class="workflow-step"><span class="step-no">02</span><h4>Assign & Coordinate</h4><p>Route the work, schedule service, and align the right vendors or maintenance support.</p></div>
+          <div class="workflow-step"><span class="step-no">03</span><h4>Track Progress</h4><p>Maintain visibility on service status, readiness, and open property tasks.</p></div>
+          <div class="workflow-step"><span class="step-no">04</span><h4>Resolve & Update</h4><p>Close out the issue and keep the portfolio team informed through completion.</p></div>
+        </div>
+      </article>
+    </div>
+
+    <aside class="partner-dashboard-side">
+      <article class="ravlo-card partner-section-card">
+        <div class="section-head"><div><h3>Property Manager Tools</h3><p>Core areas you’ll use most often.</p></div></div>
+        <div class="partner-tool-list">
+          <div class="partner-tool-item"><strong>Service Requests</strong><span>Operational issues and incoming property needs</span></div>
+          <div class="partner-tool-item"><strong>Workspace</strong><span>Track maintenance, tasks, and status updates</span></div>
+          <div class="partner-tool-item"><strong>Readiness Tracking</strong><span>Keep units and properties visible and prepared</span></div>
+          <div class="partner-tool-item"><strong>Resolution Flow</strong><span>Close requests with clear operational visibility</span></div>
+        </div>
+      </article>
+
+      <article class="ravlo-card partner-section-card">
+        <div class="section-head"><div><h3>Performance Focus</h3><p>What matters most for property manager success on Ravlo.</p></div></div>
+        <div class="partner-checklist">
+          <div class="partner-check-item">Respond quickly to property issues</div>
+          <div class="partner-check-item">Keep maintenance flow organized</div>
+          <div class="partner-check-item">Reduce downtime and open requests</div>
+          <div class="partner-check-item">Maintain clear portfolio visibility</div>
+        </div>
+      </article>
+    </aside>
+  </section>
+</div>
+{% endblock %}

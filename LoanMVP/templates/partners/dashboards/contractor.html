@@ -1,21 +1,205 @@
 {% extends "layouts/ravlo_base.html" %}
+
+{% block title %}Ravlo • Contractor Dashboard{% endblock %}
+
+{% block page_title %}Contractor Dashboard{% endblock %}
+{% block page_subline %}
+Manage renovation requests, active jobs, bid opportunities, and field updates from one workspace.
+{% endblock %}
+
+{% block topbar_actions %}
+  <a href="{{ url_for('partners.requests_inbox') }}" class="ravlo-btn ghost sm">
+    View Requests
+  </a>
+  <a href="{{ url_for('partners.workspace_home') }}" class="ravlo-btn primary sm">
+    Open Workspace
+  </a>
+{% endblock %}
+
 {% block content %}
+<div class="partner-dashboard-page contractor-dashboard">
 
-<div class="dashboard-shell">
-    <h1>Contractor Dashboard</h1>
-    <p>Manage renovation jobs, bids, and project updates.</p>
+  <!-- HERO / SUMMARY -->
+  <section class="ravlo-card partner-hero-card">
+    <div class="partner-hero-grid">
+      <div class="partner-hero-copy">
+        <span class="partner-eyebrow">Partner Command</span>
+        <h2 class="partner-hero-title">Build pipeline, manage scopes, and keep projects moving.</h2>
+        <p class="partner-hero-text">
+          Review new contractor opportunities, track active projects, and stay aligned with investors,
+          property teams, and renovation timelines across Ravlo.
+        </p>
 
-    <div class="dashboard-grid">
-        <a class="dash-card" href="{{ url_for('partners.requests_inbox') }}">
-            <h3>New Requests</h3>
-            <p>View homeowners seeking contractor services.</p>
-        </a>
+        <div class="partner-hero-actions">
+          <a href="{{ url_for('partners.requests_inbox') }}" class="ravlo-btn primary">
+            Review New Requests
+          </a>
+          <a href="{{ url_for('partners.workspace_home') }}" class="ravlo-btn ghost">
+            Go to Workspace
+          </a>
+        </div>
+      </div>
 
-        <a class="dash-card" href="{{ url_for('partners.workspace_home') }}">
-            <h3>Workspace</h3>
-            <p>Active jobs, tasks, and project timelines.</p>
-        </a>
+      <div class="partner-hero-panel">
+        <div class="partner-mini-stat">
+          <span class="label">Priority Focus</span>
+          <strong>Quotes, active jobs, field coordination</strong>
+        </div>
+        <div class="partner-mini-stat">
+          <span class="label">Best Use</span>
+          <strong>Keep requests organized and execution visible</strong>
+        </div>
+      </div>
     </div>
-</div>
+  </section>
 
+  <!-- STATS -->
+  <section class="partner-stats-grid">
+    <article class="ravlo-card partner-stat-card">
+      <div class="partner-stat-label">New Requests</div>
+      <div class="partner-stat-value">{{ new_requests_count|default(0) }}</div>
+      <div class="partner-stat-note">Opportunities waiting for review</div>
+    </article>
+
+    <article class="ravlo-card partner-stat-card">
+      <div class="partner-stat-label">Active Jobs</div>
+      <div class="partner-stat-value">{{ active_jobs_count|default(0) }}</div>
+      <div class="partner-stat-note">Projects currently in motion</div>
+    </article>
+
+    <article class="ravlo-card partner-stat-card">
+      <div class="partner-stat-label">Pending Bids</div>
+      <div class="partner-stat-value">{{ pending_bids_count|default(0) }}</div>
+      <div class="partner-stat-note">Quotes awaiting response or submission</div>
+    </article>
+
+    <article class="ravlo-card partner-stat-card">
+      <div class="partner-stat-label">Completed Jobs</div>
+      <div class="partner-stat-value">{{ completed_jobs_count|default(0) }}</div>
+      <div class="partner-stat-note">Closed-out projects and milestones</div>
+    </article>
+  </section>
+
+  <!-- MAIN GRID -->
+  <section class="partner-dashboard-grid">
+
+    <div class="partner-dashboard-main">
+
+      <article class="ravlo-card partner-section-card">
+        <div class="section-head">
+          <div>
+            <h3>Quick Actions</h3>
+            <p>Jump directly into the contractor workflow.</p>
+          </div>
+        </div>
+
+        <div class="quick-action-grid">
+          <a class="partner-action-card" href="{{ url_for('partners.requests_inbox') }}">
+            <div class="partner-action-icon">
+              <i class="lucide lucide-inbox"></i>
+            </div>
+            <div class="partner-action-copy">
+              <h4>Requests Inbox</h4>
+              <p>Review incoming service requests from investors and property owners.</p>
+            </div>
+          </a>
+
+          <a class="partner-action-card" href="{{ url_for('partners.workspace_home') }}">
+            <div class="partner-action-icon">
+              <i class="lucide lucide-briefcase-business"></i>
+            </div>
+            <div class="partner-action-copy">
+              <h4>Project Workspace</h4>
+              <p>Manage ongoing jobs, updates, timelines, and next-step execution.</p>
+            </div>
+          </a>
+        </div>
+      </article>
+
+      <article class="ravlo-card partner-section-card">
+        <div class="section-head">
+          <div>
+            <h3>Contractor Workflow</h3>
+            <p>Recommended process for handling renovation opportunities inside Ravlo.</p>
+          </div>
+        </div>
+
+        <div class="workflow-grid">
+          <div class="workflow-step">
+            <span class="step-no">01</span>
+            <h4>Review Request</h4>
+            <p>Open incoming project requests and verify scope, property details, and service type.</p>
+          </div>
+
+          <div class="workflow-step">
+            <span class="step-no">02</span>
+            <h4>Evaluate Scope</h4>
+            <p>Assess renovation needs, estimate complexity, and prepare response strategy.</p>
+          </div>
+
+          <div class="workflow-step">
+            <span class="step-no">03</span>
+            <h4>Submit Bid / Response</h4>
+            <p>Send pricing, timeline, or availability based on the project request.</p>
+          </div>
+
+          <div class="workflow-step">
+            <span class="step-no">04</span>
+            <h4>Manage Active Work</h4>
+            <p>Track progress, tasks, and field execution from the workspace once engaged.</p>
+          </div>
+        </div>
+      </article>
+
+    </div>
+
+    <aside class="partner-dashboard-side">
+
+      <article class="ravlo-card partner-section-card">
+        <div class="section-head">
+          <div>
+            <h3>Contractor Tools</h3>
+            <p>Core areas you’ll use most often.</p>
+          </div>
+        </div>
+
+        <div class="partner-tool-list">
+          <div class="partner-tool-item">
+            <strong>Requests Inbox</strong>
+            <span>New opportunities and service inquiries</span>
+          </div>
+          <div class="partner-tool-item">
+            <strong>Workspace</strong>
+            <span>Jobs, tasks, milestones, and coordination</span>
+          </div>
+          <div class="partner-tool-item">
+            <strong>Bid Tracking</strong>
+            <span>Estimate follow-up and project conversion</span>
+          </div>
+          <div class="partner-tool-item">
+            <strong>Project Updates</strong>
+            <span>Status notes, execution visibility, and communication</span>
+          </div>
+        </div>
+      </article>
+
+      <article class="ravlo-card partner-section-card">
+        <div class="section-head">
+          <div>
+            <h3>Performance Focus</h3>
+            <p>What matters most for contractor success on Ravlo.</p>
+          </div>
+        </div>
+
+        <div class="partner-checklist">
+          <div class="partner-check-item">Respond quickly to new service requests</div>
+          <div class="partner-check-item">Keep scopes and pricing easy to understand</div>
+          <div class="partner-check-item">Update active project progress consistently</div>
+          <div class="partner-check-item">Maintain professional turnaround and visibility</div>
+        </div>
+      </article>
+
+    </aside>
+  </section>
+</div>
 {% endblock %}

@@ -1,36 +1,297 @@
 {% extends "layouts/ravlo_base.html" %}
 
-{% block page_title %}Resources{% endblock %}
-{% block page_subline %}Helpful guides, partner tools, onboarding, and Ravlo best practices.{% endblock %}
+{% block title %}Ravlo • Resource Center{% endblock %}
+
+{% block page_title %}Resource Center{% endblock %}
+{% block page_subline %}
+Access platform resources, service guides, updates, and operational tools from one place.
+{% endblock %}
+
+{% block topbar_actions %}
+  <a href="{{ url_for('partners.workspace_home') }}" class="ravlo-btn ghost sm">
+    Back to Workspace
+  </a>
+  <a href="{{ url_for('partners.requests_inbox') }}" class="ravlo-btn primary sm">
+    View Requests
+  </a>
+{% endblock %}
 
 {% block content %}
-<div class="ravlo-grid">
-  <section class="ravlo-hero-card">
-    <div class="eyebrow">PARTNER RESOURCES</div>
-    <h2>Resources to help you win more work</h2>
-    <p class="muted">
-      Access guides, workflow tips, response standards, and partner growth materials.
-    </p>
+<div class="partner-dashboard-page resource-dashboard">
+
+  <!-- HERO -->
+  <section class="ravlo-card partner-hero-card">
+    <div class="partner-hero-grid">
+      <div class="partner-hero-copy">
+        <span class="partner-eyebrow">Partner Resources</span>
+        <h2 class="partner-hero-title">Everything your team needs to stay informed, prepared, and in motion.</h2>
+        <p class="partner-hero-text">
+          Use the Resource Center to access guides, service materials, workflow references,
+          platform announcements, and operational updates across the Ravlo ecosystem.
+        </p>
+
+        <div class="partner-hero-actions">
+          <a href="#resource-library" class="ravlo-btn primary">
+            Browse Resources
+          </a>
+          <a href="#platform-updates" class="ravlo-btn ghost">
+            View Updates
+          </a>
+        </div>
+      </div>
+
+      <div class="partner-hero-panel">
+        <div class="partner-mini-stat">
+          <span class="label">Priority Focus</span>
+          <strong>Guides, updates, policies, workflow support</strong>
+        </div>
+        <div class="partner-mini-stat">
+          <span class="label">Best Use</span>
+          <strong>Keep partners aligned and execution-ready</strong>
+        </div>
+      </div>
+    </div>
   </section>
 
-  <section class="ravlo-grid-3">
-    <div class="ravlo-card pad">
-      <div class="ravlo-kicker">Guide</div>
-      <h3>How to Respond Faster</h3>
-      <p class="muted">Improve response times and increase accepted opportunities.</p>
+  <!-- STATS -->
+  <section class="partner-stats-grid">
+    <article class="ravlo-card partner-stat-card">
+      <div class="partner-stat-label">Resources</div>
+      <div class="partner-stat-value">{{ resource_count|default(0) }}</div>
+      <div class="partner-stat-note">Guides, templates, and support documents</div>
+    </article>
+
+    <article class="ravlo-card partner-stat-card">
+      <div class="partner-stat-label">Unread Updates</div>
+      <div class="partner-stat-value">{{ unread_updates_count|default(0) }}</div>
+      <div class="partner-stat-note">Recent platform or workflow announcements</div>
+    </article>
+
+    <article class="ravlo-card partner-stat-card">
+      <div class="partner-stat-label">Categories</div>
+      <div class="partner-stat-value">{{ category_count|default(0) }}</div>
+      <div class="partner-stat-note">Organized knowledge areas for partners</div>
+    </article>
+
+    <article class="ravlo-card partner-stat-card">
+      <div class="partner-stat-label">Saved Items</div>
+      <div class="partner-stat-value">{{ saved_count|default(0) }}</div>
+      <div class="partner-stat-note">Bookmarked tools and references</div>
+    </article>
+  </section>
+
+  <!-- MAIN GRID -->
+  <section class="partner-dashboard-grid">
+
+    <div class="partner-dashboard-main">
+
+      <!-- QUICK ACTIONS -->
+      <article class="ravlo-card partner-section-card">
+        <div class="section-head">
+          <div>
+            <h3>Quick Actions</h3>
+            <p>Jump directly into the areas partners use most.</p>
+          </div>
+        </div>
+
+        <div class="quick-action-grid">
+          <a class="partner-action-card" href="#resource-library">
+            <div class="partner-action-icon">
+              <i class="lucide lucide-library"></i>
+            </div>
+            <div class="partner-action-copy">
+              <h4>Resource Library</h4>
+              <p>Browse guides, templates, onboarding references, and workflow materials.</p>
+            </div>
+          </a>
+
+          <a class="partner-action-card" href="#platform-updates">
+            <div class="partner-action-icon">
+              <i class="lucide lucide-bell-ring"></i>
+            </div>
+            <div class="partner-action-copy">
+              <h4>Platform Updates</h4>
+              <p>Review new announcements, feature changes, and operational notices.</p>
+            </div>
+          </a>
+
+          <a class="partner-action-card" href="#partner-guides">
+            <div class="partner-action-icon">
+              <i class="lucide lucide-book-open-check"></i>
+            </div>
+            <div class="partner-action-copy">
+              <h4>Partner Guides</h4>
+              <p>Access role-based instructions and best-practice support for execution.</p>
+            </div>
+          </a>
+
+          <a class="partner-action-card" href="#saved-items">
+            <div class="partner-action-icon">
+              <i class="lucide lucide-bookmark"></i>
+            </div>
+            <div class="partner-action-copy">
+              <h4>Saved Items</h4>
+              <p>Open your pinned references, frequently used materials, and shortcuts.</p>
+            </div>
+          </a>
+        </div>
+      </article>
+
+      <!-- RESOURCE LIBRARY -->
+      <article class="ravlo-card partner-section-card" id="resource-library">
+        <div class="section-head">
+          <div>
+            <h3>Resource Library</h3>
+            <p>Centralized tools and reference materials for partners across Ravlo.</p>
+          </div>
+        </div>
+
+        <div class="partner-tool-list">
+          {% for item in resources %}
+            <a class="partner-tool-item partner-resource-item" href="{{ item.url or '#' }}">
+              <strong>{{ item.title }}</strong>
+              <span>{{ item.description or "Resource document or support material" }}</span>
+            </a>
+          {% else %}
+            <div class="partner-empty-state">
+              <h4>No resources added yet</h4>
+              <p>Start by adding guides, checklists, onboarding materials, or workflow templates.</p>
+            </div>
+          {% endfor %}
+        </div>
+      </article>
+
+      <!-- PLATFORM UPDATES -->
+      <article class="ravlo-card partner-section-card" id="platform-updates">
+        <div class="section-head">
+          <div>
+            <h3>Platform Updates</h3>
+            <p>Recent product, workflow, and partner network announcements.</p>
+          </div>
+        </div>
+
+        <div class="partner-update-feed">
+          {% for update in updates %}
+            <div class="partner-update-item">
+              <div class="partner-update-meta">
+                <span class="badge badge-sent">{{ update.tag or "Update" }}</span>
+                <span class="partner-update-date">{{ update.date or "Recently posted" }}</span>
+              </div>
+              <h4>{{ update.title }}</h4>
+              <p>{{ update.body }}</p>
+            </div>
+          {% else %}
+            <div class="partner-empty-state">
+              <h4>No updates yet</h4>
+              <p>Recent announcements, release notes, and operational notices will appear here.</p>
+            </div>
+          {% endfor %}
+        </div>
+      </article>
+
+      <!-- PARTNER GUIDES -->
+      <article class="ravlo-card partner-section-card" id="partner-guides">
+        <div class="section-head">
+          <div>
+            <h3>Partner Guides</h3>
+            <p>Role-based support content to help partners operate more efficiently.</p>
+          </div>
+        </div>
+
+        <div class="workflow-grid">
+          <div class="workflow-step">
+            <span class="step-no">01</span>
+            <h4>Get Started</h4>
+            <p>Review onboarding, profile setup, communication standards, and operating basics.</p>
+          </div>
+
+          <div class="workflow-step">
+            <span class="step-no">02</span>
+            <h4>Use the Platform</h4>
+            <p>Learn how to manage requests, navigate workspaces, and stay aligned with Ravlo workflows.</p>
+          </div>
+
+          <div class="workflow-step">
+            <span class="step-no">03</span>
+            <h4>Stay Organized</h4>
+            <p>Use templates, process guides, and best practices to improve execution and visibility.</p>
+          </div>
+
+          <div class="workflow-step">
+            <span class="step-no">04</span>
+            <h4>Track Changes</h4>
+            <p>Keep up with new features, process updates, and partner-facing announcements.</p>
+          </div>
+        </div>
+      </article>
+
     </div>
 
-    <div class="ravlo-card pad">
-      <div class="ravlo-kicker">Playbook</div>
-      <h3>Winning More Requests</h3>
-      <p class="muted">Tips for building trust with investors and borrowers.</p>
-    </div>
+    <aside class="partner-dashboard-side">
 
-    <div class="ravlo-card pad">
-      <div class="ravlo-kicker">Support</div>
-      <h3>Partner Success</h3>
-      <p class="muted">Learn how Ravlo tiers, approvals, and visibility work.</p>
-    </div>
+      <!-- CATEGORIES -->
+      <article class="ravlo-card partner-section-card">
+        <div class="section-head">
+          <div>
+            <h3>Categories</h3>
+            <p>Browse resources by type.</p>
+          </div>
+        </div>
+
+        <div class="partner-checklist">
+          {% for category in categories %}
+            <div class="partner-check-item">{{ category }}</div>
+          {% else %}
+            <div class="partner-check-item">Onboarding</div>
+            <div class="partner-check-item">Workflow Guides</div>
+            <div class="partner-check-item">Policies</div>
+            <div class="partner-check-item">Announcements</div>
+          {% endfor %}
+        </div>
+      </article>
+
+      <!-- SAVED ITEMS -->
+      <article class="ravlo-card partner-section-card" id="saved-items">
+        <div class="section-head">
+          <div>
+            <h3>Saved Items</h3>
+            <p>Your pinned references and quick-return resources.</p>
+          </div>
+        </div>
+
+        <div class="partner-tool-list">
+          {% for item in saved_items %}
+            <a class="partner-tool-item" href="{{ item.url or '#' }}">
+              <strong>{{ item.title }}</strong>
+              <span>{{ item.description or "Saved resource" }}</span>
+            </a>
+          {% else %}
+            <div class="partner-empty-state compact">
+              <h4>No saved items</h4>
+              <p>Pin important resources here for faster access.</p>
+            </div>
+          {% endfor %}
+        </div>
+      </article>
+
+      <!-- SUPPORT NOTE -->
+      <article class="ravlo-card partner-section-card">
+        <div class="section-head">
+          <div>
+            <h3>Resource Focus</h3>
+            <p>What this center should help partners do best.</p>
+          </div>
+        </div>
+
+        <div class="partner-checklist">
+          <div class="partner-check-item">Find answers without friction</div>
+          <div class="partner-check-item">Stay aligned with current workflow changes</div>
+          <div class="partner-check-item">Keep guides and documents easy to access</div>
+          <div class="partner-check-item">Support smoother execution across the network</div>
+        </div>
+      </article>
+
+    </aside>
   </section>
 </div>
 {% endblock %}

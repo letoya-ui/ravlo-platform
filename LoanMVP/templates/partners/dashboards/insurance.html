@@ -1,21 +1,134 @@
 {% extends "layouts/ravlo_base.html" %}
+
+{% block title %}Ravlo • Insurance Dashboard{% endblock %}
+
+{% block page_title %}Insurance Dashboard{% endblock %}
+{% block page_subline %}
+Manage quote requests, active policies, pending approvals, and bound coverage from one workspace.
+{% endblock %}
+
+{% block topbar_actions %}
+  <a href="{{ url_for('partners.requests_inbox') }}" class="ravlo-btn ghost sm">
+    View Insurance Requests
+  </a>
+  <a href="{{ url_for('partners.workspace_home') }}" class="ravlo-btn primary sm">
+    Open Workspace
+  </a>
+{% endblock %}
+
 {% block content %}
+<div class="partner-dashboard-page insurance-dashboard">
 
-<div class="dashboard-shell">
-    <h1>Insurance Dashboard</h1>
-    <p>Manage insurance quote requests and policy submissions.</p>
+  <section class="ravlo-card partner-hero-card">
+    <div class="partner-hero-grid">
+      <div class="partner-hero-copy">
+        <span class="partner-eyebrow">Partner Command</span>
+        <h2 class="partner-hero-title">Guide coverage decisions, manage quotes, and keep protection in place.</h2>
+        <p class="partner-hero-text">
+          Review insurance opportunities, organize policy workflows, and keep quote-to-bind activity visible
+          across the Ravlo partner ecosystem.
+        </p>
 
-    <div class="dashboard-grid">
-        <a class="dash-card" href="{{ url_for('partners.requests_inbox') }}">
-            <h3>Insurance Requests</h3>
-            <p>View new insurance inquiries.</p>
-        </a>
+        <div class="partner-hero-actions">
+          <a href="{{ url_for('partners.requests_inbox') }}" class="ravlo-btn primary">
+            Review Insurance Requests
+          </a>
+          <a href="{{ url_for('partners.workspace_home') }}" class="ravlo-btn ghost">
+            Go to Workspace
+          </a>
+        </div>
+      </div>
 
-        <a class="dash-card" href="{{ url_for('partners.workspace_home') }}">
-            <h3>Workspace</h3>
-            <p>Active insurance jobs and documents.</p>
-        </a>
+      <div class="partner-hero-panel">
+        <div class="partner-mini-stat">
+          <span class="label">Priority Focus</span>
+          <strong>Quotes, approvals, active coverage, policy flow</strong>
+        </div>
+        <div class="partner-mini-stat">
+          <span class="label">Best Use</span>
+          <strong>Keep insurance movement clear from request to bind</strong>
+        </div>
+      </div>
     </div>
-</div>
+  </section>
 
+  <section class="partner-stats-grid">
+    <article class="ravlo-card partner-stat-card">
+      <div class="partner-stat-label">New Quotes</div>
+      <div class="partner-stat-value">{{ new_quotes|default(0) }}</div>
+      <div class="partner-stat-note">Incoming quote requests awaiting review</div>
+    </article>
+    <article class="ravlo-card partner-stat-card">
+      <div class="partner-stat-label">Active Policies</div>
+      <div class="partner-stat-value">{{ active_policies|default(0) }}</div>
+      <div class="partner-stat-note">Coverage currently in force</div>
+    </article>
+    <article class="ravlo-card partner-stat-card">
+      <div class="partner-stat-label">Pending Approval</div>
+      <div class="partner-stat-value">{{ pending|default(0) }}</div>
+      <div class="partner-stat-note">Policies or quotes awaiting next-step action</div>
+    </article>
+    <article class="ravlo-card partner-stat-card">
+      <div class="partner-stat-label">Bound</div>
+      <div class="partner-stat-value">{{ bound|default(0) }}</div>
+      <div class="partner-stat-note">Completed placements and confirmed coverage</div>
+    </article>
+  </section>
+
+  <section class="partner-dashboard-grid">
+    <div class="partner-dashboard-main">
+      <article class="ravlo-card partner-section-card">
+        <div class="section-head"><div><h3>Quick Actions</h3><p>Move quickly through your insurance workflow.</p></div></div>
+        <div class="quick-action-grid">
+          <a class="partner-action-card" href="{{ url_for('partners.requests_inbox') }}">
+            <div class="partner-action-icon"><i class="lucide lucide-shield-check"></i></div>
+            <div class="partner-action-copy">
+              <h4>Insurance Requests</h4>
+              <p>Review incoming coverage needs, quote requests, and client opportunities.</p>
+            </div>
+          </a>
+          <a class="partner-action-card" href="{{ url_for('partners.workspace_home') }}">
+            <div class="partner-action-icon"><i class="lucide lucide-file-text"></i></div>
+            <div class="partner-action-copy">
+              <h4>Policy Workspace</h4>
+              <p>Track quotes, approvals, active policies, and coverage progress.</p>
+            </div>
+          </a>
+        </div>
+      </article>
+
+      <article class="ravlo-card partner-section-card">
+        <div class="section-head"><div><h3>Insurance Workflow</h3><p>Recommended process for insurance partners inside Ravlo.</p></div></div>
+        <div class="workflow-grid">
+          <div class="workflow-step"><span class="step-no">01</span><h4>Review Request</h4><p>Open the coverage need and confirm property, borrower, or investor requirements.</p></div>
+          <div class="workflow-step"><span class="step-no">02</span><h4>Prepare Quote</h4><p>Build quote options, gather underwriting details, and structure recommendations.</p></div>
+          <div class="workflow-step"><span class="step-no">03</span><h4>Advance Approval</h4><p>Coordinate outstanding items, policy decisions, and next-step confirmations.</p></div>
+          <div class="workflow-step"><span class="step-no">04</span><h4>Bind Coverage</h4><p>Finalize the policy and maintain clean visibility on active protection.</p></div>
+        </div>
+      </article>
+    </div>
+
+    <aside class="partner-dashboard-side">
+      <article class="ravlo-card partner-section-card">
+        <div class="section-head"><div><h3>Insurance Tools</h3><p>Core areas you’ll use most often.</p></div></div>
+        <div class="partner-tool-list">
+          <div class="partner-tool-item"><strong>Insurance Requests</strong><span>Incoming coverage opportunities and quote intake</span></div>
+          <div class="partner-tool-item"><strong>Workspace</strong><span>Track quote status, documents, and approvals</span></div>
+          <div class="partner-tool-item"><strong>Policy Flow</strong><span>Monitor movement from request to active coverage</span></div>
+          <div class="partner-tool-item"><strong>Bound Policies</strong><span>Keep final placements visible and organized</span></div>
+        </div>
+      </article>
+
+      <article class="ravlo-card partner-section-card">
+        <div class="section-head"><div><h3>Performance Focus</h3><p>What matters most for insurance partner success on Ravlo.</p></div></div>
+        <div class="partner-checklist">
+          <div class="partner-check-item">Respond quickly to quote opportunities</div>
+          <div class="partner-check-item">Keep policy status clear and current</div>
+          <div class="partner-check-item">Reduce approval delays</div>
+          <div class="partner-check-item">Deliver smooth quote-to-bind execution</div>
+        </div>
+      </article>
+    </aside>
+  </section>
+</div>
 {% endblock %}

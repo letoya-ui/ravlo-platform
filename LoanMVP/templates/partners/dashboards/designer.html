@@ -1,21 +1,199 @@
 {% extends "layouts/ravlo_base.html" %}
+
+{% block title %}Ravlo • Designer Dashboard{% endblock %}
+
+{% block page_title %}Designer Dashboard{% endblock %}
+{% block page_subline %}
+Manage design requests, concept development, selections, and client approvals from one workspace.
+{% endblock %}
+
+{% block topbar_actions %}
+  <a href="{{ url_for('partners.requests_inbox') }}" class="ravlo-btn ghost sm">
+    View Design Requests
+  </a>
+  <a href="{{ url_for('partners.workspace_home') }}" class="ravlo-btn primary sm">
+    Open Workspace
+  </a>
+{% endblock %}
+
 {% block content %}
+<div class="partner-dashboard-page designer-dashboard">
 
-<div class="dashboard-shell">
-    <h1>Designer Dashboard</h1>
-    <p>Manage design requests, mood boards, and project deliverables.</p>
+  <section class="ravlo-card partner-hero-card">
+    <div class="partner-hero-grid">
+      <div class="partner-hero-copy">
+        <span class="partner-eyebrow">Partner Command</span>
+        <h2 class="partner-hero-title">Shape spaces, guide selections, and keep design execution aligned.</h2>
+        <p class="partner-hero-text">
+          Review incoming design opportunities, organize active concept work, and collaborate with investors,
+          contractors, and project teams across the Ravlo ecosystem.
+        </p>
 
-    <div class="dashboard-grid">
-        <a class="dash-card" href="{{ url_for('partners.requests_inbox') }}">
-            <h3>Design Requests</h3>
-            <p>Homeowners seeking design concepts.</p>
-        </a>
+        <div class="partner-hero-actions">
+          <a href="{{ url_for('partners.requests_inbox') }}" class="ravlo-btn primary">
+            Review Design Requests
+          </a>
+          <a href="{{ url_for('partners.workspace_home') }}" class="ravlo-btn ghost">
+            Go to Workspace
+          </a>
+        </div>
+      </div>
 
-        <a class="dash-card" href="{{ url_for('partners.workspace_home') }}">
-            <h3>Workspace</h3>
-            <p>Active design jobs and revisions.</p>
-        </a>
+      <div class="partner-hero-panel">
+        <div class="partner-mini-stat">
+          <span class="label">Priority Focus</span>
+          <strong>Concepts, selections, approvals, design clarity</strong>
+        </div>
+        <div class="partner-mini-stat">
+          <span class="label">Best Use</span>
+          <strong>Keep visual direction organized and execution-ready</strong>
+        </div>
+      </div>
     </div>
-</div>
+  </section>
 
+  <section class="partner-stats-grid">
+    <article class="ravlo-card partner-stat-card">
+      <div class="partner-stat-label">New Requests</div>
+      <div class="partner-stat-value">{{ new_requests_count|default(0) }}</div>
+      <div class="partner-stat-note">Incoming design inquiries awaiting review</div>
+    </article>
+
+    <article class="ravlo-card partner-stat-card">
+      <div class="partner-stat-label">Active Concepts</div>
+      <div class="partner-stat-value">{{ active_designs_count|default(0) }}</div>
+      <div class="partner-stat-note">Current design projects in progress</div>
+    </article>
+
+    <article class="ravlo-card partner-stat-card">
+      <div class="partner-stat-label">Pending Approvals</div>
+      <div class="partner-stat-value">{{ approvals_count|default(0) }}</div>
+      <div class="partner-stat-note">Selections or concepts waiting for signoff</div>
+    </article>
+
+    <article class="ravlo-card partner-stat-card">
+      <div class="partner-stat-label">Completed Projects</div>
+      <div class="partner-stat-value">{{ completed_designs_count|default(0) }}</div>
+      <div class="partner-stat-note">Closed design engagements and delivered work</div>
+    </article>
+  </section>
+
+  <section class="partner-dashboard-grid">
+    <div class="partner-dashboard-main">
+
+      <article class="ravlo-card partner-section-card">
+        <div class="section-head">
+          <div>
+            <h3>Quick Actions</h3>
+            <p>Move quickly through your design workflow.</p>
+          </div>
+        </div>
+
+        <div class="quick-action-grid">
+          <a class="partner-action-card" href="{{ url_for('partners.requests_inbox') }}">
+            <div class="partner-action-icon">
+              <i class="lucide lucide-pencil-ruler"></i>
+            </div>
+            <div class="partner-action-copy">
+              <h4>Design Requests</h4>
+              <p>Review incoming design inquiries, styling needs, and project fit requests.</p>
+            </div>
+          </a>
+
+          <a class="partner-action-card" href="{{ url_for('partners.workspace_home') }}">
+            <div class="partner-action-icon">
+              <i class="lucide lucide-swatch-book"></i>
+            </div>
+            <div class="partner-action-copy">
+              <h4>Workspace</h4>
+              <p>Track concept work, design phases, selections, and communication.</p>
+            </div>
+          </a>
+        </div>
+      </article>
+
+      <article class="ravlo-card partner-section-card">
+        <div class="section-head">
+          <div>
+            <h3>Designer Workflow</h3>
+            <p>Recommended process for design partners inside Ravlo.</p>
+          </div>
+        </div>
+
+        <div class="workflow-grid">
+          <div class="workflow-step">
+            <span class="step-no">01</span>
+            <h4>Review Request</h4>
+            <p>Open new design opportunities and confirm goals, style direction, and scope needs.</p>
+          </div>
+
+          <div class="workflow-step">
+            <span class="step-no">02</span>
+            <h4>Build Concept</h4>
+            <p>Create design direction, palettes, finishes, layouts, or staging recommendations.</p>
+          </div>
+
+          <div class="workflow-step">
+            <span class="step-no">03</span>
+            <h4>Align & Approve</h4>
+            <p>Coordinate with investors and project teams to finalize selections and creative direction.</p>
+          </div>
+
+          <div class="workflow-step">
+            <span class="step-no">04</span>
+            <h4>Support Execution</h4>
+            <p>Keep the project visually aligned through updates, revisions, and final implementation support.</p>
+          </div>
+        </div>
+      </article>
+
+    </div>
+
+    <aside class="partner-dashboard-side">
+      <article class="ravlo-card partner-section-card">
+        <div class="section-head">
+          <div>
+            <h3>Designer Tools</h3>
+            <p>Core areas you’ll use most often.</p>
+          </div>
+        </div>
+
+        <div class="partner-tool-list">
+          <div class="partner-tool-item">
+            <strong>Design Requests</strong>
+            <span>New design opportunities and creative briefs</span>
+          </div>
+          <div class="partner-tool-item">
+            <strong>Workspace</strong>
+            <span>Track concepts, selections, revisions, and next steps</span>
+          </div>
+          <div class="partner-tool-item">
+            <strong>Approvals</strong>
+            <span>Manage signoff for finishes, layouts, and visual direction</span>
+          </div>
+          <div class="partner-tool-item">
+            <strong>Project Alignment</strong>
+            <span>Keep design direction clear across all collaborators</span>
+          </div>
+        </div>
+      </article>
+
+      <article class="ravlo-card partner-section-card">
+        <div class="section-head">
+          <div>
+            <h3>Performance Focus</h3>
+            <p>What matters most for designer success on Ravlo.</p>
+          </div>
+        </div>
+
+        <div class="partner-checklist">
+          <div class="partner-check-item">Respond quickly to incoming design requests</div>
+          <div class="partner-check-item">Keep concepts clear, polished, and actionable</div>
+          <div class="partner-check-item">Make approvals easy for clients and teams</div>
+          <div class="partner-check-item">Support smooth execution from idea to finish</div>
+        </div>
+      </article>
+    </aside>
+  </section>
+</div>
 {% endblock %}

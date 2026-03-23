@@ -1,21 +1,169 @@
 {% extends "layouts/ravlo_base.html" %}
+
+{% block title %}Ravlo • Appraiser Dashboard{% endblock %}
+
+{% block page_title %}Appraiser Dashboard{% endblock %}
+{% block page_subline %}
+Manage valuation requests, active assignments, report deadlines, and completed appraisals from one workspace.
+{% endblock %}
+
+{% block topbar_actions %}
+  <a href="{{ url_for('partners.requests_inbox') }}" class="ravlo-btn ghost sm">
+    View Appraisal Requests
+  </a>
+  <a href="{{ url_for('partners.workspace_home') }}" class="ravlo-btn primary sm">
+    Open Workspace
+  </a>
+{% endblock %}
+
 {% block content %}
+<div class="partner-dashboard-page appraiser-dashboard">
 
-<div class="dashboard-shell">
-    <h1>Appraiser Dashboard</h1>
-    <p>Manage appraisal requests and valuation reports.</p>
+  <section class="ravlo-card partner-hero-card">
+    <div class="partner-hero-grid">
+      <div class="partner-hero-copy">
+        <span class="partner-eyebrow">Partner Command</span>
+        <h2 class="partner-hero-title">Deliver timely valuations and keep reports moving with confidence.</h2>
+        <p class="partner-hero-text">
+          Review new appraisal requests, manage active assignments, and maintain visibility across
+          valuation timelines, due dates, and completed reports inside Ravlo.
+        </p>
 
-    <div class="dashboard-grid">
-        <a class="dash-card" href="{{ url_for('partners.requests_inbox') }}">
-            <h3>Appraisal Requests</h3>
-            <p>View new appraisal jobs.</p>
-        </a>
+        <div class="partner-hero-actions">
+          <a href="{{ url_for('partners.requests_inbox') }}" class="ravlo-btn primary">
+            Review Appraisal Requests
+          </a>
+          <a href="{{ url_for('partners.workspace_home') }}" class="ravlo-btn ghost">
+            Go to Workspace
+          </a>
+        </div>
+      </div>
 
-        <a class="dash-card" href="{{ url_for('partners.workspace_home') }}">
-            <h3>Workspace</h3>
-            <p>Active appraisals and valuations.</p>
-        </a>
+      <div class="partner-hero-panel">
+        <div class="partner-mini-stat">
+          <span class="label">Priority Focus</span>
+          <strong>Valuation accuracy, turnaround, report readiness</strong>
+        </div>
+        <div class="partner-mini-stat">
+          <span class="label">Best Use</span>
+          <strong>Keep appraisal flow organized from request to delivery</strong>
+        </div>
+      </div>
     </div>
-</div>
+  </section>
 
+  <section class="partner-stats-grid">
+    <article class="ravlo-card partner-stat-card">
+      <div class="partner-stat-label">New Orders</div>
+      <div class="partner-stat-value">{{ new_orders|default(0) }}</div>
+      <div class="partner-stat-note">New appraisal requests awaiting action</div>
+    </article>
+
+    <article class="ravlo-card partner-stat-card">
+      <div class="partner-stat-label">In Progress</div>
+      <div class="partner-stat-value">{{ in_progress|default(0) }}</div>
+      <div class="partner-stat-note">Assignments currently under review or inspection</div>
+    </article>
+
+    <article class="ravlo-card partner-stat-card">
+      <div class="partner-stat-label">Reports Due</div>
+      <div class="partner-stat-value">{{ due_reports|default(0) }}</div>
+      <div class="partner-stat-note">Valuations approaching delivery deadline</div>
+    </article>
+
+    <article class="ravlo-card partner-stat-card">
+      <div class="partner-stat-label">Completed</div>
+      <div class="partner-stat-value">{{ completed|default(0) }}</div>
+      <div class="partner-stat-note">Finished appraisals and delivered reports</div>
+    </article>
+  </section>
+
+  <section class="partner-dashboard-grid">
+    <div class="partner-dashboard-main">
+      <article class="ravlo-card partner-section-card">
+        <div class="section-head">
+          <div>
+            <h3>Quick Actions</h3>
+            <p>Move quickly through your appraisal workflow.</p>
+          </div>
+        </div>
+
+        <div class="quick-action-grid">
+          <a class="partner-action-card" href="{{ url_for('partners.requests_inbox') }}">
+            <div class="partner-action-icon"><i class="lucide lucide-clipboard-list"></i></div>
+            <div class="partner-action-copy">
+              <h4>Appraisal Requests</h4>
+              <p>Review incoming orders, valuation needs, and new assignment opportunities.</p>
+            </div>
+          </a>
+
+          <a class="partner-action-card" href="{{ url_for('partners.workspace_home') }}">
+            <div class="partner-action-icon"><i class="lucide lucide-file-search"></i></div>
+            <div class="partner-action-copy">
+              <h4>Reports Workspace</h4>
+              <p>Track assignments, inspections, reporting status, and due dates.</p>
+            </div>
+          </a>
+        </div>
+      </article>
+
+      <article class="ravlo-card partner-section-card">
+        <div class="section-head">
+          <div>
+            <h3>Appraiser Workflow</h3>
+            <p>Recommended process for appraisal partners inside Ravlo.</p>
+          </div>
+        </div>
+
+        <div class="workflow-grid">
+          <div class="workflow-step">
+            <span class="step-no">01</span>
+            <h4>Review Order</h4>
+            <p>Open the request, confirm property details, valuation need, and delivery timeline.</p>
+          </div>
+
+          <div class="workflow-step">
+            <span class="step-no">02</span>
+            <h4>Inspect & Analyze</h4>
+            <p>Complete the evaluation process using property facts, condition, and comparable support.</p>
+          </div>
+
+          <div class="workflow-step">
+            <span class="step-no">03</span>
+            <h4>Prepare Report</h4>
+            <p>Build the appraisal report with clear support for value conclusions and findings.</p>
+          </div>
+
+          <div class="workflow-step">
+            <span class="step-no">04</span>
+            <h4>Deliver & Close</h4>
+            <p>Submit the completed report and maintain status visibility through final delivery.</p>
+          </div>
+        </div>
+      </article>
+    </div>
+
+    <aside class="partner-dashboard-side">
+      <article class="ravlo-card partner-section-card">
+        <div class="section-head"><div><h3>Appraiser Tools</h3><p>Core areas you’ll use most often.</p></div></div>
+        <div class="partner-tool-list">
+          <div class="partner-tool-item"><strong>Orders</strong><span>Incoming appraisal requests and assignment intake</span></div>
+          <div class="partner-tool-item"><strong>Workspace</strong><span>Track inspections, comparables, and reporting progress</span></div>
+          <div class="partner-tool-item"><strong>Deadlines</strong><span>Stay ahead of due dates and delivery expectations</span></div>
+          <div class="partner-tool-item"><strong>Completed Reports</strong><span>Maintain visibility on finished work and outcomes</span></div>
+        </div>
+      </article>
+
+      <article class="ravlo-card partner-section-card">
+        <div class="section-head"><div><h3>Performance Focus</h3><p>What matters most for appraiser success on Ravlo.</p></div></div>
+        <div class="partner-checklist">
+          <div class="partner-check-item">Respond quickly to new orders</div>
+          <div class="partner-check-item">Keep reports accurate and well-supported</div>
+          <div class="partner-check-item">Manage deadlines with consistency</div>
+          <div class="partner-check-item">Maintain clear delivery visibility</div>
+        </div>
+      </article>
+    </aside>
+  </section>
+</div>
 {% endblock %}
