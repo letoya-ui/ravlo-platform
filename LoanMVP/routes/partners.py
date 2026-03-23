@@ -220,6 +220,9 @@ def center():
         "partners/center.html",
         partners=partners,
         category=category
+        portal="partner",
+        portal_name="Partner OS",
+        portal_home=url_for("partners.dashboard"),
     )
 
 
@@ -236,6 +239,9 @@ def profile(partner_id):
     return render_template(
         "partners/profile.html",
         partner=partner
+        portal="partner",
+        portal_name="Partner OS",
+        portal_home=url_for("partners.dashboard"),
     )
 
 
@@ -318,6 +324,9 @@ def request_detail(request_id):
         req=req,
         page_title="Request Detail",
         page_subline="Review opportunity details and next steps.",
+        portal="partner",
+        portal_name="Partner OS",
+        portal_home=url_for("partners.dashboard"),
     )
 
 # ------------------------------------------------
@@ -513,6 +522,9 @@ def workspace_home():
         "partners/workspace/home.html",
         partner=partner,
         jobs=jobs
+        portal="partner",
+        portal_name="Partner OS",
+        portal_home=url_for("partners.dashboard"),
     )
 
 
@@ -537,6 +549,9 @@ def workspace_job(job_id):
         partner=partner,
         job=job,
         tasks=tasks
+        portal="partner",
+        portal_name="Partner OS",
+        portal_home=url_for("partners.dashboard"),
     )
 
 
@@ -701,6 +716,8 @@ def settings():
         "partners/settings.html",
         partner=partner,
         portal="partner"
+        portal_name="Partner OS",
+        portal_home=url_for("partners.dashboard"),
     )
 
 
@@ -720,6 +737,8 @@ def deals():
         partner=partner,
         jobs=jobs,
         portal="partner"
+        portal_name="Partner OS",
+        portal_home=url_for("partners.dashboard"),
     )
 
 
@@ -734,7 +753,9 @@ def resources():
     return render_template(
         "partners/resources.html",
         partner=partner,
-        portal="partner"
+        portal="partner",
+        portal_name="Partner OS",
+        portal_home=url_for("partners.dashboard"),
     )
 
 @partners_bp.route("/subscribe/<tier>")
