@@ -537,3 +537,52 @@ textarea.ravlo-input{
     font-size:.9rem;
   }
 }
+
+.form-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit, minmax(240px,1fr));
+  gap:14px;
+}
+
+.form-group{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+}
+
+.form-group.full{
+  grid-column:1/-1;
+}
+
+.ravlo-label{
+  font-size:.85rem;
+  color:var(--ravlo-muted);
+  font-weight:600;
+}
+
+.summary-row{
+  display:flex;
+  justify-content:space-between;
+  padding:8px 0;
+  border-bottom:1px solid var(--ravlo-border-soft);
+  font-size:.9rem;
+}
+
+.detail-actions{
+  margin-top:18px;
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+}
+
+.badge{
+  padding:6px 10px;
+  border-radius:999px;
+  font-size:.75rem;
+  font-weight:700;
+}
+
+.badge-draft{ background:#2a3a55; }
+.badge-sent{ background:#2f7dff; }
+.badge-accepted{ background:#2aa96b; }
+.badge-declined{ background:#aa3b3b; }

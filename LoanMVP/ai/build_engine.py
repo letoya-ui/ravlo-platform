@@ -69,14 +69,14 @@ def run_build_concept(payload):
     concept_render_url = (
         f"/static/{generated_concept_path}"
         if generated_concept_path
-        else "/static/img/placeholders/build_render_placeholder.jpg"
+        else "/static/images/placeholders/build_render_placeholder.jpg"
     )
 
     return {
         "concept_render_url": concept_render_url,
-        "blueprint_url": "/static/img/placeholders/blueprint_placeholder.jpg",
-        "site_plan_url": "/static/img/placeholders/siteplan_placeholder.jpg",
-        "presentation_url": "/static/img/placeholders/presentation_placeholder.jpg",
+        "blueprint_url": "/static/images/placeholders/blueprint_placeholder.jpg",
+        "site_plan_url": "/static/images/placeholders/siteplan_placeholder.jpg",
+        "presentation_url": "/static/images/placeholders/presentation_placeholder.jpg",
         "prompts": {
             "concept_prompt": concept_prompt,
         }

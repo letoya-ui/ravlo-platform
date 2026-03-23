@@ -548,7 +548,7 @@ def workspace_job(job_id):
         "partners/workspace/job.html",
         partner=partner,
         job=job,
-        tasks=tasks
+        tasks=tasks,
         portal="partner",
         portal_name="Partner OS",
         portal_home=url_for("partners.dashboard"),
@@ -962,6 +962,10 @@ def proposals():
         portal_home=url_for("partners.dashboard"),
     )
 
+from datetime import datetime
+from flask import render_template, redirect, url_for, flash, request
+from flask_login import current_user
+
 @partners_bp.route("/proposals/<int:proposal_id>", methods=["GET", "POST"])
 @role_required("partner", "admin")
 def proposal_detail(proposal_id):
@@ -970,6 +974,10 @@ def proposal_detail(proposal_id):
     if not partner:
         flash("Partner profile not found. Please register.", "warning")
         return redirect(url_for("partners.register"))
+
+    if not getattr(partner, "proposal_builder_enabled", False):
+        flash("Proposal Builder is available on an upgraded plan.", "warning")
+        return redirect(url_for("partners.upgrade"))
 
     proposal = PartnerProposal.query.filter_by(
         id=proposal_id,
@@ -985,23 +993,44 @@ def proposal_detail(proposal_id):
         proposal.labor_cost = request.form.get("labor_cost", type=float) or 0.0
         proposal.materials_cost = request.form.get("materials_cost", type=float) or 0.0
         proposal.other_cost = request.form.get("other_cost", type=float) or 0.0
-
         proposal.calculate_total()
 
         action = (request.form.get("action") or "save").strip().lower()
+
         if action == "send":
             proposal.status = "sent"
             proposal.sent_at = datetime.utcnow()
+
+            if proposal.request_id:
+                linked_request = PartnerConnectionRequest.query.filter_by(
+                    id=proposal.request_id,
+                    partner_id=partner.id
+                ).first()
+
+                if linked_request:
+                    linked_request.status = "accepted"
+                    linked_request.responded_at = datetime.utcnow()
+
+            db.session.commit()
+            flash("Proposal sent and request updated.", "success")
+            return redirect(url_for("partners.proposal_detail", proposal_id=proposal.id))
+
         elif action == "accept":
             proposal.status = "accepted"
+            db.session.commit()
+            flash("Proposal marked accepted.", "success")
+            return redirect(url_for("partners.proposal_detail", proposal_id=proposal.id))
+
         elif action == "decline":
             proposal.status = "declined"
-        else:
-            proposal.status = proposal.status or "draft"
+            db.session.commit()
+            flash("Proposal marked declined.", "warning")
+            return redirect(url_for("partners.proposal_detail", proposal_id=proposal.id))
 
-        db.session.commit()
-        flash("Proposal updated.", "success")
-        return redirect(url_for("partners.proposal_detail", proposal_id=proposal.id))
+        else:
+            db.session.commit()
+            flash("Proposal saved.", "success")
+            return redirect(url_for("partners.proposal_detail", proposal_id=proposal.id))
 
     return render_template(
         "partners/proposal_detail.html",
