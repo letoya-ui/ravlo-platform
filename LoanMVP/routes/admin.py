@@ -824,7 +824,7 @@ def company_dashboard(company_id):
 
 
 @admin_bp.route("/onboarding", methods=["GET"])
-@login_required
+@role_required("admin")
 def onboarding_center():
     return render_template(
         "admin/onboarding_center.html",
