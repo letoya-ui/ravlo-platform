@@ -12,34 +12,6 @@ Create a polished proposal with scope, pricing, and timeline.
   </a>
 {% endblock %}
 
-{% block head %}
-<style>
-  .proposal-builder-page{display:flex;flex-direction:column;gap:24px;}
-  .builder-card{padding:24px;border-radius:24px;}
-  .builder-grid{display:grid;grid-template-columns:1.2fr .8fr;gap:24px;}
-  .builder-col{display:flex;flex-direction:column;gap:24px;}
-  .builder-field{display:flex;flex-direction:column;gap:8px;}
-  .builder-label{font-size:.84rem;font-weight:700;color:var(--ravlo-muted);}
-  .builder-card h3{margin:0 0 16px;font-size:1.05rem;font-weight:800;}
-  .builder-note{color:var(--ravlo-muted);line-height:1.6;}
-  .builder-actions{display:flex;gap:12px;flex-wrap:wrap;}
-  .summary-box{
-    border:1px solid rgba(255,255,255,.08);
-    border-radius:18px;padding:18px;background:rgba(255,255,255,.02);
-  }
-  .summary-row{
-    display:flex;justify-content:space-between;gap:12px;padding:10px 0;
-    border-bottom:1px solid rgba(255,255,255,.06);
-  }
-  .summary-row:last-child{border-bottom:none;}
-  .summary-label{color:var(--ravlo-muted);}
-  .summary-value{font-weight:700;}
-  @media (max-width: 980px){
-    .builder-grid{grid-template-columns:1fr;}
-  }
-</style>
-{% endblock %}
-
 {% block content %}
 <div class="proposal-builder-page">
   <form method="POST" action="{{ url_for('partners.create_proposal') }}">
@@ -49,27 +21,34 @@ Create a polished proposal with scope, pricing, and timeline.
 
     <div class="builder-grid">
       <div class="builder-col">
+
         <section class="ravlo-card builder-card">
           <h3>Proposal Information</h3>
 
           <div class="builder-field">
             <label class="builder-label">Title</label>
-            <input type="text" name="title" class="ravlo-input" placeholder="Kitchen Renovation Proposal" required>
+            <input type="text" name="title" class="ravlo-input"
+                   value="{{ prefill.title or '' }}"
+                   placeholder="Kitchen Renovation Proposal" required>
           </div>
 
           <div class="builder-field" style="margin-top:14px;">
             <label class="builder-label">Estimated Timeline</label>
-            <input type="text" name="estimated_timeline" class="ravlo-input" placeholder="3 to 4 weeks">
+            <input type="text" name="estimated_timeline" class="ravlo-input"
+                   value="{{ prefill.estimated_timeline or '' }}"
+                   placeholder="3 to 4 weeks">
           </div>
 
           <div class="builder-field" style="margin-top:14px;">
             <label class="builder-label">Proposal Summary</label>
-            <textarea name="proposal_text" class="ravlo-input" rows="6" placeholder="Write your proposal introduction, deliverables, and client-facing summary."></textarea>
+            <textarea name="proposal_text" class="ravlo-input" rows="6"
+                      placeholder="Write your proposal introduction, deliverables, and client-facing summary.">{{ prefill.proposal_text or '' }}</textarea>
           </div>
 
           <div class="builder-field" style="margin-top:14px;">
             <label class="builder-label">Scope of Work</label>
-            <textarea name="scope_of_work" class="ravlo-input" rows="8" placeholder="Describe labor, materials, stages, and included work."></textarea>
+            <textarea name="scope_of_work" class="ravlo-input" rows="8"
+                      placeholder="Describe labor, materials, stages, and included work.">{{ prefill.scope_of_work or '' }}</textarea>
           </div>
         </section>
 
@@ -78,22 +57,26 @@ Create a polished proposal with scope, pricing, and timeline.
 
           <div class="builder-field">
             <label class="builder-label">Labor Cost</label>
-            <input type="number" step="0.01" min="0" name="labor_cost" class="ravlo-input" placeholder="0.00">
+            <input type="number" step="0.01" min="0" name="labor_cost" class="ravlo-input"
+                   value="{{ prefill.labor_cost or '' }}" placeholder="0.00">
           </div>
 
           <div class="builder-field" style="margin-top:14px;">
             <label class="builder-label">Materials Cost</label>
-            <input type="number" step="0.01" min="0" name="materials_cost" class="ravlo-input" placeholder="0.00">
+            <input type="number" step="0.01" min="0" name="materials_cost" class="ravlo-input"
+                   value="{{ prefill.materials_cost or '' }}" placeholder="0.00">
           </div>
 
           <div class="builder-field" style="margin-top:14px;">
             <label class="builder-label">Other Cost</label>
-            <input type="number" step="0.01" min="0" name="other_cost" class="ravlo-input" placeholder="0.00">
+            <input type="number" step="0.01" min="0" name="other_cost" class="ravlo-input"
+                   value="{{ prefill.other_cost or '' }}" placeholder="0.00">
           </div>
         </section>
 
         <section class="builder-actions">
-          <button type="submit" class="ravlo-btn primary">Save Draft</button>
+          <button type="submit" name="action" value="save" class="ravlo-btn primary">Save Draft</button>
+          <button type="submit" name="action" value="generate_ai" class="ravlo-btn ghost">Generate with AI</button>
           <a href="{{ url_for('partners.proposals') }}" class="ravlo-btn ghost">Cancel</a>
         </section>
       </div>
@@ -109,16 +92,24 @@ Create a polished proposal with scope, pricing, and timeline.
                 <div class="summary-value">#{{ linked_request.id }}</div>
               </div>
               <div class="summary-row">
+                <div class="summary-label">Title</div>
+                <div class="summary-value">{{ linked_request.title or "—" }}</div>
+              </div>
+              <div class="summary-row">
                 <div class="summary-label">Category</div>
                 <div class="summary-value">{{ linked_request.category or "Request" }}</div>
               </div>
               <div class="summary-row">
-                <div class="summary-label">Status</div>
-                <div class="summary-value">{{ linked_request.status|default("pending", true)|title }}</div>
+                <div class="summary-label">Budget</div>
+                <div class="summary-value">{{ linked_request.budget or "—" }}</div>
               </div>
               <div class="summary-row">
-                <div class="summary-label">Source</div>
-                <div class="summary-value">{{ linked_request.source|default("internal", true)|replace('_',' ')|title }}</div>
+                <div class="summary-label">Timeline</div>
+                <div class="summary-value">{{ linked_request.timeline or "—" }}</div>
+              </div>
+              <div class="summary-row">
+                <div class="summary-label">Status</div>
+                <div class="summary-value">{{ linked_request.status|default("pending", true)|title }}</div>
               </div>
             </div>
           {% else %}
@@ -131,8 +122,7 @@ Create a polished proposal with scope, pricing, and timeline.
         <section class="ravlo-card builder-card">
           <h3>Proposal Tips</h3>
           <p class="builder-note">
-            Keep the proposal clear, specific, and outcome-focused. Strong proposals usually define scope,
-            set expectations, and make pricing easy to understand.
+            Use AI to generate a polished first draft, then refine the scope, pricing, and timeline before sending.
           </p>
         </section>
       </div>

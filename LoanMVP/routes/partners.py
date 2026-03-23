@@ -7,7 +7,7 @@ from sqlalchemy import desc
 
 from LoanMVP.extensions import db, csrf
 from LoanMVP.utils.decorators import role_required
-
+from LoanMVP.ai.base_ai import AIAssistant
 
 from LoanMVP.services.partner_search_service import search_external_partners
 
@@ -962,9 +962,7 @@ def proposals():
         portal_home=url_for("partners.dashboard"),
     )
 
-from datetime import datetime
-from flask import render_template, redirect, url_for, flash, request
-from flask_login import current_user
+
 
 @partners_bp.route("/proposals/<int:proposal_id>", methods=["GET", "POST"])
 @role_required("partner", "admin")
@@ -1036,6 +1034,200 @@ def proposal_detail(proposal_id):
         "partners/proposal_detail.html",
         partner=partner,
         proposal=proposal,
+        portal="partner",
+        portal_name="Partner OS",
+        portal_home=url_for("partners.dashboard"),
+    )
+
+
+@partners_bp.route("/proposals/new", methods=["GET", "POST"])
+@role_required("partner", "admin")
+def create_proposal():
+
+    # --------------------------------------------------
+    # Load partner
+    # --------------------------------------------------
+    partner = Partner.query.filter_by(user_id=current_user.id).first()
+
+    if not partner:
+        flash("Partner profile not found. Please register.", "warning")
+        return redirect(url_for("partners.register"))
+
+    # --------------------------------------------------
+    # Feature gate
+    # --------------------------------------------------
+    if not getattr(partner, "proposal_builder_enabled", False):
+        flash("Proposal Builder is available on an upgraded plan.", "warning")
+        return redirect(url_for("partners.upgrade"))
+
+    # --------------------------------------------------
+    # Load request (if passed)
+    # --------------------------------------------------
+    request_id = request.args.get("request_id", type=int)
+    linked_request = None
+
+    if request_id:
+        linked_request = PartnerConnectionRequest.query.filter_by(
+            id=request_id,
+            partner_id=partner.id
+        ).first()
+
+    # --------------------------------------------------
+    # Prefill defaults
+    # --------------------------------------------------
+    prefill = {
+        "title": "",
+        "estimated_timeline": "",
+        "proposal_text": "",
+        "scope_of_work": "",
+        "labor_cost": "",
+        "materials_cost": "",
+        "other_cost": "",
+    }
+
+    if linked_request:
+        prefill["title"] = linked_request.title or linked_request.category or "Service Proposal"
+        prefill["estimated_timeline"] = linked_request.timeline or ""
+        prefill["scope_of_work"] = linked_request.message or ""
+
+    # --------------------------------------------------
+    # Handle POST
+    # --------------------------------------------------
+    if request.method == "POST":
+
+        action = (request.form.get("action") or "save").strip().lower()
+        form_request_id = request.form.get("request_id", type=int)
+
+        # Load request again safely
+        safe_request = None
+        if form_request_id:
+            safe_request = PartnerConnectionRequest.query.filter_by(
+                id=form_request_id,
+                partner_id=partner.id
+            ).first()
+
+        # --------------------------------------------------
+        # Form data
+        # --------------------------------------------------
+        title = (request.form.get("title") or "").strip()
+        proposal_text = (request.form.get("proposal_text") or "").strip()
+        scope_of_work = (request.form.get("scope_of_work") or "").strip()
+        estimated_timeline = (request.form.get("estimated_timeline") or "").strip()
+
+        labor_cost = request.form.get("labor_cost", type=float) or 0.0
+        materials_cost = request.form.get("materials_cost", type=float) or 0.0
+        other_cost = request.form.get("other_cost", type=float) or 0.0
+
+        # --------------------------------------------------
+        # 🔥 AI GENERATION
+        # --------------------------------------------------
+        if action == "generate_ai":
+
+            ai = AIAssistant()
+
+            ai_input = f"""
+You are a professional contractor preparing a proposal for a real estate investor.
+
+Partner: {partner.display_name()}
+Category: {partner.category or partner.type}
+
+Request Title: {safe_request.title if safe_request else title}
+Request Details: {safe_request.message if safe_request else scope_of_work}
+Budget: {safe_request.budget if safe_request else ''}
+Timeline: {safe_request.timeline if safe_request else estimated_timeline}
+
+Write:
+
+1. Proposal Summary
+2. Scope of Work
+3. Timeline & Execution
+4. Closing Statement
+
+Keep it clear, confident, and investor-friendly.
+"""
+
+            generated_text = ai.generate_reply(ai_input, role="general")
+
+            prefill = {
+                "title": title or (safe_request.title if safe_request else "Service Proposal"),
+                "estimated_timeline": estimated_timeline or (safe_request.timeline if safe_request else ""),
+                "proposal_text": generated_text,
+                "scope_of_work": scope_of_work or (safe_request.message if safe_request else ""),
+                "labor_cost": labor_cost,
+                "materials_cost": materials_cost,
+                "other_cost": other_cost,
+            }
+
+            return render_template(
+                "partners/proposal_builder.html",
+                partner=partner,
+                linked_request=safe_request,
+                prefill=prefill,
+                portal="partner",
+                portal_name="Partner OS",
+                portal_home=url_for("partners.dashboard"),
+            )
+
+        # --------------------------------------------------
+        # Validate
+        # --------------------------------------------------
+        if not title:
+            flash("Proposal title is required.", "danger")
+
+            prefill = {
+                "title": title,
+                "estimated_timeline": estimated_timeline,
+                "proposal_text": proposal_text,
+                "scope_of_work": scope_of_work,
+                "labor_cost": labor_cost,
+                "materials_cost": materials_cost,
+                "other_cost": other_cost,
+            }
+
+            return render_template(
+                "partners/proposal_builder.html",
+                partner=partner,
+                linked_request=safe_request,
+                prefill=prefill,
+                portal="partner",
+                portal_name="Partner OS",
+                portal_home=url_for("partners.dashboard"),
+            )
+
+        # --------------------------------------------------
+        # Save proposal
+        # --------------------------------------------------
+        proposal = PartnerProposal(
+            partner_id=partner.id,
+            request_id=safe_request.id if safe_request else None,
+            title=title,
+            proposal_text=proposal_text,
+            scope_of_work=scope_of_work,
+            labor_cost=labor_cost,
+            materials_cost=materials_cost,
+            other_cost=other_cost,
+            estimated_timeline=estimated_timeline,
+            status="draft",
+            created_at=datetime.utcnow()
+        )
+
+        proposal.calculate_total()
+
+        db.session.add(proposal)
+        db.session.commit()
+
+        flash("Proposal saved as draft.", "success")
+
+        return redirect(url_for("partners.proposal_detail", proposal_id=proposal.id))
+
+    # --------------------------------------------------
+    # GET request
+    # --------------------------------------------------
+    return render_template(
+        "partners/proposal_builder.html",
+        partner=partner,
+        linked_request=linked_request,
+        prefill=prefill,
         portal="partner",
         portal_name="Partner OS",
         portal_home=url_for("partners.dashboard"),
