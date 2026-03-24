@@ -9,7 +9,7 @@ from datetime import datetime
 from io import BytesIO
 from openai import OpenAI
 
-from PIL import Image
+from PIL import Image, ImageOps
 from werkzeug.utils import secure_filename
 from werkzeug.datastructures import ImmutableMultiDict
 from sqlalchemy.exc import SQLAlchemyError
@@ -373,20 +373,25 @@ def download_image_bytes(url: str, timeout=10) -> bytes:
     return response.content
 
 def to_png_bytes(img_bytes: bytes, max_size: int = 1024) -> bytes:
-    im = Image.open(BytesIO(img_bytes)).convert("RGB")
+    im = Image.open(BytesIO(img_bytes))
+    im = ImageOps.exif_transpose(im)   # fix phone rotation first
+    im = im.convert("RGB")
     im.thumbnail((max_size, max_size))
+
     out = BytesIO()
     im.save(out, format="PNG", optimize=True)
     return out.getvalue()
 
 
 def to_webp_bytes(img_bytes: bytes, max_size: int = 1400, quality: int = 86) -> bytes:
-    im = Image.open(BytesIO(img_bytes)).convert("RGB")
+    im = Image.open(BytesIO(img_bytes))
+    im = ImageOps.exif_transpose(im)   # fix phone rotation first
+    im = im.convert("RGB")
     im.thumbnail((max_size, max_size))
+
     out = BytesIO()
     im.save(out, format="WEBP", quality=int(quality), method=6)
     return out.getvalue()
-
 
 # =========================================================
 # STYLE HELPERS
