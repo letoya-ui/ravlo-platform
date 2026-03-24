@@ -5350,11 +5350,24 @@ def renovation_visualizer():
                 property_id = deal.property_id
 
         raw = image_file.read() if image_file else download_image_bytes(image_url)
+
         if not raw:
             return jsonify({
                 "status": "error",
                 "message": "Empty image input.",
             }), 400
+
+        # ✅ FIX ROTATION HERE
+        from PIL import Image, ImageOps
+        import io
+
+        img = Image.open(io.BytesIO(raw))
+        img = ImageOps.exif_transpose(img)  # 🔥 fixes sideways images
+
+        # Convert back to bytes
+        buf = io.BytesIO()
+        img.save(buf, format="JPEG")
+        raw = buf.getvalue()
 
         before_url = _upload_before_image(raw)
 
@@ -5376,10 +5389,10 @@ def renovation_visualizer():
             "preset": style_preset,
             "prompt": final_prompt,
             "count": 1,
-            "steps": 8,
-            "strength": 0.68,
+            "steps": 10,
+            "strength": 0.78,
             "controlnet_scale": 0.55,
-            "guidance": 6.8,
+            "guidance": 7.2,
             "width": 640,
             "height": 640,
         }
