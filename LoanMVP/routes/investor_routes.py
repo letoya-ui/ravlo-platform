@@ -5246,52 +5246,6 @@ def renovation_visualizer():
             "message": f"Renovation generator failed: {e}",
         }), 500
 
-@investor_bp.route("/build_upload", methods=["POST"])
-@csrf.exempt
-@login_required
-@role_required("investor")
-def build_upload():
-    file = request.files.get("photo")
-    deal_id = _normalize_int(request.form.get("deal_id"))
-
-    if not file or not deal_id:
-        return jsonify({
-            "status": "error",
-            "message": "Missing photo or deal_id.",
-        }), 400
-
-    deal = _get_owned_deal_or_404(deal_id)
-
-    try:
-        raw = file.read()
-        if not raw:
-            return jsonify({
-                "status": "error",
-                "message": "Empty file.",
-            }), 400
-
-        image_url = _upload_before_image(raw)
-
-        if deal is not None:
-            deal.results_json = deal.results_json or {}
-            deal.results_json["build_reference_image"] = image_url
-            flag_modified(deal, "results_json")
-
-        db.session.commit()
-
-        return jsonify({
-            "status": "ok",
-            "url": image_url,
-            "deal_id": deal.id,
-        })
-
-    except Exception as e:
-        current_app.logger.exception("build_upload failed")
-        db.session.rollback()
-        return jsonify({
-            "status": "error",
-            "message": str(e),
-        }), 500
 
 # =========================================================
 # BLUEPRINT TO CONCEPT
