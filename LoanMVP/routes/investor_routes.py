@@ -5058,13 +5058,13 @@ def renovation_visualizer():
             "mode": mode,
             "preset": style_preset,
             "prompt": final_prompt,
-            "count": variations,
-            "steps": 33 if mode == "photo" else 38,
+            "count": 1,
+            "steps": 6,
             "strength": 0.38 if mode == "photo" else 0.48,
             "controlnet_scale": 0.78 if mode == "photo" else 0.93,
             "guidance":6.5,
-            "width": 1024,
-            "height": 1024,
+            "width": 640,
+            "height": 640,
         }
 
         engine_json = _post_renovation_engine_json(
