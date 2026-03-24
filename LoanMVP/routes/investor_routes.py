@@ -5376,10 +5376,10 @@ def renovation_visualizer():
             "preset": style_preset,
             "prompt": final_prompt,
             "count": 1,
-            "steps": 20,
+            "steps": 18,
             "strength": 0.82,
-            "controlnet_scale": 0.7,
-            "guidance": 8.0,
+            "controlnet_scale": 0.72,
+            "guidance": 7.8,
             "width": 768,
             "height": 768,
         }
