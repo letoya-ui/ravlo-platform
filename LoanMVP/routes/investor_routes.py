@@ -4134,12 +4134,12 @@ def generate_build_studio():
             "zoning": zoning,
             "image_base64": image_base64,
             "image_url": image_url or "",
-            "count": 2,
-            "steps": 32,
+            "count": 1,
+            "steps": 6,
             "guidance": 7.5,
             "strength": 0.75,
-            "width": 1024,
-            "height": 1024,
+            "width": 640,
+            "height": 640,
         }
 
         data = _post_renovation_engine_json("/v1/build_concept", payload, timeout=RENDER_TIMEOUT)
@@ -4309,12 +4309,12 @@ def generate_build_studio_upload():
             "zoning": zoning,
             "image_base64": base64.b64encode(raw).decode("utf-8"),
             "image_url": "",
-            "width": int(request.form.get("width") or 1024),
-            "height": int(request.form.get("height") or 1024),
-            "steps": int(request.form.get("steps") or 32),
-            "guidance": float(request.form.get("guidance") or 7.5),
-            "strength": float(request.form.get("strength") or 0.75),
-            "count": int(request.form.get("count") or 2),
+            "width": 640,
+            "height": 640,
+            "steps": 6,
+            "guidance": 7.0,
+            "strength": 0.70,
+            "count": 1,
         }
 
         seed = request.form.get("seed")
