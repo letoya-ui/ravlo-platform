@@ -339,13 +339,13 @@ STYLE_PRESET_MAP = {
 }
 
 STYLE_PROMPT_MAP = {
-    "luxury": "Luxury HGTV renovation: bright, high-end finishes, premium lighting, upscale materials, elegant staging.",
-    "modern": "Modern renovation: clean lines, minimal clutter, matte black fixtures, neutral palette, refined finishes.",
-    "airbnb": "Airbnb-ready renovation: cozy, warm lighting, durable finishes, photogenic styling, broad guest appeal.",
-    "flip": "Flip-ready renovation: resale-friendly neutrals, durable materials, bright and clean presentation.",
-    "budget": "Budget-friendly renovation: fresh paint, simple upgrades, clean and functional finishes.",
+    "luxury": "luxury remodel, upgraded cabinetry, quartz countertops, designer backsplash, premium fixtures, warm layered lighting",
+    "modern": "modern remodel, clean cabinetry, stone countertops, simple backsplash, matte black fixtures, neutral palette",
+    "airbnb": "guest-ready remodel, bright finishes, durable materials, warm lighting, clean styling, inviting modern design",
+    "flip": "resale-focused remodel, bright neutral finishes, updated cabinets, durable countertops, clean modern presentation",
+    "budget": "light remodel, painted cabinets, simple counters, fresh finishes, updated lighting, clean functional design",
+    "dark_luxury": "upscale dark kitchen remodel, richer cabinetry, brighter quartz countertops, premium backsplash, elegant warm lighting, designer fixtures"
 }
-
 
 # =========================================================
 # IMAGE HELPERS
@@ -403,12 +403,33 @@ def _normalize_style_preset(style_preset: str) -> str:
 
 
 def _compose_style_prompt(style_prompt: str, style_preset: str, keep_layout: bool = True) -> str:
-    base = STYLE_PROMPT_MAP.get((style_preset or "").strip().lower(), "")
-    parts = [base.strip(), (style_prompt or "").strip()]
-    if keep_layout:
-        parts.append("Keep the same room layout. Produce an HGTV-style after image. No text overlays.")
-    return "\n".join([p for p in parts if p]).strip()
+    preset_key = (style_preset or "").strip().lower()
+    base = (STYLE_PROMPT_MAP.get(preset_key, "") or "").strip()
+    user = (style_prompt or "").strip()
 
+    layout_text = "preserve existing room layout and camera angle" if keep_layout else "allow moderate redesign"
+
+    prompt_parts = [
+        "photorealistic interior renovation",
+        layout_text,
+        "clear before-to-after remodel",
+        base,
+    ]
+
+    if user:
+        prompt_parts.append(user)
+
+    prompt_parts.append("replace outdated finishes with upgraded modern materials")
+    prompt_parts.append("realistic real estate after photo")
+
+    prompt = ", ".join([p for p in prompt_parts if p])
+
+    # keep prompt compact for CLIP
+    words = prompt.split()
+    if len(words) > 55:
+        prompt = " ".join(words[:55])
+
+    return prompt
 
 # =========================================================
 # ENGINE HELPERS
