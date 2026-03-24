@@ -5376,12 +5376,12 @@ def renovation_visualizer():
             "preset": style_preset,
             "prompt": final_prompt,
             "count": 1,
-            "steps": 30,
-            "strength": 0.88,
-            "controlnet_scale": 0.65,
-            "guidance": 9.0,
-            "width": 1024,
-            "height": 1024,
+            "steps": 20,
+            "strength": 0.82,
+            "controlnet_scale": 0.7,
+            "guidance": 8.0,
+            "width": 768,
+            "height": 768,
         }
 
         current_app.logger.warning(f"RENOVATION ENGINE PAYLOAD: {payload}")
