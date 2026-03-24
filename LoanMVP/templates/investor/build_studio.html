@@ -567,4 +567,75 @@
   function formPayload() {
     return {
       deal_id: "{{ deal.id if deal else '' }}",
-      project_name: (document.getElementById("
+      project_name: document.getElementById("projectName")?.value || "",
+      property_type: document.getElementById("propertyType")?.value || "",
+      style: document.getElementById("style")?.value || "",
+      lot_size: document.getElementById("lotSize")?.value || "",
+      zoning: document.getElementById("zoning")?.value || "",
+      location: document.getElementById("location")?.value || "",
+      description: document.getElementById("description")?.value || ""
+    };
+  }
+
+  async function generateBuildConcept(){
+    if (BUILD_LOADING) return;
+    BUILD_LOADING = true;
+
+    const status = document.getElementById("buildStatus");
+    status.innerText = "Generating build concept...";
+
+    try {
+      const res = await fetch("/deal-studio/build-studio/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formPayload())
+      });
+
+      const data = await res.json();
+
+      if (data.images_base64 && data.images_base64.length){
+        const img = document.getElementById("buildPreviewImg");
+        const empty = document.getElementById("buildPreviewEmpty");
+
+        img.src = "data:image/webp;base64," + data.images_base64[0];
+        img.style.display = "block";
+
+        if (empty) empty.style.display = "none";
+
+        CURRENT_BUILD_PREVIEW = img.src;
+
+        document.getElementById("saveBuildBtn").style.display = "inline-flex";
+        const budgetBtn = document.getElementById("budgetBuildBtn");
+        if (budgetBtn) budgetBtn.style.display = "inline-flex";
+
+        status.innerText = "Build concept generated.";
+      } else {
+        status.innerText = "No image returned from engine.";
+      }
+
+    } catch (e){
+      console.error(e);
+      status.innerText = "Error generating build concept.";
+    }
+
+    BUILD_LOADING = false;
+  }
+
+  function selectBuildPreview(src){
+    const img = document.getElementById("buildPreviewImg");
+    const empty = document.getElementById("buildPreviewEmpty");
+
+    img.src = src;
+    img.style.display = "block";
+
+    if (empty) empty.style.display = "none";
+
+    CURRENT_BUILD_PREVIEW = src;
+  }
+
+  function saveBuildToProject(){
+    alert("Save logic coming next step");
+  }
+</script>
+
+{% endblock %}
