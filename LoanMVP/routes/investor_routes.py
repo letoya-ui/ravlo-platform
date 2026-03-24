@@ -4930,7 +4930,7 @@ def deal_architect_analyze():
                 "score": min(round(flip_score), 100),
                 "profit": round(flip_profit, 2),
                 "margin_pct": round(flip_margin, 2),
-                "risk": "Medium" if rehab <= price * 0.35 if price else True else "High",
+                "risk": "Medium" if (price and rehab <= price * 0.35) else "High",
                 "summary": "Renovate and sell for a near-term capital gain.",
                 "best_for": "Deals with healthy spread between total basis and ARV."
             })
