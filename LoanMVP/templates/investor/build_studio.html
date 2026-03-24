@@ -584,8 +584,10 @@
     const status = document.getElementById("buildStatus");
     status.innerText = "Generating build concept...";
 
+    const BUILD_GENERATE_URL = "{{ url_for('investor.generate_build_studio') }}";
+
     try {
-      const res = await fetch("/deal-studio/build-studio/generate", {
+      const res = await fetch(BUILD_GENERATE_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formPayload())
