@@ -613,23 +613,28 @@ def _save_mockups_for_deal(
     saved = 0
 
     for after_url in after_urls:
-        db.session.add(RenovationMockup(
-            user_id=current_user.id,
-            investor_profile_id=ip_id if hasattr(RenovationMockup, "investor_profile_id") else None,
-            deal_id=deal.id,
-            saved_property_id=saved_property_id if saved_property_id is not None else getattr(deal, "saved_property_id", None),
-            property_id=property_id,
-            before_url=before_url,
-            after_url=after_url,
-            style_prompt=style_prompt,
-            style_preset=style_preset,
-            mode=mode,
-        ))
+        mockup_kwargs = {
+            "user_id": current_user.id,
+            "deal_id": deal.id,
+            "saved_property_id": saved_property_id if saved_property_id is not None else getattr(deal, "saved_property_id", None),
+            "property_id": property_id,
+            "before_url": before_url,
+            "after_url": after_url,
+            "style_prompt": style_prompt,
+            "style_preset": style_preset,
+        }
+
+        if hasattr(RenovationMockup, "investor_profile_id"):
+            mockup_kwargs["investor_profile_id"] = ip_id
+
+        if hasattr(RenovationMockup, "mode"):
+            mockup_kwargs["mode"] = mode
+
+        db.session.add(RenovationMockup(**mockup_kwargs))
         saved += 1
 
     db.session.commit()
     return saved
-
 
 def _featured_rehab_data(deal):
     try:
