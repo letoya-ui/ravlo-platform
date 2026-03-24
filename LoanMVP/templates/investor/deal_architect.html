@@ -204,7 +204,7 @@
       <div class="eyebrow">RUN ANALYSIS</div>
       <h3>Deal inputs</h3>
 
-      <form method="POST">
+      <form id="dealArchitectForm" onsubmit="runDealArchitect(event)">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
         <div class="architect-form-grid">
@@ -235,7 +235,9 @@
         </div>
 
         <div style="margin-top:14px;display:flex;gap:12px;flex-wrap:wrap;">
-          <button type="submit" class="ravlo-btn primary">Run Deal Architect</button>
+          <button type="submit" class="ravlo-btn primary">
+            Run Deal Architect
+          </button>
           {% if deal and deal.id %}
             <a href="{{ url_for('investor.generate_budget_from_ai', deal_id=deal.id) }}"
                class="ravlo-btn ghost"
@@ -367,4 +369,79 @@
   </section>
 
 </div>
+<script>
+async function runDealArchitect(e) {
+  e.preventDefault();
+
+  const form = document.getElementById("dealArchitectForm");
+  const formData = new FormData(form);
+
+  // attach deal_id
+  formData.append("deal_id", "{{ deal.id if deal else '' }}");
+
+  try {
+    const res = await fetch("{{ url_for('investor.deal_architect_analyze') }}", {
+      method: "POST",
+      body: formData
+    });
+
+    const data = await res.json();
+    console.log("DEAL ARCHITECT RESPONSE:", data);
+
+    if (!res.ok || data.status !== "ok") {
+      alert(data.message || "Analysis failed");
+      return;
+    }
+
+    // -------------------------
+    // UPDATE UI LIVE
+    // -------------------------
+
+    // Recommended Strategy
+    document.querySelectorAll(".architect-kpi .value")[0].innerText =
+      data.recommended_strategy || "N/A";
+
+    // Profit
+    document.querySelectorAll(".architect-kpi .value")[1].innerText =
+      "$" + (data.metrics?.flip_profit || 0).toLocaleString();
+
+    // Score (fake for now if not returned)
+    document.querySelectorAll(".architect-kpi .value")[2].innerText =
+      data.strategies?.[0]?.score
+        ? data.strategies[0].score + "/100"
+        : "Pending";
+
+    // Total Cost
+    document.querySelectorAll(".architect-kpi .value")[3].innerText =
+      "$" + (data.metrics?.total_basis || 0).toLocaleString();
+
+    // Reasoning
+    const summaryEl = document.querySelector(".architect-summary");
+    if (summaryEl) {
+      summaryEl.innerText =
+        data.strategies?.[0]?.summary || "Analysis complete.";
+    }
+
+    // Next steps
+    const nextStepsBox = document.querySelector(".architect-list");
+    if (nextStepsBox && data.strategies) {
+      nextStepsBox.innerHTML = "";
+
+      data.strategies.forEach((s, i) => {
+        const div = document.createElement("div");
+        div.className = "architect-list-item";
+        div.innerHTML = `
+          <div class="architect-badge">${i + 1}</div>
+          <div><strong>${s.name}</strong> — ${s.summary}</div>
+        `;
+        nextStepsBox.appendChild(div);
+      });
+    }
+
+  } catch (err) {
+    console.error("DEAL ARCHITECT ERROR:", err);
+    alert("Something went wrong.");
+  }
+}
+</script>
 {% endblock %}
