@@ -593,7 +593,7 @@ async function generateBuildConcept() {
   try {
     if (status) status.innerText = "Uploading image and generating build concept...";
 
-    const res = await fetch("/deal-studio/build-studio/generate-upload", {
+    const res = await fetch("/investor/deal-studio/build-studio/generate-upload", {
       method: "POST",
       body: buildFormData()
     });
