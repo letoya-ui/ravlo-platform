@@ -5365,7 +5365,7 @@ def renovation_visualizer():
         final_prompt = _compose_style_prompt(
             style_prompt,
             requested_style_preset,
-            keep_layout=True,
+            keep_layout=False,
         )
         render_batch_id = uuid.uuid4().hex
 
@@ -5376,12 +5376,12 @@ def renovation_visualizer():
             "preset": style_preset,
             "prompt": final_prompt,
             "count": 1,
-            "steps": 6,
-            "strength": 0.38 if mode == "photo" else 0.48,
-            "controlnet_scale": 0.78 if mode == "photo" else 0.93,
-            "guidance": 6.5,
-            "width": 640,
-            "height": 640,
+            "steps": 30,
+            "strength": 0.88,
+            "controlnet_scale": 0.65,
+            "guidance": 9.0,
+            "width": 1024,
+            "height": 1024,
         }
 
         current_app.logger.warning(f"RENOVATION ENGINE PAYLOAD: {payload}")
