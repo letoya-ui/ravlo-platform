@@ -5004,35 +5004,56 @@ def renovation_visualizer():
 
         style_prompt = (request.form.get("style_prompt") or "").strip()
         requested_style_preset = (request.form.get("style_preset") or "").strip()
-        variations = max(1, min(int(request.form.get("variations", 2)), 4))
-        save_to_deal = (request.form.get("save_to_deal") or "").lower() in ("1", "true", "yes", "on")
+        variations = max(1, min(int(request.form.get("variations", 1)), 4))
+        save_to_deal = (request.form.get("save_to_deal") or "").lower() in (
+            "1", "true", "yes", "on"
+        )
         mode = (request.form.get("mode") or "photo").strip().lower()
 
-        saved_property_id = _normalize_int(request.form.get("saved_property_id") or request.form.get("prop_id"))
+        saved_property_id = _normalize_int(
+            request.form.get("saved_property_id") or request.form.get("prop_id")
+        )
         deal_id = _normalize_int(request.form.get("deal_id"))
         property_id = (request.form.get("property_id") or "").strip() or None
 
         if not image_file and not image_url:
-            return jsonify({"status": "error", "message": "Provide image_file or image_url."}), 400
+            return jsonify({
+                "status": "error",
+                "message": "Provide image_file or image_url.",
+            }), 400
 
         if image_url.startswith("blob:"):
-            return jsonify({"status": "error", "message": "Browser preview URL detected. Please upload the image file."}), 400
+            return jsonify({
+                "status": "error",
+                "message": "Browser preview URL detected. Please upload the image file.",
+            }), 400
 
-        if image_url and not (image_url.startswith("http://") or image_url.startswith("https://")):
-            return jsonify({"status": "error", "message": "image_url must start with http:// or https://"}), 400
+        if image_url and not (
+            image_url.startswith("http://") or image_url.startswith("https://")
+        ):
+            return jsonify({
+                "status": "error",
+                "message": "image_url must start with http:// or https://",
+            }), 400
 
         if not style_prompt and not requested_style_preset:
-            return jsonify({"status": "error", "message": "Add a style prompt or choose a preset."}), 400
+            return jsonify({
+                "status": "error",
+                "message": "Add a style prompt or choose a preset.",
+            }), 400
 
         if deal_id:
             deal = Deal.query.filter_by(id=deal_id, user_id=current_user.id).first()
             if not deal:
-                return jsonify({"status": "error", "message": "Deal not found or not authorized."}), 404
+                return jsonify({
+                    "status": "error",
+                    "message": "Deal not found or not authorized.",
+                }), 404
 
             if _deal_render_lock_active(deal):
                 return jsonify({
                     "status": "error",
-                    "message": "A renovation render is already in progress for this deal."
+                    "message": "A renovation render is already in progress for this deal.",
                 }), 409
 
             _set_deal_render_processing(deal)
@@ -5046,7 +5067,10 @@ def renovation_visualizer():
 
         raw = image_file.read() if image_file else download_image_bytes(image_url)
         if not raw:
-            return jsonify({"status": "error", "message": "Empty image input."}), 400
+            return jsonify({
+                "status": "error",
+                "message": "Empty image input.",
+            }), 400
 
         before_url = _upload_before_image(raw)
 
@@ -5054,7 +5078,11 @@ def renovation_visualizer():
             _save_before_url_to_deal(deal, before_url)
 
         style_preset = _normalize_style_preset(requested_style_preset)
-        final_prompt = _compose_style_prompt(style_prompt, requested_style_preset, keep_layout=True)
+        final_prompt = _compose_style_prompt(
+            style_prompt,
+            requested_style_preset,
+            keep_layout=True,
+        )
         render_batch_id = uuid.uuid4().hex
 
         payload = {
@@ -5067,29 +5095,39 @@ def renovation_visualizer():
             "steps": 6,
             "strength": 0.38 if mode == "photo" else 0.48,
             "controlnet_scale": 0.78 if mode == "photo" else 0.93,
-            "guidance":6.5,
+            "guidance": 6.5,
             "width": 640,
             "height": 640,
         }
+
+        current_app.logger.warning(f"RENOVATION ENGINE PAYLOAD: {payload}")
 
         engine_json = _post_renovation_engine_json(
             "/v1/renovate",
             payload,
             timeout=UPLOAD_TIMEOUT if image_file else RENDER_TIMEOUT,
         )
-        
+
         current_app.logger.warning(f"ENGINE JSON: {engine_json}")
-        current_app.logger.warning(f"saved_paths: {engine_json.get('saved_paths')}")
-        current_app.logger.warning(f"images_base64 count: {len(engine_json.get('images_base64', []) or [])}")
-        returned_urls = engine_json.get("saved_paths", []) or []
+        current_app.logger.warning(
+            f"images_base64 count: {len(engine_json.get('images_base64', []) or [])}"
+        )
+
         images_b64 = engine_json.get("images_base64", []) or []
 
-            if not images_b64:
-                return jsonify({"status": "error", "message": "GPU engine returned no images."}), 502
+        if not images_b64:
+            return jsonify({
+                "status": "error",
+                "message": "GPU engine returned no images.",
+            }), 502
 
-            after_urls = _upload_after_images_from_b64(images_b64, render_batch_id)
-            if not after_urls:
-                return jsonify({"status": "error", "message": "Render completed but uploads failed."}), 500
+        after_urls = _upload_after_images_from_b64(images_b64, render_batch_id)
+
+        if not after_urls:
+            return jsonify({
+                "status": "error",
+                "message": "Render completed but uploads failed.",
+            }), 500
 
         saved_count = 0
         if save_to_deal and deal is not None:
@@ -5099,6 +5137,7 @@ def renovation_visualizer():
                 after_urls=after_urls,
                 style_prompt=style_prompt,
                 style_preset=style_preset,
+                mode=mode,
                 saved_property_id=saved_property_id,
                 property_id=property_id,
             )
@@ -5133,7 +5172,10 @@ def renovation_visualizer():
             except Exception:
                 db.session.rollback()
 
-        return jsonify({"status": "error", "message": f"Renovation generator failed: {e}"}), 500
+        return jsonify({
+            "status": "error",
+            "message": f"Renovation generator failed: {e}",
+        }), 500
 
 # =========================================================
 # BLUEPRINT TO CONCEPT
