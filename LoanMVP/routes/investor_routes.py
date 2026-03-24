@@ -5084,9 +5084,6 @@ def renovation_visualizer():
         returned_urls = engine_json.get("saved_paths", []) or []
         images_b64 = engine_json.get("images_base64", []) or []
 
-        if returned_urls:
-            after_urls = returned_urls
-        else:
             if not images_b64:
                 return jsonify({"status": "error", "message": "GPU engine returned no images."}), 502
 
