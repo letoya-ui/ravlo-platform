@@ -4351,7 +4351,7 @@ def generate_build_studio_upload():
                 "message": "Empty land image."
             }), 400
 
-        reference_image_url = _upload_build_reference_image(raw)
+        reference_image_url = _upload_before_image(raw)
 
         payload = {
             "project_name": project_name,
@@ -4392,7 +4392,7 @@ def generate_build_studio_upload():
             }), 502
 
         render_batch_id = uuid.uuid4().hex
-        build_urls = _upload_build_images_from_b64(images_b64, render_batch_id)
+        build_urls = _upload_after_images_from_b64(images_b64, render_batch_id)
 
         if not build_urls:
             return jsonify({
