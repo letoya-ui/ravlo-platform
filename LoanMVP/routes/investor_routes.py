@@ -4078,12 +4078,14 @@ def build_studio(deal_id=None):
     build_analysis = {}
     build_preview = ""
     build_mockups = []
+    build_reference_image = ""
 
     if deal:
-        results = (deal.results_json or {})
+        results = deal.results_json or {}
         build_analysis = results.get("build_analysis", {}) or {}
         build_preview = results.get("build_preview_url", "") or ""
         build_mockups = results.get("build_mockups", []) or []
+        build_reference_image = results.get("build_reference_image", "") or ""
 
     return render_template(
         "investor/build_studio.html",
@@ -4093,10 +4095,10 @@ def build_studio(deal_id=None):
         build_analysis=build_analysis,
         build_preview=build_preview,
         build_mockups=build_mockups,
+        build_reference_image=build_reference_image,
         page_title="Build Studio",
-        page_subtitle="Design and visualize new construction projects."
+        page_subtitle="Design and visualize new construction projects.",
     )
-
 
 # =========================================================
 # 🏗️ BUILD STUDIO — GENERATE CONCEPT
@@ -4110,7 +4112,9 @@ def generate_build_studio():
     deal = None
 
     try:
-        deal_id = _normalize_int(request.form.get("deal_id"))
+        data = request.get_json(silent=True) or {}
+
+        deal_id = _normalize_int(data.get("deal_id"))
 
         if deal_id:
             deal = Deal.query.filter_by(id=deal_id, user_id=current_user.id).first()
@@ -4126,24 +4130,28 @@ def generate_build_studio():
             _set_deal_render_processing(deal)
             db.session.commit()
 
-        project_name = (request.form.get("project_name") or "").strip()
-        property_type = (request.form.get("property_type") or "single_family").strip()
-        style = (request.form.get("style") or "modern_farmhouse").strip()
-        description = (request.form.get("description") or "").strip()
-        lot_size = (request.form.get("lot_size") or "").strip()
-        zoning = (request.form.get("zoning") or "").strip()
-        location = (request.form.get("location") or "").strip()
-        notes = (request.form.get("notes") or "").strip()
-        save_to_deal = (request.form.get("save_to_deal") or "").lower() in ("1", "true", "yes", "on")
+        project_name = (data.get("project_name") or "").strip()
+        property_type = (data.get("property_type") or "single_family").strip()
+        style = (data.get("style") or "modern_farmhouse").strip()
+        description = (data.get("description") or "").strip()
+        lot_size = (data.get("lot_size") or "").strip()
+        zoning = (data.get("zoning") or "").strip()
+        location = (data.get("location") or "").strip()
+        notes = (data.get("notes") or "").strip()
+        save_to_deal = str(data.get("save_to_deal") or "").lower() in ("1", "true", "yes", "on")
 
-        land_image = request.files.get("land_image")
-        image_url = (request.form.get("image_url") or "").strip()
+        image_url = (data.get("image_url") or "").strip()
+        image_base64 = (data.get("image_base64") or "").strip()
 
-        image_base64 = ""
-        if land_image:
-            raw = land_image.read()
-            if raw:
-                image_base64 = base64.b64encode(raw).decode("utf-8")
+        if not image_url and not image_base64 and deal is not None:
+            results = deal.results_json or {}
+            image_url = (results.get("build_reference_image") or "").strip()
+
+        if not image_url and not image_base64:
+            return jsonify({
+                "status": "error",
+                "message": "Build Studio requires an uploaded site image, lot photo, or reference image."
+            }), 400
 
         payload = {
             "project_name": project_name,
@@ -4153,7 +4161,7 @@ def generate_build_studio():
             "lot_size": lot_size,
             "zoning": zoning,
             "image_base64": image_base64,
-            "image_url": image_url or "",
+            "image_url": image_url,
             "count": 1,
             "steps": 6,
             "guidance": 7.5,
@@ -4162,13 +4170,35 @@ def generate_build_studio():
             "height": 640,
         }
 
-        data = _post_renovation_engine_json("/v1/build_concept", payload, timeout=RENDER_TIMEOUT)
+        current_app.logger.warning(f"BUILD ENGINE PAYLOAD: {payload}")
 
-        images = data.get("images_base64") or []
-        saved_paths = data.get("saved_paths") or []
-        meta = data.get("meta") or {}
-        seed = data.get("seed")
-        job_id = data.get("job_id")
+        engine_json = _post_renovation_engine_json(
+            "/v1/build_concept",
+            payload,
+            timeout=RENDER_TIMEOUT,
+        )
+
+        current_app.logger.warning(f"BUILD ENGINE JSON: {engine_json}")
+
+        images_b64 = engine_json.get("images_base64", []) or []
+        if not images_b64:
+            return jsonify({
+                "status": "error",
+                "message": "Build engine returned no images."
+            }), 502
+
+        render_batch_id = uuid.uuid4().hex
+        build_urls = _upload_build_images_from_b64(images_b64, render_batch_id)
+
+        if not build_urls:
+            return jsonify({
+                "status": "error",
+                "message": "Build render completed but uploads failed."
+            }), 500
+
+        meta = engine_json.get("meta") or {}
+        seed = engine_json.get("seed")
+        job_id = engine_json.get("job_id")
 
         if save_to_deal and deal is not None:
             results = _deal_results(deal)
@@ -4181,12 +4211,14 @@ def generate_build_studio():
                 "zoning": zoning,
                 "location": location,
                 "notes": notes,
-                "images_base64": images,
-                "saved_paths": saved_paths,
+                "images": build_urls,
                 "meta": meta,
                 "seed": seed,
                 "job_id": job_id,
+                "build_reference_image": image_url,
             }
+            results["build_mockups"] = build_urls
+            results["build_preview_url"] = build_urls[0] if build_urls else ""
             _set_deal_results(deal, results)
 
         if deal is not None:
@@ -4196,14 +4228,13 @@ def generate_build_studio():
 
         return jsonify({
             "status": "ok",
-            "images": images,
-            "saved_paths": saved_paths,
+            "images": build_urls,
             "meta": meta,
             "seed": seed,
             "job_id": job_id,
             "deal_id": deal.id if deal else None,
             "saved_to_deal": bool(save_to_deal and deal is not None),
-            "mode": "json",
+            "mode": "url",
         })
 
     except Exception as e:
@@ -4320,6 +4351,8 @@ def generate_build_studio_upload():
                 "message": "Empty land image."
             }), 400
 
+        reference_image_url = _upload_build_reference_image(raw)
+
         payload = {
             "project_name": project_name,
             "property_type": property_type,
@@ -4341,14 +4374,32 @@ def generate_build_studio_upload():
         if seed not in (None, "", "None"):
             payload["seed"] = int(seed)
 
+        current_app.logger.warning(f"BUILD UPLOAD ENGINE PAYLOAD: {payload}")
+
         result = _post_renovation_engine_json(
             "/v1/build_concept",
             payload,
             timeout=UPLOAD_TIMEOUT,
         )
 
-        images = result.get("images_base64") or []
-        saved_paths = result.get("saved_paths") or []
+        current_app.logger.warning(f"BUILD UPLOAD ENGINE JSON: {result}")
+
+        images_b64 = result.get("images_base64") or []
+        if not images_b64:
+            return jsonify({
+                "status": "error",
+                "message": "Build engine returned no images."
+            }), 502
+
+        render_batch_id = uuid.uuid4().hex
+        build_urls = _upload_build_images_from_b64(images_b64, render_batch_id)
+
+        if not build_urls:
+            return jsonify({
+                "status": "error",
+                "message": "Build render completed but uploads failed."
+            }), 500
+
         meta = result.get("meta") or {}
         seed = result.get("seed")
         job_id = result.get("job_id")
@@ -4364,12 +4415,15 @@ def generate_build_studio_upload():
                 "location": location,
                 "notes": notes,
                 "style": style,
-                "images_base64": images,
-                "saved_paths": saved_paths,
+                "images": build_urls,
                 "meta": meta,
                 "seed": seed,
                 "job_id": job_id,
+                "build_reference_image": reference_image_url,
             }
+            results["build_mockups"] = build_urls
+            results["build_preview_url"] = build_urls[0] if build_urls else ""
+            results["build_reference_image"] = reference_image_url
             _set_deal_results(deal, results)
 
         if deal is not None:
@@ -4379,13 +4433,13 @@ def generate_build_studio_upload():
 
         return jsonify({
             "status": "ok",
-            "images": images,
-            "saved_paths": saved_paths,
+            "images": build_urls,
             "meta": meta,
             "seed": seed,
             "job_id": job_id,
             "deal_id": deal.id if deal else None,
             "saved_to_deal": bool(save_to_deal and deal is not None),
+            "reference_image_url": reference_image_url,
             "mode": "upload",
         })
 
@@ -5190,6 +5244,53 @@ def renovation_visualizer():
         return jsonify({
             "status": "error",
             "message": f"Renovation generator failed: {e}",
+        }), 500
+
+@investor_bp.route("/build_upload", methods=["POST"])
+@csrf.exempt
+@login_required
+@role_required("investor")
+def build_upload():
+    file = request.files.get("photo")
+    deal_id = _normalize_int(request.form.get("deal_id"))
+
+    if not file or not deal_id:
+        return jsonify({
+            "status": "error",
+            "message": "Missing photo or deal_id.",
+        }), 400
+
+    deal = _get_owned_deal_or_404(deal_id)
+
+    try:
+        raw = file.read()
+        if not raw:
+            return jsonify({
+                "status": "error",
+                "message": "Empty file.",
+            }), 400
+
+        image_url = _upload_before_image(raw)
+
+        if deal is not None:
+            deal.results_json = deal.results_json or {}
+            deal.results_json["build_reference_image"] = image_url
+            flag_modified(deal, "results_json")
+
+        db.session.commit()
+
+        return jsonify({
+            "status": "ok",
+            "url": image_url,
+            "deal_id": deal.id,
+        })
+
+    except Exception as e:
+        current_app.logger.exception("build_upload failed")
+        db.session.rollback()
+        return jsonify({
+            "status": "error",
+            "message": str(e),
         }), 500
 
 # =========================================================
