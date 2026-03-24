@@ -580,20 +580,33 @@ def _save_before_url_to_deal(deal, before_url: str):
 
 
 def _get_rehab_mockups_for_deal(deal):
+    saved_property_id = getattr(deal, "saved_property_id", None)
+
     q = RenovationMockup.query.filter(
         RenovationMockup.user_id == current_user.id,
         (
             (RenovationMockup.deal_id == deal.id) |
             (
-                (RenovationMockup.saved_property_id == getattr(deal, "saved_property_id", None))
-                if getattr(deal, "saved_property_id", None) is not None
+                (RenovationMockup.saved_property_id == saved_property_id)
+                if saved_property_id is not None
                 else False
             )
         )
     ).order_by(RenovationMockup.created_at.desc())
 
-    return q.all()
+    mockups = q.all()
 
+    valid_mockups = [
+        m for m in mockups
+        if getattr(m, "after_url", None)
+        and not str(m.after_url).startswith("outputs/")
+        and (
+            str(m.after_url).startswith("http://")
+            or str(m.after_url).startswith("https://")
+        )
+    ]
+
+    return valid_mockups
 
 def _save_mockups_for_deal(
     deal,
