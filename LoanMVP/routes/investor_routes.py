@@ -4631,7 +4631,7 @@ def convert_build_project_to_deal(project_id):
 # =========================================================
 
 
-            
+        
 
 @investor_bp.route("/deal-architect", methods=["GET", "POST"])
 @investor_bp.route("/deal-architect/<int:deal_id>", methods=["GET", "POST"])
@@ -4658,7 +4658,7 @@ def deal_architect(deal_id=None):
             ).first()
 
     # -------------------------------------------------
-    # DEFAULT VALUES
+    # DEFAULT DISPLAY VALUES
     # -------------------------------------------------
     property_address = ""
     city = ""
@@ -4670,7 +4670,20 @@ def deal_architect(deal_id=None):
     sqft = None
     year_built = None
 
+    purchase_price = None
+    arv = None
+    estimated_rent = None
+    rehab_cost = None
+    lot_size = None
+    zoning = None
+    strategy = ""
+    notes = ""
+
     strategy_analysis = {}
+    rehab_analysis = {}
+    build_analysis = {}
+    build_preview_url = ""
+    build_mockups = []
 
     # -------------------------------------------------
     # LOAD DEAL DATA
@@ -4684,7 +4697,11 @@ def deal_architect(deal_id=None):
         )
         city = getattr(selected_deal, "city", "") or ""
         state = getattr(selected_deal, "state", "") or ""
-        zip_code = getattr(selected_deal, "zip_code", "") or ""
+        zip_code = (
+            getattr(selected_deal, "zip_code", None)
+            or getattr(selected_deal, "zip", None)
+            or ""
+        )
         property_type = (
             getattr(selected_deal, "property_type", None)
             or getattr(selected_deal, "asset_type", None)
@@ -4695,21 +4712,85 @@ def deal_architect(deal_id=None):
         sqft = getattr(selected_deal, "square_feet", None) or getattr(selected_deal, "sqft", None)
         year_built = getattr(selected_deal, "year_built", None)
 
-        strategy_analysis = _deal_results(selected_deal).get("strategy_analysis", {}) or {}
+        purchase_price = getattr(selected_deal, "purchase_price", None)
+        arv = getattr(selected_deal, "arv", None)
+        estimated_rent = getattr(selected_deal, "estimated_rent", None)
+        rehab_cost = (
+            getattr(selected_deal, "rehab_cost", None)
+            or getattr(selected_deal, "estimated_rehab_cost", None)
+        )
+        lot_size = getattr(selected_deal, "lot_size", None)
+        zoning = getattr(selected_deal, "zoning", None)
+        strategy = getattr(selected_deal, "strategy", "") or ""
+        notes = getattr(selected_deal, "notes", "") or ""
+
+        results = _deal_results(selected_deal)
+        strategy_analysis = results.get("strategy_analysis", {}) or {}
+        rehab_analysis = results.get("rehab_analysis", {}) or {}
+        build_analysis = results.get("build_analysis", {}) or {}
+        build_preview_url = results.get("build_preview_url", "") or ""
+        build_mockups = results.get("build_mockups", []) or []
 
     # -------------------------------------------------
-    # HANDLE FORM SUBMIT (POST)
+    # SMALL HELPERS
     # -------------------------------------------------
-    if request.method == "POST" and selected_deal:
+    def _to_float(val):
+        if val in (None, "", "None"):
+            return None
+        try:
+            return float(str(val).replace(",", "").replace("$", "").strip())
+        except Exception:
+            return None
 
-        selected_deal.purchase_price = request.form.get("purchase_price") or selected_deal.purchase_price
-        selected_deal.arv = request.form.get("arv") or selected_deal.arv
-        selected_deal.estimated_rent = request.form.get("estimated_rent") or selected_deal.estimated_rent
-        selected_deal.rehab_cost = request.form.get("rehab_cost") or selected_deal.rehab_cost
+    def _to_int(val):
+        if val in (None, "", "None"):
+            return None
+        try:
+            return int(float(str(val).replace(",", "").strip()))
+        except Exception:
+            return None
+
+    # -------------------------------------------------
+    # HANDLE FORM SUBMIT
+    # -------------------------------------------------
+    if request.method == "POST":
+        if not selected_deal:
+            flash("Select a deal before updating Deal Architect.", "warning")
+            return redirect(url_for("investor.deal_finder"))
+
+        selected_deal.purchase_price = _to_float(request.form.get("purchase_price")) or selected_deal.purchase_price
+        selected_deal.arv = _to_float(request.form.get("arv")) or selected_deal.arv
+        selected_deal.estimated_rent = _to_float(request.form.get("estimated_rent")) or selected_deal.estimated_rent
+        selected_deal.rehab_cost = _to_float(request.form.get("rehab_cost")) or getattr(selected_deal, "rehab_cost", None)
+
+        if hasattr(selected_deal, "property_type"):
+            selected_deal.property_type = request.form.get("property_type") or selected_deal.property_type
+
+        if hasattr(selected_deal, "bedrooms"):
+            selected_deal.bedrooms = _to_int(request.form.get("bedrooms")) or selected_deal.bedrooms
+
+        if hasattr(selected_deal, "bathrooms"):
+            selected_deal.bathrooms = _to_float(request.form.get("bathrooms")) or selected_deal.bathrooms
+
+        if hasattr(selected_deal, "square_feet"):
+            selected_deal.square_feet = _to_int(request.form.get("sqft")) or selected_deal.square_feet
+        elif hasattr(selected_deal, "sqft"):
+            selected_deal.sqft = _to_int(request.form.get("sqft")) or selected_deal.sqft
+
+        if hasattr(selected_deal, "year_built"):
+            selected_deal.year_built = _to_int(request.form.get("year_built")) or selected_deal.year_built
+
+        if hasattr(selected_deal, "lot_size"):
+            selected_deal.lot_size = request.form.get("lot_size") or selected_deal.lot_size
+
+        if hasattr(selected_deal, "zoning"):
+            selected_deal.zoning = request.form.get("zoning") or selected_deal.zoning
+
         selected_deal.strategy = request.form.get("strategy") or selected_deal.strategy
         selected_deal.notes = request.form.get("notes") or selected_deal.notes
 
         db.session.commit()
+        flash("Deal Architect inputs updated.", "success")
 
         return redirect(url_for("investor.deal_architect", deal_id=selected_deal.id))
 
@@ -4731,7 +4812,19 @@ def deal_architect(deal_id=None):
         bathrooms=bathrooms,
         sqft=sqft,
         year_built=year_built,
+        purchase_price=purchase_price,
+        arv=arv,
+        estimated_rent=estimated_rent,
+        rehab_cost=rehab_cost,
+        lot_size=lot_size,
+        zoning=zoning,
+        strategy=strategy,
+        notes=notes,
         strategy_analysis=strategy_analysis,
+        rehab_analysis=rehab_analysis,
+        build_analysis=build_analysis,
+        build_preview_url=build_preview_url,
+        build_mockups=build_mockups,
     )
     
 @investor_bp.route("/deal-architect/analyze", methods=["POST"])
@@ -4748,62 +4841,185 @@ def deal_architect_analyze():
             if not deal:
                 return jsonify({"status": "error", "message": "Deal not found"}), 404
 
-        address = (request.form.get("address") or "").strip()
-        property_type = (request.form.get("property_type") or "").strip().lower()
-        price = safe_float(request.form.get("price"))
-        rehab = safe_float(request.form.get("rehab"))
-        arv = safe_float(request.form.get("arv"))
-        description = (request.form.get("description") or "").strip()
+        def _pick_str(name, fallback=""):
+            val = (request.form.get(name) or "").strip()
+            if val:
+                return val
+            if deal is not None:
+                return str(getattr(deal, name, "") or fallback).strip()
+            return fallback
 
-        flip_profit = arv - (price + rehab)
-        rental_value = arv * 0.008 if arv else 0
+        def _pick_float(form_key, *deal_attrs):
+            raw = request.form.get(form_key)
+            val = safe_float(raw)
+            if val is not None:
+                return val
+            if deal is not None:
+                for attr in deal_attrs:
+                    existing = safe_float(getattr(deal, attr, None))
+                    if existing is not None:
+                        return existing
+            return 0.0
+
+        address = _pick_str("address") or (
+            (
+                getattr(deal, "property_address", None)
+                or getattr(deal, "address", None)
+                or getattr(deal, "street_address", None)
+                or ""
+            ).strip()
+            if deal is not None else ""
+        )
+
+        property_type = (
+            (request.form.get("property_type") or "").strip().lower()
+            or (
+                (
+                    getattr(deal, "property_type", None)
+                    or getattr(deal, "asset_type", None)
+                    or ""
+                ).strip().lower()
+                if deal is not None else ""
+            )
+        )
+
+        description = (request.form.get("description") or "").strip()
+        if not description and deal is not None:
+            description = (getattr(deal, "notes", None) or "").strip()
+
+        price = _pick_float("price", "purchase_price")
+        rehab = _pick_float("rehab", "rehab_cost", "estimated_rehab_cost")
+        arv = _pick_float("arv", "arv")
+        estimated_rent = _pick_float("estimated_rent", "estimated_rent")
+
+        total_basis = price + rehab
+        flip_profit = arv - total_basis if arv else 0.0
+        flip_margin = (flip_profit / arv * 100) if arv else 0.0
+
+        if not estimated_rent and arv:
+            estimated_rent = arv * 0.008
+
+        annual_rent = estimated_rent * 12
+        gross_yield = (annual_rent / total_basis * 100) if total_basis else 0.0
+        monthly_carry_proxy = total_basis * 0.01 if total_basis else 0.0
+        dscr_proxy = (estimated_rent / monthly_carry_proxy) if monthly_carry_proxy else 0.0
 
         strategies = []
 
-        if flip_profit > 20000:
+        if arv > 0:
+            flip_score = 0
+            if flip_profit >= 25000:
+                flip_score += 35
+            elif flip_profit >= 15000:
+                flip_score += 25
+            elif flip_profit > 0:
+                flip_score += 10
+
+            if flip_margin >= 18:
+                flip_score += 30
+            elif flip_margin >= 12:
+                flip_score += 20
+            elif flip_margin >= 8:
+                flip_score += 10
+
+            if rehab <= (price * 0.25 if price else rehab):
+                flip_score += 15
+
             strategies.append({
                 "name": "Fix & Flip",
+                "score": min(round(flip_score), 100),
                 "profit": round(flip_profit, 2),
-                "risk": "Medium",
-                "summary": "Renovate and sell quickly for capital gain."
+                "margin_pct": round(flip_margin, 2),
+                "risk": "Medium" if rehab <= price * 0.35 if price else True else "High",
+                "summary": "Renovate and sell for a near-term capital gain.",
+                "best_for": "Deals with healthy spread between total basis and ARV."
             })
+
+        rental_score = 0
+        if gross_yield >= 10:
+            rental_score += 35
+        elif gross_yield >= 8:
+            rental_score += 25
+        elif gross_yield >= 6:
+            rental_score += 15
+
+        if dscr_proxy >= 1.25:
+            rental_score += 30
+        elif dscr_proxy >= 1.1:
+            rental_score += 20
+        elif dscr_proxy >= 1.0:
+            rental_score += 10
+
+        if rehab <= (price * 0.30 if price else rehab):
+            rental_score += 15
 
         strategies.append({
             "name": "Buy & Hold Rental",
-            "rent_estimate": round(rental_value, 2),
-            "risk": "Low",
-            "summary": "Renovate and hold as long-term rental income."
+            "score": min(round(rental_score), 100),
+            "rent_estimate": round(estimated_rent, 2),
+            "annual_rent": round(annual_rent, 2),
+            "gross_yield_pct": round(gross_yield, 2),
+            "dscr_proxy": round(dscr_proxy, 2),
+            "risk": "Low" if dscr_proxy >= 1.2 else "Medium",
+            "summary": "Renovate and hold for recurring long-term rental income.",
+            "best_for": "Deals with stable rent coverage and durable cash flow."
         })
 
-        if property_type in ["land", "lot"]:
+        if property_type in ["land", "lot", "vacant land"]:
+            dev_score = 55
+            if arv > 0 and total_basis > 0 and flip_margin >= 15:
+                dev_score += 15
+
             strategies.append({
                 "name": "Ground-Up Development",
+                "score": min(round(dev_score), 100),
                 "risk": "High",
-                "summary": "Construct a new property for resale or rental."
+                "summary": "Construct a new property for resale, refinance, or long-term hold.",
+                "best_for": "Land or teardown opportunities with strong end-value potential."
             })
+
+        recommended_strategy = None
+        if strategies:
+            strategies = sorted(strategies, key=lambda s: s.get("score", 0), reverse=True)
+            recommended_strategy = strategies[0]["name"]
+
+        analysis = {
+            "address": address,
+            "property_type": property_type,
+            "description": description,
+            "price": round(price, 2),
+            "rehab": round(rehab, 2),
+            "arv": round(arv, 2),
+            "estimated_rent": round(estimated_rent, 2),
+            "metrics": {
+                "total_basis": round(total_basis, 2),
+                "flip_profit": round(flip_profit, 2),
+                "flip_margin_pct": round(flip_margin, 2),
+                "annual_rent": round(annual_rent, 2),
+                "gross_yield_pct": round(gross_yield, 2),
+                "dscr_proxy": round(dscr_proxy, 2),
+            },
+            "recommended_strategy": recommended_strategy,
+            "strategies": strategies,
+        }
 
         if deal:
             results = _deal_results(deal)
-            results["strategy_analysis"] = {
-                "address": address,
-                "property_type": property_type,
-                "description": description,
-                "price": price,
-                "rehab": rehab,
-                "arv": arv,
-                "strategies": strategies,
-            }
+            results["strategy_analysis"] = analysis
+
+            if recommended_strategy:
+                deal.recommended_strategy = recommended_strategy
+                if not deal.strategy:
+                    deal.strategy = recommended_strategy
+
             _set_deal_results(deal, results)
             db.session.commit()
 
         return jsonify({
             "status": "ok",
-            "address": address,
-            "property_type": property_type,
-            "description": description,
-            "strategies": strategies,
             "saved_to_deal": bool(deal),
             "deal_id": deal.id if deal else None,
+            **analysis,
         })
 
     except Exception as e:
@@ -4812,7 +5028,6 @@ def deal_architect_analyze():
             "status": "error",
             "message": str(e)
         }), 500
-
 
 @investor_bp.route("/deal-architect/strategy", methods=["POST"])
 @csrf.exempt
