@@ -33,6 +33,7 @@ class User(UserMixin, db.Model):
     onboarding_complete = db.Column(db.Boolean, default=False)
     ica_accepted = db.Column(db.Boolean, default=False)
     onboarding_step = db.Column(db.String(50), default="ica")
+    subscription = db.Column(db.String(50), default="free")
 
     # Timestamps
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
