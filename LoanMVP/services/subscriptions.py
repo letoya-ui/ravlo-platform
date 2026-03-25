@@ -1,4 +1,4 @@
-from user_models import User
+from LoanMVP.models.user_model import User
 
 def sync_features_with_subscription(user_id):
     user = User.query.get(user_id)
