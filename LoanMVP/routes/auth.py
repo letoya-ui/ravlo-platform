@@ -17,7 +17,7 @@ from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
 from LoanMVP.app import login_manager, mail
 from LoanMVP.extensions import csrf, db
 from LoanMVP.forms import RegisterForm, ResetPasswordForm, ResetPasswordRequestForm, LoginForm
-from utils.subscriptions import sync_features_with_subscription
+from LoanMVP.services.subscriptions import sync_features_with_subscription
 
 from LoanMVP.models.user_model import User
 from LoanMVP.models.admin import UserInvite
