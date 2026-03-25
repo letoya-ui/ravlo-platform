@@ -1,3 +1,5 @@
+from user_models import User
+
 def sync_features_with_subscription(user_id):
     user = User.query.get(user_id)
     tier = user.subscription_tier  # "free", "featured", "premium"
