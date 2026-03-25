@@ -17,6 +17,8 @@ from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
 from LoanMVP.app import login_manager, mail
 from LoanMVP.extensions import csrf, db
 from LoanMVP.forms import RegisterForm, ResetPasswordForm, ResetPasswordRequestForm, LoginForm
+from utils.subscriptions import sync_features_with_subscription
+
 from LoanMVP.models.user_model import User
 from LoanMVP.models.admin import UserInvite
 from LoanMVP.models.investor_models import InvestorProfile
@@ -105,7 +107,6 @@ def _full_name_from_user(user: User) -> str:
 # ============================================================
 # LOGIN
 # ============================================================
-
 @auth_bp.route("/login", methods=["GET", "POST"])
 @csrf.exempt
 def login():
@@ -115,26 +116,21 @@ def login():
         email = (request.form.get("email") or "").strip().lower()
         password = request.form.get("password") or ""
 
-        print("==== LOGIN TEST ====")
-        print("POST DATA:", dict(request.form))
-        print("EMAIL:", email)
-        print("PASSWORD PRESENT:", bool(password))
-
         user = User.query.filter(func.lower(User.email) == email).first()
-        print("USER FOUND:", bool(user))
-
-        if user:
-            print("PASSWORD OK:", user.check_password(password))
 
         if not user or not user.check_password(password):
             flash("Invalid email or password.", "danger")
             return render_template("auth/login.html", form=form)
 
+        # ⭐ STEP 3: Sync subscription → features
+        sync_features_with_subscription(user.id)
+
+        # Continue login
         login_user(user)
-        print("LOGIN SUCCESS")
         return redirect(url_for("auth.post_login_redirect"))
 
     return render_template("auth/login.html", form=form)
+
 
 
 @auth_bp.route("/register/invite/<token>", methods=["GET", "POST"])
