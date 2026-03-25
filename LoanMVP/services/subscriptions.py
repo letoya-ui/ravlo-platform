@@ -1,45 +1,45 @@
 from LoanMVP.models.user_model import User
 
 def sync_features_with_subscription(user_id):
+    from LoanMVP.models import User
+    from LoanMVP.extensions import db
+
     user = User.query.get(user_id)
-    tier = user.subscription or "free"  # "free", "featured", "premium"
-    
+    if not user:
+        return
+
+    # Always define feature_map FIRST
+    feature_map = {
+        "free": {
+            "feature_a": False,
+            "feature_b": False,
+            "feature_c": False,
+        },
+        "core": {
+            "feature_a": True,
+            "feature_b": False,
+            "feature_c": False,
+        },
+        "pro": {
+            "feature_a": True,
+            "feature_b": True,
+            "feature_c": False,
+        },
+        "enterprise": {
+            "feature_a": True,
+            "feature_b": True,
+            "feature_c": True,
+        },
+    }
+
+    # Normalize tier
+    tier = user.subscription or "free"
+
+    # Safety fallback
     if tier not in feature_map:
         tier = "free"
 
-    feature_map = {
-        "free": {
-            "crm": True,
-            "deal_visibility": False,
-            "proposal_builder": False,
-            "instant_quote": False,
-            "ai_assist": False,
-            "priority_placement": False,
-            "smart_notifications": False,
-            "portfolio_showcase": False
-        },
-        "featured": {
-            "crm": True,
-            "deal_visibility": True,
-            "proposal_builder": True,
-            "instant_quote": False,
-            "ai_assist": False,
-            "priority_placement": False,
-            "smart_notifications": False,
-            "portfolio_showcase": False
-        },
-        "premium": {
-            "crm": True,
-            "deal_visibility": True,
-            "proposal_builder": True,
-            "instant_quote": True,
-            "ai_assist": True,
-            "priority_placement": True,
-            "smart_notifications": True,
-            "portfolio_showcase": True
-        }
-    }
-
+    # Apply features
     for feature, value in feature_map[tier].items():
         setattr(user, feature, value)
 
