@@ -2,7 +2,7 @@ from LoanMVP.models.user_model import User
 
 def sync_features_with_subscription(user_id):
     user = User.query.get(user_id)
-    tier = user.subscription_tier  # "free", "featured", "premium"
+    tier = user.subscription  # "free", "featured", "premium"
 
     feature_map = {
         "free": {
