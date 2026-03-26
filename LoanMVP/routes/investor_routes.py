@@ -5416,9 +5416,9 @@ def renovation_visualizer():
             "prompt": final_prompt,
             "count": 1,
             "steps": 20,
-            "strength": 0.48,
+            "strength": 0.46,
             "controlnet_scale": 0.72,
-            "guidance": 7.2,
+            "guidance": 7.3,
             "width": 640,
             "height": 640,
         }
