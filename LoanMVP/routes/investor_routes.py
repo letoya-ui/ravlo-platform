@@ -5415,12 +5415,12 @@ def renovation_visualizer():
             "preset": style_preset,
             "prompt": final_prompt,
             "count": 1,
-            "steps": 18,
-            "strength": 0.52,
-            "controlnet_scale": 0.65,
-            "guidance": 7.0,
-            "width": 768,
-            "height": 768,
+            "steps": 20,
+            "strength": 0.50,
+            "controlnet_scale": 0.68,
+            "guidance": 7.2,
+            "width": 640,
+            "height": 640,
         }
 
         current_app.logger.warning(f"RENOVATION ENGINE PAYLOAD: {payload}")
