@@ -5415,10 +5415,10 @@ def renovation_visualizer():
             "preset": style_preset,
             "prompt": final_prompt,
             "count": 1,
-            "steps": 16,
+            "steps": 18,
             "strength": 0.52,
-            "controlnet_scale": 0.60,
-            "guidance": 6.8,
+            "controlnet_scale": 0.65,
+            "guidance": 7.0,
             "width": 640,
             "height": 640,
         }
