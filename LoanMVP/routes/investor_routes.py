@@ -5419,8 +5419,8 @@ def renovation_visualizer():
             "strength": 0.52,
             "controlnet_scale": 0.60,
             "guidance": 6.8,
-            "width": 768,
-            "height": 768,
+            "width": 640,
+            "height": 640,
         }
 
         current_app.logger.warning(f"RENOVATION ENGINE PAYLOAD: {payload}")
