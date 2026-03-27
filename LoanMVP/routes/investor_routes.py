@@ -4221,9 +4221,9 @@ def generate_build_studio():
             "image_base64": image_base64,
             "image_url": image_url,
             "count": 1,
-            "steps": 6,
-            "guidance": 7.5,
-            "strength": 0.75,
+            "steps": 24,
+            "guidance": 8.0,
+            "strength": 0.72,
             "width": 640,
             "height": 640,
         }
