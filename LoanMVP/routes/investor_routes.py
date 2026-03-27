@@ -4223,7 +4223,7 @@ def generate_build_studio():
             "count": 1,
             "steps": 24,
             "guidance": 9.0,
-            "strength": 0.58,
+            "strength": 0.55,
             "width": 640,
             "height": 640,
         }
