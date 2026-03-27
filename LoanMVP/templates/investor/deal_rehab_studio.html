@@ -724,9 +724,13 @@
 
     try {
       const fd = new FormData();
-      fd.append("image_url", CURRENT_BEFORE);
+      fd.append("style_prompt", prompt);
       fd.append("prompt_notes", prompt);
+
+      fd.append("style_preset", preset);
       fd.append("preset", preset);
+
+      fd.append("variations", String(variations));
       fd.append("count", String(variations));
       fd.append("save_to_deal", "true");
       fd.append("deal_id", "{{ deal.id }}");

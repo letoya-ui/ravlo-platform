@@ -5312,9 +5312,29 @@ def renovation_visualizer():
         image_file = request.files.get("image_file")
         image_url = (request.form.get("image_url") or "").strip()
 
-        style_prompt = (request.form.get("style_prompt") or "").strip()
-        requested_style_preset = (request.form.get("style_preset") or "").strip()
-        variations = max(1, min(int(request.form.get("variations", 1)), 4))
+        style_prompt = (
+            request.form.get("style_prompt")
+            or request.form.get("prompt_notes")
+            or ""
+        ).strip()
+
+        requested_style_preset = (
+            request.form.get("style_preset")
+            or request.form.get("preset")
+            or ""
+        ).strip()
+
+        variations_raw = (
+            request.form.get("variations")
+            or request.form.get("count")
+            or "1"
+        )
+
+        try:
+            variations = max(1, min(int(variations_raw), 4))
+        except (TypeError, ValueError):
+            variations = 1
+
         save_to_deal = (request.form.get("save_to_deal") or "").lower() in (
             "1", "true", "yes", "on"
         )
@@ -5351,7 +5371,7 @@ def renovation_visualizer():
                 "status": "error",
                 "message": "Add a style prompt or choose a preset.",
             }), 400
-
+ 
         if deal_id:
             deal = Deal.query.filter_by(id=deal_id, user_id=current_user.id).first()
             if not deal:
@@ -5417,7 +5437,7 @@ def renovation_visualizer():
             "count": 1,
             "steps": 22,
             "strength": 0.46,
-            "controlnet_scale": 0.58,
+            "controlnet_scale": 0.45,
             "guidance": 7.3,
             "width": 640,
             "height": 640,
