@@ -724,6 +724,8 @@
 
     try {
       const fd = new FormData();
+      fd.append("image_url", CURRENT_BEFORE);
+
       fd.append("style_prompt", prompt);
       fd.append("prompt_notes", prompt);
 
