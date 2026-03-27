@@ -706,7 +706,39 @@ def _set_featured_rehab(deal, after_url: str, before_url: str = "", style_preset
     db.session.commit()
     return payload["rehab"]["featured"]
 
+def build_visualizer_helper_prompt(style_prompt: str, style_preset: str = "", room_focus: str = "kitchen") -> str:
+    style_prompt = (style_prompt or "").strip().lower()
+    style_preset = (style_preset or "").strip().lower()
+    room_focus = (room_focus or "kitchen").strip().lower()
 
+    preset_map = {
+        "luxury": "luxury modern renovation",
+        "modern": "clean modern renovation",
+        "airbnb": "airbnb-ready renovation",
+        "flip": "high-end resale renovation",
+        "budget": "budget-friendly renovation",
+        "luxury_modern": "luxury modern renovation",
+    }
+
+    parts = [
+        "photorealistic real estate renovation",
+        "same exact room layout",
+        "preserve layout and geometry but allow full material replacement",
+    ]
+
+    if room_focus == "kitchen":
+        parts.append("kitchen renovation")
+
+    preset_text = preset_map.get(style_preset)
+    if preset_text:
+        parts.append(preset_text)
+
+    if style_prompt:
+        parts.append(
+            f"completely replace cabinets, countertops, flooring, fixtures, and finishes with {style_prompt}"
+        )
+
+    return ", ".join(dict.fromkeys(parts))
 # =========================================================
 # ENGINE STABILITY HELPERS
 # =========================================================
@@ -5421,11 +5453,18 @@ def renovation_visualizer():
             _save_before_url_to_deal(deal, before_url)
 
         style_preset = _normalize_style_preset(requested_style_preset)
-        final_prompt = _compose_style_prompt(
-            style_prompt,
-            requested_style_preset,
-            keep_layout=False,
+
+        final_prompt = build_visualizer_helper_prompt(
+            style_prompt=style_prompt,
+            style_preset=style_preset,
+            room_focus="kitchen",  # swap later if you infer room type
         )
+
+        print("style_prompt:", style_prompt)
+        print("requested_style_preset:", requested_style_preset)
+        print("style_preset:", style_preset)
+        print("final_prompt:", final_prompt)
+
         render_batch_id = uuid.uuid4().hex
 
         payload = {
