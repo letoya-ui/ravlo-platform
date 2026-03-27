@@ -5437,7 +5437,7 @@ def renovation_visualizer():
             "count": 1,
             "steps": 24,
             "strength": 0.75,
-            "controlnet_scale": 0.65,
+            "controlnet_scale": 0.50,
             "guidance": 8.0,
             "width": 640,
             "height": 640,
