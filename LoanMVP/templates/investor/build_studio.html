@@ -1219,6 +1219,10 @@ async function generateActiveMode() {
 
       renderModePreview("interior");
       if (status) status.innerText = "Interior generated successfully.";
+  
+      setTimeout(() => {
+      window.location.reload();
+      }, 500);
     }
 
     else if (ACTIVE_MODE === "blueprint") {

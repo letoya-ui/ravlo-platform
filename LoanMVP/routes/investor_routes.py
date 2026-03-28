@@ -4170,14 +4170,10 @@ def build_studio(deal_id=None):
         interior_block = build_project.get("interior", {}) or {}
         blueprint_block = build_project.get("blueprint", {}) or {}
 
-        # Exterior stays simple
         exterior_result = exterior_block
-
-        # Interior now supports a room collection + latest
         interior_rooms = interior_block.get("rooms", []) or []
         interior_result = interior_block.get("latest", {}) or {}
 
-        # Backward compatibility in case old saves were single-object only
         if not interior_result and interior_block.get("image_url"):
             interior_result = interior_block
 
@@ -4207,6 +4203,7 @@ def build_studio(deal_id=None):
         page_title="Build Studio",
         page_subtitle="Design and visualize new construction projects.",
     )
+
 # =========================================================
 # 🏗️ BUILD STUDIO — GENERATE CONCEPT
 # =========================================================
@@ -4751,7 +4748,9 @@ def generate_build_studio_upload():
                 "seed": seed,
                 "job_id": job_id,
                 "build_reference_image": reference_image_url,
-            }
+            },
+            "gallery": build_urls,
+        }
 
             results["build_project"] = build_project
 
@@ -4760,6 +4759,7 @@ def generate_build_studio_upload():
 
             _set_deal_results(deal, results)
 
+       
         if deal is not None:
             _clear_deal_render_processing(deal)
 
