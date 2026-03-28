@@ -4956,10 +4956,9 @@ def generate_build_studio_upload():
 
     try:
         deal_id = _normalize_int(request.form.get("deal_id"))
-        mode = (request.form.get("mode") or "exterior").strip().lower()
 
-        if mode != "exterior":
-            mode = "exterior"
+        # 🔒 This route is EXTERIOR ONLY by design
+        mode = "exterior"
 
         if deal_id:
             deal = Deal.query.filter_by(id=deal_id, user_id=current_user.id).first()
@@ -4978,6 +4977,9 @@ def generate_build_studio_upload():
             _set_deal_render_processing(deal)
             db.session.commit()
 
+        # -----------------------------
+        # FORM DATA
+        # -----------------------------
         project_name = (request.form.get("project_name") or "").strip()
         property_type = (request.form.get("property_type") or "single_family").strip()
         description = (request.form.get("description") or "").strip()
@@ -4986,9 +4988,14 @@ def generate_build_studio_upload():
         location = (request.form.get("location") or "").strip()
         notes = (request.form.get("notes") or "").strip()
         style = (request.form.get("style") or "modern_farmhouse").strip()
+
         save_to_deal = (request.form.get("save_to_deal") or "").lower() in ("1", "true", "yes", "on")
 
+        # -----------------------------
+        # REQUIRED IMAGE
+        # -----------------------------
         land_image = request.files.get("land_image")
+
         if not land_image:
             return jsonify({
                 "status": "error",
@@ -5002,8 +5009,12 @@ def generate_build_studio_upload():
                 "message": "Empty land image."
             }), 400
 
+        # Upload original reference (before image)
         reference_image_url = _upload_before_image(raw)
 
+        # -----------------------------
+        # ENGINE PAYLOAD
+        # -----------------------------
         payload = {
             "mode": "exterior",
             "project_name": project_name,
@@ -5012,13 +5023,16 @@ def generate_build_studio_upload():
             "description": description,
             "lot_size": lot_size,
             "zoning": zoning,
+
+            # ALWAYS use uploaded image for exterior
             "image_base64": base64.b64encode(raw).decode("utf-8"),
             "image_url": "",
+
             "width": 640,
             "height": 640,
-            "steps": 20,
+            "steps": 22,
             "guidance": 7.5,
-            "strength": 0.68,
+            "strength": 0.65,  # slight tweak from 0.68
             "count": 1,
         }
 
@@ -5028,6 +5042,9 @@ def generate_build_studio_upload():
 
         current_app.logger.warning(f"BUILD UPLOAD ENGINE PAYLOAD: {payload}")
 
+        # -----------------------------
+        # CALL ENGINE
+        # -----------------------------
         result = _post_renovation_engine_json(
             "/v1/build_concept",
             payload,
@@ -5043,6 +5060,9 @@ def generate_build_studio_upload():
                 "message": "Build engine returned no images."
             }), 502
 
+        # -----------------------------
+        # SAVE OUTPUT IMAGES
+        # -----------------------------
         render_batch_id = uuid.uuid4().hex
         build_urls = _upload_after_images_from_b64(images_b64, render_batch_id)
 
@@ -5056,6 +5076,9 @@ def generate_build_studio_upload():
         seed = result.get("seed")
         job_id = result.get("job_id")
 
+        # -----------------------------
+        # SAVE TO DEAL
+        # -----------------------------
         if save_to_deal and deal is not None:
             results = _deal_results(deal)
             build_project = results.get("build_project", {}) or {}
@@ -5070,24 +5093,21 @@ def generate_build_studio_upload():
                     "location": location,
                     "notes": notes,
                     "style": style,
-                    "image_url": build_urls[0] if build_urls else "",
+                    "image_url": build_urls[0],
                     "images": build_urls,
                     "meta": meta,
                     "seed": seed,
                     "job_id": job_id,
                     "build_reference_image": reference_image_url,
-                 },
-                 "gallery": build_urls,
+                },
+                "gallery": build_urls,
             }
 
             results["build_project"] = build_project
-
-            # Optional backward compatibility while you transition old pages
-            results["build_reference_image"] = reference_image_url
+            results["build_reference_image"] = reference_image_url  # legacy support
 
             _set_deal_results(deal, results)
 
-       
         if deal is not None:
             _clear_deal_render_processing(deal)
 
@@ -5097,7 +5117,7 @@ def generate_build_studio_upload():
             "status": "ok",
             "mode": "exterior",
             "images": build_urls,
-            "image_url": build_urls[0] if build_urls else "",
+            "image_url": build_urls[0],
             "meta": meta,
             "seed": seed,
             "job_id": job_id,
