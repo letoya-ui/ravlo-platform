@@ -3,28 +3,28 @@
 
 {% block page_title %}Build Project{% endblock %}
 {% block page_subline %}
-Review your saved build concept and development assumptions.
+Review your saved build concept, development inputs, and launch this project into Build Studio or Deal execution.
 {% endblock %}
 
 {% block topbar_actions %}
   <a href="{{ url_for('investor.build_projects') }}" class="ravlo-btn ghost sm">
     Back to Build Projects
   </a>
-  <a href="{{ url_for('investor.build_studio) }}" class="ravlo-btn primary sm">
-    New Concept
+
+  <a href="{{ url_for('investor.build_studio', project_id=project.id) }}" class="ravlo-btn primary sm">
+    Open in Build Studio
   </a>
 
   <button type="button" class="ravlo-btn primary sm" onclick="convertToDeal({{ project.id }})">
-  Convert to Deal
-</button>
+    Convert to Deal
+  </button>
 {% endblock %}
 
 {% block content %}
 <div class="ravlo-shell-page">
 
-  <!-- HERO -->
-  <section class="ravlo-hero-card">
-    <div>
+  <section class="ravlo-hero-card build-hero">
+    <div class="build-hero-copy">
       <div class="eyebrow">RAVLO BUILD PROJECT</div>
       <h2>{{ project.project_name or "Untitled Build Project" }}</h2>
       <p class="muted">
@@ -32,26 +32,45 @@ Review your saved build concept and development assumptions.
       </p>
 
       <div class="ravlo-chip-row" style="margin-top:16px;">
-        <span class="ravlo-chip">{{ project.property_type or "No property type" }}</span>
+        <span class="ravlo-chip">
+          {{ project.property_type or "No property type" }}
+        </span>
+
         {% if project.zoning %}
-        <span class="ravlo-chip">Zoning: {{ project.zoning }}</span>
+          <span class="ravlo-chip">Zoning: {{ project.zoning }}</span>
         {% endif %}
+
         {% if project.lot_size %}
-        <span class="ravlo-chip">Lot: {{ project.lot_size }}</span>
+          <span class="ravlo-chip">Lot: {{ project.lot_size }}</span>
+        {% endif %}
+
+        {% if project.created_at %}
+          <span class="ravlo-chip">
+            Created {{ project.created_at.strftime('%b %d, %Y') }}
+          </span>
         {% endif %}
       </div>
     </div>
 
     <div class="build-hero-actions">
-      <a href="{{ url_for('investor.build_studio') }}" class="ravlo-btn ghost">
-        Generate New Concept
+      <a href="{{ url_for('investor.build_studio', project_id=project.id) }}" class="ravlo-btn primary">
+        Open in Build Studio
       </a>
+
+      <button type="button" class="ravlo-btn ghost" onclick="convertToDeal({{ project.id }})">
+        Convert to Deal
+      </button>
+
+      {% if project.concept_render_url %}
+        <a href="{{ project.concept_render_url }}" target="_blank" class="ravlo-btn ghost">
+          Open Render
+        </a>
+      {% endif %}
     </div>
   </section>
 
   <div class="build-detail-grid">
 
-    <!-- LEFT -->
     <div class="build-detail-stack">
 
       <section class="ravlo-card pad">
@@ -82,6 +101,16 @@ Review your saved build concept and development assumptions.
             <span>Zoning</span>
             <strong>{{ project.zoning or "—" }}</strong>
           </div>
+
+          <div class="analysis-box">
+            <span>Location</span>
+            <strong>{{ project.location or "—" }}</strong>
+          </div>
+
+          <div class="analysis-box">
+            <span>Project ID</span>
+            <strong>#{{ project.id }}</strong>
+          </div>
         </div>
       </section>
 
@@ -111,9 +140,29 @@ Review your saved build concept and development assumptions.
         </div>
       </section>
 
+      <section class="ravlo-card pad">
+        <div class="section-head">
+          <div>
+            <div class="eyebrow">WORKFLOW</div>
+            <h3>Next Actions</h3>
+          </div>
+        </div>
+
+        <div class="quick-grid">
+          <a href="{{ url_for('investor.build_studio', project_id=project.id) }}" class="quick-card">
+            <span class="quick-title">Open in Build Studio</span>
+            <span class="quick-sub">Generate exterior, interior, and blueprint concepts from this project.</span>
+          </a>
+
+          <button type="button" class="quick-card quick-card-button" onclick="convertToDeal({{ project.id }})">
+            <span class="quick-title">Convert to Deal</span>
+            <span class="quick-sub">Move this development concept into your active deal workflow.</span>
+          </button>
+        </div>
+      </section>
+
     </div>
 
-    <!-- RIGHT -->
     <div class="build-detail-stack">
 
       <section class="ravlo-card pad">
@@ -128,8 +177,25 @@ Review your saved build concept and development assumptions.
           <div class="build-feature-image">
             <img src="{{ project.concept_render_url }}" alt="Build concept render">
           </div>
+
+          <div class="inline-actions">
+            <a href="{{ url_for('investor.build_studio', project_id=project.id) }}" class="ravlo-btn primary">
+              Improve This Concept
+            </a>
+            <a href="{{ project.concept_render_url }}" target="_blank" class="ravlo-btn ghost">
+              Open Full Image
+            </a>
+          </div>
         {% else %}
-          <div class="empty-state-inline">No concept render saved yet.</div>
+          <div class="empty-state-inline">
+            No concept render saved yet. Open this project in Build Studio to generate one.
+          </div>
+
+          <div class="inline-actions">
+            <a href="{{ url_for('investor.build_studio', project_id=project.id) }}" class="ravlo-btn primary">
+              Generate Concept
+            </a>
+          </div>
         {% endif %}
       </section>
 
@@ -143,28 +209,28 @@ Review your saved build concept and development assumptions.
 
         <div class="quick-grid one-col">
           {% if project.blueprint_url %}
-          <a href="{{ project.blueprint_url }}" target="_blank" class="quick-card">
-            <span class="quick-title">Blueprint</span>
-            <span class="quick-sub">Open uploaded blueprint file</span>
-          </a>
+            <a href="{{ project.blueprint_url }}" target="_blank" class="quick-card">
+              <span class="quick-title">Blueprint</span>
+              <span class="quick-sub">Open uploaded blueprint file</span>
+            </a>
           {% endif %}
 
           {% if project.site_plan_url %}
-          <a href="{{ project.site_plan_url }}" target="_blank" class="quick-card">
-            <span class="quick-title">Site Plan</span>
-            <span class="quick-sub">Open uploaded site plan</span>
-          </a>
+            <a href="{{ project.site_plan_url }}" target="_blank" class="quick-card">
+              <span class="quick-title">Site Plan</span>
+              <span class="quick-sub">Open uploaded site plan</span>
+            </a>
           {% endif %}
 
           {% if project.presentation_url %}
-          <a href="{{ project.presentation_url }}" target="_blank" class="quick-card">
-            <span class="quick-title">Presentation</span>
-            <span class="quick-sub">Open saved presentation file</span>
-          </a>
+            <a href="{{ project.presentation_url }}" target="_blank" class="quick-card">
+              <span class="quick-title">Presentation</span>
+              <span class="quick-sub">Open saved presentation file</span>
+            </a>
           {% endif %}
 
           {% if not project.blueprint_url and not project.site_plan_url and not project.presentation_url %}
-          <div class="empty-state-inline">No files attached yet.</div>
+            <div class="empty-state-inline">No files attached yet.</div>
           {% endif %}
         </div>
       </section>
@@ -212,8 +278,21 @@ Review your saved build concept and development assumptions.
     gap:20px;
   }
 
+  .build-hero{
+    display:flex;
+    justify-content:space-between;
+    gap:20px;
+    flex-wrap:wrap;
+    align-items:flex-start;
+  }
+
+  .build-hero-copy{
+    flex:1 1 540px;
+    min-width:280px;
+  }
+
   .build-hero-actions{
-    min-width:220px;
+    min-width:240px;
     display:grid;
     gap:12px;
   }
@@ -256,6 +335,7 @@ Review your saved build concept and development assumptions.
     color:var(--text);
     font-size:20px;
     font-weight:800;
+    line-height:1.35;
   }
 
   .report-note{
@@ -269,6 +349,7 @@ Review your saved build concept and development assumptions.
     margin:0;
     color:var(--muted);
     line-height:1.7;
+    white-space:pre-wrap;
   }
 
   .build-feature-image{
@@ -283,6 +364,13 @@ Review your saved build concept and development assumptions.
     display:block;
     object-fit:cover;
     max-height:460px;
+  }
+
+  .inline-actions{
+    display:flex;
+    flex-wrap:wrap;
+    gap:10px;
+    margin-top:14px;
   }
 
   .quick-grid{
@@ -303,12 +391,22 @@ Review your saved build concept and development assumptions.
     border:1px solid rgba(255,255,255,.08);
     text-decoration:none;
     transition:.2s ease;
+    color:inherit;
   }
 
   .quick-card:hover{
     transform:translateY(-1px);
     border-color:rgba(107,127,147,.35);
     background:rgba(255,255,255,.045);
+  }
+
+  .quick-card-button{
+    width:100%;
+    text-align:left;
+    cursor:pointer;
+    appearance:none;
+    -webkit-appearance:none;
+    font:inherit;
   }
 
   .quick-title{
@@ -329,6 +427,7 @@ Review your saved build concept and development assumptions.
   .empty-state-inline{
     color:var(--muted);
     padding:8px 0;
+    line-height:1.6;
   }
 
   @media (max-width: 1000px){
@@ -338,7 +437,8 @@ Review your saved build concept and development assumptions.
   }
 
   @media (max-width: 700px){
-    .analysis-grid{
+    .analysis-grid,
+    .quick-grid{
       grid-template-columns:1fr;
     }
 
@@ -348,6 +448,7 @@ Review your saved build concept and development assumptions.
     }
   }
 </style>
+
 <script>
   async function convertToDeal(projectId) {
     try {

@@ -1,0 +1,434 @@
+{% extends "layouts/ravlo_base.html" %}
+{% block title %}Ravlo • Build Projects{% endblock %}
+
+{% block page_title %}Build Projects{% endblock %}
+{% block page_subline %}
+Manage saved development concepts, review project assets, and launch any project into Build Studio or Deal execution.
+{% endblock %}
+
+{% block topbar_actions %}
+  <a href="{{ url_for('investor.build_studio') }}" class="ravlo-btn primary sm">
+    New Build Concept
+  </a>
+{% endblock %}
+
+{% block content %}
+<div class="projects-shell">
+
+  <section class="ravlo-hero-card projects-hero">
+    <div class="projects-hero-copy">
+      <div class="eyebrow">RAVLO DEVELOPMENT PIPELINE</div>
+      <h2>Build Project Library</h2>
+      <p class="muted">
+        Save, review, and move development concepts into Build Studio, budgeting, and deal execution.
+      </p>
+
+      <div class="hero-chip-row">
+        <span class="ravlo-chip">{{ projects|length }} Project{{ '' if projects|length == 1 else 's' }}</span>
+        <span class="ravlo-chip">Development Concepts</span>
+        <span class="ravlo-chip">Studio-Ready Workflow</span>
+      </div>
+    </div>
+
+    <div class="projects-hero-actions">
+      <a href="{{ url_for('investor.build_studio') }}" class="ravlo-btn primary">
+        Open Build Studio
+      </a>
+    </div>
+  </section>
+
+  {% if projects %}
+    <section class="projects-grid">
+      {% for project in projects %}
+        <article class="project-card">
+          <div class="project-card-media">
+            {% if project.concept_render_url %}
+              <img src="{{ project.concept_render_url }}" alt="{{ project.project_name or 'Build Project' }}">
+            {% else %}
+              <div class="project-media-empty">
+                <span>No Render Yet</span>
+              </div>
+            {% endif %}
+          </div>
+
+          <div class="project-card-body">
+            <div class="project-top">
+              <div>
+                <div class="eyebrow">BUILD PROJECT</div>
+                <h3>{{ project.project_name or "Untitled Build Project" }}</h3>
+              </div>
+
+              <span class="project-id">#{{ project.id }}</span>
+            </div>
+
+            <p class="project-location">
+              {{ project.location or "No location saved" }}
+            </p>
+
+            <div class="project-chip-row">
+              <span class="ravlo-chip">{{ project.property_type or "No property type" }}</span>
+
+              {% if project.zoning %}
+                <span class="ravlo-chip">Zoning: {{ project.zoning }}</span>
+              {% endif %}
+
+              {% if project.lot_size %}
+                <span class="ravlo-chip">Lot: {{ project.lot_size }}</span>
+              {% endif %}
+            </div>
+
+            <div class="project-description">
+              {{ project.description or "No project description saved yet." }}
+            </div>
+
+            <div class="project-assets">
+              {% if project.blueprint_url %}
+                <span class="asset-pill ready">Blueprint</span>
+              {% else %}
+                <span class="asset-pill">Blueprint</span>
+              {% endif %}
+
+              {% if project.site_plan_url %}
+                <span class="asset-pill ready">Site Plan</span>
+              {% else %}
+                <span class="asset-pill">Site Plan</span>
+              {% endif %}
+
+              {% if project.presentation_url %}
+                <span class="asset-pill ready">Presentation</span>
+              {% else %}
+                <span class="asset-pill">Presentation</span>
+              {% endif %}
+            </div>
+
+            <div class="project-meta">
+              <div class="meta-block">
+                <span>Created</span>
+                <strong>
+                  {% if project.created_at %}
+                    {{ project.created_at.strftime('%b %d, %Y') }}
+                  {% else %}
+                    —
+                  {% endif %}
+                </strong>
+              </div>
+
+              <div class="meta-block">
+                <span>Updated</span>
+                <strong>
+                  {% if project.updated_at %}
+                    {{ project.updated_at.strftime('%b %d, %Y') }}
+                  {% else %}
+                    —
+                  {% endif %}
+                </strong>
+              </div>
+            </div>
+
+            <div class="project-actions">
+              <a href="{{ url_for('investor.build_project_detail', project_id=project.id) }}" class="ravlo-btn ghost">
+                View Project
+              </a>
+
+              <a href="{{ url_for('investor.build_studio', project_id=project.id) }}" class="ravlo-btn primary">
+                Open in Build Studio
+              </a>
+
+              <button type="button" class="ravlo-btn ghost" onclick="convertToDeal({{ project.id }})">
+                Convert to Deal
+              </button>
+            </div>
+          </div>
+        </article>
+      {% endfor %}
+    </section>
+  {% else %}
+    <section class="ravlo-card pad empty-library">
+      <div class="empty-icon">🏗</div>
+      <h3>No Build Projects Yet</h3>
+      <p class="muted">
+        Start in Build Studio to create your first development concept, then save it into your Build Project library.
+      </p>
+
+      <div class="empty-actions">
+        <a href="{{ url_for('investor.build_studio') }}" class="ravlo-btn primary">
+          Create First Build Concept
+        </a>
+      </div>
+    </section>
+  {% endif %}
+
+</div>
+
+<style>
+  .projects-shell{
+    display:grid;
+    gap:20px;
+  }
+
+  .projects-hero{
+    display:flex;
+    justify-content:space-between;
+    gap:20px;
+    flex-wrap:wrap;
+    align-items:flex-start;
+  }
+
+  .projects-hero-copy{
+    flex:1 1 560px;
+    min-width:280px;
+  }
+
+  .projects-hero-actions{
+    min-width:220px;
+    display:grid;
+    gap:12px;
+  }
+
+  .hero-chip-row{
+    display:flex;
+    flex-wrap:wrap;
+    gap:10px;
+    margin-top:16px;
+  }
+
+  .projects-grid{
+    display:grid;
+    grid-template-columns:repeat(2, minmax(0, 1fr));
+    gap:18px;
+    align-items:start;
+  }
+
+  .project-card{
+    display:grid;
+    grid-template-columns:minmax(220px, 320px) minmax(0, 1fr);
+    background:rgba(255,255,255,.025);
+    border:1px solid rgba(255,255,255,.08);
+    border-radius:24px;
+    overflow:hidden;
+    min-height:100%;
+  }
+
+  .project-card-media{
+    background:rgba(255,255,255,.03);
+    border-right:1px solid rgba(255,255,255,.08);
+    min-height:100%;
+  }
+
+  .project-card-media img{
+    width:100%;
+    height:100%;
+    min-height:260px;
+    max-height:100%;
+    object-fit:cover;
+    display:block;
+  }
+
+  .project-media-empty{
+    height:100%;
+    min-height:260px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    color:var(--muted);
+    background:
+      radial-gradient(circle at top left, rgba(122,184,255,.08), transparent 38%),
+      rgba(255,255,255,.02);
+    font-weight:700;
+    letter-spacing:.03em;
+  }
+
+  .project-card-body{
+    padding:18px;
+    display:grid;
+    gap:14px;
+  }
+
+  .project-top{
+    display:flex;
+    justify-content:space-between;
+    gap:12px;
+    align-items:flex-start;
+  }
+
+  .project-top h3{
+    margin:4px 0 0;
+    font-size:1.15rem;
+    line-height:1.2;
+    color:var(--text);
+  }
+
+  .project-id{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    padding:.42rem .72rem;
+    border-radius:999px;
+    border:1px solid rgba(255,255,255,.10);
+    background:rgba(255,255,255,.03);
+    color:rgba(255,255,255,.74);
+    font-size:.8rem;
+    font-weight:700;
+    white-space:nowrap;
+  }
+
+  .project-location{
+    margin:0;
+    color:var(--muted);
+    line-height:1.55;
+  }
+
+  .project-chip-row{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+  }
+
+  .project-description{
+    color:var(--muted);
+    line-height:1.65;
+    padding:14px 15px;
+    border-radius:18px;
+    border:1px solid rgba(255,255,255,.07);
+    background:rgba(255,255,255,.02);
+    min-height:84px;
+  }
+
+  .project-assets{
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+  }
+
+  .asset-pill{
+    display:inline-flex;
+    align-items:center;
+    gap:.35rem;
+    padding:.42rem .72rem;
+    border-radius:999px;
+    border:1px solid rgba(255,255,255,.10);
+    background:rgba(255,255,255,.03);
+    color:rgba(255,255,255,.58);
+    font-size:.78rem;
+    font-weight:700;
+  }
+
+  .asset-pill.ready{
+    border-color:rgba(104,211,160,.34);
+    background:rgba(104,211,160,.12);
+    color:#91f0bf;
+  }
+
+  .project-meta{
+    display:grid;
+    grid-template-columns:repeat(2, minmax(0, 1fr));
+    gap:12px;
+  }
+
+  .meta-block{
+    padding:14px;
+    border-radius:18px;
+    border:1px solid rgba(255,255,255,.08);
+    background:rgba(255,255,255,.025);
+  }
+
+  .meta-block span{
+    display:block;
+    color:var(--muted);
+    font-size:12px;
+    text-transform:uppercase;
+    letter-spacing:.08em;
+    margin-bottom:8px;
+  }
+
+  .meta-block strong{
+    color:var(--text);
+    font-size:15px;
+    font-weight:800;
+  }
+
+  .project-actions{
+    display:flex;
+    flex-wrap:wrap;
+    gap:10px;
+  }
+
+  .empty-library{
+    text-align:center;
+    display:grid;
+    gap:14px;
+    justify-items:center;
+    padding:40px 24px;
+  }
+
+  .empty-icon{
+    font-size:2rem;
+  }
+
+  .empty-library h3{
+    margin:0;
+    color:var(--text);
+  }
+
+  .empty-library p{
+    max-width:620px;
+    margin:0;
+    line-height:1.7;
+  }
+
+  .empty-actions{
+    margin-top:6px;
+  }
+
+  @media (max-width: 1200px){
+    .projects-grid{
+      grid-template-columns:1fr;
+    }
+  }
+
+  @media (max-width: 820px){
+    .project-card{
+      grid-template-columns:1fr;
+    }
+
+    .project-card-media{
+      border-right:none;
+      border-bottom:1px solid rgba(255,255,255,.08);
+    }
+
+    .project-meta{
+      grid-template-columns:1fr;
+    }
+
+    .projects-hero-actions{
+      width:100%;
+      min-width:unset;
+    }
+  }
+</style>
+
+<script>
+  async function convertToDeal(projectId) {
+    try {
+      const res = await fetch(`/investor/build-projects/${projectId}/convert-to-deal`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        }
+      });
+
+      const data = await res.json();
+
+      if (!res.ok || data.status !== "ok") {
+        alert(data.message || "Unable to convert build project into a deal.");
+        return;
+      }
+
+      window.location.href = data.redirect_url;
+    } catch (err) {
+      console.error(err);
+      alert("Something went wrong converting the project.");
+    }
+  }
+</script>
+{% endblock %}
