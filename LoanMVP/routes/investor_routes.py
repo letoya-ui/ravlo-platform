@@ -4736,6 +4736,11 @@ def save_build_studio():
 
     investor_profile = InvestorProfile.query.filter_by(user_id=current_user.id).first()
 
+    # 🔥 Pull all modes
+    exterior_url = (data.get("concept_render_url") or "").strip()
+    blueprint_url = (data.get("blueprint_url") or "").strip()
+    site_plan_url = (data.get("site_plan_url") or "").strip()
+
     project = BuildProject(
         user_id=current_user.id,
         project_name=data.get("project_name"),
@@ -4745,9 +4750,12 @@ def save_build_studio():
         zoning=data.get("zoning"),
         location=data.get("location"),
         notes=data.get("notes"),
-        concept_render_url=data.get("concept_render_url"),
-        blueprint_url=data.get("blueprint_url"),
-        site_plan_url=data.get("site_plan_url"),
+
+        # 🔥 Main outputs
+        concept_render_url=exterior_url,
+        blueprint_url=blueprint_url,
+        site_plan_url=site_plan_url,
+
         presentation_url=data.get("presentation_url")
     )
 
@@ -4760,8 +4768,11 @@ def save_build_studio():
     db.session.add(project)
     db.session.flush()
 
+    # 🔥 Sync deal with structured build_project
     if deal is not None:
         results = _deal_results(deal)
+        build_project = results.get("build_project", {}) or {}
+
         results["build_project"] = {
             "project_id": project.id,
             "project_name": project.project_name,
@@ -4771,11 +4782,18 @@ def save_build_studio():
             "zoning": project.zoning,
             "location": project.location,
             "notes": project.notes,
-            "concept_render_url": project.concept_render_url,
-            "blueprint_url": project.blueprint_url,
-            "site_plan_url": project.site_plan_url,
-            "presentation_url": project.presentation_url,
+
+            # 🔥 preserve modes
+            "exterior": build_project.get("exterior", {}),
+            "interior": build_project.get("interior", {}),
+            "blueprint": build_project.get("blueprint", {}),
+
+            # 🔥 quick access
+            "concept_render_url": exterior_url,
+            "blueprint_url": blueprint_url,
+            "site_plan_url": site_plan_url,
         }
+
         _set_deal_results(deal, results)
 
     db.session.commit()
@@ -4785,7 +4803,6 @@ def save_build_studio():
         "project_id": project.id,
         "deal_id": deal.id if deal else None,
     })
-
 
 # =========================================================
 # 🏗️ BUILD PROJECTS — LIST
