@@ -880,7 +880,7 @@ async function generateActiveMode() {
       const payload = {
         ...buildCommonJson(),
         room_type: document.getElementById("roomType")?.value || "living room",
-        description: document.getElementById("interiorDescription")?.value || ""
+        description: document.getElementById("interiorDescription")?.value || "",
         reference_image_url: getBestReferenceImageForMode("interior")
       };
 
