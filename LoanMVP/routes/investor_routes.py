@@ -4213,7 +4213,7 @@ def generate_build_studio():
         room_type = (data.get("room_type") or "living room").strip()
         save_to_deal = str(data.get("save_to_deal") or "true").lower() in ("1", "true", "yes", "on")
 
-       image_url = (
+        image_url = (
             data.get("image_url")
             or data.get("reference_image_url")
             or ""
