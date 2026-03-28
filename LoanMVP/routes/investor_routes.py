@@ -4279,8 +4279,11 @@ def generate_build_studio():
         if save_to_deal and deal is not None:
             results = _deal_results(deal)
             build_project = results.get("build_project", {}) or {}
+            
+            interior_block = build_project.get("interior", {}) or {}
+            rooms = interior_block.get("rooms", []) or []
 
-            build_project["interior"] = {
+            room_entry = {
                 "project_name": project_name,
                 "property_type": property_type,
                 "style": style,
@@ -4290,6 +4293,7 @@ def generate_build_studio():
                 "location": location,
                 "notes": notes,
                 "room_type": room_type,
+                "floor": (data.get("floor") or "main").strip(),
                 "image_url": build_urls[0] if build_urls else "",
                 "images": build_urls,
                 "meta": meta,
@@ -4297,7 +4301,12 @@ def generate_build_studio():
                 "job_id": job_id,
                 "build_reference_image": image_url,
             }
-
+     
+            rooms.append(room_entry)
+            interior_block["rooms"] = rooms
+            interior_block["latest"] = room_entry
+     
+            build_project["interior"] = interior_block
             results["build_project"] = build_project
             _set_deal_results(deal, results)
 

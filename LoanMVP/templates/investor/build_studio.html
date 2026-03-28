@@ -2,7 +2,9 @@
 {% block title %}Ravlo • Build Studio{% endblock %}
 
 {% block page_title %}Build Studio{% endblock %}
-{% block page_subline %}Explore development potential, generate exterior/interior/blueprint concepts, and move the build plan into budget control.{% endblock %}
+{% block page_subline %}
+Create exterior concepts, interior room visions, blueprint outputs, and a clean build package from one connected studio.
+{% endblock %}
 
 {% block topbar_actions %}
   {% if deal %}
@@ -14,17 +16,18 @@
 
 {% block content %}
 <style>
-  .studio-wrap{
+  .studio-shell{
     display:grid;
     gap:22px;
   }
 
   .studio-hero{
-    border-radius:24px;
-    padding:22px 24px;
+    border-radius:26px;
+    padding:24px;
     border:1px solid rgba(255,255,255,.08);
     background:
-      radial-gradient(900px 520px at 15% 10%, rgba(122,184,255,.12), transparent 55%),
+      radial-gradient(900px 520px at 12% 8%, rgba(122,184,255,.13), transparent 55%),
+      radial-gradient(700px 420px at 90% 10%, rgba(104,211,160,.08), transparent 45%),
       rgba(255,255,255,.02);
     display:flex;
     justify-content:space-between;
@@ -33,11 +36,11 @@
     flex-wrap:wrap;
   }
 
-  .episode-tag{
+  .hero-kicker{
     display:inline-flex;
-    gap:.5rem;
     align-items:center;
-    padding:.42rem .75rem;
+    gap:.5rem;
+    padding:.42rem .78rem;
     border-radius:999px;
     background:rgba(255,255,255,.06);
     border:1px solid rgba(255,255,255,.12);
@@ -48,29 +51,64 @@
   }
 
   .hero-title{
-    margin:.65rem 0 0;
-    font-size:1.7rem;
-    line-height:1.08;
+    margin:.7rem 0 0;
+    font-size:1.8rem;
+    line-height:1.06;
     letter-spacing:-.02em;
   }
 
   .hero-sub{
-    color:rgba(255,255,255,.74);
-    margin:.4rem 0 0;
-    max-width:760px;
+    margin:.45rem 0 0;
+    max-width:780px;
+    color:rgba(255,255,255,.72);
+    line-height:1.65;
   }
 
   .hero-actions{
     display:flex;
-    gap:.6rem;
+    gap:.7rem;
     flex-wrap:wrap;
   }
+
+  .studio-layout{
+    display:grid;
+    grid-template-columns:minmax(320px, .78fr) minmax(0, 1.22fr);
+    gap:20px;
+    align-items:start;
+  }
+
+  @media (max-width: 1180px){
+    .studio-layout{
+      grid-template-columns:1fr;
+    }
+  }
+
+  .studio-left,
+  .studio-right{
+    display:grid;
+    gap:18px;
+  }
+
+  .card{
+    background:var(--panel, rgba(255,255,255,.025));
+    border:1px solid rgba(255,255,255,.08);
+    border-radius:22px;
+    padding:18px;
+  }
+
+  .card h3{
+    margin:.05rem 0 .95rem;
+    color:var(--accent, #7ab8ff);
+    font-size:1.05rem;
+  }
+
+  .muted{ color:var(--muted); }
 
   .btn{
     background:rgba(122,184,255,.12);
     border:1px solid rgba(122,184,255,.42);
     color:#7ab8ff;
-    padding:.76rem 1rem;
+    padding:.78rem 1rem;
     border-radius:14px;
     cursor:pointer;
     font-weight:800;
@@ -107,53 +145,16 @@
     box-shadow:0 0 14px rgba(104,211,160,.18);
   }
 
-  .grid{
-    display:grid;
-    grid-template-columns:minmax(320px, .82fr) minmax(0, 1.18fr);
-    gap:20px;
-    align-items:start;
+  .btn-warning{
+    background:rgba(255,194,102,.12);
+    border:1px solid rgba(255,194,102,.34);
+    color:#ffd28a;
   }
 
-  @media (max-width: 1100px){
-    .grid{ grid-template-columns:1fr; }
-  }
-
-  .card{
-    background:var(--panel, rgba(255,255,255,.025));
-    border:1px solid rgba(255,255,255,.08);
-    border-radius:22px;
-    padding:18px;
-  }
-
-  .card h3{
-    margin:.1rem 0 .9rem;
-    color:var(--accent, #7ab8ff);
-    font-size:1.04rem;
-  }
-
-  .muted{ color:var(--muted); }
-
-  .preview-img{
-    width:100%;
-    height:clamp(380px, 62vh, 760px);
-    object-fit:cover;
-    border-radius:18px;
-    display:block;
-    border:1px solid rgba(255,255,255,.08);
-    background:#0f141a;
-  }
-
-  .placeholder{
-    min-height:clamp(380px, 62vh, 760px);
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    text-align:center;
-    border-radius:18px;
-    border:1px dashed rgba(255,255,255,.12);
-    background:rgba(255,255,255,.02);
-    color:rgba(255,255,255,.52);
-    padding:24px;
+  .btn-warning:hover{
+    background:rgba(255,194,102,.18);
+    border-color:rgba(255,194,102,.48);
+    box-shadow:0 0 14px rgba(255,194,102,.14);
   }
 
   .row{
@@ -163,12 +164,14 @@
   }
 
   @media (max-width: 900px){
-    .row{ grid-template-columns:1fr; }
+    .row{
+      grid-template-columns:1fr;
+    }
   }
 
   .input{
     width:100%;
-    padding:.78rem .85rem;
+    padding:.82rem .88rem;
     border-radius:14px;
     border:1px solid rgba(255,255,255,.10);
     background:#0f141a;
@@ -190,113 +193,6 @@
     display:flex;
     gap:10px;
     flex-wrap:wrap;
-  }
-
-  .thumb-grid{
-    display:grid;
-    grid-template-columns:repeat(3, minmax(0,1fr));
-    gap:12px;
-  }
-
-  @media (max-width: 900px){
-    .thumb-grid{ grid-template-columns:repeat(2, minmax(0,1fr)); }
-  }
-
-  @media (max-width: 620px){
-    .thumb-grid{ grid-template-columns:1fr; }
-  }
-
-  .thumb{
-    padding:.7rem;
-    border-radius:18px;
-    background:rgba(255,255,255,.03);
-    border:1px solid rgba(255,255,255,.10);
-    transition:.15s;
-  }
-
-  .thumb:hover{
-    transform:translateY(-1px);
-    border-color:rgba(122,184,255,.28);
-  }
-
-  .thumb .img{
-    width:100%;
-    height:220px;
-    object-fit:cover;
-    border-radius:16px;
-    display:block;
-    border:1px solid rgba(255,255,255,.08);
-    background:#0f141a;
-  }
-
-  .thumb-meta{
-    margin-top:.55rem;
-    display:flex;
-    justify-content:space-between;
-    gap:.35rem;
-    align-items:center;
-  }
-
-  .chip{
-    font-size:.78rem;
-    border-radius:999px;
-    padding:.35rem .6rem;
-    background:rgba(122,184,255,.12);
-    border:1px solid rgba(122,184,255,.26);
-    color:#a9d2ff;
-  }
-
-  .scope-box{
-    padding:16px;
-    border-radius:18px;
-    background:rgba(255,255,255,.025);
-    border:1px solid rgba(255,255,255,.08);
-  }
-
-  .scope-box ul{
-    margin:.6rem 0 0 1rem;
-    padding:0;
-  }
-
-  .scope-box li{
-    margin:.35rem 0;
-    color:var(--text);
-  }
-
-  .workflow-grid{
-    display:grid;
-    grid-template-columns:repeat(3, minmax(0,1fr));
-    gap:12px;
-  }
-
-  .workflow-card{
-    display:block;
-    padding:18px;
-    border-radius:18px;
-    background:rgba(255,255,255,.03);
-    border:1px solid rgba(255,255,255,.08);
-    transition:.15s ease;
-  }
-
-  .workflow-card:hover{
-    transform:translateY(-1px);
-    border-color:rgba(122,184,255,.25);
-    background:rgba(255,255,255,.045);
-  }
-
-  .workflow-card h4{ margin:0 0 8px; }
-  .workflow-card p{
-    margin:0;
-    color:var(--muted);
-    line-height:1.6;
-  }
-
-  .status-box{
-    padding:12px 14px;
-    border-radius:14px;
-    background:rgba(255,255,255,.03);
-    border:1px solid rgba(255,255,255,.08);
-    color:var(--muted);
   }
 
   .mode-tabs{
@@ -324,7 +220,7 @@
     display:flex;
     gap:10px;
     flex-wrap:wrap;
-    margin-top:12px;
+    margin-top:8px;
   }
 
   .saved-chip{
@@ -345,6 +241,62 @@
     background:rgba(104,211,160,.12);
     color:#91f0bf;
   }
+
+  .status-box{
+    padding:12px 14px;
+    border-radius:14px;
+    background:rgba(255,255,255,.03);
+    border:1px solid rgba(255,255,255,.08);
+    color:var(--muted);
+  }
+
+  .preview-frame{
+    display:grid;
+    gap:14px;
+  }
+
+  .preview-head{
+    display:flex;
+    justify-content:space-between;
+    gap:12px;
+    align-items:center;
+    flex-wrap:wrap;
+  }
+
+  .preview-title{
+    margin:0;
+    font-size:1.02rem;
+  }
+
+  .preview-sub{
+    margin:.25rem 0 0;
+    color:var(--muted);
+    line-height:1.5;
+  }
+
+  .preview-img{
+    width:100%;
+    height:clamp(380px, 62vh, 760px);
+    object-fit:cover;
+    border-radius:18px;
+    display:block;
+    border:1px solid rgba(255,255,255,.08);
+    background:#0f141a;
+  }
+
+  .placeholder{
+    min-height:clamp(380px, 62vh, 760px);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    text-align:center;
+    border-radius:18px;
+    border:1px dashed rgba(255,255,255,.12);
+    background:rgba(255,255,255,.02);
+    color:rgba(255,255,255,.52);
+    padding:24px;
+  }
+
   .source-card{
     margin-top:.85rem;
     padding:14px;
@@ -374,12 +326,152 @@
     margin-top:12px;
     border:1px solid rgba(255,255,255,.10);
     display:block;
+    background:#0f141a;
   }
 
   .helper-note{
     margin-top:8px;
     color:rgba(255,255,255,.58);
     font-size:.84rem;
+    line-height:1.5;
+  }
+
+  .scope-box{
+    padding:16px;
+    border-radius:18px;
+    background:rgba(255,255,255,.025);
+    border:1px solid rgba(255,255,255,.08);
+  }
+
+  .scope-box ul{
+    margin:.6rem 0 0 1rem;
+    padding:0;
+  }
+
+  .scope-box li{
+    margin:.35rem 0;
+    color:var(--text);
+  }
+
+  .result-card-grid{
+    display:grid;
+    grid-template-columns:repeat(3, minmax(0,1fr));
+    gap:14px;
+  }
+
+  @media (max-width: 1100px){
+    .result-card-grid{
+      grid-template-columns:1fr;
+    }
+  }
+
+  .result-card{
+    border-radius:20px;
+    background:rgba(255,255,255,.03);
+    border:1px solid rgba(255,255,255,.09);
+    overflow:hidden;
+    display:flex;
+    flex-direction:column;
+    min-height:100%;
+  }
+
+  .result-card-media{
+    width:100%;
+    height:220px;
+    object-fit:cover;
+    display:block;
+    background:#0f141a;
+    border-bottom:1px solid rgba(255,255,255,.08);
+  }
+
+  .result-card-body{
+    padding:14px;
+    display:grid;
+    gap:10px;
+  }
+
+  .result-card-top{
+    display:flex;
+    justify-content:space-between;
+    gap:10px;
+    align-items:center;
+  }
+
+  .result-card-title{
+    margin:0;
+    font-size:1rem;
+    color:var(--text);
+  }
+
+  .result-card-text{
+    margin:0;
+    color:var(--muted);
+    line-height:1.55;
+    font-size:.92rem;
+  }
+
+  .result-card-actions{
+    display:flex;
+    gap:8px;
+    flex-wrap:wrap;
+  }
+
+  .result-meta{
+    display:flex;
+    gap:8px;
+    flex-wrap:wrap;
+  }
+
+  .result-empty{
+    min-height:320px;
+    border-radius:20px;
+    border:1px dashed rgba(255,255,255,.12);
+    background:rgba(255,255,255,.02);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    text-align:center;
+    color:rgba(255,255,255,.5);
+    padding:20px;
+  }
+
+  .workflow-grid{
+    display:grid;
+    grid-template-columns:repeat(3, minmax(0,1fr));
+    gap:12px;
+  }
+
+  @media (max-width: 900px){
+    .workflow-grid{
+      grid-template-columns:1fr;
+    }
+  }
+
+  .workflow-card{
+    display:block;
+    padding:18px;
+    border-radius:18px;
+    background:rgba(255,255,255,.03);
+    border:1px solid rgba(255,255,255,.08);
+    transition:.15s ease;
+    text-decoration:none;
+  }
+
+  .workflow-card:hover{
+    transform:translateY(-1px);
+    border-color:rgba(122,184,255,.25);
+    background:rgba(255,255,255,.045);
+  }
+
+  .workflow-card h4{
+    margin:0 0 8px;
+    color:var(--text);
+  }
+
+  .workflow-card p{
+    margin:0;
+    color:var(--muted);
+    line-height:1.6;
   }
 
   .asset-link{
@@ -399,14 +491,13 @@
   }
 
   @media (max-width: 900px){
-    .workflow-grid{ grid-template-columns:1fr; }
     .preview-img{ height:320px; }
     .placeholder{ min-height:320px; }
   }
 
   @media (max-width: 640px){
     .studio-hero{ padding:18px; }
-    .hero-title{ font-size:1.4rem; }
+    .hero-title{ font-size:1.45rem; }
     .preview-img{ height:300px; }
     .placeholder{ min-height:300px; }
   }
@@ -415,20 +506,41 @@
 {% set exterior_result = exterior_result or {} %}
 {% set interior_result = interior_result or {} %}
 {% set blueprint_result = blueprint_result or {} %}
+{% set saved_exterior_image = saved_exterior_image or exterior_result.get('image_url', '') %}
+{% set has_saved_exterior = has_saved_exterior or saved_exterior_image %}
+{% set interior_rooms = interior_rooms or [] %}
 
-<div class="studio-wrap">
+<div class="studio-shell">
 
   <div class="studio-hero">
     <div>
-      <div class="episode-tag">
+      <div class="hero-kicker">
         🏗 BUILD STUDIO
         {% if deal %}• DEAL #{{ deal.id }}{% endif %}
       </div>
+
       <h2 class="hero-title">
-        {% if deal %}{{ deal.title or ('Deal #' ~ deal.id) }}{% else %}Build Studio{% endif %}
+        {% if deal %}
+          {{ deal.title or ('Deal #' ~ deal.id) }}
+        {% else %}
+          Build Studio
+        {% endif %}
       </h2>
+
       <div class="hero-sub">
-        Generate exterior concepts, interior visions, and blueprint outputs from one connected workspace.
+        Move from site vision to interior rooms, blueprint planning, and budget-ready outputs inside one connected workspace.
+      </div>
+
+      <div class="saved-strip">
+        <div class="saved-chip {% if exterior_result.get('image_url') %}ready{% endif %}">
+          Exterior {% if exterior_result.get('image_url') %}✓{% endif %}
+        </div>
+        <div class="saved-chip {% if interior_result.get('image_url') or interior_rooms|length %}ready{% endif %}">
+          Interior {% if interior_result.get('image_url') or interior_rooms|length %}✓{% endif %}
+        </div>
+        <div class="saved-chip {% if blueprint_result.get('image_url') or blueprint_result.get('blueprint_url') %}ready{% endif %}">
+          Blueprint {% if blueprint_result.get('image_url') or blueprint_result.get('blueprint_url') %}✓{% endif %}
+        </div>
       </div>
     </div>
 
@@ -442,9 +554,9 @@
     </div>
   </div>
 
-  <div class="grid">
+  <div class="studio-layout">
 
-    <div class="section-stack">
+    <div class="studio-left">
 
       <div class="card">
         <h3>Build Controls</h3>
@@ -457,12 +569,6 @@
 
         <input type="hidden" id="buildMode" value="exterior">
         <input type="hidden" id="savedExteriorImage" value="{{ saved_exterior_image or '' }}">
-
-        <div class="saved-strip">
-          <div class="saved-chip {% if exterior_result.get('image_url') %}ready{% endif %}">Exterior {% if exterior_result.get('image_url') %}✓{% endif %}</div>
-          <div class="saved-chip {% if interior_result.get('image_url') %}ready{% endif %}">Interior {% if interior_result.get('image_url') %}✓{% endif %}</div>
-          <div class="saved-chip {% if blueprint_result.get('image_url') or blueprint_result.get('blueprint_url') %}ready{% endif %}">Blueprint {% if blueprint_result.get('image_url') or blueprint_result.get('blueprint_url') %}✓{% endif %}</div>
-        </div>
 
         <div class="row" style="margin-top:14px;">
           <div>
@@ -515,10 +621,14 @@
 
         <div class="mode-fields active" id="modeFields-exterior">
           <label class="muted" style="display:block;margin-top:.85rem;margin-bottom:.35rem;">Exterior Build Description</label>
-          <textarea id="description" class="input" placeholder="Describe the exterior concept, massing, curb appeal, style, and development direction...">{{ exterior_result.get('description', '') }}</textarea>
+          <textarea id="description" class="input" placeholder="Describe the exterior concept, curb appeal, architectural style, development direction, and overall look...">{{ exterior_result.get('description', '') }}</textarea>
 
           <label class="muted" style="display:block;margin-top:.85rem;margin-bottom:.35rem;">Land / Site Image</label>
           <input id="landImage" class="input" type="file" accept="image/*">
+
+          <div class="helper-note">
+            Upload the lot or site once here. Saved exterior builds will become the default source for Interior and Blueprint.
+          </div>
         </div>
 
         <div class="mode-fields" id="modeFields-interior">
@@ -526,37 +636,49 @@
             <div>
               <label class="muted" style="display:block;margin-bottom:.35rem;">Room Type</label>
               <select id="roomType" class="input">
-              <option value="living room">Living Room</option>
-              <option value="kitchen">Kitchen</option>
-              <option value="bedroom">Bedroom</option>
-              <option value="bathroom">Bathroom</option>
-              <option value="office">Office</option>
-              <option value="dining room">Dining Room</option>
-            </select>
-          </div>
-          <div>
-            <label class="muted" style="display:block;margin-bottom:.35rem;">Interior Reference Image</label>
-            <input id="interiorImage" class="input" type="file" accept="image/*">
-            <div class="helper-note">Optional override. If left empty, Build Studio will use the saved exterior build.</div>
-           </div>
+                <option value="living room">Living Room</option>
+                <option value="kitchen">Kitchen</option>
+                <option value="primary bedroom">Primary Bedroom</option>
+                <option value="bathroom">Bathroom</option>
+                <option value="office">Office</option>
+                <option value="dining room">Dining Room</option>
+                <option value="foyer">Foyer</option>
+                <option value="hallway">Hallway</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="muted" style="display:block;margin-bottom:.35rem;">Floor</label>
+              <select id="roomFloor" class="input">
+                <option value="main">Main Floor</option>
+                <option value="second">Second Floor</option>
+                <option value="basement">Basement</option>
+                <option value="attic">Attic / Loft</option>
+              </select>
+            </div>
           </div>
 
-         {% if has_saved_exterior %}
-           <div class="source-card" id="interiorSavedSourceCard">
-             <h4>Using saved exterior build</h4>
-             <p>Your saved exterior concept will be used as the source for interior generation unless you upload a different image.</p>
-             <img class="source-preview" src="{{ saved_exterior_image }}" alt="Saved exterior source">
-           </div>
-         {% else %}
-           <div class="helper-note">Generate and save an exterior build first for the smoothest interior workflow.</div>
-         {% endif %}
+          <div class="row" style="margin-top:.85rem;">
+            <div>
+              <label class="muted" style="display:block;margin-bottom:.35rem;">Interior Reference Image</label>
+              <input id="interiorImage" class="input" type="file" accept="image/*">
+              <div class="helper-note">Optional override. Leave empty to use the saved exterior build.</div>
+            </div>
+            <div></div>
+          </div>
 
-         <label class="muted" style="display:block;margin-top:.85rem;margin-bottom:.35rem;">Interior Description</label>
-         <textarea id="interiorDescription" class="input" placeholder="Describe finishes, layout, lighting, cabinetry, flooring, ceiling style, and the room feel...">      {{ interior_result.get('description', '') }}</textarea>
-        </div>
+          {% if has_saved_exterior %}
+            <div class="source-card">
+              <h4>Using saved exterior build</h4>
+              <p>Your saved exterior concept will be used as the default source for room generation unless you upload a different reference image.</p>
+              <img class="source-preview" src="{{ saved_exterior_image }}" alt="Saved exterior source">
+            </div>
+          {% else %}
+            <div class="helper-note">Generate and save an exterior first for the smoothest interior workflow.</div>
+          {% endif %}
 
           <label class="muted" style="display:block;margin-top:.85rem;margin-bottom:.35rem;">Interior Description</label>
-          <textarea id="interiorDescription" class="input" placeholder="Describe finishes, layout, lighting, cabinetry, flooring, ceiling style, and the room feel...">{{ interior_result.get('description', '') }}</textarea>
+          <textarea id="interiorDescription" class="input" placeholder="Describe finishes, lighting, cabinetry, flooring, room mood, layout, and materials...">{{ interior_result.get('description', '') }}</textarea>
         </div>
 
         <div class="mode-fields" id="modeFields-blueprint">
@@ -579,22 +701,22 @@
             <div>
               <label class="muted" style="display:block;margin-bottom:.35rem;">Blueprint File</label>
               <input id="blueprintFile" class="input" type="file" accept="image/*,.pdf">
-              <div class="helper-note">Optional override. If left empty, Build Studio will use the saved exterior build and project details.</div>
+              <div class="helper-note">Optional override. Leave empty to use the saved build and planning details.</div>
             </div>
           </div>
 
           {% if has_saved_exterior %}
-            <div class="source-card" id="blueprintSavedSourceCard">
+            <div class="source-card">
               <h4>Using saved build concept</h4>
-              <p>Blueprint generation will use your saved exterior build as the base reference along with the bedrooms, bathrooms, and square footage entered here.</p>
+              <p>Blueprint generation will use your saved exterior build as the reference along with the planning fields entered here.</p>
               <img class="source-preview" src="{{ saved_exterior_image }}" alt="Saved build source for blueprint">
             </div>
           {% else %}
-            <div class="helper-note">Generate and save an exterior build first for the smoothest blueprint workflow.</div>
-          {% endif %}   
+            <div class="helper-note">Generate and save an exterior first for the smoothest blueprint workflow.</div>
+          {% endif %}
 
           <label class="muted" style="display:block;margin-top:.85rem;margin-bottom:.35rem;">Blueprint / Layout Description</label>
-          <textarea id="blueprintDescription" class="input" placeholder="Describe layout goals, open concept, room placement, garage, office, circulation, and planning intent...">{{ blueprint_result.get('description', '') }}</textarea>
+          <textarea id="blueprintDescription" class="input" placeholder="Describe room layout goals, garage, office, open concept, circulation, and planning intent...">{{ blueprint_result.get('description', '') }}</textarea>
 
           {% if blueprint_result.get('blueprint_url') %}
             <a class="asset-link" href="{{ blueprint_result.get('blueprint_url') }}" target="_blank">📐 Open saved blueprint input</a>
@@ -603,7 +725,14 @@
 
         <div class="action-row" style="margin-top:14px;">
           <button class="btn" type="button" onclick="generateActiveMode()">✨ Generate Active Mode</button>
-          <button class="btn btn-secondary" type="button" onclick="generateBuildScope()">🧠 Analyze Build Scope</button>
+          <button class="btn btn-warning" type="button" onclick="generateBuildScope()">🧠 Analyze Build Scope</button>
+        </div>
+
+        <div class="action-row" style="margin-top:12px;">
+          <button id="saveBuildBtn" class="btn btn-secondary" type="button" onclick="saveBuildToProject()">💾 Save Build Project</button>
+          {% if deal %}
+            <a id="budgetBuildBtn" class="btn btn-success" href="{{ url_for('investor.budget_studio', deal_id=deal.id) }}">💰 Send to Budget</a>
+          {% endif %}
         </div>
 
         <div id="buildStatus" class="status-box" style="margin-top:14px;">Ready.</div>
@@ -612,77 +741,209 @@
       <div class="card">
         <h3>Build Scope Summary</h3>
         <div id="buildScopeResults" class="scope-box">
-          Zoning context, concept summary, and build guidance will appear here.
+          Zoning context, build guidance, and concept summary will appear here after analysis.
         </div>
       </div>
 
     </div>
 
-    <div class="section-stack">
+    <div class="studio-right">
 
       <div class="card">
-        <h3>Build Concept Preview</h3>
+        <div class="preview-frame">
+          <div class="preview-head">
+            <div>
+              <h3 class="preview-title">Active Concept Preview</h3>
+              <div class="preview-sub">Use the mode cards and room gallery below to select what appears here.</div>
+            </div>
+          </div>
 
-        {% set initial_preview = exterior_result.get('image_url') or interior_result.get('image_url') or blueprint_result.get('image_url') or '' %}
+          {% set initial_preview = exterior_result.get('image_url') or interior_result.get('image_url') or blueprint_result.get('image_url') or saved_exterior_image or '' %}
 
-        {% if initial_preview %}
-          <img id="buildPreviewImg" class="preview-img" src="{{ initial_preview }}" alt="Build concept preview">
-          <div id="buildPreviewEmpty" class="placeholder" style="display:none;">Generate a build concept to preview the direction.</div>
-        {% else %}
-          <div id="buildPreviewEmpty" class="placeholder">Generate a build concept to preview the direction.</div>
-          <img id="buildPreviewImg" class="preview-img" src="" alt="Build concept preview" style="display:none;">
-        {% endif %}
-
-        <div class="action-row" style="margin-top:14px;">
-          <button id="saveBuildBtn" class="btn btn-secondary" type="button" onclick="saveBuildToProject()">
-            💾 Save Build Project
-          </button>
-
-          {% if deal %}
-          <a id="budgetBuildBtn" class="btn btn-success" href="{{ url_for('investor.budget_studio', deal_id=deal.id) }}">
-            💰 Send to Budget
-          </a>
+          {% if initial_preview %}
+            <img id="buildPreviewImg" class="preview-img" src="{{ initial_preview }}" alt="Build concept preview">
+            <div id="buildPreviewEmpty" class="placeholder" style="display:none;">Generate a build concept to preview the direction.</div>
+          {% else %}
+            <div id="buildPreviewEmpty" class="placeholder">Generate a build concept to preview the direction.</div>
+            <img id="buildPreviewImg" class="preview-img" src="" alt="Build concept preview" style="display:none;">
           {% endif %}
         </div>
       </div>
 
       <div class="card">
-        <h3>Saved Mode Assets</h3>
+        <h3>Saved Build Outputs</h3>
 
-        <div class="thumb-grid" id="savedModeGrid">
-          {% if exterior_result.get('image_url') %}
-            <div class="thumb">
-              <img class="img" src="{{ exterior_result.get('image_url') }}" alt="Exterior concept" onclick="selectBuildPreview('{{ exterior_result.get('image_url') }}')" style="cursor:pointer;">
-              <div class="thumb-meta">
-                <span class="chip">Exterior</span>
-                <small class="muted">saved</small>
+        <div class="result-card-grid" id="savedModeGrid">
+
+          <div class="result-card">
+            {% if exterior_result.get('image_url') %}
+              <img
+                class="result-card-media"
+                src="{{ exterior_result.get('image_url') }}"
+                alt="Exterior concept"
+                onclick="selectBuildPreview('{{ exterior_result.get('image_url') }}')"
+                style="cursor:pointer;"
+              >
+              <div class="result-card-body">
+                <div class="result-card-top">
+                  <h4 class="result-card-title">Exterior Concept</h4>
+                  <span class="saved-chip ready">Saved</span>
+                </div>
+
+                <p class="result-card-text">
+                  {{ exterior_result.get('description', 'Saved exterior concept ready to drive the rest of the build flow.') }}
+                </p>
+
+                <div class="result-meta">
+                  {% if exterior_result.get('style') %}
+                    <span class="saved-chip">{{ exterior_result.get('style') }}</span>
+                  {% endif %}
+                  {% if exterior_result.get('property_type') %}
+                    <span class="saved-chip">{{ exterior_result.get('property_type') }}</span>
+                  {% endif %}
+                </div>
+
+                <div class="result-card-actions">
+                  <button class="btn btn-secondary" type="button" onclick="setMode('exterior'); selectBuildPreview('{{ exterior_result.get('image_url') }}');">
+                    View Exterior
+                  </button>
+                </div>
+              </div>
+            {% else %}
+              <div class="result-empty">Exterior concept will appear here after generation.</div>
+            {% endif %}
+          </div>
+
+          <div class="result-card">
+            {% if interior_result.get('image_url') %}
+              <img
+                class="result-card-media"
+                src="{{ interior_result.get('image_url') }}"
+                alt="Interior concept"
+                onclick="selectBuildPreview('{{ interior_result.get('image_url') }}')"
+                style="cursor:pointer;"
+              >
+              <div class="result-card-body">
+                <div class="result-card-top">
+                  <h4 class="result-card-title">Latest Interior</h4>
+                  <span class="saved-chip ready">Saved</span>
+                </div>
+
+                <p class="result-card-text">
+                  {{ interior_result.get('description', 'Saved interior concept generated from your build workflow.') }}
+                </p>
+
+                <div class="result-meta">
+                  {% if interior_result.get('room_type') %}
+                    <span class="saved-chip">{{ interior_result.get('room_type') }}</span>
+                  {% endif %}
+                  {% if interior_result.get('floor') %}
+                    <span class="saved-chip">{{ interior_result.get('floor') }}</span>
+                  {% endif %}
+                </div>
+
+                <div class="result-card-actions">
+                  <button class="btn btn-secondary" type="button" onclick="setMode('interior'); selectBuildPreview('{{ interior_result.get('image_url') }}');">
+                    View Interior
+                  </button>
+                </div>
+              </div>
+            {% else %}
+              <div class="result-empty">Interior output will appear here after generation.</div>
+            {% endif %}
+          </div>
+
+          <div class="result-card">
+            {% if blueprint_result.get('image_url') or blueprint_result.get('blueprint_url') %}
+              <img
+                class="result-card-media"
+                src="{{ blueprint_result.get('image_url') or blueprint_result.get('blueprint_url') }}"
+                alt="Blueprint concept"
+                onclick="selectBuildPreview('{{ blueprint_result.get('image_url') or blueprint_result.get('blueprint_url') }}')"
+                style="cursor:pointer;"
+              >
+              <div class="result-card-body">
+                <div class="result-card-top">
+                  <h4 class="result-card-title">Blueprint Concept</h4>
+                  <span class="saved-chip ready">Saved</span>
+                </div>
+
+                <p class="result-card-text">
+                  {{ blueprint_result.get('description', 'Saved blueprint planning concept ready for review.') }}
+                </p>
+
+                <div class="result-meta">
+                  {% if blueprint_result.get('bedrooms') %}
+                    <span class="saved-chip">{{ blueprint_result.get('bedrooms') }} bed</span>
+                  {% endif %}
+                  {% if blueprint_result.get('bathrooms') %}
+                    <span class="saved-chip">{{ blueprint_result.get('bathrooms') }} bath</span>
+                  {% endif %}
+                  {% if blueprint_result.get('square_feet') %}
+                    <span class="saved-chip">{{ blueprint_result.get('square_feet') }} sf</span>
+                  {% endif %}
+                </div>
+
+                <div class="result-card-actions">
+                  <button class="btn btn-secondary" type="button" onclick="setMode('blueprint'); selectBuildPreview('{{ blueprint_result.get('image_url') or blueprint_result.get('blueprint_url') }}');">
+                    View Blueprint
+                  </button>
+
+                  {% if blueprint_result.get('blueprint_url') %}
+                    <a class="btn btn-secondary" href="{{ blueprint_result.get('blueprint_url') }}" target="_blank">
+                      Open Source
+                    </a>
+                  {% endif %}
+                </div>
+              </div>
+            {% else %}
+              <div class="result-empty">Blueprint output will appear here after generation.</div>
+            {% endif %}
+          </div>
+
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Interior Room Gallery</h3>
+
+        <div class="result-card-grid">
+          {% for room in interior_rooms %}
+            <div class="result-card">
+              {% if room.get('image_url') %}
+                <img
+                  class="result-card-media"
+                  src="{{ room.get('image_url') }}"
+                  alt="{{ room.get('room_type', 'Interior room') }}"
+                  onclick="selectBuildPreview('{{ room.get('image_url') }}')"
+                  style="cursor:pointer;"
+                >
+              {% else %}
+                <div class="result-empty">Room preview unavailable.</div>
+              {% endif %}
+
+              <div class="result-card-body">
+                <div class="result-card-top">
+                  <h4 class="result-card-title">{{ room.get('room_type', 'Room')|title }}</h4>
+                  <span class="saved-chip">{{ room.get('floor', 'main')|title }}</span>
+                </div>
+
+                <p class="result-card-text">
+                  {{ room.get('description', 'Saved interior room concept.') }}
+                </p>
+
+                <div class="result-card-actions">
+                  <button class="btn btn-secondary" type="button" onclick="setMode('interior'); selectBuildPreview('{{ room.get('image_url') }}');">
+                    View Room
+                  </button>
+                </div>
               </div>
             </div>
-          {% endif %}
-
-          {% if interior_result.get('image_url') %}
-            <div class="thumb">
-              <img class="img" src="{{ interior_result.get('image_url') }}" alt="Interior concept" onclick="selectBuildPreview('{{ interior_result.get('image_url') }}')" style="cursor:pointer;">
-              <div class="thumb-meta">
-                <span class="chip">Interior</span>
-                <small class="muted">saved</small>
-              </div>
+          {% else %}
+            <div class="result-empty">
+              Generate interior rooms like kitchen, living room, primary bedroom, office, and bathroom to build a full interior package.
             </div>
-          {% endif %}
-
-          {% if blueprint_result.get('image_url') %}
-            <div class="thumb">
-              <img class="img" src="{{ blueprint_result.get('image_url') }}" alt="Blueprint concept" onclick="selectBuildPreview('{{ blueprint_result.get('image_url') }}')" style="cursor:pointer;">
-              <div class="thumb-meta">
-                <span class="chip">Blueprint</span>
-                <small class="muted">saved</small>
-              </div>
-            </div>
-          {% endif %}
-
-          {% if not exterior_result.get('image_url') and not interior_result.get('image_url') and not blueprint_result.get('image_url') %}
-            <div class="muted">No saved mode outputs yet.</div>
-          {% endif %}
+          {% endfor %}
         </div>
       </div>
 
@@ -690,20 +951,20 @@
         <h3>Continue Workflow</h3>
         <div class="workflow-grid">
           {% if deal %}
-          <a href="{{ url_for('investor.deal_architect', deal_id=deal.id) }}" class="workflow-card">
-            <h4>Deal Architect</h4>
-            <p>Go back to strategy, numbers, and highest-best-use logic.</p>
-          </a>
+            <a href="{{ url_for('investor.deal_architect', deal_id=deal.id) }}" class="workflow-card">
+              <h4>Deal Architect</h4>
+              <p>Return to strategy, numbers, and highest-best-use direction.</p>
+            </a>
 
-          <a href="{{ url_for('investor.deal_rehab', deal_id=deal.id) }}" class="workflow-card">
-            <h4>Renovation Studio</h4>
-            <p>Compare rehab direction against build and development potential.</p>
-          </a>
+            <a href="{{ url_for('investor.deal_rehab', deal_id=deal.id) }}" class="workflow-card">
+              <h4>Renovation Studio</h4>
+              <p>Compare rehab direction against new construction and room concepts.</p>
+            </a>
 
-          <a href="{{ url_for('investor.budget_studio', deal_id=deal.id) }}" class="workflow-card">
-            <h4>Budget Studio</h4>
-            <p>Track projected development cost and control execution.</p>
-          </a>
+            <a href="{{ url_for('investor.budget_studio', deal_id=deal.id) }}" class="workflow-card">
+              <h4>Budget Studio</h4>
+              <p>Move the build package into cost planning and execution control.</p>
+            </a>
           {% endif %}
         </div>
       </div>
@@ -721,6 +982,34 @@ let BUILD_RESULTS = {
   interior: {{ interior_result|tojson }},
   blueprint: {{ blueprint_result|tojson }}
 };
+
+function getSavedExteriorImage() {
+  return document.getElementById("savedExteriorImage")?.value || "";
+}
+
+function getBestReferenceImageForMode(mode) {
+  const savedExterior = getSavedExteriorImage();
+
+  if (mode === "interior") {
+    return (
+      BUILD_RESULTS.interior?.image_url ||
+      BUILD_RESULTS.exterior?.image_url ||
+      savedExterior ||
+      ""
+    );
+  }
+
+  if (mode === "blueprint") {
+    return (
+      BUILD_RESULTS.blueprint?.image_url ||
+      BUILD_RESULTS.exterior?.image_url ||
+      savedExterior ||
+      ""
+    );
+  }
+
+  return "";
+}
 
 function setMode(mode, btn=null) {
   ACTIVE_MODE = mode;
@@ -747,6 +1036,11 @@ function setMode(mode, btn=null) {
   if (targetFields) targetFields.classList.add("active");
 
   renderModePreview(mode);
+
+  const status = document.getElementById("buildStatus");
+  if (status) {
+    status.innerText = `Viewing ${mode} mode.`;
+  }
 }
 
 function renderModePreview(mode) {
@@ -756,6 +1050,7 @@ function renderModePreview(mode) {
   if (!src && mode !== "exterior") {
     src = getBestReferenceImageForMode(mode);
   }
+
   const img = document.getElementById("buildPreviewImg");
   const empty = document.getElementById("buildPreviewEmpty");
 
@@ -863,6 +1158,7 @@ async function generateActiveMode() {
         images: images,
         project_name: document.getElementById("projectName")?.value || "",
         property_type: document.getElementById("propertyType")?.value || "",
+        style: document.getElementById("style")?.value || "",
         description: document.getElementById("description")?.value || "",
         lot_size: document.getElementById("lotSize")?.value || "",
         zoning: document.getElementById("zoning")?.value || "",
@@ -872,6 +1168,11 @@ async function generateActiveMode() {
         job_id: data.job_id
       };
 
+      const savedInput = document.getElementById("savedExteriorImage");
+      if (savedInput && images[0]) {
+        savedInput.value = images[0];
+      }
+
       renderModePreview("exterior");
       if (status) status.innerText = "Exterior generated successfully.";
     }
@@ -880,6 +1181,7 @@ async function generateActiveMode() {
       const payload = {
         ...buildCommonJson(),
         room_type: document.getElementById("roomType")?.value || "living room",
+        floor: document.getElementById("roomFloor")?.value || "main",
         description: document.getElementById("interiorDescription")?.value || "",
         reference_image_url: getBestReferenceImageForMode("interior")
       };
@@ -908,6 +1210,7 @@ async function generateActiveMode() {
         image_url: images[0],
         images: images,
         room_type: document.getElementById("roomType")?.value || "living room",
+        floor: document.getElementById("roomFloor")?.value || "main",
         description: document.getElementById("interiorDescription")?.value || "",
         meta: data.meta || {},
         seed: data.seed,
@@ -1055,31 +1358,9 @@ document.addEventListener("DOMContentLoaded", function () {
 
   setMode("exterior");
 });
-function getSavedExteriorImage() {
-  return document.getElementById("savedExteriorImage")?.value || "";
-}
-function getBestReferenceImageForMode(mode) {
-  const savedExterior = getSavedExteriorImage();
 
-  if (mode === "interior") {
-    return (
-      BUILD_RESULTS.interior?.image_url ||
-      BUILD_RESULTS.exterior?.image_url ||
-      savedExterior ||
-      ""
-    );
-  }
-
-  if (mode === "blueprint") {
-    return (
-      BUILD_RESULTS.blueprint?.image_url ||
-      BUILD_RESULTS.exterior?.image_url ||
-      savedExterior ||
-      ""
-    );
-  }
-
-  return "";
-}
+window.generateActiveMode = generateActiveMode;
+window.setMode = setMode;
+window.saveBuildToProject = saveBuildToProject;
 </script>
 {% endblock %}
