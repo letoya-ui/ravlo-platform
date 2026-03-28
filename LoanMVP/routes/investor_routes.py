@@ -4217,7 +4217,7 @@ def generate_build_studio_legacy():
         "message": "Use the mode-specific build generation routes."
     }), 400
 
- @investor_bp.route("/deal-studio/build-studio/generate-exterior", methods=["POST"])
+@investor_bp.route("/deal-studio/build-studio/generate-exterior", methods=["POST"])
 @csrf.exempt
 @login_required
 @role_required("investor")
