@@ -4138,6 +4138,7 @@ def deal_rehab(deal_id):
 # =========================================================
 # 🏗️ BUILD STUDIO — PAGE
 # =========================================================
+
 @investor_bp.route("/deals/<int:deal_id>/build", methods=["GET"])
 @investor_bp.route("/deal-studio/build-studio", methods=["GET"])
 @login_required
@@ -4146,6 +4147,8 @@ def build_studio(deal_id=None):
     deal = None
     project = None
 
+    project_id = request.args.get("project_id", type=int)
+
     if deal_id is None:
         query_deal_id = request.args.get("deal_id", type=int)
         if query_deal_id:
@@ -4153,6 +4156,14 @@ def build_studio(deal_id=None):
 
     if deal_id is not None:
         deal = _get_owned_deal_or_404(deal_id)
+
+    if project_id is not None:
+        project = BuildProject.query.filter_by(
+            id=project_id,
+            user_id=current_user.id
+        ).first()
+
+    if project is None and deal is not None:
         project = _safe_first_related(deal, "projects")
 
     exterior_result = {}
@@ -4189,10 +4200,36 @@ def build_studio(deal_id=None):
         )
         has_saved_exterior = bool(saved_exterior_image)
 
+    project_seed = {}
+    if project:
+        project_seed = {
+            "project_id": project.id,
+            "project_name": project.project_name or "",
+            "property_type": project.property_type or "",
+            "description": project.description or "",
+            "lot_size": project.lot_size or "",
+            "zoning": project.zoning or "",
+            "location": project.location or "",
+            "notes": project.notes or "",
+            "concept_render_url": project.concept_render_url or "",
+            "blueprint_url": project.blueprint_url or "",
+            "site_plan_url": project.site_plan_url or "",
+            "presentation_url": project.presentation_url or "",
+        }
+
+        if not saved_exterior_image:
+            saved_exterior_image = (
+                project.concept_render_url
+                or project.site_plan_url
+                or ""
+            )
+            has_saved_exterior = bool(saved_exterior_image)
+
     return render_template(
         "investor/build_studio.html",
         deal=deal,
         project=project,
+        project_seed=project_seed,
         deal_id=deal.id if deal else None,
         exterior_result=exterior_result,
         interior_result=interior_result,
@@ -4203,10 +4240,10 @@ def build_studio(deal_id=None):
         page_title="Build Studio",
         page_subtitle="Design and visualize new construction projects.",
     )
-
 # =========================================================
 # 🏗️ BUILD STUDIO — GENERATE CONCEPT
 # =========================================================
+
 @investor_bp.route("/deal-studio/build-studio/generate", methods=["POST"])
 @csrf.exempt
 @login_required
@@ -4226,7 +4263,7 @@ def generate_build_exterior():
 
     try:
         deal_id = _normalize_int(request.form.get("deal_id"))
-        mode = "exterior"
+        project_id = _normalize_int(request.form.get("project_id"))
 
         if deal_id:
             deal = Deal.query.filter_by(id=deal_id, user_id=current_user.id).first()
@@ -4256,20 +4293,51 @@ def generate_build_exterior():
         save_to_deal = (request.form.get("save_to_deal") or "").lower() in ("1", "true", "yes", "on")
 
         land_image = request.files.get("land_image")
-        if not land_image:
+        reference_image_url = (request.form.get("reference_image_url") or "").strip()
+        image_base64 = ""
+        raw = None
+
+        if land_image:
+            raw = land_image.read()
+            if not raw:
+                return jsonify({
+                    "status": "error",
+                    "message": "Empty land image."
+                }), 400
+
+            image_base64 = base64.b64encode(raw).decode("utf-8")
+            reference_image_url = _upload_before_image(raw)
+
+        if not image_base64 and not reference_image_url and deal is not None:
+            results = deal.results_json or {}
+            build_project = results.get("build_project", {}) or {}
+            exterior_result = build_project.get("exterior", {}) or {}
+
+            reference_image_url = (
+                exterior_result.get("image_url")
+                or exterior_result.get("build_reference_image")
+                or results.get("build_reference_image")
+                or ""
+            ).strip()
+
+        if not image_base64 and not reference_image_url and project_id:
+            project = BuildProject.query.filter_by(
+                id=project_id,
+                user_id=current_user.id
+            ).first()
+
+            if project:
+                reference_image_url = (
+                    (project.concept_render_url or "").strip()
+                    or (project.site_plan_url or "").strip()
+                    or (project.blueprint_url or "").strip()
+                )
+
+        if not image_base64 and not reference_image_url:
             return jsonify({
                 "status": "error",
-                "message": "land_image is required."
+                "message": "Provide a land image upload or a saved project/deal reference image."
             }), 400
-
-        raw = land_image.read()
-        if not raw:
-            return jsonify({
-                "status": "error",
-                "message": "Empty land image."
-            }), 400
-
-        reference_image_url = _upload_before_image(raw)
 
         payload = {
             "mode": "exterior",
@@ -4279,8 +4347,8 @@ def generate_build_exterior():
             "description": description,
             "lot_size": lot_size,
             "zoning": zoning,
-            "image_base64": base64.b64encode(raw).decode("utf-8"),
-            "image_url": "",
+            "image_base64": image_base64,
+            "image_url": reference_image_url if not image_base64 else "",
             "width": 640,
             "height": 640,
             "steps": 20,
@@ -5100,6 +5168,21 @@ def build_project_detail(project_id):
         page_subtitle="Review your saved development concept."
     )
 
+@investor_bp.route("/build-projects/<int:project_id>/open-studio", methods=["GET"])
+@login_required
+@role_required("investor")
+def open_build_project_in_studio(project_id):
+    project = BuildProject.query.filter_by(
+        id=project_id,
+        user_id=current_user.id
+    ).first_or_404()
+
+    deal_id = request.args.get("deal_id", type=int)
+
+    if deal_id:
+        return redirect(url_for("investor.build_studio", deal_id=deal_id, project_id=project.id))
+
+    return redirect(url_for("investor.build_studio", project_id=project.id))
 
 @investor_bp.route("/build-projects/<int:project_id>/convert-to-deal", methods=["POST"])
 @csrf.exempt
