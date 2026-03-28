@@ -4721,6 +4721,7 @@ def generate_build_blueprint():
         style_prompt = build_blueprint_prompt(room_type, style_preset, renovation_level)
 
         payload = {
+            "image_base64": base64.b64encode(raw).decode("utf-8"),
             "image_url": blueprint_url,
             "mode": "blueprint",
             "preset": style_preset,
