@@ -862,6 +862,29 @@ def _upload_after_images_from_b64(images_b64, render_batch_id: str):
 
     return after_urls
 
+def _upload_build_images_from_b64(images_b64, render_batch_id: str):
+    build_urls = []
+
+    for i, b64 in enumerate(images_b64 or [], start=1):
+        try:
+            raw_png = base64.b64decode(b64)
+            img = Image.open(io.BytesIO(raw_png)).convert("RGB")
+
+            buf = io.BytesIO()
+            img.save(buf, format="WEBP", quality=90)
+
+            uploaded = spaces_put_bytes(
+                buf.getvalue(),
+                subdir=f"builds/{current_user.id}/{render_batch_id}",
+                content_type="image/webp",
+                filename=f"{render_batch_id}_build_{i}.webp",
+            )
+            build_urls.append(uploaded["url"])
+        except Exception as e:
+            current_app.logger.warning("Build image upload failed (%s): %s", i, e)
+
+    return build_urls
+
 # ---------------------------------------------------------
 # Investor Capital Timeline (used for progress UI)
 # ---------------------------------------------------------
