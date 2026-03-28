@@ -4634,7 +4634,6 @@ def generate_build_interior():
 # =========================================================
 # BLUEPRINT TO CONCEPT
 # =========================================================
-
 @investor_bp.route("/deal-studio/build-studio/generate-blueprint", methods=["POST"])
 @investor_bp.route("/blueprint_to_room", methods=["POST"])
 @csrf.exempt
@@ -4646,10 +4645,11 @@ def generate_build_blueprint():
     try:
         blueprint_file = request.files.get("blueprint_file")
         blueprint_url = (request.form.get("blueprint_url") or "").strip()
+        reference_image_url = (request.form.get("reference_image_url") or "").strip()
 
         requested_style_preset = (request.form.get("style_preset") or "luxury_modern").strip().lower()
         renovation_level = (request.form.get("renovation_level") or "medium").strip().lower()
-       
+
         description = (request.form.get("description") or "").strip()
         bedrooms = (request.form.get("bedrooms") or "").strip()
         bathrooms = (request.form.get("bathrooms") or "").strip()
@@ -4657,34 +4657,21 @@ def generate_build_blueprint():
 
         deal_id = _normalize_int(request.form.get("deal_id"))
         saved_property_id = _normalize_int(request.form.get("saved_property_id"))
+        project_id = _normalize_int(request.form.get("project_id"))
 
-        reference_image_url = (request.form.get("reference_image_url") or "").strip()
+        project = None
+        raw = None
 
-        if not blueprint_file and not blueprint_url and not reference_image_url:
-            return jsonify({
-                "status": "error",
-                "message": "Provide blueprint_file, blueprint_url, or use saved build."
-            }), 400
- 
-        if blueprint_file:
-            raw = blueprint_file.read()
-        elif blueprint_url:
-            raw = download_image_bytes(blueprint_url)
-        elif reference_image_url:
-            raw = download_image_bytes(reference_image_url)
-        else:
-            raw = None
-
-        style_preset = _normalize_style_preset(requested_style_preset)
-        render_batch_id = uuid.uuid4().hex
-        structure = None
-        room_type = "room"
-        parse_warning = None
-
+        # --------------------------------------------------
+        # Optional deal loading
+        # --------------------------------------------------
         if deal_id:
             deal = Deal.query.filter_by(id=deal_id, user_id=current_user.id).first()
             if not deal:
-                return jsonify({"status": "error", "message": "Deal not found or not authorized."}), 404
+                return jsonify({
+                    "status": "error",
+                    "message": "Deal not found or not authorized."
+                }), 404
 
             if _deal_render_lock_active(deal):
                 return jsonify({
@@ -4698,10 +4685,74 @@ def generate_build_blueprint():
             if saved_property_id is None and getattr(deal, "saved_property_id", None):
                 saved_property_id = deal.saved_property_id
 
-        
-        if not raw:
-            return jsonify({"status": "error", "message": "Empty blueprint input."}), 400
+        # --------------------------------------------------
+        # Optional project fallback
+        # --------------------------------------------------
+        if project_id:
+            project = BuildProject.query.filter_by(
+                id=project_id,
+                user_id=current_user.id
+            ).first()
 
+        if not blueprint_file and not blueprint_url and not reference_image_url and project:
+            blueprint_url = (project.blueprint_url or "").strip()
+
+            if not blueprint_url:
+                reference_image_url = (
+                    (project.site_plan_url or "").strip()
+                    or (project.concept_render_url or "").strip()
+                )
+
+        if not blueprint_file and not blueprint_url and not reference_image_url and deal is not None:
+            results = deal.results_json or {}
+            build_project = results.get("build_project", {}) or {}
+            blueprint_block = build_project.get("blueprint", {}) or {}
+            exterior_block = build_project.get("exterior", {}) or {}
+
+            blueprint_url = (
+                blueprint_block.get("blueprint_url")
+                or ""
+            ).strip()
+
+            if not blueprint_url:
+                reference_image_url = (
+                    blueprint_block.get("build_reference_image")
+                    or exterior_block.get("image_url")
+                    or exterior_block.get("build_reference_image")
+                    or ""
+                ).strip()
+
+        if not blueprint_file and not blueprint_url and not reference_image_url:
+            return jsonify({
+                "status": "error",
+                "message": "Provide blueprint_file, blueprint_url, project seed, or reference image."
+            }), 400
+
+        # --------------------------------------------------
+        # Resolve raw bytes from best available source
+        # --------------------------------------------------
+        if blueprint_file:
+            raw = blueprint_file.read()
+        elif blueprint_url:
+            raw = download_image_bytes(blueprint_url)
+        elif reference_image_url:
+            raw = download_image_bytes(reference_image_url)
+
+        if not raw:
+            return jsonify({
+                "status": "error",
+                "message": "Empty blueprint input."
+            }), 400
+
+        style_preset = _normalize_style_preset(requested_style_preset)
+        render_batch_id = uuid.uuid4().hex
+        structure = None
+        room_type = "room"
+        parse_warning = None
+
+        # --------------------------------------------------
+        # Save uploaded/reference blueprint source
+        # --------------------------------------------------
         blueprint_webp = to_webp_bytes(raw, max_size=2000, quality=90)
         uploaded = spaces_put_bytes(
             blueprint_webp,
@@ -4709,37 +4760,54 @@ def generate_build_blueprint():
             content_type="image/webp",
             filename=f"{render_batch_id}_blueprint.webp",
         )
-        blueprint_url = uploaded["url"]
+        stored_blueprint_url = uploaded["url"]
 
+        # --------------------------------------------------
+        # Parse blueprint structure if possible
+        # --------------------------------------------------
         try:
-            structure = extract_blueprint_structure(blueprint_url)
+            structure = extract_blueprint_structure(stored_blueprint_url)
             room_type = infer_room_type(structure) or "room"
         except Exception as e:
             parse_warning = str(e)
             current_app.logger.warning(f"Blueprint parsing warning: {e}")
 
         style_prompt = build_blueprint_prompt(room_type, style_preset, renovation_level)
+        style_prompt = (
+            "blueprint guided architectural layout visualization, "
+            "floor plan interpreted into realistic residential structure, "
+            "clear room organization, walls, doors, windows, "
+            "buildable home layout, clean architectural composition, "
+            + style_prompt
+        )
 
+        # --------------------------------------------------
+        # Engine payload - BASE64 ONLY for image input
+        # --------------------------------------------------
         payload = {
             "image_base64": base64.b64encode(raw).decode("utf-8"),
-            "image_url": blueprint_url,
+            "image_url": "",
             "mode": "blueprint",
             "preset": style_preset,
             "prompt": style_prompt,
             "count": 2,
-            "steps": 35,
-            "strength": 0.40,
-            "controlnet_scale": 0.85,
-            "guidance": 6.5,
+            "steps": 24,
+            "strength": 0.28,
+            "controlnet_scale": 0.55,
+            "guidance": 6.0,
             "width": 1024,
             "height": 1024,
         }
+
+        current_app.logger.warning(f"BUILD BLUEPRINT ENGINE PAYLOAD: {payload}")
 
         engine_json = _post_renovation_engine_json(
             "/v1/renovate",
             payload,
             timeout=RENDER_TIMEOUT,
         )
+
+        current_app.logger.warning(f"BUILD BLUEPRINT ENGINE JSON: {engine_json}")
 
         returned_urls = engine_json.get("saved_paths", []) or []
         images_b64 = engine_json.get("images_base64", []) or []
@@ -4748,17 +4816,23 @@ def generate_build_blueprint():
             after_urls = returned_urls
         else:
             if not images_b64:
-                return jsonify({"status": "error", "message": "GPU engine returned no images."}), 502
+                return jsonify({
+                    "status": "error",
+                    "message": "GPU engine returned no images."
+                }), 502
 
             after_urls = _upload_after_images_from_b64(images_b64, render_batch_id)
             if not after_urls:
-                return jsonify({"status": "error", "message": "Render completed but uploads failed."}), 500
+                return jsonify({
+                    "status": "error",
+                    "message": "Render completed but uploads failed."
+                }), 500
 
         saved_count = 0
         if deal is not None:
             saved_count = _save_mockups_for_deal(
                 deal=deal,
-                before_url=blueprint_url,
+                before_url=stored_blueprint_url,
                 after_urls=after_urls,
                 style_prompt=style_prompt,
                 style_preset=style_preset,
@@ -4766,24 +4840,23 @@ def generate_build_blueprint():
                 saved_property_id=saved_property_id,
             )
 
-        if deal is not None:
             results = _deal_results(deal)
             build_project = results.get("build_project", {}) or {}
 
             build_project["blueprint"] = {
                 "image_url": after_urls[0] if after_urls else "",
                 "images": after_urls,
-                "blueprint_url": blueprint_url,
+                "blueprint_url": stored_blueprint_url,
                 "room_type": room_type,
                 "structure": structure,
                 "style_prompt": style_prompt,
                 "style_preset": style_preset,
                 "renovation_level": renovation_level,
-                "description": (request.form.get("description") or "").strip(),
-                "bedrooms": (request.form.get("bedrooms") or "").strip(),
-                "bathrooms": (request.form.get("bathrooms") or "").strip(),
-                "square_feet": (request.form.get("square_feet") or "").strip(),
-                "build_reference_image": reference_image_url or blueprint_url,
+                "description": description,
+                "bedrooms": bedrooms,
+                "bathrooms": bathrooms,
+                "square_feet": square_feet,
+                "build_reference_image": reference_image_url or stored_blueprint_url,
             }
 
             results["build_project"] = build_project
@@ -4796,7 +4869,7 @@ def generate_build_blueprint():
         return jsonify({
             "status": "ok",
             "render_batch_id": render_batch_id,
-            "blueprint_url": blueprint_url,
+            "blueprint_url": stored_blueprint_url,
             "room_type": room_type,
             "structure": structure,
             "style_preset": style_preset,
@@ -4820,7 +4893,10 @@ def generate_build_blueprint():
             except Exception:
                 db.session.rollback()
 
-        return jsonify({"status": "error", "message": f"Blueprint render failed: {e}"}), 500
+        return jsonify({
+            "status": "error",
+            "message": f"Blueprint render failed: {e}"
+        }), 500
        
 @investor_bp.route("/ai/build-scope/analyze", methods=["POST"])
 @csrf.exempt

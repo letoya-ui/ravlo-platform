@@ -1076,6 +1076,7 @@ function buildBlueprintFormData() {
   fd.append("square_feet", document.getElementById("squareFeet")?.value || "");
   fd.append("style_preset", "luxury_modern");
   fd.append("reference_image_url", getBestReferenceImageForMode("blueprint"));
+  fd.append("project_id", document.getElementById("projectBuildId")?.value || "");
 
   const projectBlueprint = getProjectSeedBlueprintUrl();
   if (projectBlueprint) {
