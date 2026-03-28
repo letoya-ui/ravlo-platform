@@ -4207,25 +4207,191 @@ def build_studio(deal_id=None):
 # =========================================================
 # 🏗️ BUILD STUDIO — GENERATE CONCEPT
 # =========================================================
-
 @investor_bp.route("/deal-studio/build-studio/generate", methods=["POST"])
 @csrf.exempt
 @login_required
 @role_required("investor")
-def generate_build_studio():
+def generate_build_studio_legacy():
+    return jsonify({
+        "status": "error",
+        "message": "Use the mode-specific build generation routes."
+    }), 400
+
+ @investor_bp.route("/deal-studio/build-studio/generate-exterior", methods=["POST"])
+@csrf.exempt
+@login_required
+@role_required("investor")
+def generate_build_exterior():
     deal = None
 
     try:
-        data = request.get_json(silent=True) or {}
+        deal_id = _normalize_int(request.form.get("deal_id"))
+        mode = "exterior"
+
+        if deal_id:
+            deal = Deal.query.filter_by(id=deal_id, user_id=current_user.id).first()
+            if not deal:
+                return jsonify({
+                    "status": "error",
+                    "message": "Deal not found or not authorized."
+                }), 404
+
+            if _deal_render_lock_active(deal):
+                return jsonify({
+                    "status": "error",
+                    "message": "A build render is already in progress for this deal."
+                }), 409
+
+            _set_deal_render_processing(deal)
+            db.session.commit()
+
+        project_name = (request.form.get("project_name") or "").strip()
+        property_type = (request.form.get("property_type") or "single_family").strip()
+        description = (request.form.get("description") or "").strip()
+        lot_size = (request.form.get("lot_size") or "").strip()
+        zoning = (request.form.get("zoning") or "").strip()
+        location = (request.form.get("location") or "").strip()
+        notes = (request.form.get("notes") or "").strip()
+        style = (request.form.get("style") or "modern_farmhouse").strip()
+        save_to_deal = (request.form.get("save_to_deal") or "").lower() in ("1", "true", "yes", "on")
+
+        land_image = request.files.get("land_image")
+        if not land_image:
+            return jsonify({
+                "status": "error",
+                "message": "land_image is required."
+            }), 400
+
+        raw = land_image.read()
+        if not raw:
+            return jsonify({
+                "status": "error",
+                "message": "Empty land image."
+            }), 400
+
+        reference_image_url = _upload_before_image(raw)
+
+        payload = {
+            "mode": "exterior",
+            "project_name": project_name,
+            "property_type": property_type,
+            "style": style,
+            "description": description,
+            "lot_size": lot_size,
+            "zoning": zoning,
+            "image_base64": base64.b64encode(raw).decode("utf-8"),
+            "image_url": "",
+            "width": 640,
+            "height": 640,
+            "steps": 20,
+            "guidance": 7.5,
+            "strength": 0.68,
+            "count": 1,
+        }
+
+        seed = request.form.get("seed")
+        if seed not in (None, "", "None"):
+            payload["seed"] = int(seed)
+
+        current_app.logger.warning(f"BUILD EXTERIOR ENGINE PAYLOAD: {payload}")
+
+        result = _post_renovation_engine_json(
+            "/v1/build_concept",
+            payload,
+            timeout=UPLOAD_TIMEOUT,
+        )
+
+        current_app.logger.warning(f"BUILD EXTERIOR ENGINE JSON: {result}")
+
+        images_b64 = result.get("images_base64") or []
+        if not images_b64:
+            return jsonify({
+                "status": "error",
+                "message": "Build engine returned no images."
+            }), 502
+
+        render_batch_id = uuid.uuid4().hex
+        build_urls = _upload_after_images_from_b64(images_b64, render_batch_id)
+
+        if not build_urls:
+            return jsonify({
+                "status": "error",
+                "message": "Build render completed but uploads failed."
+            }), 500
+
+        meta = result.get("meta") or {}
+        seed = result.get("seed")
+        job_id = result.get("job_id")
+
+        if save_to_deal and deal is not None:
+            results = _deal_results(deal)
+            build_project = results.get("build_project", {}) or {}
+
+            build_project["exterior"] = {
+                "project_name": project_name,
+                "property_type": property_type,
+                "description": description,
+                "lot_size": lot_size,
+                "zoning": zoning,
+                "location": location,
+                "notes": notes,
+                "style": style,
+                "image_url": build_urls[0] if build_urls else "",
+                "images": build_urls,
+                "meta": meta,
+                "seed": seed,
+                "job_id": job_id,
+                "build_reference_image": reference_image_url,
+            }
+
+            results["build_project"] = build_project
+            results["build_reference_image"] = reference_image_url
+            _set_deal_results(deal, results)
+
+        if deal is not None:
+            _clear_deal_render_processing(deal)
+
+        db.session.commit()
+
+        return jsonify({
+            "status": "ok",
+            "mode": "exterior",
+            "images": build_urls,
+            "image_url": build_urls[0] if build_urls else "",
+            "meta": meta,
+            "seed": seed,
+            "job_id": job_id,
+            "deal_id": deal.id if deal else None,
+            "saved_to_deal": bool(save_to_deal and deal is not None),
+            "reference_image_url": reference_image_url,
+        })
+
+    except Exception as e:
+        current_app.logger.exception("Build exterior generation error")
+
+        if deal is not None:
+            try:
+                _clear_deal_render_processing(deal)
+                db.session.commit()
+            except Exception:
+                db.session.rollback()
+
+        return jsonify({
+            "status": "error",
+            "message": str(e)
+        }), 500
+
+@investor_bp.route("/deal-studio/build-studio/generate-interior", methods=["POST"])
+@csrf.exempt
+@login_required
+@role_required("investor")
+def generate_build_interior():
+    deal = None
+
+    try:
+        data = request.form.to_dict() or {}
 
         deal_id = _normalize_int(data.get("deal_id"))
-        mode = (data.get("mode") or "interior").strip().lower()
-
-        # This route is intended for non-upload generation.
-        # Keep it focused on interior so the studio stays predictable.
-        if mode != "interior":
-            mode = "interior"
-
         if deal_id:
             deal = Deal.query.filter_by(id=deal_id, user_id=current_user.id).first()
             if not deal:
@@ -4252,21 +4418,35 @@ def generate_build_studio():
         location = (data.get("location") or "").strip()
         notes = (data.get("notes") or "").strip()
         room_type = (data.get("room_type") or "living room").strip()
+        floor = (data.get("floor") or "main").strip()
         save_to_deal = str(data.get("save_to_deal") or "true").lower() in ("1", "true", "yes", "on")
+
+        interior_image = request.files.get("interior_image")
 
         image_url = (
             data.get("image_url")
             or data.get("reference_image_url")
             or ""
         ).strip()
+
         image_base64 = (data.get("image_base64") or "").strip()
 
-        # Optional fallback to saved exterior reference image if available
+        if interior_image:
+            raw = interior_image.read()
+            if raw:
+                image_base64 = base64.b64encode(raw).decode("utf-8")
+                image_url = ""
+
         if not image_url and not image_base64 and deal is not None:
             results = deal.results_json or {}
             build_project = results.get("build_project", {}) or {}
             exterior_result = build_project.get("exterior", {}) or {}
-            image_url = (exterior_result.get("build_reference_image") or "").strip()
+
+            image_url = (
+                exterior_result.get("image_url")
+                or exterior_result.get("build_reference_image")
+                or ""
+            ).strip()
 
         payload = {
             "mode": "interior",
@@ -4287,7 +4467,7 @@ def generate_build_studio():
             "height": 768,
         }
 
-        current_app.logger.warning(f"BUILD ENGINE PAYLOAD: {payload}")
+        current_app.logger.warning(f"BUILD INTERIOR ENGINE PAYLOAD: {payload}")
 
         engine_json = _post_renovation_engine_json(
             "/v1/build_concept",
@@ -4295,7 +4475,7 @@ def generate_build_studio():
             timeout=RENDER_TIMEOUT,
         )
 
-        current_app.logger.warning(f"BUILD ENGINE JSON: {engine_json}")
+        current_app.logger.warning(f"BUILD INTERIOR ENGINE JSON: {engine_json}")
 
         images_b64 = engine_json.get("images_base64", []) or []
         if not images_b64:
@@ -4305,7 +4485,7 @@ def generate_build_studio():
             }), 502
 
         render_batch_id = uuid.uuid4().hex
-        build_urls = _upload_build_images_from_b64(images_b64, render_batch_id)
+        build_urls = _upload_after_images_from_b64(images_b64, render_batch_id)
 
         if not build_urls:
             return jsonify({
@@ -4320,7 +4500,7 @@ def generate_build_studio():
         if save_to_deal and deal is not None:
             results = _deal_results(deal)
             build_project = results.get("build_project", {}) or {}
-            
+
             interior_block = build_project.get("interior", {}) or {}
             rooms = interior_block.get("rooms", []) or []
 
@@ -4334,7 +4514,7 @@ def generate_build_studio():
                 "location": location,
                 "notes": notes,
                 "room_type": room_type,
-                "floor": (data.get("floor") or "main").strip(),
+                "floor": floor,
                 "image_url": build_urls[0] if build_urls else "",
                 "images": build_urls,
                 "meta": meta,
@@ -4342,11 +4522,11 @@ def generate_build_studio():
                 "job_id": job_id,
                 "build_reference_image": image_url,
             }
-     
+
             rooms.append(room_entry)
             interior_block["rooms"] = rooms
             interior_block["latest"] = room_entry
-     
+
             build_project["interior"] = interior_block
             results["build_project"] = build_project
             _set_deal_results(deal, results)
@@ -4369,7 +4549,7 @@ def generate_build_studio():
         })
 
     except Exception as e:
-        current_app.logger.exception("Build Studio generation error")
+        current_app.logger.exception("Build interior generation error")
 
         if deal is not None:
             try:
@@ -4382,17 +4562,17 @@ def generate_build_studio():
             "status": "error",
             "message": str(e)
         }), 500
- 
+
 # =========================================================
 # BLUEPRINT TO CONCEPT
 # =========================================================
 
-@investor_bp.route("/deal-studio/rehab/blueprint-render", methods=["POST"])
+@investor_bp.route("/deal-studio/build-studio/generate-blueprint", methods=["POST"])
 @investor_bp.route("/blueprint_to_room", methods=["POST"])
 @csrf.exempt
 @login_required
 @role_required("investor")
-def blueprint_to_room():
+def generate_build_blueprint():
     deal = None
 
     try:
@@ -4417,6 +4597,15 @@ def blueprint_to_room():
                 "status": "error",
                 "message": "Provide blueprint_file, blueprint_url, or use saved build."
             }), 400
+ 
+        if blueprint_file:
+            raw = blueprint_file.read()
+        elif blueprint_url:
+            raw = download_image_bytes(blueprint_url)
+        elif reference_image_url:
+            raw = download_image_bytes(reference_image_url)
+        else:
+            raw = None
 
         style_preset = _normalize_style_preset(requested_style_preset)
         render_batch_id = uuid.uuid4().hex
@@ -4441,14 +4630,7 @@ def blueprint_to_room():
             if saved_property_id is None and getattr(deal, "saved_property_id", None):
                 saved_property_id = deal.saved_property_id
 
-        if blueprint_file:
-            raw = blueprint_file.read()
-        elif blueprint_url:
-            raw = download_image_bytes(blueprint_url)
-        elif reference_image_url:
-            raw = download_image_bytes(reference_image_url)
-        else:
-            raw = None
+        
         if not raw:
             return jsonify({"status": "error", "message": "Empty blueprint input."}), 400
 

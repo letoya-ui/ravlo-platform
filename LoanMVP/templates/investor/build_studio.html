@@ -1105,6 +1105,28 @@ function buildExteriorFormData() {
   return fd;
 }
 
+function buildInteriorFormData() {
+  const fd = new FormData();
+  fd.append("deal_id", "{{ deal.id if deal else '' }}");
+  fd.append("mode", "interior");
+  fd.append("project_name", document.getElementById("projectName")?.value || "");
+  fd.append("property_type", document.getElementById("propertyType")?.value || "");
+  fd.append("style", document.getElementById("style")?.value || "");
+  fd.append("lot_size", document.getElementById("lotSize")?.value || "");
+  fd.append("zoning", document.getElementById("zoning")?.value || "");
+  fd.append("location", document.getElementById("location")?.value || "");
+  fd.append("room_type", document.getElementById("roomType")?.value || "living room");
+  fd.append("floor", document.getElementById("roomFloor")?.value || "main");
+  fd.append("description", document.getElementById("interiorDescription")?.value || "");
+  fd.append("reference_image_url", getBestReferenceImageForMode("interior"));
+  fd.append("save_to_deal", "true");
+
+  const file = document.getElementById("interiorImage")?.files?.[0];
+  if (file) fd.append("interior_image", file);
+
+  return fd;
+}
+
 function buildBlueprintFormData() {
   const fd = new FormData();
   fd.append("deal_id", "{{ deal.id if deal else '' }}");
@@ -1134,7 +1156,7 @@ async function generateActiveMode() {
     if (status) status.innerText = `Generating ${ACTIVE_MODE}...`;
 
     if (ACTIVE_MODE === "exterior") {
-     const res = await fetch("{{ url_for('investor.generate_build_studio_upload') }}", {
+     const res = await fetch("{{ url_for('investor.generate_build_exterior') }}", {
         method: "POST",
         body: buildExteriorFormData()
       });
@@ -1188,7 +1210,6 @@ async function generateActiveMode() {
 
       const res = await fetch("{{ url_for('investor.generate_build_studio') }}", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)
       });
 
