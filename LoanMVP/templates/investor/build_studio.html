@@ -1134,7 +1134,7 @@ async function generateActiveMode() {
     if (status) status.innerText = `Generating ${ACTIVE_MODE}...`;
 
     if (ACTIVE_MODE === "exterior") {
-      const res = await fetch("/investor/deal-studio/build-studio/generate-upload", {
+     const res = await fetch("{{ url_for('investor.generate_build_studio_upload') }}", {
         method: "POST",
         body: buildExteriorFormData()
       });
@@ -1186,7 +1186,7 @@ async function generateActiveMode() {
         reference_image_url: getBestReferenceImageForMode("interior")
       };
 
-      const res = await fetch("/investor/deal-studio/build-studio/generate", {
+      const res = await fetch("{{ url_for('investor.generate_build_studio') }}", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)
@@ -1226,7 +1226,7 @@ async function generateActiveMode() {
     }
 
     else if (ACTIVE_MODE === "blueprint") {
-      const res = await fetch("/blueprint_to_room", {
+      const res = await fetch("{{ url_for('investor.blueprint_to_room') }}", {
         method: "POST",
         body: buildBlueprintFormData()
       });
