@@ -4135,6 +4135,7 @@ def build_studio(deal_id=None):
     exterior_result = {}
     interior_result = {}
     blueprint_result = {}
+    interior_rooms = []
     saved_exterior_image = ""
     has_saved_exterior = False
 
@@ -4142,11 +4143,31 @@ def build_studio(deal_id=None):
         results = deal.results_json or {}
         build_project = results.get("build_project", {}) or {}
 
-        exterior_result = build_project.get("exterior", {}) or {}
-        interior_result = build_project.get("interior", {}) or {}
-        blueprint_result = build_project.get("blueprint", {}) or {}
+        exterior_block = build_project.get("exterior", {}) or {}
+        interior_block = build_project.get("interior", {}) or {}
+        blueprint_block = build_project.get("blueprint", {}) or {}
 
-        saved_exterior_image = exterior_result.get("image_url", "") or ""
+        # Exterior stays simple
+        exterior_result = exterior_block
+
+        # Interior now supports a room collection + latest
+        interior_rooms = interior_block.get("rooms", []) or []
+        interior_result = interior_block.get("latest", {}) or {}
+
+        # Backward compatibility in case old saves were single-object only
+        if not interior_result and interior_block.get("image_url"):
+            interior_result = interior_block
+
+        if not interior_rooms and interior_result:
+            interior_rooms = [interior_result]
+
+        blueprint_result = blueprint_block
+
+        saved_exterior_image = (
+            exterior_result.get("image_url")
+            or exterior_result.get("build_reference_image")
+            or ""
+        )
         has_saved_exterior = bool(saved_exterior_image)
 
     return render_template(
@@ -4157,12 +4178,12 @@ def build_studio(deal_id=None):
         exterior_result=exterior_result,
         interior_result=interior_result,
         blueprint_result=blueprint_result,
+        interior_rooms=interior_rooms,
         saved_exterior_image=saved_exterior_image,
         has_saved_exterior=has_saved_exterior,
         page_title="Build Studio",
         page_subtitle="Design and visualize new construction projects.",
     )
-
 # =========================================================
 # 🏗️ BUILD STUDIO — GENERATE CONCEPT
 # =========================================================
