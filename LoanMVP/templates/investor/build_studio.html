@@ -1146,6 +1146,12 @@ function buildBlueprintFormData() {
   return fd;
 }
 
+const BUILD_ENDPOINTS = {
+  exterior: "{{ url_for('investor.generate_build_exterior') }}",
+  interior: "{{ url_for('investor.generate_build_interior') }}",
+  blueprint: "{{ url_for('investor.generate_build_blueprint') }}"
+};
+
 async function generateActiveMode() {
   if (BUILD_LOADING) return;
   BUILD_LOADING = true;
@@ -1156,12 +1162,13 @@ async function generateActiveMode() {
     if (status) status.innerText = `Generating ${ACTIVE_MODE}...`;
 
     if (ACTIVE_MODE === "exterior") {
-     const res = await fetch("{{ url_for('investor.generate_build_exterior') }}", {
+      const res = await fetch(BUILD_ENDPOINTS.exterior, {
         method: "POST",
         body: buildExteriorFormData()
       });
 
       const data = await res.json();
+
       if (!res.ok || data.status !== "ok") {
         if (status) status.innerText = data.message || "Exterior generation failed.";
         BUILD_LOADING = false;
@@ -1177,7 +1184,7 @@ async function generateActiveMode() {
 
       BUILD_RESULTS.exterior = {
         image_url: images[0],
-        images: images,
+        images,
         project_name: document.getElementById("projectName")?.value || "",
         property_type: document.getElementById("propertyType")?.value || "",
         style: document.getElementById("style")?.value || "",
@@ -1200,20 +1207,13 @@ async function generateActiveMode() {
     }
 
     else if (ACTIVE_MODE === "interior") {
-      const payload = {
-        ...buildCommonJson(),
-        room_type: document.getElementById("roomType")?.value || "living room",
-        floor: document.getElementById("roomFloor")?.value || "main",
-        description: document.getElementById("interiorDescription")?.value || "",
-        reference_image_url: getBestReferenceImageForMode("interior")
-      };
-
-      const res = await fetch("{{ url_for('investor.generate_build_studio') }}", {
+      const res = await fetch(BUILD_ENDPOINTS.interior, {
         method: "POST",
-        body: JSON.stringify(payload)
+        body: buildInteriorFormData()
       });
 
       const data = await res.json();
+
       if (!res.ok || data.status !== "ok") {
         if (status) status.innerText = data.message || "Interior generation failed.";
         BUILD_LOADING = false;
@@ -1229,7 +1229,7 @@ async function generateActiveMode() {
 
       BUILD_RESULTS.interior = {
         image_url: images[0],
-        images: images,
+        images,
         room_type: document.getElementById("roomType")?.value || "living room",
         floor: document.getElementById("roomFloor")?.value || "main",
         description: document.getElementById("interiorDescription")?.value || "",
@@ -1240,19 +1240,20 @@ async function generateActiveMode() {
 
       renderModePreview("interior");
       if (status) status.innerText = "Interior generated successfully.";
-  
+
       setTimeout(() => {
-      window.location.reload();
+        window.location.reload();
       }, 500);
     }
 
     else if (ACTIVE_MODE === "blueprint") {
-      const res = await fetch("{{ url_for('investor.blueprint_to_room') }}", {
+      const res = await fetch(BUILD_ENDPOINTS.blueprint, {
         method: "POST",
         body: buildBlueprintFormData()
       });
 
       const data = await res.json();
+
       if (!res.ok || data.status !== "ok") {
         if (status) status.innerText = data.message || "Blueprint generation failed.";
         BUILD_LOADING = false;
@@ -1262,7 +1263,7 @@ async function generateActiveMode() {
       const images = data.images || [];
       BUILD_RESULTS.blueprint = {
         image_url: images[0] || "",
-        images: images,
+        images,
         blueprint_url: data.blueprint_url || "",
         room_type: data.room_type || "",
         structure: data.structure || {},
@@ -1283,7 +1284,6 @@ async function generateActiveMode() {
 
   BUILD_LOADING = false;
 }
-
 async function saveBuildToProject() {
   const payload = {
     deal_id: "{{ deal.id if deal else '' }}",
