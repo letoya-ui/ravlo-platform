@@ -4135,6 +4135,8 @@ def build_studio(deal_id=None):
     exterior_result = {}
     interior_result = {}
     blueprint_result = {}
+    saved_exterior_image = ""
+    has_saved_exterior = False
 
     if deal:
         results = deal.results_json or {}
@@ -4144,6 +4146,9 @@ def build_studio(deal_id=None):
         interior_result = build_project.get("interior", {}) or {}
         blueprint_result = build_project.get("blueprint", {}) or {}
 
+        saved_exterior_image = exterior_result.get("image_url", "") or ""
+        has_saved_exterior = bool(saved_exterior_image)
+
     return render_template(
         "investor/build_studio.html",
         deal=deal,
@@ -4152,6 +4157,8 @@ def build_studio(deal_id=None):
         exterior_result=exterior_result,
         interior_result=interior_result,
         blueprint_result=blueprint_result,
+        saved_exterior_image=saved_exterior_image,
+        has_saved_exterior=has_saved_exterior,
         page_title="Build Studio",
         page_subtitle="Design and visualize new construction projects.",
     )
@@ -4206,7 +4213,11 @@ def generate_build_studio():
         room_type = (data.get("room_type") or "living room").strip()
         save_to_deal = str(data.get("save_to_deal") or "true").lower() in ("1", "true", "yes", "on")
 
-        image_url = (data.get("image_url") or "").strip()
+       image_url = (
+            data.get("image_url")
+            or data.get("reference_image_url")
+            or ""
+        ).strip()
         image_base64 = (data.get("image_base64") or "").strip()
 
         # Optional fallback to saved exterior reference image if available
@@ -4321,55 +4332,7 @@ def generate_build_studio():
             "status": "error",
             "message": str(e)
         }), 500
-        
-@investor_bp.route("/ai/build-scope/analyze", methods=["POST"])
-@csrf.exempt
-@login_required
-@role_required("investor")
-def ai_build_scope():
-    data = request.get_json(silent=True) or {}
-
-    description = (data.get("description") or "").strip()
-    property_type = (data.get("property_type") or "").strip()
-    lot_size = (data.get("lot_size") or "").strip()
-    zoning = (data.get("zoning") or "").strip()
-
-    if not description:
-        return jsonify({"status": "error", "message": "description is required."}), 400
-
-    try:
-        if not SCOPE_ENGINE_URL:
-            return jsonify({"status": "error", "message": "Scope engine is not configured."}), 500
-
-        res = requests.post(
-            _scope_engine_url("/v1/build_scope"),
-            json={
-                "description": description,
-                "property_type": property_type,
-                "lot_size": lot_size,
-                "zoning": zoning,
-            },
-            headers=_scope_engine_headers(),
-            timeout=60,
-        )
-        res.raise_for_status()
-
-        engine_data = res.json() or {}
-        build_analysis = engine_data.get("build_analysis") or {}
-
-        return jsonify({
-            "status": "ok",
-            "build_analysis": {
-                "summary": build_analysis.get("summary", ""),
-                "key_points": build_analysis.get("key_points", []),
-                "estimated_build_cost": build_analysis.get("estimated_build_cost", 0),
-            }
-        })
-
-    except Exception as e:
-        current_app.logger.exception("ai_build_scope failed")
-        return jsonify({"status": "error", "message": str(e)}), 500
-
+ 
 # =========================================================
 # BLUEPRINT TO CONCEPT
 # =========================================================
@@ -4397,8 +4360,13 @@ def blueprint_to_room():
         deal_id = _normalize_int(request.form.get("deal_id"))
         saved_property_id = _normalize_int(request.form.get("saved_property_id"))
 
-        if not blueprint_file and not blueprint_url:
-            return jsonify({"status": "error", "message": "Provide blueprint_file or blueprint_url."}), 400
+        reference_image_url = (request.form.get("reference_image_url") or "").strip()
+
+        if not blueprint_file and not blueprint_url and not reference_image_url:
+            return jsonify({
+                "status": "error",
+                "message": "Provide blueprint_file, blueprint_url, or use saved build."
+            }), 400
 
         style_preset = _normalize_style_preset(requested_style_preset)
         render_batch_id = uuid.uuid4().hex
@@ -4423,7 +4391,14 @@ def blueprint_to_room():
             if saved_property_id is None and getattr(deal, "saved_property_id", None):
                 saved_property_id = deal.saved_property_id
 
-        raw = blueprint_file.read() if blueprint_file else download_image_bytes(blueprint_url)
+        if blueprint_file:
+            raw = blueprint_file.read()
+        elif blueprint_url:
+            raw = download_image_bytes(blueprint_url)
+        elif reference_image_url:
+            raw = download_image_bytes(reference_image_url)
+        else:
+            raw = None
         if not raw:
             return jsonify({"status": "error", "message": "Empty blueprint input."}), 400
 
@@ -4507,6 +4482,7 @@ def blueprint_to_room():
                 "bedrooms": (request.form.get("bedrooms") or "").strip(),
                 "bathrooms": (request.form.get("bathrooms") or "").strip(),
                 "square_feet": (request.form.get("square_feet") or "").strip(),
+                "build_reference_image": reference_image_url or blueprint_url,
             }
 
             results["build_project"] = build_project
@@ -4544,6 +4520,55 @@ def blueprint_to_room():
                 db.session.rollback()
 
         return jsonify({"status": "error", "message": f"Blueprint render failed: {e}"}), 500
+       
+@investor_bp.route("/ai/build-scope/analyze", methods=["POST"])
+@csrf.exempt
+@login_required
+@role_required("investor")
+def ai_build_scope():
+    data = request.get_json(silent=True) or {}
+
+    description = (data.get("description") or "").strip()
+    property_type = (data.get("property_type") or "").strip()
+    lot_size = (data.get("lot_size") or "").strip()
+    zoning = (data.get("zoning") or "").strip()
+
+    if not description:
+        return jsonify({"status": "error", "message": "description is required."}), 400
+
+    try:
+        if not SCOPE_ENGINE_URL:
+            return jsonify({"status": "error", "message": "Scope engine is not configured."}), 500
+
+        res = requests.post(
+            _scope_engine_url("/v1/build_scope"),
+            json={
+                "description": description,
+                "property_type": property_type,
+                "lot_size": lot_size,
+                "zoning": zoning,
+            },
+            headers=_scope_engine_headers(),
+            timeout=60,
+        )
+        res.raise_for_status()
+
+        engine_data = res.json() or {}
+        build_analysis = engine_data.get("build_analysis") or {}
+
+        return jsonify({
+            "status": "ok",
+            "build_analysis": {
+                "summary": build_analysis.get("summary", ""),
+                "key_points": build_analysis.get("key_points", []),
+                "estimated_build_cost": build_analysis.get("estimated_build_cost", 0),
+            }
+        })
+
+    except Exception as e:
+        current_app.logger.exception("ai_build_scope failed")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
        
 @investor_bp.route("/deal-studio/build-studio/generate-upload", methods=["POST"])
 @csrf.exempt

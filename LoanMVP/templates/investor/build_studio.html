@@ -345,6 +345,42 @@
     background:rgba(104,211,160,.12);
     color:#91f0bf;
   }
+  .source-card{
+    margin-top:.85rem;
+    padding:14px;
+    border-radius:18px;
+    background:rgba(104,211,160,.08);
+    border:1px solid rgba(104,211,160,.24);
+  }
+
+  .source-card h4{
+    margin:0 0 6px;
+    color:#91f0bf;
+    font-size:.98rem;
+  }
+
+  .source-card p{
+    margin:0;
+    color:rgba(255,255,255,.74);
+    line-height:1.55;
+  }
+
+  .source-preview{
+    width:100%;
+    max-width:220px;
+    height:140px;
+    object-fit:cover;
+    border-radius:14px;
+    margin-top:12px;
+    border:1px solid rgba(255,255,255,.10);
+    display:block;
+  }
+
+  .helper-note{
+    margin-top:8px;
+    color:rgba(255,255,255,.58);
+    font-size:.84rem;
+  }
 
   .asset-link{
     display:block;
@@ -420,6 +456,7 @@
         </div>
 
         <input type="hidden" id="buildMode" value="exterior">
+        <input type="hidden" id="savedExteriorImage" value="{{ saved_exterior_image or '' }}">
 
         <div class="saved-strip">
           <div class="saved-chip {% if exterior_result.get('image_url') %}ready{% endif %}">Exterior {% if exterior_result.get('image_url') %}✓{% endif %}</div>
@@ -489,19 +526,34 @@
             <div>
               <label class="muted" style="display:block;margin-bottom:.35rem;">Room Type</label>
               <select id="roomType" class="input">
-                <option value="living room">Living Room</option>
-                <option value="kitchen">Kitchen</option>
-                <option value="bedroom">Bedroom</option>
-                <option value="bathroom">Bathroom</option>
-                <option value="office">Office</option>
-                <option value="dining room">Dining Room</option>
-              </select>
-            </div>
-            <div>
-              <label class="muted" style="display:block;margin-bottom:.35rem;">Interior Reference Image</label>
-              <input id="interiorImage" class="input" type="file" accept="image/*">
-            </div>
+              <option value="living room">Living Room</option>
+              <option value="kitchen">Kitchen</option>
+              <option value="bedroom">Bedroom</option>
+              <option value="bathroom">Bathroom</option>
+              <option value="office">Office</option>
+              <option value="dining room">Dining Room</option>
+            </select>
           </div>
+          <div>
+            <label class="muted" style="display:block;margin-bottom:.35rem;">Interior Reference Image</label>
+            <input id="interiorImage" class="input" type="file" accept="image/*">
+            <div class="helper-note">Optional override. If left empty, Build Studio will use the saved exterior build.</div>
+           </div>
+          </div>
+
+         {% if has_saved_exterior %}
+           <div class="source-card" id="interiorSavedSourceCard">
+             <h4>Using saved exterior build</h4>
+             <p>Your saved exterior concept will be used as the source for interior generation unless you upload a different image.</p>
+             <img class="source-preview" src="{{ saved_exterior_image }}" alt="Saved exterior source">
+           </div>
+         {% else %}
+           <div class="helper-note">Generate and save an exterior build first for the smoothest interior workflow.</div>
+         {% endif %}
+
+         <label class="muted" style="display:block;margin-top:.85rem;margin-bottom:.35rem;">Interior Description</label>
+         <textarea id="interiorDescription" class="input" placeholder="Describe finishes, layout, lighting, cabinetry, flooring, ceiling style, and the room feel...">      {{ interior_result.get('description', '') }}</textarea>
+        </div>
 
           <label class="muted" style="display:block;margin-top:.85rem;margin-bottom:.35rem;">Interior Description</label>
           <textarea id="interiorDescription" class="input" placeholder="Describe finishes, layout, lighting, cabinetry, flooring, ceiling style, and the room feel...">{{ interior_result.get('description', '') }}</textarea>
@@ -527,8 +579,19 @@
             <div>
               <label class="muted" style="display:block;margin-bottom:.35rem;">Blueprint File</label>
               <input id="blueprintFile" class="input" type="file" accept="image/*,.pdf">
+              <div class="helper-note">Optional override. If left empty, Build Studio will use the saved exterior build and project details.</div>
             </div>
           </div>
+
+          {% if has_saved_exterior %}
+            <div class="source-card" id="blueprintSavedSourceCard">
+              <h4>Using saved build concept</h4>
+              <p>Blueprint generation will use your saved exterior build as the base reference along with the bedrooms, bathrooms, and square footage entered here.</p>
+              <img class="source-preview" src="{{ saved_exterior_image }}" alt="Saved build source for blueprint">
+            </div>
+          {% else %}
+            <div class="helper-note">Generate and save an exterior build first for the smoothest blueprint workflow.</div>
+          {% endif %}   
 
           <label class="muted" style="display:block;margin-top:.85rem;margin-bottom:.35rem;">Blueprint / Layout Description</label>
           <textarea id="blueprintDescription" class="input" placeholder="Describe layout goals, open concept, room placement, garage, office, circulation, and planning intent...">{{ blueprint_result.get('description', '') }}</textarea>
@@ -688,7 +751,11 @@ function setMode(mode, btn=null) {
 
 function renderModePreview(mode) {
   const result = BUILD_RESULTS[mode] || {};
-  const src = result.image_url || "";
+  let src = result.image_url || "";
+
+  if (!src && mode !== "exterior") {
+    src = getBestReferenceImageForMode(mode);
+  }
   const img = document.getElementById("buildPreviewImg");
   const empty = document.getElementById("buildPreviewEmpty");
 
@@ -754,6 +821,7 @@ function buildBlueprintFormData() {
   fd.append("bathrooms", document.getElementById("bathrooms")?.value || "");
   fd.append("square_feet", document.getElementById("squareFeet")?.value || "");
   fd.append("style_preset", "luxury_modern");
+  fd.append("reference_image_url", getBestReferenceImageForMode("blueprint"));
 
   const file = document.getElementById("blueprintFile")?.files?.[0];
   if (file) fd.append("blueprint_file", file);
@@ -813,6 +881,7 @@ async function generateActiveMode() {
         ...buildCommonJson(),
         room_type: document.getElementById("roomType")?.value || "living room",
         description: document.getElementById("interiorDescription")?.value || ""
+        reference_image_url: getBestReferenceImageForMode("interior")
       };
 
       const res = await fetch("/investor/deal-studio/build-studio/generate", {
@@ -986,5 +1055,31 @@ document.addEventListener("DOMContentLoaded", function () {
 
   setMode("exterior");
 });
+function getSavedExteriorImage() {
+  return document.getElementById("savedExteriorImage")?.value || "";
+}
+function getBestReferenceImageForMode(mode) {
+  const savedExterior = getSavedExteriorImage();
+
+  if (mode === "interior") {
+    return (
+      BUILD_RESULTS.interior?.image_url ||
+      BUILD_RESULTS.exterior?.image_url ||
+      savedExterior ||
+      ""
+    );
+  }
+
+  if (mode === "blueprint") {
+    return (
+      BUILD_RESULTS.blueprint?.image_url ||
+      BUILD_RESULTS.exterior?.image_url ||
+      savedExterior ||
+      ""
+    );
+  }
+
+  return "";
+}
 </script>
 {% endblock %}
