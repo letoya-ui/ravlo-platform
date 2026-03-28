@@ -4734,23 +4734,24 @@ def generate_build_studio_upload():
             build_project = results.get("build_project", {}) or {}
 
             build_project["exterior"] = {
-                "project_name": project_name,
-                "property_type": property_type,
-                "description": description,
-                "lot_size": lot_size,
-                "zoning": zoning,
-                "location": location,
-                "notes": notes,
-                "style": style,
-                "image_url": build_urls[0] if build_urls else "",
-                "images": build_urls,
-                "meta": meta,
-                "seed": seed,
-                "job_id": job_id,
-                "build_reference_image": reference_image_url,
-            },
-            "gallery": build_urls,
-        }
+                "primary": {
+                    "project_name": project_name,
+                    "property_type": property_type,
+                    "description": description,
+                    "lot_size": lot_size,
+                    "zoning": zoning,
+                    "location": location,
+                    "notes": notes,
+                    "style": style,
+                    "image_url": build_urls[0] if build_urls else "",
+                    "images": build_urls,
+                    "meta": meta,
+                    "seed": seed,
+                    "job_id": job_id,
+                    "build_reference_image": reference_image_url,
+                 },
+                 "gallery": build_urls,
+            }
 
             results["build_project"] = build_project
 
