@@ -4224,8 +4224,8 @@ def generate_build_studio():
             "steps": 24,
             "guidance": 9.0,
             "strength": 0.55,
-            "width": 640,
-            "height": 640,
+            "width": 768,
+            "height": 768,
         }
 
         current_app.logger.warning(f"BUILD ENGINE PAYLOAD: {payload}")
