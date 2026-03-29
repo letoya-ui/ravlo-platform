@@ -4505,16 +4505,11 @@ def generate_build_interior():
                 image_base64 = base64.b64encode(raw).decode("utf-8")
                 image_url = ""
 
-        if not image_url and not image_base64 and deal is not None:
-            results = deal.results_json or {}
-            build_project = results.get("build_project", {}) or {}
-            exterior_result = build_project.get("exterior", {}) or {}
+        # Do NOT fall back to exterior for interior generation
+        # If no interior reference is provided, leave image_url empty
+        if not image_url and not image_base64:
+            image_url = ""
 
-            image_url = (
-                exterior_result.get("image_url")
-                or exterior_result.get("build_reference_image")
-                or ""
-            ).strip()
 
         payload = {
             "mode": "interior",
