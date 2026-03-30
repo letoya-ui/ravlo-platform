@@ -1,0 +1,194 @@
+{% extends "layouts/marketing_base.html" %}
+
+{% block hero %}
+<section class="mk-hero mk-hero-compact">
+  <div class="mk-container">
+    <div class="mk-hero-copy" style="max-width: 860px; margin: 0 auto; text-align: center;">
+      <div class="mk-eyebrow">Ravlo Lending OS</div>
+      <h1 class="mk-title-xl">Request a demo or start a lending conversation.</h1>
+      <p class="mk-copy-lg">
+        Tell us about your lending operation, team structure, and what you want to improve.
+        We’ll use that to guide the right Ravlo Lending OS conversation.
+      </p>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block content %}
+<section class="mk-section">
+  <div class="mk-container">
+
+    <div class="mk-split-panel">
+      <div class="mk-panel">
+        <div class="mk-eyebrow">Connect With Ravlo</div>
+        <h2 class="mk-title-lg">Built for lenders, operators, and growing teams.</h2>
+        <p class="mk-copy-lg">
+          Whether you want a platform demo, founders access, or a licensing conversation,
+          this is the best place to start.
+        </p>
+
+        <ul class="mk-bullet-list">
+          <li>Request a live Ravlo Lending OS walkthrough</li>
+          <li>Ask about founders access pricing</li>
+          <li>Start a licensing or white-label conversation</li>
+          <li>Tell us about your lending workflow and team needs</li>
+        </ul>
+
+        <div class="mk-feature-grid mk-feature-grid-1" style="margin-top: 26px;">
+          <article class="mk-feature-card">
+            <h3>Best fit for</h3>
+            <p>
+              Private lenders, hard money lenders, DSCR lenders, mortgage teams,
+              operators, and growing lending brands looking for a cleaner operating system.
+            </p>
+          </article>
+        </div>
+      </div>
+
+      <div class="mk-panel mk-panel-soft">
+        <div class="mk-eyebrow">Request Form</div>
+        <h3 style="margin-bottom: 10px;">Tell us about your team.</h3>
+        <p class="mk-copy" style="margin-bottom: 24px;">
+          The more context you share, the better we can shape your demo or next-step conversation.
+        </p>
+
+        <form method="POST" action="{{ url_for('marketing.contact') }}" class="mk-form-grid">
+          {{ form.hidden_tag() if form.hidden_tag }}
+
+          <div class="mk-form-row">
+            <div class="mk-form-group">
+              <label for="name">Full Name</label>
+              <input type="text" id="name" name="name" placeholder="Your name" required>
+            </div>
+
+            <div class="mk-form-group">
+              <label for="company_name">Company Name</label>
+              <input type="text" id="company_name" name="company_name" placeholder="Company or lending brand">
+            </div>
+          </div>
+
+          <div class="mk-form-row">
+            <div class="mk-form-group">
+              <label for="email">Work Email</label>
+              <input type="email" id="email" name="email" placeholder="name@company.com" required>
+            </div>
+
+            <div class="mk-form-group">
+              <label for="phone">Phone</label>
+              <input type="text" id="phone" name="phone" placeholder="(555) 555-5555">
+            </div>
+          </div>
+
+          <div class="mk-form-row">
+            <div class="mk-form-group">
+              <label for="company_type">Company Type</label>
+              <select id="company_type" name="company_type">
+                <option value="">Select company type</option>
+                <option value="private_lender">Private Lender</option>
+                <option value="hard_money_lender">Hard Money Lender</option>
+                <option value="mortgage_broker">Mortgage Broker</option>
+                <option value="dscr_lender">DSCR Lender</option>
+                <option value="correspondent_lender">Correspondent Lender</option>
+                <option value="lending_team">Lending Team</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+
+            <div class="mk-form-group">
+              <label for="team_size">Team Size</label>
+              <select id="team_size" name="team_size">
+                <option value="">Select team size</option>
+                <option value="1_3">1–3 users</option>
+                <option value="4_10">4–10 users</option>
+                <option value="11_25">11–25 users</option>
+                <option value="26_plus">26+ users</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="mk-form-row">
+            <div class="mk-form-group">
+              <label for="interest_type">What are you interested in?</label>
+              <select id="interest_type" name="interest_type" required>
+                <option value="">Select an option</option>
+                <option value="demo">Platform Demo</option>
+                <option value="founders_access">Founders Access</option>
+                <option value="licensing">Licensing</option>
+                <option value="white_label">White-Label Conversation</option>
+                <option value="partnership">Partnership</option>
+              </select>
+            </div>
+
+            <div class="mk-form-group">
+              <label for="timeline">Timeline</label>
+              <select id="timeline" name="timeline">
+                <option value="">Select timeline</option>
+                <option value="immediately">Immediately</option>
+                <option value="this_month">This Month</option>
+                <option value="next_90_days">Next 90 Days</option>
+                <option value="exploring">Just Exploring</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="mk-form-group">
+            <label for="current_stack">Current Tools / Current Process</label>
+            <input type="text" id="current_stack" name="current_stack" placeholder="CRM, LOS, spreadsheets, email, file sharing, etc.">
+          </div>
+
+          <div class="mk-form-group">
+            <label for="message">What do you want Ravlo to help with?</label>
+            <textarea id="message" name="message" rows="6" placeholder="Tell us about your lending workflow, pain points, growth goals, or what you want to improve." required></textarea>
+          </div>
+
+          <div class="mk-form-check">
+            <input type="checkbox" id="founders_interest" name="founders_interest" value="yes">
+            <label for="founders_interest">I’m interested in founders access pricing.</label>
+          </div>
+
+          <div class="mk-form-actions">
+            <button type="submit" class="mk-btn mk-btn-primary">Send Request</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<section class="mk-section mk-section-dark">
+  <div class="mk-container">
+    <div class="mk-section-head">
+      <div class="mk-eyebrow">Next Step</div>
+      <h2 class="mk-title-lg">What happens after you reach out?</h2>
+      <p class="mk-copy-lg">
+        We review your request, understand your workflow, and guide the right next conversation.
+      </p>
+    </div>
+
+    <div class="mk-feature-grid mk-feature-grid-3">
+      <article class="mk-feature-card">
+        <h3>1. Review</h3>
+        <p>
+          We look at your team structure, lending model, and what kind of workflow support you need.
+        </p>
+      </article>
+
+      <article class="mk-feature-card">
+        <h3>2. Demo or Discussion</h3>
+        <p>
+          We schedule a focused conversation around platform fit, founders access, or licensing direction.
+        </p>
+      </article>
+
+      <article class="mk-feature-card">
+        <h3>3. Next-Step Setup</h3>
+        <p>
+          If there’s fit, we move into access, onboarding, or a deeper platform conversation.
+        </p>
+      </article>
+    </div>
+  </div>
+</section>
+{% endblock %}
