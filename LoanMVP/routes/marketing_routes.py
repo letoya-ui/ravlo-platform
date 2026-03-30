@@ -52,6 +52,12 @@ PAGE_META = {
         "template": "marketing/contact.html",
         "hero_image": "images/marketing/city_skyline.jpg",
     },
+    "lenders_contact": {
+        "title": "Lenders Contact | Ravlo",
+        "description": "Request a demo, founders access, or a licensing conversation for Ravlo Lending OS.",
+        "template": "marketing/lenders_contact.html",
+        "hero_image": "images/marketing/lending_os_hero.jpg",
+    },
     "support": {
         "title": "Support | Ravlo",
         "description": "Get help using Ravlo, find answers, and access support resources.",
@@ -117,10 +123,10 @@ PAGE_META = {
         "hero_image": "images/about/team_strategy.jpg",
     },
     "partner_plans": {
-         "title": "Partner Plans | Ravlo",
-         "description": "Choose the Ravlo partner plan that fits your business and connect with investors through the platform.",
-         "template": "marketing/partner_plans.html",
-         "hero_image": "images/marketing/interior_luxury.jpg",
+        "title": "Partner Plans | Ravlo",
+        "description": "Choose the Ravlo partner plan that fits your business and connect with investors through the platform.",
+        "template": "marketing/partner_plans.html",
+        "hero_image": "images/marketing/interior_luxury.jpg",
     },
 }
 
@@ -248,6 +254,15 @@ def contact():
     return render_marketing_page("contact")
 
 
+@marketing_bp.route("/lenders-contact")
+def lenders_contact():
+    topic = request.args.get("topic", "")
+    return render_marketing_page(
+        "lenders_contact",
+        selected_topic=topic,
+    )
+
+
 # ---------------------------------------------------------
 # SUPPORT / FAQ
 # ---------------------------------------------------------
@@ -314,9 +329,11 @@ def mission():
 def story():
     return render_marketing_page("story")
 
+
 @marketing_bp.route("/partners/plans")
 def partner_plans():
     return render_marketing_page("partner_plans")
+
 
 @marketing_bp.route("/lending-os")
 def lending_os():
