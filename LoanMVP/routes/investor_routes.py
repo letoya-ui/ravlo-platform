@@ -4136,7 +4136,7 @@ def request_funding(deal_id):
 @investor_bp.route("/deal-studio/rehab-studio", methods=["GET"])
 @login_required
 @role_required("investor")
-def rehab_studio(deal_id=None):
+def deal_rehab(deal_id=None):
     deal = None
 
     if deal_id is None:
@@ -4168,7 +4168,7 @@ def rehab_studio(deal_id=None):
 @csrf.exempt
 @login_required
 @role_required("investor")
-def generate_rehab_variant():
+def deal_rehab_generate_variant():
     deal = None
 
     try:
@@ -6767,7 +6767,7 @@ def renovation_upload():
 @csrf.exempt
 @login_required
 @role_required("investor")
-def generate_rehab_studio():
+def deal_rehab_generate():
     deal = None
 
     try:
