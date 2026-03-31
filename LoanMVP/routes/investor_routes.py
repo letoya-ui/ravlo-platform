@@ -431,6 +431,61 @@ def _compose_style_prompt(style_prompt: str, style_preset: str, keep_layout: boo
 
     return prompt
 
+def _extract_saved_blueprint_reference(deal=None, project=None):
+    """
+    Returns a usable blueprint reference from the project or deal.
+    Can be a URL, storage path, or base64 data URI.
+    """
+    candidates = []
+
+    # ---- project-level fields first ----
+    if project:
+        for attr in [
+            "blueprint_image",
+            "blueprint_image_url",
+            "blueprint_url",
+            "blueprint_path",
+            "floorplan_image",
+            "floorplan_url",
+        ]:
+            value = getattr(project, attr, None)
+            if value:
+                candidates.append(value)
+
+        project_results = getattr(project, "results_json", None) or {}
+        if isinstance(project_results, dict):
+            candidates.extend([
+                project_results.get("blueprint_image"),
+                project_results.get("blueprint_url"),
+                (project_results.get("blueprint_result") or {}).get("image"),
+                (project_results.get("blueprint_result") or {}).get("image_url"),
+                (project_results.get("blueprint_result") or {}).get("saved_path"),
+            ])
+
+    # ---- deal-level results_json ----
+    if deal:
+        results = getattr(deal, "results_json", None) or {}
+        if isinstance(results, dict):
+            build_project = results.get("build_project") or {}
+            blueprint_result = results.get("blueprint_result") or {}
+
+            candidates.extend([
+                results.get("blueprint_image"),
+                results.get("blueprint_url"),
+                build_project.get("blueprint_image"),
+                build_project.get("blueprint_url"),
+                build_project.get("blueprint_path"),
+                blueprint_result.get("image"),
+                blueprint_result.get("image_url"),
+                blueprint_result.get("saved_path"),
+            ])
+
+    # ---- first non-empty candidate wins ----
+    for item in candidates:
+        if isinstance(item, str) and item.strip():
+            return item.strip()
+
+    return None
 # =========================================================
 # ENGINE HELPERS
 # =========================================================
@@ -4797,144 +4852,47 @@ def generate_build_blueprint():
         raw = None
         blueprint_image_base64 = ""
 
-        # --------------------------------------------------
-        # Optional deal loading
-        # --------------------------------------------------
+        # ---------------- DEAL ----------------
         if deal_id:
             deal = Deal.query.filter_by(id=deal_id, user_id=current_user.id).first()
             if not deal:
-                return jsonify({
-                    "status": "error",
-                    "message": "Deal not found or not authorized."
-                }), 404
+                return jsonify({"status": "error", "message": "Deal not found."}), 404
 
             if _deal_render_lock_active(deal):
-                return jsonify({
-                    "status": "error",
-                    "message": "A blueprint render is already in progress for this deal."
-                }), 409
+                return jsonify({"status": "error", "message": "Blueprint render in progress."}), 409
 
             _set_deal_render_processing(deal)
             db.session.commit()
 
-            if saved_property_id is None and getattr(deal, "saved_property_id", None):
-                saved_property_id = deal.saved_property_id
-
-        # --------------------------------------------------
-        # Optional project fallback
-        # --------------------------------------------------
-        if project_id:
-            project = BuildProject.query.filter_by(
-                id=project_id,
-                user_id=current_user.id
-            ).first()
-
-        # --------------------------------------------------
-        # Resolve optional image input
-        # --------------------------------------------------
+        # ---------------- IMAGE INPUT ----------------
         if blueprint_file:
             raw = blueprint_file.read()
-
         elif blueprint_url:
-            try:
-                raw = download_image_bytes(blueprint_url)
-            except Exception:
-                raw = None
-
+            raw = download_image_bytes(blueprint_url)
         elif reference_image_url:
-            try:
-                raw = download_image_bytes(reference_image_url)
-            except Exception:
-                raw = None
-
-        elif project:
-            blueprint_url = (project.blueprint_url or "").strip()
-            if blueprint_url:
-                try:
-                    raw = download_image_bytes(blueprint_url)
-                except Exception:
-                    raw = None
-
-        elif deal is not None:
-            results = deal.results_json or {}
-            build_project = results.get("build_project", {}) or {}
-            blueprint_block = build_project.get("blueprint", {}) or {}
-
-            blueprint_url = (
-                blueprint_block.get("blueprint_url")
-                or blueprint_block.get("image_url")
-                or ""
-            ).strip()
-
-            if blueprint_url:
-                try:
-                    raw = download_image_bytes(blueprint_url)
-                except Exception:
-                    raw = None
+            raw = download_image_bytes(reference_image_url)
 
         if raw:
             blueprint_image_base64 = base64.b64encode(raw).decode("utf-8")
 
-        # --------------------------------------------------
-        # Require either image input OR enough text seed
-        # --------------------------------------------------
+        # ---------------- VALIDATION ----------------
         has_text_seed = any([
-            project_name,
-            property_type,
-            description,
-            lot_size,
-            zoning,
-            bedrooms,
-            bathrooms,
-            square_feet,
+            project_name, property_type, description,
+            lot_size, zoning, bedrooms, bathrooms, square_feet
         ])
 
         if not blueprint_image_base64 and not has_text_seed:
             return jsonify({
                 "status": "error",
-                "message": "Provide a blueprint file, blueprint URL, reference image, or enough project details to generate a blueprint."
+                "message": "Provide blueprint or enough details."
             }), 400
 
+        # ---------------- ENGINE ----------------
         style_preset = _normalize_style_preset(requested_style_preset)
         render_batch_id = uuid.uuid4().hex
-        structure = None
-        room_type = "room"
-        parse_warning = None
-        stored_blueprint_url = ""
 
-        # --------------------------------------------------
-        # Save uploaded/reference blueprint source only if we have one
-        # --------------------------------------------------
-        if raw:
-            blueprint_webp = to_webp_bytes(raw, max_size=2000, quality=90)
-            uploaded = spaces_put_bytes(
-                blueprint_webp,
-                subdir=f"blueprints/{current_user.id}",
-                content_type="image/webp",
-                filename=f"{render_batch_id}_blueprint.webp",
-            )
-            stored_blueprint_url = uploaded["url"]
+        style_prompt = build_blueprint_prompt("room", style_preset, renovation_level)
 
-            # Optional parsing only when real blueprint/source exists
-            try:
-                structure = extract_blueprint_structure(stored_blueprint_url)
-                room_type = infer_room_type(structure) or "room"
-            except Exception as e:
-                parse_warning = str(e)
-                current_app.logger.warning(f"Blueprint parsing warning: {e}")
-
-        style_prompt = build_blueprint_prompt(room_type, style_preset, renovation_level)
-        style_prompt = (
-            "blueprint guided architectural layout visualization, "
-            "floor plan interpreted into realistic residential structure, "
-            "clear room organization, walls, doors, windows, "
-            "buildable home layout, clean architectural composition, "
-            + style_prompt
-        )
-
-        # --------------------------------------------------
-        # Engine payload - supports text-only or image-guided blueprint
-        # --------------------------------------------------
         payload = {
             "mode": "blueprint",
             "project_name": project_name,
@@ -4954,9 +4912,6 @@ def generate_build_blueprint():
 
         if blueprint_image_base64:
             payload["image_base64"] = blueprint_image_base64
-            payload["image_url"] = ""
-
-        current_app.logger.warning(f"BUILD BLUEPRINT ENGINE PAYLOAD: {payload}")
 
         engine_json = _post_renovation_engine_json(
             "/v1/build_concept",
@@ -4964,35 +4919,20 @@ def generate_build_blueprint():
             timeout=RENDER_TIMEOUT,
         )
 
-        current_app.logger.warning(f"BUILD BLUEPRINT ENGINE JSON: {engine_json}")
-
-        images_b64 = engine_json.get("images_base64", []) or []
+        images_b64 = engine_json.get("images_base64") or []
         if not images_b64:
-            return jsonify({
-                "status": "error",
-                "message": "Build blueprint engine returned no images."
-            }), 502
+            return jsonify({"status": "error", "message": "No blueprint images returned."}), 502
 
         after_urls = _upload_after_images_from_b64(images_b64, render_batch_id)
         if not after_urls:
-            return jsonify({
-                "status": "error",
-                "message": "Blueprint render completed but uploads failed."
-            }), 500
+            return jsonify({"status": "error", "message": "Upload failed."}), 500
 
-        saved_count = 0
+        # ---------------- 🔥 CRITICAL FIX ----------------
+        primary_blueprint = after_urls[0]
+        fallback_reference = stored_blueprint_url or primary_blueprint
+
+        # ---------------- SAVE ----------------
         if deal is not None:
-            if stored_blueprint_url:
-                saved_count = _save_mockups_for_deal(
-                    deal=deal,
-                    before_url=stored_blueprint_url,
-                    after_urls=after_urls,
-                    style_prompt=style_prompt,
-                    style_preset=style_preset,
-                    mode="blueprint",
-                    saved_property_id=saved_property_id,
-                )
-
             results = _deal_results(deal)
             build_project = results.get("build_project", {}) or {}
 
@@ -5005,25 +4945,26 @@ def generate_build_blueprint():
                 "zoning": zoning,
                 "location": location,
                 "notes": notes,
-                "image_url": after_urls[0] if after_urls else "",
+
+                # 🔥 ALWAYS VALID
+                "image_url": primary_blueprint,
+                "blueprint_url": fallback_reference,
+
                 "images": after_urls,
-                "blueprint_url": stored_blueprint_url,
-                "room_type": room_type,
-                "structure": structure,
-                "style_prompt": style_prompt,
-                "style_preset": style_preset,
-                "renovation_level": renovation_level,
-                "bedrooms": bedrooms,
-                "bathrooms": bathrooms,
-                "square_feet": square_feet,
-                "parse_warning": parse_warning,
+
+                # 🔥 IMPORTANT FOR ROOM GENERATION
+                "build_reference_image": primary_blueprint,
+
                 "meta": engine_json.get("meta") or {},
                 "seed": engine_json.get("seed"),
                 "job_id": engine_json.get("job_id"),
-                "saved_count": saved_count,
             }
 
             results["build_project"] = build_project
+
+            # 🔥 GLOBAL FALLBACK (VERY IMPORTANT)
+            results["build_reference_image"] = primary_blueprint
+
             _set_deal_results(deal, results)
 
         if deal is not None:
@@ -5033,20 +4974,10 @@ def generate_build_blueprint():
 
         return jsonify({
             "status": "ok",
-            "mode": "blueprint",
             "images": after_urls,
-            "image_url": after_urls[0] if after_urls else "",
-            "blueprint_url": stored_blueprint_url,
-            "room_type": room_type,
-            "structure": structure,
-            "style_prompt": style_prompt,
-            "style_preset": style_preset,
-            "renovation_level": renovation_level,
-            "meta": engine_json.get("meta") or {},
-            "seed": engine_json.get("seed"),
-            "job_id": engine_json.get("job_id"),
+            "image_url": primary_blueprint,
+            "blueprint_url": fallback_reference,
             "deal_id": deal.id if deal else None,
-            "saved_to_deal": bool(deal is not None),
         })
 
     except Exception as e:
@@ -5512,6 +5443,81 @@ def generate_full_build():
 def generate_build_room():
     deal = None
 
+    def _clean_str(value):
+        return (value or "").strip()
+
+    def _first_nonempty(*values):
+        for value in values:
+            if isinstance(value, str) and value.strip():
+                return value.strip()
+        return ""
+
+    def _safe_dict(value):
+        return value if isinstance(value, dict) else {}
+
+    def _extract_blueprint_reference(results, build_project):
+        """
+        Find the best saved blueprint reference from current or legacy locations.
+        """
+        results = _safe_dict(results)
+        build_project = _safe_dict(build_project)
+
+        blueprint_block = _safe_dict(build_project.get("blueprint"))
+        interior_block = _safe_dict(build_project.get("interior"))
+        interior_latest = _safe_dict(interior_block.get("latest"))
+        exterior_block = _safe_dict(build_project.get("exterior"))
+
+        # legacy/top-level blocks sometimes used by older saves
+        blueprint_result = _safe_dict(results.get("blueprint_result"))
+        build_blueprint = _safe_dict(results.get("blueprint"))
+        concept_block = _safe_dict(results.get("concept"))
+        latest_build = _safe_dict(results.get("latest_build"))
+
+        blueprint_url = _first_nonempty(
+            blueprint_block.get("image_url"),
+            blueprint_block.get("blueprint_url"),
+            blueprint_block.get("url"),
+            blueprint_block.get("saved_url"),
+            blueprint_block.get("saved_path"),
+
+            blueprint_result.get("image_url"),
+            blueprint_result.get("blueprint_url"),
+            blueprint_result.get("url"),
+            blueprint_result.get("saved_path"),
+
+            build_blueprint.get("image_url"),
+            build_blueprint.get("blueprint_url"),
+            build_blueprint.get("url"),
+
+            interior_latest.get("build_reference_image"),
+            interior_latest.get("blueprint_url"),
+            interior_latest.get("image_url"),
+
+            exterior_block.get("build_reference_image"),
+            exterior_block.get("blueprint_url"),
+
+            concept_block.get("blueprint_url"),
+            concept_block.get("image_url"),
+
+            latest_build.get("blueprint_url"),
+            latest_build.get("image_url"),
+
+            results.get("build_reference_image"),
+            results.get("blueprint_url"),
+            results.get("blueprint_image"),
+        )
+
+        current_app.logger.warning(
+            "BUILD ROOM LOOKUP deal_id=%s blueprint_url=%s result_keys=%s build_project_keys=%s blueprint_keys=%s",
+            getattr(deal, "id", None),
+            blueprint_url,
+            list(results.keys()),
+            list(build_project.keys()),
+            list(blueprint_block.keys()),
+        )
+
+        return blueprint_url, blueprint_block, interior_block, interior_latest, exterior_block
+
     try:
         data = request.form.to_dict() or {}
 
@@ -5538,100 +5544,95 @@ def generate_build_room():
         _set_deal_render_processing(deal)
         db.session.commit()
 
-        results = _deal_results(deal)
-        build_project = results.get("build_project", {}) or {}
+        results = _safe_dict(_deal_results(deal))
+        build_project = _safe_dict(results.get("build_project"))
 
-        blueprint_block = build_project.get("blueprint", {}) or {}
-        interior_block = build_project.get("interior", {}) or {}
-        interior_latest = interior_block.get("latest", {}) or {}
-        exterior_block = build_project.get("exterior", {}) or {}
-
-        # Try multiple fallback locations for the blueprint reference
-        blueprint_url = (
-            (blueprint_block.get("image_url") or "").strip()
-            or (blueprint_block.get("blueprint_url") or "").strip()
-            or (interior_latest.get("build_reference_image") or "").strip()
-            or (results.get("build_reference_image") or "").strip()
-            or (exterior_block.get("build_reference_image") or "").strip()
-        )
-
-        current_app.logger.warning(
-            "BUILD ROOM LOOKUP deal_id=%s blueprint_url=%s available_keys=%s build_project_keys=%s",
-            deal.id if deal else None,
-            blueprint_url,
-            list((results or {}).keys()),
-            list((build_project or {}).keys()),
+        blueprint_url, blueprint_block, interior_block, interior_latest, exterior_block = _extract_blueprint_reference(
+            results, build_project
         )
 
         if not blueprint_url:
-            raise RuntimeError(
-                "Blueprint is required before generating additional rooms. "
-                "No saved blueprint reference was found on this deal."
-            )
+            _clear_deal_render_processing(deal)
+            db.session.commit()
+            return jsonify({
+                "status": "error",
+                "message": "Generate and save a blueprint first before creating additional rooms."
+            }), 400
 
         try:
             raw_blueprint = download_image_bytes(blueprint_url)
-        except Exception:
+        except Exception as download_err:
+            current_app.logger.exception(
+                "BUILD ROOM blueprint download failed for deal_id=%s url=%s",
+                deal.id,
+                blueprint_url,
+            )
             raw_blueprint = None
 
         if not raw_blueprint:
-            raise RuntimeError(f"Unable to load saved blueprint from: {blueprint_url}")
+            _clear_deal_render_processing(deal)
+            db.session.commit()
+            return jsonify({
+                "status": "error",
+                "message": f"Unable to load saved blueprint from: {blueprint_url}"
+            }), 400
 
         blueprint_b64 = base64.b64encode(raw_blueprint).decode("utf-8")
 
-        project_name = (
-            data.get("project_name")
-            or blueprint_block.get("project_name")
-            or interior_latest.get("project_name")
-            or ""
-        ).strip()
+        project_name = _first_nonempty(
+            data.get("project_name"),
+            blueprint_block.get("project_name"),
+            interior_latest.get("project_name"),
+            exterior_block.get("project_name"),
+        )
 
-        property_type = (
-            data.get("property_type")
-            or blueprint_block.get("property_type")
-            or interior_latest.get("property_type")
-            or "single_family"
-        ).strip()
+        property_type = _first_nonempty(
+            data.get("property_type"),
+            blueprint_block.get("property_type"),
+            interior_latest.get("property_type"),
+            exterior_block.get("property_type"),
+            "single_family",
+        )
 
-        style = (
-            data.get("style")
-            or blueprint_block.get("style")
-            or interior_latest.get("style")
-            or "modern_farmhouse"
-        ).strip()
+        style = _first_nonempty(
+            data.get("style"),
+            blueprint_block.get("style"),
+            interior_latest.get("style"),
+            exterior_block.get("style"),
+            "modern_farmhouse",
+        )
 
-        description = (
-            data.get("description")
-            or blueprint_block.get("description")
-            or interior_latest.get("description")
-            or ""
-        ).strip()
+        description = _first_nonempty(
+            data.get("description"),
+            blueprint_block.get("description"),
+            interior_latest.get("description"),
+            exterior_block.get("description"),
+        )
 
-        lot_size = (
-            data.get("lot_size")
-            or blueprint_block.get("lot_size")
-            or interior_latest.get("lot_size")
-            or ""
-        ).strip()
+        lot_size = _first_nonempty(
+            data.get("lot_size"),
+            blueprint_block.get("lot_size"),
+            interior_latest.get("lot_size"),
+            exterior_block.get("lot_size"),
+        )
 
-        zoning = (
-            data.get("zoning")
-            or blueprint_block.get("zoning")
-            or interior_latest.get("zoning")
-            or ""
-        ).strip()
+        zoning = _first_nonempty(
+            data.get("zoning"),
+            blueprint_block.get("zoning"),
+            interior_latest.get("zoning"),
+            exterior_block.get("zoning"),
+        )
 
-        location = (
-            data.get("location")
-            or blueprint_block.get("location")
-            or interior_latest.get("location")
-            or ""
-        ).strip()
+        location = _first_nonempty(
+            data.get("location"),
+            blueprint_block.get("location"),
+            interior_latest.get("location"),
+            exterior_block.get("location"),
+        )
 
-        notes = (data.get("notes") or "").strip()
-
-        room_type = (data.get("room_type") or "kitchen").strip()
-        floor = (data.get("floor") or "main").strip()
+        notes = _clean_str(data.get("notes"))
+        room_type = _clean_str(data.get("room_type")) or "kitchen"
+        floor = _clean_str(data.get("floor")) or "main"
 
         payload = {
             "mode": "interior",
@@ -5669,7 +5670,7 @@ def generate_build_room():
         if not room_urls:
             raise RuntimeError("Room generated but uploads failed.")
 
-        interior_block = build_project.get("interior", {}) or {}
+        interior_block = _safe_dict(build_project.get("interior"))
         rooms = interior_block.get("rooms", []) or []
 
         room_entry = {
@@ -5694,8 +5695,8 @@ def generate_build_room():
         rooms = [
             r for r in rooms
             if not (
-                (r.get("room_type") or "").strip().lower() == room_type.lower()
-                and (r.get("floor") or "").strip().lower() == floor.lower()
+                _clean_str(r.get("room_type")).lower() == room_type.lower()
+                and _clean_str(r.get("floor")).lower() == floor.lower()
             )
         ]
         rooms.append(room_entry)
@@ -5703,9 +5704,24 @@ def generate_build_room():
         interior_block["latest"] = room_entry
         interior_block["rooms"] = rooms
         build_project["interior"] = interior_block
-        results["build_project"] = build_project
-        _set_deal_results(deal, results)
 
+        # preserve blueprint reference in a standard place for future room generations
+        if "blueprint" not in build_project or not isinstance(build_project.get("blueprint"), dict):
+            build_project["blueprint"] = {}
+
+        build_project["blueprint"]["image_url"] = _first_nonempty(
+            build_project["blueprint"].get("image_url"),
+            blueprint_url,
+        )
+        build_project["blueprint"]["blueprint_url"] = _first_nonempty(
+            build_project["blueprint"].get("blueprint_url"),
+            blueprint_url,
+        )
+
+        results["build_project"] = build_project
+        results["build_reference_image"] = blueprint_url
+
+        _set_deal_results(deal, results)
         _clear_deal_render_processing(deal)
         db.session.commit()
 
@@ -5730,7 +5746,7 @@ def generate_build_room():
         return jsonify({
             "status": "error",
             "message": str(e)
-        }), 500  
+        }), 500
      
 @investor_bp.route("/ai/build-scope/analyze", methods=["POST"])
 @csrf.exempt
