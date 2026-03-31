@@ -743,10 +743,10 @@ def build_visualizer_helper_prompt(style_prompt: str, style_preset: str = "", ro
 # ENGINE STABILITY HELPERS
 # =========================================================
 
-RENDER_TIMEOUT = 180
+RENDER_TIMEOUT = 240
 SCOPE_TIMEOUT = 45
-UPLOAD_TIMEOUT = 180
-RENDER_LOCK_SECONDS = 180
+UPLOAD_TIMEOUT = 240
+RENDER_LOCK_SECONDS = 300
 
 
 def _safe_engine_error_message(resp):
