@@ -5209,6 +5209,8 @@ def generate_full_build():
             "zoning": zoning,
             "room_type": room_type,
             "floor": floor,
+            "image_base64": blueprint_primary_b64,
+            "image_url": "",
             "count": 1,
             "steps": 22,
             "guidance": 7.0,
