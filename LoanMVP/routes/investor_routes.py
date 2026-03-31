@@ -5,6 +5,7 @@ import uuid
 import base64
 import requests
 import zipfile
+import copy
 from datetime import datetime
 from io import BytesIO
 from openai import OpenAI
@@ -14,6 +15,7 @@ from werkzeug.utils import secure_filename
 from werkzeug.datastructures import ImmutableMultiDict
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy import or_
+from sqlalchemy.orm.attributes import flag_modified
 from urllib.parse import urlencode
 from collections import defaultdict
 from flask import (
@@ -582,10 +584,12 @@ def _scope_engine_url(path=""):
     return f"{SCOPE_ENGINE_URL.rstrip('/')}{path}"
 
 def _deal_results(deal):
-    return deal.results_json or {}
+    return copy.deepcopy(deal.results_json or {})
+
 
 def _set_deal_results(deal, results):
-    deal.results_json = results or {}
+    deal.results_json = copy.deepcopy(results or {})
+    flag_modified(deal, "results_json")
 
 def _get_rehab_export_payload(deal):
     r = deal.results_json or {}
@@ -4861,8 +4865,12 @@ def generate_build_blueprint():
         blueprint_url = (request.form.get("blueprint_url") or "").strip()
         reference_image_url = (request.form.get("reference_image_url") or "").strip()
 
-        requested_style_preset = (request.form.get("style_preset") or "luxury_modern").strip().lower()
-        renovation_level = (request.form.get("renovation_level") or "medium").strip().lower()
+        requested_style_preset = (
+            request.form.get("style_preset") or "luxury_modern"
+        ).strip().lower()
+        renovation_level = (
+            request.form.get("renovation_level") or "medium"
+        ).strip().lower()
 
         project_name = (request.form.get("project_name") or "").strip()
         property_type = (request.form.get("property_type") or "single_family").strip()
@@ -4885,33 +4893,96 @@ def generate_build_blueprint():
         raw = None
         blueprint_image_base64 = ""
 
+        # Keep defined so nothing blows up later
+        stored_blueprint_url = ""
+
         # ---------------- DEAL ----------------
         if deal_id:
             deal = Deal.query.filter_by(id=deal_id, user_id=current_user.id).first()
             if not deal:
-                return jsonify({"status": "error", "message": "Deal not found."}), 404
+                return jsonify({
+                    "status": "error",
+                    "message": "Deal not found."
+                }), 404
 
             if _deal_render_lock_active(deal):
-                return jsonify({"status": "error", "message": "Blueprint render in progress."}), 409
+                return jsonify({
+                    "status": "error",
+                    "message": "Blueprint render in progress."
+                }), 409
 
             _set_deal_render_processing(deal)
             db.session.commit()
 
+            if saved_property_id is None and getattr(deal, "saved_property_id", None):
+                saved_property_id = deal.saved_property_id
+
+        # ---------------- OPTIONAL PROJECT ----------------
+        if project_id:
+            project = BuildProject.query.filter_by(
+                id=project_id,
+                user_id=current_user.id
+            ).first()
+
         # ---------------- IMAGE INPUT ----------------
         if blueprint_file:
             raw = blueprint_file.read()
+
         elif blueprint_url:
-            raw = download_image_bytes(blueprint_url)
+            try:
+                raw = download_image_bytes(blueprint_url)
+                stored_blueprint_url = blueprint_url
+            except Exception:
+                raw = None
+
         elif reference_image_url:
-            raw = download_image_bytes(reference_image_url)
+            try:
+                raw = download_image_bytes(reference_image_url)
+                stored_blueprint_url = reference_image_url
+            except Exception:
+                raw = None
+
+        elif project:
+            project_blueprint_url = (getattr(project, "blueprint_url", None) or "").strip()
+            if project_blueprint_url:
+                try:
+                    raw = download_image_bytes(project_blueprint_url)
+                    stored_blueprint_url = project_blueprint_url
+                except Exception:
+                    raw = None
+
+        elif deal is not None:
+            results = _deal_results(deal)
+            build_project = results.get("build_project", {}) or {}
+            blueprint_block = build_project.get("blueprint", {}) or {}
+
+            prior_blueprint_url = (
+                blueprint_block.get("image_url")
+                or blueprint_block.get("blueprint_url")
+                or results.get("build_reference_image")
+                or ""
+            ).strip()
+
+            if prior_blueprint_url:
+                try:
+                    raw = download_image_bytes(prior_blueprint_url)
+                    stored_blueprint_url = prior_blueprint_url
+                except Exception:
+                    raw = None
 
         if raw:
             blueprint_image_base64 = base64.b64encode(raw).decode("utf-8")
 
         # ---------------- VALIDATION ----------------
         has_text_seed = any([
-            project_name, property_type, description,
-            lot_size, zoning, bedrooms, bathrooms, square_feet
+            project_name,
+            property_type,
+            description,
+            lot_size,
+            zoning,
+            bedrooms,
+            bathrooms,
+            square_feet,
         ])
 
         if not blueprint_image_base64 and not has_text_seed:
@@ -4946,25 +5017,71 @@ def generate_build_blueprint():
         if blueprint_image_base64:
             payload["image_base64"] = blueprint_image_base64
 
+        current_app.logger.warning(
+            "BUILD BLUEPRINT ENGINE PAYLOAD deal_id=%s payload=%s",
+            deal.id if deal else None,
+            payload,
+        )
+
         engine_json = _post_renovation_engine_json(
             "/v1/build_concept",
             payload,
             timeout=RENDER_TIMEOUT,
         )
 
+        current_app.logger.warning(
+            "BUILD BLUEPRINT ENGINE JSON deal_id=%s engine_json=%s",
+            deal.id if deal else None,
+            engine_json,
+        )
+
         images_b64 = engine_json.get("images_base64") or []
         if not images_b64:
-            return jsonify({"status": "error", "message": "No blueprint images returned."}), 502
+            if deal is not None:
+                _clear_deal_render_processing(deal)
+                db.session.commit()
+
+            return jsonify({
+                "status": "error",
+                "message": "No blueprint images returned."
+            }), 502
 
         after_urls = _upload_after_images_from_b64(images_b64, render_batch_id)
         if not after_urls:
-            return jsonify({"status": "error", "message": "Upload failed."}), 500
+            if deal is not None:
+                _clear_deal_render_processing(deal)
+                db.session.commit()
 
-        # ---------------- 🔥 CRITICAL FIX ----------------
+            return jsonify({
+                "status": "error",
+                "message": "Upload failed."
+            }), 500
+
+        # ---------------- USE GENERATED BLUEPRINT AS PRIMARY ----------------
         primary_blueprint = after_urls[0]
-        fallback_reference = stored_blueprint_url or primary_blueprint
+        fallback_reference = primary_blueprint
 
-        # ---------------- SAVE ----------------
+        # ---------------- OPTIONAL MOCKUP SAVE ----------------
+        saved_count = 0
+        if deal is not None and stored_blueprint_url:
+            try:
+                saved_count = _save_mockups_for_deal(
+                    deal=deal,
+                    before_url=stored_blueprint_url,
+                    after_urls=after_urls,
+                    style_prompt=style_prompt,
+                    style_preset=style_preset,
+                    mode="blueprint",
+                    saved_property_id=saved_property_id,
+                )
+            except Exception as save_mockup_err:
+                current_app.logger.warning(
+                    "BUILD BLUEPRINT mockup save warning deal_id=%s error=%s",
+                    deal.id,
+                    save_mockup_err,
+                )
+
+        # ---------------- SAVE TO DEAL ----------------
         if deal is not None:
             results = _deal_results(deal)
             build_project = results.get("build_project", {}) or {}
@@ -4978,39 +5095,62 @@ def generate_build_blueprint():
                 "zoning": zoning,
                 "location": location,
                 "notes": notes,
-
-                # 🔥 ALWAYS VALID
+                "bedrooms": bedrooms,
+                "bathrooms": bathrooms,
+                "square_feet": square_feet,
                 "image_url": primary_blueprint,
                 "blueprint_url": fallback_reference,
-
                 "images": after_urls,
-
-                # 🔥 IMPORTANT FOR ROOM GENERATION
                 "build_reference_image": primary_blueprint,
-
+                "style_prompt": style_prompt,
+                "style_preset": style_preset,
+                "renovation_level": renovation_level,
                 "meta": engine_json.get("meta") or {},
                 "seed": engine_json.get("seed"),
                 "job_id": engine_json.get("job_id"),
+                "saved_count": saved_count,
+                "source_reference_image": stored_blueprint_url,
             }
 
             results["build_project"] = build_project
-
-            # 🔥 GLOBAL FALLBACK (VERY IMPORTANT)
             results["build_reference_image"] = primary_blueprint
 
             _set_deal_results(deal, results)
+
+            current_app.logger.warning(
+                "BLUEPRINT SAVE BEFORE COMMIT deal_id=%s results_keys=%s build_project_keys=%s",
+                deal.id,
+                list(results.keys()),
+                list(build_project.keys()),
+            )
 
         if deal is not None:
             _clear_deal_render_processing(deal)
 
         db.session.commit()
 
+        if deal is not None:
+            db.session.refresh(deal)
+            current_app.logger.warning(
+                "BLUEPRINT SAVE AFTER COMMIT deal_id=%s results_json=%s",
+                deal.id,
+                deal.results_json,
+            )
+
         return jsonify({
             "status": "ok",
+            "mode": "blueprint",
             "images": after_urls,
             "image_url": primary_blueprint,
             "blueprint_url": fallback_reference,
+            "style_prompt": style_prompt,
+            "style_preset": style_preset,
+            "renovation_level": renovation_level,
+            "meta": engine_json.get("meta") or {},
+            "seed": engine_json.get("seed"),
+            "job_id": engine_json.get("job_id"),
             "deal_id": deal.id if deal else None,
+            "saved_to_deal": bool(deal is not None),
         })
 
     except Exception as e:
