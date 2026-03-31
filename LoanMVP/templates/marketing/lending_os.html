@@ -14,7 +14,7 @@
 
         <div class="mk-hero-actions">
           <a href="{{ url_for('marketing.contact') }}" class="mk-btn mk-btn-primary">Request a Demo</a>
-          <a href="#licensing" class="mk-btn mk-btn-ghost">Explore Licensing</a>
+          <a href="#founders-access" class="mk-btn mk-btn-ghost">See Founders Access</a>
         </div>
 
         <div class="mk-inline-metrics">
@@ -99,6 +99,7 @@
 {% endblock %}
 
 {% block content %}
+
 <section class="mk-section">
   <div class="mk-container">
 
@@ -113,11 +114,7 @@
       </p>
     </div>
 
-    <!-- ===================== -->
-    <!-- SPLIT PANEL (MAIN MOMENT) -->
-    <!-- ===================== -->
     <div class="mk-split-panel">
-
       <div class="mk-panel">
         <h3>From borrower entry to clear-to-close</h3>
         <p>
@@ -136,23 +133,16 @@
 
       <div class="mk-panel mk-panel-soft">
         <div class="mk-flow-stack">
-
           <div class="mk-flow-step">Borrower Intake</div>
           <div class="mk-flow-step">Loan Review</div>
           <div class="mk-flow-step">Processing</div>
           <div class="mk-flow-step">Underwriting</div>
           <div class="mk-flow-step">Clear to Close</div>
-
         </div>
       </div>
-
     </div>
 
-    <!-- ===================== -->
-    <!-- 3 CORE CAPABILITIES -->
-    <!-- ===================== -->
     <div class="mk-feature-grid mk-feature-grid-3">
-
       <article class="mk-feature-card">
         <div class="mk-feature-icon"><i class="lucide lucide-clipboard-list"></i></div>
         <h3>Origination Flow</h3>
@@ -179,11 +169,47 @@
           centralized lending environment.
         </p>
       </article>
-
     </div>
 
   </div>
 </section>
+
+<section class="mk-section mk-section-dark">
+  <div class="mk-container">
+    <div class="mk-section-head">
+      <div class="mk-eyebrow">Why Ravlo</div>
+      <h2 class="mk-title-lg">Move out of disconnected systems.</h2>
+      <p class="mk-copy-lg">
+        Ravlo Lending OS is for lenders who are tired of scattered communication,
+        unclear pipeline stages, and operational drag caused by too many disconnected tools.
+      </p>
+    </div>
+
+    <div class="mk-feature-grid mk-feature-grid-3">
+      <article class="mk-feature-card">
+        <h3>More Visibility</h3>
+        <p>
+          Get a clearer view of where files stand, what conditions remain, and what your team needs next.
+        </p>
+      </article>
+
+      <article class="mk-feature-card">
+        <h3>Cleaner Handoffs</h3>
+        <p>
+          Support smoother transitions between origination, processing, and internal review teams.
+        </p>
+      </article>
+
+      <article class="mk-feature-card">
+        <h3>Brand-Ready Foundation</h3>
+        <p>
+          Build on a platform designed to support your lending process, your growth, and your market presence.
+        </p>
+      </article>
+    </div>
+  </div>
+</section>
+
 <section id="licensing" class="mk-section mk-section-dark">
   <div class="mk-container">
     <div class="mk-split-panel">
@@ -229,15 +255,69 @@
           <div class="mk-license-stat">
             <span>Expansion</span>
             <strong>AI + Workflow</strong>
-           </div>
-         </div>
+          </div>
+        </div>
 
         <div class="mk-license-note">
           Designed for borrower intake, pipeline management, internal execution,
-    and future automation.
+          and future automation.
         </div>
-       </div>
       </div>
+    </div>
+  </div>
+</section>
+
+<section id="founders-access" class="mk-section">
+  <div class="mk-container">
+    <div class="mk-section-head">
+      <div class="mk-eyebrow">Launch Offer</div>
+      <h2 class="mk-title-lg">Founders Access for early lending teams.</h2>
+      <p class="mk-copy-lg">
+        We’re opening Ravlo Lending OS to a limited group of lenders who want earlier access,
+        direct support, and a stronger operating system for lending workflow.
+      </p>
+    </div>
+
+    <div class="mk-pricing-grid">
+      <article class="mk-pricing-card mk-pricing-card-featured">
+        <div class="mk-pricing-kicker">Founders Access</div>
+        <h3>$99<span>/month</span></h3>
+        <p>
+          Intro company access for early lending teams ready to modernize workflow and execution.
+        </p>
+
+        <ul class="mk-bullet-list">
+          <li>Core Lending OS access</li>
+          <li>Borrower intake workflow</li>
+          <li>Pipeline and stage visibility</li>
+          <li>Document and conditions support</li>
+          <li>Early platform access</li>
+          <li>Direct onboarding support</li>
+        </ul>
+
+        <div class="mk-hero-actions">
+          <a href="{{ url_for('marketing.contact') }}" class="mk-btn mk-btn-primary">Request Founders Access</a>
+        </div>
+      </article>
+
+      <article class="mk-pricing-card">
+        <div class="mk-pricing-kicker">Licensing Path</div>
+        <h3>Custom<span> engagement</span></h3>
+        <p>
+          For lenders and operators interested in licensing, branding, or expanding Ravlo Lending OS for their organization.
+        </p>
+
+        <ul class="mk-bullet-list">
+          <li>Platform licensing conversations</li>
+          <li>Brand-forward opportunities</li>
+          <li>Workflow expansion planning</li>
+          <li>Future white-label direction</li>
+        </ul>
+
+        <div class="mk-hero-actions">
+          <a href="{{ url_for('marketing.contact') }}" class="mk-btn mk-btn-ghost">Talk Licensing</a>
+        </div>
+      </article>
     </div>
   </div>
 </section>

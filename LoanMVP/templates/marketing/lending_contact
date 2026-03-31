@@ -1,0 +1,181 @@
+{% extends "layouts/marketing_base.html" %}
+
+{% block hero %}
+<section class="mk-hero">
+  <div class="mk-container">
+    <div class="mk-hero-grid">
+
+      <div class="mk-hero-copy">
+        <div class="mk-eyebrow">Ravlo Platform</div>
+
+        <h1 class="mk-title-xl">
+          Lending OS built for modern lending execution.
+        </h1>
+
+        <p class="mk-copy-lg">
+          Ravlo Lending OS gives private lending teams a premium operating environment
+          for borrower intake, pipeline visibility, conditions management, and execution
+          from inquiry to close.
+        </p>
+
+        <div class="mk-hero-actions">
+          <a href="{{ url_for('marketing.lenders_contact', topic='demo') }}"
+             class="mk-btn mk-btn-primary">
+            Request a Demo
+          </a>
+
+          <a href="{{ url_for('marketing.lenders_contact', topic='founders_access') }}"
+             class="mk-btn mk-btn-ghost">
+            Founders Access
+          </a>
+        </div>
+
+      </div>
+
+      <div class="mk-hero-visual">
+        <div class="mk-glow"></div>
+      </div>
+
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block content %}
+
+<!-- ===================== -->
+<!-- OVERVIEW -->
+<!-- ===================== -->
+<section class="mk-section">
+  <div class="mk-container">
+
+    <div class="mk-section-head">
+      <div class="mk-eyebrow">Platform Overview</div>
+
+      <h2 class="mk-title-lg">
+        The operating layer behind lending execution.
+      </h2>
+
+      <p class="mk-copy-lg">
+        Lending OS connects borrower intake, pipeline movement, conditions tracking,
+        and team coordination into one unified system.
+      </p>
+    </div>
+
+  </div>
+</section>
+
+<!-- ===================== -->
+<!-- FEATURES -->
+<!-- ===================== -->
+<section class="mk-section">
+  <div class="mk-container">
+
+    <div class="mk-feature-grid mk-feature-grid-3">
+
+      <article class="mk-feature-card">
+        <h3>Origination Flow</h3>
+        <p>Clean borrower intake and application workflow.</p>
+      </article>
+
+      <article class="mk-feature-card">
+        <h3>Pipeline Visibility</h3>
+        <p>Track every deal from intake to close.</p>
+      </article>
+
+      <article class="mk-feature-card">
+        <h3>Execution System</h3>
+        <p>Align loan officers, processors, and teams.</p>
+      </article>
+
+    </div>
+
+  </div>
+</section>
+
+<!-- ===================== -->
+<!-- OPPORTUNITIES (FIXED VERSION) -->
+<!-- ===================== -->
+<section class="mk-section">
+  <div class="mk-container">
+
+    <div class="mk-mini-cta">
+
+      <div>
+        <div class="mk-eyebrow">Opportunities</div>
+
+        <h3>
+          We’re working with experienced loan officers and lending professionals.
+        </h3>
+
+        <p>
+          Ravlo is building a modern lending environment that connects borrower flow,
+          deal visibility, and execution into one system.
+
+          We’re working with loan officers who want stronger infrastructure,
+          cleaner workflow, and the ability to operate within a more connected lending network.
+        </p>
+
+        <p style="margin-top:10px;">
+          This is not a traditional role — it’s an opportunity to operate inside a system
+          designed for modern lending execution.
+        </p>
+      </div>
+
+      <div class="mk-mini-cta-actions">
+
+        <a href="{{ url_for('marketing.lenders_contact', topic='loan_officer') }}"
+           class="mk-btn mk-btn-primary">
+          Apply Interest
+        </a>
+
+        <a href="{{ url_for('marketing.lenders_contact', topic='demo') }}"
+           class="mk-btn mk-btn-ghost">
+          Request Demo
+        </a>
+
+      </div>
+
+    </div>
+
+  </div>
+</section>
+
+<!-- ===================== -->
+<!-- FINAL CTA -->
+<!-- ===================== -->
+<section class="mk-section mk-final-cta">
+  <div class="mk-container">
+
+    <div class="mk-final-card">
+
+      <div class="mk-eyebrow">Ravlo Lending OS</div>
+
+      <h2 class="mk-title-lg">
+        A premium operating system for lending workflow and execution.
+      </h2>
+
+      <p class="mk-copy-lg">
+        Explore the platform, request a demo, or connect with us.
+      </p>
+
+      <div class="mk-hero-actions" style="justify-content:center;">
+
+        <a href="{{ url_for('marketing.lenders_contact', topic='demo') }}"
+           class="mk-btn mk-btn-primary">
+          Request a Demo
+        </a>
+
+        <a href="{{ url_for('marketing.lenders_contact', topic='founders_access') }}"
+           class="mk-btn mk-btn-ghost">
+          Founders Access
+        </a>
+
+      </div>
+
+    </div>
+
+  </div>
+</section>
+
+{% endblock %}
