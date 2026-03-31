@@ -5336,6 +5336,175 @@ def generate_full_build():
             "message": str(e)
         }), 500
 
+@investor_bp.route("/deal-studio/build-studio/generate-room", methods=["POST"])
+@csrf.exempt
+@login_required
+@role_required("investor")
+def generate_build_room():
+    deal = None
+
+    try:
+        data = request.form.to_dict() or {}
+
+        deal_id = _normalize_int(data.get("deal_id"))
+        if not deal_id:
+            return jsonify({
+                "status": "error",
+                "message": "Deal ID is required."
+            }), 400
+
+        deal = Deal.query.filter_by(id=deal_id, user_id=current_user.id).first()
+        if not deal:
+            return jsonify({
+                "status": "error",
+                "message": "Deal not found or not authorized."
+            }), 404
+
+        if _deal_render_lock_active(deal):
+            return jsonify({
+                "status": "error",
+                "message": "A build render is already in progress for this deal."
+            }), 409
+
+        _set_deal_render_processing(deal)
+        db.session.commit()
+
+        results = _deal_results(deal)
+        build_project = results.get("build_project", {}) or {}
+        blueprint_block = build_project.get("blueprint", {}) or {}
+
+        blueprint_url = (
+            blueprint_block.get("image_url")
+            or blueprint_block.get("blueprint_url")
+            or ""
+        ).strip()
+
+        if not blueprint_url:
+            return jsonify({
+                "status": "error",
+                "message": "Blueprint is required before generating additional rooms."
+            }), 400
+
+        try:
+            raw_blueprint = download_image_bytes(blueprint_url)
+        except Exception:
+            raw_blueprint = None
+
+        if not raw_blueprint:
+            return jsonify({
+                "status": "error",
+                "message": "Unable to load saved blueprint."
+            }), 400
+
+        blueprint_b64 = base64.b64encode(raw_blueprint).decode("utf-8")
+
+        project_name = (data.get("project_name") or blueprint_block.get("project_name") or "").strip()
+        property_type = (data.get("property_type") or blueprint_block.get("property_type") or "single_family").strip()
+        style = (data.get("style") or blueprint_block.get("style") or "modern_farmhouse").strip()
+        description = (data.get("description") or blueprint_block.get("description") or "").strip()
+        lot_size = (data.get("lot_size") or blueprint_block.get("lot_size") or "").strip()
+        zoning = (data.get("zoning") or blueprint_block.get("zoning") or "").strip()
+        location = (data.get("location") or blueprint_block.get("location") or "").strip()
+        notes = (data.get("notes") or "").strip()
+
+        room_type = (data.get("room_type") or "kitchen").strip()
+        floor = (data.get("floor") or "main").strip()
+
+        payload = {
+            "mode": "interior",
+            "project_name": project_name,
+            "property_type": property_type,
+            "style": style,
+            "description": description,
+            "lot_size": lot_size,
+            "zoning": zoning,
+            "room_type": room_type,
+            "floor": floor,
+            "image_base64": blueprint_b64,
+            "image_url": "",
+            "count": 1,
+            "steps": 22,
+            "guidance": 7.0,
+            "strength": 0.42,
+            "width": 768,
+            "height": 768,
+        }
+
+        engine_json = _post_renovation_engine_json(
+            "/v1/build_concept",
+            payload,
+            timeout=RENDER_TIMEOUT,
+        )
+
+        images_b64 = engine_json.get("images_base64") or []
+        if not images_b64:
+            return jsonify({
+                "status": "error",
+                "message": "Room generation returned no images."
+            }), 502
+
+        render_batch_id = uuid.uuid4().hex
+        room_urls = _upload_after_images_from_b64(images_b64, render_batch_id)
+
+        if not room_urls:
+            return jsonify({
+                "status": "error",
+                "message": "Room generated but uploads failed."
+            }), 500
+
+        interior_block = build_project.get("interior", {}) or {}
+        rooms = interior_block.get("rooms", []) or []
+
+        room_entry = {
+            "project_name": project_name,
+            "property_type": property_type,
+            "style": style,
+            "description": description,
+            "lot_size": lot_size,
+            "zoning": zoning,
+            "location": location,
+            "notes": notes,
+            "room_type": room_type,
+            "floor": floor,
+            "image_url": room_urls[0],
+            "images": room_urls,
+            "meta": engine_json.get("meta") or {},
+            "seed": engine_json.get("seed"),
+            "job_id": engine_json.get("job_id"),
+            "build_reference_image": blueprint_url,
+        }
+
+        rooms.append(room_entry)
+        interior_block["latest"] = room_entry
+        interior_block["rooms"] = rooms
+        build_project["interior"] = interior_block
+        results["build_project"] = build_project
+        _set_deal_results(deal, results)
+
+        _clear_deal_render_processing(deal)
+        db.session.commit()
+
+        return jsonify({
+            "status": "ok",
+            "room_result": room_entry,
+            "rooms": rooms,
+            "deal_id": deal.id,
+        })
+
+    except Exception as e:
+        current_app.logger.exception("Build room generation error")
+
+        if deal is not None:
+            try:
+                _clear_deal_render_processing(deal)
+                db.session.commit()
+            except Exception:
+                db.session.rollback()
+
+        return jsonify({
+            "status": "error",
+            "message": str(e)
+        }), 500
        
 @investor_bp.route("/ai/build-scope/analyze", methods=["POST"])
 @csrf.exempt

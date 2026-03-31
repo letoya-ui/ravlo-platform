@@ -404,9 +404,9 @@
           </div>
 
           {% if interior_rooms %}
-          <div class="saved-room-gallery">
+          <div class="saved-room-gallery" id="savedRoomGallery">
             <div class="card-kicker">SAVED INTERIOR ROOMS</div>
-            <div class="room-gallery-grid">
+            <div class="room-gallery-grid" id="roomGalleryGrid">
               {% for room in interior_rooms %}
                 {% if room.get("image_url") %}
                 <a href="{{ room.get('image_url') }}" class="room-thumb-card" target="_blank" rel="noopener">
@@ -420,7 +420,19 @@
               {% endfor %}
             </div>
           </div>
+          {% else %}
+          <div class="saved-room-gallery hidden" id="savedRoomGallery">
+            <div class="card-kicker">SAVED INTERIOR ROOMS</div>
+            <div class="room-gallery-grid" id="roomGalleryGrid"></div>
+          </div>
           {% endif %}
+
+          <div class="cta-row" style="margin-top:14px;">
+            <button type="button" class="ravlo-btn ravlo-btn-secondary" id="openAddRoomBtn">
+              <i data-lucide="plus"></i>
+              Generate Another Room
+            </button>
+          </div>
         </div>
       </section>
     </div>
@@ -504,6 +516,45 @@
         <div class="loading-step" id="loadingStep1">Blueprint in progress...</div>
         <div class="loading-step" id="loadingStep2">Exterior waiting...</div>
         <div class="loading-step" id="loadingStep3">Interior waiting...</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="loading-overlay hidden" id="addRoomModal">
+    <div class="loading-card add-room-card">
+      <h3 style="margin-top:0;">Generate Another Room</h3>
+      <p>Use the saved blueprint to generate another room for this package.</p>
+
+      <div class="field">
+        <label for="modal_room_type">Room Type</label>
+        <select id="modal_room_type">
+          <option value="kitchen">Kitchen</option>
+          <option value="bathroom">Bathroom</option>
+          <option value="primary bedroom">Primary Bedroom</option>
+          <option value="living room">Living Room</option>
+          <option value="dining room">Dining Room</option>
+          <option value="office">Office</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label for="modal_floor">Floor</label>
+        <select id="modal_floor">
+          <option value="main">Main</option>
+          <option value="upper">Upper</option>
+          <option value="lower">Lower</option>
+          <option value="basement">Basement</option>
+        </select>
+      </div>
+
+      <div class="cta-row">
+        <button type="button" class="ravlo-btn ravlo-btn-primary" id="confirmAddRoomBtn">
+          <i data-lucide="sparkles"></i>
+          Generate Room
+        </button>
+        <button type="button" class="ravlo-btn ravlo-btn-secondary" id="closeAddRoomBtn">
+          Cancel
+        </button>
       </div>
     </div>
   </div>
@@ -1070,6 +1121,21 @@
     animation: spin 0.8s linear infinite;
   }
 
+  .add-room-card {
+    width: min(520px, 100%);
+    text-align: left;
+  }
+
+  .add-room-card .field {
+    margin-bottom: 16px;
+  }
+
+  .add-room-card select,
+  .add-room-card input,
+  .add-room-card textarea {
+    width: 100%;
+  }
+
   .hidden {
     display: none !important;
   }
@@ -1118,6 +1184,13 @@
     const landImageInput = document.getElementById("land_image");
     const blueprintSeedPreview = document.getElementById("blueprintSeedPreview");
     const landSeedPreview = document.getElementById("landSeedPreview");
+
+    const addRoomModal = document.getElementById("addRoomModal");
+    const openAddRoomBtn = document.getElementById("openAddRoomBtn");
+    const closeAddRoomBtn = document.getElementById("closeAddRoomBtn");
+    const confirmAddRoomBtn = document.getElementById("confirmAddRoomBtn");
+    const savedRoomGallery = document.getElementById("savedRoomGallery");
+    const roomGalleryGrid = document.getElementById("roomGalleryGrid");
 
     const els = {
       blueprint: {
@@ -1317,6 +1390,30 @@
       return lines.join("\n");
     }
 
+    function appendRoomCard(room) {
+      if (!roomGalleryGrid || !room || !room.image_url) return;
+
+      if (savedRoomGallery) {
+        savedRoomGallery.classList.remove("hidden");
+      }
+
+      const anchor = document.createElement("a");
+      anchor.href = room.image_url;
+      anchor.className = "room-thumb-card";
+      anchor.target = "_blank";
+      anchor.rel = "noopener";
+
+      anchor.innerHTML = `
+        <img src="${escapeHtml(room.image_url)}" alt="${escapeHtml(room.room_type || "Interior room")}">
+        <div class="room-thumb-meta">
+          <strong>${escapeHtml(room.room_type || "Room")}</strong>
+          <span>${escapeHtml(room.floor || "Floor not set")}</span>
+        </div>
+      `;
+
+      roomGalleryGrid.appendChild(anchor);
+    }
+
     downloadPackageBtn.addEventListener("click", async function () {
       const text = this.dataset.links || "";
       if (!text) return;
@@ -1418,6 +1515,14 @@
           els.interior.packageLink.href = data.interior_result.image_url;
         }
 
+        if (data?.interior_result?.image_url) {
+          appendRoomCard({
+            image_url: data.interior_result.image_url,
+            room_type: data.interior_result.room_type,
+            floor: data.interior_result.floor
+          });
+        }
+
         statusPill.textContent = "Package Ready";
 
       } catch (error) {
@@ -1426,6 +1531,84 @@
         alert(error.message || "Something went wrong during generation.");
       } finally {
         stopLoading();
+        if (window.lucide) lucide.createIcons();
+      }
+    });
+
+    openAddRoomBtn?.addEventListener("click", function () {
+      addRoomModal.classList.remove("hidden");
+      if (window.lucide) lucide.createIcons();
+    });
+
+    closeAddRoomBtn?.addEventListener("click", function () {
+      addRoomModal.classList.add("hidden");
+    });
+
+    addRoomModal?.addEventListener("click", function (e) {
+      if (e.target === addRoomModal) {
+        addRoomModal.classList.add("hidden");
+      }
+    });
+
+    confirmAddRoomBtn?.addEventListener("click", async function () {
+      const dealId = document.querySelector('input[name="deal_id"]')?.value;
+
+      if (!dealId) {
+        alert("Deal ID is required.");
+        return;
+      }
+
+      const fd = new FormData();
+      fd.append("deal_id", dealId);
+      fd.append("project_name", document.getElementById("project_name")?.value || "");
+      fd.append("property_type", document.getElementById("property_type")?.value || "");
+      fd.append("style", document.getElementById("style")?.value || "");
+      fd.append("description", document.getElementById("description")?.value || "");
+      fd.append("lot_size", document.getElementById("lot_size")?.value || "");
+      fd.append("zoning", document.getElementById("zoning")?.value || "");
+      fd.append("location", document.getElementById("location")?.value || "");
+      fd.append("notes", document.getElementById("notes")?.value || "");
+      fd.append("room_type", document.getElementById("modal_room_type")?.value || "kitchen");
+      fd.append("floor", document.getElementById("modal_floor")?.value || "main");
+
+      confirmAddRoomBtn.disabled = true;
+      confirmAddRoomBtn.innerHTML = '<i data-lucide="loader"></i> Generating...';
+      if (window.lucide) lucide.createIcons();
+
+      try {
+        const response = await fetch("{{ url_for('investor.generate_build_room') }}", {
+          method: "POST",
+          body: fd,
+          headers: {
+            "X-Requested-With": "XMLHttpRequest"
+          },
+          credentials: "same-origin"
+        });
+
+        const data = await response.json();
+
+        if (!response.ok || data.status !== "ok") {
+          throw new Error(data.message || "Room generation failed.");
+        }
+
+        const room = data.room_result || {};
+
+        fillResult(els.interior, room, "Interior");
+        document.getElementById("interiorRoom").textContent = room.room_type || "—";
+        document.getElementById("interiorFloor").textContent = room.floor || "—";
+        document.getElementById("trackerInterior").textContent = room.image_url ? "Yes" : "No";
+        document.getElementById("status-interior").textContent = room.image_url ? "Generated" : "Pending";
+
+        appendRoomCard(room);
+
+        addRoomModal.classList.add("hidden");
+
+      } catch (error) {
+        console.error(error);
+        alert(error.message || "Failed to generate room.");
+      } finally {
+        confirmAddRoomBtn.disabled = false;
+        confirmAddRoomBtn.innerHTML = '<i data-lucide="sparkles"></i> Generate Room';
         if (window.lucide) lucide.createIcons();
       }
     });
