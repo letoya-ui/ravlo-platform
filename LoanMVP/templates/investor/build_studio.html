@@ -377,6 +377,7 @@
           </div>
 
           <div class="result-body">
+            <div class="room-tabs" id="roomTabs"></div>
             <div class="result-media {% if not (interior_result and interior_result.get('image_url')) %}empty{% endif %}" id="interiorMedia">
               {% if interior_result and interior_result.get("image_url") %}
                 <img src="{{ interior_result.get('image_url') }}" alt="Interior render">
@@ -1167,6 +1168,33 @@
       justify-content: flex-start;
     }
   }
+     .room-tabs {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.room-tab {
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.08);
+  color: #cfe0ec;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.room-tab:hover {
+  background: rgba(255,255,255,0.12);
+}
+
+.room-tab.active {
+  background: linear-gradient(135deg, #3a5c7a, #567ea3);
+  color: #fff;
+  border-color: transparent;
+}
 </style>
 
 <script>
@@ -1191,6 +1219,10 @@
     const confirmAddRoomBtn = document.getElementById("confirmAddRoomBtn");
     const savedRoomGallery = document.getElementById("savedRoomGallery");
     const roomGalleryGrid = document.getElementById("roomGalleryGrid");
+    const roomTabs = document.getElementById("roomTabs");
+
+    let roomState = [];
+    let activeRoomIndex = 0;
 
     const els = {
       blueprint: {
@@ -1250,18 +1282,12 @@
       }
     }
 
-    blueprintFileInput?.addEventListener("change", function () {
-      setPreview(this, blueprintSeedPreview, "No blueprint file selected");
-    });
-
-    landImageInput?.addEventListener("change", function () {
-      setPreview(this, landSeedPreview, "No land image selected");
-    });
-
     function setStepState(step, state) {
       const el = document.querySelector(`.workflow-step[data-step="${step}"]`);
       if (!el) return;
+
       el.classList.remove("is-active", "is-complete");
+
       if (state === "active") el.classList.add("is-active");
       if (state === "complete") el.classList.add("is-complete");
     }
@@ -1301,6 +1327,8 @@
     }
 
     function renderImage(target, url, altText, emptyIcon, emptyText) {
+      if (!target) return;
+
       if (!url) {
         target.classList.add("empty");
         target.innerHTML = `
@@ -1317,11 +1345,18 @@
     }
 
     function fillResult(section, result, label) {
-      if (!result) return;
+      if (!section || !result) return;
 
       const url = result.image_url || "";
       const icon = label === "Blueprint" ? "ruler" : label === "Exterior" ? "home" : "sofa";
-      renderImage(section.media, url, `${label} render`, icon, `${label} output will appear here.`);
+
+      renderImage(
+        section.media,
+        url,
+        `${label} render`,
+        icon,
+        `${label} output will appear here.`
+      );
 
       if (section.badge) section.badge.textContent = url ? "Generated" : "No Output";
       if (section.seed) section.seed.textContent = result.seed || "—";
@@ -1360,18 +1395,31 @@
         if (section.metaStatus) section.metaStatus.textContent = "Waiting";
         if (section.hero) section.hero.textContent = "Pending";
         if (section.tracker) section.tracker.textContent = "No";
+
         if (section.link) {
           section.link.href = "#";
           section.link.classList.add("hidden");
         }
       });
 
-      document.getElementById("interiorRoom").textContent = "—";
-      document.getElementById("interiorFloor").textContent = "—";
-      document.getElementById("trackerSaved").textContent = "No";
-      packageSummaryCard.classList.add("hidden");
-      downloadPackageBtn.disabled = true;
-      downloadPackageBtn.dataset.links = "";
+      if (els.interior.room) els.interior.room.textContent = "—";
+      if (els.interior.floor) els.interior.floor.textContent = "—";
+
+      const trackerSaved = document.getElementById("trackerSaved");
+      if (trackerSaved) trackerSaved.textContent = "No";
+
+      if (packageSummaryCard) packageSummaryCard.classList.add("hidden");
+      if (downloadPackageBtn) {
+        downloadPackageBtn.disabled = true;
+        downloadPackageBtn.dataset.links = "";
+      }
+
+      roomState = [];
+      activeRoomIndex = 0;
+
+      if (roomTabs) roomTabs.innerHTML = "";
+      if (roomGalleryGrid) roomGalleryGrid.innerHTML = "";
+      if (savedRoomGallery) savedRoomGallery.classList.add("hidden");
 
       setStepState(1, "active");
       setStepState(2, "");
@@ -1414,7 +1462,77 @@
       roomGalleryGrid.appendChild(anchor);
     }
 
-    downloadPackageBtn.addEventListener("click", async function () {
+    function applyRoom(room) {
+      if (!room) return;
+
+      fillResult(els.interior, room, "Interior");
+
+      if (els.interior.room) {
+        els.interior.room.textContent = room.room_type || "—";
+      }
+
+      if (els.interior.floor) {
+        els.interior.floor.textContent = room.floor || "—";
+      }
+
+      if (els.interior.hero) {
+        els.interior.hero.textContent = room.image_url ? "Generated" : "Pending";
+      }
+
+      if (els.interior.tracker) {
+        els.interior.tracker.textContent = room.image_url ? "Yes" : "No";
+      }
+    }
+
+    function renderRoomTabs() {
+      if (!roomTabs) return;
+
+      roomTabs.innerHTML = "";
+
+      roomState.forEach((room, index) => {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "room-tab" + (index === activeRoomIndex ? " active" : "");
+
+        const label = `${room.room_type || "Room"} (${room.floor || "—"})`;
+        btn.textContent = label;
+
+        btn.addEventListener("click", function () {
+          activeRoomIndex = index;
+          applyRoom(room);
+          renderRoomTabs();
+        });
+
+        roomTabs.appendChild(btn);
+      });
+    }
+
+    function upsertRoomState(room) {
+      if (!room) return;
+
+      const roomType = String(room.room_type || "").trim().toLowerCase();
+      const floor = String(room.floor || "").trim().toLowerCase();
+
+      roomState = roomState.filter((r) => {
+        return !(
+          String(r.room_type || "").trim().toLowerCase() === roomType &&
+          String(r.floor || "").trim().toLowerCase() === floor
+        );
+      });
+
+      roomState.push(room);
+      activeRoomIndex = roomState.length - 1;
+    }
+
+    blueprintFileInput?.addEventListener("change", function () {
+      setPreview(this, blueprintSeedPreview, "No blueprint file selected");
+    });
+
+    landImageInput?.addEventListener("change", function () {
+      setPreview(this, landSeedPreview, "No land image selected");
+    });
+
+    downloadPackageBtn?.addEventListener("click", async function () {
       const text = this.dataset.links || "";
       if (!text) return;
 
@@ -1432,15 +1550,17 @@
       }
     });
 
-    resetBtn.addEventListener("click", function () {
+    resetBtn?.addEventListener("click", function () {
       form.reset();
       resetOutputs();
-      blueprintSeedPreview.textContent = "No blueprint file selected";
-      landSeedPreview.textContent = "No land image selected";
+
+      if (blueprintSeedPreview) blueprintSeedPreview.textContent = "No blueprint file selected";
+      if (landSeedPreview) landSeedPreview.textContent = "No land image selected";
+
       statusPill.textContent = "Ready";
     });
 
-    form.addEventListener("submit", async function (e) {
+    form?.addEventListener("submit", async function (e) {
       e.preventDefault();
       resetOutputs();
       startLoading();
@@ -1492,18 +1612,27 @@
         fillResult(els.exterior, data.exterior_result, "Exterior");
         fillResult(els.interior, data.interior_result, "Interior");
 
-        document.getElementById("interiorRoom").textContent = data?.interior_result?.room_type || "—";
-        document.getElementById("interiorFloor").textContent = data?.interior_result?.floor || "—";
+        if (els.interior.room) {
+          els.interior.room.textContent = data?.interior_result?.room_type || "—";
+        }
+
+        if (els.interior.floor) {
+          els.interior.floor.textContent = data?.interior_result?.floor || "—";
+        }
 
         const saved = !!data.saved_to_deal;
-        document.getElementById("trackerSaved").textContent = saved ? "Yes" : "No";
+        const trackerSaved = document.getElementById("trackerSaved");
+        if (trackerSaved) trackerSaved.textContent = saved ? "Yes" : "No";
 
         setStepState(4, "complete");
         setStepState(5, "complete");
 
-        packageSummaryCard.classList.remove("hidden");
-        downloadPackageBtn.disabled = false;
-        downloadPackageBtn.dataset.links = buildLinksText(data);
+        if (packageSummaryCard) packageSummaryCard.classList.remove("hidden");
+
+        if (downloadPackageBtn) {
+          downloadPackageBtn.disabled = false;
+          downloadPackageBtn.dataset.links = buildLinksText(data);
+        }
 
         if (data?.blueprint_result?.image_url) {
           els.blueprint.packageLink.href = data.blueprint_result.image_url;
@@ -1516,11 +1645,22 @@
         }
 
         if (data?.interior_result?.image_url) {
-          appendRoomCard({
+          const freshRoom = {
             image_url: data.interior_result.image_url,
             room_type: data.interior_result.room_type,
-            floor: data.interior_result.floor
-          });
+            floor: data.interior_result.floor,
+            seed: data.interior_result.seed,
+            job_id: data.interior_result.job_id,
+            meta: data.interior_result.meta || {},
+            images: data.interior_result.images || []
+          };
+
+          upsertRoomState(freshRoom);
+          applyRoom(freshRoom);
+          renderRoomTabs();
+
+          if (roomGalleryGrid) roomGalleryGrid.innerHTML = "";
+          roomState.forEach(appendRoomCard);
         }
 
         statusPill.textContent = "Package Ready";
@@ -1593,13 +1733,12 @@
 
         const room = data.room_result || {};
 
-        fillResult(els.interior, room, "Interior");
-        document.getElementById("interiorRoom").textContent = room.room_type || "—";
-        document.getElementById("interiorFloor").textContent = room.floor || "—";
-        document.getElementById("trackerInterior").textContent = room.image_url ? "Yes" : "No";
-        document.getElementById("status-interior").textContent = room.image_url ? "Generated" : "Pending";
+        upsertRoomState(room);
+        applyRoom(room);
+        renderRoomTabs();
 
-        appendRoomCard(room);
+        if (roomGalleryGrid) roomGalleryGrid.innerHTML = "";
+        roomState.forEach(appendRoomCard);
 
         addRoomModal.classList.add("hidden");
 
@@ -1633,6 +1772,16 @@
 
       statusPill.textContent = "Package Loaded";
     }
+
+    {% if interior_rooms %}
+    roomState = {{ interior_rooms|tojson }};
+    activeRoomIndex = roomState.length - 1;
+
+    if (roomState.length > 0) {
+      applyRoom(roomState[activeRoomIndex]);
+      renderRoomTabs();
+    }
+    {% endif %}
 
     if (window.lucide) {
       lucide.createIcons();
