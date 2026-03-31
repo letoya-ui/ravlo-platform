@@ -4189,7 +4189,7 @@ def build_studio(deal_id=None):
     ])
 
     return render_template(
-        "investor/deal_build_studio.html",
+        "investor/build_studio.html",
         deal=deal,
         project=project,
         build_project=build_project,
