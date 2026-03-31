@@ -5380,10 +5380,7 @@ def generate_build_room():
         ).strip()
 
         if not blueprint_url:
-            return jsonify({
-                "status": "error",
-                "message": "Blueprint is required before generating additional rooms."
-            }), 400
+            raise RuntimeError("Blueprint is required before generating additional rooms.")
 
         try:
             raw_blueprint = download_image_bytes(blueprint_url)
@@ -5391,10 +5388,7 @@ def generate_build_room():
             raw_blueprint = None
 
         if not raw_blueprint:
-            return jsonify({
-                "status": "error",
-                "message": "Unable to load saved blueprint."
-            }), 400
+            raise RuntimeError("Unable to load saved blueprint.")
 
         blueprint_b64 = base64.b64encode(raw_blueprint).decode("utf-8")
 
@@ -5438,19 +5432,13 @@ def generate_build_room():
 
         images_b64 = engine_json.get("images_base64") or []
         if not images_b64:
-            return jsonify({
-                "status": "error",
-                "message": "Room generation returned no images."
-            }), 502
+            raise RuntimeError("Room generation returned no images.")
 
         render_batch_id = uuid.uuid4().hex
         room_urls = _upload_after_images_from_b64(images_b64, render_batch_id)
 
         if not room_urls:
-            return jsonify({
-                "status": "error",
-                "message": "Room generated but uploads failed."
-            }), 500
+            raise RuntimeError("Room generated but uploads failed.")
 
         interior_block = build_project.get("interior", {}) or {}
         rooms = interior_block.get("rooms", []) or []
@@ -5474,7 +5462,16 @@ def generate_build_room():
             "build_reference_image": blueprint_url,
         }
 
+        # Keep one latest entry per room_type + floor combination
+        rooms = [
+            r for r in rooms
+            if not (
+                (r.get("room_type") or "").strip().lower() == room_type.lower()
+                and (r.get("floor") or "").strip().lower() == floor.lower()
+            )
+        ]
         rooms.append(room_entry)
+
         interior_block["latest"] = room_entry
         interior_block["rooms"] = rooms
         build_project["interior"] = interior_block
@@ -5489,6 +5486,7 @@ def generate_build_room():
             "room_result": room_entry,
             "rooms": rooms,
             "deal_id": deal.id,
+            "saved_to_deal": True,
         })
 
     except Exception as e:
