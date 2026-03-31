@@ -750,31 +750,55 @@ RENDER_LOCK_SECONDS = 300
 
 
 def _safe_engine_error_message(resp):
-    try:
-        payload = resp.json()
-        if isinstance(payload, dict):
-            return (
-                payload.get("detail")
-                or payload.get("message")
-                or payload.get("error")
-                or resp.text[:300]
-            )
-    except Exception:
-        pass
-    return resp.text[:300] or f"HTTP {resp.status_code}"
+    content_type = (resp.headers.get("Content-Type") or "").lower()
 
+    if "application/json" in content_type:
+        try:
+            payload = resp.json()
+            if isinstance(payload, dict):
+                return (
+                    payload.get("detail")
+                    or payload.get("message")
+                    or payload.get("error")
+                    or str(payload)[:300]
+                )
+        except Exception:
+            pass
+
+    return (resp.text or f"HTTP {resp.status_code}")[:300]
 
 def _post_renovation_engine_json(path, payload, timeout=RENDER_TIMEOUT):
+    url = _renovation_engine_url(path)
+
     res = requests.post(
-        _renovation_engine_url(path),
+        url,
         json=payload,
         headers=_engine_headers(),
         timeout=timeout,
     )
+
+    content_type = (res.headers.get("Content-Type") or "").lower()
+
     if not res.ok:
         raise RuntimeError(_safe_engine_error_message(res))
-    return res.json()
 
+    if "application/json" not in content_type:
+        snippet = (res.text or "")[:300]
+        raise RuntimeError(
+            f"Engine returned non-JSON response. "
+            f"url={url} status={res.status_code} content_type={content_type} "
+            f"body={snippet}"
+        )
+
+    try:
+        return res.json()
+    except Exception:
+        snippet = (res.text or "")[:300]
+        raise RuntimeError(
+            f"Engine returned invalid JSON. "
+            f"url={url} status={res.status_code} content_type={content_type} "
+            f"body={snippet}"
+        )
 
 def _post_renovation_engine_multipart(path, files, data, timeout=UPLOAD_TIMEOUT):
     res = requests.post(
