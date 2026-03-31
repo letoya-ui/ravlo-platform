@@ -492,12 +492,23 @@ def _extract_saved_blueprint_reference(deal=None, project=None):
 # ENGINE HELPERS
 # =========================================================
 
-def _engine_headers() -> dict:
-    headers = {}
-    if RENOVATION_API_KEY:
-        headers["X-API-Key"] = RENOVATION_API_KEY
-    return headers
+def _renovation_engine_url(path):
+    base = (current_app.config.get("RENOVATION_ENGINE_URL") or "").rstrip("/")
+    path = f"/{(path or '').lstrip('/')}"
+    return f"{base}{path}"
 
+def _engine_headers():
+    headers = {
+        "Accept": "application/json",
+        "Content-Type": "application/json",
+        "ngrok-skip-browser-warning": "true",
+    }
+
+    api_key = (current_app.config.get("RENOVATION_API_KEY") or "").strip()
+    if api_key:
+        headers["X-API-Key"] = api_key
+
+    return headers
 
 def generate_renovation_images(before_url: str, prompt: str, n: int = 2) -> list[str]:
     if not before_url or not prompt:
@@ -829,20 +840,62 @@ def _safe_engine_error_message(resp):
 def _post_renovation_engine_json(path, payload, timeout=RENDER_TIMEOUT):
     url = _renovation_engine_url(path)
 
-    res = requests.post(
+    headers = dict(_engine_headers() or {})
+    headers.setdefault("Content-Type", "application/json")
+    headers["ngrok-skip-browser-warning"] = "true"
+
+    current_app.logger.warning(
+        "ENGINE REQUEST url=%s mode=%s timeout=%s",
         url,
-        json=payload,
-        headers=_engine_headers(),
-        timeout=timeout,
+        payload.get("mode"),
+        timeout,
     )
 
-    content_type = (res.headers.get("Content-Type") or "").lower()
+    try:
+        res = requests.post(
+            url,
+            json=payload,
+            headers=headers,
+            timeout=timeout,
+        )
+    except requests.Timeout as e:
+        raise RuntimeError(f"Engine request timed out. url={url} timeout={timeout} error={e}")
+    except requests.RequestException as e:
+        raise RuntimeError(f"Engine request failed. url={url} error={e}")
 
+    content_type = (res.headers.get("Content-Type") or "").lower()
+    body = res.text or ""
+    snippet = body[:500]
+
+    current_app.logger.warning(
+        "ENGINE RESPONSE url=%s status=%s content_type=%s body_preview=%s",
+        url,
+        res.status_code,
+        content_type,
+        snippet,
+    )
+
+    # Handle HTTP errors first
     if not res.ok:
+        # ngrok/browser interstitial or generic HTML error page
+        if "text/html" in content_type or body.lstrip().lower().startswith("<!doctype html") or "<html" in body[:200].lower():
+            raise RuntimeError(
+                f"Engine returned HTML instead of JSON. "
+                f"url={url} status={res.status_code} content_type={content_type} "
+                f"body={snippet}"
+            )
+
         raise RuntimeError(_safe_engine_error_message(res))
 
+    # Successful HTTP status, but still not JSON
     if "application/json" not in content_type:
-        snippet = (res.text or "")[:300]
+        if "text/html" in content_type or body.lstrip().lower().startswith("<!doctype html") or "<html" in body[:200].lower():
+            raise RuntimeError(
+                f"Engine returned HTML instead of JSON. "
+                f"url={url} status={res.status_code} content_type={content_type} "
+                f"body={snippet}"
+            )
+
         raise RuntimeError(
             f"Engine returned non-JSON response. "
             f"url={url} status={res.status_code} content_type={content_type} "
@@ -851,12 +904,11 @@ def _post_renovation_engine_json(path, payload, timeout=RENDER_TIMEOUT):
 
     try:
         return res.json()
-    except Exception:
-        snippet = (res.text or "")[:300]
+    except Exception as e:
         raise RuntimeError(
             f"Engine returned invalid JSON. "
             f"url={url} status={res.status_code} content_type={content_type} "
-            f"body={snippet}"
+            f"error={e} body={snippet}"
         )
 
 def _post_renovation_engine_multipart(path, files, data, timeout=UPLOAD_TIMEOUT):
