@@ -572,7 +572,7 @@
               <h4>Generate Full Package</h4>
               <p>Blueprint → exterior → interior in one flow.</p>
               <div class="build-actions" style="margin-top:12px;">
-                <button type="button" class="build-btn build-btn-primary" onclick="submitBuildForm('/deal-studio/build-studio/generate-full', 'full')">
+                <button type="button" class="build-btn build-btn-primary" onclick="submitBuildForm('{{ url_for('investor.generate_full_build') }}', 'full')">
                   Generate Full Package
                 </button>
               </div>
