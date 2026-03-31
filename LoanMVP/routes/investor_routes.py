@@ -4937,6 +4937,16 @@ def generate_build_blueprint():
 @login_required
 @role_required("investor")
 def generate_full_build():
+    return jsonify({
+        "status": "ok",
+        "message": "generate_full_build route is live"
+    })
+
+@investor_bp.route("/deal-studio/build-studio/generate-full", methods=["POST"])
+@csrf.exempt
+@login_required
+@role_required("investor")
+def generate_full_build():
     deal = None
 
     try:
