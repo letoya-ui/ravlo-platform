@@ -4604,11 +4604,7 @@ def generate_build_exterior():
             ).first()
 
             if project:
-                # 🔥 REMOVE blueprint fallback here
-                reference_image_url = (
-                    (project.concept_render_url or "").strip()
-                    or (project.site_plan_url or "").strip()
-                )
+                reference_image_url = ""
 
         # ---------------- CLEAN BAD INPUT ----------------
         use_conditioning = True
