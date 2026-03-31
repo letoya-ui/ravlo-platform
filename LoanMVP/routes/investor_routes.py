@@ -4390,8 +4390,37 @@ def build_studio(deal_id=None):
     if project is None and deal is not None:
         project = _safe_first_related(deal, "projects")
 
+    # -----------------------------
+    # Canonical source: deal.results_json
+    # -----------------------------
     results = deal.results_json or {} if deal else {}
     build_project = results.get("build_project", {}) or {}
+
+    # -----------------------------
+    # Optional fallback from project
+    # only if deal has no build_project yet
+    # -----------------------------
+    if not build_project and project is not None:
+        project_results = getattr(project, "results_json", None) or {}
+
+        if isinstance(project_results, dict):
+            build_project = project_results.get("build_project", {}) or {}
+
+        if not build_project:
+            project_blueprint_url = (getattr(project, "blueprint_url", None) or "").strip()
+            project_concept_url = (getattr(project, "concept_render_url", None) or "").strip()
+            project_site_plan_url = (getattr(project, "site_plan_url", None) or "").strip()
+
+            if project_blueprint_url or project_concept_url or project_site_plan_url:
+                build_project = {
+                    "blueprint": {
+                        "image_url": project_blueprint_url,
+                        "blueprint_url": project_blueprint_url,
+                    },
+                    "exterior": {
+                        "image_url": project_concept_url,
+                    },
+                }
 
     blueprint_result = build_project.get("blueprint", {}) or {}
     exterior_result = build_project.get("exterior", {}) or {}
@@ -4411,6 +4440,14 @@ def build_studio(deal_id=None):
         package_result["exterior"],
         package_result["interior"],
     ])
+
+    current_app.logger.warning(
+        "BUILD STUDIO LOAD deal_id=%s project_id=%s result_keys=%s build_project_keys=%s",
+        deal.id if deal else None,
+        project.id if project else None,
+        list((results or {}).keys()) if isinstance(results, dict) else [],
+        list((build_project or {}).keys()) if isinstance(build_project, dict) else [],
+    )
 
     return render_template(
         "investor/build_studio.html",
@@ -4441,6 +4478,12 @@ def generate_build_studio_legacy():
         "message": "Use the mode-specific build generation routes."
     }), 400
 
+# 🔥 ADD THIS HELPER ABOVE ROUTE
+def _is_probably_blueprint(url: str) -> bool:
+    url = (url or "").lower()
+    return any(x in url for x in ["blueprint", "floorplan", "layout"])
+
+
 @investor_bp.route("/deal-studio/build-studio/generate-exterior", methods=["POST"])
 @csrf.exempt
 @login_required
@@ -4455,20 +4498,15 @@ def generate_build_exterior():
         if deal_id:
             deal = Deal.query.filter_by(id=deal_id, user_id=current_user.id).first()
             if not deal:
-                return jsonify({
-                    "status": "error",
-                    "message": "Deal not found or not authorized."
-                }), 404
+                return jsonify({"status": "error", "message": "Deal not found"}), 404
 
             if _deal_render_lock_active(deal):
-                return jsonify({
-                    "status": "error",
-                    "message": "A build render is already in progress for this deal."
-                }), 409
+                return jsonify({"status": "error", "message": "Render in progress"}), 409
 
             _set_deal_render_processing(deal)
             db.session.commit()
 
+        # ---------------- DATA ----------------
         project_name = (request.form.get("project_name") or "").strip()
         property_type = (request.form.get("property_type") or "single_family").strip()
         description = (request.form.get("description") or "").strip()
@@ -4481,29 +4519,25 @@ def generate_build_exterior():
 
         land_image = request.files.get("land_image")
         reference_image_url = (request.form.get("reference_image_url") or "").strip()
+
         image_base64 = ""
         raw = None
 
+        # ---------------- IMAGE INPUT ----------------
         if land_image:
             raw = land_image.read()
-            if not raw:
-                return jsonify({
-                    "status": "error",
-                    "message": "Empty land image."
-                }), 400
-
             image_base64 = base64.b64encode(raw).decode("utf-8")
             reference_image_url = _upload_before_image(raw)
 
-        if not image_base64 and not reference_image_url and deal is not None:
+        # ---------------- FALLBACKS ----------------
+        if not image_base64 and not reference_image_url and deal:
             results = deal.results_json or {}
             build_project = results.get("build_project", {}) or {}
-            exterior_result = build_project.get("exterior", {}) or {}
+            exterior = build_project.get("exterior", {}) or {}
 
             reference_image_url = (
-                exterior_result.get("image_url")
-                or exterior_result.get("build_reference_image")
-                or results.get("build_reference_image")
+                exterior.get("image_url")
+                or exterior.get("build_reference_image")
                 or ""
             ).strip()
 
@@ -4514,41 +4548,57 @@ def generate_build_exterior():
             ).first()
 
             if project:
+                # 🔥 REMOVE blueprint fallback here
                 reference_image_url = (
                     (project.concept_render_url or "").strip()
                     or (project.site_plan_url or "").strip()
-                    or (project.blueprint_url or "").strip()
                 )
 
-        if not image_base64 and not reference_image_url:
-            return jsonify({
-                "status": "error",
-                "message": "Provide a land image upload or a saved project/deal reference image."
-            }), 400
+        # ---------------- CLEAN BAD INPUT ----------------
+        use_conditioning = True
 
+        if _is_probably_blueprint(reference_image_url):
+            # ❌ DO NOT use blueprint for exterior
+            reference_image_url = ""
+            use_conditioning = False
+
+        # ---------------- PROMPT ----------------
+        exterior_prompt = f"""
+        photorealistic exterior of a {style} {property_type},
+        front elevation view,
+        realistic architecture, natural lighting,
+        driveway, landscaping, curb appeal,
+        high detail, real estate photography,
+        {description}
+        """
+
+        # ---------------- PAYLOAD ----------------
         payload = {
             "mode": "exterior",
             "project_name": project_name,
             "property_type": property_type,
             "style": style,
             "description": description,
+            "prompt": exterior_prompt,
             "lot_size": lot_size,
             "zoning": zoning,
-            "image_base64": image_base64,
-            "image_url": reference_image_url if not image_base64 else "",
-            "width": 640,
-            "height": 640,
-            "steps": 20,
-            "guidance": 7.5,
-            "strength": 0.68,
             "count": 1,
+            "steps": 26,
+            "guidance": 7.5,
+            "width": 1024,
+            "height": 1024,
         }
 
-        seed = request.form.get("seed")
-        if seed not in (None, "", "None"):
-            payload["seed"] = int(seed)
+        # 🔥 ONLY CONDITION WHEN VALID
+        if use_conditioning and (image_base64 or reference_image_url):
+            payload["strength"] = 0.45
 
-        current_app.logger.warning(f"BUILD EXTERIOR ENGINE PAYLOAD: {payload}")
+            if image_base64:
+                payload["image_base64"] = image_base64
+            else:
+                payload["image_url"] = reference_image_url
+
+        current_app.logger.warning(f"EXTERIOR FINAL PAYLOAD: {payload}")
 
         result = _post_renovation_engine_json(
             "/v1/build_concept",
@@ -4556,54 +4606,46 @@ def generate_build_exterior():
             timeout=UPLOAD_TIMEOUT,
         )
 
-        current_app.logger.warning(f"BUILD EXTERIOR ENGINE JSON: {result}")
-
         images_b64 = result.get("images_base64") or []
         if not images_b64:
-            return jsonify({
-                "status": "error",
-                "message": "Build engine returned no images."
-            }), 502
+            raise RuntimeError("No images returned")
 
         render_batch_id = uuid.uuid4().hex
         build_urls = _upload_after_images_from_b64(images_b64, render_batch_id)
 
         if not build_urls:
-            return jsonify({
-                "status": "error",
-                "message": "Build render completed but uploads failed."
-            }), 500
+            raise RuntimeError("Upload failed")
 
-        meta = result.get("meta") or {}
-        seed = result.get("seed")
-        job_id = result.get("job_id")
-
-        if save_to_deal and deal is not None:
+        # ---------------- SAVE ----------------
+        if save_to_deal and deal:
             results = _deal_results(deal)
             build_project = results.get("build_project", {}) or {}
 
             build_project["exterior"] = {
                 "project_name": project_name,
                 "property_type": property_type,
+                "style": style,
                 "description": description,
                 "lot_size": lot_size,
                 "zoning": zoning,
                 "location": location,
                 "notes": notes,
-                "style": style,
-                "image_url": build_urls[0] if build_urls else "",
+                "image_url": build_urls[0],
                 "images": build_urls,
-                "meta": meta,
-                "seed": seed,
-                "job_id": job_id,
-                "build_reference_image": reference_image_url,
+                "meta": result.get("meta") or {},
+                "seed": result.get("seed"),
+                "job_id": result.get("job_id"),
+
+                # 🔥 ALWAYS USE GENERATED IMAGE
+                "build_reference_image": build_urls[0],
             }
 
             results["build_project"] = build_project
-            results["build_reference_image"] = reference_image_url
+            results["build_reference_image"] = build_urls[0]
+
             _set_deal_results(deal, results)
 
-        if deal is not None:
+        if deal:
             _clear_deal_render_processing(deal)
 
         db.session.commit()
@@ -4612,29 +4654,20 @@ def generate_build_exterior():
             "status": "ok",
             "mode": "exterior",
             "images": build_urls,
-            "image_url": build_urls[0] if build_urls else "",
-            "meta": meta,
-            "seed": seed,
-            "job_id": job_id,
-            "deal_id": deal.id if deal else None,
-            "saved_to_deal": bool(save_to_deal and deal is not None),
-            "reference_image_url": reference_image_url,
+            "image_url": build_urls[0],
         })
 
     except Exception as e:
         current_app.logger.exception("Build exterior generation error")
 
-        if deal is not None:
+        if deal:
             try:
                 _clear_deal_render_processing(deal)
                 db.session.commit()
-            except Exception:
+            except:
                 db.session.rollback()
 
-        return jsonify({
-            "status": "error",
-            "message": str(e)
-        }), 500
+        return jsonify({"status": "error", "message": str(e)}), 500
 
 @investor_bp.route("/deal-studio/build-studio/generate-interior", methods=["POST"])
 @csrf.exempt
