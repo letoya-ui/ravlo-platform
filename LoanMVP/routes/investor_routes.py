@@ -4937,10 +4937,439 @@ def generate_build_blueprint():
 @login_required
 @role_required("investor")
 def generate_full_build():
-    return jsonify({
-        "status": "ok",
-        "message": "generate_full_build route is live"
-    })
+    deal = None
+
+    try:
+        data = request.form.to_dict() or {}
+
+        deal_id = _normalize_int(data.get("deal_id"))
+        project_id = _normalize_int(data.get("project_id"))
+        save_to_deal = str(data.get("save_to_deal") or "true").lower() in ("1", "true", "yes", "on")
+
+        if deal_id:
+            deal = Deal.query.filter_by(id=deal_id, user_id=current_user.id).first()
+            if not deal:
+                return jsonify({
+                    "status": "error",
+                    "message": "Deal not found or not authorized."
+                }), 404
+
+            if _deal_render_lock_active(deal):
+                return jsonify({
+                    "status": "error",
+                    "message": "A build render is already in progress for this deal."
+                }), 409
+
+            _set_deal_render_processing(deal)
+            db.session.commit()
+
+        project = None
+        if project_id:
+            project = BuildProject.query.filter_by(
+                id=project_id,
+                user_id=current_user.id
+            ).first()
+
+        # --------------------------------------------------
+        # SHARED INPUTS
+        # --------------------------------------------------
+        project_name = (data.get("project_name") or "").strip()
+        property_type = (data.get("property_type") or "single_family").strip()
+        style = (data.get("style") or "modern_farmhouse").strip()
+        description = (data.get("description") or "").strip()
+        lot_size = (data.get("lot_size") or "").strip()
+        zoning = (data.get("zoning") or "").strip()
+        location = (data.get("location") or "").strip()
+        notes = (data.get("notes") or "").strip()
+
+        room_type = (data.get("room_type") or "living room").strip()
+        floor = (data.get("floor") or "main").strip()
+
+        blueprint_file = request.files.get("blueprint_file")
+        land_image = request.files.get("land_image")
+
+        blueprint_url = (data.get("blueprint_url") or "").strip()
+        reference_image_url = (data.get("reference_image_url") or "").strip()
+
+        blueprint_image_base64 = ""
+        exterior_image_base64 = ""
+        raw_blueprint = None
+        raw_land = None
+
+        # --------------------------------------------------
+        # BLUEPRINT SOURCE RESOLUTION
+        # --------------------------------------------------
+        if blueprint_file:
+            raw_blueprint = blueprint_file.read()
+            if raw_blueprint:
+                blueprint_image_base64 = base64.b64encode(raw_blueprint).decode("utf-8")
+
+        elif blueprint_url:
+            try:
+                raw_blueprint = download_image_bytes(blueprint_url)
+                if raw_blueprint:
+                    blueprint_image_base64 = base64.b64encode(raw_blueprint).decode("utf-8")
+            except Exception:
+                raw_blueprint = None
+
+        elif project and getattr(project, "blueprint_url", None):
+            blueprint_url = (project.blueprint_url or "").strip()
+            try:
+                raw_blueprint = download_image_bytes(blueprint_url)
+                if raw_blueprint:
+                    blueprint_image_base64 = base64.b64encode(raw_blueprint).decode("utf-8")
+            except Exception:
+                raw_blueprint = None
+
+        elif deal is not None:
+            results = deal.results_json or {}
+            build_project = results.get("build_project", {}) or {}
+            saved_blueprint = build_project.get("blueprint", {}) or {}
+            blueprint_url = (
+                saved_blueprint.get("blueprint_url")
+                or saved_blueprint.get("image_url")
+                or ""
+            ).strip()
+
+            if blueprint_url:
+                try:
+                    raw_blueprint = download_image_bytes(blueprint_url)
+                    if raw_blueprint:
+                        blueprint_image_base64 = base64.b64encode(raw_blueprint).decode("utf-8")
+                except Exception:
+                    raw_blueprint = None
+
+        # --------------------------------------------------
+        # If no blueprint image, allow text-only blueprint generation
+        # --------------------------------------------------
+        has_text_seed = any([
+            project_name,
+            property_type,
+            description,
+            lot_size,
+            zoning,
+        ])
+
+        if not blueprint_image_base64 and not has_text_seed:
+            return jsonify({
+                "status": "error",
+                "message": "Provide a blueprint file, saved blueprint, or enough project details to generate a blueprint."
+            }), 400
+
+        # --------------------------------------------------
+        # EXTERIOR SOURCE RESOLUTION
+        # --------------------------------------------------
+        if land_image:
+            raw_land = land_image.read()
+            if raw_land:
+                exterior_image_base64 = base64.b64encode(raw_land).decode("utf-8")
+                if not reference_image_url:
+                    try:
+                        reference_image_url = _upload_before_image(raw_land)
+                    except Exception:
+                        reference_image_url = ""
+
+        if not exterior_image_base64 and not reference_image_url and deal is not None:
+            results = deal.results_json or {}
+            build_project = results.get("build_project", {}) or {}
+            saved_exterior = build_project.get("exterior", {}) or {}
+            reference_image_url = (
+                saved_exterior.get("image_url")
+                or saved_exterior.get("build_reference_image")
+                or ""
+            ).strip()
+
+        if not exterior_image_base64 and not reference_image_url and project:
+            reference_image_url = (
+                (project.concept_render_url or "").strip()
+                or (project.site_plan_url or "").strip()
+                or ""
+            )
+
+        # --------------------------------------------------
+        # 1. GENERATE BLUEPRINT
+        # --------------------------------------------------
+        blueprint_payload = {
+            "mode": "blueprint",
+            "project_name": project_name,
+            "property_type": property_type,
+            "style": style,
+            "description": description,
+            "lot_size": lot_size,
+            "zoning": zoning,
+            "width": 1024,
+            "height": 1024,
+            "steps": 24,
+            "guidance": 6.0,
+            "strength": 0.28,
+            "count": 1,
+        }
+
+        if blueprint_image_base64:
+            blueprint_payload["image_base64"] = blueprint_image_base64
+            blueprint_payload["image_url"] = ""
+
+        current_app.logger.warning(f"FULL BUILD BLUEPRINT PAYLOAD: {blueprint_payload}")
+
+        blueprint_json = _post_renovation_engine_json(
+            "/v1/build_concept",
+            blueprint_payload,
+            timeout=RENDER_TIMEOUT,
+        )
+
+        current_app.logger.warning(f"FULL BUILD BLUEPRINT JSON: {blueprint_json}")
+
+        blueprint_images_b64 = blueprint_json.get("images_base64") or []
+        if not blueprint_images_b64:
+            return jsonify({
+                "status": "error",
+                "message": "Blueprint step returned no images."
+            }), 502
+
+        blueprint_batch_id = uuid.uuid4().hex
+        blueprint_urls = _upload_after_images_from_b64(blueprint_images_b64, blueprint_batch_id)
+
+        if not blueprint_urls:
+            return jsonify({
+                "status": "error",
+                "message": "Blueprint generated but uploads failed."
+            }), 500
+
+        blueprint_primary_url = blueprint_urls[0]
+        blueprint_primary_b64 = blueprint_images_b64[0]
+
+        blueprint_meta = blueprint_json.get("meta") or {}
+        blueprint_seed = blueprint_json.get("seed")
+        blueprint_job_id = blueprint_json.get("job_id")
+
+        # --------------------------------------------------
+        # 2. GENERATE EXTERIOR
+        # Prefer land image if supplied, otherwise blueprint output
+        # --------------------------------------------------
+        exterior_payload = {
+            "mode": "exterior",
+            "project_name": project_name,
+            "property_type": property_type,
+            "style": style,
+            "description": description,
+            "lot_size": lot_size,
+            "zoning": zoning,
+            "image_base64": exterior_image_base64 or blueprint_primary_b64,
+            "image_url": "" if (exterior_image_base64 or blueprint_primary_b64) else reference_image_url,
+            "width": 640,
+            "height": 640,
+            "steps": 20,
+            "guidance": 7.5,
+            "strength": 0.68,
+            "count": 1,
+        }
+
+        current_app.logger.warning(f"FULL BUILD EXTERIOR PAYLOAD: {exterior_payload}")
+
+        exterior_json = _post_renovation_engine_json(
+            "/v1/build_concept",
+            exterior_payload,
+            timeout=UPLOAD_TIMEOUT,
+        )
+
+        current_app.logger.warning(f"FULL BUILD EXTERIOR JSON: {exterior_json}")
+
+        exterior_images_b64 = exterior_json.get("images_base64") or []
+        if not exterior_images_b64:
+            return jsonify({
+                "status": "error",
+                "message": "Exterior step returned no images."
+            }), 502
+
+        exterior_batch_id = uuid.uuid4().hex
+        exterior_urls = _upload_after_images_from_b64(exterior_images_b64, exterior_batch_id)
+
+        if not exterior_urls:
+            return jsonify({
+                "status": "error",
+                "message": "Exterior generated but uploads failed."
+            }), 500
+
+        exterior_primary_url = exterior_urls[0]
+        exterior_meta = exterior_json.get("meta") or {}
+        exterior_seed = exterior_json.get("seed")
+        exterior_job_id = exterior_json.get("job_id")
+
+        # --------------------------------------------------
+        # 3. GENERATE INTERIOR
+        # text-only
+        # --------------------------------------------------
+        interior_payload = {
+            "mode": "interior",
+            "project_name": project_name,
+            "property_type": property_type,
+            "style": style,
+            "description": description,
+            "lot_size": lot_size,
+            "zoning": zoning,
+            "room_type": room_type,
+            "floor": floor,
+            "count": 1,
+            "steps": 22,
+            "guidance": 7.0,
+            "strength": 0.42,
+            "width": 768,
+            "height": 768,
+        }
+
+        current_app.logger.warning(f"FULL BUILD INTERIOR PAYLOAD: {interior_payload}")
+
+        interior_json = _post_renovation_engine_json(
+            "/v1/build_concept",
+            interior_payload,
+            timeout=RENDER_TIMEOUT,
+        )
+
+        current_app.logger.warning(f"FULL BUILD INTERIOR JSON: {interior_json}")
+
+        interior_images_b64 = interior_json.get("images_base64") or []
+        interior_urls = []
+        interior_primary_url = ""
+
+        if interior_images_b64:
+            interior_batch_id = uuid.uuid4().hex
+            interior_urls = _upload_after_images_from_b64(interior_images_b64, interior_batch_id)
+            if interior_urls:
+                interior_primary_url = interior_urls[0]
+
+        interior_meta = interior_json.get("meta") or {}
+        interior_seed = interior_json.get("seed")
+        interior_job_id = interior_json.get("job_id")
+
+        # --------------------------------------------------
+        # SAVE TO DEAL
+        # --------------------------------------------------
+        if save_to_deal and deal is not None:
+            results = _deal_results(deal)
+            build_project = results.get("build_project", {}) or {}
+
+            build_project["blueprint"] = {
+                "project_name": project_name,
+                "property_type": property_type,
+                "description": description,
+                "lot_size": lot_size,
+                "zoning": zoning,
+                "location": location,
+                "notes": notes,
+                "style": style,
+                "image_url": blueprint_primary_url,
+                "images": blueprint_urls,
+                "blueprint_url": blueprint_primary_url,
+                "meta": blueprint_meta,
+                "seed": blueprint_seed,
+                "job_id": blueprint_job_id,
+            }
+
+            build_project["exterior"] = {
+                "project_name": project_name,
+                "property_type": property_type,
+                "description": description,
+                "lot_size": lot_size,
+                "zoning": zoning,
+                "location": location,
+                "notes": notes,
+                "style": style,
+                "image_url": exterior_primary_url,
+                "images": exterior_urls,
+                "meta": exterior_meta,
+                "seed": exterior_seed,
+                "job_id": exterior_job_id,
+                "build_reference_image": reference_image_url or blueprint_primary_url,
+            }
+
+            existing_interior = build_project.get("interior", {}) or {}
+            existing_rooms = existing_interior.get("rooms", []) or []
+
+            room_entry = {
+                "project_name": project_name,
+                "property_type": property_type,
+                "style": style,
+                "description": description,
+                "lot_size": lot_size,
+                "zoning": zoning,
+                "location": location,
+                "notes": notes,
+                "room_type": room_type,
+                "floor": floor,
+                "image_url": interior_primary_url,
+                "images": interior_urls,
+                "meta": interior_meta,
+                "seed": interior_seed,
+                "job_id": interior_job_id,
+                "build_reference_image": blueprint_primary_url,
+            }
+
+            if interior_primary_url:
+                existing_rooms.append(room_entry)
+
+            build_project["interior"] = {
+                "latest": room_entry,
+                "rooms": existing_rooms,
+            }
+
+            results["build_project"] = build_project
+            results["build_reference_image"] = reference_image_url or blueprint_primary_url
+            _set_deal_results(deal, results)
+
+        if deal is not None:
+            _clear_deal_render_processing(deal)
+
+        db.session.commit()
+
+        return jsonify({
+            "status": "ok",
+            "mode": "full",
+            "package": {
+                "blueprint": blueprint_primary_url,
+                "exterior": exterior_primary_url,
+                "interior": interior_primary_url,
+            },
+            "blueprint_result": {
+                "image_url": blueprint_primary_url,
+                "images": blueprint_urls,
+                "meta": blueprint_meta,
+                "seed": blueprint_seed,
+                "job_id": blueprint_job_id,
+            },
+            "exterior_result": {
+                "image_url": exterior_primary_url,
+                "images": exterior_urls,
+                "meta": exterior_meta,
+                "seed": exterior_seed,
+                "job_id": exterior_job_id,
+            },
+            "interior_result": {
+                "image_url": interior_primary_url,
+                "images": interior_urls,
+                "meta": interior_meta,
+                "seed": interior_seed,
+                "job_id": interior_job_id,
+                "room_type": room_type,
+                "floor": floor,
+            },
+            "deal_id": deal.id if deal else None,
+            "saved_to_deal": bool(save_to_deal and deal is not None),
+        })
+
+    except Exception as e:
+        current_app.logger.exception("Full build generation error")
+
+        if deal is not None:
+            try:
+                _clear_deal_render_processing(deal)
+                db.session.commit()
+            except Exception:
+                db.session.rollback()
+
+        return jsonify({
+            "status": "error",
+            "message": str(e)
+        }), 500
 
        
 @investor_bp.route("/ai/build-scope/analyze", methods=["POST"])
