@@ -4166,80 +4166,43 @@ def build_studio(deal_id=None):
     if project is None and deal is not None:
         project = _safe_first_related(deal, "projects")
 
-    exterior_result = {}
-    interior_result = {}
-    blueprint_result = {}
-    interior_rooms = []
-    saved_exterior_image = ""
-    has_saved_exterior = False
+    results = deal.results_json or {} if deal else {}
+    build_project = results.get("build_project", {}) or {}
 
-    if deal:
-        results = deal.results_json or {}
-        build_project = results.get("build_project", {}) or {}
+    blueprint_result = build_project.get("blueprint", {}) or {}
+    exterior_result = build_project.get("exterior", {}) or {}
 
-        exterior_block = build_project.get("exterior", {}) or {}
-        interior_block = build_project.get("interior", {}) or {}
-        blueprint_block = build_project.get("blueprint", {}) or {}
+    interior_block = build_project.get("interior", {}) or {}
+    interior_result = interior_block.get("latest", {}) or {}
+    interior_rooms = interior_block.get("rooms", []) or []
 
-        exterior_result = exterior_block
-        interior_rooms = interior_block.get("rooms", []) or []
-        interior_result = interior_block.get("latest", {}) or {}
+    package_result = {
+        "blueprint": blueprint_result.get("image_url") or blueprint_result.get("blueprint_url") or "",
+        "exterior": exterior_result.get("image_url") or "",
+        "interior": interior_result.get("image_url") or "",
+    }
 
-        if not interior_result and interior_block.get("image_url"):
-            interior_result = interior_block
-
-        if not interior_rooms and interior_result:
-            interior_rooms = [interior_result]
-
-        blueprint_result = blueprint_block
-
-        saved_exterior_image = (
-            exterior_result.get("image_url")
-            or exterior_result.get("build_reference_image")
-            or ""
-        )
-        has_saved_exterior = bool(saved_exterior_image)
-
-    project_seed = {}
-    if project:
-        project_seed = {
-            "project_id": project.id,
-            "project_name": project.project_name or "",
-            "property_type": project.property_type or "",
-            "description": project.description or "",
-            "lot_size": project.lot_size or "",
-            "zoning": project.zoning or "",
-            "location": project.location or "",
-            "notes": project.notes or "",
-            "concept_render_url": project.concept_render_url or "",
-            "blueprint_url": project.blueprint_url or "",
-            "site_plan_url": project.site_plan_url or "",
-            "presentation_url": project.presentation_url or "",
-        }
-
-        if not saved_exterior_image:
-            saved_exterior_image = (
-                project.concept_render_url
-                or project.site_plan_url
-                or ""
-            )
-            has_saved_exterior = bool(saved_exterior_image)
+    has_saved_package = any([
+        package_result["blueprint"],
+        package_result["exterior"],
+        package_result["interior"],
+    ])
 
     return render_template(
-        "investor/build_studio.html",
+        "investor/deal_build_studio.html",
         deal=deal,
         project=project,
-        project_seed=project_seed,
-        deal_id=deal.id if deal else None,
+        build_project=build_project,
+        blueprint_result=blueprint_result,
         exterior_result=exterior_result,
         interior_result=interior_result,
-        blueprint_result=blueprint_result,
         interior_rooms=interior_rooms,
-        saved_exterior_image=saved_exterior_image,
-        has_saved_exterior=has_saved_exterior,
+        package_result=package_result,
+        has_saved_package=has_saved_package,
         page_title="Build Studio",
         page_subtitle="Design and visualize new construction projects.",
     )
+
 # =========================================================
 # 🏗️ BUILD STUDIO — GENERATE CONCEPT
 # =========================================================
