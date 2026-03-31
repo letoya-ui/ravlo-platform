@@ -4155,7 +4155,7 @@ def deal_rehab(deal_id=None):
     rehab_concepts = rehab_project.get("concepts", []) or []
 
     return render_template(
-        "investor/rehab_studio.html",
+        "investor/deal_rehab_studio.html",
         deal=deal,
         rehab_project=rehab_project,
         rehab_before=rehab_before,
