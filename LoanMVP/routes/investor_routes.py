@@ -5540,16 +5540,34 @@ def generate_build_room():
 
         results = _deal_results(deal)
         build_project = results.get("build_project", {}) or {}
-        blueprint_block = build_project.get("blueprint", {}) or {}
 
+        blueprint_block = build_project.get("blueprint", {}) or {}
+        interior_block = build_project.get("interior", {}) or {}
+        interior_latest = interior_block.get("latest", {}) or {}
+        exterior_block = build_project.get("exterior", {}) or {}
+
+        # Try multiple fallback locations for the blueprint reference
         blueprint_url = (
-            blueprint_block.get("image_url")
-            or blueprint_block.get("blueprint_url")
-            or ""
-        ).strip()
+            (blueprint_block.get("image_url") or "").strip()
+            or (blueprint_block.get("blueprint_url") or "").strip()
+            or (interior_latest.get("build_reference_image") or "").strip()
+            or (results.get("build_reference_image") or "").strip()
+            or (exterior_block.get("build_reference_image") or "").strip()
+        )
+
+        current_app.logger.warning(
+            "BUILD ROOM LOOKUP deal_id=%s blueprint_url=%s available_keys=%s build_project_keys=%s",
+            deal.id if deal else None,
+            blueprint_url,
+            list((results or {}).keys()),
+            list((build_project or {}).keys()),
+        )
 
         if not blueprint_url:
-            raise RuntimeError("Blueprint is required before generating additional rooms.")
+            raise RuntimeError(
+                "Blueprint is required before generating additional rooms. "
+                "No saved blueprint reference was found on this deal."
+            )
 
         try:
             raw_blueprint = download_image_bytes(blueprint_url)
@@ -5557,17 +5575,59 @@ def generate_build_room():
             raw_blueprint = None
 
         if not raw_blueprint:
-            raise RuntimeError("Unable to load saved blueprint.")
+            raise RuntimeError(f"Unable to load saved blueprint from: {blueprint_url}")
 
         blueprint_b64 = base64.b64encode(raw_blueprint).decode("utf-8")
 
-        project_name = (data.get("project_name") or blueprint_block.get("project_name") or "").strip()
-        property_type = (data.get("property_type") or blueprint_block.get("property_type") or "single_family").strip()
-        style = (data.get("style") or blueprint_block.get("style") or "modern_farmhouse").strip()
-        description = (data.get("description") or blueprint_block.get("description") or "").strip()
-        lot_size = (data.get("lot_size") or blueprint_block.get("lot_size") or "").strip()
-        zoning = (data.get("zoning") or blueprint_block.get("zoning") or "").strip()
-        location = (data.get("location") or blueprint_block.get("location") or "").strip()
+        project_name = (
+            data.get("project_name")
+            or blueprint_block.get("project_name")
+            or interior_latest.get("project_name")
+            or ""
+        ).strip()
+
+        property_type = (
+            data.get("property_type")
+            or blueprint_block.get("property_type")
+            or interior_latest.get("property_type")
+            or "single_family"
+        ).strip()
+
+        style = (
+            data.get("style")
+            or blueprint_block.get("style")
+            or interior_latest.get("style")
+            or "modern_farmhouse"
+        ).strip()
+
+        description = (
+            data.get("description")
+            or blueprint_block.get("description")
+            or interior_latest.get("description")
+            or ""
+        ).strip()
+
+        lot_size = (
+            data.get("lot_size")
+            or blueprint_block.get("lot_size")
+            or interior_latest.get("lot_size")
+            or ""
+        ).strip()
+
+        zoning = (
+            data.get("zoning")
+            or blueprint_block.get("zoning")
+            or interior_latest.get("zoning")
+            or ""
+        ).strip()
+
+        location = (
+            data.get("location")
+            or blueprint_block.get("location")
+            or interior_latest.get("location")
+            or ""
+        ).strip()
+
         notes = (data.get("notes") or "").strip()
 
         room_type = (data.get("room_type") or "kitchen").strip()
@@ -5631,7 +5691,6 @@ def generate_build_room():
             "build_reference_image": blueprint_url,
         }
 
-        # Keep one latest entry per room_type + floor combination
         rooms = [
             r for r in rooms
             if not (
@@ -5671,8 +5730,8 @@ def generate_build_room():
         return jsonify({
             "status": "error",
             "message": str(e)
-        }), 500
-       
+        }), 500  
+     
 @investor_bp.route("/ai/build-scope/analyze", methods=["POST"])
 @csrf.exempt
 @login_required
