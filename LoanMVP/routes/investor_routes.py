@@ -4109,31 +4109,176 @@ def request_funding(deal_id):
 # =========================================================
 
 @investor_bp.route("/deals/<int:deal_id>/rehab", methods=["GET"])
+@investor_bp.route("/deal-studio/rehab-studio", methods=["GET"])
 @login_required
 @role_required("investor")
-def deal_rehab(deal_id):
-    deal = _get_owned_deal_or_404(deal_id)
-    mockups = _get_rehab_mockups_for_deal(deal)
+def rehab_studio(deal_id=None):
+    deal = None
 
-    before_url = ""
-    try:
-        before_url = ((deal.resolved_json or {}).get("rehab") or {}).get("before_url") or ""
-    except Exception:
-        before_url = ""
+    if deal_id is None:
+        query_deal_id = request.args.get("deal_id", type=int)
+        if query_deal_id:
+            deal_id = query_deal_id
 
-    if not before_url and mockups:
-        before_url = mockups[0].before_url or ""
+    if deal_id is not None:
+        deal = _get_owned_deal_or_404(deal_id)
 
-    featured = _featured_rehab_data(deal)
+    results = (deal.results_json or {}) if deal else {}
+    rehab_project = results.get("rehab_project", {}) or {}
+
+    rehab_before = rehab_project.get("before", {}) or {}
+    rehab_latest = rehab_project.get("latest", {}) or {}
+    rehab_concepts = rehab_project.get("concepts", []) or []
 
     return render_template(
-        "investor/deal_rehab_studio.html",
+        "investor/rehab_studio.html",
         deal=deal,
-        mockups=mockups,
-        before_url=before_url,
-        featured=featured,
+        rehab_project=rehab_project,
+        rehab_before=rehab_before,
+        rehab_latest=rehab_latest,
+        rehab_concepts=rehab_concepts,
+        page_title="Renovation Studio",
+        page_subtitle="Visualize renovation concepts before execution.",
     )
+@investor_bp.route("/deal-studio/rehab-studio/generate-variant", methods=["POST"])
+@csrf.exempt
+@login_required
+@role_required("investor")
+def generate_rehab_variant():
+    deal = None
 
+    try:
+        data = request.form.to_dict() or {}
+
+        deal_id = _normalize_int(data.get("deal_id"))
+        if not deal_id:
+            return jsonify({
+                "status": "error",
+                "message": "Deal ID is required."
+            }), 400
+
+        deal = Deal.query.filter_by(id=deal_id, user_id=current_user.id).first()
+        if not deal:
+            return jsonify({
+                "status": "error",
+                "message": "Deal not found or not authorized."
+            }), 404
+
+        if _deal_render_lock_active(deal):
+            return jsonify({
+                "status": "error",
+                "message": "A rehab render is already in progress for this deal."
+            }), 409
+
+        _set_deal_render_processing(deal)
+        db.session.commit()
+
+        results = _deal_results(deal)
+        rehab_project = results.get("rehab_project", {}) or {}
+        rehab_before = rehab_project.get("before", {}) or {}
+
+        before_url = (rehab_before.get("image_url") or "").strip()
+        if not before_url:
+            raise RuntimeError("Before image is required before generating another concept.")
+
+        try:
+            raw_before = download_image_bytes(before_url)
+        except Exception:
+            raw_before = None
+
+        if not raw_before:
+            raise RuntimeError("Unable to load saved before image.")
+
+        image_base64 = base64.b64encode(raw_before).decode("utf-8")
+
+        preset = (data.get("preset") or "luxury").strip()
+        mode = (data.get("mode") or "hgtv").strip()
+        room_type = (data.get("room_type") or "living room").strip()
+        notes = (data.get("notes") or "").strip()
+
+        payload = {
+            "preset": preset,
+            "mode": mode,
+            "room_type": room_type,
+            "image_base64": image_base64,
+            "image_url": "",
+            "count": 1,
+            "steps": 22,
+            "guidance": 7.2,
+            "strength": 0.58,
+            "width": 768,
+            "height": 768,
+            "notes": notes,
+        }
+
+        engine_json = _post_renovation_engine_json(
+            "/v1/renovate",
+            payload,
+            timeout=RENDER_TIMEOUT,
+        )
+
+        images_b64 = engine_json.get("images_base64") or []
+        if not images_b64:
+            raise RuntimeError("Variant generation returned no images.")
+
+        render_batch_id = uuid.uuid4().hex
+        after_urls = _upload_after_images_from_b64(images_b64, render_batch_id)
+
+        if not after_urls:
+            raise RuntimeError("Variant generated but uploads failed.")
+
+        concept_entry = {
+            "image_url": after_urls[0],
+            "images": after_urls,
+            "preset": preset,
+            "mode": mode,
+            "room_type": room_type,
+            "notes": notes,
+            "seed": engine_json.get("seed"),
+            "job_id": engine_json.get("job_id"),
+            "meta": engine_json.get("meta") or {},
+        }
+
+        concepts = rehab_project.get("concepts", []) or []
+        concepts = [
+            c for c in concepts
+            if not (
+                (c.get("preset") or "").strip().lower() == preset.lower()
+                and (c.get("mode") or "").strip().lower() == mode.lower()
+            )
+        ]
+        concepts.append(concept_entry)
+
+        rehab_project["latest"] = concept_entry
+        rehab_project["concepts"] = concepts
+        results["rehab_project"] = rehab_project
+        _set_deal_results(deal, results)
+
+        _clear_deal_render_processing(deal)
+        db.session.commit()
+
+        return jsonify({
+            "status": "ok",
+            "concept_result": concept_entry,
+            "concepts": concepts,
+            "deal_id": deal.id,
+            "saved_to_deal": True,
+        })
+
+    except Exception as e:
+        current_app.logger.exception("Rehab variant generation error")
+
+        if deal is not None:
+            try:
+                _clear_deal_render_processing(deal)
+                db.session.commit()
+            except Exception:
+                db.session.rollback()
+
+        return jsonify({
+            "status": "error",
+            "message": str(e)
+        }), 500
 
 # =========================================================
 # 🏗️ BUILD STUDIO — PAGE
@@ -6594,221 +6739,170 @@ def renovation_upload():
 # PHOTO RENOVATION VISUALIZER
 # =========================================================
 
-@investor_bp.route("/deal-studio/rehab/render", methods=["POST"])
-@investor_bp.route("/deals/visualizer", methods=["POST"])
-@investor_bp.route("/renovation_visualizer", methods=["POST"])
+@investor_bp.route("/deal-studio/rehab-studio/generate", methods=["POST"])
 @csrf.exempt
 @login_required
 @role_required("investor")
-def renovation_visualizer():
+def generate_rehab_studio():
     deal = None
 
     try:
-        image_file = request.files.get("image_file")
-        image_url = (request.form.get("image_url") or "").strip()
+        data = request.form.to_dict() or {}
 
-        style_prompt = (
-            request.form.get("style_prompt")
-            or request.form.get("prompt_notes")
-            or ""
-        ).strip()
-
-        requested_style_preset = (
-            request.form.get("style_preset")
-            or request.form.get("preset")
-            or ""
-        ).strip()
-
-        variations_raw = (
-            request.form.get("variations")
-            or request.form.get("count")
-            or "1"
-        )
-
-        try:
-            variations = max(1, min(int(variations_raw), 4))
-        except (TypeError, ValueError):
-            variations = 1
-
-        save_to_deal = (request.form.get("save_to_deal") or "").lower() in (
-            "1", "true", "yes", "on"
-        )
-        mode = (request.form.get("mode") or "photo").strip().lower()
-
-        saved_property_id = _normalize_int(
-            request.form.get("saved_property_id") or request.form.get("prop_id")
-        )
-        deal_id = _normalize_int(request.form.get("deal_id"))
-        property_id = (request.form.get("property_id") or "").strip() or None
-
-        if not image_file and not image_url:
-            return jsonify({
-                "status": "error",
-                "message": "Provide image_file or image_url.",
-            }), 400
-
-        if image_url.startswith("blob:"):
-            return jsonify({
-                "status": "error",
-                "message": "Browser preview URL detected. Please upload the image file.",
-            }), 400
-
-        if image_url and not (
-            image_url.startswith("http://") or image_url.startswith("https://")
-        ):
-            return jsonify({
-                "status": "error",
-                "message": "image_url must start with http:// or https://",
-            }), 400
-
-        if not style_prompt and not requested_style_preset:
-            return jsonify({
-                "status": "error",
-                "message": "Add a style prompt or choose a preset.",
-            }), 400
- 
+        deal_id = _normalize_int(data.get("deal_id"))
         if deal_id:
             deal = Deal.query.filter_by(id=deal_id, user_id=current_user.id).first()
             if not deal:
                 return jsonify({
                     "status": "error",
-                    "message": "Deal not found or not authorized.",
+                    "message": "Deal not found or not authorized."
                 }), 404
 
             if _deal_render_lock_active(deal):
                 return jsonify({
                     "status": "error",
-                    "message": "A renovation render is already in progress for this deal.",
+                    "message": "A rehab render is already in progress for this deal."
                 }), 409
 
             _set_deal_render_processing(deal)
             db.session.commit()
 
-            if saved_property_id is None and getattr(deal, "saved_property_id", None):
-                saved_property_id = deal.saved_property_id
+        preset = (data.get("preset") or "luxury").strip()
+        mode = (data.get("mode") or "hgtv").strip()
+        room_type = (data.get("room_type") or "living room").strip()
+        notes = (data.get("notes") or "").strip()
+        save_to_deal = str(data.get("save_to_deal") or "true").lower() in ("1", "true", "yes", "on")
 
-            if not property_id and getattr(deal, "property_id", None):
-                property_id = deal.property_id
+        before_image = request.files.get("before_image")
+        image_url = (data.get("image_url") or "").strip()
+        image_base64 = ""
 
-        raw = image_file.read() if image_file else download_image_bytes(image_url)
+        raw_before = None
+        before_uploaded_url = ""
 
-        if not raw:
-            return jsonify({
-                "status": "error",
-                "message": "Empty image input.",
-            }), 400
+        if before_image:
+            raw_before = before_image.read()
+            if not raw_before:
+                raise RuntimeError("Empty before image upload.")
 
-        # ✅ FIX ROTATION HERE
-        from PIL import Image, ImageOps
-        import io
+            image_base64 = base64.b64encode(raw_before).decode("utf-8")
 
-        img = Image.open(io.BytesIO(raw))
-        img = ImageOps.exif_transpose(img)  # 🔥 fixes sideways images
+            try:
+                before_uploaded_url = _upload_before_image(raw_before)
+            except Exception:
+                before_uploaded_url = ""
 
-        # Convert back to bytes
-        buf = io.BytesIO()
-        img.save(buf, format="JPEG")
-        raw = buf.getvalue()
+        elif image_url:
+            try:
+                raw_before = download_image_bytes(image_url)
+                if raw_before:
+                    image_base64 = base64.b64encode(raw_before).decode("utf-8")
+                    before_uploaded_url = image_url
+            except Exception:
+                raw_before = None
 
-        before_url = _upload_before_image(raw)
+        elif deal is not None:
+            results = _deal_results(deal)
+            rehab_project = results.get("rehab_project", {}) or {}
+            rehab_before = rehab_project.get("before", {}) or {}
 
-        if deal is not None:
-            _save_before_url_to_deal(deal, before_url)
+            saved_before_url = (rehab_before.get("image_url") or "").strip()
+            if saved_before_url:
+                try:
+                    raw_before = download_image_bytes(saved_before_url)
+                    if raw_before:
+                        image_base64 = base64.b64encode(raw_before).decode("utf-8")
+                        before_uploaded_url = saved_before_url
+                except Exception:
+                    raw_before = None
 
-        style_preset = _normalize_style_preset(requested_style_preset)
-
-        final_prompt = build_visualizer_helper_prompt(
-            style_prompt=style_prompt,
-            style_preset=style_preset,
-            room_focus="kitchen",  # swap later if you infer room type
-        )
-
-        print("style_prompt:", style_prompt)
-        print("requested_style_preset:", requested_style_preset)
-        print("style_preset:", style_preset)
-        print("final_prompt:", final_prompt)
-
-        render_batch_id = uuid.uuid4().hex
+        if not image_base64:
+            raise RuntimeError("Provide a before photo or saved rehab before image.")
 
         payload = {
-            "image_base64": base64.b64encode(raw).decode("utf-8") if image_file else "",
-            "image_url": "" if image_file else before_url,
+            "preset": preset,
             "mode": mode,
-            "preset": style_preset,
-            "prompt": final_prompt,
+            "room_type": room_type,
+            "image_base64": image_base64,
+            "image_url": "",
             "count": 1,
-            "steps": 24,
-            "strength": 0.75,
-            "controlnet_scale": 0.50,
-            "guidance": 8.0,
-            "width": 640,
-            "height": 640,
+            "steps": 22,
+            "guidance": 7.2,
+            "strength": float(data.get("strength") or 0.58),
+            "width": 768,
+            "height": 768,
+            "notes": notes,
         }
-
-        current_app.logger.warning(f"RENOVATION ENGINE PAYLOAD: {payload}")
 
         engine_json = _post_renovation_engine_json(
             "/v1/renovate",
             payload,
-            timeout=UPLOAD_TIMEOUT if image_file else RENDER_TIMEOUT,
+            timeout=RENDER_TIMEOUT,
         )
 
-        current_app.logger.warning(f"ENGINE JSON: {engine_json}")
-        current_app.logger.warning(
-            f"images_base64 count: {len(engine_json.get('images_base64', []) or [])}"
-        )
-
-        images_b64 = engine_json.get("images_base64", []) or []
-
+        images_b64 = engine_json.get("images_base64") or []
         if not images_b64:
-            return jsonify({
-                "status": "error",
-                "message": "GPU engine returned no images.",
-            }), 502
+            raise RuntimeError("Renovation engine returned no images.")
 
+        render_batch_id = uuid.uuid4().hex
         after_urls = _upload_after_images_from_b64(images_b64, render_batch_id)
 
         if not after_urls:
-            return jsonify({
-                "status": "error",
-                "message": "Render completed but uploads failed.",
-            }), 500
+            raise RuntimeError("Renovation generated but uploads failed.")
 
-        saved_count = 0
+        concept_entry = {
+            "image_url": after_urls[0],
+            "images": after_urls,
+            "preset": preset,
+            "mode": mode,
+            "room_type": room_type,
+            "notes": notes,
+            "seed": engine_json.get("seed"),
+            "job_id": engine_json.get("job_id"),
+            "meta": engine_json.get("meta") or {},
+        }
+
+        before_result = {
+            "image_url": before_uploaded_url,
+        }
+
         if save_to_deal and deal is not None:
-            saved_count = _save_mockups_for_deal(
-                deal=deal,
-                before_url=before_url,
-                after_urls=after_urls,
-                style_prompt=style_prompt,
-                style_preset=style_preset,
-                mode=mode,
-                saved_property_id=saved_property_id,
-                property_id=property_id,
-            )
+            results = _deal_results(deal)
+            rehab_project = results.get("rehab_project", {}) or {}
+
+            rehab_project["before"] = before_result
+
+            concepts = rehab_project.get("concepts", []) or []
+            concepts = [
+                c for c in concepts
+                if not (
+                    (c.get("preset") or "").strip().lower() == preset.lower()
+                    and (c.get("mode") or "").strip().lower() == mode.lower()
+                )
+            ]
+            concepts.append(concept_entry)
+
+            rehab_project["latest"] = concept_entry
+            rehab_project["concepts"] = concepts
+
+            results["rehab_project"] = rehab_project
+            _set_deal_results(deal, results)
 
         if deal is not None:
             _clear_deal_render_processing(deal)
-            db.session.commit()
+
+        db.session.commit()
 
         return jsonify({
             "status": "ok",
-            "render_batch_id": render_batch_id,
-            "mode": mode,
-            "before_url": before_url,
-            "images": after_urls,
-            "style_preset": style_preset,
-            "style_prompt": final_prompt,
-            "variations": len(after_urls),
-            "save_to_deal": save_to_deal,
-            "saved_count": saved_count,
+            "before_result": before_result,
+            "concept_result": concept_entry,
             "deal_id": deal.id if deal else None,
-            "saved_property_id": saved_property_id,
-            "property_id": property_id,
+            "saved_to_deal": bool(save_to_deal and deal is not None),
         })
 
     except Exception as e:
-        current_app.logger.exception("renovation_visualizer failed")
+        current_app.logger.exception("Rehab Studio generation error")
 
         if deal is not None:
             try:
@@ -6819,9 +6913,8 @@ def renovation_visualizer():
 
         return jsonify({
             "status": "error",
-            "message": f"Renovation generator failed: {e}",
+            "message": str(e)
         }), 500
-
 
 
 # =========================================================

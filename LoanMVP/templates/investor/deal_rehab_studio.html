@@ -1,940 +1,1433 @@
 {% extends "layouts/ravlo_base.html" %}
-{% block title %}Ravlo • Renovation Studio{% endblock %}
 
-{% block page_title %}Renovation Studio{% endblock %}
-{% block page_subline %}Create the before → after transformation inside Ravlo.{% endblock %}
-
-{% block topbar_actions %}
-  <a class="ravlo-btn ghost sm" href="{{ url_for('investor.deal_detail', deal_id=deal.id) }}">Deal Workspace</a>
-  <a class="ravlo-btn ghost sm" href="{{ url_for('investor.deal_architect', deal_id=deal.id) }}">Deal Architect</a>
-  <a class="ravlo-btn ghost sm" href="{{ url_for('investor.budget_studio', deal_id=deal.id) }}">Budget Studio</a>
-{% endblock %}
+{% block title %}Renovation Studio | Ravlo{% endblock %}
 
 {% block content %}
-<style>
-  .studio-wrap{
-    display:grid;
-    gap:22px;
-  }
+<div class="rehab-studio-page">
 
-  .studio-hero{
-    border-radius:24px;
-    padding:22px 24px;
-    border:1px solid rgba(255,255,255,.08);
-    background:
-      radial-gradient(900px 520px at 15% 10%, rgba(122,184,255,.12), transparent 55%),
-      rgba(255,255,255,.02);
-    display:flex;
-    justify-content:space-between;
-    align-items:flex-end;
-    gap:18px;
-    flex-wrap:wrap;
-  }
+  <section class="studio-hero">
+    <div class="hero-copy">
+      <div class="eyebrow">
+        <i data-lucide="hammer"></i>
+        RAVLO RENOVATION STUDIO
+      </div>
+      <h1>Visualize the renovation before the first dollar is spent.</h1>
+      <p>
+        Upload the current property image, generate renovation concepts, compare styles,
+        and save the best direction to the deal workspace.
+      </p>
 
-  .episode-tag{
-    display:inline-flex;
-    gap:.5rem;
-    align-items:center;
-    padding:.42rem .75rem;
-    border-radius:999px;
-    background:rgba(255,255,255,.06);
-    border:1px solid rgba(255,255,255,.12);
-    color:rgba(255,255,255,.88);
-    font-weight:800;
-    font-size:.78rem;
-    letter-spacing:.04em;
-  }
-
-  .hero-title{
-    margin:.65rem 0 0;
-    font-size:1.7rem;
-    line-height:1.08;
-    letter-spacing:-.02em;
-  }
-
-  .hero-sub{
-    color:rgba(255,255,255,.74);
-    margin:.4rem 0 0;
-    max-width:760px;
-  }
-
-  .hero-actions{
-    display:flex;
-    gap:.6rem;
-    flex-wrap:wrap;
-  }
-
-  .btn{
-    background:rgba(122,184,255,.12);
-    border:1px solid rgba(122,184,255,.42);
-    color:#7ab8ff;
-    padding:.76rem 1rem;
-    border-radius:14px;
-    cursor:pointer;
-    font-weight:800;
-    transition:.2s;
-    font-size:.92rem;
-    text-decoration:none;
-    display:inline-flex;
-    align-items:center;
-    justify-content:center;
-    gap:.45rem;
-  }
-
-  .btn:hover{
-    background:rgba(122,184,255,.22);
-    border-color:#7ab8ff;
-    box-shadow:0 0 14px rgba(122,184,255,.25);
-  }
-
-  .btn-secondary{
-    background:rgba(255,255,255,.04);
-    border:1px solid rgba(255,255,255,.12);
-    color:var(--text);
-  }
-
-  .btn-success{
-    background:rgba(104,211,160,.12);
-    border:1px solid rgba(104,211,160,.34);
-    color:#7ee8b1;
-  }
-
-  .btn-success:hover{
-    background:rgba(104,211,160,.2);
-    border-color:rgba(104,211,160,.5);
-    box-shadow:0 0 14px rgba(104,211,160,.18);
-  }
-
-  .grid{
-    display:grid;
-    grid-template-columns:minmax(320px, .78fr) minmax(0, 1.22fr);
-    gap:20px;
-    align-items:start;
-  }
-
-  @media (max-width: 1100px){
-    .grid{
-      grid-template-columns:1fr;
-    }
-  }
-
-  .card{
-    background:var(--panel, rgba(255,255,255,.025));
-    border:1px solid rgba(255,255,255,.08);
-    border-radius:22px;
-    padding:18px;
-  }
-
-  .card h3{
-    margin:.1rem 0 .9rem;
-    color:var(--accent, #7ab8ff);
-    font-size:1.04rem;
-  }
-
-  .muted{
-    color:var(--muted);
-  }
-
-  .img{
-    width:100%;
-    height:260px;
-    object-fit:cover;
-    border-radius:16px;
-    display:block;
-    border:1px solid rgba(255,255,255,.08);
-    background:#0f141a;
-  }
-
-  .row{
-    display:grid;
-    grid-template-columns:1fr 1fr;
-    gap:14px;
-  }
-
-  @media (max-width: 900px){
-    .row{
-      grid-template-columns:1fr;
-    }
-  }
-
-  .input{
-    width:100%;
-    padding:.78rem .85rem;
-    border-radius:14px;
-    border:1px solid rgba(255,255,255,.10);
-    background:#0f141a;
-    color:var(--text);
-    min-height:48px;
-  }
-
-  .section-stack{
-    display:grid;
-    gap:16px;
-  }
-
-  .action-row{
-    display:flex;
-    gap:10px;
-    flex-wrap:wrap;
-  }
-
-  .ba{
-    position:relative;
-    border-radius:22px;
-    overflow:hidden;
-    border:1px solid rgba(255,255,255,.10);
-    background:rgba(255,255,255,.02);
-    min-height:clamp(420px, 68vh, 860px);
-  }
-
-  .ba img{
-    display:block;
-    width:100%;
-    height:clamp(420px, 68vh, 860px);
-    object-fit:cover;
-  }
-
-  .ba .after{
-    position:absolute;
-    inset:0;
-    clip-path: inset(0 50% 0 0);
-  }
-
-  .ba .handle{
-    position:absolute;
-    top:0;
-    bottom:0;
-    left:50%;
-    width:2px;
-    background:rgba(122,184,255,.85);
-    box-shadow:0 0 18px rgba(122,184,255,.35);
-  }
-
-  .ba .knob{
-    position:absolute;
-    top:50%;
-    left:50%;
-    transform:translate(-50%, -50%);
-    width:50px;
-    height:50px;
-    border-radius:999px;
-    background:rgba(0,0,0,.55);
-    border:1px solid rgba(122,184,255,.55);
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    color:#a9d2ff;
-    font-weight:900;
-    backdrop-filter:blur(6px);
-    pointer-events:none;
-  }
-
-  .ba input[type="range"]{
-    position:absolute;
-    inset:0;
-    width:100%;
-    opacity:0;
-    cursor:ew-resize;
-  }
-
-  .ba-badges{
-    position:absolute;
-    inset:12px 12px auto 12px;
-    display:flex;
-    justify-content:space-between;
-    gap:.5rem;
-    pointer-events:none;
-    z-index:3;
-  }
-
-  .badge{
-    font-size:.78rem;
-    padding:.28rem .55rem;
-    border-radius:999px;
-    background:rgba(0,0,0,.45);
-    border:1px solid rgba(255,255,255,.14);
-    color:rgba(255,255,255,.88);
-    backdrop-filter:blur(6px);
-  }
-
-  #emptyPreview{
-    min-height:clamp(420px, 68vh, 860px);
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    text-align:center;
-    border-radius:22px;
-    border:1px dashed rgba(255,255,255,.10);
-    background:rgba(255,255,255,.02);
-    padding:24px;
-  }
-
-  .after-grid{
-    display:grid;
-    grid-template-columns:repeat(3, minmax(0,1fr));
-    gap:12px;
-  }
-
-  @media (max-width: 900px){
-    .after-grid{
-      grid-template-columns:repeat(2, minmax(0,1fr));
-    }
-  }
-
-  @media (max-width: 620px){
-    .after-grid{
-      grid-template-columns:1fr;
-    }
-  }
-
-  .thumb{
-    padding:.7rem;
-    border-radius:18px;
-    background:rgba(255,255,255,.03);
-    border:1px solid rgba(255,255,255,.10);
-    transition:.15s;
-  }
-
-  .thumb:hover{
-    transform:translateY(-1px);
-    border-color:rgba(122,184,255,.28);
-  }
-
-  .thumb .img{
-    height:240px;
-  }
-
-  .thumb-meta{
-    margin-top:.55rem;
-    display:flex;
-    justify-content:space-between;
-    gap:.35rem;
-    align-items:center;
-  }
-
-  .chip{
-    font-size:.78rem;
-    border-radius:999px;
-    padding:.35rem .6rem;
-    background:rgba(122,184,255,.12);
-    border:1px solid rgba(122,184,255,.26);
-    color:#a9d2ff;
-  }
-
-  .pick{
-    width:100%;
-    margin-top:.7rem;
-  }
-
-  .status-box{
-    padding:12px 14px;
-    border-radius:14px;
-    background:rgba(255,255,255,.03);
-    border:1px solid rgba(255,255,255,.08);
-    color:var(--muted);
-  }
-
-  .scope-box{
-    padding:16px;
-    border-radius:18px;
-    background:rgba(255,255,255,.025);
-    border:1px solid rgba(255,255,255,.08);
-  }
-
-  .scope-box ul{
-    margin:.6rem 0 0 1rem;
-    padding:0;
-  }
-
-  .scope-box li{
-    margin:.35rem 0;
-    color:var(--text);
-  }
-
-  .workflow-grid{
-    display:grid;
-    grid-template-columns:repeat(3, minmax(0,1fr));
-    gap:12px;
-  }
-
-  .workflow-card{
-    display:block;
-    padding:18px;
-    border-radius:18px;
-    background:rgba(255,255,255,.03);
-    border:1px solid rgba(255,255,255,.08);
-    transition:.15s ease;
-  }
-
-  .workflow-card:hover{
-    transform:translateY(-1px);
-    border-color:rgba(122,184,255,.25);
-    background:rgba(255,255,255,.045);
-  }
-
-  .workflow-card h4{
-    margin:0 0 8px;
-  }
-
-  .workflow-card p{
-    margin:0;
-    color:var(--muted);
-    line-height:1.6;
-  }
-
-  @media (max-width: 900px){
-    .workflow-grid{
-      grid-template-columns:1fr;
-    }
-
-    .ba,
-    #emptyPreview{
-      min-height:clamp(320px, 52vh, 620px);
-    }
-
-    .ba img{
-      height:clamp(320px, 52vh, 620px);
-    }
-
-    .img{
-      height:220px;
-    }
-
-    .thumb .img{
-      height:210px;
-    }
-  }
-
-  @media (max-width: 640px){
-    .studio-hero{
-      padding:18px;
-    }
-
-    .hero-title{
-      font-size:1.4rem;
-    }
-
-    .ba,
-    #emptyPreview{
-      min-height:320px;
-    }
-
-    .ba img{
-      height:320px;
-    }
-
-    .img{
-      height:200px;
-    }
-
-    .thumb .img{
-      height:200px;
-    }
-  }
-</style>
-
-<div class="studio-wrap">
-
-  <div class="studio-hero">
-    <div>
-      <div class="episode-tag">🎬 RENOVATION STUDIO • DEAL #{{ deal.id }}</div>
-      <h2 class="hero-title">{{ deal.title or ('Deal #' ~ deal.id) }}</h2>
-      <div class="hero-sub">
-        Build your before → after story, define the rehab direction, and send the project into budget control.
+      <div class="hero-chips">
+        <span class="chip"><i data-lucide="image"></i> Before / After</span>
+        <span class="chip"><i data-lucide="sparkles"></i> AI Renovation</span>
+        <span class="chip"><i data-lucide="clipboard-list"></i> Scope Ready</span>
+        {% if deal %}
+        <span class="chip chip-accent"><i data-lucide="briefcase"></i> Deal #{{ deal.id }}</span>
+        {% endif %}
       </div>
     </div>
 
-    <div class="hero-actions">
-      <a class="btn btn-secondary" href="{{ url_for('investor.deal_detail', deal_id=deal.id) }}">🗂 Deal Workspace</a>
-      <a class="btn btn-secondary" href="{{ url_for('investor.deal_architect', deal_id=deal.id) }}">🧠 Deal Architect</a>
-      <a class="btn btn-secondary" href="{{ url_for('investor.deal_reveal', deal_id=deal.id) }}">📺 Reveal Page</a>
-      <a class="btn btn-success" href="{{ url_for('investor.budget_studio', deal_id=deal.id) }}">💰 Budget Studio</a>
+    <div class="hero-stats">
+      <div class="hero-stat">
+        <span class="hero-stat-label">Project</span>
+        <strong>{{ deal.address if deal and deal.address else "Renovation Concept" }}</strong>
+      </div>
+      <div class="hero-stat">
+        <span class="hero-stat-label">Before Photo</span>
+        <strong id="status-before">{{ "Loaded" if rehab_before and rehab_before.get("image_url") else "Pending" }}</strong>
+      </div>
+      <div class="hero-stat">
+        <span class="hero-stat-label">Renovation</span>
+        <strong id="status-after">{{ "Generated" if rehab_latest and rehab_latest.get("image_url") else "Pending" }}</strong>
+      </div>
+      <div class="hero-stat">
+        <span class="hero-stat-label">Saved Concepts</span>
+        <strong id="status-concepts">{{ rehab_concepts|length if rehab_concepts else 0 }}</strong>
+      </div>
+    </div>
+  </section>
+
+  <section class="workflow-strip">
+    <div class="workflow-step is-active" data-step="1">
+      <span class="step-number">1</span>
+      <span class="step-label">Setup</span>
+    </div>
+    <div class="workflow-step" data-step="2">
+      <span class="step-number">2</span>
+      <span class="step-label">Before</span>
+    </div>
+    <div class="workflow-step" data-step="3">
+      <span class="step-number">3</span>
+      <span class="step-label">After</span>
+    </div>
+    <div class="workflow-step" data-step="4">
+      <span class="step-number">4</span>
+      <span class="step-label">Concepts</span>
+    </div>
+  </section>
+
+  <div class="studio-grid">
+    <div class="studio-main">
+
+      <section class="ravlo-card setup-card">
+        <div class="card-head">
+          <div>
+            <div class="card-kicker">STEP 1</div>
+            <h2>Renovation Setup</h2>
+            <p>Choose the renovation style, upload the current condition image, and generate a concept.</p>
+          </div>
+          <div class="card-head-actions">
+            <span class="status-pill" id="generation-status-pill">{{ "Concepts Loaded" if rehab_concepts else "Ready" }}</span>
+          </div>
+        </div>
+
+        <form id="rehabForm" class="studio-form" enctype="multipart/form-data">
+          {{ csrf_token() if csrf_token else "" }}
+
+          <input type="hidden" name="deal_id" value="{{ deal.id if deal else '' }}">
+          <input type="hidden" name="save_to_deal" value="true">
+
+          <div class="form-grid form-grid-2">
+            <div class="field">
+              <label for="preset">Renovation Preset</label>
+              {% set preset_value = rehab_latest.get("preset") if rehab_latest else "luxury" %}
+              <select id="preset" name="preset">
+                <option value="luxury" {{ "selected" if preset_value == "luxury" else "" }}>Luxury</option>
+                <option value="modern" {{ "selected" if preset_value == "modern" else "" }}>Modern</option>
+                <option value="airbnb" {{ "selected" if preset_value == "airbnb" else "" }}>Airbnb Ready</option>
+                <option value="flip" {{ "selected" if preset_value == "flip" else "" }}>Flip Ready</option>
+                <option value="budget" {{ "selected" if preset_value == "budget" else "" }}>Budget Refresh</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label for="mode">Renovation Mode</label>
+              {% set mode_value = rehab_latest.get("mode") if rehab_latest else "hgtv" %}
+              <select id="mode" name="mode">
+                <option value="hgtv" {{ "selected" if mode_value == "hgtv" else "" }}>HGTV</option>
+                <option value="modern" {{ "selected" if mode_value == "modern" else "" }}>Modern</option>
+                <option value="luxury" {{ "selected" if mode_value == "luxury" else "" }}>Luxury</option>
+                <option value="budget" {{ "selected" if mode_value == "budget" else "" }}>Budget</option>
+                <option value="flip" {{ "selected" if mode_value == "flip" else "" }}>Flip</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label for="room_type">Room / Area</label>
+              {% set room_type_value = rehab_latest.get("room_type") if rehab_latest else "living room" %}
+              <select id="room_type" name="room_type">
+                <option value="living room" {{ "selected" if room_type_value == "living room" else "" }}>Living Room</option>
+                <option value="kitchen" {{ "selected" if room_type_value == "kitchen" else "" }}>Kitchen</option>
+                <option value="bathroom" {{ "selected" if room_type_value == "bathroom" else "" }}>Bathroom</option>
+                <option value="bedroom" {{ "selected" if room_type_value == "bedroom" else "" }}>Bedroom</option>
+                <option value="exterior" {{ "selected" if room_type_value == "exterior" else "" }}>Exterior</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label for="strength">Transformation Strength</label>
+              <select id="strength" name="strength">
+                <option value="0.45">Light</option>
+                <option value="0.58" selected>Balanced</option>
+                <option value="0.68">Strong</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="upload-grid rehab-upload-grid">
+            <div class="upload-card">
+              <div class="upload-head">
+                <h3>Before Photo</h3>
+                <span>Required</span>
+              </div>
+              <p>Upload the current property photo that should be renovated.</p>
+              <input type="file" id="before_image" name="before_image" accept="image/*,.png,.jpg,.jpeg,.webp">
+              <input
+                type="text"
+                id="image_url"
+                name="image_url"
+                value="{{ rehab_before.get('image_url') or '' if rehab_before else '' }}"
+                placeholder="Or paste image URL"
+              >
+              <div class="mini-preview" id="beforePreview">
+                {% if rehab_before and rehab_before.get("image_url") %}
+                  <img src="{{ rehab_before.get('image_url') }}" alt="Before image">
+                  <span>Saved before image loaded</span>
+                {% else %}
+                  No before image selected
+                {% endif %}
+              </div>
+            </div>
+
+            <div class="upload-card">
+              <div class="upload-head">
+                <h3>Renovation Notes</h3>
+                <span>Optional</span>
+              </div>
+              <p>Add finishes, materials, lighting direction, or investor instructions.</p>
+              <textarea id="notes" name="notes" rows="6" placeholder="Brighten space, modern flooring, matte black fixtures, warm lighting, staged furniture.">{{ rehab_latest.get("notes") or "" if rehab_latest else "" }}</textarea>
+            </div>
+          </div>
+
+          <div class="cta-row">
+            <button type="submit" class="ravlo-btn ravlo-btn-primary" id="generateBtn">
+              <i data-lucide="sparkles"></i>
+              Generate Renovation Concept
+            </button>
+
+            <button type="button" class="ravlo-btn ravlo-btn-secondary" id="resetBtn">
+              <i data-lucide="rotate-ccw"></i>
+              Reset
+            </button>
+          </div>
+        </form>
+      </section>
+
+      <section class="results-shell">
+        <div class="results-header">
+          <div>
+            <div class="card-kicker">OUTPUT</div>
+            <h2>Renovation Results</h2>
+            <p>Compare the original property image to the generated renovation direction.</p>
+          </div>
+          <div class="results-actions">
+            <button type="button" class="ravlo-btn ravlo-btn-ghost" id="copyConceptLinkBtn" {% if not rehab_latest or not rehab_latest.get("image_url") %}disabled{% endif %}>
+              <i data-lucide="link"></i>
+              Copy Result Link
+            </button>
+          </div>
+        </div>
+
+        <div class="result-card">
+          <div class="result-head">
+            <div>
+              <div class="card-kicker">STEP 2</div>
+              <h3>Before Photo</h3>
+            </div>
+            <span class="result-status" id="beforeBadge">{{ "Loaded" if rehab_before and rehab_before.get("image_url") else "Pending" }}</span>
+          </div>
+
+          <div class="result-body">
+            <div class="result-media {% if not (rehab_before and rehab_before.get('image_url')) %}empty{% endif %}" id="beforeMedia">
+              {% if rehab_before and rehab_before.get("image_url") %}
+                <img src="{{ rehab_before.get('image_url') }}" alt="Before photo">
+              {% else %}
+                <div class="empty-state">
+                  <i data-lucide="image"></i>
+                  <p>Before photo will appear here.</p>
+                </div>
+              {% endif %}
+            </div>
+
+            <div class="result-meta">
+              <div class="meta-row"><span>Status</span><strong id="beforeMetaStatus">{{ "Loaded" if rehab_before and rehab_before.get("image_url") else "Waiting" }}</strong></div>
+              <a
+                href="{{ rehab_before.get('image_url') or '#' if rehab_before else '#' }}"
+                class="inline-link {% if not (rehab_before and rehab_before.get('image_url')) %}hidden{% endif %}"
+                id="beforeLink"
+                target="_blank"
+                rel="noopener"
+              >Open Before Image</a>
+            </div>
+          </div>
+        </div>
+
+        <div class="result-card" id="afterCard">
+          <div class="result-head">
+            <div>
+              <div class="card-kicker">STEP 3</div>
+              <h3>Renovation Concept</h3>
+            </div>
+            <span class="result-status" id="afterBadge">
+              {{ "Generated" if rehab_latest and rehab_latest.get("image_url") else "Pending" }}
+            </span>
+          </div>
+
+          <div class="room-tabs" id="conceptTabs"></div>
+
+          <div class="result-body">
+            <div class="result-media {% if not (rehab_latest and rehab_latest.get('image_url')) %}empty{% endif %}" id="afterMedia">
+              {% if rehab_latest and rehab_latest.get("image_url") %}
+                <img src="{{ rehab_latest.get('image_url') }}" alt="Renovation concept">
+              {% else %}
+                <div class="empty-state">
+                  <i data-lucide="sparkles"></i>
+                  <p>Generated concept will appear here.</p>
+                </div>
+              {% endif %}
+            </div>
+
+            <div class="result-meta">
+              <div class="meta-row"><span>Preset</span><strong id="afterPreset">{{ rehab_latest.get("preset") or "—" if rehab_latest else "—" }}</strong></div>
+              <div class="meta-row"><span>Mode</span><strong id="afterMode">{{ rehab_latest.get("mode") or "—" if rehab_latest else "—" }}</strong></div>
+              <div class="meta-row"><span>Seed</span><strong id="afterSeed">{{ rehab_latest.get("seed") or "—" if rehab_latest else "—" }}</strong></div>
+              <div class="meta-row"><span>Job ID</span><strong id="afterJob">{{ rehab_latest.get("job_id") or "—" if rehab_latest else "—" }}</strong></div>
+              <a
+                href="{{ rehab_latest.get('image_url') or '#' if rehab_latest else '#' }}"
+                class="inline-link {% if not (rehab_latest and rehab_latest.get('image_url')) %}hidden{% endif %}"
+                id="afterLink"
+                target="_blank"
+                rel="noopener"
+              >Open Concept</a>
+            </div>
+          </div>
+
+          {% if rehab_concepts %}
+          <div class="saved-room-gallery" id="savedConceptGallery">
+            <div class="card-kicker">SAVED RENOVATION CONCEPTS</div>
+            <div class="room-gallery-grid" id="conceptGalleryGrid">
+              {% for concept in rehab_concepts %}
+                {% if concept.get("image_url") %}
+                <a href="{{ concept.get('image_url') }}" class="room-thumb-card" target="_blank" rel="noopener">
+                  <img src="{{ concept.get('image_url') }}" alt="{{ concept.get('preset') or 'Renovation concept' }}">
+                  <div class="room-thumb-meta">
+                    <strong>{{ concept.get("preset") or "Concept" }}</strong>
+                    <span>{{ concept.get("mode") or "Mode not set" }}</span>
+                  </div>
+                </a>
+                {% endif %}
+              {% endfor %}
+            </div>
+          </div>
+          {% else %}
+          <div class="saved-room-gallery hidden" id="savedConceptGallery">
+            <div class="card-kicker">SAVED RENOVATION CONCEPTS</div>
+            <div class="room-gallery-grid" id="conceptGalleryGrid"></div>
+          </div>
+          {% endif %}
+
+          <div class="cta-row" style="margin-top:14px;">
+            <button type="button" class="ravlo-btn ravlo-btn-secondary" id="openVariantBtn">
+              <i data-lucide="plus"></i>
+              Generate Another Concept
+            </button>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <aside class="studio-side">
+      <section class="ravlo-card side-card">
+        <div class="card-head">
+          <div>
+            <div class="card-kicker">PACKAGE STATUS</div>
+            <h3>Renovation Tracker</h3>
+          </div>
+        </div>
+
+        <div class="tracker-list">
+          <div class="tracker-item">
+            <span class="tracker-label">Before Uploaded</span>
+            <strong id="trackerBefore">{{ "Yes" if rehab_before and rehab_before.get("image_url") else "No" }}</strong>
+          </div>
+          <div class="tracker-item">
+            <span class="tracker-label">Concept Generated</span>
+            <strong id="trackerAfter">{{ "Yes" if rehab_latest and rehab_latest.get("image_url") else "No" }}</strong>
+          </div>
+          <div class="tracker-item">
+            <span class="tracker-label">Saved To Deal</span>
+            <strong id="trackerSaved">{{ "Yes" if rehab_latest and rehab_latest.get("image_url") else "No" }}</strong>
+          </div>
+          <div class="tracker-item">
+            <span class="tracker-label">Saved Concepts</span>
+            <strong id="trackerConcepts">{{ rehab_concepts|length if rehab_concepts else 0 }}</strong>
+          </div>
+        </div>
+      </section>
+
+      <section class="ravlo-card side-card">
+        <div class="card-head">
+          <div>
+            <div class="card-kicker">WORKFLOW</div>
+            <h3>How this works</h3>
+          </div>
+        </div>
+
+        <div class="info-stack">
+          <div class="info-box">
+            <strong>1. Upload Before Photo</strong>
+            <p>Start with the current property image in its existing condition.</p>
+          </div>
+          <div class="info-box">
+            <strong>2. Generate Renovation</strong>
+            <p>Ravlo visualizes a polished after-state based on your preset and notes.</p>
+          </div>
+          <div class="info-box">
+            <strong>3. Compare Concepts</strong>
+            <p>Save multiple renovation directions and compare them before moving to scope or budget.</p>
+          </div>
+        </div>
+      </section>
+    </aside>
+  </div>
+
+  <div class="loading-overlay hidden" id="loadingOverlay">
+    <div class="loading-card">
+      <div class="loader-ring"></div>
+      <h3 id="loadingTitle">Generating Renovation Concept...</h3>
+      <p id="loadingMessage">Ravlo is redesigning the property now.</p>
+      <div class="loading-progress-list">
+        <div class="loading-step" id="loadingStep1">Uploading before photo...</div>
+        <div class="loading-step" id="loadingStep2">Generating renovation concept...</div>
+        <div class="loading-step" id="loadingStep3">Saving concept to deal...</div>
+      </div>
     </div>
   </div>
 
-  <div class="grid">
+  <div class="loading-overlay hidden" id="variantModal">
+    <div class="loading-card add-room-card">
+      <h3 style="margin-top:0;">Generate Another Concept</h3>
+      <p>Create another renovation direction from the same before photo.</p>
 
-    <div class="section-stack">
-
-      <div class="card">
-        <h3>Studio Controls</h3>
-
-        <div class="row">
-          <div>
-            <label class="muted" style="display:block;margin-bottom:.35rem;">Before Image</label>
-            <input type="file" id="beforeFile" accept="image/*" class="input">
-            <div class="muted" style="margin-top:.45rem;">
-              Upload a room photo so Ravlo can generate realistic after concepts.
-            </div>
-          </div>
-
-          <div>
-            <label class="muted" style="display:block;margin-bottom:.35rem;">Style Preset</label>
-            <select id="stylePreset" class="input">
-              <option value="">— choose —</option>
-              <option value="luxury">Luxury</option>
-              <option value="modern">Modern</option>
-              <option value="airbnb">Airbnb</option>
-              <option value="flip">Flip</option>
-              <option value="budget">Budget</option>
-            </select>
-          </div>
-        </div>
-
-      <label class="muted" style="display:block;margin-top:.85rem;margin-bottom:.35rem;">Style Prompt</label>
-      <input
-        id="stylePrompt"
-        name="prompt_notes"
-        class="input"
-        placeholder="e.g. modern minimalist kitchen with matte black fixtures"
-       >  
-
-        <div class="row" style="margin-top:.85rem;">
-          <div>
-            <label class="muted" style="display:block;margin-bottom:.35rem;">Variations</label>
-            <select id="variations" class="input">
-              <option value="1">1</option>
-              <option value="2" selected>2</option>
-              <option value="3">3</option>
-              <option value="4">4</option>
-            </select>
-          </div>
-
-          <div style="display:flex;align-items:end;">
-            <div class="action-row">
-              <button class="btn" type="button" onclick="generate()">✨ Generate</button>
-              <button class="btn btn-secondary" type="button" onclick="useLastBefore()">↩ Use Last Before</button>
-              <button class="btn btn-secondary" type="button" onclick="generateScope()">🧠 Rehab Plan</button>
-            </div>
-          </div>
-        </div>
-
-        <div id="status" class="status-box" style="margin-top:14px;">Ready.</div>
+      <div class="field">
+        <label for="modal_preset">Preset</label>
+        <select id="modal_preset">
+          <option value="luxury">Luxury</option>
+          <option value="modern">Modern</option>
+          <option value="airbnb">Airbnb Ready</option>
+          <option value="flip">Flip Ready</option>
+          <option value="budget">Budget Refresh</option>
+        </select>
       </div>
 
-      <div class="card">
-        <h3>Featured Reveal</h3>
-        <div class="muted">
-          Choose the best after image and mark it as the featured reveal for this deal.
-        </div>
-
-        <div style="margin-top:12px;">
-          <img id="featuredImg" class="img" src="" alt="Featured reveal" style="display:none;">
-          <div class="action-row" style="margin-top:.75rem;">
-            <button
-              id="featureBtn"
-              class="btn"
-              type="button"
-              onclick="feature()"
-              style="display:none;"
-            >
-              ✅ Set as Featured Reveal
-            </button>
-
-            <a
-              id="budgetBtn"
-              class="btn btn-success"
-              href="{{ url_for('investor.budget_studio', deal_id=deal.id) }}"
-              style="display:none;"
-            >
-              💰 Send to Budget
-            </a>
-          </div>
-        </div>
+      <div class="field">
+        <label for="modal_mode">Mode</label>
+        <select id="modal_mode">
+          <option value="hgtv">HGTV</option>
+          <option value="modern">Modern</option>
+          <option value="luxury">Luxury</option>
+          <option value="budget">Budget</option>
+          <option value="flip">Flip</option>
+        </select>
       </div>
 
-      <div class="card">
-        <h3>AI Rehab Plan</h3>
-        <div id="scopeResults" class="scope-box">
-          Rehab scope, cost range, and value-add guidance will appear here.
-        </div>
+      <div class="cta-row">
+        <button type="button" class="ravlo-btn ravlo-btn-primary" id="confirmVariantBtn">
+          <i data-lucide="sparkles"></i>
+          Generate Concept
+        </button>
+        <button type="button" class="ravlo-btn ravlo-btn-secondary" id="closeVariantBtn">
+          Cancel
+        </button>
       </div>
-
-    </div>
-
-    <div class="section-stack">
-
-      <div class="card">
-        <h3>Before / After Preview</h3>
-
-        <div class="ba" id="baWrap" style="display:none;">
-          <div class="ba-badges">
-            <span class="badge">BEFORE</span>
-            <span class="badge">AFTER</span>
-          </div>
-
-          <img id="baBefore" src="" alt="Before">
-          <div class="after" id="baAfter">
-            <img id="baAfterImg" src="" alt="After">
-          </div>
-          <div class="handle" id="baHandle"></div>
-          <div class="knob">↔</div>
-          <input id="baRange" type="range" min="0" max="100" value="50" aria-label="Before after slider">
-        </div>
-
-        <div id="emptyPreview" class="muted">
-          Upload a before image, then generate concepts.
-        </div>
-      </div>
-
-      <div class="card">
-        <h3>Concept Variations</h3>
-
-        {% if mockups %}
-          <div class="after-grid" id="existingGrid">
-            {% for m in mockups %}
-              <div class="thumb">
-                <img
-                  class="img"
-                  src="{{ m.after_url }}"
-                  alt="After mockup"
-                  style="cursor:pointer;"
-                  onclick="selectAfter('{{ m.after_url }}', '{{ m.before_url }}')"
-                >
-
-                <div class="thumb-meta">
-                  <span class="chip">{{ m.style_preset or 'Concept' }}</span>
-                  <small class="muted">
-                    {{ m.created_at.strftime("%b %d, %Y %I:%M %p") if m.created_at else '' }}
-                  </small>
-                </div>
-
-                <div class="action-row" style="margin-top:.7rem;">
-                  <button
-                    class="btn pick"
-                    type="button"
-                    onclick="selectAfter('{{ m.after_url }}', '{{ m.before_url }}')"
-                  >
-                    👀 Preview
-                  </button>
-
-                  <button
-                    class="btn btn-secondary pick"
-                    type="button"
-                    onclick="selectAfter('{{ m.after_url }}', '{{ m.before_url }}'); feature();"
-                  >
-                    ⭐ Feature
-                  </button>
-                </div>
-              </div>
-            {% endfor %}
-          </div>
-        {% else %}
-          <div class="muted">No saved concepts yet. Generate a set to start your reveal story.</div>
-        {% endif %}
-
-        <div class="after-grid" id="newGrid" style="margin-top:.75rem; display:none;"></div>
-      </div>
-
-      <div class="card">
-        <h3>Continue Workflow</h3>
-        <div class="workflow-grid">
-          <a href="{{ url_for('investor.deal_architect', deal_id=deal.id) }}" class="workflow-card">
-            <h4>Deal Architect</h4>
-            <p>Go back to strategy, numbers, and recommendation logic.</p>
-          </a>
-
-          <a href="{{ url_for('investor.build_studio', deal_id=deal.id) }}" class="workflow-card">
-            <h4>Build Studio</h4>
-            <p>Explore ground-up concepts and development direction.</p>
-          </a>
-
-          <a href="{{ url_for('investor.budget_studio', deal_id=deal.id) }}" class="workflow-card">
-            <h4>Budget Studio</h4>
-            <p>Track projected vs actual cost and control execution.</p>
-          </a>
-        </div>
-      </div>
-
     </div>
   </div>
 </div>
 
+<style>
+  .rehab-studio-page {
+    padding: 28px 0 60px;
+  }
+
+  .studio-hero {
+    display: grid;
+    grid-template-columns: 1.5fr 1fr;
+    gap: 20px;
+    margin-bottom: 22px;
+    padding: 28px;
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 28px;
+    background:
+      radial-gradient(circle at top left, rgba(58,92,122,0.18), transparent 38%),
+      linear-gradient(135deg, rgba(12,17,22,0.96), rgba(18,24,32,0.98));
+    box-shadow: 0 22px 60px rgba(0,0,0,0.28);
+  }
+
+  .eyebrow,
+  .card-kicker {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    font-size: 11px;
+    font-weight: 700;
+    color: #93a7bb;
+    margin-bottom: 10px;
+  }
+
+  .studio-hero h1 {
+    margin: 0 0 10px;
+    font-size: 2.2rem;
+    line-height: 1.08;
+    color: #fff;
+  }
+
+  .studio-hero p {
+    margin: 0;
+    max-width: 700px;
+    color: #b3c0cc;
+    font-size: 1rem;
+    line-height: 1.6;
+  }
+
+  .hero-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 18px;
+  }
+
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    border-radius: 999px;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.08);
+    color: #d8e3ec;
+    font-size: 0.92rem;
+  }
+
+  .chip-accent {
+    background: rgba(58,92,122,0.22);
+    color: #fff;
+  }
+
+  .hero-stats {
+    display: grid;
+    gap: 12px;
+    align-content: start;
+  }
+
+  .hero-stat {
+    padding: 16px 18px;
+    border-radius: 20px;
+    border: 1px solid rgba(255,255,255,0.08);
+    background: rgba(255,255,255,0.04);
+  }
+
+  .hero-stat-label {
+    display: block;
+    margin-bottom: 6px;
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #8fa2b5;
+  }
+
+  .hero-stat strong {
+    color: #fff;
+    font-size: 1rem;
+  }
+
+  .workflow-strip {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-bottom: 22px;
+  }
+
+  .workflow-step {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 16px;
+    border-radius: 18px;
+    background: #121821;
+    border: 1px solid rgba(255,255,255,0.06);
+    color: #aebdca;
+  }
+
+  .workflow-step.is-active,
+  .workflow-step.is-complete {
+    border-color: rgba(58,92,122,0.5);
+    background: linear-gradient(180deg, rgba(58,92,122,0.22), rgba(18,24,33,0.92));
+    color: #fff;
+  }
+
+  .step-number {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    background: rgba(255,255,255,0.08);
+  }
+
+  .studio-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.5fr) 360px;
+    gap: 22px;
+  }
+
+  .ravlo-card,
+  .result-card {
+    border-radius: 26px;
+    border: 1px solid rgba(255,255,255,0.06);
+    background: linear-gradient(180deg, rgba(20,27,36,0.98), rgba(14,19,26,0.98));
+    box-shadow: 0 18px 50px rgba(0,0,0,0.22);
+  }
+
+  .setup-card,
+  .results-shell,
+  .side-card {
+    padding: 24px;
+  }
+
+  .card-head,
+  .results-header,
+  .result-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+  }
+
+  .card-head h2,
+  .results-header h2,
+  .result-head h3,
+  .side-card h3 {
+    margin: 0;
+    color: #fff;
+  }
+
+  .card-head p,
+  .results-header p,
+  .side-card p {
+    margin: 6px 0 0;
+    color: #9fb0bf;
+  }
+
+  .status-pill,
+  .result-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 34px;
+    padding: 8px 12px;
+    border-radius: 999px;
+    background: rgba(255,255,255,0.07);
+    color: #d7e2eb;
+    font-weight: 600;
+  }
+
+  .studio-form {
+    margin-top: 20px;
+  }
+
+  .form-grid {
+    display: grid;
+    gap: 16px;
+  }
+
+  .form-grid-2 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+
+  .field label {
+    color: #d7e1ea;
+    font-size: 0.95rem;
+    font-weight: 600;
+  }
+
+  .field input,
+  .field select,
+  .field textarea {
+    width: 100%;
+    border-radius: 16px;
+    border: 1px solid rgba(255,255,255,0.08);
+    background: #0f141b;
+    color: #fff;
+    padding: 14px 15px;
+    outline: none;
+    transition: border-color 0.18s ease, box-shadow 0.18s ease;
+  }
+
+  .field input:focus,
+  .field select:focus,
+  .field textarea:focus {
+    border-color: rgba(86,129,167,0.75);
+    box-shadow: 0 0 0 4px rgba(58,92,122,0.18);
+  }
+
+  .upload-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+    margin-bottom: 16px;
+  }
+
+  .upload-card {
+    padding: 18px;
+    border-radius: 22px;
+    border: 1px dashed rgba(255,255,255,0.12);
+    background: rgba(255,255,255,0.025);
+  }
+
+  .upload-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 8px;
+  }
+
+  .upload-head h3 {
+    margin: 0;
+    color: #fff;
+    font-size: 1rem;
+  }
+
+  .upload-head span {
+    padding: 6px 10px;
+    border-radius: 999px;
+    background: rgba(255,255,255,0.06);
+    color: #b8c8d6;
+    font-size: 12px;
+  }
+
+  .upload-card p {
+    margin: 0 0 14px;
+    color: #9cb0c1;
+    line-height: 1.5;
+  }
+
+  .mini-preview {
+    min-height: 62px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: #90a3b6;
+    font-size: 0.92rem;
+  }
+
+  .mini-preview img {
+    width: 56px;
+    height: 56px;
+    object-fit: cover;
+    border-radius: 12px;
+    border: 1px solid rgba(255,255,255,0.08);
+  }
+
+  .cta-row,
+  .results-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .ravlo-btn {
+    border: none;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    min-height: 46px;
+    border-radius: 16px;
+    padding: 0 18px;
+    font-weight: 700;
+    transition: transform 0.16s ease, box-shadow 0.16s ease, opacity 0.16s ease;
+  }
+
+  .ravlo-btn:hover {
+    transform: translateY(-1px);
+  }
+
+  .ravlo-btn-primary {
+    background: linear-gradient(135deg, #3a5c7a, #567ea3);
+    color: #fff;
+    box-shadow: 0 12px 28px rgba(58,92,122,0.34);
+  }
+
+  .ravlo-btn-secondary {
+    background: rgba(255,255,255,0.08);
+    color: #dce7f0;
+  }
+
+  .ravlo-btn-ghost {
+    background: transparent;
+    border: 1px solid rgba(255,255,255,0.1);
+    color: #d5e2ec;
+  }
+
+  .results-shell {
+    margin-top: 22px;
+  }
+
+  .result-card {
+    padding: 20px;
+    margin-top: 18px;
+  }
+
+  .result-body {
+    display: grid;
+    grid-template-columns: minmax(0, 1.15fr) 260px;
+    gap: 18px;
+    margin-top: 16px;
+  }
+
+  .result-media {
+    min-height: 300px;
+    border-radius: 22px;
+    border: 1px solid rgba(255,255,255,0.06);
+    background: #0c1116;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .result-media img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
+  .result-media.empty {
+    background:
+      radial-gradient(circle at center, rgba(58,92,122,0.10), transparent 55%),
+      #0c1116;
+  }
+
+  .empty-state {
+    text-align: center;
+    color: #8fa5b8;
+    padding: 20px;
+  }
+
+  .empty-state i {
+    width: 34px;
+    height: 34px;
+    margin-bottom: 10px;
+  }
+
+  .result-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 16px;
+    border-radius: 20px;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.05);
+  }
+
+  .meta-row,
+  .tracker-item {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    align-items: center;
+  }
+
+  .meta-row span,
+  .tracker-label {
+    color: #93a8ba;
+  }
+
+  .meta-row strong,
+  .tracker-item strong {
+    color: #fff;
+    text-align: right;
+  }
+
+  .tracker-list,
+  .info-stack {
+    display: grid;
+    gap: 12px;
+    margin-top: 12px;
+  }
+
+  .info-box {
+    padding: 15px 16px;
+    border-radius: 18px;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.05);
+  }
+
+  .info-box strong {
+    display: block;
+    margin-bottom: 6px;
+    color: #fff;
+  }
+
+  .info-box p {
+    margin: 0;
+    color: #9eb0be;
+    font-size: 0.95rem;
+  }
+
+  .inline-link {
+    color: #a9c6e0;
+    text-decoration: none;
+    font-weight: 600;
+  }
+
+  .inline-link:hover {
+    color: #d6ebff;
+  }
+
+  .saved-room-gallery {
+    margin-top: 18px;
+  }
+
+  .room-gallery-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 14px;
+    margin-top: 10px;
+  }
+
+  .room-thumb-card {
+    display: block;
+    overflow: hidden;
+    border-radius: 18px;
+    text-decoration: none;
+    border: 1px solid rgba(255,255,255,0.08);
+    background: rgba(255,255,255,0.03);
+  }
+
+  .room-thumb-card img {
+    width: 100%;
+    height: 140px;
+    object-fit: cover;
+    display: block;
+  }
+
+  .room-thumb-meta {
+    padding: 12px;
+  }
+
+  .room-thumb-meta strong {
+    display: block;
+    color: #fff;
+  }
+
+  .room-thumb-meta span {
+    color: #97aabb;
+    font-size: 0.92rem;
+  }
+
+  .room-tabs {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+  }
+
+  .room-tab {
+    padding: 8px 12px;
+    border-radius: 999px;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.08);
+    color: #cfe0ec;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+
+  .room-tab:hover {
+    background: rgba(255,255,255,0.12);
+  }
+
+  .room-tab.active {
+    background: linear-gradient(135deg, #3a5c7a, #567ea3);
+    color: #fff;
+    border-color: transparent;
+  }
+
+  .loading-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 999;
+    background: rgba(5,8,11,0.72);
+    backdrop-filter: blur(8px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+  }
+
+  .loading-card {
+    width: min(560px, 100%);
+    padding: 28px;
+    border-radius: 28px;
+    background: linear-gradient(180deg, rgba(18,24,33,0.98), rgba(12,17,22,0.98));
+    border: 1px solid rgba(255,255,255,0.08);
+    box-shadow: 0 24px 60px rgba(0,0,0,0.35);
+    text-align: center;
+  }
+
+  .loading-card h3 {
+    margin: 16px 0 8px;
+    color: #fff;
+  }
+
+  .loading-card p {
+    color: #9db0bf;
+    margin: 0 0 18px;
+  }
+
+  .loading-progress-list {
+    display: grid;
+    gap: 10px;
+    margin-top: 20px;
+    text-align: left;
+  }
+
+  .loading-step {
+    padding: 12px 14px;
+    border-radius: 16px;
+    background: rgba(255,255,255,0.05);
+    color: #d5e2ec;
+  }
+
+  .loader-ring {
+    width: 56px;
+    height: 56px;
+    margin: 0 auto;
+    border: 4px solid rgba(255,255,255,0.12);
+    border-top-color: #7fa5c7;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+
+  .add-room-card {
+    width: min(520px, 100%);
+    text-align: left;
+  }
+
+  .hidden {
+    display: none !important;
+  }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+
+  @media (max-width: 1180px) {
+    .studio-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .studio-side {
+      order: -1;
+    }
+  }
+
+  @media (max-width: 960px) {
+    .studio-hero,
+    .result-body,
+    .upload-grid,
+    .form-grid-2,
+    .workflow-strip {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+
 <script>
-  let LAST_BEFORE = {{ before_url|default('', true)|tojson }};
-  let CURRENT_BEFORE = "";
-  let CURRENT_AFTER = "";
+  (function () {
+    const form = document.getElementById("rehabForm");
+    const generateBtn = document.getElementById("generateBtn");
+    const resetBtn = document.getElementById("resetBtn");
+    const loadingOverlay = document.getElementById("loadingOverlay");
+    const statusPill = document.getElementById("generation-status-pill");
+    const copyConceptLinkBtn = document.getElementById("copyConceptLinkBtn");
 
-  document.getElementById("beforeFile")?.addEventListener("change", async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    await uploadBefore(file);
-  });
+    const beforeImageInput = document.getElementById("before_image");
+    const beforePreview = document.getElementById("beforePreview");
 
-  async function uploadBefore(file) {
-    const status = document.getElementById("status");
-    status.textContent = "Uploading before image…";
+    const variantModal = document.getElementById("variantModal");
+    const openVariantBtn = document.getElementById("openVariantBtn");
+    const closeVariantBtn = document.getElementById("closeVariantBtn");
+    const confirmVariantBtn = document.getElementById("confirmVariantBtn");
 
-    try {
-      const fd = new FormData();
-      fd.append("photo", file);
-      fd.append("deal_id", "{{ deal.id }}");
-      fd.append("saved_property_id", "{{ deal.saved_property_id or '' }}");
+    const conceptTabs = document.getElementById("conceptTabs");
+    const savedConceptGallery = document.getElementById("savedConceptGallery");
+    const conceptGalleryGrid = document.getElementById("conceptGalleryGrid");
 
-      const res = await fetch("{{ url_for('investor.renovation_upload') }}", {
-        method: "POST",
-        body: fd,
-        credentials: "include"
-      });
+    let conceptState = [];
+    let activeConceptIndex = 0;
 
-      const data = await res.json();
+    const afterEls = {
+      media: document.getElementById("afterMedia"),
+      badge: document.getElementById("afterBadge"),
+      preset: document.getElementById("afterPreset"),
+      mode: document.getElementById("afterMode"),
+      seed: document.getElementById("afterSeed"),
+      job: document.getElementById("afterJob"),
+      link: document.getElementById("afterLink")
+    };
 
-      if (data.status !== "ok") {
-        status.textContent = data.message || "Upload failed.";
+    function escapeHtml(str) {
+      return String(str || "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    function setPreview(fileInput, previewEl, emptyText) {
+      const file = fileInput.files && fileInput.files[0];
+      previewEl.innerHTML = "";
+
+      if (!file) {
+        previewEl.textContent = emptyText;
         return;
       }
 
-      CURRENT_BEFORE = data.url;
-      LAST_BEFORE = data.url;
-      status.textContent = "Before image uploaded successfully.";
-      showPreview(CURRENT_BEFORE, CURRENT_AFTER || "");
-    } catch (err) {
-      console.error(err);
-      status.textContent = "Upload failed.";
-    }
-  }
-
-  function useLastBefore() {
-    if (!LAST_BEFORE) {
-      alert("No previous before image found yet.");
-      return;
+      if (file.type && file.type.startsWith("image/")) {
+        const img = document.createElement("img");
+        const text = document.createElement("span");
+        img.src = URL.createObjectURL(file);
+        text.textContent = file.name;
+        previewEl.appendChild(img);
+        previewEl.appendChild(text);
+      } else {
+        previewEl.textContent = file.name;
+      }
     }
 
-    CURRENT_BEFORE = LAST_BEFORE;
-    showPreview(CURRENT_BEFORE, CURRENT_AFTER || "");
-  }
+    function renderImage(target, url, altText, emptyIcon, emptyText) {
+      if (!target) return;
 
-  async function generate() {
-    const status = document.getElementById("status");
-    const preset = document.getElementById("stylePreset")?.value || "";
-    const prompt = (document.getElementById("stylePrompt")?.value || "").trim();
-    const variations = parseInt(document.getElementById("variations")?.value || "2", 10);
-
-    if (!CURRENT_BEFORE) {
-      alert("Upload a before image first.");
-      return;
-    }
-
-    if (!prompt && !preset) {
-      alert("Add a prompt or choose a preset.");
-      return;
-    }
-
-    status.textContent = "Generating concepts…";
-
-    try {
-      const fd = new FormData();
-      fd.append("image_url", CURRENT_BEFORE);
-
-      fd.append("style_prompt", prompt);
-      fd.append("prompt_notes", prompt);
-
-      fd.append("style_preset", preset);
-      fd.append("preset", preset);
-
-      fd.append("variations", String(variations));
-      fd.append("count", String(variations));
-      fd.append("save_to_deal", "true");
-      fd.append("deal_id", "{{ deal.id }}");
-      fd.append("saved_property_id", "{{ deal.saved_property_id or '' }}");
-
-      const res = await fetch("{{ url_for('investor.renovation_visualizer') }}", {
-        method: "POST",
-        body: fd,
-        credentials: "include"
-      });
-
-      const data = await res.json();
-
-      if (data.status !== "ok") {
-        status.textContent = data.message || "Visualizer failed.";
+      if (!url) {
+        target.classList.add("empty");
+        target.innerHTML = `
+          <div class="empty-state">
+            <i data-lucide="${escapeHtml(emptyIcon)}"></i>
+            <p>${escapeHtml(emptyText)}</p>
+          </div>
+        `;
         return;
       }
 
-      const beforeUrl = data.before_url || CURRENT_BEFORE;
-      const images = Array.isArray(data.images) ? data.images : [];
-
-      status.textContent = images.length
-        ? "Concepts generated successfully."
-        : (data.note || "No images returned yet.");
-
-      if (images.length) {
-        renderNew(images, beforeUrl);
-        selectAfter(images[0], beforeUrl);
-      }
-    } catch (err) {
-      console.error(err);
-      status.textContent = "Visualizer failed.";
+      target.classList.remove("empty");
+      target.innerHTML = `<img src="${escapeHtml(url)}" alt="${escapeHtml(altText)}">`;
     }
-  }
 
-  function renderNew(images, beforeUrl) {
-    const grid = document.getElementById("newGrid");
-    grid.innerHTML = "";
-    grid.style.display = "grid";
+    function setStepState(step, state) {
+      const el = document.querySelector(`.workflow-step[data-step="${step}"]`);
+      if (!el) return;
+      el.classList.remove("is-active", "is-complete");
+      if (state === "active") el.classList.add("is-active");
+      if (state === "complete") el.classList.add("is-complete");
+    }
 
-    images.forEach((afterUrl) => {
-      const div = document.createElement("div");
-      div.className = "thumb";
-      div.innerHTML = `
-        <img class="img" src="${afterUrl}" alt="After" style="cursor:pointer;">
-        <div class="thumb-meta">
-          <span class="chip">New</span>
-          <small class="muted">just now</small>
-        </div>
-        <div class="action-row" style="margin-top:.7rem;">
-          <button class="btn pick" type="button">👀 Preview</button>
-          <button class="btn btn-secondary pick" type="button">⭐ Feature</button>
+    function startLoading() {
+      loadingOverlay.classList.remove("hidden");
+      statusPill.textContent = "Generating";
+      generateBtn.disabled = true;
+      generateBtn.style.opacity = "0.7";
+
+      setStepState(1, "complete");
+      setStepState(2, "active");
+      setStepState(3, "");
+      setStepState(4, "");
+    }
+
+    function stopLoading() {
+      loadingOverlay.classList.add("hidden");
+      generateBtn.disabled = false;
+      generateBtn.style.opacity = "1";
+    }
+
+    function setLoadingTexts(a, b, c) {
+      document.getElementById("loadingStep1").textContent = a;
+      document.getElementById("loadingStep2").textContent = b;
+      document.getElementById("loadingStep3").textContent = c;
+    }
+
+    function applyConcept(concept) {
+      if (!concept) return;
+
+      renderImage(afterEls.media, concept.image_url || "", "Renovation concept", "sparkles", "Generated concept will appear here.");
+
+      if (afterEls.badge) afterEls.badge.textContent = concept.image_url ? "Generated" : "Pending";
+      if (afterEls.preset) afterEls.preset.textContent = concept.preset || "—";
+      if (afterEls.mode) afterEls.mode.textContent = concept.mode || "—";
+      if (afterEls.seed) afterEls.seed.textContent = concept.seed || "—";
+      if (afterEls.job) afterEls.job.textContent = concept.job_id || "—";
+
+      if (afterEls.link) {
+        if (concept.image_url) {
+          afterEls.link.href = concept.image_url;
+          afterEls.link.classList.remove("hidden");
+        } else {
+          afterEls.link.href = "#";
+          afterEls.link.classList.add("hidden");
+        }
+      }
+
+      document.getElementById("status-after").textContent = concept.image_url ? "Generated" : "Pending";
+      document.getElementById("trackerAfter").textContent = concept.image_url ? "Yes" : "No";
+      document.getElementById("trackerSaved").textContent = concept.image_url ? "Yes" : "No";
+
+      if (copyConceptLinkBtn) {
+        copyConceptLinkBtn.disabled = !concept.image_url;
+        copyConceptLinkBtn.dataset.link = concept.image_url || "";
+      }
+    }
+
+    function renderConceptTabs() {
+      if (!conceptTabs) return;
+      conceptTabs.innerHTML = "";
+
+      conceptState.forEach((concept, index) => {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "room-tab" + (index === activeConceptIndex ? " active" : "");
+        btn.textContent = `${concept.preset || "Concept"} (${concept.mode || "mode"})`;
+
+        btn.addEventListener("click", function () {
+          activeConceptIndex = index;
+          applyConcept(concept);
+          renderConceptTabs();
+        });
+
+        conceptTabs.appendChild(btn);
+      });
+    }
+
+    function appendConceptCard(concept) {
+      if (!conceptGalleryGrid || !concept || !concept.image_url) return;
+
+      if (savedConceptGallery) savedConceptGallery.classList.remove("hidden");
+
+      const anchor = document.createElement("a");
+      anchor.href = concept.image_url;
+      anchor.className = "room-thumb-card";
+      anchor.target = "_blank";
+      anchor.rel = "noopener";
+
+      anchor.innerHTML = `
+        <img src="${escapeHtml(concept.image_url)}" alt="${escapeHtml(concept.preset || "Concept")}">
+        <div class="room-thumb-meta">
+          <strong>${escapeHtml(concept.preset || "Concept")}</strong>
+          <span>${escapeHtml(concept.mode || "Mode not set")}</span>
         </div>
       `;
 
-      const buttons = div.querySelectorAll("button");
-      div.querySelector("img").onclick = () => selectAfter(afterUrl, beforeUrl);
-      buttons[0].onclick = () => selectAfter(afterUrl, beforeUrl);
-      buttons[1].onclick = async () => {
-        selectAfter(afterUrl, beforeUrl);
-        await feature();
-      };
+      conceptGalleryGrid.appendChild(anchor);
+    }
 
-      grid.appendChild(div);
+    function upsertConceptState(concept) {
+      if (!concept) return;
+
+      const preset = String(concept.preset || "").trim().toLowerCase();
+      const mode = String(concept.mode || "").trim().toLowerCase();
+
+      conceptState = conceptState.filter((c) => {
+        return !(
+          String(c.preset || "").trim().toLowerCase() === preset &&
+          String(c.mode || "").trim().toLowerCase() === mode
+        );
+      });
+
+      conceptState.push(concept);
+      activeConceptIndex = conceptState.length - 1;
+    }
+
+    beforeImageInput?.addEventListener("change", function () {
+      setPreview(this, beforePreview, "No before image selected");
     });
-  }
 
-  function selectAfter(afterUrl, beforeUrl) {
-    CURRENT_AFTER = afterUrl;
-    CURRENT_BEFORE = beforeUrl || CURRENT_BEFORE || LAST_BEFORE || "";
+    copyConceptLinkBtn?.addEventListener("click", async function () {
+      const link = this.dataset.link || "";
+      if (!link) return;
 
-    showPreview(CURRENT_BEFORE, CURRENT_AFTER);
+      try {
+        await navigator.clipboard.writeText(link);
+        this.innerHTML = '<i data-lucide="check"></i> Link Copied';
+        if (window.lucide) lucide.createIcons();
 
-    const img = document.getElementById("featuredImg");
-    const btn = document.getElementById("featureBtn");
-    const budgetBtn = document.getElementById("budgetBtn");
-
-    img.src = afterUrl;
-    img.style.display = "block";
-    btn.style.display = "inline-flex";
-    budgetBtn.style.display = "inline-flex";
-  }
-
-  function showPreview(beforeUrl, afterUrl) {
-    const wrap = document.getElementById("baWrap");
-    const empty = document.getElementById("emptyPreview");
-    const beforeImg = document.getElementById("baBefore");
-    const afterImg = document.getElementById("baAfterImg");
-    const slider = document.getElementById("baRange");
-    const afterLayer = document.getElementById("baAfter");
-    const handle = document.getElementById("baHandle");
-
-    beforeImg.src = beforeUrl || "";
-    afterImg.src = afterUrl || "";
-
-    if (!beforeUrl) {
-      wrap.style.display = "none";
-      empty.style.display = "flex";
-      return;
-    }
-
-    wrap.style.display = "block";
-    empty.style.display = "none";
-
-    function setSlider(value) {
-      const pct = Math.max(0, Math.min(100, Number(value) || 50));
-      afterLayer.style.clipPath = `inset(0 ${100 - pct}% 0 0)`;
-      handle.style.left = pct + "%";
-    }
-
-    slider.value = "50";
-    slider.oninput = (e) => setSlider(e.target.value);
-    setSlider(50);
-  }
-
-  async function feature() {
-    if (!CURRENT_AFTER) {
-      alert("Pick a concept first.");
-      return;
-    }
-
-    try {
-      const fd = new FormData();
-      fd.append("after_url", CURRENT_AFTER);
-      fd.append("before_url", CURRENT_BEFORE);
-
-      const res = await fetch("{{ url_for('investor.deal_feature_reveal', deal_id=deal.id) }}", {
-        method: "POST",
-        body: fd,
-        credentials: "include"
-      });
-
-      const data = await res.json();
-
-      if (data.status !== "ok") {
-        alert(data.message || "Could not feature reveal.");
-        return;
+        setTimeout(() => {
+          this.innerHTML = '<i data-lucide="link"></i> Copy Result Link';
+          if (window.lucide) lucide.createIcons();
+        }, 1800);
+      } catch (err) {
+        console.error(err);
       }
+    });
 
-      alert("Featured reveal set.");
-    } catch (err) {
-      console.error(err);
-      alert("Could not feature reveal.");
-    }
-  }
+    resetBtn?.addEventListener("click", function () {
+      form.reset();
+      statusPill.textContent = "Ready";
+      if (beforePreview) beforePreview.textContent = "No before image selected";
+    });
 
-  async function generateScope() {
-    if (!CURRENT_BEFORE) {
-      alert("Upload a room photo first.");
-      return;
-    }
+    form?.addEventListener("submit", async function (e) {
+      e.preventDefault();
+      startLoading();
 
-    const box = document.getElementById("scopeResults");
-    box.innerHTML = "Generating rehab plan...";
+      setLoadingTexts(
+        "Uploading before photo...",
+        "Generating renovation concept...",
+        "Saving concept to deal..."
+      );
 
-    try {
-      const res = await fetch("{{ url_for('investor.ai_rehab_scope') }}", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({
-          image_url: CURRENT_BEFORE
-        })
-      });
+      const formData = new FormData(form);
 
-      const data = await res.json();
-
-      if (data.status !== "ok") {
-        box.innerHTML = `<div class="muted">${data.message || "Scope generation failed."}</div>`;
-        return;
-      }
-
-      const scope = Array.isArray(data.scope) ? data.scope : [];
-      const estimatedCost = Number(data.estimated_cost || 0);
-      const arvIncrease = Number(data.arv_increase || 0);
-
-      let html = "<h4 style='margin:0 0 10px;'>AI Rehab Plan</h4>";
-
-      if (scope.length) {
-        html += "<ul>";
-        scope.forEach((item) => {
-          html += `<li>${item}</li>`;
+      try {
+        const response = await fetch("{{ url_for('investor.generate_rehab_studio') }}", {
+          method: "POST",
+          body: formData,
+          headers: { "X-Requested-With": "XMLHttpRequest" },
+          credentials: "same-origin"
         });
-        html += "</ul>";
-      } else {
-        html += "<div class='muted'>No line items returned.</div>";
+
+        const data = await response.json();
+
+        if (!response.ok || data.status !== "ok") {
+          throw new Error(data.message || "Renovation generation failed.");
+        }
+
+        if (data.before_result?.image_url) {
+          renderImage(
+            document.getElementById("beforeMedia"),
+            data.before_result.image_url,
+            "Before photo",
+            "image",
+            "Before photo will appear here."
+          );
+
+          const beforeLink = document.getElementById("beforeLink");
+          if (beforeLink) {
+            beforeLink.href = data.before_result.image_url;
+            beforeLink.classList.remove("hidden");
+          }
+
+          document.getElementById("beforeBadge").textContent = "Loaded";
+          document.getElementById("beforeMetaStatus").textContent = "Loaded";
+          document.getElementById("status-before").textContent = "Loaded";
+          document.getElementById("trackerBefore").textContent = "Yes";
+        }
+
+        if (data.concept_result?.image_url) {
+          upsertConceptState(data.concept_result);
+          applyConcept(data.concept_result);
+          renderConceptTabs();
+
+          if (conceptGalleryGrid) conceptGalleryGrid.innerHTML = "";
+          conceptState.forEach(appendConceptCard);
+
+          document.getElementById("status-concepts").textContent = conceptState.length;
+          document.getElementById("trackerConcepts").textContent = conceptState.length;
+        }
+
+        setStepState(2, "complete");
+        setStepState(3, "complete");
+        setStepState(4, "complete");
+
+        statusPill.textContent = "Concept Ready";
+
+      } catch (error) {
+        console.error(error);
+        statusPill.textContent = "Error";
+        alert(error.message || "Something went wrong during generation.");
+      } finally {
+        stopLoading();
+        if (window.lucide) lucide.createIcons();
+      }
+    });
+
+    openVariantBtn?.addEventListener("click", function () {
+      variantModal.classList.remove("hidden");
+      if (window.lucide) lucide.createIcons();
+    });
+
+    closeVariantBtn?.addEventListener("click", function () {
+      variantModal.classList.add("hidden");
+    });
+
+    variantModal?.addEventListener("click", function (e) {
+      if (e.target === variantModal) {
+        variantModal.classList.add("hidden");
+      }
+    });
+
+    confirmVariantBtn?.addEventListener("click", async function () {
+      const dealId = document.querySelector('input[name="deal_id"]')?.value;
+      if (!dealId) {
+        alert("Deal ID is required.");
+        return;
       }
 
-      html += `<p style="margin-top:12px;"><b>Estimated Rehab:</b> $${estimatedCost.toLocaleString()}</p>`;
-      html += `<p><b>ARV Increase:</b> $${arvIncrease.toLocaleString()}</p>`;
+      const fd = new FormData();
+      fd.append("deal_id", dealId);
+      fd.append("preset", document.getElementById("modal_preset")?.value || "luxury");
+      fd.append("mode", document.getElementById("modal_mode")?.value || "hgtv");
+      fd.append("room_type", document.getElementById("room_type")?.value || "living room");
+      fd.append("notes", document.getElementById("notes")?.value || "");
 
-      box.innerHTML = html;
-    } catch (err) {
-      console.error(err);
-      box.innerHTML = `<div class="muted">Scope generation failed.</div>`;
+      confirmVariantBtn.disabled = true;
+      confirmVariantBtn.innerHTML = '<i data-lucide="loader"></i> Generating...';
+      if (window.lucide) lucide.createIcons();
+
+      try {
+        const response = await fetch("{{ url_for('investor.generate_rehab_variant') }}", {
+          method: "POST",
+          body: fd,
+          headers: { "X-Requested-With": "XMLHttpRequest" },
+          credentials: "same-origin"
+        });
+
+        const data = await response.json();
+
+        if (!response.ok || data.status !== "ok") {
+          throw new Error(data.message || "Variant generation failed.");
+        }
+
+        const concept = data.concept_result || {};
+        upsertConceptState(concept);
+        applyConcept(concept);
+        renderConceptTabs();
+
+        if (conceptGalleryGrid) conceptGalleryGrid.innerHTML = "";
+        conceptState.forEach(appendConceptCard);
+
+        document.getElementById("status-concepts").textContent = conceptState.length;
+        document.getElementById("trackerConcepts").textContent = conceptState.length;
+
+        variantModal.classList.add("hidden");
+
+      } catch (error) {
+        console.error(error);
+        alert(error.message || "Failed to generate concept.");
+      } finally {
+        confirmVariantBtn.disabled = false;
+        confirmVariantBtn.innerHTML = '<i data-lucide="sparkles"></i> Generate Concept';
+        if (window.lucide) lucide.createIcons();
+      }
+    });
+
+    {% if rehab_concepts %}
+    conceptState = {{ rehab_concepts|tojson }};
+    activeConceptIndex = conceptState.length - 1;
+
+    if (conceptState.length > 0) {
+      applyConcept(conceptState[activeConceptIndex]);
+      renderConceptTabs();
     }
-  }
+    {% endif %}
 
-  (function initStudio() {
-    if (LAST_BEFORE) {
-      CURRENT_BEFORE = LAST_BEFORE;
-      showPreview(CURRENT_BEFORE, "");
+    {% if rehab_before and rehab_before.get("image_url") %}
+    setStepState(1, "complete");
+    setStepState(2, "complete");
+    {% endif %}
+
+    {% if rehab_latest and rehab_latest.get("image_url") %}
+    setStepState(3, "complete");
+    setStepState(4, "complete");
+    {% endif %}
+
+    if (window.lucide) {
+      lucide.createIcons();
     }
   })();
 </script>
