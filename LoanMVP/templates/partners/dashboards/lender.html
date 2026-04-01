@@ -1,317 +1,703 @@
 {% extends "layouts/ravlo_base.html" %}
 
-{% block title %}Ravlo • Lender Dashboard{% endblock %}
-
-{% block page_title %}Lender Dashboard{% endblock %}
-{% block page_subline %}
-Manage deal intake, review active files, and keep your lending pipeline organized from one place.
-{% endblock %}
-
-{% block topbar_actions %}
-  <a href="{{ url_for('partners.requests_inbox') }}" class="ravlo-btn ghost sm">
-    View Inquiries
-  </a>
-  <a href="{{ url_for('partners.workspace_home') }}" class="ravlo-btn primary sm">
-    Open Pipeline
-  </a>
-{% endblock %}
+{% block title %}Lender Dashboard | Ravlo{% endblock %}
 
 {% block content %}
-<div class="partner-dashboard-page lender-dashboard lender-tier-one-dashboard">
+<div class="lender-dashboard-page">
 
-  <!-- HERO -->
-  <section class="ravlo-card partner-hero-card">
-    <div class="partner-hero-grid">
-      <div class="partner-hero-copy">
-        <span class="partner-eyebrow">Lender Command</span>
-        <h2 class="partner-hero-title">Run your lending business without needing a full internal team.</h2>
-        <p class="partner-hero-text">
-          Review incoming loan opportunities, track active files, monitor urgent actions,
-          and keep your pipeline moving with a simple lender-first workspace.
-        </p>
-
-        <div class="partner-hero-actions">
-          <a href="{{ url_for('partners.requests_inbox') }}" class="ravlo-btn primary">
-            Review New Inquiries
-          </a>
-          <a href="{{ url_for('partners.workspace_home') }}" class="ravlo-btn ghost">
-            Open Pipeline
-          </a>
-        </div>
+  <section class="lender-hero">
+    <div class="hero-copy">
+      <div class="eyebrow">
+        <i data-lucide="landmark"></i>
+        PARTNER LENDER DASHBOARD
       </div>
+      <h1>Run your lending pipeline without the weight of a full LOS.</h1>
+      <p>
+        Track active files, review borrower activity, monitor funding opportunities,
+        and manage your team from one clean command center.
+      </p>
 
-      <div class="partner-hero-panel">
-        <div class="partner-mini-stat">
-          <span class="label">Best For</span>
-          <strong>Solo lenders and lean hard money lending operations</strong>
-        </div>
-        <div class="partner-mini-stat">
-          <span class="label">Primary Focus</span>
-          <strong>Deal intake, file visibility, and fast decision-making</strong>
-        </div>
+      <div class="hero-chips">
+        <span class="chip"><i data-lucide="briefcase"></i> Active Pipeline</span>
+        <span class="chip"><i data-lucide="badge-dollar-sign"></i> Capital Focused</span>
+        <span class="chip"><i data-lucide="users"></i> Team Friendly</span>
+      </div>
+    </div>
+
+    <div class="hero-panel">
+      <div class="hero-panel-card">
+        <span class="panel-label">Company</span>
+        <strong>{{ lender_company.name if lender_company else "Partner Lending Group" }}</strong>
+      </div>
+      <div class="hero-panel-card">
+        <span class="panel-label">Today</span>
+        <strong>{{ current_date if current_date else "Live" }}</strong>
+      </div>
+      <div class="hero-panel-card">
+        <span class="panel-label">Active Users</span>
+        <strong>{{ team_count or 4 }}</strong>
       </div>
     </div>
   </section>
 
-  <!-- STATS -->
-  <section class="partner-stats-grid">
-    <article class="ravlo-card partner-stat-card">
-      <div class="partner-stat-label">New Inquiries</div>
-      <div class="partner-stat-value">{{ new_inquiries_count|default(0) }}</div>
-      <div class="partner-stat-note">Fresh borrower or broker opportunities awaiting review</div>
-    </article>
-
-    <article class="ravlo-card partner-stat-card">
-      <div class="partner-stat-label">Active Files</div>
-      <div class="partner-stat-value">{{ active_files_count|default(0) }}</div>
-      <div class="partner-stat-note">Loans currently in process across your pipeline</div>
-    </article>
-
-    <article class="ravlo-card partner-stat-card">
-      <div class="partner-stat-label">Needs Attention</div>
-      <div class="partner-stat-value">{{ urgent_files_count|default(0) }}</div>
-      <div class="partner-stat-note">Files waiting on your review, follow-up, or decision</div>
-    </article>
-
-    <article class="ravlo-card partner-stat-card">
-      <div class="partner-stat-label">Closing / Funding Soon</div>
-      <div class="partner-stat-value">{{ closing_soon_count|default(0) }}</div>
-      <div class="partner-stat-note">Loans nearing close, docs completion, or funding</div>
-    </article>
-  </section>
-
-  <!-- MAIN GRID -->
-  <section class="partner-dashboard-grid">
-
-    <div class="partner-dashboard-main">
-
-      <!-- QUICK ACTIONS -->
-      <article class="ravlo-card partner-section-card">
-        <div class="section-head">
-          <div>
-            <h3>Quick Actions</h3>
-            <p>Move quickly through your daily lender workflow.</p>
-          </div>
-        </div>
-
-        <div class="quick-action-grid">
-          <a class="partner-action-card" href="{{ url_for('partners.requests_inbox') }}">
-            <div class="partner-action-icon">
-              <i class="lucide lucide-inbox"></i>
-            </div>
-            <div class="partner-action-copy">
-              <h4>Loan Inquiries</h4>
-              <p>Review incoming loan requests, broker referrals, and borrower opportunities.</p>
-            </div>
-          </a>
-
-          <a class="partner-action-card" href="{{ url_for('partners.workspace_home') }}">
-            <div class="partner-action-icon">
-              <i class="lucide lucide-briefcase-business"></i>
-            </div>
-            <div class="partner-action-copy">
-              <h4>Pipeline Workspace</h4>
-              <p>Track active files, loan stages, and next-step movement.</p>
-            </div>
-          </a>
-
-          <a class="partner-action-card" href="{{ url_for('partners.resources') }}">
-            <div class="partner-action-icon">
-              <i class="lucide lucide-library"></i>
-            </div>
-            <div class="partner-action-copy">
-              <h4>Resources</h4>
-              <p>Access lender guides, process support, and file-readiness references.</p>
-            </div>
-          </a>
-
-      <!-- PIPELINE -->
-      <article class="ravlo-card partner-section-card">
-        <div class="section-head">
-          <div>
-            <h3>Pipeline Snapshot</h3>
-            <p>A simple view of your current deal flow.</p>
-          </div>
-        </div>
-
-        <div class="workflow-grid">
-          <div class="workflow-step">
-            <span class="step-no">01</span>
-            <h4>New Inquiry</h4>
-            <p>{{ pipeline_new_count|default(0) }} files awaiting initial review and qualification.</p>
-          </div>
-
-          <div class="workflow-step">
-            <span class="step-no">02</span>
-            <h4>Review</h4>
-            <p>{{ pipeline_review_count|default(0) }} files under review for fit, terms, or viability.</p>
-          </div>
-
-          <div class="workflow-step">
-            <span class="step-no">03</span>
-            <h4>Docs / Conditions</h4>
-            <p>{{ pipeline_docs_count|default(0) }} files waiting on documents, conditions, or updates.</p>
-          </div>
-
-          <div class="workflow-step">
-            <span class="step-no">04</span>
-            <h4>Closing / Funding</h4>
-            <p>{{ pipeline_closing_count|default(0) }} loans moving toward final execution.</p>
-          </div>
-        </div>
-      </article>
-
-      <!-- PRIORITY FILES -->
-      <article class="ravlo-card partner-section-card">
-        <div class="section-head">
-          <div>
-            <h3>Priority Files</h3>
-            <p>Loans that need attention first.</p>
-          </div>
-        </div>
-
-        <div class="partner-tool-list">
-          {% for file in priority_files %}
-            <a class="partner-tool-item" href="{{ file.url or '#' }}">
-              <strong>{{ file.borrower_name }} · {{ file.property_address }}</strong>
-              <span>
-                {{ file.loan_type or "Loan Request" }} • {{ file.stage or "In Review" }}
-                {% if file.amount %} • ${{ "{:,.0f}".format(file.amount) }}{% endif %}
-                {% if file.note %} • {{ file.note }}{% endif %}
-              </span>
-            </a>
-          {% else %}
-            <div class="partner-empty-state">
-              <h4>No priority files right now</h4>
-              <p>Your urgent files, missing-doc items, and follow-up loans will appear here.</p>
-            </div>
-          {% endfor %}
-        </div>
-      </article>
-
-      <!-- UPGRADE -->
-      <article class="ravlo-card partner-section-card lender-upgrade-card">
-        <div class="section-head">
-          <div>
-            <h3>Upgrade to Lending OS</h3>
-            <p>Unlock the full operating system when your lending business is ready to scale.</p>
-          </div>
-        </div>
-
-        <div class="quick-action-grid">
-          <div class="partner-tool-item">
-            <strong>Advanced Pipeline Control</strong>
-            <span>Deeper file stages, richer visibility, and more production-ready workflow tools.</span>
-          </div>
-
-          <div class="partner-tool-item">
-            <strong>Borrower Portal + Automation</strong>
-            <span>Give borrowers a more structured experience with stronger document and status flow.</span>
-          </div>
-
-          <div class="partner-tool-item">
-            <strong>Team Expansion Ready</strong>
-            <span>Add processors, underwriters, or staff support as your operation grows.</span>
-          </div>
-
-          <div class="partner-tool-item">
-            <strong>Operational Scale</strong>
-            <span>Move from a lean lender workspace into a full lending command center.</span>
-          </div>
-        </div>
-
-        <div class="partner-hero-actions" style="margin-top:1rem;">
-          <a href="{{ upgrade_url or '#' }}" class="ravlo-btn primary">
-            Upgrade to Lending OS
-          </a>
-        </div>
-      </article>
-
+  <section class="dashboard-top-grid">
+    <div class="metric-card">
+      <div class="metric-head">
+        <span>Active Loans</span>
+        <i data-lucide="folder-kanban"></i>
+      </div>
+      <h2>{{ active_loans_count or 18 }}</h2>
+      <p>{{ active_loans_change or "+4 this week" }}</p>
     </div>
 
-    <aside class="partner-dashboard-side">
+    <div class="metric-card">
+      <div class="metric-head">
+        <span>Loans In Review</span>
+        <i data-lucide="search-check"></i>
+      </div>
+      <h2>{{ review_count or 7 }}</h2>
+      <p>{{ review_note or "Ready for lender review" }}</p>
+    </div>
 
-      <!-- FOCUS -->
-      <article class="ravlo-card partner-section-card">
+    <div class="metric-card">
+      <div class="metric-head">
+        <span>Potential Volume</span>
+        <i data-lucide="wallet"></i>
+      </div>
+      <h2>{{ potential_volume or "$3.8M" }}</h2>
+      <p>{{ volume_note or "Across open opportunities" }}</p>
+    </div>
+
+    <div class="metric-card">
+      <div class="metric-head">
+        <span>Pending Docs</span>
+        <i data-lucide="file-clock"></i>
+      </div>
+      <h2>{{ pending_docs_count or 11 }}</h2>
+      <p>{{ docs_note or "Need uploads or signatures" }}</p>
+    </div>
+  </section>
+
+  <div class="dashboard-main-grid">
+
+    <div class="dashboard-main-column">
+
+      <section class="dashboard-card">
         <div class="section-head">
           <div>
-            <h3>Lender Focus</h3>
-            <p>What matters most for a lean lending operation.</p>
+            <div class="section-kicker">PIPELINE</div>
+            <h3>Loan Pipeline Snapshot</h3>
+          </div>
+          <a href="{{ url_for('partners.partner_loans') if false else '#' }}" class="section-link">View All</a>
+        </div>
+
+        <div class="pipeline-grid">
+          <div class="pipeline-stage">
+            <span class="stage-label">New</span>
+            <strong>{{ pipeline.new or 6 }}</strong>
+          </div>
+          <div class="pipeline-stage">
+            <span class="stage-label">Quoted</span>
+            <strong>{{ pipeline.quoted or 4 }}</strong>
+          </div>
+          <div class="pipeline-stage">
+            <span class="stage-label">Under Review</span>
+            <strong>{{ pipeline.review or 5 }}</strong>
+          </div>
+          <div class="pipeline-stage">
+            <span class="stage-label">Conditions</span>
+            <strong>{{ pipeline.conditions or 3 }}</strong>
+          </div>
+          <div class="pipeline-stage">
+            <span class="stage-label">Clear to Close</span>
+            <strong>{{ pipeline.ctc or 2 }}</strong>
+          </div>
+          <div class="pipeline-stage">
+            <span class="stage-label">Funded</span>
+            <strong>{{ pipeline.funded or 8 }}</strong>
           </div>
         </div>
+      </section>
 
-        <div class="partner-checklist">
-          <div class="partner-check-item">Respond quickly to qualified opportunities</div>
-          <div class="partner-check-item">Keep active files moving without bottlenecks</div>
-          <div class="partner-check-item">Stay visible on conditions and closing readiness</div>
-          <div class="partner-check-item">Operate professionally without needing a full staff</div>
-        </div>
-      </article>
-
-      <!-- CM SUPPORT -->
-      <article class="ravlo-card partner-section-card">
+      <section class="dashboard-card">
         <div class="section-head">
           <div>
-            <h3>Caughman Mason Lending Support</h3>
-            <p>Optional support when you need more than software.</p>
+            <div class="section-kicker">ACTIVE FILES</div>
+            <h3>Priority Loans</h3>
           </div>
+          <a href="#" class="section-link">Open Queue</a>
         </div>
 
-        <div class="partner-tool-list">
-          <div class="partner-tool-item">
-            <strong>Deal Structuring Support</strong>
-            <span>Get help reviewing loan fit, deal setup, or complex scenarios.</span>
-          </div>
-
-          <div class="partner-tool-item">
-            <strong>Overflow / Growth Support</strong>
-            <span>Use the ecosystem when volume grows beyond your current operating capacity.</span>
-          </div>
-
-          <div class="partner-tool-item">
-            <strong>Strategic Partnership Path</strong>
-            <span>Create a natural bridge into deeper collaboration with Caughman Mason Lending.</span>
-          </div>
+        <div class="table-shell">
+          <table class="ravlo-table">
+            <thead>
+              <tr>
+                <th>Borrower</th>
+                <th>Property</th>
+                <th>Loan Type</th>
+                <th>Status</th>
+                <th>Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% if priority_loans %}
+                {% for loan in priority_loans %}
+                <tr>
+                  <td>
+                    <div class="table-primary">{{ loan.borrower_name }}</div>
+                    <div class="table-sub">{{ loan.email }}</div>
+                  </td>
+                  <td>{{ loan.property_address }}</td>
+                  <td>{{ loan.loan_type }}</td>
+                  <td><span class="status-badge">{{ loan.status }}</span></td>
+                  <td>{{ loan.amount }}</td>
+                </tr>
+                {% endfor %}
+              {% else %}
+                <tr>
+                  <td>
+                    <div class="table-primary">J. Carter</div>
+                    <div class="table-sub">jcarter@email.com</div>
+                  </td>
+                  <td>158 Whitlock Rd, Otisville, NY</td>
+                  <td>Fix &amp; Flip</td>
+                  <td><span class="status-badge">Under Review</span></td>
+                  <td>$315,000</td>
+                </tr>
+                <tr>
+                  <td>
+                    <div class="table-primary">M. Barnes</div>
+                    <div class="table-sub">mbarnes@email.com</div>
+                  </td>
+                  <td>42 Maple Ave, Newark, NJ</td>
+                  <td>Bridge</td>
+                  <td><span class="status-badge">Conditions</span></td>
+                  <td>$540,000</td>
+                </tr>
+                <tr>
+                  <td>
+                    <div class="table-primary">R. Ellis</div>
+                    <div class="table-sub">rellis@email.com</div>
+                  </td>
+                  <td>11 Willow Dr, Tampa, FL</td>
+                  <td>Rental</td>
+                  <td><span class="status-badge">Quoted</span></td>
+                  <td>$228,000</td>
+                </tr>
+              {% endif %}
+            </tbody>
+          </table>
         </div>
+      </section>
 
-        <div class="partner-hero-actions" style="margin-top:1rem;">
-          <a href="{{ cm_support_url or '#' }}" class="ravlo-btn ghost">
-            Explore Support Options
-          </a>
-        </div>
-      </article>
-
-      <!-- CRITERIA -->
-      <article class="ravlo-card partner-section-card">
+      <section class="dashboard-card">
         <div class="section-head">
           <div>
-            <h3>Your Lending Box</h3>
-            <p>A quick reminder of your active lending profile.</p>
+            <div class="section-kicker">BORROWER ACTIVITY</div>
+            <h3>Recent Updates</h3>
+          </div>
+          <a href="#" class="section-link">Activity Feed</a>
+        </div>
+
+        <div class="activity-list">
+          <div class="activity-item">
+            <div class="activity-icon"><i data-lucide="upload"></i></div>
+            <div class="activity-copy">
+              <strong>Borrower uploaded bank statements</strong>
+              <p>Loan #A-204 • 12 minutes ago</p>
+            </div>
+          </div>
+
+          <div class="activity-item">
+            <div class="activity-icon"><i data-lucide="file-signature"></i></div>
+            <div class="activity-copy">
+              <strong>Term sheet signed</strong>
+              <p>Loan #B-112 • 38 minutes ago</p>
+            </div>
+          </div>
+
+          <div class="activity-item">
+            <div class="activity-icon"><i data-lucide="message-square"></i></div>
+            <div class="activity-copy">
+              <strong>New borrower message received</strong>
+              <p>Loan #C-551 • 1 hour ago</p>
+            </div>
+          </div>
+
+          <div class="activity-item">
+            <div class="activity-icon"><i data-lucide="shield-check"></i></div>
+            <div class="activity-copy">
+              <strong>Conditions marked complete</strong>
+              <p>Loan #A-117 • 2 hours ago</p>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <aside class="dashboard-side-column">
+
+      <section class="dashboard-card side-card">
+        <div class="section-head">
+          <div>
+            <div class="section-kicker">TEAM QUEUE</div>
+            <h3>Assignments</h3>
           </div>
         </div>
 
-        <div class="partner-tool-list">
-          <div class="partner-tool-item">
-            <strong>Markets</strong>
-            <span>{{ lender_markets|default("Set your lending markets") }}</span>
+        <div class="side-list">
+          <div class="side-list-row">
+            <span>New submissions</span>
+            <strong>{{ assignment_counts.new or 5 }}</strong>
           </div>
-          <div class="partner-tool-item">
-            <strong>Loan Types</strong>
-            <span>{{ lender_loan_types|default("Set your loan programs") }}</span>
+          <div class="side-list-row">
+            <span>Need doc review</span>
+            <strong>{{ assignment_counts.docs or 8 }}</strong>
           </div>
-          <div class="partner-tool-item">
-            <strong>Range / Terms</strong>
-            <span>{{ lender_terms|default("Set your typical amount and term range") }}</span>
+          <div class="side-list-row">
+            <span>Need callback</span>
+            <strong>{{ assignment_counts.calls or 3 }}</strong>
           </div>
-          <div class="partner-tool-item">
-            <strong>Status</strong>
-            <span>{{ lender_status|default("Active and reviewing opportunities") }}</span>
+          <div class="side-list-row">
+            <span>Ready to quote</span>
+            <strong>{{ assignment_counts.quote or 2 }}</strong>
           </div>
         </div>
-      </article>
+      </section>
+
+      <section class="dashboard-card side-card">
+        <div class="section-head">
+          <div>
+            <div class="section-kicker">FUNDING SNAPSHOT</div>
+            <h3>Capital Activity</h3>
+          </div>
+        </div>
+
+        <div class="funding-stack">
+          <div class="funding-box">
+            <span>Open Opportunities</span>
+            <strong>{{ open_opportunities or "$2.15M" }}</strong>
+          </div>
+          <div class="funding-box">
+            <span>Expected This Month</span>
+            <strong>{{ expected_fundings or "$1.08M" }}</strong>
+          </div>
+          <div class="funding-box">
+            <span>Recently Funded</span>
+            <strong>{{ funded_last_30 or "$840K" }}</strong>
+          </div>
+        </div>
+      </section>
+
+      <section class="dashboard-card side-card">
+        <div class="section-head">
+          <div>
+            <div class="section-kicker">DOC STATUS</div>
+            <h3>Outstanding Items</h3>
+          </div>
+        </div>
+
+        <div class="doc-list">
+          <div class="doc-item">
+            <span>Purchase contracts</span>
+            <strong>4</strong>
+          </div>
+          <div class="doc-item">
+            <span>Insurance proof</span>
+            <strong>3</strong>
+          </div>
+          <div class="doc-item">
+            <span>Entity docs</span>
+            <strong>2</strong>
+          </div>
+          <div class="doc-item">
+            <span>Bank statements</span>
+            <strong>2</strong>
+          </div>
+        </div>
+      </section>
+
+      <section class="dashboard-card side-card">
+        <div class="section-head">
+          <div>
+            <div class="section-kicker">QUICK ACTIONS</div>
+            <h3>Team Shortcuts</h3>
+          </div>
+        </div>
+
+        <div class="quick-actions">
+          <a href="#" class="quick-action-btn"><i data-lucide="plus"></i> New Loan</a>
+          <a href="#" class="quick-action-btn"><i data-lucide="file-check"></i> Review Docs</a>
+          <a href="#" class="quick-action-btn"><i data-lucide="send"></i> Send Quote</a>
+          <a href="#" class="quick-action-btn"><i data-lucide="users"></i> Team Activity</a>
+        </div>
+      </section>
 
     </aside>
-
-  </section>
+  </div>
 </div>
+
+<style>
+  .lender-dashboard-page {
+    padding: 28px 0 60px;
+  }
+
+  .lender-hero {
+    display: grid;
+    grid-template-columns: 1.5fr 0.9fr;
+    gap: 20px;
+    margin-bottom: 22px;
+    padding: 28px;
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 28px;
+    background:
+      radial-gradient(circle at top left, rgba(58,92,122,0.18), transparent 38%),
+      linear-gradient(135deg, rgba(12,17,22,0.96), rgba(18,24,32,0.98));
+    box-shadow: 0 22px 60px rgba(0,0,0,0.28);
+  }
+
+  .eyebrow,
+  .section-kicker {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    font-size: 11px;
+    font-weight: 700;
+    color: #93a7bb;
+    margin-bottom: 10px;
+  }
+
+  .lender-hero h1 {
+    margin: 0 0 10px;
+    font-size: 2.2rem;
+    line-height: 1.08;
+    color: #fff;
+  }
+
+  .lender-hero p {
+    margin: 0;
+    max-width: 720px;
+    color: #b3c0cc;
+    font-size: 1rem;
+    line-height: 1.6;
+  }
+
+  .hero-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 18px;
+  }
+
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    border-radius: 999px;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.08);
+    color: #d8e3ec;
+    font-size: 0.92rem;
+  }
+
+  .chip-accent {
+    background: rgba(58,92,122,0.22);
+    color: #fff;
+  }
+
+  .hero-panel {
+    display: grid;
+    gap: 12px;
+    align-content: start;
+  }
+
+  .hero-panel-card {
+    padding: 16px 18px;
+    border-radius: 20px;
+    border: 1px solid rgba(255,255,255,0.08);
+    background: rgba(255,255,255,0.04);
+  }
+
+  .panel-label {
+    display: block;
+    margin-bottom: 6px;
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #8fa2b5;
+  }
+
+  .hero-panel-card strong {
+    color: #fff;
+    font-size: 1rem;
+  }
+
+  .dashboard-top-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 16px;
+    margin-bottom: 22px;
+  }
+
+  .metric-card,
+  .dashboard-card {
+    border-radius: 24px;
+    border: 1px solid rgba(255,255,255,0.06);
+    background: linear-gradient(180deg, rgba(20,27,36,0.98), rgba(14,19,26,0.98));
+    box-shadow: 0 18px 50px rgba(0,0,0,0.20);
+  }
+
+  .metric-card {
+    padding: 20px;
+  }
+
+  .metric-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: #9cb0c1;
+    margin-bottom: 14px;
+  }
+
+  .metric-card h2 {
+    margin: 0;
+    color: #fff;
+    font-size: 2rem;
+  }
+
+  .metric-card p {
+    margin: 8px 0 0;
+    color: #8fa3b6;
+  }
+
+  .dashboard-main-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.55fr) 360px;
+    gap: 22px;
+  }
+
+  .dashboard-main-column,
+  .dashboard-side-column {
+    display: grid;
+    gap: 18px;
+    align-content: start;
+  }
+
+  .dashboard-card {
+    padding: 24px;
+  }
+
+  .section-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 14px;
+    margin-bottom: 18px;
+  }
+
+  .section-head h3 {
+    margin: 0;
+    color: #fff;
+  }
+
+  .section-link {
+    color: #a9c6e0;
+    text-decoration: none;
+    font-weight: 600;
+  }
+
+  .section-link:hover {
+    color: #d6ebff;
+  }
+
+  .pipeline-grid {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 12px;
+  }
+
+  .pipeline-stage {
+    padding: 16px 14px;
+    border-radius: 18px;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.05);
+    text-align: center;
+  }
+
+  .stage-label {
+    display: block;
+    font-size: 0.85rem;
+    color: #96aabc;
+    margin-bottom: 6px;
+  }
+
+  .pipeline-stage strong {
+    font-size: 1.35rem;
+    color: #fff;
+  }
+
+  .table-shell {
+    overflow-x: auto;
+  }
+
+  .ravlo-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  .ravlo-table th,
+  .ravlo-table td {
+    padding: 14px 10px;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    text-align: left;
+    vertical-align: top;
+  }
+
+  .ravlo-table th {
+    color: #94a9bb;
+    font-size: 0.82rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  .ravlo-table td {
+    color: #dce7f0;
+  }
+
+  .table-primary {
+    font-weight: 700;
+    color: #fff;
+  }
+
+  .table-sub {
+    color: #8fa3b6;
+    font-size: 0.9rem;
+    margin-top: 4px;
+  }
+
+  .status-badge {
+    display: inline-flex;
+    align-items: center;
+    min-height: 30px;
+    padding: 6px 10px;
+    border-radius: 999px;
+    background: rgba(58,92,122,0.20);
+    border: 1px solid rgba(86,129,167,0.28);
+    color: #dce9f3;
+    font-size: 0.88rem;
+    font-weight: 600;
+  }
+
+  .activity-list,
+  .side-list,
+  .funding-stack,
+  .doc-list,
+  .quick-actions {
+    display: grid;
+    gap: 12px;
+  }
+
+  .activity-item,
+  .funding-box,
+  .doc-item,
+  .side-list-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 14px 16px;
+    border-radius: 18px;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.05);
+  }
+
+  .activity-item {
+    justify-content: flex-start;
+    align-items: flex-start;
+  }
+
+  .activity-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 14px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(58,92,122,0.18);
+    color: #dce9f3;
+    flex-shrink: 0;
+  }
+
+  .activity-copy strong,
+  .funding-box strong,
+  .doc-item strong,
+  .side-list-row strong {
+    color: #fff;
+  }
+
+  .activity-copy p {
+    margin: 6px 0 0;
+    color: #8fa3b6;
+  }
+
+  .funding-box,
+  .doc-item,
+  .side-list-row {
+    color: #96aabc;
+  }
+
+  .quick-actions {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .quick-action-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    min-height: 46px;
+    padding: 0 16px;
+    border-radius: 16px;
+    text-decoration: none;
+    background: rgba(255,255,255,0.06);
+    color: #dce7f0;
+    border: 1px solid rgba(255,255,255,0.08);
+    font-weight: 700;
+    transition: transform 0.16s ease, background 0.16s ease;
+  }
+
+  .quick-action-btn:hover {
+    transform: translateY(-1px);
+    background: rgba(255,255,255,0.10);
+  }
+
+  @media (max-width: 1180px) {
+    .dashboard-main-grid,
+    .lender-hero {
+      grid-template-columns: 1fr;
+    }
+
+    .dashboard-top-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @media (max-width: 900px) {
+    .dashboard-top-grid,
+    .pipeline-grid,
+    .quick-actions {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+
+<script>
+  if (window.lucide) {
+    lucide.createIcons();
+  }
+</script>
 {% endblock %}
