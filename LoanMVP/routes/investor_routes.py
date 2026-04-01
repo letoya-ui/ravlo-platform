@@ -9097,6 +9097,7 @@ def partner_detail(partner_id):
     )
 
 
+
 @investor_bp.route("/partners/<int:partner_id>/request-intro", methods=["POST"])
 @csrf.exempt
 @login_required
@@ -9114,6 +9115,22 @@ def request_partner_intro(partner_id):
         return redirect(url_for("investor.partners"))
 
     message = (request.form.get("message") or "").strip()
+    property_id = request.form.get("property_id", type=int)
+    lead_id = request.form.get("lead_id", type=int)
+
+    req = PartnerConnectionRequest(
+        borrower_user_id=None,
+        investor_user_id=current_user.id,
+        borrower_profile_id=None,
+        investor_profile_id=ip.id,
+        property_id=property_id if property_id else None,
+        lead_id=lead_id if lead_id else None,
+        partner_id=partner.id,
+        category=partner.category,
+        message=message or f"Investor requested connection with {partner.company or partner.name}.",
+        status="pending",
+    )
+    db.session.add(req)
 
     followup = FollowUpItem(
         investor_profile_id=ip.id,
@@ -9124,13 +9141,13 @@ def request_partner_intro(partner_id):
         is_done=False,
         created_by=current_user.id,
     )
-
     db.session.add(followup)
+
     db.session.commit()
 
     flash(f"Intro request sent for {partner.company or partner.name}.", "success")
     return redirect(url_for("investor.partner_detail", partner_id=partner.id))
-
+    
 @investor_bp.route("/resources/request-connection", methods=["POST"])
 @csrf.exempt
 @login_required
