@@ -4,38 +4,42 @@
 
 {% block page_title %}Contractor Dashboard{% endblock %}
 {% block page_subline %}
-Manage renovation requests, active jobs, bid opportunities, and field updates from one workspace.
+Review job opportunities, manage active work, and keep projects moving with visibility and speed.
 {% endblock %}
 
 {% block topbar_actions %}
   <a href="{{ url_for('partners.requests_inbox') }}" class="ravlo-btn ghost sm">
-    View Requests
+    View Jobs
   </a>
   <a href="{{ url_for('partners.workspace_home') }}" class="ravlo-btn primary sm">
-    Open Workspace
+    Open Contractor Workspace
   </a>
 {% endblock %}
 
 {% block content %}
-<div class="partner-dashboard-page contractor-dashboard">
+<div class="partner-dashboard-page default-partner-dashboard contractor-dashboard-page">
 
-  <!-- HERO / SUMMARY -->
-  <section class="ravlo-card partner-hero-card">
+  <!-- HERO -->
+  <section class="ravlo-card partner-hero-card contractor-hero-card">
     <div class="partner-hero-grid">
       <div class="partner-hero-copy">
-        <span class="partner-eyebrow">Partner Command</span>
-        <h2 class="partner-hero-title">Build pipeline, manage scopes, and keep projects moving.</h2>
+        <span class="partner-eyebrow">Execution Command</span>
+        <h2 class="partner-hero-title">
+          Stay on top of jobs, scopes, updates, and active project execution.
+        </h2>
+
         <p class="partner-hero-text">
-          Review new contractor opportunities, track active projects, and stay aligned with investors,
-          property teams, and renovation timelines across Ravlo.
+          Built for contractors and field partners inside the Ravlo network, this dashboard
+          gives you a focused workspace to review incoming work, track active projects,
+          respond to requests, and keep investors informed without extra friction.
         </p>
 
         <div class="partner-hero-actions">
           <a href="{{ url_for('partners.requests_inbox') }}" class="ravlo-btn primary">
-            Review New Requests
+            Review Job Requests
           </a>
           <a href="{{ url_for('partners.workspace_home') }}" class="ravlo-btn ghost">
-            Go to Workspace
+            Open Workspace
           </a>
         </div>
       </div>
@@ -43,11 +47,12 @@ Manage renovation requests, active jobs, bid opportunities, and field updates fr
       <div class="partner-hero-panel">
         <div class="partner-mini-stat">
           <span class="label">Priority Focus</span>
-          <strong>Quotes, active jobs, field coordination</strong>
+          <strong>Job requests, scopes, progress updates, and execution flow</strong>
         </div>
+
         <div class="partner-mini-stat">
           <span class="label">Best Use</span>
-          <strong>Keep requests organized and execution visible</strong>
+          <strong>Run active work clearly and keep investors updated</strong>
         </div>
       </div>
     </div>
@@ -56,40 +61,42 @@ Manage renovation requests, active jobs, bid opportunities, and field updates fr
   <!-- STATS -->
   <section class="partner-stats-grid">
     <article class="ravlo-card partner-stat-card">
-      <div class="partner-stat-label">New Requests</div>
+      <div class="partner-stat-label">New Job Requests</div>
       <div class="partner-stat-value">{{ new_requests_count|default(0) }}</div>
-      <div class="partner-stat-note">Opportunities waiting for review</div>
+      <div class="partner-stat-note">Fresh opportunities awaiting review</div>
     </article>
 
     <article class="ravlo-card partner-stat-card">
-      <div class="partner-stat-label">Active Jobs</div>
-      <div class="partner-stat-value">{{ active_jobs_count|default(0) }}</div>
-      <div class="partner-stat-note">Projects currently in motion</div>
+      <div class="partner-stat-label">Active Projects</div>
+      <div class="partner-stat-value">{{ active_projects_count|default(0) }}</div>
+      <div class="partner-stat-note">Jobs currently in motion</div>
     </article>
 
     <article class="ravlo-card partner-stat-card">
       <div class="partner-stat-label">Pending Bids</div>
       <div class="partner-stat-value">{{ pending_bids_count|default(0) }}</div>
-      <div class="partner-stat-note">Quotes awaiting response or submission</div>
+      <div class="partner-stat-note">Quotes, scopes, or responses still outstanding</div>
     </article>
 
     <article class="ravlo-card partner-stat-card">
       <div class="partner-stat-label">Completed Jobs</div>
-      <div class="partner-stat-value">{{ completed_jobs_count|default(0) }}</div>
-      <div class="partner-stat-note">Closed-out projects and milestones</div>
+      <div class="partner-stat-value">{{ completed_count|default(0) }}</div>
+      <div class="partner-stat-note">Finished work across the Ravlo network</div>
     </article>
   </section>
 
   <!-- MAIN GRID -->
   <section class="partner-dashboard-grid">
 
+    <!-- MAIN -->
     <div class="partner-dashboard-main">
 
+      <!-- QUICK ACTIONS -->
       <article class="ravlo-card partner-section-card">
         <div class="section-head">
           <div>
             <h3>Quick Actions</h3>
-            <p>Jump directly into the contractor workflow.</p>
+            <p>Move through your day-to-day execution workflow quickly.</p>
           </div>
         </div>
 
@@ -99,8 +106,8 @@ Manage renovation requests, active jobs, bid opportunities, and field updates fr
               <i class="lucide lucide-inbox"></i>
             </div>
             <div class="partner-action-copy">
-              <h4>Requests Inbox</h4>
-              <p>Review incoming service requests from investors and property owners.</p>
+              <h4>Job Requests</h4>
+              <p>Review incoming jobs, service requests, and opportunities.</p>
             </div>
           </a>
 
@@ -110,17 +117,134 @@ Manage renovation requests, active jobs, bid opportunities, and field updates fr
             </div>
             <div class="partner-action-copy">
               <h4>Project Workspace</h4>
-              <p>Manage ongoing jobs, updates, timelines, and next-step execution.</p>
+              <p>Track active jobs, updates, milestones, and coordination.</p>
+            </div>
+          </a>
+
+          <a class="partner-action-card" href="{{ url_for('partners.resources') }}">
+            <div class="partner-action-icon">
+              <i class="lucide lucide-clipboard-list"></i>
+            </div>
+            <div class="partner-action-copy">
+              <h4>Scopes & Resources</h4>
+              <p>Access scope references, templates, and project guidance.</p>
+            </div>
+          </a>
+
+          <a class="partner-action-card" href="{{ url_for('partners.profile') }}">
+            <div class="partner-action-icon">
+              <i class="lucide lucide-hard-hat"></i>
+            </div>
+            <div class="partner-action-copy">
+              <h4>Contractor Profile</h4>
+              <p>Update trades, service areas, team details, and availability.</p>
             </div>
           </a>
         </div>
       </article>
 
+      <!-- PROJECT PIPELINE -->
       <article class="ravlo-card partner-section-card">
         <div class="section-head">
           <div>
-            <h3>Contractor Workflow</h3>
-            <p>Recommended process for handling renovation opportunities inside Ravlo.</p>
+            <h3>Project Pipeline</h3>
+            <p>See where your jobs stand from request to completion.</p>
+          </div>
+        </div>
+
+        <div class="workflow-grid contractor-pipeline-grid">
+          <div class="workflow-step">
+            <span class="step-no">01</span>
+            <h4>Requested</h4>
+            <p>{{ new_requests_count|default(0) }} new jobs waiting for review.</p>
+          </div>
+
+          <div class="workflow-step">
+            <span class="step-no">02</span>
+            <h4>Bidding / Scope</h4>
+            <p>{{ pending_bids_count|default(0) }} opportunities needing estimate or response.</p>
+          </div>
+
+          <div class="workflow-step">
+            <span class="step-no">03</span>
+            <h4>Active Work</h4>
+            <p>{{ active_projects_count|default(0) }} projects currently being executed.</p>
+          </div>
+
+          <div class="workflow-step">
+            <span class="step-no">04</span>
+            <h4>Completed</h4>
+            <p>{{ completed_count|default(0) }} finished jobs closed out successfully.</p>
+          </div>
+        </div>
+      </article>
+
+      <!-- ACTIVE PROJECTS -->
+      <article class="ravlo-card partner-section-card">
+        <div class="section-head">
+          <div>
+            <h3>Active Projects</h3>
+            <p>Your highest-priority jobs and active execution work.</p>
+          </div>
+        </div>
+
+        <div class="partner-tool-list">
+          {% if active_projects %}
+            {% for project in active_projects %}
+            <div class="partner-tool-item contractor-project-item">
+              <div class="contractor-project-copy">
+                <strong>{{ project.title or "Project" }}</strong>
+                <span>{{ project.address or "Project location" }}</span>
+              </div>
+              <div class="contractor-project-meta">
+                <span>{{ project.phase or "In Progress" }}</span>
+                <strong>{{ project.status or "Active" }}</strong>
+              </div>
+            </div>
+            {% endfor %}
+          {% else %}
+            <div class="partner-tool-item contractor-project-item">
+              <div class="contractor-project-copy">
+                <strong>Whitlock Renovation</strong>
+                <span>158 Whitlock Rd, Otisville, NY</span>
+              </div>
+              <div class="contractor-project-meta">
+                <span>Interior Rehab</span>
+                <strong>Active</strong>
+              </div>
+            </div>
+
+            <div class="partner-tool-item contractor-project-item">
+              <div class="contractor-project-copy">
+                <strong>Maple Exterior Refresh</strong>
+                <span>42 Maple Ave, Newark, NJ</span>
+              </div>
+              <div class="contractor-project-meta">
+                <span>Exterior Scope</span>
+                <strong>Needs Bid</strong>
+              </div>
+            </div>
+
+            <div class="partner-tool-item contractor-project-item">
+              <div class="contractor-project-copy">
+                <strong>Willow Kitchen Update</strong>
+                <span>11 Willow Dr, Tampa, FL</span>
+              </div>
+              <div class="contractor-project-meta">
+                <span>Kitchen Remodel</span>
+                <strong>Active</strong>
+              </div>
+            </div>
+          {% endif %}
+        </div>
+      </article>
+
+      <!-- EXECUTION FLOW -->
+      <article class="ravlo-card partner-section-card">
+        <div class="section-head">
+          <div>
+            <h3>Execution Workflow</h3>
+            <p>How contractor partners move smoothly through Ravlo.</p>
           </div>
         </div>
 
@@ -128,78 +252,157 @@ Manage renovation requests, active jobs, bid opportunities, and field updates fr
           <div class="workflow-step">
             <span class="step-no">01</span>
             <h4>Review Request</h4>
-            <p>Open incoming project requests and verify scope, property details, and service type.</p>
+            <p>Understand the job scope, location, and expectations.</p>
           </div>
 
           <div class="workflow-step">
             <span class="step-no">02</span>
-            <h4>Evaluate Scope</h4>
-            <p>Assess renovation needs, estimate complexity, and prepare response strategy.</p>
+            <h4>Submit Scope / Bid</h4>
+            <p>Respond with pricing, notes, timing, or execution details.</p>
           </div>
 
           <div class="workflow-step">
             <span class="step-no">03</span>
-            <h4>Submit Bid / Response</h4>
-            <p>Send pricing, timeline, or availability based on the project request.</p>
+            <h4>Execute Work</h4>
+            <p>Move the project forward while keeping status visible.</p>
           </div>
 
           <div class="workflow-step">
             <span class="step-no">04</span>
-            <h4>Manage Active Work</h4>
-            <p>Track progress, tasks, and field execution from the workspace once engaged.</p>
+            <h4>Update & Close Out</h4>
+            <p>Share progress, complete work, and close the loop clearly.</p>
           </div>
         </div>
       </article>
 
     </div>
 
+    <!-- SIDE -->
     <aside class="partner-dashboard-side">
 
+      <!-- CORE TOOLS -->
       <article class="ravlo-card partner-section-card">
         <div class="section-head">
           <div>
-            <h3>Contractor Tools</h3>
-            <p>Core areas you’ll use most often.</p>
+            <h3>Core Tools</h3>
+            <p>What you’ll use most inside your contractor workspace.</p>
           </div>
         </div>
 
         <div class="partner-tool-list">
           <div class="partner-tool-item">
-            <strong>Requests Inbox</strong>
-            <span>New opportunities and service inquiries</span>
+            <strong>Job Requests</strong>
+            <span>Incoming opportunities and project invites</span>
           </div>
+
           <div class="partner-tool-item">
-            <strong>Workspace</strong>
-            <span>Jobs, tasks, milestones, and coordination</span>
+            <strong>Project Workspace</strong>
+            <span>Active work, statuses, and project communication</span>
           </div>
+
           <div class="partner-tool-item">
-            <strong>Bid Tracking</strong>
-            <span>Estimate follow-up and project conversion</span>
+            <strong>Scope / Bid Resources</strong>
+            <span>Templates, references, and execution materials</span>
           </div>
+
           <div class="partner-tool-item">
-            <strong>Project Updates</strong>
-            <span>Status notes, execution visibility, and communication</span>
+            <strong>Contractor Profile</strong>
+            <span>Trades, service area, company details, and availability</span>
           </div>
         </div>
       </article>
 
+      <!-- JOB SNAPSHOT -->
+      <article class="ravlo-card partner-section-card">
+        <div class="section-head">
+          <div>
+            <h3>Job Snapshot</h3>
+            <p>Fast visibility into your current workload.</p>
+          </div>
+        </div>
+
+        <div class="partner-checklist contractor-checklist">
+          <div class="partner-check-item">Open job requests: {{ new_requests_count|default(0) }}</div>
+          <div class="partner-check-item">Projects in progress: {{ active_projects_count|default(0) }}</div>
+          <div class="partner-check-item">Pending bids: {{ pending_bids_count|default(0) }}</div>
+          <div class="partner-check-item">Completed this month: {{ completed_count|default(0) }}</div>
+        </div>
+      </article>
+
+      <!-- PERFORMANCE -->
       <article class="ravlo-card partner-section-card">
         <div class="section-head">
           <div>
             <h3>Performance Focus</h3>
-            <p>What matters most for contractor success on Ravlo.</p>
+            <p>What helps contractor partners stand out on Ravlo.</p>
           </div>
         </div>
 
         <div class="partner-checklist">
-          <div class="partner-check-item">Respond quickly to new service requests</div>
-          <div class="partner-check-item">Keep scopes and pricing easy to understand</div>
-          <div class="partner-check-item">Update active project progress consistently</div>
-          <div class="partner-check-item">Maintain professional turnaround and visibility</div>
+          <div class="partner-check-item">Respond quickly to new job requests</div>
+          <div class="partner-check-item">Keep project status and updates visible</div>
+          <div class="partner-check-item">Submit clean scopes and realistic timing</div>
+          <div class="partner-check-item">Maintain strong execution communication</div>
         </div>
       </article>
 
     </aside>
+
   </section>
 </div>
+
+<style>
+  .contractor-dashboard-page .contractor-project-item {
+    align-items: center;
+    justify-content: space-between;
+    gap: 18px;
+  }
+
+  .contractor-project-copy {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .contractor-project-meta {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 4px;
+    text-align: right;
+  }
+
+  .contractor-project-meta span {
+    color: #8ea4b7;
+    font-size: 0.9rem;
+  }
+
+  .contractor-project-meta strong {
+    color: #ffffff;
+  }
+
+  .contractor-pipeline-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .contractor-checklist .partner-check-item {
+    justify-content: flex-start;
+  }
+
+  @media (max-width: 900px) {
+    .contractor-pipeline-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .contractor-dashboard-page .contractor-project-item {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+
+    .contractor-project-meta {
+      align-items: flex-start;
+      text-align: left;
+    }
+  }
+</style>
 {% endblock %}
