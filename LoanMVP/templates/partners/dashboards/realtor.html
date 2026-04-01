@@ -4,38 +4,42 @@
 
 {% block page_title %}Realtor Dashboard{% endblock %}
 {% block page_subline %}
-Manage client inquiries, investor property interest, active opportunities, and follow-up tasks from one workspace.
+Track opportunities, manage deal flow, and stay connected to investor activity across Ravlo.
 {% endblock %}
 
 {% block topbar_actions %}
   <a href="{{ url_for('partners.requests_inbox') }}" class="ravlo-btn ghost sm">
-    View Client Requests
+    View Opportunities
   </a>
   <a href="{{ url_for('partners.workspace_home') }}" class="ravlo-btn primary sm">
-    Open Workspace
+    Open Realtor Workspace
   </a>
 {% endblock %}
 
 {% block content %}
-<div class="partner-dashboard-page realtor-dashboard">
+<div class="partner-dashboard-page default-partner-dashboard realtor-dashboard-page">
 
-  <!-- HERO / SUMMARY -->
-  <section class="ravlo-card partner-hero-card">
+  <!-- HERO -->
+  <section class="ravlo-card partner-hero-card realtor-hero-card">
     <div class="partner-hero-grid">
       <div class="partner-hero-copy">
-        <span class="partner-eyebrow">Partner Command</span>
-        <h2 class="partner-hero-title">Organize leads, manage property interest, and keep deals moving.</h2>
+        <span class="partner-eyebrow">Deal Flow Command</span>
+        <h2 class="partner-hero-title">
+          Stay close to opportunities, investor activity, and active real estate movement.
+        </h2>
+
         <p class="partner-hero-text">
-          Review incoming buyer and seller opportunities, respond to investor inquiries,
-          and manage active client relationships inside the Ravlo partner ecosystem.
+          Built for realtors and acquisition partners inside the Ravlo network, this dashboard
+          gives you a focused place to manage incoming opportunities, active property conversations,
+          and deal-related workflow without unnecessary noise.
         </p>
 
         <div class="partner-hero-actions">
           <a href="{{ url_for('partners.requests_inbox') }}" class="ravlo-btn primary">
-            Review Client Requests
+            Review Opportunities
           </a>
           <a href="{{ url_for('partners.workspace_home') }}" class="ravlo-btn ghost">
-            Go to Workspace
+            Open Workspace
           </a>
         </div>
       </div>
@@ -43,11 +47,12 @@ Manage client inquiries, investor property interest, active opportunities, and f
       <div class="partner-hero-panel">
         <div class="partner-mini-stat">
           <span class="label">Priority Focus</span>
-          <strong>Lead response, property matching, active follow-up</strong>
+          <strong>Lead flow, property opportunities, and investor coordination</strong>
         </div>
+
         <div class="partner-mini-stat">
           <span class="label">Best Use</span>
-          <strong>Turn inquiries into active opportunities</strong>
+          <strong>Keep acquisition and property activity moving with clarity</strong>
         </div>
       </div>
     </div>
@@ -56,150 +61,348 @@ Manage client inquiries, investor property interest, active opportunities, and f
   <!-- STATS -->
   <section class="partner-stats-grid">
     <article class="ravlo-card partner-stat-card">
-      <div class="partner-stat-label">New Inquiries</div>
+      <div class="partner-stat-label">New Opportunities</div>
       <div class="partner-stat-value">{{ new_requests_count|default(0) }}</div>
-      <div class="partner-stat-note">Fresh buyer, seller, or investor requests</div>
+      <div class="partner-stat-note">Incoming investor or property-related opportunities</div>
     </article>
 
     <article class="ravlo-card partner-stat-card">
-      <div class="partner-stat-label">Active Clients</div>
-      <div class="partner-stat-value">{{ active_clients_count|default(0) }}</div>
-      <div class="partner-stat-note">Leads currently being worked</div>
+      <div class="partner-stat-label">Active Deal Flow</div>
+      <div class="partner-stat-value">{{ active_deals_count|default(0) }}</div>
+      <div class="partner-stat-note">Properties or client deals currently in motion</div>
     </article>
 
     <article class="ravlo-card partner-stat-card">
-      <div class="partner-stat-label">Property Matches</div>
-      <div class="partner-stat-value">{{ property_matches_count|default(0) }}</div>
-      <div class="partner-stat-note">Potential fit opportunities in motion</div>
+      <div class="partner-stat-label">Pending Follow-Ups</div>
+      <div class="partner-stat-value">{{ pending_followups_count|default(0) }}</div>
+      <div class="partner-stat-note">Touches, responses, or updates waiting on you</div>
     </article>
 
     <article class="ravlo-card partner-stat-card">
-      <div class="partner-stat-label">Closed Deals</div>
-      <div class="partner-stat-value">{{ closed_deals_count|default(0) }}</div>
-      <div class="partner-stat-note">Completed transactions and wins</div>
+      <div class="partner-stat-label">Closed This Month</div>
+      <div class="partner-stat-value">{{ closed_count|default(0) }}</div>
+      <div class="partner-stat-note">Closed opportunities and completed outcomes</div>
     </article>
   </section>
 
   <!-- MAIN GRID -->
   <section class="partner-dashboard-grid">
 
+    <!-- MAIN -->
     <div class="partner-dashboard-main">
 
+      <!-- QUICK ACTIONS -->
       <article class="ravlo-card partner-section-card">
         <div class="section-head">
           <div>
             <h3>Quick Actions</h3>
-            <p>Move quickly through your realtor workflow.</p>
+            <p>Move through your real estate workflow faster.</p>
           </div>
         </div>
 
         <div class="quick-action-grid">
           <a class="partner-action-card" href="{{ url_for('partners.requests_inbox') }}">
             <div class="partner-action-icon">
-              <i class="lucide lucide-users"></i>
+              <i class="lucide lucide-inbox"></i>
             </div>
             <div class="partner-action-copy">
-              <h4>Client Requests</h4>
-              <p>View incoming buyer, seller, and investor real estate inquiries.</p>
+              <h4>Opportunity Inbox</h4>
+              <p>Review investor requests, property opportunities, and partner outreach.</p>
             </div>
           </a>
 
           <a class="partner-action-card" href="{{ url_for('partners.workspace_home') }}">
             <div class="partner-action-icon">
-              <i class="lucide lucide-building-2"></i>
+              <i class="lucide lucide-briefcase-business"></i>
             </div>
             <div class="partner-action-copy">
-              <h4>Workspace</h4>
-              <p>Track active clients, property tasks, notes, and follow-up activity.</p>
+              <h4>Realtor Workspace</h4>
+              <p>Track active conversations, properties, and ongoing deal activity.</p>
+            </div>
+          </a>
+
+          <a class="partner-action-card" href="{{ url_for('partners.resources') }}">
+            <div class="partner-action-icon">
+              <i class="lucide lucide-house"></i>
+            </div>
+            <div class="partner-action-copy">
+              <h4>Property Resources</h4>
+              <p>Access tools, guidance, and materials that support deal flow.</p>
+            </div>
+          </a>
+
+          <a class="partner-action-card" href="{{ url_for('partners.profile') }}">
+            <div class="partner-action-icon">
+              <i class="lucide lucide-user-round-search"></i>
+            </div>
+            <div class="partner-action-copy">
+              <h4>Realtor Profile</h4>
+              <p>Update your market focus, service areas, and partner-facing details.</p>
             </div>
           </a>
         </div>
       </article>
 
+      <!-- DEAL FLOW -->
+      <article class="ravlo-card partner-section-card">
+        <div class="section-head">
+          <div>
+            <h3>Deal Flow Snapshot</h3>
+            <p>Simple stage visibility across your active opportunities.</p>
+          </div>
+        </div>
+
+        <div class="workflow-grid realtor-pipeline-grid">
+          <div class="workflow-step">
+            <span class="step-no">01</span>
+            <h4>New</h4>
+            <p>{{ new_requests_count|default(0) }} opportunities waiting for your review.</p>
+          </div>
+
+          <div class="workflow-step">
+            <span class="step-no">02</span>
+            <h4>Engaged</h4>
+            <p>{{ engaged_count|default(0) }} active property or investor conversations in progress.</p>
+          </div>
+
+          <div class="workflow-step">
+            <span class="step-no">03</span>
+            <h4>Offer / Negotiation</h4>
+            <p>{{ offer_count|default(0) }} opportunities currently moving through offer stages.</p>
+          </div>
+
+          <div class="workflow-step">
+            <span class="step-no">04</span>
+            <h4>Closed</h4>
+            <p>{{ closed_count|default(0) }} opportunities successfully completed.</p>
+          </div>
+        </div>
+      </article>
+
+      <!-- ACTIVE OPPORTUNITIES -->
+      <article class="ravlo-card partner-section-card">
+        <div class="section-head">
+          <div>
+            <h3>Active Opportunities</h3>
+            <p>Your most important properties and investor-facing opportunities.</p>
+          </div>
+        </div>
+
+        <div class="partner-tool-list">
+          {% if active_opportunities %}
+            {% for item in active_opportunities %}
+            <div class="partner-tool-item realtor-opportunity-item">
+              <div class="realtor-opportunity-copy">
+                <strong>{{ item.title or "Opportunity" }}</strong>
+                <span>{{ item.address or "Property / location" }}</span>
+              </div>
+              <div class="realtor-opportunity-meta">
+                <span>{{ item.category or "Property" }}</span>
+                <strong>{{ item.status or "Active" }}</strong>
+              </div>
+            </div>
+            {% endfor %}
+          {% else %}
+            <div class="partner-tool-item realtor-opportunity-item">
+              <div class="realtor-opportunity-copy">
+                <strong>Whitlock Investor Inquiry</strong>
+                <span>158 Whitlock Rd, Otisville, NY</span>
+              </div>
+              <div class="realtor-opportunity-meta">
+                <span>Fix &amp; Flip</span>
+                <strong>Engaged</strong>
+              </div>
+            </div>
+
+            <div class="partner-tool-item realtor-opportunity-item">
+              <div class="realtor-opportunity-copy">
+                <strong>Maple Multifamily Lead</strong>
+                <span>42 Maple Ave, Newark, NJ</span>
+              </div>
+              <div class="realtor-opportunity-meta">
+                <span>Acquisition</span>
+                <strong>Offer Stage</strong>
+              </div>
+            </div>
+
+            <div class="partner-tool-item realtor-opportunity-item">
+              <div class="realtor-opportunity-copy">
+                <strong>Willow Rental Search</strong>
+                <span>11 Willow Dr, Tampa, FL</span>
+              </div>
+              <div class="realtor-opportunity-meta">
+                <span>Rental</span>
+                <strong>Active</strong>
+              </div>
+            </div>
+          {% endif %}
+        </div>
+      </article>
+
+      <!-- WORKFLOW -->
       <article class="ravlo-card partner-section-card">
         <div class="section-head">
           <div>
             <h3>Realtor Workflow</h3>
-            <p>Recommended process for managing real estate opportunities inside Ravlo.</p>
+            <p>How real estate partners move efficiently inside Ravlo.</p>
           </div>
         </div>
 
         <div class="workflow-grid">
           <div class="workflow-step">
             <span class="step-no">01</span>
-            <h4>Review Inquiry</h4>
-            <p>Open new buyer, seller, or investor requests and verify the opportunity details.</p>
+            <h4>Review Opportunity</h4>
+            <p>Understand the investor need, property direction, or market request.</p>
           </div>
 
           <div class="workflow-step">
             <span class="step-no">02</span>
-            <h4>Qualify & Organize</h4>
-            <p>Clarify client goals, timeline, location, and property criteria for next steps.</p>
+            <h4>Engage & Source</h4>
+            <p>Connect, respond, and begin moving the property or deal conversation forward.</p>
           </div>
 
           <div class="workflow-step">
             <span class="step-no">03</span>
-            <h4>Match Opportunity</h4>
-            <p>Connect the client with listings, investor opportunities, or follow-up actions.</p>
+            <h4>Advance the Deal</h4>
+            <p>Track the property, offer activity, or ongoing investor coordination.</p>
           </div>
 
           <div class="workflow-step">
             <span class="step-no">04</span>
-            <h4>Manage Progress</h4>
-            <p>Track communications, active tasks, and deal momentum from the workspace.</p>
+            <h4>Close & Update</h4>
+            <p>Keep the network informed as deals move toward close or completion.</p>
           </div>
         </div>
       </article>
 
     </div>
 
+    <!-- SIDE -->
     <aside class="partner-dashboard-side">
 
+      <!-- CORE TOOLS -->
       <article class="ravlo-card partner-section-card">
         <div class="section-head">
           <div>
-            <h3>Realtor Tools</h3>
-            <p>Core areas you’ll use most often.</p>
+            <h3>Core Tools</h3>
+            <p>Your most-used areas as a realtor partner.</p>
           </div>
         </div>
 
         <div class="partner-tool-list">
           <div class="partner-tool-item">
-            <strong>Client Requests</strong>
-            <span>New buyer, seller, and investor inquiries</span>
+            <strong>Opportunity Inbox</strong>
+            <span>Investor requests and partner-introduced opportunities</span>
           </div>
+
           <div class="partner-tool-item">
-            <strong>Workspace</strong>
-            <span>Client progress, property tasks, and follow-up notes</span>
+            <strong>Realtor Workspace</strong>
+            <span>Active conversations, properties, and opportunity flow</span>
           </div>
+
           <div class="partner-tool-item">
-            <strong>Property Matching</strong>
-            <span>Track opportunities aligned with client needs</span>
+            <strong>Property Resources</strong>
+            <span>Guides, materials, and partner-facing support</span>
           </div>
+
           <div class="partner-tool-item">
-            <strong>Lead Management</strong>
-            <span>Stay on top of outreach and conversion activity</span>
+            <strong>Realtor Profile</strong>
+            <span>Markets served, specialties, and visibility details</span>
           </div>
         </div>
       </article>
 
+      <!-- SNAPSHOT -->
+      <article class="ravlo-card partner-section-card">
+        <div class="section-head">
+          <div>
+            <h3>Deal Snapshot</h3>
+            <p>Quick visibility into your current opportunity mix.</p>
+          </div>
+        </div>
+
+        <div class="partner-checklist realtor-checklist">
+          <div class="partner-check-item">New opportunities: {{ new_requests_count|default(0) }}</div>
+          <div class="partner-check-item">Active deal flow: {{ active_deals_count|default(0) }}</div>
+          <div class="partner-check-item">Pending follow-ups: {{ pending_followups_count|default(0) }}</div>
+          <div class="partner-check-item">Closed this month: {{ closed_count|default(0) }}</div>
+        </div>
+      </article>
+
+      <!-- PERFORMANCE -->
       <article class="ravlo-card partner-section-card">
         <div class="section-head">
           <div>
             <h3>Performance Focus</h3>
-            <p>What matters most for realtor success on Ravlo.</p>
+            <p>What helps realtor partners win on Ravlo.</p>
           </div>
         </div>
 
         <div class="partner-checklist">
-          <div class="partner-check-item">Respond quickly to new client inquiries</div>
-          <div class="partner-check-item">Keep follow-up organized and visible</div>
-          <div class="partner-check-item">Match opportunities efficiently</div>
-          <div class="partner-check-item">Maintain strong deal momentum and communication</div>
+          <div class="partner-check-item">Respond quickly to investor opportunities</div>
+          <div class="partner-check-item">Keep deal flow visible and current</div>
+          <div class="partner-check-item">Maintain strong property communication</div>
+          <div class="partner-check-item">Move opportunities toward clean outcomes</div>
         </div>
       </article>
 
     </aside>
+
   </section>
 </div>
+
+<style>
+  .realtor-dashboard-page .realtor-opportunity-item {
+    align-items: center;
+    justify-content: space-between;
+    gap: 18px;
+  }
+
+  .realtor-opportunity-copy {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .realtor-opportunity-meta {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 4px;
+    text-align: right;
+  }
+
+  .realtor-opportunity-meta span {
+    color: #8ea4b7;
+    font-size: 0.9rem;
+  }
+
+  .realtor-opportunity-meta strong {
+    color: #ffffff;
+  }
+
+  .realtor-pipeline-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .realtor-checklist .partner-check-item {
+    justify-content: flex-start;
+  }
+
+  @media (max-width: 900px) {
+    .realtor-pipeline-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .realtor-dashboard-page .realtor-opportunity-item {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+
+    .realtor-opportunity-meta {
+      align-items: flex-start;
+      text-align: left;
+    }
+  }
+</style>
 {% endblock %}
