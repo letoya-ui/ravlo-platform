@@ -267,7 +267,6 @@ def profile(partner_id):
     return render_template(
         "partners/profile.html",
         partner=partner,
-        partner_id=partner_id,
         portal="partner",
         portal_name="Partner OS",
         portal_home=url_for("partners.dashboard"),
