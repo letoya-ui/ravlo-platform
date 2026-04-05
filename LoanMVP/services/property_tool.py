@@ -12,6 +12,11 @@ from LoanMVP.services.deal_workspace_calcs import (
     safe_float,
 )
 
+from LoanMVP.services.deal_finder_engine import (
+    build_deal_thesis,
+    compute_ravlo_score,
+    determine_primary_and_fallback,
+)
 
 RENTCAST_BASE = "https://api.rentcast.io/v1"
 RENTCAST_KEY = (os.environ.get("RENTCAST_API_KEY") or "").strip()
@@ -377,8 +382,25 @@ def _search_deals_for_zip_rentcast(
                 **airbnb_metrics,
             }
 
-        score_data = calculate_deal_score(metrics)
-        recommended_strategy = determine_strategy(metrics, recommendation)
+        score_data = compute_ravlo_score({
+            "metrics": metrics,
+            "price": price,
+            "arv": arv,
+            "rehab": rehab,
+        })
+
+        strategy_data = determine_primary_and_fallback({
+            "comparison": comparison
+        })
+
+        deal_thesis = build_deal_thesis({
+            "metrics": metrics,
+            "price": price,
+            "arv": arv,
+            "rehab": rehab,
+            "rent": rent,
+        })
+
         ai_summary = generate_ai_deal_summary(metrics)
 
         photo = _listing_photo(l)
