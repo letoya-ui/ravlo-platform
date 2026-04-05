@@ -3163,18 +3163,22 @@ def property_tool():
 # 🔌 INVESTOR • APIs (Property Tool)
 # =========================================================
 
-@investor_bp.route("/api/intelligence/zip-search", methods=["POST"])
 @investor_bp.route("/api/property_tool_search", methods=["POST"])
 @csrf.exempt
 @login_required
 @role_required("investor")
 def api_property_tool_search():
     payload = request.get_json(force=True) or {}
+
     zip_code = (payload.get("zip") or "").strip()
     strategy = (payload.get("strategy") or "flip").strip().lower()
+    provider = (payload.get("provider") or "auto").strip().lower()
 
     if not zip_code:
-        return jsonify({"status": "error", "message": "ZIP code is required."}), 400
+        return jsonify({
+            "status": "error",
+            "message": "ZIP code is required."
+        }), 400
 
     def _num(v):
         try:
@@ -3184,20 +3188,33 @@ def api_property_tool_search():
         except Exception:
             return None
 
-    results = search_deals_for_zip(
-        zip_code=zip_code,
-        strategy=strategy,
-        price_min=_num(payload.get("price_min")),
-        price_max=_num(payload.get("price_max")),
-        beds_min=_num(payload.get("beds_min")),
-        baths_min=_num(payload.get("baths_min")),
-        min_roi=_num(payload.get("min_roi")),
-        min_cashflow=_num(payload.get("min_cashflow")),
-        limit=int(payload.get("limit") or 20),
-    )
+    try:
+        results = search_deals_for_zip(
+            zip_code=zip_code,
+            strategy=strategy,
+            price_min=_num(payload.get("price_min")),
+            price_max=_num(payload.get("price_max")),
+            beds_min=_num(payload.get("beds_min")),
+            baths_min=_num(payload.get("baths_min")),
+            min_roi=_num(payload.get("min_roi")),
+            min_cashflow=_num(payload.get("min_cashflow")),
+            limit=int(payload.get("limit") or 20),
+            provider=provider,
+        )
 
-    return jsonify({"status": "ok", "zip": zip_code, "strategy": strategy, "results": results})
+        return jsonify({
+            "status": "ok",
+            "zip": zip_code,
+            "strategy": strategy,
+            "provider": provider,
+            "results": results,
+        })
 
+    except Exception as e:
+        return jsonify({
+            "status": "error",
+            "message": f"Deal Finder search failed: {e}"
+        }), 500
 
 @investor_bp.route("/api/intelligence/save", methods=["POST"])
 @investor_bp.route("/api/property_tool_save", methods=["POST"])
