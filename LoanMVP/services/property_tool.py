@@ -1,8 +1,8 @@
 # LoanMVP/services/property_tool.py
 import os
 import requests
+from typing import Any, Dict, List, Optional
 
-from LoanMVP.services.property_service import resolve_rentcast_investor_bundle
 from LoanMVP.services.deal_workspace_calcs import (
     calculate_flip_budget,
     calculate_rental_budget,
@@ -17,14 +17,57 @@ from LoanMVP.services.deal_finder_engine import (
     determine_primary_and_fallback,
 )
 
-RENTCAST_BASE = "https://api.rentcast.io/v1"
-RENTCAST_KEY = (os.environ.get("RENTCAST_API_KEY") or "").strip()
+ATTOM_BASE_URL = os.getenv("ATTOM_BASE_URL", "https://api.gateway.attomdata.com").rstrip("/")
+ATTOM_API_KEY = (os.getenv("ATTOM_API_KEY") or "").strip()
+ATTOM_TIMEOUT = int(os.getenv("DEALFINDER_TIMEOUT", "20"))
+
+_session = requests.Session()
 
 
-def _headers():
-    if not RENTCAST_KEY:
-        raise RuntimeError("RENTCAST_API_KEY is missing.")
-    return {"X-Api-Key": RENTCAST_KEY}
+class AttomSearchError(Exception):
+    pass
+
+
+def _headers() -> Dict[str, str]:
+    if not ATTOM_API_KEY:
+        raise AttomSearchError("ATTOM_API_KEY is missing.")
+    return {
+        "accept": "application/json",
+        "apikey": ATTOM_API_KEY,
+    }
+
+
+def _get(path: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    url = f"{ATTOM_BASE_URL}{path}"
+    try:
+        res = _session.get(
+            url,
+            headers=_headers(),
+            params=params or {},
+            timeout=ATTOM_TIMEOUT,
+        )
+        res.raise_for_status()
+        return res.json()
+    except requests.HTTPError as e:
+        body = ""
+        try:
+            body = (res.text or "")[:500]
+        except Exception:
+            pass
+        raise AttomSearchError(f"ATTOM HTTP error: {e}. body={body}")
+    except Exception as e:
+        raise AttomSearchError(f"ATTOM request failed: {e}")
+
+
+def _safe_get(dct: Any, *keys: str, default=None):
+    cur = dct
+    for key in keys:
+        if not isinstance(cur, dict):
+            return default
+        cur = cur.get(key)
+        if cur is None:
+            return default
+    return cur
 
 
 def _as_float(x):
@@ -51,42 +94,6 @@ def _keyword_fixer_score(text: str) -> int:
         "water damage", "roof", "vacant", "estate sale",
     ]
     return sum(1 for w in hits if w in t)
-
-
-def _listing_photo(listing: dict):
-    if not isinstance(listing, dict):
-        return None
-
-    candidates = [
-        listing.get("imageUrl"),
-        listing.get("primaryPhoto"),
-        listing.get("photo"),
-        listing.get("photos"),
-        listing.get("imageUrls"),
-        listing.get("photoUrls"),
-        listing.get("images"),
-    ]
-
-    for val in candidates:
-        if isinstance(val, str) and val.strip():
-            return val.strip()
-        if isinstance(val, list) and val:
-            first = val[0]
-            if isinstance(first, str) and first.strip():
-                return first.strip()
-            if isinstance(first, dict):
-                url = first.get("url") or first.get("href") or first.get("src")
-                if isinstance(url, str) and url.strip():
-                    return url.strip()
-
-    for key in ("media", "assets", "listing", "property", "details"):
-        nested = listing.get(key)
-        if isinstance(nested, dict):
-            nested_photo = _listing_photo(nested)
-            if nested_photo:
-                return nested_photo
-
-    return None
 
 
 def _estimate_rehab_from_score(score: int, sqft: float | None) -> float:
@@ -126,57 +133,134 @@ def determine_strategy(metrics: dict, comparison: dict | None = None) -> str:
     return "Review"
 
 
-def _rentcast_sale_listings(
+def _listing_photo(listing: dict):
+    """
+    ATTOM usually won't give you listing photos the way listing APIs do.
+    Keep a safe placeholder.
+    """
+    return "/static/images/placeholder_property.jpg"
+
+
+def _normalize_attom_listing(raw: Dict[str, Any], zip_code_fallback: str = "") -> Dict[str, Any]:
+    address = _safe_get(raw, "address", "oneLine") or _safe_get(raw, "address", "line1") or ""
+    city = _safe_get(raw, "address", "locality") or ""
+    state = _safe_get(raw, "address", "countrySubd") or ""
+    zip_code = _safe_get(raw, "address", "postal1") or zip_code_fallback or ""
+
+    price = _as_float(
+        _safe_get(raw, "assessment", "market", "mktttlvalue")
+        or _safe_get(raw, "sale", "amount", "saleAmt")
+    )
+
+    beds = _safe_int(_safe_get(raw, "building", "rooms", "beds"))
+    baths = safe_float(_safe_get(raw, "building", "rooms", "bathstotal"))
+    sqft = _as_float(_safe_get(raw, "building", "size", "universalsize"))
+    year_built = _safe_int(_safe_get(raw, "summary", "yearBuilt"))
+    remarks = raw.get("remarks") or raw.get("description") or ""
+
+    attom_id = _safe_get(raw, "identifier", "attomId") or raw.get("attomid")
+    property_type = _safe_get(raw, "summary", "propType") or _safe_get(raw, "summary", "propSubType")
+
+    return {
+        "address": address.strip(),
+        "city": city.strip(),
+        "state": state.strip(),
+        "zip": str(zip_code).strip(),
+        "price": price,
+        "beds": beds,
+        "baths": baths,
+        "sqft": _safe_int(sqft),
+        "year_built": year_built,
+        "remarks": remarks,
+        "property_id": str(attom_id).strip() if attom_id else None,
+        "property_type": property_type,
+        "raw": raw,
+    }
+
+
+def _extract_attom_list(data: dict) -> list[dict]:
+    candidates = (
+        data.get("property")
+        or data.get("properties")
+        or _safe_get(data, "response", "property")
+        or _safe_get(data, "response", "properties")
+        or []
+    )
+
+    if isinstance(candidates, dict):
+        return [candidates]
+    if isinstance(candidates, list):
+        return candidates
+    return []
+
+
+def _attom_sale_listings_by_zip(
     zip_code: str,
     limit: int = 20,
     price_min=None,
     price_max=None,
     beds_min=None,
     baths_min=None,
-):
-    params = {"zipCode": zip_code, "limit": limit}
-    if price_min is not None:
-        params["priceMin"] = price_min
-    if price_max is not None:
-        params["priceMax"] = price_max
-    if beds_min is not None:
-        params["bedsMin"] = beds_min
-    if baths_min is not None:
-        params["bathsMin"] = baths_min
+) -> list[dict]:
+    page = 1
+    page_size = min(max(int(limit or 20), 1), 100)
 
-    r = requests.get(
-        f"{RENTCAST_BASE}/listings/sale",
-        headers=_headers(),
-        params=params,
-        timeout=30,
+    params = {
+        "postalcode": zip_code,
+        "page": page,
+        "pagesize": page_size,
+    }
+
+    data = _get("/propertyapi/v1.0.0/property/address", params=params)
+    rows = _extract_attom_list(data)
+
+    normalized = []
+    for row in rows:
+        item = _normalize_attom_listing(row, zip_code_fallback=zip_code)
+
+        # Apply local filters since ATTOM endpoint support can vary by package
+        price = _as_float(item.get("price"))
+        beds = _safe_int(item.get("beds"))
+        baths = safe_float(item.get("baths"))
+
+        if price_min is not None and price is not None and float(price) < float(price_min):
+            continue
+        if price_max is not None and price is not None and float(price) > float(price_max):
+            continue
+        if beds_min is not None and beds is not None and int(beds) < int(float(beds_min)):
+            continue
+        if baths_min is not None and baths is not None and float(baths) < float(baths_min):
+            continue
+
+        normalized.append(item)
+
+    return normalized[:limit]
+
+
+def _attom_value_estimate(raw_listing: Dict[str, Any]) -> Optional[float]:
+    """
+    Use ATTOM market/assessment values already returned in the listing/property payload.
+    """
+    raw = raw_listing.get("raw") or {}
+    value = (
+        _safe_get(raw, "assessment", "market", "mktttlvalue")
+        or _safe_get(raw, "sale", "amount", "saleAmt")
+        or _safe_get(raw, "assessment", "assessed", "assdttlvalue")
     )
-    r.raise_for_status()
-    data = r.json()
-    return data if isinstance(data, list) else (data.get("listings") or [])
+    return _as_float(value)
 
 
-def _rentcast_value_estimate(address: str, city: str, state: str, zip_code: str):
-    params = {"address": address, "city": city, "state": state, "zip": zip_code}
-    r = requests.get(
-        f"{RENTCAST_BASE}/avm/value",
-        headers=_headers(),
-        params=params,
-        timeout=30,
+def _attom_rent_estimate(raw_listing: Dict[str, Any]) -> Optional[float]:
+    """
+    ATTOM does have rental AVM products, but package access can vary.
+    Until you wire that product in your account, keep this conservative.
+    """
+    raw = raw_listing.get("raw") or {}
+    return _as_float(
+        _safe_get(raw, "avm", "rentalavm", "amount")
+        or _safe_get(raw, "rentalavm", "amount")
+        or _safe_get(raw, "rentalAVM", "amount")
     )
-    r.raise_for_status()
-    return r.json()
-
-
-def _rentcast_rent_estimate(address: str, city: str, state: str, zip_code: str):
-    params = {"address": address, "city": city, "state": state, "zip": zip_code}
-    r = requests.get(
-        f"{RENTCAST_BASE}/avm/rent/long-term",
-        headers=_headers(),
-        params=params,
-        timeout=30,
-    )
-    r.raise_for_status()
-    return r.json()
 
 
 def search_deals_for_zip(
@@ -191,32 +275,10 @@ def search_deals_for_zip(
     limit: int = 20,
     provider: str = "auto",
 ):
-    """
-    Transitional ZIP deal finder wrapper.
-
-    Current behavior:
-      - auto -> rentcast
-      - rentcast -> current working RentCast flow
-      - attom -> reserved for future ATTOM ZIP search flow
-      - unified -> reserved for future ATTOM + Mashvisor flow
-    """
     provider = (provider or "auto").strip().lower()
 
     if provider == "auto":
-        provider = "rentcast"
-
-    if provider == "rentcast":
-        return _search_deals_for_zip_rentcast(
-            zip_code=zip_code,
-            strategy=strategy,
-            price_min=price_min,
-            price_max=price_max,
-            beds_min=beds_min,
-            baths_min=baths_min,
-            min_roi=min_roi,
-            min_cashflow=min_cashflow,
-            limit=limit,
-        )
+        provider = "attom"
 
     if provider == "attom":
         return _search_deals_for_zip_attom(
@@ -247,7 +309,7 @@ def search_deals_for_zip(
     raise RuntimeError(f"Unsupported deal finder provider: {provider}")
 
 
-def _search_deals_for_zip_rentcast(
+def _search_deals_for_zip_attom(
     zip_code: str,
     strategy: str = "flip",
     price_min=None,
@@ -258,7 +320,7 @@ def _search_deals_for_zip_rentcast(
     min_cashflow=None,
     limit: int = 20,
 ):
-    listings = _rentcast_sale_listings(
+    listings = _attom_sale_listings_by_zip(
         zip_code=zip_code,
         limit=limit,
         price_min=price_min,
@@ -270,35 +332,23 @@ def _search_deals_for_zip_rentcast(
     out = []
 
     for idx, l in enumerate(listings):
-        addr = (l.get("addressLine1") or l.get("address") or "").strip()
+        addr = (l.get("address") or "").strip()
         city = (l.get("city") or "").strip()
         state = (l.get("state") or "").strip()
-        z = (l.get("zipCode") or zip_code or "").strip()
+        z = (l.get("zip") or zip_code or "").strip()
 
         price = _as_float(l.get("price"))
-        beds = _safe_int(l.get("bedrooms") or l.get("beds"))
-        baths = safe_float(l.get("bathrooms") or l.get("baths"))
-        sqft = _as_float(l.get("squareFootage") or l.get("sqft"))
-        year_built = _safe_int(l.get("yearBuilt") or l.get("year_built"))
-        remarks = l.get("description") or l.get("remarks") or ""
+        beds = _safe_int(l.get("beds"))
+        baths = safe_float(l.get("baths"))
+        sqft = _as_float(l.get("sqft"))
+        year_built = _safe_int(l.get("year_built"))
+        remarks = l.get("remarks") or ""
 
         fixer_score = _keyword_fixer_score(remarks)
         rehab = _estimate_rehab_from_score(fixer_score, sqft)
 
-        arv = None
-        rent = None
-
-        try:
-            v = _rentcast_value_estimate(addr, city, state, z)
-            arv = _as_float(v.get("price") or v.get("value") or v.get("estimate"))
-        except Exception:
-            pass
-
-        try:
-            r = _rentcast_rent_estimate(addr, city, state, z)
-            rent = _as_float(r.get("rent") or r.get("value") or r.get("estimate"))
-        except Exception:
-            pass
+        arv = _attom_value_estimate(l)
+        rent = _attom_rent_estimate(l)
 
         comps = {
             "property": {
@@ -311,7 +361,7 @@ def _search_deals_for_zip_rentcast(
                 "beds": beds,
                 "baths": baths,
                 "year_built": year_built,
-                "property_type": l.get("propertyType") or l.get("propertySubType"),
+                "property_type": l.get("property_type"),
             },
             "arv_estimate": arv,
             "market_rent_estimate": rent,
@@ -383,23 +433,6 @@ def _search_deals_for_zip_rentcast(
 
         photo = _listing_photo(l)
 
-        if not photo and addr and idx < 8:
-            try:
-                bundle = resolve_rentcast_investor_bundle(
-                    address=addr,
-                    beds=beds,
-                    baths=baths,
-                    sqft=sqft,
-                    property_type=l.get("propertyType") or l.get("propertySubType"),
-                )
-                if bundle.get("status") == "ok":
-                    photo = (bundle.get("property") or {}).get("primary_photo")
-            except Exception:
-                photo = None
-
-        if not photo:
-            photo = "/static/images/placeholder_property.jpg"
-
         if min_roi is not None and metrics.get("roi") is not None:
             if float(metrics["roi"]) < float(min_roi):
                 continue
@@ -425,8 +458,8 @@ def _search_deals_for_zip_rentcast(
             "sqft": _safe_int(sqft),
             "year_built": year_built,
             "photo": photo,
-            "property_id": l.get("id") or l.get("propertyId") or None,
-            "property_type": l.get("propertyType") or l.get("propertySubType") or None,
+            "property_id": l.get("property_id"),
+            "property_type": l.get("property_type"),
             "fixer_score": fixer_score,
             "rehab": rehab,
             "metrics": metrics,
@@ -438,7 +471,7 @@ def _search_deals_for_zip_rentcast(
             "deal_score": score_data,
             "deal_thesis": deal_thesis,
             "ai_summary": ai_summary,
-            "provider": "rentcast",
+            "provider": "attom",
         })
 
     out.sort(
@@ -456,34 +489,6 @@ def _search_deals_for_zip_rentcast(
     return out
 
 
-def _search_deals_for_zip_attom(
-    zip_code: str,
-    strategy: str = "flip",
-    price_min=None,
-    price_max=None,
-    beds_min=None,
-    baths_min=None,
-    min_roi=None,
-    min_cashflow=None,
-    limit: int = 20,
-):
-    """
-    Reserved for future ATTOM-powered ZIP search.
-    For now, we fall back to RentCast so Deal Finder keeps working.
-    """
-    return _search_deals_for_zip_rentcast(
-        zip_code=zip_code,
-        strategy=strategy,
-        price_min=price_min,
-        price_max=price_max,
-        beds_min=beds_min,
-        baths_min=baths_min,
-        min_roi=min_roi,
-        min_cashflow=min_cashflow,
-        limit=limit,
-    )
-
-
 def _search_deals_for_zip_unified(
     zip_code: str,
     strategy: str = "flip",
@@ -496,10 +501,10 @@ def _search_deals_for_zip_unified(
     limit: int = 20,
 ):
     """
-    Reserved for future ATTOM + Mashvisor flow.
-    For now, return current RentCast-backed ZIP deal search.
+    Future ATTOM + Mashvisor flow.
+    For now, return ATTOM-backed ZIP deal search.
     """
-    return _search_deals_for_zip_rentcast(
+    return _search_deals_for_zip_attom(
         zip_code=zip_code,
         strategy=strategy,
         price_min=price_min,
@@ -509,4 +514,4 @@ def _search_deals_for_zip_unified(
         min_roi=min_roi,
         min_cashflow=min_cashflow,
         limit=limit,
-    )
+        )
