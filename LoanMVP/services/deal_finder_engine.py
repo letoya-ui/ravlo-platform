@@ -3,44 +3,49 @@ def build_deal_thesis(item: dict) -> list:
     Generates human-readable reasons WHY this is a deal.
     This is what creates the "wow".
     """
-
     reasons = []
 
     price = item.get("price") or 0
     arv = item.get("arv") or 0
     rehab = item.get("rehab") or 0
-    rent = item.get("rent") or 0
 
     metrics = item.get("metrics") or {}
     roi = metrics.get("roi") or 0
     profit = metrics.get("profit") or 0
-    cashflow = metrics.get("net_cashflow_mo") or 0
+    cashflow = (
+        metrics.get("net_cashflow_mo")
+        or metrics.get("net_cashflow")
+        or 0
+    )
 
-    # --- VALUE GAP ---
+    # VALUE GAP
     if price and arv:
-        discount = (arv - price) / arv
-        if discount > 0.15:
-            reasons.append("Priced significantly below market value")
-        elif discount > 0.08:
-            reasons.append("Below estimated value range")
+        try:
+            discount = (arv - price) / arv
+            if discount > 0.15:
+                reasons.append("Priced significantly below market value")
+            elif discount > 0.08:
+                reasons.append("Below estimated value range")
+        except Exception:
+            pass
 
-    # --- FLIP SIGNAL ---
+    # FLIP SIGNAL
     if profit > 50000:
         reasons.append("Strong flip profit potential")
     elif profit > 25000:
         reasons.append("Solid flip margin")
 
-    # --- ROI ---
+    # ROI
     if roi > 0.25:
         reasons.append("High ROI opportunity")
     elif roi > 0.18:
         reasons.append("Above-average ROI")
 
-    # --- RENT FALLBACK ---
+    # RENT FALLBACK
     if cashflow and cashflow > 250:
         reasons.append("Rental fallback remains cash-flow positive")
 
-    # --- REHAB SIGNAL ---
+    # REHAB SIGNAL
     if rehab:
         if rehab < 25000:
             reasons.append("Light rehab — faster turnaround")
@@ -59,12 +64,15 @@ def compute_ravlo_score(item: dict) -> dict:
     """
     Stronger scoring engine combining flip, rental, and risk signals.
     """
-
     metrics = item.get("metrics") or {}
 
     roi = metrics.get("roi") or 0
     profit = metrics.get("profit") or 0
-    cashflow = metrics.get("net_cashflow_mo") or 0
+    cashflow = (
+        metrics.get("net_cashflow_mo")
+        or metrics.get("net_cashflow")
+        or 0
+    )
 
     price = item.get("price") or 0
     arv = item.get("arv") or 0
@@ -73,7 +81,7 @@ def compute_ravlo_score(item: dict) -> dict:
     score = 50
     risk = 0
 
-    # --- ROI ---
+    # ROI
     if roi > 0.30:
         score += 25
     elif roi > 0.20:
@@ -81,7 +89,7 @@ def compute_ravlo_score(item: dict) -> dict:
     elif roi > 0.15:
         score += 10
 
-    # --- PROFIT ---
+    # PROFIT
     if profit > 75000:
         score += 20
     elif profit > 40000:
@@ -89,21 +97,24 @@ def compute_ravlo_score(item: dict) -> dict:
     elif profit > 20000:
         score += 8
 
-    # --- CASHFLOW ---
+    # CASHFLOW
     if cashflow > 500:
         score += 15
     elif cashflow > 250:
         score += 10
 
-    # --- DISCOUNT ---
+    # DISCOUNT
     if price and arv:
-        discount = (arv - price) / arv
-        if discount > 0.15:
-            score += 10
-        elif discount > 0.08:
-            score += 5
+        try:
+            discount = (arv - price) / arv
+            if discount > 0.15:
+                score += 10
+            elif discount > 0.08:
+                score += 5
+        except Exception:
+            pass
 
-    # --- RISK ---
+    # RISK
     if rehab > 70000:
         risk += 10
     if roi < 0.12:
@@ -131,18 +142,25 @@ def compute_ravlo_score(item: dict) -> dict:
 
 def determine_primary_and_fallback(item: dict) -> dict:
     """
-    Gives investor confidence — HUGE psychological unlock.
+    Gives investor confidence and a fallback plan.
     """
-
     comparison = item.get("comparison") or {}
 
-    flip = comparison.get("flip", {})
-    rental = comparison.get("rental", {})
-    airbnb = comparison.get("airbnb", {})
+    flip = comparison.get("flip") or {}
+    rental = comparison.get("rental") or {}
+    airbnb = comparison.get("airbnb") or {}
 
     flip_profit = flip.get("profit") or 0
-    rental_cash = rental.get("net_cashflow_mo") or 0
-    airbnb_cash = airbnb.get("net_monthly") or 0
+    rental_cash = (
+        rental.get("net_cashflow_mo")
+        or rental.get("net_cashflow")
+        or 0
+    )
+    airbnb_cash = (
+        airbnb.get("net_monthly")
+        or airbnb.get("net_cashflow_mo")
+        or 0
+    )
 
     primary = "Review"
     fallback = None
