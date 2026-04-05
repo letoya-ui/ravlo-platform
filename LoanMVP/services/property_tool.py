@@ -202,6 +202,11 @@ def _rentcast_rent_estimate(address: str, city: str, state: str, zip_code: str):
 
 
 
+
+            
+        
+            "zip": z,
+            
 def search_deals_for_zip(
     zip_code: str,
     strategy: str = "flip",
@@ -214,15 +219,73 @@ def search_deals_for_zip(
     limit: int = 20,
     provider: str = "auto",
 ):
+    """
+    Transitional ZIP deal finder wrapper.
+
+    Current behavior:
+      - auto -> rentcast
+      - rentcast -> current working RentCast flow
+      - attom -> reserved for future ATTOM ZIP search flow
+      - unified -> reserved for future ATTOM + Mashvisor flow
+    """
     provider = (provider or "auto").strip().lower()
 
     if provider == "auto":
         provider = "rentcast"
 
-    if provider != "rentcast":
-        # temp fallback until ATTOM/Mashvisor ZIP flow is ready
-        provider = "rentcast"
+    if provider == "rentcast":
+        return _search_deals_for_zip_rentcast(
+            zip_code=zip_code,
+            strategy=strategy,
+            price_min=price_min,
+            price_max=price_max,
+            beds_min=beds_min,
+            baths_min=baths_min,
+            min_roi=min_roi,
+            min_cashflow=min_cashflow,
+            limit=limit,
+        )
 
+    if provider == "attom":
+        return _search_deals_for_zip_attom(
+            zip_code=zip_code,
+            strategy=strategy,
+            price_min=price_min,
+            price_max=price_max,
+            beds_min=beds_min,
+            baths_min=baths_min,
+            min_roi=min_roi,
+            min_cashflow=min_cashflow,
+            limit=limit,
+        )
+
+    if provider == "unified":
+        return _search_deals_for_zip_unified(
+            zip_code=zip_code,
+            strategy=strategy,
+            price_min=price_min,
+            price_max=price_max,
+            beds_min=beds_min,
+            baths_min=baths_min,
+            min_roi=min_roi,
+            min_cashflow=min_cashflow,
+            limit=limit,
+        )
+
+    raise RuntimeError(f"Unsupported deal finder provider: {provider}")
+
+
+def _search_deals_for_zip_rentcast(
+    zip_code: str,
+    strategy: str = "flip",
+    price_min=None,
+    price_max=None,
+    beds_min=None,
+    baths_min=None,
+    min_roi=None,
+    min_cashflow=None,
+    limit: int = 20,
+):
     listings = _rentcast_sale_listings(
         zip_code=zip_code,
         limit=limit,
@@ -403,7 +466,7 @@ def search_deals_for_zip(
             "deal_score": score_data,
             "deal_thesis": deal_thesis,
             "ai_summary": ai_summary,
-            "provider": provider,
+            "provider": "rentcast",
         })
 
     out.sort(
@@ -419,7 +482,62 @@ def search_deals_for_zip(
     )
 
     return out
-            
+
+
+def _search_deals_for_zip_attom(
+    zip_code: str,
+    strategy: str = "flip",
+    price_min=None,
+    price_max=None,
+    beds_min=None,
+    baths_min=None,
+    min_roi=None,
+    min_cashflow=None,
+    limit: int = 20,
+):
+    """
+    Reserved for future ATTOM-powered ZIP search.
+    For now, we fall back to RentCast so Deal Finder keeps working.
+    """
+    return _search_deals_for_zip_rentcast(
+        zip_code=zip_code,
+        strategy=strategy,
+        price_min=price_min,
+        price_max=price_max,
+        beds_min=beds_min,
+        baths_min=baths_min,
+        min_roi=min_roi,
+        min_cashflow=min_cashflow,
+        limit=limit,
+    )
+
+
+def _search_deals_for_zip_unified(
+    zip_code: str,
+    strategy: str = "flip",
+    price_min=None,
+    price_max=None,
+    beds_min=None,
+    baths_min=None,
+    min_roi=None,
+    min_cashflow=None,
+    limit: int = 20,
+):
+    """
+    Reserved for future ATTOM + Mashvisor flow.
+    For now, return current RentCast-backed ZIP deal search.
+    """
+    return _search_deals_for_zip_rentcast(
+        zip_code=zip_code,
+        strategy=strategy,
+        price_min=price_min,
+        price_max=price_max,
+        beds_min=beds_min,
+        baths_min=baths_min,
+        min_roi=min_roi,
+        min_cashflow=min_cashflow,
+        limit=limit,
+    )            
         
 def _search_deals_for_zip_rentcast(
     zip_code: str,
