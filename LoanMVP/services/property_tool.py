@@ -142,7 +142,6 @@ def _listing_photo(listing: dict):
 
 
 def _normalize_attom_listing(raw: Dict[str, Any], zip_code_fallback: str = "") -> Dict[str, Any]:
-def _normalize_attom_listing(raw: Dict[str, Any], zip_code_fallback: str = "") -> Dict[str, Any]:
     address = _safe_get(raw, "address", "oneLine") or _safe_get(raw, "address", "line1") or ""
     city = _safe_get(raw, "address", "locality") or ""
     state = _safe_get(raw, "address", "countrySubd") or ""
@@ -244,7 +243,8 @@ def _attom_sale_listings_by_zip(
 
     data = _get("/propertyapi/v1.0.0/property/address", params=params)
     rows = _extract_attom_list(data)
-
+    print("ATTOM RAW FIRST ROW:", rows[0] if rows else "NO ROWS")
+    
     normalized = []
     for row in rows:
         item = _normalize_attom_listing(row, zip_code_fallback=zip_code)
