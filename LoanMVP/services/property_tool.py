@@ -142,6 +142,7 @@ def _listing_photo(listing: dict):
 
 
 def _normalize_attom_listing(raw: Dict[str, Any], zip_code_fallback: str = "") -> Dict[str, Any]:
+def _normalize_attom_listing(raw: Dict[str, Any], zip_code_fallback: str = "") -> Dict[str, Any]:
     address = _safe_get(raw, "address", "oneLine") or _safe_get(raw, "address", "line1") or ""
     city = _safe_get(raw, "address", "locality") or ""
     state = _safe_get(raw, "address", "countrySubd") or ""
@@ -149,17 +150,47 @@ def _normalize_attom_listing(raw: Dict[str, Any], zip_code_fallback: str = "") -
 
     price = _as_float(
         _safe_get(raw, "assessment", "market", "mktttlvalue")
+        or _safe_get(raw, "assessment", "assessed", "assdttlvalue")
         or _safe_get(raw, "sale", "amount", "saleAmt")
+        or raw.get("avm")
+        or raw.get("estimatedValue")
+        or raw.get("marketValue")
+        or raw.get("price")
     )
 
-    beds = _safe_int(_safe_get(raw, "building", "rooms", "beds"))
-    baths = safe_float(_safe_get(raw, "building", "rooms", "bathstotal"))
-    sqft = _as_float(_safe_get(raw, "building", "size", "universalsize"))
-    year_built = _safe_int(_safe_get(raw, "summary", "yearBuilt"))
+    beds = _safe_int(
+        _safe_get(raw, "building", "rooms", "beds")
+        or raw.get("bedrooms")
+        or raw.get("beds")
+    )
+
+    baths = safe_float(
+        _safe_get(raw, "building", "rooms", "bathstotal")
+        or raw.get("bathrooms")
+        or raw.get("baths")
+    )
+
+    sqft = _as_float(
+        _safe_get(raw, "building", "size", "universalsize")
+        or raw.get("sqft")
+        or raw.get("squareFootage")
+    )
+
+    year_built = _safe_int(
+        _safe_get(raw, "summary", "yearBuilt")
+        or raw.get("yearBuilt")
+        or raw.get("year_built")
+    )
+
     remarks = raw.get("remarks") or raw.get("description") or ""
 
-    attom_id = _safe_get(raw, "identifier", "attomId") or raw.get("attomid")
-    property_type = _safe_get(raw, "summary", "propType") or _safe_get(raw, "summary", "propSubType")
+    attom_id = _safe_get(raw, "identifier", "attomId") or raw.get("attomid") or raw.get("id")
+    property_type = (
+        _safe_get(raw, "summary", "propType")
+        or _safe_get(raw, "summary", "propSubType")
+        or raw.get("propertyType")
+        or raw.get("propertySubType")
+    )
 
     return {
         "address": address.strip(),
@@ -238,17 +269,19 @@ def _attom_sale_listings_by_zip(
 
 
 def _attom_value_estimate(raw_listing: Dict[str, Any]) -> Optional[float]:
-    """
-    Use ATTOM market/assessment values already returned in the listing/property payload.
-    """
     raw = raw_listing.get("raw") or {}
+
     value = (
         _safe_get(raw, "assessment", "market", "mktttlvalue")
-        or _safe_get(raw, "sale", "amount", "saleAmt")
         or _safe_get(raw, "assessment", "assessed", "assdttlvalue")
+        or _safe_get(raw, "sale", "amount", "saleAmt")
+        or raw.get("avm")
+        or raw.get("estimatedValue")
+        or raw.get("marketValue")
+        or raw.get("price")
     )
-    return _as_float(value)
 
+    return _as_float(value)
 
 def _attom_rent_estimate(raw_listing: Dict[str, Any]) -> Optional[float]:
     """
