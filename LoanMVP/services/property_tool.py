@@ -11,7 +11,6 @@ from LoanMVP.services.deal_workspace_calcs import (
     generate_ai_deal_summary,
     safe_float,
 )
-
 from LoanMVP.services.deal_finder_engine import (
     build_deal_thesis,
     compute_ravlo_score,
@@ -33,11 +32,14 @@ def _as_float(x):
         return float(x)
     except Exception:
         return None
+
+
 def _safe_int(x):
     try:
         return int(float(x))
     except Exception:
         return None
+
 
 def _keyword_fixer_score(text: str) -> int:
     if not text:
@@ -49,6 +51,7 @@ def _keyword_fixer_score(text: str) -> int:
         "water damage", "roof", "vacant", "estate sale",
     ]
     return sum(1 for w in hits if w in t)
+
 
 def _listing_photo(listing: dict):
     if not isinstance(listing, dict):
@@ -84,7 +87,8 @@ def _listing_photo(listing: dict):
                 return nested_photo
 
     return None
-    
+
+
 def _estimate_rehab_from_score(score: int, sqft: float | None) -> float:
     if not sqft:
         sqft = 1400
@@ -97,54 +101,6 @@ def _estimate_rehab_from_score(score: int, sqft: float | None) -> float:
     else:
         per = 65
     return float(per) * float(sqft)
-
-
-def calculate_deal_score(metrics: dict) -> dict:
-    roi = metrics.get("roi") or 0
-    profit = metrics.get("profit") or 0
-    cashflow = metrics.get("net_cashflow_mo") or metrics.get("net_cashflow") or 0
-    airbnb_net = metrics.get("net_monthly") or 0
-
-    score = 0
-
-    if roi >= 0.30:
-        score += 40
-    elif roi >= 0.20:
-        score += 30
-    elif roi >= 0.15:
-        score += 20
-
-    if profit >= 75000:
-        score += 30
-    elif profit >= 40000:
-        score += 20
-    elif profit >= 20000:
-        score += 10
-
-    if cashflow >= 500:
-        score += 30
-    elif cashflow >= 300:
-        score += 20
-    elif cashflow >= 150:
-        score += 10
-
-    if airbnb_net >= 800:
-        score += 20
-    elif airbnb_net >= 400:
-        score += 10
-
-    label = "Pass"
-    if score >= 80:
-        label = "Strong Deal"
-    elif score >= 60:
-        label = "Good Deal"
-    elif score >= 40:
-        label = "Marginal"
-
-    return {
-        "score": score,
-        "label": label,
-    }
 
 
 def determine_strategy(metrics: dict, comparison: dict | None = None) -> str:
@@ -170,7 +126,14 @@ def determine_strategy(metrics: dict, comparison: dict | None = None) -> str:
     return "Review"
 
 
-def _rentcast_sale_listings(zip_code: str, limit: int = 20, price_min=None, price_max=None, beds_min=None, baths_min=None):
+def _rentcast_sale_listings(
+    zip_code: str,
+    limit: int = 20,
+    price_min=None,
+    price_max=None,
+    beds_min=None,
+    baths_min=None,
+):
     params = {"zipCode": zip_code, "limit": limit}
     if price_min is not None:
         params["priceMin"] = price_min
@@ -181,7 +144,12 @@ def _rentcast_sale_listings(zip_code: str, limit: int = 20, price_min=None, pric
     if baths_min is not None:
         params["bathsMin"] = baths_min
 
-    r = requests.get(f"{RENTCAST_BASE}/listings/sale", headers=_headers(), params=params, timeout=30)
+    r = requests.get(
+        f"{RENTCAST_BASE}/listings/sale",
+        headers=_headers(),
+        params=params,
+        timeout=30,
+    )
     r.raise_for_status()
     data = r.json()
     return data if isinstance(data, list) else (data.get("listings") or [])
@@ -189,24 +157,28 @@ def _rentcast_sale_listings(zip_code: str, limit: int = 20, price_min=None, pric
 
 def _rentcast_value_estimate(address: str, city: str, state: str, zip_code: str):
     params = {"address": address, "city": city, "state": state, "zip": zip_code}
-    r = requests.get(f"{RENTCAST_BASE}/avm/value", headers=_headers(), params=params, timeout=30)
+    r = requests.get(
+        f"{RENTCAST_BASE}/avm/value",
+        headers=_headers(),
+        params=params,
+        timeout=30,
+    )
     r.raise_for_status()
     return r.json()
 
 
 def _rentcast_rent_estimate(address: str, city: str, state: str, zip_code: str):
     params = {"address": address, "city": city, "state": state, "zip": zip_code}
-    r = requests.get(f"{RENTCAST_BASE}/avm/rent/long-term", headers=_headers(), params=params, timeout=30)
+    r = requests.get(
+        f"{RENTCAST_BASE}/avm/rent/long-term",
+        headers=_headers(),
+        params=params,
+        timeout=30,
+    )
     r.raise_for_status()
     return r.json()
 
 
-
-
-            
-        
-            "zip": z,
-            
 def search_deals_for_zip(
     zip_code: str,
     strategy: str = "flip",
@@ -395,7 +367,7 @@ def _search_deals_for_zip_rentcast(
         })
 
         strategy_data = determine_primary_and_fallback({
-            "comparison": comparison
+            "comparison": comparison,
         })
 
         deal_thesis = build_deal_thesis({
@@ -537,264 +509,4 @@ def _search_deals_for_zip_unified(
         min_roi=min_roi,
         min_cashflow=min_cashflow,
         limit=limit,
-    )            
-        
-def _search_deals_for_zip_rentcast(
-    zip_code: str,
-    strategy: str = "flip",
-    price_min=None,
-    price_max=None,
-    beds_min=None,
-    baths_min=None,
-    min_roi=None,
-    min_cashflow=None,
-    limit: int = 20,
-):
-    listings = _rentcast_sale_listings(
-        zip_code=zip_code,
-        limit=limit,
-        price_min=price_min,
-        price_max=price_max,
-        beds_min=beds_min,
-        baths_min=baths_min,
     )
-
-    out = []
-
-    for idx, l in enumerate(listings):
-        addr = (l.get("addressLine1") or l.get("address") or "").strip()
-        city = (l.get("city") or "").strip()
-        state = (l.get("state") or "").strip()
-        z = (l.get("zipCode") or zip_code or "").strip()
-
-        price = _as_float(l.get("price"))
-        beds = _safe_int(l.get("bedrooms") or l.get("beds"))
-        baths = safe_float(l.get("bathrooms") or l.get("baths"))
-        sqft = _as_float(l.get("squareFootage") or l.get("sqft"))
-        year_built = _safe_int(l.get("yearBuilt") or l.get("year_built"))
-        remarks = l.get("description") or l.get("remarks") or ""
-
-        fixer_score = _keyword_fixer_score(remarks)
-        rehab = _estimate_rehab_from_score(fixer_score, sqft)
-
-        arv = None
-        rent = None
-
-        try:
-            v = _rentcast_value_estimate(addr, city, state, z)
-            arv = _as_float(v.get("price") or v.get("value") or v.get("estimate"))
-        except Exception:
-            pass
-
-        try:
-            r = _rentcast_rent_estimate(addr, city, state, z)
-            rent = _as_float(r.get("rent") or r.get("value") or r.get("estimate"))
-        except Exception:
-            pass
-
-        comps = {
-            "property": {
-                "price": price,
-                "sqft": sqft,
-                "address": addr,
-                "city": city,
-                "state": state,
-                "zip": z,
-                "beds": beds,
-                "baths": baths,
-                "year_built": year_built,
-                "property_type": l.get("propertyType") or l.get("propertySubType"),
-            },
-            "arv_estimate": arv,
-            "market_rent_estimate": rent,
-            "rehab_total": rehab,
-            "rehab_summary": {
-                "total": rehab,
-                "scope": "light" if fixer_score <= 1 else "medium" if fixer_score <= 4 else "heavy",
-            },
-        }
-
-        form = {
-            "purchase_price": price,
-            "arv": arv,
-            "monthly_rent": rent,
-            "rehab_total": rehab,
-            "holding_months": 6,
-            "monthly_holding_cost": 0,
-            "selling_cost_rate": 0.08,
-            "down_payment_rate": 0.20,
-            "interest_rate": 0.10,
-        }
-
-        flip_metrics = calculate_flip_budget(form, comps)
-        rental_metrics = calculate_rental_budget(form, comps)
-        airbnb_metrics = calculate_airbnb_budget(form, comps)
-
-        comparison = {
-            "flip": flip_metrics,
-            "rental": rental_metrics,
-            "airbnb": airbnb_metrics,
-        }
-
-        recommendation = recommend_strategy(comparison)
-
-        if strategy == "flip":
-            metrics = flip_metrics
-        elif strategy == "rental":
-            metrics = rental_metrics
-        elif strategy == "airbnb":
-            metrics = airbnb_metrics
-        else:
-            metrics = {
-                **flip_metrics,
-                **rental_metrics,
-                **airbnb_metrics,
-            }
-
-        score_data = compute_ravlo_score({
-            "metrics": metrics,
-            "price": price,
-            "arv": arv,
-            "rehab": rehab,
-        })
-
-        strategy_data = determine_primary_and_fallback({
-            "comparison": comparison
-        })
-
-        deal_thesis = build_deal_thesis({
-            "metrics": metrics,
-            "price": price,
-            "arv": arv,
-            "rehab": rehab,
-            "rent": rent,
-        })
-
-        ai_summary = generate_ai_deal_summary(metrics)
-
-        photo = _listing_photo(l)
-
-        if not photo and addr and idx < 8:
-            try:
-                bundle = resolve_rentcast_investor_bundle(
-                    address=addr,
-                    beds=beds,
-                    baths=baths,
-                    sqft=sqft,
-                    property_type=l.get("propertyType") or l.get("propertySubType"),
-                )
-                if bundle.get("status") == "ok":
-                    photo = (bundle.get("property") or {}).get("primary_photo")
-            except Exception:
-                photo = None
-
-        if not photo:
-            photo = "/static/images/placeholder_property.jpg"
-
-        if min_roi is not None and metrics.get("roi") is not None:
-            if float(metrics["roi"]) < float(min_roi):
-                continue
-
-        cashflow_value = metrics.get("net_cashflow_mo")
-        if cashflow_value is None:
-            cashflow_value = metrics.get("net_cashflow")
-
-        if min_cashflow is not None and cashflow_value is not None:
-            if float(cashflow_value) < float(min_cashflow):
-                continue
-
-        out.append({
-            "address": addr,
-            "city": city,
-            "state": state,
-            "zip": z,
-            "price": price,
-            "beds": beds,
-            "baths": baths,
-            "sqft": _safe_int(sqft),
-            "year_built": year_built,
-            "photo": photo,
-            "property_id": l.get("id") or l.get("propertyId") or None,
-            "property_type": l.get("propertyType") or l.get("propertySubType") or None,
-            "fixer_score": fixer_score,
-            "metrics": metrics,
-            "comparison": comparison,
-            "recommendation": recommendation,
-            "recommended_strategy": recommended_strategy,
-            "deal_score": {
-                "score": score_data["score"],
-                "label": score_data["label"],
-            },
-            "ai_summary": ai_summary,
-            "provider": "rentcast",
-        })
-
-    out.sort(
-        key=lambda x: (
-            (x.get("deal_score") or {}).get("score", 0),
-            x.get("metrics", {}).get("roi", 0) or 0,
-            x.get("metrics", {}).get("profit", 0) or 0,
-            x.get("metrics", {}).get("net_cashflow_mo", 0)
-            or x.get("metrics", {}).get("net_cashflow", 0)
-            or 0,
-        ),
-        reverse=True,
-    )
-
-    return out
-
-def _search_deals_for_zip_attom(
-    zip_code: str,
-    strategy: str = "flip",
-    price_min=None,
-    price_max=None,
-    beds_min=None,
-    baths_min=None,
-    min_roi=None,
-    min_cashflow=None,
-    limit: int = 20,
-):
-    """
-    Reserved for future ATTOM-powered ZIP search.
-    For now, we fall back to RentCast so Deal Finder keeps working.
-    """
-    return _search_deals_for_zip_rentcast(
-        zip_code=zip_code,
-        strategy=strategy,
-        price_min=price_min,
-        price_max=price_max,
-        beds_min=beds_min,
-        baths_min=baths_min,
-        min_roi=min_roi,
-        min_cashflow=min_cashflow,
-        limit=limit,
-    )
-
-
-def _search_deals_for_zip_unified(
-    zip_code: str,
-    strategy: str = "flip",
-    price_min=None,
-    price_max=None,
-    beds_min=None,
-    baths_min=None,
-    min_roi=None,
-    min_cashflow=None,
-    limit: int = 20,
-):
-    """
-    Reserved for future ATTOM + Mashvisor flow.
-    For now, return current RentCast-backed ZIP deal search.
-    """
-    return _search_deals_for_zip_rentcast(
-        zip_code=zip_code,
-        strategy=strategy,
-        price_min=price_min,
-        price_max=price_max,
-        beds_min=beds_min,
-        baths_min=baths_min,
-        min_roi=min_roi,
-        min_cashflow=min_cashflow,
-        limit=limit,
-    )
-
