@@ -3147,6 +3147,7 @@ def property_explore_plus(prop_id):
     )
 
 @investor_bp.route("/intelligence/tool", methods=["GET"])
+@investor_bp.route("/intelligence/tool", methods=["GET"])
 @investor_bp.route("/property_tool", methods=["GET"])
 @login_required
 @role_required("investor")
@@ -3156,7 +3157,8 @@ def property_tool():
         title="Ravlo Deal Finder",
         active_page="property_tool",
         page_name="Deal Finder",
-        page_subline="Search by ZIP, review investment potential, and send opportunities straight into Deal Workspace."
+        page_subline="Search by ZIP, review investment potential, and send opportunities straight into Deal Workspace.",
+        default_provider="auto",
     )
 
 # =========================================================
