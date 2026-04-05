@@ -86,6 +86,11 @@ from LoanMVP.ai.master_ai import CMAIEngine  # if you use it
 # -------------------------
 # Services
 # -------------------------
+
+from LoanMVP.services.attom_service import (
+    build_attom_dealfinder_profile,
+    AttomServiceError,
+)
 from LoanMVP.services.market_service import get_market_snapshot
 from LoanMVP.services.comps_service import get_saved_property_comps
 from LoanMVP.services.rehab_service import (
