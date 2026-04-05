@@ -337,7 +337,7 @@ function renderCards(results){
             <div><span>Rent Est</span><strong>${money(r.rent_est)}</strong></div>
             <div><span>Flip Profit</span><strong>${money(m.profit)}</strong></div>
             <div><span>ROI</span><strong>${pct(m.roi)}</strong></div>
-            <div><span>Cashflow</span><strong>${money(m.net_cashflow_mo)}</strong></div>
+            <div><span>Cashflow</span><strong>${money(m.net_cashflow_mo ?? m.net_cashflow)}</strong></div>
             <div><span>Rehab</span><strong>${money(r.rehab)}</strong></div>
             <div><span>Year</span><strong>${safeText(r.year_built)}</strong></div>
           </div>
