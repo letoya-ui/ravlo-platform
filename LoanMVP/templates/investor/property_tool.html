@@ -22,7 +22,6 @@ Scan a market, rank opportunities, and move the best deals into Workspace.
 
 <div class="dfv2-shell">
 
-  <!-- SEARCH PANEL -->
   <aside class="ravlo-card pad dfv2-search-panel">
     <div class="eyebrow">RAVLO SEARCH</div>
     <h3 class="dfv2-panel-title">Deal Finder v2</h3>
@@ -43,52 +42,51 @@ Scan a market, rank opportunities, and move the best deals into Workspace.
     <div class="dfv2-form-grid mt-16">
       <div>
         <label class="ravlo-label">Min Price</label>
-        <input id="price_min" class="ravlo-input" type="number" />
+        <input id="price_min" class="ravlo-input" type="number" placeholder="0" />
       </div>
       <div>
         <label class="ravlo-label">Max Price</label>
-        <input id="price_max" class="ravlo-input" type="number" />
+        <input id="price_max" class="ravlo-input" type="number" placeholder="500000" />
       </div>
     </div>
 
     <div class="dfv2-form-grid mt-12">
       <div>
         <label class="ravlo-label">Beds ≥</label>
-        <input id="beds_min" class="ravlo-input" type="number" />
+        <input id="beds_min" class="ravlo-input" type="number" placeholder="2" />
       </div>
       <div>
         <label class="ravlo-label">Baths ≥</label>
-        <input id="baths_min" class="ravlo-input" type="number" />
+        <input id="baths_min" class="ravlo-input" type="number" placeholder="1" />
       </div>
     </div>
 
     <div class="dfv2-form-grid mt-12">
       <div>
         <label class="ravlo-label">Min ROI</label>
-        <input id="min_roi" class="ravlo-input" type="number" step="0.01" />
+        <input id="min_roi" class="ravlo-input" type="number" step="0.01" placeholder="0.20" />
       </div>
       <div>
         <label class="ravlo-label">Min Cashflow</label>
-        <input id="min_cashflow" class="ravlo-input" type="number" />
+        <input id="min_cashflow" class="ravlo-input" type="number" placeholder="300" />
       </div>
     </div>
 
-    <button class="ravlo-btn primary w-full mt-16" onclick="runSearch()">
+    <button class="ravlo-btn primary w-full mt-16" type="button" onclick="runSearch()">
       Run Search
     </button>
 
     <div id="searchStatus" class="dfv2-status">Ready to scan.</div>
   </aside>
 
-  <!-- RESULTS -->
   <section class="dfv2-results-wrap">
 
     <div id="resultsSummary" class="ravlo-card pad dfv2-summary-card" style="display:none;">
       <div class="dfv2-summary-head">
         <div>
           <div class="eyebrow">MARKET SUMMARY</div>
-          <h3 id="summaryTitle">Market Scan Complete</h3>
-          <p id="summarySub" class="muted">Ravlo results will appear here.</p>
+          <h3 id="summaryTitle" class="mb-8">Market Scan Complete</h3>
+          <p id="summarySub" class="muted mb-0">Ravlo results will appear here.</p>
         </div>
 
         <div class="dfv2-summary-metrics">
@@ -110,7 +108,11 @@ Scan a market, rank opportunities, and move the best deals into Workspace.
 
     <div id="results" class="dfv2-grid">
       <div class="ravlo-card pad dfv2-empty">
-        <h3>Your search results will appear here</h3>
+        <div class="eyebrow">RAVLO DEAL FINDER</div>
+        <h3 class="mb-8">Your search results will appear here</h3>
+        <p class="muted mb-0">
+          Enter a ZIP code, choose your strategy, and Ravlo will rank investment opportunities.
+        </p>
       </div>
     </div>
 
@@ -118,16 +120,255 @@ Scan a market, rank opportunities, and move the best deals into Workspace.
 </div>
 
 <script>
+function money(x){
+  if (x === null || x === undefined || x === "") return "—";
+  const n = Number(x);
+  if (Number.isNaN(n)) return "—";
+  return "$" + n.toLocaleString(undefined, {maximumFractionDigits:0});
+}
+
+function pct(x){
+  if (x === null || x === undefined || x === "") return "—";
+  const n = Number(x);
+  if (Number.isNaN(n)) return "—";
+  return Math.round(n * 100) + "%";
+}
+
 function numOrNull(v){
-  if (!v) return null;
-  const n = Number(v);
-  return isNaN(n) ? null : n;
+  if (v === null || v === undefined) return null;
+  const s = String(v).trim();
+  if (!s) return null;
+  const n = Number(s);
+  return Number.isNaN(n) ? null : n;
+}
+
+function safeText(v){
+  return (v === null || v === undefined || v === "") ? "—" : String(v);
 }
 
 function strategyLabel(v){
   if (v === "flip") return "Fix & Flip";
   if (v === "rental") return "Rental";
   return "All";
+}
+
+function scoreTone(item){
+  const score = Number(item?.deal_score?.score);
+  if (!Number.isNaN(score) && score >= 80) return "good";
+  if (!Number.isNaN(score) && score >= 60) return "watch";
+  return "neutral";
+}
+
+function scoreLabel(item){
+  return item?.deal_score?.label || "Review";
+}
+
+function buildPayloadObj(r, analyzeId, saveId){
+  return {
+    address: r.address || "",
+    city: r.city || "",
+    state: r.state || "",
+    zip: r.zip || "",
+    price: r.price ?? null,
+    sqft: r.sqft ?? null,
+    photo: r.photo || r.primary_photo || null,
+    beds: r.beds ?? null,
+    baths: r.baths ?? null,
+    year_built: r.year_built ?? null,
+    property_type: r.property_type || null,
+    property_id: r.property_id || r.propertyId || r.id || null,
+    _btnId: analyzeId,
+    _saveBtnId: saveId
+  };
+}
+
+async function viewDetails(item){
+  try{
+    const resp = await fetch("{{ url_for('investor.api_property_tool_view_details') }}", {
+      method: "POST",
+      headers: {"Content-Type":"application/json"},
+      credentials: "include",
+      body: JSON.stringify(item)
+    });
+    const data = await resp.json();
+
+    if (data.status !== "ok"){
+      alert(data.message || "Could not open property details.");
+      return;
+    }
+
+    if (data.detail_url){
+      window.location.href = data.detail_url;
+      return;
+    }
+
+    alert("No detail URL returned.");
+  } catch (e){
+    console.error(e);
+    alert("Network error while opening property details.");
+  }
+}
+
+async function saveOnly(item){
+  const btn = document.getElementById(item._saveBtnId);
+  if (btn){ btn.disabled = true; btn.innerText = "Saving..."; }
+
+  try{
+    const resp = await fetch("{{ url_for('investor.api_property_tool_save') }}", {
+      method: "POST",
+      headers: {"Content-Type":"application/json"},
+      credentials: "include",
+      body: JSON.stringify(item)
+    });
+    const data = await resp.json();
+
+    if (data.status !== "ok"){
+      alert(data.message || "Could not save property.");
+      if (btn){ btn.disabled = false; btn.innerText = "Save"; }
+      return;
+    }
+
+    if (btn){
+      btn.innerText = "Saved";
+      setTimeout(() => {
+        btn.disabled = false;
+        btn.innerText = "Save";
+      }, 1200);
+    }
+  } catch (e){
+    console.error(e);
+    alert("Network error while saving.");
+    if (btn){ btn.disabled = false; btn.innerText = "Save"; }
+  }
+}
+
+async function saveAndAnalyze(item){
+  const btn = document.getElementById(item._btnId);
+  if (btn){ btn.disabled = true; btn.innerText = "Saving..."; }
+
+  try{
+    const resp = await fetch("{{ url_for('investor.api_property_tool_save_and_analyze') }}", {
+      method: "POST",
+      headers: {"Content-Type":"application/json"},
+      credentials: "include",
+      body: JSON.stringify(item)
+    });
+    const data = await resp.json();
+
+    if (data.status !== "ok"){
+      alert(data.message || "Could not send property to Deal Workspace.");
+      if (btn){ btn.disabled = false; btn.innerText = "Analyze"; }
+      return;
+    }
+
+    if (data.deal_url){
+      window.location.href = data.deal_url;
+      return;
+    }
+
+    alert("Saved, but no workspace redirect returned.");
+  } catch (e){
+    console.error(e);
+    alert("Network error while saving.");
+    if (btn){ btn.disabled = false; btn.innerText = "Analyze"; }
+  }
+}
+
+function renderSummary(zip, strategy, count){
+  const card = document.getElementById("resultsSummary");
+  document.getElementById("summaryTitle").innerText = "Market Scan Complete";
+  document.getElementById("summarySub").innerText = count === 0
+    ? "No results matched your buy box."
+    : "Ravlo surfaced ranked opportunities for this market.";
+  document.getElementById("summaryCount").innerText = String(count);
+  document.getElementById("summaryStrategy").innerText = strategyLabel(strategy);
+  document.getElementById("summaryZip").innerText = zip || "—";
+  card.style.display = "block";
+}
+
+function renderEmpty(messageTitle, messageBody){
+  document.getElementById("results").innerHTML = `
+    <div class="ravlo-card pad dfv2-empty">
+      <div class="eyebrow">NO MATCHES</div>
+      <h3 class="mb-8">${messageTitle}</h3>
+      <p class="muted mb-0">${messageBody}</p>
+    </div>
+  `;
+}
+
+function renderCards(results){
+  const root = document.getElementById("results");
+
+  root.innerHTML = results.map((r, idx) => {
+    const ts = Date.now() + idx;
+    const analyzeId = `dw_${idx}_${ts}`;
+    const saveId = `sv_${idx}_${ts}`;
+    const payloadObj = buildPayloadObj(r, analyzeId, saveId);
+    const encoded = encodeURIComponent(JSON.stringify(payloadObj));
+    const score = scoreLabel(r);
+    const tone = scoreTone(r);
+    const m = r.metrics || {};
+    const thesisHtml = (r.deal_thesis || []).map(x => `<li>${x}</li>`).join("");
+
+    return `
+      <article class="ravlo-card pad dfv2-card">
+        <div class="dfv2-thumb">
+          <img src="${payloadObj.photo || '/static/images/placeholder_property.jpg'}" alt="Property photo">
+          <div class="dfv2-score-badge ${tone}">
+            ${score}${r?.deal_score?.score ? ` • ${r.deal_score.score}` : ""}
+          </div>
+        </div>
+
+        <div class="dfv2-body">
+          <div class="dfv2-address">${safeText(r.address)}</div>
+          <div class="dfv2-location">${safeText(r.city)} ${safeText(r.state)} ${safeText(r.zip)}</div>
+
+          <div class="dfv2-chip-row">
+            <span class="dfv2-chip">${safeText(r.property_type || "Property")}</span>
+            <span class="dfv2-chip">${safeText(r.beds)} bd</span>
+            <span class="dfv2-chip">${safeText(r.baths)} ba</span>
+            <span class="dfv2-chip">${safeText(r.sqft)} sqft</span>
+            <span class="dfv2-chip">${safeText(r.primary_strategy || r.recommended_strategy || "Review")}${r.fallback_strategy ? ` → ${r.fallback_strategy}` : ""}</span>
+          </div>
+
+          <div class="dfv2-metrics">
+            <div><span>Price</span><strong>${money(r.price)}</strong></div>
+            <div><span>ARV</span><strong>${money(r.arv)}</strong></div>
+            <div><span>Rent Est</span><strong>${money(r.rent_est)}</strong></div>
+            <div><span>Flip Profit</span><strong>${money(m.profit)}</strong></div>
+            <div><span>ROI</span><strong>${pct(m.roi)}</strong></div>
+            <div><span>Cashflow</span><strong>${money(m.net_cashflow_mo)}</strong></div>
+            <div><span>Rehab</span><strong>${money(r.rehab)}</strong></div>
+            <div><span>Year</span><strong>${safeText(r.year_built)}</strong></div>
+          </div>
+
+          <div class="dfv2-ai-snippet">
+            <strong>Why Ravlo likes this:</strong>
+            <ul class="dfv2-thesis-list">
+              ${thesisHtml || "<li>Meets baseline investment criteria</li>"}
+            </ul>
+          </div>
+
+          <div class="dfv2-actions">
+            <button class="ravlo-btn ghost sm" type="button"
+              onclick='viewDetails(JSON.parse(decodeURIComponent("${encoded}")))'>
+              View Details
+            </button>
+
+            <button id="${saveId}" class="ravlo-btn ghost sm" type="button"
+              onclick='saveOnly(JSON.parse(decodeURIComponent("${encoded}")))'>
+              Save
+            </button>
+
+            <button id="${analyzeId}" class="ravlo-btn primary sm" type="button"
+              onclick='saveAndAnalyze(JSON.parse(decodeURIComponent("${encoded}")))'>
+              Analyze
+            </button>
+          </div>
+        </div>
+      </article>
+    `;
+  }).join("");
 }
 
 async function runSearch(){
@@ -154,8 +395,9 @@ async function runSearch(){
     limit: 20
   };
 
-  status.innerText = "Scanning market...";
+  status.innerText = "Ravlo is scanning this market...";
   resultsSummary.style.display = "none";
+  renderEmpty("Scanning " + zip, "Matching your strategy, filters, and performance thresholds.");
 
   try{
     const resp = await fetch("{{ url_for('investor.api_property_tool_search') }}", {
@@ -169,22 +411,276 @@ async function runSearch(){
 
     if (data.status !== "ok"){
       status.innerText = data.message || "Search failed.";
+      renderEmpty("Search failed", data.message || "Please try another ZIP or adjust your filters.");
       return;
     }
 
-    document.getElementById("summaryCount").innerText = data.results.length;
-    document.getElementById("summaryStrategy").innerText = strategyLabel(data.strategy);
-    document.getElementById("summaryZip").innerText = data.zip;
-    resultsSummary.style.display = "block";
+    renderSummary(data.zip, data.strategy, data.results.length);
 
     const providerLabel = data.provider ? ` via ${data.provider}` : "";
-    status.innerText = `Found ${data.results.length} deals in ${data.zip}${providerLabel}`;
+    status.innerText = `Ravlo found ${data.results.length} opportunit${data.results.length === 1 ? "y" : "ies"} in ${data.zip}${providerLabel}.`;
 
+    if (!data.results.length){
+      renderEmpty(
+        "No properties matched your filters",
+        "Try widening your price range, lowering thresholds, or switching strategies."
+      );
+      return;
+    }
+
+    renderCards(data.results);
   } catch (e){
     console.error(e);
-    status.innerText = "Error loading market.";
+    status.innerText = "Ravlo could not load this market right now.";
+    renderEmpty("Unable to load this market", "Please try again in a moment.");
   }
 }
 </script>
+
+<style>
+.dfv2-shell{
+  display:grid;
+  grid-template-columns:360px minmax(0,1fr);
+  gap:1rem;
+}
+
+.dfv2-search-panel{
+  position:sticky;
+  top:16px;
+  align-self:start;
+}
+
+.dfv2-panel-title{
+  margin:.35rem 0 .35rem;
+}
+
+.dfv2-form-grid{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:.75rem;
+}
+
+.dfv2-status{
+  color:var(--muted);
+  margin-top:.75rem;
+  min-height:20px;
+}
+
+.dfv2-results-wrap{
+  display:grid;
+  gap:1rem;
+}
+
+.dfv2-summary-head{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:18px;
+  flex-wrap:wrap;
+}
+
+.dfv2-summary-metrics{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:.7rem;
+  min-width:320px;
+}
+
+.dfv2-summary-metric{
+  padding:.85rem .9rem;
+  border-radius:14px;
+  background:rgba(255,255,255,.03);
+  border:1px solid rgba(255,255,255,.08);
+}
+
+.dfv2-summary-metric span{
+  display:block;
+  color:var(--muted);
+  font-size:.78rem;
+  margin-bottom:.25rem;
+}
+
+.dfv2-summary-metric strong{
+  color:var(--text);
+  font-size:1rem;
+}
+
+.dfv2-grid{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:1rem;
+}
+
+.dfv2-card{
+  display:flex;
+  flex-direction:column;
+  overflow:hidden;
+}
+
+.dfv2-thumb{
+  position:relative;
+  width:100%;
+  height:210px;
+  border-radius:16px;
+  overflow:hidden;
+  background:rgba(255,255,255,.03);
+  border:1px solid rgba(255,255,255,.08);
+}
+
+.dfv2-thumb img{
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  display:block;
+}
+
+.dfv2-score-badge{
+  position:absolute;
+  top:12px;
+  left:12px;
+  padding:.45rem .7rem;
+  border-radius:999px;
+  font-size:.78rem;
+  font-weight:800;
+  border:1px solid rgba(255,255,255,.12);
+  backdrop-filter:blur(8px);
+}
+
+.dfv2-score-badge.good{
+  background:rgba(44,182,125,.18);
+  color:#d9fff0;
+}
+
+.dfv2-score-badge.watch{
+  background:rgba(209,162,70,.18);
+  color:#fff0c7;
+}
+
+.dfv2-score-badge.neutral{
+  background:rgba(107,127,147,.22);
+  color:#eef4fb;
+}
+
+.dfv2-body{
+  display:grid;
+  gap:.8rem;
+  margin-top:.85rem;
+}
+
+.dfv2-address{
+  font-weight:900;
+  color:var(--text);
+  font-size:1rem;
+  line-height:1.25;
+}
+
+.dfv2-location{
+  color:var(--muted);
+  font-size:.82rem;
+  margin-top:.2rem;
+}
+
+.dfv2-chip-row{
+  display:flex;
+  gap:.45rem;
+  flex-wrap:wrap;
+}
+
+.dfv2-chip{
+  display:inline-flex;
+  align-items:center;
+  padding:.35rem .55rem;
+  border-radius:999px;
+  background:rgba(255,255,255,.03);
+  border:1px solid rgba(255,255,255,.08);
+  color:var(--text);
+  font-size:.76rem;
+}
+
+.dfv2-metrics{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:.6rem;
+}
+
+.dfv2-metrics div{
+  padding:.7rem .75rem;
+  border-radius:12px;
+  background:rgba(255,255,255,.03);
+  border:1px solid rgba(255,255,255,.08);
+}
+
+.dfv2-metrics span{
+  display:block;
+  color:var(--muted);
+  margin-bottom:.2rem;
+  font-size:.78rem;
+}
+
+.dfv2-metrics strong{
+  color:var(--text);
+  font-size:.92rem;
+}
+
+.dfv2-ai-snippet{
+  padding:.8rem .9rem;
+  border-radius:12px;
+  background:rgba(255,255,255,.02);
+  border:1px solid rgba(255,255,255,.08);
+  color:var(--muted);
+  font-size:.82rem;
+  line-height:1.55;
+}
+
+.dfv2-thesis-list{
+  margin:.45rem 0 0 1rem;
+  padding:0;
+}
+
+.dfv2-actions{
+  display:flex;
+  gap:.5rem;
+  flex-wrap:wrap;
+}
+
+.dfv2-empty{
+  min-height:240px;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  align-items:flex-start;
+  border:1px dashed rgba(255,255,255,.12);
+  background:rgba(255,255,255,.02);
+}
+
+@media (max-width:1200px){
+  .dfv2-shell{
+    grid-template-columns:1fr;
+  }
+
+  .dfv2-search-panel{
+    position:relative;
+    top:0;
+  }
+}
+
+@media (max-width:900px){
+  .dfv2-grid{
+    grid-template-columns:1fr;
+  }
+
+  .dfv2-summary-metrics{
+    min-width:unset;
+    width:100%;
+    grid-template-columns:1fr;
+  }
+}
+
+@media (max-width:640px){
+  .dfv2-form-grid{
+    grid-template-columns:1fr;
+  }
+}
+</style>
 
 {% endblock %}
