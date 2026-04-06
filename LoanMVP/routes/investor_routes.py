@@ -3252,14 +3252,10 @@ def property_explore_plus(prop_id):
 # - role_required
 # - _profile_id_filter
 
-
-@investor_bp.route("/property-tool", methods=["GET"])
+@investor_bp.route("/property_tool", methods=["GET"])
 @login_required
 @role_required("investor")
 def property_tool():
-    """
-    Ravlo Property Tool page
-    """
     return render_template("investor/property_tool.html")
 
 
