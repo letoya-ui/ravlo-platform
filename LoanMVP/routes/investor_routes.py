@@ -106,7 +106,7 @@ from LoanMVP.services.rehab_service import (
 )
 from LoanMVP.services.ai_insights import generate_ai_insights
 from LoanMVP.services.unified_resolver import resolve_property_unified
-from LoanMVP.services.property_tool import search_deals_for_zip
+from LoanMVP.services.property_tool import get_property_search_result, PropertyAPIError
 from LoanMVP.services.notification_service import notify_team_on_conversion
 from LoanMVP.services.blueprint_parser import extract_blueprint_structure, infer_room_type
 from LoanMVP.services.prompt_builder import build_blueprint_prompt
@@ -3146,20 +3146,48 @@ def property_explore_plus(prop_id):
         back_url=url_for(fallback_endpoint),
     )
 
-@investor_bp.route("/intelligence/tool", methods=["GET"])
-@investor_bp.route("/intelligence/tool", methods=["GET"])
-@investor_bp.route("/property_tool", methods=["GET"])
+@investor_bp.route("/property-tool", methods=["GET"])
 @login_required
 @role_required("investor")
 def property_tool():
-    return render_template(
-        "investor/property_tool.html",
-        title="Ravlo Deal Finder",
-        active_page="property_tool",
-        page_name="Deal Finder",
-        page_subline="Search by ZIP, review investment potential, and send opportunities straight into Deal Workspace.",
-        default_provider="auto",
-    )
+    """
+    Ravlo Property Tool (Investor Side)
+    """
+
+    address = (request.args.get("address") or "").strip()
+    postalcode = (request.args.get("zip") or "").strip()
+    city = (request.args.get("city") or "").strip()
+    state = (request.args.get("state") or "").strip()
+
+    try:
+        result = get_property_search_result(
+            address=address or None,
+            postalcode=postalcode or None,
+            city=city or None,
+            state=state or None,
+            page=1,
+            page_size=25,
+        )
+
+        return jsonify({
+            "ok": True,
+            "count": result["count"],
+            "properties": result["properties"],
+        })
+
+    except PropertyAPIError as e:
+        return jsonify({
+            "ok": False,
+            "message": str(e),
+            "properties": [],
+        }), 400
+
+    except Exception as e:
+        return jsonify({
+            "ok": False,
+            "message": f"Unexpected error: {str(e)}",
+            "properties": [],
+        }), 500
 
 # =========================================================
 # 🔌 INVESTOR • APIs (Property Tool)
