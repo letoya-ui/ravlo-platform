@@ -106,7 +106,7 @@ from LoanMVP.services.rehab_service import (
 )
 from LoanMVP.services.ai_insights import generate_ai_insights
 from LoanMVP.services.unified_resolver import resolve_property_unified
-from LoanMVP.services.property_tool import get_property_search_result, PropertyAPIError
+from LoanMVP.services.property_tool import get_property_search_result, PropertyAPIError, build_property_card_data
 from LoanMVP.services.notification_service import notify_team_on_conversion
 from LoanMVP.services.blueprint_parser import extract_blueprint_structure, infer_room_type
 from LoanMVP.services.prompt_builder import build_blueprint_prompt
@@ -3146,105 +3146,100 @@ def property_explore_plus(prop_id):
         back_url=url_for(fallback_endpoint),
     )
 
+
+    
+    
+
+    
+# =========================================================
+# 🔌 INVESTOR • Property Tool
+# =========================================================
+
+
+
+
+# Make sure these already exist somewhere in your file/app:
+# - investor_bp
+# - role_required
+# - _profile_id_filter
+
+
 @investor_bp.route("/property-tool", methods=["GET"])
 @login_required
 @role_required("investor")
 def property_tool():
     """
-    Ravlo Property Tool (Investor Side)
+    Ravlo Property Tool page
     """
+    return render_template("investor/property_tool.html")
 
-    address = (request.args.get("address") or "").strip()
-    postalcode = (request.args.get("zip") or "").strip()
-    city = (request.args.get("city") or "").strip()
-    state = (request.args.get("state") or "").strip()
-
-    try:
-        result = get_property_search_result(
-            address=address or None,
-            postalcode=postalcode or None,
-            city=city or None,
-            state=state or None,
-            page=1,
-            page_size=25,
-        )
-
-        return jsonify({
-            "ok": True,
-            "count": result["count"],
-            "properties": result["properties"],
-        })
-
-    except PropertyAPIError as e:
-        return jsonify({
-            "ok": False,
-            "message": str(e),
-            "properties": [],
-        }), 400
-
-    except Exception as e:
-        return jsonify({
-            "ok": False,
-            "message": f"Unexpected error: {str(e)}",
-            "properties": [],
-        }), 500
-
-# =========================================================
-# 🔌 INVESTOR • APIs (Property Tool)
-# =========================================================
 
 @investor_bp.route("/api/property_tool_search", methods=["POST"])
 @csrf.exempt
 @login_required
 @role_required("investor")
 def api_property_tool_search():
+    """
+    Property search API for the Ravlo Property Tool.
+    Uses ATTOM-backed property search only.
+    """
     payload = request.get_json(force=True) or {}
 
+    address = (payload.get("address") or "").strip()
     zip_code = (payload.get("zip") or "").strip()
+    city = (payload.get("city") or "").strip()
+    state = (payload.get("state") or "").strip()
     strategy = (payload.get("strategy") or "flip").strip().lower()
-    provider = (payload.get("provider") or "auto").strip().lower()
 
-    if not zip_code:
+    if not address and not zip_code:
         return jsonify({
             "status": "error",
-            "message": "ZIP code is required."
+            "message": "Address or ZIP code is required.",
+            "results": [],
         }), 400
 
-    def _num(v):
-        try:
-            if v in (None, "", "None"):
-                return None
-            return float(v)
-        except Exception:
-            return None
+    try:
+        page_size = int(payload.get("limit") or 20)
+    except Exception:
+        page_size = 20
 
     try:
-        results = search_deals_for_zip(
-            zip_code=zip_code,
-            strategy=strategy,
-            price_min=_num(payload.get("price_min")),
-            price_max=_num(payload.get("price_max")),
-            beds_min=_num(payload.get("beds_min")),
-            baths_min=_num(payload.get("baths_min")),
-            min_roi=_num(payload.get("min_roi")),
-            min_cashflow=_num(payload.get("min_cashflow")),
-            limit=int(payload.get("limit") or 20),
-            provider=provider,
+        result = get_property_search_result(
+            address=address or None,
+            postalcode=zip_code or None,
+            city=city or None,
+            state=state or None,
+            page=1,
+            page_size=page_size,
         )
+
+        properties = result.get("properties", []) or []
 
         return jsonify({
             "status": "ok",
+            "address": address,
             "zip": zip_code,
+            "city": city,
+            "state": state,
             "strategy": strategy,
-            "provider": provider,
-            "results": results,
+            "count": len(properties),
+            "results": properties,
         })
+
+    except PropertyAPIError as e:
+        return jsonify({
+            "status": "error",
+            "message": str(e),
+            "results": [],
+        }), 400
 
     except Exception as e:
         return jsonify({
             "status": "error",
-            "message": f"Deal Finder search failed: {e}"
+            "message": f"Property Tool search failed: {e}",
+            "results": [],
         }), 500
+
 
 @investor_bp.route("/api/intelligence/save", methods=["POST"])
 @investor_bp.route("/api/property_tool_save", methods=["POST"])
@@ -3254,12 +3249,19 @@ def api_property_tool_search():
 def api_property_tool_save():
     payload = request.get_json(force=True) or {}
     address = (payload.get("address") or "").strip()
+
     if not address:
-        return jsonify({"status": "error", "message": "Address is required to save."}), 400
+        return jsonify({
+            "status": "error",
+            "message": "Address is required to save."
+        }), 400
 
     ip = InvestorProfile.query.filter_by(user_id=current_user.id).first()
     if not ip:
-        return jsonify({"status": "error", "message": "Profile not found."}), 400
+        return jsonify({
+            "status": "error",
+            "message": "Profile not found."
+        }), 400
 
     zipcode = (payload.get("zip") or "").strip() or None
     price = payload.get("price")
@@ -3274,8 +3276,12 @@ def api_property_tool_save():
     fk = _profile_id_filter(SavedProperty, ip.id)
 
     existing = None
+
     if property_id:
-        existing = SavedProperty.query.filter_by(**fk, property_id=str(property_id)).first()
+        existing = SavedProperty.query.filter_by(
+            **fk,
+            property_id=str(property_id)
+        ).first()
 
     if not existing:
         existing = SavedProperty.query.filter(
@@ -3284,7 +3290,11 @@ def api_property_tool_save():
         ).first()
 
     if existing:
-        return jsonify({"status": "ok", "message": "Already saved.", "saved_id": existing.id})
+        return jsonify({
+            "status": "ok",
+            "message": "Already saved.",
+            "saved_id": existing.id
+        })
 
     saved = SavedProperty(
         **fk,
@@ -3299,7 +3309,11 @@ def api_property_tool_save():
     db.session.add(saved)
     db.session.commit()
 
-    return jsonify({"status": "ok", "message": "Saved.", "saved_id": saved.id})
+    return jsonify({
+        "status": "ok",
+        "message": "Saved.",
+        "saved_id": saved.id
+    })
 
 
 @investor_bp.route("/api/intelligence/save-and-analyze", methods=["POST"])
@@ -3310,12 +3324,19 @@ def api_property_tool_save():
 def api_property_tool_save_and_analyze():
     payload = request.get_json(force=True) or {}
     address = (payload.get("address") or "").strip()
+
     if not address:
-        return jsonify({"status": "error", "message": "Address is required to analyze."}), 400
+        return jsonify({
+            "status": "error",
+            "message": "Address is required to analyze."
+        }), 400
 
     ip = InvestorProfile.query.filter_by(user_id=current_user.id).first()
     if not ip:
-        return jsonify({"status": "error", "message": "Profile not found."}), 400
+        return jsonify({
+            "status": "error",
+            "message": "Profile not found."
+        }), 400
 
     zipcode = (payload.get("zip") or "").strip() or None
     price = payload.get("price")
@@ -3330,8 +3351,12 @@ def api_property_tool_save_and_analyze():
     fk = _profile_id_filter(SavedProperty, ip.id)
 
     existing = None
+
     if property_id:
-        existing = SavedProperty.query.filter_by(**fk, property_id=str(property_id)).first()
+        existing = SavedProperty.query.filter_by(
+            **fk,
+            property_id=str(property_id)
+        ).first()
 
     if not existing:
         existing = SavedProperty.query.filter(
@@ -3354,7 +3379,13 @@ def api_property_tool_save_and_analyze():
         db.session.commit()
 
     deal_url = url_for("investor.deal_workspace", prop_id=existing.id, mode="flip")
-    return jsonify({"status": "ok", "saved_id": existing.id, "deal_url": deal_url})
+
+    return jsonify({
+        "status": "ok",
+        "saved_id": existing.id,
+        "deal_url": deal_url
+    })
+
 
 @investor_bp.route("/api/intelligence/card", methods=["POST"])
 @investor_bp.route("/api/property_tool_card", methods=["POST"])
@@ -3362,11 +3393,17 @@ def api_property_tool_save_and_analyze():
 @login_required
 @role_required("investor")
 def api_property_tool_card():
+    """
+    Builds a lightweight UI-ready card from incoming property fields.
+    """
     payload = request.get_json(force=True) or {}
 
     address = (payload.get("address") or "").strip()
     if not address:
-        return jsonify({"status": "error", "message": "Address is required."}), 400
+        return jsonify({
+            "status": "error",
+            "message": "Address is required."
+        }), 400
 
     def _num_or_none(v):
         try:
@@ -3379,35 +3416,61 @@ def api_property_tool_card():
     beds = _num_or_none(payload.get("beds"))
     baths = _num_or_none(payload.get("baths"))
     sqft = _num_or_none(payload.get("sqft"))
+    lot_size_sqft = _num_or_none(payload.get("lot_size_sqft"))
+    year_built = _num_or_none(payload.get("year_built"))
+    last_sale_price = _num_or_none(payload.get("last_sale_price"))
+    assessed_value = _num_or_none(payload.get("assessed_value"))
+
     property_type = (payload.get("property_type") or "").strip() or None
+    city = (payload.get("city") or "").strip() or None
+    state = (payload.get("state") or "").strip() or None
+    zip_code = (payload.get("zip") or payload.get("zip_code") or "").strip() or None
+    latitude = _num_or_none(payload.get("latitude"))
+    longitude = _num_or_none(payload.get("longitude"))
+    attom_id = payload.get("attom_id")
 
-    if beds is not None:
-        try:
-            beds = int(beds)
-        except Exception:
-            beds = None
+    try:
+        beds = int(beds) if beds is not None else None
+    except Exception:
+        beds = None
 
-    if sqft is not None:
-        try:
-            sqft = int(sqft)
-        except Exception:
-            sqft = None
+    try:
+        sqft = int(sqft) if sqft is not None else None
+    except Exception:
+        sqft = None
 
-    card = build_ravlo_property_card(
-        address=address,
-        beds=beds,
-        baths=baths,
-        sqft=sqft,
-        property_type=property_type,
-    )
+    try:
+        lot_size_sqft = int(lot_size_sqft) if lot_size_sqft is not None else None
+    except Exception:
+        lot_size_sqft = None
 
-    if card.get("status") != "ok":
-        return jsonify({
-            "status": "error",
-            "message": card.get("error") or "Unable to load property card."
-        }), 400
+    try:
+        year_built = int(year_built) if year_built is not None else None
+    except Exception:
+        year_built = None
 
-    return jsonify(card)
+    card = build_property_card_data({
+        "address": address,
+        "city": city,
+        "state": state,
+        "zip_code": zip_code,
+        "beds": beds,
+        "baths": baths,
+        "square_feet": sqft,
+        "lot_size_sqft": lot_size_sqft,
+        "year_built": year_built,
+        "property_type": property_type,
+        "last_sale_price": last_sale_price,
+        "assessed_value": assessed_value,
+        "latitude": latitude,
+        "longitude": longitude,
+        "attom_id": attom_id,
+    })
+
+    return jsonify({
+        "status": "ok",
+        "card": card
+    })
 
 
 @investor_bp.route("/api/property_tool_view_details", methods=["POST"])
@@ -3419,11 +3482,17 @@ def api_property_tool_view_details():
     address = (payload.get("address") or "").strip()
 
     if not address:
-        return jsonify({"status": "error", "message": "Address is required."}), 400
+        return jsonify({
+            "status": "error",
+            "message": "Address is required."
+        }), 400
 
     ip = InvestorProfile.query.filter_by(user_id=current_user.id).first()
     if not ip:
-        return jsonify({"status": "error", "message": "Investor profile not found."}), 400
+        return jsonify({
+            "status": "error",
+            "message": "Investor profile not found."
+        }), 400
 
     zipcode = (payload.get("zip") or "").strip() or None
     price = payload.get("price")
@@ -3438,8 +3507,12 @@ def api_property_tool_view_details():
     fk = _profile_id_filter(SavedProperty, ip.id)
 
     existing = None
+
     if property_id:
-        existing = SavedProperty.query.filter_by(**fk, property_id=str(property_id)).first()
+        existing = SavedProperty.query.filter_by(
+            **fk,
+            property_id=str(property_id)
+        ).first()
 
     if not existing:
         existing = SavedProperty.query.filter(
