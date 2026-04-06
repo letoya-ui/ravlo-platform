@@ -3482,9 +3482,6 @@ def api_property_tool_save_and_analyze():
 @login_required
 @role_required("investor")
 def api_property_tool_card():
-    """
-    Builds a lightweight UI-ready card from incoming property fields.
-    """
     payload = request.get_json(force=True) or {}
 
     address = (payload.get("address") or "").strip()
@@ -3505,60 +3502,53 @@ def api_property_tool_card():
     beds = _num_or_none(payload.get("beds"))
     baths = _num_or_none(payload.get("baths"))
     sqft = _num_or_none(payload.get("sqft"))
-    lot_size_sqft = _num_or_none(payload.get("lot_size_sqft"))
-    year_built = _num_or_none(payload.get("year_built"))
-    last_sale_price = _num_or_none(payload.get("last_sale_price"))
-    assessed_value = _num_or_none(payload.get("assessed_value"))
-
     property_type = (payload.get("property_type") or "").strip() or None
-    city = (payload.get("city") or "").strip() or None
-    state = (payload.get("state") or "").strip() or None
-    zip_code = (payload.get("zip") or payload.get("zip_code") or "").strip() or None
-    latitude = _num_or_none(payload.get("latitude"))
-    longitude = _num_or_none(payload.get("longitude"))
-    attom_id = payload.get("attom_id")
 
-    try:
-        beds = int(beds) if beds is not None else None
-    except Exception:
-        beds = None
+    if beds is not None:
+        try:
+            beds = int(beds)
+        except Exception:
+            beds = None
 
-    try:
-        sqft = int(sqft) if sqft is not None else None
-    except Exception:
-        sqft = None
+    if sqft is not None:
+        try:
+            sqft = int(sqft)
+        except Exception:
+            sqft = None
 
-    try:
-        lot_size_sqft = int(lot_size_sqft) if lot_size_sqft is not None else None
-    except Exception:
-        lot_size_sqft = None
+    bundle = resolve_property_unified(
+        address=address,
+        beds=beds,
+        baths=baths,
+        sqft=sqft,
+        property_type=property_type,
+    )
 
-    try:
-        year_built = int(year_built) if year_built is not None else None
-    except Exception:
-        year_built = None
+    if bundle.get("status") != "ok":
+        return jsonify({
+            "status": "error",
+            "message": bundle.get("error") or "Unable to load property card."
+        }), 400
 
-    card = build_property_card_data({
-        "address": address,
-        "city": city,
-        "state": state,
-        "zip_code": zip_code,
-        "beds": beds,
-        "baths": baths,
-        "square_feet": sqft,
-        "lot_size_sqft": lot_size_sqft,
-        "year_built": year_built,
-        "property_type": property_type,
-        "last_sale_price": last_sale_price,
-        "assessed_value": assessed_value,
-        "latitude": latitude,
-        "longitude": longitude,
-        "attom_id": attom_id,
-    })
+    prop = bundle.get("property") or {}
+    valuation = bundle.get("valuation") or {}
+    rent_estimate = bundle.get("rent_estimate") or {}
+    comps = bundle.get("comps") or {}
+    market_snapshot = bundle.get("market_snapshot") or {}
+    ai_summary = bundle.get("ai_summary")
+
+    card = build_property_card_data(prop)
 
     return jsonify({
         "status": "ok",
-        "card": card
+        "source": bundle.get("source"),
+        "property": prop,
+        "valuation": valuation,
+        "rent_estimate": rent_estimate,
+        "comps": comps,
+        "market_snapshot": market_snapshot,
+        "ai_summary": ai_summary,
+        "card": card,
     })
 
 
