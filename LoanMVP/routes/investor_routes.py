@@ -3091,7 +3091,6 @@ def save_property_and_analyze():
 
 
         
-
 @investor_bp.route("/intelligence/saved/<int:prop_id>", methods=["GET"])
 @investor_bp.route("/property_explore_plus/<int:prop_id>", methods=["GET"])
 @login_required
@@ -3126,13 +3125,104 @@ def property_explore_plus(prop_id):
     comps = resolved.get("comps") or {}
     market_snapshot = resolved.get("market_snapshot") or {}
     ai_summary = resolved.get("ai_summary") or resolved.get("summary") or None
+
     photos = resolved_property.get("photos") or []
-    primary_photo = resolved_property.get("primary_photo")
+    primary_photo = (
+        resolved_property.get("primary_photo")
+        or (photos[0] if photos else None)
+    )
+
+    address = (
+        resolved_property.get("address")
+        or prop.address
+    )
+
+    city = (
+        resolved_property.get("city")
+        or getattr(prop, "city", None)
+    )
+
+    state = (
+        resolved_property.get("state")
+        or getattr(prop, "state", None)
+    )
+
+    zip_code = (
+        resolved_property.get("zip")
+        or resolved_property.get("zip_code")
+        or getattr(prop, "zipcode", None)
+    )
+
+    property_type = resolved_property.get("property_type")
+    beds = resolved_property.get("beds")
+    baths = resolved_property.get("baths")
+
+    sqft = (
+        resolved_property.get("sqft")
+        or resolved_property.get("square_feet")
+        or prop.sqft
+    )
+
+    year_built = resolved_property.get("year_built")
+    lot_size_sqft = (
+        resolved_property.get("lot_size_sqft")
+        or resolved_property.get("lot_sqft")
+        or resolved_property.get("lot_size")
+    )
+
+    latitude = resolved_property.get("latitude")
+    longitude = resolved_property.get("longitude")
+
+    price = (
+        valuation.get("price")
+        or valuation.get("value")
+        or valuation.get("estimated_value")
+        or valuation.get("last_sale_price")
+    )
+
+    if price in (None, "", "None"):
+        try:
+            price = float(prop.price) if getattr(prop, "price", None) not in (None, "", "None") else None
+        except Exception:
+            price = None
+
+    assessed_value = (
+        valuation.get("assessed_value")
+        or resolved_property.get("assessed_value")
+    )
+
+    property_id = (
+        resolved_property.get("property_id")
+        or resolved_property.get("attom_id")
+        or prop.property_id
+    )
+
+    photo = primary_photo
 
     return render_template(
         "investor/property_explore_plus.html",
         investor=ip,
         prop=prop,
+
+        # flat template fields
+        address=address,
+        city=city,
+        state=state,
+        zip_code=zip_code,
+        property_type=property_type,
+        beds=beds,
+        baths=baths,
+        sqft=sqft,
+        year_built=year_built,
+        lot_size_sqft=lot_size_sqft,
+        price=price,
+        assessed_value=assessed_value,
+        latitude=latitude,
+        longitude=longitude,
+        photo=photo,
+        property_id=property_id,
+
+        # keep these available in case you still want them later
         resolved=resolved_property,
         valuation=valuation,
         rent_estimate=rent_estimate,
@@ -3141,12 +3231,11 @@ def property_explore_plus(prop_id):
         market=market_snapshot,
         photos=photos,
         primary_photo=primary_photo,
+
         active_page="property_search" if source == "property_search" else "property_tool",
         source=source,
         back_url=url_for(fallback_endpoint),
     )
-
-
     
     
 
