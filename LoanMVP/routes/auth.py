@@ -18,7 +18,7 @@ from LoanMVP.app import login_manager, mail
 from LoanMVP.extensions import csrf, db
 from LoanMVP.forms import RegisterForm, ResetPasswordForm, ResetPasswordRequestForm, LoginForm
 from LoanMVP.services.subscriptions import sync_features_with_subscription
-
+from LoanMVP.utils.blocking_helpers import is_user_blocked, get_user_block_message
 from LoanMVP.models.user_model import User
 from LoanMVP.models.admin import UserInvite
 from LoanMVP.models.investor_models import InvestorProfile
@@ -126,6 +126,10 @@ def login():
 
         # ⭐ STEP 3: Sync subscription → features
         sync_features_with_subscription(user.id)
+
+        if is_user_blocked(user):
+            flash(get_user_block_message(user), "danger")
+            return render_template("auth/login.html", form=form)
 
         # Continue login
         login_user(user)

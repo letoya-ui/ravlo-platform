@@ -1,7 +1,7 @@
 from functools import wraps
 from flask import redirect, url_for, flash, request
 from flask_login import current_user
-
+from LoanMVP.utils.blocking_helpers import is_user_blocked, get_user_block_message
 
 ADMIN_ROLES = {
     "admin",
@@ -107,5 +107,20 @@ def loan_officer_onboarding_required(fn):
     def wrapper(*args, **kwargs):
         if not getattr(current_user, "loan_officer_onboarding_complete", False):
             return redirect(url_for("loan_officer.onboarding"))
+        return fn(*args, **kwargs)
+    return wrapper
+
+
+def block_check_required(fn):
+    @wraps(fn)
+    def wrapper(*args, **kwargs):
+        if not current_user.is_authenticated:
+            return redirect(url_for("auth.login", next=request.path))
+
+        if is_user_blocked(current_user):
+            flash(get_user_block_message(current_user), "danger")
+            logout_target = url_for("auth.login")
+            return redirect(logout_target)
+
         return fn(*args, **kwargs)
     return wrapper
