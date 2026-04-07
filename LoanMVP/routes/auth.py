@@ -555,12 +555,18 @@ def accept_invite(token):
             )
             db.session.add(user)
 
-        invite.status = "accepted"
-        invite.accepted_at = datetime.utcnow()
-
-        db.session.commit()
+        # log them in immediately
+        login_user(user)
 
         flash("Invite accepted. Your account is ready.", "success")
-        return redirect(url_for("auth.login"))
+
+        # role-based redirect
+        if user.role in ["admin", "executive"]:
+            return redirect(url_for("admin.invite_workers"))
+
+        elif user.role == "worker":
+            return redirect(url_for("dashboard.index"))
+
+        return redirect(url_for("main.index"))
 
     return render_template("auth/accept_invite.html", invite=invite)
