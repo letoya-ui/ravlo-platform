@@ -1,0 +1,20 @@
+{% extends "layouts/marketing_base.html" %}
+{% block title %}Application Submitted{% endblock %}
+
+{% block content %}
+<section style="min-height:70vh;display:grid;place-items:center;padding:40px 20px;background:#08111a;color:#f4f7fb;">
+  <div style="max-width:760px;text-align:center;background:rgba(16,26,38,.88);border:1px solid rgba(255,255,255,.08);border-radius:24px;padding:40px;">
+    <div style="font-size:.8rem;letter-spacing:.18em;font-weight:800;color:#8ec5ff;margin-bottom:12px;">RAVLO LICENSING</div>
+    <h1 style="margin:0 0 12px;">Your application was submitted.</h1>
+    <p style="color:#9bb0c3;line-height:1.7;">
+      We’ve received your request and can use it to match you with the right pricing tier,
+      onboarding path, and licensing structure.
+    </p>
+    <div style="margin-top:22px;">
+      <a href="{{ url_for('marketing.pricing') }}" style="display:inline-flex;align-items:center;justify-content:center;min-height:48px;padding:0 18px;border-radius:14px;background:linear-gradient(135deg,#5da2ff,#84bdff);color:#08111a;text-decoration:none;font-weight:800;">
+        Back to Pricing
+      </a>
+    </div>
+  </div>
+</section>
+{% endblock %}

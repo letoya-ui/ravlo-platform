@@ -1,0 +1,228 @@
+{% extends "layouts/marketing_base.html" %}
+{% block title %}Apply for Ravlo Lending OS{% endblock %}
+
+{% block content %}
+<section class="apply-shell">
+  <div class="apply-wrap">
+    <div class="apply-copy">
+      <div class="eyebrow">RAVLO LICENSING</div>
+      <h1>Apply to license Ravlo Lending OS</h1>
+      <p>
+        Tell us about your operation, team structure, and goals. We use this to match you
+        to the right plan, onboarding path, and licensing structure.
+      </p>
+
+      <div class="apply-points">
+        <div class="point-card">Built for brokers, lenders, and lending teams</div>
+        <div class="point-card">Role-based access for loan officers, processors, and admins</div>
+        <div class="point-card">White-label and enterprise paths available</div>
+      </div>
+    </div>
+
+    <div class="apply-form-card">
+      <form method="POST" class="apply-form">
+        <div class="form-grid">
+          <div class="field">
+            <label>Company Name *</label>
+            <input type="text" name="company_name" required>
+          </div>
+
+          <div class="field">
+            <label>Contact Name *</label>
+            <input type="text" name="contact_name" required>
+          </div>
+
+          <div class="field">
+            <label>Email *</label>
+            <input type="email" name="email" required>
+          </div>
+
+          <div class="field">
+            <label>Phone</label>
+            <input type="text" name="phone">
+          </div>
+
+          <div class="field">
+            <label>Website</label>
+            <input type="text" name="website">
+          </div>
+
+          <div class="field">
+            <label>Business Type</label>
+            <select name="business_type">
+              <option value="">Select one</option>
+              <option value="broker">Broker</option>
+              <option value="brokerage">Brokerage</option>
+              <option value="private_lender">Private Lender</option>
+              <option value="fund">Fund</option>
+              <option value="enterprise">Enterprise</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label>Team Size</label>
+            <select name="team_size">
+              <option value="">Select one</option>
+              <option value="1">1</option>
+              <option value="2_5">2–5</option>
+              <option value="6_10">6–10</option>
+              <option value="11_25">11–25</option>
+              <option value="26_plus">26+</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label>Plan Interest</label>
+            <select name="plan_interest">
+              <option value="">Select one</option>
+              <option value="individual">Individual Loan Officer</option>
+              <option value="team">Brokerage / Small Team</option>
+              <option value="lender">Private Lender / Fund</option>
+              <option value="white_label">White-Label Platform</option>
+            </select>
+          </div>
+
+          <div class="field full">
+            <label>Monthly Loan Volume</label>
+            <input type="text" name="monthly_loan_volume" placeholder="Example: 5 loans / month">
+          </div>
+
+          <div class="field full">
+            <label>Current Tools</label>
+            <textarea name="current_tools" rows="3" placeholder="CRM, LOS, docs, spreadsheets, etc."></textarea>
+          </div>
+
+          <div class="field full">
+            <label>Goals</label>
+            <textarea name="goals" rows="4" placeholder="What do you want Ravlo to help you solve?"></textarea>
+          </div>
+
+          <div class="field full">
+            <label>Notes</label>
+            <textarea name="notes" rows="3"></textarea>
+          </div>
+        </div>
+
+        <button type="submit" class="ravlo-btn primary">Submit Application</button>
+      </form>
+    </div>
+  </div>
+</section>
+
+<style>
+  .apply-shell {
+    min-height: 100vh;
+    padding: 48px 20px 80px;
+    background: linear-gradient(180deg, #071018 0%, #0b1520 100%);
+    color: #f4f7fb;
+  }
+
+  .apply-wrap {
+    max-width: 1240px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 28px;
+    align-items: start;
+  }
+
+  .eyebrow {
+    font-size: .78rem;
+    letter-spacing: .18em;
+    font-weight: 800;
+    color: #8ec5ff;
+    margin-bottom: 12px;
+  }
+
+  .apply-copy h1 {
+    font-size: clamp(2.2rem, 4vw, 4rem);
+    line-height: 1.02;
+    margin: 0 0 14px;
+  }
+
+  .apply-copy p {
+    color: #9bb0c3;
+    line-height: 1.7;
+    max-width: 640px;
+  }
+
+  .apply-points {
+    display: grid;
+    gap: 14px;
+    margin-top: 26px;
+  }
+
+  .point-card,
+  .apply-form-card {
+    background: rgba(16, 26, 38, 0.88);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 24px;
+    box-shadow: 0 24px 80px rgba(0,0,0,0.28);
+  }
+
+  .point-card {
+    padding: 18px 20px;
+  }
+
+  .apply-form-card {
+    padding: 24px;
+  }
+
+  .form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .field.full {
+    grid-column: 1 / -1;
+  }
+
+  .field label {
+    font-size: .92rem;
+    font-weight: 700;
+    color: #dce8f4;
+  }
+
+  .field input,
+  .field select,
+  .field textarea {
+    width: 100%;
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 14px;
+    background: rgba(255,255,255,0.04);
+    color: #f4f7fb;
+    padding: 14px 14px;
+    outline: none;
+  }
+
+  .field textarea {
+    resize: vertical;
+  }
+
+  .ravlo-btn.primary {
+    margin-top: 20px;
+    min-height: 50px;
+    padding: 0 20px;
+    border: 0;
+    border-radius: 14px;
+    background: linear-gradient(135deg, #5da2ff, #84bdff);
+    color: #08111a;
+    font-weight: 800;
+    cursor: pointer;
+  }
+
+  @media (max-width: 900px) {
+    .apply-wrap,
+    .form-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+{% endblock %}

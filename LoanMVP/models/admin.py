@@ -19,10 +19,13 @@ class Company(db.Model):
     email_domain = db.Column(db.String(255), nullable=True)
     is_active = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    subscription_tier = db.Column(db.String(50), nullable=True)
+    max_users = db.Column(db.Integer, nullable=True)
 
     users = db.relationship("User", back_populates="company", lazy=True)
     invites = db.relationship("UserInvite", back_populates="company", lazy=True)
-
+    access_requests = db.relationship("AccessRequest", backref="company", lazy=True)
 
 class AccessRequest(db.Model):
     __tablename__ = "access_requests"
@@ -81,3 +84,25 @@ class UserInvite(db.Model):
 
     def is_expired(self):
         return datetime.utcnow() > self.expires_at
+
+class LicenseApplication(db.Model):
+    __tablename__ = "license_applications"
+
+    id = db.Column(db.Integer, primary_key=True)
+    company_name = db.Column(db.String(255), nullable=False)
+    contact_name = db.Column(db.String(255), nullable=False)
+    email = db.Column(db.String(255), nullable=False, index=True)
+    phone = db.Column(db.String(50))
+    website = db.Column(db.String(255))
+
+    business_type = db.Column(db.String(100))  # broker, lender, fund, brokerage, enterprise
+    team_size = db.Column(db.String(50))
+    plan_interest = db.Column(db.String(100))  # individual, team, lender, white_label
+
+    monthly_loan_volume = db.Column(db.String(100))
+    current_tools = db.Column(db.Text)
+    goals = db.Column(db.Text)
+    notes = db.Column(db.Text)
+
+    status = db.Column(db.String(50), default="new", nullable=False)  # new, contacted, approved, declined
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)

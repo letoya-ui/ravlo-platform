@@ -820,3 +820,37 @@ def onboarding_center():
         resource_count=8,
         required_steps=6,
     )
+
+@admin_bp.route("/licensing/applications")
+@login_required
+@role_required("admin")
+def licensing_applications():
+    apps = LicenseApplication.query.order_by(
+        LicenseApplication.created_at.desc()
+    ).all()
+
+    return render_template(
+        "admin/licensing_applications.html",
+        applications=apps
+    )
+
+@admin_bp.route("/licensing/applications/<int:app_id>/approve", methods=["POST"])
+@login_required
+@role_required("admin")
+def approve_application(app_id):
+    app_row = LicenseApplication.query.get_or_404(app_id)
+
+    app_row.status = "approved"
+
+    # 🔥 Create company automatically
+    company = Company(
+        name=app_row.company_name,
+        subscription_tier=app_row.plan_interest or "team",
+        is_active=True
+    )
+
+    db.session.add(company)
+    db.session.commit()
+
+    flash("Application approved and company created.", "success")
+    return redirect(url_for("admin.licensing_applications"))

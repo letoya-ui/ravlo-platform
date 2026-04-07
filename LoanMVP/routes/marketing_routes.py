@@ -1,5 +1,11 @@
 from datetime import datetime
-from flask import Blueprint, render_template, redirect, url_for, request
+
+from flask import Blueprint, render_template, redirect, url_for, request, flash
+
+from LoanMVP.extensions import db
+
+from LoanMVP.models.admin import LicenseApplication
+
 
 marketing_bp = Blueprint("marketing", __name__, url_prefix="/")
 
@@ -221,6 +227,9 @@ def about():
 def plans():
     return render_marketing_page("plans")
 
+@marketing_bp.route("/pricing")
+def pricing():
+    return render_template("marketing/lending_pricing.html")
 
 # ---------------------------------------------------------
 # PARTNERS
@@ -344,3 +353,53 @@ def lending_os():
         page_key="lending_os",
         hero_image="images/marketing/lending_os_hero.jpg",
     )
+
+
+
+@marketing_bp.route("/apply", methods=["GET", "POST"])
+def apply():
+    if request.method == "POST":
+        company_name = (request.form.get("company_name") or "").strip()
+        contact_name = (request.form.get("contact_name") or "").strip()
+        email = (request.form.get("email") or "").strip()
+        phone = (request.form.get("phone") or "").strip()
+        website = (request.form.get("website") or "").strip()
+        business_type = (request.form.get("business_type") or "").strip()
+        team_size = (request.form.get("team_size") or "").strip()
+        plan_interest = (request.form.get("plan_interest") or "").strip()
+        monthly_loan_volume = (request.form.get("monthly_loan_volume") or "").strip()
+        current_tools = (request.form.get("current_tools") or "").strip()
+        goals = (request.form.get("goals") or "").strip()
+        notes = (request.form.get("notes") or "").strip()
+
+        if not company_name or not contact_name or not email:
+            flash("Company name, contact name, and email are required.", "warning")
+            return render_template("marketing/apply.html")
+
+        app_row = LicenseApplication(
+            company_name=company_name,
+            contact_name=contact_name,
+            email=email,
+            phone=phone,
+            website=website,
+            business_type=business_type,
+            team_size=team_size,
+            plan_interest=plan_interest,
+            monthly_loan_volume=monthly_loan_volume,
+            current_tools=current_tools,
+            goals=goals,
+            notes=notes,
+            status="new",
+        )
+
+        db.session.add(app_row)
+        db.session.commit()
+
+        flash("Your application has been submitted.", "success")
+        return redirect(url_for("marketing.apply_success"))
+
+    return render_template("marketing/apply.html")
+
+@marketing_bp.route("/apply/success")
+def apply_success():
+    return render_template("marketing/apply_success.html")
