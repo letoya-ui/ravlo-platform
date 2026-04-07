@@ -2,7 +2,7 @@ from datetime import datetime
 
 from flask import Blueprint, render_template, redirect, url_for, request, flash
 
-from LoanMVP.extensions import db
+from LoanMVP.extensions import db, csrf
 
 from LoanMVP.models.admin import LicenseApplication
 
