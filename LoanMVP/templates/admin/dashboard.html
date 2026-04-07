@@ -23,6 +23,10 @@ Central system management for users, onboarding, invites, lending operations, an
     <i class="lucide lucide-inbox"></i>
     Access Requests
   </a>
+  <a class="re-btn ghost sm" href="{{ url_for('admin.license_applications') }}">
+    <i class="lucide lucide-file-text"></i>
+    License Applications
+  </a>
 {% endblock %}
 
 {% block content %}
@@ -50,6 +54,10 @@ Central system management for users, onboarding, invites, lending operations, an
       <a class="re-btn ghost" href="{{ url_for('admin.access_requests') }}">
         <i class="lucide lucide-inbox"></i>
         Access Requests
+      </a>
+      <a class="re-btn ghost" href="{{ url_for('admin.license_applications') }}">
+        <i class="lucide lucide-file-text"></i>
+        License Applications
       </a>
       <a class="re-btn ghost" href="{{ url_for('account.settings') }}">
         <i class="lucide lucide-settings"></i>
@@ -276,6 +284,10 @@ Central system management for users, onboarding, invites, lending operations, an
             <i class="lucide lucide-inbox"></i>
             Requests
           </a>
+          <a class="re-btn ghost" href="{{ url_for('admin.license_applications') }}">
+            <i class="lucide lucide-file-text"></i>
+            License Apps
+          </a>
           <a class="re-btn ghost" href="{{ url_for('system.users') }}">
             <i class="lucide lucide-users"></i>
             Users
@@ -351,6 +363,24 @@ Central system management for users, onboarding, invites, lending operations, an
             <div class="re-card-subtitle">New or active CRM records</div>
           </div>
         </div>
+        
+        <section class="re-card pad">
+          <div class="section-head">
+            <div>
+              <div class="eyebrow">LICENSING</div>
+              <h3 style="margin:.35rem 0 .2rem;">License Applications</h3>
+              <div class="re-card-subtitle">Review inbound Ravlo OS and Lending OS licensing requests</div>
+            </div>
+            <a class="re-btn ghost sm" href="{{ url_for('admin.license_applications') }}">View All</a>
+          </div>
+
+          <div class="admin-quick-actions mt-16">
+            <a class="re-btn primary" href="{{ url_for('admin.license_applications') }}">
+              <i class="lucide lucide-file-text"></i>
+              Open License Applications
+            </a>
+          </div>
+        </section>
 
         {% if leads %}
           <div class="re-table-wrap mt-16">
