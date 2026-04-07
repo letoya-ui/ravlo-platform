@@ -1,0 +1,265 @@
+{% extends "layouts/ravlo_employee_base.html" %}
+{% block title %}Licensing Applications{% endblock %}
+
+{% block content %}
+<section class="ravlo-page">
+
+  <!-- HEADER -->
+  <div class="ravlo-header">
+    <div>
+      <div class="ravlo-eyebrow">ADMIN</div>
+      <h1>Licensing Applications</h1>
+      <p>Review, approve, and onboard new Ravlo Lending OS clients.</p>
+    </div>
+  </div>
+
+  <!-- TABLE CARD -->
+  <div class="ravlo-card">
+    <div class="ravlo-card-header">
+      <h3>Incoming Applications</h3>
+    </div>
+
+    {% if applications %}
+    <div class="table-wrap">
+      <table class="ravlo-table">
+        <thead>
+          <tr>
+            <th>Company</th>
+            <th>Contact</th>
+            <th>Email</th>
+            <th>Plan</th>
+            <th>Team Size</th>
+            <th>Status</th>
+            <th>Created</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          {% for app in applications %}
+          <tr>
+            <td>
+              <strong>{{ app.company_name }}</strong>
+            </td>
+
+            <td>
+              {{ app.contact_name }}<br>
+              <span class="muted">{{ app.phone or "-" }}</span>
+            </td>
+
+            <td>{{ app.email }}</td>
+
+            <td>
+              <span class="chip">{{ app.plan_interest or "—" }}</span>
+            </td>
+
+            <td>{{ app.team_size or "—" }}</td>
+
+            <td>
+              <span class="status {{ app.status }}">
+                {{ app.status }}
+              </span>
+            </td>
+
+            <td>
+              {{ app.created_at.strftime("%b %d, %Y") }}
+            </td>
+
+            <td>
+              <div class="actions">
+
+                {% if app.status != "approved" %}
+                <form method="POST"
+                      action="{{ url_for('admin.approve_license_application', app_id=app.id) }}">
+                  <button class="ravlo-btn primary sm">Approve</button>
+                </form>
+                {% endif %}
+
+                {% if app.status != "declined" %}
+                <form method="POST"
+                      action="{{ url_for('admin.decline_license_application', app_id=app.id) }}">
+                  <button class="ravlo-btn ghost sm">Decline</button>
+                </form>
+                {% endif %}
+
+              </div>
+            </td>
+          </tr>
+
+          <!-- EXPANDED DETAILS ROW -->
+          <tr class="details-row">
+            <td colspan="8">
+
+              <div class="details-grid">
+
+                <div>
+                  <strong>Business Type:</strong>
+                  <p>{{ app.business_type or "—" }}</p>
+                </div>
+
+                <div>
+                  <strong>Website:</strong>
+                  <p>{{ app.website or "—" }}</p>
+                </div>
+
+                <div>
+                  <strong>Monthly Volume:</strong>
+                  <p>{{ app.monthly_loan_volume or "—" }}</p>
+                </div>
+
+                <div>
+                  <strong>Current Tools:</strong>
+                  <p>{{ app.current_tools or "—" }}</p>
+                </div>
+
+                <div>
+                  <strong>Goals:</strong>
+                  <p>{{ app.goals or "—" }}</p>
+                </div>
+
+                <div>
+                  <strong>Notes:</strong>
+                  <p>{{ app.notes or "—" }}</p>
+                </div>
+
+              </div>
+
+            </td>
+          </tr>
+
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    {% else %}
+    <div class="empty-state">
+      <p>No licensing applications yet.</p>
+    </div>
+    {% endif %}
+  </div>
+
+</section>
+
+<style>
+.ravlo-header {
+  margin-bottom: 20px;
+}
+
+.ravlo-eyebrow {
+  font-size: .75rem;
+  letter-spacing: .15em;
+  font-weight: 800;
+  color: #6faaff;
+}
+
+.ravlo-card {
+  background: rgba(16,26,38,.9);
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 20px;
+  padding: 20px;
+}
+
+.ravlo-card-header {
+  margin-bottom: 16px;
+}
+
+.table-wrap {
+  overflow-x: auto;
+}
+
+.ravlo-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.ravlo-table th,
+.ravlo-table td {
+  padding: 14px;
+  border-bottom: 1px solid rgba(255,255,255,.08);
+  text-align: left;
+}
+
+.ravlo-table th {
+  font-size: .85rem;
+  color: #9bb0c3;
+}
+
+.muted {
+  color: #8fa3b5;
+  font-size: .85rem;
+}
+
+.chip {
+  background: rgba(93,162,255,.15);
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: .8rem;
+}
+
+.status {
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: .8rem;
+}
+
+.status.new {
+  background: rgba(255,255,255,.1);
+}
+
+.status.approved {
+  background: rgba(120,255,180,.15);
+}
+
+.status.declined {
+  background: rgba(255,120,120,.15);
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+}
+
+.details-row td {
+  background: rgba(255,255,255,.02);
+}
+
+.details-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  padding: 14px 0;
+}
+
+.details-grid p {
+  margin: 4px 0 0;
+  color: #9bb0c3;
+}
+
+.empty-state {
+  padding: 30px;
+  text-align: center;
+  color: #9bb0c3;
+}
+
+.ravlo-btn {
+  border-radius: 10px;
+  padding: 6px 12px;
+  font-size: .8rem;
+  font-weight: 700;
+  cursor: pointer;
+  border: none;
+}
+
+.ravlo-btn.primary {
+  background: linear-gradient(135deg, #5da2ff, #84bdff);
+  color: #08111a;
+}
+
+.ravlo-btn.ghost {
+  background: rgba(255,255,255,.08);
+  color: #fff;
+}
+</style>
+
+{% endblock %}
