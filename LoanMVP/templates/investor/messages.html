@@ -319,6 +319,7 @@
     </div>
 
     <form id="aiForm" method="POST" action="{{ url_for('investor.ask_ai_post') }}" class="ai-form">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <input type="text"
              name="question"
              id="aiInput"

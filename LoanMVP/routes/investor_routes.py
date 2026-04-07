@@ -3975,7 +3975,6 @@ def deal_comparison():
     return render_template("investor/deal_comparison.html", deals=deals)
 
 @investor_bp.route("/deal-comparison/run", methods=["POST"])
-@csrf.exempt
 @login_required
 @role_required("investor")
 def run_deal_comparison():
@@ -4100,7 +4099,6 @@ def deals():
     )
     
 @investor_bp.route("/deals/create", methods=["GET", "POST"])
-@csrf.exempt
 @login_required
 @role_required("investor")
 def create_deal():
@@ -4165,7 +4163,6 @@ def create_deal():
     
 @investor_bp.route("/deals/save", methods=["POST"])
 @investor_bp.route("/deals/save_deal", methods=["POST"])
-@csrf.exempt
 @login_required
 @role_required("investor")
 def save_deal():
@@ -4328,7 +4325,6 @@ def save_deal():
     return redirect(url_for("investor.deal_detail", deal_id=deal.id))
     
 @investor_bp.route("/deals/<int:deal_id>/edit", methods=["POST"])
-@csrf.exempt
 @login_required
 @role_required("investor")
 def deal_edit(deal_id):
@@ -4347,7 +4343,6 @@ def deal_edit(deal_id):
     return redirect(url_for("investor.deal_detail", deal_id=deal.id))
 
 @investor_bp.route("/deals/<int:deal_id>/delete", methods=["POST"])
-@csrf.exempt
 @login_required
 @role_required("investor")
 def deal_delete(deal_id):
@@ -8027,7 +8022,6 @@ def messages():
 
 @investor_bp.route("/messages/send", methods=["POST"])
 @investor_bp.route("/messages/send", methods=["POST"])
-@csrf.exempt
 @login_required
 @role_required("investor")
 def send_message():
@@ -8100,13 +8094,13 @@ def ask_ai_page():
 
 @investor_bp.route("/ai", methods=["POST"])
 @investor_bp.route("/ask-ai", methods=["POST"])
-@csrf.exempt
 @login_required
 @role_required("investor")
 def ask_ai_post():
     ip = InvestorProfile.query.filter_by(user_id=current_user.id).first()
-    question = request.form.get("question") or ""
-    parent_id = request.form.get("parent_id")
+    payload = request.get_json(silent=True) if request.is_json else None
+    question = ((payload or {}).get("question") if payload is not None else request.form.get("question")) or ""
+    parent_id = ((payload or {}).get("parent_id") if payload is not None else request.form.get("parent_id"))
 
     assistant = AIAssistant()
     ai_reply = assistant.generate_reply(question, "investor_ai")
@@ -8139,6 +8133,14 @@ def ask_ai_post():
         .filter_by(user_id=current_user.id)
         .order_by(AIAssistantInteraction.timestamp.desc())
         .all())
+
+    if request.is_json:
+        return jsonify({
+            "reply": ai_reply,
+            "steps": next_steps,
+            "upload_trigger": upload_trigger,
+            "chat_id": chat.id,
+        })
 
     return render_template(
         "investor/ai_response.html",
@@ -8235,7 +8237,6 @@ def deal_copilot():
 
 
 @investor_bp.route("/deal-studio/copilot/chat", methods=["POST"])
-@csrf.exempt
 @login_required
 @role_required("investor")
 def deal_copilot_chat():

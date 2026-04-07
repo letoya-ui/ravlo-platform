@@ -27,6 +27,7 @@ Start a new opportunity and move it into your Ravlo pipeline.
 
   <section class="ravlo-card pad">
     <form method="POST" class="ravlo-form-grid create-deal-grid">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
       <div class="ravlo-field">
         <label class="ravlo-label">Deal Title</label>
