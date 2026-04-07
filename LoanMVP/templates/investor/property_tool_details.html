@@ -220,7 +220,10 @@ Review the property record, core facts, available valuation signals, and next st
 async function postJson(url, payload) {
   const res = await fetch(url, {
     method: "POST",
-    headers: {"Content-Type":"application/json"},
+    headers: {
+      "Content-Type":"application/json",
+      "X-CSRFToken": "{{ csrf_token() }}"
+    },
     credentials: "include",
     body: JSON.stringify(payload)
   });

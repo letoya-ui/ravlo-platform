@@ -101,6 +101,8 @@ Search by ZIP or address, review public record property data, and move opportuni
 </div>
 
 <script>
+const csrfToken = "{{ csrf_token() }}";
+
 function money(x){
   if (x === null || x === undefined || x === "") return "—";
   const n = Number(x);
@@ -153,7 +155,10 @@ async function viewDetails(item){
   try{
     const resp = await fetch("{{ url_for('investor.api_property_tool_view_details') }}", {
       method: "POST",
-      headers: {"Content-Type":"application/json"},
+      headers: {
+        "Content-Type":"application/json",
+        "X-CSRFToken": csrfToken
+      },
       credentials: "include",
       body: JSON.stringify(item)
     });
@@ -183,7 +188,10 @@ async function saveOnly(item){
   try{
     const resp = await fetch("{{ url_for('investor.api_property_tool_save') }}", {
       method: "POST",
-      headers: {"Content-Type":"application/json"},
+      headers: {
+        "Content-Type":"application/json",
+        "X-CSRFToken": csrfToken
+      },
       credentials: "include",
       body: JSON.stringify(item)
     });
@@ -216,7 +224,10 @@ async function saveAndAnalyze(item){
   try{
     const resp = await fetch("{{ url_for('investor.api_property_tool_save_and_analyze') }}", {
       method: "POST",
-      headers: {"Content-Type":"application/json"},
+      headers: {
+        "Content-Type":"application/json",
+        "X-CSRFToken": csrfToken
+      },
       credentials: "include",
       body: JSON.stringify(item)
     });
@@ -363,7 +374,10 @@ async function runSearch(){
   try{
     const resp = await fetch("{{ url_for('investor.api_property_tool_search') }}", {
       method: "POST",
-      headers: {"Content-Type":"application/json"},
+      headers: {
+        "Content-Type":"application/json",
+        "X-CSRFToken": csrfToken
+      },
       credentials: "include",
       body: JSON.stringify(payload)
     });

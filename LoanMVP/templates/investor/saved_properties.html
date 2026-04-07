@@ -80,7 +80,7 @@
         <form method="POST"
               action="{{ url_for('investor.saved_properties_manage') }}"
               style="margin-top:.85rem; display:flex; flex-direction:column; gap:.6rem;">
-          {{ csrf_token() if csrf_token is defined }}
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <input type="hidden" name="prop_id" value="{{ prop.id }}">
 
           <textarea name="notes"

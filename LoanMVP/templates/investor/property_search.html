@@ -292,7 +292,7 @@ Search any address and instantly see property details, investor signals, comps, 
                   action="{{ url_for('investor.save_property') }}"
                   id="savePropertyForm"
                   style="margin:0;">
-              {{ csrf_token() if csrf_token is defined }}
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
               <input type="hidden" name="property_id" value="{{ property.property_id or property.id or '' }}">
               <input type="hidden" name="address" value="{{ property.address }}">
@@ -309,7 +309,7 @@ Search any address and instantly see property details, investor signals, comps, 
                   action="{{ url_for('investor.save_property_and_analyze') }}"
                   id="analyzeForm"
                   style="margin:0;">
-              {{ csrf_token() if csrf_token is defined }}
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
               <input type="hidden" name="property_id" value="{{ property.property_id or property.id or '' }}">
               <input type="hidden" name="address" value="{{ property.address }}">

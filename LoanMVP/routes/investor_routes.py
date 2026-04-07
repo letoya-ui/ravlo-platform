@@ -2838,7 +2838,6 @@ def property_search():
 
 @investor_bp.route("/intelligence/save", methods=["POST"])
 @investor_bp.route("/save_property", methods=["POST"])
-@csrf.exempt
 @login_required
 @role_required("investor")
 def save_property():
@@ -2971,7 +2970,6 @@ def saved_properties():
 
 @investor_bp.route("/intelligence/saved/manage", methods=["POST"])
 @investor_bp.route("/saved_properties/manage", methods=["POST"])
-@csrf.exempt
 @login_required
 @role_required("investor")
 def saved_properties_manage():
@@ -3013,7 +3011,6 @@ def saved_properties_manage():
 
 @investor_bp.route("/intelligence/save-and-analyze", methods=["POST"])
 @investor_bp.route("/save_property_and_analyze", methods=["POST"])
-@csrf.exempt
 @login_required
 @role_required("investor")
 def save_property_and_analyze():
@@ -3276,7 +3273,6 @@ def property_tool():
 
 
 @investor_bp.route("/api/property_tool_search", methods=["POST"])
-@csrf.exempt
 @login_required
 @role_required("investor")
 def api_property_tool_search():
@@ -3344,7 +3340,6 @@ def api_property_tool_search():
 
 @investor_bp.route("/api/intelligence/save", methods=["POST"])
 @investor_bp.route("/api/property_tool_save", methods=["POST"])
-@csrf.exempt
 @login_required
 @role_required("investor")
 def api_property_tool_save():
@@ -3419,7 +3414,6 @@ def api_property_tool_save():
 
 @investor_bp.route("/api/intelligence/save-and-analyze", methods=["POST"])
 @investor_bp.route("/api/property_tool_save_and_analyze", methods=["POST"])
-@csrf.exempt
 @login_required
 @role_required("investor")
 def api_property_tool_save_and_analyze():
@@ -3490,7 +3484,6 @@ def api_property_tool_save_and_analyze():
 
 @investor_bp.route("/api/intelligence/card", methods=["POST"])
 @investor_bp.route("/api/property_tool_card", methods=["POST"])
-@csrf.exempt
 @login_required
 @role_required("investor")
 def api_property_tool_card():
@@ -3565,7 +3558,6 @@ def api_property_tool_card():
 
 
 @investor_bp.route("/api/property_tool_view_details", methods=["POST"])
-@csrf.exempt
 @login_required
 @role_required("investor")
 def api_property_tool_view_details():
@@ -6829,7 +6821,6 @@ def deal_architect(deal_id=None):
     )
     
 @investor_bp.route("/deal-architect/analyze", methods=["POST"])
-@csrf.exempt
 @login_required
 @role_required("investor")
 def deal_architect_analyze():

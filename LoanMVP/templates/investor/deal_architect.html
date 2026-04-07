@@ -382,6 +382,9 @@ async function runDealArchitect(e) {
   try {
     const res = await fetch("{{ url_for('investor.deal_architect_analyze') }}", {
       method: "POST",
+      headers: {
+        "X-CSRFToken": "{{ csrf_token() }}"
+      },
       body: formData
     });
 
