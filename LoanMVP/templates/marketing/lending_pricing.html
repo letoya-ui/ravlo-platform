@@ -161,7 +161,7 @@
         </ul>
 
         <div class="card-actions">
-          <a href="{{ url_for('marketing.contact') if 'marketing.contact' in current_app.view_functions else '#' }}" class="ravlo-btn secondary full">Talk to Sales</a>
+          <a href="{{ url_for('marketing.contact') }}" class="ravlo-btn secondary full">Talk to Sales</a>
         </div>
       </article>
 
@@ -187,7 +187,7 @@
         </ul>
 
         <div class="card-actions">
-          <a href="{{ url_for('marketing.contact') if 'marketing.contact' in current_app.view_functions else '#' }}" class="ravlo-btn secondary full">Request Enterprise Demo</a>
+          <a href="{{ url_for('marketing.contact') }}" class="ravlo-btn secondary full">Request Enterprise Demo</a>
         </div>
       </article>
     </div>
@@ -358,8 +358,8 @@
     </div>
 
     <div class="pricing-cta-actions">
-      <a href="{{ url_for('marketing.apply') if 'marketing.apply' in current_app.view_functions else '#' }}" class="ravlo-btn primary lg">Apply Now</a>
-      <a href="{{ url_for('marketing.contact') if 'marketing.contact' in current_app.view_functions else '#' }}" class="ravlo-btn ghost lg">Talk With Us</a>
+      <a href="{{ url_for('marketing.apply') }}" class="ravlo-btn primary lg">Apply Now</a>
+      <a href="{{ url_for('marketing.contact') }}" class="ravlo-btn ghost lg">Talk With Us</a>
     </div>
   </section>
 </section>
