@@ -12,6 +12,7 @@ from werkzeug.security import generate_password_hash
 
 from LoanMVP.ai.base_ai import AIAssistant     # ✅ Unified AI import
 from LoanMVP.utils.decorators import role_required
+from LoanMVP.utils.emailer import send_email  # or wherever you saved it
 
 # MODELS
 from LoanMVP.models.user_model import User
@@ -58,6 +59,89 @@ def _plan_defaults(plan_interest: str):
         return "white_label", None
 
     return "team", 10
+
+
+def _send_email_fallback(to_email: str, subject: str, body: str, html: str):
+    """
+    Replace this with your real SendGrid / existing email helper.
+    """
+    current_app.logger.info("EMAIL TO: %s | SUBJECT: %s", to_email, subject)
+    current_app.logger.info("BODY: %s", body)
+    current_app.logger.info("HTML: %s", html)
+
+
+def _build_license_invite_email(invite, company, application):
+    invite_url = url_for("auth.accept_invite", token=invite.token, _external=True)
+    tracking_pixel = url_for(
+        "tracking.license_invite_pixel",
+        token=invite.token,
+        email=invite.email,
+        _external=True
+    )
+
+    subject = f"You've been invited to join {company.name} on Ravlo"
+
+    body = f"""
+Hi {application.contact_name or 'there'},
+
+Your licensing application for {company.name} has been approved.
+
+Use the link below to accept your invite and activate your account:
+
+{invite_url}
+
+Plan: {company.subscription_tier or 'team'}
+Role: {invite.role}
+
+If you were not expecting this email, you can ignore it.
+
+- Ravlo
+""".strip()
+
+    html = f"""
+    <div style="font-family:Inter,Arial,sans-serif;background:#071018;padding:32px;color:#f4f7fb;">
+      <div style="max-width:680px;margin:0 auto;background:#0f1a26;border:1px solid rgba(255,255,255,.08);border-radius:20px;padding:32px;">
+        <div style="font-size:12px;letter-spacing:.18em;font-weight:800;color:#8ec5ff;margin-bottom:12px;">
+          RAVLO LICENSING
+        </div>
+
+        <h1 style="margin:0 0 12px;font-size:30px;line-height:1.1;">
+          Your application has been approved
+        </h1>
+
+        <p style="color:#9bb0c3;line-height:1.7;margin:0 0 16px;">
+          Hi {application.contact_name or 'there'},
+        </p>
+
+        <p style="color:#dce8f4;line-height:1.7;">
+          Your licensing application for <strong>{company.name}</strong> has been approved.
+          You can now activate your company admin account.
+        </p>
+
+        <p style="margin:24px 0;">
+          <a href="{invite_url}"
+             style="display:inline-block;padding:14px 20px;border-radius:12px;background:linear-gradient(135deg,#5da2ff,#84bdff);color:#08111a;text-decoration:none;font-weight:800;">
+            Accept Invite & Get Started
+          </a>
+        </p>
+
+        <div style="margin-top:18px;padding:16px;border-radius:14px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);">
+          <p style="margin:0 0 8px;color:#dce8f4;"><strong>Plan:</strong> {company.subscription_tier or 'team'}</p>
+          <p style="margin:0;color:#dce8f4;"><strong>Role:</strong> {invite.role}</p>
+        </div>
+
+        <p style="color:#9bb0c3;line-height:1.7;margin-top:20px;">
+          If you were not expecting this email, you can ignore it.
+        </p>
+
+        <p style="color:#9bb0c3;margin-top:20px;">- Ravlo</p>
+
+        <img src="{tracking_pixel}" width="1" height="1" style="display:none;" alt="">
+      </div>
+    </div>
+    """.strip()
+
+    return subject, body, html
 
 # =========================================================
 # 🏠 ADMIN DASHBOARD
@@ -856,19 +940,19 @@ def onboarding_center():
     )
 
 
-
 @admin_bp.route("/licensing/applications")
 @login_required
-@role_required("admin")
+@role_required("platform_admin")
 def licensing_applications():
     applications = LicenseApplication.query.order_by(
         LicenseApplication.created_at.desc()
     ).all()
 
     invite_lookup = {}
+
     for app in applications:
         company = Company.query.filter(
-            db.func.lower(Company.name) == app.company_name.strip().lower()
+            func.lower(Company.name) == (app.company_name or "").strip().lower()
         ).first()
 
         if company:
@@ -886,9 +970,10 @@ def licensing_applications():
         invite_lookup=invite_lookup,
     )
 
+
 @admin_bp.route("/licensing/applications/<int:app_id>/approve", methods=["POST"])
 @login_required
-@role_required("admin")
+@role_required("platform_admin")
 def approve_license_application(app_id):
     app_row = LicenseApplication.query.get_or_404(app_id)
 
@@ -898,16 +983,24 @@ def approve_license_application(app_id):
 
     subscription_tier, max_users = _plan_defaults(app_row.plan_interest)
 
-    company = Company(
-        name=app_row.company_name,
-        email_domain=None,
-        subscription_tier=subscription_tier,
-        max_users=max_users,
-        is_active=True,
-    )
+    company = Company.query.filter(
+        func.lower(Company.name) == (app_row.company_name or "").strip().lower()
+    ).first()
 
-    db.session.add(company)
-    db.session.flush()
+    if not company:
+        company = Company(
+            name=app_row.company_name,
+            email_domain=None,
+            subscription_tier=subscription_tier,
+            max_users=max_users,
+            is_active=True,
+        )
+        db.session.add(company)
+        db.session.flush()
+    else:
+        company.subscription_tier = company.subscription_tier or subscription_tier
+        company.max_users = company.max_users or max_users
+        company.is_active = True
 
     app_row.status = "approved"
 
@@ -923,16 +1016,59 @@ def approve_license_application(app_id):
         company_id=company.id,
         reviewed_by=current_user.id,
     )
-
     db.session.add(access_request)
+
+    invite = UserInvite.query.filter_by(
+        company_id=company.id,
+        email=app_row.email,
+        status="pending",
+    ).first()
+
+    if not invite:
+        parts = (app_row.contact_name or "").strip().split()
+        first_name = parts[0] if parts else None
+        last_name = " ".join(parts[1:]) if len(parts) > 1 else None
+
+        invite = UserInvite(
+            company_id=company.id,
+            email=app_row.email,
+            first_name=first_name,
+            last_name=last_name,
+            role="admin",
+            token=UserInvite.generate_token(),
+            status="pending",
+            invited_by=current_user.id,
+            expires_at=UserInvite.default_expiration(days=7),
+        )
+        db.session.add(invite)
+        db.session.flush()
+
+    email_sent = False
+    try:
+        subject, body, html = _build_license_invite_email(invite, company, app_row)
+        _send_email_fallback(
+            to_email=invite.email,
+            subject=subject,
+            body=body,
+            html=html
+        )
+        email_sent = True
+    except Exception:
+        current_app.logger.exception("Failed to send licensing invite email")
+
     db.session.commit()
 
-    flash("License application approved and company created.", "success")
+    if email_sent:
+        flash("Application approved, company created, and invite email sent.", "success")
+    else:
+        flash("Application approved and invite created, but email failed to send.", "warning")
+
     return redirect(url_for("admin.licensing_applications"))
+
 
 @admin_bp.route("/licensing/applications/<int:app_id>/decline", methods=["POST"])
 @login_required
-@role_required("admin")
+@role_required("platform_admin")
 def decline_license_application(app_id):
     app_row = LicenseApplication.query.get_or_404(app_id)
 

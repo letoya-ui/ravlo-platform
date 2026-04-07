@@ -17,3 +17,14 @@ def send_email_with_attachment(to, subject, html_body, file_path):
         )
 
     mail.send(msg)
+
+
+def send_email(to, subject, html_body, text_body=None):
+    msg = Message(
+        subject=subject,
+        recipients=[to],
+        html=html_body,
+        body=text_body or "Please view this email in HTML format."
+    )
+
+    mail.send(msg)

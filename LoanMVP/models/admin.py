@@ -106,3 +106,17 @@ class LicenseApplication(db.Model):
 
     status = db.Column(db.String(50), default="new", nullable=False)  # new, contacted, approved, declined
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+class LicenseInviteEvent(db.Model):
+    __tablename__ = "license_invite_events"
+
+    id = db.Column(db.Integer, primary_key=True)
+
+    invite_token = db.Column(db.String(255))
+    email = db.Column(db.String(255))
+
+    event_type = db.Column(db.String(50))  # opened
+    user_agent = db.Column(db.String(255))
+    ip_address = db.Column(db.String(50))
+
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)

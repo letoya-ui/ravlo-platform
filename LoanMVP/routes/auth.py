@@ -498,7 +498,6 @@ def load_user(user_id):
     return User.query.get(int(user_id))
 
 
-
 @auth_bp.route("/accept-invite/<token>", methods=["GET", "POST"])
 def accept_invite(token):
     invite = UserInvite.query.filter_by(token=token).first_or_404()
@@ -552,7 +551,7 @@ def accept_invite(token):
 
         db.session.commit()
 
-        flash("Invite accepted. You can now log in.", "success")
+        flash("Invite accepted. Your account is ready.", "success")
         return redirect(url_for("auth.login"))
 
     return render_template("auth/accept_invite.html", invite=invite)

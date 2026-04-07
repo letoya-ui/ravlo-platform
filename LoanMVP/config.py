@@ -53,7 +53,7 @@ class Config:
     STRIPE_WEBHOOK_SECRET = os.environ.get("STRIPE_WEBHOOK_SECRET", "")
 
     # MAIL
-    MAIL_SERVER = os.environ.get("MAIL_SERVER", "smtp.gmail.com")
+    MAIL_SERVER = os.environ.get("MAIL_SERVER", "smtp.sendgrid.net")
     MAIL_PORT = int(os.environ.get("MAIL_PORT", 587))
     MAIL_USE_TLS = True
     MAIL_USE_SSL = False

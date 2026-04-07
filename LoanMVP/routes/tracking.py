@@ -2,6 +2,7 @@ from flask import Blueprint, Response, request
 from LoanMVP.extensions import db
 from LoanMVP.models.loan_models import DocumentEvent
 from LoanMVP.models.partner_models import PartnerInviteEvent
+from LoanMVP.models.admin import LicenseInviteEvent
 
 tracking_bp = Blueprint("tracking", __name__, url_prefix="/track")
 
@@ -43,6 +44,30 @@ def partner_pixel():
         partner_id=partner_id,
         invite_token=token,
         request_id=request_id,
+        event_type="opened",
+        user_agent=request.headers.get("User-Agent"),
+        ip_address=request.remote_addr
+    )
+
+    db.session.add(event)
+    db.session.commit()
+
+    gif = (
+        b"GIF89a\x01\x00\x01\x00\xf0\x00\x00\x00\x00\x00"
+        b"\x00\x00\x00!\xf9\x04\x01\x00\x00\x00\x00,\x00"
+        b"\x00\x00\x00\x01\x00\x01\x00\x00\x02\x02D\x01\x00;"
+    )
+
+    return Response(gif, mimetype="image/gif")
+
+@tracking_bp.route("/license-invite-pixel")
+def license_invite_pixel():
+    token = request.args.get("token")
+    email = request.args.get("email")
+
+    event = LicenseInviteEvent(
+        invite_token=token,
+        email=email,
         event_type="opened",
         user_agent=request.headers.get("User-Agent"),
         ip_address=request.remote_addr
