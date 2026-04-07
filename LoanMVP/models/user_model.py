@@ -34,6 +34,11 @@ class User(UserMixin, db.Model):
     ica_accepted = db.Column(db.Boolean, default=False)
     onboarding_step = db.Column(db.String(50), default="ica")
     subscription = db.Column(db.String(50), default="free")
+    is_blocked = db.Column(db.Boolean, default=False, nullable=False)
+    blocked_at = db.Column(db.DateTime, nullable=True)
+    blocked_reason = db.Column(db.String(100), nullable=True)
+    blocked_note = db.Column(db.Text, nullable=True)
+    blocked_by = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=True)
 
     # Timestamps
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
@@ -47,7 +52,7 @@ class User(UserMixin, db.Model):
     # ===============================
 
     # Company relationship
-    company = db.relationship("Company", back_populates="users")
+    company = db.relationship("Company", back_populates="users", foreign_keys=[company_id])
 
     # Borrower
     borrower_profile = db.relationship(
@@ -107,7 +112,27 @@ class User(UserMixin, db.Model):
         lazy=True
     )
 
-    
+    blocked_companies = db.relationship(
+        "Company",
+        foreign_keys="Company.blocked_by",
+        back_populates="blocked_by_user",
+        lazy=True
+    )
+
+    blocked_users = db.relationship(
+        "User",
+        foreign_keys="User.blocked_by",
+        back_populates="blocked_by_user",
+        lazy=True
+    )
+
+    blocked_by_user = db.relationship(
+        "User",
+        remote_side=[id],
+        foreign_keys=[blocked_by],
+        lazy=True
+    )
+
     # ===============================
     # 🧩 Methods
     # ===============================

@@ -32,10 +32,16 @@ class Company(db.Model):
     billing_status = db.Column(db.String(50), default="active", nullable=True)
     grace_period_ends_at = db.Column(db.DateTime, nullable=True)
 
-    users = db.relationship("User", back_populates="company", lazy=True)
+    users = db.relationship("User", back_populates="company", foreign_keys="User.company_id", lazy=True)
     invites = db.relationship("UserInvite", back_populates="company", lazy=True)
     access_requests = db.relationship("AccessRequest", backref="company", lazy=True)
-     
+    blocked_by_user = db.relationship(
+        "User",
+        foreign_keys=[blocked_by],
+        back_populates="blocked_companies",
+        lazy=True
+    )
+
 class AccessRequest(db.Model):
     __tablename__ = "access_requests"
 
