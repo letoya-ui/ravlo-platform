@@ -73,8 +73,11 @@ def _safe_next_url(default_endpoint: str = "investor.command_center"):
 def _dashboard_for_role(role: str) -> str:
     role = (role or "").strip().lower()
 
+    admin_roles = {"admin", "platform_admin", "master_admin", "lending_admin"}
+    if role in admin_roles:
+        return "admin.dashboard"
+
     dashboard_map = {
-        "admin": "admin.dashboard",
         "loan_officer": "loan_officer.dashboard",
         "processor": "processor.dashboard",
         "underwriter": "underwriter.dashboard",
@@ -90,8 +93,7 @@ def _dashboard_for_role(role: str) -> str:
         "borrower": "borrower.create_profile",
     }
 
-    return dashboard_map.get(role, "investor.command_center")
-
+    return dashboard_map.get(role, "marketing.marketing_home")
 
 def _full_name_from_user(user: User) -> str:
     first = (getattr(user, "first_name", "") or "").strip()
@@ -127,7 +129,8 @@ def login():
 
         # Continue login
         login_user(user)
-        return redirect(url_for("auth.post_login_redirect"))
+        next_page = request.args.get("next")
+        return redirect(url_for("auth.post_login_redirect", next=next_page))
 
     return render_template("auth/login.html", form=form)
 
@@ -267,14 +270,18 @@ def register():
 @auth_bp.route("/post-login-redirect")
 @login_required
 def post_login_redirect():
-    if current_user.role == "investor":
-        profile = InvestorProfile.query.filter_by(user_id=current_user.id).first()
+    # 🔥 IGNORE next if user is admin-type
+    role = (current_user.role or "").strip().lower()
 
-        if not profile:
-            flash("Please complete your investor profile first.", "info")
-            return redirect(url_for("investor.create_profile"))
+    if role in ["admin", "platform_admin", "master_admin", "lending_admin"]:
+        return redirect(url_for("admin.dashboard"))
 
-    return redirect(url_for(_dashboard_for_role(current_user.role)))
+    # 👇 only allow next for non-admin users
+    next_page = (request.args.get("next") or "").strip()
+    if next_page.startswith("/"):
+        return redirect(next_page)
+
+    return redirect(url_for(_dashboard_for_role(role)))
 
 # ============================================================
 # OPTIONAL BORROWER REGISTER
