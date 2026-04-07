@@ -355,7 +355,7 @@ def request_detail(request_id):
 def access_requests():
     requests_ = AccessRequest.query.order_by(AccessRequest.created_at.desc()).all()
     return render_template(
-        "admin//requests_dashboard.html",
+        "admin/requests_dashboard.html",
         requests=requests_,
         title="Access Requests",
         active_tab="access_requests",
@@ -363,9 +363,9 @@ def access_requests():
 
 
 @admin_bp.route("/access-requests/<int:req_id>/deny", methods=["POST"])
-@csrf.exempt
 @login_required
 @role_required("admin")
+@admin_required
 def deny_access_request(req_id):
     req = AccessRequest.query.get_or_404(req_id)
 
@@ -379,16 +379,15 @@ def deny_access_request(req_id):
     return redirect(url_for("admin.access_requests"))
     
 @admin_bp.route("/access-requests/<int:req_id>/approve", methods=["POST"])
-@csrf.exempt  
 @login_required
 @role_required("admin")
 @admin_required
-def approve_request(request_id):
-    access_request = AccessRequest.query.get_or_404(request_id)
+def approve_access_request(req_id):
+    access_request = AccessRequest.query.get_or_404(req_id)
 
     if access_request.status == "approved":
         flash("Request already approved.", "info")
-        return redirect(url_for("admin.request_detail", request_id=request_id))
+        return redirect(url_for("admin.request_detail", request_id=req_id))
 
     company = None
 
@@ -424,7 +423,6 @@ def approve_request(request_id):
 
 
 @admin_bp.route("/requests/<int:request_id>/reject", methods=["POST"])
-@csrf.exempt
 @login_required
 @role_required("admin")
 @admin_required
@@ -463,7 +461,6 @@ def company_team(company_id):
 
 
 @admin_bp.route("/company/<int:company_id>/team/invite", methods=["GET", "POST"])
-@csrf.exempt
 @login_required
 @role_required("admin")
 @admin_required
@@ -554,12 +551,13 @@ def invite_team_member(company_id):
 # 📊 SYSTEM REPORTS (CSV EXPORT)
 # =========================================================
 @admin_bp.route("/reports", methods=["GET", "POST"])
-@csrf.exempt
 @login_required
 @role_required("admin")
 def reports():
     report_type = request.form.get("report_type")
-    csv_data = None
+    total_users = User.query.count()
+    total_loans = LoanApplication.query.count()
+    total_docs = LoanDocument.query.count()
 
     if request.method == "POST" and report_type:
         output = io.StringIO()
@@ -590,7 +588,12 @@ def reports():
             mimetype="text/csv"
         )
 
-    return render_template("admin/reports.html")
+    return render_template(
+        "admin/reports.html",
+        total_users=total_users,
+        total_loans=total_loans,
+        total_docs=total_docs,
+    )
 
 
 # =========================================================
@@ -598,7 +601,6 @@ def reports():
 # =========================================================
 
 @admin_bp.route("/messages", methods=["GET", "POST"])
-@csrf.exempt
 @login_required
 @role_required("admin")
 def messages():
@@ -665,8 +667,7 @@ def verify_data():
 
     return render_template("admin/verify_data.html", docs=docs)
 
-
-@admin_bp.route("/verify_doc/<int:doc_id>")
+@admin_bp.route("/verify_doc/<int:doc_id>", methods=["POST"])
 @login_required
 @role_required("admin")
 def verify_doc(doc_id):
@@ -905,13 +906,18 @@ def ai_dashboard():
     )
 
 @admin_bp.route("/ai/refresh/<string:target>", methods=["POST"])
-@csrf.exempt
 @login_required
 @role_required("admin")
 def ai_refresh(target):
     time.sleep(1.2)
     flash(f"{target} refreshed successfully.", "success")
-    return jsonify({"success": True, "target": target})
+    return jsonify(
+        {
+            "success": True,
+            "target": target,
+            "message": f"{target.replace('_', ' ').title()} refreshed successfully.",
+        }
+    )
 
 @admin_bp.route("/company/<int:company_id>/dashboard")
 @login_required
@@ -1189,7 +1195,6 @@ def resend_license_application_invite(app_id):
     return redirect(url_for("admin.licensing_applications"))
 
 @admin_bp.route("/users/<int:user_id>/block", methods=["POST"])
-@csrf.exempt
 @login_required
 @role_required("admin_group")
 def block_user(user_id):
@@ -1211,7 +1216,6 @@ def block_user(user_id):
 
 
 @admin_bp.route("/users/<int:user_id>/unblock", methods=["POST"])
-@csrf.exempt
 @login_required
 @role_required("admin_group")
 def unblock_user(user_id):
@@ -1229,7 +1233,6 @@ def unblock_user(user_id):
     return redirect(request.referrer or url_for("system.users"))
 
 @admin_bp.route("/companies/<int:company_id>/block", methods=["POST"])
-@csrf.exempt
 @login_required
 @role_required("admin_group")
 def block_company(company_id):
@@ -1254,7 +1257,6 @@ def block_company(company_id):
 
 
 @admin_bp.route("/companies/<int:company_id>/unblock", methods=["POST"])
-@csrf.exempt
 @login_required
 @role_required("admin_group")
 def unblock_company(company_id):

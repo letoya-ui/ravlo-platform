@@ -26,6 +26,7 @@
         </div>
 
         <form method="POST" action="{{ url_for('admin.messages') }}" class="admin-msg-form">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <div class="admin-msg-form-grid">
             <div class="field">
               <label class="label">Recipient</label>

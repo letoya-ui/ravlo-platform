@@ -118,6 +118,7 @@
         <form method="POST"
               action="{{ url_for('admin.approve_access_request', req_id=access_request.id) }}"
               style="margin:0;">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <button type="submit" class="re-btn success">
             <i class="lucide lucide-check"></i>
             Approve Request
@@ -127,6 +128,7 @@
         <form method="POST"
               action="{{ url_for('admin.deny_access_request', req_id=access_request.id) }}"
               style="margin:0;">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <button type="submit" class="re-btn danger">
             <i class="lucide lucide-x"></i>
             Deny Request

@@ -598,9 +598,13 @@ Central system management for users, onboarding, invites, lending operations, an
     const aiInsightEl = document.getElementById("aiInsight");
 
     function updateInsight() {
+      const csrfToken = {{ csrf_token()|tojson }};
       fetch('{{ url_for("admin.ai_refresh", target="analytics") }}', {
         method: "POST",
-        headers: { "X-Requested-With": "XMLHttpRequest" }
+        headers: {
+          "X-Requested-With": "XMLHttpRequest",
+          "X-CSRFToken": csrfToken
+        }
       })
         .then(res => {
           if (!res.ok) throw new Error("Failed to fetch AI insight");

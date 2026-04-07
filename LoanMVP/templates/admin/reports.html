@@ -28,6 +28,7 @@
     <div class="card mt-2">
       <h4>Generate Report</h4>
       <form method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <label for="report_type" class="muted">Select report type:</label>
         <select name="report_type" id="report_type" required>
           <option value="">-- Choose one --</option>
