@@ -1089,6 +1089,7 @@ def debug_google_test():
 @investor_bp.route("/index", methods=["GET"])
 @investor_bp.route("/command", methods=["GET"])
 @investor_bp.route("/dashboard", methods=["GET"])
+@investor_bp.route("/dashboard-home", methods=["GET"], endpoint="dashboard")
 @login_required
 @role_required("investor")
 def command_center():
@@ -1648,6 +1649,76 @@ def update_profile():
     ip.updated_at = datetime.utcnow()
     db.session.commit()
     return jsonify({"status": "success", "message": "Profile updated successfully."})
+
+
+@investor_bp.route("/prequal", methods=["GET", "POST"])
+@investor_bp.route("/ai-prequal", methods=["GET", "POST"], endpoint="ai_prequal")
+@login_required
+@role_required("investor")
+def prequal():
+    result = None
+
+    if request.method == "POST":
+        income = safe_float(request.form.get("income")) or 0
+        debts = safe_float(request.form.get("debts")) or 0
+        loan_amount = safe_float(request.form.get("loan_amount")) or 0
+        property_value = safe_float(request.form.get("property_value")) or 0
+        credit_score = safe_float(request.form.get("credit_score")) or 0
+
+        dti = round((debts / income) * 100, 2) if income > 0 else 0
+        ltv = round((loan_amount / property_value) * 100, 2) if property_value > 0 else 0
+
+        if dti <= 43 and ltv <= 80 and credit_score >= 680:
+            status = "Approved"
+        elif dti <= 50 and ltv <= 90 and credit_score >= 620:
+            status = "Conditional"
+        else:
+            status = "Review"
+
+        max_qual_amount = max((income * 45) - (debts * 12), 0)
+
+        ai_summary = (
+            f"DTI is {dti:.2f}% and LTV is {ltv:.2f}%. "
+            f"Based on the submitted income, debts, leverage, and credit profile, "
+            f"this scenario is currently marked {status.lower()}."
+        )
+
+        result = {
+            "status": status,
+            "dti": dti,
+            "ltv": ltv,
+            "max_qual_amount": max_qual_amount,
+            "ai_summary": ai_summary,
+        }
+
+    return render_template(
+        "investor/prequal.html",
+        result=result,
+        title="AI Pre-Qualification",
+        active_tab="capital",
+    )
+
+
+@investor_bp.route("/start-loan", methods=["GET", "POST"], endpoint="start_loan")
+@login_required
+@role_required("investor")
+def start_loan():
+    if request.method == "POST":
+        loan_type = (request.form.get("loan_type") or "Investor Capital").strip()
+        amount = safe_float(request.form.get("amount")) or 0
+        return redirect(
+            url_for(
+                "investor.capital_application",
+                loan_type=loan_type,
+                amount=amount if amount else None,
+            )
+        )
+
+    return render_template(
+        "investor/onboarding_start_loan.html",
+        title="Start Loan",
+        active_tab="capital",
+    )
     
 # =========================================================
 # 📝 INVESTOR • CAPITAL APPLICATION + STATUS
@@ -1766,12 +1837,16 @@ def capital_application():
         deal = Deal.query.filter_by(id=deal_id, user_id=current_user.id).first()
 
     officers = LoanOfficerProfile.query.order_by(LoanOfficerProfile.name.asc()).all()
+    initial_loan_type = (request.args.get("loan_type") or "").strip()
+    initial_amount = request.args.get("amount", type=float)
 
     return render_template(
         "investor/capital_application.html",
         investor=ip,
         deal=deal,
         officers=officers,
+        initial_loan_type=initial_loan_type,
+        initial_amount=initial_amount,
         title="Apply for Capital"
     )
 
@@ -2563,7 +2638,9 @@ def download_document(doc_id):
     if not doc:
         abort(404)
 
-    file_path = doc.file_path  # make sure this is stored in DB
+    file_path = doc.file_path
+    if file_path and not os.path.isabs(file_path):
+        file_path = os.path.join(current_app.config["UPLOAD_FOLDER"], file_path)
 
     if not file_path or not os.path.exists(file_path):
         abort(404)
@@ -2571,6 +2648,31 @@ def download_document(doc_id):
     return send_file(
         file_path,
         as_attachment=True,
+        download_name=os.path.basename(file_path)
+    )
+
+
+@investor_bp.route("/documents/view/<int:doc_id>", methods=["GET"])
+@login_required
+def view_document(doc_id):
+    doc = LoanDocument.query.filter_by(
+        id=doc_id,
+        user_id=current_user.id
+    ).first()
+
+    if not doc:
+        abort(404)
+
+    file_path = doc.file_path
+    if file_path and not os.path.isabs(file_path):
+        file_path = os.path.join(current_app.config["UPLOAD_FOLDER"], file_path)
+
+    if not file_path or not os.path.exists(file_path):
+        abort(404)
+
+    return send_file(
+        file_path,
+        as_attachment=False,
         download_name=os.path.basename(file_path)
     )
 
@@ -4084,11 +4186,9 @@ def deal_book(deal_id):
 # =========================================================
 # DEAL CRUD
 # =========================================================
-@investor_bp.route("/deals")
+@investor_bp.route("/deals/cards")
 @login_required
-def deals():
-
-    # Fetch deals owned by the investor
+def deals_cards():
     deals = (
         Deal.query
         .filter_by(user_id=current_user.id)
@@ -8360,24 +8460,28 @@ def activity():
 def budget():
     ip = InvestorProfile.query.filter_by(user_id=current_user.id).first()
     assistant = AIAssistant()
+    budget_data = None
+    ai_tip = None
 
     if request.method == "POST":
         expenses = request.form.to_dict()
+        income = safe_float(request.form.get("income")) or 0
+        expenses_total = safe_float(request.form.get("expenses")) or 0
+        budget_data = {
+            "income": income,
+            "expenses": expenses_total,
+            "savings": income - expenses_total,
+        }
         ai_tip = assistant.generate_reply(
             f"Analyze investor expenses: {expenses}",
             "investor_budget",
-        )
-        return render_template(
-            "investor/budget_result.html",
-            investor=ip,
-            ai_tip=ai_tip,
-            title="Budget Results",
-            active_tab="budget"
         )
 
     return render_template(
         "investor/budget.html",
         investor=ip,
+        budget_data=budget_data,
+        ai_tip=ai_tip,
         title="Budget Planner",
         active_tab="budget"
     )
@@ -8994,6 +9098,39 @@ def payments():
     )
 
 
+@investor_bp.route("/subscription", methods=["GET"])
+@login_required
+@role_required("investor")
+def subscription():
+    return redirect(url_for("investor.payments"))
+
+
+@investor_bp.route("/subscription/upgrade", methods=["POST"])
+@login_required
+@role_required("investor")
+def upgrade_plan():
+    if hasattr(current_user, "subscription_plan"):
+        current_user.subscription_plan = "Pro"
+        db.session.commit()
+        flash("Subscription updated to Pro.", "success")
+    else:
+        flash("Subscription upgrades are not available for this account yet.", "warning")
+    return redirect(url_for("investor.subscription"))
+
+
+@investor_bp.route("/subscription/downgrade", methods=["POST"])
+@login_required
+@role_required("investor")
+def downgrade_plan():
+    if hasattr(current_user, "subscription_plan"):
+        current_user.subscription_plan = "Free"
+        db.session.commit()
+        flash("Subscription updated to Free.", "success")
+    else:
+        flash("Subscription changes are not available for this account yet.", "warning")
+    return redirect(url_for("investor.subscription"))
+
+
 @investor_bp.route("/billing/checkout/<int:payment_id>", methods=["GET"])
 @investor_bp.route("/payments/checkout/<int:payment_id>", methods=["GET"])
 @login_required
@@ -9325,6 +9462,34 @@ def request_partner_intro(partner_id):
 
     flash(f"Intro request sent for {partner.company or partner.name}.", "success")
     return redirect(url_for("investor.partner_detail", partner_id=partner.id))
+
+
+@investor_bp.route("/partners/<int:partner_id>/request-connection", methods=["POST"], endpoint="request_partner_connection")
+@login_required
+@role_required("investor")
+def request_partner_connection(partner_id):
+    ip = InvestorProfile.query.filter_by(user_id=current_user.id).first()
+    if not ip:
+        flash("Please complete your investor profile first.", "warning")
+        return redirect(url_for("investor.create_profile"))
+
+    partner = Partner.query.get_or_404(partner_id)
+
+    req = PartnerConnectionRequest(
+        investor_user_id=current_user.id,
+        investor_profile_id=ip.id,
+        partner_id=partner.id,
+        category=getattr(partner, "category", None),
+        message=f"Investor requested connection with {partner.company or partner.name}.",
+        source="internal",
+        status="pending",
+    )
+
+    db.session.add(req)
+    db.session.commit()
+
+    flash(f"Connection request sent for {partner.company or partner.name}.", "success")
+    return redirect(url_for("investor.partners"))
     
 @investor_bp.route("/resources/request-connection", methods=["POST"])
 @login_required
@@ -9690,10 +9855,10 @@ def invite_external_partner(lead_id):
     flash("External provider marked as invited.", "success")
     return redirect(url_for("investor.partner_marketplace"))
 
-@investor_bp.route("/partners/request", methods=["POST"])
+@investor_bp.route("/partners/request-legacy", methods=["POST"])
 @login_required
 @role_required("investor")
-def create_partner_connection_request():
+def create_partner_connection_request_legacy():
     ip = InvestorProfile.query.filter_by(user_id=current_user.id).first()
 
     partner_id = request.form.get("partner_id", type=int)
@@ -9720,7 +9885,7 @@ def create_partner_connection_request():
     flash("Partner request sent successfully.", "success")
     return redirect(url_for("investor.partner_marketplace"))
 
-@investor_bp.route("/partners/save-external", methods=["POST"])
+@investor_bp.route("/partners/save-external-lead", methods=["POST"])
 @login_required
 @role_required("investor")
 def save_external_partner_lead():
