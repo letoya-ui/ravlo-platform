@@ -496,3 +496,63 @@ def reset_password(token):
 @login_manager.user_loader
 def load_user(user_id):
     return User.query.get(int(user_id))
+
+
+
+@auth_bp.route("/accept-invite/<token>", methods=["GET", "POST"])
+def accept_invite(token):
+    invite = UserInvite.query.filter_by(token=token).first_or_404()
+
+    if invite.status == "accepted":
+        flash("This invite has already been used.", "info")
+        return redirect(url_for("auth.login"))
+
+    if invite.is_expired():
+        flash("This invite has expired.", "warning")
+        return redirect(url_for("auth.login"))
+
+    existing_user = User.query.filter_by(email=invite.email).first()
+
+    if request.method == "POST":
+        first_name = (request.form.get("first_name") or invite.first_name or "").strip()
+        last_name = (request.form.get("last_name") or invite.last_name or "").strip()
+        password = (request.form.get("password") or "").strip()
+
+        if not password:
+            flash("Password is required.", "warning")
+            return render_template("auth/accept_invite.html", invite=invite)
+
+        if existing_user:
+            user = existing_user
+            if not user.password_hash:
+                user.password_hash = generate_password_hash(password)
+
+            user.first_name = user.first_name or first_name
+            user.last_name = user.last_name or last_name
+            user.company_id = invite.company_id
+            user.role = invite.role
+            user.invite_accepted = True
+            user.is_active = True
+        else:
+            user = User(
+                first_name=first_name,
+                last_name=last_name,
+                email=invite.email,
+                password_hash=generate_password_hash(password),
+                role=invite.role,
+                company_id=invite.company_id,
+                is_active=True,
+                invite_accepted=True,
+                onboarding_complete=False,
+            )
+            db.session.add(user)
+
+        invite.status = "accepted"
+        invite.accepted_at = datetime.utcnow()
+
+        db.session.commit()
+
+        flash("Invite accepted. You can now log in.", "success")
+        return redirect(url_for("auth.login"))
+
+    return render_template("auth/accept_invite.html", invite=invite)

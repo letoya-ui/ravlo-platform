@@ -1,0 +1,146 @@
+{% extends "layouts/auth_base.html" %}
+{% block title %}Accept Invite{% endblock %}
+
+{% block content %}
+<section class="accept-shell">
+  <div class="accept-card">
+    <div class="eyebrow">RAVLO INVITE</div>
+    <h1>Accept your company invite</h1>
+    <p>
+      You were invited to join <strong>{{ invite.company.name if invite.company else "a company" }}</strong>
+      on Ravlo.
+    </p>
+
+    <form method="POST" class="accept-form">
+      <div class="field-grid">
+        <div class="field">
+          <label>First Name</label>
+          <input type="text" name="first_name" value="{{ invite.first_name or '' }}" required>
+        </div>
+
+        <div class="field">
+          <label>Last Name</label>
+          <input type="text" name="last_name" value="{{ invite.last_name or '' }}">
+        </div>
+
+        <div class="field full">
+          <label>Email</label>
+          <input type="email" value="{{ invite.email }}" disabled>
+        </div>
+
+        <div class="field full">
+          <label>Password</label>
+          <input type="password" name="password" required>
+        </div>
+      </div>
+
+      <button type="submit" class="ravlo-btn primary full">
+        Accept Invite
+      </button>
+    </form>
+  </div>
+</section>
+
+<style>
+.accept-shell {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 32px 16px;
+  background: linear-gradient(180deg, #071018 0%, #0c1621 100%);
+  color: #f4f7fb;
+}
+
+.accept-card {
+  width: 100%;
+  max-width: 620px;
+  background: rgba(16, 26, 38, 0.92);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 24px;
+  padding: 30px;
+  box-shadow: 0 24px 80px rgba(0,0,0,0.3);
+}
+
+.eyebrow {
+  font-size: .78rem;
+  letter-spacing: .18em;
+  font-weight: 800;
+  color: #8ec5ff;
+  margin-bottom: 12px;
+}
+
+.accept-card h1 {
+  margin: 0 0 12px;
+  font-size: clamp(2rem, 4vw, 3rem);
+}
+
+.accept-card p {
+  color: #9bb0c3;
+  line-height: 1.7;
+  margin-bottom: 22px;
+}
+
+.accept-form {
+  display: block;
+}
+
+.field-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.field.full {
+  grid-column: 1 / -1;
+}
+
+.field label {
+  font-size: .92rem;
+  font-weight: 700;
+  color: #dce8f4;
+}
+
+.field input {
+  width: 100%;
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 14px;
+  background: rgba(255,255,255,0.04);
+  color: #f4f7fb;
+  padding: 14px;
+  outline: none;
+}
+
+.field input:disabled {
+  opacity: .7;
+  cursor: not-allowed;
+}
+
+.ravlo-btn.primary {
+  margin-top: 20px;
+  min-height: 50px;
+  padding: 0 20px;
+  border: 0;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #5da2ff, #84bdff);
+  color: #08111a;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.full {
+  width: 100%;
+}
+
+@media (max-width: 720px) {
+  .field-grid {
+    grid-template-columns: 1fr;
+  }
+}
+</style>
+{% endblock %}

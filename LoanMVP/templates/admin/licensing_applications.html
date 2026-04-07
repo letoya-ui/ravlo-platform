@@ -4,19 +4,20 @@
 {% block content %}
 <section class="ravlo-page">
 
-  <!-- HEADER -->
   <div class="ravlo-header">
     <div>
       <div class="ravlo-eyebrow">ADMIN</div>
       <h1>Licensing Applications</h1>
-      <p>Review, approve, and onboard new Ravlo Lending OS clients.</p>
+      <p>Review applications, approve companies, and manage onboarding invites for Ravlo Lending OS.</p>
     </div>
   </div>
 
-  <!-- TABLE CARD -->
   <div class="ravlo-card">
     <div class="ravlo-card-header">
-      <h3>Incoming Applications</h3>
+      <div>
+        <h3>Incoming Applications</h3>
+        <p class="card-subtext">Approve qualified applicants, generate company access, and share invite links.</p>
+      </div>
     </div>
 
     {% if applications %}
@@ -26,11 +27,9 @@
           <tr>
             <th>Company</th>
             <th>Contact</th>
-            <th>Email</th>
             <th>Plan</th>
-            <th>Team Size</th>
             <th>Status</th>
-            <th>Created</th>
+            <th>Submitted</th>
             <th>Actions</th>
           </tr>
         </thead>
@@ -39,227 +38,440 @@
           {% for app in applications %}
           <tr>
             <td>
-              <strong>{{ app.company_name }}</strong>
+              <div class="company-block">
+                <strong>{{ app.company_name }}</strong>
+                {% if app.business_type %}
+                <span class="muted small">{{ app.business_type }}</span>
+                {% endif %}
+              </div>
             </td>
 
             <td>
-              {{ app.contact_name }}<br>
-              <span class="muted">{{ app.phone or "-" }}</span>
+              <div class="contact-block">
+                <strong>{{ app.contact_name }}</strong>
+                <span class="muted small">{{ app.email }}</span>
+                <span class="muted small">{{ app.phone or "No phone provided" }}</span>
+              </div>
             </td>
-
-            <td>{{ app.email }}</td>
 
             <td>
               <span class="chip">{{ app.plan_interest or "—" }}</span>
+              {% if app.team_size %}
+              <div class="muted small" style="margin-top:6px;">Team: {{ app.team_size }}</div>
+              {% endif %}
             </td>
-
-            <td>{{ app.team_size or "—" }}</td>
 
             <td>
               <span class="status {{ app.status }}">
-                {{ app.status }}
+                {{ app.status|replace("_", " ")|title }}
               </span>
             </td>
 
             <td>
-              {{ app.created_at.strftime("%b %d, %Y") }}
+              {{ app.created_at.strftime("%b %d, %Y") if app.created_at else "—" }}
             </td>
 
             <td>
               <div class="actions">
-
                 {% if app.status != "approved" %}
-                <form method="POST"
-                      action="{{ url_for('admin.approve_license_application', app_id=app.id) }}">
-                  <button class="ravlo-btn primary sm">Approve</button>
+                <form method="POST" action="{{ url_for('admin.approve_license_application', app_id=app.id) }}">
+                  <button type="submit" class="ravlo-btn primary sm">Approve</button>
                 </form>
                 {% endif %}
 
                 {% if app.status != "declined" %}
-                <form method="POST"
-                      action="{{ url_for('admin.decline_license_application', app_id=app.id) }}">
-                  <button class="ravlo-btn ghost sm">Decline</button>
+                <form method="POST" action="{{ url_for('admin.decline_license_application', app_id=app.id) }}">
+                  <button type="submit" class="ravlo-btn ghost sm">Decline</button>
                 </form>
                 {% endif %}
-
               </div>
             </td>
           </tr>
 
-          <!-- EXPANDED DETAILS ROW -->
           <tr class="details-row">
-            <td colspan="8">
-
+            <td colspan="6">
               <div class="details-grid">
 
-                <div>
-                  <strong>Business Type:</strong>
-                  <p>{{ app.business_type or "—" }}</p>
+                <div class="detail-card">
+                  <h4>Business Info</h4>
+                  <p><strong>Company:</strong> {{ app.company_name or "—" }}</p>
+                  <p><strong>Business Type:</strong> {{ app.business_type or "—" }}</p>
+                  <p><strong>Website:</strong>
+                    {% if app.website %}
+                      <a href="{{ app.website }}" target="_blank" rel="noopener noreferrer">{{ app.website }}</a>
+                    {% else %}
+                      —
+                    {% endif %}
+                  </p>
+                  <p><strong>Monthly Loan Volume:</strong> {{ app.monthly_loan_volume or "—" }}</p>
                 </div>
 
-                <div>
-                  <strong>Website:</strong>
-                  <p>{{ app.website or "—" }}</p>
+                <div class="detail-card">
+                  <h4>Operational Details</h4>
+                  <p><strong>Team Size:</strong> {{ app.team_size or "—" }}</p>
+                  <p><strong>Plan Interest:</strong> {{ app.plan_interest or "—" }}</p>
+                  <p><strong>Current Tools:</strong></p>
+                  <div class="detail-text">{{ app.current_tools or "—" }}</div>
                 </div>
 
-                <div>
-                  <strong>Monthly Volume:</strong>
-                  <p>{{ app.monthly_loan_volume or "—" }}</p>
-                </div>
+                <div class="detail-card">
+                  <h4>Goals & Notes</h4>
+                  <p><strong>Goals:</strong></p>
+                  <div class="detail-text">{{ app.goals or "—" }}</div>
 
-                <div>
-                  <strong>Current Tools:</strong>
-                  <p>{{ app.current_tools or "—" }}</p>
-                </div>
-
-                <div>
-                  <strong>Goals:</strong>
-                  <p>{{ app.goals or "—" }}</p>
-                </div>
-
-                <div>
-                  <strong>Notes:</strong>
-                  <p>{{ app.notes or "—" }}</p>
+                  <p style="margin-top:14px;"><strong>Notes:</strong></p>
+                  <div class="detail-text">{{ app.notes or "—" }}</div>
                 </div>
 
               </div>
 
+              {% set invite = invite_lookup.get(app.id) %}
+              {% if invite %}
+              <div class="invite-panel">
+                <div class="invite-panel-left">
+                  <div class="invite-label">Invite Ready</div>
+                  <div class="invite-meta">
+                    <span><strong>Email:</strong> {{ invite.email }}</span>
+                    <span><strong>Role:</strong> {{ invite.role }}</span>
+                    <span><strong>Status:</strong> {{ invite.status }}</span>
+                    <span><strong>Expires:</strong>
+                      {{ invite.expires_at.strftime("%b %d, %Y %I:%M %p") if invite.expires_at else "—" }}
+                    </span>
+                  </div>
+                </div>
+
+                <div class="invite-panel-right">
+                  <a href="{{ url_for('auth.accept_invite', token=invite.token, _external=True) }}"
+                     target="_blank"
+                     class="ravlo-btn secondary sm">
+                    Open Invite Link
+                  </a>
+                </div>
+              </div>
+              {% endif %}
+
             </td>
           </tr>
-
           {% endfor %}
         </tbody>
       </table>
     </div>
-
     {% else %}
     <div class="empty-state">
-      <p>No licensing applications yet.</p>
+      <div class="empty-icon">◎</div>
+      <h3>No licensing applications yet</h3>
+      <p>When applicants submit from your pricing or apply page, they’ll appear here.</p>
     </div>
     {% endif %}
   </div>
-
 </section>
 
 <style>
-.ravlo-header {
-  margin-bottom: 20px;
-}
+  .ravlo-page {
+    padding: 24px;
+  }
 
-.ravlo-eyebrow {
-  font-size: .75rem;
-  letter-spacing: .15em;
-  font-weight: 800;
-  color: #6faaff;
-}
+  .ravlo-header {
+    margin-bottom: 22px;
+  }
 
-.ravlo-card {
-  background: rgba(16,26,38,.9);
-  border: 1px solid rgba(255,255,255,.08);
-  border-radius: 20px;
-  padding: 20px;
-}
+  .ravlo-header h1 {
+    margin: 6px 0 8px;
+    font-size: 2rem;
+    line-height: 1.05;
+    color: #f4f7fb;
+  }
 
-.ravlo-card-header {
-  margin-bottom: 16px;
-}
+  .ravlo-header p {
+    margin: 0;
+    color: #97abc0;
+    max-width: 780px;
+  }
 
-.table-wrap {
-  overflow-x: auto;
-}
+  .ravlo-eyebrow {
+    font-size: 0.76rem;
+    font-weight: 800;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: #7eb7ff;
+  }
 
-.ravlo-table {
-  width: 100%;
-  border-collapse: collapse;
-}
+  .ravlo-card {
+    background: linear-gradient(180deg, rgba(15, 25, 37, 0.94), rgba(11, 18, 29, 0.96));
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 22px;
+    padding: 20px;
+    box-shadow: 0 22px 60px rgba(0,0,0,0.24);
+  }
 
-.ravlo-table th,
-.ravlo-table td {
-  padding: 14px;
-  border-bottom: 1px solid rgba(255,255,255,.08);
-  text-align: left;
-}
+  .ravlo-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 18px;
+  }
 
-.ravlo-table th {
-  font-size: .85rem;
-  color: #9bb0c3;
-}
+  .ravlo-card-header h3 {
+    margin: 0;
+    color: #f4f7fb;
+  }
 
-.muted {
-  color: #8fa3b5;
-  font-size: .85rem;
-}
+  .card-subtext {
+    margin: 6px 0 0;
+    color: #8fa3b7;
+    font-size: 0.95rem;
+  }
 
-.chip {
-  background: rgba(93,162,255,.15);
-  padding: 6px 10px;
-  border-radius: 999px;
-  font-size: .8rem;
-}
+  .table-wrap {
+    overflow-x: auto;
+  }
 
-.status {
-  padding: 6px 10px;
-  border-radius: 999px;
-  font-size: .8rem;
-}
+  .ravlo-table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 980px;
+  }
 
-.status.new {
-  background: rgba(255,255,255,.1);
-}
+  .ravlo-table thead th {
+    text-align: left;
+    padding: 14px 12px;
+    font-size: 0.82rem;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    color: #8fa3b7;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+  }
 
-.status.approved {
-  background: rgba(120,255,180,.15);
-}
+  .ravlo-table tbody td {
+    padding: 16px 12px;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    vertical-align: top;
+    color: #e8eef6;
+  }
 
-.status.declined {
-  background: rgba(255,120,120,.15);
-}
+  .company-block,
+  .contact-block {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
 
-.actions {
-  display: flex;
-  gap: 8px;
-}
+  .small {
+    font-size: 0.84rem;
+  }
 
-.details-row td {
-  background: rgba(255,255,255,.02);
-}
+  .muted {
+    color: #90a3b7;
+  }
 
-.details-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 16px;
-  padding: 14px 0;
-}
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 6px 10px;
+    border-radius: 999px;
+    background: rgba(93,162,255,0.14);
+    border: 1px solid rgba(93,162,255,0.18);
+    color: #dceaf9;
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-transform: capitalize;
+  }
 
-.details-grid p {
-  margin: 4px 0 0;
-  color: #9bb0c3;
-}
+  .status {
+    display: inline-flex;
+    align-items: center;
+    padding: 6px 10px;
+    border-radius: 999px;
+    font-size: 0.8rem;
+    font-weight: 800;
+    text-transform: capitalize;
+  }
 
-.empty-state {
-  padding: 30px;
-  text-align: center;
-  color: #9bb0c3;
-}
+  .status.new {
+    background: rgba(255,255,255,0.08);
+    color: #dfe9f4;
+  }
 
-.ravlo-btn {
-  border-radius: 10px;
-  padding: 6px 12px;
-  font-size: .8rem;
-  font-weight: 700;
-  cursor: pointer;
-  border: none;
-}
+  .status.contacted {
+    background: rgba(255, 214, 102, 0.16);
+    color: #ffe8a3;
+  }
 
-.ravlo-btn.primary {
-  background: linear-gradient(135deg, #5da2ff, #84bdff);
-  color: #08111a;
-}
+  .status.approved {
+    background: rgba(94, 234, 165, 0.14);
+    color: #b6f3d3;
+  }
 
-.ravlo-btn.ghost {
-  background: rgba(255,255,255,.08);
-  color: #fff;
-}
+  .status.declined {
+    background: rgba(255, 120, 120, 0.14);
+    color: #ffc2c2;
+  }
+
+  .actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .details-row td {
+    background: rgba(255,255,255,0.02);
+    padding-top: 0;
+  }
+
+  .details-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 16px;
+    padding: 14px 0 4px;
+  }
+
+  .detail-card {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 16px;
+    padding: 16px;
+  }
+
+  .detail-card h4 {
+    margin: 0 0 12px;
+    color: #f4f7fb;
+    font-size: 0.98rem;
+  }
+
+  .detail-card p {
+    margin: 0 0 8px;
+    color: #d9e4ef;
+    line-height: 1.5;
+  }
+
+  .detail-card a {
+    color: #8ec5ff;
+    text-decoration: none;
+    word-break: break-word;
+  }
+
+  .detail-card a:hover {
+    text-decoration: underline;
+  }
+
+  .detail-text {
+    color: #95a9bc;
+    line-height: 1.6;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
+  .invite-panel {
+    margin-top: 16px;
+    padding: 16px;
+    border-radius: 16px;
+    background: linear-gradient(180deg, rgba(31, 64, 102, 0.22), rgba(17, 37, 61, 0.18));
+    border: 1px solid rgba(126, 183, 255, 0.18);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+  }
+
+  .invite-label {
+    font-size: 0.78rem;
+    font-weight: 800;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: #8ec5ff;
+    margin-bottom: 8px;
+  }
+
+  .invite-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px 18px;
+    color: #d7e4f0;
+    font-size: 0.9rem;
+  }
+
+  .ravlo-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    text-decoration: none;
+    border-radius: 12px;
+    font-weight: 800;
+    cursor: pointer;
+    transition: all 0.18s ease;
+    min-height: 38px;
+    padding: 0 14px;
+  }
+
+  .ravlo-btn.sm {
+    min-height: 36px;
+    padding: 0 12px;
+    font-size: 0.84rem;
+  }
+
+  .ravlo-btn.primary {
+    background: linear-gradient(135deg, #5da2ff, #84bdff);
+    color: #08111a;
+  }
+
+  .ravlo-btn.primary:hover {
+    filter: brightness(1.04);
+    transform: translateY(-1px);
+  }
+
+  .ravlo-btn.ghost {
+    background: rgba(255,255,255,0.07);
+    color: #f4f7fb;
+    border: 1px solid rgba(255,255,255,0.08);
+  }
+
+  .ravlo-btn.ghost:hover {
+    background: rgba(255,255,255,0.11);
+  }
+
+  .ravlo-btn.secondary {
+    background: rgba(93,162,255,0.14);
+    color: #eaf4ff;
+    border: 1px solid rgba(93,162,255,0.2);
+  }
+
+  .ravlo-btn.secondary:hover {
+    background: rgba(93,162,255,0.22);
+  }
+
+  .empty-state {
+    padding: 48px 20px;
+    text-align: center;
+  }
+
+  .empty-icon {
+    font-size: 2rem;
+    color: #7eb7ff;
+    margin-bottom: 8px;
+  }
+
+  .empty-state h3 {
+    margin: 0 0 8px;
+    color: #f4f7fb;
+  }
+
+  .empty-state p {
+    margin: 0;
+    color: #93a8bc;
+  }
+
+  @media (max-width: 980px) {
+    .details-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .invite-panel {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+  }
 </style>
-
 {% endblock %}
