@@ -10,6 +10,7 @@
   <p class="muted">Quickly estimate savings and get AI guidance to optimize your cash position.</p>
 
   <form method="POST" action="{{ url_for('investor.budget') }}" class="b-card" style="padding:1.5rem;margin-top:1rem;">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <label class="muted">Monthly Income ($)</label>
     <input type="number" name="income" required class="form-control" placeholder="e.g., 12000">
 

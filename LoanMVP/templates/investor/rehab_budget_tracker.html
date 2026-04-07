@@ -283,6 +283,7 @@ Track projected vs actual renovation spend for this deal.
       <p>Add a rehab line item and keep the budget totals updated automatically.</p>
 
       <form method="POST" class="form-grid">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="form-row-2">
           <div class="field">
             <label>Category</label>

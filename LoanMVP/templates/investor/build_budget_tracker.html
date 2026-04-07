@@ -283,6 +283,7 @@ Track projected vs actual construction spend for this build project.
       <p>Add a construction line item to track labor, materials, and draw activity.</p>
 
       <form method="POST" class="form-grid">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="form-row-2">
           <div class="field">
             <label>Category</label>

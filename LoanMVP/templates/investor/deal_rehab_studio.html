@@ -82,7 +82,7 @@
         </div>
 
         <form id="rehabForm" class="studio-form" enctype="multipart/form-data">
-          {{ csrf_token() if csrf_token else "" }}
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
           <input type="hidden" name="deal_id" value="{{ deal.id if deal else '' }}">
           <input type="hidden" name="save_to_deal" value="true">
@@ -1277,7 +1277,10 @@
         const response = await fetch("{{ url_for('investor.deal_rehab_generate') }}", {
           method: "POST",
           body: formData,
-          headers: { "X-Requested-With": "XMLHttpRequest" },
+          headers: {
+            "X-Requested-With": "XMLHttpRequest",
+            "X-CSRFToken": "{{ csrf_token() }}"
+          },
           credentials: "same-origin"
         });
 
@@ -1373,7 +1376,10 @@
         const response = await fetch("{{ url_for('investor.deal_rehab_generate_variant') }}", {
           method: "POST",
           body: fd,
-          headers: { "X-Requested-With": "XMLHttpRequest" },
+          headers: {
+            "X-Requested-With": "XMLHttpRequest",
+            "X-CSRFToken": "{{ csrf_token() }}"
+          },
           credentials: "same-origin"
         });
 

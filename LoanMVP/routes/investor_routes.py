@@ -4478,7 +4478,6 @@ def deal_rehab(deal_id=None):
         page_subtitle="Visualize renovation concepts before execution.",
     )
 @investor_bp.route("/deal-studio/rehab-studio/generate-variant", methods=["POST"])
-@csrf.exempt
 @login_required
 @role_required("investor")
 def deal_rehab_generate_variant():
@@ -5419,7 +5418,6 @@ def generate_build_blueprint():
         }), 500
 
 @investor_bp.route("/deal-studio/build-studio/generate-full", methods=["POST"])
-@csrf.exempt
 @login_required
 @role_required("investor")
 def generate_full_build():
@@ -5860,7 +5858,6 @@ def generate_full_build():
         }), 500
 
 @investor_bp.route("/deal-studio/build-studio/generate-room", methods=["POST"])
-@csrf.exempt
 @login_required
 @role_required("investor")
 def generate_build_room():
@@ -7261,7 +7258,6 @@ def renovation_upload():
 # =========================================================
 
 @investor_bp.route("/deal-studio/rehab-studio/generate", methods=["POST"])
-@csrf.exempt
 @login_required
 @role_required("investor")
 def deal_rehab_generate():
@@ -7444,7 +7440,6 @@ def deal_rehab_generate():
 
 @investor_bp.route("/deals/<int:deal_id>/mockups/save", methods=["POST"])
 @investor_bp.route("/deals/<int:deal_id>/mockups/save_legacy", methods=["POST"])
-@csrf.exempt
 @login_required
 @role_required("investor")
 def save_renovation_mockups(deal_id):
@@ -7497,7 +7492,6 @@ def save_renovation_mockups(deal_id):
 
 @investor_bp.route("/deals/<int:deal_id>/design/select", methods=["POST"])
 @investor_bp.route("/deals/<int:deal_id>/select_design", methods=["POST"])
-@csrf.exempt
 @login_required
 @role_required("investor")
 def deal_select_design(deal_id):
@@ -7535,7 +7529,6 @@ def deal_select_design(deal_id):
 
 
 @investor_bp.route("/deals/<int:deal_id>/rehab/feature", methods=["POST"])
-@csrf.exempt
 @login_required
 @role_required("investor")
 def deal_feature_reveal(deal_id):
@@ -7693,7 +7686,6 @@ def deal_reveal(deal_id):
 
 
 @investor_bp.route("/deals/<int:deal_id>/reveal/publish", methods=["POST"])
-@csrf.exempt
 @login_required
 @role_required("investor")
 def publish_reveal(deal_id):
@@ -7736,7 +7728,6 @@ def public_reveal(public_id):
 # =========================================================
 
 @investor_bp.route("/ai/rehab-scope/jobs", methods=["POST"])
-@csrf.exempt
 @login_required
 @role_required("investor")
 def create_rehab_scope_job():
@@ -7776,7 +7767,6 @@ def get_rehab_scope_job(job_id):
 
 
 @investor_bp.route("/ai/rehab-scope/analyze", methods=["POST"])
-@csrf.exempt
 @login_required
 @role_required("investor")
 def ai_rehab_scope():
@@ -8441,7 +8431,6 @@ def budget_studio(deal_id=None):
 
 
 @investor_bp.route("/budget-studio/create", methods=["GET", "POST"])
-@csrf.exempt
 @login_required
 @role_required("investor")
 def create_budget():
@@ -8547,7 +8536,6 @@ def budget_detail(budget_id):
     )
 
 @investor_bp.route("/deals/<int:deal_id>/budget/generate-from-ai", methods=["POST"])
-@csrf.exempt
 @login_required
 @role_required("investor")
 def generate_budget_from_ai(deal_id):
@@ -8694,7 +8682,6 @@ def generate_budget_from_ai(deal_id):
     return redirect(url_for("investor.budget_detail", budget_id=budget.id))
 
 @investor_bp.route("/budget-studio/<int:budget_id>/expense/add", methods=["POST"])
-@csrf.exempt
 @login_required
 @role_required("investor")
 def add_budget_expense(budget_id):
@@ -8731,7 +8718,6 @@ def add_budget_expense(budget_id):
     return redirect(url_for("investor.budget_detail", budget_id=budget.id))
     
 @investor_bp.route("/deals/<int:deal_id>/rehab/budget", methods=["GET", "POST"])
-@csrf.exempt
 @login_required
 @role_required("investor")
 def rehab_budget_tracker(deal_id):
@@ -8812,7 +8798,6 @@ def rehab_budget_tracker(deal_id):
     )
 
 @investor_bp.route("/build-projects/<int:project_id>/budget", methods=["GET", "POST"])
-@csrf.exempt
 @login_required
 @role_required("investor")
 def build_budget_tracker(project_id):
@@ -8898,7 +8883,6 @@ def build_budget_tracker(project_id):
 
 
 @investor_bp.route("/ai_deal_insight", methods=["POST"])
-@csrf.exempt
 @login_required
 @role_required("investor")
 def ai_deal_insight():

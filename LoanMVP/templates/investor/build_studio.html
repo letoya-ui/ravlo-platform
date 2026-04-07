@@ -86,7 +86,7 @@
         </div>
 
         <form id="fullBuildForm" class="studio-form" enctype="multipart/form-data">
-          {{ csrf_token() if csrf_token else "" }}
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
           <input type="hidden" name="deal_id" value="{{ deal.id if deal else '' }}">
           <input type="hidden" name="project_id" value="{{ project.id if project else '' }}">
@@ -1578,7 +1578,8 @@
           method: "POST",
           body: formData,
           headers: {
-            "X-Requested-With": "XMLHttpRequest"
+            "X-Requested-With": "XMLHttpRequest",
+            "X-CSRFToken": "{{ csrf_token() }}"
           },
           credentials: "same-origin"
         });
@@ -1720,7 +1721,8 @@
           method: "POST",
           body: fd,
           headers: {
-            "X-Requested-With": "XMLHttpRequest"
+            "X-Requested-With": "XMLHttpRequest",
+            "X-CSRFToken": "{{ csrf_token() }}"
           },
           credentials: "same-origin"
         });
