@@ -27,7 +27,7 @@ from LoanMVP.config import Config
 from LoanMVP.extensions import db, login_manager, migrate, mail, stripe, csrf
 from LoanMVP.models import User
 from LoanMVP.models.loan_models import BorrowerProfile, LoanNotification
-from LoanMVP.utils.role_helpers import get_role_display
+from LoanMVP.utils.role_helpers import get_role_display, get_request_type_display, get_status_display, get_status_badge
 
 import engineio
 import engineio.async_drivers.threading
