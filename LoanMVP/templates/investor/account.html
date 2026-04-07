@@ -106,13 +106,14 @@ Manage your identity, security, subscription, and account preferences.
         Permanently delete your account and all associated data.
       </p>
 
-      <form method="POST" action="{{ url_for('investor.delete_account') }}">
-        {{ csrf_token() if csrf_token is defined }}
-        <button class="ravlo-btn ghost sm mt-20"
-                onclick="return confirm('Are you sure you want to delete your account? This cannot be undone.')">
-          Delete Account
-        </button>
-      </form>
+      <p class="muted mt-20">
+        Account deletion is handled manually right now so we can verify identity and preserve compliance records.
+      </p>
+      <button class="ravlo-btn ghost sm mt-20"
+              type="button"
+              onclick="location.href='{{ url_for('investor.settings') }}'">
+        Contact Support
+      </button>
     </div>
 
   </div>

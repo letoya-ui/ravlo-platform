@@ -40,6 +40,7 @@ Manage your profile, preferences, and account details.
 
 <!-- ===================== SETTINGS FORM ===================== -->
 <form method="POST" action="{{ url_for('investor.settings') }}">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
   <div class="ravlo-card pad mt-20">
     <h3 class="ravlo-card-title" style="margin-bottom:14px;">Profile Information</h3>

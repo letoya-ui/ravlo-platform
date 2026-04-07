@@ -1474,8 +1474,7 @@ def dismiss_dashboard_tour():
 # =========================================================
 # 👤 INVESTOR ACCOUNT (profile/settings/privacy/notifications)
 # =========================================================
-@investor_bp.route("/account", methods=["GET", "POST"])
-@csrf.exempt
+@investor_bp.route("/account", methods=["GET"])
 @login_required
 @role_required("investor")
 def account():
@@ -1501,20 +1500,38 @@ def profile():
 
 
 @investor_bp.route("/settings", methods=["GET", "POST"])
-@csrf.exempt
 @login_required
 @role_required("investor")
 def settings():
     ip = InvestorProfile.query.filter_by(user_id=current_user.id).first()
 
     if request.method == "POST":
-        current_user.first_name = request.form.get("first_name")
-        current_user.last_name = request.form.get("last_name")
-        current_user.email = request.form.get("email")
+        current_user.first_name = (request.form.get("first_name") or "").strip() or current_user.first_name
+        current_user.last_name = (request.form.get("last_name") or "").strip() or current_user.last_name
+        current_user.email = (request.form.get("email") or "").strip() or current_user.email
 
-    form = InvestorSettingsForm()
+        if ip:
+            ip.strategy = (request.form.get("strategy") or "").strip() or None
 
-    if form.validate_on_submit():
+        current_password = request.form.get("current_password") or ""
+        new_password = request.form.get("new_password") or ""
+        confirm_password = request.form.get("confirm_password") or ""
+
+        if new_password or confirm_password or current_password:
+            if not current_password:
+                flash("Enter your current password to change it.", "danger")
+                return redirect(url_for("investor.settings") + "#password")
+            if not current_user.check_password(current_password):
+                flash("Current password is incorrect.", "danger")
+                return redirect(url_for("investor.settings") + "#password")
+            if new_password != confirm_password:
+                flash("New password and confirmation do not match.", "danger")
+                return redirect(url_for("investor.settings") + "#password")
+            if not new_password:
+                flash("Enter a new password to complete the password change.", "danger")
+                return redirect(url_for("investor.settings") + "#password")
+            current_user.set_password(new_password)
+
         db.session.commit()
         flash("Settings updated successfully.", "success")
         return redirect(url_for("investor.settings"))
@@ -1525,33 +1542,28 @@ def settings():
         investor_profile=ip
     )
 
-@investor_bp.route("/privacy", methods=["GET", "POST"])
-@csrf.exempt
+@investor_bp.route("/privacy", methods=["GET"])
 @login_required
 @role_required("investor")
 def privacy():
     ip = InvestorProfile.query.filter_by(user_id=current_user.id).first()
-    if ip and request.method == "POST":
-        ip.subscription_plan = request.form.get("subscription_plan")
-        db.session.commit()
-        flash("Privacy preferences updated.", "success")
-        return redirect(url_for("investor.privacy"))
-    return render_template("investor/privacy.html", investor=ip)
+    return render_template(
+        "investor/privacy.html",
+        investor=current_user,
+        investor_profile=ip,
+    )
 
 
-@investor_bp.route("/notifications-settings", methods=["GET", "POST"])
-@csrf.exempt
+@investor_bp.route("/notifications-settings", methods=["GET"])
 @login_required
 @role_required("investor")
 def notifications_settings():
     ip = InvestorProfile.query.filter_by(user_id=current_user.id).first()
-    if ip and request.method == "POST":
-        ip.email_notifications = True if request.form.get("email_notifications") else False
-        ip.sms_notifications = True if request.form.get("sms_notifications") else False
-        db.session.commit()
-        flash("Notification settings updated.", "success")
-        return redirect(url_for("investor.notifications_settings"))
-    return render_template("investor/notifications_settings.html", investor=ip)
+    return render_template(
+        "investor/notifications_settings.html",
+        investor=current_user,
+        investor_profile=ip,
+    )
 
 
 # =========================================================
@@ -1559,7 +1571,6 @@ def notifications_settings():
 # =========================================================
 
 @investor_bp.route("/create_profile", methods=["GET", "POST"])
-@csrf.exempt
 @login_required
 @role_required("investor")
 def create_profile():
