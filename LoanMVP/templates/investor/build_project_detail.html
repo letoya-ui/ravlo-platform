@@ -455,7 +455,8 @@ Review your saved build concept, development inputs, and launch this project int
       const res = await fetch(`/investor/build-projects/${projectId}/convert-to-deal`, {
         method: "POST",
         headers: {
-          "Content-Type": "application/json"
+          "Content-Type": "application/json",
+          "X-CSRFToken": "{{ csrf_token() }}"
         }
       });
 

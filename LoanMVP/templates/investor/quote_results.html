@@ -1,0 +1,61 @@
+{% extends "layouts/ravlo_base.html" %}
+
+{% block title %}Ravlo • Quote Results{% endblock %}
+{% block page_title %}Quote Results{% endblock %}
+{% block page_subline %}Review the generated lender scenarios and convert one into a capital request when you are ready.{% endblock %}
+
+{% block content %}
+<div class="ravlo-stack">
+  <div class="ravlo-card pad">
+    <div class="ravlo-grid cols-4">
+      <div>
+        <div class="ravlo-label">Property</div>
+        <div>{{ property_address or "Not provided" }}</div>
+      </div>
+      <div>
+        <div class="ravlo-label">Loan Amount</div>
+        <div>${{ "{:,.0f}".format(loan_amount or 0) }}</div>
+      </div>
+      <div>
+        <div class="ravlo-label">Property Value</div>
+        <div>${{ "{:,.0f}".format(property_value or 0) }}</div>
+      </div>
+      <div>
+        <div class="ravlo-label">Estimated LTV</div>
+        <div>{{ "%.1f"|format(ltv or 0) }}%</div>
+      </div>
+    </div>
+  </div>
+
+  {% if ai_response %}
+  <div class="ravlo-card pad">
+    <h3 class="ravlo-card-title">AI Summary</h3>
+    <p class="muted" style="margin-top:10px;">{{ ai_response }}</p>
+  </div>
+  {% endif %}
+
+  <div class="ravlo-grid cols-3">
+    {% for quote in quotes %}
+    <div class="ravlo-card pad">
+      <h3 class="ravlo-card-title">{{ quote.lender_name or "Quote" }}</h3>
+      <p class="muted" style="margin-top:8px;">{{ quote.loan_type or "Loan Option" }}</p>
+      <div style="margin-top:16px; display:grid; gap:10px;">
+        <div><span class="ravlo-label">Rate</span><div>{{ "%.2f"|format(quote.rate or 0) }}%</div></div>
+        <div><span class="ravlo-label">Deal Type</span><div>{{ quote.deal_type or "Standard" }}</div></div>
+        <div><span class="ravlo-label">Max LTV</span><div>{{ "%.1f"|format(quote.max_ltv or 0) }}%</div></div>
+        <div><span class="ravlo-label">Term</span><div>{{ quote.term_months or "—" }} months</div></div>
+      </div>
+      <form method="POST" action="{{ url_for('investor.convert_quote_to_application', quote_id=quote.id) }}" style="margin-top:18px;">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button class="ravlo-btn primary sm" type="submit">Convert to Application</button>
+      </form>
+    </div>
+    {% endfor %}
+  </div>
+
+  <div style="display:flex; gap:10px; flex-wrap:wrap;">
+    <button class="ravlo-btn ghost" type="button" onclick="location.href='{{ url_for('investor.quote') }}'">Run Another Quote</button>
+    <button class="ravlo-btn primary" type="button" onclick="location.href='{{ url_for('investor.capital_application') }}'">Open Capital Application</button>
+  </div>
+</div>
+{% endblock %}

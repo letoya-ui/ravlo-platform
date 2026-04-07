@@ -413,7 +413,8 @@ Manage saved development concepts, review project assets, and launch any project
       const res = await fetch(`/investor/build-projects/${projectId}/convert-to-deal`, {
         method: "POST",
         headers: {
-          "Content-Type": "application/json"
+          "Content-Type": "application/json",
+          "X-CSRFToken": "{{ csrf_token() }}"
         }
       });
 

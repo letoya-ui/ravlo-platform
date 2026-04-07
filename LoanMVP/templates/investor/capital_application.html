@@ -253,6 +253,7 @@ document.addEventListener("DOMContentLoaded", function(){
 
 const form = document.getElementById("capitalAppForm");
 const submitBtn = document.getElementById("capitalSubmitBtn");
+const csrfToken = form?.querySelector('input[name="csrf_token"]')?.value || "";
 
 if(!form) return;
 
@@ -269,6 +270,9 @@ try{
 
 const response = await fetch(form.action,{
 method:"POST",
+headers:{
+"X-CSRFToken": csrfToken
+},
 body:formData
 });
 

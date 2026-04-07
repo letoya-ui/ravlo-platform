@@ -75,6 +75,7 @@
   <div class="modal">
     <h2>👤 Update Profile</h2>
     <form id="updateProfileForm">
+      <input type="hidden" id="update_profile_csrf" value="{{ csrf_token() }}">
       <label>First Name</label>
       <input type="text" id="first_name" value="{{ current_user.first_name }}">
 
@@ -118,9 +119,14 @@ document.getElementById('updateProfileForm').addEventListener('submit', async fu
     address: document.getElementById('address').value
   };
 
-  const res = await fetch('/borrower/update_profile', {
+  const csrfToken = document.getElementById('update_profile_csrf').value;
+
+  const res = await fetch('{{ url_for('investor.update_profile') }}', {
     method: 'POST',
-    headers: {'Content-Type': 'application/json'},
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRFToken': csrfToken
+    },
     body: JSON.stringify(payload)
   });
 

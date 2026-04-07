@@ -170,6 +170,9 @@ async function featureReveal(dealId, afterUrl, beforeUrl, stylePreset, styleProm
     const res = await fetch(`/investor/deals/${dealId}/rehab/feature`, {
       method: "POST",
       body: fd,
+      headers: {
+        "X-CSRFToken": "{{ csrf_token() }}"
+      },
       credentials: "include"
     });
     const data = await res.json();

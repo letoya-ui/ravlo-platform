@@ -1325,7 +1325,6 @@ def resource_center():
     )
 
 @investor_bp.route("/resources/save", methods=["POST"])
-@csrf.exempt
 @login_required
 @role_required("investor")
 def resource_center_save():
@@ -1460,7 +1459,6 @@ def search():
     )
 
 @investor_bp.route("/dismiss_dashboard_tour", methods=["POST"])
-@csrf.exempt
 @login_required
 @role_required("investor")
 def dismiss_dashboard_tour():
@@ -1627,7 +1625,6 @@ def create_profile():
     )
 
 @investor_bp.route("/update_profile", methods=["POST"])
-@csrf.exempt
 @login_required
 @role_required("investor")
 def update_profile():
@@ -1635,9 +1632,18 @@ def update_profile():
     if not ip:
         return jsonify({"status": "error", "message": "Profile not found."}), 404
 
-    for field, value in request.form.items():
+    payload = request.get_json(silent=True) or request.form
+
+    user_fields = {"first_name", "last_name", "email"}
+    for field, value in payload.items():
+        clean_value = (value or "").strip() if isinstance(value, str) else value
+        if field in user_fields and clean_value:
+            setattr(current_user, field, clean_value)
+
+    for field, value in payload.items():
+        clean_value = (value or "").strip() if isinstance(value, str) else value
         if hasattr(ip, field) and (value or "").strip():
-            setattr(ip, field, value)
+            setattr(ip, field, clean_value)
 
     ip.updated_at = datetime.utcnow()
     db.session.commit()
@@ -1770,7 +1776,6 @@ def capital_application():
     )
 
 @investor_bp.route("/capital_application/submit", methods=["POST"])
-@csrf.exempt
 @login_required
 @role_required("investor")
 def submit_capital_application():
@@ -1958,7 +1963,6 @@ def submit_capital_application():
     })
 
 @investor_bp.route("/deals/<int:deal_id>/submit-funding", methods=["POST"])
-@csrf.exempt
 @login_required
 @role_required("investor")
 def submit_deal_for_funding(deal_id):
@@ -2070,7 +2074,6 @@ def loan_view(loan_id):
 
 @investor_bp.route("/capital/loan/<int:loan_id>/edit", methods=["GET", "POST"])
 @investor_bp.route("/loan/<int:loan_id>/edit", methods=["GET", "POST"])
-@csrf.exempt
 @login_required
 @role_required("investor")
 def loan_edit(loan_id):
@@ -2126,7 +2129,6 @@ def loan_edit(loan_id):
 
 @investor_bp.route("/capital/quote", methods=["GET", "POST"])
 @investor_bp.route("/quote", methods=["GET", "POST"])
-@csrf.exempt
 @login_required
 @role_required("investor")
 def quote():
@@ -2170,8 +2172,9 @@ def quote():
 
         quote_fk = _profile_id_filter(LoanQuote, ip.id)
 
+        created_quotes = []
         for lender in mock_lenders:
-            db.session.add(LoanQuote(
+            quote_row = LoanQuote(
                 **quote_fk,
                 lender_name=lender["lender_name"],
                 rate=lender["rate"],
@@ -2189,7 +2192,9 @@ def quote():
                 ai_suggestion=ai_suggestion,
                 response_json=None,
                 status="pending",
-            ))
+            )
+            db.session.add(quote_row)
+            created_quotes.append(quote_row)
 
         db.session.commit()
         flash("✅ Loan quotes generated successfully!", "success")
@@ -2197,7 +2202,7 @@ def quote():
         return render_template(
             "investor/quote_results.html",
             investor=ip,
-            lenders=mock_lenders,
+            quotes=created_quotes,
             property_address=property_address,
             property_value=property_value,
             loan_amount=loan_amount,
@@ -2212,7 +2217,6 @@ def quote():
 
 @investor_bp.route("/capital/quote/convert/<int:quote_id>", methods=["POST"])
 @investor_bp.route("/quote/convert/<int:quote_id>", methods=["POST"])
-@csrf.exempt
 @login_required
 @role_required("investor")
 def convert_quote_to_application(quote_id):
@@ -2297,7 +2301,6 @@ def convert_quote_to_application(quote_id):
 
 @investor_bp.route("/ai/quote", methods=["POST"])
 @investor_bp.route("/get_quote_ai", methods=["POST"])
-@csrf.exempt
 @login_required
 @role_required("investor")
 def get_quote_ai():
@@ -6552,7 +6555,6 @@ def open_build_project_in_studio(project_id):
     return redirect(url_for("investor.build_studio", project_id=project.id))
 
 @investor_bp.route("/build-projects/<int:project_id>/convert-to-deal", methods=["POST"])
-@csrf.exempt
 @login_required
 @role_required("investor")
 def convert_build_project_to_deal(project_id):
@@ -6620,7 +6622,6 @@ def convert_build_project_to_deal(project_id):
 
 @investor_bp.route("/deal-architect", methods=["GET", "POST"])
 @investor_bp.route("/deal-architect/<int:deal_id>", methods=["GET", "POST"])
-@csrf.exempt
 @login_required
 @role_required("investor")
 def deal_architect(deal_id=None):
@@ -7014,7 +7015,6 @@ def deal_architect_analyze():
         }), 500
 
 @investor_bp.route("/deal-architect/strategy", methods=["POST"])
-@csrf.exempt
 @login_required
 @role_required("investor")
 def deal_architect_strategy():
@@ -7114,7 +7114,6 @@ def deal_architect_strategy():
 
 
 @investor_bp.route("/rehab-architect/generate-scope", methods=["POST"])
-@csrf.exempt
 @login_required
 @role_required("investor")
 def rehab_architect_generate_scope():
@@ -7222,7 +7221,6 @@ def rehab_architect_generate_scope():
 # =========================================================
 
 @investor_bp.route("/renovation_upload", methods=["POST"])
-@csrf.exempt
 @login_required
 @role_required("investor")
 def renovation_upload():
@@ -7563,7 +7561,6 @@ def deal_feature_reveal(deal_id):
 
 @investor_bp.route("/deals/<int:deal_id>/design/share", methods=["POST"])
 @investor_bp.route("/deals/<int:deal_id>/share_design", methods=["POST"])
-@csrf.exempt
 @login_required
 @role_required("investor")
 def deal_share_design(deal_id):

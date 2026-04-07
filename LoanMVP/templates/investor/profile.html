@@ -17,53 +17,43 @@
 
 <div class="ravlo-card pad" style="max-width:760px;margin:0 auto;">
 
-  <form method="POST"
-        action="{{ url_for('investor.profile') }}">
+  <div style="font-weight:900;font-size:16px;margin-bottom:10px;">
+    Investor Profile
+  </div>
 
-    {{ csrf_token() if csrf_token is defined }}
-
-    <div style="font-weight:900;font-size:16px;margin-bottom:10px;">
-      Investor Profile
+  <div class="ravlo-grid cols-2">
+    <div>
+      <label class="ravlo-label">Full Name</label>
+      <div class="ravlo-input">{{ investor.full_name or ((current_user.first_name or "") ~ " " ~ (current_user.last_name or ""))|trim or "Not set" }}</div>
     </div>
 
-    <div class="ravlo-grid cols-2">
-      <div>
-        <label class="ravlo-label">Full Name</label>
-        <input class="ravlo-input"
-               name="full_name"
-               value="{{ investor.full_name if investor is defined else borrower.full_name if borrower is defined else '' }}"
-               placeholder="Your full name">
-      </div>
-
-      <div>
-        <label class="ravlo-label">Phone</label>
-        <input class="ravlo-input"
-               name="phone"
-               value="{{ investor.phone if investor is defined else borrower.phone if borrower is defined else '' }}"
-               placeholder="Your phone number">
-      </div>
+    <div>
+      <label class="ravlo-label">Phone</label>
+      <div class="ravlo-input">{{ investor.phone or current_user.phone or "Not set" }}</div>
     </div>
+  </div>
 
-    <div style="margin-top:12px;">
-      <label class="ravlo-label">Company</label>
-      <input class="ravlo-input"
-             name="company"
-             value="{{ investor.company if investor is defined else borrower.company if borrower is defined else '' }}"
-             placeholder="LLC / Company name">
-    </div>
+  <div style="margin-top:12px;">
+    <label class="ravlo-label">Company</label>
+    <div class="ravlo-input">{{ investor.company or "Not set" }}</div>
+  </div>
 
-    <div style="margin-top:18px;display:flex;gap:10px;flex-wrap:wrap;">
-      <button type="submit" class="ravlo-btn primary">
-        Save Changes
-      </button>
+  <div style="margin-top:12px;">
+    <label class="ravlo-label">Strategy</label>
+    <div class="ravlo-input">{{ investor.strategy or "Not set" }}</div>
+  </div>
 
-      <button type="button" class="ravlo-btn ghost"
-              onclick="history.back()">
-        Cancel
-      </button>
-    </div>
+  <div style="margin-top:18px;display:flex;gap:10px;flex-wrap:wrap;">
+    <button type="button" class="ravlo-btn primary"
+            onclick="location.href='{{ url_for('investor.settings') }}'">
+      Edit in Settings
+    </button>
 
-  </form>
+    <button type="button" class="ravlo-btn ghost"
+            onclick="history.back()">
+      Back
+    </button>
+  </div>
 
 </div>
 

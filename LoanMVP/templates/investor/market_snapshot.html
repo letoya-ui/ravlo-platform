@@ -18,12 +18,7 @@
     Back
   </button>
 
-  {% if 'investor.saved' in view_functions %}
-    <button class="ravlo-btn ghost sm" type="button"
-            onclick="location.href='{{ url_for('investor.saved') }}'">
-      Saved Properties
-    </button>
-  {% elif 'investor.saved_properties' in view_functions %}
+  {% if 'investor.saved_properties' in view_functions %}
     <button class="ravlo-btn ghost sm" type="button"
             onclick="location.href='{{ url_for('investor.saved_properties') }}'">
       Saved Properties
@@ -215,9 +210,9 @@
 
     <div style="margin-top:14px; display:flex; gap:10px; flex-wrap:wrap;">
 
-      {% if 'investor.saved' in view_functions %}
+      {% if 'investor.saved_properties' in view_functions %}
         <button class="ravlo-btn primary sm" type="button"
-                onclick="location.href='{{ url_for('investor.saved') }}'">
+                onclick="location.href='{{ url_for('investor.saved_properties') }}'">
           View Saved Properties
         </button>
       {% endif %}

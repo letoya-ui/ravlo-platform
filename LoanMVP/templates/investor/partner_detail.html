@@ -58,6 +58,7 @@ Review this partner and request an introduction.
   <div class="ravlo-card">
     <h3>Request Introduction</h3>
     <form method="POST" action="{{ url_for('investor.request_partner_intro', partner_id=partner.id) }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <label class="ravlo-label">Message</label>
       <textarea name="message" class="ravlo-input" rows="5" placeholder="Tell us what kind of help you need for this project or property."></textarea>
 
