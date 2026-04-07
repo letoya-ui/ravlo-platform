@@ -2730,7 +2730,6 @@ def investor_condition_ai(condition_id):
 
 
 @investor_bp.route("/conditions/upload/<int:cond_id>", methods=["POST"])
-@csrf.exempt
 @login_required
 @role_required("investor")
 def upload_condition(cond_id):
@@ -2751,6 +2750,7 @@ def upload_condition(cond_id):
         return "No file uploaded", 400
 
     filename = secure_filename(file.filename)
+    filename = f"condition_{cond.id}_{uuid.uuid4().hex[:8]}_{filename}"
     filepath = os.path.join(current_app.config["UPLOAD_FOLDER"], filename)
     file.save(filepath)
 
@@ -4729,7 +4729,6 @@ def build_studio(deal_id=None):
 # =========================================================
 
 @investor_bp.route("/deal-studio/build-studio/generate", methods=["POST"])
-@csrf.exempt
 @login_required
 @role_required("investor")
 def generate_build_studio_legacy():
@@ -4745,7 +4744,6 @@ def _is_probably_blueprint(url: str) -> bool:
 
 
 @investor_bp.route("/deal-studio/build-studio/generate-exterior", methods=["POST"])
-@csrf.exempt
 @login_required
 @role_required("investor")
 def generate_build_exterior():
@@ -4926,7 +4924,6 @@ def generate_build_exterior():
         return jsonify({"status": "error", "message": str(e)}), 500
 
 @investor_bp.route("/deal-studio/build-studio/generate-interior", methods=["POST"])
-@csrf.exempt
 @login_required
 @role_required("investor")
 def generate_build_interior():
@@ -5106,7 +5103,6 @@ def generate_build_interior():
 # =========================================================
 @investor_bp.route("/deal-studio/build-studio/generate-blueprint", methods=["POST"])
 @investor_bp.route("/blueprint_to_room", methods=["POST"])
-@csrf.exempt
 @login_required
 @role_required("investor")
 def generate_build_blueprint():
@@ -6172,7 +6168,6 @@ def generate_build_room():
         }), 500
      
 @investor_bp.route("/ai/build-scope/analyze", methods=["POST"])
-@csrf.exempt
 @login_required
 @role_required("investor")
 def ai_build_scope():
@@ -6221,7 +6216,6 @@ def ai_build_scope():
 
        
 @investor_bp.route("/deal-studio/build-studio/generate-upload", methods=["POST"])
-@csrf.exempt
 @login_required
 @role_required("investor")
 def generate_build_studio_upload():
@@ -6419,7 +6413,6 @@ def generate_build_studio_upload():
 # =========================================================
 
 @investor_bp.route("/deal-studio/build-studio/save", methods=["POST"])
-@csrf.exempt
 @login_required
 @role_required("investor")
 def save_build_studio():
@@ -8362,7 +8355,6 @@ def activity():
 
 @investor_bp.route("/planning/budget", methods=["GET", "POST"])
 @investor_bp.route("/budget", methods=["GET", "POST"])
-@csrf.exempt
 @login_required
 @role_required("investor")
 def budget():
@@ -9286,7 +9278,6 @@ def partner_detail(partner_id):
 
 
 @investor_bp.route("/partners/<int:partner_id>/request-intro", methods=["POST"])
-@csrf.exempt
 @login_required
 @role_required("investor")
 def request_partner_intro(partner_id):
@@ -9336,7 +9327,6 @@ def request_partner_intro(partner_id):
     return redirect(url_for("investor.partner_detail", partner_id=partner.id))
     
 @investor_bp.route("/resources/request-connection", methods=["POST"])
-@csrf.exempt
 @login_required
 @role_required("investor")
 def request_connection():
@@ -9411,19 +9401,35 @@ def partners_filter():
 def partner_marketplace():
     ip = InvestorProfile.query.filter_by(user_id=current_user.id).first()
 
-    category = (request.args.get("category") or "").strip()
+    service_type = (
+        request.args.get("service_type")
+        or request.args.get("category")
+        or ""
+    ).strip()
     city = (request.args.get("city") or "").strip()
     state = (request.args.get("state") or "").strip()
     zip_code = (request.args.get("zip_code") or "").strip()
+    deal_id = request.args.get("deal_id", type=int)
+    saved_property_id = request.args.get("saved_property_id", type=int)
 
     internal_results = []
     external_results = []
     fallback_used = False
 
-    if category and (city or state or zip_code):
+    def _pick(item, *names, default=None):
+        for name in names:
+            if isinstance(item, dict) and name in item and item.get(name) not in (None, ""):
+                return item.get(name)
+            if hasattr(item, name):
+                value = getattr(item, name)
+                if value not in (None, ""):
+                    return value
+        return default
+
+    if service_type and (city or state or zip_code):
         internal_results = search_internal_partners(
             Partner,
-            category=category,
+            category=service_type,
             city=city,
             state=state,
             zip_code=zip_code,
@@ -9432,26 +9438,115 @@ def partner_marketplace():
         if not internal_results:
             fallback_used = True
             location_text = ", ".join([x for x in [city, state, zip_code] if x])
-            external_results = search_google_places(location_text, category)
+            external_results = search_google_places(location_text, service_type)
+
+    partners = []
+
+    for partner in internal_results:
+        partners.append({
+            "id": _pick(partner, "id"),
+            "name": _pick(partner, "company", "business_name", "name", default="Partner"),
+            "service_type": _pick(partner, "category", default=service_type),
+            "address": _pick(partner, "address"),
+            "city": _pick(partner, "city"),
+            "state": _pick(partner, "state"),
+            "zip_code": _pick(partner, "zip_code", "zip"),
+            "rating": _pick(partner, "rating"),
+            "reviews": _pick(partner, "review_count", "reviews"),
+            "phone": _pick(partner, "phone"),
+            "email": _pick(partner, "email"),
+            "website": _pick(partner, "website"),
+            "bio": _pick(partner, "listing_description", "bio"),
+            "score": _pick(partner, "score"),
+            "distance_miles": _pick(partner, "distance_miles"),
+            "is_internal": True,
+            "is_verified": bool(_pick(partner, "approved", default=False)),
+            "is_preferred": bool(_pick(partner, "featured", default=False)),
+        })
+
+    for partner in external_results:
+        partners.append({
+            "name": _pick(partner, "name", default="External Provider"),
+            "service_type": service_type,
+            "address": _pick(partner, "address"),
+            "city": _pick(partner, "city", default=city),
+            "state": _pick(partner, "state", default=state),
+            "zip_code": _pick(partner, "zip_code", default=zip_code),
+            "rating": _pick(partner, "rating"),
+            "reviews": _pick(partner, "review_count", "reviews"),
+            "phone": _pick(partner, "phone"),
+            "email": _pick(partner, "email"),
+            "website": _pick(partner, "website"),
+            "bio": _pick(partner, "description", "bio"),
+            "score": _pick(partner, "score"),
+            "distance_miles": _pick(partner, "distance_miles"),
+            "source": _pick(partner, "source", default="external"),
+            "place_id": _pick(partner, "place_id", "external_id"),
+            "is_internal": False,
+            "is_verified": False,
+            "is_preferred": False,
+        })
 
     recent_requests = []
     if ip:
-        recent_requests = (
+        connection_requests = (
             PartnerConnectionRequest.query
             .filter_by(investor_profile_id=ip.id)
             .order_by(PartnerConnectionRequest.created_at.desc())
             .limit(10)
             .all()
         )
+        recent_requests = [
+            {
+                "created_at": getattr(req, "created_at", None),
+                "service_type": getattr(req, "category", None) or "Partner Connection",
+                "city": getattr(req, "city", None),
+                "state": getattr(req, "state", None),
+                "zip_code": getattr(req, "zip_code", None),
+                "request_status": getattr(req, "status", None) or "pending",
+            }
+            for req in connection_requests
+        ]
+
+        if "PartnerRequest" in globals():
+            marketplace_requests = (
+                PartnerRequest.query
+                .filter_by(investor_profile_id=ip.id)
+                .order_by(PartnerRequest.created_at.desc())
+                .limit(10)
+                .all()
+            )
+            recent_requests.extend([
+                {
+                    "created_at": getattr(req, "created_at", None),
+                    "service_type": getattr(req, "service_type", None) or "Partner Request",
+                    "city": getattr(req, "city", None),
+                    "state": getattr(req, "state", None),
+                    "zip_code": getattr(req, "zip_code", None),
+                    "request_status": getattr(req, "request_status", None) or "requested",
+                }
+                for req in marketplace_requests
+            ])
+
+        recent_requests.sort(
+            key=lambda item: item.get("created_at") or datetime.min,
+            reverse=True
+        )
+        recent_requests = recent_requests[:10]
 
     return render_template(
         "investor/partner_marketplace.html",
-        category=category,
+        category=service_type,
+        service_type=service_type,
         city=city,
         state=state,
         zip_code=zip_code,
+        deal_id=deal_id,
+        saved_property_id=saved_property_id,
         internal_results=internal_results,
         external_results=external_results,
+        partners=partners,
+        result_source="external" if fallback_used else "internal",
         fallback_used=fallback_used,
         recent_requests=recent_requests,
         active_tab="partners",
@@ -9460,7 +9555,6 @@ def partner_marketplace():
 
 
 @investor_bp.route("/partners/request", methods=["POST"])
-@csrf.exempt
 @login_required
 @role_required("investor")
 def create_partner_request():
@@ -9512,7 +9606,6 @@ def create_partner_request():
 
 
 @investor_bp.route("/partners/save-external", methods=["POST"])
-@csrf.exempt
 @login_required
 @role_required("investor")
 def save_external_partner():
@@ -9581,7 +9674,6 @@ def save_external_partner():
 
 
 @investor_bp.route("/partners/invite-external/<int:lead_id>", methods=["POST"])
-@csrf.exempt
 @login_required
 @role_required("investor", "admin")
 def invite_external_partner(lead_id):
@@ -9599,7 +9691,6 @@ def invite_external_partner(lead_id):
     return redirect(url_for("investor.partner_marketplace"))
 
 @investor_bp.route("/partners/request", methods=["POST"])
-@csrf.exempt
 @login_required
 @role_required("investor")
 def create_partner_connection_request():
@@ -9630,7 +9721,6 @@ def create_partner_connection_request():
     return redirect(url_for("investor.partner_marketplace"))
 
 @investor_bp.route("/partners/save-external", methods=["POST"])
-@csrf.exempt
 @login_required
 @role_required("investor")
 def save_external_partner_lead():
@@ -9696,7 +9786,6 @@ def save_external_partner_lead():
     return redirect(url_for("investor.partner_marketplace"))
 
 @investor_bp.route("/partners/request-external/<int:lead_id>", methods=["POST"])
-@csrf.exempt
 @login_required
 @role_required("investor")
 def create_external_partner_request(lead_id):

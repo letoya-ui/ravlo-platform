@@ -21,6 +21,18 @@
         <strong>Uploaded File:</strong><br>
         {{ condition.file_path }}
       </p>
+    {% else %}
+      <form method="POST"
+            action="{{ url_for('investor.upload_condition', cond_id=condition.id) }}"
+            enctype="multipart/form-data"
+            style="margin-top:1.25rem;">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <label class="ravlo-label">Upload Condition File</label>
+        <input type="file" name="file" class="ravlo-input" required>
+        <button type="submit" class="ravlo-btn primary" style="margin-top:12px;">
+          Upload Document
+        </button>
+      </form>
     {% endif %}
 
     <a href="{{ url_for('investor.condition_history', cond_id=condition.id) }}"

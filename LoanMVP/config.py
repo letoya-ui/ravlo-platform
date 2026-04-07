@@ -35,7 +35,20 @@ def _env_list(name: str, default: str = ""):
     raw = os.environ.get(name, default).strip()
     if not raw:
         return []
-    return [item.strip() for item in raw.split(",") if item.strip()]
+    return [item.strip().rstrip("/") for item in raw.split(",") if item.strip()]
+
+
+def _env_origin_list(name: str, *fallback_env_names: str, default: str = ""):
+    values = _env_list(name, default)
+    if values:
+        return values
+
+    for fallback_name in fallback_env_names:
+        values = _env_list(fallback_name)
+        if values:
+            return values
+
+    return []
 
 # ===================================================
 # ⚙️ MAIN CONFIG CLASS
@@ -82,9 +95,13 @@ class Config:
 
     SOCKETIO_MESSAGE_QUEUE = os.environ.get("SOCKETIO_MESSAGE_QUEUE") or None
     SOCKETIO_ASYNC_MODE = os.environ.get("SOCKETIO_ASYNC_MODE", "threading").strip().lower()
-    SOCKETIO_CORS_ALLOWED_ORIGINS = _env_list("SOCKETIO_CORS_ALLOWED_ORIGINS")
-
-    CORS_ORIGINS = _env_list("CORS_ORIGINS")
+    CORS_ORIGINS = _env_origin_list("CORS_ORIGINS", "APP_ORIGIN", "RENDER_EXTERNAL_URL")
+    SOCKETIO_CORS_ALLOWED_ORIGINS = _env_origin_list(
+        "SOCKETIO_CORS_ALLOWED_ORIGINS",
+        "CORS_ORIGINS",
+        "APP_ORIGIN",
+        "RENDER_EXTERNAL_URL",
+    )
     CORS_SUPPORTS_CREDENTIALS = _env_bool("CORS_SUPPORTS_CREDENTIALS", True)
 
     UPLOAD_FOLDER = UPLOAD_FOLDER
