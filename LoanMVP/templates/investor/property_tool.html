@@ -1,9 +1,9 @@
 {% extends "layouts/ravlo_base.html" %}
-{% block title %}Ravlo • Deal Finder{% endblock %}
+{% block title %}Ravlo • Property Tool{% endblock %}
 
-{% block page_title %}Deal Finder{% endblock %}
+{% block page_title %}Property Tool{% endblock %}
 {% block page_subline %}
-Scan a market, rank opportunities, and move the best deals into Workspace.
+Search by ZIP or address, review public record property data, and move opportunities into Workspace.
 {% endblock %}
 
 {% block topbar_actions %}
@@ -22,13 +22,26 @@ Scan a market, rank opportunities, and move the best deals into Workspace.
 
 <div class="dfv2-shell">
 
-  <!-- SEARCH PANEL -->
   <aside class="ravlo-card pad dfv2-search-panel">
-    <div class="eyebrow">RAVLO SEARCH</div>
-    <h3 class="dfv2-panel-title">Deal Finder v2</h3>
+    <div class="eyebrow">RAVLO PROPERTY SEARCH</div>
+    <h3 class="dfv2-panel-title">Property Tool</h3>
     <p class="muted">
-      Search by ZIP, apply your buy box, and let Ravlo rank opportunities.
+      Search by ZIP or address and review available public record property data.
     </p>
+
+    <label class="ravlo-label mt-16">Address</label>
+    <input id="address" class="ravlo-input" placeholder="e.g. 123 Main St" />
+
+    <div class="dfv2-form-grid mt-12">
+      <div>
+        <label class="ravlo-label">City</label>
+        <input id="city" class="ravlo-input" placeholder="e.g. Otisville" />
+      </div>
+      <div>
+        <label class="ravlo-label">State</label>
+        <input id="state" class="ravlo-input" placeholder="e.g. NY" />
+      </div>
+    </div>
 
     <label class="ravlo-label mt-16">ZIP Code</label>
     <input id="zip" class="ravlo-input" placeholder="e.g. 10924" />
@@ -40,39 +53,6 @@ Scan a market, rank opportunities, and move the best deals into Workspace.
       <option value="all">All</option>
     </select>
 
-    <div class="dfv2-form-grid mt-16">
-      <div>
-        <label class="ravlo-label">Min Price</label>
-        <input id="price_min" class="ravlo-input" type="number" placeholder="0" />
-      </div>
-      <div>
-        <label class="ravlo-label">Max Price</label>
-        <input id="price_max" class="ravlo-input" type="number" placeholder="500000" />
-      </div>
-    </div>
-
-    <div class="dfv2-form-grid mt-12">
-      <div>
-        <label class="ravlo-label">Beds ≥</label>
-        <input id="beds_min" class="ravlo-input" type="number" placeholder="2" />
-      </div>
-      <div>
-        <label class="ravlo-label">Baths ≥</label>
-        <input id="baths_min" class="ravlo-input" type="number" placeholder="1" />
-      </div>
-    </div>
-
-    <div class="dfv2-form-grid mt-12">
-      <div>
-        <label class="ravlo-label">Min ROI</label>
-        <input id="min_roi" class="ravlo-input" type="number" step="0.01" placeholder="0.20" />
-      </div>
-      <div>
-        <label class="ravlo-label">Min Cashflow</label>
-        <input id="min_cashflow" class="ravlo-input" type="number" placeholder="300" />
-      </div>
-    </div>
-
     <button class="ravlo-btn primary w-full mt-16" type="button" onclick="runSearch()">
       Run Search
     </button>
@@ -80,15 +60,14 @@ Scan a market, rank opportunities, and move the best deals into Workspace.
     <div id="searchStatus" class="dfv2-status">Ready to scan.</div>
   </aside>
 
-  <!-- RESULTS -->
   <section class="dfv2-results-wrap">
 
     <div id="resultsSummary" class="ravlo-card pad dfv2-summary-card" style="display:none;">
       <div class="dfv2-summary-head">
         <div>
-          <div class="eyebrow">MARKET SUMMARY</div>
-          <h3 id="summaryTitle" class="mb-8">Market Scan Complete</h3>
-          <p id="summarySub" class="muted mb-0">Ravlo results will appear here.</p>
+          <div class="eyebrow">SEARCH SUMMARY</div>
+          <h3 id="summaryTitle" class="mb-8">Search Complete</h3>
+          <p id="summarySub" class="muted mb-0">Property results will appear here.</p>
         </div>
 
         <div class="dfv2-summary-metrics">
@@ -110,10 +89,10 @@ Scan a market, rank opportunities, and move the best deals into Workspace.
 
     <div id="results" class="dfv2-grid">
       <div class="ravlo-card pad dfv2-empty">
-        <div class="eyebrow">RAVLO DEAL FINDER</div>
+        <div class="eyebrow">RAVLO PROPERTY TOOL</div>
         <h3 class="mb-8">Your search results will appear here</h3>
         <p class="muted mb-0">
-          Enter a ZIP code, choose your strategy, and Ravlo will rank investment opportunities.
+          Enter a ZIP code or address and Ravlo will return available property records.
         </p>
       </div>
     </div>
@@ -129,11 +108,8 @@ function money(x){
   return "$" + n.toLocaleString(undefined, {maximumFractionDigits:0});
 }
 
-function pct(x){
-  if (x === null || x === undefined || x === "") return "—";
-  const n = Number(x);
-  if (Number.isNaN(n)) return "—";
-  return Math.round(n * 100) + "%";
+function safeText(v){
+  return (v === null || v === undefined || v === "") ? "—" : String(v);
 }
 
 function numOrNull(v){
@@ -144,41 +120,30 @@ function numOrNull(v){
   return Number.isNaN(n) ? null : n;
 }
 
-function safeText(v){
-  return (v === null || v === undefined || v === "") ? "—" : String(v);
-}
-
 function strategyLabel(v){
   if (v === "flip") return "Fix & Flip";
   if (v === "rental") return "Rental";
   return "All";
 }
 
-function scoreTone(item){
-  const score = Number(item?.deal_score?.score);
-  if (!Number.isNaN(score) && score >= 80) return "good";
-  if (!Number.isNaN(score) && score >= 60) return "watch";
-  return "neutral";
-}
-
-function scoreLabel(item){
-  return item?.deal_score?.label || "Review";
-}
-
 function buildPayloadObj(r, analyzeId, saveId){
   return {
-    address: r.address || "",
+    address: r.address || r.address_line1 || "",
     city: r.city || "",
     state: r.state || "",
-    zip: r.zip || "",
-    price: r.price ?? null,
-    sqft: r.sqft ?? null,
-    photo: r.photo || r.primary_photo || null,
+    zip: r.zip_code || "",
+    price: r.last_sale_price ?? null,
+    sqft: r.square_feet ?? null,
     beds: r.beds ?? null,
     baths: r.baths ?? null,
     year_built: r.year_built ?? null,
     property_type: r.property_type || null,
-    property_id: r.property_id || r.propertyId || r.id || null,
+    property_id: r.attom_id || null,
+    lot_size_sqft: r.lot_size_sqft ?? null,
+    assessed_value: r.assessed_value ?? null,
+    latitude: r.latitude ?? null,
+    longitude: r.longitude ?? null,
+    last_sale_price: r.last_sale_price ?? null,
     _btnId: analyzeId,
     _saveBtnId: saveId
   };
@@ -278,10 +243,10 @@ async function saveAndAnalyze(item){
 
 function renderSummary(zip, strategy, count){
   const card = document.getElementById("resultsSummary");
-  document.getElementById("summaryTitle").innerText = "Market Scan Complete";
+  document.getElementById("summaryTitle").innerText = "Search Complete";
   document.getElementById("summarySub").innerText = count === 0
-    ? "No results matched your buy box."
-    : "Ravlo surfaced ranked opportunities for this market.";
+    ? "No properties matched this search."
+    : "Ravlo returned available public record property data.";
   document.getElementById("summaryCount").innerText = String(count);
   document.getElementById("summaryStrategy").innerText = strategyLabel(strategy);
   document.getElementById("summaryZip").innerText = zip || "—";
@@ -307,42 +272,43 @@ function renderCards(results){
     const saveId = `sv_${idx}_${ts}`;
     const payloadObj = buildPayloadObj(r, analyzeId, saveId);
     const encoded = encodeURIComponent(JSON.stringify(payloadObj));
-    const score = scoreLabel(r);
-    const tone = scoreTone(r);
-    const m = r.metrics || {};
 
     return `
       <article class="ravlo-card pad dfv2-card">
         <div class="dfv2-thumb">
-          <img src="${payloadObj.photo || '/static/images/placeholder_property.jpg'}" alt="Property photo">
-          <div class="dfv2-score-badge ${tone}">
-            ${score}${r?.deal_score?.score ? ` • ${r.deal_score.score}` : ""}
+          <img src="/static/images/placeholder_property.jpg" alt="Property photo">
+          <div class="dfv2-score-badge neutral">
+            Public Record
           </div>
         </div>
 
         <div class="dfv2-body">
-          <div class="dfv2-address">${safeText(r.address)}</div>
-          <div class="dfv2-location">${safeText(r.city)} ${safeText(r.state)} ${safeText(r.zip)}</div>
+          <div class="dfv2-address">${safeText(r.address || r.address_line1)}</div>
+          <div class="dfv2-location">${safeText(r.city)}, ${safeText(r.state)} ${safeText(r.zip_code)}</div>
 
           <div class="dfv2-chip-row">
             <span class="dfv2-chip">${safeText(r.property_type || "Property")}</span>
             <span class="dfv2-chip">${safeText(r.beds)} bd</span>
             <span class="dfv2-chip">${safeText(r.baths)} ba</span>
-            <span class="dfv2-chip">${safeText(r.sqft)} sqft</span>
-            <span class="dfv2-chip">${safeText(r.recommended_strategy || "Review")}</span>
+            <span class="dfv2-chip">${safeText(r.square_feet)} sqft</span>
           </div>
 
           <div class="dfv2-metrics">
-            <div><span>Price</span><strong>${money(r.price)}</strong></div>
-            <div><span>Rent Est</span><strong>${money(m.rent_est)}</strong></div>
-            <div><span>Flip Profit</span><strong>${money(m.profit)}</strong></div>
-            <div><span>ROI</span><strong>${pct(m.roi)}</strong></div>
-            <div><span>Cashflow</span><strong>${money(m.net_cashflow_mo)}</strong></div>
-            <div><span>Year</span><strong>${safeText(r.year_built)}</strong></div>
+            <div><span>Last Recorded Sale</span><strong>${money(r.last_sale_price)}</strong></div>
+            <div><span>Assessed Value</span><strong>${money(r.assessed_value)}</strong></div>
+            <div><span>Lot Size</span><strong>${safeText(r.lot_size_sqft)}</strong></div>
+            <div><span>Year Built</span><strong>${safeText(r.year_built)}</strong></div>
+            <div><span>Latitude</span><strong>${safeText(r.latitude)}</strong></div>
+            <div><span>Longitude</span><strong>${safeText(r.longitude)}</strong></div>
           </div>
 
           <div class="dfv2-ai-snippet">
-            ${safeText(r.ai_summary || "No AI summary available.")}
+            <strong>Property Snapshot:</strong>
+            <ul class="dfv2-thesis-list">
+              <li>Showing available public record property details</li>
+              <li>Use View Details for the full property workflow</li>
+              <li>Save or Analyze to move this property into Ravlo Workspace</li>
+            </ul>
           </div>
 
           <div class="dfv2-actions">
@@ -368,31 +334,31 @@ function renderCards(results){
 }
 
 async function runSearch(){
+  const address = document.getElementById("address").value.trim();
+  const city = document.getElementById("city").value.trim();
+  const state = document.getElementById("state").value.trim();
   const zip = document.getElementById("zip").value.trim();
   const strategy = document.getElementById("strategy").value;
   const status = document.getElementById("searchStatus");
   const resultsSummary = document.getElementById("resultsSummary");
 
-  if (!zip){
-    status.innerText = "Enter a ZIP code first.";
+  if (!zip && !address){
+    status.innerText = "Enter an address or ZIP code first.";
     return;
   }
 
   const payload = {
+    address,
+    city,
+    state,
     zip,
     strategy,
-    price_min: numOrNull(document.getElementById("price_min").value),
-    price_max: numOrNull(document.getElementById("price_max").value),
-    beds_min: numOrNull(document.getElementById("beds_min").value),
-    baths_min: numOrNull(document.getElementById("baths_min").value),
-    min_roi: numOrNull(document.getElementById("min_roi").value),
-    min_cashflow: numOrNull(document.getElementById("min_cashflow").value),
     limit: 20
   };
 
   status.innerText = "Ravlo is scanning this market...";
   resultsSummary.style.display = "none";
-  renderEmpty("Scanning " + zip, "Matching your strategy, filters, and performance thresholds.");
+  renderEmpty("Scanning search", "Reviewing available public record property data.");
 
   try{
     const resp = await fetch("{{ url_for('investor.api_property_tool_search') }}", {
@@ -406,17 +372,19 @@ async function runSearch(){
 
     if (data.status !== "ok"){
       status.innerText = data.message || "Search failed.";
-      renderEmpty("Search failed", data.message || "Please try another ZIP or adjust your filters.");
+      renderEmpty("Search failed", data.message || "Please try another address or ZIP.");
       return;
     }
 
     renderSummary(data.zip, data.strategy, data.results.length);
-    status.innerText = `Ravlo found ${data.results.length} opportunit${data.results.length === 1 ? "y" : "ies"} in ${data.zip}.`;
+
+    const locationLabel = data.zip || data.address || "your search";
+    status.innerText = `Ravlo found ${data.results.length} propert${data.results.length === 1 ? "y" : "ies"} for ${locationLabel}.`;
 
     if (!data.results.length){
       renderEmpty(
-        "No properties matched your filters",
-        "Try widening your price range, lowering thresholds, or switching strategies."
+        "No properties matched your search",
+        "Try another address, city/state combination, or ZIP code."
       );
       return;
     }
@@ -424,8 +392,8 @@ async function runSearch(){
     renderCards(data.results);
   } catch (e){
     console.error(e);
-    status.innerText = "Ravlo could not load this market right now.";
-    renderEmpty("Unable to load this market", "Please try again in a moment.");
+    status.innerText = "Ravlo could not load this search right now.";
+    renderEmpty("Unable to load this search", "Please try again in a moment.");
   }
 }
 </script>
@@ -527,16 +495,6 @@ async function runSearch(){
   display:block;
 }
 
-.dfv2-noimg{
-  width:100%;
-  height:100%;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  color:var(--muted);
-  font-size:.85rem;
-}
-
 .dfv2-score-badge{
   position:absolute;
   top:12px;
@@ -633,6 +591,11 @@ async function runSearch(){
   color:var(--muted);
   font-size:.82rem;
   line-height:1.55;
+}
+
+.dfv2-thesis-list{
+  margin:.45rem 0 0 1rem;
+  padding:0;
 }
 
 .dfv2-actions{

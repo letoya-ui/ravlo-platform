@@ -1,0 +1,408 @@
+{% extends "layouts/ravlo_base.html" %}
+
+{% block title %}Ravlo • Capital Partner Dashboard{% endblock %}
+
+{% block page_title %}Capital Partner Dashboard{% endblock %}
+{% block page_subline %}
+Review opportunities, monitor active files, and keep your lending pipeline moving with speed and clarity.
+{% endblock %}
+
+{% block topbar_actions %}
+  <a href="{{ url_for('partners.requests_inbox') }}" class="ravlo-btn ghost sm">
+    View Opportunities
+  </a>
+  <a href="{{ url_for('partners.workspace_home') }}" class="ravlo-btn primary sm">
+    Open Capital Workspace
+  </a>
+{% endblock %}
+
+{% block content %}
+<div class="partner-dashboard-page default-partner-dashboard capital-partner-dashboard">
+
+  <!-- HERO -->
+  <section class="ravlo-card partner-hero-card capital-hero-card">
+    <div class="partner-hero-grid">
+      <div class="partner-hero-copy">
+        <span class="partner-eyebrow">Capital Command</span>
+        <h2 class="partner-hero-title">
+          Stay close to the deals, the documents, and the dollars.
+        </h2>
+
+        <p class="partner-hero-text">
+          Built for lean lending teams, private capital groups, and hard money lenders,
+          this dashboard gives you a focused command center for opportunity review,
+          borrower movement, and funding readiness without the overhead of a full OS.
+        </p>
+
+        <div class="partner-hero-actions">
+          <a href="{{ url_for('partners.requests_inbox') }}" class="ravlo-btn primary">
+            Review Opportunities
+          </a>
+          <a href="{{ url_for('partners.workspace_home') }}" class="ravlo-btn ghost">
+            Open Workspace
+          </a>
+        </div>
+      </div>
+
+      <div class="partner-hero-panel">
+        <div class="partner-mini-stat">
+          <span class="label">Priority Focus</span>
+          <strong>Opportunity review, borrower readiness, and funding visibility</strong>
+        </div>
+
+        <div class="partner-mini-stat">
+          <span class="label">Designed For</span>
+          <strong>Small capital teams and partner lenders running lean</strong>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- STATS -->
+  <section class="partner-stats-grid">
+    <article class="ravlo-card partner-stat-card">
+      <div class="partner-stat-label">Open Opportunities</div>
+      <div class="partner-stat-value">{{ open_opportunities_count|default(0) }}</div>
+      <div class="partner-stat-note">New borrower or deal opportunities ready for review</div>
+    </article>
+
+    <article class="ravlo-card partner-stat-card">
+      <div class="partner-stat-label">Active Files</div>
+      <div class="partner-stat-value">{{ active_loans_count|default(0) }}</div>
+      <div class="partner-stat-note">Loans currently moving through your pipeline</div>
+    </article>
+
+    <article class="ravlo-card partner-stat-card">
+      <div class="partner-stat-label">Pending Docs</div>
+      <div class="partner-stat-value">{{ pending_docs_count|default(0) }}</div>
+      <div class="partner-stat-note">Files waiting on uploads, signatures, or review</div>
+    </article>
+
+    <article class="ravlo-card partner-stat-card">
+      <div class="partner-stat-label">Funded This Month</div>
+      <div class="partner-stat-value">{{ funded_count|default(0) }}</div>
+      <div class="partner-stat-note">Closed and funded files this month</div>
+    </article>
+  </section>
+
+  <!-- MAIN GRID -->
+  <section class="partner-dashboard-grid">
+
+    <!-- MAIN -->
+    <div class="partner-dashboard-main">
+
+      <!-- QUICK ACTIONS -->
+      <article class="ravlo-card partner-section-card">
+        <div class="section-head">
+          <div>
+            <h3>Quick Actions</h3>
+            <p>Move through your capital workflow without friction.</p>
+          </div>
+        </div>
+
+        <div class="quick-action-grid">
+          <a class="partner-action-card" href="{{ url_for('partners.requests_inbox') }}">
+            <div class="partner-action-icon">
+              <i class="lucide lucide-inbox"></i>
+            </div>
+            <div class="partner-action-copy">
+              <h4>Opportunity Inbox</h4>
+              <p>Review new submissions, intros, and lending opportunities.</p>
+            </div>
+          </a>
+
+          <a class="partner-action-card" href="{{ url_for('partners.workspace_home') }}">
+            <div class="partner-action-icon">
+              <i class="lucide lucide-briefcase-business"></i>
+            </div>
+            <div class="partner-action-copy">
+              <h4>Capital Workspace</h4>
+              <p>Monitor active files, borrower movement, and file progress.</p>
+            </div>
+          </a>
+
+          <a class="partner-action-card" href="{{ url_for('partners.resources') }}">
+            <div class="partner-action-icon">
+              <i class="lucide lucide-file-check"></i>
+            </div>
+            <div class="partner-action-copy">
+              <h4>Docs & Criteria</h4>
+              <p>Access checklists, requirements, and lender-facing resources.</p>
+            </div>
+          </a>
+
+          <a class="partner-action-card" href="{{ url_for('partners.profile', partner_id=partner.id) }}">
+            <div class="partner-action-icon">
+              <i class="lucide lucide-building-2"></i>
+            </div>
+            <div class="partner-action-copy">
+              <h4>Capital Profile</h4>
+              <p>Update your box, preferences, geography, and lending details.</p>
+            </div>
+          </a>
+        </div>
+      </article>
+
+      <!-- PIPELINE -->
+      <article class="ravlo-card partner-section-card">
+        <div class="section-head">
+          <div>
+            <h3>Pipeline Snapshot</h3>
+            <p>A fast view of where your files stand right now.</p>
+          </div>
+        </div>
+
+        <div class="workflow-grid capital-pipeline-grid">
+          <div class="workflow-step">
+            <span class="step-no">01</span>
+            <h4>New</h4>
+            <p>{{ new_opportunities_count|default(0) }} new files waiting for first review.</p>
+          </div>
+
+          <div class="workflow-step">
+            <span class="step-no">02</span>
+            <h4>In Review</h4>
+            <p>{{ in_review_count|default(0) }} opportunities currently being evaluated.</p>
+          </div>
+
+          <div class="workflow-step">
+            <span class="step-no">03</span>
+            <h4>Conditions</h4>
+            <p>{{ conditions_count|default(0) }} files waiting for borrower or team actions.</p>
+          </div>
+
+          <div class="workflow-step">
+            <span class="step-no">04</span>
+            <h4>Funding Ready</h4>
+            <p>{{ ready_to_fund_count|default(0) }} files approaching close and funding.</p>
+          </div>
+        </div>
+      </article>
+
+      <!-- ACTIVE PIPELINE -->
+      <article class="ravlo-card partner-section-card">
+        <div class="section-head">
+          <div>
+            <h3>Priority Files</h3>
+            <p>Active borrowers and opportunities that need attention.</p>
+          </div>
+        </div>
+
+        <div class="partner-tool-list">
+          {% if active_files %}
+            {% for file in active_files %}
+            <div class="partner-tool-item capital-file-item">
+              <div class="capital-file-copy">
+                <strong>{{ file.borrower_name or "Borrower" }}</strong>
+                <span>{{ file.property_address or "Property address unavailable" }}</span>
+              </div>
+              <div class="capital-file-meta">
+                <span>{{ file.loan_type or "Loan Type" }}</span>
+                <strong>{{ file.status or "In Review" }}</strong>
+              </div>
+            </div>
+            {% endfor %}
+          {% else %}
+            <div class="partner-tool-item capital-file-item">
+              <div class="capital-file-copy">
+                <strong>J. Carter</strong>
+                <span>158 Whitlock Rd, Otisville, NY</span>
+              </div>
+              <div class="capital-file-meta">
+                <span>Fix &amp; Flip</span>
+                <strong>Under Review</strong>
+              </div>
+            </div>
+
+            <div class="partner-tool-item capital-file-item">
+              <div class="capital-file-copy">
+                <strong>M. Barnes</strong>
+                <span>42 Maple Ave, Newark, NJ</span>
+              </div>
+              <div class="capital-file-meta">
+                <span>Bridge</span>
+                <strong>Conditions</strong>
+              </div>
+            </div>
+
+            <div class="partner-tool-item capital-file-item">
+              <div class="capital-file-copy">
+                <strong>R. Ellis</strong>
+                <span>11 Willow Dr, Tampa, FL</span>
+              </div>
+              <div class="capital-file-meta">
+                <span>Rental</span>
+                <strong>Quoted</strong>
+              </div>
+            </div>
+          {% endif %}
+        </div>
+      </article>
+
+      <!-- TEAM FLOW -->
+      <article class="ravlo-card partner-section-card">
+        <div class="section-head">
+          <div>
+            <h3>Capital Workflow</h3>
+            <p>How lean lending teams move efficiently inside Ravlo.</p>
+          </div>
+        </div>
+
+        <div class="workflow-grid">
+          <div class="workflow-step">
+            <span class="step-no">01</span>
+            <h4>Review Opportunity</h4>
+            <p>Screen the borrower, scenario, and asset fit for your lending box.</p>
+          </div>
+
+          <div class="workflow-step">
+            <span class="step-no">02</span>
+            <h4>Request What’s Missing</h4>
+            <p>Identify the documents, data, or clarifications needed to move forward.</p>
+          </div>
+
+          <div class="workflow-step">
+            <span class="step-no">03</span>
+            <h4>Advance the File</h4>
+            <p>Push the deal from review to conditions, quote, or approval.</p>
+          </div>
+
+          <div class="workflow-step">
+            <span class="step-no">04</span>
+            <h4>Prepare to Fund</h4>
+            <p>Keep closing visibility high and make sure the file is funding ready.</p>
+          </div>
+        </div>
+      </article>
+
+    </div>
+
+    <!-- SIDE -->
+    <aside class="partner-dashboard-side">
+
+      <!-- CORE TOOLS -->
+      <article class="ravlo-card partner-section-card">
+        <div class="section-head">
+          <div>
+            <h3>Core Tools</h3>
+            <p>Your most used areas inside the lender workspace.</p>
+          </div>
+        </div>
+
+        <div class="partner-tool-list">
+          <div class="partner-tool-item">
+            <strong>Opportunity Inbox</strong>
+            <span>New borrower and partner-submitted opportunities</span>
+          </div>
+
+          <div class="partner-tool-item">
+            <strong>Active Pipeline</strong>
+            <span>Current files and real-time borrower movement</span>
+          </div>
+
+          <div class="partner-tool-item">
+            <strong>Document Review</strong>
+            <span>Pending uploads, signatures, and review items</span>
+          </div>
+
+          <div class="partner-tool-item">
+            <strong>Capital Profile</strong>
+            <span>Lending criteria, product fit, and coverage areas</span>
+          </div>
+        </div>
+      </article>
+
+      <!-- CAPITAL SNAPSHOT -->
+      <article class="ravlo-card partner-section-card">
+        <div class="section-head">
+          <div>
+            <h3>Capital Snapshot</h3>
+            <p>Simple visibility into the money side of your pipeline.</p>
+          </div>
+        </div>
+
+        <div class="partner-checklist capital-checklist">
+          <div class="partner-check-item">Open pipeline volume: {{ open_pipeline_volume|default("$0") }}</div>
+          <div class="partner-check-item">Pending funding volume: {{ pending_funding_volume|default("$0") }}</div>
+          <div class="partner-check-item">Funded this month: {{ funded_volume_month|default("$0") }}</div>
+          <div class="partner-check-item">Average response speed: {{ avg_response_speed|default("—") }}</div>
+        </div>
+      </article>
+
+      <!-- PERFORMANCE -->
+      <article class="ravlo-card partner-section-card">
+        <div class="section-head">
+          <div>
+            <h3>Performance Focus</h3>
+            <p>What keeps a capital team strong on Ravlo.</p>
+          </div>
+        </div>
+
+        <div class="partner-checklist">
+          <div class="partner-check-item">Review opportunities quickly</div>
+          <div class="partner-check-item">Keep borrowers moving with clarity</div>
+          <div class="partner-check-item">Reduce document drag in active files</div>
+          <div class="partner-check-item">Maintain fast, visible funding communication</div>
+        </div>
+      </article>
+
+    </aside>
+
+  </section>
+</div>
+
+<style>
+  .capital-partner-dashboard .capital-file-item {
+    align-items: center;
+    justify-content: space-between;
+    gap: 18px;
+  }
+
+  .capital-file-copy {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .capital-file-meta {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 4px;
+    text-align: right;
+  }
+
+  .capital-file-meta span {
+    color: #8ea4b7;
+    font-size: 0.9rem;
+  }
+
+  .capital-file-meta strong {
+    color: #ffffff;
+  }
+
+  .capital-pipeline-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .capital-checklist .partner-check-item {
+    justify-content: flex-start;
+  }
+
+  @media (max-width: 900px) {
+    .capital-pipeline-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .capital-partner-dashboard .capital-file-item {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+
+    .capital-file-meta {
+      align-items: flex-start;
+      text-align: left;
+    }
+  }
+</style>
+{% endblock %}

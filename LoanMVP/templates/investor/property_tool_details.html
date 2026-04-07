@@ -3,12 +3,12 @@
 
 {% block page_title %}Property Details{% endblock %}
 {% block page_subline %}
-Review the property, market signals, strategy fit, and next steps.
+Review the property record, core facts, available valuation signals, and next steps.
 {% endblock %}
 
 {% block topbar_actions %}
-  <a href="{{ url_for('investor.property_tool') }}" class="ravlo-btn ghost sm">
-    Back to Deal Finder
+  <a href="{{ back_url }}" class="ravlo-btn ghost sm">
+    Back to Property Tool
   </a>
   <a href="{{ url_for('investor.saved_properties') }}" class="ravlo-btn primary sm">
     Saved Properties
@@ -19,12 +19,11 @@ Review the property, market signals, strategy fit, and next steps.
 
 <div class="pd-shell">
 
-  <!-- HERO -->
   <section class="pd-hero">
     <div class="pd-hero-copy">
       <div class="eyebrow">RAVLO PROPERTY DETAILS</div>
 
-      <h2>{{ address }}</h2>
+      <h2>{{ address or "Property" }}</h2>
 
       <p class="muted">
         {{ city or "" }}{% if city and state %}, {% endif %}{{ state or "" }} {{ zip_code or "" }}
@@ -41,7 +40,13 @@ Review the property, market signals, strategy fit, and next steps.
             — sqft
           {% endif %}
         </span>
-        <span class="pd-chip">{{ card.strategy_fit or "Review Needed" }}</span>
+        <span class="pd-chip">
+          {% if year_built %}
+            Built {{ year_built }}
+          {% else %}
+            Year Unknown
+          {% endif %}
+        </span>
       </div>
     </div>
 
@@ -49,15 +54,14 @@ Review the property, market signals, strategy fit, and next steps.
       {% if photo %}
         <img src="{{ photo }}" alt="Property photo">
       {% else %}
-        <div class="pd-no-photo">No Photo Available</div>
+        <img src="{{ url_for('static', filename='images/placeholder_property.jpg') }}" alt="Property placeholder">
       {% endif %}
     </div>
   </section>
 
-  <!-- KPI STRIP -->
   <section class="pd-kpi-grid">
     <div class="pd-kpi-card">
-      <div class="ravlo-kicker">Price</div>
+      <div class="ravlo-kicker">Last Recorded Sale</div>
       <h3>
         {% if price %}
           ${{ "{:,.0f}".format(price) }}
@@ -65,7 +69,19 @@ Review the property, market signals, strategy fit, and next steps.
           Not Available
         {% endif %}
       </h3>
-      <p class="muted">Current pricing from the search result.</p>
+      <p class="muted">Available public record sale data.</p>
+    </div>
+
+    <div class="pd-kpi-card">
+      <div class="ravlo-kicker">Assessed Value</div>
+      <h3>
+        {% if assessed_value %}
+          ${{ "{:,.0f}".format(assessed_value) }}
+        {% else %}
+          Not Available
+        {% endif %}
+      </h3>
+      <p class="muted">Assessment data when available.</p>
     </div>
 
     <div class="pd-kpi-card">
@@ -79,49 +95,63 @@ Review the property, market signals, strategy fit, and next steps.
         {% endif %}
       </p>
     </div>
-
-    <div class="pd-kpi-card">
-      <div class="ravlo-kicker">Strategy Fit</div>
-      <h3>{{ card.strategy_fit or "Review Needed" }}</h3>
-      <p class="muted">AI-assisted opportunity positioning.</p>
-    </div>
   </section>
 
-  <!-- MAIN GRID -->
   <section class="pd-main-grid">
 
-    <!-- LEFT -->
     <div class="pd-col">
       <section class="ravlo-card pad">
         <div class="section-head">
-          <div class="ravlo-card-title">Property Intelligence</div>
+          <div class="ravlo-card-title">Property Overview</div>
         </div>
 
         <div class="pd-intel-grid">
           <div class="ravlo-card pad pd-inner-card">
-            <div class="ravlo-kicker">Summary</div>
-            <p class="muted">{{ card.summary or "No summary available." }}</p>
+            <div class="ravlo-kicker">Record Summary</div>
+            <p class="muted">
+              {% if property_type or year_built or lot_size_sqft %}
+                This property is listed as
+                {{ property_type or "a property" }}
+                {% if year_built %}, built in {{ year_built }}{% endif %}
+                {% if lot_size_sqft %}, with an approximate lot size of {{ "{:,}".format(lot_size_sqft) }} sqft{% endif %}.
+              {% else %}
+                No additional public record summary is available.
+              {% endif %}
+            </p>
           </div>
 
           <div class="ravlo-card pad pd-inner-card">
-            <div class="ravlo-kicker">Market Signal</div>
-            <p class="muted">{{ card.market_signal or "No market signal available." }}</p>
+            <div class="ravlo-kicker">Location Signal</div>
+            <p class="muted">
+              {% if latitude and longitude %}
+                Coordinates available for mapping and downstream analysis.
+              {% else %}
+                Location coordinates are not available for this property.
+              {% endif %}
+            </p>
           </div>
 
           <div class="ravlo-card pad pd-inner-card">
-            <div class="ravlo-kicker">Opportunity Notes</div>
-            <p class="muted">{{ card.opportunity_notes or "No opportunity notes available." }}</p>
+            <div class="ravlo-kicker">Value Signal</div>
+            <p class="muted">
+              {% if price or assessed_value %}
+                Ravlo has at least one available valuation signal for this property.
+              {% else %}
+                No pricing or assessed value signal is currently available in the property record.
+              {% endif %}
+            </p>
           </div>
 
           <div class="ravlo-card pad pd-inner-card">
-            <div class="ravlo-kicker">Risk Notes</div>
-            <p class="muted">{{ card.risk_notes or "No risk notes available." }}</p>
+            <div class="ravlo-kicker">Workflow Note</div>
+            <p class="muted">
+              Save this property or send it into Workspace to continue underwriting, strategy analysis, and deal modeling.
+            </p>
           </div>
         </div>
       </section>
     </div>
 
-    <!-- RIGHT -->
     <div class="pd-col">
       <section class="ravlo-card pad">
         <div class="ravlo-card-title">Next Actions</div>
@@ -169,6 +199,13 @@ Review the property, market signals, strategy fit, and next steps.
           <div><span>City / State</span><strong>{{ city or "—" }}{% if state %}, {{ state }}{% endif %}</strong></div>
           <div><span>ZIP</span><strong>{{ zip_code or "—" }}</strong></div>
           <div><span>Property Type</span><strong>{{ property_type or "—" }}</strong></div>
+          <div><span>Beds / Baths</span><strong>{{ beds or "—" }} / {{ baths or "—" }}</strong></div>
+          <div><span>Square Feet</span><strong>{% if sqft %}{{ "{:,}".format(sqft) }}{% else %}—{% endif %}</strong></div>
+          <div><span>Lot Size</span><strong>{% if lot_size_sqft %}{{ "{:,}".format(lot_size_sqft) }} sqft{% else %}—{% endif %}</strong></div>
+          <div><span>Year Built</span><strong>{{ year_built or "—" }}</strong></div>
+          <div><span>Last Recorded Sale</span><strong>{% if price %}${{ "{:,.0f}".format(price) }}{% else %}—{% endif %}</strong></div>
+          <div><span>Assessed Value</span><strong>{% if assessed_value %}${{ "{:,.0f}".format(assessed_value) }}{% else %}—{% endif %}</strong></div>
+          <div><span>Latitude / Longitude</span><strong>{{ latitude or "—" }} / {{ longitude or "—" }}</strong></div>
         </div>
       </section>
     </div>

@@ -86,6 +86,11 @@ from LoanMVP.ai.master_ai import CMAIEngine  # if you use it
 # -------------------------
 # Services
 # -------------------------
+
+from LoanMVP.services.attom_service import (
+    build_attom_dealfinder_profile,
+    AttomServiceError,
+)
 from LoanMVP.services.market_service import get_market_snapshot
 from LoanMVP.services.comps_service import get_saved_property_comps
 from LoanMVP.services.rehab_service import (
@@ -101,14 +106,14 @@ from LoanMVP.services.rehab_service import (
 )
 from LoanMVP.services.ai_insights import generate_ai_insights
 from LoanMVP.services.unified_resolver import resolve_property_unified
-from LoanMVP.services.property_tool import search_deals_for_zip
+from LoanMVP.services.property_tool import get_property_search_result, PropertyAPIError, build_property_card_data
 from LoanMVP.services.notification_service import notify_team_on_conversion
 from LoanMVP.services.blueprint_parser import extract_blueprint_structure, infer_room_type
 from LoanMVP.services.prompt_builder import build_blueprint_prompt
 from LoanMVP.services.concept_build_service import run_concept_build
 from LoanMVP.services.renovation_engine_client import generate_concept, call_renovation_engine_upload, RenovationEngineError
 # 🔥 Property intelligence (IMPORTANT)
-from LoanMVP.services.property_service import resolve_rentcast_investor_bundle, build_ravlo_property_card
+from LoanMVP.services.property_service import resolve_property_unified, build_property_card_data, build_property_card
 from LoanMVP.services.deal_copilot_service import build_deal_copilot_context, generate_deal_copilot_response
 
 from LoanMVP.utils.r2_storage import spaces_put_bytes
@@ -3086,7 +3091,6 @@ def save_property_and_analyze():
 
 
         
-
 @investor_bp.route("/intelligence/saved/<int:prop_id>", methods=["GET"])
 @investor_bp.route("/property_explore_plus/<int:prop_id>", methods=["GET"])
 @login_required
@@ -3121,13 +3125,104 @@ def property_explore_plus(prop_id):
     comps = resolved.get("comps") or {}
     market_snapshot = resolved.get("market_snapshot") or {}
     ai_summary = resolved.get("ai_summary") or resolved.get("summary") or None
+
     photos = resolved_property.get("photos") or []
-    primary_photo = resolved_property.get("primary_photo")
+    primary_photo = (
+        resolved_property.get("primary_photo")
+        or (photos[0] if photos else None)
+    )
+
+    address = (
+        resolved_property.get("address")
+        or prop.address
+    )
+
+    city = (
+        resolved_property.get("city")
+        or getattr(prop, "city", None)
+    )
+
+    state = (
+        resolved_property.get("state")
+        or getattr(prop, "state", None)
+    )
+
+    zip_code = (
+        resolved_property.get("zip")
+        or resolved_property.get("zip_code")
+        or getattr(prop, "zipcode", None)
+    )
+
+    property_type = resolved_property.get("property_type")
+    beds = resolved_property.get("beds")
+    baths = resolved_property.get("baths")
+
+    sqft = (
+        resolved_property.get("sqft")
+        or resolved_property.get("square_feet")
+        or prop.sqft
+    )
+
+    year_built = resolved_property.get("year_built")
+    lot_size_sqft = (
+        resolved_property.get("lot_size_sqft")
+        or resolved_property.get("lot_sqft")
+        or resolved_property.get("lot_size")
+    )
+
+    latitude = resolved_property.get("latitude")
+    longitude = resolved_property.get("longitude")
+
+    price = (
+        valuation.get("price")
+        or valuation.get("value")
+        or valuation.get("estimated_value")
+        or valuation.get("last_sale_price")
+    )
+
+    if price in (None, "", "None"):
+        try:
+            price = float(prop.price) if getattr(prop, "price", None) not in (None, "", "None") else None
+        except Exception:
+            price = None
+
+    assessed_value = (
+        valuation.get("assessed_value")
+        or resolved_property.get("assessed_value")
+    )
+
+    property_id = (
+        resolved_property.get("property_id")
+        or resolved_property.get("attom_id")
+        or prop.property_id
+    )
+
+    photo = primary_photo
 
     return render_template(
         "investor/property_explore_plus.html",
         investor=ip,
         prop=prop,
+
+        # flat template fields
+        address=address,
+        city=city,
+        state=state,
+        zip_code=zip_code,
+        property_type=property_type,
+        beds=beds,
+        baths=baths,
+        sqft=sqft,
+        year_built=year_built,
+        lot_size_sqft=lot_size_sqft,
+        price=price,
+        assessed_value=assessed_value,
+        latitude=latitude,
+        longitude=longitude,
+        photo=photo,
+        property_id=property_id,
+
+        # keep these available in case you still want them later
         resolved=resolved_property,
         valuation=valuation,
         rent_estimate=rent_estimate,
@@ -3136,62 +3231,99 @@ def property_explore_plus(prop_id):
         market=market_snapshot,
         photos=photos,
         primary_photo=primary_photo,
+
         active_page="property_search" if source == "property_search" else "property_tool",
         source=source,
         back_url=url_for(fallback_endpoint),
     )
+    
+    
 
-@investor_bp.route("/intelligence/tool", methods=["GET"])
+    
+# =========================================================
+# 🔌 INVESTOR • Property Tool
+# =========================================================
+
+
+
+
+# Make sure these already exist somewhere in your file/app:
+# - investor_bp
+# - role_required
+# - _profile_id_filter
+
 @investor_bp.route("/property_tool", methods=["GET"])
 @login_required
 @role_required("investor")
 def property_tool():
-    return render_template(
-        "investor/property_tool.html",
-        title="Ravlo Deal Finder",
-        active_page="property_tool",
-        page_name="Deal Finder",
-        page_subline="Search by ZIP, review investment potential, and send opportunities straight into Deal Workspace."
-    )
+    return render_template("investor/property_tool.html")
 
-# =========================================================
-# 🔌 INVESTOR • APIs (Property Tool)
-# =========================================================
 
-@investor_bp.route("/api/intelligence/zip-search", methods=["POST"])
 @investor_bp.route("/api/property_tool_search", methods=["POST"])
 @csrf.exempt
 @login_required
 @role_required("investor")
 def api_property_tool_search():
+    """
+    Property search API for the Ravlo Property Tool.
+    Uses ATTOM-backed property search only.
+    """
     payload = request.get_json(force=True) or {}
+
+    address = (payload.get("address") or "").strip()
     zip_code = (payload.get("zip") or "").strip()
+    city = (payload.get("city") or "").strip()
+    state = (payload.get("state") or "").strip()
     strategy = (payload.get("strategy") or "flip").strip().lower()
 
-    if not zip_code:
-        return jsonify({"status": "error", "message": "ZIP code is required."}), 400
+    if not address and not zip_code:
+        return jsonify({
+            "status": "error",
+            "message": "Address or ZIP code is required.",
+            "results": [],
+        }), 400
 
-    def _num(v):
-        try:
-            if v in (None, "", "None"):
-                return None
-            return float(v)
-        except Exception:
-            return None
+    try:
+        page_size = int(payload.get("limit") or 20)
+    except Exception:
+        page_size = 20
 
-    results = search_deals_for_zip(
-        zip_code=zip_code,
-        strategy=strategy,
-        price_min=_num(payload.get("price_min")),
-        price_max=_num(payload.get("price_max")),
-        beds_min=_num(payload.get("beds_min")),
-        baths_min=_num(payload.get("baths_min")),
-        min_roi=_num(payload.get("min_roi")),
-        min_cashflow=_num(payload.get("min_cashflow")),
-        limit=int(payload.get("limit") or 20),
-    )
+    try:
+        result = get_property_search_result(
+            address=address or None,
+            postalcode=zip_code or None,
+            city=city or None,
+            state=state or None,
+            page=1,
+            page_size=page_size,
+        )
 
-    return jsonify({"status": "ok", "zip": zip_code, "strategy": strategy, "results": results})
+        properties = result.get("properties", []) or []
+
+        return jsonify({
+            "status": "ok",
+            "address": address,
+            "zip": zip_code,
+            "city": city,
+            "state": state,
+            "strategy": strategy,
+            "count": len(properties),
+            "results": properties,
+        })
+
+    except PropertyAPIError as e:
+        return jsonify({
+            "status": "error",
+            "message": str(e),
+            "results": [],
+        }), 400
+
+    except Exception as e:
+        return jsonify({
+            "status": "error",
+            "message": f"Property Tool search failed: {e}",
+            "results": [],
+        }), 500
 
 
 @investor_bp.route("/api/intelligence/save", methods=["POST"])
@@ -3202,12 +3334,19 @@ def api_property_tool_search():
 def api_property_tool_save():
     payload = request.get_json(force=True) or {}
     address = (payload.get("address") or "").strip()
+
     if not address:
-        return jsonify({"status": "error", "message": "Address is required to save."}), 400
+        return jsonify({
+            "status": "error",
+            "message": "Address is required to save."
+        }), 400
 
     ip = InvestorProfile.query.filter_by(user_id=current_user.id).first()
     if not ip:
-        return jsonify({"status": "error", "message": "Profile not found."}), 400
+        return jsonify({
+            "status": "error",
+            "message": "Profile not found."
+        }), 400
 
     zipcode = (payload.get("zip") or "").strip() or None
     price = payload.get("price")
@@ -3222,8 +3361,12 @@ def api_property_tool_save():
     fk = _profile_id_filter(SavedProperty, ip.id)
 
     existing = None
+
     if property_id:
-        existing = SavedProperty.query.filter_by(**fk, property_id=str(property_id)).first()
+        existing = SavedProperty.query.filter_by(
+            **fk,
+            property_id=str(property_id)
+        ).first()
 
     if not existing:
         existing = SavedProperty.query.filter(
@@ -3232,7 +3375,11 @@ def api_property_tool_save():
         ).first()
 
     if existing:
-        return jsonify({"status": "ok", "message": "Already saved.", "saved_id": existing.id})
+        return jsonify({
+            "status": "ok",
+            "message": "Already saved.",
+            "saved_id": existing.id
+        })
 
     saved = SavedProperty(
         **fk,
@@ -3247,7 +3394,11 @@ def api_property_tool_save():
     db.session.add(saved)
     db.session.commit()
 
-    return jsonify({"status": "ok", "message": "Saved.", "saved_id": saved.id})
+    return jsonify({
+        "status": "ok",
+        "message": "Saved.",
+        "saved_id": saved.id
+    })
 
 
 @investor_bp.route("/api/intelligence/save-and-analyze", methods=["POST"])
@@ -3258,12 +3409,19 @@ def api_property_tool_save():
 def api_property_tool_save_and_analyze():
     payload = request.get_json(force=True) or {}
     address = (payload.get("address") or "").strip()
+
     if not address:
-        return jsonify({"status": "error", "message": "Address is required to analyze."}), 400
+        return jsonify({
+            "status": "error",
+            "message": "Address is required to analyze."
+        }), 400
 
     ip = InvestorProfile.query.filter_by(user_id=current_user.id).first()
     if not ip:
-        return jsonify({"status": "error", "message": "Profile not found."}), 400
+        return jsonify({
+            "status": "error",
+            "message": "Profile not found."
+        }), 400
 
     zipcode = (payload.get("zip") or "").strip() or None
     price = payload.get("price")
@@ -3278,8 +3436,12 @@ def api_property_tool_save_and_analyze():
     fk = _profile_id_filter(SavedProperty, ip.id)
 
     existing = None
+
     if property_id:
-        existing = SavedProperty.query.filter_by(**fk, property_id=str(property_id)).first()
+        existing = SavedProperty.query.filter_by(
+            **fk,
+            property_id=str(property_id)
+        ).first()
 
     if not existing:
         existing = SavedProperty.query.filter(
@@ -3302,7 +3464,13 @@ def api_property_tool_save_and_analyze():
         db.session.commit()
 
     deal_url = url_for("investor.deal_workspace", prop_id=existing.id, mode="flip")
-    return jsonify({"status": "ok", "saved_id": existing.id, "deal_url": deal_url})
+
+    return jsonify({
+        "status": "ok",
+        "saved_id": existing.id,
+        "deal_url": deal_url
+    })
+
 
 @investor_bp.route("/api/intelligence/card", methods=["POST"])
 @investor_bp.route("/api/property_tool_card", methods=["POST"])
@@ -3314,7 +3482,10 @@ def api_property_tool_card():
 
     address = (payload.get("address") or "").strip()
     if not address:
-        return jsonify({"status": "error", "message": "Address is required."}), 400
+        return jsonify({
+            "status": "error",
+            "message": "Address is required."
+        }), 400
 
     def _num_or_none(v):
         try:
@@ -3341,7 +3512,7 @@ def api_property_tool_card():
         except Exception:
             sqft = None
 
-    card = build_ravlo_property_card(
+    bundle = resolve_property_unified(
         address=address,
         beds=beds,
         baths=baths,
@@ -3349,13 +3520,32 @@ def api_property_tool_card():
         property_type=property_type,
     )
 
-    if card.get("status") != "ok":
+    if bundle.get("status") != "ok":
         return jsonify({
             "status": "error",
-            "message": card.get("error") or "Unable to load property card."
+            "message": bundle.get("error") or "Unable to load property card."
         }), 400
 
-    return jsonify(card)
+    prop = bundle.get("property") or {}
+    valuation = bundle.get("valuation") or {}
+    rent_estimate = bundle.get("rent_estimate") or {}
+    comps = bundle.get("comps") or {}
+    market_snapshot = bundle.get("market_snapshot") or {}
+    ai_summary = bundle.get("ai_summary")
+
+    card = build_property_card_data(prop)
+
+    return jsonify({
+        "status": "ok",
+        "source": bundle.get("source"),
+        "property": prop,
+        "valuation": valuation,
+        "rent_estimate": rent_estimate,
+        "comps": comps,
+        "market_snapshot": market_snapshot,
+        "ai_summary": ai_summary,
+        "card": card,
+    })
 
 
 @investor_bp.route("/api/property_tool_view_details", methods=["POST"])
@@ -3367,11 +3557,17 @@ def api_property_tool_view_details():
     address = (payload.get("address") or "").strip()
 
     if not address:
-        return jsonify({"status": "error", "message": "Address is required."}), 400
+        return jsonify({
+            "status": "error",
+            "message": "Address is required."
+        }), 400
 
     ip = InvestorProfile.query.filter_by(user_id=current_user.id).first()
     if not ip:
-        return jsonify({"status": "error", "message": "Investor profile not found."}), 400
+        return jsonify({
+            "status": "error",
+            "message": "Investor profile not found."
+        }), 400
 
     zipcode = (payload.get("zip") or "").strip() or None
     price = payload.get("price")
@@ -3386,8 +3582,12 @@ def api_property_tool_view_details():
     fk = _profile_id_filter(SavedProperty, ip.id)
 
     existing = None
+
     if property_id:
-        existing = SavedProperty.query.filter_by(**fk, property_id=str(property_id)).first()
+        existing = SavedProperty.query.filter_by(
+            **fk,
+            property_id=str(property_id)
+        ).first()
 
     if not existing:
         existing = SavedProperty.query.filter(
@@ -9097,6 +9297,7 @@ def partner_detail(partner_id):
     )
 
 
+
 @investor_bp.route("/partners/<int:partner_id>/request-intro", methods=["POST"])
 @csrf.exempt
 @login_required
@@ -9114,6 +9315,22 @@ def request_partner_intro(partner_id):
         return redirect(url_for("investor.partners"))
 
     message = (request.form.get("message") or "").strip()
+    property_id = request.form.get("property_id", type=int)
+    lead_id = request.form.get("lead_id", type=int)
+
+    req = PartnerConnectionRequest(
+        borrower_user_id=None,
+        investor_user_id=current_user.id,
+        borrower_profile_id=None,
+        investor_profile_id=ip.id,
+        property_id=property_id if property_id else None,
+        lead_id=lead_id if lead_id else None,
+        partner_id=partner.id,
+        category=partner.category,
+        message=message or f"Investor requested connection with {partner.company or partner.name}.",
+        status="pending",
+    )
+    db.session.add(req)
 
     followup = FollowUpItem(
         investor_profile_id=ip.id,
@@ -9124,13 +9341,13 @@ def request_partner_intro(partner_id):
         is_done=False,
         created_by=current_user.id,
     )
-
     db.session.add(followup)
+
     db.session.commit()
 
     flash(f"Intro request sent for {partner.company or partner.name}.", "success")
     return redirect(url_for("investor.partner_detail", partner_id=partner.id))
-
+    
 @investor_bp.route("/resources/request-connection", methods=["POST"])
 @csrf.exempt
 @login_required
