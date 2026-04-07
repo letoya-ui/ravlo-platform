@@ -972,6 +972,7 @@ def licensing_applications():
 
 
 @admin_bp.route("/licensing/applications/<int:app_id>/approve", methods=["POST"])
+@csrf.exempt
 @login_required
 @role_required("platform_admin")
 def approve_license_application(app_id):
@@ -1046,11 +1047,11 @@ def approve_license_application(app_id):
     email_sent = False
     try:
         subject, body, html = _build_license_invite_email(invite, company, app_row)
-        _send_email_fallback(
-            to_email=invite.email,
+        _send_email(
+            to=invite.email,
             subject=subject,
-            body=body,
-            html=html
+            html_body=html,
+            text_body=body
         )
         email_sent = True
     except Exception:
@@ -1067,6 +1068,7 @@ def approve_license_application(app_id):
 
 
 @admin_bp.route("/licensing/applications/<int:app_id>/decline", methods=["POST"])
+@csrf.exempt
 @login_required
 @role_required("platform_admin")
 def decline_license_application(app_id):
