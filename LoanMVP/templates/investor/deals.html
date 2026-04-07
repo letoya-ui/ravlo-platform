@@ -400,7 +400,10 @@ Manage opportunities, open studios, and move deals toward funding.
     try {
       const res = await fetch(`/investor/deals/${dealId}/request-funding`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" }
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRFToken": "{{ csrf_token() }}"
+        }
       });
 
       const data = await res.json();
@@ -422,7 +425,10 @@ Manage opportunities, open studios, and move deals toward funding.
     try {
       const res = await fetch(`/investor/deals/${dealId}/request-funding`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" }
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRFToken": "{{ csrf_token() }}"
+        }
       });
 
       const data = await res.json();

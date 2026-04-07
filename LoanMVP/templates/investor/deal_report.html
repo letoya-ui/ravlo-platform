@@ -555,7 +555,8 @@ Investment summary, strategy, rehab scope, and funding readiness.
       const res = await fetch(`/investor/deals/${dealId}/request-funding`, {
         method: "POST",
         headers: {
-          "Content-Type": "application/json"
+          "Content-Type": "application/json",
+          "X-CSRFToken": "{{ csrf_token() }}"
         }
       });
 

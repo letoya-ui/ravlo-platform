@@ -2417,7 +2417,6 @@ def document_requests():
 
 
 @investor_bp.route("/upload_document", methods=["GET", "POST"])
-@csrf.exempt
 @login_required
 @role_required("investor")
 def upload_document():
@@ -2452,7 +2451,6 @@ def upload_document():
 
 
 @investor_bp.route("/upload_request", methods=["GET", "POST"])
-@csrf.exempt
 @login_required
 @role_required("investor")
 def upload_request():
@@ -2460,10 +2458,16 @@ def upload_request():
     if not ip:
         return redirect(url_for("investor.create_profile"))
 
-    item_id = request.args.get("item_id")
-    item_type = request.args.get("type")  # request|condition
+    item_id = request.values.get("item_id") or request.values.get("document_id")
+    item_type = request.values.get("type") or request.values.get("item_type") or "request"
 
-    item = DocumentRequest.query.get(item_id) if item_type == "request" else UnderwritingCondition.query.get(item_id)
+    item = None
+    if item_id:
+        item = DocumentRequest.query.get(item_id) if item_type == "request" else UnderwritingCondition.query.get(item_id)
+
+    if not item:
+        flash("Requested item not found.", "warning")
+        return redirect(url_for("investor.document_requests"))
 
     # Basic ownership check for request/condition
     if item_type == "request" and item:
@@ -2509,7 +2513,7 @@ def upload_request():
     return render_template(
         "investor/upload_request.html",
         investor=ip,
-        item=item,
+        request_item=item,
         item_type=item_type,
         title="Upload Document",
         active_tab="documents"
@@ -2517,7 +2521,6 @@ def upload_request():
 
 
 @investor_bp.route("/delete_document/<int:doc_id>", methods=["POST"])
-@csrf.exempt
 @login_required
 @role_required("investor")
 def delete_document(doc_id):
@@ -2542,6 +2545,8 @@ def delete_document(doc_id):
 
     db.session.delete(doc)
     db.session.commit()
+    if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+        return jsonify({"success": True, "status": "ok"})
     return redirect(url_for("investor.documents"))
 
 @investor_bp.route("/documents/download/<int:doc_id>", methods=["GET"])
@@ -4416,7 +4421,6 @@ def deal_report(deal_id):
     )
 
 @investor_bp.route("/deals/<int:deal_id>/request-funding", methods=["POST"])
-@csrf.exempt
 @login_required
 def request_funding(deal_id):
     deal = Deal.query.filter_by(id=deal_id, user_id=current_user.id).first_or_404()
@@ -8943,7 +8947,6 @@ def investor_esign():
 
 @investor_bp.route("/sign/<int:doc_id>", methods=["POST"])
 @investor_bp.route("/esign/sign/<int:doc_id>", methods=["POST"])
-@csrf.exempt
 @login_required
 @role_required("investor")
 def investor_esign_sign(doc_id):

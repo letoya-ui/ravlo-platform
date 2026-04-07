@@ -63,8 +63,9 @@ Back to Capital Studio
         <form method="POST"
               enctype="multipart/form-data"
               action="{{ url_for('investor.upload_request') }}">
-
-          <input type="hidden" name="document_id" value="{{ doc.id }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="item_id" value="{{ doc.id }}">
+          <input type="hidden" name="item_type" value="{{ doc.type }}">
 
           <input type="file"
                  name="file"

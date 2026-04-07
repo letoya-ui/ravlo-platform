@@ -67,7 +67,7 @@
       </div>
 
       <form id="signForm" method="POST" style="margin-top:12px;">
-        {{ csrf_token() if csrf_token is defined }}
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <input type="hidden" name="signature_data" id="signatureData">
 
         <div class="row" style="gap:10px; flex-wrap:wrap; margin-top:12px;">

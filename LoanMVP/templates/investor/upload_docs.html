@@ -159,9 +159,10 @@
     if (!confirm("Delete this document?")) return;
 
     fetch(`/investor/documents/delete/${id}`, {
-      method: "DELETE",
+      method: "POST",
       credentials: "include",
       headers: {
+        "X-Requested-With": "XMLHttpRequest",
         "X-CSRFToken": "{{ csrf_token() }}"
       }
     })

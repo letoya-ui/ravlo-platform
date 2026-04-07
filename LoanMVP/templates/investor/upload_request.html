@@ -10,7 +10,6 @@
             onclick="location.href='{{ url_for('investor.document_requests') }}'">
       Back to Requests
     </button>
-  {% endif %}
 {% endblock %}
 
 {% block content %}
@@ -143,7 +142,9 @@
 
       {# IMPORTANT: keep POST on same route OR set action=... #}
       <form method="POST" enctype="multipart/form-data" style="margin-top:.85rem;">
-        {{ csrf_token() if csrf_token is defined }}
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="item_id" value="{{ request_item.id }}">
+        <input type="hidden" name="item_type" value="{{ item_type }}">
 
         <label class="label">Select file</label>
         <input type="file" name="file" class="dw-input" required>
@@ -153,11 +154,10 @@
             Submit File
           </button>
 
-            <button class="ravlo-btn ghost sm" type="button"
+          <button class="ravlo-btn ghost sm" type="button"
                     onclick="location.href='{{ url_for('investor.document_requests') }}'">
               Cancel
             </button>
-          {% endif %}
         </div>
       </form>
 
