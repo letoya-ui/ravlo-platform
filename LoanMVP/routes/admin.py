@@ -47,10 +47,6 @@ def admin_required(func):
     return wrapper
 
 
-if not is_admin(current_user):
-    flash("Unauthorized", "danger")
-    return redirect(url_for("auth.login"))
-
 def _plan_defaults(plan_interest: str):
     plan = (plan_interest or "").strip().lower()
 
@@ -154,7 +150,7 @@ If you were not expecting this email, you can ignore it.
 
 @admin_bp.route("/dashboard")
 @login_required
-@role_required("admin", "master_admin", "lending_admin")
+@role_required("admin_group")
 def dashboard():
     company = None
 
@@ -1088,3 +1084,89 @@ def decline_license_application(app_id):
 
     flash("License application declined.", "success")
     return redirect(url_for("admin.licensing_applications"))
+
+@admin_bp.route("/users/<int:user_id>/block", methods=["POST"])
+@csrf.exempt
+@login_required
+@role_required("admin_group")
+def block_user(user_id):
+    user = User.query.get_or_404(user_id)
+
+    reason = (request.form.get("reason") or "manual_review").strip().lower()
+    note = (request.form.get("note") or "").strip()
+
+    user.is_blocked = True
+    user.blocked_at = datetime.utcnow()
+    user.blocked_reason = reason
+    user.blocked_note = note or None
+    user.blocked_by = current_user.id
+
+    db.session.commit()
+
+    flash(f"{user.email} was blocked.", "warning")
+    return redirect(request.referrer or url_for("system.users"))
+
+
+@admin_bp.route("/users/<int:user_id>/unblock", methods=["POST"])
+@csrf.exempt
+@login_required
+@role_required("admin_group")
+def unblock_user(user_id):
+    user = User.query.get_or_404(user_id)
+
+    user.is_blocked = False
+    user.blocked_at = None
+    user.blocked_reason = None
+    user.blocked_note = None
+    user.blocked_by = None
+
+    db.session.commit()
+
+    flash(f"{user.email} was restored.", "success")
+    return redirect(request.referrer or url_for("system.users"))
+
+@admin_bp.route("/companies/<int:company_id>/block", methods=["POST"])
+@csrf.exempt
+@login_required
+@role_required("admin_group")
+def block_company(company_id):
+    company = Company.query.get_or_404(company_id)
+
+    reason = (request.form.get("reason") or "non_payment").strip().lower()
+    note = (request.form.get("note") or "").strip()
+
+    company.is_blocked = True
+    company.blocked_at = datetime.utcnow()
+    company.blocked_reason = reason
+    company.blocked_note = note or None
+    company.blocked_by = current_user.id
+
+    if hasattr(company, "billing_status"):
+        company.billing_status = "blocked"
+
+    db.session.commit()
+
+    flash(f"{company.name} was blocked.", "warning")
+    return redirect(request.referrer or url_for("admin.companies"))
+
+
+@admin_bp.route("/companies/<int:company_id>/unblock", methods=["POST"])
+@csrf.exempt
+@login_required
+@role_required("admin_group")
+def unblock_company(company_id):
+    company = Company.query.get_or_404(company_id)
+
+    company.is_blocked = False
+    company.blocked_at = None
+    company.blocked_reason = None
+    company.blocked_note = None
+    company.blocked_by = None
+
+    if hasattr(company, "billing_status"):
+        company.billing_status = "active"
+
+    db.session.commit()
+
+    flash(f"{company.name} was restored.", "success")
+    return redirect(request.referrer or url_for("admin.companies"))
