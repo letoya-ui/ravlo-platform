@@ -3,7 +3,7 @@
 # =========================================================
 
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, send_file
-from flask_login import current_user
+from flask_login import current_user, login_required
 from collections import defaultdict
 from sqlalchemy import func, desc
 from datetime import datetime, timedelta
@@ -19,7 +19,7 @@ from LoanMVP.models.crm_models import Lead, Message, Task
 from LoanMVP.models.loan_models import LoanApplication, BorrowerProfile
 from LoanMVP.models.document_models import LoanDocument
 from LoanMVP.models.system_models import SystemLog
-from LoanMVP.models.admin import Company, AccessRequest, UserInvite
+from LoanMVP.models.admin import Company, AccessRequest, UserInvite, LicenseApplication
 from LoanMVP.models.ai_models import AIAssistantInteraction
 from LoanMVP.services.notify_service import notify
 
@@ -44,11 +44,27 @@ def admin_required(func):
     return wrapper
 
 
+
+def _plan_defaults(plan_interest: str):
+    plan = (plan_interest or "").strip().lower()
+
+    if plan == "individual":
+        return "individual", 1
+    if plan == "team":
+        return "team", 10
+    if plan == "lender":
+        return "lender", 50
+    if plan == "white_label":
+        return "white_label", None
+
+    return "team", 10
+
 # =========================================================
 # 🏠 ADMIN DASHBOARD
 # =========================================================
 
 @admin_bp.route("/dashboard")
+@login_required
 @role_required("admin", "master_admin", "lending_admin")
 def dashboard():
     company = None
@@ -186,6 +202,7 @@ def dashboard():
     )
 
 @admin_bp.route("/companies")
+@login_required
 @role_required("admin")
 def companies():
     companies = Company.query.order_by(Company.created_at.desc()).all()
@@ -196,6 +213,7 @@ def companies():
     )
 
 @admin_bp.route("/requests")
+@login_required
 @role_required("admin")
 @admin_required
 def requests_dashboard():
@@ -216,6 +234,7 @@ def requests_dashboard():
 
 
 @admin_bp.route("/requests/<int:request_id>")
+@login_required
 @role_required("admin")
 @admin_required
 def request_detail(request_id):
@@ -228,6 +247,7 @@ def request_detail(request_id):
 
 
 @admin_bp.route("/access-requests", methods=["GET"])
+@login_required
 @role_required("admin")
 def access_requests():
     requests_ = AccessRequest.query.order_by(AccessRequest.created_at.desc()).all()
@@ -241,6 +261,7 @@ def access_requests():
 
 @admin_bp.route("/access-requests/<int:req_id>/deny", methods=["POST"])
 @csrf.exempt
+@login_required
 @role_required("admin")
 def deny_access_request(req_id):
     req = AccessRequest.query.get_or_404(req_id)
@@ -256,6 +277,7 @@ def deny_access_request(req_id):
     
 @admin_bp.route("/access-requests/<int:req_id>/approve", methods=["POST"])
 @csrf.exempt  
+@login_required
 @role_required("admin")
 @admin_required
 def approve_request(request_id):
@@ -300,6 +322,7 @@ def approve_request(request_id):
 
 @admin_bp.route("/requests/<int:request_id>/reject", methods=["POST"])
 @csrf.exempt
+@login_required
 @role_required("admin")
 @admin_required
 def reject_request(request_id):
@@ -320,6 +343,7 @@ def reject_request(request_id):
 
 
 @admin_bp.route("/company/<int:company_id>/team")
+@login_required
 @role_required("admin")
 @admin_required
 def company_team(company_id):
@@ -337,6 +361,7 @@ def company_team(company_id):
 
 @admin_bp.route("/company/<int:company_id>/team/invite", methods=["GET", "POST"])
 @csrf.exempt
+@login_required
 @role_required("admin")
 @admin_required
 def invite_team_member(company_id):
@@ -427,6 +452,7 @@ def invite_team_member(company_id):
 # =========================================================
 @admin_bp.route("/reports", methods=["GET", "POST"])
 @csrf.exempt
+@login_required
 @role_required("admin")
 def reports():
     report_type = request.form.get("report_type")
@@ -470,6 +496,7 @@ def reports():
 
 @admin_bp.route("/messages", methods=["GET", "POST"])
 @csrf.exempt
+@login_required
 @role_required("admin")
 def messages():
     if request.method == "POST":
@@ -523,6 +550,7 @@ def messages():
 # 📑 VERIFY DOCUMENTS
 # =========================================================
 @admin_bp.route("/verify_data")
+@login_required
 @role_required("admin")
 def verify_data():
     docs = LoanDocument.query.order_by(LoanDocument.created_at.desc()).limit(50).all()
@@ -536,6 +564,7 @@ def verify_data():
 
 
 @admin_bp.route("/verify_doc/<int:doc_id>")
+@login_required
 @role_required("admin")
 def verify_doc(doc_id):
     doc = LoanDocument.query.get_or_404(doc_id)
@@ -550,6 +579,7 @@ def verify_doc(doc_id):
 # =========================================================
 
 @admin_bp.route("/analytics")
+@login_required
 @role_required("admin")
 def analytics():
     stats = {
@@ -571,6 +601,7 @@ def analytics():
     )
 
 @admin_bp.route("/ai-dashboard", methods=["GET"])
+@login_required
 @role_required("admin")
 def ai_dashboard():
     """
@@ -772,6 +803,7 @@ def ai_dashboard():
 
 @admin_bp.route("/ai/refresh/<string:target>", methods=["POST"])
 @csrf.exempt
+@login_required
 @role_required("admin")
 def ai_refresh(target):
     time.sleep(1.2)
@@ -779,6 +811,7 @@ def ai_refresh(target):
     return jsonify({"success": True, "target": target})
 
 @admin_bp.route("/company/<int:company_id>/dashboard")
+@login_required
 @role_required("admin", "master_admin", "lending_admin")
 def company_dashboard(company_id):
     company = Company.query.get_or_404(company_id)
@@ -811,6 +844,7 @@ def company_dashboard(company_id):
 
 
 @admin_bp.route("/onboarding", methods=["GET"])
+@login_required
 @role_required("admin")
 def onboarding_center():
     return render_template(
@@ -834,23 +868,91 @@ def licensing_applications():
         applications=apps
     )
 
+@admin_bp.route("/licensing/applications")
+@login_required
+@role_required("admin")
+def licensing_applications():
+    applications = LicenseApplication.query.order_by(
+        LicenseApplication.created_at.desc()
+    ).all()
+
+    invite_lookup = {}
+    for app in applications:
+        company = Company.query.filter(
+            db.func.lower(Company.name) == app.company_name.strip().lower()
+        ).first()
+
+        if company:
+            invite = UserInvite.query.filter_by(
+                company_id=company.id,
+                email=app.email
+            ).order_by(UserInvite.created_at.desc()).first()
+
+            if invite:
+                invite_lookup[app.id] = invite
+
+    return render_template(
+        "admin/licensing_applications.html",
+        applications=applications,
+        invite_lookup=invite_lookup,
+    )
+
 @admin_bp.route("/licensing/applications/<int:app_id>/approve", methods=["POST"])
 @login_required
 @role_required("admin")
-def approve_application(app_id):
+def approve_license_application(app_id):
     app_row = LicenseApplication.query.get_or_404(app_id)
 
-    app_row.status = "approved"
+    if app_row.status == "approved":
+        flash("This application was already approved.", "info")
+        return redirect(url_for("admin.licensing_applications"))
 
-    # 🔥 Create company automatically
+    subscription_tier, max_users = _plan_defaults(app_row.plan_interest)
+
     company = Company(
         name=app_row.company_name,
-        subscription_tier=app_row.plan_interest or "team",
-        is_active=True
+        email_domain=None,
+        subscription_tier=subscription_tier,
+        max_users=max_users,
+        is_active=True,
     )
 
     db.session.add(company)
+    db.session.flush()
+
+    app_row.status = "approved"
+
+    access_request = AccessRequest(
+        company_name=app_row.company_name,
+        contact_name=app_row.contact_name,
+        email=app_row.email,
+        phone=app_row.phone,
+        request_type="license_application",
+        requested_role="admin",
+        status="approved",
+        notes=f"Approved from LicenseApplication #{app_row.id}",
+        company_id=company.id,
+        reviewed_by=current_user.id,
+    )
+
+    db.session.add(access_request)
     db.session.commit()
 
-    flash("Application approved and company created.", "success")
+    flash("License application approved and company created.", "success")
+    return redirect(url_for("admin.licensing_applications"))
+
+@admin_bp.route("/licensing/applications/<int:app_id>/decline", methods=["POST"])
+@login_required
+@role_required("admin")
+def decline_license_application(app_id):
+    app_row = LicenseApplication.query.get_or_404(app_id)
+
+    if app_row.status == "approved":
+        flash("Approved applications cannot be declined here.", "warning")
+        return redirect(url_for("admin.licensing_applications"))
+
+    app_row.status = "declined"
+    db.session.commit()
+
+    flash("License application declined.", "success")
     return redirect(url_for("admin.licensing_applications"))
