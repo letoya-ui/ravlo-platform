@@ -1,8 +1,5 @@
 # run.py — LoanMVP Production Launcher
 import os
-import sys
-import time
-import threading
 from datetime import datetime
 from LoanMVP.app import create_app
 
@@ -11,43 +8,33 @@ LOG_DIR = os.path.join(BASE_DIR, "logs")
 os.makedirs(LOG_DIR, exist_ok=True)
 log_file = os.path.join(LOG_DIR, f"LoanMVP_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log")
 
-def log(msg):
-    message = f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] {msg}"
-    print(message)
-    with open(log_file, "a", encoding="utf-8") as f:
-        f.write(message + "\n")
+def log(message):
+    line = f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] {message}"
+    print(line)
+    with open(log_file, "a", encoding="utf-8") as handle:
+        handle.write(line + "\n")
 
 def start_server():
     app = create_app()
-
-    # Render requires binding to the PORT environment variable
     port = int(os.environ.get("PORT", 5050))
+    host = os.environ.get("HOST", "0.0.0.0")
+    async_mode = app.config.get("SOCKETIO_ASYNC_MODE", "threading")
+    debug = bool(app.debug)
 
-    log(f" Starting LoanMVP Flask-SocketIO server on port {port} (threading mode)...")
-
-    try:
-        app.socketio.run(
-            app,
-            host="0.0.0.0",
-            port=port,
-            debug=False,
-            allow_unsafe_werkzeug=True  # Required for threading mode in production
+    if async_mode == "threading" and not debug:
+        raise RuntimeError(
+            "Refusing to boot production with Werkzeug/threading. "
+            "Set SOCKETIO_ASYNC_MODE=eventlet or deploy with gunicorn."
         )
-    except Exception as e:
-        log(f" Server failed: {e}")
-        time.sleep(5)
+
+    log(f"Starting Ravlo on {host}:{port} using Socket.IO async mode '{async_mode}'")
+    app.socketio.run(
+        app,
+        host=host,
+        port=port,
+        debug=debug,
+        use_reloader=False,
+    )
 
 if __name__ == "__main__":
-    log(" Initializing LoanMVP Production Service...")
-
-    # Start the server in the main thread (Render prefers this)
-    # but keep your threading model intact
-    server_thread = threading.Thread(target=start_server, daemon=True)
-    server_thread.start()
-
-    try:
-        while True:
-            time.sleep(10)
-    except KeyboardInterrupt:
-        log(" LoanMVP service stopped manually.")
-        sys.exit(0)
+    start_server()

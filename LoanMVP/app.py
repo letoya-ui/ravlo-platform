@@ -29,17 +29,17 @@ from LoanMVP.models import User
 from LoanMVP.models.loan_models import BorrowerProfile, LoanNotification
 from LoanMVP.utils.role_helpers import get_role_display, get_request_type_display, get_status_display, get_status_badge
 
-import engineio
-import engineio.async_drivers.threading
-import socketio as sio_pkg
+ENV_NAME = os.environ.get("FLASK_ENV", "production").strip().lower()
+DEFAULT_SOCKETIO_ASYNC_MODE = "threading" if ENV_NAME in {"dev", "development", "local"} else "eventlet"
+SOCKETIO_ASYNC_MODE = os.environ.get("SOCKETIO_ASYNC_MODE", DEFAULT_SOCKETIO_ASYNC_MODE).strip().lower()
 
+if SOCKETIO_ASYNC_MODE == "threading":
+    import engineio
+    import engineio.async_drivers.threading
 
-# ---------------------------------------------------------
-# Patch engineio BEFORE Flask-SocketIO usage
-# ---------------------------------------------------------
-if not hasattr(engineio, "async_modes") or "threading" not in getattr(engineio, "async_modes", []):
-    engineio.async_modes = ["threading"]
-    engineio.Server = engineio.server.Server
+    if not hasattr(engineio, "async_modes") or "threading" not in getattr(engineio, "async_modes", []):
+        engineio.async_modes = ["threading"]
+        engineio.Server = engineio.server.Server
 
 
 # ---------------------------------------------------------
@@ -47,7 +47,7 @@ if not hasattr(engineio, "async_modes") or "threading" not in getattr(engineio, 
 # ---------------------------------------------------------
 cors = CORS()
 socketio = SocketIO(
-    async_mode="threading",
+    async_mode=SOCKETIO_ASYNC_MODE,
     logger=False,
     engineio_logger=False,
     transports=["websocket", "polling"],
@@ -82,6 +82,7 @@ def create_app():
     config_class = get_config()
     config_class.validate()
     app.config.from_object(config_class)
+    app.config["SOCKETIO_ASYNC_MODE"] = app.config.get("SOCKETIO_ASYNC_MODE") or SOCKETIO_ASYNC_MODE
 
     # ✅ Make sure secret key comes from config/env
     app.secret_key = app.config.get("SECRET_KEY")

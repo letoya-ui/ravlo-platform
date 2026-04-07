@@ -81,6 +81,7 @@ class Config:
     MAIL_DEFAULT_SENDER = os.environ.get("MAIL_DEFAULT_SENDER", MAIL_USERNAME)
 
     SOCKETIO_MESSAGE_QUEUE = os.environ.get("SOCKETIO_MESSAGE_QUEUE") or None
+    SOCKETIO_ASYNC_MODE = os.environ.get("SOCKETIO_ASYNC_MODE", "threading").strip().lower()
     SOCKETIO_CORS_ALLOWED_ORIGINS = _env_list("SOCKETIO_CORS_ALLOWED_ORIGINS")
 
     CORS_ORIGINS = _env_list("CORS_ORIGINS")
@@ -139,6 +140,7 @@ class Config:
 class DevelopmentConfig(Config):
     ENV_NAME = "development"
     DEBUG = _env_bool("FLASK_DEBUG", True)
+    SOCKETIO_ASYNC_MODE = os.environ.get("SOCKETIO_ASYNC_MODE", "threading").strip().lower()
     SESSION_COOKIE_SECURE = False
     REMEMBER_COOKIE_SECURE = False
     PREFERRED_URL_SCHEME = os.environ.get("PREFERRED_URL_SCHEME", "http")
@@ -155,6 +157,7 @@ class DevelopmentConfig(Config):
 class ProductionConfig(Config):
     ENV_NAME = "production"
     DEBUG = False
+    SOCKETIO_ASYNC_MODE = os.environ.get("SOCKETIO_ASYNC_MODE", "eventlet").strip().lower()
     ENABLE_DEVELOPER_TOOLS = False
 
     @classmethod
@@ -172,6 +175,8 @@ class ProductionConfig(Config):
             missing.append("CORS_ORIGINS")
         if not cls.SOCKETIO_CORS_ALLOWED_ORIGINS:
             missing.append("SOCKETIO_CORS_ALLOWED_ORIGINS")
+        if cls.SOCKETIO_ASYNC_MODE not in {"eventlet", "threading"}:
+            missing.append("SOCKETIO_ASYNC_MODE (supported: eventlet, threading)")
         if missing:
             raise RuntimeError(
                 "Production configuration is incomplete: " + ", ".join(missing)
