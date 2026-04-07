@@ -37,7 +37,7 @@
     <div class="mk-header-glow"></div>
 
     <div class="mk-container mk-header-inner">
-      <a href="{{ url_for('marketing.homepage') }}" class="mk-brand" aria-label="Ravlo Home">
+      <a href="{{ url_for('marketing.marketing_home') }}" class="mk-brand" aria-label="Ravlo Home">
         <div class="mk-brand-mark-wrap">
           <div class="mk-brand-mark">R</div>
           <div class="mk-brand-mark-ring"></div>
@@ -64,7 +64,7 @@
       </button>
 
       <nav class="mk-nav">
-        <a href="{{ url_for('marketing.homepage') }}" class="{% if page_key == 'home' %}active{% endif %}">Home</a>
+        <a href="{{ url_for('marketing.marketing_home') }}" class="{% if page_key == 'home' %}active{% endif %}">Home</a>
         <a href="{{ url_for('marketing.about') }}" class="{% if page_key == 'about' %}active{% endif %}">About</a>
         <a href="{{ url_for('marketing.tour') }}" class="{% if page_key == 'tour' %}active{% endif %}">Tour</a>
         <a href="{{ url_for('marketing.lending_os') }}" class="{% if page_key == 'lending_os' %}active{% endif %}">Lending OS</a>
