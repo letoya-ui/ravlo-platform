@@ -855,18 +855,7 @@ def onboarding_center():
         required_steps=6,
     )
 
-@admin_bp.route("/licensing/applications")
-@login_required
-@role_required("admin")
-def licensing_applications():
-    apps = LicenseApplication.query.order_by(
-        LicenseApplication.created_at.desc()
-    ).all()
 
-    return render_template(
-        "admin/licensing_applications.html",
-        applications=apps
-    )
 
 @admin_bp.route("/licensing/applications")
 @login_required
