@@ -2,7 +2,7 @@
 # 🏛 ADMIN ROUTES — LoanMVP 2025 (Stabilized Version)
 # =========================================================
 
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, send_file
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, send_file, current_app
 from flask_login import current_user, login_required
 from collections import defaultdict
 from sqlalchemy import func, desc
@@ -22,7 +22,7 @@ from LoanMVP.models.crm_models import Lead, Message, Task
 from LoanMVP.models.loan_models import LoanApplication, BorrowerProfile
 from LoanMVP.models.document_models import LoanDocument
 from LoanMVP.models.system_models import SystemLog
-from LoanMVP.models.admin import Company, AccessRequest, UserInvite, LicenseApplication
+from LoanMVP.models.admin import Company, AccessRequest, UserInvite, LicenseApplication, LicenseInviteEvent
 from LoanMVP.models.ai_models import AIAssistantInteraction
 from LoanMVP.services.notify_service import notify
 
@@ -69,6 +69,24 @@ def _send_email_fallback(to_email: str, subject: str, body: str, html: str):
     current_app.logger.info("EMAIL TO: %s | SUBJECT: %s", to_email, subject)
     current_app.logger.info("BODY: %s", body)
     current_app.logger.info("HTML: %s", html)
+
+
+def _deliver_license_invite(invite, company, application):
+    subject, body, html = _build_license_invite_email(invite, company, application)
+    send_email(
+        to=invite.email,
+        subject=subject,
+        html_body=html,
+        text_body=body,
+    )
+
+
+def _refresh_invite(invite):
+    invite.token = UserInvite.generate_token()
+    invite.status = "pending"
+    invite.accepted_at = None
+    invite.expires_at = UserInvite.default_expiration(days=7)
+    return invite
 
 
 def _build_license_invite_email(invite, company, application):
@@ -943,13 +961,14 @@ def onboarding_center():
 
 @admin_bp.route("/licensing/applications")
 @login_required
-@role_required("platform_admin")
+@role_required("platform_admin", "master_admin")
 def licensing_applications():
     applications = LicenseApplication.query.order_by(
         LicenseApplication.created_at.desc()
     ).all()
 
     invite_lookup = {}
+    invite_event_lookup = {}
 
     for app in applications:
         company = Company.query.filter(
@@ -964,18 +983,48 @@ def licensing_applications():
 
             if invite:
                 invite_lookup[app.id] = invite
+                invite_events = LicenseInviteEvent.query.filter_by(
+                    invite_token=invite.token
+                ).order_by(LicenseInviteEvent.created_at.desc()).all()
+                invite_event_lookup[app.id] = {
+                    "open_count": len(invite_events),
+                    "last_opened_at": invite_events[0].created_at if invite_events else None,
+                }
 
     return render_template(
         "admin/licensing_applications.html",
         applications=applications,
         invite_lookup=invite_lookup,
+        invite_event_lookup=invite_event_lookup,
     )
+
+
+@admin_bp.route("/licensing/applications/<int:app_id>/contact", methods=["POST"])
+@csrf.exempt
+@login_required
+@role_required("platform_admin", "master_admin")
+def contact_license_application(app_id):
+    app_row = LicenseApplication.query.get_or_404(app_id)
+
+    if app_row.status == "approved":
+        flash("Approved applications are already in onboarding.", "info")
+        return redirect(url_for("admin.licensing_applications"))
+
+    if app_row.status == "declined":
+        flash("Declined applications cannot be moved to contacted.", "warning")
+        return redirect(url_for("admin.licensing_applications"))
+
+    app_row.status = "contacted"
+    db.session.commit()
+
+    flash("Application marked as contacted.", "success")
+    return redirect(url_for("admin.licensing_applications"))
 
 
 @admin_bp.route("/licensing/applications/<int:app_id>/approve", methods=["POST"])
 @csrf.exempt
 @login_required
-@role_required("platform_admin")
+@role_required("platform_admin", "master_admin")
 def approve_license_application(app_id):
     app_row = LicenseApplication.query.get_or_404(app_id)
 
@@ -1045,15 +1094,14 @@ def approve_license_application(app_id):
         db.session.add(invite)
         db.session.flush()
 
+    invite_was_refreshed = False
+    if invite.is_expired():
+        _refresh_invite(invite)
+        invite_was_refreshed = True
+
     email_sent = False
     try:
-        subject, body, html = _build_license_invite_email(invite, company, app_row)
-        _send_email(
-            to=invite.email,
-            subject=subject,
-            html_body=html,
-            text_body=body
-        )
+        _deliver_license_invite(invite, company, app_row)
         email_sent = True
     except Exception:
         current_app.logger.exception("Failed to send licensing invite email")
@@ -1061,7 +1109,8 @@ def approve_license_application(app_id):
     db.session.commit()
 
     if email_sent:
-        flash("Application approved, company created, and invite email sent.", "success")
+        refreshed_note = " A fresh invite link was generated." if invite_was_refreshed else ""
+        flash(f"Application approved, company created, and invite email sent.{refreshed_note}", "success")
     else:
         flash("Application approved and invite created, but email failed to send.", "warning")
 
@@ -1071,7 +1120,7 @@ def approve_license_application(app_id):
 @admin_bp.route("/licensing/applications/<int:app_id>/decline", methods=["POST"])
 @csrf.exempt
 @login_required
-@role_required("platform_admin")
+@role_required("platform_admin", "master_admin")
 def decline_license_application(app_id):
     app_row = LicenseApplication.query.get_or_404(app_id)
 
@@ -1083,6 +1132,64 @@ def decline_license_application(app_id):
     db.session.commit()
 
     flash("License application declined.", "success")
+    return redirect(url_for("admin.licensing_applications"))
+
+
+@admin_bp.route("/licensing/applications/<int:app_id>/resend-invite", methods=["POST"])
+@csrf.exempt
+@login_required
+@role_required("platform_admin", "master_admin")
+def resend_license_application_invite(app_id):
+    app_row = LicenseApplication.query.get_or_404(app_id)
+
+    if app_row.status != "approved":
+        flash("Approve the application before sending an onboarding invite.", "warning")
+        return redirect(url_for("admin.licensing_applications"))
+
+    company = Company.query.filter(
+        func.lower(Company.name) == (app_row.company_name or "").strip().lower()
+    ).first()
+    if not company:
+        flash("No company record was found for this approved application.", "danger")
+        return redirect(url_for("admin.licensing_applications"))
+
+    invite = UserInvite.query.filter_by(
+        company_id=company.id,
+        email=app_row.email,
+    ).order_by(UserInvite.created_at.desc()).first()
+
+    if not invite:
+        parts = (app_row.contact_name or "").strip().split()
+        first_name = parts[0] if parts else None
+        last_name = " ".join(parts[1:]) if len(parts) > 1 else None
+        invite = UserInvite(
+            company_id=company.id,
+            email=app_row.email,
+            first_name=first_name,
+            last_name=last_name,
+            role="admin",
+            token=UserInvite.generate_token(),
+            status="pending",
+            invited_by=current_user.id,
+            expires_at=UserInvite.default_expiration(days=7),
+        )
+        db.session.add(invite)
+        db.session.flush()
+    elif invite.status == "accepted":
+        flash("This invite has already been accepted.", "info")
+        return redirect(url_for("admin.licensing_applications"))
+    elif invite.is_expired():
+        _refresh_invite(invite)
+
+    try:
+        _deliver_license_invite(invite, company, app_row)
+        db.session.commit()
+        flash("Onboarding invite sent successfully.", "success")
+    except Exception:
+        db.session.rollback()
+        current_app.logger.exception("Failed to resend licensing invite email")
+        flash("The invite exists, but the email could not be sent.", "warning")
+
     return redirect(url_for("admin.licensing_applications"))
 
 @admin_bp.route("/users/<int:user_id>/block", methods=["POST"])

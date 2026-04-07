@@ -73,6 +73,12 @@
 
             <td>
               <div class="actions">
+                {% if app.status not in ["approved", "declined", "contacted"] %}
+                <form method="POST" action="{{ url_for('admin.contact_license_application', app_id=app.id) }}">
+                  <button type="submit" class="ravlo-btn ghost sm">Mark Contacted</button>
+                </form>
+                {% endif %}
+
                 {% if app.status != "approved" %}
                 <form method="POST" action="{{ url_for('admin.approve_license_application', app_id=app.id) }}">
                   <button type="submit" class="ravlo-btn primary sm">Approve</button>
@@ -82,6 +88,12 @@
                 {% if app.status != "declined" %}
                 <form method="POST" action="{{ url_for('admin.decline_license_application', app_id=app.id) }}">
                   <button type="submit" class="ravlo-btn ghost sm">Decline</button>
+                </form>
+                {% endif %}
+
+                {% if app.status == "approved" %}
+                <form method="POST" action="{{ url_for('admin.resend_license_application_invite', app_id=app.id) }}">
+                  <button type="submit" class="ravlo-btn secondary sm">Resend Invite</button>
                 </form>
                 {% endif %}
               </div>
@@ -126,6 +138,7 @@
               </div>
 
               {% set invite = invite_lookup.get(app.id) %}
+              {% set invite_events = invite_event_lookup.get(app.id) %}
               {% if invite %}
               <div class="invite-panel">
                 <div class="invite-panel-left">
@@ -136,6 +149,14 @@
                     <span><strong>Status:</strong> {{ invite.status }}</span>
                     <span><strong>Expires:</strong>
                       {{ invite.expires_at.strftime("%b %d, %Y %I:%M %p") if invite.expires_at else "—" }}
+                    </span>
+                    <span><strong>Opens:</strong> {{ invite_events.open_count if invite_events else 0 }}</span>
+                    <span><strong>Last Opened:</strong>
+                      {% if invite_events and invite_events.last_opened_at %}
+                        {{ invite_events.last_opened_at.strftime("%b %d, %Y %I:%M %p") }}
+                      {% else %}
+                        -
+                      {% endif %}
                     </span>
                   </div>
                 </div>
