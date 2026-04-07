@@ -1,47 +1,67 @@
-print(">>> Loaded config from:", __file__)
-
-from datetime import timedelta
-from dotenv import load_dotenv
 import os
+from datetime import timedelta
+
+from dotenv import load_dotenv
 
 # ===================================================
 # 🏗 BASE CONFIG PATH SETUP
 # ===================================================
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 INSTANCE_PATH = os.path.join(BASE_DIR, "instance")
-os.makedirs(INSTANCE_PATH, exist_ok=True)
+UPLOAD_FOLDER = os.path.join(BASE_DIR, "uploads")
+LOG_FOLDER = os.path.join(BASE_DIR, "logs")
+
+for path in (INSTANCE_PATH, UPLOAD_FOLDER, LOG_FOLDER):
+    os.makedirs(path, exist_ok=True)
 
 load_dotenv()
+
+TRUE_VALUES = {"1", "true", "yes", "on"}
+
+
+def _env_bool(name: str, default: bool = False) -> bool:
+    return os.environ.get(name, str(default)).strip().lower() in TRUE_VALUES
+
+
+def _env_int(name: str, default: int) -> int:
+    return int(os.environ.get(name, default))
+
+
+def _env_float(name: str, default: float) -> float:
+    return float(os.environ.get(name, default))
+
+
+def _env_list(name: str, default: str = ""):
+    raw = os.environ.get(name, default).strip()
+    if not raw:
+        return []
+    return [item.strip() for item in raw.split(",") if item.strip()]
 
 # ===================================================
 # ⚙️ MAIN CONFIG CLASS
 # ===================================================
  
 class Config:
+    ENV_NAME = os.environ.get("FLASK_ENV", "production").strip().lower()
+    TESTING = False
     SECRET_KEY = os.getenv("SECRET_KEY", "dev_only_change_me")
     SECURITY_PASSWORD_SALT = os.getenv("SECURITY_PASSWORD_SALT", "dev_salt_change_me")
 
-    DEBUG = os.environ.get("FLASK_DEBUG", "false").lower() in ("1", "true", "yes")
+    DEBUG = _env_bool("FLASK_DEBUG", False)
 
-    # Session timeout (auto logout after inactivity)
     PERMANENT_SESSION_LIFETIME = timedelta(minutes=30)
-
-    # Remember login duration
     REMEMBER_COOKIE_DURATION = timedelta(days=30)
-
-    # Session cookies
+    SESSION_COOKIE_NAME = "ravlo_session"
     SESSION_COOKIE_SECURE = True
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = "Lax"
-
-    # Remember cookies
     REMEMBER_COOKIE_SECURE = True
     REMEMBER_COOKIE_HTTPONLY = True
     REMEMBER_COOKIE_SAMESITE = "Lax"
-
-    # Flask-Login protection
     SESSION_PROTECTION = "basic"
     SESSION_REFRESH_EACH_REQUEST = True
+    WTF_CSRF_TIME_LIMIT = 60 * 60 * 2
+    PREFERRED_URL_SCHEME = os.environ.get("PREFERRED_URL_SCHEME", "https")
  
     # DATABASE
     SQLALCHEMY_DATABASE_URI = os.getenv("DATABASE_URL") or "sqlite:///local.db"
@@ -52,26 +72,21 @@ class Config:
     STRIPE_SECRET_KEY = os.environ.get("STRIPE_SECRET_KEY", "")
     STRIPE_WEBHOOK_SECRET = os.environ.get("STRIPE_WEBHOOK_SECRET", "")
 
-    # MAIL
     MAIL_SERVER = os.environ.get("MAIL_SERVER", "smtp.sendgrid.net")
-    MAIL_PORT = int(os.environ.get("MAIL_PORT", 587))
-    MAIL_USE_TLS = True
-    MAIL_USE_SSL = False
+    MAIL_PORT = _env_int("MAIL_PORT", 587)
+    MAIL_USE_TLS = _env_bool("MAIL_USE_TLS", True)
+    MAIL_USE_SSL = _env_bool("MAIL_USE_SSL", False)
     MAIL_USERNAME = os.environ.get("MAIL_USERNAME", "")
     MAIL_PASSWORD = os.environ.get("MAIL_PASSWORD", "")
     MAIL_DEFAULT_SENDER = os.environ.get("MAIL_DEFAULT_SENDER", MAIL_USERNAME)
 
-    # SOCKETIO
-    SOCKETIO_MESSAGE_QUEUE = os.environ.get("SOCKETIO_MESSAGE_QUEUE", None)
-    SOCKETIO_CORS_ALLOWED_ORIGINS = "*"
+    SOCKETIO_MESSAGE_QUEUE = os.environ.get("SOCKETIO_MESSAGE_QUEUE") or None
+    SOCKETIO_CORS_ALLOWED_ORIGINS = _env_list("SOCKETIO_CORS_ALLOWED_ORIGINS")
 
-    # CORS
-    CORS_ORIGINS = os.environ.get("CORS_ORIGINS", "*")
-    CORS_SUPPORTS_CREDENTIALS = True
+    CORS_ORIGINS = _env_list("CORS_ORIGINS")
+    CORS_SUPPORTS_CREDENTIALS = _env_bool("CORS_SUPPORTS_CREDENTIALS", True)
 
-    # FILE UPLOADS
-    UPLOAD_FOLDER = os.path.join(BASE_DIR, "uploads")
-    os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+    UPLOAD_FOLDER = UPLOAD_FOLDER
     MAX_CONTENT_LENGTH = 25 * 1024 * 1024
 
     # TWILIO
@@ -79,47 +94,92 @@ class Config:
     TWILIO_AUTH_TOKEN = os.environ.get("TWILIO_AUTH_TOKEN", "")
     TWILIO_PHONE_NUMBER = os.environ.get("TWILIO_PHONE_NUMBER", "")
 
-    # SENDGRID
     SENDGRID_API_KEY = os.environ.get("SENDGRID_API_KEY", "")
-    SENDGRID_FROM_EMAIL = os.environ.get("SENDGRID_FROM_EMAIL", "noreply@caughmanmason.com")
+    SENDGRID_FROM_EMAIL = os.environ.get("SENDGRID_FROM_EMAIL", "noreply@ravlohq.com")
 
     # AI
     OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")
     AI_MODEL = os.environ.get("AI_MODEL", "gpt-4-turbo-preview")
-    AI_TIMEOUT = int(os.environ.get("AI_TIMEOUT", 30))
+    AI_TIMEOUT = _env_int("AI_TIMEOUT", 30)
 
     GOOGLE_PLACES_API_KEY = os.environ.get("GOOGLE_PLACES_API_KEY", "")
 
     # RENTCAST
     RENTCAST_API_KEY = os.environ.get("RENTCAST_API_KEY", "").strip()
     RENTCAST_BASE_URL = os.environ.get("RENTCAST_BASE_URL", "https://api.rentcast.io/v1").strip()
-    RENTCAST_TIMEOUT = int(os.environ.get("RENTCAST_TIMEOUT", 12))
-    RENTCAST_COMP_COUNT = int(os.environ.get("RENTCAST_COMP_COUNT", 15))
-    RENTCAST_MAX_RADIUS = float(os.environ.get("RENTCAST_MAX_RADIUS", 2))
-    RENTCAST_DAYS_OLD = int(os.environ.get("RENTCAST_DAYS_OLD", 180))
-    RENTCAST_LOOKUP_SUBJECT_ATTRS = os.environ.get("RENTCAST_LOOKUP_SUBJECT_ATTRS", "true").lower() in ("1", "true", "yes")
+    RENTCAST_TIMEOUT = _env_int("RENTCAST_TIMEOUT", 12)
+    RENTCAST_COMP_COUNT = _env_int("RENTCAST_COMP_COUNT", 15)
+    RENTCAST_MAX_RADIUS = _env_float("RENTCAST_MAX_RADIUS", 2)
+    RENTCAST_DAYS_OLD = _env_int("RENTCAST_DAYS_OLD", 180)
+    RENTCAST_LOOKUP_SUBJECT_ATTRS = _env_bool("RENTCAST_LOOKUP_SUBJECT_ATTRS", True)
 
     PROPERTY_PROVIDER = os.environ.get("PROPERTY_PROVIDER", "rentcast")
-    ENABLE_PROPERTY_CACHE = os.environ.get("ENABLE_PROPERTY_CACHE", "true").lower() in ("1", "true", "yes")
+    ENABLE_PROPERTY_CACHE = _env_bool("ENABLE_PROPERTY_CACHE", True)
 
-    # BRAND
-    COMPANY_NAME = "Caughman Mason Realty Group"
-    COMPANY_EMAIL = "info@caughmanmason.com"
-    COMPANY_PHONE = "(845) 395-6627"
-    COMPANY_ADDRESS = "33 Maple Fields Dr Middletown NY 10940"
+    COMPANY_NAME = os.environ.get("COMPANY_NAME", "Ravlo")
+    COMPANY_EMAIL = os.environ.get("COMPANY_EMAIL", "info@ravlohq.com")
+    COMPANY_PHONE = os.environ.get("COMPANY_PHONE", "")
+    COMPANY_ADDRESS = os.environ.get("COMPANY_ADDRESS", "")
 
-    # LOGGING
-    LOG_FOLDER = os.path.join(BASE_DIR, "logs")
-    os.makedirs(LOG_FOLDER, exist_ok=True)
+    LOG_FOLDER = LOG_FOLDER
 
-    # FEATURE TOGGLES
-    ENABLE_AI_CHAT = True
-    ENABLE_LOAN_ENGINE = True
-    ENABLE_CONSTRUCTION_MODE = False
-    ENABLE_DEVELOPER_TOOLS = True
+    ENABLE_AI_CHAT = _env_bool("ENABLE_AI_CHAT", True)
+    ENABLE_LOAN_ENGINE = _env_bool("ENABLE_LOAN_ENGINE", True)
+    ENABLE_CONSTRUCTION_MODE = _env_bool("ENABLE_CONSTRUCTION_MODE", False)
+    ENABLE_DEVELOPER_TOOLS = _env_bool("ENABLE_DEVELOPER_TOOLS", False)
 
-    BYPASS_PARTNER_SUBSCRIPTION = True
-    FREE_PARTNER_MODE = True
+    BYPASS_PARTNER_SUBSCRIPTION = _env_bool("BYPASS_PARTNER_SUBSCRIPTION", False)
+    FREE_PARTNER_MODE = _env_bool("FREE_PARTNER_MODE", False)
+
+    @classmethod
+    def validate(cls):
+        return
+
+
+class DevelopmentConfig(Config):
+    ENV_NAME = "development"
+    DEBUG = _env_bool("FLASK_DEBUG", True)
+    SESSION_COOKIE_SECURE = False
+    REMEMBER_COOKIE_SECURE = False
+    PREFERRED_URL_SCHEME = os.environ.get("PREFERRED_URL_SCHEME", "http")
+    ENABLE_DEVELOPER_TOOLS = _env_bool("ENABLE_DEVELOPER_TOOLS", True)
+    CORS_ORIGINS = _env_list("CORS_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000")
+    SOCKETIO_CORS_ALLOWED_ORIGINS = _env_list(
+        "SOCKETIO_CORS_ALLOWED_ORIGINS",
+        "http://localhost:3000,http://127.0.0.1:3000",
+    )
+    BYPASS_PARTNER_SUBSCRIPTION = _env_bool("BYPASS_PARTNER_SUBSCRIPTION", True)
+    FREE_PARTNER_MODE = _env_bool("FREE_PARTNER_MODE", True)
+
+
+class ProductionConfig(Config):
+    ENV_NAME = "production"
+    DEBUG = False
+    ENABLE_DEVELOPER_TOOLS = False
+
+    @classmethod
+    def validate(cls):
+        missing = []
+        if not cls.SECRET_KEY or cls.SECRET_KEY == "dev_only_change_me":
+            missing.append("SECRET_KEY")
+        if not cls.SECURITY_PASSWORD_SALT or cls.SECURITY_PASSWORD_SALT == "dev_salt_change_me":
+            missing.append("SECURITY_PASSWORD_SALT")
+        if not cls.SQLALCHEMY_DATABASE_URI:
+            missing.append("DATABASE_URL")
+        elif cls.SQLALCHEMY_DATABASE_URI.startswith("sqlite"):
+            missing.append("DATABASE_URL (must not be sqlite in production)")
+        if not cls.CORS_ORIGINS:
+            missing.append("CORS_ORIGINS")
+        if not cls.SOCKETIO_CORS_ALLOWED_ORIGINS:
+            missing.append("SOCKETIO_CORS_ALLOWED_ORIGINS")
+        if missing:
+            raise RuntimeError(
+                "Production configuration is incomplete: " + ", ".join(missing)
+            )
+
 
 def get_config():
-    return Config
+    env_name = os.environ.get("FLASK_ENV", "production").strip().lower()
+    if env_name in {"dev", "development", "local"}:
+        return DevelopmentConfig
+    return ProductionConfig

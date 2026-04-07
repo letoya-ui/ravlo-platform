@@ -23,7 +23,7 @@ from flask_migrate import Migrate
 from flask_login import LoginManager, current_user
 from werkzeug.middleware.proxy_fix import ProxyFix
 
-from LoanMVP.config import Config
+from LoanMVP.config import get_config
 from LoanMVP.extensions import db, login_manager, migrate, mail, stripe, csrf
 from LoanMVP.models import User
 from LoanMVP.models.loan_models import BorrowerProfile, LoanNotification
@@ -47,7 +47,6 @@ if not hasattr(engineio, "async_modes") or "threading" not in getattr(engineio, 
 # ---------------------------------------------------------
 cors = CORS()
 socketio = SocketIO(
-    cors_allowed_origins="*",
     async_mode="threading",
     logger=False,
     engineio_logger=False,
@@ -80,8 +79,9 @@ def create_app():
         instance_relative_config=True,
     )
 
-    # Core configuration
-    app.config.from_object(Config)
+    config_class = get_config()
+    config_class.validate()
+    app.config.from_object(config_class)
 
     # ✅ Make sure secret key comes from config/env
     app.secret_key = app.config.get("SECRET_KEY")
@@ -93,12 +93,21 @@ def create_app():
     stripe.api_key = app.config.get("STRIPE_SECRET_KEY")
 
     # Initialize extensions
-    cors.init_app(app)
+    cors_origins = app.config.get("CORS_ORIGINS") or []
+    cors.init_app(
+        app,
+        origins=cors_origins or None,
+        supports_credentials=app.config.get("CORS_SUPPORTS_CREDENTIALS", True),
+    )
     db.init_app(app)
     migrate.init_app(app, db)
     login_manager.init_app(app)
     mail.init_app(app)
-    socketio.init_app(app)
+    socketio.init_app(
+        app,
+        cors_allowed_origins=app.config.get("SOCKETIO_CORS_ALLOWED_ORIGINS") or [],
+        message_queue=app.config.get("SOCKETIO_MESSAGE_QUEUE"),
+    )
     app.socketio = socketio
     csrf.init_app(app)
      
@@ -168,11 +177,11 @@ def create_app():
     # Global error handler
     @app.errorhandler(Exception)
     def handle_any_exception(e):
-        print("\n========== REAL TRACEBACK START ==========")
-        traceback.print_exc()
-        print("========== REAL TRACEBACK END ==========\n")
-        tb = traceback.format_exc()
-        return Response(f"<pre>{tb}</pre>", mimetype="text/plain"), 500
+        current_app.logger.exception("Unhandled application error")
+        if app.debug or app.testing:
+            tb = traceback.format_exc()
+            return Response(f"<pre>{tb}</pre>", mimetype="text/plain"), 500
+        return render_template("errors/500.html"), 500
 
     @app.get("/robots.txt")
     def robots_txt():
