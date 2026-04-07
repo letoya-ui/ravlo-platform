@@ -53,9 +53,12 @@
     </a>
 
     <!-- 🚪 Logout -->
-    <a href="{{ url_for('auth.logout') }}">
-      <i class="lucide lucide-log-out"></i> Logout
-    </a>
+    <form method="POST" action="{{ url_for('auth.logout') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button type="submit" style="background:none;border:none;padding:0;color:inherit;font:inherit;cursor:pointer;">
+        <i class="lucide lucide-log-out"></i> Logout
+      </button>
+    </form>
   </nav>
 
   <div class="sidebar-footer">

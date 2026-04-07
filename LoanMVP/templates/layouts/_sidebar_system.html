@@ -191,11 +191,8 @@
       <a href="{{ url_for('system.users') }}">
         <i class="fa-solid fa-users"></i> Manage Users
       </a>
-      <a href="{{ url_for('system.toggle_user', user_id=1) }}">
-        <i class="fa-solid fa-toggle-on"></i> Toggle User
-      </a>
-      <a href="{{ url_for('system.delete_user', user_id=1) }}">
-        <i class="fa-solid fa-user-xmark"></i> Delete User
+      <a href="{{ url_for('admin.licensing_applications') }}">
+        <i class="fa-solid fa-id-card"></i> Licensing Queue
       </a>
     </div>
 
@@ -213,9 +210,12 @@
     <!-- ⚙️ Account -->
     <div class="nav-section">
       <h4>Account</h4>
-      <a href="{{ url_for('auth.logout') }}">
-        <i class="fa-solid fa-right-from-bracket"></i> Logout
-      </a>
+      <form method="POST" action="{{ url_for('auth.logout') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" style="background:none;border:none;padding:0;color:inherit;font:inherit;cursor:pointer;">
+          <i class="fa-solid fa-right-from-bracket"></i> Logout
+        </button>
+      </form>
     </div>
   </nav>
 

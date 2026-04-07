@@ -129,6 +129,7 @@
     </a>
 
     <form method="post" action="{{ url_for('auth.logout') }}" class="ravlo-sidebar-logout-form">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <button type="submit" class="ravlo-btn ghost sm ravlo-logout-btn sidebar-logout-full">
         <i class="lucide lucide-log-out"></i>
         <span>Logout</span>

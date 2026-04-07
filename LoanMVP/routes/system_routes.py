@@ -169,7 +169,6 @@ def users():
 # 🟢 Toggle User Active Status
 # =========================================================
 @system_bp.route("/toggle_user/<int:user_id>", methods=["POST"])
-@csrf.exempt
 @role_required("system", "admin")
 def toggle_user(user_id):
     user = User.query.get_or_404(user_id)
@@ -183,7 +182,6 @@ def toggle_user(user_id):
 # 🗑️ Delete User
 # =========================================================
 @system_bp.route("/delete_user/<int:user_id>", methods=["POST"])
-@csrf.exempt
 @role_required("system", "admin")
 def delete_user(user_id):
     user = User.query.get_or_404(user_id)

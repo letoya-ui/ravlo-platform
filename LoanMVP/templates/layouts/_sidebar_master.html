@@ -179,8 +179,11 @@
     <i class="lucide lucide-terminal-square"></i> System Logs
   </a>
   </a>
-      <a href="{{ url_for('auth.logout') }}">
-        <i class="fa-solid fa-right-from-bracket"></i> Logout
-      </a>
+  <form method="POST" action="{{ url_for('auth.logout') }}" style="padding: .75rem 1.2rem;">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <button type="submit" class="nav-link" style="background:none;border:none;width:100%;text-align:left;cursor:pointer;">
+      <i class="fa-solid fa-right-from-bracket"></i> Logout
+    </button>
+  </form>
 
 </div>

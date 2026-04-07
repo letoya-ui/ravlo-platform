@@ -100,6 +100,7 @@
                   <form method="POST"
                         action="{{ url_for('system.toggle_user', user_id=user.id) }}"
                         style="margin:0;">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <button type="submit" class="re-btn ghost sm">
                       <i class="lucide lucide-power"></i>
                       {% if user.is_active %}Deactivate{% else %}Activate{% endif %}
@@ -111,6 +112,7 @@
                         action="{{ url_for('system.delete_user', user_id=user.id) }}"
                         onsubmit="return confirm('Delete this account permanently? This action cannot be undone.');"
                         style="margin:0;">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <button type="submit" class="re-btn danger sm">
                       <i class="lucide lucide-trash-2"></i>
                       Delete

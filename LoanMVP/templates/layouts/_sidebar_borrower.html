@@ -64,9 +64,12 @@
       </div>
     </div>
 
-    <a href="{{ url_for('auth.logout') }}" class="ravlo-logout-btn">
-      <i data-lucide="log-out"></i>
-      <span>Logout</span>
-    </a>
+    <form method="POST" action="{{ url_for('auth.logout') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button type="submit" class="ravlo-logout-btn">
+        <i data-lucide="log-out"></i>
+        <span>Logout</span>
+      </button>
+    </form>
   </div>
 </aside>

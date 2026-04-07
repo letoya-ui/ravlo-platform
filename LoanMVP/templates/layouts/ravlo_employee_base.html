@@ -83,10 +83,13 @@
 
               <div class="re-divider"></div>
 
-              <a href="{{ url_for('auth.logout') }}" class="danger">
-                <i class="icon lucide lucide-log-out"></i>
-                Logout
-              </a>
+              <form method="POST" action="{{ url_for('auth.logout') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="danger" style="background:none;border:none;padding:0;cursor:pointer;font:inherit;text-align:left;width:100%;">
+                  <i class="icon lucide lucide-log-out"></i>
+                  Logout
+                </button>
+              </form>
             </div>
           </div>
           {% endif %}

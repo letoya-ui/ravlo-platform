@@ -201,9 +201,12 @@
     <!-- 👤 Account -->
     <div class="nav-section">
       <h4>Account</h4>
-      <a href="{{ url_for('auth.logout') }}">
-        <i class="fa-solid fa-right-from-bracket"></i> Logout
-      </a>
+      <form method="POST" action="{{ url_for('auth.logout') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" style="background:none;border:none;padding:0;color:inherit;font:inherit;cursor:pointer;">
+          <i class="fa-solid fa-right-from-bracket"></i> Logout
+        </button>
+      </form>
     </div>
   </nav>
 

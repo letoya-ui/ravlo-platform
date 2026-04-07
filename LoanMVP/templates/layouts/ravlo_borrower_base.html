@@ -56,7 +56,12 @@
           <a href="{{ url_for('account.profile') }}">Profile</a>
           <a href="{{ url_for('account.settings') }}">Settings</a>
           <div class="rb-divider"></div>
-          <a href="{{ url_for('auth.logout') }}" class="danger">Logout</a>
+          <form method="POST" action="{{ url_for('auth.logout') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="danger" style="background:none;border:none;padding:0;cursor:pointer;font:inherit;text-align:left;width:100%;">
+              Logout
+            </button>
+          </form>
         </div>
       </div>
       {% endif %}
