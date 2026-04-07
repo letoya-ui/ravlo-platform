@@ -13,6 +13,8 @@ from werkzeug.security import generate_password_hash
 from LoanMVP.ai.base_ai import AIAssistant     # ✅ Unified AI import
 from LoanMVP.utils.decorators import role_required
 from LoanMVP.utils.emailer import send_email  # or wherever you saved it
+from LoanMVP.utils.role_helpers import is_admin
+
 
 # MODELS
 from LoanMVP.models.user_model import User
@@ -45,6 +47,9 @@ def admin_required(func):
     return wrapper
 
 
+if not is_admin(current_user):
+    flash("Unauthorized", "danger")
+    return redirect(url_for("auth.login"))
 
 def _plan_defaults(plan_interest: str):
     plan = (plan_interest or "").strip().lower()

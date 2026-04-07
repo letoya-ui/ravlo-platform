@@ -1,22 +1,23 @@
 {% extends "layouts/ravlo_employee_base.html" %}
 
-{% block title %}Admin Requests{% endblock %}
+{% block title %}Admin • Requests{% endblock %}
 {% block page_title %}Access Requests{% endblock %}
-{% block page_subline %}Review new company, subscription, and platform requests{% endblock %}
+{% block page_subline %}Review new company, subscription, licensing, and platform access requests{% endblock %}
 
 {% block content %}
 {% set total_requests = requests_list|length %}
 {% set pending_requests = requests_list|selectattr('status', 'equalto', 'pending')|list|length %}
 {% set approved_requests = requests_list|selectattr('status', 'equalto', 'approved')|list|length %}
 {% set denied_requests = requests_list|selectattr('status', 'in', ['denied', 'rejected'])|list|length %}
+{% set licensing_requests = requests_list|selectattr('request_type', 'equalto', 'license_application')|list|length %}
 
-<div class="re-grid">
+<div class="admin-requests-wrap">
 
-  <section class="re-grid-4">
+  <section class="re-grid-5 admin-request-stats">
     <div class="re-stat">
       <div class="re-stat-label">Total Requests</div>
       <div class="re-stat-value">{{ total_requests }}</div>
-      <div class="re-stat-meta">All submitted access requests</div>
+      <div class="re-stat-meta">All submitted requests</div>
     </div>
 
     <div class="re-stat">
@@ -36,20 +37,52 @@
       <div class="re-stat-value">{{ denied_requests }}</div>
       <div class="re-stat-meta">Rejected requests</div>
     </div>
+
+    <div class="re-stat">
+      <div class="re-stat-label">Licensing</div>
+      <div class="re-stat-value">{{ licensing_requests }}</div>
+      <div class="re-stat-meta">Software / platform applications</div>
+    </div>
   </section>
 
   <section class="re-card pad">
-    <div class="section-head">
+    <div class="section-head admin-requests-head">
       <div>
         <div class="eyebrow">REQUEST REVIEW</div>
-        <h3 style="margin:.35rem 0 .2rem;">Requests</h3>
-        <div class="re-card-subtitle">Review pending staff and platform access requests.</div>
+        <h3 style="margin:.35rem 0 .2rem;">Requests Queue</h3>
+        <div class="re-card-subtitle">Review pending staff, licensing, and platform access requests.</div>
+      </div>
+
+      <div class="admin-requests-actions">
+        <a class="re-btn ghost sm" href="{{ url_for('admin.access_requests') }}">
+          <i class="lucide lucide-refresh-cw"></i>
+          Refresh
+        </a>
+      </div>
+    </div>
+
+    <div class="admin-filter-bar">
+      <div class="admin-filter-chips">
+        <button class="filter-chip active" type="button" data-filter="all">All</button>
+        <button class="filter-chip" type="button" data-filter="pending">Pending</button>
+        <button class="filter-chip" type="button" data-filter="approved">Approved</button>
+        <button class="filter-chip" type="button" data-filter="denied">Denied</button>
+        <button class="filter-chip" type="button" data-filter="license_application">Licensing</button>
+      </div>
+
+      <div class="admin-filter-search">
+        <input
+          id="requestSearch"
+          class="re-input"
+          type="text"
+          placeholder="Search contact, email, company..."
+        >
       </div>
     </div>
 
     {% if requests_list %}
       <div class="re-table-wrap mt-16">
-        <table class="re-table">
+        <table class="re-table" id="requestsTable">
           <thead>
             <tr>
               <th>ID</th>
@@ -57,6 +90,7 @@
               <th>Email</th>
               <th>Company</th>
               <th>Type</th>
+              <th>Requested Role</th>
               <th>Status</th>
               <th>Created</th>
               <th class="text-right">Actions</th>
@@ -65,60 +99,76 @@
           <tbody>
             {% for item in requests_list %}
             {% set raw_status = (item.status or 'pending')|lower %}
-            <tr>
+            {% set raw_type = (item.request_type or 'general')|lower %}
+            <tr
+              data-status="{{ raw_status }}"
+              data-type="{{ raw_type }}"
+              data-search="{{ (
+                (item.contact_name or '') ~ ' ' ~
+                (item.email or '') ~ ' ' ~
+                (item.company_name or '') ~ ' ' ~
+                (item.requested_role or '') ~ ' ' ~
+                (item.request_type or '')
+              )|lower }}"
+            >
               <td>#{{ item.id }}</td>
+
               <td>
                 <div style="display:grid; gap:4px;">
                   <strong>{{ item.contact_name or "—" }}</strong>
                 </div>
               </td>
+
               <td>{{ item.email or "—" }}</td>
+
               <td>{{ item.company_name or "—" }}</td>
+
               <td>
-                <span class="badge badge-info">
-                  {{ (item.request_type or "general")|replace('_', ' ')|title }}
+                <span class="badge {{ 'badge-danger' if raw_type == 'license_application' else 'badge-info' }}">
+                  {{ get_request_type_display(item.request_type or "general") }}
                 </span>
               </td>
+
               <td>
-                {% if raw_status == 'pending' %}
-                  <span class="badge badge-warning">Pending</span>
-                {% elif raw_status == 'approved' %}
-                  <span class="badge badge-success">Approved</span>
-                {% elif raw_status in ['denied', 'rejected'] %}
-                  <span class="badge badge-danger">{{ raw_status|title }}</span>
-                {% else %}
-                  <span class="badge badge-neutral">{{ (item.status or "Unknown")|title }}</span>
-                {% endif %}
+                <span class="badge badge-neutral">
+                  {{ get_role_display(item.requested_role) if item.requested_role else "—" }}
+                </span>
               </td>
+
+              <td>
+                <span class="{{ get_status_badge(item.status) }}">
+                  {{ get_status_display(item.status) }}
+                </span>
+              </td>
+
               <td>{{ item.created_at.strftime("%Y-%m-%d") if item.created_at else "—" }}</td>
+
               <td class="text-right">
                 <div class="row" style="justify-content:flex-end; gap:8px; flex-wrap:wrap;">
-
                   <a href="{{ url_for('admin.request_detail', request_id=item.id) }}" class="re-btn primary sm">
                     <i class="lucide lucide-eye"></i>
                     View
                   </a>
 
                   {% if raw_status == 'pending' %}
-                  <form method="POST"
-                        action="{{ url_for('admin.approve_access_request', req_id=item.id) }}"
-                        style="display:inline; margin:0;">
-                    <button type="submit" class="re-btn success sm">
-                      <i class="lucide lucide-check"></i>
-                      Approve
-                    </button>
-                  </form>
+                    <form method="POST"
+                          action="{{ url_for('admin.approve_access_request', req_id=item.id) }}"
+                          style="display:inline; margin:0;">
+                      <button type="submit" class="re-btn success sm">
+                        <i class="lucide lucide-check"></i>
+                        Approve
+                      </button>
+                    </form>
 
-                  <form method="POST"
-                        action="{{ url_for('admin.deny_access_request', req_id=item.id) }}"
-                        style="display:inline; margin:0;">
-                    <button type="submit" class="re-btn ghost sm">
-                      <i class="lucide lucide-x"></i>
-                      Deny
-                    </button>
-                  </form>
+                    <form method="POST"
+                          action="{{ url_for('admin.deny_access_request', req_id=item.id) }}"
+                          style="display:inline; margin:0;">
+                      <button type="submit" class="re-btn ghost sm">
+                        <i class="lucide lucide-x"></i>
+                        Deny
+                      </button>
+                    </form>
                   {% endif %}
-
                 </div>
               </td>
             </tr>
@@ -126,12 +176,170 @@
           </tbody>
         </table>
       </div>
+
+      <div id="requestsEmptyState" class="re-empty mt-16" style="display:none;">
+        No matching requests found.
+      </div>
     {% else %}
       <div class="re-empty mt-16">
         No requests found.
       </div>
     {% endif %}
   </section>
-
 </div>
+
+<style>
+  .admin-requests-wrap{
+    display:grid;
+    gap:16px;
+  }
+
+  .admin-request-stats{
+    gap:14px;
+  }
+
+  .admin-requests-head{
+    display:flex;
+    justify-content:space-between;
+    gap:14px;
+    align-items:flex-start;
+    flex-wrap:wrap;
+  }
+
+  .admin-requests-actions{
+    display:flex;
+    gap:8px;
+    flex-wrap:wrap;
+  }
+
+  .admin-filter-bar{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:14px;
+    flex-wrap:wrap;
+    margin-top:14px;
+    padding:14px;
+    border:1px solid rgba(255,255,255,.08);
+    border-radius:16px;
+    background:rgba(255,255,255,.02);
+  }
+
+  .admin-filter-chips{
+    display:flex;
+    gap:8px;
+    flex-wrap:wrap;
+  }
+
+  .filter-chip{
+    appearance:none;
+    border:1px solid rgba(255,255,255,.10);
+    background:rgba(255,255,255,.03);
+    color:inherit;
+    border-radius:999px;
+    padding:.55rem .9rem;
+    font-weight:700;
+    cursor:pointer;
+    transition:.18s ease;
+  }
+
+  .filter-chip:hover{
+    transform:translateY(-1px);
+    border-color:rgba(255,255,255,.18);
+  }
+
+  .filter-chip.active{
+    background:rgba(122,184,255,.16);
+    border-color:rgba(122,184,255,.35);
+    color:#d9ebff;
+  }
+
+  .admin-filter-search{
+    min-width:260px;
+    flex:1;
+    max-width:360px;
+  }
+
+  .admin-filter-search .re-input{
+    width:100%;
+  }
+
+  @media (max-width: 980px){
+    .admin-request-stats{
+      grid-template-columns:repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @media (max-width: 640px){
+    .admin-request-stats{
+      grid-template-columns:1fr;
+    }
+
+    .admin-filter-search{
+      min-width:100%;
+      max-width:none;
+    }
+  }
+</style>
+
+<script>
+  (function () {
+    const chips = document.querySelectorAll(".filter-chip");
+    const searchInput = document.getElementById("requestSearch");
+    const rows = Array.from(document.querySelectorAll("#requestsTable tbody tr"));
+    const emptyState = document.getElementById("requestsEmptyState");
+
+    let activeFilter = "all";
+
+    function matchesStatus(rowStatus, filter) {
+      if (filter === "all") return true;
+      if (filter === "denied") return ["denied", "rejected"].includes(rowStatus);
+      return rowStatus === filter;
+    }
+
+    function matchesType(rowType, filter) {
+      if (filter === "license_application") return rowType === "license_application";
+      return true;
+    }
+
+    function applyFilters() {
+      const query = (searchInput?.value || "").trim().toLowerCase();
+      let visibleCount = 0;
+
+      rows.forEach((row) => {
+        const rowStatus = (row.dataset.status || "").toLowerCase();
+        const rowType = (row.dataset.type || "").toLowerCase();
+        const rowSearch = (row.dataset.search || "").toLowerCase();
+
+        const statusOk = matchesStatus(rowStatus, activeFilter);
+        const typeOk = matchesType(rowType, activeFilter);
+        const searchOk = !query || rowSearch.includes(query);
+
+        const show = statusOk && typeOk && searchOk;
+        row.style.display = show ? "" : "none";
+
+        if (show) visibleCount += 1;
+      });
+
+      if (emptyState) {
+        emptyState.style.display = visibleCount === 0 ? "" : "none";
+      }
+    }
+
+    chips.forEach((chip) => {
+      chip.addEventListener("click", () => {
+        chips.forEach((c) => c.classList.remove("active"));
+        chip.classList.add("active");
+        activeFilter = chip.dataset.filter || "all";
+        applyFilters();
+      });
+    });
+
+    if (searchInput) {
+      searchInput.addEventListener("input", applyFilters);
+    }
+
+    applyFilters();
+  })();
+</script>
 {% endblock %}

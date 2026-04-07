@@ -85,11 +85,11 @@
           </div>
           <div>
             <div class="text-muted">Request Type</div>
-            <strong>{{ (access_request.request_type or "—")|replace('_', ' ')|title }}</strong>
+            <strong>{{ get_role_display(access_request.requested_role) if access_request.requested_role else "—" }}</strong>
           </div>
           <div>
             <div class="text-muted">Requested Role</div>
-            <strong>{{ (access_request.requested_role or "—")|replace('_', ' ')|title }}</strong>
+            <strong>{{ get_role_display(access_request.requested_role) if access_request.requested_role else "—" }}</strong>
           </div>
         </div>
       </div>

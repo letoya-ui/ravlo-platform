@@ -27,6 +27,7 @@ from LoanMVP.config import Config
 from LoanMVP.extensions import db, login_manager, migrate, mail, stripe, csrf
 from LoanMVP.models import User
 from LoanMVP.models.loan_models import BorrowerProfile, LoanNotification
+from LoanMVP.utils.role_helpers import get_role_display
 
 import engineio
 import engineio.async_drivers.threading
@@ -199,7 +200,20 @@ def create_app():
                     is_read=False,
                 ).count()
         return dict(unread_count=unread)
-  
+    
+    
+    @app.context_processor
+    def inject_role_helpers():
+        return dict(get_role_display=get_role_display)  
+
+    @app.context_processor
+    def inject_ui_helpers():
+        return dict(
+            get_role_display=get_role_display,
+            get_request_type_display=get_request_type_display,
+            get_status_display=get_status_display,
+            get_status_badge=get_status_badge,
+        ) 
    
     @app.context_processor
     def inject_datetime():

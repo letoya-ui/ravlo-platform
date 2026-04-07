@@ -22,3 +22,23 @@ def _dashboard_for_role(role: str) -> str:
     }
 
     return role_map.get(role, "marketing.marketing_home")
+
+def get_role_display(role: str) -> str:
+    role = (role or "").strip().lower()
+
+    role_map = {
+        "platform_admin": "Platform Admin",
+        "master_admin": "Master Admin",
+        "lending_admin": "Lending Admin",
+        "admin": "Admin",
+
+        "loan_officer": "Loan Officer",
+        "processor": "Processor",
+        "underwriter": "Underwriter",
+
+        "investor": "Investor",
+        "borrower": "Borrower",
+        "partner": "Partner",
+    }
+
+    return role_map.get(role, role.replace("_", " ").title())

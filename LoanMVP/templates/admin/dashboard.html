@@ -228,7 +228,7 @@ Central system management for users, onboarding, invites, lending operations, an
                   <td>{{ user.email or '—' }}</td>
                   <td>
                     <span class="badge badge-info">
-                      {{ (user.role or 'user')|replace('_', ' ')|title }}
+                        {{ get_role_display(user.role) }}
                     </span>
                   </td>
                   <td>{{ user.company.name if user.company else '—' }}</td>
@@ -331,7 +331,7 @@ Central system management for users, onboarding, invites, lending operations, an
                   <td>{{ ((invite.first_name or '') ~ ' ' ~ (invite.last_name or ''))|trim or '—' }}</td>
                   <td>
                     <span class="badge badge-info">
-                      {{ (invite.role or 'user')|replace('_', ' ')|title }}
+                      {{ get_role_display(invite.role) }}
                     </span>
                   </td>
                   <td>

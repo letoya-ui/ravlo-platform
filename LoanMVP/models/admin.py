@@ -22,11 +22,20 @@ class Company(db.Model):
     
     subscription_tier = db.Column(db.String(50), nullable=True)
     max_users = db.Column(db.Integer, nullable=True)
+    
+    is_blocked = db.Column(db.Boolean, default=False, nullable=False)
+    blocked_at = db.Column(db.DateTime, nullable=True)
+    blocked_reason = db.Column(db.String(100), nullable=True)
+    blocked_note = db.Column(db.Text, nullable=True)
+    blocked_by = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=True)
+
+    billing_status = db.Column(db.String(50), default="active", nullable=True)
+    grace_period_ends_at = db.Column(db.DateTime, nullable=True)
 
     users = db.relationship("User", back_populates="company", lazy=True)
     invites = db.relationship("UserInvite", back_populates="company", lazy=True)
     access_requests = db.relationship("AccessRequest", backref="company", lazy=True)
-
+     
 class AccessRequest(db.Model):
     __tablename__ = "access_requests"
 

@@ -73,7 +73,7 @@
               <td>{{ user.email or "—" }}</td>
               <td>
                 <span class="badge badge-info">
-                  {{ (user.role or "unknown")|replace('_', ' ')|title }}
+                  { get_role_display(user.role) }}
                 </span>
               </td>
             </tr>
@@ -114,7 +114,7 @@
               <td>{{ invite.email }}</td>
               <td>
                 <span class="badge badge-info">
-                  {{ (invite.role or "unknown")|replace('_', ' ')|title }}
+                  {{ get_role_display(invite.role) }}
                 </span>
               </td>
               <td>
