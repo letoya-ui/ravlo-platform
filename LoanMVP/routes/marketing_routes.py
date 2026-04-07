@@ -357,6 +357,7 @@ def lending_os():
 
 
 @marketing_bp.route("/apply", methods=["GET", "POST"])
+@csrf.exempt
 def apply():
     if request.method == "POST":
         company_name = (request.form.get("company_name") or "").strip()
