@@ -75,24 +75,28 @@
               <div class="actions">
                 {% if app.status not in ["approved", "declined", "contacted"] %}
                 <form method="POST" action="{{ url_for('admin.contact_license_application', app_id=app.id) }}">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                   <button type="submit" class="ravlo-btn ghost sm">Mark Contacted</button>
                 </form>
                 {% endif %}
 
                 {% if app.status != "approved" %}
                 <form method="POST" action="{{ url_for('admin.approve_license_application', app_id=app.id) }}">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                   <button type="submit" class="ravlo-btn primary sm">Approve</button>
                 </form>
                 {% endif %}
 
                 {% if app.status != "declined" %}
                 <form method="POST" action="{{ url_for('admin.decline_license_application', app_id=app.id) }}">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                   <button type="submit" class="ravlo-btn ghost sm">Decline</button>
                 </form>
                 {% endif %}
 
                 {% if app.status == "approved" %}
                 <form method="POST" action="{{ url_for('admin.resend_license_application_invite', app_id=app.id) }}">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                   <button type="submit" class="ravlo-btn secondary sm">Resend Invite</button>
                 </form>
                 {% endif %}

@@ -1000,7 +1000,6 @@ def licensing_applications():
 
 
 @admin_bp.route("/licensing/applications/<int:app_id>/contact", methods=["POST"])
-@csrf.exempt
 @login_required
 @role_required("platform_admin", "master_admin")
 def contact_license_application(app_id):
@@ -1022,7 +1021,6 @@ def contact_license_application(app_id):
 
 
 @admin_bp.route("/licensing/applications/<int:app_id>/approve", methods=["POST"])
-@csrf.exempt
 @login_required
 @role_required("platform_admin", "master_admin")
 def approve_license_application(app_id):
@@ -1118,7 +1116,6 @@ def approve_license_application(app_id):
 
 
 @admin_bp.route("/licensing/applications/<int:app_id>/decline", methods=["POST"])
-@csrf.exempt
 @login_required
 @role_required("platform_admin", "master_admin")
 def decline_license_application(app_id):
@@ -1136,7 +1133,6 @@ def decline_license_application(app_id):
 
 
 @admin_bp.route("/licensing/applications/<int:app_id>/resend-invite", methods=["POST"])
-@csrf.exempt
 @login_required
 @role_required("platform_admin", "master_admin")
 def resend_license_application_invite(app_id):

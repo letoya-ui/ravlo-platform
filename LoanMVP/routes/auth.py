@@ -13,6 +13,7 @@ from flask import (
 )
 from flask_login import current_user, login_required, login_user, logout_user
 from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
+from werkzeug.security import generate_password_hash
 
 from LoanMVP.app import login_manager, mail
 from LoanMVP.extensions import csrf, db
@@ -20,7 +21,7 @@ from LoanMVP.forms import RegisterForm, ResetPasswordForm, ResetPasswordRequestF
 from LoanMVP.services.subscriptions import sync_features_with_subscription
 from LoanMVP.utils.blocking_helpers import is_user_blocked, get_user_block_message
 from LoanMVP.models.user_model import User
-from LoanMVP.models.admin import UserInvite
+from LoanMVP.models.admin import AccessRequest, UserInvite
 from LoanMVP.models.investor_models import InvestorProfile
 from flask_mail import Message as MailMessage
 
@@ -110,7 +111,6 @@ def _full_name_from_user(user: User) -> str:
 # LOGIN
 # ============================================================
 @auth_bp.route("/login", methods=["GET", "POST"])
-@csrf.exempt
 def login():
     form = LoginForm()
 
@@ -141,7 +141,6 @@ def login():
 
 
 @auth_bp.route("/register/invite/<token>", methods=["GET", "POST"])
-@csrf.exempt
 def register_from_invite(token):
     invite = UserInvite.query.filter_by(token=token).first_or_404()
 
@@ -162,11 +161,13 @@ def register_from_invite(token):
 
     if request.method == "POST":
         full_name = (request.form.get("full_name") or "").strip()
+        first_name = (request.form.get("first_name") or "").strip()
+        last_name = (request.form.get("last_name") or "").strip()
         password = request.form.get("password") or ""
         confirm_password = request.form.get("confirm_password") or ""
 
-        if not full_name:
-            flash("Please enter your full name.", "danger")
+        if not full_name and not first_name:
+            flash("Please enter your name.", "danger")
             return render_template("auth/register_from_invite.html", invite=invite)
 
         if not password or len(password) < 8:
@@ -177,9 +178,11 @@ def register_from_invite(token):
             flash("Passwords do not match.", "danger")
             return render_template("auth/register_from_invite.html", invite=invite)
 
-        parts = full_name.split(None, 1)
-        first_name = parts[0] if parts else ""
-        last_name = parts[1] if len(parts) > 1 else ""
+        if full_name and not first_name:
+            parts = full_name.split(None, 1)
+            first_name = parts[0] if parts else ""
+            last_name = parts[1] if len(parts) > 1 else ""
+        full_name = full_name or f"{first_name} {last_name}".strip()
 
         user = User(
             first_name=first_name or None,
@@ -224,7 +227,6 @@ def logout():
 # REGISTER
 # ============================================================
 @auth_bp.route("/register", methods=["GET", "POST"])
-@csrf.exempt
 def register():
     form = RegisterForm()
 
@@ -292,7 +294,6 @@ def post_login_redirect():
 # ============================================================
 
 @auth_bp.route("/register_borrower", methods=["GET", "POST"])
-@csrf.exempt
 def register_borrower():
     if request.method == "POST":
         full_name = (request.form.get("full_name") or "").strip()
@@ -351,7 +352,6 @@ def register_borrower():
 
 @auth_bp.route("/forgot-password", methods=["GET", "POST"])
 @auth_bp.route("/reset_password_request", methods=["GET", "POST"])
-@csrf.exempt
 def forgot_password():
     form = ResetPasswordRequestForm()
 
@@ -391,7 +391,7 @@ def forgot_password():
         print("FORGOT PASSWORD FORM ERRORS:", form.errors)
 
     return render_template(
-        "auth/forgot_password.html",
+        "auth/forgot_password_form.html",
         form=form,
         title="Forgot Password | Ravlo",
     )
@@ -460,7 +460,6 @@ def request_access():
 
 
 @auth_bp.route("/reset_password/<token>", methods=["GET", "POST"])
-@csrf.exempt
 def reset_password(token):
     form = ResetPasswordForm()
     email = verify_reset_token(token, expiration_seconds=3600)
