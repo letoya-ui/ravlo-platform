@@ -21,7 +21,7 @@ from LoanMVP.forms import RegisterForm, ResetPasswordForm, ResetPasswordRequestF
 from LoanMVP.services.subscriptions import sync_features_with_subscription
 from LoanMVP.utils.blocking_helpers import is_user_blocked, get_user_block_message
 from LoanMVP.models.user_model import User
-from LoanMVP.models.admin import AccessRequest, UserInvite
+from LoanMVP.models.admin import AccessRequest, UserInvite, LicenseApplication
 from LoanMVP.models.investor_models import InvestorProfile
 from flask_mail import Message as MailMessage
 
