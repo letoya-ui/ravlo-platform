@@ -515,6 +515,14 @@ def accept_invite(token):
         flash("This invite has already been used.", "info")
         return redirect(url_for("auth.login"))
 
+    app_row = LicenseApplication.query.filter_by(email=invite.email).first()
+        email=invite.email,
+        company_name=invite.company.name
+    ).first()
+
+    if app_row:
+        app_row.status = "onboarded"   # or "active"
+
     if invite.is_expired():
         flash("This invite has expired.", "warning")
         return redirect(url_for("auth.login"))
