@@ -335,6 +335,39 @@
         </div>
       </section>
 
+      <section class="ravlo-card side-card" id="rehabScopeCard">
+        <div class="card-head">
+          <div>
+            <div class="card-kicker">ENGINE SCOPE</div>
+            <h3>Rehab Snapshot</h3>
+          </div>
+        </div>
+
+        <div class="tracker-list">
+          <div class="tracker-item">
+            <span class="tracker-label">Cost Low</span>
+            <strong id="scopeCostLow">{{ rehab_scope.get("cost_low") if rehab_scope else "—" }}</strong>
+          </div>
+          <div class="tracker-item">
+            <span class="tracker-label">Cost High</span>
+            <strong id="scopeCostHigh">{{ rehab_scope.get("cost_high") if rehab_scope else "—" }}</strong>
+          </div>
+          <div class="tracker-item">
+            <span class="tracker-label">ARV</span>
+            <strong id="scopeArv">{{ rehab_scope.get("arv") if rehab_scope else "—" }}</strong>
+          </div>
+          <div class="tracker-item">
+            <span class="tracker-label">Rooms</span>
+            <strong id="scopeRooms">{{ rehab_scope.get("rooms")|length if rehab_scope and rehab_scope.get("rooms") else 0 }}</strong>
+          </div>
+        </div>
+
+        <div class="info-box" style="margin-top:12px;">
+          <strong>Plan Summary</strong>
+          <p id="scopePlan">{{ rehab_scope.get("plan") if rehab_scope else "Generate a concept with a before photo to pull the current rehab scope snapshot." }}</p>
+        </div>
+      </section>
+
       <section class="ravlo-card side-card">
         <div class="card-head">
           <div>
@@ -1053,6 +1086,14 @@
     let conceptState = [];
     let activeConceptIndex = 0;
 
+    const rehabScopeEls = {
+      costLow: document.getElementById("scopeCostLow"),
+      costHigh: document.getElementById("scopeCostHigh"),
+      arv: document.getElementById("scopeArv"),
+      rooms: document.getElementById("scopeRooms"),
+      plan: document.getElementById("scopePlan")
+    };
+
     const afterEls = {
       media: document.getElementById("afterMedia"),
       badge: document.getElementById("afterBadge"),
@@ -1070,6 +1111,24 @@
         .replaceAll(">", "&gt;")
         .replaceAll('"', "&quot;")
         .replaceAll("'", "&#039;");
+    }
+
+    function asMoney(value) {
+      const number = Number(value);
+      if (!Number.isFinite(number)) return "—";
+      return number.toLocaleString(undefined, {
+        style: "currency",
+        currency: "USD",
+        maximumFractionDigits: 0
+      });
+    }
+
+    function renderRehabScope(scope) {
+      if (rehabScopeEls.costLow) rehabScopeEls.costLow.textContent = scope?.cost_low != null ? asMoney(scope.cost_low) : "—";
+      if (rehabScopeEls.costHigh) rehabScopeEls.costHigh.textContent = scope?.cost_high != null ? asMoney(scope.cost_high) : "—";
+      if (rehabScopeEls.arv) rehabScopeEls.arv.textContent = scope?.arv != null ? asMoney(scope.arv) : "—";
+      if (rehabScopeEls.rooms) rehabScopeEls.rooms.textContent = Array.isArray(scope?.rooms) ? scope.rooms.length : 0;
+      if (rehabScopeEls.plan) rehabScopeEls.plan.textContent = scope?.plan || "Generate a concept with a before photo to pull the current rehab scope snapshot.";
     }
 
     function setPreview(fileInput, previewEl, emptyText) {
@@ -1323,6 +1382,8 @@
           document.getElementById("trackerConcepts").textContent = conceptState.length;
         }
 
+        renderRehabScope(data.rehab_scope || null);
+
         setStepState(2, "complete");
         setStepState(3, "complete");
         setStepState(4, "complete");
@@ -1431,6 +1492,8 @@
     setStepState(3, "complete");
     setStepState(4, "complete");
     {% endif %}
+
+    renderRehabScope({{ rehab_scope|tojson }});
 
     if (window.lucide) {
       lucide.createIcons();

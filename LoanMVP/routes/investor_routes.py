@@ -4580,6 +4580,7 @@ def deal_rehab(deal_id=None):
 
     results = (deal.results_json or {}) if deal else {}
     rehab_project = results.get("rehab_project", {}) or {}
+    rehab_scope = results.get("rehab_scope") or (getattr(deal, "rehab_scope_json", None) if deal else None) or {}
 
     rehab_before = rehab_project.get("before", {}) or {}
     rehab_latest = rehab_project.get("latest", {}) or {}
@@ -4589,6 +4590,7 @@ def deal_rehab(deal_id=None):
         "investor/deal_rehab_studio.html",
         deal=deal,
         rehab_project=rehab_project,
+        rehab_scope=rehab_scope,
         rehab_before=rehab_before,
         rehab_latest=rehab_latest,
         rehab_concepts=rehab_concepts,
@@ -7303,6 +7305,7 @@ def renovation_upload():
 @role_required("investor")
 def deal_rehab_generate():
     deal = None
+    rehab_scope_result = {}
 
     try:
         data = request.form.to_dict() or {}
@@ -7424,6 +7427,18 @@ def deal_rehab_generate():
             "image_url": before_uploaded_url,
         }
 
+        scope_image_url = before_uploaded_url or image_url
+        if scope_image_url and SCOPE_ENGINE_URL:
+            try:
+                rehab_scope_result = _post_scope_engine_json(
+                    "/v1/rehab_scope",
+                    {"image_url": scope_image_url},
+                    timeout=60,
+                ) or {}
+            except Exception:
+                current_app.logger.exception("Rehab Studio scope analysis failed")
+                rehab_scope_result = {}
+
         if save_to_deal and deal is not None:
             results = _deal_results(deal)
             rehab_project = results.get("rehab_project", {}) or {}
@@ -7443,6 +7458,15 @@ def deal_rehab_generate():
             rehab_project["latest"] = concept_entry
             rehab_project["concepts"] = concepts
 
+            if rehab_scope_result:
+                results["rehab_scope"] = rehab_scope_result
+                if hasattr(deal, "rehab_scope_json"):
+                    deal.rehab_scope_json = rehab_scope_result
+                if hasattr(deal, "rehab_cost") and rehab_scope_result.get("cost_high") is not None:
+                    deal.rehab_cost = rehab_scope_result.get("cost_high")
+                if hasattr(deal, "arv") and rehab_scope_result.get("arv") and not getattr(deal, "arv", None):
+                    deal.arv = rehab_scope_result.get("arv")
+
             results["rehab_project"] = rehab_project
             _set_deal_results(deal, results)
 
@@ -7455,6 +7479,7 @@ def deal_rehab_generate():
             "status": "ok",
             "before_result": before_result,
             "concept_result": concept_entry,
+            "rehab_scope": rehab_scope_result,
             "deal_id": deal.id if deal else None,
             "saved_to_deal": bool(save_to_deal and deal is not None),
         })
@@ -7820,14 +7845,7 @@ def ai_rehab_scope():
         if not SCOPE_ENGINE_URL:
             return jsonify({"status": "error", "message": "Scope engine is not configured."}), 500
 
-        res = requests.post(
-            _scope_engine_url("/v1/rehab_scope"),
-            json={"image_url": image_url},
-            headers=_scope_engine_headers(),
-            timeout=60,
-        )
-        res.raise_for_status()
-        return jsonify(res.json())
+        return jsonify(_post_scope_engine_json("/v1/rehab_scope", {"image_url": image_url}, timeout=60))
 
     except Exception as e:
         current_app.logger.exception("ai_rehab_scope failed")
