@@ -726,7 +726,6 @@ def ai_generator():
 # Loan Applications
 # =========================================================
 @loan_officer_bp.route("/new_application", methods=["GET", "POST"])
-@csrf.exempt
 @role_required("loan_officer")
 def new_application():
     borrowers = BorrowerProfile.query.order_by(BorrowerProfile.full_name.asc()).all()
@@ -790,7 +789,6 @@ def new_application():
 # CREATE NEW LOAN
 # ===============================================================
 @loan_officer_bp.route("/create-loan", methods=["GET", "POST"])
-@csrf.exempt
 @role_required("loan_officer")
 def create_loan():
     borrowers = BorrowerProfile.query.order_by(BorrowerProfile.full_name.asc()).all()
@@ -830,7 +828,6 @@ def create_loan():
 
 
 @loan_officer_bp.route("/quick-1003", methods=["GET", "POST"])
-@csrf.exempt
 @role_required("loan_officer")
 def quick_1003():
     officer = LoanOfficerProfile.query.filter_by(user_id=current_user.id).first()
@@ -905,7 +902,6 @@ def quick_1003():
 # Quote Engine
 # =========================================================
 @loan_officer_bp.route("/quote_engine", methods=["GET", "POST"])
-@csrf.exempt
 @role_required("loan_officer")
 def quote_engine():
     officer = LoanOfficerProfile.query.filter_by(user_id=current_user.id).first()
@@ -999,7 +995,6 @@ def quote_engine():
     )
 
 @loan_officer_bp.route("/quotes/new", methods=["GET", "POST"])
-@csrf.exempt
 @role_required("loan_officer")
 def new_quote():
     borrowers = BorrowerProfile.query.order_by(BorrowerProfile.full_name.asc()).all()
@@ -2395,7 +2390,6 @@ def quotes(borrower_id):
 # NEW LOAN CREATION
 # =========================================================
 @loan_officer_bp.route("/loan/new", methods=["GET", "POST"])
-@csrf.exempt
 @role_required("loan_officer")
 def new_loan():
     borrowers = BorrowerProfile.query.order_by(BorrowerProfile.full_name.asc()).all()
@@ -2521,7 +2515,6 @@ def capital_funds(loan_id):
     )
 
 @loan_officer_bp.route("/upload/<int:borrower_id>", methods=["GET", "POST"])
-@csrf.exempt
 @role_required("loan_officer")
 def upload(borrower_id):
     borrower = BorrowerProfile.query.get_or_404(borrower_id)
@@ -2569,7 +2562,7 @@ def upload(borrower_id):
         return redirect(url_for("loan_officer.upload", borrower_id=borrower_id))
 
     return render_template(
-        "loan_officer/upload.html",
+        "loan_officer/uploads.html",
         borrower=borrower,
         form=form,
         uploads=uploads,
@@ -2820,7 +2813,6 @@ def borrower_search():
     )
 
 @loan_officer_bp.route("/borrower-intake", methods=["GET", "POST"])
-@csrf.exempt
 @role_required("loan_officer")
 def borrower_intake():
     form = BorrowerIntakeForm()
@@ -3519,7 +3511,6 @@ def generate_1003(loan_id):
 
 
 @loan_officer_bp.route("/borrower/<int:borrower_id>/request-docs", methods=["GET", "POST"])
-@csrf.exempt
 @role_required("loan_officer")
 def request_documents(borrower_id):
     borrower = BorrowerProfile.query.get_or_404(borrower_id)

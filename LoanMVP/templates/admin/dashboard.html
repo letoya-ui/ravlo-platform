@@ -7,11 +7,7 @@ Central system management for users, onboarding, invites, lending operations, an
 {% endblock %}
 
 {% block topbar_actions %}
-  {% if company %}
-    {{ url_for('admin.invite_team_member', company_id=company.id) }}
-  {% else %}
-    #
-  {% endif %}
+  <a class="re-btn primary sm" href="{% if company %}{{ url_for('admin.invite_team_member', company_id=company.id) }}{% else %}#{% endif %}">
     <i class="lucide lucide-user-plus"></i>
     Send Register Request
   </a>

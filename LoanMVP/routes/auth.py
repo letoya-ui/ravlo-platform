@@ -292,6 +292,9 @@ def post_login_redirect():
     if current_user.invite_accepted and not current_user.onboarding_complete:
         return redirect(url_for("auth.complete_profile"))
 
+    if role == "admin" and current_user.company_id:
+        return redirect(url_for("admin.company_dashboard", company_id=current_user.company_id))
+
     if role in ["admin", "platform_admin", "master_admin", "lending_admin"]:
         return redirect(url_for("admin.dashboard"))
 

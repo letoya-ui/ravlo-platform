@@ -1,0 +1,162 @@
+{% extends "layouts/ravlo_employee_base.html" %}
+
+{% block title %}{{ company.name }} • Admin{% endblock %}
+{% block page_title %}{{ company.name }}{% endblock %}
+{% block page_subline %}Company admin workspace for your team, invites, and lending activity{% endblock %}
+
+{% block topbar_actions %}
+  <a class="re-btn primary sm" href="{{ url_for('admin.invite_team_member', company_id=company.id) }}">
+    <i class="lucide lucide-user-plus"></i>
+    Invite Team Member
+  </a>
+  <a class="re-btn ghost sm" href="{{ url_for('admin.company_team', company_id=company.id) }}">
+    <i class="lucide lucide-users"></i>
+    View Team
+  </a>
+{% endblock %}
+
+{% block content %}
+<div class="re-grid">
+
+  <section class="re-card pad">
+    <div class="section-head">
+      <div>
+        <div class="eyebrow">COMPANY WORKSPACE</div>
+        <h3 style="margin:.35rem 0 .2rem;">Blank slate, ready to build</h3>
+        <div class="re-card-subtitle">
+          {{ company.name }} now has its own admin workspace. Add team members, send invites, and start opening files from here.
+        </div>
+      </div>
+    </div>
+
+    <div class="re-grid-3 mt-16">
+      <div class="re-stat">
+        <div class="re-stat-label">Team Members</div>
+        <div class="re-stat-value">{{ stats.team_members or 0 }}</div>
+        <div class="re-stat-meta">Users assigned to this company</div>
+      </div>
+
+      <div class="re-stat">
+        <div class="re-stat-label">Pending Invites</div>
+        <div class="re-stat-value">{{ stats.pending_invites or 0 }}</div>
+        <div class="re-stat-meta">Invitations waiting to be accepted</div>
+      </div>
+
+      <div class="re-stat">
+        <div class="re-stat-label">Loan Files</div>
+        <div class="re-stat-value">{{ stats.loans or 0 }}</div>
+        <div class="re-stat-meta">Applications tied to this workspace</div>
+      </div>
+
+      <div class="re-stat">
+        <div class="re-stat-label">Borrowers</div>
+        <div class="re-stat-value">{{ stats.borrowers or 0 }}</div>
+        <div class="re-stat-meta">Profiles in pipeline</div>
+      </div>
+
+      <div class="re-stat">
+        <div class="re-stat-label">Documents</div>
+        <div class="re-stat-value">{{ stats.documents or 0 }}</div>
+        <div class="re-stat-meta">Uploaded file count</div>
+      </div>
+
+      <div class="re-stat">
+        <div class="re-stat-label">Subscription</div>
+        <div class="re-stat-value" style="font-size:1.05rem;">{{ company.subscription_tier or "Team" }}</div>
+        <div class="re-stat-meta">Current workspace plan</div>
+      </div>
+    </div>
+  </section>
+
+  {% if not team_members and not invites and not loans and not borrowers %}
+    <section class="re-card pad">
+      <div class="section-head">
+        <div>
+          <div class="eyebrow">GET STARTED</div>
+          <h3 style="margin:.35rem 0 .2rem;">Your workspace is empty on purpose</h3>
+          <div class="re-card-subtitle">New company admins start with a clean dashboard instead of platform-wide data.</div>
+        </div>
+      </div>
+
+      <div class="re-empty mt-16" style="text-align:left;">
+        <p style="margin:0 0 12px;">Recommended first steps:</p>
+        <p style="margin:0 0 8px;">1. Invite the rest of your Caughman Mason Loan Service team.</p>
+        <p style="margin:0 0 8px;">2. Create your first borrower and loan workflow.</p>
+        <p style="margin:0;">3. Use this dashboard as the company-specific command center going forward.</p>
+      </div>
+    </section>
+  {% endif %}
+
+  <section class="re-card pad">
+    <div class="section-head">
+      <div>
+        <div class="eyebrow">TEAM</div>
+        <h3 style="margin:.35rem 0 .2rem;">Recent Team Members</h3>
+        <div class="re-card-subtitle">People currently assigned to {{ company.name }}.</div>
+      </div>
+      <a class="re-btn ghost sm" href="{{ url_for('admin.company_team', company_id=company.id) }}">Manage Team</a>
+    </div>
+
+    {% if team_members %}
+      <div class="re-table-wrap mt-16">
+        <table class="re-table">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Email</th>
+              <th>Role</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for member in team_members %}
+            <tr>
+              <td>{{ member.full_name or member.username or member.email or "—" }}</td>
+              <td>{{ member.email or "—" }}</td>
+              <td><span class="badge badge-info">{{ get_role_display(member.role) }}</span></td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="re-empty mt-16">No team members have been added yet.</div>
+    {% endif %}
+  </section>
+
+  <section class="re-card pad">
+    <div class="section-head">
+      <div>
+        <div class="eyebrow">INVITES</div>
+        <h3 style="margin:.35rem 0 .2rem;">Recent Invites</h3>
+        <div class="re-card-subtitle">Outstanding or accepted invitations for this company.</div>
+      </div>
+    </div>
+
+    {% if invites %}
+      <div class="re-table-wrap mt-16">
+        <table class="re-table">
+          <thead>
+            <tr>
+              <th>Email</th>
+              <th>Role</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for invite in invites %}
+            <tr>
+              <td>{{ invite.email }}</td>
+              <td><span class="badge badge-info">{{ get_role_display(invite.role) }}</span></td>
+              <td><span class="badge badge-neutral">{{ (invite.status or "pending")|replace("_", " ")|title }}</span></td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="re-empty mt-16">No invites have been sent yet.</div>
+    {% endif %}
+  </section>
+
+</div>
+{% endblock %}

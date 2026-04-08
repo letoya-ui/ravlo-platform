@@ -32,6 +32,7 @@ import time
 
 admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
 assistant = AIAssistant()
+FULL_ADMIN_ROLES = {"platform_admin", "master_admin", "lending_admin"}
 
 # =========================================================
 # 🔐 ADMIN ONLY CHECK
@@ -40,11 +41,37 @@ def admin_required(func):
     from functools import wraps
     @wraps(func)
     def wrapper(*args, **kwargs):
-        if not current_user.is_authenticated or current_user.role != "admin":
+        user_role = (getattr(current_user, "role", "") or "").strip().lower()
+        if not current_user.is_authenticated or user_role not in {"admin", *FULL_ADMIN_ROLES}:
             flash("⚠️ Unauthorized access.", "danger")
             return redirect(url_for("auth.login"))
         return func(*args, **kwargs)
     return wrapper
+
+
+def _is_company_admin(user) -> bool:
+    return ((getattr(user, "role", "") or "").strip().lower() == "admin")
+
+
+def _is_full_admin(user) -> bool:
+    return ((getattr(user, "role", "") or "").strip().lower() in FULL_ADMIN_ROLES)
+
+
+def _admin_home_endpoint():
+    if _is_company_admin(current_user) and getattr(current_user, "company_id", None):
+        return url_for("admin.company_dashboard", company_id=current_user.company_id)
+    return url_for("admin.dashboard")
+
+
+def _ensure_company_access(company):
+    if _is_full_admin(current_user):
+        return None
+
+    if _is_company_admin(current_user) and getattr(current_user, "company_id", None) == company.id:
+        return None
+
+    flash("You do not have access to that company workspace.", "warning")
+    return redirect(_admin_home_endpoint())
 
 
 def _plan_defaults(plan_interest: str):
@@ -239,6 +266,9 @@ If you were not expecting this email, you can ignore it.
 @login_required
 @role_required("admin_group")
 def dashboard():
+    if _is_company_admin(current_user) and current_user.company_id:
+        return redirect(url_for("admin.company_dashboard", company_id=current_user.company_id))
+
     company = None
 
     if current_user.role == "master_admin":
@@ -378,6 +408,9 @@ def dashboard():
 @login_required
 @role_required("admin")
 def companies():
+    if _is_company_admin(current_user) and current_user.company_id:
+        return redirect(url_for("admin.company_dashboard", company_id=current_user.company_id))
+
     companies = Company.query.order_by(Company.created_at.desc()).all()
 
     return render_template(
@@ -585,6 +618,10 @@ def reject_request(request_id):
 @admin_required
 def company_team(company_id):
     company = Company.query.get_or_404(company_id)
+    access_redirect = _ensure_company_access(company)
+    if access_redirect:
+        return access_redirect
+
     team_members = User.query.filter_by(company_id=company.id).order_by(User.role, User.first_name).all()
     invites = UserInvite.query.filter_by(company_id=company.id).order_by(UserInvite.created_at.desc()).all()
 
@@ -602,6 +639,9 @@ def company_team(company_id):
 @admin_required
 def invite_team_member(company_id):
     company = Company.query.get_or_404(company_id)
+    access_redirect = _ensure_company_access(company)
+    if access_redirect:
+        return access_redirect
 
     if request.method == "POST":
         first_name = (request.form.get("first_name") or "").strip()
@@ -1060,6 +1100,9 @@ def ai_refresh(target):
 @role_required("admin", "master_admin", "lending_admin")
 def company_dashboard(company_id):
     company = Company.query.get_or_404(company_id)
+    access_redirect = _ensure_company_access(company)
+    if access_redirect:
+        return access_redirect
 
     team_members = User.query.filter_by(company_id=company.id).all()
     invites = UserInvite.query.filter_by(company_id=company.id).all()
