@@ -107,6 +107,20 @@ def _full_name_from_user(user: User) -> str:
     return getattr(user, "full_name", None) or getattr(user, "username", None) or "there"
 
 
+def _parse_name_parts(full_name: str, first_name: str, last_name: str):
+    full_name = (full_name or "").strip()
+    first_name = (first_name or "").strip()
+    last_name = (last_name or "").strip()
+
+    if full_name and not first_name:
+        parts = full_name.split(None, 1)
+        first_name = parts[0] if parts else ""
+        last_name = parts[1] if len(parts) > 1 else last_name
+
+    full_name = full_name or f"{first_name} {last_name}".strip()
+    return first_name, last_name, full_name
+
+
 # ============================================================
 # LOGIN
 # ============================================================
@@ -178,11 +192,7 @@ def register_from_invite(token):
             flash("Passwords do not match.", "danger")
             return render_template("auth/register_from_invite.html", invite=invite)
 
-        if full_name and not first_name:
-            parts = full_name.split(None, 1)
-            first_name = parts[0] if parts else ""
-            last_name = parts[1] if len(parts) > 1 else ""
-        full_name = full_name or f"{first_name} {last_name}".strip()
+        first_name, last_name, full_name = _parse_name_parts(full_name, first_name, last_name)
 
         user = User(
             first_name=first_name or None,
@@ -194,6 +204,7 @@ def register_from_invite(token):
             password_hash=generate_password_hash(password),
             is_active=True,
             invite_accepted=True,
+            onboarding_complete=False,
         )
 
         db.session.add(user)
@@ -203,8 +214,9 @@ def register_from_invite(token):
 
         db.session.commit()
 
-        flash("Registration complete. You can now log in.", "success")
-        return redirect(url_for("auth.login"))
+        login_user(user)
+        flash("Invite accepted. Complete your profile to continue.", "success")
+        return redirect(url_for("auth.complete_profile"))
 
     return render_template("auth/register_from_invite.html", invite=invite)
 
@@ -275,8 +287,10 @@ def register():
 @auth_bp.route("/post-login-redirect")
 @login_required
 def post_login_redirect():
-    # 🔥 IGNORE next if user is admin-type
     role = (current_user.role or "").strip().lower()
+
+    if current_user.invite_accepted and not current_user.onboarding_complete:
+        return redirect(url_for("auth.complete_profile"))
 
     if role in ["admin", "platform_admin", "master_admin", "lending_admin"]:
         return redirect(url_for("admin.dashboard"))
@@ -546,14 +560,18 @@ def accept_invite(token):
 
             user.first_name = first_name or user.first_name
             user.last_name = last_name or user.last_name
+            if not user.username:
+                user.username = f"{first_name} {last_name}".strip() or user.email
             user.company_id = invite.company_id
             user.role = invite.role
             user.invite_accepted = True
             user.is_active = True
+            user.onboarding_complete = bool(user.first_name and user.last_name)
         else:
             user = User(
                 first_name=first_name,
                 last_name=last_name,
+                username=f"{first_name} {last_name}".strip() or invite.email,
                 email=invite.email,
                 password_hash=generate_password_hash(password),
                 role=invite.role,
