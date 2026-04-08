@@ -184,6 +184,21 @@ def safe_json_loads(data, default=None):
     except Exception:
         return default
 
+
+def _normalize_percentage(value):
+    if value in (None, "", "None"):
+        return None
+
+    try:
+        number = float(str(value).replace("%", "").replace(",", "").strip())
+    except (TypeError, ValueError):
+        return None
+
+    if number > 1:
+        number = number / 100.0
+
+    return number
+
 def search_external_partners_google(category=None, city=None, state=None):
     import os
     import requests
@@ -4755,6 +4770,7 @@ def build_studio(deal_id=None):
     # -----------------------------
     results = deal.results_json or {} if deal else {}
     build_project = results.get("build_project", {}) or {}
+    build_analysis = results.get("build_analysis", {}) or {}
 
     # -----------------------------
     # Optional fallback from project
@@ -4813,6 +4829,7 @@ def build_studio(deal_id=None):
         "investor/build_studio.html",
         deal=deal,
         project=project,
+        build_analysis=build_analysis,
         build_project=build_project,
         blueprint_result=blueprint_result,
         exterior_result=exterior_result,
