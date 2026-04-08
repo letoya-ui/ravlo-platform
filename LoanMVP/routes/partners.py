@@ -22,14 +22,79 @@ from LoanMVP.models.partner_models import (
 partners_bp = Blueprint("partners", __name__, url_prefix="/partners")
 
 
+def _partner_testing_enabled() -> bool:
+    return bool(
+        current_app.config.get("FREE_PARTNER_MODE", False)
+        or current_app.config.get("BYPASS_PARTNER_SUBSCRIPTION", False)
+    )
+
+
+def _partner_tier_features(partner) -> set[str]:
+    tier = ((getattr(partner, "subscription_tier", "") or "").strip().lower())
+
+    features_by_tier = {
+        "free": {"crm_enabled"},
+        "featured": {
+            "crm_enabled",
+            "deal_visibility_enabled",
+            "priority_placement_enabled",
+            "smart_notifications_enabled",
+            "portfolio_showcase_enabled",
+        },
+        "premium": {
+            "crm_enabled",
+            "deal_visibility_enabled",
+            "priority_placement_enabled",
+            "smart_notifications_enabled",
+            "portfolio_showcase_enabled",
+            "proposal_builder_enabled",
+            "instant_quote_enabled",
+            "ai_assist_enabled",
+        },
+        "enterprise": {
+            "crm_enabled",
+            "deal_visibility_enabled",
+            "priority_placement_enabled",
+            "smart_notifications_enabled",
+            "portfolio_showcase_enabled",
+            "proposal_builder_enabled",
+            "instant_quote_enabled",
+            "ai_assist_enabled",
+        },
+    }
+
+    return features_by_tier.get(tier, set())
+
+
 def partner_feature_enabled(partner, feature_attr: str, default: bool = False) -> bool:
-    if current_app.config.get("FREE_PARTNER_MODE", False):
+    if _partner_testing_enabled():
         return bool(partner)
 
     if not partner:
         return False
 
-    return getattr(partner, feature_attr, default)
+    if getattr(partner, feature_attr, default):
+        return True
+
+    return feature_attr in _partner_tier_features(partner)
+
+
+def partner_effective_feature_access(partner) -> dict[str, bool]:
+    feature_defaults = {
+        "crm_enabled": True,
+        "deal_visibility_enabled": False,
+        "proposal_builder_enabled": False,
+        "instant_quote_enabled": False,
+        "ai_assist_enabled": False,
+        "priority_placement_enabled": False,
+        "smart_notifications_enabled": False,
+        "portfolio_showcase_enabled": False,
+    }
+
+    return {
+        feature_name: partner_feature_enabled(partner, feature_name, default)
+        for feature_name, default in feature_defaults.items()
+    }
 
 
 def partner_has_pro_access(partner) -> bool:
@@ -949,23 +1014,15 @@ def upgrade():
         flash("Partner profile not found. Please register.", "warning")
         return redirect(url_for("partners.register"))
 
-    locked_feature_count = 0
-    feature_flags = [
-        partner_feature_enabled(partner, "crm_enabled", True),
-        partner_feature_enabled(partner, "deal_visibility_enabled", False),
-        partner_feature_enabled(partner, "proposal_builder_enabled", False),
-        partner_feature_enabled(partner, "instant_quote_enabled", False),
-        partner_feature_enabled(partner, "ai_assist_enabled", False),
-        partner_feature_enabled(partner, "priority_placement_enabled", False),
-        partner_feature_enabled(partner, "smart_notifications_enabled", False),
-        partner_feature_enabled(partner, "portfolio_showcase_enabled", False),
-    ]
-    locked_feature_count = sum(1 for item in feature_flags if not item)
+    feature_access = partner_effective_feature_access(partner)
+    locked_feature_count = sum(1 for item in feature_access.values() if not item)
 
     return render_template(
         "partners/upgrade.html",
         partner=partner,
+        feature_access=feature_access,
         locked_feature_count=locked_feature_count,
+        testing_unlocks_enabled=_partner_testing_enabled(),
         portal="partner",
         portal_name="Partner OS",
         portal_home=url_for("partners.dashboard"),
