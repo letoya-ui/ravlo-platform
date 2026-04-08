@@ -1,0 +1,124 @@
+{% extends "layouts/ravlo_employee_base.html" %}
+{% block title %}{{ onboarding_title }}{% endblock %}
+
+{% block page_title %}{{ onboarding_title }}{% endblock %}
+{% block page_subline %}{{ onboarding_subline }}{% endblock %}
+
+{% block topbar_actions %}
+  <a class="re-btn ghost sm" href="{{ url_for(contracts_endpoint) }}">
+    <i class="lucide lucide-folder-lock"></i>
+    Contracts Hub
+  </a>
+  <a class="re-btn ghost sm" href="{{ url_for(dashboard_endpoint) }}">
+    <i class="lucide lucide-layout-dashboard"></i>
+    Dashboard
+  </a>
+{% endblock %}
+
+{% block content %}
+<div class="ops-shell">
+  <section class="ops-hero">
+    <div>
+      <div class="ops-eyebrow">Onboarding Track</div>
+      <h2>{{ role_label }} workflow readiness.</h2>
+      <p>{{ onboarding_subline }}</p>
+    </div>
+    <div class="ops-progress-card">
+      <div class="ops-progress-label">Progress</div>
+      <div class="ops-progress-value">{{ progress_label }}</div>
+      <div class="ops-progress-bar">
+        <span style="width: {{ progress_label }}"></span>
+      </div>
+      <div class="ops-progress-note">Complete this review to unlock full readiness.</div>
+    </div>
+  </section>
+
+  <section class="ops-grid">
+    <article class="ops-card">
+      <div class="ops-card-head">
+        <div class="ops-eyebrow">Checklist</div>
+        <h3>Core Readiness Items</h3>
+      </div>
+      <div class="ops-list">
+        {% for item in checklist_items %}
+        <div class="ops-list-item">
+          <strong>{{ item }}</strong>
+        </div>
+        {% endfor %}
+      </div>
+    </article>
+
+    <article class="ops-card">
+      <div class="ops-card-head">
+        <div class="ops-eyebrow">Workflow</div>
+        <h3>Daily Operating Flow</h3>
+      </div>
+      <div class="ops-steps">
+        {% for step in workflow_steps %}
+        <div class="ops-step">
+          <span class="ops-step-no">{{ step.number }}</span>
+          <div>
+            <strong>{{ step.title }}</strong>
+            <p>{{ step.text }}</p>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </article>
+  </section>
+
+  <section class="ops-card">
+    <div class="ops-card-head">
+      <div class="ops-eyebrow">Final Acknowledgment</div>
+      <h3>Complete Onboarding</h3>
+    </div>
+
+    <form method="POST" action="{{ url_for(complete_endpoint) }}" class="ops-form ops-form-inline">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+      <label class="ops-check">
+        <input type="checkbox" name="acknowledged" value="yes" required>
+        <span>I confirm that I have reviewed the {{ role_label|lower }} workflow, communication standards, and role expectations.</span>
+      </label>
+
+      <label class="ops-check">
+        <input type="checkbox" name="agreement" value="yes" required>
+        <span>I am ready to operate inside Ravlo using these standards.</span>
+      </label>
+
+      <button type="submit" class="re-btn primary">
+        Complete Onboarding
+      </button>
+    </form>
+  </section>
+</div>
+
+<style>
+.ops-shell{display:grid;gap:20px}
+.ops-hero,.ops-card{border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03);border-radius:24px}
+.ops-hero{display:grid;grid-template-columns:1.2fr .8fr;gap:18px;padding:24px;background:radial-gradient(900px 460px at 10% 0%, rgba(250,183,70,.14), transparent 50%), rgba(255,255,255,.03)}
+.ops-hero h2{margin:8px 0 10px;font-size:clamp(1.5rem,2.4vw,2.15rem)}
+.ops-hero p{margin:0;color:var(--rav-muted);line-height:1.7;max-width:760px}
+.ops-eyebrow{font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--rav-muted)}
+.ops-progress-card{padding:18px;border-radius:20px;background:rgba(12,19,26,.7);border:1px solid rgba(255,255,255,.07)}
+.ops-progress-label{font-size:.76rem;text-transform:uppercase;color:var(--rav-muted)}
+.ops-progress-value{margin-top:10px;font-size:1.45rem;font-weight:800}
+.ops-progress-bar{margin-top:12px;height:10px;border-radius:999px;background:rgba(255,255,255,.08);overflow:hidden}
+.ops-progress-bar span{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg, #f5c561, #7ab8ff)}
+.ops-progress-note{margin-top:8px;color:var(--rav-text-soft);font-size:.95rem;line-height:1.5}
+.ops-grid{display:grid;grid-template-columns:1.02fr .98fr;gap:20px}
+.ops-card{padding:22px}
+.ops-card-head h3{margin:4px 0 0}
+.ops-list,.ops-form,.ops-steps{display:grid;gap:12px}
+.ops-list-item,.ops-check,.ops-step{padding:14px 16px;border-radius:16px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.02)}
+.ops-check{display:flex;gap:12px;align-items:flex-start}
+.ops-check input{margin-top:3px}
+.ops-step{display:flex;gap:14px}
+.ops-step-no{display:inline-flex;align-items:center;justify-content:center;min-width:42px;height:42px;border-radius:12px;background:rgba(122,184,255,.16);color:#dcecff;font-weight:800}
+.ops-step p{margin:6px 0 0;color:var(--rav-muted);line-height:1.6}
+.ops-form-inline{max-width:860px}
+@media (max-width: 960px){
+  .ops-hero,.ops-grid{grid-template-columns:1fr}
+}
+</style>
+{% endblock %}

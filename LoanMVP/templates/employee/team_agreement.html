@@ -1,0 +1,98 @@
+{% extends "layouts/ravlo_employee_base.html" %}
+{% block title %}{{ role_label }} Agreement{% endblock %}
+
+{% block page_title %}{{ agreement_label }}{% endblock %}
+{% block page_subline %}
+Review role expectations, operating standards, and accountability before continuing into live workflow.
+{% endblock %}
+
+{% block topbar_actions %}
+  <a class="re-btn ghost sm" href="{{ url_for(contracts_endpoint) }}">
+    <i class="lucide lucide-folder-lock"></i>
+    Contracts Hub
+  </a>
+  <a class="re-btn ghost sm" href="{{ url_for(dashboard_endpoint) }}">
+    <i class="lucide lucide-layout-dashboard"></i>
+    Dashboard
+  </a>
+{% endblock %}
+
+{% block content %}
+<div class="ops-shell">
+  <section class="ops-hero">
+    <div>
+      <div class="ops-eyebrow">Role Agreement</div>
+      <h2>{{ hero_title }}</h2>
+      <p>{{ hero_text }}</p>
+    </div>
+    <div class="ops-status-card">
+      <div class="ops-status-label">Readiness</div>
+      <div class="ops-status-value">
+        {% if current_user.ica_accepted %}Agreement Complete{% else %}Action Required{% endif %}
+      </div>
+      <div class="ops-status-note">Complete this step before NDA and onboarding.</div>
+    </div>
+  </section>
+
+  <section class="ops-grid">
+    <article class="ops-card">
+      <div class="ops-card-head">
+        <div class="ops-eyebrow">Core Terms</div>
+        <h3>What You’re Agreeing To</h3>
+      </div>
+      <div class="ops-list">
+        {% for item in checkpoints %}
+        <div class="ops-list-item">
+          <strong>{{ item }}</strong>
+        </div>
+        {% endfor %}
+      </div>
+    </article>
+
+    <article class="ops-card">
+      <div class="ops-card-head">
+        <div class="ops-eyebrow">Acknowledgment</div>
+        <h3>Accept Agreement</h3>
+      </div>
+
+      <form method="POST" action="{{ url_for(accept_endpoint) }}" class="ops-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        {% for item in acknowledgment_items %}
+        <label class="ops-check">
+          <input type="checkbox" name="{{ item.name }}" required>
+          <span>{{ item.text }}</span>
+        </label>
+        {% endfor %}
+
+        <button type="submit" class="re-btn primary">
+          Accept Agreement
+        </button>
+      </form>
+    </article>
+  </section>
+</div>
+
+<style>
+.ops-shell{display:grid;gap:20px}
+.ops-hero,.ops-card{border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03);border-radius:24px}
+.ops-hero{display:grid;grid-template-columns:1.3fr .7fr;gap:18px;padding:24px;background:radial-gradient(900px 460px at 10% 0%, rgba(113,173,255,.15), transparent 50%), rgba(255,255,255,.03)}
+.ops-hero h2{margin:8px 0 10px;font-size:clamp(1.5rem,2.4vw,2.15rem)}
+.ops-hero p{margin:0;color:var(--rav-muted);line-height:1.7;max-width:760px}
+.ops-eyebrow{font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--rav-muted)}
+.ops-status-card{padding:18px;border-radius:20px;background:rgba(12,19,26,.7);border:1px solid rgba(255,255,255,.07)}
+.ops-status-label{font-size:.76rem;text-transform:uppercase;color:var(--rav-muted)}
+.ops-status-value{margin-top:10px;font-size:1.35rem;font-weight:800}
+.ops-status-note{margin-top:8px;color:var(--rav-text-soft);font-size:.95rem;line-height:1.5}
+.ops-grid{display:grid;grid-template-columns:1.05fr .95fr;gap:20px}
+.ops-card{padding:22px}
+.ops-card-head h3{margin:4px 0 0}
+.ops-list,.ops-form{display:grid;gap:12px}
+.ops-list-item,.ops-check{padding:14px 16px;border-radius:16px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.02)}
+.ops-check{display:flex;gap:12px;align-items:flex-start}
+.ops-check input{margin-top:3px}
+@media (max-width: 960px){
+  .ops-hero,.ops-grid{grid-template-columns:1fr}
+}
+</style>
+{% endblock %}

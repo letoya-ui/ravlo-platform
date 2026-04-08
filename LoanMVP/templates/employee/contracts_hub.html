@@ -1,0 +1,108 @@
+{% extends "layouts/ravlo_employee_base.html" %}
+{% block title %}{{ contracts_title }}{% endblock %}
+
+{% block page_title %}{{ contracts_title }}{% endblock %}
+{% block page_subline %}{{ contracts_subline }}{% endblock %}
+
+{% block topbar_actions %}
+  <a class="re-btn ghost sm" href="{{ url_for(next_step_endpoint) }}">
+    <i class="lucide lucide-arrow-right-circle"></i>
+    Next Step
+  </a>
+  <a class="re-btn ghost sm" href="{{ url_for(dashboard_endpoint) }}">
+    <i class="lucide lucide-layout-dashboard"></i>
+    Dashboard
+  </a>
+{% endblock %}
+
+{% block content %}
+<div class="hub-shell">
+  <section class="hub-grid">
+    <article class="hub-card hub-card-wide">
+      <div class="hub-card-head">
+        <div class="hub-eyebrow">Readiness Stack</div>
+        <h3>Required Materials</h3>
+      </div>
+
+      <div class="hub-packet-list">
+        {% for item in packet_items %}
+        <div class="hub-packet-item">
+          <strong>{{ item.title }}</strong>
+          <p>{{ item.detail }}</p>
+        </div>
+        {% endfor %}
+      </div>
+    </article>
+
+    <article class="hub-card">
+      <div class="hub-card-head">
+        <div class="hub-eyebrow">Progress</div>
+        <h3>Status Board</h3>
+      </div>
+
+      <div class="hub-status-list">
+        <a class="hub-status-row" href="{{ url_for(agreement_endpoint) }}">
+          <span>Operating Agreement</span>
+          <strong>{% if current_user.ica_accepted %}Complete{% else %}Pending{% endif %}</strong>
+        </a>
+        <a class="hub-status-row" href="{{ url_for(nda_endpoint) }}">
+          <span>NDA</span>
+          <strong>{% if current_user.nda_accepted %}Complete{% else %}Pending{% endif %}</strong>
+        </a>
+        <a class="hub-status-row" href="{{ url_for(onboarding_endpoint) }}">
+          <span>Onboarding</span>
+          <strong>{% if current_user.onboarding_complete %}Complete{% else %}Pending{% endif %}</strong>
+        </a>
+      </div>
+    </article>
+  </section>
+
+  <section class="hub-grid">
+    <article class="hub-card">
+      <div class="hub-card-head">
+        <div class="hub-eyebrow">Workflow Standards</div>
+        <h3>Day-One Expectations</h3>
+      </div>
+
+      <div class="hub-standard-list">
+        {% for item in workflow_items %}
+        <div class="hub-standard-item">{{ item }}</div>
+        {% endfor %}
+      </div>
+    </article>
+
+    <article class="hub-card">
+      <div class="hub-card-head">
+        <div class="hub-eyebrow">Actions</div>
+        <h3>Open Required Step</h3>
+      </div>
+
+      <div class="hub-actions">
+        <a class="re-btn primary" href="{{ url_for(next_step_endpoint) }}">Continue Setup</a>
+        <a class="re-btn ghost" href="{{ url_for(agreement_endpoint) }}">Agreement</a>
+        <a class="re-btn ghost" href="{{ url_for(nda_endpoint) }}">NDA</a>
+        <a class="re-btn ghost" href="{{ url_for(onboarding_endpoint) }}">Onboarding</a>
+      </div>
+    </article>
+  </section>
+</div>
+
+<style>
+.hub-shell{display:grid;gap:20px}
+.hub-grid{display:grid;grid-template-columns:1.1fr .9fr;gap:20px}
+.hub-card{padding:22px;border-radius:24px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03)}
+.hub-card-wide{background:radial-gradient(900px 460px at 10% 0%, rgba(123,166,255,.14), transparent 50%), rgba(255,255,255,.03)}
+.hub-card-head h3{margin:4px 0 0}
+.hub-eyebrow{font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--rav-muted)}
+.hub-packet-list,.hub-status-list,.hub-standard-list,.hub-actions{display:grid;gap:12px}
+.hub-packet-item,.hub-status-row,.hub-standard-item{padding:14px 16px;border-radius:16px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.02)}
+.hub-packet-item p{margin:6px 0 0;color:var(--rav-muted);line-height:1.6}
+.hub-status-row{display:flex;justify-content:space-between;gap:14px;text-decoration:none;color:var(--rav-text)}
+.hub-status-row strong{color:#dfeaff}
+.hub-actions{grid-template-columns:repeat(2,minmax(0,1fr))}
+.hub-actions .re-btn{justify-content:center}
+@media (max-width: 960px){
+  .hub-grid,.hub-actions{grid-template-columns:1fr}
+}
+</style>
+{% endblock %}
