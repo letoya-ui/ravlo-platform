@@ -281,10 +281,11 @@ def onboarding():
     return render_template(
         "loan_officer/onboarding.html",
         assigned_role="Loan Officer",
-        onboarding_progress="15%",
+        onboarding_progress="100%",
         resource_count=6,
         required_steps=6,
     )
+
 
 @loan_officer_bp.route("/onboarding/complete", methods=["POST"])
 @role_required("loan_officer")
@@ -296,21 +297,23 @@ def complete_onboarding():
         flash("You must confirm all acknowledgment items before continuing.", "danger")
         return redirect(url_for("loan_officer.onboarding"))
 
-    current_user.onboarding_complete = True
+    current_user.loan_officer_onboarding_complete = True
     db.session.commit()
 
     flash("Onboarding completed. Welcome to your dashboard.", "success")
     return redirect(url_for("loan_officer.dashboard"))
 
+
 @loan_officer_bp.route("/nda", methods=["GET"])
 @role_required("loan_officer")
 def nda():
     if getattr(current_user, "nda_accepted", False):
-        if getattr(current_user, "onboarding_complete", False):
+        if getattr(current_user, "loan_officer_onboarding_complete", False):
             return redirect(url_for("loan_officer.dashboard"))
         return redirect(url_for("loan_officer.onboarding"))
 
     return render_template("loan_officer/nda.html")
+
 
 @loan_officer_bp.route("/nda/accept", methods=["POST"])
 @role_required("loan_officer")
@@ -323,10 +326,17 @@ def accept_nda():
         return redirect(url_for("loan_officer.nda"))
 
     current_user.nda_accepted = True
-    db.session.commit()
 
+    # If NDA is the last required signature, send them onward.
+    if getattr(current_user, "ica_accepted", False):
+        db.session.commit()
+        flash("NDA accepted successfully.", "success")
+        return redirect(url_for("loan_officer.onboarding"))
+
+    db.session.commit()
     flash("NDA accepted successfully.", "success")
     return redirect(url_for("loan_officer.onboarding"))
+
 
 @loan_officer_bp.route("/agreement", methods=["GET"])
 @role_required("loan_officer")
@@ -334,11 +344,12 @@ def agreement():
     if getattr(current_user, "ica_accepted", False):
         if not getattr(current_user, "nda_accepted", False):
             return redirect(url_for("loan_officer.nda"))
-        if getattr(current_user, "onboarding_complete", False):
+        if getattr(current_user, "loan_officer_onboarding_complete", False):
             return redirect(url_for("loan_officer.dashboard"))
         return redirect(url_for("loan_officer.onboarding"))
 
     return render_template("loan_officer/agreement.html")
+
 
 @loan_officer_bp.route("/agreement/accept", methods=["POST"])
 @role_required("loan_officer")
