@@ -12,10 +12,28 @@ REALTOR_SEARCH_URL = os.getenv(
     "REALTOR_RAPIDAPI_SEARCH_URL",
     f"https://{RAPIDAPI_HOST}/for-sale",
 )
+REALTOR_PHOTOS_URL = os.getenv(
+    "REALTOR_RAPIDAPI_PHOTOS_URL",
+    f"https://{RAPIDAPI_HOST}/propertyPhotos",
+)
+REALTOR_ESTIMATES_URL = os.getenv(
+    "REALTOR_RAPIDAPI_ESTIMATES_URL",
+    f"https://{RAPIDAPI_HOST}/estimates",
+)
 
 
 class RealtorProviderError(Exception):
     pass
+
+
+def _headers(include_json: bool = False) -> Dict[str, str]:
+    headers = {
+        "X-RapidAPI-Key": RAPIDAPI_KEY or "",
+        "X-RapidAPI-Host": RAPIDAPI_HOST,
+    }
+    if include_json:
+        headers["content-type"] = "application/json"
+    return headers
 
 
 def _safe_list(val):
@@ -188,13 +206,8 @@ def search_realtor_for_sale(
         "expand_search_radius": expand_search_radius,
     }
 
-    headers = {
-        "X-RapidAPI-Key": RAPIDAPI_KEY,
-        "X-RapidAPI-Host": RAPIDAPI_HOST,
-    }
-
     try:
-        resp = requests.get(REALTOR_SEARCH_URL, headers=headers, params=params, timeout=20)
+        resp = requests.get(REALTOR_SEARCH_URL, headers=_headers(), params=params, timeout=20)
         if not resp.ok:
             print("Realtor Search error:", resp.text[:300])
             return []
@@ -238,13 +251,7 @@ def fetch_realtor_data(address: str, city: str, state: str) -> Optional[Dict[str
             "state_code": state,
         }
 
-        headers = {
-            "content-type": "application/json",
-            "X-RapidAPI-Key": RAPIDAPI_KEY,
-            "X-RapidAPI-Host": RAPIDAPI_HOST,
-        }
-
-        resp = requests.post(REALTOR_DETAIL_URL, json=payload, headers=headers, timeout=15)
+        resp = requests.post(REALTOR_DETAIL_URL, json=payload, headers=_headers(include_json=True), timeout=15)
 
         if not resp.ok:
             print("Realtor Provider error:", resp.text[:300])
@@ -302,3 +309,59 @@ def fetch_realtor_data(address: str, city: str, state: str) -> Optional[Dict[str
     except Exception as e:
         print("Realtor Provider Exception:", e)
         return None
+
+
+def fetch_realtor_photos(property_id: str | int | None) -> List[str]:
+    if not RAPIDAPI_KEY or not property_id:
+        return []
+
+    try:
+        resp = requests.get(
+            REALTOR_PHOTOS_URL,
+            headers=_headers(),
+            params={"id": str(property_id)},
+            timeout=15,
+        )
+        if not resp.ok:
+            print("Realtor Photos error:", resp.text[:300])
+            return []
+        data = resp.json()
+        photo_nodes = (
+            data.get("photos")
+            or _pick(data, ("data", "photos"))
+            or _pick(data, ("property", "photos"))
+            or _pick(data, ("data", "property", "photos"))
+            or []
+        )
+        return _extract_photos(photo_nodes)
+    except Exception as e:
+        print("Realtor Photos exception:", e)
+        return []
+
+
+def fetch_realtor_estimate(property_id: str | int | None) -> Dict[str, Any]:
+    if not RAPIDAPI_KEY or not property_id:
+        return {}
+
+    try:
+        resp = requests.get(
+            REALTOR_ESTIMATES_URL,
+            headers=_headers(),
+            params={"id": str(property_id)},
+            timeout=15,
+        )
+        if not resp.ok:
+            print("Realtor Estimate error:", resp.text[:300])
+            return {}
+        data = resp.json()
+        estimate = _pick(data, ("estimate",)) or _pick(data, ("data", "estimate")) or data
+        if not isinstance(estimate, dict):
+            return {}
+        return {
+            "estimate": _pick(estimate, ("value",), ("price",), ("amount",), ("estimate",)),
+            "low": _pick(estimate, ("low",), ("min",), ("estimate_low",)),
+            "high": _pick(estimate, ("high",), ("max",), ("estimate_high",)),
+        }
+    except Exception as e:
+        print("Realtor Estimate exception:", e)
+        return {}

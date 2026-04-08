@@ -202,7 +202,11 @@ def _enrich_property_with_detail(prop: Dict[str, Any]) -> Dict[str, Any]:
 
     realtor_detail = {}
     try:
-        from LoanMVP.services.realtor_provider import fetch_realtor_data
+        from LoanMVP.services.realtor_provider import (
+            fetch_realtor_data,
+            fetch_realtor_photos,
+            fetch_realtor_estimate,
+        )
 
         realtor_raw = fetch_realtor_data(address1, city, state)
         if realtor_raw and realtor_raw.get("property"):
@@ -218,6 +222,19 @@ def _enrich_property_with_detail(prop: Dict[str, Any]) -> Dict[str, Any]:
                 "baths": _to_float(listing.get("baths")),
                 "square_feet": _to_int(listing.get("sqft")),
             }
+
+        realtor_property_id = prop.get("property_id") or prop.get("attom_id")
+        estimate = fetch_realtor_estimate(realtor_property_id)
+        photos = fetch_realtor_photos(realtor_property_id)
+
+        if estimate:
+            realtor_detail["realtor_estimate"] = _to_float(estimate.get("estimate"))
+            realtor_detail["realtor_estimate_low"] = _to_float(estimate.get("low"))
+            realtor_detail["realtor_estimate_high"] = _to_float(estimate.get("high"))
+
+        if photos:
+            realtor_detail["photos"] = photos
+            realtor_detail["primary_photo"] = photos[0]
     except Exception:
         realtor_detail = {}
 
@@ -245,7 +262,7 @@ def _enrich_property_with_detail(prop: Dict[str, Any]) -> Dict[str, Any]:
 
     display_value = _build_display_value(
         listing_price=_to_float(realtor_detail.get("price")) or _to_float(prop.get("price")),
-        market_value=_to_float(detail.get("market_value")),
+        market_value=_to_float(realtor_detail.get("realtor_estimate")) or _to_float(detail.get("market_value")),
         assessed_value=_to_float(detail.get("assessed_value")),
         last_sale_price=_to_float(detail.get("last_sale_price")),
         last_sale_date=detail.get("last_sale_date"),
