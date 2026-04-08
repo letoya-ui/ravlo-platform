@@ -269,7 +269,13 @@ def dashboard():
 @loan_officer_bp.route("/onboarding", methods=["GET"])
 @role_required("loan_officer")
 def onboarding():
-    if getattr(current_user, "loan_officer_onboarding_complete", False):
+    if not getattr(current_user, "ica_accepted", False):
+        return redirect(url_for("loan_officer.agreement"))
+
+    if not getattr(current_user, "nda_accepted", False):
+        return redirect(url_for("loan_officer.nda"))
+
+    if getattr(current_user, "onboarding_complete", False):
         return redirect(url_for("loan_officer.dashboard"))
 
     return render_template(
@@ -282,7 +288,6 @@ def onboarding():
 
 
 @loan_officer_bp.route("/onboarding/complete", methods=["POST"])
-@csrf.exempt
 @role_required("loan_officer")
 def complete_onboarding():
     acknowledged = request.form.get("acknowledged")
@@ -302,12 +307,13 @@ def complete_onboarding():
 @role_required("loan_officer")
 def nda():
     if getattr(current_user, "nda_accepted", False):
+        if getattr(current_user, "onboarding_complete", False):
+            return redirect(url_for("loan_officer.dashboard"))
         return redirect(url_for("loan_officer.onboarding"))
 
     return render_template("loan_officer/nda.html")
 
 @loan_officer_bp.route("/nda/accept", methods=["POST"])
-@csrf.exempt
 @role_required("loan_officer")
 def accept_nda():
     nda_ack = request.form.get("nda_ack")
@@ -320,18 +326,22 @@ def accept_nda():
     current_user.nda_accepted = True
     db.session.commit()
 
+    flash("NDA accepted successfully.", "success")
     return redirect(url_for("loan_officer.onboarding"))
 
 @loan_officer_bp.route("/agreement", methods=["GET"])
 @role_required("loan_officer")
 def agreement():
     if getattr(current_user, "ica_accepted", False):
+        if not getattr(current_user, "nda_accepted", False):
+            return redirect(url_for("loan_officer.nda"))
+        if getattr(current_user, "onboarding_complete", False):
+            return redirect(url_for("loan_officer.dashboard"))
         return redirect(url_for("loan_officer.onboarding"))
 
     return render_template("loan_officer/agreement.html")
 
 @loan_officer_bp.route("/agreement/accept", methods=["POST"])
-@csrf.exempt
 @role_required("loan_officer")
 def accept_ica():
     if not all([
@@ -346,6 +356,7 @@ def accept_ica():
     current_user.ica_accepted = True
     db.session.commit()
 
+    flash("Agreement accepted successfully.", "success")
     return redirect(url_for("loan_officer.nda"))
 
 # =============================================================
@@ -479,7 +490,6 @@ def ai_assistant():
 
 
 @loan_officer_bp.route("/messages", methods=["GET", "POST"])
-@csrf.exempt
 @role_required("loan_officer")
 @loan_officer_onboarding_required
 def messages():
@@ -1164,7 +1174,6 @@ def ai_summary():
 # Task Manager
 # =========================================================
 @loan_officer_bp.route("/tasks", methods=["GET", "POST"])
-@csrf.exempt
 @role_required("loan_officer")
 def task():
     if request.method == "POST":
@@ -1201,7 +1210,6 @@ def task():
 
 
 @loan_officer_bp.route("/tasks/<int:task_id>/toggle", methods=["POST"])
-@csrf.exempt
 @role_required("loan_officer")
 def toggle_task(task_id):
     task = Task.query.get_or_404(task_id)
@@ -1211,7 +1219,6 @@ def toggle_task(task_id):
 
 
 @loan_officer_bp.route("/tasks/<int:task_id>/delete", methods=["POST"])
-@csrf.exempt
 @role_required("loan_officer")
 def delete_task(task_id):
     task = Task.query.get_or_404(task_id)
@@ -1223,21 +1230,21 @@ def delete_task(task_id):
 
 
 @loan_officer_bp.route("/tasks/complete/<int:task_id>", methods=["POST"])
-@csrf.exempt
 @role_required("loan_officer")
 def task_complete(task_id):
     task = Task.query.get_or_404(task_id)
     task.status = "Completed"
+    task.completed = True
     db.session.commit()
     return redirect(url_for("loan_officer.task"))
 
 
 @loan_officer_bp.route("/tasks/new", methods=["GET", "POST"])
-@csrf.exempt
 @role_required("loan_officer")
 def new_task():
     borrowers = BorrowerProfile.query.order_by(BorrowerProfile.full_name.asc()).all()
     loans = LoanApplication.query.order_by(LoanApplication.created_at.desc()).all()
+    selected_borrower_id = request.args.get("borrower_id", type=int)
 
     if request.method == "POST":
         due_date_raw = request.form.get("due_date")
@@ -1261,6 +1268,7 @@ def new_task():
         "loan_officer/new_task.html",
         borrowers=borrowers,
         loans=loans,
+        selected_borrower_id=selected_borrower_id,
         active_tab="tasks",
         title="New Task"
     )

@@ -131,8 +131,64 @@ def _normalize_attom_property(raw: Dict[str, Any]) -> Dict[str, Any]:
         or _safe_get(raw, "assessment", "market", "mktttlvalue")
         or _safe_get(raw, "assessment", "assdttlvalue")
     )
+    market_value = _to_float(
+        _safe_get(raw, "assessment", "market", "mktttlvalue")
+        or _safe_get(raw, "assessment", "market", "mktTtlValue")
+    )
+    tax_amount = _to_float(
+        _safe_get(raw, "assessment", "tax", "taxamt")
+        or _safe_get(raw, "assessment", "tax", "taxAmt")
+    )
+    mortgage_amount = _to_float(
+        _safe_get(raw, "mortgage", "amount")
+        or _safe_get(raw, "mortgage", "mtgamt")
+    )
+    owner_occupied = _safe_get(raw, "summary", "ownerOccupied")
+    distressed = bool(
+        _safe_get(raw, "foreclosure", "status")
+        or _safe_get(raw, "preforeclosure")
+    )
+    primary_photo = (
+        _safe_get(raw, "photo")
+        or _safe_get(raw, "primary_photo")
+        or _safe_get(raw, "primaryPhoto")
+        or _safe_get(raw, "media", "primaryPhoto")
+        or _safe_get(raw, "photos", 0, "url")
+        or _safe_get(raw, "photos", 0)
+    )
 
     attom_id = _safe_get(raw, "identifier", "attomId") or _safe_get(raw, "identifier", "Id")
+
+    ravlo_score = None
+    score_reasons: List[str] = []
+
+    if distressed:
+        ravlo_score = 68
+        score_reasons.append("Distress signal detected")
+    else:
+        ravlo_score = 50
+
+    if market_value and last_sale_price and last_sale_price < (market_value * 0.85):
+        ravlo_score += 10
+        score_reasons.append("Sale appears below current market value")
+
+    if owner_occupied is False:
+        ravlo_score += 6
+        score_reasons.append("Non-owner occupied")
+
+    if year_built and year_built < 1980:
+        ravlo_score -= 4
+        score_reasons.append("Older property may need heavier updates")
+
+    ravlo_score = max(1, min(100, int(round(ravlo_score))))
+
+    recommended_strategy = "Needs Review"
+    if distressed and owner_occupied is False:
+        recommended_strategy = "Flip / BRRRR"
+    elif distressed:
+        recommended_strategy = "Flip"
+    elif market_value:
+        recommended_strategy = "Rental Review"
 
     return {
         "attom_id": attom_id,
@@ -152,6 +208,15 @@ def _normalize_attom_property(raw: Dict[str, Any]) -> Dict[str, Any]:
         "last_sale_price": last_sale_price,
         "last_sale_date": last_sale_date,
         "assessed_value": assessed_value,
+        "market_value": market_value,
+        "tax_amount": tax_amount,
+        "mortgage_amount": mortgage_amount,
+        "owner_occupied": owner_occupied,
+        "distressed": distressed,
+        "ravlo_score": ravlo_score,
+        "recommended_strategy": recommended_strategy,
+        "score_reasons": score_reasons,
+        "primary_photo": primary_photo,
         "raw": raw,
     }
 
@@ -277,12 +342,17 @@ def build_property_card_data(prop: Dict[str, Any]) -> Dict[str, Any]:
             [x for x in [prop.get("city"), prop.get("state"), prop.get("zip_code")] if x]
         ),
         "price": prop.get("last_sale_price"),
+        "market_value": prop.get("market_value"),
+        "assessed_value": prop.get("assessed_value"),
         "beds": prop.get("beds"),
         "baths": prop.get("baths"),
         "sqft": prop.get("square_feet"),
         "lot_size_sqft": prop.get("lot_size_sqft"),
         "year_built": prop.get("year_built"),
         "property_type": prop.get("property_type"),
+        "primary_photo": prop.get("primary_photo"),
+        "ravlo_score": prop.get("ravlo_score"),
+        "recommended_strategy": prop.get("recommended_strategy"),
         "latitude": prop.get("latitude"),
         "longitude": prop.get("longitude"),
         "attom_id": prop.get("attom_id"),

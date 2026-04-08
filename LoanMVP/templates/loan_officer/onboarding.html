@@ -142,7 +142,15 @@ Learn how to generate, manage, and close deals using the Ravlo ecosystem.
 
 </div>
 <form method="POST" action="{{ url_for('loan_officer.complete_onboarding') }}">
-  {{ csrf_token() }}
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <label class="partner-check-item" style="display:flex; gap:.65rem; margin:1rem 0;">
+    <input type="checkbox" name="acknowledged" value="yes" required>
+    I acknowledge the loan officer workflow, borrower standards, and platform expectations.
+  </label>
+  <label class="partner-check-item" style="display:flex; gap:.65rem; margin:0 0 1rem 0;">
+    <input type="checkbox" name="agreement" value="yes" required>
+    I am ready to begin operating inside Ravlo as a loan officer.
+  </label>
   <button type="submit" class="ravlo-btn primary">
     Complete Onboarding
   </button>

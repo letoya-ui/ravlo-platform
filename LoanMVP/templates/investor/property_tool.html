@@ -128,6 +128,14 @@ function strategyLabel(v){
   return "All";
 }
 
+function scoreClass(score){
+  const n = Number(score);
+  if (!Number.isFinite(n)) return "neutral";
+  if (n >= 70) return "good";
+  if (n >= 55) return "watch";
+  return "neutral";
+}
+
 function buildPayloadObj(r, analyzeId, saveId){
   return {
     address: r.address || r.address_line1 || "",
@@ -283,13 +291,36 @@ function renderCards(results){
     const saveId = `sv_${idx}_${ts}`;
     const payloadObj = buildPayloadObj(r, analyzeId, saveId);
     const encoded = encodeURIComponent(JSON.stringify(payloadObj));
+    const imageUrl = r.primary_photo || r.photo || r.thumbnail || "/static/images/placeholder_property.jpg";
+    const score = numOrNull(r.ravlo_score);
+    const scoreText = score !== null ? `${score}/100` : "Public Record";
+    const salePrice = numOrNull(r.last_sale_price);
+    const marketValue = numOrNull(r.market_value);
+    const assessedValue = numOrNull(r.assessed_value);
+    const taxAmount = numOrNull(r.tax_amount);
+    const metricOneLabel = marketValue !== null ? "Market Value" : "Last Recorded Sale";
+    const metricOneValue = marketValue !== null ? money(marketValue) : money(salePrice);
+    const metricTwoLabel = salePrice !== null ? "Last Recorded Sale" : "Assessed Value";
+    const metricTwoValue = salePrice !== null ? money(salePrice) : money(assessedValue);
+    const metricThreeLabel = assessedValue !== null ? "Assessed Value" : "Property Tax";
+    const metricThreeValue = assessedValue !== null ? money(assessedValue) : money(taxAmount);
+    const metricFourLabel = taxAmount !== null ? "Property Tax" : "Year Built";
+    const metricFourValue = taxAmount !== null ? money(taxAmount) : safeText(r.year_built);
+    const strategy = safeText(r.recommended_strategy || r.property_type || "Property");
+    const reasons = Array.isArray(r.score_reasons) && r.score_reasons.length
+      ? r.score_reasons.slice(0, 3)
+      : [
+          marketValue !== null ? "Market value signal available" : "Public record value still limited",
+          salePrice !== null ? "Recorded sale data available" : "No recent sale surfaced",
+          r.distressed ? "Distress marker found in record" : "Open detail view for deeper underwriting"
+        ];
 
     return `
       <article class="ravlo-card pad dfv2-card">
         <div class="dfv2-thumb">
-          <img src="/static/images/placeholder_property.jpg" alt="Property photo">
-          <div class="dfv2-score-badge neutral">
-            Public Record
+          <img src="${imageUrl}" alt="Property photo" onerror="this.onerror=null;this.src='/static/images/placeholder_property.jpg';">
+          <div class="dfv2-score-badge ${scoreClass(score)}">
+            ${scoreText}
           </div>
         </div>
 
@@ -298,27 +329,25 @@ function renderCards(results){
           <div class="dfv2-location">${safeText(r.city)}, ${safeText(r.state)} ${safeText(r.zip_code)}</div>
 
           <div class="dfv2-chip-row">
-            <span class="dfv2-chip">${safeText(r.property_type || "Property")}</span>
+            <span class="dfv2-chip">${strategy}</span>
             <span class="dfv2-chip">${safeText(r.beds)} bd</span>
             <span class="dfv2-chip">${safeText(r.baths)} ba</span>
             <span class="dfv2-chip">${safeText(r.square_feet)} sqft</span>
           </div>
 
           <div class="dfv2-metrics">
-            <div><span>Last Recorded Sale</span><strong>${money(r.last_sale_price)}</strong></div>
-            <div><span>Assessed Value</span><strong>${money(r.assessed_value)}</strong></div>
+            <div><span>${metricOneLabel}</span><strong>${metricOneValue}</strong></div>
+            <div><span>${metricTwoLabel}</span><strong>${metricTwoValue}</strong></div>
+            <div><span>${metricThreeLabel}</span><strong>${metricThreeValue}</strong></div>
+            <div><span>${metricFourLabel}</span><strong>${metricFourValue}</strong></div>
             <div><span>Lot Size</span><strong>${safeText(r.lot_size_sqft)}</strong></div>
             <div><span>Year Built</span><strong>${safeText(r.year_built)}</strong></div>
-            <div><span>Latitude</span><strong>${safeText(r.latitude)}</strong></div>
-            <div><span>Longitude</span><strong>${safeText(r.longitude)}</strong></div>
           </div>
 
           <div class="dfv2-ai-snippet">
-            <strong>Property Snapshot:</strong>
+            <strong>Deal Finder Snapshot:</strong>
             <ul class="dfv2-thesis-list">
-              <li>Showing available public record property details</li>
-              <li>Use View Details for the full property workflow</li>
-              <li>Save or Analyze to move this property into Ravlo Workspace</li>
+              ${reasons.map(reason => `<li>${safeText(reason)}</li>`).join("")}
             </ul>
           </div>
 
