@@ -212,6 +212,44 @@ def _deliver_access_request_invite(invite, company, access_request):
     )
 
 
+def _send_team_invite_email(invite, company):
+    invite_url = url_for("auth.register_from_invite", token=invite.token, _external=True)
+    role_label = (invite.role or "").replace("_", " ").title()
+    first_name = (invite.first_name or "").strip() or "there"
+
+    subject = f"You're invited to join {company.name} on Ravlo"
+    body = f"""
+Hi {first_name},
+
+You have been invited to join {company.name} on Ravlo as a {role_label}.
+
+Complete your registration here:
+{invite_url}
+
+This link expires in 7 days.
+""".strip()
+
+    html = f"""
+    <div style="font-family:Inter,Arial,sans-serif;line-height:1.6;color:#111;">
+      <h2>You're invited to Ravlo</h2>
+      <p>Hello {first_name},</p>
+      <p>You have been invited to join <strong>{company.name}</strong> as a <strong>{role_label}</strong>.</p>
+      <p>
+        Complete your registration here:<br>
+        <a href="{invite_url}">{invite_url}</a>
+      </p>
+      <p>This link expires in 7 days.</p>
+    </div>
+    """.strip()
+
+    send_email(
+        to=invite.email,
+        subject=subject,
+        html_body=html,
+        text_body=body,
+    )
+
+
 def _build_license_invite_email(invite, company, application):
     invite_url = url_for("auth.accept_invite", token=invite.token, _external=True)
     tracking_pixel = url_for(
@@ -729,37 +767,10 @@ def invite_team_member(company_id):
         db.session.add(invite)
         db.session.commit()
 
-        invite_url = url_for("auth.register_from_invite", token=invite.token, _external=True)
-
         try:
-            from sendgrid.helpers.mail import Mail
-            import sendgrid
-
-            sendgrid_api_key = current_app.config.get("SENDGRID_API_KEY")
-            from_email = current_app.config.get("NOTIFY_FROM_EMAIL", "noreply@ravlohq.com")
-
-            if sendgrid_api_key:
-                sg = sendgrid.SendGridAPIClient(sendgrid_api_key)
-                email_msg = Mail(
-                    from_email=from_email,
-                    to_emails=email,
-                    subject=f"You're invited to join {company.name} on Ravlo",
-                    html_content=f"""
-                    <div style="font-family:Inter,Arial,sans-serif;line-height:1.6;color:#111;">
-                      <h2>You're invited to Ravlo</h2>
-                      <p>Hello {first_name or 'there'},</p>
-                      <p>You have been invited to join <strong>{company.name}</strong> as a <strong>{role.replace('_', ' ').title()}</strong>.</p>
-                      <p>
-                        Complete your registration here:<br>
-                        <a href="{invite_url}">{invite_url}</a>
-                      </p>
-                      <p>This link expires in 7 days.</p>
-                    </div>
-                    """
-                )
-                sg.send(email_msg)
+            _send_team_invite_email(invite, company)
         except Exception:
-            pass
+            current_app.logger.exception("Failed to send team invite email")
 
         flash("Invite created and email sent.", "success")
         return redirect(url_for("admin.company_team", company_id=company.id))
@@ -768,6 +779,40 @@ def invite_team_member(company_id):
         "admin/invite_team_member.html",
         company=company,
     )
+
+
+@admin_bp.route("/company/<int:company_id>/team/invites/<int:invite_id>/resend", methods=["POST"])
+@login_required
+@role_required("admin_group")
+@admin_required
+def resend_team_invite(company_id, invite_id):
+    company = Company.query.get_or_404(company_id)
+    access_redirect = _ensure_company_access(company)
+    if access_redirect:
+        return access_redirect
+
+    invite = UserInvite.query.get_or_404(invite_id)
+    if invite.company_id != company.id:
+        flash("That invite does not belong to this company.", "danger")
+        return redirect(url_for("admin.company_team", company_id=company.id))
+
+    if invite.status == "accepted":
+        flash("This invite has already been accepted.", "info")
+        return redirect(url_for("admin.company_team", company_id=company.id))
+
+    if invite.status != "pending" or invite.is_expired():
+        _refresh_invite(invite)
+
+    try:
+        _send_team_invite_email(invite, company)
+        db.session.commit()
+        flash("Invite resent successfully.", "success")
+    except Exception:
+        db.session.rollback()
+        current_app.logger.exception("Failed to resend team invite email")
+        flash("The invite exists, but the email could not be sent.", "warning")
+
+    return redirect(url_for("admin.company_team", company_id=company.id))
 
 # =========================================================
 # 📊 SYSTEM REPORTS (CSV EXPORT)

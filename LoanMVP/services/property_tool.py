@@ -159,19 +159,29 @@ def _enrich_property_with_detail(prop: Dict[str, Any]) -> Dict[str, Any]:
     city = (prop.get("city") or "").strip()
     state = (prop.get("state") or "").strip()
     zip_code = (prop.get("zip_code") or "").strip()
+    attom_id = (prop.get("attom_id") or "").strip() if isinstance(prop.get("attom_id"), str) else prop.get("attom_id")
 
-    if not address1 or not city or not state:
+    if not attom_id and (not address1 or not city or not state):
         return prop
 
     try:
-        from LoanMVP.services.attom_service import build_attom_dealfinder_profile
-
-        detail = build_attom_dealfinder_profile(
-            address=address1,
-            city=city,
-            state=state,
-            zip_code=zip_code,
-        )
+        if attom_id:
+            payload = _request_attom("property/detail", params={"attomid": attom_id})
+        else:
+            address2 = ", ".join(part for part in [city, state] if part).strip()
+            if zip_code:
+                address2 = f"{address2} {zip_code}".strip()
+            payload = _request_attom(
+                "property/detail",
+                params={
+                    "address1": address1,
+                    "address2": address2,
+                },
+            )
+        raw_detail = _extract_first_property(payload)
+        if not raw_detail:
+            return prop
+        detail = _normalize_attom_property(raw_detail)
     except Exception:
         return prop
 
@@ -338,6 +348,22 @@ def _extract_property_list(payload: Dict[str, Any]) -> List[Dict[str, Any]]:
     if isinstance(props, list):
         return props
     return []
+
+
+def _extract_first_property(payload: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    props = (
+        payload.get("property")
+        or payload.get("properties")
+        or _safe_get(payload, "response", "property")
+        or []
+    )
+
+    if isinstance(props, dict):
+        return props
+    if isinstance(props, list) and props:
+        first = props[0]
+        return first if isinstance(first, dict) else None
+    return None
 
 
 def search_properties_by_zip(postalcode: str, page: int = 1, page_size: int = 25) -> List[Dict[str, Any]]:
