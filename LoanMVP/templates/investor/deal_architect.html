@@ -63,6 +63,7 @@
 
       <form id="dealArchitectForm" onsubmit="runDealArchitect(event)">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="deal_id" value="{{ deal.id if deal else '' }}">
 
         <div class="da-input-grid">
           <input class="da-input" name="project_name" placeholder="project_name" value="{{ deal.title if deal else '' }}">
@@ -77,13 +78,15 @@
           <input class="da-input" name="zip_code" placeholder="zip_code" value="{{ deal.zip_code if deal else '' }}">
           <input class="da-input" name="arv" placeholder="arv" value="{{ deal.arv if deal else '' }}">
           <input class="da-input" name="monthly_rent" placeholder="monthly_rent" value="{{ deal.estimated_rent if deal else '' }}">
-          <input class="da-input" name="down_payment_pct" placeholder="down_payment_pct" value="20">
-          <input class="da-input" name="interest_rate" placeholder="interest_rate" value="8.5">
+          <input class="da-input" name="down_payment_pct" placeholder="down_payment_pct" value="25">
+          <input class="da-input" name="interest_rate" placeholder="interest_rate" value="8">
           <input class="da-input" name="hold_years" placeholder="hold_years" value="5">
           <input class="da-input" name="annual_tax_rate" placeholder="annual_tax_rate (optional)">
           <input class="da-input" name="annual_insurance_rate" placeholder="annual_insurance_rate (optional)">
-          <input class="da-input" name="market_multiplier_rent" placeholder="market_multiplier_rent (optional)">
-          <input class="da-input" name="market_multiplier_value" placeholder="market_multiplier_value (optional)">
+          <input class="da-input" name="market_cost_multiplier" placeholder="market_cost_multiplier (optional)">
+          <input class="da-input" name="market_value_multiplier" placeholder="market_value_multiplier (optional)">
+          <input class="da-input" name="market_rent_multiplier" placeholder="market_rent_multiplier (optional)">
+          <input class="da-input" name="market_risk_adjustment" placeholder="market_risk_adjustment (optional)">
         </div>
 
         <div style="margin-top:12px;">
