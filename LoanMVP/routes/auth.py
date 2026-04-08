@@ -563,16 +563,14 @@ def accept_invite(token):
                 onboarding_complete=False,
             )
             db.session.add(user)
-            db.session.flush()  # ensures user.id exists before commit if needed
+            db.session.flush()
 
         invite.status = "accepted"
         invite.accepted_at = datetime.utcnow()
 
-        # keep application status in sync
         app_row = LicenseApplication.query.filter_by(email=invite.email).order_by(
             LicenseApplication.created_at.desc()
         ).first()
-
         if app_row:
             app_row.status = "onboarded"
 
@@ -584,15 +582,12 @@ def accept_invite(token):
 
     return render_template("auth/accept_invite.html", invite=invite)
 
-
 @auth_bp.route("/complete-profile", methods=["GET", "POST"])
 @login_required
 def complete_profile():
     if request.method == "POST":
         first_name = (request.form.get("first_name") or "").strip()
         last_name = (request.form.get("last_name") or "").strip()
-        phone = (request.form.get("phone") or "").strip()
-        title = (request.form.get("title") or "").strip()
 
         if not first_name:
             flash("First name is required.", "warning")
@@ -604,20 +599,13 @@ def complete_profile():
 
         current_user.first_name = first_name
         current_user.last_name = last_name
-
-        # only keep these if your User model has these columns
-        if hasattr(current_user, "phone"):
-            current_user.phone = phone
-
-        if hasattr(current_user, "title"):
-            current_user.title = title
-
         current_user.onboarding_complete = True
+
         db.session.commit()
 
         flash("Profile completed successfully.", "success")
 
-        if current_user.role in ["admin", "executive", "master_admin", "platform_admin"]:
+        if current_user.role in ["admin", "master_admin", "lending_admin", "platform_admin"]:
             return redirect(url_for("admin.dashboard"))
 
         return redirect(url_for("dashboard.index"))
