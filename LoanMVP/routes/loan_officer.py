@@ -107,6 +107,13 @@ equifax = EquifaxAPI()
 assistant = AIAssistant()
 ai = LoanMVPAI()
 
+
+def _loan_officer_onboarding_done():
+    return bool(
+        getattr(current_user, "loan_officer_onboarding_complete", False)
+        or getattr(current_user, "onboarding_complete", False)
+    )
+
 def _resolve_recipient_name(recipient_type, recipient_id):
     """
     Best-effort display name resolver for inbox UI.
@@ -139,7 +146,7 @@ def enforce_onboarding_flow():
     if not current_user.nda_accepted:
         return redirect(url_for("loan_officer.nda"))
 
-    if not current_user.onboarding_complete:
+    if not _loan_officer_onboarding_done():
         return redirect(url_for("loan_officer.onboarding"))
 
     return None
@@ -272,7 +279,7 @@ def agreement():
     if getattr(current_user, "ica_accepted", False):
         if not getattr(current_user, "nda_accepted", False):
             return redirect(url_for("loan_officer.nda"))
-        if getattr(current_user, "loan_officer_onboarding_complete", False):
+        if _loan_officer_onboarding_done():
             return redirect(url_for("loan_officer.dashboard"))
         return redirect(url_for("loan_officer.onboarding"))
 
@@ -302,7 +309,7 @@ def accept_ica():
 @role_required("loan_officer")
 def nda():
     if getattr(current_user, "nda_accepted", False):
-        if getattr(current_user, "loan_officer_onboarding_complete", False):
+        if _loan_officer_onboarding_done():
             return redirect(url_for("loan_officer.dashboard"))
         return redirect(url_for("loan_officer.onboarding"))
 
@@ -335,7 +342,7 @@ def onboarding():
     if not getattr(current_user, "nda_accepted", False):
         return redirect(url_for("loan_officer.nda"))
 
-    if getattr(current_user, "loan_officer_onboarding_complete", False):
+    if _loan_officer_onboarding_done():
         return redirect(url_for("loan_officer.dashboard"))
 
     return render_template(
@@ -358,6 +365,7 @@ def complete_onboarding():
         return redirect(url_for("loan_officer.onboarding"))
 
     current_user.loan_officer_onboarding_complete = True
+    current_user.onboarding_complete = True
     db.session.commit()
 
     flash("Onboarding completed. Welcome to your dashboard.", "success")

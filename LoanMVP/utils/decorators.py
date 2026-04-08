@@ -105,7 +105,10 @@ def partner_required(f):
 def loan_officer_onboarding_required(fn):
     @wraps(fn)
     def wrapper(*args, **kwargs):
-        if not getattr(current_user, "loan_officer_onboarding_complete", False):
+        if not (
+            getattr(current_user, "loan_officer_onboarding_complete", False)
+            or getattr(current_user, "onboarding_complete", False)
+        ):
             return redirect(url_for("loan_officer.onboarding"))
         return fn(*args, **kwargs)
     return wrapper
