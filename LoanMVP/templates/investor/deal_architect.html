@@ -180,14 +180,18 @@ function requestBodyFromForm(form) {
     const n = Number(v);
     return Number.isNaN(n) ? null : n;
   };
-
-  const market_multipliers = {};
-  const mmRent = numOrNull("market_multiplier_rent");
-  const mmValue = numOrNull("market_multiplier_value");
-  if (mmRent !== null) market_multipliers.rent = mmRent;
-  if (mmValue !== null) market_multipliers.value = mmValue;
+  const intOrNull = (name) => {
+    const value = numOrNull(name);
+    return value === null ? null : Math.trunc(value);
+  };
+  const pctOrNull = (name) => {
+    const value = numOrNull(name);
+    if (value === null) return null;
+    return value > 1 ? value / 100 : value;
+  };
 
   const payload = {
+    deal_id: intOrNull("deal_id"),
     project_name: get("project_name"),
     description: get("description"),
     property_type: get("property_type"),
@@ -200,17 +204,17 @@ function requestBodyFromForm(form) {
     zip_code: get("zip_code"),
     arv: numOrNull("arv"),
     monthly_rent: numOrNull("monthly_rent"),
-    down_payment_pct: numOrNull("down_payment_pct"),
-    interest_rate: numOrNull("interest_rate"),
-    hold_years: numOrNull("hold_years"),
-    annual_tax_rate: numOrNull("annual_tax_rate"),
-    annual_insurance_rate: numOrNull("annual_insurance_rate"),
+    down_payment_pct: pctOrNull("down_payment_pct"),
+    interest_rate: pctOrNull("interest_rate"),
+    hold_years: intOrNull("hold_years"),
+    annual_tax_rate: pctOrNull("annual_tax_rate"),
+    annual_insurance_rate: pctOrNull("annual_insurance_rate"),
+    market_cost_multiplier: numOrNull("market_cost_multiplier"),
+    market_value_multiplier: numOrNull("market_value_multiplier"),
+    market_rent_multiplier: numOrNull("market_rent_multiplier"),
+    market_risk_adjustment: intOrNull("market_risk_adjustment"),
     comps: parseComps(get("comps_json"))
   };
-
-  if (Object.keys(market_multipliers).length > 0) {
-    payload.market_multipliers = market_multipliers;
-  }
 
   return payload;
 }
@@ -332,7 +336,7 @@ async function runDealArchitect(e) {
   }
 
   try {
-    const res = await fetch("/v1/deal_architect", {
+    const res = await fetch("{{ url_for('investor.deal_architect_analyze') }}", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -343,14 +347,14 @@ async function runDealArchitect(e) {
 
     const data = await res.json();
     if (!res.ok) {
-      alert(data?.message || "Underwriting request failed.");
+      alert(data?.detail || data?.message || "Underwriting request failed.");
       return;
     }
 
     renderResponse(data || {});
   } catch (err) {
     console.error("Deal Architect request failed", err);
-    alert("Unable to reach /v1/deal_architect.");
+    alert("Unable to reach the Deal Architect engine proxy.");
   }
 }
 
