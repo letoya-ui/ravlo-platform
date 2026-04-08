@@ -12,6 +12,7 @@ from flask import (
     Response,
     redirect,
     render_template,
+    request,
     send_from_directory,
     current_app,
     url_for,  
@@ -21,6 +22,7 @@ from flask_cors import CORS
 from flask_socketio import SocketIO
 from flask_migrate import Migrate
 from flask_login import LoginManager, current_user
+from flask_wtf.csrf import CSRFError
 from werkzeug.middleware.proxy_fix import ProxyFix
 
 from LoanMVP.config import get_config
@@ -197,6 +199,28 @@ def create_app():
             "favicon.ico",
             mimetype="image/vnd.microsoft.icon",
         )
+
+    @app.errorhandler(CSRFError)
+    def handle_csrf_error(error):
+        if request.blueprint == "auth":
+            flash_message = "Your session expired. Please try signing in again."
+            from flask import flash
+            flash(flash_message, "warning")
+            next_page = request.args.get("next") or request.form.get("next")
+            return redirect(url_for("auth.login", next=next_page) if next_page else url_for("auth.login"))
+        return render_template("errors/500.html"), 400
+
+    @app.after_request
+    def add_auth_cache_headers(response):
+        if request.blueprint == "auth" and request.method == "GET":
+            response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0, private"
+            response.headers["Pragma"] = "no-cache"
+            response.headers["Expires"] = "0"
+            existing_vary = response.headers.get("Vary", "")
+            vary_values = {value.strip() for value in existing_vary.split(",") if value.strip()}
+            vary_values.add("Cookie")
+            response.headers["Vary"] = ", ".join(sorted(vary_values))
+        return response
 
     # Context processors
     @app.context_processor
