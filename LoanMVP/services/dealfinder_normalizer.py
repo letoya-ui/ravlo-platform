@@ -10,10 +10,10 @@ def _num(val: Any, default=0.0) -> float:
         return float(default)
 
 
-def normalize_property(attom_data: Dict[str, Any], mash_data: Dict[str, Any]) -> Dict[str, Any]:
-    price = _num(attom_data.get("market_value") or mash_data.get("listing_price"))
-    traditional_rent = _num(mash_data.get("traditional_rent"))
-    airbnb_rent = _num(mash_data.get("airbnb_rent"))
+def normalize_property(attom_data: Dict[str, Any], analytics_data: Dict[str, Any]) -> Dict[str, Any]:
+    price = _num(attom_data.get("market_value") or analytics_data.get("listing_price"))
+    traditional_rent = _num(analytics_data.get("traditional_rent"))
+    airbnb_rent = _num(analytics_data.get("airbnb_rent"))
     sqft = _num(attom_data.get("sqft"))
     tax_amount = _num(attom_data.get("tax_amount"))
 
@@ -33,7 +33,7 @@ def normalize_property(attom_data: Dict[str, Any], mash_data: Dict[str, Any]) ->
         "last_sale_price": _num(attom_data.get("last_sale_price")),
         "last_sale_date": attom_data.get("last_sale_date"),
 
-        "property_type": attom_data.get("property_type"),
+        "property_type": attom_data.get("property_type") or analytics_data.get("property_type"),
         "property_sub_type": attom_data.get("property_sub_type"),
         "beds": _num(attom_data.get("bedrooms")),
         "baths": _num(attom_data.get("bathrooms")),
@@ -48,21 +48,21 @@ def normalize_property(attom_data: Dict[str, Any], mash_data: Dict[str, Any]) ->
         "tax_amount": tax_amount,
 
         "traditional_rent": traditional_rent,
-        "traditional_cash_flow": _num(mash_data.get("traditional_cash_flow")),
-        "traditional_cap_rate": _num(mash_data.get("traditional_cap_rate")),
-        "traditional_coc": _num(mash_data.get("traditional_coc")),
+        "traditional_cash_flow": _num(analytics_data.get("traditional_cash_flow")),
+        "traditional_cap_rate": _num(analytics_data.get("traditional_cap_rate")),
+        "traditional_coc": _num(analytics_data.get("traditional_coc")),
 
         "airbnb_rent": airbnb_rent,
-        "airbnb_cash_flow": _num(mash_data.get("airbnb_cash_flow")),
-        "airbnb_cap_rate": _num(mash_data.get("airbnb_cap_rate")),
-        "airbnb_coc": _num(mash_data.get("airbnb_coc")),
-        "occupancy_rate": _num(mash_data.get("occupancy_rate")),
+        "airbnb_cash_flow": _num(analytics_data.get("airbnb_cash_flow")),
+        "airbnb_cap_rate": _num(analytics_data.get("airbnb_cap_rate")),
+        "airbnb_coc": _num(analytics_data.get("airbnb_coc")),
+        "occupancy_rate": _num(analytics_data.get("occupancy_rate")),
 
         "rent_to_price_ratio": (traditional_rent * 12 / price) if price > 0 else 0,
         "price_per_sqft": (price / sqft) if sqft > 0 else 0,
 
         "raw_sources": {
             "attom": attom_data.get("raw", {}),
-            "mashvisor": mash_data.get("raw", {}),
+            "analytics": analytics_data.get("raw", {}),
         },
     }
