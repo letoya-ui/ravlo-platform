@@ -515,14 +515,6 @@ def accept_invite(token):
         flash("This invite has already been used.", "info")
         return redirect(url_for("auth.login"))
 
-    app_row = LicenseApplication.query.filter_by(email=invite.email).first()
-        email=invite.email,
-        company_name=invite.company.name
-    ).first()
-
-    if app_row:
-        app_row.status = "onboarded"   # or "active"
-
     if invite.is_expired():
         flash("This invite has expired.", "warning")
         return redirect(url_for("auth.login"))
@@ -534,17 +526,26 @@ def accept_invite(token):
         last_name = (request.form.get("last_name") or invite.last_name or "").strip()
         password = (request.form.get("password") or "").strip()
 
+        if not first_name:
+            flash("First name is required.", "warning")
+            return render_template("auth/accept_invite.html", invite=invite)
+
+        if not last_name:
+            flash("Last name is required.", "warning")
+            return render_template("auth/accept_invite.html", invite=invite)
+
         if not password:
             flash("Password is required.", "warning")
             return render_template("auth/accept_invite.html", invite=invite)
 
         if existing_user:
             user = existing_user
+
             if not user.password_hash:
                 user.password_hash = generate_password_hash(password)
 
-            user.first_name = user.first_name or first_name
-            user.last_name = user.last_name or last_name
+            user.first_name = first_name or user.first_name
+            user.last_name = last_name or user.last_name
             user.company_id = invite.company_id
             user.role = invite.role
             user.invite_accepted = True
@@ -562,19 +563,63 @@ def accept_invite(token):
                 onboarding_complete=False,
             )
             db.session.add(user)
+            db.session.flush()  # ensures user.id exists before commit if needed
 
-        # log them in immediately
+        invite.status = "accepted"
+        invite.accepted_at = datetime.utcnow()
+
+        # keep application status in sync
+        app_row = LicenseApplication.query.filter_by(email=invite.email).order_by(
+            LicenseApplication.created_at.desc()
+        ).first()
+
+        if app_row:
+            app_row.status = "onboarded"
+
+        db.session.commit()
+
         login_user(user)
-
-        flash("Invite accepted. Your account is ready.", "success")
-
-        # role-based redirect
-        if user.role in ["admin", "executive"]:
-            return redirect(url_for("admin.invite_workers"))
-
-        elif user.role == "worker":
-            return redirect(url_for("dashboard.index"))
-
-        return redirect(url_for("main.index"))
+        flash("Invite accepted. Complete your profile to continue.", "success")
+        return redirect(url_for("auth.complete_profile"))
 
     return render_template("auth/accept_invite.html", invite=invite)
+
+
+@auth_bp.route("/complete-profile", methods=["GET", "POST"])
+@login_required
+def complete_profile():
+    if request.method == "POST":
+        first_name = (request.form.get("first_name") or "").strip()
+        last_name = (request.form.get("last_name") or "").strip()
+        phone = (request.form.get("phone") or "").strip()
+        title = (request.form.get("title") or "").strip()
+
+        if not first_name:
+            flash("First name is required.", "warning")
+            return render_template("auth/complete_profile.html", user=current_user)
+
+        if not last_name:
+            flash("Last name is required.", "warning")
+            return render_template("auth/complete_profile.html", user=current_user)
+
+        current_user.first_name = first_name
+        current_user.last_name = last_name
+
+        # only keep these if your User model has these columns
+        if hasattr(current_user, "phone"):
+            current_user.phone = phone
+
+        if hasattr(current_user, "title"):
+            current_user.title = title
+
+        current_user.onboarding_complete = True
+        db.session.commit()
+
+        flash("Profile completed successfully.", "success")
+
+        if current_user.role in ["admin", "executive", "master_admin", "platform_admin"]:
+            return redirect(url_for("admin.dashboard"))
+
+        return redirect(url_for("dashboard.index"))
+
+    return render_template("auth/complete_profile.html", user=current_user)

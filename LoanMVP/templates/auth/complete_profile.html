@@ -1,0 +1,54 @@
+{% extends "layouts/auth_base.html" %}
+
+{% block content %}
+<div class="auth-card">
+  <h1>Complete Your Profile</h1>
+  <p>Finish setting up your account to continue.</p>
+
+  <form method="POST">
+    <div>
+      <label for="first_name">First Name</label>
+      <input
+        type="text"
+        id="first_name"
+        name="first_name"
+        value="{{ user.first_name or '' }}"
+        required
+      >
+    </div>
+
+    <div>
+      <label for="last_name">Last Name</label>
+      <input
+        type="text"
+        id="last_name"
+        name="last_name"
+        value="{{ user.last_name or '' }}"
+        required
+      >
+    </div>
+
+    <div>
+      <label for="phone">Phone</label>
+      <input
+        type="text"
+        id="phone"
+        name="phone"
+        value="{{ user.phone or '' }}"
+      >
+    </div>
+
+    <div>
+      <label for="title">Job Title</label>
+      <input
+        type="text"
+        id="title"
+        name="title"
+        value="{{ user.title or '' }}"
+      >
+    </div>
+
+    <button type="submit">Continue</button>
+  </form>
+</div>
+{% endblock %}

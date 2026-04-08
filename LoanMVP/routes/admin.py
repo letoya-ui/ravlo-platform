@@ -304,6 +304,7 @@ def dashboard():
         server_load_value=server_load_value,
     )
 
+
 @admin_bp.route("/companies")
 @login_required
 @role_required("admin")
