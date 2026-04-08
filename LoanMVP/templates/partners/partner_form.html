@@ -145,7 +145,7 @@ Build your public Ravlo profile so investors can find and trust your business.
 
     <div class="partner-form-actions">
       <button type="submit" class="ravlo-btn primary">Save Profile</button>
-      <a href="{{ url_for('partners.profile') }}" class="ravlo-btn ghost">Cancel</a>
+      <a href="{{ url_for('partners.profile', partner_id=partner.id) if partner and partner.id else url_for('partners.dashboard') }}" class="ravlo-btn ghost">Cancel</a>
     </div>
   </form>
 </div>

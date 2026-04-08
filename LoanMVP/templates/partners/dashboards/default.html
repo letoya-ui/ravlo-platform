@@ -131,7 +131,7 @@ Access your workspace, manage requests, and stay aligned with the Ravlo partner 
             </div>
           </a>
 
-          <a class="partner-action-card" href="{{ url_for('partners.profile') }}">
+          <a class="partner-action-card" href="{{ url_for('partners.profile', partner_id=partner.id) if partner else url_for('partners.register') }}">
             <div class="partner-action-icon">
               <i class="lucide lucide-user"></i>
             </div>
