@@ -6858,7 +6858,7 @@ def deal_architect(deal_id=None):
     if request.method == "POST":
         if not selected_deal:
             flash("Select a deal before updating Deal Architect.", "warning")
-            return redirect(url_for("investor.deal_finder"))
+            return redirect(url_for("investor.property_tool"))
 
         selected_deal.purchase_price = _to_float(request.form.get("purchase_price")) or selected_deal.purchase_price
         selected_deal.arv = _to_float(request.form.get("arv")) or selected_deal.arv

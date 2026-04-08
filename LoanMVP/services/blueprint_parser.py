@@ -1,4 +1,7 @@
-import cv2
+try:
+    import cv2
+except ModuleNotFoundError:
+    cv2 = None
 import numpy as np
 import requests
 from io import BytesIO
@@ -7,6 +10,23 @@ from PIL import Image
 def extract_blueprint_structure(blueprint_url: str):
     img = _load_image(blueprint_url)
     h, w = img.shape[:2]
+
+    # Keep investor routes bootable even when OpenCV is unavailable in the
+    # current runtime. We return a lightweight structural shell instead of
+    # failing the entire blueprint import.
+    if cv2 is None:
+        return {
+            "image_w": int(w),
+            "image_h": int(h),
+            "walls": [],
+            "fixtures": [],
+            "doors": [],
+            "windows": [],
+            "layout_mask": None,
+            "depth_map": None,
+            "parser_status": "cv2_unavailable",
+        }
+
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
     # Wall detection
@@ -46,7 +66,10 @@ def _load_image(url: str):
     r = requests.get(url, timeout=20)
     r.raise_for_status()
     img = Image.open(BytesIO(r.content)).convert("RGB")
-    return cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
+    arr = np.array(img)
+    if cv2 is None:
+        return arr
+    return cv2.cvtColor(arr, cv2.COLOR_RGB2BGR)
 
 def infer_room_type(structure: dict) -> str:
     """
