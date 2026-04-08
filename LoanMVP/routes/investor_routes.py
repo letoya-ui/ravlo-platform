@@ -3784,6 +3784,44 @@ def api_property_tool_search():
             "results": [],
         }), 500
 
+@investor_bp.route("/api/property_detail", methods=["POST"])
+@login_required
+@role_required("investor")
+def api_property_detail():
+    """
+    Unified property detail endpoint using ATTOM + Realtor.com enrichment.
+    """
+    payload = request.get_json(force=True) or {}
+    address = (payload.get("address") or "").strip()
+
+    if not address:
+        return jsonify({
+            "status": "error",
+            "message": "Address is required.",
+        }), 400
+
+    result = resolve_property_unified(address=address)
+
+    if result.get("status") != "ok":
+        return jsonify({
+            "status": "error",
+            "message": result.get("error") or "Lookup failed.",
+            "stage": result.get("stage"),
+            "source": result.get("source"),
+        }), 400
+
+    return jsonify({
+        "status": "ok",
+        "source": result.get("source"),
+        "property": result.get("property"),
+        "valuation": result.get("valuation"),
+        "rent_estimate": result.get("rent_estimate"),
+        "comps": result.get("comps"),
+        "market_snapshot": result.get("market_snapshot"),
+        "ai_summary": result.get("ai_summary"),
+        "raw": result.get("raw"),
+    })
+
 # ----------------------------
 # api: save
 # ----------------------------
