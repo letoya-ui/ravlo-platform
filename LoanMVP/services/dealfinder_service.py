@@ -12,7 +12,9 @@ from LoanMVP.services.mashvisor_service import (
 )
 from LoanMVP.services.dealfinder_normalizer import normalize_property
 from LoanMVP.services.dealfinder_scoring import compute_deal_score
+import requests
 
+RENTCAST_API_KEY = d0bdb63befcc468897409c4293fd5049
 
 def build_dealfinder_profile(
     address: str,
@@ -64,3 +66,27 @@ def build_dealfinder_profile(
             "mashvisor": bool(mash_core),
         },
     }
+
+
+
+def get_rentcast_data(address, city, state, zip_code):
+    try:
+        url = "https://api.rentcast.io/v1/avm/rent/long-term"
+
+        params = {
+            "address": f"{address}, {city}, {state} {zip_code}"
+        }
+
+        headers = {
+            "X-Api-Key": RENTCAST_API_KEY
+        }
+
+        res = requests.get(url, headers=headers, params=params, timeout=10)
+
+        if res.status_code != 200:
+            return None
+
+        return res.json()
+
+    except Exception:
+        return None
