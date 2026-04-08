@@ -321,6 +321,7 @@ def _build_property_tool_result(raw_match, profile_bundle):
         "market_value": market_value,
         "assessed_value": assessed_value,
         "last_sale_price": last_sale_price,
+        "data_status": "enriched",
         "last_sale_date": profile.get("last_sale_date"),
         "tax_amount": _safe_float(profile.get("tax_amount")),
 
@@ -350,6 +351,74 @@ def _build_property_tool_result(raw_match, profile_bundle):
         "source_status": profile_bundle.get("source_status") or {},
         "provider_errors": profile_bundle.get("errors") or [],
     }
+
+def _build_attom_fallback(raw):
+    return {
+        "address": raw.get("address") or raw.get("address_line1"),
+        "address_line1": raw.get("address_line1") or raw.get("address"),
+        "city": raw.get("city"),
+        "state": raw.get("state"),
+        "zip_code": raw.get("zip_code"),
+
+        "attom_id": raw.get("attom_id"),
+        "property_type": raw.get("property_type"),
+        "property_sub_type": raw.get("property_sub_type"),
+
+        "beds": raw.get("beds") or raw.get("bedrooms"),
+        "baths": raw.get("baths") or raw.get("bathrooms"),
+        "square_feet": raw.get("square_feet") or raw.get("sqft"),
+        "sqft": raw.get("square_feet") or raw.get("sqft"),
+        "lot_size_sqft": raw.get("lot_size_sqft") or raw.get("lot_sqft"),
+        "year_built": raw.get("year_built"),
+
+        "display_value": (
+            raw.get("market_value")
+            or raw.get("assessed_value")
+            or raw.get("last_sale_price")
+        ),
+        "display_value_label": (
+            "Market Value"
+            if raw.get("market_value")
+            else "Assessed Value"
+            if raw.get("assessed_value")
+            else "Last Recorded Sale"
+        ),
+        "display_value_secondary": (
+            raw.get("assessed_value")
+            if raw.get("market_value")
+            else raw.get("last_sale_price")
+        ),
+        "display_value_secondary_label": (
+            "Assessed Value"
+            if raw.get("market_value") and raw.get("assessed_value")
+            else "Last Sale Price"
+            if raw.get("market_value") and raw.get("last_sale_price")
+            else None
+        ),
+
+        "price": raw.get("market_value") or raw.get("last_sale_price"),
+        "market_value": raw.get("market_value"),
+        "assessed_value": raw.get("assessed_value"),
+        "last_sale_price": raw.get("last_sale_price"),
+        "last_sale_date": raw.get("last_sale_date"),
+        "tax_amount": raw.get("tax_amount"),
+
+        "primary_photo": _resolve_photo(raw),
+        "photo": _resolve_photo(raw),
+        "thumbnail": _resolve_photo(raw),
+
+        "latitude": raw.get("latitude"),
+        "longitude": raw.get("longitude"),
+
+        "ravlo_score": None,
+        "recommended_strategy": "Review",
+        "score_reasons": [
+            "Public record property data available",
+            "Advanced rent and strategy enrichment pending",
+        ],
+        "data_status": "attom_only",
+    }
+
 # =========================================================
 # 🧾 JSON + FORM SAFETY
 # =========================================================
@@ -3581,8 +3650,8 @@ def api_property_tool_search():
     """
     Property Tool search:
     1) get lightweight ATTOM search matches
-    2) enrich each result via dealfinder profile
-    3) return card-ready normalized results
+    2) enrich each result via dealfinder profile when possible
+    3) fall back to ATTOM-only cards if enrichment is unavailable
     """
     payload = request.get_json(force=True) or {}
 
@@ -3604,8 +3673,7 @@ def api_property_tool_search():
     except Exception:
         page_size = 20
 
-    # Hard cap enrichment for production safety.
-    # build_dealfinder_profile() hits ATTOM detail + Mashvisor per property.
+    page_size = max(1, min(page_size, 20))
     enrich_limit = min(page_size, 8)
 
     try:
@@ -3619,66 +3687,80 @@ def api_property_tool_search():
         )
 
         raw_matches = search_result.get("properties", []) or []
-        enriched_results = []
+        results = []
         skipped = []
 
-        for idx, raw in enumerate(raw_matches[:enrich_limit]):
-            try:
-                raw_address = (
-                    raw.get("address_line1")
-                    or raw.get("address")
-                    or raw.get("address_one_line")
-                    or ""
-                ).strip()
+        for idx, raw in enumerate(raw_matches[:page_size]):
+            raw_address = (
+                raw.get("address_line1")
+                or raw.get("address")
+                or raw.get("address_one_line")
+                or ""
+            ).strip()
 
-                raw_city = (raw.get("city") or city or "").strip()
-                raw_state = (raw.get("state") or state or "").strip()
-                raw_zip = (raw.get("zip_code") or zip_code or "").strip()
-                raw_property_type = (
-                    raw.get("property_type")
-                    or "single_family"
-                )
+            raw_city = (raw.get("city") or city or "").strip()
+            raw_state = (raw.get("state") or state or "").strip()
+            raw_zip = (raw.get("zip_code") or zip_code or "").strip()
+            raw_property_type = (raw.get("property_type") or "single_family")
 
-                if not raw_address or not raw_city or not raw_state:
-                    skipped.append({
-                        "index": idx,
-                        "reason": "Missing address/city/state for enrichment",
-                        "address": raw_address,
-                    })
-                    continue
-
-                bundle = build_dealfinder_profile(
-                    address=raw_address,
-                    city=raw_city,
-                    state=raw_state,
-                    zip_code=raw_zip,
-                    property_type=raw_property_type,
-                )
-
-                if not bundle.get("ok"):
-                    skipped.append({
-                        "index": idx,
-                        "reason": "; ".join(bundle.get("errors") or ["Profile build failed"]),
-                        "address": raw_address,
-                    })
-                    continue
-
-                enriched_results.append(
-                    _build_property_tool_result(raw, bundle)
-                )
-
-            except Exception as inner_e:
-                current_app.logger.warning(
-                    "property_tool enrichment failed idx=%s address=%s err=%s",
-                    idx,
-                    raw.get("address") or raw.get("address_line1"),
-                    inner_e,
-                )
+            if not raw_address:
                 skipped.append({
                     "index": idx,
-                    "reason": str(inner_e),
+                    "reason": "Missing address",
                     "address": raw.get("address") or raw.get("address_line1"),
                 })
+                continue
+
+            # Try enrichment only for the first N results
+            should_enrich = (
+                idx < enrich_limit
+                and bool(raw_city)
+                and bool(raw_state)
+            )
+
+            if should_enrich:
+                try:
+                    bundle = build_dealfinder_profile(
+                        address=raw_address,
+                        city=raw_city,
+                        state=raw_state,
+                        zip_code=raw_zip,
+                        property_type=raw_property_type,
+                    )
+
+                    if bundle.get("ok"):
+                        results.append(_build_property_tool_result(raw, bundle))
+                    else:
+                        skipped.append({
+                            "index": idx,
+                            "reason": "; ".join(bundle.get("errors") or ["Profile build failed"]),
+                            "address": raw_address,
+                        })
+                        results.append(_build_attom_fallback(raw))
+
+                except Exception as inner_e:
+                    current_app.logger.warning(
+                        "property_tool enrichment failed idx=%s address=%s err=%s",
+                        idx,
+                        raw_address,
+                        inner_e,
+                    )
+                    skipped.append({
+                        "index": idx,
+                        "reason": str(inner_e),
+                        "address": raw_address,
+                    })
+                    results.append(_build_attom_fallback(raw))
+
+            else:
+                if idx < enrich_limit and (not raw_city or not raw_state):
+                    skipped.append({
+                        "index": idx,
+                        "reason": "Missing city/state for enrichment; ATTOM fallback used",
+                        "address": raw_address,
+                    })
+
+                results.append(_build_attom_fallback(raw))
 
         return jsonify({
             "status": "ok",
@@ -3687,12 +3769,20 @@ def api_property_tool_search():
             "city": city,
             "state": state,
             "strategy": strategy,
-            "count": len(enriched_results),
-            "results": enriched_results,
+            "count": len(results),
+            "results": results,
             "meta": {
                 "raw_count": len(raw_matches),
-                "enriched_count": len(enriched_results),
+                "returned_count": len(results),
                 "enrich_limit": enrich_limit,
+                "enriched_count": len([
+                    r for r in results
+                    if r.get("data_status") != "attom_only"
+                ]),
+                "attom_only_count": len([
+                    r for r in results
+                    if r.get("data_status") == "attom_only"
+                ]),
                 "skipped_count": len(skipped),
                 "skipped": skipped[:10],
             },
@@ -3712,7 +3802,6 @@ def api_property_tool_search():
             "message": f"Property Tool search failed: {e}",
             "results": [],
         }), 500
-
 
 # ----------------------------
 # api: save
