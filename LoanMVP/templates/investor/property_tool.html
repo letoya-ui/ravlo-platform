@@ -3,7 +3,7 @@
 
 {% block page_title %}Property Tool{% endblock %}
 {% block page_subline %}
-Search by ZIP or address, review public record property data, and move opportunities into Workspace.
+Search active inventory, compare pricing signals, and move real opportunities into Deal Workspace.
 {% endblock %}
 
 {% block topbar_actions %}
@@ -23,10 +23,10 @@ Search by ZIP or address, review public record property data, and move opportuni
 <div class="dfv2-shell">
 
   <aside class="ravlo-card pad dfv2-search-panel">
-    <div class="eyebrow">RAVLO PROPERTY SEARCH</div>
-    <h3 class="dfv2-panel-title">Property Tool</h3>
+    <div class="eyebrow">DEAL FINDER</div>
+    <h3 class="dfv2-panel-title">Search Live Inventory</h3>
     <p class="muted">
-      Search by ZIP or address and review available public record property data.
+      Search by ZIP or address, then review list price, estimated value, rent signal, and property facts.
     </p>
 
     <label class="ravlo-label mt-16">Address</label>
@@ -54,10 +54,13 @@ Search by ZIP or address, review public record property data, and move opportuni
     </select>
 
     <button class="ravlo-btn primary w-full mt-16" type="button" onclick="runSearch()">
-      Run Search
+      Find Deals
     </button>
 
     <div id="searchStatus" class="dfv2-status">Ready to scan.</div>
+    <div class="dfv2-panel-note">
+      <strong>Signal priority:</strong> live list price first, then estimate, then public-record fallback.
+    </div>
   </aside>
 
   <section class="dfv2-results-wrap">
