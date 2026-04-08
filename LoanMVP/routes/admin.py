@@ -89,6 +89,75 @@ def _refresh_invite(invite):
     return invite
 
 
+def _access_request_role(access_request):
+    role = ((access_request.requested_role or "").strip().lower()).replace(" ", "_")
+    allowed_roles = {"admin", "loan_officer", "processor", "underwriter"}
+    if role in allowed_roles:
+        return role
+    return "admin"
+
+
+def _build_access_request_invite_email(invite, company, access_request):
+    invite_url = url_for("auth.accept_invite", token=invite.token, _external=True)
+    role_label = invite.role.replace("_", " ").title()
+    contact_name = access_request.contact_name or invite.first_name or "there"
+
+    subject = f"Your access request for {company.name} was approved"
+
+    body = f"""
+Hi {contact_name},
+
+Your request to join {company.name} on Ravlo has been approved.
+
+Use the secure link below to activate your account:
+
+{invite_url}
+
+Role: {role_label}
+
+If you were not expecting this email, you can ignore it.
+
+- Ravlo
+""".strip()
+
+    html = f"""
+    <div style="font-family:Inter,Arial,sans-serif;background:#071018;padding:32px;color:#f4f7fb;">
+      <div style="max-width:680px;margin:0 auto;background:#0f1a26;border:1px solid rgba(255,255,255,.08);border-radius:20px;padding:32px;">
+        <div style="font-size:12px;letter-spacing:.18em;font-weight:800;color:#8ec5ff;margin-bottom:12px;">
+          RAVLO ACCESS APPROVED
+        </div>
+        <h1 style="margin:0 0 12px;font-size:30px;line-height:1.1;">
+          Your account is ready
+        </h1>
+        <p style="margin:0 0 14px;color:#c9d6e3;">
+          Your access request for <strong>{company.name}</strong> has been approved.
+        </p>
+        <p style="margin:0 0 18px;color:#c9d6e3;">
+          Role: <strong>{role_label}</strong>
+        </p>
+        <a href="{invite_url}" style="display:inline-block;padding:14px 20px;background:#1f8fff;color:#ffffff;text-decoration:none;border-radius:12px;font-weight:700;">
+          Accept Invite
+        </a>
+        <p style="margin:18px 0 0;color:#8da3b8;font-size:13px;">
+          This link expires in 7 days.
+        </p>
+      </div>
+    </div>
+    """.strip()
+
+    return subject, body, html
+
+
+def _deliver_access_request_invite(invite, company, access_request):
+    subject, body, html = _build_access_request_invite_email(invite, company, access_request)
+    send_email(
+        to=invite.email,
+        subject=subject,
+        html_body=html,
+        text_body=body,
+    )
+
+
 def _build_license_invite_email(invite, company, application):
     invite_url = url_for("auth.accept_invite", token=invite.token, _external=True)
     tracking_pixel = url_for(
@@ -386,28 +455,85 @@ def deny_access_request(req_id):
 def approve_access_request(req_id):
     access_request = AccessRequest.query.get_or_404(req_id)
 
-    if access_request.status == "approved":
-        flash("Request already approved.", "info")
-        return redirect(url_for("admin.request_detail", request_id=req_id))
+    company = Company.query.get(access_request.company_id) if access_request.company_id else None
 
-    company = None
-
-    if access_request.company_id:
-        company = Company.query.get(access_request.company_id)
+    if not company and access_request.company_name:
+        company = Company.query.filter(
+            func.lower(Company.name) == access_request.company_name.strip().lower()
+        ).first()
 
     if not company:
+        subscription_tier, max_users = _plan_defaults("team")
         company = Company(
             name=access_request.company_name or access_request.contact_name,
-            email_domain=(access_request.email.split("@")[-1].lower() if access_request.email and "@" in access_request.email else None),
-            is_active=True
+            email_domain=(
+                access_request.email.split("@")[-1].lower()
+                if access_request.email and "@" in access_request.email
+                else None
+            ),
+            subscription_tier=subscription_tier,
+            max_users=max_users,
+            is_active=True,
         )
         db.session.add(company)
         db.session.flush()
+    else:
+        company.is_active = True
+        if not company.subscription_tier:
+            company.subscription_tier = "team"
+        if company.max_users is None:
+            company.max_users = 10
 
     access_request.company_id = company.id
     access_request.status = "approved"
     access_request.reviewed_by = current_user.id
     access_request.reviewed_at = datetime.utcnow()
+
+    role = _access_request_role(access_request)
+    existing_user = User.query.filter_by(email=access_request.email).first()
+
+    invite = (
+        UserInvite.query.filter_by(company_id=company.id, email=access_request.email)
+        .order_by(UserInvite.created_at.desc())
+        .first()
+    )
+
+    invite_created = False
+    invite_refreshed = False
+
+    if invite and invite.status == "accepted":
+        if existing_user:
+            existing_user.company_id = company.id
+            existing_user.role = role
+            existing_user.is_active = True
+            existing_user.invite_accepted = True
+    else:
+        if not invite or invite.status != "pending":
+            parts = (access_request.contact_name or "").strip().split(None, 1)
+            invite = UserInvite(
+                company_id=company.id,
+                email=access_request.email,
+                first_name=parts[0] if parts else None,
+                last_name=parts[1] if len(parts) > 1 else None,
+                role=role,
+                token=UserInvite.generate_token(),
+                status="pending",
+                invited_by=current_user.id,
+                expires_at=UserInvite.default_expiration(days=7),
+            )
+            db.session.add(invite)
+            db.session.flush()
+            invite_created = True
+        elif invite.is_expired():
+            _refresh_invite(invite)
+            invite_refreshed = True
+
+        try:
+            _deliver_access_request_invite(invite, company, access_request)
+            invite_email_sent = True
+        except Exception:
+            current_app.logger.exception("Failed to send access-request invite email")
+            invite_email_sent = False
 
     db.session.commit()
 
@@ -419,7 +545,16 @@ def approve_access_request(req_id):
         channels=["socket", "inapp"]
     )
 
-    flash("Request approved successfully.", "success")
+    if invite and invite.status == "accepted":
+        flash("Request approved and the user is already onboarded to the company.", "success")
+    elif invite_created and invite_email_sent:
+        flash("Request approved, company onboarded, and invite email sent.", "success")
+    elif invite_refreshed and invite_email_sent:
+        flash("Request approved and a fresh onboarding invite was sent.", "success")
+    elif invite_email_sent:
+        flash("Request approved and onboarding invite sent.", "success")
+    else:
+        flash("Request approved, but the onboarding invite email could not be sent automatically.", "warning")
     return redirect(url_for("admin.company_team", company_id=company.id))
 
 
