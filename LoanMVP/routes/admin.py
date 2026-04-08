@@ -6,6 +6,7 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash,
 from flask_login import current_user, login_required
 from collections import defaultdict
 from sqlalchemy import func, desc
+from sqlalchemy.orm import aliased
 from datetime import datetime, timedelta
 from LoanMVP.extensions import db, csrf
 from werkzeug.security import generate_password_hash
@@ -72,6 +73,32 @@ def _ensure_company_access(company):
 
     flash("You do not have access to that company workspace.", "warning")
     return redirect(_admin_home_endpoint())
+
+
+def _company_scope():
+    if not _is_company_admin(current_user):
+        return None
+    return Company.query.get(getattr(current_user, "company_id", None)) if getattr(current_user, "company_id", None) else None
+
+
+def _can_access_request(access_request) -> bool:
+    if _is_full_admin(current_user):
+        return True
+
+    company = _company_scope()
+    if not company:
+        return False
+
+    request_company_name = (getattr(access_request, "company_name", "") or "").strip().lower()
+    company_name = (company.name or "").strip().lower()
+    email_domain = (company.email_domain or "").strip().lower()
+    email = (getattr(access_request, "email", "") or "").strip().lower()
+
+    return (
+        getattr(access_request, "company_id", None) == company.id
+        or (company_name and request_company_name == company_name)
+        or (email_domain and email.endswith(f"@{email_domain}"))
+    )
 
 
 def _plan_defaults(plan_interest: str):
@@ -420,17 +447,22 @@ def companies():
 
 @admin_bp.route("/requests")
 @login_required
-@role_required("admin")
+@role_required("admin_group")
 @admin_required
 def requests_dashboard():
     status = request.args.get("status", "pending")
 
     requests_q = AccessRequest.query.order_by(AccessRequest.created_at.desc())
+    requests_list = requests_q.all()
+
+    if _is_company_admin(current_user):
+        requests_list = [item for item in requests_list if _can_access_request(item)]
 
     if status:
-        requests_q = requests_q.filter_by(status=status)
-
-    requests_list = requests_q.all()
+        requests_list = [
+            item for item in requests_list
+            if (item.status or "").strip().lower() == status.strip().lower()
+        ]
 
     return render_template(
         "admin/requests_dashboard.html",
@@ -441,10 +473,13 @@ def requests_dashboard():
 
 @admin_bp.route("/requests/<int:request_id>")
 @login_required
-@role_required("admin")
+@role_required("admin_group")
 @admin_required
 def request_detail(request_id):
     access_request = AccessRequest.query.get_or_404(request_id)
+    if not _can_access_request(access_request):
+        flash("You do not have access to that request.", "warning")
+        return redirect(_admin_home_endpoint())
 
     return render_template(
         "admin/request_detail.html",
@@ -454,12 +489,14 @@ def request_detail(request_id):
 
 @admin_bp.route("/access-requests", methods=["GET"])
 @login_required
-@role_required("admin")
+@role_required("admin_group")
 def access_requests():
     requests_ = AccessRequest.query.order_by(AccessRequest.created_at.desc()).all()
+    if _is_company_admin(current_user):
+        requests_ = [item for item in requests_ if _can_access_request(item)]
     return render_template(
         "admin/requests_dashboard.html",
-        requests=requests_,
+        requests_list=requests_,
         title="Access Requests",
         active_tab="access_requests",
     )
@@ -467,10 +504,13 @@ def access_requests():
 
 @admin_bp.route("/access-requests/<int:req_id>/deny", methods=["POST"])
 @login_required
-@role_required("admin")
+@role_required("admin_group")
 @admin_required
 def deny_access_request(req_id):
     req = AccessRequest.query.get_or_404(req_id)
+    if not _can_access_request(req):
+        flash("You do not have access to that request.", "warning")
+        return redirect(_admin_home_endpoint())
 
     req.status = "denied"
     req.reviewed_by = current_user.id
@@ -483,10 +523,13 @@ def deny_access_request(req_id):
     
 @admin_bp.route("/access-requests/<int:req_id>/approve", methods=["POST"])
 @login_required
-@role_required("admin")
+@role_required("admin_group")
 @admin_required
 def approve_access_request(req_id):
     access_request = AccessRequest.query.get_or_404(req_id)
+    if not _can_access_request(access_request):
+        flash("You do not have access to that request.", "warning")
+        return redirect(_admin_home_endpoint())
 
     company = Company.query.get(access_request.company_id) if access_request.company_id else None
 
@@ -593,10 +636,13 @@ def approve_access_request(req_id):
 
 @admin_bp.route("/requests/<int:request_id>/reject", methods=["POST"])
 @login_required
-@role_required("admin")
+@role_required("admin_group")
 @admin_required
 def reject_request(request_id):
     access_request = AccessRequest.query.get_or_404(request_id)
+    if not _can_access_request(access_request):
+        flash("You do not have access to that request.", "warning")
+        return redirect(_admin_home_endpoint())
 
     if access_request.status == "rejected":
         flash("Request already rejected.", "info")
