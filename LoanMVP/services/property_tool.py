@@ -88,11 +88,26 @@ def _request_attom(path: str, params: Optional[Dict[str, Any]] = None) -> Dict[s
 
 def _build_display_value(
     *,
+    listing_price: Optional[float] = None,
     market_value: Optional[float],
     assessed_value: Optional[float],
     last_sale_price: Optional[float],
     last_sale_date: Optional[str],
 ) -> Dict[str, Optional[Any]]:
+    if listing_price is not None:
+        return {
+            "display_value": listing_price,
+            "display_value_label": "List Price",
+            "display_value_source": "listing_price",
+            "display_value_secondary": market_value or assessed_value or last_sale_price,
+            "display_value_secondary_label": (
+                "Estimated Market Value" if market_value is not None
+                else "Assessed Value" if assessed_value is not None
+                else "Last Recorded Sale" if last_sale_price is not None
+                else None
+            ),
+        }
+
     if market_value is not None:
         return {
             "display_value": market_value,
@@ -133,7 +148,7 @@ def _build_display_value(
 def _needs_detail_enrichment(prop: Dict[str, Any]) -> bool:
     return not any(
         _to_float(prop.get(field)) is not None
-        for field in ("display_value", "market_value", "assessed_value", "last_sale_price")
+        for field in ("display_value", "price", "market_value", "assessed_value", "last_sale_price")
     )
 
 
@@ -164,6 +179,7 @@ def _enrich_property_with_detail(prop: Dict[str, Any]) -> Dict[str, Any]:
     if not attom_id and (not address1 or not city or not state):
         return prop
 
+    detail = {}
     try:
         if attom_id:
             payload = _request_attom("property/detail", params={"attomid": attom_id})
@@ -179,13 +195,56 @@ def _enrich_property_with_detail(prop: Dict[str, Any]) -> Dict[str, Any]:
                 },
             )
         raw_detail = _extract_first_property(payload)
-        if not raw_detail:
-            return prop
-        detail = _normalize_attom_property(raw_detail)
+        if raw_detail:
+            detail = _normalize_attom_property(raw_detail)
     except Exception:
-        return prop
+        detail = {}
+
+    realtor_detail = {}
+    try:
+        from LoanMVP.services.realtor_provider import fetch_realtor_data
+
+        realtor_raw = fetch_realtor_data(address1, city, state)
+        if realtor_raw and realtor_raw.get("property"):
+            listing = realtor_raw["property"] or {}
+            realtor_detail = {
+                "price": _to_float(listing.get("price")),
+                "status": listing.get("status"),
+                "days_on_market": _to_int(listing.get("days_on_market")),
+                "description": listing.get("description"),
+                "primary_photo": listing.get("primary_photo"),
+                "photos": listing.get("photos") or [],
+                "beds": _to_int(listing.get("beds")),
+                "baths": _to_float(listing.get("baths")),
+                "square_feet": _to_int(listing.get("sqft")),
+            }
+    except Exception:
+        realtor_detail = {}
+
+    rentcast_detail = {}
+    try:
+        from LoanMVP.services.rentcast_service import get_rentcast_rent_estimate
+
+        rentcast_raw = get_rentcast_rent_estimate(
+            address=address1,
+            city=city,
+            state=state,
+            zip_code=zip_code,
+            property_type=(prop.get("property_type") or detail.get("property_type") or "single_family"),
+        )
+        rentcast_detail = {
+            "estimated_rent": _to_float(
+                rentcast_raw.get("rent")
+                or rentcast_raw.get("estimatedRent")
+                or rentcast_raw.get("rentEstimate")
+                or rentcast_raw.get("price")
+            )
+        }
+    except Exception:
+        rentcast_detail = {}
 
     display_value = _build_display_value(
+        listing_price=_to_float(realtor_detail.get("price")) or _to_float(prop.get("price")),
         market_value=_to_float(detail.get("market_value")),
         assessed_value=_to_float(detail.get("assessed_value")),
         last_sale_price=_to_float(detail.get("last_sale_price")),
@@ -193,6 +252,8 @@ def _enrich_property_with_detail(prop: Dict[str, Any]) -> Dict[str, Any]:
     )
 
     enriched = _merge_property_data(prop, detail)
+    enriched = _merge_property_data(enriched, realtor_detail)
+    enriched = _merge_property_data(enriched, rentcast_detail)
     enriched.update(display_value)
     return enriched
 
@@ -302,6 +363,7 @@ def _normalize_attom_property(raw: Dict[str, Any]) -> Dict[str, Any]:
         recommended_strategy = "Rental Review"
 
     display_value = _build_display_value(
+        listing_price=None,
         market_value=market_value,
         assessed_value=assessed_value,
         last_sale_price=last_sale_price,
