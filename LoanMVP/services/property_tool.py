@@ -86,6 +86,50 @@ def _request_attom(path: str, params: Optional[Dict[str, Any]] = None) -> Dict[s
         raise PropertyAPIError(f"ATTOM returned invalid JSON. Response: {snippet}")
 
 
+def _build_display_value(
+    *,
+    market_value: Optional[float],
+    assessed_value: Optional[float],
+    last_sale_price: Optional[float],
+    last_sale_date: Optional[str],
+) -> Dict[str, Optional[Any]]:
+    if market_value is not None:
+        return {
+            "display_value": market_value,
+            "display_value_label": "Estimated Market Value",
+            "display_value_source": "market_value",
+            "display_value_secondary": last_sale_price,
+            "display_value_secondary_label": "Last Recorded Sale",
+        }
+
+    if assessed_value is not None:
+        return {
+            "display_value": assessed_value,
+            "display_value_label": "Assessed Value",
+            "display_value_source": "assessed_value",
+            "display_value_secondary": last_sale_price,
+            "display_value_secondary_label": "Last Recorded Sale",
+        }
+
+    if last_sale_price is not None:
+        secondary_label = "Recorded Sale Date" if last_sale_date else None
+        return {
+            "display_value": last_sale_price,
+            "display_value_label": "Last Recorded Sale",
+            "display_value_source": "last_sale_price",
+            "display_value_secondary": last_sale_date,
+            "display_value_secondary_label": secondary_label,
+        }
+
+    return {
+        "display_value": None,
+        "display_value_label": "Value Signal Unavailable",
+        "display_value_source": None,
+        "display_value_secondary": None,
+        "display_value_secondary_label": None,
+    }
+
+
 def _normalize_attom_property(raw: Dict[str, Any]) -> Dict[str, Any]:
     """
     Normalizes one ATTOM property result into a clean Ravlo-friendly shape.
@@ -190,6 +234,13 @@ def _normalize_attom_property(raw: Dict[str, Any]) -> Dict[str, Any]:
     elif market_value:
         recommended_strategy = "Rental Review"
 
+    display_value = _build_display_value(
+        market_value=market_value,
+        assessed_value=assessed_value,
+        last_sale_price=last_sale_price,
+        last_sale_date=last_sale_date,
+    )
+
     return {
         "attom_id": attom_id,
         "address": address_one_line or line1,
@@ -217,6 +268,7 @@ def _normalize_attom_property(raw: Dict[str, Any]) -> Dict[str, Any]:
         "recommended_strategy": recommended_strategy,
         "score_reasons": score_reasons,
         "primary_photo": primary_photo,
+        **display_value,
         "raw": raw,
     }
 

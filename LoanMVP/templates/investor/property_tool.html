@@ -137,12 +137,13 @@ function scoreClass(score){
 }
 
 function buildPayloadObj(r, analyzeId, saveId){
+  const primaryValue = r.display_value ?? r.market_value ?? r.assessed_value ?? r.last_sale_price ?? null;
   return {
     address: r.address || r.address_line1 || "",
     city: r.city || "",
     state: r.state || "",
     zip: r.zip_code || "",
-    price: r.last_sale_price ?? null,
+    price: primaryValue,
     sqft: r.square_feet ?? null,
     beds: r.beds ?? null,
     baths: r.baths ?? null,
@@ -294,6 +295,10 @@ function renderCards(results){
     const imageUrl = r.primary_photo || r.photo || r.thumbnail || "/static/images/placeholder_property.jpg";
     const score = numOrNull(r.ravlo_score);
     const scoreText = score !== null ? `${score}/100` : "Public Record";
+    const displayValue = numOrNull(r.display_value);
+    const displayValueLabel = safeText(r.display_value_label || "Best Available Value");
+    const displayValueSecondary = r.display_value_secondary;
+    const displayValueSecondaryLabel = r.display_value_secondary_label;
     const salePrice = numOrNull(r.last_sale_price);
     const marketValue = numOrNull(r.market_value);
     const assessedValue = numOrNull(r.assessed_value);
@@ -310,7 +315,7 @@ function renderCards(results){
     const reasons = Array.isArray(r.score_reasons) && r.score_reasons.length
       ? r.score_reasons.slice(0, 3)
       : [
-          marketValue !== null ? "Market value signal available" : "Public record value still limited",
+          displayValue !== null ? `${displayValueLabel} surfaced for this property` : "Public record value still limited",
           salePrice !== null ? "Recorded sale data available" : "No recent sale surfaced",
           r.distressed ? "Distress marker found in record" : "Open detail view for deeper underwriting"
         ];
@@ -327,6 +332,14 @@ function renderCards(results){
         <div class="dfv2-body">
           <div class="dfv2-address">${safeText(r.address || r.address_line1)}</div>
           <div class="dfv2-location">${safeText(r.city)}, ${safeText(r.state)} ${safeText(r.zip_code)}</div>
+          <div class="dfv2-price-block">
+            <div class="dfv2-price-label">${displayValueLabel}</div>
+            <div class="dfv2-price-value">${displayValue !== null ? money(displayValue) : "Value unavailable"}</div>
+            ${displayValueSecondaryLabel && displayValueSecondary
+              ? `<div class="dfv2-price-sub">${safeText(displayValueSecondaryLabel)}: ${safeText(displayValueSecondaryLabel.includes("Date") ? displayValueSecondary : money(displayValueSecondary))}</div>`
+              : ""
+            }
+          </div>
 
           <div class="dfv2-chip-row">
             <span class="dfv2-chip">${strategy}</span>
@@ -582,6 +595,32 @@ async function runSearch(){
   color:var(--muted);
   font-size:.82rem;
   margin-top:.2rem;
+}
+
+.dfv2-price-block{
+  padding:.8rem .9rem;
+  border-radius:14px;
+  background:linear-gradient(180deg, rgba(42,96,191,.22), rgba(19,43,82,.18));
+  border:1px solid rgba(126,171,255,.18);
+}
+
+.dfv2-price-label{
+  color:#a9c4ff;
+  font-size:.78rem;
+  margin-bottom:.2rem;
+}
+
+.dfv2-price-value{
+  color:#f6fbff;
+  font-size:1.28rem;
+  font-weight:900;
+  line-height:1.1;
+}
+
+.dfv2-price-sub{
+  color:var(--muted);
+  font-size:.76rem;
+  margin-top:.28rem;
 }
 
 .dfv2-chip-row{
