@@ -353,70 +353,51 @@ def _build_property_tool_result(raw_match, profile_bundle):
     }
 
 def _build_attom_fallback(raw):
+    try:
+        detail = get_property_detail(
+            address=raw.get("address_line1") or raw.get("address"),
+            city=raw.get("city"),
+            state=raw.get("state"),
+            postalcode=raw.get("zip_code"),
+        )
+
+        detail = extract_attom_fields(detail)
+
+    except Exception:
+        detail = {}
+
+    market = detail.get("market_value") or raw.get("market_value")
+    assessed = detail.get("assessed_value") or raw.get("assessed_value")
+    sale = detail.get("last_sale_price") or raw.get("last_sale_price")
+
+    display_value = market or assessed or sale
+
     return {
         "address": raw.get("address") or raw.get("address_line1"),
-        "address_line1": raw.get("address_line1") or raw.get("address"),
         "city": raw.get("city"),
         "state": raw.get("state"),
         "zip_code": raw.get("zip_code"),
 
-        "attom_id": raw.get("attom_id"),
-        "property_type": raw.get("property_type"),
-        "property_sub_type": raw.get("property_sub_type"),
+        "beds": detail.get("bedrooms") or raw.get("beds"),
+        "baths": detail.get("bathrooms") or raw.get("baths"),
+        "sqft": detail.get("sqft") or raw.get("square_feet"),
 
-        "beds": raw.get("beds") or raw.get("bedrooms"),
-        "baths": raw.get("baths") or raw.get("bathrooms"),
-        "square_feet": raw.get("square_feet") or raw.get("sqft"),
-        "sqft": raw.get("square_feet") or raw.get("sqft"),
-        "lot_size_sqft": raw.get("lot_size_sqft") or raw.get("lot_sqft"),
-        "year_built": raw.get("year_built"),
+        "market_value": market,
+        "assessed_value": assessed,
+        "last_sale_price": sale,
 
-        "display_value": (
-            raw.get("market_value")
-            or raw.get("assessed_value")
-            or raw.get("last_sale_price")
-        ),
+        "display_value": display_value,
         "display_value_label": (
-            "Market Value"
-            if raw.get("market_value")
-            else "Assessed Value"
-            if raw.get("assessed_value")
-            else "Last Recorded Sale"
+            "Market Value" if market else
+            "Assessed Value" if assessed else
+            "Last Sale"
         ),
-        "display_value_secondary": (
-            raw.get("assessed_value")
-            if raw.get("market_value")
-            else raw.get("last_sale_price")
-        ),
-        "display_value_secondary_label": (
-            "Assessed Value"
-            if raw.get("market_value") and raw.get("assessed_value")
-            else "Last Sale Price"
-            if raw.get("market_value") and raw.get("last_sale_price")
-            else None
-        ),
-
-        "price": raw.get("market_value") or raw.get("last_sale_price"),
-        "market_value": raw.get("market_value"),
-        "assessed_value": raw.get("assessed_value"),
-        "last_sale_price": raw.get("last_sale_price"),
-        "last_sale_date": raw.get("last_sale_date"),
-        "tax_amount": raw.get("tax_amount"),
 
         "primary_photo": _resolve_photo(raw),
-        "photo": _resolve_photo(raw),
-        "thumbnail": _resolve_photo(raw),
-
-        "latitude": raw.get("latitude"),
-        "longitude": raw.get("longitude"),
 
         "ravlo_score": None,
         "recommended_strategy": "Review",
-        "score_reasons": [
-            "Public record property data available",
-            "Advanced rent and strategy enrichment pending",
-        ],
-        "data_status": "attom_only",
+        "data_status": "attom_only"
     }
 
 # =========================================================
