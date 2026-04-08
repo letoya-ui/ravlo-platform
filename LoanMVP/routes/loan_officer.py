@@ -275,7 +275,7 @@ def onboarding():
     if not getattr(current_user, "nda_accepted", False):
         return redirect(url_for("loan_officer.nda"))
 
-    if getattr(current_user, "onboarding_complete", False):
+    if getattr(current_user, "loan_officer_onboarding_complete", False):
         return redirect(url_for("loan_officer.dashboard"))
 
     return render_template(
@@ -285,7 +285,6 @@ def onboarding():
         resource_count=6,
         required_steps=6,
     )
-
 
 @loan_officer_bp.route("/onboarding/complete", methods=["POST"])
 @role_required("loan_officer")
