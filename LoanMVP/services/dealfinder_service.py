@@ -16,6 +16,39 @@ import requests
 RENTCAST_API_KEY = "d0bdb63befcc468897409c4293fd5049"
 
 
+def extract_attom_fields(raw):
+    try:
+        prop = raw.get("property", {}) or raw
+
+        market = (
+            prop.get("market_value")
+            or prop.get("marketValue")
+            or prop.get("avm", {}).get("amount")
+            or prop.get("assessment", {}).get("market", {}).get("mktttlvalue")
+        )
+
+        assessed = (
+            prop.get("assessed_value")
+            or prop.get("assessment", {}).get("assessed", {}).get("assdttlvalue")
+        )
+
+        sale = (
+            prop.get("last_sale_price")
+            or prop.get("sale", {}).get("amount")
+        )
+
+        return {
+            "market_value": market,
+            "assessed_value": assessed,
+            "last_sale_price": sale,
+            "bedrooms": prop.get("beds") or prop.get("bedrooms"),
+            "bathrooms": prop.get("baths") or prop.get("bathrooms"),
+            "sqft": prop.get("sqft") or prop.get("livingSize"),
+            "year_built": prop.get("yearBuilt"),
+        }
+
+    except Exception:
+        return {}
 
 def _extract_rentcast_fields(rentcast_raw: Dict[str, Any]) -> Dict[str, Any]:
     """

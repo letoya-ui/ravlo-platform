@@ -115,7 +115,7 @@ from LoanMVP.services.renovation_engine_client import generate_concept, call_ren
 # 🔥 Property intelligence (IMPORTANT)
 from LoanMVP.services.property_service import resolve_property_unified, build_property_card_data, build_property_card
 from LoanMVP.services.deal_copilot_service import build_deal_copilot_context, generate_deal_copilot_response
-from LoanMVP.services.dealfinder_service import build_dealfinder_profile
+from LoanMVP.services.dealfinder_service import build_dealfinder_profile, extract_attom_fields, _extract_rentcast_fields, get_rentcast_data
 
 from LoanMVP.utils.r2_storage import spaces_put_bytes
 
