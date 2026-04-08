@@ -130,6 +130,63 @@ def _build_display_value(
     }
 
 
+def _needs_detail_enrichment(prop: Dict[str, Any]) -> bool:
+    return not any(
+        _to_float(prop.get(field)) is not None
+        for field in ("display_value", "market_value", "assessed_value", "last_sale_price")
+    )
+
+
+def _merge_property_data(base: Dict[str, Any], detail: Dict[str, Any]) -> Dict[str, Any]:
+    merged = dict(base)
+    for key, value in (detail or {}).items():
+        if key == "raw":
+            continue
+        if merged.get(key) in (None, "", [], {}) and value not in (None, "", [], {}):
+            merged[key] = value
+
+    if detail:
+        merged["raw"] = detail.get("raw") or base.get("raw")
+
+    return merged
+
+
+def _enrich_property_with_detail(prop: Dict[str, Any]) -> Dict[str, Any]:
+    if not _needs_detail_enrichment(prop):
+        return prop
+
+    address1 = (prop.get("address_line1") or prop.get("address") or "").strip()
+    city = (prop.get("city") or "").strip()
+    state = (prop.get("state") or "").strip()
+    zip_code = (prop.get("zip_code") or "").strip()
+
+    if not address1 or not city or not state:
+        return prop
+
+    try:
+        from LoanMVP.services.attom_service import build_attom_dealfinder_profile
+
+        detail = build_attom_dealfinder_profile(
+            address=address1,
+            city=city,
+            state=state,
+            zip_code=zip_code,
+        )
+    except Exception:
+        return prop
+
+    display_value = _build_display_value(
+        market_value=_to_float(detail.get("market_value")),
+        assessed_value=_to_float(detail.get("assessed_value")),
+        last_sale_price=_to_float(detail.get("last_sale_price")),
+        last_sale_date=detail.get("last_sale_date"),
+    )
+
+    enriched = _merge_property_data(prop, detail)
+    enriched.update(display_value)
+    return enriched
+
+
 def _normalize_attom_property(raw: Dict[str, Any]) -> Dict[str, Any]:
     """
     Normalizes one ATTOM property result into a clean Ravlo-friendly shape.
@@ -293,7 +350,8 @@ def search_properties_by_zip(postalcode: str, page: int = 1, page_size: int = 25
         },
     )
     properties = _extract_property_list(payload)
-    return [_normalize_attom_property(p) for p in properties]
+    normalized = [_normalize_attom_property(p) for p in properties]
+    return [_enrich_property_with_detail(p) for p in normalized]
 
 
 def search_property_by_address(
@@ -316,7 +374,8 @@ def search_property_by_address(
 
     payload = _request_attom("property/address", params=params)
     properties = _extract_property_list(payload)
-    return [_normalize_attom_property(p) for p in properties]
+    normalized = [_normalize_attom_property(p) for p in properties]
+    return [_enrich_property_with_detail(p) for p in normalized]
 
 
 def get_best_property_match(

@@ -774,12 +774,15 @@ def invite_team_member(company_id):
 # =========================================================
 @admin_bp.route("/reports", methods=["GET", "POST"])
 @login_required
-@role_required("admin")
+@role_required("admin_group")
 def reports():
+    company = _company_scope()
     report_type = request.form.get("report_type")
-    total_users = User.query.count()
-    total_loans = LoanApplication.query.count()
-    total_docs = LoanDocument.query.count()
+    users_query = User.query.filter_by(company_id=company.id) if company else User.query
+    total_users = users_query.count()
+    total_loans = LoanApplication.query.count() if not company else 0
+    total_docs = LoanDocument.query.count() if not company else 0
+    total_invites = UserInvite.query.filter_by(company_id=company.id).count() if company else UserInvite.query.count()
 
     if request.method == "POST" and report_type:
         output = io.StringIO()
@@ -787,18 +790,27 @@ def reports():
 
         if report_type == "users":
             writer.writerow(["ID", "Username", "Email", "Role", "Created"])
-            for u in User.query.all():
+            for u in users_query.all():
                 writer.writerow([u.id, u.username, u.email, u.role, u.created_at])
 
-        elif report_type == "loans":
+        elif report_type == "invites":
+            invite_query = UserInvite.query.filter_by(company_id=company.id) if company else UserInvite.query
+            writer.writerow(["ID", "Email", "Role", "Status", "Expires", "Created"])
+            for invite in invite_query.all():
+                writer.writerow([invite.id, invite.email, invite.role, invite.status, invite.expires_at, invite.created_at])
+
+        elif report_type == "loans" and not company:
             writer.writerow(["ID", "Borrower ID", "Type", "Amount", "Status", "Created"])
             for l in LoanApplication.query.all():
                 writer.writerow([l.id, l.borrower_profile_id, l.loan_type, l.amount, l.status, l.created_at])
 
-        elif report_type == "documents":
+        elif report_type == "documents" and not company:
             writer.writerow(["ID", "Borrower ID", "Name", "Status", "Created"])
             for d in LoanDocument.query.all():
                 writer.writerow([d.id, d.borrower_profile_id, d.document_name, d.status, d.created_at])
+        else:
+            flash("That report is not available for this admin workspace.", "warning")
+            return redirect(url_for("admin.reports"))
 
         output.seek(0)
         csv_data = output.getvalue()
@@ -812,9 +824,11 @@ def reports():
 
     return render_template(
         "admin/reports.html",
+        company=company,
         total_users=total_users,
         total_loans=total_loans,
         total_docs=total_docs,
+        total_invites=total_invites,
     )
 
 
@@ -824,8 +838,9 @@ def reports():
 
 @admin_bp.route("/messages", methods=["GET", "POST"])
 @login_required
-@role_required("admin")
+@role_required("admin_group")
 def messages():
+    company = _company_scope()
     if request.method == "POST":
         content = (request.form.get("content") or "").strip()
         receiver_id = request.form.get("recipient_id", type=int)
@@ -843,6 +858,10 @@ def messages():
             flash("⚠️ Recipient not found.", "danger")
             return redirect(url_for("admin.messages"))
 
+        if company and recipient_user.company_id != company.id:
+            flash("You can only message users in your company workspace.", "warning")
+            return redirect(url_for("admin.messages"))
+
         new_msg = Message(
             sender_id=current_user.id,
             receiver_id=receiver_id,
@@ -858,19 +877,39 @@ def messages():
         flash("Message sent.", "success")
         return redirect(url_for("admin.messages"))
 
-    msgs = (
-        Message.query
-        .order_by(Message.created_at.desc(), Message.id.desc())
-        .limit(50)
-        .all()
-    )
+    if company:
+        users = (
+            User.query
+            .filter_by(company_id=company.id)
+            .order_by(User.first_name.asc(), User.last_name.asc())
+            .all()
+        )
+        allowed_user_ids = {user.id for user in users}
+        allowed_user_ids.add(current_user.id)
+        msgs = [
+            msg for msg in (
+                Message.query
+                .order_by(Message.created_at.desc(), Message.id.desc())
+                .limit(200)
+                .all()
+            )
+            if msg.sender_id in allowed_user_ids and msg.receiver_id in allowed_user_ids
+        ][:50]
+    else:
+        msgs = (
+            Message.query
+            .order_by(Message.created_at.desc(), Message.id.desc())
+            .limit(50)
+            .all()
+        )
 
-    users = User.query.order_by(User.first_name.asc(), User.last_name.asc()).all()
+        users = User.query.order_by(User.first_name.asc(), User.last_name.asc()).all()
 
     return render_template(
         "admin/messages.html",
         messages=msgs,
-        users=users
+        users=users,
+        company=company,
     )
     
 # =========================================================

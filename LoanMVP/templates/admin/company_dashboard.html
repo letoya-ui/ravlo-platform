@@ -13,6 +13,14 @@
     <i class="lucide lucide-users"></i>
     View Team
   </a>
+  <a class="re-btn ghost sm" href="{{ url_for('admin.messages') }}">
+    <i class="lucide lucide-messages-square"></i>
+    Messages
+  </a>
+  <a class="re-btn ghost sm" href="{{ url_for('admin.reports') }}">
+    <i class="lucide lucide-file-spreadsheet"></i>
+    Reports
+  </a>
 {% endblock %}
 
 {% block content %}
@@ -65,6 +73,58 @@
         <div class="re-stat-value" style="font-size:1.05rem;">{{ company.subscription_tier or "Team" }}</div>
         <div class="re-stat-meta">Current workspace plan</div>
       </div>
+    </div>
+  </section>
+
+  <section class="re-card pad">
+    <div class="section-head">
+      <div>
+        <div class="eyebrow">ADMIN TOOLS</div>
+        <h3 style="margin:.35rem 0 .2rem;">Workspace Controls</h3>
+        <div class="re-card-subtitle">Everything a company admin needs to operate day to day.</div>
+      </div>
+    </div>
+
+    <div class="quick-action-grid mt-16">
+      <a class="partner-action-card" href="{{ url_for('admin.company_team', company_id=company.id) }}">
+        <div class="partner-action-icon"><i class="lucide lucide-users"></i></div>
+        <div class="partner-action-copy">
+          <h4>Team</h4>
+          <p>Review users, invites, and role assignments for this company.</p>
+        </div>
+      </a>
+
+      <a class="partner-action-card" href="{{ url_for('system.users') }}">
+        <div class="partner-action-icon"><i class="lucide lucide-user-cog"></i></div>
+        <div class="partner-action-copy">
+          <h4>Users</h4>
+          <p>Manage active accounts scoped to your company workspace.</p>
+        </div>
+      </a>
+
+      <a class="partner-action-card" href="{{ url_for('admin.messages') }}">
+        <div class="partner-action-icon"><i class="lucide lucide-messages-square"></i></div>
+        <div class="partner-action-copy">
+          <h4>Messages</h4>
+          <p>Send internal messages to your company users.</p>
+        </div>
+      </a>
+
+      <a class="partner-action-card" href="{{ url_for('admin.reports') }}">
+        <div class="partner-action-icon"><i class="lucide lucide-file-spreadsheet"></i></div>
+        <div class="partner-action-copy">
+          <h4>Reports</h4>
+          <p>Export team and invite reports for your workspace.</p>
+        </div>
+      </a>
+
+      <a class="partner-action-card" href="{{ url_for('admin.access_requests') }}">
+        <div class="partner-action-icon"><i class="lucide lucide-clipboard-list"></i></div>
+        <div class="partner-action-copy">
+          <h4>Requests</h4>
+          <p>Review access requests related to your company.</p>
+        </div>
+      </a>
     </div>
   </section>
 

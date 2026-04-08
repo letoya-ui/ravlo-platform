@@ -45,6 +45,14 @@
       <span>{% if is_company_admin %}Team{% else %}Access Requests{% endif %}</span>
     </a>
 
+    {% if is_company_admin %}
+      <a href="{{ url_for('admin.access_requests') }}"
+         class="re-nav-link {% if ep in ['admin.access_requests', 'admin.requests_dashboard', 'admin.request_detail'] %}active{% endif %}">
+        <i class="icon lucide lucide-clipboard-list"></i>
+        <span>Requests</span>
+      </a>
+    {% endif %}
+
     {% if not is_company_admin %}
       <a href="{{ url_for('admin.companies') }}"
          class="re-nav-link {% if ep == 'admin.companies' %}active{% endif %}">
@@ -62,6 +70,18 @@
         <span>Verify Documents</span>
       </a>
 
+      <a href="{{ url_for('admin.messages') }}"
+         class="re-nav-link {% if ep == 'admin.messages' %}active{% endif %}">
+        <i class="icon lucide lucide-messages-square"></i>
+        <span>Messages</span>
+      </a>
+
+      <a href="{{ url_for('admin.reports') }}"
+         class="re-nav-link {% if ep == 'admin.reports' %}active{% endif %}">
+        <i class="icon lucide lucide-file-spreadsheet"></i>
+        <span>Reports</span>
+      </a>
+    {% else %}
       <a href="{{ url_for('admin.messages') }}"
          class="re-nav-link {% if ep == 'admin.messages' %}active{% endif %}">
         <i class="icon lucide lucide-messages-square"></i>
@@ -91,6 +111,11 @@
       <a href="{{ url_for('property.manage') }}" class="re-nav-link">
         <i class="icon lucide lucide-building"></i>
         <span>Properties</span>
+      </a>
+    {% else %}
+      <a href="{{ url_for('system.users') }}" class="re-nav-link {% if ep in ['system.users'] %}active{% endif %}">
+        <i class="icon lucide lucide-user-cog"></i>
+        <span>Users</span>
       </a>
     {% endif %}
 
