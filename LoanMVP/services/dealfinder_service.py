@@ -1,17 +1,17 @@
 from typing import Dict, Any
 
-from services.attom_service import (
+from LoanMVP.services.attom_service import (
     get_property_detail,
     extract_core_fields as extract_attom_fields,
     AttomServiceError,
 )
-from services.mashvisor_service import (
+from LoanMVP.services.mashvisor_service import (
     get_property_analytics,
     extract_core_fields as extract_mash_fields,
     MashvisorServiceError,
 )
-from services.dealfinder_normalizer import normalize_property
-from services.dealfinder_scoring import compute_deal_score
+from LoanMVP.services.dealfinder_normalizer import normalize_property
+from LoanMVP.services.dealfinder_scoring import compute_deal_score
 
 
 def build_dealfinder_profile(
