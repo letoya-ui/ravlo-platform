@@ -106,6 +106,103 @@ def _pick(node: Dict[str, Any], *paths: tuple[str, ...]) -> Any:
     return None
 
 
+def _normalize_listing_item(item: Dict[str, Any]) -> Dict[str, Any]:
+    location = _first_dict(
+        _pick(item, ("location",)),
+        _pick(item, ("address",)),
+        _pick(item, ("description",)),
+    )
+
+    photos = _extract_photos(
+        _pick(
+            item,
+            ("photos",),
+            ("primary_photo",),
+            ("photo",),
+            ("description", "photos"),
+            ("location", "photos"),
+        )
+    )
+
+    return {
+        "property_id": _pick(item, ("property_id",), ("propertyId",), ("listing_id",), ("mls_id",), ("listing_id",)),
+        "address": _pick(item, ("address", "line"), ("location", "address", "line"), ("description", "line"), ("address",), ("location", "address")),
+        "address_line1": _pick(item, ("address", "line"), ("location", "address", "line"), ("description", "line")),
+        "city": _pick(item, ("address", "city"), ("location", "address", "city"), ("location", "city"), ("description", "city")),
+        "state": _pick(item, ("address", "state_code"), ("location", "address", "state_code"), ("location", "state_code"), ("description", "state_code")),
+        "zip_code": _pick(item, ("address", "postal_code"), ("location", "address", "postal_code"), ("location", "postal_code"), ("description", "postal_code")),
+        "price": _pick(item, ("list_price",), ("price",), ("description", "price")),
+        "beds": _pick(item, ("beds",), ("description", "beds")),
+        "baths": _pick(item, ("baths",), ("description", "baths_full"), ("description", "baths")),
+        "square_feet": _pick(item, ("sqft",), ("description", "sqft"), ("description", "sold_price_per_sqft")),
+        "lot_size_sqft": _pick(item, ("description", "lot_sqft"), ("lot_sqft",)),
+        "year_built": _pick(item, ("description", "year_built"), ("year_built",)),
+        "property_type": _pick(item, ("prop_type",), ("description", "type"), ("property_type",)),
+        "status": _pick(item, ("status",), ("description", "status")),
+        "days_on_market": _pick(item, ("days_on_mls",), ("days_on_market",), ("description", "days_on_mls")),
+        "primary_photo": photos[0] if photos else None,
+        "photos": photos,
+        "raw": item,
+    }
+
+
+def _extract_listing_results(data: Dict[str, Any]) -> List[Dict[str, Any]]:
+    candidates = [
+        data.get("results"),
+        data.get("properties"),
+        data.get("listings"),
+        _pick(data, ("data", "results")),
+        _pick(data, ("data", "home_search", "results")),
+        _pick(data, ("data", "properties")),
+        _pick(data, ("data", "listings")),
+    ]
+
+    for candidate in candidates:
+        if isinstance(candidate, list):
+            return [item for item in candidate if isinstance(item, dict)]
+    return []
+
+
+def search_realtor_for_sale(
+    *,
+    location: str,
+    limit: int = 20,
+    offset: int = 0,
+    sort: str = "relevance",
+    days_on: int = 1,
+    expand_search_radius: int = 0,
+) -> List[Dict[str, Any]]:
+    if not RAPIDAPI_KEY:
+        return []
+
+    params = {
+        "location": location,
+        "offset": offset,
+        "limit": limit,
+        "sort": sort,
+        "days_on": days_on,
+        "expand_search_radius": expand_search_radius,
+    }
+
+    headers = {
+        "X-RapidAPI-Key": RAPIDAPI_KEY,
+        "X-RapidAPI-Host": RAPIDAPI_HOST,
+    }
+
+    try:
+        resp = requests.get(RAPIDAPI_URL, headers=headers, params=params, timeout=20)
+        if not resp.ok:
+            print("Realtor Search error:", resp.text[:300])
+            return []
+        data = resp.json()
+    except Exception as e:
+        print("Realtor Search exception:", e)
+        return []
+
+    listings = _extract_listing_results(data)
+    return [_normalize_listing_item(item) for item in listings]
+
+
 def fetch_realtor_data(address: str, city: str, state: str) -> Optional[Dict[str, Any]]:
     """
     Fetch listing data from Realtor.com via RapidAPI.
