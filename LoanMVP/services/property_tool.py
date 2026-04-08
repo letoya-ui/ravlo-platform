@@ -508,6 +508,37 @@ def get_property_search_result(
     Ravlo-friendly wrapper for routes/services.
     """
 
+    location_parts = []
+    if address:
+        location_parts.append(address)
+    if city:
+        location_parts.append(city)
+    if state:
+        location_parts.append(state)
+    if postalcode:
+        location_parts.append(postalcode)
+    realtor_location = ", ".join([part.strip() for part in location_parts if str(part).strip()])
+
+    if realtor_location:
+        try:
+            from LoanMVP.services.realtor_provider import search_realtor_for_sale
+
+            realtor_results = search_realtor_for_sale(
+                location=realtor_location,
+                limit=page_size,
+                offset=max(page - 1, 0) * page_size,
+            )
+            if realtor_results:
+                enriched = [_enrich_property_with_detail(item) for item in realtor_results]
+                return {
+                    "ok": True,
+                    "count": len(enriched),
+                    "properties": enriched,
+                    "source": "realtor",
+                }
+        except Exception:
+            pass
+
     if address:
         results = search_property_by_address(
             address1=address,
@@ -528,6 +559,7 @@ def get_property_search_result(
         "ok": True,
         "count": len(results),
         "properties": results,
+        "source": "attom",
     }
 
 

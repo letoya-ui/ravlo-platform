@@ -4,9 +4,13 @@ from typing import Dict, Any, Optional, List
 
 RAPIDAPI_KEY = os.getenv("RAPIDAPI_KEY")
 RAPIDAPI_HOST = os.getenv("REALTOR_RAPIDAPI_HOST", "realtor-search.p.rapidapi.com")
-RAPIDAPI_URL = os.getenv(
+REALTOR_DETAIL_URL = os.getenv(
     "REALTOR_RAPIDAPI_URL",
     f"https://{RAPIDAPI_HOST}/properties/v3/detail",
+)
+REALTOR_SEARCH_URL = os.getenv(
+    "REALTOR_RAPIDAPI_SEARCH_URL",
+    f"https://{RAPIDAPI_HOST}/for-sale",
 )
 
 
@@ -190,7 +194,7 @@ def search_realtor_for_sale(
     }
 
     try:
-        resp = requests.get(RAPIDAPI_URL, headers=headers, params=params, timeout=20)
+        resp = requests.get(REALTOR_SEARCH_URL, headers=headers, params=params, timeout=20)
         if not resp.ok:
             print("Realtor Search error:", resp.text[:300])
             return []
@@ -240,7 +244,7 @@ def fetch_realtor_data(address: str, city: str, state: str) -> Optional[Dict[str
             "X-RapidAPI-Host": RAPIDAPI_HOST,
         }
 
-        resp = requests.post(RAPIDAPI_URL, json=payload, headers=headers, timeout=15)
+        resp = requests.post(REALTOR_DETAIL_URL, json=payload, headers=headers, timeout=15)
 
         if not resp.ok:
             print("Realtor Provider error:", resp.text[:300])
