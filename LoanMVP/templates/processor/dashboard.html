@@ -24,6 +24,7 @@ Review submissions, verify documents, clear conditions, and move files toward un
       <a href="{{ url_for('processor.loan_queue') }}" class="ravlo-btn ghost">Open Queue</a>
       <a href="{{ url_for('processor.documents') }}" class="ravlo-btn ghost">Documents</a>
       <a href="{{ url_for('processor.verify_docs') }}" class="ravlo-btn primary">Verify Docs</a>
+      <a href="{{ url_for('processor.contracts') }}" class="ravlo-btn ghost">Contracts Hub</a>
     </div>
   </section>
 
@@ -108,6 +109,25 @@ Review submissions, verify documents, clear conditions, and move files toward un
         <a href="{{ url_for('processor.reports') }}" class="quick-action-card">
           <span class="qa-title">Reports & Insights</span>
           <span class="qa-sub">View processor activity and pipeline metrics</span>
+        </a>
+
+        <a href="{{ url_for('processor.contracts') }}" class="quick-action-card">
+          <span class="qa-title">NDA & Contracts</span>
+          <span class="qa-sub">
+            Agreement: {{ "Complete" if current_user.ica_accepted else "Pending" }} ·
+            NDA: {{ "Complete" if current_user.nda_accepted else "Pending" }}
+          </span>
+        </a>
+
+        <a href="{{ url_for('processor.onboarding') }}" class="quick-action-card">
+          <span class="qa-title">Onboarding</span>
+          <span class="qa-sub">
+            {% if current_user.onboarding_complete %}
+              Workflow onboarding is complete and processor standards are active
+            {% else %}
+              Review document flow, borrower communication, and underwriting handoff standards
+            {% endif %}
+          </span>
         </a>
       </div>
     </div>

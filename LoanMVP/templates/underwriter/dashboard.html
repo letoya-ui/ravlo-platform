@@ -15,6 +15,10 @@ Review risk, analyze loan quality, manage conditions, and drive final credit dec
     <i class="lucide lucide-shield-alert"></i>
     Risk Reports
   </a>
+  <a class="re-btn ghost sm" href="{{ url_for('underwriter.contracts') }}">
+    <i class="lucide lucide-folder-lock"></i>
+    Contracts Hub
+  </a>
 {% endblock %}
 
 {% block content %}
@@ -41,6 +45,10 @@ Review risk, analyze loan quality, manage conditions, and drive final credit dec
       <a class="re-btn ghost" href="{{ url_for('underwriter.pipeline') }}">
         <i class="lucide lucide-git-branch"></i>
         Pipeline
+      </a>
+      <a class="re-btn ghost" href="{{ url_for('underwriter.onboarding') }}">
+        <i class="lucide lucide-clipboard-check"></i>
+        Onboarding
       </a>
       <button class="re-btn ghost" type="button" onclick="toggleAI()">
         <i class="lucide lucide-bot"></i>
@@ -187,6 +195,25 @@ Review risk, analyze loan quality, manage conditions, and drive final credit dec
           <a class="uw-tool" href="{{ url_for('underwriter.messages') }}">
             <span class="uw-tool-title">Messages</span>
             <span class="uw-tool-sub">Coordinate with processor and lending team</span>
+          </a>
+
+          <a class="uw-tool" href="{{ url_for('underwriter.contracts') }}">
+            <span class="uw-tool-title">NDA & Contracts</span>
+            <span class="uw-tool-sub">
+              Agreement: {{ "Complete" if current_user.ica_accepted else "Pending" }} ·
+              NDA: {{ "Complete" if current_user.nda_accepted else "Pending" }}
+            </span>
+          </a>
+
+          <a class="uw-tool" href="{{ url_for('underwriter.onboarding') }}">
+            <span class="uw-tool-title">Onboarding</span>
+            <span class="uw-tool-sub">
+              {% if current_user.onboarding_complete %}
+                Workflow onboarding is complete and ready for live file work
+              {% else %}
+                Review underwriting workflow, condition standards, and escalation rules
+              {% endif %}
+            </span>
           </a>
         </div>
       </div>
