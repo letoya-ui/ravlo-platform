@@ -266,6 +266,66 @@ def dashboard():
 
 
 
+@loan_officer_bp.route("/agreement", methods=["GET"])
+@role_required("loan_officer")
+def agreement():
+    if getattr(current_user, "ica_accepted", False):
+        if not getattr(current_user, "nda_accepted", False):
+            return redirect(url_for("loan_officer.nda"))
+        if getattr(current_user, "loan_officer_onboarding_complete", False):
+            return redirect(url_for("loan_officer.dashboard"))
+        return redirect(url_for("loan_officer.onboarding"))
+
+    return render_template("loan_officer/agreement.html")
+
+
+@loan_officer_bp.route("/agreement/accept", methods=["POST"])
+@role_required("loan_officer")
+def accept_ica():
+    if not all([
+        request.form.get("status_ack"),
+        request.form.get("comp_ack"),
+        request.form.get("no_guarantee"),
+        request.form.get("agree_terms")
+    ]):
+        flash("You must accept all terms before continuing.", "danger")
+        return redirect(url_for("loan_officer.agreement"))
+
+    current_user.ica_accepted = True
+    db.session.commit()
+
+    flash("Agreement accepted successfully.", "success")
+    return redirect(url_for("loan_officer.nda"))
+
+
+@loan_officer_bp.route("/nda", methods=["GET"])
+@role_required("loan_officer")
+def nda():
+    if getattr(current_user, "nda_accepted", False):
+        if getattr(current_user, "loan_officer_onboarding_complete", False):
+            return redirect(url_for("loan_officer.dashboard"))
+        return redirect(url_for("loan_officer.onboarding"))
+
+    return render_template("loan_officer/nda.html")
+
+
+@loan_officer_bp.route("/nda/accept", methods=["POST"])
+@role_required("loan_officer")
+def accept_nda():
+    nda_ack = request.form.get("nda_ack")
+    nda_agree = request.form.get("nda_agree")
+
+    if not nda_ack or not nda_agree:
+        flash("You must accept the NDA to continue.", "danger")
+        return redirect(url_for("loan_officer.nda"))
+
+    current_user.nda_accepted = True
+    db.session.commit()
+
+    flash("NDA accepted successfully.", "success")
+    return redirect(url_for("loan_officer.onboarding"))
+
+
 @loan_officer_bp.route("/onboarding", methods=["GET"])
 @role_required("loan_officer")
 def onboarding():
@@ -302,72 +362,6 @@ def complete_onboarding():
 
     flash("Onboarding completed. Welcome to your dashboard.", "success")
     return redirect(url_for("loan_officer.dashboard"))
-
-
-@loan_officer_bp.route("/nda", methods=["GET"])
-@role_required("loan_officer")
-def nda():
-    if getattr(current_user, "nda_accepted", False):
-        if getattr(current_user, "loan_officer_onboarding_complete", False):
-            return redirect(url_for("loan_officer.dashboard"))
-        return redirect(url_for("loan_officer.onboarding"))
-
-    return render_template("loan_officer/nda.html")
-
-
-@loan_officer_bp.route("/nda/accept", methods=["POST"])
-@role_required("loan_officer")
-def accept_nda():
-    nda_ack = request.form.get("nda_ack")
-    nda_agree = request.form.get("nda_agree")
-
-    if not nda_ack or not nda_agree:
-        flash("You must accept the NDA to continue.", "danger")
-        return redirect(url_for("loan_officer.nda"))
-
-    current_user.nda_accepted = True
-
-    # If NDA is the last required signature, send them onward.
-    if getattr(current_user, "ica_accepted", False):
-        db.session.commit()
-        flash("NDA accepted successfully.", "success")
-        return redirect(url_for("loan_officer.onboarding"))
-
-    db.session.commit()
-    flash("NDA accepted successfully.", "success")
-    return redirect(url_for("loan_officer.onboarding"))
-
-
-@loan_officer_bp.route("/agreement", methods=["GET"])
-@role_required("loan_officer")
-def agreement():
-    if getattr(current_user, "ica_accepted", False):
-        if not getattr(current_user, "nda_accepted", False):
-            return redirect(url_for("loan_officer.nda"))
-        if getattr(current_user, "loan_officer_onboarding_complete", False):
-            return redirect(url_for("loan_officer.dashboard"))
-        return redirect(url_for("loan_officer.onboarding"))
-
-    return render_template("loan_officer/agreement.html")
-
-
-@loan_officer_bp.route("/agreement/accept", methods=["POST"])
-@role_required("loan_officer")
-def accept_ica():
-    if not all([
-        request.form.get("status_ack"),
-        request.form.get("comp_ack"),
-        request.form.get("no_guarantee"),
-        request.form.get("agree_terms")
-    ]):
-        flash("You must accept all terms before continuing.", "danger")
-        return redirect(url_for("loan_officer.agreement"))
-
-    current_user.ica_accepted = True
-    db.session.commit()
-
-    flash("Agreement accepted successfully.", "success")
-    return redirect(url_for("loan_officer.nda"))
 
 # =============================================================
 # AI Assistant — Loan Officer
