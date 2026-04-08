@@ -102,12 +102,13 @@ Search by ZIP or address, review public record property data, and move opportuni
 
 <script>
 const csrfToken = "{{ csrf_token() }}";
+const PLACEHOLDER_IMAGE = "/static/images/placeholder_property.jpg";
 
 function money(x){
   if (x === null || x === undefined || x === "") return "—";
-  const n = Number(x);
-  if (Number.isNaN(n)) return "—";
-  return "$" + n.toLocaleString(undefined, {maximumFractionDigits:0});
+  const n = Number(String(x).replace(/[$,]/g, "").trim());
+  if (Number.isNaN(n) || n <= 0) return "—";
+  return "$" + n.toLocaleString(undefined, {maximumFractionDigits: 0});
 }
 
 function safeText(v){
@@ -116,10 +117,16 @@ function safeText(v){
 
 function numOrNull(v){
   if (v === null || v === undefined) return null;
-  const s = String(v).trim();
+  const s = String(v).replace(/[$,]/g, "").trim();
   if (!s) return null;
   const n = Number(s);
   return Number.isNaN(n) ? null : n;
+}
+
+function prettyNumber(v){
+  const n = numOrNull(v);
+  if (n === null || n <= 0) return "—";
+  return n.toLocaleString(undefined, {maximumFractionDigits: 0});
 }
 
 function strategyLabel(v){
@@ -136,15 +143,31 @@ function scoreClass(score){
   return "neutral";
 }
 
+function escapeHtml(str){
+  return String(str ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
 function buildPayloadObj(r, analyzeId, saveId){
-  const primaryValue = r.display_value ?? r.market_value ?? r.assessed_value ?? r.last_sale_price ?? null;
+  const primaryValue =
+    r.display_value ??
+    r.price ??
+    r.market_value ??
+    r.assessed_value ??
+    r.last_sale_price ??
+    null;
+
   return {
     address: r.address || r.address_line1 || "",
     city: r.city || "",
     state: r.state || "",
     zip: r.zip_code || "",
     price: primaryValue,
-    sqft: r.square_feet ?? null,
+    sqft: r.square_feet ?? r.sqft ?? null,
     beds: r.beds ?? null,
     baths: r.baths ?? null,
     year_built: r.year_built ?? null,
@@ -158,6 +181,82 @@ function buildPayloadObj(r, analyzeId, saveId){
     _btnId: analyzeId,
     _saveBtnId: saveId
   };
+}
+
+function resolveImage(r){
+  return (
+    r.primary_photo ||
+    r.photo ||
+    r.thumbnail ||
+    (Array.isArray(r.photos) ? r.photos[0] : null) ||
+    PLACEHOLDER_IMAGE
+  );
+}
+
+function resolveDisplayValue(r){
+  return (
+    numOrNull(r.display_value) ??
+    numOrNull(r.price) ??
+    numOrNull(r.market_value) ??
+    numOrNull(r.assessed_value) ??
+    numOrNull(r.last_sale_price)
+  );
+}
+
+function resolveDisplayLabel(r){
+  return (
+    r.display_value_label ||
+    (numOrNull(r.market_value) !== null ? "Market Value" :
+     numOrNull(r.assessed_value) !== null ? "Assessed Value" :
+     numOrNull(r.last_sale_price) !== null ? "Last Recorded Sale" :
+     "Best Available Value")
+  );
+}
+
+function resolveSecondaryValue(r){
+  return r.display_value_secondary ?? null;
+}
+
+function resolveSecondaryLabel(r){
+  return r.display_value_secondary_label ?? null;
+}
+
+function resolveDataBadge(r){
+  if (r.data_status === "attom_only") {
+    return `<span class="dfv2-data-badge pending">ATTOM Only</span>`;
+  }
+  return `<span class="dfv2-data-badge live">Enriched</span>`;
+}
+
+function resolveScoreText(r){
+  const score = numOrNull(r.ravlo_score);
+  if (score === null) return "Public Record";
+  return `${score}/100`;
+}
+
+function resolveReasons(r, displayValueLabel, displayValue){
+  if (Array.isArray(r.score_reasons) && r.score_reasons.length) {
+    return r.score_reasons.slice(0, 3);
+  }
+
+  const reasons = [];
+  reasons.push(
+    displayValue !== null
+      ? `${displayValueLabel} available for review`
+      : "Valuation data is still pending"
+  );
+
+  if (numOrNull(r.traditional_rent) !== null) {
+    reasons.push(`Estimated rent: ${money(r.traditional_rent)}/mo`);
+  }
+
+  if (r.data_status === "attom_only") {
+    reasons.push("Advanced rent and strategy enrichment pending");
+  } else {
+    reasons.push("Enriched profile ready for deeper review");
+  }
+
+  return reasons;
 }
 
 async function viewDetails(item){
@@ -266,7 +365,7 @@ function renderSummary(zip, strategy, count){
   document.getElementById("summaryTitle").innerText = "Search Complete";
   document.getElementById("summarySub").innerText = count === 0
     ? "No properties matched this search."
-    : "Ravlo returned available public record property data.";
+    : "Ravlo returned available property results for review.";
   document.getElementById("summaryCount").innerText = String(count);
   document.getElementById("summaryStrategy").innerText = strategyLabel(strategy);
   document.getElementById("summaryZip").innerText = zip || "—";
@@ -277,8 +376,8 @@ function renderEmpty(messageTitle, messageBody){
   document.getElementById("results").innerHTML = `
     <div class="ravlo-card pad dfv2-empty">
       <div class="eyebrow">NO MATCHES</div>
-      <h3 class="mb-8">${messageTitle}</h3>
-      <p class="muted mb-0">${messageBody}</p>
+      <h3 class="mb-8">${escapeHtml(messageTitle)}</h3>
+      <p class="muted mb-0">${escapeHtml(messageBody)}</p>
     </div>
   `;
 }
@@ -286,81 +385,106 @@ function renderEmpty(messageTitle, messageBody){
 function renderCards(results){
   const root = document.getElementById("results");
 
+  if (!results || !results.length){
+    renderEmpty(
+      "No properties matched your search",
+      "Try another address, city/state combination, or ZIP code."
+    );
+    return;
+  }
+
   root.innerHTML = results.map((r, idx) => {
     const ts = Date.now() + idx;
     const analyzeId = `dw_${idx}_${ts}`;
     const saveId = `sv_${idx}_${ts}`;
     const payloadObj = buildPayloadObj(r, analyzeId, saveId);
     const encoded = encodeURIComponent(JSON.stringify(payloadObj));
-    const imageUrl = r.primary_photo || r.photo || r.thumbnail || "/static/images/placeholder_property.jpg";
+
+    const imageUrl = resolveImage(r);
     const score = numOrNull(r.ravlo_score);
-    const scoreText = score !== null ? `${score}/100` : "Public Record";
-    const displayValue = numOrNull(r.display_value);
-    const displayValueLabel = safeText(r.display_value_label || "Best Available Value");
-    const displayValueSecondary = r.display_value_secondary;
-    const displayValueSecondaryLabel = r.display_value_secondary_label;
-    const salePrice = numOrNull(r.last_sale_price);
+    const scoreText = resolveScoreText(r);
+
+    const displayValue = resolveDisplayValue(r);
+    const displayValueLabel = resolveDisplayLabel(r);
+    const displayValueSecondary = resolveSecondaryValue(r);
+    const displayValueSecondaryLabel = resolveSecondaryLabel(r);
+
     const marketValue = numOrNull(r.market_value);
     const assessedValue = numOrNull(r.assessed_value);
+    const salePrice = numOrNull(r.last_sale_price);
     const taxAmount = numOrNull(r.tax_amount);
+    const rentEstimate = numOrNull(r.traditional_rent);
+
     const metricOneLabel = marketValue !== null ? "Market Value" : "Last Recorded Sale";
     const metricOneValue = marketValue !== null ? money(marketValue) : money(salePrice);
-    const metricTwoLabel = salePrice !== null ? "Last Recorded Sale" : "Assessed Value";
-    const metricTwoValue = salePrice !== null ? money(salePrice) : money(assessedValue);
-    const metricThreeLabel = assessedValue !== null ? "Assessed Value" : "Property Tax";
-    const metricThreeValue = assessedValue !== null ? money(assessedValue) : money(taxAmount);
-    const metricFourLabel = taxAmount !== null ? "Property Tax" : "Year Built";
-    const metricFourValue = taxAmount !== null ? money(taxAmount) : safeText(r.year_built);
-    const strategy = safeText(r.recommended_strategy || r.property_type || "Property");
-    const reasons = Array.isArray(r.score_reasons) && r.score_reasons.length
-      ? r.score_reasons.slice(0, 3)
-      : [
-          displayValue !== null ? `${displayValueLabel} surfaced for this property` : "Public record value still limited",
-          salePrice !== null ? "Recorded sale data available" : "No recent sale surfaced",
-          r.distressed ? "Distress marker found in record" : "Open detail view for deeper underwriting"
-        ];
+
+    const metricTwoLabel = assessedValue !== null ? "Assessed Value" : "Property Tax";
+    const metricTwoValue = assessedValue !== null ? money(assessedValue) : money(taxAmount);
+
+    const metricThreeLabel = rentEstimate !== null ? "Est. Rent" : "Property Type";
+    const metricThreeValue = rentEstimate !== null ? `${money(rentEstimate)}/mo` : safeText(r.property_type);
+
+    const metricFourLabel = "Year Built";
+    const metricFourValue = safeText(r.year_built);
+
+    const strategy = safeText(r.recommended_strategy || r.property_type || "Review");
+    const reasons = resolveReasons(r, displayValueLabel, displayValue);
+
+    const secondaryLine = displayValueSecondaryLabel && displayValueSecondary
+      ? `<div class="dfv2-price-sub">${escapeHtml(displayValueSecondaryLabel)}: ${
+          String(displayValueSecondaryLabel).includes("Date")
+            ? escapeHtml(displayValueSecondary)
+            : escapeHtml(money(displayValueSecondary))
+        }</div>`
+      : "";
 
     return `
       <article class="ravlo-card pad dfv2-card">
         <div class="dfv2-thumb">
-          <img src="${imageUrl}" alt="Property photo" onerror="this.onerror=null;this.src='/static/images/placeholder_property.jpg';">
-          <div class="dfv2-score-badge ${scoreClass(score)}">
-            ${scoreText}
+          <img src="${escapeHtml(imageUrl)}" alt="Property photo"
+               onerror="this.onerror=null;this.src='${PLACEHOLDER_IMAGE}';">
+          <div class="dfv2-thumb-top">
+            <div class="dfv2-score-badge ${scoreClass(score)}">
+              ${escapeHtml(scoreText)}
+            </div>
+            ${resolveDataBadge(r)}
           </div>
         </div>
 
         <div class="dfv2-body">
-          <div class="dfv2-address">${safeText(r.address || r.address_line1)}</div>
-          <div class="dfv2-location">${safeText(r.city)}, ${safeText(r.state)} ${safeText(r.zip_code)}</div>
+          <div>
+            <div class="dfv2-address">${escapeHtml(safeText(r.address || r.address_line1))}</div>
+            <div class="dfv2-location">${escapeHtml(safeText(r.city))}, ${escapeHtml(safeText(r.state))} ${escapeHtml(safeText(r.zip_code))}</div>
+          </div>
+
           <div class="dfv2-price-block">
-            <div class="dfv2-price-label">${displayValueLabel}</div>
-            <div class="dfv2-price-value">${displayValue !== null ? money(displayValue) : "Value unavailable"}</div>
-            ${displayValueSecondaryLabel && displayValueSecondary
-              ? `<div class="dfv2-price-sub">${safeText(displayValueSecondaryLabel)}: ${safeText(displayValueSecondaryLabel.includes("Date") ? displayValueSecondary : money(displayValueSecondary))}</div>`
-              : ""
-            }
+            <div class="dfv2-price-label">${escapeHtml(displayValueLabel)}</div>
+            <div class="dfv2-price-value">
+              ${displayValue !== null ? escapeHtml(money(displayValue)) : `<span class="dfv2-muted-inline">Data pending</span>`}
+            </div>
+            ${secondaryLine}
           </div>
 
           <div class="dfv2-chip-row">
-            <span class="dfv2-chip">${strategy}</span>
-            <span class="dfv2-chip">${safeText(r.beds)} bd</span>
-            <span class="dfv2-chip">${safeText(r.baths)} ba</span>
-            <span class="dfv2-chip">${safeText(r.square_feet)} sqft</span>
+            <span class="dfv2-chip">${escapeHtml(strategy)}</span>
+            <span class="dfv2-chip">${escapeHtml(safeText(r.beds))} bd</span>
+            <span class="dfv2-chip">${escapeHtml(safeText(r.baths))} ba</span>
+            <span class="dfv2-chip">${escapeHtml(prettyNumber(r.square_feet || r.sqft))} sqft</span>
           </div>
 
           <div class="dfv2-metrics">
-            <div><span>${metricOneLabel}</span><strong>${metricOneValue}</strong></div>
-            <div><span>${metricTwoLabel}</span><strong>${metricTwoValue}</strong></div>
-            <div><span>${metricThreeLabel}</span><strong>${metricThreeValue}</strong></div>
-            <div><span>${metricFourLabel}</span><strong>${metricFourValue}</strong></div>
-            <div><span>Lot Size</span><strong>${safeText(r.lot_size_sqft)}</strong></div>
-            <div><span>Year Built</span><strong>${safeText(r.year_built)}</strong></div>
+            <div><span>${metricOneLabel}</span><strong>${escapeHtml(metricOneValue)}</strong></div>
+            <div><span>${metricTwoLabel}</span><strong>${escapeHtml(metricTwoValue)}</strong></div>
+            <div><span>${metricThreeLabel}</span><strong>${escapeHtml(metricThreeValue)}</strong></div>
+            <div><span>${metricFourLabel}</span><strong>${escapeHtml(metricFourValue)}</strong></div>
+            <div><span>Lot Size</span><strong>${escapeHtml(prettyNumber(r.lot_size_sqft))}</strong></div>
+            <div><span>Property Type</span><strong>${escapeHtml(safeText(r.property_type))}</strong></div>
           </div>
 
           <div class="dfv2-ai-snippet">
             <strong>Deal Finder Snapshot:</strong>
             <ul class="dfv2-thesis-list">
-              ${reasons.map(reason => `<li>${safeText(reason)}</li>`).join("")}
+              ${reasons.map(reason => `<li>${escapeHtml(reason)}</li>`).join("")}
             </ul>
           </div>
 
@@ -411,7 +535,7 @@ async function runSearch(){
 
   status.innerText = "Ravlo is scanning this market...";
   resultsSummary.style.display = "none";
-  renderEmpty("Scanning search", "Reviewing available public record property data.");
+  renderEmpty("Scanning search", "Reviewing available property data.");
 
   try{
     const resp = await fetch("{{ url_for('investor.api_property_tool_search') }}", {
@@ -551,10 +675,18 @@ async function runSearch(){
   display:block;
 }
 
-.dfv2-score-badge{
+.dfv2-thumb-top{
   position:absolute;
   top:12px;
   left:12px;
+  right:12px;
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:.5rem;
+}
+
+.dfv2-score-badge{
   padding:.45rem .7rem;
   border-radius:999px;
   font-size:.78rem;
@@ -576,6 +708,27 @@ async function runSearch(){
 .dfv2-score-badge.neutral{
   background:rgba(107,127,147,.22);
   color:#eef4fb;
+}
+
+.dfv2-data-badge{
+  display:inline-flex;
+  align-items:center;
+  padding:.42rem .68rem;
+  border-radius:999px;
+  font-size:.72rem;
+  font-weight:800;
+  border:1px solid rgba(255,255,255,.12);
+  backdrop-filter:blur(8px);
+}
+
+.dfv2-data-badge.live{
+  background:rgba(37,99,235,.22);
+  color:#dbeafe;
+}
+
+.dfv2-data-badge.pending{
+  background:rgba(148,163,184,.20);
+  color:#e2e8f0;
 }
 
 .dfv2-body{
@@ -621,6 +774,12 @@ async function runSearch(){
   color:var(--muted);
   font-size:.76rem;
   margin-top:.28rem;
+}
+
+.dfv2-muted-inline{
+  color:#aebed9;
+  font-size:1rem;
+  font-weight:700;
 }
 
 .dfv2-chip-row{
