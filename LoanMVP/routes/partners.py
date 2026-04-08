@@ -514,7 +514,7 @@ def update_request_status(request_id):
 
     if new_status not in allowed:
         flash("Invalid request status.", "danger")
-        return redirect(url_for("partner.request_detail", request_id=req.id))
+        return redirect(url_for("partners.request_detail", request_id=req.id))
 
     req.status = new_status
     req.responded_at = datetime.utcnow()
@@ -522,7 +522,7 @@ def update_request_status(request_id):
     db.session.commit()
 
     flash("Request status updated.", "success")
-    return redirect(url_for("partner.request_detail", request_id=req.id))
+    return redirect(url_for("partners.request_detail", request_id=req.id))
 
 # ------------------------------------------------
 # PREMIUM WORKSPACE
