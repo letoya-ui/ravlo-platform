@@ -13,7 +13,7 @@ from LoanMVP.services.dealfinder_normalizer import normalize_property
 from LoanMVP.services.dealfinder_scoring import compute_deal_score
 import requests
 
-RENTCAST_API_KEY = d0bdb63befcc468897409c4293fd5049
+RENTCAST_API_KEY = "d0bdb63befcc468897409c4293fd5049"
 
 
 
