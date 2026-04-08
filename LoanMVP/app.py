@@ -30,6 +30,7 @@ from LoanMVP.extensions import db, login_manager, migrate, mail, stripe, csrf
 from LoanMVP.models import User
 from LoanMVP.models.loan_models import BorrowerProfile, LoanNotification
 from LoanMVP.utils.role_helpers import get_role_display, get_request_type_display, get_status_display, get_status_badge
+from LoanMVP.services.unified_resolver import resolve_property
 
 ENV_NAME = os.environ.get("FLASK_ENV", "production").strip().lower()
 DEFAULT_SOCKETIO_ASYNC_MODE = "threading" if ENV_NAME in {"dev", "development", "local"} else "eventlet"
@@ -175,6 +176,22 @@ def create_app():
             ("Auth", "/auth"),
         ]
         return render_template("dashboard.html", dashboards=dashboards)
+
+    
+
+    @app.route("/api/property/resolve", methods=["POST"])
+    def api_resolve_property():
+        payload = request.get_json() or {}
+        address = payload.get("address")
+        city = payload.get("city")
+        state = payload.get("state")
+
+        if not all([address, city, state]):
+            return jsonify({"error": "address, city, state required"}), 400
+
+        result = resolve_property(address, city, state)
+        return jsonify(result), 200
+
 
         
     # Global error handler

@@ -10,14 +10,37 @@ def _num(val: Any, default=0.0) -> float:
         return float(default)
 
 
-def normalize_property(attom_data: Dict[str, Any], analytics_data: Dict[str, Any]) -> Dict[str, Any]:
-    price = _num(attom_data.get("market_value") or analytics_data.get("listing_price"))
+
+def normalize_property(
+    attom_data: Dict[str, Any],
+    analytics_data: Dict[str, Any],
+    realtor_data: Dict[str, Any] = None
+) -> Dict[str, Any]:
+    """
+    Unified property normalizer for ATTOM + RentCast + Realtor.com.
+    - ATTOM = base public record
+    - analytics_data = RentCast (rent, valuation)
+    - realtor_data = listing data (price, photos, status, DOM, description)
+    """
+
+    # -----------------------------
+    # Base numeric fields
+    # -----------------------------
+    price = _num(
+        attom_data.get("market_value")
+        or analytics_data.get("listing_price")
+        or (realtor_data or {}).get("price")
+    )
+
     traditional_rent = _num(analytics_data.get("traditional_rent"))
     airbnb_rent = _num(analytics_data.get("airbnb_rent"))
     sqft = _num(attom_data.get("sqft"))
     tax_amount = _num(attom_data.get("tax_amount"))
 
-    return {
+    # -----------------------------
+    # Base ATTOM + RentCast profile
+    # -----------------------------
+    profile = {
         "address": attom_data.get("address_one_line") or "",
         "address_line1": attom_data.get("address_line1") or "",
         "city": attom_data.get("city") or "",
@@ -64,5 +87,21 @@ def normalize_property(attom_data: Dict[str, Any], analytics_data: Dict[str, Any
         "raw_sources": {
             "attom": attom_data.get("raw", {}),
             "analytics": analytics_data.get("raw", {}),
+            "realtor": realtor_data or {},
         },
     }
+
+    # -----------------------------
+    # ⭐ Merge Realtor.com listing data
+    # -----------------------------
+    if realtor_data:
+        profile.update({
+            "price": realtor_data.get("price") or profile.get("price"),
+            "photos": realtor_data.get("photos"),
+            "primary_photo": realtor_data.get("primary_photo"),
+            "status": realtor_data.get("status"),
+            "days_on_market": realtor_data.get("days_on_market"),
+            "description": realtor_data.get("description"),
+        })
+
+    return profile

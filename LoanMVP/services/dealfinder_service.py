@@ -12,6 +12,7 @@ from LoanMVP.services.rentcast_service import (
 from LoanMVP.services.dealfinder_normalizer import normalize_property
 from LoanMVP.services.dealfinder_scoring import compute_deal_score
 import requests
+from LoanMVP.services.realtor_provider import fetch_realtor_data
 
 RENTCAST_API_KEY = "d0bdb63befcc468897409c4293fd5049"
 
@@ -147,6 +148,21 @@ def build_dealfinder_profile(
         errors.append(f"RentCast: {e}")
     except Exception as e:
         errors.append(f"RentCast: {e}")
+ 
+        realtor_raw = fetch_realtor_data(address, city, state)
+
+        realtor_core = {}
+        if realtor_raw and realtor_raw.get("property"):
+            prop = realtor_raw["property"]
+            realtor_core = {
+                "price": prop.get("price"),
+                "photos": prop.get("photos"),
+                "primary_photo": prop.get("primary_photo"),
+                "status": prop.get("status"),
+                "days_on_market": prop.get("days_on_market"),
+                "description": prop.get("description"),
+            }
+
 
     # ATTOM is the required/base source for now.
     # RentCast is enrichment, not a gate.
@@ -162,7 +178,7 @@ def build_dealfinder_profile(
             },
         }
 
-    profile = normalize_property(attom_core, rentcast_core)
+    profile = normalize_property(attom_core, rentcast_core, realtor_core)
     scoring = compute_deal_score(profile)
 
     # helpful UI extras
