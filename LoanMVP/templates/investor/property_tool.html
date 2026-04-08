@@ -460,7 +460,7 @@ function renderCards(results){
           <div class="dfv2-price-block">
             <div class="dfv2-price-label">${escapeHtml(displayValueLabel)}</div>
             <div class="dfv2-price-value">
-              ${displayValue !== null ? escapeHtml(money(displayValue)) : `<span class="dfv2-muted-inline">Data pending</span>`}
+              ${displayValue !== null ? escapeHtml(money(displayValue)) : `<span class="dfv2-muted-inline">Loading valuation</span>`}
             </div>
             ${secondaryLine}
           </div>
