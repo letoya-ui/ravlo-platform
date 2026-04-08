@@ -115,6 +115,7 @@ from LoanMVP.services.renovation_engine_client import generate_concept, call_ren
 # 🔥 Property intelligence (IMPORTANT)
 from LoanMVP.services.property_service import resolve_property_unified, build_property_card_data, build_property_card
 from LoanMVP.services.deal_copilot_service import build_deal_copilot_context, generate_deal_copilot_response
+from services.dealfinder_service import build_dealfinder_profile
 
 from LoanMVP.utils.r2_storage import spaces_put_bytes
 
@@ -164,6 +165,191 @@ def safe_int(value, default=0, min_v=None, max_v=None):
         return default
 
 
+# ----------------------------
+# internal helpers
+# ----------------------------
+
+def _safe_float(v):
+    try:
+        if v in (None, "", "None"):
+            return None
+        if isinstance(v, (int, float)):
+            return float(v)
+        return float(str(v).replace("$", "").replace(",", "").strip())
+    except Exception:
+        return None
+
+
+def _safe_int(v):
+    try:
+        n = _safe_float(v)
+        return int(round(n)) if n is not None else None
+    except Exception:
+        return None
+
+
+def _first_nonempty(*vals):
+    for v in vals:
+        if v not in (None, "", [], {}):
+            return v
+    return None
+
+
+def _resolve_photo(raw):
+    """
+    Best-effort photo resolution from search payload.
+    If the upstream search response has no usable photo,
+    frontend will still fall back to placeholder_property.jpg.
+    """
+    photos = raw.get("photos") or []
+    if isinstance(photos, list):
+        for p in photos:
+            if isinstance(p, str) and p.strip():
+                return p
+            if isinstance(p, dict):
+                candidate = (
+                    p.get("url")
+                    or p.get("href")
+                    or p.get("src")
+                    or p.get("photo")
+                    or p.get("thumbnail")
+                )
+                if candidate:
+                    return candidate
+
+    return _first_nonempty(
+        raw.get("primary_photo"),
+        raw.get("photo"),
+        raw.get("thumbnail"),
+        raw.get("image_url"),
+        raw.get("image"),
+    )
+
+
+def _build_property_tool_result(raw_match, profile_bundle):
+    """
+    Convert normalized + scored dealfinder output into the shape
+    expected by property_tool.html.
+    """
+    profile = profile_bundle.get("profile") or {}
+    scoring = profile_bundle.get("scoring") or {}
+
+    market_value = _safe_float(profile.get("market_value"))
+    assessed_value = _safe_float(profile.get("assessed_value"))
+    last_sale_price = _safe_float(profile.get("last_sale_price"))
+    price = _safe_float(profile.get("price"))
+
+    display_value = _first_nonempty(
+        market_value,
+        price,
+        assessed_value,
+        last_sale_price,
+    )
+
+    if market_value is not None:
+        display_value_label = "Market Value"
+        display_value_secondary = assessed_value or last_sale_price
+        display_value_secondary_label = (
+            "Assessed Value" if assessed_value is not None else
+            "Last Sale Price" if last_sale_price is not None else
+            None
+        )
+    elif price is not None:
+        display_value_label = "Best Available Value"
+        display_value_secondary = assessed_value or last_sale_price
+        display_value_secondary_label = (
+            "Assessed Value" if assessed_value is not None else
+            "Last Sale Price" if last_sale_price is not None else
+            None
+        )
+    elif assessed_value is not None:
+        display_value_label = "Assessed Value"
+        display_value_secondary = last_sale_price
+        display_value_secondary_label = (
+            "Last Sale Price" if last_sale_price is not None else None
+        )
+    else:
+        display_value_label = "Last Recorded Sale"
+        display_value_secondary = profile.get("last_sale_date")
+        display_value_secondary_label = (
+            "Last Sale Date" if profile.get("last_sale_date") else None
+        )
+
+    overall_score = scoring.get("overall_score")
+    recommended_strategy = scoring.get("recommended_strategy")
+    score_reasons = scoring.get("score_reasons") or []
+
+    # normalized fields for current frontend
+    return {
+        "address": _first_nonempty(
+            profile.get("address_line1"),
+            profile.get("address"),
+            raw_match.get("address"),
+            raw_match.get("address_line1"),
+        ),
+        "address_line1": _first_nonempty(
+            profile.get("address_line1"),
+            raw_match.get("address_line1"),
+            raw_match.get("address"),
+        ),
+        "city": _first_nonempty(profile.get("city"), raw_match.get("city")),
+        "state": _first_nonempty(profile.get("state"), raw_match.get("state")),
+        "zip_code": _first_nonempty(profile.get("zip_code"), raw_match.get("zip_code")),
+        "attom_id": _first_nonempty(profile.get("attom_id"), raw_match.get("attom_id")),
+
+        "property_type": _first_nonempty(
+            profile.get("property_type"),
+            raw_match.get("property_type"),
+        ),
+        "property_sub_type": profile.get("property_sub_type"),
+
+        "beds": _safe_int(profile.get("beds")),
+        "baths": _safe_float(profile.get("baths")),
+        "square_feet": _safe_int(profile.get("sqft")),
+        "sqft": _safe_int(profile.get("sqft")),
+        "lot_size_sqft": _safe_int(
+            _first_nonempty(profile.get("lot_sqft"), raw_match.get("lot_size_sqft"))
+        ),
+        "year_built": _safe_int(profile.get("year_built")),
+
+        "display_value": display_value,
+        "display_value_label": display_value_label,
+        "display_value_secondary": display_value_secondary,
+        "display_value_secondary_label": display_value_secondary_label,
+
+        "price": price,
+        "market_value": market_value,
+        "assessed_value": assessed_value,
+        "last_sale_price": last_sale_price,
+        "last_sale_date": profile.get("last_sale_date"),
+        "tax_amount": _safe_float(profile.get("tax_amount")),
+
+        "traditional_rent": _safe_float(profile.get("traditional_rent")),
+        "airbnb_rent": _safe_float(profile.get("airbnb_rent")),
+        "traditional_cap_rate": _safe_float(profile.get("traditional_cap_rate")),
+        "traditional_coc": _safe_float(profile.get("traditional_coc")),
+        "airbnb_cap_rate": _safe_float(profile.get("airbnb_cap_rate")),
+        "airbnb_coc": _safe_float(profile.get("airbnb_coc")),
+        "occupancy_rate": _safe_float(profile.get("occupancy_rate")),
+
+        "distressed": bool(profile.get("distressed")),
+        "foreclosure_status": profile.get("foreclosure_status"),
+        "owner_occupied": profile.get("owner_occupied"),
+
+        "ravlo_score": overall_score,
+        "recommended_strategy": recommended_strategy or "Hold / Review",
+        "score_reasons": score_reasons,
+
+        "primary_photo": _resolve_photo(raw_match),
+        "photo": _resolve_photo(raw_match),
+        "thumbnail": _resolve_photo(raw_match),
+
+        "latitude": _safe_float(raw_match.get("latitude")),
+        "longitude": _safe_float(raw_match.get("longitude")),
+
+        "source_status": profile_bundle.get("source_status") or {},
+        "provider_errors": profile_bundle.get("errors") or [],
+    }
 # =========================================================
 # 🧾 JSON + FORM SAFETY
 # =========================================================
@@ -3370,20 +3556,12 @@ def property_explore_plus(prop_id):
         back_url=url_for(fallback_endpoint),
     )
     
-    
-
-    
-# =========================================================
-# 🔌 INVESTOR • Property Tool
-# =========================================================
+  
 
 
-
-
-# Make sure these already exist somewhere in your file/app:
-# - investor_bp
-# - role_required
-# - _profile_id_filter
+# ----------------------------
+# pages
+# ----------------------------
 
 @investor_bp.route("/property_tool", methods=["GET"])
 @login_required
@@ -3392,13 +3570,19 @@ def property_tool():
     return render_template("investor/property_tool.html")
 
 
+# ----------------------------
+# api: search
+# ----------------------------
+
 @investor_bp.route("/api/property_tool_search", methods=["POST"])
 @login_required
 @role_required("investor")
 def api_property_tool_search():
     """
-    Property search API for the Ravlo Property Tool.
-    Uses ATTOM-backed property search only.
+    Property Tool search:
+    1) get lightweight ATTOM search matches
+    2) enrich each result via dealfinder profile
+    3) return card-ready normalized results
     """
     payload = request.get_json(force=True) or {}
 
@@ -3420,8 +3604,12 @@ def api_property_tool_search():
     except Exception:
         page_size = 20
 
+    # Hard cap enrichment for production safety.
+    # build_dealfinder_profile() hits ATTOM detail + Mashvisor per property.
+    enrich_limit = min(page_size, 8)
+
     try:
-        result = get_property_search_result(
+        search_result = get_property_search_result(
             address=address or None,
             postalcode=zip_code or None,
             city=city or None,
@@ -3430,7 +3618,67 @@ def api_property_tool_search():
             page_size=page_size,
         )
 
-        properties = result.get("properties", []) or []
+        raw_matches = search_result.get("properties", []) or []
+        enriched_results = []
+        skipped = []
+
+        for idx, raw in enumerate(raw_matches[:enrich_limit]):
+            try:
+                raw_address = (
+                    raw.get("address_line1")
+                    or raw.get("address")
+                    or raw.get("address_one_line")
+                    or ""
+                ).strip()
+
+                raw_city = (raw.get("city") or city or "").strip()
+                raw_state = (raw.get("state") or state or "").strip()
+                raw_zip = (raw.get("zip_code") or zip_code or "").strip()
+                raw_property_type = (
+                    raw.get("property_type")
+                    or "single_family"
+                )
+
+                if not raw_address or not raw_city or not raw_state:
+                    skipped.append({
+                        "index": idx,
+                        "reason": "Missing address/city/state for enrichment",
+                        "address": raw_address,
+                    })
+                    continue
+
+                bundle = build_dealfinder_profile(
+                    address=raw_address,
+                    city=raw_city,
+                    state=raw_state,
+                    zip_code=raw_zip,
+                    property_type=raw_property_type,
+                )
+
+                if not bundle.get("ok"):
+                    skipped.append({
+                        "index": idx,
+                        "reason": "; ".join(bundle.get("errors") or ["Profile build failed"]),
+                        "address": raw_address,
+                    })
+                    continue
+
+                enriched_results.append(
+                    _build_property_tool_result(raw, bundle)
+                )
+
+            except Exception as inner_e:
+                current_app.logger.warning(
+                    "property_tool enrichment failed idx=%s address=%s err=%s",
+                    idx,
+                    raw.get("address") or raw.get("address_line1"),
+                    inner_e,
+                )
+                skipped.append({
+                    "index": idx,
+                    "reason": str(inner_e),
+                    "address": raw.get("address") or raw.get("address_line1"),
+                })
 
         return jsonify({
             "status": "ok",
@@ -3439,8 +3687,15 @@ def api_property_tool_search():
             "city": city,
             "state": state,
             "strategy": strategy,
-            "count": len(properties),
-            "results": properties,
+            "count": len(enriched_results),
+            "results": enriched_results,
+            "meta": {
+                "raw_count": len(raw_matches),
+                "enriched_count": len(enriched_results),
+                "enrich_limit": enrich_limit,
+                "skipped_count": len(skipped),
+                "skipped": skipped[:10],
+            },
         })
 
     except PropertyAPIError as e:
@@ -3451,12 +3706,17 @@ def api_property_tool_search():
         }), 400
 
     except Exception as e:
+        current_app.logger.exception("Property Tool search failed")
         return jsonify({
             "status": "error",
             "message": f"Property Tool search failed: {e}",
             "results": [],
         }), 500
 
+
+# ----------------------------
+# api: save
+# ----------------------------
 
 @investor_bp.route("/api/intelligence/save", methods=["POST"])
 @investor_bp.route("/api/property_tool_save", methods=["POST"])
@@ -3479,10 +3739,10 @@ def api_property_tool_save():
             "message": "Profile not found."
         }), 400
 
-    zipcode = (payload.get("zip") or "").strip() or None
-    price = payload.get("price")
-    sqft = payload.get("sqft")
-    property_id = payload.get("property_id")
+    zipcode = (payload.get("zip") or payload.get("zip_code") or "").strip() or None
+    price = payload.get("price") or payload.get("display_value")
+    sqft = payload.get("sqft") or payload.get("square_feet")
+    property_id = payload.get("property_id") or payload.get("attom_id")
 
     try:
         sqft = int(float(sqft)) if sqft not in (None, "", "None") else None
@@ -3532,6 +3792,10 @@ def api_property_tool_save():
     })
 
 
+# ----------------------------
+# api: save + analyze
+# ----------------------------
+
 @investor_bp.route("/api/intelligence/save-and-analyze", methods=["POST"])
 @investor_bp.route("/api/property_tool_save_and_analyze", methods=["POST"])
 @login_required
@@ -3553,10 +3817,10 @@ def api_property_tool_save_and_analyze():
             "message": "Profile not found."
         }), 400
 
-    zipcode = (payload.get("zip") or "").strip() or None
-    price = payload.get("price")
-    sqft = payload.get("sqft")
-    property_id = payload.get("property_id")
+    zipcode = (payload.get("zip") or payload.get("zip_code") or "").strip() or None
+    price = payload.get("price") or payload.get("display_value")
+    sqft = payload.get("sqft") or payload.get("square_feet")
+    property_id = payload.get("property_id") or payload.get("attom_id")
 
     try:
         sqft = int(float(sqft)) if sqft not in (None, "", "None") else None
@@ -3602,6 +3866,10 @@ def api_property_tool_save_and_analyze():
     })
 
 
+# ----------------------------
+# api: card
+# ----------------------------
+
 @investor_bp.route("/api/intelligence/card", methods=["POST"])
 @investor_bp.route("/api/property_tool_card", methods=["POST"])
 @login_required
@@ -3610,72 +3878,54 @@ def api_property_tool_card():
     payload = request.get_json(force=True) or {}
 
     address = (payload.get("address") or "").strip()
+    city = (payload.get("city") or "").strip()
+    state = (payload.get("state") or "").strip()
+    zip_code = (payload.get("zip") or payload.get("zip_code") or "").strip()
+    property_type = (payload.get("property_type") or "single_family").strip()
+
     if not address:
         return jsonify({
             "status": "error",
             "message": "Address is required."
         }), 400
 
-    def _num_or_none(v):
-        try:
-            if v in (None, "", "None"):
-                return None
-            return float(v)
-        except Exception:
-            return None
+    try:
+        bundle = build_dealfinder_profile(
+            address=address,
+            city=city,
+            state=state,
+            zip_code=zip_code,
+            property_type=property_type,
+        )
 
-    beds = _num_or_none(payload.get("beds"))
-    baths = _num_or_none(payload.get("baths"))
-    sqft = _num_or_none(payload.get("sqft"))
-    property_type = (payload.get("property_type") or "").strip() or None
+        if not bundle.get("ok"):
+            return jsonify({
+                "status": "error",
+                "message": "; ".join(bundle.get("errors") or ["Unable to load property card."])
+            }), 400
 
-    if beds is not None:
-        try:
-            beds = int(beds)
-        except Exception:
-            beds = None
+        card = _build_property_tool_result(payload, bundle)
 
-    if sqft is not None:
-        try:
-            sqft = int(sqft)
-        except Exception:
-            sqft = None
+        return jsonify({
+            "status": "ok",
+            "property": bundle.get("profile") or {},
+            "scoring": bundle.get("scoring") or {},
+            "source_status": bundle.get("source_status") or {},
+            "errors": bundle.get("errors") or [],
+            "card": card,
+        })
 
-    bundle = resolve_property_unified(
-        address=address,
-        beds=beds,
-        baths=baths,
-        sqft=sqft,
-        property_type=property_type,
-    )
-
-    if bundle.get("status") != "ok":
+    except Exception as e:
+        current_app.logger.exception("Property Tool card failed")
         return jsonify({
             "status": "error",
-            "message": bundle.get("error") or "Unable to load property card."
-        }), 400
+            "message": f"Unable to load property card: {e}"
+        }), 500
 
-    prop = bundle.get("property") or {}
-    valuation = bundle.get("valuation") or {}
-    rent_estimate = bundle.get("rent_estimate") or {}
-    comps = bundle.get("comps") or {}
-    market_snapshot = bundle.get("market_snapshot") or {}
-    ai_summary = bundle.get("ai_summary")
 
-    card = build_property_card_data(prop)
-
-    return jsonify({
-        "status": "ok",
-        "source": bundle.get("source"),
-        "property": prop,
-        "valuation": valuation,
-        "rent_estimate": rent_estimate,
-        "comps": comps,
-        "market_snapshot": market_snapshot,
-        "ai_summary": ai_summary,
-        "card": card,
-    })
-
+# ----------------------------
+# api: detail handoff
+# ----------------------------
 
 @investor_bp.route("/api/property_tool_view_details", methods=["POST"])
 @login_required
@@ -3697,10 +3947,10 @@ def api_property_tool_view_details():
             "message": "Investor profile not found."
         }), 400
 
-    zipcode = (payload.get("zip") or "").strip() or None
-    price = payload.get("price")
-    sqft = payload.get("sqft")
-    property_id = payload.get("property_id")
+    zipcode = (payload.get("zip") or payload.get("zip_code") or "").strip() or None
+    price = payload.get("price") or payload.get("display_value")
+    sqft = payload.get("sqft") or payload.get("square_feet")
+    property_id = payload.get("property_id") or payload.get("attom_id")
 
     try:
         sqft = int(float(sqft)) if sqft not in (None, "", "None") else None
