@@ -18,10 +18,6 @@
     border-radius:20px; padding:18px;
     border:1px solid rgba(255,255,255,.08);
     background:rgba(255,255,255,.03);
-<<<<<<< ours
-<<<<<<< ours
-=======
->>>>>>> theirs
   }
   .da-grid-2 { display:grid; grid-template-columns:1.1fr .9fr; gap:20px; }
   .da-input-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
@@ -29,18 +25,6 @@
     width:100%; padding:.75rem .85rem; border-radius:12px;
     border:1px solid rgba(255,255,255,.12); background:rgba(255,255,255,.04); color:#eef4ff;
   }
-<<<<<<< ours
-=======
-  }
-  .da-grid-2 { display:grid; grid-template-columns:1.1fr .9fr; gap:20px; }
-  .da-input-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
-  .da-input, .da-select, .da-textarea {
-    width:100%; padding:.75rem .85rem; border-radius:12px;
-    border:1px solid rgba(255,255,255,.12); background:rgba(255,255,255,.04); color:#eef4ff;
-  }
->>>>>>> theirs
-=======
->>>>>>> theirs
   .da-textarea { min-height:90px; resize:vertical; }
   .da-kpis { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
   .da-kpi { border:1px solid rgba(255,255,255,.08); border-radius:14px; padding:12px; background:rgba(255,255,255,.02); }
@@ -79,13 +63,7 @@
 
       <form id="dealArchitectForm" onsubmit="runDealArchitect(event)">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-<<<<<<< ours
-<<<<<<< ours
         <input type="hidden" name="deal_id" value="{{ deal.id if deal else '' }}">
-=======
->>>>>>> theirs
-=======
->>>>>>> theirs
 
         <div class="da-input-grid">
           <input class="da-input" name="project_name" placeholder="project_name" value="{{ deal.title if deal else '' }}">
@@ -100,8 +78,6 @@
           <input class="da-input" name="zip_code" placeholder="zip_code" value="{{ deal.zip_code if deal else '' }}">
           <input class="da-input" name="arv" placeholder="arv" value="{{ deal.arv if deal else '' }}">
           <input class="da-input" name="monthly_rent" placeholder="monthly_rent" value="{{ deal.estimated_rent if deal else '' }}">
-<<<<<<< ours
-<<<<<<< ours
           <input class="da-input" name="down_payment_pct" placeholder="down_payment_pct" value="25">
           <input class="da-input" name="interest_rate" placeholder="interest_rate" value="8">
           <input class="da-input" name="hold_years" placeholder="hold_years" value="5">
@@ -111,20 +87,6 @@
           <input class="da-input" name="market_value_multiplier" placeholder="market_value_multiplier (optional)">
           <input class="da-input" name="market_rent_multiplier" placeholder="market_rent_multiplier (optional)">
           <input class="da-input" name="market_risk_adjustment" placeholder="market_risk_adjustment (optional)">
-=======
-=======
->>>>>>> theirs
-          <input class="da-input" name="down_payment_pct" placeholder="down_payment_pct" value="20">
-          <input class="da-input" name="interest_rate" placeholder="interest_rate" value="8.5">
-          <input class="da-input" name="hold_years" placeholder="hold_years" value="5">
-          <input class="da-input" name="annual_tax_rate" placeholder="annual_tax_rate (optional)">
-          <input class="da-input" name="annual_insurance_rate" placeholder="annual_insurance_rate (optional)">
-          <input class="da-input" name="market_multiplier_rent" placeholder="market_multiplier_rent (optional)">
-          <input class="da-input" name="market_multiplier_value" placeholder="market_multiplier_value (optional)">
-<<<<<<< ours
->>>>>>> theirs
-=======
->>>>>>> theirs
         </div>
 
         <div style="margin-top:12px;">
@@ -218,8 +180,6 @@ function requestBodyFromForm(form) {
     const n = Number(v);
     return Number.isNaN(n) ? null : n;
   };
-<<<<<<< ours
-<<<<<<< ours
   const intOrNull = (name) => {
     const value = numOrNull(name);
     return value === null ? null : Math.trunc(value);
@@ -232,21 +192,6 @@ function requestBodyFromForm(form) {
 
   const payload = {
     deal_id: intOrNull("deal_id"),
-=======
-=======
->>>>>>> theirs
-
-  const market_multipliers = {};
-  const mmRent = numOrNull("market_multiplier_rent");
-  const mmValue = numOrNull("market_multiplier_value");
-  if (mmRent !== null) market_multipliers.rent = mmRent;
-  if (mmValue !== null) market_multipliers.value = mmValue;
-
-  const payload = {
-<<<<<<< ours
->>>>>>> theirs
-=======
->>>>>>> theirs
     project_name: get("project_name"),
     description: get("description"),
     property_type: get("property_type"),
@@ -259,8 +204,6 @@ function requestBodyFromForm(form) {
     zip_code: get("zip_code"),
     arv: numOrNull("arv"),
     monthly_rent: numOrNull("monthly_rent"),
-<<<<<<< ours
-<<<<<<< ours
     down_payment_pct: pctOrNull("down_payment_pct"),
     interest_rate: pctOrNull("interest_rate"),
     hold_years: intOrNull("hold_years"),
@@ -272,26 +215,6 @@ function requestBodyFromForm(form) {
     market_risk_adjustment: intOrNull("market_risk_adjustment"),
     comps: parseComps(get("comps_json"))
   };
-
-=======
-=======
->>>>>>> theirs
-    down_payment_pct: numOrNull("down_payment_pct"),
-    interest_rate: numOrNull("interest_rate"),
-    hold_years: numOrNull("hold_years"),
-    annual_tax_rate: numOrNull("annual_tax_rate"),
-    annual_insurance_rate: numOrNull("annual_insurance_rate"),
-    comps: parseComps(get("comps_json"))
-  };
-
-  if (Object.keys(market_multipliers).length > 0) {
-    payload.market_multipliers = market_multipliers;
-  }
-
-<<<<<<< ours
->>>>>>> theirs
-=======
->>>>>>> theirs
   return payload;
 }
 
@@ -412,7 +335,7 @@ async function runDealArchitect(e) {
   }
 
   try {
-    const res = await fetch("/v1/deal_architect", {
+    const res = await fetch("{{ url_for('investor.deal_architect_analyze') }}", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -423,30 +346,14 @@ async function runDealArchitect(e) {
 
     const data = await res.json();
     if (!res.ok) {
-<<<<<<< ours
-<<<<<<< ours
       alert(data?.detail || data?.message || "Underwriting request failed.");
-=======
-      alert(data?.message || "Underwriting request failed.");
->>>>>>> theirs
-=======
-      alert(data?.message || "Underwriting request failed.");
->>>>>>> theirs
       return;
     }
 
     renderResponse(data || {});
   } catch (err) {
     console.error("Deal Architect request failed", err);
-<<<<<<< ours
-<<<<<<< ours
     alert("Unable to reach the Deal Architect engine proxy.");
-=======
-    alert("Unable to reach /v1/deal_architect.");
->>>>>>> theirs
-=======
-    alert("Unable to reach /v1/deal_architect.");
->>>>>>> theirs
   }
 }
 
