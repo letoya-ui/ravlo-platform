@@ -617,15 +617,23 @@ def complete_profile():
 
         current_user.first_name = first_name
         current_user.last_name = last_name
+        if not current_user.username:
+            current_user.username = f"{first_name} {last_name}".strip() or current_user.email
         current_user.onboarding_complete = True
 
         db.session.commit()
 
         flash("Profile completed successfully.", "success")
 
-        if current_user.role in ["admin", "master_admin", "lending_admin", "platform_admin"]:
-            return redirect(url_for("admin.dashboard"))
+        role = (current_user.role or "").strip().lower()
+        if role == "investor":
+            return redirect(url_for("investor.create_profile"))
+        if role == "borrower":
+            return redirect(url_for("borrower.create_profile"))
 
-        return redirect(url_for("dashboard.index"))
+        return redirect(url_for(_dashboard_for_role(role)))
+
+    if current_user.invite_accepted and current_user.onboarding_complete:
+        return redirect(url_for(_dashboard_for_role(current_user.role)))
 
     return render_template("auth/complete_profile.html", user=current_user)

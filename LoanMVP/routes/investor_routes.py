@@ -5538,6 +5538,7 @@ def generate_build_blueprint():
 @role_required("investor")
 def generate_full_build():
     deal = None
+    build_analysis = {}
 
     try:
         data = request.form.to_dict() or {}
@@ -5584,6 +5585,23 @@ def generate_full_build():
 
         room_type = (data.get("room_type") or "living room").strip()
         floor = (data.get("floor") or "main").strip()
+
+        if SCOPE_ENGINE_URL and description:
+            try:
+                build_analysis = _post_scope_engine_json(
+                    "/v1/build_scope",
+                    {
+                        "project_name": project_name or None,
+                        "description": description,
+                        "property_type": property_type or None,
+                        "lot_size": lot_size or None,
+                        "zoning": zoning or None,
+                    },
+                    timeout=60,
+                ) or {}
+            except Exception:
+                current_app.logger.exception("Full build scope analysis failed")
+                build_analysis = {}
 
         blueprint_file = request.files.get("blueprint_file")
         land_image = request.files.get("land_image")
@@ -5914,6 +5932,8 @@ def generate_full_build():
                 "rooms": existing_rooms,
             }
 
+            if build_analysis:
+                results["build_analysis"] = build_analysis
             results["build_project"] = build_project
             results["build_reference_image"] = reference_image_url or blueprint_primary_url
             _set_deal_results(deal, results)
@@ -5954,6 +5974,7 @@ def generate_full_build():
                 "room_type": room_type,
                 "floor": floor,
             },
+            "build_analysis": build_analysis,
             "deal_id": deal.id if deal else None,
             "saved_to_deal": bool(save_to_deal and deal is not None),
         })
@@ -6290,42 +6311,25 @@ def generate_build_room():
 def ai_build_scope():
     data = request.get_json(silent=True) or {}
 
-    description = (data.get("description") or "").strip()
-    property_type = (data.get("property_type") or "").strip()
-    lot_size = (data.get("lot_size") or "").strip()
-    zoning = (data.get("zoning") or "").strip()
+    payload = {
+        "project_name": (data.get("project_name") or "").strip() or None,
+        "description": (data.get("description") or "").strip(),
+        "property_type": (data.get("property_type") or "").strip() or None,
+        "lot_size": (data.get("lot_size") or "").strip() or None,
+        "zoning": (data.get("zoning") or "").strip() or None,
+        "asking_price": safe_float(data.get("asking_price"), default=None) if data.get("asking_price") not in (None, "", "None") else None,
+        "square_feet_target": safe_int(data.get("square_feet_target"), default=None) if data.get("square_feet_target") not in (None, "", "None") else None,
+    }
 
-    if not description:
+    if not payload["description"]:
         return jsonify({"status": "error", "message": "description is required."}), 400
 
     try:
         if not SCOPE_ENGINE_URL:
             return jsonify({"status": "error", "message": "Scope engine is not configured."}), 500
 
-        res = requests.post(
-            _scope_engine_url("/v1/build_scope"),
-            json={
-                "description": description,
-                "property_type": property_type,
-                "lot_size": lot_size,
-                "zoning": zoning,
-            },
-            headers=_scope_engine_headers(),
-            timeout=60,
-        )
-        res.raise_for_status()
-
-        engine_data = res.json() or {}
-        build_analysis = engine_data.get("build_analysis") or {}
-
-        return jsonify({
-            "status": "ok",
-            "build_analysis": {
-                "summary": build_analysis.get("summary", ""),
-                "key_points": build_analysis.get("key_points", []),
-                "estimated_build_cost": build_analysis.get("estimated_build_cost", 0),
-            }
-        })
+        engine_data = _post_scope_engine_json("/v1/build_scope", payload, timeout=60) or {}
+        return jsonify(engine_data)
 
     except Exception as e:
         current_app.logger.exception("ai_build_scope failed")
@@ -6928,7 +6932,8 @@ def deal_architect(deal_id=None):
 @role_required("investor")
 def deal_architect_analyze():
     try:
-        deal_id = _normalize_int(request.form.get("deal_id"))
+        data = request.get_json(silent=True) or request.form.to_dict() or {}
+        deal_id = _normalize_int(data.get("deal_id"))
         deal = None
 
         if deal_id:
@@ -6936,186 +6941,114 @@ def deal_architect_analyze():
             if not deal:
                 return jsonify({"status": "error", "message": "Deal not found"}), 404
 
-        def _pick_str(name, fallback=""):
-            val = (request.form.get(name) or "").strip()
-            if val:
-                return val
-            if deal is not None:
-                return str(getattr(deal, name, "") or fallback).strip()
-            return fallback
+        if not RENOVATION_ENGINE_URL:
+            return jsonify({"status": "error", "message": "Renovation engine is not configured"}), 500
 
-        def _pick_float(form_key, *deal_attrs):
-            raw = request.form.get(form_key)
-            val = safe_float(raw)
-            if val is not None:
-                return val
+        def _pick_str(name, *deal_attrs, fallback=""):
+            raw = data.get(name)
+            if raw is not None and str(raw).strip():
+                return str(raw).strip()
             if deal is not None:
                 for attr in deal_attrs:
-                    existing = safe_float(getattr(deal, attr, None))
-                    if existing is not None:
-                        return existing
-            return 0.0
+                    existing = getattr(deal, attr, None)
+                    if existing is not None and str(existing).strip():
+                        return str(existing).strip()
+            return fallback
 
-        address = _pick_str("address") or (
-            (
-                getattr(deal, "property_address", None)
-                or getattr(deal, "address", None)
-                or getattr(deal, "street_address", None)
-                or ""
-            ).strip()
-            if deal is not None else ""
-        )
+        def _pick_float(name, *deal_attrs):
+            raw = data.get(name)
+            if raw not in (None, "", "None"):
+                try:
+                    return float(str(raw).replace(",", "").replace("$", "").strip())
+                except (TypeError, ValueError):
+                    return None
+            if deal is not None:
+                for attr in deal_attrs:
+                    existing = getattr(deal, attr, None)
+                    if existing not in (None, "", "None"):
+                        try:
+                            return float(existing)
+                        except (TypeError, ValueError):
+                            continue
+            return None
 
-        property_type = (
-            (request.form.get("property_type") or "").strip().lower()
-            or (
-                (
-                    getattr(deal, "property_type", None)
-                    or getattr(deal, "asset_type", None)
-                    or ""
-                ).strip().lower()
-                if deal is not None else ""
-            )
-        )
+        def _pick_int(name, *deal_attrs):
+            raw = data.get(name)
+            if raw not in (None, "", "None"):
+                try:
+                    return int(float(str(raw).replace(",", "").strip()))
+                except (TypeError, ValueError):
+                    return None
+            if deal is not None:
+                for attr in deal_attrs:
+                    existing = getattr(deal, attr, None)
+                    if existing not in (None, "", "None"):
+                        try:
+                            return int(float(existing))
+                        except (TypeError, ValueError):
+                            continue
+            return None
 
-        description = (request.form.get("description") or "").strip()
-        if not description and deal is not None:
-            description = (getattr(deal, "notes", None) or "").strip()
+        comps = data.get("comps")
+        if not isinstance(comps, list):
+            comps = safe_json_loads(data.get("comps_json"), default=[])
+        comps = comps if isinstance(comps, list) else []
 
-        price = _pick_float("price", "purchase_price")
-        rehab = _pick_float("rehab", "rehab_cost", "estimated_rehab_cost")
-        arv = _pick_float("arv", "arv")
-        estimated_rent = _pick_float("estimated_rent", "estimated_rent")
-
-        total_basis = price + rehab
-        flip_profit = arv - total_basis if arv else 0.0
-        flip_margin = (flip_profit / arv * 100) if arv else 0.0
-
-        if not estimated_rent and arv:
-            estimated_rent = arv * 0.008
-
-        annual_rent = estimated_rent * 12
-        gross_yield = (annual_rent / total_basis * 100) if total_basis else 0.0
-        monthly_carry_proxy = total_basis * 0.01 if total_basis else 0.0
-        dscr_proxy = (estimated_rent / monthly_carry_proxy) if monthly_carry_proxy else 0.0
-
-        strategies = []
-
-        if arv > 0:
-            flip_score = 0
-            if flip_profit >= 25000:
-                flip_score += 35
-            elif flip_profit >= 15000:
-                flip_score += 25
-            elif flip_profit > 0:
-                flip_score += 10
-
-            if flip_margin >= 18:
-                flip_score += 30
-            elif flip_margin >= 12:
-                flip_score += 20
-            elif flip_margin >= 8:
-                flip_score += 10
-
-            if rehab <= (price * 0.25 if price else rehab):
-                flip_score += 15
-
-            strategies.append({
-                "name": "Fix & Flip",
-                "score": min(round(flip_score), 100),
-                "profit": round(flip_profit, 2),
-                "margin_pct": round(flip_margin, 2),
-                "risk": "Medium" if (price and rehab <= price * 0.35) else "High",
-                "summary": "Renovate and sell for a near-term capital gain.",
-                "best_for": "Deals with healthy spread between total basis and ARV."
-            })
-
-        rental_score = 0
-        if gross_yield >= 10:
-            rental_score += 35
-        elif gross_yield >= 8:
-            rental_score += 25
-        elif gross_yield >= 6:
-            rental_score += 15
-
-        if dscr_proxy >= 1.25:
-            rental_score += 30
-        elif dscr_proxy >= 1.1:
-            rental_score += 20
-        elif dscr_proxy >= 1.0:
-            rental_score += 10
-
-        if rehab <= (price * 0.30 if price else rehab):
-            rental_score += 15
-
-        strategies.append({
-            "name": "Buy & Hold Rental",
-            "score": min(round(rental_score), 100),
-            "rent_estimate": round(estimated_rent, 2),
-            "annual_rent": round(annual_rent, 2),
-            "gross_yield_pct": round(gross_yield, 2),
-            "dscr_proxy": round(dscr_proxy, 2),
-            "risk": "Low" if dscr_proxy >= 1.2 else "Medium",
-            "summary": "Renovate and hold for recurring long-term rental income.",
-            "best_for": "Deals with stable rent coverage and durable cash flow."
-        })
-
-        if property_type in ["land", "lot", "vacant land"]:
-            dev_score = 55
-            if arv > 0 and total_basis > 0 and flip_margin >= 15:
-                dev_score += 15
-
-            strategies.append({
-                "name": "Ground-Up Development",
-                "score": min(round(dev_score), 100),
-                "risk": "High",
-                "summary": "Construct a new property for resale, refinance, or long-term hold.",
-                "best_for": "Land or teardown opportunities with strong end-value potential."
-            })
-
-        recommended_strategy = None
-        if strategies:
-            strategies = sorted(strategies, key=lambda s: s.get("score", 0), reverse=True)
-            recommended_strategy = strategies[0]["name"]
-
-        analysis = {
-            "address": address,
-            "property_type": property_type,
-            "description": description,
-            "price": round(price, 2),
-            "rehab": round(rehab, 2),
-            "arv": round(arv, 2),
-            "estimated_rent": round(estimated_rent, 2),
-            "metrics": {
-                "total_basis": round(total_basis, 2),
-                "flip_profit": round(flip_profit, 2),
-                "flip_margin_pct": round(flip_margin, 2),
-                "annual_rent": round(annual_rent, 2),
-                "gross_yield_pct": round(gross_yield, 2),
-                "dscr_proxy": round(dscr_proxy, 2),
-            },
-            "recommended_strategy": recommended_strategy,
-            "strategies": strategies,
+        payload = {
+            "project_name": _pick_str("project_name", "title", "address", "property_address") or None,
+            "description": _pick_str("description", "notes"),
+            "property_type": _pick_str("property_type", "asset_type", fallback="single_family") or None,
+            "lot_size": _pick_str("lot_size") or None,
+            "zoning": _pick_str("zoning") or None,
+            "asking_price": _pick_float("asking_price", "purchase_price"),
+            "square_feet_target": _pick_int("square_feet_target", "square_feet", "sqft"),
+            "city": _pick_str("city") or None,
+            "state": _pick_str("state") or None,
+            "zip_code": _pick_str("zip_code", "zip") or None,
+            "arv": _pick_float("arv"),
+            "monthly_rent": _pick_float("monthly_rent", "estimated_rent"),
+            "down_payment_pct": _normalize_percentage(data.get("down_payment_pct")) or 0.25,
+            "interest_rate": _normalize_percentage(data.get("interest_rate")) or 0.08,
+            "hold_years": _pick_int("hold_years") or 1,
+            "annual_tax_rate": _normalize_percentage(data.get("annual_tax_rate")),
+            "annual_insurance_rate": _normalize_percentage(data.get("annual_insurance_rate")),
+            "market_cost_multiplier": _pick_float("market_cost_multiplier"),
+            "market_value_multiplier": _pick_float("market_value_multiplier"),
+            "market_rent_multiplier": _pick_float("market_rent_multiplier"),
+            "market_risk_adjustment": _pick_int("market_risk_adjustment"),
+            "comps": comps,
         }
 
-        if deal:
+        if not payload["description"]:
+            return jsonify({"status": "error", "message": "description is required"}), 400
+
+        engine_data = _post_renovation_engine_json("/v1/deal_architect", payload, timeout=60) or {}
+
+        if deal is not None:
             results = _deal_results(deal)
-            results["strategy_analysis"] = analysis
-
-            if recommended_strategy:
-                deal.recommended_strategy = recommended_strategy
-                if not deal.strategy:
-                    deal.strategy = recommended_strategy
-
+            results["strategy_analysis"] = engine_data
             _set_deal_results(deal, results)
+
+            if hasattr(deal, "recommended_strategy"):
+                deal.recommended_strategy = engine_data.get("recommended_type") or getattr(deal, "recommended_strategy", None)
+            if hasattr(deal, "strategy") and not getattr(deal, "strategy", None):
+                deal.strategy = engine_data.get("recommended_type") or getattr(deal, "strategy", None)
+            if hasattr(deal, "deal_score"):
+                deal.deal_score = engine_data.get("deal_score") or getattr(deal, "deal_score", None)
+            if hasattr(deal, "purchase_price") and payload.get("asking_price") is not None:
+                deal.purchase_price = payload["asking_price"]
+            if hasattr(deal, "arv") and payload.get("arv") is not None:
+                deal.arv = payload["arv"]
+            if hasattr(deal, "estimated_rent") and payload.get("monthly_rent") is not None:
+                deal.estimated_rent = payload["monthly_rent"]
+            if hasattr(deal, "lot_size") and payload.get("lot_size"):
+                deal.lot_size = payload["lot_size"]
+            if hasattr(deal, "zoning") and payload.get("zoning"):
+                deal.zoning = payload["zoning"]
+
             db.session.commit()
 
-        return jsonify({
-            "status": "ok",
-            "saved_to_deal": bool(deal),
-            "deal_id": deal.id if deal else None,
-            **analysis,
-        })
+        return jsonify(engine_data)
 
     except Exception as e:
         current_app.logger.exception("deal_architect_analyze failed")

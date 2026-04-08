@@ -6,6 +6,7 @@
   <p>Finish setting up your account to continue.</p>
 
   <form method="POST">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <div>
       <label for="first_name">First Name</label>
       <input

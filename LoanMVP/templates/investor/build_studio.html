@@ -467,6 +467,59 @@
         </div>
       </section>
 
+      {% set build_scope_meta = build_analysis.get('meta', {}) if build_analysis else {} %}
+      <section class="ravlo-card side-card" id="buildAnalysisCard">
+        <div class="card-head">
+          <div>
+            <div class="card-kicker">ENGINE FEASIBILITY</div>
+            <h3>Scope Snapshot</h3>
+          </div>
+        </div>
+
+        <div class="tracker-list">
+          <div class="tracker-item">
+            <span class="tracker-label">Recommended Type</span>
+            <strong id="analysisRecommended">{{ build_analysis.get("recommended_type") or "Pending" }}</strong>
+          </div>
+          <div class="tracker-item">
+            <span class="tracker-label">Deal Score</span>
+            <strong id="analysisScore">{{ build_scope_meta.get("deal_score") if build_analysis else "—" }}</strong>
+          </div>
+          <div class="tracker-item">
+            <span class="tracker-label">Tier</span>
+            <strong id="analysisTier">{{ build_analysis.get("opportunity_tier") or build_scope_meta.get("opportunity_tier") or "—" }}</strong>
+          </div>
+        </div>
+
+        <div class="analysis-metrics" id="analysisMetrics">
+          <div class="analysis-metric">
+            <span>Cost Low</span>
+            <strong id="analysisCostLow">{{ build_analysis.get("cost_low") if build_analysis else "—" }}</strong>
+          </div>
+          <div class="analysis-metric">
+            <span>Cost High</span>
+            <strong id="analysisCostHigh">{{ build_analysis.get("cost_high") if build_analysis else "—" }}</strong>
+          </div>
+          <div class="analysis-metric">
+            <span>Estimated Value</span>
+            <strong id="analysisValue">{{ build_analysis.get("estimated_value") if build_analysis else "—" }}</strong>
+          </div>
+          <div class="analysis-metric">
+            <span>All-In Low</span>
+            <strong id="analysisAllInLow">{{ build_scope_meta.get("all_in_low") if build_analysis else "—" }}</strong>
+          </div>
+          <div class="analysis-metric">
+            <span>All-In High</span>
+            <strong id="analysisAllInHigh">{{ build_scope_meta.get("all_in_high") if build_analysis else "—" }}</strong>
+          </div>
+        </div>
+
+        <div class="info-box" style="margin-top:14px;">
+          <strong>Next Step</strong>
+          <p id="analysisNextStep">{{ build_analysis.get("next_step") or "Run a package to generate the latest engine-backed build snapshot." }}</p>
+        </div>
+      </section>
+
       <section class="ravlo-card side-card">
         <div class="card-head">
           <div>
@@ -986,6 +1039,32 @@
     text-align: right;
   }
 
+  .analysis-metrics {
+    display: grid;
+    gap: 10px;
+    margin-top: 14px;
+  }
+
+  .analysis-metric {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 12px;
+    border-radius: 14px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.05);
+  }
+
+  .analysis-metric span {
+    color: #9fb0bf;
+    font-size: 0.9rem;
+  }
+
+  .analysis-metric strong {
+    color: #fff;
+    text-align: right;
+  }
+
   .tracker-list,
   .info-stack,
   .package-links {
@@ -1224,6 +1303,18 @@
     let roomState = [];
     let activeRoomIndex = 0;
 
+    const buildAnalysisEls = {
+      recommended: document.getElementById("analysisRecommended"),
+      score: document.getElementById("analysisScore"),
+      tier: document.getElementById("analysisTier"),
+      costLow: document.getElementById("analysisCostLow"),
+      costHigh: document.getElementById("analysisCostHigh"),
+      value: document.getElementById("analysisValue"),
+      allInLow: document.getElementById("analysisAllInLow"),
+      allInHigh: document.getElementById("analysisAllInHigh"),
+      nextStep: document.getElementById("analysisNextStep")
+    };
+
     const els = {
       blueprint: {
         media: document.getElementById("blueprintMedia"),
@@ -1324,6 +1415,30 @@
         .replaceAll(">", "&gt;")
         .replaceAll('"', "&quot;")
         .replaceAll("'", "&#039;");
+    }
+
+    function asMoney(value) {
+      const number = Number(value);
+      if (!Number.isFinite(number)) return "—";
+      return number.toLocaleString(undefined, {
+        style: "currency",
+        currency: "USD",
+        maximumFractionDigits: 0
+      });
+    }
+
+    function renderBuildAnalysis(analysis) {
+      const meta = analysis?.meta || {};
+
+      if (buildAnalysisEls.recommended) buildAnalysisEls.recommended.textContent = analysis?.recommended_type || "Pending";
+      if (buildAnalysisEls.score) buildAnalysisEls.score.textContent = meta?.deal_score ?? "—";
+      if (buildAnalysisEls.tier) buildAnalysisEls.tier.textContent = analysis?.opportunity_tier || meta?.opportunity_tier || "—";
+      if (buildAnalysisEls.costLow) buildAnalysisEls.costLow.textContent = analysis?.cost_low != null ? asMoney(analysis.cost_low) : "—";
+      if (buildAnalysisEls.costHigh) buildAnalysisEls.costHigh.textContent = analysis?.cost_high != null ? asMoney(analysis.cost_high) : "—";
+      if (buildAnalysisEls.value) buildAnalysisEls.value.textContent = analysis?.estimated_value != null ? asMoney(analysis.estimated_value) : "—";
+      if (buildAnalysisEls.allInLow) buildAnalysisEls.allInLow.textContent = meta?.all_in_low != null ? asMoney(meta.all_in_low) : "—";
+      if (buildAnalysisEls.allInHigh) buildAnalysisEls.allInHigh.textContent = meta?.all_in_high != null ? asMoney(meta.all_in_high) : "—";
+      if (buildAnalysisEls.nextStep) buildAnalysisEls.nextStep.textContent = analysis?.next_step || "Run a package to generate the latest engine-backed build snapshot.";
     }
 
     function renderImage(target, url, altText, emptyIcon, emptyText) {
@@ -1664,6 +1779,8 @@
           roomState.forEach(appendRoomCard);
         }
 
+        renderBuildAnalysis(data?.build_analysis || null);
+
         statusPill.textContent = "Package Ready";
 
       } catch (error) {
@@ -1774,6 +1891,8 @@
 
       statusPill.textContent = "Package Loaded";
     }
+
+    renderBuildAnalysis({{ build_analysis|tojson }});
 
     {% if interior_rooms %}
     roomState = {{ interior_rooms|tojson }};
