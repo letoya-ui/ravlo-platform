@@ -406,7 +406,7 @@ def dashboard():
 
 @admin_bp.route("/companies")
 @login_required
-@role_required("admin")
+@role_required("admin_group")
 def companies():
     if _is_company_admin(current_user) and current_user.company_id:
         return redirect(url_for("admin.company_dashboard", company_id=current_user.company_id))
@@ -614,7 +614,7 @@ def reject_request(request_id):
 
 @admin_bp.route("/company/<int:company_id>/team")
 @login_required
-@role_required("admin")
+@role_required("admin_group")
 @admin_required
 def company_team(company_id):
     company = Company.query.get_or_404(company_id)
@@ -635,7 +635,7 @@ def company_team(company_id):
 
 @admin_bp.route("/company/<int:company_id>/team/invite", methods=["GET", "POST"])
 @login_required
-@role_required("admin")
+@role_required("admin_group")
 @admin_required
 def invite_team_member(company_id):
     company = Company.query.get_or_404(company_id)
@@ -1097,7 +1097,7 @@ def ai_refresh(target):
 
 @admin_bp.route("/company/<int:company_id>/dashboard")
 @login_required
-@role_required("admin", "master_admin", "lending_admin")
+@role_required("admin_group")
 def company_dashboard(company_id):
     company = Company.query.get_or_404(company_id)
     access_redirect = _ensure_company_access(company)
