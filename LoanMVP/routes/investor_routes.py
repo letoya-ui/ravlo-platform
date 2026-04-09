@@ -5263,6 +5263,7 @@ def request_funding(deal_id):
 @role_required("investor")
 def deal_rehab(deal_id=None):
     deal = None
+    saved_property = None
 
     if deal_id is None:
         query_deal_id = request.args.get("deal_id", type=int)
@@ -5280,6 +5281,24 @@ def deal_rehab(deal_id=None):
     rehab_latest = rehab_project.get("latest", {}) or {}
     rehab_concepts = rehab_project.get("concepts", []) or []
 
+    if deal and getattr(deal, "saved_property_id", None):
+        saved_property = SavedProperty.query.filter_by(id=deal.saved_property_id).first()
+
+    property_media = _saved_property_media(saved_property) if saved_property else {"primary_photo": None, "photos": []}
+
+    if property_media.get("primary_photo") and not rehab_before.get("image_url"):
+        rehab_before = {
+            **rehab_before,
+            "image_url": property_media["primary_photo"],
+            "source": "saved_listing_photo",
+        }
+
+    if property_media.get("photos") and not rehab_before.get("gallery"):
+        rehab_before = {
+            **rehab_before,
+            "gallery": property_media["photos"],
+        }
+
     return render_template(
         "investor/deal_rehab_studio.html",
         deal=deal,
@@ -5288,6 +5307,7 @@ def deal_rehab(deal_id=None):
         rehab_before=rehab_before,
         rehab_latest=rehab_latest,
         rehab_concepts=rehab_concepts,
+        property_photo_gallery=property_media.get("photos") or [],
         page_title="Renovation Studio",
         page_subtitle="Visualize renovation concepts before execution.",
     )
@@ -5441,6 +5461,7 @@ def deal_rehab_generate_variant():
 def build_studio(deal_id=None):
     deal = None
     project = None
+    saved_property = None
 
     project_id = request.args.get("project_id", type=int)
 
@@ -5518,8 +5539,19 @@ def build_studio(deal_id=None):
         deal.id if deal else None,
         project.id if project else None,
         list((results or {}).keys()) if isinstance(results, dict) else [],
-        list((build_project or {}).keys()) if isinstance(build_project, dict) else [],
+        list((build_project or {}).keys()) if isinstance(build_project, dict) else [],        
     )
+
+    if deal and getattr(deal, "saved_property_id", None):
+        saved_property = SavedProperty.query.filter_by(id=deal.saved_property_id).first()
+
+    property_media = _saved_property_media(saved_property) if saved_property else {"primary_photo": None, "photos": []}
+
+    if property_media.get("primary_photo") and not exterior_result.get("build_reference_image"):
+        exterior_result = {
+            **exterior_result,
+            "build_reference_image": property_media["primary_photo"],
+        }
 
     return render_template(
         "investor/build_studio.html",
@@ -5531,6 +5563,7 @@ def build_studio(deal_id=None):
         exterior_result=exterior_result,
         interior_result=interior_result,
         interior_rooms=interior_rooms,
+        property_photo_gallery=property_media.get("photos") or [],
         package_result=package_result,
         has_saved_package=has_saved_package,
         page_title="Build Studio",
