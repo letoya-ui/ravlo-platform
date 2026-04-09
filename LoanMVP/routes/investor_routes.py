@@ -864,6 +864,7 @@ def _project_studio_lookup(address: str, city: str = "", state: str = "", zip_co
         "city": property_data.get("city") or city,
         "state": property_data.get("state") or state,
         "zip_code": property_data.get("zip_code") or zip_code,
+        "property_id": property_data.get("property_id") or property_data.get("attom_id"),
         "property_type": property_data.get("property_type"),
         "beds": property_data.get("beds"),
         "baths": property_data.get("baths"),
@@ -973,6 +974,223 @@ def _project_studio_scope_budget(selected_card: dict | None, selected_strategy: 
         "outcome_label": selected_card.get("outcome_label") or "Projected Outcome",
         "confidence": selected_card.get("confidence") or "Moderate",
     }
+
+
+def _project_studio_upsert_deal(
+    investor_profile,
+    snapshot: dict,
+    selected_card: dict,
+    selected_strategy: str,
+    selected_scope: str,
+    scope_budget: dict,
+    *,
+    strategy_cards: list[dict] | None = None,
+    flags: list[dict] | None = None,
+    ai_summary: str | None = None,
+    market_snapshot: dict | None = None,
+    deal_id: int | None = None,
+):
+    address = (snapshot.get("address") or "").strip()
+    if not investor_profile or not address or not selected_card or not selected_scope or not scope_budget:
+        return None
+
+    property_id = snapshot.get("property_id")
+    zipcode = (snapshot.get("zip_code") or "").strip() or None
+    city = (snapshot.get("city") or "").strip() or None
+    state = (snapshot.get("state") or "").strip() or None
+    sqft = snapshot.get("sqft") or snapshot.get("square_feet")
+
+    try:
+        sqft = int(float(sqft)) if sqft not in (None, "", "None") else None
+    except Exception:
+        sqft = None
+
+    fk = _profile_id_filter(SavedProperty, investor_profile.id)
+    saved_property = None
+
+    if property_id:
+        saved_property = SavedProperty.query.filter_by(
+            **fk,
+            property_id=str(property_id),
+        ).first()
+
+    if not saved_property:
+        saved_property = SavedProperty.query.filter(
+            getattr(SavedProperty, "investor_profile_id", SavedProperty.borrower_profile_id) == investor_profile.id,
+            db.func.lower(SavedProperty.address) == address.lower(),
+        ).first()
+
+    if not saved_property:
+        saved_property = SavedProperty(
+            **fk,
+            property_id=str(property_id) if property_id else None,
+            address=address,
+            price=str(snapshot.get("listing_price") or snapshot.get("price") or ""),
+            sqft=sqft,
+            zipcode=zipcode,
+            saved_at=datetime.utcnow(),
+            created_at=datetime.utcnow(),
+        )
+        db.session.add(saved_property)
+        db.session.flush()
+    else:
+        saved_property.address = address
+        saved_property.property_id = str(property_id) if property_id else saved_property.property_id
+        saved_property.price = str(snapshot.get("listing_price") or snapshot.get("price") or saved_property.price or "")
+        saved_property.sqft = sqft or saved_property.sqft
+        saved_property.zipcode = zipcode or saved_property.zipcode
+        saved_property.saved_at = datetime.utcnow()
+
+    saved_property_payload = {
+        "property": {
+            **snapshot,
+            "city": city,
+            "state": state,
+            "zip_code": zipcode,
+        },
+        "market_snapshot": market_snapshot or {},
+        "ai_summary": ai_summary,
+        "project_studio": {
+            "selected_strategy": selected_strategy,
+            "selected_scope": selected_scope,
+            "scope_budget": scope_budget,
+        },
+    }
+    if hasattr(saved_property, "resolved_json"):
+        saved_property.resolved_json = json.dumps(saved_property_payload)
+        saved_property.resolved_at = datetime.utcnow()
+
+    deal = None
+    if deal_id:
+        deal = Deal.query.filter_by(id=deal_id, user_id=current_user.id).first()
+
+    if not deal:
+        deal = (
+            Deal.query
+            .filter_by(user_id=current_user.id, saved_property_id=saved_property.id)
+            .order_by(Deal.updated_at.desc(), Deal.id.desc())
+            .first()
+        )
+
+    if not deal:
+        deal = Deal.query.filter(
+            Deal.user_id == current_user.id,
+            db.func.lower(Deal.address) == address.lower(),
+        ).order_by(Deal.updated_at.desc(), Deal.id.desc()).first()
+
+    deal_score = snapshot.get("deal_score")
+    try:
+        deal_score = int(round(float(deal_score))) if deal_score not in (None, "", "None") else None
+    except (TypeError, ValueError):
+        deal_score = None
+
+    budget_low = scope_budget.get("budget_low")
+    budget_high = scope_budget.get("budget_high")
+    budget_midpoint = None
+    if budget_low not in (None, "", "None") and budget_high not in (None, "", "None"):
+        budget_midpoint = (float(budget_low) + float(budget_high)) / 2
+
+    results = _deal_results(deal) if deal else {}
+    results["project_studio"] = {
+        "selected_strategy": selected_strategy,
+        "selected_scope": selected_scope,
+        "scope_budget": copy.deepcopy(scope_budget or {}),
+        "selected_card": copy.deepcopy(selected_card or {}),
+        "strategy_cards": copy.deepcopy(strategy_cards or []),
+        "flags": copy.deepcopy(flags or []),
+        "snapshot": copy.deepcopy(snapshot or {}),
+        "ai_summary": ai_summary,
+        "saved_at": datetime.utcnow().isoformat(),
+    }
+    results["strategy_analysis"] = {
+        "strategy": selected_strategy,
+        "title": selected_card.get("title"),
+        "reason": selected_card.get("why"),
+        "risk_note": selected_card.get("risk_note"),
+        "confidence": selected_card.get("confidence"),
+        "timeline": scope_budget.get("timeline"),
+        "outcome": scope_budget.get("outcome"),
+        "outcome_label": scope_budget.get("outcome_label"),
+    }
+    results["workspace_analysis"] = {
+        "selected_strategy": selected_strategy,
+        "selected_scope": selected_scope,
+        "planning_budget": copy.deepcopy(scope_budget or {}),
+        "flags": copy.deepcopy(flags or []),
+        "ai_summary": ai_summary,
+    }
+    if selected_strategy == "rehab":
+        results["rehab_analysis"] = {
+            "estimated_rehab_cost": budget_midpoint,
+            "scope": {
+                "strategy": selected_strategy,
+                "selection": selected_scope,
+                "label": selected_card.get("title"),
+                "budget_low": budget_low,
+                "budget_high": budget_high,
+                "timeline": scope_budget.get("timeline"),
+            },
+        }
+    else:
+        results.pop("rehab_analysis", None)
+
+    if deal:
+        deal.investor_profile_id = investor_profile.id
+        deal.saved_property_id = saved_property.id
+        deal.property_id = str(property_id) if property_id else deal.property_id
+        deal.title = deal.title or address
+        deal.address = address
+        deal.city = city
+        deal.state = state
+        deal.zip_code = zipcode
+        deal.strategy = selected_strategy
+        deal.recommended_strategy = selected_card.get("title") or selected_strategy
+        deal.purchase_price = _safe_float(snapshot.get("listing_price") or snapshot.get("price")) or deal.purchase_price or 0
+        deal.arv = _safe_float(selected_card.get("arv")) or deal.arv or 0
+        deal.estimated_rent = _safe_float(snapshot.get("traditional_rent")) or deal.estimated_rent or 0
+        deal.rehab_cost = budget_midpoint or deal.rehab_cost or 0
+        deal.deal_score = deal_score if deal_score is not None else deal.deal_score
+        deal.resolved_json = {
+            "property": copy.deepcopy(snapshot or {}),
+            "market_snapshot": copy.deepcopy(market_snapshot or {}),
+        }
+        if selected_strategy == "rehab":
+            deal.rehab_scope_json = results["rehab_analysis"]["scope"]
+        else:
+            deal.rehab_scope_json = None
+        _set_deal_results(deal, results)
+    else:
+        deal = Deal(
+            user_id=current_user.id,
+            investor_profile_id=investor_profile.id,
+            saved_property_id=saved_property.id,
+            property_id=str(property_id) if property_id else None,
+            title=address,
+            address=address,
+            city=city,
+            state=state,
+            zip_code=zipcode,
+            strategy=selected_strategy,
+            recommended_strategy=selected_card.get("title") or selected_strategy,
+            purchase_price=_safe_float(snapshot.get("listing_price") or snapshot.get("price")) or 0,
+            arv=_safe_float(selected_card.get("arv")) or 0,
+            estimated_rent=_safe_float(snapshot.get("traditional_rent")) or 0,
+            rehab_cost=budget_midpoint or 0,
+            deal_score=deal_score,
+            results_json={},
+            resolved_json={
+                "property": copy.deepcopy(snapshot or {}),
+                "market_snapshot": copy.deepcopy(market_snapshot or {}),
+            },
+            rehab_scope_json=(results.get("rehab_analysis") or {}).get("scope") if selected_strategy == "rehab" else None,
+            status="active",
+        )
+        db.session.add(deal)
+        db.session.flush()
+        _set_deal_results(deal, results)
+
+    db.session.commit()
+    return deal
 
 # =========================================================
 # 🧾 JSON + FORM SAFETY
@@ -4396,6 +4614,7 @@ def project_studio():
     city = (request.args.get("city") or "").strip()
     state = (request.args.get("state") or "").strip()
     zip_code = (request.args.get("zip") or request.args.get("zip_code") or "").strip()
+    deal_id = request.args.get("deal_id", type=int)
     selected_strategy = (request.args.get("strategy") or "").strip().lower()
     selected_scope = (request.args.get("scope") or "").strip().lower()
     snapshot = None
@@ -4407,6 +4626,7 @@ def project_studio():
     selected_card = None
     scope_options = []
     scope_budget = None
+    workspace_deal = None
 
     if address:
         try:
@@ -4433,6 +4653,21 @@ def project_studio():
                 if selected_scope not in valid_scopes and scope_options:
                     selected_scope = str(scope_options[0].get("value") or "").lower()
                 scope_budget = _project_studio_scope_budget(selected_card, selected_strategy, selected_scope)
+                if selected_card and selected_scope and scope_budget:
+                    ip = InvestorProfile.query.filter_by(user_id=current_user.id).first()
+                    workspace_deal = _project_studio_upsert_deal(
+                        ip,
+                        snapshot,
+                        selected_card,
+                        selected_strategy,
+                        selected_scope,
+                        scope_budget,
+                        strategy_cards=strategy_cards,
+                        flags=flags,
+                        ai_summary=ai_summary,
+                        market_snapshot=market_snapshot,
+                        deal_id=deal_id,
+                    )
         except Exception as exc:
             engine_error = str(exc)
             current_app.logger.warning("project_studio lookup failed for %s: %s", address, exc)
@@ -4456,6 +4691,7 @@ def project_studio():
         selected_scope=selected_scope,
         scope_options=scope_options,
         scope_budget=scope_budget,
+        workspace_deal=workspace_deal,
     )
 
 # -------------------------------------------------------------------

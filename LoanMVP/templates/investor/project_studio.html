@@ -224,7 +224,7 @@ Open any address and let Ravlo compare the best plan before you move into scope,
         <div class="ps-action-row">
           <a
             class="ravlo-btn primary"
-            href="{{ url_for('investor.project_studio', address=address, city=city, state=state, zip=zip_code, strategy=card.key) }}"
+            href="{{ url_for('investor.project_studio', address=address, city=city, state=state, zip=zip_code, strategy=card.key, deal_id=(workspace_deal.id if workspace_deal else None)) }}"
           >{{ "Choose " ~ card.title }}</a>
         </div>
       </article>
@@ -252,7 +252,7 @@ Open any address and let Ravlo compare the best plan before you move into scope,
         {% for option in scope_options %}
         <a
           class="ps-scope-card {% if selected_scope == option.value %}active{% endif %}"
-          href="{{ url_for('investor.project_studio', address=address, city=city, state=state, zip=zip_code, strategy=selected_strategy, scope=option.value) }}"
+          href="{{ url_for('investor.project_studio', address=address, city=city, state=state, zip=zip_code, strategy=selected_strategy, scope=option.value, deal_id=(workspace_deal.id if workspace_deal else None)) }}"
         >
           <strong>{{ option.label }}</strong>
           <p>{{ option.detail }}</p>
@@ -293,6 +293,17 @@ Open any address and let Ravlo compare the best plan before you move into scope,
         <strong>Decision-quality range</strong>
         <p>This is the rough planning layer, not a contractor-grade quote. Once you confirm the strategy and scope, Ravlo can move you into execution tools like quoting, partners, and financing.</p>
       </div>
+
+      {% if workspace_deal %}
+      <div class="ps-callout ps-persisted-callout">
+        <strong>Saved to Deal Workspace</strong>
+        <p>Ravlo is now persisting this property, strategy, and scope automatically so you can come back later without losing the chosen path.</p>
+        <div class="ps-link-row">
+          <a href="{{ url_for('investor.deal_workspace', deal_id=workspace_deal.id) }}" class="ravlo-btn ghost">Open Deal Workspace</a>
+          <a href="{{ url_for('investor.deal_detail', deal_id=workspace_deal.id) }}" class="ravlo-btn ghost">Open Saved Deal</a>
+        </div>
+      </div>
+      {% endif %}
       {% endif %}
     </div>
   </section>
@@ -312,6 +323,14 @@ Open any address and let Ravlo compare the best plan before you move into scope,
         <strong>Get Real Quote</strong>
         <p>Turn the planning range into a more concrete quote scenario before you commit capital.</p>
       </a>
+
+      {% if workspace_deal %}
+      <a href="{{ url_for('investor.deal_workspace', deal_id=workspace_deal.id) }}" class="ps-execution-card">
+        <span class="ps-execution-kicker">WORKSPACE</span>
+        <strong>Open Deal Workspace</strong>
+        <p>Review the saved strategy, compare paths again, and keep this project moving inside Ravlo OS.</p>
+      </a>
+      {% endif %}
 
       <a href="{{ url_for('investor.partner_marketplace', service_type='Contractor', city=city, state=state, zip_code=zip_code) }}" class="ps-execution-card">
         <span class="ps-execution-kicker">TEAM</span>
@@ -389,6 +408,7 @@ Open any address and let Ravlo compare the best plan before you move into scope,
 .ps-fact strong,.ps-card-metrics strong{display:block;color:#fff;line-height:1.4}
 .ps-callout strong,.ps-card-risk strong,.ps-flag strong{display:block;color:#fff;margin-bottom:.3rem}
 .ps-callout p,.ps-card-risk p,.ps-flag p{margin:0;color:var(--muted);line-height:1.55}
+.ps-persisted-callout{margin-top:1rem;background:rgba(37,99,235,.08);border-color:rgba(96,165,250,.22)}
 .ps-flag-stack{display:grid;gap:.75rem}
 .ps-flag.good{background:rgba(44,182,125,.12);border-color:rgba(44,182,125,.24)}
 .ps-flag.watch{background:rgba(209,162,70,.10);border-color:rgba(209,162,70,.22)}
