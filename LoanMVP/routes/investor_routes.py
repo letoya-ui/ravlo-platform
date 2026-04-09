@@ -1114,6 +1114,7 @@ def _ingest_listing_photos_to_spaces(photo_urls: list[str], *, subdir: str, limi
 
 def _store_saved_property_media(saved_property, payload, *, source: str = "listing_search") -> dict:
     existing_payload = _safe_json_loads_local(getattr(saved_property, "resolved_json", None), default={})
+    incoming_payload = _safe_json_loads_local(payload, default={})
     incoming_prop = _property_payload_from_any(payload)
     existing_prop = _property_payload_from_any(existing_payload)
 
@@ -1147,6 +1148,12 @@ def _store_saved_property_media(saved_property, payload, *, source: str = "listi
     merged_prop["photo_ingested_at"] = datetime.utcnow().isoformat()
 
     merged_payload = existing_payload if isinstance(existing_payload, dict) else {}
+    if isinstance(incoming_payload, dict):
+        for key, value in incoming_payload.items():
+            if key == "property":
+                continue
+            if value not in (None, "", [], {}):
+                merged_payload[key] = value
     merged_payload["property"] = merged_prop
 
     if hasattr(saved_property, "resolved_json"):
