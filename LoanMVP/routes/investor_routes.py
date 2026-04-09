@@ -3996,6 +3996,26 @@ def property_explore_plus(prop_id):
 def property_tool():
     return render_template("investor/property_tool.html")
 
+
+@investor_bp.route("/project-studio", methods=["GET"])
+@login_required
+@role_required("investor")
+def project_studio():
+    address = (request.args.get("address") or "").strip()
+    city = (request.args.get("city") or "").strip()
+    state = (request.args.get("state") or "").strip()
+    zip_code = (request.args.get("zip") or request.args.get("zip_code") or "").strip()
+
+    return render_template(
+        "investor/project_studio.html",
+        title="Investor OS • Project Studio",
+        active_tab="project_studio",
+        address=address,
+        city=city,
+        state=state,
+        zip_code=zip_code,
+    )
+
 # -------------------------------------------------------------------
 # PROXY ROUTE FOR UI
 # -------------------------------------------------------------------
