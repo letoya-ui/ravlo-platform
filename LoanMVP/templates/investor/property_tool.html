@@ -128,6 +128,9 @@ Search by address or ZIP and Ravlo will return a short ranked list of the strong
 const csrfToken = "{{ csrf_token() }}";
 const PLACEHOLDER_IMAGE = "/static/images/placeholder_property.jpg";
 const DEAL_ARCHITECT_URL = "{{ url_for('investor.api_deal_architect_proxy') }}";
+const SAVE_URL = "{{ url_for('investor.api_property_tool_save') }}";
+const SAVE_AND_ANALYZE_URL = "{{ url_for('investor.api_property_tool_save_and_analyze') }}";
+const VIEW_DETAILS_URL = "{{ url_for('investor.api_property_tool_view_details') }}";
 
 function money(x){
   if (x === null || x === undefined || x === "") return "—";
@@ -272,32 +275,73 @@ function signalLabel(signal){
   return "Worth Reviewing";
 }
 
+function currentSearchStrategy(){
+  return document.getElementById("strategy")?.value || "all";
+}
+
 function buildPropertyPayload(r, analyzeId, saveId){
-  const primaryValue =
-    r.price ??
-    r.display_value ??
-    r.market_value ??
-    r.assessed_value ??
-    r.last_sale_price ??
-    null;
+  const strategy = currentSearchStrategy();
+
+  const headline = resolveHeadlineValue(r);
+  const primaryValue = headline.value
+    ?? numOrNull(r.price)
+    ?? numOrNull(r.display_value)
+    ?? numOrNull(r.market_value)
+    ?? numOrNull(r.assessed_value)
+    ?? numOrNull(r.last_sale_price)
+    ?? null;
 
   return {
     address: r.address || r.address_line1 || "",
     city: r.city || "",
     state: r.state || "",
     zip: r.zip_code || "",
+
     price: primaryValue,
+    purchase_price: primaryValue,
+    display_value: numOrNull(r.display_value),
+    market_value: numOrNull(r.market_value),
+    estimated_value_engine: numOrNull(r.estimated_value_engine),
+    assessed_value: numOrNull(r.assessed_value),
+    arv: numOrNull(r.estimated_value_engine) ?? numOrNull(r.market_value) ?? numOrNull(r.display_value),
+
     sqft: r.square_feet ?? r.sqft ?? null,
+    square_feet: r.square_feet ?? r.sqft ?? null,
     beds: r.beds ?? null,
     baths: r.baths ?? null,
     year_built: r.year_built ?? null,
     property_type: r.property_type || null,
     property_id: r.property_id || r.attom_id || null,
     lot_size_sqft: r.lot_size_sqft ?? null,
-    assessed_value: r.assessed_value ?? null,
+
     latitude: r.latitude ?? null,
     longitude: r.longitude ?? null,
     last_sale_price: r.last_sale_price ?? null,
+    last_sale_date: r.last_sale_date ?? null,
+
+    monthly_rent: numOrNull(r.monthly_rent_estimate) ?? numOrNull(r.traditional_rent),
+    monthly_rent_estimate: numOrNull(r.monthly_rent_estimate) ?? numOrNull(r.traditional_rent),
+
+    status: r.status || null,
+    strategy: strategy,
+    strategy_tag: r.strategy_tag || null,
+    recommended_strategy: r.recommended_strategy || null,
+    estimated_best_use: r.estimated_best_use || r.best_use || null,
+
+    deal_score: numOrNull(r.deal_score),
+    opportunity_tier: r.opportunity_tier || null,
+    deal_finder_signal: r.deal_finder_signal || null,
+    next_step: r.next_step_engine || r.next_step || null,
+    comp_confidence: r.comp_confidence || null,
+
+    primary_strengths: Array.isArray(r.primary_strengths) ? r.primary_strengths : [],
+    primary_risks: Array.isArray(r.primary_risks) ? r.primary_risks : [],
+    risk_notes: Array.isArray(r.risk_notes) ? r.risk_notes : [],
+    why_it_made_list: Array.isArray(r.why_it_made_list) ? r.why_it_made_list : [],
+
+    description: r.description || null,
+    image_url: r.primary_photo || r.photo || r.thumbnail || (Array.isArray(r.photos) ? r.photos[0] : null) || null,
+
     _btnId: analyzeId,
     _saveBtnId: saveId
   };
@@ -472,7 +516,6 @@ function renderCards(results){
 
     const headline = resolveHeadlineValue(r);
     const price = headline.value;
-    const priceLabel = headline.label;
     const marketValue = numOrNull(r.estimated_value_engine) ?? numOrNull(r.market_value) ?? numOrNull(r.assessed_value);
     const valueSourceBadge =
       headline.source === "listing" ? "Live Listing" :
@@ -480,6 +523,7 @@ function renderCards(results){
       headline.source === "assessed" ? "Tax Record" :
       headline.source === "last_sale" ? "Sale Record" :
       "Record Only";
+
     const reasons = resolveReasons(r);
     const risks = resolveRiskNotes(r);
     const score = Number(r.deal_score);
@@ -494,6 +538,7 @@ function renderCards(results){
     const strategyTag = safeText(r.strategy_tag || r.recommended_strategy || signalLabel(signal));
     const bestUse = safeText(r.estimated_best_use || r.best_use || "Review the highest and best use in Project Studio.");
     const roughUpside = safeText(r.rough_upside || "Upside depends on deeper review.");
+
     const facts = [
       {label: "Strategy Tag", value: strategyTag},
       {label: "Rough Upside", value: roughUpside},
@@ -527,7 +572,7 @@ function renderCards(results){
 
           <div class="dfv4-price-block">
             <div class="dfv4-price-header">
-              <span class="dfv4-price-label">${escapeHtml(priceLabel)}</span>
+              <span class="dfv4-price-label">${escapeHtml(headline.label)}</span>
               <span class="dfv4-source-pill">${escapeHtml(valueSourceBadge)}</span>
             </div>
             <div class="dfv4-price-value">${escapeHtml(money(price))}</div>
@@ -594,7 +639,7 @@ function renderCards(results){
 
 async function viewDetails(item){
   try{
-    const resp = await fetch("{{ url_for('investor.api_property_tool_view_details') }}", {
+    const resp = await fetch(VIEW_DETAILS_URL, {
       method: "POST",
       headers: {"Content-Type":"application/json", "X-CSRFToken": csrfToken},
       credentials: "include",
@@ -612,20 +657,29 @@ async function viewDetails(item){
 async function saveOnly(item){
   const btn = document.getElementById(item._saveBtnId);
   if (btn){ btn.disabled = true; btn.innerText = "Saving..."; }
+
   try{
-    const resp = await fetch("{{ url_for('investor.api_property_tool_save') }}", {
+    const resp = await fetch(SAVE_URL, {
       method: "POST",
       headers: {"Content-Type":"application/json", "X-CSRFToken": csrfToken},
       credentials: "include",
       body: JSON.stringify(item)
     });
+
     const data = await resp.json();
     if (data.status !== "ok") {
       alert(data.message || "Could not save property.");
       if (btn){ btn.disabled = false; btn.innerText = "Save"; }
       return;
     }
-    if (btn){ btn.innerText = "Saved"; setTimeout(() => { btn.disabled = false; btn.innerText = "Save"; }, 1200); }
+
+    if (btn){
+      btn.innerText = "Saved";
+      setTimeout(() => {
+        btn.disabled = false;
+        btn.innerText = "Save";
+      }, 1200);
+    }
   } catch (e) {
     console.error(e);
     alert("Network error while saving.");
@@ -633,17 +687,50 @@ async function saveOnly(item){
   }
 }
 
-function planThisDeal(item){
+async function planThisDeal(item){
   const btn = document.getElementById(item._btnId);
-  if (btn){ btn.disabled = true; btn.innerText = "Opening..."; }
+  if (btn){
+    btn.disabled = true;
+    btn.innerText = "Opening...";
+  }
 
-  const params = new URLSearchParams();
-  if (item.address) params.set("address", item.address);
-  if (item.city) params.set("city", item.city);
-  if (item.state) params.set("state", item.state);
-  if (item.zip) params.set("zip", item.zip);
+  try{
+    const resp = await fetch(SAVE_AND_ANALYZE_URL, {
+      method: "POST",
+      headers: {"Content-Type":"application/json", "X-CSRFToken": csrfToken},
+      credentials: "include",
+      body: JSON.stringify(item)
+    });
 
-  window.location.href = `{{ url_for('investor.project_studio') }}?${params.toString()}`;
+    const data = await resp.json();
+
+    if (data.status !== "ok") {
+      alert(data.message || "Could not create deal.");
+      if (btn){
+        btn.disabled = false;
+        btn.innerText = "Plan This Deal";
+      }
+      return;
+    }
+
+    if (data.deal_url) {
+      window.location.href = data.deal_url;
+      return;
+    }
+
+    alert("Deal created, but no destination URL was returned.");
+    if (btn){
+      btn.disabled = false;
+      btn.innerText = "Plan This Deal";
+    }
+  } catch (e) {
+    console.error(e);
+    alert("Network error while opening deal.");
+    if (btn){
+      btn.disabled = false;
+      btn.innerText = "Plan This Deal";
+    }
+  }
 }
 
 async function runSearch(){
@@ -762,15 +849,24 @@ async function runSearch(){
 {% endblock %}
 
 {#
-Flask proxy route to add in your investor blueprint:
+Required backend behavior for the primary CTA:
 
-@bp.post('/api/deal-architect-proxy')
-def api_deal_architect_proxy():
+@bp.post('/api/property-tool/save-and-analyze')
+def api_property_tool_save_and_analyze():
     payload = request.get_json(force=True) or {}
-    engine_url = current_app.config['RENOVATION_ENGINE_URL'].rstrip('/') + '/v1/deal_architect'
-    headers = {'X-API-Key': current_app.config['RENOVATION_ENGINE_API_KEY']}
-    resp = requests.post(engine_url, json=payload, headers=headers, timeout=20)
-    return jsonify(resp.json()), resp.status_code
 
-# Also register endpoint name: investor.api_deal_architect_proxy
+    # 1) Create or update canonical deal record
+    # 2) Persist address, pricing, sqft, beds/baths, property_id, strategy, rent, score signals, etc.
+    # 3) Mark budget + analysis as pending/stale so downstream routes recompute from same deal_id
+    # 4) Return the real workspace URL for that saved deal
+
+    return jsonify({
+        "status": "ok",
+        "deal_url": url_for("investor.deal_workspace", deal_id=deal.id)
+    })
+
+# Main idea:
+# Deal Finder -> save canonical deal -> redirect by deal_id
+# NOT:
+# Deal Finder -> query params only -> empty workspace shell
 #}
