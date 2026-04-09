@@ -427,6 +427,52 @@ async function sendToWorkspace(){
   font-size:.78rem;
 }
 
+.pi-chip.accent{
+  background:rgba(37,99,235,.14);
+  border-color:rgba(96,165,250,.22);
+  color:#dbeafe;
+}
+
+.pi-value-band{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:.85rem;
+  margin-top:1.15rem;
+}
+
+.pi-value-block{
+  padding:1rem 1rem 1.05rem;
+  border-radius:16px;
+  background:linear-gradient(180deg, rgba(42,96,191,.24), rgba(19,43,82,.18));
+  border:1px solid rgba(126,171,255,.2);
+}
+
+.pi-value-block span{
+  display:block;
+  color:#a9c4ff;
+  font-size:.76rem;
+  margin-bottom:.25rem;
+  font-weight:800;
+  text-transform:uppercase;
+  letter-spacing:.04em;
+}
+
+.pi-value-block strong{
+  color:#f6fbff;
+  font-size:1.35rem;
+  line-height:1.1;
+}
+
+.pi-summary-callout{
+  margin-top:1rem;
+  padding:1rem 1.05rem;
+  border-radius:16px;
+  background:rgba(255,255,255,.03);
+  border:1px solid rgba(255,255,255,.08);
+  color:var(--text);
+  line-height:1.7;
+}
+
 .pi-hero-media{
   min-height:280px;
   border-radius:18px;
@@ -608,6 +654,7 @@ async function sendToWorkspace(){
     grid-template-columns:1fr;
   }
 
+  .pi-value-band,
   .pi-metric-grid{
     grid-template-columns:repeat(2, minmax(0,1fr));
   }
@@ -618,6 +665,7 @@ async function sendToWorkspace(){
 }
 
 @media (max-width: 640px){
+  .pi-value-band,
   .pi-metric-grid,
   .facts-grid,
   .facts-grid-2{
