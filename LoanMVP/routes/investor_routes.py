@@ -906,6 +906,74 @@ def _project_studio_lookup(address: str, city: str = "", state: str = "", zip_co
         "engine_error": engine_error,
     }
 
+
+def _project_studio_scope_options(selected_strategy: str) -> list[dict]:
+    key = (selected_strategy or "").strip().lower()
+    if key == "rehab":
+        return [
+            {"value": "light", "label": "Light / Cosmetic", "detail": "Paint, flooring, fixtures, kitchen and bath refresh."},
+            {"value": "medium", "label": "Medium", "detail": "Bigger interior upgrades with selective systems work."},
+            {"value": "heavy", "label": "Heavy / Full Gut", "detail": "Major layout, systems, and structural-level renovation."},
+        ]
+    if key == "build_studio":
+        return [
+            {"value": "keep_structure", "label": "Keep Existing Structure", "detail": "Reuse the shell and plan around additions or redesign."},
+            {"value": "demo_first", "label": "Demo Existing Structure First", "detail": "Clear the site before moving into a build path."},
+            {"value": "ai_recommend", "label": "Let AI Recommend", "detail": "Have Ravlo choose between keep-vs-demo based on the site."},
+        ]
+    if key == "project_build":
+        return [
+            {"value": "2_units", "label": "2 Units", "detail": "Smaller multi-unit or dual-build concept."},
+            {"value": "3_units", "label": "3 Units", "detail": "Mid-density concept for stronger site leverage."},
+            {"value": "4_units", "label": "4+ Units", "detail": "Highest-intensity early planning path."},
+        ]
+    return []
+
+
+def _project_studio_scope_budget(selected_card: dict | None, selected_strategy: str, selected_scope: str) -> dict | None:
+    if not selected_card:
+        return None
+
+    low = _safe_float(selected_card.get("budget_low")) or 0
+    high = _safe_float(selected_card.get("budget_high")) or 0
+    outcome = _safe_float(selected_card.get("outcome"))
+    timeline = str(selected_card.get("timeline") or "")
+
+    multipliers = {
+        "rehab": {
+            "light": (0.85, 0.9, "4-6 months"),
+            "medium": (1.0, 1.0, "5-8 months"),
+            "heavy": (1.2, 1.3, "7-10 months"),
+        },
+        "build_studio": {
+            "keep_structure": (0.9, 0.92, "8-12 months"),
+            "demo_first": (1.08, 1.15, "10-15 months"),
+            "ai_recommend": (1.0, 1.04, timeline or "8-14 months"),
+        },
+        "project_build": {
+            "2_units": (0.92, 0.95, "12-16 months"),
+            "3_units": (1.0, 1.0, "14-18 months"),
+            "4_units": (1.12, 1.18, "16-22 months"),
+        },
+    }
+
+    strategy_mults = multipliers.get((selected_strategy or "").lower(), {})
+    low_mult, high_mult, timeline_out = strategy_mults.get(selected_scope, (1.0, 1.0, timeline or "Planning"))
+
+    scoped_low = round(low * low_mult)
+    scoped_high = round(high * high_mult)
+    midpoint = (scoped_low + scoped_high) / 2 if scoped_low and scoped_high else None
+    refined_outcome = round((outcome or 0) - ((midpoint - ((low + high) / 2)) if midpoint else 0)) if outcome is not None else None
+
+    return {
+        "budget_low": scoped_low,
+        "budget_high": scoped_high,
+        "timeline": timeline_out,
+        "outcome": refined_outcome,
+        "outcome_label": selected_card.get("outcome_label") or "Projected Outcome",
+        "confidence": selected_card.get("confidence") or "Moderate",
+    }
+
 # =========================================================
 # 🧾 JSON + FORM SAFETY
 # =========================================================
