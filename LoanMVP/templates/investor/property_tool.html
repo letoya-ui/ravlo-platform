@@ -397,12 +397,12 @@ async function enrichWithDealArchitect(results, strategy){
   return enriched.sort((a, b) => (Number(b.deal_score) || 0) - (Number(a.deal_score) || 0));
 }
 
-function renderSummary(zip, strategy, count, engineReady){
+function renderSummary(zip, strategy, count, engineReady, totalMatches){
   const card = document.getElementById("resultsSummary");
-  document.getElementById("summaryTitle").innerText = count === 0 ? "No Matches Yet" : "Review Complete";
+  document.getElementById("summaryTitle").innerText = count === 0 ? "No Matches Yet" : "Top Opportunities Ready";
   document.getElementById("summarySub").innerText = count === 0
     ? "Try another address or ZIP to surface opportunities."
-    : "These properties are now ranked with Deal Architect signals.";
+    : `Ravlo ranked ${totalMatches || count} matches and returned the top ${count} opportunities for planning.`;
   document.getElementById("summaryCount").innerText = String(count);
   document.getElementById("summaryStrategy").innerText = strategyLabel(strategy);
   document.getElementById("summaryZip").innerText = zip || "—";
@@ -425,6 +425,10 @@ function resolveImage(r){
 }
 
 function resolveReasons(r){
+  if (Array.isArray(r.why_it_made_list) && r.why_it_made_list.length) {
+    return r.why_it_made_list.slice(0, 3);
+  }
+
   const strengths = Array.isArray(r.primary_strengths) ? r.primary_strengths.slice(0, 2) : [];
   const risks = Array.isArray(r.primary_risks) ? r.primary_risks.slice(0, 1) : [];
 
@@ -439,6 +443,16 @@ function resolveReasons(r){
   if (numOrNull(r.traditional_rent) !== null) fallback.push(`Estimated rent: ${money(r.traditional_rent)}/mo`);
   if (!fallback.length) fallback.push("Ready for deeper review in Deal Workspace");
   return fallback.slice(0, 3);
+}
+
+function resolveRiskNotes(r){
+  if (Array.isArray(r.risk_notes) && r.risk_notes.length) {
+    return r.risk_notes.slice(0, 2);
+  }
+
+  const risks = Array.isArray(r.primary_risks) ? r.primary_risks.slice(0, 2) : [];
+  if (risks.length) return risks;
+  return ["Validate scope, comps, and zoning before moving this into execution."];
 }
 
 function renderCards(results){
@@ -467,6 +481,7 @@ function renderCards(results){
       headline.source === "last_sale" ? "Sale Record" :
       "Record Only";
     const reasons = resolveReasons(r);
+    const risks = resolveRiskNotes(r);
     const score = Number(r.deal_score);
     const tier = r.opportunity_tier || "moderate";
     const signal = r.deal_finder_signal;
@@ -476,11 +491,15 @@ function renderCards(results){
     const lotText = compactNumberText(r.lot_size_sqft, "sq ft lot");
     const description = shortText(r.description, 160);
     const lastSaleDate = compactDate(r.last_sale_date);
+    const strategyTag = safeText(r.strategy_tag || r.recommended_strategy || signalLabel(signal));
+    const bestUse = safeText(r.estimated_best_use || r.best_use || "Review the highest and best use in Project Studio.");
+    const roughUpside = safeText(r.rough_upside || "Upside depends on deeper review.");
     const facts = [
+      {label: "Strategy Tag", value: strategyTag},
+      {label: "Rough Upside", value: roughUpside},
+      {label: "Best Use", value: bestUse},
       {label: "Type", value: safeText(r.property_type || "Property")},
       {label: "Beds / Baths", value: `${safeText(r.beds)} / ${safeText(r.baths)}`},
-      {label: "Sqft", value: sqftText},
-      {label: "Year Built", value: safeText(r.year_built)},
       {label: "Lot", value: lotText},
       {label: "Last Sale", value: numOrNull(r.last_sale_price) !== null ? `${money(r.last_sale_price)}${lastSaleDate ? ` · ${lastSaleDate}` : ""}` : "—"}
     ].filter(item => item.value && item.value !== "—");
@@ -497,7 +516,7 @@ function renderCards(results){
 
         <div class="dfv4-body">
           <div class="dfv4-topline">
-            <div class="dfv4-opportunity-callout ${tierClass(tier)}">${escapeHtml(signalLabel(signal))}</div>
+            <div class="dfv4-opportunity-callout ${tierClass(tier)}">${escapeHtml(strategyTag)}</div>
             <div class="dfv4-status-inline">${escapeHtml(statusText)}</div>
           </div>
 
