@@ -692,6 +692,220 @@ def _annotate_deal_finder_opportunity(result: dict, selected_strategy: str = "al
     result["opportunity_summary"] = why_it_made_list[0]
     return result
 
+
+def _project_studio_market_label(engine_data: dict, valuation: dict) -> str:
+    market_value = _safe_float((valuation or {}).get("market_value"))
+    engine_value = _safe_float((engine_data or {}).get("estimated_value"))
+    if engine_value and market_value:
+        return f"${engine_value:,.0f} engine value vs ${market_value:,.0f} market value."
+    if engine_value:
+        return f"${engine_value:,.0f} engine value signal."
+    if market_value:
+        return f"${market_value:,.0f} market value signal."
+    return "Live market value is still forming."
+
+
+def _project_studio_flags(snapshot: dict) -> list[dict]:
+    lot_size = _safe_float(snapshot.get("lot_size_sqft")) or 0
+    sqft = _safe_float(snapshot.get("square_feet") or snapshot.get("sqft")) or 0
+    year_built = _safe_int(snapshot.get("year_built")) or 0
+    property_type = str(snapshot.get("property_type") or "").lower()
+    dom = _safe_int(snapshot.get("days_on_market")) or 0
+    price = _safe_float(snapshot.get("price") or snapshot.get("listing_price"))
+    market_value = _safe_float(snapshot.get("market_value") or snapshot.get("engine_value"))
+
+    flags = []
+    if lot_size >= 10000:
+        flags.append({"label": "Oversized Lot", "tone": "good", "detail": f"{lot_size:,.0f} sq ft creates extra optionality."})
+    if lot_size >= 14000 or any(term in property_type for term in ["land", "lot", "vacant"]):
+        flags.append({"label": "Development Potential", "tone": "good", "detail": "Lot size and property profile suggest a bigger site play."})
+    if year_built and year_built <= 1965 and sqft and sqft <= 1500:
+        flags.append({"label": "Teardown Potential", "tone": "watch", "detail": "Older, smaller structure may be less valuable than the site."})
+    if dom >= 45:
+        flags.append({"label": "Negotiation Window", "tone": "watch", "detail": f"{dom} days on market may create pricing flexibility."})
+    if price and market_value and market_value > price:
+        flags.append({"label": "Spread Detected", "tone": "good", "detail": f"${market_value - price:,.0f} gap between current price and value signals."})
+
+    return flags[:4]
+
+
+def _project_studio_strategy_cards(snapshot: dict, engine_data: dict | None) -> list[dict]:
+    engine_data = engine_data or {}
+    meta = engine_data.get("meta") or {}
+
+    price = _safe_float(snapshot.get("price") or snapshot.get("listing_price") or snapshot.get("last_sale_price")) or 0
+    market_value = _safe_float(snapshot.get("market_value") or engine_data.get("estimated_value") or snapshot.get("assessed_value")) or 0
+    rent = _safe_float(snapshot.get("traditional_rent") or meta.get("monthly_rent_estimate")) or 0
+    sqft = _safe_float(snapshot.get("square_feet") or snapshot.get("sqft")) or 0
+    lot_size = _safe_float(snapshot.get("lot_size_sqft")) or 0
+    dom = _safe_int(snapshot.get("days_on_market")) or 0
+    comp_conf = str(meta.get("comp_confidence") or snapshot.get("comp_confidence") or "Moderate")
+    primary_strengths = [str(x).strip() for x in (meta.get("primary_strengths") or snapshot.get("primary_strengths") or []) if str(x).strip()]
+    primary_risks = [str(x).strip() for x in (meta.get("primary_risks") or snapshot.get("primary_risks") or []) if str(x).strip()]
+    market_label = _project_studio_market_label(engine_data, snapshot)
+
+    rehab_budget_low = max(25000, round(sqft * 28)) if sqft else 45000
+    rehab_budget_high = max(rehab_budget_low + 25000, round(sqft * 62)) if sqft else 95000
+    rehab_arv = max(market_value, price * 1.18) if price else market_value
+    rehab_profit = rehab_arv - price - ((rehab_budget_low + rehab_budget_high) / 2) if price and rehab_arv else None
+    rehab_confidence = "High" if market_value and dom <= 45 else "Moderate"
+
+    build_budget_low = max(140000, round((sqft or 900) * 155))
+    build_budget_high = max(build_budget_low + 60000, round((sqft or 1100) * 215))
+    build_arv = max(rehab_arv * 1.08 if rehab_arv else 0, market_value * 1.12 if market_value else 0)
+    build_outcome = build_arv - price - ((build_budget_low + build_budget_high) / 2) if price and build_arv else None
+    build_confidence = "Moderate" if lot_size >= 7000 else "Watch"
+
+    project_units = 4 if lot_size >= 18000 else 3 if lot_size >= 14000 else 2
+    project_budget_low = max(260000, project_units * 180000)
+    project_budget_high = max(project_budget_low + 140000, project_units * 255000)
+    project_arv = max(build_arv * 1.35 if build_arv else 0, (market_value or rehab_arv or price) * 1.45 if (market_value or rehab_arv or price) else 0)
+    project_outcome = project_arv - price - ((project_budget_low + project_budget_high) / 2) if price and project_arv else None
+    project_confidence = "Moderate" if lot_size >= 12000 else "Low"
+
+    cards = [
+        {
+            "key": "rehab",
+            "title": "Rehab",
+            "badge": None,
+            "arv": rehab_arv,
+            "budget_low": rehab_budget_low,
+            "budget_high": rehab_budget_high,
+            "outcome": rehab_profit,
+            "outcome_label": "Projected Spread",
+            "timeline": "4-8 months",
+            "confidence": rehab_confidence,
+            "why": primary_strengths[0] if primary_strengths else "Use the existing structure and value gap for a focused improvement plan.",
+            "tone": "good" if rehab_profit and rehab_profit > 0 else "watch",
+        },
+        {
+            "key": "build_studio",
+            "title": "Build Studio",
+            "badge": None,
+            "arv": build_arv,
+            "budget_low": build_budget_low,
+            "budget_high": build_budget_high,
+            "outcome": build_outcome,
+            "outcome_label": "Projected Outcome",
+            "timeline": "8-14 months",
+            "confidence": build_confidence,
+            "why": "Test a bigger redesign, addition, or structure-first build path before committing to scope.",
+            "tone": "good" if lot_size >= 8000 else "watch",
+        },
+    ]
+
+    if lot_size >= 12000 or any(term in str(snapshot.get("property_type") or "").lower() for term in ["land", "lot", "vacant"]):
+        cards.append({
+            "key": "project_build",
+            "title": "Project Build",
+            "badge": None,
+            "arv": project_arv,
+            "budget_low": project_budget_low,
+            "budget_high": project_budget_high,
+            "outcome": project_outcome,
+            "outcome_label": "Projected Outcome",
+            "timeline": "12-20 months",
+            "confidence": project_confidence,
+            "why": f"Lot size supports a higher-and-better-use path, potentially around {project_units} units.",
+            "tone": "good" if lot_size >= 14000 else "watch",
+        })
+
+    cards = [c for c in cards if c.get("arv") or c.get("budget_low")]
+    cards.sort(key=lambda c: (_safe_float(c.get("outcome")) is not None, _safe_float(c.get("outcome")) or 0), reverse=True)
+
+    if cards:
+        cards[0]["badge"] = "Recommended Strategy"
+
+    highest_profit = max(cards, key=lambda c: _safe_float(c.get("outcome")) or float("-inf")) if cards else None
+    if highest_profit and highest_profit.get("badge") != "Recommended Strategy":
+        highest_profit["badge"] = "Highest Profit"
+
+    lowest_risk = max(cards, key=lambda c: {"High": 3, "Moderate": 2, "Watch": 1, "Low": 0}.get(c.get("confidence"), 0)) if cards else None
+    if lowest_risk and not lowest_risk.get("badge"):
+        lowest_risk["badge"] = "Lowest Risk"
+
+    for card in cards:
+        card["market_note"] = market_label
+        if primary_risks:
+            card["risk_note"] = primary_risks[0]
+        elif dom >= 60:
+            card["risk_note"] = "Long market time suggests demand or pricing friction."
+        else:
+            card["risk_note"] = "Validate zoning, scope, and exit assumptions before execution."
+
+    recommended_type = str(engine_data.get("recommended_type") or "").strip().lower()
+    for card in cards:
+        if recommended_type and recommended_type in card["title"].lower():
+            card["badge"] = "Recommended Strategy"
+
+    return cards
+
+
+def _project_studio_lookup(address: str, city: str = "", state: str = "", zip_code: str = "") -> dict:
+    address = (address or "").strip()
+    city = (city or "").strip()
+    state = (state or "").strip()
+    zip_code = (zip_code or "").strip()
+    lookup_parts = [address, city, state, zip_code]
+    lookup_address = ", ".join([part for part in lookup_parts if part]).strip(", ")
+    resolved = resolve_property_unified(address=lookup_address or address)
+
+    if resolved.get("status") != "ok":
+        raise ValueError(resolved.get("error") or "Property lookup failed.")
+
+    property_data = resolved.get("property") or {}
+    valuation = resolved.get("valuation") or {}
+    rent_estimate = resolved.get("rent_estimate") or {}
+    photos = property_data.get("photos") or []
+    primary_photo = property_data.get("primary_photo") or (photos[0] if photos else None)
+
+    snapshot = {
+        "address": property_data.get("address") or address,
+        "city": property_data.get("city") or city,
+        "state": property_data.get("state") or state,
+        "zip_code": property_data.get("zip_code") or zip_code,
+        "property_type": property_data.get("property_type"),
+        "beds": property_data.get("beds"),
+        "baths": property_data.get("baths"),
+        "square_feet": property_data.get("square_feet") or property_data.get("sqft"),
+        "sqft": property_data.get("square_feet") or property_data.get("sqft"),
+        "lot_size_sqft": property_data.get("lot_size_sqft") or property_data.get("lot_sqft"),
+        "year_built": property_data.get("year_built"),
+        "price": property_data.get("price") or valuation.get("market_value") or valuation.get("estimated_value"),
+        "listing_price": property_data.get("price"),
+        "market_value": valuation.get("market_value") or valuation.get("estimated_value"),
+        "assessed_value": valuation.get("assessed_value"),
+        "last_sale_price": valuation.get("last_sale_price"),
+        "tax_amount": valuation.get("tax_amount"),
+        "traditional_rent": rent_estimate.get("traditional_rent") or rent_estimate.get("estimated_rent"),
+        "days_on_market": property_data.get("days_on_market"),
+        "status": property_data.get("status"),
+        "description": property_data.get("description"),
+        "latitude": property_data.get("latitude"),
+        "longitude": property_data.get("longitude"),
+        "primary_photo": primary_photo,
+        "photos": photos,
+    }
+
+    engine_data = None
+    engine_error = None
+    try:
+        engine_data = _call_deal_architect(_build_deal_architect_payload(snapshot, strategy="all"))
+        snapshot = _attach_deal_architect_signals(snapshot, engine_data)
+    except Exception as exc:
+        current_app.logger.warning("project_studio engine enrichment failed for %s: %s", snapshot.get("address"), exc)
+        engine_error = str(exc)
+
+    return {
+        "snapshot": snapshot,
+        "flags": _project_studio_flags(snapshot),
+        "strategy_cards": _project_studio_strategy_cards(snapshot, engine_data),
+        "ai_summary": resolved.get("ai_summary") or (engine_data or {}).get("summary"),
+        "market_snapshot": resolved.get("market_snapshot") or {},
+        "comps": resolved.get("comps") or {},
+        "engine_error": engine_error,
+    }
+
 # =========================================================
 # 🧾 JSON + FORM SAFETY
 # =========================================================
@@ -4114,6 +4328,30 @@ def project_studio():
     city = (request.args.get("city") or "").strip()
     state = (request.args.get("state") or "").strip()
     zip_code = (request.args.get("zip") or request.args.get("zip_code") or "").strip()
+    snapshot = None
+    flags = []
+    strategy_cards = []
+    ai_summary = None
+    engine_error = None
+    market_snapshot = {}
+
+    if address:
+        try:
+            studio_context = _project_studio_lookup(
+                address=address,
+                city=city,
+                state=state,
+                zip_code=zip_code,
+            )
+            snapshot = studio_context.get("snapshot")
+            flags = studio_context.get("flags") or []
+            strategy_cards = studio_context.get("strategy_cards") or []
+            ai_summary = studio_context.get("ai_summary")
+            engine_error = studio_context.get("engine_error")
+            market_snapshot = studio_context.get("market_snapshot") or {}
+        except Exception as exc:
+            engine_error = str(exc)
+            current_app.logger.warning("project_studio lookup failed for %s: %s", address, exc)
 
     return render_template(
         "investor/project_studio.html",
@@ -4123,6 +4361,12 @@ def project_studio():
         city=city,
         state=state,
         zip_code=zip_code,
+        snapshot=snapshot,
+        flags=flags,
+        strategy_cards=strategy_cards,
+        ai_summary=ai_summary,
+        engine_error=engine_error,
+        market_snapshot=market_snapshot,
     )
 
 # -------------------------------------------------------------------

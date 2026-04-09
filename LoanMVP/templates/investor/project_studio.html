@@ -86,6 +86,150 @@ Open any address and let Ravlo compare the best plan before you move into scope,
     </div>
   </section>
 
+  {% if snapshot %}
+  <section class="ps-studio-shell">
+    <div class="ravlo-card pad ps-snapshot-card">
+      <div class="ps-section-head">
+        <div>
+          <div class="eyebrow">STEP 1</div>
+          <h3 class="ps-title">Instant Property Snapshot</h3>
+        </div>
+        <span class="ps-status-pill">{{ snapshot.status or "Property Loaded" }}</span>
+      </div>
+
+      <div class="ps-snapshot-grid">
+        <div class="ps-snapshot-media">
+          {% if snapshot.primary_photo %}
+          <img src="{{ snapshot.primary_photo }}" alt="Property photo">
+          {% else %}
+          <div class="ps-photo-fallback">No live photo yet</div>
+          {% endif %}
+        </div>
+
+        <div class="ps-snapshot-body">
+          <div>
+            <div class="ps-address">{{ snapshot.address }}</div>
+            <div class="muted">{{ [snapshot.city, snapshot.state, snapshot.zip_code]|select|join(', ') }}</div>
+          </div>
+
+          <div class="ps-value-band">
+            <div class="ps-value-block">
+              <span>List / Current Price</span>
+              <strong>{% if snapshot.price %}${{ "{:,.0f}".format(snapshot.price|float) }}{% else %}—{% endif %}</strong>
+            </div>
+            <div class="ps-value-block">
+              <span>Market Value</span>
+              <strong>{% if snapshot.market_value %}${{ "{:,.0f}".format(snapshot.market_value|float) }}{% else %}—{% endif %}</strong>
+            </div>
+            <div class="ps-value-block">
+              <span>Rent Signal</span>
+              <strong>{% if snapshot.traditional_rent %}${{ "{:,.0f}".format(snapshot.traditional_rent|float) }}/mo{% else %}—{% endif %}</strong>
+            </div>
+          </div>
+
+          <div class="ps-fact-grid">
+            <div class="ps-fact"><span>Type</span><strong>{{ snapshot.property_type or "Property" }}</strong></div>
+            <div class="ps-fact"><span>Beds / Baths</span><strong>{{ snapshot.beds or "—" }} / {{ snapshot.baths or "—" }}</strong></div>
+            <div class="ps-fact"><span>Sq Ft</span><strong>{% if snapshot.square_feet %}{{ "{:,.0f}".format(snapshot.square_feet|float) }}{% else %}—{% endif %}</strong></div>
+            <div class="ps-fact"><span>Lot Size</span><strong>{% if snapshot.lot_size_sqft %}{{ "{:,.0f}".format(snapshot.lot_size_sqft|float) }} sq ft{% else %}—{% endif %}</strong></div>
+            <div class="ps-fact"><span>Year Built</span><strong>{{ snapshot.year_built or "—" }}</strong></div>
+            <div class="ps-fact"><span>Comp Confidence</span><strong>{{ snapshot.comp_confidence or "Moderate" }}</strong></div>
+          </div>
+
+          {% if snapshot.description %}
+          <div class="ps-callout">
+            <strong>Property read</strong>
+            <p>{{ snapshot.description }}</p>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <div class="ravlo-card pad">
+      <div class="ps-section-head">
+        <div>
+          <div class="eyebrow">STEP 2</div>
+          <h3 class="ps-title">AI Flags</h3>
+        </div>
+      </div>
+
+      {% if flags %}
+      <div class="ps-flag-stack">
+        {% for flag in flags %}
+        <div class="ps-flag {{ flag.tone }}">
+          <strong>{{ flag.label }}</strong>
+          <p>{{ flag.detail }}</p>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="ps-callout">
+        <strong>Signals still loading</strong>
+        <p>Ravlo loaded the property, but there are not enough lot or pricing flags yet to highlight a specific site condition.</p>
+      </div>
+      {% endif %}
+
+      {% if ai_summary %}
+      <div class="ps-callout">
+        <strong>Ravlo read</strong>
+        <p>{{ ai_summary }}</p>
+      </div>
+      {% endif %}
+
+      {% if engine_error %}
+      <div class="ps-engine-warning">{{ engine_error }}</div>
+      {% endif %}
+    </div>
+  </section>
+
+  <section class="ravlo-card pad">
+    <div class="ps-section-head">
+      <div>
+        <div class="eyebrow">STEP 3</div>
+        <h3 class="ps-title">Choose the best strategy</h3>
+      </div>
+      <div class="muted">Ravlo compares the strongest paths before you scope the work.</div>
+    </div>
+
+    <div class="ps-strategy-grid">
+      {% for card in strategy_cards %}
+      <article class="ps-strategy-card {{ card.tone }}">
+        {% if card.badge %}
+        <div class="ps-card-badge">{{ card.badge }}</div>
+        {% endif %}
+        <h4>{{ card.title }}</h4>
+        <p class="muted">{{ card.why }}</p>
+
+        <div class="ps-card-metrics">
+          <div><span>ARV / Outcome</span><strong>{% if card.arv %}${{ "{:,.0f}".format(card.arv|float) }}{% else %}—{% endif %}</strong></div>
+          <div><span>Budget Range</span><strong>${{ "{:,.0f}".format(card.budget_low|float) }} - ${{ "{:,.0f}".format(card.budget_high|float) }}</strong></div>
+          <div><span>{{ card.outcome_label }}</span><strong>{% if card.outcome %}${{ "{:,.0f}".format(card.outcome|float) }}{% else %}—{% endif %}</strong></div>
+          <div><span>Timeline</span><strong>{{ card.timeline }}</strong></div>
+          <div><span>Confidence</span><strong>{{ card.confidence }}</strong></div>
+          <div><span>Market Context</span><strong>{{ card.market_note }}</strong></div>
+        </div>
+
+        <div class="ps-card-foot">
+          <div class="ps-card-risk">
+            <strong>Why this works</strong>
+            <p>{{ card.why }}</p>
+          </div>
+          <div class="ps-card-risk">
+            <strong>Risk note</strong>
+            <p>{{ card.risk_note }}</p>
+          </div>
+        </div>
+
+        <div class="ps-action-row">
+          <button class="ravlo-btn primary" type="button">{{ "Choose " ~ card.title }}</button>
+        </div>
+      </article>
+      {% endfor %}
+    </div>
+  </section>
+  {% endif %}
+
   <section class="ps-grid">
     <div class="ravlo-card pad">
       <div class="eyebrow">CONNECTED TO DEAL FINDER</div>
@@ -119,10 +263,37 @@ Open any address and let Ravlo compare the best plan before you move into scope,
 .ps-pill-row{display:flex;flex-wrap:wrap;gap:.55rem}
 .ps-pill{display:inline-flex;align-items:center;padding:.45rem .75rem;border-radius:999px;background:rgba(37,99,235,.14);border:1px solid rgba(96,165,250,.22);color:#dbeafe;font-size:.8rem;font-weight:800}
 .ps-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}
+.ps-studio-shell{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(320px,.75fr);gap:18px}
 .ps-title{margin:.35rem 0 .55rem}
 .ps-form{display:grid;gap:.8rem;margin-top:1rem}
 .ps-form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.8rem}
 .ps-action-row,.ps-link-row{display:flex;gap:.7rem;flex-wrap:wrap;margin-top:.4rem}
+.ps-section-head{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;flex-wrap:wrap;margin-bottom:1rem}
+.ps-status-pill,.ps-card-badge{display:inline-flex;align-items:center;padding:.38rem .7rem;border-radius:999px;background:rgba(37,99,235,.14);border:1px solid rgba(96,165,250,.22);color:#dbeafe;font-size:.76rem;font-weight:800}
+.ps-snapshot-grid{display:grid;grid-template-columns:minmax(280px,.9fr) minmax(0,1.1fr);gap:18px}
+.ps-snapshot-media img,.ps-photo-fallback{width:100%;height:100%;min-height:280px;object-fit:cover;border-radius:20px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03)}
+.ps-photo-fallback{display:flex;align-items:center;justify-content:center;color:var(--muted);font-weight:700}
+.ps-snapshot-body{display:grid;gap:1rem}
+.ps-address{font-size:1.5rem;font-weight:900;line-height:1.08;color:#fff}
+.ps-value-band{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.75rem}
+.ps-value-block,.ps-fact,.ps-callout,.ps-flag,.ps-card-risk,.ps-card-metrics div{padding:.9rem 1rem;border-radius:16px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08)}
+.ps-value-block span,.ps-fact span,.ps-card-metrics span{display:block;color:var(--muted);font-size:.74rem;text-transform:uppercase;letter-spacing:.04em;margin-bottom:.2rem}
+.ps-value-block strong{display:block;color:#fff;font-size:1.15rem;line-height:1.2}
+.ps-fact-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.75rem}
+.ps-fact strong,.ps-card-metrics strong{display:block;color:#fff;line-height:1.4}
+.ps-callout strong,.ps-card-risk strong,.ps-flag strong{display:block;color:#fff;margin-bottom:.3rem}
+.ps-callout p,.ps-card-risk p,.ps-flag p{margin:0;color:var(--muted);line-height:1.55}
+.ps-flag-stack{display:grid;gap:.75rem}
+.ps-flag.good{background:rgba(44,182,125,.12);border-color:rgba(44,182,125,.24)}
+.ps-flag.watch{background:rgba(209,162,70,.10);border-color:rgba(209,162,70,.22)}
+.ps-engine-warning{margin-top:1rem;padding:.9rem 1rem;border-radius:16px;background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.22);color:#fecaca}
+.ps-strategy-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}
+.ps-strategy-card{display:grid;gap:1rem;padding:1.15rem;border-radius:22px;border:1px solid rgba(255,255,255,.08);background:linear-gradient(180deg, rgba(20,30,40,.52), rgba(12,18,26,.74))}
+.ps-strategy-card.good{box-shadow:0 18px 36px rgba(44,182,125,.08)}
+.ps-strategy-card.watch{box-shadow:0 18px 36px rgba(209,162,70,.08)}
+.ps-strategy-card h4{margin:0;color:#fff;font-size:1.3rem}
+.ps-card-metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.75rem}
+.ps-card-foot{display:grid;gap:.75rem}
 .ps-step-list{display:grid;gap:.85rem;margin-top:1rem}
 .ps-step{display:grid;grid-template-columns:auto 1fr;gap:.8rem;padding:.9rem 1rem;border-radius:16px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08)}
 .ps-step span{display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:999px;background:rgba(255,255,255,.05);font-weight:800;color:#fff}
@@ -132,6 +303,7 @@ Open any address and let Ravlo compare the best plan before you move into scope,
 .ps-loaded-card strong{color:#fff;font-size:1rem}
 .ps-bullet-list{display:grid;gap:.7rem;margin-top:1rem}
 .ps-bullet-list div{padding:.9rem 1rem;border-radius:16px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);color:#fff}
-@media (max-width:900px){.ps-grid,.ps-form-grid{grid-template-columns:1fr}}
+@media (max-width:1100px){.ps-studio-shell,.ps-snapshot-grid,.ps-strategy-grid{grid-template-columns:1fr}}
+@media (max-width:900px){.ps-grid,.ps-form-grid,.ps-value-band,.ps-fact-grid,.ps-card-metrics{grid-template-columns:1fr}}
 </style>
 {% endblock %}
