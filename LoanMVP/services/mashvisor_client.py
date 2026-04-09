@@ -1,0 +1,195 @@
+import os
+from dataclasses import dataclass
+from typing import Any, Dict, Optional
+
+import requests
+
+
+class MashvisorError(Exception):
+    pass
+
+
+@dataclass
+class MashvisorConfig:
+    api_key: str
+    base_url: str = "https://api.mashvisor.com/v1.1/client"
+    timeout_seconds: int = 20
+
+
+class MashvisorClient:
+    def __init__(self, config: Optional[MashvisorConfig] = None) -> None:
+        if config is None:
+            api_key = os.getenv("MASHVISOR_API_KEY", "").strip()
+            base_url = os.getenv(
+                "MASHVISOR_BASE_URL",
+                "https://api.mashvisor.com/v1.1/client"
+            ).strip()
+
+            if not api_key:
+                raise MashvisorError("Missing MASHVISOR_API_KEY in environment.")
+
+            config = MashvisorConfig(api_key=api_key, base_url=base_url)
+
+        self.config = config
+        self.session = requests.Session()
+        self.session.headers.update({
+            "x-api-key": self.config.api_key,
+            "Accept": "application/json",
+            "User-Agent": "YourAppName/1.0"
+        })
+
+    def _build_url(self, endpoint: str) -> str:
+        endpoint = endpoint.lstrip("/")
+        return f"{self.config.base_url}/{endpoint}"
+
+    def _get(self, endpoint: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        clean_params: Dict[str, Any] = {}
+        for key, value in (params or {}).items():
+            if value is not None and value != "":
+                clean_params[key] = value
+
+        url = self._build_url(endpoint)
+
+        try:
+            response = self.session.get(
+                url,
+                params=clean_params,
+                timeout=self.config.timeout_seconds,
+            )
+        except requests.RequestException as exc:
+            raise MashvisorError(f"Network error calling Mashvisor: {exc}") from exc
+
+        try:
+            data = response.json()
+        except ValueError as exc:
+            raise MashvisorError(
+                f"Mashvisor returned non-JSON response: {response.text[:500]}"
+            ) from exc
+
+        if not response.ok:
+            raise MashvisorError(
+                f"Mashvisor error {response.status_code}: {data}"
+            )
+
+        return data
+
+    def get_property_by_address(
+        self,
+        *,
+        address: str,
+        city: str,
+        state: str,
+        zip_code: str,
+    ) -> Dict[str, Any]:
+        return self._get(
+            "property",
+            params={
+                "address": address,
+                "city": city,
+                "state": state,
+                "zip_code": zip_code,
+            },
+        )
+
+    def get_airbnb_lookup(
+        self,
+        *,
+        address: str,
+        city: str,
+        state: str,
+        zip_code: str,
+        beds: Optional[int] = None,
+        baths: Optional[float] = None,
+        lat: Optional[float] = None,
+        lng: Optional[float] = None,
+    ) -> Dict[str, Any]:
+        return self._get(
+            "rento-calculator/lookup",
+            params={
+                "address": address,
+                "city": city,
+                "state": state,
+                "zip_code": zip_code,
+                "beds": beds,
+                "baths": baths,
+                "lat": lat,
+                "lng": lng,
+                "resource": "airbnb",
+            },
+        )
+
+    def get_airbnb_comps(
+        self,
+        *,
+        state: str,
+        zip_code: str,
+    ) -> Dict[str, Any]:
+        return self._get(
+            "rento-calculator/export-comps",
+            params={
+                "state": state,
+                "zip_code": zip_code,
+                "resource": "airbnb",
+            },
+        )
+
+    def validate_property_with_mashvisor(
+        self,
+        *,
+        address: str,
+        city: str,
+        state: str,
+        zip_code: str,
+        beds: Optional[int] = None,
+        baths: Optional[float] = None,
+        lat: Optional[float] = None,
+        lng: Optional[float] = None,
+        include_comps: bool = False,
+    ) -> Dict[str, Any]:
+        """
+        Recommended flow:
+        - call only after property + strategy are selected
+        - default to property + lookup
+        - only fetch comps when truly needed, to reduce usage
+        """
+        result: Dict[str, Any] = {
+            "property": None,
+            "lookup": None,
+            "comps": None,
+            "errors": [],
+        }
+
+        try:
+            result["property"] = self.get_property_by_address(
+                address=address,
+                city=city,
+                state=state,
+                zip_code=zip_code,
+            )
+        except MashvisorError as exc:
+            result["errors"].append({"property": str(exc)})
+
+        try:
+            result["lookup"] = self.get_airbnb_lookup(
+                address=address,
+                city=city,
+                state=state,
+                zip_code=zip_code,
+                beds=beds,
+                baths=baths,
+                lat=lat,
+                lng=lng,
+            )
+        except MashvisorError as exc:
+            result["errors"].append({"lookup": str(exc)})
+
+        if include_comps:
+            try:
+                result["comps"] = self.get_airbnb_comps(
+                    state=state,
+                    zip_code=zip_code,
+                )
+            except MashvisorError as exc:
+                result["errors"].append({"comps": str(exc)})
+
+        return result
