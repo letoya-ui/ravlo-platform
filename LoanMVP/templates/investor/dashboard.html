@@ -298,6 +298,82 @@ Your capital, deals, and funding — in one place.
     font-size:.92rem;
   }
 
+  .command-center-page .front-door-grid{
+    display:grid;
+    grid-template-columns:repeat(2, minmax(0,1fr));
+    gap:18px;
+  }
+
+  .command-center-page .front-door-card{
+    position:relative;
+    display:grid;
+    gap:18px;
+    padding:26px;
+    border-radius:28px;
+    border:1px solid rgba(255,255,255,.08);
+    background:
+      radial-gradient(circle at top left, rgba(107,127,147,.16), transparent 34%),
+      linear-gradient(180deg, rgba(20,30,40,.54), rgba(12,18,26,.74));
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,.05),
+      0 18px 40px rgba(0,0,0,.2);
+    overflow:hidden;
+  }
+
+  .command-center-page .front-door-card::after{
+    content:"";
+    position:absolute;
+    right:-56px;
+    top:-56px;
+    width:180px;
+    height:180px;
+    border-radius:50%;
+    background:radial-gradient(circle, rgba(142,167,192,.14), transparent 68%);
+    pointer-events:none;
+  }
+
+  .command-center-page .front-door-card h3{
+    margin:0;
+    font-size:1.6rem;
+    line-height:1.05;
+    letter-spacing:-.04em;
+    color:#fff;
+  }
+
+  .command-center-page .front-door-card p{
+    margin:0;
+    color:rgba(255,255,255,.72);
+    line-height:1.6;
+  }
+
+  .command-center-page .front-door-meta{
+    position:relative;
+    z-index:2;
+    display:grid;
+    gap:10px;
+  }
+
+  .command-center-page .front-door-bullets{
+    position:relative;
+    z-index:2;
+    display:flex;
+    flex-wrap:wrap;
+    gap:10px;
+  }
+
+  .command-center-page .front-door-bullets span{
+    display:inline-flex;
+    align-items:center;
+    min-height:34px;
+    padding:0 14px;
+    border-radius:999px;
+    border:1px solid rgba(255,255,255,.06);
+    background:rgba(255,255,255,.04);
+    color:#fff;
+    font-size:.88rem;
+    font-weight:600;
+  }
+
   .command-center-page .ravlo-link-btn{
     display:inline-flex;
     align-items:center;
@@ -433,6 +509,10 @@ Your capital, deals, and funding — in one place.
   }
 
   @media (max-width: 1180px){
+    .command-center-page .front-door-grid{
+      grid-template-columns:1fr;
+    }
+
     .command-center-page .dashboard-kpi-strip{
       grid-template-columns:repeat(2, minmax(0,1fr));
     }
@@ -484,13 +564,13 @@ Your capital, deals, and funding — in one place.
 
 {% block topbar_actions %}
   <a href="{{ url_for('investor.property_tool') }}" class="ravlo-btn ghost sm">
-    Deal Finder
+    Find Deals
   </a>
-  <a href="{{ url_for('investor.deal_comparison') }}" class="ravlo-btn ghost sm">
-    Compare Deals
+  <a href="{{ url_for('investor.project_studio') }}" class="ravlo-btn ghost sm">
+    Project Studio
   </a>
   <a href="{{ url_for('investor.deals_list') }}" class="ravlo-btn primary sm">
-    Deal Pipeline
+    Deal Workspace
   </a>
 {% endblock %}
 
@@ -504,10 +584,10 @@ Your capital, deals, and funding — in one place.
   <!-- HERO -->
   <section class="ravlo-hero-card command-hero">
     <div>
-      <div class="eyebrow">RAVLO COMMAND CENTER</div>
+      <div class="eyebrow">RAVLO OS</div>
       <h2>{{ ((current_user.first_name or "") ~ " " ~ (current_user.last_name or ""))|trim or "Investor" }}</h2>
       <p class="muted">
-        {{ investor_profile.strategy if investor_profile and investor_profile.strategy else "Your capital, deals, and funding in one command view." }}
+        {{ investor_profile.strategy if investor_profile and investor_profile.strategy else "Ravlo helps you find opportunities, choose the best strategy, and move the right property into execution." }}
       </p>
 
       <div class="ravlo-chip-row" style="margin-top:16px;">
@@ -522,6 +602,40 @@ Your capital, deals, and funding — in one place.
       <strong>${{ "{:,.0f}".format((snapshot.amount if snapshot else 0) or 0) }}</strong>
       <small>{{ snapshot.address if snapshot and snapshot.address else "No active property selected" }}</small>
     </div>
+  </section>
+
+  <section class="front-door-grid">
+    <article class="front-door-card">
+      <div class="eyebrow">FRONT DOOR 01</div>
+      <div class="front-door-meta">
+        <h3>Find Deals</h3>
+        <p>Discover the best opportunities in any area. Ravlo should surface a short ranked list instead of making investors sort through weak listings.</p>
+      </div>
+      <div class="front-door-bullets">
+        <span>Search ZIPs and target areas</span>
+        <span>Review Ravlo-ranked opportunities</span>
+        <span>Choose a deal and move it into planning</span>
+      </div>
+      <div>
+        <a href="{{ url_for('investor.property_tool') }}" class="ravlo-btn primary">Open Deal Finder</a>
+      </div>
+    </article>
+
+    <article class="front-door-card">
+      <div class="eyebrow">FRONT DOOR 02</div>
+      <div class="front-door-meta">
+        <h3>Plan a Project</h3>
+        <p>Open any property or address and let Ravlo compare the best plan before you move into scope, budget, and execution.</p>
+      </div>
+      <div class="front-door-bullets">
+        <span>Enter a property directly</span>
+        <span>See the snapshot and strategy options</span>
+        <span>Move into Project Studio without friction</span>
+      </div>
+      <div>
+        <a href="{{ url_for('investor.project_studio') }}" class="ravlo-btn primary">Open Project Studio</a>
+      </div>
+    </article>
   </section>
 
   <!-- KPI STRIP -->
@@ -578,25 +692,25 @@ Your capital, deals, and funding — in one place.
     <section class="panel panel-small">
       <div class="section-head">
         <div>
-          <div class="eyebrow">ACTIONS</div>
-          <h3>Quick Actions</h3>
+          <div class="eyebrow">START HERE</div>
+          <h3>Core Product Paths</h3>
         </div>
       </div>
 
       <div class="quick-grid one-col">
         <a href="{{ url_for('investor.property_tool') }}" class="quick-card">
-          <span class="quick-title">Deal Finder</span>
-          <span class="quick-sub">Search opportunities</span>
+          <span class="quick-title">Find Deals</span>
+          <span class="quick-sub">Search opportunities with Deal Finder</span>
+        </a>
+
+        <a href="{{ url_for('investor.project_studio') }}" class="quick-card">
+          <span class="quick-title">Plan a Project</span>
+          <span class="quick-sub">Open a property directly in Project Studio</span>
         </a>
 
         <a href="{{ url_for('investor.deals_list') }}" class="quick-card">
-          <span class="quick-title">Deal Pipeline</span>
-          <span class="quick-sub">Open your saved deals</span>
-        </a>
-
-        <a href="{{ url_for('investor.deal_comparison') }}" class="quick-card">
-          <span class="quick-title">Compare Deals</span>
-          <span class="quick-sub">Prioritize your best move</span>
+          <span class="quick-title">Deal Workspace</span>
+          <span class="quick-sub">Review saved properties and execution status</span>
         </a>
       </div>
     </section>
