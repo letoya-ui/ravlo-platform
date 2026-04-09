@@ -159,6 +159,18 @@ Compare exit paths, pressure-test returns, and move into architect, rehab, or ca
                 </a>
                 {% endif %}
             </div>
+
+            {% if workspace_analysis and workspace_analysis.get("selected_strategy") %}
+            <div class="workspace-studio-callout mt-16">
+                <strong>Project Studio path saved</strong>
+                <p>
+                    {{ (workspace_analysis.get("selected_strategy") or "Strategy")|replace("_", " ")|title }}
+                    {% if workspace_analysis.get("selected_scope") %}
+                    • {{ (workspace_analysis.get("selected_scope") or "")|replace("_", " ")|title }}
+                    {% endif %}
+                </p>
+            </div>
+            {% endif %}
         </div>
 
         <div class="workspace-hero-side">
@@ -671,6 +683,25 @@ Compare exit paths, pressure-test returns, and move into architect, rehab, or ca
       flex-wrap:wrap;
       gap:12px;
       align-items:center;
+    }
+
+    .workspace-studio-callout{
+      margin-top:16px;
+      padding:14px 16px;
+      border-radius:16px;
+      background:rgba(37,99,235,.08);
+      border:1px solid rgba(96,165,250,.22);
+    }
+
+    .workspace-studio-callout strong{
+      display:block;
+      color:var(--text);
+      margin-bottom:4px;
+    }
+
+    .workspace-studio-callout p{
+      margin:0;
+      color:var(--muted);
     }
 
     .workspace-hero-side{

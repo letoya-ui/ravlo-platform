@@ -86,6 +86,11 @@ PAGE_META = {
         "description": "Read Ravlo’s privacy policy.",
         "template": "marketing/privacy_launch.html",
     },
+    "disclaimer": {
+        "title": "Disclaimer | Ravlo",
+        "description": "Read Ravlo's platform disclaimer and important use limitations.",
+        "template": "marketing/disclaimer.html",
+    },
     "deal_architect": {
         "title": "Deal Architect | Ravlo Studio",
         "description": "Model investment scenarios, analyze numbers, and shape smarter acquisition decisions.",
@@ -296,6 +301,11 @@ def terms():
 @marketing_bp.route("/privacy")
 def privacy():
     return render_marketing_page("privacy")
+
+
+@marketing_bp.route("/disclaimer")
+def disclaimer():
+    return render_marketing_page("disclaimer")
 
 
 # ---------------------------------------------------------
