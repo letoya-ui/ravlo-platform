@@ -76,6 +76,13 @@
         Submit Inquiry
       </button>
 
+      <p style="margin-top:16px; color:rgba(235,240,247,.76); line-height:1.5; font-size:.92rem;">
+        By submitting this inquiry, you agree to Ravlo's
+        <a href="{{ url_for('marketing.terms') }}" style="color:#fff; text-decoration:underline;">Terms</a>,
+        <a href="{{ url_for('marketing.privacy') }}" style="color:#fff; text-decoration:underline;">Privacy Policy</a>,
+        and <a href="{{ url_for('marketing.disclaimer') }}" style="color:#fff; text-decoration:underline;">Disclaimer</a>.
+      </p>
+
     </form>
 
   </div>

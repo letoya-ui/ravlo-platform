@@ -56,6 +56,13 @@
           <div>
             <button type="submit" class="mk-btn mk-btn-primary">Send Message</button>
           </div>
+
+          <p class="mk-copy" style="margin:0; color:rgba(235,240,247,.74); font-size:.9rem;">
+            By submitting this form, you agree to Ravlo's
+            <a href="{{ url_for('marketing.terms') }}">Terms</a>,
+            <a href="{{ url_for('marketing.privacy') }}">Privacy Policy</a>,
+            and <a href="{{ url_for('marketing.disclaimer') }}">Disclaimer</a>.
+          </p>
         </form>
       </div>
 
