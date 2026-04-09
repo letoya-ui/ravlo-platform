@@ -139,11 +139,10 @@ def _engine_base_url() -> str:
 
 def _engine_headers() -> dict:
     headers = {"Content-Type": "application/json"}
-    api_key = current_app.config.get("RENOVATION_ENGINE_API_KEY")
+    api_key = current_app.config.get("RENOVATION_API_KEY")
     if api_key:
         headers["X-API-Key"] = api_key
     return headers
-
 
 def _safe_engine_num(value):
     if value in (None, "", "—"):
@@ -213,23 +212,25 @@ def _build_deal_architect_payload(result: dict, strategy: str = "flip") -> dict:
 
 
 def _call_deal_architect(payload: dict) -> dict:
-    engine_url = f"{_engine_base_url()}/v1/deal_architect"
-    if not _engine_base_url():
-        raise RuntimeError("RENOVATION_ENGINE_URL is not configured.")
+    engine_url = (current_app.config.get("RENOVATION_ENGINE_URL") or "").rstrip("/")
+    if not engine_url:
+        raise RuntimeError(
+            "RENOVATION_ENGINE_URL is missing. Add it to your Flask app config or Render environment variables."
+        )
+
+    headers = {"Content-Type": "application/json"}
+    api_key = (current_app.config.get("RENOVATION_ENGINE_API_KEY") or "").strip()
+    if api_key:
+        headers["X-API-Key"] = api_key
 
     resp = requests.post(
-        engine_url,
+        f"{engine_url}/v1/deal_architect",
         json=payload,
-        headers=_engine_headers(),
+        headers=headers,
         timeout=20,
     )
-
-    data = resp.json()
-    if resp.status_code >= 400:
-        raise RuntimeError(data.get("detail") or data.get("message") or "Deal Architect request failed.")
-
-    return data
-
+    resp.raise_for_status()
+    return resp.json()
 
 def _attach_deal_architect_signals(result: dict, engine_data: dict) -> dict:
     enriched = dict(result)

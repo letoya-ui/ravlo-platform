@@ -119,6 +119,12 @@ class Config:
     OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")
     AI_MODEL = os.environ.get("AI_MODEL", "gpt-4-turbo-preview")
     AI_TIMEOUT = _env_int("AI_TIMEOUT", 30)
+    RENOVATION_ENGINE_URL = os.getenv(
+        "RENOVATION_ENGINE_URL",
+        "https://nondiscoverable-henry-metempirical.ngrok-free.dev"
+    ).rstrip("/")
+
+    RENOVATION_API_KEY = os.getenv("RENOVATION_API_KEY", "")
 
     GOOGLE_PLACES_API_KEY = os.environ.get("GOOGLE_PLACES_API_KEY", "")
 
@@ -135,7 +141,7 @@ class Config:
     ENABLE_PROPERTY_CACHE = _env_bool("ENABLE_PROPERTY_CACHE", True)
  
     RAPIDAPI_KEY = os.getenv("RAPIDAPI_KEY")
-
+     
     COMPANY_NAME = os.environ.get("COMPANY_NAME", "Ravlo")
     COMPANY_EMAIL = os.environ.get("COMPANY_EMAIL", "info@ravlohq.com")
     COMPANY_PHONE = os.environ.get("COMPANY_PHONE", "")
