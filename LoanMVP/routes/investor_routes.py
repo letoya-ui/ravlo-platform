@@ -583,6 +583,115 @@ def _build_attom_fallback(raw):
         "data_status": "attom_only"
     }
 
+
+def _deal_finder_tag(result: dict, selected_strategy: str = "all") -> str:
+    property_type = str(result.get("property_type") or "").lower()
+    lot_size = _safe_float(result.get("lot_size_sqft")) or 0
+    sqft = _safe_float(result.get("square_feet") or result.get("sqft")) or 0
+    year_built = _safe_int(result.get("year_built")) or 0
+    distressed = bool(result.get("distressed"))
+    dom = _safe_int(result.get("days_on_market")) or 0
+    score = _safe_float(result.get("deal_score") or result.get("ravlo_score")) or 0
+    strengths_text = " ".join(result.get("primary_strengths") or []).lower()
+    strategy_text = str(result.get("recommended_strategy") or "").lower()
+
+    if any(term in property_type for term in ["vacant", "land", "lot"]):
+        return "Vacant Land"
+
+    if any(term in strengths_text for term in ["teardown", "redevelop", "development", "infill"]):
+        return "Teardown / Rebuild"
+
+    if lot_size >= 10000 and property_type in {"single_family", "single family", "single_family_residence", "sfr"}:
+        if year_built and year_built <= 1965 and sqft and sqft <= 1500:
+            return "Teardown / Rebuild"
+        return "New Construction Opportunity"
+
+    if distressed or any(term in strategy_text for term in ["rehab", "flip"]):
+        if dom >= 45 or score < 55:
+            return "Heavy Rehab"
+        return "Standard Rehab"
+
+    if selected_strategy == "rental":
+        return "Standard Rehab"
+
+    return "Standard Rehab"
+
+
+def _deal_finder_best_use(result: dict, strategy_tag: str) -> str:
+    market_value = _safe_float(result.get("market_value") or result.get("engine_value"))
+    price = _safe_float(result.get("price") or result.get("listing_price"))
+    rent = _safe_float(result.get("monthly_rent_estimate") or result.get("traditional_rent"))
+    lot_size = _safe_float(result.get("lot_size_sqft")) or 0
+
+    if strategy_tag == "Vacant Land":
+        return "Treat this as a buildable land play instead of a rehab candidate."
+    if strategy_tag == "Teardown / Rebuild":
+        return "Highest and best use likely comes from the site more than the current structure."
+    if strategy_tag == "New Construction Opportunity":
+        return "Use the lot and layout potential to evaluate a ground-up or expansion path."
+    if market_value and price and market_value > price:
+        return "Acquire below current value signals, then improve and exit or refinance."
+    if rent:
+        return f"Review for hold economics with rent potential around ${rent:,.0f}/mo."
+    if lot_size >= 10000:
+        return "The oversized lot creates optionality beyond a simple cosmetic upgrade."
+    return "Best use appears to be a focused value-add improvement plan."
+
+
+def _deal_finder_upside(result: dict, strategy_tag: str) -> str:
+    price = _safe_float(result.get("price") or result.get("listing_price"))
+    market_value = _safe_float(result.get("market_value") or result.get("engine_value"))
+    assessed = _safe_float(result.get("assessed_value"))
+    rent = _safe_float(result.get("monthly_rent_estimate") or result.get("traditional_rent"))
+    lot_size = _safe_float(result.get("lot_size_sqft")) or 0
+
+    if price and market_value and market_value > price:
+        return f"${market_value - price:,.0f} spread to current value estimate."
+    if price and assessed and assessed > price:
+        return f"${assessed - price:,.0f} spread to assessed value."
+    if rent:
+        return f"${rent:,.0f}/mo rental signal."
+    if strategy_tag in {"Teardown / Rebuild", "New Construction Opportunity"} and lot_size:
+        return f"{lot_size:,.0f} sq ft lot with redevelopment optionality."
+    return "Upside depends on deeper scope and comp validation."
+
+
+def _annotate_deal_finder_opportunity(result: dict, selected_strategy: str = "all") -> dict:
+    strategy_tag = _deal_finder_tag(result, selected_strategy=selected_strategy)
+    strengths = [str(x).strip() for x in (result.get("primary_strengths") or []) if str(x).strip()]
+    risks = [str(x).strip() for x in (result.get("primary_risks") or []) if str(x).strip()]
+    score_reasons = [str(x).strip() for x in (result.get("score_reasons") or []) if str(x).strip()]
+
+    why_it_made_list = strengths[:2] or score_reasons[:2]
+    if not why_it_made_list:
+        fallback = []
+        if _safe_float(result.get("price")):
+            fallback.append("Live pricing is available for a fast first-pass review.")
+        if _safe_float(result.get("market_value") or result.get("engine_value")):
+            fallback.append("Value signals are present, so spread can be checked immediately.")
+        if _safe_int(result.get("days_on_market")):
+            fallback.append(f"{result.get('days_on_market')} days on market may create negotiating leverage.")
+        why_it_made_list = fallback[:2] or ["Ravlo surfaced enough pricing and property data to evaluate this one quickly."]
+
+    risk_notes = risks[:2]
+    if not risk_notes:
+        dom = _safe_int(result.get("days_on_market")) or 0
+        if dom >= 60:
+            risk_notes.append("Long time on market suggests demand friction or pricing issues.")
+        elif result.get("engine_error"):
+            risk_notes.append("AI scoring was only partially available, so validate the assumptions.")
+        else:
+            risk_notes.append("Validate scope, comps, and zoning before moving into execution.")
+
+    result["strategy_tag"] = strategy_tag
+    result["estimated_best_use"] = _deal_finder_best_use(result, strategy_tag)
+    result["best_use"] = result["estimated_best_use"]
+    result["why_it_made_list"] = why_it_made_list
+    result["risk_notes"] = risk_notes
+    result["rough_upside"] = _deal_finder_upside(result, strategy_tag)
+    result["opportunity_summary"] = why_it_made_list[0]
+    return result
+
 # =========================================================
 # 🧾 JSON + FORM SAFETY
 # =========================================================
@@ -4063,6 +4172,7 @@ def api_property_tool_search():
 
     page_size = min(int(payload.get("limit") or 20), 20)
     enrich_limit = min(page_size, 8)
+    top_pick_limit = 4
 
     try:
         search_result = get_property_search_result(
@@ -4172,7 +4282,7 @@ def api_property_tool_search():
                 except Exception as e:
                     result["engine_error"] = str(e)
 
-            results.append(result)
+            results.append(_annotate_deal_finder_opportunity(result, strategy))
 
         # -------------------------
         # STEP 3: SORT BY DEAL SCORE
@@ -4183,10 +4293,18 @@ def api_property_tool_search():
             reverse=True,
         )
 
+        top_results = results[:top_pick_limit]
+        engine_ready = any(r.get("deal_score") is not None for r in top_results)
+
         return jsonify({
             "status": "ok",
-            "results": results,
-            "count": len(results),
+            "results": top_results,
+            "count": len(top_results),
+            "total_matches": len(results),
+            "strategy": strategy,
+            "zip": zip_code,
+            "address": address,
+            "engine_ready": engine_ready,
         })
 
     except Exception as e:
