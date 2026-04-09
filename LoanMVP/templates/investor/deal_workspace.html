@@ -4,7 +4,7 @@
 
 {% block page_title %}Deal Workspace{% endblock %}
 {% block page_subline %}
-Compare exit paths, pressure-test returns, and move into architect, rehab, or capital.
+Compare exit paths, pressure-test returns, and move into architect, budget, rehab, or capital.
 {% endblock %}
 
 {% block topbar_actions %}
@@ -13,31 +13,35 @@ Compare exit paths, pressure-test returns, and move into architect, rehab, or ca
 </a>
 
 {% if selected_prop %}
-{% if deal %}
-<a href="{{ url_for('investor.deal_detail', deal_id=deal.id) }}" class="ravlo-btn ghost sm">
-    Open Deal
-</a>
-<a href="{{ url_for('investor.capital_application', deal_id=deal.id, prop_id=selected_prop.id) }}" class="ravlo-btn primary sm">
-    Apply
-</a>
-{% else %}
-<form method="POST" action="{{ url_for('investor.save_deal', prop_id=selected_prop.id) }}" class="inline-form">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-    <button type="submit" class="ravlo-btn ghost sm">Save Deal</button>
-</form>
-<a href="{{ url_for('investor.capital_application', prop_id=selected_prop.id) }}" class="ravlo-btn primary sm">
-    Apply
-</a>
-{% endif %}
-{% endif %}
-
-{% if deal %}
-<a href="{{ url_for('investor.deal_architect', deal_id=deal.id) }}" class="ravlo-btn ghost sm">
-    AI Architect
-</a>
-<a href="{{ url_for('investor.deal_rehab', deal_id=deal.id) }}" class="ravlo-btn primary sm">
-    Rehab Studio
-</a>
+    {% if deal %}
+    <a href="{{ url_for('investor.deal_detail', deal_id=deal.id) }}" class="ravlo-btn ghost sm">
+        Open Deal
+    </a>
+    <a href="{{ url_for('investor.deal_architect', deal_id=deal.id) }}" class="ravlo-btn ghost sm">
+        Deal Architect
+    </a>
+    <a href="{{ url_for('investor.budget_studio', deal_id=deal.id) }}" class="ravlo-btn ghost sm">
+        {% if budget_summary and budget_summary.total_budget %}
+            Open Budget
+        {% else %}
+            Start Budget
+        {% endif %}
+    </a>
+    <a href="{{ url_for('investor.deal_rehab', deal_id=deal.id) }}" class="ravlo-btn ghost sm">
+        Rehab Studio
+    </a>
+    <a href="{{ url_for('investor.capital_application', deal_id=deal.id, prop_id=selected_prop.id) }}" class="ravlo-btn primary sm">
+        Apply
+    </a>
+    {% else %}
+    <form method="POST" action="{{ url_for('investor.save_deal', prop_id=selected_prop.id) }}" class="inline-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="ravlo-btn ghost sm">Save Deal</button>
+    </form>
+    <a href="{{ url_for('investor.capital_application', prop_id=selected_prop.id) }}" class="ravlo-btn primary sm">
+        Apply
+    </a>
+    {% endif %}
 {% endif %}
 {% endblock %}
 
@@ -70,6 +74,7 @@ Compare exit paths, pressure-test returns, and move into architect, rehab, or ca
     {% set flip = comparison.get("flip", {}) if comparison else {} %}
     {% set rental = comparison.get("rental", {}) if comparison else {} %}
     {% set airbnb = comparison.get("airbnb", {}) if comparison else {} %}
+    {% set planning_budget = workspace_analysis.get("planning_budget", {}) if workspace_analysis else {} %}
 
     {# ---------- SAFE NUMERIC NORMALIZATION ---------- #}
     {% set purchase_price = (selected_prop.price or 0) | float %}
@@ -108,7 +113,7 @@ Compare exit paths, pressure-test returns, and move into architect, rehab, or ca
 
     <section class="ravlo-hero-card workspace-hero">
         <div class="workspace-hero-copy">
-            <div class="eyebrow">RAVLO WORKSPACE V3</div>
+            <div class="eyebrow">RAVLO WORKSPACE</div>
             <h2>{{ selected_prop.address }}</h2>
             <p class="muted">
                 {{ selected_prop.city or "" }}{% if selected_prop.city and selected_prop.state %}, {% endif %}{{ selected_prop.state or "" }}
@@ -116,32 +121,54 @@ Compare exit paths, pressure-test returns, and move into architect, rehab, or ca
             </p>
 
             <div class="ravlo-chip-row mt-16">
-        <span class="ravlo-chip">
-          Best Path:
-          {% if recommended == "flip" %}
-            Fix & Flip
-          {% elif recommended == "rental" %}
-            Buy & Hold Rental
-          {% elif recommended == "airbnb" %}
-            Airbnb
-          {% else %}
-            Pending
-          {% endif %}
-        </span>
+                <span class="ravlo-chip">
+                    Best Path:
+                    {% if recommended == "flip" %}
+                    Fix & Flip
+                    {% elif recommended == "rental" %}
+                    Buy & Hold Rental
+                    {% elif recommended == "airbnb" %}
+                    Airbnb
+                    {% else %}
+                    Pending
+                    {% endif %}
+                </span>
 
                 <span class="ravlo-chip">
-          {% if comps %}Comps Loaded{% else %}No Comps{% endif %}
-        </span>
+                    {% if comps %}Comps Loaded{% else %}No Comps{% endif %}
+                </span>
 
                 <span class="ravlo-chip">
-          {% if deal %}Deal #{{ deal.id }}{% else %}Not Attached{% endif %}
-        </span>
+                    {% if deal %}Deal #{{ deal.id }}{% else %}Not Attached{% endif %}
+                </span>
+
+                <span class="ravlo-chip">
+                    Budget:
+                    {% if budget_summary and budget_summary.total_budget %}
+                        Ready
+                    {% else %}
+                        Not Started
+                    {% endif %}
+                </span>
             </div>
 
             <div class="workspace-action-row mt-16">
                 {% if deal %}
                 <a href="{{ url_for('investor.deal_detail', deal_id=deal.id) }}" class="ravlo-btn ghost">
                     Open Deal
+                </a>
+                <a href="{{ url_for('investor.deal_architect', deal_id=deal.id) }}" class="ravlo-btn ghost">
+                    Deal Architect
+                </a>
+                <a href="{{ url_for('investor.budget_studio', deal_id=deal.id) }}" class="ravlo-btn ghost">
+                    {% if budget_summary and budget_summary.total_budget %}
+                        Open Budget
+                    {% else %}
+                        Start Budget
+                    {% endif %}
+                </a>
+                <a href="{{ url_for('investor.deal_rehab', deal_id=deal.id) }}" class="ravlo-btn ghost">
+                    Rehab Studio
                 </a>
                 <a href="{{ url_for('investor.capital_application', deal_id=deal.id, prop_id=selected_prop.id) }}" class="ravlo-btn primary">
                     Apply
@@ -188,7 +215,7 @@ Compare exit paths, pressure-test returns, and move into architect, rehab, or ca
                     {% endif %}
                 </strong>
                 <p>
-                    Review path strength, return profile, and execution pressure before moving into rehab, architect, or capital.
+                    Review path strength, return profile, and execution pressure before moving into architect, budget, rehab, or capital.
                 </p>
             </div>
         </div>
@@ -405,6 +432,49 @@ Compare exit paths, pressure-test returns, and move into architect, rehab, or ca
                 </div>
             </section>
 
+            {% if deal %}
+            <section class="ravlo-card pad">
+                <div class="section-head">
+                    <div>
+                        <div class="eyebrow">NEXT TOOLS</div>
+                        <h3>Move this deal forward</h3>
+                    </div>
+                </div>
+
+                <div class="studio-grid">
+                    <a href="{{ url_for('investor.deal_architect', deal_id=deal.id) }}" class="studio-card">
+                        <div class="studio-icon">📐</div>
+                        <div class="studio-title">Deal Architect</div>
+                        <div class="studio-sub">
+                            Generate strategy insights, risk framing, and next-step guidance.
+                        </div>
+                    </a>
+
+                    <a href="{{ url_for('investor.budget_studio', deal_id=deal.id) }}" class="studio-card">
+                        <div class="studio-icon">💰</div>
+                        <div class="studio-title">
+                            {% if budget_summary and budget_summary.total_budget %}
+                                Budget Studio
+                            {% else %}
+                                Start Budget
+                            {% endif %}
+                        </div>
+                        <div class="studio-sub">
+                            Build the planning budget, pressure-test costs, and start tracking scope assumptions.
+                        </div>
+                    </a>
+
+                    <a href="{{ url_for('investor.deal_rehab', deal_id=deal.id) }}" class="studio-card">
+                        <div class="studio-icon">🛠</div>
+                        <div class="studio-title">Rehab Studio</div>
+                        <div class="studio-sub">
+                            Visualize the renovation path, generate concepts, and shape rehab scope.
+                        </div>
+                    </a>
+                </div>
+            </section>
+            {% endif %}
+
             <section class="ravlo-card pad">
                 <div class="section-head">
                     <div>
@@ -435,30 +505,14 @@ Compare exit paths, pressure-test returns, and move into architect, rehab, or ca
                         <strong>{{ selected_prop.bedrooms or selected_prop.beds or "—" }} / {{ selected_prop.bathrooms or selected_prop.baths or "—" }}</strong>
                     </div>
                     <div class="workspace-info-box">
-                        <span>Sq Ft</span>
-                        <strong>{{ "{:,.0f}".format((selected_prop.sqft or selected_prop.square_feet)|float) if (selected_prop.sqft or selected_prop.square_feet) else "—" }}</strong>
-                    </div>
-                    <div class="workspace-info-box">
-                        <span>Deal Attached</span>
-                        <strong>{% if deal %}Yes{% else %}No{% endif %}</strong>
-                    </div>
-                    <div class="workspace-info-box">
-                        <span>Recommended</span>
-                        <strong>
-                            {% if recommended == "flip" %}
-                            Fix & Flip
-                            {% elif recommended == "rental" %}
-                            Rental
-                            {% elif recommended == "airbnb" %}
-                            Airbnb
-                            {% else %}
-                            Pending
-                            {% endif %}
-                        </strong>
+                        <span>Purchase Price</span>
+                        <strong>${{ "{:,.0f}".format(selected_prop.price|float) if selected_prop.price else "—" }}</strong>
                     </div>
                 </div>
             </section>
 
+            {% if rehab_analysis %}
+            {% set rehab_scope = rehab_analysis.get("scope", {}) %}
             <section class="ravlo-card pad">
                 <div class="section-head">
                     <div>
@@ -472,8 +526,6 @@ Compare exit paths, pressure-test returns, and move into architect, rehab, or ca
                     {% endif %}
                 </div>
 
-                {% set rehab_scope = rehab_analysis.get("scope", {}) %}
-                {% if rehab_analysis %}
                 <div class="workspace-fit-grid">
                     <div class="workspace-mini-stat">
                         <span>Estimated Rehab Cost</span>
@@ -481,646 +533,585 @@ Compare exit paths, pressure-test returns, and move into architect, rehab, or ca
                     </div>
                     <div class="workspace-mini-stat">
                         <span>Scope</span>
-                        <strong>{{ rehab_scope.get("rehab_level") or "Pending" }}</strong>
+                        <strong>{{ rehab_scope.get("selection", "—")|replace("_", " ")|title }}</strong>
                     </div>
                     <div class="workspace-mini-stat">
-                        <span>Cost / Sq Ft</span>
-                        <strong>{% if rehab_scope.get("cost_per_sqft") %}${{ "{:,.0f}".format(rehab_scope.get("cost_per_sqft")) }}{% else %}—{% endif %}</strong>
+                        <span>Budget Low</span>
+                        <strong>${{ "{:,.0f}".format(rehab_scope.get("budget_low", 0) or 0) }}</strong>
                     </div>
                     <div class="workspace-mini-stat">
-                        <span>Sq Ft Basis</span>
-                        <strong>{{ rehab_scope.get("sqft") or "—" }}</strong>
+                        <span>Budget High</span>
+                        <strong>${{ "{:,.0f}".format(rehab_scope.get("budget_high", 0) or 0) }}</strong>
                     </div>
                 </div>
-
-                {% if rehab_scope.get("line_items") %}
-                <div class="workspace-line-items mt-16">
-                    {% for item, amount in rehab_scope.get("line_items", {}).items() %}
-                    <div class="workspace-line-row">
-                        <span>{{ item.replace("_", " ")|title }}</span>
-                        <strong>${{ "{:,.0f}".format(amount or 0) }}</strong>
-                    </div>
-                    {% endfor %}
-                </div>
-                {% endif %}
-                {% else %}
-                <div class="empty-state">No rehab summary saved yet.</div>
-                {% endif %}
             </section>
+            {% endif %}
 
         </div>
 
         <div class="workspace-stack">
 
+            {% if strategy_analysis %}
             <section class="ravlo-card pad">
                 <div class="section-head">
                     <div>
-                        <div class="eyebrow">SCOREBOARD</div>
-                        <h3>Performance Signals</h3>
+                        <div class="eyebrow">SAVED STRATEGY</div>
+                        <h3>Project Studio Selection</h3>
                     </div>
                 </div>
 
-                <div class="workspace-mini-stat-stack">
+                <div class="workspace-fit-grid">
                     <div class="workspace-mini-stat">
-                        <span>Flip Profit</span>
-                        <strong>${{ "{:,.0f}".format(flip_profit) }}</strong>
+                        <span>Strategy</span>
+                        <strong>{{ strategy_analysis.get("title", strategy_analysis.get("strategy", "—")) }}</strong>
                     </div>
                     <div class="workspace-mini-stat">
-                        <span>Rental Cash Flow</span>
-                        <strong>${{ "{:,.0f}".format(rental_cashflow) }}/mo</strong>
+                        <span>Timeline</span>
+                        <strong>{{ strategy_analysis.get("timeline", "—") }}</strong>
                     </div>
                     <div class="workspace-mini-stat">
-                        <span>Airbnb Net</span>
-                        <strong>${{ "{:,.0f}".format(airbnb_net) }}/mo</strong>
+                        <span>Confidence</span>
+                        <strong>{{ strategy_analysis.get("confidence", "—") }}</strong>
                     </div>
                     <div class="workspace-mini-stat">
-                        <span>Rental DSCR</span>
-                        <strong>{{ "{:.2f}".format(rental_dscr) if rental_dscr else "—" }}</strong>
-                    </div>
-                    <div class="workspace-mini-stat">
-                        <span>Top ROI</span>
-                        <strong>{{ "{:.1f}".format(max_roi) }}%</strong>
+                        <span>Outcome</span>
+                        <strong>
+                            {% if strategy_analysis.get("outcome") is not none %}
+                            ${{ "{:,.0f}".format(strategy_analysis.get("outcome")|float) }}
+                            {% else %}
+                            —
+                            {% endif %}
+                        </strong>
                     </div>
                 </div>
+
+                <div class="workspace-note mt-16">
+                    <strong>Reason</strong>
+                    <p>{{ strategy_analysis.get("reason", "No saved reason yet.") }}</p>
+                </div>
+
+                {% if strategy_analysis.get("risk_note") %}
+                <div class="workspace-note">
+                    <strong>Risk Note</strong>
+                    <p>{{ strategy_analysis.get("risk_note") }}</p>
+                </div>
+                {% endif %}
             </section>
+            {% endif %}
 
             <section class="ravlo-card pad">
                 <div class="section-head">
                     <div>
-                        <div class="eyebrow">OPTIMIZATION</div>
-                        <h3>Saved Optimization</h3>
+                        <div class="eyebrow">BUDGET LAYER</div>
+                        <h3>Planning Budget</h3>
                     </div>
-                </div>
-
-                {% if optimization %}
-                <div class="workspace-mini-stat-stack">
-                    <div class="workspace-mini-stat">
-                        <span>Best Exit</span>
-                        <strong>{{ optimization.get("best_exit") or "—" }}</strong>
-                    </div>
-                    <div class="workspace-mini-stat">
-                        <span>Profit Gap To Target</span>
-                        <strong>${{ "{:,.0f}".format(optimization.get("profit_gap_to_target", 0) or 0) }}</strong>
-                    </div>
-                    <div class="workspace-mini-stat">
-                        <span>Rehab Pressure</span>
-                        <strong>{% if optimization.get("rehab_pressure") is not none %}{{ "{:.1f}".format((optimization.get("rehab_pressure", 0) or 0) * 100) }}%{% else %}—{% endif %}</strong>
-                    </div>
-                    <div class="workspace-mini-stat">
-                        <span>Rent Ratio</span>
-                        <strong>{% if optimization.get("rent_ratio") is not none %}{{ "{:.2f}".format((optimization.get("rent_ratio", 0) or 0) * 100) }}%{% else %}—{% endif %}</strong>
-                    </div>
-                </div>
-
-                <div class="report-note mt-16">
-                    <strong>Notes</strong>
-                    {% if optimization.get("notes") %}
-                    <ul class="workspace-note-list">
-                        {% for note in optimization.get("notes", []) %}
-                        <li>{{ note }}</li>
-                        {% endfor %}
-                    </ul>
-                    {% else %}
-                    <p>No optimization notes saved yet.</p>
+                    {% if deal %}
+                    <a href="{{ url_for('investor.budget_studio', deal_id=deal.id) }}" class="ravlo-link-btn">
+                        {% if budget_summary and budget_summary.total_budget %}
+                            Open Budget Studio
+                        {% else %}
+                            Start Budget Studio
+                        {% endif %}
+                    </a>
                     {% endif %}
                 </div>
+
+                {% if planning_budget %}
+                <div class="workspace-fit-grid">
+                    <div class="workspace-mini-stat">
+                        <span>Budget Low</span>
+                        <strong>${{ "{:,.0f}".format(planning_budget.get("budget_low", 0) or 0) }}</strong>
+                    </div>
+                    <div class="workspace-mini-stat">
+                        <span>Budget High</span>
+                        <strong>${{ "{:,.0f}".format(planning_budget.get("budget_high", 0) or 0) }}</strong>
+                    </div>
+                    <div class="workspace-mini-stat">
+                        <span>Timeline</span>
+                        <strong>{{ planning_budget.get("timeline", "—") }}</strong>
+                    </div>
+                    <div class="workspace-mini-stat">
+                        <span>Confidence</span>
+                        <strong>{{ planning_budget.get("confidence", "—") }}</strong>
+                    </div>
+                </div>
                 {% else %}
-                <div class="empty-state">No optimization saved yet.</div>
+                <div class="empty-state-inline">
+                    No Project Studio planning budget has been saved yet.
+                </div>
                 {% endif %}
             </section>
 
+            {% if deal %}
             <section class="ravlo-card pad">
                 <div class="section-head">
                     <div>
-                        <div class="eyebrow">NEXT ACTIONS</div>
-                        <h3>Continue Workflow</h3>
+                        <div class="eyebrow">BUDGET TRACKER</div>
+                        <h3>Current Budget Status</h3>
+                    </div>
+                    <a href="{{ url_for('investor.budget_studio', deal_id=deal.id) }}" class="ravlo-link-btn">
+                        Open Full Budget
+                    </a>
+                </div>
+
+                {% if budget_summary %}
+                <div class="workspace-fit-grid">
+                    <div class="workspace-mini-stat">
+                        <span>Total Budget</span>
+                        <strong>${{ "{:,.0f}".format(budget_summary.get("total_budget", 0) or 0) }}</strong>
+                    </div>
+                    <div class="workspace-mini-stat">
+                        <span>Estimated</span>
+                        <strong>${{ "{:,.0f}".format(budget_summary.get("estimated_total", 0) or 0) }}</strong>
+                    </div>
+                    <div class="workspace-mini-stat">
+                        <span>Actual</span>
+                        <strong>${{ "{:,.0f}".format(budget_summary.get("actual_total", 0) or 0) }}</strong>
+                    </div>
+                    <div class="workspace-mini-stat">
+                        <span>Remaining</span>
+                        <strong>${{ "{:,.0f}".format(budget_summary.get("remaining_balance", 0) or 0) }}</strong>
+                    </div>
+                    <div class="workspace-mini-stat">
+                        <span>Paid</span>
+                        <strong>${{ "{:,.0f}".format(budget_summary.get("paid_total", 0) or 0) }}</strong>
+                    </div>
+                    <div class="workspace-mini-stat">
+                        <span>Contingency</span>
+                        <strong>${{ "{:,.0f}".format(budget_summary.get("contingency", 0) or 0) }}</strong>
                     </div>
                 </div>
 
-                <div class="quick-grid one-col">
-                    {% if deal %}
-                    <a href="{{ url_for('investor.deal_architect', deal_id=deal.id) }}" class="quick-card">
-                        <span class="quick-title">Open Deal Architect</span>
-                        <span class="quick-sub">Refine strategy, scoring, and recommendation.</span>
-                    </a>
-
-                    <a href="{{ url_for('investor.deal_rehab', deal_id=deal.id) }}" class="quick-card">
-                        <span class="quick-title">Open Rehab Studio</span>
-                        <span class="quick-sub">Build scope, optimize budget, and pressure-test rehab.</span>
-                    </a>
-
-                    <a href="{{ url_for('investor.build_studio') }}" class="quick-card">
-                        <span class="quick-title">Open Build Studio</span>
-                        <span class="quick-sub">Use build tools for development-heavy opportunities.</span>
-                    </a>
-
-                    <a href="{{ url_for('investor.capital_application', deal_id=deal.id, prop_id=selected_prop.id) }}" class="quick-card">
-                        <span class="quick-title">Apply for Capital</span>
-                        <span class="quick-sub">Send this deal into capital intake and funding workflow.</span>
-                    </a>
-                    {% else %}
-                    <form method="POST" action="{{ url_for('investor.save_deal', prop_id=selected_prop.id) }}" class="quick-save-form">
-                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                        <button type="submit" class="quick-card quick-card-button">
-                            <span class="quick-title">Save Deal</span>
-                            <span class="quick-sub">Create and attach this property as a deal in your pipeline.</span>
-                        </button>
-                    </form>
-
-                    <a href="{{ url_for('investor.capital_application', prop_id=selected_prop.id) }}" class="quick-card">
-                        <span class="quick-title">Apply for Capital</span>
-                        <span class="quick-sub">Start a funding application using this property’s numbers.</span>
-                    </a>
-                    {% endif %}
+                {% if budget_items %}
+                <div class="workspace-budget-list mt-16">
+                    {% for item in budget_items[:5] %}
+                    <div class="workspace-budget-row">
+                        <div>
+                            <strong>{{ item.description or "Budget Item" }}</strong>
+                            <p class="muted mb-0">{{ item.vendor or item.status or "Planned" }}</p>
+                        </div>
+                        <div class="workspace-budget-amounts">
+                            <span>Est. ${{ "{:,.0f}".format(item.estimated_amount or 0) }}</span>
+                            <span>Actual ${{ "{:,.0f}".format(item.actual_amount or 0) }}</span>
+                        </div>
+                    </div>
+                    {% endfor %}
                 </div>
+                {% endif %}
+                {% else %}
+                <div class="empty-state-inline">
+                    No budget tracker is attached to this deal yet. Start Budget Studio to create the first budget.
+                </div>
+                {% endif %}
+            </section>
+            {% endif %}
+
+            <section class="ravlo-card pad">
+                <div class="section-head">
+                    <div>
+                        <div class="eyebrow">NEXT STEP</div>
+                        <h3>Move this deal forward</h3>
+                    </div>
+                </div>
+
+                {% if not deal %}
+                <div class="empty-state-inline">
+                    Save this property as a deal first so Ravlo can attach budget, rehab, and funding workflows.
+                </div>
+                {% elif not budget_summary %}
+                <a href="{{ url_for('investor.budget_studio', deal_id=deal.id) }}" class="ravlo-btn primary w-full">
+                    Build Budget
+                </a>
+                {% elif not deal.submitted_for_funding %}
+                <a href="{{ url_for('investor.capital_application', deal_id=deal.id, prop_id=selected_prop.id) }}" class="ravlo-btn primary w-full">
+                    Apply for Funding
+                </a>
+                {% else %}
+                <div class="workspace-note">
+                    <strong>Funding in progress</strong>
+                    <p>This deal already has a funding request in motion. Continue managing scope, budget, and execution from the linked studios.</p>
+                </div>
+                {% endif %}
             </section>
 
         </div>
-
     </div>
-
-    {% else %}
-    <section class="ravlo-hero-card">
-        <div class="eyebrow">RAVLO WORKSPACE</div>
-        <h2>No property selected</h2>
-        <p class="muted">
-            Choose a saved property to compare Fix & Flip, Rental, and Airbnb paths.
-        </p>
-        <div class="mt-16">
-            <a href="{{ url_for('investor.deals_list') }}" class="ravlo-btn primary">
-                        Open Deal Workspace
-            </a>
-        </div>
-    </section>
     {% endif %}
-
 </div>
 
 <style>
-    .workspace-shell{
-      display:grid;
-      gap:20px;
-    }
+.workspace-shell{
+    display:grid;
+    gap:20px;
+}
 
-    .workspace-hero{
-      align-items:stretch;
-    }
+.workspace-hero{
+    display:grid;
+    grid-template-columns:1.25fr .75fr;
+    gap:18px;
+    border-radius:28px;
+}
 
-    .workspace-hero-copy{
-      flex:1;
-      min-width:0;
-    }
+.workspace-hero-copy{
+    display:grid;
+    gap:8px;
+}
 
-    .workspace-hero-copy h2{
-      margin:8px 0 10px;
-      font-size:34px;
-      line-height:1.05;
-      letter-spacing:-.03em;
-    }
+.workspace-hero-side{
+    display:flex;
+    align-items:stretch;
+}
 
-    .workspace-action-row{
-      display:flex;
-      flex-wrap:wrap;
-      gap:12px;
-      align-items:center;
-    }
+.workspace-highlight{
+    width:100%;
+    padding:20px;
+    border-radius:22px;
+    background:rgba(255,255,255,.03);
+    border:1px solid rgba(255,255,255,.08);
+    display:grid;
+    gap:10px;
+}
 
-    .workspace-studio-callout{
-      margin-top:16px;
-      padding:14px 16px;
-      border-radius:16px;
-      background:rgba(37,99,235,.08);
-      border:1px solid rgba(96,165,250,.22);
-    }
+.workspace-highlight span{
+    font-size:12px;
+    color:var(--muted);
+    text-transform:uppercase;
+    letter-spacing:.08em;
+}
 
-    .workspace-studio-callout strong{
-      display:block;
-      color:var(--text);
-      margin-bottom:4px;
-    }
+.workspace-highlight strong{
+    font-size:22px;
+    line-height:1.15;
+}
 
-    .workspace-studio-callout p{
-      margin:0;
-      color:var(--muted);
-    }
+.workspace-action-row{
+    display:flex;
+    flex-wrap:wrap;
+    gap:12px;
+}
 
-    .workspace-hero-side{
-      width:320px;
-      max-width:100%;
-      display:flex;
-      align-items:stretch;
-    }
+.workspace-studio-callout{
+    padding:14px 16px;
+    border-radius:18px;
+    background:rgba(122,184,255,.08);
+    border:1px solid rgba(122,184,255,.18);
+}
 
-    .workspace-highlight{
-      width:100%;
-      padding:18px;
-      border-radius:20px;
-      background:rgba(255,255,255,.04);
-      border:1px solid rgba(255,255,255,.08);
-    }
+.workspace-grid-4{
+    display:grid;
+    grid-template-columns:repeat(4, 1fr);
+    gap:14px;
+}
 
-    .workspace-highlight span{
-      display:block;
-      color:var(--muted);
-      font-size:12px;
-      text-transform:uppercase;
-      letter-spacing:.08em;
-    }
+.workspace-stat{
+    padding:16px 18px;
+    border-radius:20px;
+    background:rgba(255,255,255,.03);
+    border:1px solid rgba(255,255,255,.08);
+    display:grid;
+    gap:6px;
+}
 
-    .workspace-highlight strong{
-      display:block;
-      margin-top:8px;
-      font-size:28px;
-      line-height:1.1;
-      color:var(--text);
-    }
+.workspace-stat span{
+    font-size:12px;
+    color:var(--muted);
+    text-transform:uppercase;
+    letter-spacing:.06em;
+}
 
-    .workspace-highlight p{
-      margin:10px 0 0;
-      color:var(--muted);
-      line-height:1.6;
+.workspace-stat strong{
+    font-size:22px;
+}
+
+.workspace-main-grid{
+    display:grid;
+    grid-template-columns:1.2fr .8fr;
+    gap:18px;
+}
+
+.workspace-stack{
+    display:grid;
+    gap:18px;
+}
+
+.workspace-compare-grid{
+    display:grid;
+    grid-template-columns:repeat(3, 1fr);
+    gap:14px;
+}
+
+.workspace-compare-card{
+    padding:18px;
+    border-radius:22px;
+    background:rgba(255,255,255,.03);
+    border:1px solid rgba(255,255,255,.08);
+    display:grid;
+    gap:14px;
+}
+
+.workspace-compare-card.recommended{
+    border-color:rgba(122,184,255,.35);
+    background:rgba(122,184,255,.07);
+}
+
+.workspace-card-topline{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:10px;
+}
+
+.workspace-compare-kicker{
+    font-size:11px;
+    font-weight:700;
+    letter-spacing:.1em;
+    color:var(--muted);
+}
+
+.workspace-badge{
+    font-size:11px;
+    padding:5px 9px;
+    border-radius:999px;
+    background:rgba(122,184,255,.15);
+    border:1px solid rgba(122,184,255,.28);
+    color:#9ecbff;
+}
+
+.workspace-compare-title{
+    font-size:20px;
+    line-height:1.15;
+}
+
+.workspace-compare-meta{
+    display:grid;
+    gap:10px;
+}
+
+.workspace-compare-meta div{
+    display:flex;
+    justify-content:space-between;
+    gap:12px;
+    padding-bottom:10px;
+    border-bottom:1px solid rgba(255,255,255,.06);
+}
+
+.workspace-compare-meta div:last-child{
+    border-bottom:none;
+    padding-bottom:0;
+}
+
+.workspace-compare-meta span{
+    font-size:13px;
+    color:var(--muted);
+}
+
+.workspace-compare-note{
+    padding:12px 14px;
+    border-radius:14px;
+    background:rgba(255,255,255,.03);
+    border:1px solid rgba(255,255,255,.06);
+    font-size:14px;
+}
+
+.metric-bar-wrap{
+    display:grid;
+    gap:8px;
+}
+
+.metric-bar-label{
+    display:flex;
+    justify-content:space-between;
+    gap:10px;
+    font-size:13px;
+}
+
+.metric-bar{
+    width:100%;
+    height:10px;
+    border-radius:999px;
+    background:rgba(255,255,255,.06);
+    overflow:hidden;
+}
+
+.metric-bar-fill{
+    height:100%;
+    border-radius:999px;
+    background:linear-gradient(90deg, #7ab8ff, #8fd6ff);
+}
+
+.metric-bar-fill.alt{
+    background:linear-gradient(90deg, #6fe2b4, #9bf0c7);
+}
+
+.feature-highlight{
+    padding:18px;
+    border-radius:22px;
+    background:rgba(255,255,255,.03);
+    border:1px solid rgba(255,255,255,.08);
+    display:grid;
+    gap:8px;
+}
+
+.feature-highlight-label{
+    font-size:12px;
+    color:var(--muted);
+    text-transform:uppercase;
+    letter-spacing:.08em;
+}
+
+.feature-highlight-value{
+    font-size:18px;
+    line-height:1.5;
+}
+
+.workspace-fit-grid{
+    display:grid;
+    grid-template-columns:repeat(2, 1fr);
+    gap:12px;
+}
+
+.workspace-mini-stat{
+    padding:14px 16px;
+    border-radius:18px;
+    background:rgba(255,255,255,.03);
+    border:1px solid rgba(255,255,255,.07);
+    display:grid;
+    gap:6px;
+}
+
+.workspace-mini-stat span{
+    font-size:12px;
+    color:var(--muted);
+    text-transform:uppercase;
+    letter-spacing:.06em;
+}
+
+.workspace-info-grid{
+    display:grid;
+    grid-template-columns:repeat(2, 1fr);
+    gap:12px;
+}
+
+.workspace-info-box{
+    padding:14px 16px;
+    border-radius:18px;
+    background:rgba(255,255,255,.03);
+    border:1px solid rgba(255,255,255,.07);
+    display:grid;
+    gap:6px;
+}
+
+.workspace-info-box span{
+    font-size:12px;
+    color:var(--muted);
+    text-transform:uppercase;
+    letter-spacing:.06em;
+}
+
+.workspace-note{
+    margin-top:14px;
+    padding:14px 16px;
+    border-radius:18px;
+    background:rgba(255,255,255,.03);
+    border:1px solid rgba(255,255,255,.07);
+}
+
+.workspace-budget-list{
+    display:grid;
+    gap:10px;
+}
+
+.workspace-budget-row{
+    display:flex;
+    justify-content:space-between;
+    gap:12px;
+    padding:14px 16px;
+    border-radius:16px;
+    background:rgba(255,255,255,.03);
+    border:1px solid rgba(255,255,255,.06);
+}
+
+.workspace-budget-amounts{
+    display:grid;
+    gap:6px;
+    text-align:right;
+    font-size:13px;
+}
+
+.studio-grid{
+    display:grid;
+    grid-template-columns:repeat(3, 1fr);
+    gap:14px;
+}
+
+.studio-card{
+    display:grid;
+    gap:10px;
+    padding:18px;
+    border-radius:20px;
+    background:rgba(255,255,255,.03);
+    border:1px solid rgba(255,255,255,.08);
+    text-decoration:none;
+    color:inherit;
+    transition:.18s ease;
+}
+
+.studio-card:hover{
+    transform:translateY(-2px);
+    border-color:rgba(122,184,255,.22);
+}
+
+.studio-icon{
+    font-size:24px;
+}
+
+.studio-title{
+    font-weight:700;
+    font-size:17px;
+}
+
+.studio-sub{
+    color:var(--muted);
+    font-size:14px;
+    line-height:1.45;
+}
+
+.empty-state,
+.empty-state-inline{
+    padding:16px 18px;
+    border-radius:18px;
+    background:rgba(255,255,255,.03);
+    border:1px dashed rgba(255,255,255,.12);
+    color:var(--muted);
+}
+
+@media (max-width: 1180px){
+    .workspace-hero,
+    .workspace-main-grid,
+    .workspace-compare-grid,
+    .studio-grid{
+        grid-template-columns:1fr;
     }
 
     .workspace-grid-4{
-      display:grid;
-      grid-template-columns:repeat(4, minmax(0, 1fr));
-      gap:14px;
+        grid-template-columns:repeat(2, 1fr);
     }
+}
 
-    .workspace-stat{
-      padding:18px;
-      border-radius:20px;
-      background:rgba(255,255,255,.03);
-      border:1px solid rgba(255,255,255,.08);
-    }
-
-    .workspace-stat span{
-      display:block;
-      color:var(--muted);
-      font-size:12px;
-      text-transform:uppercase;
-      letter-spacing:.08em;
-      margin-bottom:8px;
-    }
-
-    .workspace-stat strong{
-      color:var(--text);
-      font-size:24px;
-      font-weight:800;
-      letter-spacing:-.02em;
-    }
-
-    .workspace-main-grid{
-      display:grid;
-      grid-template-columns:1.15fr .85fr;
-      gap:20px;
-      align-items:start;
-    }
-
-    .workspace-stack{
-      display:grid;
-      gap:20px;
-    }
-
+@media (max-width: 720px){
+    .workspace-grid-4,
+    .workspace-fit-grid,
     .workspace-info-grid{
-      display:grid;
-      grid-template-columns:repeat(4, minmax(0,1fr));
-      gap:12px;
-    }
-
-    .workspace-info-box,
-    .workspace-mini-stat{
-      padding:16px;
-      border-radius:18px;
-      background:rgba(255,255,255,.03);
-      border:1px solid rgba(255,255,255,.08);
-    }
-
-    .workspace-info-box span,
-    .workspace-mini-stat span{
-      display:block;
-      color:var(--muted);
-      font-size:12px;
-      text-transform:uppercase;
-      letter-spacing:.08em;
-      margin-bottom:8px;
-    }
-
-    .workspace-info-box strong,
-    .workspace-mini-stat strong{
-      color:var(--text);
-      font-size:18px;
-      font-weight:700;
-      line-height:1.35;
-    }
-
-    .workspace-compare-grid{
-      display:grid;
-      grid-template-columns:repeat(3, minmax(0,1fr));
-      gap:14px;
-    }
-
-    .workspace-compare-card{
-      padding:20px;
-      border-radius:22px;
-      background:rgba(255,255,255,.03);
-      border:1px solid rgba(255,255,255,.08);
-      position:relative;
-    }
-
-    .workspace-compare-card.recommended{
-      border-color:rgba(107,127,147,.40);
-      background:linear-gradient(180deg, rgba(107,127,147,.11), rgba(255,255,255,.03));
-      box-shadow:0 0 0 1px rgba(107,127,147,.14) inset, 0 14px 34px rgba(0,0,0,.18);
-    }
-
-    .workspace-card-topline{
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap:10px;
-    }
-
-    .workspace-badge{
-      display:inline-flex;
-      align-items:center;
-      padding:6px 10px;
-      border-radius:999px;
-      font-size:11px;
-      font-weight:700;
-      letter-spacing:.08em;
-      text-transform:uppercase;
-      background:rgba(142,167,192,.14);
-      border:1px solid rgba(142,167,192,.22);
-      color:#dce8f5;
-    }
-
-    .workspace-compare-kicker{
-      font-size:11px;
-      letter-spacing:.1em;
-      text-transform:uppercase;
-      color:var(--muted);
-    }
-
-    .workspace-compare-title{
-      display:block;
-      margin-top:8px;
-      font-size:19px;
-      font-weight:700;
-      color:var(--text);
-    }
-
-    .workspace-compare-meta{
-      display:grid;
-      gap:10px;
-      margin-top:14px;
-    }
-
-    .workspace-compare-meta div{
-      display:flex;
-      justify-content:space-between;
-      align-items:center;
-      gap:12px;
-      padding:10px 0;
-      border-bottom:1px solid rgba(255,255,255,.06);
-    }
-
-    .workspace-compare-meta div:last-child{
-      border-bottom:none;
-      padding-bottom:0;
-    }
-
-    .workspace-compare-meta span{
-      color:var(--muted);
-      font-size:12px;
-      text-transform:uppercase;
-      letter-spacing:.08em;
-    }
-
-    .workspace-compare-meta strong{
-      color:var(--text);
-      font-size:15px;
-      font-weight:700;
-      text-align:right;
-    }
-
-    .workspace-compare-note{
-      margin-top:14px;
-      padding-top:14px;
-      border-top:1px solid rgba(255,255,255,.06);
-      color:var(--muted);
-      font-size:13px;
-      line-height:1.55;
-    }
-
-    .metric-bar-wrap{
-      margin-top:14px;
-    }
-
-    .metric-bar-label{
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap:10px;
-      margin-bottom:8px;
-      font-size:12px;
-      color:var(--muted);
-      text-transform:uppercase;
-      letter-spacing:.08em;
-    }
-
-    .metric-bar{
-      width:100%;
-      height:10px;
-      border-radius:999px;
-      background:rgba(255,255,255,.06);
-      overflow:hidden;
-    }
-
-    .metric-bar-fill{
-      height:100%;
-      border-radius:inherit;
-      background:linear-gradient(90deg, #6B7F93, #8EA7C0);
-    }
-
-    .metric-bar-fill.alt{
-      background:linear-gradient(90deg, rgba(255,255,255,.45), #AFC5DB);
-    }
-
-    .workspace-fit-grid{
-      display:grid;
-      grid-template-columns:repeat(2, minmax(0, 1fr));
-      gap:12px;
-    }
-
-    .workspace-mini-stat-stack{
-      display:grid;
-      gap:12px;
-    }
-
-    .workspace-line-items{
-      display:grid;
-      gap:10px;
-    }
-
-    .workspace-line-row{
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap:14px;
-      padding:14px 16px;
-      border-radius:16px;
-      background:rgba(255,255,255,.03);
-      border:1px solid rgba(255,255,255,.08);
-    }
-
-    .workspace-line-row span{
-      color:var(--muted);
-    }
-
-    .workspace-line-row strong{
-      color:var(--text);
-    }
-
-    .workspace-note-list{
-      margin:10px 0 0;
-      padding-left:18px;
-      color:var(--muted);
-    }
-
-    .workspace-note-list li + li{
-      margin-top:8px;
-    }
-
-    .quick-grid{
-      display:grid;
-      grid-template-columns:repeat(2, minmax(0, 1fr));
-      gap:14px;
-    }
-
-    .quick-grid.one-col{
-      grid-template-columns:1fr;
-    }
-
-    .quick-card{
-      display:block;
-      width:100%;
-      text-align:left;
-      padding:18px;
-      border-radius:18px;
-      background:rgba(255,255,255,.03);
-      border:1px solid rgba(255,255,255,.08);
-      text-decoration:none;
-      transition:.2s ease;
-    }
-
-    .quick-card-button{
-      appearance:none;
-      cursor:pointer;
-      font:inherit;
-      color:inherit;
-    }
-
-    .quick-card:hover,
-    .quick-card-button:hover{
-      transform:translateY(-1px);
-      border-color:rgba(107,127,147,.35);
-      background:rgba(255,255,255,.045);
-    }
-
-    .quick-title{
-      display:block;
-      color:var(--text);
-      font-size:16px;
-      font-weight:700;
-    }
-
-    .quick-sub{
-      display:block;
-      margin-top:8px;
-      color:var(--muted);
-      font-size:13px;
-      line-height:1.55;
-    }
-
-    .inline-form,
-    .quick-save-form{
-      margin:0;
-    }
-
-    .ravlo-link-btn{
-      display:inline-flex;
-      align-items:center;
-      justify-content:center;
-      min-height:36px;
-      padding:0 14px;
-      border-radius:999px;
-      border:1px solid rgba(255,255,255,.06);
-      background:rgba(255,255,255,.03);
-      color:rgba(255,255,255,.88);
-      font-weight:700;
-      font-size:.9rem;
-      text-decoration:none;
-    }
-
-    .ravlo-link-btn:hover{
-      background:rgba(255,255,255,.05);
-      color:#fff;
-    }
-
-    @media (max-width: 1200px){
-      .workspace-grid-4,
-      .workspace-info-grid,
-      .workspace-compare-grid{
-        grid-template-columns:repeat(2, minmax(0,1fr));
-      }
-    }
-
-    @media (max-width: 1100px){
-      .workspace-main-grid{
         grid-template-columns:1fr;
-      }
-
-      .workspace-hero{
-        flex-direction:column;
-      }
-
-      .workspace-hero-side{
-        width:100%;
-      }
     }
 
-    @media (max-width: 700px){
-      .workspace-grid-4,
-      .workspace-info-grid,
-      .workspace-fit-grid,
-      .workspace-compare-grid{
-        grid-template-columns:1fr;
-      }
-
-      .workspace-action-row{
+    .workspace-budget-row{
         flex-direction:column;
-        align-items:stretch;
-      }
-
-      .workspace-action-row .ravlo-btn,
-      .workspace-action-row form{
-        width:100%;
-      }
-
-      .workspace-action-row .ravlo-btn,
-      .workspace-action-row button{
-        width:100%;
-        justify-content:center;
-      }
-
-      .workspace-hero-copy h2{
-        font-size:28px;
-      }
-
-      .workspace-highlight strong{
-        font-size:22px;
-      }
     }
+
+    .workspace-budget-amounts{
+        text-align:left;
+    }
+}
 </style>
 {% endblock %}

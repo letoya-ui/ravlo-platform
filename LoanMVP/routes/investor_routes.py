@@ -116,7 +116,7 @@ from LoanMVP.services.renovation_engine_client import generate_concept, call_ren
 from LoanMVP.services.property_service import resolve_property_unified, build_property_card_data, build_property_card
 from LoanMVP.services.deal_copilot_service import build_deal_copilot_context, generate_deal_copilot_response
 from LoanMVP.services.dealfinder_service import build_dealfinder_profile, extract_attom_fields, _extract_rentcast_fields, get_rentcast_data
-
+from LoanMVP.services.mashvisor_client import MashvisorClient
 from LoanMVP.utils.r2_storage import spaces_put_bytes
 
 
@@ -291,6 +291,7 @@ def safe_int(value, default=0, min_v=None, max_v=None):
         return x
     except (TypeError, ValueError):
         return default
+
 
 
 # ----------------------------
@@ -1191,6 +1192,111 @@ def _project_studio_upsert_deal(
 
     db.session.commit()
     return deal
+
+def _project_studio_validate_with_mashvisor(snapshot, selected_strategy):
+    client = MashvisorClient()
+
+    try:
+        result = client.get_airbnb_lookup(
+            address=snapshot.get("address"),
+            city=snapshot.get("city"),
+            state=snapshot.get("state"),
+            zip_code=snapshot.get("zip_code"),
+            beds=snapshot.get("beds"),
+            baths=snapshot.get("baths"),
+            lat=snapshot.get("latitude"),
+            lng=snapshot.get("longitude"),
+        )
+
+        return result
+
+    except Exception as e:
+        return {"error": str(e)}
+
+def _run_mashvisor_validation(snapshot: dict) -> dict | None:
+    """
+    Lightweight STR validation for Project Studio.
+    Use only after a property is loaded and a serious strategy path is in play.
+    """
+    if not snapshot:
+        return None
+
+    address = (snapshot.get("address") or "").strip()
+    city = (snapshot.get("city") or "").strip()
+    state = (snapshot.get("state") or "").strip()
+    zip_code = (snapshot.get("zip_code") or "").strip()
+
+    if not address or not city or not state or not zip_code:
+        return None
+
+    try:
+        client = MashvisorClient()
+        result = client.get_airbnb_lookup(
+            address=address,
+            city=city,
+            state=state,
+            zip_code=zip_code,
+            beds=_safe_int(snapshot.get("beds")),
+            baths=_safe_float(snapshot.get("baths")),
+            lat=_safe_float(snapshot.get("latitude")),
+            lng=_safe_float(snapshot.get("longitude")),
+        )
+
+        lookup = result.get("content", result) if isinstance(result, dict) else {}
+
+        return {
+            "airbnb_revenue": (
+                lookup.get("rental_income")
+                or lookup.get("airbnb_rental_income")
+                or lookup.get("monthly_revenue")
+            ),
+            "occupancy_rate": (
+                lookup.get("occupancy_rate")
+                or lookup.get("airbnb_occupancy_rate")
+            ),
+            "adr": (
+                lookup.get("daily_rate")
+                or lookup.get("adr")
+                or lookup.get("average_daily_rate")
+            ),
+            "confidence": (
+                lookup.get("data_quality")
+                or lookup.get("confidence")
+                or "Moderate"
+            ),
+            "raw": result,
+        }
+
+    except Exception as exc:
+        current_app.logger.warning(
+            "project_studio mashvisor validation failed for %s: %s",
+            snapshot.get("address"),
+            exc,
+        )
+        return {"error": str(exc)}
+
+
+def _build_mashvisor_insight(scope_budget: dict | None, mashvisor_data: dict | None) -> str | None:
+    """
+    Compare Ravlo's rough planning outcome to Mashvisor STR signal.
+    We use budget outcome as the internal reference only if available.
+    """
+    if not scope_budget or not mashvisor_data or mashvisor_data.get("error"):
+        return None
+
+    internal_reference = _safe_float(scope_budget.get("outcome"))
+    mashvisor_revenue = _safe_float(mashvisor_data.get("airbnb_revenue"))
+
+    if internal_reference is None or mashvisor_revenue is None or internal_reference == 0:
+        return "Market validation is available, but there is not enough aligned data yet for a direct comparison."
+
+    pct = ((mashvisor_revenue - internal_reference) / abs(internal_reference)) * 100
+
+    if abs(pct) <= 10:
+        return "Market data is generally aligned with Ravlo's current planning assumptions."
+    if pct < 0:
+        return "Market data is coming in below Ravlo's internal planning signal, so pressure-test the revenue assumptions."
+    return "Market data is stronger than Ravlo's current planning signal, which may support more upside."
 
 # =========================================================
 # 🧾 JSON + FORM SAFETY
@@ -4614,9 +4720,11 @@ def project_studio():
     city = (request.args.get("city") or "").strip()
     state = (request.args.get("state") or "").strip()
     zip_code = (request.args.get("zip") or request.args.get("zip_code") or "").strip()
+
     deal_id = request.args.get("deal_id", type=int)
     selected_strategy = (request.args.get("strategy") or "").strip().lower()
     selected_scope = (request.args.get("scope") or "").strip().lower()
+
     snapshot = None
     flags = []
     strategy_cards = []
@@ -4628,6 +4736,9 @@ def project_studio():
     scope_budget = None
     workspace_deal = None
 
+    mashvisor_data = None
+    mashvisor_insight = None
+
     if address:
         try:
             studio_context = _project_studio_lookup(
@@ -4636,6 +4747,7 @@ def project_studio():
                 state=state,
                 zip_code=zip_code,
             )
+
             snapshot = studio_context.get("snapshot")
             flags = studio_context.get("flags") or []
             strategy_cards = studio_context.get("strategy_cards") or []
@@ -4644,17 +4756,46 @@ def project_studio():
             market_snapshot = studio_context.get("market_snapshot") or {}
 
             if strategy_cards:
-                valid_keys = {str(card.get("key") or "").lower() for card in strategy_cards}
+                valid_keys = {
+                    str(card.get("key") or "").lower()
+                    for card in strategy_cards
+                }
+
                 if selected_strategy not in valid_keys:
-                    selected_strategy = str((strategy_cards[0].get("key") or "")).lower()
-                selected_card = next((card for card in strategy_cards if str(card.get("key") or "").lower() == selected_strategy), None)
+                    selected_strategy = str(
+                        (strategy_cards[0].get("key") or "")
+                    ).lower()
+
+                selected_card = next(
+                    (
+                        card for card in strategy_cards
+                        if str(card.get("key") or "").lower() == selected_strategy
+                    ),
+                    None
+                )
+
                 scope_options = _project_studio_scope_options(selected_strategy)
-                valid_scopes = {str(opt.get("value") or "").lower() for opt in scope_options}
+                valid_scopes = {
+                    str(opt.get("value") or "").lower()
+                    for opt in scope_options
+                }
+
                 if selected_scope not in valid_scopes and scope_options:
-                    selected_scope = str(scope_options[0].get("value") or "").lower()
-                scope_budget = _project_studio_scope_budget(selected_card, selected_strategy, selected_scope)
+                    selected_scope = str(
+                        scope_options[0].get("value") or ""
+                    ).lower()
+
+                scope_budget = _project_studio_scope_budget(
+                    selected_card,
+                    selected_strategy,
+                    selected_scope,
+                )
+
                 if selected_card and selected_scope and scope_budget:
-                    ip = InvestorProfile.query.filter_by(user_id=current_user.id).first()
+                    ip = InvestorProfile.query.filter_by(
+                        user_id=current_user.id
+                    ).first()
+
                     workspace_deal = _project_studio_upsert_deal(
                         ip,
                         snapshot,
@@ -4668,9 +4809,22 @@ def project_studio():
                         market_snapshot=market_snapshot,
                         deal_id=deal_id,
                     )
+
+                    # Final validation layer:
+                    # only after property + strategy + scope exist
+                    mashvisor_data = _run_mashvisor_validation(snapshot)
+                    mashvisor_insight = _build_mashvisor_insight(
+                        scope_budget,
+                        mashvisor_data,
+                    )
+
         except Exception as exc:
             engine_error = str(exc)
-            current_app.logger.warning("project_studio lookup failed for %s: %s", address, exc)
+            current_app.logger.warning(
+                "project_studio lookup failed for %s: %s",
+                address,
+                exc,
+            )
 
     return render_template(
         "investor/project_studio.html",
@@ -4692,6 +4846,8 @@ def project_studio():
         scope_options=scope_options,
         scope_budget=scope_budget,
         workspace_deal=workspace_deal,
+        mashvisor=mashvisor_data,
+        mashvisor_insight=mashvisor_insight,
     )
 
 # -------------------------------------------------------------------
