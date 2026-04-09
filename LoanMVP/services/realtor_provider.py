@@ -1,12 +1,13 @@
 import os
 import requests
 from typing import Dict, Any, Optional, List
+from urllib.parse import urlparse
 
 RAPIDAPI_KEY = os.getenv("RAPIDAPI_KEY")
 RAPIDAPI_HOST = os.getenv("REALTOR_RAPIDAPI_HOST", "realtor-search.p.rapidapi.com")
 REALTOR_DETAIL_URL = os.getenv(
     "REALTOR_RAPIDAPI_URL",
-    f"https://{RAPIDAPI_HOST}/properties/v3/detail",
+    "https://us-real-estate-listings.p.rapidapi.com/v2/property",
 )
 REALTOR_SEARCH_URL = os.getenv(
     "REALTOR_RAPIDAPI_SEARCH_URL",
@@ -26,10 +27,18 @@ class RealtorProviderError(Exception):
     pass
 
 
-def _headers(include_json: bool = False) -> Dict[str, str]:
+def _host_for_url(url: str, fallback: str) -> str:
+    try:
+        parsed = urlparse(url or "")
+        return parsed.netloc or fallback
+    except Exception:
+        return fallback
+
+
+def _headers(include_json: bool = False, host: Optional[str] = None) -> Dict[str, str]:
     headers = {
         "X-RapidAPI-Key": RAPIDAPI_KEY or "",
-        "X-RapidAPI-Host": RAPIDAPI_HOST,
+        "X-RapidAPI-Host": host or RAPIDAPI_HOST,
     }
     if include_json:
         headers["content-type"] = "application/json"
@@ -295,7 +304,12 @@ def fetch_realtor_data(address: str, city: str, state: str) -> Optional[Dict[str
             "state_code": state,
         }
 
-        resp = requests.post(REALTOR_DETAIL_URL, json=payload, headers=_headers(include_json=True), timeout=15)
+        resp = requests.post(
+            REALTOR_DETAIL_URL,
+            json=payload,
+            headers=_headers(include_json=True, host=_host_for_url(REALTOR_DETAIL_URL, RAPIDAPI_HOST)),
+            timeout=15,
+        )
 
         if not resp.ok:
             print("Realtor Provider error:", resp.text[:300])
