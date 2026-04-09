@@ -19,20 +19,18 @@ This is where investors find property opportunities worth reviewing. Search by a
 {% endblock %}
 
 {% block content %}
-
-<div class="dfv3-shell">
-
-  <aside class="ravlo-card pad dfv3-search-panel">
+<div class="dfv4-shell">
+  <aside class="ravlo-card pad dfv4-search-panel">
     <div class="eyebrow">DEAL FINDER</div>
-    <h3 class="dfv3-panel-title">Start Finding Deals</h3>
+    <h3 class="dfv4-panel-title">Start Finding Deals</h3>
     <p class="muted">
-      Search by address or ZIP, then review the photo, sale price, value signals, and property facts that help investors decide what is worth their time.
+      Search by address or ZIP, then review the photo, sale price, value signals, and investor-ready recommendations.
     </p>
 
     <label class="ravlo-label mt-16">Address</label>
     <input id="address" class="ravlo-input" placeholder="e.g. 123 Main St" />
 
-    <div class="dfv3-form-grid mt-12">
+    <div class="dfv4-form-grid mt-12">
       <div>
         <label class="ravlo-label">City</label>
         <input id="city" class="ravlo-input" placeholder="e.g. Otisville" />
@@ -57,77 +55,79 @@ This is where investors find property opportunities worth reviewing. Search by a
       Find Deals
     </button>
 
-    <div id="searchStatus" class="dfv3-status">Ready to find the next opportunity.</div>
+    <div id="searchStatus" class="dfv4-status">Ready to find the next opportunity.</div>
 
-    <div class="dfv3-panel-note">
-      <strong>What you will see first:</strong>
+    <div class="dfv4-panel-note">
+      <strong>Deal Finder now shows:</strong>
       <ul>
-        <li>Property photo</li>
-        <li>Sale price or best available value</li>
-        <li>Beds, baths, and square feet</li>
-        <li>Signals that tell you whether the deal is worth reviewing</li>
+        <li>Photo + sale price first</li>
+        <li>Deal score + tier</li>
+        <li>Top strengths + risks</li>
+        <li>Clear next move from the engine</li>
       </ul>
     </div>
   </aside>
 
-  <section class="dfv3-results-wrap">
-
-    <div class="ravlo-card pad dfv3-hero-card">
+  <section class="dfv4-results-wrap">
+    <div class="ravlo-card pad dfv4-hero-card">
       <div>
         <div class="eyebrow">INVESTOR OS</div>
-        <h2 class="dfv3-hero-title">This is where investors find deals worth reviewing.</h2>
+        <h2 class="dfv4-hero-title">This is where investors find deals worth reviewing.</h2>
         <p class="muted mb-0">
-          Deal Finder should feel like the place where noise drops away and the right opportunities show up fast.
+          Search results are enriched with Deal Architect so every card feels like a real recommendation, not just a property record.
         </p>
       </div>
-      <div class="dfv3-hero-pill-row">
-        <span class="dfv3-hero-pill">Photo First</span>
-        <span class="dfv3-hero-pill">Sale Price First</span>
-        <span class="dfv3-hero-pill">Analyze Fast</span>
+      <div class="dfv4-hero-pill-row">
+        <span class="dfv4-hero-pill">Photo First</span>
+        <span class="dfv4-hero-pill">Score First</span>
+        <span class="dfv4-hero-pill">Analyze Fast</span>
       </div>
     </div>
 
-    <div id="resultsSummary" class="ravlo-card pad dfv3-summary-card" style="display:none;">
-      <div class="dfv3-summary-head">
+    <div id="resultsSummary" class="ravlo-card pad dfv4-summary-card" style="display:none;">
+      <div class="dfv4-summary-head">
         <div>
           <div class="eyebrow">SEARCH SUMMARY</div>
           <h3 id="summaryTitle" class="mb-8">Review Complete</h3>
           <p id="summarySub" class="muted mb-0">Property results will appear here.</p>
         </div>
-
-        <div class="dfv3-summary-metrics">
-          <div class="dfv3-summary-metric">
+        <div class="dfv4-summary-metrics">
+          <div class="dfv4-summary-metric">
             <span>Results</span>
             <strong id="summaryCount">0</strong>
           </div>
-          <div class="dfv3-summary-metric">
+          <div class="dfv4-summary-metric">
             <span>Strategy</span>
             <strong id="summaryStrategy">—</strong>
           </div>
-          <div class="dfv3-summary-metric">
+          <div class="dfv4-summary-metric">
             <span>ZIP</span>
             <strong id="summaryZip">—</strong>
+          </div>
+          <div class="dfv4-summary-metric">
+            <span>Engine</span>
+            <strong id="summaryEngine">Pending</strong>
           </div>
         </div>
       </div>
     </div>
 
-    <div id="results" class="dfv3-grid">
-      <div class="ravlo-card pad dfv3-empty">
+    <div id="results" class="dfv4-grid">
+      <div class="ravlo-card pad dfv4-empty">
         <div class="eyebrow">DEAL FINDER</div>
         <h3 class="mb-8">This is where the right properties should start showing up</h3>
         <p class="muted mb-0">
-          Enter an address or ZIP code to start reviewing property opportunities with photo, sale price, and the details investors care about first.
+          Enter an address or ZIP code to start reviewing property opportunities with photo, sale price, deal score, and investor signals.
         </p>
       </div>
     </div>
-
   </section>
 </div>
 
 <script>
 const csrfToken = "{{ csrf_token() }}";
 const PLACEHOLDER_IMAGE = "/static/images/placeholder_property.jpg";
+const DEAL_ARCHITECT_URL = "{{ url_for('investor.api_deal_architect_proxy') }}";
 
 function money(x){
   if (x === null || x === undefined || x === "") return "—";
@@ -160,14 +160,6 @@ function strategyLabel(v){
   return "All";
 }
 
-function scoreClass(score){
-  const n = Number(score);
-  if (!Number.isFinite(n)) return "neutral";
-  if (n >= 70) return "good";
-  if (n >= 55) return "watch";
-  return "neutral";
-}
-
 function escapeHtml(str){
   return String(str ?? "")
     .replace(/&/g, "&amp;")
@@ -177,7 +169,30 @@ function escapeHtml(str){
     .replace(/'/g, "&#039;");
 }
 
-function buildPayloadObj(r, analyzeId, saveId){
+function scoreClass(score){
+  const n = Number(score);
+  if (!Number.isFinite(n)) return "neutral";
+  if (n >= 70) return "good";
+  if (n >= 45) return "watch";
+  return "risk";
+}
+
+function tierClass(tier){
+  const t = String(tier || "").toLowerCase();
+  if (t === "strong") return "good";
+  if (t === "moderate") return "watch";
+  return "risk";
+}
+
+function signalLabel(signal){
+  const value = String(signal || "").toLowerCase();
+  if (value === "advance_to_lender_package") return "Move Fast";
+  if (value === "validate_zoning_and_pricing") return "Needs Validation";
+  if (value === "retrade_or_pass") return "Pass or Rework";
+  return "Worth Reviewing";
+}
+
+function buildPropertyPayload(r, analyzeId, saveId){
   const primaryValue =
     r.last_sale_price ??
     r.display_value ??
@@ -208,116 +223,237 @@ function buildPayloadObj(r, analyzeId, saveId){
   };
 }
 
+function buildDealArchitectRequest(r, selectedStrategy){
+  const strategy = selectedStrategy || "all";
+  const type = String(r.property_type || "single family");
+  const salePrice = numOrNull(r.last_sale_price) ?? numOrNull(r.price) ?? null;
+  const marketValue = numOrNull(r.market_value) ?? numOrNull(r.display_value) ?? null;
+  const rentValue = numOrNull(r.traditional_rent) ?? null;
+  const sqft = numOrNull(r.square_feet || r.sqft) ?? null;
+  const lotSqft = numOrNull(r.lot_size_sqft) ?? null;
+
+  const descriptionParts = [
+    `${safeText(r.address || r.address_line1)}, ${safeText(r.city)}, ${safeText(r.state)} ${safeText(r.zip_code)}`,
+    `${safeText(r.beds)} bed`,
+    `${safeText(r.baths)} bath`,
+    sqft ? `${prettyNumber(sqft)} sqft` : null,
+    strategy === "rental" ? "rental hold candidate" : strategy === "flip" ? "fix and flip candidate" : "investment property candidate"
+  ].filter(Boolean);
+
+  return {
+    project_name: r.address || r.address_line1 || "Deal Finder Property",
+    description: descriptionParts.join(" • "),
+    property_type: type,
+    lot_size: lotSqft ? `${prettyNumber(lotSqft)} sq ft lot` : "",
+    zoning: r.zoning || "",
+    asking_price: salePrice,
+    square_feet_target: sqft,
+    city: r.city || "",
+    state: r.state || "",
+    zip_code: r.zip_code || "",
+    arv: marketValue,
+    monthly_rent: rentValue,
+    local_facts: {
+      bedrooms: numOrNull(r.beds),
+      bathrooms: numOrNull(r.baths),
+      year_built: numOrNull(r.year_built),
+      lot_sqft: lotSqft,
+      assessed_value: numOrNull(r.assessed_value),
+      annual_tax_amount: numOrNull(r.tax_amount),
+      latitude: r.latitude,
+      longitude: r.longitude,
+      source: "deal_finder"
+    }
+  };
+}
+
+async function enrichWithDealArchitect(results, strategy){
+  const enriched = await Promise.all(results.map(async (r) => {
+    try {
+      const resp = await fetch(DEAL_ARCHITECT_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRFToken": csrfToken
+        },
+        credentials: "include",
+        body: JSON.stringify(buildDealArchitectRequest(r, strategy))
+      });
+
+      const data = await resp.json();
+      if (!resp.ok || data.ok === false) {
+        return {
+          ...r,
+          architect_error: data.detail || data.message || "Deal Architect unavailable"
+        };
+      }
+
+      const meta = data.meta || {};
+      return {
+        ...r,
+        architect: data,
+        deal_score: data.deal_score,
+        opportunity_tier: data.opportunity_tier,
+        deal_finder_signal: meta.deal_finder_signal,
+        primary_strengths: meta.primary_strengths || [],
+        primary_risks: meta.primary_risks || [],
+        verdict_breakdown: meta.verdict_breakdown || {},
+        valuation_source_label: meta.valuation_source_label,
+        dscr_estimate: meta.dscr_estimate,
+        rent_yield: meta.rent_yield,
+        monthly_rent_estimate: meta.monthly_rent_estimate,
+        estimated_value_engine: data.estimated_value,
+        next_step_engine: data.next_step,
+        comp_confidence: meta.comp_confidence
+      };
+    } catch (error) {
+      return {
+        ...r,
+        architect_error: "Deal Architect request failed"
+      };
+    }
+  }));
+
+  return enriched.sort((a, b) => (Number(b.deal_score) || 0) - (Number(a.deal_score) || 0));
+}
+
+function renderSummary(zip, strategy, count, engineReady){
+  const card = document.getElementById("resultsSummary");
+  document.getElementById("summaryTitle").innerText = count === 0 ? "No Matches Yet" : "Review Complete";
+  document.getElementById("summarySub").innerText = count === 0
+    ? "Try another address or ZIP to surface opportunities."
+    : "These properties are now ranked with Deal Architect signals.";
+  document.getElementById("summaryCount").innerText = String(count);
+  document.getElementById("summaryStrategy").innerText = strategyLabel(strategy);
+  document.getElementById("summaryZip").innerText = zip || "—";
+  document.getElementById("summaryEngine").innerText = engineReady ? "Connected" : "Partial";
+  card.style.display = "block";
+}
+
+function renderEmpty(title, body){
+  document.getElementById("results").innerHTML = `
+    <div class="ravlo-card pad dfv4-empty">
+      <div class="eyebrow">DEAL FINDER</div>
+      <h3 class="mb-8">${escapeHtml(title)}</h3>
+      <p class="muted mb-0">${escapeHtml(body)}</p>
+    </div>
+  `;
+}
+
 function resolveImage(r){
-  return (
-    r.primary_photo ||
-    r.photo ||
-    r.thumbnail ||
-    (Array.isArray(r.photos) ? r.photos[0] : null) ||
-    PLACEHOLDER_IMAGE
-  );
+  return r.primary_photo || r.photo || r.thumbnail || (Array.isArray(r.photos) ? r.photos[0] : null) || PLACEHOLDER_IMAGE;
 }
 
-function resolvePrimaryPrice(r){
-  return numOrNull(r.last_sale_price) ?? numOrNull(r.price) ?? numOrNull(r.display_value);
-}
+function resolveReasons(r){
+  const strengths = Array.isArray(r.primary_strengths) ? r.primary_strengths.slice(0, 2) : [];
+  const risks = Array.isArray(r.primary_risks) ? r.primary_risks.slice(0, 1) : [];
 
-function resolvePrimaryPriceLabel(r){
-  return numOrNull(r.last_sale_price) !== null ? "Sale Price" : "Best Available Value";
-}
-
-function resolveSecondaryValue(r){
-  return (
-    numOrNull(r.market_value) ??
-    numOrNull(r.assessed_value) ??
-    numOrNull(r.display_value_secondary) ??
-    null
-  );
-}
-
-function resolveSecondaryLabel(r){
-  if (numOrNull(r.market_value) !== null) return "Market Value";
-  if (numOrNull(r.assessed_value) !== null) return "Assessed Value";
-  return r.display_value_secondary_label || null;
-}
-
-function resolveDataBadge(r){
-  if (r.data_status === "attom_only") {
-    return `<span class="dfv3-data-badge pending">Public Record</span>`;
-  }
-  return `<span class="dfv3-data-badge live">Investor Ready</span>`;
-}
-
-function resolveScoreText(r){
-  const score = numOrNull(r.ravlo_score);
-  if (score === null) return "Public Record";
-  return `${score}/100`;
-}
-
-function resolveOpportunityLabel(r){
-  const score = numOrNull(r.ravlo_score);
-  const rent = numOrNull(r.traditional_rent);
-  const sale = numOrNull(r.last_sale_price);
-  const market = numOrNull(r.market_value);
-
-  if (score !== null && score >= 70) return "Strong Candidate";
-  if (rent !== null && String(r.recommended_strategy || "").toLowerCase().includes("rental")) return "Rental Potential";
-  if (sale !== null && market !== null && market > sale) return "Value Gap Found";
-  return "Worth Reviewing";
-}
-
-function resolveReasons(r, primaryPriceLabel, primaryPrice){
-  if (Array.isArray(r.score_reasons) && r.score_reasons.length) {
-    return r.score_reasons.slice(0, 3);
+  if (strengths.length || risks.length) {
+    return [...strengths, ...risks.map(x => `Watch: ${x}`)].slice(0, 3);
   }
 
-  const reasons = [];
-  reasons.push(
-    primaryPrice !== null
-      ? `${primaryPriceLabel} available for review`
-      : "Pricing data is still loading"
-  );
+  const fallback = [];
+  if (numOrNull(r.last_sale_price) !== null) fallback.push("Sale price available for review");
+  if (numOrNull(r.market_value) !== null) fallback.push(`Market value surfaced at ${money(r.market_value)}`);
+  if (numOrNull(r.traditional_rent) !== null) fallback.push(`Estimated rent: ${money(r.traditional_rent)}/mo`);
+  if (!fallback.length) fallback.push("Ready for deeper review in Deal Workspace");
+  return fallback.slice(0, 3);
+}
 
-  if (numOrNull(r.market_value) !== null) {
-    reasons.push(`Market value surfaced at ${money(r.market_value)}`);
-  } else if (numOrNull(r.assessed_value) !== null) {
-    reasons.push(`Assessed value surfaced at ${money(r.assessed_value)}`);
+function renderCards(results){
+  const root = document.getElementById("results");
+
+  if (!results || !results.length) {
+    renderEmpty("No properties matched your search", "Try another address, city/state combination, or ZIP code.");
+    return;
   }
 
-  if (numOrNull(r.traditional_rent) !== null) {
-    reasons.push(`Estimated rent: ${money(r.traditional_rent)}/mo`);
-  } else {
-    reasons.push("Ready for deeper review in Deal Workspace");
-  }
+  root.innerHTML = results.map((r, idx) => {
+    const ts = Date.now() + idx;
+    const analyzeId = `dw_${idx}_${ts}`;
+    const saveId = `sv_${idx}_${ts}`;
+    const payloadObj = buildPropertyPayload(r, analyzeId, saveId);
+    const encoded = encodeURIComponent(JSON.stringify(payloadObj));
 
-  return reasons;
+    const price = numOrNull(r.last_sale_price) ?? numOrNull(r.display_value) ?? numOrNull(r.price);
+    const marketValue = numOrNull(r.estimated_value_engine) ?? numOrNull(r.market_value) ?? numOrNull(r.assessed_value);
+    const reasons = resolveReasons(r);
+    const score = Number(r.deal_score);
+    const tier = r.opportunity_tier || "moderate";
+    const signal = r.deal_finder_signal;
+    const architectError = r.architect_error;
+
+    return `
+      <article class="ravlo-card pad dfv4-card">
+        <div class="dfv4-thumb">
+          <img src="${escapeHtml(resolveImage(r))}" alt="Property photo" onerror="this.onerror=null;this.src='${PLACEHOLDER_IMAGE}';">
+          <div class="dfv4-thumb-top">
+            <div class="dfv4-score-badge ${scoreClass(score)}">${Number.isFinite(score) ? `${score}/99` : `Record Only`}</div>
+            <div class="dfv4-tier-badge ${tierClass(tier)}">${escapeHtml(tier)}</div>
+          </div>
+        </div>
+
+        <div class="dfv4-body">
+          <div class="dfv4-opportunity-callout ${tierClass(tier)}">${escapeHtml(signalLabel(signal))}</div>
+
+          <div>
+            <div class="dfv4-address">${escapeHtml(safeText(r.address || r.address_line1))}</div>
+            <div class="dfv4-location">${escapeHtml(safeText(r.city))}, ${escapeHtml(safeText(r.state))} ${escapeHtml(safeText(r.zip_code))}</div>
+          </div>
+
+          <div class="dfv4-price-block">
+            <div class="dfv4-price-label">Sale Price</div>
+            <div class="dfv4-price-value">${escapeHtml(money(price))}</div>
+            <div class="dfv4-price-sub">${marketValue !== null ? `Engine Value: ${escapeHtml(money(marketValue))}` : "Engine value pending"}</div>
+          </div>
+
+          <div class="dfv4-chip-row">
+            <span class="dfv4-chip">${escapeHtml(safeText(r.property_type || "Property"))}</span>
+            <span class="dfv4-chip">${escapeHtml(safeText(r.beds))} bd</span>
+            <span class="dfv4-chip">${escapeHtml(safeText(r.baths))} ba</span>
+            <span class="dfv4-chip">${escapeHtml(prettyNumber(r.square_feet || r.sqft))} sqft</span>
+          </div>
+
+          <div class="dfv4-engine-grid">
+            <div><span>Tier</span><strong>${escapeHtml(tier)}</strong></div>
+            <div><span>Signal</span><strong>${escapeHtml(signalLabel(signal))}</strong></div>
+            <div><span>Rent Est.</span><strong>${escapeHtml(money(r.monthly_rent_estimate || r.traditional_rent))}${numOrNull(r.monthly_rent_estimate || r.traditional_rent) !== null ? '/mo' : ''}</strong></div>
+            <div><span>DSCR</span><strong>${escapeHtml(safeText(r.dscr_estimate))}</strong></div>
+            <div><span>Comp Confidence</span><strong>${escapeHtml(safeText(r.comp_confidence))}</strong></div>
+            <div><span>Next Step</span><strong>${escapeHtml(safeText(r.next_step_engine || 'Review'))}</strong></div>
+          </div>
+
+          <div class="dfv4-ai-snippet">
+            <strong>Why this deal stands out</strong>
+            <ul class="dfv4-thesis-list">
+              ${reasons.map(reason => `<li>${escapeHtml(reason)}</li>`).join('')}
+            </ul>
+            ${architectError ? `<div class="dfv4-engine-warning">${escapeHtml(architectError)}</div>` : ''}
+          </div>
+
+          <div class="dfv4-actions">
+            <button class="ravlo-btn ghost sm" type="button" onclick='viewDetails(JSON.parse(decodeURIComponent("${encoded}")))'>View Details</button>
+            <button id="${saveId}" class="ravlo-btn ghost sm" type="button" onclick='saveOnly(JSON.parse(decodeURIComponent("${encoded}")))'>Save</button>
+            <button id="${analyzeId}" class="ravlo-btn primary sm" type="button" onclick='saveAndAnalyze(JSON.parse(decodeURIComponent("${encoded}")))'>Analyze Deal</button>
+          </div>
+        </div>
+      </article>
+    `;
+  }).join("");
 }
 
 async function viewDetails(item){
   try{
     const resp = await fetch("{{ url_for('investor.api_property_tool_view_details') }}", {
       method: "POST",
-      headers: {
-        "Content-Type":"application/json",
-        "X-CSRFToken": csrfToken
-      },
+      headers: {"Content-Type":"application/json", "X-CSRFToken": csrfToken},
       credentials: "include",
       body: JSON.stringify(item)
     });
     const data = await resp.json();
-
-    if (data.status !== "ok"){
-      alert(data.message || "Could not open property details.");
-      return;
-    }
-
-    if (data.detail_url){
-      window.location.href = data.detail_url;
-      return;
-    }
-
-    alert("No detail URL returned.");
-  } catch (e){
+    if (data.status !== "ok") return alert(data.message || "Could not open property details.");
+    if (data.detail_url) window.location.href = data.detail_url;
+  } catch (e) {
     console.error(e);
     alert("Network error while opening property details.");
   }
@@ -326,33 +462,21 @@ async function viewDetails(item){
 async function saveOnly(item){
   const btn = document.getElementById(item._saveBtnId);
   if (btn){ btn.disabled = true; btn.innerText = "Saving..."; }
-
   try{
     const resp = await fetch("{{ url_for('investor.api_property_tool_save') }}", {
       method: "POST",
-      headers: {
-        "Content-Type":"application/json",
-        "X-CSRFToken": csrfToken
-      },
+      headers: {"Content-Type":"application/json", "X-CSRFToken": csrfToken},
       credentials: "include",
       body: JSON.stringify(item)
     });
     const data = await resp.json();
-
-    if (data.status !== "ok"){
+    if (data.status !== "ok") {
       alert(data.message || "Could not save property.");
       if (btn){ btn.disabled = false; btn.innerText = "Save"; }
       return;
     }
-
-    if (btn){
-      btn.innerText = "Saved";
-      setTimeout(() => {
-        btn.disabled = false;
-        btn.innerText = "Save";
-      }, 1200);
-    }
-  } catch (e){
+    if (btn){ btn.innerText = "Saved"; setTimeout(() => { btn.disabled = false; btn.innerText = "Save"; }, 1200); }
+  } catch (e) {
     console.error(e);
     alert("Network error while saving.");
     if (btn){ btn.disabled = false; btn.innerText = "Save"; }
@@ -362,165 +486,25 @@ async function saveOnly(item){
 async function saveAndAnalyze(item){
   const btn = document.getElementById(item._btnId);
   if (btn){ btn.disabled = true; btn.innerText = "Analyzing..."; }
-
   try{
     const resp = await fetch("{{ url_for('investor.api_property_tool_save_and_analyze') }}", {
       method: "POST",
-      headers: {
-        "Content-Type":"application/json",
-        "X-CSRFToken": csrfToken
-      },
+      headers: {"Content-Type":"application/json", "X-CSRFToken": csrfToken},
       credentials: "include",
       body: JSON.stringify(item)
     });
     const data = await resp.json();
-
-    if (data.status !== "ok"){
+    if (data.status !== "ok") {
       alert(data.message || "Could not send property to Deal Workspace.");
       if (btn){ btn.disabled = false; btn.innerText = "Analyze Deal"; }
       return;
     }
-
-    if (data.deal_url){
-      window.location.href = data.deal_url;
-      return;
-    }
-
-    alert("Saved, but no workspace redirect returned.");
-  } catch (e){
+    if (data.deal_url) window.location.href = data.deal_url;
+  } catch (e) {
     console.error(e);
     alert("Network error while saving.");
     if (btn){ btn.disabled = false; btn.innerText = "Analyze Deal"; }
   }
-}
-
-function renderSummary(zip, strategy, count){
-  const card = document.getElementById("resultsSummary");
-  document.getElementById("summaryTitle").innerText = count === 0 ? "No Matches Yet" : "Review Complete";
-  document.getElementById("summarySub").innerText = count === 0
-    ? "Try another address or ZIP to surface opportunities."
-    : "These properties are ready for a quick investor review.";
-  document.getElementById("summaryCount").innerText = String(count);
-  document.getElementById("summaryStrategy").innerText = strategyLabel(strategy);
-  document.getElementById("summaryZip").innerText = zip || "—";
-  card.style.display = "block";
-}
-
-function renderEmpty(messageTitle, messageBody){
-  document.getElementById("results").innerHTML = `
-    <div class="ravlo-card pad dfv3-empty">
-      <div class="eyebrow">DEAL FINDER</div>
-      <h3 class="mb-8">${escapeHtml(messageTitle)}</h3>
-      <p class="muted mb-0">${escapeHtml(messageBody)}</p>
-    </div>
-  `;
-}
-
-function renderCards(results){
-  const root = document.getElementById("results");
-
-  if (!results || !results.length){
-    renderEmpty(
-      "No properties matched your search",
-      "Try another address, city/state combination, or ZIP code."
-    );
-    return;
-  }
-
-  root.innerHTML = results.map((r, idx) => {
-    const ts = Date.now() + idx;
-    const analyzeId = `dw_${idx}_${ts}`;
-    const saveId = `sv_${idx}_${ts}`;
-    const payloadObj = buildPayloadObj(r, analyzeId, saveId);
-    const encoded = encodeURIComponent(JSON.stringify(payloadObj));
-
-    const imageUrl = resolveImage(r);
-    const score = numOrNull(r.ravlo_score);
-    const scoreText = resolveScoreText(r);
-    const opportunityLabel = resolveOpportunityLabel(r);
-
-    const primaryPrice = resolvePrimaryPrice(r);
-    const primaryPriceLabel = resolvePrimaryPriceLabel(r);
-    const secondaryValue = resolveSecondaryValue(r);
-    const secondaryLabel = resolveSecondaryLabel(r);
-
-    const assessedValue = numOrNull(r.assessed_value);
-    const taxAmount = numOrNull(r.tax_amount);
-    const rentEstimate = numOrNull(r.traditional_rent);
-    const reasons = resolveReasons(r, primaryPriceLabel, primaryPrice);
-
-    return `
-      <article class="ravlo-card pad dfv3-card">
-        <div class="dfv3-thumb">
-          <img src="${escapeHtml(imageUrl)}" alt="Property photo"
-               onerror="this.onerror=null;this.src='${PLACEHOLDER_IMAGE}';">
-          <div class="dfv3-thumb-top">
-            <div class="dfv3-score-badge ${scoreClass(score)}">
-              ${escapeHtml(scoreText)}
-            </div>
-            ${resolveDataBadge(r)}
-          </div>
-        </div>
-
-        <div class="dfv3-body">
-          <div class="dfv3-opportunity-callout">${escapeHtml(opportunityLabel)}</div>
-
-          <div>
-            <div class="dfv3-address">${escapeHtml(safeText(r.address || r.address_line1))}</div>
-            <div class="dfv3-location">${escapeHtml(safeText(r.city))}, ${escapeHtml(safeText(r.state))} ${escapeHtml(safeText(r.zip_code))}</div>
-          </div>
-
-          <div class="dfv3-price-block">
-            <div class="dfv3-price-label">${escapeHtml(primaryPriceLabel)}</div>
-            <div class="dfv3-price-value">
-              ${primaryPrice !== null ? escapeHtml(money(primaryPrice)) : `<span class="dfv3-muted-inline">Loading price</span>`}
-            </div>
-            ${secondaryLabel && secondaryValue !== null ? `<div class="dfv3-price-sub">${escapeHtml(secondaryLabel)}: ${escapeHtml(money(secondaryValue))}</div>` : ""}
-          </div>
-
-          <div class="dfv3-chip-row">
-            <span class="dfv3-chip">${escapeHtml(safeText(r.recommended_strategy || r.property_type || "Review"))}</span>
-            <span class="dfv3-chip">${escapeHtml(safeText(r.beds))} bd</span>
-            <span class="dfv3-chip">${escapeHtml(safeText(r.baths))} ba</span>
-            <span class="dfv3-chip">${escapeHtml(prettyNumber(r.square_feet || r.sqft))} sqft</span>
-          </div>
-
-          <div class="dfv3-metrics">
-            <div><span>Assessed Value</span><strong>${escapeHtml(money(assessedValue))}</strong></div>
-            <div><span>Property Tax</span><strong>${escapeHtml(money(taxAmount))}</strong></div>
-            <div><span>Est. Rent</span><strong>${rentEstimate !== null ? escapeHtml(`${money(rentEstimate)}/mo`) : "—"}</strong></div>
-            <div><span>Year Built</span><strong>${escapeHtml(safeText(r.year_built))}</strong></div>
-            <div><span>Lot Size</span><strong>${escapeHtml(prettyNumber(r.lot_size_sqft))}</strong></div>
-            <div><span>Property Type</span><strong>${escapeHtml(safeText(r.property_type))}</strong></div>
-          </div>
-
-          <div class="dfv3-ai-snippet">
-            <strong>Why this deal stands out</strong>
-            <ul class="dfv3-thesis-list">
-              ${reasons.map(reason => `<li>${escapeHtml(reason)}</li>`).join("")}
-            </ul>
-          </div>
-
-          <div class="dfv3-actions">
-            <button class="ravlo-btn ghost sm" type="button"
-              onclick='viewDetails(JSON.parse(decodeURIComponent("${encoded}")))'>
-              View Details
-            </button>
-
-            <button id="${saveId}" class="ravlo-btn ghost sm" type="button"
-              onclick='saveOnly(JSON.parse(decodeURIComponent("${encoded}")))'>
-              Save
-            </button>
-
-            <button id="${analyzeId}" class="ravlo-btn primary sm" type="button"
-              onclick='saveAndAnalyze(JSON.parse(decodeURIComponent("${encoded}")))'>
-              Analyze Deal
-            </button>
-          </div>
-        </div>
-      </article>
-    `;
-  }).join("");
 }
 
 async function runSearch(){
@@ -532,60 +516,45 @@ async function runSearch(){
   const status = document.getElementById("searchStatus");
   const resultsSummary = document.getElementById("resultsSummary");
 
-  if (!zip && !address){
+  if (!zip && !address) {
     status.innerText = "Enter an address or ZIP code first.";
     return;
   }
 
-  const payload = {
-    address,
-    city,
-    state,
-    zip,
-    strategy,
-    limit: 20
-  };
+  const payload = { address, city, state, zip, strategy, limit: 20 };
 
   status.innerText = "Searching properties...";
   resultsSummary.style.display = "none";
   renderEmpty("Searching for opportunities", "Pulling the photo, pricing, and property facts investors care about most.");
 
-  try{
+  try {
     const resp = await fetch("{{ url_for('investor.api_property_tool_search') }}", {
       method: "POST",
-      headers: {
-        "Content-Type":"application/json",
-        "X-CSRFToken": csrfToken
-      },
+      headers: {"Content-Type":"application/json", "X-CSRFToken": csrfToken},
       credentials: "include",
       body: JSON.stringify(payload)
     });
 
     const data = await resp.json();
-
-    if (data.status !== "ok"){
+    if (data.status !== "ok") {
       status.innerText = data.message || "Search failed.";
       renderEmpty("Search failed", data.message || "Please try another address or ZIP.");
       return;
     }
 
-    renderSummary(data.zip, data.strategy, data.results.length);
+    status.innerText = "Ranking deals with Deal Architect...";
+    const enriched = await enrichWithDealArchitect(data.results || [], strategy);
+    const engineReady = enriched.some(x => Number.isFinite(Number(x.deal_score)));
+
+    renderSummary(data.zip, data.strategy, enriched.length, engineReady);
 
     const locationLabel = data.zip || data.address || "your search";
-    status.innerText = data.results.length
-      ? `Found ${data.results.length} propert${data.results.length === 1 ? "y" : "ies"} ready for review in ${locationLabel}.`
+    status.innerText = enriched.length
+      ? `Found ${enriched.length} propert${enriched.length === 1 ? "y" : "ies"} ranked for review in ${locationLabel}.`
       : `No properties matched ${locationLabel}.`;
 
-    if (!data.results.length){
-      renderEmpty(
-        "No properties matched your search",
-        "Try another address, city/state combination, or ZIP code."
-      );
-      return;
-    }
-
-    renderCards(data.results);
-  } catch (e){
+    renderCards(enriched);
+  } catch (e) {
     console.error(e);
     status.innerText = "Investor OS could not load this search right now.";
     renderEmpty("Unable to load this search", "Please try again in a moment.");
@@ -594,364 +563,63 @@ async function runSearch(){
 </script>
 
 <style>
-.dfv3-shell{
-  display:grid;
-  grid-template-columns:360px minmax(0,1fr);
-  gap:1rem;
-}
-
-.dfv3-search-panel{
-  position:sticky;
-  top:16px;
-  align-self:start;
-}
-
-.dfv3-panel-title,
-.dfv3-hero-title{
-  margin:.35rem 0 .35rem;
-}
-
-.dfv3-form-grid{
-  display:grid;
-  grid-template-columns:repeat(2,minmax(0,1fr));
-  gap:.75rem;
-}
-
-.dfv3-status{
-  color:var(--muted);
-  margin-top:.75rem;
-  min-height:20px;
-}
-
-.dfv3-panel-note{
-  margin-top:1rem;
-  padding:.9rem 1rem;
-  border-radius:16px;
-  background:rgba(255,255,255,.03);
-  border:1px solid rgba(255,255,255,.08);
-}
-
-.dfv3-panel-note ul{
-  margin:.55rem 0 0 1rem;
-  padding:0;
-  color:var(--muted);
-}
-
-.dfv3-results-wrap{
-  display:grid;
-  gap:1rem;
-}
-
-.dfv3-hero-card{
-  display:flex;
-  justify-content:space-between;
-  align-items:flex-start;
-  gap:1rem;
-  flex-wrap:wrap;
-}
-
-.dfv3-hero-pill-row{
-  display:flex;
-  flex-wrap:wrap;
-  gap:.5rem;
-}
-
-.dfv3-hero-pill{
-  display:inline-flex;
-  align-items:center;
-  padding:.45rem .7rem;
-  border-radius:999px;
-  background:rgba(37,99,235,.16);
-  border:1px solid rgba(96,165,250,.22);
-  color:#dbeafe;
-  font-size:.78rem;
-  font-weight:800;
-}
-
-.dfv3-summary-head{
-  display:flex;
-  justify-content:space-between;
-  align-items:flex-start;
-  gap:18px;
-  flex-wrap:wrap;
-}
-
-.dfv3-summary-metrics{
-  display:grid;
-  grid-template-columns:repeat(3,minmax(0,1fr));
-  gap:.7rem;
-  min-width:320px;
-}
-
-.dfv3-summary-metric{
-  padding:.85rem .9rem;
-  border-radius:14px;
-  background:rgba(255,255,255,.03);
-  border:1px solid rgba(255,255,255,.08);
-}
-
-.dfv3-summary-metric span{
-  display:block;
-  color:var(--muted);
-  font-size:.78rem;
-  margin-bottom:.25rem;
-}
-
-.dfv3-summary-metric strong{
-  color:var(--text);
-  font-size:1rem;
-}
-
-.dfv3-grid{
-  display:grid;
-  grid-template-columns:repeat(2,minmax(0,1fr));
-  gap:1rem;
-}
-
-.dfv3-card{
-  display:flex;
-  flex-direction:column;
-  overflow:hidden;
-}
-
-.dfv3-thumb{
-  position:relative;
-  width:100%;
-  height:220px;
-  border-radius:16px;
-  overflow:hidden;
-  background:rgba(255,255,255,.03);
-  border:1px solid rgba(255,255,255,.08);
-}
-
-.dfv3-thumb img{
-  width:100%;
-  height:100%;
-  object-fit:cover;
-  display:block;
-}
-
-.dfv3-thumb-top{
-  position:absolute;
-  top:12px;
-  left:12px;
-  right:12px;
-  display:flex;
-  justify-content:space-between;
-  align-items:flex-start;
-  gap:.5rem;
-}
-
-.dfv3-score-badge{
-  padding:.45rem .7rem;
-  border-radius:999px;
-  font-size:.78rem;
-  font-weight:800;
-  border:1px solid rgba(255,255,255,.12);
-  backdrop-filter:blur(8px);
-}
-
-.dfv3-score-badge.good{
-  background:rgba(44,182,125,.18);
-  color:#d9fff0;
-}
-
-.dfv3-score-badge.watch{
-  background:rgba(209,162,70,.18);
-  color:#fff0c7;
-}
-
-.dfv3-score-badge.neutral{
-  background:rgba(107,127,147,.22);
-  color:#eef4fb;
-}
-
-.dfv3-data-badge{
-  display:inline-flex;
-  align-items:center;
-  padding:.42rem .68rem;
-  border-radius:999px;
-  font-size:.72rem;
-  font-weight:800;
-  border:1px solid rgba(255,255,255,.12);
-  backdrop-filter:blur(8px);
-}
-
-.dfv3-data-badge.live{
-  background:rgba(37,99,235,.22);
-  color:#dbeafe;
-}
-
-.dfv3-data-badge.pending{
-  background:rgba(148,163,184,.20);
-  color:#e2e8f0;
-}
-
-.dfv3-body{
-  display:grid;
-  gap:.8rem;
-  margin-top:.85rem;
-}
-
-.dfv3-opportunity-callout{
-  display:inline-flex;
-  align-items:center;
-  width:max-content;
-  padding:.36rem .62rem;
-  border-radius:999px;
-  background:rgba(34,197,94,.14);
-  border:1px solid rgba(74,222,128,.2);
-  color:#bbf7d0;
-  font-size:.76rem;
-  font-weight:800;
-}
-
-.dfv3-address{
-  font-weight:900;
-  color:var(--text);
-  font-size:1rem;
-  line-height:1.25;
-}
-
-.dfv3-location{
-  color:var(--muted);
-  font-size:.82rem;
-  margin-top:.2rem;
-}
-
-.dfv3-price-block{
-  padding:.95rem 1rem;
-  border-radius:14px;
-  background:linear-gradient(180deg, rgba(42,96,191,.22), rgba(19,43,82,.18));
-  border:1px solid rgba(126,171,255,.18);
-}
-
-.dfv3-price-label{
-  color:#a9c4ff;
-  font-size:.78rem;
-  margin-bottom:.2rem;
-}
-
-.dfv3-price-value{
-  color:#f6fbff;
-  font-size:1.42rem;
-  font-weight:900;
-  line-height:1.1;
-}
-
-.dfv3-price-sub{
-  color:var(--muted);
-  font-size:.76rem;
-  margin-top:.28rem;
-}
-
-.dfv3-muted-inline{
-  color:#aebed9;
-  font-size:1rem;
-  font-weight:700;
-}
-
-.dfv3-chip-row{
-  display:flex;
-  gap:.45rem;
-  flex-wrap:wrap;
-}
-
-.dfv3-chip{
-  display:inline-flex;
-  align-items:center;
-  padding:.35rem .55rem;
-  border-radius:999px;
-  background:rgba(255,255,255,.03);
-  border:1px solid rgba(255,255,255,.08);
-  color:var(--text);
-  font-size:.76rem;
-}
-
-.dfv3-metrics{
-  display:grid;
-  grid-template-columns:repeat(2,minmax(0,1fr));
-  gap:.6rem;
-}
-
-.dfv3-metrics div{
-  padding:.7rem .75rem;
-  border-radius:12px;
-  background:rgba(255,255,255,.03);
-  border:1px solid rgba(255,255,255,.08);
-}
-
-.dfv3-metrics span{
-  display:block;
-  color:var(--muted);
-  margin-bottom:.2rem;
-  font-size:.78rem;
-}
-
-.dfv3-metrics strong{
-  color:var(--text);
-  font-size:.92rem;
-}
-
-.dfv3-ai-snippet{
-  padding:.8rem .9rem;
-  border-radius:12px;
-  background:rgba(255,255,255,.02);
-  border:1px solid rgba(255,255,255,.08);
-  color:var(--muted);
-  font-size:.82rem;
-  line-height:1.55;
-}
-
-.dfv3-thesis-list{
-  margin:.45rem 0 0 1rem;
-  padding:0;
-}
-
-.dfv3-actions{
-  display:flex;
-  gap:.5rem;
-  flex-wrap:wrap;
-}
-
-.dfv3-empty{
-  min-height:240px;
-  display:flex;
-  flex-direction:column;
-  justify-content:center;
-  align-items:flex-start;
-  border:1px dashed rgba(255,255,255,.12);
-  background:rgba(255,255,255,.02);
-}
-
-@media (max-width:1200px){
-  .dfv3-shell{
-    grid-template-columns:1fr;
-  }
-
-  .dfv3-search-panel{
-    position:relative;
-    top:0;
-  }
-}
-
-@media (max-width:900px){
-  .dfv3-grid{
-    grid-template-columns:1fr;
-  }
-
-  .dfv3-summary-metrics{
-    min-width:unset;
-    width:100%;
-    grid-template-columns:1fr;
-  }
-}
-
-@media (max-width:640px){
-  .dfv3-form-grid{
-    grid-template-columns:1fr;
-  }
-}
+.dfv4-shell{display:grid;grid-template-columns:360px minmax(0,1fr);gap:1rem}
+.dfv4-search-panel{position:sticky;top:16px;align-self:start}
+.dfv4-panel-title,.dfv4-hero-title{margin:.35rem 0}
+.dfv4-form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.75rem}
+.dfv4-status{color:var(--muted);margin-top:.75rem;min-height:20px}
+.dfv4-panel-note{margin-top:1rem;padding:.9rem 1rem;border-radius:16px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08)}
+.dfv4-panel-note ul{margin:.55rem 0 0 1rem;padding:0;color:var(--muted)}
+.dfv4-results-wrap{display:grid;gap:1rem}
+.dfv4-hero-card{display:flex;justify-content:space-between;align-items:flex-start;gap:1rem;flex-wrap:wrap}
+.dfv4-hero-pill-row{display:flex;flex-wrap:wrap;gap:.5rem}
+.dfv4-hero-pill{display:inline-flex;align-items:center;padding:.45rem .7rem;border-radius:999px;background:rgba(37,99,235,.16);border:1px solid rgba(96,165,250,.22);color:#dbeafe;font-size:.78rem;font-weight:800}
+.dfv4-summary-head{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;flex-wrap:wrap}
+.dfv4-summary-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:.7rem;min-width:420px}
+.dfv4-summary-metric{padding:.85rem .9rem;border-radius:14px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08)}
+.dfv4-summary-metric span{display:block;color:var(--muted);font-size:.78rem;margin-bottom:.25rem}
+.dfv4-summary-metric strong{color:var(--text);font-size:1rem}
+.dfv4-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1rem}
+.dfv4-card{display:flex;flex-direction:column;overflow:hidden}
+.dfv4-thumb{position:relative;width:100%;height:220px;border-radius:16px;overflow:hidden;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08)}
+.dfv4-thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.dfv4-thumb-top{position:absolute;top:12px;left:12px;right:12px;display:flex;justify-content:space-between;align-items:flex-start;gap:.5rem}
+.dfv4-score-badge,.dfv4-tier-badge{padding:.45rem .7rem;border-radius:999px;font-size:.78rem;font-weight:800;border:1px solid rgba(255,255,255,.12);backdrop-filter:blur(8px)}
+.dfv4-score-badge.good,.dfv4-tier-badge.good,.dfv4-opportunity-callout.good{background:rgba(44,182,125,.18);color:#d9fff0}
+.dfv4-score-badge.watch,.dfv4-tier-badge.watch,.dfv4-opportunity-callout.watch{background:rgba(209,162,70,.18);color:#fff0c7}
+.dfv4-score-badge.risk,.dfv4-tier-badge.risk,.dfv4-opportunity-callout.risk{background:rgba(239,68,68,.18);color:#fecaca}
+.dfv4-score-badge.neutral,.dfv4-tier-badge.neutral,.dfv4-opportunity-callout.neutral{background:rgba(107,127,147,.22);color:#eef4fb}
+.dfv4-body{display:grid;gap:.8rem;margin-top:.85rem}
+.dfv4-opportunity-callout{display:inline-flex;align-items:center;width:max-content;padding:.36rem .62rem;border-radius:999px;font-size:.76rem;font-weight:800;border:1px solid rgba(255,255,255,.12)}
+.dfv4-address{font-weight:900;color:var(--text);font-size:1rem;line-height:1.25}
+.dfv4-location{color:var(--muted);font-size:.82rem;margin-top:.2rem}
+.dfv4-price-block{padding:.95rem 1rem;border-radius:14px;background:linear-gradient(180deg, rgba(42,96,191,.22), rgba(19,43,82,.18));border:1px solid rgba(126,171,255,.18)}
+.dfv4-price-label{color:#a9c4ff;font-size:.78rem;margin-bottom:.2rem}.dfv4-price-value{color:#f6fbff;font-size:1.42rem;font-weight:900;line-height:1.1}.dfv4-price-sub{color:var(--muted);font-size:.76rem;margin-top:.28rem}
+.dfv4-chip-row{display:flex;gap:.45rem;flex-wrap:wrap}.dfv4-chip{display:inline-flex;align-items:center;padding:.35rem .55rem;border-radius:999px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);color:var(--text);font-size:.76rem}
+.dfv4-engine-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.6rem}
+.dfv4-engine-grid div{padding:.7rem .75rem;border-radius:12px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08)}
+.dfv4-engine-grid span{display:block;color:var(--muted);margin-bottom:.2rem;font-size:.78rem}.dfv4-engine-grid strong{color:var(--text);font-size:.92rem}
+.dfv4-ai-snippet{padding:.8rem .9rem;border-radius:12px;background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.08);color:var(--muted);font-size:.82rem;line-height:1.55}
+.dfv4-thesis-list{margin:.45rem 0 0 1rem;padding:0}
+.dfv4-engine-warning{margin-top:.5rem;color:#fca5a5;font-size:.78rem}
+.dfv4-actions{display:flex;gap:.5rem;flex-wrap:wrap}
+.dfv4-empty{min-height:240px;display:flex;flex-direction:column;justify-content:center;align-items:flex-start;border:1px dashed rgba(255,255,255,.12);background:rgba(255,255,255,.02)}
+@media (max-width:1200px){.dfv4-shell{grid-template-columns:1fr}.dfv4-search-panel{position:relative;top:0}}
+@media (max-width:900px){.dfv4-grid{grid-template-columns:1fr}.dfv4-summary-metrics{min-width:unset;width:100%;grid-template-columns:1fr 1fr}}
+@media (max-width:640px){.dfv4-form-grid,.dfv4-engine-grid,.dfv4-summary-metrics{grid-template-columns:1fr}}
 </style>
-
 {% endblock %}
+
+{#
+Flask proxy route to add in your investor blueprint:
+
+@bp.post('/api/deal-architect-proxy')
+def api_deal_architect_proxy():
+    payload = request.get_json(force=True) or {}
+    engine_url = current_app.config['RENOVATION_ENGINE_URL'].rstrip('/') + '/v1/deal_architect'
+    headers = {'X-API-Key': current_app.config['RENOVATION_ENGINE_API_KEY']}
+    resp = requests.post(engine_url, json=payload, headers=headers, timeout=20)
+    return jsonify(resp.json()), resp.status_code
+
+# Also register endpoint name: investor.api_deal_architect_proxy
+#}
