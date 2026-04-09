@@ -61,6 +61,17 @@ Open any address and let Ravlo compare the best plan before you move into scope,
           {% endif %}
         </div>
       </form>
+
+      {% if address %}
+      <div class="ps-loaded-card">
+        <div class="eyebrow">PROPERTY QUEUED</div>
+        <strong>{{ address }}</strong>
+        <p class="muted mb-0">
+          {{ [city, state, zip_code]|select|join(', ') or "Address loaded from Deal Finder." }}
+        </p>
+        <p class="muted mb-0">This property is ready for the next Project Studio step: snapshot, strategy compare, and scope planning.</p>
+      </div>
+      {% endif %}
     </div>
 
     <div class="ravlo-card pad">
@@ -117,6 +128,8 @@ Open any address and let Ravlo compare the best plan before you move into scope,
 .ps-step span{display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:999px;background:rgba(255,255,255,.05);font-weight:800;color:#fff}
 .ps-step strong{display:block;color:#fff;margin-bottom:.15rem}
 .ps-step p{margin:0;color:var(--muted)}
+.ps-loaded-card{display:grid;gap:.45rem;margin-top:1rem;padding:1rem 1.05rem;border-radius:18px;background:rgba(37,99,235,.08);border:1px solid rgba(96,165,250,.22)}
+.ps-loaded-card strong{color:#fff;font-size:1rem}
 .ps-bullet-list{display:grid;gap:.7rem;margin-top:1rem}
 .ps-bullet-list div{padding:.9rem 1rem;border-radius:16px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);color:#fff}
 @media (max-width:900px){.ps-grid,.ps-form-grid{grid-template-columns:1fr}}
