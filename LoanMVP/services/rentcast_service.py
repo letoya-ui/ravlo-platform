@@ -1,4 +1,5 @@
 import os
+import re
 import requests
 from typing import Dict, Any, List
 
@@ -21,7 +22,7 @@ def _rentcast_headers() -> Dict[str, str]:
     }
 
 
-def _safe_get(url: str, params: Dict[str, Any], timeout: int = 12) -> Dict[str, Any]:
+def _safe_get(url: str, params: Dict[str, Any], timeout: int = 12) -> Any:
     try:
         resp = requests.get(url, headers=_rentcast_headers(), params=params, timeout=timeout)
     except requests.RequestException as e:
@@ -37,6 +38,18 @@ def _safe_get(url: str, params: Dict[str, Any], timeout: int = 12) -> Dict[str, 
         return resp.json() or {}
     except Exception as e:
         raise RentCastServiceError(f"Invalid JSON response: {e}") from e
+
+
+def _extract_listing_items(payload: Any) -> List[Dict[str, Any]]:
+    if isinstance(payload, list):
+        return [item for item in payload if isinstance(item, dict)]
+
+    if isinstance(payload, dict):
+        items = payload.get("listings") or payload.get("results") or payload.get("data") or []
+        if isinstance(items, list):
+            return [item for item in items if isinstance(item, dict)]
+
+    return []
 
 
 def _full_address(address: str, city: str, state: str, zip_code: str = "") -> str:
@@ -93,20 +106,7 @@ def get_rentcast_sale_listings(
         "limit": limit,
     }
 
-    data = _safe_get(url, params)
-
-    if isinstance(data, list):
-        return data
-
-    if isinstance(data, dict):
-        return (
-            data.get("listings")
-            or data.get("results")
-            or data.get("data")
-            or []
-        )
-
-    return []
+    return _extract_listing_items(_safe_get(url, params))
 
 
 def normalize_rentcast_sale_listing(item: Dict[str, Any]) -> Dict[str, Any]:
@@ -134,14 +134,36 @@ def normalize_rentcast_sale_listing(item: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def _normalize_address_for_match(value: str) -> str:
+    replacements = {
+        " street": " st",
+        " avenue": " ave",
+        " road": " rd",
+        " drive": " dr",
+        " lane": " ln",
+        " court": " ct",
+        " place": " pl",
+        " boulevard": " blvd",
+        " terrace": " ter",
+        " highway": " hwy",
+        " parkway": " pkwy",
+        " north": " n",
+        " south": " s",
+        " east": " e",
+        " west": " w",
+    }
+
+    normalized = f" {((value or '').lower())} "
+    normalized = normalized.replace(".", " ").replace(",", " ").replace("#", " ")
+    normalized = re.sub(r"\bapartment\b|\bapt\b|\bunit\b|\bsuite\b", " ", normalized)
+    for original, replacement in replacements.items():
+        normalized = normalized.replace(original, replacement)
+
     return (
-        (value or "")
-        .lower()
-        .replace(".", "")
-        .replace(",", "")
-        .replace("#", "")
-        .replace("  ", " ")
+        normalized
+        .replace("-", " ")
+        .replace("/", " ")
         .strip()
+        .replace("  ", " ")
     )
 
 
@@ -158,12 +180,22 @@ def find_rentcast_sale_listing(
     """
     listings = get_rentcast_sale_listings(city=city, state=state, status="Active", limit=limit)
     target = _normalize_address_for_match(address)
+    zip_digits = "".join(ch for ch in str(zip_code or "") if ch.isdigit())
 
     if not listings:
         return {}
 
+    scoped_listings = listings
+    if zip_digits:
+        filtered = [
+            item for item in listings
+            if "".join(ch for ch in str(item.get("zipCode") or item.get("zip") or "") if ch.isdigit()) == zip_digits
+        ]
+        if filtered:
+            scoped_listings = filtered
+
     # exact-ish address match first
-    for item in listings:
+    for item in scoped_listings:
         listing_addr = _normalize_address_for_match(
             item.get("address")
             or item.get("formattedAddress")
@@ -175,7 +207,7 @@ def find_rentcast_sale_listing(
             return item
 
     # fallback contains match
-    for item in listings:
+    for item in scoped_listings:
         listing_addr = _normalize_address_for_match(
             item.get("address")
             or item.get("formattedAddress")
