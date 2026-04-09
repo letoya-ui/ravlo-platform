@@ -4982,11 +4982,227 @@ def api_deal_architect_proxy():
 # UPDATED PROPERTY TOOL SEARCH
 # -------------------------------------------------------------------
 
+
+
+            
+
+
+
+def _clean_str(value):
+    if value is None:
+        return None
+    value = str(value).strip()
+    return value or None
+
+
+def _clean_num(value):
+    if value in (None, "", "None"):
+        return None
+    try:
+        if isinstance(value, str):
+            value = value.replace("$", "").replace(",", "").strip()
+        return float(value)
+    except Exception:
+        return None
+
+
+def _clean_int(value):
+    num = _clean_num(value)
+    if num is None:
+        return None
+    try:
+        return int(round(num))
+    except Exception:
+        return None
+
+
+def _safe_json_list(value):
+    if isinstance(value, list):
+        return value
+    return []
+
+
+def _get_investor_profile_or_error():
+    ip = InvestorProfile.query.filter_by(user_id=current_user.id).first()
+    if not ip:
+        return None, (
+            jsonify({
+                "status": "error",
+                "message": "Profile not found."
+            }),
+            400,
+        )
+    return ip, None
+
+
+def _find_existing_saved_property(ip, payload):
+    address = _clean_str(payload.get("address"))
+    property_id = _clean_str(payload.get("property_id") or payload.get("attom_id"))
+
+    fk = _profile_id_filter(SavedProperty, ip.id)
+    existing = None
+
+    if property_id:
+        existing = SavedProperty.query.filter_by(
+            **fk,
+            property_id=property_id
+        ).first()
+
+    if not existing and address:
+        existing = SavedProperty.query.filter(
+            getattr(SavedProperty, "investor_profile_id", SavedProperty.borrower_profile_id) == ip.id,
+            db.func.lower(SavedProperty.address) == address.lower()
+        ).first()
+
+    return existing
+
+
+def _assign_if_has_attr(model_obj, field_name, value):
+    if hasattr(model_obj, field_name) and value is not None:
+        setattr(model_obj, field_name, value)
+
+
+def _persist_property_core_fields(saved, payload):
+    """
+    Persist richer canonical fields when the SavedProperty model supports them.
+    This is intentionally defensive so it works with your current schema.
+    """
+    address = _clean_str(payload.get("address"))
+    city = _clean_str(payload.get("city"))
+    state = _clean_str(payload.get("state"))
+    zipcode = _clean_str(payload.get("zip") or payload.get("zip_code"))
+    property_id = _clean_str(payload.get("property_id") or payload.get("attom_id"))
+
+    price = _clean_num(payload.get("price") or payload.get("purchase_price") or payload.get("display_value"))
+    arv = _clean_num(payload.get("arv") or payload.get("estimated_value_engine") or payload.get("market_value"))
+    market_value = _clean_num(payload.get("market_value"))
+    assessed_value = _clean_num(payload.get("assessed_value"))
+    monthly_rent = _clean_num(payload.get("monthly_rent") or payload.get("monthly_rent_estimate"))
+    last_sale_price = _clean_num(payload.get("last_sale_price"))
+
+    sqft = _clean_int(payload.get("sqft") or payload.get("square_feet"))
+    lot_size_sqft = _clean_int(payload.get("lot_size_sqft"))
+    beds = _clean_num(payload.get("beds"))
+    baths = _clean_num(payload.get("baths"))
+    year_built = _clean_int(payload.get("year_built"))
+
+    latitude = _clean_num(payload.get("latitude"))
+    longitude = _clean_num(payload.get("longitude"))
+
+    strategy = _clean_str(payload.get("strategy"))
+    strategy_tag = _clean_str(payload.get("strategy_tag"))
+    recommended_strategy = _clean_str(payload.get("recommended_strategy"))
+    estimated_best_use = _clean_str(payload.get("estimated_best_use"))
+    property_type = _clean_str(payload.get("property_type"))
+
+    deal_score = _clean_num(payload.get("deal_score"))
+    opportunity_tier = _clean_str(payload.get("opportunity_tier"))
+    deal_finder_signal = _clean_str(payload.get("deal_finder_signal"))
+    next_step = _clean_str(payload.get("next_step"))
+    comp_confidence = _clean_str(payload.get("comp_confidence"))
+    image_url = _clean_str(payload.get("image_url"))
+    description = _clean_str(payload.get("description"))
+
+    if address:
+        saved.address = address
+
+    if property_id:
+        _assign_if_has_attr(saved, "property_id", property_id)
+
+    # keep your existing core fields in sync
+    if price is not None:
+        _assign_if_has_attr(saved, "price", str(int(price)) if float(price).is_integer() else str(price))
+
+    if sqft is not None:
+        _assign_if_has_attr(saved, "sqft", sqft)
+
+    if zipcode:
+        if hasattr(saved, "zipcode"):
+            saved.zipcode = zipcode
+        elif hasattr(saved, "zip_code"):
+            saved.zip_code = zipcode
+
+    # richer optional fields
+    _assign_if_has_attr(saved, "city", city)
+    _assign_if_has_attr(saved, "state", state)
+    _assign_if_has_attr(saved, "property_type", property_type)
+    _assign_if_has_attr(saved, "beds", beds)
+    _assign_if_has_attr(saved, "baths", baths)
+    _assign_if_has_attr(saved, "year_built", year_built)
+    _assign_if_has_attr(saved, "square_feet", sqft)
+    _assign_if_has_attr(saved, "lot_size_sqft", lot_size_sqft)
+    _assign_if_has_attr(saved, "assessed_value", assessed_value)
+    _assign_if_has_attr(saved, "market_value", market_value)
+    _assign_if_has_attr(saved, "arv", arv)
+    _assign_if_has_attr(saved, "monthly_rent", monthly_rent)
+    _assign_if_has_attr(saved, "monthly_rent_estimate", monthly_rent)
+    _assign_if_has_attr(saved, "last_sale_price", last_sale_price)
+    _assign_if_has_attr(saved, "latitude", latitude)
+    _assign_if_has_attr(saved, "longitude", longitude)
+
+    _assign_if_has_attr(saved, "strategy", strategy)
+    _assign_if_has_attr(saved, "strategy_tag", strategy_tag)
+    _assign_if_has_attr(saved, "recommended_strategy", recommended_strategy)
+    _assign_if_has_attr(saved, "estimated_best_use", estimated_best_use)
+
+    _assign_if_has_attr(saved, "deal_score", deal_score)
+    _assign_if_has_attr(saved, "opportunity_tier", opportunity_tier)
+    _assign_if_has_attr(saved, "deal_finder_signal", deal_finder_signal)
+    _assign_if_has_attr(saved, "next_step", next_step)
+    _assign_if_has_attr(saved, "comp_confidence", comp_confidence)
+
+    _assign_if_has_attr(saved, "image_url", image_url)
+    _assign_if_has_attr(saved, "description", description)
+
+    # optional JSON/meta fields if your model supports them
+    _assign_if_has_attr(saved, "primary_strengths", _safe_json_list(payload.get("primary_strengths")))
+    _assign_if_has_attr(saved, "primary_risks", _safe_json_list(payload.get("primary_risks")))
+    _assign_if_has_attr(saved, "risk_notes", _safe_json_list(payload.get("risk_notes")))
+    _assign_if_has_attr(saved, "why_it_made_list", _safe_json_list(payload.get("why_it_made_list")))
+
+    # status / timestamps if present on model
+    _assign_if_has_attr(saved, "analysis_status", "pending")
+    _assign_if_has_attr(saved, "budget_status", "pending")
+    _assign_if_has_attr(saved, "last_synced_at", datetime.utcnow())
+    _assign_if_has_attr(saved, "updated_at", datetime.utcnow())
+
+
+def _upsert_saved_property_from_payload(ip, payload):
+    address = _clean_str(payload.get("address"))
+    if not address:
+        raise ValueError("Address is required.")
+
+    price = payload.get("price") or payload.get("purchase_price") or payload.get("display_value")
+    sqft = _clean_int(payload.get("sqft") or payload.get("square_feet"))
+    zipcode = _clean_str(payload.get("zip") or payload.get("zip_code"))
+    property_id = _clean_str(payload.get("property_id") or payload.get("attom_id"))
+
+    existing = _find_existing_saved_property(ip, payload)
+    fk = _profile_id_filter(SavedProperty, ip.id)
+
+    if not existing:
+        existing = SavedProperty(
+            **fk,
+            property_id=property_id if property_id else None,
+            address=address,
+            price=str(price or ""),
+            sqft=sqft,
+            zipcode=zipcode,
+            saved_at=datetime.utcnow(),
+            created_at=datetime.utcnow(),
+        )
+        db.session.add(existing)
+        db.session.flush()
+
+    _persist_property_core_fields(existing, payload)
+    _store_saved_property_media(existing, payload, source="property_tool")
+    return existing
+
+
 @investor_bp.route("/api/property_tool_search", methods=["POST"])
 @login_required
 @role_required("investor")
 def api_property_tool_search():
-
     payload = request.get_json(force=True) or {}
 
     address = (payload.get("address") or "").strip()
@@ -5020,7 +5236,6 @@ def api_property_tool_search():
         results = []
 
         for idx, raw in enumerate(raw_matches[:page_size]):
-
             raw_address = (
                 raw.get("address_line1")
                 or raw.get("address")
@@ -5036,9 +5251,6 @@ def api_property_tool_search():
             if not raw_address:
                 continue
 
-            # -------------------------
-            # STEP 1: YOUR EXISTING FLOW
-            # -------------------------
             if idx < enrich_limit and raw_city and raw_state:
                 bundle = build_dealfinder_profile(
                     address=raw_address,
@@ -5055,9 +5267,6 @@ def api_property_tool_search():
             else:
                 result = _build_attom_fallback(raw)
 
-            # -------------------------
-            # STEP 2: 🔥 DEAL ARCHITECT
-            # -------------------------
             if idx < enrich_limit:
                 try:
                     engine_payload = {
@@ -5084,7 +5293,7 @@ def api_property_tool_search():
                     }
 
                     engine_resp = requests.post(
-                        current_app.config["RENOVATION_ENGINE_URL"] + "/v1/deal_architect",
+                        current_app.config["RENOVATION_ENGINE_URL"].rstrip("/") + "/v1/deal_architect",
                         json=engine_payload,
                         headers={"X-API-Key": current_app.config["RENOVATION_ENGINE_API_KEY"]},
                         timeout=12
@@ -5092,7 +5301,7 @@ def api_property_tool_search():
 
                     if engine_resp.ok:
                         engine = engine_resp.json()
-                        meta = engine.get("meta", {})
+                        meta = engine.get("meta", {}) or {}
 
                         result.update({
                             "deal_score": engine.get("deal_score"),
@@ -5105,20 +5314,17 @@ def api_property_tool_search():
                             "monthly_rent_estimate": meta.get("monthly_rent_estimate"),
                             "next_step": engine.get("next_step"),
                             "engine_value": engine.get("estimated_value"),
+                            "estimated_value_engine": engine.get("estimated_value"),
                             "valuation_source_label": meta.get("valuation_source_label"),
                             "comp_confidence": meta.get("comp_confidence"),
                         })
                     else:
                         result["engine_error"] = "Deal Architect failed"
-
                 except Exception as e:
                     result["engine_error"] = str(e)
 
             results.append(_annotate_deal_finder_opportunity(result, strategy))
 
-        # -------------------------
-        # STEP 3: SORT BY DEAL SCORE
-        # -------------------------
         results = sorted(
             results,
             key=lambda r: (r.get("deal_score") is not None, r.get("deal_score") or 0),
@@ -5147,18 +5353,11 @@ def api_property_tool_search():
             "results": [],
         }), 500
 
-# -------------------------------------------------------------------
-# OPTIONAL: ENGINE-ENRICHED DETAIL ROUTE
-# -------------------------------------------------------------------
 
 @investor_bp.route("/api/property_detail", methods=["POST"])
 @login_required
 @role_required("investor")
 def api_property_detail():
-    """
-    Unified property detail endpoint using ATTOM + Realtor.com enrichment,
-    with optional Deal Architect signal enrichment.
-    """
     payload = request.get_json(force=True) or {}
     address = (payload.get("address") or "").strip()
 
@@ -5225,9 +5424,6 @@ def api_property_detail():
         "engine_error": engine_error,
     })
 
-# ----------------------------
-# api: save
-# ----------------------------
 
 @investor_bp.route("/api/intelligence/save", methods=["POST"])
 @investor_bp.route("/api/property_tool_save", methods=["POST"])
@@ -5243,73 +5439,27 @@ def api_property_tool_save():
             "message": "Address is required to save."
         }), 400
 
-    ip = InvestorProfile.query.filter_by(user_id=current_user.id).first()
-    if not ip:
-        return jsonify({
-            "status": "error",
-            "message": "Profile not found."
-        }), 400
-
-    zipcode = (payload.get("zip") or payload.get("zip_code") or "").strip() or None
-    price = payload.get("price") or payload.get("display_value")
-    sqft = payload.get("sqft") or payload.get("square_feet")
-    property_id = payload.get("property_id") or payload.get("attom_id")
+    ip, error = _get_investor_profile_or_error()
+    if error:
+        return error
 
     try:
-        sqft = int(float(sqft)) if sqft not in (None, "", "None") else None
-    except Exception:
-        sqft = None
-
-    fk = _profile_id_filter(SavedProperty, ip.id)
-
-    existing = None
-
-    if property_id:
-        existing = SavedProperty.query.filter_by(
-            **fk,
-            property_id=str(property_id)
-        ).first()
-
-    if not existing:
-        existing = SavedProperty.query.filter(
-            getattr(SavedProperty, "investor_profile_id", SavedProperty.borrower_profile_id) == ip.id,
-            db.func.lower(SavedProperty.address) == address.lower()
-        ).first()
-
-    if existing:
-        _store_saved_property_media(existing, payload, source="property_tool")
+        saved = _upsert_saved_property_from_payload(ip, payload)
         db.session.commit()
+
         return jsonify({
             "status": "ok",
-            "message": "Already saved.",
-            "saved_id": existing.id
+            "message": "Saved.",
+            "saved_id": saved.id
         })
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.exception("Property Tool save failed")
+        return jsonify({
+            "status": "error",
+            "message": f"Could not save property: {e}"
+        }), 500
 
-    saved = SavedProperty(
-        **fk,
-        property_id=str(property_id) if property_id else None,
-        address=address,
-        price=str(price or ""),
-        sqft=sqft,
-        zipcode=zipcode,
-        saved_at=datetime.utcnow(),
-        created_at=datetime.utcnow(),
-    )
-    db.session.add(saved)
-    db.session.flush()
-    _store_saved_property_media(saved, payload, source="property_tool")
-    db.session.commit()
-
-    return jsonify({
-        "status": "ok",
-        "message": "Saved.",
-        "saved_id": saved.id
-    })
-
-
-# ----------------------------
-# api: save + analyze
-# ----------------------------
 
 @investor_bp.route("/api/intelligence/save-and-analyze", methods=["POST"])
 @investor_bp.route("/api/property_tool_save_and_analyze", methods=["POST"])
@@ -5325,68 +5475,41 @@ def api_property_tool_save_and_analyze():
             "message": "Address is required to analyze."
         }), 400
 
-    ip = InvestorProfile.query.filter_by(user_id=current_user.id).first()
-    if not ip:
-        return jsonify({
-            "status": "error",
-            "message": "Profile not found."
-        }), 400
-
-    zipcode = (payload.get("zip") or payload.get("zip_code") or "").strip() or None
-    price = payload.get("price") or payload.get("display_value")
-    sqft = payload.get("sqft") or payload.get("square_feet")
-    property_id = payload.get("property_id") or payload.get("attom_id")
+    ip, error = _get_investor_profile_or_error()
+    if error:
+        return error
 
     try:
-        sqft = int(float(sqft)) if sqft not in (None, "", "None") else None
-    except Exception:
-        sqft = None
+        saved = _upsert_saved_property_from_payload(ip, payload)
 
-    fk = _profile_id_filter(SavedProperty, ip.id)
+        # mark downstream tools as stale / pending if your model supports these fields
+        _assign_if_has_attr(saved, "analysis_status", "pending")
+        _assign_if_has_attr(saved, "budget_status", "pending")
+        _assign_if_has_attr(saved, "scope_status", "pending")
+        _assign_if_has_attr(saved, "updated_at", datetime.utcnow())
 
-    existing = None
+        db.session.commit()
 
-    if property_id:
-        existing = SavedProperty.query.filter_by(
-            **fk,
-            property_id=str(property_id)
-        ).first()
-
-    if not existing:
-        existing = SavedProperty.query.filter(
-            getattr(SavedProperty, "investor_profile_id", SavedProperty.borrower_profile_id) == ip.id,
-            db.func.lower(SavedProperty.address) == address.lower()
-        ).first()
-
-    if not existing:
-        existing = SavedProperty(
-            **fk,
-            property_id=str(property_id) if property_id else None,
-            address=address,
-            price=str(price or ""),
-            sqft=sqft,
-            zipcode=zipcode,
-            saved_at=datetime.utcnow(),
-            created_at=datetime.utcnow(),
+        deal_url = url_for(
+            "investor.deal_workspace",
+            prop_id=saved.id,
+            mode=(payload.get("strategy") or "flip")
         )
-        db.session.add(existing)
-        db.session.flush()
 
-    _store_saved_property_media(existing, payload, source="property_tool")
-    db.session.commit()
+        return jsonify({
+            "status": "ok",
+            "message": "Deal created.",
+            "saved_id": saved.id,
+            "deal_url": deal_url
+        })
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.exception("Property Tool save-and-analyze failed")
+        return jsonify({
+            "status": "error",
+            "message": f"Could not create deal: {e}"
+        }), 500
 
-    deal_url = url_for("investor.deal_workspace", prop_id=existing.id, mode="flip")
-
-    return jsonify({
-        "status": "ok",
-        "saved_id": existing.id,
-        "deal_url": deal_url
-    })
-
-
-# ----------------------------
-# api: card
-# ----------------------------
 
 @investor_bp.route("/api/intelligence/card", methods=["POST"])
 @investor_bp.route("/api/property_tool_card", methods=["POST"])
@@ -5441,10 +5564,6 @@ def api_property_tool_card():
         }), 500
 
 
-# ----------------------------
-# api: detail handoff
-# ----------------------------
-
 @investor_bp.route("/api/property_tool_view_details", methods=["POST"])
 @login_required
 @role_required("investor")
@@ -5458,64 +5577,38 @@ def api_property_tool_view_details():
             "message": "Address is required."
         }), 400
 
-    ip = InvestorProfile.query.filter_by(user_id=current_user.id).first()
-    if not ip:
-        return jsonify({
-            "status": "error",
-            "message": "Investor profile not found."
-        }), 400
-
-    zipcode = (payload.get("zip") or payload.get("zip_code") or "").strip() or None
-    price = payload.get("price") or payload.get("display_value")
-    sqft = payload.get("sqft") or payload.get("square_feet")
-    property_id = payload.get("property_id") or payload.get("attom_id")
+    ip, error = _get_investor_profile_or_error()
+    if error:
+        return error
 
     try:
-        sqft = int(float(sqft)) if sqft not in (None, "", "None") else None
-    except Exception:
-        sqft = None
-
-    fk = _profile_id_filter(SavedProperty, ip.id)
-
-    existing = None
-
-    if property_id:
-        existing = SavedProperty.query.filter_by(
-            **fk,
-            property_id=str(property_id)
-        ).first()
-
-    if not existing:
-        existing = SavedProperty.query.filter(
-            getattr(SavedProperty, "investor_profile_id", SavedProperty.borrower_profile_id) == ip.id,
-            db.func.lower(SavedProperty.address) == address.lower()
-        ).first()
-
-    if not existing:
-        existing = SavedProperty(
-            **fk,
-            property_id=str(property_id) if property_id else None,
-            address=address,
-            price=str(price or ""),
-            sqft=sqft,
-            zipcode=zipcode,
-            saved_at=datetime.utcnow(),
-            created_at=datetime.utcnow(),
-        )
-        db.session.add(existing)
+        saved = _upsert_saved_property_from_payload(ip, payload)
         db.session.commit()
 
-    detail_url = url_for(
-        "investor.property_explore_plus",
-        prop_id=existing.id,
-        source="property_tool"
-    )
+        detail_url = url_for(
+            "investor.property_explore_plus",
+            prop_id=saved.id,
+            source="property_tool"
+        )
 
-    return jsonify({
-        "status": "ok",
-        "saved_id": existing.id,
-        "detail_url": detail_url
-    })
+        return jsonify({
+            "status": "ok",
+            "saved_id": saved.id,
+            "detail_url": detail_url
+        })
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.exception("Property Tool detail handoff failed")
+        return jsonify({
+            "status": "error",
+            "message": f"Could not open property details: {e}"
+        }), 500
+
+
+
+
+
+
          
 # =========================================================
 # 💼 INVESTOR • DEAL STUDIO (workspace + deals + visualizer + exports)
