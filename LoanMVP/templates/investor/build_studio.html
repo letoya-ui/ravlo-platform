@@ -1344,10 +1344,12 @@
 
     const statusPill = document.getElementById("generation-status-pill");
 
-    const blueprintFileInput = document.getElementById("blueprint_file");
-    const landImageInput = document.getElementById("land_image");
-    const blueprintSeedPreview = document.getElementById("blueprintSeedPreview");
-    const landSeedPreview = document.getElementById("landSeedPreview");
+      const blueprintFileInput = document.getElementById("blueprint_file");
+      const landImageInput = document.getElementById("land_image");
+      const referenceImageInput = document.getElementById("reference_image_url");
+      const blueprintSeedPreview = document.getElementById("blueprintSeedPreview");
+      const landSeedPreview = document.getElementById("landSeedPreview");
+      const savedLandGallery = document.getElementById("savedLandGallery");
 
     const addRoomModal = document.getElementById("addRoomModal");
     const openAddRoomBtn = document.getElementById("openAddRoomBtn");
@@ -1700,9 +1702,30 @@
       setPreview(this, blueprintSeedPreview, "No blueprint file selected");
     });
 
-    landImageInput?.addEventListener("change", function () {
-      setPreview(this, landSeedPreview, "No land image selected");
-    });
+      landImageInput?.addEventListener("change", function () {
+        setPreview(this, landSeedPreview, "No land image selected");
+      });
+
+      function selectSavedLand(url) {
+        if (!url) return;
+
+        if (referenceImageInput) referenceImageInput.value = url;
+        if (landImageInput) landImageInput.value = "";
+
+        if (landSeedPreview) {
+          landSeedPreview.innerHTML = `<img src="${escapeHtml(url)}" alt="Saved land reference"><span>Saved property photo selected</span>`;
+        }
+
+        savedLandGallery?.querySelectorAll(".seed-thumb").forEach((btn) => {
+          btn.classList.toggle("is-active", btn.dataset.seedUrl === url);
+        });
+      }
+
+      savedLandGallery?.querySelectorAll(".seed-thumb").forEach((btn) => {
+        btn.addEventListener("click", function () {
+          selectSavedLand(this.dataset.seedUrl || "");
+        });
+      });
 
     downloadPackageBtn?.addEventListener("click", async function () {
       const text = this.dataset.links || "";
