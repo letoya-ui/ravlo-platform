@@ -222,12 +222,81 @@ Open any address and let Ravlo compare the best plan before you move into scope,
         </div>
 
         <div class="ps-action-row">
-          <button class="ravlo-btn primary" type="button">{{ "Choose " ~ card.title }}</button>
+          <a
+            class="ravlo-btn primary"
+            href="{{ url_for('investor.project_studio', address=address, city=city, state=state, zip=zip_code, strategy=card.key) }}"
+          >{{ "Choose " ~ card.title }}</a>
         </div>
       </article>
       {% endfor %}
     </div>
   </section>
+
+  {% if selected_card %}
+  <section class="ps-grid ps-build-grid">
+    <div class="ravlo-card pad">
+      <div class="ps-section-head">
+        <div>
+          <div class="eyebrow">STEP 4</div>
+          <h3 class="ps-title">Scope Builder</h3>
+        </div>
+        <span class="ps-status-pill">{{ selected_card.title }} Selected</span>
+      </div>
+
+      <div class="ps-callout">
+        <strong>You selected: {{ selected_card.title }}</strong>
+        <p>{{ selected_card.why }}</p>
+      </div>
+
+      <div class="ps-scope-grid">
+        {% for option in scope_options %}
+        <a
+          class="ps-scope-card {% if selected_scope == option.value %}active{% endif %}"
+          href="{{ url_for('investor.project_studio', address=address, city=city, state=state, zip=zip_code, strategy=selected_strategy, scope=option.value) }}"
+        >
+          <strong>{{ option.label }}</strong>
+          <p>{{ option.detail }}</p>
+        </a>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="ravlo-card pad">
+      <div class="ps-section-head">
+        <div>
+          <div class="eyebrow">STEP 5</div>
+          <h3 class="ps-title">Planning Budget</h3>
+        </div>
+      </div>
+
+      {% if scope_budget %}
+      <div class="ps-budget-band">
+        <div class="ps-value-block">
+          <span>Budget Range</span>
+          <strong>${{ "{:,.0f}".format(scope_budget.budget_low|float) }} - ${{ "{:,.0f}".format(scope_budget.budget_high|float) }}</strong>
+        </div>
+        <div class="ps-value-block">
+          <span>{{ scope_budget.outcome_label }}</span>
+          <strong>{% if scope_budget.outcome is not none %}${{ "{:,.0f}".format(scope_budget.outcome|float) }}{% else %}—{% endif %}</strong>
+        </div>
+        <div class="ps-value-block">
+          <span>Timeline</span>
+          <strong>{{ scope_budget.timeline }}</strong>
+        </div>
+        <div class="ps-value-block">
+          <span>Confidence</span>
+          <strong>{{ scope_budget.confidence }}</strong>
+        </div>
+      </div>
+
+      <div class="ps-callout">
+        <strong>Decision-quality range</strong>
+        <p>This is the rough planning layer, not a contractor-grade quote. Once you confirm the strategy and scope, Ravlo can move you into execution tools like quoting, partners, and financing.</p>
+      </div>
+      {% endif %}
+    </div>
+  </section>
+  {% endif %}
   {% endif %}
 
   <section class="ps-grid">
@@ -263,6 +332,7 @@ Open any address and let Ravlo compare the best plan before you move into scope,
 .ps-pill-row{display:flex;flex-wrap:wrap;gap:.55rem}
 .ps-pill{display:inline-flex;align-items:center;padding:.45rem .75rem;border-radius:999px;background:rgba(37,99,235,.14);border:1px solid rgba(96,165,250,.22);color:#dbeafe;font-size:.8rem;font-weight:800}
 .ps-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}
+.ps-build-grid{align-items:start}
 .ps-studio-shell{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(320px,.75fr);gap:18px}
 .ps-title{margin:.35rem 0 .55rem}
 .ps-form{display:grid;gap:.8rem;margin-top:1rem}
@@ -294,6 +364,12 @@ Open any address and let Ravlo compare the best plan before you move into scope,
 .ps-strategy-card h4{margin:0;color:#fff;font-size:1.3rem}
 .ps-card-metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.75rem}
 .ps-card-foot{display:grid;gap:.75rem}
+.ps-scope-grid{display:grid;gap:.8rem;margin-top:1rem}
+.ps-scope-card{display:grid;gap:.35rem;padding:1rem 1.05rem;border-radius:18px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);text-decoration:none;color:inherit;transition:all .2s ease}
+.ps-scope-card strong{color:#fff}
+.ps-scope-card p{margin:0;color:var(--muted);line-height:1.55}
+.ps-scope-card:hover,.ps-scope-card.active{border-color:rgba(96,165,250,.28);background:rgba(37,99,235,.08);transform:translateY(-1px)}
+.ps-budget-band{display:grid;gap:.75rem}
 .ps-step-list{display:grid;gap:.85rem;margin-top:1rem}
 .ps-step{display:grid;grid-template-columns:auto 1fr;gap:.8rem;padding:.9rem 1rem;border-radius:16px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08)}
 .ps-step span{display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:999px;background:rgba(255,255,255,.05);font-weight:800;color:#fff}

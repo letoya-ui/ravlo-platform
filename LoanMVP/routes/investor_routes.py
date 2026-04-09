@@ -4396,12 +4396,17 @@ def project_studio():
     city = (request.args.get("city") or "").strip()
     state = (request.args.get("state") or "").strip()
     zip_code = (request.args.get("zip") or request.args.get("zip_code") or "").strip()
+    selected_strategy = (request.args.get("strategy") or "").strip().lower()
+    selected_scope = (request.args.get("scope") or "").strip().lower()
     snapshot = None
     flags = []
     strategy_cards = []
     ai_summary = None
     engine_error = None
     market_snapshot = {}
+    selected_card = None
+    scope_options = []
+    scope_budget = None
 
     if address:
         try:
@@ -4417,6 +4422,17 @@ def project_studio():
             ai_summary = studio_context.get("ai_summary")
             engine_error = studio_context.get("engine_error")
             market_snapshot = studio_context.get("market_snapshot") or {}
+
+            if strategy_cards:
+                valid_keys = {str(card.get("key") or "").lower() for card in strategy_cards}
+                if selected_strategy not in valid_keys:
+                    selected_strategy = str((strategy_cards[0].get("key") or "")).lower()
+                selected_card = next((card for card in strategy_cards if str(card.get("key") or "").lower() == selected_strategy), None)
+                scope_options = _project_studio_scope_options(selected_strategy)
+                valid_scopes = {str(opt.get("value") or "").lower() for opt in scope_options}
+                if selected_scope not in valid_scopes and scope_options:
+                    selected_scope = str(scope_options[0].get("value") or "").lower()
+                scope_budget = _project_studio_scope_budget(selected_card, selected_strategy, selected_scope)
         except Exception as exc:
             engine_error = str(exc)
             current_app.logger.warning("project_studio lookup failed for %s: %s", address, exc)
@@ -4435,6 +4451,11 @@ def project_studio():
         ai_summary=ai_summary,
         engine_error=engine_error,
         market_snapshot=market_snapshot,
+        selected_strategy=selected_strategy,
+        selected_card=selected_card,
+        selected_scope=selected_scope,
+        scope_options=scope_options,
+        scope_budget=scope_budget,
     )
 
 # -------------------------------------------------------------------
