@@ -17,6 +17,14 @@ Deep property analysis, comps, market context, and AI-backed investor insight.
 {% block content %}
 
 {% set hero_photo = photos[0] if photos and photos|length > 0 else None %}
+{% set headline_price = price or prop.price %}
+{% set market_value = valuation.market_value or valuation.value or valuation.estimated_value %}
+{% set assessed = assessed_value or valuation.assessed_value %}
+{% set last_sale = valuation.last_sale_price or resolved.last_sale_price %}
+{% set status_label = resolved.status or valuation.status or "Review Opportunity" %}
+{% set rent_value = rent_estimate.traditional_rent or rent_estimate.rent or rent_estimate.estimated_rent %}
+{% set dom_value = resolved.days_on_market or market.dom %}
+{% set summary_text = resolved.description or ai_summary %}
 
 <div class="pi-shell">
 
@@ -24,17 +32,39 @@ Deep property analysis, comps, market context, and AI-backed investor insight.
   <section class="pi-hero">
     <div class="pi-hero-copy">
       <div class="eyebrow">RAVLO PROPERTY DOSSIER</div>
-      <h2>{{ prop.address or "Property" }}</h2>
+      <h2>{{ address or prop.address or "Property" }}</h2>
       <p class="muted">
-        {{ resolved.city or "" }}{% if resolved.city and resolved.state %}, {% endif %}{{ resolved.state or "" }} {{ prop.zipcode or resolved.zip or "" }}
+        {{ city or "" }}{% if city and state %}, {% endif %}{{ state or "" }} {{ zip_code or "" }}
       </p>
 
       <div class="pi-chip-row">
-        <span class="pi-chip">{{ resolved.propertyType or resolved.property_type or "Property" }}</span>
-        <span class="pi-chip">{{ resolved.beds or "—" }} bd</span>
-        <span class="pi-chip">{{ resolved.baths or "—" }} ba</span>
-        <span class="pi-chip">{{ prop.sqft or resolved.sqft or resolved.squareFootage or "—" }} sqft</span>
+        <span class="pi-chip">{{ property_type or resolved.propertyType or resolved.property_type or "Property" }}</span>
+        <span class="pi-chip">{{ beds or "—" }} bd</span>
+        <span class="pi-chip">{{ baths or "—" }} ba</span>
+        <span class="pi-chip">{{ "{:,.0f}".format(sqft|float) if sqft else "—" }} sqft</span>
+        <span class="pi-chip accent">{{ status_label }}</span>
       </div>
+
+      <div class="pi-value-band">
+        <div class="pi-value-block">
+          <span>List Price</span>
+          <strong>{% if headline_price %}${{ "{:,.0f}".format(headline_price|float) }}{% else %}—{% endif %}</strong>
+        </div>
+        <div class="pi-value-block">
+          <span>Market Value</span>
+          <strong>{% if market_value %}${{ "{:,.0f}".format(market_value|float) }}{% else %}—{% endif %}</strong>
+        </div>
+        <div class="pi-value-block">
+          <span>Rent Estimate</span>
+          <strong>{% if rent_value %}${{ "{:,.0f}".format(rent_value|float) }}/mo{% else %}—{% endif %}</strong>
+        </div>
+      </div>
+
+      {% if summary_text %}
+      <div class="pi-summary-callout">
+        {{ summary_text }}
+      </div>
+      {% endif %}
     </div>
 
     <div class="pi-hero-media">
@@ -49,10 +79,10 @@ Deep property analysis, comps, market context, and AI-backed investor insight.
   <!-- METRIC STRIP -->
   <section class="pi-metric-grid">
     <div class="pi-metric-card">
-      <span>Price</span>
+      <span>List Price</span>
       <strong>
-        {% if prop.price %}
-          ${{ prop.price }}
+        {% if headline_price %}
+          ${{ "{:,.0f}".format(headline_price|float) }}
         {% else %}
           —
         {% endif %}
@@ -61,17 +91,17 @@ Deep property analysis, comps, market context, and AI-backed investor insight.
 
     <div class="pi-metric-card">
       <span>Sqft</span>
-      <strong>{{ prop.sqft or resolved.sqft or resolved.squareFootage or "—" }}</strong>
+      <strong>{{ "{:,.0f}".format(sqft|float) if sqft else "—" }}</strong>
     </div>
 
     <div class="pi-metric-card">
       <span>Beds / Baths</span>
-      <strong>{{ resolved.beds or "—" }} / {{ resolved.baths or "—" }}</strong>
+      <strong>{{ beds or "—" }} / {{ baths or "—" }}</strong>
     </div>
 
     <div class="pi-metric-card">
-      <span>Year Built</span>
-      <strong>{{ resolved.yearBuilt or resolved.year_built or "—" }}</strong>
+      <span>Status / DOM</span>
+      <strong>{{ status_label }}{% if dom_value %} · {{ dom_value }} DOM{% endif %}</strong>
     </div>
   </section>
 
@@ -94,14 +124,17 @@ Deep property analysis, comps, market context, and AI-backed investor insight.
       {% endif %}
 
       <section class="ravlo-card pad">
-        <div class="ravlo-card-title">Property Facts</div>
+        <div class="section-head">
+          <div class="ravlo-card-title">Property Facts</div>
+          <div class="comp-count">{{ property_type or "Property" }}</div>
+        </div>
 
         <div class="facts-grid">
           <div>
-            <span>Price</span>
+            <span>List Price</span>
             <strong>
-              {% if prop.price %}
-                ${{ prop.price }}
+              {% if headline_price %}
+                ${{ "{:,.0f}".format(headline_price|float) }}
               {% else %}
                 —
               {% endif %}
@@ -110,37 +143,62 @@ Deep property analysis, comps, market context, and AI-backed investor insight.
 
           <div>
             <span>Sqft</span>
-            <strong>{{ prop.sqft or resolved.sqft or resolved.squareFootage or "—" }}</strong>
+            <strong>{{ "{:,.0f}".format(sqft|float) if sqft else "—" }}</strong>
           </div>
 
           <div>
             <span>Beds</span>
-            <strong>{{ resolved.beds or "—" }}</strong>
+            <strong>{{ beds or "—" }}</strong>
           </div>
 
           <div>
             <span>Baths</span>
-            <strong>{{ resolved.baths or "—" }}</strong>
+            <strong>{{ baths or "—" }}</strong>
           </div>
 
           <div>
             <span>Property Type</span>
-            <strong>{{ resolved.propertyType or resolved.property_type or "—" }}</strong>
+            <strong>{{ property_type or resolved.propertyType or resolved.property_type or "—" }}</strong>
           </div>
 
           <div>
             <span>Year Built</span>
-            <strong>{{ resolved.yearBuilt or resolved.year_built or "—" }}</strong>
+            <strong>{{ year_built or resolved.yearBuilt or resolved.year_built or "—" }}</strong>
           </div>
 
           <div>
             <span>ZIP</span>
-            <strong>{{ prop.zipcode or resolved.zip or "—" }}</strong>
+            <strong>{{ zip_code or "—" }}</strong>
           </div>
 
           <div>
             <span>Address</span>
-            <strong>{{ prop.address or "—" }}</strong>
+            <strong>{{ address or prop.address or "—" }}</strong>
+          </div>
+
+          <div>
+            <span>Lot Size</span>
+            <strong>{{ "{:,.0f}".format(lot_size_sqft|float) ~ " sq ft" if lot_size_sqft else "—" }}</strong>
+          </div>
+
+          <div>
+            <span>Assessed Value</span>
+            <strong>{% if assessed %}${{ "{:,.0f}".format(assessed|float) }}{% else %}—{% endif %}</strong>
+          </div>
+
+          <div>
+            <span>Last Sale</span>
+            <strong>{% if last_sale %}${{ "{:,.0f}".format(last_sale|float) }}{% else %}—{% endif %}</strong>
+          </div>
+
+          <div>
+            <span>Status</span>
+            <strong>{{ status_label }}</strong>
+          </div>
+
+          <div>
+            <span>Days on Market</span>
+            <strong>{{ dom_value or "—" }}</strong>
           </div>
         </div>
       </section>
@@ -205,6 +263,32 @@ Deep property analysis, comps, market context, and AI-backed investor insight.
       </section>
       {% endif %}
 
+      <section class="ravlo-card pad">
+        <div class="ravlo-card-title">Valuation Snapshot</div>
+
+        <div class="facts-grid facts-grid-2">
+          <div>
+            <span>List Price</span>
+            <strong>{% if headline_price %}${{ "{:,.0f}".format(headline_price|float) }}{% else %}—{% endif %}</strong>
+          </div>
+
+          <div>
+            <span>Estimated Market Value</span>
+            <strong>{% if market_value %}${{ "{:,.0f}".format(market_value|float) }}{% else %}—{% endif %}</strong>
+          </div>
+
+          <div>
+            <span>Assessed Value</span>
+            <strong>{% if assessed %}${{ "{:,.0f}".format(assessed|float) }}{% else %}—{% endif %}</strong>
+          </div>
+
+          <div>
+            <span>Estimated Rent</span>
+            <strong>{% if rent_value %}${{ "{:,.0f}".format(rent_value|float) }}/mo{% else %}—{% endif %}</strong>
+          </div>
+        </div>
+      </section>
+
       {% if market %}
       <section class="ravlo-card pad">
         <div class="ravlo-card-title">Market Snapshot</div>
@@ -214,7 +298,7 @@ Deep property analysis, comps, market context, and AI-backed investor insight.
             <span>Median Price</span>
             <strong>
               {% if market.median_price %}
-                ${{ market.median_price }}
+                ${{ "{:,.0f}".format(market.median_price|float) }}
               {% else %}
                 —
               {% endif %}
@@ -225,7 +309,7 @@ Deep property analysis, comps, market context, and AI-backed investor insight.
             <span>Median Rent</span>
             <strong>
               {% if market.median_rent %}
-                ${{ market.median_rent }}
+                ${{ "{:,.0f}".format(market.median_rent|float) }}
               {% else %}
                 —
               {% endif %}
@@ -236,7 +320,7 @@ Deep property analysis, comps, market context, and AI-backed investor insight.
             <span>Price / Sqft</span>
             <strong>
               {% if market.price_per_sqft %}
-                ${{ market.price_per_sqft }}
+                ${{ "{:,.0f}".format(market.price_per_sqft|float) }}
               {% else %}
                 —
               {% endif %}
@@ -278,10 +362,10 @@ async function sendToWorkspace(){
       },
       credentials: "include",
       body: JSON.stringify({
-        address: "{{ prop.address or '' }}",
-        zip: "{{ prop.zipcode or '' }}",
-        price: "{{ prop.price or '' }}",
-        sqft: "{{ prop.sqft or '' }}"
+        address: "{{ address or prop.address or '' }}",
+        zip: "{{ zip_code or '' }}",
+        price: "{{ headline_price or '' }}",
+        sqft: "{{ sqft or '' }}"
       })
     });
 
