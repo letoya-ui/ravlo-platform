@@ -20,13 +20,17 @@ Compare exit paths, pressure-test returns, and move into architect, budget, reha
     <a href="{{ url_for('investor.deal_architect', deal_id=deal.id) }}" class="ravlo-btn ghost sm">
         Deal Architect
     </a>
-    <a href="{{ url_for('investor.budget_studio', deal_id=deal.id) }}" class="ravlo-btn ghost sm">
-        {% if budget_summary and budget_summary.total_budget %}
-            Open Budget
-        {% else %}
-            Start Budget
-        {% endif %}
+
+    {% if budget %}
+    <a href="{{ url_for('investor.budget_detail', budget_id=budget.id) }}" class="ravlo-btn ghost sm">
+        Open Budget
     </a>
+    {% else %}
+    <a href="{{ url_for('investor.budget_studio', deal_id=deal.id) }}" class="ravlo-btn ghost sm">
+        Start Budget
+    </a>
+    {% endif %}
+
     <a href="{{ url_for('investor.deal_rehab', deal_id=deal.id) }}" class="ravlo-btn ghost sm">
         Rehab Studio
     </a>
@@ -76,7 +80,6 @@ Compare exit paths, pressure-test returns, and move into architect, budget, reha
     {% set airbnb = comparison.get("airbnb", {}) if comparison else {} %}
     {% set planning_budget = workspace_analysis.get("planning_budget", {}) if workspace_analysis else {} %}
 
-    {# ---------- SAFE NUMERIC NORMALIZATION ---------- #}
     {% set purchase_price = (selected_prop.price or 0) | float %}
     {% set purchase_price_safe = purchase_price if purchase_price > 0 else 1 %}
 
@@ -144,7 +147,7 @@ Compare exit paths, pressure-test returns, and move into architect, budget, reha
 
                 <span class="ravlo-chip">
                     Budget:
-                    {% if budget_summary and budget_summary.total_budget %}
+                    {% if budget %}
                         Ready
                     {% else %}
                         Not Started
@@ -160,13 +163,17 @@ Compare exit paths, pressure-test returns, and move into architect, budget, reha
                 <a href="{{ url_for('investor.deal_architect', deal_id=deal.id) }}" class="ravlo-btn ghost">
                     Deal Architect
                 </a>
-                <a href="{{ url_for('investor.budget_studio', deal_id=deal.id) }}" class="ravlo-btn ghost">
-                    {% if budget_summary and budget_summary.total_budget %}
-                        Open Budget
-                    {% else %}
-                        Start Budget
-                    {% endif %}
+
+                {% if budget %}
+                <a href="{{ url_for('investor.budget_detail', budget_id=budget.id) }}" class="ravlo-btn ghost">
+                    Open Budget
                 </a>
+                {% else %}
+                <a href="{{ url_for('investor.budget_studio', deal_id=deal.id) }}" class="ravlo-btn ghost">
+                    Start Budget
+                </a>
+                {% endif %}
+
                 <a href="{{ url_for('investor.deal_rehab', deal_id=deal.id) }}" class="ravlo-btn ghost">
                     Rehab Studio
                 </a>
@@ -243,8 +250,14 @@ Compare exit paths, pressure-test returns, and move into architect, budget, reha
             <strong>${{ "{:,.0f}".format(comps.arv_estimate or 0) if comps and comps.arv_estimate else "—" }}</strong>
         </div>
         <div class="workspace-stat">
-            <span>Market Rent</span>
-            <strong>${{ "{:,.0f}".format(comps.market_rent_estimate or 0) if comps and comps.market_rent_estimate else "—" }}</strong>
+            <span>Budget Status</span>
+            <strong>
+                {% if budget %}
+                    Ready
+                {% else %}
+                    Not Started
+                {% endif %}
+            </strong>
         </div>
     </section>
 
@@ -295,10 +308,6 @@ Compare exit paths, pressure-test returns, and move into architect, budget, reha
                             </div>
                             <div class="metric-bar"><div class="metric-bar-fill alt" style="width: {{ flip_roi_strength }}%;"></div></div>
                         </div>
-
-                        {% if recommendation and recommendation.notes and recommendation.notes.get("flip") %}
-                        <div class="workspace-compare-note">{{ recommendation.notes.get("flip") }}</div>
-                        {% endif %}
                     </div>
 
                     <div class="workspace-compare-card {% if recommended == 'rental' %}recommended{% endif %}">
@@ -333,10 +342,6 @@ Compare exit paths, pressure-test returns, and move into architect, budget, reha
                             </div>
                             <div class="metric-bar"><div class="metric-bar-fill alt" style="width: {{ rental_roi_strength }}%;"></div></div>
                         </div>
-
-                        {% if recommendation and recommendation.notes and recommendation.notes.get("rental") %}
-                        <div class="workspace-compare-note">{{ recommendation.notes.get("rental") }}</div>
-                        {% endif %}
                     </div>
 
                     <div class="workspace-compare-card {% if recommended == 'airbnb' %}recommended{% endif %}">
@@ -372,64 +377,12 @@ Compare exit paths, pressure-test returns, and move into architect, budget, reha
                             </div>
                             <div class="metric-bar"><div class="metric-bar-fill alt" style="width: {{ airbnb_roi_strength }}%;"></div></div>
                         </div>
-
-                        {% if recommendation and recommendation.notes and recommendation.notes.get("airbnb") %}
-                        <div class="workspace-compare-note">{{ recommendation.notes.get("airbnb") }}</div>
-                        {% endif %}
                     </div>
 
                 </div>
                 {% else %}
                 <div class="empty-state">No comparison data loaded yet.</div>
                 {% endif %}
-            </section>
-
-            <section class="ravlo-card pad">
-                <div class="section-head">
-                    <div>
-                        <div class="eyebrow">AI SUMMARY</div>
-                        <h3>Opportunity Narrative</h3>
-                    </div>
-                </div>
-
-                <div class="feature-highlight">
-                    <div class="feature-highlight-label">AI Summary</div>
-                    <div class="feature-highlight-value">
-                        {{ ai_summary or (workspace_analysis.get("summary") if workspace_analysis else None) or "No AI summary yet." }}
-                    </div>
-                </div>
-
-                <div class="workspace-fit-grid mt-16">
-                    <div class="workspace-mini-stat">
-                        <span>Best Strategy</span>
-                        <strong>
-                            {% if recommended == "flip" %}
-                            Fix & Flip
-                            {% elif recommended == "rental" %}
-                            Buy & Hold
-                            {% elif recommended == "airbnb" %}
-                            Airbnb
-                            {% else %}
-                            Pending
-                            {% endif %}
-                        </strong>
-                    </div>
-
-                    <div class="workspace-mini-stat">
-                        <span>Rental DSCR</span>
-                        <strong>{{ "{:.2f}".format(rental_dscr) if rental_dscr else "—" }}</strong>
-                    </div>
-
-                    <div class="workspace-mini-stat">
-                        <span>Flip ROI</span>
-                        <strong>{{ "{:.1f}".format(flip_roi) }}%</strong>
-                    </div>
-
-                    <div class="workspace-mini-stat">
-                        <span>Airbnb ROI</span>
-                        <strong>{{ "{:.1f}".format(airbnb_roi) }}%</strong>
-                    </div>
-                </div>
             </section>
 
             {% if deal %}
@@ -450,19 +403,23 @@ Compare exit paths, pressure-test returns, and move into architect, budget, reha
                         </div>
                     </a>
 
-                    <a href="{{ url_for('investor.budget_studio', deal_id=deal.id) }}" class="studio-card">
+                    {% if budget %}
+                    <a href="{{ url_for('investor.budget_detail', budget_id=budget.id) }}" class="studio-card">
                         <div class="studio-icon">💰</div>
-                        <div class="studio-title">
-                            {% if budget_summary and budget_summary.total_budget %}
-                                Budget Studio
-                            {% else %}
-                                Start Budget
-                            {% endif %}
-                        </div>
+                        <div class="studio-title">Budget Studio</div>
                         <div class="studio-sub">
-                            Build the planning budget, pressure-test costs, and start tracking scope assumptions.
+                            Open the active budget, review line items, and track cost performance.
                         </div>
                     </a>
+                    {% else %}
+                    <a href="{{ url_for('investor.budget_studio', deal_id=deal.id) }}" class="studio-card">
+                        <div class="studio-icon">💰</div>
+                        <div class="studio-title">Start Budget</div>
+                        <div class="studio-sub">
+                            Open Budget Studio for this deal and start building the first tracked budget.
+                        </div>
+                    </a>
+                    {% endif %}
 
                     <a href="{{ url_for('investor.deal_rehab', deal_id=deal.id) }}" class="studio-card">
                         <div class="studio-icon">🛠</div>
@@ -474,82 +431,6 @@ Compare exit paths, pressure-test returns, and move into architect, budget, reha
                 </div>
             </section>
             {% endif %}
-
-            <section class="ravlo-card pad">
-                <div class="section-head">
-                    <div>
-                        <div class="eyebrow">PROPERTY SNAPSHOT</div>
-                        <h3>Property + Deal Context</h3>
-                    </div>
-                </div>
-
-                <div class="workspace-info-grid">
-                    <div class="workspace-info-box">
-                        <span>Address</span>
-                        <strong>{{ selected_prop.address or "—" }}</strong>
-                    </div>
-                    <div class="workspace-info-box">
-                        <span>City / State</span>
-                        <strong>{{ selected_prop.city or "—" }}{% if selected_prop.city and selected_prop.state %}, {% endif %}{{ selected_prop.state or "" }}</strong>
-                    </div>
-                    <div class="workspace-info-box">
-                        <span>ZIP</span>
-                        <strong>{{ selected_prop.zip_code or "—" }}</strong>
-                    </div>
-                    <div class="workspace-info-box">
-                        <span>Type</span>
-                        <strong>{{ selected_prop.property_type or "—" }}</strong>
-                    </div>
-                    <div class="workspace-info-box">
-                        <span>Beds / Baths</span>
-                        <strong>{{ selected_prop.bedrooms or selected_prop.beds or "—" }} / {{ selected_prop.bathrooms or selected_prop.baths or "—" }}</strong>
-                    </div>
-                    <div class="workspace-info-box">
-                        <span>Purchase Price</span>
-                        <strong>${{ "{:,.0f}".format(selected_prop.price|float) if selected_prop.price else "—" }}</strong>
-                    </div>
-                </div>
-            </section>
-
-            {% if rehab_analysis %}
-            {% set rehab_scope = rehab_analysis.get("scope", {}) %}
-            <section class="ravlo-card pad">
-                <div class="section-head">
-                    <div>
-                        <div class="eyebrow">REHAB</div>
-                        <h3>Saved Rehab Summary</h3>
-                    </div>
-                    {% if deal %}
-                    <a href="{{ url_for('investor.deal_rehab', deal_id=deal.id) }}" class="ravlo-link-btn">
-                        Open Rehab Studio
-                    </a>
-                    {% endif %}
-                </div>
-
-                <div class="workspace-fit-grid">
-                    <div class="workspace-mini-stat">
-                        <span>Estimated Rehab Cost</span>
-                        <strong>${{ "{:,.0f}".format(rehab_analysis.get("estimated_rehab_cost", 0) or 0) }}</strong>
-                    </div>
-                    <div class="workspace-mini-stat">
-                        <span>Scope</span>
-                        <strong>{{ rehab_scope.get("selection", "—")|replace("_", " ")|title }}</strong>
-                    </div>
-                    <div class="workspace-mini-stat">
-                        <span>Budget Low</span>
-                        <strong>${{ "{:,.0f}".format(rehab_scope.get("budget_low", 0) or 0) }}</strong>
-                    </div>
-                    <div class="workspace-mini-stat">
-                        <span>Budget High</span>
-                        <strong>${{ "{:,.0f}".format(rehab_scope.get("budget_high", 0) or 0) }}</strong>
-                    </div>
-                </div>
-            </section>
-            {% endif %}
-
-        </div>
-
-        <div class="workspace-stack">
 
             {% if strategy_analysis %}
             <section class="ravlo-card pad">
@@ -599,6 +480,10 @@ Compare exit paths, pressure-test returns, and move into architect, budget, reha
             </section>
             {% endif %}
 
+        </div>
+
+        <div class="workspace-stack">
+
             <section class="ravlo-card pad">
                 <div class="section-head">
                     <div>
@@ -606,13 +491,15 @@ Compare exit paths, pressure-test returns, and move into architect, budget, reha
                         <h3>Planning Budget</h3>
                     </div>
                     {% if deal %}
-                    <a href="{{ url_for('investor.budget_studio', deal_id=deal.id) }}" class="ravlo-link-btn">
-                        {% if budget_summary and budget_summary.total_budget %}
-                            Open Budget Studio
+                        {% if budget %}
+                        <a href="{{ url_for('investor.budget_detail', budget_id=budget.id) }}" class="ravlo-link-btn">
+                            Open Budget
+                        </a>
                         {% else %}
+                        <a href="{{ url_for('investor.budget_studio', deal_id=deal.id) }}" class="ravlo-link-btn">
                             Start Budget Studio
+                        </a>
                         {% endif %}
-                    </a>
                     {% endif %}
                 </div>
 
@@ -649,46 +536,45 @@ Compare exit paths, pressure-test returns, and move into architect, budget, reha
                         <div class="eyebrow">BUDGET TRACKER</div>
                         <h3>Current Budget Status</h3>
                     </div>
-                    <a href="{{ url_for('investor.budget_studio', deal_id=deal.id) }}" class="ravlo-link-btn">
+
+                    {% if budget %}
+                    <a href="{{ url_for('investor.budget_detail', budget_id=budget.id) }}" class="ravlo-link-btn">
                         Open Full Budget
                     </a>
+                    {% else %}
+                    <a href="{{ url_for('investor.budget_studio', deal_id=deal.id) }}" class="ravlo-link-btn">
+                        Start Budget
+                    </a>
+                    {% endif %}
                 </div>
 
-                {% if budget_summary %}
+                {% if budget %}
                 <div class="workspace-fit-grid">
                     <div class="workspace-mini-stat">
                         <span>Total Budget</span>
-                        <strong>${{ "{:,.0f}".format(budget_summary.get("total_budget", 0) or 0) }}</strong>
+                        <strong>${{ "{:,.0f}".format(budget.total_budget or 0) }}</strong>
                     </div>
                     <div class="workspace-mini-stat">
-                        <span>Estimated</span>
-                        <strong>${{ "{:,.0f}".format(budget_summary.get("estimated_total", 0) or 0) }}</strong>
+                        <span>Total Cost</span>
+                        <strong>${{ "{:,.0f}".format(budget.total_cost or 0) }}</strong>
                     </div>
                     <div class="workspace-mini-stat">
-                        <span>Actual</span>
-                        <strong>${{ "{:,.0f}".format(budget_summary.get("actual_total", 0) or 0) }}</strong>
-                    </div>
-                    <div class="workspace-mini-stat">
-                        <span>Remaining</span>
-                        <strong>${{ "{:,.0f}".format(budget_summary.get("remaining_balance", 0) or 0) }}</strong>
-                    </div>
-                    <div class="workspace-mini-stat">
-                        <span>Paid</span>
-                        <strong>${{ "{:,.0f}".format(budget_summary.get("paid_total", 0) or 0) }}</strong>
+                        <span>Paid Amount</span>
+                        <strong>${{ "{:,.0f}".format(budget.paid_amount or 0) }}</strong>
                     </div>
                     <div class="workspace-mini-stat">
                         <span>Contingency</span>
-                        <strong>${{ "{:,.0f}".format(budget_summary.get("contingency", 0) or 0) }}</strong>
+                        <strong>${{ "{:,.0f}".format(budget.contingency or 0) }}</strong>
                     </div>
                 </div>
 
-                {% if budget_items %}
+                {% if budget.expenses %}
                 <div class="workspace-budget-list mt-16">
-                    {% for item in budget_items[:5] %}
+                    {% for item in budget.expenses[:5] %}
                     <div class="workspace-budget-row">
                         <div>
                             <strong>{{ item.description or "Budget Item" }}</strong>
-                            <p class="muted mb-0">{{ item.vendor or item.status or "Planned" }}</p>
+                            <p class="muted mb-0">{{ item.category or "General" }}{% if item.status %} • {{ item.status|title }}{% endif %}</p>
                         </div>
                         <div class="workspace-budget-amounts">
                             <span>Est. ${{ "{:,.0f}".format(item.estimated_amount or 0) }}</span>
@@ -701,6 +587,18 @@ Compare exit paths, pressure-test returns, and move into architect, budget, reha
                 {% else %}
                 <div class="empty-state-inline">
                     No budget tracker is attached to this deal yet. Start Budget Studio to create the first budget.
+                </div>
+
+                <div class="workspace-action-row mt-16">
+                    <a href="{{ url_for('investor.budget_studio', deal_id=deal.id) }}" class="ravlo-btn ghost">
+                        Open Budget Studio
+                    </a>
+                    <form method="POST" action="{{ url_for('investor.generate_budget_from_ai', deal_id=deal.id) }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="ravlo-btn primary">
+                            Generate Budget From AI
+                        </button>
+                    </form>
                 </div>
                 {% endif %}
             </section>
@@ -718,10 +616,18 @@ Compare exit paths, pressure-test returns, and move into architect, budget, reha
                 <div class="empty-state-inline">
                     Save this property as a deal first so Ravlo can attach budget, rehab, and funding workflows.
                 </div>
-                {% elif not budget_summary %}
-                <a href="{{ url_for('investor.budget_studio', deal_id=deal.id) }}" class="ravlo-btn primary w-full">
-                    Build Budget
-                </a>
+                {% elif not budget %}
+                <div class="workspace-action-row">
+                    <a href="{{ url_for('investor.budget_studio', deal_id=deal.id) }}" class="ravlo-btn ghost">
+                        Start Budget
+                    </a>
+                    <form method="POST" action="{{ url_for('investor.generate_budget_from_ai', deal_id=deal.id) }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="ravlo-btn primary">
+                            Generate AI Budget
+                        </button>
+                    </form>
+                </div>
                 {% elif not deal.submitted_for_funding %}
                 <a href="{{ url_for('investor.capital_application', deal_id=deal.id, prop_id=selected_prop.id) }}" class="ravlo-btn primary w-full">
                     Apply for Funding
@@ -905,14 +811,6 @@ Compare exit paths, pressure-test returns, and move into architect, budget, reha
     color:var(--muted);
 }
 
-.workspace-compare-note{
-    padding:12px 14px;
-    border-radius:14px;
-    background:rgba(255,255,255,.03);
-    border:1px solid rgba(255,255,255,.06);
-    font-size:14px;
-}
-
 .metric-bar-wrap{
     display:grid;
     gap:8px;
@@ -943,27 +841,6 @@ Compare exit paths, pressure-test returns, and move into architect, budget, reha
     background:linear-gradient(90deg, #6fe2b4, #9bf0c7);
 }
 
-.feature-highlight{
-    padding:18px;
-    border-radius:22px;
-    background:rgba(255,255,255,.03);
-    border:1px solid rgba(255,255,255,.08);
-    display:grid;
-    gap:8px;
-}
-
-.feature-highlight-label{
-    font-size:12px;
-    color:var(--muted);
-    text-transform:uppercase;
-    letter-spacing:.08em;
-}
-
-.feature-highlight-value{
-    font-size:18px;
-    line-height:1.5;
-}
-
 .workspace-fit-grid{
     display:grid;
     grid-template-columns:repeat(2, 1fr);
@@ -980,28 +857,6 @@ Compare exit paths, pressure-test returns, and move into architect, budget, reha
 }
 
 .workspace-mini-stat span{
-    font-size:12px;
-    color:var(--muted);
-    text-transform:uppercase;
-    letter-spacing:.06em;
-}
-
-.workspace-info-grid{
-    display:grid;
-    grid-template-columns:repeat(2, 1fr);
-    gap:12px;
-}
-
-.workspace-info-box{
-    padding:14px 16px;
-    border-radius:18px;
-    background:rgba(255,255,255,.03);
-    border:1px solid rgba(255,255,255,.07);
-    display:grid;
-    gap:6px;
-}
-
-.workspace-info-box span{
     font-size:12px;
     color:var(--muted);
     text-transform:uppercase;
@@ -1100,8 +955,7 @@ Compare exit paths, pressure-test returns, and move into architect, budget, reha
 
 @media (max-width: 720px){
     .workspace-grid-4,
-    .workspace-fit-grid,
-    .workspace-info-grid{
+    .workspace-fit-grid{
         grid-template-columns:1fr;
     }
 

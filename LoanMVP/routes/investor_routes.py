@@ -5502,6 +5502,8 @@ def deal_workspace(deal_id=None):
 
     selected_prop = None
     deal = None
+    budget = None
+
     comps = {}
     resolved = None
     comparison = {}
@@ -5518,7 +5520,7 @@ def deal_workspace(deal_id=None):
         mode = "flip"
 
     # -----------------------------------------
-    # 1) Load by deal_id if provided in URL
+    # 1) Load by route param deal_id
     # -----------------------------------------
     if deal_id:
         deal = (
@@ -5548,6 +5550,7 @@ def deal_workspace(deal_id=None):
                 .filter_by(id=query_deal_id, user_id=current_user.id)
                 .first()
             )
+
             if deal and getattr(deal, "saved_property_id", None):
                 selected_prop = (
                     SavedProperty.query
@@ -5598,7 +5601,21 @@ def deal_workspace(deal_id=None):
         )
 
     # -----------------------------------------
-    # 5) Load comps / property intelligence
+    # 5) Load real linked budget for this deal
+    # -----------------------------------------
+    if deal:
+        budget = (
+            ProjectBudget.query
+            .filter_by(
+                deal_id=deal.id,
+                investor_profile_id=ip.id
+            )
+            .order_by(ProjectBudget.id.desc())
+            .first()
+        )
+
+    # -----------------------------------------
+    # 6) Load comps / property intelligence
     # -----------------------------------------
     if selected_prop:
         try:
@@ -5642,7 +5659,7 @@ def deal_workspace(deal_id=None):
                 recommendation = {}
 
     # -----------------------------------------
-    # 6) Load saved deal results
+    # 7) Load saved deal results
     # -----------------------------------------
     if deal:
         results_json = deal.results_json or {}
@@ -5652,7 +5669,7 @@ def deal_workspace(deal_id=None):
         optimization = results_json.get("optimization", {}) or {}
 
     # -----------------------------------------
-    # 7) AI summary
+    # 8) AI summary
     # -----------------------------------------
     try:
         if comparison:
@@ -5671,6 +5688,7 @@ def deal_workspace(deal_id=None):
         property_id=(selected_prop.id if selected_prop else None),
         deal=deal,
         deal_id=(deal.id if deal else None),
+        budget=budget,
         mode=mode,
         comps=comps,
         resolved=resolved,
