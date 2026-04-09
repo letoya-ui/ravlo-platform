@@ -128,6 +128,133 @@ investor_bp = Blueprint("investor", __name__, url_prefix="/investor")
 
 client = OpenAI()
 
+
+# -------------------------------------------------------------------
+# DEAL ARCHITECT HELPERS
+# -------------------------------------------------------------------
+
+def _engine_base_url() -> str:
+    return (current_app.config.get("RENOVATION_ENGINE_URL") or "").rstrip("/")
+
+
+def _engine_headers() -> dict:
+    headers = {"Content-Type": "application/json"}
+    api_key = current_app.config.get("RENOVATION_ENGINE_API_KEY")
+    if api_key:
+        headers["X-API-Key"] = api_key
+    return headers
+
+
+def _safe_engine_num(value):
+    if value in (None, "", "—"):
+        return None
+    try:
+        return float(str(value).replace("$", "").replace(",", "").strip())
+    except Exception:
+        return None
+
+
+def _build_deal_architect_payload(result: dict, strategy: str = "flip") -> dict:
+    address = (result.get("address") or result.get("address_line1") or "").strip()
+    city = (result.get("city") or "").strip()
+    state = (result.get("state") or "").strip()
+    zip_code = (result.get("zip_code") or "").strip()
+
+    beds = _safe_engine_num(result.get("beds"))
+    baths = _safe_engine_num(result.get("baths"))
+    sqft = _safe_engine_num(result.get("square_feet") or result.get("sqft"))
+    lot_sqft = _safe_engine_num(result.get("lot_size_sqft"))
+    assessed_value = _safe_engine_num(result.get("assessed_value"))
+    tax_amount = _safe_engine_num(result.get("tax_amount"))
+    market_value = _safe_engine_num(result.get("market_value") or result.get("display_value"))
+    sale_price = _safe_engine_num(result.get("last_sale_price") or result.get("price"))
+    monthly_rent = _safe_engine_num(result.get("traditional_rent"))
+    property_type = (result.get("property_type") or "single family").strip()
+
+    strategy_label = {
+        "flip": "fix and flip candidate",
+        "rental": "rental hold candidate",
+        "all": "investment property candidate",
+    }.get((strategy or "flip").lower(), "investment property candidate")
+
+    description_parts = [
+        f"{address}, {city}, {state} {zip_code}".strip(", ").strip(),
+        f"{int(beds)} bed" if beds is not None else None,
+        f"{baths} bath" if baths is not None else None,
+        f"{int(sqft):,} sqft" if sqft else None,
+        strategy_label,
+    ]
+
+    return {
+        "project_name": address or "Deal Finder Property",
+        "description": " • ".join([p for p in description_parts if p]),
+        "property_type": property_type,
+        "lot_size": f"{int(lot_sqft):,} sq ft lot" if lot_sqft else "",
+        "zoning": result.get("zoning") or "",
+        "asking_price": sale_price,
+        "square_feet_target": sqft,
+        "city": city,
+        "state": state,
+        "zip_code": zip_code,
+        "arv": market_value,
+        "monthly_rent": monthly_rent,
+        "local_facts": {
+            "bedrooms": beds,
+            "bathrooms": baths,
+            "year_built": _safe_engine_num(result.get("year_built")),
+            "lot_sqft": lot_sqft,
+            "assessed_value": assessed_value,
+            "annual_tax_amount": tax_amount,
+            "latitude": result.get("latitude"),
+            "longitude": result.get("longitude"),
+            "source": "deal_finder",
+        },
+    }
+
+
+def _call_deal_architect(payload: dict) -> dict:
+    engine_url = f"{_engine_base_url()}/v1/deal_architect"
+    if not _engine_base_url():
+        raise RuntimeError("RENOVATION_ENGINE_URL is not configured.")
+
+    resp = requests.post(
+        engine_url,
+        json=payload,
+        headers=_engine_headers(),
+        timeout=20,
+    )
+
+    data = resp.json()
+    if resp.status_code >= 400:
+        raise RuntimeError(data.get("detail") or data.get("message") or "Deal Architect request failed.")
+
+    return data
+
+
+def _attach_deal_architect_signals(result: dict, engine_data: dict) -> dict:
+    enriched = dict(result)
+    meta = engine_data.get("meta") or {}
+
+    enriched.update({
+        "deal_score": engine_data.get("deal_score"),
+        "opportunity_tier": engine_data.get("opportunity_tier"),
+        "deal_finder_signal": meta.get("deal_finder_signal"),
+        "primary_strengths": meta.get("primary_strengths") or [],
+        "primary_risks": meta.get("primary_risks") or [],
+        "dscr_estimate": meta.get("dscr_estimate"),
+        "rent_yield": meta.get("rent_yield"),
+        "monthly_rent_estimate": meta.get("monthly_rent_estimate"),
+        "next_step": engine_data.get("next_step"),
+        "engine_value": engine_data.get("estimated_value"),
+        "valuation_source_label": meta.get("valuation_source_label"),
+        "comp_confidence": meta.get("comp_confidence"),
+        "engine_summary": engine_data.get("summary"),
+        "engine_meta": meta,
+    })
+    return enriched
+
+
+
 # =========================================================
 # 🔢 SAFE NUMERIC HELPERS
 # =========================================================
@@ -3619,21 +3746,36 @@ def property_explore_plus(prop_id):
 def property_tool():
     return render_template("investor/property_tool.html")
 
+# -------------------------------------------------------------------
+# PROXY ROUTE FOR UI
+# -------------------------------------------------------------------
 
-# ----------------------------
-# api: search
-# ----------------------------
+@investor_bp.route("/api/deal-architect-proxy", methods=["POST"])
+@login_required
+@role_required("investor")
+def api_deal_architect_proxy():
+    payload = request.get_json(force=True) or {}
+
+    try:
+        data = _call_deal_architect(payload)
+        return jsonify(data), 200
+    except Exception as e:
+        current_app.logger.exception("Deal Architect proxy failed")
+        return jsonify({
+            "ok": False,
+            "message": f"Deal Architect proxy failed: {e}",
+        }), 500
+
+
+# -------------------------------------------------------------------
+# UPDATED PROPERTY TOOL SEARCH
+# -------------------------------------------------------------------
 
 @investor_bp.route("/api/property_tool_search", methods=["POST"])
 @login_required
 @role_required("investor")
 def api_property_tool_search():
-    """
-    Property Tool search:
-    1) get lightweight ATTOM search matches
-    2) enrich each result via dealfinder profile when possible
-    3) fall back to ATTOM-only cards if enrichment is unavailable
-    """
+
     payload = request.get_json(force=True) or {}
 
     address = (payload.get("address") or "").strip()
@@ -3649,12 +3791,7 @@ def api_property_tool_search():
             "results": [],
         }), 400
 
-    try:
-        page_size = int(payload.get("limit") or 20)
-    except Exception:
-        page_size = 20
-
-    page_size = max(1, min(page_size, 20))
+    page_size = min(int(payload.get("limit") or 20), 20)
     enrich_limit = min(page_size, 8)
 
     try:
@@ -3669,9 +3806,9 @@ def api_property_tool_search():
 
         raw_matches = search_result.get("properties", []) or []
         results = []
-        skipped = []
 
         for idx, raw in enumerate(raw_matches[:page_size]):
+
             raw_address = (
                 raw.get("address_line1")
                 or raw.get("address")
@@ -3685,111 +3822,122 @@ def api_property_tool_search():
             raw_property_type = (raw.get("property_type") or "single_family")
 
             if not raw_address:
-                skipped.append({
-                    "index": idx,
-                    "reason": "Missing address",
-                    "address": raw.get("address") or raw.get("address_line1"),
-                })
                 continue
 
-            # Try enrichment only for the first N results
-            should_enrich = (
-                idx < enrich_limit
-                and bool(raw_city)
-                and bool(raw_state)
-            )
+            # -------------------------
+            # STEP 1: YOUR EXISTING FLOW
+            # -------------------------
+            if idx < enrich_limit and raw_city and raw_state:
+                bundle = build_dealfinder_profile(
+                    address=raw_address,
+                    city=raw_city,
+                    state=raw_state,
+                    zip_code=raw_zip,
+                    property_type=raw_property_type,
+                )
 
-            if should_enrich:
-                try:
-                    bundle = build_dealfinder_profile(
-                        address=raw_address,
-                        city=raw_city,
-                        state=raw_state,
-                        zip_code=raw_zip,
-                        property_type=raw_property_type,
-                    )
-
-                    if bundle.get("ok"):
-                        results.append(_build_property_tool_result(raw, bundle))
-                    else:
-                        skipped.append({
-                            "index": idx,
-                            "reason": "; ".join(bundle.get("errors") or ["Profile build failed"]),
-                            "address": raw_address,
-                        })
-                        results.append(_build_attom_fallback(raw))
-
-                except Exception as inner_e:
-                    current_app.logger.warning(
-                        "property_tool enrichment failed idx=%s address=%s err=%s",
-                        idx,
-                        raw_address,
-                        inner_e,
-                    )
-                    skipped.append({
-                        "index": idx,
-                        "reason": str(inner_e),
-                        "address": raw_address,
-                    })
-                    results.append(_build_attom_fallback(raw))
-
+                if bundle.get("ok"):
+                    result = _build_property_tool_result(raw, bundle)
+                else:
+                    result = _build_attom_fallback(raw)
             else:
-                if idx < enrich_limit and (not raw_city or not raw_state):
-                    skipped.append({
-                        "index": idx,
-                        "reason": "Missing city/state for enrichment; ATTOM fallback used",
-                        "address": raw_address,
-                    })
+                result = _build_attom_fallback(raw)
 
-                results.append(_build_attom_fallback(raw))
+            # -------------------------
+            # STEP 2: 🔥 DEAL ARCHITECT
+            # -------------------------
+            if idx < enrich_limit:
+                try:
+                    engine_payload = {
+                        "project_name": raw_address,
+                        "description": f"{raw_address}, {raw_city}, {raw_state}",
+                        "property_type": result.get("property_type"),
+                        "asking_price": result.get("last_sale_price") or result.get("price"),
+                        "square_feet_target": result.get("square_feet"),
+                        "city": raw_city,
+                        "state": raw_state,
+                        "zip_code": raw_zip,
+                        "arv": result.get("market_value"),
+                        "monthly_rent": result.get("traditional_rent"),
+                        "local_facts": {
+                            "bedrooms": result.get("beds"),
+                            "bathrooms": result.get("baths"),
+                            "year_built": result.get("year_built"),
+                            "lot_sqft": result.get("lot_size_sqft"),
+                            "assessed_value": result.get("assessed_value"),
+                            "annual_tax_amount": result.get("tax_amount"),
+                            "latitude": result.get("latitude"),
+                            "longitude": result.get("longitude"),
+                        }
+                    }
+
+                    engine_resp = requests.post(
+                        current_app.config["RENOVATION_ENGINE_URL"] + "/v1/deal_architect",
+                        json=engine_payload,
+                        headers={"X-API-Key": current_app.config["RENOVATION_ENGINE_API_KEY"]},
+                        timeout=12
+                    )
+
+                    if engine_resp.ok:
+                        engine = engine_resp.json()
+                        meta = engine.get("meta", {})
+
+                        result.update({
+                            "deal_score": engine.get("deal_score"),
+                            "opportunity_tier": engine.get("opportunity_tier"),
+                            "deal_finder_signal": meta.get("deal_finder_signal"),
+                            "primary_strengths": meta.get("primary_strengths", []),
+                            "primary_risks": meta.get("primary_risks", []),
+                            "dscr_estimate": meta.get("dscr_estimate"),
+                            "rent_yield": meta.get("rent_yield"),
+                            "monthly_rent_estimate": meta.get("monthly_rent_estimate"),
+                            "next_step": engine.get("next_step"),
+                            "engine_value": engine.get("estimated_value"),
+                            "valuation_source_label": meta.get("valuation_source_label"),
+                            "comp_confidence": meta.get("comp_confidence"),
+                        })
+                    else:
+                        result["engine_error"] = "Deal Architect failed"
+
+                except Exception as e:
+                    result["engine_error"] = str(e)
+
+            results.append(result)
+
+        # -------------------------
+        # STEP 3: SORT BY DEAL SCORE
+        # -------------------------
+        results = sorted(
+            results,
+            key=lambda r: (r.get("deal_score") is not None, r.get("deal_score") or 0),
+            reverse=True,
+        )
 
         return jsonify({
             "status": "ok",
-            "address": address,
-            "zip": zip_code,
-            "city": city,
-            "state": state,
-            "strategy": strategy,
-            "count": len(results),
             "results": results,
-            "meta": {
-                "raw_count": len(raw_matches),
-                "returned_count": len(results),
-                "enrich_limit": enrich_limit,
-                "enriched_count": len([
-                    r for r in results
-                    if r.get("data_status") != "attom_only"
-                ]),
-                "attom_only_count": len([
-                    r for r in results
-                    if r.get("data_status") == "attom_only"
-                ]),
-                "skipped_count": len(skipped),
-                "skipped": skipped[:10],
-            },
+            "count": len(results),
         })
-
-    except PropertyAPIError as e:
-        return jsonify({
-            "status": "error",
-            "message": str(e),
-            "results": [],
-        }), 400
 
     except Exception as e:
         current_app.logger.exception("Property Tool search failed")
         return jsonify({
             "status": "error",
-            "message": f"Property Tool search failed: {e}",
+            "message": str(e),
             "results": [],
         }), 500
+
+# -------------------------------------------------------------------
+# OPTIONAL: ENGINE-ENRICHED DETAIL ROUTE
+# -------------------------------------------------------------------
 
 @investor_bp.route("/api/property_detail", methods=["POST"])
 @login_required
 @role_required("investor")
 def api_property_detail():
     """
-    Unified property detail endpoint using ATTOM + Realtor.com enrichment.
+    Unified property detail endpoint using ATTOM + Realtor.com enrichment,
+    with optional Deal Architect signal enrichment.
     """
     payload = request.get_json(force=True) or {}
     address = (payload.get("address") or "").strip()
@@ -3810,16 +3958,51 @@ def api_property_detail():
             "source": result.get("source"),
         }), 400
 
+    property_data = result.get("property") or {}
+    valuation = result.get("valuation") or {}
+    rent_estimate = result.get("rent_estimate") or {}
+
+    engine = None
+    engine_error = None
+
+    try:
+        detail_for_engine = {
+            "address": property_data.get("address") or address,
+            "city": property_data.get("city"),
+            "state": property_data.get("state"),
+            "zip_code": property_data.get("zip_code"),
+            "beds": property_data.get("beds"),
+            "baths": property_data.get("baths"),
+            "square_feet": property_data.get("square_feet") or property_data.get("sqft"),
+            "lot_size_sqft": property_data.get("lot_size_sqft"),
+            "year_built": property_data.get("year_built"),
+            "property_type": property_data.get("property_type"),
+            "assessed_value": valuation.get("assessed_value"),
+            "market_value": valuation.get("market_value"),
+            "last_sale_price": valuation.get("last_sale_price"),
+            "traditional_rent": rent_estimate.get("traditional_rent"),
+            "tax_amount": valuation.get("tax_amount"),
+            "latitude": property_data.get("latitude"),
+            "longitude": property_data.get("longitude"),
+        }
+        engine_payload = _build_deal_architect_payload(detail_for_engine, strategy="all")
+        engine = _call_deal_architect(engine_payload)
+    except Exception as e:
+        current_app.logger.warning("property_detail engine enrichment failed: %s", e)
+        engine_error = str(e)
+
     return jsonify({
         "status": "ok",
         "source": result.get("source"),
-        "property": result.get("property"),
-        "valuation": result.get("valuation"),
-        "rent_estimate": result.get("rent_estimate"),
+        "property": property_data,
+        "valuation": valuation,
+        "rent_estimate": rent_estimate,
         "comps": result.get("comps"),
         "market_snapshot": result.get("market_snapshot"),
         "ai_summary": result.get("ai_summary"),
         "raw": result.get("raw"),
+        "engine": engine,
+        "engine_error": engine_error,
     })
 
 # ----------------------------
