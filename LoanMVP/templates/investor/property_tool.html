@@ -154,6 +154,70 @@ function prettyNumber(v){
   return n.toLocaleString(undefined, {maximumFractionDigits: 0});
 }
 
+function compactDate(value){
+  if (!value) return "";
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return safeText(value);
+  return d.toLocaleDateString(undefined, {month:"short", day:"numeric", year:"numeric"});
+}
+
+function resolveHeadlineValue(r){
+  const listPrice = numOrNull(r.price);
+  const estimatedValue = numOrNull(r.estimated_value_engine) ?? numOrNull(r.market_value);
+  const assessedValue = numOrNull(r.assessed_value);
+  const lastSalePrice = numOrNull(r.last_sale_price);
+  const lastSaleDate = compactDate(r.last_sale_date);
+
+  if (listPrice !== null) {
+    return {
+      label: "List Price",
+      value: listPrice,
+      subLabel: estimatedValue !== null
+        ? `Estimated value ${money(estimatedValue)}`
+        : (r.status ? `Status: ${safeText(r.status)}` : "Live listing data"),
+      source: "listing"
+    };
+  }
+
+  if (estimatedValue !== null) {
+    return {
+      label: "Estimated Value",
+      value: estimatedValue,
+      subLabel: assessedValue !== null
+        ? `Assessed value ${money(assessedValue)}`
+        : "Automated valuation estimate",
+      source: "estimate"
+    };
+  }
+
+  if (assessedValue !== null) {
+    return {
+      label: "Assessed Value",
+      value: assessedValue,
+      subLabel: lastSalePrice !== null
+        ? `Last sale ${money(lastSalePrice)}${lastSaleDate ? ` on ${lastSaleDate}` : ""}`
+        : "Public record assessed value",
+      source: "assessed"
+    };
+  }
+
+  if (lastSalePrice !== null) {
+    return {
+      label: "Last Recorded Sale",
+      value: lastSalePrice,
+      subLabel: lastSaleDate ? `Recorded ${lastSaleDate}` : "Public record sale history",
+      source: "last_sale"
+    };
+  }
+
+  return {
+    label: "Value Signal",
+    value: null,
+    subLabel: "Live price or estimate pending",
+    source: "unknown"
+  };
+}
+
 function strategyLabel(v){
   if (v === "flip") return "Fix & Flip";
   if (v === "rental") return "Rental";
