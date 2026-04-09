@@ -279,10 +279,17 @@ function currentSearchStrategy(){
   return document.getElementById("strategy")?.value || "all";
 }
 
+function normalizePhotoArray(photos){
+  if (!Array.isArray(photos)) return [];
+  return photos
+    .map(p => typeof p === "string" ? p : (p?.url || p?.src || p?.href || null))
+    .filter(Boolean);
+}
+
 function buildPropertyPayload(r, analyzeId, saveId){
   const strategy = currentSearchStrategy();
-
   const headline = resolveHeadlineValue(r);
+
   const primaryValue = headline.value
     ?? numOrNull(r.price)
     ?? numOrNull(r.display_value)
@@ -290,6 +297,14 @@ function buildPropertyPayload(r, analyzeId, saveId){
     ?? numOrNull(r.assessed_value)
     ?? numOrNull(r.last_sale_price)
     ?? null;
+
+  const listingPhotos = normalizePhotoArray(r.photos);
+  const primaryPhoto =
+    r.primary_photo ||
+    r.photo ||
+    r.thumbnail ||
+    (listingPhotos.length ? listingPhotos[0] : null) ||
+    null;
 
   return {
     address: r.address || r.address_line1 || "",
@@ -340,7 +355,9 @@ function buildPropertyPayload(r, analyzeId, saveId){
     why_it_made_list: Array.isArray(r.why_it_made_list) ? r.why_it_made_list : [],
 
     description: r.description || null,
-    image_url: r.primary_photo || r.photo || r.thumbnail || (Array.isArray(r.photos) ? r.photos[0] : null) || null,
+
+    image_url: primaryPhoto,
+    listing_photos: listingPhotos,
 
     _btnId: analyzeId,
     _saveBtnId: saveId
@@ -465,7 +482,8 @@ function renderEmpty(title, body){
 }
 
 function resolveImage(r){
-  return r.primary_photo || r.photo || r.thumbnail || (Array.isArray(r.photos) ? r.photos[0] : null) || PLACEHOLDER_IMAGE;
+  const listingPhotos = normalizePhotoArray(r.photos);
+  return r.primary_photo || r.photo || r.thumbnail || (listingPhotos.length ? listingPhotos[0] : null) || PLACEHOLDER_IMAGE;
 }
 
 function resolveReasons(r){
@@ -656,7 +674,10 @@ async function viewDetails(item){
 
 async function saveOnly(item){
   const btn = document.getElementById(item._saveBtnId);
-  if (btn){ btn.disabled = true; btn.innerText = "Saving..."; }
+  if (btn){
+    btn.disabled = true;
+    btn.innerText = "Saving...";
+  }
 
   try{
     const resp = await fetch(SAVE_URL, {
@@ -669,7 +690,10 @@ async function saveOnly(item){
     const data = await resp.json();
     if (data.status !== "ok") {
       alert(data.message || "Could not save property.");
-      if (btn){ btn.disabled = false; btn.innerText = "Save"; }
+      if (btn){
+        btn.disabled = false;
+        btn.innerText = "Save";
+      }
       return;
     }
 
@@ -683,7 +707,10 @@ async function saveOnly(item){
   } catch (e) {
     console.error(e);
     alert("Network error while saving.");
-    if (btn){ btn.disabled = false; btn.innerText = "Save"; }
+    if (btn){
+      btn.disabled = false;
+      btn.innerText = "Save";
+    }
   }
 }
 
@@ -776,7 +803,7 @@ async function runSearch(){
 
     const locationLabel = data.zip || data.address || "your search";
     status.innerText = enriched.length
-      ? `Ravlo found ${data.total_matches || enriched.length} matches and returned the top ${enriched.length} deal${enriched.length === 1 ? "" : "s"} for ${locationLabel}.`
+      ? `Ravlo found ${data.total_matches || enriched.length} matches and returned the top ${enriched.length} opportunities for ${locationLabel}.`
       : `No properties matched ${locationLabel}.`;
 
     renderCards(enriched);
@@ -827,7 +854,8 @@ async function runSearch(){
 .dfv4-source-pill{display:inline-flex;align-items:center;padding:.28rem .5rem;border-radius:999px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.1);color:#eef4fb;font-size:.68rem;font-weight:800;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap}
 .dfv4-price-value{color:#f6fbff;font-size:1.6rem;font-weight:900;line-height:1.05;margin-top:.35rem}
 .dfv4-price-sub{color:var(--muted);font-size:.78rem;margin-top:.35rem}
-.dfv4-chip-row{display:flex;gap:.45rem;flex-wrap:wrap}.dfv4-chip{display:inline-flex;align-items:center;padding:.35rem .55rem;border-radius:999px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);color:var(--text);font-size:.76rem}
+.dfv4-chip-row{display:flex;gap:.45rem;flex-wrap:wrap}
+.dfv4-chip{display:inline-flex;align-items:center;padding:.35rem .55rem;border-radius:999px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);color:var(--text);font-size:.76rem}
 .dfv4-chip.accent{background:rgba(37,99,235,.12);border-color:rgba(96,165,250,.22);color:#dbeafe}
 .dfv4-description{padding:.75rem .85rem;border-radius:12px;background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.08);color:#d7e0eb;font-size:.82rem;line-height:1.55}
 .dfv4-fact-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.55rem}
@@ -836,7 +864,8 @@ async function runSearch(){
 .dfv4-fact strong{color:var(--text);font-size:.86rem;line-height:1.45}
 .dfv4-engine-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.6rem}
 .dfv4-engine-grid div{padding:.7rem .75rem;border-radius:12px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08)}
-.dfv4-engine-grid span{display:block;color:var(--muted);margin-bottom:.2rem;font-size:.78rem}.dfv4-engine-grid strong{color:var(--text);font-size:.92rem}
+.dfv4-engine-grid span{display:block;color:var(--muted);margin-bottom:.2rem;font-size:.78rem}
+.dfv4-engine-grid strong{color:var(--text);font-size:.92rem}
 .dfv4-ai-snippet{padding:.8rem .9rem;border-radius:12px;background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.08);color:var(--muted);font-size:.82rem;line-height:1.55}
 .dfv4-thesis-list{margin:.45rem 0 0 1rem;padding:0}
 .dfv4-engine-warning{margin-top:.5rem;color:#fca5a5;font-size:.78rem}
@@ -849,24 +878,18 @@ async function runSearch(){
 {% endblock %}
 
 {#
-Required backend behavior for the primary CTA:
+Notes:
+1) buildPropertyPayload now includes:
+   - image_url
+   - listing_photos
+2) saveOnly and planThisDeal now send those photos to the backend.
+3) Backend can upload them to DigitalOcean Spaces and store:
+   - SavedProperty.image_url
+   - SavedProperty.listing_photos_json
+   - Deal.results_json["listing_photos"]
 
-@bp.post('/api/property-tool/save-and-analyze')
-def api_property_tool_save_and_analyze():
-    payload = request.get_json(force=True) or {}
-
-    # 1) Create or update canonical deal record
-    # 2) Persist address, pricing, sqft, beds/baths, property_id, strategy, rent, score signals, etc.
-    # 3) Mark budget + analysis as pending/stale so downstream routes recompute from same deal_id
-    # 4) Return the real workspace URL for that saved deal
-
-    return jsonify({
-        "status": "ok",
-        "deal_url": url_for("investor.deal_workspace", deal_id=deal.id)
-    })
-
-# Main idea:
-# Deal Finder -> save canonical deal -> redirect by deal_id
-# NOT:
-# Deal Finder -> query params only -> empty workspace shell
+Recommended route behavior:
+- /api/property_tool_save_and_analyze should create/update a real Deal
+- return /deal_workspace/<deal_id>
+- deal_open() should also redirect with deal_id instead of prop_id
 #}
