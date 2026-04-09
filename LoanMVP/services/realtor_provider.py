@@ -244,6 +244,50 @@ def fetch_realtor_data(address: str, city: str, state: str) -> Optional[Dict[str
         print("Realtor Provider: RAPIDAPI_KEY missing")
         return None
 
+    location_parts = [part.strip() for part in [address, city, state] if part and str(part).strip()]
+    location_query = ", ".join(location_parts)
+
+    def _fallback_search_result() -> Optional[Dict[str, Any]]:
+        if not location_query:
+            return None
+        listings = search_realtor_for_sale(location=location_query, limit=10)
+        if not listings:
+            return None
+
+        target_address = (address or "").strip().lower()
+        target_city = (city or "").strip().lower()
+        target_state = (state or "").strip().lower()
+
+        selected = None
+        for item in listings:
+            item_address = (item.get("address") or item.get("address_line1") or "").strip().lower()
+            item_city = (item.get("city") or "").strip().lower()
+            item_state = (item.get("state") or "").strip().lower()
+            if target_address and item_address and target_address in item_address:
+                if (not target_city or target_city == item_city) and (not target_state or target_state == item_state):
+                    selected = item
+                    break
+
+        if not selected:
+            selected = listings[0]
+
+        return {
+            "status": "ok",
+            "provider": "realtor_search",
+            "property": {
+                "price": selected.get("price"),
+                "beds": selected.get("beds"),
+                "baths": selected.get("baths"),
+                "sqft": selected.get("square_feet"),
+                "status": selected.get("status"),
+                "days_on_market": selected.get("days_on_market"),
+                "description": None,
+                "photos": selected.get("photos") or [],
+                "primary_photo": selected.get("primary_photo"),
+            },
+            "raw": selected.get("raw") or selected,
+        }
+
     try:
         payload = {
             "address": address,
@@ -255,13 +299,13 @@ def fetch_realtor_data(address: str, city: str, state: str) -> Optional[Dict[str
 
         if not resp.ok:
             print("Realtor Provider error:", resp.text[:300])
-            return None
+            return _fallback_search_result()
 
         data = resp.json()
         home = _find_listing_node(data)
 
         if not home:
-            return None
+            return _fallback_search_result()
 
         photos = _extract_photos(
             _pick(
@@ -308,7 +352,7 @@ def fetch_realtor_data(address: str, city: str, state: str) -> Optional[Dict[str
 
     except Exception as e:
         print("Realtor Provider Exception:", e)
-        return None
+        return _fallback_search_result()
 
 
 def fetch_realtor_photos(property_id: str | int | None) -> List[str]:

@@ -3820,8 +3820,50 @@ def property_explore_plus(prop_id):
     resolved = resolve_property_unified(prop.address)
 
     if resolved.get("status") != "ok":
-        flash("Could not load property intelligence.", "warning")
-        return redirect(url_for(fallback_endpoint))
+        current_app.logger.warning(
+            "Property explore fallback for prop_id=%s address=%s: %s",
+            prop_id,
+            prop.address,
+            resolved.get("error") or resolved.get("stage") or "unknown_error",
+        )
+        resolved = {
+            "status": "partial",
+            "property": {
+                "address": prop.address,
+                "address_line1": prop.address,
+                "city": getattr(prop, "city", None),
+                "state": getattr(prop, "state", None),
+                "zip_code": getattr(prop, "zipcode", None),
+                "zip": getattr(prop, "zipcode", None),
+                "property_id": prop.property_id,
+                "price": None,
+                "beds": getattr(prop, "bedrooms", None),
+                "baths": getattr(prop, "bathrooms", None),
+                "sqft": prop.sqft,
+                "square_feet": prop.sqft,
+                "property_type": getattr(prop, "property_type", None),
+                "photos": [],
+                "primary_photo": None,
+                "status": "Saved Property",
+                "days_on_market": None,
+                "description": None,
+            },
+            "valuation": {
+                "estimate": None,
+                "market_value": None,
+                "assessed_value": None,
+                "last_sale_price": None,
+            },
+            "rent_estimate": {
+                "rent": None,
+                "traditional_rent": None,
+                "estimated_rent": None,
+            },
+            "comps": {"sales": [], "rentals": [], "meta": {}},
+            "market_snapshot": {},
+            "ai_summary": "Live property enrichment is temporarily unavailable. You can still review the saved property and send it to Deal Workspace.",
+        }
+        flash("Live property intelligence is temporarily unavailable. Showing saved property details instead.", "warning")
 
     resolved_property = resolved.get("property") or {}
     valuation = resolved.get("valuation") or {}
