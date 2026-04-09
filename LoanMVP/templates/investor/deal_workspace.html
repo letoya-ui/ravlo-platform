@@ -38,8 +38,20 @@ Compare exit paths, pressure-test returns, and move into architect, budget, reha
         Apply
     </a>
     {% else %}
-    <form method="POST" action="{{ url_for('investor.save_deal', prop_id=selected_prop.id) }}" class="inline-form">
+    <form method="POST" action="{{ url_for('investor.save_deal') }}" class="inline-form">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="saved_property_id" value="{{ selected_prop.id }}">
+        <input type="hidden" name="title" value="{{ selected_prop.address or 'Saved Deal' }}">
+        <input type="hidden" name="strategy" value="{{ mode or 'flip' }}">
+        <input type="hidden" name="property_id" value="{{ selected_prop.property_id or '' }}">
+        <input type="hidden" name="inputs_json" value='{{ {
+            "address": selected_prop.address,
+            "city": selected_prop.city,
+            "state": selected_prop.state,
+            "zip_code": selected_prop.zipcode if selected_prop.zipcode is defined else "",
+            "strategy": mode or "flip",
+            "purchase_price": selected_prop.price or 0
+        } | tojson | safe }}'>
         <button type="submit" class="ravlo-btn ghost sm">Save Deal</button>
     </form>
     <a href="{{ url_for('investor.capital_application', prop_id=selected_prop.id) }}" class="ravlo-btn primary sm">
@@ -74,21 +86,139 @@ Compare exit paths, pressure-test returns, and move into architect, budget, reha
 
     {% if selected_prop %}
 
-    {% set recommended = recommendation.best if recommendation else "" %}
+    {# -------------------------------------------------------
+       PRIMARY SOURCES
+       Prefer deal -> workspace_analysis -> selected_prop -> comps
+       ------------------------------------------------------- #}
+
+    {% set deal_inputs = deal.inputs_json if deal and deal.inputs_json else {} %}
+    {% set deal_results = deal.results_json if deal and deal.results_json else {} %}
+    {% set wa = workspace_analysis if workspace_analysis else {} %}
+    {% set planning_budget = wa.get("planning_budget", {}) if wa else {} %}
+
+    {% set recommended =
+        (
+            recommendation.best
+            if recommendation and recommendation.best
+            else (
+                strategy_analysis.get("strategy")
+                if strategy_analysis and strategy_analysis.get("strategy")
+                else (
+                    deal.recommended_strategy
+                    if deal and deal.recommended_strategy
+                    else (
+                        deal.strategy if deal and deal.strategy else ""
+                    )
+                )
+            )
+        )
+    %}
+
+    {% set purchase_price =
+        (
+            deal.purchase_price
+            or wa.get("purchase_price")
+            or deal_inputs.get("purchase_price")
+            or selected_prop.price
+            or 0
+        ) | float
+    %}
+    {% set purchase_price_safe = purchase_price if purchase_price > 0 else 1 %}
+
+    {% set sqft_value =
+        (
+            wa.get("square_feet")
+            or selected_prop.sqft
+            or selected_prop.square_feet
+            or (comps.property.sqft if comps and comps.property and comps.property.sqft else 0)
+            or 0
+        ) | float
+    %}
+
+    {% set arv_value =
+        (
+            deal.arv
+            or wa.get("arv")
+            or (comps.arv_estimate if comps and comps.arv_estimate else 0)
+            or 0
+        ) | float
+    %}
+
+    {% set rent_value =
+        (
+            deal.estimated_rent
+            or wa.get("estimated_rent")
+            or wa.get("monthly_rent")
+            or 0
+        ) | float
+    %}
+
+    {% set rehab_cost_value =
+        (
+            deal.rehab_cost
+            or rehab_analysis.get("total")
+            or 0
+        ) | float
+    %}
+
+    {% set deal_score_value =
+        (
+            deal.deal_score
+            if deal and deal.deal_score is not none
+            else wa.get("deal_score")
+        )
+    %}
+
+    {% set best_use_value =
+        wa.get("estimated_best_use")
+        or wa.get("selected_strategy")
+        or deal.recommended_strategy if deal and deal.recommended_strategy
+        else ""
+    %}
+
+    {# comparison sources #}
     {% set flip = comparison.get("flip", {}) if comparison else {} %}
     {% set rental = comparison.get("rental", {}) if comparison else {} %}
     {% set airbnb = comparison.get("airbnb", {}) if comparison else {} %}
-    {% set planning_budget = workspace_analysis.get("planning_budget", {}) if workspace_analysis else {} %}
 
-    {% set purchase_price = (selected_prop.price or 0) | float %}
-    {% set purchase_price_safe = purchase_price if purchase_price > 0 else 1 %}
+    {% set flip_profit =
+        (
+            flip.get("profit", 0)
+            or ((deal.arv - deal.purchase_price - deal.rehab_cost) if deal and deal.arv and deal.purchase_price is not none and deal.rehab_cost is not none else 0)
+        ) | float
+    %}
+    {% set flip_total =
+        (
+            flip.get("total_investment", 0)
+            or ((deal.purchase_price or 0) + (deal.rehab_cost or 0) if deal else 0)
+        ) | float
+    %}
+    {% set flip_arv =
+        (
+            flip.get("arv", 0)
+            or deal.arv
+            or wa.get("arv")
+            or (comps.arv_estimate if comps and comps.arv_estimate else 0)
+            or 0
+        ) | float
+    %}
+    {% set flip_roi =
+        (
+            ((flip.get("roi", 0) or 0) | float) * 100
+            if flip.get("roi") is not none
+            else (((flip_profit / flip_total) * 100) if flip_total > 0 else 0)
+        )
+    %}
 
-    {% set flip_profit = (flip.get("profit", 0) or 0) | float %}
-    {% set flip_roi = ((flip.get("roi", 0) or 0) | float) * 100 %}
-    {% set flip_total = (flip.get("total_investment", 0) or 0) | float %}
-    {% set flip_arv = (flip.get("arv", comps.arv_estimate if comps and comps.arv_estimate else 0) or 0) | float %}
-
-    {% set rental_rent = (rental.get("monthly_rent", 0) or 0) | float %}
+    {% set rental_rent =
+        (
+            rental.get("monthly_rent", 0)
+            or deal.estimated_rent
+            or wa.get("estimated_rent")
+            or wa.get("monthly_rent")
+            or 0
+        ) | float
+    %}
     {% set rental_cashflow = (rental.get("net_cashflow", 0) or 0) | float %}
     {% set rental_cap = ((rental.get("cap_rate", 0) or 0) | float) * 100 %}
     {% set rental_dscr = (rental.get("dscr", 0) or 0) | float %}
@@ -142,7 +272,13 @@ Compare exit paths, pressure-test returns, and move into architect, budget, reha
                 </span>
 
                 <span class="ravlo-chip">
-                    {% if deal %}Deal #{{ deal.id }}{% else %}Not Attached{% endif %}
+                    {% if deal %}
+                        Deal #{{ deal.id }}
+                    {% elif selected_prop %}
+                        Property Saved
+                    {% else %}
+                        Not Attached
+                    {% endif %}
                 </span>
 
                 <span class="ravlo-chip">
@@ -153,6 +289,12 @@ Compare exit paths, pressure-test returns, and move into architect, budget, reha
                         Not Started
                     {% endif %}
                 </span>
+
+                {% if deal_score_value is not none %}
+                <span class="ravlo-chip">
+                    Score: {{ deal_score_value }}
+                </span>
+                {% endif %}
             </div>
 
             <div class="workspace-action-row mt-16">
@@ -181,8 +323,22 @@ Compare exit paths, pressure-test returns, and move into architect, budget, reha
                     Apply
                 </a>
                 {% else %}
-                <form method="POST" action="{{ url_for('investor.save_deal', prop_id=selected_prop.id) }}" class="inline-form">
+                <form method="POST" action="{{ url_for('investor.save_deal') }}" class="inline-form">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="saved_property_id" value="{{ selected_prop.id }}">
+                    <input type="hidden" name="title" value="{{ selected_prop.address or 'Saved Deal' }}">
+                    <input type="hidden" name="strategy" value="{{ mode or 'flip' }}">
+                    <input type="hidden" name="property_id" value="{{ selected_prop.property_id or '' }}">
+                    <input type="hidden" name="inputs_json" value='{{ {
+                        "address": selected_prop.address,
+                        "city": selected_prop.city,
+                        "state": selected_prop.state,
+                        "zip_code": selected_prop.zipcode if selected_prop.zipcode is defined else "",
+                        "strategy": mode or "flip",
+                        "purchase_price": purchase_price,
+                        "arv": arv_value,
+                        "estimated_rent": rent_value
+                    } | tojson | safe }}'>
                     <button type="submit" class="ravlo-btn ghost">
                         Save Deal
                     </button>
@@ -231,31 +387,44 @@ Compare exit paths, pressure-test returns, and move into architect, budget, reha
     <section class="workspace-grid-4">
         <div class="workspace-stat">
             <span>Purchase Price</span>
-            <strong>${{ "{:,.0f}".format(purchase_price) }}</strong>
-        </div>
-        <div class="workspace-stat">
-            <span>Sq Ft</span>
             <strong>
-                {% if selected_prop.sqft or selected_prop.square_feet %}
-                {{ "{:,.0f}".format((selected_prop.sqft or selected_prop.square_feet)|float) }}
-                {% elif comps and comps.property and comps.property.sqft %}
-                {{ "{:,.0f}".format(comps.property.sqft|float) }}
+                {% if purchase_price > 0 %}
+                    ${{ "{:,.0f}".format(purchase_price) }}
                 {% else %}
-                —
+                    —
                 {% endif %}
             </strong>
         </div>
+
+        <div class="workspace-stat">
+            <span>Sq Ft</span>
+            <strong>
+                {% if sqft_value > 0 %}
+                    {{ "{:,.0f}".format(sqft_value) }}
+                {% else %}
+                    —
+                {% endif %}
+            </strong>
+        </div>
+
         <div class="workspace-stat">
             <span>ARV Estimate</span>
-            <strong>${{ "{:,.0f}".format(comps.arv_estimate or 0) if comps and comps.arv_estimate else "—" }}</strong>
-        </div>
-        <div class="workspace-stat">
-            <span>Budget Status</span>
             <strong>
-                {% if budget %}
-                    Ready
+                {% if arv_value > 0 %}
+                    ${{ "{:,.0f}".format(arv_value) }}
                 {% else %}
-                    Not Started
+                    —
+                {% endif %}
+            </strong>
+        </div>
+
+        <div class="workspace-stat">
+            <span>Estimated Rent</span>
+            <strong>
+                {% if rent_value > 0 %}
+                    ${{ "{:,.0f}".format(rent_value) }}/mo
+                {% else %}
+                    —
                 {% endif %}
             </strong>
         </div>
@@ -289,7 +458,7 @@ Compare exit paths, pressure-test returns, and move into architect, budget, reha
                         <div class="workspace-compare-meta">
                             <div><span>Projected Profit</span><strong>${{ "{:,.0f}".format(flip_profit) }}</strong></div>
                             <div><span>Total Investment</span><strong>${{ "{:,.0f}".format(flip_total) }}</strong></div>
-                            <div><span>Projected ARV</span><strong>${{ "{:,.0f}".format(flip_arv) if flip_arv else "—" }}</strong></div>
+                            <div><span>Projected ARV</span><strong>{% if flip_arv %}${{ "{:,.0f}".format(flip_arv) }}{% else %}—{% endif %}</strong></div>
                             <div><span>ROI</span><strong>{{ "{:.1f}".format(flip_roi) }}%</strong></div>
                         </div>
 
@@ -379,6 +548,37 @@ Compare exit paths, pressure-test returns, and move into architect, budget, reha
                         </div>
                     </div>
 
+                </div>
+                {% elif workspace_analysis %}
+                <div class="workspace-fit-grid">
+                    <div class="workspace-mini-stat">
+                        <span>Saved Strategy</span>
+                        <strong>{{ workspace_analysis.get("selected_strategy", workspace_analysis.get("strategy", "—")) }}</strong>
+                    </div>
+                    <div class="workspace-mini-stat">
+                        <span>Best Use</span>
+                        <strong>{{ workspace_analysis.get("estimated_best_use", "—") }}</strong>
+                    </div>
+                    <div class="workspace-mini-stat">
+                        <span>ARV</span>
+                        <strong>
+                            {% if workspace_analysis.get("arv") %}
+                                ${{ "{:,.0f}".format(workspace_analysis.get("arv")|float) }}
+                            {% else %}
+                                —
+                            {% endif %}
+                        </strong>
+                    </div>
+                    <div class="workspace-mini-stat">
+                        <span>Estimated Rent</span>
+                        <strong>
+                            {% if workspace_analysis.get("estimated_rent") %}
+                                ${{ "{:,.0f}".format(workspace_analysis.get("estimated_rent")|float) }}/mo
+                            {% else %}
+                                —
+                            {% endif %}
+                        </strong>
+                    </div>
                 </div>
                 {% else %}
                 <div class="empty-state">No comparison data loaded yet.</div>
@@ -520,6 +720,25 @@ Compare exit paths, pressure-test returns, and move into architect, budget, reha
                     <div class="workspace-mini-stat">
                         <span>Confidence</span>
                         <strong>{{ planning_budget.get("confidence", "—") }}</strong>
+                    </div>
+                </div>
+                {% elif rehab_cost_value > 0 %}
+                <div class="workspace-fit-grid">
+                    <div class="workspace-mini-stat">
+                        <span>Saved Rehab Cost</span>
+                        <strong>${{ "{:,.0f}".format(rehab_cost_value) }}</strong>
+                    </div>
+                    <div class="workspace-mini-stat">
+                        <span>Budget Status</span>
+                        <strong>{% if budget %}Tracked{% else %}Planning{% endif %}</strong>
+                    </div>
+                    <div class="workspace-mini-stat">
+                        <span>Deal Source</span>
+                        <strong>{% if deal %}Deal Record{% else %}Saved Property{% endif %}</strong>
+                    </div>
+                    <div class="workspace-mini-stat">
+                        <span>Confidence</span>
+                        <strong>Working Draft</strong>
                     </div>
                 </div>
                 {% else %}
