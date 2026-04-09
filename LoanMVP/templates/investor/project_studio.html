@@ -296,6 +296,42 @@ Open any address and let Ravlo compare the best plan before you move into scope,
       {% endif %}
     </div>
   </section>
+
+  <section class="ravlo-card pad">
+    <div class="ps-section-head">
+      <div>
+        <div class="eyebrow">STEP 6</div>
+        <h3 class="ps-title">Move into execution</h3>
+      </div>
+      <div class="muted">These actions unlock after property, strategy, and scope are defined.</div>
+    </div>
+
+    <div class="ps-execution-grid">
+      <a href="{{ url_for('investor.quote') }}" class="ps-execution-card">
+        <span class="ps-execution-kicker">QUOTE</span>
+        <strong>Get Real Quote</strong>
+        <p>Turn the planning range into a more concrete quote scenario before you commit capital.</p>
+      </a>
+
+      <a href="{{ url_for('investor.partner_marketplace', service_type='Contractor', city=city, state=state, zip_code=zip_code) }}" class="ps-execution-card">
+        <span class="ps-execution-kicker">TEAM</span>
+        <strong>Connect Contractor</strong>
+        <p>Open the partner marketplace with contractor filters so you can line up execution support for this plan.</p>
+      </a>
+
+      <a href="{{ url_for('investor.partner_marketplace', service_type='Realtor', city=city, state=state, zip_code=zip_code) }}" class="ps-execution-card">
+        <span class="ps-execution-kicker">MARKET</span>
+        <strong>Connect Realtor</strong>
+        <p>Bring in a realtor for pricing, resale strategy, and market validation on the selected path.</p>
+      </a>
+
+      <a href="{{ url_for('investor.capital_application') }}" class="ps-execution-card">
+        <span class="ps-execution-kicker">CAPITAL</span>
+        <strong>Apply for Construction Loan</strong>
+        <p>Move from planning into financing when you are ready to turn the scoped strategy into a funded project.</p>
+      </a>
+    </div>
+  </section>
   {% endif %}
   {% endif %}
 
@@ -370,6 +406,12 @@ Open any address and let Ravlo compare the best plan before you move into scope,
 .ps-scope-card p{margin:0;color:var(--muted);line-height:1.55}
 .ps-scope-card:hover,.ps-scope-card.active{border-color:rgba(96,165,250,.28);background:rgba(37,99,235,.08);transform:translateY(-1px)}
 .ps-budget-band{display:grid;gap:.75rem}
+.ps-execution-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px}
+.ps-execution-card{display:grid;gap:.45rem;padding:1rem 1.05rem;border-radius:18px;background:linear-gradient(180deg, rgba(20,30,40,.52), rgba(12,18,26,.74));border:1px solid rgba(255,255,255,.08);text-decoration:none;color:inherit;transition:all .2s ease}
+.ps-execution-card:hover{transform:translateY(-1px);border-color:rgba(96,165,250,.28);background:rgba(37,99,235,.08)}
+.ps-execution-kicker{color:#a9c4ff;font-size:.72rem;font-weight:800;letter-spacing:.08em}
+.ps-execution-card strong{color:#fff;font-size:1rem}
+.ps-execution-card p{margin:0;color:var(--muted);line-height:1.55}
 .ps-step-list{display:grid;gap:.85rem;margin-top:1rem}
 .ps-step{display:grid;grid-template-columns:auto 1fr;gap:.8rem;padding:.9rem 1rem;border-radius:16px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08)}
 .ps-step span{display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:999px;background:rgba(255,255,255,.05);font-weight:800;color:#fff}
@@ -379,7 +421,7 @@ Open any address and let Ravlo compare the best plan before you move into scope,
 .ps-loaded-card strong{color:#fff;font-size:1rem}
 .ps-bullet-list{display:grid;gap:.7rem;margin-top:1rem}
 .ps-bullet-list div{padding:.9rem 1rem;border-radius:16px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);color:#fff}
-@media (max-width:1100px){.ps-studio-shell,.ps-snapshot-grid,.ps-strategy-grid{grid-template-columns:1fr}}
+@media (max-width:1100px){.ps-studio-shell,.ps-snapshot-grid,.ps-strategy-grid,.ps-execution-grid{grid-template-columns:1fr}}
 @media (max-width:900px){.ps-grid,.ps-form-grid,.ps-value-band,.ps-fact-grid,.ps-card-metrics{grid-template-columns:1fr}}
 </style>
 {% endblock %}

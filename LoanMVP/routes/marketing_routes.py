@@ -79,12 +79,12 @@ PAGE_META = {
     "terms": {
         "title": "Terms of Service | Ravlo",
         "description": "Read Ravlo’s terms of service.",
-        "template": "marketing/terms.html",
+        "template": "marketing/terms_launch.html",
     },
     "privacy": {
         "title": "Privacy Policy | Ravlo",
         "description": "Read Ravlo’s privacy policy.",
-        "template": "marketing/privacy.html",
+        "template": "marketing/privacy_launch.html",
     },
     "deal_architect": {
         "title": "Deal Architect | Ravlo Studio",

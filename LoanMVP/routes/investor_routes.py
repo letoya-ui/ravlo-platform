@@ -2524,7 +2524,7 @@ def settings():
 def privacy():
     ip = InvestorProfile.query.filter_by(user_id=current_user.id).first()
     return render_template(
-        "investor/privacy.html",
+        "investor/privacy_launch.html",
         investor=current_user,
         investor_profile=ip,
     )
