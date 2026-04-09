@@ -361,20 +361,48 @@ def _build_property_tool_result(raw_match, profile_bundle):
     """
     profile = profile_bundle.get("profile") or {}
     scoring = profile_bundle.get("scoring") or {}
+    raw_sources = profile.get("raw_sources") or {}
+    realtor_source = raw_sources.get("realtor") or {}
+    photos = profile.get("photos") or raw_match.get("photos") or []
+
+    listing_price = _safe_float(
+        _first_nonempty(
+            profile.get("listing_price"),
+            realtor_source.get("price"),
+            profile.get("price") if (
+                profile.get("status")
+                or profile.get("days_on_market")
+                or profile.get("description")
+            ) else None,
+            raw_match.get("price"),
+            raw_match.get("list_price"),
+            raw_match.get("listPrice"),
+            raw_match.get("listedPrice"),
+        )
+    )
 
     market_value = _safe_float(profile.get("market_value"))
     assessed_value = _safe_float(profile.get("assessed_value"))
     last_sale_price = _safe_float(profile.get("last_sale_price"))
-    price = _safe_float(profile.get("price"))
+    price = listing_price
 
     display_value = _first_nonempty(
+        listing_price,
         market_value,
-        price,
         assessed_value,
         last_sale_price,
     )
 
-    if market_value is not None:
+    if listing_price is not None:
+        display_value_label = "List Price"
+        display_value_secondary = market_value or assessed_value or last_sale_price
+        display_value_secondary_label = (
+            "Estimated Market Value" if market_value is not None else
+            "Assessed Value" if assessed_value is not None else
+            "Last Sale Price" if last_sale_price is not None else
+            None
+        )
+    elif market_value is not None:
         display_value_label = "Market Value"
         display_value_secondary = assessed_value or last_sale_price
         display_value_secondary_label = (
@@ -382,7 +410,7 @@ def _build_property_tool_result(raw_match, profile_bundle):
             "Last Sale Price" if last_sale_price is not None else
             None
         )
-    elif price is not None:
+    elif _safe_float(profile.get("price")) is not None:
         display_value_label = "Best Available Value"
         display_value_secondary = assessed_value or last_sale_price
         display_value_secondary_label = (
@@ -446,12 +474,18 @@ def _build_property_tool_result(raw_match, profile_bundle):
         "display_value_secondary_label": display_value_secondary_label,
 
         "price": price,
+        "listing_price": listing_price,
         "market_value": market_value,
         "assessed_value": assessed_value,
         "last_sale_price": last_sale_price,
         "data_status": "enriched",
         "last_sale_date": profile.get("last_sale_date"),
         "tax_amount": _safe_float(profile.get("tax_amount")),
+        "status": _first_nonempty(profile.get("status"), raw_match.get("status")),
+        "days_on_market": _safe_int(
+            _first_nonempty(profile.get("days_on_market"), raw_match.get("days_on_market"), raw_match.get("daysOnMarket"))
+        ),
+        "description": _first_nonempty(profile.get("description"), raw_match.get("description")),
 
         "traditional_rent": _safe_float(profile.get("traditional_rent")),
         "airbnb_rent": _safe_float(profile.get("airbnb_rent")),
@@ -469,9 +503,10 @@ def _build_property_tool_result(raw_match, profile_bundle):
         "recommended_strategy": recommended_strategy or "Hold / Review",
         "score_reasons": score_reasons,
 
-        "primary_photo": _resolve_photo(raw_match),
-        "photo": _resolve_photo(raw_match),
-        "thumbnail": _resolve_photo(raw_match),
+        "primary_photo": _first_nonempty(profile.get("primary_photo"), _resolve_photo(raw_match)),
+        "photo": _first_nonempty(profile.get("primary_photo"), _resolve_photo(raw_match)),
+        "thumbnail": _first_nonempty(profile.get("primary_photo"), _resolve_photo(raw_match)),
+        "photos": photos,
 
         "latitude": _safe_float(raw_match.get("latitude")),
         "longitude": _safe_float(raw_match.get("longitude")),
@@ -497,31 +532,51 @@ def _build_attom_fallback(raw):
     market = detail.get("market_value") or raw.get("market_value")
     assessed = detail.get("assessed_value") or raw.get("assessed_value")
     sale = detail.get("last_sale_price") or raw.get("last_sale_price")
+    listing_price = (
+        raw.get("price")
+        or raw.get("list_price")
+        or raw.get("listPrice")
+        or raw.get("listedPrice")
+    )
 
-    display_value = market or assessed or sale
+    display_value = listing_price or market or assessed or sale
 
     return {
         "address": raw.get("address") or raw.get("address_line1"),
+        "address_line1": raw.get("address_line1") or raw.get("address"),
         "city": raw.get("city"),
         "state": raw.get("state"),
         "zip_code": raw.get("zip_code"),
+        "property_type": raw.get("property_type") or raw.get("propertyType"),
 
-        "beds": detail.get("bedrooms") or raw.get("beds"),
-        "baths": detail.get("bathrooms") or raw.get("baths"),
-        "sqft": detail.get("sqft") or raw.get("square_feet"),
+        "beds": detail.get("bedrooms") or raw.get("beds") or raw.get("bedrooms"),
+        "baths": detail.get("bathrooms") or raw.get("baths") or raw.get("bathrooms"),
+        "square_feet": detail.get("sqft") or raw.get("square_feet") or raw.get("sqft"),
+        "sqft": detail.get("sqft") or raw.get("square_feet") or raw.get("sqft"),
+        "lot_size_sqft": raw.get("lot_size_sqft") or raw.get("lotSizeSqft"),
+        "year_built": detail.get("year_built") or raw.get("year_built") or raw.get("yearBuilt"),
 
+        "price": listing_price,
+        "listing_price": listing_price,
         "market_value": market,
         "assessed_value": assessed,
         "last_sale_price": sale,
+        "status": raw.get("status"),
+        "days_on_market": raw.get("days_on_market") or raw.get("daysOnMarket"),
+        "description": raw.get("description"),
 
         "display_value": display_value,
         "display_value_label": (
+            "List Price" if listing_price else
             "Market Value" if market else
             "Assessed Value" if assessed else
             "Last Sale"
         ),
 
         "primary_photo": _resolve_photo(raw),
+        "photo": _resolve_photo(raw),
+        "thumbnail": _resolve_photo(raw),
+        "photos": raw.get("photos") or [],
 
         "ravlo_score": None,
         "recommended_strategy": "Review",

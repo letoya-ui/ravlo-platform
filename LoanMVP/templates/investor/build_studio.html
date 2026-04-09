@@ -245,6 +245,18 @@
               </div>
               {% if property_photo_gallery %}
               <div class="seed-gallery-note">Saved listing photo gallery is available for this deal and the first photo has been preloaded.</div>
+              <div class="seed-thumb-row" id="savedLandGallery">
+                {% for photo in property_photo_gallery[:8] %}
+                <button
+                  type="button"
+                  class="seed-thumb{% if exterior_result and exterior_result.get('build_reference_image') == photo %} is-active{% elif loop.first and not (exterior_result and exterior_result.get('build_reference_image')) %} is-active{% endif %}"
+                  data-seed-url="{{ photo }}"
+                  aria-label="Use saved property photo {{ loop.index }}"
+                >
+                  <img src="{{ photo }}" alt="Saved property photo {{ loop.index }}">
+                </button>
+                {% endfor %}
+              </div>
               {% endif %}
             </div>
           </div>
@@ -905,6 +917,37 @@
     color: #c8d8f2;
     font-size: .82rem;
     line-height: 1.45;
+  }
+
+  .seed-thumb-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(74px, 1fr));
+    gap: 10px;
+    margin-top: 12px;
+  }
+
+  .seed-thumb {
+    padding: 0;
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 14px;
+    overflow: hidden;
+    background: rgba(255,255,255,0.04);
+    cursor: pointer;
+    transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease;
+  }
+
+  .seed-thumb:hover,
+  .seed-thumb.is-active {
+    border-color: rgba(126,171,255,0.75);
+    box-shadow: 0 0 0 1px rgba(126,171,255,0.3);
+    transform: translateY(-1px);
+  }
+
+  .seed-thumb img {
+    display: block;
+    width: 100%;
+    height: 74px;
+    object-fit: cover;
   }
 
   .upload-card input[type="file"],

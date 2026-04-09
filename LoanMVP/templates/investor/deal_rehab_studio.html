@@ -158,6 +158,21 @@
                 {% endif %}
               </div>
               {% if property_photo_gallery %}
+              <div class="seed-gallery-note">Choose a saved listing photo to use as the renovation starting point.</div>
+              <div class="seed-thumb-row" id="savedBeforeGallery">
+                {% for photo in property_photo_gallery[:8] %}
+                <button
+                  type="button"
+                  class="seed-thumb{% if rehab_before and rehab_before.get('image_url') == photo %} is-active{% elif loop.first and not (rehab_before and rehab_before.get('image_url')) %} is-active{% endif %}"
+                  data-seed-url="{{ photo }}"
+                  aria-label="Use saved property photo {{ loop.index }}"
+                >
+                  <img src="{{ photo }}" alt="Saved property photo {{ loop.index }}">
+                </button>
+                {% endfor %}
+              </div>
+              {% endif %}
+              {% if property_photo_gallery %}
               <div class="seed-gallery-note">Saved listing photos are available for this property and the lead image has been preloaded.</div>
               {% endif %}
             </div>
@@ -740,6 +755,37 @@
     line-height: 1.45;
   }
 
+  .seed-thumb-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(74px, 1fr));
+    gap: 10px;
+    margin-top: 12px;
+  }
+
+  .seed-thumb {
+    padding: 0;
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 14px;
+    overflow: hidden;
+    background: rgba(255,255,255,0.04);
+    cursor: pointer;
+    transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease;
+  }
+
+  .seed-thumb:hover,
+  .seed-thumb.is-active {
+    border-color: rgba(126,171,255,0.75);
+    box-shadow: 0 0 0 1px rgba(126,171,255,0.3);
+    transform: translateY(-1px);
+  }
+
+  .seed-thumb img {
+    display: block;
+    width: 100%;
+    height: 74px;
+    object-fit: cover;
+  }
+
   .mini-preview {
     min-height: 62px;
     display: flex;
@@ -1086,7 +1132,9 @@
     const copyConceptLinkBtn = document.getElementById("copyConceptLinkBtn");
 
     const beforeImageInput = document.getElementById("before_image");
+    const beforeUrlInput = document.getElementById("image_url");
     const beforePreview = document.getElementById("beforePreview");
+    const savedBeforeGallery = document.getElementById("savedBeforeGallery");
 
     const variantModal = document.getElementById("variantModal");
     const openVariantBtn = document.getElementById("openVariantBtn");
@@ -1308,6 +1356,46 @@
 
     beforeImageInput?.addEventListener("change", function () {
       setPreview(this, beforePreview, "No before image selected");
+    });
+
+    function selectSavedBefore(url) {
+      if (!url) return;
+
+      if (beforeUrlInput) beforeUrlInput.value = url;
+      if (beforeImageInput) beforeImageInput.value = "";
+
+      if (beforePreview) {
+        beforePreview.innerHTML = `<img src="${escapeHtml(url)}" alt="Before image"><span>Saved property photo selected</span>`;
+      }
+
+      renderImage(
+        document.getElementById("beforeMedia"),
+        url,
+        "Before photo",
+        "image",
+        "Before photo will appear here."
+      );
+
+      const beforeLink = document.getElementById("beforeLink");
+      if (beforeLink) {
+        beforeLink.href = url;
+        beforeLink.classList.remove("hidden");
+      }
+
+      document.getElementById("status-before").textContent = "Loaded";
+      document.getElementById("beforeBadge").textContent = "Loaded";
+      document.getElementById("beforeMetaStatus").textContent = "Loaded";
+      document.getElementById("trackerBefore").textContent = "Yes";
+
+      savedBeforeGallery?.querySelectorAll(".seed-thumb").forEach((btn) => {
+        btn.classList.toggle("is-active", btn.dataset.seedUrl === url);
+      });
+    }
+
+    savedBeforeGallery?.querySelectorAll(".seed-thumb").forEach((btn) => {
+      btn.addEventListener("click", function () {
+        selectSavedBefore(this.dataset.seedUrl || "");
+      });
     });
 
     copyConceptLinkBtn?.addEventListener("click", async function () {
