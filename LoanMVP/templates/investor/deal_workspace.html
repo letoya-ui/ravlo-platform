@@ -86,11 +86,6 @@ Compare exit paths, pressure-test returns, and move into architect, budget, reha
 
     {% if selected_prop %}
 
-    {# -------------------------------------------------------
-       PRIMARY SOURCES
-       Prefer deal -> workspace_analysis -> selected_prop -> comps
-       ------------------------------------------------------- #}
-
     {% set deal_inputs = deal.inputs_json if deal and deal.inputs_json else {} %}
     {% set deal_results = deal.results_json if deal and deal.results_json else {} %}
     {% set wa = workspace_analysis if workspace_analysis else {} %}
@@ -169,14 +164,38 @@ Compare exit paths, pressure-test returns, and move into architect, budget, reha
         )
     %}
 
-    {% set best_use_value =
-        wa.get("estimated_best_use")
-        or wa.get("selected_strategy")
-        or deal.recommended_strategy if deal and deal.recommended_strategy
-        else ""
+    {% set listing_photos =
+        (
+            wa.get("listing_photos")
+            or deal_results.get("listing_photos")
+            or selected_prop.listing_photos_json if selected_prop and selected_prop.listing_photos_json is defined
+            else (
+                selected_prop.listing_photos if selected_prop and selected_prop.listing_photos is defined
+                else []
+            )
+        )
     %}
 
-    {# comparison sources #}
+    {% set primary_photo =
+        (
+            wa.get("image_url")
+            or deal_results.get("image_url")
+            or selected_prop.image_url if selected_prop and selected_prop.image_url is defined
+            else (
+                selected_prop.primary_photo_url if selected_prop and selected_prop.primary_photo_url is defined
+                else None
+            )
+        )
+    %}
+
+    {% if not primary_photo and listing_photos %}
+        {% if listing_photos[0] is mapping %}
+            {% set primary_photo = listing_photos[0].get("url") %}
+        {% else %}
+            {% set primary_photo = listing_photos[0] %}
+        {% endif %}
+    {% endif %}
+
     {% set flip = comparison.get("flip", {}) if comparison else {} %}
     {% set rental = comparison.get("rental", {}) if comparison else {} %}
     {% set airbnb = comparison.get("airbnb", {}) if comparison else {} %}
@@ -382,6 +401,51 @@ Compare exit paths, pressure-test returns, and move into architect, budget, reha
                 </p>
             </div>
         </div>
+    </section>
+
+    <section class="ravlo-card pad">
+        <div class="section-head">
+            <div>
+                <div class="eyebrow">LISTING PHOTOS</div>
+                <h3>Reference Photos for Rehab & Build Studio</h3>
+            </div>
+        </div>
+
+        <p class="muted mb-16">
+            Use these listing photos as temporary visual references until site photos are taken and uploaded.
+        </p>
+
+        {% if primary_photo or listing_photos %}
+        <div class="workspace-photo-shell">
+            {% if primary_photo %}
+            <div class="workspace-photo-main">
+                <img src="{{ primary_photo }}" alt="Primary listing photo">
+            </div>
+            {% endif %}
+
+            {% if listing_photos %}
+            <div class="workspace-photo-grid">
+                {% for photo in listing_photos %}
+                    {% if photo is mapping %}
+                        {% set photo_url = photo.get("url") %}
+                    {% else %}
+                        {% set photo_url = photo %}
+                    {% endif %}
+
+                    {% if photo_url %}
+                    <div class="workspace-photo-tile">
+                        <img src="{{ photo_url }}" alt="Listing photo {{ loop.index }}">
+                    </div>
+                    {% endif %}
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+        {% else %}
+        <div class="empty-state-inline">
+            No listing photos are attached yet. Once listing photo URLs are saved with the property/deal, they will appear here for Rehab Studio and Build Studio reference.
+        </div>
+        {% endif %}
     </section>
 
     <section class="workspace-grid-4">
@@ -1112,6 +1176,49 @@ Compare exit paths, pressure-test returns, and move into architect, budget, reha
     font-size:13px;
 }
 
+.workspace-photo-shell{
+    display:grid;
+    gap:14px;
+}
+
+.workspace-photo-main{
+    border-radius:20px;
+    overflow:hidden;
+    border:1px solid rgba(255,255,255,.08);
+    background:rgba(255,255,255,.03);
+    min-height:320px;
+}
+
+.workspace-photo-main img{
+    width:100%;
+    height:100%;
+    max-height:460px;
+    object-fit:cover;
+    display:block;
+}
+
+.workspace-photo-grid{
+    display:grid;
+    grid-template-columns:repeat(4, 1fr);
+    gap:12px;
+}
+
+.workspace-photo-tile{
+    border-radius:16px;
+    overflow:hidden;
+    border:1px solid rgba(255,255,255,.08);
+    background:rgba(255,255,255,.03);
+    min-height:120px;
+}
+
+.workspace-photo-tile img{
+    width:100%;
+    height:100%;
+    min-height:120px;
+    object-fit:cover;
+    display:block;
+}
+
 .studio-grid{
     display:grid;
     grid-template-columns:repeat(3, 1fr);
@@ -1170,6 +1277,10 @@ Compare exit paths, pressure-test returns, and move into architect, budget, reha
     .workspace-grid-4{
         grid-template-columns:repeat(2, 1fr);
     }
+
+    .workspace-photo-grid{
+        grid-template-columns:repeat(3, 1fr);
+    }
 }
 
 @media (max-width: 720px){
@@ -1184,6 +1295,10 @@ Compare exit paths, pressure-test returns, and move into architect, budget, reha
 
     .workspace-budget-amounts{
         text-align:left;
+    }
+
+    .workspace-photo-grid{
+        grid-template-columns:repeat(2, 1fr);
     }
 }
 </style>
