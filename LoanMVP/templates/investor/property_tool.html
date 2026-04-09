@@ -440,20 +440,16 @@ function renderCards(results){
     const payloadObj = buildPropertyPayload(r, analyzeId, saveId);
     const encoded = encodeURIComponent(JSON.stringify(payloadObj));
 
-    const price =
-      numOrNull(r.display_value) ??
-      numOrNull(r.price) ??
-      numOrNull(r.market_value) ??
-      numOrNull(r.assessed_value) ??
-      numOrNull(r.last_sale_price);
-    const priceLabel =
-      r.display_value_label ||
-      (numOrNull(r.price) !== null ? "List Price" :
-      numOrNull(r.market_value) !== null ? "Estimated Market Value" :
-      numOrNull(r.assessed_value) !== null ? "Assessed Value" :
-      numOrNull(r.last_sale_price) !== null ? "Last Sale Price" :
-      "Best Available Value");
+    const headline = resolveHeadlineValue(r);
+    const price = headline.value;
+    const priceLabel = headline.label;
     const marketValue = numOrNull(r.estimated_value_engine) ?? numOrNull(r.market_value) ?? numOrNull(r.assessed_value);
+    const valueSourceBadge =
+      headline.source === "listing" ? "Live Listing" :
+      headline.source === "estimate" ? "AVM" :
+      headline.source === "assessed" ? "Tax Record" :
+      headline.source === "last_sale" ? "Sale Record" :
+      "Record Only";
     const reasons = resolveReasons(r);
     const score = Number(r.deal_score);
     const tier = r.opportunity_tier || "moderate";
@@ -465,7 +461,7 @@ function renderCards(results){
         <div class="dfv4-thumb">
           <img src="${escapeHtml(resolveImage(r))}" alt="Property photo" onerror="this.onerror=null;this.src='${PLACEHOLDER_IMAGE}';">
           <div class="dfv4-thumb-top">
-            <div class="dfv4-score-badge ${scoreClass(score)}">${Number.isFinite(score) ? `${score}/99` : `Record Only`}</div>
+            <div class="dfv4-score-badge ${scoreClass(score)}">${Number.isFinite(score) ? `${score}/99` : escapeHtml(valueSourceBadge)}</div>
             <div class="dfv4-tier-badge ${tierClass(tier)}">${escapeHtml(tier)}</div>
           </div>
         </div>
@@ -479,9 +475,12 @@ function renderCards(results){
           </div>
 
           <div class="dfv4-price-block">
-            <span class="dfv5-price-label">${escapeHtml(priceLabel)}</span>
+            <div class="dfv4-price-header">
+              <span class="dfv4-price-label">${escapeHtml(priceLabel)}</span>
+              <span class="dfv4-source-pill">${escapeHtml(valueSourceBadge)}</span>
+            </div>
             <div class="dfv4-price-value">${escapeHtml(money(price))}</div>
-            <div class="dfv4-price-sub">${marketValue !== null ? `Engine Value: ${escapeHtml(money(marketValue))}` : "Engine value pending"}</div>
+            <div class="dfv4-price-sub">${escapeHtml(headline.subLabel || (marketValue !== null ? `Engine value ${money(marketValue)}` : "Engine value pending"))}</div>
           </div>
 
           <div class="dfv4-chip-row">
@@ -493,9 +492,9 @@ function renderCards(results){
 
           <div class="dfv4-engine-grid">
             <div><span>Tier</span><strong>${escapeHtml(tier)}</strong></div>
-            <div><span>Signal</span><strong>${escapeHtml(signalLabel(signal))}</strong></div>
+            <div><span>Status</span><strong>${escapeHtml(safeText(r.status || signalLabel(signal)))}</strong></div>
             <div><span>Rent Est.</span><strong>${escapeHtml(money(r.monthly_rent_estimate || r.traditional_rent))}${numOrNull(r.monthly_rent_estimate || r.traditional_rent) !== null ? '/mo' : ''}</strong></div>
-            <div><span>DSCR</span><strong>${escapeHtml(safeText(r.dscr_estimate))}</strong></div>
+            <div><span>Days on Market</span><strong>${escapeHtml(safeText(r.days_on_market))}</strong></div>
             <div><span>Comp Confidence</span><strong>${escapeHtml(safeText(r.comp_confidence))}</strong></div>
             <div><span>Next Step</span><strong>${escapeHtml(safeText(r.next_step_engine || 'Review'))}</strong></div>
           </div>
