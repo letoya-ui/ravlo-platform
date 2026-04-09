@@ -375,7 +375,14 @@ function renderCards(results){
     const payloadObj = buildPropertyPayload(r, analyzeId, saveId);
     const encoded = encodeURIComponent(JSON.stringify(payloadObj));
 
-    const price = numOrNull(r.last_sale_price) ?? numOrNull(r.display_value) ?? numOrNull(r.price);
+    const price =
+      numOrNull(r.price) ??
+      numOrNull(r.last_sale_price) ??
+      numOrNull(r.display_value);
+    const priceLabel =
+      numOrNull(r.price) !== null ? "List Price" :
+      numOrNull(r.last_sale_price) !== null ? "Last Sale Price" :
+      "Best Available Value"; 
     const marketValue = numOrNull(r.estimated_value_engine) ?? numOrNull(r.market_value) ?? numOrNull(r.assessed_value);
     const reasons = resolveReasons(r);
     const score = Number(r.deal_score);
@@ -402,7 +409,7 @@ function renderCards(results){
           </div>
 
           <div class="dfv4-price-block">
-            <div class="dfv4-price-label">Sale Price</div>
+            <span class="dfv5-price-label">${escapeHtml(priceLabel)}</span>
             <div class="dfv4-price-value">${escapeHtml(money(price))}</div>
             <div class="dfv4-price-sub">${marketValue !== null ? `Engine Value: ${escapeHtml(money(marketValue))}` : "Engine value pending"}</div>
           </div>
@@ -543,7 +550,7 @@ async function runSearch(){
     }
 
     status.innerText = "Ranking deals with Deal Architect...";
-    const enriched = await enrichWithDealArchitect(data.results || [], strategy);
+    const enriched = data.results || [];
     const engineReady = enriched.some(x => Number.isFinite(Number(x.deal_score)));
 
     renderSummary(data.zip, data.strategy, enriched.length, engineReady);

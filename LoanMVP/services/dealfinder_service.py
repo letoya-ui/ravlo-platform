@@ -123,6 +123,7 @@ def build_dealfinder_profile(
     errors = []
     attom_core: Dict[str, Any] = {}
     rentcast_core: Dict[str, Any] = {}
+    realtor_core: Dict[str, Any] = {}
 
     try:
         attom_raw = get_property_detail(
@@ -145,27 +146,83 @@ def build_dealfinder_profile(
         )
         rentcast_core = _extract_rentcast_fields(rentcast_raw)
     except RentCastServiceError as e:
-        errors.append(f"RentCast: {e}")
+        errors.append(f"RentCast rent: {e}")
     except Exception as e:
-        errors.append(f"RentCast: {e}")
- 
-        realtor_raw = fetch_realtor_data(address, city, state)
+        errors.append(f"RentCast rent: {e}")
 
-        realtor_core = {}
+    try:
+        value_raw = get_rentcast_value_estimate(
+            address=address,
+            city=city,
+            state=state,
+            zip_code=zip_code,
+            property_type=property_type,
+        )
+        rentcast_core["listing_price"] = (
+            value_raw.get("price")
+            or value_raw.get("value")
+            or value_raw.get("avm")
+            or value_raw.get("estimatedValue")
+        )
+        rentcast_core["avm_value"] = (
+            value_raw.get("price")
+            or value_raw.get("value")
+            or value_raw.get("avm")
+            or value_raw.get("estimatedValue")
+        )
+        rentcast_core["value_raw"] = value_raw
+    except RentCastServiceError as e:
+        errors.append(f"RentCast value: {e}")
+    except Exception as e:
+        errors.append(f"RentCast value: {e}")
+
+    try:
+        sale_listing = find_rentcast_sale_listing(
+            address=address,
+            city=city,
+            state=state,
+            zip_code=zip_code,
+        )
+        if sale_listing:
+            realtor_core.update({
+                "price": (
+                    sale_listing.get("price")
+                    or sale_listing.get("listPrice")
+                    or sale_listing.get("listingPrice")
+                ),
+                "photos": sale_listing.get("photos"),
+                "primary_photo": (
+                    sale_listing.get("primaryPhoto")
+                    or sale_listing.get("primary_photo")
+                    or sale_listing.get("photo")
+                ),
+                "status": sale_listing.get("status"),
+                "days_on_market": (
+                    sale_listing.get("daysOnMarket")
+                    or sale_listing.get("days_on_market")
+                ),
+                "description": sale_listing.get("description"),
+            })
+    except RentCastServiceError as e:
+        errors.append(f"RentCast sale listing: {e}")
+    except Exception as e:
+        errors.append(f"RentCast sale listing: {e}")
+
+    try:
+        realtor_raw = fetch_realtor_data(address, city, state)
         if realtor_raw and realtor_raw.get("property"):
             prop = realtor_raw["property"]
-            realtor_core = {
-                "price": prop.get("price"),
-                "photos": prop.get("photos"),
-                "primary_photo": prop.get("primary_photo"),
-                "status": prop.get("status"),
-                "days_on_market": prop.get("days_on_market"),
-                "description": prop.get("description"),
-            }
+            realtor_core.update({
+                "price": prop.get("price") or realtor_core.get("price"),
+                "photos": prop.get("photos") or realtor_core.get("photos"),
+                "primary_photo": prop.get("primary_photo") or realtor_core.get("primary_photo"),
+                "status": prop.get("status") or realtor_core.get("status"),
+                "days_on_market": prop.get("days_on_market") or realtor_core.get("days_on_market"),
+                "description": prop.get("description") or realtor_core.get("description"),
+            })
+    except Exception as e:
+        errors.append(f"Realtor: {e}")
 
-
-    # ATTOM is the required/base source for now.
-    # RentCast is enrichment, not a gate.
     if not attom_core:
         return {
             "ok": False,
@@ -175,17 +232,18 @@ def build_dealfinder_profile(
             "source_status": {
                 "attom": False,
                 "rentcast": bool(rentcast_core),
+                "realtor": bool(realtor_core),
             },
         }
 
     profile = normalize_property(attom_core, rentcast_core, realtor_core)
     scoring = compute_deal_score(profile)
 
-    # helpful UI extras
     if rentcast_core:
         profile["rent_low"] = rentcast_core.get("rent_low")
         profile["rent_high"] = rentcast_core.get("rent_high")
         profile["rent_confidence"] = rentcast_core.get("confidence")
+        profile["avm_value"] = rentcast_core.get("avm_value")
 
     return {
         "ok": True,
@@ -195,9 +253,9 @@ def build_dealfinder_profile(
         "source_status": {
             "attom": bool(attom_core),
             "rentcast": bool(rentcast_core),
+            "realtor": bool(realtor_core),
         },
     }
-
 
 def get_rentcast_data(address, city, state, zip_code):
     try:
