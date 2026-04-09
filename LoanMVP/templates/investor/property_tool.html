@@ -558,12 +558,12 @@ function renderCards(results){
           </div>
 
           <div class="dfv4-engine-grid">
-            <div><span>Tier</span><strong>${escapeHtml(tier)}</strong></div>
-            <div><span>Status</span><strong>${escapeHtml(statusText)}</strong></div>
+            <div><span>Opportunity Tier</span><strong>${escapeHtml(tier)}</strong></div>
+            <div><span>Estimated Best Use</span><strong>${escapeHtml(bestUse)}</strong></div>
             <div><span>Rent Est.</span><strong>${escapeHtml(money(r.monthly_rent_estimate || r.traditional_rent))}${numOrNull(r.monthly_rent_estimate || r.traditional_rent) !== null ? '/mo' : ''}</strong></div>
             <div><span>Days on Market</span><strong>${escapeHtml(safeText(r.days_on_market))}</strong></div>
             <div><span>Comp Confidence</span><strong>${escapeHtml(safeText(r.comp_confidence))}</strong></div>
-            <div><span>Next Step</span><strong>${escapeHtml(safeText(r.next_step_engine || 'Review'))}</strong></div>
+            <div><span>Next Move</span><strong>${escapeHtml(safeText(r.next_step_engine || 'Plan in Project Studio'))}</strong></div>
           </div>
 
           <div class="dfv4-ai-snippet">
