@@ -6,6 +6,12 @@ import base64
 import requests
 import zipfile
 import copy
+
+
+import mimetypes
+
+import boto3
+
 from datetime import datetime
 from io import BytesIO
 from openai import OpenAI
@@ -1506,6 +1512,64 @@ STYLE_PROMPT_MAP = {
 # =========================================================
 # IMAGE HELPERS
 # =========================================================
+
+def get_spaces_client():
+    return boto3.client(
+        "s3",
+        region_name=os.environ["DO_SPACES_REGION"],
+        endpoint_url=os.environ["DO_SPACES_ENDPOINT"],
+        aws_access_key_id=os.environ["DO_SPACES_KEY"],
+        aws_secret_access_key=os.environ["DO_SPACES_SECRET"],
+    )
+
+def upload_listing_photos_to_spaces(photo_urls, deal_id=None, saved_property_id=None):
+    if not photo_urls:
+        return []
+
+    bucket = os.environ["DO_SPACES_BUCKET"]
+    cdn_base = os.environ.get("DO_SPACES_CDN_BASE", "").rstrip("/")
+    s3 = get_spaces_client()
+
+    uploaded = []
+
+    for idx, source_url in enumerate(photo_urls, start=1):
+        if not source_url:
+            continue
+
+        try:
+            resp = requests.get(source_url, timeout=15, stream=True)
+            resp.raise_for_status()
+
+            parsed = urlparse(source_url)
+            ext = os.path.splitext(parsed.path)[1].lower() or ".jpg"
+            content_type = resp.headers.get("Content-Type") or mimetypes.guess_type(source_url)[0] or "image/jpeg"
+
+            owner_part = f"deal-{deal_id}" if deal_id else f"saved-{saved_property_id or 'unknown'}"
+            key = f"listing-photos/{owner_part}/{uuid.uuid4().hex}-{idx}{ext}"
+
+            s3.upload_fileobj(
+                resp.raw,
+                bucket,
+                key,
+                ExtraArgs={
+                    "ACL": "public-read",
+                    "ContentType": content_type,
+                },
+            )
+
+            final_url = f"{cdn_base}/{key}" if cdn_base else f"{os.environ['DO_SPACES_ENDPOINT'].rstrip('/')}/{bucket}/{key}"
+
+            uploaded.append({
+                "url": final_url,
+                "source_url": source_url,
+                "label": f"Listing Photo {idx}",
+                "position": idx,
+            })
+
+        except Exception:
+            continue
+
+    return uploaded    
 
 def download_image_bytes(url: str, timeout=10) -> bytes:
     """Secure image download with relaxed header check."""
