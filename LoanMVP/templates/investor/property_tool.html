@@ -161,6 +161,22 @@ function compactDate(value){
   return d.toLocaleDateString(undefined, {month:"short", day:"numeric", year:"numeric"});
 }
 
+function compactNumberText(value, suffix){
+  const n = numOrNull(value);
+  if (n === null || n <= 0) return "—";
+  return `${n.toLocaleString(undefined, {maximumFractionDigits: 0})} ${suffix}`;
+}
+
+function shortText(value, max = 140){
+  const text = String(value || "").trim();
+  if (!text) return "";
+  return text.length > max ? `${text.slice(0, max - 1)}…` : text;
+}
+
+function resolveStatusText(r, signal){
+  return safeText(r.status || signalLabel(signal));
+}
+
 function resolveHeadlineValue(r){
   const listPrice = numOrNull(r.price);
   const estimatedValue = numOrNull(r.estimated_value_engine) ?? numOrNull(r.market_value);
@@ -455,6 +471,19 @@ function renderCards(results){
     const tier = r.opportunity_tier || "moderate";
     const signal = r.deal_finder_signal;
     const architectError = r.architect_error;
+    const statusText = resolveStatusText(r, signal);
+    const sqftText = prettyNumber(r.square_feet || r.sqft);
+    const lotText = compactNumberText(r.lot_size_sqft, "sq ft lot");
+    const description = shortText(r.description, 160);
+    const lastSaleDate = compactDate(r.last_sale_date);
+    const facts = [
+      {label: "Type", value: safeText(r.property_type || "Property")},
+      {label: "Beds / Baths", value: `${safeText(r.beds)} / ${safeText(r.baths)}`},
+      {label: "Sqft", value: sqftText},
+      {label: "Year Built", value: safeText(r.year_built)},
+      {label: "Lot", value: lotText},
+      {label: "Last Sale", value: numOrNull(r.last_sale_price) !== null ? `${money(r.last_sale_price)}${lastSaleDate ? ` · ${lastSaleDate}` : ""}` : "—"}
+    ].filter(item => item.value && item.value !== "—");
 
     return `
       <article class="ravlo-card pad dfv4-card">
@@ -467,7 +496,10 @@ function renderCards(results){
         </div>
 
         <div class="dfv4-body">
-          <div class="dfv4-opportunity-callout ${tierClass(tier)}">${escapeHtml(signalLabel(signal))}</div>
+          <div class="dfv4-topline">
+            <div class="dfv4-opportunity-callout ${tierClass(tier)}">${escapeHtml(signalLabel(signal))}</div>
+            <div class="dfv4-status-inline">${escapeHtml(statusText)}</div>
+          </div>
 
           <div>
             <div class="dfv4-address">${escapeHtml(safeText(r.address || r.address_line1))}</div>
@@ -487,12 +519,28 @@ function renderCards(results){
             <span class="dfv4-chip">${escapeHtml(safeText(r.property_type || "Property"))}</span>
             <span class="dfv4-chip">${escapeHtml(safeText(r.beds))} bd</span>
             <span class="dfv4-chip">${escapeHtml(safeText(r.baths))} ba</span>
-            <span class="dfv4-chip">${escapeHtml(prettyNumber(r.square_feet || r.sqft))} sqft</span>
+            <span class="dfv4-chip">${escapeHtml(sqftText)} sqft</span>
+            ${numOrNull(r.days_on_market) !== null ? `<span class="dfv4-chip accent">${escapeHtml(String(r.days_on_market))} DOM</span>` : ""}
+          </div>
+
+          ${description ? `
+            <div class="dfv4-description">
+              ${escapeHtml(description)}
+            </div>
+          ` : ""}
+
+          <div class="dfv4-fact-grid">
+            ${facts.map(item => `
+              <div class="dfv4-fact">
+                <span>${escapeHtml(item.label)}</span>
+                <strong>${escapeHtml(item.value)}</strong>
+              </div>
+            `).join("")}
           </div>
 
           <div class="dfv4-engine-grid">
             <div><span>Tier</span><strong>${escapeHtml(tier)}</strong></div>
-            <div><span>Status</span><strong>${escapeHtml(safeText(r.status || signalLabel(signal)))}</strong></div>
+            <div><span>Status</span><strong>${escapeHtml(statusText)}</strong></div>
             <div><span>Rent Est.</span><strong>${escapeHtml(money(r.monthly_rent_estimate || r.traditional_rent))}${numOrNull(r.monthly_rent_estimate || r.traditional_rent) !== null ? '/mo' : ''}</strong></div>
             <div><span>Days on Market</span><strong>${escapeHtml(safeText(r.days_on_market))}</strong></div>
             <div><span>Comp Confidence</span><strong>${escapeHtml(safeText(r.comp_confidence))}</strong></div>
@@ -666,7 +714,9 @@ async function runSearch(){
 .dfv4-score-badge.risk,.dfv4-tier-badge.risk,.dfv4-opportunity-callout.risk{background:rgba(239,68,68,.18);color:#fecaca}
 .dfv4-score-badge.neutral,.dfv4-tier-badge.neutral,.dfv4-opportunity-callout.neutral{background:rgba(107,127,147,.22);color:#eef4fb}
 .dfv4-body{display:grid;gap:.8rem;margin-top:.85rem}
+.dfv4-topline{display:flex;justify-content:space-between;align-items:center;gap:.75rem;flex-wrap:wrap}
 .dfv4-opportunity-callout{display:inline-flex;align-items:center;width:max-content;padding:.36rem .62rem;border-radius:999px;font-size:.76rem;font-weight:800;border:1px solid rgba(255,255,255,.12)}
+.dfv4-status-inline{font-size:.76rem;font-weight:700;color:#c9d5e4;text-transform:uppercase;letter-spacing:.04em}
 .dfv4-address{font-weight:900;color:var(--text);font-size:1rem;line-height:1.25}
 .dfv4-location{color:var(--muted);font-size:.82rem;margin-top:.2rem}
 .dfv4-price-block{padding:1rem 1rem 1.05rem;border-radius:16px;background:linear-gradient(180deg, rgba(42,96,191,.24), rgba(19,43,82,.18));border:1px solid rgba(126,171,255,.2);box-shadow:inset 0 1px 0 rgba(255,255,255,.03)}
@@ -676,6 +726,12 @@ async function runSearch(){
 .dfv4-price-value{color:#f6fbff;font-size:1.6rem;font-weight:900;line-height:1.05;margin-top:.35rem}
 .dfv4-price-sub{color:var(--muted);font-size:.78rem;margin-top:.35rem}
 .dfv4-chip-row{display:flex;gap:.45rem;flex-wrap:wrap}.dfv4-chip{display:inline-flex;align-items:center;padding:.35rem .55rem;border-radius:999px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);color:var(--text);font-size:.76rem}
+.dfv4-chip.accent{background:rgba(37,99,235,.12);border-color:rgba(96,165,250,.22);color:#dbeafe}
+.dfv4-description{padding:.75rem .85rem;border-radius:12px;background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.08);color:#d7e0eb;font-size:.82rem;line-height:1.55}
+.dfv4-fact-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.55rem}
+.dfv4-fact{padding:.7rem .75rem;border-radius:12px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08)}
+.dfv4-fact span{display:block;color:var(--muted);margin-bottom:.18rem;font-size:.73rem;text-transform:uppercase;letter-spacing:.04em}
+.dfv4-fact strong{color:var(--text);font-size:.9rem;line-height:1.35}
 .dfv4-engine-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.6rem}
 .dfv4-engine-grid div{padding:.7rem .75rem;border-radius:12px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08)}
 .dfv4-engine-grid span{display:block;color:var(--muted);margin-bottom:.2rem;font-size:.78rem}.dfv4-engine-grid strong{color:var(--text);font-size:.92rem}
@@ -686,7 +742,7 @@ async function runSearch(){
 .dfv4-empty{min-height:240px;display:flex;flex-direction:column;justify-content:center;align-items:flex-start;border:1px dashed rgba(255,255,255,.12);background:rgba(255,255,255,.02)}
 @media (max-width:1200px){.dfv4-shell{grid-template-columns:1fr}.dfv4-search-panel{position:relative;top:0}}
 @media (max-width:900px){.dfv4-grid{grid-template-columns:1fr}.dfv4-summary-metrics{min-width:unset;width:100%;grid-template-columns:1fr 1fr}}
-@media (max-width:640px){.dfv4-form-grid,.dfv4-engine-grid,.dfv4-summary-metrics{grid-template-columns:1fr}}
+@media (max-width:640px){.dfv4-form-grid,.dfv4-engine-grid,.dfv4-summary-metrics,.dfv4-fact-grid{grid-template-columns:1fr}}
 </style>
 {% endblock %}
 
