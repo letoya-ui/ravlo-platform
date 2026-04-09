@@ -1,0 +1,124 @@
+{% extends "layouts/ravlo_base.html" %}
+{% block title %}Investor OS • Project Studio{% endblock %}
+
+{% block page_title %}Project Studio{% endblock %}
+{% block page_subline %}
+Open any address and let Ravlo compare the best plan before you move into scope, budget, and execution.
+{% endblock %}
+
+{% block topbar_actions %}
+  <a href="{{ url_for('investor.property_tool') }}" class="ravlo-btn ghost sm">Find Deals</a>
+  <a href="{{ url_for('investor.deals_list') }}" class="ravlo-btn ghost sm">Deal Workspace</a>
+  <a href="{{ url_for('investor.project_studio') }}" class="ravlo-btn primary sm">Project Studio</a>
+{% endblock %}
+
+{% block content %}
+<div class="ps-shell">
+  <section class="ps-hero ravlo-card pad">
+    <div>
+      <div class="eyebrow">PROJECT STUDIO</div>
+      <h2>Plan any property without setup friction.</h2>
+      <p class="muted">
+        Enter an address, load the property snapshot, compare strategy cards, and move into the best plan. This is the execution engine side of Ravlo OS.
+      </p>
+    </div>
+    <div class="ps-pill-row">
+      <span class="ps-pill">Enter Property</span>
+      <span class="ps-pill">Compare Strategies</span>
+      <span class="ps-pill">Define Scope</span>
+      <span class="ps-pill">Move to Execution</span>
+    </div>
+  </section>
+
+  <section class="ps-grid">
+    <div class="ravlo-card pad">
+      <div class="eyebrow">START HERE</div>
+      <h3 class="ps-title">Open a Property</h3>
+      <p class="muted">Paste an address and Ravlo will open the property snapshot first, then guide you into strategy selection.</p>
+
+      <form method="get" action="{{ url_for('investor.project_studio') }}" class="ps-form">
+        <label class="ravlo-label">Property Address</label>
+        <input class="ravlo-input" type="text" name="address" value="{{ address or '' }}" placeholder="123 Main St">
+
+        <div class="ps-form-grid">
+          <div>
+            <label class="ravlo-label">City</label>
+            <input class="ravlo-input" type="text" name="city" value="{{ city or '' }}" placeholder="Middletown">
+          </div>
+          <div>
+            <label class="ravlo-label">State</label>
+            <input class="ravlo-input" type="text" name="state" value="{{ state or '' }}" placeholder="NY">
+          </div>
+        </div>
+
+        <label class="ravlo-label">ZIP Code</label>
+        <input class="ravlo-input" type="text" name="zip" value="{{ zip_code or '' }}" placeholder="10940">
+
+        <div class="ps-action-row">
+          <button class="ravlo-btn primary" type="submit">Load Property</button>
+          {% if address %}
+          <a class="ravlo-btn ghost" href="{{ url_for('investor.project_studio') }}">Clear</a>
+          {% endif %}
+        </div>
+      </form>
+    </div>
+
+    <div class="ravlo-card pad">
+      <div class="eyebrow">FLOW</div>
+      <h3 class="ps-title">How Project Studio Works</h3>
+      <div class="ps-step-list">
+        <div class="ps-step"><span>01</span><div><strong>Enter property</strong><p>Open any address directly. No forced save step.</p></div></div>
+        <div class="ps-step"><span>02</span><div><strong>See the snapshot</strong><p>Review the property facts, lot flags, and development signals.</p></div></div>
+        <div class="ps-step"><span>03</span><div><strong>Compare strategies</strong><p>Ravlo scores Rehab, Build Studio, and Project Build when applicable.</p></div></div>
+        <div class="ps-step"><span>04</span><div><strong>Choose the plan</strong><p>Select a strategy, define scope, and move into budget and execution.</p></div></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="ps-grid">
+    <div class="ravlo-card pad">
+      <div class="eyebrow">CONNECTED TO DEAL FINDER</div>
+      <h3 class="ps-title">Two front doors, one system</h3>
+      <p class="muted">
+        Deal Finder is for discovery. Project Studio is for planning. When a user selects a property in Deal Finder, the next move should bring them here to choose the best strategy.
+      </p>
+      <div class="ps-link-row">
+        <a href="{{ url_for('investor.property_tool') }}" class="ravlo-btn ghost">Open Deal Finder</a>
+        <a href="{{ url_for('investor.deals_list') }}" class="ravlo-btn ghost">Open Deal Workspace</a>
+      </div>
+    </div>
+
+    <div class="ravlo-card pad">
+      <div class="eyebrow">NEXT BUILD</div>
+      <h3 class="ps-title">What comes next here</h3>
+      <div class="ps-bullet-list">
+        <div>Instant property snapshot</div>
+        <div>Strategy cards with recommended path</div>
+        <div>Scope builder for rehab, build, or project build</div>
+        <div>Refined planning budget before execution</div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<style>
+.ps-shell{display:grid;gap:18px}
+.ps-hero{display:grid;gap:16px;border-radius:28px;background:linear-gradient(160deg, rgba(18,28,38,.68), rgba(10,15,22,.86));border:1px solid rgba(255,255,255,.06)}
+.ps-hero h2{margin:.2rem 0;font-size:clamp(2rem,3vw,3rem);line-height:1.04;letter-spacing:-.04em}
+.ps-pill-row{display:flex;flex-wrap:wrap;gap:.55rem}
+.ps-pill{display:inline-flex;align-items:center;padding:.45rem .75rem;border-radius:999px;background:rgba(37,99,235,.14);border:1px solid rgba(96,165,250,.22);color:#dbeafe;font-size:.8rem;font-weight:800}
+.ps-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}
+.ps-title{margin:.35rem 0 .55rem}
+.ps-form{display:grid;gap:.8rem;margin-top:1rem}
+.ps-form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.8rem}
+.ps-action-row,.ps-link-row{display:flex;gap:.7rem;flex-wrap:wrap;margin-top:.4rem}
+.ps-step-list{display:grid;gap:.85rem;margin-top:1rem}
+.ps-step{display:grid;grid-template-columns:auto 1fr;gap:.8rem;padding:.9rem 1rem;border-radius:16px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08)}
+.ps-step span{display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:999px;background:rgba(255,255,255,.05);font-weight:800;color:#fff}
+.ps-step strong{display:block;color:#fff;margin-bottom:.15rem}
+.ps-step p{margin:0;color:var(--muted)}
+.ps-bullet-list{display:grid;gap:.7rem;margin-top:1rem}
+.ps-bullet-list div{padding:.9rem 1rem;border-radius:16px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);color:#fff}
+@media (max-width:900px){.ps-grid,.ps-form-grid{grid-template-columns:1fr}}
+</style>
+{% endblock %}
