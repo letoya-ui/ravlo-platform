@@ -10261,6 +10261,37 @@ def create_budget():
         active_tab="budget"
     )
 
+@investor_bp.route("/budget/create-from-studio/<int:deal_id>", methods=["POST"])
+@login_required
+def create_budget_from_studio(deal_id):
+    ip = InvestorProfile.query.filter_by(user_id=current_user.id).first()
+
+    payload = request.form.get("budget_payload")
+    data = json.loads(payload or "{}")
+
+    budget = ProjectBudget(
+        deal_id=deal_id,
+        investor_profile_id=ip.id,
+        name="Deal Budget",
+        budget_type="rehab"
+    )
+    db.session.add(budget)
+    db.session.flush()
+
+    for item in data.get("items", []):
+        expense = BudgetItem(
+            budget_id=budget.id,
+            description=item.get("name"),
+            estimated_amount=item.get("cost", 0),
+            actual_amount=0,
+            paid_amount=0,
+            status="planned"
+        )
+        db.session.add(expense)
+
+    db.session.commit()
+
+    return redirect(url_for("investor.budget_detail", budget_id=budget.id))
 
 @investor_bp.route("/budget-studio/<int:budget_id>")
 @login_required
