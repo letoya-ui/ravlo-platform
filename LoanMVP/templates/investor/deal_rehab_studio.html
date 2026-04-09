@@ -71,11 +71,11 @@
 
       <section class="ravlo-card setup-card">
         <div class="card-head">
-          <div>
-            <div class="card-kicker">STEP 1</div>
-            <h2>Renovation Setup</h2>
-            <p>Choose the renovation style, upload the current condition image, and generate a concept.</p>
-          </div>
+            <div>
+              <div class="card-kicker">STEP 1</div>
+              <h2>Renovation Setup</h2>
+              <p>Choose the renovation style, upload a current condition image, or start from the saved listing photo for this deal.</p>
+            </div>
           <div class="card-head-actions">
             <span class="status-pill" id="generation-status-pill">{{ "Concepts Loaded" if rehab_concepts else "Ready" }}</span>
           </div>
@@ -140,7 +140,7 @@
                 <h3>Before Photo</h3>
                 <span>Required</span>
               </div>
-              <p>Upload the current property photo that should be renovated.</p>
+              <p>Upload the current property photo that should be renovated, or use the saved listing photo already attached to the deal.</p>
               <input type="file" id="before_image" name="before_image" accept="image/*,.png,.jpg,.jpeg,.webp">
               <input
                 type="text"
@@ -157,6 +157,9 @@
                   No before image selected
                 {% endif %}
               </div>
+              {% if property_photo_gallery %}
+              <div class="seed-gallery-note">Saved listing photos are available for this property and the lead image has been preloaded.</div>
+              {% endif %}
             </div>
 
             <div class="upload-card">
