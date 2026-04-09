@@ -5026,6 +5026,8 @@ def api_property_tool_view_details():
 @login_required
 @role_required("investor")
 def deal_studio():
+    return redirect(url_for("investor.project_studio"))
+
     """
     Deal Studio is the investor workspace where users can:
 

@@ -8,7 +8,7 @@ Review the saved deal, check strategy and funding status, and launch the next to
 
 {% block topbar_actions %}
   <a href="{{ url_for('investor.deals_list') }}" class="ravlo-btn ghost sm">
-    Deal Pipeline
+    Deal Workspace
   </a>
   <a href="{{ url_for('investor.deal_report', deal_id=deal.id) }}" class="ravlo-btn primary sm">
     View Report
@@ -53,8 +53,8 @@ Review the saved deal, check strategy and funding status, and launch the next to
         Renovation Studio
       </a>
 
-      <a href="{{ url_for('investor.build_studio', deal_id=deal.id) }}" class="ravlo-btn ghost">
-        Build Studio
+      <a href="{{ url_for('investor.project_studio', address=deal.address) }}" class="ravlo-btn ghost">
+        Project Studio
       </a>
       <form method="POST"
             action="{{ url_for('investor.generate_budget_from_ai', deal_id=deal.id) }}"
@@ -70,17 +70,17 @@ Review the saved deal, check strategy and funding status, and launch the next to
     </div>
   </section>
 
-  <!-- DEAL STUDIO TOOLS -->
+  <!-- PROJECT STUDIO TOOLS -->
   <section class="ravlo-card pad">
     <div class="section-head">
       <div>
-        <div class="eyebrow">DEAL STUDIO</div>
-        <h3>Deal Development Tools</h3>
+        <div class="eyebrow">PROJECT STUDIO</div>
+        <h3>Project Planning Tools</h3>
       </div>
     </div>
 
     <p class="muted" style="margin:0 0 18px;">
-      Use Ravlo's tools to analyze, design, and plan your investment strategy.
+      Use Ravlo's planning tools to compare strategy paths, shape scope, and move this property toward execution.
     </p>
 
     <div class="studio-grid">
@@ -93,11 +93,11 @@ Review the saved deal, check strategy and funding status, and launch the next to
         </div>
       </a>
 
-      <a href="{{ url_for('investor.build_studio', deal_id=deal.id) }}" class="studio-card">
+      <a href="{{ url_for('investor.project_studio', address=deal.address) }}" class="studio-card">
         <div class="studio-icon">🏗</div>
-        <div class="studio-title">Build Studio</div>
+        <div class="studio-title">Project Studio</div>
         <div class="studio-sub">
-          Design ground-up development concepts and site plans.
+          Compare strategy paths, choose scope, and move this property into planning.
         </div>
       </a>
 
