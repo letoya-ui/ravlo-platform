@@ -7281,10 +7281,10 @@ def generate_build_exterior():
             "lot_size": lot_size,
             "zoning": zoning,
             "count": 1,
-            "steps": 25,
+            "steps": 22,
             "guidance": 7.5,
-            "width": 1024,
-            "height": 1024,
+            "width": 768,
+            "height": 768,
         }
 
         # 🔥 ONLY CONDITION WHEN VALID
@@ -7439,7 +7439,7 @@ def generate_build_interior():
             "room_type": room_type,
             "floor": floor,
             "count": 1,
-            "steps": 22,
+            "steps": 20,
             "guidance": 7.0,
             "strength": 0.65,
             "width": 768,
@@ -7699,11 +7699,11 @@ def generate_build_blueprint():
             "zoning": zoning,
             "prompt": style_prompt,
             "count": 1,
-            "steps": 24,
+            "steps": 20,
             "strength": 0.28,
             "guidance": 6.0,
-            "width": 1024,
-            "height": 1024,
+            "width": 768,
+            "height": 768,
         }
 
         if blueprint_image_base64:
