@@ -4227,11 +4227,11 @@ def api_property_tool_save():
         zipcode=zipcode,
         saved_at=datetime.utcnow(),
         created_at=datetime.utcnow(),
-      )
-      db.session.add(saved)
-      db.session.flush()
-      _store_saved_property_media(saved, payload, source="property_tool")
-      db.session.commit()
+    )
+    db.session.add(saved)
+    db.session.flush()
+    _store_saved_property_media(saved, payload, source="property_tool")
+    db.session.commit()
 
     return jsonify({
         "status": "ok",
