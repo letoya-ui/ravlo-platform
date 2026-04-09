@@ -226,7 +226,7 @@
                 <h3>Land / Site Image</h3>
                 <span>Optional</span>
               </div>
-              <p>Upload the land image now, or add it later after the package is generated.</p>
+              <p>Upload the land image now, or use the saved property listing photo as the starting reference.</p>
               <input type="file" id="land_image" name="land_image" accept="image/*,.png,.jpg,.jpeg,.webp">
               <input
                 type="text"
@@ -243,6 +243,9 @@
                   No land image selected
                 {% endif %}
               </div>
+              {% if property_photo_gallery %}
+              <div class="seed-gallery-note">Saved listing photo gallery is available for this deal and the first photo has been preloaded.</div>
+              {% endif %}
             </div>
           </div>
 
