@@ -47,13 +47,13 @@
     <a href="{{ url_for('investor.deals_list') }}"
        class="ravlo-nav-link {% if ep in ['investor.deals_list','investor.deal_detail','investor.deal_report'] %}active{% endif %}">
       <i class="lucide lucide-briefcase-business"></i>
-      <span>Deal Pipeline</span>
+      <span>Deal Workspace</span>
     </a>
 
-    <a href="{{ url_for('investor.deal_copilot') }}"
-       class="ravlo-nav-link {% if 'copilot' in ep or 'workspace' in ep or 'rehab' in ep or 'build_studio' in ep %}active{% endif %}">
-      <i class="lucide lucide-box"></i>
-      <span>Deal Studio</span>
+    <a href="{{ url_for('investor.project_studio') }}"
+       class="ravlo-nav-link {% if ep == 'investor.project_studio' %}active{% endif %}">
+      <i class="lucide lucide-building-2"></i>
+      <span>Project Studio</span>
     </a>
     <a href="{{ url_for('investor.budget_studio') }}"
        class="ravlo-nav-link {% if ep in [
