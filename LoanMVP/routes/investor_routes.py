@@ -1778,6 +1778,113 @@ def _safe_first_related(obj, attr_name):
     return items[0] if items else None
 
 _fmt_money = fmt_money
+
+def _build_budget_seed_from_results(results: dict) -> dict:
+    results = results or {}
+
+    rehab_scope = results.get("rehab_scope") or {}
+    rehab_analysis = results.get("rehab_analysis") or {}
+    build_analysis = results.get("build_analysis") or {}
+    workspace_analysis = results.get("workspace_analysis") or {}
+    strategy_analysis = results.get("strategy_analysis") or {}
+
+    raw_items = (
+        rehab_scope.get("line_items")
+        or rehab_scope.get("budget_items")
+        or rehab_scope.get("items")
+        or build_analysis.get("line_items")
+        or build_analysis.get("budget_items")
+        or []
+    )
+
+    suggested_breakdown = []
+
+    for item in raw_items:
+        if not isinstance(item, dict):
+            continue
+
+        name = (
+            item.get("description")
+            or item.get("name")
+            or item.get("item")
+            or item.get("category")
+            or "Budget Item"
+        )
+
+        cost = (
+            item.get("estimated_amount")
+            or item.get("cost")
+            or item.get("amount")
+            or item.get("estimate")
+            or 0
+        )
+
+        try:
+            cost = float(cost or 0)
+        except (TypeError, ValueError):
+            cost = 0.0
+
+        suggested_breakdown.append({
+            "name": str(name).strip() or "Budget Item",
+            "cost": cost,
+        })
+
+    # Fallback from saved planning budget
+    if not suggested_breakdown:
+        planning_budget = workspace_analysis.get("planning_budget") or {}
+        budget_low = planning_budget.get("budget_low")
+        budget_high = planning_budget.get("budget_high")
+
+        try:
+            budget_low = float(budget_low or 0)
+            budget_high = float(budget_high or 0)
+        except (TypeError, ValueError):
+            budget_low = 0.0
+            budget_high = 0.0
+
+        midpoint = 0.0
+        if budget_low and budget_high:
+            midpoint = (budget_low + budget_high) / 2
+        elif budget_high:
+            midpoint = budget_high
+        elif budget_low:
+            midpoint = budget_low
+
+        if midpoint > 0:
+            strategy_key = str(
+                strategy_analysis.get("strategy")
+                or workspace_analysis.get("selected_strategy")
+                or "rehab"
+            ).lower()
+
+            if strategy_key == "project_build":
+                suggested_breakdown = [
+                    {"name": "Site Work / Prep", "cost": round(midpoint * 0.15, 2)},
+                    {"name": "Core Construction", "cost": round(midpoint * 0.55, 2)},
+                    {"name": "MEP / Systems", "cost": round(midpoint * 0.12, 2)},
+                    {"name": "Finishes", "cost": round(midpoint * 0.10, 2)},
+                    {"name": "Contingency", "cost": round(midpoint * 0.08, 2)},
+                ]
+            elif strategy_key == "build_studio":
+                suggested_breakdown = [
+                    {"name": "Demo / Prep", "cost": round(midpoint * 0.12, 2)},
+                    {"name": "Structure / Framing", "cost": round(midpoint * 0.30, 2)},
+                    {"name": "MEP / Utilities", "cost": round(midpoint * 0.18, 2)},
+                    {"name": "Interior Finishes", "cost": round(midpoint * 0.25, 2)},
+                    {"name": "Contingency", "cost": round(midpoint * 0.15, 2)},
+                ]
+            else:
+                suggested_breakdown = [
+                    {"name": "Kitchen / Bath", "cost": round(midpoint * 0.30, 2)},
+                    {"name": "Flooring / Paint", "cost": round(midpoint * 0.18, 2)},
+                    {"name": "Systems / Repairs", "cost": round(midpoint * 0.22, 2)},
+                    {"name": "Exterior / Curb Appeal", "cost": round(midpoint * 0.12, 2)},
+                    {"name": "Contingency", "cost": round(midpoint * 0.18, 2)},
+                ]
+
+    return {
+        "suggested_breakdown": suggested_breakdown
+    }
 # =========================================================
 # GENERIC HELPERS
 # =========================================================
@@ -10175,6 +10282,7 @@ def budget():
 def budget_studio(deal_id=None):
     deal = None
     results = {}
+    existing_budget = None
 
     if deal_id is None:
         query_deal_id = request.args.get("deal_id", type=int)
@@ -10187,7 +10295,20 @@ def budget_studio(deal_id=None):
             user_id=current_user.id
         ).first_or_404()
 
-        results = deal.results_json or {}
+        results = copy.deepcopy(deal.results_json or {})
+        results["budget_seed"] = _build_budget_seed_from_results(results)
+
+        ip = InvestorProfile.query.filter_by(user_id=current_user.id).first()
+        if ip:
+            existing_budget = (
+                ProjectBudget.query
+                .filter_by(
+                    deal_id=deal.id,
+                    investor_profile_id=ip.id
+                )
+                .order_by(ProjectBudget.id.desc())
+                .first()
+            )
 
     purchase_price = float(getattr(deal, "purchase_price", 0) or 0) if deal else 0
     arv = float(getattr(deal, "arv", 0) or 0) if deal else 0
@@ -10197,13 +10318,13 @@ def budget_studio(deal_id=None):
         "investor/budget_studio.html",
         deal=deal,
         results=results,
+        existing_budget=existing_budget,
         purchase_price=purchase_price,
         arv=arv,
         rehab_cost=rehab_cost,
         page_title="Budget Studio",
         page_subtitle="Control your numbers, track execution, and stay profitable."
     )
-
 
 @investor_bp.route("/budget-studio/create", methods=["GET", "POST"])
 @login_required
@@ -10261,35 +10382,104 @@ def create_budget():
         active_tab="budget"
     )
 
-@investor_bp.route("/budget/create-from-studio/<int:deal_id>", methods=["POST"])
+@investor_bp.route("/deals/<int:deal_id>/budget/create-from-studio", methods=["POST"])
 @login_required
+@role_required("investor")
 def create_budget_from_studio(deal_id):
-    ip = InvestorProfile.query.filter_by(user_id=current_user.id).first()
+    deal = _get_owned_deal_or_404(deal_id)
+    ip = InvestorProfile.query.filter_by(user_id=current_user.id).first_or_404()
 
-    payload = request.form.get("budget_payload")
-    data = json.loads(payload or "{}")
+    existing_budget = ProjectBudget.query.filter_by(
+        deal_id=deal.id,
+        investor_profile_id=ip.id
+    ).order_by(ProjectBudget.id.desc()).first()
+
+    if existing_budget:
+        flash("A budget already exists for this deal.", "info")
+        return redirect(url_for("investor.budget_detail", budget_id=existing_budget.id))
+
+    raw_payload = request.form.get("budget_payload") or "{}"
+
+    try:
+        payload = json.loads(raw_payload)
+    except Exception:
+        payload = {}
+
+    items = payload.get("items") or []
+    strategy = (
+        payload.get("strategy")
+        or ((deal.results_json or {}).get("workspace_analysis") or {}).get("selected_strategy")
+        or ((deal.results_json or {}).get("strategy_analysis") or {}).get("strategy")
+        or "rehab"
+    )
+
+    budget_type = "build" if str(strategy).lower() in {"build_studio", "project_build", "build"} else "rehab"
 
     budget = ProjectBudget(
-        deal_id=deal_id,
+        borrower_profile_id=None,
         investor_profile_id=ip.id,
-        name="Deal Budget",
-        budget_type="rehab"
+        loan_app_id=None,
+        deal_id=deal.id,
+        build_project_id=None,
+        budget_type=budget_type,
+        name=f"Budget - {deal.title or deal.address or f'Deal #{deal.id}'}",
+        project_name=deal.title or deal.address,
+        total_amount=0.0,
+        total_budget=0.0,
+        total_cost=0.0,
+        materials_cost=0.0,
+        labor_cost=0.0,
+        contingency=0.0,
+        paid_amount=0.0,
+        notes="Created from Budget Studio.",
     )
     db.session.add(budget)
     db.session.flush()
 
-    for item in data.get("items", []):
-        expense = BudgetItem(
+    created_count = 0
+    estimated_total = 0.0
+
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+
+        description = str(item.get("name") or item.get("description") or "Budget Item").strip() or "Budget Item"
+
+        try:
+            estimated_amount = float(item.get("cost") or item.get("estimated_amount") or 0)
+        except (TypeError, ValueError):
+            estimated_amount = 0.0
+
+        category = str(item.get("category") or "General").strip() or "General"
+
+        expense = ProjectExpense(
             budget_id=budget.id,
-            description=item.get("name"),
-            estimated_amount=item.get("cost", 0),
-            actual_amount=0,
-            paid_amount=0,
-            status="planned"
+            category=category,
+            description=description,
+            vendor=None,
+            estimated_amount=estimated_amount,
+            actual_amount=0.0,
+            paid_amount=0.0,
+            status="planned",
+            notes="Imported from Budget Studio.",
         )
         db.session.add(expense)
+        created_count += 1
+        estimated_total += estimated_amount
+
+    budget.total_cost = estimated_total
+    budget.total_amount = estimated_total
+    budget.total_budget = estimated_total + float(budget.contingency or 0)
+
+    if hasattr(budget, "recalculate_totals"):
+        budget.recalculate_totals()
 
     db.session.commit()
+
+    if created_count:
+        flash(f"Budget tracker created with {created_count} line item(s).", "success")
+    else:
+        flash("Budget tracker created, but no line items were added.", "warning")
 
     return redirect(url_for("investor.budget_detail", budget_id=budget.id))
 
