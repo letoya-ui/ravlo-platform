@@ -194,11 +194,11 @@ function signalLabel(signal){
 
 function buildPropertyPayload(r, analyzeId, saveId){
   const primaryValue =
-    r.last_sale_price ??
-    r.display_value ??
     r.price ??
+    r.display_value ??
     r.market_value ??
     r.assessed_value ??
+    r.last_sale_price ??
     null;
 
   return {
@@ -212,7 +212,7 @@ function buildPropertyPayload(r, analyzeId, saveId){
     baths: r.baths ?? null,
     year_built: r.year_built ?? null,
     property_type: r.property_type || null,
-    property_id: r.attom_id || null,
+    property_id: r.property_id || r.attom_id || null,
     lot_size_sqft: r.lot_size_sqft ?? null,
     assessed_value: r.assessed_value ?? null,
     latitude: r.latitude ?? null,
@@ -226,8 +226,8 @@ function buildPropertyPayload(r, analyzeId, saveId){
 function buildDealArchitectRequest(r, selectedStrategy){
   const strategy = selectedStrategy || "all";
   const type = String(r.property_type || "single family");
-  const salePrice = numOrNull(r.last_sale_price) ?? numOrNull(r.price) ?? null;
-  const marketValue = numOrNull(r.market_value) ?? numOrNull(r.display_value) ?? null;
+  const salePrice = numOrNull(r.price) ?? numOrNull(r.last_sale_price) ?? null;
+  const marketValue = numOrNull(r.estimated_value_engine) ?? numOrNull(r.market_value) ?? numOrNull(r.display_value) ?? null;
   const rentValue = numOrNull(r.traditional_rent) ?? null;
   const sqft = numOrNull(r.square_feet || r.sqft) ?? null;
   const lotSqft = numOrNull(r.lot_size_sqft) ?? null;
@@ -353,7 +353,8 @@ function resolveReasons(r){
   }
 
   const fallback = [];
-  if (numOrNull(r.last_sale_price) !== null) fallback.push("Sale price available for review");
+  if (numOrNull(r.price) !== null) fallback.push(`Live list price available at ${money(r.price)}`);
+  if (numOrNull(r.last_sale_price) !== null) fallback.push("Recorded sale price available for review");
   if (numOrNull(r.market_value) !== null) fallback.push(`Market value surfaced at ${money(r.market_value)}`);
   if (numOrNull(r.traditional_rent) !== null) fallback.push(`Estimated rent: ${money(r.traditional_rent)}/mo`);
   if (!fallback.length) fallback.push("Ready for deeper review in Deal Workspace");
@@ -376,13 +377,18 @@ function renderCards(results){
     const encoded = encodeURIComponent(JSON.stringify(payloadObj));
 
     const price =
+      numOrNull(r.display_value) ??
       numOrNull(r.price) ??
-      numOrNull(r.last_sale_price) ??
-      numOrNull(r.display_value);
+      numOrNull(r.market_value) ??
+      numOrNull(r.assessed_value) ??
+      numOrNull(r.last_sale_price);
     const priceLabel =
-      numOrNull(r.price) !== null ? "List Price" :
+      r.display_value_label ||
+      (numOrNull(r.price) !== null ? "List Price" :
+      numOrNull(r.market_value) !== null ? "Estimated Market Value" :
+      numOrNull(r.assessed_value) !== null ? "Assessed Value" :
       numOrNull(r.last_sale_price) !== null ? "Last Sale Price" :
-      "Best Available Value"; 
+      "Best Available Value");
     const marketValue = numOrNull(r.estimated_value_engine) ?? numOrNull(r.market_value) ?? numOrNull(r.assessed_value);
     const reasons = resolveReasons(r);
     const score = Number(r.deal_score);

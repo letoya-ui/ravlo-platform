@@ -70,14 +70,78 @@ def get_rentcast_value_estimate(
     zip_code: str = "",
     property_type: str = "single_family",
 ) -> Dict[str, Any]:
+    if not RENTCAST_API_KEY:
+        raise RentCastServiceError("Missing RENTCAST_API_KEY")
+
+    full_address = f"{address}, {city}, {state} {zip_code}".strip()
     url = f"{RENTCAST_BASE_URL}/avm/value"
+
+    headers = {
+        "X-Api-Key": RENTCAST_API_KEY,
+        "Accept": "application/json",
+    }
+
     params = {
-        "address": _full_address(address, city, state, zip_code),
+        "address": full_address,
         "propertyType": property_type,
         "compCount": 5,
     }
-    return _safe_get(url, params)
 
+    try:
+        resp = requests.get(url, headers=headers, params=params, timeout=12)
+    except requests.RequestException as e:
+        raise RentCastServiceError(f"Request failed: {e}") from e
+
+    if resp.status_code == 404:
+        raise RentCastServiceError("No RentCast value estimate found")
+
+    if resp.status_code >= 400:
+        raise RentCastServiceError(f"HTTP {resp.status_code}: {resp.text[:300]}")
+
+    try:
+        return resp.json() or {}
+    except Exception as e:
+        raise RentCastServiceError(f"Invalid JSON response: {e}") from e
+
+
+def get_rentcast_sale_listings(
+    city: str,
+    state: str,
+    status: str = "Active",
+    limit: int = 25,
+) -> Dict[str, Any]:
+    if not RENTCAST_API_KEY:
+        raise RentCastServiceError("Missing RENTCAST_API_KEY")
+
+    url = f"{RENTCAST_BASE_URL}/listings/sale"
+
+    headers = {
+        "X-Api-Key": RENTCAST_API_KEY,
+        "Accept": "application/json",
+    }
+
+    params = {
+        "city": city,
+        "state": state,
+        "status": status,
+        "limit": limit,
+    }
+
+    try:
+        resp = requests.get(url, headers=headers, params=params, timeout=12)
+    except requests.RequestException as e:
+        raise RentCastServiceError(f"Request failed: {e}") from e
+
+    if resp.status_code == 404:
+        raise RentCastServiceError("No RentCast sale listings found")
+
+    if resp.status_code >= 400:
+        raise RentCastServiceError(f"HTTP {resp.status_code}: {resp.text[:300]}")
+
+    try:
+        return resp.json() or {}
+    except Exception as e:
+        raise RentCastServiceError(f"Invalid JSON response: {e}") from e
 
 def get_rentcast_sale_listings(
     city: str,
