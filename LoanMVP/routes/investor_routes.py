@@ -1706,6 +1706,166 @@ def _extract_saved_blueprint_reference(deal=None, project=None):
             return item.strip()
 
     return None
+
+def _clean_spaces_url_part(value):
+    return (value or "").strip().rstrip("/")
+
+
+def _get_spaces_client():
+    return boto3.client(
+        "s3",
+        region_name=os.environ["DO_SPACES_REGION"],
+        endpoint_url=_clean_spaces_url_part(os.environ["DO_SPACES_ENDPOINT"]),
+        aws_access_key_id=os.environ["DO_SPACES_KEY"],
+        aws_secret_access_key=os.environ["DO_SPACES_SECRET"],
+    )
+
+
+def _normalize_photo_url_list(payload):
+    photo_urls = payload.get("listing_photos") or []
+    if not isinstance(photo_urls, list):
+        photo_urls = []
+
+    primary = payload.get("image_url")
+    if primary and primary not in photo_urls:
+        photo_urls = [primary] + photo_urls
+
+    cleaned = []
+    seen = set()
+
+    for item in photo_urls:
+        if not item:
+            continue
+        url = str(item).strip()
+        if not url or url in seen:
+            continue
+        seen.add(url)
+        cleaned.append(url)
+
+    return cleaned
+
+
+def _safe_set_attr(obj, field_name, value):
+    if hasattr(obj, field_name):
+        setattr(obj, field_name, value)
+
+
+def _public_spaces_url(bucket, key):
+    cdn_base = _clean_spaces_url_part(os.environ.get("DO_SPACES_CDN_BASE"))
+    endpoint = _clean_spaces_url_part(os.environ.get("DO_SPACES_ENDPOINT"))
+
+    if cdn_base:
+        return f"{cdn_base}/{key}"
+
+    return f"{endpoint}/{bucket}/{key}"
+
+
+def upload_listing_photos_to_spaces(photo_urls, saved_property_id=None, deal_id=None):
+    """
+    Downloads remote listing photos and stores them in DigitalOcean Spaces.
+    Returns a list of photo metadata dictionaries.
+    Never raises on per-photo failure; skips bad photos.
+    """
+    if not photo_urls:
+        return []
+
+    bucket = os.environ["DO_SPACES_BUCKET"]
+    s3 = _get_spaces_client()
+
+    uploaded = []
+    owner_part = f"deal-{deal_id}" if deal_id else f"saved-{saved_property_id or 'unknown'}"
+
+    for idx, source_url in enumerate(photo_urls, start=1):
+        try:
+            resp = requests.get(source_url, timeout=15, stream=True)
+            resp.raise_for_status()
+
+            parsed = urlparse(source_url)
+            ext = os.path.splitext(parsed.path)[1].lower() or ".jpg"
+            content_type = (
+                resp.headers.get("Content-Type")
+                or mimetypes.guess_type(source_url)[0]
+                or "image/jpeg"
+            )
+
+            key = f"listing-photos/{owner_part}/{uuid.uuid4().hex}-{idx}{ext}"
+
+            s3.upload_fileobj(
+                resp.raw,
+                bucket,
+                key,
+                ExtraArgs={
+                    "ACL": "public-read",
+                    "ContentType": content_type,
+                },
+            )
+
+            uploaded.append({
+                "url": _public_spaces_url(bucket, key),
+                "source_url": source_url,
+                "label": f"Listing Photo {idx}",
+                "position": idx,
+            })
+
+        except Exception as e:
+            current_app.logger.warning(
+                "Failed listing photo upload for %s: %s",
+                source_url,
+                e,
+            )
+            continue
+
+    return uploaded
+
+
+def _persist_listing_photo_refs(saved_property, deal, uploaded_photos):
+    """
+    Persist uploaded photo refs on SavedProperty and Deal if supported.
+    Defensive so it works with partial schema.
+    """
+    if not uploaded_photos:
+        return
+
+    primary_url = uploaded_photos[0]["url"]
+
+    # SavedProperty-level
+    _safe_set_attr(saved_property, "image_url", primary_url)
+    _safe_set_attr(saved_property, "listing_photos_json", uploaded_photos)
+
+    # Alternate possible field names
+    _safe_set_attr(saved_property, "listing_photos", uploaded_photos)
+    _safe_set_attr(saved_property, "primary_photo_url", primary_url)
+
+    # Deal-level snapshot
+    if deal:
+        results_json = deal.results_json or {}
+        results_json["listing_photos"] = uploaded_photos
+        results_json["image_url"] = primary_url
+        deal.results_json = results_json
+
+
+def _try_upload_and_attach_listing_photos(payload, saved_property, deal=None):
+    """
+    Best-effort upload. Never raises to caller.
+    """
+    try:
+        photo_urls = _normalize_photo_url_list(payload)
+        if not photo_urls:
+            return []
+
+        uploaded_photos = upload_listing_photos_to_spaces(
+            photo_urls=photo_urls,
+            saved_property_id=getattr(saved_property, "id", None),
+            deal_id=getattr(deal, "id", None) if deal else None,
+        )
+
+        if uploaded_photos:
+            _persist_listing_photo_refs(saved_property, deal, uploaded_photos)
+
+        return uploaded_photos
+    except Exception as e:
+        current_app.logger.warning("Listing photo attach failed: %s", e)
+        return []
 # =========================================================
 # ENGINE HELPERS
 # =========================================================
@@ -4412,7 +4572,6 @@ def property_search():
         primary_photo=primary_photo,
     )
 
-
 @investor_bp.route("/intelligence/save", methods=["POST"])
 @investor_bp.route("/save_property", methods=["POST"])
 @login_required
@@ -5490,6 +5649,7 @@ def api_property_detail():
 
 
 @investor_bp.route("/api/intelligence/save", methods=["POST"])
+@investor_bp.route("/api/intelligence/save", methods=["POST"])
 @investor_bp.route("/api/property_tool_save", methods=["POST"])
 @login_required
 @role_required("investor")
@@ -5503,19 +5663,32 @@ def api_property_tool_save():
             "message": "Address is required to save."
         }), 400
 
-    ip, error = _get_investor_profile_or_error()
-    if error:
-        return error
+    ip = InvestorProfile.query.filter_by(user_id=current_user.id).first()
+    if not ip:
+        return jsonify({
+            "status": "error",
+            "message": "Profile not found."
+        }), 400
 
     try:
         saved = _upsert_saved_property_from_payload(ip, payload)
+
+        uploaded_photos = _try_upload_and_attach_listing_photos(
+            payload=payload,
+            saved_property=saved,
+            deal=None,
+        )
+
         db.session.commit()
 
         return jsonify({
             "status": "ok",
             "message": "Saved.",
-            "saved_id": saved.id
+            "saved_id": saved.id,
+            "listing_photos_count": len(uploaded_photos),
+            "primary_photo_url": uploaded_photos[0]["url"] if uploaded_photos else getattr(saved, "image_url", None),
         })
+
     except Exception as e:
         db.session.rollback()
         current_app.logger.exception("Property Tool save failed")
@@ -5557,8 +5730,10 @@ def api_property_tool_save_and_analyze():
             return 0.0
 
     try:
+        # 1) Upsert saved property
         saved = _upsert_saved_property_from_payload(ip, payload)
 
+        # 2) Find or create linked deal
         deal = (
             Deal.query
             .filter_by(user_id=current_user.id, saved_property_id=saved.id)
@@ -5716,6 +5891,13 @@ def api_property_tool_save_and_analyze():
             db.session.add(deal)
             db.session.flush()
 
+        # 3) Best-effort upload to DO Spaces and attach URLs
+        uploaded_photos = _try_upload_and_attach_listing_photos(
+            payload=payload,
+            saved_property=saved,
+            deal=deal,
+        )
+
         db.session.commit()
 
         deal_url = url_for(
@@ -5728,7 +5910,9 @@ def api_property_tool_save_and_analyze():
             "status": "ok",
             "saved_id": saved.id,
             "deal_id": deal.id,
-            "deal_url": deal_url
+            "deal_url": deal_url,
+            "listing_photos_count": len(uploaded_photos),
+            "primary_photo_url": uploaded_photos[0]["url"] if uploaded_photos else None,
         })
 
     except Exception as e:
@@ -5738,6 +5922,8 @@ def api_property_tool_save_and_analyze():
             "status": "error",
             "message": f"Could not create deal: {e}"
         }), 500
+        
+            
 
 
 @investor_bp.route("/api/intelligence/card", methods=["POST"])
@@ -6580,7 +6766,6 @@ def deal_delete(deal_id):
     flash("Deal deleted.", "success")
     return redirect(url_for("investor.deals_list"))
 
-@investor_bp.route("/deals/<int:deal_id>/open", methods=["GET"])
 @investor_bp.route("/deals/<int:deal_id>/open", methods=["GET"])
 @login_required
 @role_required("investor")
