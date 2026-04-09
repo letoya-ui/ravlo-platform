@@ -1020,10 +1020,155 @@ def _safe_json_loads_local(value, default=None):
     default = default if default is not None else {}
     if not value:
         return default
+    if isinstance(value, dict):
+        return value
     try:
         return json.loads(value)
     except Exception:
         return default
+
+
+def _normalize_photo_urls(value) -> list[str]:
+    normalized = []
+    seen = set()
+
+    if isinstance(value, str):
+        candidates = [value]
+    elif isinstance(value, list):
+        candidates = value
+    else:
+        candidates = []
+
+    for item in candidates:
+        url = None
+        if isinstance(item, str):
+            url = item.strip()
+        elif isinstance(item, dict):
+            url = (
+                item.get("url")
+                or item.get("href")
+                or item.get("src")
+                or item.get("image_url")
+            )
+            url = str(url).strip() if url not in (None, "") else None
+
+        if not url or not url.lower().startswith(("http://", "https://")):
+            continue
+
+        if url in seen:
+            continue
+
+        seen.add(url)
+        normalized.append(url)
+
+    return normalized
+
+
+def _property_payload_from_any(payload) -> dict:
+    raw = _safe_json_loads_local(payload, default={})
+    if not isinstance(raw, dict):
+        return {}
+
+    prop = raw.get("property")
+    if isinstance(prop, dict):
+        return prop
+
+    return raw
+
+
+def _merge_nonempty_dict(target: dict, source: dict) -> dict:
+    target = target if isinstance(target, dict) else {}
+    if not isinstance(source, dict):
+        return target
+
+    for key, value in source.items():
+        if value not in (None, "", [], {}):
+            target[key] = value
+    return target
+
+
+def _ingest_listing_photos_to_spaces(photo_urls: list[str], *, subdir: str, limit: int = 8) -> list[str]:
+    stored = []
+
+    for idx, url in enumerate(_normalize_photo_urls(photo_urls)[:limit], start=1):
+        try:
+            raw = download_image_bytes(url)
+            if not raw:
+                continue
+
+            webp = to_webp_bytes(raw, max_size=1600, quality=86)
+            uploaded = spaces_put_bytes(
+                webp,
+                subdir=subdir,
+                content_type="image/webp",
+                filename=f"listing_{idx:02d}_{uuid.uuid4().hex[:10]}.webp",
+            )
+            stored_url = uploaded.get("url")
+            if stored_url:
+                stored.append(stored_url)
+        except Exception:
+            current_app.logger.exception("Listing photo ingest failed for %s", url)
+
+    return stored
+
+
+def _store_saved_property_media(saved_property, payload, *, source: str = "listing_search") -> dict:
+    existing_payload = _safe_json_loads_local(getattr(saved_property, "resolved_json", None), default={})
+    incoming_prop = _property_payload_from_any(payload)
+    existing_prop = _property_payload_from_any(existing_payload)
+
+    merged_prop = _merge_nonempty_dict(existing_prop, incoming_prop)
+
+    primary_candidate = (
+        merged_prop.get("primary_photo")
+        or merged_prop.get("photo")
+        or merged_prop.get("image_url")
+    )
+    source_urls = _normalize_photo_urls(
+        [primary_candidate] + _normalize_photo_urls(merged_prop.get("photos"))
+    )
+
+    stored_urls = _ingest_listing_photos_to_spaces(
+        source_urls,
+        subdir=f"properties/{current_user.id}/{saved_property.id or 'pending'}/listing_photos",
+    ) if source_urls else []
+
+    final_urls = stored_urls or source_urls
+    final_primary = final_urls[0] if final_urls else None
+
+    if final_urls:
+        merged_prop["photos"] = final_urls
+    if final_primary:
+        merged_prop["primary_photo"] = final_primary
+        merged_prop["image_url"] = merged_prop.get("image_url") or final_primary
+
+    merged_prop["photo_source"] = source
+    merged_prop["photo_count"] = len(final_urls)
+    merged_prop["photo_ingested_at"] = datetime.utcnow().isoformat()
+
+    merged_payload = existing_payload if isinstance(existing_payload, dict) else {}
+    merged_payload["property"] = merged_prop
+
+    if hasattr(saved_property, "resolved_json"):
+        saved_property.resolved_json = json.dumps(merged_payload)
+        saved_property.resolved_at = datetime.utcnow()
+
+    return merged_payload
+
+
+def _saved_property_media(saved_property) -> dict:
+    payload = _safe_json_loads_local(getattr(saved_property, "resolved_json", None), default={})
+    prop = _property_payload_from_any(payload)
+    photos = _normalize_photo_urls(prop.get("photos"))
+    primary_photo = (
+        prop.get("primary_photo")
+        or prop.get("image_url")
+        or (photos[0] if photos else None)
+    )
+    return {
+        "primary_photo": primary_photo,
+        "photos": photos,
+    }
 
 
 def _normalize_int(value):
@@ -3397,9 +3542,8 @@ def save_property():
         if (not getattr(existing, "property_id", None)) and final_property_id:
             existing.property_id = str(final_property_id)
 
-        if hasattr(existing, "resolved_json"):
-            existing.resolved_json = json.dumps(resolved) if resolved else None
-            existing.resolved_at = datetime.utcnow() if resolved else None
+        if resolved:
+            _store_saved_property_media(existing, resolved, source="unified_resolver")
 
         db.session.commit()
         return jsonify({"status": "success", "message": "Already saved (updated details).", "saved_id": existing.id})
@@ -3415,11 +3559,12 @@ def save_property():
         created_at=datetime.utcnow(),
     )
 
-    if hasattr(saved, "resolved_json"):
-        saved.resolved_json = json.dumps(resolved) if resolved else None
-        saved.resolved_at = datetime.utcnow() if resolved else None
-
     db.session.add(saved)
+    db.session.flush()
+
+    if resolved:
+        _store_saved_property_media(saved, resolved, source="unified_resolver")
+
     db.session.commit()
 
     return jsonify({"status": "success", "message": "Saved.", "saved_id": saved.id})
@@ -4058,6 +4203,8 @@ def api_property_tool_save():
         ).first()
 
     if existing:
+        _store_saved_property_media(existing, payload, source="property_tool")
+        db.session.commit()
         return jsonify({
             "status": "ok",
             "message": "Already saved.",
@@ -4073,9 +4220,11 @@ def api_property_tool_save():
         zipcode=zipcode,
         saved_at=datetime.utcnow(),
         created_at=datetime.utcnow(),
-    )
-    db.session.add(saved)
-    db.session.commit()
+      )
+      db.session.add(saved)
+      db.session.flush()
+      _store_saved_property_media(saved, payload, source="property_tool")
+      db.session.commit()
 
     return jsonify({
         "status": "ok",
@@ -4147,7 +4296,10 @@ def api_property_tool_save_and_analyze():
             created_at=datetime.utcnow(),
         )
         db.session.add(existing)
-        db.session.commit()
+        db.session.flush()
+
+    _store_saved_property_media(existing, payload, source="property_tool")
+    db.session.commit()
 
     deal_url = url_for("investor.deal_workspace", prop_id=existing.id, mode="flip")
 
