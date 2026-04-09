@@ -5475,33 +5475,198 @@ def api_property_tool_save_and_analyze():
             "message": "Address is required to analyze."
         }), 400
 
-    ip, error = _get_investor_profile_or_error()
-    if error:
-        return error
+    ip = InvestorProfile.query.filter_by(user_id=current_user.id).first()
+    if not ip:
+        return jsonify({
+            "status": "error",
+            "message": "Profile not found."
+        }), 400
+
+    def to_float(val):
+        try:
+            if val in (None, "", "None"):
+                return 0.0
+            if isinstance(val, str):
+                val = val.replace("$", "").replace(",", "").strip()
+            return float(val)
+        except (TypeError, ValueError):
+            return 0.0
 
     try:
         saved = _upsert_saved_property_from_payload(ip, payload)
 
-        # mark downstream tools as stale / pending if your model supports these fields
-        _assign_if_has_attr(saved, "analysis_status", "pending")
-        _assign_if_has_attr(saved, "budget_status", "pending")
-        _assign_if_has_attr(saved, "scope_status", "pending")
-        _assign_if_has_attr(saved, "updated_at", datetime.utcnow())
+        deal = (
+            Deal.query
+            .filter_by(user_id=current_user.id, saved_property_id=saved.id)
+            .order_by(Deal.updated_at.desc(), Deal.id.desc())
+            .first()
+        )
+
+        strategy = (payload.get("strategy") or "flip").strip().lower()
+        if strategy not in ("flip", "rental", "airbnb"):
+            strategy = "flip"
+
+        title = (
+            payload.get("title")
+            or payload.get("address")
+            or f"Deal {saved.id}"
+        )
+
+        purchase_price = to_float(
+            payload.get("purchase_price")
+            or payload.get("price")
+            or payload.get("display_value")
+            or payload.get("last_sale_price")
+        )
+
+        arv = to_float(
+            payload.get("arv")
+            or payload.get("estimated_value_engine")
+            or payload.get("market_value")
+            or payload.get("engine_value")
+        )
+
+        estimated_rent = to_float(
+            payload.get("estimated_rent")
+            or payload.get("monthly_rent")
+            or payload.get("monthly_rent_estimate")
+        )
+
+        raw_score = payload.get("deal_score")
+        try:
+            deal_score = int(round(float(raw_score))) if raw_score not in (None, "", "None") else None
+        except (TypeError, ValueError):
+            deal_score = None
+
+        results_json = {
+            "strategy_analysis": {},
+            "rehab_analysis": {},
+            "workspace_analysis": {
+                "address": payload.get("address"),
+                "city": payload.get("city"),
+                "state": payload.get("state"),
+                "zip_code": payload.get("zip") or payload.get("zip_code"),
+                "purchase_price": purchase_price,
+                "arv": arv,
+                "estimated_rent": estimated_rent,
+                "square_feet": payload.get("sqft") or payload.get("square_feet"),
+                "beds": payload.get("beds"),
+                "baths": payload.get("baths"),
+                "year_built": payload.get("year_built"),
+                "property_type": payload.get("property_type"),
+                "strategy": strategy,
+                "strategy_tag": payload.get("strategy_tag"),
+                "recommended_strategy": payload.get("recommended_strategy"),
+                "estimated_best_use": payload.get("estimated_best_use"),
+                "deal_score": deal_score,
+                "opportunity_tier": payload.get("opportunity_tier"),
+                "deal_finder_signal": payload.get("deal_finder_signal"),
+                "next_step": payload.get("next_step"),
+                "comp_confidence": payload.get("comp_confidence"),
+                "primary_strengths": payload.get("primary_strengths") or [],
+                "primary_risks": payload.get("primary_risks") or [],
+                "risk_notes": payload.get("risk_notes") or [],
+                "why_it_made_list": payload.get("why_it_made_list") or [],
+            },
+            "optimization": {},
+        }
+
+        notes_parts = []
+
+        if payload.get("estimated_best_use"):
+            notes_parts.append(f"Best Use: {payload.get('estimated_best_use')}")
+        if payload.get("next_step"):
+            notes_parts.append(f"Next Step: {payload.get('next_step')}")
+
+        primary_strengths = payload.get("primary_strengths") or []
+        if primary_strengths:
+            notes_parts.append("Strengths: " + ", ".join(str(x) for x in primary_strengths))
+
+        primary_risks = payload.get("primary_risks") or []
+        if primary_risks:
+            notes_parts.append("Risks: " + ", ".join(str(x) for x in primary_risks))
+
+        notes = "\n".join(notes_parts).strip() or None
+
+        if deal:
+            deal.investor_profile_id = ip.id
+            deal.saved_property_id = saved.id
+            deal.property_id = payload.get("property_id") or payload.get("attom_id")
+            deal.title = title
+            deal.address = payload.get("address")
+            deal.city = payload.get("city")
+            deal.state = payload.get("state")
+            deal.zip_code = payload.get("zip") or payload.get("zip_code")
+            deal.strategy = strategy
+            deal.recommended_strategy = payload.get("recommended_strategy") or strategy
+            deal.purchase_price = purchase_price
+            deal.arv = arv
+            deal.estimated_rent = estimated_rent
+            deal.deal_score = deal_score
+            deal.inputs_json = {
+                "address": payload.get("address"),
+                "city": payload.get("city"),
+                "state": payload.get("state"),
+                "zip_code": payload.get("zip") or payload.get("zip_code"),
+                "strategy": strategy,
+                "purchase_price": purchase_price,
+                "arv": arv,
+                "estimated_rent": estimated_rent,
+            }
+            deal.results_json = results_json
+            deal.notes = notes
+            deal.status = deal.status or "active"
+            deal.updated_at = datetime.utcnow()
+        else:
+            deal = Deal(
+                user_id=current_user.id,
+                investor_profile_id=ip.id,
+                saved_property_id=saved.id,
+                property_id=payload.get("property_id") or payload.get("attom_id"),
+                title=title,
+                address=payload.get("address"),
+                city=payload.get("city"),
+                state=payload.get("state"),
+                zip_code=payload.get("zip") or payload.get("zip_code"),
+                strategy=strategy,
+                recommended_strategy=payload.get("recommended_strategy") or strategy,
+                purchase_price=purchase_price,
+                arv=arv,
+                estimated_rent=estimated_rent,
+                rehab_cost=0,
+                deal_score=deal_score,
+                inputs_json={
+                    "address": payload.get("address"),
+                    "city": payload.get("city"),
+                    "state": payload.get("state"),
+                    "zip_code": payload.get("zip") or payload.get("zip_code"),
+                    "strategy": strategy,
+                    "purchase_price": purchase_price,
+                    "arv": arv,
+                    "estimated_rent": estimated_rent,
+                },
+                results_json=results_json,
+                notes=notes,
+                status="active",
+            )
+            db.session.add(deal)
+            db.session.flush()
 
         db.session.commit()
 
         deal_url = url_for(
             "investor.deal_workspace",
-            prop_id=saved.id,
-            mode=(payload.get("strategy") or "flip")
+            deal_id=deal.id,
+            mode=strategy
         )
 
         return jsonify({
             "status": "ok",
-            "message": "Deal created.",
             "saved_id": saved.id,
+            "deal_id": deal.id,
             "deal_url": deal_url
         })
+
     except Exception as e:
         db.session.rollback()
         current_app.logger.exception("Property Tool save-and-analyze failed")
@@ -6352,20 +6517,17 @@ def deal_delete(deal_id):
     return redirect(url_for("investor.deals_list"))
 
 @investor_bp.route("/deals/<int:deal_id>/open", methods=["GET"])
+@investor_bp.route("/deals/<int:deal_id>/open", methods=["GET"])
 @login_required
 @role_required("investor")
 def deal_open(deal_id):
     deal = _get_owned_deal_or_404(deal_id)
 
-    if getattr(deal, "saved_property_id", None):
-        return redirect(url_for(
-            "investor.deal_workspace",
-            prop_id=deal.saved_property_id,
-            mode=deal.strategy or "flip"
-        ))
-
-    flash("This deal is not linked to a saved property yet.", "warning")
-    return redirect(url_for("investor.deal_workspace"))
+    return redirect(url_for(
+        "investor.deal_workspace",
+        deal_id=deal.id,
+        mode=deal.strategy or "flip"
+    ))
 
 @investor_bp.route("/deals/<int:deal_id>/report", methods=["GET"])
 @login_required
