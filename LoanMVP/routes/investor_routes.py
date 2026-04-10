@@ -1304,6 +1304,61 @@ def _build_mashvisor_insight(scope_budget: dict | None, mashvisor_data: dict | N
         return "Market data is coming in below Ravlo's internal planning signal, so pressure-test the revenue assumptions."
     return "Market data is stronger than Ravlo's current planning signal, which may support more upside."
 
+def _build_loan_sizing_from_budget(deal, budget=None) -> dict:
+    """
+    Build a lightweight financing summary from deal + budget.
+    Conservative defaults for now; can be replaced with lender rules later.
+    """
+    purchase_price = float(getattr(deal, "purchase_price", 0) or 0)
+    arv = float(getattr(deal, "arv", 0) or 0)
+
+    if budget:
+        construction_budget = float(getattr(budget, "total_budget", 0) or 0)
+        estimated_budget = float(getattr(budget, "total_cost", 0) or 0)
+        paid_amount = float(getattr(budget, "paid_amount", 0) or 0)
+        contingency = float(getattr(budget, "contingency", 0) or 0)
+    else:
+        construction_budget = float(getattr(deal, "rehab_cost", 0) or 0)
+        estimated_budget = construction_budget
+        paid_amount = 0.0
+        contingency = 0.0
+
+    total_project_cost = purchase_price + construction_budget
+
+    # Simple lender assumptions for v1
+    max_purchase_ltc = 0.90
+    max_construction_ltc = 1.00
+
+    financeable_purchase = purchase_price * max_purchase_ltc
+    financeable_construction = construction_budget * max_construction_ltc
+
+    estimated_loan_request = financeable_purchase + financeable_construction
+    estimated_cash_required = max(total_project_cost - estimated_loan_request, 0)
+
+    ltc = (estimated_loan_request / total_project_cost * 100) if total_project_cost > 0 else 0
+    arv_leverage = (estimated_loan_request / arv * 100) if arv > 0 else 0
+
+    if ltc <= 75:
+        leverage_note = "Conservative leverage profile."
+    elif ltc <= 90:
+        leverage_note = "Typical leverage for a strong deal."
+    else:
+        leverage_note = "High leverage — confirm lender appetite and reserves."
+
+    return {
+        "purchase_price": purchase_price,
+        "construction_budget": construction_budget,
+        "estimated_budget": estimated_budget,
+        "paid_amount": paid_amount,
+        "contingency": contingency,
+        "total_project_cost": total_project_cost,
+        "estimated_loan_request": estimated_loan_request,
+        "estimated_cash_required": estimated_cash_required,
+        "ltc": ltc,
+        "arv_leverage": arv_leverage,
+        "leverage_note": leverage_note,
+    }
+
 # =========================================================
 # 🧾 JSON + FORM SAFETY
 # =========================================================
@@ -6228,6 +6283,10 @@ def deal_workspace(deal_id=None):
             .order_by(ProjectBudget.id.desc())
             .first()
         )
+    loan_sizing = None
+
+    if deal:
+        loan_sizing = _build_loan_sizing_from_budget(deal, budget)
 
     # -----------------------------------------
     # 6) Load comps / property intelligence
@@ -6304,6 +6363,7 @@ def deal_workspace(deal_id=None):
         deal=deal,
         deal_id=(deal.id if deal else None),
         budget=budget,
+        loan_sizing=loan_sizing,
         mode=mode,
         comps=comps,
         resolved=resolved,
@@ -10986,6 +11046,17 @@ def create_budget_from_studio(deal_id):
         flash("Budget tracker created, but no line items were added.", "warning")
 
     return redirect(url_for("investor.budget_detail", budget_id=budget.id))
+
+const updateForm = document.getElementById("updateBudgetForm");
+
+if (updateForm) {
+  updateForm.addEventListener("submit", function(){
+    const payloadInput = document.getElementById("updatePayload");
+    if (payloadInput) {
+      payloadInput.value = serializeBudgetPayload();
+    }
+  });
+}
 
 @investor_bp.route("/budget-studio/<int:budget_id>")
 @login_required

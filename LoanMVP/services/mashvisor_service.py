@@ -141,3 +141,46 @@ def extract_core_fields(raw: Dict[str, Any]) -> Dict[str, Any]:
         "walk_score": raw.get("walk_score"),
         "raw": raw,
     }
+
+
+def normalize_mashvisor_validation(result: Dict[str, Any]) -> Dict[str, Any]:
+    lookup = result.get("lookup") or {}
+    comps = result.get("comps") or {}
+
+    lookup_content = lookup.get("content", lookup)
+    comps_content = comps.get("content", comps)
+
+    return {
+        "airbnb_revenue": (
+            lookup_content.get("rental_income")
+            or lookup_content.get("airbnb_rental_income")
+            or lookup_content.get("monthly_revenue")
+        ),
+        "occupancy_rate": (
+            lookup_content.get("occupancy_rate")
+            or lookup_content.get("airbnb_occupancy_rate")
+        ),
+        "adr": (
+            lookup_content.get("daily_rate")
+            or lookup_content.get("adr")
+            or lookup_content.get("average_daily_rate")
+        ),
+        "revpar": lookup_content.get("revpar"),
+        "cash_flow": lookup_content.get("cash_flow"),
+        "noi": lookup_content.get("noi"),
+        "cash_on_cash_return": (
+            lookup_content.get("cash_on_cash_return")
+            or lookup_content.get("coc")
+        ),
+        "confidence": (
+            lookup_content.get("data_quality")
+            or lookup_content.get("confidence")
+            or lookup_content.get("sample_size")
+        ),
+        "comps": (
+            comps_content.get("list")
+            or comps_content.get("comparables")
+            or []
+        ),
+        "raw": result,
+    }
