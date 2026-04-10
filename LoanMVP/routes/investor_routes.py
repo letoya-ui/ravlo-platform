@@ -22,7 +22,7 @@ from werkzeug.datastructures import ImmutableMultiDict
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy import or_
 from sqlalchemy.orm.attributes import flag_modified
-from urllib.parse import urlencode
+from urllib.parse import urlencode, urlparse
 from collections import defaultdict
 from flask import (
     Blueprint,
@@ -2529,6 +2529,14 @@ def _safe_engine_error_message(resp):
 
     return (resp.text or f"HTTP {resp.status_code}")[:300]
 
+
+def _friendly_engine_timeout_message(url, timeout, error):
+    host = (urlparse(url).netloc or url).strip()
+    message = f"Renovation engine timed out after {timeout}s."
+    if "ngrok" in host:
+        message += " The ngrok tunnel or local render worker may be offline, sleeping, or still processing the image job."
+    return f"{message} host={host} error={error}"
+
 def _post_renovation_engine_json(path, payload, timeout=RENDER_TIMEOUT):
     url = _renovation_engine_url(path)
 
@@ -2551,7 +2559,7 @@ def _post_renovation_engine_json(path, payload, timeout=RENDER_TIMEOUT):
             timeout=timeout,
         )
     except requests.Timeout as e:
-        raise RuntimeError(f"Engine request timed out. url={url} timeout={timeout} error={e}")
+        raise RuntimeError(_friendly_engine_timeout_message(url, timeout, e))
     except requests.RequestException as e:
         raise RuntimeError(f"Engine request failed. url={url} error={e}")
 
