@@ -5,8 +5,8 @@ app = Flask(__name__)
 SITE = {
     'company_name': 'Caughman Mason LLC',
     'tagline': 'Construction Powerhouse',
-    'email': 'hello@yourdomain.com',
-    'phone': '(555) 555-5555',
+    'email': 'Jamaine@caughmanmason.com',
+    'phone': '(347) 926-9541',
     'florida_note': 'Expanding into Florida and preparing to bid on upcoming jobs.',
 }
 
