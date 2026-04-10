@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="section">
+  <div class="container">
+    <div class="section-head">
+      <div class="eyebrow">Projects</div>
+      <h1>Project categories that support bidding credibility and investor confidence.</h1>
+      <p class="lead">Use this page to add photos, before-and-after examples, and property case studies as you build your Florida pipeline.</p>
+    </div>
+    <div class="card-grid">
+      {% for project in projects %}
+      <div class="card">
+        <h3>{{ project.name }}</h3>
+        <p>{{ project.description }}</p>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+{% endblock %}
