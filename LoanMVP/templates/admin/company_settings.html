@@ -125,34 +125,40 @@
       </div>
     </div>
 
-    <div class="widget-toggle-grid mt-16" id="dashboardWidgetControls" data-dashboard-company="{{ company.id }}">
-      <label class="widget-toggle"><input type="checkbox" data-widget-key="overview" checked> <span>Overview</span></label>
-      <label class="widget-toggle"><input type="checkbox" data-widget-key="tools" checked> <span>Workspace Controls</span></label>
-      <label class="widget-toggle"><input type="checkbox" data-widget-key="analytics" checked> <span>Analytics</span></label>
-      <label class="widget-toggle"><input type="checkbox" data-widget-key="empty_state" checked> <span>Get Started Panel</span></label>
-      <label class="widget-toggle"><input type="checkbox" data-widget-key="team" checked> <span>Recent Team</span></label>
-      <label class="widget-toggle"><input type="checkbox" data-widget-key="invites" checked> <span>Recent Invites</span></label>
-      <label class="widget-toggle"><input type="checkbox" data-widget-key="requests" checked> <span>Recent Requests</span></label>
-      <label class="widget-toggle"><input type="checkbox" data-widget-key="messages" checked> <span>Recent Messages</span></label>
-    </div>
+    <form method="POST" class="mt-16" id="dashboardLayoutForm">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="action_type" value="dashboard_layout">
+      <input type="hidden" name="dashboard_layout_json" id="dashboardLayoutJson" value="">
 
-    <div class="admin-quick-actions mt-16">
-      <button type="button" class="re-btn primary" id="saveDashboardLayoutBtn">
-        <i class="lucide lucide-save"></i>
-        Save Dashboard Layout
-      </button>
-      <button type="button" class="re-btn ghost" id="resetDashboardLayoutBtn">
-        <i class="lucide lucide-rotate-ccw"></i>
-        Reset Dashboard Layout
-      </button>
-      <a class="re-btn ghost" href="{{ url_for('admin.company_dashboard', company_id=company.id) }}">
-        <i class="lucide lucide-layout-dashboard"></i>
-        Open Company Dashboard
-      </a>
-    </div>
+      <div class="widget-toggle-grid" id="dashboardWidgetControls">
+        <label class="widget-toggle"><input type="checkbox" data-widget-key="overview" {% if dashboard_preferences.overview is not sameas false %}checked{% endif %}> <span>Overview</span></label>
+        <label class="widget-toggle"><input type="checkbox" data-widget-key="tools" {% if dashboard_preferences.tools is not sameas false %}checked{% endif %}> <span>Workspace Controls</span></label>
+        <label class="widget-toggle"><input type="checkbox" data-widget-key="analytics" {% if dashboard_preferences.analytics is not sameas false %}checked{% endif %}> <span>Analytics</span></label>
+        <label class="widget-toggle"><input type="checkbox" data-widget-key="empty_state" {% if dashboard_preferences.empty_state is not sameas false %}checked{% endif %}> <span>Get Started Panel</span></label>
+        <label class="widget-toggle"><input type="checkbox" data-widget-key="team" {% if dashboard_preferences.team is not sameas false %}checked{% endif %}> <span>Recent Team</span></label>
+        <label class="widget-toggle"><input type="checkbox" data-widget-key="invites" {% if dashboard_preferences.invites is not sameas false %}checked{% endif %}> <span>Recent Invites</span></label>
+        <label class="widget-toggle"><input type="checkbox" data-widget-key="requests" {% if dashboard_preferences.requests is not sameas false %}checked{% endif %}> <span>Recent Requests</span></label>
+        <label class="widget-toggle"><input type="checkbox" data-widget-key="messages" {% if dashboard_preferences.messages is not sameas false %}checked{% endif %}> <span>Recent Messages</span></label>
+      </div>
+
+      <div class="admin-quick-actions mt-16">
+        <button type="submit" class="re-btn primary" id="saveDashboardLayoutBtn">
+          <i class="lucide lucide-save"></i>
+          Save Dashboard Layout
+        </button>
+        <button type="button" class="re-btn ghost" id="resetDashboardLayoutBtn">
+          <i class="lucide lucide-rotate-ccw"></i>
+          Reset Dashboard Layout
+        </button>
+        <a class="re-btn ghost" href="{{ url_for('admin.company_dashboard', company_id=company.id) }}">
+          <i class="lucide lucide-layout-dashboard"></i>
+          Open Company Dashboard
+        </a>
+      </div>
+    </form>
 
     <div class="re-card-subtitle mt-16" id="dashboardLayoutStatus">
-      Dashboard controls are saved locally for this company admin workspace in your browser.
+      Dashboard controls are saved to this company workspace so the layout can follow admins across sessions and devices.
     </div>
   </section>
 </div>
@@ -220,34 +226,11 @@
 <script>
   (function () {
     const controlsRoot = document.getElementById("dashboardWidgetControls");
+    const form = document.getElementById("dashboardLayoutForm");
     const saveBtn = document.getElementById("saveDashboardLayoutBtn");
     const resetBtn = document.getElementById("resetDashboardLayoutBtn");
     const statusEl = document.getElementById("dashboardLayoutStatus");
-    const storageKey = controlsRoot
-      ? `ravlo_company_dashboard_layout_${controlsRoot.dataset.dashboardCompany || "default"}`
-      : null;
-
-    function readPrefs() {
-      if (!storageKey) return {};
-      try {
-        return JSON.parse(window.localStorage.getItem(storageKey) || "{}") || {};
-      } catch (error) {
-        return {};
-      }
-    }
-
-    function writePrefs(prefs) {
-      if (!storageKey) return;
-      window.localStorage.setItem(storageKey, JSON.stringify(prefs));
-    }
-
-    function syncControlsFromPrefs() {
-      const prefs = readPrefs();
-      controlsRoot?.querySelectorAll("[data-widget-key]").forEach((checkbox) => {
-        const key = checkbox.dataset.widgetKey;
-        checkbox.checked = prefs[key] !== false;
-      });
-    }
+    const layoutJsonInput = document.getElementById("dashboardLayoutJson");
 
     function collectPrefs() {
       const prefs = {};
@@ -257,24 +240,23 @@
       return prefs;
     }
 
-    saveBtn?.addEventListener("click", function () {
-      writePrefs(collectPrefs());
-      if (statusEl) {
-        statusEl.textContent = "Dashboard layout saved for this company in your browser.";
+    form?.addEventListener("submit", function () {
+      if (layoutJsonInput) {
+        layoutJsonInput.value = JSON.stringify(collectPrefs());
       }
     });
 
     resetBtn?.addEventListener("click", function () {
-      if (storageKey) {
-        window.localStorage.removeItem(storageKey);
+      controlsRoot?.querySelectorAll("[data-widget-key]").forEach((checkbox) => {
+        checkbox.checked = true;
+      });
+      if (layoutJsonInput) {
+        layoutJsonInput.value = JSON.stringify(collectPrefs());
       }
-      syncControlsFromPrefs();
-      if (statusEl) {
-        statusEl.textContent = "Dashboard layout reset to the default company admin view.";
+      if (form) {
+        form.requestSubmit();
       }
     });
-
-    syncControlsFromPrefs();
   })();
 </script>
 {% endblock %}

@@ -360,33 +360,19 @@
   (function () {
     const dashboardRoot = document.getElementById("companyDashboardRoot");
     const resetDashboardLayoutBtn = document.getElementById("resetDashboardLayoutBtn");
-    const dashboardStorageKey = dashboardRoot
-      ? `ravlo_company_dashboard_layout_${dashboardRoot.dataset.dashboardCompany || "default"}`
-      : null;
-
-    function readDashboardPrefs() {
-      if (!dashboardStorageKey) return {};
-      try {
-        return JSON.parse(window.localStorage.getItem(dashboardStorageKey) || "{}") || {};
-      } catch (error) {
-        return {};
-      }
-    }
+    const dashboardPrefs = {{ (dashboard_preferences or {})|tojson }};
 
     function applyDashboardPrefs() {
       if (!dashboardRoot) return;
-      const prefs = readDashboardPrefs();
       dashboardRoot.querySelectorAll("[data-widget-key]").forEach((section) => {
         const key = section.dataset.widgetKey;
-        const visible = prefs[key] !== false;
+        const visible = dashboardPrefs[key] !== false;
         section.style.display = visible ? "" : "none";
       });
     }
 
     resetDashboardLayoutBtn?.addEventListener("click", function () {
-      if (!dashboardStorageKey) return;
-      window.localStorage.removeItem(dashboardStorageKey);
-      applyDashboardPrefs();
+      window.location.href = "{{ url_for('admin.company_settings', company_id=company.id) }}";
     });
 
     applyDashboardPrefs();

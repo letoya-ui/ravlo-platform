@@ -5,9 +5,10 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, send_file, current_app
 from flask_login import current_user, login_required
 from collections import defaultdict
-from sqlalchemy import func, desc
+from sqlalchemy import func, desc, inspect, text
 from sqlalchemy.orm import aliased
 from datetime import datetime, timedelta
+import json
 from LoanMVP.extensions import db, csrf
 from werkzeug.security import generate_password_hash
 
@@ -114,6 +115,59 @@ def _plan_defaults(plan_interest: str):
         return "white_label", None
 
     return "team", 10
+
+
+def _company_dashboard_defaults():
+    return {
+        "overview": True,
+        "tools": True,
+        "analytics": True,
+        "empty_state": True,
+        "team": True,
+        "invites": True,
+        "requests": True,
+        "messages": True,
+    }
+
+
+def _company_dashboard_column_exists():
+    try:
+        columns = inspect(db.engine).get_columns("companies")
+        return any(column.get("name") == "dashboard_settings" for column in columns)
+    except Exception:
+        return False
+
+
+def _company_dashboard_settings(company):
+    defaults = _company_dashboard_defaults()
+    if not _company_dashboard_column_exists():
+        return defaults
+
+    try:
+        raw = db.session.execute(
+            text("SELECT dashboard_settings FROM companies WHERE id = :company_id"),
+            {"company_id": company.id},
+        ).scalar()
+    except Exception:
+        raw = None
+
+    raw = (raw or "").strip()
+    if not raw:
+        return defaults
+
+    try:
+        payload = json.loads(raw)
+    except (TypeError, ValueError):
+        return defaults
+
+    if not isinstance(payload, dict):
+        return defaults
+
+    merged = defaults.copy()
+    for key in defaults:
+        if key in payload:
+            merged[key] = bool(payload[key])
+    return merged
 
 
 def _last_n_months(n=6):
@@ -1349,6 +1403,7 @@ def company_dashboard(company_id):
         f"{len(pending_invites)} pending invite(s), {len(loans)} loan file(s), "
         f"and {len(pending_requests)} access request(s) waiting on review."
     )
+    dashboard_preferences = _company_dashboard_settings(company)
 
     stats = {
         "team_members": len(team_members),
@@ -1382,6 +1437,7 @@ def company_dashboard(company_id):
         invite_growth_series=invite_growth_series,
         workspace_health=workspace_health,
         workspace_summary=workspace_summary,
+        dashboard_preferences=dashboard_preferences,
         title=f"{company.name} Dashboard",
         active_tab="companies",
     )
@@ -1398,6 +1454,32 @@ def company_settings(company_id):
         return access_redirect
 
     if request.method == "POST":
+        action_type = (request.form.get("action_type") or "profile").strip().lower()
+
+        if action_type == "dashboard_layout":
+            raw_layout = (request.form.get("dashboard_layout_json") or "").strip()
+            try:
+                parsed_layout = json.loads(raw_layout) if raw_layout else {}
+            except (TypeError, ValueError):
+                parsed_layout = {}
+
+            merged_layout = _company_dashboard_defaults()
+            if isinstance(parsed_layout, dict):
+                for key in merged_layout:
+                    if key in parsed_layout:
+                        merged_layout[key] = bool(parsed_layout[key])
+
+            if _company_dashboard_column_exists():
+                db.session.execute(
+                    text("UPDATE companies SET dashboard_settings = :payload WHERE id = :company_id"),
+                    {"payload": json.dumps(merged_layout), "company_id": company.id},
+                )
+                db.session.commit()
+                flash("Dashboard layout saved for this company workspace.", "success")
+            else:
+                flash("Dashboard layout migration is not active yet. Run the latest database migration to persist this across devices.", "warning")
+            return redirect(url_for("admin.company_settings", company_id=company.id))
+
         company.name = (request.form.get("name") or company.name or "").strip() or company.name
         company.email_domain = ((request.form.get("email_domain") or "").strip().lower() or None)
         company.address = (request.form.get("address") or "").strip() or None
@@ -1428,6 +1510,7 @@ def company_settings(company_id):
         "admin/company_settings.html",
         company=company,
         stats=stats,
+        dashboard_preferences=_company_dashboard_settings(company),
     )
 
 
