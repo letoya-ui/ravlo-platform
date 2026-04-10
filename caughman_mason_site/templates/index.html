@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="hero">
+  <div class="container hero-grid">
+    <div>
+      <div class="eyebrow">Construction-First Company</div>
+      <h1>A construction powerhouse built to execute projects, transform properties, and scale into Florida.</h1>
+      <p class="lead">{{ site.company_name }} delivers construction services, lending support, janitorial operations, and commercial property investing under one brand built for action.</p>
+      <div class="cta-row">
+        <a href="/contact" class="btn btn-gold">Start a Conversation</a>
+        <a href="/services" class="btn btn-outline">Explore Services</a>
+      </div>
+    </div>
+    <div class="panel luxury-panel">
+      <div class="panel-title">Florida Expansion</div>
+      <p>{{ site.florida_note }}</p>
+      <ul class="bullet-list">
+        {% for item in why_us %}
+        <li>{{ item }}</li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container">
+    <div class="section-head">
+      <div class="eyebrow">Core Divisions</div>
+      <h2>Built to win work, support assets, and grow long-term value.</h2>
+    </div>
+    <div class="card-grid">
+      {% for service in services %}
+      <div class="card">
+        <h3>{{ service.title }}</h3>
+        <p>{{ service.description }}</p>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+{% endblock %}
