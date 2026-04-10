@@ -586,6 +586,18 @@
         <div class="loading-step" id="loadingStep2">Exterior waiting...</div>
         <div class="loading-step" id="loadingStep3">Interior waiting...</div>
       </div>
+      <div class="loading-help hidden" id="loadingHelp">
+        <strong id="loadingHelpTitle">Render needs attention</strong>
+        <p id="loadingHelpMessage">The render worker may be offline or still warming up. You can retry without losing your form inputs.</p>
+      </div>
+      <div class="cta-row loading-actions hidden" id="loadingRetryRow">
+        <button type="button" class="ravlo-btn ravlo-btn-primary" id="retryGenerationBtn">
+          Retry Render
+        </button>
+        <button type="button" class="ravlo-btn ravlo-btn-secondary" id="dismissLoadingBtn">
+          Close
+        </button>
+      </div>
     </div>
   </div>
 
@@ -1241,6 +1253,31 @@
     text-align: left;
   }
 
+  .loading-help {
+    margin-top: 18px;
+    padding: 16px 18px;
+    border-radius: 18px;
+    text-align: left;
+    background: rgba(122, 86, 58, 0.12);
+    border: 1px solid rgba(214, 157, 92, 0.26);
+  }
+
+  .loading-help strong {
+    display: block;
+    margin-bottom: 8px;
+    color: #fff2dc;
+  }
+
+  .loading-help p {
+    margin: 0;
+    color: #e6d2b6;
+  }
+
+  .loading-actions {
+    justify-content: center;
+    margin-top: 18px;
+  }
+
   .loading-step {
     padding: 12px 14px;
     border-radius: 16px;
@@ -1339,6 +1376,14 @@
     const generateBtn = document.getElementById("generateBtn");
     const resetBtn = document.getElementById("resetBtn");
     const loadingOverlay = document.getElementById("loadingOverlay");
+    const loadingTitle = document.getElementById("loadingTitle");
+    const loadingMessage = document.getElementById("loadingMessage");
+    const loadingHelp = document.getElementById("loadingHelp");
+    const loadingHelpTitle = document.getElementById("loadingHelpTitle");
+    const loadingHelpMessage = document.getElementById("loadingHelpMessage");
+    const loadingRetryRow = document.getElementById("loadingRetryRow");
+    const retryGenerationBtn = document.getElementById("retryGenerationBtn");
+    const dismissLoadingBtn = document.getElementById("dismissLoadingBtn");
     const downloadPackageBtn = document.getElementById("downloadPackageBtn");
     const packageSummaryCard = document.getElementById("packageSummaryCard");
 
@@ -1443,6 +1488,7 @@
     }
 
     function startLoading() {
+      resetLoadingError();
       loadingOverlay.classList.remove("hidden");
       statusPill.textContent = "Generating";
       generateBtn.disabled = true;
@@ -1465,6 +1511,50 @@
       document.getElementById("loadingStep1").textContent = blueprint;
       document.getElementById("loadingStep2").textContent = exterior;
       document.getElementById("loadingStep3").textContent = interior;
+    }
+
+    function resetLoadingError() {
+      if (loadingTitle) loadingTitle.textContent = "Generating Full Build Package...";
+      if (loadingMessage) loadingMessage.textContent = "Blueprint, exterior, and interior are being created now.";
+      loadingHelp?.classList.add("hidden");
+      loadingRetryRow?.classList.add("hidden");
+    }
+
+    function showLoadingError(message, options = {}) {
+      const {
+        title = "Generation needs attention",
+        allowRetry = false
+      } = options;
+
+      if (loadingTitle) loadingTitle.textContent = title;
+      if (loadingMessage) loadingMessage.textContent = message || "The build render did not complete.";
+
+      if (loadingHelpTitle) {
+        loadingHelpTitle.textContent = allowRetry
+          ? "Retry available"
+          : "Review the render request";
+      }
+
+      if (loadingHelpMessage) {
+        loadingHelpMessage.textContent = allowRetry
+          ? "Blueprint renders now fail faster when the render worker is offline or slow to respond. Retry once the worker is ready."
+          : "You can close this panel, adjust the project inputs, and try again.";
+      }
+
+      if (loadingHelp) loadingHelp.classList.remove("hidden");
+      if (loadingRetryRow) loadingRetryRow.classList.toggle("hidden", !allowRetry);
+    }
+
+    function getErrorMessage(error, fallbackText) {
+      if (error && typeof error.message === "string" && error.message.trim()) {
+        return error.message.trim();
+      }
+      return fallbackText;
+    }
+
+    function isTimeoutLikeError(error, code) {
+      const text = `${code || ""} ${getErrorMessage(error, "")}`.toLowerCase();
+      return text.includes("engine_timeout") || text.includes("timed out");
     }
 
     function escapeHtml(str) {
@@ -1748,11 +1838,22 @@
     resetBtn?.addEventListener("click", function () {
       form.reset();
       resetOutputs();
+      resetLoadingError();
 
       if (blueprintSeedPreview) blueprintSeedPreview.textContent = "No blueprint file selected";
       if (landSeedPreview) landSeedPreview.textContent = "No land image selected";
 
       statusPill.textContent = "Ready";
+    });
+
+    retryGenerationBtn?.addEventListener("click", function () {
+      if (generateBtn?.disabled) return;
+      form?.requestSubmit();
+    });
+
+    dismissLoadingBtn?.addEventListener("click", function () {
+      stopLoading();
+      statusPill.textContent = "Retry Ready";
     });
 
     form?.addEventListener("submit", async function (e) {
@@ -1767,6 +1868,9 @@
       );
 
       const formData = new FormData(form);
+      const controller = new AbortController();
+      const clientTimeoutMs = 105000;
+      const clientTimeout = window.setTimeout(() => controller.abort(), clientTimeoutMs);
 
       try {
         const response = await fetch("{{ url_for('investor.generate_full_build') }}", {
@@ -1776,13 +1880,21 @@
             "X-Requested-With": "XMLHttpRequest",
             "X-CSRFToken": "{{ csrf_token() }}"
           },
-          credentials: "same-origin"
+          credentials: "same-origin",
+          signal: controller.signal
         });
 
-        const data = await response.json();
+        let data = {};
+        try {
+          data = await response.json();
+        } catch (parseError) {
+          data = {};
+        }
 
         if (!response.ok || data.status !== "ok") {
-          throw new Error(data.message || "Build package generation failed.");
+          const fetchError = new Error(data.message || "Build package generation failed.");
+          fetchError.code = data.code || `http_${response.status}`;
+          throw fetchError;
         }
 
         setStepState(2, "complete");
@@ -1865,10 +1977,26 @@
 
       } catch (error) {
         console.error(error);
-        statusPill.textContent = "Error";
-        alert(error.message || "Something went wrong during generation.");
+        const wasAborted = error?.name === "AbortError";
+        const message = wasAborted
+          ? "Blueprint render is taking longer than expected. The render worker may still be warming up or disconnected."
+          : getErrorMessage(error, "Something went wrong during generation.");
+        const allowRetry = wasAborted || isTimeoutLikeError(error, error?.code);
+
+        statusPill.textContent = allowRetry ? "Retry Ready" : "Error";
+        showLoadingError(message, {
+          title: allowRetry ? "Blueprint render timed out" : "Generation failed",
+          allowRetry
+        });
+        return;
       } finally {
-        stopLoading();
+        window.clearTimeout(clientTimeout);
+        if (loadingRetryRow?.classList.contains("hidden")) {
+          stopLoading();
+        } else {
+          generateBtn.disabled = false;
+          generateBtn.style.opacity = "1";
+        }
         if (window.lucide) lucide.createIcons();
       }
     });
