@@ -10,7 +10,11 @@
         <div class="eyebrow">ADMIN COMMUNICATIONS</div>
         <h1>Internal Messages</h1>
         <div class="muted">
-          Review recent platform messages and send internal updates to users.
+          {% if company %}
+            Review recent company messages and send internal updates to users in {{ company.name }}.
+          {% else %}
+            Review recent platform messages and send internal updates to users.
+          {% endif %}
         </div>
       </div>
     </section>
@@ -21,7 +25,13 @@
         <div class="section-head">
           <div>
             <h3>Send Message</h3>
-            <div class="muted">Send an internal message to any user</div>
+            <div class="muted">
+              {% if company %}
+                Send an internal message to a user in your company workspace
+              {% else %}
+                Send an internal message to any user
+              {% endif %}
+            </div>
           </div>
         </div>
 
@@ -62,7 +72,13 @@
         <div class="section-head">
           <div>
             <h3>Recent Messages</h3>
-            <div class="muted">Latest 50 internal messages</div>
+            <div class="muted">
+              {% if company %}
+                Latest company-scoped internal messages
+              {% else %}
+                Latest 50 internal messages
+              {% endif %}
+            </div>
           </div>
         </div>
 

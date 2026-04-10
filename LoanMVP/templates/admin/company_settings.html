@@ -1,0 +1,156 @@
+{% extends "layouts/ravlo_employee_base.html" %}
+{% block title %}{{ company.name }} Workspace Settings{% endblock %}
+{% block page_title %}Workspace Settings{% endblock %}
+{% block page_subline %}Manage your company profile, domain, location, and workspace status{% endblock %}
+
+{% block topbar_actions %}
+  <a class="re-btn ghost sm" href="{{ url_for('admin.company_dashboard', company_id=company.id) }}">
+    <i class="lucide lucide-layout-dashboard"></i>
+    Back to Dashboard
+  </a>
+  <a class="re-btn ghost sm" href="{{ url_for('admin.company_team', company_id=company.id) }}">
+    <i class="lucide lucide-users"></i>
+    Team
+  </a>
+{% endblock %}
+
+{% block content %}
+<div class="re-grid">
+  <section class="re-card pad">
+    <div class="section-head">
+      <div>
+        <div class="eyebrow">WORKSPACE PROFILE</div>
+        <h3 style="margin:.35rem 0 .2rem;">Company Controls</h3>
+        <div class="re-card-subtitle">Update the workspace profile and operating details company admins need to manage day to day.</div>
+      </div>
+    </div>
+
+    <form method="POST" class="settings-form mt-16">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+      <div class="re-grid-2">
+        <div class="field">
+          <label for="name">Company Name</label>
+          <input id="name" name="name" type="text" value="{{ company.name or '' }}" required>
+        </div>
+        <div class="field">
+          <label for="email_domain">Email Domain</label>
+          <input id="email_domain" name="email_domain" type="text" value="{{ company.email_domain or '' }}" placeholder="company.com">
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="address">Address</label>
+        <input id="address" name="address" type="text" value="{{ company.address or '' }}">
+      </div>
+
+      <div class="re-grid-3">
+        <div class="field">
+          <label for="city">City</label>
+          <input id="city" name="city" type="text" value="{{ company.city or '' }}">
+        </div>
+        <div class="field">
+          <label for="state">State</label>
+          <input id="state" name="state" type="text" value="{{ company.state or '' }}">
+        </div>
+        <div class="field">
+          <label for="zip">ZIP</label>
+          <input id="zip" name="zip" type="text" value="{{ company.zip or '' }}">
+        </div>
+      </div>
+
+      <label class="toggle-row">
+        <input type="checkbox" name="is_active" value="1" {% if company.is_active %}checked{% endif %}>
+        <span>Workspace is active</span>
+      </label>
+
+      <div class="mt-16">
+        <button type="submit" class="re-btn primary">
+          <i class="lucide lucide-save"></i>
+          Save Workspace Settings
+        </button>
+      </div>
+    </form>
+  </section>
+
+  <section class="re-card pad">
+    <div class="section-head">
+      <div>
+        <div class="eyebrow">WORKSPACE STATUS</div>
+        <h3 style="margin:.35rem 0 .2rem;">Admin Snapshot</h3>
+        <div class="re-card-subtitle">Quick operational context for company admins.</div>
+      </div>
+    </div>
+
+    <div class="re-grid-3 mt-16">
+      <div class="re-stat">
+        <div class="re-stat-label">Team Members</div>
+        <div class="re-stat-value">{{ stats.team_members or 0 }}</div>
+        <div class="re-stat-meta">Current assigned users</div>
+      </div>
+      <div class="re-stat">
+        <div class="re-stat-label">Pending Invites</div>
+        <div class="re-stat-value">{{ stats.pending_invites or 0 }}</div>
+        <div class="re-stat-meta">Outstanding invitations</div>
+      </div>
+      <div class="re-stat">
+        <div class="re-stat-label">Requests</div>
+        <div class="re-stat-value">{{ stats.requests or 0 }}</div>
+        <div class="re-stat-meta">Company-related access requests</div>
+      </div>
+      <div class="re-stat">
+        <div class="re-stat-label">Plan</div>
+        <div class="re-stat-value" style="font-size:1.05rem;">{{ company.subscription_tier or "Team" }}</div>
+        <div class="re-stat-meta">Current subscription tier</div>
+      </div>
+      <div class="re-stat">
+        <div class="re-stat-label">Billing Status</div>
+        <div class="re-stat-value" style="font-size:1.05rem;">{{ company.billing_status|default("active", true)|replace("_", " ")|title }}</div>
+        <div class="re-stat-meta">Billing and access health</div>
+      </div>
+      <div class="re-stat">
+        <div class="re-stat-label">Max Users</div>
+        <div class="re-stat-value" style="font-size:1.05rem;">{{ company.max_users or "Flexible" }}</div>
+        <div class="re-stat-meta">Current workspace capacity</div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<style>
+  .settings-form{
+    display:grid;
+    gap:14px;
+  }
+
+  .field{
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+  }
+
+  .field label{
+    font-weight:700;
+    color:#dce7f0;
+  }
+
+  .field input{
+    width:100%;
+    min-width:0;
+    border-radius:14px;
+    border:1px solid rgba(255,255,255,.08);
+    background:rgba(255,255,255,.03);
+    color:#fff;
+    padding:.9rem 1rem;
+    outline:none;
+  }
+
+  .toggle-row{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    color:#dce7f0;
+    font-weight:600;
+  }
+</style>
+{% endblock %}

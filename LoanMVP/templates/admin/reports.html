@@ -4,8 +4,14 @@
 <main class="dashboard-main">
   <div class="wrap">
     <header>
-      <h2>📑 Reports Dashboard</h2>
-      <p class="muted">Generate CSV reports for users, loans, and documents.</p>
+      <h2>Reports Dashboard</h2>
+      <p class="muted">
+        {% if company %}
+          Export company-scoped users and invite activity for {{ company.name }}.
+        {% else %}
+          Generate CSV reports for users, loans, documents, and invites.
+        {% endif %}
+      </p>
     </header>
 
     <!-- === STATS OVERVIEW === -->
@@ -22,6 +28,10 @@
         <h4>Total Documents</h4>
         <p class="stat">{{ total_docs }}</p>
       </div>
+      <div class="card stat-card">
+        <h4>Total Invites</h4>
+        <p class="stat">{{ total_invites }}</p>
+      </div>
     </div>
 
     <!-- === REPORT GENERATOR === -->
@@ -33,17 +43,20 @@
         <select name="report_type" id="report_type" required>
           <option value="">-- Choose one --</option>
           <option value="users">Users Report</option>
-          <option value="loans">Loans Report</option>
-          <option value="documents">Documents Report</option>
+          <option value="invites">Invites Report</option>
+          {% if not company %}
+            <option value="loans">Loans Report</option>
+            <option value="documents">Documents Report</option>
+          {% endif %}
         </select>
-        <button type="submit" class="btn btn-glow mt-1">📥 Download CSV</button>
+        <button type="submit" class="btn btn-glow mt-1">Download CSV</button>
       </form>
     </div>
 
     <!-- === INFO === -->
     <div class="card mt-2">
-      <h4>💡 Tip:</h4>
-      <p>You can use these CSV files for compliance, internal reviews, or data audits. Each export includes timestamps and all key attributes.</p>
+      <h4>Tip</h4>
+      <p>You can use these CSV files for compliance, onboarding reviews, internal audits, and company operations.</p>
     </div>
   </div>
 </main>
