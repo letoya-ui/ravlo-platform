@@ -25,6 +25,10 @@
     <i class="lucide lucide-settings-2"></i>
     Workspace Settings
   </a>
+  <button class="re-btn ghost sm" type="button" id="resetDashboardLayoutBtn">
+    <i class="lucide lucide-rotate-ccw"></i>
+    Reset Layout
+  </button>
   <a class="re-btn ghost sm" href="{{ url_for('admin.reports') }}">
     <i class="lucide lucide-file-spreadsheet"></i>
     Reports
@@ -34,9 +38,9 @@
 {% block content %}
 <link rel="preconnect" href="https://cdn.jsdelivr.net">
 <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
-<div class="re-grid">
+<div class="re-grid" id="companyDashboardRoot" data-dashboard-company="{{ company.id }}">
 
-  <section class="re-card pad">
+  <section class="re-card pad" data-widget-key="overview">
     <div class="section-head">
       <div>
         <div class="eyebrow">COMPANY WORKSPACE</div>
@@ -98,7 +102,7 @@
     </div>
   </section>
 
-  <section class="re-card pad">
+  <section class="re-card pad" data-widget-key="tools">
     <div class="section-head">
       <div>
         <div class="eyebrow">ADMIN TOOLS</div>
@@ -166,7 +170,7 @@
     </div>
   </section>
 
-  <section class="re-card pad">
+  <section class="re-card pad" data-widget-key="analytics">
     <div class="section-head">
       <div>
         <div class="eyebrow">ANALYTICS</div>
@@ -195,7 +199,7 @@
   </section>
 
   {% if not team_members and not invites and not loans and not borrowers %}
-    <section class="re-card pad">
+    <section class="re-card pad" data-widget-key="empty_state">
       <div class="section-head">
         <div>
           <div class="eyebrow">GET STARTED</div>
@@ -213,7 +217,7 @@
     </section>
   {% endif %}
 
-  <section class="re-card pad">
+  <section class="re-card pad" data-widget-key="team">
     <div class="section-head">
       <div>
         <div class="eyebrow">TEAM</div>
@@ -249,7 +253,7 @@
     {% endif %}
   </section>
 
-  <section class="re-card pad">
+  <section class="re-card pad" data-widget-key="invites">
     <div class="section-head">
       <div>
         <div class="eyebrow">INVITES</div>
@@ -284,7 +288,7 @@
     {% endif %}
   </section>
 
-  <section class="re-card pad">
+  <section class="re-card pad" data-widget-key="requests">
     <div class="section-head">
       <div>
         <div class="eyebrow">REQUESTS</div>
@@ -320,7 +324,7 @@
     {% endif %}
   </section>
 
-  <section class="re-card pad">
+  <section class="re-card pad" data-widget-key="messages">
     <div class="section-head">
       <div>
         <div class="eyebrow">MESSAGES</div>
@@ -354,6 +358,39 @@
 </div>
 <script>
   (function () {
+    const dashboardRoot = document.getElementById("companyDashboardRoot");
+    const resetDashboardLayoutBtn = document.getElementById("resetDashboardLayoutBtn");
+    const dashboardStorageKey = dashboardRoot
+      ? `ravlo_company_dashboard_layout_${dashboardRoot.dataset.dashboardCompany || "default"}`
+      : null;
+
+    function readDashboardPrefs() {
+      if (!dashboardStorageKey) return {};
+      try {
+        return JSON.parse(window.localStorage.getItem(dashboardStorageKey) || "{}") || {};
+      } catch (error) {
+        return {};
+      }
+    }
+
+    function applyDashboardPrefs() {
+      if (!dashboardRoot) return;
+      const prefs = readDashboardPrefs();
+      dashboardRoot.querySelectorAll("[data-widget-key]").forEach((section) => {
+        const key = section.dataset.widgetKey;
+        const visible = prefs[key] !== false;
+        section.style.display = visible ? "" : "none";
+      });
+    }
+
+    resetDashboardLayoutBtn?.addEventListener("click", function () {
+      if (!dashboardStorageKey) return;
+      window.localStorage.removeItem(dashboardStorageKey);
+      applyDashboardPrefs();
+    });
+
+    applyDashboardPrefs();
+
     const roleLabels = {{ (role_labels or [])|tojson }};
     const roleValues = {{ (role_values or [])|tojson }};
     const inviteStatusLabels = {{ (invite_status_labels or [])|tojson }};
