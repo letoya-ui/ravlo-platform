@@ -2507,6 +2507,7 @@ def build_visualizer_helper_prompt(style_prompt: str, style_preset: str = "", ro
 # =========================================================
 
 RENDER_TIMEOUT = 240
+BLUEPRINT_RENDER_TIMEOUT = int(os.getenv("BLUEPRINT_RENDER_TIMEOUT", "90"))
 SCOPE_TIMEOUT = 45
 UPLOAD_TIMEOUT = 240
 RENDER_LOCK_SECONDS = 300
@@ -2537,6 +2538,11 @@ def _friendly_engine_timeout_message(url, timeout, error):
     if "ngrok" in host:
         message += " The ngrok tunnel or local render worker may be offline, sleeping, or still processing the image job."
     return f"{message} host={host} error={error}"
+
+
+def _is_engine_timeout_error(error):
+    text = str(error or "").lower()
+    return "timed out" in text and "engine" in text
 
 
 def _stable_render_seed(*parts):
@@ -7528,7 +7534,7 @@ def generate_build_interior():
         engine_json = _post_renovation_engine_json(
             "/v1/build_concept",
             payload,
-            timeout=RENDER_TIMEOUT,
+            timeout=BLUEPRINT_RENDER_TIMEOUT,
         )
 
         current_app.logger.warning(f"BUILD INTERIOR ENGINE JSON: {engine_json}")
@@ -7932,10 +7938,14 @@ def generate_build_blueprint():
             except Exception:
                 db.session.rollback()
 
+        error_message = str(e)
+        status_code = 504 if _is_engine_timeout_error(e) else 500
+
         return jsonify({
             "status": "error",
-            "message": str(e)
-        }), 500
+            "code": "engine_timeout" if status_code == 504 else "blueprint_generation_failed",
+            "message": error_message,
+        }), status_code
 
 @investor_bp.route("/deal-studio/build-studio/generate-full", methods=["POST"])
 @login_required
@@ -8136,7 +8146,7 @@ def generate_full_build():
         blueprint_json = _post_renovation_engine_json(
             "/v1/build_concept",
             blueprint_payload,
-            timeout=RENDER_TIMEOUT,
+            timeout=BLUEPRINT_RENDER_TIMEOUT,
         )
 
         current_app.logger.warning(f"FULL BUILD BLUEPRINT JSON: {blueprint_json}")
@@ -8393,10 +8403,14 @@ def generate_full_build():
             except Exception:
                 db.session.rollback()
 
+        error_message = str(e)
+        status_code = 504 if _is_engine_timeout_error(e) else 500
+
         return jsonify({
             "status": "error",
-            "message": str(e)
-        }), 500
+            "code": "engine_timeout" if status_code == 504 else "full_build_generation_failed",
+            "message": error_message,
+        }), status_code
 
 @investor_bp.route("/deal-studio/build-studio/generate-room", methods=["POST"])
 @login_required
