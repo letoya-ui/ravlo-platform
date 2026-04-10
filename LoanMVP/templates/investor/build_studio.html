@@ -1537,7 +1537,7 @@
 
       if (loadingHelpMessage) {
         loadingHelpMessage.textContent = allowRetry
-          ? "Blueprint renders now fail faster when the render worker is offline or slow to respond. Retry once the worker is ready."
+          ? "Full package renders on a local GPU can take a few minutes. Retry once the render worker is ready, or let the current job finish warming the models."
           : "You can close this panel, adjust the project inputs, and try again.";
       }
 
@@ -1869,7 +1869,7 @@
 
       const formData = new FormData(form);
       const controller = new AbortController();
-      const clientTimeoutMs = 105000;
+      const clientTimeoutMs = 300000;
       const clientTimeout = window.setTimeout(() => controller.abort(), clientTimeoutMs);
 
       try {
@@ -1979,13 +1979,13 @@
         console.error(error);
         const wasAborted = error?.name === "AbortError";
         const message = wasAborted
-          ? "Blueprint render is taking longer than expected. The render worker may still be warming up or disconnected."
+          ? "The full package render is taking longer than expected. Your local GPU may still be warming models or processing the package."
           : getErrorMessage(error, "Something went wrong during generation.");
         const allowRetry = wasAborted || isTimeoutLikeError(error, error?.code);
 
         statusPill.textContent = allowRetry ? "Retry Ready" : "Error";
         showLoadingError(message, {
-          title: allowRetry ? "Blueprint render timed out" : "Generation failed",
+          title: allowRetry ? "Full package render timed out" : "Generation failed",
           allowRetry
         });
         return;
