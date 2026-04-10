@@ -11105,17 +11105,6 @@ def create_budget_from_studio(deal_id):
 
     return redirect(url_for("investor.budget_detail", budget_id=budget.id))
 
-const updateForm = document.getElementById("updateBudgetForm");
-
-if (updateForm) {
-  updateForm.addEventListener("submit", function(){
-    const payloadInput = document.getElementById("updatePayload");
-    if (payloadInput) {
-      payloadInput.value = serializeBudgetPayload();
-    }
-  });
-}
-
 @investor_bp.route("/budget-studio/<int:budget_id>")
 @login_required
 @role_required("investor")
