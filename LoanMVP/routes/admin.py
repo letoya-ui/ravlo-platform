@@ -116,6 +116,37 @@ def _plan_defaults(plan_interest: str):
     return "team", 10
 
 
+def _last_n_months(n=6):
+    now = datetime.utcnow()
+    months = []
+    year = now.year
+    month = now.month
+
+    for _ in range(n):
+        months.append((year, month))
+        month -= 1
+        if month == 0:
+            month = 12
+            year -= 1
+
+    months.reverse()
+    return months
+
+
+def _monthly_series(records, date_attr="created_at", months_back=6):
+    month_keys = _last_n_months(months_back)
+    labels = [datetime(year, month, 1).strftime("%b") for year, month in month_keys]
+    counts = defaultdict(int)
+
+    for row in records:
+        dt = getattr(row, date_attr, None)
+        if dt:
+            counts[(dt.year, dt.month)] += 1
+
+    series = [counts.get((year, month), 0) for year, month in month_keys]
+    return labels, series
+
+
 def _send_email_fallback(to_email: str, subject: str, body: str, html: str):
     """
     Replace this with your real SendGrid / existing email helper.
@@ -992,22 +1023,54 @@ def verify_doc(doc_id):
 @login_required
 @role_required("admin")
 def analytics():
-    stats = {
-        "users": User.query.count(),
-        "loans": LoanApplication.query.count(),
-        "docs": LoanDocument.query.count(),
-        "borrowers": User.query.filter_by(role="borrower").count(),
-        "officers": User.query.filter_by(role="loan_officer").count()
-    }
+    company = _company_scope()
 
-    loan_status_labels = []
-    loan_status_values = []
+    if company:
+        users_query = User.query.filter_by(company_id=company.id)
+        total_users = users_query.count()
+        total_loans = LoanApplication.query.filter_by(company_id=company.id).count() if hasattr(LoanApplication, "company_id") else 0
+        total_docs = LoanDocument.query.filter_by(company_id=company.id).count() if hasattr(LoanDocument, "company_id") else 0
+        active_borrowers = BorrowerProfile.query.filter_by(company_id=company.id).count() if hasattr(BorrowerProfile, "company_id") else 0
+        loan_rows = LoanApplication.query.filter_by(company_id=company.id).all() if hasattr(LoanApplication, "company_id") else []
+        user_rows = users_query.all()
+        ai_summary = (
+            f"{company.name} analytics: {total_users} team user(s), "
+            f"{total_loans} loan file(s), {total_docs} document(s), and "
+            f"{active_borrowers} borrower profile(s) in this workspace."
+        )
+    else:
+        users_query = User.query
+        total_users = users_query.count()
+        total_loans = LoanApplication.query.count()
+        total_docs = LoanDocument.query.count()
+        active_borrowers = User.query.filter_by(role="borrower").count()
+        loan_rows = LoanApplication.query.all()
+        user_rows = users_query.all()
+        ai_summary = (
+            f"Platform analytics: {total_users} total user(s), {total_loans} loan file(s), "
+            f"{total_docs} document(s), and {active_borrowers} borrower account(s)."
+        )
+
+    loan_status_counts = defaultdict(int)
+    for loan in loan_rows:
+        loan_status_counts[(getattr(loan, "status", None) or "unknown").replace("_", " ").title()] += 1
+
+    role_counts = defaultdict(int)
+    for user in user_rows:
+        role_counts[(getattr(user, "role", None) or "unknown").replace("_", " ").title()] += 1
 
     return render_template(
         "admin/analytics.html",
-        stats=stats,
-        loan_status_labels=loan_status_labels,
-        loan_status_values=loan_status_values,
+        company=company,
+        total_users=total_users,
+        total_loans=total_loans,
+        total_docs=total_docs,
+        active_borrowers=active_borrowers,
+        loan_status_labels=list(loan_status_counts.keys()),
+        loan_status_values=list(loan_status_counts.values()),
+        role_labels=list(role_counts.keys()),
+        role_values=list(role_counts.values()),
+        ai_summary=ai_summary,
     )
 
 @admin_bp.route("/ai-dashboard", methods=["GET"])
@@ -1234,18 +1297,69 @@ def company_dashboard(company_id):
     if access_redirect:
         return access_redirect
 
-    team_members = User.query.filter_by(company_id=company.id).all()
-    invites = UserInvite.query.filter_by(company_id=company.id).all()
-    loans = LoanApplication.query.filter_by(company_id=company.id).all() if hasattr(LoanApplication, "company_id") else []
+    team_members = User.query.filter_by(company_id=company.id).order_by(User.created_at.desc()).all()
+    invites = UserInvite.query.filter_by(company_id=company.id).order_by(UserInvite.created_at.desc()).all()
+    loans = LoanApplication.query.filter_by(company_id=company.id).order_by(LoanApplication.created_at.desc()).all() if hasattr(LoanApplication, "company_id") else []
     borrowers = BorrowerProfile.query.filter_by(company_id=company.id).all() if hasattr(BorrowerProfile, "company_id") else []
     docs = LoanDocument.query.filter_by(company_id=company.id).all() if hasattr(LoanDocument, "company_id") else []
+    access_requests = [
+        item for item in (
+            AccessRequest.query
+            .order_by(AccessRequest.created_at.desc())
+            .limit(100)
+            .all()
+        )
+        if _can_access_request(item)
+    ]
+
+    member_ids = [member.id for member in team_members]
+    recent_messages = []
+    if member_ids:
+        allowed_user_ids = set(member_ids)
+        allowed_user_ids.add(current_user.id)
+        recent_messages = [
+            msg for msg in (
+                Message.query
+                .order_by(Message.created_at.desc(), Message.id.desc())
+                .limit(200)
+                .all()
+            )
+            if msg.sender_id in allowed_user_ids and msg.receiver_id in allowed_user_ids
+        ][:5]
+
+    active_team_count = len([member for member in team_members if getattr(member, "is_active", False)])
+    pending_invites = [invite for invite in invites if (invite.status or "").lower() == "pending"]
+    accepted_invites = [invite for invite in invites if (invite.status or "").lower() == "accepted"]
+    pending_requests = [item for item in access_requests if (item.status or "").lower() == "pending"]
+
+    role_counts = defaultdict(int)
+    for member in team_members:
+        role_counts[(getattr(member, "role", None) or "unknown").replace("_", " ").title()] += 1
+
+    invite_counts = defaultdict(int)
+    for invite in invites:
+        invite_counts[(getattr(invite, "status", None) or "pending").replace("_", " ").title()] += 1
+
+    team_growth_labels, team_growth_series = _monthly_series(team_members, "created_at", 6)
+    invite_growth_labels, invite_growth_series = _monthly_series(invites, "created_at", 6)
+
+    workspace_health = "Attention Needed" if company.is_blocked or company.billing_status == "past_due" else "Healthy"
+    workspace_summary = (
+        f"{company.name} has {len(team_members)} team member(s), "
+        f"{len(pending_invites)} pending invite(s), {len(loans)} loan file(s), "
+        f"and {len(pending_requests)} access request(s) waiting on review."
+    )
 
     stats = {
         "team_members": len(team_members),
-        "pending_invites": len([i for i in invites if (i.status or "").lower() == "pending"]),
+        "active_team_members": active_team_count,
+        "pending_invites": len(pending_invites),
+        "accepted_invites": len(accepted_invites),
         "loans": len(loans),
         "borrowers": len(borrowers),
         "documents": len(docs),
+        "requests": len(access_requests),
+        "pending_requests": len(pending_requests),
     }
 
     return render_template(
@@ -1255,9 +1369,65 @@ def company_dashboard(company_id):
         invites=invites[:5],
         loans=loans[:5],
         borrowers=borrowers[:5],
+        recent_messages=recent_messages,
+        access_requests=access_requests[:5],
         stats=stats,
+        role_labels=list(role_counts.keys()),
+        role_values=list(role_counts.values()),
+        invite_status_labels=list(invite_counts.keys()),
+        invite_status_values=list(invite_counts.values()),
+        team_growth_labels=team_growth_labels,
+        team_growth_series=team_growth_series,
+        invite_growth_labels=invite_growth_labels,
+        invite_growth_series=invite_growth_series,
+        workspace_health=workspace_health,
+        workspace_summary=workspace_summary,
         title=f"{company.name} Dashboard",
         active_tab="companies",
+    )
+
+
+@admin_bp.route("/company/<int:company_id>/settings", methods=["GET", "POST"])
+@login_required
+@role_required("admin_group")
+@admin_required
+def company_settings(company_id):
+    company = Company.query.get_or_404(company_id)
+    access_redirect = _ensure_company_access(company)
+    if access_redirect:
+        return access_redirect
+
+    if request.method == "POST":
+        company.name = (request.form.get("name") or company.name or "").strip() or company.name
+        company.email_domain = ((request.form.get("email_domain") or "").strip().lower() or None)
+        company.address = (request.form.get("address") or "").strip() or None
+        company.city = (request.form.get("city") or "").strip() or None
+        company.state = (request.form.get("state") or "").strip() or None
+        company.zip = (request.form.get("zip") or "").strip() or None
+        company.is_active = str(request.form.get("is_active") or "false").lower() in ("1", "true", "yes", "on")
+
+        db.session.commit()
+        flash("Company workspace settings updated.", "success")
+        return redirect(url_for("admin.company_settings", company_id=company.id))
+
+    stats = {
+        "team_members": User.query.filter_by(company_id=company.id).count(),
+        "pending_invites": UserInvite.query.filter_by(company_id=company.id, status="pending").count(),
+        "requests": len([
+            item for item in (
+                AccessRequest.query
+                .order_by(AccessRequest.created_at.desc())
+                .limit(100)
+                .all()
+            )
+            if _can_access_request(item)
+        ]),
+    }
+
+    return render_template(
+        "admin/company_settings.html",
+        company=company,
+        stats=stats,
     )
 
 

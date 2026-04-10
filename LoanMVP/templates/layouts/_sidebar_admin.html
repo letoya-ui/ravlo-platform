@@ -35,6 +35,12 @@
         <i class="icon lucide lucide-sparkles"></i>
         <span>AI Control</span>
       </a>
+    {% else %}
+      <a href="{{ url_for('admin.analytics') }}"
+         class="re-nav-link {% if ep == 'admin.analytics' %}active{% endif %}">
+        <i class="icon lucide lucide-bar-chart-3"></i>
+        <span>Analytics</span>
+      </a>
     {% endif %}
 
     <div class="re-nav-section-label">Onboarding</div>
@@ -116,6 +122,12 @@
       <a href="{{ url_for('system.users') }}" class="re-nav-link {% if ep in ['system.users'] %}active{% endif %}">
         <i class="icon lucide lucide-user-cog"></i>
         <span>Users</span>
+      </a>
+
+      <a href="{{ url_for('admin.company_settings', company_id=current_user.company_id) }}"
+         class="re-nav-link {% if ep == 'admin.company_settings' %}active{% endif %}">
+        <i class="icon lucide lucide-settings-2"></i>
+        <span>Workspace Settings</span>
       </a>
     {% endif %}
 
