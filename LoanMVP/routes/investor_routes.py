@@ -2508,6 +2508,7 @@ def build_visualizer_helper_prompt(style_prompt: str, style_preset: str = "", ro
 
 RENDER_TIMEOUT = 240
 BLUEPRINT_RENDER_TIMEOUT = int(os.getenv("BLUEPRINT_RENDER_TIMEOUT", "90"))
+FULL_BUILD_BLUEPRINT_TIMEOUT = int(os.getenv("FULL_BUILD_BLUEPRINT_TIMEOUT", "240"))
 SCOPE_TIMEOUT = 45
 UPLOAD_TIMEOUT = 240
 RENDER_LOCK_SECONDS = 300
@@ -8146,7 +8147,7 @@ def generate_full_build():
         blueprint_json = _post_renovation_engine_json(
             "/v1/build_concept",
             blueprint_payload,
-            timeout=BLUEPRINT_RENDER_TIMEOUT,
+            timeout=FULL_BUILD_BLUEPRINT_TIMEOUT,
         )
 
         current_app.logger.warning(f"FULL BUILD BLUEPRINT JSON: {blueprint_json}")
