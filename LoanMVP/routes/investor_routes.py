@@ -3,6 +3,7 @@ import io
 import json
 import uuid
 import base64
+import hashlib
 import requests
 import zipfile
 import copy
@@ -2536,6 +2537,14 @@ def _friendly_engine_timeout_message(url, timeout, error):
     if "ngrok" in host:
         message += " The ngrok tunnel or local render worker may be offline, sleeping, or still processing the image job."
     return f"{message} host={host} error={error}"
+
+
+def _stable_render_seed(*parts):
+    raw = "|".join([str(part or "").strip().lower() for part in parts if part is not None]).strip("|")
+    if not raw:
+        raw = uuid.uuid4().hex
+    digest = hashlib.sha256(raw.encode("utf-8")).hexdigest()
+    return int(digest[:8], 16) % 2_147_483_647
 
 def _post_renovation_engine_json(path, payload, timeout=RENDER_TIMEOUT):
     url = _renovation_engine_url(path)
@@ -9725,6 +9734,7 @@ def deal_rehab_generate():
         mode = (data.get("mode") or "hgtv").strip()
         room_type = (data.get("room_type") or "living room").strip()
         notes = (data.get("notes") or "").strip()
+        rehab_level = (data.get("rehab_level") or "medium").strip().lower()
         save_to_deal = str(data.get("save_to_deal") or "true").lower() in ("1", "true", "yes", "on")
 
         before_image = request.files.get("before_image")
@@ -9773,10 +9783,33 @@ def deal_rehab_generate():
         if not image_base64:
             raise RuntimeError("Provide a before photo or saved rehab before image.")
 
+        property_type = (
+            (data.get("property_type") or "").strip()
+            or (getattr(deal, "resolved_json", {}) or {}).get("property", {}).get("property_type", "")
+            or "residential property"
+        )
+        stable_seed = _stable_render_seed(
+            "rehab",
+            getattr(deal, "id", None),
+            before_uploaded_url or image_url,
+            preset,
+            mode,
+            room_type,
+            rehab_level,
+            notes,
+        )
+
         payload = {
             "preset": preset,
             "mode": mode,
             "room_type": room_type,
+            "room_focus": room_type,
+            "rehab_level": rehab_level,
+            "property_type": property_type,
+            "design_style": preset,
+            "desired_updates": notes,
+            "keep_layout": True,
+            "preserve_structure": True,
             "image_base64": image_base64,
             "image_url": "",
             "count": 1,
@@ -9786,6 +9819,7 @@ def deal_rehab_generate():
             "width": 768,
             "height": 768,
             "notes": notes,
+            "seed": stable_seed,
         }
 
         engine_json = _post_renovation_engine_json(
@@ -9810,8 +9844,9 @@ def deal_rehab_generate():
             "preset": preset,
             "mode": mode,
             "room_type": room_type,
+            "rehab_level": rehab_level,
             "notes": notes,
-            "seed": engine_json.get("seed"),
+            "seed": engine_json.get("seed") or stable_seed,
             "job_id": engine_json.get("job_id"),
             "meta": engine_json.get("meta") or {},
         }
@@ -9844,6 +9879,7 @@ def deal_rehab_generate():
                 if not (
                     (c.get("preset") or "").strip().lower() == preset.lower()
                     and (c.get("mode") or "").strip().lower() == mode.lower()
+                    and (c.get("room_type") or "").strip().lower() == room_type.lower()
                 )
             ]
             concepts.append(concept_entry)
