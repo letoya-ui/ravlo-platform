@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="section">
+  <div class="container two-col">
+    <div>
+      <div class="eyebrow">Careers</div>
+      <h1>We are hiring to support construction growth and lending expansion.</h1>
+      <p class="lead">Our team is growing across project execution, field operations, and finance support.</p>
+    </div>
+    <div class="panel">
+      <div class="panel-title">Current Focus</div>
+      <ul class="bullet-list">
+        {% for role in careers %}
+        <li>{{ role }}</li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+</section>
+{% endblock %}
