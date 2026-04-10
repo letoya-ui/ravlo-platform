@@ -115,6 +115,46 @@
       </div>
     </div>
   </section>
+
+  <section class="re-card pad">
+    <div class="section-head">
+      <div>
+        <div class="eyebrow">DASHBOARD CONTROLS</div>
+        <h3 style="margin:.35rem 0 .2rem;">Customize Company Dashboard</h3>
+        <div class="re-card-subtitle">Choose which dashboard sections your company admin workspace shows by default in this browser.</div>
+      </div>
+    </div>
+
+    <div class="widget-toggle-grid mt-16" id="dashboardWidgetControls" data-dashboard-company="{{ company.id }}">
+      <label class="widget-toggle"><input type="checkbox" data-widget-key="overview" checked> <span>Overview</span></label>
+      <label class="widget-toggle"><input type="checkbox" data-widget-key="tools" checked> <span>Workspace Controls</span></label>
+      <label class="widget-toggle"><input type="checkbox" data-widget-key="analytics" checked> <span>Analytics</span></label>
+      <label class="widget-toggle"><input type="checkbox" data-widget-key="empty_state" checked> <span>Get Started Panel</span></label>
+      <label class="widget-toggle"><input type="checkbox" data-widget-key="team" checked> <span>Recent Team</span></label>
+      <label class="widget-toggle"><input type="checkbox" data-widget-key="invites" checked> <span>Recent Invites</span></label>
+      <label class="widget-toggle"><input type="checkbox" data-widget-key="requests" checked> <span>Recent Requests</span></label>
+      <label class="widget-toggle"><input type="checkbox" data-widget-key="messages" checked> <span>Recent Messages</span></label>
+    </div>
+
+    <div class="admin-quick-actions mt-16">
+      <button type="button" class="re-btn primary" id="saveDashboardLayoutBtn">
+        <i class="lucide lucide-save"></i>
+        Save Dashboard Layout
+      </button>
+      <button type="button" class="re-btn ghost" id="resetDashboardLayoutBtn">
+        <i class="lucide lucide-rotate-ccw"></i>
+        Reset Dashboard Layout
+      </button>
+      <a class="re-btn ghost" href="{{ url_for('admin.company_dashboard', company_id=company.id) }}">
+        <i class="lucide lucide-layout-dashboard"></i>
+        Open Company Dashboard
+      </a>
+    </div>
+
+    <div class="re-card-subtitle mt-16" id="dashboardLayoutStatus">
+      Dashboard controls are saved locally for this company admin workspace in your browser.
+    </div>
+  </section>
 </div>
 
 <style>
@@ -152,5 +192,89 @@
     color:#dce7f0;
     font-weight:600;
   }
+
+  .widget-toggle-grid{
+    display:grid;
+    grid-template-columns:repeat(2, minmax(0, 1fr));
+    gap:12px;
+  }
+
+  .widget-toggle{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    padding:.9rem 1rem;
+    border-radius:14px;
+    border:1px solid rgba(255,255,255,.08);
+    background:rgba(255,255,255,.03);
+    color:#dce7f0;
+    font-weight:600;
+  }
+
+  @media (max-width: 760px){
+    .widget-toggle-grid{
+      grid-template-columns:1fr;
+    }
+  }
 </style>
+<script>
+  (function () {
+    const controlsRoot = document.getElementById("dashboardWidgetControls");
+    const saveBtn = document.getElementById("saveDashboardLayoutBtn");
+    const resetBtn = document.getElementById("resetDashboardLayoutBtn");
+    const statusEl = document.getElementById("dashboardLayoutStatus");
+    const storageKey = controlsRoot
+      ? `ravlo_company_dashboard_layout_${controlsRoot.dataset.dashboardCompany || "default"}`
+      : null;
+
+    function readPrefs() {
+      if (!storageKey) return {};
+      try {
+        return JSON.parse(window.localStorage.getItem(storageKey) || "{}") || {};
+      } catch (error) {
+        return {};
+      }
+    }
+
+    function writePrefs(prefs) {
+      if (!storageKey) return;
+      window.localStorage.setItem(storageKey, JSON.stringify(prefs));
+    }
+
+    function syncControlsFromPrefs() {
+      const prefs = readPrefs();
+      controlsRoot?.querySelectorAll("[data-widget-key]").forEach((checkbox) => {
+        const key = checkbox.dataset.widgetKey;
+        checkbox.checked = prefs[key] !== false;
+      });
+    }
+
+    function collectPrefs() {
+      const prefs = {};
+      controlsRoot?.querySelectorAll("[data-widget-key]").forEach((checkbox) => {
+        prefs[checkbox.dataset.widgetKey] = checkbox.checked;
+      });
+      return prefs;
+    }
+
+    saveBtn?.addEventListener("click", function () {
+      writePrefs(collectPrefs());
+      if (statusEl) {
+        statusEl.textContent = "Dashboard layout saved for this company in your browser.";
+      }
+    });
+
+    resetBtn?.addEventListener("click", function () {
+      if (storageKey) {
+        window.localStorage.removeItem(storageKey);
+      }
+      syncControlsFromPrefs();
+      if (statusEl) {
+        statusEl.textContent = "Dashboard layout reset to the default company admin view.";
+      }
+    });
+
+    syncControlsFromPrefs();
+  })();
+</script>
 {% endblock %}
