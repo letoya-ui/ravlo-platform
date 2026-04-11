@@ -4,7 +4,7 @@
 
 {% block page_title %}Budget Studio{% endblock %}
 {% block page_subline %}
-Control your numbers, track execution, and protect deal profitability.
+Build the financial operating system for your deal.
 {% endblock %}
 
 {% block topbar_actions %}
@@ -21,157 +21,958 @@ Control your numbers, track execution, and protect deal profitability.
 
 {% block content %}
 
-{# ===== DATA SETUP ===== #}
 {% set seed = results.get("budget_seed", {}) if results else {} %}
 {% set seeded_items = seed.get("suggested_breakdown", []) if seed else [] %}
 
-{# ===== STYLES ===== #}
 <style>
-  .budget-shell{ display:grid; gap:20px; }
-  .budget-card{
+  .studio-shell{
+    display:grid;
+    gap:22px;
+    padding-bottom:28px;
+  }
+
+  .studio-hero{
+    position:relative;
+    overflow:hidden;
+    border-radius:28px;
+    border:1px solid rgba(255,255,255,.08);
+    background:
+      radial-gradient(1000px 500px at 0% 0%, rgba(122,184,255,.18), transparent 52%),
+      radial-gradient(900px 460px at 100% 0%, rgba(84,123,255,.10), transparent 42%),
+      linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
+    padding:26px;
+    box-shadow:0 20px 50px rgba(0,0,0,.18);
+  }
+
+  .studio-hero-grid{
+    display:grid;
+    grid-template-columns:1.2fr .8fr;
+    gap:20px;
+    align-items:end;
+  }
+
+  .studio-tag{
+    display:inline-flex;
+    align-items:center;
+    gap:.5rem;
+    padding:.45rem .8rem;
+    border-radius:999px;
+    background:rgba(255,255,255,.06);
+    border:1px solid rgba(255,255,255,.12);
+    color:#eef4ff;
+    font-size:.78rem;
+    font-weight:800;
+    letter-spacing:.05em;
+    text-transform:uppercase;
+  }
+
+  .studio-title{
+    margin:.8rem 0 .55rem;
+    font-size:2.35rem;
+    line-height:1.02;
+    letter-spacing:-.04em;
+    color:#fff;
+    max-width:760px;
+  }
+
+  .studio-subtitle{
+    color:rgba(228,236,246,.78);
+    max-width:760px;
+    line-height:1.7;
+    font-size:1rem;
+  }
+
+  .studio-chip-row{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+    margin-top:18px;
+  }
+
+  .studio-chip{
+    display:inline-flex;
+    align-items:center;
+    gap:.45rem;
+    padding:.55rem .8rem;
+    border-radius:999px;
+    background:rgba(255,255,255,.05);
+    border:1px solid rgba(255,255,255,.08);
+    color:#dfe9f7;
+    font-size:.84rem;
+    font-weight:700;
+  }
+
+  .hero-panel{
+    display:grid;
+    gap:12px;
+  }
+
+  .hero-stat-grid{
+    display:grid;
+    grid-template-columns:repeat(2, minmax(0,1fr));
+    gap:12px;
+  }
+
+  .hero-stat{
+    padding:15px 16px;
+    border-radius:18px;
+    background:rgba(255,255,255,.04);
+    border:1px solid rgba(255,255,255,.08);
+    backdrop-filter:blur(8px);
+  }
+
+  .hero-stat-label{
+    color:rgba(228,236,246,.62);
+    text-transform:uppercase;
+    font-size:.72rem;
+    letter-spacing:.06em;
+    margin-bottom:6px;
+  }
+
+  .hero-stat-value{
+    color:#fff;
+    font-size:1.18rem;
+    font-weight:800;
+    letter-spacing:-.02em;
+  }
+
+  .studio-layout{
+    display:grid;
+    grid-template-columns:minmax(0, 1.2fr) 380px;
+    gap:22px;
+    align-items:start;
+  }
+
+  .studio-main,
+  .studio-side{
+    display:grid;
+    gap:22px;
+  }
+
+  .studio-card{
     background:rgba(255,255,255,.02);
     border:1px solid rgba(255,255,255,.08);
-    border-radius:22px;
-    padding:18px;
+    border-radius:24px;
+    padding:20px;
+    box-shadow:0 10px 30px rgba(0,0,0,.08);
   }
-  .budget-line-item{
+
+  .studio-card-head{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    gap:16px;
+    margin-bottom:14px;
+  }
+
+  .studio-eyebrow{
+    color:#8ebdff;
+    text-transform:uppercase;
+    font-size:.74rem;
+    font-weight:800;
+    letter-spacing:.08em;
+    margin-bottom:6px;
+  }
+
+  .studio-card h3{
+    margin:0;
+    color:#fff;
+    font-size:1.08rem;
+    letter-spacing:-.02em;
+  }
+
+  .studio-note{
+    margin:6px 0 0;
+    color:rgba(228,236,246,.72);
+    line-height:1.65;
+  }
+
+  .product-badge{
+    display:inline-flex;
+    align-items:center;
+    gap:.45rem;
+    padding:.48rem .75rem;
+    border-radius:999px;
+    background:rgba(122,184,255,.12);
+    border:1px solid rgba(122,184,255,.24);
+    color:#bfe0ff;
+    font-size:.78rem;
+    font-weight:800;
+    white-space:nowrap;
+  }
+
+  .kpi-grid{
     display:grid;
-    grid-template-columns:1.5fr 160px 130px auto;
-    gap:10px;
-    padding:12px;
-    border-radius:16px;
-    background:rgba(255,255,255,.025);
+    grid-template-columns:repeat(4, minmax(0,1fr));
+    gap:12px;
+  }
+
+  .kpi-card{
+    border-radius:18px;
+    padding:16px;
+    background:rgba(255,255,255,.035);
     border:1px solid rgba(255,255,255,.08);
   }
-  .budget-input{
+
+  .kpi-label{
+    color:rgba(228,236,246,.62);
+    font-size:.76rem;
+    text-transform:uppercase;
+    letter-spacing:.06em;
+    margin-bottom:6px;
+  }
+
+  .kpi-value{
+    color:#fff;
+    font-size:1.35rem;
+    font-weight:800;
+    letter-spacing:-.03em;
+  }
+
+  .kpi-value.positive{ color:#7ee8b1; }
+  .kpi-value.negative{ color:#ff9a9a; }
+
+  .line-items-shell{
+    display:grid;
+    gap:14px;
+  }
+
+  .line-list{
+    display:grid;
+    gap:10px;
+  }
+
+  .line-item{
+    display:grid;
+    grid-template-columns:1.45fr 170px 130px auto;
+    gap:10px;
+    padding:12px;
+    border-radius:18px;
+    background:rgba(255,255,255,.025);
+    border:1px solid rgba(255,255,255,.08);
+    align-items:center;
+  }
+
+  .studio-input{
     width:100%;
-    padding:.8rem;
-    border-radius:12px;
+    padding:.84rem .92rem;
+    border-radius:14px;
     background:#0f141a;
     border:1px solid rgba(255,255,255,.1);
     color:#fff;
+    min-height:48px;
+    outline:none;
+    transition:border-color .16s ease, box-shadow .16s ease;
   }
-  .budget-btn{
-    padding:.7rem 1rem;
-    border-radius:12px;
-    font-weight:700;
+
+  .studio-input:focus{
+    border-color:rgba(122,184,255,.42);
+    box-shadow:0 0 0 3px rgba(122,184,255,.12);
+  }
+
+  .studio-toolbar{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+    margin-top:4px;
+  }
+
+  .studio-toolbar form{
+    display:inline-flex;
+  }
+
+  .studio-btn{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    gap:.45rem;
+    padding:.78rem 1rem;
+    border-radius:14px;
     cursor:pointer;
-    border:1px solid rgba(122,184,255,.4);
+    font-weight:800;
+    font-size:.92rem;
+    text-decoration:none;
+    transition:.18s ease;
+    white-space:nowrap;
+    border:1px solid rgba(122,184,255,.42);
     background:rgba(122,184,255,.12);
     color:#7ab8ff;
   }
+
+  .studio-btn:hover{
+    background:rgba(122,184,255,.2);
+    box-shadow:0 0 14px rgba(122,184,255,.18);
+    transform:translateY(-1px);
+  }
+
+  .studio-btn.secondary{
+    background:rgba(255,255,255,.04);
+    border:1px solid rgba(255,255,255,.12);
+    color:#eef4ff;
+  }
+
+  .studio-btn.success{
+    background:rgba(104,211,160,.12);
+    border:1px solid rgba(104,211,160,.34);
+    color:#7ee8b1;
+  }
+
+  .studio-btn.warn{
+    background:rgba(255,211,122,.12);
+    border:1px solid rgba(255,211,122,.32);
+    color:#ffd37a;
+  }
+
+  .studio-btn.danger{
+    background:rgba(255,255,255,.03);
+    border:1px solid rgba(255,255,255,.1);
+    color:#fff;
+  }
+
+  .summary-stack{
+    display:grid;
+    gap:12px;
+  }
+
+  .summary-row{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:14px;
+    padding:14px 0;
+    border-bottom:1px solid rgba(255,255,255,.08);
+  }
+
+  .summary-row:last-child{
+    border-bottom:none;
+  }
+
+  .summary-label{
+    color:rgba(228,236,246,.66);
+  }
+
+  .summary-value{
+    color:#fff;
+    font-weight:800;
+    text-align:right;
+  }
+
+  .summary-value.total{
+    color:#8ebdff;
+    font-size:1.45rem;
+    letter-spacing:-.03em;
+  }
+
+  .summary-value.positive{ color:#7ee8b1; }
+  .summary-value.negative{ color:#ff9a9a; }
+
+  .health-card{
+    padding:16px;
+    border-radius:18px;
+    border:1px solid rgba(255,255,255,.08);
+    background:rgba(255,255,255,.03);
+  }
+
+  .health-label{
+    font-size:.76rem;
+    color:rgba(228,236,246,.62);
+    text-transform:uppercase;
+    letter-spacing:.06em;
+    margin-bottom:8px;
+  }
+
+  .health-value{
+    font-size:1.08rem;
+    font-weight:800;
+  }
+
+  .health-value.good{ color:#7ee8b1; }
+  .health-value.watch{ color:#ffd37a; }
+  .health-value.risk{ color:#ff9a9a; }
+
+  .callout{
+    padding:16px;
+    border-radius:18px;
+    background:rgba(122,184,255,.08);
+    border:1px solid rgba(122,184,255,.16);
+  }
+
+  .callout strong{
+    display:block;
+    margin-bottom:6px;
+    color:#fff;
+  }
+
+  .callout p{
+    margin:0;
+    color:rgba(228,236,246,.78);
+    line-height:1.65;
+  }
+
+  .mini-stack{
+    display:grid;
+    gap:10px;
+  }
+
+  .mini-panel{
+    padding:14px 15px;
+    border-radius:16px;
+    background:rgba(255,255,255,.03);
+    border:1px solid rgba(255,255,255,.08);
+  }
+
+  .mini-panel-label{
+    color:rgba(228,236,246,.62);
+    font-size:.74rem;
+    text-transform:uppercase;
+    letter-spacing:.06em;
+    margin-bottom:6px;
+  }
+
+  .mini-panel strong{
+    color:#fff;
+    display:block;
+  }
+
+  .mini-panel p{
+    margin:6px 0 0;
+    color:rgba(228,236,246,.72);
+    line-height:1.55;
+  }
+
+  .workflow-grid{
+    display:grid;
+    grid-template-columns:repeat(4, minmax(0,1fr));
+    gap:12px;
+  }
+
+  .workflow-card{
+    display:block;
+    padding:18px;
+    border-radius:18px;
+    background:rgba(255,255,255,.03);
+    border:1px solid rgba(255,255,255,.08);
+    transition:.15s ease;
+    text-decoration:none;
+    color:inherit;
+  }
+
+  .workflow-card:hover{
+    transform:translateY(-1px);
+    border-color:rgba(122,184,255,.25);
+    background:rgba(255,255,255,.045);
+  }
+
+  .workflow-card h4{
+    margin:0 0 8px;
+    color:#fff;
+  }
+
+  .workflow-card p{
+    margin:0;
+    color:var(--muted);
+    line-height:1.6;
+  }
+
+  .empty-state{
+    padding:16px;
+    border-radius:16px;
+    background:rgba(255,255,255,.03);
+    border:1px dashed rgba(255,255,255,.12);
+    color:rgba(228,236,246,.72);
+  }
+
+  .sticky-side{
+    position:sticky;
+    top:18px;
+  }
+
+  .muted{ color:var(--muted); }
+
+  @media (max-width: 1180px){
+    .studio-layout{ grid-template-columns:1fr; }
+    .sticky-side{ position:static; }
+    .kpi-grid{ grid-template-columns:repeat(2, minmax(0,1fr)); }
+    .workflow-grid{ grid-template-columns:repeat(2, minmax(0,1fr)); }
+  }
+
+  @media (max-width: 980px){
+    .studio-hero-grid{ grid-template-columns:1fr; }
+  }
+
+  @media (max-width: 760px){
+    .line-item{ grid-template-columns:1fr; }
+  }
+
+  @media (max-width: 700px){
+    .kpi-grid{ grid-template-columns:1fr; }
+    .workflow-grid{ grid-template-columns:1fr; }
+    .studio-title{ font-size:1.9rem; }
+  }
 </style>
 
-{# ===== UI ===== #}
-<div class="budget-shell">
+<div class="studio-shell">
 
-  <section class="budget-card">
-    <h3>Line Items</h3>
+  <section class="studio-hero">
+    <div class="studio-hero-grid">
+      <div>
+        <div class="studio-tag">
+          💰 Budget Studio
+          {% if deal %}• Deal #{{ deal.id }}{% endif %}
+        </div>
 
-    <div id="lineItems"></div>
+        <h1 class="studio-title">
+          Budget like an operator, not a spreadsheet.
+        </h1>
 
-    <div style="margin-top:12px;">
-      <button class="budget-btn" onclick="addItem()">+ Add Item</button>
-      <button class="budget-btn" onclick="seedDefaults()">Seed Defaults</button>
+        <div class="studio-subtitle">
+          Budget Studio is Ravlo’s financial planning workspace — a dedicated command layer for deal cost modeling, line item architecture, margin protection, and execution handoff into tracked budgets.
+        </div>
+
+        <div class="studio-chip-row">
+          <span class="studio-chip">Planning Layer</span>
+          <span class="studio-chip">Execution Ready</span>
+          <span class="studio-chip">AI Seeded</span>
+          <span class="studio-chip">Deal Connected</span>
+        </div>
+      </div>
+
+      <div class="hero-panel">
+        <div class="hero-stat-grid">
+          <div class="hero-stat">
+            <div class="hero-stat-label">Purchase</div>
+            <div class="hero-stat-value">${{ "{:,.0f}".format(purchase_price or 0) }}</div>
+          </div>
+          <div class="hero-stat">
+            <div class="hero-stat-label">ARV</div>
+            <div class="hero-stat-value">${{ "{:,.0f}".format(arv or 0) }}</div>
+          </div>
+          <div class="hero-stat">
+            <div class="hero-stat-label">Seed Source</div>
+            <div class="hero-stat-value">
+              {% if seeded_items %}AI / Studio Data{% else %}Manual Setup{% endif %}
+            </div>
+          </div>
+          <div class="hero-stat">
+            <div class="hero-stat-label">Tracker</div>
+            <div class="hero-stat-value">
+              {% if existing_budget %}Connected{% else %}Not Started{% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   </section>
 
-  <section class="budget-card">
-    <h3>Summary</h3>
+  <section class="kpi-grid">
+    <div class="kpi-card">
+      <div class="kpi-label">Purchase Price</div>
+      <div class="kpi-value" id="purchasePriceDisplay">${{ "{:,.0f}".format(purchase_price or 0) }}</div>
+    </div>
 
-    <div>Total Budget: <strong id="budgetTotal">$0</strong></div>
-    <div>Projected Profit: <strong id="profit">$0</strong></div>
+    <div class="kpi-card">
+      <div class="kpi-label">After Repair Value</div>
+      <div class="kpi-value" id="arvDisplay">${{ "{:,.0f}".format(arv or 0) }}</div>
+    </div>
+
+    <div class="kpi-card">
+      <div class="kpi-label">Budget Total</div>
+      <div class="kpi-value" id="budgetTotalDisplay">$0</div>
+    </div>
+
+    <div class="kpi-card">
+      <div class="kpi-label">Projected Profit</div>
+      <div class="kpi-value" id="projectedProfitDisplay">$0</div>
+    </div>
   </section>
 
+  <div class="studio-layout">
+    <div class="studio-main">
+
+      <section class="studio-card">
+        <div class="studio-card-head">
+          <div>
+            <div class="studio-eyebrow">Line Item Engine</div>
+            <h3>Build Your Cost Architecture</h3>
+            <p class="studio-note">
+              Define the full cost structure for the deal. Add, refine, and sort line items before converting this plan into a live tracked budget.
+            </p>
+          </div>
+          <div class="product-badge">
+            {% if seeded_items %}AI Seeded{% else %}Manual Mode{% endif %}
+          </div>
+        </div>
+
+        <div class="line-items-shell">
+          <div id="lineItems" class="line-list"></div>
+
+          <div class="studio-toolbar">
+            <button class="studio-btn" type="button" onclick="addItem()">+ Add Line Item</button>
+            <button class="studio-btn secondary" type="button" onclick="seedDefaults()">Seed Defaults</button>
+            <button class="studio-btn warn" type="button" onclick="sortItems()">Sort by Cost</button>
+
+            {% if deal %}
+              {% if existing_budget %}
+                <a class="studio-btn success" href="{{ url_for('investor.budget_detail', budget_id=existing_budget.id) }}">
+                  📊 Open Budget Tracker
+                </a>
+              {% else %}
+                <form method="POST"
+                      action="{{ url_for('investor.create_budget_from_studio', deal_id=deal.id) }}"
+                      id="startTrackingBudgetForm">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <input type="hidden" name="budget_payload" id="budgetPayload">
+                  <button class="studio-btn success" type="submit">
+                    🚀 Start Tracking Budget
+                  </button>
+                </form>
+              {% endif %}
+            {% endif %}
+          </div>
+        </div>
+      </section>
+
+      {% if seeded_items %}
+      <section class="studio-card">
+        <div class="studio-card-head">
+          <div>
+            <div class="studio-eyebrow">Seeded Intelligence</div>
+            <h3>Budget Inputs Were Prebuilt for You</h3>
+            <p class="studio-note">
+              Ravlo used deal strategy, rehab logic, build planning, and AI outputs to shape your starting budget structure.
+            </p>
+          </div>
+          <div class="product-badge">Studio Connected</div>
+        </div>
+
+        <div class="callout">
+          <strong>How to use this</strong>
+          <p>
+            Review each seeded line item, pressure-test costs, then move the deal into Budget Tracker once the planning layer feels execution-ready.
+          </p>
+        </div>
+      </section>
+      {% endif %}
+
+      <section class="studio-card">
+        <div class="studio-card-head">
+          <div>
+            <div class="studio-eyebrow">Workflow</div>
+            <h3>Continue the Deal Flow</h3>
+            <p class="studio-note">
+              Budget Studio works best when connected to the full Ravlo studio system.
+            </p>
+          </div>
+        </div>
+
+        <div class="workflow-grid">
+          {% if deal %}
+          <a href="{{ url_for('investor.deal_architect', deal_id=deal.id) }}" class="workflow-card">
+            <h4>Deal Architect</h4>
+            <p>Set strategy, thesis, and risk posture before finalizing costs.</p>
+          </a>
+
+          <a href="{{ url_for('investor.deal_rehab', deal_id=deal.id) }}" class="workflow-card">
+            <h4>Renovation Studio</h4>
+            <p>Use rehab scope and finish direction to sharpen your budget assumptions.</p>
+          </a>
+
+          <a href="{{ url_for('investor.build_studio', deal_id=deal.id) }}" class="workflow-card">
+            <h4>Build Studio</h4>
+            <p>Bring construction, additions, or development scenarios into the model.</p>
+          </a>
+
+          <a href="{{ url_for('investor.deal_detail', deal_id=deal.id) }}" class="workflow-card">
+            <h4>Deal Workspace</h4>
+            <p>Return to the main deal record and view the full operating picture.</p>
+          </a>
+          {% endif %}
+        </div>
+      </section>
+
+    </div>
+
+    <aside class="studio-side">
+      <div class="sticky-side">
+        <section class="studio-card">
+          <div class="studio-card-head">
+            <div>
+              <div class="studio-eyebrow">Financial Summary</div>
+              <h3>Command Panel</h3>
+              <p class="studio-note">
+                Watch margin, total cost, and profit update in real time.
+              </p>
+            </div>
+            <div class="product-badge">Live</div>
+          </div>
+
+          <div class="summary-stack">
+            <div class="summary-row">
+              <span class="summary-label">Purchase Price</span>
+              <strong class="summary-value" id="purchasePriceSummary">${{ "{:,.0f}".format(purchase_price or 0) }}</strong>
+            </div>
+
+            <div class="summary-row">
+              <span class="summary-label">Budget Total</span>
+              <strong class="summary-value" id="budgetTotal">$0</strong>
+            </div>
+
+            <div class="summary-row">
+              <span class="summary-label">Total Project Cost</span>
+              <strong class="summary-value" id="totalProjectCost">$0</strong>
+            </div>
+
+            <div class="summary-row">
+              <span class="summary-label">ARV</span>
+              <strong class="summary-value" id="arvSummary">${{ "{:,.0f}".format(arv or 0) }}</strong>
+            </div>
+
+            <div class="summary-row">
+              <span class="summary-label">Projected Profit</span>
+              <strong class="summary-value total" id="projectedProfit">$0</strong>
+            </div>
+
+            <div class="summary-row">
+              <span class="summary-label">Margin %</span>
+              <strong class="summary-value total" id="marginPct">0%</strong>
+            </div>
+          </div>
+        </section>
+
+        <section class="studio-card">
+          <div class="studio-card-head">
+            <div>
+              <div class="studio-eyebrow">Health Signal</div>
+              <h3>Budget Health</h3>
+            </div>
+          </div>
+
+          <div class="health-card">
+            <div class="health-label">Current Status</div>
+            <div id="budgetHealth" class="health-value">Waiting for numbers…</div>
+          </div>
+
+          <div class="mini-stack" style="margin-top:12px;">
+            <div class="mini-panel">
+              <div class="mini-panel-label">Planning Layer</div>
+              <strong>Studio First</strong>
+              <p>This page is for modeling and decision-making before execution begins.</p>
+            </div>
+
+            <div class="mini-panel">
+              <div class="mini-panel-label">Execution Layer</div>
+              <strong>Tracked Budget</strong>
+              <p>Once ready, push this into the live budget tracker and manage real execution.</p>
+            </div>
+          </div>
+        </section>
+
+        <section class="studio-card">
+          <div class="studio-card-head">
+            <div>
+              <div class="studio-eyebrow">Next Step</div>
+              <h3>Move Into Tracking</h3>
+            </div>
+          </div>
+
+          <div class="callout">
+            <strong>Budget Studio is the productized planning layer.</strong>
+            <p>
+              Once this cost architecture is right, Ravlo converts it into a real tracked budget with line items, live updates, and execution visibility.
+            </p>
+          </div>
+
+          {% if not deal %}
+          <div class="empty-state" style="margin-top:12px;">
+            Open Budget Studio from a deal to connect strategy, rehab, build outputs, and tracked execution.
+          </div>
+          {% endif %}
+        </section>
+      </div>
+    </aside>
+  </div>
 </div>
 
-{# ===== SCRIPT ===== #}
 <script>
-let items = [];
+  let items = [];
 
-const PURCHASE_PRICE = Number({{ purchase_price|default(0)|tojson }}) || 0;
-const ARV = Number({{ arv|default(0)|tojson }}) || 0;
+  const PURCHASE_PRICE = Number({{ purchase_price|default(0)|tojson }}) || 0;
+  const ARV = Number({{ arv|default(0)|tojson }}) || 0;
+  const REHAB_COST = Number({{ rehab_cost|default(0)|tojson }}) || 0;
 
-function addItem(name="", cost=0, category="General"){
-  items.push({
-    id: Date.now(),
-    name,
-    cost: Number(cost) || 0,
-    category
-  });
+  function formatMoney(value){
+    const num = Number(value || 0);
+    return "$" + num.toLocaleString(undefined, { maximumFractionDigits: 0 });
+  }
+
+  function normalizeCost(value){
+    const num = Number(value);
+    return Number.isFinite(num) ? num : 0;
+  }
+
+  function addItem(name = "", cost = 0, category = "General"){
+    const id = Date.now() + Math.floor(Math.random() * 1000);
+    items.push({
+      id,
+      name: String(name || "").trim(),
+      cost: normalizeCost(cost),
+      category: String(category || "General").trim() || "General"
+    });
+    render();
+  }
+
+  function updateItem(id, field, value){
+    const item = items.find(i => i.id === id);
+    if (!item) return;
+
+    if (field === "cost") {
+      item[field] = normalizeCost(value);
+    } else {
+      item[field] = String(value || "");
+    }
+
+    calculate();
+  }
+
+  function removeItem(id){
+    items = items.filter(i => i.id !== id);
+    render();
+  }
+
+  function sortItems(){
+    items.sort((a, b) => normalizeCost(b.cost) - normalizeCost(a.cost));
+    render();
+  }
+
+  function seedDefaults(){
+    if (items.length > 0) return;
+    addItem("Permits / Planning", 8000, "Planning");
+    addItem("Labor", 35000, "Labor");
+    addItem("Materials", 45000, "Materials");
+    addItem("Contingency", 12000, "Contingency");
+  }
+
+  function render(){
+    const container = document.getElementById("lineItems");
+    container.innerHTML = "";
+
+    items.forEach(item => {
+      const row = document.createElement("div");
+      row.className = "line-item";
+      row.innerHTML = `
+        <input class="studio-input"
+               placeholder="Item name"
+               value="${escapeHtml(item.name)}"
+               oninput="updateItem(${item.id}, 'name', this.value)">
+
+        <input class="studio-input"
+               placeholder="Category"
+               value="${escapeHtml(item.category)}"
+               oninput="updateItem(${item.id}, 'category', this.value)">
+
+        <input class="studio-input"
+               type="number"
+               step="0.01"
+               min="0"
+               value="${item.cost}"
+               oninput="updateItem(${item.id}, 'cost', this.value)">
+
+        <button class="studio-btn danger" type="button" onclick="removeItem(${item.id})">Remove</button>
+      `;
+      container.appendChild(row);
+    });
+
+    calculate();
+  }
+
+  function calculate(){
+    const budgetTotal = items.reduce((sum, item) => sum + normalizeCost(item.cost), 0);
+    const totalProjectCost = PURCHASE_PRICE + budgetTotal;
+    const projectedProfit = ARV - totalProjectCost;
+    const marginPct = ARV > 0 ? (projectedProfit / ARV) * 100 : 0;
+
+    document.getElementById("budgetTotalDisplay").innerText = formatMoney(budgetTotal);
+    document.getElementById("projectedProfitDisplay").innerText = formatMoney(projectedProfit);
+
+    document.getElementById("budgetTotal").innerText = formatMoney(budgetTotal);
+    document.getElementById("totalProjectCost").innerText = formatMoney(totalProjectCost);
+
+    const profitEl = document.getElementById("projectedProfit");
+    profitEl.innerText = formatMoney(projectedProfit);
+    profitEl.classList.remove("positive", "negative");
+    profitEl.classList.add(projectedProfit >= 0 ? "positive" : "negative");
+
+    const profitKpi = document.getElementById("projectedProfitDisplay");
+    profitKpi.classList.remove("positive", "negative");
+    profitKpi.classList.add(projectedProfit >= 0 ? "positive" : "negative");
+
+    const marginEl = document.getElementById("marginPct");
+    marginEl.innerText = marginPct.toFixed(1) + "%";
+    marginEl.classList.remove("positive", "negative");
+    marginEl.classList.add(marginPct >= 0 ? "positive" : "negative");
+
+    const health = document.getElementById("budgetHealth");
+    health.classList.remove("good", "watch", "risk");
+
+    if (marginPct >= 18){
+      health.innerText = "Healthy margin — strong room for execution.";
+      health.classList.add("good");
+    } else if (marginPct >= 8){
+      health.innerText = "Watch closely — margin is workable but tighter.";
+      health.classList.add("watch");
+    } else {
+      health.innerText = "High risk — budget pressure may hurt profitability.";
+      health.classList.add("risk");
+    }
+  }
+
+  function serializeBudgetPayload(){
+    return JSON.stringify({
+      items: items.map(item => ({
+        name: item.name || "Budget Item",
+        cost: normalizeCost(item.cost),
+        category: item.category || "General"
+      }))
+    });
+  }
+
+  function escapeHtml(str){
+    return String(str ?? "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+  }
+
   render();
-}
 
-function removeItem(id){
-  items = items.filter(i => i.id !== id);
-  render();
-}
+  {% if seeded_items %}
+    const seededBreakdown = {{ seeded_items|tojson }};
+    if (items.length === 0 && Array.isArray(seededBreakdown) && seededBreakdown.length) {
+      seededBreakdown.forEach(item => {
+        addItem(
+          item.name || "Line Item",
+          item.cost || 0,
+          item.category || "General"
+        );
+      });
+    }
+  {% endif %}
 
-function updateItem(id, field, value){
-  const item = items.find(i => i.id === id);
-  if (!item) return;
-  item[field] = field === "cost" ? Number(value) : value;
-  calculate();
-}
+  if (items.length === 0 && REHAB_COST > 0){
+    addItem("Rehab Scope", REHAB_COST, "Rehab");
+  }
 
-function seedDefaults(){
-  if (items.length) return;
-  addItem("Labor", 30000);
-  addItem("Materials", 40000);
-  addItem("Contingency", 10000);
-}
-
-function render(){
-  const el = document.getElementById("lineItems");
-  el.innerHTML = "";
-
-  items.forEach(item => {
-    el.innerHTML += `
-      <div class="budget-line-item">
-        <input class="budget-input"
-          value="${escapeHtml(item.name)}"
-          oninput="updateItem(${item.id}, 'name', this.value)">
-
-        <input class="budget-input"
-          value="${escapeHtml(item.category)}"
-          oninput="updateItem(${item.id}, 'category', this.value)">
-
-        <input class="budget-input"
-          type="number"
-          value="${item.cost}"
-          oninput="updateItem(${item.id}, 'cost', this.value)">
-
-        <button class="budget-btn" onclick="removeItem(${item.id})">X</button>
-      </div>
-    `;
-  });
-
-  calculate();
-}
-
-function calculate(){
-  const total = items.reduce((sum, i) => sum + i.cost, 0);
-  const profit = ARV - (PURCHASE_PRICE + total);
-
-  document.getElementById("budgetTotal").innerText = "$" + total.toLocaleString();
-  document.getElementById("profit").innerText = "$" + profit.toLocaleString();
-}
-
-function escapeHtml(str){
-  return String(str)
-    .replaceAll("&","&amp;")
-    .replaceAll("<","&lt;")
-    .replaceAll(">","&gt;");
-}
-
-render();
-
-{% if seeded_items %}
-const seeded = {{ seeded_items|tojson }};
-if (!items.length){
-  seeded.forEach(i => addItem(i.name, i.cost, i.category));
-}
-{% endif %}
+  const startTrackingBudgetForm = document.getElementById("startTrackingBudgetForm");
+  if (startTrackingBudgetForm) {
+    startTrackingBudgetForm.addEventListener("submit", function(){
+      const payloadInput = document.getElementById("budgetPayload");
+      if (payloadInput) {
+        payloadInput.value = serializeBudgetPayload();
+      }
+    });
+  }
 </script>
 
 {% endblock %}
