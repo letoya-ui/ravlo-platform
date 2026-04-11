@@ -42,6 +42,29 @@ def _single_admin_mode_enabled() -> bool:
 
 def _owner_admin_email() -> str:
     return (current_app.config.get("OWNER_ADMIN_EMAIL") or "").strip().lower()
+
+
+def _owner_admin_exists() -> bool:
+    owner_email = _owner_admin_email()
+    if not owner_email:
+        return False
+    return (
+        db.session.query(User.id)
+        .filter(func.lower(User.email) == owner_email)
+        .first()
+        is not None
+    )
+
+
+def _workspace_recovery_mode() -> bool:
+    if db.session.query(User.id).first() is None:
+        return True
+
+    return _single_admin_mode_enabled() and not _owner_admin_exists()
+
+
+def _registration_blocked() -> bool:
+    return _single_admin_mode_enabled() and not _workspace_recovery_mode()
 # ============================================================
 # TOKEN HELPERS
 # ============================================================
@@ -146,7 +169,11 @@ def login():
             flash("Invalid email or password.", "danger")
             return render_template("auth/login.html", form=form)
 
-        if _single_admin_mode_enabled() and email != _owner_admin_email():
+        if (
+            _single_admin_mode_enabled()
+            and _owner_admin_exists()
+            and email != _owner_admin_email()
+        ):
             flash("This workspace is locked to the owner admin account.", "warning")
             return render_template("auth/login.html", form=form)
 
@@ -168,7 +195,7 @@ def login():
 
 @auth_bp.route("/register/invite/<token>", methods=["GET", "POST"])
 def register_from_invite(token):
-    if _single_admin_mode_enabled():
+    if _registration_blocked():
         flash("Team invites are disabled while single-admin mode is active.", "warning")
         return redirect(url_for("auth.login"))
 
@@ -255,16 +282,28 @@ def logout():
 # ============================================================
 @auth_bp.route("/register", methods=["GET", "POST"])
 def register():
-    if _single_admin_mode_enabled():
+    recovery_mode = _workspace_recovery_mode()
+
+    if _registration_blocked():
         flash("Self-serve registration is disabled for this workspace.", "warning")
         return redirect(url_for("auth.login"))
 
     form = RegisterForm()
 
     if form.validate_on_submit():
-        role = (form.role.data or "").strip().lower()
         full_name = (form.full_name.data or "").strip()
         email = (form.email.data or "").strip().lower()
+        owner_email = _owner_admin_email()
+        role = (form.role.data or "").strip().lower()
+
+        if recovery_mode:
+            if owner_email and email != owner_email:
+                flash(
+                    f"Recovery mode is active. Register the owner admin account using {owner_email}.",
+                    "warning",
+                )
+                return render_template("auth/register.html", form=form)
+            role = "admin"
 
         existing = User.query.filter_by(email=email).first()
         if existing:
@@ -290,6 +329,10 @@ def register():
         db.session.commit()
 
         login_user(user)
+
+        if recovery_mode:
+            flash("Owner admin account restored. You can now invite or create users again.", "success")
+            return redirect(url_for("admin.dashboard"))
 
         flash("Welcome to Ravlo. Let's set up your profile.", "info")
 
@@ -331,7 +374,7 @@ def post_login_redirect():
 
 @auth_bp.route("/register_borrower", methods=["GET", "POST"])
 def register_borrower():
-    if _single_admin_mode_enabled():
+    if _registration_blocked():
         flash("Borrower registration is disabled for this workspace.", "warning")
         return redirect(url_for("auth.login"))
 
@@ -439,7 +482,7 @@ def forgot_password():
 
 @auth_bp.route("/request-access", methods=["GET", "POST"])
 def request_access():
-    if _single_admin_mode_enabled():
+    if _registration_blocked():
         flash("Access requests are disabled while single-admin mode is active.", "warning")
         return redirect(url_for("auth.login"))
 
@@ -554,7 +597,7 @@ def load_user(user_id):
 
 @auth_bp.route("/accept-invite/<token>", methods=["GET", "POST"])
 def accept_invite(token):
-    if _single_admin_mode_enabled():
+    if _registration_blocked():
         flash("Invites are disabled while single-admin mode is active.", "warning")
         return redirect(url_for("auth.login"))
 

@@ -47,6 +47,10 @@ def _owner_admin_email() -> str:
     return (current_app.config.get("OWNER_ADMIN_EMAIL") or "").strip().lower()
 
 
+def _remaining_user_count(excluded_user_id: int) -> int:
+    return User.query.filter(User.id != excluded_user_id).count()
+
+
 # =========================================================
 # 🧭 Helper — Context Builder
 # =========================================================
@@ -251,6 +255,10 @@ def delete_user(user_id):
 
     if user.id == current_user.id:
         flash("You cannot delete your own account from this screen.", "warning")
+        return redirect(url_for("system.users"))
+
+    if _remaining_user_count(user.id) == 0:
+        flash("You cannot delete the last remaining user. Create another account first.", "warning")
         return redirect(url_for("system.users"))
 
     try:
