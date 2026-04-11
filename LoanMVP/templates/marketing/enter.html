@@ -16,6 +16,9 @@
 
         <div class="mk-hero-actions">
           <a href="/login" class="mk-btn mk-btn-primary">Go to Login</a>
+          {% if recovery_mode %}
+          <a href="{{ url_for('auth.restore_owner_admin') }}" class="mk-btn mk-btn-ghost">Restore Owner Admin</a>
+          {% endif %}
           <a href="{{ url_for('marketing.tour') }}" class="mk-btn mk-btn-ghost">Preview the Platform</a>
         </div>
 
@@ -91,7 +94,11 @@
       </p>
       <div class="mk-cta-actions">
         <a href="/login" class="mk-btn mk-btn-primary">Go to Login</a>
+        {% if recovery_mode %}
+        <a href="{{ url_for('auth.restore_owner_admin') }}" class="mk-btn mk-btn-ghost">Restore Owner Admin</a>
+        {% else %}
         <a href="{{ url_for('marketing.contact') }}" class="mk-btn mk-btn-ghost">Contact Us</a>
+        {% endif %}
       </div>
     </div>
   </div>

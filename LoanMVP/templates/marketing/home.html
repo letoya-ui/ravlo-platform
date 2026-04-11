@@ -17,7 +17,9 @@
         </p>
 
         <div class="mk-hero-actions">
-          <a href="{{ url_for('auth.register') }}" class="mk-btn mk-btn-primary">Create Account</a>
+          <a href="{{ url_for('auth.restore_owner_admin' if recovery_mode else 'auth.register') }}" class="mk-btn mk-btn-primary">
+            {{ "Restore Owner Admin" if recovery_mode else "Create Account" }}
+          </a>
           <a href="{{ url_for('auth.login') }}" class="mk-btn mk-btn-ghost">Login</a>
           <a href="{{ url_for('marketing.tour') }}" class="mk-btn mk-btn-ghost">See the Platform</a>
         </div>
@@ -268,7 +270,9 @@
 
       <div class="mk-cta-actions">
         <a href="{{ url_for('marketing.tour') }}" class="mk-btn mk-btn-primary">Take the Tour</a>
-        <a href="{{ url_for('auth.register') }}" class="mk-btn mk-btn-ghost">Create Account</a>
+        <a href="{{ url_for('auth.restore_owner_admin' if recovery_mode else 'auth.register') }}" class="mk-btn mk-btn-ghost">
+          {{ "Restore Owner Admin" if recovery_mode else "Create Account" }}
+        </a>
       </div>
     </div>
   </div>

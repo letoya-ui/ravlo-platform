@@ -87,6 +87,21 @@
     </div>
   </header>
 
+  {% if recovery_mode %}
+  <section style="position: relative; z-index: 3; border-bottom: 1px solid rgba(255,255,255,.08); background: linear-gradient(90deg, rgba(153,88,42,.92), rgba(100,54,26,.92));">
+    <div class="mk-container" style="display:flex; gap:16px; align-items:center; justify-content:space-between; padding:14px 0; flex-wrap:wrap;">
+      <div style="color:#fff3e6; line-height:1.6;">
+        <strong style="color:#ffffff;">Workspace recovery available.</strong>
+        Restore owner admin access with <strong>{{ owner_admin_email }}</strong>.
+      </div>
+      <div style="display:flex; gap:12px; flex-wrap:wrap;">
+        <a href="{{ url_for('auth.restore_owner_admin') }}" class="mk-btn mk-btn-primary">Restore Owner Admin</a>
+        <a href="{{ url_for('auth.login') }}" class="mk-btn mk-btn-ghost">Login</a>
+      </div>
+    </div>
+  </section>
+  {% endif %}
+
   <main class="mk-main">
     {% block hero %}{% endblock %}
     {% block content %}{% endblock %}
