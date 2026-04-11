@@ -27,11 +27,20 @@ def _is_company_admin(user) -> bool:
     return ((getattr(user, "role", "") or "").strip().lower() == "admin")
 
 
+def _is_owner_admin(user) -> bool:
+    email = (getattr(user, "email", "") or "").strip().lower()
+    owner_email = _owner_admin_email()
+    return bool(owner_email and email == owner_email)
+
+
 def _company_admin_guard(user):
     if not _is_company_admin(user):
         return None, None
 
     company_id = getattr(user, "company_id", None)
+    if _is_owner_admin(user):
+        return None, None
+
     if not company_id:
         flash("Your admin account is not assigned to a company yet.", "warning")
         return None, redirect(url_for("admin.dashboard"))

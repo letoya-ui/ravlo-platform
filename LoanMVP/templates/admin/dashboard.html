@@ -1,9 +1,14 @@
 {% extends "layouts/ravlo_employee_base.html" %}
-{% block title %}Admin • Dashboard{% endblock %}
+{% set is_owner_executive = current_user.role == "admin" and owner_admin_email is defined and (current_user.email or "")|lower == owner_admin_email %}
+{% block title %}{% if is_owner_executive %}Executive • Dashboard{% else %}Admin • Dashboard{% endif %}{% endblock %}
 
-{% block page_title %}Admin Command Center{% endblock %}
+{% block page_title %}{% if is_owner_executive %}Executive Command Center{% else %}Admin Command Center{% endif %}{% endblock %}
 {% block page_subline %}
+{% if is_owner_executive %}
+Executive oversight for users, onboarding, invites, lending operations, and platform visibility.
+{% else %}
 Central system management for users, onboarding, invites, lending operations, and platform visibility.
+{% endif %}
 {% endblock %}
 
 {% block topbar_actions %}
@@ -37,12 +42,16 @@ Central system management for users, onboarding, invites, lending operations, an
 
   <section class="re-card pad admin-hero">
     <div class="admin-hero__left">
-      <div class="eyebrow">ADMIN COMMAND CENTER</div>
+      <div class="eyebrow">{% if is_owner_executive %}EXECUTIVE COMMAND CENTER{% else %}ADMIN COMMAND CENTER{% endif %}</div>
       <h1 class="admin-hero__title">
         Welcome, {{ current_user.full_name or current_user.username or current_user.email or 'Admin' }}
       </h1>
       <div class="text-muted admin-hero__copy">
+        {% if is_owner_executive %}
+        Executive oversight for users, onboarding, invites, lending operations, and platform visibility.
+        {% else %}
         Central system management for users, onboarding, invites, lending operations, and platform visibility.
+        {% endif %}
       </div>
     </div>
 
