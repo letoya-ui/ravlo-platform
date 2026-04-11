@@ -1,426 +1,920 @@
 {% extends "layouts/ravlo_base.html" %}
 
-{% block title %}Ravlo • Deal Architect{% endblock %}
-{% block page_title %}Deal Architect{% endblock %}
-{% block page_subline %}Underwriting source-of-truth view powered by /v1/deal_architect.{% endblock %}
+{% block title %}Ravlo • Underwriting{% endblock %}
+
+{% block page_title %}Thesis Studio{% endblock %}
+{% block page_subline %}
+Underwrite the deal, test the assumptions, and choose the highest-conviction path.
+{% endblock %}
 
 {% block topbar_actions %}
-  {% if deal and deal.id %}
-    <a href="{{ url_for('investor.deal_detail', deal_id=deal.id) }}" class="ravlo-btn ghost sm">Back to Deal</a>
+  {% if deal %}
+    <a class="ravlo-btn ghost sm" href="{{ url_for('investor.deal_detail', deal_id=deal.id) }}">Back to Deal</a>
+    <a class="ravlo-btn ghost sm" href="{{ url_for('investor.budget_studio', deal_id=deal.id) }}">Budget Studio</a>
+    <a class="ravlo-btn ghost sm" href="{{ url_for('investor.deal_rehab', deal_id=deal.id) }}">Renovation Studio</a>
+    <a class="ravlo-btn ghost sm" href="{{ url_for('investor.build_studio', deal_id=deal.id) }}">Build Studio</a>
   {% endif %}
-  <a href="{{ url_for('investor.budget_studio') }}" class="ravlo-btn ghost sm">Budget Studio</a>
 {% endblock %}
 
 {% block content %}
+
+{% set uw = underwriting if underwriting else {} %}
+{% set verdict = uw.get("verdict", {}) if uw else {} %}
+{% set meta = uw.get("meta", {}) if uw else {} %}
+{% set market = meta.get("market", {}) if meta else {} %}
+{% set breakdown = meta.get("verdict_breakdown", {}) if meta else {} %}
+{% set comp_analysis = meta.get("comp_analysis", {}) if meta else {} %}
+{% set normalized_comps = comp_analysis.get("normalized_comps", []) if comp_analysis else [] %}
+{% set strengths = verdict.get("strengths", []) if verdict else [] %}
+{% set risks = verdict.get("risks", []) if verdict else [] %}
+
 <style>
-  .da-wrap { display:grid; gap:20px; }
-  .da-card {
-    border-radius:20px; padding:18px;
+  .uw-shell{
+    display:grid;
+    gap:22px;
+    padding-bottom:28px;
+  }
+
+  .uw-hero{
+    position:relative;
+    overflow:hidden;
+    border-radius:28px;
+    padding:26px;
     border:1px solid rgba(255,255,255,.08);
+    background:
+      radial-gradient(900px 460px at 0% 0%, rgba(122,184,255,.18), transparent 52%),
+      radial-gradient(820px 420px at 100% 0%, rgba(66,120,255,.10), transparent 42%),
+      linear-gradient(180deg, rgba(255,255,255,.045), rgba(255,255,255,.02));
+    box-shadow:0 18px 50px rgba(0,0,0,.18);
+  }
+
+  .uw-hero-grid{
+    display:grid;
+    grid-template-columns:1.15fr .85fr;
+    gap:22px;
+    align-items:end;
+  }
+
+  .uw-tag{
+    display:inline-flex;
+    align-items:center;
+    gap:.5rem;
+    padding:.46rem .8rem;
+    border-radius:999px;
+    background:rgba(255,255,255,.06);
+    border:1px solid rgba(255,255,255,.12);
+    color:#eef4ff;
+    font-size:.78rem;
+    font-weight:800;
+    letter-spacing:.05em;
+    text-transform:uppercase;
+  }
+
+  .uw-title{
+    margin:.8rem 0 .45rem;
+    font-size:2.25rem;
+    line-height:1.02;
+    letter-spacing:-.04em;
+    color:#fff;
+  }
+
+  .uw-subtitle{
+    color:rgba(228,236,246,.78);
+    max-width:760px;
+    line-height:1.7;
+    font-size:1rem;
+  }
+
+  .uw-chip-row{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+    margin-top:18px;
+  }
+
+  .uw-chip{
+    display:inline-flex;
+    align-items:center;
+    gap:.45rem;
+    padding:.56rem .82rem;
+    border-radius:999px;
+    background:rgba(255,255,255,.05);
+    border:1px solid rgba(255,255,255,.08);
+    color:#dfe9f7;
+    font-size:.84rem;
+    font-weight:700;
+  }
+
+  .uw-hero-side{
+    display:grid;
+    gap:12px;
+  }
+
+  .uw-hero-stat-grid{
+    display:grid;
+    grid-template-columns:repeat(2, minmax(0,1fr));
+    gap:12px;
+  }
+
+  .uw-hero-stat{
+    padding:16px;
+    border-radius:18px;
+    background:rgba(255,255,255,.04);
+    border:1px solid rgba(255,255,255,.08);
+  }
+
+  .uw-hero-stat-label{
+    color:rgba(228,236,246,.62);
+    text-transform:uppercase;
+    font-size:.72rem;
+    letter-spacing:.06em;
+    margin-bottom:6px;
+  }
+
+  .uw-hero-stat-value{
+    color:#fff;
+    font-size:1.15rem;
+    font-weight:800;
+    letter-spacing:-.02em;
+  }
+
+  .uw-layout{
+    display:grid;
+    grid-template-columns:minmax(0, 1.05fr) 390px;
+    gap:22px;
+    align-items:start;
+  }
+
+  .uw-main,
+  .uw-side{
+    display:grid;
+    gap:22px;
+  }
+
+  .uw-card{
+    background:rgba(255,255,255,.02);
+    border:1px solid rgba(255,255,255,.08);
+    border-radius:24px;
+    padding:22px;
+    box-shadow:0 10px 30px rgba(0,0,0,.08);
+  }
+
+  .uw-card-head{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    gap:16px;
+    margin-bottom:14px;
+  }
+
+  .uw-eyebrow{
+    color:#8ebdff;
+    text-transform:uppercase;
+    font-size:.74rem;
+    font-weight:800;
+    letter-spacing:.08em;
+    margin-bottom:6px;
+  }
+
+  .uw-card h3{
+    margin:0;
+    color:#fff;
+    font-size:1.08rem;
+    letter-spacing:-.02em;
+  }
+
+  .uw-note{
+    margin:6px 0 0;
+    color:rgba(228,236,246,.72);
+    line-height:1.65;
+  }
+
+  .uw-badge{
+    display:inline-flex;
+    align-items:center;
+    gap:.45rem;
+    padding:.48rem .75rem;
+    border-radius:999px;
+    background:rgba(122,184,255,.12);
+    border:1px solid rgba(122,184,255,.24);
+    color:#bfe0ff;
+    font-size:.78rem;
+    font-weight:800;
+    white-space:nowrap;
+  }
+
+  .uw-form-sections{
+    display:grid;
+    gap:18px;
+  }
+
+  .uw-form-section{
+    padding:16px;
+    border-radius:18px;
+    background:rgba(255,255,255,.025);
+    border:1px solid rgba(255,255,255,.07);
+  }
+
+  .uw-form-section-title{
+    font-size:.76rem;
+    text-transform:uppercase;
+    letter-spacing:.08em;
+    color:rgba(228,236,246,.62);
+    font-weight:800;
+    margin-bottom:12px;
+  }
+
+  .uw-grid-2{
+    display:grid;
+    grid-template-columns:repeat(2, minmax(0,1fr));
+    gap:12px;
+  }
+
+  .uw-field{
+    display:grid;
+    gap:8px;
+  }
+
+  .uw-field label{
+    color:#eef4ff;
+    font-size:.88rem;
+    font-weight:700;
+  }
+
+  .uw-input,
+  .uw-select,
+  .uw-textarea{
+    width:100%;
+    padding:.86rem .95rem;
+    border-radius:14px;
+    background:#0f141a;
+    border:1px solid rgba(255,255,255,.1);
+    color:#fff;
+    min-height:50px;
+    outline:none;
+    transition:border-color .16s ease, box-shadow .16s ease, background .16s ease;
+  }
+
+  .uw-input::placeholder,
+  .uw-textarea::placeholder{
+    color:rgba(228,236,246,.35);
+  }
+
+  .uw-input:focus,
+  .uw-select:focus,
+  .uw-textarea:focus{
+    border-color:rgba(122,184,255,.42);
+    box-shadow:0 0 0 3px rgba(122,184,255,.12);
+    background:#111821;
+  }
+
+  .uw-textarea{
+    min-height:122px;
+    resize:vertical;
+  }
+
+  .uw-toolbar{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+    margin-top:14px;
+  }
+
+  .uw-btn{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    gap:.45rem;
+    padding:.8rem 1rem;
+    border-radius:14px;
+    cursor:pointer;
+    font-weight:800;
+    font-size:.92rem;
+    text-decoration:none;
+    transition:.18s ease;
+    white-space:nowrap;
+    border:1px solid rgba(122,184,255,.42);
+    background:rgba(122,184,255,.12);
+    color:#7ab8ff;
+  }
+
+  .uw-btn:hover{
+    background:rgba(122,184,255,.2);
+    box-shadow:0 0 14px rgba(122,184,255,.18);
+    transform:translateY(-1px);
+  }
+
+  .uw-btn.secondary{
+    background:rgba(255,255,255,.04);
+    border:1px solid rgba(255,255,255,.12);
+    color:#eef4ff;
+  }
+
+  .uw-btn.success{
+    background:rgba(104,211,160,.12);
+    border:1px solid rgba(104,211,160,.34);
+    color:#7ee8b1;
+  }
+
+  .uw-kpi-grid{
+    display:grid;
+    grid-template-columns:repeat(2, minmax(0,1fr));
+    gap:12px;
+  }
+
+  .uw-kpi{
+    border-radius:18px;
+    padding:16px;
+    background:rgba(255,255,255,.035);
+    border:1px solid rgba(255,255,255,.08);
+  }
+
+  .uw-kpi-label{
+    color:rgba(228,236,246,.62);
+    font-size:.76rem;
+    text-transform:uppercase;
+    letter-spacing:.06em;
+    margin-bottom:6px;
+  }
+
+  .uw-kpi-value{
+    color:#fff;
+    font-size:1.35rem;
+    font-weight:800;
+    letter-spacing:-.03em;
+  }
+
+  .uw-kpi-value.positive{ color:#7ee8b1; }
+  .uw-kpi-value.negative{ color:#ff9a9a; }
+  .uw-kpi-value.watch{ color:#ffd37a; }
+
+  .uw-summary{
+    display:grid;
+    gap:10px;
+    margin-top:12px;
+  }
+
+  .uw-summary-row{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:14px;
+    padding:12px 0;
+    border-bottom:1px solid rgba(255,255,255,.08);
+  }
+
+  .uw-summary-row:last-child{
+    border-bottom:none;
+  }
+
+  .uw-summary-label{
+    color:rgba(228,236,246,.66);
+  }
+
+  .uw-summary-value{
+    color:#fff;
+    font-weight:800;
+    text-align:right;
+  }
+
+  .uw-summary-value.good{ color:#7ee8b1; }
+  .uw-summary-value.watch{ color:#ffd37a; }
+  .uw-summary-value.risk{ color:#ff9a9a; }
+
+  .uw-callout{
+    padding:16px;
+    border-radius:18px;
+    background:rgba(122,184,255,.08);
+    border:1px solid rgba(122,184,255,.16);
+  }
+
+  .uw-callout strong{
+    display:block;
+    margin-bottom:6px;
+    color:#fff;
+  }
+
+  .uw-callout p{
+    margin:0;
+    color:rgba(228,236,246,.78);
+    line-height:1.65;
+  }
+
+  .uw-list{
+    display:grid;
+    gap:12px;
+  }
+
+  .uw-list-item{
+    padding:15px 16px;
+    border-radius:18px;
     background:rgba(255,255,255,.03);
-<<<<<<< ours
+    border:1px solid rgba(255,255,255,.08);
   }
-  .da-grid-2 { display:grid; grid-template-columns:1.1fr .9fr; gap:20px; }
-  .da-input-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
-  .da-input, .da-select, .da-textarea {
-    width:100%; padding:.75rem .85rem; border-radius:12px;
-    border:1px solid rgba(255,255,255,.12); background:rgba(255,255,255,.04); color:#eef4ff;
+
+  .uw-list-item strong{
+    display:block;
+    color:#fff;
+    margin-bottom:6px;
   }
-=======
+
+  .uw-list-item p{
+    margin:0;
+    color:rgba(228,236,246,.72);
+    line-height:1.6;
   }
-  .da-grid-2 { display:grid; grid-template-columns:1.1fr .9fr; gap:20px; }
-  .da-input-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
-  .da-input, .da-select, .da-textarea {
-    width:100%; padding:.75rem .85rem; border-radius:12px;
-    border:1px solid rgba(255,255,255,.12); background:rgba(255,255,255,.04); color:#eef4ff;
+
+  .uw-signal-grid{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:14px;
   }
->>>>>>> theirs
-  .da-textarea { min-height:90px; resize:vertical; }
-  .da-kpis { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
-  .da-kpi { border:1px solid rgba(255,255,255,.08); border-radius:14px; padding:12px; background:rgba(255,255,255,.02); }
-  .da-kpi .label { font-size:.78rem; color:rgba(224,233,246,.7); margin-bottom:4px; }
-  .da-kpi .value { font-weight:800; font-size:1.05rem; color:#f4f8ff; }
-  .da-list { display:grid; gap:8px; }
-  .da-pill {
-    display:inline-flex; align-items:center; gap:6px;
-    border-radius:999px; padding:.35rem .65rem;
-    border:1px solid rgba(255,255,255,.1); background:rgba(255,255,255,.04);
-    margin-right:8px; margin-bottom:8px;
+
+  .uw-signal-col{
+    display:grid;
+    gap:12px;
   }
-  .da-table-wrap { overflow:auto; border:1px solid rgba(255,255,255,.1); border-radius:14px; }
-  table.da-table { width:100%; border-collapse:collapse; min-width:700px; }
-  .da-table th,.da-table td { padding:10px; border-bottom:1px solid rgba(255,255,255,.08); text-align:left; font-size:.9rem; }
-  .da-headline { display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-top:8px; }
-  .muted-sm { font-size:.85rem; color:rgba(224,233,246,.7); }
-  @media (max-width: 1100px) { .da-grid-2, .da-input-grid, .da-kpis { grid-template-columns:1fr; } }
+
+  .uw-signal-title{
+    font-size:.76rem;
+    text-transform:uppercase;
+    letter-spacing:.08em;
+    color:rgba(228,236,246,.62);
+    font-weight:800;
+  }
+
+  .uw-table-wrap{
+    overflow:auto;
+    border-radius:18px;
+    border:1px solid rgba(255,255,255,.08);
+    background:rgba(255,255,255,.02);
+  }
+
+  .uw-table{
+    width:100%;
+    border-collapse:collapse;
+    min-width:760px;
+  }
+
+  .uw-table th,
+  .uw-table td{
+    padding:14px 14px;
+    text-align:left;
+    border-bottom:1px solid rgba(255,255,255,.06);
+    font-size:.92rem;
+  }
+
+  .uw-table th{
+    color:#b8d6f4;
+    font-size:.76rem;
+    text-transform:uppercase;
+    letter-spacing:.06em;
+    background:rgba(255,255,255,.02);
+  }
+
+  .uw-table td{
+    color:rgba(235,241,249,.82);
+  }
+
+  .uw-table tr:last-child td{
+    border-bottom:none;
+  }
+
+  .uw-empty{
+    padding:16px;
+    border-radius:16px;
+    background:rgba(255,255,255,.03);
+    border:1px dashed rgba(255,255,255,.12);
+    color:rgba(228,236,246,.72);
+  }
+
+  .uw-sticky{
+    position:sticky;
+    top:18px;
+  }
+
+  @media (max-width: 1180px){
+    .uw-layout{ grid-template-columns:1fr; }
+    .uw-sticky{ position:static; }
+  }
+
+  @media (max-width: 980px){
+    .uw-hero-grid,
+    .uw-grid-2,
+    .uw-signal-grid{
+      grid-template-columns:1fr;
+    }
+  }
+
+  @media (max-width: 700px){
+    .uw-title{ font-size:1.9rem; }
+    .uw-kpi-grid{ grid-template-columns:1fr; }
+  }
 </style>
 
-{% set initial = strategy_analysis or {} %}
-{% set initial_meta = initial.get('meta', {}) if initial else {} %}
+<div class="uw-shell">
 
-<div class="da-wrap">
-  <section class="da-card">
-    <div class="eyebrow">RAVLO UNDERWRITING</div>
-    <h2 style="margin:4px 0 8px;">{{ deal.title or deal.address or "Deal Architect" }}</h2>
-    <div class="muted-sm">POST <code>/v1/deal_architect</code> is the only underwriting source of truth for this screen.</div>
-    <div id="summaryHeader" class="da-headline" style="margin-top:12px;"></div>
-  </section>
-
-  <div class="da-grid-2">
-    <section class="da-card">
-      <div class="eyebrow">REQUEST ASSEMBLY</div>
-      <h3 style="margin:0 0 10px;">Deal + location + market inputs</h3>
-
-      <form id="dealArchitectForm" onsubmit="runDealArchitect(event)">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-<<<<<<< ours
-        <input type="hidden" name="deal_id" value="{{ deal.id if deal else '' }}">
-=======
->>>>>>> theirs
-
-        <div class="da-input-grid">
-          <input class="da-input" name="project_name" placeholder="project_name" value="{{ deal.title if deal else '' }}">
-          <input class="da-input" name="property_type" placeholder="property_type" value="{{ deal.property_type if deal else '' }}">
-          <input class="da-input" name="description" placeholder="description" value="{{ deal.notes if deal else '' }}">
-          <input class="da-input" name="lot_size" placeholder="lot_size" value="{{ deal.lot_size if deal else '' }}">
-          <input class="da-input" name="zoning" placeholder="zoning" value="{{ deal.zoning if deal else '' }}">
-          <input class="da-input" name="asking_price" placeholder="asking_price" value="{{ deal.purchase_price if deal else '' }}">
-          <input class="da-input" name="square_feet_target" placeholder="square_feet_target" value="{{ deal.square_feet if deal else '' }}">
-          <input class="da-input" name="city" placeholder="city" value="{{ deal.city if deal else '' }}">
-          <input class="da-input" name="state" placeholder="state" value="{{ deal.state if deal else '' }}">
-          <input class="da-input" name="zip_code" placeholder="zip_code" value="{{ deal.zip_code if deal else '' }}">
-          <input class="da-input" name="arv" placeholder="arv" value="{{ deal.arv if deal else '' }}">
-          <input class="da-input" name="monthly_rent" placeholder="monthly_rent" value="{{ deal.estimated_rent if deal else '' }}">
-<<<<<<< ours
-          <input class="da-input" name="down_payment_pct" placeholder="down_payment_pct" value="25">
-          <input class="da-input" name="interest_rate" placeholder="interest_rate" value="8">
-          <input class="da-input" name="hold_years" placeholder="hold_years" value="5">
-          <input class="da-input" name="annual_tax_rate" placeholder="annual_tax_rate (optional)">
-          <input class="da-input" name="annual_insurance_rate" placeholder="annual_insurance_rate (optional)">
-          <input class="da-input" name="market_cost_multiplier" placeholder="market_cost_multiplier (optional)">
-          <input class="da-input" name="market_value_multiplier" placeholder="market_value_multiplier (optional)">
-          <input class="da-input" name="market_rent_multiplier" placeholder="market_rent_multiplier (optional)">
-          <input class="da-input" name="market_risk_adjustment" placeholder="market_risk_adjustment (optional)">
-=======
-          <input class="da-input" name="down_payment_pct" placeholder="down_payment_pct" value="20">
-          <input class="da-input" name="interest_rate" placeholder="interest_rate" value="8.5">
-          <input class="da-input" name="hold_years" placeholder="hold_years" value="5">
-          <input class="da-input" name="annual_tax_rate" placeholder="annual_tax_rate (optional)">
-          <input class="da-input" name="annual_insurance_rate" placeholder="annual_insurance_rate (optional)">
-          <input class="da-input" name="market_multiplier_rent" placeholder="market_multiplier_rent (optional)">
-          <input class="da-input" name="market_multiplier_value" placeholder="market_multiplier_value (optional)">
->>>>>>> theirs
-        </div>
-
-        <div style="margin-top:12px;">
-          <label class="muted-sm">comps (JSON array: address, price, optional sqft/beds/baths/distance_miles/months_ago/notes)</label>
-          <textarea class="da-textarea" name="comps_json" placeholder='[{"address":"123 Main St","price":320000,"sqft":1400,"beds":3,"baths":2,"distance_miles":0.4,"months_ago":2,"notes":"Updated kitchen"}]'></textarea>
-        </div>
-
-        <div style="margin-top:12px;display:flex;gap:10px;flex-wrap:wrap;">
-          <button type="submit" class="ravlo-btn primary">Run Underwriting</button>
-          <span class="muted-sm">Frontend only assembles request and renders response.</span>
-        </div>
-      </form>
-    </section>
-
-    <section class="da-card">
-      <div class="eyebrow">FINANCIALS</div>
-      <h3 style="margin:0 0 10px;">Response-derived financial cards</h3>
-      <div id="financialCards" class="da-kpis"></div>
-      <div id="valuationSource" class="muted-sm" style="margin-top:10px;"></div>
-      <div id="compsFallback" class="muted-sm" style="margin-top:8px;"></div>
-    </section>
-  </div>
-
-  <section class="da-card">
-    <div class="eyebrow">TOP STRENGTHS & RISKS</div>
-    <h3 style="margin:0 0 10px;">First-class verdict signals</h3>
-    <div class="da-grid-2">
+  <section class="uw-hero">
+    <div class="uw-hero-grid">
       <div>
-        <div class="muted-sm" style="margin-bottom:8px;">Strengths</div>
-        <div id="strengthsList" class="da-list"></div>
+        <div class="uw-tag">
+          🧠 Ravlo Underwriting
+          {% if deal %}• Deal #{{ deal.id }}{% endif %}
+        </div>
+
+        <h1 class="uw-title">
+          {{ deal.address if deal and deal.address else deal.title if deal and deal.title else "Underwriting Workspace" }}
+        </h1>
+
+        <div class="uw-subtitle">
+          Assemble deal inputs, location context, and market signals into a single underwriting view. Use this workspace to test the thesis, validate spread, and decide the best execution path.
+        </div>
+
+        <div class="uw-chip-row">
+          <span class="uw-chip">Source of Truth</span>
+          <span class="uw-chip">Market Aware</span>
+          <span class="uw-chip">Risk Adjusted</span>
+          <span class="uw-chip">Execution Ready</span>
+        </div>
       </div>
-      <div>
-        <div class="muted-sm" style="margin-bottom:8px;">Risks</div>
-        <div id="risksList" class="da-list"></div>
+
+      <div class="uw-hero-side">
+        <div class="uw-hero-stat-grid">
+          <div class="uw-hero-stat">
+            <div class="uw-hero-stat-label">Verdict</div>
+            <div class="uw-hero-stat-value">{{ verdict.get("label") or verdict.get("grade") or "Pending" }}</div>
+          </div>
+          <div class="uw-hero-stat">
+            <div class="uw-hero-stat-label">Confidence</div>
+            <div class="uw-hero-stat-value">{{ verdict.get("confidence") or meta.get("confidence") or "—" }}</div>
+          </div>
+          <div class="uw-hero-stat">
+            <div class="uw-hero-stat-label">Market</div>
+            <div class="uw-hero-stat-value">{{ market.get("city") or market.get("market_name") or "Not loaded" }}</div>
+          </div>
+          <div class="uw-hero-stat">
+            <div class="uw-hero-stat-label">Comps</div>
+            <div class="uw-hero-stat-value">{{ normalized_comps|length if normalized_comps else 0 }}</div>
+          </div>
+        </div>
       </div>
     </div>
   </section>
 
-  <section class="da-card">
-    <div class="eyebrow">VERDICT BREAKDOWN</div>
-    <h3 style="margin:0 0 10px;">meta.verdict_breakdown.subscores</h3>
-    <div id="subscoresPills"></div>
-  </section>
+  <div class="uw-layout">
+    <div class="uw-main">
 
-  <section class="da-card">
-    <div class="eyebrow">COMPARABLES</div>
-    <h3 style="margin:0 0 10px;">meta.comp_analysis.normalized_comps</h3>
-    <div id="compTableWrap" class="da-table-wrap"></div>
-  </section>
+      <section class="uw-card">
+        <div class="uw-card-head">
+          <div>
+            <div class="uw-eyebrow">Request Assembly</div>
+            <h3>Deal + Site + Market Inputs</h3>
+            <p class="uw-note">
+              Cleanly structure the assumptions that drive your underwriting. Grouped inputs keep the page usable and make the logic easier to trust.
+            </p>
+          </div>
+          <div class="uw-badge">Underwriting Input Layer</div>
+        </div>
 
-  <section class="da-card">
-    <div class="eyebrow">MARKET ASSUMPTIONS</div>
-    <h3 style="margin:0 0 10px;">meta.market</h3>
-    <div id="marketAssumptions" class="da-list"></div>
-  </section>
+        <form method="POST" action="{% if deal %}{{ url_for('investor.run_underwriting', deal_id=deal.id) }}{% else %}#{% endif %}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+          <div class="uw-form-sections">
+            <div class="uw-form-section">
+              <div class="uw-form-section-title">Deal Basics</div>
+              <div class="uw-grid-2">
+                <div class="uw-field">
+                  <label for="address">Address</label>
+                  <input class="uw-input" id="address" name="address" value="{{ deal.address if deal and deal.address else '' }}" placeholder="28 Genung St">
+                </div>
+                <div class="uw-field">
+                  <label for="property_type">Property Type</label>
+                  <input class="uw-input" id="property_type" name="property_type" value="{{ uw.get('property_type', '') }}" placeholder="Single Family">
+                </div>
+
+                <div class="uw-field">
+                  <label for="purchase_price">Purchase Price</label>
+                  <input class="uw-input" id="purchase_price" name="purchase_price" type="number" step="0.01" value="{{ purchase_price or '' }}" placeholder="350000">
+                </div>
+                <div class="uw-field">
+                  <label for="arv">ARV / Exit Value</label>
+                  <input class="uw-input" id="arv" name="arv" type="number" step="0.01" value="{{ arv or '' }}" placeholder="525000">
+                </div>
+              </div>
+            </div>
+
+            <div class="uw-form-section">
+              <div class="uw-form-section-title">Site + Physical Inputs</div>
+              <div class="uw-grid-2">
+                <div class="uw-field">
+                  <label for="lot_size">Lot Size</label>
+                  <input class="uw-input" id="lot_size" name="lot_size" value="{{ uw.get('lot_size', '') }}" placeholder="99000">
+                </div>
+                <div class="uw-field">
+                  <label for="zoning">Zoning</label>
+                  <input class="uw-input" id="zoning" name="zoning" value="{{ uw.get('zoning', '') }}" placeholder="R-1">
+                </div>
+
+                <div class="uw-field">
+                  <label for="square_feet_target">Target Sq Ft</label>
+                  <input class="uw-input" id="square_feet_target" name="square_feet_target" type="number" step="1" value="{{ uw.get('square_feet_target', '') }}" placeholder="1400">
+                </div>
+                <div class="uw-field">
+                  <label for="bed_bath">Beds / Baths</label>
+                  <input class="uw-input" id="bed_bath" name="bed_bath" value="{{ uw.get('bed_bath', '') }}" placeholder="3 / 2">
+                </div>
+              </div>
+            </div>
+
+            <div class="uw-form-section">
+              <div class="uw-form-section-title">Market + Cost Assumptions</div>
+              <div class="uw-grid-2">
+                <div class="uw-field">
+                  <label for="market_cost_multiplier">Market Cost Multiplier</label>
+                  <input class="uw-input" id="market_cost_multiplier" name="market_cost_multiplier" type="number" step="0.01" value="{{ uw.get('market_cost_multiplier', '') }}" placeholder="1.00">
+                </div>
+                <div class="uw-field">
+                  <label for="market_value_multiplier">Market Value Multiplier</label>
+                  <input class="uw-input" id="market_value_multiplier" name="market_value_multiplier" type="number" step="0.01" value="{{ uw.get('market_value_multiplier', '') }}" placeholder="1.00">
+                </div>
+
+                <div class="uw-field">
+                  <label for="annual_tax_rate">Annual Tax Rate</label>
+                  <input class="uw-input" id="annual_tax_rate" name="annual_tax_rate" type="number" step="0.01" value="{{ uw.get('annual_tax_rate', '') }}" placeholder="Optional">
+                </div>
+                <div class="uw-field">
+                  <label for="annual_insurance_rate">Annual Insurance Rate</label>
+                  <input class="uw-input" id="annual_insurance_rate" name="annual_insurance_rate" type="number" step="0.01" value="{{ uw.get('annual_insurance_rate', '') }}" placeholder="Optional">
+                </div>
+              </div>
+            </div>
+
+            <div class="uw-form-section">
+              <div class="uw-form-section-title">Comparable Set</div>
+              <div class="uw-field">
+                <label for="comps_json">Comps JSON</label>
+                <textarea class="uw-textarea" id="comps_json" name="comps_json" placeholder='[{"address":"123 Main St","price":320000,"sqft":1400,"beds":3,"baths":2,"distance_miles":0.4,"months_ago":2}]'>{{ uw.get("comps_json", "") }}</textarea>
+              </div>
+            </div>
+          </div>
+
+          <div class="uw-toolbar">
+            <button class="uw-btn success" type="submit">Run Underwriting</button>
+            {% if deal %}
+              <a class="uw-btn secondary" href="{{ url_for('investor.budget_studio', deal_id=deal.id) }}">Open Budget Studio</a>
+            {% endif %}
+          </div>
+        </form>
+      </section>
+
+      <section class="uw-card">
+        <div class="uw-card-head">
+          <div>
+            <div class="uw-eyebrow">Top Signals</div>
+            <h3>Strengths & Risks</h3>
+            <p class="uw-note">
+              High-level verdict signals should be fast to scan and easy to defend.
+            </p>
+          </div>
+        </div>
+
+        <div class="uw-signal-grid">
+          <div class="uw-signal-col">
+            <div class="uw-signal-title">Strengths</div>
+            {% if strengths %}
+              <div class="uw-list">
+                {% for item in strengths %}
+                  <div class="uw-list-item">
+                    <strong>{{ item.get("title") or item if item is mapping else item }}</strong>
+                    <p>
+                      {% if item is mapping and item.get("detail") %}{{ item.get("detail") }}
+                      {% elif item is mapping and item.get("description") %}{{ item.get("description") }}
+                      {% else %}Positive signal supporting the deal thesis.{% endif %}
+                    </p>
+                  </div>
+                {% endfor %}
+              </div>
+            {% else %}
+              <div class="uw-empty">No strengths have been returned yet.</div>
+            {% endif %}
+          </div>
+
+          <div class="uw-signal-col">
+            <div class="uw-signal-title">Risks</div>
+            {% if risks %}
+              <div class="uw-list">
+                {% for item in risks %}
+                  <div class="uw-list-item">
+                    <strong>{{ item.get("title") or item if item is mapping else item }}</strong>
+                    <p>
+                      {% if item is mapping and item.get("detail") %}{{ item.get("detail") }}
+                      {% elif item is mapping and item.get("description") %}{{ item.get("description") }}
+                      {% else %}Risk signal that could impact pricing, execution, or margin.{% endif %}
+                    </p>
+                  </div>
+                {% endfor %}
+              </div>
+            {% else %}
+              <div class="uw-empty">No risks have been returned yet.</div>
+            {% endif %}
+          </div>
+        </div>
+      </section>
+
+      <section class="uw-card">
+        <div class="uw-card-head">
+          <div>
+            <div class="uw-eyebrow">Verdict Breakdown</div>
+            <h3>Decision Subscores</h3>
+            <p class="uw-note">
+              Break the underwriting decision into explainable parts instead of one opaque score.
+            </p>
+          </div>
+        </div>
+
+        {% if breakdown %}
+          <div class="uw-kpi-grid">
+            {% for key, value in breakdown.items() %}
+              <div class="uw-kpi">
+                <div class="uw-kpi-label">{{ key|replace("_", " ")|title }}</div>
+                <div class="uw-kpi-value">{{ value }}</div>
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="uw-empty">No verdict breakdown returned yet.</div>
+        {% endif %}
+      </section>
+
+      <section class="uw-card">
+        <div class="uw-card-head">
+          <div>
+            <div class="uw-eyebrow">Comparables</div>
+            <h3>Normalized Comp Set</h3>
+            <p class="uw-note">
+              This is the evidence layer behind pricing confidence and exit logic.
+            </p>
+          </div>
+        </div>
+
+        {% if normalized_comps %}
+          <div class="uw-table-wrap">
+            <table class="uw-table">
+              <thead>
+                <tr>
+                  <th>Address</th>
+                  <th>Price</th>
+                  <th>Sq Ft</th>
+                  <th>Beds</th>
+                  <th>Baths</th>
+                  <th>Distance</th>
+                  <th>Months Ago</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for comp in normalized_comps %}
+                  <tr>
+                    <td>{{ comp.get("address") or "—" }}</td>
+                    <td>${{ "{:,.0f}".format(comp.get("price", 0) or 0) }}</td>
+                    <td>{{ comp.get("sqft") or "—" }}</td>
+                    <td>{{ comp.get("beds") or "—" }}</td>
+                    <td>{{ comp.get("baths") or "—" }}</td>
+                    <td>{{ comp.get("distance_miles") or "—" }}</td>
+                    <td>{{ comp.get("months_ago") or "—" }}</td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% else %}
+          <div class="uw-empty">No normalized comps returned yet.</div>
+        {% endif %}
+      </section>
+
+      <section class="uw-card">
+        <div class="uw-card-head">
+          <div>
+            <div class="uw-eyebrow">Market Assumptions</div>
+            <h3>Context Layer</h3>
+            <p class="uw-note">
+              Surface the market assumptions that shape cost, value, and confidence.
+            </p>
+          </div>
+        </div>
+
+        {% if market %}
+          <div class="uw-list">
+            {% for key, value in market.items() %}
+              <div class="uw-list-item">
+                <strong>{{ key|replace("_", " ")|title }}</strong>
+                <p>{{ value }}</p>
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="uw-empty">No market assumptions returned yet.</div>
+        {% endif %}
+      </section>
+
+    </div>
+
+    <aside class="uw-side">
+      <div class="uw-sticky">
+
+        <section class="uw-card">
+          <div class="uw-card-head">
+            <div>
+              <div class="uw-eyebrow">Decision Snapshot</div>
+              <h3>Financial Verdict</h3>
+              <p class="uw-note">
+                The right rail should answer the decision question immediately.
+              </p>
+            </div>
+            <div class="uw-badge">Live Output</div>
+          </div>
+
+          <div class="uw-kpi-grid">
+            <div class="uw-kpi">
+              <div class="uw-kpi-label">Score</div>
+              <div class="uw-kpi-value">{{ verdict.get("score") or meta.get("score") or "—" }}</div>
+            </div>
+
+            <div class="uw-kpi">
+              <div class="uw-kpi-label">Verdict</div>
+              <div class="uw-kpi-value">{{ verdict.get("label") or verdict.get("grade") or "Pending" }}</div>
+            </div>
+
+            <div class="uw-kpi">
+              <div class="uw-kpi-label">Estimated Profit</div>
+              <div class="uw-kpi-value {% if meta.get('estimated_profit', 0) >= 0 %}positive{% else %}negative{% endif %}">
+                {% if meta.get("estimated_profit") is not none %}
+                  ${{ "{:,.0f}".format(meta.get("estimated_profit") or 0) }}
+                {% else %}
+                  —
+                {% endif %}
+              </div>
+            </div>
+
+            <div class="uw-kpi">
+              <div class="uw-kpi-label">Margin</div>
+              <div class="uw-kpi-value {% if meta.get('margin_pct', 0) >= 15 %}positive{% elif meta.get('margin_pct', 0) >= 8 %}watch{% else %}negative{% endif %}">
+                {% if meta.get("margin_pct") is not none %}
+                  {{ "%.1f"|format(meta.get("margin_pct") or 0) }}%
+                {% else %}
+                  —
+                {% endif %}
+              </div>
+            </div>
+          </div>
+
+          <div class="uw-summary">
+            <div class="uw-summary-row">
+              <span class="uw-summary-label">Purchase Price</span>
+              <strong class="uw-summary-value">
+                {% if purchase_price is not none %}${{ "{:,.0f}".format(purchase_price or 0) }}{% else %}—{% endif %}
+              </strong>
+            </div>
+
+            <div class="uw-summary-row">
+              <span class="uw-summary-label">Exit Value</span>
+              <strong class="uw-summary-value">
+                {% if arv is not none %}${{ "{:,.0f}".format(arv or 0) }}{% else %}—{% endif %}
+              </strong>
+            </div>
+
+            <div class="uw-summary-row">
+              <span class="uw-summary-label">Risk Level</span>
+              <strong class="uw-summary-value {% if verdict.get('risk_level') == 'Low' %}good{% elif verdict.get('risk_level') == 'Moderate' %}watch{% else %}risk{% endif %}">
+                {{ verdict.get("risk_level") or meta.get("risk_level") or "—" }}
+              </strong>
+            </div>
+
+            <div class="uw-summary-row">
+              <span class="uw-summary-label">Recommended Path</span>
+              <strong class="uw-summary-value">{{ verdict.get("recommended_path") or meta.get("recommended_path") or "—" }}</strong>
+            </div>
+          </div>
+        </section>
+
+        <section class="uw-card">
+          <div class="uw-card-head">
+            <div>
+              <div class="uw-eyebrow">Recommendation</div>
+              <h3>Operator Read</h3>
+            </div>
+          </div>
+
+          <div class="uw-callout">
+            <strong>{{ verdict.get("label") or "Underwriting Pending" }}</strong>
+            <p>
+              {{ verdict.get("summary") or meta.get("summary") or "Run underwriting to generate a recommendation, confidence signal, and decision rationale." }}
+            </p>
+          </div>
+        </section>
+
+      </div>
+    </aside>
+  </div>
 </div>
 
-<script>
-function asMoney(val) {
-  const n = Number(val);
-  if (Number.isNaN(n)) return "—";
-  return n.toLocaleString(undefined, { style: "currency", currency: "USD", maximumFractionDigits: 0 });
-}
-
-function asNum(val, fallback = "—") {
-  if (val === null || val === undefined || val === "") return fallback;
-  const n = Number(val);
-  return Number.isNaN(n) ? String(val) : n.toLocaleString();
-}
-
-function listOrFallback(values, fallback) {
-  if (!Array.isArray(values) || values.length === 0) return [`<div class="muted-sm">${fallback}</div>`];
-  return values.map(v => `<div class="da-kpi"><div class="value" style="font-size:.98rem;">${v}</div></div>`);
-}
-
-function parseComps(text) {
-  if (!text || !text.trim()) return [];
-  try {
-    const parsed = JSON.parse(text);
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    throw new Error("Comps must be valid JSON array.");
-  }
-}
-
-function requestBodyFromForm(form) {
-  const get = (name) => (form.querySelector(`[name="${name}"]`)?.value || "").trim();
-  const numOrNull = (name) => {
-    const v = get(name);
-    if (!v) return null;
-    const n = Number(v);
-    return Number.isNaN(n) ? null : n;
-  };
-<<<<<<< ours
-  const intOrNull = (name) => {
-    const value = numOrNull(name);
-    return value === null ? null : Math.trunc(value);
-  };
-  const pctOrNull = (name) => {
-    const value = numOrNull(name);
-    if (value === null) return null;
-    return value > 1 ? value / 100 : value;
-  };
-
-  const payload = {
-    deal_id: intOrNull("deal_id"),
-=======
-
-  const market_multipliers = {};
-  const mmRent = numOrNull("market_multiplier_rent");
-  const mmValue = numOrNull("market_multiplier_value");
-  if (mmRent !== null) market_multipliers.rent = mmRent;
-  if (mmValue !== null) market_multipliers.value = mmValue;
-
-  const payload = {
->>>>>>> theirs
-    project_name: get("project_name"),
-    description: get("description"),
-    property_type: get("property_type"),
-    lot_size: get("lot_size"),
-    zoning: get("zoning"),
-    asking_price: numOrNull("asking_price"),
-    square_feet_target: numOrNull("square_feet_target"),
-    city: get("city"),
-    state: get("state"),
-    zip_code: get("zip_code"),
-    arv: numOrNull("arv"),
-    monthly_rent: numOrNull("monthly_rent"),
-<<<<<<< ours
-    down_payment_pct: pctOrNull("down_payment_pct"),
-    interest_rate: pctOrNull("interest_rate"),
-    hold_years: intOrNull("hold_years"),
-    annual_tax_rate: pctOrNull("annual_tax_rate"),
-    annual_insurance_rate: pctOrNull("annual_insurance_rate"),
-    market_cost_multiplier: numOrNull("market_cost_multiplier"),
-    market_value_multiplier: numOrNull("market_value_multiplier"),
-    market_rent_multiplier: numOrNull("market_rent_multiplier"),
-    market_risk_adjustment: intOrNull("market_risk_adjustment"),
-    comps: parseComps(get("comps_json"))
-  };
-=======
-    down_payment_pct: numOrNull("down_payment_pct"),
-    interest_rate: numOrNull("interest_rate"),
-    hold_years: numOrNull("hold_years"),
-    annual_tax_rate: numOrNull("annual_tax_rate"),
-    annual_insurance_rate: numOrNull("annual_insurance_rate"),
-    comps: parseComps(get("comps_json"))
-  };
-
-  if (Object.keys(market_multipliers).length > 0) {
-    payload.market_multipliers = market_multipliers;
-  }
-
->>>>>>> theirs
-  return payload;
-}
-
-function renderResponse(data) {
-  const meta = data?.meta || {};
-  const verdict = meta?.verdict_breakdown || {};
-  const compAnalysis = meta?.comp_analysis || {};
-  const market = meta?.market || {};
-
-  // 1) Summary header order
-  const summary = document.getElementById("summaryHeader");
-  summary.innerHTML = `
-    <span class="da-pill"><strong>Recommended:</strong> ${data?.recommended_type || data?.summary || "—"}</span>
-    <span class="da-pill"><strong>Deal Score:</strong> ${asNum(data?.deal_score)}</span>
-    <span class="da-pill"><strong>Tier:</strong> ${data?.opportunity_tier || "—"}</span>
-    <span class="da-pill"><strong>Verdict:</strong> ${verdict?.verdict || "—"}</span>
-  `;
-
-  // 2) Financial cards order
-  const financialCards = document.getElementById("financialCards");
-  const entries = [
-    ["Cost Low", data?.cost_low],
-    ["Cost High", data?.cost_high],
-    ["Estimated Value", data?.estimated_value],
-    ["All-In Low", meta?.all_in_low],
-    ["All-In High", meta?.all_in_high],
-    ["Estimated Margin Low", meta?.estimated_margin_low],
-    ["Estimated Margin High", meta?.estimated_margin_high],
-    ["Monthly Rent Estimate", meta?.monthly_rent_estimate],
-    ["NOI Estimate", meta?.noi_estimate],
-    ["DSCR Estimate", meta?.dscr_estimate],
-  ];
-  financialCards.innerHTML = entries.map(([label, value]) => `
-    <div class="da-kpi">
-      <div class="label">${label}</div>
-      <div class="value">${label.includes("DSCR") ? asNum(value) : asMoney(value)}</div>
-    </div>
-  `).join("");
-
-  // valuation source + comps fallback guidance
-  const valuationSource = document.getElementById("valuationSource");
-  valuationSource.innerHTML = `<strong>Valuation source:</strong> ${meta?.valuation_source || "Not provided"}`;
-
-  const comps = Array.isArray(compAnalysis?.normalized_comps) ? compAnalysis.normalized_comps : [];
-  const confidenceRaw = compAnalysis?.confidence ?? compAnalysis?.comp_confidence;
-  const confidence = Number(confidenceRaw);
-  const lowConfidence = !Number.isNaN(confidence) && confidence < 0.5;
-  const fallbackEl = document.getElementById("compsFallback");
-  if (comps.length === 0) {
-    fallbackEl.textContent = "No comps returned. Underwriting is using fallback valuation assumptions.";
-  } else if (lowConfidence) {
-    fallbackEl.textContent = "Comp confidence is low. Treat valuation ranges as directional until higher-quality comps are added.";
-  } else {
-    fallbackEl.textContent = "";
-  }
-
-  // 3) verdict breakdown subscores
-  const subscores = verdict?.subscores || {};
-  const subscoresPills = document.getElementById("subscoresPills");
-  const subEntries = Object.entries(subscores);
-  subscoresPills.innerHTML = subEntries.length
-    ? subEntries.map(([k,v]) => `<span class="da-pill"><strong>${k}:</strong> ${asNum(v)}</span>`).join("")
-    : `<div class="muted-sm">No subscores returned.</div>`;
-
-  // 4) strengths & risks first-class
-  document.getElementById("strengthsList").innerHTML = listOrFallback(verdict?.strengths, "No strengths were returned.").join("");
-  document.getElementById("risksList").innerHTML = listOrFallback(verdict?.risks, "No risks were returned.").join("");
-
-  // 5) comp table
-  const compTableWrap = document.getElementById("compTableWrap");
-  if (!comps.length) {
-    compTableWrap.innerHTML = `<div style="padding:12px;" class="muted-sm">Comparable sales are not yet available.</div>`;
-  } else {
-    compTableWrap.innerHTML = `
-      <table class="da-table">
-        <thead>
-          <tr>
-            <th>Address</th><th>Price</th><th>Sqft</th><th>Beds</th><th>Baths</th>
-            <th>Distance (mi)</th><th>Months Ago</th><th>Notes</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${comps.map(c => `
-            <tr>
-              <td>${c.address || "—"}</td>
-              <td>${asMoney(c.price)}</td>
-              <td>${asNum(c.sqft)}</td>
-              <td>${asNum(c.beds)}</td>
-              <td>${asNum(c.baths)}</td>
-              <td>${asNum(c.distance_miles)}</td>
-              <td>${asNum(c.months_ago)}</td>
-              <td>${c.notes || "—"}</td>
-            </tr>
-          `).join("")}
-        </tbody>
-      </table>
-    `;
-  }
-
-  // 6) market assumptions
-  const marketAssumptions = document.getElementById("marketAssumptions");
-  const marketEntries = Object.entries(market);
-  marketAssumptions.innerHTML = marketEntries.length
-    ? marketEntries.map(([k,v]) => `<div class="da-kpi"><div class="label">${k}</div><div class="value" style="font-size:.95rem;">${typeof v === "number" ? asNum(v) : (v || "—")}</div></div>`).join("")
-    : `<div class="muted-sm">No market assumptions returned.</div>`;
-}
-
-async function runDealArchitect(e) {
-  e.preventDefault();
-  const form = document.getElementById("dealArchitectForm");
-
-  let payload;
-  try {
-    payload = requestBodyFromForm(form);
-  } catch (err) {
-    alert(err.message || "Invalid request payload.");
-    return;
-  }
-
-  try {
-    const res = await fetch("/v1/deal_architect", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-CSRFToken": "{{ csrf_token() }}"
-      },
-      body: JSON.stringify(payload)
-    });
-
-    const data = await res.json();
-    if (!res.ok) {
-<<<<<<< ours
-      alert(data?.detail || data?.message || "Underwriting request failed.");
-=======
-      alert(data?.message || "Underwriting request failed.");
->>>>>>> theirs
-      return;
-    }
-
-    renderResponse(data || {});
-  } catch (err) {
-    console.error("Deal Architect request failed", err);
-<<<<<<< ours
-    alert("Unable to reach the Deal Architect engine proxy.");
-=======
-    alert("Unable to reach /v1/deal_architect.");
->>>>>>> theirs
-  }
-}
-
-{% if initial %}
-  document.addEventListener("DOMContentLoaded", () => {
-    renderResponse({
-      ...{{ initial|tojson }},
-      meta: {{ initial_meta|tojson }}
-    });
-  });
-{% endif %}
-</script>
 {% endblock %}
