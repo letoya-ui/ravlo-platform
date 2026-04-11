@@ -262,6 +262,28 @@ from LoanMVP.services.investor.investor_saved_property_helpers import (
     _property_payload_from_any,
     _merge_nonempty_dict,
 )
+from LoanMVP.services.investor.investor_route_helpers import (
+    search_external_partners_google,
+    _set_if_attr,
+    _get_owned_deal_or_404,
+    _safe_first_related,
+    _deal_render_lock_active,
+    _set_deal_render_processing,
+    _clear_deal_render_processing,
+    _normalize_style_preset,
+    _stable_render_seed,
+    _save_before_url_to_deal,
+    _save_mockups_for_deal,
+    _get_rehab_mockups_for_deal,
+    _set_featured_rehab,
+    _featured_rehab_data,
+    _get_rehab_export_payload,
+    _build_budget_seed_from_results,
+    _build_loan_sizing_from_budget,
+    _build_mashvisor_insight,
+    _build_attom_fallback,
+    _annotate_deal_finder_opportunity,
+)
 
 from LoanMVP.services.mashvisor_client import MashvisorClient
 from LoanMVP.utils.r2_storage import spaces_put_bytes
@@ -362,7 +384,6 @@ def _fmt_money(value):
     except Exception:
         return "—"
 
-        
 @investor_bp.route("/", methods=["GET"], endpoint="command_center")
 @investor_bp.route("/index", methods=["GET"])
 @investor_bp.route("/command", methods=["GET"])
@@ -9980,6 +10001,10 @@ def partner_marketplace():
 @role_required("investor")
 def create_partner_request():
     ip = InvestorProfile.query.filter_by(user_id=current_user.id).first()
+
+    if PartnerRequest is None:
+        flash("Partner request workflow is not configured yet.", "warning")
+        return redirect(url_for("investor.partner_marketplace"))
 
     service_type = (request.form.get("service_type") or "").strip()
     city = (request.form.get("city") or "").strip()
