@@ -52,7 +52,51 @@
     font-weight:800;
     margin-top:10px;
   }
+  .sub-group-title{
+    font-size:.78rem;
+    letter-spacing:.08em;
+    text-transform:uppercase;
+    opacity:.75;
+    margin:12px 0 8px;
+  }
 </style>
+
+<div class="ravlo-card pad" style="margin-top:14px;">
+  <div class="eyebrow">Subscription</div>
+  <h3 style="margin:4px 0 6px;">Current Plan: {{ (subscription_plan or "free")|title }}</h3>
+  {% if config.get("STRIPE_BILLING_ENABLED") %}
+    {% set ordered_groups = ["LendingOS", "Investor", "Partner"] %}
+    {% for group_name in ordered_groups %}
+      {% set group_plans = subscription_groups.get(group_name, []) %}
+      {% if group_plans %}
+        <div class="sub-group-title">{{ group_name }} Pricing</div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+          {% for plan in group_plans %}
+            {% if plan.configured %}
+              <a
+                class="ravlo-btn {% if (subscription_plan or 'free')|lower == plan.slug %}primary{% else %}ghost{% endif %} sm"
+                href="{{ url_for('investor.start_subscription_checkout', plan=plan.slug) }}"
+                title="{{ plan.family }} • ${{ plan.monthly_price }}/mo"
+              >
+                {{ plan.label }} — ${{ plan.monthly_price }}/mo
+              </a>
+            {% else %}
+              <span class="ravlo-btn ghost sm" title="Missing Stripe price id for {{ plan.slug }}" style="opacity:.55;cursor:not-allowed;">
+                {{ plan.label }} — ${{ plan.monthly_price }}/mo
+              </span>
+            {% endif %}
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endfor %}
+
+    {% if not subscription_catalog %}
+      <span class="payment-amount">No Stripe price ids configured yet.</span>
+    {% endif %}
+  {% else %}
+    <div class="payment-amount">Stripe billing is currently disabled. Enable <code>STRIPE_BILLING_ENABLED=true</code>.</div>
+  {% endif %}
+</div>
 
 {% if payments and payments|length > 0 %}
   <div class="payment-grid">

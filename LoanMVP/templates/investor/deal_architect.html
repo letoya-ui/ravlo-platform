@@ -2,449 +2,362 @@
 
 {% block title %}Ravlo • Deal Architect{% endblock %}
 {% block page_title %}Deal Architect{% endblock %}
-{% block page_subline %}Analyze strategy, shape the best move, and launch the next studio.{% endblock %}
+{% block page_subline %}Underwriting source-of-truth view powered by /v1/deal_architect.{% endblock %}
 
 {% block topbar_actions %}
   {% if deal and deal.id %}
-    <a href="{{ url_for('investor.deal_detail', deal_id=deal.id) }}" class="ravlo-btn ghost sm">
-      Back to Deal
-    </a>
+    <a href="{{ url_for('investor.deal_detail', deal_id=deal.id) }}" class="ravlo-btn ghost sm">Back to Deal</a>
   {% endif %}
-  <a href="{{ url_for('investor.budget_studio') }}" class="ravlo-btn ghost sm">
-    Budget Studio
-  </a>
+  <a href="{{ url_for('investor.budget_studio') }}" class="ravlo-btn ghost sm">Budget Studio</a>
 {% endblock %}
 
 {% block content %}
 <style>
-  .architect-wrap{display:grid;gap:20px;}
-  .architect-hero{
-    border-radius:24px;
-    padding:22px 24px;
-    border:1px solid rgba(255,255,255,.08);
-    background:
-      radial-gradient(900px 420px at 10% 10%, rgba(122,184,255,.12), transparent 55%),
-      rgba(255,255,255,.03);
-    display:flex;
-    justify-content:space-between;
-    align-items:flex-end;
-    gap:18px;
-    flex-wrap:wrap;
-  }
-  .architect-hero h2{margin:6px 0 8px;}
-  .architect-chip-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px;}
-  .architect-chip{
-    display:inline-flex;
-    align-items:center;
-    padding:.42rem .72rem;
-    border-radius:999px;
-    border:1px solid rgba(255,255,255,.08);
-    background:rgba(255,255,255,.04);
-    color:#dfe9f8;
-    font-size:.82rem;
-  }
-  .architect-grid{
-    display:grid;
-    grid-template-columns:1.05fr .95fr;
-    gap:20px;
-    align-items:start;
-  }
-  .architect-card{
-    border-radius:22px;
-    padding:20px;
+  .da-wrap { display:grid; gap:20px; }
+  .da-card {
+    border-radius:20px; padding:18px;
     border:1px solid rgba(255,255,255,.08);
     background:rgba(255,255,255,.03);
   }
-  .architect-card h3{margin:0 0 12px;}
-  .architect-form-grid{
-    display:grid;
-    grid-template-columns:repeat(2,minmax(0,1fr));
-    gap:12px;
+  .da-grid-2 { display:grid; grid-template-columns:1.1fr .9fr; gap:20px; }
+  .da-input-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
+  .da-input, .da-select, .da-textarea {
+    width:100%; padding:.75rem .85rem; border-radius:12px;
+    border:1px solid rgba(255,255,255,.12); background:rgba(255,255,255,.04); color:#eef4ff;
   }
-  .architect-input,
-  .architect-select,
-  .architect-textarea{
-    width:100%;
-    padding:.85rem .95rem;
-    border-radius:14px;
-    background:rgba(255,255,255,.04);
-    border:1px solid rgba(255,255,255,.09);
-    color:#eef4ff;
+  .da-textarea { min-height:90px; resize:vertical; }
+  .da-kpis { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
+  .da-kpi { border:1px solid rgba(255,255,255,.08); border-radius:14px; padding:12px; background:rgba(255,255,255,.02); }
+  .da-kpi .label { font-size:.78rem; color:rgba(224,233,246,.7); margin-bottom:4px; }
+  .da-kpi .value { font-weight:800; font-size:1.05rem; color:#f4f8ff; }
+  .da-list { display:grid; gap:8px; }
+  .da-pill {
+    display:inline-flex; align-items:center; gap:6px;
+    border-radius:999px; padding:.35rem .65rem;
+    border:1px solid rgba(255,255,255,.1); background:rgba(255,255,255,.04);
+    margin-right:8px; margin-bottom:8px;
   }
-  .architect-textarea{
-    min-height:130px;
-    resize:vertical;
-  }
-  .architect-kpis{
-    display:grid;
-    grid-template-columns:repeat(2,minmax(0,1fr));
-    gap:12px;
-  }
-  .architect-kpi{
-    padding:16px;
-    border-radius:18px;
-    background:rgba(255,255,255,.03);
-    border:1px solid rgba(255,255,255,.08);
-  }
-  .architect-kpi .label{
-    font-size:.78rem;
-    color:rgba(224,233,246,.7);
-    margin-bottom:6px;
-  }
-  .architect-kpi .value{
-    font-size:1.4rem;
-    font-weight:800;
-    color:#f4f8ff;
-  }
-  .architect-summary{
-    line-height:1.7;
-    color:#d8e3f3;
-  }
-  .architect-list{
-    display:grid;
-    gap:10px;
-    margin-top:14px;
-  }
-  .architect-list-item{
-    display:flex;
-    gap:12px;
-    padding:14px 0;
-    border-bottom:1px solid rgba(255,255,255,.08);
-  }
-  .architect-list-item:last-child{border-bottom:none;}
-  .architect-badge{
-    width:28px;
-    height:28px;
-    flex:0 0 28px;
-    border-radius:999px;
-    display:grid;
-    place-items:center;
-    font-size:.8rem;
-    font-weight:800;
-    color:#06111e;
-    background:linear-gradient(135deg,#bfe2ff,#7ab8ff);
-    margin-top:2px;
-  }
-  .architect-workflow{
-    display:grid;
-    grid-template-columns:repeat(4,minmax(0,1fr));
-    gap:14px;
-  }
-  .architect-workflow-card{
-    display:block;
-    padding:18px;
-    border-radius:18px;
-    border:1px solid rgba(255,255,255,.08);
-    background:rgba(255,255,255,.03);
-    text-decoration:none;
-    transition:.18s ease;
-  }
-  .architect-workflow-card:hover{
-    transform:translateY(-2px);
-    border-color:rgba(122,184,255,.24);
-    background:rgba(255,255,255,.045);
-  }
-  .architect-workflow-card h4{margin:0 0 8px;}
-  .architect-workflow-card p{margin:0;color:rgba(224,233,246,.72);font-size:.92rem;line-height:1.55;}
-  .muted-sm{font-size:.84rem;color:rgba(224,233,246,.66);}
-  @media (max-width: 1100px){
-    .architect-grid,
-    .architect-workflow,
-    .architect-form-grid,
-    .architect-kpis{
-      grid-template-columns:1fr;
-    }
-  }
+  .da-table-wrap { overflow:auto; border:1px solid rgba(255,255,255,.1); border-radius:14px; }
+  table.da-table { width:100%; border-collapse:collapse; min-width:700px; }
+  .da-table th,.da-table td { padding:10px; border-bottom:1px solid rgba(255,255,255,.08); text-align:left; font-size:.9rem; }
+  .da-headline { display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-top:8px; }
+  .muted-sm { font-size:.85rem; color:rgba(224,233,246,.7); }
+  @media (max-width: 1100px) { .da-grid-2, .da-input-grid, .da-kpis { grid-template-columns:1fr; } }
 </style>
 
-{% set analysis = strategy_analysis or {} %}
-{% set recommended = analysis.get("recommended_strategy") or deal.recommended_strategy or "Pending" %}
-{% set projected_profit = analysis.get("projected_profit", deal.estimated_profit if deal else 0) or 0 %}
-{% set deal_score = analysis.get("deal_score") or (deal.deal_score if deal else None) %}
-{% set reasoning = analysis.get("reason") or "Run Deal Architect to generate strategy guidance and estimated direction." %}
-{% set next_steps = analysis.get("next_steps") or [] %}
-{% set warnings = analysis.get("warnings") or [] %}
+{% set initial = strategy_analysis or {} %}
+{% set initial_meta = initial.get('meta', {}) if initial else {} %}
 
-<div class="architect-wrap">
-
-  <section class="architect-hero">
-    <div>
-      <div class="eyebrow">RAVLO STUDIO</div>
-      <h2>{{ deal.title or deal.address or "Deal Architect" }}</h2>
-      <p class="muted">
-        Use AI-guided analysis to evaluate the opportunity, compare strategy, and direct the next move.
-      </p>
-
-      <div class="architect-chip-row">
-        <span class="architect-chip">Recommended: {{ recommended }}</span>
-        <span class="architect-chip">
-          {% if deal_score %}Score {{ deal_score }}/100{% else %}Score Pending{% endif %}
-        </span>
-        {% if deal and deal.status %}
-          <span class="architect-chip">Status: {{ deal.status }}</span>
-        {% endif %}
-      </div>
-    </div>
-
-    <div style="display:flex;gap:12px;flex-wrap:wrap;">
-      {% if deal and deal.id %}
-        <a href="{{ url_for('investor.rehab_budget_tracker', deal_id=deal.id) }}" class="ravlo-btn ghost">
-          Open Budget
-        </a>
-        <a href="{{ url_for('investor.deal_rehab', deal_id=deal.id) }}" class="ravlo-btn ghost">
-          Open Renovation Studio
-        </a>
-      {% endif %}
-    </div>
+<div class="da-wrap">
+  <section class="da-card">
+    <div class="eyebrow">RAVLO UNDERWRITING</div>
+    <h2 style="margin:4px 0 8px;">{{ deal.title or deal.address or "Deal Architect" }}</h2>
+    <div class="muted-sm">POST <code>/v1/deal_architect</code> is the only underwriting source of truth for this screen.</div>
+    <div id="summaryHeader" class="da-headline" style="margin-top:12px;"></div>
   </section>
 
-  <div class="architect-grid">
-
-    <section class="architect-card">
-      <div class="eyebrow">RUN ANALYSIS</div>
-      <h3>Deal inputs</h3>
+  <div class="da-grid-2">
+    <section class="da-card">
+      <div class="eyebrow">REQUEST ASSEMBLY</div>
+      <h3 style="margin:0 0 10px;">Deal + location + market inputs</h3>
 
       <form id="dealArchitectForm" onsubmit="runDealArchitect(event)">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
-        <div class="architect-form-grid">
-          <input class="architect-input" type="text" name="purchase_price" placeholder="Purchase Price"
-                 value="{{ deal.purchase_price if deal else '' }}">
-          <input class="architect-input" type="text" name="arv" placeholder="Projected ARV"
-                 value="{{ deal.arv if deal else '' }}">
-
-          <input class="architect-input" type="text" name="estimated_rent" placeholder="Estimated Rent"
-                 value="{{ deal.estimated_rent if deal else '' }}">
-          <input class="architect-input" type="text" name="rehab_cost" placeholder="Estimated Rehab Cost"
-                 value="{{ deal.rehab_cost if deal else '' }}">
-
-          <select class="architect-select" name="strategy">
-            <option value="">Select Strategy</option>
-            <option value="flip" {% if deal and deal.strategy == 'flip' %}selected{% endif %}>Flip</option>
-            <option value="rental" {% if deal and deal.strategy == 'rental' %}selected{% endif %}>Rental</option>
-            <option value="airbnb" {% if deal and deal.strategy == 'airbnb' %}selected{% endif %}>Short-Term Rental</option>
-            <option value="build" {% if deal and deal.strategy == 'build' %}selected{% endif %}>Build / Development</option>
-          </select>
-
-          <input class="architect-input" type="text" name="address" placeholder="Property Address"
-                 value="{{ deal.address if deal else '' }}">
+        <div class="da-input-grid">
+          <input class="da-input" name="project_name" placeholder="project_name" value="{{ deal.title if deal else '' }}">
+          <input class="da-input" name="property_type" placeholder="property_type" value="{{ deal.property_type if deal else '' }}">
+          <input class="da-input" name="description" placeholder="description" value="{{ deal.notes if deal else '' }}">
+          <input class="da-input" name="lot_size" placeholder="lot_size" value="{{ deal.lot_size if deal else '' }}">
+          <input class="da-input" name="zoning" placeholder="zoning" value="{{ deal.zoning if deal else '' }}">
+          <input class="da-input" name="asking_price" placeholder="asking_price" value="{{ deal.purchase_price if deal else '' }}">
+          <input class="da-input" name="square_feet_target" placeholder="square_feet_target" value="{{ deal.square_feet if deal else '' }}">
+          <input class="da-input" name="city" placeholder="city" value="{{ deal.city if deal else '' }}">
+          <input class="da-input" name="state" placeholder="state" value="{{ deal.state if deal else '' }}">
+          <input class="da-input" name="zip_code" placeholder="zip_code" value="{{ deal.zip_code if deal else '' }}">
+          <input class="da-input" name="arv" placeholder="arv" value="{{ deal.arv if deal else '' }}">
+          <input class="da-input" name="monthly_rent" placeholder="monthly_rent" value="{{ deal.estimated_rent if deal else '' }}">
+          <input class="da-input" name="down_payment_pct" placeholder="down_payment_pct" value="20">
+          <input class="da-input" name="interest_rate" placeholder="interest_rate" value="8.5">
+          <input class="da-input" name="hold_years" placeholder="hold_years" value="5">
+          <input class="da-input" name="annual_tax_rate" placeholder="annual_tax_rate (optional)">
+          <input class="da-input" name="annual_insurance_rate" placeholder="annual_insurance_rate (optional)">
+          <input class="da-input" name="market_multiplier_rent" placeholder="market_multiplier_rent (optional)">
+          <input class="da-input" name="market_multiplier_value" placeholder="market_multiplier_value (optional)">
         </div>
 
         <div style="margin-top:12px;">
-          <textarea class="architect-textarea" name="notes" placeholder="Add context, concerns, or what you want Ravlo to analyze...">{{ deal.notes if deal else '' }}</textarea>
+          <label class="muted-sm">comps (JSON array: address, price, optional sqft/beds/baths/distance_miles/months_ago/notes)</label>
+          <textarea class="da-textarea" name="comps_json" placeholder='[{"address":"123 Main St","price":320000,"sqft":1400,"beds":3,"baths":2,"distance_miles":0.4,"months_ago":2,"notes":"Updated kitchen"}]'></textarea>
         </div>
 
-        <div style="margin-top:14px;display:flex;gap:12px;flex-wrap:wrap;">
-          <button type="submit" class="ravlo-btn primary">
-            Run Deal Architect
-          </button>
-          {% if deal and deal.id %}
-            <a href="{{ url_for('investor.generate_budget_from_ai', deal_id=deal.id) }}"
-               class="ravlo-btn ghost"
-               onclick="event.preventDefault(); this.closest('div').querySelector('#budget-ai-form').submit();">
-              Generate Budget from AI
-            </a>
-          {% endif %}
+        <div style="margin-top:12px;display:flex;gap:10px;flex-wrap:wrap;">
+          <button type="submit" class="ravlo-btn primary">Run Underwriting</button>
+          <span class="muted-sm">Frontend only assembles request and renders response.</span>
         </div>
       </form>
-
-      {% if deal and deal.id %}
-      <form id="budget-ai-form" method="POST" action="{{ url_for('investor.generate_budget_from_ai', deal_id=deal.id) }}" style="display:none;">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-      </form>
-      {% endif %}
     </section>
 
-    <section class="architect-card">
-      <div class="eyebrow">RESULTS</div>
-      <h3>Strategy output</h3>
-
-      <div class="architect-kpis">
-        <div class="architect-kpi">
-          <div class="label">Recommended Strategy</div>
-          <div class="value" style="font-size:1.12rem;">{{ recommended }}</div>
-        </div>
-
-        <div class="architect-kpi">
-          <div class="label">Projected Profit</div>
-          <div class="value">${{ "{:,.0f}".format(projected_profit or 0) }}</div>
-        </div>
-
-        <div class="architect-kpi">
-          <div class="label">Deal Score</div>
-          <div class="value">{% if deal_score %}{{ deal_score }}/100{% else %}Pending{% endif %}</div>
-        </div>
-
-        <div class="architect-kpi">
-          <div class="label">Estimated Total Cost</div>
-          <div class="value">
-            ${{ "{:,.0f}".format(((deal.purchase_price or 0) + (deal.rehab_cost or 0)) if deal else 0) }}
-          </div>
-        </div>
-      </div>
-
-      <div style="margin-top:16px;">
-        <div class="muted-sm" style="margin-bottom:8px;">AI Reasoning</div>
-        <div class="architect-summary">{{ reasoning }}</div>
-      </div>
-
-      {% if warnings %}
-        <div style="margin-top:18px;">
-          <div class="muted-sm" style="margin-bottom:8px;">Warnings</div>
-          <div class="architect-list">
-            {% for item in warnings %}
-              <div class="architect-list-item">
-                <div class="architect-badge">!</div>
-                <div>{{ item }}</div>
-              </div>
-            {% endfor %}
-          </div>
-        </div>
-      {% endif %}
-
-      {% if next_steps %}
-        <div style="margin-top:18px;">
-          <div class="muted-sm" style="margin-bottom:8px;">Suggested Next Steps</div>
-          <div class="architect-list">
-            {% for item in next_steps %}
-              <div class="architect-list-item">
-                <div class="architect-badge">{{ loop.index }}</div>
-                <div>{{ item }}</div>
-              </div>
-            {% endfor %}
-          </div>
-        </div>
-      {% endif %}
+    <section class="da-card">
+      <div class="eyebrow">FINANCIALS</div>
+      <h3 style="margin:0 0 10px;">Response-derived financial cards</h3>
+      <div id="financialCards" class="da-kpis"></div>
+      <div id="valuationSource" class="muted-sm" style="margin-top:10px;"></div>
+      <div id="compsFallback" class="muted-sm" style="margin-top:8px;"></div>
     </section>
-
   </div>
 
-  <section class="architect-card">
-    <div class="eyebrow">CONTINUE WORKFLOW</div>
-    <h3>Move through Ravlo’s studios</h3>
-    <p class="muted" style="margin:0 0 16px;">
-      Take the strategy from analysis into design, construction thinking, and financial execution.
-    </p>
-
-    <div class="architect-workflow">
-      {% if deal and deal.id %}
-      <a href="{{ url_for('investor.deal_detail', deal_id=deal.id) }}" class="architect-workflow-card">
-        <h4>Deal Detail</h4>
-        <p>Return to the command view for this opportunity.</p>
-      </a>
-
-      <a href="{{ url_for('investor.deal_rehab', deal_id=deal.id) }}" class="architect-workflow-card">
-        <h4>Renovation Studio</h4>
-        <p>Visualize rehab direction and shape the transformation plan.</p>
-      </a>
-
-      <a href="{{ url_for('investor.build_studio', deal_id=deal.id) }}" class="architect-workflow-card">
-        <h4>Build Studio</h4>
-        <p>Explore development and new construction concepts.</p>
-      </a>
-
-      <a href="{{ url_for('investor.rehab_budget_tracker', deal_id=deal.id) }}" class="architect-workflow-card">
-        <h4>Budget Studio</h4>
-        <p>Track projected versus actual costs and stay grounded in execution.</p>
-      </a>
-      {% else %}
-      <div class="architect-workflow-card">
-        <h4>Deal Detail</h4>
-        <p>Connect this page to a specific deal to continue the workflow.</p>
+  <section class="da-card">
+    <div class="eyebrow">TOP STRENGTHS & RISKS</div>
+    <h3 style="margin:0 0 10px;">First-class verdict signals</h3>
+    <div class="da-grid-2">
+      <div>
+        <div class="muted-sm" style="margin-bottom:8px;">Strengths</div>
+        <div id="strengthsList" class="da-list"></div>
       </div>
-      <div class="architect-workflow-card">
-        <h4>Renovation Studio</h4>
-        <p>Design and scope the rehab direction.</p>
+      <div>
+        <div class="muted-sm" style="margin-bottom:8px;">Risks</div>
+        <div id="risksList" class="da-list"></div>
       </div>
-      <div class="architect-workflow-card">
-        <h4>Build Studio</h4>
-        <p>Explore ground-up ideas and development potential.</p>
-      </div>
-      <div class="architect-workflow-card">
-        <h4>Budget Studio</h4>
-        <p>Track the financial side of execution.</p>
-      </div>
-      {% endif %}
     </div>
   </section>
 
+  <section class="da-card">
+    <div class="eyebrow">VERDICT BREAKDOWN</div>
+    <h3 style="margin:0 0 10px;">meta.verdict_breakdown.subscores</h3>
+    <div id="subscoresPills"></div>
+  </section>
+
+  <section class="da-card">
+    <div class="eyebrow">COMPARABLES</div>
+    <h3 style="margin:0 0 10px;">meta.comp_analysis.normalized_comps</h3>
+    <div id="compTableWrap" class="da-table-wrap"></div>
+  </section>
+
+  <section class="da-card">
+    <div class="eyebrow">MARKET ASSUMPTIONS</div>
+    <h3 style="margin:0 0 10px;">meta.market</h3>
+    <div id="marketAssumptions" class="da-list"></div>
+  </section>
 </div>
+
 <script>
+function asMoney(val) {
+  const n = Number(val);
+  if (Number.isNaN(n)) return "—";
+  return n.toLocaleString(undefined, { style: "currency", currency: "USD", maximumFractionDigits: 0 });
+}
+
+function asNum(val, fallback = "—") {
+  if (val === null || val === undefined || val === "") return fallback;
+  const n = Number(val);
+  return Number.isNaN(n) ? String(val) : n.toLocaleString();
+}
+
+function listOrFallback(values, fallback) {
+  if (!Array.isArray(values) || values.length === 0) return [`<div class="muted-sm">${fallback}</div>`];
+  return values.map(v => `<div class="da-kpi"><div class="value" style="font-size:.98rem;">${v}</div></div>`);
+}
+
+function parseComps(text) {
+  if (!text || !text.trim()) return [];
+  try {
+    const parsed = JSON.parse(text);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    throw new Error("Comps must be valid JSON array.");
+  }
+}
+
+function requestBodyFromForm(form) {
+  const get = (name) => (form.querySelector(`[name="${name}"]`)?.value || "").trim();
+  const numOrNull = (name) => {
+    const v = get(name);
+    if (!v) return null;
+    const n = Number(v);
+    return Number.isNaN(n) ? null : n;
+  };
+
+  const market_multipliers = {};
+  const mmRent = numOrNull("market_multiplier_rent");
+  const mmValue = numOrNull("market_multiplier_value");
+  if (mmRent !== null) market_multipliers.rent = mmRent;
+  if (mmValue !== null) market_multipliers.value = mmValue;
+
+  const payload = {
+    project_name: get("project_name"),
+    description: get("description"),
+    property_type: get("property_type"),
+    lot_size: get("lot_size"),
+    zoning: get("zoning"),
+    asking_price: numOrNull("asking_price"),
+    square_feet_target: numOrNull("square_feet_target"),
+    city: get("city"),
+    state: get("state"),
+    zip_code: get("zip_code"),
+    arv: numOrNull("arv"),
+    monthly_rent: numOrNull("monthly_rent"),
+    down_payment_pct: numOrNull("down_payment_pct"),
+    interest_rate: numOrNull("interest_rate"),
+    hold_years: numOrNull("hold_years"),
+    annual_tax_rate: numOrNull("annual_tax_rate"),
+    annual_insurance_rate: numOrNull("annual_insurance_rate"),
+    comps: parseComps(get("comps_json"))
+  };
+
+  if (Object.keys(market_multipliers).length > 0) {
+    payload.market_multipliers = market_multipliers;
+  }
+
+  return payload;
+}
+
+function renderResponse(data) {
+  const meta = data?.meta || {};
+  const verdict = meta?.verdict_breakdown || {};
+  const compAnalysis = meta?.comp_analysis || {};
+  const market = meta?.market || {};
+
+  // 1) Summary header order
+  const summary = document.getElementById("summaryHeader");
+  summary.innerHTML = `
+    <span class="da-pill"><strong>Recommended:</strong> ${data?.recommended_type || data?.summary || "—"}</span>
+    <span class="da-pill"><strong>Deal Score:</strong> ${asNum(data?.deal_score)}</span>
+    <span class="da-pill"><strong>Tier:</strong> ${data?.opportunity_tier || "—"}</span>
+    <span class="da-pill"><strong>Verdict:</strong> ${verdict?.verdict || "—"}</span>
+  `;
+
+  // 2) Financial cards order
+  const financialCards = document.getElementById("financialCards");
+  const entries = [
+    ["Cost Low", data?.cost_low],
+    ["Cost High", data?.cost_high],
+    ["Estimated Value", data?.estimated_value],
+    ["All-In Low", meta?.all_in_low],
+    ["All-In High", meta?.all_in_high],
+    ["Estimated Margin Low", meta?.estimated_margin_low],
+    ["Estimated Margin High", meta?.estimated_margin_high],
+    ["Monthly Rent Estimate", meta?.monthly_rent_estimate],
+    ["NOI Estimate", meta?.noi_estimate],
+    ["DSCR Estimate", meta?.dscr_estimate],
+  ];
+  financialCards.innerHTML = entries.map(([label, value]) => `
+    <div class="da-kpi">
+      <div class="label">${label}</div>
+      <div class="value">${label.includes("DSCR") ? asNum(value) : asMoney(value)}</div>
+    </div>
+  `).join("");
+
+  // valuation source + comps fallback guidance
+  const valuationSource = document.getElementById("valuationSource");
+  valuationSource.innerHTML = `<strong>Valuation source:</strong> ${meta?.valuation_source || "Not provided"}`;
+
+  const comps = Array.isArray(compAnalysis?.normalized_comps) ? compAnalysis.normalized_comps : [];
+  const confidenceRaw = compAnalysis?.confidence ?? compAnalysis?.comp_confidence;
+  const confidence = Number(confidenceRaw);
+  const lowConfidence = !Number.isNaN(confidence) && confidence < 0.5;
+  const fallbackEl = document.getElementById("compsFallback");
+  if (comps.length === 0) {
+    fallbackEl.textContent = "No comps returned. Underwriting is using fallback valuation assumptions.";
+  } else if (lowConfidence) {
+    fallbackEl.textContent = "Comp confidence is low. Treat valuation ranges as directional until higher-quality comps are added.";
+  } else {
+    fallbackEl.textContent = "";
+  }
+
+  // 3) verdict breakdown subscores
+  const subscores = verdict?.subscores || {};
+  const subscoresPills = document.getElementById("subscoresPills");
+  const subEntries = Object.entries(subscores);
+  subscoresPills.innerHTML = subEntries.length
+    ? subEntries.map(([k,v]) => `<span class="da-pill"><strong>${k}:</strong> ${asNum(v)}</span>`).join("")
+    : `<div class="muted-sm">No subscores returned.</div>`;
+
+  // 4) strengths & risks first-class
+  document.getElementById("strengthsList").innerHTML = listOrFallback(verdict?.strengths, "No strengths were returned.").join("");
+  document.getElementById("risksList").innerHTML = listOrFallback(verdict?.risks, "No risks were returned.").join("");
+
+  // 5) comp table
+  const compTableWrap = document.getElementById("compTableWrap");
+  if (!comps.length) {
+    compTableWrap.innerHTML = `<div style="padding:12px;" class="muted-sm">Comparable sales are not yet available.</div>`;
+  } else {
+    compTableWrap.innerHTML = `
+      <table class="da-table">
+        <thead>
+          <tr>
+            <th>Address</th><th>Price</th><th>Sqft</th><th>Beds</th><th>Baths</th>
+            <th>Distance (mi)</th><th>Months Ago</th><th>Notes</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${comps.map(c => `
+            <tr>
+              <td>${c.address || "—"}</td>
+              <td>${asMoney(c.price)}</td>
+              <td>${asNum(c.sqft)}</td>
+              <td>${asNum(c.beds)}</td>
+              <td>${asNum(c.baths)}</td>
+              <td>${asNum(c.distance_miles)}</td>
+              <td>${asNum(c.months_ago)}</td>
+              <td>${c.notes || "—"}</td>
+            </tr>
+          `).join("")}
+        </tbody>
+      </table>
+    `;
+  }
+
+  // 6) market assumptions
+  const marketAssumptions = document.getElementById("marketAssumptions");
+  const marketEntries = Object.entries(market);
+  marketAssumptions.innerHTML = marketEntries.length
+    ? marketEntries.map(([k,v]) => `<div class="da-kpi"><div class="label">${k}</div><div class="value" style="font-size:.95rem;">${typeof v === "number" ? asNum(v) : (v || "—")}</div></div>`).join("")
+    : `<div class="muted-sm">No market assumptions returned.</div>`;
+}
+
 async function runDealArchitect(e) {
   e.preventDefault();
-
   const form = document.getElementById("dealArchitectForm");
-  const formData = new FormData(form);
 
-  // attach deal_id
-  formData.append("deal_id", "{{ deal.id if deal else '' }}");
+  let payload;
+  try {
+    payload = requestBodyFromForm(form);
+  } catch (err) {
+    alert(err.message || "Invalid request payload.");
+    return;
+  }
 
   try {
-    const res = await fetch("{{ url_for('investor.deal_architect_analyze') }}", {
+    const res = await fetch("/v1/deal_architect", {
       method: "POST",
       headers: {
+        "Content-Type": "application/json",
         "X-CSRFToken": "{{ csrf_token() }}"
       },
-      body: formData
+      body: JSON.stringify(payload)
     });
 
     const data = await res.json();
-    console.log("DEAL ARCHITECT RESPONSE:", data);
-
-    if (!res.ok || data.status !== "ok") {
-      alert(data.message || "Analysis failed");
+    if (!res.ok) {
+      alert(data?.message || "Underwriting request failed.");
       return;
     }
 
-    // -------------------------
-    // UPDATE UI LIVE
-    // -------------------------
-
-    // Recommended Strategy
-    document.querySelectorAll(".architect-kpi .value")[0].innerText =
-      data.recommended_strategy || "N/A";
-
-    // Profit
-    document.querySelectorAll(".architect-kpi .value")[1].innerText =
-      "$" + (data.metrics?.flip_profit || 0).toLocaleString();
-
-    // Score (fake for now if not returned)
-    document.querySelectorAll(".architect-kpi .value")[2].innerText =
-      data.strategies?.[0]?.score
-        ? data.strategies[0].score + "/100"
-        : "Pending";
-
-    // Total Cost
-    document.querySelectorAll(".architect-kpi .value")[3].innerText =
-      "$" + (data.metrics?.total_basis || 0).toLocaleString();
-
-    // Reasoning
-    const summaryEl = document.querySelector(".architect-summary");
-    if (summaryEl) {
-      summaryEl.innerText =
-        data.strategies?.[0]?.summary || "Analysis complete.";
-    }
-
-    // Next steps
-    const nextStepsBox = document.querySelector(".architect-list");
-    if (nextStepsBox && data.strategies) {
-      nextStepsBox.innerHTML = "";
-
-      data.strategies.forEach((s, i) => {
-        const div = document.createElement("div");
-        div.className = "architect-list-item";
-        div.innerHTML = `
-          <div class="architect-badge">${i + 1}</div>
-          <div><strong>${s.name}</strong> — ${s.summary}</div>
-        `;
-        nextStepsBox.appendChild(div);
-      });
-    }
-
+    renderResponse(data || {});
   } catch (err) {
-    console.error("DEAL ARCHITECT ERROR:", err);
-    alert("Something went wrong.");
+    console.error("Deal Architect request failed", err);
+    alert("Unable to reach /v1/deal_architect.");
   }
 }
+
+{% if initial %}
+  document.addEventListener("DOMContentLoaded", () => {
+    renderResponse({
+      ...{{ initial|tojson }},
+      meta: {{ initial_meta|tojson }}
+    });
+  });
+{% endif %}
 </script>
 {% endblock %}

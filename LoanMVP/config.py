@@ -84,6 +84,17 @@ class Config:
     # STRIPE
     STRIPE_SECRET_KEY = os.environ.get("STRIPE_SECRET_KEY", "")
     STRIPE_WEBHOOK_SECRET = os.environ.get("STRIPE_WEBHOOK_SECRET", "")
+    STRIPE_BILLING_ENABLED = _env_bool("STRIPE_BILLING_ENABLED", False)
+    STRIPE_PRICE_CORE = os.environ.get("STRIPE_PRICE_CORE", "")
+    STRIPE_PRICE_PRO = os.environ.get("STRIPE_PRICE_PRO", "")
+    STRIPE_PRICE_ENTERPRISE = os.environ.get("STRIPE_PRICE_ENTERPRISE", "")
+    STRIPE_PRICE_BROKERAGE_SMALL_TEAM = os.environ.get("STRIPE_PRICE_BROKERAGE_SMALL_TEAM", "")
+    STRIPE_PRICE_INDIVIDUAL_LOAN_OFFICER = os.environ.get("STRIPE_PRICE_INDIVIDUAL_LOAN_OFFICER", "")
+    STRIPE_PRICE_FEATURED_PARTNER = os.environ.get("STRIPE_PRICE_FEATURED_PARTNER", "")
+    STRIPE_PRICE_PREFERRED_PARTNER = os.environ.get("STRIPE_PRICE_PREFERRED_PARTNER", "")
+    STRIPE_PRICE_BASIC_LISTING = os.environ.get("STRIPE_PRICE_BASIC_LISTING", "")
+    STRIPE_PRICE_OPERATOR = os.environ.get("STRIPE_PRICE_OPERATOR", "")
+    STRIPE_PRICE_EXPLORER = os.environ.get("STRIPE_PRICE_EXPLORER", "")
 
     MAIL_SERVER = os.environ.get("MAIL_SERVER", "smtp.sendgrid.net")
     MAIL_PORT = _env_int("MAIL_PORT", 587)
@@ -148,6 +159,8 @@ class Config:
 
     BYPASS_PARTNER_SUBSCRIPTION = _env_bool("BYPASS_PARTNER_SUBSCRIPTION", False)
     FREE_PARTNER_MODE = _env_bool("FREE_PARTNER_MODE", False)
+    BETA_SUBSCRIPTION_BYPASS = _env_bool("BETA_SUBSCRIPTION_BYPASS", False)
+    BETA_ACCESS_AUTO_APPROVE = _env_bool("BETA_ACCESS_AUTO_APPROVE", False)
 
     @classmethod
     def validate(cls):
@@ -169,6 +182,8 @@ class DevelopmentConfig(Config):
     )
     BYPASS_PARTNER_SUBSCRIPTION = _env_bool("BYPASS_PARTNER_SUBSCRIPTION", True)
     FREE_PARTNER_MODE = _env_bool("FREE_PARTNER_MODE", True)
+    BETA_SUBSCRIPTION_BYPASS = _env_bool("BETA_SUBSCRIPTION_BYPASS", True)
+    BETA_ACCESS_AUTO_APPROVE = _env_bool("BETA_ACCESS_AUTO_APPROVE", True)
 
 
 class ProductionConfig(Config):
