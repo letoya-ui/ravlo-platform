@@ -1238,7 +1238,7 @@ def _run_mashvisor_validation(snapshot: dict) -> dict | None:
 
     try:
         client = MashvisorClient()
-        result = client.get_airbnb_lookup(
+        result = client.validate_property_with_mashvisor(
             address=address,
             city=city,
             state=state,
@@ -1247,9 +1247,30 @@ def _run_mashvisor_validation(snapshot: dict) -> dict | None:
             baths=_safe_float(snapshot.get("baths")),
             lat=_safe_float(snapshot.get("latitude")),
             lng=_safe_float(snapshot.get("longitude")),
+            include_comps=False,
         )
 
-        lookup = result.get("content", result) if isinstance(result, dict) else {}
+        lookup_raw = result.get("lookup") if isinstance(result, dict) else {}
+        lookup = lookup_raw.get("content", lookup_raw) if isinstance(lookup_raw, dict) else {}
+        property_raw = result.get("property") if isinstance(result, dict) else {}
+        property_content = (
+            property_raw.get("content", property_raw)
+            if isinstance(property_raw, dict)
+            else {}
+        )
+
+        photo_urls = []
+        if isinstance(property_content, dict):
+            for key in ("photos", "images", "image_urls", "gallery"):
+                values = property_content.get(key)
+                if isinstance(values, list):
+                    photo_urls = [
+                        str(v).strip()
+                        for v in values
+                        if isinstance(v, str) and str(v).strip()
+                    ]
+                    if photo_urls:
+                        break
 
         return {
             "airbnb_revenue": (
@@ -1271,6 +1292,8 @@ def _run_mashvisor_validation(snapshot: dict) -> dict | None:
                 or lookup.get("confidence")
                 or "Moderate"
             ),
+            "photos": photo_urls[:8],
+            "photo_count": len(photo_urls),
             "raw": result,
         }
 
