@@ -62,6 +62,22 @@
     </a>
   </div>
 
+  <div class="re-nav-group">
+    <div class="re-nav-label">Readiness</div>
+
+    <a href="{{ url_for('underwriter.contracts') }}"
+       class="re-nav-link {% if active_tab == 'contracts' %}active{% endif %}">
+      <i class="icon lucide lucide-folder-lock"></i>
+      <span>Contracts Hub</span>
+    </a>
+
+    <a href="{{ url_for('underwriter.onboarding') }}"
+       class="re-nav-link {% if active_tab == 'onboarding' %}active{% endif %}">
+      <i class="icon lucide lucide-clipboard-check"></i>
+      <span>Onboarding</span>
+    </a>
+  </div>
+
 </nav>
 
 <div class="re-sidebar-foot">

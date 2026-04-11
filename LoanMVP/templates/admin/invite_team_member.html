@@ -26,6 +26,7 @@
     </div>
 
     <form method="POST" class="stack mt-16">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <div class="re-grid-2">
         <div>
           <label class="mb-8" style="display:block;">First Name</label>

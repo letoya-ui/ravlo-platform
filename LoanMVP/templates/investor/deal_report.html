@@ -13,8 +13,8 @@ Investment summary, strategy, rehab scope, and funding readiness.
     Request Funding
   </a>
 
-  <a href="{{ url_for('investor.deal_studio') }}" class="ravlo-btn ghost sm">
-    Back to Deal Studio
+  <a href="{{ url_for('investor.project_studio', address=deal.address) }}" class="ravlo-btn ghost sm">
+    Back to Project Studio
   </a>
 {% endblock %}
 

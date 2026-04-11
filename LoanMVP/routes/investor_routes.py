@@ -3,9 +3,16 @@ import io
 import json
 import uuid
 import base64
+import hashlib
 import requests
 import zipfile
 import copy
+
+
+import mimetypes
+
+import boto3
+
 from datetime import datetime
 from io import BytesIO
 from openai import OpenAI
@@ -16,7 +23,7 @@ from werkzeug.datastructures import ImmutableMultiDict
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy import or_
 from sqlalchemy.orm.attributes import flag_modified
-from urllib.parse import urlencode
+from urllib.parse import urlencode, urlparse
 from collections import defaultdict
 from flask import (
     Blueprint,
@@ -115,7 +122,8 @@ from LoanMVP.services.renovation_engine_client import generate_concept, call_ren
 # 🔥 Property intelligence (IMPORTANT)
 from LoanMVP.services.property_service import resolve_property_unified, build_property_card_data, build_property_card
 from LoanMVP.services.deal_copilot_service import build_deal_copilot_context, generate_deal_copilot_response
-
+from LoanMVP.services.dealfinder_service import build_dealfinder_profile, extract_attom_fields, _extract_rentcast_fields, get_rentcast_data
+from LoanMVP.services.mashvisor_client import MashvisorClient
 from LoanMVP.utils.r2_storage import spaces_put_bytes
 
 
@@ -127,6 +135,134 @@ investor_bp = Blueprint("investor", __name__, url_prefix="/investor")
 deal_architect_api_bp = Blueprint("deal_architect_api", __name__, url_prefix="/")
 
 client = OpenAI()
+
+
+# -------------------------------------------------------------------
+# DEAL ARCHITECT HELPERS
+# -------------------------------------------------------------------
+
+def _engine_base_url() -> str:
+    return (current_app.config.get("RENOVATION_ENGINE_URL") or "").rstrip("/")
+
+
+def _engine_headers() -> dict:
+    headers = {"Content-Type": "application/json"}
+    api_key = current_app.config.get("RENOVATION_API_KEY")
+    if api_key:
+        headers["X-API-Key"] = api_key
+    return headers
+
+def _safe_engine_num(value):
+    if value in (None, "", "—"):
+        return None
+    try:
+        return float(str(value).replace("$", "").replace(",", "").strip())
+    except Exception:
+        return None
+
+
+def _build_deal_architect_payload(result: dict, strategy: str = "flip") -> dict:
+    address = (result.get("address") or result.get("address_line1") or "").strip()
+    city = (result.get("city") or "").strip()
+    state = (result.get("state") or "").strip()
+    zip_code = (result.get("zip_code") or "").strip()
+
+    beds = _safe_engine_num(result.get("beds"))
+    baths = _safe_engine_num(result.get("baths"))
+    sqft = _safe_engine_num(result.get("square_feet") or result.get("sqft"))
+    lot_sqft = _safe_engine_num(result.get("lot_size_sqft"))
+    assessed_value = _safe_engine_num(result.get("assessed_value"))
+    tax_amount = _safe_engine_num(result.get("tax_amount"))
+    market_value = _safe_engine_num(result.get("market_value") or result.get("display_value"))
+    sale_price = _safe_engine_num(result.get("last_sale_price") or result.get("price"))
+    monthly_rent = _safe_engine_num(result.get("traditional_rent"))
+    property_type = (result.get("property_type") or "single family").strip()
+
+    strategy_label = {
+        "flip": "fix and flip candidate",
+        "rental": "rental hold candidate",
+        "all": "investment property candidate",
+    }.get((strategy or "flip").lower(), "investment property candidate")
+
+    description_parts = [
+        f"{address}, {city}, {state} {zip_code}".strip(", ").strip(),
+        f"{int(beds)} bed" if beds is not None else None,
+        f"{baths} bath" if baths is not None else None,
+        f"{int(sqft):,} sqft" if sqft else None,
+        strategy_label,
+    ]
+
+    return {
+        "project_name": address or "Deal Finder Property",
+        "description": " • ".join([p for p in description_parts if p]),
+        "property_type": property_type,
+        "lot_size": f"{int(lot_sqft):,} sq ft lot" if lot_sqft else "",
+        "zoning": result.get("zoning") or "",
+        "asking_price": sale_price,
+        "square_feet_target": sqft,
+        "city": city,
+        "state": state,
+        "zip_code": zip_code,
+        "arv": market_value,
+        "monthly_rent": monthly_rent,
+        "local_facts": {
+            "bedrooms": beds,
+            "bathrooms": baths,
+            "year_built": _safe_engine_num(result.get("year_built")),
+            "lot_sqft": lot_sqft,
+            "assessed_value": assessed_value,
+            "annual_tax_amount": tax_amount,
+            "latitude": result.get("latitude"),
+            "longitude": result.get("longitude"),
+            "source": "deal_finder",
+        },
+    }
+
+
+def _call_deal_architect(payload: dict) -> dict:
+    engine_url = (current_app.config.get("RENOVATION_ENGINE_URL") or "").rstrip("/")
+    if not engine_url:
+        raise RuntimeError(
+            "RENOVATION_ENGINE_URL is missing. Add it to your Flask app config or Render environment variables."
+        )
+
+    headers = {"Content-Type": "application/json"}
+    api_key = (current_app.config.get("RENOVATION_ENGINE_API_KEY") or "").strip()
+    if api_key:
+        headers["X-API-Key"] = api_key
+
+    resp = requests.post(
+        f"{engine_url}/v1/deal_architect",
+        json=payload,
+        headers=headers,
+        timeout=20,
+    )
+    resp.raise_for_status()
+    return resp.json()
+
+def _attach_deal_architect_signals(result: dict, engine_data: dict) -> dict:
+    enriched = dict(result)
+    meta = engine_data.get("meta") or {}
+
+    enriched.update({
+        "deal_score": engine_data.get("deal_score"),
+        "opportunity_tier": engine_data.get("opportunity_tier"),
+        "deal_finder_signal": meta.get("deal_finder_signal"),
+        "primary_strengths": meta.get("primary_strengths") or [],
+        "primary_risks": meta.get("primary_risks") or [],
+        "dscr_estimate": meta.get("dscr_estimate"),
+        "rent_yield": meta.get("rent_yield"),
+        "monthly_rent_estimate": meta.get("monthly_rent_estimate"),
+        "next_step": engine_data.get("next_step"),
+        "engine_value": engine_data.get("estimated_value"),
+        "valuation_source_label": meta.get("valuation_source_label"),
+        "comp_confidence": meta.get("comp_confidence"),
+        "engine_summary": engine_data.get("summary"),
+        "engine_meta": meta,
+    })
+    return enriched
+
+
 
 # =========================================================
 # 🔢 SAFE NUMERIC HELPERS
@@ -165,6 +301,1066 @@ def safe_int(value, default=0, min_v=None, max_v=None):
         return default
 
 
+
+# ----------------------------
+# internal helpers
+# ----------------------------
+
+def _safe_float(v):
+    try:
+        if v in (None, "", "None"):
+            return None
+        if isinstance(v, (int, float)):
+            return float(v)
+        return float(str(v).replace("$", "").replace(",", "").strip())
+    except Exception:
+        return None
+
+
+def _safe_int(v):
+    try:
+        n = _safe_float(v)
+        return int(round(n)) if n is not None else None
+    except Exception:
+        return None
+
+
+def _first_nonempty(*vals):
+    for v in vals:
+        if v not in (None, "", [], {}):
+            return v
+    return None
+
+
+def _resolve_photo(raw):
+    """
+    Best-effort photo resolution from search payload.
+    If the upstream search response has no usable photo,
+    frontend will still fall back to placeholder_property.jpg.
+    """
+    photos = raw.get("photos") or []
+    if isinstance(photos, list):
+        for p in photos:
+            if isinstance(p, str) and p.strip():
+                return p
+            if isinstance(p, dict):
+                candidate = (
+                    p.get("url")
+                    or p.get("href")
+                    or p.get("src")
+                    or p.get("photo")
+                    or p.get("thumbnail")
+                )
+                if candidate:
+                    return candidate
+
+    return _first_nonempty(
+        raw.get("primary_photo"),
+        raw.get("photo"),
+        raw.get("thumbnail"),
+        raw.get("image_url"),
+        raw.get("image"),
+    )
+
+
+def _build_property_tool_result(raw_match, profile_bundle):
+    """
+    Convert normalized + scored dealfinder output into the shape
+    expected by property_tool.html.
+    """
+    profile = profile_bundle.get("profile") or {}
+    scoring = profile_bundle.get("scoring") or {}
+    raw_sources = profile.get("raw_sources") or {}
+    realtor_source = raw_sources.get("realtor") or {}
+    photos = profile.get("photos") or raw_match.get("photos") or []
+
+    listing_price = _safe_float(
+        _first_nonempty(
+            profile.get("listing_price"),
+            realtor_source.get("price"),
+            profile.get("price") if (
+                profile.get("status")
+                or profile.get("days_on_market")
+                or profile.get("description")
+            ) else None,
+            raw_match.get("price"),
+            raw_match.get("list_price"),
+            raw_match.get("listPrice"),
+            raw_match.get("listedPrice"),
+        )
+    )
+
+    market_value = _safe_float(profile.get("market_value"))
+    assessed_value = _safe_float(profile.get("assessed_value"))
+    last_sale_price = _safe_float(profile.get("last_sale_price"))
+    price = listing_price
+
+    display_value = _first_nonempty(
+        listing_price,
+        market_value,
+        assessed_value,
+        last_sale_price,
+    )
+
+    if listing_price is not None:
+        display_value_label = "List Price"
+        display_value_secondary = market_value or assessed_value or last_sale_price
+        display_value_secondary_label = (
+            "Estimated Market Value" if market_value is not None else
+            "Assessed Value" if assessed_value is not None else
+            "Last Sale Price" if last_sale_price is not None else
+            None
+        )
+    elif market_value is not None:
+        display_value_label = "Market Value"
+        display_value_secondary = assessed_value or last_sale_price
+        display_value_secondary_label = (
+            "Assessed Value" if assessed_value is not None else
+            "Last Sale Price" if last_sale_price is not None else
+            None
+        )
+    elif _safe_float(profile.get("price")) is not None:
+        display_value_label = "Best Available Value"
+        display_value_secondary = assessed_value or last_sale_price
+        display_value_secondary_label = (
+            "Assessed Value" if assessed_value is not None else
+            "Last Sale Price" if last_sale_price is not None else
+            None
+        )
+    elif assessed_value is not None:
+        display_value_label = "Assessed Value"
+        display_value_secondary = last_sale_price
+        display_value_secondary_label = (
+            "Last Sale Price" if last_sale_price is not None else None
+        )
+    else:
+        display_value_label = "Last Recorded Sale"
+        display_value_secondary = profile.get("last_sale_date")
+        display_value_secondary_label = (
+            "Last Sale Date" if profile.get("last_sale_date") else None
+        )
+
+    overall_score = scoring.get("overall_score")
+    recommended_strategy = scoring.get("recommended_strategy")
+    score_reasons = scoring.get("score_reasons") or []
+
+    # normalized fields for current frontend
+    return {
+        "address": _first_nonempty(
+            profile.get("address_line1"),
+            profile.get("address"),
+            raw_match.get("address"),
+            raw_match.get("address_line1"),
+        ),
+        "address_line1": _first_nonempty(
+            profile.get("address_line1"),
+            raw_match.get("address_line1"),
+            raw_match.get("address"),
+        ),
+        "city": _first_nonempty(profile.get("city"), raw_match.get("city")),
+        "state": _first_nonempty(profile.get("state"), raw_match.get("state")),
+        "zip_code": _first_nonempty(profile.get("zip_code"), raw_match.get("zip_code")),
+        "attom_id": _first_nonempty(profile.get("attom_id"), raw_match.get("attom_id")),
+
+        "property_type": _first_nonempty(
+            profile.get("property_type"),
+            raw_match.get("property_type"),
+        ),
+        "property_sub_type": profile.get("property_sub_type"),
+
+        "beds": _safe_int(profile.get("beds")),
+        "baths": _safe_float(profile.get("baths")),
+        "square_feet": _safe_int(profile.get("sqft")),
+        "sqft": _safe_int(profile.get("sqft")),
+        "lot_size_sqft": _safe_int(
+            _first_nonempty(profile.get("lot_sqft"), raw_match.get("lot_size_sqft"))
+        ),
+        "year_built": _safe_int(profile.get("year_built")),
+
+        "display_value": display_value,
+        "display_value_label": display_value_label,
+        "display_value_secondary": display_value_secondary,
+        "display_value_secondary_label": display_value_secondary_label,
+
+        "price": price,
+        "listing_price": listing_price,
+        "market_value": market_value,
+        "assessed_value": assessed_value,
+        "last_sale_price": last_sale_price,
+        "data_status": "enriched",
+        "last_sale_date": profile.get("last_sale_date"),
+        "tax_amount": _safe_float(profile.get("tax_amount")),
+        "status": _first_nonempty(profile.get("status"), raw_match.get("status")),
+        "days_on_market": _safe_int(
+            _first_nonempty(profile.get("days_on_market"), raw_match.get("days_on_market"), raw_match.get("daysOnMarket"))
+        ),
+        "description": _first_nonempty(profile.get("description"), raw_match.get("description")),
+
+        "traditional_rent": _safe_float(profile.get("traditional_rent")),
+        "airbnb_rent": _safe_float(profile.get("airbnb_rent")),
+        "traditional_cap_rate": _safe_float(profile.get("traditional_cap_rate")),
+        "traditional_coc": _safe_float(profile.get("traditional_coc")),
+        "airbnb_cap_rate": _safe_float(profile.get("airbnb_cap_rate")),
+        "airbnb_coc": _safe_float(profile.get("airbnb_coc")),
+        "occupancy_rate": _safe_float(profile.get("occupancy_rate")),
+
+        "distressed": bool(profile.get("distressed")),
+        "foreclosure_status": profile.get("foreclosure_status"),
+        "owner_occupied": profile.get("owner_occupied"),
+
+        "ravlo_score": overall_score,
+        "recommended_strategy": recommended_strategy or "Hold / Review",
+        "score_reasons": score_reasons,
+
+        "primary_photo": _first_nonempty(profile.get("primary_photo"), _resolve_photo(raw_match)),
+        "photo": _first_nonempty(profile.get("primary_photo"), _resolve_photo(raw_match)),
+        "thumbnail": _first_nonempty(profile.get("primary_photo"), _resolve_photo(raw_match)),
+        "photos": photos,
+
+        "latitude": _safe_float(raw_match.get("latitude")),
+        "longitude": _safe_float(raw_match.get("longitude")),
+
+        "source_status": profile_bundle.get("source_status") or {},
+        "provider_errors": profile_bundle.get("errors") or [],
+    }
+
+def _build_attom_fallback(raw):
+    try:
+        detail = get_property_detail(
+            address=raw.get("address_line1") or raw.get("address"),
+            city=raw.get("city"),
+            state=raw.get("state"),
+            postalcode=raw.get("zip_code"),
+        )
+
+        detail = extract_attom_fields(detail)
+
+    except Exception:
+        detail = {}
+
+    market = detail.get("market_value") or raw.get("market_value")
+    assessed = detail.get("assessed_value") or raw.get("assessed_value")
+    sale = detail.get("last_sale_price") or raw.get("last_sale_price")
+    listing_price = (
+        raw.get("price")
+        or raw.get("list_price")
+        or raw.get("listPrice")
+        or raw.get("listedPrice")
+    )
+
+    display_value = listing_price or market or assessed or sale
+
+    return {
+        "address": raw.get("address") or raw.get("address_line1"),
+        "address_line1": raw.get("address_line1") or raw.get("address"),
+        "city": raw.get("city"),
+        "state": raw.get("state"),
+        "zip_code": raw.get("zip_code"),
+        "property_type": raw.get("property_type") or raw.get("propertyType"),
+
+        "beds": detail.get("bedrooms") or raw.get("beds") or raw.get("bedrooms"),
+        "baths": detail.get("bathrooms") or raw.get("baths") or raw.get("bathrooms"),
+        "square_feet": detail.get("sqft") or raw.get("square_feet") or raw.get("sqft"),
+        "sqft": detail.get("sqft") or raw.get("square_feet") or raw.get("sqft"),
+        "lot_size_sqft": raw.get("lot_size_sqft") or raw.get("lotSizeSqft"),
+        "year_built": detail.get("year_built") or raw.get("year_built") or raw.get("yearBuilt"),
+
+        "price": listing_price,
+        "listing_price": listing_price,
+        "market_value": market,
+        "assessed_value": assessed,
+        "last_sale_price": sale,
+        "status": raw.get("status"),
+        "days_on_market": raw.get("days_on_market") or raw.get("daysOnMarket"),
+        "description": raw.get("description"),
+
+        "display_value": display_value,
+        "display_value_label": (
+            "List Price" if listing_price else
+            "Market Value" if market else
+            "Assessed Value" if assessed else
+            "Last Sale"
+        ),
+
+        "primary_photo": _resolve_photo(raw),
+        "photo": _resolve_photo(raw),
+        "thumbnail": _resolve_photo(raw),
+        "photos": raw.get("photos") or [],
+
+        "ravlo_score": None,
+        "recommended_strategy": "Review",
+        "data_status": "attom_only"
+    }
+
+
+def _deal_finder_tag(result: dict, selected_strategy: str = "all") -> str:
+    property_type = str(result.get("property_type") or "").lower()
+    lot_size = _safe_float(result.get("lot_size_sqft")) or 0
+    sqft = _safe_float(result.get("square_feet") or result.get("sqft")) or 0
+    year_built = _safe_int(result.get("year_built")) or 0
+    distressed = bool(result.get("distressed"))
+    dom = _safe_int(result.get("days_on_market")) or 0
+    score = _safe_float(result.get("deal_score") or result.get("ravlo_score")) or 0
+    strengths_text = " ".join(result.get("primary_strengths") or []).lower()
+    strategy_text = str(result.get("recommended_strategy") or "").lower()
+
+    if any(term in property_type for term in ["vacant", "land", "lot"]):
+        return "Vacant Land"
+
+    if any(term in strengths_text for term in ["teardown", "redevelop", "development", "infill"]):
+        return "Teardown / Rebuild"
+
+    if lot_size >= 10000 and property_type in {"single_family", "single family", "single_family_residence", "sfr"}:
+        if year_built and year_built <= 1965 and sqft and sqft <= 1500:
+            return "Teardown / Rebuild"
+        return "New Construction Opportunity"
+
+    if distressed or any(term in strategy_text for term in ["rehab", "flip"]):
+        if dom >= 45 or score < 55:
+            return "Heavy Rehab"
+        return "Standard Rehab"
+
+    if selected_strategy == "rental":
+        return "Standard Rehab"
+
+    return "Standard Rehab"
+
+
+def _deal_finder_best_use(result: dict, strategy_tag: str) -> str:
+    market_value = _safe_float(result.get("market_value") or result.get("engine_value"))
+    price = _safe_float(result.get("price") or result.get("listing_price"))
+    rent = _safe_float(result.get("monthly_rent_estimate") or result.get("traditional_rent"))
+    lot_size = _safe_float(result.get("lot_size_sqft")) or 0
+
+    if strategy_tag == "Vacant Land":
+        return "Treat this as a buildable land play instead of a rehab candidate."
+    if strategy_tag == "Teardown / Rebuild":
+        return "Highest and best use likely comes from the site more than the current structure."
+    if strategy_tag == "New Construction Opportunity":
+        return "Use the lot and layout potential to evaluate a ground-up or expansion path."
+    if market_value and price and market_value > price:
+        return "Acquire below current value signals, then improve and exit or refinance."
+    if rent:
+        return f"Review for hold economics with rent potential around ${rent:,.0f}/mo."
+    if lot_size >= 10000:
+        return "The oversized lot creates optionality beyond a simple cosmetic upgrade."
+    return "Best use appears to be a focused value-add improvement plan."
+
+
+def _deal_finder_upside(result: dict, strategy_tag: str) -> str:
+    price = _safe_float(result.get("price") or result.get("listing_price"))
+    market_value = _safe_float(result.get("market_value") or result.get("engine_value"))
+    assessed = _safe_float(result.get("assessed_value"))
+    rent = _safe_float(result.get("monthly_rent_estimate") or result.get("traditional_rent"))
+    lot_size = _safe_float(result.get("lot_size_sqft")) or 0
+
+    if price and market_value and market_value > price:
+        return f"${market_value - price:,.0f} spread to current value estimate."
+    if price and assessed and assessed > price:
+        return f"${assessed - price:,.0f} spread to assessed value."
+    if rent:
+        return f"${rent:,.0f}/mo rental signal."
+    if strategy_tag in {"Teardown / Rebuild", "New Construction Opportunity"} and lot_size:
+        return f"{lot_size:,.0f} sq ft lot with redevelopment optionality."
+    return "Upside depends on deeper scope and comp validation."
+
+
+def _annotate_deal_finder_opportunity(result: dict, selected_strategy: str = "all") -> dict:
+    strategy_tag = _deal_finder_tag(result, selected_strategy=selected_strategy)
+    strengths = [str(x).strip() for x in (result.get("primary_strengths") or []) if str(x).strip()]
+    risks = [str(x).strip() for x in (result.get("primary_risks") or []) if str(x).strip()]
+    score_reasons = [str(x).strip() for x in (result.get("score_reasons") or []) if str(x).strip()]
+
+    why_it_made_list = strengths[:2] or score_reasons[:2]
+    if not why_it_made_list:
+        fallback = []
+        if _safe_float(result.get("price")):
+            fallback.append("Live pricing is available for a fast first-pass review.")
+        if _safe_float(result.get("market_value") or result.get("engine_value")):
+            fallback.append("Value signals are present, so spread can be checked immediately.")
+        if _safe_int(result.get("days_on_market")):
+            fallback.append(f"{result.get('days_on_market')} days on market may create negotiating leverage.")
+        why_it_made_list = fallback[:2] or ["Ravlo surfaced enough pricing and property data to evaluate this one quickly."]
+
+    risk_notes = risks[:2]
+    if not risk_notes:
+        dom = _safe_int(result.get("days_on_market")) or 0
+        if dom >= 60:
+            risk_notes.append("Long time on market suggests demand friction or pricing issues.")
+        elif result.get("engine_error"):
+            risk_notes.append("AI scoring was only partially available, so validate the assumptions.")
+        else:
+            risk_notes.append("Validate scope, comps, and zoning before moving into execution.")
+
+    result["strategy_tag"] = strategy_tag
+    result["estimated_best_use"] = _deal_finder_best_use(result, strategy_tag)
+    result["best_use"] = result["estimated_best_use"]
+    result["why_it_made_list"] = why_it_made_list
+    result["risk_notes"] = risk_notes
+    result["rough_upside"] = _deal_finder_upside(result, strategy_tag)
+    result["opportunity_summary"] = why_it_made_list[0]
+    return result
+
+
+def _project_studio_market_label(engine_data: dict, valuation: dict) -> str:
+    market_value = _safe_float((valuation or {}).get("market_value"))
+    engine_value = _safe_float((engine_data or {}).get("estimated_value"))
+    if engine_value and market_value:
+        return f"${engine_value:,.0f} engine value vs ${market_value:,.0f} market value."
+    if engine_value:
+        return f"${engine_value:,.0f} engine value signal."
+    if market_value:
+        return f"${market_value:,.0f} market value signal."
+    return "Live market value is still forming."
+
+
+def _project_studio_flags(snapshot: dict) -> list[dict]:
+    lot_size = _safe_float(snapshot.get("lot_size_sqft")) or 0
+    sqft = _safe_float(snapshot.get("square_feet") or snapshot.get("sqft")) or 0
+    year_built = _safe_int(snapshot.get("year_built")) or 0
+    property_type = str(snapshot.get("property_type") or "").lower()
+    dom = _safe_int(snapshot.get("days_on_market")) or 0
+    price = _safe_float(snapshot.get("price") or snapshot.get("listing_price"))
+    market_value = _safe_float(snapshot.get("market_value") or snapshot.get("engine_value"))
+
+    flags = []
+    if lot_size >= 10000:
+        flags.append({"label": "Oversized Lot", "tone": "good", "detail": f"{lot_size:,.0f} sq ft creates extra optionality."})
+    if lot_size >= 14000 or any(term in property_type for term in ["land", "lot", "vacant"]):
+        flags.append({"label": "Development Potential", "tone": "good", "detail": "Lot size and property profile suggest a bigger site play."})
+    if year_built and year_built <= 1965 and sqft and sqft <= 1500:
+        flags.append({"label": "Teardown Potential", "tone": "watch", "detail": "Older, smaller structure may be less valuable than the site."})
+    if dom >= 45:
+        flags.append({"label": "Negotiation Window", "tone": "watch", "detail": f"{dom} days on market may create pricing flexibility."})
+    if price and market_value and market_value > price:
+        flags.append({"label": "Spread Detected", "tone": "good", "detail": f"${market_value - price:,.0f} gap between current price and value signals."})
+
+    return flags[:4]
+
+
+def _project_studio_strategy_cards(snapshot: dict, engine_data: dict | None) -> list[dict]:
+    engine_data = engine_data or {}
+    meta = engine_data.get("meta") or {}
+
+    price = _safe_float(snapshot.get("price") or snapshot.get("listing_price") or snapshot.get("last_sale_price")) or 0
+    market_value = _safe_float(snapshot.get("market_value") or engine_data.get("estimated_value") or snapshot.get("assessed_value")) or 0
+    rent = _safe_float(snapshot.get("traditional_rent") or meta.get("monthly_rent_estimate")) or 0
+    sqft = _safe_float(snapshot.get("square_feet") or snapshot.get("sqft")) or 0
+    lot_size = _safe_float(snapshot.get("lot_size_sqft")) or 0
+    dom = _safe_int(snapshot.get("days_on_market")) or 0
+    comp_conf = str(meta.get("comp_confidence") or snapshot.get("comp_confidence") or "Moderate")
+    primary_strengths = [str(x).strip() for x in (meta.get("primary_strengths") or snapshot.get("primary_strengths") or []) if str(x).strip()]
+    primary_risks = [str(x).strip() for x in (meta.get("primary_risks") or snapshot.get("primary_risks") or []) if str(x).strip()]
+    market_label = _project_studio_market_label(engine_data, snapshot)
+
+    rehab_budget_low = max(25000, round(sqft * 28)) if sqft else 45000
+    rehab_budget_high = max(rehab_budget_low + 25000, round(sqft * 62)) if sqft else 95000
+    rehab_arv = max(market_value, price * 1.18) if price else market_value
+    rehab_profit = rehab_arv - price - ((rehab_budget_low + rehab_budget_high) / 2) if price and rehab_arv else None
+    rehab_confidence = "High" if market_value and dom <= 45 else "Moderate"
+
+    build_budget_low = max(140000, round((sqft or 900) * 155))
+    build_budget_high = max(build_budget_low + 60000, round((sqft or 1100) * 215))
+    build_arv = max(rehab_arv * 1.08 if rehab_arv else 0, market_value * 1.12 if market_value else 0)
+    build_outcome = build_arv - price - ((build_budget_low + build_budget_high) / 2) if price and build_arv else None
+    build_confidence = "Moderate" if lot_size >= 7000 else "Watch"
+
+    project_units = 4 if lot_size >= 18000 else 3 if lot_size >= 14000 else 2
+    project_budget_low = max(260000, project_units * 180000)
+    project_budget_high = max(project_budget_low + 140000, project_units * 255000)
+    project_arv = max(build_arv * 1.35 if build_arv else 0, (market_value or rehab_arv or price) * 1.45 if (market_value or rehab_arv or price) else 0)
+    project_outcome = project_arv - price - ((project_budget_low + project_budget_high) / 2) if price and project_arv else None
+    project_confidence = "Moderate" if lot_size >= 12000 else "Low"
+
+    cards = [
+        {
+            "key": "rehab",
+            "title": "Rehab",
+            "badge": None,
+            "arv": rehab_arv,
+            "budget_low": rehab_budget_low,
+            "budget_high": rehab_budget_high,
+            "outcome": rehab_profit,
+            "outcome_label": "Projected Spread",
+            "timeline": "4-8 months",
+            "confidence": rehab_confidence,
+            "why": primary_strengths[0] if primary_strengths else "Use the existing structure and value gap for a focused improvement plan.",
+            "tone": "good" if rehab_profit and rehab_profit > 0 else "watch",
+        },
+        {
+            "key": "build_studio",
+            "title": "Build Studio",
+            "badge": None,
+            "arv": build_arv,
+            "budget_low": build_budget_low,
+            "budget_high": build_budget_high,
+            "outcome": build_outcome,
+            "outcome_label": "Projected Outcome",
+            "timeline": "8-14 months",
+            "confidence": build_confidence,
+            "why": "Test a bigger redesign, addition, or structure-first build path before committing to scope.",
+            "tone": "good" if lot_size >= 8000 else "watch",
+        },
+    ]
+
+    if lot_size >= 12000 or any(term in str(snapshot.get("property_type") or "").lower() for term in ["land", "lot", "vacant"]):
+        cards.append({
+            "key": "project_build",
+            "title": "Project Build",
+            "badge": None,
+            "arv": project_arv,
+            "budget_low": project_budget_low,
+            "budget_high": project_budget_high,
+            "outcome": project_outcome,
+            "outcome_label": "Projected Outcome",
+            "timeline": "12-20 months",
+            "confidence": project_confidence,
+            "why": f"Lot size supports a higher-and-better-use path, potentially around {project_units} units.",
+            "tone": "good" if lot_size >= 14000 else "watch",
+        })
+
+    cards = [c for c in cards if c.get("arv") or c.get("budget_low")]
+    cards.sort(key=lambda c: (_safe_float(c.get("outcome")) is not None, _safe_float(c.get("outcome")) or 0), reverse=True)
+
+    if cards:
+        cards[0]["badge"] = "Recommended Strategy"
+
+    highest_profit = max(cards, key=lambda c: _safe_float(c.get("outcome")) or float("-inf")) if cards else None
+    if highest_profit and highest_profit.get("badge") != "Recommended Strategy":
+        highest_profit["badge"] = "Highest Profit"
+
+    lowest_risk = max(cards, key=lambda c: {"High": 3, "Moderate": 2, "Watch": 1, "Low": 0}.get(c.get("confidence"), 0)) if cards else None
+    if lowest_risk and not lowest_risk.get("badge"):
+        lowest_risk["badge"] = "Lowest Risk"
+
+    for card in cards:
+        card["market_note"] = market_label
+        if primary_risks:
+            card["risk_note"] = primary_risks[0]
+        elif dom >= 60:
+            card["risk_note"] = "Long market time suggests demand or pricing friction."
+        else:
+            card["risk_note"] = "Validate zoning, scope, and exit assumptions before execution."
+
+    recommended_type = str(engine_data.get("recommended_type") or "").strip().lower()
+    for card in cards:
+        if recommended_type and recommended_type in card["title"].lower():
+            card["badge"] = "Recommended Strategy"
+
+    return cards
+
+
+def _project_studio_lookup(address: str, city: str = "", state: str = "", zip_code: str = "") -> dict:
+    address = (address or "").strip()
+    city = (city or "").strip()
+    state = (state or "").strip()
+    zip_code = (zip_code or "").strip()
+    lookup_parts = [address, city, state, zip_code]
+    lookup_address = ", ".join([part for part in lookup_parts if part]).strip(", ")
+    resolved = resolve_property_unified(address=lookup_address or address)
+
+    if resolved.get("status") != "ok":
+        raise ValueError(resolved.get("error") or "Property lookup failed.")
+
+    property_data = resolved.get("property") or {}
+    valuation = resolved.get("valuation") or {}
+    rent_estimate = resolved.get("rent_estimate") or {}
+    photos = property_data.get("photos") or []
+    primary_photo = property_data.get("primary_photo") or (photos[0] if photos else None)
+
+    snapshot = {
+        "address": property_data.get("address") or address,
+        "city": property_data.get("city") or city,
+        "state": property_data.get("state") or state,
+        "zip_code": property_data.get("zip_code") or zip_code,
+        "property_id": property_data.get("property_id") or property_data.get("attom_id"),
+        "property_type": property_data.get("property_type"),
+        "beds": property_data.get("beds"),
+        "baths": property_data.get("baths"),
+        "square_feet": property_data.get("square_feet") or property_data.get("sqft"),
+        "sqft": property_data.get("square_feet") or property_data.get("sqft"),
+        "lot_size_sqft": property_data.get("lot_size_sqft") or property_data.get("lot_sqft"),
+        "year_built": property_data.get("year_built"),
+        "price": property_data.get("price") or valuation.get("market_value") or valuation.get("estimated_value"),
+        "listing_price": property_data.get("price"),
+        "market_value": valuation.get("market_value") or valuation.get("estimated_value"),
+        "assessed_value": valuation.get("assessed_value"),
+        "last_sale_price": valuation.get("last_sale_price"),
+        "tax_amount": valuation.get("tax_amount"),
+        "traditional_rent": rent_estimate.get("traditional_rent") or rent_estimate.get("estimated_rent"),
+        "days_on_market": property_data.get("days_on_market"),
+        "status": property_data.get("status"),
+        "description": property_data.get("description"),
+        "latitude": property_data.get("latitude"),
+        "longitude": property_data.get("longitude"),
+        "primary_photo": primary_photo,
+        "photos": photos,
+    }
+
+    engine_data = None
+    engine_error = None
+    try:
+        engine_data = _call_deal_architect(_build_deal_architect_payload(snapshot, strategy="all"))
+        snapshot = _attach_deal_architect_signals(snapshot, engine_data)
+    except Exception as exc:
+        current_app.logger.warning("project_studio engine enrichment failed for %s: %s", snapshot.get("address"), exc)
+        engine_error = str(exc)
+
+    return {
+        "snapshot": snapshot,
+        "flags": _project_studio_flags(snapshot),
+        "strategy_cards": _project_studio_strategy_cards(snapshot, engine_data),
+        "ai_summary": resolved.get("ai_summary") or (engine_data or {}).get("summary"),
+        "market_snapshot": resolved.get("market_snapshot") or {},
+        "comps": resolved.get("comps") or {},
+        "engine_error": engine_error,
+    }
+
+
+def _project_studio_scope_options(selected_strategy: str) -> list[dict]:
+    key = (selected_strategy or "").strip().lower()
+    if key == "rehab":
+        return [
+            {"value": "light", "label": "Light / Cosmetic", "detail": "Paint, flooring, fixtures, kitchen and bath refresh."},
+            {"value": "medium", "label": "Medium", "detail": "Bigger interior upgrades with selective systems work."},
+            {"value": "heavy", "label": "Heavy / Full Gut", "detail": "Major layout, systems, and structural-level renovation."},
+        ]
+    if key == "build_studio":
+        return [
+            {"value": "keep_structure", "label": "Keep Existing Structure", "detail": "Reuse the shell and plan around additions or redesign."},
+            {"value": "demo_first", "label": "Demo Existing Structure First", "detail": "Clear the site before moving into a build path."},
+            {"value": "ai_recommend", "label": "Let AI Recommend", "detail": "Have Ravlo choose between keep-vs-demo based on the site."},
+        ]
+    if key == "project_build":
+        return [
+            {"value": "2_units", "label": "2 Units", "detail": "Smaller multi-unit or dual-build concept."},
+            {"value": "3_units", "label": "3 Units", "detail": "Mid-density concept for stronger site leverage."},
+            {"value": "4_units", "label": "4+ Units", "detail": "Highest-intensity early planning path."},
+        ]
+    return []
+
+
+def _project_studio_scope_budget(selected_card: dict | None, selected_strategy: str, selected_scope: str) -> dict | None:
+    if not selected_card:
+        return None
+
+    low = _safe_float(selected_card.get("budget_low")) or 0
+    high = _safe_float(selected_card.get("budget_high")) or 0
+    outcome = _safe_float(selected_card.get("outcome"))
+    timeline = str(selected_card.get("timeline") or "")
+
+    multipliers = {
+        "rehab": {
+            "light": (0.85, 0.9, "4-6 months"),
+            "medium": (1.0, 1.0, "5-8 months"),
+            "heavy": (1.2, 1.3, "7-10 months"),
+        },
+        "build_studio": {
+            "keep_structure": (0.9, 0.92, "8-12 months"),
+            "demo_first": (1.08, 1.15, "10-15 months"),
+            "ai_recommend": (1.0, 1.04, timeline or "8-14 months"),
+        },
+        "project_build": {
+            "2_units": (0.92, 0.95, "12-16 months"),
+            "3_units": (1.0, 1.0, "14-18 months"),
+            "4_units": (1.12, 1.18, "16-22 months"),
+        },
+    }
+
+    strategy_mults = multipliers.get((selected_strategy or "").lower(), {})
+    low_mult, high_mult, timeline_out = strategy_mults.get(selected_scope, (1.0, 1.0, timeline or "Planning"))
+
+    scoped_low = round(low * low_mult)
+    scoped_high = round(high * high_mult)
+    midpoint = (scoped_low + scoped_high) / 2 if scoped_low and scoped_high else None
+    refined_outcome = round((outcome or 0) - ((midpoint - ((low + high) / 2)) if midpoint else 0)) if outcome is not None else None
+
+    return {
+        "budget_low": scoped_low,
+        "budget_high": scoped_high,
+        "timeline": timeline_out,
+        "outcome": refined_outcome,
+        "outcome_label": selected_card.get("outcome_label") or "Projected Outcome",
+        "confidence": selected_card.get("confidence") or "Moderate",
+    }
+
+
+def _project_studio_upsert_deal(
+    investor_profile,
+    snapshot: dict,
+    selected_card: dict,
+    selected_strategy: str,
+    selected_scope: str,
+    scope_budget: dict,
+    *,
+    strategy_cards: list[dict] | None = None,
+    flags: list[dict] | None = None,
+    ai_summary: str | None = None,
+    market_snapshot: dict | None = None,
+    deal_id: int | None = None,
+):
+    address = (snapshot.get("address") or "").strip()
+    if not investor_profile or not address or not selected_card or not selected_scope or not scope_budget:
+        return None
+
+    property_id = snapshot.get("property_id")
+    zipcode = (snapshot.get("zip_code") or "").strip() or None
+    city = (snapshot.get("city") or "").strip() or None
+    state = (snapshot.get("state") or "").strip() or None
+    sqft = snapshot.get("sqft") or snapshot.get("square_feet")
+
+    try:
+        sqft = int(float(sqft)) if sqft not in (None, "", "None") else None
+    except Exception:
+        sqft = None
+
+    fk = _profile_id_filter(SavedProperty, investor_profile.id)
+    saved_property = None
+
+    if property_id:
+        saved_property = SavedProperty.query.filter_by(
+            **fk,
+            property_id=str(property_id),
+        ).first()
+
+    if not saved_property:
+        saved_property = SavedProperty.query.filter(
+            getattr(SavedProperty, "investor_profile_id", SavedProperty.borrower_profile_id) == investor_profile.id,
+            db.func.lower(SavedProperty.address) == address.lower(),
+        ).first()
+
+    if not saved_property:
+        saved_property = SavedProperty(
+            **fk,
+            property_id=str(property_id) if property_id else None,
+            address=address,
+            price=str(snapshot.get("listing_price") or snapshot.get("price") or ""),
+            sqft=sqft,
+            zipcode=zipcode,
+            saved_at=datetime.utcnow(),
+            created_at=datetime.utcnow(),
+        )
+        db.session.add(saved_property)
+        db.session.flush()
+    else:
+        saved_property.address = address
+        saved_property.property_id = str(property_id) if property_id else saved_property.property_id
+        saved_property.price = str(snapshot.get("listing_price") or snapshot.get("price") or saved_property.price or "")
+        saved_property.sqft = sqft or saved_property.sqft
+        saved_property.zipcode = zipcode or saved_property.zipcode
+        saved_property.saved_at = datetime.utcnow()
+
+    saved_property_payload = {
+        "property": {
+            **snapshot,
+            "city": city,
+            "state": state,
+            "zip_code": zipcode,
+        },
+        "market_snapshot": market_snapshot or {},
+        "ai_summary": ai_summary,
+        "project_studio": {
+            "selected_strategy": selected_strategy,
+            "selected_scope": selected_scope,
+            "scope_budget": scope_budget,
+        },
+    }
+    if hasattr(saved_property, "resolved_json"):
+        saved_property.resolved_json = json.dumps(saved_property_payload)
+        saved_property.resolved_at = datetime.utcnow()
+
+    deal = None
+    if deal_id:
+        deal = Deal.query.filter_by(id=deal_id, user_id=current_user.id).first()
+
+    if not deal:
+        deal = (
+            Deal.query
+            .filter_by(user_id=current_user.id, saved_property_id=saved_property.id)
+            .order_by(Deal.updated_at.desc(), Deal.id.desc())
+            .first()
+        )
+
+    if not deal:
+        deal = Deal.query.filter(
+            Deal.user_id == current_user.id,
+            db.func.lower(Deal.address) == address.lower(),
+        ).order_by(Deal.updated_at.desc(), Deal.id.desc()).first()
+
+    deal_score = snapshot.get("deal_score")
+    try:
+        deal_score = int(round(float(deal_score))) if deal_score not in (None, "", "None") else None
+    except (TypeError, ValueError):
+        deal_score = None
+
+    budget_low = scope_budget.get("budget_low")
+    budget_high = scope_budget.get("budget_high")
+    budget_midpoint = None
+    if budget_low not in (None, "", "None") and budget_high not in (None, "", "None"):
+        budget_midpoint = (float(budget_low) + float(budget_high)) / 2
+
+    results = _deal_results(deal) if deal else {}
+    results["project_studio"] = {
+        "selected_strategy": selected_strategy,
+        "selected_scope": selected_scope,
+        "scope_budget": copy.deepcopy(scope_budget or {}),
+        "selected_card": copy.deepcopy(selected_card or {}),
+        "strategy_cards": copy.deepcopy(strategy_cards or []),
+        "flags": copy.deepcopy(flags or []),
+        "snapshot": copy.deepcopy(snapshot or {}),
+        "ai_summary": ai_summary,
+        "saved_at": datetime.utcnow().isoformat(),
+    }
+    results["strategy_analysis"] = {
+        "strategy": selected_strategy,
+        "title": selected_card.get("title"),
+        "reason": selected_card.get("why"),
+        "risk_note": selected_card.get("risk_note"),
+        "confidence": selected_card.get("confidence"),
+        "timeline": scope_budget.get("timeline"),
+        "outcome": scope_budget.get("outcome"),
+        "outcome_label": scope_budget.get("outcome_label"),
+    }
+    results["workspace_analysis"] = {
+        "selected_strategy": selected_strategy,
+        "selected_scope": selected_scope,
+        "planning_budget": copy.deepcopy(scope_budget or {}),
+        "flags": copy.deepcopy(flags or []),
+        "ai_summary": ai_summary,
+    }
+    if selected_strategy == "rehab":
+        results["rehab_analysis"] = {
+            "estimated_rehab_cost": budget_midpoint,
+            "scope": {
+                "strategy": selected_strategy,
+                "selection": selected_scope,
+                "label": selected_card.get("title"),
+                "budget_low": budget_low,
+                "budget_high": budget_high,
+                "timeline": scope_budget.get("timeline"),
+            },
+        }
+    else:
+        results.pop("rehab_analysis", None)
+
+    if deal:
+        deal.investor_profile_id = investor_profile.id
+        deal.saved_property_id = saved_property.id
+        deal.property_id = str(property_id) if property_id else deal.property_id
+        deal.title = deal.title or address
+        deal.address = address
+        deal.city = city
+        deal.state = state
+        deal.zip_code = zipcode
+        deal.strategy = selected_strategy
+        deal.recommended_strategy = selected_card.get("title") or selected_strategy
+        deal.purchase_price = _safe_float(snapshot.get("listing_price") or snapshot.get("price")) or deal.purchase_price or 0
+        deal.arv = _safe_float(selected_card.get("arv")) or deal.arv or 0
+        deal.estimated_rent = _safe_float(snapshot.get("traditional_rent")) or deal.estimated_rent or 0
+        deal.rehab_cost = budget_midpoint or deal.rehab_cost or 0
+        deal.deal_score = deal_score if deal_score is not None else deal.deal_score
+        deal.resolved_json = {
+            "property": copy.deepcopy(snapshot or {}),
+            "market_snapshot": copy.deepcopy(market_snapshot or {}),
+        }
+        if selected_strategy == "rehab":
+            deal.rehab_scope_json = results["rehab_analysis"]["scope"]
+        else:
+            deal.rehab_scope_json = None
+        _set_deal_results(deal, results)
+    else:
+        deal = Deal(
+            user_id=current_user.id,
+            investor_profile_id=investor_profile.id,
+            saved_property_id=saved_property.id,
+            property_id=str(property_id) if property_id else None,
+            title=address,
+            address=address,
+            city=city,
+            state=state,
+            zip_code=zipcode,
+            strategy=selected_strategy,
+            recommended_strategy=selected_card.get("title") or selected_strategy,
+            purchase_price=_safe_float(snapshot.get("listing_price") or snapshot.get("price")) or 0,
+            arv=_safe_float(selected_card.get("arv")) or 0,
+            estimated_rent=_safe_float(snapshot.get("traditional_rent")) or 0,
+            rehab_cost=budget_midpoint or 0,
+            deal_score=deal_score,
+            results_json={},
+            resolved_json={
+                "property": copy.deepcopy(snapshot or {}),
+                "market_snapshot": copy.deepcopy(market_snapshot or {}),
+            },
+            rehab_scope_json=(results.get("rehab_analysis") or {}).get("scope") if selected_strategy == "rehab" else None,
+            status="active",
+        )
+        db.session.add(deal)
+        db.session.flush()
+        _set_deal_results(deal, results)
+
+    db.session.commit()
+    return deal
+
+def _project_studio_validate_with_mashvisor(snapshot, selected_strategy):
+    client = MashvisorClient()
+
+    try:
+        result = client.get_airbnb_lookup(
+            address=snapshot.get("address"),
+            city=snapshot.get("city"),
+            state=snapshot.get("state"),
+            zip_code=snapshot.get("zip_code"),
+            beds=snapshot.get("beds"),
+            baths=snapshot.get("baths"),
+            lat=snapshot.get("latitude"),
+            lng=snapshot.get("longitude"),
+        )
+
+        return result
+
+    except Exception as e:
+        return {"error": str(e)}
+
+def _run_mashvisor_validation(snapshot: dict) -> dict | None:
+    """
+    Lightweight STR validation for Project Studio.
+    Use only after a property is loaded and a serious strategy path is in play.
+    """
+    if not snapshot:
+        return None
+
+    address = (snapshot.get("address") or "").strip()
+    city = (snapshot.get("city") or "").strip()
+    state = (snapshot.get("state") or "").strip()
+    zip_code = (snapshot.get("zip_code") or "").strip()
+
+    if not address or not city or not state or not zip_code:
+        return None
+
+    try:
+        client = MashvisorClient()
+        result = client.get_airbnb_lookup(
+            address=address,
+            city=city,
+            state=state,
+            zip_code=zip_code,
+            beds=_safe_int(snapshot.get("beds")),
+            baths=_safe_float(snapshot.get("baths")),
+            lat=_safe_float(snapshot.get("latitude")),
+            lng=_safe_float(snapshot.get("longitude")),
+        )
+
+        lookup = result.get("content", result) if isinstance(result, dict) else {}
+
+        return {
+            "airbnb_revenue": (
+                lookup.get("rental_income")
+                or lookup.get("airbnb_rental_income")
+                or lookup.get("monthly_revenue")
+            ),
+            "occupancy_rate": (
+                lookup.get("occupancy_rate")
+                or lookup.get("airbnb_occupancy_rate")
+            ),
+            "adr": (
+                lookup.get("daily_rate")
+                or lookup.get("adr")
+                or lookup.get("average_daily_rate")
+            ),
+            "confidence": (
+                lookup.get("data_quality")
+                or lookup.get("confidence")
+                or "Moderate"
+            ),
+            "raw": result,
+        }
+
+    except Exception as exc:
+        current_app.logger.warning(
+            "project_studio mashvisor validation failed for %s: %s",
+            snapshot.get("address"),
+            exc,
+        )
+        return {"error": str(exc)}
+
+
+def _build_mashvisor_insight(scope_budget: dict | None, mashvisor_data: dict | None) -> str | None:
+    """
+    Compare Ravlo's rough planning outcome to Mashvisor STR signal.
+    We use budget outcome as the internal reference only if available.
+    """
+    if not scope_budget or not mashvisor_data or mashvisor_data.get("error"):
+        return None
+
+    internal_reference = _safe_float(scope_budget.get("outcome"))
+    mashvisor_revenue = _safe_float(mashvisor_data.get("airbnb_revenue"))
+
+    if internal_reference is None or mashvisor_revenue is None or internal_reference == 0:
+        return "Market validation is available, but there is not enough aligned data yet for a direct comparison."
+
+    pct = ((mashvisor_revenue - internal_reference) / abs(internal_reference)) * 100
+
+    if abs(pct) <= 10:
+        return "Market data is generally aligned with Ravlo's current planning assumptions."
+    if pct < 0:
+        return "Market data is coming in below Ravlo's internal planning signal, so pressure-test the revenue assumptions."
+    return "Market data is stronger than Ravlo's current planning signal, which may support more upside."
+
+def _build_loan_sizing_from_budget(deal, budget=None) -> dict:
+    """
+    Build a lightweight financing summary from deal + budget.
+    Conservative defaults for now; can be replaced with lender rules later.
+    """
+    purchase_price = float(getattr(deal, "purchase_price", 0) or 0)
+    arv = float(getattr(deal, "arv", 0) or 0)
+
+    if budget:
+        construction_budget = float(getattr(budget, "total_budget", 0) or 0)
+        estimated_budget = float(getattr(budget, "total_cost", 0) or 0)
+        paid_amount = float(getattr(budget, "paid_amount", 0) or 0)
+        contingency = float(getattr(budget, "contingency", 0) or 0)
+    else:
+        construction_budget = float(getattr(deal, "rehab_cost", 0) or 0)
+        estimated_budget = construction_budget
+        paid_amount = 0.0
+        contingency = 0.0
+
+    total_project_cost = purchase_price + construction_budget
+
+    # Simple lender assumptions for v1
+    max_purchase_ltc = 0.90
+    max_construction_ltc = 1.00
+
+    financeable_purchase = purchase_price * max_purchase_ltc
+    financeable_construction = construction_budget * max_construction_ltc
+
+    estimated_loan_request = financeable_purchase + financeable_construction
+    estimated_cash_required = max(total_project_cost - estimated_loan_request, 0)
+
+    ltc = (estimated_loan_request / total_project_cost * 100) if total_project_cost > 0 else 0
+    arv_leverage = (estimated_loan_request / arv * 100) if arv > 0 else 0
+
+    if ltc <= 75:
+        leverage_note = "Conservative leverage profile."
+    elif ltc <= 90:
+        leverage_note = "Typical leverage for a strong deal."
+    else:
+        leverage_note = "High leverage — confirm lender appetite and reserves."
+
+    return {
+        "purchase_price": purchase_price,
+        "construction_budget": construction_budget,
+        "estimated_budget": estimated_budget,
+        "paid_amount": paid_amount,
+        "contingency": contingency,
+        "total_project_cost": total_project_cost,
+        "estimated_loan_request": estimated_loan_request,
+        "estimated_cash_required": estimated_cash_required,
+        "ltc": ltc,
+        "arv_leverage": arv_leverage,
+        "leverage_note": leverage_note,
+    }
+
 # =========================================================
 # 🧾 JSON + FORM SAFETY
 # =========================================================
@@ -184,6 +1380,21 @@ def safe_json_loads(data, default=None):
         return json.loads(data)
     except Exception:
         return default
+
+
+def _normalize_percentage(value):
+    if value in (None, "", "None"):
+        return None
+
+    try:
+        number = float(str(value).replace("%", "").replace(",", "").strip())
+    except (TypeError, ValueError):
+        return None
+
+    if number > 1:
+        number = number / 100.0
+
+    return number
 
 def search_external_partners_google(category=None, city=None, state=None):
     import os
@@ -359,6 +1570,64 @@ STYLE_PROMPT_MAP = {
 # IMAGE HELPERS
 # =========================================================
 
+def get_spaces_client():
+    return boto3.client(
+        "s3",
+        region_name=os.environ["DO_SPACES_REGION"],
+        endpoint_url=os.environ["DO_SPACES_ENDPOINT"],
+        aws_access_key_id=os.environ["DO_SPACES_KEY"],
+        aws_secret_access_key=os.environ["DO_SPACES_SECRET"],
+    )
+
+def upload_listing_photos_to_spaces(photo_urls, deal_id=None, saved_property_id=None):
+    if not photo_urls:
+        return []
+
+    bucket = os.environ["DO_SPACES_BUCKET"]
+    cdn_base = os.environ.get("DO_SPACES_CDN_BASE", "").rstrip("/")
+    s3 = get_spaces_client()
+
+    uploaded = []
+
+    for idx, source_url in enumerate(photo_urls, start=1):
+        if not source_url:
+            continue
+
+        try:
+            resp = requests.get(source_url, timeout=15, stream=True)
+            resp.raise_for_status()
+
+            parsed = urlparse(source_url)
+            ext = os.path.splitext(parsed.path)[1].lower() or ".jpg"
+            content_type = resp.headers.get("Content-Type") or mimetypes.guess_type(source_url)[0] or "image/jpeg"
+
+            owner_part = f"deal-{deal_id}" if deal_id else f"saved-{saved_property_id or 'unknown'}"
+            key = f"listing-photos/{owner_part}/{uuid.uuid4().hex}-{idx}{ext}"
+
+            s3.upload_fileobj(
+                resp.raw,
+                bucket,
+                key,
+                ExtraArgs={
+                    "ACL": "public-read",
+                    "ContentType": content_type,
+                },
+            )
+
+            final_url = f"{cdn_base}/{key}" if cdn_base else f"{os.environ['DO_SPACES_ENDPOINT'].rstrip('/')}/{bucket}/{key}"
+
+            uploaded.append({
+                "url": final_url,
+                "source_url": source_url,
+                "label": f"Listing Photo {idx}",
+                "position": idx,
+            })
+
+        except Exception:
+            continue
+
+    return uploaded    
+
 def download_image_bytes(url: str, timeout=10) -> bytes:
     """Secure image download with relaxed header check."""
 
@@ -494,6 +1763,166 @@ def _extract_saved_blueprint_reference(deal=None, project=None):
             return item.strip()
 
     return None
+
+def _clean_spaces_url_part(value):
+    return (value or "").strip().rstrip("/")
+
+
+def _get_spaces_client():
+    return boto3.client(
+        "s3",
+        region_name=os.environ["DO_SPACES_REGION"],
+        endpoint_url=_clean_spaces_url_part(os.environ["DO_SPACES_ENDPOINT"]),
+        aws_access_key_id=os.environ["DO_SPACES_KEY"],
+        aws_secret_access_key=os.environ["DO_SPACES_SECRET"],
+    )
+
+
+def _normalize_photo_url_list(payload):
+    photo_urls = payload.get("listing_photos") or []
+    if not isinstance(photo_urls, list):
+        photo_urls = []
+
+    primary = payload.get("image_url")
+    if primary and primary not in photo_urls:
+        photo_urls = [primary] + photo_urls
+
+    cleaned = []
+    seen = set()
+
+    for item in photo_urls:
+        if not item:
+            continue
+        url = str(item).strip()
+        if not url or url in seen:
+            continue
+        seen.add(url)
+        cleaned.append(url)
+
+    return cleaned
+
+
+def _safe_set_attr(obj, field_name, value):
+    if hasattr(obj, field_name):
+        setattr(obj, field_name, value)
+
+
+def _public_spaces_url(bucket, key):
+    cdn_base = _clean_spaces_url_part(os.environ.get("DO_SPACES_CDN_BASE"))
+    endpoint = _clean_spaces_url_part(os.environ.get("DO_SPACES_ENDPOINT"))
+
+    if cdn_base:
+        return f"{cdn_base}/{key}"
+
+    return f"{endpoint}/{bucket}/{key}"
+
+
+def upload_listing_photos_to_spaces(photo_urls, saved_property_id=None, deal_id=None):
+    """
+    Downloads remote listing photos and stores them in DigitalOcean Spaces.
+    Returns a list of photo metadata dictionaries.
+    Never raises on per-photo failure; skips bad photos.
+    """
+    if not photo_urls:
+        return []
+
+    bucket = os.environ["DO_SPACES_BUCKET"]
+    s3 = _get_spaces_client()
+
+    uploaded = []
+    owner_part = f"deal-{deal_id}" if deal_id else f"saved-{saved_property_id or 'unknown'}"
+
+    for idx, source_url in enumerate(photo_urls, start=1):
+        try:
+            resp = requests.get(source_url, timeout=15, stream=True)
+            resp.raise_for_status()
+
+            parsed = urlparse(source_url)
+            ext = os.path.splitext(parsed.path)[1].lower() or ".jpg"
+            content_type = (
+                resp.headers.get("Content-Type")
+                or mimetypes.guess_type(source_url)[0]
+                or "image/jpeg"
+            )
+
+            key = f"listing-photos/{owner_part}/{uuid.uuid4().hex}-{idx}{ext}"
+
+            s3.upload_fileobj(
+                resp.raw,
+                bucket,
+                key,
+                ExtraArgs={
+                    "ACL": "public-read",
+                    "ContentType": content_type,
+                },
+            )
+
+            uploaded.append({
+                "url": _public_spaces_url(bucket, key),
+                "source_url": source_url,
+                "label": f"Listing Photo {idx}",
+                "position": idx,
+            })
+
+        except Exception as e:
+            current_app.logger.warning(
+                "Failed listing photo upload for %s: %s",
+                source_url,
+                e,
+            )
+            continue
+
+    return uploaded
+
+
+def _persist_listing_photo_refs(saved_property, deal, uploaded_photos):
+    """
+    Persist uploaded photo refs on SavedProperty and Deal if supported.
+    Defensive so it works with partial schema.
+    """
+    if not uploaded_photos:
+        return
+
+    primary_url = uploaded_photos[0]["url"]
+
+    # SavedProperty-level
+    _safe_set_attr(saved_property, "image_url", primary_url)
+    _safe_set_attr(saved_property, "listing_photos_json", uploaded_photos)
+
+    # Alternate possible field names
+    _safe_set_attr(saved_property, "listing_photos", uploaded_photos)
+    _safe_set_attr(saved_property, "primary_photo_url", primary_url)
+
+    # Deal-level snapshot
+    if deal:
+        results_json = deal.results_json or {}
+        results_json["listing_photos"] = uploaded_photos
+        results_json["image_url"] = primary_url
+        deal.results_json = results_json
+
+
+def _try_upload_and_attach_listing_photos(payload, saved_property, deal=None):
+    """
+    Best-effort upload. Never raises to caller.
+    """
+    try:
+        photo_urls = _normalize_photo_url_list(payload)
+        if not photo_urls:
+            return []
+
+        uploaded_photos = upload_listing_photos_to_spaces(
+            photo_urls=photo_urls,
+            saved_property_id=getattr(saved_property, "id", None),
+            deal_id=getattr(deal, "id", None) if deal else None,
+        )
+
+        if uploaded_photos:
+            _persist_listing_photo_refs(saved_property, deal, uploaded_photos)
+
+        return uploaded_photos
+    except Exception as e:
+        current_app.logger.warning("Listing photo attach failed: %s", e)
+        return []
 # =========================================================
 # ENGINE HELPERS
 # =========================================================
@@ -630,6 +2059,113 @@ def _safe_first_related(obj, attr_name):
     return items[0] if items else None
 
 _fmt_money = fmt_money
+
+def _build_budget_seed_from_results(results: dict) -> dict:
+    results = results or {}
+
+    rehab_scope = results.get("rehab_scope") or {}
+    rehab_analysis = results.get("rehab_analysis") or {}
+    build_analysis = results.get("build_analysis") or {}
+    workspace_analysis = results.get("workspace_analysis") or {}
+    strategy_analysis = results.get("strategy_analysis") or {}
+
+    raw_items = (
+        rehab_scope.get("line_items")
+        or rehab_scope.get("budget_items")
+        or rehab_scope.get("items")
+        or build_analysis.get("line_items")
+        or build_analysis.get("budget_items")
+        or []
+    )
+
+    suggested_breakdown = []
+
+    for item in raw_items:
+        if not isinstance(item, dict):
+            continue
+
+        name = (
+            item.get("description")
+            or item.get("name")
+            or item.get("item")
+            or item.get("category")
+            or "Budget Item"
+        )
+
+        cost = (
+            item.get("estimated_amount")
+            or item.get("cost")
+            or item.get("amount")
+            or item.get("estimate")
+            or 0
+        )
+
+        try:
+            cost = float(cost or 0)
+        except (TypeError, ValueError):
+            cost = 0.0
+
+        suggested_breakdown.append({
+            "name": str(name).strip() or "Budget Item",
+            "cost": cost,
+        })
+
+    # Fallback from saved planning budget
+    if not suggested_breakdown:
+        planning_budget = workspace_analysis.get("planning_budget") or {}
+        budget_low = planning_budget.get("budget_low")
+        budget_high = planning_budget.get("budget_high")
+
+        try:
+            budget_low = float(budget_low or 0)
+            budget_high = float(budget_high or 0)
+        except (TypeError, ValueError):
+            budget_low = 0.0
+            budget_high = 0.0
+
+        midpoint = 0.0
+        if budget_low and budget_high:
+            midpoint = (budget_low + budget_high) / 2
+        elif budget_high:
+            midpoint = budget_high
+        elif budget_low:
+            midpoint = budget_low
+
+        if midpoint > 0:
+            strategy_key = str(
+                strategy_analysis.get("strategy")
+                or workspace_analysis.get("selected_strategy")
+                or "rehab"
+            ).lower()
+
+            if strategy_key == "project_build":
+                suggested_breakdown = [
+                    {"name": "Site Work / Prep", "cost": round(midpoint * 0.15, 2)},
+                    {"name": "Core Construction", "cost": round(midpoint * 0.55, 2)},
+                    {"name": "MEP / Systems", "cost": round(midpoint * 0.12, 2)},
+                    {"name": "Finishes", "cost": round(midpoint * 0.10, 2)},
+                    {"name": "Contingency", "cost": round(midpoint * 0.08, 2)},
+                ]
+            elif strategy_key == "build_studio":
+                suggested_breakdown = [
+                    {"name": "Demo / Prep", "cost": round(midpoint * 0.12, 2)},
+                    {"name": "Structure / Framing", "cost": round(midpoint * 0.30, 2)},
+                    {"name": "MEP / Utilities", "cost": round(midpoint * 0.18, 2)},
+                    {"name": "Interior Finishes", "cost": round(midpoint * 0.25, 2)},
+                    {"name": "Contingency", "cost": round(midpoint * 0.15, 2)},
+                ]
+            else:
+                suggested_breakdown = [
+                    {"name": "Kitchen / Bath", "cost": round(midpoint * 0.30, 2)},
+                    {"name": "Flooring / Paint", "cost": round(midpoint * 0.18, 2)},
+                    {"name": "Systems / Repairs", "cost": round(midpoint * 0.22, 2)},
+                    {"name": "Exterior / Curb Appeal", "cost": round(midpoint * 0.12, 2)},
+                    {"name": "Contingency", "cost": round(midpoint * 0.18, 2)},
+                ]
+
+    return {
+        "suggested_breakdown": suggested_breakdown
+    }
 # =========================================================
 # GENERIC HELPERS
 # =========================================================
@@ -642,10 +2178,162 @@ def _safe_json_loads_local(value, default=None):
     default = default if default is not None else {}
     if not value:
         return default
+    if isinstance(value, dict):
+        return value
     try:
         return json.loads(value)
     except Exception:
         return default
+
+
+def _normalize_photo_urls(value) -> list[str]:
+    normalized = []
+    seen = set()
+
+    if isinstance(value, str):
+        candidates = [value]
+    elif isinstance(value, list):
+        candidates = value
+    else:
+        candidates = []
+
+    for item in candidates:
+        url = None
+        if isinstance(item, str):
+            url = item.strip()
+        elif isinstance(item, dict):
+            url = (
+                item.get("url")
+                or item.get("href")
+                or item.get("src")
+                or item.get("image_url")
+            )
+            url = str(url).strip() if url not in (None, "") else None
+
+        if not url or not url.lower().startswith(("http://", "https://")):
+            continue
+
+        if url in seen:
+            continue
+
+        seen.add(url)
+        normalized.append(url)
+
+    return normalized
+
+
+def _property_payload_from_any(payload) -> dict:
+    raw = _safe_json_loads_local(payload, default={})
+    if not isinstance(raw, dict):
+        return {}
+
+    prop = raw.get("property")
+    if isinstance(prop, dict):
+        return prop
+
+    return raw
+
+
+def _merge_nonempty_dict(target: dict, source: dict) -> dict:
+    target = target if isinstance(target, dict) else {}
+    if not isinstance(source, dict):
+        return target
+
+    for key, value in source.items():
+        if value not in (None, "", [], {}):
+            target[key] = value
+    return target
+
+
+def _ingest_listing_photos_to_spaces(photo_urls: list[str], *, subdir: str, limit: int = 8) -> list[str]:
+    stored = []
+
+    for idx, url in enumerate(_normalize_photo_urls(photo_urls)[:limit], start=1):
+        try:
+            raw = download_image_bytes(url)
+            if not raw:
+                continue
+
+            webp = to_webp_bytes(raw, max_size=1600, quality=86)
+            uploaded = spaces_put_bytes(
+                webp,
+                subdir=subdir,
+                content_type="image/webp",
+                filename=f"listing_{idx:02d}_{uuid.uuid4().hex[:10]}.webp",
+            )
+            stored_url = uploaded.get("url")
+            if stored_url:
+                stored.append(stored_url)
+        except Exception:
+            current_app.logger.exception("Listing photo ingest failed for %s", url)
+
+    return stored
+
+
+def _store_saved_property_media(saved_property, payload, *, source: str = "listing_search") -> dict:
+    existing_payload = _safe_json_loads_local(getattr(saved_property, "resolved_json", None), default={})
+    incoming_payload = _safe_json_loads_local(payload, default={})
+    incoming_prop = _property_payload_from_any(payload)
+    existing_prop = _property_payload_from_any(existing_payload)
+
+    merged_prop = _merge_nonempty_dict(existing_prop, incoming_prop)
+
+    primary_candidate = (
+        merged_prop.get("primary_photo")
+        or merged_prop.get("photo")
+        or merged_prop.get("image_url")
+    )
+    source_urls = _normalize_photo_urls(
+        [primary_candidate] + _normalize_photo_urls(merged_prop.get("photos"))
+    )
+
+    stored_urls = _ingest_listing_photos_to_spaces(
+        source_urls,
+        subdir=f"properties/{current_user.id}/{saved_property.id or 'pending'}/listing_photos",
+    ) if source_urls else []
+
+    final_urls = stored_urls or source_urls
+    final_primary = final_urls[0] if final_urls else None
+
+    if final_urls:
+        merged_prop["photos"] = final_urls
+    if final_primary:
+        merged_prop["primary_photo"] = final_primary
+        merged_prop["image_url"] = merged_prop.get("image_url") or final_primary
+
+    merged_prop["photo_source"] = source
+    merged_prop["photo_count"] = len(final_urls)
+    merged_prop["photo_ingested_at"] = datetime.utcnow().isoformat()
+
+    merged_payload = existing_payload if isinstance(existing_payload, dict) else {}
+    if isinstance(incoming_payload, dict):
+        for key, value in incoming_payload.items():
+            if key == "property":
+                continue
+            if value not in (None, "", [], {}):
+                merged_payload[key] = value
+    merged_payload["property"] = merged_prop
+
+    if hasattr(saved_property, "resolved_json"):
+        saved_property.resolved_json = json.dumps(merged_payload)
+        saved_property.resolved_at = datetime.utcnow()
+
+    return merged_payload
+
+
+def _saved_property_media(saved_property) -> dict:
+    payload = _safe_json_loads_local(getattr(saved_property, "resolved_json", None), default={})
+    prop = _property_payload_from_any(payload)
+    photos = _normalize_photo_urls(prop.get("photos"))
+    primary_photo = (
+        prop.get("primary_photo")
+        or prop.get("image_url")
+        or (photos[0] if photos else None)
+    )
+    return {
+        "primary_photo": primary_photo,
+        "photos": photos,
+    }
 
 
 def _normalize_int(value):
@@ -820,6 +2508,8 @@ def build_visualizer_helper_prompt(style_prompt: str, style_preset: str = "", ro
 # =========================================================
 
 RENDER_TIMEOUT = 240
+BLUEPRINT_RENDER_TIMEOUT = int(os.getenv("BLUEPRINT_RENDER_TIMEOUT", "90"))
+FULL_BUILD_BLUEPRINT_TIMEOUT = int(os.getenv("FULL_BUILD_BLUEPRINT_TIMEOUT", "240"))
 SCOPE_TIMEOUT = 45
 UPLOAD_TIMEOUT = 240
 RENDER_LOCK_SECONDS = 300
@@ -843,6 +2533,27 @@ def _safe_engine_error_message(resp):
 
     return (resp.text or f"HTTP {resp.status_code}")[:300]
 
+
+def _friendly_engine_timeout_message(url, timeout, error):
+    host = (urlparse(url).netloc or url).strip()
+    message = f"Renovation engine timed out after {timeout}s."
+    if "ngrok" in host:
+        message += " The ngrok tunnel or local render worker may be offline, sleeping, or still processing the image job."
+    return f"{message} host={host} error={error}"
+
+
+def _is_engine_timeout_error(error):
+    text = str(error or "").lower()
+    return "timed out" in text and "engine" in text
+
+
+def _stable_render_seed(*parts):
+    raw = "|".join([str(part or "").strip().lower() for part in parts if part is not None]).strip("|")
+    if not raw:
+        raw = uuid.uuid4().hex
+    digest = hashlib.sha256(raw.encode("utf-8")).hexdigest()
+    return int(digest[:8], 16) % 2_147_483_647
+
 def _post_renovation_engine_json(path, payload, timeout=RENDER_TIMEOUT):
     url = _renovation_engine_url(path)
 
@@ -865,7 +2576,7 @@ def _post_renovation_engine_json(path, payload, timeout=RENDER_TIMEOUT):
             timeout=timeout,
         )
     except requests.Timeout as e:
-        raise RuntimeError(f"Engine request timed out. url={url} timeout={timeout} error={e}")
+        raise RuntimeError(_friendly_engine_timeout_message(url, timeout, e))
     except requests.RequestException as e:
         raise RuntimeError(f"Engine request failed. url={url} error={e}")
 
@@ -1090,6 +2801,7 @@ def debug_google_test():
 @investor_bp.route("/index", methods=["GET"])
 @investor_bp.route("/command", methods=["GET"])
 @investor_bp.route("/dashboard", methods=["GET"])
+@investor_bp.route("/dashboard-home", methods=["GET"], endpoint="dashboard")
 @login_required
 @role_required("investor")
 def command_center():
@@ -1547,7 +3259,7 @@ def settings():
 def privacy():
     ip = InvestorProfile.query.filter_by(user_id=current_user.id).first()
     return render_template(
-        "investor/privacy.html",
+        "investor/privacy_launch.html",
         investor=current_user,
         investor_profile=ip,
     )
@@ -1649,6 +3361,76 @@ def update_profile():
     ip.updated_at = datetime.utcnow()
     db.session.commit()
     return jsonify({"status": "success", "message": "Profile updated successfully."})
+
+
+@investor_bp.route("/prequal", methods=["GET", "POST"])
+@investor_bp.route("/ai-prequal", methods=["GET", "POST"], endpoint="ai_prequal")
+@login_required
+@role_required("investor")
+def prequal():
+    result = None
+
+    if request.method == "POST":
+        income = safe_float(request.form.get("income")) or 0
+        debts = safe_float(request.form.get("debts")) or 0
+        loan_amount = safe_float(request.form.get("loan_amount")) or 0
+        property_value = safe_float(request.form.get("property_value")) or 0
+        credit_score = safe_float(request.form.get("credit_score")) or 0
+
+        dti = round((debts / income) * 100, 2) if income > 0 else 0
+        ltv = round((loan_amount / property_value) * 100, 2) if property_value > 0 else 0
+
+        if dti <= 43 and ltv <= 80 and credit_score >= 680:
+            status = "Approved"
+        elif dti <= 50 and ltv <= 90 and credit_score >= 620:
+            status = "Conditional"
+        else:
+            status = "Review"
+
+        max_qual_amount = max((income * 45) - (debts * 12), 0)
+
+        ai_summary = (
+            f"DTI is {dti:.2f}% and LTV is {ltv:.2f}%. "
+            f"Based on the submitted income, debts, leverage, and credit profile, "
+            f"this scenario is currently marked {status.lower()}."
+        )
+
+        result = {
+            "status": status,
+            "dti": dti,
+            "ltv": ltv,
+            "max_qual_amount": max_qual_amount,
+            "ai_summary": ai_summary,
+        }
+
+    return render_template(
+        "investor/prequal.html",
+        result=result,
+        title="AI Pre-Qualification",
+        active_tab="capital",
+    )
+
+
+@investor_bp.route("/start-loan", methods=["GET", "POST"], endpoint="start_loan")
+@login_required
+@role_required("investor")
+def start_loan():
+    if request.method == "POST":
+        loan_type = (request.form.get("loan_type") or "Investor Capital").strip()
+        amount = safe_float(request.form.get("amount")) or 0
+        return redirect(
+            url_for(
+                "investor.capital_application",
+                loan_type=loan_type,
+                amount=amount if amount else None,
+            )
+        )
+
+    return render_template(
+        "investor/onboarding_start_loan.html",
+        title="Start Loan",
+        active_tab="capital",
+    )
     
 # =========================================================
 # 📝 INVESTOR • CAPITAL APPLICATION + STATUS
@@ -1767,12 +3549,16 @@ def capital_application():
         deal = Deal.query.filter_by(id=deal_id, user_id=current_user.id).first()
 
     officers = LoanOfficerProfile.query.order_by(LoanOfficerProfile.name.asc()).all()
+    initial_loan_type = (request.args.get("loan_type") or "").strip()
+    initial_amount = request.args.get("amount", type=float)
 
     return render_template(
         "investor/capital_application.html",
         investor=ip,
         deal=deal,
         officers=officers,
+        initial_loan_type=initial_loan_type,
+        initial_amount=initial_amount,
         title="Apply for Capital"
     )
 
@@ -2564,7 +4350,9 @@ def download_document(doc_id):
     if not doc:
         abort(404)
 
-    file_path = doc.file_path  # make sure this is stored in DB
+    file_path = doc.file_path
+    if file_path and not os.path.isabs(file_path):
+        file_path = os.path.join(current_app.config["UPLOAD_FOLDER"], file_path)
 
     if not file_path or not os.path.exists(file_path):
         abort(404)
@@ -2572,6 +4360,31 @@ def download_document(doc_id):
     return send_file(
         file_path,
         as_attachment=True,
+        download_name=os.path.basename(file_path)
+    )
+
+
+@investor_bp.route("/documents/view/<int:doc_id>", methods=["GET"])
+@login_required
+def view_document(doc_id):
+    doc = LoanDocument.query.filter_by(
+        id=doc_id,
+        user_id=current_user.id
+    ).first()
+
+    if not doc:
+        abort(404)
+
+    file_path = doc.file_path
+    if file_path and not os.path.isabs(file_path):
+        file_path = os.path.join(current_app.config["UPLOAD_FOLDER"], file_path)
+
+    if not file_path or not os.path.exists(file_path):
+        abort(404)
+
+    return send_file(
+        file_path,
+        as_attachment=False,
         download_name=os.path.basename(file_path)
     )
 
@@ -2839,7 +4652,6 @@ def property_search():
         primary_photo=primary_photo,
     )
 
-
 @investor_bp.route("/intelligence/save", methods=["POST"])
 @investor_bp.route("/save_property", methods=["POST"])
 @login_required
@@ -2917,9 +4729,8 @@ def save_property():
         if (not getattr(existing, "property_id", None)) and final_property_id:
             existing.property_id = str(final_property_id)
 
-        if hasattr(existing, "resolved_json"):
-            existing.resolved_json = json.dumps(resolved) if resolved else None
-            existing.resolved_at = datetime.utcnow() if resolved else None
+        if resolved:
+            _store_saved_property_media(existing, resolved, source="unified_resolver")
 
         db.session.commit()
         return jsonify({"status": "success", "message": "Already saved (updated details).", "saved_id": existing.id})
@@ -2935,11 +4746,12 @@ def save_property():
         created_at=datetime.utcnow(),
     )
 
-    if hasattr(saved, "resolved_json"):
-        saved.resolved_json = json.dumps(resolved) if resolved else None
-        saved.resolved_at = datetime.utcnow() if resolved else None
-
     db.session.add(saved)
+    db.session.flush()
+
+    if resolved:
+        _store_saved_property_media(saved, resolved, source="unified_resolver")
+
     db.session.commit()
 
     return jsonify({"status": "success", "message": "Saved.", "saved_id": saved.id})
@@ -3133,8 +4945,50 @@ def property_explore_plus(prop_id):
     resolved = resolve_property_unified(prop.address)
 
     if resolved.get("status") != "ok":
-        flash("Could not load property intelligence.", "warning")
-        return redirect(url_for(fallback_endpoint))
+        current_app.logger.warning(
+            "Property explore fallback for prop_id=%s address=%s: %s",
+            prop_id,
+            prop.address,
+            resolved.get("error") or resolved.get("stage") or "unknown_error",
+        )
+        resolved = {
+            "status": "partial",
+            "property": {
+                "address": prop.address,
+                "address_line1": prop.address,
+                "city": getattr(prop, "city", None),
+                "state": getattr(prop, "state", None),
+                "zip_code": getattr(prop, "zipcode", None),
+                "zip": getattr(prop, "zipcode", None),
+                "property_id": prop.property_id,
+                "price": None,
+                "beds": getattr(prop, "bedrooms", None),
+                "baths": getattr(prop, "bathrooms", None),
+                "sqft": prop.sqft,
+                "square_feet": prop.sqft,
+                "property_type": getattr(prop, "property_type", None),
+                "photos": [],
+                "primary_photo": None,
+                "status": "Saved Property",
+                "days_on_market": None,
+                "description": None,
+            },
+            "valuation": {
+                "estimate": None,
+                "market_value": None,
+                "assessed_value": None,
+                "last_sale_price": None,
+            },
+            "rent_estimate": {
+                "rent": None,
+                "traditional_rent": None,
+                "estimated_rent": None,
+            },
+            "comps": {"sales": [], "rentals": [], "meta": {}},
+            "market_snapshot": {},
+            "ai_summary": "Live property enrichment is temporarily unavailable. You can still review the saved property and send it to Deal Workspace.",
+        }
+        flash("Live property intelligence is temporarily unavailable. Showing saved property details instead.", "warning")
 
     resolved_property = resolved.get("property") or {}
     valuation = resolved.get("valuation") or {}
@@ -3254,20 +5108,12 @@ def property_explore_plus(prop_id):
         back_url=url_for(fallback_endpoint),
     )
     
-    
-
-    
-# =========================================================
-# 🔌 INVESTOR • Property Tool
-# =========================================================
+  
 
 
-
-
-# Make sure these already exist somewhere in your file/app:
-# - investor_bp
-# - role_required
-# - _profile_id_filter
+# ----------------------------
+# pages
+# ----------------------------
 
 @investor_bp.route("/property_tool", methods=["GET"])
 @login_required
@@ -3276,14 +5122,390 @@ def property_tool():
     return render_template("investor/property_tool.html")
 
 
+@investor_bp.route("/project-studio", methods=["GET"])
+@login_required
+@role_required("investor")
+def project_studio():
+    address = (request.args.get("address") or "").strip()
+    city = (request.args.get("city") or "").strip()
+    state = (request.args.get("state") or "").strip()
+    zip_code = (request.args.get("zip") or request.args.get("zip_code") or "").strip()
+
+    deal_id = request.args.get("deal_id", type=int)
+    selected_strategy = (request.args.get("strategy") or "").strip().lower()
+    selected_scope = (request.args.get("scope") or "").strip().lower()
+
+    snapshot = None
+    flags = []
+    strategy_cards = []
+    ai_summary = None
+    engine_error = None
+    market_snapshot = {}
+    selected_card = None
+    scope_options = []
+    scope_budget = None
+    workspace_deal = None
+
+    mashvisor_data = None
+    mashvisor_insight = None
+
+    if address:
+        try:
+            studio_context = _project_studio_lookup(
+                address=address,
+                city=city,
+                state=state,
+                zip_code=zip_code,
+            )
+
+            snapshot = studio_context.get("snapshot")
+            flags = studio_context.get("flags") or []
+            strategy_cards = studio_context.get("strategy_cards") or []
+            ai_summary = studio_context.get("ai_summary")
+            engine_error = studio_context.get("engine_error")
+            market_snapshot = studio_context.get("market_snapshot") or {}
+
+            if strategy_cards:
+                valid_keys = {
+                    str(card.get("key") or "").lower()
+                    for card in strategy_cards
+                }
+
+                if selected_strategy not in valid_keys:
+                    selected_strategy = str(
+                        (strategy_cards[0].get("key") or "")
+                    ).lower()
+
+                selected_card = next(
+                    (
+                        card for card in strategy_cards
+                        if str(card.get("key") or "").lower() == selected_strategy
+                    ),
+                    None
+                )
+
+                scope_options = _project_studio_scope_options(selected_strategy)
+                valid_scopes = {
+                    str(opt.get("value") or "").lower()
+                    for opt in scope_options
+                }
+
+                if selected_scope not in valid_scopes and scope_options:
+                    selected_scope = str(
+                        scope_options[0].get("value") or ""
+                    ).lower()
+
+                scope_budget = _project_studio_scope_budget(
+                    selected_card,
+                    selected_strategy,
+                    selected_scope,
+                )
+
+                if selected_card and selected_scope and scope_budget:
+                    ip = InvestorProfile.query.filter_by(
+                        user_id=current_user.id
+                    ).first()
+
+                    workspace_deal = _project_studio_upsert_deal(
+                        ip,
+                        snapshot,
+                        selected_card,
+                        selected_strategy,
+                        selected_scope,
+                        scope_budget,
+                        strategy_cards=strategy_cards,
+                        flags=flags,
+                        ai_summary=ai_summary,
+                        market_snapshot=market_snapshot,
+                        deal_id=deal_id,
+                    )
+
+                    # Final validation layer:
+                    # only after property + strategy + scope exist
+                    mashvisor_data = _run_mashvisor_validation(snapshot)
+                    mashvisor_insight = _build_mashvisor_insight(
+                        scope_budget,
+                        mashvisor_data,
+                    )
+
+        except Exception as exc:
+            engine_error = str(exc)
+            current_app.logger.warning(
+                "project_studio lookup failed for %s: %s",
+                address,
+                exc,
+            )
+
+    return render_template(
+        "investor/project_studio.html",
+        title="Investor OS • Project Studio",
+        active_tab="project_studio",
+        address=address,
+        city=city,
+        state=state,
+        zip_code=zip_code,
+        snapshot=snapshot,
+        flags=flags,
+        strategy_cards=strategy_cards,
+        ai_summary=ai_summary,
+        engine_error=engine_error,
+        market_snapshot=market_snapshot,
+        selected_strategy=selected_strategy,
+        selected_card=selected_card,
+        selected_scope=selected_scope,
+        scope_options=scope_options,
+        scope_budget=scope_budget,
+        workspace_deal=workspace_deal,
+        mashvisor=mashvisor_data,
+        mashvisor_insight=mashvisor_insight,
+    )
+
+# -------------------------------------------------------------------
+# PROXY ROUTE FOR UI
+# -------------------------------------------------------------------
+
+@investor_bp.route("/api/deal-architect-proxy", methods=["POST"])
+@login_required
+@role_required("investor")
+def api_deal_architect_proxy():
+    payload = request.get_json(force=True) or {}
+
+    try:
+        data = _call_deal_architect(payload)
+        return jsonify(data), 200
+    except Exception as e:
+        current_app.logger.exception("Deal Architect proxy failed")
+        return jsonify({
+            "ok": False,
+            "message": f"Deal Architect proxy failed: {e}",
+        }), 500
+
+
+# -------------------------------------------------------------------
+# UPDATED PROPERTY TOOL SEARCH
+# -------------------------------------------------------------------
+
+
+
+            
+
+
+
+def _clean_str(value):
+    if value is None:
+        return None
+    value = str(value).strip()
+    return value or None
+
+
+def _clean_num(value):
+    if value in (None, "", "None"):
+        return None
+    try:
+        if isinstance(value, str):
+            value = value.replace("$", "").replace(",", "").strip()
+        return float(value)
+    except Exception:
+        return None
+
+
+def _clean_int(value):
+    num = _clean_num(value)
+    if num is None:
+        return None
+    try:
+        return int(round(num))
+    except Exception:
+        return None
+
+
+def _safe_json_list(value):
+    if isinstance(value, list):
+        return value
+    return []
+
+
+def _get_investor_profile_or_error():
+    ip = InvestorProfile.query.filter_by(user_id=current_user.id).first()
+    if not ip:
+        return None, (
+            jsonify({
+                "status": "error",
+                "message": "Profile not found."
+            }),
+            400,
+        )
+    return ip, None
+
+
+def _find_existing_saved_property(ip, payload):
+    address = _clean_str(payload.get("address"))
+    property_id = _clean_str(payload.get("property_id") or payload.get("attom_id"))
+
+    fk = _profile_id_filter(SavedProperty, ip.id)
+    existing = None
+
+    if property_id:
+        existing = SavedProperty.query.filter_by(
+            **fk,
+            property_id=property_id
+        ).first()
+
+    if not existing and address:
+        existing = SavedProperty.query.filter(
+            getattr(SavedProperty, "investor_profile_id", SavedProperty.borrower_profile_id) == ip.id,
+            db.func.lower(SavedProperty.address) == address.lower()
+        ).first()
+
+    return existing
+
+
+def _assign_if_has_attr(model_obj, field_name, value):
+    if hasattr(model_obj, field_name) and value is not None:
+        setattr(model_obj, field_name, value)
+
+
+def _persist_property_core_fields(saved, payload):
+    """
+    Persist richer canonical fields when the SavedProperty model supports them.
+    This is intentionally defensive so it works with your current schema.
+    """
+    address = _clean_str(payload.get("address"))
+    city = _clean_str(payload.get("city"))
+    state = _clean_str(payload.get("state"))
+    zipcode = _clean_str(payload.get("zip") or payload.get("zip_code"))
+    property_id = _clean_str(payload.get("property_id") or payload.get("attom_id"))
+
+    price = _clean_num(payload.get("price") or payload.get("purchase_price") or payload.get("display_value"))
+    arv = _clean_num(payload.get("arv") or payload.get("estimated_value_engine") or payload.get("market_value"))
+    market_value = _clean_num(payload.get("market_value"))
+    assessed_value = _clean_num(payload.get("assessed_value"))
+    monthly_rent = _clean_num(payload.get("monthly_rent") or payload.get("monthly_rent_estimate"))
+    last_sale_price = _clean_num(payload.get("last_sale_price"))
+
+    sqft = _clean_int(payload.get("sqft") or payload.get("square_feet"))
+    lot_size_sqft = _clean_int(payload.get("lot_size_sqft"))
+    beds = _clean_num(payload.get("beds"))
+    baths = _clean_num(payload.get("baths"))
+    year_built = _clean_int(payload.get("year_built"))
+
+    latitude = _clean_num(payload.get("latitude"))
+    longitude = _clean_num(payload.get("longitude"))
+
+    strategy = _clean_str(payload.get("strategy"))
+    strategy_tag = _clean_str(payload.get("strategy_tag"))
+    recommended_strategy = _clean_str(payload.get("recommended_strategy"))
+    estimated_best_use = _clean_str(payload.get("estimated_best_use"))
+    property_type = _clean_str(payload.get("property_type"))
+
+    deal_score = _clean_num(payload.get("deal_score"))
+    opportunity_tier = _clean_str(payload.get("opportunity_tier"))
+    deal_finder_signal = _clean_str(payload.get("deal_finder_signal"))
+    next_step = _clean_str(payload.get("next_step"))
+    comp_confidence = _clean_str(payload.get("comp_confidence"))
+    image_url = _clean_str(payload.get("image_url"))
+    description = _clean_str(payload.get("description"))
+
+    if address:
+        saved.address = address
+
+    if property_id:
+        _assign_if_has_attr(saved, "property_id", property_id)
+
+    # keep your existing core fields in sync
+    if price is not None:
+        _assign_if_has_attr(saved, "price", str(int(price)) if float(price).is_integer() else str(price))
+
+    if sqft is not None:
+        _assign_if_has_attr(saved, "sqft", sqft)
+
+    if zipcode:
+        if hasattr(saved, "zipcode"):
+            saved.zipcode = zipcode
+        elif hasattr(saved, "zip_code"):
+            saved.zip_code = zipcode
+
+    # richer optional fields
+    _assign_if_has_attr(saved, "city", city)
+    _assign_if_has_attr(saved, "state", state)
+    _assign_if_has_attr(saved, "property_type", property_type)
+    _assign_if_has_attr(saved, "beds", beds)
+    _assign_if_has_attr(saved, "baths", baths)
+    _assign_if_has_attr(saved, "year_built", year_built)
+    _assign_if_has_attr(saved, "square_feet", sqft)
+    _assign_if_has_attr(saved, "lot_size_sqft", lot_size_sqft)
+    _assign_if_has_attr(saved, "assessed_value", assessed_value)
+    _assign_if_has_attr(saved, "market_value", market_value)
+    _assign_if_has_attr(saved, "arv", arv)
+    _assign_if_has_attr(saved, "monthly_rent", monthly_rent)
+    _assign_if_has_attr(saved, "monthly_rent_estimate", monthly_rent)
+    _assign_if_has_attr(saved, "last_sale_price", last_sale_price)
+    _assign_if_has_attr(saved, "latitude", latitude)
+    _assign_if_has_attr(saved, "longitude", longitude)
+
+    _assign_if_has_attr(saved, "strategy", strategy)
+    _assign_if_has_attr(saved, "strategy_tag", strategy_tag)
+    _assign_if_has_attr(saved, "recommended_strategy", recommended_strategy)
+    _assign_if_has_attr(saved, "estimated_best_use", estimated_best_use)
+
+    _assign_if_has_attr(saved, "deal_score", deal_score)
+    _assign_if_has_attr(saved, "opportunity_tier", opportunity_tier)
+    _assign_if_has_attr(saved, "deal_finder_signal", deal_finder_signal)
+    _assign_if_has_attr(saved, "next_step", next_step)
+    _assign_if_has_attr(saved, "comp_confidence", comp_confidence)
+
+    _assign_if_has_attr(saved, "image_url", image_url)
+    _assign_if_has_attr(saved, "description", description)
+
+    # optional JSON/meta fields if your model supports them
+    _assign_if_has_attr(saved, "primary_strengths", _safe_json_list(payload.get("primary_strengths")))
+    _assign_if_has_attr(saved, "primary_risks", _safe_json_list(payload.get("primary_risks")))
+    _assign_if_has_attr(saved, "risk_notes", _safe_json_list(payload.get("risk_notes")))
+    _assign_if_has_attr(saved, "why_it_made_list", _safe_json_list(payload.get("why_it_made_list")))
+
+    # status / timestamps if present on model
+    _assign_if_has_attr(saved, "analysis_status", "pending")
+    _assign_if_has_attr(saved, "budget_status", "pending")
+    _assign_if_has_attr(saved, "last_synced_at", datetime.utcnow())
+    _assign_if_has_attr(saved, "updated_at", datetime.utcnow())
+
+
+def _upsert_saved_property_from_payload(ip, payload):
+    address = _clean_str(payload.get("address"))
+    if not address:
+        raise ValueError("Address is required.")
+
+    price = payload.get("price") or payload.get("purchase_price") or payload.get("display_value")
+    sqft = _clean_int(payload.get("sqft") or payload.get("square_feet"))
+    zipcode = _clean_str(payload.get("zip") or payload.get("zip_code"))
+    property_id = _clean_str(payload.get("property_id") or payload.get("attom_id"))
+
+    existing = _find_existing_saved_property(ip, payload)
+    fk = _profile_id_filter(SavedProperty, ip.id)
+
+    if not existing:
+        existing = SavedProperty(
+            **fk,
+            property_id=property_id if property_id else None,
+            address=address,
+            price=str(price or ""),
+            sqft=sqft,
+            zipcode=zipcode,
+            saved_at=datetime.utcnow(),
+            created_at=datetime.utcnow(),
+        )
+        db.session.add(existing)
+        db.session.flush()
+
+    _persist_property_core_fields(existing, payload)
+    _store_saved_property_media(existing, payload, source="property_tool")
+    return existing
+
+
 @investor_bp.route("/api/property_tool_search", methods=["POST"])
 @login_required
 @role_required("investor")
 def api_property_tool_search():
-    """
-    Property search API for the Ravlo Property Tool.
-    Uses ATTOM-backed property search only.
-    """
     payload = request.get_json(force=True) or {}
 
     address = (payload.get("address") or "").strip()
@@ -3299,13 +5521,12 @@ def api_property_tool_search():
             "results": [],
         }), 400
 
-    try:
-        page_size = int(payload.get("limit") or 20)
-    except Exception:
-        page_size = 20
+    page_size = min(int(payload.get("limit") or 20), 20)
+    enrich_limit = min(page_size, 8)
+    top_pick_limit = 4
 
     try:
-        result = get_property_search_result(
+        search_result = get_property_search_result(
             address=address or None,
             postalcode=zip_code or None,
             city=city or None,
@@ -3314,34 +5535,200 @@ def api_property_tool_search():
             page_size=page_size,
         )
 
-        properties = result.get("properties", []) or []
+        raw_matches = search_result.get("properties", []) or []
+        results = []
+
+        for idx, raw in enumerate(raw_matches[:page_size]):
+            raw_address = (
+                raw.get("address_line1")
+                or raw.get("address")
+                or raw.get("address_one_line")
+                or ""
+            ).strip()
+
+            raw_city = (raw.get("city") or city or "").strip()
+            raw_state = (raw.get("state") or state or "").strip()
+            raw_zip = (raw.get("zip_code") or zip_code or "").strip()
+            raw_property_type = (raw.get("property_type") or "single_family")
+
+            if not raw_address:
+                continue
+
+            if idx < enrich_limit and raw_city and raw_state:
+                bundle = build_dealfinder_profile(
+                    address=raw_address,
+                    city=raw_city,
+                    state=raw_state,
+                    zip_code=raw_zip,
+                    property_type=raw_property_type,
+                )
+
+                if bundle.get("ok"):
+                    result = _build_property_tool_result(raw, bundle)
+                else:
+                    result = _build_attom_fallback(raw)
+            else:
+                result = _build_attom_fallback(raw)
+
+            if idx < enrich_limit:
+                try:
+                    engine_payload = {
+                        "project_name": raw_address,
+                        "description": f"{raw_address}, {raw_city}, {raw_state}",
+                        "property_type": result.get("property_type"),
+                        "asking_price": result.get("last_sale_price") or result.get("price"),
+                        "square_feet_target": result.get("square_feet"),
+                        "city": raw_city,
+                        "state": raw_state,
+                        "zip_code": raw_zip,
+                        "arv": result.get("market_value"),
+                        "monthly_rent": result.get("traditional_rent"),
+                        "local_facts": {
+                            "bedrooms": result.get("beds"),
+                            "bathrooms": result.get("baths"),
+                            "year_built": result.get("year_built"),
+                            "lot_sqft": result.get("lot_size_sqft"),
+                            "assessed_value": result.get("assessed_value"),
+                            "annual_tax_amount": result.get("tax_amount"),
+                            "latitude": result.get("latitude"),
+                            "longitude": result.get("longitude"),
+                        }
+                    }
+
+                    engine_resp = requests.post(
+                        current_app.config["RENOVATION_ENGINE_URL"].rstrip("/") + "/v1/deal_architect",
+                        json=engine_payload,
+                        headers={"X-API-Key": current_app.config["RENOVATION_ENGINE_API_KEY"]},
+                        timeout=12
+                    )
+
+                    if engine_resp.ok:
+                        engine = engine_resp.json()
+                        meta = engine.get("meta", {}) or {}
+
+                        result.update({
+                            "deal_score": engine.get("deal_score"),
+                            "opportunity_tier": engine.get("opportunity_tier"),
+                            "deal_finder_signal": meta.get("deal_finder_signal"),
+                            "primary_strengths": meta.get("primary_strengths", []),
+                            "primary_risks": meta.get("primary_risks", []),
+                            "dscr_estimate": meta.get("dscr_estimate"),
+                            "rent_yield": meta.get("rent_yield"),
+                            "monthly_rent_estimate": meta.get("monthly_rent_estimate"),
+                            "next_step": engine.get("next_step"),
+                            "engine_value": engine.get("estimated_value"),
+                            "estimated_value_engine": engine.get("estimated_value"),
+                            "valuation_source_label": meta.get("valuation_source_label"),
+                            "comp_confidence": meta.get("comp_confidence"),
+                        })
+                    else:
+                        result["engine_error"] = "Deal Architect failed"
+                except Exception as e:
+                    result["engine_error"] = str(e)
+
+            results.append(_annotate_deal_finder_opportunity(result, strategy))
+
+        results = sorted(
+            results,
+            key=lambda r: (r.get("deal_score") is not None, r.get("deal_score") or 0),
+            reverse=True,
+        )
+
+        top_results = results[:top_pick_limit]
+        engine_ready = any(r.get("deal_score") is not None for r in top_results)
 
         return jsonify({
             "status": "ok",
-            "address": address,
-            "zip": zip_code,
-            "city": city,
-            "state": state,
+            "results": top_results,
+            "count": len(top_results),
+            "total_matches": len(results),
             "strategy": strategy,
-            "count": len(properties),
-            "results": properties,
+            "zip": zip_code,
+            "address": address,
+            "engine_ready": engine_ready,
         })
 
-    except PropertyAPIError as e:
+    except Exception as e:
+        current_app.logger.exception("Property Tool search failed")
         return jsonify({
             "status": "error",
             "message": str(e),
             "results": [],
-        }), 400
-
-    except Exception as e:
-        return jsonify({
-            "status": "error",
-            "message": f"Property Tool search failed: {e}",
-            "results": [],
         }), 500
 
 
+@investor_bp.route("/api/property_detail", methods=["POST"])
+@login_required
+@role_required("investor")
+def api_property_detail():
+    payload = request.get_json(force=True) or {}
+    address = (payload.get("address") or "").strip()
+
+    if not address:
+        return jsonify({
+            "status": "error",
+            "message": "Address is required.",
+        }), 400
+
+    result = resolve_property_unified(address=address)
+
+    if result.get("status") != "ok":
+        return jsonify({
+            "status": "error",
+            "message": result.get("error") or "Lookup failed.",
+            "stage": result.get("stage"),
+            "source": result.get("source"),
+        }), 400
+
+    property_data = result.get("property") or {}
+    valuation = result.get("valuation") or {}
+    rent_estimate = result.get("rent_estimate") or {}
+
+    engine = None
+    engine_error = None
+
+    try:
+        detail_for_engine = {
+            "address": property_data.get("address") or address,
+            "city": property_data.get("city"),
+            "state": property_data.get("state"),
+            "zip_code": property_data.get("zip_code"),
+            "beds": property_data.get("beds"),
+            "baths": property_data.get("baths"),
+            "square_feet": property_data.get("square_feet") or property_data.get("sqft"),
+            "lot_size_sqft": property_data.get("lot_size_sqft"),
+            "year_built": property_data.get("year_built"),
+            "property_type": property_data.get("property_type"),
+            "assessed_value": valuation.get("assessed_value"),
+            "market_value": valuation.get("market_value"),
+            "last_sale_price": valuation.get("last_sale_price"),
+            "traditional_rent": rent_estimate.get("traditional_rent"),
+            "tax_amount": valuation.get("tax_amount"),
+            "latitude": property_data.get("latitude"),
+            "longitude": property_data.get("longitude"),
+        }
+        engine_payload = _build_deal_architect_payload(detail_for_engine, strategy="all")
+        engine = _call_deal_architect(engine_payload)
+    except Exception as e:
+        current_app.logger.warning("property_detail engine enrichment failed: %s", e)
+        engine_error = str(e)
+
+    return jsonify({
+        "status": "ok",
+        "source": result.get("source"),
+        "property": property_data,
+        "valuation": valuation,
+        "rent_estimate": rent_estimate,
+        "comps": result.get("comps"),
+        "market_snapshot": result.get("market_snapshot"),
+        "ai_summary": result.get("ai_summary"),
+        "raw": result.get("raw"),
+        "engine": engine,
+        "engine_error": engine_error,
+    })
+
+
+@investor_bp.route("/api/intelligence/save", methods=["POST"])
 @investor_bp.route("/api/intelligence/save", methods=["POST"])
 @investor_bp.route("/api/property_tool_save", methods=["POST"])
 @login_required
@@ -3363,57 +5750,32 @@ def api_property_tool_save():
             "message": "Profile not found."
         }), 400
 
-    zipcode = (payload.get("zip") or "").strip() or None
-    price = payload.get("price")
-    sqft = payload.get("sqft")
-    property_id = payload.get("property_id")
-
     try:
-        sqft = int(float(sqft)) if sqft not in (None, "", "None") else None
-    except Exception:
-        sqft = None
+        saved = _upsert_saved_property_from_payload(ip, payload)
 
-    fk = _profile_id_filter(SavedProperty, ip.id)
+        uploaded_photos = _try_upload_and_attach_listing_photos(
+            payload=payload,
+            saved_property=saved,
+            deal=None,
+        )
 
-    existing = None
+        db.session.commit()
 
-    if property_id:
-        existing = SavedProperty.query.filter_by(
-            **fk,
-            property_id=str(property_id)
-        ).first()
-
-    if not existing:
-        existing = SavedProperty.query.filter(
-            getattr(SavedProperty, "investor_profile_id", SavedProperty.borrower_profile_id) == ip.id,
-            db.func.lower(SavedProperty.address) == address.lower()
-        ).first()
-
-    if existing:
         return jsonify({
             "status": "ok",
-            "message": "Already saved.",
-            "saved_id": existing.id
+            "message": "Saved.",
+            "saved_id": saved.id,
+            "listing_photos_count": len(uploaded_photos),
+            "primary_photo_url": uploaded_photos[0]["url"] if uploaded_photos else getattr(saved, "image_url", None),
         })
 
-    saved = SavedProperty(
-        **fk,
-        property_id=str(property_id) if property_id else None,
-        address=address,
-        price=str(price or ""),
-        sqft=sqft,
-        zipcode=zipcode,
-        saved_at=datetime.utcnow(),
-        created_at=datetime.utcnow(),
-    )
-    db.session.add(saved)
-    db.session.commit()
-
-    return jsonify({
-        "status": "ok",
-        "message": "Saved.",
-        "saved_id": saved.id
-    })
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.exception("Property Tool save failed")
+        return jsonify({
+            "status": "error",
+            "message": f"Could not save property: {e}"
+        }), 500
 
 
 @investor_bp.route("/api/intelligence/save-and-analyze", methods=["POST"])
@@ -3437,53 +5799,211 @@ def api_property_tool_save_and_analyze():
             "message": "Profile not found."
         }), 400
 
-    zipcode = (payload.get("zip") or "").strip() or None
-    price = payload.get("price")
-    sqft = payload.get("sqft")
-    property_id = payload.get("property_id")
+    def to_float(val):
+        try:
+            if val in (None, "", "None"):
+                return 0.0
+            if isinstance(val, str):
+                val = val.replace("$", "").replace(",", "").strip()
+            return float(val)
+        except (TypeError, ValueError):
+            return 0.0
 
     try:
-        sqft = int(float(sqft)) if sqft not in (None, "", "None") else None
-    except Exception:
-        sqft = None
+        # 1) Upsert saved property
+        saved = _upsert_saved_property_from_payload(ip, payload)
 
-    fk = _profile_id_filter(SavedProperty, ip.id)
-
-    existing = None
-
-    if property_id:
-        existing = SavedProperty.query.filter_by(
-            **fk,
-            property_id=str(property_id)
-        ).first()
-
-    if not existing:
-        existing = SavedProperty.query.filter(
-            getattr(SavedProperty, "investor_profile_id", SavedProperty.borrower_profile_id) == ip.id,
-            db.func.lower(SavedProperty.address) == address.lower()
-        ).first()
-
-    if not existing:
-        existing = SavedProperty(
-            **fk,
-            property_id=str(property_id) if property_id else None,
-            address=address,
-            price=str(price or ""),
-            sqft=sqft,
-            zipcode=zipcode,
-            saved_at=datetime.utcnow(),
-            created_at=datetime.utcnow(),
+        # 2) Find or create linked deal
+        deal = (
+            Deal.query
+            .filter_by(user_id=current_user.id, saved_property_id=saved.id)
+            .order_by(Deal.updated_at.desc(), Deal.id.desc())
+            .first()
         )
-        db.session.add(existing)
+
+        strategy = (payload.get("strategy") or "flip").strip().lower()
+        if strategy not in ("flip", "rental", "airbnb"):
+            strategy = "flip"
+
+        title = (
+            payload.get("title")
+            or payload.get("address")
+            or f"Deal {saved.id}"
+        )
+
+        purchase_price = to_float(
+            payload.get("purchase_price")
+            or payload.get("price")
+            or payload.get("display_value")
+            or payload.get("last_sale_price")
+        )
+
+        arv = to_float(
+            payload.get("arv")
+            or payload.get("estimated_value_engine")
+            or payload.get("market_value")
+            or payload.get("engine_value")
+        )
+
+        estimated_rent = to_float(
+            payload.get("estimated_rent")
+            or payload.get("monthly_rent")
+            or payload.get("monthly_rent_estimate")
+        )
+
+        raw_score = payload.get("deal_score")
+        try:
+            deal_score = int(round(float(raw_score))) if raw_score not in (None, "", "None") else None
+        except (TypeError, ValueError):
+            deal_score = None
+
+        results_json = {
+            "strategy_analysis": {},
+            "rehab_analysis": {},
+            "workspace_analysis": {
+                "address": payload.get("address"),
+                "city": payload.get("city"),
+                "state": payload.get("state"),
+                "zip_code": payload.get("zip") or payload.get("zip_code"),
+                "purchase_price": purchase_price,
+                "arv": arv,
+                "estimated_rent": estimated_rent,
+                "square_feet": payload.get("sqft") or payload.get("square_feet"),
+                "beds": payload.get("beds"),
+                "baths": payload.get("baths"),
+                "year_built": payload.get("year_built"),
+                "property_type": payload.get("property_type"),
+                "strategy": strategy,
+                "strategy_tag": payload.get("strategy_tag"),
+                "recommended_strategy": payload.get("recommended_strategy"),
+                "estimated_best_use": payload.get("estimated_best_use"),
+                "deal_score": deal_score,
+                "opportunity_tier": payload.get("opportunity_tier"),
+                "deal_finder_signal": payload.get("deal_finder_signal"),
+                "next_step": payload.get("next_step"),
+                "comp_confidence": payload.get("comp_confidence"),
+                "primary_strengths": payload.get("primary_strengths") or [],
+                "primary_risks": payload.get("primary_risks") or [],
+                "risk_notes": payload.get("risk_notes") or [],
+                "why_it_made_list": payload.get("why_it_made_list") or [],
+            },
+            "optimization": {},
+        }
+
+        notes_parts = []
+
+        if payload.get("estimated_best_use"):
+            notes_parts.append(f"Best Use: {payload.get('estimated_best_use')}")
+        if payload.get("next_step"):
+            notes_parts.append(f"Next Step: {payload.get('next_step')}")
+
+        primary_strengths = payload.get("primary_strengths") or []
+        if primary_strengths:
+            notes_parts.append("Strengths: " + ", ".join(str(x) for x in primary_strengths))
+
+        primary_risks = payload.get("primary_risks") or []
+        if primary_risks:
+            notes_parts.append("Risks: " + ", ".join(str(x) for x in primary_risks))
+
+        notes = "\n".join(notes_parts).strip() or None
+
+        if deal:
+            deal.investor_profile_id = ip.id
+            deal.saved_property_id = saved.id
+            deal.property_id = payload.get("property_id") or payload.get("attom_id")
+            deal.title = title
+            deal.address = payload.get("address")
+            deal.city = payload.get("city")
+            deal.state = payload.get("state")
+            deal.zip_code = payload.get("zip") or payload.get("zip_code")
+            deal.strategy = strategy
+            deal.recommended_strategy = payload.get("recommended_strategy") or strategy
+            deal.purchase_price = purchase_price
+            deal.arv = arv
+            deal.estimated_rent = estimated_rent
+            deal.deal_score = deal_score
+            deal.inputs_json = {
+                "address": payload.get("address"),
+                "city": payload.get("city"),
+                "state": payload.get("state"),
+                "zip_code": payload.get("zip") or payload.get("zip_code"),
+                "strategy": strategy,
+                "purchase_price": purchase_price,
+                "arv": arv,
+                "estimated_rent": estimated_rent,
+            }
+            deal.results_json = results_json
+            deal.notes = notes
+            deal.status = deal.status or "active"
+            deal.updated_at = datetime.utcnow()
+        else:
+            deal = Deal(
+                user_id=current_user.id,
+                investor_profile_id=ip.id,
+                saved_property_id=saved.id,
+                property_id=payload.get("property_id") or payload.get("attom_id"),
+                title=title,
+                address=payload.get("address"),
+                city=payload.get("city"),
+                state=payload.get("state"),
+                zip_code=payload.get("zip") or payload.get("zip_code"),
+                strategy=strategy,
+                recommended_strategy=payload.get("recommended_strategy") or strategy,
+                purchase_price=purchase_price,
+                arv=arv,
+                estimated_rent=estimated_rent,
+                rehab_cost=0,
+                deal_score=deal_score,
+                inputs_json={
+                    "address": payload.get("address"),
+                    "city": payload.get("city"),
+                    "state": payload.get("state"),
+                    "zip_code": payload.get("zip") or payload.get("zip_code"),
+                    "strategy": strategy,
+                    "purchase_price": purchase_price,
+                    "arv": arv,
+                    "estimated_rent": estimated_rent,
+                },
+                results_json=results_json,
+                notes=notes,
+                status="active",
+            )
+            db.session.add(deal)
+            db.session.flush()
+
+        # 3) Best-effort upload to DO Spaces and attach URLs
+        uploaded_photos = _try_upload_and_attach_listing_photos(
+            payload=payload,
+            saved_property=saved,
+            deal=deal,
+        )
+
         db.session.commit()
 
-    deal_url = url_for("investor.deal_workspace", prop_id=existing.id, mode="flip")
+        deal_url = url_for(
+            "investor.deal_workspace",
+            deal_id=deal.id,
+            mode=strategy
+        )
 
-    return jsonify({
-        "status": "ok",
-        "saved_id": existing.id,
-        "deal_url": deal_url
-    })
+        return jsonify({
+            "status": "ok",
+            "saved_id": saved.id,
+            "deal_id": deal.id,
+            "deal_url": deal_url,
+            "listing_photos_count": len(uploaded_photos),
+            "primary_photo_url": uploaded_photos[0]["url"] if uploaded_photos else None,
+        })
+
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.exception("Property Tool save-and-analyze failed")
+        return jsonify({
+            "status": "error",
+            "message": f"Could not create deal: {e}"
+        }), 500
+        
+            
 
 
 @investor_bp.route("/api/intelligence/card", methods=["POST"])
@@ -3494,71 +6014,49 @@ def api_property_tool_card():
     payload = request.get_json(force=True) or {}
 
     address = (payload.get("address") or "").strip()
+    city = (payload.get("city") or "").strip()
+    state = (payload.get("state") or "").strip()
+    zip_code = (payload.get("zip") or payload.get("zip_code") or "").strip()
+    property_type = (payload.get("property_type") or "single_family").strip()
+
     if not address:
         return jsonify({
             "status": "error",
             "message": "Address is required."
         }), 400
 
-    def _num_or_none(v):
-        try:
-            if v in (None, "", "None"):
-                return None
-            return float(v)
-        except Exception:
-            return None
+    try:
+        bundle = build_dealfinder_profile(
+            address=address,
+            city=city,
+            state=state,
+            zip_code=zip_code,
+            property_type=property_type,
+        )
 
-    beds = _num_or_none(payload.get("beds"))
-    baths = _num_or_none(payload.get("baths"))
-    sqft = _num_or_none(payload.get("sqft"))
-    property_type = (payload.get("property_type") or "").strip() or None
+        if not bundle.get("ok"):
+            return jsonify({
+                "status": "error",
+                "message": "; ".join(bundle.get("errors") or ["Unable to load property card."])
+            }), 400
 
-    if beds is not None:
-        try:
-            beds = int(beds)
-        except Exception:
-            beds = None
+        card = _build_property_tool_result(payload, bundle)
 
-    if sqft is not None:
-        try:
-            sqft = int(sqft)
-        except Exception:
-            sqft = None
+        return jsonify({
+            "status": "ok",
+            "property": bundle.get("profile") or {},
+            "scoring": bundle.get("scoring") or {},
+            "source_status": bundle.get("source_status") or {},
+            "errors": bundle.get("errors") or [],
+            "card": card,
+        })
 
-    bundle = resolve_property_unified(
-        address=address,
-        beds=beds,
-        baths=baths,
-        sqft=sqft,
-        property_type=property_type,
-    )
-
-    if bundle.get("status") != "ok":
+    except Exception as e:
+        current_app.logger.exception("Property Tool card failed")
         return jsonify({
             "status": "error",
-            "message": bundle.get("error") or "Unable to load property card."
-        }), 400
-
-    prop = bundle.get("property") or {}
-    valuation = bundle.get("valuation") or {}
-    rent_estimate = bundle.get("rent_estimate") or {}
-    comps = bundle.get("comps") or {}
-    market_snapshot = bundle.get("market_snapshot") or {}
-    ai_summary = bundle.get("ai_summary")
-
-    card = build_property_card_data(prop)
-
-    return jsonify({
-        "status": "ok",
-        "source": bundle.get("source"),
-        "property": prop,
-        "valuation": valuation,
-        "rent_estimate": rent_estimate,
-        "comps": comps,
-        "market_snapshot": market_snapshot,
-        "ai_summary": ai_summary,
-        "card": card,
-    })
+            "message": f"Unable to load property card: {e}"
+        }), 500
 
 
 @investor_bp.route("/api/property_tool_view_details", methods=["POST"])
@@ -3574,64 +6072,38 @@ def api_property_tool_view_details():
             "message": "Address is required."
         }), 400
 
-    ip = InvestorProfile.query.filter_by(user_id=current_user.id).first()
-    if not ip:
-        return jsonify({
-            "status": "error",
-            "message": "Investor profile not found."
-        }), 400
-
-    zipcode = (payload.get("zip") or "").strip() or None
-    price = payload.get("price")
-    sqft = payload.get("sqft")
-    property_id = payload.get("property_id")
+    ip, error = _get_investor_profile_or_error()
+    if error:
+        return error
 
     try:
-        sqft = int(float(sqft)) if sqft not in (None, "", "None") else None
-    except Exception:
-        sqft = None
-
-    fk = _profile_id_filter(SavedProperty, ip.id)
-
-    existing = None
-
-    if property_id:
-        existing = SavedProperty.query.filter_by(
-            **fk,
-            property_id=str(property_id)
-        ).first()
-
-    if not existing:
-        existing = SavedProperty.query.filter(
-            getattr(SavedProperty, "investor_profile_id", SavedProperty.borrower_profile_id) == ip.id,
-            db.func.lower(SavedProperty.address) == address.lower()
-        ).first()
-
-    if not existing:
-        existing = SavedProperty(
-            **fk,
-            property_id=str(property_id) if property_id else None,
-            address=address,
-            price=str(price or ""),
-            sqft=sqft,
-            zipcode=zipcode,
-            saved_at=datetime.utcnow(),
-            created_at=datetime.utcnow(),
-        )
-        db.session.add(existing)
+        saved = _upsert_saved_property_from_payload(ip, payload)
         db.session.commit()
 
-    detail_url = url_for(
-        "investor.property_explore_plus",
-        prop_id=existing.id,
-        source="property_tool"
-    )
+        detail_url = url_for(
+            "investor.property_explore_plus",
+            prop_id=saved.id,
+            source="property_tool"
+        )
 
-    return jsonify({
-        "status": "ok",
-        "saved_id": existing.id,
-        "detail_url": detail_url
-    })
+        return jsonify({
+            "status": "ok",
+            "saved_id": saved.id,
+            "detail_url": detail_url
+        })
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.exception("Property Tool detail handoff failed")
+        return jsonify({
+            "status": "error",
+            "message": f"Could not open property details: {e}"
+        }), 500
+
+
+
+
+
+
          
 # =========================================================
 # 💼 INVESTOR • DEAL STUDIO (workspace + deals + visualizer + exports)
@@ -3641,6 +6113,8 @@ def api_property_tool_view_details():
 @login_required
 @role_required("investor")
 def deal_studio():
+    return redirect(url_for("investor.project_studio"))
+
     """
     Deal Studio is the investor workspace where users can:
 
@@ -3723,6 +6197,8 @@ def deal_workspace(deal_id=None):
 
     selected_prop = None
     deal = None
+    budget = None
+
     comps = {}
     resolved = None
     comparison = {}
@@ -3739,7 +6215,7 @@ def deal_workspace(deal_id=None):
         mode = "flip"
 
     # -----------------------------------------
-    # 1) Load by deal_id if provided in URL
+    # 1) Load by route param deal_id
     # -----------------------------------------
     if deal_id:
         deal = (
@@ -3769,6 +6245,7 @@ def deal_workspace(deal_id=None):
                 .filter_by(id=query_deal_id, user_id=current_user.id)
                 .first()
             )
+
             if deal and getattr(deal, "saved_property_id", None):
                 selected_prop = (
                     SavedProperty.query
@@ -3819,7 +6296,25 @@ def deal_workspace(deal_id=None):
         )
 
     # -----------------------------------------
-    # 5) Load comps / property intelligence
+    # 5) Load real linked budget for this deal
+    # -----------------------------------------
+    if deal:
+        budget = (
+            ProjectBudget.query
+            .filter_by(
+                deal_id=deal.id,
+                investor_profile_id=ip.id
+            )
+            .order_by(ProjectBudget.id.desc())
+            .first()
+        )
+    loan_sizing = None
+
+    if deal:
+        loan_sizing = _build_loan_sizing_from_budget(deal, budget)
+
+    # -----------------------------------------
+    # 6) Load comps / property intelligence
     # -----------------------------------------
     if selected_prop:
         try:
@@ -3863,7 +6358,7 @@ def deal_workspace(deal_id=None):
                 recommendation = {}
 
     # -----------------------------------------
-    # 6) Load saved deal results
+    # 7) Load saved deal results
     # -----------------------------------------
     if deal:
         results_json = deal.results_json or {}
@@ -3873,7 +6368,7 @@ def deal_workspace(deal_id=None):
         optimization = results_json.get("optimization", {}) or {}
 
     # -----------------------------------------
-    # 7) AI summary
+    # 8) AI summary
     # -----------------------------------------
     try:
         if comparison:
@@ -3892,6 +6387,8 @@ def deal_workspace(deal_id=None):
         property_id=(selected_prop.id if selected_prop else None),
         deal=deal,
         deal_id=(deal.id if deal else None),
+        budget=budget,
+        loan_sizing=loan_sizing,
         mode=mode,
         comps=comps,
         resolved=resolved,
@@ -4085,11 +6582,9 @@ def deal_book(deal_id):
 # =========================================================
 # DEAL CRUD
 # =========================================================
-@investor_bp.route("/deals")
+@investor_bp.route("/deals/cards")
 @login_required
-def deals():
-
-    # Fetch deals owned by the investor
+def deals_cards():
     deals = (
         Deal.query
         .filter_by(user_id=current_user.id)
@@ -4362,15 +6857,11 @@ def deal_delete(deal_id):
 def deal_open(deal_id):
     deal = _get_owned_deal_or_404(deal_id)
 
-    if getattr(deal, "saved_property_id", None):
-        return redirect(url_for(
-            "investor.deal_workspace",
-            prop_id=deal.saved_property_id,
-            mode=deal.strategy or "flip"
-        ))
-
-    flash("This deal is not linked to a saved property yet.", "warning")
-    return redirect(url_for("investor.deal_workspace"))
+    return redirect(url_for(
+        "investor.deal_workspace",
+        deal_id=deal.id,
+        mode=deal.strategy or "flip"
+    ))
 
 @investor_bp.route("/deals/<int:deal_id>/report", methods=["GET"])
 @login_required
@@ -4455,6 +6946,7 @@ def request_funding(deal_id):
 @role_required("investor")
 def deal_rehab(deal_id=None):
     deal = None
+    saved_property = None
 
     if deal_id is None:
         query_deal_id = request.args.get("deal_id", type=int)
@@ -4466,18 +6958,39 @@ def deal_rehab(deal_id=None):
 
     results = (deal.results_json or {}) if deal else {}
     rehab_project = results.get("rehab_project", {}) or {}
+    rehab_scope = results.get("rehab_scope") or (getattr(deal, "rehab_scope_json", None) if deal else None) or {}
 
     rehab_before = rehab_project.get("before", {}) or {}
     rehab_latest = rehab_project.get("latest", {}) or {}
     rehab_concepts = rehab_project.get("concepts", []) or []
 
+    if deal and getattr(deal, "saved_property_id", None):
+        saved_property = SavedProperty.query.filter_by(id=deal.saved_property_id).first()
+
+    property_media = _saved_property_media(saved_property) if saved_property else {"primary_photo": None, "photos": []}
+
+    if property_media.get("primary_photo") and not rehab_before.get("image_url"):
+        rehab_before = {
+            **rehab_before,
+            "image_url": property_media["primary_photo"],
+            "source": "saved_listing_photo",
+        }
+
+    if property_media.get("photos") and not rehab_before.get("gallery"):
+        rehab_before = {
+            **rehab_before,
+            "gallery": property_media["photos"],
+        }
+
     return render_template(
         "investor/deal_rehab_studio.html",
         deal=deal,
         rehab_project=rehab_project,
+        rehab_scope=rehab_scope,
         rehab_before=rehab_before,
         rehab_latest=rehab_latest,
         rehab_concepts=rehab_concepts,
+        property_photo_gallery=property_media.get("photos") or [],
         page_title="Renovation Studio",
         page_subtitle="Visualize renovation concepts before execution.",
     )
@@ -4631,6 +7144,7 @@ def deal_rehab_generate_variant():
 def build_studio(deal_id=None):
     deal = None
     project = None
+    saved_property = None
 
     project_id = request.args.get("project_id", type=int)
 
@@ -4656,6 +7170,7 @@ def build_studio(deal_id=None):
     # -----------------------------
     results = deal.results_json or {} if deal else {}
     build_project = results.get("build_project", {}) or {}
+    build_analysis = results.get("build_analysis", {}) or {}
 
     # -----------------------------
     # Optional fallback from project
@@ -4707,18 +7222,31 @@ def build_studio(deal_id=None):
         deal.id if deal else None,
         project.id if project else None,
         list((results or {}).keys()) if isinstance(results, dict) else [],
-        list((build_project or {}).keys()) if isinstance(build_project, dict) else [],
+        list((build_project or {}).keys()) if isinstance(build_project, dict) else [],        
     )
+
+    if deal and getattr(deal, "saved_property_id", None):
+        saved_property = SavedProperty.query.filter_by(id=deal.saved_property_id).first()
+
+    property_media = _saved_property_media(saved_property) if saved_property else {"primary_photo": None, "photos": []}
+
+    if property_media.get("primary_photo") and not exterior_result.get("build_reference_image"):
+        exterior_result = {
+            **exterior_result,
+            "build_reference_image": property_media["primary_photo"],
+        }
 
     return render_template(
         "investor/build_studio.html",
         deal=deal,
         project=project,
+        build_analysis=build_analysis,
         build_project=build_project,
         blueprint_result=blueprint_result,
         exterior_result=exterior_result,
         interior_result=interior_result,
         interior_rooms=interior_rooms,
+        property_photo_gallery=property_media.get("photos") or [],
         package_result=package_result,
         has_saved_package=has_saved_package,
         page_title="Build Studio",
@@ -4838,10 +7366,10 @@ def generate_build_exterior():
             "lot_size": lot_size,
             "zoning": zoning,
             "count": 1,
-            "steps": 26,
+            "steps": 22,
             "guidance": 7.5,
-            "width": 1024,
-            "height": 1024,
+            "width": 768,
+            "height": 768,
         }
 
         # 🔥 ONLY CONDITION WHEN VALID
@@ -4996,7 +7524,7 @@ def generate_build_interior():
             "room_type": room_type,
             "floor": floor,
             "count": 1,
-            "steps": 22,
+            "steps": 20,
             "guidance": 7.0,
             "strength": 0.65,
             "width": 768,
@@ -5008,7 +7536,7 @@ def generate_build_interior():
         engine_json = _post_renovation_engine_json(
             "/v1/build_concept",
             payload,
-            timeout=RENDER_TIMEOUT,
+            timeout=BLUEPRINT_RENDER_TIMEOUT,
         )
 
         current_app.logger.warning(f"BUILD INTERIOR ENGINE JSON: {engine_json}")
@@ -5255,12 +7783,12 @@ def generate_build_blueprint():
             "lot_size": lot_size,
             "zoning": zoning,
             "prompt": style_prompt,
-            "count": 2,
-            "steps": 24,
+            "count": 1,
+            "steps": 20,
             "strength": 0.28,
             "guidance": 6.0,
-            "width": 1024,
-            "height": 1024,
+            "width": 768,
+            "height": 768,
         }
 
         if blueprint_image_base64:
@@ -5412,16 +7940,21 @@ def generate_build_blueprint():
             except Exception:
                 db.session.rollback()
 
+        error_message = str(e)
+        status_code = 504 if _is_engine_timeout_error(e) else 500
+
         return jsonify({
             "status": "error",
-            "message": str(e)
-        }), 500
+            "code": "engine_timeout" if status_code == 504 else "blueprint_generation_failed",
+            "message": error_message,
+        }), status_code
 
 @investor_bp.route("/deal-studio/build-studio/generate-full", methods=["POST"])
 @login_required
 @role_required("investor")
 def generate_full_build():
     deal = None
+    build_analysis = {}
 
     try:
         data = request.form.to_dict() or {}
@@ -5468,6 +8001,23 @@ def generate_full_build():
 
         room_type = (data.get("room_type") or "living room").strip()
         floor = (data.get("floor") or "main").strip()
+
+        if SCOPE_ENGINE_URL and description:
+            try:
+                build_analysis = _post_scope_engine_json(
+                    "/v1/build_scope",
+                    {
+                        "project_name": project_name or None,
+                        "description": description,
+                        "property_type": property_type or None,
+                        "lot_size": lot_size or None,
+                        "zoning": zoning or None,
+                    },
+                    timeout=60,
+                ) or {}
+            except Exception:
+                current_app.logger.exception("Full build scope analysis failed")
+                build_analysis = {}
 
         blueprint_file = request.files.get("blueprint_file")
         land_image = request.files.get("land_image")
@@ -5583,7 +8133,7 @@ def generate_full_build():
             "zoning": zoning,
             "width": 1024,
             "height": 1024,
-            "steps": 24,
+            "steps": 22,
             "guidance": 6.0,
             "strength": 0.28,
             "count": 1,
@@ -5598,7 +8148,7 @@ def generate_full_build():
         blueprint_json = _post_renovation_engine_json(
             "/v1/build_concept",
             blueprint_payload,
-            timeout=RENDER_TIMEOUT,
+            timeout=FULL_BUILD_BLUEPRINT_TIMEOUT,
         )
 
         current_app.logger.warning(f"FULL BUILD BLUEPRINT JSON: {blueprint_json}")
@@ -5798,6 +8348,8 @@ def generate_full_build():
                 "rooms": existing_rooms,
             }
 
+            if build_analysis:
+                results["build_analysis"] = build_analysis
             results["build_project"] = build_project
             results["build_reference_image"] = reference_image_url or blueprint_primary_url
             _set_deal_results(deal, results)
@@ -5838,6 +8390,7 @@ def generate_full_build():
                 "room_type": room_type,
                 "floor": floor,
             },
+            "build_analysis": build_analysis,
             "deal_id": deal.id if deal else None,
             "saved_to_deal": bool(save_to_deal and deal is not None),
         })
@@ -5852,10 +8405,14 @@ def generate_full_build():
             except Exception:
                 db.session.rollback()
 
+        error_message = str(e)
+        status_code = 504 if _is_engine_timeout_error(e) else 500
+
         return jsonify({
             "status": "error",
-            "message": str(e)
-        }), 500
+            "code": "engine_timeout" if status_code == 504 else "full_build_generation_failed",
+            "message": error_message,
+        }), status_code
 
 @investor_bp.route("/deal-studio/build-studio/generate-room", methods=["POST"])
 @login_required
@@ -6174,42 +8731,25 @@ def generate_build_room():
 def ai_build_scope():
     data = request.get_json(silent=True) or {}
 
-    description = (data.get("description") or "").strip()
-    property_type = (data.get("property_type") or "").strip()
-    lot_size = (data.get("lot_size") or "").strip()
-    zoning = (data.get("zoning") or "").strip()
+    payload = {
+        "project_name": (data.get("project_name") or "").strip() or None,
+        "description": (data.get("description") or "").strip(),
+        "property_type": (data.get("property_type") or "").strip() or None,
+        "lot_size": (data.get("lot_size") or "").strip() or None,
+        "zoning": (data.get("zoning") or "").strip() or None,
+        "asking_price": safe_float(data.get("asking_price"), default=None) if data.get("asking_price") not in (None, "", "None") else None,
+        "square_feet_target": safe_int(data.get("square_feet_target"), default=None) if data.get("square_feet_target") not in (None, "", "None") else None,
+    }
 
-    if not description:
+    if not payload["description"]:
         return jsonify({"status": "error", "message": "description is required."}), 400
 
     try:
         if not SCOPE_ENGINE_URL:
             return jsonify({"status": "error", "message": "Scope engine is not configured."}), 500
 
-        res = requests.post(
-            _scope_engine_url("/v1/build_scope"),
-            json={
-                "description": description,
-                "property_type": property_type,
-                "lot_size": lot_size,
-                "zoning": zoning,
-            },
-            headers=_scope_engine_headers(),
-            timeout=60,
-        )
-        res.raise_for_status()
-
-        engine_data = res.json() or {}
-        build_analysis = engine_data.get("build_analysis") or {}
-
-        return jsonify({
-            "status": "ok",
-            "build_analysis": {
-                "summary": build_analysis.get("summary", ""),
-                "key_points": build_analysis.get("key_points", []),
-                "estimated_build_cost": build_analysis.get("estimated_build_cost", 0),
-            }
-        })
+        engine_data = _post_scope_engine_json("/v1/build_scope", payload, timeout=60) or {}
+        return jsonify(engine_data)
 
     except Exception as e:
         current_app.logger.exception("ai_build_scope failed")
@@ -6736,7 +9276,7 @@ def deal_architect(deal_id=None):
     if request.method == "POST":
         if not selected_deal:
             flash("Select a deal before updating Deal Architect.", "warning")
-            return redirect(url_for("investor.deal_finder"))
+            return redirect(url_for("investor.property_tool"))
 
         selected_deal.purchase_price = _to_float(request.form.get("purchase_price")) or selected_deal.purchase_price
         selected_deal.arv = _to_float(request.form.get("arv")) or selected_deal.arv
@@ -6980,7 +9520,8 @@ def v1_deal_architect_underwrite():
 @role_required("investor")
 def deal_architect_analyze():
     try:
-        deal_id = _normalize_int(request.form.get("deal_id"))
+        data = request.get_json(silent=True) or request.form.to_dict() or {}
+        deal_id = _normalize_int(data.get("deal_id"))
         deal = None
 
         if deal_id:
@@ -6988,186 +9529,114 @@ def deal_architect_analyze():
             if not deal:
                 return jsonify({"status": "error", "message": "Deal not found"}), 404
 
-        def _pick_str(name, fallback=""):
-            val = (request.form.get(name) or "").strip()
-            if val:
-                return val
-            if deal is not None:
-                return str(getattr(deal, name, "") or fallback).strip()
-            return fallback
+        if not RENOVATION_ENGINE_URL:
+            return jsonify({"status": "error", "message": "Renovation engine is not configured"}), 500
 
-        def _pick_float(form_key, *deal_attrs):
-            raw = request.form.get(form_key)
-            val = safe_float(raw)
-            if val is not None:
-                return val
+        def _pick_str(name, *deal_attrs, fallback=""):
+            raw = data.get(name)
+            if raw is not None and str(raw).strip():
+                return str(raw).strip()
             if deal is not None:
                 for attr in deal_attrs:
-                    existing = safe_float(getattr(deal, attr, None))
-                    if existing is not None:
-                        return existing
-            return 0.0
+                    existing = getattr(deal, attr, None)
+                    if existing is not None and str(existing).strip():
+                        return str(existing).strip()
+            return fallback
 
-        address = _pick_str("address") or (
-            (
-                getattr(deal, "property_address", None)
-                or getattr(deal, "address", None)
-                or getattr(deal, "street_address", None)
-                or ""
-            ).strip()
-            if deal is not None else ""
-        )
+        def _pick_float(name, *deal_attrs):
+            raw = data.get(name)
+            if raw not in (None, "", "None"):
+                try:
+                    return float(str(raw).replace(",", "").replace("$", "").strip())
+                except (TypeError, ValueError):
+                    return None
+            if deal is not None:
+                for attr in deal_attrs:
+                    existing = getattr(deal, attr, None)
+                    if existing not in (None, "", "None"):
+                        try:
+                            return float(existing)
+                        except (TypeError, ValueError):
+                            continue
+            return None
 
-        property_type = (
-            (request.form.get("property_type") or "").strip().lower()
-            or (
-                (
-                    getattr(deal, "property_type", None)
-                    or getattr(deal, "asset_type", None)
-                    or ""
-                ).strip().lower()
-                if deal is not None else ""
-            )
-        )
+        def _pick_int(name, *deal_attrs):
+            raw = data.get(name)
+            if raw not in (None, "", "None"):
+                try:
+                    return int(float(str(raw).replace(",", "").strip()))
+                except (TypeError, ValueError):
+                    return None
+            if deal is not None:
+                for attr in deal_attrs:
+                    existing = getattr(deal, attr, None)
+                    if existing not in (None, "", "None"):
+                        try:
+                            return int(float(existing))
+                        except (TypeError, ValueError):
+                            continue
+            return None
 
-        description = (request.form.get("description") or "").strip()
-        if not description and deal is not None:
-            description = (getattr(deal, "notes", None) or "").strip()
+        comps = data.get("comps")
+        if not isinstance(comps, list):
+            comps = safe_json_loads(data.get("comps_json"), default=[])
+        comps = comps if isinstance(comps, list) else []
 
-        price = _pick_float("price", "purchase_price")
-        rehab = _pick_float("rehab", "rehab_cost", "estimated_rehab_cost")
-        arv = _pick_float("arv", "arv")
-        estimated_rent = _pick_float("estimated_rent", "estimated_rent")
-
-        total_basis = price + rehab
-        flip_profit = arv - total_basis if arv else 0.0
-        flip_margin = (flip_profit / arv * 100) if arv else 0.0
-
-        if not estimated_rent and arv:
-            estimated_rent = arv * 0.008
-
-        annual_rent = estimated_rent * 12
-        gross_yield = (annual_rent / total_basis * 100) if total_basis else 0.0
-        monthly_carry_proxy = total_basis * 0.01 if total_basis else 0.0
-        dscr_proxy = (estimated_rent / monthly_carry_proxy) if monthly_carry_proxy else 0.0
-
-        strategies = []
-
-        if arv > 0:
-            flip_score = 0
-            if flip_profit >= 25000:
-                flip_score += 35
-            elif flip_profit >= 15000:
-                flip_score += 25
-            elif flip_profit > 0:
-                flip_score += 10
-
-            if flip_margin >= 18:
-                flip_score += 30
-            elif flip_margin >= 12:
-                flip_score += 20
-            elif flip_margin >= 8:
-                flip_score += 10
-
-            if rehab <= (price * 0.25 if price else rehab):
-                flip_score += 15
-
-            strategies.append({
-                "name": "Fix & Flip",
-                "score": min(round(flip_score), 100),
-                "profit": round(flip_profit, 2),
-                "margin_pct": round(flip_margin, 2),
-                "risk": "Medium" if (price and rehab <= price * 0.35) else "High",
-                "summary": "Renovate and sell for a near-term capital gain.",
-                "best_for": "Deals with healthy spread between total basis and ARV."
-            })
-
-        rental_score = 0
-        if gross_yield >= 10:
-            rental_score += 35
-        elif gross_yield >= 8:
-            rental_score += 25
-        elif gross_yield >= 6:
-            rental_score += 15
-
-        if dscr_proxy >= 1.25:
-            rental_score += 30
-        elif dscr_proxy >= 1.1:
-            rental_score += 20
-        elif dscr_proxy >= 1.0:
-            rental_score += 10
-
-        if rehab <= (price * 0.30 if price else rehab):
-            rental_score += 15
-
-        strategies.append({
-            "name": "Buy & Hold Rental",
-            "score": min(round(rental_score), 100),
-            "rent_estimate": round(estimated_rent, 2),
-            "annual_rent": round(annual_rent, 2),
-            "gross_yield_pct": round(gross_yield, 2),
-            "dscr_proxy": round(dscr_proxy, 2),
-            "risk": "Low" if dscr_proxy >= 1.2 else "Medium",
-            "summary": "Renovate and hold for recurring long-term rental income.",
-            "best_for": "Deals with stable rent coverage and durable cash flow."
-        })
-
-        if property_type in ["land", "lot", "vacant land"]:
-            dev_score = 55
-            if arv > 0 and total_basis > 0 and flip_margin >= 15:
-                dev_score += 15
-
-            strategies.append({
-                "name": "Ground-Up Development",
-                "score": min(round(dev_score), 100),
-                "risk": "High",
-                "summary": "Construct a new property for resale, refinance, or long-term hold.",
-                "best_for": "Land or teardown opportunities with strong end-value potential."
-            })
-
-        recommended_strategy = None
-        if strategies:
-            strategies = sorted(strategies, key=lambda s: s.get("score", 0), reverse=True)
-            recommended_strategy = strategies[0]["name"]
-
-        analysis = {
-            "address": address,
-            "property_type": property_type,
-            "description": description,
-            "price": round(price, 2),
-            "rehab": round(rehab, 2),
-            "arv": round(arv, 2),
-            "estimated_rent": round(estimated_rent, 2),
-            "metrics": {
-                "total_basis": round(total_basis, 2),
-                "flip_profit": round(flip_profit, 2),
-                "flip_margin_pct": round(flip_margin, 2),
-                "annual_rent": round(annual_rent, 2),
-                "gross_yield_pct": round(gross_yield, 2),
-                "dscr_proxy": round(dscr_proxy, 2),
-            },
-            "recommended_strategy": recommended_strategy,
-            "strategies": strategies,
+        payload = {
+            "project_name": _pick_str("project_name", "title", "address", "property_address") or None,
+            "description": _pick_str("description", "notes"),
+            "property_type": _pick_str("property_type", "asset_type", fallback="single_family") or None,
+            "lot_size": _pick_str("lot_size") or None,
+            "zoning": _pick_str("zoning") or None,
+            "asking_price": _pick_float("asking_price", "purchase_price"),
+            "square_feet_target": _pick_int("square_feet_target", "square_feet", "sqft"),
+            "city": _pick_str("city") or None,
+            "state": _pick_str("state") or None,
+            "zip_code": _pick_str("zip_code", "zip") or None,
+            "arv": _pick_float("arv"),
+            "monthly_rent": _pick_float("monthly_rent", "estimated_rent"),
+            "down_payment_pct": _normalize_percentage(data.get("down_payment_pct")) or 0.25,
+            "interest_rate": _normalize_percentage(data.get("interest_rate")) or 0.08,
+            "hold_years": _pick_int("hold_years") or 1,
+            "annual_tax_rate": _normalize_percentage(data.get("annual_tax_rate")),
+            "annual_insurance_rate": _normalize_percentage(data.get("annual_insurance_rate")),
+            "market_cost_multiplier": _pick_float("market_cost_multiplier"),
+            "market_value_multiplier": _pick_float("market_value_multiplier"),
+            "market_rent_multiplier": _pick_float("market_rent_multiplier"),
+            "market_risk_adjustment": _pick_int("market_risk_adjustment"),
+            "comps": comps,
         }
 
-        if deal:
+        if not payload["description"]:
+            return jsonify({"status": "error", "message": "description is required"}), 400
+
+        engine_data = _post_renovation_engine_json("/v1/deal_architect", payload, timeout=60) or {}
+
+        if deal is not None:
             results = _deal_results(deal)
-            results["strategy_analysis"] = analysis
-
-            if recommended_strategy:
-                deal.recommended_strategy = recommended_strategy
-                if not deal.strategy:
-                    deal.strategy = recommended_strategy
-
+            results["strategy_analysis"] = engine_data
             _set_deal_results(deal, results)
+
+            if hasattr(deal, "recommended_strategy"):
+                deal.recommended_strategy = engine_data.get("recommended_type") or getattr(deal, "recommended_strategy", None)
+            if hasattr(deal, "strategy") and not getattr(deal, "strategy", None):
+                deal.strategy = engine_data.get("recommended_type") or getattr(deal, "strategy", None)
+            if hasattr(deal, "deal_score"):
+                deal.deal_score = engine_data.get("deal_score") or getattr(deal, "deal_score", None)
+            if hasattr(deal, "purchase_price") and payload.get("asking_price") is not None:
+                deal.purchase_price = payload["asking_price"]
+            if hasattr(deal, "arv") and payload.get("arv") is not None:
+                deal.arv = payload["arv"]
+            if hasattr(deal, "estimated_rent") and payload.get("monthly_rent") is not None:
+                deal.estimated_rent = payload["monthly_rent"]
+            if hasattr(deal, "lot_size") and payload.get("lot_size"):
+                deal.lot_size = payload["lot_size"]
+            if hasattr(deal, "zoning") and payload.get("zoning"):
+                deal.zoning = payload["zoning"]
+
             db.session.commit()
 
-        return jsonify({
-            "status": "ok",
-            "saved_to_deal": bool(deal),
-            "deal_id": deal.id if deal else None,
-            **analysis,
-        })
+        return jsonify(engine_data)
 
     except Exception as e:
         current_app.logger.exception("deal_architect_analyze failed")
@@ -7422,6 +9891,7 @@ def renovation_upload():
 @role_required("investor")
 def deal_rehab_generate():
     deal = None
+    rehab_scope_result = {}
 
     try:
         data = request.form.to_dict() or {}
@@ -7448,6 +9918,7 @@ def deal_rehab_generate():
         mode = (data.get("mode") or "hgtv").strip()
         room_type = (data.get("room_type") or "living room").strip()
         notes = (data.get("notes") or "").strip()
+        rehab_level = (data.get("rehab_level") or "medium").strip().lower()
         save_to_deal = str(data.get("save_to_deal") or "true").lower() in ("1", "true", "yes", "on")
 
         before_image = request.files.get("before_image")
@@ -7496,10 +9967,33 @@ def deal_rehab_generate():
         if not image_base64:
             raise RuntimeError("Provide a before photo or saved rehab before image.")
 
+        property_type = (
+            (data.get("property_type") or "").strip()
+            or (getattr(deal, "resolved_json", {}) or {}).get("property", {}).get("property_type", "")
+            or "residential property"
+        )
+        stable_seed = _stable_render_seed(
+            "rehab",
+            getattr(deal, "id", None),
+            before_uploaded_url or image_url,
+            preset,
+            mode,
+            room_type,
+            rehab_level,
+            notes,
+        )
+
         payload = {
             "preset": preset,
             "mode": mode,
             "room_type": room_type,
+            "room_focus": room_type,
+            "rehab_level": rehab_level,
+            "property_type": property_type,
+            "design_style": preset,
+            "desired_updates": notes,
+            "keep_layout": True,
+            "preserve_structure": True,
             "image_base64": image_base64,
             "image_url": "",
             "count": 1,
@@ -7509,6 +10003,7 @@ def deal_rehab_generate():
             "width": 768,
             "height": 768,
             "notes": notes,
+            "seed": stable_seed,
         }
 
         engine_json = _post_renovation_engine_json(
@@ -7533,8 +10028,9 @@ def deal_rehab_generate():
             "preset": preset,
             "mode": mode,
             "room_type": room_type,
+            "rehab_level": rehab_level,
             "notes": notes,
-            "seed": engine_json.get("seed"),
+            "seed": engine_json.get("seed") or stable_seed,
             "job_id": engine_json.get("job_id"),
             "meta": engine_json.get("meta") or {},
         }
@@ -7542,6 +10038,18 @@ def deal_rehab_generate():
         before_result = {
             "image_url": before_uploaded_url,
         }
+
+        scope_image_url = before_uploaded_url or image_url
+        if scope_image_url and SCOPE_ENGINE_URL:
+            try:
+                rehab_scope_result = _post_scope_engine_json(
+                    "/v1/rehab_scope",
+                    {"image_url": scope_image_url},
+                    timeout=60,
+                ) or {}
+            except Exception:
+                current_app.logger.exception("Rehab Studio scope analysis failed")
+                rehab_scope_result = {}
 
         if save_to_deal and deal is not None:
             results = _deal_results(deal)
@@ -7555,12 +10063,22 @@ def deal_rehab_generate():
                 if not (
                     (c.get("preset") or "").strip().lower() == preset.lower()
                     and (c.get("mode") or "").strip().lower() == mode.lower()
+                    and (c.get("room_type") or "").strip().lower() == room_type.lower()
                 )
             ]
             concepts.append(concept_entry)
 
             rehab_project["latest"] = concept_entry
             rehab_project["concepts"] = concepts
+
+            if rehab_scope_result:
+                results["rehab_scope"] = rehab_scope_result
+                if hasattr(deal, "rehab_scope_json"):
+                    deal.rehab_scope_json = rehab_scope_result
+                if hasattr(deal, "rehab_cost") and rehab_scope_result.get("cost_high") is not None:
+                    deal.rehab_cost = rehab_scope_result.get("cost_high")
+                if hasattr(deal, "arv") and rehab_scope_result.get("arv") and not getattr(deal, "arv", None):
+                    deal.arv = rehab_scope_result.get("arv")
 
             results["rehab_project"] = rehab_project
             _set_deal_results(deal, results)
@@ -7574,6 +10092,7 @@ def deal_rehab_generate():
             "status": "ok",
             "before_result": before_result,
             "concept_result": concept_entry,
+            "rehab_scope": rehab_scope_result,
             "deal_id": deal.id if deal else None,
             "saved_to_deal": bool(save_to_deal and deal is not None),
         })
@@ -7939,14 +10458,7 @@ def ai_rehab_scope():
         if not SCOPE_ENGINE_URL:
             return jsonify({"status": "error", "message": "Scope engine is not configured."}), 500
 
-        res = requests.post(
-            _scope_engine_url("/v1/rehab_scope"),
-            json={"image_url": image_url},
-            headers=_scope_engine_headers(),
-            timeout=60,
-        )
-        res.raise_for_status()
-        return jsonify(res.json())
+        return jsonify(_post_scope_engine_json("/v1/rehab_scope", {"image_url": image_url}, timeout=60))
 
     except Exception as e:
         current_app.logger.exception("ai_rehab_scope failed")
@@ -8529,24 +11041,28 @@ def activity():
 def budget():
     ip = InvestorProfile.query.filter_by(user_id=current_user.id).first()
     assistant = AIAssistant()
+    budget_data = None
+    ai_tip = None
 
     if request.method == "POST":
         expenses = request.form.to_dict()
+        income = safe_float(request.form.get("income")) or 0
+        expenses_total = safe_float(request.form.get("expenses")) or 0
+        budget_data = {
+            "income": income,
+            "expenses": expenses_total,
+            "savings": income - expenses_total,
+        }
         ai_tip = assistant.generate_reply(
             f"Analyze investor expenses: {expenses}",
             "investor_budget",
-        )
-        return render_template(
-            "investor/budget_result.html",
-            investor=ip,
-            ai_tip=ai_tip,
-            title="Budget Results",
-            active_tab="budget"
         )
 
     return render_template(
         "investor/budget.html",
         investor=ip,
+        budget_data=budget_data,
+        ai_tip=ai_tip,
         title="Budget Planner",
         active_tab="budget"
     )
@@ -8558,6 +11074,7 @@ def budget():
 def budget_studio(deal_id=None):
     deal = None
     results = {}
+    existing_budget = None
 
     if deal_id is None:
         query_deal_id = request.args.get("deal_id", type=int)
@@ -8570,7 +11087,20 @@ def budget_studio(deal_id=None):
             user_id=current_user.id
         ).first_or_404()
 
-        results = deal.results_json or {}
+        results = copy.deepcopy(deal.results_json or {})
+        results["budget_seed"] = _build_budget_seed_from_results(results)
+
+        ip = InvestorProfile.query.filter_by(user_id=current_user.id).first()
+        if ip:
+            existing_budget = (
+                ProjectBudget.query
+                .filter_by(
+                    deal_id=deal.id,
+                    investor_profile_id=ip.id
+                )
+                .order_by(ProjectBudget.id.desc())
+                .first()
+            )
 
     purchase_price = float(getattr(deal, "purchase_price", 0) or 0) if deal else 0
     arv = float(getattr(deal, "arv", 0) or 0) if deal else 0
@@ -8580,13 +11110,13 @@ def budget_studio(deal_id=None):
         "investor/budget_studio.html",
         deal=deal,
         results=results,
+        existing_budget=existing_budget,
         purchase_price=purchase_price,
         arv=arv,
         rehab_cost=rehab_cost,
         page_title="Budget Studio",
         page_subtitle="Control your numbers, track execution, and stay profitable."
     )
-
 
 @investor_bp.route("/budget-studio/create", methods=["GET", "POST"])
 @login_required
@@ -8644,6 +11174,106 @@ def create_budget():
         active_tab="budget"
     )
 
+@investor_bp.route("/deals/<int:deal_id>/budget/create-from-studio", methods=["POST"])
+@login_required
+@role_required("investor")
+def create_budget_from_studio(deal_id):
+    deal = _get_owned_deal_or_404(deal_id)
+    ip = InvestorProfile.query.filter_by(user_id=current_user.id).first_or_404()
+
+    existing_budget = ProjectBudget.query.filter_by(
+        deal_id=deal.id,
+        investor_profile_id=ip.id
+    ).order_by(ProjectBudget.id.desc()).first()
+
+    if existing_budget:
+        flash("A budget already exists for this deal.", "info")
+        return redirect(url_for("investor.budget_detail", budget_id=existing_budget.id))
+
+    raw_payload = request.form.get("budget_payload") or "{}"
+
+    try:
+        payload = json.loads(raw_payload)
+    except Exception:
+        payload = {}
+
+    items = payload.get("items") or []
+    strategy = (
+        payload.get("strategy")
+        or ((deal.results_json or {}).get("workspace_analysis") or {}).get("selected_strategy")
+        or ((deal.results_json or {}).get("strategy_analysis") or {}).get("strategy")
+        or "rehab"
+    )
+
+    budget_type = "build" if str(strategy).lower() in {"build_studio", "project_build", "build"} else "rehab"
+
+    budget = ProjectBudget(
+        borrower_profile_id=None,
+        investor_profile_id=ip.id,
+        loan_app_id=None,
+        deal_id=deal.id,
+        build_project_id=None,
+        budget_type=budget_type,
+        name=f"Budget - {deal.title or deal.address or f'Deal #{deal.id}'}",
+        project_name=deal.title or deal.address,
+        total_amount=0.0,
+        total_budget=0.0,
+        total_cost=0.0,
+        materials_cost=0.0,
+        labor_cost=0.0,
+        contingency=0.0,
+        paid_amount=0.0,
+        notes="Created from Budget Studio.",
+    )
+    db.session.add(budget)
+    db.session.flush()
+
+    created_count = 0
+    estimated_total = 0.0
+
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+
+        description = str(item.get("name") or item.get("description") or "Budget Item").strip() or "Budget Item"
+
+        try:
+            estimated_amount = float(item.get("cost") or item.get("estimated_amount") or 0)
+        except (TypeError, ValueError):
+            estimated_amount = 0.0
+
+        category = str(item.get("category") or "General").strip() or "General"
+
+        expense = ProjectExpense(
+            budget_id=budget.id,
+            category=category,
+            description=description,
+            vendor=None,
+            estimated_amount=estimated_amount,
+            actual_amount=0.0,
+            paid_amount=0.0,
+            status="planned",
+            notes="Imported from Budget Studio.",
+        )
+        db.session.add(expense)
+        created_count += 1
+        estimated_total += estimated_amount
+
+    budget.total_cost = estimated_total
+    budget.total_amount = estimated_total
+    budget.total_budget = estimated_total + float(budget.contingency or 0)
+
+    if hasattr(budget, "recalculate_totals"):
+        budget.recalculate_totals()
+
+    db.session.commit()
+
+    if created_count:
+        flash(f"Budget tracker created with {created_count} line item(s).", "success")
+    else:
+        flash("Budget tracker created, but no line items were added.", "warning")
+
+    return redirect(url_for("investor.budget_detail", budget_id=budget.id))
 
 @investor_bp.route("/budget-studio/<int:budget_id>")
 @login_required
@@ -9264,6 +11894,39 @@ def payments():
     )
 
 
+@investor_bp.route("/subscription", methods=["GET"])
+@login_required
+@role_required("investor")
+def subscription():
+    return redirect(url_for("investor.payments"))
+
+
+@investor_bp.route("/subscription/upgrade", methods=["POST"])
+@login_required
+@role_required("investor")
+def upgrade_plan():
+    if hasattr(current_user, "subscription_plan"):
+        current_user.subscription_plan = "Pro"
+        db.session.commit()
+        flash("Subscription updated to Pro.", "success")
+    else:
+        flash("Subscription upgrades are not available for this account yet.", "warning")
+    return redirect(url_for("investor.subscription"))
+
+
+@investor_bp.route("/subscription/downgrade", methods=["POST"])
+@login_required
+@role_required("investor")
+def downgrade_plan():
+    if hasattr(current_user, "subscription_plan"):
+        current_user.subscription_plan = "Free"
+        db.session.commit()
+        flash("Subscription updated to Free.", "success")
+    else:
+        flash("Subscription changes are not available for this account yet.", "warning")
+    return redirect(url_for("investor.subscription"))
+
+
 @investor_bp.route("/billing/checkout/<int:payment_id>", methods=["GET"])
 @investor_bp.route("/payments/checkout/<int:payment_id>", methods=["GET"])
 @login_required
@@ -9595,6 +12258,34 @@ def request_partner_intro(partner_id):
 
     flash(f"Intro request sent for {partner.company or partner.name}.", "success")
     return redirect(url_for("investor.partner_detail", partner_id=partner.id))
+
+
+@investor_bp.route("/partners/<int:partner_id>/request-connection", methods=["POST"], endpoint="request_partner_connection")
+@login_required
+@role_required("investor")
+def request_partner_connection(partner_id):
+    ip = InvestorProfile.query.filter_by(user_id=current_user.id).first()
+    if not ip:
+        flash("Please complete your investor profile first.", "warning")
+        return redirect(url_for("investor.create_profile"))
+
+    partner = Partner.query.get_or_404(partner_id)
+
+    req = PartnerConnectionRequest(
+        investor_user_id=current_user.id,
+        investor_profile_id=ip.id,
+        partner_id=partner.id,
+        category=getattr(partner, "category", None),
+        message=f"Investor requested connection with {partner.company or partner.name}.",
+        source="internal",
+        status="pending",
+    )
+
+    db.session.add(req)
+    db.session.commit()
+
+    flash(f"Connection request sent for {partner.company or partner.name}.", "success")
+    return redirect(url_for("investor.partners"))
     
 @investor_bp.route("/resources/request-connection", methods=["POST"])
 @login_required
@@ -9960,10 +12651,10 @@ def invite_external_partner(lead_id):
     flash("External provider marked as invited.", "success")
     return redirect(url_for("investor.partner_marketplace"))
 
-@investor_bp.route("/partners/request", methods=["POST"])
+@investor_bp.route("/partners/request-legacy", methods=["POST"])
 @login_required
 @role_required("investor")
-def create_partner_connection_request():
+def create_partner_connection_request_legacy():
     ip = InvestorProfile.query.filter_by(user_id=current_user.id).first()
 
     partner_id = request.form.get("partner_id", type=int)
@@ -9990,7 +12681,7 @@ def create_partner_connection_request():
     flash("Partner request sent successfully.", "success")
     return redirect(url_for("investor.partner_marketplace"))
 
-@investor_bp.route("/partners/save-external", methods=["POST"])
+@investor_bp.route("/partners/save-external-lead", methods=["POST"])
 @login_required
 @role_required("investor")
 def save_external_partner_lead():

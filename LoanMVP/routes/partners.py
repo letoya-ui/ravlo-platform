@@ -22,6 +22,81 @@ from LoanMVP.models.partner_models import (
 partners_bp = Blueprint("partners", __name__, url_prefix="/partners")
 
 
+def _partner_testing_enabled() -> bool:
+    return bool(
+        current_app.config.get("FREE_PARTNER_MODE", False)
+        or current_app.config.get("BYPASS_PARTNER_SUBSCRIPTION", False)
+    )
+
+
+def _partner_tier_features(partner) -> set[str]:
+    tier = ((getattr(partner, "subscription_tier", "") or "").strip().lower())
+
+    features_by_tier = {
+        "free": {"crm_enabled"},
+        "featured": {
+            "crm_enabled",
+            "deal_visibility_enabled",
+            "priority_placement_enabled",
+            "smart_notifications_enabled",
+            "portfolio_showcase_enabled",
+        },
+        "premium": {
+            "crm_enabled",
+            "deal_visibility_enabled",
+            "priority_placement_enabled",
+            "smart_notifications_enabled",
+            "portfolio_showcase_enabled",
+            "proposal_builder_enabled",
+            "instant_quote_enabled",
+            "ai_assist_enabled",
+        },
+        "enterprise": {
+            "crm_enabled",
+            "deal_visibility_enabled",
+            "priority_placement_enabled",
+            "smart_notifications_enabled",
+            "portfolio_showcase_enabled",
+            "proposal_builder_enabled",
+            "instant_quote_enabled",
+            "ai_assist_enabled",
+        },
+    }
+
+    return features_by_tier.get(tier, set())
+
+
+def partner_feature_enabled(partner, feature_attr: str, default: bool = False) -> bool:
+    if _partner_testing_enabled():
+        return bool(partner)
+
+    if not partner:
+        return False
+
+    if getattr(partner, feature_attr, default):
+        return True
+
+    return feature_attr in _partner_tier_features(partner)
+
+
+def partner_effective_feature_access(partner) -> dict[str, bool]:
+    feature_defaults = {
+        "crm_enabled": True,
+        "deal_visibility_enabled": False,
+        "proposal_builder_enabled": False,
+        "instant_quote_enabled": False,
+        "ai_assist_enabled": False,
+        "priority_placement_enabled": False,
+        "smart_notifications_enabled": False,
+        "portfolio_showcase_enabled": False,
+    }
+
+    return {
+        feature_name: partner_feature_enabled(partner, feature_name, default)
+        for feature_name, default in feature_defaults.items()
+    }
+
+
 def partner_has_pro_access(partner) -> bool:
     if current_app.config.get("FREE_PARTNER_MODE", False):
         return bool(partner)
@@ -76,7 +151,7 @@ def dashboard():
             "key": "crm",
             "title": "CRM",
             "description": "Manage contacts, follow-up, and lead activity inside Ravlo.",
-            "enabled": getattr(partner, "crm_enabled", True),
+            "enabled": partner_feature_enabled(partner, "crm_enabled", True),
             "cta": "Open CRM",
             "endpoint": "partners.crm",
             "badge": "Core",
@@ -85,7 +160,7 @@ def dashboard():
             "key": "deal_visibility",
             "title": "Deal Visibility",
             "description": "See project, deal, and property context tied to requests.",
-            "enabled": getattr(partner, "deal_visibility_enabled", False),
+            "enabled": partner_feature_enabled(partner, "deal_visibility_enabled", False),
             "cta": "View Opportunities",
             "endpoint": "partners.requests",
             "badge": "Growth Tool",
@@ -94,7 +169,7 @@ def dashboard():
             "key": "proposal_builder",
             "title": "Proposal Builder",
             "description": "Create scopes, service proposals, and branded responses.",
-            "enabled": getattr(partner, "proposal_builder_enabled", False),
+            "enabled": partner_feature_enabled(partner, "proposal_builder_enabled", False),
             "cta": "Build Proposal",
             "endpoint": "partners.proposals",
             "badge": "Premium",
@@ -103,7 +178,7 @@ def dashboard():
             "key": "instant_quote",
             "title": "Instant Quote",
             "description": "Generate pricing quickly for incoming work opportunities.",
-            "enabled": getattr(partner, "instant_quote_enabled", False),
+            "enabled": partner_feature_enabled(partner, "instant_quote_enabled", False),
             "cta": "Create Quote",
             "endpoint": "partners.quotes",
             "badge": "Premium",
@@ -112,7 +187,7 @@ def dashboard():
             "key": "ai_assist",
             "title": "AI Assist",
             "description": "Use AI to help draft responses, estimates, and timelines.",
-            "enabled": getattr(partner, "ai_assist_enabled", False),
+            "enabled": partner_feature_enabled(partner, "ai_assist_enabled", False),
             "cta": "Open AI",
             "endpoint": "partners.ai",
             "badge": "Premium",
@@ -121,7 +196,7 @@ def dashboard():
             "key": "priority_placement",
             "title": "Priority Placement",
             "description": "Appear higher in Ravlo search and partner recommendations.",
-            "enabled": getattr(partner, "priority_placement_enabled", False),
+            "enabled": partner_feature_enabled(partner, "priority_placement_enabled", False),
             "cta": "Boost Visibility",
             "endpoint": "partners.upgrade",
             "badge": "Visibility",
@@ -130,7 +205,7 @@ def dashboard():
             "key": "smart_notifications",
             "title": "Smart Notifications",
             "description": "Get alerts when new requests match your service area.",
-            "enabled": getattr(partner, "smart_notifications_enabled", False),
+            "enabled": partner_feature_enabled(partner, "smart_notifications_enabled", False),
             "cta": "Manage Alerts",
             "endpoint": "partners.notifications",
             "badge": "Automation",
@@ -139,7 +214,7 @@ def dashboard():
             "key": "portfolio_showcase",
             "title": "Portfolio Showcase",
             "description": "Display photos and project work to help investors trust faster.",
-            "enabled": getattr(partner, "portfolio_showcase_enabled", False),
+            "enabled": partner_feature_enabled(partner, "portfolio_showcase_enabled", False),
             "cta": "Manage Portfolio",
             "endpoint": "partners.portfolio",
             "badge": "Brand",
@@ -514,7 +589,7 @@ def update_request_status(request_id):
 
     if new_status not in allowed:
         flash("Invalid request status.", "danger")
-        return redirect(url_for("partner.request_detail", request_id=req.id))
+        return redirect(url_for("partners.request_detail", request_id=req.id))
 
     req.status = new_status
     req.responded_at = datetime.utcnow()
@@ -522,7 +597,7 @@ def update_request_status(request_id):
     db.session.commit()
 
     flash("Request status updated.", "success")
-    return redirect(url_for("partner.request_detail", request_id=req.id))
+    return redirect(url_for("partners.request_detail", request_id=req.id))
 
 # ------------------------------------------------
 # PREMIUM WORKSPACE
@@ -926,7 +1001,7 @@ def edit_profile():
 
         db.session.commit()
         flash("Your partner profile was updated successfully.", "success")
-        return redirect(url_for("partners.profile"))
+        return redirect(url_for("partners.profile", partner_id=partner.id))
 
     return render_template("partners/partner_form.html", partner=partner)
 
@@ -939,23 +1014,15 @@ def upgrade():
         flash("Partner profile not found. Please register.", "warning")
         return redirect(url_for("partners.register"))
 
-    locked_feature_count = 0
-    feature_flags = [
-        getattr(partner, "crm_enabled", True),
-        getattr(partner, "deal_visibility_enabled", False),
-        getattr(partner, "proposal_builder_enabled", False),
-        getattr(partner, "instant_quote_enabled", False),
-        getattr(partner, "ai_assist_enabled", False),
-        getattr(partner, "priority_placement_enabled", False),
-        getattr(partner, "smart_notifications_enabled", False),
-        getattr(partner, "portfolio_showcase_enabled", False),
-    ]
-    locked_feature_count = sum(1 for item in feature_flags if not item)
+    feature_access = partner_effective_feature_access(partner)
+    locked_feature_count = sum(1 for item in feature_access.values() if not item)
 
     return render_template(
         "partners/upgrade.html",
         partner=partner,
+        feature_access=feature_access,
         locked_feature_count=locked_feature_count,
+        testing_unlocks_enabled=_partner_testing_enabled(),
         portal="partner",
         portal_name="Partner OS",
         portal_home=url_for("partners.dashboard"),
@@ -970,7 +1037,7 @@ def proposals():
         flash("Partner profile not found. Please register.", "warning")
         return redirect(url_for("partners.register"))
 
-    if not getattr(partner, "proposal_builder_enabled", False):
+    if not partner_feature_enabled(partner, "proposal_builder_enabled", False):
         flash("Proposal Builder is available on an upgraded plan.", "warning")
         return redirect(url_for("partners.upgrade"))
 
@@ -1000,7 +1067,7 @@ def proposal_detail(proposal_id):
         flash("Partner profile not found. Please register.", "warning")
         return redirect(url_for("partners.register"))
 
-    if not getattr(partner, "proposal_builder_enabled", False):
+    if not partner_feature_enabled(partner, "proposal_builder_enabled", False):
         flash("Proposal Builder is available on an upgraded plan.", "warning")
         return redirect(url_for("partners.upgrade"))
 
@@ -1081,7 +1148,7 @@ def create_proposal():
     # --------------------------------------------------
     # Feature gate
     # --------------------------------------------------
-    if not getattr(partner, "proposal_builder_enabled", False):
+    if not partner_feature_enabled(partner, "proposal_builder_enabled", False):
         flash("Proposal Builder is available on an upgraded plan.", "warning")
         return redirect(url_for("partners.upgrade"))
 

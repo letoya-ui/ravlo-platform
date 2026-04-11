@@ -86,6 +86,195 @@ def _request_attom(path: str, params: Optional[Dict[str, Any]] = None) -> Dict[s
         raise PropertyAPIError(f"ATTOM returned invalid JSON. Response: {snippet}")
 
 
+def _build_display_value(
+    *,
+    listing_price: Optional[float] = None,
+    market_value: Optional[float],
+    assessed_value: Optional[float],
+    last_sale_price: Optional[float],
+    last_sale_date: Optional[str],
+) -> Dict[str, Optional[Any]]:
+    if listing_price is not None:
+        return {
+            "display_value": listing_price,
+            "display_value_label": "List Price",
+            "display_value_source": "listing_price",
+            "display_value_secondary": market_value or assessed_value or last_sale_price,
+            "display_value_secondary_label": (
+                "Estimated Market Value" if market_value is not None
+                else "Assessed Value" if assessed_value is not None
+                else "Last Recorded Sale" if last_sale_price is not None
+                else None
+            ),
+        }
+
+    if market_value is not None:
+        return {
+            "display_value": market_value,
+            "display_value_label": "Estimated Market Value",
+            "display_value_source": "market_value",
+            "display_value_secondary": last_sale_price,
+            "display_value_secondary_label": "Last Recorded Sale",
+        }
+
+    if assessed_value is not None:
+        return {
+            "display_value": assessed_value,
+            "display_value_label": "Assessed Value",
+            "display_value_source": "assessed_value",
+            "display_value_secondary": last_sale_price,
+            "display_value_secondary_label": "Last Recorded Sale",
+        }
+
+    if last_sale_price is not None:
+        secondary_label = "Recorded Sale Date" if last_sale_date else None
+        return {
+            "display_value": last_sale_price,
+            "display_value_label": "Last Recorded Sale",
+            "display_value_source": "last_sale_price",
+            "display_value_secondary": last_sale_date,
+            "display_value_secondary_label": secondary_label,
+        }
+
+    return {
+        "display_value": None,
+        "display_value_label": "Value Signal Unavailable",
+        "display_value_source": None,
+        "display_value_secondary": None,
+        "display_value_secondary_label": None,
+    }
+
+
+def _needs_detail_enrichment(prop: Dict[str, Any]) -> bool:
+    return not any(
+        _to_float(prop.get(field)) is not None
+        for field in ("display_value", "price", "market_value", "assessed_value", "last_sale_price")
+    )
+
+
+def _merge_property_data(base: Dict[str, Any], detail: Dict[str, Any]) -> Dict[str, Any]:
+    merged = dict(base)
+    for key, value in (detail or {}).items():
+        if key == "raw":
+            continue
+        if merged.get(key) in (None, "", [], {}) and value not in (None, "", [], {}):
+            merged[key] = value
+
+    if detail:
+        merged["raw"] = detail.get("raw") or base.get("raw")
+
+    return merged
+
+
+def _enrich_property_with_detail(prop: Dict[str, Any]) -> Dict[str, Any]:
+    if not _needs_detail_enrichment(prop):
+        return prop
+
+    address1 = (prop.get("address_line1") or prop.get("address") or "").strip()
+    city = (prop.get("city") or "").strip()
+    state = (prop.get("state") or "").strip()
+    zip_code = (prop.get("zip_code") or "").strip()
+    attom_id = (prop.get("attom_id") or "").strip() if isinstance(prop.get("attom_id"), str) else prop.get("attom_id")
+
+    if not attom_id and (not address1 or not city or not state):
+        return prop
+
+    detail = {}
+    try:
+        if attom_id:
+            payload = _request_attom("property/detail", params={"attomid": attom_id})
+        else:
+            address2 = ", ".join(part for part in [city, state] if part).strip()
+            if zip_code:
+                address2 = f"{address2} {zip_code}".strip()
+            payload = _request_attom(
+                "property/detail",
+                params={
+                    "address1": address1,
+                    "address2": address2,
+                },
+            )
+        raw_detail = _extract_first_property(payload)
+        if raw_detail:
+            detail = _normalize_attom_property(raw_detail)
+    except Exception:
+        detail = {}
+
+    realtor_detail = {}
+    try:
+        from LoanMVP.services.realtor_provider import (
+            fetch_realtor_data,
+            fetch_realtor_photos,
+            fetch_realtor_estimate,
+        )
+
+        realtor_raw = fetch_realtor_data(address1, city, state)
+        if realtor_raw and realtor_raw.get("property"):
+            listing = realtor_raw["property"] or {}
+            realtor_detail = {
+                "price": _to_float(listing.get("price")),
+                "status": listing.get("status"),
+                "days_on_market": _to_int(listing.get("days_on_market")),
+                "description": listing.get("description"),
+                "primary_photo": listing.get("primary_photo"),
+                "photos": listing.get("photos") or [],
+                "beds": _to_int(listing.get("beds")),
+                "baths": _to_float(listing.get("baths")),
+                "square_feet": _to_int(listing.get("sqft")),
+            }
+
+        realtor_property_id = prop.get("property_id") or prop.get("attom_id")
+        estimate = fetch_realtor_estimate(realtor_property_id)
+        photos = fetch_realtor_photos(realtor_property_id)
+
+        if estimate:
+            realtor_detail["realtor_estimate"] = _to_float(estimate.get("estimate"))
+            realtor_detail["realtor_estimate_low"] = _to_float(estimate.get("low"))
+            realtor_detail["realtor_estimate_high"] = _to_float(estimate.get("high"))
+
+        if photos:
+            realtor_detail["photos"] = photos
+            realtor_detail["primary_photo"] = photos[0]
+    except Exception:
+        realtor_detail = {}
+
+    rentcast_detail = {}
+    try:
+        from LoanMVP.services.rentcast_service import get_rentcast_rent_estimate
+
+        rentcast_raw = get_rentcast_rent_estimate(
+            address=address1,
+            city=city,
+            state=state,
+            zip_code=zip_code,
+            property_type=(prop.get("property_type") or detail.get("property_type") or "single_family"),
+        )
+        rentcast_detail = {
+            "estimated_rent": _to_float(
+                rentcast_raw.get("rent")
+                or rentcast_raw.get("estimatedRent")
+                or rentcast_raw.get("rentEstimate")
+                or rentcast_raw.get("price")
+            )
+        }
+    except Exception:
+        rentcast_detail = {}
+
+    display_value = _build_display_value(
+        listing_price=_to_float(realtor_detail.get("price")) or _to_float(prop.get("price")),
+        market_value=_to_float(realtor_detail.get("realtor_estimate")) or _to_float(detail.get("market_value")),
+        assessed_value=_to_float(detail.get("assessed_value")),
+        last_sale_price=_to_float(detail.get("last_sale_price")),
+        last_sale_date=detail.get("last_sale_date"),
+    )
+
+    enriched = _merge_property_data(prop, detail)
+    enriched = _merge_property_data(enriched, realtor_detail)
+    enriched = _merge_property_data(enriched, rentcast_detail)
+    enriched.update(display_value)
+    return enriched
+
+
 def _normalize_attom_property(raw: Dict[str, Any]) -> Dict[str, Any]:
     """
     Normalizes one ATTOM property result into a clean Ravlo-friendly shape.
@@ -131,8 +320,72 @@ def _normalize_attom_property(raw: Dict[str, Any]) -> Dict[str, Any]:
         or _safe_get(raw, "assessment", "market", "mktttlvalue")
         or _safe_get(raw, "assessment", "assdttlvalue")
     )
+    market_value = _to_float(
+        _safe_get(raw, "assessment", "market", "mktttlvalue")
+        or _safe_get(raw, "assessment", "market", "mktTtlValue")
+    )
+    tax_amount = _to_float(
+        _safe_get(raw, "assessment", "tax", "taxamt")
+        or _safe_get(raw, "assessment", "tax", "taxAmt")
+    )
+    mortgage_amount = _to_float(
+        _safe_get(raw, "mortgage", "amount")
+        or _safe_get(raw, "mortgage", "mtgamt")
+    )
+    owner_occupied = _safe_get(raw, "summary", "ownerOccupied")
+    distressed = bool(
+        _safe_get(raw, "foreclosure", "status")
+        or _safe_get(raw, "preforeclosure")
+    )
+    primary_photo = (
+        _safe_get(raw, "photo")
+        or _safe_get(raw, "primary_photo")
+        or _safe_get(raw, "primaryPhoto")
+        or _safe_get(raw, "media", "primaryPhoto")
+        or _safe_get(raw, "photos", 0, "url")
+        or _safe_get(raw, "photos", 0)
+    )
 
     attom_id = _safe_get(raw, "identifier", "attomId") or _safe_get(raw, "identifier", "Id")
+
+    ravlo_score = None
+    score_reasons: List[str] = []
+
+    if distressed:
+        ravlo_score = 68
+        score_reasons.append("Distress signal detected")
+    else:
+        ravlo_score = 50
+
+    if market_value and last_sale_price and last_sale_price < (market_value * 0.85):
+        ravlo_score += 10
+        score_reasons.append("Sale appears below current market value")
+
+    if owner_occupied is False:
+        ravlo_score += 6
+        score_reasons.append("Non-owner occupied")
+
+    if year_built and year_built < 1980:
+        ravlo_score -= 4
+        score_reasons.append("Older property may need heavier updates")
+
+    ravlo_score = max(1, min(100, int(round(ravlo_score))))
+
+    recommended_strategy = "Needs Review"
+    if distressed and owner_occupied is False:
+        recommended_strategy = "Flip / BRRRR"
+    elif distressed:
+        recommended_strategy = "Flip"
+    elif market_value:
+        recommended_strategy = "Rental Review"
+
+    display_value = _build_display_value(
+        listing_price=None,
+        market_value=market_value,
+        assessed_value=assessed_value,
+        last_sale_price=last_sale_price,
+        last_sale_date=last_sale_date,
+    )
 
     return {
         "attom_id": attom_id,
@@ -152,6 +405,16 @@ def _normalize_attom_property(raw: Dict[str, Any]) -> Dict[str, Any]:
         "last_sale_price": last_sale_price,
         "last_sale_date": last_sale_date,
         "assessed_value": assessed_value,
+        "market_value": market_value,
+        "tax_amount": tax_amount,
+        "mortgage_amount": mortgage_amount,
+        "owner_occupied": owner_occupied,
+        "distressed": distressed,
+        "ravlo_score": ravlo_score,
+        "recommended_strategy": recommended_strategy,
+        "score_reasons": score_reasons,
+        "primary_photo": primary_photo,
+        **display_value,
         "raw": raw,
     }
 
@@ -166,6 +429,22 @@ def _extract_property_list(payload: Dict[str, Any]) -> List[Dict[str, Any]]:
     return []
 
 
+def _extract_first_property(payload: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    props = (
+        payload.get("property")
+        or payload.get("properties")
+        or _safe_get(payload, "response", "property")
+        or []
+    )
+
+    if isinstance(props, dict):
+        return props
+    if isinstance(props, list) and props:
+        first = props[0]
+        return first if isinstance(first, dict) else None
+    return None
+
+
 def search_properties_by_zip(postalcode: str, page: int = 1, page_size: int = 25) -> List[Dict[str, Any]]:
     payload = _request_attom(
         "property/address",
@@ -176,7 +455,8 @@ def search_properties_by_zip(postalcode: str, page: int = 1, page_size: int = 25
         },
     )
     properties = _extract_property_list(payload)
-    return [_normalize_attom_property(p) for p in properties]
+    normalized = [_normalize_attom_property(p) for p in properties]
+    return [_enrich_property_with_detail(p) for p in normalized]
 
 
 def search_property_by_address(
@@ -199,7 +479,8 @@ def search_property_by_address(
 
     payload = _request_attom("property/address", params=params)
     properties = _extract_property_list(payload)
-    return [_normalize_attom_property(p) for p in properties]
+    normalized = [_normalize_attom_property(p) for p in properties]
+    return [_enrich_property_with_detail(p) for p in normalized]
 
 
 def get_best_property_match(
@@ -244,6 +525,37 @@ def get_property_search_result(
     Ravlo-friendly wrapper for routes/services.
     """
 
+    location_parts = []
+    if address:
+        location_parts.append(address)
+    if city:
+        location_parts.append(city)
+    if state:
+        location_parts.append(state)
+    if postalcode:
+        location_parts.append(postalcode)
+    realtor_location = ", ".join([part.strip() for part in location_parts if str(part).strip()])
+
+    if realtor_location:
+        try:
+            from LoanMVP.services.realtor_provider import search_realtor_for_sale
+
+            realtor_results = search_realtor_for_sale(
+                location=realtor_location,
+                limit=page_size,
+                offset=max(page - 1, 0) * page_size,
+            )
+            if realtor_results:
+                enriched = [_enrich_property_with_detail(item) for item in realtor_results]
+                return {
+                    "ok": True,
+                    "count": len(enriched),
+                    "properties": enriched,
+                    "source": "realtor",
+                }
+        except Exception:
+            pass
+
     if address:
         results = search_property_by_address(
             address1=address,
@@ -264,6 +576,7 @@ def get_property_search_result(
         "ok": True,
         "count": len(results),
         "properties": results,
+        "source": "attom",
     }
 
 
@@ -277,12 +590,17 @@ def build_property_card_data(prop: Dict[str, Any]) -> Dict[str, Any]:
             [x for x in [prop.get("city"), prop.get("state"), prop.get("zip_code")] if x]
         ),
         "price": prop.get("last_sale_price"),
+        "market_value": prop.get("market_value"),
+        "assessed_value": prop.get("assessed_value"),
         "beds": prop.get("beds"),
         "baths": prop.get("baths"),
         "sqft": prop.get("square_feet"),
         "lot_size_sqft": prop.get("lot_size_sqft"),
         "year_built": prop.get("year_built"),
         "property_type": prop.get("property_type"),
+        "primary_photo": prop.get("primary_photo"),
+        "ravlo_score": prop.get("ravlo_score"),
+        "recommended_strategy": prop.get("recommended_strategy"),
         "latitude": prop.get("latitude"),
         "longitude": prop.get("longitude"),
         "attom_id": prop.get("attom_id"),

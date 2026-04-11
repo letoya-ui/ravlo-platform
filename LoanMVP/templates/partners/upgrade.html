@@ -362,6 +362,12 @@ Unlock tools that help partners respond faster, stand out, and win more work ins
           Current Tier: {{ partner.subscription_tier or "Free" }}
         </div>
 
+        {% if testing_unlocks_enabled %}
+          <div class="partner-tier-pill" style="margin-left:8px; background:rgba(34,197,94,.12); color:#7ef0a5; border-color:rgba(34,197,94,.24);">
+            Test Mode Unlocks On
+          </div>
+        {% endif %}
+
         <h2 class="partner-upgrade-title">
           Build a stronger presence inside the Ravlo network.
         </h2>
@@ -519,8 +525,8 @@ Unlock tools that help partners respond faster, stand out, and win more work ins
             <strong>CRM</strong>
             <span>Manage contacts and lead follow-up</span>
           </div>
-          <span class="feature-status {% if partner.crm_enabled %}enabled{% else %}locked{% endif %}">
-            {% if partner.crm_enabled %}Active{% else %}Locked{% endif %}
+          <span class="feature-status {% if feature_access.crm_enabled %}enabled{% else %}locked{% endif %}">
+            {% if feature_access.crm_enabled %}Active{% else %}Locked{% endif %}
           </span>
         </div>
 
@@ -529,8 +535,8 @@ Unlock tools that help partners respond faster, stand out, and win more work ins
             <strong>Deal Visibility</strong>
             <span>See project and opportunity context</span>
           </div>
-          <span class="feature-status {% if partner.deal_visibility_enabled %}enabled{% else %}locked{% endif %}">
-            {% if partner.deal_visibility_enabled %}Active{% else %}Locked{% endif %}
+          <span class="feature-status {% if feature_access.deal_visibility_enabled %}enabled{% else %}locked{% endif %}">
+            {% if feature_access.deal_visibility_enabled %}Active{% else %}Locked{% endif %}
           </span>
         </div>
 
@@ -539,8 +545,8 @@ Unlock tools that help partners respond faster, stand out, and win more work ins
             <strong>Proposal Builder</strong>
             <span>Create polished scopes and responses</span>
           </div>
-          <span class="feature-status {% if partner.proposal_builder_enabled %}enabled{% else %}locked{% endif %}">
-            {% if partner.proposal_builder_enabled %}Active{% else %}Locked{% endif %}
+          <span class="feature-status {% if feature_access.proposal_builder_enabled %}enabled{% else %}locked{% endif %}">
+            {% if feature_access.proposal_builder_enabled %}Active{% else %}Locked{% endif %}
           </span>
         </div>
 
@@ -549,8 +555,8 @@ Unlock tools that help partners respond faster, stand out, and win more work ins
             <strong>Instant Quote</strong>
             <span>Generate quick estimates</span>
           </div>
-          <span class="feature-status {% if partner.instant_quote_enabled %}enabled{% else %}locked{% endif %}">
-            {% if partner.instant_quote_enabled %}Active{% else %}Locked{% endif %}
+          <span class="feature-status {% if feature_access.instant_quote_enabled %}enabled{% else %}locked{% endif %}">
+            {% if feature_access.instant_quote_enabled %}Active{% else %}Locked{% endif %}
           </span>
         </div>
       </div>
@@ -561,8 +567,8 @@ Unlock tools that help partners respond faster, stand out, and win more work ins
             <strong>AI Assist</strong>
             <span>Draft pricing, timelines, and responses</span>
           </div>
-          <span class="feature-status {% if partner.ai_assist_enabled %}enabled{% else %}locked{% endif %}">
-            {% if partner.ai_assist_enabled %}Active{% else %}Locked{% endif %}
+          <span class="feature-status {% if feature_access.ai_assist_enabled %}enabled{% else %}locked{% endif %}">
+            {% if feature_access.ai_assist_enabled %}Active{% else %}Locked{% endif %}
           </span>
         </div>
 
@@ -571,8 +577,8 @@ Unlock tools that help partners respond faster, stand out, and win more work ins
             <strong>Priority Placement</strong>
             <span>Appear higher in partner discovery</span>
           </div>
-          <span class="feature-status {% if partner.priority_placement_enabled %}enabled{% else %}locked{% endif %}">
-            {% if partner.priority_placement_enabled %}Active{% else %}Locked{% endif %}
+          <span class="feature-status {% if feature_access.priority_placement_enabled %}enabled{% else %}locked{% endif %}">
+            {% if feature_access.priority_placement_enabled %}Active{% else %}Locked{% endif %}
           </span>
         </div>
 
@@ -581,8 +587,8 @@ Unlock tools that help partners respond faster, stand out, and win more work ins
             <strong>Smart Notifications</strong>
             <span>Get alerts for matching requests</span>
           </div>
-          <span class="feature-status {% if partner.smart_notifications_enabled %}enabled{% else %}locked{% endif %}">
-            {% if partner.smart_notifications_enabled %}Active{% else %}Locked{% endif %}
+          <span class="feature-status {% if feature_access.smart_notifications_enabled %}enabled{% else %}locked{% endif %}">
+            {% if feature_access.smart_notifications_enabled %}Active{% else %}Locked{% endif %}
           </span>
         </div>
 
@@ -591,8 +597,8 @@ Unlock tools that help partners respond faster, stand out, and win more work ins
             <strong>Portfolio Showcase</strong>
             <span>Display project photos and completed work</span>
           </div>
-          <span class="feature-status {% if partner.portfolio_showcase_enabled %}enabled{% else %}locked{% endif %}">
-            {% if partner.portfolio_showcase_enabled %}Active{% else %}Locked{% endif %}
+          <span class="feature-status {% if feature_access.portfolio_showcase_enabled %}enabled{% else %}locked{% endif %}">
+            {% if feature_access.portfolio_showcase_enabled %}Active{% else %}Locked{% endif %}
           </span>
         </div>
       </div>

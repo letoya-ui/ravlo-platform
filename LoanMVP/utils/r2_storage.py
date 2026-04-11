@@ -1,10 +1,18 @@
 import os
 import uuid
-import boto3
-from botocore.client import Config
+
+try:
+    import boto3
+    from botocore.client import Config
+except ModuleNotFoundError:
+    boto3 = None
+    Config = None
 
 
 def _spaces_client():
+    if boto3 is None or Config is None:
+        raise RuntimeError("boto3 is required for Spaces/R2 uploads but is not installed.")
+
     endpoint_url = os.environ["SPACES_ENDPOINT"]  # ex: https://ravlo-images.sfo3.digitaloceanspaces.com
 
     return boto3.client(

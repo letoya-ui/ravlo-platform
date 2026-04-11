@@ -79,12 +79,17 @@ PAGE_META = {
     "terms": {
         "title": "Terms of Service | Ravlo",
         "description": "Read Ravlo’s terms of service.",
-        "template": "marketing/terms.html",
+        "template": "marketing/terms_launch.html",
     },
     "privacy": {
         "title": "Privacy Policy | Ravlo",
         "description": "Read Ravlo’s privacy policy.",
-        "template": "marketing/privacy.html",
+        "template": "marketing/privacy_launch.html",
+    },
+    "disclaimer": {
+        "title": "Disclaimer | Ravlo",
+        "description": "Read Ravlo's platform disclaimer and important use limitations.",
+        "template": "marketing/disclaimer.html",
     },
     "deal_architect": {
         "title": "Deal Architect | Ravlo Studio",
@@ -296,6 +301,11 @@ def terms():
 @marketing_bp.route("/privacy")
 def privacy():
     return render_marketing_page("privacy")
+
+
+@marketing_bp.route("/disclaimer")
+def disclaimer():
+    return render_marketing_page("disclaimer")
 
 
 # ---------------------------------------------------------

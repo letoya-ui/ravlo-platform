@@ -30,6 +30,16 @@ underwriter_bp = Blueprint("underwriter", __name__, url_prefix="/underwriter")
 print(">>> UNDERWRITER ROUTE LOADED FROM:", __file__)
 
 
+def _underwriter_next_setup_endpoint():
+    if not getattr(current_user, "ica_accepted", False):
+        return "underwriter.agreement"
+    if not getattr(current_user, "nda_accepted", False):
+        return "underwriter.nda"
+    if not getattr(current_user, "onboarding_complete", False):
+        return "underwriter.onboarding"
+    return "underwriter.dashboard"
+
+
 # ===============================================================
 #   DASHBOARD
 # ===============================================================
@@ -67,6 +77,234 @@ def dashboard():
         title="Underwriter Command Center",
         active_tab="dashboard",
     )
+
+
+@underwriter_bp.route("/contracts")
+@login_required
+@role_required("underwriter")
+def contracts():
+    return render_template(
+        "employee/contracts_hub.html",
+        role_label="Underwriter",
+        dashboard_endpoint="underwriter.dashboard",
+        agreement_endpoint="underwriter.agreement",
+        nda_endpoint="underwriter.nda",
+        onboarding_endpoint="underwriter.onboarding",
+        next_step_endpoint=_underwriter_next_setup_endpoint(),
+        contracts_title="Underwriting Readiness Hub",
+        contracts_subline="Review required agreements, confidentiality terms, onboarding steps, and workflow standards before issuing decisions.",
+        packet_items=[
+            {
+                "title": "Underwriting Agreement Packet",
+                "detail": "Authority, escalation expectations, audit standards, and decision accountability.",
+            },
+            {
+                "title": "Confidentiality + Data Handling",
+                "detail": "Borrower files, credit reports, and internal pricing logic must stay inside authorized workflows.",
+            },
+            {
+                "title": "Onboarding Playbook",
+                "detail": "Risk review standards, condition management, communication norms, and file turn-time expectations.",
+            },
+        ],
+        workflow_items=[
+            "Review complete borrower files before issuing a decision.",
+            "Escalate guideline exceptions and policy conflicts quickly.",
+            "Keep condition language specific, supportable, and measurable.",
+            "Document approval and decline rationale clearly for downstream teams.",
+        ],
+        active_tab="contracts",
+        title="Underwriter Contracts Hub",
+    )
+
+
+@underwriter_bp.route("/agreement", methods=["GET"])
+@login_required
+@role_required("underwriter")
+def agreement():
+    if getattr(current_user, "ica_accepted", False):
+        if not getattr(current_user, "nda_accepted", False):
+            return redirect(url_for("underwriter.nda"))
+        if not getattr(current_user, "onboarding_complete", False):
+            return redirect(url_for("underwriter.onboarding"))
+        return redirect(url_for("underwriter.dashboard"))
+
+    return render_template(
+        "employee/team_agreement.html",
+        role_label="Underwriter",
+        dashboard_endpoint="underwriter.dashboard",
+        contracts_endpoint="underwriter.contracts",
+        accept_endpoint="underwriter.accept_agreement",
+        agreement_label="Underwriter Operating Agreement",
+        hero_title="Confirm authority, credit standards, and escalation expectations.",
+        hero_text="This agreement outlines the underwriting authority, service expectations, and operating rules attached to your role inside Ravlo.",
+        checkpoints=[
+            "Your approvals and declines must align with credit policy and documented file support.",
+            "Exceptions, overlays, and material file concerns must be escalated instead of silently worked around.",
+            "Borrower information, internal strategy, and pricing details remain confidential and role-bound.",
+            "Performance is measured by decision quality, timeliness, and clean communication to processing and leadership.",
+        ],
+        acknowledgment_items=[
+            {
+                "name": "status_ack",
+                "text": "I understand the underwriter role, authority limits, and escalation responsibilities.",
+            },
+            {
+                "name": "comp_ack",
+                "text": "I understand that performance, scope, and role expectations are governed by this operating agreement.",
+            },
+            {
+                "name": "no_guarantee",
+                "text": "I understand Ravlo may adjust responsibilities, queue mix, and process expectations as operations evolve.",
+            },
+            {
+                "name": "agree_terms",
+                "text": "I agree to operate within underwriting policy, audit standards, and company expectations.",
+            },
+        ],
+        active_tab="contracts",
+        title="Underwriter Agreement",
+    )
+
+
+@underwriter_bp.route("/agreement/accept", methods=["POST"])
+@login_required
+@role_required("underwriter")
+def accept_agreement():
+    if not all([
+        request.form.get("status_ack"),
+        request.form.get("comp_ack"),
+        request.form.get("no_guarantee"),
+        request.form.get("agree_terms"),
+    ]):
+        flash("You must accept all agreement items before continuing.", "danger")
+        return redirect(url_for("underwriter.agreement"))
+
+    current_user.ica_accepted = True
+    db.session.commit()
+
+    flash("Agreement accepted successfully.", "success")
+    return redirect(url_for("underwriter.nda"))
+
+
+@underwriter_bp.route("/nda", methods=["GET"])
+@login_required
+@role_required("underwriter")
+def nda():
+    if not getattr(current_user, "ica_accepted", False):
+        return redirect(url_for("underwriter.agreement"))
+    if getattr(current_user, "nda_accepted", False):
+        if not getattr(current_user, "onboarding_complete", False):
+            return redirect(url_for("underwriter.onboarding"))
+        return redirect(url_for("underwriter.dashboard"))
+
+    return render_template(
+        "employee/team_nda.html",
+        role_label="Underwriter",
+        dashboard_endpoint="underwriter.dashboard",
+        contracts_endpoint="underwriter.contracts",
+        accept_endpoint="underwriter.accept_nda",
+        confidentiality_title="Underwriter Confidentiality Agreement",
+        confidentiality_points=[
+            "Credit reports, income documents, fraud findings, and file narratives are confidential.",
+            "Internal policy overlays, scorecards, and decision rationale must stay inside approved channels.",
+            "Borrower and partner data may only be used for active underwriting work.",
+            "Confidentiality obligations continue after queue access or employment ends.",
+        ],
+        active_tab="contracts",
+        title="Underwriter NDA",
+    )
+
+
+@underwriter_bp.route("/nda/accept", methods=["POST"])
+@login_required
+@role_required("underwriter")
+def accept_nda():
+    nda_ack = request.form.get("nda_ack")
+    nda_agree = request.form.get("nda_agree")
+
+    if not nda_ack or not nda_agree:
+        flash("You must accept the NDA to continue.", "danger")
+        return redirect(url_for("underwriter.nda"))
+
+    current_user.nda_accepted = True
+    db.session.commit()
+
+    flash("NDA accepted successfully.", "success")
+    return redirect(url_for("underwriter.onboarding"))
+
+
+@underwriter_bp.route("/onboarding", methods=["GET"])
+@login_required
+@role_required("underwriter")
+def onboarding():
+    if not getattr(current_user, "ica_accepted", False):
+        return redirect(url_for("underwriter.agreement"))
+    if not getattr(current_user, "nda_accepted", False):
+        return redirect(url_for("underwriter.nda"))
+    if getattr(current_user, "onboarding_complete", False):
+        return redirect(url_for("underwriter.dashboard"))
+
+    return render_template(
+        "employee/team_onboarding.html",
+        role_label="Underwriter",
+        dashboard_endpoint="underwriter.dashboard",
+        contracts_endpoint="underwriter.contracts",
+        complete_endpoint="underwriter.complete_onboarding",
+        onboarding_title="Underwriter Onboarding",
+        onboarding_subline="Learn the decision workflow, communication cadence, and file standards that keep underwriting fast and supportable.",
+        progress_label="67%",
+        checklist_items=[
+            "Review risk, credit, income, and collateral decision standards.",
+            "Understand when to approve, condition, suspend, or decline a file.",
+            "Use precise condition language that processors and borrowers can action.",
+            "Escalate fraud signals, policy exceptions, and missing support immediately.",
+            "Keep decision notes concise, defensible, and easy for downstream teams to follow.",
+            "Maintain response speed without sacrificing audit quality.",
+        ],
+        workflow_steps=[
+            {
+                "number": "01",
+                "title": "File Intake",
+                "text": "Confirm a complete package, identify critical gaps, and establish first-pass risk.",
+            },
+            {
+                "number": "02",
+                "title": "Risk Review",
+                "text": "Evaluate borrower strength, loan structure, collateral support, and red flags.",
+            },
+            {
+                "number": "03",
+                "title": "Condition Strategy",
+                "text": "Issue only the conditions needed to cure the file and communicate them clearly.",
+            },
+            {
+                "number": "04",
+                "title": "Decision Handoff",
+                "text": "Publish a supportable decision and keep processor, borrower, and leadership aligned.",
+            },
+        ],
+        active_tab="onboarding",
+        title="Underwriter Onboarding",
+    )
+
+
+@underwriter_bp.route("/onboarding/complete", methods=["POST"])
+@login_required
+@role_required("underwriter")
+def complete_onboarding():
+    acknowledged = request.form.get("acknowledged")
+    agreement = request.form.get("agreement")
+
+    if not acknowledged or not agreement:
+        flash("You must confirm all onboarding items before continuing.", "danger")
+        return redirect(url_for("underwriter.onboarding"))
+
+    current_user.onboarding_complete = True
+    db.session.commit()
+
+    flash("Onboarding completed. Welcome to the underwriting command center.", "success")
+    return redirect(url_for("underwriter.dashboard"))
 
 
 # ===============================================================

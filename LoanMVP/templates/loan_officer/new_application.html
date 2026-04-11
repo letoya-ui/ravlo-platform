@@ -8,6 +8,7 @@
   <div class="card">
     <h2>📝 New Loan Application</h2>
     <form method="POST">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <!-- Borrower + Type -->
       <div class="row">
         <div>

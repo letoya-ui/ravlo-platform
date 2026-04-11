@@ -73,7 +73,7 @@
               <td>{{ user.email or "—" }}</td>
               <td>
                 <span class="badge badge-info">
-                  { get_role_display(user.role) }}
+                  {{ get_role_display(user.role) }}
                 </span>
               </td>
             </tr>
@@ -106,6 +106,7 @@
               <th>Role</th>
               <th>Status</th>
               <th>Expires</th>
+              <th>Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -129,6 +130,16 @@
                 {% endif %}
               </td>
               <td>{{ invite.expires_at.strftime("%Y-%m-%d") if invite.expires_at else "—" }}</td>
+              <td>
+                {% if invite.status != "accepted" %}
+                  <form method="post" action="{{ url_for('admin.resend_team_invite', company_id=company.id, invite_id=invite.id) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="re-btn ghost sm">Resend</button>
+                  </form>
+                {% else %}
+                  <span class="badge badge-neutral">Complete</span>
+                {% endif %}
+              </td>
             </tr>
             {% endfor %}
           </tbody>

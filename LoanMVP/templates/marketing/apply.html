@@ -104,6 +104,12 @@
         </div>
 
         <button type="submit" class="ravlo-btn primary">Submit Application</button>
+        <p class="apply-legal-note">
+          By submitting this application, you agree to Ravlo's
+          <a href="{{ url_for('marketing.terms') }}">Terms</a>,
+          <a href="{{ url_for('marketing.privacy') }}">Privacy Policy</a>,
+          and <a href="{{ url_for('marketing.disclaimer') }}">Disclaimer</a>.
+        </p>
       </form>
     </div>
   </div>
@@ -216,6 +222,19 @@
     color: #08111a;
     font-weight: 800;
     cursor: pointer;
+  }
+
+  .apply-legal-note {
+    margin-top: 16px;
+    font-size: .88rem;
+    color: rgba(235,240,247,0.76);
+    line-height: 1.5;
+  }
+
+  .apply-legal-note a {
+    color: #fff;
+    text-decoration: underline;
+    text-underline-offset: 3px;
   }
 
   @media (max-width: 900px) {

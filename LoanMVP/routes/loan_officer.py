@@ -107,6 +107,13 @@ equifax = EquifaxAPI()
 assistant = AIAssistant()
 ai = LoanMVPAI()
 
+
+def _loan_officer_onboarding_done():
+    return bool(
+        getattr(current_user, "loan_officer_onboarding_complete", False)
+        or getattr(current_user, "onboarding_complete", False)
+    )
+
 def _resolve_recipient_name(recipient_type, recipient_id):
     """
     Best-effort display name resolver for inbox UI.
@@ -139,7 +146,7 @@ def enforce_onboarding_flow():
     if not current_user.nda_accepted:
         return redirect(url_for("loan_officer.nda"))
 
-    if not current_user.onboarding_complete:
+    if not _loan_officer_onboarding_done():
         return redirect(url_for("loan_officer.onboarding"))
 
     return None
@@ -266,72 +273,20 @@ def dashboard():
 
 
 
-@loan_officer_bp.route("/onboarding", methods=["GET"])
-@role_required("loan_officer")
-def onboarding():
-    if getattr(current_user, "loan_officer_onboarding_complete", False):
-        return redirect(url_for("loan_officer.dashboard"))
-
-    return render_template(
-        "loan_officer/onboarding.html",
-        assigned_role="Loan Officer",
-        onboarding_progress="15%",
-        resource_count=6,
-        required_steps=6,
-    )
-
-
-@loan_officer_bp.route("/onboarding/complete", methods=["POST"])
-@csrf.exempt
-@role_required("loan_officer")
-def complete_onboarding():
-    acknowledged = request.form.get("acknowledged")
-    agreement = request.form.get("agreement")
-
-    if not acknowledged or not agreement:
-        flash("You must confirm all acknowledgment items before continuing.", "danger")
-        return redirect(url_for("loan_officer.onboarding"))
-
-    current_user.onboarding_complete = True
-    db.session.commit()
-
-    flash("Onboarding completed. Welcome to your dashboard.", "success")
-    return redirect(url_for("loan_officer.dashboard"))
-
-@loan_officer_bp.route("/nda", methods=["GET"])
-@role_required("loan_officer")
-def nda():
-    if getattr(current_user, "nda_accepted", False):
-        return redirect(url_for("loan_officer.onboarding"))
-
-    return render_template("loan_officer/nda.html")
-
-@loan_officer_bp.route("/nda/accept", methods=["POST"])
-@csrf.exempt
-@role_required("loan_officer")
-def accept_nda():
-    nda_ack = request.form.get("nda_ack")
-    nda_agree = request.form.get("nda_agree")
-
-    if not nda_ack or not nda_agree:
-        flash("You must accept the NDA to continue.", "danger")
-        return redirect(url_for("loan_officer.nda"))
-
-    current_user.nda_accepted = True
-    db.session.commit()
-
-    return redirect(url_for("loan_officer.onboarding"))
-
 @loan_officer_bp.route("/agreement", methods=["GET"])
 @role_required("loan_officer")
 def agreement():
     if getattr(current_user, "ica_accepted", False):
+        if not getattr(current_user, "nda_accepted", False):
+            return redirect(url_for("loan_officer.nda"))
+        if _loan_officer_onboarding_done():
+            return redirect(url_for("loan_officer.dashboard"))
         return redirect(url_for("loan_officer.onboarding"))
 
     return render_template("loan_officer/agreement.html")
 
+
 @loan_officer_bp.route("/agreement/accept", methods=["POST"])
-@csrf.exempt
 @role_required("loan_officer")
 def accept_ica():
     if not all([
@@ -346,7 +301,75 @@ def accept_ica():
     current_user.ica_accepted = True
     db.session.commit()
 
+    flash("Agreement accepted successfully.", "success")
     return redirect(url_for("loan_officer.nda"))
+
+
+@loan_officer_bp.route("/nda", methods=["GET"])
+@role_required("loan_officer")
+def nda():
+    if getattr(current_user, "nda_accepted", False):
+        if _loan_officer_onboarding_done():
+            return redirect(url_for("loan_officer.dashboard"))
+        return redirect(url_for("loan_officer.onboarding"))
+
+    return render_template("loan_officer/nda.html")
+
+
+@loan_officer_bp.route("/nda/accept", methods=["POST"])
+@role_required("loan_officer")
+def accept_nda():
+    nda_ack = request.form.get("nda_ack")
+    nda_agree = request.form.get("nda_agree")
+
+    if not nda_ack or not nda_agree:
+        flash("You must accept the NDA to continue.", "danger")
+        return redirect(url_for("loan_officer.nda"))
+
+    current_user.nda_accepted = True
+    db.session.commit()
+
+    flash("NDA accepted successfully.", "success")
+    return redirect(url_for("loan_officer.onboarding"))
+
+
+@loan_officer_bp.route("/onboarding", methods=["GET"])
+@role_required("loan_officer")
+def onboarding():
+    if not getattr(current_user, "ica_accepted", False):
+        return redirect(url_for("loan_officer.agreement"))
+
+    if not getattr(current_user, "nda_accepted", False):
+        return redirect(url_for("loan_officer.nda"))
+
+    if _loan_officer_onboarding_done():
+        return redirect(url_for("loan_officer.dashboard"))
+
+    return render_template(
+        "loan_officer/onboarding.html",
+        assigned_role="Loan Officer",
+        onboarding_progress="100%",
+        resource_count=6,
+        required_steps=6,
+    )
+
+
+@loan_officer_bp.route("/onboarding/complete", methods=["POST"])
+@role_required("loan_officer")
+def complete_onboarding():
+    acknowledged = request.form.get("acknowledged")
+    agreement = request.form.get("agreement")
+
+    if not acknowledged or not agreement:
+        flash("You must confirm all acknowledgment items before continuing.", "danger")
+        return redirect(url_for("loan_officer.onboarding"))
+
+    current_user.loan_officer_onboarding_complete = True
+    current_user.onboarding_complete = True
+    db.session.commit()
+
+    flash("Onboarding completed. Welcome to your dashboard.", "success")
+    return redirect(url_for("loan_officer.dashboard"))
 
 # =============================================================
 # AI Assistant — Loan Officer
@@ -479,7 +502,6 @@ def ai_assistant():
 
 
 @loan_officer_bp.route("/messages", methods=["GET", "POST"])
-@csrf.exempt
 @role_required("loan_officer")
 @loan_officer_onboarding_required
 def messages():
@@ -716,7 +738,6 @@ def ai_generator():
 # Loan Applications
 # =========================================================
 @loan_officer_bp.route("/new_application", methods=["GET", "POST"])
-@csrf.exempt
 @role_required("loan_officer")
 def new_application():
     borrowers = BorrowerProfile.query.order_by(BorrowerProfile.full_name.asc()).all()
@@ -780,7 +801,6 @@ def new_application():
 # CREATE NEW LOAN
 # ===============================================================
 @loan_officer_bp.route("/create-loan", methods=["GET", "POST"])
-@csrf.exempt
 @role_required("loan_officer")
 def create_loan():
     borrowers = BorrowerProfile.query.order_by(BorrowerProfile.full_name.asc()).all()
@@ -820,7 +840,6 @@ def create_loan():
 
 
 @loan_officer_bp.route("/quick-1003", methods=["GET", "POST"])
-@csrf.exempt
 @role_required("loan_officer")
 def quick_1003():
     officer = LoanOfficerProfile.query.filter_by(user_id=current_user.id).first()
@@ -895,7 +914,6 @@ def quick_1003():
 # Quote Engine
 # =========================================================
 @loan_officer_bp.route("/quote_engine", methods=["GET", "POST"])
-@csrf.exempt
 @role_required("loan_officer")
 def quote_engine():
     officer = LoanOfficerProfile.query.filter_by(user_id=current_user.id).first()
@@ -989,7 +1007,6 @@ def quote_engine():
     )
 
 @loan_officer_bp.route("/quotes/new", methods=["GET", "POST"])
-@csrf.exempt
 @role_required("loan_officer")
 def new_quote():
     borrowers = BorrowerProfile.query.order_by(BorrowerProfile.full_name.asc()).all()
@@ -1164,7 +1181,6 @@ def ai_summary():
 # Task Manager
 # =========================================================
 @loan_officer_bp.route("/tasks", methods=["GET", "POST"])
-@csrf.exempt
 @role_required("loan_officer")
 def task():
     if request.method == "POST":
@@ -1201,7 +1217,6 @@ def task():
 
 
 @loan_officer_bp.route("/tasks/<int:task_id>/toggle", methods=["POST"])
-@csrf.exempt
 @role_required("loan_officer")
 def toggle_task(task_id):
     task = Task.query.get_or_404(task_id)
@@ -1211,7 +1226,6 @@ def toggle_task(task_id):
 
 
 @loan_officer_bp.route("/tasks/<int:task_id>/delete", methods=["POST"])
-@csrf.exempt
 @role_required("loan_officer")
 def delete_task(task_id):
     task = Task.query.get_or_404(task_id)
@@ -1223,21 +1237,21 @@ def delete_task(task_id):
 
 
 @loan_officer_bp.route("/tasks/complete/<int:task_id>", methods=["POST"])
-@csrf.exempt
 @role_required("loan_officer")
 def task_complete(task_id):
     task = Task.query.get_or_404(task_id)
     task.status = "Completed"
+    task.completed = True
     db.session.commit()
     return redirect(url_for("loan_officer.task"))
 
 
 @loan_officer_bp.route("/tasks/new", methods=["GET", "POST"])
-@csrf.exempt
 @role_required("loan_officer")
 def new_task():
     borrowers = BorrowerProfile.query.order_by(BorrowerProfile.full_name.asc()).all()
     loans = LoanApplication.query.order_by(LoanApplication.created_at.desc()).all()
+    selected_borrower_id = request.args.get("borrower_id", type=int)
 
     if request.method == "POST":
         due_date_raw = request.form.get("due_date")
@@ -1261,6 +1275,7 @@ def new_task():
         "loan_officer/new_task.html",
         borrowers=borrowers,
         loans=loans,
+        selected_borrower_id=selected_borrower_id,
         active_tab="tasks",
         title="New Task"
     )
@@ -2387,7 +2402,6 @@ def quotes(borrower_id):
 # NEW LOAN CREATION
 # =========================================================
 @loan_officer_bp.route("/loan/new", methods=["GET", "POST"])
-@csrf.exempt
 @role_required("loan_officer")
 def new_loan():
     borrowers = BorrowerProfile.query.order_by(BorrowerProfile.full_name.asc()).all()
@@ -2513,7 +2527,6 @@ def capital_funds(loan_id):
     )
 
 @loan_officer_bp.route("/upload/<int:borrower_id>", methods=["GET", "POST"])
-@csrf.exempt
 @role_required("loan_officer")
 def upload(borrower_id):
     borrower = BorrowerProfile.query.get_or_404(borrower_id)
@@ -2561,7 +2574,7 @@ def upload(borrower_id):
         return redirect(url_for("loan_officer.upload", borrower_id=borrower_id))
 
     return render_template(
-        "loan_officer/upload.html",
+        "loan_officer/uploads.html",
         borrower=borrower,
         form=form,
         uploads=uploads,
@@ -2812,7 +2825,6 @@ def borrower_search():
     )
 
 @loan_officer_bp.route("/borrower-intake", methods=["GET", "POST"])
-@csrf.exempt
 @role_required("loan_officer")
 def borrower_intake():
     form = BorrowerIntakeForm()
@@ -3511,7 +3523,6 @@ def generate_1003(loan_id):
 
 
 @loan_officer_bp.route("/borrower/<int:borrower_id>/request-docs", methods=["GET", "POST"])
-@csrf.exempt
 @role_required("loan_officer")
 def request_documents(borrower_id):
     borrower = BorrowerProfile.query.get_or_404(borrower_id)

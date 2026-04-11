@@ -34,6 +34,16 @@ from LoanMVP.app import socketio
 processor_bp = Blueprint("processor", __name__, url_prefix="/processor")
 assistant = AIAssistant()
 
+
+def _processor_next_setup_endpoint():
+    if not getattr(current_user, "ica_accepted", False):
+        return "processor.agreement"
+    if not getattr(current_user, "nda_accepted", False):
+        return "processor.nda"
+    if not getattr(current_user, "onboarding_complete", False):
+        return "processor.onboarding"
+    return "processor.dashboard"
+
 # ---------------------------------------------------------
 # 🏠 Processor Dashboard
 # ---------------------------------------------------------
@@ -170,8 +180,230 @@ def dashboard():
         pending_docs=pending_docs,
         stats=stats,
         ai_summary=ai_summary,
-        title="Processor Command Center"
+        title="Processor Command Center",
+        active_tab="dashboard",
     )
+
+
+@processor_bp.route("/contracts")
+@role_required("processor")
+def contracts():
+    return render_template(
+        "employee/contracts_hub.html",
+        role_label="Processor",
+        dashboard_endpoint="processor.dashboard",
+        agreement_endpoint="processor.agreement",
+        nda_endpoint="processor.nda",
+        onboarding_endpoint="processor.onboarding",
+        next_step_endpoint=_processor_next_setup_endpoint(),
+        contracts_title="Processor Readiness Hub",
+        contracts_subline="Keep agreements, confidentiality, onboarding, and workflow standards in one place before touching live borrower files.",
+        packet_items=[
+            {
+                "title": "Processor Operating Agreement",
+                "detail": "Service expectations, file ownership, document control, and escalation rules.",
+            },
+            {
+                "title": "Confidentiality + Borrower Privacy",
+                "detail": "Income docs, credit materials, title items, and borrower communications must stay protected.",
+            },
+            {
+                "title": "Onboarding Playbook",
+                "detail": "Queue management, document verification, condition handling, and underwriting handoff standards.",
+            },
+        ],
+        workflow_items=[
+            "Keep borrower-facing requests specific, timely, and easy to fulfill.",
+            "Verify documents against conditions before marking a file ready.",
+            "Surface bottlenecks early so underwriters are not blocked by avoidable gaps.",
+            "Maintain clean status updates and handoff notes across every active file.",
+        ],
+        active_tab="contracts",
+        title="Processor Contracts Hub",
+    )
+
+
+@processor_bp.route("/agreement", methods=["GET"])
+@role_required("processor")
+def agreement():
+    if getattr(current_user, "ica_accepted", False):
+        if not getattr(current_user, "nda_accepted", False):
+            return redirect(url_for("processor.nda"))
+        if not getattr(current_user, "onboarding_complete", False):
+            return redirect(url_for("processor.onboarding"))
+        return redirect(url_for("processor.dashboard"))
+
+    return render_template(
+        "employee/team_agreement.html",
+        role_label="Processor",
+        dashboard_endpoint="processor.dashboard",
+        contracts_endpoint="processor.contracts",
+        accept_endpoint="processor.accept_agreement",
+        agreement_label="Processor Operating Agreement",
+        hero_title="Confirm file ownership, service standards, and operational expectations.",
+        hero_text="This agreement defines how processors manage borrower files, document flow, and underwriting handoff inside Ravlo.",
+        checkpoints=[
+            "Processors are responsible for keeping files moving and surfacing blockers early.",
+            "Borrower communication must be clear, professional, and tied to real file needs.",
+            "Document verification and file notes must be accurate enough for underwriting to trust immediately.",
+            "Status changes, handoffs, and escalations should leave a clean audit trail.",
+        ],
+        acknowledgment_items=[
+            {
+                "name": "status_ack",
+                "text": "I understand the processor role, file ownership expectations, and escalation responsibilities.",
+            },
+            {
+                "name": "comp_ack",
+                "text": "I understand that role expectations, service standards, and accountability are governed by this agreement.",
+            },
+            {
+                "name": "no_guarantee",
+                "text": "I understand Ravlo may adjust workflow, staffing, and queue assignments as operations evolve.",
+            },
+            {
+                "name": "agree_terms",
+                "text": "I agree to operate within processor workflow standards, documentation rules, and company expectations.",
+            },
+        ],
+        active_tab="contracts",
+        title="Processor Agreement",
+    )
+
+
+@processor_bp.route("/agreement/accept", methods=["POST"])
+@role_required("processor")
+def accept_agreement():
+    if not all([
+        request.form.get("status_ack"),
+        request.form.get("comp_ack"),
+        request.form.get("no_guarantee"),
+        request.form.get("agree_terms"),
+    ]):
+        flash("You must accept all agreement items before continuing.", "danger")
+        return redirect(url_for("processor.agreement"))
+
+    current_user.ica_accepted = True
+    db.session.commit()
+
+    flash("Agreement accepted successfully.", "success")
+    return redirect(url_for("processor.nda"))
+
+
+@processor_bp.route("/nda", methods=["GET"])
+@role_required("processor")
+def nda():
+    if not getattr(current_user, "ica_accepted", False):
+        return redirect(url_for("processor.agreement"))
+    if getattr(current_user, "nda_accepted", False):
+        if not getattr(current_user, "onboarding_complete", False):
+            return redirect(url_for("processor.onboarding"))
+        return redirect(url_for("processor.dashboard"))
+
+    return render_template(
+        "employee/team_nda.html",
+        role_label="Processor",
+        dashboard_endpoint="processor.dashboard",
+        contracts_endpoint="processor.contracts",
+        accept_endpoint="processor.accept_nda",
+        confidentiality_title="Processor Confidentiality Agreement",
+        confidentiality_points=[
+            "Borrower uploads, condition requests, title items, and internal notes are confidential.",
+            "Borrower information may only be used for active file handling and approved communication.",
+            "Operational playbooks, lender guidance, and internal decision context must stay inside authorized systems.",
+            "Confidentiality obligations continue after role access ends.",
+        ],
+        active_tab="contracts",
+        title="Processor NDA",
+    )
+
+
+@processor_bp.route("/nda/accept", methods=["POST"])
+@role_required("processor")
+def accept_nda():
+    nda_ack = request.form.get("nda_ack")
+    nda_agree = request.form.get("nda_agree")
+
+    if not nda_ack or not nda_agree:
+        flash("You must accept the NDA to continue.", "danger")
+        return redirect(url_for("processor.nda"))
+
+    current_user.nda_accepted = True
+    db.session.commit()
+
+    flash("NDA accepted successfully.", "success")
+    return redirect(url_for("processor.onboarding"))
+
+
+@processor_bp.route("/onboarding", methods=["GET"])
+@role_required("processor")
+def onboarding():
+    if not getattr(current_user, "ica_accepted", False):
+        return redirect(url_for("processor.agreement"))
+    if not getattr(current_user, "nda_accepted", False):
+        return redirect(url_for("processor.nda"))
+    if getattr(current_user, "onboarding_complete", False):
+        return redirect(url_for("processor.dashboard"))
+
+    return render_template(
+        "employee/team_onboarding.html",
+        role_label="Processor",
+        dashboard_endpoint="processor.dashboard",
+        contracts_endpoint="processor.contracts",
+        complete_endpoint="processor.complete_onboarding",
+        onboarding_title="Processor Onboarding",
+        onboarding_subline="Learn the document, condition, and borrower workflow standards that keep files clean before underwriting.",
+        progress_label="67%",
+        checklist_items=[
+            "Understand queue ownership, borrower updates, and document chase expectations.",
+            "Verify uploads against actual file needs before marking anything complete.",
+            "Track conditions cleanly so underwriters can act without reworking the file.",
+            "Escalate missing support, stale borrower follow-up, and high-risk blockers quickly.",
+            "Keep notes, status changes, and handoff summaries specific and current.",
+            "Maintain professional borrower communication at every stage of the file.",
+        ],
+        workflow_steps=[
+            {
+                "number": "01",
+                "title": "Open File",
+                "text": "Review borrower details, required docs, and status so the file starts organized.",
+            },
+            {
+                "number": "02",
+                "title": "Drive Conditions",
+                "text": "Request what is missing, follow up quickly, and keep borrowers clear on next steps.",
+            },
+            {
+                "number": "03",
+                "title": "Verify Support",
+                "text": "Check uploaded materials against file needs before clearing them forward.",
+            },
+            {
+                "number": "04",
+                "title": "Handoff Cleanly",
+                "text": "Send underwriting a file with organized notes, verified documents, and current status.",
+            },
+        ],
+        active_tab="onboarding",
+        title="Processor Onboarding",
+    )
+
+
+@processor_bp.route("/onboarding/complete", methods=["POST"])
+@role_required("processor")
+def complete_onboarding():
+    acknowledged = request.form.get("acknowledged")
+    agreement = request.form.get("agreement")
+
+    if not acknowledged or not agreement:
+        flash("You must confirm all onboarding items before continuing.", "danger")
+        return redirect(url_for("processor.onboarding"))
+
+    current_user.onboarding_complete = True
+    db.session.commit()
+
+    flash("Onboarding completed. Welcome to the processor command center.", "success")
+    return redirect(url_for("processor.dashboard"))
 
 # ---------------------------------------------------------
 # 📊 Dashboard Data API

@@ -8,9 +8,353 @@ Learn how to generate, manage, and close deals using the Ravlo ecosystem.
 {% endblock %}
 
 {% block content %}
+<style>
+  .loan-officer-onboarding {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+
+  .partner-hero-card {
+    position: relative;
+    overflow: hidden;
+    border-radius: 20px;
+    padding: 2rem;
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 45%, #2563eb 100%);
+    color: #fff;
+    box-shadow: 0 18px 40px rgba(15, 23, 42, 0.18);
+  }
+
+  .partner-hero-card::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(circle at top right, rgba(255,255,255,0.16), transparent 30%),
+      radial-gradient(circle at bottom left, rgba(255,255,255,0.10), transparent 35%);
+    pointer-events: none;
+  }
+
+  .partner-hero-grid {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    grid-template-columns: 1.6fr 1fr;
+    gap: 1.5rem;
+    align-items: stretch;
+  }
+
+  .partner-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.35rem 0.75rem;
+    border-radius: 999px;
+    background: rgba(255,255,255,0.14);
+    border: 1px solid rgba(255,255,255,0.18);
+    font-size: 0.82rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    margin-bottom: 1rem;
+  }
+
+  .partner-hero-title {
+    margin: 0 0 0.85rem;
+    font-size: 2rem;
+    line-height: 1.15;
+    font-weight: 800;
+  }
+
+  .partner-hero-text {
+    margin: 0;
+    max-width: 60ch;
+    color: rgba(255,255,255,0.88);
+    font-size: 1rem;
+    line-height: 1.7;
+  }
+
+  .partner-hero-panel {
+    display: grid;
+    gap: 1rem;
+    align-content: start;
+  }
+
+  .partner-mini-stat {
+    padding: 1rem 1.1rem;
+    border-radius: 16px;
+    background: rgba(255,255,255,0.12);
+    border: 1px solid rgba(255,255,255,0.16);
+    backdrop-filter: blur(6px);
+  }
+
+  .partner-mini-stat .label {
+    display: block;
+    margin-bottom: 0.35rem;
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: rgba(255,255,255,0.72);
+  }
+
+  .partner-mini-stat strong {
+    font-size: 0.98rem;
+    line-height: 1.5;
+    color: #fff;
+  }
+
+  .onboarding-progress-bar {
+    border-radius: 18px;
+    padding: 1.15rem 1.25rem;
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.05);
+  }
+
+  .progress-label {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 0.65rem;
+    font-size: 0.92rem;
+    color: #475569;
+  }
+
+  .progress-label strong {
+    color: #0f172a;
+    font-size: 0.95rem;
+  }
+
+  .progress-track {
+    width: 100%;
+    height: 10px;
+    background: #e5e7eb;
+    border-radius: 999px;
+    overflow: hidden;
+  }
+
+  .progress-fill {
+    height: 100%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #2563eb, #4f46e5);
+    transition: width 0.35s ease;
+  }
+
+  .partner-section-card,
+  .onboarding-complete-card {
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 20px;
+    padding: 1.5rem;
+    box-shadow: 0 10px 30px rgba(15, 23, 42, 0.04);
+  }
+
+  .section-head {
+    margin-bottom: 1rem;
+  }
+
+  .section-head h3 {
+    margin: 0 0 0.35rem;
+    font-size: 1.2rem;
+    color: #0f172a;
+  }
+
+  .section-head p {
+    margin: 0;
+    color: #64748b;
+    line-height: 1.6;
+  }
+
+  .partner-checklist {
+    display: grid;
+    gap: 0.85rem;
+  }
+
+  .partner-check-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 0.95rem 1rem;
+    border-radius: 14px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    color: #0f172a;
+    line-height: 1.55;
+  }
+
+  .partner-check-item::before {
+    content: "✓";
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.35rem;
+    height: 1.35rem;
+    min-width: 1.35rem;
+    border-radius: 999px;
+    background: #dbeafe;
+    color: #1d4ed8;
+    font-size: 0.82rem;
+    font-weight: 800;
+    margin-top: 0.1rem;
+  }
+
+  .workflow-grid,
+  .quick-action-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+  }
+
+  .workflow-step,
+  .partner-action-card {
+    height: 100%;
+    padding: 1.1rem;
+    border-radius: 16px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+  }
+
+  .workflow-step:hover,
+  .partner-action-card:hover {
+    transform: translateY(-2px);
+    border-color: #c7d2fe;
+    box-shadow: 0 10px 24px rgba(37, 99, 235, 0.08);
+  }
+
+  .step-no {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    border-radius: 999px;
+    background: linear-gradient(135deg, #2563eb, #4f46e5);
+    color: #fff;
+    font-size: 0.82rem;
+    font-weight: 800;
+    margin-bottom: 0.85rem;
+  }
+
+  .workflow-step h4,
+  .partner-action-copy h4 {
+    margin: 0 0 0.35rem;
+    color: #0f172a;
+    font-size: 1rem;
+  }
+
+  .workflow-step p,
+  .partner-action-copy p {
+    margin: 0;
+    color: #64748b;
+    line-height: 1.6;
+  }
+
+  .onboarding-complete-card {
+    background: linear-gradient(145deg, #ffffff, #f8fbff);
+    border: 1px solid #dbeafe;
+  }
+
+  .complete-header h3 {
+    margin: 0 0 0.35rem;
+    font-size: 1.35rem;
+    color: #0f172a;
+  }
+
+  .complete-header p {
+    margin: 0;
+    color: #64748b;
+    line-height: 1.65;
+  }
+
+  .check-group {
+    margin: 1.4rem 0 1.15rem;
+    display: grid;
+    gap: 0.85rem;
+  }
+
+  .check-item {
+    display: flex;
+    gap: 0.8rem;
+    align-items: flex-start;
+    padding: 0.95rem 1rem;
+    border-radius: 14px;
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    transition: border-color 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+    cursor: pointer;
+  }
+
+  .check-item:hover {
+    background: #f8fbff;
+    border-color: #93c5fd;
+    box-shadow: 0 8px 20px rgba(37, 99, 235, 0.06);
+  }
+
+  .check-item input[type="checkbox"] {
+    margin-top: 0.2rem;
+    transform: scale(1.1);
+    accent-color: #2563eb;
+  }
+
+  .check-item span {
+    color: #0f172a;
+    line-height: 1.55;
+  }
+
+  .ravlo-btn.primary.large {
+    width: 100%;
+    min-height: 50px;
+    border: none;
+    border-radius: 12px;
+    padding: 0.95rem 1.25rem;
+    font-size: 0.98rem;
+    font-weight: 700;
+    background: linear-gradient(90deg, #2563eb, #4f46e5);
+    color: #fff;
+    box-shadow: 0 12px 28px rgba(37, 99, 235, 0.24);
+    cursor: pointer;
+    transition: transform 0.18s ease, box-shadow 0.18s ease, opacity 0.18s ease;
+  }
+
+  .ravlo-btn.primary.large:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 16px 32px rgba(37, 99, 235, 0.28);
+  }
+
+  .ravlo-btn.primary.large:active {
+    transform: translateY(0);
+  }
+
+  @media (max-width: 900px) {
+    .partner-hero-grid,
+    .workflow-grid,
+    .quick-action-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .partner-hero-title {
+      font-size: 1.65rem;
+    }
+  }
+
+  @media (max-width: 640px) {
+    .partner-hero-card,
+    .partner-section-card,
+    .onboarding-complete-card,
+    .onboarding-progress-bar {
+      padding: 1.15rem;
+      border-radius: 16px;
+    }
+
+    .partner-hero-title {
+      font-size: 1.45rem;
+    }
+  }
+</style>
+
 <div class="partner-dashboard-page loan-officer-onboarding">
 
-  <!-- HERO -->
   <section class="ravlo-card partner-hero-card">
     <div class="partner-hero-grid">
       <div class="partner-hero-copy">
@@ -37,7 +381,16 @@ Learn how to generate, manage, and close deals using the Ravlo ecosystem.
     </div>
   </section>
 
-  <!-- CHECKLIST -->
+  <div class="onboarding-progress-bar">
+    <div class="progress-label">
+      <span>Onboarding Progress</span>
+      <strong>{{ onboarding_progress }}</strong>
+    </div>
+    <div class="progress-track">
+      <div class="progress-fill" style="width: {{ onboarding_progress }}"></div>
+    </div>
+  </div>
+
   <section class="partner-section-card">
     <div class="section-head">
       <h3>Onboarding Checklist</h3>
@@ -54,7 +407,6 @@ Learn how to generate, manage, and close deals using the Ravlo ecosystem.
     </div>
   </section>
 
-  <!-- WORKFLOW -->
   <section class="partner-section-card">
     <div class="section-head">
       <h3>Loan Officer Workflow</h3>
@@ -88,7 +440,6 @@ Learn how to generate, manage, and close deals using the Ravlo ecosystem.
     </div>
   </section>
 
-  <!-- PLATFORM USE -->
   <section class="partner-section-card">
     <div class="section-head">
       <h3>Platform Usage</h3>
@@ -126,7 +477,6 @@ Learn how to generate, manage, and close deals using the Ravlo ecosystem.
     </div>
   </section>
 
-  <!-- PERFORMANCE -->
   <section class="partner-section-card">
     <div class="section-head">
       <h3>Performance Expectations</h3>
@@ -140,10 +490,32 @@ Learn how to generate, manage, and close deals using the Ravlo ecosystem.
     </div>
   </section>
 
+  <section class="onboarding-complete-card">
+    <div class="complete-header">
+      <h3>You're Almost Ready</h3>
+      <p>Confirm your setup and enter the dashboard to begin working deals inside Ravlo.</p>
+    </div>
+
+    <form method="POST" action="{{ url_for('loan_officer.complete_onboarding') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+      <div class="check-group">
+        <label class="check-item">
+          <input type="checkbox" name="acknowledged" value="yes" required>
+          <span>I acknowledge the loan officer workflow, borrower standards, and platform expectations.</span>
+        </label>
+
+        <label class="check-item">
+          <input type="checkbox" name="agreement" value="yes" required>
+          <span>I am ready to begin operating inside Ravlo as a loan officer.</span>
+        </label>
+      </div>
+
+      <button type="submit" class="ravlo-btn primary large">
+        Complete Onboarding & Enter Dashboard
+      </button>
+    </form>
+  </section>
+
 </div>
-<form method="POST" action="{{ url_for('loan_officer.complete_onboarding') }}">
-  {{ csrf_token() }}
-  <button type="submit" class="ravlo-btn primary">
-    Complete Onboarding
-  </button>
-</form>{% endblock %}
+{% endblock %}

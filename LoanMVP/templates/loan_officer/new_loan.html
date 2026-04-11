@@ -9,6 +9,7 @@
   </div>
 
   <form method="POST">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <label for="borrower_id">Borrower</label>
     <select name="borrower_id" required>
       <option value="">-- Select Borrower --</option>

@@ -13,14 +13,15 @@
 </form>
 
 <hr>
-<h4>📄 Requested Documents</h4>
+<h4>Requested Documents</h4>
 <ul>
   {% for doc in requested_docs %}
-    <li>{{ doc.name }} — 
-      {% if doc.loan_id in uploads|map(attribute='loan_id') and doc.name in uploads|map(attribute='description') %}
-        ✅ <span class="text-success">Received</span>
+    {% set doc_name = doc.document_name or doc.name or "Requested Document" %}
+    <li>{{ doc_name }} -
+      {% if doc.loan_id in uploads|map(attribute='loan_id') and doc_name in uploads|map(attribute='category') %}
+        <span class="text-success">Received</span>
       {% else %}
-        ❌ <span class="text-danger">Missing</span>
+        <span class="text-danger">Missing</span>
       {% endif %}
     </li>
   {% else %}
@@ -28,10 +29,10 @@
   {% endfor %}
 </ul>
 
-<h4>📥 Received Uploads</h4>
+<h4>Received Uploads</h4>
 <ul>
   {% for u in uploads %}
-    <li>{{ u.uploaded_at.strftime('%b %d, %Y') }} — {{ u.filename }} <small class="text-muted">({{ u.description }})</small></li>
+    <li>{{ u.uploaded_at.strftime('%b %d, %Y') }} - {{ u.file_name }} <small class="text-muted">({{ u.category or "General Upload" }})</small></li>
   {% else %}
     <li class="text-muted">No uploads yet.</li>
   {% endfor %}

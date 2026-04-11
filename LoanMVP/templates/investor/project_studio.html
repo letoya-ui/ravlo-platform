@@ -1,0 +1,506 @@
+{% extends "layouts/ravlo_base.html" %}
+{% block title %}Investor OS • Project Studio{% endblock %}
+
+{% block page_title %}Project Studio{% endblock %}
+{% block page_subline %}
+Open any address and let Ravlo compare the best plan before you move into scope, budget, and execution.
+{% endblock %}
+
+{% block topbar_actions %}
+  <a href="{{ url_for('investor.property_tool') }}" class="ravlo-btn ghost sm">Find Deals</a>
+  <a href="{{ url_for('investor.deals_list') }}" class="ravlo-btn ghost sm">Deal Workspace</a>
+  <a href="{{ url_for('investor.project_studio') }}" class="ravlo-btn primary sm">Project Studio</a>
+{% endblock %}
+
+{% block content %}
+<div class="ps-shell">
+  <section class="ps-hero ravlo-card pad">
+    <div>
+      <div class="eyebrow">PROJECT STUDIO</div>
+      <h2>Plan any property without setup friction.</h2>
+      <p class="muted">
+        Enter an address, load the property snapshot, compare strategy cards, and move into the best plan.
+        This is the execution engine side of Ravlo OS.
+      </p>
+    </div>
+    <div class="ps-pill-row">
+      <span class="ps-pill">Enter Property</span>
+      <span class="ps-pill">Compare Strategies</span>
+      <span class="ps-pill">Define Scope</span>
+      <span class="ps-pill">Validate</span>
+      <span class="ps-pill">Move to Execution</span>
+    </div>
+  </section>
+
+  <section class="ps-grid">
+    <div class="ravlo-card pad">
+      <div class="eyebrow">START HERE</div>
+      <h3 class="ps-title">Open a Property</h3>
+      <p class="muted">
+        Paste an address and Ravlo will open the property snapshot first, then guide you into strategy selection.
+      </p>
+
+      <form method="get" action="{{ url_for('investor.project_studio') }}" class="ps-form">
+        <label class="ravlo-label">Property Address</label>
+        <input class="ravlo-input" type="text" name="address" value="{{ address or '' }}" placeholder="123 Main St">
+
+        <div class="ps-form-grid">
+          <div>
+            <label class="ravlo-label">City</label>
+            <input class="ravlo-input" type="text" name="city" value="{{ city or '' }}" placeholder="Middletown">
+          </div>
+          <div>
+            <label class="ravlo-label">State</label>
+            <input class="ravlo-input" type="text" name="state" value="{{ state or '' }}" placeholder="NY">
+          </div>
+        </div>
+
+        <label class="ravlo-label">ZIP Code</label>
+        <input class="ravlo-input" type="text" name="zip" value="{{ zip_code or '' }}" placeholder="10940">
+
+        <div class="ps-action-row">
+          <button class="ravlo-btn primary" type="submit">Load Property</button>
+          {% if address %}
+          <a class="ravlo-btn ghost" href="{{ url_for('investor.project_studio') }}">Clear</a>
+          {% endif %}
+        </div>
+      </form>
+
+      {% if address %}
+      <div class="ps-loaded-card">
+        <div class="eyebrow">PROPERTY QUEUED</div>
+        <strong>{{ address }}</strong>
+        <p class="muted mb-0">
+          {{ [city, state, zip_code]|select|join(', ') or "Address loaded from Deal Finder." }}
+        </p>
+        <p class="muted mb-0">
+          This property is ready for the next Project Studio step: snapshot, strategy compare, and scope planning.
+        </p>
+      </div>
+      {% endif %}
+    </div>
+
+    <div class="ravlo-card pad">
+      <div class="eyebrow">FLOW</div>
+      <h3 class="ps-title">How Project Studio Works</h3>
+      <div class="ps-step-list">
+        <div class="ps-step"><span>01</span><div><strong>Enter property</strong><p>Open any address directly. No forced save step.</p></div></div>
+        <div class="ps-step"><span>02</span><div><strong>See the snapshot</strong><p>Review the property facts, lot flags, and development signals.</p></div></div>
+        <div class="ps-step"><span>03</span><div><strong>Compare strategies</strong><p>Ravlo scores Rehab, Build Studio, and Project Build when applicable.</p></div></div>
+        <div class="ps-step"><span>04</span><div><strong>Define scope</strong><p>Refine the chosen path without overwhelming the user.</p></div></div>
+        <div class="ps-step"><span>05</span><div><strong>Validate + execute</strong><p>Use market validation, then move to quote, partners, or capital.</p></div></div>
+      </div>
+    </div>
+  </section>
+
+  {% if snapshot %}
+  <section class="ps-studio-shell">
+    <div class="ravlo-card pad ps-snapshot-card">
+      <div class="ps-section-head">
+        <div>
+          <div class="eyebrow">STEP 1</div>
+          <h3 class="ps-title">Instant Property Snapshot</h3>
+        </div>
+        <span class="ps-status-pill">{{ snapshot.status or "Property Loaded" }}</span>
+      </div>
+
+      <div class="ps-snapshot-grid">
+        <div class="ps-snapshot-media">
+          {% if snapshot.primary_photo %}
+          <img src="{{ snapshot.primary_photo }}" alt="Property photo">
+          {% else %}
+          <div class="ps-photo-fallback">No live photo yet</div>
+          {% endif %}
+        </div>
+
+        <div class="ps-snapshot-body">
+          <div>
+            <div class="ps-address">{{ snapshot.address }}</div>
+            <div class="muted">{{ [snapshot.city, snapshot.state, snapshot.zip_code]|select|join(', ') }}</div>
+          </div>
+
+          <div class="ps-value-band">
+            <div class="ps-value-block">
+              <span>List / Current Price</span>
+              <strong>{% if snapshot.price %}${{ "{:,.0f}".format(snapshot.price|float) }}{% else %}—{% endif %}</strong>
+            </div>
+            <div class="ps-value-block">
+              <span>Market Value</span>
+              <strong>{% if snapshot.market_value %}${{ "{:,.0f}".format(snapshot.market_value|float) }}{% else %}—{% endif %}</strong>
+            </div>
+            <div class="ps-value-block">
+              <span>Rent Signal</span>
+              <strong>{% if snapshot.traditional_rent %}${{ "{:,.0f}".format(snapshot.traditional_rent|float) }}/mo{% else %}—{% endif %}</strong>
+            </div>
+          </div>
+
+          <div class="ps-fact-grid">
+            <div class="ps-fact"><span>Type</span><strong>{{ snapshot.property_type or "Property" }}</strong></div>
+            <div class="ps-fact"><span>Beds / Baths</span><strong>{{ snapshot.beds or "—" }} / {{ snapshot.baths or "—" }}</strong></div>
+            <div class="ps-fact"><span>Sq Ft</span><strong>{% if snapshot.square_feet %}{{ "{:,.0f}".format(snapshot.square_feet|float) }}{% else %}—{% endif %}</strong></div>
+            <div class="ps-fact"><span>Lot Size</span><strong>{% if snapshot.lot_size_sqft %}{{ "{:,.0f}".format(snapshot.lot_size_sqft|float) }} sq ft{% else %}—{% endif %}</strong></div>
+            <div class="ps-fact"><span>Year Built</span><strong>{{ snapshot.year_built or "—" }}</strong></div>
+            <div class="ps-fact"><span>Comp Confidence</span><strong>{{ snapshot.comp_confidence or "Moderate" }}</strong></div>
+          </div>
+
+          {% if snapshot.description %}
+          <div class="ps-callout">
+            <strong>Property read</strong>
+            <p>{{ snapshot.description }}</p>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <div class="ravlo-card pad">
+      <div class="ps-section-head">
+        <div>
+          <div class="eyebrow">STEP 2</div>
+          <h3 class="ps-title">AI Flags</h3>
+        </div>
+      </div>
+
+      {% if flags %}
+      <div class="ps-flag-stack">
+        {% for flag in flags %}
+        <div class="ps-flag {{ flag.tone }}">
+          <strong>{{ flag.label }}</strong>
+          <p>{{ flag.detail }}</p>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="ps-callout">
+        <strong>Signals still loading</strong>
+        <p>Ravlo loaded the property, but there are not enough lot or pricing flags yet to highlight a specific site condition.</p>
+      </div>
+      {% endif %}
+
+      {% if ai_summary %}
+      <div class="ps-callout">
+        <strong>Ravlo read</strong>
+        <p>{{ ai_summary }}</p>
+      </div>
+      {% endif %}
+
+      {% if engine_error %}
+      <div class="ps-engine-warning">{{ engine_error }}</div>
+      {% endif %}
+    </div>
+  </section>
+
+  <section class="ravlo-card pad">
+    <div class="ps-section-head">
+      <div>
+        <div class="eyebrow">STEP 3</div>
+        <h3 class="ps-title">Choose the best strategy</h3>
+      </div>
+      <div class="muted">Ravlo compares the strongest paths before you scope the work.</div>
+    </div>
+
+    <div class="ps-strategy-grid">
+      {% for card in strategy_cards %}
+      <article class="ps-strategy-card {{ card.tone }}">
+        {% if card.badge %}
+        <div class="ps-card-badge">{{ card.badge }}</div>
+        {% endif %}
+
+        <h4>{{ card.title }}</h4>
+        <p class="muted">{{ card.why }}</p>
+
+        <div class="ps-card-metrics">
+          <div><span>ARV / Outcome</span><strong>{% if card.arv %}${{ "{:,.0f}".format(card.arv|float) }}{% else %}—{% endif %}</strong></div>
+          <div><span>Budget Range</span><strong>${{ "{:,.0f}".format(card.budget_low|float) }} - ${{ "{:,.0f}".format(card.budget_high|float) }}</strong></div>
+          <div><span>{{ card.outcome_label }}</span><strong>{% if card.outcome is not none %}${{ "{:,.0f}".format(card.outcome|float) }}{% else %}—{% endif %}</strong></div>
+          <div><span>Timeline</span><strong>{{ card.timeline }}</strong></div>
+          <div><span>Confidence</span><strong>{{ card.confidence }}</strong></div>
+          <div><span>Market Context</span><strong>{{ card.market_note }}</strong></div>
+        </div>
+
+        <div class="ps-card-foot">
+          <div class="ps-card-risk">
+            <strong>Why this works</strong>
+            <p>{{ card.why }}</p>
+          </div>
+          <div class="ps-card-risk">
+            <strong>Risk note</strong>
+            <p>{{ card.risk_note }}</p>
+          </div>
+        </div>
+
+        <div class="ps-action-row">
+          <a
+            class="ravlo-btn primary"
+            href="{{ url_for('investor.project_studio', address=address, city=city, state=state, zip=zip_code, strategy=card.key, deal_id=(workspace_deal.id if workspace_deal else None)) }}"
+          >{{ "Choose " ~ card.title }}</a>
+        </div>
+      </article>
+      {% endfor %}
+    </div>
+  </section>
+
+  {% if selected_card %}
+  <section class="ps-grid ps-build-grid">
+    <div class="ravlo-card pad">
+      <div class="ps-section-head">
+        <div>
+          <div class="eyebrow">STEP 4</div>
+          <h3 class="ps-title">Scope Builder</h3>
+        </div>
+        <span class="ps-status-pill">{{ selected_card.title }} Selected</span>
+      </div>
+
+      <div class="ps-callout">
+        <strong>You selected: {{ selected_card.title }}</strong>
+        <p>{{ selected_card.why }}</p>
+      </div>
+
+      <div class="ps-scope-grid">
+        {% for option in scope_options %}
+        <a
+          class="ps-scope-card {% if selected_scope == option.value %}active{% endif %}"
+          href="{{ url_for('investor.project_studio', address=address, city=city, state=state, zip=zip_code, strategy=selected_strategy, scope=option.value, deal_id=(workspace_deal.id if workspace_deal else None)) }}"
+        >
+          <strong>{{ option.label }}</strong>
+          <p>{{ option.detail }}</p>
+        </a>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="ravlo-card pad">
+      <div class="ps-section-head">
+        <div>
+          <div class="eyebrow">STEP 5</div>
+          <h3 class="ps-title">Planning Budget</h3>
+        </div>
+      </div>
+
+      {% if scope_budget %}
+      <div class="ps-budget-band">
+        <div class="ps-value-block">
+          <span>Budget Range</span>
+          <strong>${{ "{:,.0f}".format(scope_budget.budget_low|float) }} - ${{ "{:,.0f}".format(scope_budget.budget_high|float) }}</strong>
+        </div>
+        <div class="ps-value-block">
+          <span>{{ scope_budget.outcome_label }}</span>
+          <strong>{% if scope_budget.outcome is not none %}${{ "{:,.0f}".format(scope_budget.outcome|float) }}{% else %}—{% endif %}</strong>
+        </div>
+        <div class="ps-value-block">
+          <span>Timeline</span>
+          <strong>{{ scope_budget.timeline }}</strong>
+        </div>
+        <div class="ps-value-block">
+          <span>Confidence</span>
+          <strong>{{ scope_budget.confidence }}</strong>
+        </div>
+      </div>
+
+      <div class="ps-callout">
+        <strong>Decision-quality range</strong>
+        <p>This is the rough planning layer, not a contractor-grade quote. Once you confirm the strategy and scope, Ravlo can move you into execution tools like quoting, partners, and financing.</p>
+      </div>
+
+      {% if workspace_deal %}
+      <div class="ps-callout ps-persisted-callout">
+        <strong>Saved to Deal Workspace</strong>
+        <p>Ravlo is now persisting this property, strategy, and scope automatically so you can come back later without losing the chosen path.</p>
+        <div class="ps-link-row">
+          <a href="{{ url_for('investor.deal_workspace', deal_id=workspace_deal.id) }}" class="ravlo-btn ghost">Open Deal Workspace</a>
+          <a href="{{ url_for('investor.deal_detail', deal_id=workspace_deal.id) }}" class="ravlo-btn ghost">Open Saved Deal</a>
+        </div>
+      </div>
+      {% endif %}
+      {% endif %}
+    </div>
+  </section>
+
+  {% if mashvisor and not mashvisor.error %}
+  <section class="ravlo-card pad">
+    <div class="ps-section-head">
+      <div>
+        <div class="eyebrow">STEP 6</div>
+        <h3 class="ps-title">Market Validation</h3>
+      </div>
+      <div class="muted">Mashvisor is used here as a final validation layer, not a discovery tool.</div>
+    </div>
+
+    <div class="ps-budget-band">
+      <div class="ps-value-block">
+        <span>Airbnb Revenue</span>
+        <strong>
+          {% if mashvisor.airbnb_revenue %}
+            ${{ "{:,.0f}".format(mashvisor.airbnb_revenue|float) }}/mo
+          {% else %}
+            —
+          {% endif %}
+        </strong>
+      </div>
+
+      <div class="ps-value-block">
+        <span>Occupancy</span>
+        <strong>
+          {% if mashvisor.occupancy_rate %}
+            {{ (mashvisor.occupancy_rate * 100)|round(0) }}%
+          {% else %}
+            —
+          {% endif %}
+        </strong>
+      </div>
+
+      <div class="ps-value-block">
+        <span>ADR</span>
+        <strong>
+          {% if mashvisor.adr %}
+            ${{ "{:,.0f}".format(mashvisor.adr|float) }}
+          {% else %}
+            —
+          {% endif %}
+        </strong>
+      </div>
+
+      <div class="ps-value-block">
+        <span>Confidence</span>
+        <strong>{{ mashvisor.confidence or "Moderate" }}</strong>
+      </div>
+    </div>
+
+    {% if mashvisor_insight %}
+    <div class="ps-callout">
+      <strong>Ravlo Insight</strong>
+      <p>{{ mashvisor_insight }}</p>
+    </div>
+    {% endif %}
+  </section>
+  {% endif %}
+
+  <section class="ravlo-card pad">
+    <div class="ps-section-head">
+      <div>
+        <div class="eyebrow">STEP 7</div>
+        <h3 class="ps-title">Move into execution</h3>
+      </div>
+      <div class="muted">These actions unlock after property, strategy, and scope are defined.</div>
+    </div>
+
+    <div class="ps-execution-grid">
+      <a href="{{ url_for('investor.quote') }}" class="ps-execution-card">
+        <span class="ps-execution-kicker">QUOTE</span>
+        <strong>Get Real Quote</strong>
+        <p>Turn the planning range into a more concrete quote scenario before you commit capital.</p>
+      </a>
+
+      {% if workspace_deal %}
+      <a href="{{ url_for('investor.deal_workspace', deal_id=workspace_deal.id) }}" class="ps-execution-card">
+        <span class="ps-execution-kicker">WORKSPACE</span>
+        <strong>Open Deal Workspace</strong>
+        <p>Review the saved strategy, compare paths again, and keep this project moving inside Ravlo OS.</p>
+      </a>
+      {% endif %}
+
+      <a href="{{ url_for('investor.partner_marketplace', service_type='Contractor', city=city, state=state, zip_code=zip_code) }}" class="ps-execution-card">
+        <span class="ps-execution-kicker">TEAM</span>
+        <strong>Connect Contractor</strong>
+        <p>Open the partner marketplace with contractor filters so you can line up execution support for this plan.</p>
+      </a>
+
+      <a href="{{ url_for('investor.partner_marketplace', service_type='Realtor', city=city, state=state, zip_code=zip_code) }}" class="ps-execution-card">
+        <span class="ps-execution-kicker">MARKET</span>
+        <strong>Connect Realtor</strong>
+        <p>Bring in a realtor for pricing, resale strategy, and market validation on the selected path.</p>
+      </a>
+
+      <a href="{{ url_for('investor.capital_application') }}" class="ps-execution-card">
+        <span class="ps-execution-kicker">CAPITAL</span>
+        <strong>Apply for Construction Loan</strong>
+        <p>Move from planning into financing when you are ready to turn the scoped strategy into a funded project.</p>
+      </a>
+    </div>
+  </section>
+  {% endif %}
+  {% endif %}
+
+  <section class="ps-grid">
+    <div class="ravlo-card pad">
+      <div class="eyebrow">CONNECTED TO DEAL FINDER</div>
+      <h3 class="ps-title">Two front doors, one system</h3>
+      <p class="muted">
+        Deal Finder is for discovery. Project Studio is for planning. When a user selects a property in Deal Finder, the next move should bring them here to choose the best strategy.
+      </p>
+      <div class="ps-link-row">
+        <a href="{{ url_for('investor.property_tool') }}" class="ravlo-btn ghost">Open Deal Finder</a>
+        <a href="{{ url_for('investor.deals_list') }}" class="ravlo-btn ghost">Open Deal Workspace</a>
+      </div>
+    </div>
+
+    <div class="ravlo-card pad">
+      <div class="eyebrow">NEXT BUILD</div>
+      <h3 class="ps-title">What comes next here</h3>
+      <div class="ps-bullet-list">
+        <div>Instant property snapshot</div>
+        <div>Strategy cards with recommended path</div>
+        <div>Scope builder for rehab, build, or project build</div>
+        <div>Refined planning budget before execution</div>
+        <div>Late-stage market validation before partners and capital</div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<style>
+.ps-shell{display:grid;gap:18px}
+.ps-hero{display:grid;gap:16px;border-radius:28px;background:linear-gradient(135deg,rgba(82,142,255,.12),rgba(122,184,255,.03));border:1px solid rgba(122,184,255,.16)}
+.ps-pill-row{display:flex;flex-wrap:wrap;gap:10px}
+.ps-pill{padding:8px 12px;border-radius:999px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);font-size:12px;color:var(--muted)}
+.ps-grid{display:grid;grid-template-columns:1.1fr .9fr;gap:18px}
+.ps-form,.ps-step-list,.ps-flag-stack,.ps-bullet-list{display:grid;gap:12px}
+.ps-form-grid,.ps-link-row,.ps-action-row{display:flex;gap:12px;flex-wrap:wrap}
+.ps-title{margin:6px 0 0}
+.ps-loaded-card,.ps-callout{margin-top:16px;padding:14px 16px;border-radius:18px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07)}
+.ps-persisted-callout{background:rgba(122,184,255,.08);border-color:rgba(122,184,255,.18)}
+.ps-step{display:grid;grid-template-columns:42px 1fr;gap:12px;align-items:flex-start}
+.ps-step span{display:grid;place-items:center;width:42px;height:42px;border-radius:14px;background:rgba(122,184,255,.12);font-weight:700}
+.ps-studio-shell{display:grid;grid-template-columns:1.3fr .7fr;gap:18px}
+.ps-snapshot-card{overflow:hidden}
+.ps-section-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;margin-bottom:14px}
+.ps-status-pill{padding:8px 12px;border-radius:999px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);font-size:12px}
+.ps-snapshot-grid{display:grid;grid-template-columns:340px 1fr;gap:18px}
+.ps-snapshot-media img,.ps-photo-fallback{width:100%;height:100%;min-height:280px;object-fit:cover;border-radius:20px;background:rgba(255,255,255,.03);display:grid;place-items:center}
+.ps-snapshot-body{display:grid;gap:16px}
+.ps-address{font-size:26px;font-weight:700}
+.ps-value-band,.ps-budget-band{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}
+.ps-value-block{padding:14px;border-radius:18px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07)}
+.ps-value-block span{display:block;font-size:12px;color:var(--muted);margin-bottom:6px}
+.ps-value-block strong{font-size:18px}
+.ps-fact-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+.ps-fact{padding:12px 14px;border-radius:16px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06)}
+.ps-fact span{display:block;font-size:12px;color:var(--muted);margin-bottom:6px}
+.ps-flag{padding:14px;border-radius:16px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03)}
+.ps-flag.good{border-color:rgba(78,208,156,.35);background:rgba(78,208,156,.08)}
+.ps-flag.watch{border-color:rgba(255,200,96,.35);background:rgba(255,200,96,.08)}
+.ps-engine-warning{margin-top:14px;padding:14px 16px;border-radius:16px;background:rgba(255,95,95,.08);border:1px solid rgba(255,95,95,.2);color:#ffb1b1}
+.ps-strategy-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px}
+.ps-strategy-card{position:relative;padding:18px;border-radius:22px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);display:grid;gap:14px}
+.ps-strategy-card.good{border-color:rgba(78,208,156,.28)}
+.ps-strategy-card.watch{border-color:rgba(255,200,96,.24)}
+.ps-card-badge{position:absolute;top:14px;right:14px;padding:6px 10px;border-radius:999px;background:rgba(122,184,255,.12);border:1px solid rgba(122,184,255,.22);font-size:11px;font-weight:600}
+.ps-card-metrics{display:grid;gap:10px}
+.ps-card-metrics div{display:flex;justify-content:space-between;gap:14px;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.06)}
+.ps-card-metrics div:last-child{border-bottom:none}
+.ps-card-metrics span{font-size:13px;color:var(--muted)}
+.ps-card-foot{display:grid;gap:12px}
+.ps-card-risk{padding:12px 14px;border-radius:16px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06)}
+.ps-build-grid{grid-template-columns:1fr 1fr}
+.ps-scope-grid{display:grid;gap:12px}
+.ps-scope-card{display:block;padding:16px;border-radius:18px;text-decoration:none;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);color:inherit}
+.ps-scope-card.active{border-color:rgba(122,184,255,.35);background:rgba(122,184,255,.08)}
+.ps-execution-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}
+.ps-execution-card{display:grid;gap:10px;padding:18px;border-radius:20px;text-decoration:none;color:inherit;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08)}
+.ps-execution-kicker{font-size:11px;letter-spacing:.08em;color:var(--muted)}
+.ps-bullet-list div{padding:10px 12px;border-radius:14px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06)}
+@media (max-width: 1100px){
+  .ps-grid,.ps-studio-shell,.ps-build-grid,.ps-snapshot-grid{grid-template-columns:1fr}
+}
+</style>
+{% endblock %}

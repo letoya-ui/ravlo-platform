@@ -8,135 +8,172 @@ from LoanMVP.services.attom_service import (
     AttomServiceError,
 )
 
+from LoanMVP.services.realtor_provider import fetch_realtor_data
+from LoanMVP.services.rentcast_provider import fetch_rentcast_data
+from LoanMVP.services.attom_provider import fetch_attom_data
+
 _CACHE = {}
 _TTL = 60 * 60 * 6  # 6 hours
 
 
-def resolve_property_unified(address: str = None, zipcode: str = None, **kwargs) -> dict:
+def resolve_property_unified(address: str, *, beds=None, baths=None, sqft=None, property_type=None) -> dict:
     """
-    Unified property resolver.
-
-    Backward compatible:
-      - accepts zipcode
-      - accepts extra kwargs from older callers without crashing
-      - returns the same general structure expected by current routes/templates
+    Unified property resolver with ATTOM as base and Realtor.com enrichment.
+    Returns:
+    - property (ATTOM + Realtor merged)
+    - valuation
+    - rent_estimate (placeholder)
+    - comps (placeholder)
+    - market_snapshot
+    - ai_summary
+    - raw payloads
     """
 
-    raw_query = (address or "").strip()
-    zipcode = (zipcode or "").strip()
+    from LoanMVP.services.realtor_provider import fetch_realtor_data
 
-    if not raw_query:
-        return {
-            "status": "error",
-            "provider": "attom",
-            "error": "address_required",
-            "stage": "input",
-        }
-
-    # ---- cache ----
-    key = _ck(raw_query, zipcode=zipcode)
-    cached = _cache_get(key)
-    if cached:
-        return cached
-
-    parsed = _parse_address_query(raw_query, zipcode=zipcode)
-    if not parsed:
-        out = {
-            "status": "error",
-            "provider": "attom",
-            "error": "Enter full address as: 123 Main St, Atlanta, GA 30308",
-            "stage": "parse",
-        }
-        _cache_set(key, out)
-        return out
+    address = (address or "").strip()
+    if not address:
+        return {"status": "error", "error": "address_required"}
 
     try:
-        profile = build_attom_dealfinder_profile(
-            address=parsed["address"],
-            city=parsed["city"],
-            state=parsed["state"],
-            zip_code=parsed.get("zip_code") or "",
-        )
+        # -----------------------------------------
+        # 1) ATTOM lookup
+        # -----------------------------------------
+        payload = _attom_get("property/address", {"address1": address})
+        properties = _extract_attom_properties(payload)
 
-        property_payload = {
-            "property_id": profile.get("attom_id"),
-            "id": profile.get("attom_id"),
-            "propertyId": profile.get("attom_id"),
-            "address": profile.get("address") or profile.get("address_line1") or raw_query,
-            "address_line1": profile.get("address_line1"),
-            "city": profile.get("city"),
-            "state": profile.get("state"),
-            "zip": profile.get("zip_code"),
-            "zipCode": profile.get("zip_code"),
-            "postalCode": profile.get("zip_code"),
-            "sqft": profile.get("sqft"),
-            "squareFootage": profile.get("sqft"),
-            "beds": profile.get("beds"),
-            "baths": profile.get("baths"),
-            "property_type": profile.get("property_type"),
-            "property_sub_type": profile.get("property_sub_type"),
-            "year_built": profile.get("year_built"),
-            "owner_name": profile.get("owner_name"),
-            "owner_occupied": profile.get("owner_occupied"),
-            "apn": profile.get("apn"),
-            "latitude": profile.get("latitude"),
-            "longitude": profile.get("longitude"),
-            "price": profile.get("market_value") or profile.get("assessed_value") or 0,
-            "photos": [],
-            "primary_photo": None,
-            "ravlo_score": profile.get("ravlo_score"),
-            "recommended_strategy": profile.get("recommended_strategy"),
-            "score_reasons": profile.get("score_reasons", []),
-        }
+        if not properties:
+            return {
+                "status": "error",
+                "source": "attom",
+                "stage": "property_lookup",
+                "error": "No property found for this address.",
+            }
 
+        subject_raw = properties[0]
+        prop = _normalize_attom_subject(subject_raw, address)
+
+        # -----------------------------------------
+        # 2) Realtor.com enrichment
+        # -----------------------------------------
+        try:
+            realtor_raw = fetch_realtor_data(
+                prop.get("address_line1") or prop.get("address"),
+                prop.get("city"),
+                prop.get("state")
+            )
+        except Exception:
+            realtor_raw = None
+
+        if realtor_raw and realtor_raw.get("property"):
+            listing = realtor_raw["property"]
+
+            prop["price"] = listing.get("price") or prop.get("price")
+            prop["photos"] = listing.get("photos") or prop.get("photos")
+            prop["primary_photo"] = listing.get("primary_photo") or prop.get("primary_photo")
+            prop["status"] = listing.get("status")
+            prop["days_on_market"] = listing.get("days_on_market")
+            prop["description"] = listing.get("description")
+
+        # -----------------------------------------
+        # 3) Valuation (ATTOM-based)
+        # -----------------------------------------
         valuation = {
-            "market_value": profile.get("market_value"),
-            "assessed_value": profile.get("assessed_value"),
-            "last_sale_price": profile.get("last_sale_price"),
-            "last_sale_date": profile.get("last_sale_date"),
-            "tax_amount": profile.get("tax_amount"),
+            "estimate": prop.get("price"),
+            "low": None,
+            "high": None,
+            "confidence": None,
+            "assessed_value": prop.get("assessed_value"),
+            "last_sale_price": prop.get("price"),
         }
 
-        rent_estimate = {}
-        comps = {}
-        market_snapshot = {
-            "foreclosure_status": profile.get("foreclosure_status"),
-            "distressed": profile.get("distressed"),
-            "mortgage_amount": profile.get("mortgage_amount"),
-            "owner_occupied": profile.get("owner_occupied"),
+        # -----------------------------------------
+        # 4) Rent estimate placeholder
+        # -----------------------------------------
+        rent_estimate = {
+            "rent": None,
+            "low": None,
+            "high": None,
+            "confidence": None,
         }
 
-        summary = generate_property_summary({
-            "property": property_payload,
-            "valuation": valuation,
-            "rent_estimate": rent_estimate,
-            "comps": comps,
-            "market_snapshot": market_snapshot,
-            "source": "attom",
-        })
+        # -----------------------------------------
+        # 5) Comps placeholder
+        # -----------------------------------------
+        comps = {
+            "sales": [],
+            "rentals": [],
+            "meta": {
+                "comp_count": 0,
+                "max_radius": None,
+                "days_old": None,
+            },
+        }
 
-        out = {
+        # -----------------------------------------
+        # 6) Market snapshot
+        # -----------------------------------------
+        market_snapshot = _calculate_market_snapshot([], [], comps["meta"])
+
+        # -----------------------------------------
+        # 7) AI summary
+        # -----------------------------------------
+        summary_bits = []
+        if prop.get("property_type"):
+            summary_bits.append(f"Type: {prop['property_type']}")
+        if prop.get("year_built"):
+            summary_bits.append(f"Built: {prop['year_built']}")
+        if prop.get("square_feet"):
+            summary_bits.append(f"Size: {prop['square_feet']:,} sqft")
+        if prop.get("price"):
+            summary_bits.append(f"Last recorded sale: ${prop['price']:,.0f}")
+        if prop.get("assessed_value"):
+            summary_bits.append(f"Assessed value: ${prop['assessed_value']:,.0f}")
+
+        ai_summary = " | ".join(summary_bits) if summary_bits else "Public record property data loaded."
+
+        # -----------------------------------------
+        # 8) Final return
+        # -----------------------------------------
+        return {
             "status": "ok",
-            "provider": "attom",
-            "stage": "property_detail",
-            "property": property_payload,
+            "source": "realtor" if realtor_raw else "attom",
+            "property": prop,
             "valuation": valuation,
             "rent_estimate": rent_estimate,
             "comps": comps,
             "market_snapshot": market_snapshot,
-            "ai_summary": summary,
-            "primary_source": "attom",
-            "raw_profile": profile,
+            "ai_summary": ai_summary,
+            "raw": {
+                "property_lookup": subject_raw,
+                "realtor": realtor_raw,
+            },
         }
 
-        _cache_set(key, out)
-        return out
-
-    except AttomServiceError as e:
-        out = {
+    except Exception as e:
+        return {
             "status": "error",
-            "provider": "attom",
+            "source": "attom",
+            "stage": "property_lookup",
             "error": str(e),
-            "stage": "property_detail",
         }
-        _cache_set(key, out)
+
+
+def resolve_property(address, city, state):
+    # 1. Realtor.com (photos + price)
+    realtor = fetch_realtor_data(address, city, state)
+    if realtor:
+        return realtor
+
+    # 2. RentCast (valuation, rent, comps)
+    rentcast = fetch_rentcast_data(address, city, state)
+    if rentcast:
+        return rentcast
+
+    # 3. ATTOM (public record fallback)
+    attom = fetch_attom_data(address, city, state)
+    if attom:
+        return attom
+
+    return {"source": "none", "error": "No data found"}
+

@@ -12,6 +12,7 @@ from flask import (
     Response,
     redirect,
     render_template,
+    request,
     send_from_directory,
     current_app,
     url_for,  
@@ -21,6 +22,7 @@ from flask_cors import CORS
 from flask_socketio import SocketIO
 from flask_migrate import Migrate
 from flask_login import LoginManager, current_user
+from flask_wtf.csrf import CSRFError
 from werkzeug.middleware.proxy_fix import ProxyFix
 
 from LoanMVP.config import get_config
@@ -28,6 +30,7 @@ from LoanMVP.extensions import db, login_manager, migrate, mail, stripe, csrf
 from LoanMVP.models import User
 from LoanMVP.models.loan_models import BorrowerProfile, LoanNotification
 from LoanMVP.utils.role_helpers import get_role_display, get_request_type_display, get_status_display, get_status_badge
+from LoanMVP.services.unified_resolver import resolve_property
 
 ENV_NAME = os.environ.get("FLASK_ENV", "production").strip().lower()
 DEFAULT_SOCKETIO_ASYNC_MODE = "threading" if ENV_NAME in {"dev", "development", "local"} else "eventlet"
@@ -174,6 +177,22 @@ def create_app():
         ]
         return render_template("dashboard.html", dashboards=dashboards)
 
+    
+
+    @app.route("/api/property/resolve", methods=["POST"])
+    def api_resolve_property():
+        payload = request.get_json() or {}
+        address = payload.get("address")
+        city = payload.get("city")
+        state = payload.get("state")
+
+        if not all([address, city, state]):
+            return jsonify({"error": "address, city, state required"}), 400
+
+        result = resolve_property(address, city, state)
+        return jsonify(result), 200
+
+
         
     # Global error handler
     @app.errorhandler(Exception)
@@ -197,6 +216,28 @@ def create_app():
             "favicon.ico",
             mimetype="image/vnd.microsoft.icon",
         )
+
+    @app.errorhandler(CSRFError)
+    def handle_csrf_error(error):
+        if request.blueprint == "auth":
+            flash_message = "Your session expired. Please try signing in again."
+            from flask import flash
+            flash(flash_message, "warning")
+            next_page = request.args.get("next") or request.form.get("next")
+            return redirect(url_for("auth.login", next=next_page) if next_page else url_for("auth.login"))
+        return render_template("errors/500.html"), 400
+
+    @app.after_request
+    def add_auth_cache_headers(response):
+        if request.blueprint == "auth" and request.method == "GET":
+            response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0, private"
+            response.headers["Pragma"] = "no-cache"
+            response.headers["Expires"] = "0"
+            existing_vary = response.headers.get("Vary", "")
+            vary_values = {value.strip() for value in existing_vary.split(",") if value.strip()}
+            vary_values.add("Cookie")
+            response.headers["Vary"] = ", ".join(sorted(vary_values))
+        return response
 
     # Context processors
     @app.context_processor

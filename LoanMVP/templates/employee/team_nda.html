@@ -1,0 +1,101 @@
+{% extends "layouts/ravlo_employee_base.html" %}
+{% block title %}{{ role_label }} NDA{% endblock %}
+
+{% block page_title %}{{ confidentiality_title }}{% endblock %}
+{% block page_subline %}
+Protect borrower data, internal workflow information, and company operations.
+{% endblock %}
+
+{% block topbar_actions %}
+  <a class="re-btn ghost sm" href="{{ url_for(contracts_endpoint) }}">
+    <i class="lucide lucide-folder-lock"></i>
+    Contracts Hub
+  </a>
+  <a class="re-btn ghost sm" href="{{ url_for(dashboard_endpoint) }}">
+    <i class="lucide lucide-layout-dashboard"></i>
+    Dashboard
+  </a>
+{% endblock %}
+
+{% block content %}
+<div class="ops-shell">
+  <section class="ops-hero">
+    <div>
+      <div class="ops-eyebrow">Confidentiality</div>
+      <h2>Keep sensitive files protected and role-bound.</h2>
+      <p>These confidentiality terms apply to borrower information, internal process data, pricing logic, and operational materials you access inside Ravlo.</p>
+    </div>
+    <div class="ops-status-card">
+      <div class="ops-status-label">Readiness</div>
+      <div class="ops-status-value">
+        {% if current_user.nda_accepted %}NDA Complete{% else %}Action Required{% endif %}
+      </div>
+      <div class="ops-status-note">This must be accepted before onboarding is complete.</div>
+    </div>
+  </section>
+
+  <section class="ops-grid">
+    <article class="ops-card">
+      <div class="ops-card-head">
+        <div class="ops-eyebrow">Key Duties</div>
+        <h3>Confidentiality Standards</h3>
+      </div>
+      <div class="ops-list">
+        {% for item in confidentiality_points %}
+        <div class="ops-list-item">
+          <strong>{{ item }}</strong>
+        </div>
+        {% endfor %}
+      </div>
+    </article>
+
+    <article class="ops-card">
+      <div class="ops-card-head">
+        <div class="ops-eyebrow">Confirmation</div>
+        <h3>Accept NDA</h3>
+      </div>
+
+      <form method="POST" action="{{ url_for(accept_endpoint) }}" class="ops-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        <label class="ops-check">
+          <input type="checkbox" name="nda_ack" required>
+          <span>I understand that I will have access to confidential borrower, deal, and operational information.</span>
+        </label>
+
+        <label class="ops-check">
+          <input type="checkbox" name="nda_agree" required>
+          <span>I agree not to disclose, misuse, or export confidential information outside authorized business use.</span>
+        </label>
+
+        <button type="submit" class="re-btn primary">
+          Accept NDA
+        </button>
+      </form>
+    </article>
+  </section>
+</div>
+
+<style>
+.ops-shell{display:grid;gap:20px}
+.ops-hero,.ops-card{border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03);border-radius:24px}
+.ops-hero{display:grid;grid-template-columns:1.3fr .7fr;gap:18px;padding:24px;background:radial-gradient(900px 460px at 10% 0%, rgba(102,185,160,.16), transparent 50%), rgba(255,255,255,.03)}
+.ops-hero h2{margin:8px 0 10px;font-size:clamp(1.5rem,2.4vw,2.15rem)}
+.ops-hero p{margin:0;color:var(--rav-muted);line-height:1.7;max-width:760px}
+.ops-eyebrow{font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--rav-muted)}
+.ops-status-card{padding:18px;border-radius:20px;background:rgba(12,19,26,.7);border:1px solid rgba(255,255,255,.07)}
+.ops-status-label{font-size:.76rem;text-transform:uppercase;color:var(--rav-muted)}
+.ops-status-value{margin-top:10px;font-size:1.35rem;font-weight:800}
+.ops-status-note{margin-top:8px;color:var(--rav-text-soft);font-size:.95rem;line-height:1.5}
+.ops-grid{display:grid;grid-template-columns:1.05fr .95fr;gap:20px}
+.ops-card{padding:22px}
+.ops-card-head h3{margin:4px 0 0}
+.ops-list,.ops-form{display:grid;gap:12px}
+.ops-list-item,.ops-check{padding:14px 16px;border-radius:16px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.02)}
+.ops-check{display:flex;gap:12px;align-items:flex-start}
+.ops-check input{margin-top:3px}
+@media (max-width: 960px){
+  .ops-hero,.ops-grid{grid-template-columns:1fr}
+}
+</style>
+{% endblock %}

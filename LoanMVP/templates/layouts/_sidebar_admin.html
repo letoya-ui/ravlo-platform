@@ -1,9 +1,10 @@
 {% set ep = request.endpoint or "" %}
 
 <div class="re-sidebar-inner">
+  {% set is_company_admin = current_user.role == "admin" and current_user.company_id %}
 
   <div class="re-brand">
-    <a href="{{ url_for('admin.dashboard') }}" class="re-brand-link">
+    <a href="{% if is_company_admin %}{{ url_for('admin.company_dashboard', company_id=current_user.company_id) }}{% else %}{{ url_for('admin.dashboard') }}{% endif %}" class="re-brand-link">
       <div class="re-brand-mark">R</div>
       <div>
         <div class="re-brand-title">Ravlo</div>
@@ -16,79 +17,119 @@
 
     <div class="re-nav-section-label">Overview</div>
 
-    <a href="{{ url_for('admin.dashboard') }}"
-       class="re-nav-link {% if ep == 'admin.dashboard' %}active{% endif %}">
+    <a href="{% if is_company_admin %}{{ url_for('admin.company_dashboard', company_id=current_user.company_id) }}{% else %}{{ url_for('admin.dashboard') }}{% endif %}"
+       class="re-nav-link {% if ep in ['admin.dashboard', 'admin.company_dashboard'] %}active{% endif %}">
       <i class="icon lucide lucide-layout-dashboard"></i>
       <span>Dashboard</span>
     </a>
 
-    <a href="{{ url_for('admin.analytics') }}"
-       class="re-nav-link {% if ep == 'admin.analytics' %}active{% endif %}">
-      <i class="icon lucide lucide-bar-chart-3"></i>
-      <span>Analytics</span>
-    </a>
+    {% if not is_company_admin %}
+      <a href="{{ url_for('admin.analytics') }}"
+         class="re-nav-link {% if ep == 'admin.analytics' %}active{% endif %}">
+        <i class="icon lucide lucide-bar-chart-3"></i>
+        <span>Analytics</span>
+      </a>
 
-    <a href="{{ url_for('admin.ai_dashboard') }}"
-       class="re-nav-link {% if ep == 'admin.ai_dashboard' %}active{% endif %}">
-      <i class="icon lucide lucide-sparkles"></i>
-      <span>AI Control</span>
-    </a>
+      <a href="{{ url_for('admin.ai_dashboard') }}"
+         class="re-nav-link {% if ep == 'admin.ai_dashboard' %}active{% endif %}">
+        <i class="icon lucide lucide-sparkles"></i>
+        <span>AI Control</span>
+      </a>
+    {% else %}
+      <a href="{{ url_for('admin.analytics') }}"
+         class="re-nav-link {% if ep == 'admin.analytics' %}active{% endif %}">
+        <i class="icon lucide lucide-bar-chart-3"></i>
+        <span>Analytics</span>
+      </a>
+    {% endif %}
 
     <div class="re-nav-section-label">Onboarding</div>
 
-    <a href="{{ url_for('admin.requests_dashboard') }}"
-       class="re-nav-link {% if ep in [
-          'admin.requests_dashboard',
-          'admin.request_detail',
-          'admin.company_team',
-          'admin.invite_team_member'
-       ] %}active{% endif %}">
+    <a href="{% if is_company_admin %}{{ url_for('admin.company_team', company_id=current_user.company_id) }}{% else %}{{ url_for('admin.requests_dashboard') }}{% endif %}"
+       class="re-nav-link {% if ep in ['admin.requests_dashboard', 'admin.request_detail', 'admin.company_team', 'admin.invite_team_member'] %}active{% endif %}">
       <i class="icon lucide lucide-inbox"></i>
-      <span>Access Requests</span>
+      <span>{% if is_company_admin %}Team{% else %}Access Requests{% endif %}</span>
     </a>
 
-    <a href="{{ url_for('admin.companies') }}"
-       class="re-nav-link {% if ep == 'admin.companies' %}active{% endif %}">
-      <i class="icon lucide lucide-building-2"></i>
-      <span>Companies</span>
-    </a>
+    {% if is_company_admin %}
+      <a href="{{ url_for('admin.access_requests') }}"
+         class="re-nav-link {% if ep in ['admin.access_requests', 'admin.requests_dashboard', 'admin.request_detail'] %}active{% endif %}">
+        <i class="icon lucide lucide-clipboard-list"></i>
+        <span>Requests</span>
+      </a>
+    {% endif %}
+
+    {% if not is_company_admin %}
+      <a href="{{ url_for('admin.companies') }}"
+         class="re-nav-link {% if ep == 'admin.companies' %}active{% endif %}">
+        <i class="icon lucide lucide-building-2"></i>
+        <span>Companies</span>
+      </a>
+    {% endif %}
 
     <div class="re-nav-section-label">Operations</div>
 
-    <a href="{{ url_for('admin.verify_data') }}"
-       class="re-nav-link {% if ep in ['admin.verify_data', 'admin.verify_doc'] %}active{% endif %}">
-      <i class="icon lucide lucide-badge-check"></i>
-      <span>Verify Documents</span>
-    </a>
+    {% if not is_company_admin %}
+      <a href="{{ url_for('admin.verify_data') }}"
+         class="re-nav-link {% if ep in ['admin.verify_data', 'admin.verify_doc'] %}active{% endif %}">
+        <i class="icon lucide lucide-badge-check"></i>
+        <span>Verify Documents</span>
+      </a>
 
-    <a href="{{ url_for('admin.messages') }}"
-       class="re-nav-link {% if ep == 'admin.messages' %}active{% endif %}">
-      <i class="icon lucide lucide-messages-square"></i>
-      <span>Messages</span>
-    </a>
+      <a href="{{ url_for('admin.messages') }}"
+         class="re-nav-link {% if ep == 'admin.messages' %}active{% endif %}">
+        <i class="icon lucide lucide-messages-square"></i>
+        <span>Messages</span>
+      </a>
 
-    <a href="{{ url_for('admin.reports') }}"
-       class="re-nav-link {% if ep == 'admin.reports' %}active{% endif %}">
-      <i class="icon lucide lucide-file-spreadsheet"></i>
-      <span>Reports</span>
-    </a>
+      <a href="{{ url_for('admin.reports') }}"
+         class="re-nav-link {% if ep == 'admin.reports' %}active{% endif %}">
+        <i class="icon lucide lucide-file-spreadsheet"></i>
+        <span>Reports</span>
+      </a>
+    {% else %}
+      <a href="{{ url_for('admin.messages') }}"
+         class="re-nav-link {% if ep == 'admin.messages' %}active{% endif %}">
+        <i class="icon lucide lucide-messages-square"></i>
+        <span>Messages</span>
+      </a>
+
+      <a href="{{ url_for('admin.reports') }}"
+         class="re-nav-link {% if ep == 'admin.reports' %}active{% endif %}">
+        <i class="icon lucide lucide-file-spreadsheet"></i>
+        <span>Reports</span>
+      </a>
+    {% endif %}
 
     <div class="re-nav-section-label">Linked Systems</div>
 
-    <a href="{{ url_for('crm.dashboard') }}" class="re-nav-link">
-      <i class="icon lucide lucide-users"></i>
-      <span>CRM</span>
-    </a>
+    {% if not is_company_admin %}
+      <a href="{{ url_for('crm.dashboard') }}" class="re-nav-link">
+        <i class="icon lucide lucide-users"></i>
+        <span>CRM</span>
+      </a>
 
-    <a href="{{ url_for('system.users') }}" class="re-nav-link">
-      <i class="icon lucide lucide-user-cog"></i>
-      <span>Users</span>
-    </a>
+      <a href="{{ url_for('system.users') }}" class="re-nav-link">
+        <i class="icon lucide lucide-user-cog"></i>
+        <span>Users</span>
+      </a>
 
-    <a href="{{ url_for('property.manage') }}" class="re-nav-link">
-      <i class="icon lucide lucide-building"></i>
-      <span>Properties</span>
-    </a>
+      <a href="{{ url_for('property.manage') }}" class="re-nav-link">
+        <i class="icon lucide lucide-building"></i>
+        <span>Properties</span>
+      </a>
+    {% else %}
+      <a href="{{ url_for('system.users') }}" class="re-nav-link {% if ep in ['system.users'] %}active{% endif %}">
+        <i class="icon lucide lucide-user-cog"></i>
+        <span>Users</span>
+      </a>
+
+      <a href="{{ url_for('admin.company_settings', company_id=current_user.company_id) }}"
+         class="re-nav-link {% if ep == 'admin.company_settings' %}active{% endif %}">
+        <i class="icon lucide lucide-settings-2"></i>
+        <span>Workspace Settings</span>
+      </a>
+    {% endif %}
 
   </nav>
 
@@ -99,7 +140,7 @@
       </div>
       <div>
         <div class="re-user-name">{{ current_user.first_name or current_user.username or "Admin" }}</div>
-        <div class="re-user-role">Administrator</div>
+        <div class="re-user-role">{% if is_company_admin %}Company Admin{% else %}Administrator{% endif %}</div>
       </div>
     </div>
   </div>

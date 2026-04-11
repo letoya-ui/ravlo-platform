@@ -7,11 +7,7 @@ Central system management for users, onboarding, invites, lending operations, an
 {% endblock %}
 
 {% block topbar_actions %}
-  {% if company %}
-    {{ url_for('admin.invite_team_member', company_id=company.id) }}
-  {% else %}
-    #
-  {% endif %}
+  <a class="re-btn primary sm" href="{% if company %}{{ url_for('admin.invite_team_member', company_id=company.id) }}{% else %}#{% endif %}">
     <i class="lucide lucide-user-plus"></i>
     Send Register Request
   </a>
@@ -598,9 +594,13 @@ Central system management for users, onboarding, invites, lending operations, an
     const aiInsightEl = document.getElementById("aiInsight");
 
     function updateInsight() {
+      const csrfToken = {{ csrf_token()|tojson }};
       fetch('{{ url_for("admin.ai_refresh", target="analytics") }}', {
         method: "POST",
-        headers: { "X-Requested-With": "XMLHttpRequest" }
+        headers: {
+          "X-Requested-With": "XMLHttpRequest",
+          "X-CSRFToken": csrfToken
+        }
       })
         .then(res => {
           if (!res.ok) throw new Error("Failed to fetch AI insight");

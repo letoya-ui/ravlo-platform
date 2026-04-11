@@ -27,7 +27,10 @@
           <td>{{ doc.file_name }}</td>
           <td>{{ doc.status }}</td>
           <td>
-            <a href="{{ url_for('admin.verify_doc', doc_id=doc.id) }}" class="btn btn-accent btn-sm">Verify</a>
+            <form method="POST" action="{{ url_for('admin.verify_doc', doc_id=doc.id) }}" style="margin:0;">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button type="submit" class="btn btn-accent btn-sm">Verify</button>
+            </form>
           </td>
         </tr>
         {% endfor %}

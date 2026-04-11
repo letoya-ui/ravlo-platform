@@ -1,9 +1,9 @@
 {% extends "layouts/ravlo_base.html" %}
-{% block title %}Ravlo • Property Tool{% endblock %}
+{% block title %}Investor OS • Deal Finder{% endblock %}
 
-{% block page_title %}Property Tool{% endblock %}
+{% block page_title %}Deal Finder{% endblock %}
 {% block page_subline %}
-Search by ZIP or address, review public record property data, and move opportunities into Workspace.
+Search by address or ZIP and Ravlo will return a short ranked list of the strongest opportunities, then move the right one into Project Studio.
 {% endblock %}
 
 {% block topbar_actions %}
@@ -19,20 +19,18 @@ Search by ZIP or address, review public record property data, and move opportuni
 {% endblock %}
 
 {% block content %}
-
-<div class="dfv2-shell">
-
-  <aside class="ravlo-card pad dfv2-search-panel">
-    <div class="eyebrow">RAVLO PROPERTY SEARCH</div>
-    <h3 class="dfv2-panel-title">Property Tool</h3>
+<div class="dfv4-shell">
+  <aside class="ravlo-card pad dfv4-search-panel">
+    <div class="eyebrow">DEAL FINDER</div>
+    <h3 class="dfv4-panel-title">Start Finding Deals</h3>
     <p class="muted">
-      Search by ZIP or address and review available public record property data.
+      Search by address or ZIP, then review Ravlo's top four opportunities with strategy tags, risk notes, and a clear next move into planning.
     </p>
 
     <label class="ravlo-label mt-16">Address</label>
     <input id="address" class="ravlo-input" placeholder="e.g. 123 Main St" />
 
-    <div class="dfv2-form-grid mt-12">
+    <div class="dfv4-form-grid mt-12">
       <div>
         <label class="ravlo-label">City</label>
         <input id="city" class="ravlo-input" placeholder="e.g. Otisville" />
@@ -54,60 +52,91 @@ Search by ZIP or address, review public record property data, and move opportuni
     </select>
 
     <button class="ravlo-btn primary w-full mt-16" type="button" onclick="runSearch()">
-      Run Search
+      Find Deals
     </button>
 
-    <div id="searchStatus" class="dfv2-status">Ready to scan.</div>
+    <div id="searchStatus" class="dfv4-status">Ready to find the next opportunity.</div>
+
+    <div class="dfv4-panel-note">
+      <strong>Deal Finder now returns:</strong>
+      <ul>
+        <li>Top 4 ranked opportunities</li>
+        <li>Strategy tag + estimated best use</li>
+        <li>Why it made the list + risk notes</li>
+        <li>A direct bridge into Project Studio</li>
+      </ul>
+    </div>
   </aside>
 
-  <section class="dfv2-results-wrap">
+  <section class="dfv4-results-wrap">
+    <div class="ravlo-card pad dfv4-hero-card">
+      <div>
+        <div class="eyebrow">INVESTOR OS</div>
+        <h2 class="dfv4-hero-title">This is where Ravlo finds the few deals worth planning.</h2>
+        <p class="muted mb-0">
+          Deal Finder should surface a short, ranked recommendation set instead of making investors sort through a giant listing feed.
+        </p>
+      </div>
+      <div class="dfv4-hero-pill-row">
+        <span class="dfv4-hero-pill">Top 4 Picks</span>
+        <span class="dfv4-hero-pill">Best Use First</span>
+        <span class="dfv4-hero-pill">Plan the Right Deal</span>
+      </div>
+    </div>
 
-    <div id="resultsSummary" class="ravlo-card pad dfv2-summary-card" style="display:none;">
-      <div class="dfv2-summary-head">
+    <div id="resultsSummary" class="ravlo-card pad dfv4-summary-card" style="display:none;">
+      <div class="dfv4-summary-head">
         <div>
           <div class="eyebrow">SEARCH SUMMARY</div>
-          <h3 id="summaryTitle" class="mb-8">Search Complete</h3>
+          <h3 id="summaryTitle" class="mb-8">Review Complete</h3>
           <p id="summarySub" class="muted mb-0">Property results will appear here.</p>
         </div>
-
-        <div class="dfv2-summary-metrics">
-          <div class="dfv2-summary-metric">
-            <span>Results</span>
+        <div class="dfv4-summary-metrics">
+          <div class="dfv4-summary-metric">
+            <span>Top Picks</span>
             <strong id="summaryCount">0</strong>
           </div>
-          <div class="dfv2-summary-metric">
+          <div class="dfv4-summary-metric">
             <span>Strategy</span>
             <strong id="summaryStrategy">—</strong>
           </div>
-          <div class="dfv2-summary-metric">
+          <div class="dfv4-summary-metric">
             <span>ZIP</span>
             <strong id="summaryZip">—</strong>
+          </div>
+          <div class="dfv4-summary-metric">
+            <span>Engine</span>
+            <strong id="summaryEngine">Pending</strong>
           </div>
         </div>
       </div>
     </div>
 
-    <div id="results" class="dfv2-grid">
-      <div class="ravlo-card pad dfv2-empty">
-        <div class="eyebrow">RAVLO PROPERTY TOOL</div>
-        <h3 class="mb-8">Your search results will appear here</h3>
+    <div id="results" class="dfv4-grid">
+      <div class="ravlo-card pad dfv4-empty">
+        <div class="eyebrow">DEAL FINDER</div>
+        <h3 class="mb-8">This is where the right properties should start showing up</h3>
         <p class="muted mb-0">
-          Enter a ZIP code or address and Ravlo will return available property records.
+          Enter an address or ZIP code to let Ravlo rank the four strongest opportunities and send the right one into Project Studio.
         </p>
       </div>
     </div>
-
   </section>
 </div>
 
 <script>
 const csrfToken = "{{ csrf_token() }}";
+const PLACEHOLDER_IMAGE = "/static/images/placeholder_property.jpg";
+const DEAL_ARCHITECT_URL = "{{ url_for('investor.api_deal_architect_proxy') }}";
+const SAVE_URL = "{{ url_for('investor.api_property_tool_save') }}";
+const SAVE_AND_ANALYZE_URL = "{{ url_for('investor.api_property_tool_save_and_analyze') }}";
+const VIEW_DETAILS_URL = "{{ url_for('investor.api_property_tool_view_details') }}";
 
 function money(x){
   if (x === null || x === undefined || x === "") return "—";
-  const n = Number(x);
-  if (Number.isNaN(n)) return "—";
-  return "$" + n.toLocaleString(undefined, {maximumFractionDigits:0});
+  const n = Number(String(x).replace(/[$,]/g, "").trim());
+  if (Number.isNaN(n) || n <= 0) return "—";
+  return "$" + n.toLocaleString(undefined, {maximumFractionDigits: 0});
 }
 
 function safeText(v){
@@ -116,10 +145,96 @@ function safeText(v){
 
 function numOrNull(v){
   if (v === null || v === undefined) return null;
-  const s = String(v).trim();
+  const s = String(v).replace(/[$,]/g, "").trim();
   if (!s) return null;
   const n = Number(s);
   return Number.isNaN(n) ? null : n;
+}
+
+function prettyNumber(v){
+  const n = numOrNull(v);
+  if (n === null || n <= 0) return "—";
+  return n.toLocaleString(undefined, {maximumFractionDigits: 0});
+}
+
+function compactDate(value){
+  if (!value) return "";
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return safeText(value);
+  return d.toLocaleDateString(undefined, {month:"short", day:"numeric", year:"numeric"});
+}
+
+function compactNumberText(value, suffix){
+  const n = numOrNull(value);
+  if (n === null || n <= 0) return "—";
+  return `${n.toLocaleString(undefined, {maximumFractionDigits: 0})} ${suffix}`;
+}
+
+function shortText(value, max = 140){
+  const text = String(value || "").trim();
+  if (!text) return "";
+  return text.length > max ? `${text.slice(0, max - 1)}…` : text;
+}
+
+function resolveStatusText(r, signal){
+  return safeText(r.status || signalLabel(signal));
+}
+
+function resolveHeadlineValue(r){
+  const listPrice = numOrNull(r.price);
+  const estimatedValue = numOrNull(r.estimated_value_engine) ?? numOrNull(r.market_value);
+  const assessedValue = numOrNull(r.assessed_value);
+  const lastSalePrice = numOrNull(r.last_sale_price);
+  const lastSaleDate = compactDate(r.last_sale_date);
+
+  if (listPrice !== null) {
+    return {
+      label: "List Price",
+      value: listPrice,
+      subLabel: estimatedValue !== null
+        ? `Estimated value ${money(estimatedValue)}`
+        : (r.status ? `Status: ${safeText(r.status)}` : "Live listing data"),
+      source: "listing"
+    };
+  }
+
+  if (estimatedValue !== null) {
+    return {
+      label: "Estimated Value",
+      value: estimatedValue,
+      subLabel: assessedValue !== null
+        ? `Assessed value ${money(assessedValue)}`
+        : "Automated valuation estimate",
+      source: "estimate"
+    };
+  }
+
+  if (assessedValue !== null) {
+    return {
+      label: "Assessed Value",
+      value: assessedValue,
+      subLabel: lastSalePrice !== null
+        ? `Last sale ${money(lastSalePrice)}${lastSaleDate ? ` on ${lastSaleDate}` : ""}`
+        : "Public record assessed value",
+      source: "assessed"
+    };
+  }
+
+  if (lastSalePrice !== null) {
+    return {
+      label: "Last Recorded Sale",
+      value: lastSalePrice,
+      subLabel: lastSaleDate ? `Recorded ${lastSaleDate}` : "Public record sale history",
+      source: "last_sale"
+    };
+  }
+
+  return {
+    label: "Value Signal",
+    value: null,
+    subLabel: "Live price or estimate pending",
+    source: "unknown"
+  };
 }
 
 function strategyLabel(v){
@@ -128,54 +243,430 @@ function strategyLabel(v){
   return "All";
 }
 
-function buildPayloadObj(r, analyzeId, saveId){
+function escapeHtml(str){
+  return String(str ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/\"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+function scoreClass(score){
+  const n = Number(score);
+  if (!Number.isFinite(n)) return "neutral";
+  if (n >= 70) return "good";
+  if (n >= 45) return "watch";
+  return "risk";
+}
+
+function tierClass(tier){
+  const t = String(tier || "").toLowerCase();
+  if (t === "strong") return "good";
+  if (t === "moderate") return "watch";
+  return "risk";
+}
+
+function signalLabel(signal){
+  const value = String(signal || "").toLowerCase();
+  if (value === "advance_to_lender_package") return "Move Fast";
+  if (value === "validate_zoning_and_pricing") return "Needs Validation";
+  if (value === "retrade_or_pass") return "Pass or Rework";
+  return "Worth Reviewing";
+}
+
+function currentSearchStrategy(){
+  return document.getElementById("strategy")?.value || "all";
+}
+
+function normalizePhotoArray(photos){
+  if (!Array.isArray(photos)) return [];
+  return photos
+    .map(p => typeof p === "string" ? p : (p?.url || p?.src || p?.href || null))
+    .filter(Boolean);
+}
+
+function buildPropertyPayload(r, analyzeId, saveId){
+  const strategy = currentSearchStrategy();
+  const headline = resolveHeadlineValue(r);
+
+  const primaryValue = headline.value
+    ?? numOrNull(r.price)
+    ?? numOrNull(r.display_value)
+    ?? numOrNull(r.market_value)
+    ?? numOrNull(r.assessed_value)
+    ?? numOrNull(r.last_sale_price)
+    ?? null;
+
+  const listingPhotos = normalizePhotoArray(r.photos);
+  const primaryPhoto =
+    r.primary_photo ||
+    r.photo ||
+    r.thumbnail ||
+    (listingPhotos.length ? listingPhotos[0] : null) ||
+    null;
+
   return {
     address: r.address || r.address_line1 || "",
     city: r.city || "",
     state: r.state || "",
     zip: r.zip_code || "",
-    price: r.last_sale_price ?? null,
-    sqft: r.square_feet ?? null,
+
+    price: primaryValue,
+    purchase_price: primaryValue,
+    display_value: numOrNull(r.display_value),
+    market_value: numOrNull(r.market_value),
+    estimated_value_engine: numOrNull(r.estimated_value_engine),
+    assessed_value: numOrNull(r.assessed_value),
+    arv: numOrNull(r.estimated_value_engine) ?? numOrNull(r.market_value) ?? numOrNull(r.display_value),
+
+    sqft: r.square_feet ?? r.sqft ?? null,
+    square_feet: r.square_feet ?? r.sqft ?? null,
     beds: r.beds ?? null,
     baths: r.baths ?? null,
     year_built: r.year_built ?? null,
     property_type: r.property_type || null,
-    property_id: r.attom_id || null,
+    property_id: r.property_id || r.attom_id || null,
     lot_size_sqft: r.lot_size_sqft ?? null,
-    assessed_value: r.assessed_value ?? null,
+
     latitude: r.latitude ?? null,
     longitude: r.longitude ?? null,
     last_sale_price: r.last_sale_price ?? null,
+    last_sale_date: r.last_sale_date ?? null,
+
+    monthly_rent: numOrNull(r.monthly_rent_estimate) ?? numOrNull(r.traditional_rent),
+    monthly_rent_estimate: numOrNull(r.monthly_rent_estimate) ?? numOrNull(r.traditional_rent),
+
+    status: r.status || null,
+    strategy: strategy,
+    strategy_tag: r.strategy_tag || null,
+    recommended_strategy: r.recommended_strategy || null,
+    estimated_best_use: r.estimated_best_use || r.best_use || null,
+
+    deal_score: numOrNull(r.deal_score),
+    opportunity_tier: r.opportunity_tier || null,
+    deal_finder_signal: r.deal_finder_signal || null,
+    next_step: r.next_step_engine || r.next_step || null,
+    comp_confidence: r.comp_confidence || null,
+
+    primary_strengths: Array.isArray(r.primary_strengths) ? r.primary_strengths : [],
+    primary_risks: Array.isArray(r.primary_risks) ? r.primary_risks : [],
+    risk_notes: Array.isArray(r.risk_notes) ? r.risk_notes : [],
+    why_it_made_list: Array.isArray(r.why_it_made_list) ? r.why_it_made_list : [],
+
+    description: r.description || null,
+
+    image_url: primaryPhoto,
+    listing_photos: listingPhotos,
+
     _btnId: analyzeId,
     _saveBtnId: saveId
   };
 }
 
+function buildDealArchitectRequest(r, selectedStrategy){
+  const strategy = selectedStrategy || "all";
+  const type = String(r.property_type || "single family");
+  const salePrice = numOrNull(r.price) ?? numOrNull(r.last_sale_price) ?? null;
+  const marketValue = numOrNull(r.estimated_value_engine) ?? numOrNull(r.market_value) ?? numOrNull(r.display_value) ?? null;
+  const rentValue = numOrNull(r.traditional_rent) ?? null;
+  const sqft = numOrNull(r.square_feet || r.sqft) ?? null;
+  const lotSqft = numOrNull(r.lot_size_sqft) ?? null;
+
+  const descriptionParts = [
+    `${safeText(r.address || r.address_line1)}, ${safeText(r.city)}, ${safeText(r.state)} ${safeText(r.zip_code)}`,
+    `${safeText(r.beds)} bed`,
+    `${safeText(r.baths)} bath`,
+    sqft ? `${prettyNumber(sqft)} sqft` : null,
+    strategy === "rental" ? "rental hold candidate" : strategy === "flip" ? "fix and flip candidate" : "investment property candidate"
+  ].filter(Boolean);
+
+  return {
+    project_name: r.address || r.address_line1 || "Deal Finder Property",
+    description: descriptionParts.join(" • "),
+    property_type: type,
+    lot_size: lotSqft ? `${prettyNumber(lotSqft)} sq ft lot` : "",
+    zoning: r.zoning || "",
+    asking_price: salePrice,
+    square_feet_target: sqft,
+    city: r.city || "",
+    state: r.state || "",
+    zip_code: r.zip_code || "",
+    arv: marketValue,
+    monthly_rent: rentValue,
+    local_facts: {
+      bedrooms: numOrNull(r.beds),
+      bathrooms: numOrNull(r.baths),
+      year_built: numOrNull(r.year_built),
+      lot_sqft: lotSqft,
+      assessed_value: numOrNull(r.assessed_value),
+      annual_tax_amount: numOrNull(r.tax_amount),
+      latitude: r.latitude,
+      longitude: r.longitude,
+      source: "deal_finder"
+    }
+  };
+}
+
+async function enrichWithDealArchitect(results, strategy){
+  const enriched = await Promise.all(results.map(async (r) => {
+    try {
+      const resp = await fetch(DEAL_ARCHITECT_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRFToken": csrfToken
+        },
+        credentials: "include",
+        body: JSON.stringify(buildDealArchitectRequest(r, strategy))
+      });
+
+      const data = await resp.json();
+      if (!resp.ok || data.ok === false) {
+        return {
+          ...r,
+          architect_error: data.detail || data.message || "Deal Architect unavailable"
+        };
+      }
+
+      const meta = data.meta || {};
+      return {
+        ...r,
+        architect: data,
+        deal_score: data.deal_score,
+        opportunity_tier: data.opportunity_tier,
+        deal_finder_signal: meta.deal_finder_signal,
+        primary_strengths: meta.primary_strengths || [],
+        primary_risks: meta.primary_risks || [],
+        verdict_breakdown: meta.verdict_breakdown || {},
+        valuation_source_label: meta.valuation_source_label,
+        dscr_estimate: meta.dscr_estimate,
+        rent_yield: meta.rent_yield,
+        monthly_rent_estimate: meta.monthly_rent_estimate,
+        estimated_value_engine: data.estimated_value,
+        next_step_engine: data.next_step,
+        comp_confidence: meta.comp_confidence
+      };
+    } catch (error) {
+      return {
+        ...r,
+        architect_error: "Deal Architect request failed"
+      };
+    }
+  }));
+
+  return enriched.sort((a, b) => (Number(b.deal_score) || 0) - (Number(a.deal_score) || 0));
+}
+
+function renderSummary(zip, strategy, count, engineReady, totalMatches){
+  const card = document.getElementById("resultsSummary");
+  document.getElementById("summaryTitle").innerText = count === 0 ? "No Matches Yet" : "Top Opportunities Ready";
+  document.getElementById("summarySub").innerText = count === 0
+    ? "Try another address or ZIP to surface opportunities."
+    : `Ravlo ranked ${totalMatches || count} matches and returned the top ${count} opportunities for planning.`;
+  document.getElementById("summaryCount").innerText = String(count);
+  document.getElementById("summaryStrategy").innerText = strategyLabel(strategy);
+  document.getElementById("summaryZip").innerText = zip || "—";
+  document.getElementById("summaryEngine").innerText = engineReady ? "Connected" : "Partial";
+  card.style.display = "block";
+}
+
+function renderEmpty(title, body){
+  document.getElementById("results").innerHTML = `
+    <div class="ravlo-card pad dfv4-empty">
+      <div class="eyebrow">DEAL FINDER</div>
+      <h3 class="mb-8">${escapeHtml(title)}</h3>
+      <p class="muted mb-0">${escapeHtml(body)}</p>
+    </div>
+  `;
+}
+
+function resolveImage(r){
+  const listingPhotos = normalizePhotoArray(r.photos);
+  return r.primary_photo || r.photo || r.thumbnail || (listingPhotos.length ? listingPhotos[0] : null) || PLACEHOLDER_IMAGE;
+}
+
+function resolveReasons(r){
+  if (Array.isArray(r.why_it_made_list) && r.why_it_made_list.length) {
+    return r.why_it_made_list.slice(0, 3);
+  }
+
+  const strengths = Array.isArray(r.primary_strengths) ? r.primary_strengths.slice(0, 2) : [];
+  const risks = Array.isArray(r.primary_risks) ? r.primary_risks.slice(0, 1) : [];
+
+  if (strengths.length || risks.length) {
+    return [...strengths, ...risks.map(x => `Watch: ${x}`)].slice(0, 3);
+  }
+
+  const fallback = [];
+  if (numOrNull(r.price) !== null) fallback.push(`Live list price available at ${money(r.price)}`);
+  if (numOrNull(r.last_sale_price) !== null) fallback.push("Recorded sale price available for review");
+  if (numOrNull(r.market_value) !== null) fallback.push(`Market value surfaced at ${money(r.market_value)}`);
+  if (numOrNull(r.traditional_rent) !== null) fallback.push(`Estimated rent: ${money(r.traditional_rent)}/mo`);
+  if (!fallback.length) fallback.push("Ready for deeper review in Deal Workspace");
+  return fallback.slice(0, 3);
+}
+
+function resolveRiskNotes(r){
+  if (Array.isArray(r.risk_notes) && r.risk_notes.length) {
+    return r.risk_notes.slice(0, 2);
+  }
+
+  const risks = Array.isArray(r.primary_risks) ? r.primary_risks.slice(0, 2) : [];
+  if (risks.length) return risks;
+  return ["Validate scope, comps, and zoning before moving this into execution."];
+}
+
+function renderCards(results){
+  const root = document.getElementById("results");
+
+  if (!results || !results.length) {
+    renderEmpty("No properties matched your search", "Try another address, city/state combination, or ZIP code.");
+    return;
+  }
+
+  root.innerHTML = results.map((r, idx) => {
+    const ts = Date.now() + idx;
+    const analyzeId = `dw_${idx}_${ts}`;
+    const saveId = `sv_${idx}_${ts}`;
+    const payloadObj = buildPropertyPayload(r, analyzeId, saveId);
+    const encoded = encodeURIComponent(JSON.stringify(payloadObj));
+
+    const headline = resolveHeadlineValue(r);
+    const price = headline.value;
+    const marketValue = numOrNull(r.estimated_value_engine) ?? numOrNull(r.market_value) ?? numOrNull(r.assessed_value);
+    const valueSourceBadge =
+      headline.source === "listing" ? "Live Listing" :
+      headline.source === "estimate" ? "AVM" :
+      headline.source === "assessed" ? "Tax Record" :
+      headline.source === "last_sale" ? "Sale Record" :
+      "Record Only";
+
+    const reasons = resolveReasons(r);
+    const risks = resolveRiskNotes(r);
+    const score = Number(r.deal_score);
+    const tier = r.opportunity_tier || "moderate";
+    const signal = r.deal_finder_signal;
+    const architectError = r.architect_error;
+    const statusText = resolveStatusText(r, signal);
+    const sqftText = prettyNumber(r.square_feet || r.sqft);
+    const lotText = compactNumberText(r.lot_size_sqft, "sq ft lot");
+    const description = shortText(r.description, 160);
+    const lastSaleDate = compactDate(r.last_sale_date);
+    const strategyTag = safeText(r.strategy_tag || r.recommended_strategy || signalLabel(signal));
+    const bestUse = safeText(r.estimated_best_use || r.best_use || "Review the highest and best use in Project Studio.");
+    const roughUpside = safeText(r.rough_upside || "Upside depends on deeper review.");
+
+    const facts = [
+      {label: "Strategy Tag", value: strategyTag},
+      {label: "Rough Upside", value: roughUpside},
+      {label: "Best Use", value: bestUse},
+      {label: "Type", value: safeText(r.property_type || "Property")},
+      {label: "Beds / Baths", value: `${safeText(r.beds)} / ${safeText(r.baths)}`},
+      {label: "Lot", value: lotText},
+      {label: "Last Sale", value: numOrNull(r.last_sale_price) !== null ? `${money(r.last_sale_price)}${lastSaleDate ? ` · ${lastSaleDate}` : ""}` : "—"}
+    ].filter(item => item.value && item.value !== "—");
+
+    return `
+      <article class="ravlo-card pad dfv4-card">
+        <div class="dfv4-thumb">
+          <img src="${escapeHtml(resolveImage(r))}" alt="Property photo" onerror="this.onerror=null;this.src='${PLACEHOLDER_IMAGE}';">
+          <div class="dfv4-thumb-top">
+            <div class="dfv4-score-badge ${scoreClass(score)}">${Number.isFinite(score) ? `${score}/99` : escapeHtml(valueSourceBadge)}</div>
+            <div class="dfv4-tier-badge ${tierClass(tier)}">${escapeHtml(tier)}</div>
+          </div>
+        </div>
+
+        <div class="dfv4-body">
+          <div class="dfv4-topline">
+            <div class="dfv4-opportunity-callout ${tierClass(tier)}">${escapeHtml(strategyTag)}</div>
+            <div class="dfv4-status-inline">${escapeHtml(statusText)}</div>
+          </div>
+
+          <div>
+            <div class="dfv4-address">${escapeHtml(safeText(r.address || r.address_line1))}</div>
+            <div class="dfv4-location">${escapeHtml(safeText(r.city))}, ${escapeHtml(safeText(r.state))} ${escapeHtml(safeText(r.zip_code))}</div>
+          </div>
+
+          <div class="dfv4-price-block">
+            <div class="dfv4-price-header">
+              <span class="dfv4-price-label">${escapeHtml(headline.label)}</span>
+              <span class="dfv4-source-pill">${escapeHtml(valueSourceBadge)}</span>
+            </div>
+            <div class="dfv4-price-value">${escapeHtml(money(price))}</div>
+            <div class="dfv4-price-sub">${escapeHtml(headline.subLabel || (marketValue !== null ? `Engine value ${money(marketValue)}` : "Engine value pending"))}</div>
+          </div>
+
+          <div class="dfv4-chip-row">
+            <span class="dfv4-chip">${escapeHtml(safeText(r.property_type || "Property"))}</span>
+            <span class="dfv4-chip">${escapeHtml(safeText(r.beds))} bd</span>
+            <span class="dfv4-chip">${escapeHtml(safeText(r.baths))} ba</span>
+            <span class="dfv4-chip">${escapeHtml(sqftText)} sqft</span>
+            ${numOrNull(r.days_on_market) !== null ? `<span class="dfv4-chip accent">${escapeHtml(String(r.days_on_market))} DOM</span>` : ""}
+          </div>
+
+          ${description ? `
+            <div class="dfv4-description">
+              ${escapeHtml(description)}
+            </div>
+          ` : ""}
+
+          <div class="dfv4-fact-grid">
+            ${facts.map(item => `
+              <div class="dfv4-fact">
+                <span>${escapeHtml(item.label)}</span>
+                <strong>${escapeHtml(item.value)}</strong>
+              </div>
+            `).join("")}
+          </div>
+
+          <div class="dfv4-engine-grid">
+            <div><span>Opportunity Tier</span><strong>${escapeHtml(tier)}</strong></div>
+            <div><span>Estimated Best Use</span><strong>${escapeHtml(bestUse)}</strong></div>
+            <div><span>Rent Est.</span><strong>${escapeHtml(money(r.monthly_rent_estimate || r.traditional_rent))}${numOrNull(r.monthly_rent_estimate || r.traditional_rent) !== null ? '/mo' : ''}</strong></div>
+            <div><span>Days on Market</span><strong>${escapeHtml(safeText(r.days_on_market))}</strong></div>
+            <div><span>Comp Confidence</span><strong>${escapeHtml(safeText(r.comp_confidence))}</strong></div>
+            <div><span>Next Move</span><strong>${escapeHtml(safeText(r.next_step_engine || 'Plan in Project Studio'))}</strong></div>
+          </div>
+
+          <div class="dfv4-ai-snippet">
+            <strong>Why it made the list</strong>
+            <ul class="dfv4-thesis-list">
+              ${reasons.map(reason => `<li>${escapeHtml(reason)}</li>`).join('')}
+            </ul>
+            ${architectError ? `<div class="dfv4-engine-warning">${escapeHtml(architectError)}</div>` : ''}
+          </div>
+
+          <div class="dfv4-ai-snippet">
+            <strong>Risk notes</strong>
+            <ul class="dfv4-thesis-list">
+              ${risks.map(risk => `<li>${escapeHtml(risk)}</li>`).join('')}
+            </ul>
+          </div>
+
+          <div class="dfv4-actions">
+            <button class="ravlo-btn ghost sm" type="button" onclick='viewDetails(JSON.parse(decodeURIComponent("${encoded}")))'>View Details</button>
+            <button id="${saveId}" class="ravlo-btn ghost sm" type="button" onclick='saveOnly(JSON.parse(decodeURIComponent("${encoded}")))'>Save</button>
+            <button id="${analyzeId}" class="ravlo-btn primary sm" type="button" onclick='planThisDeal(JSON.parse(decodeURIComponent("${encoded}")))'>Plan This Deal</button>
+          </div>
+        </div>
+      </article>
+    `;
+  }).join("");
+}
+
 async function viewDetails(item){
   try{
-    const resp = await fetch("{{ url_for('investor.api_property_tool_view_details') }}", {
+    const resp = await fetch(VIEW_DETAILS_URL, {
       method: "POST",
-      headers: {
-        "Content-Type":"application/json",
-        "X-CSRFToken": csrfToken
-      },
+      headers: {"Content-Type":"application/json", "X-CSRFToken": csrfToken},
       credentials: "include",
       body: JSON.stringify(item)
     });
     const data = await resp.json();
-
-    if (data.status !== "ok"){
-      alert(data.message || "Could not open property details.");
-      return;
-    }
-
-    if (data.detail_url){
-      window.location.href = data.detail_url;
-      return;
-    }
-
-    alert("No detail URL returned.");
-  } catch (e){
+    if (data.status !== "ok") return alert(data.message || "Could not open property details.");
+    if (data.detail_url) window.location.href = data.detail_url;
+  } catch (e) {
     console.error(e);
     alert("Network error while opening property details.");
   }
@@ -183,23 +674,26 @@ async function viewDetails(item){
 
 async function saveOnly(item){
   const btn = document.getElementById(item._saveBtnId);
-  if (btn){ btn.disabled = true; btn.innerText = "Saving..."; }
+  if (btn){
+    btn.disabled = true;
+    btn.innerText = "Saving...";
+  }
 
   try{
-    const resp = await fetch("{{ url_for('investor.api_property_tool_save') }}", {
+    const resp = await fetch(SAVE_URL, {
       method: "POST",
-      headers: {
-        "Content-Type":"application/json",
-        "X-CSRFToken": csrfToken
-      },
+      headers: {"Content-Type":"application/json", "X-CSRFToken": csrfToken},
       credentials: "include",
       body: JSON.stringify(item)
     });
-    const data = await resp.json();
 
-    if (data.status !== "ok"){
+    const data = await resp.json();
+    if (data.status !== "ok") {
       alert(data.message || "Could not save property.");
-      if (btn){ btn.disabled = false; btn.innerText = "Save"; }
+      if (btn){
+        btn.disabled = false;
+        btn.innerText = "Save";
+      }
       return;
     }
 
@@ -210,138 +704,60 @@ async function saveOnly(item){
         btn.innerText = "Save";
       }, 1200);
     }
-  } catch (e){
+  } catch (e) {
     console.error(e);
     alert("Network error while saving.");
-    if (btn){ btn.disabled = false; btn.innerText = "Save"; }
+    if (btn){
+      btn.disabled = false;
+      btn.innerText = "Save";
+    }
   }
 }
 
-async function saveAndAnalyze(item){
+async function planThisDeal(item){
   const btn = document.getElementById(item._btnId);
-  if (btn){ btn.disabled = true; btn.innerText = "Saving..."; }
+  if (btn){
+    btn.disabled = true;
+    btn.innerText = "Opening...";
+  }
 
   try{
-    const resp = await fetch("{{ url_for('investor.api_property_tool_save_and_analyze') }}", {
+    const resp = await fetch(SAVE_AND_ANALYZE_URL, {
       method: "POST",
-      headers: {
-        "Content-Type":"application/json",
-        "X-CSRFToken": csrfToken
-      },
+      headers: {"Content-Type":"application/json", "X-CSRFToken": csrfToken},
       credentials: "include",
       body: JSON.stringify(item)
     });
+
     const data = await resp.json();
 
-    if (data.status !== "ok"){
-      alert(data.message || "Could not send property to Deal Workspace.");
-      if (btn){ btn.disabled = false; btn.innerText = "Analyze"; }
+    if (data.status !== "ok") {
+      alert(data.message || "Could not create deal.");
+      if (btn){
+        btn.disabled = false;
+        btn.innerText = "Plan This Deal";
+      }
       return;
     }
 
-    if (data.deal_url){
+    if (data.deal_url) {
       window.location.href = data.deal_url;
       return;
     }
 
-    alert("Saved, but no workspace redirect returned.");
-  } catch (e){
+    alert("Deal created, but no destination URL was returned.");
+    if (btn){
+      btn.disabled = false;
+      btn.innerText = "Plan This Deal";
+    }
+  } catch (e) {
     console.error(e);
-    alert("Network error while saving.");
-    if (btn){ btn.disabled = false; btn.innerText = "Analyze"; }
+    alert("Network error while opening deal.");
+    if (btn){
+      btn.disabled = false;
+      btn.innerText = "Plan This Deal";
+    }
   }
-}
-
-function renderSummary(zip, strategy, count){
-  const card = document.getElementById("resultsSummary");
-  document.getElementById("summaryTitle").innerText = "Search Complete";
-  document.getElementById("summarySub").innerText = count === 0
-    ? "No properties matched this search."
-    : "Ravlo returned available public record property data.";
-  document.getElementById("summaryCount").innerText = String(count);
-  document.getElementById("summaryStrategy").innerText = strategyLabel(strategy);
-  document.getElementById("summaryZip").innerText = zip || "—";
-  card.style.display = "block";
-}
-
-function renderEmpty(messageTitle, messageBody){
-  document.getElementById("results").innerHTML = `
-    <div class="ravlo-card pad dfv2-empty">
-      <div class="eyebrow">NO MATCHES</div>
-      <h3 class="mb-8">${messageTitle}</h3>
-      <p class="muted mb-0">${messageBody}</p>
-    </div>
-  `;
-}
-
-function renderCards(results){
-  const root = document.getElementById("results");
-
-  root.innerHTML = results.map((r, idx) => {
-    const ts = Date.now() + idx;
-    const analyzeId = `dw_${idx}_${ts}`;
-    const saveId = `sv_${idx}_${ts}`;
-    const payloadObj = buildPayloadObj(r, analyzeId, saveId);
-    const encoded = encodeURIComponent(JSON.stringify(payloadObj));
-
-    return `
-      <article class="ravlo-card pad dfv2-card">
-        <div class="dfv2-thumb">
-          <img src="/static/images/placeholder_property.jpg" alt="Property photo">
-          <div class="dfv2-score-badge neutral">
-            Public Record
-          </div>
-        </div>
-
-        <div class="dfv2-body">
-          <div class="dfv2-address">${safeText(r.address || r.address_line1)}</div>
-          <div class="dfv2-location">${safeText(r.city)}, ${safeText(r.state)} ${safeText(r.zip_code)}</div>
-
-          <div class="dfv2-chip-row">
-            <span class="dfv2-chip">${safeText(r.property_type || "Property")}</span>
-            <span class="dfv2-chip">${safeText(r.beds)} bd</span>
-            <span class="dfv2-chip">${safeText(r.baths)} ba</span>
-            <span class="dfv2-chip">${safeText(r.square_feet)} sqft</span>
-          </div>
-
-          <div class="dfv2-metrics">
-            <div><span>Last Recorded Sale</span><strong>${money(r.last_sale_price)}</strong></div>
-            <div><span>Assessed Value</span><strong>${money(r.assessed_value)}</strong></div>
-            <div><span>Lot Size</span><strong>${safeText(r.lot_size_sqft)}</strong></div>
-            <div><span>Year Built</span><strong>${safeText(r.year_built)}</strong></div>
-            <div><span>Latitude</span><strong>${safeText(r.latitude)}</strong></div>
-            <div><span>Longitude</span><strong>${safeText(r.longitude)}</strong></div>
-          </div>
-
-          <div class="dfv2-ai-snippet">
-            <strong>Property Snapshot:</strong>
-            <ul class="dfv2-thesis-list">
-              <li>Showing available public record property details</li>
-              <li>Use View Details for the full property workflow</li>
-              <li>Save or Analyze to move this property into Ravlo Workspace</li>
-            </ul>
-          </div>
-
-          <div class="dfv2-actions">
-            <button class="ravlo-btn ghost sm" type="button"
-              onclick='viewDetails(JSON.parse(decodeURIComponent("${encoded}")))'>
-              View Details
-            </button>
-
-            <button id="${saveId}" class="ravlo-btn ghost sm" type="button"
-              onclick='saveOnly(JSON.parse(decodeURIComponent("${encoded}")))'>
-              Save
-            </button>
-
-            <button id="${analyzeId}" class="ravlo-btn primary sm" type="button"
-              onclick='saveAndAnalyze(JSON.parse(decodeURIComponent("${encoded}")))'>
-              Analyze
-            </button>
-          </div>
-        </div>
-      </article>
-    `;
-  }).join("");
 }
 
 async function runSearch(){
@@ -353,309 +769,127 @@ async function runSearch(){
   const status = document.getElementById("searchStatus");
   const resultsSummary = document.getElementById("resultsSummary");
 
-  if (!zip && !address){
+  if (!zip && !address) {
     status.innerText = "Enter an address or ZIP code first.";
     return;
   }
 
-  const payload = {
-    address,
-    city,
-    state,
-    zip,
-    strategy,
-    limit: 20
-  };
+  const payload = { address, city, state, zip, strategy, limit: 12 };
 
-  status.innerText = "Ravlo is scanning this market...";
+  status.innerText = "Searching the market for opportunity candidates...";
   resultsSummary.style.display = "none";
-  renderEmpty("Scanning search", "Reviewing available public record property data.");
+  renderEmpty("Ranking opportunities", "Pulling listing data, pricing signals, and best-use clues so Ravlo can return a focused top four.");
 
-  try{
+  try {
     const resp = await fetch("{{ url_for('investor.api_property_tool_search') }}", {
       method: "POST",
-      headers: {
-        "Content-Type":"application/json",
-        "X-CSRFToken": csrfToken
-      },
+      headers: {"Content-Type":"application/json", "X-CSRFToken": csrfToken},
       credentials: "include",
       body: JSON.stringify(payload)
     });
 
     const data = await resp.json();
-
-    if (data.status !== "ok"){
+    if (data.status !== "ok") {
       status.innerText = data.message || "Search failed.";
       renderEmpty("Search failed", data.message || "Please try another address or ZIP.");
       return;
     }
 
-    renderSummary(data.zip, data.strategy, data.results.length);
+    status.innerText = "Packaging the strongest opportunities for review...";
+    const enriched = data.results || [];
+    const engineReady = Boolean(data.engine_ready) || enriched.some(x => Number.isFinite(Number(x.deal_score)));
+
+    renderSummary(data.zip, data.strategy, enriched.length, engineReady, data.total_matches);
 
     const locationLabel = data.zip || data.address || "your search";
-    status.innerText = `Ravlo found ${data.results.length} propert${data.results.length === 1 ? "y" : "ies"} for ${locationLabel}.`;
+    status.innerText = enriched.length
+      ? `Ravlo found ${data.total_matches || enriched.length} matches and returned the top ${enriched.length} opportunities for ${locationLabel}.`
+      : `No properties matched ${locationLabel}.`;
 
-    if (!data.results.length){
-      renderEmpty(
-        "No properties matched your search",
-        "Try another address, city/state combination, or ZIP code."
-      );
-      return;
-    }
-
-    renderCards(data.results);
-  } catch (e){
+    renderCards(enriched);
+  } catch (e) {
     console.error(e);
-    status.innerText = "Ravlo could not load this search right now.";
+    status.innerText = "Investor OS could not load this search right now.";
     renderEmpty("Unable to load this search", "Please try again in a moment.");
   }
 }
 </script>
 
 <style>
-.dfv2-shell{
-  display:grid;
-  grid-template-columns:360px minmax(0,1fr);
-  gap:1rem;
-}
-
-.dfv2-search-panel{
-  position:sticky;
-  top:16px;
-  align-self:start;
-}
-
-.dfv2-panel-title{
-  margin:.35rem 0 .35rem;
-}
-
-.dfv2-form-grid{
-  display:grid;
-  grid-template-columns:repeat(2,minmax(0,1fr));
-  gap:.75rem;
-}
-
-.dfv2-status{
-  color:var(--muted);
-  margin-top:.75rem;
-  min-height:20px;
-}
-
-.dfv2-results-wrap{
-  display:grid;
-  gap:1rem;
-}
-
-.dfv2-summary-head{
-  display:flex;
-  justify-content:space-between;
-  align-items:flex-start;
-  gap:18px;
-  flex-wrap:wrap;
-}
-
-.dfv2-summary-metrics{
-  display:grid;
-  grid-template-columns:repeat(3,minmax(0,1fr));
-  gap:.7rem;
-  min-width:320px;
-}
-
-.dfv2-summary-metric{
-  padding:.85rem .9rem;
-  border-radius:14px;
-  background:rgba(255,255,255,.03);
-  border:1px solid rgba(255,255,255,.08);
-}
-
-.dfv2-summary-metric span{
-  display:block;
-  color:var(--muted);
-  font-size:.78rem;
-  margin-bottom:.25rem;
-}
-
-.dfv2-summary-metric strong{
-  color:var(--text);
-  font-size:1rem;
-}
-
-.dfv2-grid{
-  display:grid;
-  grid-template-columns:repeat(2,minmax(0,1fr));
-  gap:1rem;
-}
-
-.dfv2-card{
-  display:flex;
-  flex-direction:column;
-  overflow:hidden;
-}
-
-.dfv2-thumb{
-  position:relative;
-  width:100%;
-  height:210px;
-  border-radius:16px;
-  overflow:hidden;
-  background:rgba(255,255,255,.03);
-  border:1px solid rgba(255,255,255,.08);
-}
-
-.dfv2-thumb img{
-  width:100%;
-  height:100%;
-  object-fit:cover;
-  display:block;
-}
-
-.dfv2-score-badge{
-  position:absolute;
-  top:12px;
-  left:12px;
-  padding:.45rem .7rem;
-  border-radius:999px;
-  font-size:.78rem;
-  font-weight:800;
-  border:1px solid rgba(255,255,255,.12);
-  backdrop-filter:blur(8px);
-}
-
-.dfv2-score-badge.good{
-  background:rgba(44,182,125,.18);
-  color:#d9fff0;
-}
-
-.dfv2-score-badge.watch{
-  background:rgba(209,162,70,.18);
-  color:#fff0c7;
-}
-
-.dfv2-score-badge.neutral{
-  background:rgba(107,127,147,.22);
-  color:#eef4fb;
-}
-
-.dfv2-body{
-  display:grid;
-  gap:.8rem;
-  margin-top:.85rem;
-}
-
-.dfv2-address{
-  font-weight:900;
-  color:var(--text);
-  font-size:1rem;
-  line-height:1.25;
-}
-
-.dfv2-location{
-  color:var(--muted);
-  font-size:.82rem;
-  margin-top:.2rem;
-}
-
-.dfv2-chip-row{
-  display:flex;
-  gap:.45rem;
-  flex-wrap:wrap;
-}
-
-.dfv2-chip{
-  display:inline-flex;
-  align-items:center;
-  padding:.35rem .55rem;
-  border-radius:999px;
-  background:rgba(255,255,255,.03);
-  border:1px solid rgba(255,255,255,.08);
-  color:var(--text);
-  font-size:.76rem;
-}
-
-.dfv2-metrics{
-  display:grid;
-  grid-template-columns:repeat(2,minmax(0,1fr));
-  gap:.6rem;
-}
-
-.dfv2-metrics div{
-  padding:.7rem .75rem;
-  border-radius:12px;
-  background:rgba(255,255,255,.03);
-  border:1px solid rgba(255,255,255,.08);
-}
-
-.dfv2-metrics span{
-  display:block;
-  color:var(--muted);
-  margin-bottom:.2rem;
-  font-size:.78rem;
-}
-
-.dfv2-metrics strong{
-  color:var(--text);
-  font-size:.92rem;
-}
-
-.dfv2-ai-snippet{
-  padding:.8rem .9rem;
-  border-radius:12px;
-  background:rgba(255,255,255,.02);
-  border:1px solid rgba(255,255,255,.08);
-  color:var(--muted);
-  font-size:.82rem;
-  line-height:1.55;
-}
-
-.dfv2-thesis-list{
-  margin:.45rem 0 0 1rem;
-  padding:0;
-}
-
-.dfv2-actions{
-  display:flex;
-  gap:.5rem;
-  flex-wrap:wrap;
-}
-
-.dfv2-empty{
-  min-height:240px;
-  display:flex;
-  flex-direction:column;
-  justify-content:center;
-  align-items:flex-start;
-  border:1px dashed rgba(255,255,255,.12);
-  background:rgba(255,255,255,.02);
-}
-
-@media (max-width:1200px){
-  .dfv2-shell{
-    grid-template-columns:1fr;
-  }
-
-  .dfv2-search-panel{
-    position:relative;
-    top:0;
-  }
-}
-
-@media (max-width:900px){
-  .dfv2-grid{
-    grid-template-columns:1fr;
-  }
-
-  .dfv2-summary-metrics{
-    min-width:unset;
-    width:100%;
-    grid-template-columns:1fr;
-  }
-}
-
-@media (max-width:640px){
-  .dfv2-form-grid{
-    grid-template-columns:1fr;
-  }
-}
+.dfv4-shell{display:grid;grid-template-columns:360px minmax(0,1fr);gap:1rem}
+.dfv4-search-panel{position:sticky;top:16px;align-self:start}
+.dfv4-panel-title,.dfv4-hero-title{margin:.35rem 0}
+.dfv4-form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.75rem}
+.dfv4-status{color:var(--muted);margin-top:.75rem;min-height:20px}
+.dfv4-panel-note{margin-top:1rem;padding:.9rem 1rem;border-radius:16px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08)}
+.dfv4-panel-note ul{margin:.55rem 0 0 1rem;padding:0;color:var(--muted)}
+.dfv4-results-wrap{display:grid;gap:1rem}
+.dfv4-hero-card{display:flex;justify-content:space-between;align-items:flex-start;gap:1rem;flex-wrap:wrap}
+.dfv4-hero-pill-row{display:flex;flex-wrap:wrap;gap:.5rem}
+.dfv4-hero-pill{display:inline-flex;align-items:center;padding:.45rem .7rem;border-radius:999px;background:rgba(37,99,235,.16);border:1px solid rgba(96,165,250,.22);color:#dbeafe;font-size:.78rem;font-weight:800}
+.dfv4-summary-head{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;flex-wrap:wrap}
+.dfv4-summary-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:.7rem;min-width:420px}
+.dfv4-summary-metric{padding:.85rem .9rem;border-radius:14px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08)}
+.dfv4-summary-metric span{display:block;color:var(--muted);font-size:.78rem;margin-bottom:.25rem}
+.dfv4-summary-metric strong{color:var(--text);font-size:1rem}
+.dfv4-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1rem}
+.dfv4-card{display:flex;flex-direction:column;overflow:hidden}
+.dfv4-thumb{position:relative;width:100%;height:220px;border-radius:16px;overflow:hidden;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08)}
+.dfv4-thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.dfv4-thumb-top{position:absolute;top:12px;left:12px;right:12px;display:flex;justify-content:space-between;align-items:flex-start;gap:.5rem}
+.dfv4-score-badge,.dfv4-tier-badge{padding:.45rem .7rem;border-radius:999px;font-size:.78rem;font-weight:800;border:1px solid rgba(255,255,255,.12);backdrop-filter:blur(8px)}
+.dfv4-score-badge.good,.dfv4-tier-badge.good,.dfv4-opportunity-callout.good{background:rgba(44,182,125,.18);color:#d9fff0}
+.dfv4-score-badge.watch,.dfv4-tier-badge.watch,.dfv4-opportunity-callout.watch{background:rgba(209,162,70,.18);color:#fff0c7}
+.dfv4-score-badge.risk,.dfv4-tier-badge.risk,.dfv4-opportunity-callout.risk{background:rgba(239,68,68,.18);color:#fecaca}
+.dfv4-score-badge.neutral,.dfv4-tier-badge.neutral,.dfv4-opportunity-callout.neutral{background:rgba(107,127,147,.22);color:#eef4fb}
+.dfv4-body{display:grid;gap:.8rem;margin-top:.85rem}
+.dfv4-topline{display:flex;justify-content:space-between;align-items:center;gap:.75rem;flex-wrap:wrap}
+.dfv4-opportunity-callout{display:inline-flex;align-items:center;width:max-content;padding:.36rem .62rem;border-radius:999px;font-size:.76rem;font-weight:800;border:1px solid rgba(255,255,255,.12)}
+.dfv4-status-inline{font-size:.76rem;font-weight:700;color:#c9d5e4;text-transform:uppercase;letter-spacing:.04em}
+.dfv4-address{font-weight:900;color:var(--text);font-size:1rem;line-height:1.25}
+.dfv4-location{color:var(--muted);font-size:.82rem;margin-top:.2rem}
+.dfv4-price-block{padding:1rem 1rem 1.05rem;border-radius:16px;background:linear-gradient(180deg, rgba(42,96,191,.24), rgba(19,43,82,.18));border:1px solid rgba(126,171,255,.2);box-shadow:inset 0 1px 0 rgba(255,255,255,.03)}
+.dfv4-price-header{display:flex;align-items:center;justify-content:space-between;gap:.7rem}
+.dfv4-price-label{color:#a9c4ff;font-size:.78rem;margin-bottom:.2rem;font-weight:800;text-transform:uppercase;letter-spacing:.04em}
+.dfv4-source-pill{display:inline-flex;align-items:center;padding:.28rem .5rem;border-radius:999px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.1);color:#eef4fb;font-size:.68rem;font-weight:800;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap}
+.dfv4-price-value{color:#f6fbff;font-size:1.6rem;font-weight:900;line-height:1.05;margin-top:.35rem}
+.dfv4-price-sub{color:var(--muted);font-size:.78rem;margin-top:.35rem}
+.dfv4-chip-row{display:flex;gap:.45rem;flex-wrap:wrap}
+.dfv4-chip{display:inline-flex;align-items:center;padding:.35rem .55rem;border-radius:999px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);color:var(--text);font-size:.76rem}
+.dfv4-chip.accent{background:rgba(37,99,235,.12);border-color:rgba(96,165,250,.22);color:#dbeafe}
+.dfv4-description{padding:.75rem .85rem;border-radius:12px;background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.08);color:#d7e0eb;font-size:.82rem;line-height:1.55}
+.dfv4-fact-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.55rem}
+.dfv4-fact{padding:.7rem .75rem;border-radius:12px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08)}
+.dfv4-fact span{display:block;color:var(--muted);margin-bottom:.18rem;font-size:.73rem;text-transform:uppercase;letter-spacing:.04em}
+.dfv4-fact strong{color:var(--text);font-size:.86rem;line-height:1.45}
+.dfv4-engine-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.6rem}
+.dfv4-engine-grid div{padding:.7rem .75rem;border-radius:12px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08)}
+.dfv4-engine-grid span{display:block;color:var(--muted);margin-bottom:.2rem;font-size:.78rem}
+.dfv4-engine-grid strong{color:var(--text);font-size:.92rem}
+.dfv4-ai-snippet{padding:.8rem .9rem;border-radius:12px;background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.08);color:var(--muted);font-size:.82rem;line-height:1.55}
+.dfv4-thesis-list{margin:.45rem 0 0 1rem;padding:0}
+.dfv4-engine-warning{margin-top:.5rem;color:#fca5a5;font-size:.78rem}
+.dfv4-actions{display:flex;gap:.5rem;flex-wrap:wrap}
+.dfv4-empty{min-height:240px;display:flex;flex-direction:column;justify-content:center;align-items:flex-start;border:1px dashed rgba(255,255,255,.12);background:rgba(255,255,255,.02)}
+@media (max-width:1200px){.dfv4-shell{grid-template-columns:1fr}.dfv4-search-panel{position:relative;top:0}}
+@media (max-width:900px){.dfv4-grid{grid-template-columns:1fr}.dfv4-summary-metrics{min-width:unset;width:100%;grid-template-columns:1fr 1fr}}
+@media (max-width:640px){.dfv4-form-grid,.dfv4-engine-grid,.dfv4-summary-metrics,.dfv4-fact-grid{grid-template-columns:1fr}}
 </style>
-
 {% endblock %}
+
+{#
+Notes:
+1) buildPropertyPayload now includes:
+   - image_url
+   - listing_photos
+2) saveOnly and planThisDeal now send those photos to the backend.
+3) Backend can upload them to DigitalOcean Spaces and store:
+   - SavedProperty.image_url
+   - SavedProperty.listing_photos_json
+   - Deal.results_json["listing_photos"]
+
+Recommended route behavior:
+- /api/property_tool_save_and_analyze should create/update a real Deal
+- return /deal_workspace/<deal_id>
+- deal_open() should also redirect with deal_id instead of prop_id
+#}

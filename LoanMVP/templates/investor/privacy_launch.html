@@ -1,0 +1,68 @@
+{% extends "layouts/ravlo_base.html" %}
+{% block title %}Ravlo - Privacy{% endblock %}
+
+{% block page_title %}Privacy Center{% endblock %}
+{% block page_subline %}
+Review how account, deal, and uploaded property data are used across your investor workspace.
+{% endblock %}
+
+{% block content %}
+
+<div class="ravlo-grid cols-2 mt-20">
+  <div class="ravlo-card pad">
+    <h3 class="ravlo-card-title">Workspace Data</h3>
+    <p class="muted mt-12">
+      Ravlo stores your identity, investor profile, saved properties, deal activity, uploaded files, generated studio
+      assets, and project history so your workspace can operate across sessions and tools.
+    </p>
+
+    <div class="mt-20">
+      <p class="muted">Primary Email</p>
+      <p>{{ investor.email }}</p>
+    </div>
+
+    <div class="mt-20">
+      <p class="muted">Profile Strategy</p>
+      <p>{{ investor_profile.strategy or "Not set" }}</p>
+    </div>
+
+    <div class="mt-20">
+      <p class="muted">Public Policy</p>
+      <p>
+        The full public-facing privacy policy is available at
+        <a href="{{ url_for('marketing.privacy') }}">Ravlo Privacy Policy</a>.
+      </p>
+    </div>
+  </div>
+
+  <div class="ravlo-card pad">
+    <h3 class="ravlo-card-title">Requests and Controls</h3>
+    <p class="muted mt-12">
+      Self-service privacy preference changes are still being finalized for launch. If you need a data export,
+      correction, deletion review, or account-level privacy support, contact the Ravlo team and we will route the
+      request through the verified support flow.
+    </p>
+
+    <div class="mt-20">
+      <p class="muted">Privacy Contact</p>
+      <p><a href="mailto:info@ravlohq.com">info@ravlohq.com</a></p>
+    </div>
+
+    <div class="mt-20">
+      <p class="muted">Operational Note</p>
+      <p>
+        Some property, listing, valuation, and AI-image features rely on third-party providers. Ravlo stores the
+        resulting workspace data so your saved deals, renovation concepts, and build references remain usable even if
+        a source provider changes its feed later.
+      </p>
+    </div>
+
+    <button class="ravlo-btn primary sm mt-20"
+            type="button"
+            onclick="location.href='{{ url_for('investor.settings') }}'">
+      Go To Settings
+    </button>
+  </div>
+</div>
+
+{% endblock %}

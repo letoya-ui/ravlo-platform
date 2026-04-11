@@ -20,6 +20,29 @@ Compare lender options, review estimated terms, and help borrowers choose the st
 {% block content %}
 <div class="quote-shell">
 
+  <section class="rv-card">
+    <div class="section-head">
+      <div>
+        <div class="eyebrow">Loan Selection</div>
+        <h3>Choose a Loan to Price</h3>
+      </div>
+    </div>
+
+    <form method="POST" class="quote-selector-form">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <select name="loan_id" class="quote-loan-select" required>
+        <option value="">Select a loan</option>
+        {% for loan in loans %}
+          <option value="{{ loan.id }}" {% if selected_loan and selected_loan.id == loan.id %}selected{% endif %}>
+            Loan #{{ loan.id }} • {{ loan.borrower_profile.full_name if loan.borrower_profile else 'Unknown Borrower' }} • {{ loan.loan_type or 'Loan' }}
+          </option>
+        {% endfor %}
+      </select>
+      <button type="submit" class="rv-btn primary sm">Load Quotes</button>
+      <a class="rv-btn secondary sm" href="{{ url_for('loan_officer.new_quote') }}">Create Quote</a>
+    </form>
+  </section>
+
   <!-- HERO -->
   <section class="rv-card quote-hero">
     <div>
@@ -179,6 +202,23 @@ Compare lender options, review estimated terms, and help borrowers choose the st
 .quote-shell{
   display:grid;
   gap:18px;
+}
+
+.quote-selector-form{
+  display:flex;
+  gap:12px;
+  flex-wrap:wrap;
+  align-items:center;
+}
+
+.quote-loan-select{
+  flex:1 1 320px;
+  min-height:46px;
+  border-radius:12px;
+  border:1px solid rgba(255,255,255,.08);
+  background:rgba(255,255,255,.04);
+  color:#e7eef5;
+  padding:0 .9rem;
 }
 
 .quote-hero{

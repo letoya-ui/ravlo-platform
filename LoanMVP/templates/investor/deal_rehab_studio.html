@@ -71,11 +71,11 @@
 
       <section class="ravlo-card setup-card">
         <div class="card-head">
-          <div>
-            <div class="card-kicker">STEP 1</div>
-            <h2>Renovation Setup</h2>
-            <p>Choose the renovation style, upload the current condition image, and generate a concept.</p>
-          </div>
+            <div>
+              <div class="card-kicker">STEP 1</div>
+              <h2>Renovation Setup</h2>
+              <p>Choose the renovation style, upload a current condition image, or start from the saved listing photo for this deal.</p>
+            </div>
           <div class="card-head-actions">
             <span class="status-pill" id="generation-status-pill">{{ "Concepts Loaded" if rehab_concepts else "Ready" }}</span>
           </div>
@@ -140,7 +140,7 @@
                 <h3>Before Photo</h3>
                 <span>Required</span>
               </div>
-              <p>Upload the current property photo that should be renovated.</p>
+              <p>Upload the current property photo that should be renovated, or use the saved listing photo already attached to the deal.</p>
               <input type="file" id="before_image" name="before_image" accept="image/*,.png,.jpg,.jpeg,.webp">
               <input
                 type="text"
@@ -157,6 +157,24 @@
                   No before image selected
                 {% endif %}
               </div>
+              {% if property_photo_gallery %}
+              <div class="seed-gallery-note">Choose a saved listing photo to use as the renovation starting point.</div>
+              <div class="seed-thumb-row" id="savedBeforeGallery">
+                {% for photo in property_photo_gallery[:8] %}
+                <button
+                  type="button"
+                  class="seed-thumb{% if rehab_before and rehab_before.get('image_url') == photo %} is-active{% elif loop.first and not (rehab_before and rehab_before.get('image_url')) %} is-active{% endif %}"
+                  data-seed-url="{{ photo }}"
+                  aria-label="Use saved property photo {{ loop.index }}"
+                >
+                  <img src="{{ photo }}" alt="Saved property photo {{ loop.index }}">
+                </button>
+                {% endfor %}
+              </div>
+              {% endif %}
+              {% if property_photo_gallery %}
+              <div class="seed-gallery-note">Saved listing photos are available for this property and the lead image has been preloaded.</div>
+              {% endif %}
             </div>
 
             <div class="upload-card">
@@ -332,6 +350,39 @@
             <span class="tracker-label">Saved Concepts</span>
             <strong id="trackerConcepts">{{ rehab_concepts|length if rehab_concepts else 0 }}</strong>
           </div>
+        </div>
+      </section>
+
+      <section class="ravlo-card side-card" id="rehabScopeCard">
+        <div class="card-head">
+          <div>
+            <div class="card-kicker">ENGINE SCOPE</div>
+            <h3>Rehab Snapshot</h3>
+          </div>
+        </div>
+
+        <div class="tracker-list">
+          <div class="tracker-item">
+            <span class="tracker-label">Cost Low</span>
+            <strong id="scopeCostLow">{{ rehab_scope.get("cost_low") if rehab_scope else "—" }}</strong>
+          </div>
+          <div class="tracker-item">
+            <span class="tracker-label">Cost High</span>
+            <strong id="scopeCostHigh">{{ rehab_scope.get("cost_high") if rehab_scope else "—" }}</strong>
+          </div>
+          <div class="tracker-item">
+            <span class="tracker-label">ARV</span>
+            <strong id="scopeArv">{{ rehab_scope.get("arv") if rehab_scope else "—" }}</strong>
+          </div>
+          <div class="tracker-item">
+            <span class="tracker-label">Rooms</span>
+            <strong id="scopeRooms">{{ rehab_scope.get("rooms")|length if rehab_scope and rehab_scope.get("rooms") else 0 }}</strong>
+          </div>
+        </div>
+
+        <div class="info-box" style="margin-top:12px;">
+          <strong>Plan Summary</strong>
+          <p id="scopePlan">{{ rehab_scope.get("plan") if rehab_scope else "Generate a concept with a before photo to pull the current rehab scope snapshot." }}</p>
         </div>
       </section>
 
@@ -693,6 +744,48 @@
     line-height: 1.5;
   }
 
+  .seed-gallery-note {
+    margin-top: 10px;
+    padding: 10px 12px;
+    border-radius: 14px;
+    background: rgba(90,140,255,0.08);
+    border: 1px solid rgba(126,171,255,0.16);
+    color: #c8d8f2;
+    font-size: .82rem;
+    line-height: 1.45;
+  }
+
+  .seed-thumb-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(74px, 1fr));
+    gap: 10px;
+    margin-top: 12px;
+  }
+
+  .seed-thumb {
+    padding: 0;
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 14px;
+    overflow: hidden;
+    background: rgba(255,255,255,0.04);
+    cursor: pointer;
+    transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease;
+  }
+
+  .seed-thumb:hover,
+  .seed-thumb.is-active {
+    border-color: rgba(126,171,255,0.75);
+    box-shadow: 0 0 0 1px rgba(126,171,255,0.3);
+    transform: translateY(-1px);
+  }
+
+  .seed-thumb img {
+    display: block;
+    width: 100%;
+    height: 74px;
+    object-fit: cover;
+  }
+
   .mini-preview {
     min-height: 62px;
     display: flex;
@@ -1039,7 +1132,9 @@
     const copyConceptLinkBtn = document.getElementById("copyConceptLinkBtn");
 
     const beforeImageInput = document.getElementById("before_image");
+    const beforeUrlInput = document.getElementById("image_url");
     const beforePreview = document.getElementById("beforePreview");
+    const savedBeforeGallery = document.getElementById("savedBeforeGallery");
 
     const variantModal = document.getElementById("variantModal");
     const openVariantBtn = document.getElementById("openVariantBtn");
@@ -1052,6 +1147,14 @@
 
     let conceptState = [];
     let activeConceptIndex = 0;
+
+    const rehabScopeEls = {
+      costLow: document.getElementById("scopeCostLow"),
+      costHigh: document.getElementById("scopeCostHigh"),
+      arv: document.getElementById("scopeArv"),
+      rooms: document.getElementById("scopeRooms"),
+      plan: document.getElementById("scopePlan")
+    };
 
     const afterEls = {
       media: document.getElementById("afterMedia"),
@@ -1070,6 +1173,24 @@
         .replaceAll(">", "&gt;")
         .replaceAll('"', "&quot;")
         .replaceAll("'", "&#039;");
+    }
+
+    function asMoney(value) {
+      const number = Number(value);
+      if (!Number.isFinite(number)) return "—";
+      return number.toLocaleString(undefined, {
+        style: "currency",
+        currency: "USD",
+        maximumFractionDigits: 0
+      });
+    }
+
+    function renderRehabScope(scope) {
+      if (rehabScopeEls.costLow) rehabScopeEls.costLow.textContent = scope?.cost_low != null ? asMoney(scope.cost_low) : "—";
+      if (rehabScopeEls.costHigh) rehabScopeEls.costHigh.textContent = scope?.cost_high != null ? asMoney(scope.cost_high) : "—";
+      if (rehabScopeEls.arv) rehabScopeEls.arv.textContent = scope?.arv != null ? asMoney(scope.arv) : "—";
+      if (rehabScopeEls.rooms) rehabScopeEls.rooms.textContent = Array.isArray(scope?.rooms) ? scope.rooms.length : 0;
+      if (rehabScopeEls.plan) rehabScopeEls.plan.textContent = scope?.plan || "Generate a concept with a before photo to pull the current rehab scope snapshot.";
     }
 
     function setPreview(fileInput, previewEl, emptyText) {
@@ -1237,6 +1358,46 @@
       setPreview(this, beforePreview, "No before image selected");
     });
 
+    function selectSavedBefore(url) {
+      if (!url) return;
+
+      if (beforeUrlInput) beforeUrlInput.value = url;
+      if (beforeImageInput) beforeImageInput.value = "";
+
+      if (beforePreview) {
+        beforePreview.innerHTML = `<img src="${escapeHtml(url)}" alt="Before image"><span>Saved property photo selected</span>`;
+      }
+
+      renderImage(
+        document.getElementById("beforeMedia"),
+        url,
+        "Before photo",
+        "image",
+        "Before photo will appear here."
+      );
+
+      const beforeLink = document.getElementById("beforeLink");
+      if (beforeLink) {
+        beforeLink.href = url;
+        beforeLink.classList.remove("hidden");
+      }
+
+      document.getElementById("status-before").textContent = "Loaded";
+      document.getElementById("beforeBadge").textContent = "Loaded";
+      document.getElementById("beforeMetaStatus").textContent = "Loaded";
+      document.getElementById("trackerBefore").textContent = "Yes";
+
+      savedBeforeGallery?.querySelectorAll(".seed-thumb").forEach((btn) => {
+        btn.classList.toggle("is-active", btn.dataset.seedUrl === url);
+      });
+    }
+
+    savedBeforeGallery?.querySelectorAll(".seed-thumb").forEach((btn) => {
+      btn.addEventListener("click", function () {
+        selectSavedBefore(this.dataset.seedUrl || "");
+      });
+    });
+
     copyConceptLinkBtn?.addEventListener("click", async function () {
       const link = this.dataset.link || "";
       if (!link) return;
@@ -1322,6 +1483,8 @@
           document.getElementById("status-concepts").textContent = conceptState.length;
           document.getElementById("trackerConcepts").textContent = conceptState.length;
         }
+
+        renderRehabScope(data.rehab_scope || null);
 
         setStepState(2, "complete");
         setStepState(3, "complete");
@@ -1431,6 +1594,8 @@
     setStepState(3, "complete");
     setStepState(4, "complete");
     {% endif %}
+
+    renderRehabScope({{ rehab_scope|tojson }});
 
     if (window.lucide) {
       lucide.createIcons();

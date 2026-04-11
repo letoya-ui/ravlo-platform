@@ -22,7 +22,7 @@ from LoanMVP.forms import RegisterForm, ResetPasswordForm, ResetPasswordRequestF
 from LoanMVP.services.subscriptions import sync_features_with_subscription
 from LoanMVP.utils.blocking_helpers import is_user_blocked, get_user_block_message
 from LoanMVP.models.user_model import User
-from LoanMVP.models.admin import AccessRequest, UserInvite
+from LoanMVP.models.admin import AccessRequest, UserInvite, LicenseApplication
 from LoanMVP.models.investor_models import InvestorProfile
 from flask_mail import Message as MailMessage
 
@@ -108,6 +108,20 @@ def _full_name_from_user(user: User) -> str:
     return getattr(user, "full_name", None) or getattr(user, "username", None) or "there"
 
 
+def _parse_name_parts(full_name: str, first_name: str, last_name: str):
+    full_name = (full_name or "").strip()
+    first_name = (first_name or "").strip()
+    last_name = (last_name or "").strip()
+
+    if full_name and not first_name:
+        parts = full_name.split(None, 1)
+        first_name = parts[0] if parts else ""
+        last_name = parts[1] if len(parts) > 1 else last_name
+
+    full_name = full_name or f"{first_name} {last_name}".strip()
+    return first_name, last_name, full_name
+
+
 # ============================================================
 # LOGIN
 # ============================================================
@@ -179,11 +193,7 @@ def register_from_invite(token):
             flash("Passwords do not match.", "danger")
             return render_template("auth/register_from_invite.html", invite=invite)
 
-        if full_name and not first_name:
-            parts = full_name.split(None, 1)
-            first_name = parts[0] if parts else ""
-            last_name = parts[1] if len(parts) > 1 else ""
-        full_name = full_name or f"{first_name} {last_name}".strip()
+        first_name, last_name, full_name = _parse_name_parts(full_name, first_name, last_name)
 
         user = User(
             first_name=first_name or None,
@@ -195,6 +205,7 @@ def register_from_invite(token):
             password_hash=generate_password_hash(password),
             is_active=True,
             invite_accepted=True,
+            onboarding_complete=False,
         )
 
         db.session.add(user)
@@ -204,8 +215,9 @@ def register_from_invite(token):
 
         db.session.commit()
 
-        flash("Registration complete. You can now log in.", "success")
-        return redirect(url_for("auth.login"))
+        login_user(user)
+        flash("Invite accepted. Complete your profile to continue.", "success")
+        return redirect(url_for("auth.complete_profile"))
 
     return render_template("auth/register_from_invite.html", invite=invite)
 
@@ -276,8 +288,13 @@ def register():
 @auth_bp.route("/post-login-redirect")
 @login_required
 def post_login_redirect():
-    # 🔥 IGNORE next if user is admin-type
     role = (current_user.role or "").strip().lower()
+
+    if current_user.invite_accepted and not current_user.onboarding_complete:
+        return redirect(url_for("auth.complete_profile"))
+
+    if role == "admin" and current_user.company_id:
+        return redirect(url_for("admin.company_dashboard", company_id=current_user.company_id))
 
     if role in ["admin", "platform_admin", "master_admin", "lending_admin"]:
         return redirect(url_for("admin.dashboard"))
@@ -555,25 +572,38 @@ def accept_invite(token):
         last_name = (request.form.get("last_name") or invite.last_name or "").strip()
         password = (request.form.get("password") or "").strip()
 
+        if not first_name:
+            flash("First name is required.", "warning")
+            return render_template("auth/accept_invite.html", invite=invite)
+
+        if not last_name:
+            flash("Last name is required.", "warning")
+            return render_template("auth/accept_invite.html", invite=invite)
+
         if not password:
             flash("Password is required.", "warning")
             return render_template("auth/accept_invite.html", invite=invite)
 
         if existing_user:
             user = existing_user
+
             if not user.password_hash:
                 user.password_hash = generate_password_hash(password)
 
-            user.first_name = user.first_name or first_name
-            user.last_name = user.last_name or last_name
+            user.first_name = first_name or user.first_name
+            user.last_name = last_name or user.last_name
+            if not user.username:
+                user.username = f"{first_name} {last_name}".strip() or user.email
             user.company_id = invite.company_id
             user.role = invite.role
             user.invite_accepted = True
             user.is_active = True
+            user.onboarding_complete = bool(user.first_name and user.last_name)
         else:
             user = User(
                 first_name=first_name,
                 last_name=last_name,
+                username=f"{first_name} {last_name}".strip() or invite.email,
                 email=invite.email,
                 password_hash=generate_password_hash(password),
                 role=invite.role,
@@ -583,13 +613,59 @@ def accept_invite(token):
                 onboarding_complete=False,
             )
             db.session.add(user)
+            db.session.flush()
 
         invite.status = "accepted"
         invite.accepted_at = datetime.utcnow()
 
+        app_row = LicenseApplication.query.filter_by(email=invite.email).order_by(
+            LicenseApplication.created_at.desc()
+        ).first()
+        if app_row:
+            app_row.status = "onboarded"
+
         db.session.commit()
 
-        flash("Invite accepted. Your account is ready.", "success")
-        return redirect(url_for("auth.login"))
+        login_user(user)
+        flash("Invite accepted. Complete your profile to continue.", "success")
+        return redirect(url_for("auth.complete_profile"))
 
     return render_template("auth/accept_invite.html", invite=invite)
+
+@auth_bp.route("/complete-profile", methods=["GET", "POST"])
+@login_required
+def complete_profile():
+    if request.method == "POST":
+        first_name = (request.form.get("first_name") or "").strip()
+        last_name = (request.form.get("last_name") or "").strip()
+
+        if not first_name:
+            flash("First name is required.", "warning")
+            return render_template("auth/complete_profile.html", user=current_user)
+
+        if not last_name:
+            flash("Last name is required.", "warning")
+            return render_template("auth/complete_profile.html", user=current_user)
+
+        current_user.first_name = first_name
+        current_user.last_name = last_name
+        if not current_user.username:
+            current_user.username = f"{first_name} {last_name}".strip() or current_user.email
+        current_user.onboarding_complete = True
+
+        db.session.commit()
+
+        flash("Profile completed successfully.", "success")
+
+        role = (current_user.role or "").strip().lower()
+        if role == "investor":
+            return redirect(url_for("investor.create_profile"))
+        if role == "borrower":
+            return redirect(url_for("borrower.create_profile"))
+
+        return redirect(url_for(_dashboard_for_role(role)))
+
+    if current_user.invite_accepted and current_user.onboarding_complete:
+        return redirect(url_for(_dashboard_for_role(current_user.role)))
+
+    return render_template("auth/complete_profile.html", user=current_user)

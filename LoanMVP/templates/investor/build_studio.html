@@ -226,7 +226,7 @@
                 <h3>Land / Site Image</h3>
                 <span>Optional</span>
               </div>
-              <p>Upload the land image now, or add it later after the package is generated.</p>
+              <p>Upload the land image now, or use the saved property listing photo as the starting reference.</p>
               <input type="file" id="land_image" name="land_image" accept="image/*,.png,.jpg,.jpeg,.webp">
               <input
                 type="text"
@@ -243,6 +243,21 @@
                   No land image selected
                 {% endif %}
               </div>
+              {% if property_photo_gallery %}
+              <div class="seed-gallery-note">Saved listing photo gallery is available for this deal and the first photo has been preloaded.</div>
+              <div class="seed-thumb-row" id="savedLandGallery">
+                {% for photo in property_photo_gallery[:8] %}
+                <button
+                  type="button"
+                  class="seed-thumb{% if exterior_result and exterior_result.get('build_reference_image') == photo %} is-active{% elif loop.first and not (exterior_result and exterior_result.get('build_reference_image')) %} is-active{% endif %}"
+                  data-seed-url="{{ photo }}"
+                  aria-label="Use saved property photo {{ loop.index }}"
+                >
+                  <img src="{{ photo }}" alt="Saved property photo {{ loop.index }}">
+                </button>
+                {% endfor %}
+              </div>
+              {% endif %}
             </div>
           </div>
 
@@ -467,6 +482,59 @@
         </div>
       </section>
 
+      {% set build_scope_meta = build_analysis.get('meta', {}) if build_analysis else {} %}
+      <section class="ravlo-card side-card" id="buildAnalysisCard">
+        <div class="card-head">
+          <div>
+            <div class="card-kicker">ENGINE FEASIBILITY</div>
+            <h3>Scope Snapshot</h3>
+          </div>
+        </div>
+
+        <div class="tracker-list">
+          <div class="tracker-item">
+            <span class="tracker-label">Recommended Type</span>
+            <strong id="analysisRecommended">{{ build_analysis.get("recommended_type") or "Pending" }}</strong>
+          </div>
+          <div class="tracker-item">
+            <span class="tracker-label">Deal Score</span>
+            <strong id="analysisScore">{{ build_scope_meta.get("deal_score") if build_analysis else "—" }}</strong>
+          </div>
+          <div class="tracker-item">
+            <span class="tracker-label">Tier</span>
+            <strong id="analysisTier">{{ build_analysis.get("opportunity_tier") or build_scope_meta.get("opportunity_tier") or "—" }}</strong>
+          </div>
+        </div>
+
+        <div class="analysis-metrics" id="analysisMetrics">
+          <div class="analysis-metric">
+            <span>Cost Low</span>
+            <strong id="analysisCostLow">{{ build_analysis.get("cost_low") if build_analysis else "—" }}</strong>
+          </div>
+          <div class="analysis-metric">
+            <span>Cost High</span>
+            <strong id="analysisCostHigh">{{ build_analysis.get("cost_high") if build_analysis else "—" }}</strong>
+          </div>
+          <div class="analysis-metric">
+            <span>Estimated Value</span>
+            <strong id="analysisValue">{{ build_analysis.get("estimated_value") if build_analysis else "—" }}</strong>
+          </div>
+          <div class="analysis-metric">
+            <span>All-In Low</span>
+            <strong id="analysisAllInLow">{{ build_scope_meta.get("all_in_low") if build_analysis else "—" }}</strong>
+          </div>
+          <div class="analysis-metric">
+            <span>All-In High</span>
+            <strong id="analysisAllInHigh">{{ build_scope_meta.get("all_in_high") if build_analysis else "—" }}</strong>
+          </div>
+        </div>
+
+        <div class="info-box" style="margin-top:14px;">
+          <strong>Next Step</strong>
+          <p id="analysisNextStep">{{ build_analysis.get("next_step") or "Run a package to generate the latest engine-backed build snapshot." }}</p>
+        </div>
+      </section>
+
       <section class="ravlo-card side-card">
         <div class="card-head">
           <div>
@@ -517,6 +585,18 @@
         <div class="loading-step" id="loadingStep1">Blueprint in progress...</div>
         <div class="loading-step" id="loadingStep2">Exterior waiting...</div>
         <div class="loading-step" id="loadingStep3">Interior waiting...</div>
+      </div>
+      <div class="loading-help hidden" id="loadingHelp">
+        <strong id="loadingHelpTitle">Render needs attention</strong>
+        <p id="loadingHelpMessage">The render worker may be offline or still warming up. You can retry without losing your form inputs.</p>
+      </div>
+      <div class="cta-row loading-actions hidden" id="loadingRetryRow">
+        <button type="button" class="ravlo-btn ravlo-btn-primary" id="retryGenerationBtn">
+          Retry Render
+        </button>
+        <button type="button" class="ravlo-btn ravlo-btn-secondary" id="dismissLoadingBtn">
+          Close
+        </button>
       </div>
     </div>
   </div>
@@ -840,6 +920,48 @@
     line-height: 1.5;
   }
 
+  .seed-gallery-note {
+    margin-top: 10px;
+    padding: 10px 12px;
+    border-radius: 14px;
+    background: rgba(90,140,255,0.08);
+    border: 1px solid rgba(126,171,255,0.16);
+    color: #c8d8f2;
+    font-size: .82rem;
+    line-height: 1.45;
+  }
+
+  .seed-thumb-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(74px, 1fr));
+    gap: 10px;
+    margin-top: 12px;
+  }
+
+  .seed-thumb {
+    padding: 0;
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 14px;
+    overflow: hidden;
+    background: rgba(255,255,255,0.04);
+    cursor: pointer;
+    transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease;
+  }
+
+  .seed-thumb:hover,
+  .seed-thumb.is-active {
+    border-color: rgba(126,171,255,0.75);
+    box-shadow: 0 0 0 1px rgba(126,171,255,0.3);
+    transform: translateY(-1px);
+  }
+
+  .seed-thumb img {
+    display: block;
+    width: 100%;
+    height: 74px;
+    object-fit: cover;
+  }
+
   .upload-card input[type="file"],
   .upload-card input[type="text"] {
     margin-bottom: 12px;
@@ -986,6 +1108,32 @@
     text-align: right;
   }
 
+  .analysis-metrics {
+    display: grid;
+    gap: 10px;
+    margin-top: 14px;
+  }
+
+  .analysis-metric {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 12px;
+    border-radius: 14px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.05);
+  }
+
+  .analysis-metric span {
+    color: #9fb0bf;
+    font-size: 0.9rem;
+  }
+
+  .analysis-metric strong {
+    color: #fff;
+    text-align: right;
+  }
+
   .tracker-list,
   .info-stack,
   .package-links {
@@ -1105,6 +1253,31 @@
     text-align: left;
   }
 
+  .loading-help {
+    margin-top: 18px;
+    padding: 16px 18px;
+    border-radius: 18px;
+    text-align: left;
+    background: rgba(122, 86, 58, 0.12);
+    border: 1px solid rgba(214, 157, 92, 0.26);
+  }
+
+  .loading-help strong {
+    display: block;
+    margin-bottom: 8px;
+    color: #fff2dc;
+  }
+
+  .loading-help p {
+    margin: 0;
+    color: #e6d2b6;
+  }
+
+  .loading-actions {
+    justify-content: center;
+    margin-top: 18px;
+  }
+
   .loading-step {
     padding: 12px 14px;
     border-radius: 16px;
@@ -1203,15 +1376,25 @@
     const generateBtn = document.getElementById("generateBtn");
     const resetBtn = document.getElementById("resetBtn");
     const loadingOverlay = document.getElementById("loadingOverlay");
+    const loadingTitle = document.getElementById("loadingTitle");
+    const loadingMessage = document.getElementById("loadingMessage");
+    const loadingHelp = document.getElementById("loadingHelp");
+    const loadingHelpTitle = document.getElementById("loadingHelpTitle");
+    const loadingHelpMessage = document.getElementById("loadingHelpMessage");
+    const loadingRetryRow = document.getElementById("loadingRetryRow");
+    const retryGenerationBtn = document.getElementById("retryGenerationBtn");
+    const dismissLoadingBtn = document.getElementById("dismissLoadingBtn");
     const downloadPackageBtn = document.getElementById("downloadPackageBtn");
     const packageSummaryCard = document.getElementById("packageSummaryCard");
 
     const statusPill = document.getElementById("generation-status-pill");
 
-    const blueprintFileInput = document.getElementById("blueprint_file");
-    const landImageInput = document.getElementById("land_image");
-    const blueprintSeedPreview = document.getElementById("blueprintSeedPreview");
-    const landSeedPreview = document.getElementById("landSeedPreview");
+      const blueprintFileInput = document.getElementById("blueprint_file");
+      const landImageInput = document.getElementById("land_image");
+      const referenceImageInput = document.getElementById("reference_image_url");
+      const blueprintSeedPreview = document.getElementById("blueprintSeedPreview");
+      const landSeedPreview = document.getElementById("landSeedPreview");
+      const savedLandGallery = document.getElementById("savedLandGallery");
 
     const addRoomModal = document.getElementById("addRoomModal");
     const openAddRoomBtn = document.getElementById("openAddRoomBtn");
@@ -1223,6 +1406,18 @@
 
     let roomState = [];
     let activeRoomIndex = 0;
+
+    const buildAnalysisEls = {
+      recommended: document.getElementById("analysisRecommended"),
+      score: document.getElementById("analysisScore"),
+      tier: document.getElementById("analysisTier"),
+      costLow: document.getElementById("analysisCostLow"),
+      costHigh: document.getElementById("analysisCostHigh"),
+      value: document.getElementById("analysisValue"),
+      allInLow: document.getElementById("analysisAllInLow"),
+      allInHigh: document.getElementById("analysisAllInHigh"),
+      nextStep: document.getElementById("analysisNextStep")
+    };
 
     const els = {
       blueprint: {
@@ -1293,6 +1488,7 @@
     }
 
     function startLoading() {
+      resetLoadingError();
       loadingOverlay.classList.remove("hidden");
       statusPill.textContent = "Generating";
       generateBtn.disabled = true;
@@ -1317,6 +1513,50 @@
       document.getElementById("loadingStep3").textContent = interior;
     }
 
+    function resetLoadingError() {
+      if (loadingTitle) loadingTitle.textContent = "Generating Full Build Package...";
+      if (loadingMessage) loadingMessage.textContent = "Blueprint, exterior, and interior are being created now.";
+      loadingHelp?.classList.add("hidden");
+      loadingRetryRow?.classList.add("hidden");
+    }
+
+    function showLoadingError(message, options = {}) {
+      const {
+        title = "Generation needs attention",
+        allowRetry = false
+      } = options;
+
+      if (loadingTitle) loadingTitle.textContent = title;
+      if (loadingMessage) loadingMessage.textContent = message || "The build render did not complete.";
+
+      if (loadingHelpTitle) {
+        loadingHelpTitle.textContent = allowRetry
+          ? "Retry available"
+          : "Review the render request";
+      }
+
+      if (loadingHelpMessage) {
+        loadingHelpMessage.textContent = allowRetry
+          ? "Full package renders on a local GPU can take a few minutes. Retry once the render worker is ready, or let the current job finish warming the models."
+          : "You can close this panel, adjust the project inputs, and try again.";
+      }
+
+      if (loadingHelp) loadingHelp.classList.remove("hidden");
+      if (loadingRetryRow) loadingRetryRow.classList.toggle("hidden", !allowRetry);
+    }
+
+    function getErrorMessage(error, fallbackText) {
+      if (error && typeof error.message === "string" && error.message.trim()) {
+        return error.message.trim();
+      }
+      return fallbackText;
+    }
+
+    function isTimeoutLikeError(error, code) {
+      const text = `${code || ""} ${getErrorMessage(error, "")}`.toLowerCase();
+      return text.includes("engine_timeout") || text.includes("timed out");
+    }
+
     function escapeHtml(str) {
       return String(str || "")
         .replaceAll("&", "&amp;")
@@ -1324,6 +1564,30 @@
         .replaceAll(">", "&gt;")
         .replaceAll('"', "&quot;")
         .replaceAll("'", "&#039;");
+    }
+
+    function asMoney(value) {
+      const number = Number(value);
+      if (!Number.isFinite(number)) return "—";
+      return number.toLocaleString(undefined, {
+        style: "currency",
+        currency: "USD",
+        maximumFractionDigits: 0
+      });
+    }
+
+    function renderBuildAnalysis(analysis) {
+      const meta = analysis?.meta || {};
+
+      if (buildAnalysisEls.recommended) buildAnalysisEls.recommended.textContent = analysis?.recommended_type || "Pending";
+      if (buildAnalysisEls.score) buildAnalysisEls.score.textContent = meta?.deal_score ?? "—";
+      if (buildAnalysisEls.tier) buildAnalysisEls.tier.textContent = analysis?.opportunity_tier || meta?.opportunity_tier || "—";
+      if (buildAnalysisEls.costLow) buildAnalysisEls.costLow.textContent = analysis?.cost_low != null ? asMoney(analysis.cost_low) : "—";
+      if (buildAnalysisEls.costHigh) buildAnalysisEls.costHigh.textContent = analysis?.cost_high != null ? asMoney(analysis.cost_high) : "—";
+      if (buildAnalysisEls.value) buildAnalysisEls.value.textContent = analysis?.estimated_value != null ? asMoney(analysis.estimated_value) : "—";
+      if (buildAnalysisEls.allInLow) buildAnalysisEls.allInLow.textContent = meta?.all_in_low != null ? asMoney(meta.all_in_low) : "—";
+      if (buildAnalysisEls.allInHigh) buildAnalysisEls.allInHigh.textContent = meta?.all_in_high != null ? asMoney(meta.all_in_high) : "—";
+      if (buildAnalysisEls.nextStep) buildAnalysisEls.nextStep.textContent = analysis?.next_step || "Run a package to generate the latest engine-backed build snapshot.";
     }
 
     function renderImage(target, url, altText, emptyIcon, emptyText) {
@@ -1528,9 +1792,30 @@
       setPreview(this, blueprintSeedPreview, "No blueprint file selected");
     });
 
-    landImageInput?.addEventListener("change", function () {
-      setPreview(this, landSeedPreview, "No land image selected");
-    });
+      landImageInput?.addEventListener("change", function () {
+        setPreview(this, landSeedPreview, "No land image selected");
+      });
+
+      function selectSavedLand(url) {
+        if (!url) return;
+
+        if (referenceImageInput) referenceImageInput.value = url;
+        if (landImageInput) landImageInput.value = "";
+
+        if (landSeedPreview) {
+          landSeedPreview.innerHTML = `<img src="${escapeHtml(url)}" alt="Saved land reference"><span>Saved property photo selected</span>`;
+        }
+
+        savedLandGallery?.querySelectorAll(".seed-thumb").forEach((btn) => {
+          btn.classList.toggle("is-active", btn.dataset.seedUrl === url);
+        });
+      }
+
+      savedLandGallery?.querySelectorAll(".seed-thumb").forEach((btn) => {
+        btn.addEventListener("click", function () {
+          selectSavedLand(this.dataset.seedUrl || "");
+        });
+      });
 
     downloadPackageBtn?.addEventListener("click", async function () {
       const text = this.dataset.links || "";
@@ -1553,11 +1838,22 @@
     resetBtn?.addEventListener("click", function () {
       form.reset();
       resetOutputs();
+      resetLoadingError();
 
       if (blueprintSeedPreview) blueprintSeedPreview.textContent = "No blueprint file selected";
       if (landSeedPreview) landSeedPreview.textContent = "No land image selected";
 
       statusPill.textContent = "Ready";
+    });
+
+    retryGenerationBtn?.addEventListener("click", function () {
+      if (generateBtn?.disabled) return;
+      form?.requestSubmit();
+    });
+
+    dismissLoadingBtn?.addEventListener("click", function () {
+      stopLoading();
+      statusPill.textContent = "Retry Ready";
     });
 
     form?.addEventListener("submit", async function (e) {
@@ -1572,6 +1868,9 @@
       );
 
       const formData = new FormData(form);
+      const controller = new AbortController();
+      const clientTimeoutMs = 300000;
+      const clientTimeout = window.setTimeout(() => controller.abort(), clientTimeoutMs);
 
       try {
         const response = await fetch("{{ url_for('investor.generate_full_build') }}", {
@@ -1581,13 +1880,21 @@
             "X-Requested-With": "XMLHttpRequest",
             "X-CSRFToken": "{{ csrf_token() }}"
           },
-          credentials: "same-origin"
+          credentials: "same-origin",
+          signal: controller.signal
         });
 
-        const data = await response.json();
+        let data = {};
+        try {
+          data = await response.json();
+        } catch (parseError) {
+          data = {};
+        }
 
         if (!response.ok || data.status !== "ok") {
-          throw new Error(data.message || "Build package generation failed.");
+          const fetchError = new Error(data.message || "Build package generation failed.");
+          fetchError.code = data.code || `http_${response.status}`;
+          throw fetchError;
         }
 
         setStepState(2, "complete");
@@ -1664,14 +1971,32 @@
           roomState.forEach(appendRoomCard);
         }
 
+        renderBuildAnalysis(data?.build_analysis || null);
+
         statusPill.textContent = "Package Ready";
 
       } catch (error) {
         console.error(error);
-        statusPill.textContent = "Error";
-        alert(error.message || "Something went wrong during generation.");
+        const wasAborted = error?.name === "AbortError";
+        const message = wasAborted
+          ? "The full package render is taking longer than expected. Your local GPU may still be warming models or processing the package."
+          : getErrorMessage(error, "Something went wrong during generation.");
+        const allowRetry = wasAborted || isTimeoutLikeError(error, error?.code);
+
+        statusPill.textContent = allowRetry ? "Retry Ready" : "Error";
+        showLoadingError(message, {
+          title: allowRetry ? "Full package render timed out" : "Generation failed",
+          allowRetry
+        });
+        return;
       } finally {
-        stopLoading();
+        window.clearTimeout(clientTimeout);
+        if (loadingRetryRow?.classList.contains("hidden")) {
+          stopLoading();
+        } else {
+          generateBtn.disabled = false;
+          generateBtn.style.opacity = "1";
+        }
         if (window.lucide) lucide.createIcons();
       }
     });
@@ -1774,6 +2099,8 @@
 
       statusPill.textContent = "Package Loaded";
     }
+
+    renderBuildAnalysis({{ build_analysis|tojson }});
 
     {% if interior_rooms %}
     roomState = {{ interior_rooms|tojson }};

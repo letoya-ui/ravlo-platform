@@ -23,6 +23,22 @@ system_bp = Blueprint("system", __name__, url_prefix="/system")
 print(">>> SYSTEM ROUTES LOADED FROM:", __file__)
 
 
+def _is_company_admin(user) -> bool:
+    return ((getattr(user, "role", "") or "").strip().lower() == "admin")
+
+
+def _company_admin_guard(user):
+    if not _is_company_admin(user):
+        return None, None
+
+    company_id = getattr(user, "company_id", None)
+    if not company_id:
+        flash("Your admin account is not assigned to a company yet.", "warning")
+        return None, redirect(url_for("admin.dashboard"))
+
+    return company_id, None
+
+
 # =========================================================
 # 🧭 Helper — Context Builder
 # =========================================================
@@ -159,8 +175,22 @@ def audits():
 @system_bp.route("/users")
 @role_required("system", "admin")
 def users():
+    company_id, redirect_response = _company_admin_guard(current_user)
+    if redirect_response:
+        return redirect_response
+
     ctx = get_system_context()
-    ctx["users"] = User.query.order_by(User.created_at.desc()).all()
+    if _is_company_admin(current_user):
+        ctx["users"] = (
+            User.query
+            .filter_by(company_id=company_id)
+            .order_by(User.created_at.desc())
+            .all()
+        )
+        ctx["company"] = current_user.company
+    else:
+        ctx["users"] = User.query.order_by(User.created_at.desc()).all()
+
     ctx["title"] = "User Management"
     return render_template("system/users.html", **ctx)
 
@@ -171,7 +201,15 @@ def users():
 @system_bp.route("/toggle_user/<int:user_id>", methods=["POST"])
 @role_required("system", "admin")
 def toggle_user(user_id):
+    company_id, redirect_response = _company_admin_guard(current_user)
+    if redirect_response:
+        return redirect_response
+
     user = User.query.get_or_404(user_id)
+    if _is_company_admin(current_user) and user.company_id != company_id:
+        flash("You can only manage users from your own company.", "warning")
+        return redirect(url_for("admin.company_dashboard", company_id=company_id))
+
     user.is_active = not user.is_active
     db.session.commit()
 
@@ -184,7 +222,14 @@ def toggle_user(user_id):
 @system_bp.route("/delete_user/<int:user_id>", methods=["POST"])
 @role_required("system", "admin")
 def delete_user(user_id):
+    company_id, redirect_response = _company_admin_guard(current_user)
+    if redirect_response:
+        return redirect_response
+
     user = User.query.get_or_404(user_id)
+    if _is_company_admin(current_user) and user.company_id != company_id:
+        flash("You can only manage users from your own company.", "warning")
+        return redirect(url_for("admin.company_dashboard", company_id=company_id))
 
     if user.id == current_user.id:
         flash("You cannot delete your own account from this screen.", "warning")

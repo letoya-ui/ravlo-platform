@@ -1,363 +1,774 @@
 {% extends "layouts/ravlo_base.html" %}
 
 {% block title %}Ravlo • Deal Architect{% endblock %}
+
 {% block page_title %}Deal Architect{% endblock %}
-{% block page_subline %}Underwriting source-of-truth view powered by /v1/deal_architect.{% endblock %}
+{% block page_subline %}
+Shape the investment thesis, stress test the numbers, and define the execution path before capital moves.
+{% endblock %}
 
 {% block topbar_actions %}
-  {% if deal and deal.id %}
-    <a href="{{ url_for('investor.deal_detail', deal_id=deal.id) }}" class="ravlo-btn ghost sm">Back to Deal</a>
+  {% if deal %}
+    <a class="ravlo-btn ghost sm" href="{{ url_for('investor.deal_detail', deal_id=deal.id) }}">Deal Workspace</a>
+    <a class="ravlo-btn ghost sm" href="{{ url_for('investor.deal_rehab', deal_id=deal.id) }}">Renovation Studio</a>
+    <a class="ravlo-btn ghost sm" href="{{ url_for('investor.build_studio', deal_id=deal.id) }}">Build Studio</a>
+    <a class="ravlo-btn ghost sm" href="{{ url_for('investor.budget_studio', deal_id=deal.id) }}">Budget Studio</a>
   {% endif %}
-  <a href="{{ url_for('investor.budget_studio') }}" class="ravlo-btn ghost sm">Budget Studio</a>
 {% endblock %}
 
 {% block content %}
+
+{% set analysis = deal_analysis if deal_analysis else {} %}
+{% set strategy = analysis.get("strategy") if analysis else {} %}
+{% set risks = analysis.get("risks", []) if analysis else [] %}
+{% set opportunities = analysis.get("opportunities", []) if analysis else [] %}
+{% set assumptions = analysis.get("assumptions", []) if analysis else [] %}
+{% set next_steps = analysis.get("next_steps", []) if analysis else [] %}
+{% set scenarios = analysis.get("scenarios", []) if analysis else [] %}
+{% set recommendation = analysis.get("recommendation", {}) if analysis else {} %}
+
 <style>
-  .da-wrap { display:grid; gap:20px; }
-  .da-card {
-    border-radius:20px; padding:18px;
+  .architect-shell{
+    display:grid;
+    gap:20px;
+  }
+
+  .architect-hero{
+    border-radius:26px;
+    padding:24px;
     border:1px solid rgba(255,255,255,.08);
+    background:
+      radial-gradient(900px 520px at 10% 10%, rgba(122,184,255,.12), transparent 55%),
+      linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-end;
+    gap:18px;
+    flex-wrap:wrap;
+  }
+
+  .architect-tag{
+    display:inline-flex;
+    align-items:center;
+    gap:.5rem;
+    padding:.42rem .78rem;
+    border-radius:999px;
+    background:rgba(255,255,255,.06);
+    border:1px solid rgba(255,255,255,.12);
+    color:rgba(255,255,255,.88);
+    font-weight:800;
+    font-size:.78rem;
+    letter-spacing:.05em;
+  }
+
+  .architect-hero h2{
+    margin:.7rem 0 0;
+    font-size:1.85rem;
+    line-height:1.08;
+    letter-spacing:-.03em;
+  }
+
+  .architect-hero-sub{
+    color:rgba(224,233,246,.74);
+    margin:.45rem 0 0;
+    max-width:780px;
+    line-height:1.65;
+  }
+
+  .architect-actions{
+    display:flex;
+    gap:.65rem;
+    flex-wrap:wrap;
+  }
+
+  .architect-grid{
+    display:grid;
+    grid-template-columns:1.1fr .9fr;
+    gap:20px;
+    align-items:start;
+  }
+
+  .architect-card{
+    background:rgba(255,255,255,.02);
+    border:1px solid rgba(255,255,255,.08);
+    border-radius:22px;
+    padding:18px;
+  }
+
+  .architect-card h3{
+    margin:.1rem 0 .85rem;
+    color:#7ab8ff;
+    font-size:1.04rem;
+  }
+
+  .architect-card-head{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    gap:12px;
+    margin-bottom:12px;
+  }
+
+  .architect-card-head p{
+    margin:0;
+    color:rgba(224,233,246,.72);
+    line-height:1.6;
+  }
+
+  .architect-kpi-grid{
+    display:grid;
+    grid-template-columns:repeat(4, minmax(0,1fr));
+    gap:12px;
+  }
+
+  .architect-kpi{
+    border-radius:18px;
+    padding:16px;
     background:rgba(255,255,255,.03);
+    border:1px solid rgba(255,255,255,.08);
   }
-  .da-grid-2 { display:grid; grid-template-columns:1.1fr .9fr; gap:20px; }
-  .da-input-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
-  .da-input, .da-select, .da-textarea {
-    width:100%; padding:.75rem .85rem; border-radius:12px;
-    border:1px solid rgba(255,255,255,.12); background:rgba(255,255,255,.04); color:#eef4ff;
+
+  .architect-kpi-label{
+    color:rgba(224,233,246,.64);
+    font-size:.78rem;
+    margin-bottom:6px;
+    text-transform:uppercase;
+    letter-spacing:.06em;
   }
-  .da-textarea { min-height:90px; resize:vertical; }
-  .da-kpis { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
-  .da-kpi { border:1px solid rgba(255,255,255,.08); border-radius:14px; padding:12px; background:rgba(255,255,255,.02); }
-  .da-kpi .label { font-size:.78rem; color:rgba(224,233,246,.7); margin-bottom:4px; }
-  .da-kpi .value { font-weight:800; font-size:1.05rem; color:#f4f8ff; }
-  .da-list { display:grid; gap:8px; }
-  .da-pill {
-    display:inline-flex; align-items:center; gap:6px;
-    border-radius:999px; padding:.35rem .65rem;
-    border:1px solid rgba(255,255,255,.1); background:rgba(255,255,255,.04);
-    margin-right:8px; margin-bottom:8px;
+
+  .architect-kpi-value{
+    font-size:1.35rem;
+    font-weight:800;
+    color:#f4f8ff;
+    letter-spacing:-.02em;
   }
-  .da-table-wrap { overflow:auto; border:1px solid rgba(255,255,255,.1); border-radius:14px; }
-  table.da-table { width:100%; border-collapse:collapse; min-width:700px; }
-  .da-table th,.da-table td { padding:10px; border-bottom:1px solid rgba(255,255,255,.08); text-align:left; font-size:.9rem; }
-  .da-headline { display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-top:8px; }
-  .muted-sm { font-size:.85rem; color:rgba(224,233,246,.7); }
-  @media (max-width: 1100px) { .da-grid-2, .da-input-grid, .da-kpis { grid-template-columns:1fr; } }
+
+  .architect-kpi-value.good{ color:#7ee8b1; }
+  .architect-kpi-value.watch{ color:#ffd37a; }
+  .architect-kpi-value.risk{ color:#ff9a9a; }
+
+  .architect-section-note{
+    color:rgba(224,233,246,.72);
+    line-height:1.65;
+    margin:0 0 12px;
+  }
+
+  .architect-stack{
+    display:grid;
+    gap:12px;
+  }
+
+  .architect-panel{
+    padding:14px 16px;
+    border-radius:16px;
+    background:rgba(255,255,255,.03);
+    border:1px solid rgba(255,255,255,.08);
+  }
+
+  .architect-panel-title{
+    font-size:.86rem;
+    text-transform:uppercase;
+    letter-spacing:.06em;
+    color:rgba(224,233,246,.62);
+    margin-bottom:8px;
+  }
+
+  .architect-panel strong{
+    color:#fff;
+  }
+
+  .architect-panel p{
+    margin:8px 0 0;
+    color:rgba(224,233,246,.74);
+    line-height:1.65;
+  }
+
+  .architect-list{
+    display:grid;
+    gap:10px;
+    margin-top:12px;
+  }
+
+  .architect-list-item{
+    padding:14px 16px;
+    border-radius:16px;
+    background:rgba(255,255,255,.03);
+    border:1px solid rgba(255,255,255,.08);
+  }
+
+  .architect-list-item strong{
+    display:block;
+    margin-bottom:6px;
+    color:#fff;
+  }
+
+  .architect-list-item p{
+    margin:0;
+    color:rgba(224,233,246,.72);
+    line-height:1.6;
+  }
+
+  .architect-badge-row{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+    margin-top:10px;
+  }
+
+  .architect-badge{
+    padding:.42rem .72rem;
+    border-radius:999px;
+    background:rgba(122,184,255,.1);
+    border:1px solid rgba(122,184,255,.2);
+    color:#bfe0ff;
+    font-size:.82rem;
+    font-weight:700;
+  }
+
+  .architect-summary{
+    display:grid;
+    gap:10px;
+    margin-top:12px;
+  }
+
+  .architect-summary-row{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:14px;
+    padding:14px 0;
+    border-bottom:1px solid rgba(255,255,255,.08);
+  }
+
+  .architect-summary-row:last-child{
+    border-bottom:none;
+  }
+
+  .architect-summary-label{
+    color:rgba(224,233,246,.66);
+  }
+
+  .architect-summary-value{
+    color:#f4f8ff;
+    font-weight:800;
+    text-align:right;
+  }
+
+  .architect-summary-value.good{ color:#7ee8b1; }
+  .architect-summary-value.watch{ color:#ffd37a; }
+  .architect-summary-value.risk{ color:#ff9a9a; }
+
+  .architect-callout{
+    margin-top:14px;
+    padding:15px 16px;
+    border-radius:16px;
+    background:rgba(122,184,255,.08);
+    border:1px solid rgba(122,184,255,.16);
+  }
+
+  .architect-callout strong{
+    display:block;
+    margin-bottom:6px;
+  }
+
+  .architect-form-grid{
+    display:grid;
+    grid-template-columns:repeat(2, minmax(0,1fr));
+    gap:12px;
+  }
+
+  .architect-input,
+  .architect-select,
+  .architect-textarea{
+    width:100%;
+    padding:.82rem .9rem;
+    border-radius:12px;
+    background:#0f141a;
+    border:1px solid rgba(255,255,255,.1);
+    color:#fff;
+    min-height:48px;
+  }
+
+  .architect-textarea{
+    min-height:120px;
+    resize:vertical;
+  }
+
+  .architect-field{
+    display:grid;
+    gap:8px;
+  }
+
+  .architect-field label{
+    color:#eef4ff;
+    font-size:.92rem;
+    font-weight:700;
+  }
+
+  .architect-toolbar{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+    margin-top:14px;
+  }
+
+  .architect-btn{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    gap:.45rem;
+    padding:.76rem 1rem;
+    border-radius:12px;
+    cursor:pointer;
+    font-weight:800;
+    font-size:.92rem;
+    text-decoration:none;
+    transition:.18s ease;
+    border:1px solid rgba(122,184,255,.42);
+    background:rgba(122,184,255,.12);
+    color:#7ab8ff;
+  }
+
+  .architect-btn:hover{
+    background:rgba(122,184,255,.22);
+    box-shadow:0 0 14px rgba(122,184,255,.22);
+  }
+
+  .architect-btn.secondary{
+    background:rgba(255,255,255,.04);
+    border:1px solid rgba(255,255,255,.12);
+    color:#eef4ff;
+  }
+
+  .architect-btn.success{
+    background:rgba(104,211,160,.12);
+    border:1px solid rgba(104,211,160,.34);
+    color:#7ee8b1;
+  }
+
+  .architect-btn.warn{
+    background:rgba(255,211,122,.12);
+    border:1px solid rgba(255,211,122,.3);
+    color:#ffd37a;
+  }
+
+  .architect-empty{
+    padding:16px;
+    border-radius:16px;
+    background:rgba(255,255,255,.03);
+    border:1px dashed rgba(255,255,255,.12);
+    color:rgba(224,233,246,.7);
+  }
+
+  .workflow-grid{
+    display:grid;
+    grid-template-columns:repeat(4, minmax(0,1fr));
+    gap:12px;
+  }
+
+  .workflow-card{
+    display:block;
+    padding:18px;
+    border-radius:18px;
+    background:rgba(255,255,255,.03);
+    border:1px solid rgba(255,255,255,.08);
+    transition:.15s ease;
+    text-decoration:none;
+    color:inherit;
+  }
+
+  .workflow-card:hover{
+    transform:translateY(-1px);
+    border-color:rgba(122,184,255,.25);
+    background:rgba(255,255,255,.045);
+  }
+
+  .workflow-card h4{
+    margin:0 0 8px;
+  }
+
+  .workflow-card p{
+    margin:0;
+    color:var(--muted);
+    line-height:1.6;
+  }
+
+  .muted{ color:var(--muted); }
+
+  @media (max-width: 1180px){
+    .architect-kpi-grid{ grid-template-columns:repeat(2, minmax(0,1fr)); }
+    .workflow-grid{ grid-template-columns:repeat(2, minmax(0,1fr)); }
+  }
+
+  @media (max-width: 980px){
+    .architect-grid{ grid-template-columns:1fr; }
+    .architect-form-grid{ grid-template-columns:1fr; }
+  }
+
+  @media (max-width: 700px){
+    .architect-kpi-grid{ grid-template-columns:1fr; }
+    .workflow-grid{ grid-template-columns:1fr; }
+  }
 </style>
 
-{% set initial = strategy_analysis or {} %}
-{% set initial_meta = initial.get('meta', {}) if initial else {} %}
+<div class="architect-shell">
 
-<div class="da-wrap">
-  <section class="da-card">
-    <div class="eyebrow">RAVLO UNDERWRITING</div>
-    <h2 style="margin:4px 0 8px;">{{ deal.title or deal.address or "Deal Architect" }}</h2>
-    <div class="muted-sm">POST <code>/v1/deal_architect</code> is the only underwriting source of truth for this screen.</div>
-    <div id="summaryHeader" class="da-headline" style="margin-top:12px;"></div>
+  <section class="architect-hero">
+    <div>
+      <div class="architect-tag">
+        🧠 DEAL ARCHITECT
+        {% if deal %}• DEAL #{{ deal.id }}{% endif %}
+      </div>
+      <h2>{% if deal %}{{ deal.title or ('Deal #' ~ deal.id) }}{% else %}Deal Architect{% endif %}</h2>
+      <div class="architect-hero-sub">
+        Build the investment thesis, compare exit paths, pressure test assumptions, and choose the most defendable execution plan.
+      </div>
+
+      <div class="architect-badge-row">
+        {% if analysis.get("strategy_type") %}
+          <span class="architect-badge">{{ analysis.get("strategy_type") }}</span>
+        {% endif %}
+        {% if analysis.get("market_position") %}
+          <span class="architect-badge">{{ analysis.get("market_position") }}</span>
+        {% endif %}
+        {% if analysis.get("execution_mode") %}
+          <span class="architect-badge">{{ analysis.get("execution_mode") }}</span>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="architect-actions">
+      {% if deal %}
+        <a class="architect-btn secondary" href="{{ url_for('investor.deal_detail', deal_id=deal.id) }}">🗂 Deal Workspace</a>
+        <a class="architect-btn secondary" href="{{ url_for('investor.deal_rehab', deal_id=deal.id) }}">🎬 Renovation Studio</a>
+        <a class="architect-btn secondary" href="{{ url_for('investor.build_studio', deal_id=deal.id) }}">🏗 Build Studio</a>
+        <a class="architect-btn secondary" href="{{ url_for('investor.budget_studio', deal_id=deal.id) }}">💰 Budget Studio</a>
+      {% endif %}
+    </div>
   </section>
 
-  <div class="da-grid-2">
-    <section class="da-card">
-      <div class="eyebrow">REQUEST ASSEMBLY</div>
-      <h3 style="margin:0 0 10px;">Deal + location + market inputs</h3>
+  <section class="architect-kpi-grid">
+    <div class="architect-kpi">
+      <div class="architect-kpi-label">Purchase Price</div>
+      <div class="architect-kpi-value">${{ "{:,.0f}".format(purchase_price or 0) }}</div>
+    </div>
 
-      <form id="dealArchitectForm" onsubmit="runDealArchitect(event)">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="architect-kpi">
+      <div class="architect-kpi-label">ARV</div>
+      <div class="architect-kpi-value">${{ "{:,.0f}".format(arv or 0) }}</div>
+    </div>
 
-        <div class="da-input-grid">
-          <input class="da-input" name="project_name" placeholder="project_name" value="{{ deal.title if deal else '' }}">
-          <input class="da-input" name="property_type" placeholder="property_type" value="{{ deal.property_type if deal else '' }}">
-          <input class="da-input" name="description" placeholder="description" value="{{ deal.notes if deal else '' }}">
-          <input class="da-input" name="lot_size" placeholder="lot_size" value="{{ deal.lot_size if deal else '' }}">
-          <input class="da-input" name="zoning" placeholder="zoning" value="{{ deal.zoning if deal else '' }}">
-          <input class="da-input" name="asking_price" placeholder="asking_price" value="{{ deal.purchase_price if deal else '' }}">
-          <input class="da-input" name="square_feet_target" placeholder="square_feet_target" value="{{ deal.square_feet if deal else '' }}">
-          <input class="da-input" name="city" placeholder="city" value="{{ deal.city if deal else '' }}">
-          <input class="da-input" name="state" placeholder="state" value="{{ deal.state if deal else '' }}">
-          <input class="da-input" name="zip_code" placeholder="zip_code" value="{{ deal.zip_code if deal else '' }}">
-          <input class="da-input" name="arv" placeholder="arv" value="{{ deal.arv if deal else '' }}">
-          <input class="da-input" name="monthly_rent" placeholder="monthly_rent" value="{{ deal.estimated_rent if deal else '' }}">
-          <input class="da-input" name="down_payment_pct" placeholder="down_payment_pct" value="20">
-          <input class="da-input" name="interest_rate" placeholder="interest_rate" value="8.5">
-          <input class="da-input" name="hold_years" placeholder="hold_years" value="5">
-          <input class="da-input" name="annual_tax_rate" placeholder="annual_tax_rate (optional)">
-          <input class="da-input" name="annual_insurance_rate" placeholder="annual_insurance_rate (optional)">
-          <input class="da-input" name="market_multiplier_rent" placeholder="market_multiplier_rent (optional)">
-          <input class="da-input" name="market_multiplier_value" placeholder="market_multiplier_value (optional)">
+    <div class="architect-kpi">
+      <div class="architect-kpi-label">Estimated Profit</div>
+      <div class="architect-kpi-value {% if estimated_profit and estimated_profit > 0 %}good{% elif estimated_profit and estimated_profit < 0 %}risk{% else %}watch{% endif %}">
+        ${{ "{:,.0f}".format(estimated_profit or 0) }}
+      </div>
+    </div>
+
+    <div class="architect-kpi">
+      <div class="architect-kpi-label">Deal Score</div>
+      <div class="architect-kpi-value {% if deal_score and deal_score >= 80 %}good{% elif deal_score and deal_score >= 60 %}watch{% else %}risk{% endif %}">
+        {{ deal_score or 0 }}/100
+      </div>
+    </div>
+  </section>
+
+  <div class="architect-grid">
+
+    <section class="architect-card">
+      <div class="architect-card-head">
+        <div>
+          <h3>Investment Thesis</h3>
+          <p>Define why this deal works, what execution path wins, and where the margin is coming from.</p>
+        </div>
+      </div>
+
+      <div class="architect-stack">
+        <div class="architect-panel">
+          <div class="architect-panel-title">Primary Strategy</div>
+          <strong>{{ strategy.get("primary") or analysis.get("strategy_type") or "Not set" }}</strong>
+          <p>{{ strategy.get("primary_reason") or analysis.get("summary") or "No strategy summary yet." }}</p>
         </div>
 
-        <div style="margin-top:12px;">
-          <label class="muted-sm">comps (JSON array: address, price, optional sqft/beds/baths/distance_miles/months_ago/notes)</label>
-          <textarea class="da-textarea" name="comps_json" placeholder='[{"address":"123 Main St","price":320000,"sqft":1400,"beds":3,"baths":2,"distance_miles":0.4,"months_ago":2,"notes":"Updated kitchen"}]'></textarea>
+        <div class="architect-panel">
+          <div class="architect-panel-title">Target Outcome</div>
+          <strong>{{ strategy.get("target_outcome") or "Maximize spread while preserving execution safety." }}</strong>
+          <p>{{ strategy.get("outcome_notes") or "Use this section to define whether the deal is optimized for resale, rental hold, refinance, development, or hybrid execution." }}</p>
         </div>
 
-        <div style="margin-top:12px;display:flex;gap:10px;flex-wrap:wrap;">
-          <button type="submit" class="ravlo-btn primary">Run Underwriting</button>
-          <span class="muted-sm">Frontend only assembles request and renders response.</span>
+        <div class="architect-panel">
+          <div class="architect-panel-title">Why This Deal Can Work</div>
+          <p>{{ analysis.get("why_it_works") or "Strong opportunities usually come from basis advantage, value-add execution, zoning or layout upside, market mismatch, or construction leverage." }}</p>
         </div>
-      </form>
+      </div>
+
+      <div class="architect-callout">
+        <strong>Architect Lens</strong>
+        <div>
+          Focus on <em>edge</em>, not just upside. The best deals are the ones where the thesis still holds after delays, cost drift, and conservative pricing assumptions.
+        </div>
+      </div>
     </section>
 
-    <section class="da-card">
-      <div class="eyebrow">FINANCIALS</div>
-      <h3 style="margin:0 0 10px;">Response-derived financial cards</h3>
-      <div id="financialCards" class="da-kpis"></div>
-      <div id="valuationSource" class="muted-sm" style="margin-top:10px;"></div>
-      <div id="compsFallback" class="muted-sm" style="margin-top:8px;"></div>
+    <section class="architect-card">
+      <h3>Decision Snapshot</h3>
+
+      <div class="architect-summary">
+        <div class="architect-summary-row">
+          <span class="architect-summary-label">Recommended Path</span>
+          <strong class="architect-summary-value">{{ recommendation.get("path") or analysis.get("recommended_path") or "Pending" }}</strong>
+        </div>
+
+        <div class="architect-summary-row">
+          <span class="architect-summary-label">Confidence</span>
+          <strong class="architect-summary-value {% if recommendation.get('confidence') == 'High' %}good{% elif recommendation.get('confidence') == 'Medium' %}watch{% else %}risk{% endif %}">
+            {{ recommendation.get("confidence") or "Low" }}
+          </strong>
+        </div>
+
+        <div class="architect-summary-row">
+          <span class="architect-summary-label">Execution Complexity</span>
+          <strong class="architect-summary-value">{{ analysis.get("execution_complexity") or "Moderate" }}</strong>
+        </div>
+
+        <div class="architect-summary-row">
+          <span class="architect-summary-label">Capital Intensity</span>
+          <strong class="architect-summary-value">{{ analysis.get("capital_intensity") or "Moderate" }}</strong>
+        </div>
+
+        <div class="architect-summary-row">
+          <span class="architect-summary-label">Risk Level</span>
+          <strong class="architect-summary-value {% if analysis.get('risk_level') == 'Low' %}good{% elif analysis.get('risk_level') == 'Moderate' %}watch{% else %}risk{% endif %}">
+            {{ analysis.get("risk_level") or "Moderate" }}
+          </strong>
+        </div>
+      </div>
+
+      <div class="architect-health" style="margin-top:14px;">
+        <div class="architect-panel-title">AI Recommendation</div>
+        <p style="margin:0; color:rgba(224,233,246,.74); line-height:1.65;">
+          {{ recommendation.get("reason") or analysis.get("recommendation_summary") or "Run Deal Architect from a live deal to generate a recommendation based on pricing, scope, execution path, and risk-adjusted return." }}
+        </p>
+      </div>
     </section>
+
   </div>
 
-  <section class="da-card">
-    <div class="eyebrow">TOP STRENGTHS & RISKS</div>
-    <h3 style="margin:0 0 10px;">First-class verdict signals</h3>
-    <div class="da-grid-2">
+  <div class="architect-grid">
+
+    <section class="architect-card">
+      <h3>Opportunities</h3>
+
+      {% if opportunities %}
+        <div class="architect-list">
+          {% for item in opportunities %}
+            <div class="architect-list-item">
+              <strong>{{ item.get("title") or item if item is mapping else item }}</strong>
+              {% if item is mapping and item.get("detail") %}
+                <p>{{ item.get("detail") }}</p>
+              {% elif item is mapping and item.get("description") %}
+                <p>{{ item.get("description") }}</p>
+              {% else %}
+                <p>Potential upside lever identified for the current deal thesis.</p>
+              {% endif %}
+            </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="architect-empty">
+          No structured opportunities yet. Typical upside includes layout improvement, scope optimization, rent lift, zoning flexibility, phased execution, or better exit positioning.
+        </div>
+      {% endif %}
+    </section>
+
+    <section class="architect-card">
+      <h3>Risks</h3>
+
+      {% if risks %}
+        <div class="architect-list">
+          {% for item in risks %}
+            <div class="architect-list-item">
+              <strong>{{ item.get("title") or item if item is mapping else item }}</strong>
+              {% if item is mapping and item.get("detail") %}
+                <p>{{ item.get("detail") }}</p>
+              {% elif item is mapping and item.get("description") %}
+                <p>{{ item.get("description") }}</p>
+              {% else %}
+                <p>Material risk that could pressure execution, timing, or margin.</p>
+              {% endif %}
+            </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="architect-empty">
+          No structured risks yet. Common risks include scope creep, title issues, permit drag, appraisal mismatch, contractor dependency, and conservative buyer demand.
+        </div>
+      {% endif %}
+    </section>
+
+  </div>
+
+  <div class="architect-grid">
+
+    <section class="architect-card">
+      <h3>Assumptions</h3>
+
+      {% if assumptions %}
+        <div class="architect-list">
+          {% for item in assumptions %}
+            <div class="architect-list-item">
+              <strong>{{ item.get("title") or item if item is mapping else item }}</strong>
+              {% if item is mapping and item.get("detail") %}
+                <p>{{ item.get("detail") }}</p>
+              {% elif item is mapping and item.get("description") %}
+                <p>{{ item.get("description") }}</p>
+              {% else %}
+                <p>This assumption should be validated before final commitment.</p>
+              {% endif %}
+            </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="architect-empty">
+          No assumptions have been captured yet. Log the major assumptions around pricing, timing, rehab scope, construction cost, exit timing, and financing.
+        </div>
+      {% endif %}
+    </section>
+
+    <section class="architect-card">
+      <h3>Next Steps</h3>
+
+      {% if next_steps %}
+        <div class="architect-list">
+          {% for item in next_steps %}
+            <div class="architect-list-item">
+              <strong>Step {{ loop.index }}</strong>
+              <p>{{ item.get("title") or item.get("detail") or item if item is mapping else item }}</p>
+            </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="architect-empty">
+          No execution steps generated yet. Typical next steps include scope verification, contractor pricing, ARV validation, permit review, and workflow handoff into Rehab or Build Studio.
+        </div>
+      {% endif %}
+    </section>
+
+  </div>
+
+  <section class="architect-card">
+    <div class="architect-card-head">
       <div>
-        <div class="muted-sm" style="margin-bottom:8px;">Strengths</div>
-        <div id="strengthsList" class="da-list"></div>
+        <h3>Scenario Planning</h3>
+        <p>Compare multiple strategy paths before choosing where to push capital and effort.</p>
       </div>
+    </div>
+
+    {% if scenarios %}
+      <div class="architect-list">
+        {% for scenario in scenarios %}
+          <div class="architect-list-item">
+            <strong>{{ scenario.get("name") or ('Scenario ' ~ loop.index) }}</strong>
+            <p>
+              {{ scenario.get("description") or "Alternative execution path for comparison." }}
+              {% if scenario.get("profit") %}
+                <br><span class="muted">Projected Profit:</span> ${{ "{:,.0f}".format(scenario.get("profit") or 0) }}
+              {% endif %}
+              {% if scenario.get("risk") %}
+                <br><span class="muted">Risk:</span> {{ scenario.get("risk") }}
+              {% endif %}
+            </p>
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="architect-empty">
+        No scenarios have been modeled yet. You can use this section for light rehab vs full rehab, hold vs flip, or by-right renovation vs full build paths.
+      </div>
+    {% endif %}
+  </section>
+
+  <section class="architect-card">
+    <div class="architect-card-head">
       <div>
-        <div class="muted-sm" style="margin-bottom:8px;">Risks</div>
-        <div id="risksList" class="da-list"></div>
+        <h3>Architect Notes</h3>
+        <p>Capture the working thesis, constraints, investor logic, and operator notes tied to this deal.</p>
       </div>
+    </div>
+
+    <form method="POST" action="{% if deal %}{{ url_for('investor.save_deal_architect_notes', deal_id=deal.id) }}{% else %}#{% endif %}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+      <div class="architect-form-grid">
+        <div class="architect-field">
+          <label for="strategy_type">Strategy Type</label>
+          <select class="architect-select" id="strategy_type" name="strategy_type">
+            <option value="Flip" {% if analysis.get("strategy_type") == "Flip" %}selected{% endif %}>Flip</option>
+            <option value="Rental Hold" {% if analysis.get("strategy_type") == "Rental Hold" %}selected{% endif %}>Rental Hold</option>
+            <option value="BRRRR" {% if analysis.get("strategy_type") == "BRRRR" %}selected{% endif %}>BRRRR</option>
+            <option value="Development" {% if analysis.get("strategy_type") == "Development" %}selected{% endif %}>Development</option>
+            <option value="Hybrid" {% if analysis.get("strategy_type") == "Hybrid" %}selected{% endif %}>Hybrid</option>
+          </select>
+        </div>
+
+        <div class="architect-field">
+          <label for="risk_level">Risk Level</label>
+          <select class="architect-select" id="risk_level" name="risk_level">
+            <option value="Low" {% if analysis.get("risk_level") == "Low" %}selected{% endif %}>Low</option>
+            <option value="Moderate" {% if analysis.get("risk_level") == "Moderate" or not analysis.get("risk_level") %}selected{% endif %}>Moderate</option>
+            <option value="High" {% if analysis.get("risk_level") == "High" %}selected{% endif %}>High</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="architect-field" style="margin-top:12px;">
+        <label for="architect_summary">Architect Summary</label>
+        <textarea class="architect-textarea" id="architect_summary" name="architect_summary" placeholder="Summarize the thesis, execution path, edge, and why this deal makes sense.">{{ analysis.get("summary") or "" }}</textarea>
+      </div>
+
+      <div class="architect-field" style="margin-top:12px;">
+        <label for="architect_notes">Operator Notes</label>
+        <textarea class="architect-textarea" id="architect_notes" name="architect_notes" placeholder="Capture constraints, pricing notes, contractor feedback, or strategic watchouts.">{{ analysis.get("notes") or "" }}</textarea>
+      </div>
+
+      <div class="architect-toolbar">
+        <button class="architect-btn success" type="submit">💾 Save Architect Notes</button>
+        {% if deal %}
+          <a class="architect-btn secondary" href="{{ url_for('investor.deal_rehab', deal_id=deal.id) }}">🎬 Move to Renovation Studio</a>
+          <a class="architect-btn secondary" href="{{ url_for('investor.build_studio', deal_id=deal.id) }}">🏗 Move to Build Studio</a>
+          <a class="architect-btn secondary" href="{{ url_for('investor.budget_studio', deal_id=deal.id) }}">💰 Move to Budget Studio</a>
+        {% endif %}
+      </div>
+    </form>
+  </section>
+
+  <section class="architect-card">
+    <h3>Continue Workflow</h3>
+    <div class="workflow-grid">
+      {% if deal %}
+        <a href="{{ url_for('investor.deal_detail', deal_id=deal.id) }}" class="workflow-card">
+          <h4>Deal Workspace</h4>
+          <p>Return to the main record and review property, contacts, files, and execution context.</p>
+        </a>
+
+        <a href="{{ url_for('investor.deal_rehab', deal_id=deal.id) }}" class="workflow-card">
+          <h4>Renovation Studio</h4>
+          <p>Translate the thesis into rehab scope, finishes, sequencing, and property transformation.</p>
+        </a>
+
+        <a href="{{ url_for('investor.build_studio', deal_id=deal.id) }}" class="workflow-card">
+          <h4>Build Studio</h4>
+          <p>Model new construction or expansion concepts when the strategy requires development upside.</p>
+        </a>
+
+        <a href="{{ url_for('investor.budget_studio', deal_id=deal.id) }}" class="workflow-card">
+          <h4>Budget Studio</h4>
+          <p>Turn the deal thesis into numbers, line items, cost pressure tests, and tracked execution.</p>
+        </a>
+      {% endif %}
     </div>
   </section>
 
-  <section class="da-card">
-    <div class="eyebrow">VERDICT BREAKDOWN</div>
-    <h3 style="margin:0 0 10px;">meta.verdict_breakdown.subscores</h3>
-    <div id="subscoresPills"></div>
-  </section>
-
-  <section class="da-card">
-    <div class="eyebrow">COMPARABLES</div>
-    <h3 style="margin:0 0 10px;">meta.comp_analysis.normalized_comps</h3>
-    <div id="compTableWrap" class="da-table-wrap"></div>
-  </section>
-
-  <section class="da-card">
-    <div class="eyebrow">MARKET ASSUMPTIONS</div>
-    <h3 style="margin:0 0 10px;">meta.market</h3>
-    <div id="marketAssumptions" class="da-list"></div>
-  </section>
 </div>
 
-<script>
-function asMoney(val) {
-  const n = Number(val);
-  if (Number.isNaN(n)) return "—";
-  return n.toLocaleString(undefined, { style: "currency", currency: "USD", maximumFractionDigits: 0 });
-}
-
-function asNum(val, fallback = "—") {
-  if (val === null || val === undefined || val === "") return fallback;
-  const n = Number(val);
-  return Number.isNaN(n) ? String(val) : n.toLocaleString();
-}
-
-function listOrFallback(values, fallback) {
-  if (!Array.isArray(values) || values.length === 0) return [`<div class="muted-sm">${fallback}</div>`];
-  return values.map(v => `<div class="da-kpi"><div class="value" style="font-size:.98rem;">${v}</div></div>`);
-}
-
-function parseComps(text) {
-  if (!text || !text.trim()) return [];
-  try {
-    const parsed = JSON.parse(text);
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    throw new Error("Comps must be valid JSON array.");
-  }
-}
-
-function requestBodyFromForm(form) {
-  const get = (name) => (form.querySelector(`[name="${name}"]`)?.value || "").trim();
-  const numOrNull = (name) => {
-    const v = get(name);
-    if (!v) return null;
-    const n = Number(v);
-    return Number.isNaN(n) ? null : n;
-  };
-
-  const market_multipliers = {};
-  const mmRent = numOrNull("market_multiplier_rent");
-  const mmValue = numOrNull("market_multiplier_value");
-  if (mmRent !== null) market_multipliers.rent = mmRent;
-  if (mmValue !== null) market_multipliers.value = mmValue;
-
-  const payload = {
-    project_name: get("project_name"),
-    description: get("description"),
-    property_type: get("property_type"),
-    lot_size: get("lot_size"),
-    zoning: get("zoning"),
-    asking_price: numOrNull("asking_price"),
-    square_feet_target: numOrNull("square_feet_target"),
-    city: get("city"),
-    state: get("state"),
-    zip_code: get("zip_code"),
-    arv: numOrNull("arv"),
-    monthly_rent: numOrNull("monthly_rent"),
-    down_payment_pct: numOrNull("down_payment_pct"),
-    interest_rate: numOrNull("interest_rate"),
-    hold_years: numOrNull("hold_years"),
-    annual_tax_rate: numOrNull("annual_tax_rate"),
-    annual_insurance_rate: numOrNull("annual_insurance_rate"),
-    comps: parseComps(get("comps_json"))
-  };
-
-  if (Object.keys(market_multipliers).length > 0) {
-    payload.market_multipliers = market_multipliers;
-  }
-
-  return payload;
-}
-
-function renderResponse(data) {
-  const meta = data?.meta || {};
-  const verdict = meta?.verdict_breakdown || {};
-  const compAnalysis = meta?.comp_analysis || {};
-  const market = meta?.market || {};
-
-  // 1) Summary header order
-  const summary = document.getElementById("summaryHeader");
-  summary.innerHTML = `
-    <span class="da-pill"><strong>Recommended:</strong> ${data?.recommended_type || data?.summary || "—"}</span>
-    <span class="da-pill"><strong>Deal Score:</strong> ${asNum(data?.deal_score)}</span>
-    <span class="da-pill"><strong>Tier:</strong> ${data?.opportunity_tier || "—"}</span>
-    <span class="da-pill"><strong>Verdict:</strong> ${verdict?.verdict || "—"}</span>
-  `;
-
-  // 2) Financial cards order
-  const financialCards = document.getElementById("financialCards");
-  const entries = [
-    ["Cost Low", data?.cost_low],
-    ["Cost High", data?.cost_high],
-    ["Estimated Value", data?.estimated_value],
-    ["All-In Low", meta?.all_in_low],
-    ["All-In High", meta?.all_in_high],
-    ["Estimated Margin Low", meta?.estimated_margin_low],
-    ["Estimated Margin High", meta?.estimated_margin_high],
-    ["Monthly Rent Estimate", meta?.monthly_rent_estimate],
-    ["NOI Estimate", meta?.noi_estimate],
-    ["DSCR Estimate", meta?.dscr_estimate],
-  ];
-  financialCards.innerHTML = entries.map(([label, value]) => `
-    <div class="da-kpi">
-      <div class="label">${label}</div>
-      <div class="value">${label.includes("DSCR") ? asNum(value) : asMoney(value)}</div>
-    </div>
-  `).join("");
-
-  // valuation source + comps fallback guidance
-  const valuationSource = document.getElementById("valuationSource");
-  valuationSource.innerHTML = `<strong>Valuation source:</strong> ${meta?.valuation_source || "Not provided"}`;
-
-  const comps = Array.isArray(compAnalysis?.normalized_comps) ? compAnalysis.normalized_comps : [];
-  const confidenceRaw = compAnalysis?.confidence ?? compAnalysis?.comp_confidence;
-  const confidence = Number(confidenceRaw);
-  const lowConfidence = !Number.isNaN(confidence) && confidence < 0.5;
-  const fallbackEl = document.getElementById("compsFallback");
-  if (comps.length === 0) {
-    fallbackEl.textContent = "No comps returned. Underwriting is using fallback valuation assumptions.";
-  } else if (lowConfidence) {
-    fallbackEl.textContent = "Comp confidence is low. Treat valuation ranges as directional until higher-quality comps are added.";
-  } else {
-    fallbackEl.textContent = "";
-  }
-
-  // 3) verdict breakdown subscores
-  const subscores = verdict?.subscores || {};
-  const subscoresPills = document.getElementById("subscoresPills");
-  const subEntries = Object.entries(subscores);
-  subscoresPills.innerHTML = subEntries.length
-    ? subEntries.map(([k,v]) => `<span class="da-pill"><strong>${k}:</strong> ${asNum(v)}</span>`).join("")
-    : `<div class="muted-sm">No subscores returned.</div>`;
-
-  // 4) strengths & risks first-class
-  document.getElementById("strengthsList").innerHTML = listOrFallback(verdict?.strengths, "No strengths were returned.").join("");
-  document.getElementById("risksList").innerHTML = listOrFallback(verdict?.risks, "No risks were returned.").join("");
-
-  // 5) comp table
-  const compTableWrap = document.getElementById("compTableWrap");
-  if (!comps.length) {
-    compTableWrap.innerHTML = `<div style="padding:12px;" class="muted-sm">Comparable sales are not yet available.</div>`;
-  } else {
-    compTableWrap.innerHTML = `
-      <table class="da-table">
-        <thead>
-          <tr>
-            <th>Address</th><th>Price</th><th>Sqft</th><th>Beds</th><th>Baths</th>
-            <th>Distance (mi)</th><th>Months Ago</th><th>Notes</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${comps.map(c => `
-            <tr>
-              <td>${c.address || "—"}</td>
-              <td>${asMoney(c.price)}</td>
-              <td>${asNum(c.sqft)}</td>
-              <td>${asNum(c.beds)}</td>
-              <td>${asNum(c.baths)}</td>
-              <td>${asNum(c.distance_miles)}</td>
-              <td>${asNum(c.months_ago)}</td>
-              <td>${c.notes || "—"}</td>
-            </tr>
-          `).join("")}
-        </tbody>
-      </table>
-    `;
-  }
-
-  // 6) market assumptions
-  const marketAssumptions = document.getElementById("marketAssumptions");
-  const marketEntries = Object.entries(market);
-  marketAssumptions.innerHTML = marketEntries.length
-    ? marketEntries.map(([k,v]) => `<div class="da-kpi"><div class="label">${k}</div><div class="value" style="font-size:.95rem;">${typeof v === "number" ? asNum(v) : (v || "—")}</div></div>`).join("")
-    : `<div class="muted-sm">No market assumptions returned.</div>`;
-}
-
-async function runDealArchitect(e) {
-  e.preventDefault();
-  const form = document.getElementById("dealArchitectForm");
-
-  let payload;
-  try {
-    payload = requestBodyFromForm(form);
-  } catch (err) {
-    alert(err.message || "Invalid request payload.");
-    return;
-  }
-
-  try {
-    const res = await fetch("/v1/deal_architect", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-CSRFToken": "{{ csrf_token() }}"
-      },
-      body: JSON.stringify(payload)
-    });
-
-    const data = await res.json();
-    if (!res.ok) {
-      alert(data?.message || "Underwriting request failed.");
-      return;
-    }
-
-    renderResponse(data || {});
-  } catch (err) {
-    console.error("Deal Architect request failed", err);
-    alert("Unable to reach /v1/deal_architect.");
-  }
-}
-
-{% if initial %}
-  document.addEventListener("DOMContentLoaded", () => {
-    renderResponse({
-      ...{{ initial|tojson }},
-      meta: {{ initial_meta|tojson }}
-    });
-  });
-{% endif %}
-</script>
 {% endblock %}

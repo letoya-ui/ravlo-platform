@@ -1,0 +1,446 @@
+{% extends "layouts/ravlo_employee_base.html" %}
+
+{% block title %}{{ company.name }} Admin{% endblock %}
+{% block page_title %}{{ company.name }} Command Center{% endblock %}
+{% block page_subline %}Company-scoped controls for team, requests, reporting, analytics, and workspace operations{% endblock %}
+
+{% block topbar_actions %}
+  <a class="re-btn primary sm" href="{{ url_for('admin.invite_team_member', company_id=company.id) }}">
+    <i class="lucide lucide-user-plus"></i>
+    Invite Team Member
+  </a>
+  <a class="re-btn ghost sm" href="{{ url_for('admin.company_team', company_id=company.id) }}">
+    <i class="lucide lucide-users"></i>
+    View Team
+  </a>
+  <a class="re-btn ghost sm" href="{{ url_for('admin.messages') }}">
+    <i class="lucide lucide-messages-square"></i>
+    Messages
+  </a>
+  <a class="re-btn ghost sm" href="{{ url_for('admin.analytics') }}">
+    <i class="lucide lucide-bar-chart-3"></i>
+    Analytics
+  </a>
+  <a class="re-btn ghost sm" href="{{ url_for('admin.company_settings', company_id=company.id) }}">
+    <i class="lucide lucide-settings-2"></i>
+    Workspace Settings
+  </a>
+  <button class="re-btn ghost sm" type="button" id="resetDashboardLayoutBtn">
+    <i class="lucide lucide-rotate-ccw"></i>
+    Reset Layout
+  </button>
+  <a class="re-btn ghost sm" href="{{ url_for('admin.reports') }}">
+    <i class="lucide lucide-file-spreadsheet"></i>
+    Reports
+  </a>
+{% endblock %}
+
+{% block content %}
+<link rel="preconnect" href="https://cdn.jsdelivr.net">
+<script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+<div class="re-grid" id="companyDashboardRoot" data-dashboard-company="{{ company.id }}">
+
+  <section class="re-card pad" data-widget-key="overview">
+    <div class="section-head">
+      <div>
+        <div class="eyebrow">COMPANY WORKSPACE</div>
+        <h3 style="margin:.35rem 0 .2rem;">Company admin command center</h3>
+        <div class="re-card-subtitle">
+          {{ workspace_summary }}
+        </div>
+      </div>
+    </div>
+
+    <div class="re-grid-3 mt-16">
+      <div class="re-stat">
+        <div class="re-stat-label">Team Members</div>
+        <div class="re-stat-value">{{ stats.team_members or 0 }}</div>
+        <div class="re-stat-meta">Users assigned to this company</div>
+      </div>
+
+      <div class="re-stat">
+        <div class="re-stat-label">Pending Invites</div>
+        <div class="re-stat-value">{{ stats.pending_invites or 0 }}</div>
+        <div class="re-stat-meta">Invitations waiting to be accepted</div>
+      </div>
+
+      <div class="re-stat">
+        <div class="re-stat-label">Requests</div>
+        <div class="re-stat-value">{{ stats.requests or 0 }}</div>
+        <div class="re-stat-meta">{{ stats.pending_requests or 0 }} waiting on review</div>
+      </div>
+
+      <div class="re-stat">
+        <div class="re-stat-label">Loan Files</div>
+        <div class="re-stat-value">{{ stats.loans or 0 }}</div>
+        <div class="re-stat-meta">Applications tied to this workspace</div>
+      </div>
+
+      <div class="re-stat">
+        <div class="re-stat-label">Borrowers</div>
+        <div class="re-stat-value">{{ stats.borrowers or 0 }}</div>
+        <div class="re-stat-meta">Profiles in pipeline</div>
+      </div>
+
+      <div class="re-stat">
+        <div class="re-stat-label">Documents</div>
+        <div class="re-stat-value">{{ stats.documents or 0 }}</div>
+        <div class="re-stat-meta">Uploaded file count</div>
+      </div>
+
+      <div class="re-stat">
+        <div class="re-stat-label">Subscription</div>
+        <div class="re-stat-value" style="font-size:1.05rem;">{{ company.subscription_tier or "Team" }}</div>
+        <div class="re-stat-meta">Current workspace plan</div>
+      </div>
+
+      <div class="re-stat">
+        <div class="re-stat-label">Workspace Health</div>
+        <div class="re-stat-value" style="font-size:1.05rem;">{{ workspace_health }}</div>
+        <div class="re-stat-meta">{{ company.billing_status|default("active", true)|replace("_", " ")|title }} billing status</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="re-card pad" data-widget-key="tools">
+    <div class="section-head">
+      <div>
+        <div class="eyebrow">ADMIN TOOLS</div>
+        <h3 style="margin:.35rem 0 .2rem;">Workspace Controls</h3>
+        <div class="re-card-subtitle">Everything a company admin needs to operate day to day.</div>
+      </div>
+    </div>
+
+    <div class="quick-action-grid mt-16">
+      <a class="partner-action-card" href="{{ url_for('admin.company_team', company_id=company.id) }}">
+        <div class="partner-action-icon"><i class="lucide lucide-users"></i></div>
+        <div class="partner-action-copy">
+          <h4>Team</h4>
+          <p>Review users, invites, and role assignments for this company.</p>
+        </div>
+      </a>
+
+      <a class="partner-action-card" href="{{ url_for('system.users') }}">
+        <div class="partner-action-icon"><i class="lucide lucide-user-cog"></i></div>
+        <div class="partner-action-copy">
+          <h4>Users</h4>
+          <p>Manage active accounts scoped to your company workspace.</p>
+        </div>
+      </a>
+
+      <a class="partner-action-card" href="{{ url_for('admin.messages') }}">
+        <div class="partner-action-icon"><i class="lucide lucide-messages-square"></i></div>
+        <div class="partner-action-copy">
+          <h4>Messages</h4>
+          <p>Send internal messages to your company users.</p>
+        </div>
+      </a>
+
+      <a class="partner-action-card" href="{{ url_for('admin.reports') }}">
+        <div class="partner-action-icon"><i class="lucide lucide-file-spreadsheet"></i></div>
+        <div class="partner-action-copy">
+          <h4>Reports</h4>
+          <p>Export team and invite reports for your workspace.</p>
+        </div>
+      </a>
+
+      <a class="partner-action-card" href="{{ url_for('admin.access_requests') }}">
+        <div class="partner-action-icon"><i class="lucide lucide-clipboard-list"></i></div>
+        <div class="partner-action-copy">
+          <h4>Requests</h4>
+          <p>Review access requests related to your company.</p>
+        </div>
+      </a>
+
+      <a class="partner-action-card" href="{{ url_for('admin.analytics') }}">
+        <div class="partner-action-icon"><i class="lucide lucide-bar-chart-3"></i></div>
+        <div class="partner-action-copy">
+          <h4>Analytics</h4>
+          <p>Review company-scoped team, invite, and workflow trends.</p>
+        </div>
+      </a>
+
+      <a class="partner-action-card" href="{{ url_for('admin.company_settings', company_id=company.id) }}">
+        <div class="partner-action-icon"><i class="lucide lucide-settings-2"></i></div>
+        <div class="partner-action-copy">
+          <h4>Settings</h4>
+          <p>Control workspace profile, domain, location, and activation settings.</p>
+        </div>
+      </a>
+    </div>
+  </section>
+
+  <section class="re-card pad" data-widget-key="analytics">
+    <div class="section-head">
+      <div>
+        <div class="eyebrow">ANALYTICS</div>
+        <h3 style="margin:.35rem 0 .2rem;">Workspace Trends</h3>
+        <div class="re-card-subtitle">Company-level visibility similar to the platform dashboard, scoped to your team.</div>
+      </div>
+    </div>
+
+    <div class="re-grid-2 mt-16">
+      <div>
+        <div id="chart_team_growth" style="min-height:260px;"></div>
+      </div>
+      <div>
+        <div id="chart_invite_growth" style="min-height:260px;"></div>
+      </div>
+    </div>
+
+    <div class="re-grid-2 mt-16">
+      <div>
+        <div id="chart_role_mix" style="min-height:240px;"></div>
+      </div>
+      <div>
+        <div id="chart_invite_status" style="min-height:240px;"></div>
+      </div>
+    </div>
+  </section>
+
+  {% if not team_members and not invites and not loans and not borrowers %}
+    <section class="re-card pad" data-widget-key="empty_state">
+      <div class="section-head">
+        <div>
+          <div class="eyebrow">GET STARTED</div>
+          <h3 style="margin:.35rem 0 .2rem;">Your workspace is empty on purpose</h3>
+          <div class="re-card-subtitle">New company admins start with a clean dashboard instead of platform-wide data.</div>
+        </div>
+      </div>
+
+      <div class="re-empty mt-16" style="text-align:left;">
+        <p style="margin:0 0 12px;">Recommended first steps:</p>
+        <p style="margin:0 0 8px;">1. Invite the rest of your Caughman Mason Loan Service team.</p>
+        <p style="margin:0 0 8px;">2. Create your first borrower and loan workflow.</p>
+        <p style="margin:0;">3. Use this dashboard as the company-specific command center going forward.</p>
+      </div>
+    </section>
+  {% endif %}
+
+  <section class="re-card pad" data-widget-key="team">
+    <div class="section-head">
+      <div>
+        <div class="eyebrow">TEAM</div>
+        <h3 style="margin:.35rem 0 .2rem;">Recent Team Members</h3>
+        <div class="re-card-subtitle">People currently assigned to {{ company.name }}.</div>
+      </div>
+      <a class="re-btn ghost sm" href="{{ url_for('admin.company_team', company_id=company.id) }}">Manage Team</a>
+    </div>
+
+    {% if team_members %}
+      <div class="re-table-wrap mt-16">
+        <table class="re-table">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Email</th>
+              <th>Role</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for member in team_members %}
+            <tr>
+              <td>{{ member.full_name or member.username or member.email or "—" }}</td>
+              <td>{{ member.email or "—" }}</td>
+              <td><span class="badge badge-info">{{ get_role_display(member.role) }}</span></td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="re-empty mt-16">No team members have been added yet.</div>
+    {% endif %}
+  </section>
+
+  <section class="re-card pad" data-widget-key="invites">
+    <div class="section-head">
+      <div>
+        <div class="eyebrow">INVITES</div>
+        <h3 style="margin:.35rem 0 .2rem;">Recent Invites</h3>
+        <div class="re-card-subtitle">Outstanding or accepted invitations for this company.</div>
+      </div>
+    </div>
+
+    {% if invites %}
+      <div class="re-table-wrap mt-16">
+        <table class="re-table">
+          <thead>
+            <tr>
+              <th>Email</th>
+              <th>Role</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for invite in invites %}
+            <tr>
+              <td>{{ invite.email }}</td>
+              <td><span class="badge badge-info">{{ get_role_display(invite.role) }}</span></td>
+              <td><span class="badge badge-neutral">{{ (invite.status or "pending")|replace("_", " ")|title }}</span></td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="re-empty mt-16">No invites have been sent yet.</div>
+    {% endif %}
+  </section>
+
+  <section class="re-card pad" data-widget-key="requests">
+    <div class="section-head">
+      <div>
+        <div class="eyebrow">REQUESTS</div>
+        <h3 style="margin:.35rem 0 .2rem;">Recent Access Requests</h3>
+        <div class="re-card-subtitle">Requests tied to your company workspace.</div>
+      </div>
+      <a class="re-btn ghost sm" href="{{ url_for('admin.access_requests') }}">View Requests</a>
+    </div>
+
+    {% if access_requests %}
+      <div class="re-table-wrap mt-16">
+        <table class="re-table">
+          <thead>
+            <tr>
+              <th>Contact</th>
+              <th>Email</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for item in access_requests %}
+            <tr>
+              <td>{{ item.contact_name or "—" }}</td>
+              <td>{{ item.email or "—" }}</td>
+              <td><span class="badge badge-neutral">{{ (item.status or "pending")|replace("_", " ")|title }}</span></td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="re-empty mt-16">No company-related access requests yet.</div>
+    {% endif %}
+  </section>
+
+  <section class="re-card pad" data-widget-key="messages">
+    <div class="section-head">
+      <div>
+        <div class="eyebrow">MESSAGES</div>
+        <h3 style="margin:.35rem 0 .2rem;">Recent Internal Messages</h3>
+        <div class="re-card-subtitle">Latest communication inside your workspace.</div>
+      </div>
+      <a class="re-btn ghost sm" href="{{ url_for('admin.messages') }}">Open Messages</a>
+    </div>
+
+    {% if recent_messages %}
+      <div class="mt-16">
+        {% for msg in recent_messages %}
+          <div class="re-stat" style="margin-bottom:10px;">
+            <div class="re-stat-label">
+              {{ msg.created_at.strftime("%Y-%m-%d %I:%M %p") if msg.created_at else "" }}
+            </div>
+            <div class="re-stat-meta" style="margin-bottom:6px;">
+              {{ msg.sender.full_name or msg.sender.username or msg.sender.email if msg.sender else "Unknown Sender" }}
+              to
+              {{ msg.receiver.full_name or msg.receiver.username or msg.receiver.email if msg.receiver else "Unknown Recipient" }}
+            </div>
+            <div>{{ msg.content }}</div>
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="re-empty mt-16">No recent internal messages inside this company workspace.</div>
+    {% endif %}
+  </section>
+
+</div>
+<script>
+  (function () {
+    const dashboardRoot = document.getElementById("companyDashboardRoot");
+    const resetDashboardLayoutBtn = document.getElementById("resetDashboardLayoutBtn");
+    const dashboardPrefs = {{ (dashboard_preferences or {})|tojson }};
+
+    function applyDashboardPrefs() {
+      if (!dashboardRoot) return;
+      dashboardRoot.querySelectorAll("[data-widget-key]").forEach((section) => {
+        const key = section.dataset.widgetKey;
+        const visible = dashboardPrefs[key] !== false;
+        section.style.display = visible ? "" : "none";
+      });
+    }
+
+    resetDashboardLayoutBtn?.addEventListener("click", function () {
+      window.location.href = "{{ url_for('admin.company_settings', company_id=company.id) }}";
+    });
+
+    applyDashboardPrefs();
+
+    const roleLabels = {{ (role_labels or [])|tojson }};
+    const roleValues = {{ (role_values or [])|tojson }};
+    const inviteStatusLabels = {{ (invite_status_labels or [])|tojson }};
+    const inviteStatusValues = {{ (invite_status_values or [])|tojson }};
+    const teamGrowthLabels = {{ (team_growth_labels or [])|tojson }};
+    const teamGrowthSeries = {{ (team_growth_series or [])|tojson }};
+    const inviteGrowthLabels = {{ (invite_growth_labels or [])|tojson }};
+    const inviteGrowthSeries = {{ (invite_growth_series or [])|tojson }};
+
+    const baseOpt = {
+      chart: { toolbar: { show: false }, foreColor: "#c9d3df" },
+      grid: { borderColor: "#2a2e36" },
+      dataLabels: { enabled: false },
+      legend: { labels: { colors: "#c9d3df" } },
+      theme: { mode: "dark" }
+    };
+
+    const teamGrowthEl = document.querySelector("#chart_team_growth");
+    if (teamGrowthEl) {
+      new ApexCharts(teamGrowthEl, {
+        ...baseOpt,
+        chart: { ...baseOpt.chart, type: "area", height: 260 },
+        stroke: { curve: "smooth", width: 2 },
+        series: [{ name: "Team Members", data: teamGrowthSeries }],
+        xaxis: { categories: teamGrowthLabels },
+        colors: ["#7ab8ff"]
+      }).render();
+    }
+
+    const inviteGrowthEl = document.querySelector("#chart_invite_growth");
+    if (inviteGrowthEl) {
+      new ApexCharts(inviteGrowthEl, {
+        ...baseOpt,
+        chart: { ...baseOpt.chart, type: "line", height: 260 },
+        stroke: { curve: "smooth", width: 3 },
+        series: [{ name: "Invites", data: inviteGrowthSeries }],
+        xaxis: { categories: inviteGrowthLabels },
+        colors: ["#43d19e"]
+      }).render();
+    }
+
+    const roleMixEl = document.querySelector("#chart_role_mix");
+    if (roleMixEl) {
+      new ApexCharts(roleMixEl, {
+        ...baseOpt,
+        chart: { ...baseOpt.chart, type: "donut", height: 240 },
+        labels: roleLabels,
+        series: roleValues.length ? roleValues : [1],
+        colors: ["#7ab8ff", "#43d19e", "#ffdf6e", "#fb7185", "#a78bfa"],
+        legend: { position: "bottom", labels: { colors: "#c9d3df" } }
+      }).render();
+    }
+
+    const inviteStatusEl = document.querySelector("#chart_invite_status");
+    if (inviteStatusEl) {
+      new ApexCharts(inviteStatusEl, {
+        ...baseOpt,
+        chart: { ...baseOpt.chart, type: "donut", height: 240 },
+        labels: inviteStatusLabels.length ? inviteStatusLabels : ["Pending"],
+        series: inviteStatusValues.length ? inviteStatusValues : [0],
+        colors: ["#7ab8ff", "#43d19e", "#fb7185", "#ffdf6e"],
+        legend: { position: "bottom", labels: { colors: "#c9d3df" } }
+      }).render();
+    }
+  })();
+</script>
+{% endblock %}

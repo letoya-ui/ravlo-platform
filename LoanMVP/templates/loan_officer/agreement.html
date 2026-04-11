@@ -68,6 +68,7 @@ Define your role, responsibilities, and relationship with Caughman Mason.
     </div>
 
     <form method="POST" action="{{ url_for('loan_officer.accept_ica') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
       <div class="partner-checklist" style="margin-bottom:1rem;">
         <label class="partner-check-item">

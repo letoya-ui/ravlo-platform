@@ -32,7 +32,7 @@
     <div class="ravlo-card" style="padding:14px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.02);">
       <form method="POST" action="{{
         url_for('investor.ai_prequal') }}">
-        {{ csrf_token() if csrf_token is defined }}
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
         <div style="font-weight:800;margin-bottom:10px;">💵 Income & Debts</div>
 

@@ -1,0 +1,37 @@
+{% extends "layouts/ravlo_auth_base.html" %}
+{% block title %}Complete Profile{% endblock %}
+{% block auth_title %}Complete Your Profile{% endblock %}
+{% block auth_subtitle %}
+Finish setting up your account before entering Ravlo.
+{% endblock %}
+
+{% block auth_content %}
+<form method="POST" class="ravlo-form">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <div class="ravlo-field">
+    <label class="ravlo-label" for="first_name">First Name</label>
+    <input
+      type="text"
+      id="first_name"
+      name="first_name"
+      class="ravlo-input"
+      value="{{ user.first_name or '' }}"
+      required
+    >
+  </div>
+
+  <div class="ravlo-field">
+    <label class="ravlo-label" for="last_name">Last Name</label>
+    <input
+      type="text"
+      id="last_name"
+      name="last_name"
+      class="ravlo-input"
+      value="{{ user.last_name or '' }}"
+      required
+    >
+  </div>
+
+  <button type="submit" class="ravlo-btn primary">Continue</button>
+</form>
+{% endblock %}

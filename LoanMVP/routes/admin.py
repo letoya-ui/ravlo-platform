@@ -5,8 +5,10 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, send_file, current_app
 from flask_login import current_user, login_required
 from collections import defaultdict
-from sqlalchemy import func, desc
+from sqlalchemy import func, desc, inspect, text
+from sqlalchemy.orm import aliased
 from datetime import datetime, timedelta
+import json
 from LoanMVP.extensions import db, csrf
 from werkzeug.security import generate_password_hash
 
@@ -32,6 +34,7 @@ import time
 
 admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
 assistant = AIAssistant()
+FULL_ADMIN_ROLES = {"platform_admin", "master_admin", "lending_admin"}
 
 # =========================================================
 # 🔐 ADMIN ONLY CHECK
@@ -40,11 +43,63 @@ def admin_required(func):
     from functools import wraps
     @wraps(func)
     def wrapper(*args, **kwargs):
-        if not current_user.is_authenticated or current_user.role != "admin":
+        user_role = (getattr(current_user, "role", "") or "").strip().lower()
+        if not current_user.is_authenticated or user_role not in {"admin", *FULL_ADMIN_ROLES}:
             flash("⚠️ Unauthorized access.", "danger")
             return redirect(url_for("auth.login"))
         return func(*args, **kwargs)
     return wrapper
+
+
+def _is_company_admin(user) -> bool:
+    return ((getattr(user, "role", "") or "").strip().lower() == "admin")
+
+
+def _is_full_admin(user) -> bool:
+    return ((getattr(user, "role", "") or "").strip().lower() in FULL_ADMIN_ROLES)
+
+
+def _admin_home_endpoint():
+    if _is_company_admin(current_user) and getattr(current_user, "company_id", None):
+        return url_for("admin.company_dashboard", company_id=current_user.company_id)
+    return url_for("admin.dashboard")
+
+
+def _ensure_company_access(company):
+    if _is_full_admin(current_user):
+        return None
+
+    if _is_company_admin(current_user) and getattr(current_user, "company_id", None) == company.id:
+        return None
+
+    flash("You do not have access to that company workspace.", "warning")
+    return redirect(_admin_home_endpoint())
+
+
+def _company_scope():
+    if not _is_company_admin(current_user):
+        return None
+    return Company.query.get(getattr(current_user, "company_id", None)) if getattr(current_user, "company_id", None) else None
+
+
+def _can_access_request(access_request) -> bool:
+    if _is_full_admin(current_user):
+        return True
+
+    company = _company_scope()
+    if not company:
+        return False
+
+    request_company_name = (getattr(access_request, "company_name", "") or "").strip().lower()
+    company_name = (company.name or "").strip().lower()
+    email_domain = (company.email_domain or "").strip().lower()
+    email = (getattr(access_request, "email", "") or "").strip().lower()
+
+    return (
+        getattr(access_request, "company_id", None) == company.id
+        or (company_name and request_company_name == company_name)
+        or (email_domain and email.endswith(f"@{email_domain}"))
+    )
 
 
 def _plan_defaults(plan_interest: str):
@@ -60,6 +115,90 @@ def _plan_defaults(plan_interest: str):
         return "white_label", None
 
     return "team", 10
+
+
+def _company_dashboard_defaults():
+    return {
+        "overview": True,
+        "tools": True,
+        "analytics": True,
+        "empty_state": True,
+        "team": True,
+        "invites": True,
+        "requests": True,
+        "messages": True,
+    }
+
+
+def _company_dashboard_column_exists():
+    try:
+        columns = inspect(db.engine).get_columns("companies")
+        return any(column.get("name") == "dashboard_settings" for column in columns)
+    except Exception:
+        return False
+
+
+def _company_dashboard_settings(company):
+    defaults = _company_dashboard_defaults()
+    if not _company_dashboard_column_exists():
+        return defaults
+
+    try:
+        raw = db.session.execute(
+            text("SELECT dashboard_settings FROM companies WHERE id = :company_id"),
+            {"company_id": company.id},
+        ).scalar()
+    except Exception:
+        raw = None
+
+    raw = (raw or "").strip()
+    if not raw:
+        return defaults
+
+    try:
+        payload = json.loads(raw)
+    except (TypeError, ValueError):
+        return defaults
+
+    if not isinstance(payload, dict):
+        return defaults
+
+    merged = defaults.copy()
+    for key in defaults:
+        if key in payload:
+            merged[key] = bool(payload[key])
+    return merged
+
+
+def _last_n_months(n=6):
+    now = datetime.utcnow()
+    months = []
+    year = now.year
+    month = now.month
+
+    for _ in range(n):
+        months.append((year, month))
+        month -= 1
+        if month == 0:
+            month = 12
+            year -= 1
+
+    months.reverse()
+    return months
+
+
+def _monthly_series(records, date_attr="created_at", months_back=6):
+    month_keys = _last_n_months(months_back)
+    labels = [datetime(year, month, 1).strftime("%b") for year, month in month_keys]
+    counts = defaultdict(int)
+
+    for row in records:
+        dt = getattr(row, date_attr, None)
+        if dt:
+            counts[(dt.year, dt.month)] += 1
+
+    series = [counts.get((year, month), 0) for year, month in month_keys]
+    return labels, series
 
 
 def _send_email_fallback(to_email: str, subject: str, body: str, html: str):
@@ -87,6 +226,113 @@ def _refresh_invite(invite):
     invite.accepted_at = None
     invite.expires_at = UserInvite.default_expiration(days=7)
     return invite
+
+
+def _access_request_role(access_request):
+    role = ((access_request.requested_role or "").strip().lower()).replace(" ", "_")
+    allowed_roles = {"admin", "loan_officer", "processor", "underwriter"}
+    if role in allowed_roles:
+        return role
+    return "admin"
+
+
+def _build_access_request_invite_email(invite, company, access_request):
+    invite_url = url_for("auth.accept_invite", token=invite.token, _external=True)
+    role_label = invite.role.replace("_", " ").title()
+    contact_name = access_request.contact_name or invite.first_name or "there"
+
+    subject = f"Your access request for {company.name} was approved"
+
+    body = f"""
+Hi {contact_name},
+
+Your request to join {company.name} on Ravlo has been approved.
+
+Use the secure link below to activate your account:
+
+{invite_url}
+
+Role: {role_label}
+
+If you were not expecting this email, you can ignore it.
+
+- Ravlo
+""".strip()
+
+    html = f"""
+    <div style="font-family:Inter,Arial,sans-serif;background:#071018;padding:32px;color:#f4f7fb;">
+      <div style="max-width:680px;margin:0 auto;background:#0f1a26;border:1px solid rgba(255,255,255,.08);border-radius:20px;padding:32px;">
+        <div style="font-size:12px;letter-spacing:.18em;font-weight:800;color:#8ec5ff;margin-bottom:12px;">
+          RAVLO ACCESS APPROVED
+        </div>
+        <h1 style="margin:0 0 12px;font-size:30px;line-height:1.1;">
+          Your account is ready
+        </h1>
+        <p style="margin:0 0 14px;color:#c9d6e3;">
+          Your access request for <strong>{company.name}</strong> has been approved.
+        </p>
+        <p style="margin:0 0 18px;color:#c9d6e3;">
+          Role: <strong>{role_label}</strong>
+        </p>
+        <a href="{invite_url}" style="display:inline-block;padding:14px 20px;background:#1f8fff;color:#ffffff;text-decoration:none;border-radius:12px;font-weight:700;">
+          Accept Invite
+        </a>
+        <p style="margin:18px 0 0;color:#8da3b8;font-size:13px;">
+          This link expires in 7 days.
+        </p>
+      </div>
+    </div>
+    """.strip()
+
+    return subject, body, html
+
+
+def _deliver_access_request_invite(invite, company, access_request):
+    subject, body, html = _build_access_request_invite_email(invite, company, access_request)
+    send_email(
+        to=invite.email,
+        subject=subject,
+        html_body=html,
+        text_body=body,
+    )
+
+
+def _send_team_invite_email(invite, company):
+    invite_url = url_for("auth.register_from_invite", token=invite.token, _external=True)
+    role_label = (invite.role or "").replace("_", " ").title()
+    first_name = (invite.first_name or "").strip() or "there"
+
+    subject = f"You're invited to join {company.name} on Ravlo"
+    body = f"""
+Hi {first_name},
+
+You have been invited to join {company.name} on Ravlo as a {role_label}.
+
+Complete your registration here:
+{invite_url}
+
+This link expires in 7 days.
+""".strip()
+
+    html = f"""
+    <div style="font-family:Inter,Arial,sans-serif;line-height:1.6;color:#111;">
+      <h2>You're invited to Ravlo</h2>
+      <p>Hello {first_name},</p>
+      <p>You have been invited to join <strong>{company.name}</strong> as a <strong>{role_label}</strong>.</p>
+      <p>
+        Complete your registration here:<br>
+        <a href="{invite_url}">{invite_url}</a>
+      </p>
+      <p>This link expires in 7 days.</p>
+    </div>
+    """.strip()
+
+    send_email(
+        to=invite.email,
+        subject=subject,
+        html_body=html,
+        text_body=body,
+    )
 
 
 def _build_license_invite_email(invite, company, application):
@@ -170,6 +416,9 @@ If you were not expecting this email, you can ignore it.
 @login_required
 @role_required("admin_group")
 def dashboard():
+    if _is_company_admin(current_user) and current_user.company_id:
+        return redirect(url_for("admin.company_dashboard", company_id=current_user.company_id))
+
     company = None
 
     if current_user.role == "master_admin":
@@ -304,10 +553,14 @@ def dashboard():
         server_load_value=server_load_value,
     )
 
+
 @admin_bp.route("/companies")
 @login_required
-@role_required("admin")
+@role_required("admin_group")
 def companies():
+    if _is_company_admin(current_user) and current_user.company_id:
+        return redirect(url_for("admin.company_dashboard", company_id=current_user.company_id))
+
     companies = Company.query.order_by(Company.created_at.desc()).all()
 
     return render_template(
@@ -317,17 +570,22 @@ def companies():
 
 @admin_bp.route("/requests")
 @login_required
-@role_required("admin")
+@role_required("admin_group")
 @admin_required
 def requests_dashboard():
     status = request.args.get("status", "pending")
 
     requests_q = AccessRequest.query.order_by(AccessRequest.created_at.desc())
+    requests_list = requests_q.all()
+
+    if _is_company_admin(current_user):
+        requests_list = [item for item in requests_list if _can_access_request(item)]
 
     if status:
-        requests_q = requests_q.filter_by(status=status)
-
-    requests_list = requests_q.all()
+        requests_list = [
+            item for item in requests_list
+            if (item.status or "").strip().lower() == status.strip().lower()
+        ]
 
     return render_template(
         "admin/requests_dashboard.html",
@@ -338,10 +596,13 @@ def requests_dashboard():
 
 @admin_bp.route("/requests/<int:request_id>")
 @login_required
-@role_required("admin")
+@role_required("admin_group")
 @admin_required
 def request_detail(request_id):
     access_request = AccessRequest.query.get_or_404(request_id)
+    if not _can_access_request(access_request):
+        flash("You do not have access to that request.", "warning")
+        return redirect(_admin_home_endpoint())
 
     return render_template(
         "admin/request_detail.html",
@@ -351,23 +612,28 @@ def request_detail(request_id):
 
 @admin_bp.route("/access-requests", methods=["GET"])
 @login_required
-@role_required("admin")
+@role_required("admin_group")
 def access_requests():
     requests_ = AccessRequest.query.order_by(AccessRequest.created_at.desc()).all()
+    if _is_company_admin(current_user):
+        requests_ = [item for item in requests_ if _can_access_request(item)]
     return render_template(
-        "admin//requests_dashboard.html",
-        requests=requests_,
+        "admin/requests_dashboard.html",
+        requests_list=requests_,
         title="Access Requests",
         active_tab="access_requests",
     )
 
 
 @admin_bp.route("/access-requests/<int:req_id>/deny", methods=["POST"])
-@csrf.exempt
 @login_required
-@role_required("admin")
+@role_required("admin_group")
+@admin_required
 def deny_access_request(req_id):
     req = AccessRequest.query.get_or_404(req_id)
+    if not _can_access_request(req):
+        flash("You do not have access to that request.", "warning")
+        return redirect(_admin_home_endpoint())
 
     req.status = "denied"
     req.reviewed_by = current_user.id
@@ -379,35 +645,94 @@ def deny_access_request(req_id):
     return redirect(url_for("admin.access_requests"))
     
 @admin_bp.route("/access-requests/<int:req_id>/approve", methods=["POST"])
-@csrf.exempt  
 @login_required
-@role_required("admin")
+@role_required("admin_group")
 @admin_required
-def approve_request(request_id):
-    access_request = AccessRequest.query.get_or_404(request_id)
+def approve_access_request(req_id):
+    access_request = AccessRequest.query.get_or_404(req_id)
+    if not _can_access_request(access_request):
+        flash("You do not have access to that request.", "warning")
+        return redirect(_admin_home_endpoint())
 
-    if access_request.status == "approved":
-        flash("Request already approved.", "info")
-        return redirect(url_for("admin.request_detail", request_id=request_id))
+    company = Company.query.get(access_request.company_id) if access_request.company_id else None
 
-    company = None
-
-    if access_request.company_id:
-        company = Company.query.get(access_request.company_id)
+    if not company and access_request.company_name:
+        company = Company.query.filter(
+            func.lower(Company.name) == access_request.company_name.strip().lower()
+        ).first()
 
     if not company:
+        subscription_tier, max_users = _plan_defaults("team")
         company = Company(
             name=access_request.company_name or access_request.contact_name,
-            email_domain=(access_request.email.split("@")[-1].lower() if access_request.email and "@" in access_request.email else None),
-            is_active=True
+            email_domain=(
+                access_request.email.split("@")[-1].lower()
+                if access_request.email and "@" in access_request.email
+                else None
+            ),
+            subscription_tier=subscription_tier,
+            max_users=max_users,
+            is_active=True,
         )
         db.session.add(company)
         db.session.flush()
+    else:
+        company.is_active = True
+        if not company.subscription_tier:
+            company.subscription_tier = "team"
+        if company.max_users is None:
+            company.max_users = 10
 
     access_request.company_id = company.id
     access_request.status = "approved"
     access_request.reviewed_by = current_user.id
     access_request.reviewed_at = datetime.utcnow()
+
+    role = _access_request_role(access_request)
+    existing_user = User.query.filter_by(email=access_request.email).first()
+
+    invite = (
+        UserInvite.query.filter_by(company_id=company.id, email=access_request.email)
+        .order_by(UserInvite.created_at.desc())
+        .first()
+    )
+
+    invite_created = False
+    invite_refreshed = False
+
+    if invite and invite.status == "accepted":
+        if existing_user:
+            existing_user.company_id = company.id
+            existing_user.role = role
+            existing_user.is_active = True
+            existing_user.invite_accepted = True
+    else:
+        if not invite or invite.status != "pending":
+            parts = (access_request.contact_name or "").strip().split(None, 1)
+            invite = UserInvite(
+                company_id=company.id,
+                email=access_request.email,
+                first_name=parts[0] if parts else None,
+                last_name=parts[1] if len(parts) > 1 else None,
+                role=role,
+                token=UserInvite.generate_token(),
+                status="pending",
+                invited_by=current_user.id,
+                expires_at=UserInvite.default_expiration(days=7),
+            )
+            db.session.add(invite)
+            db.session.flush()
+            invite_created = True
+        elif invite.is_expired():
+            _refresh_invite(invite)
+            invite_refreshed = True
+
+        try:
+            _deliver_access_request_invite(invite, company, access_request)
+            invite_email_sent = True
+        except Exception:
+            current_app.logger.exception("Failed to send access-request invite email")
+            invite_email_sent = False
 
     db.session.commit()
 
@@ -419,17 +744,28 @@ def approve_request(request_id):
         channels=["socket", "inapp"]
     )
 
-    flash("Request approved successfully.", "success")
+    if invite and invite.status == "accepted":
+        flash("Request approved and the user is already onboarded to the company.", "success")
+    elif invite_created and invite_email_sent:
+        flash("Request approved, company onboarded, and invite email sent.", "success")
+    elif invite_refreshed and invite_email_sent:
+        flash("Request approved and a fresh onboarding invite was sent.", "success")
+    elif invite_email_sent:
+        flash("Request approved and onboarding invite sent.", "success")
+    else:
+        flash("Request approved, but the onboarding invite email could not be sent automatically.", "warning")
     return redirect(url_for("admin.company_team", company_id=company.id))
 
 
 @admin_bp.route("/requests/<int:request_id>/reject", methods=["POST"])
-@csrf.exempt
 @login_required
-@role_required("admin")
+@role_required("admin_group")
 @admin_required
 def reject_request(request_id):
     access_request = AccessRequest.query.get_or_404(request_id)
+    if not _can_access_request(access_request):
+        flash("You do not have access to that request.", "warning")
+        return redirect(_admin_home_endpoint())
 
     if access_request.status == "rejected":
         flash("Request already rejected.", "info")
@@ -447,10 +783,14 @@ def reject_request(request_id):
 
 @admin_bp.route("/company/<int:company_id>/team")
 @login_required
-@role_required("admin")
+@role_required("admin_group")
 @admin_required
 def company_team(company_id):
     company = Company.query.get_or_404(company_id)
+    access_redirect = _ensure_company_access(company)
+    if access_redirect:
+        return access_redirect
+
     team_members = User.query.filter_by(company_id=company.id).order_by(User.role, User.first_name).all()
     invites = UserInvite.query.filter_by(company_id=company.id).order_by(UserInvite.created_at.desc()).all()
 
@@ -463,12 +803,14 @@ def company_team(company_id):
 
 
 @admin_bp.route("/company/<int:company_id>/team/invite", methods=["GET", "POST"])
-@csrf.exempt
 @login_required
-@role_required("admin")
+@role_required("admin_group")
 @admin_required
 def invite_team_member(company_id):
     company = Company.query.get_or_404(company_id)
+    access_redirect = _ensure_company_access(company)
+    if access_redirect:
+        return access_redirect
 
     if request.method == "POST":
         first_name = (request.form.get("first_name") or "").strip()
@@ -510,37 +852,10 @@ def invite_team_member(company_id):
         db.session.add(invite)
         db.session.commit()
 
-        invite_url = url_for("auth.register_from_invite", token=invite.token, _external=True)
-
         try:
-            from sendgrid.helpers.mail import Mail
-            import sendgrid
-
-            sendgrid_api_key = current_app.config.get("SENDGRID_API_KEY")
-            from_email = current_app.config.get("NOTIFY_FROM_EMAIL", "noreply@ravlohq.com")
-
-            if sendgrid_api_key:
-                sg = sendgrid.SendGridAPIClient(sendgrid_api_key)
-                email_msg = Mail(
-                    from_email=from_email,
-                    to_emails=email,
-                    subject=f"You're invited to join {company.name} on Ravlo",
-                    html_content=f"""
-                    <div style="font-family:Inter,Arial,sans-serif;line-height:1.6;color:#111;">
-                      <h2>You're invited to Ravlo</h2>
-                      <p>Hello {first_name or 'there'},</p>
-                      <p>You have been invited to join <strong>{company.name}</strong> as a <strong>{role.replace('_', ' ').title()}</strong>.</p>
-                      <p>
-                        Complete your registration here:<br>
-                        <a href="{invite_url}">{invite_url}</a>
-                      </p>
-                      <p>This link expires in 7 days.</p>
-                    </div>
-                    """
-                )
-                sg.send(email_msg)
+            _send_team_invite_email(invite, company)
         except Exception:
-            pass
+            current_app.logger.exception("Failed to send team invite email")
 
         flash("Invite created and email sent.", "success")
         return redirect(url_for("admin.company_team", company_id=company.id))
@@ -550,16 +865,54 @@ def invite_team_member(company_id):
         company=company,
     )
 
+
+@admin_bp.route("/company/<int:company_id>/team/invites/<int:invite_id>/resend", methods=["POST"])
+@login_required
+@role_required("admin_group")
+@admin_required
+def resend_team_invite(company_id, invite_id):
+    company = Company.query.get_or_404(company_id)
+    access_redirect = _ensure_company_access(company)
+    if access_redirect:
+        return access_redirect
+
+    invite = UserInvite.query.get_or_404(invite_id)
+    if invite.company_id != company.id:
+        flash("That invite does not belong to this company.", "danger")
+        return redirect(url_for("admin.company_team", company_id=company.id))
+
+    if invite.status == "accepted":
+        flash("This invite has already been accepted.", "info")
+        return redirect(url_for("admin.company_team", company_id=company.id))
+
+    if invite.status != "pending" or invite.is_expired():
+        _refresh_invite(invite)
+
+    try:
+        _send_team_invite_email(invite, company)
+        db.session.commit()
+        flash("Invite resent successfully.", "success")
+    except Exception:
+        db.session.rollback()
+        current_app.logger.exception("Failed to resend team invite email")
+        flash("The invite exists, but the email could not be sent.", "warning")
+
+    return redirect(url_for("admin.company_team", company_id=company.id))
+
 # =========================================================
 # 📊 SYSTEM REPORTS (CSV EXPORT)
 # =========================================================
 @admin_bp.route("/reports", methods=["GET", "POST"])
-@csrf.exempt
 @login_required
-@role_required("admin")
+@role_required("admin_group")
 def reports():
+    company = _company_scope()
     report_type = request.form.get("report_type")
-    csv_data = None
+    users_query = User.query.filter_by(company_id=company.id) if company else User.query
+    total_users = users_query.count()
+    total_loans = LoanApplication.query.count() if not company else 0
+    total_docs = LoanDocument.query.count() if not company else 0
+    total_invites = UserInvite.query.filter_by(company_id=company.id).count() if company else UserInvite.query.count()
 
     if request.method == "POST" and report_type:
         output = io.StringIO()
@@ -567,18 +920,27 @@ def reports():
 
         if report_type == "users":
             writer.writerow(["ID", "Username", "Email", "Role", "Created"])
-            for u in User.query.all():
+            for u in users_query.all():
                 writer.writerow([u.id, u.username, u.email, u.role, u.created_at])
 
-        elif report_type == "loans":
+        elif report_type == "invites":
+            invite_query = UserInvite.query.filter_by(company_id=company.id) if company else UserInvite.query
+            writer.writerow(["ID", "Email", "Role", "Status", "Expires", "Created"])
+            for invite in invite_query.all():
+                writer.writerow([invite.id, invite.email, invite.role, invite.status, invite.expires_at, invite.created_at])
+
+        elif report_type == "loans" and not company:
             writer.writerow(["ID", "Borrower ID", "Type", "Amount", "Status", "Created"])
             for l in LoanApplication.query.all():
                 writer.writerow([l.id, l.borrower_profile_id, l.loan_type, l.amount, l.status, l.created_at])
 
-        elif report_type == "documents":
+        elif report_type == "documents" and not company:
             writer.writerow(["ID", "Borrower ID", "Name", "Status", "Created"])
             for d in LoanDocument.query.all():
                 writer.writerow([d.id, d.borrower_profile_id, d.document_name, d.status, d.created_at])
+        else:
+            flash("That report is not available for this admin workspace.", "warning")
+            return redirect(url_for("admin.reports"))
 
         output.seek(0)
         csv_data = output.getvalue()
@@ -590,7 +952,14 @@ def reports():
             mimetype="text/csv"
         )
 
-    return render_template("admin/reports.html")
+    return render_template(
+        "admin/reports.html",
+        company=company,
+        total_users=total_users,
+        total_loans=total_loans,
+        total_docs=total_docs,
+        total_invites=total_invites,
+    )
 
 
 # =========================================================
@@ -598,10 +967,10 @@ def reports():
 # =========================================================
 
 @admin_bp.route("/messages", methods=["GET", "POST"])
-@csrf.exempt
 @login_required
-@role_required("admin")
+@role_required("admin_group")
 def messages():
+    company = _company_scope()
     if request.method == "POST":
         content = (request.form.get("content") or "").strip()
         receiver_id = request.form.get("recipient_id", type=int)
@@ -619,6 +988,10 @@ def messages():
             flash("⚠️ Recipient not found.", "danger")
             return redirect(url_for("admin.messages"))
 
+        if company and recipient_user.company_id != company.id:
+            flash("You can only message users in your company workspace.", "warning")
+            return redirect(url_for("admin.messages"))
+
         new_msg = Message(
             sender_id=current_user.id,
             receiver_id=receiver_id,
@@ -634,19 +1007,39 @@ def messages():
         flash("Message sent.", "success")
         return redirect(url_for("admin.messages"))
 
-    msgs = (
-        Message.query
-        .order_by(Message.created_at.desc(), Message.id.desc())
-        .limit(50)
-        .all()
-    )
+    if company:
+        users = (
+            User.query
+            .filter_by(company_id=company.id)
+            .order_by(User.first_name.asc(), User.last_name.asc())
+            .all()
+        )
+        allowed_user_ids = {user.id for user in users}
+        allowed_user_ids.add(current_user.id)
+        msgs = [
+            msg for msg in (
+                Message.query
+                .order_by(Message.created_at.desc(), Message.id.desc())
+                .limit(200)
+                .all()
+            )
+            if msg.sender_id in allowed_user_ids and msg.receiver_id in allowed_user_ids
+        ][:50]
+    else:
+        msgs = (
+            Message.query
+            .order_by(Message.created_at.desc(), Message.id.desc())
+            .limit(50)
+            .all()
+        )
 
-    users = User.query.order_by(User.first_name.asc(), User.last_name.asc()).all()
+        users = User.query.order_by(User.first_name.asc(), User.last_name.asc()).all()
 
     return render_template(
         "admin/messages.html",
         messages=msgs,
-        users=users
+        users=users,
+        company=company,
     )
     
 # =========================================================
@@ -665,8 +1058,7 @@ def verify_data():
 
     return render_template("admin/verify_data.html", docs=docs)
 
-
-@admin_bp.route("/verify_doc/<int:doc_id>")
+@admin_bp.route("/verify_doc/<int:doc_id>", methods=["POST"])
 @login_required
 @role_required("admin")
 def verify_doc(doc_id):
@@ -685,22 +1077,54 @@ def verify_doc(doc_id):
 @login_required
 @role_required("admin")
 def analytics():
-    stats = {
-        "users": User.query.count(),
-        "loans": LoanApplication.query.count(),
-        "docs": LoanDocument.query.count(),
-        "borrowers": User.query.filter_by(role="borrower").count(),
-        "officers": User.query.filter_by(role="loan_officer").count()
-    }
+    company = _company_scope()
 
-    loan_status_labels = []
-    loan_status_values = []
+    if company:
+        users_query = User.query.filter_by(company_id=company.id)
+        total_users = users_query.count()
+        total_loans = LoanApplication.query.filter_by(company_id=company.id).count() if hasattr(LoanApplication, "company_id") else 0
+        total_docs = LoanDocument.query.filter_by(company_id=company.id).count() if hasattr(LoanDocument, "company_id") else 0
+        active_borrowers = BorrowerProfile.query.filter_by(company_id=company.id).count() if hasattr(BorrowerProfile, "company_id") else 0
+        loan_rows = LoanApplication.query.filter_by(company_id=company.id).all() if hasattr(LoanApplication, "company_id") else []
+        user_rows = users_query.all()
+        ai_summary = (
+            f"{company.name} analytics: {total_users} team user(s), "
+            f"{total_loans} loan file(s), {total_docs} document(s), and "
+            f"{active_borrowers} borrower profile(s) in this workspace."
+        )
+    else:
+        users_query = User.query
+        total_users = users_query.count()
+        total_loans = LoanApplication.query.count()
+        total_docs = LoanDocument.query.count()
+        active_borrowers = User.query.filter_by(role="borrower").count()
+        loan_rows = LoanApplication.query.all()
+        user_rows = users_query.all()
+        ai_summary = (
+            f"Platform analytics: {total_users} total user(s), {total_loans} loan file(s), "
+            f"{total_docs} document(s), and {active_borrowers} borrower account(s)."
+        )
+
+    loan_status_counts = defaultdict(int)
+    for loan in loan_rows:
+        loan_status_counts[(getattr(loan, "status", None) or "unknown").replace("_", " ").title()] += 1
+
+    role_counts = defaultdict(int)
+    for user in user_rows:
+        role_counts[(getattr(user, "role", None) or "unknown").replace("_", " ").title()] += 1
 
     return render_template(
         "admin/analytics.html",
-        stats=stats,
-        loan_status_labels=loan_status_labels,
-        loan_status_values=loan_status_values,
+        company=company,
+        total_users=total_users,
+        total_loans=total_loans,
+        total_docs=total_docs,
+        active_borrowers=active_borrowers,
+        loan_status_labels=list(loan_status_counts.keys()),
+        loan_status_values=list(loan_status_counts.values()),
+        role_labels=list(role_counts.keys()),
+        role_values=list(role_counts.values()),
+        ai_summary=ai_summary,
     )
 
 @admin_bp.route("/ai-dashboard", methods=["GET"])
@@ -905,32 +1329,92 @@ def ai_dashboard():
     )
 
 @admin_bp.route("/ai/refresh/<string:target>", methods=["POST"])
-@csrf.exempt
 @login_required
 @role_required("admin")
 def ai_refresh(target):
     time.sleep(1.2)
     flash(f"{target} refreshed successfully.", "success")
-    return jsonify({"success": True, "target": target})
+    return jsonify(
+        {
+            "success": True,
+            "target": target,
+            "message": f"{target.replace('_', ' ').title()} refreshed successfully.",
+        }
+    )
 
 @admin_bp.route("/company/<int:company_id>/dashboard")
 @login_required
-@role_required("admin", "master_admin", "lending_admin")
+@role_required("admin_group")
 def company_dashboard(company_id):
     company = Company.query.get_or_404(company_id)
+    access_redirect = _ensure_company_access(company)
+    if access_redirect:
+        return access_redirect
 
-    team_members = User.query.filter_by(company_id=company.id).all()
-    invites = UserInvite.query.filter_by(company_id=company.id).all()
-    loans = LoanApplication.query.filter_by(company_id=company.id).all() if hasattr(LoanApplication, "company_id") else []
+    team_members = User.query.filter_by(company_id=company.id).order_by(User.created_at.desc()).all()
+    invites = UserInvite.query.filter_by(company_id=company.id).order_by(UserInvite.created_at.desc()).all()
+    loans = LoanApplication.query.filter_by(company_id=company.id).order_by(LoanApplication.created_at.desc()).all() if hasattr(LoanApplication, "company_id") else []
     borrowers = BorrowerProfile.query.filter_by(company_id=company.id).all() if hasattr(BorrowerProfile, "company_id") else []
     docs = LoanDocument.query.filter_by(company_id=company.id).all() if hasattr(LoanDocument, "company_id") else []
+    access_requests = [
+        item for item in (
+            AccessRequest.query
+            .order_by(AccessRequest.created_at.desc())
+            .limit(100)
+            .all()
+        )
+        if _can_access_request(item)
+    ]
+
+    member_ids = [member.id for member in team_members]
+    recent_messages = []
+    if member_ids:
+        allowed_user_ids = set(member_ids)
+        allowed_user_ids.add(current_user.id)
+        recent_messages = [
+            msg for msg in (
+                Message.query
+                .order_by(Message.created_at.desc(), Message.id.desc())
+                .limit(200)
+                .all()
+            )
+            if msg.sender_id in allowed_user_ids and msg.receiver_id in allowed_user_ids
+        ][:5]
+
+    active_team_count = len([member for member in team_members if getattr(member, "is_active", False)])
+    pending_invites = [invite for invite in invites if (invite.status or "").lower() == "pending"]
+    accepted_invites = [invite for invite in invites if (invite.status or "").lower() == "accepted"]
+    pending_requests = [item for item in access_requests if (item.status or "").lower() == "pending"]
+
+    role_counts = defaultdict(int)
+    for member in team_members:
+        role_counts[(getattr(member, "role", None) or "unknown").replace("_", " ").title()] += 1
+
+    invite_counts = defaultdict(int)
+    for invite in invites:
+        invite_counts[(getattr(invite, "status", None) or "pending").replace("_", " ").title()] += 1
+
+    team_growth_labels, team_growth_series = _monthly_series(team_members, "created_at", 6)
+    invite_growth_labels, invite_growth_series = _monthly_series(invites, "created_at", 6)
+
+    workspace_health = "Attention Needed" if company.is_blocked or company.billing_status == "past_due" else "Healthy"
+    workspace_summary = (
+        f"{company.name} has {len(team_members)} team member(s), "
+        f"{len(pending_invites)} pending invite(s), {len(loans)} loan file(s), "
+        f"and {len(pending_requests)} access request(s) waiting on review."
+    )
+    dashboard_preferences = _company_dashboard_settings(company)
 
     stats = {
         "team_members": len(team_members),
-        "pending_invites": len([i for i in invites if (i.status or "").lower() == "pending"]),
+        "active_team_members": active_team_count,
+        "pending_invites": len(pending_invites),
+        "accepted_invites": len(accepted_invites),
         "loans": len(loans),
         "borrowers": len(borrowers),
         "documents": len(docs),
+        "requests": len(access_requests),
+        "pending_requests": len(pending_requests),
     }
 
     return render_template(
@@ -940,9 +1424,93 @@ def company_dashboard(company_id):
         invites=invites[:5],
         loans=loans[:5],
         borrowers=borrowers[:5],
+        recent_messages=recent_messages,
+        access_requests=access_requests[:5],
         stats=stats,
+        role_labels=list(role_counts.keys()),
+        role_values=list(role_counts.values()),
+        invite_status_labels=list(invite_counts.keys()),
+        invite_status_values=list(invite_counts.values()),
+        team_growth_labels=team_growth_labels,
+        team_growth_series=team_growth_series,
+        invite_growth_labels=invite_growth_labels,
+        invite_growth_series=invite_growth_series,
+        workspace_health=workspace_health,
+        workspace_summary=workspace_summary,
+        dashboard_preferences=dashboard_preferences,
         title=f"{company.name} Dashboard",
         active_tab="companies",
+    )
+
+
+@admin_bp.route("/company/<int:company_id>/settings", methods=["GET", "POST"])
+@login_required
+@role_required("admin_group")
+@admin_required
+def company_settings(company_id):
+    company = Company.query.get_or_404(company_id)
+    access_redirect = _ensure_company_access(company)
+    if access_redirect:
+        return access_redirect
+
+    if request.method == "POST":
+        action_type = (request.form.get("action_type") or "profile").strip().lower()
+
+        if action_type == "dashboard_layout":
+            raw_layout = (request.form.get("dashboard_layout_json") or "").strip()
+            try:
+                parsed_layout = json.loads(raw_layout) if raw_layout else {}
+            except (TypeError, ValueError):
+                parsed_layout = {}
+
+            merged_layout = _company_dashboard_defaults()
+            if isinstance(parsed_layout, dict):
+                for key in merged_layout:
+                    if key in parsed_layout:
+                        merged_layout[key] = bool(parsed_layout[key])
+
+            if _company_dashboard_column_exists():
+                db.session.execute(
+                    text("UPDATE companies SET dashboard_settings = :payload WHERE id = :company_id"),
+                    {"payload": json.dumps(merged_layout), "company_id": company.id},
+                )
+                db.session.commit()
+                flash("Dashboard layout saved for this company workspace.", "success")
+            else:
+                flash("Dashboard layout migration is not active yet. Run the latest database migration to persist this across devices.", "warning")
+            return redirect(url_for("admin.company_settings", company_id=company.id))
+
+        company.name = (request.form.get("name") or company.name or "").strip() or company.name
+        company.email_domain = ((request.form.get("email_domain") or "").strip().lower() or None)
+        company.address = (request.form.get("address") or "").strip() or None
+        company.city = (request.form.get("city") or "").strip() or None
+        company.state = (request.form.get("state") or "").strip() or None
+        company.zip = (request.form.get("zip") or "").strip() or None
+        company.is_active = str(request.form.get("is_active") or "false").lower() in ("1", "true", "yes", "on")
+
+        db.session.commit()
+        flash("Company workspace settings updated.", "success")
+        return redirect(url_for("admin.company_settings", company_id=company.id))
+
+    stats = {
+        "team_members": User.query.filter_by(company_id=company.id).count(),
+        "pending_invites": UserInvite.query.filter_by(company_id=company.id, status="pending").count(),
+        "requests": len([
+            item for item in (
+                AccessRequest.query
+                .order_by(AccessRequest.created_at.desc())
+                .limit(100)
+                .all()
+            )
+            if _can_access_request(item)
+        ]),
+    }
+
+    return render_template(
+        "admin/company_settings.html",
+        company=company,
+        stats=stats,
+        dashboard_preferences=_company_dashboard_settings(company),
     )
 
 
@@ -1189,7 +1757,6 @@ def resend_license_application_invite(app_id):
     return redirect(url_for("admin.licensing_applications"))
 
 @admin_bp.route("/users/<int:user_id>/block", methods=["POST"])
-@csrf.exempt
 @login_required
 @role_required("admin_group")
 def block_user(user_id):
@@ -1211,7 +1778,6 @@ def block_user(user_id):
 
 
 @admin_bp.route("/users/<int:user_id>/unblock", methods=["POST"])
-@csrf.exempt
 @login_required
 @role_required("admin_group")
 def unblock_user(user_id):
@@ -1229,7 +1795,6 @@ def unblock_user(user_id):
     return redirect(request.referrer or url_for("system.users"))
 
 @admin_bp.route("/companies/<int:company_id>/block", methods=["POST"])
-@csrf.exempt
 @login_required
 @role_required("admin_group")
 def block_company(company_id):
@@ -1254,7 +1819,6 @@ def block_company(company_id):
 
 
 @admin_bp.route("/companies/<int:company_id>/unblock", methods=["POST"])
-@csrf.exempt
 @login_required
 @role_required("admin_group")
 def unblock_company(company_id):

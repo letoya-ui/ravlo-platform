@@ -7,6 +7,11 @@
   <p>Borrower: <strong>{{ borrower.full_name }}</strong></p>
 
   <form method="POST">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="form-group">
+      <label for="document_name">Document Name</label>
+      <input id="document_name" name="document_name" class="form-control" placeholder="e.g., W-2, bank statements, operating agreement">
+    </div>
     <div class="form-group">
       <label for="notes">Notes / Instructions</label>
       <textarea id="notes" name="notes" class="form-control" rows="4"
