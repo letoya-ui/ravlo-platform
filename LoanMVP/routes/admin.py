@@ -34,7 +34,7 @@ import time
 
 admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
 assistant = AIAssistant()
-FULL_ADMIN_ROLES = {"platform_admin", "master_admin", "lending_admin"}
+FULL_ADMIN_ROLES = {"platform_admin", "master_admin", "lending_admin", "executive"}
 
 
 def _single_admin_mode_enabled() -> bool:

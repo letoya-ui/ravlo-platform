@@ -4,6 +4,7 @@
 
 ADMIN_ROLES = {
     "admin",
+    "executive",
     "master_admin",
     "lending_admin",
     "platform_admin",
@@ -63,6 +64,7 @@ def get_role_label(role: str) -> str:
         "Platform Admin": "Platform Admin (Full Control)",
         "Master Admin": "Master Admin (Operations)",
         "Lending Admin": "Lending Admin",
+        "Executive": "Executive",
         "Admin": "Company Admin",
         "Loan Officer": "Loan Officer",
         "Processor": "Processor",
@@ -82,6 +84,8 @@ def get_role_badge_class(role: str) -> str:
     if role == "master_admin":
         return "badge badge-warning"
     if role == "lending_admin":
+        return "badge badge-info"
+    if role == "executive":
         return "badge badge-info"
     if role == "admin":
         return "badge badge-primary"
@@ -161,6 +165,7 @@ def get_role_display(role: str) -> str:
         "platform_admin": "Platform Admin",
         "master_admin": "Master Admin",
         "lending_admin": "Lending Admin",
+        "executive": "Executive",
         "admin": "Admin",
         "loan_officer": "Loan Officer",
         "processor": "Processor",

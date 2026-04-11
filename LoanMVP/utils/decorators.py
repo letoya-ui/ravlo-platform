@@ -5,6 +5,7 @@ from LoanMVP.utils.blocking_helpers import is_user_blocked, get_user_block_messa
 
 ADMIN_ROLES = {
     "admin",
+    "executive",
     "master_admin",
     "lending_admin",
     "platform_admin",
@@ -42,6 +43,7 @@ def admin_role_label(role: str) -> str:
         "platform_admin": "Platform Admin",
         "master_admin": "Master Admin",
         "lending_admin": "Lending Admin",
+        "executive": "Executive",
         "admin": "Admin",
         "loan_officer": "Loan Officer",
         "processor": "Processor",

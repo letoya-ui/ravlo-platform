@@ -30,6 +30,7 @@ def get_role_display(role: str) -> str:
         "platform_admin": "Platform Admin",
         "master_admin": "Master Admin",
         "lending_admin": "Lending Admin",
+        "executive": "Executive",
         "admin": "Admin",
 
         "loan_officer": "Loan Officer",
