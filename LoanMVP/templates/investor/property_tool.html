@@ -43,9 +43,6 @@ Search by address or ZIP and Ravlo will return a short ranked list of the strong
 
     <label class="ravlo-label mt-16">ZIP Code</label>
     <input id="zip" class="ravlo-input" placeholder="e.g. 10924" />
-    <button class="ravlo-btn ghost w-full mt-12" type="button" onclick="useCurrentLocation()">
-      Use Current Location
-    </button>
 
     <label class="ravlo-label mt-16">Strategy</label>
     <select id="strategy" class="ravlo-input">
@@ -177,57 +174,6 @@ function shortText(value, max = 140){
   const text = String(value || "").trim();
   if (!text) return "";
   return text.length > max ? `${text.slice(0, max - 1)}…` : text;
-}
-
-async function useCurrentLocation(){
-  const status = document.getElementById("searchStatus");
-  if (!navigator.geolocation){
-    status.textContent = "Geolocation is not supported in this browser.";
-    return;
-  }
-
-  status.textContent = "Getting your current location...";
-
-  navigator.geolocation.getCurrentPosition(async (position) => {
-    try {
-      const { latitude, longitude } = position.coords;
-      const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${encodeURIComponent(latitude)}&lon=${encodeURIComponent(longitude)}`;
-      const res = await fetch(url, {
-        headers: { "Accept": "application/json" }
-      });
-
-      if (!res.ok){
-        throw new Error(`Reverse geocode failed (${res.status})`);
-      }
-
-      const data = await res.json();
-      const addr = data.address || {};
-
-      const road = addr.road || addr.pedestrian || addr.footway || "";
-      const house = addr.house_number || "";
-      const city = addr.city || addr.town || addr.village || addr.hamlet || "";
-      const state = addr.state_code || addr.state || "";
-      const zip = addr.postcode || "";
-
-      const addressText = `${house} ${road}`.trim();
-      if (addressText) document.getElementById("address").value = addressText;
-      if (city) document.getElementById("city").value = city;
-      if (state) document.getElementById("state").value = state;
-      if (zip) document.getElementById("zip").value = zip;
-
-      status.textContent = "Current location applied. Tap Find Deals to run analysis.";
-    } catch (err) {
-      console.error(err);
-      status.textContent = "Could not resolve address from your location. You can still search by ZIP.";
-    }
-  }, (error) => {
-    console.error(error);
-    status.textContent = "Location access was denied or unavailable.";
-  }, {
-    enableHighAccuracy: true,
-    timeout: 12000,
-    maximumAge: 300000
-  });
 }
 
 function resolveStatusText(r, signal){
