@@ -146,6 +146,8 @@ class Config:
     COMPANY_EMAIL = os.environ.get("COMPANY_EMAIL", "info@ravlohq.com")
     COMPANY_PHONE = os.environ.get("COMPANY_PHONE", "")
     COMPANY_ADDRESS = os.environ.get("COMPANY_ADDRESS", "")
+    OWNER_ADMIN_EMAIL = os.environ.get("OWNER_ADMIN_EMAIL", "letoya@ravlohq.com").strip().lower()
+    SINGLE_ADMIN_MODE = _env_bool("SINGLE_ADMIN_MODE", True)
 
     LOG_FOLDER = LOG_FOLDER
 

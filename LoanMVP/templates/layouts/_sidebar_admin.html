@@ -23,6 +23,12 @@
       <span>Dashboard</span>
     </a>
 
+    <a href="{{ url_for('admin.demo_center') }}"
+       class="re-nav-link {% if ep == 'admin.demo_center' %}active{% endif %}">
+      <i class="icon lucide lucide-panels-top-left"></i>
+      <span>Demo Center</span>
+    </a>
+
     {% if not is_company_admin %}
       <a href="{{ url_for('admin.analytics') }}"
          class="re-nav-link {% if ep == 'admin.analytics' %}active{% endif %}">

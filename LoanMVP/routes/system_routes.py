@@ -4,7 +4,7 @@
 
 from flask import (
     Blueprint, render_template, request,
-    jsonify, redirect, url_for, flash
+    jsonify, redirect, url_for, flash, current_app
 )
 from flask_login import current_user
 from datetime import datetime
@@ -37,6 +37,14 @@ def _company_admin_guard(user):
         return None, redirect(url_for("admin.dashboard"))
 
     return company_id, None
+
+
+def _single_admin_mode_enabled() -> bool:
+    return bool(current_app.config.get("SINGLE_ADMIN_MODE", False))
+
+
+def _owner_admin_email() -> str:
+    return (current_app.config.get("OWNER_ADMIN_EMAIL") or "").strip().lower()
 
 
 # =========================================================
@@ -192,6 +200,8 @@ def users():
         ctx["users"] = User.query.order_by(User.created_at.desc()).all()
 
     ctx["title"] = "User Management"
+    ctx["single_admin_mode"] = _single_admin_mode_enabled()
+    ctx["owner_admin_email"] = _owner_admin_email()
     return render_template("system/users.html", **ctx)
 
 
@@ -206,6 +216,10 @@ def toggle_user(user_id):
         return redirect_response
 
     user = User.query.get_or_404(user_id)
+    if _single_admin_mode_enabled() and (user.email or "").strip().lower() == _owner_admin_email():
+        flash("The owner admin account is protected in single-admin mode.", "warning")
+        return redirect(url_for("system.users"))
+
     if _is_company_admin(current_user) and user.company_id != company_id:
         flash("You can only manage users from your own company.", "warning")
         return redirect(url_for("admin.company_dashboard", company_id=company_id))
@@ -227,6 +241,10 @@ def delete_user(user_id):
         return redirect_response
 
     user = User.query.get_or_404(user_id)
+    if _single_admin_mode_enabled() and (user.email or "").strip().lower() == _owner_admin_email():
+        flash("The owner admin account is protected in single-admin mode.", "warning")
+        return redirect(url_for("system.users"))
+
     if _is_company_admin(current_user) and user.company_id != company_id:
         flash("You can only manage users from your own company.", "warning")
         return redirect(url_for("admin.company_dashboard", company_id=company_id))

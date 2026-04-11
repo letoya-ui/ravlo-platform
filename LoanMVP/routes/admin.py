@@ -36,6 +36,79 @@ admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
 assistant = AIAssistant()
 FULL_ADMIN_ROLES = {"platform_admin", "master_admin", "lending_admin"}
 
+
+def _single_admin_mode_enabled() -> bool:
+    return bool(current_app.config.get("SINGLE_ADMIN_MODE", False))
+
+
+def _owner_admin_email() -> str:
+    return (current_app.config.get("OWNER_ADMIN_EMAIL") or "").strip().lower()
+
+
+def _demo_dashboard_cards():
+    return [
+        {
+            "role": "Investor",
+            "tagline": "Capital pipeline, deal room, and subscription-led access.",
+            "theme": "Investor OS",
+            "kpis": [
+                {"label": "Live Deals", "value": "12"},
+                {"label": "Funding Ready", "value": "$4.8M"},
+                {"label": "Active Plan", "value": "Pro"},
+            ],
+            "bullets": [
+                "Deal sourcing, rehab planning, and funding status in one command view.",
+                "Subscription-aware premium tooling, exports, and AI analysis states.",
+                "Investor-ready next steps, document progress, and saved-property watchlist.",
+            ],
+        },
+        {
+            "role": "Partners",
+            "tagline": "Marketplace visibility, request intake, and service ops.",
+            "theme": "Partner Network",
+            "kpis": [
+                {"label": "New Requests", "value": "18"},
+                {"label": "Acceptance Rate", "value": "86%"},
+                {"label": "Tier", "value": "Enterprise"},
+            ],
+            "bullets": [
+                "Shows partner request flow, proposal value, and unlocked tier features.",
+                "Highlights CRM, instant quote, AI assist, and portfolio showcase modules.",
+                "Works as a pitch surface for contractors, title, insurance, and vendors.",
+            ],
+        },
+        {
+            "role": "Loan Officers",
+            "tagline": "Pipeline command center for leads, files, and capital submissions.",
+            "theme": "Origination Desk",
+            "kpis": [
+                {"label": "Assigned Leads", "value": "34"},
+                {"label": "Active Files", "value": "21"},
+                {"label": "Capital Requests", "value": "7"},
+            ],
+            "bullets": [
+                "Pipeline stages for submitted, in review, approved, and investor capital loans.",
+                "Intake coverage, lead conversion, and borrower communication workload.",
+                "Designed as a live demo for lenders, broker partners, and recruiting.",
+            ],
+        },
+        {
+            "role": "Underwriting",
+            "tagline": "Conditions, risk review, and file movement through approval.",
+            "theme": "Risk Console",
+            "kpis": [
+                {"label": "Files in Review", "value": "14"},
+                {"label": "Conditions Cleared", "value": "92"},
+                {"label": "Avg Turn", "value": "2.1d"},
+            ],
+            "bullets": [
+                "Communicates operational control and review velocity for partners and investors.",
+                "Frames conditions, risk flags, and decision support as one clean workspace.",
+                "Pairs naturally with the investor funding timeline for cross-role storytelling.",
+            ],
+        },
+    ]
+
 # =========================================================
 # 🔐 ADMIN ONLY CHECK
 # =========================================================
@@ -540,6 +613,9 @@ def dashboard():
         "admin/dashboard.html",
         company=company,
         stats=stats,
+        demo_dashboards=_demo_dashboard_cards(),
+        single_admin_mode=_single_admin_mode_enabled(),
+        owner_admin_email=_owner_admin_email(),
         recent_requests=recent_requests,
         users=users,
         recent_invites=recent_invites,
@@ -551,6 +627,26 @@ def dashboard():
         user_growth_labels=user_growth_labels,
         user_growth_series=user_growth_series,
         server_load_value=server_load_value,
+    )
+
+
+@admin_bp.route("/demo-center")
+@login_required
+@role_required("admin_group")
+def demo_center():
+    demo_dashboards = _demo_dashboard_cards()
+    spotlight_metrics = {
+        "dashboards_ready": len(demo_dashboards),
+        "single_admin_mode": "Enabled" if _single_admin_mode_enabled() else "Disabled",
+        "owner_admin_email": _owner_admin_email() or "Not set",
+    }
+
+    return render_template(
+        "admin/demo_center.html",
+        demo_dashboards=demo_dashboards,
+        spotlight_metrics=spotlight_metrics,
+        single_admin_mode=_single_admin_mode_enabled(),
+        owner_admin_email=_owner_admin_email(),
     )
 
 
@@ -811,6 +907,13 @@ def invite_team_member(company_id):
     access_redirect = _ensure_company_access(company)
     if access_redirect:
         return access_redirect
+
+    if _single_admin_mode_enabled():
+        flash(
+            f"Single-admin mode is active. Only {_owner_admin_email()} can access this workspace.",
+            "warning",
+        )
+        return redirect(url_for("admin.company_dashboard", company_id=company.id))
 
     if request.method == "POST":
         first_name = (request.form.get("first_name") or "").strip()

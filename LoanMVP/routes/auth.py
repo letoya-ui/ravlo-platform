@@ -34,6 +34,14 @@ RESTRICTED_STAFF_ROLES = {
     "processor",
     "underwriter",
 }
+
+
+def _single_admin_mode_enabled() -> bool:
+    return bool(current_app.config.get("SINGLE_ADMIN_MODE", False))
+
+
+def _owner_admin_email() -> str:
+    return (current_app.config.get("OWNER_ADMIN_EMAIL") or "").strip().lower()
 # ============================================================
 # TOKEN HELPERS
 # ============================================================
@@ -138,6 +146,10 @@ def login():
             flash("Invalid email or password.", "danger")
             return render_template("auth/login.html", form=form)
 
+        if _single_admin_mode_enabled() and email != _owner_admin_email():
+            flash("This workspace is locked to the owner admin account.", "warning")
+            return render_template("auth/login.html", form=form)
+
         # ⭐ STEP 3: Sync subscription → features
         sync_features_with_subscription(user.id)
 
@@ -156,6 +168,10 @@ def login():
 
 @auth_bp.route("/register/invite/<token>", methods=["GET", "POST"])
 def register_from_invite(token):
+    if _single_admin_mode_enabled():
+        flash("Team invites are disabled while single-admin mode is active.", "warning")
+        return redirect(url_for("auth.login"))
+
     invite = UserInvite.query.filter_by(token=token).first_or_404()
 
     if invite.status != "pending":
@@ -239,6 +255,10 @@ def logout():
 # ============================================================
 @auth_bp.route("/register", methods=["GET", "POST"])
 def register():
+    if _single_admin_mode_enabled():
+        flash("Self-serve registration is disabled for this workspace.", "warning")
+        return redirect(url_for("auth.login"))
+
     form = RegisterForm()
 
     if form.validate_on_submit():
@@ -311,6 +331,10 @@ def post_login_redirect():
 
 @auth_bp.route("/register_borrower", methods=["GET", "POST"])
 def register_borrower():
+    if _single_admin_mode_enabled():
+        flash("Borrower registration is disabled for this workspace.", "warning")
+        return redirect(url_for("auth.login"))
+
     if request.method == "POST":
         full_name = (request.form.get("full_name") or "").strip()
         email = (request.form.get("email") or "").strip().lower()
@@ -415,6 +439,10 @@ def forgot_password():
 
 @auth_bp.route("/request-access", methods=["GET", "POST"])
 def request_access():
+    if _single_admin_mode_enabled():
+        flash("Access requests are disabled while single-admin mode is active.", "warning")
+        return redirect(url_for("auth.login"))
+
     requested_role = (request.args.get("requested_role") or request.form.get("requested_role") or "").strip().lower()
 
     if requested_role == "loan officer":
@@ -526,6 +554,10 @@ def load_user(user_id):
 
 @auth_bp.route("/accept-invite/<token>", methods=["GET", "POST"])
 def accept_invite(token):
+    if _single_admin_mode_enabled():
+        flash("Invites are disabled while single-admin mode is active.", "warning")
+        return redirect(url_for("auth.login"))
+
     invite = UserInvite.query.filter_by(token=token).first_or_404()
 
     if invite.status == "accepted":

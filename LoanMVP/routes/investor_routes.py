@@ -137,6 +137,69 @@ investor_bp = Blueprint("investor", __name__, url_prefix="/investor")
 client = OpenAI()
 
 
+def _subscription_catalog():
+    return {
+        "Free": {
+            "key": "free",
+            "price": 0,
+            "features": [
+                "Basic deal workspace",
+                "Save properties",
+                "Document uploads",
+            ],
+        },
+        "Pro": {
+            "key": "pro",
+            "price": 49,
+            "features": [
+                "AI deal insights",
+                "Renovation studio",
+                "Investor exports and reports",
+                "Portfolio intelligence",
+            ],
+        },
+        "Enterprise": {
+            "key": "enterprise",
+            "price": 149,
+            "features": [
+                "Everything in Pro",
+                "Priority support",
+                "Custom workflows",
+                "White-glove onboarding",
+            ],
+        },
+    }
+
+
+def _sync_investor_subscription_record(user, investor_profile=None):
+    plan_name = getattr(user, "subscription_plan", "Free")
+    plan_info = _subscription_catalog().get(plan_name, _subscription_catalog()["Free"])
+
+    if investor_profile is None:
+        investor_profile = InvestorProfile.query.filter_by(user_id=user.id).first()
+
+    if not investor_profile:
+        return None
+
+    subscription = (
+        SubscriptionPlan.query
+        .filter_by(investor_profile_id=investor_profile.id)
+        .order_by(SubscriptionPlan.created_at.desc())
+        .first()
+    )
+
+    if not subscription:
+        return None
+
+    subscription.plan_name = plan_name
+    subscription.price = plan_info["price"]
+    subscription.features = json.dumps(plan_info["features"])
+    subscription.status = "Active"
+    subscription.start_date = subscription.start_date or datetime.utcnow()
+    subscription.end_date = None
+    return subscription
+
+
 # -------------------------------------------------------------------
 # DEAL ARCHITECT HELPERS
 # -------------------------------------------------------------------
@@ -11962,19 +12025,35 @@ def payments():
 @login_required
 @role_required("investor")
 def subscription():
-    return redirect(url_for("investor.payments"))
+    investor_profile = InvestorProfile.query.filter_by(user_id=current_user.id).first()
+    active_subscription = _sync_investor_subscription_record(current_user, investor_profile)
+    if active_subscription:
+        db.session.commit()
+
+    current_plan = getattr(current_user, "subscription_plan", "Free")
+    return render_template(
+        "investor/subscription.html",
+        current_plan=current_plan,
+        subscription_catalog=_subscription_catalog(),
+        active_subscription=active_subscription,
+        investor_profile=investor_profile,
+        title="Subscription",
+        active_tab="subscription",
+    )
 
 
 @investor_bp.route("/subscription/upgrade", methods=["POST"])
 @login_required
 @role_required("investor")
 def upgrade_plan():
-    if hasattr(current_user, "subscription_plan"):
-        current_user.subscription_plan = "Pro"
-        db.session.commit()
-        flash("Subscription updated to Pro.", "success")
-    else:
-        flash("Subscription upgrades are not available for this account yet.", "warning")
+    selected_plan = (request.form.get("plan") or "Pro").strip().title()
+    if selected_plan not in _subscription_catalog():
+        selected_plan = "Pro"
+
+    current_user.subscription_plan = selected_plan
+    _sync_investor_subscription_record(current_user)
+    db.session.commit()
+    flash(f"Subscription updated to {selected_plan}.", "success")
     return redirect(url_for("investor.subscription"))
 
 
@@ -11982,12 +12061,10 @@ def upgrade_plan():
 @login_required
 @role_required("investor")
 def downgrade_plan():
-    if hasattr(current_user, "subscription_plan"):
-        current_user.subscription_plan = "Free"
-        db.session.commit()
-        flash("Subscription updated to Free.", "success")
-    else:
-        flash("Subscription changes are not available for this account yet.", "warning")
+    current_user.subscription_plan = "Free"
+    _sync_investor_subscription_record(current_user)
+    db.session.commit()
+    flash("Subscription updated to Free.", "success")
     return redirect(url_for("investor.subscription"))
 
 
