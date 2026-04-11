@@ -9,12 +9,12 @@ import hashlib
 import zipfile
 import copy
 import mimetypes
+from collections import defaultdict
 from datetime import datetime
 from decimal import Decimal, InvalidOperation
 from io import BytesIO
-from urllib.parse import urlencode, urlparse
-from collections import defaultdict
 from typing import Any, Dict
+from urllib.parse import urlencode, urlparse
 
 import boto3
 import requests
@@ -95,12 +95,21 @@ from LoanMVP.models.investor_models import (
     FundingRequest,
     Project,
 )
+try:
+    from LoanMVP.models.activity_models import InvestorActivity
+except Exception:
+    InvestorActivity = None
+
+try:
+    from LoanMVP.models.partner_models import PartnerRequest
+except Exception:
+    PartnerRequest = None
 
 # -------------------------
 # AI / Assistants
 # -------------------------
-from LoanMVP.ai.master_ai import master_ai, CMAIEngine
 from LoanMVP.ai.base_ai import AIAssistant
+from LoanMVP.ai.master_ai import master_ai, CMAIEngine
 
 # -------------------------
 # Core Services
@@ -164,22 +173,22 @@ from LoanMVP.utils.pdf_utils import add_signature_to_pdf
 # Investor Helper Modules
 # -------------------------
 from LoanMVP.services.investor.investor_helpers import (
-    _first_non_empty,
-    _clean_str,
-    _clean_num,
     _clean_int,
-    _safe_float,
-    _safe_int,
-    _safe_json_list,
-    _safe_json_loads_local,
-    safe_json_loads,
+    _clean_num,
+    _clean_str,
+    _first_non_empty,
     _json_default,
     _normalize_int,
     _normalize_percentage,
+    _safe_float,
+    _safe_int,
+    _safe_json_loads_local,
+    _safe_json_list,
+    fmt_money,
+    safe_decimal,
     safe_float,
     safe_int,
-    safe_decimal,
-    fmt_money,
+    safe_json_loads,
     split_ids,
 )
 
@@ -208,20 +217,20 @@ from LoanMVP.services.investor.investor_engine_helpers import (
 )
 
 from LoanMVP.services.investor.investor_media_helpers import (
+    _normalize_photo_urls,
+    _persist_listing_photo_refs,
+    _store_saved_property_media,
     _normalize_photo_list,
     _resolve_photo,
-    _normalize_photo_urls,
-    upload_listing_photos_to_spaces,
-    _persist_listing_photo_refs,
-    _try_upload_and_attach_listing_photos,
-    _store_saved_property_media,
     _saved_property_media,
-    download_image_bytes,
-    to_png_bytes,
-    to_webp_bytes,
+    _try_upload_and_attach_listing_photos,
     _upload_before_image,
     _upload_after_images_from_b64,
     _upload_build_images_from_b64,
+    download_image_bytes,
+    to_png_bytes,
+    to_webp_bytes,
+    upload_listing_photos_to_spaces,
 )
 
 from LoanMVP.services.investor.investor_mashvisor_helpers import (
@@ -253,50 +262,40 @@ from LoanMVP.services.investor.investor_project_studio_helpers import (
 )
 
 from LoanMVP.services.investor.investor_saved_property_helpers import (
-    _get_investor_profile_or_error,
-    _find_existing_saved_property,
     _assign_if_has_attr,
+    _find_existing_saved_property,
+    _get_investor_profile_or_error,
+    _merge_nonempty_dict,
     _persist_property_core_fields,
-    _upsert_saved_property_from_payload,
     _profile_id_filter,
     _property_payload_from_any,
-    _merge_nonempty_dict,
+    _upsert_saved_property_from_payload,
 )
 from LoanMVP.services.investor.investor_route_helpers import (
-    search_external_partners_google,
-    _set_if_attr,
-    _get_owned_deal_or_404,
-    _safe_first_related,
-    _deal_render_lock_active,
-    _set_deal_render_processing,
-    _clear_deal_render_processing,
-    _normalize_style_preset,
-    _stable_render_seed,
-    _save_before_url_to_deal,
-    _save_mockups_for_deal,
-    _get_rehab_mockups_for_deal,
-    _set_featured_rehab,
-    _featured_rehab_data,
-    _get_rehab_export_payload,
+    _annotate_deal_finder_opportunity,
+    _build_attom_fallback,
     _build_budget_seed_from_results,
     _build_loan_sizing_from_budget,
     _build_mashvisor_insight,
-    _build_attom_fallback,
-    _annotate_deal_finder_opportunity,
+    _clear_deal_render_processing,
+    _deal_render_lock_active,
+    _featured_rehab_data,
+    _get_owned_deal_or_404,
+    _get_rehab_mockups_for_deal,
+    _get_rehab_export_payload,
+    _normalize_style_preset,
+    _safe_first_related,
+    _save_before_url_to_deal,
+    _save_mockups_for_deal,
+    _set_deal_render_processing,
+    _set_featured_rehab,
+    _set_if_attr,
+    _stable_render_seed,
+    search_external_partners_google,
 )
 
 from LoanMVP.services.mashvisor_client import MashvisorClient
 from LoanMVP.utils.r2_storage import spaces_put_bytes
-
-try:
-    from LoanMVP.models.activity_models import InvestorActivity
-except Exception:
-    InvestorActivity = None
-
-try:
-    from LoanMVP.models.partner_models import PartnerRequest
-except Exception:
-    PartnerRequest = None
 
 
 investor_bp = Blueprint("investor", __name__, url_prefix="/investor")
