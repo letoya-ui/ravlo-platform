@@ -1,0 +1,36 @@
+{% extends "layouts/ravlo_auth_base.html" %}
+{% block title %}Restore Owner Admin • Ravlo{% endblock %}
+
+{% block auth_title %}Restore owner admin access{% endblock %}
+{% block auth_subtitle %}
+This workspace needs its owner admin account recreated before normal access can resume.
+{% endblock %}
+
+{% block auth_content %}
+<div class="ravlo-alert warning" style="margin-bottom: 18px;">
+Register the owner admin account using <strong>{{ owner_admin_email }}</strong>.
+</div>
+
+<div class="ravlo-form" style="gap: 14px;">
+  <div class="ravlo-field">
+    <label class="ravlo-label">Recovery email</label>
+    <input class="ravlo-input" value="{{ owner_admin_email }}" disabled>
+  </div>
+
+  <p style="margin: 0; color: #a8b7c8; line-height: 1.7;">
+    Once the owner admin account is restored, you can sign in and add the rest of your users again.
+  </p>
+
+  <form method="POST">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <button type="submit" class="ravlo-btn primary" style="width: 100%;">
+      Continue to recovery registration
+    </button>
+  </form>
+</div>
+
+<div class="ravlo-auth-foot">
+  Back to
+  <a href="{{ url_for('auth.login') }}">login</a>
+</div>
+{% endblock %}

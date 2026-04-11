@@ -65,6 +65,13 @@ def _workspace_recovery_mode() -> bool:
 
 def _registration_blocked() -> bool:
     return _single_admin_mode_enabled() and not _workspace_recovery_mode()
+
+
+def _auth_page_context() -> dict:
+    return {
+        "recovery_mode": _workspace_recovery_mode(),
+        "owner_admin_email": _owner_admin_email(),
+    }
 # ============================================================
 # TOKEN HELPERS
 # ============================================================
@@ -167,7 +174,7 @@ def login():
 
         if not user or not user.check_password(password):
             flash("Invalid email or password.", "danger")
-            return render_template("auth/login.html", form=form)
+            return render_template("auth/login.html", form=form, **_auth_page_context())
 
         if (
             _single_admin_mode_enabled()
@@ -175,21 +182,21 @@ def login():
             and email != _owner_admin_email()
         ):
             flash("This workspace is locked to the owner admin account.", "warning")
-            return render_template("auth/login.html", form=form)
+            return render_template("auth/login.html", form=form, **_auth_page_context())
 
         # ⭐ STEP 3: Sync subscription → features
         sync_features_with_subscription(user.id)
 
         if is_user_blocked(user):
             flash(get_user_block_message(user), "danger")
-            return render_template("auth/login.html", form=form)
+            return render_template("auth/login.html", form=form, **_auth_page_context())
 
         # Continue login
         login_user(user)
         next_page = request.args.get("next")
         return redirect(url_for("auth.post_login_redirect", next=next_page))
 
-    return render_template("auth/login.html", form=form)
+    return render_template("auth/login.html", form=form, **_auth_page_context())
 
 
 
@@ -302,13 +309,23 @@ def register():
                     f"Recovery mode is active. Register the owner admin account using {owner_email}.",
                     "warning",
                 )
-                return render_template("auth/register.html", form=form)
+                return render_template(
+                    "auth/register.html",
+                    form=form,
+                    recovery_mode=recovery_mode,
+                    owner_admin_email=owner_email,
+                )
             role = "admin"
 
         existing = User.query.filter_by(email=email).first()
         if existing:
             flash("An account with that email already exists.", "danger")
-            return render_template("auth/register.html", form=form)
+            return render_template(
+                "auth/register.html",
+                form=form,
+                recovery_mode=recovery_mode,
+                owner_admin_email=owner_email,
+            )
 
         parts = full_name.split(None, 1)
         first_name = parts[0] if parts else ""
@@ -344,7 +361,27 @@ def register():
     if request.method == "POST":
         flash("Please correct the errors in the form.", "danger")
 
-    return render_template("auth/register.html", form=form)
+    return render_template(
+        "auth/register.html",
+        form=form,
+        recovery_mode=recovery_mode,
+        owner_admin_email=_owner_admin_email(),
+    )
+
+
+@auth_bp.route("/restore-owner-admin", methods=["GET", "POST"])
+def restore_owner_admin():
+    if not _workspace_recovery_mode():
+        flash("Owner admin recovery is only available when the workspace needs to be restored.", "info")
+        return redirect(url_for("auth.login"))
+
+    if request.method == "POST":
+        return redirect(url_for("auth.register"))
+
+    return render_template(
+        "auth/restore_owner_admin.html",
+        owner_admin_email=_owner_admin_email(),
+    )
 
 
 @auth_bp.route("/post-login-redirect")

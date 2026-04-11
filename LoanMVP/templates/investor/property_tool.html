@@ -63,6 +63,7 @@ Search by address or ZIP and Ravlo will return a short ranked list of the strong
         <li>Top 4 ranked opportunities</li>
         <li>Strategy tag + estimated best use</li>
         <li>Why it made the list + risk notes</li>
+        <li>Exit strategy comparison cards</li>
         <li>A direct bridge into Project Studio</li>
       </ul>
     </div>
@@ -80,7 +81,7 @@ Search by address or ZIP and Ravlo will return a short ranked list of the strong
       <div class="dfv4-hero-pill-row">
         <span class="dfv4-hero-pill">Top 4 Picks</span>
         <span class="dfv4-hero-pill">Best Use First</span>
-        <span class="dfv4-hero-pill">Plan the Right Deal</span>
+        <span class="dfv4-hero-pill">Exit Strategies Ranked</span>
       </div>
     </div>
 
@@ -517,6 +518,42 @@ function resolveRiskNotes(r){
   return ["Validate scope, comps, and zoning before moving this into execution."];
 }
 
+function renderExitStrategySection(r){
+  if (!Array.isArray(r.exit_strategy_cards) || !r.exit_strategy_cards.length) {
+    return "";
+  }
+
+  return `
+    <div class="dfv4-exit-grid">
+      ${r.exit_strategy_cards.map(card => {
+        const isBest = r.best_exit_strategy === card.label;
+        const label = card.headline_label || "Signal";
+        const value =
+          card.headline_value !== null && card.headline_value !== undefined
+            ? (label.toLowerCase().includes("profit") || label.toLowerCase().includes("flow")
+                ? money(card.headline_value)
+                : prettyNumber(card.headline_value))
+            : "—";
+
+        return `
+          <div class="dfv4-exit-card ${isBest ? "best" : ""}">
+            <div class="dfv4-exit-title">${escapeHtml(card.label || "Strategy")}</div>
+            <div class="dfv4-exit-value">${escapeHtml(value)}</div>
+            <div class="dfv4-exit-label">${escapeHtml(label)}</div>
+            <div class="dfv4-exit-summary">${escapeHtml(card.summary || "")}</div>
+          </div>
+        `;
+      }).join("")}
+    </div>
+    ${r.best_exit_strategy ? `
+      <div class="dfv4-best-exit">
+        <strong>Best Exit:</strong> ${escapeHtml(r.best_exit_strategy)}
+        ${r.best_exit_reason ? `<span class="muted">— ${escapeHtml(r.best_exit_reason)}</span>` : ""}
+      </div>
+    ` : ""}
+  `;
+}
+
 function renderCards(results){
   const root = document.getElementById("results");
 
@@ -619,6 +656,8 @@ function renderCards(results){
               </div>
             `).join("")}
           </div>
+
+          ${renderExitStrategySection(r)}
 
           <div class="dfv4-engine-grid">
             <div><span>Opportunity Tier</span><strong>${escapeHtml(tier)}</strong></div>
@@ -862,6 +901,14 @@ async function runSearch(){
 .dfv4-fact{padding:.7rem .75rem;border-radius:12px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08)}
 .dfv4-fact span{display:block;color:var(--muted);margin-bottom:.18rem;font-size:.73rem;text-transform:uppercase;letter-spacing:.04em}
 .dfv4-fact strong{color:var(--text);font-size:.86rem;line-height:1.45}
+.dfv4-exit-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.6rem;margin-top:.1rem}
+.dfv4-exit-card{padding:.7rem .75rem;border-radius:12px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);display:flex;flex-direction:column;gap:.2rem;transition:all .2s ease}
+.dfv4-exit-card.best{background:rgba(37,99,235,.15);border-color:rgba(96,165,250,.35);box-shadow:0 0 0 1px rgba(96,165,250,.2) inset}
+.dfv4-exit-title{font-size:.72rem;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);font-weight:800}
+.dfv4-exit-value{font-size:1.05rem;font-weight:900;color:var(--text)}
+.dfv4-exit-label{font-size:.7rem;color:#a9c4ff;font-weight:700}
+.dfv4-exit-summary{font-size:.72rem;color:var(--muted);line-height:1.35}
+.dfv4-best-exit{margin-top:.2rem;font-size:.78rem;color:#dbeafe}
 .dfv4-engine-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.6rem}
 .dfv4-engine-grid div{padding:.7rem .75rem;border-radius:12px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08)}
 .dfv4-engine-grid span{display:block;color:var(--muted);margin-bottom:.2rem;font-size:.78rem}
@@ -872,7 +919,7 @@ async function runSearch(){
 .dfv4-actions{display:flex;gap:.5rem;flex-wrap:wrap}
 .dfv4-empty{min-height:240px;display:flex;flex-direction:column;justify-content:center;align-items:flex-start;border:1px dashed rgba(255,255,255,.12);background:rgba(255,255,255,.02)}
 @media (max-width:1200px){.dfv4-shell{grid-template-columns:1fr}.dfv4-search-panel{position:relative;top:0}}
-@media (max-width:900px){.dfv4-grid{grid-template-columns:1fr}.dfv4-summary-metrics{min-width:unset;width:100%;grid-template-columns:1fr 1fr}}
+@media (max-width:900px){.dfv4-grid{grid-template-columns:1fr}.dfv4-summary-metrics{min-width:unset;width:100%;grid-template-columns:1fr 1fr}.dfv4-exit-grid{grid-template-columns:1fr}}
 @media (max-width:640px){.dfv4-form-grid,.dfv4-engine-grid,.dfv4-summary-metrics,.dfv4-fact-grid{grid-template-columns:1fr}}
 </style>
 {% endblock %}
@@ -887,6 +934,10 @@ Notes:
    - SavedProperty.image_url
    - SavedProperty.listing_photos_json
    - Deal.results_json["listing_photos"]
+4) This template expects each property result to optionally include:
+   - exit_strategy_cards: [{label, headline_value, headline_label, summary, key, metrics}]
+   - best_exit_strategy
+   - best_exit_reason
 
 Recommended route behavior:
 - /api/property_tool_save_and_analyze should create/update a real Deal
