@@ -12,7 +12,7 @@ Central system management for users, onboarding, invites, lending operations, an
 {% endblock %}
 
 {% block topbar_actions %}
-  <a class="re-btn primary sm" href="{% if company %}{{ url_for('admin.invite_team_member', company_id=company.id) }}{% else %}#{% endif %}">
+  <a class="re-btn primary sm" href="{% if company %}{{ url_for('admin.invite_team_member', company_id=company.id) }}{% else %}{{ url_for('admin.companies') }}{% endif %}">
     <i class="lucide lucide-user-plus"></i>
     Send Register Request
   </a>
@@ -90,7 +90,7 @@ Central system management for users, onboarding, invites, lending operations, an
             <div class="eyebrow">WORKSPACE MODE</div>
             <h3 style="margin:.35rem 0 .2rem;">Single Admin Lock</h3>
             <div class="re-card-subtitle">
-              Access is limited to {{ owner_admin_email }} and approved executive leadership accounts. New registrations and team invites are disabled.
+              Access is limited to {{ owner_admin_email }} and approved executive leadership accounts. Self-serve registration is disabled, but executive-approved invites remain available.
             </div>
           </div>
           <a class="re-btn ghost sm" href="{{ url_for('system.users') }}">Review Users</a>
@@ -353,7 +353,7 @@ Central system management for users, onboarding, invites, lending operations, an
             <i class="lucide lucide-file-text"></i>
             Reports
           <a class="re-btn primary sm"
-             href="{% if company %}{{ url_for('admin.invite_team_member', company_id=company.id) }}{% else %}#{% endif %}">
+             href="{% if company %}{{ url_for('admin.invite_team_member', company_id=company.id) }}{% else %}{{ url_for('admin.companies') }}{% endif %}">
             <i class="lucide lucide-send"></i>
             Send Invite
           </a>             

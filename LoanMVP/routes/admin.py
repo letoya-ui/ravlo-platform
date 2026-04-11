@@ -908,9 +908,9 @@ def invite_team_member(company_id):
     if access_redirect:
         return access_redirect
 
-    if _single_admin_mode_enabled():
+    if _single_admin_mode_enabled() and not _is_full_admin(current_user):
         flash(
-            f"Single-admin mode is active. Only {_owner_admin_email()} can access this workspace.",
+            f"Single-admin mode is active. Company admins cannot invite users while {_owner_admin_email()} controls workspace access.",
             "warning",
         )
         return redirect(url_for("admin.company_dashboard", company_id=company.id))
@@ -978,6 +978,13 @@ def resend_team_invite(company_id, invite_id):
     access_redirect = _ensure_company_access(company)
     if access_redirect:
         return access_redirect
+
+    if _single_admin_mode_enabled() and not _is_full_admin(current_user):
+        flash(
+            f"Single-admin mode is active. Company admins cannot resend invites while {_owner_admin_email()} controls workspace access.",
+            "warning",
+        )
+        return redirect(url_for("admin.company_dashboard", company_id=company.id))
 
     invite = UserInvite.query.get_or_404(invite_id)
     if invite.company_id != company.id:

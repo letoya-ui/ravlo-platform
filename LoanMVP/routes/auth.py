@@ -218,10 +218,6 @@ def login():
 
 @auth_bp.route("/register/invite/<token>", methods=["GET", "POST"])
 def register_from_invite(token):
-    if _registration_blocked():
-        flash("Team invites are disabled while single-admin mode is active.", "warning")
-        return redirect(url_for("auth.login"))
-
     invite = UserInvite.query.filter_by(token=token).first_or_404()
 
     if invite.status != "pending":
@@ -650,10 +646,6 @@ def load_user(user_id):
 
 @auth_bp.route("/accept-invite/<token>", methods=["GET", "POST"])
 def accept_invite(token):
-    if _registration_blocked():
-        flash("Invites are disabled while single-admin mode is active.", "warning")
-        return redirect(url_for("auth.login"))
-
     invite = UserInvite.query.filter_by(token=token).first_or_404()
 
     if invite.status == "accepted":

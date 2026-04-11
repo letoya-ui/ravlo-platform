@@ -7,7 +7,7 @@
 {% block topbar_actions %}
   {% if not single_admin_mode %}
   <a class="re-btn primary sm"
-     href="{% if company %}{{ url_for('admin.invite_team_member', company_id=company.id) }}{% else %}#{% endif %}">
+     href="{% if company %}{{ url_for('admin.invite_team_member', company_id=company.id) }}{% else %}{{ url_for('admin.companies') }}{% endif %}">
     <i class="lucide lucide-send"></i>
      Send Invite
    </a>
@@ -29,7 +29,7 @@
         <div class="eyebrow">SINGLE ADMIN MODE</div>
         <h3 style="margin:.35rem 0 .2rem;">Owner Account Protected</h3>
         <div class="re-card-subtitle">
-          The workspace is locked to {{ owner_admin_email }} and approved executive leadership accounts. Registrations and invites are disabled.
+          The workspace is locked to {{ owner_admin_email }} and approved executive leadership accounts. Self-serve registrations are disabled, but executive-approved invites remain available.
         </div>
       </div>
     </div>
