@@ -12032,7 +12032,7 @@ def subscription():
 
     current_plan = getattr(current_user, "subscription_plan", "Free")
     return render_template(
-        "investor/subscription.html",
+        "investor/subscription_v2.html",
         current_plan=current_plan,
         subscription_catalog=_subscription_catalog(),
         active_subscription=active_subscription,
