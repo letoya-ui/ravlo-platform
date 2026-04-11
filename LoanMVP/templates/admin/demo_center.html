@@ -1,0 +1,127 @@
+{% extends "layouts/ravlo_employee_base.html" %}
+{% block title %}Admin • Demo Center{% endblock %}
+{% block page_title %}Demo Center{% endblock %}
+{% block page_subline %}Investor, partner, and lending walkthrough dashboards prepared for demos and investor conversations.{% endblock %}
+
+{% block topbar_actions %}
+  <a class="re-btn ghost sm" href="{{ url_for('admin.dashboard') }}">
+    <i class="lucide lucide-arrow-left"></i>
+    Back to Admin
+  </a>
+{% endblock %}
+
+{% block content %}
+<style>
+  .demo-hero {
+    display:grid;
+    grid-template-columns:1.3fr .9fr;
+    gap:18px;
+  }
+  .demo-grid {
+    display:grid;
+    grid-template-columns:repeat(auto-fit, minmax(260px, 1fr));
+    gap:16px;
+    margin-top:16px;
+  }
+  .demo-card {
+    border-radius:22px;
+    padding:20px;
+    border:1px solid rgba(255,255,255,.08);
+    background:
+      radial-gradient(circle at top right, rgba(99, 169, 255, .18), transparent 34%),
+      linear-gradient(180deg, rgba(18,28,42,.98), rgba(10,16,25,.98));
+    box-shadow:0 18px 40px rgba(0,0,0,.22);
+  }
+  .demo-tag {
+    font-size:.75rem;
+    text-transform:uppercase;
+    letter-spacing:.14em;
+    color:#8ec5ff;
+    font-weight:800;
+  }
+  .demo-kpis {
+    display:grid;
+    gap:10px;
+    margin-top:16px;
+  }
+  .demo-kpi {
+    display:flex;
+    justify-content:space-between;
+    gap:12px;
+    padding:10px 12px;
+    border-radius:14px;
+    background:rgba(255,255,255,.04);
+  }
+  .demo-list {
+    display:grid;
+    gap:8px;
+    margin:16px 0 0;
+    padding:0;
+    list-style:none;
+    color:#cbd6e2;
+  }
+  @media (max-width: 900px) {
+    .demo-hero {
+      grid-template-columns:1fr;
+    }
+  }
+</style>
+
+<section class="demo-hero">
+  <div class="re-card pad">
+    <div class="eyebrow">PRESENTATION READY</div>
+    <h2 style="margin:.45rem 0 .5rem;">Role-based demo dashboards are staged for investor, partner, and operator walkthroughs.</h2>
+    <div class="re-card-subtitle">
+      Use this page as the starting point for live demos. Each card summarizes the story, metrics, and premium surfaces to highlight.
+    </div>
+  </div>
+
+  <div class="re-card pad">
+    <div class="eyebrow">CONTROL STATUS</div>
+    <div class="demo-kpis">
+      <div class="demo-kpi"><span>Dashboards Ready</span><strong>{{ spotlight_metrics.dashboards_ready }}</strong></div>
+      <div class="demo-kpi"><span>Workspace Mode</span><strong>{{ spotlight_metrics.single_admin_mode }}</strong></div>
+      <div class="demo-kpi"><span>Owner Admin</span><strong>{{ spotlight_metrics.owner_admin_email }}</strong></div>
+    </div>
+  </div>
+</section>
+
+<section class="demo-grid">
+  {% for demo in demo_dashboards %}
+  <article class="demo-card">
+    <div class="demo-tag">{{ demo.theme }}</div>
+    <h3 style="margin:.5rem 0 .35rem;">{{ demo.role }}</h3>
+    <div style="color:#aab9c7; min-height:48px;">{{ demo.tagline }}</div>
+
+    <div class="demo-kpis">
+      {% for stat in demo.kpis %}
+      <div class="demo-kpi">
+        <span>{{ stat.label }}</span>
+        <strong>{{ stat.value }}</strong>
+      </div>
+      {% endfor %}
+    </div>
+
+    <ul class="demo-list">
+      {% for bullet in demo.bullets %}
+      <li>{{ bullet }}</li>
+      {% endfor %}
+    </ul>
+  </article>
+  {% endfor %}
+</section>
+
+{% if single_admin_mode %}
+<section class="re-card pad" style="margin-top:16px;">
+  <div class="section-head">
+    <div>
+      <div class="eyebrow">ACCESS MODEL</div>
+      <h3 style="margin:.35rem 0 .2rem;">Single-admin demo environment</h3>
+      <div class="re-card-subtitle">
+        Demo dashboards are available without keeping partner, investor, or staff logins active in the workspace.
+      </div>
+    </div>
+  </div>
+</section>
+{% endif %}
+{% endblock %}
