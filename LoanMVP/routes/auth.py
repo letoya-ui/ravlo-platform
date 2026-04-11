@@ -44,6 +44,22 @@ def _owner_admin_email() -> str:
     return (current_app.config.get("OWNER_ADMIN_EMAIL") or "").strip().lower()
 
 
+def _workspace_executive_roles() -> set[str]:
+    return {"executive", "platform_admin", "master_admin", "lending_admin"}
+
+
+def _can_bypass_single_admin_lock(user) -> bool:
+    if not user:
+        return False
+
+    email = (getattr(user, "email", "") or "").strip().lower()
+    if email == _owner_admin_email():
+        return True
+
+    role = (getattr(user, "role", "") or "").strip().lower()
+    return role in _workspace_executive_roles()
+
+
 def _owner_admin_exists() -> bool:
     owner_email = _owner_admin_email()
     if not owner_email:
@@ -179,9 +195,9 @@ def login():
         if (
             _single_admin_mode_enabled()
             and _owner_admin_exists()
-            and email != _owner_admin_email()
+            and not _can_bypass_single_admin_lock(user)
         ):
-            flash("This workspace is locked to the owner admin account.", "warning")
+            flash("This workspace is locked to the owner admin and executive leadership accounts.", "warning")
             return render_template("auth/login.html", form=form, **_auth_page_context())
 
         # ⭐ STEP 3: Sync subscription → features
