@@ -5,11 +5,13 @@
 {% block page_subline %}Manage platform accounts, status, and employee access{% endblock %}
 
 {% block topbar_actions %}
+  {% if not single_admin_mode %}
   <a class="re-btn primary sm"
      href="{% if company %}{{ url_for('admin.invite_team_member', company_id=company.id) }}{% else %}#{% endif %}">
     <i class="lucide lucide-send"></i>
      Send Invite
    </a>
+  {% endif %}
 {% endblock %}
 
 {% block content %}
@@ -19,6 +21,20 @@
 {% set inactive_users = total_users - active_users %}
 
 <div class="re-grid">
+
+  {% if single_admin_mode %}
+  <section class="re-card pad">
+    <div class="section-head">
+      <div>
+        <div class="eyebrow">SINGLE ADMIN MODE</div>
+        <h3 style="margin:.35rem 0 .2rem;">Owner Account Protected</h3>
+        <div class="re-card-subtitle">
+          The workspace is locked to {{ owner_admin_email }}. Registrations and invites are disabled.
+        </div>
+      </div>
+    </div>
+  </section>
+  {% endif %}
 
   <section class="re-grid-3">
     <div class="re-stat">
@@ -101,13 +117,14 @@
                         action="{{ url_for('system.toggle_user', user_id=user.id) }}"
                         style="margin:0;">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <button type="submit" class="re-btn ghost sm">
+                    <button type="submit" class="re-btn ghost sm"
+                            {% if single_admin_mode and (user.email or '')|lower == owner_admin_email %}disabled{% endif %}>
                       <i class="lucide lucide-power"></i>
                       {% if user.is_active %}Deactivate{% else %}Activate{% endif %}
                     </button>
                   </form>
 
-                  {% if user.id != current_user.id %}
+                  {% if user.id != current_user.id and not (single_admin_mode and (user.email or '')|lower == owner_admin_email) %}
                   <form method="POST"
                         action="{{ url_for('system.delete_user', user_id=user.id) }}"
                         onsubmit="return confirm('Delete this account permanently? This action cannot be undone.');"

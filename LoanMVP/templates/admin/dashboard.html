@@ -15,6 +15,10 @@ Central system management for users, onboarding, invites, lending operations, an
     <i class="lucide lucide-users"></i>
     Manage Users
   </a>
+  <a class="re-btn ghost sm" href="{{ url_for('admin.demo_center') }}">
+    <i class="lucide lucide-panels-top-left"></i>
+    Demo Dashboards
+  </a>
   <a class="re-btn ghost sm" href="{{ url_for('admin.access_requests') }}">
     <i class="lucide lucide-inbox"></i>
     Access Requests
@@ -47,6 +51,10 @@ Central system management for users, onboarding, invites, lending operations, an
         <i class="lucide lucide-bar-chart-3"></i>
         View Analytics
       </a>
+      <a class="re-btn ghost" href="{{ url_for('admin.demo_center') }}">
+        <i class="lucide lucide-panels-top-left"></i>
+        Demo Center
+      </a>
       <a class="re-btn ghost" href="{{ url_for('admin.access_requests') }}">
         <i class="lucide lucide-inbox"></i>
         Access Requests
@@ -65,6 +73,21 @@ Central system management for users, onboarding, invites, lending operations, an
   <div class="admin-layout">
 
     <section class="admin-main-col">
+
+      {% if single_admin_mode %}
+      <section class="re-card pad" style="margin-bottom:16px; border:1px solid rgba(122,184,255,.24); background:linear-gradient(135deg, rgba(17,31,48,.95), rgba(11,21,34,.94));">
+        <div class="section-head">
+          <div>
+            <div class="eyebrow">WORKSPACE MODE</div>
+            <h3 style="margin:.35rem 0 .2rem;">Single Admin Lock</h3>
+            <div class="re-card-subtitle">
+              Only {{ owner_admin_email }} can sign in. New registrations and team invites are disabled.
+            </div>
+          </div>
+          <a class="re-btn ghost sm" href="{{ url_for('system.users') }}">Review Users</a>
+        </div>
+      </section>
+      {% endif %}
 
       <section class="re-grid-4 admin-kpi-grid">
         <div class="re-stat">
@@ -135,6 +158,35 @@ Central system management for users, onboarding, invites, lending operations, an
             </div>
           </div>
           <div id="chart_users" class="chart-box"></div>
+        </div>
+      </section>
+
+      <section class="re-card pad">
+        <div class="section-head">
+          <div>
+            <div class="eyebrow">DEMO SURFACES</div>
+            <h3 style="margin:.35rem 0 .2rem;">Role Dashboard Previews</h3>
+            <div class="re-card-subtitle">Investor, partner, and lending role demos prepared for walkthroughs.</div>
+          </div>
+          <a class="re-btn ghost sm" href="{{ url_for('admin.demo_center') }}">Open Demo Center</a>
+        </div>
+
+        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:14px; margin-top:16px;">
+          {% for demo in demo_dashboards %}
+          <div style="padding:16px; border-radius:18px; border:1px solid rgba(255,255,255,.08); background:rgba(255,255,255,.02);">
+            <div style="font-size:.78rem; letter-spacing:.12em; text-transform:uppercase; color:#8ec5ff; font-weight:800;">{{ demo.theme }}</div>
+            <h4 style="margin:.45rem 0 .35rem;">{{ demo.role }}</h4>
+            <div style="color:#9fb0bf; font-size:.94rem; min-height:42px;">{{ demo.tagline }}</div>
+            <div style="display:grid; gap:8px; margin-top:14px;">
+              {% for stat in demo.kpis %}
+              <div style="display:flex; justify-content:space-between; gap:10px; font-size:.92rem;">
+                <span style="color:#93a6b7;">{{ stat.label }}</span>
+                <strong>{{ stat.value }}</strong>
+              </div>
+              {% endfor %}
+            </div>
+          </div>
+          {% endfor %}
         </div>
       </section>
 
