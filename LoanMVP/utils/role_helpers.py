@@ -211,7 +211,8 @@ def can_manage_users(user) -> bool:
 
 
 def can_approve_licensing(user) -> bool:
-    return is_platform_admin(user) or is_master_admin(user)
+    role = (getattr(user, "role", "") or "").strip().lower()
+    return is_platform_admin(user) or is_master_admin(user) or role == "executive"
 
 
 def can_block_accounts(user) -> bool:

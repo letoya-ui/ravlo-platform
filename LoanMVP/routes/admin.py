@@ -1632,7 +1632,7 @@ def onboarding_center():
 
 @admin_bp.route("/licensing/applications")
 @login_required
-@role_required("platform_admin", "master_admin")
+@role_required("platform_admin", "master_admin", "executive")
 def licensing_applications():
     applications = LicenseApplication.query.order_by(
         LicenseApplication.created_at.desc()
@@ -1672,7 +1672,7 @@ def licensing_applications():
 
 @admin_bp.route("/licensing/applications/<int:app_id>/contact", methods=["POST"])
 @login_required
-@role_required("platform_admin", "master_admin")
+@role_required("platform_admin", "master_admin", "executive")
 def contact_license_application(app_id):
     app_row = LicenseApplication.query.get_or_404(app_id)
 
@@ -1693,7 +1693,7 @@ def contact_license_application(app_id):
 
 @admin_bp.route("/licensing/applications/<int:app_id>/approve", methods=["POST"])
 @login_required
-@role_required("platform_admin", "master_admin")
+@role_required("platform_admin", "master_admin", "executive")
 def approve_license_application(app_id):
     app_row = LicenseApplication.query.get_or_404(app_id)
 
@@ -1788,7 +1788,7 @@ def approve_license_application(app_id):
 
 @admin_bp.route("/licensing/applications/<int:app_id>/decline", methods=["POST"])
 @login_required
-@role_required("platform_admin", "master_admin")
+@role_required("platform_admin", "master_admin", "executive")
 def decline_license_application(app_id):
     app_row = LicenseApplication.query.get_or_404(app_id)
 
@@ -1805,7 +1805,7 @@ def decline_license_application(app_id):
 
 @admin_bp.route("/licensing/applications/<int:app_id>/resend-invite", methods=["POST"])
 @login_required
-@role_required("platform_admin", "master_admin")
+@role_required("platform_admin", "master_admin", "executive")
 def resend_license_application_invite(app_id):
     app_row = LicenseApplication.query.get_or_404(app_id)
 
