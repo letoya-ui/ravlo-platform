@@ -1,18 +1,11 @@
-{% extends "layouts/ravlo_base.html" %}
-
-{% block title %}Ravlo • Deal Workspace{% endblock %}
-
-{% block page_title %}Deal Workspace{% endblock %}
-{% block page_subline %}
-Compare exit paths, pressure-test returns, and move into architect, budget, rehab, or capital.
-{% endblock %}
-
 {% block topbar_actions %}
+{% set sp = selected_prop if selected_prop is defined else none %}
+
 <a href="{{ url_for('investor.deals_list') }}" class="ravlo-btn ghost sm">
     Deal Workspace
 </a>
 
-{% if selected_prop %}
+{% if sp %}
     {% if deal %}
     <a href="{{ url_for('investor.deal_detail', deal_id=deal.id) }}" class="ravlo-btn ghost sm">
         Open Deal
@@ -34,34 +27,33 @@ Compare exit paths, pressure-test returns, and move into architect, budget, reha
     <a href="{{ url_for('investor.deal_rehab', deal_id=deal.id) }}" class="ravlo-btn ghost sm">
         Rehab Studio
     </a>
-    <a href="{{ url_for('investor.capital_application', deal_id=deal.id, prop_id=selected_prop.id) }}" class="ravlo-btn primary sm">
+    <a href="{{ url_for('investor.capital_application', deal_id=deal.id, prop_id=sp.id) }}" class="ravlo-btn primary sm">
         Apply
     </a>
     {% else %}
     <form method="POST" action="{{ url_for('investor.save_deal') }}" class="inline-form">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <input type="hidden" name="saved_property_id" value="{{ selected_prop.id }}">
-        <input type="hidden" name="title" value="{{ selected_prop.address or 'Saved Deal' }}">
-        <input type="hidden" name="strategy" value="{{ mode or 'flip' }}">
-        <input type="hidden" name="property_id" value="{{ selected_prop.property_id or '' }}">
+        <input type="hidden" name="saved_property_id" value="{{ sp.id or '' }}">
+        <input type="hidden" name="title" value="{{ sp.address if sp.address is defined and sp.address else 'Saved Deal' }}">
+        <input type="hidden" name="strategy" value="{{ mode | default('flip') }}">
+        <input type="hidden" name="property_id" value="{{ sp.property_id if sp.property_id is defined and sp.property_id else '' }}">
         <input type="hidden" name="inputs_json" value='{{ {
-            "address": selected_prop.address,
-            "city": selected_prop.city,
-            "state": selected_prop.state,
-            "zip_code": selected_prop.zipcode if selected_prop.zipcode is defined else "",
-            "strategy": mode or "flip",
-            "purchase_price": selected_prop.price or 0
+            "address": sp.address if sp.address is defined and sp.address else "",
+            "city": sp.city if sp.city is defined and sp.city else "",
+            "state": sp.state if sp.state is defined and sp.state else "",
+            "zip_code": sp.zipcode if sp.zipcode is defined and sp.zipcode else "",
+            "strategy": mode | default("flip"),
+            "purchase_price": sp.price if sp.price is defined and sp.price else 0
         } | tojson | safe }}'>
         <button type="submit" class="ravlo-btn ghost sm">Save Deal</button>
     </form>
-    <a href="{{ url_for('investor.capital_application', prop_id=selected_prop.id) }}" class="ravlo-btn primary sm">
+
+    <a href="{{ url_for('investor.capital_application', prop_id=sp.id) }}" class="ravlo-btn primary sm">
         Apply
     </a>
     {% endif %}
 {% endif %}
 {% endblock %}
-
-{% block content %}
 <div class="workspace-shell">
 
     <section class="ravlo-card pad">
