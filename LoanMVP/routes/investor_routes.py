@@ -1,3 +1,4 @@
+from __future__ import annotations
 import os
 import io
 import json
@@ -47,7 +48,7 @@ from reportlab.lib.pagesizes import LETTER
 from LoanMVP.extensions import db, stripe, csrf
 
 from LoanMVP.utils.decorators import role_required
-from __future__ import annotations
+
 
 from LoanMVP.forms.investor_forms import InvestorSettingsForm, InvestorProfileForm, CapitalApplicationForm
 
