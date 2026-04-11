@@ -1745,7 +1745,7 @@ def _project_studio_validate_with_mashvisor(snapshot, selected_strategy):
     except Exception as e:
         return {"error": str(e)}
 
-"
+
 
 def _build_loan_sizing_from_budget(deal, budget=None) -> dict:
     """
