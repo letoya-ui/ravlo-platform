@@ -151,6 +151,14 @@ from LoanMVP.services.partner_marketplace_service import (
     search_internal_partners,
     search_google_places,
 )
+from LoanMVP.services.deal_workspace_calcs import (
+    calculate_flip_budget,
+    calculate_rental_budget,
+    calculate_airbnb_budget,
+    generate_ai_deal_summary,
+    recommend_strategy,
+)
+from LoanMVP.utils.pdf_utils import add_signature_to_pdf
 
 # -------------------------
 # Investor Helper Modules
@@ -234,6 +242,7 @@ from LoanMVP.services.investor.investor_deal_analysis_helpers import (
 )
 
 from LoanMVP.services.investor.investor_project_studio_helpers import (
+    _call_deal_architect,
     _project_studio_market_label,
     _project_studio_flags,
     _project_studio_strategy_cards,
@@ -256,6 +265,16 @@ from LoanMVP.services.investor.investor_saved_property_helpers import (
 
 from LoanMVP.services.mashvisor_client import MashvisorClient
 from LoanMVP.utils.r2_storage import spaces_put_bytes
+
+try:
+    from LoanMVP.models.activity_models import InvestorActivity
+except Exception:
+    InvestorActivity = None
+
+try:
+    from LoanMVP.models.partner_models import PartnerRequest
+except Exception:
+    PartnerRequest = None
 
 
 investor_bp = Blueprint("investor", __name__, url_prefix="/investor")

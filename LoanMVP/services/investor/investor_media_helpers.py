@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 import uuid
 import mimetypes
+import base64
 import requests
 from io import BytesIO
 from PIL import Image
