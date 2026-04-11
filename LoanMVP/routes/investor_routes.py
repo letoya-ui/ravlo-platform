@@ -40,14 +40,14 @@ from flask import (
 )
 
 from flask_login import current_user, login_required
-
+from typing import Any, Dict
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import LETTER
 
 from LoanMVP.extensions import db, stripe, csrf
 
 from LoanMVP.utils.decorators import role_required
-
+from __future__ import annotations
 
 from LoanMVP.forms.investor_forms import InvestorSettingsForm, InvestorProfileForm, CapitalApplicationForm
 
@@ -160,6 +160,321 @@ def _safe_engine_num(value):
         return None
 
 
+def _first_non_empty(*values):
+    for value in values:
+        if value not in (None, "", [], {}):
+            return value
+    return None
+
+
+def _normalize_photo_list(raw_media: Any) -> list[str]:
+    photos: list[str] = []
+
+    if not raw_media:
+        return photos
+
+    if isinstance(raw_media, list):
+        for item in raw_media:
+            if isinstance(item, str) and item.strip():
+                photos.append(item.strip())
+            elif isinstance(item, dict):
+                url = (
+                    item.get("url")
+                    or item.get("src")
+                    or item.get("href")
+                    or item.get("image")
+                    or item.get("photo")
+                )
+                if isinstance(url, str) and url.strip():
+                    photos.append(url.strip())
+
+    elif isinstance(raw_media, dict):
+        for key in ("photos", "images", "media"):
+            nested = raw_media.get(key)
+            if nested:
+                photos.extend(_normalize_photo_list(nested))
+
+    seen = set()
+    clean = []
+    for url in photos:
+        if url not in seen:
+            seen.add(url)
+            clean.append(url)
+    return clean
+
+
+def _run_full_mashvisor_analysis(snapshot: dict) -> dict | None:
+    if not snapshot:
+        return None
+
+    address = (snapshot.get("address") or "").strip()
+    city = (snapshot.get("city") or "").strip()
+    state = (snapshot.get("state") or "").strip()
+    zip_code = (snapshot.get("zip_code") or "").strip()
+
+    if not address or not city or not state or not zip_code:
+        return None
+
+    property_type = (snapshot.get("property_type") or "single_family").strip()
+
+    try:
+        client = MashvisorClient()
+
+        property_result = client.get_property_by_address(
+            address=address,
+            city=city,
+            state=state,
+            zip_code=zip_code,
+        )
+
+        lookup_result = client.get_airbnb_lookup(
+            address=address,
+            city=city,
+            state=state,
+            zip_code=zip_code,
+            beds=_safe_int(snapshot.get("beds")),
+            baths=_safe_float(snapshot.get("baths")),
+            lat=_safe_float(snapshot.get("latitude")),
+            lng=_safe_float(snapshot.get("longitude")),
+        )
+
+        comps_result = client.get_airbnb_comps(
+            state=state,
+            zip_code=zip_code,
+        )
+
+        analytics_result = get_property_analytics(
+            address=address,
+            city=city,
+            state=state,
+            zip_code=zip_code,
+            property_type=property_type,
+        )
+
+        analytics = extract_core_fields(analytics_result)
+
+        property_content = (
+            property_result.get("content", property_result)
+            if isinstance(property_result, dict) else {}
+        )
+        lookup_content = (
+            lookup_result.get("content", lookup_result)
+            if isinstance(lookup_result, dict) else {}
+        )
+        comps_content = (
+            comps_result.get("content", comps_result)
+            if isinstance(comps_result, dict) else {}
+        )
+
+        photos = _normalize_photo_list(
+            _first_non_empty(
+                property_content.get("photos") if isinstance(property_content, dict) else None,
+                property_content.get("images") if isinstance(property_content, dict) else None,
+                property_content.get("media") if isinstance(property_content, dict) else None,
+                property_result.get("photos") if isinstance(property_result, dict) else None,
+                property_result.get("images") if isinstance(property_result, dict) else None,
+            )
+        )
+
+        return {
+            "address": _first_non_empty(
+                property_content.get("address") if isinstance(property_content, dict) else None,
+                address,
+            ),
+            "listing_price": _first_non_empty(
+                analytics.get("listing_price"),
+                property_content.get("price") if isinstance(property_content, dict) else None,
+                snapshot.get("purchase_price"),
+            ),
+            "price_per_sqft": analytics.get("price_per_sqft"),
+            "walk_score": analytics.get("walk_score"),
+            "days_on_market": analytics.get("days_on_market"),
+
+            "traditional_rent": analytics.get("traditional_rent"),
+            "traditional_cash_flow": analytics.get("traditional_cash_flow"),
+            "traditional_cap_rate": analytics.get("traditional_cap_rate"),
+            "traditional_coc": analytics.get("traditional_coc"),
+
+            "airbnb_revenue": _first_non_empty(
+                lookup_content.get("rental_income") if isinstance(lookup_content, dict) else None,
+                lookup_content.get("airbnb_rental_income") if isinstance(lookup_content, dict) else None,
+                lookup_content.get("monthly_revenue") if isinstance(lookup_content, dict) else None,
+                analytics.get("airbnb_rent"),
+            ),
+            "airbnb_cash_flow": _first_non_empty(
+                analytics.get("airbnb_cash_flow"),
+                lookup_content.get("cash_flow") if isinstance(lookup_content, dict) else None,
+            ),
+            "airbnb_cap_rate": analytics.get("airbnb_cap_rate"),
+            "airbnb_coc": analytics.get("airbnb_coc"),
+            "occupancy_rate": _first_non_empty(
+                lookup_content.get("occupancy_rate") if isinstance(lookup_content, dict) else None,
+                lookup_content.get("airbnb_occupancy_rate") if isinstance(lookup_content, dict) else None,
+                analytics.get("occupancy_rate"),
+            ),
+            "adr": _first_non_empty(
+                lookup_content.get("daily_rate") if isinstance(lookup_content, dict) else None,
+                lookup_content.get("adr") if isinstance(lookup_content, dict) else None,
+                lookup_content.get("average_daily_rate") if isinstance(lookup_content, dict) else None,
+            ),
+
+            "confidence": _first_non_empty(
+                lookup_content.get("data_quality") if isinstance(lookup_content, dict) else None,
+                lookup_content.get("confidence") if isinstance(lookup_content, dict) else None,
+                lookup_content.get("sample_size") if isinstance(lookup_content, dict) else None,
+                "Moderate",
+            ),
+
+            "airbnb_comps": _first_non_empty(
+                comps_content.get("list") if isinstance(comps_content, dict) else None,
+                comps_content.get("comparables") if isinstance(comps_content, dict) else None,
+                [],
+            ),
+
+            "photos": photos,
+
+            "raw": {
+                "property": property_result,
+                "lookup": lookup_result,
+                "comps": comps_result,
+                "analytics": analytics_result,
+            },
+        }
+
+    except Exception as exc:
+        current_app.logger.warning(
+            "full mashvisor analysis failed for %s: %s",
+            snapshot.get("address"),
+            exc,
+        )
+        return {"error": str(exc)}
+
+
+def _build_flip_analysis(snapshot: dict, scope_budget: dict | None = None) -> dict:
+    purchase_price = _safe_float(snapshot.get("purchase_price")) or 0
+    arv = _safe_float(snapshot.get("arv")) or 0
+    rehab_cost = (
+        _safe_float((scope_budget or {}).get("total_cost"))
+        or _safe_float(snapshot.get("rehab_cost"))
+        or 0
+    )
+
+    holding_cost = round((purchase_price + rehab_cost) * 0.01 * 6, 2)
+    selling_cost = round(arv * 0.08, 2)
+    all_in_cost = purchase_price + rehab_cost + holding_cost + selling_cost
+    profit = arv - all_in_cost
+    margin_pct = (profit / arv * 100) if arv else 0
+
+    return {
+        "label": "Fix & Flip",
+        "purchase_price": purchase_price,
+        "rehab_cost": rehab_cost,
+        "holding_cost": holding_cost,
+        "selling_cost": selling_cost,
+        "all_in_cost": all_in_cost,
+        "exit_value": arv,
+        "profit": profit,
+        "margin_pct": margin_pct,
+        "timeline_months": 6,
+    }
+
+
+def _build_rental_analysis(snapshot: dict, mashvisor: dict | None) -> dict:
+    rent = _safe_float((mashvisor or {}).get("traditional_rent")) or _safe_float(snapshot.get("estimated_rent")) or 0
+    cash_flow = _safe_float((mashvisor or {}).get("traditional_cash_flow"))
+    cap_rate = _safe_float((mashvisor or {}).get("traditional_cap_rate"))
+    coc = _safe_float((mashvisor or {}).get("traditional_coc"))
+
+    return {
+        "label": "Long-Term Rental",
+        "monthly_rent": rent,
+        "annual_rent": rent * 12 if rent else 0,
+        "cash_flow": cash_flow,
+        "cap_rate": cap_rate,
+        "cash_on_cash_return": coc,
+        "confidence": (mashvisor or {}).get("confidence"),
+    }
+
+
+def _build_airbnb_analysis(snapshot: dict, mashvisor: dict | None) -> dict:
+    revenue = _safe_float((mashvisor or {}).get("airbnb_revenue")) or 0
+    occupancy = _safe_float((mashvisor or {}).get("occupancy_rate"))
+    adr = _safe_float((mashvisor or {}).get("adr"))
+    cash_flow = _safe_float((mashvisor or {}).get("airbnb_cash_flow"))
+    cap_rate = _safe_float((mashvisor or {}).get("airbnb_cap_rate"))
+    coc = _safe_float((mashvisor or {}).get("airbnb_coc"))
+
+    return {
+        "label": "Airbnb / STR",
+        "monthly_revenue": revenue,
+        "annual_revenue": revenue * 12 if revenue else 0,
+        "occupancy_rate": occupancy,
+        "adr": adr,
+        "cash_flow": cash_flow,
+        "cap_rate": cap_rate,
+        "cash_on_cash_return": coc,
+        "confidence": (mashvisor or {}).get("confidence"),
+    }
+
+
+def _build_brrrr_analysis(snapshot: dict, rental: dict, flip: dict) -> dict:
+    arv = _safe_float(snapshot.get("arv")) or 0
+    all_in_cost = _safe_float(flip.get("all_in_cost")) or 0
+    monthly_rent = _safe_float(rental.get("monthly_rent")) or 0
+    cash_flow = _safe_float(rental.get("cash_flow"))
+
+    refi_ltv = 0.75
+    refi_value = arv
+    cash_out = refi_value * refi_ltv if refi_value else 0
+    capital_left_in_deal = max(all_in_cost - cash_out, 0)
+
+    return {
+        "label": "BRRRR",
+        "refi_value": refi_value,
+        "cash_out": cash_out,
+        "capital_left_in_deal": capital_left_in_deal,
+        "stabilized_rent": monthly_rent,
+        "post_refi_cash_flow": cash_flow,
+    }
+
+
+def _recommend_exit_strategy(
+    flip: dict,
+    rental: dict,
+    airbnb: dict,
+    brrrr: dict,
+) -> dict:
+    flip_margin = _safe_float(flip.get("margin_pct")) or 0
+    rental_cf = _safe_float(rental.get("cash_flow")) or 0
+    airbnb_cf = _safe_float(airbnb.get("cash_flow")) or 0
+
+    if airbnb_cf > rental_cf and airbnb_cf > 0:
+        return {
+            "best_strategy": "Airbnb / STR",
+            "confidence": "High" if airbnb_cf >= (rental_cf * 1.25 if rental_cf else airbnb_cf) else "Moderate",
+            "reason": "Highest projected monthly income and strongest short-term revenue profile.",
+        }
+
+    if flip_margin >= 15:
+        return {
+            "best_strategy": "Fix & Flip",
+            "confidence": "High",
+            "reason": "Strong projected resale margin with enough room for execution risk.",
+        }
+
+    if rental_cf > 0:
+        return {
+            "best_strategy": "Long-Term Rental",
+            "confidence": "Moderate",
+            "reason": "Stable rental cash flow with a simpler operating model than short-term rental.",
+        }
+
+    return {
+        "best_strategy": "BRRRR",
+        "confidence": "Moderate",
+        "reason": "Best fit when the goal is recycling capital and holding long-term exposure.",
+    }
+
 def _build_deal_architect_payload(result: dict, strategy: str = "flip") -> dict:
     address = (result.get("address") or result.get("address_line1") or "").strip()
     city = (result.get("city") or "").strip()
@@ -216,6 +531,216 @@ def _build_deal_architect_payload(result: dict, strategy: str = "flip") -> dict:
             "source": "deal_finder",
         },
     }
+
+def _clean_str(value):
+    if value is None:
+        return None
+    value = str(value).strip()
+    return value or None
+
+
+def _clean_num(value):
+    if value in (None, "", "None"):
+        return None
+    try:
+        if isinstance(value, str):
+            value = value.replace("$", "").replace(",", "").strip()
+        return float(value)
+    except Exception:
+        return None
+
+
+def _clean_int(value):
+    num = _clean_num(value)
+    if num is None:
+        return None
+    try:
+        return int(round(num))
+    except Exception:
+        return None
+
+
+def _safe_json_list(value):
+    if isinstance(value, list):
+        return value
+    return []
+
+
+def _get_investor_profile_or_error():
+    ip = InvestorProfile.query.filter_by(user_id=current_user.id).first()
+    if not ip:
+        return None, (
+            jsonify({
+                "status": "error",
+                "message": "Profile not found."
+            }),
+            400,
+        )
+    return ip, None
+
+
+def _find_existing_saved_property(ip, payload):
+    address = _clean_str(payload.get("address"))
+    property_id = _clean_str(payload.get("property_id") or payload.get("attom_id"))
+
+    fk = _profile_id_filter(SavedProperty, ip.id)
+    existing = None
+
+    if property_id:
+        existing = SavedProperty.query.filter_by(
+            **fk,
+            property_id=property_id
+        ).first()
+
+    if not existing and address:
+        existing = SavedProperty.query.filter(
+            getattr(SavedProperty, "investor_profile_id", SavedProperty.borrower_profile_id) == ip.id,
+            db.func.lower(SavedProperty.address) == address.lower()
+        ).first()
+
+    return existing
+
+
+def _assign_if_has_attr(model_obj, field_name, value):
+    if hasattr(model_obj, field_name) and value is not None:
+        setattr(model_obj, field_name, value)
+
+
+def _persist_property_core_fields(saved, payload):
+    """
+    Persist richer canonical fields when the SavedProperty model supports them.
+    This is intentionally defensive so it works with your current schema.
+    """
+    address = _clean_str(payload.get("address"))
+    city = _clean_str(payload.get("city"))
+    state = _clean_str(payload.get("state"))
+    zipcode = _clean_str(payload.get("zip") or payload.get("zip_code"))
+    property_id = _clean_str(payload.get("property_id") or payload.get("attom_id"))
+
+    price = _clean_num(payload.get("price") or payload.get("purchase_price") or payload.get("display_value"))
+    arv = _clean_num(payload.get("arv") or payload.get("estimated_value_engine") or payload.get("market_value"))
+    market_value = _clean_num(payload.get("market_value"))
+    assessed_value = _clean_num(payload.get("assessed_value"))
+    monthly_rent = _clean_num(payload.get("monthly_rent") or payload.get("monthly_rent_estimate"))
+    last_sale_price = _clean_num(payload.get("last_sale_price"))
+
+    sqft = _clean_int(payload.get("sqft") or payload.get("square_feet"))
+    lot_size_sqft = _clean_int(payload.get("lot_size_sqft"))
+    beds = _clean_num(payload.get("beds"))
+    baths = _clean_num(payload.get("baths"))
+    year_built = _clean_int(payload.get("year_built"))
+
+    latitude = _clean_num(payload.get("latitude"))
+    longitude = _clean_num(payload.get("longitude"))
+
+    strategy = _clean_str(payload.get("strategy"))
+    strategy_tag = _clean_str(payload.get("strategy_tag"))
+    recommended_strategy = _clean_str(payload.get("recommended_strategy"))
+    estimated_best_use = _clean_str(payload.get("estimated_best_use"))
+    property_type = _clean_str(payload.get("property_type"))
+
+    deal_score = _clean_num(payload.get("deal_score"))
+    opportunity_tier = _clean_str(payload.get("opportunity_tier"))
+    deal_finder_signal = _clean_str(payload.get("deal_finder_signal"))
+    next_step = _clean_str(payload.get("next_step"))
+    comp_confidence = _clean_str(payload.get("comp_confidence"))
+    image_url = _clean_str(payload.get("image_url"))
+    description = _clean_str(payload.get("description"))
+
+    if address:
+        saved.address = address
+
+    if property_id:
+        _assign_if_has_attr(saved, "property_id", property_id)
+
+    # keep your existing core fields in sync
+    if price is not None:
+        _assign_if_has_attr(saved, "price", str(int(price)) if float(price).is_integer() else str(price))
+
+    if sqft is not None:
+        _assign_if_has_attr(saved, "sqft", sqft)
+
+    if zipcode:
+        if hasattr(saved, "zipcode"):
+            saved.zipcode = zipcode
+        elif hasattr(saved, "zip_code"):
+            saved.zip_code = zipcode
+
+    # richer optional fields
+    _assign_if_has_attr(saved, "city", city)
+    _assign_if_has_attr(saved, "state", state)
+    _assign_if_has_attr(saved, "property_type", property_type)
+    _assign_if_has_attr(saved, "beds", beds)
+    _assign_if_has_attr(saved, "baths", baths)
+    _assign_if_has_attr(saved, "year_built", year_built)
+    _assign_if_has_attr(saved, "square_feet", sqft)
+    _assign_if_has_attr(saved, "lot_size_sqft", lot_size_sqft)
+    _assign_if_has_attr(saved, "assessed_value", assessed_value)
+    _assign_if_has_attr(saved, "market_value", market_value)
+    _assign_if_has_attr(saved, "arv", arv)
+    _assign_if_has_attr(saved, "monthly_rent", monthly_rent)
+    _assign_if_has_attr(saved, "monthly_rent_estimate", monthly_rent)
+    _assign_if_has_attr(saved, "last_sale_price", last_sale_price)
+    _assign_if_has_attr(saved, "latitude", latitude)
+    _assign_if_has_attr(saved, "longitude", longitude)
+
+    _assign_if_has_attr(saved, "strategy", strategy)
+    _assign_if_has_attr(saved, "strategy_tag", strategy_tag)
+    _assign_if_has_attr(saved, "recommended_strategy", recommended_strategy)
+    _assign_if_has_attr(saved, "estimated_best_use", estimated_best_use)
+
+    _assign_if_has_attr(saved, "deal_score", deal_score)
+    _assign_if_has_attr(saved, "opportunity_tier", opportunity_tier)
+    _assign_if_has_attr(saved, "deal_finder_signal", deal_finder_signal)
+    _assign_if_has_attr(saved, "next_step", next_step)
+    _assign_if_has_attr(saved, "comp_confidence", comp_confidence)
+
+    _assign_if_has_attr(saved, "image_url", image_url)
+    _assign_if_has_attr(saved, "description", description)
+
+    # optional JSON/meta fields if your model supports them
+    _assign_if_has_attr(saved, "primary_strengths", _safe_json_list(payload.get("primary_strengths")))
+    _assign_if_has_attr(saved, "primary_risks", _safe_json_list(payload.get("primary_risks")))
+    _assign_if_has_attr(saved, "risk_notes", _safe_json_list(payload.get("risk_notes")))
+    _assign_if_has_attr(saved, "why_it_made_list", _safe_json_list(payload.get("why_it_made_list")))
+
+    # status / timestamps if present on model
+    _assign_if_has_attr(saved, "analysis_status", "pending")
+    _assign_if_has_attr(saved, "budget_status", "pending")
+    _assign_if_has_attr(saved, "last_synced_at", datetime.utcnow())
+    _assign_if_has_attr(saved, "updated_at", datetime.utcnow())
+
+
+def _upsert_saved_property_from_payload(ip, payload):
+    address = _clean_str(payload.get("address"))
+    if not address:
+        raise ValueError("Address is required.")
+
+    price = payload.get("price") or payload.get("purchase_price") or payload.get("display_value")
+    sqft = _clean_int(payload.get("sqft") or payload.get("square_feet"))
+    zipcode = _clean_str(payload.get("zip") or payload.get("zip_code"))
+    property_id = _clean_str(payload.get("property_id") or payload.get("attom_id"))
+
+    existing = _find_existing_saved_property(ip, payload)
+    fk = _profile_id_filter(SavedProperty, ip.id)
+
+    if not existing:
+        existing = SavedProperty(
+            **fk,
+            property_id=property_id if property_id else None,
+            address=address,
+            price=str(price or ""),
+            sqft=sqft,
+            zipcode=zipcode,
+            saved_at=datetime.utcnow(),
+            created_at=datetime.utcnow(),
+        )
+        db.session.add(existing)
+        db.session.flush()
+
+    _persist_property_core_fields(existing, payload)
+    _store_saved_property_media(existing, payload, source="property_tool")
+    return existing
 
 
 def _call_deal_architect(payload: dict) -> dict:
@@ -1220,90 +1745,7 @@ def _project_studio_validate_with_mashvisor(snapshot, selected_strategy):
     except Exception as e:
         return {"error": str(e)}
 
-def _run_mashvisor_validation(snapshot: dict) -> dict | None:
-    """
-    Lightweight STR validation for Project Studio.
-    Use only after a property is loaded and a serious strategy path is in play.
-    """
-    if not snapshot:
-        return None
-
-    address = (snapshot.get("address") or "").strip()
-    city = (snapshot.get("city") or "").strip()
-    state = (snapshot.get("state") or "").strip()
-    zip_code = (snapshot.get("zip_code") or "").strip()
-
-    if not address or not city or not state or not zip_code:
-        return None
-
-    try:
-        client = MashvisorClient()
-        result = client.get_airbnb_lookup(
-            address=address,
-            city=city,
-            state=state,
-            zip_code=zip_code,
-            beds=_safe_int(snapshot.get("beds")),
-            baths=_safe_float(snapshot.get("baths")),
-            lat=_safe_float(snapshot.get("latitude")),
-            lng=_safe_float(snapshot.get("longitude")),
-        )
-
-        lookup = result.get("content", result) if isinstance(result, dict) else {}
-
-        return {
-            "airbnb_revenue": (
-                lookup.get("rental_income")
-                or lookup.get("airbnb_rental_income")
-                or lookup.get("monthly_revenue")
-            ),
-            "occupancy_rate": (
-                lookup.get("occupancy_rate")
-                or lookup.get("airbnb_occupancy_rate")
-            ),
-            "adr": (
-                lookup.get("daily_rate")
-                or lookup.get("adr")
-                or lookup.get("average_daily_rate")
-            ),
-            "confidence": (
-                lookup.get("data_quality")
-                or lookup.get("confidence")
-                or "Moderate"
-            ),
-            "raw": result,
-        }
-
-    except Exception as exc:
-        current_app.logger.warning(
-            "project_studio mashvisor validation failed for %s: %s",
-            snapshot.get("address"),
-            exc,
-        )
-        return {"error": str(exc)}
-
-
-def _build_mashvisor_insight(scope_budget: dict | None, mashvisor_data: dict | None) -> str | None:
-    """
-    Compare Ravlo's rough planning outcome to Mashvisor STR signal.
-    We use budget outcome as the internal reference only if available.
-    """
-    if not scope_budget or not mashvisor_data or mashvisor_data.get("error"):
-        return None
-
-    internal_reference = _safe_float(scope_budget.get("outcome"))
-    mashvisor_revenue = _safe_float(mashvisor_data.get("airbnb_revenue"))
-
-    if internal_reference is None or mashvisor_revenue is None or internal_reference == 0:
-        return "Market validation is available, but there is not enough aligned data yet for a direct comparison."
-
-    pct = ((mashvisor_revenue - internal_reference) / abs(internal_reference)) * 100
-
-    if abs(pct) <= 10:
-        return "Market data is generally aligned with Ravlo's current planning assumptions."
-    if pct < 0:
-        return "Market data is coming in below Ravlo's internal planning signal, so pressure-test the revenue assumptions."
-    return "Market data is stronger than Ravlo's current planning signal, which may support more upside."
+"
 
 def _build_loan_sizing_from_budget(deal, budget=None) -> dict:
     """
@@ -5147,6 +5589,7 @@ def project_studio():
 
     mashvisor_data = None
     mashvisor_insight = None
+    analysis = None
 
     if address:
         try:
@@ -5219,12 +5662,43 @@ def project_studio():
                         deal_id=deal_id,
                     )
 
-                    # Final validation layer:
-                    # only after property + strategy + scope exist
-                    mashvisor_data = _run_mashvisor_validation(snapshot)
+                    # Upgraded market intelligence layer
+                    mashvisor_data = _run_full_mashvisor_analysis(snapshot)
+
                     mashvisor_insight = _build_mashvisor_insight(
                         scope_budget,
                         mashvisor_data,
+                    )
+
+                    flip = _build_flip_analysis(
+                        snapshot,
+                        scope_budget=scope_budget,
+                    )
+                    rental = _build_rental_analysis(
+                        snapshot,
+                        mashvisor_data,
+                    )
+                    airbnb = _build_airbnb_analysis(
+                        snapshot,
+                        mashvisor_data,
+                    )
+                    brrrr = _build_brrrr_analysis(
+                        snapshot,
+                        rental,
+                        flip,
+                    )
+
+                    analysis = {
+                        "flip": flip,
+                        "rental": rental,
+                        "airbnb": airbnb,
+                        "brrrr": brrrr,
+                    }
+                    analysis["recommendation"] = _recommend_exit_strategy(
+                        flip=analysis["flip"],
+                        rental=analysis["rental"],
+                        airbnb=analysis["airbnb"],
+                        brrrr=analysis["brrrr"],
                     )
 
         except Exception as exc:
@@ -5257,6 +5731,7 @@ def project_studio():
         workspace_deal=workspace_deal,
         mashvisor=mashvisor_data,
         mashvisor_insight=mashvisor_insight,
+        analysis=analysis,
     )
 
 # -------------------------------------------------------------------
@@ -5283,223 +5758,6 @@ def api_deal_architect_proxy():
 # -------------------------------------------------------------------
 # UPDATED PROPERTY TOOL SEARCH
 # -------------------------------------------------------------------
-
-
-
-            
-
-
-
-def _clean_str(value):
-    if value is None:
-        return None
-    value = str(value).strip()
-    return value or None
-
-
-def _clean_num(value):
-    if value in (None, "", "None"):
-        return None
-    try:
-        if isinstance(value, str):
-            value = value.replace("$", "").replace(",", "").strip()
-        return float(value)
-    except Exception:
-        return None
-
-
-def _clean_int(value):
-    num = _clean_num(value)
-    if num is None:
-        return None
-    try:
-        return int(round(num))
-    except Exception:
-        return None
-
-
-def _safe_json_list(value):
-    if isinstance(value, list):
-        return value
-    return []
-
-
-def _get_investor_profile_or_error():
-    ip = InvestorProfile.query.filter_by(user_id=current_user.id).first()
-    if not ip:
-        return None, (
-            jsonify({
-                "status": "error",
-                "message": "Profile not found."
-            }),
-            400,
-        )
-    return ip, None
-
-
-def _find_existing_saved_property(ip, payload):
-    address = _clean_str(payload.get("address"))
-    property_id = _clean_str(payload.get("property_id") or payload.get("attom_id"))
-
-    fk = _profile_id_filter(SavedProperty, ip.id)
-    existing = None
-
-    if property_id:
-        existing = SavedProperty.query.filter_by(
-            **fk,
-            property_id=property_id
-        ).first()
-
-    if not existing and address:
-        existing = SavedProperty.query.filter(
-            getattr(SavedProperty, "investor_profile_id", SavedProperty.borrower_profile_id) == ip.id,
-            db.func.lower(SavedProperty.address) == address.lower()
-        ).first()
-
-    return existing
-
-
-def _assign_if_has_attr(model_obj, field_name, value):
-    if hasattr(model_obj, field_name) and value is not None:
-        setattr(model_obj, field_name, value)
-
-
-def _persist_property_core_fields(saved, payload):
-    """
-    Persist richer canonical fields when the SavedProperty model supports them.
-    This is intentionally defensive so it works with your current schema.
-    """
-    address = _clean_str(payload.get("address"))
-    city = _clean_str(payload.get("city"))
-    state = _clean_str(payload.get("state"))
-    zipcode = _clean_str(payload.get("zip") or payload.get("zip_code"))
-    property_id = _clean_str(payload.get("property_id") or payload.get("attom_id"))
-
-    price = _clean_num(payload.get("price") or payload.get("purchase_price") or payload.get("display_value"))
-    arv = _clean_num(payload.get("arv") or payload.get("estimated_value_engine") or payload.get("market_value"))
-    market_value = _clean_num(payload.get("market_value"))
-    assessed_value = _clean_num(payload.get("assessed_value"))
-    monthly_rent = _clean_num(payload.get("monthly_rent") or payload.get("monthly_rent_estimate"))
-    last_sale_price = _clean_num(payload.get("last_sale_price"))
-
-    sqft = _clean_int(payload.get("sqft") or payload.get("square_feet"))
-    lot_size_sqft = _clean_int(payload.get("lot_size_sqft"))
-    beds = _clean_num(payload.get("beds"))
-    baths = _clean_num(payload.get("baths"))
-    year_built = _clean_int(payload.get("year_built"))
-
-    latitude = _clean_num(payload.get("latitude"))
-    longitude = _clean_num(payload.get("longitude"))
-
-    strategy = _clean_str(payload.get("strategy"))
-    strategy_tag = _clean_str(payload.get("strategy_tag"))
-    recommended_strategy = _clean_str(payload.get("recommended_strategy"))
-    estimated_best_use = _clean_str(payload.get("estimated_best_use"))
-    property_type = _clean_str(payload.get("property_type"))
-
-    deal_score = _clean_num(payload.get("deal_score"))
-    opportunity_tier = _clean_str(payload.get("opportunity_tier"))
-    deal_finder_signal = _clean_str(payload.get("deal_finder_signal"))
-    next_step = _clean_str(payload.get("next_step"))
-    comp_confidence = _clean_str(payload.get("comp_confidence"))
-    image_url = _clean_str(payload.get("image_url"))
-    description = _clean_str(payload.get("description"))
-
-    if address:
-        saved.address = address
-
-    if property_id:
-        _assign_if_has_attr(saved, "property_id", property_id)
-
-    # keep your existing core fields in sync
-    if price is not None:
-        _assign_if_has_attr(saved, "price", str(int(price)) if float(price).is_integer() else str(price))
-
-    if sqft is not None:
-        _assign_if_has_attr(saved, "sqft", sqft)
-
-    if zipcode:
-        if hasattr(saved, "zipcode"):
-            saved.zipcode = zipcode
-        elif hasattr(saved, "zip_code"):
-            saved.zip_code = zipcode
-
-    # richer optional fields
-    _assign_if_has_attr(saved, "city", city)
-    _assign_if_has_attr(saved, "state", state)
-    _assign_if_has_attr(saved, "property_type", property_type)
-    _assign_if_has_attr(saved, "beds", beds)
-    _assign_if_has_attr(saved, "baths", baths)
-    _assign_if_has_attr(saved, "year_built", year_built)
-    _assign_if_has_attr(saved, "square_feet", sqft)
-    _assign_if_has_attr(saved, "lot_size_sqft", lot_size_sqft)
-    _assign_if_has_attr(saved, "assessed_value", assessed_value)
-    _assign_if_has_attr(saved, "market_value", market_value)
-    _assign_if_has_attr(saved, "arv", arv)
-    _assign_if_has_attr(saved, "monthly_rent", monthly_rent)
-    _assign_if_has_attr(saved, "monthly_rent_estimate", monthly_rent)
-    _assign_if_has_attr(saved, "last_sale_price", last_sale_price)
-    _assign_if_has_attr(saved, "latitude", latitude)
-    _assign_if_has_attr(saved, "longitude", longitude)
-
-    _assign_if_has_attr(saved, "strategy", strategy)
-    _assign_if_has_attr(saved, "strategy_tag", strategy_tag)
-    _assign_if_has_attr(saved, "recommended_strategy", recommended_strategy)
-    _assign_if_has_attr(saved, "estimated_best_use", estimated_best_use)
-
-    _assign_if_has_attr(saved, "deal_score", deal_score)
-    _assign_if_has_attr(saved, "opportunity_tier", opportunity_tier)
-    _assign_if_has_attr(saved, "deal_finder_signal", deal_finder_signal)
-    _assign_if_has_attr(saved, "next_step", next_step)
-    _assign_if_has_attr(saved, "comp_confidence", comp_confidence)
-
-    _assign_if_has_attr(saved, "image_url", image_url)
-    _assign_if_has_attr(saved, "description", description)
-
-    # optional JSON/meta fields if your model supports them
-    _assign_if_has_attr(saved, "primary_strengths", _safe_json_list(payload.get("primary_strengths")))
-    _assign_if_has_attr(saved, "primary_risks", _safe_json_list(payload.get("primary_risks")))
-    _assign_if_has_attr(saved, "risk_notes", _safe_json_list(payload.get("risk_notes")))
-    _assign_if_has_attr(saved, "why_it_made_list", _safe_json_list(payload.get("why_it_made_list")))
-
-    # status / timestamps if present on model
-    _assign_if_has_attr(saved, "analysis_status", "pending")
-    _assign_if_has_attr(saved, "budget_status", "pending")
-    _assign_if_has_attr(saved, "last_synced_at", datetime.utcnow())
-    _assign_if_has_attr(saved, "updated_at", datetime.utcnow())
-
-
-def _upsert_saved_property_from_payload(ip, payload):
-    address = _clean_str(payload.get("address"))
-    if not address:
-        raise ValueError("Address is required.")
-
-    price = payload.get("price") or payload.get("purchase_price") or payload.get("display_value")
-    sqft = _clean_int(payload.get("sqft") or payload.get("square_feet"))
-    zipcode = _clean_str(payload.get("zip") or payload.get("zip_code"))
-    property_id = _clean_str(payload.get("property_id") or payload.get("attom_id"))
-
-    existing = _find_existing_saved_property(ip, payload)
-    fk = _profile_id_filter(SavedProperty, ip.id)
-
-    if not existing:
-        existing = SavedProperty(
-            **fk,
-            property_id=property_id if property_id else None,
-            address=address,
-            price=str(price or ""),
-            sqft=sqft,
-            zipcode=zipcode,
-            saved_at=datetime.utcnow(),
-            created_at=datetime.utcnow(),
-        )
-        db.session.add(existing)
-        db.session.flush()
-
-    _persist_property_core_fields(existing, payload)
-    _store_saved_property_media(existing, payload, source="property_tool")
-    return existing
-
 
 @investor_bp.route("/api/property_tool_search", methods=["POST"])
 @login_required
@@ -6540,7 +6798,82 @@ def run_deal_comparison():
         "comparison": comparison,
         "summary": summary
     })
-    
+
+@investor_bp.route("/deal/<int:deal_id>/analysis", methods=["GET"])
+@login_required
+@role_required("investor")
+def deal_analysis(deal_id):
+    deal = Deal.query.filter_by(id=deal_id, user_id=current_user.id).first_or_404()
+
+    resolved_property = ((deal.resolved_json or {}).get("property") or {}) if deal.resolved_json else {}
+    results_json = deal.results_json or {}
+    rehab_scope_json = deal.rehab_scope_json or {}
+
+    snapshot = {
+        "address": deal.address,
+        "city": deal.city,
+        "state": deal.state,
+        "zip_code": deal.zip_code,
+        "purchase_price": deal.purchase_price,
+        "arv": deal.arv,
+        "estimated_rent": deal.estimated_rent,
+        "rehab_cost": deal.rehab_cost,
+        "deal_score": deal.deal_score,
+        "strategy": deal.strategy,
+        "property_type": (
+            resolved_property.get("property_type")
+            or resolved_property.get("propertyType")
+            or "single_family"
+        ),
+        "beds": resolved_property.get("beds"),
+        "baths": resolved_property.get("baths"),
+        "latitude": resolved_property.get("latitude") or resolved_property.get("lat"),
+        "longitude": resolved_property.get("longitude") or resolved_property.get("lng"),
+    }
+
+    scope_budget = {
+        "total_cost": (
+            _safe_float(rehab_scope_json.get("total"))
+            or _safe_float(results_json.get("rehab_total"))
+            or _safe_float(deal.rehab_cost)
+            or 0
+        )
+    }
+
+    mashvisor = _run_full_mashvisor_analysis(snapshot)
+
+    flip = _build_flip_analysis(snapshot, scope_budget=scope_budget)
+    rental = _build_rental_analysis(snapshot, mashvisor)
+    airbnb = _build_airbnb_analysis(snapshot, mashvisor)
+    brrrr = _build_brrrr_analysis(snapshot, rental, flip)
+    recommendation = _recommend_exit_strategy(
+        flip=flip,
+        rental=rental,
+        airbnb=airbnb,
+        brrrr=brrrr,
+    )
+
+    analysis = {
+        "flip": flip,
+        "rental": rental,
+        "airbnb": airbnb,
+        "brrrr": brrrr,
+        "recommendation": recommendation,
+        "mashvisor": mashvisor,
+    }
+
+    return render_template(
+        "investor/underwriting.html",
+        title="Ravlo • Underwriting",
+        active_tab="deal_analysis",
+        deal=deal,
+        analysis=analysis,
+        mashvisor=mashvisor,
+        purchase_price=deal.purchase_price,
+        arv=deal.arv,
+        estimated_rent=deal.estimated_rent,
+    )  
+  
 @investor_bp.route("/deals/<int:deal_id>/dealbook", methods=["GET"])
 @login_required
 @role_required("investor")
@@ -6820,7 +7153,7 @@ def save_deal():
     db.session.commit()
 
     flash("Deal saved.", "success")
-    return redirect(url_for("investor.deal_detail", deal_id=deal.id))
+    return redirect(url_for("investor.deal_analysis", deal_id=deal.id))
     
 @investor_bp.route("/deals/<int:deal_id>/edit", methods=["POST"])
 @login_required
