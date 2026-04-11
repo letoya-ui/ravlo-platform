@@ -316,7 +316,7 @@ Open any address and let Ravlo compare the best plan before you move into scope,
     </div>
   </section>
 
-  {% if selected_card and selected_scope %}
+  {% if mashvisor and not mashvisor.error %}
   <section class="ravlo-card pad">
     <div class="ps-section-head">
       <div>
@@ -326,16 +326,6 @@ Open any address and let Ravlo compare the best plan before you move into scope,
       <div class="muted">Mashvisor is used here as a final validation layer, not a discovery tool.</div>
     </div>
 
-    <div class="ps-link-row" style="margin-bottom: 12px;">
-      <a
-        href="{{ url_for('investor.project_studio', address=address, city=city, state=state, zip=zip_code, strategy=selected_strategy, scope=selected_scope, deal_id=(workspace_deal.id if workspace_deal else None)) }}"
-        class="ravlo-btn ghost"
-      >
-        Refresh Mashvisor Analysis
-      </a>
-    </div>
-
-    {% if mashvisor and not mashvisor.error %}
     <div class="ps-budget-band">
       <div class="ps-value-block">
         <span>Airbnb Revenue</span>
@@ -376,29 +366,10 @@ Open any address and let Ravlo compare the best plan before you move into scope,
       </div>
     </div>
 
-    {% if mashvisor.photos %}
-    <div class="ps-callout" style="margin-top: 12px;">
-      <strong>Photo Sync (Mashvisor)</strong>
-      <p>
-        Retrieved {{ mashvisor.photo_count or mashvisor.photos|length }} photo{% if (mashvisor.photo_count or mashvisor.photos|length) != 1 %}s{% endif %}. 
-        Use these when a listing image is missing or low quality.
-      </p>
-      <div class="ps-link-row">
-        <a href="{{ mashvisor.photos[0] }}" target="_blank" rel="noopener" class="ravlo-btn ghost">Open First Mashvisor Photo</a>
-      </div>
-    </div>
-    {% endif %}
-
     {% if mashvisor_insight %}
     <div class="ps-callout">
       <strong>Ravlo Insight</strong>
       <p>{{ mashvisor_insight }}</p>
-    </div>
-    {% endif %}
-    {% else %}
-    <div class="ps-callout">
-      <strong>Mashvisor is not connected yet</strong>
-      <p>Click <em>Refresh Mashvisor Analysis</em> after selecting strategy + scope. If this persists, verify <code>MASHVISOR_API_KEY</code> in environment configuration.</p>
     </div>
     {% endif %}
   </section>
