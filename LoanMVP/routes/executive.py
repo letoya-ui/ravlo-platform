@@ -190,7 +190,7 @@ def dashboard():
     )
 
     return render_template(
-        "admin/dashboard.html",
+        "executive/dashboard.html",
         company=company,
         stats=stats,
         demo_dashboards=_demo_dashboard_cards(),

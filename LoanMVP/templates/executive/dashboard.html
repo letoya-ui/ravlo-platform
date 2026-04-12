@@ -1,0 +1,227 @@
+{% extends "layouts/ravlo_employee_base.html" %}
+{% set executive_company_name = company.name if company else (current_user.company.name if current_user.company else "Ravlo") %}
+{% block title %}{{ executive_company_name }} Executive Dashboard{% endblock %}
+{% block page_title %}{{ executive_company_name }} Executive Dashboard{% endblock %}
+{% block page_subline %}
+Executive oversight across users, onboarding, invites, lending operations, and platform visibility.
+{% endblock %}
+
+{% block topbar_actions %}
+  <a class="re-btn primary sm" href="{{ url_for('system.users') }}">
+    <i class="lucide lucide-user-cog"></i>
+    Manage Users
+  </a>
+  <a class="re-btn ghost sm" href="{{ url_for('admin.access_requests') }}">
+    <i class="lucide lucide-inbox"></i>
+    Access Requests
+  </a>
+  <a class="re-btn ghost sm" href="{{ url_for('admin.licensing_applications') }}">
+    <i class="lucide lucide-file-text"></i>
+    License Applications
+  </a>
+{% endblock %}
+
+{% block head %}
+<script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+<style>
+  .exec-wrap{display:grid;gap:18px}
+  .exec-hero{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(280px,.85fr);gap:18px;align-items:stretch}
+  .exec-hero-panel{padding:28px;border-radius:24px;border:1px solid rgba(255,255,255,.08);background:linear-gradient(150deg, rgba(17,29,45,.96), rgba(8,14,24,.94));box-shadow:0 20px 46px rgba(0,0,0,.24)}
+  .exec-hero h1{margin:.35rem 0 .55rem;font-size:clamp(2rem,3vw,3rem);line-height:1.03;letter-spacing:-.05em}
+  .exec-hero-copy{color:#a9b7c6;max-width:720px}
+  .exec-chip-row{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}
+  .exec-chip{display:inline-flex;align-items:center;padding:.45rem .75rem;border-radius:999px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.09);font-size:.82rem;font-weight:700;color:#e8eef6}
+  .exec-hero-stat{display:grid;gap:10px;align-content:center}
+  .exec-hero-stat .label{font-size:.78rem;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:#8fbef2}
+  .exec-hero-stat .value{font-size:3rem;line-height:1;font-weight:900;letter-spacing:-.06em}
+  .exec-hero-stat .meta{color:#98aabd}
+  .exec-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
+  .exec-stat{padding:18px;border-radius:20px;border:1px solid rgba(255,255,255,.07);background:linear-gradient(180deg, rgba(18,26,38,.72), rgba(10,16,24,.84))}
+  .exec-stat-label{font-size:.76rem;letter-spacing:.12em;text-transform:uppercase;color:#8fa1b6;font-weight:800}
+  .exec-stat-value{font-size:2rem;line-height:1;margin:.55rem 0 .35rem;font-weight:900}
+  .exec-stat-meta{color:#95a7b9;font-size:.88rem}
+  .exec-main{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(340px,.8fr);gap:18px}
+  .exec-card{padding:22px;border-radius:24px;border:1px solid rgba(255,255,255,.07);background:linear-gradient(180deg, rgba(18,26,38,.72), rgba(10,16,24,.84))}
+  .exec-card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:16px}
+  .exec-card-head h3{margin:.25rem 0 0}
+  .exec-card-sub{color:#92a5b7}
+  .exec-list{display:grid;gap:12px}
+  .exec-row{display:flex;justify-content:space-between;gap:12px;padding:14px 16px;border-radius:16px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06)}
+  .exec-row-title{font-weight:800}
+  .exec-row-sub{color:#95a7b9;font-size:.88rem;margin-top:2px}
+  .exec-pill{display:inline-flex;align-items:center;padding:.3rem .55rem;border-radius:999px;background:rgba(122,184,255,.14);border:1px solid rgba(122,184,255,.18);color:#dcedff;font-size:.74rem;font-weight:800}
+  .exec-chart{height:280px}
+  @media (max-width: 1200px){.exec-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.exec-main,.exec-hero{grid-template-columns:1fr}}
+  @media (max-width: 700px){.exec-grid{grid-template-columns:1fr}}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="exec-wrap">
+  <section class="exec-hero">
+    <div class="exec-hero-panel">
+      <div class="eyebrow">{{ executive_company_name|upper }} EXECUTIVE DASHBOARD</div>
+      <h1>Executive oversight for the whole operating system.</h1>
+      <div class="exec-hero-copy">
+        Use this view to manage people, monitor loan activity, review invites and access requests, and keep the Ravlo workspace aligned across teams.
+      </div>
+      <div class="exec-chip-row">
+        <span class="exec-chip">{{ stats.total_users or 0 }} total users</span>
+        <span class="exec-chip">{{ stats.total_loans or 0 }} active loan files</span>
+        <span class="exec-chip">{{ stats.pending_requests or 0 }} pending requests</span>
+        <span class="exec-chip">{{ stats.pending_invites or 0 }} pending invites</span>
+      </div>
+    </div>
+
+    <div class="exec-hero-panel exec-hero-stat">
+      <div class="label">Executive Summary</div>
+      <div class="value">{{ stats.total_users or 0 }}</div>
+      <div class="meta">{{ ai_summary }}</div>
+      <a class="re-btn ghost sm" href="{{ url_for('admin.analytics') }}">Open Analytics</a>
+    </div>
+  </section>
+
+  <section class="exec-grid">
+    <div class="exec-stat">
+      <div class="exec-stat-label">Users</div>
+      <div class="exec-stat-value">{{ stats.total_users or 0 }}</div>
+      <div class="exec-stat-meta">Registered accounts in this workspace</div>
+    </div>
+    <div class="exec-stat">
+      <div class="exec-stat-label">Loans</div>
+      <div class="exec-stat-value">{{ stats.total_loans or 0 }}</div>
+      <div class="exec-stat-meta">Loan files currently in the system</div>
+    </div>
+    <div class="exec-stat">
+      <div class="exec-stat-label">Access Requests</div>
+      <div class="exec-stat-value">{{ stats.pending_requests or 0 }}</div>
+      <div class="exec-stat-meta">Pending onboarding and access approvals</div>
+    </div>
+    <div class="exec-stat">
+      <div class="exec-stat-label">Invites</div>
+      <div class="exec-stat-value">{{ stats.pending_invites or 0 }}</div>
+      <div class="exec-stat-meta">Invites waiting to be accepted</div>
+    </div>
+  </section>
+
+  <section class="exec-main">
+    <div class="exec-card">
+      <div class="exec-card-head">
+        <div>
+          <div class="eyebrow">Recent Requests</div>
+          <h3>Access and onboarding queue</h3>
+          <div class="exec-card-sub">Newest requests that need executive visibility.</div>
+        </div>
+        <a class="re-btn ghost sm" href="{{ url_for('admin.access_requests') }}">View All</a>
+      </div>
+
+      <div class="exec-list">
+        {% if recent_requests %}
+          {% for req in recent_requests %}
+          <div class="exec-row">
+            <div>
+              <div class="exec-row-title">{{ req.contact_name or req.email or ('Request #' ~ req.id) }}</div>
+              <div class="exec-row-sub">{{ req.company_name or executive_company_name }} • {{ req.email or "No email" }}</div>
+            </div>
+            <div class="exec-pill">{{ req.status or "pending" }}</div>
+          </div>
+          {% endfor %}
+        {% else %}
+          <div class="exec-row">
+            <div>
+              <div class="exec-row-title">No requests waiting</div>
+              <div class="exec-row-sub">New access and onboarding requests will show up here.</div>
+            </div>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="exec-card">
+      <div class="exec-card-head">
+        <div>
+          <div class="eyebrow">Recent Users</div>
+          <h3>Newest team members</h3>
+          <div class="exec-card-sub">Quick visibility into who was added most recently.</div>
+        </div>
+        <a class="re-btn ghost sm" href="{{ url_for('system.users') }}">Manage Users</a>
+      </div>
+
+      <div class="exec-list">
+        {% if users %}
+          {% for user in users %}
+          <div class="exec-row">
+            <div>
+              <div class="exec-row-title">{{ user.full_name or user.username or user.email }}</div>
+              <div class="exec-row-sub">{{ user.email }} • {{ user.role|replace('_', ' ')|title }}</div>
+            </div>
+            <div class="exec-pill">{{ user.company.name if user.company else executive_company_name }}</div>
+          </div>
+          {% endfor %}
+        {% else %}
+          <div class="exec-row">
+            <div>
+              <div class="exec-row-title">No users yet</div>
+              <div class="exec-row-sub">User records will appear here once accounts are created.</div>
+            </div>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </section>
+
+  <section class="exec-main">
+    <div class="exec-card">
+      <div class="exec-card-head">
+        <div>
+          <div class="eyebrow">Loan Activity</div>
+          <h3>Monthly loan volume</h3>
+          <div class="exec-card-sub">Recent application momentum across the workspace.</div>
+        </div>
+      </div>
+      <div id="execLoanChart" class="exec-chart"></div>
+    </div>
+
+    <div class="exec-card">
+      <div class="exec-card-head">
+        <div>
+          <div class="eyebrow">User Growth</div>
+          <h3>Monthly registrations</h3>
+          <div class="exec-card-sub">New user growth over the last six months.</div>
+        </div>
+      </div>
+      <div id="execUserChart" class="exec-chart"></div>
+    </div>
+  </section>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  const executiveLoanChart = new ApexCharts(document.querySelector("#execLoanChart"), {
+    chart: { type: "area", height: 280, toolbar: { show: false }, background: "transparent" },
+    series: [{ name: "Loan Files", data: {{ loan_volume_series|tojson }} }],
+    xaxis: { categories: {{ loan_volume_labels|tojson }}, labels: { style: { colors: "#92a5b7" } } },
+    yaxis: { labels: { style: { colors: "#92a5b7" } } },
+    stroke: { curve: "smooth", width: 3 },
+    fill: { type: "gradient", gradient: { opacityFrom: 0.35, opacityTo: 0.04 } },
+    colors: ["#7ab8ff"],
+    grid: { borderColor: "rgba(255,255,255,.08)" },
+    dataLabels: { enabled: false },
+    legend: { show: false }
+  });
+  executiveLoanChart.render();
+
+  const executiveUserChart = new ApexCharts(document.querySelector("#execUserChart"), {
+    chart: { type: "bar", height: 280, toolbar: { show: false }, background: "transparent" },
+    series: [{ name: "Users", data: {{ user_growth_series|tojson }} }],
+    xaxis: { categories: {{ user_growth_labels|tojson }}, labels: { style: { colors: "#92a5b7" } } },
+    yaxis: { labels: { style: { colors: "#92a5b7" } } },
+    colors: ["#9dd39b"],
+    grid: { borderColor: "rgba(255,255,255,.08)" },
+    dataLabels: { enabled: false },
+    legend: { show: false }
+  });
+  executiveUserChart.render();
+</script>
+{% endblock %}
