@@ -29,7 +29,9 @@
           {% include "layouts/_sidebar_processor.html" %}
         {% elif current_user.role == "underwriter" %}
           {% include "layouts/_sidebar_underwriter.html" %}
-        {% elif current_user.role in ["admin", "executive", "platform_admin", "master_admin", "lending_admin"] %}
+        {% elif current_user.role == "executive" %}
+          {% include "layouts/_sidebar_executive.html" %}
+        {% elif current_user.role in ["admin", "platform_admin", "master_admin", "lending_admin"] %}
           {% include "layouts/_sidebar_admin.html" %}
         {% else %}
           {% include "layouts/_sidebar_loan_officer.html" %}
