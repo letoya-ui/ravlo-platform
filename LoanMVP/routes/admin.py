@@ -22,6 +22,8 @@ from LoanMVP.utils.role_helpers import is_admin
 from LoanMVP.models.user_model import User
 from LoanMVP.models.crm_models import Lead, Message, Task 
 from LoanMVP.models.loan_models import LoanApplication, BorrowerProfile
+from LoanMVP.models.loan_officer_model import LoanOfficerProfile
+from LoanMVP.models.processor_model import ProcessorProfile
 from LoanMVP.models.document_models import LoanDocument
 from LoanMVP.models.system_models import SystemLog
 from LoanMVP.models.admin import Company, AccessRequest, UserInvite, LicenseApplication, LicenseInviteEvent
@@ -201,11 +203,80 @@ def _company_dashboard_defaults():
         "tools": True,
         "analytics": True,
         "empty_state": True,
+        "applicants": True,
         "team": True,
         "invites": True,
         "requests": True,
         "messages": True,
     }
+
+
+def _as_int(value):
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _company_loan_officers(company_id):
+    return (
+        db.session.query(LoanOfficerProfile)
+        .join(User, LoanOfficerProfile.user_id == User.id)
+        .filter(User.company_id == company_id)
+        .order_by(func.lower(func.coalesce(LoanOfficerProfile.name, User.email)))
+        .all()
+    )
+
+
+def _company_processors(company_id):
+    return (
+        db.session.query(ProcessorProfile)
+        .join(User, ProcessorProfile.user_id == User.id)
+        .filter(User.company_id == company_id)
+        .order_by(func.lower(func.coalesce(ProcessorProfile.full_name, User.email)))
+        .all()
+    )
+
+
+def _borrower_matches_company(borrower, company):
+    if not borrower or not company:
+        return False
+
+    borrower_user = getattr(borrower, "user", None)
+    borrower_company_id = getattr(borrower_user, "company_id", None)
+    if borrower_company_id == company.id:
+        return True
+
+    borrower_company_name = (getattr(borrower, "company", "") or "").strip().lower()
+    company_name = (getattr(company, "name", "") or "").strip().lower()
+    return bool(company_name and borrower_company_name == company_name)
+
+
+def _loan_matches_company(loan, company):
+    if not loan or not company:
+        return False
+
+    if getattr(loan, "company_id", None) == company.id:
+        return True
+
+    borrower = getattr(loan, "borrower_profile", None)
+    return _borrower_matches_company(borrower, company)
+
+
+def _company_recent_applicants(company_id, limit=8):
+    company = Company.query.get(company_id)
+    if not company:
+        return []
+
+    loans = (
+        LoanApplication.query
+        .order_by(LoanApplication.created_at.desc(), LoanApplication.id.desc())
+        .limit(200)
+        .all()
+    )
+
+    scoped_loans = [loan for loan in loans if _loan_matches_company(loan, company)]
+    return scoped_loans[:limit]
 
 
 def _company_dashboard_column_exists():
@@ -1473,10 +1544,13 @@ def company_dashboard(company_id):
         return access_redirect
 
     team_members = User.query.filter_by(company_id=company.id).order_by(User.created_at.desc()).all()
+    company_loan_officers = _company_loan_officers(company.id)
+    company_processors = _company_processors(company.id)
     invites = UserInvite.query.filter_by(company_id=company.id).order_by(UserInvite.created_at.desc()).all()
     loans = LoanApplication.query.filter_by(company_id=company.id).order_by(LoanApplication.created_at.desc()).all() if hasattr(LoanApplication, "company_id") else []
     borrowers = BorrowerProfile.query.filter_by(company_id=company.id).all() if hasattr(BorrowerProfile, "company_id") else []
     docs = LoanDocument.query.filter_by(company_id=company.id).all() if hasattr(LoanDocument, "company_id") else []
+    applicant_loans = _company_recent_applicants(company.id)
     access_requests = [
         item for item in (
             AccessRequest.query
@@ -1532,6 +1606,8 @@ def company_dashboard(company_id):
         "pending_invites": len(pending_invites),
         "accepted_invites": len(accepted_invites),
         "loans": len(loans),
+        "assigned_loan_officers": len([loan for loan in applicant_loans if getattr(loan, "loan_officer_id", None)]),
+        "assigned_processors": len([loan for loan in applicant_loans if getattr(loan, "processor_id", None)]),
         "borrowers": len(borrowers),
         "documents": len(docs),
         "requests": len(access_requests),
@@ -1545,6 +1621,9 @@ def company_dashboard(company_id):
         invites=invites[:5],
         loans=loans[:5],
         borrowers=borrowers[:5],
+        applicant_loans=applicant_loans,
+        company_loan_officers=company_loan_officers,
+        company_processors=company_processors,
         recent_messages=recent_messages,
         access_requests=access_requests[:5],
         stats=stats,
@@ -1562,6 +1641,51 @@ def company_dashboard(company_id):
         title=f"{company.name} Dashboard",
         active_tab="companies",
     )
+
+
+@admin_bp.route("/company/<int:company_id>/applications/<int:loan_id>/assign", methods=["POST"])
+@login_required
+@role_required("admin_group")
+def assign_company_applicant(company_id, loan_id):
+    company = Company.query.get_or_404(company_id)
+    access_redirect = _ensure_company_access(company)
+    if access_redirect:
+        return access_redirect
+
+    loan = LoanApplication.query.get_or_404(loan_id)
+    if not _loan_matches_company(loan, company):
+        flash("That applicant is not part of this company workspace.", "warning")
+        return redirect(url_for("admin.company_dashboard", company_id=company.id))
+
+    available_officers = {profile.id: profile for profile in _company_loan_officers(company.id)}
+    available_processors = {profile.id: profile for profile in _company_processors(company.id)}
+
+    officer_id = _as_int(request.form.get("loan_officer_id"))
+    processor_id = _as_int(request.form.get("processor_id"))
+
+    if officer_id and officer_id not in available_officers:
+        flash("Please choose a loan officer assigned to this company.", "warning")
+        return redirect(url_for("admin.company_dashboard", company_id=company.id))
+
+    if processor_id and processor_id not in available_processors:
+        flash("Please choose a processor assigned to this company.", "warning")
+        return redirect(url_for("admin.company_dashboard", company_id=company.id))
+
+    borrower = getattr(loan, "borrower_profile", None)
+
+    loan.loan_officer_id = officer_id or None
+    loan.processor_id = processor_id or None
+
+    if borrower is not None:
+        borrower.assigned_officer_id = officer_id or None
+        if officer_id:
+            officer_profile = available_officers.get(officer_id)
+            borrower.assigned_to = getattr(officer_profile, "user_id", None)
+
+    db.session.commit()
+
+    flash("Applicant assignments updated.", "success")
+    return redirect(url_for("admin.company_dashboard", company_id=company.id))
 
 
 @admin_bp.route("/company/<int:company_id>/settings", methods=["GET", "POST"])

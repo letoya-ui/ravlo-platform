@@ -21,7 +21,7 @@ from LoanMVP.forms import RegisterForm, ResetPasswordForm, ResetPasswordRequestF
 from LoanMVP.services.subscriptions import sync_features_with_subscription
 from LoanMVP.utils.blocking_helpers import is_user_blocked, get_user_block_message
 from LoanMVP.models.user_model import User
-from LoanMVP.models.admin import AccessRequest, UserInvite, LicenseApplication
+from LoanMVP.models.admin import AccessRequest, UserInvite, LicenseApplication, Company
 from LoanMVP.models.investor_models import InvestorProfile
 from flask_mail import Message as MailMessage
 
@@ -97,6 +97,22 @@ def _auth_page_context() -> dict:
         "recovery_mode": _workspace_recovery_mode(),
         "owner_admin_email": _owner_admin_email(),
     }
+
+
+def _default_investor_company_id() -> int | None:
+    company = Company.query.filter(
+        func.lower(Company.name) == "caughman mason loan service"
+    ).first()
+    return getattr(company, "id", None)
+
+
+def _resolve_registration_company_id(role: str, explicit_company_id=None):
+    role = (role or "").strip().lower()
+    if explicit_company_id:
+        return explicit_company_id
+    if role == "investor":
+        return _default_investor_company_id()
+    return None
 # ============================================================
 # TOKEN HELPERS
 # ============================================================
@@ -271,7 +287,7 @@ def register_from_invite(token):
             username=full_name or None,
             email=invite.email,
             role=invite.role,
-            company_id=invite.company_id,
+            company_id=_resolve_registration_company_id(invite.role, invite.company_id),
             password_hash=generate_password_hash(password),
             is_active=True,
             invite_accepted=True,
@@ -358,6 +374,7 @@ def register():
             username=full_name or None,
             email=email,
             role=role,
+            company_id=_resolve_registration_company_id(role),
             is_active=True,
         )
 
@@ -697,7 +714,7 @@ def accept_invite(token):
             user.last_name = last_name or user.last_name
             if not user.username:
                 user.username = f"{first_name} {last_name}".strip() or user.email
-            user.company_id = invite.company_id
+            user.company_id = _resolve_registration_company_id(invite.role, invite.company_id)
             user.role = invite.role
             user.invite_accepted = True
             user.is_active = True
@@ -710,7 +727,7 @@ def accept_invite(token):
                 email=invite.email,
                 password_hash=generate_password_hash(password),
                 role=invite.role,
-                company_id=invite.company_id,
+                company_id=_resolve_registration_company_id(invite.role, invite.company_id),
                 is_active=True,
                 invite_accepted=True,
                 onboarding_complete=False,
