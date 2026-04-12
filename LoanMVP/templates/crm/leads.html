@@ -45,7 +45,7 @@
           <div class="muted">{{ lead.ai_summary[:80] }}...</div>
             {% endif %}
           </td>
-            <a href="{{ url_for('crm.lead_details', lead_id=lead.id) }}" class="btn btn-sm">🔍</a>
+            <a href="{{ url_for('crm.view_lead', lead_id=lead.id) }}" class="btn btn-sm">🔍</a>
             <a href="{{ url_for('crm.update_lead', lead_id=lead.id) }}" class="btn btn-sm">✏️</a>
           </td>
         </tr>

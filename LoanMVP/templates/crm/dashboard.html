@@ -33,7 +33,7 @@
          <tbody>
            {% for lead in contacted_leads %}
              <tr>
-               <td><a href="{{ url_for('crm.lead_details', lead_id=lead.id) }}">{{ lead.name }}</a></td>
+               <td><a href="{{ url_for('crm.view_lead', lead_id=lead.id) }}">{{ lead.name }}</a></td>
                <td>{{ lead.status }}</td>
                <td>{{ lead.updated_at.strftime('%b %d, %Y %I:%M %p') }}</td>
                <td>{{ lead.assigned_officer.full_name if lead.assigned_officer else 'Unassigned' }}</td>

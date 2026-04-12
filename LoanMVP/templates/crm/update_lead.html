@@ -11,7 +11,7 @@
       <h1><i class="lucide lucide-edit-3"></i> Update Lead</h1>
       <div class="row">
         <a href="{{ url_for('crm.leads') }}" class="btn btn-outline"><i class="lucide lucide-users"></i> View Leads</a>
-        <a href="{{ url_for('crm.lead_details', lead_id=lead.id) }}" class="btn btn-outline"><i class="lucide lucide-eye"></i> View Detail</a>
+        <a href="{{ url_for('crm.view_lead', lead_id=lead.id) }}" class="btn btn-outline"><i class="lucide lucide-eye"></i> View Detail</a>
       </div>
     </div>
     <p class="muted">Last updated: {{ lead.updated_at.strftime('%b %d, %Y %I:%M %p') if lead.updated_at else '—' }}</p>

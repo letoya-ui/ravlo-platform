@@ -79,6 +79,10 @@ def _choose_auto_assignee(officers):
     return ranked[0][1]
 
 
+def _company_scoped_lead_or_404(lead_id):
+    return _company_scoped_leads_query().filter(Lead.id == lead_id).first_or_404()
+
+
 def _lead_source_record(source_name):
     normalized = (source_name or "AI Lead Engine").strip() or "AI Lead Engine"
     record = LeadSource.query.filter(func.lower(LeadSource.source_name) == normalized.lower()).first()
@@ -696,7 +700,7 @@ def campaigns():
 @csrf.exempt
 @role_required("crm", "loan_officer", "processor", "executive", "admin", "partners")
 def view_lead(lead_id):
-    lead = Lead.query.get_or_404(lead_id)
+    lead = _company_scoped_lead_or_404(lead_id)
     calls = CallLog.query.filter_by(related_lead_id=lead.id).order_by(CallLog.created_at.desc()).all()
     ai_followup = None
 
@@ -888,12 +892,12 @@ Use plausible sample contact info, not existing famous people.
         title="AI Leads",
     )
 
-@crm_bp.route("/leads/<int:lead_id>", methods=["GET", "POST"])
+@crm_bp.route("/leads/<int:lead_id>/edit", methods=["GET", "POST"])
 @csrf.exempt
 @role_required("crm", "loan_officer", "processor", "executive", "admin", "partners")
 def update_lead(lead_id):
     """Update or assign a lead."""
-    lead = _company_scoped_leads_query().filter(Lead.id == lead_id).first_or_404()
+    lead = _company_scoped_lead_or_404(lead_id)
     borrower = BorrowerProfile.query.filter_by(lead_id=lead_id).first()
     officers = _crm_company_loan_officers()
 
@@ -1002,7 +1006,7 @@ from sqlalchemy import func
 # 🧭 Lead Engine (Search / Filter / Analytics)
 # ==========================================================
 @crm_bp.route("/lead_engine")
-@role_required("crm", "admin")
+@role_required("crm", "loan_officer", "processor", "executive", "admin", "partners")
 def lead_engine():
     query = request.args.get("q", "")
     leads = _company_scoped_leads_query().filter(Lead.name.ilike(f"%{query}%")).all() if query else []
@@ -1012,7 +1016,7 @@ def lead_engine():
 # 📋 View All Leads
 # ==========================================================
 @crm_bp.route("/leads")
-@role_required("crm", "admin")
+@role_required("crm", "loan_officer", "processor", "executive", "admin", "partners")
 def leads():
     leads = _company_scoped_leads_query().order_by(Lead.created_at.desc()).all()
     return render_template("crm/leads.html", leads=leads, title="All Leads")
@@ -1021,32 +1025,9 @@ def leads():
 # 🧠 Lead Detail (Full View with AI + Communication)
 # ==========================================================
 @crm_bp.route("/details/<int:lead_id>")
-@role_required("crm", "admin")
+@role_required("crm", "loan_officer", "processor", "executive", "admin", "partners")
 def lead_details(lead_id):
-    """
-    Detailed view for a single lead including AI insights,
-    tasks, communication logs, and related loans.
-    """
-    lead = _company_scoped_leads_query().filter(Lead.id == lead_id).first_or_404()
-
-    # Optional relationships (if you have them)
-    tasks = getattr(lead, "tasks", [])
-    messages = getattr(lead, "messages", [])
-    loans = getattr(lead, "loans", [])
-
-    # Simple placeholder AI summary (can replace with your AI assistant)
-    ai_summary = f"🤖 Lead '{lead.name}' is currently marked as {lead.status}. Based on recent trends, " \
-                 f"leads from {lead.source or 'organic sources'} show a {round(72.5, 1)}% chance of conversion."
-
-    return render_template(
-        "crm/lead_details.html",
-        lead=lead,
-        tasks=tasks,
-        messages=messages,
-        loans=loans,
-        ai_summary=ai_summary,
-        title=f"Lead Details - {lead.name}"
-    )
+    return redirect(url_for("crm.view_lead", lead_id=lead_id))
 
 # -----------------------------------------------------
 # 🤝 Partner Detail View
