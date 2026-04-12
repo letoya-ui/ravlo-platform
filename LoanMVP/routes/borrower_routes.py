@@ -23,6 +23,9 @@ from LoanMVP.models.loan_models import BorrowerProfile, LoanApplication, Borrowe
 from LoanMVP.models.document_models import LoanDocument
 from LoanMVP.models.underwriter_model import UnderwritingCondition
 from LoanMVP.models.crm_models import Message
+from LoanMVP.models.user_model import User
+from LoanMVP.models.loan_officer_model import LoanOfficerProfile
+from LoanMVP.models.processor_model import ProcessorProfile
 
 borrower_bp = Blueprint("borrower", __name__, url_prefix="/borrower")
 
@@ -68,6 +71,46 @@ def get_active_loan(borrower):
         .order_by(LoanApplication.created_at.desc())
         .first()
     )
+
+
+def _assigned_borrower_contacts(borrower):
+    if not borrower:
+        return []
+
+    active_loan = get_active_loan(borrower)
+    user_ids = []
+
+    if getattr(borrower, "assigned_to", None):
+        user_ids.append(borrower.assigned_to)
+
+    if getattr(borrower, "assigned_officer_id", None):
+        officer_profile = LoanOfficerProfile.query.get(borrower.assigned_officer_id)
+        if officer_profile and officer_profile.user_id:
+            user_ids.append(officer_profile.user_id)
+
+    if active_loan and getattr(active_loan, "loan_officer_id", None):
+        officer_profile = LoanOfficerProfile.query.get(active_loan.loan_officer_id)
+        if officer_profile and officer_profile.user_id:
+            user_ids.append(officer_profile.user_id)
+
+    if active_loan and getattr(active_loan, "processor_id", None):
+        processor_profile = ProcessorProfile.query.get(active_loan.processor_id)
+        if processor_profile and processor_profile.user_id:
+            user_ids.append(processor_profile.user_id)
+
+    allowed_user_ids = []
+    seen = set()
+    for user_id in user_ids:
+        if user_id and user_id not in seen:
+            seen.add(user_id)
+            allowed_user_ids.append(user_id)
+
+    if not allowed_user_ids:
+        return []
+
+    users = User.query.filter(User.id.in_(allowed_user_ids)).all()
+    user_lookup = {user.id: user for user in users if (user.role or "").strip().lower() in {"loan_officer", "processor"}}
+    return [user_lookup[user_id] for user_id in allowed_user_ids if user_id in user_lookup]
 
 
 def safe_float(value, default=0.0):
@@ -679,11 +722,8 @@ def messages():
         flash("Please complete your borrower profile first.", "warning")
         return redirect(url_for("borrower.create_profile"))
 
-    from LoanMVP.models.user_model import User
-
-    officers = User.query.filter(
-        User.role.in_(["loan_officer", "processor", "underwriter"])
-    ).all()
+    officers = _assigned_borrower_contacts(borrower)
+    allowed_receiver_ids = {user.id for user in officers}
 
     receiver_id = request.args.get("receiver_id", type=int)
     selected_messages = []
@@ -691,6 +731,10 @@ def messages():
     if request.method == "POST":
         content = (request.form.get("content") or "").strip()
         receiver_id = request.form.get("receiver_id", type=int)
+
+        if receiver_id and receiver_id not in allowed_receiver_ids:
+            flash("You can only message your assigned loan officer or processor.", "warning")
+            return redirect(url_for("borrower.messages"))
 
         if receiver_id and content:
             msg = Message(
@@ -707,6 +751,9 @@ def messages():
         flash("Please select a recipient and enter a message.", "warning")
 
     if receiver_id:
+        if receiver_id not in allowed_receiver_ids:
+            flash("You can only view messages with your assigned loan officer or processor.", "warning")
+            return redirect(url_for("borrower.messages"))
         selected_messages = (
             Message.query.filter(
                 ((Message.sender_id == current_user.id) & (Message.receiver_id == receiver_id)) |

@@ -4,7 +4,7 @@
 
 {% block page_title %}Messages{% endblock %}
 {% block page_subline %}
-Stay connected with your lending team and keep your file moving.
+Stay connected with your assigned loan officer and processor to keep your file moving.
 {% endblock %}
 
 {% block content %}
@@ -42,9 +42,9 @@ Stay connected with your lending team and keep your file moving.
             </div>
           </a>
         {% endfor %}
-      {% else %}
-        <div class="empty-team">
-          <p class="muted">No team members available yet.</p>
+        {% else %}
+          <div class="empty-team">
+          <p class="muted">Your assigned loan officer or processor will appear here as soon as they are linked to your file.</p>
         </div>
       {% endif %}
     </div>
@@ -91,7 +91,7 @@ Stay connected with your lending team and keep your file moving.
         {% else %}
           <div class="empty-thread">
             <h4>No conversation selected</h4>
-            <p class="muted">Choose a loan officer, processor, or underwriter from the left to start messaging.</p>
+            <p class="muted">Choose your assigned loan officer or processor from the left to start messaging.</p>
           </div>
         {% endif %}
       </div>

@@ -20,12 +20,10 @@ def _owner_admin_email() -> str:
 
 def _can_access_executive_dashboard(user) -> bool:
     role = (getattr(user, "role", "") or "").strip().lower()
-    if role in {"executive", "platform_admin", "master_admin", "lending_admin"}:
-        return True
+    company = getattr(user, "company", None)
+    company_name = (getattr(company, "name", "") or "").strip().lower()
 
-    email = (getattr(user, "email", "") or "").strip().lower()
-    return bool(email) and email == _owner_admin_email()
-
+    return role in {"executive", "platform_admin", "master_admin", "lending_admin"} and company_name == "ravlo"
 
 def _demo_dashboard_cards():
     return [
