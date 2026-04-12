@@ -64,6 +64,7 @@ from LoanMVP.models.loan_models import (
     BorrowerConsent,  
 )
 from LoanMVP.models.loan_officer_model import LoanOfficerProfile
+from LoanMVP.models.processor_model import ProcessorProfile
 from LoanMVP.models.crm_models import (
     Lead,
     CRMNote,
@@ -85,6 +86,7 @@ from LoanMVP.models.borrowers import BorrowerInteraction
 from LoanMVP.models.payment_models import PaymentRecord
 from LoanMVP.models.campaign_model import Campaign
 from LoanMVP.models.user_model import User
+from LoanMVP.models.underwriter_model import UnderwriterProfile
 # Forms
 from LoanMVP.forms import BorrowerProfileForm
 from LoanMVP.forms.loan_officer_forms import (
@@ -138,6 +140,52 @@ def _resolve_recipient_name(recipient_type, recipient_id):
         pass
 
     return f"{recipient_type.title()} #{recipient_id}"
+
+
+def _loan_officer_profile():
+    return LoanOfficerProfile.query.filter_by(user_id=current_user.id).first()
+
+
+def _assigned_contact_users_for_loan_officer():
+    profile = _loan_officer_profile()
+    if not profile:
+        return []
+
+    user_ids = set()
+    assigned_loans = LoanApplication.query.filter_by(loan_officer_id=profile.id).all()
+    assigned_borrowers = BorrowerProfile.query.filter_by(assigned_officer_id=profile.id).all()
+
+    for borrower in assigned_borrowers:
+        if getattr(borrower, "user_id", None):
+            user_ids.add(borrower.user_id)
+
+    for loan in assigned_loans:
+        borrower = getattr(loan, "borrower_profile", None)
+        processor = getattr(loan, "processor", None)
+        underwriter = getattr(loan, "underwriter", None)
+
+        if borrower and getattr(borrower, "user_id", None):
+            user_ids.add(borrower.user_id)
+        if processor and getattr(processor, "user_id", None):
+            user_ids.add(processor.user_id)
+        if underwriter and getattr(underwriter, "user_id", None):
+            user_ids.add(underwriter.user_id)
+
+    if not user_ids:
+        return []
+
+    users = User.query.filter(User.id.in_(user_ids)).all()
+    return sorted(
+        users,
+        key=lambda user: (
+            (getattr(user, "role", "") or "").lower(),
+            (getattr(user, "full_name", "") or getattr(user, "email", "") or "").lower(),
+        ),
+    )
+
+
+def _allowed_loan_officer_contact_ids():
+    return {user.id for user in _assigned_contact_users_for_loan_officer()}
 
 def enforce_onboarding_flow():
     if not current_user.ica_accepted:
