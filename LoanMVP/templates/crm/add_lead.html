@@ -42,10 +42,10 @@
     <div class="row" style="justify-content:space-between;">
       <h1><i class="lucide lucide-user-plus"></i> Add Lead</h1>
       <div class="row">
-        <a href="{{ url_for('crm.view_leads') }}" class="btn btn-outline"><i class="lucide lucide-users"></i> View Leads</a>
+        <a href="{{ url_for('crm.leads') }}" class="btn btn-outline"><i class="lucide lucide-users"></i> View Leads</a>
       </div>
     </div>
-    <p class="muted">Create a new lead. Only name and email are required — everything else is optional and can be updated later.</p>
+    <p class="muted">Create a new lead for your business and assign it to the right loan officer from the start.</p>
 
     <form method="POST" action="{{ url_for('crm.add_lead') }}">
       <!-- If you’re using WTForms/CSRF, include: {{ form.csrf_token }} -->
@@ -56,8 +56,8 @@
           <input id="name" name="name" type="text" placeholder="e.g., Jordan Miles" required>
         </div>
         <div>
-          <label for="email">Email *</label>
-          <input id="email" name="email" type="email" placeholder="e.g., jordan@example.com" required>
+          <label for="email">Email</label>
+          <input id="email" name="email" type="email" placeholder="e.g., jordan@example.com">
         </div>
       </div>
 
@@ -87,9 +87,14 @@
 
       <div class="grid g-2" style="margin-top:1rem;">
         <div>
-          <label for="assigned_to">Assigned To</label>
-          <input id="assigned_to" name="assigned_to" type="text" placeholder="User or team name">
-          <div class="inline-help">Leave blank to assign later.</div>
+          <label for="assigned_officer_id">Assigned Loan Officer</label>
+          <select id="assigned_officer_id" name="assigned_officer_id">
+            <option value="">Assign later</option>
+            {% for officer in officers %}
+              <option value="{{ officer.id }}">{{ officer.full_name or officer.name or officer.email }}</option>
+            {% endfor %}
+          </select>
+          <div class="inline-help">Only loan officers in this company are shown.</div>
         </div>
         <div>
           <label for="score">Lead Score</label>
@@ -108,7 +113,7 @@
 
       <div class="row" style="margin-top:1.2rem;">
         <button type="submit" class="btn"><i class="lucide lucide-save"></i> Save Lead</button>
-        <a href="{{ url_for('crm.view_leads') }}" class="btn btn-outline"><i class="lucide lucide-x"></i> Cancel</a>
+        <a href="{{ url_for('crm.leads') }}" class="btn btn-outline"><i class="lucide lucide-x"></i> Cancel</a>
       </div>
     </form>
   </div>

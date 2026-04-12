@@ -1,0 +1,110 @@
+{% extends "layouts/ravlo_employee_base.html" %}
+{% block title %}AI Leads{% endblock %}
+{% block content %}
+<main style="margin-left:260px; padding:2rem; background:#0f0f11; color:#e6e6e6; min-height:100vh;">
+  <link rel="stylesheet" href="https://unpkg.com/lucide-static@latest/font/lucide.css">
+
+  <style>
+    .card{
+      background:#15161a;border:1px solid #2b2f36;border-radius:14px;
+      padding:1.4rem;box-shadow:0 0 18px rgba(122,184,255,0.18);
+      max-width:1100px;margin:0 auto 1.25rem;
+    }
+    .grid{display:grid;gap:1rem}
+    .g-2{grid-template-columns:repeat(2,minmax(0,1fr))}
+    label{display:block;margin-bottom:.35rem;color:#cfe0f5;font-size:.92rem}
+    input,select{
+      width:100%;background:#0f0f11;color:#e6e6e6;border:1px solid #2b2f36;
+      border-radius:10px;padding:.7rem .8rem;
+    }
+    .btn{
+      display:inline-flex;align-items:center;gap:.5rem;
+      background:linear-gradient(180deg,#2a4a62,#1b2a38);border:1px solid #2a4a62;
+      color:#cfe8ff;border-radius:10px;padding:.7rem 1rem;text-decoration:none;cursor:pointer;
+    }
+    .btn-outline{background:transparent;border:1px solid #2b2f36;color:#e6e6e6}
+    table{width:100%;border-collapse:collapse}
+    th,td{padding:.75rem;border-bottom:1px solid #2b2f36;text-align:left}
+    .muted{color:#a5a7ad}
+  </style>
+
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:1rem;flex-wrap:wrap;">
+      <div>
+        <h1 style="margin:0 0 .35rem;"><i class="lucide lucide-sparkles"></i> AI Lead Builder</h1>
+        <p class="muted" style="margin:0;">Generate prospect leads for the business and send them straight into the CRM queue.</p>
+      </div>
+      <div style="display:flex;gap:.6rem;flex-wrap:wrap;">
+        <a href="{{ url_for('crm.leads') }}" class="btn btn-outline"><i class="lucide lucide-users"></i> View Leads</a>
+        <a href="{{ url_for('crm.add_lead') }}" class="btn btn-outline"><i class="lucide lucide-plus"></i> Manual Lead</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <form method="POST">
+      <div class="grid g-2">
+        <div>
+          <label for="market">Market</label>
+          <input id="market" name="market" type="text" placeholder="e.g., Atlanta first-time buyers">
+        </div>
+        <div>
+          <label for="audience">Audience</label>
+          <input id="audience" name="audience" type="text" placeholder="e.g., self-employed borrowers">
+        </div>
+      </div>
+
+      <div class="grid g-2" style="margin-top:1rem;">
+        <div>
+          <label for="product_focus">Product Focus</label>
+          <input id="product_focus" name="product_focus" type="text" placeholder="e.g., DSCR, FHA, refinance">
+        </div>
+        <div>
+          <label for="assigned_officer_id">Assign To Loan Officer</label>
+          <select id="assigned_officer_id" name="assigned_officer_id">
+            <option value="">Leave unassigned</option>
+            {% for officer in officers %}
+              <option value="{{ officer.id }}">{{ officer.full_name or officer.name or officer.email }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
+      <div style="margin-top:1rem; max-width:240px;">
+        <label for="count">Lead Count</label>
+        <input id="count" name="count" type="number" min="1" max="20" value="5">
+      </div>
+
+      <div style="margin-top:1.2rem;">
+        <button type="submit" class="btn"><i class="lucide lucide-brain-circuit"></i> Generate Leads</button>
+      </div>
+    </form>
+  </div>
+
+  {% if generated %}
+    <div class="card">
+      <h2 style="margin-top:0;">Generated This Run</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Email</th>
+            <th>Phone</th>
+            <th>Need</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for lead in generated %}
+            <tr>
+              <td>{{ lead.name }}</td>
+              <td>{{ lead.email or "—" }}</td>
+              <td>{{ lead.phone or "—" }}</td>
+              <td>{{ lead.message or "—" }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% endif %}
+</main>
+{% endblock %}

@@ -553,6 +553,9 @@ def ai_assistant():
 @role_required("loan_officer")
 @loan_officer_onboarding_required
 def messages():
+    allowed_users = _assigned_contact_users_for_loan_officer()
+    allowed_user_ids = {user.id for user in allowed_users}
+
     if request.method == "POST":
         receiver_id = request.form.get("receiver_id", type=int)
         subject = (request.form.get("subject") or "").strip()
@@ -560,6 +563,10 @@ def messages():
 
         if not receiver_id or not content:
             flash("Receiver and message content are required.", "danger")
+            return redirect(url_for("loan_officer.messages"))
+
+        if receiver_id not in allowed_user_ids:
+            flash("You can only message assigned borrowers and file teammates.", "warning")
             return redirect(url_for("loan_officer.messages"))
 
         receiver = User.query.get(receiver_id)
@@ -580,17 +587,12 @@ def messages():
         flash("Message sent successfully.", "success")
         return redirect(url_for("loan_officer.messages"))
 
-    active_users = (
-        User.query
-        .filter(User.id != current_user.id)
-        .filter_by(is_active=True)
-        .order_by(User.first_name.asc(), User.last_name.asc())
-        .all()
-    )
+    active_users = allowed_users
 
     inbox = (
         Message.query
         .filter_by(receiver_id=current_user.id)
+        .filter(Message.sender_id.in_(allowed_user_ids))
         .order_by(Message.created_at.desc())
         .all()
     )
@@ -598,6 +600,7 @@ def messages():
     sent = (
         Message.query
         .filter_by(sender_id=current_user.id)
+        .filter(Message.receiver_id.in_(allowed_user_ids))
         .order_by(Message.created_at.desc())
         .all()
     )
@@ -614,6 +617,7 @@ def messages():
 @csrf.exempt
 @role_required("loan_officer")
 def send_message():
+    allowed_receiver_ids = _allowed_loan_officer_contact_ids()
     receiver_id = request.form.get("receiver_id", type=int)
     subject = (request.form.get("subject") or "internal").strip().lower()
     content = (request.form.get("content") or "").strip()
@@ -622,6 +626,10 @@ def send_message():
 
     if not receiver_id:
         flash("Please select a receiver.", "danger")
+        return redirect(url_for("loan_officer.messages"))
+
+    if receiver_id not in allowed_receiver_ids:
+        flash("You can only message assigned borrowers and file teammates.", "warning")
         return redirect(url_for("loan_officer.messages"))
 
     if not content:

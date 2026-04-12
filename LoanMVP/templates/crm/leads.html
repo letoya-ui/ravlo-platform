@@ -12,6 +12,7 @@
       <h1><i class="lucide lucide-users"></i> Leads Dashboard</h1>
       <div style="display:flex;gap:.6rem;">
         <a href="{{ url_for('crm.add_lead') }}" class="btn-glow"><i class="lucide lucide-plus"></i> Add Lead</a>
+        <a href="{{ url_for('crm.ai_leads') }}" class="btn"><i class="lucide lucide-sparkles"></i> AI Leads</a>
         <a href="{{ url_for('crm.lead_engine') }}" class="btn"><i class="lucide lucide-brain-circuit"></i> Lead Engine</a>
         <a href="{{ url_for('crm.dialer_results') }}" class="btn"><i class="lucide lucide-phone-call"></i> Dialer</a>
       </div>
@@ -44,7 +45,7 @@
           <div class="muted">{{ lead.ai_summary[:80] }}...</div>
             {% endif %}
           </td>
-            <a href="{{ url_for('crm.lead_detail', lead_id=lead.id) }}" class="btn btn-sm">🔍</a>
+            <a href="{{ url_for('crm.lead_details', lead_id=lead.id) }}" class="btn btn-sm">🔍</a>
             <a href="{{ url_for('crm.update_lead', lead_id=lead.id) }}" class="btn btn-sm">✏️</a>
           </td>
         </tr>

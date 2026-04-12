@@ -8,6 +8,7 @@ from datetime import datetime
 from sqlalchemy import func, case
 from random import choice
 import json
+import re
 import csv
 
 from io import StringIO
@@ -28,6 +29,58 @@ from LoanMVP.utils.decorators import role_required
 crm_bp = Blueprint("crm", __name__, url_prefix="/crm")
 assistant = AIAssistant()
 
+
+def _crm_company_loan_officers():
+    query = LoanOfficerProfile.query.join(User, LoanOfficerProfile.user_id == User.id)
+    if getattr(current_user, "company_id", None):
+        query = query.filter(User.company_id == current_user.company_id)
+    return query.order_by(User.first_name.asc(), User.last_name.asc()).all()
+
+
+def _lead_source_record(source_name):
+    normalized = (source_name or "AI Lead Engine").strip() or "AI Lead Engine"
+    record = LeadSource.query.filter(func.lower(LeadSource.source_name) == normalized.lower()).first()
+    if record:
+        return record
+
+    record = LeadSource(source_name=normalized, source_type="AI")
+    db.session.add(record)
+    db.session.flush()
+    return record
+
+
+def _parse_ai_leads(raw_text):
+    text = (raw_text or "").strip()
+    if not text:
+        return []
+
+    match = re.search(r"\[[\s\S]*\]", text)
+    if not match:
+        return []
+
+    try:
+        payload = json.loads(match.group(0))
+    except Exception:
+        return []
+
+    if not isinstance(payload, list):
+        return []
+
+    leads = []
+    for item in payload:
+        if not isinstance(item, dict):
+            continue
+        name = (item.get("name") or "").strip()
+        if not name:
+            continue
+        leads.append({
+            "name": name,
+            "email": (item.get("email") or "").strip() or None,
+            "phone": (item.get("phone") or "").strip() or None,
+            "message": (item.get("message") or item.get("notes") or "").strip() or None,
+        })
+    return leads
+
 # ---------------------------------------------------------
 # 🧭 CRM Dashboard
 # ---------------------------------------------------------
@@ -45,8 +98,12 @@ def dashboard():
     # Role-based lead & task visibility
     # ----------------------------------------
     if role == "loan_officer":
+        officer = LoanOfficerProfile.query.filter_by(user_id=current_user.id).first()
         leads_list = (
-            Lead.query.filter_by(assigned_officer_id=current_user.id)
+            Lead.query.filter(
+                (Lead.assigned_to == current_user.id) |
+                (Lead.assigned_officer_id == getattr(officer, "id", None))
+            )
             .order_by(Lead.created_at.desc())
             .all()
         )
@@ -687,30 +744,104 @@ def lead_ai_followup(lead_id):
 
     return {"message": ai_text}
 
-@crm_bp.route("/add_lead", methods=["POST"])
+@crm_bp.route("/add_lead", methods=["GET", "POST"])
 @csrf.exempt
 @role_required("crm", "loan_officer", "processor", "executive", "admin", "partners")
 def add_lead():
     """Add a new lead record."""
-    full_name = request.form.get("full_name")
-    email = request.form.get("email")
-    phone = request.form.get("phone")
-    source = request.form.get("source")
-    notes = request.form.get("notes")
+    officers = _crm_company_loan_officers()
+    if request.method == "GET":
+        return render_template("crm/add_lead.html", officers=officers, title="Add Lead")
 
+    name = (request.form.get("name") or request.form.get("full_name") or "").strip()
+    email = (request.form.get("email") or "").strip() or None
+    phone = (request.form.get("phone") or "").strip() or None
+    source_name = (request.form.get("source") or "Manual Entry").strip()
+    notes = (request.form.get("notes") or "").strip() or None
+    status = (request.form.get("status") or "New").strip()
+    assigned_officer_id = request.form.get("assigned_officer_id", type=int)
+
+    if not name:
+        flash("Lead name is required.", "danger")
+        return render_template("crm/add_lead.html", officers=officers, title="Add Lead")
+
+    selected_officer = next((officer for officer in officers if officer.id == assigned_officer_id), None)
+    source = _lead_source_record(source_name)
     new_lead = Lead(
-        full_name=full_name,
+        name=name,
         email=email,
         phone=phone,
-        source=source,
-        notes=notes,
-        status="New",
+        message=notes,
+        source_id=source.id if source else None,
+        assigned_officer_id=selected_officer.id if selected_officer else None,
+        assigned_to=selected_officer.user_id if selected_officer else None,
+        status=status,
         created_at=datetime.utcnow()
     )
     db.session.add(new_lead)
     db.session.commit()
-    flash(f"✅ Lead '{full_name}' added successfully!", "success")
-    return redirect(url_for("crm.dashboard"))
+    flash(f"Lead '{name}' added successfully.", "success")
+    return redirect(url_for("crm.leads"))
+
+
+@crm_bp.route("/ai_leads", methods=["GET", "POST"])
+@csrf.exempt
+@role_required("crm", "loan_officer", "executive", "admin")
+def ai_leads():
+    officers = _crm_company_loan_officers()
+    generated = []
+
+    if request.method == "POST":
+        market = (request.form.get("market") or "").strip()
+        audience = (request.form.get("audience") or "").strip()
+        product_focus = (request.form.get("product_focus") or "").strip()
+        count = min(max(request.form.get("count", type=int) or 5, 1), 20)
+        assigned_officer_id = request.form.get("assigned_officer_id", type=int)
+        selected_officer = next((officer for officer in officers if officer.id == assigned_officer_id), None)
+        source = _lead_source_record("AI Lead Engine")
+
+        prompt = f"""
+Generate {count} realistic mortgage prospect leads for a lending business.
+Target market: {market or 'United States'}.
+Audience: {audience or 'homebuyers and refinance borrowers'}.
+Product focus: {product_focus or 'residential mortgage products'}.
+Return only valid JSON as an array.
+Each object must include: name, email, phone, message.
+Keep the message to one short sentence explaining the prospect's likely need.
+Use plausible sample contact info, not existing famous people.
+"""
+
+        try:
+            raw = assistant.generate_reply(prompt, "crm_ai_leads")
+            generated = _parse_ai_leads(raw)
+        except Exception:
+            generated = []
+
+        if not generated:
+            flash("AI could not generate lead records this time.", "warning")
+        else:
+            for item in generated:
+                lead = Lead(
+                    name=item["name"],
+                    email=item["email"],
+                    phone=item["phone"],
+                    message=item["message"],
+                    source_id=source.id if source else None,
+                    assigned_officer_id=selected_officer.id if selected_officer else None,
+                    assigned_to=selected_officer.user_id if selected_officer else None,
+                    status="New",
+                    created_at=datetime.utcnow(),
+                )
+                db.session.add(lead)
+            db.session.commit()
+            flash(f"{len(generated)} AI-generated leads were added to the CRM queue.", "success")
+
+    return render_template(
+        "crm/ai_leads.html",
+        officers=officers,
+        generated=generated,
+        title="AI Leads",
+    )
 
 @crm_bp.route("/leads/<int:lead_id>", methods=["GET", "POST"])
 @csrf.exempt
