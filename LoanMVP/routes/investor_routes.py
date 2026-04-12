@@ -16,7 +16,6 @@ from io import BytesIO
 from typing import Any, Dict
 from urllib.parse import urlencode, urlparse
 
-import boto3
 import requests
 
 from openai import OpenAI

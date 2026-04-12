@@ -7,7 +7,11 @@ import base64
 import requests
 from io import BytesIO
 from PIL import Image
-import boto3
+
+try:
+    import boto3
+except ModuleNotFoundError:
+    boto3 = None
 
 from flask import current_app
 
@@ -87,6 +91,9 @@ def _normalize_photo_urls(*sources):
 # -------------------------
 
 def _get_spaces_client():
+    if boto3 is None:
+        raise RuntimeError("boto3 is required for Spaces uploads but is not installed.")
+
     return boto3.client(
         "s3",
         region_name=SPACES_REGION,
