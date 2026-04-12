@@ -4,10 +4,13 @@
 
 ADMIN_ROLES = {
     "admin",
-    "executive",
     "master_admin",
     "lending_admin",
     "platform_admin",
+}
+
+EXECUTIVE_ROLES = {
+    "executive",
 }
 
 STAFF_ROLES = {
@@ -31,6 +34,12 @@ def is_admin(user) -> bool:
     if not user:
         return False
     return (user.role or "").strip().lower() in ADMIN_ROLES
+
+
+def is_executive(user) -> bool:
+    if not user:
+        return False
+    return (user.role or "").strip().lower() in EXECUTIVE_ROLES
 
 
 def is_platform_admin(user) -> bool:

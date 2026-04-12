@@ -36,7 +36,7 @@ import time
 
 admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
 assistant = AIAssistant()
-FULL_ADMIN_ROLES = {"platform_admin", "master_admin", "lending_admin", "executive"}
+FULL_ADMIN_ROLES = {"platform_admin", "master_admin", "lending_admin"}
 
 
 def _single_admin_mode_enabled() -> bool:
@@ -1774,7 +1774,7 @@ def onboarding_center():
 
 @admin_bp.route("/licensing/applications")
 @login_required
-@role_required("platform_admin", "master_admin", "executive")
+@role_required("platform_admin", "master_admin", "lending_admin")
 def licensing_applications():
     applications = LicenseApplication.query.order_by(
         LicenseApplication.created_at.desc()
@@ -1814,7 +1814,7 @@ def licensing_applications():
 
 @admin_bp.route("/licensing/applications/<int:app_id>/contact", methods=["POST"])
 @login_required
-@role_required("platform_admin", "master_admin", "executive")
+@role_required("platform_admin", "master_admin", "lending_admin")
 def contact_license_application(app_id):
     app_row = LicenseApplication.query.get_or_404(app_id)
 
@@ -1835,7 +1835,7 @@ def contact_license_application(app_id):
 
 @admin_bp.route("/licensing/applications/<int:app_id>/approve", methods=["POST"])
 @login_required
-@role_required("platform_admin", "master_admin", "executive")
+@role_required("platform_admin", "master_admin", "lending_admin")
 def approve_license_application(app_id):
     app_row = LicenseApplication.query.get_or_404(app_id)
 
@@ -1930,7 +1930,7 @@ def approve_license_application(app_id):
 
 @admin_bp.route("/licensing/applications/<int:app_id>/decline", methods=["POST"])
 @login_required
-@role_required("platform_admin", "master_admin", "executive")
+@role_required("platform_admin", "master_admin", "lending_admin")
 def decline_license_application(app_id):
     app_row = LicenseApplication.query.get_or_404(app_id)
 
@@ -1947,7 +1947,7 @@ def decline_license_application(app_id):
 
 @admin_bp.route("/licensing/applications/<int:app_id>/resend-invite", methods=["POST"])
 @login_required
-@role_required("platform_admin", "master_admin", "executive")
+@role_required("platform_admin", "master_admin", "lending_admin")
 def resend_license_application_invite(app_id):
     app_row = LicenseApplication.query.get_or_404(app_id)
 

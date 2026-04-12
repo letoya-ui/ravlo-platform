@@ -65,11 +65,7 @@ def _is_executive_dashboard_user(user) -> bool:
         return False
 
     role = (getattr(user, "role", "") or "").strip().lower()
-    if role == "executive":
-        return True
-
-    email = (getattr(user, "email", "") or "").strip().lower()
-    return bool(email) and email == _owner_admin_email()
+    return role == "executive"
 
 
 def _owner_admin_exists() -> bool:

@@ -5,10 +5,13 @@ from LoanMVP.utils.blocking_helpers import is_user_blocked, get_user_block_messa
 
 ADMIN_ROLES = {
     "admin",
-    "executive",
     "master_admin",
     "lending_admin",
     "platform_admin",
+}
+
+EXECUTIVE_ROLES = {
+    "executive",
 }
 
 STAFF_ROLES = {
@@ -24,6 +27,10 @@ def normalize_role(role):
 
 def is_admin_role(role: str) -> bool:
     return normalize_role(role) in ADMIN_ROLES
+
+
+def is_executive_role(role: str) -> bool:
+    return normalize_role(role) in EXECUTIVE_ROLES
 
 
 def is_staff_role(role: str) -> bool:
@@ -81,6 +88,9 @@ def role_required(*roles):
 
                 if user_role == "investor":
                     return redirect(url_for("investor.command_center"))
+
+                if user_role in EXECUTIVE_ROLES:
+                    return redirect(url_for("executive.dashboard"))
 
                 if user_role in ADMIN_ROLES:
                     return redirect(url_for("admin.dashboard"))
