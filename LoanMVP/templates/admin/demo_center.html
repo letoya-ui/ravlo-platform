@@ -1,10 +1,11 @@
 {% extends "layouts/ravlo_employee_base.html" %}
+{% set route_ns = route_namespace|default('admin', true) %}
 {% block title %}Admin • Demo Center{% endblock %}
 {% block page_title %}Demo Center{% endblock %}
 {% block page_subline %}Investor, partner, and lending walkthrough dashboards prepared for demos and investor conversations.{% endblock %}
 
 {% block topbar_actions %}
-  <a class="re-btn ghost sm" href="{{ url_for('admin.dashboard') }}">
+  <a class="re-btn ghost sm" href="{{ url_for(route_ns ~ '.dashboard') }}">
     <i class="lucide lucide-arrow-left"></i>
     Back to Admin
   </a>
