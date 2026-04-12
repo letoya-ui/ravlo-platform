@@ -12,8 +12,8 @@ from LoanMVP.extensions import db, csrf
 from LoanMVP.models.user_model import User
 from LoanMVP.models.loan_models import LoanApplication, BorrowerProfile
 from LoanMVP.models.document_models import LoanDocument
-from LoanMVP.models.underwriter_model import UnderwritingCondition, UnderwriterTask
-from LoanMVP.models.crm_models import MessageThread, Message
+from LoanMVP.models.underwriter_model import UnderwritingCondition, UnderwriterTask, UnderwriterProfile
+from LoanMVP.models.crm_models import Message
 from LoanMVP.models.credit_models import SoftCreditReport      # FIXED
 
 from LoanMVP.utils.pricing_engine import calculate_dti_ltv
@@ -38,6 +38,44 @@ def _underwriter_next_setup_endpoint():
     if not getattr(current_user, "onboarding_complete", False):
         return "underwriter.onboarding"
     return "underwriter.dashboard"
+
+
+def _underwriter_profile():
+    return UnderwriterProfile.query.filter_by(user_id=current_user.id).first()
+
+
+def _assigned_team_users_for_underwriter():
+    profile = _underwriter_profile()
+    if not profile:
+        return []
+
+    assigned_loans = LoanApplication.query.filter_by(underwriter_id=profile.id).all()
+    user_ids = set()
+
+    for loan in assigned_loans:
+        processor = getattr(loan, "processor", None)
+        loan_officer = getattr(loan, "loan_officer", None)
+
+        if processor and getattr(processor, "user_id", None):
+            user_ids.add(processor.user_id)
+        if loan_officer and getattr(loan_officer, "user_id", None):
+            user_ids.add(loan_officer.user_id)
+
+    if not user_ids:
+        return []
+
+    users = User.query.filter(User.id.in_(user_ids)).all()
+    return sorted(
+        users,
+        key=lambda user: (
+            (getattr(user, "role", "") or "").lower(),
+            (getattr(user, "full_name", "") or getattr(user, "email", "") or "").lower(),
+        ),
+    )
+
+
+def _allowed_underwriter_partner_ids():
+    return {user.id for user in _assigned_team_users_for_underwriter()}
 
 
 # ===============================================================
@@ -701,10 +739,37 @@ def pipeline():
 @login_required
 @role_required("underwriter")
 def messages():
-    
-    threads = MessageThread.query.filter_by(
-        sender_id=current_user.id
-    ).order_by(MessageThread.sent_at.desc()).all()
+    allowed_users = _assigned_team_users_for_underwriter()
+    allowed_partner_ids = {user.id for user in allowed_users}
+    threads = []
+
+    if allowed_partner_ids:
+        partner_lookup = {user.id: user for user in allowed_users}
+        conversations = (
+            Message.query.filter(
+                ((Message.sender_id == current_user.id) & (Message.receiver_id.in_(allowed_partner_ids))) |
+                ((Message.receiver_id == current_user.id) & (Message.sender_id.in_(allowed_partner_ids)))
+            )
+            .order_by(Message.created_at.desc())
+            .all()
+        )
+
+        seen_partner_ids = set()
+        for msg in conversations:
+            partner_id = msg.receiver_id if msg.sender_id == current_user.id else msg.sender_id
+            if partner_id in seen_partner_ids:
+                continue
+            partner = partner_lookup.get(partner_id)
+            if not partner:
+                continue
+            seen_partner_ids.add(partner_id)
+            threads.append({
+                "partner_id": partner_id,
+                "partner_name": partner.full_name or partner.email or "Assigned Team Member",
+                "last_sender_id": msg.sender_id,
+                "last_message_preview": (msg.content or "")[:120],
+                "updated_at": getattr(msg, "created_at", datetime.utcnow()),
+            })
 
     return render_template(
         "underwriter/messages.html",
@@ -718,6 +783,11 @@ def messages():
 @role_required("underwriter")
 def message_thread(partner_id):
     user_id = current_user.id
+    allowed_partner_ids = _allowed_underwriter_partner_ids()
+
+    if partner_id not in allowed_partner_ids:
+        flash("You can only message assigned processors and loan officers.", "warning")
+        return redirect(url_for("underwriter.messages"))
 
     if request.method == "POST":
         text = request.form.get("message")
@@ -757,10 +827,13 @@ def message_thread(partner_id):
 @login_required
 @role_required("underwriter")
 def new_message():
-    users = User.query.filter(User.id != current_user.id).all()
+    users = _assigned_team_users_for_underwriter()
 
     if request.method == "POST":
-        partner_id = request.form.get("partner_id")
+        partner_id = request.form.get("partner_id", type=int)
+        if partner_id not in {user.id for user in users}:
+            flash("Please select an assigned processor or loan officer.", "warning")
+            return redirect(url_for("underwriter.new_message"))
         return redirect(url_for("underwriter.message_thread", partner_id=partner_id))
 
     return render_template(
