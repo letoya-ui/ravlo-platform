@@ -140,15 +140,7 @@ def dashboard():
     # Role-based lead & task visibility
     # ----------------------------------------
     if role == "loan_officer":
-        officer = LoanOfficerProfile.query.filter_by(user_id=current_user.id).first()
-        leads_list = (
-            Lead.query.filter(
-                (Lead.assigned_to == current_user.id) |
-                (Lead.assigned_officer_id == getattr(officer, "id", None))
-            )
-            .order_by(Lead.created_at.desc())
-            .all()
-        )
+        leads_list = _company_scoped_leads_query().order_by(Lead.created_at.desc()).all()
         tasks_list = (
             Task.query.filter_by(assigned_to=current_user.id)
             .order_by(Task.due_date.asc())
@@ -158,7 +150,8 @@ def dashboard():
 
     elif role == "processor":
         leads_list = (
-            Lead.query.filter(Lead.status.in_(["submitted", "processing"]))
+            _company_scoped_leads_query()
+            .filter(Lead.status.in_(["submitted", "processing"]))
             .order_by(Lead.created_at.desc())
             .all()
         )
@@ -170,12 +163,12 @@ def dashboard():
         role_view = "Processor CRM"
 
     elif role in ["executive", "admin", "crm"]:
-        leads_list = Lead.query.order_by(Lead.created_at.desc()).limit(50).all()
+        leads_list = _company_scoped_leads_query().order_by(Lead.created_at.desc()).limit(50).all()
         tasks_list = Task.query.order_by(Task.due_date.asc()).limit(50).all()
         role_view = "Executive CRM Overview"
 
     else:
-        leads_list = Lead.query.filter_by(status="active").limit(10).all()
+        leads_list = _company_scoped_leads_query().filter_by(status="active").limit(10).all()
         tasks_list = []
         role_view = "Basic CRM View"
 
@@ -183,14 +176,14 @@ def dashboard():
     # Additional Data Sets
     # ----------------------------------------
     contacted_leads = (
-        Lead.query.filter(Lead.updated_at >= week_ago)
+        _company_scoped_leads_query().filter(Lead.updated_at >= week_ago)
         .order_by(Lead.updated_at.desc())
         .limit(5)
         .all()
     )
 
     leads_recent = (
-        Lead.query.order_by(Lead.created_at.desc())
+        _company_scoped_leads_query().order_by(Lead.created_at.desc())
         .limit(5)
         .all()
     )
