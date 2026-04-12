@@ -801,6 +801,11 @@ def add_lead():
         return render_template("crm/add_lead.html", officers=officers, title="Add Lead")
 
     selected_officer = next((officer for officer in officers if officer.id == assigned_officer_id), None)
+    if not selected_officer:
+        if (getattr(current_user, "role", "") or "").lower() == "loan_officer":
+            selected_officer = next((officer for officer in officers if officer.user_id == current_user.id), None)
+        if not selected_officer:
+            selected_officer = _choose_auto_assignee(officers)
     source = _lead_source_record(source_name)
     new_lead = Lead(
         name=name,
@@ -833,6 +838,11 @@ def ai_leads():
         count = min(max(request.form.get("count", type=int) or 5, 1), 20)
         assigned_officer_id = request.form.get("assigned_officer_id", type=int)
         selected_officer = next((officer for officer in officers if officer.id == assigned_officer_id), None)
+        if not selected_officer:
+            if (getattr(current_user, "role", "") or "").lower() == "loan_officer":
+                selected_officer = next((officer for officer in officers if officer.user_id == current_user.id), None)
+            if not selected_officer:
+                selected_officer = _choose_auto_assignee(officers)
         source = _lead_source_record("AI Lead Engine")
 
         prompt = f"""
@@ -883,22 +893,27 @@ Use plausible sample contact info, not existing famous people.
 @role_required("crm", "loan_officer", "processor", "executive", "admin", "partners")
 def update_lead(lead_id):
     """Update or assign a lead."""
-    lead = Lead.query.get_or_404(lead_id)
+    lead = _company_scoped_leads_query().filter(Lead.id == lead_id).first_or_404()
     borrower = BorrowerProfile.query.filter_by(lead_id=lead_id).first()
+    officers = _crm_company_loan_officers()
 
     if request.method == "POST":
+        lead.name = request.form.get("name") or lead.name
+        lead.email = request.form.get("email") or lead.email
+        lead.phone = request.form.get("phone") or lead.phone
         lead.status = request.form.get("status") or lead.status
-        lead.notes = request.form.get("notes") or lead.notes
-        assigned_to = request.form.get("assigned_to")
-        if assigned_to:
-            lead.assigned_to = int(assigned_to)
+        lead.message = request.form.get("notes") or lead.message
+        assigned_officer_id = request.form.get("assigned_officer_id", type=int)
+        selected_officer = next((officer for officer in officers if officer.id == assigned_officer_id), None)
+        if selected_officer:
+            lead.assigned_officer_id = selected_officer.id
+            lead.assigned_to = selected_officer.user_id
         lead.updated_at = datetime.utcnow()
         db.session.commit()
         flash("✅ Lead updated successfully.", "success")
-        return redirect(url_for("crm.view_leads"))
+        return redirect(url_for("crm.leads"))
 
-    users = User.query.all()
-    return render_template("crm/lead_detail.html", lead=lead, borrower=borrower, users=users)
+    return render_template("crm/update_lead.html", lead=lead, borrower=borrower, officers=officers)
 
 # ---------------------------------------------------------
 # 🧭 Communication Hub + AI Summary
@@ -922,7 +937,7 @@ def hub():
 @role_required("crm")
 def ai_summary():
     """Generates AI summary of CRM activity and engagement patterns."""
-    leads = Lead.query.order_by(Lead.created_at.desc()).limit(20).all()
+    leads = _company_scoped_leads_query().order_by(Lead.created_at.desc()).limit(20).all()
     tasks = Task.query.order_by(Task.due_date.asc()).limit(10).all()
 
     total_leads = len(leads)
@@ -966,7 +981,7 @@ def ai_summary():
 @crm_bp.route("/dialer_results")
 @role_required("crm", "loan_officer", "processor", "executive", "admin")
 def dialer_results():
-    leads = Lead.query.order_by(Lead.created_at.desc()).limit(15).all()
+    leads = _company_scoped_leads_query().order_by(Lead.created_at.desc()).limit(15).all()
     return render_template("crm/leads.html", leads=leads, title="Dialer Results")
 
 @crm_bp.route("/call_log/delete/<int:call_id>", methods=["POST"])
@@ -990,7 +1005,7 @@ from sqlalchemy import func
 @role_required("crm", "admin")
 def lead_engine():
     query = request.args.get("q", "")
-    leads = Lead.query.filter(Lead.name.ilike(f"%{query}%")).all() if query else []
+    leads = _company_scoped_leads_query().filter(Lead.name.ilike(f"%{query}%")).all() if query else []
     return render_template("crm/leads.html", leads=leads, query=query, title="Lead Engine")
 
 # ==========================================================
@@ -999,7 +1014,7 @@ def lead_engine():
 @crm_bp.route("/leads")
 @role_required("crm", "admin")
 def leads():
-    leads = Lead.query.order_by(Lead.created_at.desc()).all()
+    leads = _company_scoped_leads_query().order_by(Lead.created_at.desc()).all()
     return render_template("crm/leads.html", leads=leads, title="All Leads")
 
 # ==========================================================
@@ -1012,7 +1027,7 @@ def lead_details(lead_id):
     Detailed view for a single lead including AI insights,
     tasks, communication logs, and related loans.
     """
-    lead = Lead.query.get_or_404(lead_id)
+    lead = _company_scoped_leads_query().filter(Lead.id == lead_id).first_or_404()
 
     # Optional relationships (if you have them)
     tasks = getattr(lead, "tasks", [])

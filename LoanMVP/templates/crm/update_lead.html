@@ -10,8 +10,8 @@
     <div class="row" style="justify-content:space-between;">
       <h1><i class="lucide lucide-edit-3"></i> Update Lead</h1>
       <div class="row">
-        <a href="{{ url_for('crm.view_leads') }}" class="btn btn-outline"><i class="lucide lucide-users"></i> View Leads</a>
-        <a href="{{ url_for('crm.lead_detail', lead_id=lead.id) }}" class="btn btn-outline"><i class="lucide lucide-eye"></i> View Detail</a>
+        <a href="{{ url_for('crm.leads') }}" class="btn btn-outline"><i class="lucide lucide-users"></i> View Leads</a>
+        <a href="{{ url_for('crm.lead_details', lead_id=lead.id) }}" class="btn btn-outline"><i class="lucide lucide-eye"></i> View Detail</a>
       </div>
     </div>
     <p class="muted">Last updated: {{ lead.updated_at.strftime('%b %d, %Y %I:%M %p') if lead.updated_at else '—' }}</p>
@@ -25,8 +25,8 @@
           <input id="name" name="name" type="text" value="{{ lead.name }}" required>
         </div>
         <div>
-          <label for="email">Email *</label>
-          <input id="email" name="email" type="email" value="{{ lead.email }}" required>
+          <label for="email">Email</label>
+          <input id="email" name="email" type="email" value="{{ lead.email or '' }}">
         </div>
       </div>
 
@@ -55,8 +55,15 @@
 
       <div class="grid g-2" style="margin-top:1rem;">
         <div>
-          <label for="assigned_to">Assigned To</label>
-          <input id="assigned_to" name="assigned_to" type="text" value="{{ lead.assigned_to or '' }}">
+          <label for="assigned_officer_id">Assigned Loan Officer</label>
+          <select id="assigned_officer_id" name="assigned_officer_id">
+            <option value="">Keep current assignment</option>
+            {% for officer in officers %}
+              <option value="{{ officer.id }}" {% if lead.assigned_officer_id == officer.id %}selected{% endif %}>
+                {{ officer.full_name or officer.name or officer.email }}
+              </option>
+            {% endfor %}
+          </select>
         </div>
         <div>
           <label for="score">Lead Score</label>
@@ -69,12 +76,12 @@
 
       <div style="margin-top:1rem;">
         <label for="notes">Notes</label>
-        <textarea id="notes" name="notes">{{ lead.notes or '' }}</textarea>
+        <textarea id="notes" name="notes">{{ lead.message or '' }}</textarea>
       </div>
 
       <div class="row" style="margin-top:1.2rem;">
         <button type="submit" class="btn"><i class="lucide lucide-save"></i> Update Lead</button>
-        <a href="{{ url_for('crm.view_leads') }}" class="btn btn-outline"><i class="lucide lucide-x"></i> Cancel</a>
+        <a href="{{ url_for('crm.leads') }}" class="btn btn-outline"><i class="lucide lucide-x"></i> Cancel</a>
       </div>
     </form>
   </div>
