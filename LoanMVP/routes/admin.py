@@ -45,6 +45,11 @@ def _owner_admin_email() -> str:
     return (current_app.config.get("OWNER_ADMIN_EMAIL") or "").strip().lower()
 
 
+def _is_owner_account(user) -> bool:
+    email = (getattr(user, "email", "") or "").strip().lower()
+    return bool(email) and email == _owner_admin_email()
+
+
 def _demo_dashboard_cards():
     return [
         {
@@ -489,7 +494,10 @@ If you were not expecting this email, you can ignore it.
 @login_required
 @role_required("admin_group")
 def dashboard():
-    if (getattr(current_user, "role", "") or "").strip().lower() == "executive":
+    if (
+        (getattr(current_user, "role", "") or "").strip().lower() == "executive"
+        or _is_owner_account(current_user)
+    ):
         return redirect(url_for("executive.dashboard"))
 
     if _is_company_admin(current_user) and current_user.company_id:

@@ -60,6 +60,18 @@ def _can_bypass_single_admin_lock(user) -> bool:
     return role in _workspace_executive_roles()
 
 
+def _is_executive_dashboard_user(user) -> bool:
+    if not user:
+        return False
+
+    role = (getattr(user, "role", "") or "").strip().lower()
+    if role == "executive":
+        return True
+
+    email = (getattr(user, "email", "") or "").strip().lower()
+    return bool(email) and email == _owner_admin_email()
+
+
 def _owner_admin_exists() -> bool:
     owner_email = _owner_admin_email()
     if not owner_email:
@@ -404,7 +416,7 @@ def post_login_redirect():
     if role == "admin" and current_user.company_id:
         return redirect(url_for("admin.company_dashboard", company_id=current_user.company_id))
 
-    if role == "executive":
+    if _is_executive_dashboard_user(current_user):
         return redirect(url_for("executive.dashboard"))
 
     if role in ["admin", "platform_admin", "master_admin", "lending_admin"]:

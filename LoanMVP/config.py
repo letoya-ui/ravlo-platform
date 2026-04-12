@@ -7,9 +7,12 @@ from dotenv import load_dotenv
 # 🏗 BASE CONFIG PATH SETUP
 # ===================================================
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
+PROJECT_ROOT = os.path.abspath(os.path.join(BASE_DIR, os.pardir))
 INSTANCE_PATH = os.path.join(BASE_DIR, "instance")
 UPLOAD_FOLDER = os.path.join(BASE_DIR, "uploads")
 LOG_FOLDER = os.path.join(BASE_DIR, "logs")
+DEFAULT_SQLITE_PATH = os.path.join(PROJECT_ROOT, "instance", "local.db")
+DEFAULT_SQLITE_URI = "sqlite:///" + DEFAULT_SQLITE_PATH.replace("\\", "/")
 
 for path in (INSTANCE_PATH, UPLOAD_FOLDER, LOG_FOLDER):
     os.makedirs(path, exist_ok=True)
@@ -77,7 +80,7 @@ class Config:
     PREFERRED_URL_SCHEME = os.environ.get("PREFERRED_URL_SCHEME", "https")
  
     # DATABASE
-    SQLALCHEMY_DATABASE_URI = os.getenv("DATABASE_URL") or "sqlite:///local.db"
+    SQLALCHEMY_DATABASE_URI = os.getenv("DATABASE_URL") or DEFAULT_SQLITE_URI
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
 
