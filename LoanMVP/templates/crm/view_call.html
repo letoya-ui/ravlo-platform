@@ -40,7 +40,7 @@
   <p><strong>{{ related_lead.name }}</strong><br>
      {{ related_lead.email or 'No email' }}<br>
      {{ related_lead.phone or 'No phone' }}</p>
-  <a href="{{ url_for('crm.view_lead', lead_id=related_lead.id) }}" class="btn">
+  <a href="{{ url_for('crm.lead_details', lead_id=related_lead.id) }}" class="btn">
     <i class="lucide lucide-eye"></i> View Lead
   </a>
   {% endif %}
