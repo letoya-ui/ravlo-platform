@@ -38,7 +38,7 @@ FULL_ADMIN_ROLES = {"platform_admin", "master_admin", "lending_admin", "executiv
 
 
 def _single_admin_mode_enabled() -> bool:
-    return bool(current_app.config.get("SINGLE_ADMIN_MODE", False))
+    return False
 
 
 def _owner_admin_email() -> str:

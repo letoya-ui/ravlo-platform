@@ -37,7 +37,7 @@ RESTRICTED_STAFF_ROLES = {
 
 
 def _single_admin_mode_enabled() -> bool:
-    return bool(current_app.config.get("SINGLE_ADMIN_MODE", False))
+    return False
 
 
 def _owner_admin_email() -> str:
@@ -73,14 +73,11 @@ def _owner_admin_exists() -> bool:
 
 
 def _workspace_recovery_mode() -> bool:
-    if db.session.query(User.id).first() is None:
-        return True
-
-    return _single_admin_mode_enabled() and not _owner_admin_exists()
+    return db.session.query(User.id).first() is None
 
 
 def _registration_blocked() -> bool:
-    return _single_admin_mode_enabled() and not _workspace_recovery_mode()
+    return False
 
 
 def _auth_page_context() -> dict:
