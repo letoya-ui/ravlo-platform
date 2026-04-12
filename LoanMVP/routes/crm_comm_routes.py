@@ -5,7 +5,7 @@
 from flask import Blueprint, render_template, request, jsonify, flash, redirect, url_for, make_response
 from flask_login import current_user
 from datetime import datetime
-from sqlalchemy import func, case
+from sqlalchemy import func, case, or_
 from random import choice
 import json
 import re
@@ -35,6 +35,48 @@ def _crm_company_loan_officers():
     if getattr(current_user, "company_id", None):
         query = query.filter(User.company_id == current_user.company_id)
     return query.order_by(User.first_name.asc(), User.last_name.asc()).all()
+
+
+def _company_scoped_leads_query():
+    officers = _crm_company_loan_officers()
+    officer_ids = [officer.id for officer in officers]
+    officer_user_ids = [officer.user_id for officer in officers if getattr(officer, "user_id", None)]
+
+    role = (getattr(current_user, "role", "") or "").lower()
+    if role == "loan_officer":
+        officer = LoanOfficerProfile.query.filter_by(user_id=current_user.id).first()
+        return Lead.query.filter(
+            (Lead.assigned_to == current_user.id) |
+            (Lead.assigned_officer_id == getattr(officer, "id", None))
+        )
+
+    if officer_ids or officer_user_ids:
+        clauses = []
+        if officer_ids:
+            clauses.append(Lead.assigned_officer_id.in_(officer_ids))
+        if officer_user_ids:
+            clauses.append(Lead.assigned_to.in_(officer_user_ids))
+        return Lead.query.filter(or_(*clauses))
+
+    return Lead.query.filter(Lead.assigned_to == current_user.id)
+
+
+def _choose_auto_assignee(officers):
+    if not officers:
+        return None
+
+    ranked = []
+    for officer in officers:
+        active_count = (
+            Lead.query.filter(
+                (Lead.assigned_officer_id == officer.id) |
+                (Lead.assigned_to == officer.user_id)
+            ).count()
+        )
+        ranked.append((active_count, officer))
+
+    ranked.sort(key=lambda item: (item[0], (item[1].full_name or item[1].name or item[1].email or "").lower()))
+    return ranked[0][1]
 
 
 def _lead_source_record(source_name):
