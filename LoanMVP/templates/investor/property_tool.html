@@ -44,6 +44,20 @@ Search by address or ZIP and Ravlo will return a short ranked list of the strong
     <label class="ravlo-label mt-16">ZIP Code</label>
     <input id="zip" class="ravlo-input" placeholder="e.g. 10924" />
 
+    <label class="ravlo-label mt-16">Asset Type</label>
+    <select id="assetType" class="ravlo-input">
+      <option value="any">All Asset Types</option>
+      <option value="office">Office</option>
+      <option value="retail">Retail</option>
+      <option value="restaurant">Restaurant</option>
+      <option value="mixed_use">Mixed Use</option>
+      <option value="multifamily">Multifamily</option>
+      <option value="industrial">Industrial</option>
+      <option value="warehouse">Warehouse</option>
+      <option value="hospitality">Hospitality</option>
+      <option value="medical">Medical</option>
+    </select>
+
     <label class="ravlo-label mt-16">Strategy</label>
     <select id="strategy" class="ravlo-input">
       <option value="flip">Fix & Flip</option>
@@ -75,7 +89,7 @@ Search by address or ZIP and Ravlo will return a short ranked list of the strong
         <div class="eyebrow">INVESTOR OS</div>
         <h2 class="dfv4-hero-title">This is where Ravlo finds the few deals worth planning.</h2>
         <p class="muted mb-0">
-          Deal Finder should surface a short, ranked recommendation set instead of making investors sort through a giant listing feed.
+          Deal Finder should surface a short, ranked recommendation set for office, restaurant, retail, and other commercial plays instead of making investors sort through a giant listing feed.
         </p>
       </div>
       <div class="dfv4-hero-pill-row">
@@ -102,6 +116,10 @@ Search by address or ZIP and Ravlo will return a short ranked list of the strong
             <strong id="summaryStrategy">—</strong>
           </div>
           <div class="dfv4-summary-metric">
+            <span>Asset Type</span>
+            <strong id="summaryAssetType">—</strong>
+          </div>
+          <div class="dfv4-summary-metric">
             <span>ZIP</span>
             <strong id="summaryZip">—</strong>
           </div>
@@ -118,7 +136,7 @@ Search by address or ZIP and Ravlo will return a short ranked list of the strong
         <div class="eyebrow">DEAL FINDER</div>
         <h3 class="mb-8">This is where the right properties should start showing up</h3>
         <p class="muted mb-0">
-          Enter an address or ZIP code to let Ravlo rank the four strongest opportunities and send the right one into Project Studio.
+          Enter an address or ZIP code, choose an asset type, and let Ravlo rank the four strongest opportunities for planning.
         </p>
       </div>
     </div>
@@ -242,6 +260,21 @@ function strategyLabel(v){
   if (v === "flip") return "Fix & Flip";
   if (v === "rental") return "Rental";
   return "All";
+}
+
+function assetTypeLabel(v){
+  switch ((v || "").toLowerCase()) {
+    case "office": return "Office";
+    case "retail": return "Retail";
+    case "restaurant": return "Restaurant";
+    case "mixed_use": return "Mixed Use";
+    case "multifamily": return "Multifamily";
+    case "industrial": return "Industrial";
+    case "warehouse": return "Warehouse";
+    case "hospitality": return "Hospitality";
+    case "medical": return "Medical";
+    default: return "All Asset Types";
+  }
 }
 
 function escapeHtml(str){
@@ -459,7 +492,7 @@ async function enrichWithDealArchitect(results, strategy){
   return enriched.sort((a, b) => (Number(b.deal_score) || 0) - (Number(a.deal_score) || 0));
 }
 
-function renderSummary(zip, strategy, count, engineReady, totalMatches){
+function renderSummary(zip, strategy, assetType, count, engineReady, totalMatches){
   const card = document.getElementById("resultsSummary");
   document.getElementById("summaryTitle").innerText = count === 0 ? "No Matches Yet" : "Top Opportunities Ready";
   document.getElementById("summarySub").innerText = count === 0
@@ -467,6 +500,7 @@ function renderSummary(zip, strategy, count, engineReady, totalMatches){
     : `Ravlo ranked ${totalMatches || count} matches and returned the top ${count} opportunities for planning.`;
   document.getElementById("summaryCount").innerText = String(count);
   document.getElementById("summaryStrategy").innerText = strategyLabel(strategy);
+  document.getElementById("summaryAssetType").innerText = assetTypeLabel(assetType);
   document.getElementById("summaryZip").innerText = zip || "—";
   document.getElementById("summaryEngine").innerText = engineReady ? "Connected" : "Partial";
   card.style.display = "block";
@@ -804,6 +838,7 @@ async function runSearch(){
   const city = document.getElementById("city").value.trim();
   const state = document.getElementById("state").value.trim();
   const zip = document.getElementById("zip").value.trim();
+  const assetType = document.getElementById("assetType").value;
   const strategy = document.getElementById("strategy").value;
   const status = document.getElementById("searchStatus");
   const resultsSummary = document.getElementById("resultsSummary");
@@ -813,7 +848,7 @@ async function runSearch(){
     return;
   }
 
-  const payload = { address, city, state, zip, strategy, limit: 12 };
+  const payload = { address, city, state, zip, asset_type: assetType, strategy, limit: 12 };
 
   status.innerText = "Searching the market for opportunity candidates...";
   resultsSummary.style.display = "none";
@@ -838,7 +873,7 @@ async function runSearch(){
     const enriched = data.results || [];
     const engineReady = Boolean(data.engine_ready) || enriched.some(x => Number.isFinite(Number(x.deal_score)));
 
-    renderSummary(data.zip, data.strategy, enriched.length, engineReady, data.total_matches);
+    renderSummary(data.zip, data.strategy, data.asset_type, enriched.length, engineReady, data.total_matches);
 
     const locationLabel = data.zip || data.address || "your search";
     status.innerText = enriched.length
@@ -867,7 +902,7 @@ async function runSearch(){
 .dfv4-hero-pill-row{display:flex;flex-wrap:wrap;gap:.5rem}
 .dfv4-hero-pill{display:inline-flex;align-items:center;padding:.45rem .7rem;border-radius:999px;background:rgba(37,99,235,.16);border:1px solid rgba(96,165,250,.22);color:#dbeafe;font-size:.78rem;font-weight:800}
 .dfv4-summary-head{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;flex-wrap:wrap}
-.dfv4-summary-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:.7rem;min-width:420px}
+.dfv4-summary-metrics{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:.7rem;min-width:520px}
 .dfv4-summary-metric{padding:.85rem .9rem;border-radius:14px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08)}
 .dfv4-summary-metric span{display:block;color:var(--muted);font-size:.78rem;margin-bottom:.25rem}
 .dfv4-summary-metric strong{color:var(--text);font-size:1rem}

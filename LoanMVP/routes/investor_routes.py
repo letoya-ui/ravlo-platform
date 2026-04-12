@@ -140,6 +140,10 @@ from LoanMVP.services.property_service import build_property_card, _build_proper
 from LoanMVP.services.notification_service import notify_team_on_conversion
 from LoanMVP.services.blueprint_parser import extract_blueprint_structure, infer_room_type
 from LoanMVP.services.prompt_builder import build_blueprint_prompt
+from LoanMVP.services.investor.investor_prompt_helpers import (
+    build_exterior_concept_prompt,
+    build_rehab_concept_prompt,
+)
 from LoanMVP.services.concept_build_service import run_concept_build
 from LoanMVP.services.renovation_engine_client import (
     generate_concept,
@@ -2163,6 +2167,65 @@ def upload_condition(cond_id):
 # 🧠 INVESTOR • PROPERTY INTELLIGENCE (search/saved/tool/apis)
 # =========================================================
 
+COMMERCIAL_ASSET_LABELS = {
+    "any": "All Asset Types",
+    "office": "Office",
+    "retail": "Retail",
+    "restaurant": "Restaurant",
+    "mixed_use": "Mixed Use",
+    "multifamily": "Multifamily",
+    "industrial": "Industrial",
+    "warehouse": "Warehouse",
+    "hospitality": "Hospitality",
+    "medical": "Medical",
+}
+
+
+def _normalize_asset_type(value):
+    value = (value or "any").strip().lower().replace("-", "_").replace(" ", "_")
+    return value if value in COMMERCIAL_ASSET_LABELS else "any"
+
+
+def _asset_type_label(asset_type):
+    return COMMERCIAL_ASSET_LABELS.get(_normalize_asset_type(asset_type), COMMERCIAL_ASSET_LABELS["any"])
+
+
+def _property_matches_asset_type(prop, asset_type):
+    asset_type = _normalize_asset_type(asset_type)
+    if asset_type == "any":
+        return True
+
+    if not isinstance(prop, dict):
+        return False
+
+    haystack = " ".join(
+        str(prop.get(key) or "")
+        for key in (
+            "property_type",
+            "property_subtype",
+            "property_use",
+            "use_code",
+            "description",
+            "status",
+            "recommended_strategy",
+        )
+    ).lower()
+
+    aliases = {
+        "office": ("office", "coworking", "workspace", "commercial office"),
+        "retail": ("retail", "storefront", "shopping", "boutique", "strip center"),
+        "restaurant": ("restaurant", "cafe", "bar", "dining", "food service", "kitchen"),
+        "mixed_use": ("mixed use", "mixed-use", "live/work", "retail residential"),
+        "multifamily": ("multifamily", "multi family", "apartment", "duplex", "triplex", "fourplex"),
+        "industrial": ("industrial", "flex", "manufacturing", "distribution"),
+        "warehouse": ("warehouse", "distribution", "storage"),
+        "hospitality": ("hotel", "hospitality", "motel", "inn", "lodging"),
+        "medical": ("medical", "clinic", "healthcare", "surgical", "dental"),
+    }
+
+    return any(term in haystack for term in aliases.get(asset_type, (asset_type,)))
+
+
 @investor_bp.route("/intelligence", methods=["GET"])
 @investor_bp.route("/property_search", methods=["GET"])
 @login_required
@@ -2170,6 +2233,7 @@ def upload_condition(cond_id):
 def property_search():
     ip = InvestorProfile.query.filter_by(user_id=current_user.id).first()
     query = (request.args.get("query") or "").strip()
+    asset_type = _normalize_asset_type(request.args.get("asset_type"))
 
     property_data = None
     valuation = {}
@@ -2188,28 +2252,30 @@ def property_search():
 
         if resolved.get("status") == "ok":
             raw_prop = resolved.get("property") or {}
+            if not _property_matches_asset_type(raw_prop, asset_type):
+                error = f"This property does not match the selected asset type lens: {_asset_type_label(asset_type)}."
+            else:
+                # Pull already-normalized bundle if your unified resolver now returns it
+                property_data = raw_prop
+                valuation = resolved.get("valuation") or raw_prop.get("valuation") or {}
+                rent_estimate = resolved.get("rent_estimate") or raw_prop.get("rent_estimate") or raw_prop.get("rentEstimate") or {}
+                comps = resolved.get("comps") or raw_prop.get("comps") or {}
+                market_snapshot = resolved.get("market_snapshot") or raw_prop.get("market_snapshot") or {}
+                ai_summary = resolved.get("ai_summary") or resolved.get("summary") or None
 
-            # Pull already-normalized bundle if your unified resolver now returns it
-            property_data = raw_prop
-            valuation = resolved.get("valuation") or raw_prop.get("valuation") or {}
-            rent_estimate = resolved.get("rent_estimate") or raw_prop.get("rent_estimate") or raw_prop.get("rentEstimate") or {}
-            comps = resolved.get("comps") or raw_prop.get("comps") or {}
-            market_snapshot = resolved.get("market_snapshot") or raw_prop.get("market_snapshot") or {}
-            ai_summary = resolved.get("ai_summary") or resolved.get("summary") or None
+                photos = property_data.get("photos") or []
+                primary_photo = property_data.get("primary_photo")
 
-            photos = property_data.get("photos") or []
-            primary_photo = property_data.get("primary_photo")
-
-            if ip and property_data.get("address"):
-                try:
-                    existing = SavedProperty.query.filter(
-                        getattr(SavedProperty, "investor_profile_id", SavedProperty.borrower_profile_id) == ip.id,
-                        db.func.lower(SavedProperty.address) == property_data["address"].lower()
-                    ).first()
-                    if existing:
-                        saved_id = existing.id
-                except Exception:
-                    saved_id = None
+                if ip and property_data.get("address"):
+                    try:
+                        existing = SavedProperty.query.filter(
+                            getattr(SavedProperty, "investor_profile_id", SavedProperty.borrower_profile_id) == ip.id,
+                            db.func.lower(SavedProperty.address) == property_data["address"].lower()
+                        ).first()
+                        if existing:
+                            saved_id = existing.id
+                    except Exception:
+                        saved_id = None
 
         else:
             error = resolved.get("error") or "unknown_error"
@@ -2224,6 +2290,8 @@ def property_search():
         title="Property Search",
         active_page="property_search",
         query=query,
+        asset_type=asset_type,
+        asset_type_options=COMMERCIAL_ASSET_LABELS,
         error=error,
         debug=debug,
         property=property_data,
@@ -2914,6 +2982,7 @@ def api_property_tool_search():
     city = (payload.get("city") or "").strip()
     state = (payload.get("state") or "").strip()
     strategy = (payload.get("strategy") or "flip").strip().lower()
+    asset_type = _normalize_asset_type(payload.get("asset_type"))
 
     if not address and not zip_code:
         return jsonify({
@@ -3191,7 +3260,10 @@ def api_property_tool_search():
             page_size=page_size,
         )
 
-        raw_matches = search_result.get("properties", []) or []
+        raw_matches = [
+            prop for prop in (search_result.get("properties", []) or [])
+            if _property_matches_asset_type(prop, asset_type)
+        ]
         results = []
 
         for idx, raw in enumerate(raw_matches[:page_size]):
@@ -3299,10 +3371,17 @@ def api_property_tool_search():
 
         return jsonify({
             "status": "ok",
+            "message": (
+                f"No {_asset_type_label(asset_type).lower()} properties matched that search."
+                if not top_results and asset_type != "any"
+                else None
+            ),
             "results": top_results,
             "count": len(top_results),
             "total_matches": len(results),
             "strategy": strategy,
+            "asset_type": asset_type,
+            "asset_type_label": _asset_type_label(asset_type),
             "zip": zip_code,
             "address": address,
             "engine_ready": engine_ready,
@@ -4790,7 +4869,7 @@ def deal_rehab_generate_variant():
             "image_base64": image_base64,
             "image_url": "",
             "count": 1,
-            "steps": 22,
+            "steps": 18,
             "guidance": 7.2,
             "strength": 0.58,
             "width": 768,
@@ -5080,14 +5159,11 @@ def generate_build_exterior():
             use_conditioning = False
 
         # ---------------- PROMPT ----------------
-        exterior_prompt = f"""
-        photorealistic exterior of a {style} {property_type},
-        front elevation view,
-        realistic architecture, natural lighting,
-        driveway, landscaping, curb appeal,
-        high detail, real estate photography,
-        {description}
-        """
+        exterior_prompt = build_exterior_concept_prompt(
+            property_type=property_type,
+            style=style,
+            description=description,
+        )
 
         # ---------------- PAYLOAD ----------------
         payload = {
@@ -5258,7 +5334,7 @@ def generate_build_interior():
             "room_type": room_type,
             "floor": floor,
             "count": 1,
-            "steps": 20,
+            "steps": 18,
             "guidance": 7.0,
             "strength": 0.65,
             "width": 768,
@@ -5867,7 +5943,7 @@ def generate_full_build():
             "zoning": zoning,
             "width": 1024,
             "height": 1024,
-            "steps": 22,
+            "steps": 18,
             "guidance": 6.0,
             "strength": 0.28,
             "count": 1,
@@ -7548,6 +7624,13 @@ def deal_rehab_generate():
             rehab_level,
             notes,
         )
+        rehab_prompt = build_rehab_concept_prompt(
+            room_type=room_type,
+            style_preset=preset,
+            rehab_level=rehab_level,
+            property_type=property_type,
+            notes=notes,
+        )
 
         payload = {
             "preset": preset,
@@ -7558,6 +7641,7 @@ def deal_rehab_generate():
             "property_type": property_type,
             "design_style": preset,
             "desired_updates": notes,
+            "prompt": rehab_prompt,
             "keep_layout": True,
             "preserve_structure": True,
             "image_base64": image_base64,

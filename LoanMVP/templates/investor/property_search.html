@@ -29,7 +29,7 @@ Search any address and instantly see property details, investor signals, comps, 
       <div>
         <div class="eyebrow">RAVLO PROPERTY LOOKUP</div>
         <h3>Search a Property</h3>
-        <p class="muted">Enter an address to pull photos, value signals, rent estimates, comps, and investor insight.</p>
+        <p class="muted">Enter an address and choose an asset lens for office, restaurant, retail, mixed-use, or other commercial opportunities.</p>
       </div>
     </div>
 
@@ -43,6 +43,12 @@ Search any address and instantly see property details, investor signals, comps, 
         value="{{ query or '' }}"
         autocomplete="street-address"
       >
+      <label class="ravlo-label">Asset type</label>
+      <select class="ravlo-input" name="asset_type">
+        {% for option_value, option_label in asset_type_options.items() %}
+          <option value="{{ option_value }}" {% if asset_type == option_value %}selected{% endif %}>{{ option_label }}</option>
+        {% endfor %}
+      </select>
       <button type="submit" class="ravlo-btn primary">Search</button>
     </form>
   </section>
@@ -92,6 +98,7 @@ Search any address and instantly see property details, investor signals, comps, 
         </div>
 
         <div class="ps-chip-row">
+          <span class="ps-chip">{{ property.property_type or "Property type unavailable" }}</span>
           <span class="ps-chip">{{ property.beds or "—" }} bd</span>
           <span class="ps-chip">{{ property.baths or "—" }} ba</span>
           <span class="ps-chip">{{ property.sqft or "—" }} sqft</span>
@@ -186,6 +193,10 @@ Search any address and instantly see property details, investor signals, comps, 
             <div>
               <span>Address</span>
               <strong>{{ property.address or "—" }}</strong>
+            </div>
+            <div>
+              <span>Property Type</span>
+              <strong>{{ property.property_type or "—" }}</strong>
             </div>
             <div>
               <span>ZIP</span>
