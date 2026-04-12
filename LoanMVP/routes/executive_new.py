@@ -20,11 +20,33 @@ from LoanMVP.routes import admin as admin_routes
 executive_bp = Blueprint("executive", __name__, url_prefix="/executive")
 
 
+def _ravlo_company() -> Company:
+    company = Company.query.filter(
+        (func.lower(Company.name) == "ravlo")
+        | (func.lower(func.coalesce(Company.email_domain, "")) == "ravlohq.com")
+    ).first()
+
+    if company:
+        return company
+
+    company = Company(
+        name="Ravlo",
+        email_domain="ravlohq.com",
+        is_active=True,
+        subscription_tier="enterprise",
+    )
+    db.session.add(company)
+    db.session.flush()
+    return company
+
+
 def _can_access_executive_dashboard(user) -> bool:
     role = (getattr(user, "role", "") or "").strip().lower()
-    company = getattr(user, "company", None)
-    company_name = (getattr(company, "name", "") or "").strip().lower()
-    return role in {"executive", "platform_admin", "master_admin", "lending_admin"} and company_name == "ravlo"
+    ravlo_company_id = getattr(_ravlo_company(), "id", None)
+    return (
+        role in {"executive", "platform_admin", "master_admin", "lending_admin"}
+        and getattr(user, "company_id", None) == ravlo_company_id
+    )
 
 
 def _ensure_executive_access():

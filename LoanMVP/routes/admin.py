@@ -37,6 +37,19 @@ import time
 admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
 assistant = AIAssistant()
 FULL_ADMIN_ROLES = {"platform_admin", "master_admin", "lending_admin"}
+COMPANY_INVITABLE_ROLES = [
+    ("admin", "Admin"),
+    ("loan_officer", "Loan Officer"),
+    ("processor", "Processor"),
+    ("underwriter", "Underwriter"),
+    ("borrower", "Borrower"),
+    ("compliance", "Compliance"),
+    ("crm", "CRM"),
+    ("property", "Property"),
+    ("ai", "AI"),
+    ("intelligence", "Intelligence"),
+]
+COMPANY_INVITABLE_ROLE_SET = {role for role, _label in COMPANY_INVITABLE_ROLES}
 
 
 def _single_admin_mode_enabled() -> bool:
@@ -379,8 +392,7 @@ def _refresh_invite(invite):
 
 def _access_request_role(access_request):
     role = ((access_request.requested_role or "").strip().lower()).replace(" ", "_")
-    allowed_roles = {"admin", "loan_officer", "processor", "underwriter"}
-    if role in allowed_roles:
+    if role in COMPANY_INVITABLE_ROLE_SET:
         return role
     return "admin"
 
@@ -1003,13 +1015,11 @@ def invite_team_member(company_id):
         email = (request.form.get("email") or "").strip().lower()
         role = (request.form.get("role") or "").strip()
 
-        allowed_roles = ["admin", "loan_officer", "processor", "underwriter"]
-
         if not email or not role:
             flash("Email and role are required.", "danger")
             return redirect(url_for("admin.invite_team_member", company_id=company.id))
 
-        if role not in allowed_roles:
+        if role not in COMPANY_INVITABLE_ROLE_SET:
             flash("Invalid role selected.", "danger")
             return redirect(url_for("admin.invite_team_member", company_id=company.id))
 
@@ -1048,6 +1058,7 @@ def invite_team_member(company_id):
     return render_template(
         "admin/invite_team_member.html",
         company=company,
+        invitable_roles=COMPANY_INVITABLE_ROLES,
     )
 
 
@@ -2006,6 +2017,9 @@ def resend_license_application_invite(app_id):
 @role_required("admin_group")
 def block_user(user_id):
     user = User.query.get_or_404(user_id)
+    if _is_company_admin(current_user) and getattr(user, "company_id", None) != getattr(current_user, "company_id", None):
+        flash("You can only manage users from your own company.", "warning")
+        return redirect(url_for("admin.company_dashboard", company_id=current_user.company_id))
 
     reason = (request.form.get("reason") or "manual_review").strip().lower()
     note = (request.form.get("note") or "").strip()
@@ -2027,6 +2041,9 @@ def block_user(user_id):
 @role_required("admin_group")
 def unblock_user(user_id):
     user = User.query.get_or_404(user_id)
+    if _is_company_admin(current_user) and getattr(user, "company_id", None) != getattr(current_user, "company_id", None):
+        flash("You can only manage users from your own company.", "warning")
+        return redirect(url_for("admin.company_dashboard", company_id=current_user.company_id))
 
     user.is_blocked = False
     user.blocked_at = None

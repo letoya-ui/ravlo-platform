@@ -1,8 +1,9 @@
 {% extends "layouts/ravlo_employee_base.html" %}
+{% set is_company_scope = company is defined and company %}
 
 {% block title %}User Management{% endblock %}
 {% block page_title %}User Management{% endblock %}
-{% block page_subline %}Manage platform accounts, status, and employee access{% endblock %}
+{% block page_subline %}{% if is_company_scope %}Manage users assigned to {{ company.name }}{% else %}Manage platform accounts, status, and employee access{% endif %}{% endblock %}
 
 {% block topbar_actions %}
   {% if not single_admin_mode %}
@@ -40,7 +41,7 @@
     <div class="re-stat">
       <div class="re-stat-label">Total Users</div>
       <div class="re-stat-value">{{ total_users }}</div>
-      <div class="re-stat-meta">All accounts in platform</div>
+      <div class="re-stat-meta">{% if is_company_scope %}Accounts in this company{% else %}All accounts in platform{% endif %}</div>
     </div>
 
     <div class="re-stat">
@@ -60,9 +61,9 @@
     <div class="section-head">
       <div>
         <div class="eyebrow">ACCOUNT CONTROL</div>
-        <h3 style="margin:.35rem 0 .2rem;">System Users</h3>
+        <h3 style="margin:.35rem 0 .2rem;">{% if is_company_scope %}Company Users{% else %}System Users{% endif %}</h3>
         <div class="re-card-subtitle">
-          Activate, deactivate, and remove user accounts.
+          {% if is_company_scope %}Activate, deactivate, and remove users assigned to {{ company.name }}.{% else %}Activate, deactivate, and remove user accounts.{% endif %}
         </div>
       </div>
     </div>

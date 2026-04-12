@@ -102,12 +102,38 @@ def _default_investor_company_id() -> int | None:
     return getattr(company, "id", None)
 
 
+def _ravlo_company() -> Company:
+    company = Company.query.filter(
+        (func.lower(Company.name) == "ravlo")
+        | (func.lower(func.coalesce(Company.email_domain, "")) == "ravlohq.com")
+    ).first()
+
+    if company:
+        return company
+
+    company = Company(
+        name="Ravlo",
+        email_domain="ravlohq.com",
+        is_active=True,
+        subscription_tier="enterprise",
+    )
+    db.session.add(company)
+    db.session.flush()
+    return company
+
+
+def _default_ravlo_company_id() -> int | None:
+    return getattr(_ravlo_company(), "id", None)
+
+
 def _resolve_registration_company_id(role: str, explicit_company_id=None):
     role = (role or "").strip().lower()
     if explicit_company_id:
         return explicit_company_id
     if role == "investor":
         return _default_investor_company_id()
+    if role in _workspace_executive_roles():
+        return _default_ravlo_company_id()
     return None
 # ============================================================
 # TOKEN HELPERS
