@@ -489,6 +489,9 @@ If you were not expecting this email, you can ignore it.
 @login_required
 @role_required("admin_group")
 def dashboard():
+    if (getattr(current_user, "role", "") or "").strip().lower() == "executive":
+        return redirect(url_for("executive.dashboard"))
+
     if _is_company_admin(current_user) and current_user.company_id:
         return redirect(url_for("admin.company_dashboard", company_id=current_user.company_id))
 

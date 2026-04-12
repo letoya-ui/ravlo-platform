@@ -125,7 +125,7 @@ def _safe_next_url(default_endpoint: str = "investor.command_center"):
 def _dashboard_for_role(role: str) -> str:
     role = (role or "").strip().lower()
 
-    admin_roles = {"admin", "executive", "platform_admin", "master_admin", "lending_admin"}
+    admin_roles = {"admin", "platform_admin", "master_admin", "lending_admin"}
     if role in admin_roles:
         return "admin.dashboard"
 
@@ -134,7 +134,7 @@ def _dashboard_for_role(role: str) -> str:
         "processor": "processor.dashboard",
         "underwriter": "underwriter.dashboard",
         "investor": "investor.command_center",
-        "executive": "admin.dashboard",
+        "executive": "executive.dashboard",
         "compliance": "compliance.dashboard",
         "property": "property.dashboard",
         "system": "system.dashboard",
@@ -404,7 +404,10 @@ def post_login_redirect():
     if role == "admin" and current_user.company_id:
         return redirect(url_for("admin.company_dashboard", company_id=current_user.company_id))
 
-    if role in ["admin", "executive", "platform_admin", "master_admin", "lending_admin"]:
+    if role == "executive":
+        return redirect(url_for("executive.dashboard"))
+
+    if role in ["admin", "platform_admin", "master_admin", "lending_admin"]:
         return redirect(url_for("admin.dashboard"))
 
     # 👇 only allow next for non-admin users

@@ -7,8 +7,11 @@ def _dashboard_for_role(role: str) -> str:
     role = (role or "").lower().strip()
 
     # 🔥 Handle all admin-level roles FIRST
-    if role in ["admin", "platform_admin", "master_admin", "lending_admin", "executive"]:
+    if role in ["admin", "platform_admin", "master_admin", "lending_admin"]:
         return "admin.dashboard"
+
+    if role == "executive":
+        return "executive.dashboard"
 
     role_map = {
         "investor": "investor.command_center",
