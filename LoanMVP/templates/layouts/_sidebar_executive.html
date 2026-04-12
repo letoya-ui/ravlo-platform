@@ -1,5 +1,6 @@
 {% set ep = request.endpoint or "" %}
 {% set executive_company_name = current_user.company.name if current_user.company else "Ravlo" %}
+{% set exec_ns = 'executive' %}
 
 <div class="re-sidebar-inner">
   <div class="re-brand">
@@ -21,14 +22,14 @@
       <span>Dashboard</span>
     </a>
 
-    <a href="{{ url_for('admin.analytics') }}"
-       class="re-nav-link {% if ep == 'admin.analytics' %}active{% endif %}">
+    <a href="{{ url_for(exec_ns ~ '.analytics') }}"
+       class="re-nav-link {% if ep == exec_ns ~ '.analytics' %}active{% endif %}">
       <i class="icon lucide lucide-bar-chart-3"></i>
       <span>Analytics</span>
     </a>
 
-    <a href="{{ url_for('admin.demo_center') }}"
-       class="re-nav-link {% if ep == 'admin.demo_center' %}active{% endif %}">
+    <a href="{{ url_for(exec_ns ~ '.demo_center') }}"
+       class="re-nav-link {% if ep == exec_ns ~ '.demo_center' %}active{% endif %}">
       <i class="icon lucide lucide-panels-top-left"></i>
       <span>Demo Center</span>
     </a>
@@ -41,22 +42,22 @@
       <span>Users</span>
     </a>
 
-    <a href="{{ url_for('admin.access_requests') }}"
-       class="re-nav-link {% if ep in ['admin.access_requests', 'admin.requests_dashboard', 'admin.request_detail'] %}active{% endif %}">
+    <a href="{{ url_for(exec_ns ~ '.access_requests') }}"
+       class="re-nav-link {% if ep in [exec_ns ~ '.access_requests', exec_ns ~ '.request_detail'] %}active{% endif %}">
       <i class="icon lucide lucide-inbox"></i>
       <span>Access Requests</span>
     </a>
 
-    <a href="{{ url_for('admin.licensing_applications') }}"
-       class="re-nav-link {% if ep == 'admin.licensing_applications' %}active{% endif %}">
+    <a href="{{ url_for(exec_ns ~ '.licensing_applications') }}"
+       class="re-nav-link {% if ep == exec_ns ~ '.licensing_applications' %}active{% endif %}">
       <i class="icon lucide lucide-file-text"></i>
       <span>License Applications</span>
     </a>
 
     <div class="re-nav-section-label">Platform</div>
 
-    <a href="{{ url_for('admin.companies') }}"
-       class="re-nav-link {% if ep == 'admin.companies' %}active{% endif %}">
+    <a href="{{ url_for(exec_ns ~ '.companies') }}"
+       class="re-nav-link {% if ep == exec_ns ~ '.companies' %}active{% endif %}">
       <i class="icon lucide lucide-building-2"></i>
       <span>Companies</span>
     </a>

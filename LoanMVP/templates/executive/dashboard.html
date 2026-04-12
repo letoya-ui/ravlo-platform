@@ -1,5 +1,6 @@
 {% extends "layouts/ravlo_employee_base.html" %}
 {% set executive_company_name = company.name if company else (current_user.company.name if current_user.company else "Ravlo") %}
+{% set exec_ns = route_namespace|default('executive', true) %}
 {% block title %}{{ executive_company_name }} Executive Dashboard{% endblock %}
 {% block page_title %}{{ executive_company_name }} Executive Dashboard{% endblock %}
 {% block page_subline %}
@@ -11,11 +12,11 @@ Executive oversight across users, onboarding, invites, lending operations, and p
     <i class="lucide lucide-user-cog"></i>
     Manage Users
   </a>
-  <a class="re-btn ghost sm" href="{{ url_for('admin.access_requests') }}">
+  <a class="re-btn ghost sm" href="{{ url_for(exec_ns ~ '.access_requests') }}">
     <i class="lucide lucide-inbox"></i>
     Access Requests
   </a>
-  <a class="re-btn ghost sm" href="{{ url_for('admin.licensing_applications') }}">
+  <a class="re-btn ghost sm" href="{{ url_for(exec_ns ~ '.licensing_applications') }}">
     <i class="lucide lucide-file-text"></i>
     License Applications
   </a>
@@ -77,7 +78,7 @@ Executive oversight across users, onboarding, invites, lending operations, and p
       <div class="label">Executive Summary</div>
       <div class="value">{{ stats.total_users or 0 }}</div>
       <div class="meta">{{ ai_summary }}</div>
-      <a class="re-btn ghost sm" href="{{ url_for('admin.analytics') }}">Open Analytics</a>
+      <a class="re-btn ghost sm" href="{{ url_for(exec_ns ~ '.analytics') }}">Open Analytics</a>
     </div>
   </section>
 
@@ -112,7 +113,7 @@ Executive oversight across users, onboarding, invites, lending operations, and p
           <h3>Access and onboarding queue</h3>
           <div class="exec-card-sub">Newest requests that need executive visibility.</div>
         </div>
-        <a class="re-btn ghost sm" href="{{ url_for('admin.access_requests') }}">View All</a>
+        <a class="re-btn ghost sm" href="{{ url_for(exec_ns ~ '.access_requests') }}">View All</a>
       </div>
 
       <div class="exec-list">
