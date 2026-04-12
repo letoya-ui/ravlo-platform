@@ -1,3 +1,10 @@
+{% extends "layouts/ravlo_base.html" %}
+{% block title %}Investor OS • Deal Workspace{% endblock %}
+{% block page_title %}Deal Workspace{% endblock %}
+{% block page_subline %}
+Review a saved property, compare strategies, and move the best deal into planning, rehab, budget, and funding.
+{% endblock %}
+
 {% block topbar_actions %}
 {% set sp = selected_prop if selected_prop is defined else none %}
 
@@ -54,6 +61,8 @@
     {% endif %}
 {% endif %}
 {% endblock %}
+
+{% block content %}
 <div class="workspace-shell">
 
     <section class="ravlo-card pad">
