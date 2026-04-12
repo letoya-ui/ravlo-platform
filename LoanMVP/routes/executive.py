@@ -1,7 +1,7 @@
 from collections import defaultdict
 from datetime import datetime
 
-from flask import Blueprint, render_template
+from flask import Blueprint, current_app, flash, redirect, render_template, url_for
 from flask_login import current_user, login_required
 
 from LoanMVP.extensions import db
@@ -11,10 +11,20 @@ from LoanMVP.models.document_models import LoanDocument
 from LoanMVP.models.loan_models import LoanApplication
 from LoanMVP.models.system_models import SystemLog
 from LoanMVP.models.user_model import User
-from LoanMVP.utils.decorators import role_required
-
-
 executive_bp = Blueprint("executive", __name__, url_prefix="/executive")
+
+
+def _owner_admin_email() -> str:
+    return (current_app.config.get("OWNER_ADMIN_EMAIL") or "").strip().lower()
+
+
+def _can_access_executive_dashboard(user) -> bool:
+    role = (getattr(user, "role", "") or "").strip().lower()
+    if role in {"executive", "platform_admin", "master_admin", "lending_admin"}:
+        return True
+
+    email = (getattr(user, "email", "") or "").strip().lower()
+    return bool(email) and email == _owner_admin_email()
 
 
 def _demo_dashboard_cards():
@@ -96,8 +106,11 @@ def _monthly_series(records, date_attr="created_at", months_back=6):
 @executive_bp.route("/")
 @executive_bp.route("/dashboard")
 @login_required
-@role_required("executive", "platform_admin", "master_admin")
 def dashboard():
+    if not _can_access_executive_dashboard(current_user):
+        flash("Your account doesn’t have access to that page yet.", "warning")
+        return redirect(url_for("admin.dashboard"))
+
     company = getattr(current_user, "company", None)
     company_id = getattr(current_user, "company_id", None)
 
