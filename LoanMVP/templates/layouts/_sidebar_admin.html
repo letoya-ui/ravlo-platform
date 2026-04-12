@@ -2,16 +2,15 @@
 
 <div class="re-sidebar-inner">
   {% set is_company_admin = current_user.role == "admin" and current_user.company_id %}
-  {% set is_owner_executive = current_user.role == "admin" and owner_admin_email is defined and (current_user.email or "")|lower == owner_admin_email %}
-  {% set executive_company_name = current_user.company.name if current_user.company else "Ravlo" %}
-  {% set dashboard_endpoint = 'executive.dashboard' if current_user.role == 'executive' else ('admin.company_dashboard' if is_company_admin else 'admin.dashboard') %}
+  {% set is_executive_sidebar = current_user.role == "executive" and ep.startswith("executive.") %}
+  {% set sidebar_company_name = current_user.company.name if current_user.company else "Ravlo" %}
 
   <div class="re-brand">
-    <a href="{% if current_user.role == 'executive' %}{{ url_for('executive.dashboard') }}{% elif is_company_admin %}{{ url_for('admin.company_dashboard', company_id=current_user.company_id) }}{% else %}{{ url_for('admin.dashboard') }}{% endif %}" class="re-brand-link">
+    <a href="{% if is_executive_sidebar %}{{ url_for('executive.dashboard') }}{% elif is_company_admin %}{{ url_for('admin.company_dashboard', company_id=current_user.company_id) }}{% else %}{{ url_for('admin.dashboard') }}{% endif %}" class="re-brand-link">
       <div class="re-brand-mark">R</div>
       <div>
-        <div class="re-brand-title">{% if is_owner_executive or current_user.role == "executive" %}{{ executive_company_name }}{% else %}Ravlo{% endif %}</div>
-        <div class="re-brand-sub">{% if is_owner_executive or current_user.role == "executive" %}Executive Dashboard{% else %}Admin OS{% endif %}</div>
+        <div class="re-brand-title">{% if is_executive_sidebar %}{{ sidebar_company_name }}{% else %}Ravlo{% endif %}</div>
+        <div class="re-brand-sub">{% if is_executive_sidebar %}Executive Dashboard{% else %}Admin OS{% endif %}</div>
       </div>
     </a>
   </div>
@@ -20,7 +19,7 @@
 
     <div class="re-nav-section-label">Overview</div>
 
-    <a href="{% if current_user.role == 'executive' %}{{ url_for('executive.dashboard') }}{% elif is_company_admin %}{{ url_for('admin.company_dashboard', company_id=current_user.company_id) }}{% else %}{{ url_for('admin.dashboard') }}{% endif %}"
+    <a href="{% if is_executive_sidebar %}{{ url_for('executive.dashboard') }}{% elif is_company_admin %}{{ url_for('admin.company_dashboard', company_id=current_user.company_id) }}{% else %}{{ url_for('admin.dashboard') }}{% endif %}"
        class="re-nav-link {% if ep in ['admin.dashboard', 'admin.company_dashboard', 'executive.dashboard'] %}active{% endif %}">
       <i class="icon lucide lucide-layout-dashboard"></i>
       <span>Dashboard</span>
@@ -152,7 +151,7 @@
         <div class="re-user-role">
           {% if is_company_admin %}
             Company Admin
-          {% elif is_owner_executive or current_user.role == "executive" %}
+          {% elif is_executive_sidebar %}
             Executive
           {% else %}
             Administrator
