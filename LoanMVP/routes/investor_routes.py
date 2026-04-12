@@ -83,6 +83,9 @@ from LoanMVP.models.borrowers import (
     DealShare,
 )
 from LoanMVP.models.loan_officer_model import LoanOfficerProfile
+from LoanMVP.models.processor_model import ProcessorProfile
+from LoanMVP.models.underwriter_model import UnderwriterProfile
+from LoanMVP.models.user_model import User
 from LoanMVP.models.renovation_models import RenovationMockup, RehabJob, BuildProject
 from LoanMVP.models.partner_models import PartnerConnectionRequest, ExternalPartnerLead
 from LoanMVP.models.investor_models import (
@@ -367,6 +370,56 @@ def _sync_investor_subscription_record(user, investor_profile=None):
     subscription.end_date = None
 
     return subscription
+
+
+def _investor_owned_loans(investor_profile):
+    if not investor_profile:
+        return []
+
+    loans = LoanApplication.query.filter_by(investor_profile_id=investor_profile.id).all()
+    if loans:
+        return loans
+
+    legacy_ids = []
+    if hasattr(investor_profile, "borrower_profile_id") and getattr(investor_profile, "borrower_profile_id", None):
+        legacy_ids.append(getattr(investor_profile, "borrower_profile_id"))
+    legacy_ids.append(investor_profile.id)
+
+    return LoanApplication.query.filter(LoanApplication.borrower_profile_id.in_(legacy_ids)).all()
+
+
+def _assigned_professional_users_for_investor(investor_profile):
+    assigned_user_ids = set()
+
+    for loan in _investor_owned_loans(investor_profile):
+        loan_officer = getattr(loan, "loan_officer", None)
+        processor = getattr(loan, "processor", None)
+        underwriter = getattr(loan, "underwriter", None)
+
+        if loan_officer and getattr(loan_officer, "user_id", None):
+            assigned_user_ids.add(loan_officer.user_id)
+        if processor and getattr(processor, "user_id", None):
+            assigned_user_ids.add(processor.user_id)
+        if underwriter and getattr(underwriter, "user_id", None):
+            assigned_user_ids.add(underwriter.user_id)
+
+    if not assigned_user_ids:
+        return []
+
+    users = (
+        User.query
+        .filter(User.id.in_(assigned_user_ids))
+        .order_by(User.first_name.asc(), User.last_name.asc(), User.email.asc())
+        .all()
+    )
+    return users
+
+
+def _loan_officer_user_id(profile_id):
+    if not profile_id:
+        return None
+    officer = LoanOfficerProfile.query.get(profile_id)
+    return getattr(officer, "user_id", None)
 
 def _deal_results(deal):
     return copy.deepcopy(deal.results_json or {})
@@ -1137,7 +1190,15 @@ def capital_application():
     if deal_id:
         deal = Deal.query.filter_by(id=deal_id, user_id=current_user.id).first()
 
-    officers = LoanOfficerProfile.query.order_by(LoanOfficerProfile.name.asc()).all()
+    company_id = getattr(current_user, "company_id", None)
+    officers_query = (
+        LoanOfficerProfile.query
+        .join(User, LoanOfficerProfile.user_id == User.id)
+        .order_by(LoanOfficerProfile.name.asc())
+    )
+    if company_id:
+        officers_query = officers_query.filter(User.company_id == company_id)
+    officers = officers_query.all()
     initial_loan_type = (request.args.get("loan_type") or "").strip()
     initial_amount = request.args.get("amount", type=float)
 
@@ -1656,13 +1717,15 @@ def convert_quote_to_application(quote_id):
         f"Capital Request #{new_app.id} for {quote.property_address or 'a new property'}."
     )
 
-    db.session.add(Message(
-        sender_id=current_user.id,
-        receiver_id=getattr(quote, "assigned_officer_id", None),
-        content=msg,
-        created_at=datetime.utcnow(),
-        system_generated=True,
-    ))
+    assigned_officer_user_id = _loan_officer_user_id(getattr(quote, "assigned_officer_id", None))
+    if assigned_officer_user_id:
+        db.session.add(Message(
+            sender_id=current_user.id,
+            receiver_id=assigned_officer_user_id,
+            content=msg,
+            created_at=datetime.utcnow(),
+            system_generated=True,
+        ))
 
     db.session.commit()
 
@@ -8292,12 +8355,23 @@ def export_rehab_scope(deal_id):
 @role_required("investor")
 def messages():
     ip = InvestorProfile.query.filter_by(user_id=current_user.id).first()
+    officers = _assigned_professional_users_for_investor(ip)
 
-    from LoanMVP.models.user_model import User
-
-    officers = User.query.filter(
-        User.role.in_(["loan_officer", "processor", "underwriter"])
-    ).order_by(User.first_name.asc(), User.last_name.asc()).all()
+    for officer in officers:
+        officer.last_message = (
+            Message.query.filter(
+                (
+                    (Message.sender_id == current_user.id) &
+                    (Message.receiver_id == officer.id)
+                ) |
+                (
+                    (Message.sender_id == officer.id) &
+                    (Message.receiver_id == current_user.id)
+                )
+            )
+            .order_by(Message.created_at.desc())
+            .first()
+        )
 
     allowed_receiver_ids = {u.id for u in officers}
 
@@ -8336,19 +8410,16 @@ def messages():
 @login_required
 @role_required("investor")
 def send_message():
+    ip = InvestorProfile.query.filter_by(user_id=current_user.id).first()
     content = (request.form.get("content") or "").strip()
     receiver_id = request.form.get("receiver_id", type=int)
-
-    from LoanMVP.models.user_model import User
 
     if not receiver_id or not content:
         flash("⚠️ Please select a recipient and enter a message.", "warning")
         return redirect(url_for("investor.messages"))
 
-    allowed_receiver = User.query.filter(
-        User.id == receiver_id,
-        User.role.in_(["loan_officer", "processor", "underwriter"])
-    ).first()
+    allowed_receiver_ids = {user.id for user in _assigned_professional_users_for_investor(ip)}
+    allowed_receiver = User.query.filter(User.id == receiver_id).first() if receiver_id in allowed_receiver_ids else None
 
     if not allowed_receiver:
         flash("⚠️ Invalid message recipient.", "danger")
