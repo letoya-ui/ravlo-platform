@@ -301,9 +301,16 @@ def register_blueprints(app):
         print("No routes folder found.")
         return
 
+    module_aliases = {
+        "executive.py": "LoanMVP.routes.executive_new",
+    }
+
     for file in os.listdir(routes_dir):
         if file.endswith(".py") and not file.startswith("__"):
-            mod_name = f"LoanMVP.routes.{file[:-3]}"
+            if file.endswith("_new.py"):
+                continue
+
+            mod_name = module_aliases.get(file, f"LoanMVP.routes.{file[:-3]}")
             try:
                 mod = importlib.import_module(mod_name)
 

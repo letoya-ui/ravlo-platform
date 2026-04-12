@@ -1,14 +1,15 @@
 {% extends "layouts/ravlo_employee_base.html" %}
+{% set route_ns = route_namespace|default('admin', true) %}
 {% block title %}Admin • Companies{% endblock %}
 {% block page_title %}Companies{% endblock %}
 {% block page_subline %}Manage organizations onboarded into Ravlo Lending OS{% endblock %}
 
 {% block topbar_actions %}
-  <a class="re-btn ghost sm" href="{{ url_for('admin.access_requests') }}">
+  <a class="re-btn ghost sm" href="{{ url_for(route_ns ~ '.access_requests') }}">
     <i class="lucide lucide-inbox"></i>
     Access Requests
   </a>
-  <a class="re-btn primary sm" href="{{ url_for('admin.dashboard') }}">
+  <a class="re-btn primary sm" href="{{ url_for(route_ns ~ '.dashboard') }}">
     <i class="lucide lucide-layout-dashboard"></i>
     Dashboard
   </a>
@@ -80,15 +81,19 @@
               <td>{{ company.created_at.strftime("%Y-%m-%d") if company.created_at else "—" }}</td>
               <td class="text-right">
                 <div class="row" style="justify-content:flex-end; gap:8px; flex-wrap:wrap;">
-                  <a class="re-btn ghost sm" href="{{ url_for('admin.company_team', company_id=company.id) }}">
-                    <i class="lucide lucide-users"></i>
-                    Team
-                  </a>
+                  {% if route_ns == 'admin' %}
+                    <a class="re-btn ghost sm" href="{{ url_for('admin.company_team', company_id=company.id) }}">
+                      <i class="lucide lucide-users"></i>
+                      Team
+                    </a>
 
-                  <a class="re-btn primary sm" href="{{ url_for('admin.company_dashboard', company_id=company.id) }}">
-                    <i class="lucide lucide-building-2"></i>
-                    Dashboard
-                  </a>
+                    <a class="re-btn primary sm" href="{{ url_for('admin.company_dashboard', company_id=company.id) }}">
+                      <i class="lucide lucide-building-2"></i>
+                      Dashboard
+                    </a>
+                  {% else %}
+                    <span class="badge badge-neutral">Company workspace lives under Admin</span>
+                  {% endif %}
                 </div>
               </td>
             </tr>
