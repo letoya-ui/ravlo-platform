@@ -1549,6 +1549,9 @@ def ai_refresh(target):
 @login_required
 @role_required("admin_group")
 def company_dashboard(company_id):
+    if (getattr(current_user, "role", "") or "").strip().lower() == "executive":
+        return redirect(url_for("executive.dashboard"))
+
     company = Company.query.get_or_404(company_id)
     access_redirect = _ensure_company_access(company)
     if access_redirect:

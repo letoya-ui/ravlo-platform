@@ -22,6 +22,24 @@ load_dotenv()
 TRUE_VALUES = {"1", "true", "yes", "on"}
 
 
+def _resolve_database_uri() -> str:
+    raw_uri = (os.getenv("DATABASE_URL") or "").strip()
+    if not raw_uri:
+        return DEFAULT_SQLITE_URI
+
+    # Keep local development on the shared workspace DB instead of a cwd-dependent file.
+    if raw_uri in {"sqlite:///local.db", "sqlite://local.db"}:
+        return DEFAULT_SQLITE_URI
+
+    sqlite_prefix = "sqlite:///"
+    if raw_uri.startswith(sqlite_prefix):
+        sqlite_path = raw_uri[len(sqlite_prefix):]
+        if sqlite_path and not os.path.isabs(sqlite_path):
+            return "sqlite:///" + os.path.abspath(os.path.join(PROJECT_ROOT, sqlite_path)).replace("\\", "/")
+
+    return raw_uri
+
+
 def _env_bool(name: str, default: bool = False) -> bool:
     return os.environ.get(name, str(default)).strip().lower() in TRUE_VALUES
 
@@ -80,7 +98,7 @@ class Config:
     PREFERRED_URL_SCHEME = os.environ.get("PREFERRED_URL_SCHEME", "https")
  
     # DATABASE
-    SQLALCHEMY_DATABASE_URI = os.getenv("DATABASE_URL") or DEFAULT_SQLITE_URI
+    SQLALCHEMY_DATABASE_URI = _resolve_database_uri()
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
 
