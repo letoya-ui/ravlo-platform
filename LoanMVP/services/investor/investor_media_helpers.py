@@ -15,9 +15,6 @@ except ModuleNotFoundError:
 
 from flask import current_app
 
-# -------------------------
-# ENV / CONFIG
-# -------------------------
 
 SPACES_BUCKET = os.getenv("SPACES_BUCKET", "")
 SPACES_REGION = os.getenv("SPACES_REGION", "")
@@ -26,10 +23,6 @@ SPACES_KEY = os.getenv("SPACES_KEY", "")
 SPACES_SECRET = os.getenv("SPACES_SECRET", "")
 SPACES_CDN_BASE = os.getenv("SPACES_CDN_BASE", "").rstrip("/")
 
-
-# -------------------------
-# PHOTO NORMALIZATION
-# -------------------------
 
 def _normalize_photo_list(value) -> list[str]:
     photos = []
@@ -48,17 +41,31 @@ def _normalize_photo_list(value) -> list[str]:
                     or item.get("href")
                     or item.get("photo")
                     or item.get("image")
+                    or item.get("thumbnail")
                 )
                 if isinstance(url, str) and url.strip():
                     photos.append(url.strip())
 
     elif isinstance(value, dict):
+        direct_url = (
+            value.get("url")
+            or value.get("src")
+            or value.get("href")
+            or value.get("photo")
+            or value.get("image")
+            or value.get("thumbnail")
+        )
+        if isinstance(direct_url, str) and direct_url.strip():
+            photos.append(direct_url.strip())
+
         for key in ("photos", "images", "media", "gallery"):
             nested = value.get(key)
             if nested:
                 photos.extend(_normalize_photo_list(nested))
 
-    # dedupe
+    elif isinstance(value, str) and value.strip():
+        photos.append(value.strip())
+
     seen = set()
     clean = []
     for url in photos:
@@ -79,16 +86,17 @@ def _resolve_photo(primary=None, gallery=None):
 
 
 def _normalize_photo_urls(*sources):
+    merged = []
+    seen = set()
+
     for source in sources:
-        photos = _normalize_photo_list(source)
-        if photos:
-            return photos
-    return []
+        for url in _normalize_photo_list(source):
+            if url not in seen:
+                seen.add(url)
+                merged.append(url)
 
+    return merged
 
-# -------------------------
-# SPACES CLIENT
-# -------------------------
 
 def _get_spaces_client():
     if boto3 is None:
@@ -108,10 +116,6 @@ def _public_spaces_url(key: str) -> str:
         return f"{SPACES_CDN_BASE}/{key}"
     return f"{SPACES_ENDPOINT}/{SPACES_BUCKET}/{key}"
 
-
-# -------------------------
-# IMAGE UTILS
-# -------------------------
 
 def download_image_bytes(url: str) -> bytes | None:
     try:
@@ -136,10 +140,6 @@ def to_webp_bytes(image_bytes: bytes) -> bytes:
     img.save(out, format="WEBP", quality=85)
     return out.getvalue()
 
-
-# -------------------------
-# UPLOAD HELPERS
-# -------------------------
 
 def upload_listing_photos_to_spaces(photos: list[str], prefix="listing") -> list[str]:
     if not photos:
@@ -166,16 +166,11 @@ def upload_listing_photos_to_spaces(photos: list[str], prefix="listing") -> list
             )
 
             uploaded_urls.append(_public_spaces_url(key))
-
         except Exception:
             continue
 
     return uploaded_urls
 
-
-# -------------------------
-# MODEL ATTACH HELPERS
-# -------------------------
 
 def _persist_listing_photo_refs(model, photo_urls: list[str]):
     if not model:
@@ -187,15 +182,14 @@ def _persist_listing_photo_refs(model, photo_urls: list[str]):
     if hasattr(model, "primary_photo"):
         model.primary_photo = photo_urls[0] if photo_urls else None
 
+    if hasattr(model, "listing_photos_json"):
+        model.listing_photos_json = photo_urls
 
-def _try_upload_and_attach_listing_photos(model, raw_photos):
-    normalized = _normalize_photo_list(raw_photos)
-    if not normalized:
-        return []
+    if hasattr(model, "photos_json"):
+        model.photos_json = photo_urls
 
-    uploaded = upload_listing_photos_to_spaces(normalized)
-    _persist_listing_photo_refs(model, uploaded)
-    return uploaded
+    if hasattr(model, "image_url"):
+        model.image_url = photo_urls[0] if photo_urls else getattr(model, "image_url", None)
 
 
 def _store_saved_property_media(saved_property, photo_urls):
@@ -208,27 +202,86 @@ def _store_saved_property_media(saved_property, photo_urls):
     if hasattr(saved_property, "primary_photo"):
         saved_property.primary_photo = photo_urls[0] if photo_urls else None
 
+    if hasattr(saved_property, "listing_photos_json"):
+        saved_property.listing_photos_json = photo_urls
+
+    if hasattr(saved_property, "photos_json"):
+        saved_property.photos_json = photo_urls
+
+    if hasattr(saved_property, "image_url") and photo_urls:
+        saved_property.image_url = photo_urls[0]
+
 
 def _saved_property_media(saved_property):
     if not saved_property:
         return {"primary_photo": None, "gallery": []}
 
+    gallery = (
+        getattr(saved_property, "photo_gallery", None)
+        or getattr(saved_property, "listing_photos_json", None)
+        or getattr(saved_property, "photos_json", None)
+        or []
+    )
+
+    primary = (
+        getattr(saved_property, "primary_photo", None)
+        or getattr(saved_property, "image_url", None)
+        or (gallery[0] if gallery else None)
+    )
+
     return {
-        "primary_photo": getattr(saved_property, "primary_photo", None),
-        "gallery": getattr(saved_property, "photo_gallery", []) or [],
+        "primary_photo": primary,
+        "gallery": gallery,
     }
 
 
-# -------------------------
-# BUILD / RENOVATION IMAGE HELPERS
-# -------------------------
+def _extract_listing_photos_from_payload(payload) -> list[str]:
+    if not isinstance(payload, dict):
+        return []
+
+    return _normalize_photo_urls(
+        payload.get("listing_photos"),
+        payload.get("photos"),
+        payload.get("images"),
+        payload.get("media"),
+        payload.get("gallery"),
+        payload.get("image_url"),
+        payload.get("primary_photo"),
+        payload.get("photo"),
+        payload.get("thumbnail"),
+    )
+
+
+def _try_upload_and_attach_listing_photos(payload=None, saved_property=None, deal=None):
+    """
+    Expected by api_property_tool_save and api_property_tool_save_and_analyze.
+
+    Returns a list of dicts:
+    [
+        {"url": "https://..."},
+        ...
+    ]
+    """
+    payload = payload or {}
+    raw_photos = _extract_listing_photos_from_payload(payload)
+    if not raw_photos:
+        return []
+
+    uploaded_urls = upload_listing_photos_to_spaces(raw_photos)
+    if not uploaded_urls:
+        return []
+
+    _store_saved_property_media(saved_property, uploaded_urls)
+    _persist_listing_photo_refs(deal, uploaded_urls)
+
+    return [{"url": url} for url in uploaded_urls]
+
 
 def _upload_before_image(image_bytes: bytes, prefix="before") -> str | None:
     if not image_bytes:
         return None
 
     client = _get_spaces_client()
-
     key = f"{prefix}/{uuid.uuid4().hex}.png"
 
     client.put_object(
