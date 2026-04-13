@@ -48,7 +48,7 @@
     <p class="muted">Create a new lead for your business and assign it to the right loan officer from the start.</p>
 
     <form method="POST" action="{{ url_for('crm.add_lead') }}">
-      <!-- If you’re using WTForms/CSRF, include: {{ form.csrf_token }} -->
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
       <div class="grid g-2">
         <div>

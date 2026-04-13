@@ -17,7 +17,7 @@
     <p class="muted">Last updated: {{ lead.updated_at.strftime('%b %d, %Y %I:%M %p') if lead.updated_at else '—' }}</p>
 
     <form method="POST" action="{{ url_for('crm.update_lead', lead_id=lead.id) }}">
-      <!-- Include {{ form.csrf_token }} if using WTForms -->
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
       <div class="grid g-2">
         <div>
