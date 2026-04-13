@@ -2,7 +2,7 @@ import os
 import requests
 from typing import Optional, Dict, Any
 
-RENTCAST_API_KEY = os.getenv("RENTCAST_API_KEY") or "d0bdb63befcc468897409c4293fd5049"
+RENTCAST_API_KEY = os.getenv("RENTCAST_API_KEY")
 
 def fetch_rentcast_data(address: str, city: str, state: str, zip_code: str = "") -> Optional[Dict[str, Any]]:
     """

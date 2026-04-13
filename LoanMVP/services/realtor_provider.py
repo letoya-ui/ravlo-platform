@@ -5,10 +5,10 @@ from urllib.parse import urlparse
 
 RAPIDAPI_KEY = os.getenv("RAPIDAPI_KEY")
 RAPIDAPI_HOST = os.getenv("REALTOR_RAPIDAPI_HOST", "realtor-search.p.rapidapi.com")
-REALTOR_DETAIL_URL = os.getenv(
-    "REALTOR_RAPIDAPI_URL",
-    "https://us-real-estate-listings.p.rapidapi.com/v2/property",
-)
+
+# Leave blank unless you have a confirmed working provider detail endpoint.
+REALTOR_DETAIL_URL = os.getenv("REALTOR_RAPIDAPI_URL", "").strip()
+
 REALTOR_SEARCH_URL = os.getenv(
     "REALTOR_RAPIDAPI_SEARCH_URL",
     f"https://{RAPIDAPI_HOST}/for-sale",
@@ -53,9 +53,9 @@ def _safe_list(val):
 
 def _extract_photos(raw_photos: Any) -> List[str]:
     """
-    Normalize Realtor.com photo objects into a clean list of URLs.
+    Normalize Realtor photo objects into a clean list of URLs.
     """
-    photos = []
+    photos: List[str] = []
 
     if isinstance(raw_photos, list):
         for p in raw_photos:
@@ -67,12 +67,30 @@ def _extract_photos(raw_photos: Any) -> List[str]:
                     or p.get("url")
                     or p.get("src")
                     or p.get("photo")
+                    or p.get("image")
+                    or p.get("thumbnail")
                 )
                 if isinstance(url, str) and url.strip():
                     photos.append(url.strip())
 
-    # Deduplicate
-    clean = []
+    elif isinstance(raw_photos, dict):
+        direct = (
+            raw_photos.get("href")
+            or raw_photos.get("url")
+            or raw_photos.get("src")
+            or raw_photos.get("photo")
+            or raw_photos.get("image")
+            or raw_photos.get("thumbnail")
+        )
+        if isinstance(direct, str) and direct.strip():
+            photos.append(direct.strip())
+
+        for key in ("photos", "images", "media", "gallery"):
+            nested = raw_photos.get(key)
+            if nested:
+                photos.extend(_extract_photos(nested))
+
+    clean: List[str] = []
     seen = set()
     for url in photos:
         if url not in seen:
@@ -138,12 +156,6 @@ def _pick(node: Dict[str, Any], *paths: tuple[str, ...]) -> Any:
 
 
 def _normalize_listing_item(item: Dict[str, Any]) -> Dict[str, Any]:
-    location = _first_dict(
-        _pick(item, ("location",)),
-        _pick(item, ("address",)),
-        _pick(item, ("description",)),
-    )
-
     photos = _extract_photos(
         _pick(
             item,
@@ -152,24 +164,25 @@ def _normalize_listing_item(item: Dict[str, Any]) -> Dict[str, Any]:
             ("photo",),
             ("description", "photos"),
             ("location", "photos"),
+            ("media",),
         )
     )
 
     return {
-        "property_id": _pick(item, ("property_id",), ("propertyId",), ("listing_id",), ("mls_id",), ("listing_id",)),
+        "property_id": _pick(item, ("property_id",), ("propertyId",), ("listing_id",), ("mls_id",)),
         "address": _pick(item, ("address", "line"), ("location", "address", "line"), ("description", "line"), ("address",), ("location", "address")),
         "address_line1": _pick(item, ("address", "line"), ("location", "address", "line"), ("description", "line")),
         "city": _pick(item, ("address", "city"), ("location", "address", "city"), ("location", "city"), ("description", "city")),
         "state": _pick(item, ("address", "state_code"), ("location", "address", "state_code"), ("location", "state_code"), ("description", "state_code")),
         "zip_code": _pick(item, ("address", "postal_code"), ("location", "address", "postal_code"), ("location", "postal_code"), ("description", "postal_code")),
         "price": _pick(item, ("list_price",), ("price",), ("description", "price")),
-        "beds": _pick(item, ("beds",), ("description", "beds")),
-        "baths": _pick(item, ("baths",), ("description", "baths_full"), ("description", "baths")),
-        "square_feet": _pick(item, ("sqft",), ("description", "sqft"), ("description", "sold_price_per_sqft")),
+        "beds": _pick(item, ("beds",), ("bedrooms",), ("description", "beds")),
+        "baths": _pick(item, ("baths",), ("bathrooms",), ("description", "baths_full"), ("description", "baths")),
+        "square_feet": _pick(item, ("sqft",), ("square_feet",), ("description", "sqft")),
         "lot_size_sqft": _pick(item, ("description", "lot_sqft"), ("lot_sqft",)),
         "year_built": _pick(item, ("description", "year_built"), ("year_built",)),
         "property_type": _pick(item, ("prop_type",), ("description", "type"), ("property_type",)),
-        "status": _pick(item, ("status",), ("description", "status")),
+        "status": _pick(item, ("status",), ("listing_status",), ("description", "status")),
         "days_on_market": _pick(item, ("days_on_mls",), ("days_on_market",), ("description", "days_on_mls")),
         "primary_photo": photos[0] if photos else None,
         "photos": photos,
@@ -231,26 +244,13 @@ def search_realtor_for_sale(
 
 def fetch_realtor_data(address: str, city: str, state: str) -> Optional[Dict[str, Any]]:
     """
-    Fetch listing data from Realtor.com via RapidAPI.
-    Returns:
-        {
-            "status": "ok",
-            "provider": "realtor",
-            "property": {
-                "price": ...,
-                "photos": [...],
-                "primary_photo": ...,
-                "status": ...,
-                "days_on_market": ...,
-                "description": ...,
-            },
-            "raw": <full API response>
-        }
-    Or None if no listing found.
-    """
+    Safe provider entrypoint.
 
+    Preferred flow:
+    - if a verified detail endpoint exists, try it
+    - otherwise use search fallback directly
+    """
     if not RAPIDAPI_KEY:
-        print("Realtor Provider: RAPIDAPI_KEY missing")
         return None
 
     location_parts = [part.strip() for part in [address, city, state] if part and str(part).strip()]
@@ -259,31 +259,17 @@ def fetch_realtor_data(address: str, city: str, state: str) -> Optional[Dict[str
     def _fallback_search_result() -> Optional[Dict[str, Any]]:
         if not location_query:
             return None
-        listings = search_realtor_for_sale(location=location_query, limit=10)
+
+        listings = search_realtor_for_sale(location=location_query, limit=3)
         if not listings:
             return None
 
-        target_address = (address or "").strip().lower()
-        target_city = (city or "").strip().lower()
-        target_state = (state or "").strip().lower()
-
-        selected = None
-        for item in listings:
-            item_address = (item.get("address") or item.get("address_line1") or "").strip().lower()
-            item_city = (item.get("city") or "").strip().lower()
-            item_state = (item.get("state") or "").strip().lower()
-            if target_address and item_address and target_address in item_address:
-                if (not target_city or target_city == item_city) and (not target_state or target_state == item_state):
-                    selected = item
-                    break
-
-        if not selected:
-            selected = listings[0]
-
+        selected = listings[0]
         return {
             "status": "ok",
             "provider": "realtor_search",
             "property": {
+                "property_id": selected.get("property_id"),
                 "price": selected.get("price"),
                 "beds": selected.get("beds"),
                 "baths": selected.get("baths"),
@@ -296,6 +282,9 @@ def fetch_realtor_data(address: str, city: str, state: str) -> Optional[Dict[str
             },
             "raw": selected.get("raw") or selected,
         }
+
+    if not REALTOR_DETAIL_URL:
+        return _fallback_search_result()
 
     try:
         payload = {
@@ -312,52 +301,35 @@ def fetch_realtor_data(address: str, city: str, state: str) -> Optional[Dict[str
         )
 
         if not resp.ok:
-            print("Realtor Provider error:", resp.text[:300])
+            body = (resp.text or "")[:300]
+            print("Realtor Provider error:", body)
+
+            if "does not exist" in body.lower() or resp.status_code in (404, 410, 429):
+                return _fallback_search_result()
+
             return _fallback_search_result()
 
         data = resp.json()
         home = _find_listing_node(data)
-
         if not home:
             return _fallback_search_result()
 
         photos = _extract_photos(
-            _pick(
-                home,
-                ("photos",),
-                ("primary_photo",),
-                ("photo",),
-                ("description", "photos"),
-                ("media", "photos"),
-            )
+            _pick(home, ("photos",), ("primary_photo",), ("photo",), ("description", "photos"), ("media", "photos"))
         )
-
-        price = _pick(
-            home,
-            ("price",),
-            ("list_price",),
-            ("listPrice",),
-            ("list_price_min",),
-            ("description", "price"),
-        )
-        beds = _pick(home, ("beds",), ("bedrooms",), ("description", "beds"))
-        baths = _pick(home, ("baths",), ("bathrooms",), ("description", "baths"))
-        sqft = _pick(home, ("sqft",), ("sqft_value",), ("building_size", "size"), ("description", "sqft"))
-        status = _pick(home, ("status",), ("listing_status",), ("description", "status"))
-        days_on_market = _pick(home, ("days_on_market",), ("days_on_realtor",), ("description", "days_on_market"))
-        description = _pick(home, ("description",), ("description", "text"), ("description", "summary"))
 
         return {
             "status": "ok",
             "provider": "realtor",
             "property": {
-                "price": price,
-                "beds": beds,
-                "baths": baths,
-                "sqft": sqft,
-                "status": status,
-                "days_on_market": days_on_market,
-                "description": description,
+                "property_id": _pick(home, ("property_id",), ("propertyId",), ("listing_id",), ("mls_id",)),
+                "price": _pick(home, ("price",), ("list_price",), ("listPrice",), ("list_price_min",), ("description", "price")),
+                "beds": _pick(home, ("beds",), ("bedrooms",), ("description", "beds")),
+                "baths": _pick(home, ("baths",), ("bathrooms",), ("description", "baths")),
+                "sqft": _pick(home, ("sqft",), ("sqft_value",), ("building_size", "size"), ("description", "sqft")),
+                "status": _pick(home, ("status",), ("listing_status",), ("description", "status")),
+                "days_on_market": _pick(home, ("days_on_market",), ("days_on_realtor",), ("description", "days_on_market")),
+                "description": _pick(home, ("description",), ("description", "text"), ("description", "summary")),
                 "photos": photos,
                 "primary_photo": photos[0] if photos else None,
             },
@@ -370,6 +342,9 @@ def fetch_realtor_data(address: str, city: str, state: str) -> Optional[Dict[str
 
 
 def fetch_realtor_photos(property_id: str | int | None) -> List[str]:
+    """
+    Use only on single-property detail pages, not bulk search result enrichment.
+    """
     if not RAPIDAPI_KEY or not property_id:
         return []
 
@@ -398,6 +373,9 @@ def fetch_realtor_photos(property_id: str | int | None) -> List[str]:
 
 
 def fetch_realtor_estimate(property_id: str | int | None) -> Dict[str, Any]:
+    """
+    Use only on single-property detail pages, not bulk search result enrichment.
+    """
     if not RAPIDAPI_KEY or not property_id:
         return {}
 

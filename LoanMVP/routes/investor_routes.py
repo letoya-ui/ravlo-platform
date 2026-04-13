@@ -3045,7 +3045,7 @@ def api_property_tool_search():
     city = (payload.get("city") or "").strip()
     state = (payload.get("state") or "").strip()
     strategy = (payload.get("strategy") or "flip").strip().lower()
-    asset_type = _normalize_asset_type(payload.get("asset_type"))
+    asset_type = payload.get("asset_type") or "any"
 
     if not address and not zip_code:
         return jsonify({
@@ -3054,400 +3054,37 @@ def api_property_tool_search():
             "results": [],
         }), 400
 
-    page_size = min(int(payload.get("limit") or 20), 20)
-    enrich_limit = min(page_size, 8)
-    top_pick_limit = 4
-
-    def _first_truthy(*vals):
-        for v in vals:
-            if v not in (None, "", [], {}):
-                return v
-        return None
-
-    def _as_float(v):
-        try:
-            if v in (None, "", "None"):
-                return None
-            if isinstance(v, (int, float)):
-                return float(v)
-            return float(str(v).replace("$", "").replace(",", "").strip())
-        except Exception:
-            return None
-
-    def _as_int(v):
-        try:
-            n = _as_float(v)
-            return int(round(n)) if n is not None else None
-        except Exception:
-            return None
-
-    def _normalize_photo_candidates(*sources):
-        out = []
-        seen = set()
-
-        def _push(url):
-            if not url:
-                return
-            url = str(url).strip()
-            if not url or url in seen:
-                return
-            seen.add(url)
-            out.append(url)
-
-        def _walk(value):
-            if not value:
-                return
-            if isinstance(value, str):
-                _push(value)
-            elif isinstance(value, list):
-                for item in value:
-                    _walk(item)
-            elif isinstance(value, dict):
-                for key in ("url", "src", "href", "photo", "image", "thumbnail"):
-                    if value.get(key):
-                        _push(value.get(key))
-                for key in ("photos", "images", "media", "gallery"):
-                    if value.get(key):
-                        _walk(value.get(key))
-
-        for src in sources:
-            _walk(src)
-
-        return out
-
-    def _merge_result(raw: dict, result: dict, bundle: dict | None = None) -> dict:
-        """
-        Canonical merge layer:
-        - prefer enriched/provider-stacked values
-        - fall back to ATTOM/search raw
-        - preserve photos and price even if one source is sparse
-        """
-        bundle = bundle or {}
-        profile = bundle.get("profile") or {}
-        scoring = bundle.get("scoring") or {}
-        raw_sources = profile.get("raw_sources") or {}
-
-        rentcast_src = raw_sources.get("rentcast") or {}
-        mashvisor_src = raw_sources.get("mashvisor") or {}
-        realtor_src = raw_sources.get("realtor") or {}
-        attom_src = raw_sources.get("attom") or {}
-
-        photos = _normalize_photo_candidates(
-            result.get("photos"),
-            profile.get("photos"),
-            realtor_src.get("photos"),
-            realtor_src.get("images"),
-            rentcast_src.get("photos"),
-            rentcast_src.get("images"),
-            mashvisor_src.get("photos"),
-            mashvisor_src.get("images"),
-            raw.get("photos"),
-            raw.get("images"),
-            raw.get("media"),
-            raw.get("primary_photo"),
-            raw.get("photo"),
-            raw.get("thumbnail"),
-            raw.get("image_url"),
-        )
-        primary_photo = _first_truthy(
-            result.get("primary_photo"),
-            profile.get("primary_photo"),
-            realtor_src.get("primary_photo"),
-            realtor_src.get("photo"),
-            rentcast_src.get("primary_photo"),
-            mashvisor_src.get("primary_photo"),
-            photos[0] if photos else None,
-        )
-
-        listing_price = _first_truthy(
-            result.get("listing_price"),
-            result.get("price"),
-            profile.get("listing_price"),
-            realtor_src.get("price"),
-            realtor_src.get("list_price"),
-            rentcast_src.get("price"),
-            rentcast_src.get("listing_price"),
-            mashvisor_src.get("listing_price"),
-            raw.get("price"),
-            raw.get("list_price"),
-            raw.get("listPrice"),
-            raw.get("listedPrice"),
-        )
-        listing_price = _as_float(listing_price)
-
-        market_value = _as_float(_first_truthy(
-            result.get("market_value"),
-            profile.get("market_value"),
-            mashvisor_src.get("market_value"),
-            rentcast_src.get("market_value"),
-            attom_src.get("market_value"),
-            raw.get("market_value"),
-        ))
-
-        assessed_value = _as_float(_first_truthy(
-            result.get("assessed_value"),
-            profile.get("assessed_value"),
-            attom_src.get("assessed_value"),
-            raw.get("assessed_value"),
-        ))
-
-        last_sale_price = _as_float(_first_truthy(
-            result.get("last_sale_price"),
-            profile.get("last_sale_price"),
-            attom_src.get("last_sale_price"),
-            raw.get("last_sale_price"),
-        ))
-
-        traditional_rent = _as_float(_first_truthy(
-            result.get("traditional_rent"),
-            profile.get("traditional_rent"),
-            mashvisor_src.get("traditional_rent"),
-            rentcast_src.get("rent_estimate"),
-            rentcast_src.get("market_rent"),
-        ))
-
-        result["address"] = _first_truthy(
-            result.get("address"),
-            profile.get("address"),
-            raw.get("address"),
-            raw.get("address_line1"),
-            raw.get("address_one_line"),
-        )
-        result["address_line1"] = _first_truthy(
-            result.get("address_line1"),
-            profile.get("address_line1"),
-            raw.get("address_line1"),
-            raw.get("address"),
-        )
-        result["city"] = _first_truthy(result.get("city"), profile.get("city"), raw.get("city"), city)
-        result["state"] = _first_truthy(result.get("state"), profile.get("state"), raw.get("state"), state)
-        result["zip_code"] = _first_truthy(
-            result.get("zip_code"),
-            profile.get("zip_code"),
-            raw.get("zip_code"),
-            zip_code,
-        )
-        result["property_type"] = _first_truthy(
-            result.get("property_type"),
-            profile.get("property_type"),
-            raw.get("property_type"),
-            "single_family",
-        )
-
-        result["price"] = listing_price
-        result["listing_price"] = listing_price
-        result["market_value"] = market_value
-        result["assessed_value"] = assessed_value
-        result["last_sale_price"] = last_sale_price
-        result["traditional_rent"] = traditional_rent
-
-        result["beds"] = _first_truthy(result.get("beds"), profile.get("beds"), raw.get("beds"), raw.get("bedrooms"))
-        result["baths"] = _first_truthy(result.get("baths"), profile.get("baths"), raw.get("baths"), raw.get("bathrooms"))
-        result["square_feet"] = _as_int(_first_truthy(
-            result.get("square_feet"),
-            result.get("sqft"),
-            profile.get("sqft"),
-            raw.get("square_feet"),
-            raw.get("sqft"),
-        ))
-        result["sqft"] = result["square_feet"]
-        result["lot_size_sqft"] = _as_int(_first_truthy(
-            result.get("lot_size_sqft"),
-            profile.get("lot_sqft"),
-            raw.get("lot_size_sqft"),
-            raw.get("lotSizeSqft"),
-        ))
-        result["year_built"] = _as_int(_first_truthy(
-            result.get("year_built"),
-            profile.get("year_built"),
-            raw.get("year_built"),
-            raw.get("yearBuilt"),
-        ))
-
-        result["primary_photo"] = primary_photo
-        result["photo"] = primary_photo
-        result["thumbnail"] = primary_photo
-        result["photos"] = photos
-
-        result["display_value"] = _first_truthy(
-            listing_price,
-            market_value,
-            assessed_value,
-            last_sale_price,
-        )
-
-        if listing_price is not None:
-            result["display_value_label"] = "List Price"
-            result["display_value_secondary"] = _first_truthy(market_value, assessed_value, last_sale_price)
-            result["display_value_secondary_label"] = (
-                "Estimated Market Value" if market_value is not None else
-                "Assessed Value" if assessed_value is not None else
-                "Last Sale Price" if last_sale_price is not None else
-                None
-            )
-        elif market_value is not None:
-            result["display_value_label"] = "Market Value"
-            result["display_value_secondary"] = _first_truthy(assessed_value, last_sale_price)
-            result["display_value_secondary_label"] = (
-                "Assessed Value" if assessed_value is not None else
-                "Last Sale Price" if last_sale_price is not None else
-                None
-            )
-        elif assessed_value is not None:
-            result["display_value_label"] = "Assessed Value"
-            result["display_value_secondary"] = last_sale_price
-            result["display_value_secondary_label"] = "Last Sale Price" if last_sale_price is not None else None
-        else:
-            result["display_value_label"] = "Last Recorded Sale"
-            result["display_value_secondary"] = result.get("last_sale_date")
-            result["display_value_secondary_label"] = "Last Sale Date" if result.get("last_sale_date") else None
-
-        if scoring:
-            result["ravlo_score"] = _first_truthy(result.get("ravlo_score"), scoring.get("overall_score"))
-            result["recommended_strategy"] = _first_truthy(
-                result.get("recommended_strategy"),
-                scoring.get("recommended_strategy"),
-                "Hold / Review",
-            )
-            result["score_reasons"] = _first_truthy(result.get("score_reasons"), scoring.get("score_reasons"), [])
-
-        return result
-
     try:
-        search_result = get_property_search_result(
-            address=address or None,
-            postalcode=zip_code or None,
-            city=city or None,
-            state=state or None,
-            page=1,
-            page_size=page_size,
+        orchestrator = PropertyIntelligenceOrchestrator(
+            strategy=strategy,
+            asset_type=asset_type,
         )
 
-        raw_matches = [
-            prop for prop in (search_result.get("properties", []) or [])
-            if _property_matches_asset_type(prop, asset_type)
-        ]
-        results = []
-
-        for idx, raw in enumerate(raw_matches[:page_size]):
-            raw_address = (
-                raw.get("address_line1")
-                or raw.get("address")
-                or raw.get("address_one_line")
-                or ""
-            ).strip()
-
-            raw_city = (raw.get("city") or city or "").strip()
-            raw_state = (raw.get("state") or state or "").strip()
-            raw_zip = (raw.get("zip_code") or zip_code or "").strip()
-            raw_property_type = (raw.get("property_type") or "single_family")
-
-            if not raw_address:
-                continue
-
-            bundle = None
-
-            if idx < enrich_limit and raw_city and raw_state:
-                bundle = build_dealfinder_profile(
-                    address=raw_address,
-                    city=raw_city,
-                    state=raw_state,
-                    zip_code=raw_zip,
-                    property_type=raw_property_type,
-                )
-
-                if bundle.get("ok"):
-                    result = _build_property_tool_result(raw, bundle)
-                else:
-                    result = _build_attom_fallback(raw)
-            else:
-                result = _build_attom_fallback(raw)
-
-            result = _merge_result(raw, result, bundle)
-
-            if idx < enrich_limit:
-                try:
-                    engine_payload = {
-                        "project_name": raw_address,
-                        "description": f"{raw_address}, {raw_city}, {raw_state}",
-                        "property_type": result.get("property_type"),
-                        "asking_price": result.get("listing_price") or result.get("last_sale_price") or result.get("price"),
-                        "square_feet_target": result.get("square_feet"),
-                        "city": raw_city,
-                        "state": raw_state,
-                        "zip_code": raw_zip,
-                        "arv": result.get("market_value"),
-                        "monthly_rent": result.get("traditional_rent"),
-                        "local_facts": {
-                            "bedrooms": result.get("beds"),
-                            "bathrooms": result.get("baths"),
-                            "year_built": result.get("year_built"),
-                            "lot_sqft": result.get("lot_size_sqft"),
-                            "assessed_value": result.get("assessed_value"),
-                            "annual_tax_amount": result.get("tax_amount"),
-                            "latitude": result.get("latitude"),
-                            "longitude": result.get("longitude"),
-                        }
-                    }
-
-                    engine_resp = requests.post(
-                        current_app.config["RENOVATION_ENGINE_URL"].rstrip("/") + "/v1/deal_architect",
-                        json=engine_payload,
-                        headers={"X-API-Key": current_app.config["RENOVATION_ENGINE_API_KEY"]},
-                        timeout=12,
-                    )
-
-                    if engine_resp.ok:
-                        engine = engine_resp.json()
-                        meta = engine.get("meta", {}) or {}
-
-                        result.update({
-                            "deal_score": engine.get("deal_score"),
-                            "opportunity_tier": engine.get("opportunity_tier"),
-                            "deal_finder_signal": meta.get("deal_finder_signal"),
-                            "primary_strengths": meta.get("primary_strengths", []),
-                            "primary_risks": meta.get("primary_risks", []),
-                            "dscr_estimate": meta.get("dscr_estimate"),
-                            "rent_yield": meta.get("rent_yield"),
-                            "monthly_rent_estimate": meta.get("monthly_rent_estimate"),
-                            "next_step": engine.get("next_step"),
-                            "engine_value": engine.get("estimated_value"),
-                            "estimated_value_engine": engine.get("estimated_value"),
-                            "valuation_source_label": meta.get("valuation_source_label"),
-                            "comp_confidence": meta.get("comp_confidence"),
-                        })
-                    else:
-                        result["engine_error"] = "Deal Architect failed"
-                except Exception as e:
-                    result["engine_error"] = str(e)
-
-            results.append(_annotate_deal_finder_opportunity(result, strategy))
-
-        results = sorted(
-            results,
-            key=lambda r: (r.get("deal_score") is not None, r.get("deal_score") or 0),
-            reverse=True,
+        results, meta = orchestrator.run_search(
+            address=address,
+            city=city,
+            state=state,
+            zip_code=zip_code,
+            limit=min(int(payload.get("limit") or 12), 12),
         )
-
-        top_results = results[:top_pick_limit]
-        engine_ready = any(r.get("deal_score") is not None for r in top_results)
 
         return jsonify({
             "status": "ok",
             "message": (
-                f"No {_asset_type_label(asset_type).lower()} properties matched that search."
-                if not top_results and asset_type != "any"
+                f"No {meta['asset_type_label'].lower()} properties matched that search."
+                if not results and meta["asset_type"] != "any"
                 else None
             ),
-            "results": top_results,
-            "count": len(top_results),
-            "total_matches": len(results),
-            "strategy": strategy,
-            "asset_type": asset_type,
-            "asset_type_label": _asset_type_label(asset_type),
-            "zip": zip_code,
-            "address": address,
-            "engine_ready": engine_ready,
+            "results": results,
+            "count": meta["count"],
+            "total_matches": meta["total_matches"],
+            "strategy": meta["strategy"],
+            "asset_type": meta["asset_type"],
+            "asset_type_label": meta["asset_type_label"],
+            "zip": meta["zip"],
+            "address": meta["address"],
+            "engine_ready": meta["engine_ready"],
+            "budget_remaining": meta["budget_remaining"],
         })
 
     except Exception as e:
