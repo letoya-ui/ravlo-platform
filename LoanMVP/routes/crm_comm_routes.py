@@ -31,25 +31,6 @@ crm_bp = Blueprint("crm", __name__, url_prefix="/crm")
 assistant = AIAssistant()
 
 
-ENGINE_URL = os.getenv("RENOVATION_ENGINE_URL")
-
-payload = {
-    "market": market or "United States",
-    "audience": audience or "homebuyers and refinance borrowers",
-    "product_focus": product_focus or "residential mortgage products",
-    "count": count,
-}
-
-generated = []
-try:
-    resp = requests.post(f"{ENGINE_URL}/lead-engine/ai_leads", json=payload, timeout=20)
-    resp.raise_for_status()
-    data = resp.json()
-    if isinstance(data, list):
-        generated = data
-except Exception:
-    generated = []
-
 
 def _crm_company_loan_officers():
     query = LoanOfficerProfile.query.join(User, LoanOfficerProfile.user_id == User.id)
@@ -857,36 +838,72 @@ def ai_leads():
     generated = []
 
     if request.method == "POST":
+        # -----------------------------
+        # Form Inputs
+        # -----------------------------
         market = (request.form.get("market") or "").strip()
         audience = (request.form.get("audience") or "").strip()
         product_focus = (request.form.get("product_focus") or "").strip()
         count = min(max(request.form.get("count", type=int) or 5, 1), 20)
+
+        # -----------------------------
+        # Officer Assignment
+        # -----------------------------
         assigned_officer_id = request.form.get("assigned_officer_id", type=int)
         selected_officer = next((officer for officer in officers if officer.id == assigned_officer_id), None)
+
         if not selected_officer:
             if (getattr(current_user, "role", "") or "").lower() == "loan_officer":
                 selected_officer = next((officer for officer in officers if officer.user_id == current_user.id), None)
             if not selected_officer:
                 selected_officer = _choose_auto_assignee(officers)
+
         source = _lead_source_record("AI Lead Engine")
 
-        prompt = f"""
-Generate {count} realistic mortgage prospect leads for a lending business.
-Target market: {market or 'United States'}.
-Audience: {audience or 'homebuyers and refinance borrowers'}.
-Product focus: {product_focus or 'residential mortgage products'}.
-Return only valid JSON as an array.
-Each object must include: name, email, phone, message.
-Keep the message to one short sentence explaining the prospect's likely need.
-Use plausible sample contact info, not existing famous people.
-"""
+        # -----------------------------
+        # Call the Backend Lead Engine
+        # -----------------------------
+        import os, requests
 
+        ENGINE_URL = os.getenv("RENOVATION_ENGINE_URL")
+
+        payload = {
+            "market": market or "United States",
+            "audience": audience or "homebuyers and refinance borrowers",
+            "product_focus": product_focus or "residential mortgage products",
+            "count": count,
+        }
+
+        generated = []
         try:
-            raw = assistant.generate_reply(prompt, "crm_ai_leads")
-            generated = _parse_ai_leads(raw)
-        except Exception:
+            resp = requests.post(
+                f"{ENGINE_URL}/lead-engine/ai_leads",
+                json=payload,
+                timeout=20
+            )
+            resp.raise_for_status()
+            data = resp.json()
+            
+            items = data.get("leads", []) if isinstance(data, dict) else []
+
+            if isinstance(data, list):
+                for item in items:
+                    name = (item.get("name") or "").strip()
+                    if not name:
+                        continue
+                    generated.append({
+                        "name": name,
+                        "email": (item.get("email") or "").strip() or None,
+                        "phone": (item.get("phone") or "").strip() or None,
+                        "message": (item.get("message") or "").strip() or None,
+                    })
+        except Exception as e:
+            print("Lead Engine Error:", e)
             generated = []
 
+        # -----------------------------
+        # Insert Leads Into Database
+        # -----------------------------
         if not generated:
             flash("AI could not generate lead records this time.", "warning")
         else:
@@ -903,9 +920,13 @@ Use plausible sample contact info, not existing famous people.
                     created_at=datetime.utcnow(),
                 )
                 db.session.add(lead)
+
             db.session.commit()
             flash(f"{len(generated)} AI-generated leads were added to the CRM queue.", "success")
 
+    # -----------------------------
+    # Render Page
+    # -----------------------------
     return render_template(
         "crm/ai_leads.html",
         officers=officers,
@@ -1041,6 +1062,69 @@ def lead_engine():
 def leads():
     leads = _company_scoped_leads_query().order_by(Lead.created_at.desc()).all()
     return render_template("crm/leads.html", leads=leads, title="All Leads")
+
+@crm_bp.route("/lead_capture", methods=["POST"])
+@csrf.exempt
+def lead_capture():
+    import os
+    import requests
+
+    ENGINE_URL = os.getenv("RENOVATION_ENGINE_URL")
+
+    incoming = request.get_json(silent=True) or {}
+
+    try:
+        resp = requests.post(
+            f"{ENGINE_URL}/lead-engine/capture",
+            json=incoming,
+            timeout=20
+        )
+        resp.raise_for_status()
+        data = resp.json()
+    except Exception as e:
+        return jsonify({"ok": False, "error": f"Lead engine error: {str(e)}"}), 500
+
+    lead_data = data.get("lead") or {}
+    if not lead_data:
+        return jsonify({"ok": False, "error": "No lead returned."}), 400
+
+    officers = _crm_company_loan_officers()
+    selected_officer = _choose_auto_assignee(officers)
+    source = _lead_source_record(lead_data.get("source") or "Inbound Lead")
+
+    existing = None
+    if lead_data.get("email"):
+        existing = Lead.query.filter(func.lower(Lead.email) == lead_data["email"].lower()).first()
+
+    if not existing and lead_data.get("phone"):
+        existing = Lead.query.filter(Lead.phone == lead_data["phone"]).first()
+
+    if existing:
+        existing.message = lead_data.get("ai_summary") or lead_data.get("pain_point") or existing.message
+        existing.updated_at = datetime.utcnow()
+        db.session.commit()
+        return jsonify({"ok": True, "deduped": True, "lead_id": existing.id}), 200
+
+    new_lead = Lead(
+        name=lead_data.get("name"),
+        email=lead_data.get("email"),
+        phone=lead_data.get("phone"),
+        message=lead_data.get("ai_summary") or lead_data.get("pain_point"),
+        source_id=source.id if source else None,
+        assigned_officer_id=selected_officer.id if selected_officer else None,
+        assigned_to=selected_officer.user_id if selected_officer else None,
+        status="New",
+        created_at=datetime.utcnow(),
+    )
+    db.session.add(new_lead)
+    db.session.commit()
+
+    return jsonify({
+        "ok": True,
+        "deduped": False,
+        "lead_id": new_lead.id,
+        "assigned_officer_id": selected_officer.id if selected_officer else None,
+    }), 201
 
 # ==========================================================
 # 🧠 Lead Detail (Full View with AI + Communication)
