@@ -143,9 +143,61 @@ def create_app():
 
     @app.route("/dashboard")
     def dashboard_redirect():
-        return redirect(url_for("investor.command_center"))
+        if current_user.is_authenticated:
+            role = (getattr(current_user, "role", "") or "").strip().lower()
 
-    @app.route("/dashboard")
+            if role == "executive":
+                return redirect(url_for("executive.dashboard"))
+
+            if role in {"admin", "platform_admin", "master_admin", "lending_admin"}:
+                return redirect(url_for("admin.dashboard"))
+
+            if role == "loan_officer":
+                return redirect(url_for("loan_officer.dashboard"))
+
+            if role == "processor":
+                return redirect(url_for("processor.dashboard"))
+
+            if role == "underwriter":
+                return redirect(url_for("underwriter.dashboard"))
+
+            if role == "crm":
+                return redirect(url_for("crm.dashboard"))
+
+            if role == "investor":
+                return redirect(url_for("investor.command_center"))
+
+        dashboards = [
+            # User-facing
+            ("Investor", "/investor"),
+            ("Investor AI", "/investor_ai"),
+       
+            # Partner-facing        
+            ("Partner", "/partner"),
+
+            # Internal lending workflow
+            ("Loan Officer", "/loan_officer"),
+            ("Processor", "/processor"),
+            ("Underwriter", "/underwriter"),
+            ("Compliance", "/compliance"),
+
+            # System-level dashboards
+            ("Admin", "/admin"),
+            ("Executive", "/executive"),
+            ("Intelligence", "/intelligence"),
+            ("CRM", "/crm"),
+            ("Contractors", "/contractors"),
+            ("Property", "/property"),
+            ("Notifications", "/notifications"),
+            ("System", "/system"),
+            ("Tracking", "/track"),
+            ("Master", "/master"),
+            ("AI", "/ai"),
+            ("Auth", "/auth"),
+        ]
+        return render_template("dashboard.html", dashboards=dashboards)
+
+    @app.route("/dashboard-index")
     def index():
         dashboards = [
             # User-facing
