@@ -4929,6 +4929,7 @@ def deal_rehab_generate_variant():
             "preset": preset,
             "mode": mode,
             "room_type": room_type,
+            "room_focus": room_type,
             "image_base64": image_base64,
             "image_url": "",
             "count": 1,
@@ -4937,7 +4938,8 @@ def deal_rehab_generate_variant():
             "strength": 0.58,
             "width": 768,
             "height": 768,
-            "notes": notes,
+            "desired_updates": notes,
+            "prompt_notes": notes,
         }
 
         engine_json = _post_renovation_engine_json(
