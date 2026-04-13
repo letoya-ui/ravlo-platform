@@ -38,15 +38,16 @@ def build_rehab_concept_prompt(
         "light": "Light cosmetic upgrades with better finishes and lighting.",
         "medium": "Meaningful renovation with upgraded surfaces, fixtures, and millwork.",
         "heavy": "High-end transformation with premium finishes while preserving structure.",
+        "luxury": "Luxury-grade transformation with designer finishes, premium materials, and listing-ready polish.",
     }
 
     parts = [
         f"Photorealistic rehab concept for a {room_label} in a {property_label}.",
         f"Design direction: {style_label}.",
         level_map.get(level, level_map["medium"]),
-        "Preserve the existing layout, walls, windows, doors, and camera angle.",
-        "Use realistic materials, accurate lighting, and buildable detailing.",
-        "No warped geometry, no duplicate fixtures, no people, no text, no watermark, no logo.",
+        "Preserve the existing layout, walls, windows, doors, and camera angle unless a minor refinement improves realism.",
+        "Fully renovated finished room, realistic materials, accurate lighting, believable millwork, and investor-ready detailing.",
+        "No warped geometry, no duplicate fixtures, no unfinished construction, no people, no text, no watermark, no logo.",
     ]
     if notes_label:
         parts.insert(3, f"Requested upgrades: {notes_label}.")
