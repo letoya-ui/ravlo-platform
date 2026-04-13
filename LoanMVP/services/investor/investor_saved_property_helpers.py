@@ -89,6 +89,17 @@ def _assign_if_has_attr(model_obj, field_name, value):
         setattr(model_obj, field_name, value)
 
 
+def _clean_string_list(value):
+    if not value:
+        return []
+    if isinstance(value, list):
+        return [str(x).strip() for x in value if str(x).strip()]
+    if isinstance(value, str):
+        value = value.strip()
+        return [value] if value else []
+    return [str(value).strip()] if str(value).strip() else []
+
+
 def _persist_property_core_fields(saved, payload):
     """
     Persist richer canonical fields when the SavedProperty model supports them.
@@ -100,8 +111,18 @@ def _persist_property_core_fields(saved, payload):
     zipcode = _clean_str(payload.get("zip") or payload.get("zip_code"))
     property_id = _clean_str(payload.get("property_id") or payload.get("attom_id"))
 
-    price = _clean_num(payload.get("price") or payload.get("purchase_price") or payload.get("display_value"))
-    arv = _clean_num(payload.get("arv") or payload.get("estimated_value_engine") or payload.get("market_value"))
+    purchase_price = _clean_num(
+        payload.get("purchase_price")
+        or payload.get("price")
+        or payload.get("display_value")
+        or payload.get("last_sale_price")
+    )
+    arv = _clean_num(
+        payload.get("arv")
+        or payload.get("estimated_value_engine")
+        or payload.get("market_value")
+        or payload.get("engine_value")
+    )
     market_value = _clean_num(payload.get("market_value"))
     assessed_value = _clean_num(payload.get("assessed_value"))
     monthly_rent = _clean_num(payload.get("monthly_rent") or payload.get("monthly_rent_estimate"))
@@ -129,6 +150,7 @@ def _persist_property_core_fields(saved, payload):
     comp_confidence = _clean_str(payload.get("comp_confidence"))
     image_url = _clean_str(payload.get("image_url"))
     description = _clean_str(payload.get("description"))
+    listing_photos = _clean_string_list(payload.get("listing_photos"))
 
     if address:
         saved.address = address
@@ -137,12 +159,10 @@ def _persist_property_core_fields(saved, payload):
         _assign_if_has_attr(saved, "property_id", property_id)
 
     # keep your existing core fields in sync
-    if price is not None:
-        _assign_if_has_attr(
-            saved,
-            "price",
-            str(int(price)) if float(price).is_integer() else str(price)
-        )
+    if purchase_price is not None:
+        price_as_string = str(int(purchase_price)) if float(purchase_price).is_integer() else str(purchase_price)
+        _assign_if_has_attr(saved, "price", price_as_string)
+        _assign_if_has_attr(saved, "purchase_price", purchase_price)
 
     if sqft is not None:
         _assign_if_has_attr(saved, "sqft", sqft)
@@ -191,6 +211,11 @@ def _persist_property_core_fields(saved, payload):
     _assign_if_has_attr(saved, "risk_notes", _safe_json_list(payload.get("risk_notes")))
     _assign_if_has_attr(saved, "why_it_made_list", _safe_json_list(payload.get("why_it_made_list")))
 
+    # photo collections if your model supports them
+    if listing_photos:
+        _assign_if_has_attr(saved, "listing_photos_json", listing_photos)
+        _assign_if_has_attr(saved, "photos_json", listing_photos)
+
     # status / timestamps if present on model
     _assign_if_has_attr(saved, "analysis_status", "pending")
     _assign_if_has_attr(saved, "budget_status", "pending")
@@ -203,25 +228,40 @@ def _upsert_saved_property_from_payload(ip, payload):
     if not address:
         raise ValueError("Address is required.")
 
-    price = payload.get("price") or payload.get("purchase_price") or payload.get("display_value")
+    purchase_price = (
+        payload.get("purchase_price")
+        or payload.get("price")
+        or payload.get("display_value")
+        or payload.get("last_sale_price")
+    )
     sqft = _clean_int(payload.get("sqft") or payload.get("square_feet"))
     zipcode = _clean_str(payload.get("zip") or payload.get("zip_code"))
     property_id = _clean_str(payload.get("property_id") or payload.get("attom_id"))
+    image_url = _clean_str(payload.get("image_url"))
 
     existing = _find_existing_saved_property(ip, payload)
     fk = _profile_id_filter(SavedProperty, ip.id)
 
     if not existing:
-        existing = SavedProperty(
+        create_kwargs = {
             **fk,
-            property_id=property_id if property_id else None,
-            address=address,
-            price=str(price or ""),
-            sqft=sqft,
-            zipcode=zipcode,
-            saved_at=datetime.utcnow(),
-            created_at=datetime.utcnow(),
-        )
+            "property_id": property_id if property_id else None,
+            "address": address,
+            "price": str(purchase_price or ""),
+            "sqft": sqft,
+            "saved_at": datetime.utcnow(),
+            "created_at": datetime.utcnow(),
+        }
+
+        if hasattr(SavedProperty, "zipcode"):
+            create_kwargs["zipcode"] = zipcode
+        elif hasattr(SavedProperty, "zip_code"):
+            create_kwargs["zip_code"] = zipcode
+
+        if hasattr(SavedProperty, "image_url"):
+            create_kwargs["image_url"] = image_url
+
+        existing = SavedProperty(**create_kwargs)
         db.session.add(existing)
         db.session.flush()
 
