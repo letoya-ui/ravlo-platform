@@ -3610,6 +3610,23 @@ def api_property_tool_save_and_analyze():
         except (TypeError, ValueError):
             return 0.0
 
+    def to_int_or_none(val):
+        try:
+            if val in (None, "", "None"):
+                return None
+            if isinstance(val, str):
+                val = val.replace(",", "").strip()
+            return int(round(float(val)))
+        except (TypeError, ValueError):
+            return None
+
+    def clean_list(value):
+        if not value:
+            return []
+        if isinstance(value, list):
+            return [str(x).strip() for x in value if str(x).strip()]
+        return [str(value).strip()] if str(value).strip() else []
+
     try:
         # 1) Upsert saved property
         saved = _upsert_saved_property_from_payload(ip, payload)
@@ -3658,36 +3675,52 @@ def api_property_tool_save_and_analyze():
         except (TypeError, ValueError):
             deal_score = None
 
+        image_url = payload.get("image_url")
+        listing_photos = clean_list(payload.get("listing_photos"))
+        primary_strengths = clean_list(payload.get("primary_strengths"))
+        primary_risks = clean_list(payload.get("primary_risks"))
+        risk_notes = clean_list(payload.get("risk_notes"))
+        why_it_made_list = clean_list(payload.get("why_it_made_list"))
+
+        workspace_analysis = {
+            "address": payload.get("address"),
+            "city": payload.get("city"),
+            "state": payload.get("state"),
+            "zip_code": payload.get("zip") or payload.get("zip_code"),
+            "purchase_price": purchase_price,
+            "arv": arv,
+            "estimated_rent": estimated_rent,
+            "square_feet": to_int_or_none(payload.get("sqft") or payload.get("square_feet")),
+            "beds": to_int_or_none(payload.get("beds")),
+            "baths": payload.get("baths"),
+            "year_built": to_int_or_none(payload.get("year_built")),
+            "property_type": payload.get("property_type"),
+            "property_id": payload.get("property_id") or payload.get("attom_id"),
+            "strategy": strategy,
+            "strategy_tag": payload.get("strategy_tag"),
+            "recommended_strategy": payload.get("recommended_strategy"),
+            "estimated_best_use": payload.get("estimated_best_use"),
+            "deal_score": deal_score,
+            "opportunity_tier": payload.get("opportunity_tier"),
+            "deal_finder_signal": payload.get("deal_finder_signal"),
+            "next_step": payload.get("next_step"),
+            "comp_confidence": payload.get("comp_confidence"),
+            "primary_strengths": primary_strengths,
+            "primary_risks": primary_risks,
+            "risk_notes": risk_notes,
+            "why_it_made_list": why_it_made_list,
+            "image_url": image_url,
+            "listing_photos": listing_photos,
+            "last_sale_price": to_float(payload.get("last_sale_price")),
+            "market_value": to_float(payload.get("market_value")),
+            "assessed_value": to_float(payload.get("assessed_value")),
+            "monthly_rent_estimate": to_float(payload.get("monthly_rent_estimate")),
+        }
+
         results_json = {
             "strategy_analysis": {},
             "rehab_analysis": {},
-            "workspace_analysis": {
-                "address": payload.get("address"),
-                "city": payload.get("city"),
-                "state": payload.get("state"),
-                "zip_code": payload.get("zip") or payload.get("zip_code"),
-                "purchase_price": purchase_price,
-                "arv": arv,
-                "estimated_rent": estimated_rent,
-                "square_feet": payload.get("sqft") or payload.get("square_feet"),
-                "beds": payload.get("beds"),
-                "baths": payload.get("baths"),
-                "year_built": payload.get("year_built"),
-                "property_type": payload.get("property_type"),
-                "strategy": strategy,
-                "strategy_tag": payload.get("strategy_tag"),
-                "recommended_strategy": payload.get("recommended_strategy"),
-                "estimated_best_use": payload.get("estimated_best_use"),
-                "deal_score": deal_score,
-                "opportunity_tier": payload.get("opportunity_tier"),
-                "deal_finder_signal": payload.get("deal_finder_signal"),
-                "next_step": payload.get("next_step"),
-                "comp_confidence": payload.get("comp_confidence"),
-                "primary_strengths": payload.get("primary_strengths") or [],
-                "primary_risks": payload.get("primary_risks") or [],
-                "risk_notes": payload.get("risk_notes") or [],
-                "why_it_made_list": payload.get("why_it_made_list") or [],
-            },
+            "workspace_analysis": workspace_analysis,
             "optimization": {},
         }
 
@@ -3697,14 +3730,10 @@ def api_property_tool_save_and_analyze():
             notes_parts.append(f"Best Use: {payload.get('estimated_best_use')}")
         if payload.get("next_step"):
             notes_parts.append(f"Next Step: {payload.get('next_step')}")
-
-        primary_strengths = payload.get("primary_strengths") or []
         if primary_strengths:
-            notes_parts.append("Strengths: " + ", ".join(str(x) for x in primary_strengths))
-
-        primary_risks = payload.get("primary_risks") or []
+            notes_parts.append("Strengths: " + ", ".join(primary_strengths))
         if primary_risks:
-            notes_parts.append("Risks: " + ", ".join(str(x) for x in primary_risks))
+            notes_parts.append("Risks: " + ", ".join(primary_risks))
 
         notes = "\n".join(notes_parts).strip() or None
 
@@ -3732,6 +3761,8 @@ def api_property_tool_save_and_analyze():
                 "purchase_price": purchase_price,
                 "arv": arv,
                 "estimated_rent": estimated_rent,
+                "image_url": image_url,
+                "listing_photos": listing_photos,
             }
             deal.results_json = results_json
             deal.notes = notes
@@ -3764,6 +3795,8 @@ def api_property_tool_save_and_analyze():
                     "purchase_price": purchase_price,
                     "arv": arv,
                     "estimated_rent": estimated_rent,
+                    "image_url": image_url,
+                    "listing_photos": listing_photos,
                 },
                 results_json=results_json,
                 notes=notes,
@@ -3779,6 +3812,14 @@ def api_property_tool_save_and_analyze():
             deal=deal,
         )
 
+        # 4) Persist uploaded photo URLs back into results_json for stable workspace rendering
+        if uploaded_photos:
+            uploaded_urls = [p.get("url") for p in uploaded_photos if p.get("url")]
+            workspace = (deal.results_json or {}).get("workspace_analysis", {})
+            workspace["listing_photos"] = uploaded_urls
+            workspace["image_url"] = uploaded_urls[0] if uploaded_urls else image_url
+            deal.results_json["workspace_analysis"] = workspace
+
         db.session.commit()
 
         deal_url = url_for(
@@ -3793,7 +3834,7 @@ def api_property_tool_save_and_analyze():
             "deal_id": deal.id,
             "deal_url": deal_url,
             "listing_photos_count": len(uploaded_photos),
-            "primary_photo_url": uploaded_photos[0]["url"] if uploaded_photos else None,
+            "primary_photo_url": uploaded_photos[0]["url"] if uploaded_photos else getattr(saved, "image_url", None),
         })
 
     except Exception as e:
@@ -3802,10 +3843,8 @@ def api_property_tool_save_and_analyze():
         return jsonify({
             "status": "error",
             "message": f"Could not create deal: {e}"
-        }), 500
-        
+        }), 500        
             
-
 
 @investor_bp.route("/api/intelligence/card", methods=["POST"])
 @investor_bp.route("/api/property_tool_card", methods=["POST"])
