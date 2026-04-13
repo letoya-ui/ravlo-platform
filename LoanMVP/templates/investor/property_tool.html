@@ -200,7 +200,7 @@ function resolveStatusText(r, signal){
 }
 
 function resolveHeadlineValue(r){
-  const listPrice = numOrNull(r.price);
+  const listPrice = numOrNull(r.listing_price) ?? numOrNull(r.price) ?? numOrNull(r.display_value);
   const estimatedValue = numOrNull(r.estimated_value_engine) ?? numOrNull(r.market_value);
   const assessedValue = numOrNull(r.assessed_value);
   const lastSalePrice = numOrNull(r.last_sale_price);
@@ -401,7 +401,7 @@ function buildPropertyPayload(r, analyzeId, saveId){
 function buildDealArchitectRequest(r, selectedStrategy){
   const strategy = selectedStrategy || "all";
   const type = String(r.property_type || "single family");
-  const salePrice = numOrNull(r.price) ?? numOrNull(r.last_sale_price) ?? null;
+  const salePrice = numOrNull(r.listing_price) ?? numOrNull(r.price) ?? numOrNull(r.last_sale_price) ?? null;
   const marketValue = numOrNull(r.estimated_value_engine) ?? numOrNull(r.market_value) ?? numOrNull(r.display_value) ?? null;
   const rentValue = numOrNull(r.traditional_rent) ?? null;
   const sqft = numOrNull(r.square_feet || r.sqft) ?? null;
@@ -518,7 +518,7 @@ function renderEmpty(title, body){
 
 function resolveImage(r){
   const listingPhotos = normalizePhotoArray(r.photos);
-  return r.primary_photo || r.photo || r.thumbnail || (listingPhotos.length ? listingPhotos[0] : null) || PLACEHOLDER_IMAGE;
+  return r.primary_photo || r.primary_photo_url || r.image_url || r.photo || r.thumbnail || (listingPhotos.length ? listingPhotos[0] : null) || PLACEHOLDER_IMAGE;
 }
 
 function resolveReasons(r){
@@ -534,7 +534,7 @@ function resolveReasons(r){
   }
 
   const fallback = [];
-  if (numOrNull(r.price) !== null) fallback.push(`Live list price available at ${money(r.price)}`);
+  if ((numOrNull(r.listing_price) ?? numOrNull(r.price)) !== null) fallback.push(`Live list price available at ${money(numOrNull(r.listing_price) ?? numOrNull(r.price))}`);
   if (numOrNull(r.last_sale_price) !== null) fallback.push("Recorded sale price available for review");
   if (numOrNull(r.market_value) !== null) fallback.push(`Market value surfaced at ${money(r.market_value)}`);
   if (numOrNull(r.traditional_rent) !== null) fallback.push(`Estimated rent: ${money(r.traditional_rent)}/mo`);
@@ -604,7 +604,7 @@ function renderCards(results){
     const encoded = encodeURIComponent(JSON.stringify(payloadObj));
 
     const headline = resolveHeadlineValue(r);
-    const price = headline.value;
+    const price = headline.value ?? numOrNull(r.listing_price) ?? numOrNull(r.price) ?? numOrNull(r.display_value);
     const marketValue = numOrNull(r.estimated_value_engine) ?? numOrNull(r.market_value) ?? numOrNull(r.assessed_value);
     const valueSourceBadge =
       headline.source === "listing" ? "Live Listing" :

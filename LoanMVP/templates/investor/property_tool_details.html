@@ -226,7 +226,7 @@ function buildPropertyPayload(r, analyzeId, saveId){
 function buildDealArchitectRequest(r, selectedStrategy){
   const strategy = selectedStrategy || "all";
   const type = String(r.property_type || "single family");
-  const salePrice = numOrNull(r.last_sale_price) ?? numOrNull(r.price) ?? null;
+  const salePrice = numOrNull(r.listing_price) ?? numOrNull(r.price) ?? numOrNull(r.last_sale_price) ?? null;
   const marketValue = numOrNull(r.market_value) ?? numOrNull(r.display_value) ?? null;
   const rentValue = numOrNull(r.traditional_rent) ?? null;
   const sqft = numOrNull(r.square_feet || r.sqft) ?? null;
@@ -341,7 +341,7 @@ function renderEmpty(title, body){
 }
 
 function resolveImage(r){
-  return r.primary_photo || r.photo || r.thumbnail || (Array.isArray(r.photos) ? r.photos[0] : null) || PLACEHOLDER_IMAGE;
+  return r.primary_photo || r.primary_photo_url || r.image_url || r.photo || r.thumbnail || (Array.isArray(r.photos) ? r.photos[0] : null) || PLACEHOLDER_IMAGE;
 }
 
 function resolveReasons(r){
@@ -353,7 +353,7 @@ function resolveReasons(r){
   }
 
   const fallback = [];
-  if (numOrNull(r.last_sale_price) !== null) fallback.push("Sale price available for review");
+  if ((numOrNull(r.listing_price) ?? numOrNull(r.price) ?? numOrNull(r.last_sale_price)) !== null) fallback.push("Sale price available for review");
   if (numOrNull(r.market_value) !== null) fallback.push(`Market value surfaced at ${money(r.market_value)}`);
   if (numOrNull(r.traditional_rent) !== null) fallback.push(`Estimated rent: ${money(r.traditional_rent)}/mo`);
   if (!fallback.length) fallback.push("Ready for deeper review in Deal Workspace");
@@ -375,7 +375,7 @@ function renderCards(results){
     const payloadObj = buildPropertyPayload(r, analyzeId, saveId);
     const encoded = encodeURIComponent(JSON.stringify(payloadObj));
 
-    const price = numOrNull(r.last_sale_price) ?? numOrNull(r.display_value) ?? numOrNull(r.price);
+  const price = numOrNull(r.listing_price) ?? numOrNull(r.price) ?? numOrNull(r.display_value) ?? numOrNull(r.last_sale_price);
     const marketValue = numOrNull(r.estimated_value_engine) ?? numOrNull(r.market_value) ?? numOrNull(r.assessed_value);
     const reasons = resolveReasons(r);
     const score = Number(r.deal_score);
