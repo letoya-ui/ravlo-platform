@@ -11,6 +11,7 @@ import json
 import re
 import csv
 
+import os, requests
 from io import StringIO
 from LoanMVP.app import socketio
 from LoanMVP.extensions import db, csrf
@@ -28,6 +29,26 @@ from LoanMVP.utils.decorators import role_required
 # ---------------------------------------------------------
 crm_bp = Blueprint("crm", __name__, url_prefix="/crm")
 assistant = AIAssistant()
+
+
+ENGINE_URL = os.getenv("RENOVATION_ENGINE_URL")
+
+payload = {
+    "market": market or "United States",
+    "audience": audience or "homebuyers and refinance borrowers",
+    "product_focus": product_focus or "residential mortgage products",
+    "count": count,
+}
+
+generated = []
+try:
+    resp = requests.post(f"{ENGINE_URL}/lead-engine/ai_leads", json=payload, timeout=20)
+    resp.raise_for_status()
+    data = resp.json()
+    if isinstance(data, list):
+        generated = data
+except Exception:
+    generated = []
 
 
 def _crm_company_loan_officers():
