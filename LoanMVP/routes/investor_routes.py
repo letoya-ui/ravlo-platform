@@ -3807,157 +3807,45 @@ def deal_workspace():
         mode=mode,
     )
 
-            
-
-@investor_bp.route("/deals/workspace", methods=["GET"])
+@investor_bp.route("/deals/<int:deal_id>", methods=["GET"])
 @login_required
 @role_required("investor")
-def deals_list():
-    prop_id = request.args.get("prop_id", type=int)
-    mode = (request.args.get("mode") or "flip").strip().lower()
+def deal_detail(deal_id):
 
-    investor_profile = InvestorProfile.query.filter_by(user_id=current_user.id).first()
+    deal = Deal.query.get_or_404(deal_id)
 
-    saved_props = []
-    if investor_profile:
-        saved_props = (
-            SavedProperty.query
-            .filter_by(investor_profile_id=investor_profile.id)
-            .order_by(SavedProperty.id.desc())
-            .all()
-        )
+    if deal.user_id != current_user.id:
+        abort(403)
 
-    selected_prop = None
-    deal = None
-    budget = None
-    partners = []
-    mockups = []
-    featured = {}
-    comps = {}
-    strategy_analysis = {}
-    rehab_analysis = {}
-    comparison = {}
-    recommendation = {}
-    workspace_analysis = {}
+    mockups = (
+        RenovationMockup.query
+        .filter_by(deal_id=deal_id, user_id=current_user.id)
+        .order_by(RenovationMockup.created_at.desc())
+        .all()
+    )
 
-    if prop_id:
-        if investor_profile:
-            selected_prop = (
-                SavedProperty.query
-                .filter_by(id=prop_id, investor_profile_id=investor_profile.id)
-                .first()
-            )
-        else:
-            selected_prop = SavedProperty.query.filter_by(id=prop_id).first()
+    partners = (
+        Partner.query
+        .filter_by(user_id=current_user.id)
+        .order_by(Partner.created_at.desc())
+        .all()
+    )
 
-    if selected_prop:
-        deal = (
-            Deal.query
-            .filter_by(saved_property_id=selected_prop.id, user_id=current_user.id)
-            .order_by(Deal.updated_at.desc(), Deal.id.desc())
-            .first()
-        )
-
-        if deal:
-            budget = (
-                Budget.query
-                .filter_by(deal_id=deal.id, user_id=current_user.id)
-                .order_by(Budget.id.desc())
-                .first()
-            )
-
-            try:
-                mockups = (
-                    RenovationMockup.query
-                    .filter_by(deal_id=deal.id, user_id=current_user.id)
-                    .order_by(RenovationMockup.id.desc())
-                    .all()
-                )
-            except Exception:
-                mockups = []
-
-            featured_mockup = None
-            for m in mockups:
-                if getattr(m, "is_featured", False):
-                    featured_mockup = m
-                    break
-
-            if featured_mockup:
-                featured = {
-                    "after_url": getattr(featured_mockup, "after_url", None),
-                    "before_url": getattr(featured_mockup, "before_url", None),
-                    "style_preset": getattr(featured_mockup, "style_preset", None),
-                }
-
-            deal_results = deal.results_json or {}
-            workspace_analysis = deal_results.get("workspace_analysis", {}) or {}
-            comps = deal_results.get("comp_analysis", {}) or {}
-            rehab_analysis = deal_results.get("rehab_analysis", {}) or {}
-            strategy_analysis = deal_results.get("strategy_analysis", {}) or {}
-
-            comps["normalized_comps"] = normalize_workspace_comps(
-                comps.get("normalized_comps") or comps.get("comps") or []
-            )
-
-            comparison = build_workspace_exit_comparison(
-                selected_prop=selected_prop,
-                deal=deal,
-                workspace_analysis=workspace_analysis,
-                comps=comps,
-                rehab_analysis=rehab_analysis,
-            )
-
-            exit_strategy_analysis = build_exit_strategy_analysis(
-                selected_prop=selected_prop,
-                deal=deal,
-                workspace_analysis=workspace_analysis,
-                comps=comps,
-                comparison=comparison,
-            )
-
-            deal_results["comp_analysis"] = comps
-            deal_results["exit_strategy_analysis"] = exit_strategy_analysis
-            deal.results_json = deal_results
-
-            if deal.deal_score is None:
-                best = exit_strategy_analysis.get("best_exit_strategy")
-                if best == "rental":
-                    deal.deal_score = 74
-                elif best == "flip":
-                    deal.deal_score = 68
-                elif best == "airbnb":
-                    deal.deal_score = 64
-                elif best == "land":
-                    deal.deal_score = 58
-
-            db.session.commit()
-
-            recommendation = {
-                "best": exit_strategy_analysis.get("best_exit_strategy")
-            }
-
-        try:
-            partners = get_workspace_partners_for_property(selected_prop)
-        except Exception:
-            partners = []
+    results = deal.results_json or {}
+    strategy_analysis = results.get("strategy_analysis", {})
+    rehab_analysis = results.get("rehab_analysis", {})
 
     return render_template(
-        "investor/deal_workspace.html",
-        saved_props=saved_props,
-        selected_prop=selected_prop,
+        "investor/deal_detail.html",
         deal=deal,
-        budget=budget,
-        partners=partners,
         mockups=mockups,
-        featured=featured,
-        comps=comps,
+        partners=partners,
         strategy_analysis=strategy_analysis,
-        rehab_analysis=rehab_analysis,
-        comparison=comparison,
-        recommendation=recommendation,
-        workspace_analysis=workspace_analysis,
-        mode=mode,
+        rehab_analysis=rehab_analysis
     )
+
+            
+
     
 @investor_bp.route("/deal-comparison", methods=["GET"])
 @login_required
