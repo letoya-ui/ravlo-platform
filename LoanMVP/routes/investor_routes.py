@@ -3657,229 +3657,126 @@ def deal_studio():
         page_subtitle="Analyze opportunities, design projects, and prepare deals for funding."
     )
 
-@investor_bp.route("/deals/workspace", methods=["GET"])
-@investor_bp.route("/deal_workspace", methods=["GET"])
-@investor_bp.route("/deal_workspace/<int:deal_id>", methods=["GET"])
+
+@investor_bp.route("/investor/deal-workspace", methods=["GET"])
 @login_required
 @role_required("investor")
-def deal_workspace(deal_id=None):
-    ip = InvestorProfile.query.filter_by(user_id=current_user.id).first()
-    if not ip:
-        flash("Profile not found.", "danger")
-        return redirect(url_for("investor.command_center"))
+def deal_workspace():
+    prop_id = request.args.get("prop_id", type=int)
+    mode = (request.args.get("mode") or "flip").strip().lower()
 
     saved_props = (
         SavedProperty.query
-        .filter_by(**_profile_id_filter(SavedProperty, ip.id))
-        .order_by(SavedProperty.created_at.desc())
+        .filter_by(investor_profile_id=getattr(current_user, "investor_profile_id", None))
+        .order_by(SavedProperty.id.desc())
         .all()
     )
 
     selected_prop = None
     deal = None
     budget = None
-
+    partners = []
+    mockups = []
+    featured = {}
     comps = {}
-    resolved = None
-    comparison = {}
-    recommendation = {}
-    ai_summary = None
-
-    workspace_analysis = {}
     strategy_analysis = {}
     rehab_analysis = {}
-    optimization = {}
+    comparison = {}
+    recommendation = {}
+    workspace_analysis = {}
 
-    mode = (request.args.get("mode") or "flip").lower()
-    if mode not in ("flip", "rental", "airbnb"):
-        mode = "flip"
-
-    # -----------------------------------------
-    # 1) Load by route param deal_id
-    # -----------------------------------------
-    if deal_id:
-        deal = (
-            Deal.query
-            .filter_by(id=deal_id, user_id=current_user.id)
-            .first_or_404()
-        )
-
-        if getattr(deal, "saved_property_id", None):
-            selected_prop = (
-                SavedProperty.query
-                .filter_by(
-                    id=deal.saved_property_id,
-                    **_profile_id_filter(SavedProperty, ip.id)
-                )
-                .first()
-            )
-
-    # -----------------------------------------
-    # 2) Fallback: querystring deal_id
-    # -----------------------------------------
-    if not deal:
-        query_deal_id = request.args.get("deal_id", type=int)
-        if query_deal_id:
-            deal = (
-                Deal.query
-                .filter_by(id=query_deal_id, user_id=current_user.id)
-                .first()
-            )
-
-            if deal and getattr(deal, "saved_property_id", None):
-                selected_prop = (
-                    SavedProperty.query
-                    .filter_by(
-                        id=deal.saved_property_id,
-                        **_profile_id_filter(SavedProperty, ip.id)
-                    )
-                    .first()
-                )
-
-    # -----------------------------------------
-    # 3) Fallback: property selection by prop_id
-    # -----------------------------------------
-    if not selected_prop:
-        prop_id = request.args.get("prop_id", type=int)
-        if prop_id:
-            selected_prop = (
-                SavedProperty.query
-                .filter_by(
-                    id=prop_id,
-                    **_profile_id_filter(SavedProperty, ip.id)
-                )
-                .first()
-            )
-
-            if selected_prop and not deal:
-                deal = (
-                    Deal.query
-                    .filter_by(
-                        user_id=current_user.id,
-                        saved_property_id=selected_prop.id
-                    )
-                    .order_by(Deal.updated_at.desc(), Deal.id.desc())
-                    .first()
-                )
-
-    # -----------------------------------------
-    # 4) If deal exists but prop not loaded, try FK
-    # -----------------------------------------
-    if deal and not selected_prop and getattr(deal, "saved_property_id", None):
+    if prop_id:
         selected_prop = (
             SavedProperty.query
-            .filter_by(
-                id=deal.saved_property_id,
-                **_profile_id_filter(SavedProperty, ip.id)
-            )
+            .filter_by(id=prop_id)
             .first()
         )
 
-    # -----------------------------------------
-    # 5) Load real linked budget for this deal
-    # -----------------------------------------
-    if deal:
-        budget = (
-            ProjectBudget.query
-            .filter_by(
-                deal_id=deal.id,
-                investor_profile_id=ip.id
-            )
-            .order_by(ProjectBudget.id.desc())
-            .first()
-        )
-    loan_sizing = None
-
-    if deal:
-        loan_sizing = _build_loan_sizing_from_budget(deal, budget)
-
-    # -----------------------------------------
-    # 6) Load comps / property intelligence
-    # -----------------------------------------
     if selected_prop:
-        try:
-            comps = get_saved_property_comps(
-                user_id=current_user.id,
-                saved_property_id=selected_prop.id,
-                rentometer_api_key=None,
-            ) or {}
-        except Exception as e:
-            current_app.logger.warning("Workspace comps error: %s", e)
-            comps = {}
+        deal = (
+            Deal.query
+            .filter_by(saved_property_id=selected_prop.id, user_id=current_user.id)
+            .order_by(Deal.updated_at.desc(), Deal.id.desc())
+            .first()
+        )
 
-        if comps:
-            try:
-                from LoanMVP.services.unified_property_resolver import resolve_property_intelligence
-                resolved = resolve_property_intelligence(selected_prop.id, comps)
-            except Exception as e:
-                current_app.logger.warning("Resolver error: %s", e)
-                resolved = None
+        if deal:
+            budget = (
+                Budget.query
+                .filter_by(deal_id=deal.id, user_id=current_user.id)
+                .order_by(Budget.updated_at.desc(), Budget.id.desc())
+                .first()
+            )
 
-            try:
-                from LoanMVP.services.deal_workspace_calcs import (
-                    calculate_flip_budget,
-                    calculate_rental_budget,
-                    calculate_airbnb_budget,
-                    recommend_strategy,
-                )
+            mockups = (
+                RenovationMockup.query
+                .filter_by(deal_id=deal.id, user_id=current_user.id)
+                .order_by(RenovationMockup.id.desc())
+                .all()
+            )
 
-                empty_form = ImmutableMultiDict()
-
-                comparison = {
-                    "flip": calculate_flip_budget(empty_form, comps),
-                    "rental": calculate_rental_budget(empty_form, comps),
-                    "airbnb": calculate_airbnb_budget(empty_form, comps),
+            featured_after = next((m for m in mockups if getattr(m, "is_featured", False)), None)
+            if featured_after:
+                featured = {
+                    "after_url": getattr(featured_after, "after_url", None),
+                    "before_url": getattr(featured_after, "before_url", None),
+                    "style_preset": getattr(featured_after, "style_preset", None),
                 }
 
-                recommendation = recommend_strategy(comparison) or {}
-            except Exception as e:
-                current_app.logger.warning("Workspace calculation error: %s", e)
-                comparison = {}
-                recommendation = {}
+            deal_results = deal.results_json or {}
+            workspace_analysis = deal_results.get("workspace_analysis", {}) or {}
+            comps = deal_results.get("comp_analysis", {}) or {}
+            rehab_analysis = deal_results.get("rehab_analysis", {}) or {}
+            strategy_analysis = deal_results.get("strategy_analysis", {}) or {}
 
-    # -----------------------------------------
-    # 7) Load saved deal results
-    # -----------------------------------------
-    if deal:
-        results_json = deal.results_json or {}
-        strategy_analysis = results_json.get("strategy_analysis", {}) or {}
-        rehab_analysis = results_json.get("rehab_analysis", {}) or {}
-        workspace_analysis = results_json.get("workspace_analysis", {}) or {}
-        optimization = results_json.get("optimization", {}) or {}
+            comparison = build_workspace_exit_comparison(
+                selected_prop=selected_prop,
+                deal=deal,
+                workspace_analysis=workspace_analysis,
+                comps=comps,
+                rehab_analysis=rehab_analysis,
+            )
 
-    # -----------------------------------------
-    # 8) AI summary
-    # -----------------------------------------
-    try:
-        if comparison:
-            selected_metrics = comparison.get(mode) or comparison.get("flip") or {}
-            ai_summary = generate_ai_deal_summary(selected_metrics)
-    except Exception as e:
-        current_app.logger.warning("AI summary error: %s", e)
-        ai_summary = None
+            exit_strategy_analysis = build_exit_strategy_analysis(
+                selected_prop=selected_prop,
+                deal=deal,
+                workspace_analysis=workspace_analysis,
+                comps=comps,
+                comparison=comparison,
+            )
+
+            deal_results["exit_strategy_analysis"] = exit_strategy_analysis
+            deal_results["comp_analysis"] = deal_results.get("comp_analysis", {}) or {}
+            deal_results["comp_analysis"]["normalized_comps"] = normalize_workspace_comps(
+                comps.get("normalized_comps") or comps.get("comps") or []
+            )
+
+            deal.results_json = deal_results
+            deal.updated_at = datetime.utcnow()
+            db.session.commit()
+
+            recommendation = {
+                "best": exit_strategy_analysis.get("best_exit_strategy")
+            }
+
+        partners = get_workspace_partners_for_property(selected_prop)
 
     return render_template(
         "investor/deal_workspace.html",
-        investor=ip,
         saved_props=saved_props,
         selected_prop=selected_prop,
-        prop_id=(selected_prop.id if selected_prop else None),
-        property_id=(selected_prop.id if selected_prop else None),
         deal=deal,
-        deal_id=(deal.id if deal else None),
         budget=budget,
-        loan_sizing=loan_sizing,
-        mode=mode,
-        comps=comps,
-        resolved=resolved,
-        comparison=comparison,
-        recommendation=recommendation,
-        ai_summary=ai_summary,
+        partners=partners,
+        mockups=mockups,
+        featured=featured,
+        comps=(deal.results_json.get("comp_analysis", {}) if deal and deal.results_json else {}),
         strategy_analysis=strategy_analysis,
         rehab_analysis=rehab_analysis,
-        workspace_analysis=workspace_analysis,
-        optimization=optimization,
-        active_page="deal_workspace",
+        comparison=comparison,
+        recommendation=recommendation,
+        workspace_analysis=(deal.results_json.get("workspace_analysis", {}) if deal and deal.results_json else {}),
+        mode=mode,
     )
 
 @investor_bp.route("/deals", methods=["GET"])
