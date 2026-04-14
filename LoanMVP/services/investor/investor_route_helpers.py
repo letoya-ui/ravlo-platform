@@ -254,6 +254,30 @@ def _annotate_deal_finder_opportunity(result: dict, strategy: str) -> dict:
     annotated["score_badge"] = "High Priority" if score and score >= 80 else "Review" if score and score >= 60 else "Early Look"
     return annotated
 
+def _property_matches_asset_type(prop: dict, asset_type: str | None) -> bool:
+    normalized_filter = _normalize_asset_type(asset_type)
+    if normalized_filter == "any":
+        return True
+
+    prop_type = _normalize_asset_type(
+        prop.get("property_type")
+        or prop.get("prop_type")
+        or prop.get("type")
+        or prop.get("property_sub_type")
+        or ""
+    )
+
+    if prop_type == normalized_filter:
+        return True
+
+    if normalized_filter == "multifamily" and prop_type in {"apartment", "duplex", "triplex", "quadplex"}:
+        return True
+
+    if normalized_filter == "hospitality" and prop_type in {"hotel", "motel"}:
+        return True
+
+    return False
+
 def _normalize_asset_type(value: str | None) -> str:
     """
     Normalize UI / provider asset-type values into a stable internal key.
@@ -297,26 +321,26 @@ def _normalize_asset_type(value: str | None) -> str:
 
     return aliases.get(raw, raw.replace(" ", "_").replace("-", "_"))
 
-def _property_matches_asset_type(prop: dict, asset_type: str) -> bool:
-    normalized_filter = _normalize_asset_type(asset_type)
-    if normalized_filter == "any":
-        return True
 
-    prop_type = _normalize_asset_type(
-        prop.get("property_type")
-        or prop.get("prop_type")
-        or prop.get("type")
-        or ""
-    )
+def _asset_type_label(asset_type: str | None) -> str:
+    """
+    Human-friendly label for UI responses.
+    """
+    normalized = _normalize_asset_type(asset_type)
 
-    if prop_type == normalized_filter:
-        return True
+    labels = {
+        "any": "All Asset Types",
+        "single_family": "Single Family",
+        "multifamily": "Multifamily",
+        "office": "Office",
+        "retail": "Retail",
+        "restaurant": "Restaurant",
+        "mixed_use": "Mixed Use",
+        "industrial": "Industrial",
+        "warehouse": "Warehouse",
+        "hospitality": "Hospitality",
+        "medical": "Medical",
+        "land": "Land",
+    }
 
-    # helpful loose matches
-    if normalized_filter == "multifamily" and prop_type in {"apartment", "duplex", "triplex", "quadplex"}:
-        return True
-
-    if normalized_filter == "hospitality" and prop_type in {"hotel", "motel"}:
-        return True
-
-    return False
+    return labels.get(normalized, normalized.replace("_", " ").title())
