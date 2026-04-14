@@ -3782,6 +3782,8 @@ def deal_workspace():
         mode=mode,
     )
 
+            
+
 @investor_bp.route("/deals/workspace", methods=["GET"])
 @login_required
 @role_required("investor")
@@ -3930,46 +3932,8 @@ def deals_list():
         recommendation=recommendation,
         workspace_analysis=workspace_analysis,
         mode=mode,
-                )
-
-
-@investor_bp.route("/deals/<int:deal_id>", methods=["GET"])
-@login_required
-@role_required("investor")
-def deal_detail(deal_id):
-
-    deal = Deal.query.get_or_404(deal_id)
-
-    if deal.user_id != current_user.id:
-        abort(403)
-
-    mockups = (
-        RenovationMockup.query
-        .filter_by(deal_id=deal_id, user_id=current_user.id)
-        .order_by(RenovationMockup.created_at.desc())
-        .all()
     )
-
-    partners = (
-        Partner.query
-        .filter_by(user_id=current_user.id)
-        .order_by(Partner.created_at.desc())
-        .all()
-    )
-
-    results = deal.results_json or {}
-    strategy_analysis = results.get("strategy_analysis", {})
-    rehab_analysis = results.get("rehab_analysis", {})
-
-    return render_template(
-        "investor/deal_detail.html",
-        deal=deal,
-        mockups=mockups,
-        partners=partners,
-        strategy_analysis=strategy_analysis,
-        rehab_analysis=rehab_analysis
-    )
-
+    
 @investor_bp.route("/deal-comparison", methods=["GET"])
 @login_required
 @role_required("investor")
