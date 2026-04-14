@@ -4096,7 +4096,95 @@ def deal_analysis(deal_id):
         arv=deal.arv,
         estimated_rent=deal.estimated_rent,
     )  
-  
+@investor_bp.route("/deal/<int:deal_id>/run-analysis", methods=["POST"])
+@login_required
+def run_analysis(deal_id):
+    deal = Deal.query.filter_by(id=deal_id, user_id=current_user.id).first_or_404()
+
+    existing_results = deal.results_json or {}
+    workspace = existing_results.get("workspace_analysis", {}) or {}
+
+    purchase_price = deal.purchase_price or workspace.get("purchase_price") or 0
+    rehab_cost = deal.rehab_cost or 0
+    arv = deal.arv or workspace.get("arv") or 0
+    estimated_rent = deal.estimated_rent or workspace.get("estimated_rent") or 0
+    strategy = (deal.strategy or workspace.get("strategy") or "flip").strip().lower()
+
+    total_basis = float(purchase_price or 0) + float(rehab_cost or 0)
+    gross_profit = float(arv or 0) - total_basis if arv else 0
+
+    analysis_summary = []
+    risk_flags = []
+    strengths = []
+
+    if arv and purchase_price and float(arv) > float(purchase_price):
+        strengths.append("ARV is above purchase price.")
+    else:
+        risk_flags.append("ARV needs validation or is not above purchase price.")
+
+    if estimated_rent:
+        strengths.append("Rent estimate is available for deal review.")
+    elif strategy in ("rental", "airbnb"):
+        risk_flags.append("Rental strategy selected without rent support.")
+
+    if rehab_cost and purchase_price:
+        rehab_ratio = float(rehab_cost) / max(float(purchase_price), 1)
+        if rehab_ratio > 0.5:
+            risk_flags.append("Rehab budget is high relative to purchase price.")
+        else:
+            strengths.append("Rehab budget appears proportionate to acquisition cost.")
+
+    if gross_profit > 0:
+        analysis_summary.append(f"Projected gross upside is approximately ${gross_profit:,.0f}.")
+    else:
+        analysis_summary.append("Projected upside is limited until pricing or ARV improves.")
+
+    if strategy == "flip":
+        strategy_summary = "Best fit appears to be a fix-and-flip execution path."
+    elif strategy == "rental":
+        strategy_summary = "Best fit appears to be a long-term rental hold strategy."
+    elif strategy == "airbnb":
+        strategy_summary = "Best fit appears to be a short-term rental strategy."
+    else:
+        strategy_summary = "Best fit needs additional strategy validation."
+
+    analysis_block = {
+        "ran_at": datetime.utcnow().isoformat(),
+        "status": "complete",
+        "strategy": strategy,
+        "purchase_price": purchase_price,
+        "rehab_cost": rehab_cost,
+        "total_basis": total_basis,
+        "arv": arv,
+        "estimated_rent": estimated_rent,
+        "gross_profit": gross_profit,
+        "summary": analysis_summary,
+        "strategy_summary": strategy_summary,
+        "strengths": strengths,
+        "risk_flags": risk_flags,
+    }
+
+    existing_results["deal_architect_analysis"] = analysis_block
+    deal.results_json = existing_results
+    deal.updated_at = datetime.utcnow()
+
+    if hasattr(deal, "deal_score") and not deal.deal_score:
+        if gross_profit > 0 and not risk_flags:
+            deal.deal_score = 72
+        elif gross_profit > 0:
+            deal.deal_score = 58
+        else:
+            deal.deal_score = 42
+
+    db.session.commit()
+
+    return jsonify({
+        "success": True,
+        "message": "Deal analysis completed successfully.",
+        "deal_id": deal.id,
+        "analysis": analysis_block,
+    })
+    
 @investor_bp.route("/deals/<int:deal_id>/dealbook", methods=["GET"])
 @login_required
 @role_required("investor")
