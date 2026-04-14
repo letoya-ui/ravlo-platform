@@ -148,13 +148,14 @@ const PLACEHOLDER_IMAGE = "/static/images/placeholder_property.jpg";
 const SAVE_URL = "{{ url_for('investor.api_property_tool_save') }}";
 const SAVE_AND_ANALYZE_URL = "{{ url_for('investor.api_property_tool_save_and_analyze') }}";
 const VIEW_DETAILS_URL = "{{ url_for('investor.api_property_detail') }}";
+const SEARCH_URL = "{{ url_for('investor.api_property_tool_search') }}";
 const DEAL_WORKSPACE_URL = "{{ url_for('investor.deal_workspace') }}";
 
 function money(x){
   if (x === null || x === undefined || x === "") return "—";
   const n = Number(String(x).replace(/[$,]/g, "").trim());
   if (Number.isNaN(n) || n <= 0) return "—";
-  return "$" + n.toLocaleString(undefined, {maximumFractionDigits: 0});
+  return "$" + n.toLocaleString(undefined, { maximumFractionDigits: 0 });
 }
 
 function safeText(v){
@@ -172,26 +173,98 @@ function numOrNull(v){
 function prettyNumber(v){
   const n = numOrNull(v);
   if (n === null || n <= 0) return "—";
-  return n.toLocaleString(undefined, {maximumFractionDigits: 0});
+  return n.toLocaleString(undefined, { maximumFractionDigits: 0 });
 }
 
 function compactDate(value){
   if (!value) return "";
   const d = new Date(value);
   if (Number.isNaN(d.getTime())) return safeText(value);
-  return d.toLocaleDateString(undefined, {month:"short", day:"numeric", year:"numeric"});
+  return d.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
 }
 
 function compactNumberText(value, suffix){
   const n = numOrNull(value);
   if (n === null || n <= 0) return "—";
-  return `${n.toLocaleString(undefined, {maximumFractionDigits: 0})} ${suffix}`;
+  return `${n.toLocaleString(undefined, { maximumFractionDigits: 0 })} ${suffix}`;
 }
 
 function shortText(value, max = 140){
   const text = String(value || "").trim();
   if (!text) return "";
   return text.length > max ? `${text.slice(0, max - 1)}…` : text;
+}
+
+function escapeHtml(str){
+  return String(str ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+function strategyLabel(v){
+  if (v === "flip") return "Fix & Flip";
+  if (v === "rental") return "Rental";
+  if (v === "airbnb") return "Airbnb";
+  return "All";
+}
+
+function assetTypeLabel(v){
+  switch ((v || "").toLowerCase()) {
+    case "single_family": return "Single Family";
+    case "multi_family": return "Multi Family";
+    case "condo": return "Condo";
+    case "townhome": return "Townhome";
+    case "land": return "Land";
+    case "manufactured": return "Manufactured";
+    case "commercial": return "Commercial";
+    default: return "All Property Types";
+  }
+}
+
+function classificationLabel(value){
+  const v = String(value || "").toLowerCase();
+  if (v === "land") return "Land";
+  if (v === "fixer_upper") return "Fixer Upper";
+  if (v === "rental_candidate") return "Rental Candidate";
+  if (v === "str_candidate") return "STR Candidate";
+  return "General Opportunity";
+}
+
+function scoreClass(score){
+  const n = Number(score);
+  if (!Number.isFinite(n)) return "neutral";
+  if (n >= 70) return "good";
+  if (n >= 45) return "watch";
+  return "risk";
+}
+
+function tierClass(tier){
+  const t = String(tier || "").toLowerCase();
+  if (t === "strong") return "good";
+  if (t === "moderate") return "watch";
+  return "risk";
+}
+
+function signalLabel(signal){
+  const value = String(signal || "").toLowerCase();
+  if (value === "advance_to_lender_package") return "Move Fast";
+  if (value === "validate_zoning_and_pricing") return "Needs Validation";
+  if (value === "retrade_or_pass") return "Pass or Rework";
+  return "Worth Reviewing";
+}
+
+function currentSearchStrategy(){
+  return document.getElementById("strategy")?.value || "all";
+}
+
+function normalizePhotoArray(photos){
+  if (!Array.isArray(photos)) return [];
+  return photos
+    .map(p => typeof p === "string" ? p : (p?.url || p?.src || p?.href || null))
+    .filter(Boolean);
 }
 
 function resolveStatusText(r, signal){
@@ -255,76 +328,36 @@ function resolveHeadlineValue(r){
   };
 }
 
-function strategyLabel(v){
-  if (v === "flip") return "Fix & Flip";
-  if (v === "rental") return "Rental";
-  if (v === "airbnb") return "Airbnb";
-  return "All";
-}
+function resolveImage(r){
+  const listingPhotos = normalizePhotoArray(r.listing_photos || r.photos);
 
-function assetTypeLabel(v){
-  switch ((v || "").toLowerCase()) {
-    case "single_family": return "Single Family";
-    case "multi_family": return "Multi Family";
-    case "condo": return "Condo";
-    case "townhome": return "Townhome";
-    case "land": return "Land";
-    case "manufactured": return "Manufactured";
-    case "commercial": return "Commercial";
-    default: return "All Property Types";
-  }
-}
+  const candidates = [
+    ...listingPhotos,
+    r.primary_photo,
+    r.primary_photo_url,
+    r.image_url,
+    r.photo,
+    r.thumbnail
+  ].filter(Boolean);
 
-function escapeHtml(str){
-  return String(str ?? "")
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/\"/g, "&quot;")
-    .replace(/'/g, "&#039;");
-}
+  const sorted = candidates.sort((a, b) => {
+    const score = (url) => {
+      const u = String(url || "").toLowerCase();
+      let s = 0;
+      if (u.includes("thumbnail")) s -= 50;
+      if (u.includes("small")) s -= 25;
+      if (u.includes("100x100")) s -= 40;
+      if (u.includes("150x150")) s -= 35;
+      if (u.includes("300x")) s -= 20;
+      if (u.includes("full")) s += 20;
+      if (u.includes("large")) s += 10;
+      if (u.includes("orig")) s += 15;
+      return s;
+    };
+    return score(b) - score(a);
+  });
 
-function scoreClass(score){
-  const n = Number(score);
-  if (!Number.isFinite(n)) return "neutral";
-  if (n >= 70) return "good";
-  if (n >= 45) return "watch";
-  return "risk";
-}
-
-function tierClass(tier){
-  const t = String(tier || "").toLowerCase();
-  if (t === "strong") return "good";
-  if (t === "moderate") return "watch";
-  return "risk";
-}
-
-function signalLabel(signal){
-  const value = String(signal || "").toLowerCase();
-  if (value === "advance_to_lender_package") return "Move Fast";
-  if (value === "validate_zoning_and_pricing") return "Needs Validation";
-  if (value === "retrade_or_pass") return "Pass or Rework";
-  return "Worth Reviewing";
-}
-
-function classificationLabel(value){
-  const v = String(value || "").toLowerCase();
-  if (v === "land") return "Land";
-  if (v === "fixer_upper") return "Fixer Upper";
-  if (v === "rental_candidate") return "Rental Candidate";
-  if (v === "str_candidate") return "STR Candidate";
-  return "General Opportunity";
-}
-
-function currentSearchStrategy(){
-  return document.getElementById("strategy")?.value || "all";
-}
-
-function normalizePhotoArray(photos){
-  if (!Array.isArray(photos)) return [];
-  return photos
-    .map(p => typeof p === "string" ? p : (p?.url || p?.src || p?.href || null))
-    .filter(Boolean);
+  return sorted[0] || PLACEHOLDER_IMAGE;
 }
 
 function buildPropertyPayload(r, analyzeId, saveId){
@@ -436,40 +469,6 @@ function renderEmpty(title, body){
       <p class="muted mb-0">${escapeHtml(body)}</p>
     </div>
   `;
-}
-
-function resolveImage(r){
-  const listingPhotos = normalizePhotoArray(r.listing_photos || r.photos);
-
-  const candidates = [
-    ...listingPhotos,
-    r.primary_photo,
-    r.primary_photo_url,
-    r.image_url,
-    r.photo,
-    r.thumbnail
-  ].filter(Boolean);
-
-  const sorted = candidates.sort((a, b) => {
-    const score = (url) => {
-      const u = String(url || "").toLowerCase();
-      let s = 0;
-      if (u.includes("thumbnail")) s -= 50;
-      if (u.includes("small")) s -= 25;
-      if (u.includes("100x100")) s -= 40;
-      if (u.includes("150x150")) s -= 35;
-      if (u.includes("300x")) s -= 20;
-      if (u.includes("full")) s += 20;
-      if (u.includes("large")) s += 10;
-      if (u.includes("orig")) s += 15;
-      return s;
-    };
-    return score(b) - score(a);
-  });
-
-  return sorted[0] || PLACEHOLDER_IMAGE;
-}
-  return r.primary_photo || r.primary_photo_url || r.image_url || r.photo || r.thumbnail || (listingPhotos.length ? listingPhotos[0] : null) || PLACEHOLDER_IMAGE;
 }
 
 function resolveReasons(r){
@@ -655,16 +654,16 @@ function renderCards(results){
           <div class="dfv4-engine-grid">
             <div><span>Opportunity Tier</span><strong>${escapeHtml(tier)}</strong></div>
             <div><span>Estimated Best Use</span><strong>${escapeHtml(bestUse)}</strong></div>
-            <div><span>Rent Est.</span><strong>${escapeHtml(money(r.monthly_rent_estimate || r.traditional_rent))}${numOrNull(r.monthly_rent_estimate || r.traditional_rent) !== null ? '/mo' : ''}</strong></div>
+            <div><span>Rent Est.</span><strong>${escapeHtml(money(r.monthly_rent_estimate || r.traditional_rent))}${numOrNull(r.monthly_rent_estimate || r.traditional_rent) !== null ? "/mo" : ""}</strong></div>
             <div><span>Days on Market</span><strong>${escapeHtml(safeText(r.days_on_market))}</strong></div>
             <div><span>Comp Confidence</span><strong>${escapeHtml(safeText(r.comp_confidence))}</strong></div>
-            <div><span>Next Move</span><strong>${escapeHtml(safeText(r.next_step_engine || r.next_step || 'Analyze in Deal Workspace'))}</strong></div>
+            <div><span>Next Move</span><strong>${escapeHtml(safeText(r.next_step_engine || r.next_step || "Analyze in Deal Workspace"))}</strong></div>
           </div>
 
           <div class="dfv4-ai-snippet">
             <strong>Why it made the list</strong>
             <ul class="dfv4-thesis-list">
-              ${reasons.map(reason => `<li>${escapeHtml(reason)}</li>`).join('')}
+              ${reasons.map(reason => `<li>${escapeHtml(reason)}</li>`).join("")}
             </ul>
           </div>
 
@@ -672,7 +671,7 @@ function renderCards(results){
             <div class="dfv4-ai-snippet">
               <strong>AI recommendation</strong>
               <ul class="dfv4-thesis-list">
-                ${aiWhy.map(reason => `<li>${escapeHtml(reason)}</li>`).join('')}
+                ${aiWhy.map(reason => `<li>${escapeHtml(reason)}</li>`).join("")}
               </ul>
             </div>
           ` : ""}
@@ -680,7 +679,7 @@ function renderCards(results){
           <div class="dfv4-ai-snippet">
             <strong>Risk notes</strong>
             <ul class="dfv4-thesis-list">
-              ${risks.map(risk => `<li>${escapeHtml(risk)}</li>`).join('')}
+              ${risks.map(risk => `<li>${escapeHtml(risk)}</li>`).join("")}
             </ul>
           </div>
 
@@ -702,13 +701,23 @@ async function viewDetails(item){
   try{
     const resp = await fetch(VIEW_DETAILS_URL, {
       method: "POST",
-      headers: {"Content-Type":"application/json", "X-CSRFToken": csrfToken},
+      headers: {
+        "Content-Type": "application/json",
+        "X-CSRFToken": csrfToken
+      },
       credentials: "include",
       body: JSON.stringify(item)
     });
 
-    const data = await resp.json();
-    if (data.status !== "ok") {
+    let data = {};
+    try {
+      data = await resp.json();
+    } catch (jsonErr) {
+      alert("Property details returned an invalid response.");
+      return;
+    }
+
+    if (!resp.ok || data.status !== "ok") {
       alert(data.message || "Could not open property details.");
       return;
     }
@@ -743,13 +752,16 @@ async function saveOnly(item){
   try{
     const resp = await fetch(SAVE_URL, {
       method: "POST",
-      headers: {"Content-Type":"application/json", "X-CSRFToken": csrfToken},
+      headers: {
+        "Content-Type":"application/json",
+        "X-CSRFToken": csrfToken
+      },
       credentials: "include",
       body: JSON.stringify(item)
     });
 
     const data = await resp.json();
-    if (data.status !== "ok") {
+    if (!resp.ok || data.status !== "ok") {
       alert(data.message || "Could not save property.");
       if (btn){
         btn.disabled = false;
@@ -793,9 +805,19 @@ async function saveAndAnalyze(item){
       body: JSON.stringify(item)
     });
 
-    const data = await resp.json();
+    let data = {};
+    try {
+      data = await resp.json();
+    } catch (jsonErr) {
+      alert("Save & Analyze returned an invalid response.");
+      if (btn){
+        btn.disabled = false;
+        btn.innerText = "Save & Analyze";
+      }
+      return;
+    }
 
-    if (data.status !== "ok") {
+    if (!resp.ok || data.status !== "ok") {
       alert(data.message || "Could not save and analyze this property.");
       if (btn){
         btn.disabled = false;
@@ -858,7 +880,7 @@ async function runSearch(){
   );
 
   try {
-    const resp = await fetch("{{ url_for('investor.api_property_tool_search') }}", {
+    const resp = await fetch(SEARCH_URL, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -868,7 +890,17 @@ async function runSearch(){
       body: JSON.stringify(payload)
     });
 
-    const data = await resp.json();
+    let data = {};
+    try {
+      data = await resp.json();
+    } catch (jsonErr) {
+      const rawText = await resp.text();
+      console.error("Search returned non-JSON:", rawText);
+      status.innerText = `Search failed (${resp.status}).`;
+      renderEmpty("Search failed", rawText || "Server returned an invalid response.");
+      return;
+    }
+
     console.log("Deal Finder search response:", data);
 
     if (!resp.ok || data.status !== "ok") {
@@ -878,7 +910,7 @@ async function runSearch(){
       return;
     }
 
-    const enriched = data.results || [];
+    const enriched = Array.isArray(data.results) ? data.results : [];
     const engineReady =
       Boolean(data.engine_ready) ||
       enriched.some(x => Number.isFinite(Number(x.deal_score)));
@@ -899,9 +931,9 @@ async function runSearch(){
 
     renderCards(enriched);
   } catch (e) {
-    console.error(e);
+    console.error("Deal Finder network error:", e);
     status.innerText = "Investor OS could not load this search right now.";
-    renderEmpty("Unable to load this search", "Please try again in a moment.");
+    renderEmpty("Unable to load this search", e?.message || "Please try again in a moment.");
   }
 }
 </script>
@@ -932,16 +964,15 @@ async function runSearch(){
   border-radius:16px;
   overflow:hidden;
   background:rgba(255,255,255,.03);
-  border:1px solid rgba(255,255,255,.08);
+  border:1px solid rgba(255,255,255,.08)
 }
-
 .dfv4-thumb img{
   width:100%;
   height:100%;
   object-fit:cover;
   object-position:center;
   display:block;
-  image-rendering:auto;
+  image-rendering:auto
 }
 .dfv4-thumb-top{position:absolute;top:12px;left:12px;right:12px;display:flex;justify-content:space-between;align-items:flex-start;gap:.5rem}
 .dfv4-score-badge,.dfv4-tier-badge{padding:.45rem .7rem;border-radius:999px;font-size:.78rem;font-weight:800;border:1px solid rgba(255,255,255,.12);backdrop-filter:blur(8px)}
