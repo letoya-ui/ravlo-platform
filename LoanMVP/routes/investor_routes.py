@@ -3222,272 +3222,286 @@ def api_property_tool_save():
         }), 500
 
 
-@investor_bp.route("/api/intelligence/save-and-analyze", methods=["POST"])
+
+      
 @investor_bp.route("/api/property_tool_save_and_analyze", methods=["POST"])
 @login_required
 @role_required("investor")
 def api_property_tool_save_and_analyze():
     payload = request.get_json(force=True) or {}
-    address = (payload.get("address") or "").strip()
-
-    if not address:
-        return jsonify({
-            "status": "error",
-            "message": "Address is required to analyze."
-        }), 400
-
-    ip = InvestorProfile.query.filter_by(user_id=current_user.id).first()
-    if not ip:
-        return jsonify({
-            "status": "error",
-            "message": "Profile not found."
-        }), 400
-
-    def to_float(val):
-        try:
-            if val in (None, "", "None"):
-                return 0.0
-            if isinstance(val, str):
-                val = val.replace("$", "").replace(",", "").strip()
-            return float(val)
-        except (TypeError, ValueError):
-            return 0.0
-
-    def to_int_or_none(val):
-        try:
-            if val in (None, "", "None"):
-                return None
-            if isinstance(val, str):
-                val = val.replace(",", "").strip()
-            return int(round(float(val)))
-        except (TypeError, ValueError):
-            return None
-
-    def clean_list(value):
-        if not value:
-            return []
-        if isinstance(value, list):
-            return [str(x).strip() for x in value if str(x).strip()]
-        return [str(value).strip()] if str(value).strip() else []
 
     try:
-        # 1) Upsert saved property
-        saved = _upsert_saved_property_from_payload(ip, payload)
+        investor_profile = InvestorProfile.query.filter_by(user_id=current_user.id).first()
+        if not investor_profile:
+            return jsonify({
+                "status": "error",
+                "message": "Investor profile not found."
+            }), 400
 
-        # 2) Find or create linked deal
-        deal = (
+        property_payload = payload.get("property") if isinstance(payload.get("property"), dict) else payload
+        if not isinstance(property_payload, dict):
+            property_payload = {}
+
+        address = (property_payload.get("address") or "").strip()
+        if not address:
+            return jsonify({
+                "status": "error",
+                "message": "Address is required."
+            }), 400
+
+        # ------------------------------------------------------------
+        # 1. SAVE / UPSERT PROPERTY
+        # ------------------------------------------------------------
+        saved = _upsert_saved_property_from_payload(investor_profile, property_payload)
+
+        # ------------------------------------------------------------
+        # 2. BUILD/PULL ANALYSIS INPUTS
+        # ------------------------------------------------------------
+        comps = property_payload.get("comp_analysis") or {}
+        if not isinstance(comps, dict):
+            comps = {}
+
+        comps["normalized_comps"] = normalize_workspace_comps(
+            comps.get("normalized_comps") or comps.get("comps") or []
+        )
+
+        workspace_analysis = property_payload.get("workspace_analysis") or {}
+        if not isinstance(workspace_analysis, dict):
+            workspace_analysis = {}
+
+        rehab_analysis = property_payload.get("rehab_analysis") or {}
+        if not isinstance(rehab_analysis, dict):
+            rehab_analysis = {}
+
+        strategy_analysis = property_payload.get("strategy_analysis") or {}
+        if not isinstance(strategy_analysis, dict):
+            strategy_analysis = {}
+
+        # ------------------------------------------------------------
+        # 3. BUILD DEAL COMPARISON + EXIT STRATEGY ANALYSIS
+        # ------------------------------------------------------------
+        comparison = build_workspace_exit_comparison(
+            selected_prop=saved,
+            deal=None,
+            workspace_analysis=workspace_analysis,
+            comps=comps,
+            rehab_analysis=rehab_analysis,
+        )
+
+        exit_strategy_analysis = build_exit_strategy_analysis(
+            selected_prop=saved,
+            deal=None,
+            workspace_analysis=workspace_analysis,
+            comps=comps,
+            comparison=comparison,
+        )
+
+        recommendation = {
+            "best": exit_strategy_analysis.get("best_exit_strategy")
+        }
+
+        # ------------------------------------------------------------
+        # 4. CREATE OR UPDATE DEAL
+        # ------------------------------------------------------------
+        existing_deal = (
             Deal.query
-            .filter_by(user_id=current_user.id, saved_property_id=saved.id)
+            .filter_by(saved_property_id=saved.id, user_id=current_user.id)
             .order_by(Deal.updated_at.desc(), Deal.id.desc())
             .first()
         )
 
-        strategy = (payload.get("strategy") or "flip").strip().lower()
-        if strategy not in ("flip", "rental", "airbnb"):
-            strategy = "flip"
-
-        title = (
-            payload.get("title")
-            or payload.get("address")
-            or f"Deal {saved.id}"
+        purchase_price = safe_float(
+            property_payload.get("purchase_price")
+            or property_payload.get("price")
+            or workspace_analysis.get("purchase_price")
+            or getattr(saved, "purchase_price", None)
+            or getattr(saved, "price", None)
         )
 
-        purchase_price = to_float(
-            payload.get("purchase_price")
-            or payload.get("price")
-            or payload.get("display_value")
-            or payload.get("last_sale_price")
+        arv = safe_float(
+            property_payload.get("arv")
+            or workspace_analysis.get("arv")
+            or property_payload.get("market_value")
+            or getattr(saved, "arv", None)
+            or getattr(saved, "market_value", None)
         )
 
-        arv = to_float(
-            payload.get("arv")
-            or payload.get("estimated_value_engine")
-            or payload.get("market_value")
-            or payload.get("engine_value")
+        estimated_rent = safe_float(
+            property_payload.get("estimated_rent")
+            or property_payload.get("monthly_rent_estimate")
+            or workspace_analysis.get("estimated_rent")
+            or workspace_analysis.get("monthly_rent")
+            or getattr(saved, "monthly_rent", None)
         )
 
-        estimated_rent = to_float(
-            payload.get("estimated_rent")
-            or payload.get("monthly_rent")
-            or payload.get("monthly_rent_estimate")
+        rehab_cost = safe_float(
+            property_payload.get("rehab_cost")
+            or rehab_analysis.get("total")
+            or workspace_analysis.get("rehab_cost")
         )
 
-        raw_score = payload.get("deal_score")
-        try:
-            deal_score = int(round(float(raw_score))) if raw_score not in (None, "", "None") else None
-        except (TypeError, ValueError):
-            deal_score = None
+        best_exit = exit_strategy_analysis.get("best_exit_strategy")
+        best_reason = exit_strategy_analysis.get("best_exit_reason")
+        property_classification = exit_strategy_analysis.get("property_classification")
 
-        image_url = payload.get("image_url")
-        listing_photos = clean_list(payload.get("listing_photos"))
-        primary_strengths = clean_list(payload.get("primary_strengths"))
-        primary_risks = clean_list(payload.get("primary_risks"))
-        risk_notes = clean_list(payload.get("risk_notes"))
-        why_it_made_list = clean_list(payload.get("why_it_made_list"))
-
-        workspace_analysis = {
-            "address": payload.get("address"),
-            "city": payload.get("city"),
-            "state": payload.get("state"),
-            "zip_code": payload.get("zip") or payload.get("zip_code"),
+        inputs_json = {
+            "address": address,
+            "city": property_payload.get("city") or getattr(saved, "city", None),
+            "state": property_payload.get("state") or getattr(saved, "state", None),
+            "zip_code": property_payload.get("zip_code") or property_payload.get("zip") or getattr(saved, "zipcode", None),
             "purchase_price": purchase_price,
             "arv": arv,
             "estimated_rent": estimated_rent,
-            "square_feet": to_int_or_none(payload.get("sqft") or payload.get("square_feet")),
-            "beds": to_int_or_none(payload.get("beds")),
-            "baths": payload.get("baths"),
-            "year_built": to_int_or_none(payload.get("year_built")),
-            "property_type": payload.get("property_type"),
-            "property_id": payload.get("property_id") or payload.get("attom_id"),
-            "strategy": strategy,
-            "strategy_tag": payload.get("strategy_tag"),
-            "recommended_strategy": payload.get("recommended_strategy"),
-            "estimated_best_use": payload.get("estimated_best_use"),
-            "deal_score": deal_score,
-            "opportunity_tier": payload.get("opportunity_tier"),
-            "deal_finder_signal": payload.get("deal_finder_signal"),
-            "next_step": payload.get("next_step"),
-            "comp_confidence": payload.get("comp_confidence"),
-            "primary_strengths": primary_strengths,
-            "primary_risks": primary_risks,
-            "risk_notes": risk_notes,
-            "why_it_made_list": why_it_made_list,
-            "image_url": image_url,
-            "listing_photos": listing_photos,
-            "last_sale_price": to_float(payload.get("last_sale_price")),
-            "market_value": to_float(payload.get("market_value")),
-            "assessed_value": to_float(payload.get("assessed_value")),
-            "monthly_rent_estimate": to_float(payload.get("monthly_rent_estimate")),
+            "strategy": best_exit or property_payload.get("strategy") or "flip",
+            "property_id": property_payload.get("property_id") or getattr(saved, "property_id", None),
+            "property_classification": property_classification,
         }
 
         results_json = {
-            "strategy_analysis": {},
-            "rehab_analysis": {},
-            "workspace_analysis": workspace_analysis,
-            "optimization": {},
-        }
-
-        notes_parts = []
-
-        if payload.get("estimated_best_use"):
-            notes_parts.append(f"Best Use: {payload.get('estimated_best_use')}")
-        if payload.get("next_step"):
-            notes_parts.append(f"Next Step: {payload.get('next_step')}")
-        if primary_strengths:
-            notes_parts.append("Strengths: " + ", ".join(primary_strengths))
-        if primary_risks:
-            notes_parts.append("Risks: " + ", ".join(primary_risks))
-
-        notes = "\n".join(notes_parts).strip() or None
-
-        if deal:
-            deal.investor_profile_id = ip.id
-            deal.saved_property_id = saved.id
-            deal.property_id = payload.get("property_id") or payload.get("attom_id")
-            deal.title = title
-            deal.address = payload.get("address")
-            deal.city = payload.get("city")
-            deal.state = payload.get("state")
-            deal.zip_code = payload.get("zip") or payload.get("zip_code")
-            deal.strategy = strategy
-            deal.recommended_strategy = payload.get("recommended_strategy") or strategy
-            deal.purchase_price = purchase_price
-            deal.arv = arv
-            deal.estimated_rent = estimated_rent
-            deal.deal_score = deal_score
-            deal.inputs_json = {
-                "address": payload.get("address"),
-                "city": payload.get("city"),
-                "state": payload.get("state"),
-                "zip_code": payload.get("zip") or payload.get("zip_code"),
-                "strategy": strategy,
+            "workspace_analysis": {
+                **workspace_analysis,
+                "address": address,
+                "city": property_payload.get("city") or getattr(saved, "city", None),
+                "state": property_payload.get("state") or getattr(saved, "state", None),
+                "zip_code": property_payload.get("zip_code") or property_payload.get("zip") or getattr(saved, "zipcode", None),
                 "purchase_price": purchase_price,
                 "arv": arv,
                 "estimated_rent": estimated_rent,
-                "image_url": image_url,
-                "listing_photos": listing_photos,
-            }
-            deal.results_json = results_json
-            deal.notes = notes
-            deal.status = deal.status or "active"
-            deal.updated_at = datetime.utcnow()
+                "rehab_cost": rehab_cost,
+                "deal_score": property_payload.get("deal_score"),
+                "image_url": property_payload.get("image_url") or getattr(saved, "image_url", None),
+                "listing_photos": property_payload.get("listing_photos") or property_payload.get("photos") or [],
+                "property_type": property_payload.get("property_type") or getattr(saved, "property_type", None),
+                "square_feet": property_payload.get("square_feet") or property_payload.get("sqft") or getattr(saved, "sqft", None),
+                "beds": property_payload.get("beds"),
+                "baths": property_payload.get("baths"),
+                "year_built": property_payload.get("year_built"),
+                "lot_size_sqft": property_payload.get("lot_size_sqft"),
+                "selected_strategy": best_exit,
+                "estimated_best_use": best_reason,
+            },
+            "comp_analysis": comps,
+            "rehab_analysis": rehab_analysis,
+            "strategy_analysis": {
+                **strategy_analysis,
+                "recommended_strategy": best_exit,
+                "reason": best_reason,
+                "property_classification": property_classification,
+            },
+            "exit_strategy_analysis": exit_strategy_analysis,
+        }
+
+        if existing_deal:
+            deal = existing_deal
+            deal.title = deal.title or address or "Saved Deal"
+            deal.address = address
+            deal.city = property_payload.get("city") or deal.city
+            deal.state = property_payload.get("state") or deal.state
+            deal.zip_code = property_payload.get("zip_code") or property_payload.get("zip") or deal.zip_code
+            deal.purchase_price = purchase_price or deal.purchase_price
+            deal.arv = arv or deal.arv
+            deal.estimated_rent = estimated_rent or deal.estimated_rent
+            deal.rehab_cost = rehab_cost or deal.rehab_cost
+            deal.strategy = best_exit or deal.strategy or "flip"
+            deal.recommended_strategy = best_exit or deal.recommended_strategy
+            deal.notes = best_reason or deal.notes
+            deal.inputs_json = {**(deal.inputs_json or {}), **inputs_json}
+            deal.results_json = {**(deal.results_json or {}), **results_json}
+            if getattr(deal, "deal_score", None) is None and property_payload.get("deal_score") is not None:
+                deal.deal_score = property_payload.get("deal_score")
         else:
             deal = Deal(
                 user_id=current_user.id,
-                investor_profile_id=ip.id,
                 saved_property_id=saved.id,
-                property_id=payload.get("property_id") or payload.get("attom_id"),
-                title=title,
-                address=payload.get("address"),
-                city=payload.get("city"),
-                state=payload.get("state"),
-                zip_code=payload.get("zip") or payload.get("zip_code"),
-                strategy=strategy,
-                recommended_strategy=payload.get("recommended_strategy") or strategy,
+                title=address or "Saved Deal",
+                address=address,
+                city=property_payload.get("city"),
+                state=property_payload.get("state"),
+                zip_code=property_payload.get("zip_code") or property_payload.get("zip"),
                 purchase_price=purchase_price,
                 arv=arv,
                 estimated_rent=estimated_rent,
-                rehab_cost=0,
-                deal_score=deal_score,
-                inputs_json={
-                    "address": payload.get("address"),
-                    "city": payload.get("city"),
-                    "state": payload.get("state"),
-                    "zip_code": payload.get("zip") or payload.get("zip_code"),
-                    "strategy": strategy,
-                    "purchase_price": purchase_price,
-                    "arv": arv,
-                    "estimated_rent": estimated_rent,
-                    "image_url": image_url,
-                    "listing_photos": listing_photos,
-                },
+                rehab_cost=rehab_cost,
+                strategy=best_exit or property_payload.get("strategy") or "flip",
+                recommended_strategy=best_exit or property_payload.get("strategy") or "flip",
+                notes=best_reason,
+                inputs_json=inputs_json,
                 results_json=results_json,
-                notes=notes,
                 status="active",
             )
+            if property_payload.get("deal_score") is not None and hasattr(deal, "deal_score"):
+                deal.deal_score = property_payload.get("deal_score")
             db.session.add(deal)
             db.session.flush()
 
-        # 3) Best-effort upload to DO Spaces and attach URLs
-        uploaded_photos = _try_upload_and_attach_listing_photos(
-            payload=payload,
-            saved_property=saved,
-            deal=deal,
-        )
+        # ------------------------------------------------------------
+        # 5. ATTACH LISTING PHOTOS
+        # ------------------------------------------------------------
+        uploaded_photos = []
+        try:
+            uploaded_photos = _try_upload_and_attach_listing_photos(
+                payload=property_payload,
+                saved_property=saved,
+                deal=deal,
+            ) or []
+        except Exception as e:
+            current_app.logger.warning("Listing photo attach failed: %s", e)
 
-        # 4) Persist uploaded photo URLs back into results_json for stable workspace rendering
         if uploaded_photos:
-            uploaded_urls = [p.get("url") for p in uploaded_photos if p.get("url")]
-            workspace = (deal.results_json or {}).get("workspace_analysis", {})
-            workspace["listing_photos"] = uploaded_urls
-            workspace["image_url"] = uploaded_urls[0] if uploaded_urls else image_url
-            deal.results_json["workspace_analysis"] = workspace
+            uploaded_urls = [p.get("url") for p in uploaded_photos if isinstance(p, dict) and p.get("url")]
+            if uploaded_urls:
+                deal_results = deal.results_json or {}
+                wa = deal_results.get("workspace_analysis", {}) or {}
+                wa["listing_photos"] = uploaded_urls
+                wa["image_url"] = uploaded_urls[0]
+                deal_results["workspace_analysis"] = wa
+                deal.results_json = deal_results
+
+        # ------------------------------------------------------------
+        # 6. DEAL SCORE DEFAULT
+        # ------------------------------------------------------------
+        if getattr(deal, "deal_score", None) is None:
+            best = exit_strategy_analysis.get("best_exit_strategy")
+            if best == "rental":
+                deal.deal_score = 74
+            elif best == "flip":
+                deal.deal_score = 68
+            elif best == "airbnb":
+                deal.deal_score = 64
+            elif best == "land":
+                deal.deal_score = 58
 
         db.session.commit()
 
-        deal_url = url_for(
-            "investor.deal_workspace",
-            deal_id=deal.id,
-            mode=strategy
-        )
-
         return jsonify({
             "status": "ok",
-            "saved_id": saved.id,
+            "saved_property_id": saved.id,
             "deal_id": deal.id,
-            "deal_url": deal_url,
-            "listing_photos_count": len(uploaded_photos),
-            "primary_photo_url": uploaded_photos[0]["url"] if uploaded_photos else getattr(saved, "image_url", None),
+            "property": {
+                "id": saved.id,
+                "address": getattr(saved, "address", None),
+                "image_url": getattr(saved, "image_url", None),
+            },
+            "deal": {
+                "id": deal.id,
+                "title": deal.title,
+                "recommended_strategy": deal.recommended_strategy,
+                "deal_score": getattr(deal, "deal_score", None),
+            },
+            "comparison": comparison,
+            "recommendation": recommendation,
+            "exit_strategy_analysis": exit_strategy_analysis,
+            "comp_analysis": comps,
+            "workspace_analysis": (deal.results_json or {}).get("workspace_analysis", {}),
+            "message": "Property saved and deal analysis created successfully.",
         })
 
     except Exception as e:
-        db.session.rollback()
-        current_app.logger.exception("Property Tool save-and-analyze failed")
+        current_app.logger.exception("property_tool_save_and_analyze failed")
         return jsonify({
             "status": "error",
-            "message": f"Could not create deal: {e}"
-        }), 500        
-            
+            "message": str(e),
+        }), 500            
 
 @investor_bp.route("/api/intelligence/card", methods=["POST"])
 @investor_bp.route("/api/property_tool_card", methods=["POST"])
