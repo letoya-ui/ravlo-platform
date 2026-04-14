@@ -3492,7 +3492,7 @@ def api_property_tool_save_and_analyze():
             "exit_strategy_analysis": exit_strategy_analysis,
             "comp_analysis": comps,
             "workspace_analysis": (deal.results_json or {}).get("workspace_analysis", {}),
-            "redirect_url": url_for("investor.deal_workspace", prop_id=saved.id)
+            "redirect_url": url_for("investor.deal_workspace", prop_id=saved.id),
             "message": "Property saved and deal analysis created successfully.",
         })
 
