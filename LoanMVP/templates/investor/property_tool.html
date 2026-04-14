@@ -3,13 +3,13 @@
 
 {% block page_title %}Deal Finder{% endblock %}
 {% block page_subline %}
-Search by address or ZIP and Ravlo will return a short ranked list of the strongest opportunities, then move the right one into Project Studio.
+Search by address or ZIP and Ravlo will return a short ranked list of the strongest opportunities, then move the right one into Deal Workspace.
 {% endblock %}
 
 {% block topbar_actions %}
   <button class="ravlo-btn ghost sm" type="button"
-          onclick="location.href='{{ url_for("investor.command_center") }}'">
-    Command Center
+          onclick="location.href='{{ url_for("investor.deal_workspace") }}'">
+    Deal Workspace
   </button>
 
   <button class="ravlo-btn primary sm" type="button"
@@ -24,7 +24,7 @@ Search by address or ZIP and Ravlo will return a short ranked list of the strong
     <div class="eyebrow">DEAL FINDER</div>
     <h3 class="dfv4-panel-title">Start Finding Deals</h3>
     <p class="muted">
-      Search by address or ZIP, then review Ravlo's top four opportunities with strategy tags, risk notes, and a clear next move into planning.
+      Search by address or ZIP, then review Ravlo's top opportunities with classification, best exit strategy, risk notes, and a direct Save & Analyze path into Deal Workspace.
     </p>
 
     <label class="ravlo-label mt-16">Address</label>
@@ -46,22 +46,21 @@ Search by address or ZIP and Ravlo will return a short ranked list of the strong
 
     <label class="ravlo-label mt-16">Asset Type</label>
     <select id="assetType" class="ravlo-input">
-      <option value="any">All Asset Types</option>
-      <option value="office">Office</option>
-      <option value="retail">Retail</option>
-      <option value="restaurant">Restaurant</option>
-      <option value="mixed_use">Mixed Use</option>
-      <option value="multifamily">Multifamily</option>
-      <option value="industrial">Industrial</option>
-      <option value="warehouse">Warehouse</option>
-      <option value="hospitality">Hospitality</option>
-      <option value="medical">Medical</option>
+      <option value="any">All Property Types</option>
+      <option value="single_family">Single Family</option>
+      <option value="multi_family">Multi Family</option>
+      <option value="condo">Condo</option>
+      <option value="townhome">Townhome</option>
+      <option value="land">Land</option>
+      <option value="manufactured">Manufactured</option>
+      <option value="commercial">Commercial</option>
     </select>
 
     <label class="ravlo-label mt-16">Strategy</label>
     <select id="strategy" class="ravlo-input">
       <option value="flip">Fix & Flip</option>
       <option value="rental">Rental</option>
+      <option value="airbnb">Airbnb</option>
       <option value="all">All</option>
     </select>
 
@@ -74,11 +73,11 @@ Search by address or ZIP and Ravlo will return a short ranked list of the strong
     <div class="dfv4-panel-note">
       <strong>Deal Finder now returns:</strong>
       <ul>
-        <li>Top 4 ranked opportunities</li>
-        <li>Strategy tag + estimated best use</li>
-        <li>Why it made the list + risk notes</li>
+        <li>Top ranked opportunities</li>
+        <li>Property classification: land, fixer upper, rental, or STR</li>
+        <li>Best exit strategy + AI recommendation</li>
         <li>Exit strategy comparison cards</li>
-        <li>A direct bridge into Project Studio</li>
+        <li>A direct Save & Analyze bridge into Deal Workspace</li>
       </ul>
     </div>
   </aside>
@@ -89,11 +88,11 @@ Search by address or ZIP and Ravlo will return a short ranked list of the strong
         <div class="eyebrow">INVESTOR OS</div>
         <h2 class="dfv4-hero-title">This is where Ravlo finds the few deals worth planning.</h2>
         <p class="muted mb-0">
-          Deal Finder should surface a short, ranked recommendation set for office, restaurant, retail, and other commercial plays instead of making investors sort through a giant listing feed.
+          Deal Finder should surface a short, ranked recommendation set instead of making investors sort through a giant listing feed.
         </p>
       </div>
       <div class="dfv4-hero-pill-row">
-        <span class="dfv4-hero-pill">Top 4 Picks</span>
+        <span class="dfv4-hero-pill">Top Picks</span>
         <span class="dfv4-hero-pill">Best Use First</span>
         <span class="dfv4-hero-pill">Exit Strategies Ranked</span>
       </div>
@@ -136,7 +135,7 @@ Search by address or ZIP and Ravlo will return a short ranked list of the strong
         <div class="eyebrow">DEAL FINDER</div>
         <h3 class="mb-8">This is where the right properties should start showing up</h3>
         <p class="muted mb-0">
-          Enter an address or ZIP code, choose an asset type, and let Ravlo rank the four strongest opportunities for planning.
+          Enter an address or ZIP code, choose an asset type, and let Ravlo rank the strongest opportunities for planning.
         </p>
       </div>
     </div>
@@ -146,10 +145,10 @@ Search by address or ZIP and Ravlo will return a short ranked list of the strong
 <script>
 const csrfToken = "{{ csrf_token() }}";
 const PLACEHOLDER_IMAGE = "/static/images/placeholder_property.jpg";
-const DEAL_ARCHITECT_URL = "{{ url_for('investor.api_deal_architect_proxy') }}";
 const SAVE_URL = "{{ url_for('investor.api_property_tool_save') }}";
 const SAVE_AND_ANALYZE_URL = "{{ url_for('investor.api_property_tool_save_and_analyze') }}";
-const VIEW_DETAILS_URL = "{{ url_for('investor.api_property_tool_view_details') }}";
+const VIEW_DETAILS_URL = "{{ url_for('investor.api_property_detail') }}";
+const DEAL_WORKSPACE_URL = "{{ url_for('investor.deal_workspace') }}";
 
 function money(x){
   if (x === null || x === undefined || x === "") return "—";
@@ -259,21 +258,20 @@ function resolveHeadlineValue(r){
 function strategyLabel(v){
   if (v === "flip") return "Fix & Flip";
   if (v === "rental") return "Rental";
+  if (v === "airbnb") return "Airbnb";
   return "All";
 }
 
 function assetTypeLabel(v){
   switch ((v || "").toLowerCase()) {
-    case "office": return "Office";
-    case "retail": return "Retail";
-    case "restaurant": return "Restaurant";
-    case "mixed_use": return "Mixed Use";
-    case "multifamily": return "Multifamily";
-    case "industrial": return "Industrial";
-    case "warehouse": return "Warehouse";
-    case "hospitality": return "Hospitality";
-    case "medical": return "Medical";
-    default: return "All Asset Types";
+    case "single_family": return "Single Family";
+    case "multi_family": return "Multi Family";
+    case "condo": return "Condo";
+    case "townhome": return "Townhome";
+    case "land": return "Land";
+    case "manufactured": return "Manufactured";
+    case "commercial": return "Commercial";
+    default: return "All Property Types";
   }
 }
 
@@ -309,6 +307,15 @@ function signalLabel(signal){
   return "Worth Reviewing";
 }
 
+function classificationLabel(value){
+  const v = String(value || "").toLowerCase();
+  if (v === "land") return "Land";
+  if (v === "fixer_upper") return "Fixer Upper";
+  if (v === "rental_candidate") return "Rental Candidate";
+  if (v === "str_candidate") return "STR Candidate";
+  return "General Opportunity";
+}
+
 function currentSearchStrategy(){
   return document.getElementById("strategy")?.value || "all";
 }
@@ -324,7 +331,8 @@ function buildPropertyPayload(r, analyzeId, saveId){
   const strategy = currentSearchStrategy();
   const headline = resolveHeadlineValue(r);
 
-  const primaryValue = headline.value
+  const primaryValue =
+    headline.value
     ?? numOrNull(r.price)
     ?? numOrNull(r.display_value)
     ?? numOrNull(r.market_value)
@@ -332,9 +340,10 @@ function buildPropertyPayload(r, analyzeId, saveId){
     ?? numOrNull(r.last_sale_price)
     ?? null;
 
-  const listingPhotos = normalizePhotoArray(r.photos);
+  const listingPhotos = normalizePhotoArray(r.listing_photos || r.photos);
   const primaryPhoto =
     r.primary_photo ||
+    r.image_url ||
     r.photo ||
     r.thumbnail ||
     (listingPhotos.length ? listingPhotos[0] : null) ||
@@ -345,6 +354,7 @@ function buildPropertyPayload(r, analyzeId, saveId){
     city: r.city || "",
     state: r.state || "",
     zip: r.zip_code || "",
+    zip_code: r.zip_code || "",
 
     price: primaryValue,
     purchase_price: primaryValue,
@@ -352,7 +362,7 @@ function buildPropertyPayload(r, analyzeId, saveId){
     market_value: numOrNull(r.market_value),
     estimated_value_engine: numOrNull(r.estimated_value_engine),
     assessed_value: numOrNull(r.assessed_value),
-    arv: numOrNull(r.estimated_value_engine) ?? numOrNull(r.market_value) ?? numOrNull(r.display_value),
+    arv: numOrNull(r.arv) ?? numOrNull(r.market_value) ?? numOrNull(r.display_value),
 
     sqft: r.square_feet ?? r.sqft ?? null,
     square_feet: r.square_feet ?? r.sqft ?? null,
@@ -383,6 +393,12 @@ function buildPropertyPayload(r, analyzeId, saveId){
     next_step: r.next_step_engine || r.next_step || null,
     comp_confidence: r.comp_confidence || null,
 
+    property_classification: r.property_classification || null,
+    best_exit_strategy: r.best_exit_strategy || null,
+    best_exit_reason: r.best_exit_reason || null,
+    ai_recommendation: r.ai_recommendation || {},
+    exit_strategy_cards: Array.isArray(r.exit_strategy_cards) ? r.exit_strategy_cards : [],
+
     primary_strengths: Array.isArray(r.primary_strengths) ? r.primary_strengths : [],
     primary_risks: Array.isArray(r.primary_risks) ? r.primary_risks : [],
     risk_notes: Array.isArray(r.risk_notes) ? r.risk_notes : [],
@@ -396,100 +412,6 @@ function buildPropertyPayload(r, analyzeId, saveId){
     _btnId: analyzeId,
     _saveBtnId: saveId
   };
-}
-
-function buildDealArchitectRequest(r, selectedStrategy){
-  const strategy = selectedStrategy || "all";
-  const type = String(r.property_type || "single family");
-  const salePrice = numOrNull(r.listing_price) ?? numOrNull(r.price) ?? numOrNull(r.last_sale_price) ?? null;
-  const marketValue = numOrNull(r.estimated_value_engine) ?? numOrNull(r.market_value) ?? numOrNull(r.display_value) ?? null;
-  const rentValue = numOrNull(r.traditional_rent) ?? null;
-  const sqft = numOrNull(r.square_feet || r.sqft) ?? null;
-  const lotSqft = numOrNull(r.lot_size_sqft) ?? null;
-
-  const descriptionParts = [
-    `${safeText(r.address || r.address_line1)}, ${safeText(r.city)}, ${safeText(r.state)} ${safeText(r.zip_code)}`,
-    `${safeText(r.beds)} bed`,
-    `${safeText(r.baths)} bath`,
-    sqft ? `${prettyNumber(sqft)} sqft` : null,
-    strategy === "rental" ? "rental hold candidate" : strategy === "flip" ? "fix and flip candidate" : "investment property candidate"
-  ].filter(Boolean);
-
-  return {
-    project_name: r.address || r.address_line1 || "Deal Finder Property",
-    description: descriptionParts.join(" • "),
-    property_type: type,
-    lot_size: lotSqft ? `${prettyNumber(lotSqft)} sq ft lot` : "",
-    zoning: r.zoning || "",
-    asking_price: salePrice,
-    square_feet_target: sqft,
-    city: r.city || "",
-    state: r.state || "",
-    zip_code: r.zip_code || "",
-    arv: marketValue,
-    monthly_rent: rentValue,
-    local_facts: {
-      bedrooms: numOrNull(r.beds),
-      bathrooms: numOrNull(r.baths),
-      year_built: numOrNull(r.year_built),
-      lot_sqft: lotSqft,
-      assessed_value: numOrNull(r.assessed_value),
-      annual_tax_amount: numOrNull(r.tax_amount),
-      latitude: r.latitude,
-      longitude: r.longitude,
-      source: "deal_finder"
-    }
-  };
-}
-
-async function enrichWithDealArchitect(results, strategy){
-  const enriched = await Promise.all(results.map(async (r) => {
-    try {
-      const resp = await fetch(DEAL_ARCHITECT_URL, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-CSRFToken": csrfToken
-        },
-        credentials: "include",
-        body: JSON.stringify(buildDealArchitectRequest(r, strategy))
-      });
-
-      const data = await resp.json();
-      if (!resp.ok || data.ok === false) {
-        return {
-          ...r,
-          architect_error: data.detail || data.message || "Deal Architect unavailable"
-        };
-      }
-
-      const meta = data.meta || {};
-      return {
-        ...r,
-        architect: data,
-        deal_score: data.deal_score,
-        opportunity_tier: data.opportunity_tier,
-        deal_finder_signal: meta.deal_finder_signal,
-        primary_strengths: meta.primary_strengths || [],
-        primary_risks: meta.primary_risks || [],
-        verdict_breakdown: meta.verdict_breakdown || {},
-        valuation_source_label: meta.valuation_source_label,
-        dscr_estimate: meta.dscr_estimate,
-        rent_yield: meta.rent_yield,
-        monthly_rent_estimate: meta.monthly_rent_estimate,
-        estimated_value_engine: data.estimated_value,
-        next_step_engine: data.next_step,
-        comp_confidence: meta.comp_confidence
-      };
-    } catch (error) {
-      return {
-        ...r,
-        architect_error: "Deal Architect request failed"
-      };
-    }
-  }));
-
-  return enriched.sort((a, b) => (Number(b.deal_score) || 0) - (Number(a.deal_score) || 0));
 }
 
 function renderSummary(zip, strategy, assetType, count, engineReady, totalMatches){
@@ -517,7 +439,7 @@ function renderEmpty(title, body){
 }
 
 function resolveImage(r){
-  const listingPhotos = normalizePhotoArray(r.photos);
+  const listingPhotos = normalizePhotoArray(r.listing_photos || r.photos);
   return r.primary_photo || r.primary_photo_url || r.image_url || r.photo || r.thumbnail || (listingPhotos.length ? listingPhotos[0] : null) || PLACEHOLDER_IMAGE;
 }
 
@@ -560,11 +482,14 @@ function renderExitStrategySection(r){
   return `
     <div class="dfv4-exit-grid">
       ${r.exit_strategy_cards.map(card => {
-        const isBest = r.best_exit_strategy === card.label;
+        const cardKey = String(card.key || card.label || "").toLowerCase();
+        const bestKey = String(r.best_exit_strategy || "").toLowerCase();
+        const isBest = bestKey === cardKey;
+
         const label = card.headline_label || "Signal";
         const value =
           card.headline_value !== null && card.headline_value !== undefined
-            ? (label.toLowerCase().includes("profit") || label.toLowerCase().includes("flow")
+            ? (label.toLowerCase().includes("profit") || label.toLowerCase().includes("flow") || label.toLowerCase().includes("upside")
                 ? money(card.headline_value)
                 : prettyNumber(card.headline_value))
             : "—";
@@ -618,17 +543,18 @@ function renderCards(results){
     const score = Number(r.deal_score);
     const tier = r.opportunity_tier || "moderate";
     const signal = r.deal_finder_signal;
-    const architectError = r.architect_error;
     const statusText = resolveStatusText(r, signal);
     const sqftText = prettyNumber(r.square_feet || r.sqft);
     const lotText = compactNumberText(r.lot_size_sqft, "sq ft lot");
     const description = shortText(r.description, 160);
     const lastSaleDate = compactDate(r.last_sale_date);
     const strategyTag = safeText(r.strategy_tag || r.recommended_strategy || signalLabel(signal));
-    const bestUse = safeText(r.estimated_best_use || r.best_use || "Review the highest and best use in Project Studio.");
+    const bestUse = safeText(r.estimated_best_use || r.best_use || "Review the highest and best use in Deal Workspace.");
     const roughUpside = safeText(r.rough_upside || "Upside depends on deeper review.");
+    const classification = classificationLabel(r.property_classification);
 
     const facts = [
+      {label: "Classification", value: classification},
       {label: "Strategy Tag", value: strategyTag},
       {label: "Rough Upside", value: roughUpside},
       {label: "Best Use", value: bestUse},
@@ -637,6 +563,9 @@ function renderCards(results){
       {label: "Lot", value: lotText},
       {label: "Last Sale", value: numOrNull(r.last_sale_price) !== null ? `${money(r.last_sale_price)}${lastSaleDate ? ` · ${lastSaleDate}` : ""}` : "—"}
     ].filter(item => item.value && item.value !== "—");
+
+    const aiRecommendation = r.ai_recommendation || {};
+    const aiWhy = Array.isArray(aiRecommendation.why) ? aiRecommendation.why.slice(0, 3) : [];
 
     return `
       <article class="ravlo-card pad dfv4-card">
@@ -670,6 +599,7 @@ function renderCards(results){
 
           <div class="dfv4-chip-row">
             <span class="dfv4-chip">${escapeHtml(safeText(r.property_type || "Property"))}</span>
+            <span class="dfv4-chip">${escapeHtml(classification)}</span>
             <span class="dfv4-chip">${escapeHtml(safeText(r.beds))} bd</span>
             <span class="dfv4-chip">${escapeHtml(safeText(r.baths))} ba</span>
             <span class="dfv4-chip">${escapeHtml(sqftText)} sqft</span>
@@ -699,7 +629,7 @@ function renderCards(results){
             <div><span>Rent Est.</span><strong>${escapeHtml(money(r.monthly_rent_estimate || r.traditional_rent))}${numOrNull(r.monthly_rent_estimate || r.traditional_rent) !== null ? '/mo' : ''}</strong></div>
             <div><span>Days on Market</span><strong>${escapeHtml(safeText(r.days_on_market))}</strong></div>
             <div><span>Comp Confidence</span><strong>${escapeHtml(safeText(r.comp_confidence))}</strong></div>
-            <div><span>Next Move</span><strong>${escapeHtml(safeText(r.next_step_engine || 'Plan in Project Studio'))}</strong></div>
+            <div><span>Next Move</span><strong>${escapeHtml(safeText(r.next_step_engine || r.next_step || 'Analyze in Deal Workspace'))}</strong></div>
           </div>
 
           <div class="dfv4-ai-snippet">
@@ -707,8 +637,16 @@ function renderCards(results){
             <ul class="dfv4-thesis-list">
               ${reasons.map(reason => `<li>${escapeHtml(reason)}</li>`).join('')}
             </ul>
-            ${architectError ? `<div class="dfv4-engine-warning">${escapeHtml(architectError)}</div>` : ''}
           </div>
+
+          ${aiWhy.length ? `
+            <div class="dfv4-ai-snippet">
+              <strong>AI recommendation</strong>
+              <ul class="dfv4-thesis-list">
+                ${aiWhy.map(reason => `<li>${escapeHtml(reason)}</li>`).join('')}
+              </ul>
+            </div>
+          ` : ""}
 
           <div class="dfv4-ai-snippet">
             <strong>Risk notes</strong>
@@ -718,9 +656,12 @@ function renderCards(results){
           </div>
 
           <div class="dfv4-actions">
-            <button class="ravlo-btn ghost sm" type="button" onclick='viewDetails(JSON.parse(decodeURIComponent("${encoded}")))'>View Details</button>
-            <button id="${saveId}" class="ravlo-btn ghost sm" type="button" onclick='saveOnly(JSON.parse(decodeURIComponent("${encoded}")))'>Save</button>
-            <button id="${analyzeId}" class="ravlo-btn primary sm" type="button" onclick='planThisDeal(JSON.parse(decodeURIComponent("${encoded}")))'>Plan This Deal</button>
+            <button class="ravlo-btn ghost sm" type="button" onclick='viewDetails(JSON.parse(decodeURIComponent("${encoded}")))'>
+              View Details
+            </button>
+            <button id="${analyzeId}" class="ravlo-btn primary sm" type="button" onclick='saveAndAnalyze(JSON.parse(decodeURIComponent("${encoded}")))'>
+              Save & Analyze
+            </button>
           </div>
         </div>
       </article>
@@ -736,9 +677,27 @@ async function viewDetails(item){
       credentials: "include",
       body: JSON.stringify(item)
     });
+
     const data = await resp.json();
-    if (data.status !== "ok") return alert(data.message || "Could not open property details.");
-    if (data.detail_url) window.location.href = data.detail_url;
+    if (data.status !== "ok") {
+      alert(data.message || "Could not open property details.");
+      return;
+    }
+
+    const detail = data.property || {};
+    const valuation = data.valuation || {};
+    const rent = data.rent_estimate || {};
+
+    const lines = [
+      `Address: ${detail.address || item.address || "—"}`,
+      `Beds/Baths: ${detail.beds || item.beds || "—"} / ${detail.baths || item.baths || "—"}`,
+      `Sq Ft: ${detail.square_feet || detail.sqft || item.square_feet || item.sqft || "—"}`,
+      `Market Value: ${money(valuation.market_value)}`,
+      `Assessed Value: ${money(valuation.assessed_value)}`,
+      `Estimated Rent: ${money(rent.traditional_rent || rent.monthly_rent_estimate)}`
+    ];
+
+    alert(lines.join("\n"));
   } catch (e) {
     console.error(e);
     alert("Network error while opening property details.");
@@ -787,17 +746,20 @@ async function saveOnly(item){
   }
 }
 
-async function planThisDeal(item){
+async function saveAndAnalyze(item){
   const btn = document.getElementById(item._btnId);
   if (btn){
     btn.disabled = true;
-    btn.innerText = "Opening...";
+    btn.innerText = "Saving...";
   }
 
   try{
     const resp = await fetch(SAVE_AND_ANALYZE_URL, {
       method: "POST",
-      headers: {"Content-Type":"application/json", "X-CSRFToken": csrfToken},
+      headers: {
+        "Content-Type":"application/json",
+        "X-CSRFToken": csrfToken
+      },
       credentials: "include",
       body: JSON.stringify(item)
     });
@@ -805,30 +767,31 @@ async function planThisDeal(item){
     const data = await resp.json();
 
     if (data.status !== "ok") {
-      alert(data.message || "Could not create deal.");
+      alert(data.message || "Could not save and analyze this property.");
       if (btn){
         btn.disabled = false;
-        btn.innerText = "Plan This Deal";
+        btn.innerText = "Save & Analyze";
       }
       return;
     }
 
-    if (data.deal_url) {
-      window.location.href = data.deal_url;
+    if (data.redirect_url) {
+      window.location.href = data.redirect_url;
       return;
     }
 
-    alert("Deal created, but no destination URL was returned.");
-    if (btn){
-      btn.disabled = false;
-      btn.innerText = "Plan This Deal";
+    if (data.saved_property_id) {
+      window.location.href = `${DEAL_WORKSPACE_URL}?prop_id=${data.saved_property_id}`;
+      return;
     }
+
+    window.location.href = DEAL_WORKSPACE_URL;
   } catch (e) {
     console.error(e);
-    alert("Network error while opening deal.");
+    alert("Network error while saving and analyzing.");
     if (btn){
       btn.disabled = false;
-      btn.innerText = "Plan This Deal";
+      btn.innerText = "Save & Analyze";
     }
   }
 }
@@ -852,7 +815,7 @@ async function runSearch(){
 
   status.innerText = "Searching the market for opportunity candidates...";
   resultsSummary.style.display = "none";
-  renderEmpty("Ranking opportunities", "Pulling listing data, pricing signals, and best-use clues so Ravlo can return a focused top four.");
+  renderEmpty("Ranking opportunities", "Pulling listing data, pricing signals, and best-use clues so Ravlo can return a focused top set.");
 
   try {
     const resp = await fetch("{{ url_for('investor.api_property_tool_search') }}", {
@@ -869,7 +832,6 @@ async function runSearch(){
       return;
     }
 
-    status.innerText = "Packaging the strongest opportunities for review...";
     const enriched = data.results || [];
     const engineReady = Boolean(data.engine_ready) || enriched.some(x => Number.isFinite(Number(x.deal_score)));
 
@@ -936,7 +898,7 @@ async function runSearch(){
 .dfv4-fact{padding:.7rem .75rem;border-radius:12px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08)}
 .dfv4-fact span{display:block;color:var(--muted);margin-bottom:.18rem;font-size:.73rem;text-transform:uppercase;letter-spacing:.04em}
 .dfv4-fact strong{color:var(--text);font-size:.86rem;line-height:1.45}
-.dfv4-exit-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.6rem;margin-top:.1rem}
+.dfv4-exit-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.6rem;margin-top:.1rem}
 .dfv4-exit-card{padding:.7rem .75rem;border-radius:12px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);display:flex;flex-direction:column;gap:.2rem;transition:all .2s ease}
 .dfv4-exit-card.best{background:rgba(37,99,235,.15);border-color:rgba(96,165,250,.35);box-shadow:0 0 0 1px rgba(96,165,250,.2) inset}
 .dfv4-exit-title{font-size:.72rem;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);font-weight:800}
@@ -950,7 +912,6 @@ async function runSearch(){
 .dfv4-engine-grid strong{color:var(--text);font-size:.92rem}
 .dfv4-ai-snippet{padding:.8rem .9rem;border-radius:12px;background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.08);color:var(--muted);font-size:.82rem;line-height:1.55}
 .dfv4-thesis-list{margin:.45rem 0 0 1rem;padding:0}
-.dfv4-engine-warning{margin-top:.5rem;color:#fca5a5;font-size:.78rem}
 .dfv4-actions{display:flex;gap:.5rem;flex-wrap:wrap}
 .dfv4-empty{min-height:240px;display:flex;flex-direction:column;justify-content:center;align-items:flex-start;border:1px dashed rgba(255,255,255,.12);background:rgba(255,255,255,.02)}
 @media (max-width:1200px){.dfv4-shell{grid-template-columns:1fr}.dfv4-search-panel{position:relative;top:0}}
@@ -958,24 +919,3 @@ async function runSearch(){
 @media (max-width:640px){.dfv4-form-grid,.dfv4-engine-grid,.dfv4-summary-metrics,.dfv4-fact-grid{grid-template-columns:1fr}}
 </style>
 {% endblock %}
-
-{#
-Notes:
-1) buildPropertyPayload now includes:
-   - image_url
-   - listing_photos
-2) saveOnly and planThisDeal now send those photos to the backend.
-3) Backend can upload them to DigitalOcean Spaces and store:
-   - SavedProperty.image_url
-   - SavedProperty.listing_photos_json
-   - Deal.results_json["listing_photos"]
-4) This template expects each property result to optionally include:
-   - exit_strategy_cards: [{label, headline_value, headline_label, summary, key, metrics}]
-   - best_exit_strategy
-   - best_exit_reason
-
-Recommended route behavior:
-- /api/property_tool_save_and_analyze should create/update a real Deal
-- return /deal_workspace/<deal_id>
-- deal_open() should also redirect with deal_id instead of prop_id
-#}
