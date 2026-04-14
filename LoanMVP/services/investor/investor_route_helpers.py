@@ -1,7 +1,14 @@
 from __future__ import annotations
 
-from typing import Dict, Any, List
+import json
+import math
+import random
+from typing import Dict, Any, List, Optional
 
+
+# -------------------------------------------------------------------
+# BASIC SAFETY / NORMALIZATION
+# -------------------------------------------------------------------
 
 def safe_float(x, default=0.0):
     try:
@@ -43,26 +50,21 @@ def to_float(value, default=0.0):
         return float(default)
 
 
-def normalize_workspace_comps(raw_comps):
-    normalized = []
+def _safe_first_related(items, default=None):
+    try:
+        return items[0] if items else default
+    except Exception:
+        return default
 
-    for comp in raw_comps or []:
-        if not isinstance(comp, dict):
-            continue
 
-        normalized.append({
-            "address": comp.get("address") or comp.get("formatted_address"),
-            "price": to_float(comp.get("price") or comp.get("sale_price") or comp.get("list_price")),
-            "sqft": to_float(comp.get("sqft") or comp.get("square_feet")),
-            "beds": to_float(comp.get("beds") or comp.get("bedrooms")),
-            "baths": to_float(comp.get("baths") or comp.get("bathrooms")),
-            "distance_miles": to_float(comp.get("distance_miles") or comp.get("distance")),
-            "months_ago": to_float(comp.get("months_ago") or comp.get("sold_months_ago")),
-            "source": comp.get("source"),
-        })
+def _set_if_attr(obj, attr_name, value):
+    if hasattr(obj, attr_name):
+        setattr(obj, attr_name, value)
 
-    return normalized
 
+# -------------------------------------------------------------------
+# ASSET TYPE + DEAL FINDER HELPERS
+# -------------------------------------------------------------------
 
 def _normalize_asset_type(asset_type: str | None) -> str:
     value = safe_str(asset_type, "any").lower()
@@ -143,6 +145,81 @@ def _property_matches_asset_type(item: Dict[str, Any], asset_type: str | None) -
 
     return True
 
+
+def _annotate_deal_finder_opportunity(result: Dict[str, Any], strategy: str = "flip") -> Dict[str, Any]:
+    result = dict(result or {})
+    best_exit = result.get("best_exit_strategy") or strategy or "flip"
+
+    score = safe_float(result.get("deal_score"), 50)
+    result["deal_score"] = score
+
+    if score >= 72:
+        result["opportunity_tier"] = result.get("opportunity_tier") or "strong"
+        result["deal_finder_signal"] = result.get("deal_finder_signal") or "advance_to_lender_package"
+    elif score >= 48:
+        result["opportunity_tier"] = result.get("opportunity_tier") or "moderate"
+        result["deal_finder_signal"] = result.get("deal_finder_signal") or "validate_zoning_and_pricing"
+    else:
+        result["opportunity_tier"] = result.get("opportunity_tier") or "risk"
+        result["deal_finder_signal"] = result.get("deal_finder_signal") or "retrade_or_pass"
+
+    if best_exit == "rental":
+        result["strategy_tag"] = result.get("strategy_tag") or "Hold Candidate"
+        result["recommended_strategy"] = result.get("recommended_strategy") or "rental"
+        result["estimated_best_use"] = result.get("estimated_best_use") or "Long-term rental hold"
+    elif best_exit == "airbnb":
+        result["strategy_tag"] = result.get("strategy_tag") or "STR Candidate"
+        result["recommended_strategy"] = result.get("recommended_strategy") or "airbnb"
+        result["estimated_best_use"] = result.get("estimated_best_use") or "Short-term rental operation"
+    elif best_exit == "land":
+        result["strategy_tag"] = result.get("strategy_tag") or "Land Optionality"
+        result["recommended_strategy"] = result.get("recommended_strategy") or "land"
+        result["estimated_best_use"] = result.get("estimated_best_use") or "Land bank or build strategy"
+    else:
+        result["strategy_tag"] = result.get("strategy_tag") or "Flip Candidate"
+        result["recommended_strategy"] = result.get("recommended_strategy") or "flip"
+        result["estimated_best_use"] = result.get("estimated_best_use") or "Fix and flip reposition"
+
+    result["next_step"] = result.get("next_step") or (
+        "Move this into Project Studio and underwrite the plan."
+        if score >= 72
+        else "Validate comps, scope, and pricing before planning."
+    )
+
+    result["primary_strengths"] = result.get("primary_strengths") or result.get("why_it_made_list") or []
+    result["primary_risks"] = result.get("primary_risks") or result.get("risk_notes") or []
+
+    return result
+
+
+# -------------------------------------------------------------------
+# COMPS + WORKSPACE NORMALIZATION
+# -------------------------------------------------------------------
+
+def normalize_workspace_comps(raw_comps):
+    normalized = []
+
+    for comp in raw_comps or []:
+        if not isinstance(comp, dict):
+            continue
+
+        normalized.append({
+            "address": comp.get("address") or comp.get("formatted_address"),
+            "price": to_float(comp.get("price") or comp.get("sale_price") or comp.get("list_price")),
+            "sqft": to_float(comp.get("sqft") or comp.get("square_feet")),
+            "beds": to_float(comp.get("beds") or comp.get("bedrooms")),
+            "baths": to_float(comp.get("baths") or comp.get("bathrooms")),
+            "distance_miles": to_float(comp.get("distance_miles") or comp.get("distance")),
+            "months_ago": to_float(comp.get("months_ago") or comp.get("sold_months_ago")),
+            "source": comp.get("source"),
+        })
+
+    return normalized
+
+
+# -------------------------------------------------------------------
+# STRATEGY / BUDGET CALCS
+# -------------------------------------------------------------------
 
 def _get_prop_sqft(comps: Dict[str, Any]) -> int:
     return safe_int((comps.get("property") or {}).get("sqft"), 0)
@@ -605,6 +682,10 @@ Recommended strategy: {recommendation}.
 """.strip()
 
 
+# -------------------------------------------------------------------
+# WORKSPACE-SPECIFIC ANALYSIS
+# -------------------------------------------------------------------
+
 def build_workspace_exit_comparison(
     selected_prop,
     deal,
@@ -745,10 +826,15 @@ def build_exit_strategy_analysis(
     else:
         property_classification = "general_opportunity"
 
+    purchase_price_for_airbnb = max(
+        to_float((deal.purchase_price if deal else None) or workspace_analysis.get("purchase_price") or getattr(selected_prop, "price", 1)),
+        1,
+    )
+
     strategy_scores = {
         "flip": max(flip_roi, 0) + (10 if flip_profit > 0 else 0),
         "rental": max(rental_cap, 0) + (8 if rental_cashflow > 0 else 0),
-        "airbnb": max((airbnb_net * 12) / max(to_float((deal.purchase_price if deal else None) or workspace_analysis.get("purchase_price") or getattr(selected_prop, "price", 1)), 1) * 100, 0),
+        "airbnb": max((airbnb_net * 12) / purchase_price_for_airbnb * 100, 0),
         "land": land_score if property_classification == "land" else max(land_score - 25, 0),
     }
 
@@ -765,22 +851,22 @@ def build_exit_strategy_analysis(
         "flip": [
             "Projected flip margin is competitive.",
             "ARV appears to support a resale thesis.",
-            "This looks more like a value-add than a stabilized hold."
+            "This looks more like a value-add than a stabilized hold.",
         ],
         "rental": [
             "Rent support is present.",
             "The hold profile looks more stable than the resale spread.",
-            "This asset appears to fit a long-term residential strategy."
+            "This asset appears to fit a long-term residential strategy.",
         ],
         "airbnb": [
             "Short-term revenue appears stronger than long-term rent.",
             "Hospitality-style upside may justify deeper underwriting.",
-            "The property may support a higher-revenue furnished strategy."
+            "The property may support a higher-revenue furnished strategy.",
         ],
         "land": [
             "The asset reads more like land or optionality than a conventional income property.",
             "Structure data is limited relative to site size or parcel value.",
-            "A build or hold thesis may be stronger than a standard buy-and-hold."
+            "A build or hold thesis may be stronger than a standard buy-and-hold.",
         ],
     }
 
@@ -855,47 +941,201 @@ def build_exit_strategy_analysis(
     }
 
 
-def _annotate_deal_finder_opportunity(result: Dict[str, Any], strategy: str = "flip") -> Dict[str, Any]:
-    result = dict(result or {})
-    best_exit = result.get("best_exit_strategy") or strategy or "flip"
+# -------------------------------------------------------------------
+# BUDGET / LOAN SIZING
+# -------------------------------------------------------------------
 
-    score = safe_float(result.get("deal_score"), 50)
-    result["deal_score"] = score
+def _build_budget_seed_from_results(results_json: Dict[str, Any]) -> Dict[str, Any]:
+    results = results_json or {}
+    workspace = results.get("workspace_analysis", {}) or {}
+    comp_analysis = results.get("comp_analysis", {}) or {}
+    rehab_analysis = results.get("rehab_analysis", {}) or {}
+    strategy_analysis = results.get("strategy_analysis", {}) or {}
+    exit_analysis = results.get("exit_strategy_analysis", {}) or {}
 
-    if score >= 72:
-        result["opportunity_tier"] = result.get("opportunity_tier") or "strong"
-        result["deal_finder_signal"] = result.get("deal_finder_signal") or "advance_to_lender_package"
-    elif score >= 48:
-        result["opportunity_tier"] = result.get("opportunity_tier") or "moderate"
-        result["deal_finder_signal"] = result.get("deal_finder_signal") or "validate_zoning_and_pricing"
-    else:
-        result["opportunity_tier"] = result.get("opportunity_tier") or "risk"
-        result["deal_finder_signal"] = result.get("deal_finder_signal") or "retrade_or_pass"
-
-    if best_exit == "rental":
-        result["strategy_tag"] = result.get("strategy_tag") or "Hold Candidate"
-        result["recommended_strategy"] = result.get("recommended_strategy") or "rental"
-        result["estimated_best_use"] = result.get("estimated_best_use") or "Long-term rental hold"
-    elif best_exit == "airbnb":
-        result["strategy_tag"] = result.get("strategy_tag") or "STR Candidate"
-        result["recommended_strategy"] = result.get("recommended_strategy") or "airbnb"
-        result["estimated_best_use"] = result.get("estimated_best_use") or "Short-term rental operation"
-    elif best_exit == "land":
-        result["strategy_tag"] = result.get("strategy_tag") or "Land Optionality"
-        result["recommended_strategy"] = result.get("recommended_strategy") or "land"
-        result["estimated_best_use"] = result.get("estimated_best_use") or "Land bank or build strategy"
-    else:
-        result["strategy_tag"] = result.get("strategy_tag") or "Flip Candidate"
-        result["recommended_strategy"] = result.get("recommended_strategy") or "flip"
-        result["estimated_best_use"] = result.get("estimated_best_use") or "Fix and flip reposition"
-
-    result["next_step"] = result.get("next_step") or (
-        "Move this into Project Studio and underwrite the plan."
-        if score >= 72
-        else "Validate comps, scope, and pricing before planning."
+    purchase_price = to_float(
+        workspace.get("purchase_price")
+        or results.get("purchase_price")
+        or comp_analysis.get("purchase_price")
+    )
+    rehab_cost = to_float(
+        rehab_analysis.get("total")
+        or workspace.get("rehab_cost")
+        or results.get("rehab_cost")
+    )
+    arv = to_float(
+        workspace.get("arv")
+        or comp_analysis.get("arv_estimate")
+        or results.get("arv")
+    )
+    estimated_rent = to_float(
+        workspace.get("estimated_rent")
+        or workspace.get("monthly_rent")
+        or results.get("estimated_rent")
     )
 
-    result["primary_strengths"] = result.get("primary_strengths") or result.get("why_it_made_list") or []
-    result["primary_risks"] = result.get("primary_risks") or result.get("risk_notes") or []
+    total_project_cost = purchase_price + rehab_cost
+    contingency = rehab_cost * 0.1 if rehab_cost > 0 else 0.0
 
-    return result
+    return {
+        "purchase_price": purchase_price,
+        "rehab_cost": rehab_cost,
+        "contingency": contingency,
+        "total_project_cost": total_project_cost + contingency,
+        "arv": arv,
+        "estimated_rent": estimated_rent,
+        "recommended_strategy": (
+            exit_analysis.get("best_exit_strategy")
+            or strategy_analysis.get("recommended_strategy")
+            or workspace.get("selected_strategy")
+            or "flip"
+        ),
+        "property_classification": exit_analysis.get("property_classification"),
+        "budget_line_items": rehab_analysis.get("line_items", {}),
+    }
+
+
+def _build_loan_sizing_from_budget(seed: Dict[str, Any]) -> Dict[str, Any]:
+    seed = seed or {}
+
+    purchase_price = to_float(seed.get("purchase_price"))
+    rehab_cost = to_float(seed.get("rehab_cost"))
+    contingency = to_float(seed.get("contingency"))
+    total_cost = to_float(seed.get("total_project_cost")) or (purchase_price + rehab_cost + contingency)
+    arv = to_float(seed.get("arv"))
+
+    ltc_limit = total_cost * 0.85
+    arv_limit = arv * 0.70 if arv > 0 else 0.0
+    recommended_loan = min(x for x in [ltc_limit, arv_limit] if x > 0) if any(x > 0 for x in [ltc_limit, arv_limit]) else ltc_limit
+
+    return {
+        "purchase_price": purchase_price,
+        "rehab_cost": rehab_cost,
+        "contingency": contingency,
+        "total_cost": total_cost,
+        "arv": arv,
+        "max_loan_ltc": ltc_limit,
+        "max_loan_arv": arv_limit,
+        "recommended_loan_amount": recommended_loan,
+        "estimated_cash_required": max(total_cost - recommended_loan, 0),
+    }
+
+
+# -------------------------------------------------------------------
+# MASHVISOR / ATTOM / PARTNER FALLBACK SHIMS
+# -------------------------------------------------------------------
+
+def _build_mashvisor_insight(data: Dict[str, Any] | None) -> Dict[str, Any]:
+    data = data or {}
+    return {
+        "traditional_roi": to_float(data.get("traditional_roi")),
+        "traditional_cap_rate": to_float(data.get("traditional_cap_rate")),
+        "airbnb_roi": to_float(data.get("airbnb_roi")),
+        "airbnb_cap_rate": to_float(data.get("airbnb_cap_rate")),
+        "traditional_rent": to_float(data.get("traditional_rent")),
+        "airbnb_rent": to_float(data.get("airbnb_rent")),
+        "occupancy_rate": to_float(data.get("occupancy_rate")),
+        "confidence": data.get("confidence"),
+        "source": "mashvisor" if data else None,
+    }
+
+
+def _build_attom_fallback(data: Dict[str, Any] | None = None) -> Dict[str, Any]:
+    data = data or {}
+    return {
+        "market_value": to_float(data.get("market_value")),
+        "assessed_value": to_float(data.get("assessed_value")),
+        "last_sale_price": to_float(data.get("last_sale_price")),
+        "last_sale_date": data.get("last_sale_date"),
+        "beds": to_float(data.get("beds")),
+        "baths": to_float(data.get("baths")),
+        "sqft": to_float(data.get("sqft")),
+        "lot_sqft": to_float(data.get("lot_sqft")),
+        "year_built": safe_int(data.get("year_built")),
+        "property_type": data.get("property_type"),
+        "source": "attom",
+    }
+
+
+def search_external_partners_google(*args, **kwargs):
+    return []
+
+
+# -------------------------------------------------------------------
+# DEAL / REHAB / RENDER PLACEHOLDERS
+# -------------------------------------------------------------------
+
+def _deal_render_lock_active(deal) -> bool:
+    return bool(getattr(deal, "render_processing", False))
+
+
+def _set_deal_render_processing(deal, value: bool = True):
+    _set_if_attr(deal, "render_processing", bool(value))
+
+
+def _clear_deal_render_processing(deal):
+    _set_if_attr(deal, "render_processing", False)
+
+
+def _stable_render_seed(deal_id: int | None = None, variant: str | None = None) -> int:
+    base = safe_int(deal_id, 0)
+    extra = sum(ord(c) for c in safe_str(variant))
+    return base + extra or random.randint(1000, 999999)
+
+
+def _normalize_style_preset(style: str | None) -> str:
+    value = safe_str(style, "modern")
+    return value.lower().replace(" ", "_")
+
+
+def _featured_rehab_data(deal) -> Dict[str, Any]:
+    results = getattr(deal, "results_json", {}) or {}
+    featured = results.get("featured_rehab", {}) or {}
+    return {
+        "before_url": featured.get("before_url"),
+        "after_url": featured.get("after_url"),
+        "style_preset": featured.get("style_preset"),
+    }
+
+
+def _save_before_url_to_deal(deal, before_url: str | None):
+    results = getattr(deal, "results_json", {}) or {}
+    featured = results.get("featured_rehab", {}) or {}
+    featured["before_url"] = before_url
+    results["featured_rehab"] = featured
+    _set_if_attr(deal, "results_json", results)
+
+
+def _save_mockups_for_deal(deal, mockups: List[Dict[str, Any]] | None):
+    results = getattr(deal, "results_json", {}) or {}
+    results["mockups"] = mockups or []
+    _set_if_attr(deal, "results_json", results)
+
+
+def _set_featured_rehab(deal, after_url: str | None, before_url: str | None = None, style_preset: str | None = None):
+    results = getattr(deal, "results_json", {}) or {}
+    results["featured_rehab"] = {
+        "after_url": after_url,
+        "before_url": before_url,
+        "style_preset": style_preset,
+    }
+    _set_if_attr(deal, "results_json", results)
+
+
+def _get_rehab_mockups_for_deal(deal) -> List[Dict[str, Any]]:
+    results = getattr(deal, "results_json", {}) or {}
+    return results.get("mockups", []) or []
+
+
+def _get_rehab_export_payload(deal) -> Dict[str, Any]:
+    return {
+        "deal_id": getattr(deal, "id", None),
+        "title": getattr(deal, "title", None),
+        "address": getattr(deal, "address", None),
+        "featured_rehab": _featured_rehab_data(deal),
+        "mockups": _get_rehab_mockups_for_deal(deal),
+    }
+
+
+def _get_owned_deal_or_404(queryset, deal_id: int, user_id: int):
+    return queryset.filter_by(id=deal_id, user_id=user_id).first_or_404()
