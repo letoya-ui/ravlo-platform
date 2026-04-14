@@ -714,22 +714,7 @@ Your capital, deals, and funding — in one place.
           <span class="quick-sub">Use Build Studio or Rehab Studio concepts when a deal needs design clarity</span>
         </a>
 
-        <a href="{{ url_for('investor.deals_list') }}" class="quick-card">
-          <span class="quick-title">4. Move to Execution</span>
-          <span class="quick-sub">Review saved deals, budgets, and execution status inside the workspace</span>
-        </a>
-      </div>
-    </section>
-
-    <section class="panel panel-wide">
-      <div class="section-head">
-        <div>
-          <div class="eyebrow">PIPELINE</div>
-          <h3>Recent Deals</h3>
-        </div>
-        <a href="{{ url_for('investor.deals_list') }}" class="ravlo-link-btn">View All</a>
-      </div>
-
+        
       {% if recent_deals %}
         <div class="recent-list">
           {% for deal in recent_deals %}
