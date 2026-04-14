@@ -3188,58 +3188,83 @@ def api_property_detail():
     })
 
 
-@investor_bp.route("/api/intelligence/save", methods=["POST"])
-@investor_bp.route("/api/intelligence/save", methods=["POST"])
 @investor_bp.route("/api/property_tool_save", methods=["POST"])
 @login_required
 @role_required("investor")
 def api_property_tool_save():
     payload = request.get_json(force=True) or {}
-    address = (payload.get("address") or "").strip()
-
-    if not address:
-        return jsonify({
-            "status": "error",
-            "message": "Address is required to save."
-        }), 400
-
-    ip = InvestorProfile.query.filter_by(user_id=current_user.id).first()
-    if not ip:
-        return jsonify({
-            "status": "error",
-            "message": "Profile not found."
-        }), 400
 
     try:
-        saved = _upsert_saved_property_from_payload(ip, payload)
+        investor_profile = InvestorProfile.query.filter_by(user_id=current_user.id).first()
+        if not investor_profile:
+            return jsonify({
+                "status": "error",
+                "message": "Investor profile not found."
+            }), 400
 
-        uploaded_photos = _try_upload_and_attach_listing_photos(
-            payload=payload,
-            saved_property=saved,
-            deal=None,
-        )
+        property_payload = payload.get("property") if isinstance(payload.get("property"), dict) else payload
+        if not isinstance(property_payload, dict):
+            property_payload = {}
+
+        address = (property_payload.get("address") or "").strip()
+        if not address:
+            return jsonify({
+                "status": "error",
+                "message": "Address is required."
+            }), 400
+
+        saved = _upsert_saved_property_from_payload(investor_profile, property_payload)
+
+        listing_photos = property_payload.get("listing_photos") or property_payload.get("photos") or []
+        if not isinstance(listing_photos, list):
+            listing_photos = []
+
+        image_url = property_payload.get("image_url")
+        if not image_url and listing_photos:
+            image_url = listing_photos[0]
+
+        if image_url and hasattr(saved, "image_url"):
+            saved.image_url = image_url
+
+        if listing_photos:
+            try:
+                uploaded_photos = _try_upload_and_attach_listing_photos(
+                    payload=property_payload,
+                    saved_property=saved,
+                    deal=None,
+                ) or []
+                uploaded_urls = [
+                    p.get("url") for p in uploaded_photos
+                    if isinstance(p, dict) and p.get("url")
+                ]
+                if uploaded_urls and hasattr(saved, "image_url"):
+                    saved.image_url = uploaded_urls[0]
+            except Exception as e:
+                current_app.logger.warning("Listing photo attach failed on save-only: %s", e)
 
         db.session.commit()
 
         return jsonify({
             "status": "ok",
-            "message": "Saved.",
-            "saved_id": saved.id,
-            "listing_photos_count": len(uploaded_photos),
-            "primary_photo_url": uploaded_photos[0]["url"] if uploaded_photos else getattr(saved, "image_url", None),
+            "message": "Property saved successfully.",
+            "saved_property_id": saved.id,
+            "property": {
+                "id": saved.id,
+                "address": getattr(saved, "address", None),
+                "image_url": getattr(saved, "image_url", None),
+                "city": getattr(saved, "city", None),
+                "state": getattr(saved, "state", None),
+            }
         })
 
     except Exception as e:
-        db.session.rollback()
-        current_app.logger.exception("Property Tool save failed")
+        current_app.logger.exception("property_tool_save failed")
         return jsonify({
             "status": "error",
-            "message": f"Could not save property: {e}"
+            "message": str(e),
         }), 500
 
-
-
-      
+     
 @investor_bp.route("/api/property_tool_save_and_analyze", methods=["POST"])
 @login_required
 @role_required("investor")
@@ -3265,14 +3290,8 @@ def api_property_tool_save_and_analyze():
                 "message": "Address is required."
             }), 400
 
-        # ------------------------------------------------------------
-        # 1. SAVE / UPSERT PROPERTY
-        # ------------------------------------------------------------
         saved = _upsert_saved_property_from_payload(investor_profile, property_payload)
 
-        # ------------------------------------------------------------
-        # 2. BUILD/PULL ANALYSIS INPUTS
-        # ------------------------------------------------------------
         comps = property_payload.get("comp_analysis") or {}
         if not isinstance(comps, dict):
             comps = {}
@@ -3293,9 +3312,6 @@ def api_property_tool_save_and_analyze():
         if not isinstance(strategy_analysis, dict):
             strategy_analysis = {}
 
-        # ------------------------------------------------------------
-        # 3. BUILD DEAL COMPARISON + EXIT STRATEGY ANALYSIS
-        # ------------------------------------------------------------
         comparison = build_workspace_exit_comparison(
             selected_prop=saved,
             deal=None,
@@ -3316,13 +3332,10 @@ def api_property_tool_save_and_analyze():
             "best": exit_strategy_analysis.get("best_exit_strategy")
         }
 
-        # ------------------------------------------------------------
-        # 4. CREATE OR UPDATE DEAL
-        # ------------------------------------------------------------
         existing_deal = (
             Deal.query
             .filter_by(saved_property_id=saved.id, user_id=current_user.id)
-            .order_by(Deal.updated_at.desc(), Deal.id.desc())
+            .order_by(Deal.id.desc())
             .first()
         )
 
@@ -3330,7 +3343,6 @@ def api_property_tool_save_and_analyze():
             property_payload.get("purchase_price")
             or property_payload.get("price")
             or workspace_analysis.get("purchase_price")
-            or getattr(saved, "purchase_price", None)
             or getattr(saved, "price", None)
         )
 
@@ -3338,16 +3350,14 @@ def api_property_tool_save_and_analyze():
             property_payload.get("arv")
             or workspace_analysis.get("arv")
             or property_payload.get("market_value")
-            or getattr(saved, "arv", None)
-            or getattr(saved, "market_value", None)
         )
 
         estimated_rent = safe_float(
             property_payload.get("estimated_rent")
             or property_payload.get("monthly_rent_estimate")
+            or property_payload.get("monthly_rent")
             or workspace_analysis.get("estimated_rent")
             or workspace_analysis.get("monthly_rent")
-            or getattr(saved, "monthly_rent", None)
         )
 
         rehab_cost = safe_float(
@@ -3359,6 +3369,14 @@ def api_property_tool_save_and_analyze():
         best_exit = exit_strategy_analysis.get("best_exit_strategy")
         best_reason = exit_strategy_analysis.get("best_exit_reason")
         property_classification = exit_strategy_analysis.get("property_classification")
+
+        listing_photos = property_payload.get("listing_photos") or property_payload.get("photos") or []
+        if not isinstance(listing_photos, list):
+            listing_photos = []
+
+        image_url = property_payload.get("image_url")
+        if not image_url and listing_photos:
+            image_url = listing_photos[0]
 
         inputs_json = {
             "address": address,
@@ -3385,8 +3403,8 @@ def api_property_tool_save_and_analyze():
                 "estimated_rent": estimated_rent,
                 "rehab_cost": rehab_cost,
                 "deal_score": property_payload.get("deal_score"),
-                "image_url": property_payload.get("image_url") or getattr(saved, "image_url", None),
-                "listing_photos": property_payload.get("listing_photos") or property_payload.get("photos") or [],
+                "image_url": image_url,
+                "listing_photos": listing_photos,
                 "property_type": property_payload.get("property_type") or getattr(saved, "property_type", None),
                 "square_feet": property_payload.get("square_feet") or property_payload.get("sqft") or getattr(saved, "sqft", None),
                 "beds": property_payload.get("beds"),
@@ -3450,10 +3468,6 @@ def api_property_tool_save_and_analyze():
             db.session.add(deal)
             db.session.flush()
 
-        # ------------------------------------------------------------
-        # 5. ATTACH LISTING PHOTOS
-        # ------------------------------------------------------------
-        uploaded_photos = []
         try:
             uploaded_photos = _try_upload_and_attach_listing_photos(
                 payload=property_payload,
@@ -3462,6 +3476,7 @@ def api_property_tool_save_and_analyze():
             ) or []
         except Exception as e:
             current_app.logger.warning("Listing photo attach failed: %s", e)
+            uploaded_photos = []
 
         if uploaded_photos:
             uploaded_urls = [p.get("url") for p in uploaded_photos if isinstance(p, dict) and p.get("url")]
@@ -3473,9 +3488,6 @@ def api_property_tool_save_and_analyze():
                 deal_results["workspace_analysis"] = wa
                 deal.results_json = deal_results
 
-        # ------------------------------------------------------------
-        # 6. DEAL SCORE DEFAULT
-        # ------------------------------------------------------------
         if getattr(deal, "deal_score", None) is None:
             best = exit_strategy_analysis.get("best_exit_strategy")
             if best == "rental":
@@ -3491,8 +3503,11 @@ def api_property_tool_save_and_analyze():
 
         return jsonify({
             "status": "ok",
+            "message": "Property saved and analyzed successfully.",
             "saved_property_id": saved.id,
             "deal_id": deal.id,
+            "redirect_url": url_for("investor.deal_workspace", prop_id=saved.id),
+
             "property": {
                 "id": saved.id,
                 "address": getattr(saved, "address", None),
@@ -3509,8 +3524,6 @@ def api_property_tool_save_and_analyze():
             "exit_strategy_analysis": exit_strategy_analysis,
             "comp_analysis": comps,
             "workspace_analysis": (deal.results_json or {}).get("workspace_analysis", {}),
-            "redirect_url": url_for("investor.deal_workspace", prop_id=saved.id),
-            "message": "Property saved and deal analysis created successfully.",
         })
 
     except Exception as e:
@@ -3518,7 +3531,7 @@ def api_property_tool_save_and_analyze():
         return jsonify({
             "status": "error",
             "message": str(e),
-        }), 500            
+        }), 500           
 
 @investor_bp.route("/api/intelligence/card", methods=["POST"])
 @investor_bp.route("/api/property_tool_card", methods=["POST"])
