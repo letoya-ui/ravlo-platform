@@ -35,7 +35,7 @@ class MashvisorClient:
         self.session.headers.update({
             "x-api-key": self.config.api_key,
             "Accept": "application/json",
-            "User-Agent": "YourAppName/1.0"
+            "User-Agent": "Ravlo/1.0",
         })
 
     def _build_url(self, endpoint: str) -> str:
@@ -90,6 +90,92 @@ class MashvisorClient:
                 "zip_code": zip_code,
             },
         )
+
+    def get_property_images(self, property_id: Any) -> Dict[str, Any]:
+        """
+        Fetch listing images for a Mashvisor property.
+
+        Returns:
+        {
+            "status": "success" | "error",
+            "property_id": <id>,
+            "photos": [<url>, ...],
+            "primary_photo": <url or None>,
+            "raw": <raw response>,
+            "message": <optional error message>
+        }
+        """
+        if not property_id:
+            return {
+                "status": "error",
+                "property_id": property_id,
+                "photos": [],
+                "primary_photo": None,
+                "raw": {},
+                "message": "property_id is required",
+            }
+
+        try:
+            data = self._get(f"property/{property_id}/images")
+        except Exception as e:
+            return {
+                "status": "error",
+                "property_id": property_id,
+                "photos": [],
+                "primary_photo": None,
+                "raw": {},
+                "message": str(e),
+            }
+
+        content = data.get("content") if isinstance(data, dict) else {}
+        if not isinstance(content, dict):
+            content = {}
+
+        photos = []
+
+        def _push(url: Any) -> None:
+            if not url:
+                return
+            clean = str(url).strip()
+            if not clean:
+                return
+            if clean not in photos:
+                photos.append(clean)
+
+        image_block = content.get("image")
+        if isinstance(image_block, dict):
+            _push(image_block.get("url"))
+            _push(image_block.get("image"))
+        elif isinstance(image_block, str):
+            _push(image_block)
+
+        extra_images = content.get("extra_images")
+        if isinstance(extra_images, list):
+            for img in extra_images:
+                if isinstance(img, str):
+                    _push(img)
+                elif isinstance(img, dict):
+                    _push(img.get("url"))
+                    _push(img.get("image"))
+
+        photos_block = content.get("photos")
+        if isinstance(photos_block, list):
+            for img in photos_block:
+                if isinstance(img, str):
+                    _push(img)
+                elif isinstance(img, dict):
+                    _push(img.get("url"))
+                    _push(img.get("image"))
+
+        primary_photo = photos[0] if photos else None
+
+        return {
+            "status": "success",
+            "property_id": property_id,
+            "photos": photos,
+            "primary_photo": primary_photo,
+            "raw": data,
+        }
 
     def get_airbnb_lookup(
         self,

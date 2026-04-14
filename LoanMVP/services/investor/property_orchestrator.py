@@ -237,7 +237,7 @@ class PropertyIntelligenceOrchestrator:
                 for key in ("url", "src", "href", "photo", "image", "thumbnail"):
                     if value.get(key):
                         _push(value.get(key))
-                for key in ("photos", "images", "media", "gallery"):
+                for key in ("photos", "images", "media", "gallery", "extra_images"):
                     if value.get(key):
                         _walk(value.get(key))
 
@@ -245,6 +245,34 @@ class PropertyIntelligenceOrchestrator:
             _walk(src)
 
         return out
+
+    def _extract_mashvisor_photos(
+        self,
+        normalized: Dict[str, Any],
+        raw_result: Dict[str, Any] | None = None,
+    ) -> List[str]:
+        raw_result = raw_result or {}
+        content = raw_result.get("content") if isinstance(raw_result, dict) else {}
+
+        if not isinstance(content, dict):
+            content = {}
+
+        photos = self._normalize_photo_candidates(
+            normalized.get("photos"),
+            normalized.get("images"),
+            normalized.get("image"),
+            normalized.get("extra_images"),
+            raw_result.get("photos"),
+            raw_result.get("images"),
+            raw_result.get("image"),
+            raw_result.get("extra_images"),
+            content.get("photos"),
+            content.get("images"),
+            content.get("image"),
+            content.get("extra_images"),
+        )
+
+        return photos
 
     def _classify_property(self, cp: CanonicalProperty) -> str:
         prop_type = (cp.property_type or "").lower()
@@ -693,7 +721,16 @@ class PropertyIntelligenceOrchestrator:
         property_id = (
             normalized.get("property_id")
             or normalized.get("id")
-            or ((result.get("content") or {}).get("id") if isinstance(result, dict) else None)
+            or (
+                ((result.get("property") or {}).get("content") or {}).get("id")
+                if isinstance(result, dict) and isinstance(result.get("property"), dict)
+                else None
+            )
+            or (
+                ((result.get("lookup") or {}).get("content") or {}).get("id")
+                if isinstance(result, dict) and isinstance(result.get("lookup"), dict)
+                else None
+            )
         )
 
         if property_id and hasattr(self._mashvisor, "get_property_images"):
@@ -709,13 +746,9 @@ class PropertyIntelligenceOrchestrator:
                 pass
 
         if mashvisor_photos:
-            if not cp.photos:
-                cp.photos = mashvisor_photos
-            else:
-                cp.photos = self._normalize_photo_candidates(cp.photos, mashvisor_photos)
-
-            if not cp.primary_photo and cp.photos:
-                cp.primary_photo = cp.photos[0]
+            cp.photos = self._normalize_photo_candidates(cp.photos, mashvisor_photos)
+            if cp.photos:
+                cp.primary_photo = cp.primary_photo or cp.photos[0]
 
         cp.value_sources.update({
             "airbnb_revenue": "mashvisor",
@@ -724,7 +757,7 @@ class PropertyIntelligenceOrchestrator:
         })
 
         return cp
-        
+
     def rank_candidates(self, results: List[CanonicalProperty]) -> List[CanonicalProperty]:
         ranked: List[CanonicalProperty] = []
 
@@ -876,98 +909,3 @@ class PropertyIntelligenceOrchestrator:
             },
         }
         return results, meta
-
-    def _extract_mashvisor_photos(self, normalized: Dict[str, Any], raw_result: Dict[str, Any] | None = None) -> List[str]:
-        raw_result = raw_result or {}
-
-        photos = self._normalize_photo_candidates(
-            normalized.get("photos"),
-            normalized.get("images"),
-            normalized.get("image"),
-            normalized.get("extra_images"),
-            raw_result.get("photos"),
-            raw_result.get("images"),
-            raw_result.get("image"),
-            raw_result.get("extra_images"),
-            (raw_result.get("content") or {}).get("photos"),
-            (raw_result.get("content") or {}).get("images"),
-            (raw_result.get("content") or {}).get("image"),
-            (raw_result.get("content") or {}).get("extra_images"),
-        )
-
-        return photos
-
-def get_property_images(self, property_id):
-        if not property_id:
-            return {
-                "status": "error",
-                "property_id": property_id,
-                "photos": [],
-                "primary_photo": None,
-                "raw": {},
-                "message": "property_id is required",
-            }
-
-        endpoint = f"/property/{property_id}/images"
-
-        try:
-            data = self._get(endpoint)
-        except Exception as e:
-            return {
-                "status": "error",
-                "property_id": property_id,
-                "photos": [],
-                "primary_photo": None,
-                "raw": {},
-                "message": str(e),
-            }
-
-        content = data.get("content") if isinstance(data, dict) else {}
-        if not isinstance(content, dict):
-            content = {}
-
-        photos = []
-
-        def _push(url):
-            if not url:
-                return
-            url = str(url).strip()
-            if not url:
-                return
-            if url not in photos:
-                photos.append(url)
-
-        image_block = content.get("image")
-        if isinstance(image_block, dict):
-            _push(image_block.get("url"))
-            _push(image_block.get("image"))
-        elif isinstance(image_block, str):
-            _push(image_block)
-
-        extra_images = content.get("extra_images")
-        if isinstance(extra_images, list):
-            for img in extra_images:
-                if isinstance(img, str):
-                    _push(img)
-                elif isinstance(img, dict):
-                    _push(img.get("url"))
-                    _push(img.get("image"))
-
-        photos_block = content.get("photos")
-        if isinstance(photos_block, list):
-            for img in photos_block:
-                if isinstance(img, str):
-                    _push(img)
-                elif isinstance(img, dict):
-                    _push(img.get("url"))
-                    _push(img.get("image"))
-
-        primary_photo = photos[0] if photos else None
-
-        return {
-            "status": "success",
-            "property_id": property_id,
-            "photos": photos,
-            "primary_photo": primary_photo,
-            "raw": data,
-        }
