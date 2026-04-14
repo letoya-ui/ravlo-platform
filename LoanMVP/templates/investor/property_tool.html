@@ -840,31 +840,57 @@ async function runSearch(){
     return;
   }
 
-  const payload = { address, city, state, zip, asset_type: assetType, strategy, limit: 12 };
+  const payload = {
+    address,
+    city,
+    state,
+    zip,
+    asset_type: assetType,
+    strategy,
+    limit: 12
+  };
 
   status.innerText = "Searching the market for opportunity candidates...";
   resultsSummary.style.display = "none";
-  renderEmpty("Ranking opportunities", "Pulling listing data, pricing signals, and best-use clues so Ravlo can return a focused top set.");
+  renderEmpty(
+    "Ranking opportunities",
+    "Pulling listing data, pricing signals, and best-use clues so Ravlo can return a focused top set."
+  );
 
   try {
     const resp = await fetch("{{ url_for('investor.api_property_tool_search') }}", {
       method: "POST",
-      headers: {"Content-Type":"application/json", "X-CSRFToken": csrfToken},
+      headers: {
+        "Content-Type": "application/json",
+        "X-CSRFToken": csrfToken
+      },
       credentials: "include",
       body: JSON.stringify(payload)
     });
 
     const data = await resp.json();
-    if (data.status !== "ok") {
-      status.innerText = data.message || "Search failed.";
-      renderEmpty("Search failed", data.message || "Please try another address or ZIP.");
+    console.log("Deal Finder search response:", data);
+
+    if (!resp.ok || data.status !== "ok") {
+      const msg = data.message || `Search failed (${resp.status}).`;
+      status.innerText = msg;
+      renderEmpty("Search failed", msg);
       return;
     }
 
     const enriched = data.results || [];
-    const engineReady = Boolean(data.engine_ready) || enriched.some(x => Number.isFinite(Number(x.deal_score)));
+    const engineReady =
+      Boolean(data.engine_ready) ||
+      enriched.some(x => Number.isFinite(Number(x.deal_score)));
 
-    renderSummary(data.zip, data.strategy, data.asset_type, enriched.length, engineReady, data.total_matches);
+    renderSummary(
+      data.zip,
+      data.strategy,
+      data.asset_type,
+      enriched.length,
+      engineReady,
+      data.total_matches
+    );
 
     const locationLabel = data.zip || data.address || "your search";
     status.innerText = enriched.length

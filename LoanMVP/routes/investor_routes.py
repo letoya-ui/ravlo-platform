@@ -3070,6 +3070,12 @@ def api_property_tool_search():
             "results": [],
         }), 400
 
+    raw_limit = payload.get("limit")
+    try:
+        limit = min(int(raw_limit or 12), 12)
+    except (TypeError, ValueError):
+        limit = 12
+
     try:
         orchestrator = PropertyIntelligenceOrchestrator(
             strategy=strategy,
@@ -3081,7 +3087,7 @@ def api_property_tool_search():
             city=city,
             state=state,
             zip_code=zip_code,
-            limit=min(int(payload.get("limit") or 12), 12),
+            limit=limit,
         )
 
         return jsonify({
