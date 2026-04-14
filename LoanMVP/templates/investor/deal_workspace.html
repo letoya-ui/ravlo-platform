@@ -45,12 +45,12 @@ Review a saved property, compare strategies, and move the best deal into plannin
         <input type="hidden" name="strategy" value="{{ mode | default('flip') }}">
         <input type="hidden" name="property_id" value="{{ sp.property_id if sp.property_id is defined and sp.property_id else '' }}">
         <input type="hidden" name="inputs_json" value='{{ {
-            "address": sp.address if sp.address is defined and sp.address else "",
-            "city": sp.city if sp.city is defined and sp.city else "",
-            "state": sp.state if sp.state is defined and sp.state else "",
-            "zip_code": sp.zipcode if sp.zipcode is defined and sp.zipcode else "",
-            "strategy": mode | default("flip"),
-            "purchase_price": sp.price if sp.price is defined and sp.price else 0
+            "address": sp.address|default("", true),
+            "city": sp.city|default("", true),
+            "state": sp.state|default("", true),
+            "zip_code": sp.zipcode|default("", true),
+            "strategy": mode|default("flip", true),
+            "purchase_price": sp.price|default(0, true)
         } | tojson | safe }}'>
         <button type="submit" class="ravlo-btn ghost sm">Save Deal</button>
     </form>
@@ -350,15 +350,15 @@ Review a saved property, compare strategies, and move the best deal into plannin
                     <input type="hidden" name="strategy" value="{{ mode or 'flip' }}">
                     <input type="hidden" name="property_id" value="{{ selected_prop.property_id or '' }}">
                     <input type="hidden" name="inputs_json" value='{{ {
-                        "address": selected_prop.address,
-                        "city": selected_prop.city,
-                        "state": selected_prop.state,
-                        "zip_code": selected_prop.zipcode if selected_prop.zipcode is defined else "",
-                        "strategy": mode or "flip",
-                        "purchase_price": purchase_price,
-                        "arv": arv_value,
-                        "estimated_rent": rent_value
-                    } | tojson | safe }}'>
+                        "address": selected_prop.address|default("", true),
+                        "city": selected_prop.city|default("", true),
+                        "state": selected_prop.state|default("", true),
+                        "zip_code": selected_prop.zipcode|default("", true),
+                        "strategy": mode|default("flip", true),
+                        "purchase_price": purchase_price|default(0, true),
+                        "arv": arv_value|default(0, true),
+                        "estimated_rent": rent_value|default(0, true)
+                     } | tojson | safe }}'>
                     <button type="submit" class="ravlo-btn ghost">
                         Save Deal
                     </button>
