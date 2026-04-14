@@ -6,7 +6,7 @@ from urllib.parse import urlparse
 RAPIDAPI_KEY = os.getenv("RAPIDAPI_KEY")
 RAPIDAPI_HOST = os.getenv("REALTOR_RAPIDAPI_HOST", "realtor-search.p.rapidapi.com")
 
-# Leave blank unless you have a confirmed working provider detail endpoint.
+# Leave blank unless you have a verified working detail endpoint.
 REALTOR_DETAIL_URL = os.getenv("REALTOR_RAPIDAPI_URL", "").strip()
 
 REALTOR_SEARCH_URL = os.getenv(
@@ -45,16 +45,7 @@ def _headers(include_json: bool = False, host: Optional[str] = None) -> Dict[str
     return headers
 
 
-def _safe_list(val):
-    if isinstance(val, list):
-        return val
-    return []
-
-
 def _extract_photos(raw_photos: Any) -> List[str]:
-    """
-    Normalize Realtor photo objects into a clean list of URLs.
-    """
     photos: List[str] = []
 
     if isinstance(raw_photos, list):
@@ -243,13 +234,6 @@ def search_realtor_for_sale(
 
 
 def fetch_realtor_data(address: str, city: str, state: str) -> Optional[Dict[str, Any]]:
-    """
-    Safe provider entrypoint.
-
-    Preferred flow:
-    - if a verified detail endpoint exists, try it
-    - otherwise use search fallback directly
-    """
     if not RAPIDAPI_KEY:
         return None
 
@@ -303,10 +287,6 @@ def fetch_realtor_data(address: str, city: str, state: str) -> Optional[Dict[str
         if not resp.ok:
             body = (resp.text or "")[:300]
             print("Realtor Provider error:", body)
-
-            if "does not exist" in body.lower() or resp.status_code in (404, 410, 429):
-                return _fallback_search_result()
-
             return _fallback_search_result()
 
         data = resp.json()
@@ -342,9 +322,6 @@ def fetch_realtor_data(address: str, city: str, state: str) -> Optional[Dict[str
 
 
 def fetch_realtor_photos(property_id: str | int | None) -> List[str]:
-    """
-    Use only on single-property detail pages, not bulk search result enrichment.
-    """
     if not RAPIDAPI_KEY or not property_id:
         return []
 
@@ -373,9 +350,6 @@ def fetch_realtor_photos(property_id: str | int | None) -> List[str]:
 
 
 def fetch_realtor_estimate(property_id: str | int | None) -> Dict[str, Any]:
-    """
-    Use only on single-property detail pages, not bulk search result enrichment.
-    """
     if not RAPIDAPI_KEY or not property_id:
         return {}
 
