@@ -301,6 +301,9 @@ from LoanMVP.services.investor.investor_route_helpers import (
     _set_if_attr,
     _stable_render_seed,
     search_external_partners_google,
+    normalize_workspace_comps,
+    build_workspace_exit_comparison,
+    build_exit_strategy_analysis,
 )
 
 from LoanMVP.services.mashvisor_client import MashvisorClient
