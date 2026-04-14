@@ -201,7 +201,15 @@ def _persist_property_core_fields(saved, payload):
     _assign_if_has_attr(saved, "deal_finder_signal", deal_finder_signal)
     _assign_if_has_attr(saved, "next_step", next_step)
     _assign_if_has_attr(saved, "comp_confidence", comp_confidence)
+    listing_photos = _clean_string_list(payload.get("listing_photos"))
 
+    best_image_url = None
+    if listing_photos:
+        best_image_url = listing_photos[0]
+    elif image_url:
+        best_image_url = image_url
+
+    _assign_if_has_attr(saved, "image_url", best_image_url)
     _assign_if_has_attr(saved, "image_url", image_url)
     _assign_if_has_attr(saved, "description", description)
 

@@ -440,6 +440,35 @@ function renderEmpty(title, body){
 
 function resolveImage(r){
   const listingPhotos = normalizePhotoArray(r.listing_photos || r.photos);
+
+  const candidates = [
+    ...listingPhotos,
+    r.primary_photo,
+    r.primary_photo_url,
+    r.image_url,
+    r.photo,
+    r.thumbnail
+  ].filter(Boolean);
+
+  const sorted = candidates.sort((a, b) => {
+    const score = (url) => {
+      const u = String(url || "").toLowerCase();
+      let s = 0;
+      if (u.includes("thumbnail")) s -= 50;
+      if (u.includes("small")) s -= 25;
+      if (u.includes("100x100")) s -= 40;
+      if (u.includes("150x150")) s -= 35;
+      if (u.includes("300x")) s -= 20;
+      if (u.includes("full")) s += 20;
+      if (u.includes("large")) s += 10;
+      if (u.includes("orig")) s += 15;
+      return s;
+    };
+    return score(b) - score(a);
+  });
+
+  return sorted[0] || PLACEHOLDER_IMAGE;
+}
   return r.primary_photo || r.primary_photo_url || r.image_url || r.photo || r.thumbnail || (listingPhotos.length ? listingPhotos[0] : null) || PLACEHOLDER_IMAGE;
 }
 
@@ -870,8 +899,24 @@ async function runSearch(){
 .dfv4-summary-metric strong{color:var(--text);font-size:1rem}
 .dfv4-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1rem}
 .dfv4-card{display:flex;flex-direction:column;overflow:hidden}
-.dfv4-thumb{position:relative;width:100%;height:220px;border-radius:16px;overflow:hidden;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08)}
-.dfv4-thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.dfv4-thumb{
+  position:relative;
+  width:100%;
+  height:260px;
+  border-radius:16px;
+  overflow:hidden;
+  background:rgba(255,255,255,.03);
+  border:1px solid rgba(255,255,255,.08);
+}
+
+.dfv4-thumb img{
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  object-position:center;
+  display:block;
+  image-rendering:auto;
+}
 .dfv4-thumb-top{position:absolute;top:12px;left:12px;right:12px;display:flex;justify-content:space-between;align-items:flex-start;gap:.5rem}
 .dfv4-score-badge,.dfv4-tier-badge{padding:.45rem .7rem;border-radius:999px;font-size:.78rem;font-weight:800;border:1px solid rgba(255,255,255,.12);backdrop-filter:blur(8px)}
 .dfv4-score-badge.good,.dfv4-tier-badge.good,.dfv4-opportunity-callout.good{background:rgba(44,182,125,.18);color:#d9fff0}
