@@ -16,7 +16,7 @@ from LoanMVP.services.mashvisor_client import MashvisorClient, MashvisorError
 from LoanMVP.services.mashvisor_service import normalize_mashvisor_validation
 
 # Keep using your existing route/helper logic so the UI stays aligned.
-from LoanMVP.routes.investor_routes.property_tool_helpers import (
+from LoanMVP.service.investor_route_helpers import (
     _normalize_asset_type,
     _asset_type_label,
     _property_matches_asset_type,
