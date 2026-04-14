@@ -282,7 +282,6 @@ from LoanMVP.services.investor.investor_saved_property_helpers import (
 )
 from LoanMVP.services.investor.investor_route_helpers import (
     _annotate_deal_finder_opportunity,
-    _build_attom_fallback,
     _build_budget_seed_from_results,
     _build_loan_sizing_from_budget,
     _build_mashvisor_insight,
