@@ -3827,12 +3827,15 @@ def deal_workspace():
     )
 
 @investor_bp.route("/deals", methods=["GET"])
+@investor_bp.route("/deals", methods=["GET"])
 @login_required
 @role_required("investor")
 def deals_list():
     q = (request.args.get("q") or "").strip()
     status_filter = (request.args.get("status") or "").strip().lower()
     strategy_filter = (request.args.get("strategy") or "").strip().lower()
+
+    investor_profile = InvestorProfile.query.filter_by(user_id=current_user.id).first()
 
     query = Deal.query.filter_by(user_id=current_user.id)
 
@@ -3865,16 +3868,21 @@ def deals_list():
     )
 
     budget_map = {}
-    if deals:
+    if deals and investor_profile:
         deal_ids = [d.id for d in deals]
+
         budgets = (
-            Budget.query
-            .filter(Budget.deal_id.in_(deal_ids), Budget.user_id == current_user.id)
-            .order_by(Budget.id.desc())
+            ProjectBudget.query
+            .filter(
+                ProjectBudget.investor_profile_id == investor_profile.id,
+                ProjectBudget.deal_id.in_(deal_ids)
+            )
+            .order_by(ProjectBudget.updated_at.desc(), ProjectBudget.id.desc())
             .all()
         )
+
         for b in budgets:
-            if b.deal_id not in budget_map:
+            if b.deal_id and b.deal_id not in budget_map:
                 budget_map[b.deal_id] = b
 
     return render_template(
