@@ -253,3 +253,70 @@ def _annotate_deal_finder_opportunity(result: dict, strategy: str) -> dict:
     annotated["strategy_label"] = (strategy or "hold").replace("_", " ").title()
     annotated["score_badge"] = "High Priority" if score and score >= 80 else "Review" if score and score >= 60 else "Early Look"
     return annotated
+
+def _normalize_asset_type(value: str | None) -> str:
+    """
+    Normalize UI / provider asset-type values into a stable internal key.
+    """
+    raw = (value or "").strip().lower()
+
+    if not raw:
+        return "any"
+
+    aliases = {
+        "any": "any",
+        "all": "any",
+        "all asset types": "any",
+
+        "single family": "single_family",
+        "single_family": "single_family",
+        "single-family": "single_family",
+        "sfr": "single_family",
+
+        "multifamily": "multifamily",
+        "multi family": "multifamily",
+        "multi-family": "multifamily",
+
+        "office": "office",
+        "retail": "retail",
+        "restaurant": "restaurant",
+
+        "mixed use": "mixed_use",
+        "mixed_use": "mixed_use",
+        "mixed-use": "mixed_use",
+
+        "industrial": "industrial",
+        "warehouse": "warehouse",
+        "hospitality": "hospitality",
+        "hotel": "hospitality",
+        "medical": "medical",
+
+        "land": "land",
+        "lot": "land",
+    }
+
+    return aliases.get(raw, raw.replace(" ", "_").replace("-", "_"))
+
+def _property_matches_asset_type(prop: dict, asset_type: str) -> bool:
+    normalized_filter = _normalize_asset_type(asset_type)
+    if normalized_filter == "any":
+        return True
+
+    prop_type = _normalize_asset_type(
+        prop.get("property_type")
+        or prop.get("prop_type")
+        or prop.get("type")
+        or ""
+    )
+
+    if prop_type == normalized_filter:
+        return True
+
+    # helpful loose matches
+    if normalized_filter == "multifamily" and prop_type in {"apartment", "duplex", "triplex", "quadplex"}:
+        return True
+
+    if normalized_filter == "hospitality" and prop_type in {"hotel", "motel"}:
+        return True
+
+    return False
