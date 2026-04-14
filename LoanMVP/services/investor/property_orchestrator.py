@@ -15,7 +15,6 @@ from LoanMVP.services.rentcast_service import (
 from LoanMVP.services.mashvisor_client import MashvisorClient, MashvisorError
 from LoanMVP.services.mashvisor_service import normalize_mashvisor_validation
 
-# Keep using your existing route/helper logic so the UI stays aligned.
 from LoanMVP.services.investor.investor_route_helpers import (
     _normalize_asset_type,
     _asset_type_label,
@@ -100,6 +99,12 @@ class CanonicalProperty:
     airbnb_cash_on_cash: Optional[float] = None
     occupancy_rate: Optional[float] = None
 
+    property_classification: Optional[str] = None
+    best_exit_strategy: Optional[str] = None
+    best_exit_reason: Optional[str] = None
+    ai_recommendation: Dict[str, Any] = field(default_factory=dict)
+    exit_strategy_cards: List[Dict[str, Any]] = field(default_factory=list)
+
     value_sources: Dict[str, str] = field(default_factory=dict)
     raw: Dict[str, Any] = field(default_factory=dict)
 
@@ -157,6 +162,11 @@ class CanonicalProperty:
             "airbnb_cap_rate": self.airbnb_cap_rate,
             "airbnb_cash_on_cash": self.airbnb_cash_on_cash,
             "occupancy_rate": self.occupancy_rate,
+            "property_classification": self.property_classification,
+            "best_exit_strategy": self.best_exit_strategy,
+            "best_exit_reason": self.best_exit_reason,
+            "ai_recommendation": self.ai_recommendation,
+            "exit_strategy_cards": self.exit_strategy_cards,
             "value_sources": self.value_sources,
             "raw": self.raw,
         }
@@ -236,6 +246,194 @@ class PropertyIntelligenceOrchestrator:
 
         return out
 
+    def _classify_property(self, cp: CanonicalProperty) -> str:
+        prop_type = (cp.property_type or "").lower()
+        has_structure = bool(cp.square_feet or cp.beds or cp.baths)
+        lot_size = cp.lot_size_sqft or 0
+
+        looks_like_land = any(x in prop_type for x in ["land", "lot", "vacant", "acre", "parcel"])
+        fixer_signal = bool(cp.year_built and cp.year_built < 1980)
+
+        if looks_like_land or (lot_size > 0 and not has_structure):
+            return "land"
+
+        if cp.airbnb_rent_estimate and (cp.occupancy_rate or 0) >= 0.45:
+            return "str_candidate"
+
+        if cp.monthly_rent_estimate and (cp.market_value or cp.listing_price):
+            return "rental_candidate"
+
+        if fixer_signal or (cp.assessed_value and cp.market_value and cp.assessed_value < cp.market_value):
+            return "fixer_upper"
+
+        return "general_opportunity"
+
+    def _build_exit_strategy_cards(self, cp: CanonicalProperty) -> List[Dict[str, Any]]:
+        purchase_price = self._as_float(cp.purchase_price) or self._as_float(cp.listing_price) or 0.0
+        rehab_cost = 0.0
+        arv = self._as_float(cp.arv) or self._as_float(cp.market_value) or 0.0
+        monthly_rent = self._as_float(cp.monthly_rent_estimate) or 0.0
+        airbnb_monthly = self._as_float(cp.airbnb_rent_estimate) or 0.0
+        occupancy = self._as_float(cp.occupancy_rate) or 0.0
+
+        flip_total = purchase_price + rehab_cost
+        flip_profit = (arv - (flip_total + (arv * 0.08))) if arv > 0 else 0.0
+        flip_roi = (flip_profit / flip_total * 100.0) if flip_total > 0 else 0.0
+
+        rental_expenses = monthly_rent * 0.35 if monthly_rent > 0 else 0.0
+        rental_cashflow = monthly_rent - rental_expenses
+        annual_noi = rental_cashflow * 12.0
+        rental_cap = (annual_noi / purchase_price * 100.0) if purchase_price > 0 else 0.0
+        rental_dscr = ((monthly_rent - rental_expenses) / max((purchase_price * 0.0075), 1.0)) if purchase_price > 0 else 0.0
+
+        airbnb_net = airbnb_monthly * 0.62 if airbnb_monthly > 0 else 0.0
+        airbnb_roi = ((airbnb_net * 12.0) / purchase_price * 100.0) if purchase_price > 0 else 0.0
+
+        land_score = 70.0 if self._classify_property(cp) == "land" else 20.0
+        land_upside = ((cp.market_value or 0) - purchase_price) if (cp.market_value and purchase_price) else 0.0
+
+        return [
+            {
+                "key": "flip",
+                "label": "Flip",
+                "headline_label": "Projected Profit",
+                "headline_value": flip_profit,
+                "score": flip_roi,
+                "summary": "Resale-driven value-add path.",
+                "metrics": {
+                    "purchase_price": purchase_price,
+                    "rehab_cost": rehab_cost,
+                    "arv": arv,
+                    "profit": flip_profit,
+                    "roi": flip_roi,
+                    "total_investment": flip_total,
+                },
+            },
+            {
+                "key": "rental",
+                "label": "Rental",
+                "headline_label": "Monthly Cash Flow",
+                "headline_value": rental_cashflow,
+                "score": rental_cap,
+                "summary": "Long-term hold and income path.",
+                "metrics": {
+                    "monthly_rent": monthly_rent,
+                    "net_cashflow": rental_cashflow,
+                    "annual_noi": annual_noi,
+                    "cap_rate": rental_cap,
+                    "dscr": rental_dscr,
+                },
+            },
+            {
+                "key": "airbnb",
+                "label": "Airbnb",
+                "headline_label": "Net Monthly",
+                "headline_value": airbnb_net,
+                "score": airbnb_roi,
+                "summary": "Short-term rental revenue path.",
+                "metrics": {
+                    "gross_monthly": airbnb_monthly,
+                    "net_monthly": airbnb_net,
+                    "occupancy_rate": occupancy,
+                    "annualized_roi": airbnb_roi,
+                },
+            },
+            {
+                "key": "land",
+                "label": "Land / Build",
+                "headline_label": "Optionality Score",
+                "headline_value": land_score,
+                "score": land_score,
+                "summary": "Land optionality or build-out path.",
+                "metrics": {
+                    "land_value": purchase_price,
+                    "projected_upside": land_upside,
+                    "score": land_score,
+                    "lot_size_sqft": cp.lot_size_sqft,
+                },
+            },
+        ]
+
+    def _recommend_exit_strategy(self, cp: CanonicalProperty) -> CanonicalProperty:
+        cards = self._build_exit_strategy_cards(cp)
+        property_classification = self._classify_property(cp)
+
+        scores = {card["key"]: self._as_float(card.get("score")) or 0.0 for card in cards}
+
+        if property_classification == "land":
+            scores["land"] += 20
+            scores["flip"] -= 20
+            scores["rental"] -= 20
+            scores["airbnb"] -= 20
+        elif property_classification == "fixer_upper":
+            scores["flip"] += 10
+        elif property_classification == "rental_candidate":
+            scores["rental"] += 10
+        elif property_classification == "str_candidate":
+            scores["airbnb"] += 10
+
+        best = max(scores, key=scores.get) if scores else "flip"
+
+        reasons = {
+            "flip": "Flip shows the strongest spread between basis and resale value.",
+            "rental": "Rental shows the strongest risk-adjusted hold profile with recurring income support.",
+            "airbnb": "Short-term rental shows the strongest revenue upside under current assumptions.",
+            "land": "This opportunity reads more like land optionality or a build-oriented play than a standard residential hold.",
+        }
+
+        why_map = {
+            "flip": [
+                "Projected resale spread is competitive.",
+                "This looks more like a value-add execution path than a stabilized hold.",
+                "Current value signals support a resale thesis.",
+            ],
+            "rental": [
+                "Long-term rent support is present.",
+                "The hold profile appears more stable than the resale spread.",
+                "This asset fits a recurring-income strategy.",
+            ],
+            "airbnb": [
+                "Short-term revenue appears stronger than long-term rent.",
+                "Hospitality upside may justify deeper underwriting.",
+                "Revenue concentration is stronger under an STR path.",
+            ],
+            "land": [
+                "Lot and site profile matter more than in-place operations.",
+                "This appears better suited to land optionality or build-out.",
+                "Traditional residential income assumptions are weaker here.",
+            ],
+        }
+
+        watch_map = {
+            "flip": [
+                "Verify rehab scope and resale timeline.",
+                "Stress-test ARV against conservative comps.",
+            ],
+            "rental": [
+                "Confirm taxes, insurance, and maintenance assumptions.",
+                "Validate rent support with fresh comps.",
+            ],
+            "airbnb": [
+                "Validate STR regulations and seasonality.",
+                "Pressure-test occupancy and nightly assumptions.",
+            ],
+            "land": [
+                "Verify zoning and entitlement path.",
+                "Confirm utility access and frontage.",
+            ],
+        }
+
+        cp.property_classification = property_classification
+        cp.best_exit_strategy = best
+        cp.best_exit_reason = reasons[best]
+        cp.exit_strategy_cards = cards
+        cp.ai_recommendation = {
+            "confidence": "high" if scores.get(best, 0) >= 12 else "moderate",
+            "why": why_map[best],
+            "watch_items": watch_map[best],
+        }
+        return cp
+
     def search_candidates(
         self,
         *,
@@ -310,7 +508,6 @@ class PropertyIntelligenceOrchestrator:
             cp = self._enrich_with_attom(cp)
             cp = self._enrich_with_rentcast(cp)
 
-            # Only top 2 get Mashvisor depth
             if idx < 2:
                 cp = self._enrich_with_mashvisor(cp)
 
@@ -493,6 +690,8 @@ class PropertyIntelligenceOrchestrator:
         ranked: List[CanonicalProperty] = []
 
         for idx, cp in enumerate(results):
+            cp = self._recommend_exit_strategy(cp)
+
             if idx < 4 and self.budget.use("deal_architect", 1):
                 cp = self._apply_ravlo_opinion(cp)
             else:
@@ -555,17 +754,22 @@ class PropertyIntelligenceOrchestrator:
             cp.opportunity_tier = "risk"
             cp.deal_finder_signal = "retrade_or_pass"
 
-        if self.strategy == "rental":
+        best_exit = cp.best_exit_strategy or self.strategy
+
+        if best_exit == "rental":
             cp.strategy_tag = cp.strategy_tag or "Hold Candidate"
             cp.estimated_best_use = cp.estimated_best_use or "Long-term rental hold"
-        elif self.strategy == "airbnb":
+        elif best_exit == "airbnb":
             cp.strategy_tag = cp.strategy_tag or "STR Candidate"
             cp.estimated_best_use = cp.estimated_best_use or "Short-term rental operation"
+        elif best_exit == "land":
+            cp.strategy_tag = cp.strategy_tag or "Land Optionality"
+            cp.estimated_best_use = cp.estimated_best_use or "Land bank or build-oriented strategy"
         else:
             cp.strategy_tag = cp.strategy_tag or "Flip Candidate"
             cp.estimated_best_use = cp.estimated_best_use or "Fix and flip reposition"
 
-        cp.recommended_strategy = cp.recommended_strategy or self.strategy
+        cp.recommended_strategy = cp.recommended_strategy or best_exit
         cp.next_step = cp.next_step or (
             "Move this into Project Studio and underwrite the plan."
             if cp.opportunity_tier == "strong"
