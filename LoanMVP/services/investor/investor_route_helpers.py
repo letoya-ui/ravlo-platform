@@ -344,3 +344,327 @@ def _asset_type_label(asset_type: str | None) -> str:
     }
 
     return labels.get(normalized, normalized.replace("_", " ").title())
+
+def normalize_workspace_comps(raw_comps):
+    normalized = []
+
+    for comp in raw_comps or []:
+        if not isinstance(comp, dict):
+            continue
+
+        normalized.append({
+            "address": comp.get("address") or comp.get("formatted_address"),
+            "price": to_float(comp.get("price") or comp.get("sale_price") or comp.get("list_price")),
+            "sqft": to_float(comp.get("sqft") or comp.get("square_feet")),
+            "beds": to_float(comp.get("beds") or comp.get("bedrooms")),
+            "baths": to_float(comp.get("baths") or comp.get("bathrooms")),
+            "distance_miles": to_float(comp.get("distance_miles") or comp.get("distance")),
+            "months_ago": to_float(comp.get("months_ago") or comp.get("sold_months_ago")),
+            "source": comp.get("source"),
+        })
+
+    return normalized
+
+    def build_exit_strategy_analysis(selected_prop, deal, workspace_analysis, comps, comparison):
+    property_type = (
+        workspace_analysis.get("property_type")
+        or getattr(selected_prop, "property_type", "")
+        or ""
+    ).lower()
+
+    sqft = to_float(
+        workspace_analysis.get("square_feet")
+        or getattr(selected_prop, "sqft", 0)
+        or getattr(selected_prop, "square_feet", 0)
+    )
+    beds = to_float(workspace_analysis.get("beds") or getattr(selected_prop, "beds", 0))
+    baths = to_float(workspace_analysis.get("baths") or getattr(selected_prop, "baths", 0))
+    lot_size = to_float(workspace_analysis.get("lot_size_sqft") or getattr(selected_prop, "lot_size_sqft", 0))
+
+    has_structure = bool(sqft or beds or baths)
+    looks_like_land = any(x in property_type for x in ["land", "lot", "vacant", "acre"]) or (lot_size and not has_structure)
+
+    flip = comparison.get("flip", {})
+    rental = comparison.get("rental", {})
+    airbnb = comparison.get("airbnb", {})
+    land = comparison.get("land", {})
+
+    flip_profit = to_float(flip.get("profit"))
+    flip_roi = to_float(flip.get("roi")) * 100
+    rental_cap = to_float(rental.get("cap_rate")) * 100
+    rental_cashflow = to_float(rental.get("net_cashflow"))
+    airbnb_net = to_float(airbnb.get("net_monthly"))
+    airbnb_occ = to_float(airbnb.get("occupancy_rate")) * 100
+    land_score = to_float(land.get("score"))
+
+    if looks_like_land:
+        property_classification = "land"
+    elif flip_profit > 0 and flip_roi >= 12:
+        property_classification = "fixer_upper"
+    elif airbnb_net > rental_cashflow and airbnb_occ >= 45:
+        property_classification = "str_candidate"
+    elif rental_cashflow > 0 or rental_cap >= 5:
+        property_classification = "rental_candidate"
+    else:
+        property_classification = "general_opportunity"
+
+    strategy_scores = {
+        "flip": max(flip_roi, 0) + (10 if flip_profit > 0 else 0),
+        "rental": max(rental_cap, 0) + (8 if rental_cashflow > 0 else 0),
+        "airbnb": max((airbnb_net * 12) / max(to_float((deal.purchase_price if deal else None) or workspace_analysis.get("purchase_price") or getattr(selected_prop, "price", 1)), 1) * 100, 0),
+        "land": land_score if property_classification == "land" else max(land_score - 25, 0),
+    }
+
+    best_exit = max(strategy_scores, key=strategy_scores.get)
+
+    reasons = {
+        "flip": "Flip shows the best spread between basis and exit value.",
+        "rental": "Rental shows the strongest risk-adjusted hold profile with recurring income support.",
+        "airbnb": "Short-term rental shows the highest revenue upside based on current hospitality assumptions.",
+        "land": "This opportunity looks better as land optionality or a build-oriented play than a standard residential hold.",
+    }
+
+    why = {
+        "flip": [
+            "Projected flip margin is competitive.",
+            "ARV appears to support a resale thesis.",
+            "This looks more like a value-add than a stabilized hold."
+        ],
+        "rental": [
+            "Rent support is present.",
+            "The hold profile looks more stable than the resale spread.",
+            "This asset appears to fit a long-term residential strategy."
+        ],
+        "airbnb": [
+            "Short-term revenue appears stronger than long-term rent.",
+            "Hospitality-style upside may justify deeper underwriting.",
+            "The property may support a higher-revenue furnished strategy."
+        ],
+        "land": [
+            "The asset reads more like land or optionality than a conventional income property.",
+            "Structure data is limited relative to site size or parcel value.",
+            "A build or hold thesis may be stronger than a standard buy-and-hold."
+        ],
+    }
+
+    watch_items = {
+        "flip": [
+            "Verify final rehab scope and sale costs.",
+            "Stress-test ARV against conservative comps.",
+        ],
+        "rental": [
+            "Confirm taxes, insurance, and maintenance assumptions.",
+            "Verify long-term rent support with current comps.",
+        ],
+        "airbnb": [
+            "Validate STR regulation and seasonality.",
+            "Confirm occupancy and nightly rate assumptions.",
+        ],
+        "land": [
+            "Verify zoning and entitlement path.",
+            "Validate utility access, frontage, and resale demand.",
+        ],
+    }
+
+    cards = [
+        {
+            "key": "flip",
+            "label": "Flip",
+            "headline_label": "Projected Profit",
+            "headline_value": flip_profit,
+            "score": strategy_scores["flip"],
+            "summary": reasons["flip"],
+            "metrics": flip,
+        },
+        {
+            "key": "rental",
+            "label": "Rental",
+            "headline_label": "Monthly Cash Flow",
+            "headline_value": rental_cashflow,
+            "score": strategy_scores["rental"],
+            "summary": reasons["rental"],
+            "metrics": rental,
+        },
+        {
+            "key": "airbnb",
+            "label": "Airbnb",
+            "headline_label": "Net Monthly",
+            "headline_value": airbnb_net,
+            "score": strategy_scores["airbnb"],
+            "summary": reasons["airbnb"],
+            "metrics": airbnb,
+        },
+        {
+            "key": "land",
+            "label": "Land / Build",
+            "headline_label": "Optionality Score",
+            "headline_value": land_score,
+            "score": strategy_scores["land"],
+            "summary": reasons["land"],
+            "metrics": land,
+        },
+    ]
+
+    return {
+        "property_classification": property_classification,
+        "exit_strategy_cards": cards,
+        "best_exit_strategy": best_exit,
+        "best_exit_reason": reasons[best_exit],
+        "ai_recommendation": {
+            "confidence": "high" if strategy_scores[best_exit] >= 12 else "moderate",
+            "why": why[best_exit],
+            "watch_items": watch_items[best_exit],
+        },
+    }
+
+    def build_exit_strategy_analysis(selected_prop, deal, workspace_analysis, comps, comparison):
+    property_type = (
+        workspace_analysis.get("property_type")
+        or getattr(selected_prop, "property_type", "")
+        or ""
+    ).lower()
+
+    sqft = to_float(
+        workspace_analysis.get("square_feet")
+        or getattr(selected_prop, "sqft", 0)
+        or getattr(selected_prop, "square_feet", 0)
+    )
+    beds = to_float(workspace_analysis.get("beds") or getattr(selected_prop, "beds", 0))
+    baths = to_float(workspace_analysis.get("baths") or getattr(selected_prop, "baths", 0))
+    lot_size = to_float(workspace_analysis.get("lot_size_sqft") or getattr(selected_prop, "lot_size_sqft", 0))
+
+    has_structure = bool(sqft or beds or baths)
+    looks_like_land = any(x in property_type for x in ["land", "lot", "vacant", "acre"]) or (lot_size and not has_structure)
+
+    flip = comparison.get("flip", {})
+    rental = comparison.get("rental", {})
+    airbnb = comparison.get("airbnb", {})
+    land = comparison.get("land", {})
+
+    flip_profit = to_float(flip.get("profit"))
+    flip_roi = to_float(flip.get("roi")) * 100
+    rental_cap = to_float(rental.get("cap_rate")) * 100
+    rental_cashflow = to_float(rental.get("net_cashflow"))
+    airbnb_net = to_float(airbnb.get("net_monthly"))
+    airbnb_occ = to_float(airbnb.get("occupancy_rate")) * 100
+    land_score = to_float(land.get("score"))
+
+    if looks_like_land:
+        property_classification = "land"
+    elif flip_profit > 0 and flip_roi >= 12:
+        property_classification = "fixer_upper"
+    elif airbnb_net > rental_cashflow and airbnb_occ >= 45:
+        property_classification = "str_candidate"
+    elif rental_cashflow > 0 or rental_cap >= 5:
+        property_classification = "rental_candidate"
+    else:
+        property_classification = "general_opportunity"
+
+    strategy_scores = {
+        "flip": max(flip_roi, 0) + (10 if flip_profit > 0 else 0),
+        "rental": max(rental_cap, 0) + (8 if rental_cashflow > 0 else 0),
+        "airbnb": max((airbnb_net * 12) / max(to_float((deal.purchase_price if deal else None) or workspace_analysis.get("purchase_price") or getattr(selected_prop, "price", 1)), 1) * 100, 0),
+        "land": land_score if property_classification == "land" else max(land_score - 25, 0),
+    }
+
+    best_exit = max(strategy_scores, key=strategy_scores.get)
+
+    reasons = {
+        "flip": "Flip shows the best spread between basis and exit value.",
+        "rental": "Rental shows the strongest risk-adjusted hold profile with recurring income support.",
+        "airbnb": "Short-term rental shows the highest revenue upside based on current hospitality assumptions.",
+        "land": "This opportunity looks better as land optionality or a build-oriented play than a standard residential hold.",
+    }
+
+    why = {
+        "flip": [
+            "Projected flip margin is competitive.",
+            "ARV appears to support a resale thesis.",
+            "This looks more like a value-add than a stabilized hold."
+        ],
+        "rental": [
+            "Rent support is present.",
+            "The hold profile looks more stable than the resale spread.",
+            "This asset appears to fit a long-term residential strategy."
+        ],
+        "airbnb": [
+            "Short-term revenue appears stronger than long-term rent.",
+            "Hospitality-style upside may justify deeper underwriting.",
+            "The property may support a higher-revenue furnished strategy."
+        ],
+        "land": [
+            "The asset reads more like land or optionality than a conventional income property.",
+            "Structure data is limited relative to site size or parcel value.",
+            "A build or hold thesis may be stronger than a standard buy-and-hold."
+        ],
+    }
+
+    watch_items = {
+        "flip": [
+            "Verify final rehab scope and sale costs.",
+            "Stress-test ARV against conservative comps.",
+        ],
+        "rental": [
+            "Confirm taxes, insurance, and maintenance assumptions.",
+            "Verify long-term rent support with current comps.",
+        ],
+        "airbnb": [
+            "Validate STR regulation and seasonality.",
+            "Confirm occupancy and nightly rate assumptions.",
+        ],
+        "land": [
+            "Verify zoning and entitlement path.",
+            "Validate utility access, frontage, and resale demand.",
+        ],
+    }
+
+    cards = [
+        {
+            "key": "flip",
+            "label": "Flip",
+            "headline_label": "Projected Profit",
+            "headline_value": flip_profit,
+            "score": strategy_scores["flip"],
+            "summary": reasons["flip"],
+            "metrics": flip,
+        },
+        {
+            "key": "rental",
+            "label": "Rental",
+            "headline_label": "Monthly Cash Flow",
+            "headline_value": rental_cashflow,
+            "score": strategy_scores["rental"],
+            "summary": reasons["rental"],
+            "metrics": rental,
+        },
+        {
+            "key": "airbnb",
+            "label": "Airbnb",
+            "headline_label": "Net Monthly",
+            "headline_value": airbnb_net,
+            "score": strategy_scores["airbnb"],
+            "summary": reasons["airbnb"],
+            "metrics": airbnb,
+        },
+        {
+            "key": "land",
+            "label": "Land / Build",
+            "headline_label": "Optionality Score",
+            "headline_value": land_score,
+            "score": strategy_scores["land"],
+            "summary": reasons["land"],
+            "metrics": land,
+        },
+    ]
+
+    return {
+        "property_classification": property_classification,
+        "exit_strategy_cards": cards,
+        "best_exit_strategy": best_exit,
+        "best_exit_reason": reasons[best_exit],
+        "ai_recommendation": {
+            "confidence": "high" if strategy_scores[best_exit] >= 12 else "moderate",
+            "why": why[best_exit],
+            "watch_items": watch_items[best_exit],
+        },
+    }
