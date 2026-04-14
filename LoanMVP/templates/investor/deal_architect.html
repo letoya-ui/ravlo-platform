@@ -1,10 +1,10 @@
 {% extends "layouts/ravlo_base.html" %}
 
-{% block title %}Ravlo • Underwriting{% endblock %}
+{% block title %}Ravlo • Deal Analysis{% endblock %}
 
 {% block page_title %}Thesis Studio{% endblock %}
 {% block page_subline %}
-Underwrite the deal, test the assumptions, and choose the highest-conviction path.
+Analyze the deal, test the assumptions, and choose the highest-conviction path.
 {% endblock %}
 
 {% block topbar_actions %}
@@ -18,9 +18,9 @@ Underwrite the deal, test the assumptions, and choose the highest-conviction pat
 
 {% block content %}
 
-{% set uw = underwriting if underwriting else {} %}
-{% set verdict = uw.get("verdict", {}) if uw else {} %}
-{% set meta = uw.get("meta", {}) if uw else {} %}
+{% set analysis = underwriting if underwriting else {} %}
+{% set verdict = analysis.get("verdict", {}) if analysis else {} %}
+{% set meta = analysis.get("meta", {}) if analysis else {} %}
 {% set market = meta.get("market", {}) if meta else {} %}
 {% set breakdown = meta.get("verdict_breakdown", {}) if meta else {} %}
 {% set comp_analysis = meta.get("comp_analysis", {}) if meta else {} %}
@@ -518,16 +518,16 @@ Underwrite the deal, test the assumptions, and choose the highest-conviction pat
     <div class="uw-hero-grid">
       <div>
         <div class="uw-tag">
-          🧠 Ravlo Underwriting
+          🧠 Ravlo Deal Analysis
           {% if deal %}• Deal #{{ deal.id }}{% endif %}
         </div>
 
         <h1 class="uw-title">
-          {{ deal.address if deal and deal.address else deal.title if deal and deal.title else "Underwriting Workspace" }}
+          {{ deal.address if deal and deal.address else deal.title if deal and deal.title else "Thesis Studio" }}
         </h1>
 
         <div class="uw-subtitle">
-          Assemble deal inputs, location context, and market signals into a single underwriting view. Use this workspace to test the thesis, validate spread, and decide the best execution path.
+          Assemble deal inputs, location context, and market signals into a single analysis view. Use this workspace to test the thesis, validate spread, and decide the strongest execution path.
         </div>
 
         <div class="uw-chip-row">
@@ -570,13 +570,13 @@ Underwrite the deal, test the assumptions, and choose the highest-conviction pat
             <div class="uw-eyebrow">Request Assembly</div>
             <h3>Deal + Site + Market Inputs</h3>
             <p class="uw-note">
-              Cleanly structure the assumptions that drive your underwriting. Grouped inputs keep the page usable and make the logic easier to trust.
+              Structure the assumptions that drive your analysis. Grouped inputs keep the page usable and make the output easier to trust.
             </p>
           </div>
-          <div class="uw-badge">Underwriting Input Layer</div>
+          <div class="uw-badge">Analysis Input Layer</div>
         </div>
 
-        <form method="POST" action="{% if deal %}{{ url_for('investor.run_underwriting', deal_id=deal.id) }}{% else %}#{% endif %}">
+        <form method="POST" action="{% if deal %}{{ url_for('investor.run_analysis', deal_id=deal.id) }}{% else %}#{% endif %}">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
           <div class="uw-form-sections">
@@ -589,7 +589,7 @@ Underwrite the deal, test the assumptions, and choose the highest-conviction pat
                 </div>
                 <div class="uw-field">
                   <label for="property_type">Property Type</label>
-                  <input class="uw-input" id="property_type" name="property_type" value="{{ uw.get('property_type', '') }}" placeholder="Single Family">
+                  <input class="uw-input" id="property_type" name="property_type" value="{{ analysis.get('property_type', '') }}" placeholder="Single Family">
                 </div>
 
                 <div class="uw-field">
@@ -608,20 +608,20 @@ Underwrite the deal, test the assumptions, and choose the highest-conviction pat
               <div class="uw-grid-2">
                 <div class="uw-field">
                   <label for="lot_size">Lot Size</label>
-                  <input class="uw-input" id="lot_size" name="lot_size" value="{{ uw.get('lot_size', '') }}" placeholder="99000">
+                  <input class="uw-input" id="lot_size" name="lot_size" value="{{ analysis.get('lot_size', '') }}" placeholder="99000">
                 </div>
                 <div class="uw-field">
                   <label for="zoning">Zoning</label>
-                  <input class="uw-input" id="zoning" name="zoning" value="{{ uw.get('zoning', '') }}" placeholder="R-1">
+                  <input class="uw-input" id="zoning" name="zoning" value="{{ analysis.get('zoning', '') }}" placeholder="R-1">
                 </div>
 
                 <div class="uw-field">
                   <label for="square_feet_target">Target Sq Ft</label>
-                  <input class="uw-input" id="square_feet_target" name="square_feet_target" type="number" step="1" value="{{ uw.get('square_feet_target', '') }}" placeholder="1400">
+                  <input class="uw-input" id="square_feet_target" name="square_feet_target" type="number" step="1" value="{{ analysis.get('square_feet_target', '') }}" placeholder="1400">
                 </div>
                 <div class="uw-field">
                   <label for="bed_bath">Beds / Baths</label>
-                  <input class="uw-input" id="bed_bath" name="bed_bath" value="{{ uw.get('bed_bath', '') }}" placeholder="3 / 2">
+                  <input class="uw-input" id="bed_bath" name="bed_bath" value="{{ analysis.get('bed_bath', '') }}" placeholder="3 / 2">
                 </div>
               </div>
             </div>
@@ -631,20 +631,20 @@ Underwrite the deal, test the assumptions, and choose the highest-conviction pat
               <div class="uw-grid-2">
                 <div class="uw-field">
                   <label for="market_cost_multiplier">Market Cost Multiplier</label>
-                  <input class="uw-input" id="market_cost_multiplier" name="market_cost_multiplier" type="number" step="0.01" value="{{ uw.get('market_cost_multiplier', '') }}" placeholder="1.00">
+                  <input class="uw-input" id="market_cost_multiplier" name="market_cost_multiplier" type="number" step="0.01" value="{{ analysis.get('market_cost_multiplier', '') }}" placeholder="1.00">
                 </div>
                 <div class="uw-field">
                   <label for="market_value_multiplier">Market Value Multiplier</label>
-                  <input class="uw-input" id="market_value_multiplier" name="market_value_multiplier" type="number" step="0.01" value="{{ uw.get('market_value_multiplier', '') }}" placeholder="1.00">
+                  <input class="uw-input" id="market_value_multiplier" name="market_value_multiplier" type="number" step="0.01" value="{{ analysis.get('market_value_multiplier', '') }}" placeholder="1.00">
                 </div>
 
                 <div class="uw-field">
                   <label for="annual_tax_rate">Annual Tax Rate</label>
-                  <input class="uw-input" id="annual_tax_rate" name="annual_tax_rate" type="number" step="0.01" value="{{ uw.get('annual_tax_rate', '') }}" placeholder="Optional">
+                  <input class="uw-input" id="annual_tax_rate" name="annual_tax_rate" type="number" step="0.01" value="{{ analysis.get('annual_tax_rate', '') }}" placeholder="Optional">
                 </div>
                 <div class="uw-field">
                   <label for="annual_insurance_rate">Annual Insurance Rate</label>
-                  <input class="uw-input" id="annual_insurance_rate" name="annual_insurance_rate" type="number" step="0.01" value="{{ uw.get('annual_insurance_rate', '') }}" placeholder="Optional">
+                  <input class="uw-input" id="annual_insurance_rate" name="annual_insurance_rate" type="number" step="0.01" value="{{ analysis.get('annual_insurance_rate', '') }}" placeholder="Optional">
                 </div>
               </div>
             </div>
@@ -653,13 +653,13 @@ Underwrite the deal, test the assumptions, and choose the highest-conviction pat
               <div class="uw-form-section-title">Comparable Set</div>
               <div class="uw-field">
                 <label for="comps_json">Comps JSON</label>
-                <textarea class="uw-textarea" id="comps_json" name="comps_json" placeholder='[{"address":"123 Main St","price":320000,"sqft":1400,"beds":3,"baths":2,"distance_miles":0.4,"months_ago":2}]'>{{ uw.get("comps_json", "") }}</textarea>
+                <textarea class="uw-textarea" id="comps_json" name="comps_json" placeholder='[{"address":"123 Main St","price":320000,"sqft":1400,"beds":3,"baths":2,"distance_miles":0.4,"months_ago":2}]'>{{ analysis.get("comps_json", "") }}</textarea>
               </div>
             </div>
           </div>
 
           <div class="uw-toolbar">
-            <button class="uw-btn success" type="submit">Run Underwriting</button>
+            <button class="uw-btn success" type="submit">Run Analysis</button>
             {% if deal %}
               <a class="uw-btn secondary" href="{{ url_for('investor.budget_studio', deal_id=deal.id) }}">Open Budget Studio</a>
             {% endif %}
@@ -673,7 +673,7 @@ Underwrite the deal, test the assumptions, and choose the highest-conviction pat
             <div class="uw-eyebrow">Top Signals</div>
             <h3>Strengths & Risks</h3>
             <p class="uw-note">
-              High-level verdict signals should be fast to scan and easy to defend.
+              High-level decision signals should be fast to scan and easy to defend.
             </p>
           </div>
         </div>
@@ -727,7 +727,7 @@ Underwrite the deal, test the assumptions, and choose the highest-conviction pat
             <div class="uw-eyebrow">Verdict Breakdown</div>
             <h3>Decision Subscores</h3>
             <p class="uw-note">
-              Break the underwriting decision into explainable parts instead of one opaque score.
+              Break the deal decision into explainable parts instead of one opaque score.
             </p>
           </div>
         </div>
@@ -825,7 +825,7 @@ Underwrite the deal, test the assumptions, and choose the highest-conviction pat
           <div class="uw-card-head">
             <div>
               <div class="uw-eyebrow">Decision Snapshot</div>
-              <h3>Financial Verdict</h3>
+              <h3>Analysis Verdict</h3>
               <p class="uw-note">
                 The right rail should answer the decision question immediately.
               </p>
@@ -905,9 +905,9 @@ Underwrite the deal, test the assumptions, and choose the highest-conviction pat
           </div>
 
           <div class="uw-callout">
-            <strong>{{ verdict.get("label") or "Underwriting Pending" }}</strong>
+            <strong>{{ verdict.get("label") or "Analysis Pending" }}</strong>
             <p>
-              {{ verdict.get("summary") or meta.get("summary") or "Run underwriting to generate a recommendation, confidence signal, and decision rationale." }}
+              {{ verdict.get("summary") or meta.get("summary") or "Run analysis to generate a recommendation, confidence signal, and decision rationale." }}
             </p>
           </div>
         </section>
