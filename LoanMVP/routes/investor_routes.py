@@ -166,13 +166,7 @@ from LoanMVP.services.partner_marketplace_service import (
     search_internal_partners,
     search_google_places,
 )
-from LoanMVP.services.deal_workspace_calcs import (
-    calculate_flip_budget,
-    calculate_rental_budget,
-    calculate_airbnb_budget,
-    generate_ai_deal_summary,
-    recommend_strategy,
-)
+
 from LoanMVP.utils.pdf_utils import add_signature_to_pdf
 
 # -------------------------
