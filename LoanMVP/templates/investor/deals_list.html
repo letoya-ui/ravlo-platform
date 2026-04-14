@@ -184,6 +184,38 @@ Track active opportunities, jump into workspace tools, and move the strongest de
             </div>
           </div>
 
+          {% if budget %}
+            <div class="deal-budget-strip">
+              <div class="deal-budget-item">
+                <span>Budget Name</span>
+                <strong>{{ budget.project_name or budget.name or "Project Budget" }}</strong>
+              </div>
+              <div class="deal-budget-item">
+                <span>Total Budget</span>
+                <strong>${{ "{:,.0f}".format(budget.total_budget or budget.total_amount or 0) }}</strong>
+              </div>
+              <div class="deal-budget-item">
+                <span>Total Cost</span>
+                <strong>${{ "{:,.0f}".format(budget.total_cost or 0) }}</strong>
+              </div>
+              <div class="deal-budget-item">
+                <span>Paid</span>
+                <strong>${{ "{:,.0f}".format(budget.paid_amount or 0) }}</strong>
+              </div>
+              <div class="deal-budget-item">
+                <span>Contingency</span>
+                <strong>${{ "{:,.0f}".format(budget.contingency or 0) }}</strong>
+              </div>
+            </div>
+
+            {% if budget.notes %}
+              <div class="deal-notes">
+                <strong>Budget Notes</strong>
+                <p>{{ budget.notes }}</p>
+              </div>
+            {% endif %}
+          {% endif %}
+
           <div class="deal-actions">
             <a href="{{ url_for('investor.deal_workspace', prop_id=deal.saved_property_id) }}" class="ravlo-btn primary">
               Open Workspace
@@ -325,7 +357,8 @@ Track active opportunities, jump into workspace tools, and move the strongest de
 }
 
 .deal-kpi,
-.deal-meta-box{
+.deal-meta-box,
+.deal-budget-item{
   padding:14px 16px;
   border-radius:16px;
   background:rgba(255,255,255,.03);
@@ -335,7 +368,8 @@ Track active opportunities, jump into workspace tools, and move the strongest de
 }
 
 .deal-kpi span,
-.deal-meta-box span{
+.deal-meta-box span,
+.deal-budget-item span{
   font-size:12px;
   color:var(--muted);
   text-transform:uppercase;
@@ -343,7 +377,8 @@ Track active opportunities, jump into workspace tools, and move the strongest de
 }
 
 .deal-kpi strong,
-.deal-meta-box strong{
+.deal-meta-box strong,
+.deal-budget-item strong{
   font-size:16px;
   color:var(--text);
 }
@@ -352,6 +387,31 @@ Track active opportunities, jump into workspace tools, and move the strongest de
   display:grid;
   grid-template-columns:repeat(4, minmax(0, 1fr));
   gap:12px;
+}
+
+.deal-budget-strip{
+  display:grid;
+  grid-template-columns:repeat(5, minmax(0, 1fr));
+  gap:12px;
+}
+
+.deal-notes{
+  padding:14px 16px;
+  border-radius:16px;
+  background:rgba(255,255,255,.03);
+  border:1px solid rgba(255,255,255,.08);
+}
+
+.deal-notes strong{
+  display:block;
+  margin-bottom:8px;
+  color:var(--text);
+}
+
+.deal-notes p{
+  margin:0;
+  color:var(--muted);
+  line-height:1.55;
 }
 
 .deal-actions{
@@ -372,6 +432,10 @@ Track active opportunities, jump into workspace tools, and move the strongest de
   .deals-summary-grid{
     grid-template-columns:1fr;
   }
+
+  .deal-budget-strip{
+    grid-template-columns:repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 760px){
@@ -383,7 +447,8 @@ Track active opportunities, jump into workspace tools, and move the strongest de
 
   .deal-kpi-grid,
   .deal-meta-grid,
-  .deals-filter-grid{
+  .deals-filter-grid,
+  .deal-budget-strip{
     grid-template-columns:1fr;
   }
 
