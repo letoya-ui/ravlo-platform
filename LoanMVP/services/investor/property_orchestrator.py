@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Tuple
+
+_log = logging.getLogger(__name__)
 
 from LoanMVP.services.attom_service import build_attom_dealfinder_profile, AttomServiceError
 from LoanMVP.services.rentcast_service import (
@@ -185,8 +188,11 @@ class PropertyIntelligenceOrchestrator:
 
     def _init_mashvisor(self):
         try:
-            return MashvisorClient()
-        except Exception:
+            client = MashvisorClient()
+            _log.info("[mashvisor] client initialised")
+            return client
+        except Exception as exc:
+            _log.warning("[mashvisor] client init failed: %s", exc)
             return None
 
     @staticmethod
@@ -225,24 +231,32 @@ class PropertyIntelligenceOrchestrator:
         raw_result: Dict[str, Any] | None = None,
     ) -> List[str]:
         raw_result = raw_result or {}
-        content = raw_result.get("content") if isinstance(raw_result, dict) else {}
 
-        if not isinstance(content, dict):
-            content = {}
+        # raw_result is the validate dict with keys: property, lookup, comps, errors.
+        # Extract the nested "content" dicts from property and lookup responses.
+        prop_resp = raw_result.get("property") or {}
+        prop_content = prop_resp.get("content") if isinstance(prop_resp, dict) else {}
+        if not isinstance(prop_content, dict):
+            prop_content = {}
+
+        lookup_resp = raw_result.get("lookup") or {}
+        lookup_content = lookup_resp.get("content") if isinstance(lookup_resp, dict) else {}
+        if not isinstance(lookup_content, dict):
+            lookup_content = {}
 
         photos = self._normalize_photo_candidates(
             normalized.get("photos"),
             normalized.get("images"),
             normalized.get("image"),
             normalized.get("extra_images"),
-            raw_result.get("photos"),
-            raw_result.get("images"),
-            raw_result.get("image"),
-            raw_result.get("extra_images"),
-            content.get("photos"),
-            content.get("images"),
-            content.get("image"),
-            content.get("extra_images"),
+            prop_content.get("photos"),
+            prop_content.get("images"),
+            prop_content.get("image"),
+            prop_content.get("extra_images"),
+            lookup_content.get("photos"),
+            lookup_content.get("images"),
+            lookup_content.get("image"),
+            lookup_content.get("extra_images"),
         )
 
         return photos
@@ -681,13 +695,52 @@ class PropertyIntelligenceOrchestrator:
 
         return cp
 
+    @staticmethod
+    def _resolve_mashvisor_property_id(result: Dict[str, Any], normalized: Dict[str, Any]) -> Any:
+        """Extract a Mashvisor property id from every possible location."""
+        # 1. normalized (if normalize_mashvisor_validation ever populates it)
+        pid = normalized.get("property_id") or normalized.get("id")
+        if pid:
+            return pid
+
+        # 2. property response  {"status":"success","content":{"id":...}}
+        prop = result.get("property")
+        if isinstance(prop, dict):
+            content = prop.get("content")
+            if isinstance(content, dict):
+                pid = content.get("id") or content.get("property_id")
+                if pid:
+                    return pid
+            # some plans nest differently
+            pid = prop.get("id") or prop.get("property_id")
+            if pid:
+                return pid
+
+        # 3. lookup response
+        lookup = result.get("lookup")
+        if isinstance(lookup, dict):
+            content = lookup.get("content")
+            if isinstance(content, dict):
+                pid = content.get("id") or content.get("property_id")
+                if pid:
+                    return pid
+
+        return None
+
     def _enrich_with_mashvisor(self, cp: CanonicalProperty) -> CanonicalProperty:
-        if not self._mashvisor or not self.budget.use("mashvisor_detail", 1):
+        if not self._mashvisor:
+            _log.warning("[mashvisor] skipping enrichment -- no client")
             return cp
+        if not self.budget.use("mashvisor_detail", 1):
+            _log.info("[mashvisor] skipping enrichment -- budget exhausted")
+            return cp
+
+        addr = cp.address or cp.address_line1 or ""
+        _log.info("[mashvisor] enriching %s, %s %s %s", addr, cp.city, cp.state, cp.zip_code)
 
         try:
             result = self._mashvisor.validate_property_with_mashvisor(
-                address=cp.address or cp.address_line1 or "",
+                address=addr,
                 city=cp.city or "",
                 state=cp.state or "",
                 zip_code=cp.zip_code or "",
@@ -697,10 +750,15 @@ class PropertyIntelligenceOrchestrator:
                 lng=cp.longitude,
                 include_comps=False,
             )
+            _log.info("[mashvisor] validate ok  keys=%s  errors=%s",
+                      list(result.keys()) if result else None,
+                      result.get("errors") if result else None)
             normalized = normalize_mashvisor_validation(result)
-        except MashvisorError:
+        except MashvisorError as exc:
+            _log.warning("[mashvisor] validate MashvisorError: %s", exc)
             return cp
-        except Exception:
+        except Exception as exc:
+            _log.warning("[mashvisor] validate exception: %s", exc)
             return cp
 
         cp.airbnb_rent_estimate = self._first_truthy(
@@ -721,34 +779,29 @@ class PropertyIntelligenceOrchestrator:
         )
 
         mashvisor_photos = self._extract_mashvisor_photos(normalized, result)
+        _log.info("[mashvisor] inline photos extracted: %d", len(mashvisor_photos))
 
-        property_id = (
-            normalized.get("property_id")
-            or normalized.get("id")
-            or (
-                ((result.get("property") or {}).get("content") or {}).get("id")
-                if isinstance(result, dict) and isinstance(result.get("property"), dict)
-                else None
-            )
-            or (
-                ((result.get("lookup") or {}).get("content") or {}).get("id")
-                if isinstance(result, dict) and isinstance(result.get("lookup"), dict)
-                else None
-            )
-        )
+        property_id = self._resolve_mashvisor_property_id(result, normalized)
+        _log.info("[mashvisor] resolved property_id=%s", property_id)
 
-        if property_id and hasattr(self._mashvisor, "get_property_images"):
+        if property_id:
             try:
                 image_result = self._mashvisor.get_property_images(property_id)
-                if image_result.get("status") == "success":
+                img_status = image_result.get("status")
+                img_count = len(image_result.get("photos") or [])
+                _log.info("[mashvisor] get_property_images status=%s  count=%d", img_status, img_count)
+                if img_status == "success" and img_count:
                     mashvisor_photos = self._normalize_photo_candidates(
                         mashvisor_photos,
                         image_result.get("photos"),
                         image_result.get("primary_photo"),
                     )
-            except Exception:
-                pass
+            except Exception as exc:
+                _log.warning("[mashvisor] get_property_images failed: %s", exc)
+        else:
+            _log.warning("[mashvisor] no property_id -- cannot fetch images")
 
+        _log.info("[mashvisor] final photo count: mashvisor=%d  existing=%d", len(mashvisor_photos), len(cp.photos))
         if mashvisor_photos:
             cp.photos = self._normalize_photo_candidates(cp.photos, mashvisor_photos)
             if cp.photos:

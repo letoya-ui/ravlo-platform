@@ -144,13 +144,31 @@ def extract_core_fields(raw: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def normalize_mashvisor_validation(result: Dict[str, Any]) -> Dict[str, Any]:
+    prop = result.get("property") or {}
     lookup = result.get("lookup") or {}
     comps = result.get("comps") or {}
 
-    lookup_content = lookup.get("content", lookup)
-    comps_content = comps.get("content", comps)
+    prop_content = prop.get("content", prop) if isinstance(prop, dict) else {}
+    if not isinstance(prop_content, dict):
+        prop_content = {}
+    lookup_content = lookup.get("content", lookup) if isinstance(lookup, dict) else {}
+    if not isinstance(lookup_content, dict):
+        lookup_content = {}
+    comps_content = comps.get("content", comps) if isinstance(comps, dict) else {}
+    if not isinstance(comps_content, dict):
+        comps_content = {}
+
+    # Extract property_id from the property response so it's available for
+    # downstream callers (e.g. get_property_images).
+    property_id = (
+        prop_content.get("id")
+        or prop_content.get("property_id")
+        or lookup_content.get("id")
+        or lookup_content.get("property_id")
+    )
 
     return {
+        "property_id": property_id,
         "airbnb_revenue": (
             lookup_content.get("rental_income")
             or lookup_content.get("airbnb_rental_income")
