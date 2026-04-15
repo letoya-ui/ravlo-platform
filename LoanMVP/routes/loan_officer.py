@@ -1057,7 +1057,6 @@ def loan_application():
             rate=float(rate) if rate else None,
             term_months=int(term_months) if term_months else None,
             description=loan_purpose or None,
-            ai_summary=notes or None,
             status="Application Submitted",
             created_at=datetime.utcnow(),
         )
@@ -1065,8 +1064,11 @@ def loan_application():
         db.session.flush()
 
         # --- default status events ---
+        submission_desc = "Loan Officer submitted the application on behalf of borrower."
+        if notes:
+            submission_desc += f"\n\nOfficer Notes: {notes}"
         default_events = [
-            ("Application Submitted", "Loan Officer submitted the application on behalf of borrower."),
+            ("Application Submitted", submission_desc),
             ("Processor Review", "Processor will begin reviewing the file."),
             ("Document Review", "Borrower documents pending review."),
         ]
