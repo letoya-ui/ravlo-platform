@@ -34,6 +34,12 @@ Review a saved property, compare exit paths, and move the best opportunity into 
     <a href="{{ url_for('investor.deal_rehab', deal_id=deal.id) }}" class="ravlo-btn ghost sm">
         Rehab Studio
     </a>
+    <a href="{{ url_for('investor.build_studio', deal_id=deal.id) }}" class="ravlo-btn ghost sm">
+        Build Studio
+    </a>
+    <a href="{{ url_for('investor.build_projects') }}" class="ravlo-btn ghost sm">
+        Project Build
+    </a>
     <a href="{{ url_for('investor.capital_application', deal_id=deal.id, prop_id=sp.id) }}" class="ravlo-btn primary sm">
         Apply
     </a>
@@ -345,6 +351,12 @@ Review a saved property, compare exit paths, and move the best opportunity into 
                 <a href="{{ url_for('investor.deal_rehab', deal_id=deal.id) }}" class="ravlo-btn ghost">
                     Rehab Studio
                 </a>
+                <a href="{{ url_for('investor.build_studio', deal_id=deal.id) }}" class="ravlo-btn ghost">
+                    Build Studio
+                </a>
+                <a href="{{ url_for('investor.build_projects') }}" class="ravlo-btn ghost">
+                    Project Build
+                </a>
                 <a href="{{ url_for('investor.capital_application', deal_id=deal.id, prop_id=selected_prop.id) }}" class="ravlo-btn primary">
                     Apply
                 </a>
@@ -618,8 +630,13 @@ Review a saved property, compare exit paths, and move the best opportunity into 
                 {% if primary_photo or listing_photos %}
                 <div class="workspace-photo-shell">
                     {% if primary_photo %}
-                    <div class="workspace-photo-main">
-                        <img src="{{ primary_photo }}" alt="Primary listing photo">
+                    <div class="workspace-photo-main workspace-photo-rehab-link">
+                        <img src="{{ primary_photo }}" alt="Primary listing photo" loading="lazy" referrerpolicy="no-referrer" onerror="this.onerror=null;this.src='/static/images/placeholder_property.jpg';">
+                        {% if deal %}
+                        <a href="{{ url_for('investor.deal_rehab', deal_id=deal.id, image_url=primary_photo) }}" class="workspace-photo-overlay" title="Use in Rehab Studio">
+                            <i data-lucide="sparkles"></i> Use in Rehab Studio
+                        </a>
+                        {% endif %}
                     </div>
                     {% endif %}
 
@@ -632,8 +649,13 @@ Review a saved property, compare exit paths, and move the best opportunity into 
                                 {% set photo_url = photo %}
                             {% endif %}
                             {% if photo_url %}
-                            <div class="workspace-photo-tile">
-                                <img src="{{ photo_url }}" alt="Listing photo {{ loop.index }}">
+                            <div class="workspace-photo-tile workspace-photo-rehab-link">
+                                <img src="{{ photo_url }}" alt="Listing photo {{ loop.index }}" loading="lazy" referrerpolicy="no-referrer" onerror="this.onerror=null;this.src='/static/images/placeholder_property.jpg';">
+                                {% if deal %}
+                                <a href="{{ url_for('investor.deal_rehab', deal_id=deal.id, image_url=photo_url) }}" class="workspace-photo-overlay" title="Use in Rehab Studio">
+                                    <i data-lucide="sparkles"></i>
+                                </a>
+                                {% endif %}
                             </div>
                             {% endif %}
                         {% endfor %}
@@ -913,6 +935,10 @@ Review a saved property, compare exit paths, and move the best opportunity into 
 .workspace-photo-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
 .workspace-photo-tile{border-radius:16px;overflow:hidden;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03);min-height:120px}
 .workspace-photo-tile img{width:100%;height:100%;min-height:120px;object-fit:cover;display:block}
+.workspace-photo-rehab-link{position:relative}
+.workspace-photo-overlay{position:absolute;bottom:0;left:0;right:0;padding:8px 12px;background:linear-gradient(transparent,rgba(0,0,0,.72));color:#fff;font-size:12px;font-weight:600;text-decoration:none;display:flex;align-items:center;gap:6px;opacity:0;transition:opacity .2s ease}
+.workspace-photo-rehab-link:hover .workspace-photo-overlay{opacity:1}
+.workspace-photo-overlay i,.workspace-photo-overlay svg{width:14px;height:14px}
 .comp-card-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}
 .comp-card{padding:16px;border-radius:18px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);display:grid;gap:10px}
 .comp-card-meta{display:flex;justify-content:space-between;gap:10px;font-size:13px}

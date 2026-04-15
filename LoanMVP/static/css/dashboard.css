@@ -443,12 +443,19 @@ textarea.ravlo-input{
   display:none;
   width:42px;
   height:42px;
-  border:none;
+  border:1px solid rgba(255,255,255,.10);
   border-radius:12px;
-  background:rgba(255,255,255,.05);
-  color:var(--ravlo-text);
+  background:linear-gradient(180deg, rgba(95,168,255,.22), rgba(95,168,255,.10));
+  color:#F4F8FC;
   cursor:pointer;
-  font-size:1.15rem;
+  font-size:1.1rem;
+  font-weight:800;
+  letter-spacing:.05em;
+}
+
+.mobile-menu-button:hover{
+  background:linear-gradient(180deg, rgba(95,168,255,.32), rgba(95,168,255,.18));
+  border-color:rgba(141,167,194,.28);
 }
 
 .ravlo-sidebar-overlay{

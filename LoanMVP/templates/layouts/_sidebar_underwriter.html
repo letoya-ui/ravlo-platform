@@ -76,6 +76,12 @@
       <i class="icon lucide lucide-clipboard-check"></i>
       <span>Onboarding</span>
     </a>
+
+    <a href="{{ url_for('account.settings') }}"
+       class="re-nav-link {% if active_tab == 'settings' %}active{% endif %}">
+      <i class="icon lucide lucide-settings"></i>
+      <span>Settings</span>
+    </a>
   </div>
 
 </nav>

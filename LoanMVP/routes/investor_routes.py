@@ -420,13 +420,44 @@ def _resolve_rehab_before_seed(deal):
     return {"url": url or "", "gallery": gallery}
 
 
+def _is_map_tile_url(url):
+    """Return True if *url* is an OpenStreetMap (or similar) map-tile URL."""
+    if not url:
+        return False
+    lower = str(url).lower()
+    return "tile.openstreetmap.org" in lower or "tiles.mapbox.com" in lower
+
+
 def _proxy_listing_image_url(source_url):
     source_url = safe_str(source_url)
     if not source_url:
         return None
+    if _is_map_tile_url(source_url):
+        return None
     if source_url.startswith("/") or source_url.startswith("data:"):
         return source_url
     return url_for("investor.api_property_tool_image", src=source_url)
+
+
+def _proxy_photo_list(photo_urls):
+    """Proxy a flat list of photo URL strings through the image proxy."""
+    if not photo_urls:
+        return []
+    proxied = []
+    for url in photo_urls:
+        if isinstance(url, dict):
+            best = (
+                url.get("url") or url.get("src") or url.get("href")
+                or url.get("photo") or url.get("image")
+            )
+            p = _proxy_listing_image_url(best)
+            if p:
+                proxied.append(p)
+        else:
+            p = _proxy_listing_image_url(url)
+            if p:
+                proxied.append(p)
+    return proxied
 
 
 def _proxy_search_result_images(result):
@@ -467,11 +498,12 @@ def _proxy_search_result_images(result):
 
     updated["listing_photos"] = proxied_listing_photos
     updated["photos"] = proxied_listing_photos
-    updated["primary_photo"] = _proxy_listing_image_url(updated.get("primary_photo")) or updated.get("primary_photo")
-    updated["primary_photo_url"] = _proxy_listing_image_url(updated.get("primary_photo_url")) or updated.get("primary_photo_url")
-    updated["image_url"] = _proxy_listing_image_url(updated.get("image_url")) or updated.get("image_url")
-    updated["photo"] = _proxy_listing_image_url(updated.get("photo")) or updated.get("photo")
-    updated["thumbnail"] = _proxy_listing_image_url(updated.get("thumbnail")) or updated.get("thumbnail")
+    for _field in ("primary_photo", "primary_photo_url", "image_url", "photo", "thumbnail"):
+        raw_val = updated.get(_field)
+        if _is_map_tile_url(raw_val):
+            updated[_field] = None
+        else:
+            updated[_field] = _proxy_listing_image_url(raw_val) or raw_val
     return updated
 
 
@@ -4084,16 +4116,23 @@ def deal_workspace():
             workspace_analysis["baths"] = workspace_analysis.get("baths") or saved_property_payload.get("baths")
             workspace_analysis["year_built"] = workspace_analysis.get("year_built") or saved_property_payload.get("year_built")
             workspace_analysis["lot_size_sqft"] = workspace_analysis.get("lot_size_sqft") or saved_property_payload.get("lot_size_sqft")
-            workspace_analysis["listing_photos"] = _normalize_photo_urls(
-                workspace_analysis.get("listing_photos"),
-                deal_results.get("listing_photos"),
-                saved_seed.get("listing_photos"),
+            workspace_analysis["listing_photos"] = _proxy_photo_list(
+                _normalize_photo_urls(
+                    workspace_analysis.get("listing_photos"),
+                    deal_results.get("listing_photos"),
+                    saved_seed.get("listing_photos"),
+                )
             )
-            workspace_analysis["image_url"] = _resolve_photo(
-                workspace_analysis.get("image_url")
-                or deal_results.get("image_url")
-                or saved_seed.get("primary_photo"),
-                workspace_analysis.get("listing_photos"),
+            workspace_analysis["image_url"] = (
+                _proxy_listing_image_url(
+                    _resolve_photo(
+                        workspace_analysis.get("image_url")
+                        or deal_results.get("image_url")
+                        or saved_seed.get("primary_photo"),
+                        workspace_analysis.get("listing_photos"),
+                    )
+                )
+                or _resolve_photo(None, workspace_analysis.get("listing_photos"))
             )
 
             comparison = build_workspace_exit_comparison(
@@ -4175,10 +4214,12 @@ def deal_workspace():
             budget_snapshot = _project_budget_snapshot(budget)
 
         else:
+            _proxied_photos = _proxy_photo_list(saved_seed.get("listing_photos") or [])
+            _proxied_primary = _proxy_listing_image_url(saved_seed.get("primary_photo"))
             workspace_analysis = {
                 **saved_workspace,
-                "listing_photos": saved_seed.get("listing_photos"),
-                "image_url": saved_seed.get("primary_photo"),
+                "listing_photos": _proxied_photos,
+                "image_url": _proxied_primary or (_proxied_photos[0] if _proxied_photos else None),
                 "address": saved_property_payload.get("address") or getattr(selected_prop, "address", None),
                 "city": saved_property_payload.get("city"),
                 "state": saved_property_payload.get("state"),
@@ -5047,16 +5088,48 @@ def deal_rehab(deal_id=None):
 
     property_seed = _saved_property_workspace_seed(saved_property) if saved_property else {}
     property_media = _saved_property_media(saved_property) if saved_property else {"primary_photo": None, "gallery": []}
+
+    workspace_analysis = results.get("workspace_analysis", {}) or {}
+
     property_gallery = _normalize_photo_urls(
         property_seed.get("listing_photos"),
         property_media.get("gallery"),
+        workspace_analysis.get("listing_photos"),
+        results.get("listing_photos"),
     )
     property_primary_photo = _resolve_photo(
         property_seed.get("primary_photo") or property_media.get("primary_photo"),
         property_gallery,
     )
 
-    if property_primary_photo and not rehab_before.get("image_url"):
+    workspace_images = []
+    seen_urls = set()
+    for url in property_gallery:
+        if url and url not in seen_urls:
+            workspace_images.append({"url": url, "label": "Listing Photo", "source": "listing"})
+            seen_urls.add(url)
+
+    for concept in rehab_concepts:
+        concept_url = concept.get("image_url") if isinstance(concept, dict) else None
+        if concept_url and concept_url not in seen_urls:
+            concept_label = (concept.get("preset") or "Concept").title()
+            raw_mode = (concept.get("mode") or "").strip()
+            concept_mode = raw_mode.upper() if raw_mode.lower() in {"hgtv"} else raw_mode.title()
+            label = f"{concept_label} — {concept_mode}" if concept_mode else concept_label
+            workspace_images.append({"url": concept_url, "label": label, "source": "concept"})
+            seen_urls.add(concept_url)
+
+    preselected_image_url = (request.args.get("image_url") or "").strip()
+    if preselected_image_url and not preselected_image_url.lower().startswith(("http://", "https://")):
+        preselected_image_url = ""
+
+    if preselected_image_url and not rehab_before.get("image_url"):
+        rehab_before = {
+            **rehab_before,
+            "image_url": preselected_image_url,
+            "source": "workspace_preselect",
+        }
+    elif property_primary_photo and not rehab_before.get("image_url"):
         rehab_before = {
             **rehab_before,
             "image_url": property_primary_photo,
@@ -5078,6 +5151,8 @@ def deal_rehab(deal_id=None):
         rehab_latest=rehab_latest,
         rehab_concepts=rehab_concepts,
         property_photo_gallery=property_gallery,
+        workspace_images=workspace_images,
+        preselected_image_url=preselected_image_url,
         page_title="Renovation Studio",
         page_subtitle="Visualize renovation concepts before execution.",
     )
@@ -8128,10 +8203,10 @@ def deal_rehab_generate():
             except Exception:
                 raw_before = None
 
-        elif deal is not None:
+        if not image_base64 and deal is not None:
             seed_media = _resolve_rehab_before_seed(deal)
             saved_before_url = (seed_media.get("url") or "").strip()
-            if saved_before_url:
+            if saved_before_url and saved_before_url != image_url:
                 try:
                     raw_before = download_image_bytes(saved_before_url)
                     if raw_before:
