@@ -172,7 +172,6 @@ class Config:
     PROPERTY_PROVIDER = os.environ.get("PROPERTY_PROVIDER", "rentcast")
     ENABLE_PROPERTY_CACHE = _env_bool("ENABLE_PROPERTY_CACHE", True)
  
-    RAPIDAPI_KEY = os.getenv("RAPIDAPI_KEY")
      
     COMPANY_NAME = os.environ.get("COMPANY_NAME", "Ravlo")
     COMPANY_EMAIL = os.environ.get("COMPANY_EMAIL", "info@ravlohq.com")
