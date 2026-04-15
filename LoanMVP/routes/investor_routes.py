@@ -498,11 +498,12 @@ def _proxy_search_result_images(result):
 
     updated["listing_photos"] = proxied_listing_photos
     updated["photos"] = proxied_listing_photos
-    updated["primary_photo"] = _proxy_listing_image_url(updated.get("primary_photo")) or updated.get("primary_photo")
-    updated["primary_photo_url"] = _proxy_listing_image_url(updated.get("primary_photo_url")) or updated.get("primary_photo_url")
-    updated["image_url"] = _proxy_listing_image_url(updated.get("image_url")) or updated.get("image_url")
-    updated["photo"] = _proxy_listing_image_url(updated.get("photo")) or updated.get("photo")
-    updated["thumbnail"] = _proxy_listing_image_url(updated.get("thumbnail")) or updated.get("thumbnail")
+    for _field in ("primary_photo", "primary_photo_url", "image_url", "photo", "thumbnail"):
+        raw_val = updated.get(_field)
+        if _is_map_tile_url(raw_val):
+            updated[_field] = None
+        else:
+            updated[_field] = _proxy_listing_image_url(raw_val) or raw_val
     return updated
 
 
