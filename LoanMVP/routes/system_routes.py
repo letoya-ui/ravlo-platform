@@ -11,9 +11,34 @@ from datetime import datetime
 
 from LoanMVP.extensions import db, csrf
 from LoanMVP.models.system_models import System, SystemLog, AuditLog, SystemSettings
-from LoanMVP.models.crm_models import Lead
-from LoanMVP.models.loan_models import LoanApplication, LoanNotification
-from LoanMVP.models.document_models import DocumentRequest
+from LoanMVP.models.loan_models import (
+    BorrowerProfile, CreditProfile, LoanApplication, LoanIntakeSession,
+    LoanNotification, LoanQuote, Upload,
+)
+from LoanMVP.models.document_models import (
+    DocumentRequest, ESignedDocument, LoanDocument,
+)
+from LoanMVP.models.investor_models import (
+    DealConversation, DealMessage, FundingRequest, InvestorProfile, Project,
+)
+from LoanMVP.models.borrowers import Deal, ProjectBudget, PropertyAnalysis
+from LoanMVP.models.call_model import CallLog
+from LoanMVP.models.renovation_models import RenovationMockup, BuildProject
+from LoanMVP.models.ai_models import (
+    AIAssistantInteraction, AIIntakeSummary, LoanAIConversation,
+)
+from LoanMVP.models.partner_models import (
+    ExternalPartnerLead, PartnerConnectionRequest, PartnerJob,
+)
+from LoanMVP.models.activity_models import BorrowerActivity
+from LoanMVP.models.credit_models import SoftCreditReport
+from LoanMVP.models.campaign_model import Campaign, CampaignRecipient
+from LoanMVP.models.processor_model import ProcessorProfile
+from LoanMVP.models.underwriter_model import (
+    UnderwriterProfile, UnderwriterTask, UnderwritingCondition, ConditionRequest,
+)
+from LoanMVP.models.crm_models import Lead, Message, CRMNote, Task
+from LoanMVP.models.loan_officer_model import LoanOfficerProfile
 from LoanMVP.models.user_model import User
 
 from LoanMVP.utils.decorators import role_required
@@ -271,6 +296,275 @@ def delete_user(user_id):
         return redirect(url_for("system.users"))
 
     try:
+        # Explicitly remove related rows whose FK is NOT NULL and
+        # would otherwise cause a constraint violation when the ORM
+        # tries to SET user_id = NULL during cascade.
+
+        # -- CRM / messaging -------------------------------------------
+        Message.query.filter(
+            (Message.sender_id == user.id) | (Message.receiver_id == user.id)
+        ).delete(synchronize_session="fetch")
+        CRMNote.query.filter_by(user_id=user.id).delete(synchronize_session="fetch")
+
+        conversation_ids = [
+            c.id for c in DealConversation.query
+            .filter_by(user_id=user.id)
+            .with_entities(DealConversation.id)
+            .all()
+        ]
+        if conversation_ids:
+            DealMessage.query.filter(
+                DealMessage.conversation_id.in_(conversation_ids)
+            ).delete(synchronize_session="fetch")
+        DealConversation.query.filter_by(user_id=user.id).delete(synchronize_session="fetch")
+
+        # -- Renovation mockups & build projects -------------------------
+        # Must delete BEFORE deals because RenovationMockup.deal_id is a FK
+        # to deals.id (no ondelete clause → RESTRICT by default).
+        RenovationMockup.query.filter_by(user_id=user.id).delete(
+            synchronize_session="fetch"
+        )
+        # BuildProject child rows: ProjectBudget via build_project_id
+        build_project_ids = [
+            bp.id for bp in BuildProject.query
+            .filter_by(user_id=user.id)
+            .with_entities(BuildProject.id)
+            .all()
+        ]
+        if build_project_ids:
+            ProjectBudget.query.filter(
+                ProjectBudget.build_project_id.in_(build_project_ids)
+            ).delete(synchronize_session="fetch")
+        BuildProject.query.filter_by(user_id=user.id).delete(
+            synchronize_session="fetch"
+        )
+
+        # -- Deals & child rows ----------------------------------------
+        deal_ids = [
+            d.id for d in Deal.query
+            .filter_by(user_id=user.id)
+            .with_entities(Deal.id)
+            .all()
+        ]
+        if deal_ids:
+            FundingRequest.query.filter(
+                FundingRequest.deal_id.in_(deal_ids)
+            ).delete(synchronize_session="fetch")
+            Project.query.filter(
+                Project.deal_id.in_(deal_ids)
+            ).delete(synchronize_session="fetch")
+            ProjectBudget.query.filter(
+                ProjectBudget.deal_id.in_(deal_ids)
+            ).delete(synchronize_session="fetch")
+            # Nullify deal_id on tables that reference these deals
+            PartnerConnectionRequest.query.filter(
+                PartnerConnectionRequest.deal_id.in_(deal_ids)
+            ).update({"deal_id": None}, synchronize_session="fetch")
+            RenovationMockup.query.filter(
+                RenovationMockup.deal_id.in_(deal_ids)
+            ).update({"deal_id": None}, synchronize_session="fetch")
+        # User's own funding requests on other users' deals
+        FundingRequest.query.filter_by(investor_id=user.id).delete(
+            synchronize_session="fetch"
+        )
+        Deal.query.filter_by(user_id=user.id).delete(synchronize_session="fetch")
+
+        # -- Calls, AI -------------------------------------------------
+        CallLog.query.filter_by(user_id=user.id).delete(synchronize_session="fetch")
+        AIAssistantInteraction.query.filter_by(user_id=user.id).delete(
+            synchronize_session="fetch"
+        )
+
+        # -- Partner leads & uploads -----------------------------------
+        ExternalPartnerLead.query.filter_by(
+            created_by_user_id=user.id
+        ).delete(synchronize_session="fetch")
+        Upload.query.filter_by(uploaded_by_id=user.id).delete(
+            synchronize_session="fetch"
+        )
+
+        # -- Campaigns & recipients ------------------------------------
+        campaign_ids = [
+            c.id for c in Campaign.query
+            .filter_by(created_by_id=user.id)
+            .with_entities(Campaign.id)
+            .all()
+        ]
+        if campaign_ids:
+            CampaignRecipient.query.filter(
+                CampaignRecipient.campaign_id.in_(campaign_ids)
+            ).delete(synchronize_session="fetch")
+        Campaign.query.filter_by(created_by_id=user.id).delete(
+            synchronize_session="fetch"
+        )
+
+        # -- Processor & underwriter profiles --------------------------
+        # Nullify nullable FK references on child tables before deleting
+        # profiles, so LoanApplications / Tasks / Quotes are preserved.
+        proc_ids = [
+            p.id for p in ProcessorProfile.query
+            .filter_by(user_id=user.id)
+            .with_entities(ProcessorProfile.id)
+            .all()
+        ]
+        if proc_ids:
+            LoanApplication.query.filter(
+                LoanApplication.processor_id.in_(proc_ids)
+            ).update({"processor_id": None}, synchronize_session="fetch")
+
+        uw_ids = [
+            u.id for u in UnderwriterProfile.query
+            .filter_by(user_id=user.id)
+            .with_entities(UnderwriterProfile.id)
+            .all()
+        ]
+        if uw_ids:
+            LoanApplication.query.filter(
+                LoanApplication.underwriter_id.in_(uw_ids)
+            ).update({"underwriter_id": None}, synchronize_session="fetch")
+            UnderwriterTask.query.filter(
+                UnderwriterTask.assigned_to.in_(uw_ids)
+            ).update({"assigned_to": None}, synchronize_session="fetch")
+            LoanQuote.query.filter(
+                LoanQuote.assigned_underwriter_id.in_(uw_ids)
+            ).update({"assigned_underwriter_id": None}, synchronize_session="fetch")
+
+        ProcessorProfile.query.filter_by(user_id=user.id).delete(
+            synchronize_session="fetch")
+        UnderwriterProfile.query.filter_by(user_id=user.id).delete(
+            synchronize_session="fetch")
+
+        # -- Investor profile: detach loan applications --------------------
+        # User.investor_profile uses cascade="all, delete-orphan", which
+        # means db.session.delete(user) will ORM-cascade-delete the
+        # InvestorProfile.  InvestorProfile.capital_requests also has
+        # cascade="all, delete-orphan" → that would wipe out every linked
+        # LoanApplication (and *their* children: tasks, quotes, documents,
+        # conditions, budgets, scenarios, …).
+        # Nullify the FK first so those loans are detached before the
+        # cascade fires.  Investor-specific data (investments, saved
+        # properties, credit profiles, etc.) is still cleaned up by the
+        # cascade — only the loan pipeline is preserved.
+        inv_ids = [
+            ip.id for ip in InvestorProfile.query
+            .filter_by(user_id=user.id)
+            .with_entities(InvestorProfile.id)
+            .all()
+        ]
+        if inv_ids:
+            # 1) Delete NOT NULL investor_profile_id rows (cannot nullify)
+            BorrowerActivity.query.filter(
+                BorrowerActivity.investor_profile_id.in_(inv_ids)
+            ).delete(synchronize_session="fetch")
+            AIIntakeSummary.query.filter(
+                AIIntakeSummary.investor_profile_id.in_(inv_ids)
+            ).delete(synchronize_session="fetch")
+            ESignedDocument.query.filter(
+                ESignedDocument.investor_profile_id.in_(inv_ids)
+            ).delete(synchronize_session="fetch")
+
+            # 2) Nullify investor_profile_id on shared child tables so
+            #    ORM cascade-delete of InvestorProfile doesn't wipe them
+            LoanApplication.query.filter(
+                LoanApplication.investor_profile_id.in_(inv_ids)
+            ).update({"investor_profile_id": None},
+                     synchronize_session="fetch")
+            LoanDocument.query.filter(
+                LoanDocument.investor_profile_id.in_(inv_ids)
+            ).update({"investor_profile_id": None},
+                     synchronize_session="fetch")
+            UnderwritingCondition.query.filter(
+                UnderwritingCondition.investor_profile_id.in_(inv_ids)
+            ).update({"investor_profile_id": None},
+                     synchronize_session="fetch")
+            ConditionRequest.query.filter(
+                ConditionRequest.investor_profile_id.in_(inv_ids)
+            ).update({"investor_profile_id": None},
+                     synchronize_session="fetch")
+            CreditProfile.query.filter(
+                CreditProfile.investor_profile_id.in_(inv_ids)
+            ).update({"investor_profile_id": None},
+                     synchronize_session="fetch")
+            LoanQuote.query.filter(
+                LoanQuote.investor_profile_id.in_(inv_ids)
+            ).update({"investor_profile_id": None},
+                     synchronize_session="fetch")
+            PropertyAnalysis.query.filter(
+                PropertyAnalysis.investor_profile_id.in_(inv_ids)
+            ).update({"investor_profile_id": None},
+                     synchronize_session="fetch")
+            LoanIntakeSession.query.filter(
+                LoanIntakeSession.investor_profile_id.in_(inv_ids)
+            ).update({"investor_profile_id": None},
+                     synchronize_session="fetch")
+            DocumentRequest.query.filter(
+                DocumentRequest.investor_profile_id.in_(inv_ids)
+            ).update({"investor_profile_id": None},
+                     synchronize_session="fetch")
+            ProjectBudget.query.filter(
+                ProjectBudget.investor_profile_id.in_(inv_ids)
+            ).update({"investor_profile_id": None},
+                     synchronize_session="fetch")
+            LoanAIConversation.query.filter(
+                LoanAIConversation.investor_profile_id.in_(inv_ids)
+            ).update({"investor_profile_id": None},
+                     synchronize_session="fetch")
+            Task.query.filter(
+                Task.investor_profile_id.in_(inv_ids)
+            ).update({"investor_profile_id": None},
+                     synchronize_session="fetch")
+            SoftCreditReport.query.filter(
+                SoftCreditReport.investor_profile_id.in_(inv_ids)
+            ).update({"investor_profile_id": None},
+                     synchronize_session="fetch")
+            PartnerConnectionRequest.query.filter(
+                PartnerConnectionRequest.investor_profile_id.in_(inv_ids)
+            ).update({"investor_profile_id": None},
+                     synchronize_session="fetch")
+            PartnerJob.query.filter(
+                PartnerJob.investor_profile_id.in_(inv_ids)
+            ).update({"investor_profile_id": None},
+                     synchronize_session="fetch")
+            ExternalPartnerLead.query.filter(
+                ExternalPartnerLead.investor_profile_id.in_(inv_ids)
+            ).update({"investor_profile_id": None},
+                     synchronize_session="fetch")
+
+        # -- Loan officer profile: detach loans & borrowers ----------------
+        # User.loan_officer_profile has cascade="all, delete", which
+        # ORM-cascade-deletes the LoanOfficerProfile.  That profile has
+        # cascade="all, delete-orphan" on loans and borrowers, wiping out
+        # every assigned LoanApplication and BorrowerProfile (plus all
+        # *their* children).  Nullify the FKs to preserve the pipeline.
+        lo_ids = [
+            lo.id for lo in LoanOfficerProfile.query
+            .filter_by(user_id=user.id)
+            .with_entities(LoanOfficerProfile.id)
+            .all()
+        ]
+        if lo_ids:
+            LoanApplication.query.filter(
+                LoanApplication.loan_officer_id.in_(lo_ids)
+            ).update({"loan_officer_id": None},
+                     synchronize_session="fetch")
+            BorrowerProfile.query.filter(
+                BorrowerProfile.assigned_officer_id.in_(lo_ids)
+            ).update({"assigned_officer_id": None},
+                     synchronize_session="fetch")
+            LoanIntakeSession.query.filter(
+                LoanIntakeSession.assigned_officer_id.in_(lo_ids)
+            ).update({"assigned_officer_id": None},
+                     synchronize_session="fetch")
+            LoanQuote.query.filter(
+                LoanQuote.assigned_officer_id.in_(lo_ids)
+            ).update({"assigned_officer_id": None},
+                     synchronize_session="fetch")
+
+        # Force the ORM to reload all relationship collections from the
+        # database so the cascade triggered by db.session.delete(user)
+        # sees the nullified FK values rather than stale in-memory state.
+        db.session.expire_all()
+
         db.session.delete(user)
         db.session.commit()
         flash(f"Deleted user {user.email}.", "success")

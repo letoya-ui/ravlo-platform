@@ -73,6 +73,8 @@ class User(UserMixin, db.Model):
     investor_profile = db.relationship(
         "InvestorProfile",
         back_populates="user",
+        uselist=False,
+        cascade="all, delete-orphan",
         foreign_keys="[InvestorProfile.user_id]"
     )
 
