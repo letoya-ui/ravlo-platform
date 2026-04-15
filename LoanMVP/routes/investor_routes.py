@@ -3705,19 +3705,23 @@ def deal_studio():
     )
 
 
-@investor_bp.route("/investor/deal-workspace", methods=["GET"])
+@investor_bp.route("/deals/workspace", methods=["GET"])
 @login_required
 @role_required("investor")
 def deal_workspace():
     prop_id = request.args.get("prop_id", type=int)
     mode = (request.args.get("mode") or "flip").strip().lower()
 
-    saved_props = (
-        SavedProperty.query
-        .filter_by(investor_profile_id=getattr(current_user, "investor_profile_id", None))
-        .order_by(SavedProperty.id.desc())
-        .all()
-    )
+    investor_profile = InvestorProfile.query.filter_by(user_id=current_user.id).first()
+
+    saved_props = []
+    if investor_profile:
+        saved_props = (
+            SavedProperty.query
+            .filter_by(investor_profile_id=investor_profile.id)
+            .order_by(SavedProperty.id.desc())
+            .all()
+        )
 
     selected_prop = None
     deal = None
@@ -3733,11 +3737,14 @@ def deal_workspace():
     workspace_analysis = {}
 
     if prop_id:
-        selected_prop = (
-            SavedProperty.query
-            .filter_by(id=prop_id)
-            .first()
-        )
+        if investor_profile:
+            selected_prop = (
+                SavedProperty.query
+                .filter_by(id=prop_id, investor_profile_id=investor_profile.id)
+                .first()
+            )
+        else:
+            selected_prop = SavedProperty.query.filter_by(id=prop_id).first()
 
     if selected_prop:
         deal = (
@@ -3748,26 +3755,45 @@ def deal_workspace():
         )
 
         if deal:
-            budget = (
-                Budget.query
-                .filter_by(deal_id=deal.id, user_id=current_user.id)
-                .order_by(Budget.updated_at.desc(), Budget.id.desc())
-                .first()
-            )
+            if investor_profile:
+                budget = (
+                    ProjectBudget.query
+                    .filter_by(
+                        deal_id=deal.id,
+                        investor_profile_id=investor_profile.id,
+                    )
+                    .order_by(ProjectBudget.updated_at.desc(), ProjectBudget.id.desc())
+                    .first()
+                )
+            else:
+                budget = (
+                    ProjectBudget.query
+                    .filter_by(deal_id=deal.id)
+                    .order_by(ProjectBudget.updated_at.desc(), ProjectBudget.id.desc())
+                    .first()
+                )
 
-            mockups = (
-                RenovationMockup.query
-                .filter_by(deal_id=deal.id, user_id=current_user.id)
-                .order_by(RenovationMockup.id.desc())
-                .all()
-            )
+            try:
+                mockups = (
+                    RenovationMockup.query
+                    .filter_by(deal_id=deal.id, user_id=current_user.id)
+                    .order_by(RenovationMockup.id.desc())
+                    .all()
+                )
+            except Exception:
+                mockups = []
 
-            featured_after = next((m for m in mockups if getattr(m, "is_featured", False)), None)
-            if featured_after:
+            featured_mockup = None
+            for m in mockups:
+                if getattr(m, "is_featured", False):
+                    featured_mockup = m
+                    break
+
+            if featured_mockup:
                 featured = {
-                    "after_url": getattr(featured_after, "after_url", None),
-                    "before_url": getattr(featured_after, "before_url", None),
-                    "style_preset": getattr(featured_after, "style_preset", None),
+                    "after_url": getattr(featured_mockup, "after_url", None),
+                    "before_url": getattr(featured_mockup, "before_url", None),
+                    "style_preset": getattr(featured_mockup, "style_preset", None),
                 }
 
             deal_results = deal.results_json or {}
@@ -3775,6 +3801,10 @@ def deal_workspace():
             comps = deal_results.get("comp_analysis", {}) or {}
             rehab_analysis = deal_results.get("rehab_analysis", {}) or {}
             strategy_analysis = deal_results.get("strategy_analysis", {}) or {}
+
+            comps["normalized_comps"] = normalize_workspace_comps(
+                comps.get("normalized_comps") or comps.get("comps") or []
+            )
 
             comparison = build_workspace_exit_comparison(
                 selected_prop=selected_prop,
@@ -3792,21 +3822,31 @@ def deal_workspace():
                 comparison=comparison,
             )
 
+            deal_results["comp_analysis"] = comps
             deal_results["exit_strategy_analysis"] = exit_strategy_analysis
-            deal_results["comp_analysis"] = deal_results.get("comp_analysis", {}) or {}
-            deal_results["comp_analysis"]["normalized_comps"] = normalize_workspace_comps(
-                comps.get("normalized_comps") or comps.get("comps") or []
-            )
-
             deal.results_json = deal_results
-            deal.updated_at = datetime.utcnow()
+
+            if deal.deal_score is None:
+                best = exit_strategy_analysis.get("best_exit_strategy")
+                if best == "rental":
+                    deal.deal_score = 74
+                elif best == "flip":
+                    deal.deal_score = 68
+                elif best == "airbnb":
+                    deal.deal_score = 64
+                elif best == "land":
+                    deal.deal_score = 58
+
             db.session.commit()
 
             recommendation = {
                 "best": exit_strategy_analysis.get("best_exit_strategy")
             }
 
-        partners = get_workspace_partners_for_property(selected_prop)
+        try:
+            partners = get_workspace_partners_for_property(selected_prop)
+        except Exception:
+            partners = []
 
     return render_template(
         "investor/deal_workspace.html",
@@ -3817,12 +3857,12 @@ def deal_workspace():
         partners=partners,
         mockups=mockups,
         featured=featured,
-        comps=(deal.results_json.get("comp_analysis", {}) if deal and deal.results_json else {}),
+        comps=comps,
         strategy_analysis=strategy_analysis,
         rehab_analysis=rehab_analysis,
         comparison=comparison,
         recommendation=recommendation,
-        workspace_analysis=(deal.results_json.get("workspace_analysis", {}) if deal and deal.results_json else {}),
+        workspace_analysis=workspace_analysis,
         mode=mode,
     )
 
@@ -4019,6 +4059,7 @@ def deal_analysis(deal_id):
         arv=deal.arv,
         estimated_rent=deal.estimated_rent,
     )  
+
 @investor_bp.route("/deal/<int:deal_id>/run-analysis", methods=["POST"])
 @login_required
 def run_analysis(deal_id):

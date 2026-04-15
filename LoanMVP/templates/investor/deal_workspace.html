@@ -9,7 +9,7 @@ Review a saved property, compare exit paths, and move the best opportunity into 
 {% set sp = selected_prop if selected_prop is defined else none %}
 
 <a href="{{ url_for('investor.deals_list') }}" class="ravlo-btn ghost sm">
-    Deal Workspace
+    Deals
 </a>
 
 {% if sp %}
@@ -325,6 +325,11 @@ Review a saved property, compare exit paths, and move the best opportunity into 
                     {% else %}
                         Not Attached
                     {% endif %}
+                </span>
+
+                <span class="ravlo-chip">
+                    Budget:
+                    {% if budget %}Ready{% else %}Not Started{% endif %}
                 </span>
 
                 {% if deal_score_value is not none %}
@@ -739,6 +744,100 @@ Review a saved property, compare exit paths, and move the best opportunity into 
             <section class="ravlo-card pad">
                 <div class="section-head">
                     <div>
+                        <div class="eyebrow">BUDGET TRACKER</div>
+                        <h3>Current Budget Status</h3>
+                    </div>
+                    {% if deal %}
+                        {% if budget %}
+                        <a href="{{ url_for('investor.budget_detail', budget_id=budget.id) }}" class="ravlo-link-btn">
+                            Open Full Budget
+                        </a>
+                        {% else %}
+                        <a href="{{ url_for('investor.budget_studio', deal_id=deal.id) }}" class="ravlo-link-btn">
+                            Start Budget
+                        </a>
+                        {% endif %}
+                    {% endif %}
+                </div>
+
+                {% if budget %}
+                <div class="workspace-fit-grid">
+                    <div class="workspace-mini-stat">
+                        <span>Budget Name</span>
+                        <strong>{{ budget.project_name or budget.name or "Project Budget" }}</strong>
+                    </div>
+                    <div class="workspace-mini-stat">
+                        <span>Total Budget</span>
+                        <strong>${{ "{:,.0f}".format(budget.total_budget or budget.total_amount or 0) }}</strong>
+                    </div>
+                    <div class="workspace-mini-stat">
+                        <span>Total Cost</span>
+                        <strong>${{ "{:,.0f}".format(budget.total_cost or 0) }}</strong>
+                    </div>
+                    <div class="workspace-mini-stat">
+                        <span>Paid Amount</span>
+                        <strong>${{ "{:,.0f}".format(budget.paid_amount or 0) }}</strong>
+                    </div>
+                    <div class="workspace-mini-stat">
+                        <span>Contingency</span>
+                        <strong>${{ "{:,.0f}".format(budget.contingency or 0) }}</strong>
+                    </div>
+                    <div class="workspace-mini-stat">
+                        <span>Budget Type</span>
+                        <strong>{{ budget.budget_type or "rehab" }}</strong>
+                    </div>
+                </div>
+
+                {% if budget.notes %}
+                <div class="workspace-note mt-16">
+                    <strong>Budget Notes</strong>
+                    <p>{{ budget.notes }}</p>
+                </div>
+                {% endif %}
+
+                {% if budget.expenses %}
+                <div class="workspace-budget-list mt-16">
+                    {% for item in budget.expenses[:5] %}
+                    <div class="workspace-budget-row">
+                        <div>
+                            <strong>{{ item.description or "Budget Item" }}</strong>
+                            <p class="muted mb-0">
+                                {{ item.category or "General" }}
+                                {% if item.status %} • {{ item.status|title }}{% endif %}
+                            </p>
+                        </div>
+                        <div class="workspace-budget-amounts">
+                            <span>Est. ${{ "{:,.0f}".format(item.estimated_amount or 0) }}</span>
+                            <span>Actual ${{ "{:,.0f}".format(item.actual_amount or 0) }}</span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+                {% else %}
+                <div class="empty-state-inline">
+                    No project budget is attached to this deal yet. Start Budget Studio to create the first budget.
+                </div>
+
+                {% if deal %}
+                <div class="workspace-action-row mt-16">
+                    <a href="{{ url_for('investor.budget_studio', deal_id=deal.id) }}" class="ravlo-btn ghost">
+                        Open Budget Studio
+                    </a>
+                    <form method="POST" action="{{ url_for('investor.generate_budget_from_ai', deal_id=deal.id) }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="ravlo-btn primary">
+                            Generate Budget From AI
+                        </button>
+                    </form>
+                </div>
+                {% endif %}
+                {% endif %}
+            </section>
+
+            <section class="ravlo-card pad">
+                <div class="section-head">
+                    <div>
                         <div class="eyebrow">NEXT STEP</div>
                         <h3>Move this deal forward</h3>
                     </div>
@@ -815,6 +914,9 @@ Review a saved property, compare exit paths, and move the best opportunity into 
 .workspace-note{margin-top:14px;padding:14px 16px;border-radius:18px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07)}
 .workspace-bullets{margin:10px 0 0 18px;padding:0}
 .workspace-bullets li{margin:0 0 8px;color:var(--text)}
+.workspace-budget-list{display:grid;gap:10px}
+.workspace-budget-row{display:flex;justify-content:space-between;gap:12px;padding:14px 16px;border-radius:16px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06)}
+.workspace-budget-amounts{display:grid;gap:6px;text-align:right;font-size:13px}
 .workspace-photo-shell{display:grid;gap:14px}
 .workspace-photo-main{border-radius:20px;overflow:hidden;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03);min-height:320px}
 .workspace-photo-main img{width:100%;height:100%;max-height:460px;object-fit:cover;display:block}
@@ -832,6 +934,8 @@ Review a saved property, compare exit paths, and move the best opportunity into 
 }
 @media (max-width:720px){
   .workspace-grid-4,.workspace-fit-grid,.comp-card-grid{grid-template-columns:1fr}
+  .workspace-budget-row{flex-direction:column}
+  .workspace-budget-amounts{text-align:left}
   .workspace-photo-grid{grid-template-columns:repeat(2,1fr)}
 }
 </style>
