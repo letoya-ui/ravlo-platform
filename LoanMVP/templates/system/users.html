@@ -127,12 +127,12 @@
               </td>
 
               <td>
-                {% if not user.last_login %}
-                  <span class="badge badge-warning">Pending</span>
-                {% elif user.is_active %}
-                  <span class="badge badge-success">Active</span>
-                {% else %}
+                {% if not user.is_active %}
                   <span class="badge badge-danger">Inactive</span>
+                {% elif not user.last_login %}
+                  <span class="badge badge-warning">Pending</span>
+                {% else %}
+                  <span class="badge badge-success">Active</span>
                 {% endif %}
               </td>
 
