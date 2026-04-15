@@ -65,9 +65,9 @@ def _photo_score(url: str | None) -> int:
 SPACES_BUCKET = os.getenv("SPACES_BUCKET", "")
 SPACES_REGION = os.getenv("SPACES_REGION", "")
 SPACES_ENDPOINT = os.getenv("SPACES_ENDPOINT", "")
-SPACES_KEY = os.getenv("SPACES_KEY", "")
-SPACES_SECRET = os.getenv("SPACES_SECRET", "")
-SPACES_CDN_BASE = os.getenv("SPACES_CDN_BASE", "").rstrip("/")
+SPACES_KEY = os.getenv("SPACES_ACCESS_KEY_ID", "") or os.getenv("SPACES_KEY", "")
+SPACES_SECRET = os.getenv("SPACES_SECRET_ACCESS_KEY", "") or os.getenv("SPACES_SECRET", "")
+SPACES_CDN_BASE = (os.getenv("SPACES_PUBLIC_BASE_URL", "") or os.getenv("SPACES_CDN_BASE", "")).rstrip("/")
 
 
 def _normalize_photo_list(value) -> list[str]:
