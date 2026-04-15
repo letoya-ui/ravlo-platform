@@ -379,6 +379,46 @@ def _project_budget_snapshot(budget):
     }
 
 
+def _resolve_rehab_before_seed(deal):
+    if not deal:
+        return {"url": "", "gallery": []}
+
+    results = _deal_results(deal)
+    rehab_project = results.get("rehab_project", {}) or {}
+    rehab_before = rehab_project.get("before", {}) or {}
+    workspace_analysis = results.get("workspace_analysis", {}) or {}
+    property_payload = results.get("property", {}) or {}
+
+    saved_property = None
+    if getattr(deal, "saved_property_id", None):
+        saved_property = SavedProperty.query.filter_by(id=deal.saved_property_id).first()
+
+    property_seed = _saved_property_workspace_seed(saved_property) if saved_property else {}
+    property_media = _saved_property_media(saved_property) if saved_property else {"primary_photo": None, "gallery": []}
+
+    gallery = _normalize_photo_urls(
+        rehab_before.get("gallery"),
+        workspace_analysis.get("listing_photos"),
+        property_payload.get("listing_photos"),
+        property_seed.get("listing_photos"),
+        property_media.get("gallery"),
+        rehab_before.get("image_url"),
+        workspace_analysis.get("image_url"),
+        property_payload.get("image_url"),
+        property_seed.get("primary_photo"),
+        property_media.get("primary_photo"),
+    )
+    url = _resolve_photo(
+        rehab_before.get("image_url")
+        or workspace_analysis.get("image_url")
+        or property_payload.get("image_url")
+        or property_seed.get("primary_photo")
+        or property_media.get("primary_photo"),
+        gallery,
+    )
+    return {"url": url or "", "gallery": gallery}
+
+
 def _proxy_listing_image_url(source_url):
     source_url = safe_str(source_url)
     if not source_url:
@@ -5064,11 +5104,8 @@ def deal_rehab_generate_variant():
         _set_deal_render_processing(deal)
         db.session.commit()
 
-        results = _deal_results(deal)
-        rehab_project = results.get("rehab_project", {}) or {}
-        rehab_before = rehab_project.get("before", {}) or {}
-
-        before_url = (rehab_before.get("image_url") or "").strip()
+        seed_media = _resolve_rehab_before_seed(deal)
+        before_url = (seed_media.get("url") or "").strip()
         if not before_url:
             raise RuntimeError("Before image is required before generating another concept.")
 
@@ -7859,11 +7896,8 @@ def deal_rehab_generate():
                 raw_before = None
 
         elif deal is not None:
-            results = _deal_results(deal)
-            rehab_project = results.get("rehab_project", {}) or {}
-            rehab_before = rehab_project.get("before", {}) or {}
-
-            saved_before_url = (rehab_before.get("image_url") or "").strip()
+            seed_media = _resolve_rehab_before_seed(deal)
+            saved_before_url = (seed_media.get("url") or "").strip()
             if saved_before_url:
                 try:
                     raw_before = download_image_bytes(saved_before_url)
@@ -7872,30 +7906,6 @@ def deal_rehab_generate():
                         before_uploaded_url = saved_before_url
                 except Exception:
                     raw_before = None
-
-            if not image_base64 and getattr(deal, "saved_property_id", None):
-                saved_property = SavedProperty.query.filter_by(
-                    id=deal.saved_property_id,
-                    user_id=current_user.id,
-                ).first()
-                property_seed = _saved_property_workspace_seed(saved_property) if saved_property else {}
-                property_media = _saved_property_media(saved_property) if saved_property else {"primary_photo": None, "gallery": []}
-                fallback_gallery = _normalize_photo_urls(
-                    property_seed.get("listing_photos"),
-                    property_media.get("gallery"),
-                )
-                fallback_before_url = _resolve_photo(
-                    property_seed.get("primary_photo") or property_media.get("primary_photo"),
-                    fallback_gallery,
-                )
-                if fallback_before_url:
-                    try:
-                        raw_before = download_image_bytes(fallback_before_url)
-                        if raw_before:
-                            image_base64 = base64.b64encode(raw_before).decode("utf-8")
-                            before_uploaded_url = fallback_before_url
-                    except Exception:
-                        raw_before = None
 
         if not image_base64:
             raise RuntimeError("Provide a before photo or saved rehab before image.")
