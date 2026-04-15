@@ -75,7 +75,7 @@ def build_rehab_concept_prompt(
         f"fully finished space, real materials, natural lighting, {style_label} renovation, {level_phrase}",
     ]
     if notes_label:
-        parts.append(f", {notes_label}")
+        parts.append(notes_label)
     prompt = " ".join(parts)
     return _clip_safe(prompt)
 
