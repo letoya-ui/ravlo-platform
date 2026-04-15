@@ -11,23 +11,31 @@ from datetime import datetime
 
 from LoanMVP.extensions import db, csrf
 from LoanMVP.models.system_models import System, SystemLog, AuditLog, SystemSettings
-from LoanMVP.models.crm_models import Lead, Message, CRMNote
 from LoanMVP.models.loan_models import (
-    BorrowerProfile, LoanApplication, LoanIntakeSession, LoanNotification,
-    LoanQuote, Upload,
+    BorrowerProfile, CreditProfile, LoanApplication, LoanIntakeSession,
+    LoanNotification, LoanQuote, Upload,
 )
-from LoanMVP.models.document_models import DocumentRequest
+from LoanMVP.models.document_models import (
+    DocumentRequest, ESignedDocument, LoanDocument,
+)
 from LoanMVP.models.investor_models import (
     DealConversation, DealMessage, FundingRequest, InvestorProfile, Project,
 )
-from LoanMVP.models.borrowers import Deal, ProjectBudget
+from LoanMVP.models.borrowers import Deal, ProjectBudget, PropertyAnalysis
 from LoanMVP.models.call_model import CallLog
 from LoanMVP.models.renovation_models import RenovationMockup, BuildProject
-from LoanMVP.models.ai_models import AIAssistantInteraction
+from LoanMVP.models.ai_models import (
+    AIAssistantInteraction, AIIntakeSummary, LoanAIConversation,
+)
 from LoanMVP.models.partner_models import ExternalPartnerLead
+from LoanMVP.models.activity_models import BorrowerActivity
+from LoanMVP.models.credit_models import SoftCreditReport
 from LoanMVP.models.campaign_model import Campaign, CampaignRecipient
 from LoanMVP.models.processor_model import ProcessorProfile
-from LoanMVP.models.underwriter_model import UnderwriterProfile, UnderwriterTask
+from LoanMVP.models.underwriter_model import (
+    UnderwriterProfile, UnderwriterTask, UnderwritingCondition, ConditionRequest,
+)
+from LoanMVP.models.crm_models import Lead, Message, CRMNote, Task
 from LoanMVP.models.loan_officer_model import LoanOfficerProfile
 from LoanMVP.models.user_model import User
 
@@ -435,8 +443,69 @@ def delete_user(user_id):
             .all()
         ]
         if inv_ids:
+            # 1) Delete NOT NULL investor_profile_id rows (cannot nullify)
+            BorrowerActivity.query.filter(
+                BorrowerActivity.investor_profile_id.in_(inv_ids)
+            ).delete(synchronize_session="fetch")
+            AIIntakeSummary.query.filter(
+                AIIntakeSummary.investor_profile_id.in_(inv_ids)
+            ).delete(synchronize_session="fetch")
+            ESignedDocument.query.filter(
+                ESignedDocument.investor_profile_id.in_(inv_ids)
+            ).delete(synchronize_session="fetch")
+
+            # 2) Nullify investor_profile_id on shared child tables so
+            #    ORM cascade-delete of InvestorProfile doesn't wipe them
             LoanApplication.query.filter(
                 LoanApplication.investor_profile_id.in_(inv_ids)
+            ).update({"investor_profile_id": None},
+                     synchronize_session="fetch")
+            LoanDocument.query.filter(
+                LoanDocument.investor_profile_id.in_(inv_ids)
+            ).update({"investor_profile_id": None},
+                     synchronize_session="fetch")
+            UnderwritingCondition.query.filter(
+                UnderwritingCondition.investor_profile_id.in_(inv_ids)
+            ).update({"investor_profile_id": None},
+                     synchronize_session="fetch")
+            ConditionRequest.query.filter(
+                ConditionRequest.investor_profile_id.in_(inv_ids)
+            ).update({"investor_profile_id": None},
+                     synchronize_session="fetch")
+            CreditProfile.query.filter(
+                CreditProfile.investor_profile_id.in_(inv_ids)
+            ).update({"investor_profile_id": None},
+                     synchronize_session="fetch")
+            LoanQuote.query.filter(
+                LoanQuote.investor_profile_id.in_(inv_ids)
+            ).update({"investor_profile_id": None},
+                     synchronize_session="fetch")
+            PropertyAnalysis.query.filter(
+                PropertyAnalysis.investor_profile_id.in_(inv_ids)
+            ).update({"investor_profile_id": None},
+                     synchronize_session="fetch")
+            LoanIntakeSession.query.filter(
+                LoanIntakeSession.investor_profile_id.in_(inv_ids)
+            ).update({"investor_profile_id": None},
+                     synchronize_session="fetch")
+            DocumentRequest.query.filter(
+                DocumentRequest.investor_profile_id.in_(inv_ids)
+            ).update({"investor_profile_id": None},
+                     synchronize_session="fetch")
+            ProjectBudget.query.filter(
+                ProjectBudget.investor_profile_id.in_(inv_ids)
+            ).update({"investor_profile_id": None},
+                     synchronize_session="fetch")
+            LoanAIConversation.query.filter(
+                LoanAIConversation.investor_profile_id.in_(inv_ids)
+            ).update({"investor_profile_id": None},
+                     synchronize_session="fetch")
+            Task.query.filter(
+                Task.investor_profile_id.in_(inv_ids)
+            ).update({"investor_profile_id": None},
+                     synchronize_session="fetch")
+            SoftCreditReport.query.filter(
+                SoftCreditReport.investor_profile_id.in_(inv_ids)
             ).update({"investor_profile_id": None},
                      synchronize_session="fetch")
 
