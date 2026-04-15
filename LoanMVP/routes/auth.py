@@ -1,4 +1,5 @@
 from datetime import datetime
+import secrets
 from sqlalchemy import func
 from flask import (
     Blueprint,
@@ -620,6 +621,11 @@ def request_access():
             flash("An access request already exists for this email and role.", "info")
             return redirect(url_for("auth.login"))
 
+        auto_approve_beta = bool(
+            current_app.config.get("BETA_ACCESS_AUTO_APPROVE", False)
+            and not current_app.config.get("STRIPE_BILLING_ENABLED", False)
+        )
+
         req = AccessRequest(
             company_name=company_name or None,
             contact_name=contact_name,
@@ -627,12 +633,39 @@ def request_access():
             phone=phone or None,
             request_type="company_setup",
             requested_role=requested_role,
-            status="pending",
+            status="approved" if auto_approve_beta else "pending",
             notes=notes or None,
         )
 
         db.session.add(req)
+        if auto_approve_beta:
+            existing_user = User.query.filter(func.lower(User.email) == email).first()
+            if not existing_user:
+                generated_password = secrets.token_urlsafe(12)
+                name_parts = contact_name.split(None, 1)
+                first_name = name_parts[0] if name_parts else contact_name
+                last_name = name_parts[1] if len(name_parts) > 1 else ""
+                beta_user = User(
+                    first_name=first_name or None,
+                    last_name=last_name or None,
+                    username=contact_name or email,
+                    email=email,
+                    role=requested_role,
+                    is_active=True,
+                    invite_accepted=True,
+                )
+                beta_user.set_password(generated_password)
+                db.session.add(beta_user)
+
         db.session.commit()
+
+        if auto_approve_beta:
+            token = generate_reset_token(email)
+            flash(
+                "Beta access approved! Please set your password to get started.",
+                "success",
+            )
+            return redirect(url_for("auth.reset_password", token=token))
 
         flash("Your access request has been submitted. An admin will review it.", "success")
         return redirect(url_for("auth.login"))

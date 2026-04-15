@@ -321,6 +321,7 @@ from LoanMVP.utils.r2_storage import spaces_put_bytes
 
 
 investor_bp = Blueprint("investor", __name__, url_prefix="/investor")
+deal_architect_api_bp = Blueprint("deal_architect_api", __name__, url_prefix="/")
 
 client = OpenAI()
 
@@ -7473,6 +7474,181 @@ def deal_architect(deal_id=None):
         build_preview_url=build_preview_url,
         build_mockups=build_mockups,
     )
+
+
+@deal_architect_api_bp.route("v1/deal_architect", methods=["POST"])
+@login_required
+@role_required("investor", "admin", "platform_admin", "master_admin", "lending_admin")
+def v1_deal_architect_underwrite():
+    """
+    Source-of-truth underwriting endpoint for Deal Architect UI.
+    Frontend should only assemble this request and render this response.
+    """
+    payload = request.get_json(silent=True) or {}
+
+    def _num(key, default=None):
+        raw = payload.get(key, default)
+        if raw in (None, "", "None"):
+            return default
+        try:
+            return float(raw)
+        except (TypeError, ValueError):
+            return default
+
+    def _text(key, default=""):
+        return str(payload.get(key) or default).strip()
+
+    asking_price = _num("asking_price", 0.0) or 0.0
+    if asking_price <= 0:
+        return jsonify({"error": "asking_price must be greater than zero."}), 400
+
+    arv = _num("arv", 0.0) or 0.0
+    monthly_rent = _num("monthly_rent", 0.0) or 0.0
+    down_payment_pct = _num("down_payment_pct", 20.0) or 20.0
+    interest_rate = _num("interest_rate", 8.5) or 8.5
+    hold_years = _num("hold_years", 5.0) or 5.0
+    annual_tax_rate = _num("annual_tax_rate", 0.012)
+    annual_insurance_rate = _num("annual_insurance_rate", 0.005)
+
+    comps_in = payload.get("comps") or []
+    if not isinstance(comps_in, list):
+        comps_in = []
+
+    normalized_comps = []
+    for comp in comps_in:
+        if not isinstance(comp, dict):
+            continue
+        normalized_comps.append(
+            {
+                "address": (comp.get("address") or "").strip(),
+                "price": safe_float(comp.get("price"), 0.0),
+                "sqft": _normalize_int(comp.get("sqft")),
+                "beds": _normalize_int(comp.get("beds")),
+                "baths": safe_float(comp.get("baths"), 0.0),
+                "distance_miles": safe_float(comp.get("distance_miles"), 0.0),
+                "months_ago": _normalize_int(comp.get("months_ago")),
+                "notes": (comp.get("notes") or "").strip(),
+            }
+        )
+
+    comp_prices = [c["price"] for c in normalized_comps if (c.get("price") or 0) > 0]
+    comp_avg = (sum(comp_prices) / len(comp_prices)) if comp_prices else None
+    valuation_source = "comp_based" if comp_avg else "model_fallback"
+    estimated_value = comp_avg if comp_avg else (arv or asking_price * 1.15)
+
+    base_cost_low = asking_price * 1.05
+    base_cost_high = asking_price * 1.20
+    cost_low = round(base_cost_low, 2)
+    cost_high = round(base_cost_high, 2)
+
+    all_in_low = round(cost_low * (1 + down_payment_pct / 100 * 0.05), 2)
+    all_in_high = round(cost_high * (1 + down_payment_pct / 100 * 0.05), 2)
+
+    estimated_margin_low = round((estimated_value or 0) - all_in_high, 2)
+    estimated_margin_high = round((estimated_value or 0) - all_in_low, 2)
+
+    annual_taxes = (asking_price or 0) * (annual_tax_rate or 0)
+    annual_insurance = (asking_price or 0) * (annual_insurance_rate or 0)
+    annual_debt_service = (asking_price or 0) * 0.70 * ((interest_rate or 0) / 100)
+    noi_estimate = round((monthly_rent * 12) - annual_taxes - annual_insurance, 2)
+    dscr_estimate = round((noi_estimate / annual_debt_service), 2) if annual_debt_service > 0 else None
+
+    # NOTE: "market" and "execution" are static placeholders until live
+    # market-data and execution-risk scoring are implemented.  Update these
+    # once external data sources (e.g. Mashvisor market scores, contractor
+    # reliability indices) are integrated.
+    subscores = {
+        "valuation": max(0, min(100, round((estimated_margin_high / max((estimated_value or 1), 1)) * 100 + 50))),
+        "cashflow": max(0, min(100, round(((dscr_estimate or 0) / 1.25) * 100))),
+        "market": 65,  # placeholder — replace with live market data
+        "execution": 60 if hold_years <= 5 else 55,  # placeholder — replace with execution-risk model
+    }
+    deal_score = round(sum(subscores.values()) / len(subscores))
+
+    if deal_score >= 78:
+        opportunity_tier = "A"
+        verdict = "Strong proceed"
+    elif deal_score >= 62:
+        opportunity_tier = "B"
+        verdict = "Proceed with conditions"
+    else:
+        opportunity_tier = "C"
+        verdict = "Caution"
+
+    strengths = []
+    risks = []
+
+    if estimated_margin_low > 0:
+        strengths.append("Positive downside margin on all-in basis.")
+    if (dscr_estimate or 0) >= 1.25:
+        strengths.append("Debt coverage is above typical DSCR threshold.")
+    if len(normalized_comps) >= 3:
+        strengths.append("Comp set has enough observations for directional valuation.")
+
+    if len(normalized_comps) == 0:
+        risks.append("No comps were provided; valuation uses fallback assumptions.")
+    if len(normalized_comps) > 0 and len(normalized_comps) < 3:
+        risks.append("Limited comps reduce confidence in comp-based valuation.")
+    if (dscr_estimate or 0) < 1.10:
+        risks.append("DSCR is thin and may fail tighter underwriting lanes.")
+    if estimated_margin_low <= 0:
+        risks.append("Downside margin is negative on all-in high case.")
+
+    recommended_type = "Buy & Hold" if (dscr_estimate or 0) >= 1.15 else "Value-Add / Flip"
+    summary = (
+        f"{recommended_type} is currently favored based on valuation spread, "
+        f"cash-flow coverage, and comp support."
+    )
+
+    comp_confidence = 0.0
+    if len(normalized_comps) >= 5:
+        comp_confidence = 0.85
+    elif len(normalized_comps) >= 3:
+        comp_confidence = 0.65
+    elif len(normalized_comps) > 0:
+        comp_confidence = 0.35
+
+    response = {
+        "summary": summary,
+        "recommended_type": recommended_type,
+        "deal_score": deal_score,
+        "opportunity_tier": opportunity_tier,
+        "cost_low": cost_low,
+        "cost_high": cost_high,
+        "estimated_value": round(estimated_value or 0, 2),
+        "next_step": "Validate underwriting docs and confirm rent/comp assumptions.",
+        "meta": {
+            "all_in_low": all_in_low,
+            "all_in_high": all_in_high,
+            "estimated_margin_low": estimated_margin_low,
+            "estimated_margin_high": estimated_margin_high,
+            "monthly_rent_estimate": round(monthly_rent, 2),
+            "noi_estimate": noi_estimate,
+            "dscr_estimate": dscr_estimate,
+            "valuation_source": valuation_source,
+            "market": {
+                "city": _text("city"),
+                "state": _text("state"),
+                "zip_code": _text("zip_code"),
+                "interest_rate": interest_rate,
+                "hold_years": hold_years,
+                "annual_tax_rate": annual_tax_rate,
+                "annual_insurance_rate": annual_insurance_rate,
+                "market_multipliers": payload.get("market_multipliers") or {},
+            },
+            "comp_analysis": {
+                "normalized_comps": normalized_comps,
+                "comp_confidence": round(comp_confidence, 2),
+            },
+            "verdict_breakdown": {
+                "verdict": verdict,
+                "subscores": subscores,
+                "strengths": strengths,
+                "risks": risks,
+            },
+        },
+    }
+    return jsonify(response)
     
 @investor_bp.route("/deal-architect/analyze", methods=["POST"])
 @login_required
@@ -9772,13 +9948,131 @@ def investor_esign_sign(doc_id):
 # 💳 INVESTOR • PAYMENTS / BILLING
 # =========================================================
 
+def _stripe_subscription_catalog():
+    cfg = current_app.config
+    plans = [
+        ("individual_loan_officer", "Individual Loan Officer", "LendingOS", 149, cfg.get("STRIPE_PRICE_INDIVIDUAL_LOAN_OFFICER")),
+        ("brokerage_small_team", "Brokerage / Small Team", "LendingOS", 799, cfg.get("STRIPE_PRICE_BROKERAGE_SMALL_TEAM")),
+        ("explorer", "Explorer", "Investor", 29, cfg.get("STRIPE_PRICE_EXPLORER")),
+        ("operator", "Operator", "Investor", 99, cfg.get("STRIPE_PRICE_OPERATOR")),
+        ("basic_listing", "Basic Listing", "Partner", 49, cfg.get("STRIPE_PRICE_BASIC_LISTING")),
+        ("preferred_partner", "Preferred Partner", "Partner", 99, cfg.get("STRIPE_PRICE_PREFERRED_PARTNER")),
+        ("featured_partner", "Featured Partner", "Partner", 199, cfg.get("STRIPE_PRICE_FEATURED_PARTNER")),
+        # Legacy tiers kept for compatibility
+        ("core", "Core", "Legacy", 149, cfg.get("STRIPE_PRICE_CORE")),
+        ("pro", "Pro", "Legacy", 299, cfg.get("STRIPE_PRICE_PRO")),
+        ("enterprise", "Enterprise", "Legacy", 799, cfg.get("STRIPE_PRICE_ENTERPRISE")),
+    ]
+    return [
+        {
+            "slug": slug,
+            "label": label,
+            "family": family,
+            "monthly_price": monthly_price,
+            "price_id": price_id or "",
+            "configured": bool(price_id),
+        }
+        for slug, label, family, monthly_price, price_id in plans
+    ]
+
+
+def _stripe_subscription_price_for_plan(plan: str):
+    normalized = (plan or "").strip().lower()
+    for item in _stripe_subscription_catalog():
+        if item["slug"] == normalized:
+            return normalized, item["price_id"]
+    return normalized, None
+
+
+@investor_bp.route("/billing/subscription/<string:plan>", methods=["POST"])
+@login_required
+@role_required("investor")
+def start_subscription_checkout(plan):
+    if not current_app.config.get("STRIPE_BILLING_ENABLED", False):
+        flash("Stripe billing is not enabled yet.", "warning")
+        return redirect(url_for("investor.payments"))
+
+    normalized, price_id = _stripe_subscription_price_for_plan(plan)
+    if not price_id:
+        flash("Invalid plan or missing Stripe price id.", "danger")
+        return redirect(url_for("investor.payments"))
+
+    session_obj = stripe.checkout.Session.create(
+        mode="subscription",
+        payment_method_types=["card"],
+        line_items=[{"price": price_id, "quantity": 1}],
+        success_url=url_for("investor.subscription_checkout_success", _external=True) + "?session_id={CHECKOUT_SESSION_ID}",
+        cancel_url=url_for("investor.payments", _external=True),
+        customer_email=current_user.email,
+        metadata={
+            "user_id": str(current_user.id),
+            "subscription_plan": normalized,
+        },
+    )
+    return redirect(session_obj.url, code=303)
+
+
+@investor_bp.route("/billing/subscription/success", methods=["GET"])
+@login_required
+@role_required("investor")
+def subscription_checkout_success():
+    session_id = request.args.get("session_id")
+    if not session_id:
+        flash("Missing Stripe session id.", "warning")
+        return redirect(url_for("investor.payments"))
+
+    try:
+        session_obj = stripe.checkout.Session.retrieve(session_id)
+    except Exception:
+        current_app.logger.exception("Stripe subscription checkout verification failed")
+        flash("Unable to verify Stripe checkout session.", "danger")
+        return redirect(url_for("investor.payments"))
+
+    # Verify payment was actually completed
+    if session_obj.payment_status != "paid":
+        current_app.logger.warning(
+            "Stripe checkout session %s has payment_status=%s",
+            session_id, session_obj.payment_status,
+        )
+        flash("Payment has not been completed.", "danger")
+        return redirect(url_for("investor.payments"))
+
+    metadata = session_obj.get("metadata") or {}
+
+    # Verify the checkout session belongs to the current user
+    if str(metadata.get("user_id")) != str(current_user.id):
+        current_app.logger.warning(
+            "Stripe checkout user_id mismatch: session=%s current_user=%s",
+            metadata.get("user_id"), current_user.id,
+        )
+        flash("This checkout session does not belong to your account.", "danger")
+        return redirect(url_for("investor.payments"))
+
+    plan = (metadata.get("subscription_plan") or "").strip().lower()
+    allowed = {item["slug"] for item in _stripe_subscription_catalog() if item["configured"]}
+    if plan in allowed:
+        current_user.subscription = plan
+        db.session.commit()
+        flash(f"Subscription updated to {plan.title()}.", "success")
+    else:
+        flash("Subscription checkout completed, but plan metadata was missing.", "warning")
+
+    return redirect(url_for("investor.payments"))
+
 @investor_bp.route("/billing", methods=["GET"])
 @investor_bp.route("/payments", methods=["GET"])
 @login_required
 @role_required("investor")
 def payments():
     user = current_user
-    subscription_plan = getattr(user, "subscription_plan", "Free")
+    subscription_plan = getattr(user, "subscription", "free")
+    subscription_catalog = _stripe_subscription_catalog()
+    subscription_groups = {
+        "LendingOS": [p for p in subscription_catalog if p.get("family") == "LendingOS"],
+        "Investor": [p for p in subscription_catalog if p.get("family") == "Investor"],
+        "Partner": [p for p in subscription_catalog if p.get("family") == "Partner"],
+        "Legacy": [p for p in subscription_catalog if p.get("family") == "Legacy"],
+    }
 
     payments = (PaymentRecord.query
         .filter_by(user_id=user.id)
@@ -9789,6 +10083,8 @@ def payments():
         "investor/payments.html",
         user=user,
         subscription_plan=subscription_plan,
+        subscription_catalog=subscription_catalog,
+        subscription_groups=subscription_groups,
         payments=payments,
         title="Billing",
         active_tab="billing"
