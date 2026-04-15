@@ -1077,10 +1077,19 @@ def _clear_deal_render_processing(deal):
     _set_if_attr(deal, "render_processing", False)
 
 
-def _stable_render_seed(deal_id: int | None = None, variant: str | None = None) -> int:
-    base = safe_int(deal_id, 0)
-    extra = sum(ord(c) for c in safe_str(variant))
-    return base + extra or random.randint(1000, 999999)
+def _stable_render_seed(*parts) -> int:
+    """Create a deterministic seed from any number of hashable parts.
+
+    Accepts positional arguments of any type (deal_id, variant strings,
+    image URLs, etc.) and hashes them into a stable integer seed.
+    Falls back to a random seed when all parts are empty/None.
+    """
+    import hashlib
+    combined = "|".join(safe_str(p) for p in parts if p is not None)
+    if not combined.strip("|"):
+        return random.randint(1000, 999999)
+    digest = int(hashlib.md5(combined.encode()).hexdigest(), 16)
+    return digest % 999999 + 1
 
 
 def _normalize_style_preset(style: str | None) -> str:
@@ -1112,14 +1121,18 @@ def _save_mockups_for_deal(deal, mockups: List[Dict[str, Any]] | None):
     _set_if_attr(deal, "results_json", results)
 
 
-def _set_featured_rehab(deal, after_url: str | None, before_url: str | None = None, style_preset: str | None = None):
+def _set_featured_rehab(deal, after_url: str | None, before_url: str | None = None, style_preset: str | None = None, style_prompt: str | None = None):
     results = getattr(deal, "results_json", {}) or {}
-    results["featured_rehab"] = {
+    featured = {
         "after_url": after_url,
         "before_url": before_url,
         "style_preset": style_preset,
     }
+    if style_prompt:
+        featured["style_prompt"] = style_prompt
+    results["featured_rehab"] = featured
     _set_if_attr(deal, "results_json", results)
+    return featured
 
 
 def _get_rehab_mockups_for_deal(deal) -> List[Dict[str, Any]]:

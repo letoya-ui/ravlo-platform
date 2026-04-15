@@ -13,12 +13,10 @@
     ← Back  
   </button>  
 
-  {# Optional: if a search page route exists #}  
-      <button class="ravlo-btn primary sm" type="button"  
-            onclick="location.href='{{ url_for('investor.search') }}'">  
-      New Search  
-    </button>  
-  {% endif %}  
+  <button class="ravlo-btn primary sm" type="button"  
+          onclick="location.href='{{ url_for('investor.search') }}'">  
+    New Search  
+  </button>  
 {% endblock %}  
 
 {% block content %}  

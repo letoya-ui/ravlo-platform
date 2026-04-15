@@ -206,10 +206,10 @@ class DevelopmentConfig(Config):
     REMEMBER_COOKIE_SECURE = False
     PREFERRED_URL_SCHEME = os.environ.get("PREFERRED_URL_SCHEME", "http")
     ENABLE_DEVELOPER_TOOLS = _env_bool("ENABLE_DEVELOPER_TOOLS", True)
-    CORS_ORIGINS = _env_list("CORS_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000")
+    CORS_ORIGINS = _env_list("CORS_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000,http://localhost:5050,http://127.0.0.1:5050")
     SOCKETIO_CORS_ALLOWED_ORIGINS = _env_list(
         "SOCKETIO_CORS_ALLOWED_ORIGINS",
-        "http://localhost:3000,http://127.0.0.1:3000",
+        "http://localhost:3000,http://127.0.0.1:3000,http://localhost:5050,http://127.0.0.1:5050",
     )
     BYPASS_PARTNER_SUBSCRIPTION = _env_bool("BYPASS_PARTNER_SUBSCRIPTION", True)
     FREE_PARTNER_MODE = _env_bool("FREE_PARTNER_MODE", True)
