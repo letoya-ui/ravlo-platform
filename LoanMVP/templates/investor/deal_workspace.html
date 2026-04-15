@@ -92,11 +92,11 @@ Review a saved property, compare exit paths, and move the best opportunity into 
     {% set wa = workspace_analysis if workspace_analysis else {} %}
     {% set planning_budget = wa.get("planning_budget", {}) if wa else {} %}
     {% set exit_analysis = deal_results.get("exit_strategy_analysis", {}) if deal_results else {} %}
-    {% set exit_cards = exit_analysis.get("exit_strategy_cards", []) if exit_analysis else [] %}
-    {% set ai_rec = exit_analysis.get("ai_recommendation", {}) if exit_analysis else {} %}
-    {% set best_exit = exit_analysis.get("best_exit_strategy") if exit_analysis else None %}
-    {% set best_exit_reason = exit_analysis.get("best_exit_reason") if exit_analysis else None %}
-    {% set property_classification = exit_analysis.get("property_classification") if exit_analysis else None %}
+    {% set exit_cards = exit_analysis.get("exit_strategy_cards", []) if exit_analysis else (wa.get("exit_strategy_cards", []) if wa else []) %}
+    {% set ai_rec = exit_analysis.get("ai_recommendation", {}) if exit_analysis else (wa.get("ai_recommendation", {}) if wa else {}) %}
+    {% set best_exit = exit_analysis.get("best_exit_strategy") if exit_analysis else (wa.get("best_exit_strategy") if wa else None) %}
+    {% set best_exit_reason = exit_analysis.get("best_exit_reason") if exit_analysis else (wa.get("best_exit_reason") if wa else None) %}
+    {% set property_classification = exit_analysis.get("property_classification") if exit_analysis else (wa.get("property_classification") if wa else None) %}
     {% set comp_analysis = deal_results.get("comp_analysis", {}) if deal_results else {} %}
     {% set normalized_comps = comp_analysis.get("normalized_comps", []) if comp_analysis else [] %}
 
@@ -177,29 +177,8 @@ Review a saved property, compare exit paths, and move the best opportunity into 
         )
     %}
 
-    {% set listing_photos =
-        (
-            wa.get("listing_photos")
-            or deal_results.get("listing_photos")
-            or selected_prop.listing_photos_json if selected_prop and selected_prop.listing_photos_json is defined
-            else (
-                selected_prop.listing_photos if selected_prop and selected_prop.listing_photos is defined
-                else []
-            )
-        )
-    %}
-
-    {% set primary_photo =
-        (
-            wa.get("image_url")
-            or deal_results.get("image_url")
-            or selected_prop.image_url if selected_prop and selected_prop.image_url is defined
-            else (
-                selected_prop.primary_photo_url if selected_prop and selected_prop.primary_photo_url is defined
-                else None
-            )
-        )
-    %}
+    {% set listing_photos = wa.get("listing_photos") or deal_results.get("listing_photos") or [] %}
+    {% set primary_photo = wa.get("image_url") or deal_results.get("image_url") or None %}
 
     {% if not primary_photo and listing_photos %}
         {% if listing_photos[0] is mapping %}
@@ -208,6 +187,13 @@ Review a saved property, compare exit paths, and move the best opportunity into 
             {% set primary_photo = listing_photos[0] %}
         {% endif %}
     {% endif %}
+
+    {% set budget_metrics = budget_snapshot or {} %}
+    {% set budget_total = budget_metrics.get("estimated_total_with_contingency", budget.total_budget if budget else 0) %}
+    {% set budget_estimated = budget_metrics.get("estimated_subtotal", budget.total_cost if budget else 0) %}
+    {% set budget_actual = budget_metrics.get("actual_total", budget.total_cost if budget else 0) %}
+    {% set budget_paid = budget_metrics.get("paid_total", budget.paid_amount if budget else 0) %}
+    {% set budget_contingency = budget_metrics.get("contingency_amount", budget.contingency if budget else 0) %}
 
     {% set flip = comparison.get("flip", {}) if comparison else {} %}
     {% set rental = comparison.get("rental", {}) if comparison else {} %}
@@ -768,19 +754,23 @@ Review a saved property, compare exit paths, and move the best opportunity into 
                     </div>
                     <div class="workspace-mini-stat">
                         <span>Total Budget</span>
-                        <strong>${{ "{:,.0f}".format(budget.total_budget or budget.total_amount or 0) }}</strong>
+                        <strong>${{ "{:,.0f}".format(budget_total or 0) }}</strong>
                     </div>
                     <div class="workspace-mini-stat">
-                        <span>Total Cost</span>
-                        <strong>${{ "{:,.0f}".format(budget.total_cost or 0) }}</strong>
+                        <span>Estimated</span>
+                        <strong>${{ "{:,.0f}".format(budget_estimated or 0) }}</strong>
+                    </div>
+                    <div class="workspace-mini-stat">
+                        <span>Actual</span>
+                        <strong>${{ "{:,.0f}".format(budget_actual or 0) }}</strong>
                     </div>
                     <div class="workspace-mini-stat">
                         <span>Paid Amount</span>
-                        <strong>${{ "{:,.0f}".format(budget.paid_amount or 0) }}</strong>
+                        <strong>${{ "{:,.0f}".format(budget_paid or 0) }}</strong>
                     </div>
                     <div class="workspace-mini-stat">
                         <span>Contingency</span>
-                        <strong>${{ "{:,.0f}".format(budget.contingency or 0) }}</strong>
+                        <strong>${{ "{:,.0f}".format(budget_contingency or 0) }}</strong>
                     </div>
                     <div class="workspace-mini-stat">
                         <span>Budget Type</span>

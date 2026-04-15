@@ -3270,13 +3270,17 @@ def api_property_tool_save():
 
         saved = _upsert_saved_property_from_payload(investor_profile, property_payload)
 
-        listing_photos = property_payload.get("listing_photos") or property_payload.get("photos") or []
-        if not isinstance(listing_photos, list):
-            listing_photos = []
+        listing_photos = _normalize_photo_urls(
+            property_payload.get("listing_photos"),
+            property_payload.get("photos"),
+            property_payload.get("images"),
+            property_payload.get("media"),
+        )
 
-        image_url = property_payload.get("image_url")
-        if not image_url and listing_photos:
-            image_url = listing_photos[0]
+        image_url = _resolve_photo(
+            property_payload.get("image_url") or property_payload.get("primary_photo"),
+            listing_photos,
+        )
 
         if image_url and hasattr(saved, "image_url"):
             saved.image_url = image_url
@@ -3293,7 +3297,12 @@ def api_property_tool_save():
                     if isinstance(p, dict) and p.get("url")
                 ]
                 if uploaded_urls and hasattr(saved, "image_url"):
-                    saved.image_url = uploaded_urls[0]
+                    saved.image_url = _resolve_photo(uploaded_urls[0], uploaded_urls)
+                    _persist_property_core_fields(saved, {
+                        **property_payload,
+                        "image_url": saved.image_url,
+                        "listing_photos": uploaded_urls,
+                    })
             except Exception as e:
                 current_app.logger.warning("Listing photo attach failed on save-only: %s", e)
 
@@ -3306,7 +3315,8 @@ def api_property_tool_save():
             "property": {
                 "id": saved.id,
                 "address": getattr(saved, "address", None),
-                "image_url": getattr(saved, "image_url", None),
+                "image_url": _saved_property_workspace_seed(saved).get("primary_photo"),
+                "listing_photos": _saved_property_workspace_seed(saved).get("listing_photos"),
                 "city": getattr(saved, "city", None),
                 "state": getattr(saved, "state", None),
             }
@@ -3384,7 +3394,9 @@ def api_property_tool_save_and_analyze():
         )
 
         recommendation = {
-            "best": exit_strategy_analysis.get("best_exit_strategy")
+            "best": exit_strategy_analysis.get("best_exit_strategy"),
+            "reason": exit_strategy_analysis.get("best_exit_reason"),
+            "ai_recommendation": exit_strategy_analysis.get("ai_recommendation") or {},
         }
 
         existing_deal = (
@@ -3425,13 +3437,34 @@ def api_property_tool_save_and_analyze():
         best_reason = exit_strategy_analysis.get("best_exit_reason")
         property_classification = exit_strategy_analysis.get("property_classification")
 
-        listing_photos = property_payload.get("listing_photos") or property_payload.get("photos") or []
-        if not isinstance(listing_photos, list):
-            listing_photos = []
+        listing_photos = _normalize_photo_urls(
+            property_payload.get("listing_photos"),
+            property_payload.get("photos"),
+            property_payload.get("images"),
+            property_payload.get("media"),
+        )
 
-        image_url = property_payload.get("image_url")
-        if not image_url and listing_photos:
-            image_url = listing_photos[0]
+        image_url = _resolve_photo(
+            property_payload.get("image_url") or property_payload.get("primary_photo"),
+            listing_photos,
+        )
+
+        canonical_property_payload = {
+            **property_payload,
+            "image_url": image_url,
+            "listing_photos": listing_photos,
+            "property_classification": property_classification,
+            "best_exit_strategy": best_exit,
+            "best_exit_reason": best_reason,
+            "ai_recommendation": exit_strategy_analysis.get("ai_recommendation") or {},
+            "exit_strategy_cards": exit_strategy_analysis.get("exit_strategy_cards") or [],
+            "comparison": comparison,
+            "recommendation": recommendation,
+            "comp_analysis": comps,
+            "rehab_analysis": rehab_analysis,
+            "strategy_analysis": strategy_analysis,
+            "exit_strategy_analysis": exit_strategy_analysis,
+        }
 
         inputs_json = {
             "address": address,
@@ -3458,6 +3491,7 @@ def api_property_tool_save_and_analyze():
                 "estimated_rent": estimated_rent,
                 "rehab_cost": rehab_cost,
                 "deal_score": property_payload.get("deal_score"),
+                "opportunity_tier": property_payload.get("opportunity_tier"),
                 "image_url": image_url,
                 "listing_photos": listing_photos,
                 "property_type": property_payload.get("property_type") or getattr(saved, "property_type", None),
@@ -3467,7 +3501,13 @@ def api_property_tool_save_and_analyze():
                 "year_built": property_payload.get("year_built"),
                 "lot_size_sqft": property_payload.get("lot_size_sqft"),
                 "selected_strategy": best_exit,
-                "estimated_best_use": best_reason,
+                "estimated_best_use": property_payload.get("estimated_best_use") or best_reason,
+                "property_classification": property_classification,
+                "best_exit_strategy": best_exit,
+                "best_exit_reason": best_reason,
+                "ai_recommendation": exit_strategy_analysis.get("ai_recommendation") or {},
+                "exit_strategy_cards": exit_strategy_analysis.get("exit_strategy_cards") or [],
+                "next_step": property_payload.get("next_step"),
             },
             "comp_analysis": comps,
             "rehab_analysis": rehab_analysis,
@@ -3478,6 +3518,10 @@ def api_property_tool_save_and_analyze():
                 "property_classification": property_classification,
             },
             "exit_strategy_analysis": exit_strategy_analysis,
+            "comparison": comparison,
+            "recommendation": recommendation,
+            "listing_photos": listing_photos,
+            "image_url": image_url,
         }
 
         if existing_deal:
@@ -3536,12 +3580,29 @@ def api_property_tool_save_and_analyze():
         if uploaded_photos:
             uploaded_urls = [p.get("url") for p in uploaded_photos if isinstance(p, dict) and p.get("url")]
             if uploaded_urls:
+                canonical_property_payload["listing_photos"] = _normalize_photo_urls(uploaded_urls, canonical_property_payload.get("listing_photos"))
+                canonical_property_payload["image_url"] = _resolve_photo(uploaded_urls[0], canonical_property_payload["listing_photos"])
                 deal_results = deal.results_json or {}
                 wa = deal_results.get("workspace_analysis", {}) or {}
-                wa["listing_photos"] = uploaded_urls
-                wa["image_url"] = uploaded_urls[0]
+                wa["listing_photos"] = _normalize_photo_urls(uploaded_urls, wa.get("listing_photos"))
+                wa["image_url"] = _resolve_photo(uploaded_urls[0], wa["listing_photos"])
                 deal_results["workspace_analysis"] = wa
+                deal_results["listing_photos"] = wa["listing_photos"]
+                deal_results["image_url"] = wa["image_url"]
                 deal.results_json = deal_results
+
+        _persist_property_core_fields(saved, canonical_property_payload)
+        saved_seed = _saved_property_workspace_seed(saved)
+        deal.resolved_json = {
+            "property": saved_seed.get("property"),
+            "workspace_analysis": (deal.results_json or {}).get("workspace_analysis", {}),
+            "comp_analysis": comps,
+            "rehab_analysis": rehab_analysis,
+            "strategy_analysis": (deal.results_json or {}).get("strategy_analysis", {}),
+            "exit_strategy_analysis": (deal.results_json or {}).get("exit_strategy_analysis", {}),
+            "comparison": comparison,
+            "recommendation": recommendation,
+        }
 
         if getattr(deal, "deal_score", None) is None:
             best = exit_strategy_analysis.get("best_exit_strategy")
@@ -3566,7 +3627,7 @@ def api_property_tool_save_and_analyze():
             "property": {
                 "id": saved.id,
                 "address": getattr(saved, "address", None),
-                "image_url": getattr(saved, "image_url", None),
+                "image_url": _saved_property_workspace_seed(saved).get("primary_photo"),
             },
             "deal": {
                 "id": deal.id,
@@ -3790,6 +3851,7 @@ def deal_workspace():
     comparison = {}
     recommendation = {}
     workspace_analysis = {}
+    budget_snapshot = None
 
     if prop_id:
         if investor_profile:
@@ -3802,6 +3864,11 @@ def deal_workspace():
             selected_prop = SavedProperty.query.filter_by(id=prop_id).first()
 
     if selected_prop:
+        saved_seed = _saved_property_workspace_seed(selected_prop)
+        saved_resolved = saved_seed.get("resolved") or {}
+        saved_property_payload = saved_seed.get("property") or {}
+        saved_workspace = saved_seed.get("workspace_analysis") or {}
+
         deal = (
             Deal.query
             .filter_by(saved_property_id=selected_prop.id, user_id=current_user.id)
@@ -3852,13 +3919,45 @@ def deal_workspace():
                 }
 
             deal_results = deal.results_json or {}
-            workspace_analysis = deal_results.get("workspace_analysis", {}) or {}
-            comps = deal_results.get("comp_analysis", {}) or {}
-            rehab_analysis = deal_results.get("rehab_analysis", {}) or {}
-            strategy_analysis = deal_results.get("strategy_analysis", {}) or {}
+            workspace_analysis = {
+                **saved_workspace,
+                **(deal_results.get("workspace_analysis", {}) or {}),
+            }
+            comps = deal_results.get("comp_analysis", {}) or saved_resolved.get("comp_analysis", {}) or {}
+            rehab_analysis = deal_results.get("rehab_analysis", {}) or saved_resolved.get("rehab_analysis", {}) or {}
+            strategy_analysis = {
+                **(saved_resolved.get("strategy_analysis", {}) or {}),
+                **(deal_results.get("strategy_analysis", {}) or {}),
+            }
 
             comps["normalized_comps"] = normalize_workspace_comps(
                 comps.get("normalized_comps") or comps.get("comps") or []
+            )
+
+            workspace_analysis["address"] = workspace_analysis.get("address") or deal.address or saved_property_payload.get("address") or getattr(selected_prop, "address", None)
+            workspace_analysis["city"] = workspace_analysis.get("city") or deal.city or saved_property_payload.get("city")
+            workspace_analysis["state"] = workspace_analysis.get("state") or deal.state or saved_property_payload.get("state")
+            workspace_analysis["zip_code"] = workspace_analysis.get("zip_code") or deal.zip_code or saved_property_payload.get("zip_code") or getattr(selected_prop, "zipcode", None)
+            workspace_analysis["purchase_price"] = workspace_analysis.get("purchase_price") or deal.purchase_price or safe_float(saved_property_payload.get("purchase_price") or saved_property_payload.get("price"))
+            workspace_analysis["arv"] = workspace_analysis.get("arv") or deal.arv or safe_float(saved_property_payload.get("arv") or saved_property_payload.get("market_value"))
+            workspace_analysis["estimated_rent"] = workspace_analysis.get("estimated_rent") or deal.estimated_rent or safe_float(saved_property_payload.get("monthly_rent_estimate"))
+            workspace_analysis["rehab_cost"] = workspace_analysis.get("rehab_cost") or deal.rehab_cost or safe_float(rehab_analysis.get("total"))
+            workspace_analysis["property_type"] = workspace_analysis.get("property_type") or saved_property_payload.get("property_type")
+            workspace_analysis["square_feet"] = workspace_analysis.get("square_feet") or saved_property_payload.get("square_feet") or getattr(selected_prop, "sqft", None)
+            workspace_analysis["beds"] = workspace_analysis.get("beds") or saved_property_payload.get("beds")
+            workspace_analysis["baths"] = workspace_analysis.get("baths") or saved_property_payload.get("baths")
+            workspace_analysis["year_built"] = workspace_analysis.get("year_built") or saved_property_payload.get("year_built")
+            workspace_analysis["lot_size_sqft"] = workspace_analysis.get("lot_size_sqft") or saved_property_payload.get("lot_size_sqft")
+            workspace_analysis["listing_photos"] = _normalize_photo_urls(
+                workspace_analysis.get("listing_photos"),
+                deal_results.get("listing_photos"),
+                saved_seed.get("listing_photos"),
+            )
+            workspace_analysis["image_url"] = _resolve_photo(
+                workspace_analysis.get("image_url")
+                or deal_results.get("image_url")
+                or saved_seed.get("primary_photo"),
+                workspace_analysis.get("listing_photos"),
             )
 
             comparison = build_workspace_exit_comparison(
@@ -3877,8 +3976,45 @@ def deal_workspace():
                 comparison=comparison,
             )
 
+            if not exit_strategy_analysis.get("best_exit_strategy"):
+                exit_strategy_analysis = saved_resolved.get("exit_strategy_analysis", {}) or exit_strategy_analysis
+
+            workspace_analysis["property_classification"] = (
+                workspace_analysis.get("property_classification")
+                or exit_strategy_analysis.get("property_classification")
+                or saved_property_payload.get("property_classification")
+            )
+            workspace_analysis["best_exit_strategy"] = (
+                workspace_analysis.get("best_exit_strategy")
+                or exit_strategy_analysis.get("best_exit_strategy")
+                or saved_property_payload.get("best_exit_strategy")
+            )
+            workspace_analysis["best_exit_reason"] = (
+                workspace_analysis.get("best_exit_reason")
+                or exit_strategy_analysis.get("best_exit_reason")
+                or saved_property_payload.get("best_exit_reason")
+            )
+            workspace_analysis["ai_recommendation"] = (
+                workspace_analysis.get("ai_recommendation")
+                or exit_strategy_analysis.get("ai_recommendation")
+                or saved_workspace.get("ai_recommendation")
+                or {}
+            )
+            workspace_analysis["exit_strategy_cards"] = (
+                workspace_analysis.get("exit_strategy_cards")
+                or exit_strategy_analysis.get("exit_strategy_cards")
+                or []
+            )
+
             deal_results["comp_analysis"] = comps
+            deal_results["workspace_analysis"] = workspace_analysis
             deal_results["exit_strategy_analysis"] = exit_strategy_analysis
+            deal_results["comparison"] = comparison
+            deal_results["recommendation"] = {
+                "best": exit_strategy_analysis.get("best_exit_strategy"),
+                "reason": exit_strategy_analysis.get("best_exit_reason"),
+                "ai_recommendation": exit_strategy_analysis.get("ai_recommendation") or {},
+            }
             deal.results_json = deal_results
 
             if deal.deal_score is None:
@@ -3894,8 +4030,50 @@ def deal_workspace():
 
             db.session.commit()
 
-            recommendation = {
-                "best": exit_strategy_analysis.get("best_exit_strategy")
+            recommendation = deal_results.get("recommendation") or {
+                "best": exit_strategy_analysis.get("best_exit_strategy"),
+                "reason": exit_strategy_analysis.get("best_exit_reason"),
+                "ai_recommendation": exit_strategy_analysis.get("ai_recommendation") or {},
+            }
+
+            budget_snapshot = _project_budget_snapshot(budget)
+
+        else:
+            workspace_analysis = {
+                **saved_workspace,
+                "listing_photos": saved_seed.get("listing_photos"),
+                "image_url": saved_seed.get("primary_photo"),
+                "address": saved_property_payload.get("address") or getattr(selected_prop, "address", None),
+                "city": saved_property_payload.get("city"),
+                "state": saved_property_payload.get("state"),
+                "zip_code": saved_property_payload.get("zip_code") or getattr(selected_prop, "zipcode", None),
+                "purchase_price": saved_property_payload.get("purchase_price") or saved_property_payload.get("price"),
+                "arv": saved_property_payload.get("arv") or saved_property_payload.get("market_value"),
+                "estimated_rent": saved_property_payload.get("monthly_rent_estimate"),
+                "property_type": saved_property_payload.get("property_type"),
+                "square_feet": saved_property_payload.get("square_feet") or getattr(selected_prop, "sqft", None),
+                "beds": saved_property_payload.get("beds"),
+                "baths": saved_property_payload.get("baths"),
+                "year_built": saved_property_payload.get("year_built"),
+                "lot_size_sqft": saved_property_payload.get("lot_size_sqft"),
+                "property_classification": saved_property_payload.get("property_classification"),
+                "best_exit_strategy": saved_property_payload.get("best_exit_strategy"),
+                "best_exit_reason": saved_property_payload.get("best_exit_reason"),
+                "ai_recommendation": saved_workspace.get("ai_recommendation") or {},
+                "exit_strategy_cards": saved_workspace.get("exit_strategy_cards") or [],
+            }
+            comps = saved_resolved.get("comp_analysis", {}) or {}
+            comps["normalized_comps"] = normalize_workspace_comps(
+                comps.get("normalized_comps") or comps.get("comps") or []
+            )
+            rehab_analysis = saved_resolved.get("rehab_analysis", {}) or {}
+            strategy_analysis = saved_resolved.get("strategy_analysis", {}) or {}
+            comparison = saved_resolved.get("comparison", {}) or {}
+            exit_strategy_analysis = saved_resolved.get("exit_strategy_analysis", {}) or {}
+            recommendation = saved_resolved.get("recommendation", {}) or {
+                "best": workspace_analysis.get("best_exit_strategy"),
+                "reason": workspace_analysis.get("best_exit_reason"),
+                "ai_recommendation": workspace_analysis.get("ai_recommendation") or {},
             }
 
         try:
@@ -3918,6 +4096,7 @@ def deal_workspace():
         comparison=comparison,
         recommendation=recommendation,
         workspace_analysis=workspace_analysis,
+        budget_snapshot=budget_snapshot,
         mode=mode,
     )
 
@@ -3963,8 +4142,12 @@ def deals_list():
     )
 
     budget_map = {}
+    budget_snapshot_map = {}
+    saved_property_map = {}
+    deal_media_map = {}
     if deals and investor_profile:
         deal_ids = [d.id for d in deals]
+        saved_property_ids = [d.saved_property_id for d in deals if d.saved_property_id]
 
         budgets = (
             ProjectBudget.query
@@ -3979,11 +4162,32 @@ def deals_list():
         for b in budgets:
             if b.deal_id and b.deal_id not in budget_map:
                 budget_map[b.deal_id] = b
+                budget_snapshot_map[b.deal_id] = _project_budget_snapshot(b)
+
+        if saved_property_ids:
+            saved_properties = (
+                SavedProperty.query
+                .filter(
+                    SavedProperty.investor_profile_id == investor_profile.id,
+                    SavedProperty.id.in_(saved_property_ids),
+                )
+                .all()
+            )
+            saved_property_map = {prop.id: prop for prop in saved_properties}
+            for prop in saved_properties:
+                seed = _saved_property_workspace_seed(prop)
+                deal_media_map[prop.id] = {
+                    "image_url": seed.get("primary_photo"),
+                    "listing_photos": seed.get("listing_photos"),
+                }
 
     return render_template(
         "investor/deals_list.html",
         deals=deals,
         budget_map=budget_map,
+        budget_snapshot_map=budget_snapshot_map,
+        saved_property_map=saved_property_map,
+        deal_media_map=deal_media_map,
         q=q,
         status_filter=status_filter,
         strategy_filter=strategy_filter,

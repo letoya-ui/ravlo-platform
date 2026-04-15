@@ -261,10 +261,42 @@ function currentSearchStrategy(){
 }
 
 function normalizePhotoArray(photos){
-  if (!Array.isArray(photos)) return [];
-  return photos
-    .map(p => typeof p === "string" ? p : (p?.url || p?.src || p?.href || null))
-    .filter(Boolean);
+  const values = Array.isArray(photos) ? photos : (photos ? [photos] : []);
+  const score = (url) => {
+    const u = String(url || "").toLowerCase();
+    let s = 0;
+    if (u.includes("thumbnail") || u.includes("thumb")) s -= 50;
+    if (u.includes("small") || u.includes("tiny")) s -= 25;
+    if (u.includes("100x100") || u.includes("150x150") || u.includes("200x200")) s -= 35;
+    if (u.includes("300x")) s -= 20;
+    if (u.includes("full") || u.includes("original") || u.includes("orig")) s += 20;
+    if (u.includes("large") || u.includes("xl")) s += 12;
+    return s;
+  };
+
+  const candidates = values.flatMap((p) => {
+    if (!p) return [];
+    if (typeof p === "string") return [p];
+    const ordered = [
+      p?.full,
+      p?.full_url,
+      p?.fullSize,
+      p?.full_size,
+      p?.original,
+      p?.original_url,
+      p?.large,
+      p?.large_url,
+      p?.url,
+      p?.src,
+      p?.href,
+      p?.photo,
+      p?.image,
+      p?.thumbnail
+    ].filter(Boolean);
+    return ordered.length ? [ordered[0]] : [];
+  });
+
+  return [...new Set(candidates)].sort((a, b) => score(b) - score(a));
 }
 
 function resolveStatusText(r, signal){
@@ -374,13 +406,11 @@ function buildPropertyPayload(r, analyzeId, saveId){
     ?? null;
 
   const listingPhotos = normalizePhotoArray(r.listing_photos || r.photos);
-  const primaryPhoto =
-    r.primary_photo ||
-    r.image_url ||
-    r.photo ||
-    r.thumbnail ||
-    (listingPhotos.length ? listingPhotos[0] : null) ||
-    null;
+  const primaryPhoto = resolveImage({
+    ...r,
+    listing_photos: listingPhotos,
+    photos: listingPhotos
+  });
 
   return {
     address: r.address || r.address_line1 || "",

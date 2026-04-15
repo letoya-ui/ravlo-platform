@@ -86,12 +86,17 @@ Track active opportunities, jump into workspace tools, and move the strongest de
     <section class="deals-grid">
       {% for deal in deals %}
         {% set budget = budget_map.get(deal.id) %}
+        {% set budget_metrics = budget_snapshot_map.get(deal.id, {}) %}
+        {% set saved_media = deal_media_map.get(deal.saved_property_id, {}) %}
         {% set score = deal.deal_score if deal.deal_score is not none else None %}
         {% set strategy = deal.recommended_strategy or deal.strategy or "Pending" %}
         {% set image_url = None %}
         {% if deal.results_json %}
           {% set wa = deal.results_json.get("workspace_analysis", {}) %}
           {% set image_url = wa.get("image_url") %}
+        {% endif %}
+        {% if not image_url %}
+          {% set image_url = saved_media.get("image_url") %}
         {% endif %}
 
         <article class="ravlo-card pad deal-card">
@@ -192,19 +197,23 @@ Track active opportunities, jump into workspace tools, and move the strongest de
               </div>
               <div class="deal-budget-item">
                 <span>Total Budget</span>
-                <strong>${{ "{:,.0f}".format(budget.total_budget or budget.total_amount or 0) }}</strong>
+                <strong>${{ "{:,.0f}".format(budget_metrics.get("estimated_total_with_contingency", budget.total_budget if budget else 0) or 0) }}</strong>
               </div>
               <div class="deal-budget-item">
-                <span>Total Cost</span>
-                <strong>${{ "{:,.0f}".format(budget.total_cost or 0) }}</strong>
+                <span>Estimated</span>
+                <strong>${{ "{:,.0f}".format(budget_metrics.get("estimated_subtotal", budget.total_cost if budget else 0) or 0) }}</strong>
+              </div>
+              <div class="deal-budget-item">
+                <span>Actual</span>
+                <strong>${{ "{:,.0f}".format(budget_metrics.get("actual_total", budget.total_cost if budget else 0) or 0) }}</strong>
               </div>
               <div class="deal-budget-item">
                 <span>Paid</span>
-                <strong>${{ "{:,.0f}".format(budget.paid_amount or 0) }}</strong>
+                <strong>${{ "{:,.0f}".format(budget_metrics.get("paid_total", budget.paid_amount if budget else 0) or 0) }}</strong>
               </div>
               <div class="deal-budget-item">
                 <span>Contingency</span>
-                <strong>${{ "{:,.0f}".format(budget.contingency or 0) }}</strong>
+                <strong>${{ "{:,.0f}".format(budget_metrics.get("contingency_amount", budget.contingency if budget else 0) or 0) }}</strong>
               </div>
             </div>
 
