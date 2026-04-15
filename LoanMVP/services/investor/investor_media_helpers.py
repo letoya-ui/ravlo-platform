@@ -1,12 +1,16 @@
 from __future__ import annotations
 
+import logging
 import os
 import uuid
 import mimetypes
 import base64
 import requests
 from io import BytesIO
+from urllib.parse import urlparse, parse_qs
 from PIL import Image
+
+logger = logging.getLogger(__name__)
 
 try:
     import boto3
@@ -187,13 +191,69 @@ def _public_spaces_url(key: str) -> str:
     return f"{SPACES_ENDPOINT}/{SPACES_BUCKET}/{key}"
 
 
+_BROWSER_HEADERS = {
+    "User-Agent": (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) "
+        "Chrome/126.0.0.0 Safari/537.36"
+    ),
+    "Accept": "image/avif,image/webp,image/apng,image/*,*/*;q=0.8",
+    "Accept-Language": "en-US,en;q=0.9",
+}
+
+
+def _is_image_url(url: str) -> bool:
+    """Return False for URLs that are clearly HTML pages, not direct images."""
+    if not url or not url.startswith(("http://", "https://")):
+        return False
+    parsed = urlparse(url)
+    path = parsed.path.lower()
+    # Common real estate listing page patterns
+    non_image_patterns = (
+        "/realestateandhomes-detail/",
+        "/homedetails/",
+        "/homes/",
+        "/listing/",
+        "/property/",
+    )
+    for pattern in non_image_patterns:
+        if pattern in path:
+            return False
+    return True
+
+
+def _unwrap_proxy_url(url: str) -> str:
+    """Extract the original URL from a proxied /api/property_tool_image?src= URL."""
+    if not url:
+        return url
+    if "property_tool_image" in url and "src=" in url:
+        parsed = urlparse(url)
+        src = parse_qs(parsed.query).get("src", [""])[0]
+        if src:
+            return src
+    return url
+
+
 def download_image_bytes(url: str) -> bytes | None:
+    url = _unwrap_proxy_url(url)
+    if not _is_image_url(url):
+        logger.info("Skipping non-image URL: %s", url[:200])
+        return None
     try:
-        res = requests.get(url, timeout=10)
-        if res.ok:
-            return res.content
-    except Exception:
-        pass
+        res = requests.get(url, timeout=15, headers=_BROWSER_HEADERS)
+        if not res.ok:
+            logger.info("Image download returned %s for %s", res.status_code, url[:200])
+            return None
+        content_type = res.headers.get("Content-Type", "")
+        if content_type and not content_type.startswith("image/"):
+            logger.info("Non-image content-type '%s' for %s", content_type, url[:200])
+            return None
+        if len(res.content) < 1000:
+            logger.info("Suspiciously small response (%d bytes) for %s", len(res.content), url[:200])
+            return None
+        return res.content
+    except Exception as exc:
+        logger.info("Image download failed for %s: %s", url[:200], exc)
     return None
 
 
@@ -215,7 +275,12 @@ def upload_listing_photos_to_spaces(photos: list[str], prefix="listing") -> list
     if not photos:
         return []
 
-    client = _get_spaces_client()
+    try:
+        client = _get_spaces_client()
+    except Exception as exc:
+        logger.warning("Cannot create Spaces client, skipping photo upload: %s", exc)
+        return []
+
     uploaded_urls = []
 
     for url in photos:
@@ -236,9 +301,12 @@ def upload_listing_photos_to_spaces(photos: list[str], prefix="listing") -> list
             )
 
             uploaded_urls.append(_public_spaces_url(key))
-        except Exception:
+            logger.info("Uploaded listing photo to Spaces: %s -> %s", url[:120], _public_spaces_url(key)[:120])
+        except Exception as exc:
+            logger.warning("Failed to upload listing photo %s: %s", url[:200], exc)
             continue
 
+    logger.info("Uploaded %d/%d listing photos to Spaces", len(uploaded_urls), len(photos))
     return uploaded_urls
 
 
