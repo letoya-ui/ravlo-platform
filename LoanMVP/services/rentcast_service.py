@@ -118,6 +118,37 @@ def get_rentcast_sale_listings(
 
 def normalize_rentcast_sale_listing(item: Dict[str, Any]) -> Dict[str, Any]:
     item = item or {}
+
+    # Extract photos from the raw listing data.  RentCast may return photos
+    # under several keys; collect them all so the orchestrator can score and
+    # rank them later.
+    raw_photos = item.get("photos") or item.get("images") or []
+    if isinstance(raw_photos, str):
+        raw_photos = [raw_photos]
+    elif not isinstance(raw_photos, list):
+        raw_photos = []
+    photo_list: List[str] = []
+    for entry in raw_photos:
+        if isinstance(entry, str) and entry.strip():
+            photo_list.append(entry.strip())
+        elif isinstance(entry, dict):
+            url = (
+                entry.get("url")
+                or entry.get("href")
+                or entry.get("src")
+                or entry.get("photo")
+                or entry.get("image")
+            )
+            if isinstance(url, str) and url.strip():
+                photo_list.append(url.strip())
+
+    primary_photo = (
+        item.get("imgSrc")
+        or item.get("primaryPhotoUrl")
+        or item.get("primaryPhoto")
+        or (photo_list[0] if photo_list else None)
+    )
+
     return {
         "property_id": item.get("id") or item.get("propertyId") or item.get("listingId"),
         "address": item.get("formattedAddress") or item.get("address") or item.get("line1") or item.get("streetAddress"),
@@ -135,7 +166,8 @@ def normalize_rentcast_sale_listing(item: Dict[str, Any]) -> Dict[str, Any]:
         "days_on_market": item.get("daysOnMarket"),
         "latitude": item.get("latitude"),
         "longitude": item.get("longitude"),
-        "primary_photo": item.get("imgSrc") or item.get("primaryPhotoUrl"),
+        "primary_photo": primary_photo,
+        "photos": photo_list,
         "raw": item,
     }
 
