@@ -324,6 +324,61 @@ investor_bp = Blueprint("investor", __name__, url_prefix="/investor")
 
 client = OpenAI()
 
+
+def _load_saved_property_resolved(saved_property):
+    if not saved_property or not hasattr(saved_property, "resolved_json"):
+        return {}
+
+    payload = _safe_json_loads_local(getattr(saved_property, "resolved_json", None), default={})
+    return payload if isinstance(payload, dict) else {}
+
+
+def _saved_property_workspace_seed(saved_property):
+    resolved = _load_saved_property_resolved(saved_property)
+    property_payload = resolved.get("property")
+    if not isinstance(property_payload, dict):
+        property_payload = {}
+
+    workspace_analysis = resolved.get("workspace_analysis")
+    if not isinstance(workspace_analysis, dict):
+        workspace_analysis = {}
+
+    media = _saved_property_media(saved_property)
+    listing_photos = _normalize_photo_urls(
+        workspace_analysis.get("listing_photos"),
+        property_payload.get("listing_photos"),
+        media.get("gallery"),
+    )
+    primary_photo = _resolve_photo(
+        workspace_analysis.get("image_url")
+        or property_payload.get("image_url")
+        or media.get("primary_photo"),
+        listing_photos,
+    )
+
+    return {
+        "resolved": resolved,
+        "property": property_payload,
+        "workspace_analysis": workspace_analysis,
+        "listing_photos": listing_photos,
+        "primary_photo": primary_photo,
+    }
+
+
+def _project_budget_snapshot(budget):
+    if not budget:
+        return None
+
+    return {
+        "estimated_subtotal": float(getattr(budget, "estimated_subtotal", 0) or 0),
+        "actual_total": float(getattr(budget, "actual_total", 0) or 0),
+        "paid_total": float(getattr(budget, "paid_total", 0) or 0),
+        "contingency_amount": float(getattr(budget, "contingency_amount", 0) or 0),
+        "estimated_total_with_contingency": float(getattr(budget, "estimated_total_with_contingency", 0) or 0),
+        "remaining_balance": float(getattr(budget, "remaining_balance", 0) or 0),
+    }
+
+
 def _subscription_catalog():
     return {
         "Free": {
