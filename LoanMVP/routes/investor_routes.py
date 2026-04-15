@@ -5102,7 +5102,8 @@ def deal_rehab(deal_id=None):
         concept_url = concept.get("image_url") if isinstance(concept, dict) else None
         if concept_url and concept_url not in seen_urls:
             concept_label = (concept.get("preset") or "Concept").title()
-            concept_mode = (concept.get("mode") or "").title()
+            raw_mode = (concept.get("mode") or "").strip()
+            concept_mode = raw_mode.upper() if raw_mode.lower() in {"hgtv"} else raw_mode.title()
             label = f"{concept_label} — {concept_mode}" if concept_mode else concept_label
             workspace_images.append({"url": concept_url, "label": label, "source": "concept"})
             seen_urls.add(concept_url)
