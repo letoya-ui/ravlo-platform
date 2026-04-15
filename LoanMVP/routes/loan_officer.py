@@ -966,6 +966,145 @@ def quick_1003():
         title="Quick 1003"
     )
 
+# =============================================================
+# LOAN APPLICATION — Take application from borrower without account
+# =============================================================
+@loan_officer_bp.route("/loan-application", methods=["GET", "POST"])
+@role_required("loan_officer")
+@loan_officer_onboarding_required
+def loan_application():
+    """
+    Full loan application intake for borrowers who do NOT have an account.
+    Creates a BorrowerProfile + LoanApplication + default status events.
+    """
+    officer = LoanOfficerProfile.query.filter_by(user_id=current_user.id).first()
+
+    if request.method == "POST":
+        # ---- borrower info ----
+        full_name = request.form.get("full_name", "").strip()
+        email = request.form.get("email", "").strip()
+        phone = request.form.get("phone", "").strip()
+        dob = request.form.get("dob", "").strip()
+        ssn = request.form.get("ssn", "").strip()
+
+        # ---- address ----
+        address = request.form.get("address", "").strip()
+        city = request.form.get("city", "").strip()
+        state = request.form.get("state", "").strip()
+        zip_code = request.form.get("zip", "").strip()
+
+        # ---- employment ----
+        employment_status = request.form.get("employment_status", "").strip()
+        employer_name = request.form.get("employer_name", "").strip()
+        job_title = request.form.get("job_title", "").strip()
+        years_at_job = request.form.get("years_at_job", "").strip()
+        annual_income = request.form.get("annual_income", "").strip()
+
+        # ---- loan details ----
+        loan_type = request.form.get("loan_type", "").strip()
+        loan_amount = request.form.get("loan_amount", "").strip()
+        property_value = request.form.get("property_value", "").strip()
+        property_address = request.form.get("property_address", "").strip()
+        rate = request.form.get("rate", "").strip()
+        term_months = request.form.get("term_months", "").strip()
+        loan_purpose = request.form.get("loan_purpose", "").strip()
+
+        # ---- notes ----
+        notes = request.form.get("notes", "").strip()
+
+        # --- validation ---
+        if not full_name or not loan_amount or not property_value:
+            flash("Borrower name, loan amount, and property value are required.", "warning")
+            return redirect(url_for("loan_officer.loan_application"))
+
+        # --- create borrower profile (no user account) ---
+        borrower = BorrowerProfile(
+            full_name=full_name,
+            email=email or None,
+            phone=phone or None,
+            address=address or None,
+            city=city or None,
+            state=state or None,
+            zip=zip_code or None,
+            employment_status=employment_status or None,
+            employer_name=employer_name or None,
+            job_title=job_title or None,
+            years_at_job=int(years_at_job) if years_at_job else None,
+            annual_income=float(annual_income) if annual_income else None,
+            assigned_officer_id=officer.id if officer else None,
+        )
+
+        if dob:
+            try:
+                borrower.dob = datetime.strptime(dob, "%Y-%m-%d").date()
+            except ValueError:
+                pass
+
+        if ssn:
+            borrower.ssn = ssn
+
+        db.session.add(borrower)
+        db.session.flush()
+
+        # --- create loan application ---
+        loan = LoanApplication(
+            borrower_profile_id=borrower.id,
+            loan_officer_id=officer.id if officer else None,
+            loan_type=loan_type or "Conventional",
+            amount=float(loan_amount),
+            property_value=float(property_value),
+            property_address=property_address or None,
+            rate=float(rate) if rate else None,
+            term_months=int(term_months) if term_months else None,
+            description=loan_purpose or None,
+            ai_summary=notes or None,
+            status="Application Submitted",
+            created_at=datetime.utcnow(),
+        )
+        db.session.add(loan)
+        db.session.flush()
+
+        # --- default status events ---
+        default_events = [
+            ("Application Submitted", "Loan Officer submitted the application on behalf of borrower."),
+            ("Processor Review", "Processor will begin reviewing the file."),
+            ("Document Review", "Borrower documents pending review."),
+        ]
+        for event_name, desc in default_events:
+            db.session.add(LoanStatusEvent(
+                loan_id=loan.id,
+                event_name=event_name,
+                description=desc,
+            ))
+
+        # --- default fees ---
+        default_fees = [
+            ("Credit Pull Fee", 40),
+            ("Application Fee", 95),
+        ]
+        for fee_name, fee_amount in default_fees:
+            db.session.add(PaymentRecord(
+                borrower_profile_id=borrower.id,
+                loan_id=loan.id,
+                payment_type=fee_name,
+                amount=fee_amount,
+            ))
+
+        db.session.commit()
+
+        flash(
+            f"Loan application created for {full_name}. Loan #{loan.id} is now in the pipeline.",
+            "success",
+        )
+        return redirect(url_for("loan_officer.loan_file", loan_id=loan.id))
+
+    return render_template(
+        "loan_officer/loan_application.html",
+        active_tab="loan_application",
+        title="Loan Application",
+    )
+
+
 # =========================================================
 # Quote Engine
 # =========================================================

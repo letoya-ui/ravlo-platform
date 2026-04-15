@@ -77,6 +77,12 @@
       <i class="icon lucide lucide-badge-check"></i>
       <span>Credit Check</span>
     </a>
+
+    <a href="{{ url_for('loan_officer.loan_application') }}"
+       class="re-nav-link {% if ep == 'loan_officer.loan_application' %}active{% endif %}">
+      <i class="icon lucide lucide-file-pen"></i>
+      <span>Loan Application</span>
+    </a>
   </div>
 
   <div class="re-nav-group">
