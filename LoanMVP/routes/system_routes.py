@@ -12,9 +12,15 @@ from datetime import datetime
 from LoanMVP.extensions import db, csrf
 from LoanMVP.models.system_models import System, SystemLog, AuditLog, SystemSettings
 from LoanMVP.models.crm_models import Lead, Message, CRMNote
-from LoanMVP.models.loan_models import LoanApplication, LoanNotification
+from LoanMVP.models.loan_models import LoanApplication, LoanNotification, Upload
 from LoanMVP.models.document_models import DocumentRequest
-from LoanMVP.models.investor_models import DealConversation, DealMessage, FundingRequest
+from LoanMVP.models.investor_models import DealConversation, DealMessage, FundingRequest, Project
+from LoanMVP.models.borrowers import Deal, ProjectBudget
+from LoanMVP.models.call_model import CallLog
+from LoanMVP.models.renovation_models import RenovationMockup, BuildProject
+from LoanMVP.models.ai_models import AIAssistantInteraction
+from LoanMVP.models.partner_models import ExternalPartnerLead
+from LoanMVP.models.campaign_model import Campaign, CampaignRecipient
 from LoanMVP.models.user_model import User
 
 from LoanMVP.utils.decorators import role_required
@@ -275,10 +281,13 @@ def delete_user(user_id):
         # Explicitly remove related rows whose FK is NOT NULL and
         # would otherwise cause a constraint violation when the ORM
         # tries to SET user_id = NULL during cascade.
+
+        # -- CRM / messaging -------------------------------------------
         Message.query.filter(
             (Message.sender_id == user.id) | (Message.receiver_id == user.id)
         ).delete(synchronize_session="fetch")
         CRMNote.query.filter_by(user_id=user.id).delete(synchronize_session="fetch")
+
         conversation_ids = [
             c.id for c in DealConversation.query
             .filter_by(user_id=user.id)
@@ -290,7 +299,64 @@ def delete_user(user_id):
                 DealMessage.conversation_id.in_(conversation_ids)
             ).delete(synchronize_session="fetch")
         DealConversation.query.filter_by(user_id=user.id).delete(synchronize_session="fetch")
-        FundingRequest.query.filter_by(investor_id=user.id).delete(synchronize_session="fetch")
+
+        # -- Deals & child rows ----------------------------------------
+        deal_ids = [
+            d.id for d in Deal.query
+            .filter_by(user_id=user.id)
+            .with_entities(Deal.id)
+            .all()
+        ]
+        if deal_ids:
+            FundingRequest.query.filter(
+                FundingRequest.deal_id.in_(deal_ids)
+            ).delete(synchronize_session="fetch")
+            Project.query.filter(
+                Project.deal_id.in_(deal_ids)
+            ).delete(synchronize_session="fetch")
+            ProjectBudget.query.filter(
+                ProjectBudget.deal_id.in_(deal_ids)
+            ).delete(synchronize_session="fetch")
+        # User's own funding requests on other users' deals
+        FundingRequest.query.filter_by(investor_id=user.id).delete(
+            synchronize_session="fetch"
+        )
+        Deal.query.filter_by(user_id=user.id).delete(synchronize_session="fetch")
+
+        # -- Calls, AI, renovation, build ------------------------------
+        CallLog.query.filter_by(user_id=user.id).delete(synchronize_session="fetch")
+        AIAssistantInteraction.query.filter_by(user_id=user.id).delete(
+            synchronize_session="fetch"
+        )
+        RenovationMockup.query.filter_by(user_id=user.id).delete(
+            synchronize_session="fetch"
+        )
+        BuildProject.query.filter_by(user_id=user.id).delete(
+            synchronize_session="fetch"
+        )
+
+        # -- Partner leads & uploads -----------------------------------
+        ExternalPartnerLead.query.filter_by(
+            created_by_user_id=user.id
+        ).delete(synchronize_session="fetch")
+        Upload.query.filter_by(uploaded_by_id=user.id).delete(
+            synchronize_session="fetch"
+        )
+
+        # -- Campaigns & recipients ------------------------------------
+        campaign_ids = [
+            c.id for c in Campaign.query
+            .filter_by(created_by_id=user.id)
+            .with_entities(Campaign.id)
+            .all()
+        ]
+        if campaign_ids:
+            CampaignRecipient.query.filter(
+                CampaignRecipient.campaign_id.in_(campaign_ids)
+            ).delete(synchronize_session="fetch")
+        Campaign.query.filter_by(created_by_id=user.id).delete(
+            synchronize_session="fetch"
+        )
 
         db.session.delete(user)
         db.session.commit()
