@@ -1,4 +1,4 @@
-{% extends "layouts/borrower_base.html" %}
+{% extends "layouts/ravlo_base.html" %}
 {% block title %}Ravlo • Edit Deal{% endblock %}
 {% block content %}
 
@@ -11,7 +11,7 @@
 
 <div class="dw-card" style="max-width: 860px; margin: 0 auto;">
 
-  <form method="POST" action="{{ url_for('borrower.deal_edit', deal_id=deal.id) }}">
+  <form method="POST" action="{{ url_for('investor.deal_edit', deal_id=deal.id) }}">
     {% if csrf_token is defined %}
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     {% endif %}
@@ -49,13 +49,13 @@
       <button class="dw-button" type="submit">💾 Save Changes</button>
 
       <a class="dw-button"
-         href="{{ url_for('borrower.deal_detail', deal_id=deal.id) }}"
+         href="{{ url_for('investor.deal_detail', deal_id=deal.id) }}"
          style="text-decoration:none; display:inline-flex; align-items:center; justify-content:center;">
         Cancel
       </a>
 
       <a class="dw-button"
-         href="{{ url_for('borrower.deal_open', deal_id=deal.id) }}"
+         href="{{ url_for('investor.deal_workspace', deal_id=deal.id) }}"
          style="text-decoration:none; display:inline-flex; align-items:center; justify-content:center;">
         Open in Workspace
       </a>

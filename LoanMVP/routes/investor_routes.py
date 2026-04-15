@@ -4512,8 +4512,8 @@ def deal_analysis(deal_id):
     }
 
     return render_template(
-        "investor/underwriting.html",
-        title="Ravlo • Underwriting",
+        "investor/analysis.html",
+        title="Ravlo • Deal Analysis",
         active_tab="deal_analysis",
         deal=deal,
         analysis=analysis,
@@ -4893,11 +4893,19 @@ def save_deal():
     flash("Deal saved.", "success")
     return redirect(url_for("investor.deal_analysis", deal_id=deal.id))
     
-@investor_bp.route("/deals/<int:deal_id>/edit", methods=["POST"])
+@investor_bp.route("/deals/<int:deal_id>/edit", methods=["GET", "POST"])
 @login_required
 @role_required("investor")
 def deal_edit(deal_id):
     deal = _get_owned_deal_or_404(deal_id)
+
+    if request.method == "GET":
+        return render_template(
+            "investor/edit_deal.html",
+            deal=deal,
+            title="Ravlo • Edit Deal",
+            active_tab="deals",
+        )
 
     deal.title = request.form.get("title", deal.title)
     if hasattr(deal, "notes"):
@@ -10679,7 +10687,7 @@ def partner_marketplace():
             for req in connection_requests
         ]
 
-        if "PartnerRequest" in globals():
+        if PartnerRequest is not None:
             marketplace_requests = (
                 PartnerRequest.query
                 .filter_by(investor_profile_id=ip.id)
