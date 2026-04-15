@@ -11,9 +11,10 @@ from datetime import datetime
 
 from LoanMVP.extensions import db, csrf
 from LoanMVP.models.system_models import System, SystemLog, AuditLog, SystemSettings
-from LoanMVP.models.crm_models import Lead
+from LoanMVP.models.crm_models import Lead, Message, CRMNote
 from LoanMVP.models.loan_models import LoanApplication, LoanNotification
 from LoanMVP.models.document_models import DocumentRequest
+from LoanMVP.models.investor_models import DealConversation, FundingRequest
 from LoanMVP.models.user_model import User
 
 from LoanMVP.utils.decorators import role_required
@@ -271,6 +272,16 @@ def delete_user(user_id):
         return redirect(url_for("system.users"))
 
     try:
+        # Explicitly remove related rows whose FK is NOT NULL and
+        # would otherwise cause a constraint violation when the ORM
+        # tries to SET user_id = NULL during cascade.
+        Message.query.filter(
+            (Message.sender_id == user.id) | (Message.receiver_id == user.id)
+        ).delete(synchronize_session="fetch")
+        CRMNote.query.filter_by(user_id=user.id).delete(synchronize_session="fetch")
+        DealConversation.query.filter_by(user_id=user.id).delete(synchronize_session="fetch")
+        FundingRequest.query.filter_by(investor_id=user.id).delete(synchronize_session="fetch")
+
         db.session.delete(user)
         db.session.commit()
         flash(f"Deleted user {user.email}.", "success")
