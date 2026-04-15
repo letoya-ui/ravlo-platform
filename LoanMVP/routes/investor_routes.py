@@ -5254,7 +5254,7 @@ def build_studio(deal_id=None):
         ).first()
 
     if project is None and deal is not None:
-        project = _safe_first_related(deal, "projects")
+        project = _safe_first_related(getattr(deal, "projects", None))
 
     # -----------------------------
     # Canonical source: deal.results_json
@@ -8862,7 +8862,6 @@ def messages():
     )
 
 
-@investor_bp.route("/messages/send", methods=["POST"])
 @investor_bp.route("/messages/send", methods=["POST"])
 @login_required
 @role_required("investor")
