@@ -16,7 +16,7 @@ from io import StringIO
 from LoanMVP.app import socketio
 from LoanMVP.extensions import db, csrf
 from LoanMVP.ai.base_ai import AIAssistant
-from LoanMVP.models.crm_models import Lead, Task, Message, Partner, LeadSource
+from LoanMVP.models.crm_models import Lead, Task, Message, Partner, LeadSource, CRMNote, PartnerNote
 from LoanMVP.models.call_model import CallLog
 from LoanMVP.models.loan_models import LoanApplication, BorrowerProfile
 from LoanMVP.models.campaign_model import Campaign
@@ -350,7 +350,11 @@ def call_ai():
             summary = "AI summary unavailable."
 
         if selected_lead:
-            msg = Message(lead_id=selected_lead.id, sender="AI", content=summary)
+            msg = CRMNote(
+                lead_id=selected_lead.id,
+                user_id=current_user.id,
+                content=f"AI Call Summary: {summary}",
+            )
             db.session.add(msg)
             db.session.commit()
 
@@ -636,7 +640,7 @@ def export_call_report():
 @role_required("crm", "loan_officer", "processor", "executive", "admin", "partners")
 def messages():
     """Unified message thread across email/SMS/chat."""
-    all_messages = Message.query.order_by(Message.timestamp.desc()).limit(50).all()
+    all_messages = Message.query.order_by(Message.created_at.desc()).limit(50).all()
 
     if request.method == "POST":
         content = request.form.get("message", "")
@@ -645,7 +649,12 @@ def messages():
         if not content:
             return jsonify({"reply": "⚠️ No message provided."}), 400
 
-        new_message = Message(sender=current_user.username, content=content, lead_id=lead_id)
+        new_message = Message(
+            sender_id=current_user.id,
+            receiver_id=current_user.id,
+            content=content,
+            sender_role=(current_user.role or "user"),
+        )
         db.session.add(new_message)
         db.session.commit()
 
@@ -654,7 +663,13 @@ def messages():
         except Exception:
             ai_reply = "AI response unavailable."
 
-        ai_message = Message(sender="AI", content=ai_reply, lead_id=lead_id)
+        ai_message = Message(
+            sender_id=current_user.id,
+            receiver_id=current_user.id,
+            content=ai_reply,
+            sender_role="ai",
+            system_generated=True,
+        )
         db.session.add(ai_message)
         db.session.commit()
 
@@ -884,19 +899,20 @@ def ai_leads():
             resp.raise_for_status()
             data = resp.json()
             
-            items = data.get("leads", []) if isinstance(data, dict) else []
+            items = data.get("leads", []) if isinstance(data, dict) else data if isinstance(data, list) else []
 
-            if isinstance(data, list):
-                for item in items:
-                    name = (item.get("name") or "").strip()
-                    if not name:
-                        continue
-                    generated.append({
-                        "name": name,
-                        "email": (item.get("email") or "").strip() or None,
-                        "phone": (item.get("phone") or "").strip() or None,
-                        "message": (item.get("message") or "").strip() or None,
-                    })
+            for item in items:
+                if not isinstance(item, dict):
+                    continue
+                name = (item.get("name") or "").strip()
+                if not name:
+                    continue
+                generated.append({
+                    "name": name,
+                    "email": (item.get("email") or "").strip() or None,
+                    "phone": (item.get("phone") or "").strip() or None,
+                    "message": (item.get("message") or "").strip() or None,
+                })
         except Exception as e:
             print("Lead Engine Error:", e)
             generated = []
@@ -1140,7 +1156,6 @@ def lead_details(lead_id):
 @crm_bp.route("/partners/<int:partner_id>", methods=["GET"])
 @role_required("crm", "admin")
 def partner_detail(partner_id):
-    from LoanMVP.models.crm_models import Partner, PartnerNote
     partner = Partner.query.get_or_404(partner_id)
     notes = PartnerNote.query.filter_by(partner_id=partner.id).order_by(PartnerNote.created_at.desc()).all()
     activities = []  # placeholder for system activity
@@ -1157,7 +1172,6 @@ def partner_detail(partner_id):
 @csrf.exempt
 @role_required("crm" , "admin")
 def add_partner_note(partner_id):
-    from LoanMVP.models.crm_models import PartnerNote
     content = request.form.get("content")
     if not content:
         flash("⚠️ Note content cannot be empty.", "warning")
