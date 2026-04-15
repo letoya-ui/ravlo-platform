@@ -7540,11 +7540,15 @@ def v1_deal_architect_underwrite():
     noi_estimate = round((monthly_rent * 12) - annual_taxes - annual_insurance, 2)
     dscr_estimate = round((noi_estimate / annual_debt_service), 2) if annual_debt_service > 0 else None
 
+    # NOTE: "market" and "execution" are static placeholders until live
+    # market-data and execution-risk scoring are implemented.  Update these
+    # once external data sources (e.g. Mashvisor market scores, contractor
+    # reliability indices) are integrated.
     subscores = {
         "valuation": max(0, min(100, round((estimated_margin_high / max((estimated_value or 1), 1)) * 100 + 50))),
         "cashflow": max(0, min(100, round(((dscr_estimate or 0) / 1.25) * 100))),
-        "market": 65,
-        "execution": 60 if hold_years <= 5 else 55,
+        "market": 65,  # placeholder — replace with live market data
+        "execution": 60 if hold_years <= 5 else 55,  # placeholder — replace with execution-risk model
     }
     deal_score = round(sum(subscores.values()) / len(subscores))
 
@@ -9937,7 +9941,7 @@ def _stripe_subscription_price_for_plan(plan: str):
     return normalized, None
 
 
-@investor_bp.route("/billing/subscription/<string:plan>", methods=["GET"])
+@investor_bp.route("/billing/subscription/<string:plan>", methods=["POST"])
 @login_required
 @role_required("investor")
 def start_subscription_checkout(plan):

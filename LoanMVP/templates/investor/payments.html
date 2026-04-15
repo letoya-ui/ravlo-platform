@@ -73,13 +73,15 @@
         <div style="display:flex;gap:10px;flex-wrap:wrap;">
           {% for plan in group_plans %}
             {% if plan.configured %}
-              <a
-                class="ravlo-btn {% if (subscription_plan or 'free')|lower == plan.slug %}primary{% else %}ghost{% endif %} sm"
-                href="{{ url_for('investor.start_subscription_checkout', plan=plan.slug) }}"
-                title="{{ plan.family }} • ${{ plan.monthly_price }}/mo"
-              >
-                {{ plan.label }} — ${{ plan.monthly_price }}/mo
-              </a>
+              <form method="POST" action="{{ url_for('investor.start_subscription_checkout', plan=plan.slug) }}" style="display:inline;">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit"
+                  class="ravlo-btn {% if (subscription_plan or 'free')|lower == plan.slug %}primary{% else %}ghost{% endif %} sm"
+                  title="{{ plan.family }} • ${{ plan.monthly_price }}/mo"
+                >
+                  {{ plan.label }} — ${{ plan.monthly_price }}/mo
+                </button>
+              </form>
             {% else %}
               <span class="ravlo-btn ghost sm" title="Missing Stripe price id for {{ plan.slug }}" style="opacity:.55;cursor:not-allowed;">
                 {{ plan.label }} — ${{ plan.monthly_price }}/mo

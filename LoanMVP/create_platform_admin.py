@@ -7,13 +7,19 @@ from LoanMVP.extensions import db
 from LoanMVP.models.user_model import User
 
 DEFAULT_EMAIL = "letoya@ravlohq.com"
-DEFAULT_PASSWORD = os.environ.get("DEFAULT_PLATFORM_ADMIN_PASSWORD", "ChangeMeNow!2026")
+DEFAULT_PASSWORD = os.environ.get("DEFAULT_PLATFORM_ADMIN_PASSWORD", "")
 DEFAULT_FIRST_NAME = "Letoya"
 DEFAULT_LAST_NAME = "Ravlo"
 DEFAULT_ROLE = "platform_admin"
 
 
 def ensure_platform_admin(email: str = DEFAULT_EMAIL, password: str = DEFAULT_PASSWORD):
+    if not password:
+        raise ValueError(
+            "Password must be provided via --password or the "
+            "DEFAULT_PLATFORM_ADMIN_PASSWORD environment variable."
+        )
+
     with app.app_context():
         user = User.query.filter_by(email=email.lower().strip()).first()
         created = False
