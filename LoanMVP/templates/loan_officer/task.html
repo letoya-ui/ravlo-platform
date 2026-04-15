@@ -59,8 +59,8 @@
                 {% else %}
                   General follow-up
                 {% endif %}
-                {% if t.due_date %} • Due {{ t.due_date.strftime("%Y-%m-%d") }}{% endif %}
-                {% if t.priority %} • {{ t.priority }}{% endif %}
+                {% if t.due_date %} | Due {{ t.due_date.strftime("%Y-%m-%d") }}{% endif %}
+                {% if t.priority %} | {{ t.priority }}{% endif %}
               </p>
             </div>
             <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:flex-end;">

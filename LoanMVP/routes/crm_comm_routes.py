@@ -5,11 +5,13 @@
 from flask import Blueprint, render_template, request, jsonify, flash, redirect, url_for, make_response
 from flask_login import current_user
 from datetime import datetime
-from sqlalchemy import func, case
+from sqlalchemy import func, case, or_
 from random import choice
 import json
+import re
 import csv
 
+import os, requests
 from io import StringIO
 from LoanMVP.app import socketio
 from LoanMVP.extensions import db, csrf
@@ -28,6 +30,105 @@ from LoanMVP.utils.decorators import role_required
 crm_bp = Blueprint("crm", __name__, url_prefix="/crm")
 assistant = AIAssistant()
 
+
+
+def _crm_company_loan_officers():
+    query = LoanOfficerProfile.query.join(User, LoanOfficerProfile.user_id == User.id)
+    if getattr(current_user, "company_id", None):
+        query = query.filter(User.company_id == current_user.company_id)
+    return query.order_by(User.first_name.asc(), User.last_name.asc()).all()
+
+
+def _company_scoped_leads_query():
+    officers = _crm_company_loan_officers()
+    officer_ids = [officer.id for officer in officers]
+    officer_user_ids = [officer.user_id for officer in officers if getattr(officer, "user_id", None)]
+
+    role = (getattr(current_user, "role", "") or "").lower()
+    if role == "loan_officer":
+        officer = LoanOfficerProfile.query.filter_by(user_id=current_user.id).first()
+        return Lead.query.filter(
+            (Lead.assigned_to == current_user.id) |
+            (Lead.assigned_officer_id == getattr(officer, "id", None))
+        )
+
+    if officer_ids or officer_user_ids:
+        clauses = []
+        if officer_ids:
+            clauses.append(Lead.assigned_officer_id.in_(officer_ids))
+        if officer_user_ids:
+            clauses.append(Lead.assigned_to.in_(officer_user_ids))
+        return Lead.query.filter(or_(*clauses))
+
+    return Lead.query.filter(Lead.assigned_to == current_user.id)
+
+
+def _choose_auto_assignee(officers):
+    if not officers:
+        return None
+
+    ranked = []
+    for officer in officers:
+        active_count = (
+            Lead.query.filter(
+                (Lead.assigned_officer_id == officer.id) |
+                (Lead.assigned_to == officer.user_id)
+            ).count()
+        )
+        ranked.append((active_count, officer))
+
+    ranked.sort(key=lambda item: (item[0], (item[1].full_name or item[1].name or item[1].email or "").lower()))
+    return ranked[0][1]
+
+
+def _company_scoped_lead_or_404(lead_id):
+    return _company_scoped_leads_query().filter(Lead.id == lead_id).first_or_404()
+
+
+def _lead_source_record(source_name):
+    normalized = (source_name or "AI Lead Engine").strip() or "AI Lead Engine"
+    record = LeadSource.query.filter(func.lower(LeadSource.source_name) == normalized.lower()).first()
+    if record:
+        return record
+
+    record = LeadSource(source_name=normalized, source_type="AI")
+    db.session.add(record)
+    db.session.flush()
+    return record
+
+
+def _parse_ai_leads(raw_text):
+    text = (raw_text or "").strip()
+    if not text:
+        return []
+
+    match = re.search(r"\[[\s\S]*\]", text)
+    if not match:
+        return []
+
+    try:
+        payload = json.loads(match.group(0))
+    except Exception:
+        return []
+
+    if not isinstance(payload, list):
+        return []
+
+    leads = []
+    for item in payload:
+        if not isinstance(item, dict):
+            continue
+        name = (item.get("name") or "").strip()
+        if not name:
+            continue
+        leads.append({
+            "name": name,
+            "email": (item.get("email") or "").strip() or None,
+            "phone": (item.get("phone") or "").strip() or None,
+            "message": (item.get("message") or item.get("notes") or "").strip() or None,
+        })
+    return leads
+
 # ---------------------------------------------------------
 # 🧭 CRM Dashboard
 # ---------------------------------------------------------
@@ -45,11 +146,7 @@ def dashboard():
     # Role-based lead & task visibility
     # ----------------------------------------
     if role == "loan_officer":
-        leads_list = (
-            Lead.query.filter_by(assigned_officer_id=current_user.id)
-            .order_by(Lead.created_at.desc())
-            .all()
-        )
+        leads_list = _company_scoped_leads_query().order_by(Lead.created_at.desc()).all()
         tasks_list = (
             Task.query.filter_by(assigned_to=current_user.id)
             .order_by(Task.due_date.asc())
@@ -59,7 +156,8 @@ def dashboard():
 
     elif role == "processor":
         leads_list = (
-            Lead.query.filter(Lead.status.in_(["submitted", "processing"]))
+            _company_scoped_leads_query()
+            .filter(Lead.status.in_(["submitted", "processing"]))
             .order_by(Lead.created_at.desc())
             .all()
         )
@@ -71,12 +169,12 @@ def dashboard():
         role_view = "Processor CRM"
 
     elif role in ["executive", "admin", "crm"]:
-        leads_list = Lead.query.order_by(Lead.created_at.desc()).limit(50).all()
+        leads_list = _company_scoped_leads_query().order_by(Lead.created_at.desc()).limit(50).all()
         tasks_list = Task.query.order_by(Task.due_date.asc()).limit(50).all()
         role_view = "Executive CRM Overview"
 
     else:
-        leads_list = Lead.query.filter_by(status="active").limit(10).all()
+        leads_list = _company_scoped_leads_query().filter_by(status="active").limit(10).all()
         tasks_list = []
         role_view = "Basic CRM View"
 
@@ -84,14 +182,14 @@ def dashboard():
     # Additional Data Sets
     # ----------------------------------------
     contacted_leads = (
-        Lead.query.filter(Lead.updated_at >= week_ago)
+        _company_scoped_leads_query().filter(Lead.updated_at >= week_ago)
         .order_by(Lead.updated_at.desc())
         .limit(5)
         .all()
     )
 
     leads_recent = (
-        Lead.query.order_by(Lead.created_at.desc())
+        _company_scoped_leads_query().order_by(Lead.created_at.desc())
         .limit(5)
         .all()
     )
@@ -604,7 +702,7 @@ def campaigns():
 @csrf.exempt
 @role_required("crm", "loan_officer", "processor", "executive", "admin", "partners")
 def view_lead(lead_id):
-    lead = Lead.query.get_or_404(lead_id)
+    lead = _company_scoped_lead_or_404(lead_id)
     calls = CallLog.query.filter_by(related_lead_id=lead.id).order_by(CallLog.created_at.desc()).all()
     ai_followup = None
 
@@ -687,52 +785,181 @@ def lead_ai_followup(lead_id):
 
     return {"message": ai_text}
 
-@crm_bp.route("/add_lead", methods=["POST"])
+@crm_bp.route("/add_lead", methods=["GET", "POST"])
 @csrf.exempt
 @role_required("crm", "loan_officer", "processor", "executive", "admin", "partners")
 def add_lead():
     """Add a new lead record."""
-    full_name = request.form.get("full_name")
-    email = request.form.get("email")
-    phone = request.form.get("phone")
-    source = request.form.get("source")
-    notes = request.form.get("notes")
+    officers = _crm_company_loan_officers()
+    if request.method == "GET":
+        return render_template("crm/add_lead.html", officers=officers, title="Add Lead")
 
+    name = (request.form.get("name") or request.form.get("full_name") or "").strip()
+    email = (request.form.get("email") or "").strip() or None
+    phone = (request.form.get("phone") or "").strip() or None
+    source_name = (request.form.get("source") or "Manual Entry").strip()
+    notes = (request.form.get("notes") or "").strip() or None
+    status = (request.form.get("status") or "New").strip()
+    assigned_officer_id = request.form.get("assigned_officer_id", type=int)
+
+    if not name:
+        flash("Lead name is required.", "danger")
+        return render_template("crm/add_lead.html", officers=officers, title="Add Lead")
+
+    selected_officer = next((officer for officer in officers if officer.id == assigned_officer_id), None)
+    if not selected_officer:
+        if (getattr(current_user, "role", "") or "").lower() == "loan_officer":
+            selected_officer = next((officer for officer in officers if officer.user_id == current_user.id), None)
+        if not selected_officer:
+            selected_officer = _choose_auto_assignee(officers)
+    source = _lead_source_record(source_name)
     new_lead = Lead(
-        full_name=full_name,
+        name=name,
         email=email,
         phone=phone,
-        source=source,
-        notes=notes,
-        status="New",
+        message=notes,
+        source_id=source.id if source else None,
+        assigned_officer_id=selected_officer.id if selected_officer else None,
+        assigned_to=selected_officer.user_id if selected_officer else None,
+        status=status,
         created_at=datetime.utcnow()
     )
     db.session.add(new_lead)
     db.session.commit()
-    flash(f"✅ Lead '{full_name}' added successfully!", "success")
-    return redirect(url_for("crm.dashboard"))
+    flash(f"Lead '{name}' added successfully.", "success")
+    return redirect(url_for("crm.leads"))
 
-@crm_bp.route("/leads/<int:lead_id>", methods=["GET", "POST"])
+
+@crm_bp.route("/ai_leads", methods=["GET", "POST"])
+@csrf.exempt
+@role_required("crm", "loan_officer", "executive", "admin")
+def ai_leads():
+    officers = _crm_company_loan_officers()
+    generated = []
+
+    if request.method == "POST":
+        # -----------------------------
+        # Form Inputs
+        # -----------------------------
+        market = (request.form.get("market") or "").strip()
+        audience = (request.form.get("audience") or "").strip()
+        product_focus = (request.form.get("product_focus") or "").strip()
+        count = min(max(request.form.get("count", type=int) or 5, 1), 20)
+
+        # -----------------------------
+        # Officer Assignment
+        # -----------------------------
+        assigned_officer_id = request.form.get("assigned_officer_id", type=int)
+        selected_officer = next((officer for officer in officers if officer.id == assigned_officer_id), None)
+
+        if not selected_officer:
+            if (getattr(current_user, "role", "") or "").lower() == "loan_officer":
+                selected_officer = next((officer for officer in officers if officer.user_id == current_user.id), None)
+            if not selected_officer:
+                selected_officer = _choose_auto_assignee(officers)
+
+        source = _lead_source_record("AI Lead Engine")
+
+        # -----------------------------
+        # Call the Backend Lead Engine
+        # -----------------------------
+        import os, requests
+
+        ENGINE_URL = os.getenv("RENOVATION_ENGINE_URL")
+
+        payload = {
+            "market": market or "United States",
+            "audience": audience or "homebuyers and refinance borrowers",
+            "product_focus": product_focus or "residential mortgage products",
+            "count": count,
+        }
+
+        generated = []
+        try:
+            resp = requests.post(
+                f"{ENGINE_URL}/lead-engine/ai_leads",
+                json=payload,
+                timeout=20
+            )
+            resp.raise_for_status()
+            data = resp.json()
+            
+            items = data.get("leads", []) if isinstance(data, dict) else []
+
+            if isinstance(data, list):
+                for item in items:
+                    name = (item.get("name") or "").strip()
+                    if not name:
+                        continue
+                    generated.append({
+                        "name": name,
+                        "email": (item.get("email") or "").strip() or None,
+                        "phone": (item.get("phone") or "").strip() or None,
+                        "message": (item.get("message") or "").strip() or None,
+                    })
+        except Exception as e:
+            print("Lead Engine Error:", e)
+            generated = []
+
+        # -----------------------------
+        # Insert Leads Into Database
+        # -----------------------------
+        if not generated:
+            flash("AI could not generate lead records this time.", "warning")
+        else:
+            for item in generated:
+                lead = Lead(
+                    name=item["name"],
+                    email=item["email"],
+                    phone=item["phone"],
+                    message=item["message"],
+                    source_id=source.id if source else None,
+                    assigned_officer_id=selected_officer.id if selected_officer else None,
+                    assigned_to=selected_officer.user_id if selected_officer else None,
+                    status="New",
+                    created_at=datetime.utcnow(),
+                )
+                db.session.add(lead)
+
+            db.session.commit()
+            flash(f"{len(generated)} AI-generated leads were added to the CRM queue.", "success")
+
+    # -----------------------------
+    # Render Page
+    # -----------------------------
+    return render_template(
+        "crm/ai_leads.html",
+        officers=officers,
+        generated=generated,
+        title="AI Leads",
+    )
+
+@crm_bp.route("/leads/<int:lead_id>/edit", methods=["GET", "POST"])
 @csrf.exempt
 @role_required("crm", "loan_officer", "processor", "executive", "admin", "partners")
 def update_lead(lead_id):
     """Update or assign a lead."""
-    lead = Lead.query.get_or_404(lead_id)
+    lead = _company_scoped_lead_or_404(lead_id)
     borrower = BorrowerProfile.query.filter_by(lead_id=lead_id).first()
+    officers = _crm_company_loan_officers()
 
     if request.method == "POST":
+        lead.name = request.form.get("name") or lead.name
+        lead.email = request.form.get("email") or lead.email
+        lead.phone = request.form.get("phone") or lead.phone
         lead.status = request.form.get("status") or lead.status
-        lead.notes = request.form.get("notes") or lead.notes
-        assigned_to = request.form.get("assigned_to")
-        if assigned_to:
-            lead.assigned_to = int(assigned_to)
+        lead.message = request.form.get("notes") or lead.message
+        assigned_officer_id = request.form.get("assigned_officer_id", type=int)
+        selected_officer = next((officer for officer in officers if officer.id == assigned_officer_id), None)
+        if selected_officer:
+            lead.assigned_officer_id = selected_officer.id
+            lead.assigned_to = selected_officer.user_id
         lead.updated_at = datetime.utcnow()
         db.session.commit()
         flash("✅ Lead updated successfully.", "success")
-        return redirect(url_for("crm.view_leads"))
+        return redirect(url_for("crm.leads"))
 
-    users = User.query.all()
-    return render_template("crm/lead_detail.html", lead=lead, borrower=borrower, users=users)
+    return render_template("crm/update_lead.html", lead=lead, borrower=borrower, officers=officers)
 
 # ---------------------------------------------------------
 # 🧭 Communication Hub + AI Summary
@@ -756,7 +983,7 @@ def hub():
 @role_required("crm")
 def ai_summary():
     """Generates AI summary of CRM activity and engagement patterns."""
-    leads = Lead.query.order_by(Lead.created_at.desc()).limit(20).all()
+    leads = _company_scoped_leads_query().order_by(Lead.created_at.desc()).limit(20).all()
     tasks = Task.query.order_by(Task.due_date.asc()).limit(10).all()
 
     total_leads = len(leads)
@@ -800,7 +1027,7 @@ def ai_summary():
 @crm_bp.route("/dialer_results")
 @role_required("crm", "loan_officer", "processor", "executive", "admin")
 def dialer_results():
-    leads = Lead.query.order_by(Lead.created_at.desc()).limit(15).all()
+    leads = _company_scoped_leads_query().order_by(Lead.created_at.desc()).limit(15).all()
     return render_template("crm/leads.html", leads=leads, title="Dialer Results")
 
 @crm_bp.route("/call_log/delete/<int:call_id>", methods=["POST"])
@@ -821,51 +1048,91 @@ from sqlalchemy import func
 # 🧭 Lead Engine (Search / Filter / Analytics)
 # ==========================================================
 @crm_bp.route("/lead_engine")
-@role_required("crm", "admin")
+@role_required("crm", "loan_officer", "processor", "executive", "admin", "partners")
 def lead_engine():
     query = request.args.get("q", "")
-    leads = Lead.query.filter(Lead.name.ilike(f"%{query}%")).all() if query else []
+    leads = _company_scoped_leads_query().filter(Lead.name.ilike(f"%{query}%")).all() if query else []
     return render_template("crm/leads.html", leads=leads, query=query, title="Lead Engine")
 
 # ==========================================================
 # 📋 View All Leads
 # ==========================================================
 @crm_bp.route("/leads")
-@role_required("crm", "admin")
+@role_required("crm", "loan_officer", "processor", "executive", "admin", "partners")
 def leads():
-    leads = Lead.query.order_by(Lead.created_at.desc()).all()
+    leads = _company_scoped_leads_query().order_by(Lead.created_at.desc()).all()
     return render_template("crm/leads.html", leads=leads, title="All Leads")
+
+@crm_bp.route("/lead_capture", methods=["POST"])
+@csrf.exempt
+def lead_capture():
+    import os
+    import requests
+
+    ENGINE_URL = os.getenv("RENOVATION_ENGINE_URL")
+
+    incoming = request.get_json(silent=True) or {}
+
+    try:
+        resp = requests.post(
+            f"{ENGINE_URL}/lead-engine/capture",
+            json=incoming,
+            timeout=20
+        )
+        resp.raise_for_status()
+        data = resp.json()
+    except Exception as e:
+        return jsonify({"ok": False, "error": f"Lead engine error: {str(e)}"}), 500
+
+    lead_data = data.get("lead") or {}
+    if not lead_data:
+        return jsonify({"ok": False, "error": "No lead returned."}), 400
+
+    officers = _crm_company_loan_officers()
+    selected_officer = _choose_auto_assignee(officers)
+    source = _lead_source_record(lead_data.get("source") or "Inbound Lead")
+
+    existing = None
+    if lead_data.get("email"):
+        existing = Lead.query.filter(func.lower(Lead.email) == lead_data["email"].lower()).first()
+
+    if not existing and lead_data.get("phone"):
+        existing = Lead.query.filter(Lead.phone == lead_data["phone"]).first()
+
+    if existing:
+        existing.message = lead_data.get("ai_summary") or lead_data.get("pain_point") or existing.message
+        existing.updated_at = datetime.utcnow()
+        db.session.commit()
+        return jsonify({"ok": True, "deduped": True, "lead_id": existing.id}), 200
+
+    new_lead = Lead(
+        name=lead_data.get("name"),
+        email=lead_data.get("email"),
+        phone=lead_data.get("phone"),
+        message=lead_data.get("ai_summary") or lead_data.get("pain_point"),
+        source_id=source.id if source else None,
+        assigned_officer_id=selected_officer.id if selected_officer else None,
+        assigned_to=selected_officer.user_id if selected_officer else None,
+        status="New",
+        created_at=datetime.utcnow(),
+    )
+    db.session.add(new_lead)
+    db.session.commit()
+
+    return jsonify({
+        "ok": True,
+        "deduped": False,
+        "lead_id": new_lead.id,
+        "assigned_officer_id": selected_officer.id if selected_officer else None,
+    }), 201
 
 # ==========================================================
 # 🧠 Lead Detail (Full View with AI + Communication)
 # ==========================================================
 @crm_bp.route("/details/<int:lead_id>")
-@role_required("crm", "admin")
+@role_required("crm", "loan_officer", "processor", "executive", "admin", "partners")
 def lead_details(lead_id):
-    """
-    Detailed view for a single lead including AI insights,
-    tasks, communication logs, and related loans.
-    """
-    lead = Lead.query.get_or_404(lead_id)
-
-    # Optional relationships (if you have them)
-    tasks = getattr(lead, "tasks", [])
-    messages = getattr(lead, "messages", [])
-    loans = getattr(lead, "loans", [])
-
-    # Simple placeholder AI summary (can replace with your AI assistant)
-    ai_summary = f"🤖 Lead '{lead.name}' is currently marked as {lead.status}. Based on recent trends, " \
-                 f"leads from {lead.source or 'organic sources'} show a {round(72.5, 1)}% chance of conversion."
-
-    return render_template(
-        "crm/lead_details.html",
-        lead=lead,
-        tasks=tasks,
-        messages=messages,
-        loans=loans,
-        ai_summary=ai_summary,
-        title=f"Lead Details - {lead.name}"
-    )
+    return redirect(url_for("crm.view_lead", lead_id=lead_id))
 
 # -----------------------------------------------------
 # 🤝 Partner Detail View

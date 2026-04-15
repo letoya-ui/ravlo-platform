@@ -380,6 +380,10 @@ textarea{
   flex-wrap:wrap;
 }
 
+.re-topbar-logout{
+  margin:0;
+}
+
 .re-page-title,
 .rl-page-title{
   font-size:clamp(1.45rem, 2vw, 2.1rem);
@@ -483,7 +487,9 @@ textarea{
 }
 
 .re-user-dropdown a,
-.rl-user-dropdown a{
+.rl-user-dropdown a,
+.re-user-dropdown-btn,
+.rl-user-dropdown-btn{
   display:flex;
   align-items:center;
   gap:10px;
@@ -491,21 +497,33 @@ textarea{
   padding:10px 12px;
   border-radius:12px;
   color:var(--text-soft);
+  width:100%;
+  background:none;
+  border:none;
+  cursor:pointer;
+  font:inherit;
+  text-align:left;
 }
 
 .re-user-dropdown a:hover,
-.rl-user-dropdown a:hover{
+.rl-user-dropdown a:hover,
+.re-user-dropdown-btn:hover,
+.rl-user-dropdown-btn:hover{
   color:var(--text);
   background:rgba(255,255,255,.04);
 }
 
 .re-user-dropdown a.danger,
-.rl-user-dropdown a.danger{
+.rl-user-dropdown a.danger,
+.re-user-dropdown-btn.danger,
+.rl-user-dropdown-btn.danger{
   color:#f0c7c7;
 }
 
 .re-user-dropdown a.danger:hover,
-.rl-user-dropdown a.danger:hover{
+.rl-user-dropdown a.danger:hover,
+.re-user-dropdown-btn.danger:hover,
+.rl-user-dropdown-btn.danger:hover{
   background:rgba(212,107,107,.12);
   color:#fff;
 }

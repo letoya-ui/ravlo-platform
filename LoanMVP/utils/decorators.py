@@ -10,6 +10,10 @@ ADMIN_ROLES = {
     "platform_admin",
 }
 
+EXECUTIVE_ROLES = {
+    "executive",
+}
+
 STAFF_ROLES = {
     "loan_officer",
     "processor",
@@ -23,6 +27,10 @@ def normalize_role(role):
 
 def is_admin_role(role: str) -> bool:
     return normalize_role(role) in ADMIN_ROLES
+
+
+def is_executive_role(role: str) -> bool:
+    return normalize_role(role) in EXECUTIVE_ROLES
 
 
 def is_staff_role(role: str) -> bool:
@@ -42,6 +50,7 @@ def admin_role_label(role: str) -> str:
         "platform_admin": "Platform Admin",
         "master_admin": "Master Admin",
         "lending_admin": "Lending Admin",
+        "executive": "Executive",
         "admin": "Admin",
         "loan_officer": "Loan Officer",
         "processor": "Processor",
@@ -79,6 +88,9 @@ def role_required(*roles):
 
                 if user_role == "investor":
                     return redirect(url_for("investor.command_center"))
+
+                if user_role in EXECUTIVE_ROLES:
+                    return redirect(url_for("executive.dashboard"))
 
                 if user_role in ADMIN_ROLES:
                     return redirect(url_for("admin.dashboard"))

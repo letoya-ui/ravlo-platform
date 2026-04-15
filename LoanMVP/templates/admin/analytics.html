@@ -1,10 +1,10 @@
 {% extends "layouts/ravlo_employee_base.html" %}
-{% block title %}Admin Analytics{% endblock %}
+{% block title %}{{ analytics_title|default('Admin Analytics', true) }}{% endblock %}
 {% block content %}
 <main class="dashboard-main">
   <div class="wrap">
     <header>
-      <h2>Admin Analytics Dashboard</h2>
+      <h2>{{ analytics_title|default('Admin Analytics Dashboard', true) }}</h2>
       <p class="muted">
         {% if company %}
           Company-scoped insights and performance metrics for {{ company.name }}.

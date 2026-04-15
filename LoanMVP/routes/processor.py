@@ -9,6 +9,7 @@ from flask import (
 from flask_login import login_required, current_user
 from datetime import datetime
 from werkzeug.utils import secure_filename
+from sqlalchemy import or_
 
 # ✅ Always import db before model files
 from LoanMVP.extensions import db, csrf
@@ -17,7 +18,10 @@ from LoanMVP.extensions import db, csrf
 from LoanMVP.models.loan_models import LoanApplication, BorrowerProfile, LoanStatusEvent
 from LoanMVP.models.document_models import LoanDocument, DocumentRequest
 from LoanMVP.models.crm_models import Message
+from LoanMVP.models.loan_officer_model import LoanOfficerProfile
+from LoanMVP.models.processor_model import ProcessorProfile
 from LoanMVP.models.underwriter_model import ConditionRequest, UnderwritingCondition
+from LoanMVP.models.underwriter_model import UnderwriterProfile
 from LoanMVP.models.ai_models import LoanAIConversation
 from LoanMVP.models.payment_models import PaymentRecord
 from LoanMVP.models.user_model import User
@@ -43,6 +47,53 @@ def _processor_next_setup_endpoint():
     if not getattr(current_user, "onboarding_complete", False):
         return "processor.onboarding"
     return "processor.dashboard"
+
+
+def _processor_profile():
+    return ProcessorProfile.query.filter_by(user_id=current_user.id).first()
+
+
+def _processor_assigned_loans():
+    profile = _processor_profile()
+    if profile:
+        return (
+            LoanApplication.query
+            .filter(or_(LoanApplication.processor_id == profile.id, LoanApplication.processor_id == current_user.id))
+            .all()
+        )
+    return LoanApplication.query.filter_by(processor_id=current_user.id).all()
+
+
+def _assigned_team_users_for_processor():
+    user_ids = set()
+
+    for loan in _processor_assigned_loans():
+        borrower = getattr(loan, "borrower_profile", None)
+        loan_officer = getattr(loan, "loan_officer", None)
+        underwriter = getattr(loan, "underwriter", None)
+
+        if borrower and getattr(borrower, "user_id", None):
+            user_ids.add(borrower.user_id)
+        if loan_officer and getattr(loan_officer, "user_id", None):
+            user_ids.add(loan_officer.user_id)
+        if underwriter and getattr(underwriter, "user_id", None):
+            user_ids.add(underwriter.user_id)
+
+    if not user_ids:
+        return []
+
+    users = User.query.filter(User.id.in_(user_ids)).all()
+    return sorted(
+        users,
+        key=lambda user: (
+            (getattr(user, "role", "") or "").lower(),
+            (getattr(user, "full_name", "") or getattr(user, "email", "") or "").lower(),
+        ),
+    )
+
+
+def _allowed_processor_partner_ids():
+    return {user.id for user in _assigned_team_users_for_processor()}
 
 # ---------------------------------------------------------
 # 🏠 Processor Dashboard
@@ -802,11 +853,13 @@ def reports():
 @csrf.exempt
 @role_required("processor")
 def new_message():
-    # Get all users except the current one
-    users = User.query.filter(User.id != current_user.id).all()
+    users = _assigned_team_users_for_processor()
 
     if request.method == "POST":
-        partner_id = request.form.get("partner_id")
+        partner_id = request.form.get("partner_id", type=int)
+        if partner_id not in {user.id for user in users}:
+            flash("Please select an assigned borrower, loan officer, or underwriter.", "warning")
+            return redirect(url_for("processor.new_message"))
         return redirect(url_for("processor.message_thread", partner_id=partner_id))
 
     return render_template(
@@ -890,23 +943,42 @@ def condition_review(loan_id):
 @role_required("processor")
 def messages():
     user_id = current_user.id
+    allowed_users = _assigned_team_users_for_processor()
+    allowed_partner_ids = {user.id for user in allowed_users}
+    threads = []
 
-    conversations = (
-        db.session.query(Message)
-        .filter((Message.sender_id == user_id) | (Message.receiver_id == user_id))
-        .order_by(Message.created_at.desc())
-        .all()
-    )
+    if allowed_partner_ids:
+        partner_lookup = {user.id: user for user in allowed_users}
+        conversations = (
+            db.session.query(Message)
+            .filter(
+                ((Message.sender_id == user_id) & (Message.receiver_id.in_(allowed_partner_ids))) |
+                ((Message.receiver_id == user_id) & (Message.sender_id.in_(allowed_partner_ids)))
+            )
+            .order_by(Message.created_at.desc())
+            .all()
+        )
 
-    partners = {}
-    for msg in conversations:
-        other_id = msg.receiver_id if msg.sender_id == user_id else msg.sender_id
-        if other_id not in partners:
-            partners[other_id] = msg
+        seen_partner_ids = set()
+        for msg in conversations:
+            other_id = msg.receiver_id if msg.sender_id == user_id else msg.sender_id
+            if other_id in seen_partner_ids:
+                continue
+            partner = partner_lookup.get(other_id)
+            if not partner:
+                continue
+            seen_partner_ids.add(other_id)
+            threads.append({
+                "partner_id": other_id,
+                "partner_name": partner.full_name or partner.email or "Assigned Team Member",
+                "last_sender_id": msg.sender_id,
+                "last_message_preview": (msg.content or "")[:120],
+                "updated_at": getattr(msg, "created_at", datetime.utcnow()),
+            })
 
     return render_template(
         "processor/messages.html",
-        partners=partners,
+        threads=threads,
         current_user=current_user,
         title="Messages"
     )
@@ -1155,7 +1227,7 @@ def chat(user_id):
 @processor_bp.route("/messages/start")
 @role_required("processor")
 def start_chat():
-    users = User.query.filter(User.id != current_user.id).all()
+    users = _assigned_team_users_for_processor()
     return render_template("processor/start_chat.html", users=users)
 
 # ---------------------------------------------------------
@@ -1183,11 +1255,14 @@ def join_chat(data):
 @socketio.on("send_message")
 def send_message(data):
     """Send a real-time message between any two users."""
+    if not current_user.is_authenticated:
+        return
+
     sender_id = int(data.get("sender_id"))
     receiver_id = int(data.get("receiver_id"))
     text = (data.get("text") or "").strip()
 
-    if not text:
+    if sender_id != current_user.id or receiver_id not in _allowed_processor_partner_ids() or not text:
         return
 
     # Save message to DB
@@ -1215,6 +1290,11 @@ def send_message(data):
 @role_required("processor")
 def message_thread(partner_id):
     user_id = current_user.id
+    allowed_partner_ids = _allowed_processor_partner_ids()
+
+    if partner_id not in allowed_partner_ids:
+        flash("You can only message assigned borrowers and file teammates.", "warning")
+        return redirect(url_for("processor.messages"))
 
     if request.method == "POST":
         text = request.form.get("message")

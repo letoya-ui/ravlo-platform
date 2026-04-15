@@ -1,8 +1,18 @@
+import io
+
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import letter
-from PyPDF2 import PdfReader, PdfWriter
+
+try:
+    from PyPDF2 import PdfReader, PdfWriter
+except ModuleNotFoundError:
+    PdfReader = None
+    PdfWriter = None
 
 def add_signature_to_pdf(input_pdf, signature_img, output_pdf):
+    if PdfReader is None or PdfWriter is None:
+        raise RuntimeError("PyPDF2 is required for PDF signature operations but is not installed.")
+
     packet = io.BytesIO()
 
     # Create a blank PDF for signature overlay

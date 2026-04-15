@@ -278,3 +278,191 @@ def get_rentcast_data(address, city, state, zip_code):
 
     except Exception:
         return None
+
+def _build_flip_strategy_card(result: dict) -> dict:
+    price = _safe_float(result.get("price") or result.get("listing_price")) or 0
+    market_value = _safe_float(
+        result.get("engine_value")
+        or result.get("market_value")
+        or result.get("display_value")
+    ) or 0
+
+    rehab_guess = _safe_float(result.get("estimated_rehab_cost"))
+    if rehab_guess is None:
+        sqft = _safe_float(result.get("square_feet") or result.get("sqft")) or 0
+        strategy_tag = str(result.get("strategy_tag") or "").lower()
+
+        if "heavy" in strategy_tag or "teardown" in strategy_tag:
+            rehab_guess = max(85000, sqft * 55 if sqft else 85000)
+        else:
+            rehab_guess = max(35000, sqft * 28 if sqft else 35000)
+
+    holding_cost = (price + rehab_guess) * 0.06
+    selling_cost = market_value * 0.08 if market_value else 0
+    all_in_cost = price + rehab_guess + holding_cost + selling_cost
+    profit = market_value - all_in_cost if market_value else None
+    margin_pct = (profit / market_value * 100) if market_value and profit is not None else None
+
+    return {
+        "key": "flip",
+        "label": "Fix & Flip",
+        "headline_value": profit,
+        "headline_label": "Projected Profit",
+        "metrics": {
+            "purchase_price": price,
+            "rehab_cost": rehab_guess,
+            "all_in_cost": all_in_cost,
+            "exit_value": market_value,
+            "margin_pct": margin_pct,
+        },
+        "summary": (
+            f"${profit:,.0f} projected spread"
+            if profit is not None else
+            "Not enough value data yet"
+        ),
+    }
+
+
+def _build_rental_strategy_card(result: dict) -> dict:
+    price = _safe_float(result.get("price") or result.get("listing_price")) or 0
+    rent = _safe_float(
+        result.get("traditional_rent")
+        or result.get("monthly_rent_estimate")
+    ) or 0
+
+    taxes = (_safe_float(result.get("tax_amount")) or 0) / 12
+    insurance = max(price * 0.004 / 12, 100) if price else 150
+    maintenance = rent * 0.08 if rent else 0
+    vacancy = rent * 0.05 if rent else 0
+    management = rent * 0.08 if rent else 0
+
+    expenses = taxes + insurance + maintenance + vacancy + management
+    net_cashflow = rent - expenses if rent else None
+    annual_noi = (net_cashflow * 12) if net_cashflow is not None else None
+    cap_rate = (annual_noi / price * 100) if price and annual_noi is not None else None
+
+    return {
+        "key": "rental",
+        "label": "Long-Term Rental",
+        "headline_value": net_cashflow,
+        "headline_label": "Monthly Cash Flow",
+        "metrics": {
+            "monthly_rent": rent,
+            "monthly_expenses": expenses,
+            "monthly_cash_flow": net_cashflow,
+            "cap_rate": cap_rate,
+        },
+        "summary": (
+            f"${net_cashflow:,.0f}/mo projected cash flow"
+            if net_cashflow is not None else
+            "Not enough rent data yet"
+        ),
+    }
+
+
+def _build_airbnb_strategy_card(result: dict) -> dict:
+    price = _safe_float(result.get("price") or result.get("listing_price")) or 0
+    monthly_revenue = _safe_float(
+        result.get("airbnb_rent")
+        or result.get("airbnb_revenue")
+    ) or 0
+
+    if not monthly_revenue:
+        traditional_rent = _safe_float(result.get("traditional_rent")) or 0
+        monthly_revenue = traditional_rent * 1.55 if traditional_rent else 0
+
+    occupancy_rate = _safe_float(result.get("occupancy_rate"))
+    if occupancy_rate is None and monthly_revenue:
+        occupancy_rate = 62.0
+
+    cleaning = monthly_revenue * 0.10 if monthly_revenue else 0
+    platform = monthly_revenue * 0.03 if monthly_revenue else 0
+    utilities = max(250, monthly_revenue * 0.05) if monthly_revenue else 250
+    taxes = (_safe_float(result.get("tax_amount")) or 0) / 12
+    insurance = max(price * 0.005 / 12, 140) if price else 175
+    reserve = monthly_revenue * 0.08 if monthly_revenue else 0
+
+    expenses = cleaning + platform + utilities + taxes + insurance + reserve
+    net_cashflow = monthly_revenue - expenses if monthly_revenue else None
+    annual_noi = (net_cashflow * 12) if net_cashflow is not None else None
+    cap_rate = (annual_noi / price * 100) if price and annual_noi is not None else None
+
+    adr = None
+    if monthly_revenue and occupancy_rate:
+        try:
+            adr = monthly_revenue / (30 * (occupancy_rate / 100))
+        except Exception:
+            adr = None
+
+    return {
+        "key": "airbnb",
+        "label": "Airbnb / STR",
+        "headline_value": net_cashflow,
+        "headline_label": "Monthly Cash Flow",
+        "metrics": {
+            "monthly_revenue": monthly_revenue,
+            "occupancy_rate": occupancy_rate,
+            "adr": adr,
+            "monthly_cash_flow": net_cashflow,
+            "cap_rate": cap_rate,
+        },
+        "summary": (
+            f"${monthly_revenue:,.0f}/mo STR revenue potential"
+            if monthly_revenue else
+            "No STR signal yet"
+        ),
+    }
+
+
+def _pick_best_exit_strategy(cards: list[dict]) -> dict:
+    best = None
+    best_score = None
+
+    for card in cards:
+        key = card.get("key")
+        metrics = card.get("metrics") or {}
+
+        if key == "flip":
+            score = _safe_float(metrics.get("margin_pct")) or -999
+        else:
+            score = _safe_float(metrics.get("monthly_cash_flow")) or -999
+
+        if best is None or score > best_score:
+            best = card
+            best_score = score
+
+    if not best:
+        return {
+            "label": "Review",
+            "reason": "Not enough data to confidently rank exit paths yet.",
+        }
+
+    reason_map = {
+        "flip": "Strongest projected resale spread.",
+        "rental": "Best stable long-term income profile.",
+        "airbnb": "Strongest short-term income potential.",
+    }
+
+    return {
+        "label": best.get("label"),
+        "reason": reason_map.get(best.get("key"), "Best current signal."),
+    }
+
+
+def _attach_exit_strategy_cards(result: dict) -> dict:
+    flip_card = _build_flip_strategy_card(result)
+    rental_card = _build_rental_strategy_card(result)
+    airbnb_card = _build_airbnb_strategy_card(result)
+
+    cards = [flip_card, rental_card, airbnb_card]
+    best_exit = _pick_best_exit_strategy(cards)
+
+    result["exit_strategy_cards"] = cards
+    result["best_exit_strategy"] = best_exit.get("label")
+    result["best_exit_reason"] = best_exit.get("reason")
+
+    # Keep recommended_strategy aligned if it is weak / empty
+    if not result.get("recommended_strategy") or result.get("recommended_strategy") == "Hold / Review":
+        result["recommended_strategy"] = best_exit.get("label")
+
+    return result

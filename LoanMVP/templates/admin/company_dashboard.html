@@ -198,6 +198,115 @@
     </div>
   </section>
 
+  <section class="re-card pad" data-widget-key="applicants">
+    <div class="section-head">
+      <div>
+        <div class="eyebrow">APPLICANT ASSIGNMENTS</div>
+        <h3 style="margin:.35rem 0 .2rem;">Assign Loan Officer And Processor</h3>
+        <div class="re-card-subtitle">Company admins can route each applicant to the right origination and processing team members.</div>
+      </div>
+    </div>
+
+    <div class="re-grid-3 mt-16">
+      <div class="re-stat">
+        <div class="re-stat-label">Applicants In View</div>
+        <div class="re-stat-value">{{ applicant_loans|length }}</div>
+        <div class="re-stat-meta">Recent files scoped to {{ company.name }}</div>
+      </div>
+
+      <div class="re-stat">
+        <div class="re-stat-label">Officer Assigned</div>
+        <div class="re-stat-value">{{ stats.assigned_loan_officers or 0 }}</div>
+        <div class="re-stat-meta">Applicant files with an assigned loan officer</div>
+      </div>
+
+      <div class="re-stat">
+        <div class="re-stat-label">Processor Assigned</div>
+        <div class="re-stat-value">{{ stats.assigned_processors or 0 }}</div>
+        <div class="re-stat-meta">Applicant files with an assigned processor</div>
+      </div>
+    </div>
+
+    {% if applicant_loans %}
+      <div class="re-table-wrap mt-16">
+        <table class="re-table">
+          <thead>
+            <tr>
+              <th>Applicant</th>
+              <th>Loan</th>
+              <th>Loan Officer</th>
+              <th>Processor</th>
+              <th>Save</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for loan in applicant_loans %}
+              {% set borrower = loan.borrower_profile %}
+              <tr>
+                <td>
+                  <div style="font-weight:600;">{{ borrower.full_name if borrower and borrower.full_name else borrower.email if borrower and borrower.email else "Applicant #" ~ loan.id }}</div>
+                  <div class="re-stat-meta">{{ borrower.email if borrower and borrower.email else loan.property_address or "No email on file" }}</div>
+                </td>
+                <td>
+                  <div>{{ loan.loan_type or "Loan Application" }}</div>
+                  <div class="re-stat-meta">
+                    {{ loan.status or "Pending" }}
+                    {% if loan.created_at %}
+                      • {{ loan.created_at.strftime("%Y-%m-%d") }}
+                    {% endif %}
+                  </div>
+                </td>
+                <td colspan="3" style="min-width:520px;">
+                  <form method="POST" action="{{ url_for('admin.assign_company_applicant', company_id=company.id, loan_id=loan.id) }}" class="re-grid-3" style="align-items:end; gap:12px;">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <label style="display:block;">
+                      <span class="re-stat-meta" style="display:block; margin-bottom:6px;">Loan Officer</span>
+                      <select name="loan_officer_id" class="re-input" style="width:100%;">
+                        <option value="">Unassigned</option>
+                        {% for officer in company_loan_officers %}
+                          <option value="{{ officer.id }}" {% if loan.loan_officer_id == officer.id %}selected{% endif %}>
+                            {{ officer.name or officer.email or ("Officer #" ~ officer.id) }}
+                          </option>
+                        {% endfor %}
+                      </select>
+                    </label>
+
+                    <label style="display:block;">
+                      <span class="re-stat-meta" style="display:block; margin-bottom:6px;">Processor</span>
+                      <select name="processor_id" class="re-input" style="width:100%;">
+                        <option value="">Unassigned</option>
+                        {% for processor in company_processors %}
+                          <option value="{{ processor.id }}" {% if loan.processor_id == processor.id %}selected{% endif %}>
+                            {{ processor.full_name or processor.email or ("Processor #" ~ processor.id) }}
+                          </option>
+                        {% endfor %}
+                      </select>
+                    </label>
+
+                    <button type="submit" class="re-btn primary sm" style="width:100%;">Save Assignment</button>
+                  </form>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="re-empty mt-16">No recent applicant files are available for assignment yet.</div>
+    {% endif %}
+
+    {% if not company_loan_officers or not company_processors %}
+      <div class="re-empty mt-16" style="text-align:left;">
+        {% if not company_loan_officers %}
+          <p style="margin:0 0 8px;">Add at least one `loan_officer` user with a linked loan officer profile so applicants can be assigned.</p>
+        {% endif %}
+        {% if not company_processors %}
+          <p style="margin:0;">Add at least one `processor` user with a linked processor profile so applicants can be routed for fulfillment.</p>
+        {% endif %}
+      </div>
+    {% endif %}
+  </section>
+
   {% if not team_members and not invites and not loans and not borrowers %}
     <section class="re-card pad" data-widget-key="empty_state">
       <div class="section-head">

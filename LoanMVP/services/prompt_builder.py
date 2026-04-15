@@ -1,23 +1,21 @@
 def build_blueprint_prompt(room_type: str, style_preset: str, level: str) -> str:
-    # Normalize
-    rt = (room_type or "room").replace("_", " ")
-    sp = (style_preset or "luxury_modern").replace("_", " ")
-    lvl = (level or "medium").lower()
+    focus = (room_type or "room").replace("_", " ")
+    style = (style_preset or "luxury_modern").replace("_", " ")
+    intensity = (level or "medium").lower()
 
-    # Renovation intensity text
     level_map = {
-        "light": "light cosmetic renovation, paint, fixtures, minor upgrades",
-        "medium": "moderate renovation, new flooring, cabinets/vanity, updated lighting, premium finishes",
-        "heavy": "full gut renovation, high-end finishes, redesigned surfaces while preserving layout"
+        "light": "clean and efficient build concept with straightforward materials and simple detailing",
+        "medium": "refined build concept with upgraded materials, clear room definition, and polished presentation",
+        "heavy": "high-design build concept with richer detailing, stronger material contrast, and more dramatic architectural expression",
+        "luxury": "luxury-level architectural concept with premium finishes, elevated composition, and presentation-ready detail",
     }
-    lvl_text = level_map.get(lvl, level_map["medium"])
+    level_text = level_map.get(intensity, level_map["medium"])
 
-    # SDXL-friendly prompt
     return (
-        f"Photorealistic HGTV-grade {rt} renovation in {sp} style. "
-        f"{lvl_text}. "
-        "Use a realistic wide-angle interior photo perspective, natural daylight plus architectural lighting, "
-        "premium materials, crisp details, realistic shadows. "
-        "STRICT: preserve the blueprint layout exactly — same wall positions, room proportions, door/window openings. "
-        "No warped geometry, no melted lines, no text, no watermark, no logo."
+        f"Blueprint-guided residential architectural concept for a {focus}. "
+        f"Style direction: {style}. "
+        f"{level_text}. "
+        "Honor the source layout and room relationships, keep the plan buildable, and preserve believable wall, door, and window placement. "
+        "Generate an architectural presentation image with coherent circulation, realistic scale, clean geometry, and crisp material definition. "
+        "No warped lines, no melted structure, no random furniture clutter, no text labels, no watermark, no logo."
     )

@@ -58,7 +58,7 @@
           <td>{{ lead.source or '—' }}</td>
           <td>{{ lead.assigned_to or 'Unassigned' }}</td>
           <td class="actions">
-            <a href="{{ url_for('crm.lead_detail', lead_id=lead.id) }}" class="btn"><i class="lucide lucide-eye"></i></a>
+            <a href="{{ url_for('crm.view_lead', lead_id=lead.id) }}" class="btn"><i class="lucide lucide-eye"></i></a>
             <a href="{{ url_for('crm.update_lead', lead_id=lead.id) }}" class="btn"><i class="lucide lucide-edit-3"></i></a>
           </td>
         </tr>

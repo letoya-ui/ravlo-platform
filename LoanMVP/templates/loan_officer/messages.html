@@ -2,7 +2,7 @@
 
 {% block title %}Messages | Lending OS{% endblock %}
 {% block page_title %}Messages{% endblock %}
-{% block page_subline %}Connect with active users across the platform.{% endblock %}
+{% block page_subline %}Message assigned borrowers and active file teammates only.{% endblock %}
 
 {% block content %}
 <div class="ravlo-shell">
@@ -11,7 +11,7 @@
     <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
       <div>
         <h3 style="margin-bottom:6px;">Send Message</h3>
-        <p class="muted" style="margin:0;">Only active users are shown here.</p>
+        <p class="muted" style="margin:0;">Only assigned borrowers, processors, and underwriters are shown here.</p>
       </div>
     </div>
 
@@ -22,7 +22,7 @@
         <div>
           <label for="receiver_id">Receiver</label>
           <select name="receiver_id" id="receiver_id" class="ravlo-input" required>
-            <option value="">Select an active user</option>
+            <option value="">Select an assigned contact</option>
             {% for user in active_users %}
               <option value="{{ user.id }}">
                 {{ user.full_name or ((user.first_name or "") ~ " " ~ (user.last_name or ""))|trim }}

@@ -22,6 +22,8 @@ from LoanMVP.utils.role_helpers import is_admin
 from LoanMVP.models.user_model import User
 from LoanMVP.models.crm_models import Lead, Message, Task 
 from LoanMVP.models.loan_models import LoanApplication, BorrowerProfile
+from LoanMVP.models.loan_officer_model import LoanOfficerProfile
+from LoanMVP.models.processor_model import ProcessorProfile
 from LoanMVP.models.document_models import LoanDocument
 from LoanMVP.models.system_models import SystemLog
 from LoanMVP.models.admin import Company, AccessRequest, UserInvite, LicenseApplication, LicenseInviteEvent
@@ -35,6 +37,97 @@ import time
 admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
 assistant = AIAssistant()
 FULL_ADMIN_ROLES = {"platform_admin", "master_admin", "lending_admin"}
+COMPANY_INVITABLE_ROLES = [
+    ("admin", "Admin"),
+    ("loan_officer", "Loan Officer"),
+    ("processor", "Processor"),
+    ("underwriter", "Underwriter"),
+    ("borrower", "Borrower"),
+    ("compliance", "Compliance"),
+    ("crm", "CRM"),
+    ("property", "Property"),
+    ("ai", "AI"),
+    ("intelligence", "Intelligence"),
+]
+COMPANY_INVITABLE_ROLE_SET = {role for role, _label in COMPANY_INVITABLE_ROLES}
+
+
+def _single_admin_mode_enabled() -> bool:
+    return False
+
+
+def _owner_admin_email() -> str:
+    return (current_app.config.get("OWNER_ADMIN_EMAIL") or "").strip().lower()
+
+
+def _is_owner_account(user) -> bool:
+    email = (getattr(user, "email", "") or "").strip().lower()
+    return bool(email) and email == _owner_admin_email()
+
+
+def _demo_dashboard_cards():
+    return [
+        {
+            "role": "Investor",
+            "tagline": "Capital pipeline, deal room, and subscription-led access.",
+            "theme": "Investor OS",
+            "kpis": [
+                {"label": "Live Deals", "value": "12"},
+                {"label": "Funding Ready", "value": "$4.8M"},
+                {"label": "Active Plan", "value": "Pro"},
+            ],
+            "bullets": [
+                "Deal sourcing, rehab planning, and funding status in one command view.",
+                "Subscription-aware premium tooling, exports, and AI analysis states.",
+                "Investor-ready next steps, document progress, and saved-property watchlist.",
+            ],
+        },
+        {
+            "role": "Partners",
+            "tagline": "Marketplace visibility, request intake, and service ops.",
+            "theme": "Partner Network",
+            "kpis": [
+                {"label": "New Requests", "value": "18"},
+                {"label": "Acceptance Rate", "value": "86%"},
+                {"label": "Tier", "value": "Enterprise"},
+            ],
+            "bullets": [
+                "Shows partner request flow, proposal value, and unlocked tier features.",
+                "Highlights CRM, instant quote, AI assist, and portfolio showcase modules.",
+                "Works as a pitch surface for contractors, title, insurance, and vendors.",
+            ],
+        },
+        {
+            "role": "Loan Officers",
+            "tagline": "Pipeline command center for leads, files, and capital submissions.",
+            "theme": "Origination Desk",
+            "kpis": [
+                {"label": "Assigned Leads", "value": "34"},
+                {"label": "Active Files", "value": "21"},
+                {"label": "Capital Requests", "value": "7"},
+            ],
+            "bullets": [
+                "Pipeline stages for submitted, in review, approved, and investor capital loans.",
+                "Intake coverage, lead conversion, and borrower communication workload.",
+                "Designed as a live demo for lenders, broker partners, and recruiting.",
+            ],
+        },
+        {
+            "role": "Underwriting",
+            "tagline": "Conditions, risk review, and file movement through approval.",
+            "theme": "Risk Console",
+            "kpis": [
+                {"label": "Files in Review", "value": "14"},
+                {"label": "Conditions Cleared", "value": "92"},
+                {"label": "Avg Turn", "value": "2.1d"},
+            ],
+            "bullets": [
+                "Communicates operational control and review velocity for partners and investors.",
+                "Frames conditions, risk flags, and decision support as one clean workspace.",
+                "Pairs naturally with the investor funding timeline for cross-role storytelling.",
+            ],
+        },
+    ]
 
 # =========================================================
 # 🔐 ADMIN ONLY CHECK
@@ -123,11 +216,80 @@ def _company_dashboard_defaults():
         "tools": True,
         "analytics": True,
         "empty_state": True,
+        "applicants": True,
         "team": True,
         "invites": True,
         "requests": True,
         "messages": True,
     }
+
+
+def _as_int(value):
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _company_loan_officers(company_id):
+    return (
+        db.session.query(LoanOfficerProfile)
+        .join(User, LoanOfficerProfile.user_id == User.id)
+        .filter(User.company_id == company_id)
+        .order_by(func.lower(func.coalesce(LoanOfficerProfile.name, User.email)))
+        .all()
+    )
+
+
+def _company_processors(company_id):
+    return (
+        db.session.query(ProcessorProfile)
+        .join(User, ProcessorProfile.user_id == User.id)
+        .filter(User.company_id == company_id)
+        .order_by(func.lower(func.coalesce(ProcessorProfile.full_name, User.email)))
+        .all()
+    )
+
+
+def _borrower_matches_company(borrower, company):
+    if not borrower or not company:
+        return False
+
+    borrower_user = getattr(borrower, "user", None)
+    borrower_company_id = getattr(borrower_user, "company_id", None)
+    if borrower_company_id == company.id:
+        return True
+
+    borrower_company_name = (getattr(borrower, "company", "") or "").strip().lower()
+    company_name = (getattr(company, "name", "") or "").strip().lower()
+    return bool(company_name and borrower_company_name == company_name)
+
+
+def _loan_matches_company(loan, company):
+    if not loan or not company:
+        return False
+
+    if getattr(loan, "company_id", None) == company.id:
+        return True
+
+    borrower = getattr(loan, "borrower_profile", None)
+    return _borrower_matches_company(borrower, company)
+
+
+def _company_recent_applicants(company_id, limit=8):
+    company = Company.query.get(company_id)
+    if not company:
+        return []
+
+    loans = (
+        LoanApplication.query
+        .order_by(LoanApplication.created_at.desc(), LoanApplication.id.desc())
+        .limit(200)
+        .all()
+    )
+
+    scoped_loans = [loan for loan in loans if _loan_matches_company(loan, company)]
+    return scoped_loans[:limit]
 
 
 def _company_dashboard_column_exists():
@@ -230,8 +392,7 @@ def _refresh_invite(invite):
 
 def _access_request_role(access_request):
     role = ((access_request.requested_role or "").strip().lower()).replace(" ", "_")
-    allowed_roles = {"admin", "loan_officer", "processor", "underwriter"}
-    if role in allowed_roles:
+    if role in COMPANY_INVITABLE_ROLE_SET:
         return role
     return "admin"
 
@@ -416,6 +577,12 @@ If you were not expecting this email, you can ignore it.
 @login_required
 @role_required("admin_group")
 def dashboard():
+    if (
+        (getattr(current_user, "role", "") or "").strip().lower() == "executive"
+        or _is_owner_account(current_user)
+    ):
+        return redirect(url_for("executive.dashboard"))
+
     if _is_company_admin(current_user) and current_user.company_id:
         return redirect(url_for("admin.company_dashboard", company_id=current_user.company_id))
 
@@ -540,6 +707,9 @@ def dashboard():
         "admin/dashboard.html",
         company=company,
         stats=stats,
+        demo_dashboards=_demo_dashboard_cards(),
+        single_admin_mode=_single_admin_mode_enabled(),
+        owner_admin_email=_owner_admin_email(),
         recent_requests=recent_requests,
         users=users,
         recent_invites=recent_invites,
@@ -551,6 +721,26 @@ def dashboard():
         user_growth_labels=user_growth_labels,
         user_growth_series=user_growth_series,
         server_load_value=server_load_value,
+    )
+
+
+@admin_bp.route("/demo-center")
+@login_required
+@role_required("admin_group")
+def demo_center():
+    demo_dashboards = _demo_dashboard_cards()
+    spotlight_metrics = {
+        "dashboards_ready": len(demo_dashboards),
+        "single_admin_mode": "Enabled" if _single_admin_mode_enabled() else "Disabled",
+        "owner_admin_email": _owner_admin_email() or "Not set",
+    }
+
+    return render_template(
+        "admin/demo_center.html",
+        demo_dashboards=demo_dashboards,
+        spotlight_metrics=spotlight_metrics,
+        single_admin_mode=_single_admin_mode_enabled(),
+        owner_admin_email=_owner_admin_email(),
     )
 
 
@@ -812,19 +1002,24 @@ def invite_team_member(company_id):
     if access_redirect:
         return access_redirect
 
+    if _single_admin_mode_enabled() and not _is_full_admin(current_user):
+        flash(
+            f"Single-admin mode is active. Company admins cannot invite users while {_owner_admin_email()} controls workspace access.",
+            "warning",
+        )
+        return redirect(url_for("admin.company_dashboard", company_id=company.id))
+
     if request.method == "POST":
         first_name = (request.form.get("first_name") or "").strip()
         last_name = (request.form.get("last_name") or "").strip()
         email = (request.form.get("email") or "").strip().lower()
         role = (request.form.get("role") or "").strip()
 
-        allowed_roles = ["admin", "loan_officer", "processor", "underwriter"]
-
         if not email or not role:
             flash("Email and role are required.", "danger")
             return redirect(url_for("admin.invite_team_member", company_id=company.id))
 
-        if role not in allowed_roles:
+        if role not in COMPANY_INVITABLE_ROLE_SET:
             flash("Invalid role selected.", "danger")
             return redirect(url_for("admin.invite_team_member", company_id=company.id))
 
@@ -863,6 +1058,7 @@ def invite_team_member(company_id):
     return render_template(
         "admin/invite_team_member.html",
         company=company,
+        invitable_roles=COMPANY_INVITABLE_ROLES,
     )
 
 
@@ -875,6 +1071,13 @@ def resend_team_invite(company_id, invite_id):
     access_redirect = _ensure_company_access(company)
     if access_redirect:
         return access_redirect
+
+    if _single_admin_mode_enabled() and not _is_full_admin(current_user):
+        flash(
+            f"Single-admin mode is active. Company admins cannot resend invites while {_owner_admin_email()} controls workspace access.",
+            "warning",
+        )
+        return redirect(url_for("admin.company_dashboard", company_id=company.id))
 
     invite = UserInvite.query.get_or_404(invite_id)
     if invite.company_id != company.id:
@@ -1346,16 +1549,22 @@ def ai_refresh(target):
 @login_required
 @role_required("admin_group")
 def company_dashboard(company_id):
+    if (getattr(current_user, "role", "") or "").strip().lower() == "executive":
+        return redirect(url_for("executive.dashboard"))
+
     company = Company.query.get_or_404(company_id)
     access_redirect = _ensure_company_access(company)
     if access_redirect:
         return access_redirect
 
     team_members = User.query.filter_by(company_id=company.id).order_by(User.created_at.desc()).all()
+    company_loan_officers = _company_loan_officers(company.id)
+    company_processors = _company_processors(company.id)
     invites = UserInvite.query.filter_by(company_id=company.id).order_by(UserInvite.created_at.desc()).all()
     loans = LoanApplication.query.filter_by(company_id=company.id).order_by(LoanApplication.created_at.desc()).all() if hasattr(LoanApplication, "company_id") else []
     borrowers = BorrowerProfile.query.filter_by(company_id=company.id).all() if hasattr(BorrowerProfile, "company_id") else []
     docs = LoanDocument.query.filter_by(company_id=company.id).all() if hasattr(LoanDocument, "company_id") else []
+    applicant_loans = _company_recent_applicants(company.id)
     access_requests = [
         item for item in (
             AccessRequest.query
@@ -1411,6 +1620,8 @@ def company_dashboard(company_id):
         "pending_invites": len(pending_invites),
         "accepted_invites": len(accepted_invites),
         "loans": len(loans),
+        "assigned_loan_officers": len([loan for loan in applicant_loans if getattr(loan, "loan_officer_id", None)]),
+        "assigned_processors": len([loan for loan in applicant_loans if getattr(loan, "processor_id", None)]),
         "borrowers": len(borrowers),
         "documents": len(docs),
         "requests": len(access_requests),
@@ -1424,6 +1635,9 @@ def company_dashboard(company_id):
         invites=invites[:5],
         loans=loans[:5],
         borrowers=borrowers[:5],
+        applicant_loans=applicant_loans,
+        company_loan_officers=company_loan_officers,
+        company_processors=company_processors,
         recent_messages=recent_messages,
         access_requests=access_requests[:5],
         stats=stats,
@@ -1441,6 +1655,51 @@ def company_dashboard(company_id):
         title=f"{company.name} Dashboard",
         active_tab="companies",
     )
+
+
+@admin_bp.route("/company/<int:company_id>/applications/<int:loan_id>/assign", methods=["POST"])
+@login_required
+@role_required("admin_group")
+def assign_company_applicant(company_id, loan_id):
+    company = Company.query.get_or_404(company_id)
+    access_redirect = _ensure_company_access(company)
+    if access_redirect:
+        return access_redirect
+
+    loan = LoanApplication.query.get_or_404(loan_id)
+    if not _loan_matches_company(loan, company):
+        flash("That applicant is not part of this company workspace.", "warning")
+        return redirect(url_for("admin.company_dashboard", company_id=company.id))
+
+    available_officers = {profile.id: profile for profile in _company_loan_officers(company.id)}
+    available_processors = {profile.id: profile for profile in _company_processors(company.id)}
+
+    officer_id = _as_int(request.form.get("loan_officer_id"))
+    processor_id = _as_int(request.form.get("processor_id"))
+
+    if officer_id and officer_id not in available_officers:
+        flash("Please choose a loan officer assigned to this company.", "warning")
+        return redirect(url_for("admin.company_dashboard", company_id=company.id))
+
+    if processor_id and processor_id not in available_processors:
+        flash("Please choose a processor assigned to this company.", "warning")
+        return redirect(url_for("admin.company_dashboard", company_id=company.id))
+
+    borrower = getattr(loan, "borrower_profile", None)
+
+    loan.loan_officer_id = officer_id or None
+    loan.processor_id = processor_id or None
+
+    if borrower is not None:
+        borrower.assigned_officer_id = officer_id or None
+        if officer_id:
+            officer_profile = available_officers.get(officer_id)
+            borrower.assigned_to = getattr(officer_profile, "user_id", None)
+
+    db.session.commit()
+
+    flash("Applicant assignments updated.", "success")
+    return redirect(url_for("admin.company_dashboard", company_id=company.id))
 
 
 @admin_bp.route("/company/<int:company_id>/settings", methods=["GET", "POST"])
@@ -1529,7 +1788,7 @@ def onboarding_center():
 
 @admin_bp.route("/licensing/applications")
 @login_required
-@role_required("platform_admin", "master_admin")
+@role_required("platform_admin", "master_admin", "lending_admin")
 def licensing_applications():
     applications = LicenseApplication.query.order_by(
         LicenseApplication.created_at.desc()
@@ -1569,7 +1828,7 @@ def licensing_applications():
 
 @admin_bp.route("/licensing/applications/<int:app_id>/contact", methods=["POST"])
 @login_required
-@role_required("platform_admin", "master_admin")
+@role_required("platform_admin", "master_admin", "lending_admin")
 def contact_license_application(app_id):
     app_row = LicenseApplication.query.get_or_404(app_id)
 
@@ -1590,7 +1849,7 @@ def contact_license_application(app_id):
 
 @admin_bp.route("/licensing/applications/<int:app_id>/approve", methods=["POST"])
 @login_required
-@role_required("platform_admin", "master_admin")
+@role_required("platform_admin", "master_admin", "lending_admin")
 def approve_license_application(app_id):
     app_row = LicenseApplication.query.get_or_404(app_id)
 
@@ -1685,7 +1944,7 @@ def approve_license_application(app_id):
 
 @admin_bp.route("/licensing/applications/<int:app_id>/decline", methods=["POST"])
 @login_required
-@role_required("platform_admin", "master_admin")
+@role_required("platform_admin", "master_admin", "lending_admin")
 def decline_license_application(app_id):
     app_row = LicenseApplication.query.get_or_404(app_id)
 
@@ -1702,7 +1961,7 @@ def decline_license_application(app_id):
 
 @admin_bp.route("/licensing/applications/<int:app_id>/resend-invite", methods=["POST"])
 @login_required
-@role_required("platform_admin", "master_admin")
+@role_required("platform_admin", "master_admin", "lending_admin")
 def resend_license_application_invite(app_id):
     app_row = LicenseApplication.query.get_or_404(app_id)
 
@@ -1761,6 +2020,9 @@ def resend_license_application_invite(app_id):
 @role_required("admin_group")
 def block_user(user_id):
     user = User.query.get_or_404(user_id)
+    if _is_company_admin(current_user) and getattr(user, "company_id", None) != getattr(current_user, "company_id", None):
+        flash("You can only manage users from your own company.", "warning")
+        return redirect(url_for("admin.company_dashboard", company_id=current_user.company_id))
 
     reason = (request.form.get("reason") or "manual_review").strip().lower()
     note = (request.form.get("note") or "").strip()
@@ -1782,6 +2044,9 @@ def block_user(user_id):
 @role_required("admin_group")
 def unblock_user(user_id):
     user = User.query.get_or_404(user_id)
+    if _is_company_admin(current_user) and getattr(user, "company_id", None) != getattr(current_user, "company_id", None):
+        flash("You can only manage users from your own company.", "warning")
+        return redirect(url_for("admin.company_dashboard", company_id=current_user.company_id))
 
     user.is_blocked = False
     user.blocked_at = None

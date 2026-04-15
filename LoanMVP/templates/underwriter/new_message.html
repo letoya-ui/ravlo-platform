@@ -15,28 +15,32 @@
                 </a>
             </div>
 
-            <p class="muted">Choose who you want to message.</p>
+            <p class="muted">Choose an assigned processor or loan officer.</p>
 
             <!-- SEARCH -->
             <input type="text" id="recipientSearch" class="search-input"
-                   placeholder="Search recipients…">
+                   placeholder="Search assigned team…">
 
-            <form method="POST" class="newmsg-form">
+            {% if users %}
+                <form method="POST" class="newmsg-form">
 
-                <label class="form-label">Select Recipient</label>
+                    <label class="form-label">Select Recipient</label>
 
-                <select name="partner_id" required class="form-select" id="recipientSelect">
-                    {% for user in users %}
-                        <option value="{{ user.id }}">
-                            {{ user.full_name }} ({{ user.role }})
-                        </option>
-                    {% endfor %}
-                </select>
+                    <select name="partner_id" required class="form-select" id="recipientSelect">
+                        {% for user in users %}
+                            <option value="{{ user.id }}">
+                                {{ user.full_name }} ({{ user.role }})
+                            </option>
+                        {% endfor %}
+                    </select>
 
-                <button type="submit" class="btn-glow full-btn">
-                    <i class="lucide lucide-send"></i> Start Conversation
-                </button>
-            </form>
+                    <button type="submit" class="btn-glow full-btn">
+                        <i class="lucide lucide-send"></i> Start Conversation
+                    </button>
+                </form>
+            {% else %}
+                <p class="muted">No assigned processors or loan officers are available for this underwriter yet.</p>
+            {% endif %}
 
         </div>
     </section>

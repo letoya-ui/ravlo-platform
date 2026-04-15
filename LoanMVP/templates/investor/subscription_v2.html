@@ -1,0 +1,138 @@
+{% extends "layouts/ravlo_base.html" %}
+{% block title %}Ravlo • Subscription{% endblock %}
+{% block page_title %}Subscription{% endblock %}
+{% block page_subline %}Manage your investor plan and keep premium tools active for live deals.{% endblock %}
+
+{% block topbar_actions %}
+  <button class="ravlo-btn ghost sm" type="button"
+          onclick="location.href='{{ url_for('investor.command_center') }}'">
+    Command Center
+  </button>
+{% endblock %}
+
+{% block content %}
+<style>
+  .sub-summary {
+    display:grid;
+    grid-template-columns:1.1fr .9fr;
+    gap:16px;
+    margin-top:14px;
+  }
+  .sub-grid {
+    display:grid;
+    grid-template-columns:repeat(auto-fit, minmax(280px, 1fr));
+    gap:16px;
+    margin-top:16px;
+  }
+  .plan-card {
+    background:rgba(255,255,255,.03);
+    border:1px solid rgba(255,255,255,.1);
+    border-radius:20px;
+    padding:20px;
+    box-shadow:0 10px 30px rgba(0,0,0,.18);
+  }
+  .plan-card.active {
+    border-color:rgba(122,184,255,.55);
+    box-shadow:0 12px 34px rgba(122,184,255,.18);
+  }
+  .plan-price {
+    font-size:2rem;
+    font-weight:900;
+    margin:.7rem 0 .35rem;
+  }
+  .features {
+    list-style:none;
+    padding:0;
+    margin:14px 0 0;
+    display:grid;
+    gap:8px;
+    color:rgba(230,235,240,.88);
+  }
+  .pill {
+    display:inline-flex;
+    align-items:center;
+    gap:.45rem;
+    padding:.35rem .7rem;
+    border-radius:999px;
+    font-size:.82rem;
+    font-weight:800;
+    border:1px solid rgba(122,184,255,.45);
+    color:#7ab8ff;
+    background:rgba(122,184,255,.08);
+    margin-top:12px;
+  }
+  .plan-actions {
+    margin-top:16px;
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+  }
+  .plan-actions form { margin:0; }
+  @media (max-width: 900px) {
+    .sub-summary { grid-template-columns:1fr; }
+  }
+</style>
+
+<section class="sub-summary">
+  <div class="ravlo-card pad">
+    <div class="eyebrow">ACTIVE INVESTOR ACCESS</div>
+    <h2 style="margin:.5rem 0 .45rem;">{{ current_plan }} plan is live for this account.</h2>
+    <div style="color:var(--muted);">
+      Subscription controls are now wired to your investor user record, so upgrades and downgrades update a real active plan state instead of a dead-end screen.
+    </div>
+  </div>
+
+  <div class="ravlo-card pad">
+    <div class="eyebrow">PLAN STATUS</div>
+    <div style="display:grid; gap:10px; margin-top:12px;">
+      <div style="display:flex; justify-content:space-between; gap:12px;">
+        <span style="color:var(--muted);">Current Plan</span>
+        <strong>{{ current_plan }}</strong>
+      </div>
+      <div style="display:flex; justify-content:space-between; gap:12px;">
+        <span style="color:var(--muted);">Profile Linked</span>
+        <strong>{{ "Yes" if investor_profile else "Pending" }}</strong>
+      </div>
+      <div style="display:flex; justify-content:space-between; gap:12px;">
+        <span style="color:var(--muted);">Billing Status</span>
+        <strong>{{ active_subscription.status if active_subscription else "Active on user account" }}</strong>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="sub-grid">
+  {% for plan_name, plan in subscription_catalog.items() %}
+  <article class="plan-card {% if current_plan == plan_name %}active{% endif %}">
+    <div class="eyebrow">{{ plan.key|upper }}</div>
+    <h2 style="margin:.45rem 0 0;">{{ plan_name }}</h2>
+    <div class="plan-price">${{ plan.price }} <small style="font-size:.95rem; opacity:.7;">/mo</small></div>
+
+    <ul class="features">
+      {% for feature in plan.features %}
+      <li>{{ feature }}</li>
+      {% endfor %}
+    </ul>
+
+    {% if current_plan == plan_name %}
+      <div class="pill">Current Plan</div>
+    {% else %}
+      <div class="plan-actions">
+        {% if plan_name == "Free" %}
+        <form method="POST" action="{{ url_for('investor.downgrade_plan') }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button class="ravlo-btn ghost sm" type="submit">Switch to Free</button>
+        </form>
+        {% else %}
+        <form method="POST" action="{{ url_for('investor.upgrade_plan') }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="plan" value="{{ plan_name }}">
+          <button class="ravlo-btn primary sm" type="submit">Activate {{ plan_name }}</button>
+        </form>
+        {% endif %}
+      </div>
+    {% endif %}
+  </article>
+  {% endfor %}
+</section>
+{% endblock %}

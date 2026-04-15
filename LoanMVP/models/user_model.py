@@ -146,6 +146,29 @@ class User(UserMixin, db.Model):
     def check_password(self, password):
         return check_password_hash(self.password_hash, password)
 
+    @property
+    def subscription_plan(self):
+        tier = (self.subscription or "free").strip().lower()
+        labels = {
+            "free": "Free",
+            "core": "Core",
+            "pro": "Pro",
+            "enterprise": "Enterprise",
+        }
+        return labels.get(tier, tier.title() if tier else "Free")
+
+    @subscription_plan.setter
+    def subscription_plan(self, value):
+        normalized = (value or "free").strip().lower()
+        alias_map = {
+            "starter": "free",
+            "individual": "core",
+            "team": "pro",
+            "premium": "pro",
+            "active": "pro",
+        }
+        self.subscription = alias_map.get(normalized, normalized or "free")
+
     # Full name hybrid property
     @hybrid_property
     def full_name(self):

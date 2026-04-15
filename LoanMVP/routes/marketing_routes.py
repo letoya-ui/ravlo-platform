@@ -1,10 +1,12 @@
 from datetime import datetime
 
-from flask import Blueprint, render_template, redirect, url_for, request, flash
+from flask import Blueprint, render_template, redirect, url_for, request, flash, current_app
+from sqlalchemy import func
 
 from LoanMVP.extensions import db, csrf
 
 from LoanMVP.models.admin import LicenseApplication
+from LoanMVP.models.user_model import User
 
 
 marketing_bp = Blueprint("marketing", __name__, url_prefix="/")
@@ -142,6 +144,33 @@ PAGE_META = {
 }
 
 
+def _owner_admin_email() -> str:
+    return (current_app.config.get("OWNER_ADMIN_EMAIL") or "").strip().lower()
+
+
+def _single_admin_mode_enabled() -> bool:
+    return bool(current_app.config.get("SINGLE_ADMIN_MODE", False))
+
+
+def _owner_admin_exists() -> bool:
+    owner_email = _owner_admin_email()
+    if not owner_email:
+        return False
+    return (
+        db.session.query(User.id)
+        .filter(func.lower(User.email) == owner_email)
+        .first()
+        is not None
+    )
+
+
+def _workspace_recovery_mode() -> bool:
+    if db.session.query(User.id).first() is None:
+        return True
+
+    return _single_admin_mode_enabled() and not _owner_admin_exists()
+
+
 # ---------------------------------------------------------
 # Shared renderer
 # ---------------------------------------------------------
@@ -165,6 +194,8 @@ def render_marketing_page(page_key, **extra_context):
             {"label": "Contact", "endpoint": "marketing.contact"},
             {"label": "Enter", "endpoint": "marketing.enter"},
         ],
+        "recovery_mode": _workspace_recovery_mode(),
+        "owner_admin_email": _owner_admin_email(),
     }
 
     context.update(extra_context)

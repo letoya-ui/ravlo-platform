@@ -3,7 +3,7 @@
 
 {% block title %}Ravlo • Messages{% endblock %}
 {% block page_title %}Messages{% endblock %}
-{% block page_subline %}Chat with your team and keep deal communication in one place.{% endblock %}
+{% block page_subline %}Chat only with the professionals currently assigned to your loans and capital requests.{% endblock %}
 
 {% block head %}
 <meta name="csrf-token" content="{{ csrf_token() }}">
@@ -250,7 +250,7 @@
   <div class="messenger-layout">
 
     <aside class="conversation-list">
-      <h2>Conversations</h2>
+      <h2>Assigned Team</h2>
 
       {% for officer in officers %}
         <a href="{{ url_for('investor.messages', receiver_id=officer.id) }}"
@@ -261,7 +261,7 @@
           </div>
         </a>
       {% else %}
-        <div class="empty-conversations">No conversations yet.</div>
+        <div class="empty-conversations">No assigned professionals yet.</div>
       {% endfor %}
     </aside>
 

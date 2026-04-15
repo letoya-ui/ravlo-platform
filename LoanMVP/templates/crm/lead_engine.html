@@ -13,7 +13,7 @@
     <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;">
       <h1><i class="lucide lucide-cpu"></i> Lead Engine</h1>
       <div style="display:flex;gap:.5rem;flex-wrap:wrap;">
-        <a href="{{ url_for('crm.view_leads') }}" class="btn btn-outline"><i class="lucide lucide-users"></i> View Leads</a>
+        <a href="{{ url_for('crm.leads') }}" class="btn btn-outline"><i class="lucide lucide-users"></i> View Leads</a>
         <a href="{{ url_for('crm.add_lead') }}" class="btn btn-outline"><i class="lucide lucide-user-plus"></i> Add Lead</a>
       </div>
     </div>
@@ -50,7 +50,7 @@
       <tbody>
         {% for lead in leads %}
         <tr>
-          <td><a href="{{ url_for('crm.lead_detail', lead_id=lead.id) }}" style="color:#7ab8ff;">{{ lead.name }}</a></td>
+          <td><a href="{{ url_for('crm.view_lead', lead_id=lead.id) }}" style="color:#7ab8ff;">{{ lead.name }}</a></td>
           <td>{{ lead.email }}</td>
           <td>{{ lead.source or '—' }}</td>
           <td>{{ lead.status or 'New' }}</td>

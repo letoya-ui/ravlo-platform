@@ -10,6 +10,13 @@ Access your Ravlo command center.
 
 {% block auth_content %}
 
+{% if recovery_mode %}
+<div class="ravlo-alert warning" style="margin-bottom: 18px;">
+Owner admin recovery is available for this workspace.
+Use <strong>{{ owner_admin_email }}</strong> to restore access.
+</div>
+{% endif %}
+
 <form method="POST" class="ravlo-form">
 {{ form.hidden_tag() }}
 
@@ -48,5 +55,12 @@ Don't have an account?
 <a href="{{ url_for('auth.register') }}">Create one</a>
 
 </div>
+
+{% if recovery_mode %}
+<div class="ravlo-auth-foot">
+Need to restore admin access?
+<a href="{{ url_for('auth.restore_owner_admin') }}">Restore owner admin</a>
+</div>
+{% endif %}
 
 {% endblock %}

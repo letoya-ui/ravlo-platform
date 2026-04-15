@@ -27,7 +27,7 @@ Open any address and let Ravlo compare the best plan before you move into scope,
       <span class="ps-pill">Enter Property</span>
       <span class="ps-pill">Compare Strategies</span>
       <span class="ps-pill">Define Scope</span>
-      <span class="ps-pill">Validate</span>
+      <span class="ps-pill">Run Analysis</span>
       <span class="ps-pill">Move to Execution</span>
     </div>
   </section>
@@ -88,7 +88,7 @@ Open any address and let Ravlo compare the best plan before you move into scope,
         <div class="ps-step"><span>02</span><div><strong>See the snapshot</strong><p>Review the property facts, lot flags, and development signals.</p></div></div>
         <div class="ps-step"><span>03</span><div><strong>Compare strategies</strong><p>Ravlo scores Rehab, Build Studio, and Project Build when applicable.</p></div></div>
         <div class="ps-step"><span>04</span><div><strong>Define scope</strong><p>Refine the chosen path without overwhelming the user.</p></div></div>
-        <div class="ps-step"><span>05</span><div><strong>Validate + execute</strong><p>Use market validation, then move to quote, partners, or capital.</p></div></div>
+        <div class="ps-step"><span>05</span><div><strong>Run analysis</strong><p>Compare flip, rental, Airbnb, and BRRRR before execution.</p></div></div>
       </div>
     </div>
   </section>
@@ -309,6 +309,7 @@ Open any address and let Ravlo compare the best plan before you move into scope,
         <div class="ps-link-row">
           <a href="{{ url_for('investor.deal_workspace', deal_id=workspace_deal.id) }}" class="ravlo-btn ghost">Open Deal Workspace</a>
           <a href="{{ url_for('investor.deal_detail', deal_id=workspace_deal.id) }}" class="ravlo-btn ghost">Open Saved Deal</a>
+          <a href="{{ url_for('investor.deal_analysis', deal_id=workspace_deal.id) }}" class="ravlo-btn primary">Run Full Deal Analysis</a>
         </div>
       </div>
       {% endif %}
@@ -316,62 +317,81 @@ Open any address and let Ravlo compare the best plan before you move into scope,
     </div>
   </section>
 
-  {% if mashvisor and not mashvisor.error %}
+  {% if analysis %}
   <section class="ravlo-card pad">
     <div class="ps-section-head">
       <div>
         <div class="eyebrow">STEP 6</div>
-        <h3 class="ps-title">Market Validation</h3>
+        <h3 class="ps-title">Exit Strategy Analysis</h3>
       </div>
-      <div class="muted">Mashvisor is used here as a final validation layer, not a discovery tool.</div>
+      <div class="muted">Ravlo compares all viable paths and recommends the strongest one.</div>
     </div>
 
-    <div class="ps-budget-band">
-      <div class="ps-value-block">
-        <span>Airbnb Revenue</span>
-        <strong>
-          {% if mashvisor.airbnb_revenue %}
-            ${{ "{:,.0f}".format(mashvisor.airbnb_revenue|float) }}/mo
-          {% else %}
-            —
-          {% endif %}
-        </strong>
-      </div>
+    <div class="ps-strategy-grid">
+      <article class="ps-strategy-card">
+        <h4>Fix & Flip</h4>
+        <div class="ps-card-metrics">
+          <div><span>Profit</span><strong>${{ "{:,.0f}".format(analysis.flip.profit or 0) }}</strong></div>
+          <div><span>Margin</span><strong>{{ "%.1f"|format(analysis.flip.margin_pct or 0) }}%</strong></div>
+          <div><span>All-In Cost</span><strong>${{ "{:,.0f}".format(analysis.flip.all_in_cost or 0) }}</strong></div>
+          <div><span>Exit Value</span><strong>${{ "{:,.0f}".format(analysis.flip.exit_value or 0) }}</strong></div>
+        </div>
+      </article>
 
-      <div class="ps-value-block">
-        <span>Occupancy</span>
-        <strong>
-          {% if mashvisor.occupancy_rate %}
-            {{ (mashvisor.occupancy_rate * 100)|round(0) }}%
-          {% else %}
-            —
-          {% endif %}
-        </strong>
-      </div>
+      <article class="ps-strategy-card">
+        <h4>Long-Term Rental</h4>
+        <div class="ps-card-metrics">
+          <div><span>Monthly Rent</span><strong>{% if analysis.rental.monthly_rent %}${{ "{:,.0f}".format(analysis.rental.monthly_rent) }}{% else %}—{% endif %}</strong></div>
+          <div><span>Cash Flow</span><strong>{% if analysis.rental.cash_flow is not none %}${{ "{:,.0f}".format(analysis.rental.cash_flow) }}{% else %}—{% endif %}</strong></div>
+          <div><span>Cap Rate</span><strong>{% if analysis.rental.cap_rate is not none %}{{ "%.2f"|format(analysis.rental.cap_rate) }}%{% else %}—{% endif %}</strong></div>
+          <div><span>CoC Return</span><strong>{% if analysis.rental.cash_on_cash_return is not none %}{{ "%.2f"|format(analysis.rental.cash_on_cash_return) }}%{% else %}—{% endif %}</strong></div>
+        </div>
+      </article>
 
-      <div class="ps-value-block">
-        <span>ADR</span>
-        <strong>
-          {% if mashvisor.adr %}
-            ${{ "{:,.0f}".format(mashvisor.adr|float) }}
-          {% else %}
-            —
-          {% endif %}
-        </strong>
-      </div>
+      <article class="ps-strategy-card">
+        <h4>Airbnb / STR</h4>
+        <div class="ps-card-metrics">
+          <div><span>Revenue</span><strong>{% if analysis.airbnb.monthly_revenue %}${{ "{:,.0f}".format(analysis.airbnb.monthly_revenue) }}{% else %}—{% endif %}</strong></div>
+          <div><span>Occupancy</span><strong>{% if analysis.airbnb.occupancy_rate is not none %}{{ "%.0f"|format(analysis.airbnb.occupancy_rate) }}%{% else %}—{% endif %}</strong></div>
+          <div><span>ADR</span><strong>{% if analysis.airbnb.adr is not none %}${{ "{:,.0f}".format(analysis.airbnb.adr) }}{% else %}—{% endif %}</strong></div>
+          <div><span>Cash Flow</span><strong>{% if analysis.airbnb.cash_flow is not none %}${{ "{:,.0f}".format(analysis.airbnb.cash_flow) }}{% else %}—{% endif %}</strong></div>
+        </div>
+      </article>
 
-      <div class="ps-value-block">
-        <span>Confidence</span>
-        <strong>{{ mashvisor.confidence or "Moderate" }}</strong>
-      </div>
+      <article class="ps-strategy-card">
+        <h4>BRRRR</h4>
+        <div class="ps-card-metrics">
+          <div><span>Refi Value</span><strong>${{ "{:,.0f}".format(analysis.brrrr.refi_value or 0) }}</strong></div>
+          <div><span>Cash Out</span><strong>${{ "{:,.0f}".format(analysis.brrrr.cash_out or 0) }}</strong></div>
+          <div><span>Capital Left</span><strong>${{ "{:,.0f}".format(analysis.brrrr.capital_left_in_deal or 0) }}</strong></div>
+          <div><span>Post-Refi Cash Flow</span><strong>{% if analysis.brrrr.post_refi_cash_flow is not none %}${{ "{:,.0f}".format(analysis.brrrr.post_refi_cash_flow) }}{% else %}—{% endif %}</strong></div>
+        </div>
+      </article>
     </div>
 
-    {% if mashvisor_insight %}
-    <div class="ps-callout">
-      <strong>Ravlo Insight</strong>
-      <p>{{ mashvisor_insight }}</p>
+    <div class="ps-callout ps-persisted-callout" style="margin-top:18px;">
+      <strong>Recommended Strategy: {{ analysis.recommendation.best_strategy }}</strong>
+      <p>{{ analysis.recommendation.reason }}</p>
+      <p class="muted mb-0">Confidence: {{ analysis.recommendation.confidence }}</p>
     </div>
-    {% endif %}
+  </section>
+  {% endif %}
+
+  {% if mashvisor and mashvisor.photos %}
+  <section class="ravlo-card pad">
+    <div class="ps-section-head">
+      <div>
+        <div class="eyebrow">PROPERTY MEDIA</div>
+        <h3 class="ps-title">Listing Photos</h3>
+      </div>
+      <div class="muted">Loaded from property intelligence when available.</div>
+    </div>
+
+    <div class="ps-photo-grid">
+      {% for photo in mashvisor.photos[:8] %}
+      <img src="{{ photo }}" class="ps-photo" alt="Property photo {{ loop.index }}">
+      {% endfor %}
+    </div>
   </section>
   {% endif %}
 
@@ -442,7 +462,7 @@ Open any address and let Ravlo compare the best plan before you move into scope,
         <div>Strategy cards with recommended path</div>
         <div>Scope builder for rehab, build, or project build</div>
         <div>Refined planning budget before execution</div>
-        <div>Late-stage market validation before partners and capital</div>
+        <div>Full exit strategy analysis before commitment</div>
       </div>
     </div>
   </section>
@@ -499,6 +519,8 @@ Open any address and let Ravlo compare the best plan before you move into scope,
 .ps-execution-card{display:grid;gap:10px;padding:18px;border-radius:20px;text-decoration:none;color:inherit;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08)}
 .ps-execution-kicker{font-size:11px;letter-spacing:.08em;color:var(--muted)}
 .ps-bullet-list div{padding:10px 12px;border-radius:14px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06)}
+.ps-photo-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px}
+.ps-photo{width:100%;height:140px;object-fit:cover;border-radius:14px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03)}
 @media (max-width: 1100px){
   .ps-grid,.ps-studio-shell,.ps-build-grid,.ps-snapshot-grid{grid-template-columns:1fr}
 }

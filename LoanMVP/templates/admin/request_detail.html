@@ -1,11 +1,12 @@
 {% extends "layouts/ravlo_employee_base.html" %}
+{% set route_ns = route_namespace|default('admin', true) %}
 
 {% block title %}Request Detail{% endblock %}
 {% block page_title %}Request #{{ access_request.id }}{% endblock %}
 {% block page_subline %}Review submission details and take action{% endblock %}
 
 {% block topbar_actions %}
-  <a href="{{ url_for('admin.access_requests') }}" class="re-btn ghost sm">
+  <a href="{{ url_for(route_ns ~ '.access_requests') }}" class="re-btn ghost sm">
     <i class="lucide lucide-arrow-left"></i>
     Back to Requests
   </a>
@@ -116,7 +117,7 @@
       <div class="row" style="gap:12px; flex-wrap:wrap; margin-top:16px;">
 
         <form method="POST"
-              action="{{ url_for('admin.approve_access_request', req_id=access_request.id) }}"
+              action="{{ url_for(route_ns ~ '.approve_access_request', req_id=access_request.id) }}"
               style="margin:0;">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <button type="submit" class="re-btn success">
@@ -126,7 +127,7 @@
         </form>
 
         <form method="POST"
-              action="{{ url_for('admin.deny_access_request', req_id=access_request.id) }}"
+              action="{{ url_for(route_ns ~ '.deny_access_request', req_id=access_request.id) }}"
               style="margin:0;">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <button type="submit" class="re-btn danger">

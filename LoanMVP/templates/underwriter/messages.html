@@ -9,7 +9,7 @@
 
             <!-- HEADER -->
             <div class="messages-header">
-                <h2><i class="lucide lucide-messages-square"></i> Messages</h2>
+                <h2><i class="lucide lucide-messages-square"></i> Assigned Team Messages</h2>
 
                 <a href="{{ url_for('underwriter.new_message') }}" class="new-msg-btn">
                     <i class="lucide lucide-plus"></i> New Message
@@ -44,7 +44,7 @@
                     {% endfor %}
                 </div>
             {% else %}
-                <p class="muted">No conversations yet.</p>
+                <p class="muted">No assigned processor or loan officer conversations yet.</p>
             {% endif %}
 
         </div>
@@ -53,7 +53,7 @@
     <aside class="rhs">
         <div class="card">
             <h3>Smart Tip</h3>
-            <p class="muted">Message processors or loan officers to clarify conditions or request documents.</p>
+            <p class="muted">Underwriters can only message assigned processors and loan officers for the loans in their queue.</p>
         </div>
     </aside>
 

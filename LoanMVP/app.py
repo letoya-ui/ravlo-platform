@@ -143,9 +143,61 @@ def create_app():
 
     @app.route("/dashboard")
     def dashboard_redirect():
-        return redirect(url_for("investor.command_center"))
+        if current_user.is_authenticated:
+            role = (getattr(current_user, "role", "") or "").strip().lower()
 
-    @app.route("/dashboard")
+            if role == "executive":
+                return redirect(url_for("executive.dashboard"))
+
+            if role in {"admin", "platform_admin", "master_admin", "lending_admin"}:
+                return redirect(url_for("admin.dashboard"))
+
+            if role == "loan_officer":
+                return redirect(url_for("loan_officer.dashboard"))
+
+            if role == "processor":
+                return redirect(url_for("processor.dashboard"))
+
+            if role == "underwriter":
+                return redirect(url_for("underwriter.dashboard"))
+
+            if role == "crm":
+                return redirect(url_for("crm.dashboard"))
+
+            if role == "investor":
+                return redirect(url_for("investor.command_center"))
+
+        dashboards = [
+            # User-facing
+            ("Investor", "/investor"),
+            ("Investor AI", "/investor_ai"),
+       
+            # Partner-facing        
+            ("Partner", "/partner"),
+
+            # Internal lending workflow
+            ("Loan Officer", "/loan_officer"),
+            ("Processor", "/processor"),
+            ("Underwriter", "/underwriter"),
+            ("Compliance", "/compliance"),
+
+            # System-level dashboards
+            ("Admin", "/admin"),
+            ("Executive", "/executive"),
+            ("Intelligence", "/intelligence"),
+            ("CRM", "/crm"),
+            ("Contractors", "/contractors"),
+            ("Property", "/property"),
+            ("Notifications", "/notifications"),
+            ("System", "/system"),
+            ("Tracking", "/track"),
+            ("Master", "/master"),
+            ("AI", "/ai"),
+            ("Auth", "/auth"),
+        ]
+        return render_template("dashboard.html", dashboards=dashboards)
+
+    @app.route("/dashboard-index")
     def index():
         dashboards = [
             # User-facing
@@ -301,9 +353,16 @@ def register_blueprints(app):
         print("No routes folder found.")
         return
 
+    module_aliases = {
+        "executive.py": "LoanMVP.routes.executive_new",
+    }
+
     for file in os.listdir(routes_dir):
         if file.endswith(".py") and not file.startswith("__"):
-            mod_name = f"LoanMVP.routes.{file[:-3]}"
+            if file.endswith("_new.py"):
+                continue
+
+            mod_name = module_aliases.get(file, f"LoanMVP.routes.{file[:-3]}")
             try:
                 mod = importlib.import_module(mod_name)
 

@@ -569,7 +569,7 @@ Your capital, deals, and funding — in one place.
   <a href="{{ url_for('investor.project_studio') }}" class="ravlo-btn ghost sm">
     Project Studio
   </a>
-  <a href="{{ url_for('investor.deals_list') }}" class="ravlo-btn primary sm">
+  <a href="{{ url_for('investor.deal_workspace') }}" class="ravlo-btn primary sm">
     Deal Workspace
   </a>
 {% endblock %}
@@ -694,36 +694,27 @@ Your capital, deals, and funding — in one place.
         <div>
           <div class="eyebrow">START HERE</div>
           <h3>Core Product Paths</h3>
+          <p class="muted mb-0">Follow the platform in order the first time, or jump straight into the step you already know you need.</p>
         </div>
       </div>
 
       <div class="quick-grid one-col">
         <a href="{{ url_for('investor.property_tool') }}" class="quick-card">
-          <span class="quick-title">Find Deals</span>
-          <span class="quick-sub">Search opportunities with Deal Finder</span>
+          <span class="quick-title">1. Find Deals</span>
+          <span class="quick-sub">Search office, restaurant, retail, and residential opportunities with Deal Finder</span>
         </a>
 
         <a href="{{ url_for('investor.project_studio') }}" class="quick-card">
-          <span class="quick-title">Plan a Project</span>
-          <span class="quick-sub">Open a property directly in Project Studio</span>
+          <span class="quick-title">2. Plan the Strategy</span>
+          <span class="quick-sub">Open the deal in Project Studio to compare hold, rehab, or build paths</span>
         </a>
 
-        <a href="{{ url_for('investor.deals_list') }}" class="quick-card">
-          <span class="quick-title">Deal Workspace</span>
-          <span class="quick-sub">Review saved properties and execution status</span>
+        <a href="{{ url_for('investor.build_projects') }}" class="quick-card">
+          <span class="quick-title">3. Visualize the Concept</span>
+          <span class="quick-sub">Use Build Studio or Rehab Studio concepts when a deal needs design clarity</span>
         </a>
-      </div>
-    </section>
 
-    <section class="panel panel-wide">
-      <div class="section-head">
-        <div>
-          <div class="eyebrow">PIPELINE</div>
-          <h3>Recent Deals</h3>
-        </div>
-        <a href="{{ url_for('investor.deals_list') }}" class="ravlo-link-btn">View All</a>
-      </div>
-
+        
       {% if recent_deals %}
         <div class="recent-list">
           {% for deal in recent_deals %}

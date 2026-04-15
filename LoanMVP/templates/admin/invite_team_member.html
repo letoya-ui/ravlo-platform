@@ -48,10 +48,9 @@
         <label class="mb-8" style="display:block;">Role</label>
         <select name="role" class="re-input" required>
           <option value="">Select role</option>
-          <option value="admin">Admin</option>
-          <option value="loan_officer">Loan Officer</option>
-          <option value="processor">Processor</option>
-          <option value="underwriter">Underwriter</option>
+          {% for role_value, role_label in invitable_roles %}
+          <option value="{{ role_value }}">{{ role_label }}</option>
+          {% endfor %}
         </select>
       </div>
 

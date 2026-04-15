@@ -1,774 +1,920 @@
 {% extends "layouts/ravlo_base.html" %}
 
-{% block title %}Ravlo • Deal Architect{% endblock %}
+{% block title %}Ravlo • Deal Analysis{% endblock %}
 
-{% block page_title %}Deal Architect{% endblock %}
+{% block page_title %}Thesis Studio{% endblock %}
 {% block page_subline %}
-Shape the investment thesis, stress test the numbers, and define the execution path before capital moves.
+Analyze the deal, test the assumptions, and choose the highest-conviction path.
 {% endblock %}
 
 {% block topbar_actions %}
   {% if deal %}
-    <a class="ravlo-btn ghost sm" href="{{ url_for('investor.deal_detail', deal_id=deal.id) }}">Deal Workspace</a>
+    <a class="ravlo-btn ghost sm" href="{{ url_for('investor.deal_detail', deal_id=deal.id) }}">Back to Deal</a>
+    <a class="ravlo-btn ghost sm" href="{{ url_for('investor.budget_studio', deal_id=deal.id) }}">Budget Studio</a>
     <a class="ravlo-btn ghost sm" href="{{ url_for('investor.deal_rehab', deal_id=deal.id) }}">Renovation Studio</a>
     <a class="ravlo-btn ghost sm" href="{{ url_for('investor.build_studio', deal_id=deal.id) }}">Build Studio</a>
-    <a class="ravlo-btn ghost sm" href="{{ url_for('investor.budget_studio', deal_id=deal.id) }}">Budget Studio</a>
   {% endif %}
 {% endblock %}
 
 {% block content %}
 
-{% set analysis = deal_analysis if deal_analysis else {} %}
-{% set strategy = analysis.get("strategy") if analysis else {} %}
-{% set risks = analysis.get("risks", []) if analysis else [] %}
-{% set opportunities = analysis.get("opportunities", []) if analysis else [] %}
-{% set assumptions = analysis.get("assumptions", []) if analysis else [] %}
-{% set next_steps = analysis.get("next_steps", []) if analysis else [] %}
-{% set scenarios = analysis.get("scenarios", []) if analysis else [] %}
-{% set recommendation = analysis.get("recommendation", {}) if analysis else {} %}
+{% set analysis = underwriting if underwriting else {} %}
+{% set verdict = analysis.get("verdict", {}) if analysis else {} %}
+{% set meta = analysis.get("meta", {}) if analysis else {} %}
+{% set market = meta.get("market", {}) if meta else {} %}
+{% set breakdown = meta.get("verdict_breakdown", {}) if meta else {} %}
+{% set comp_analysis = meta.get("comp_analysis", {}) if meta else {} %}
+{% set normalized_comps = comp_analysis.get("normalized_comps", []) if comp_analysis else [] %}
+{% set strengths = verdict.get("strengths", []) if verdict else [] %}
+{% set risks = verdict.get("risks", []) if verdict else [] %}
 
 <style>
-  .architect-shell{
+  .uw-shell{
     display:grid;
-    gap:20px;
+    gap:22px;
+    padding-bottom:28px;
   }
 
-  .architect-hero{
-    border-radius:26px;
-    padding:24px;
+  .uw-hero{
+    position:relative;
+    overflow:hidden;
+    border-radius:28px;
+    padding:26px;
     border:1px solid rgba(255,255,255,.08);
     background:
-      radial-gradient(900px 520px at 10% 10%, rgba(122,184,255,.12), transparent 55%),
-      linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
-    display:flex;
-    justify-content:space-between;
-    align-items:flex-end;
-    gap:18px;
-    flex-wrap:wrap;
+      radial-gradient(900px 460px at 0% 0%, rgba(122,184,255,.18), transparent 52%),
+      radial-gradient(820px 420px at 100% 0%, rgba(66,120,255,.10), transparent 42%),
+      linear-gradient(180deg, rgba(255,255,255,.045), rgba(255,255,255,.02));
+    box-shadow:0 18px 50px rgba(0,0,0,.18);
   }
 
-  .architect-tag{
+  .uw-hero-grid{
+    display:grid;
+    grid-template-columns:1.15fr .85fr;
+    gap:22px;
+    align-items:end;
+  }
+
+  .uw-tag{
     display:inline-flex;
     align-items:center;
     gap:.5rem;
-    padding:.42rem .78rem;
+    padding:.46rem .8rem;
     border-radius:999px;
     background:rgba(255,255,255,.06);
     border:1px solid rgba(255,255,255,.12);
-    color:rgba(255,255,255,.88);
-    font-weight:800;
+    color:#eef4ff;
     font-size:.78rem;
+    font-weight:800;
     letter-spacing:.05em;
-  }
-
-  .architect-hero h2{
-    margin:.7rem 0 0;
-    font-size:1.85rem;
-    line-height:1.08;
-    letter-spacing:-.03em;
-  }
-
-  .architect-hero-sub{
-    color:rgba(224,233,246,.74);
-    margin:.45rem 0 0;
-    max-width:780px;
-    line-height:1.65;
-  }
-
-  .architect-actions{
-    display:flex;
-    gap:.65rem;
-    flex-wrap:wrap;
-  }
-
-  .architect-grid{
-    display:grid;
-    grid-template-columns:1.1fr .9fr;
-    gap:20px;
-    align-items:start;
-  }
-
-  .architect-card{
-    background:rgba(255,255,255,.02);
-    border:1px solid rgba(255,255,255,.08);
-    border-radius:22px;
-    padding:18px;
-  }
-
-  .architect-card h3{
-    margin:.1rem 0 .85rem;
-    color:#7ab8ff;
-    font-size:1.04rem;
-  }
-
-  .architect-card-head{
-    display:flex;
-    justify-content:space-between;
-    align-items:flex-start;
-    gap:12px;
-    margin-bottom:12px;
-  }
-
-  .architect-card-head p{
-    margin:0;
-    color:rgba(224,233,246,.72);
-    line-height:1.6;
-  }
-
-  .architect-kpi-grid{
-    display:grid;
-    grid-template-columns:repeat(4, minmax(0,1fr));
-    gap:12px;
-  }
-
-  .architect-kpi{
-    border-radius:18px;
-    padding:16px;
-    background:rgba(255,255,255,.03);
-    border:1px solid rgba(255,255,255,.08);
-  }
-
-  .architect-kpi-label{
-    color:rgba(224,233,246,.64);
-    font-size:.78rem;
-    margin-bottom:6px;
     text-transform:uppercase;
-    letter-spacing:.06em;
   }
 
-  .architect-kpi-value{
-    font-size:1.35rem;
-    font-weight:800;
-    color:#f4f8ff;
-    letter-spacing:-.02em;
-  }
-
-  .architect-kpi-value.good{ color:#7ee8b1; }
-  .architect-kpi-value.watch{ color:#ffd37a; }
-  .architect-kpi-value.risk{ color:#ff9a9a; }
-
-  .architect-section-note{
-    color:rgba(224,233,246,.72);
-    line-height:1.65;
-    margin:0 0 12px;
-  }
-
-  .architect-stack{
-    display:grid;
-    gap:12px;
-  }
-
-  .architect-panel{
-    padding:14px 16px;
-    border-radius:16px;
-    background:rgba(255,255,255,.03);
-    border:1px solid rgba(255,255,255,.08);
-  }
-
-  .architect-panel-title{
-    font-size:.86rem;
-    text-transform:uppercase;
-    letter-spacing:.06em;
-    color:rgba(224,233,246,.62);
-    margin-bottom:8px;
-  }
-
-  .architect-panel strong{
+  .uw-title{
+    margin:.8rem 0 .45rem;
+    font-size:2.25rem;
+    line-height:1.02;
+    letter-spacing:-.04em;
     color:#fff;
   }
 
-  .architect-panel p{
-    margin:8px 0 0;
-    color:rgba(224,233,246,.74);
-    line-height:1.65;
+  .uw-subtitle{
+    color:rgba(228,236,246,.78);
+    max-width:760px;
+    line-height:1.7;
+    font-size:1rem;
   }
 
-  .architect-list{
-    display:grid;
-    gap:10px;
-    margin-top:12px;
-  }
-
-  .architect-list-item{
-    padding:14px 16px;
-    border-radius:16px;
-    background:rgba(255,255,255,.03);
-    border:1px solid rgba(255,255,255,.08);
-  }
-
-  .architect-list-item strong{
-    display:block;
-    margin-bottom:6px;
-    color:#fff;
-  }
-
-  .architect-list-item p{
-    margin:0;
-    color:rgba(224,233,246,.72);
-    line-height:1.6;
-  }
-
-  .architect-badge-row{
+  .uw-chip-row{
     display:flex;
     gap:10px;
     flex-wrap:wrap;
-    margin-top:10px;
+    margin-top:18px;
   }
 
-  .architect-badge{
-    padding:.42rem .72rem;
+  .uw-chip{
+    display:inline-flex;
+    align-items:center;
+    gap:.45rem;
+    padding:.56rem .82rem;
     border-radius:999px;
-    background:rgba(122,184,255,.1);
-    border:1px solid rgba(122,184,255,.2);
-    color:#bfe0ff;
-    font-size:.82rem;
+    background:rgba(255,255,255,.05);
+    border:1px solid rgba(255,255,255,.08);
+    color:#dfe9f7;
+    font-size:.84rem;
     font-weight:700;
   }
 
-  .architect-summary{
+  .uw-hero-side{
     display:grid;
-    gap:10px;
-    margin-top:12px;
+    gap:12px;
   }
 
-  .architect-summary-row{
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-    gap:14px;
-    padding:14px 0;
-    border-bottom:1px solid rgba(255,255,255,.08);
-  }
-
-  .architect-summary-row:last-child{
-    border-bottom:none;
-  }
-
-  .architect-summary-label{
-    color:rgba(224,233,246,.66);
-  }
-
-  .architect-summary-value{
-    color:#f4f8ff;
-    font-weight:800;
-    text-align:right;
-  }
-
-  .architect-summary-value.good{ color:#7ee8b1; }
-  .architect-summary-value.watch{ color:#ffd37a; }
-  .architect-summary-value.risk{ color:#ff9a9a; }
-
-  .architect-callout{
-    margin-top:14px;
-    padding:15px 16px;
-    border-radius:16px;
-    background:rgba(122,184,255,.08);
-    border:1px solid rgba(122,184,255,.16);
-  }
-
-  .architect-callout strong{
-    display:block;
-    margin-bottom:6px;
-  }
-
-  .architect-form-grid{
+  .uw-hero-stat-grid{
     display:grid;
     grid-template-columns:repeat(2, minmax(0,1fr));
     gap:12px;
   }
 
-  .architect-input,
-  .architect-select,
-  .architect-textarea{
-    width:100%;
-    padding:.82rem .9rem;
-    border-radius:12px;
-    background:#0f141a;
-    border:1px solid rgba(255,255,255,.1);
+  .uw-hero-stat{
+    padding:16px;
+    border-radius:18px;
+    background:rgba(255,255,255,.04);
+    border:1px solid rgba(255,255,255,.08);
+  }
+
+  .uw-hero-stat-label{
+    color:rgba(228,236,246,.62);
+    text-transform:uppercase;
+    font-size:.72rem;
+    letter-spacing:.06em;
+    margin-bottom:6px;
+  }
+
+  .uw-hero-stat-value{
     color:#fff;
-    min-height:48px;
+    font-size:1.15rem;
+    font-weight:800;
+    letter-spacing:-.02em;
   }
 
-  .architect-textarea{
-    min-height:120px;
-    resize:vertical;
+  .uw-layout{
+    display:grid;
+    grid-template-columns:minmax(0, 1.05fr) 390px;
+    gap:22px;
+    align-items:start;
   }
 
-  .architect-field{
+  .uw-main,
+  .uw-side{
+    display:grid;
+    gap:22px;
+  }
+
+  .uw-card{
+    background:rgba(255,255,255,.02);
+    border:1px solid rgba(255,255,255,.08);
+    border-radius:24px;
+    padding:22px;
+    box-shadow:0 10px 30px rgba(0,0,0,.08);
+  }
+
+  .uw-card-head{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    gap:16px;
+    margin-bottom:14px;
+  }
+
+  .uw-eyebrow{
+    color:#8ebdff;
+    text-transform:uppercase;
+    font-size:.74rem;
+    font-weight:800;
+    letter-spacing:.08em;
+    margin-bottom:6px;
+  }
+
+  .uw-card h3{
+    margin:0;
+    color:#fff;
+    font-size:1.08rem;
+    letter-spacing:-.02em;
+  }
+
+  .uw-note{
+    margin:6px 0 0;
+    color:rgba(228,236,246,.72);
+    line-height:1.65;
+  }
+
+  .uw-badge{
+    display:inline-flex;
+    align-items:center;
+    gap:.45rem;
+    padding:.48rem .75rem;
+    border-radius:999px;
+    background:rgba(122,184,255,.12);
+    border:1px solid rgba(122,184,255,.24);
+    color:#bfe0ff;
+    font-size:.78rem;
+    font-weight:800;
+    white-space:nowrap;
+  }
+
+  .uw-form-sections{
+    display:grid;
+    gap:18px;
+  }
+
+  .uw-form-section{
+    padding:16px;
+    border-radius:18px;
+    background:rgba(255,255,255,.025);
+    border:1px solid rgba(255,255,255,.07);
+  }
+
+  .uw-form-section-title{
+    font-size:.76rem;
+    text-transform:uppercase;
+    letter-spacing:.08em;
+    color:rgba(228,236,246,.62);
+    font-weight:800;
+    margin-bottom:12px;
+  }
+
+  .uw-grid-2{
+    display:grid;
+    grid-template-columns:repeat(2, minmax(0,1fr));
+    gap:12px;
+  }
+
+  .uw-field{
     display:grid;
     gap:8px;
   }
 
-  .architect-field label{
+  .uw-field label{
     color:#eef4ff;
-    font-size:.92rem;
+    font-size:.88rem;
     font-weight:700;
   }
 
-  .architect-toolbar{
+  .uw-input,
+  .uw-select,
+  .uw-textarea{
+    width:100%;
+    padding:.86rem .95rem;
+    border-radius:14px;
+    background:#0f141a;
+    border:1px solid rgba(255,255,255,.1);
+    color:#fff;
+    min-height:50px;
+    outline:none;
+    transition:border-color .16s ease, box-shadow .16s ease, background .16s ease;
+  }
+
+  .uw-input::placeholder,
+  .uw-textarea::placeholder{
+    color:rgba(228,236,246,.35);
+  }
+
+  .uw-input:focus,
+  .uw-select:focus,
+  .uw-textarea:focus{
+    border-color:rgba(122,184,255,.42);
+    box-shadow:0 0 0 3px rgba(122,184,255,.12);
+    background:#111821;
+  }
+
+  .uw-textarea{
+    min-height:122px;
+    resize:vertical;
+  }
+
+  .uw-toolbar{
     display:flex;
     gap:10px;
     flex-wrap:wrap;
     margin-top:14px;
   }
 
-  .architect-btn{
+  .uw-btn{
     display:inline-flex;
     align-items:center;
     justify-content:center;
     gap:.45rem;
-    padding:.76rem 1rem;
-    border-radius:12px;
+    padding:.8rem 1rem;
+    border-radius:14px;
     cursor:pointer;
     font-weight:800;
     font-size:.92rem;
     text-decoration:none;
     transition:.18s ease;
+    white-space:nowrap;
     border:1px solid rgba(122,184,255,.42);
     background:rgba(122,184,255,.12);
     color:#7ab8ff;
   }
 
-  .architect-btn:hover{
-    background:rgba(122,184,255,.22);
-    box-shadow:0 0 14px rgba(122,184,255,.22);
+  .uw-btn:hover{
+    background:rgba(122,184,255,.2);
+    box-shadow:0 0 14px rgba(122,184,255,.18);
+    transform:translateY(-1px);
   }
 
-  .architect-btn.secondary{
+  .uw-btn.secondary{
     background:rgba(255,255,255,.04);
     border:1px solid rgba(255,255,255,.12);
     color:#eef4ff;
   }
 
-  .architect-btn.success{
+  .uw-btn.success{
     background:rgba(104,211,160,.12);
     border:1px solid rgba(104,211,160,.34);
     color:#7ee8b1;
   }
 
-  .architect-btn.warn{
-    background:rgba(255,211,122,.12);
-    border:1px solid rgba(255,211,122,.3);
-    color:#ffd37a;
+  .uw-kpi-grid{
+    display:grid;
+    grid-template-columns:repeat(2, minmax(0,1fr));
+    gap:12px;
   }
 
-  .architect-empty{
+  .uw-kpi{
+    border-radius:18px;
+    padding:16px;
+    background:rgba(255,255,255,.035);
+    border:1px solid rgba(255,255,255,.08);
+  }
+
+  .uw-kpi-label{
+    color:rgba(228,236,246,.62);
+    font-size:.76rem;
+    text-transform:uppercase;
+    letter-spacing:.06em;
+    margin-bottom:6px;
+  }
+
+  .uw-kpi-value{
+    color:#fff;
+    font-size:1.35rem;
+    font-weight:800;
+    letter-spacing:-.03em;
+  }
+
+  .uw-kpi-value.positive{ color:#7ee8b1; }
+  .uw-kpi-value.negative{ color:#ff9a9a; }
+  .uw-kpi-value.watch{ color:#ffd37a; }
+
+  .uw-summary{
+    display:grid;
+    gap:10px;
+    margin-top:12px;
+  }
+
+  .uw-summary-row{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:14px;
+    padding:12px 0;
+    border-bottom:1px solid rgba(255,255,255,.08);
+  }
+
+  .uw-summary-row:last-child{
+    border-bottom:none;
+  }
+
+  .uw-summary-label{
+    color:rgba(228,236,246,.66);
+  }
+
+  .uw-summary-value{
+    color:#fff;
+    font-weight:800;
+    text-align:right;
+  }
+
+  .uw-summary-value.good{ color:#7ee8b1; }
+  .uw-summary-value.watch{ color:#ffd37a; }
+  .uw-summary-value.risk{ color:#ff9a9a; }
+
+  .uw-callout{
+    padding:16px;
+    border-radius:18px;
+    background:rgba(122,184,255,.08);
+    border:1px solid rgba(122,184,255,.16);
+  }
+
+  .uw-callout strong{
+    display:block;
+    margin-bottom:6px;
+    color:#fff;
+  }
+
+  .uw-callout p{
+    margin:0;
+    color:rgba(228,236,246,.78);
+    line-height:1.65;
+  }
+
+  .uw-list{
+    display:grid;
+    gap:12px;
+  }
+
+  .uw-list-item{
+    padding:15px 16px;
+    border-radius:18px;
+    background:rgba(255,255,255,.03);
+    border:1px solid rgba(255,255,255,.08);
+  }
+
+  .uw-list-item strong{
+    display:block;
+    color:#fff;
+    margin-bottom:6px;
+  }
+
+  .uw-list-item p{
+    margin:0;
+    color:rgba(228,236,246,.72);
+    line-height:1.6;
+  }
+
+  .uw-signal-grid{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:14px;
+  }
+
+  .uw-signal-col{
+    display:grid;
+    gap:12px;
+  }
+
+  .uw-signal-title{
+    font-size:.76rem;
+    text-transform:uppercase;
+    letter-spacing:.08em;
+    color:rgba(228,236,246,.62);
+    font-weight:800;
+  }
+
+  .uw-table-wrap{
+    overflow:auto;
+    border-radius:18px;
+    border:1px solid rgba(255,255,255,.08);
+    background:rgba(255,255,255,.02);
+  }
+
+  .uw-table{
+    width:100%;
+    border-collapse:collapse;
+    min-width:760px;
+  }
+
+  .uw-table th,
+  .uw-table td{
+    padding:14px 14px;
+    text-align:left;
+    border-bottom:1px solid rgba(255,255,255,.06);
+    font-size:.92rem;
+  }
+
+  .uw-table th{
+    color:#b8d6f4;
+    font-size:.76rem;
+    text-transform:uppercase;
+    letter-spacing:.06em;
+    background:rgba(255,255,255,.02);
+  }
+
+  .uw-table td{
+    color:rgba(235,241,249,.82);
+  }
+
+  .uw-table tr:last-child td{
+    border-bottom:none;
+  }
+
+  .uw-empty{
     padding:16px;
     border-radius:16px;
     background:rgba(255,255,255,.03);
     border:1px dashed rgba(255,255,255,.12);
-    color:rgba(224,233,246,.7);
+    color:rgba(228,236,246,.72);
   }
 
-  .workflow-grid{
-    display:grid;
-    grid-template-columns:repeat(4, minmax(0,1fr));
-    gap:12px;
+  .uw-sticky{
+    position:sticky;
+    top:18px;
   }
-
-  .workflow-card{
-    display:block;
-    padding:18px;
-    border-radius:18px;
-    background:rgba(255,255,255,.03);
-    border:1px solid rgba(255,255,255,.08);
-    transition:.15s ease;
-    text-decoration:none;
-    color:inherit;
-  }
-
-  .workflow-card:hover{
-    transform:translateY(-1px);
-    border-color:rgba(122,184,255,.25);
-    background:rgba(255,255,255,.045);
-  }
-
-  .workflow-card h4{
-    margin:0 0 8px;
-  }
-
-  .workflow-card p{
-    margin:0;
-    color:var(--muted);
-    line-height:1.6;
-  }
-
-  .muted{ color:var(--muted); }
 
   @media (max-width: 1180px){
-    .architect-kpi-grid{ grid-template-columns:repeat(2, minmax(0,1fr)); }
-    .workflow-grid{ grid-template-columns:repeat(2, minmax(0,1fr)); }
+    .uw-layout{ grid-template-columns:1fr; }
+    .uw-sticky{ position:static; }
   }
 
   @media (max-width: 980px){
-    .architect-grid{ grid-template-columns:1fr; }
-    .architect-form-grid{ grid-template-columns:1fr; }
+    .uw-hero-grid,
+    .uw-grid-2,
+    .uw-signal-grid{
+      grid-template-columns:1fr;
+    }
   }
 
   @media (max-width: 700px){
-    .architect-kpi-grid{ grid-template-columns:1fr; }
-    .workflow-grid{ grid-template-columns:1fr; }
+    .uw-title{ font-size:1.9rem; }
+    .uw-kpi-grid{ grid-template-columns:1fr; }
   }
 </style>
 
-<div class="architect-shell">
+<div class="uw-shell">
 
-  <section class="architect-hero">
-    <div>
-      <div class="architect-tag">
-        🧠 DEAL ARCHITECT
-        {% if deal %}• DEAL #{{ deal.id }}{% endif %}
-      </div>
-      <h2>{% if deal %}{{ deal.title or ('Deal #' ~ deal.id) }}{% else %}Deal Architect{% endif %}</h2>
-      <div class="architect-hero-sub">
-        Build the investment thesis, compare exit paths, pressure test assumptions, and choose the most defendable execution plan.
-      </div>
-
-      <div class="architect-badge-row">
-        {% if analysis.get("strategy_type") %}
-          <span class="architect-badge">{{ analysis.get("strategy_type") }}</span>
-        {% endif %}
-        {% if analysis.get("market_position") %}
-          <span class="architect-badge">{{ analysis.get("market_position") }}</span>
-        {% endif %}
-        {% if analysis.get("execution_mode") %}
-          <span class="architect-badge">{{ analysis.get("execution_mode") }}</span>
-        {% endif %}
-      </div>
-    </div>
-
-    <div class="architect-actions">
-      {% if deal %}
-        <a class="architect-btn secondary" href="{{ url_for('investor.deal_detail', deal_id=deal.id) }}">🗂 Deal Workspace</a>
-        <a class="architect-btn secondary" href="{{ url_for('investor.deal_rehab', deal_id=deal.id) }}">🎬 Renovation Studio</a>
-        <a class="architect-btn secondary" href="{{ url_for('investor.build_studio', deal_id=deal.id) }}">🏗 Build Studio</a>
-        <a class="architect-btn secondary" href="{{ url_for('investor.budget_studio', deal_id=deal.id) }}">💰 Budget Studio</a>
-      {% endif %}
-    </div>
-  </section>
-
-  <section class="architect-kpi-grid">
-    <div class="architect-kpi">
-      <div class="architect-kpi-label">Purchase Price</div>
-      <div class="architect-kpi-value">${{ "{:,.0f}".format(purchase_price or 0) }}</div>
-    </div>
-
-    <div class="architect-kpi">
-      <div class="architect-kpi-label">ARV</div>
-      <div class="architect-kpi-value">${{ "{:,.0f}".format(arv or 0) }}</div>
-    </div>
-
-    <div class="architect-kpi">
-      <div class="architect-kpi-label">Estimated Profit</div>
-      <div class="architect-kpi-value {% if estimated_profit and estimated_profit > 0 %}good{% elif estimated_profit and estimated_profit < 0 %}risk{% else %}watch{% endif %}">
-        ${{ "{:,.0f}".format(estimated_profit or 0) }}
-      </div>
-    </div>
-
-    <div class="architect-kpi">
-      <div class="architect-kpi-label">Deal Score</div>
-      <div class="architect-kpi-value {% if deal_score and deal_score >= 80 %}good{% elif deal_score and deal_score >= 60 %}watch{% else %}risk{% endif %}">
-        {{ deal_score or 0 }}/100
-      </div>
-    </div>
-  </section>
-
-  <div class="architect-grid">
-
-    <section class="architect-card">
-      <div class="architect-card-head">
-        <div>
-          <h3>Investment Thesis</h3>
-          <p>Define why this deal works, what execution path wins, and where the margin is coming from.</p>
-        </div>
-      </div>
-
-      <div class="architect-stack">
-        <div class="architect-panel">
-          <div class="architect-panel-title">Primary Strategy</div>
-          <strong>{{ strategy.get("primary") or analysis.get("strategy_type") or "Not set" }}</strong>
-          <p>{{ strategy.get("primary_reason") or analysis.get("summary") or "No strategy summary yet." }}</p>
-        </div>
-
-        <div class="architect-panel">
-          <div class="architect-panel-title">Target Outcome</div>
-          <strong>{{ strategy.get("target_outcome") or "Maximize spread while preserving execution safety." }}</strong>
-          <p>{{ strategy.get("outcome_notes") or "Use this section to define whether the deal is optimized for resale, rental hold, refinance, development, or hybrid execution." }}</p>
-        </div>
-
-        <div class="architect-panel">
-          <div class="architect-panel-title">Why This Deal Can Work</div>
-          <p>{{ analysis.get("why_it_works") or "Strong opportunities usually come from basis advantage, value-add execution, zoning or layout upside, market mismatch, or construction leverage." }}</p>
-        </div>
-      </div>
-
-      <div class="architect-callout">
-        <strong>Architect Lens</strong>
-        <div>
-          Focus on <em>edge</em>, not just upside. The best deals are the ones where the thesis still holds after delays, cost drift, and conservative pricing assumptions.
-        </div>
-      </div>
-    </section>
-
-    <section class="architect-card">
-      <h3>Decision Snapshot</h3>
-
-      <div class="architect-summary">
-        <div class="architect-summary-row">
-          <span class="architect-summary-label">Recommended Path</span>
-          <strong class="architect-summary-value">{{ recommendation.get("path") or analysis.get("recommended_path") or "Pending" }}</strong>
-        </div>
-
-        <div class="architect-summary-row">
-          <span class="architect-summary-label">Confidence</span>
-          <strong class="architect-summary-value {% if recommendation.get('confidence') == 'High' %}good{% elif recommendation.get('confidence') == 'Medium' %}watch{% else %}risk{% endif %}">
-            {{ recommendation.get("confidence") or "Low" }}
-          </strong>
-        </div>
-
-        <div class="architect-summary-row">
-          <span class="architect-summary-label">Execution Complexity</span>
-          <strong class="architect-summary-value">{{ analysis.get("execution_complexity") or "Moderate" }}</strong>
-        </div>
-
-        <div class="architect-summary-row">
-          <span class="architect-summary-label">Capital Intensity</span>
-          <strong class="architect-summary-value">{{ analysis.get("capital_intensity") or "Moderate" }}</strong>
-        </div>
-
-        <div class="architect-summary-row">
-          <span class="architect-summary-label">Risk Level</span>
-          <strong class="architect-summary-value {% if analysis.get('risk_level') == 'Low' %}good{% elif analysis.get('risk_level') == 'Moderate' %}watch{% else %}risk{% endif %}">
-            {{ analysis.get("risk_level") or "Moderate" }}
-          </strong>
-        </div>
-      </div>
-
-      <div class="architect-health" style="margin-top:14px;">
-        <div class="architect-panel-title">AI Recommendation</div>
-        <p style="margin:0; color:rgba(224,233,246,.74); line-height:1.65;">
-          {{ recommendation.get("reason") or analysis.get("recommendation_summary") or "Run Deal Architect from a live deal to generate a recommendation based on pricing, scope, execution path, and risk-adjusted return." }}
-        </p>
-      </div>
-    </section>
-
-  </div>
-
-  <div class="architect-grid">
-
-    <section class="architect-card">
-      <h3>Opportunities</h3>
-
-      {% if opportunities %}
-        <div class="architect-list">
-          {% for item in opportunities %}
-            <div class="architect-list-item">
-              <strong>{{ item.get("title") or item if item is mapping else item }}</strong>
-              {% if item is mapping and item.get("detail") %}
-                <p>{{ item.get("detail") }}</p>
-              {% elif item is mapping and item.get("description") %}
-                <p>{{ item.get("description") }}</p>
-              {% else %}
-                <p>Potential upside lever identified for the current deal thesis.</p>
-              {% endif %}
-            </div>
-          {% endfor %}
-        </div>
-      {% else %}
-        <div class="architect-empty">
-          No structured opportunities yet. Typical upside includes layout improvement, scope optimization, rent lift, zoning flexibility, phased execution, or better exit positioning.
-        </div>
-      {% endif %}
-    </section>
-
-    <section class="architect-card">
-      <h3>Risks</h3>
-
-      {% if risks %}
-        <div class="architect-list">
-          {% for item in risks %}
-            <div class="architect-list-item">
-              <strong>{{ item.get("title") or item if item is mapping else item }}</strong>
-              {% if item is mapping and item.get("detail") %}
-                <p>{{ item.get("detail") }}</p>
-              {% elif item is mapping and item.get("description") %}
-                <p>{{ item.get("description") }}</p>
-              {% else %}
-                <p>Material risk that could pressure execution, timing, or margin.</p>
-              {% endif %}
-            </div>
-          {% endfor %}
-        </div>
-      {% else %}
-        <div class="architect-empty">
-          No structured risks yet. Common risks include scope creep, title issues, permit drag, appraisal mismatch, contractor dependency, and conservative buyer demand.
-        </div>
-      {% endif %}
-    </section>
-
-  </div>
-
-  <div class="architect-grid">
-
-    <section class="architect-card">
-      <h3>Assumptions</h3>
-
-      {% if assumptions %}
-        <div class="architect-list">
-          {% for item in assumptions %}
-            <div class="architect-list-item">
-              <strong>{{ item.get("title") or item if item is mapping else item }}</strong>
-              {% if item is mapping and item.get("detail") %}
-                <p>{{ item.get("detail") }}</p>
-              {% elif item is mapping and item.get("description") %}
-                <p>{{ item.get("description") }}</p>
-              {% else %}
-                <p>This assumption should be validated before final commitment.</p>
-              {% endif %}
-            </div>
-          {% endfor %}
-        </div>
-      {% else %}
-        <div class="architect-empty">
-          No assumptions have been captured yet. Log the major assumptions around pricing, timing, rehab scope, construction cost, exit timing, and financing.
-        </div>
-      {% endif %}
-    </section>
-
-    <section class="architect-card">
-      <h3>Next Steps</h3>
-
-      {% if next_steps %}
-        <div class="architect-list">
-          {% for item in next_steps %}
-            <div class="architect-list-item">
-              <strong>Step {{ loop.index }}</strong>
-              <p>{{ item.get("title") or item.get("detail") or item if item is mapping else item }}</p>
-            </div>
-          {% endfor %}
-        </div>
-      {% else %}
-        <div class="architect-empty">
-          No execution steps generated yet. Typical next steps include scope verification, contractor pricing, ARV validation, permit review, and workflow handoff into Rehab or Build Studio.
-        </div>
-      {% endif %}
-    </section>
-
-  </div>
-
-  <section class="architect-card">
-    <div class="architect-card-head">
+  <section class="uw-hero">
+    <div class="uw-hero-grid">
       <div>
-        <h3>Scenario Planning</h3>
-        <p>Compare multiple strategy paths before choosing where to push capital and effort.</p>
+        <div class="uw-tag">
+          🧠 Ravlo Deal Analysis
+          {% if deal %}• Deal #{{ deal.id }}{% endif %}
+        </div>
+
+        <h1 class="uw-title">
+          {{ deal.address if deal and deal.address else deal.title if deal and deal.title else "Thesis Studio" }}
+        </h1>
+
+        <div class="uw-subtitle">
+          Assemble deal inputs, location context, and market signals into a single analysis view. Use this workspace to test the thesis, validate spread, and decide the strongest execution path.
+        </div>
+
+        <div class="uw-chip-row">
+          <span class="uw-chip">Source of Truth</span>
+          <span class="uw-chip">Market Aware</span>
+          <span class="uw-chip">Risk Adjusted</span>
+          <span class="uw-chip">Execution Ready</span>
+        </div>
+      </div>
+
+      <div class="uw-hero-side">
+        <div class="uw-hero-stat-grid">
+          <div class="uw-hero-stat">
+            <div class="uw-hero-stat-label">Verdict</div>
+            <div class="uw-hero-stat-value">{{ verdict.get("label") or verdict.get("grade") or "Pending" }}</div>
+          </div>
+          <div class="uw-hero-stat">
+            <div class="uw-hero-stat-label">Confidence</div>
+            <div class="uw-hero-stat-value">{{ verdict.get("confidence") or meta.get("confidence") or "—" }}</div>
+          </div>
+          <div class="uw-hero-stat">
+            <div class="uw-hero-stat-label">Market</div>
+            <div class="uw-hero-stat-value">{{ market.get("city") or market.get("market_name") or "Not loaded" }}</div>
+          </div>
+          <div class="uw-hero-stat">
+            <div class="uw-hero-stat-label">Comps</div>
+            <div class="uw-hero-stat-value">{{ normalized_comps|length if normalized_comps else 0 }}</div>
+          </div>
+        </div>
       </div>
     </div>
+  </section>
 
-    {% if scenarios %}
-      <div class="architect-list">
-        {% for scenario in scenarios %}
-          <div class="architect-list-item">
-            <strong>{{ scenario.get("name") or ('Scenario ' ~ loop.index) }}</strong>
-            <p>
-              {{ scenario.get("description") or "Alternative execution path for comparison." }}
-              {% if scenario.get("profit") %}
-                <br><span class="muted">Projected Profit:</span> ${{ "{:,.0f}".format(scenario.get("profit") or 0) }}
-              {% endif %}
-              {% if scenario.get("risk") %}
-                <br><span class="muted">Risk:</span> {{ scenario.get("risk") }}
-              {% endif %}
+  <div class="uw-layout">
+    <div class="uw-main">
+
+      <section class="uw-card">
+        <div class="uw-card-head">
+          <div>
+            <div class="uw-eyebrow">Request Assembly</div>
+            <h3>Deal + Site + Market Inputs</h3>
+            <p class="uw-note">
+              Structure the assumptions that drive your analysis. Grouped inputs keep the page usable and make the output easier to trust.
             </p>
           </div>
-        {% endfor %}
-      </div>
-    {% else %}
-      <div class="architect-empty">
-        No scenarios have been modeled yet. You can use this section for light rehab vs full rehab, hold vs flip, or by-right renovation vs full build paths.
-      </div>
-    {% endif %}
-  </section>
-
-  <section class="architect-card">
-    <div class="architect-card-head">
-      <div>
-        <h3>Architect Notes</h3>
-        <p>Capture the working thesis, constraints, investor logic, and operator notes tied to this deal.</p>
-      </div>
-    </div>
-
-    <form method="POST" action="{% if deal %}{{ url_for('investor.save_deal_architect_notes', deal_id=deal.id) }}{% else %}#{% endif %}">
-      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-
-      <div class="architect-form-grid">
-        <div class="architect-field">
-          <label for="strategy_type">Strategy Type</label>
-          <select class="architect-select" id="strategy_type" name="strategy_type">
-            <option value="Flip" {% if analysis.get("strategy_type") == "Flip" %}selected{% endif %}>Flip</option>
-            <option value="Rental Hold" {% if analysis.get("strategy_type") == "Rental Hold" %}selected{% endif %}>Rental Hold</option>
-            <option value="BRRRR" {% if analysis.get("strategy_type") == "BRRRR" %}selected{% endif %}>BRRRR</option>
-            <option value="Development" {% if analysis.get("strategy_type") == "Development" %}selected{% endif %}>Development</option>
-            <option value="Hybrid" {% if analysis.get("strategy_type") == "Hybrid" %}selected{% endif %}>Hybrid</option>
-          </select>
+          <div class="uw-badge">Analysis Input Layer</div>
         </div>
 
-        <div class="architect-field">
-          <label for="risk_level">Risk Level</label>
-          <select class="architect-select" id="risk_level" name="risk_level">
-            <option value="Low" {% if analysis.get("risk_level") == "Low" %}selected{% endif %}>Low</option>
-            <option value="Moderate" {% if analysis.get("risk_level") == "Moderate" or not analysis.get("risk_level") %}selected{% endif %}>Moderate</option>
-            <option value="High" {% if analysis.get("risk_level") == "High" %}selected{% endif %}>High</option>
-          </select>
+        <form method="POST" action="{% if deal %}{{ url_for('investor.run_analysis', deal_id=deal.id) }}{% else %}#{% endif %}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+          <div class="uw-form-sections">
+            <div class="uw-form-section">
+              <div class="uw-form-section-title">Deal Basics</div>
+              <div class="uw-grid-2">
+                <div class="uw-field">
+                  <label for="address">Address</label>
+                  <input class="uw-input" id="address" name="address" value="{{ deal.address if deal and deal.address else '' }}" placeholder="28 Genung St">
+                </div>
+                <div class="uw-field">
+                  <label for="property_type">Property Type</label>
+                  <input class="uw-input" id="property_type" name="property_type" value="{{ analysis.get('property_type', '') }}" placeholder="Single Family">
+                </div>
+
+                <div class="uw-field">
+                  <label for="purchase_price">Purchase Price</label>
+                  <input class="uw-input" id="purchase_price" name="purchase_price" type="number" step="0.01" value="{{ purchase_price or '' }}" placeholder="350000">
+                </div>
+                <div class="uw-field">
+                  <label for="arv">ARV / Exit Value</label>
+                  <input class="uw-input" id="arv" name="arv" type="number" step="0.01" value="{{ arv or '' }}" placeholder="525000">
+                </div>
+              </div>
+            </div>
+
+            <div class="uw-form-section">
+              <div class="uw-form-section-title">Site + Physical Inputs</div>
+              <div class="uw-grid-2">
+                <div class="uw-field">
+                  <label for="lot_size">Lot Size</label>
+                  <input class="uw-input" id="lot_size" name="lot_size" value="{{ analysis.get('lot_size', '') }}" placeholder="99000">
+                </div>
+                <div class="uw-field">
+                  <label for="zoning">Zoning</label>
+                  <input class="uw-input" id="zoning" name="zoning" value="{{ analysis.get('zoning', '') }}" placeholder="R-1">
+                </div>
+
+                <div class="uw-field">
+                  <label for="square_feet_target">Target Sq Ft</label>
+                  <input class="uw-input" id="square_feet_target" name="square_feet_target" type="number" step="1" value="{{ analysis.get('square_feet_target', '') }}" placeholder="1400">
+                </div>
+                <div class="uw-field">
+                  <label for="bed_bath">Beds / Baths</label>
+                  <input class="uw-input" id="bed_bath" name="bed_bath" value="{{ analysis.get('bed_bath', '') }}" placeholder="3 / 2">
+                </div>
+              </div>
+            </div>
+
+            <div class="uw-form-section">
+              <div class="uw-form-section-title">Market + Cost Assumptions</div>
+              <div class="uw-grid-2">
+                <div class="uw-field">
+                  <label for="market_cost_multiplier">Market Cost Multiplier</label>
+                  <input class="uw-input" id="market_cost_multiplier" name="market_cost_multiplier" type="number" step="0.01" value="{{ analysis.get('market_cost_multiplier', '') }}" placeholder="1.00">
+                </div>
+                <div class="uw-field">
+                  <label for="market_value_multiplier">Market Value Multiplier</label>
+                  <input class="uw-input" id="market_value_multiplier" name="market_value_multiplier" type="number" step="0.01" value="{{ analysis.get('market_value_multiplier', '') }}" placeholder="1.00">
+                </div>
+
+                <div class="uw-field">
+                  <label for="annual_tax_rate">Annual Tax Rate</label>
+                  <input class="uw-input" id="annual_tax_rate" name="annual_tax_rate" type="number" step="0.01" value="{{ analysis.get('annual_tax_rate', '') }}" placeholder="Optional">
+                </div>
+                <div class="uw-field">
+                  <label for="annual_insurance_rate">Annual Insurance Rate</label>
+                  <input class="uw-input" id="annual_insurance_rate" name="annual_insurance_rate" type="number" step="0.01" value="{{ analysis.get('annual_insurance_rate', '') }}" placeholder="Optional">
+                </div>
+              </div>
+            </div>
+
+            <div class="uw-form-section">
+              <div class="uw-form-section-title">Comparable Set</div>
+              <div class="uw-field">
+                <label for="comps_json">Comps JSON</label>
+                <textarea class="uw-textarea" id="comps_json" name="comps_json" placeholder='[{"address":"123 Main St","price":320000,"sqft":1400,"beds":3,"baths":2,"distance_miles":0.4,"months_ago":2}]'>{{ analysis.get("comps_json", "") }}</textarea>
+              </div>
+            </div>
+          </div>
+
+          <div class="uw-toolbar">
+            <button class="uw-btn success" type="submit">Run Analysis</button>
+            {% if deal %}
+              <a class="uw-btn secondary" href="{{ url_for('investor.budget_studio', deal_id=deal.id) }}">Open Budget Studio</a>
+            {% endif %}
+          </div>
+        </form>
+      </section>
+
+      <section class="uw-card">
+        <div class="uw-card-head">
+          <div>
+            <div class="uw-eyebrow">Top Signals</div>
+            <h3>Strengths & Risks</h3>
+            <p class="uw-note">
+              High-level decision signals should be fast to scan and easy to defend.
+            </p>
+          </div>
         </div>
-      </div>
 
-      <div class="architect-field" style="margin-top:12px;">
-        <label for="architect_summary">Architect Summary</label>
-        <textarea class="architect-textarea" id="architect_summary" name="architect_summary" placeholder="Summarize the thesis, execution path, edge, and why this deal makes sense.">{{ analysis.get("summary") or "" }}</textarea>
-      </div>
+        <div class="uw-signal-grid">
+          <div class="uw-signal-col">
+            <div class="uw-signal-title">Strengths</div>
+            {% if strengths %}
+              <div class="uw-list">
+                {% for item in strengths %}
+                  <div class="uw-list-item">
+                    <strong>{{ item.get("title") or item if item is mapping else item }}</strong>
+                    <p>
+                      {% if item is mapping and item.get("detail") %}{{ item.get("detail") }}
+                      {% elif item is mapping and item.get("description") %}{{ item.get("description") }}
+                      {% else %}Positive signal supporting the deal thesis.{% endif %}
+                    </p>
+                  </div>
+                {% endfor %}
+              </div>
+            {% else %}
+              <div class="uw-empty">No strengths have been returned yet.</div>
+            {% endif %}
+          </div>
 
-      <div class="architect-field" style="margin-top:12px;">
-        <label for="architect_notes">Operator Notes</label>
-        <textarea class="architect-textarea" id="architect_notes" name="architect_notes" placeholder="Capture constraints, pricing notes, contractor feedback, or strategic watchouts.">{{ analysis.get("notes") or "" }}</textarea>
-      </div>
+          <div class="uw-signal-col">
+            <div class="uw-signal-title">Risks</div>
+            {% if risks %}
+              <div class="uw-list">
+                {% for item in risks %}
+                  <div class="uw-list-item">
+                    <strong>{{ item.get("title") or item if item is mapping else item }}</strong>
+                    <p>
+                      {% if item is mapping and item.get("detail") %}{{ item.get("detail") }}
+                      {% elif item is mapping and item.get("description") %}{{ item.get("description") }}
+                      {% else %}Risk signal that could impact pricing, execution, or margin.{% endif %}
+                    </p>
+                  </div>
+                {% endfor %}
+              </div>
+            {% else %}
+              <div class="uw-empty">No risks have been returned yet.</div>
+            {% endif %}
+          </div>
+        </div>
+      </section>
 
-      <div class="architect-toolbar">
-        <button class="architect-btn success" type="submit">💾 Save Architect Notes</button>
-        {% if deal %}
-          <a class="architect-btn secondary" href="{{ url_for('investor.deal_rehab', deal_id=deal.id) }}">🎬 Move to Renovation Studio</a>
-          <a class="architect-btn secondary" href="{{ url_for('investor.build_studio', deal_id=deal.id) }}">🏗 Move to Build Studio</a>
-          <a class="architect-btn secondary" href="{{ url_for('investor.budget_studio', deal_id=deal.id) }}">💰 Move to Budget Studio</a>
+      <section class="uw-card">
+        <div class="uw-card-head">
+          <div>
+            <div class="uw-eyebrow">Verdict Breakdown</div>
+            <h3>Decision Subscores</h3>
+            <p class="uw-note">
+              Break the deal decision into explainable parts instead of one opaque score.
+            </p>
+          </div>
+        </div>
+
+        {% if breakdown %}
+          <div class="uw-kpi-grid">
+            {% for key, value in breakdown.items() %}
+              <div class="uw-kpi">
+                <div class="uw-kpi-label">{{ key|replace("_", " ")|title }}</div>
+                <div class="uw-kpi-value">{{ value }}</div>
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="uw-empty">No verdict breakdown returned yet.</div>
         {% endif %}
-      </div>
-    </form>
-  </section>
+      </section>
 
-  <section class="architect-card">
-    <h3>Continue Workflow</h3>
-    <div class="workflow-grid">
-      {% if deal %}
-        <a href="{{ url_for('investor.deal_detail', deal_id=deal.id) }}" class="workflow-card">
-          <h4>Deal Workspace</h4>
-          <p>Return to the main record and review property, contacts, files, and execution context.</p>
-        </a>
+      <section class="uw-card">
+        <div class="uw-card-head">
+          <div>
+            <div class="uw-eyebrow">Comparables</div>
+            <h3>Normalized Comp Set</h3>
+            <p class="uw-note">
+              This is the evidence layer behind pricing confidence and exit logic.
+            </p>
+          </div>
+        </div>
 
-        <a href="{{ url_for('investor.deal_rehab', deal_id=deal.id) }}" class="workflow-card">
-          <h4>Renovation Studio</h4>
-          <p>Translate the thesis into rehab scope, finishes, sequencing, and property transformation.</p>
-        </a>
+        {% if normalized_comps %}
+          <div class="uw-table-wrap">
+            <table class="uw-table">
+              <thead>
+                <tr>
+                  <th>Address</th>
+                  <th>Price</th>
+                  <th>Sq Ft</th>
+                  <th>Beds</th>
+                  <th>Baths</th>
+                  <th>Distance</th>
+                  <th>Months Ago</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for comp in normalized_comps %}
+                  <tr>
+                    <td>{{ comp.get("address") or "—" }}</td>
+                    <td>${{ "{:,.0f}".format(comp.get("price", 0) or 0) }}</td>
+                    <td>{{ comp.get("sqft") or "—" }}</td>
+                    <td>{{ comp.get("beds") or "—" }}</td>
+                    <td>{{ comp.get("baths") or "—" }}</td>
+                    <td>{{ comp.get("distance_miles") or "—" }}</td>
+                    <td>{{ comp.get("months_ago") or "—" }}</td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% else %}
+          <div class="uw-empty">No normalized comps returned yet.</div>
+        {% endif %}
+      </section>
 
-        <a href="{{ url_for('investor.build_studio', deal_id=deal.id) }}" class="workflow-card">
-          <h4>Build Studio</h4>
-          <p>Model new construction or expansion concepts when the strategy requires development upside.</p>
-        </a>
+      <section class="uw-card">
+        <div class="uw-card-head">
+          <div>
+            <div class="uw-eyebrow">Market Assumptions</div>
+            <h3>Context Layer</h3>
+            <p class="uw-note">
+              Surface the market assumptions that shape cost, value, and confidence.
+            </p>
+          </div>
+        </div>
 
-        <a href="{{ url_for('investor.budget_studio', deal_id=deal.id) }}" class="workflow-card">
-          <h4>Budget Studio</h4>
-          <p>Turn the deal thesis into numbers, line items, cost pressure tests, and tracked execution.</p>
-        </a>
-      {% endif %}
+        {% if market %}
+          <div class="uw-list">
+            {% for key, value in market.items() %}
+              <div class="uw-list-item">
+                <strong>{{ key|replace("_", " ")|title }}</strong>
+                <p>{{ value }}</p>
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="uw-empty">No market assumptions returned yet.</div>
+        {% endif %}
+      </section>
+
     </div>
-  </section>
 
+    <aside class="uw-side">
+      <div class="uw-sticky">
+
+        <section class="uw-card">
+          <div class="uw-card-head">
+            <div>
+              <div class="uw-eyebrow">Decision Snapshot</div>
+              <h3>Analysis Verdict</h3>
+              <p class="uw-note">
+                The right rail should answer the decision question immediately.
+              </p>
+            </div>
+            <div class="uw-badge">Live Output</div>
+          </div>
+
+          <div class="uw-kpi-grid">
+            <div class="uw-kpi">
+              <div class="uw-kpi-label">Score</div>
+              <div class="uw-kpi-value">{{ verdict.get("score") or meta.get("score") or "—" }}</div>
+            </div>
+
+            <div class="uw-kpi">
+              <div class="uw-kpi-label">Verdict</div>
+              <div class="uw-kpi-value">{{ verdict.get("label") or verdict.get("grade") or "Pending" }}</div>
+            </div>
+
+            <div class="uw-kpi">
+              <div class="uw-kpi-label">Estimated Profit</div>
+              <div class="uw-kpi-value {% if meta.get('estimated_profit', 0) >= 0 %}positive{% else %}negative{% endif %}">
+                {% if meta.get("estimated_profit") is not none %}
+                  ${{ "{:,.0f}".format(meta.get("estimated_profit") or 0) }}
+                {% else %}
+                  —
+                {% endif %}
+              </div>
+            </div>
+
+            <div class="uw-kpi">
+              <div class="uw-kpi-label">Margin</div>
+              <div class="uw-kpi-value {% if meta.get('margin_pct', 0) >= 15 %}positive{% elif meta.get('margin_pct', 0) >= 8 %}watch{% else %}negative{% endif %}">
+                {% if meta.get("margin_pct") is not none %}
+                  {{ "%.1f"|format(meta.get("margin_pct") or 0) }}%
+                {% else %}
+                  —
+                {% endif %}
+              </div>
+            </div>
+          </div>
+
+          <div class="uw-summary">
+            <div class="uw-summary-row">
+              <span class="uw-summary-label">Purchase Price</span>
+              <strong class="uw-summary-value">
+                {% if purchase_price is not none %}${{ "{:,.0f}".format(purchase_price or 0) }}{% else %}—{% endif %}
+              </strong>
+            </div>
+
+            <div class="uw-summary-row">
+              <span class="uw-summary-label">Exit Value</span>
+              <strong class="uw-summary-value">
+                {% if arv is not none %}${{ "{:,.0f}".format(arv or 0) }}{% else %}—{% endif %}
+              </strong>
+            </div>
+
+            <div class="uw-summary-row">
+              <span class="uw-summary-label">Risk Level</span>
+              <strong class="uw-summary-value {% if verdict.get('risk_level') == 'Low' %}good{% elif verdict.get('risk_level') == 'Moderate' %}watch{% else %}risk{% endif %}">
+                {{ verdict.get("risk_level") or meta.get("risk_level") or "—" }}
+              </strong>
+            </div>
+
+            <div class="uw-summary-row">
+              <span class="uw-summary-label">Recommended Path</span>
+              <strong class="uw-summary-value">{{ verdict.get("recommended_path") or meta.get("recommended_path") or "—" }}</strong>
+            </div>
+          </div>
+        </section>
+
+        <section class="uw-card">
+          <div class="uw-card-head">
+            <div>
+              <div class="uw-eyebrow">Recommendation</div>
+              <h3>Operator Read</h3>
+            </div>
+          </div>
+
+          <div class="uw-callout">
+            <strong>{{ verdict.get("label") or "Analysis Pending" }}</strong>
+            <p>
+              {{ verdict.get("summary") or meta.get("summary") or "Run analysis to generate a recommendation, confidence signal, and decision rationale." }}
+            </p>
+          </div>
+        </section>
+
+      </div>
+    </aside>
+  </div>
 </div>
 
 {% endblock %}

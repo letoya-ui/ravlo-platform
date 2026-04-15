@@ -9,6 +9,10 @@ ADMIN_ROLES = {
     "platform_admin",
 }
 
+EXECUTIVE_ROLES = {
+    "executive",
+}
+
 STAFF_ROLES = {
     "loan_officer",
     "processor",
@@ -30,6 +34,12 @@ def is_admin(user) -> bool:
     if not user:
         return False
     return (user.role or "").strip().lower() in ADMIN_ROLES
+
+
+def is_executive(user) -> bool:
+    if not user:
+        return False
+    return (user.role or "").strip().lower() in EXECUTIVE_ROLES
 
 
 def is_platform_admin(user) -> bool:
@@ -63,6 +73,7 @@ def get_role_label(role: str) -> str:
         "Platform Admin": "Platform Admin (Full Control)",
         "Master Admin": "Master Admin (Operations)",
         "Lending Admin": "Lending Admin",
+        "Executive": "Executive",
         "Admin": "Company Admin",
         "Loan Officer": "Loan Officer",
         "Processor": "Processor",
@@ -82,6 +93,8 @@ def get_role_badge_class(role: str) -> str:
     if role == "master_admin":
         return "badge badge-warning"
     if role == "lending_admin":
+        return "badge badge-info"
+    if role == "executive":
         return "badge badge-info"
     if role == "admin":
         return "badge badge-primary"
@@ -161,6 +174,7 @@ def get_role_display(role: str) -> str:
         "platform_admin": "Platform Admin",
         "master_admin": "Master Admin",
         "lending_admin": "Lending Admin",
+        "executive": "Executive",
         "admin": "Admin",
         "loan_officer": "Loan Officer",
         "processor": "Processor",
@@ -206,7 +220,8 @@ def can_manage_users(user) -> bool:
 
 
 def can_approve_licensing(user) -> bool:
-    return is_platform_admin(user) or is_master_admin(user)
+    role = (getattr(user, "role", "") or "").strip().lower()
+    return is_platform_admin(user) or is_master_admin(user) or role == "executive"
 
 
 def can_block_accounts(user) -> bool:

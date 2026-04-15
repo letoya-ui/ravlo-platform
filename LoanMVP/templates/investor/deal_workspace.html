@@ -1,18 +1,18 @@
 {% extends "layouts/ravlo_base.html" %}
-
-{% block title %}Ravlo • Deal Workspace{% endblock %}
-
+{% block title %}Investor OS • Deal Workspace{% endblock %}
 {% block page_title %}Deal Workspace{% endblock %}
 {% block page_subline %}
-Compare exit paths, pressure-test returns, and move into architect, budget, rehab, or capital.
+Review a saved property, compare exit paths, and move the best opportunity into planning, rehab, budget, and funding.
 {% endblock %}
 
 {% block topbar_actions %}
+{% set sp = selected_prop if selected_prop is defined else none %}
+
 <a href="{{ url_for('investor.deals_list') }}" class="ravlo-btn ghost sm">
-    Deal Workspace
+    Deals
 </a>
 
-{% if selected_prop %}
+{% if sp %}
     {% if deal %}
     <a href="{{ url_for('investor.deal_detail', deal_id=deal.id) }}" class="ravlo-btn ghost sm">
         Open Deal
@@ -34,27 +34,28 @@ Compare exit paths, pressure-test returns, and move into architect, budget, reha
     <a href="{{ url_for('investor.deal_rehab', deal_id=deal.id) }}" class="ravlo-btn ghost sm">
         Rehab Studio
     </a>
-    <a href="{{ url_for('investor.capital_application', deal_id=deal.id, prop_id=selected_prop.id) }}" class="ravlo-btn primary sm">
+    <a href="{{ url_for('investor.capital_application', deal_id=deal.id, prop_id=sp.id) }}" class="ravlo-btn primary sm">
         Apply
     </a>
     {% else %}
     <form method="POST" action="{{ url_for('investor.save_deal') }}" class="inline-form">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <input type="hidden" name="saved_property_id" value="{{ selected_prop.id }}">
-        <input type="hidden" name="title" value="{{ selected_prop.address or 'Saved Deal' }}">
-        <input type="hidden" name="strategy" value="{{ mode or 'flip' }}">
-        <input type="hidden" name="property_id" value="{{ selected_prop.property_id or '' }}">
+        <input type="hidden" name="saved_property_id" value="{{ sp.id or '' }}">
+        <input type="hidden" name="title" value="{{ sp.address if sp.address is defined and sp.address else 'Saved Deal' }}">
+        <input type="hidden" name="strategy" value="{{ mode | default('flip') }}">
+        <input type="hidden" name="property_id" value="{{ sp.property_id if sp.property_id is defined and sp.property_id else '' }}">
         <input type="hidden" name="inputs_json" value='{{ {
-            "address": selected_prop.address,
-            "city": selected_prop.city,
-            "state": selected_prop.state,
-            "zip_code": selected_prop.zipcode if selected_prop.zipcode is defined else "",
-            "strategy": mode or "flip",
-            "purchase_price": selected_prop.price or 0
+            "address": sp.address|default("", true),
+            "city": sp.city|default("", true),
+            "state": sp.state|default("", true),
+            "zip_code": sp.zipcode|default("", true),
+            "strategy": mode|default("flip", true),
+            "purchase_price": sp.price|default(0, true)
         } | tojson | safe }}'>
         <button type="submit" class="ravlo-btn ghost sm">Save Deal</button>
     </form>
-    <a href="{{ url_for('investor.capital_application', prop_id=selected_prop.id) }}" class="ravlo-btn primary sm">
+
+    <a href="{{ url_for('investor.capital_application', prop_id=sp.id) }}" class="ravlo-btn primary sm">
         Apply
     </a>
     {% endif %}
@@ -90,19 +91,31 @@ Compare exit paths, pressure-test returns, and move into architect, budget, reha
     {% set deal_results = deal.results_json if deal and deal.results_json else {} %}
     {% set wa = workspace_analysis if workspace_analysis else {} %}
     {% set planning_budget = wa.get("planning_budget", {}) if wa else {} %}
+    {% set exit_analysis = deal_results.get("exit_strategy_analysis", {}) if deal_results else {} %}
+    {% set exit_cards = exit_analysis.get("exit_strategy_cards", []) if exit_analysis else (wa.get("exit_strategy_cards", []) if wa else []) %}
+    {% set ai_rec = exit_analysis.get("ai_recommendation", {}) if exit_analysis else (wa.get("ai_recommendation", {}) if wa else {}) %}
+    {% set best_exit = exit_analysis.get("best_exit_strategy") if exit_analysis else (wa.get("best_exit_strategy") if wa else None) %}
+    {% set best_exit_reason = exit_analysis.get("best_exit_reason") if exit_analysis else (wa.get("best_exit_reason") if wa else None) %}
+    {% set property_classification = exit_analysis.get("property_classification") if exit_analysis else (wa.get("property_classification") if wa else None) %}
+    {% set comp_analysis = deal_results.get("comp_analysis", {}) if deal_results else {} %}
+    {% set normalized_comps = comp_analysis.get("normalized_comps", []) if comp_analysis else [] %}
 
     {% set recommended =
         (
             recommendation.best
             if recommendation and recommendation.best
             else (
-                strategy_analysis.get("strategy")
-                if strategy_analysis and strategy_analysis.get("strategy")
+                best_exit
+                if best_exit
                 else (
-                    deal.recommended_strategy
-                    if deal and deal.recommended_strategy
+                    strategy_analysis.get("strategy")
+                    if strategy_analysis and strategy_analysis.get("strategy")
                     else (
-                        deal.strategy if deal and deal.strategy else ""
+                        deal.recommended_strategy
+                        if deal and deal.recommended_strategy
+                        else (
+                            deal.strategy if deal and deal.strategy else ""
+                        )
                     )
                 )
             )
@@ -164,29 +177,8 @@ Compare exit paths, pressure-test returns, and move into architect, budget, reha
         )
     %}
 
-    {% set listing_photos =
-        (
-            wa.get("listing_photos")
-            or deal_results.get("listing_photos")
-            or selected_prop.listing_photos_json if selected_prop and selected_prop.listing_photos_json is defined
-            else (
-                selected_prop.listing_photos if selected_prop and selected_prop.listing_photos is defined
-                else []
-            )
-        )
-    %}
-
-    {% set primary_photo =
-        (
-            wa.get("image_url")
-            or deal_results.get("image_url")
-            or selected_prop.image_url if selected_prop and selected_prop.image_url is defined
-            else (
-                selected_prop.primary_photo_url if selected_prop and selected_prop.primary_photo_url is defined
-                else None
-            )
-        )
-    %}
+    {% set listing_photos = wa.get("listing_photos") or deal_results.get("listing_photos") or [] %}
+    {% set primary_photo = wa.get("image_url") or deal_results.get("image_url") or None %}
 
     {% if not primary_photo and listing_photos %}
         {% if listing_photos[0] is mapping %}
@@ -196,9 +188,17 @@ Compare exit paths, pressure-test returns, and move into architect, budget, reha
         {% endif %}
     {% endif %}
 
+    {% set budget_metrics = budget_snapshot or {} %}
+    {% set budget_total = budget_metrics.get("estimated_total_with_contingency", budget.total_budget if budget else 0) %}
+    {% set budget_estimated = budget_metrics.get("estimated_subtotal", budget.total_cost if budget else 0) %}
+    {% set budget_actual = budget_metrics.get("actual_total", budget.total_cost if budget else 0) %}
+    {% set budget_paid = budget_metrics.get("paid_total", budget.paid_amount if budget else 0) %}
+    {% set budget_contingency = budget_metrics.get("contingency_amount", budget.contingency if budget else 0) %}
+
     {% set flip = comparison.get("flip", {}) if comparison else {} %}
     {% set rental = comparison.get("rental", {}) if comparison else {} %}
     {% set airbnb = comparison.get("airbnb", {}) if comparison else {} %}
+    {% set land = comparison.get("land", {}) if comparison else {} %}
 
     {% set flip_profit =
         (
@@ -249,19 +249,25 @@ Compare exit paths, pressure-test returns, and move into architect, budget, reha
     {% set airbnb_net = (airbnb.get("net_monthly", 0) or 0) | float %}
     {% set airbnb_roi = ((airbnb_net * 12) / purchase_price_safe) * 100 if purchase_price_safe > 0 else 0 %}
 
-    {% set max_profit = [flip_profit, rental_cashflow * 12, airbnb_net * 12] | max %}
+    {% set land_value = (land.get("land_value", 0) or 0) | float %}
+    {% set land_upside = (land.get("projected_upside", 0) or 0) | float %}
+    {% set land_score = (land.get("score", 0) or 0) | float %}
+
+    {% set max_profit = [flip_profit, rental_cashflow * 12, airbnb_net * 12, land_upside] | max %}
     {% set max_profit = 1 if max_profit <= 0 else max_profit %}
 
-    {% set max_roi = [flip_roi, rental_cap, airbnb_roi] | max %}
+    {% set max_roi = [flip_roi, rental_cap, airbnb_roi, land_score] | max %}
     {% set max_roi = 1 if max_roi <= 0 else max_roi %}
 
     {% set flip_profit_strength = ((flip_profit / max_profit) * 100) if max_profit else 0 %}
     {% set rental_profit_strength = (((rental_cashflow * 12) / max_profit) * 100) if max_profit else 0 %}
     {% set airbnb_profit_strength = (((airbnb_net * 12) / max_profit) * 100) if max_profit else 0 %}
+    {% set land_profit_strength = ((land_upside / max_profit) * 100) if max_profit else 0 %}
 
     {% set flip_roi_strength = ((flip_roi / max_roi) * 100) if max_roi else 0 %}
     {% set rental_roi_strength = ((rental_cap / max_roi) * 100) if max_roi else 0 %}
     {% set airbnb_roi_strength = ((airbnb_roi / max_roi) * 100) if max_roi else 0 %}
+    {% set land_roi_strength = ((land_score / max_roi) * 100) if max_roi else 0 %}
 
     <section class="ravlo-hero-card workspace-hero">
         <div class="workspace-hero-copy">
@@ -281,13 +287,20 @@ Compare exit paths, pressure-test returns, and move into architect, budget, reha
                     Buy & Hold Rental
                     {% elif recommended == "airbnb" %}
                     Airbnb
+                    {% elif recommended == "land" %}
+                    Land / Build
                     {% else %}
                     Pending
                     {% endif %}
                 </span>
 
                 <span class="ravlo-chip">
-                    {% if comps %}Comps Loaded{% else %}No Comps{% endif %}
+                    Classification:
+                    {{ property_classification|replace("_", " ")|title if property_classification else "Pending" }}
+                </span>
+
+                <span class="ravlo-chip">
+                    {% if normalized_comps %}Comps Loaded{% else %}No Comps{% endif %}
                 </span>
 
                 <span class="ravlo-chip">
@@ -302,11 +315,7 @@ Compare exit paths, pressure-test returns, and move into architect, budget, reha
 
                 <span class="ravlo-chip">
                     Budget:
-                    {% if budget %}
-                        Ready
-                    {% else %}
-                        Not Started
-                    {% endif %}
+                    {% if budget %}Ready{% else %}Not Started{% endif %}
                 </span>
 
                 {% if deal_score_value is not none %}
@@ -324,7 +333,6 @@ Compare exit paths, pressure-test returns, and move into architect, budget, reha
                 <a href="{{ url_for('investor.deal_architect', deal_id=deal.id) }}" class="ravlo-btn ghost">
                     Deal Architect
                 </a>
-
                 {% if budget %}
                 <a href="{{ url_for('investor.budget_detail', budget_id=budget.id) }}" class="ravlo-btn ghost">
                     Open Budget
@@ -334,7 +342,6 @@ Compare exit paths, pressure-test returns, and move into architect, budget, reha
                     Start Budget
                 </a>
                 {% endif %}
-
                 <a href="{{ url_for('investor.deal_rehab', deal_id=deal.id) }}" class="ravlo-btn ghost">
                     Rehab Studio
                 </a>
@@ -349,15 +356,15 @@ Compare exit paths, pressure-test returns, and move into architect, budget, reha
                     <input type="hidden" name="strategy" value="{{ mode or 'flip' }}">
                     <input type="hidden" name="property_id" value="{{ selected_prop.property_id or '' }}">
                     <input type="hidden" name="inputs_json" value='{{ {
-                        "address": selected_prop.address,
-                        "city": selected_prop.city,
-                        "state": selected_prop.state,
-                        "zip_code": selected_prop.zipcode if selected_prop.zipcode is defined else "",
-                        "strategy": mode or "flip",
-                        "purchase_price": purchase_price,
-                        "arv": arv_value,
-                        "estimated_rent": rent_value
-                    } | tojson | safe }}'>
+                        "address": selected_prop.address|default("", true),
+                        "city": selected_prop.city|default("", true),
+                        "state": selected_prop.state|default("", true),
+                        "zip_code": selected_prop.zipcode|default("", true),
+                        "strategy": mode|default("flip", true),
+                        "purchase_price": purchase_price|default(0, true),
+                        "arv": arv_value|default(0, true),
+                        "estimated_rent": rent_value|default(0, true)
+                     } | tojson | safe }}'>
                     <button type="submit" class="ravlo-btn ghost">
                         Save Deal
                     </button>
@@ -369,15 +376,10 @@ Compare exit paths, pressure-test returns, and move into architect, budget, reha
                 {% endif %}
             </div>
 
-            {% if workspace_analysis and workspace_analysis.get("selected_strategy") %}
+            {% if best_exit_reason %}
             <div class="workspace-studio-callout mt-16">
-                <strong>Project Studio path saved</strong>
-                <p>
-                    {{ (workspace_analysis.get("selected_strategy") or "Strategy")|replace("_", " ")|title }}
-                    {% if workspace_analysis.get("selected_scope") %}
-                    • {{ (workspace_analysis.get("selected_scope") or "")|replace("_", " ")|title }}
-                    {% endif %}
-                </p>
+                <strong>AI recommendation</strong>
+                <p>{{ best_exit_reason }}</p>
             </div>
             {% endif %}
         </div>
@@ -392,6 +394,8 @@ Compare exit paths, pressure-test returns, and move into architect, budget, reha
                     Stable Long-Term Cash Flow
                     {% elif recommended == "airbnb" %}
                     Highest Revenue Potential
+                    {% elif recommended == "land" %}
+                    Land Optionality / Build Upside
                     {% else %}
                     Compare Scenarios
                     {% endif %}
@@ -403,176 +407,127 @@ Compare exit paths, pressure-test returns, and move into architect, budget, reha
         </div>
     </section>
 
-    <section class="ravlo-card pad">
-        <div class="section-head">
-            <div>
-                <div class="eyebrow">LISTING PHOTOS</div>
-                <h3>Reference Photos for Rehab & Build Studio</h3>
-            </div>
-        </div>
-
-        <p class="muted mb-16">
-            Use these listing photos as temporary visual references until site photos are taken and uploaded.
-        </p>
-
-        {% if primary_photo or listing_photos %}
-        <div class="workspace-photo-shell">
-            {% if primary_photo %}
-            <div class="workspace-photo-main">
-                <img src="{{ primary_photo }}" alt="Primary listing photo">
-            </div>
-            {% endif %}
-
-            {% if listing_photos %}
-            <div class="workspace-photo-grid">
-                {% for photo in listing_photos %}
-                    {% if photo is mapping %}
-                        {% set photo_url = photo.get("url") %}
-                    {% else %}
-                        {% set photo_url = photo %}
-                    {% endif %}
-
-                    {% if photo_url %}
-                    <div class="workspace-photo-tile">
-                        <img src="{{ photo_url }}" alt="Listing photo {{ loop.index }}">
-                    </div>
-                    {% endif %}
-                {% endfor %}
-            </div>
-            {% endif %}
-        </div>
-        {% else %}
-        <div class="empty-state-inline">
-            No listing photos are attached yet. Once listing photo URLs are saved with the property/deal, they will appear here for Rehab Studio and Build Studio reference.
-        </div>
-        {% endif %}
-    </section>
-
     <section class="workspace-grid-4">
         <div class="workspace-stat">
             <span>Purchase Price</span>
-            <strong>
-                {% if purchase_price > 0 %}
-                    ${{ "{:,.0f}".format(purchase_price) }}
-                {% else %}
-                    —
-                {% endif %}
-            </strong>
+            <strong>{% if purchase_price > 0 %}${{ "{:,.0f}".format(purchase_price) }}{% else %}—{% endif %}</strong>
         </div>
 
         <div class="workspace-stat">
             <span>Sq Ft</span>
-            <strong>
-                {% if sqft_value > 0 %}
-                    {{ "{:,.0f}".format(sqft_value) }}
-                {% else %}
-                    —
-                {% endif %}
-            </strong>
+            <strong>{% if sqft_value > 0 %}{{ "{:,.0f}".format(sqft_value) }}{% else %}—{% endif %}</strong>
         </div>
 
         <div class="workspace-stat">
             <span>ARV Estimate</span>
-            <strong>
-                {% if arv_value > 0 %}
-                    ${{ "{:,.0f}".format(arv_value) }}
-                {% else %}
-                    —
-                {% endif %}
-            </strong>
+            <strong>{% if arv_value > 0 %}${{ "{:,.0f}".format(arv_value) }}{% else %}—{% endif %}</strong>
         </div>
 
         <div class="workspace-stat">
             <span>Estimated Rent</span>
-            <strong>
-                {% if rent_value > 0 %}
-                    ${{ "{:,.0f}".format(rent_value) }}/mo
-                {% else %}
-                    —
-                {% endif %}
-            </strong>
+            <strong>{% if rent_value > 0 %}${{ "{:,.0f}".format(rent_value) }}/mo{% else %}—{% endif %}</strong>
         </div>
     </section>
 
     <div class="workspace-main-grid">
-
         <div class="workspace-stack">
 
             <section class="ravlo-card pad">
                 <div class="section-head">
                     <div>
-                        <div class="eyebrow">STRATEGY BOARD</div>
-                        <h3>Side-by-Side Comparison</h3>
+                        <div class="eyebrow">AI RECOMMENDATION</div>
+                        <h3>Best Exit Strategy</h3>
                     </div>
                 </div>
 
-                {% if comparison %}
+                <div class="workspace-note">
+                    <strong>
+                        {{ best_exit|replace("_", " ")|title if best_exit else "Recommendation Pending" }}
+                    </strong>
+                    <p>
+                        {{ best_exit_reason or "No strategy recommendation has been saved yet." }}
+                    </p>
+                </div>
+
+                {% if ai_rec %}
+                <div class="workspace-fit-grid mt-16">
+                    <div class="workspace-mini-stat">
+                        <span>Confidence</span>
+                        <strong>{{ ai_rec.get("confidence", "—") }}</strong>
+                    </div>
+                    <div class="workspace-mini-stat">
+                        <span>Property Type</span>
+                        <strong>{{ property_classification|replace("_", " ")|title if property_classification else "—" }}</strong>
+                    </div>
+                </div>
+
+                {% if ai_rec.get("why") %}
+                <div class="workspace-note mt-16">
+                    <strong>Why Ravlo chose this</strong>
+                    <ul class="workspace-bullets">
+                        {% for item in ai_rec.get("why", []) %}
+                        <li>{{ item }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% endif %}
+
+                {% if ai_rec.get("watch_items") %}
+                <div class="workspace-note mt-16">
+                    <strong>Watch items</strong>
+                    <ul class="workspace-bullets">
+                        {% for item in ai_rec.get("watch_items", []) %}
+                        <li>{{ item }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% endif %}
+                {% endif %}
+            </section>
+
+            <section class="ravlo-card pad">
+                <div class="section-head">
+                    <div>
+                        <div class="eyebrow">STRATEGY BOARD</div>
+                        <h3>Side-by-Side Exit Paths</h3>
+                    </div>
+                </div>
+
                 <div class="workspace-compare-grid">
 
                     <div class="workspace-compare-card {% if recommended == 'flip' %}recommended{% endif %}">
                         <div class="workspace-card-topline">
                             <span class="workspace-compare-kicker">FLIP</span>
-                            {% if recommended == 'flip' %}
-                            <span class="workspace-badge">Recommended</span>
-                            {% endif %}
+                            {% if recommended == 'flip' %}<span class="workspace-badge">Recommended</span>{% endif %}
                         </div>
-
                         <strong class="workspace-compare-title">Fix & Flip</strong>
-
                         <div class="workspace-compare-meta">
                             <div><span>Projected Profit</span><strong>${{ "{:,.0f}".format(flip_profit) }}</strong></div>
                             <div><span>Total Investment</span><strong>${{ "{:,.0f}".format(flip_total) }}</strong></div>
                             <div><span>Projected ARV</span><strong>{% if flip_arv %}${{ "{:,.0f}".format(flip_arv) }}{% else %}—{% endif %}</strong></div>
                             <div><span>ROI</span><strong>{{ "{:.1f}".format(flip_roi) }}%</strong></div>
                         </div>
-
                         <div class="metric-bar-wrap">
-                            <div class="metric-bar-label">
-                                <span>Profit Strength</span>
-                                <strong>{{ "{:.0f}".format(flip_profit_strength) }}%</strong>
-                            </div>
+                            <div class="metric-bar-label"><span>Profit Strength</span><strong>{{ "{:.0f}".format(flip_profit_strength) }}%</strong></div>
                             <div class="metric-bar"><div class="metric-bar-fill" style="width: {{ flip_profit_strength }}%;"></div></div>
-                        </div>
-
-                        <div class="metric-bar-wrap">
-                            <div class="metric-bar-label">
-                                <span>ROI Strength</span>
-                                <strong>{{ "{:.0f}".format(flip_roi_strength) }}%</strong>
-                            </div>
-                            <div class="metric-bar"><div class="metric-bar-fill alt" style="width: {{ flip_roi_strength }}%;"></div></div>
                         </div>
                     </div>
 
                     <div class="workspace-compare-card {% if recommended == 'rental' %}recommended{% endif %}">
                         <div class="workspace-card-topline">
                             <span class="workspace-compare-kicker">RENTAL</span>
-                            {% if recommended == 'rental' %}
-                            <span class="workspace-badge">Recommended</span>
-                            {% endif %}
+                            {% if recommended == 'rental' %}<span class="workspace-badge">Recommended</span>{% endif %}
                         </div>
-
                         <strong class="workspace-compare-title">Buy & Hold Rental</strong>
-
                         <div class="workspace-compare-meta">
                             <div><span>Monthly Rent</span><strong>${{ "{:,.0f}".format(rental_rent) }}</strong></div>
                             <div><span>Monthly Cash Flow</span><strong>${{ "{:,.0f}".format(rental_cashflow) }}</strong></div>
                             <div><span>Annual NOI</span><strong>${{ "{:,.0f}".format(rental_noi) }}</strong></div>
                             <div><span>Cap Rate</span><strong>{{ "{:.1f}".format(rental_cap) }}%</strong></div>
+                            <div><span>DSCR</span><strong>{{ "{:.2f}".format(rental_dscr) }}</strong></div>
                         </div>
-
                         <div class="metric-bar-wrap">
-                            <div class="metric-bar-label">
-                                <span>Cash Flow Strength</span>
-                                <strong>{{ "{:.0f}".format(rental_profit_strength) }}%</strong>
-                            </div>
-                            <div class="metric-bar"><div class="metric-bar-fill" style="width: {{ rental_profit_strength }}%;"></div></div>
-                        </div>
-
-                        <div class="metric-bar-wrap">
-                            <div class="metric-bar-label">
-                                <span>Return Strength</span>
-                                <strong>{{ "{:.0f}".format(rental_roi_strength) }}%</strong>
-                            </div>
+                            <div class="metric-bar-label"><span>Return Strength</span><strong>{{ "{:.0f}".format(rental_roi_strength) }}%</strong></div>
                             <div class="metric-bar"><div class="metric-bar-fill alt" style="width: {{ rental_roi_strength }}%;"></div></div>
                         </div>
                     </div>
@@ -580,13 +535,9 @@ Compare exit paths, pressure-test returns, and move into architect, budget, reha
                     <div class="workspace-compare-card {% if recommended == 'airbnb' %}recommended{% endif %}">
                         <div class="workspace-card-topline">
                             <span class="workspace-compare-kicker">AIRBNB</span>
-                            {% if recommended == 'airbnb' %}
-                            <span class="workspace-badge">Recommended</span>
-                            {% endif %}
+                            {% if recommended == 'airbnb' %}<span class="workspace-badge">Recommended</span>{% endif %}
                         </div>
-
                         <strong class="workspace-compare-title">Short-Term Rental</strong>
-
                         <div class="workspace-compare-meta">
                             <div><span>Nightly Rate</span><strong>${{ "{:,.0f}".format(airbnb_nightly) }}</strong></div>
                             <div><span>Occupancy</span><strong>{{ "{:.0f}".format(airbnb_occ) }}%</strong></div>
@@ -594,159 +545,137 @@ Compare exit paths, pressure-test returns, and move into architect, budget, reha
                             <div><span>Net Monthly</span><strong>${{ "{:,.0f}".format(airbnb_net) }}</strong></div>
                             <div><span>Annualized ROI</span><strong>{{ "{:.1f}".format(airbnb_roi) }}%</strong></div>
                         </div>
-
                         <div class="metric-bar-wrap">
-                            <div class="metric-bar-label">
-                                <span>Income Strength</span>
-                                <strong>{{ "{:.0f}".format(airbnb_profit_strength) }}%</strong>
-                            </div>
-                            <div class="metric-bar"><div class="metric-bar-fill" style="width: {{ airbnb_profit_strength }}%;"></div></div>
-                        </div>
-
-                        <div class="metric-bar-wrap">
-                            <div class="metric-bar-label">
-                                <span>Return Strength</span>
-                                <strong>{{ "{:.0f}".format(airbnb_roi_strength) }}%</strong>
-                            </div>
+                            <div class="metric-bar-label"><span>Return Strength</span><strong>{{ "{:.0f}".format(airbnb_roi_strength) }}%</strong></div>
                             <div class="metric-bar"><div class="metric-bar-fill alt" style="width: {{ airbnb_roi_strength }}%;"></div></div>
                         </div>
                     </div>
 
+                    <div class="workspace-compare-card {% if recommended == 'land' %}recommended{% endif %}">
+                        <div class="workspace-card-topline">
+                            <span class="workspace-compare-kicker">LAND / BUILD</span>
+                            {% if recommended == 'land' %}<span class="workspace-badge">Recommended</span>{% endif %}
+                        </div>
+                        <strong class="workspace-compare-title">Land / Optionality</strong>
+                        <div class="workspace-compare-meta">
+                            <div><span>Lot / Land Value</span><strong>{% if land_value %}${{ "{:,.0f}".format(land_value) }}{% else %}—{% endif %}</strong></div>
+                            <div><span>Projected Upside</span><strong>{% if land_upside %}${{ "{:,.0f}".format(land_upside) }}{% else %}—{% endif %}</strong></div>
+                            <div><span>Strategy Score</span><strong>{{ "{:.0f}".format(land_score) }}</strong></div>
+                        </div>
+                        <div class="metric-bar-wrap">
+                            <div class="metric-bar-label"><span>Optionality Strength</span><strong>{{ "{:.0f}".format(land_roi_strength) }}%</strong></div>
+                            <div class="metric-bar"><div class="metric-bar-fill" style="width: {{ land_roi_strength }}%;"></div></div>
+                        </div>
+                    </div>
+
                 </div>
-                {% elif workspace_analysis %}
-                <div class="workspace-fit-grid">
-                    <div class="workspace-mini-stat">
-                        <span>Saved Strategy</span>
-                        <strong>{{ workspace_analysis.get("selected_strategy", workspace_analysis.get("strategy", "—")) }}</strong>
+            </section>
+
+            <section class="ravlo-card pad">
+                <div class="section-head">
+                    <div>
+                        <div class="eyebrow">COMPARABLES</div>
+                        <h3>Comp Cards</h3>
                     </div>
-                    <div class="workspace-mini-stat">
-                        <span>Best Use</span>
-                        <strong>{{ workspace_analysis.get("estimated_best_use", "—") }}</strong>
+                </div>
+
+                {% if normalized_comps %}
+                <div class="comp-card-grid">
+                    {% for comp in normalized_comps[:6] %}
+                    <div class="comp-card">
+                        <strong>{{ comp.get("address") or "Comparable" }}</strong>
+                        <div class="comp-card-meta">
+                            <span>Price</span><strong>${{ "{:,.0f}".format(comp.get("price", 0) or 0) }}</strong>
+                        </div>
+                        <div class="comp-card-meta">
+                            <span>Sq Ft</span><strong>{{ comp.get("sqft") or "—" }}</strong>
+                        </div>
+                        <div class="comp-card-meta">
+                            <span>Beds / Baths</span><strong>{{ comp.get("beds") or "—" }} / {{ comp.get("baths") or "—" }}</strong>
+                        </div>
+                        <div class="comp-card-meta">
+                            <span>Distance</span><strong>{{ comp.get("distance_miles") or "—" }}</strong>
+                        </div>
+                        <div class="comp-card-meta">
+                            <span>Months Ago</span><strong>{{ comp.get("months_ago") or "—" }}</strong>
+                        </div>
                     </div>
-                    <div class="workspace-mini-stat">
-                        <span>ARV</span>
-                        <strong>
-                            {% if workspace_analysis.get("arv") %}
-                                ${{ "{:,.0f}".format(workspace_analysis.get("arv")|float) }}
-                            {% else %}
-                                —
-                            {% endif %}
-                        </strong>
-                    </div>
-                    <div class="workspace-mini-stat">
-                        <span>Estimated Rent</span>
-                        <strong>
-                            {% if workspace_analysis.get("estimated_rent") %}
-                                ${{ "{:,.0f}".format(workspace_analysis.get("estimated_rent")|float) }}/mo
-                            {% else %}
-                                —
-                            {% endif %}
-                        </strong>
-                    </div>
+                    {% endfor %}
                 </div>
                 {% else %}
-                <div class="empty-state">No comparison data loaded yet.</div>
+                <div class="empty-state-inline">No normalized comps loaded yet.</div>
                 {% endif %}
             </section>
 
-            {% if deal %}
             <section class="ravlo-card pad">
                 <div class="section-head">
                     <div>
-                        <div class="eyebrow">NEXT TOOLS</div>
-                        <h3>Move this deal forward</h3>
+                        <div class="eyebrow">LISTING PHOTOS</div>
+                        <h3>Reference Photos for Rehab & Build Studio</h3>
                     </div>
                 </div>
 
-                <div class="studio-grid">
-                    <a href="{{ url_for('investor.deal_architect', deal_id=deal.id) }}" class="studio-card">
-                        <div class="studio-icon">📐</div>
-                        <div class="studio-title">Deal Architect</div>
-                        <div class="studio-sub">
-                            Generate strategy insights, risk framing, and next-step guidance.
-                        </div>
-                    </a>
-
-                    {% if budget %}
-                    <a href="{{ url_for('investor.budget_detail', budget_id=budget.id) }}" class="studio-card">
-                        <div class="studio-icon">💰</div>
-                        <div class="studio-title">Budget Studio</div>
-                        <div class="studio-sub">
-                            Open the active budget, review line items, and track cost performance.
-                        </div>
-                    </a>
-                    {% else %}
-                    <a href="{{ url_for('investor.budget_studio', deal_id=deal.id) }}" class="studio-card">
-                        <div class="studio-icon">💰</div>
-                        <div class="studio-title">Start Budget</div>
-                        <div class="studio-sub">
-                            Open Budget Studio for this deal and start building the first tracked budget.
-                        </div>
-                    </a>
+                {% if primary_photo or listing_photos %}
+                <div class="workspace-photo-shell">
+                    {% if primary_photo %}
+                    <div class="workspace-photo-main">
+                        <img src="{{ primary_photo }}" alt="Primary listing photo">
+                    </div>
                     {% endif %}
 
-                    <a href="{{ url_for('investor.deal_rehab', deal_id=deal.id) }}" class="studio-card">
-                        <div class="studio-icon">🛠</div>
-                        <div class="studio-title">Rehab Studio</div>
-                        <div class="studio-sub">
-                            Visualize the renovation path, generate concepts, and shape rehab scope.
-                        </div>
-                    </a>
-                </div>
-            </section>
-            {% endif %}
-
-            {% if strategy_analysis %}
-            <section class="ravlo-card pad">
-                <div class="section-head">
-                    <div>
-                        <div class="eyebrow">SAVED STRATEGY</div>
-                        <h3>Project Studio Selection</h3>
-                    </div>
-                </div>
-
-                <div class="workspace-fit-grid">
-                    <div class="workspace-mini-stat">
-                        <span>Strategy</span>
-                        <strong>{{ strategy_analysis.get("title", strategy_analysis.get("strategy", "—")) }}</strong>
-                    </div>
-                    <div class="workspace-mini-stat">
-                        <span>Timeline</span>
-                        <strong>{{ strategy_analysis.get("timeline", "—") }}</strong>
-                    </div>
-                    <div class="workspace-mini-stat">
-                        <span>Confidence</span>
-                        <strong>{{ strategy_analysis.get("confidence", "—") }}</strong>
-                    </div>
-                    <div class="workspace-mini-stat">
-                        <span>Outcome</span>
-                        <strong>
-                            {% if strategy_analysis.get("outcome") is not none %}
-                            ${{ "{:,.0f}".format(strategy_analysis.get("outcome")|float) }}
+                    {% if listing_photos %}
+                    <div class="workspace-photo-grid">
+                        {% for photo in listing_photos %}
+                            {% if photo is mapping %}
+                                {% set photo_url = photo.get("url") %}
                             {% else %}
-                            —
+                                {% set photo_url = photo %}
                             {% endif %}
-                        </strong>
+                            {% if photo_url %}
+                            <div class="workspace-photo-tile">
+                                <img src="{{ photo_url }}" alt="Listing photo {{ loop.index }}">
+                            </div>
+                            {% endif %}
+                        {% endfor %}
                     </div>
+                    {% endif %}
                 </div>
-
-                <div class="workspace-note mt-16">
-                    <strong>Reason</strong>
-                    <p>{{ strategy_analysis.get("reason", "No saved reason yet.") }}</p>
-                </div>
-
-                {% if strategy_analysis.get("risk_note") %}
-                <div class="workspace-note">
-                    <strong>Risk Note</strong>
-                    <p>{{ strategy_analysis.get("risk_note") }}</p>
+                {% else %}
+                <div class="empty-state-inline">
+                    No listing photos are attached yet.
                 </div>
                 {% endif %}
             </section>
-            {% endif %}
 
         </div>
 
         <div class="workspace-stack">
+
+            <section class="ravlo-card pad">
+                <div class="section-head">
+                    <div>
+                        <div class="eyebrow">CLASSIFICATION</div>
+                        <h3>Deal Type</h3>
+                    </div>
+                </div>
+
+                <div class="workspace-note">
+                    <strong>{{ property_classification|replace("_", " ")|title if property_classification else "Pending" }}</strong>
+                    <p>
+                        {% if property_classification == "land" %}
+                        This looks more like land or parcel optionality than a standard cash-flowing residential deal.
+                        {% elif property_classification == "fixer_upper" %}
+                        This appears to be a value-add or rehab-driven opportunity.
+                        {% elif property_classification == "rental_candidate" %}
+                        This appears to support a long-term rental path.
+                        {% elif property_classification == "str_candidate" %}
+                        This appears to have short-term rental potential.
+                        {% else %}
+                        Ravlo is still evaluating the best category for this opportunity.
+                        {% endif %}
+                    </p>
+                </div>
+            </section>
 
             <section class="ravlo-card pad">
                 <div class="section-head">
@@ -756,13 +685,9 @@ Compare exit paths, pressure-test returns, and move into architect, budget, reha
                     </div>
                     {% if deal %}
                         {% if budget %}
-                        <a href="{{ url_for('investor.budget_detail', budget_id=budget.id) }}" class="ravlo-link-btn">
-                            Open Budget
-                        </a>
+                        <a href="{{ url_for('investor.budget_detail', budget_id=budget.id) }}" class="ravlo-link-btn">Open Budget</a>
                         {% else %}
-                        <a href="{{ url_for('investor.budget_studio', deal_id=deal.id) }}" class="ravlo-link-btn">
-                            Start Budget Studio
-                        </a>
+                        <a href="{{ url_for('investor.budget_studio', deal_id=deal.id) }}" class="ravlo-link-btn">Start Budget Studio</a>
                         {% endif %}
                     {% endif %}
                 </div>
@@ -796,60 +721,69 @@ Compare exit paths, pressure-test returns, and move into architect, budget, reha
                         <span>Budget Status</span>
                         <strong>{% if budget %}Tracked{% else %}Planning{% endif %}</strong>
                     </div>
-                    <div class="workspace-mini-stat">
-                        <span>Deal Source</span>
-                        <strong>{% if deal %}Deal Record{% else %}Saved Property{% endif %}</strong>
-                    </div>
-                    <div class="workspace-mini-stat">
-                        <span>Confidence</span>
-                        <strong>Working Draft</strong>
-                    </div>
                 </div>
                 {% else %}
-                <div class="empty-state-inline">
-                    No Project Studio planning budget has been saved yet.
-                </div>
+                <div class="empty-state-inline">No planning budget has been saved yet.</div>
                 {% endif %}
             </section>
 
-            {% if deal %}
             <section class="ravlo-card pad">
                 <div class="section-head">
                     <div>
                         <div class="eyebrow">BUDGET TRACKER</div>
                         <h3>Current Budget Status</h3>
                     </div>
-
-                    {% if budget %}
-                    <a href="{{ url_for('investor.budget_detail', budget_id=budget.id) }}" class="ravlo-link-btn">
-                        Open Full Budget
-                    </a>
-                    {% else %}
-                    <a href="{{ url_for('investor.budget_studio', deal_id=deal.id) }}" class="ravlo-link-btn">
-                        Start Budget
-                    </a>
+                    {% if deal %}
+                        {% if budget %}
+                        <a href="{{ url_for('investor.budget_detail', budget_id=budget.id) }}" class="ravlo-link-btn">
+                            Open Full Budget
+                        </a>
+                        {% else %}
+                        <a href="{{ url_for('investor.budget_studio', deal_id=deal.id) }}" class="ravlo-link-btn">
+                            Start Budget
+                        </a>
+                        {% endif %}
                     {% endif %}
                 </div>
 
                 {% if budget %}
                 <div class="workspace-fit-grid">
                     <div class="workspace-mini-stat">
-                        <span>Total Budget</span>
-                        <strong>${{ "{:,.0f}".format(budget.total_budget or 0) }}</strong>
+                        <span>Budget Name</span>
+                        <strong>{{ budget.project_name or budget.name or "Project Budget" }}</strong>
                     </div>
                     <div class="workspace-mini-stat">
-                        <span>Total Cost</span>
-                        <strong>${{ "{:,.0f}".format(budget.total_cost or 0) }}</strong>
+                        <span>Total Budget</span>
+                        <strong>${{ "{:,.0f}".format(budget_total or 0) }}</strong>
+                    </div>
+                    <div class="workspace-mini-stat">
+                        <span>Estimated</span>
+                        <strong>${{ "{:,.0f}".format(budget_estimated or 0) }}</strong>
+                    </div>
+                    <div class="workspace-mini-stat">
+                        <span>Actual</span>
+                        <strong>${{ "{:,.0f}".format(budget_actual or 0) }}</strong>
                     </div>
                     <div class="workspace-mini-stat">
                         <span>Paid Amount</span>
-                        <strong>${{ "{:,.0f}".format(budget.paid_amount or 0) }}</strong>
+                        <strong>${{ "{:,.0f}".format(budget_paid or 0) }}</strong>
                     </div>
                     <div class="workspace-mini-stat">
                         <span>Contingency</span>
-                        <strong>${{ "{:,.0f}".format(budget.contingency or 0) }}</strong>
+                        <strong>${{ "{:,.0f}".format(budget_contingency or 0) }}</strong>
+                    </div>
+                    <div class="workspace-mini-stat">
+                        <span>Budget Type</span>
+                        <strong>{{ budget.budget_type or "rehab" }}</strong>
                     </div>
                 </div>
+
+                {% if budget.notes %}
+                <div class="workspace-note mt-16">
+                    <strong>Budget Notes</strong>
+                    <p>{{ budget.notes }}</p>
+                </div>
+                {% endif %}
 
                 {% if budget.expenses %}
                 <div class="workspace-budget-list mt-16">
@@ -857,7 +791,10 @@ Compare exit paths, pressure-test returns, and move into architect, budget, reha
                     <div class="workspace-budget-row">
                         <div>
                             <strong>{{ item.description or "Budget Item" }}</strong>
-                            <p class="muted mb-0">{{ item.category or "General" }}{% if item.status %} • {{ item.status|title }}{% endif %}</p>
+                            <p class="muted mb-0">
+                                {{ item.category or "General" }}
+                                {% if item.status %} • {{ item.status|title }}{% endif %}
+                            </p>
                         </div>
                         <div class="workspace-budget-amounts">
                             <span>Est. ${{ "{:,.0f}".format(item.estimated_amount or 0) }}</span>
@@ -869,9 +806,10 @@ Compare exit paths, pressure-test returns, and move into architect, budget, reha
                 {% endif %}
                 {% else %}
                 <div class="empty-state-inline">
-                    No budget tracker is attached to this deal yet. Start Budget Studio to create the first budget.
+                    No project budget is attached to this deal yet. Start Budget Studio to create the first budget.
                 </div>
 
+                {% if deal %}
                 <div class="workspace-action-row mt-16">
                     <a href="{{ url_for('investor.budget_studio', deal_id=deal.id) }}" class="ravlo-btn ghost">
                         Open Budget Studio
@@ -884,8 +822,8 @@ Compare exit paths, pressure-test returns, and move into architect, budget, reha
                     </form>
                 </div>
                 {% endif %}
+                {% endif %}
             </section>
-            {% endif %}
 
             <section class="ravlo-card pad">
                 <div class="section-head">
@@ -918,7 +856,7 @@ Compare exit paths, pressure-test returns, and move into architect, budget, reha
                 {% else %}
                 <div class="workspace-note">
                     <strong>Funding in progress</strong>
-                    <p>This deal already has a funding request in motion. Continue managing scope, budget, and execution from the linked studios.</p>
+                    <p>This deal already has a funding request in motion.</p>
                 </div>
                 {% endif %}
             </section>
@@ -929,377 +867,66 @@ Compare exit paths, pressure-test returns, and move into architect, budget, reha
 </div>
 
 <style>
-.workspace-shell{
-    display:grid;
-    gap:20px;
+.workspace-shell{display:grid;gap:20px}
+.workspace-hero{display:grid;grid-template-columns:1.25fr .75fr;gap:18px;border-radius:28px}
+.workspace-hero-copy{display:grid;gap:8px}
+.workspace-hero-side{display:flex;align-items:stretch}
+.workspace-highlight{width:100%;padding:20px;border-radius:22px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);display:grid;gap:10px}
+.workspace-highlight span{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
+.workspace-highlight strong{font-size:22px;line-height:1.15}
+.workspace-action-row{display:flex;flex-wrap:wrap;gap:12px}
+.workspace-studio-callout{padding:14px 16px;border-radius:18px;background:rgba(122,184,255,.08);border:1px solid rgba(122,184,255,.18)}
+.workspace-grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+.workspace-stat{padding:16px 18px;border-radius:20px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);display:grid;gap:6px}
+.workspace-stat span{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.workspace-stat strong{font-size:22px}
+.workspace-main-grid{display:grid;grid-template-columns:1.2fr .8fr;gap:18px}
+.workspace-stack{display:grid;gap:18px}
+.workspace-compare-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}
+.workspace-compare-card{padding:18px;border-radius:22px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);display:grid;gap:14px}
+.workspace-compare-card.recommended{border-color:rgba(122,184,255,.35);background:rgba(122,184,255,.07)}
+.workspace-card-topline{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.workspace-compare-kicker{font-size:11px;font-weight:700;letter-spacing:.1em;color:var(--muted)}
+.workspace-badge{font-size:11px;padding:5px 9px;border-radius:999px;background:rgba(122,184,255,.15);border:1px solid rgba(122,184,255,.28);color:#9ecbff}
+.workspace-compare-title{font-size:20px;line-height:1.15}
+.workspace-compare-meta{display:grid;gap:10px}
+.workspace-compare-meta div{display:flex;justify-content:space-between;gap:12px;padding-bottom:10px;border-bottom:1px solid rgba(255,255,255,.06)}
+.workspace-compare-meta div:last-child{border-bottom:none;padding-bottom:0}
+.workspace-compare-meta span{font-size:13px;color:var(--muted)}
+.metric-bar-wrap{display:grid;gap:8px}
+.metric-bar-label{display:flex;justify-content:space-between;gap:10px;font-size:13px}
+.metric-bar{width:100%;height:10px;border-radius:999px;background:rgba(255,255,255,.06);overflow:hidden}
+.metric-bar-fill{height:100%;border-radius:999px;background:linear-gradient(90deg,#7ab8ff,#8fd6ff)}
+.metric-bar-fill.alt{background:linear-gradient(90deg,#6fe2b4,#9bf0c7)}
+.workspace-fit-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+.workspace-mini-stat{padding:14px 16px;border-radius:18px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);display:grid;gap:6px}
+.workspace-mini-stat span{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.workspace-note{margin-top:14px;padding:14px 16px;border-radius:18px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07)}
+.workspace-bullets{margin:10px 0 0 18px;padding:0}
+.workspace-bullets li{margin:0 0 8px;color:var(--text)}
+.workspace-budget-list{display:grid;gap:10px}
+.workspace-budget-row{display:flex;justify-content:space-between;gap:12px;padding:14px 16px;border-radius:16px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06)}
+.workspace-budget-amounts{display:grid;gap:6px;text-align:right;font-size:13px}
+.workspace-photo-shell{display:grid;gap:14px}
+.workspace-photo-main{border-radius:20px;overflow:hidden;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03);min-height:320px}
+.workspace-photo-main img{width:100%;height:100%;max-height:460px;object-fit:cover;display:block}
+.workspace-photo-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.workspace-photo-tile{border-radius:16px;overflow:hidden;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03);min-height:120px}
+.workspace-photo-tile img{width:100%;height:100%;min-height:120px;object-fit:cover;display:block}
+.comp-card-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}
+.comp-card{padding:16px;border-radius:18px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);display:grid;gap:10px}
+.comp-card-meta{display:flex;justify-content:space-between;gap:10px;font-size:13px}
+.empty-state,.empty-state-inline{padding:16px 18px;border-radius:18px;background:rgba(255,255,255,.03);border:1px dashed rgba(255,255,255,.12);color:var(--muted)}
+@media (max-width:1180px){
+  .workspace-hero,.workspace-main-grid,.workspace-compare-grid{grid-template-columns:1fr}
+  .workspace-grid-4{grid-template-columns:repeat(2,1fr)}
+  .workspace-photo-grid{grid-template-columns:repeat(3,1fr)}
 }
-
-.workspace-hero{
-    display:grid;
-    grid-template-columns:1.25fr .75fr;
-    gap:18px;
-    border-radius:28px;
-}
-
-.workspace-hero-copy{
-    display:grid;
-    gap:8px;
-}
-
-.workspace-hero-side{
-    display:flex;
-    align-items:stretch;
-}
-
-.workspace-highlight{
-    width:100%;
-    padding:20px;
-    border-radius:22px;
-    background:rgba(255,255,255,.03);
-    border:1px solid rgba(255,255,255,.08);
-    display:grid;
-    gap:10px;
-}
-
-.workspace-highlight span{
-    font-size:12px;
-    color:var(--muted);
-    text-transform:uppercase;
-    letter-spacing:.08em;
-}
-
-.workspace-highlight strong{
-    font-size:22px;
-    line-height:1.15;
-}
-
-.workspace-action-row{
-    display:flex;
-    flex-wrap:wrap;
-    gap:12px;
-}
-
-.workspace-studio-callout{
-    padding:14px 16px;
-    border-radius:18px;
-    background:rgba(122,184,255,.08);
-    border:1px solid rgba(122,184,255,.18);
-}
-
-.workspace-grid-4{
-    display:grid;
-    grid-template-columns:repeat(4, 1fr);
-    gap:14px;
-}
-
-.workspace-stat{
-    padding:16px 18px;
-    border-radius:20px;
-    background:rgba(255,255,255,.03);
-    border:1px solid rgba(255,255,255,.08);
-    display:grid;
-    gap:6px;
-}
-
-.workspace-stat span{
-    font-size:12px;
-    color:var(--muted);
-    text-transform:uppercase;
-    letter-spacing:.06em;
-}
-
-.workspace-stat strong{
-    font-size:22px;
-}
-
-.workspace-main-grid{
-    display:grid;
-    grid-template-columns:1.2fr .8fr;
-    gap:18px;
-}
-
-.workspace-stack{
-    display:grid;
-    gap:18px;
-}
-
-.workspace-compare-grid{
-    display:grid;
-    grid-template-columns:repeat(3, 1fr);
-    gap:14px;
-}
-
-.workspace-compare-card{
-    padding:18px;
-    border-radius:22px;
-    background:rgba(255,255,255,.03);
-    border:1px solid rgba(255,255,255,.08);
-    display:grid;
-    gap:14px;
-}
-
-.workspace-compare-card.recommended{
-    border-color:rgba(122,184,255,.35);
-    background:rgba(122,184,255,.07);
-}
-
-.workspace-card-topline{
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-    gap:10px;
-}
-
-.workspace-compare-kicker{
-    font-size:11px;
-    font-weight:700;
-    letter-spacing:.1em;
-    color:var(--muted);
-}
-
-.workspace-badge{
-    font-size:11px;
-    padding:5px 9px;
-    border-radius:999px;
-    background:rgba(122,184,255,.15);
-    border:1px solid rgba(122,184,255,.28);
-    color:#9ecbff;
-}
-
-.workspace-compare-title{
-    font-size:20px;
-    line-height:1.15;
-}
-
-.workspace-compare-meta{
-    display:grid;
-    gap:10px;
-}
-
-.workspace-compare-meta div{
-    display:flex;
-    justify-content:space-between;
-    gap:12px;
-    padding-bottom:10px;
-    border-bottom:1px solid rgba(255,255,255,.06);
-}
-
-.workspace-compare-meta div:last-child{
-    border-bottom:none;
-    padding-bottom:0;
-}
-
-.workspace-compare-meta span{
-    font-size:13px;
-    color:var(--muted);
-}
-
-.metric-bar-wrap{
-    display:grid;
-    gap:8px;
-}
-
-.metric-bar-label{
-    display:flex;
-    justify-content:space-between;
-    gap:10px;
-    font-size:13px;
-}
-
-.metric-bar{
-    width:100%;
-    height:10px;
-    border-radius:999px;
-    background:rgba(255,255,255,.06);
-    overflow:hidden;
-}
-
-.metric-bar-fill{
-    height:100%;
-    border-radius:999px;
-    background:linear-gradient(90deg, #7ab8ff, #8fd6ff);
-}
-
-.metric-bar-fill.alt{
-    background:linear-gradient(90deg, #6fe2b4, #9bf0c7);
-}
-
-.workspace-fit-grid{
-    display:grid;
-    grid-template-columns:repeat(2, 1fr);
-    gap:12px;
-}
-
-.workspace-mini-stat{
-    padding:14px 16px;
-    border-radius:18px;
-    background:rgba(255,255,255,.03);
-    border:1px solid rgba(255,255,255,.07);
-    display:grid;
-    gap:6px;
-}
-
-.workspace-mini-stat span{
-    font-size:12px;
-    color:var(--muted);
-    text-transform:uppercase;
-    letter-spacing:.06em;
-}
-
-.workspace-note{
-    margin-top:14px;
-    padding:14px 16px;
-    border-radius:18px;
-    background:rgba(255,255,255,.03);
-    border:1px solid rgba(255,255,255,.07);
-}
-
-.workspace-budget-list{
-    display:grid;
-    gap:10px;
-}
-
-.workspace-budget-row{
-    display:flex;
-    justify-content:space-between;
-    gap:12px;
-    padding:14px 16px;
-    border-radius:16px;
-    background:rgba(255,255,255,.03);
-    border:1px solid rgba(255,255,255,.06);
-}
-
-.workspace-budget-amounts{
-    display:grid;
-    gap:6px;
-    text-align:right;
-    font-size:13px;
-}
-
-.workspace-photo-shell{
-    display:grid;
-    gap:14px;
-}
-
-.workspace-photo-main{
-    border-radius:20px;
-    overflow:hidden;
-    border:1px solid rgba(255,255,255,.08);
-    background:rgba(255,255,255,.03);
-    min-height:320px;
-}
-
-.workspace-photo-main img{
-    width:100%;
-    height:100%;
-    max-height:460px;
-    object-fit:cover;
-    display:block;
-}
-
-.workspace-photo-grid{
-    display:grid;
-    grid-template-columns:repeat(4, 1fr);
-    gap:12px;
-}
-
-.workspace-photo-tile{
-    border-radius:16px;
-    overflow:hidden;
-    border:1px solid rgba(255,255,255,.08);
-    background:rgba(255,255,255,.03);
-    min-height:120px;
-}
-
-.workspace-photo-tile img{
-    width:100%;
-    height:100%;
-    min-height:120px;
-    object-fit:cover;
-    display:block;
-}
-
-.studio-grid{
-    display:grid;
-    grid-template-columns:repeat(3, 1fr);
-    gap:14px;
-}
-
-.studio-card{
-    display:grid;
-    gap:10px;
-    padding:18px;
-    border-radius:20px;
-    background:rgba(255,255,255,.03);
-    border:1px solid rgba(255,255,255,.08);
-    text-decoration:none;
-    color:inherit;
-    transition:.18s ease;
-}
-
-.studio-card:hover{
-    transform:translateY(-2px);
-    border-color:rgba(122,184,255,.22);
-}
-
-.studio-icon{
-    font-size:24px;
-}
-
-.studio-title{
-    font-weight:700;
-    font-size:17px;
-}
-
-.studio-sub{
-    color:var(--muted);
-    font-size:14px;
-    line-height:1.45;
-}
-
-.empty-state,
-.empty-state-inline{
-    padding:16px 18px;
-    border-radius:18px;
-    background:rgba(255,255,255,.03);
-    border:1px dashed rgba(255,255,255,.12);
-    color:var(--muted);
-}
-
-@media (max-width: 1180px){
-    .workspace-hero,
-    .workspace-main-grid,
-    .workspace-compare-grid,
-    .studio-grid{
-        grid-template-columns:1fr;
-    }
-
-    .workspace-grid-4{
-        grid-template-columns:repeat(2, 1fr);
-    }
-
-    .workspace-photo-grid{
-        grid-template-columns:repeat(3, 1fr);
-    }
-}
-
-@media (max-width: 720px){
-    .workspace-grid-4,
-    .workspace-fit-grid{
-        grid-template-columns:1fr;
-    }
-
-    .workspace-budget-row{
-        flex-direction:column;
-    }
-
-    .workspace-budget-amounts{
-        text-align:left;
-    }
-
-    .workspace-photo-grid{
-        grid-template-columns:repeat(2, 1fr);
-    }
+@media (max-width:720px){
+  .workspace-grid-4,.workspace-fit-grid,.comp-card-grid{grid-template-columns:1fr}
+  .workspace-budget-row{flex-direction:column}
+  .workspace-budget-amounts{text-align:left}
+  .workspace-photo-grid{grid-template-columns:repeat(2,1fr)}
 }
 </style>
 {% endblock %}

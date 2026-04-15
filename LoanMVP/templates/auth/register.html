@@ -8,6 +8,13 @@ Begin analyzing deals, planning projects, and requesting funding.
 
 {% block auth_content %}
 
+{% if recovery_mode %}
+<div class="ravlo-alert warning" style="margin-bottom: 18px;">
+This workspace is in recovery mode. Create the owner admin account with
+<strong>{{ owner_admin_email }}</strong> to restore access.
+</div>
+{% endif %}
+
 <form method="POST" action="{{ url_for('auth.register') }}" class="ravlo-form">
   {{ form.hidden_tag() }}
 
@@ -45,14 +52,17 @@ Begin analyzing deals, planning projects, and requesting funding.
 
   <div class="ravlo-field">
     <label class="ravlo-label">{{ form.role.label.text }}</label>
-    {{ form.role(class="ravlo-input") }}
+    {{ form.role(class="ravlo-input", disabled=recovery_mode) }}
     {% for error in form.role.errors %}
       <div class="ravlo-alert error">{{ error }}</div>
     {% endfor %}
+    {% if recovery_mode %}
+      <div class="ravlo-alert warning">Role is fixed to Admin during recovery.</div>
+    {% endif %}
   </div>
 
   <button type="submit" class="ravlo-btn primary">
-    Register Account
+    {{ "Restore Owner Admin" if recovery_mode else "Register Account" }}
   </button>
 </form>
 

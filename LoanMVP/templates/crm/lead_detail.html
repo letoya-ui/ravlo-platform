@@ -13,7 +13,7 @@
     <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;">
       <h1><i class="lucide lucide-user"></i> {{ lead.name }}</h1>
       <div style="display:flex;gap:.5rem;flex-wrap:wrap;">
-        <a href="{{ url_for('crm.view_leads') }}" class="btn-outline btn">← Back to Leads</a>
+        <a href="{{ url_for('crm.leads') }}" class="btn-outline btn">← Back to Leads</a>
         <a href="{{ url_for('crm.update_lead', lead_id=lead.id) }}" class="btn"><i class="lucide lucide-pencil"></i> Edit Lead</a>
       </div>
     </div>
@@ -50,8 +50,11 @@
       <p class="muted">No previous contact logged.</p>
       {% endif %}
       <hr style="border-color:#2b2f36;margin:1rem 0;">
-      <form method="POST" action="{{ url_for('crm.update_lead_notes', lead_id=lead.id) }}">
+      <form method="POST" action="{{ url_for('crm.update_lead', lead_id=lead.id) }}">
         <label class="section-title">Add Note or Update Status</label>
+        <input type="hidden" name="name" value="{{ lead.name }}">
+        <input type="hidden" name="email" value="{{ lead.email or '' }}">
+        <input type="hidden" name="phone" value="{{ lead.phone or '' }}">
         <textarea name="notes" placeholder="e.g., Left voicemail or scheduled call..."></textarea>
         <select name="status">
           <option value="">— Select Status —</option>

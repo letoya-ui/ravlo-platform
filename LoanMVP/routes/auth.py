@@ -22,7 +22,7 @@ from LoanMVP.forms import RegisterForm, ResetPasswordForm, ResetPasswordRequestF
 from LoanMVP.services.subscriptions import sync_features_with_subscription
 from LoanMVP.utils.blocking_helpers import is_user_blocked, get_user_block_message
 from LoanMVP.models.user_model import User
-from LoanMVP.models.admin import AccessRequest, UserInvite, LicenseApplication
+from LoanMVP.models.admin import AccessRequest, UserInvite, LicenseApplication, Company
 from LoanMVP.models.investor_models import InvestorProfile
 from flask_mail import Message as MailMessage
 
@@ -35,6 +35,107 @@ RESTRICTED_STAFF_ROLES = {
     "processor",
     "underwriter",
 }
+
+
+def _single_admin_mode_enabled() -> bool:
+    return False
+
+
+def _owner_admin_email() -> str:
+    return (current_app.config.get("OWNER_ADMIN_EMAIL") or "").strip().lower()
+
+
+def _workspace_executive_roles() -> set[str]:
+    return {"executive", "platform_admin", "master_admin", "lending_admin"}
+
+
+def _can_bypass_single_admin_lock(user) -> bool:
+    if not user:
+        return False
+
+    email = (getattr(user, "email", "") or "").strip().lower()
+    if email == _owner_admin_email():
+        return True
+
+    role = (getattr(user, "role", "") or "").strip().lower()
+    return role in _workspace_executive_roles()
+
+
+def _is_executive_dashboard_user(user) -> bool:
+    if not user:
+        return False
+
+    role = (getattr(user, "role", "") or "").strip().lower()
+    return role == "executive"
+
+
+def _owner_admin_exists() -> bool:
+    owner_email = _owner_admin_email()
+    if not owner_email:
+        return False
+    return (
+        db.session.query(User.id)
+        .filter(func.lower(User.email) == owner_email)
+        .first()
+        is not None
+    )
+
+
+def _workspace_recovery_mode() -> bool:
+    return db.session.query(User.id).first() is None
+
+
+def _registration_blocked() -> bool:
+    return False
+
+
+def _auth_page_context() -> dict:
+    return {
+        "recovery_mode": _workspace_recovery_mode(),
+        "owner_admin_email": _owner_admin_email(),
+    }
+
+
+def _default_investor_company_id() -> int | None:
+    company = Company.query.filter(
+        func.lower(Company.name) == "caughman mason loan service"
+    ).first()
+    return getattr(company, "id", None)
+
+
+def _ravlo_company() -> Company:
+    company = Company.query.filter(
+        (func.lower(Company.name) == "ravlo")
+        | (func.lower(func.coalesce(Company.email_domain, "")) == "ravlohq.com")
+    ).first()
+
+    if company:
+        return company
+
+    company = Company(
+        name="Ravlo",
+        email_domain="ravlohq.com",
+        is_active=True,
+        subscription_tier="enterprise",
+    )
+    db.session.add(company)
+    db.session.flush()
+    return company
+
+
+def _default_ravlo_company_id() -> int | None:
+    return getattr(_ravlo_company(), "id", None)
+
+
+def _resolve_registration_company_id(role: str, explicit_company_id=None):
+    role = (role or "").strip().lower()
+    if explicit_company_id:
+        return explicit_company_id
+    if role == "investor":
+        return _default_investor_company_id()
+    if role in _workspace_executive_roles():
+        return _default_ravlo_company_id()
+    return None
 # ============================================================
 # TOKEN HELPERS
 # ============================================================
@@ -137,21 +238,29 @@ def login():
 
         if not user or not user.check_password(password):
             flash("Invalid email or password.", "danger")
-            return render_template("auth/login.html", form=form)
+            return render_template("auth/login.html", form=form, **_auth_page_context())
+
+        if (
+            _single_admin_mode_enabled()
+            and _owner_admin_exists()
+            and not _can_bypass_single_admin_lock(user)
+        ):
+            flash("This workspace is locked to the owner admin and executive leadership accounts.", "warning")
+            return render_template("auth/login.html", form=form, **_auth_page_context())
 
         # ⭐ STEP 3: Sync subscription → features
         sync_features_with_subscription(user.id)
 
         if is_user_blocked(user):
             flash(get_user_block_message(user), "danger")
-            return render_template("auth/login.html", form=form)
+            return render_template("auth/login.html", form=form, **_auth_page_context())
 
         # Continue login
         login_user(user)
         next_page = request.args.get("next")
         return redirect(url_for("auth.post_login_redirect", next=next_page))
 
-    return render_template("auth/login.html", form=form)
+    return render_template("auth/login.html", form=form, **_auth_page_context())
 
 
 
@@ -201,7 +310,7 @@ def register_from_invite(token):
             username=full_name or None,
             email=invite.email,
             role=invite.role,
-            company_id=invite.company_id,
+            company_id=_resolve_registration_company_id(invite.role, invite.company_id),
             password_hash=generate_password_hash(password),
             is_active=True,
             invite_accepted=True,
@@ -240,17 +349,43 @@ def logout():
 # ============================================================
 @auth_bp.route("/register", methods=["GET", "POST"])
 def register():
+    recovery_mode = _workspace_recovery_mode()
+
+    if _registration_blocked():
+        flash("Self-serve registration is disabled for this workspace.", "warning")
+        return redirect(url_for("auth.login"))
+
     form = RegisterForm()
 
     if form.validate_on_submit():
-        role = (form.role.data or "").strip().lower()
         full_name = (form.full_name.data or "").strip()
         email = (form.email.data or "").strip().lower()
+        owner_email = _owner_admin_email()
+        role = (form.role.data or "").strip().lower()
+
+        if recovery_mode:
+            if owner_email and email != owner_email:
+                flash(
+                    f"Recovery mode is active. Register the owner admin account using {owner_email}.",
+                    "warning",
+                )
+                return render_template(
+                    "auth/register.html",
+                    form=form,
+                    recovery_mode=recovery_mode,
+                    owner_admin_email=owner_email,
+                )
+            role = "admin"
 
         existing = User.query.filter_by(email=email).first()
         if existing:
             flash("An account with that email already exists.", "danger")
-            return render_template("auth/register.html", form=form)
+            return render_template(
+                "auth/register.html",
+                form=form,
+                recovery_mode=recovery_mode,
+                owner_admin_email=owner_email,
+            )
 
         parts = full_name.split(None, 1)
         first_name = parts[0] if parts else ""
@@ -262,6 +397,7 @@ def register():
             username=full_name or None,
             email=email,
             role=role,
+            company_id=_resolve_registration_company_id(role),
             is_active=True,
         )
 
@@ -271,6 +407,10 @@ def register():
         db.session.commit()
 
         login_user(user)
+
+        if recovery_mode:
+            flash("Owner admin account restored. You can now invite or create users again.", "success")
+            return redirect(url_for("admin.dashboard"))
 
         flash("Welcome to Ravlo. Let's set up your profile.", "info")
 
@@ -282,7 +422,27 @@ def register():
     if request.method == "POST":
         flash("Please correct the errors in the form.", "danger")
 
-    return render_template("auth/register.html", form=form)
+    return render_template(
+        "auth/register.html",
+        form=form,
+        recovery_mode=recovery_mode,
+        owner_admin_email=_owner_admin_email(),
+    )
+
+
+@auth_bp.route("/restore-owner-admin", methods=["GET", "POST"])
+def restore_owner_admin():
+    if not _workspace_recovery_mode():
+        flash("Owner admin recovery is only available when the workspace needs to be restored.", "info")
+        return redirect(url_for("auth.login"))
+
+    if request.method == "POST":
+        return redirect(url_for("auth.register"))
+
+    return render_template(
+        "auth/restore_owner_admin.html",
+        owner_admin_email=_owner_admin_email(),
+    )
 
 
 @auth_bp.route("/post-login-redirect")
@@ -295,6 +455,9 @@ def post_login_redirect():
 
     if role == "admin" and current_user.company_id:
         return redirect(url_for("admin.company_dashboard", company_id=current_user.company_id))
+
+    if _is_executive_dashboard_user(current_user):
+        return redirect(url_for("executive.dashboard"))
 
     if role in ["admin", "platform_admin", "master_admin", "lending_admin"]:
         return redirect(url_for("admin.dashboard"))
@@ -312,6 +475,10 @@ def post_login_redirect():
 
 @auth_bp.route("/register_borrower", methods=["GET", "POST"])
 def register_borrower():
+    if _registration_blocked():
+        flash("Borrower registration is disabled for this workspace.", "warning")
+        return redirect(url_for("auth.login"))
+
     if request.method == "POST":
         full_name = (request.form.get("full_name") or "").strip()
         email = (request.form.get("email") or "").strip().lower()
@@ -416,6 +583,10 @@ def forgot_password():
 
 @auth_bp.route("/request-access", methods=["GET", "POST"])
 def request_access():
+    if _registration_blocked():
+        flash("Access requests are disabled while single-admin mode is active.", "warning")
+        return redirect(url_for("auth.login"))
+
     requested_role = (request.args.get("requested_role") or request.form.get("requested_role") or "").strip().lower()
 
     if requested_role == "loan officer":
@@ -598,7 +769,7 @@ def accept_invite(token):
             user.last_name = last_name or user.last_name
             if not user.username:
                 user.username = f"{first_name} {last_name}".strip() or user.email
-            user.company_id = invite.company_id
+            user.company_id = _resolve_registration_company_id(invite.role, invite.company_id)
             user.role = invite.role
             user.invite_accepted = True
             user.is_active = True
@@ -611,7 +782,7 @@ def accept_invite(token):
                 email=invite.email,
                 password_hash=generate_password_hash(password),
                 role=invite.role,
-                company_id=invite.company_id,
+                company_id=_resolve_registration_company_id(invite.role, invite.company_id),
                 is_active=True,
                 invite_accepted=True,
                 onboarding_complete=False,

@@ -29,6 +29,8 @@
           {% include "layouts/_sidebar_processor.html" %}
         {% elif current_user.role == "underwriter" %}
           {% include "layouts/_sidebar_underwriter.html" %}
+        {% elif current_user.role == "executive" %}
+          {% include "layouts/_sidebar_executive.html" %}
         {% elif current_user.role in ["admin", "platform_admin", "master_admin", "lending_admin"] %}
           {% include "layouts/_sidebar_admin.html" %}
         {% else %}
@@ -62,6 +64,16 @@
           </div>
 
           {% if current_user.is_authenticated %}
+          <form method="POST" action="{{ url_for('auth.logout') }}" class="re-topbar-logout">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="re-btn ghost sm">
+              <i class="lucide lucide-log-out"></i>
+              Logout
+            </button>
+          </form>
+          {% endif %}
+
+          {% if current_user.is_authenticated %}
           <div class="re-user-menu">
             <div class="re-user-chip-top">
               <div class="re-user-avatar">
@@ -83,9 +95,9 @@
 
               <div class="re-divider"></div>
 
-              <form method="POST" action="{{ url_for('auth.logout') }}">
+              <form method="POST" action="{{ url_for('auth.logout') }}" class="re-user-dropdown-form">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <button type="submit" class="danger" style="background:none;border:none;padding:0;cursor:pointer;font:inherit;text-align:left;width:100%;">
+                <button type="submit" class="re-user-dropdown-btn danger">
                   <i class="icon lucide lucide-log-out"></i>
                   Logout
                 </button>

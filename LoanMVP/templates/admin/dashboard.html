@@ -1,19 +1,30 @@
 {% extends "layouts/ravlo_employee_base.html" %}
-{% block title %}Admin • Dashboard{% endblock %}
+{% set is_owner_executive = current_user.role == "admin" and owner_admin_email is defined and (current_user.email or "")|lower == owner_admin_email %}
+{% set is_executive_dashboard = is_owner_executive or current_user.role == "executive" %}
+{% set executive_company_name = company.name if company else (current_user.company.name if current_user.company else "Ravlo") %}
+{% block title %}{% if is_executive_dashboard %}{{ executive_company_name }} Executive Dashboard{% else %}Admin • Dashboard{% endif %}{% endblock %}
 
-{% block page_title %}Admin Command Center{% endblock %}
+{% block page_title %}{% if is_executive_dashboard %}{{ executive_company_name }} Executive Dashboard{% else %}Admin Command Center{% endif %}{% endblock %}
 {% block page_subline %}
+{% if is_executive_dashboard %}
+Executive oversight for {{ executive_company_name }}, including users, onboarding, invites, lending operations, and platform visibility.
+{% else %}
 Central system management for users, onboarding, invites, lending operations, and platform visibility.
+{% endif %}
 {% endblock %}
 
 {% block topbar_actions %}
-  <a class="re-btn primary sm" href="{% if company %}{{ url_for('admin.invite_team_member', company_id=company.id) }}{% else %}#{% endif %}">
+  <a class="re-btn primary sm" href="{% if company %}{{ url_for('admin.invite_team_member', company_id=company.id) }}{% else %}{{ url_for('admin.companies') }}{% endif %}">
     <i class="lucide lucide-user-plus"></i>
     Send Register Request
   </a>
   <a class="re-btn ghost sm" href="{{ url_for('system.users') }}">
     <i class="lucide lucide-users"></i>
     Manage Users
+  </a>
+  <a class="re-btn ghost sm" href="{{ url_for('admin.demo_center') }}">
+    <i class="lucide lucide-panels-top-left"></i>
+    Demo Dashboards
   </a>
   <a class="re-btn ghost sm" href="{{ url_for('admin.access_requests') }}">
     <i class="lucide lucide-inbox"></i>
@@ -33,12 +44,16 @@ Central system management for users, onboarding, invites, lending operations, an
 
   <section class="re-card pad admin-hero">
     <div class="admin-hero__left">
-      <div class="eyebrow">ADMIN COMMAND CENTER</div>
+      <div class="eyebrow">{% if is_executive_dashboard %}{{ executive_company_name|upper }} EXECUTIVE DASHBOARD{% else %}ADMIN COMMAND CENTER{% endif %}</div>
       <h1 class="admin-hero__title">
         Welcome, {{ current_user.full_name or current_user.username or current_user.email or 'Admin' }}
       </h1>
       <div class="text-muted admin-hero__copy">
+        {% if is_executive_dashboard %}
+        Executive oversight for {{ executive_company_name }}, including users, onboarding, invites, lending operations, and platform visibility.
+        {% else %}
         Central system management for users, onboarding, invites, lending operations, and platform visibility.
+        {% endif %}
       </div>
     </div>
 
@@ -46,6 +61,10 @@ Central system management for users, onboarding, invites, lending operations, an
       <a class="re-btn primary" href="{{ url_for('admin.analytics') }}">
         <i class="lucide lucide-bar-chart-3"></i>
         View Analytics
+      </a>
+      <a class="re-btn ghost" href="{{ url_for('admin.demo_center') }}">
+        <i class="lucide lucide-panels-top-left"></i>
+        Demo Center
       </a>
       <a class="re-btn ghost" href="{{ url_for('admin.access_requests') }}">
         <i class="lucide lucide-inbox"></i>
@@ -65,6 +84,21 @@ Central system management for users, onboarding, invites, lending operations, an
   <div class="admin-layout">
 
     <section class="admin-main-col">
+
+      {% if single_admin_mode %}
+      <section class="re-card pad" style="margin-bottom:16px; border:1px solid rgba(122,184,255,.24); background:linear-gradient(135deg, rgba(17,31,48,.95), rgba(11,21,34,.94));">
+        <div class="section-head">
+          <div>
+            <div class="eyebrow">WORKSPACE MODE</div>
+            <h3 style="margin:.35rem 0 .2rem;">Single Admin Lock</h3>
+            <div class="re-card-subtitle">
+              Access is limited to {{ owner_admin_email }} and approved executive leadership accounts. Self-serve registration is disabled, but executive-approved invites remain available.
+            </div>
+          </div>
+          <a class="re-btn ghost sm" href="{{ url_for('system.users') }}">Review Users</a>
+        </div>
+      </section>
+      {% endif %}
 
       <section class="re-grid-4 admin-kpi-grid">
         <div class="re-stat">
@@ -135,6 +169,35 @@ Central system management for users, onboarding, invites, lending operations, an
             </div>
           </div>
           <div id="chart_users" class="chart-box"></div>
+        </div>
+      </section>
+
+      <section class="re-card pad">
+        <div class="section-head">
+          <div>
+            <div class="eyebrow">DEMO SURFACES</div>
+            <h3 style="margin:.35rem 0 .2rem;">Role Dashboard Previews</h3>
+            <div class="re-card-subtitle">Investor, partner, and lending role demos prepared for walkthroughs.</div>
+          </div>
+          <a class="re-btn ghost sm" href="{{ url_for('admin.demo_center') }}">Open Demo Center</a>
+        </div>
+
+        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:14px; margin-top:16px;">
+          {% for demo in demo_dashboards %}
+          <div style="padding:16px; border-radius:18px; border:1px solid rgba(255,255,255,.08); background:rgba(255,255,255,.02);">
+            <div style="font-size:.78rem; letter-spacing:.12em; text-transform:uppercase; color:#8ec5ff; font-weight:800;">{{ demo.theme }}</div>
+            <h4 style="margin:.45rem 0 .35rem;">{{ demo.role }}</h4>
+            <div style="color:#9fb0bf; font-size:.94rem; min-height:42px;">{{ demo.tagline }}</div>
+            <div style="display:grid; gap:8px; margin-top:14px;">
+              {% for stat in demo.kpis %}
+              <div style="display:flex; justify-content:space-between; gap:10px; font-size:.92rem;">
+                <span style="color:#93a6b7;">{{ stat.label }}</span>
+                <strong>{{ stat.value }}</strong>
+              </div>
+              {% endfor %}
+            </div>
+          </div>
+          {% endfor %}
         </div>
       </section>
 
@@ -292,7 +355,7 @@ Central system management for users, onboarding, invites, lending operations, an
             <i class="lucide lucide-file-text"></i>
             Reports
           <a class="re-btn primary sm"
-             href="{% if company %}{{ url_for('admin.invite_team_member', company_id=company.id) }}{% else %}#{% endif %}">
+             href="{% if company %}{{ url_for('admin.invite_team_member', company_id=company.id) }}{% else %}{{ url_for('admin.companies') }}{% endif %}">
             <i class="lucide lucide-send"></i>
             Send Invite
           </a>             

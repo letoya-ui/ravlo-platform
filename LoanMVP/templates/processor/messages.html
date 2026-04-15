@@ -9,7 +9,7 @@
 
             <!-- HEADER WITH NEW MESSAGE BUTTON -->
             <div class="messages-header">
-                <h2><i class="lucide lucide-messages-square"></i> Messages</h2>
+                <h2><i class="lucide lucide-messages-square"></i> Assigned File Messages</h2>
 
                 <a href="{{ url_for('processor.new_message') }}" class="new-msg-btn">
                     <i class="lucide lucide-plus"></i> New Message
@@ -57,7 +57,7 @@
         </div>
 
             {% else %}
-                <p class="muted">No conversations yet. Start one using the button above.</p>
+                <p class="muted">No assigned borrower or teammate conversations yet.</p>
             {% endif %}
 
         </div>
@@ -67,7 +67,7 @@
         <div class="card">
             <h3>Smart Tip</h3>
             <p class="muted">
-                Start a new message to coordinate tasks, request documents, or follow up with borrowers.
+                Processors can only message assigned borrowers, loan officers, and underwriters tied to their files.
             </p>
         </div>
     </aside>
