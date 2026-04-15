@@ -4,6 +4,7 @@ from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Tuple
 
 from LoanMVP.services.realtor_provider import search_realtor_for_sale
+from LoanMVP.services.realtor_provider import fetch_realtor_photos
 from LoanMVP.services.attom_service import build_attom_dealfinder_profile, AttomServiceError
 from LoanMVP.services.rentcast_service import (
     get_rentcast_rent_estimate,
@@ -566,6 +567,7 @@ class PropertyIntelligenceOrchestrator:
                 enriched.append(cp)
                 continue
 
+            cp = self._enrich_with_realtor_photos(cp)
             cp = self._enrich_with_attom(cp)
             cp = self._enrich_with_rentcast(cp)
 
@@ -575,6 +577,22 @@ class PropertyIntelligenceOrchestrator:
             enriched.append(cp)
 
         return enriched
+
+    def _enrich_with_realtor_photos(self, cp: CanonicalProperty) -> CanonicalProperty:
+        property_id = cp.provider_ids.get("realtor")
+        if not property_id:
+            return cp
+
+        try:
+            extra_photos = fetch_realtor_photos(property_id)
+        except Exception:
+            extra_photos = []
+
+        if extra_photos:
+            cp.photos = self._normalize_photo_candidates(cp.photos, extra_photos)
+            cp.primary_photo = _resolve_photo(cp.primary_photo, cp.photos)
+
+        return cp
 
     def _enrich_with_attom(self, cp: CanonicalProperty) -> CanonicalProperty:
         if not self.budget.use("attom_detail", 1):

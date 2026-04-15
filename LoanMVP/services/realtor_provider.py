@@ -48,33 +48,39 @@ def _headers(include_json: bool = False, host: Optional[str] = None) -> Dict[str
 def _extract_photos(raw_photos: Any) -> List[str]:
     photos: List[str] = []
 
+    def _ordered_photo_values(node: Dict[str, Any]) -> List[str]:
+        return [
+            node.get("full"),
+            node.get("full_url"),
+            node.get("fullSize"),
+            node.get("full_size"),
+            node.get("original"),
+            node.get("original_url"),
+            node.get("large"),
+            node.get("large_url"),
+            node.get("href"),
+            node.get("url"),
+            node.get("src"),
+            node.get("photo"),
+            node.get("image"),
+            node.get("thumbnail"),
+        ]
+
     if isinstance(raw_photos, list):
         for p in raw_photos:
             if isinstance(p, str) and p.strip():
                 photos.append(p.strip())
             elif isinstance(p, dict):
-                url = (
-                    p.get("href")
-                    or p.get("url")
-                    or p.get("src")
-                    or p.get("photo")
-                    or p.get("image")
-                    or p.get("thumbnail")
-                )
-                if isinstance(url, str) and url.strip():
-                    photos.append(url.strip())
+                for url in _ordered_photo_values(p):
+                    if isinstance(url, str) and url.strip():
+                        photos.append(url.strip())
+                        break
 
     elif isinstance(raw_photos, dict):
-        direct = (
-            raw_photos.get("href")
-            or raw_photos.get("url")
-            or raw_photos.get("src")
-            or raw_photos.get("photo")
-            or raw_photos.get("image")
-            or raw_photos.get("thumbnail")
-        )
-        if isinstance(direct, str) and direct.strip():
-            photos.append(direct.strip())
+        for direct in _ordered_photo_values(raw_photos):
+            if isinstance(direct, str) and direct.strip():
+                photos.append(direct.strip())
+                break
 
         for key in ("photos", "images", "media", "gallery"):
             nested = raw_photos.get(key)

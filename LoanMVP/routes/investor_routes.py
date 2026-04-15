@@ -3172,6 +3172,45 @@ def api_property_tool_search():
             "results": [],
         }), 500
 
+
+@investor_bp.route("/api/property_tool_image", methods=["GET"])
+@login_required
+@role_required("investor")
+def api_property_tool_image():
+    source_url = (request.args.get("src") or "").strip()
+    if not source_url:
+        abort(400)
+
+    parsed = urlparse(source_url)
+    if parsed.scheme not in {"http", "https"}:
+        abort(400)
+
+    try:
+        upstream = requests.get(
+            source_url,
+            timeout=12,
+            stream=True,
+            headers={
+                "User-Agent": "Mozilla/5.0 Ravlo/1.0",
+                "Accept": "image/avif,image/webp,image/apng,image/*,*/*;q=0.8",
+                "Referer": f"{request.scheme}://{request.host}/",
+            },
+        )
+        if not upstream.ok:
+            abort(404)
+
+        content_type = upstream.headers.get("Content-Type", "image/jpeg")
+        if not content_type.startswith("image/"):
+            abort(415)
+
+        payload = io.BytesIO(upstream.content)
+        response = send_file(payload, mimetype=content_type, conditional=True)
+        response.headers["Cache-Control"] = "public, max-age=3600"
+        return response
+    except Exception:
+        current_app.logger.warning("property_tool_image proxy failed for %s", source_url, exc_info=True)
+        abort(404)
+
 @investor_bp.route("/api/property_detail", methods=["POST"])
 @login_required
 @role_required("investor")
