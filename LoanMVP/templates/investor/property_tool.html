@@ -399,11 +399,29 @@ function resolveImage(r){
   return sorted[0] || PLACEHOLDER_IMAGE;
 }
 
+function osmTileUrl(lat, lng, zoom){
+  const n = Math.pow(2, zoom);
+  const x = Math.floor((lng + 180) / 360 * n);
+  const latRad = lat * Math.PI / 180;
+  const y = Math.floor((1 - Math.log(Math.tan(latRad) + 1 / Math.cos(latRad)) / Math.PI) / 2 * n);
+  return `https://tile.openstreetmap.org/${zoom}/${x}/${y}.png`;
+}
+
 function resolveCardImageSrc(r){
   const raw = resolveImage(r);
-  if (!raw || raw === PLACEHOLDER_IMAGE) return PLACEHOLDER_IMAGE;
-  if (raw.startsWith("/") || raw.startsWith("data:")) return raw;
-  return `${IMAGE_PROXY_URL}?src=${encodeURIComponent(raw)}`;
+  if (raw && raw !== PLACEHOLDER_IMAGE) {
+    if (raw.startsWith("/") || raw.startsWith("data:")) return raw;
+    return `${IMAGE_PROXY_URL}?src=${encodeURIComponent(raw)}`;
+  }
+
+  // OpenStreetMap tile fallback using lat/lng when no listing photo exists
+  const lat = parseFloat(r.latitude);
+  const lng = parseFloat(r.longitude);
+  if (Number.isFinite(lat) && Number.isFinite(lng)) {
+    return `${IMAGE_PROXY_URL}?src=${encodeURIComponent(osmTileUrl(lat, lng, 16))}`;
+  }
+
+  return PLACEHOLDER_IMAGE;
 }
 
 function buildPropertyPayload(r, analyzeId, saveId){
