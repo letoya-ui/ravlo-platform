@@ -250,12 +250,21 @@ def create_app():
     @app.errorhandler(Exception)
     def handle_any_exception(e):
         from werkzeug.exceptions import HTTPException
+
         if isinstance(e, HTTPException):
             return e
+
+        try:
+            db.session.rollback()
+        except Exception:
+            pass
+
         current_app.logger.exception("Unhandled application error")
+
         if current_app.debug or current_app.testing:
             tb = traceback.format_exc()
             return Response(f"<pre>{tb}</pre>", mimetype="text/plain"), 500
+
         return render_template("errors/500.html"), 500
 
     @app.get("/robots.txt")
@@ -298,13 +307,22 @@ def create_app():
     @app.context_processor
     def inject_notifications():
         unread = 0
-        if current_user.is_authenticated:
+
+        if not current_user.is_authenticated:
+            return dict(unread_count=0)
+
+        try:
             borrower = BorrowerProfile.query.filter_by(user_id=current_user.id).first()
             if borrower:
                 unread = LoanNotification.query.filter_by(
                     borrower_id=borrower.id,
                     is_read=False,
                 ).count()
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.exception("inject_notifications failed: %s", e)
+            unread = 0
+
         return dict(unread_count=unread)
     
     
