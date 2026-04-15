@@ -141,12 +141,20 @@ def _normalize_photo_list(value) -> list[str]:
     seen = set()
     clean = []
     for url in photos:
-        if url not in seen:
+        if url not in seen and not _is_map_tile_url(url):
             seen.add(url)
             clean.append(url)
 
     clean.sort(key=_photo_score, reverse=True)
     return clean
+
+
+def _is_map_tile_url(url):
+    """Return True if *url* is an OpenStreetMap (or similar) map-tile URL."""
+    if not url:
+        return False
+    lower = str(url).lower()
+    return "tile.openstreetmap.org" in lower or "tiles.mapbox.com" in lower
 
 
 def _resolve_photo(primary=None, gallery=None):
