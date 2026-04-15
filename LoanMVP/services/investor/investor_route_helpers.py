@@ -1084,10 +1084,12 @@ def _stable_render_seed(*parts) -> int:
     image URLs, etc.) and hashes them into a stable integer seed.
     Falls back to a random seed when all parts are empty/None.
     """
+    import hashlib
     combined = "|".join(safe_str(p) for p in parts if p is not None)
     if not combined.strip("|"):
         return random.randint(1000, 999999)
-    return abs(hash(combined)) % 999999 + 1
+    digest = int(hashlib.md5(combined.encode()).hexdigest(), 16)
+    return digest % 999999 + 1
 
 
 def _normalize_style_preset(style: str | None) -> str:
@@ -1130,6 +1132,7 @@ def _set_featured_rehab(deal, after_url: str | None, before_url: str | None = No
         featured["style_prompt"] = style_prompt
     results["featured_rehab"] = featured
     _set_if_attr(deal, "results_json", results)
+    return featured
 
 
 def _get_rehab_mockups_for_deal(deal) -> List[Dict[str, Any]]:
