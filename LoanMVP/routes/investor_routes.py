@@ -5104,10 +5104,18 @@ def deal_rehab_generate_variant():
         _set_deal_render_processing(deal)
         db.session.commit()
 
+        results = _deal_results(deal)
+        rehab_project = results.get("rehab_project", {}) or {}
+
         seed_media = _resolve_rehab_before_seed(deal)
         before_url = (seed_media.get("url") or "").strip()
         if not before_url:
-            raise RuntimeError("Before image is required before generating another concept.")
+            _clear_deal_render_processing(deal)
+            db.session.commit()
+            return jsonify({
+                "status": "error",
+                "message": "Before image is required before generating another concept."
+            }), 400
 
         try:
             raw_before = download_image_bytes(before_url)
@@ -5115,7 +5123,12 @@ def deal_rehab_generate_variant():
             raw_before = None
 
         if not raw_before:
-            raise RuntimeError("Unable to load saved before image.")
+            _clear_deal_render_processing(deal)
+            db.session.commit()
+            return jsonify({
+                "status": "error",
+                "message": "Unable to load saved before image."
+            }), 422
 
         image_base64 = base64.b64encode(raw_before).decode("utf-8")
 
@@ -5245,7 +5258,7 @@ def build_studio(deal_id=None):
     # -----------------------------
     # Canonical source: deal.results_json
     # -----------------------------
-    results = deal.results_json or {} if deal else {}
+    results = (deal.results_json or {}) if deal else {}
     build_project = results.get("build_project", {}) or {}
     build_analysis = results.get("build_analysis", {}) or {}
 
@@ -7842,7 +7855,14 @@ def deal_rehab_generate():
     try:
         data = request.form.to_dict() or {}
 
-        deal_id = _normalize_int(data.get("deal_id"))
+        raw_deal_id = data.get("deal_id")
+        deal_id = _normalize_int(raw_deal_id)
+        if raw_deal_id and not deal_id:
+            return jsonify({
+                "status": "error",
+                "message": "Invalid deal ID."
+            }), 400
+
         if deal_id:
             deal = Deal.query.filter_by(id=deal_id, user_id=current_user.id).first()
             if not deal:
@@ -7867,6 +7887,17 @@ def deal_rehab_generate():
         rehab_level = (data.get("rehab_level") or "medium").strip().lower()
         save_to_deal = str(data.get("save_to_deal") or "true").lower() in ("1", "true", "yes", "on")
 
+        try:
+            strength = float(data.get("strength") or 0.58)
+        except (ValueError, TypeError):
+            if deal is not None:
+                _clear_deal_render_processing(deal)
+                db.session.commit()
+            return jsonify({
+                "status": "error",
+                "message": "Invalid strength value; must be a number."
+            }), 400
+
         before_image = request.files.get("before_image")
         image_url = (data.get("image_url") or "").strip()
         image_base64 = ""
@@ -7877,7 +7908,13 @@ def deal_rehab_generate():
         if before_image:
             raw_before = before_image.read()
             if not raw_before:
-                raise RuntimeError("Empty before image upload.")
+                if deal is not None:
+                    _clear_deal_render_processing(deal)
+                    db.session.commit()
+                return jsonify({
+                    "status": "error",
+                    "message": "Empty before image upload."
+                }), 400
 
             image_base64 = base64.b64encode(raw_before).decode("utf-8")
 
@@ -7908,7 +7945,13 @@ def deal_rehab_generate():
                     raw_before = None
 
         if not image_base64:
-            raise RuntimeError("Provide a before photo or saved rehab before image.")
+            if deal is not None:
+                _clear_deal_render_processing(deal)
+                db.session.commit()
+            return jsonify({
+                "status": "error",
+                "message": "Provide a before photo or saved rehab before image."
+            }), 400
 
         property_type = (
             (data.get("property_type") or "").strip()
@@ -7951,7 +7994,7 @@ def deal_rehab_generate():
             "count": 1,
             "steps": 22,
             "guidance": 7.2,
-            "strength": float(data.get("strength") or 0.58),
+            "strength": strength,
             "width": 768,
             "height": 768,
             "seed": stable_seed,
