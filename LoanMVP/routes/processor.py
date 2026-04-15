@@ -4,7 +4,7 @@
 import os
 from flask import (
     Blueprint, render_template, request, redirect,
-    url_for, flash, jsonify, current_app, send_from_directory
+    url_for, flash, jsonify, current_app, send_from_directory, abort
 )
 from flask_login import login_required, current_user
 from datetime import datetime
@@ -729,13 +729,19 @@ def submit_underwriter(loan_id):
     return redirect(f"/processor/file/{loan.id}")
 
 @processor_bp.route("/view-file/<path:filename>")
+@login_required
+@role_required("processor")
 def view_file(filename):
+    safe_name = secure_filename(filename)
+    if not safe_name:
+        abort(400, description="Invalid filename")
+
     upload_folder = current_app.config.get("UPLOAD_FOLDER")
 
     if not upload_folder:
         upload_folder = os.path.join(current_app.instance_path, "uploads")
 
-    return send_from_directory(upload_folder, filename)
+    return send_from_directory(upload_folder, safe_name)
 
 # ---------------------------------------------------------
 # 📤 Upload Document
