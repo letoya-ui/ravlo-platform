@@ -16,6 +16,52 @@ except ModuleNotFoundError:
 from flask import current_app
 
 
+def _photo_score(url: str | None) -> int:
+    value = str(url or "").lower()
+    if not value:
+        return -10_000
+
+    score = 0
+
+    penalties = (
+        "thumbnail",
+        "thumb",
+        "small",
+        "tiny",
+        "100x100",
+        "150x150",
+        "200x200",
+        "300x",
+        "avatar",
+        "icon",
+    )
+    bonuses = (
+        "full",
+        "original",
+        "orig",
+        "large",
+        "xl",
+        "2048",
+        "1920",
+        "1600",
+        "1200",
+        "hero",
+    )
+
+    for token in penalties:
+        if token in value:
+            score -= 40
+
+    for token in bonuses:
+        if token in value:
+            score += 20
+
+    if value.startswith("https://"):
+        score += 2
+
+    return score
+
+
 SPACES_BUCKET = os.getenv("SPACES_BUCKET", "")
 SPACES_REGION = os.getenv("SPACES_REGION", "")
 SPACES_ENDPOINT = os.getenv("SPACES_ENDPOINT", "")
@@ -35,20 +81,46 @@ def _normalize_photo_list(value) -> list[str]:
             if isinstance(item, str) and item.strip():
                 photos.append(item.strip())
             elif isinstance(item, dict):
-                url = (
-                    item.get("url")
-                    or item.get("src")
-                    or item.get("href")
-                    or item.get("photo")
-                    or item.get("image")
-                    or item.get("thumbnail")
-                )
-                if isinstance(url, str) and url.strip():
-                    photos.append(url.strip())
+                ordered = [
+                    item.get("full"),
+                    item.get("full_url"),
+                    item.get("fullSize"),
+                    item.get("full_size"),
+                    item.get("original"),
+                    item.get("original_url"),
+                    item.get("large"),
+                    item.get("large_url"),
+                    item.get("url"),
+                    item.get("src"),
+                    item.get("href"),
+                    item.get("photo"),
+                    item.get("image"),
+                    item.get("thumbnail"),
+                ]
+                best = None
+                for candidate in ordered:
+                    if isinstance(candidate, str) and candidate.strip():
+                        best = candidate.strip()
+                        break
+                if best:
+                    photos.append(best)
+
+                for key in ("photos", "images", "media", "gallery", "variants"):
+                    nested = item.get(key)
+                    if nested:
+                        photos.extend(_normalize_photo_list(nested))
 
     elif isinstance(value, dict):
         direct_url = (
-            value.get("url")
+            value.get("full")
+            or value.get("full_url")
+            or value.get("fullSize")
+            or value.get("full_size")
+            or value.get("original")
+            or value.get("original_url")
+            or value.get("large")
+            or value.get("large_url")
+            or value.get("url")
             or value.get("src")
             or value.get("href")
             or value.get("photo")
@@ -58,7 +130,7 @@ def _normalize_photo_list(value) -> list[str]:
         if isinstance(direct_url, str) and direct_url.strip():
             photos.append(direct_url.strip())
 
-        for key in ("photos", "images", "media", "gallery"):
+        for key in ("photos", "images", "media", "gallery", "variants"):
             nested = value.get(key)
             if nested:
                 photos.extend(_normalize_photo_list(nested))
@@ -73,16 +145,13 @@ def _normalize_photo_list(value) -> list[str]:
             seen.add(url)
             clean.append(url)
 
+    clean.sort(key=_photo_score, reverse=True)
     return clean
 
 
 def _resolve_photo(primary=None, gallery=None):
-    gallery = gallery or []
-    if primary:
-        return primary
-    if gallery:
-        return gallery[0]
-    return ""
+    candidates = _normalize_photo_urls(primary, gallery)
+    return candidates[0] if candidates else ""
 
 
 def _normalize_photo_urls(*sources):
@@ -95,6 +164,7 @@ def _normalize_photo_urls(*sources):
                 seen.add(url)
                 merged.append(url)
 
+    merged.sort(key=_photo_score, reverse=True)
     return merged
 
 
@@ -249,6 +319,8 @@ def _extract_listing_photos_from_payload(payload) -> list[str]:
         payload.get("primary_photo"),
         payload.get("photo"),
         payload.get("thumbnail"),
+        (payload.get("workspace_analysis") or {}).get("listing_photos") if isinstance(payload.get("workspace_analysis"), dict) else None,
+        (payload.get("workspace_analysis") or {}).get("image_url") if isinstance(payload.get("workspace_analysis"), dict) else None,
     )
 
 
