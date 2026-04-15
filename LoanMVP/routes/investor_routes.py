@@ -3866,6 +3866,74 @@ def deal_workspace():
         mode=mode,
     )
 
+@investor_bp.route("/deals", methods=["GET"])
+@investor_bp.route("/deals", methods=["GET"])
+@login_required
+@role_required("investor")
+def deals_list():
+    q = (request.args.get("q") or "").strip()
+    status_filter = (request.args.get("status") or "").strip().lower()
+    strategy_filter = (request.args.get("strategy") or "").strip().lower()
+
+    investor_profile = InvestorProfile.query.filter_by(user_id=current_user.id).first()
+
+    query = Deal.query.filter_by(user_id=current_user.id)
+
+    if q:
+        like_q = f"%{q}%"
+        query = query.filter(
+            db.or_(
+                Deal.title.ilike(like_q),
+                Deal.address.ilike(like_q),
+                Deal.city.ilike(like_q),
+                Deal.state.ilike(like_q),
+                Deal.zip_code.ilike(like_q),
+            )
+        )
+
+    if status_filter:
+        query = query.filter(db.func.lower(Deal.status) == status_filter)
+
+    if strategy_filter:
+        query = query.filter(
+            db.func.lower(
+                db.func.coalesce(Deal.recommended_strategy, Deal.strategy)
+            ) == strategy_filter
+        )
+
+    deals = (
+        query
+        .order_by(Deal.updated_at.desc(), Deal.id.desc())
+        .all()
+    )
+
+    budget_map = {}
+    if deals and investor_profile:
+        deal_ids = [d.id for d in deals]
+
+        budgets = (
+            ProjectBudget.query
+            .filter(
+                ProjectBudget.investor_profile_id == investor_profile.id,
+                ProjectBudget.deal_id.in_(deal_ids)
+            )
+            .order_by(ProjectBudget.updated_at.desc(), ProjectBudget.id.desc())
+            .all()
+        )
+
+        for b in budgets:
+            if b.deal_id and b.deal_id not in budget_map:
+                budget_map[b.deal_id] = b
+
+    return render_template(
+        "investor/deals_list.html",
+        deals=deals,
+        budget_map=budget_map,
+        q=q,
+        status_filter=status_filter,
+        strategy_filter=strategy_filter,
+    )
+    
 @investor_bp.route("/deals/<int:deal_id>", methods=["GET"])
 @login_required
 @role_required("investor")
