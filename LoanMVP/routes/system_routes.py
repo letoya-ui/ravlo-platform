@@ -14,7 +14,7 @@ from LoanMVP.models.system_models import System, SystemLog, AuditLog, SystemSett
 from LoanMVP.models.crm_models import Lead, Message, CRMNote
 from LoanMVP.models.loan_models import LoanApplication, LoanNotification
 from LoanMVP.models.document_models import DocumentRequest
-from LoanMVP.models.investor_models import DealConversation, FundingRequest
+from LoanMVP.models.investor_models import DealConversation, DealMessage, FundingRequest
 from LoanMVP.models.user_model import User
 
 from LoanMVP.utils.decorators import role_required
@@ -279,6 +279,16 @@ def delete_user(user_id):
             (Message.sender_id == user.id) | (Message.receiver_id == user.id)
         ).delete(synchronize_session="fetch")
         CRMNote.query.filter_by(user_id=user.id).delete(synchronize_session="fetch")
+        conversation_ids = [
+            c.id for c in DealConversation.query
+            .filter_by(user_id=user.id)
+            .with_entities(DealConversation.id)
+            .all()
+        ]
+        if conversation_ids:
+            DealMessage.query.filter(
+                DealMessage.conversation_id.in_(conversation_ids)
+            ).delete(synchronize_session="fetch")
         DealConversation.query.filter_by(user_id=user.id).delete(synchronize_session="fetch")
         FundingRequest.query.filter_by(investor_id=user.id).delete(synchronize_session="fetch")
 
