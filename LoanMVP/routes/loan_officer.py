@@ -1031,6 +1031,7 @@ def loan_application():
             job_title=job_title or None,
             years_at_job=int(years_at_job) if years_at_job else None,
             annual_income=float(annual_income) if annual_income else None,
+            income=round(float(annual_income) / 12, 2) if annual_income else None,
             assigned_officer_id=officer.id if officer else None,
         )
 
