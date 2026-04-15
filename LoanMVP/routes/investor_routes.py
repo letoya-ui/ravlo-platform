@@ -5077,16 +5077,48 @@ def deal_rehab(deal_id=None):
 
     property_seed = _saved_property_workspace_seed(saved_property) if saved_property else {}
     property_media = _saved_property_media(saved_property) if saved_property else {"primary_photo": None, "gallery": []}
+
+    workspace_analysis = results.get("workspace_analysis", {}) or {}
+
     property_gallery = _normalize_photo_urls(
         property_seed.get("listing_photos"),
         property_media.get("gallery"),
+        workspace_analysis.get("listing_photos"),
+        results.get("listing_photos"),
     )
     property_primary_photo = _resolve_photo(
         property_seed.get("primary_photo") or property_media.get("primary_photo"),
         property_gallery,
     )
 
-    if property_primary_photo and not rehab_before.get("image_url"):
+    workspace_images = []
+    seen_urls = set()
+    for url in property_gallery:
+        if url and url not in seen_urls:
+            workspace_images.append({"url": url, "label": "Listing Photo", "source": "listing"})
+            seen_urls.add(url)
+
+    for concept in rehab_concepts:
+        concept_url = concept.get("image_url") if isinstance(concept, dict) else None
+        if concept_url and concept_url not in seen_urls:
+            concept_label = (concept.get("preset") or "Concept").title()
+            raw_mode = (concept.get("mode") or "").strip()
+            concept_mode = raw_mode.upper() if raw_mode.lower() in {"hgtv"} else raw_mode.title()
+            label = f"{concept_label} — {concept_mode}" if concept_mode else concept_label
+            workspace_images.append({"url": concept_url, "label": label, "source": "concept"})
+            seen_urls.add(concept_url)
+
+    preselected_image_url = (request.args.get("image_url") or "").strip()
+    if preselected_image_url and not preselected_image_url.lower().startswith(("http://", "https://")):
+        preselected_image_url = ""
+
+    if preselected_image_url and not rehab_before.get("image_url"):
+        rehab_before = {
+            **rehab_before,
+            "image_url": preselected_image_url,
+            "source": "workspace_preselect",
+        }
+    elif property_primary_photo and not rehab_before.get("image_url"):
         rehab_before = {
             **rehab_before,
             "image_url": property_primary_photo,
@@ -5108,6 +5140,8 @@ def deal_rehab(deal_id=None):
         rehab_latest=rehab_latest,
         rehab_concepts=rehab_concepts,
         property_photo_gallery=property_gallery,
+        workspace_images=workspace_images,
+        preselected_image_url=preselected_image_url,
         page_title="Renovation Studio",
         page_subtitle="Visualize renovation concepts before execution.",
     )
