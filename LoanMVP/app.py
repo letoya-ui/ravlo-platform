@@ -249,6 +249,9 @@ def create_app():
     # Global error handler
     @app.errorhandler(Exception)
     def handle_any_exception(e):
+        from werkzeug.exceptions import HTTPException
+        if isinstance(e, HTTPException):
+            return e
         current_app.logger.exception("Unhandled application error")
         if current_app.debug or current_app.testing:
             tb = traceback.format_exc()
