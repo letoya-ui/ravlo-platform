@@ -49,6 +49,12 @@
       <span>Messages</span>
     </a>
 
+    <a href="{{ url_for('account.settings') }}"
+       class="ravlo-nav-link {% if ep == 'account.settings' %}active{% endif %}">
+      <i data-lucide="settings"></i>
+      <span>Settings</span>
+    </a>
+
   </nav>
 
   <div class="ravlo-sidebar-footer">

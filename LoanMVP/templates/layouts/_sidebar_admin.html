@@ -77,6 +77,12 @@
 
     <div class="re-nav-section-label">Operations</div>
 
+    <a href="{{ url_for('account.settings') }}"
+       class="re-nav-link {% if ep == 'account.settings' %}active{% endif %}">
+      <i class="icon lucide lucide-settings"></i>
+      <span>Settings</span>
+    </a>
+
     {% if not is_company_admin %}
       <a href="{{ url_for('admin.verify_data') }}"
          class="re-nav-link {% if ep in ['admin.verify_data', 'admin.verify_doc'] %}active{% endif %}">
