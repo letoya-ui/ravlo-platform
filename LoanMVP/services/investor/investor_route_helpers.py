@@ -1137,5 +1137,21 @@ def _get_rehab_export_payload(deal) -> Dict[str, Any]:
     }
 
 
-def _get_owned_deal_or_404(queryset, deal_id: int, user_id: int):
-    return queryset.filter_by(id=deal_id, user_id=user_id).first_or_404()
+def _get_owned_deal_or_404(queryset_or_deal_id, deal_id: int | None = None, user_id: int | None = None):
+    """
+    Backward-compatible helper.
+
+    Supports:
+    - _get_owned_deal_or_404(deal_id)
+    - _get_owned_deal_or_404(queryset, deal_id, user_id)
+    """
+    if deal_id is None:
+        from flask_login import current_user
+        from LoanMVP.models.borrowers import Deal
+
+        return Deal.query.filter_by(
+            id=queryset_or_deal_id,
+            user_id=current_user.id,
+        ).first_or_404()
+
+    return queryset_or_deal_id.filter_by(id=deal_id, user_id=user_id).first_or_404()
