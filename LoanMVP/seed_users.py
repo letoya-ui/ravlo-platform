@@ -88,6 +88,12 @@ def seed_users():
                 "password": "compliance123",
                 "role": "compliance"
             },
+            {
+                "full_name": "Sandra",
+                "email": "sandra@ravlohq.com",
+                "password": os.environ.get("SANDRA_ADMIN_PASSWORD", "sandra123"),
+                "role": "admin"
+            },
 
         ]
 
