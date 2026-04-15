@@ -98,8 +98,12 @@ def seed_users():
         ]
 
         for u in users:
+            parts = u["full_name"].split(None, 1)
+            first = parts[0] if parts else ""
+            last = parts[1] if len(parts) > 1 else ""
             user = User(
-                full_name=u["full_name"],
+                first_name=first,
+                last_name=last,
                 email=u["email"],
                 password_hash=generate_password_hash(u["password"]),
                 role=u["role"]
