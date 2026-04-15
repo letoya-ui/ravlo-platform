@@ -23,13 +23,15 @@
 
     <aside class="re-sidebar" id="reSidebar">
       {% if current_user.is_authenticated %}
+        {% set _exec_emails = ["letoya@ravlohq.com", "jamaine.caughman@ravlohq.com"] %}
+        {% set _is_exec_user = current_user.role == "executive" or (current_user.email and current_user.email.strip().lower() in _exec_emails) %}
         {% if current_user.role == "loan_officer" %}
           {% include "layouts/_sidebar_loan_officer.html" %}
         {% elif current_user.role == "processor" %}
           {% include "layouts/_sidebar_processor.html" %}
         {% elif current_user.role == "underwriter" %}
           {% include "layouts/_sidebar_underwriter.html" %}
-        {% elif current_user.role == "executive" %}
+        {% elif _is_exec_user %}
           {% include "layouts/_sidebar_executive.html" %}
         {% elif current_user.role in ["admin", "platform_admin", "master_admin", "lending_admin"] %}
           {% include "layouts/_sidebar_admin.html" %}

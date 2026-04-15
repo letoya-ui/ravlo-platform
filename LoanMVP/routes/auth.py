@@ -61,9 +61,21 @@ def _can_bypass_single_admin_lock(user) -> bool:
     return role in _workspace_executive_roles()
 
 
+# Accounts that should always land on the executive dashboard regardless
+# of their stored role.  Keep addresses lower-cased.
+_EXECUTIVE_DASHBOARD_EMAILS: set[str] = {
+    "letoya@ravlohq.com",
+    "jamaine.caughman@ravlohq.com",
+}
+
+
 def _is_executive_dashboard_user(user) -> bool:
     if not user:
         return False
+
+    email = (getattr(user, "email", "") or "").strip().lower()
+    if email in _EXECUTIVE_DASHBOARD_EMAILS:
+        return True
 
     role = (getattr(user, "role", "") or "").strip().lower()
     return role == "executive"
@@ -453,11 +465,11 @@ def post_login_redirect():
     if current_user.invite_accepted and not current_user.onboarding_complete:
         return redirect(url_for("auth.complete_profile"))
 
-    if role == "admin" and current_user.company_id:
-        return redirect(url_for("admin.company_dashboard", company_id=current_user.company_id))
-
     if _is_executive_dashboard_user(current_user):
         return redirect(url_for("executive.dashboard"))
+
+    if role == "admin" and current_user.company_id:
+        return redirect(url_for("admin.company_dashboard", company_id=current_user.company_id))
 
     if role in ["admin", "platform_admin", "master_admin", "lending_admin"]:
         return redirect(url_for("admin.dashboard"))

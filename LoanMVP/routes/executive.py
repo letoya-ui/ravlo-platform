@@ -18,7 +18,19 @@ def _owner_admin_email() -> str:
     return (current_app.config.get("OWNER_ADMIN_EMAIL") or "").strip().lower()
 
 
+# Accounts that should always have executive dashboard access regardless
+# of their stored role.  Keep addresses lower-cased.
+_EXECUTIVE_DASHBOARD_EMAILS: set[str] = {
+    "letoya@ravlohq.com",
+    "jamaine.caughman@ravlohq.com",
+}
+
+
 def _can_access_executive_dashboard(user) -> bool:
+    email = (getattr(user, "email", "") or "").strip().lower()
+    if email in _EXECUTIVE_DASHBOARD_EMAILS:
+        return True
+
     role = (getattr(user, "role", "") or "").strip().lower()
     company = getattr(user, "company", None)
     company_name = (getattr(company, "name", "") or "").strip().lower()
