@@ -70,13 +70,13 @@ def build_rehab_concept_prompt(
     level_phrase = level_map.get(level, level_map["medium"])
 
     parts = [
-        f"photorealistic real estate renovation, {room_label} renovation concept for a {property_label},",
-        "same room footprint and believable architecture, preserve geometry and layout unless small refinements improve realism,",
+        f"photorealistic real estate renovation, {room_label} renovation concept for a {property_label}",
+        "same room footprint and believable architecture, preserve geometry and layout unless small refinements improve realism",
         f"fully finished space, real materials, natural lighting, {style_label} renovation, {level_phrase}",
     ]
     if notes_label:
         parts.append(notes_label)
-    prompt = " ".join(parts)
+    prompt = ", ".join(parts)
     return _clip_safe(prompt)
 
 
