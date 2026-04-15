@@ -42,8 +42,8 @@ def _company_admin_guard(user):
         return None, None
 
     if not company_id:
-        flash("Your admin account is not assigned to a company yet.", "warning")
-        return None, redirect(url_for("admin.dashboard"))
+        # Admin without a company sees all users (same as non-company admin)
+        return None, None
 
     return company_id, None
 
