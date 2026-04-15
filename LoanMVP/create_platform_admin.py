@@ -59,7 +59,7 @@ def ensure_platform_admin(email: str = DEFAULT_EMAIL, password: str = DEFAULT_PA
 def ensure_sandra_admin(email: str = SANDRA_EMAIL, password: str = SANDRA_PASSWORD):
     if not password:
         raise ValueError(
-            "Password must be provided via --password or the "
+            "Password must be provided via --sandra-password or the "
             "SANDRA_ADMIN_PASSWORD environment variable."
         )
 
