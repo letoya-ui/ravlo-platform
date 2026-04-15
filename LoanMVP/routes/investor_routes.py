@@ -4996,19 +4996,28 @@ def deal_rehab(deal_id=None):
     if deal and getattr(deal, "saved_property_id", None):
         saved_property = SavedProperty.query.filter_by(id=deal.saved_property_id).first()
 
-    property_media = _saved_property_media(saved_property) if saved_property else {"primary_photo": None, "photos": []}
+    property_seed = _saved_property_workspace_seed(saved_property) if saved_property else {}
+    property_media = _saved_property_media(saved_property) if saved_property else {"primary_photo": None, "gallery": []}
+    property_gallery = _normalize_photo_urls(
+        property_seed.get("listing_photos"),
+        property_media.get("gallery"),
+    )
+    property_primary_photo = _resolve_photo(
+        property_seed.get("primary_photo") or property_media.get("primary_photo"),
+        property_gallery,
+    )
 
-    if property_media.get("primary_photo") and not rehab_before.get("image_url"):
+    if property_primary_photo and not rehab_before.get("image_url"):
         rehab_before = {
             **rehab_before,
-            "image_url": property_media["primary_photo"],
+            "image_url": property_primary_photo,
             "source": "saved_listing_photo",
         }
 
-    if property_media.get("photos") and not rehab_before.get("gallery"):
+    if property_gallery and not rehab_before.get("gallery"):
         rehab_before = {
             **rehab_before,
-            "gallery": property_media["photos"],
+            "gallery": property_gallery,
         }
 
     return render_template(
@@ -5019,7 +5028,7 @@ def deal_rehab(deal_id=None):
         rehab_before=rehab_before,
         rehab_latest=rehab_latest,
         rehab_concepts=rehab_concepts,
-        property_photo_gallery=property_media.get("photos") or [],
+        property_photo_gallery=property_gallery,
         page_title="Renovation Studio",
         page_subtitle="Visualize renovation concepts before execution.",
     )
@@ -5259,12 +5268,27 @@ def build_studio(deal_id=None):
     if deal and getattr(deal, "saved_property_id", None):
         saved_property = SavedProperty.query.filter_by(id=deal.saved_property_id).first()
 
-    property_media = _saved_property_media(saved_property) if saved_property else {"primary_photo": None, "photos": []}
+    property_seed = _saved_property_workspace_seed(saved_property) if saved_property else {}
+    property_media = _saved_property_media(saved_property) if saved_property else {"primary_photo": None, "gallery": []}
+    property_gallery = _normalize_photo_urls(
+        property_seed.get("listing_photos"),
+        property_media.get("gallery"),
+    )
+    property_primary_photo = _resolve_photo(
+        property_seed.get("primary_photo") or property_media.get("primary_photo"),
+        property_gallery,
+    )
 
-    if property_media.get("primary_photo") and not exterior_result.get("build_reference_image"):
+    if property_primary_photo and not exterior_result.get("build_reference_image"):
         exterior_result = {
             **exterior_result,
-            "build_reference_image": property_media["primary_photo"],
+            "build_reference_image": property_primary_photo,
+        }
+
+    if property_gallery and not exterior_result.get("gallery"):
+        exterior_result = {
+            **exterior_result,
+            "gallery": property_gallery,
         }
 
     return render_template(
@@ -5277,7 +5301,7 @@ def build_studio(deal_id=None):
         exterior_result=exterior_result,
         interior_result=interior_result,
         interior_rooms=interior_rooms,
-        property_photo_gallery=property_media.get("photos") or [],
+        property_photo_gallery=property_gallery,
         package_result=package_result,
         has_saved_package=has_saved_package,
         page_title="Build Studio",
