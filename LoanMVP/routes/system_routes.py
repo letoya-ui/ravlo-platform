@@ -21,6 +21,8 @@ from LoanMVP.models.renovation_models import RenovationMockup, BuildProject
 from LoanMVP.models.ai_models import AIAssistantInteraction
 from LoanMVP.models.partner_models import ExternalPartnerLead
 from LoanMVP.models.campaign_model import Campaign, CampaignRecipient
+from LoanMVP.models.processor_model import ProcessorProfile
+from LoanMVP.models.underwriter_model import UnderwriterProfile
 from LoanMVP.models.user_model import User
 
 from LoanMVP.utils.decorators import role_required
@@ -300,6 +302,27 @@ def delete_user(user_id):
             ).delete(synchronize_session="fetch")
         DealConversation.query.filter_by(user_id=user.id).delete(synchronize_session="fetch")
 
+        # -- Renovation mockups & build projects -------------------------
+        # Must delete BEFORE deals because RenovationMockup.deal_id is a FK
+        # to deals.id (no ondelete clause → RESTRICT by default).
+        RenovationMockup.query.filter_by(user_id=user.id).delete(
+            synchronize_session="fetch"
+        )
+        # BuildProject child rows: ProjectBudget via build_project_id
+        build_project_ids = [
+            bp.id for bp in BuildProject.query
+            .filter_by(user_id=user.id)
+            .with_entities(BuildProject.id)
+            .all()
+        ]
+        if build_project_ids:
+            ProjectBudget.query.filter(
+                ProjectBudget.build_project_id.in_(build_project_ids)
+            ).delete(synchronize_session="fetch")
+        BuildProject.query.filter_by(user_id=user.id).delete(
+            synchronize_session="fetch"
+        )
+
         # -- Deals & child rows ----------------------------------------
         deal_ids = [
             d.id for d in Deal.query
@@ -323,15 +346,9 @@ def delete_user(user_id):
         )
         Deal.query.filter_by(user_id=user.id).delete(synchronize_session="fetch")
 
-        # -- Calls, AI, renovation, build ------------------------------
+        # -- Calls, AI -------------------------------------------------
         CallLog.query.filter_by(user_id=user.id).delete(synchronize_session="fetch")
         AIAssistantInteraction.query.filter_by(user_id=user.id).delete(
-            synchronize_session="fetch"
-        )
-        RenovationMockup.query.filter_by(user_id=user.id).delete(
-            synchronize_session="fetch"
-        )
-        BuildProject.query.filter_by(user_id=user.id).delete(
             synchronize_session="fetch"
         )
 
@@ -357,6 +374,12 @@ def delete_user(user_id):
         Campaign.query.filter_by(created_by_id=user.id).delete(
             synchronize_session="fetch"
         )
+
+        # -- Processor & underwriter profiles --------------------------
+        ProcessorProfile.query.filter_by(user_id=user.id).delete(
+            synchronize_session="fetch")
+        UnderwriterProfile.query.filter_by(user_id=user.id).delete(
+            synchronize_session="fetch")
 
         db.session.delete(user)
         db.session.commit()
