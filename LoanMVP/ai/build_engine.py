@@ -51,6 +51,7 @@ def run_build_concept(payload):
         "build_description": payload.get("description", ""),
         "lot_size": payload.get("lot_size", ""),
         "zoning": payload.get("zoning", ""),
+        "location": payload.get("location", ""),
         "prompt_notes": payload.get("notes", ""),
         "count": 1,
         "steps": payload.get("steps", 20),
