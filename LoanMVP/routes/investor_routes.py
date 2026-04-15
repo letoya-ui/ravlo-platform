@@ -379,6 +379,61 @@ def _project_budget_snapshot(budget):
     }
 
 
+def _proxy_listing_image_url(source_url):
+    source_url = safe_str(source_url)
+    if not source_url:
+        return None
+    if source_url.startswith("/") or source_url.startswith("data:"):
+        return source_url
+    return url_for("investor.api_property_tool_image", src=source_url)
+
+
+def _proxy_search_result_images(result):
+    if not isinstance(result, dict):
+        return result
+
+    updated = dict(result)
+    proxied_listing_photos = []
+    raw_listing_photos = updated.get("listing_photos") or updated.get("photos") or []
+
+    for photo in raw_listing_photos:
+        if isinstance(photo, dict):
+            photo_copy = dict(photo)
+            best_url = (
+                photo_copy.get("full")
+                or photo_copy.get("full_url")
+                or photo_copy.get("fullSize")
+                or photo_copy.get("full_size")
+                or photo_copy.get("original")
+                or photo_copy.get("original_url")
+                or photo_copy.get("large")
+                or photo_copy.get("large_url")
+                or photo_copy.get("url")
+                or photo_copy.get("src")
+                or photo_copy.get("href")
+                or photo_copy.get("photo")
+                or photo_copy.get("image")
+                or photo_copy.get("thumbnail")
+            )
+            proxied = _proxy_listing_image_url(best_url)
+            if proxied:
+                photo_copy["url"] = proxied
+                proxied_listing_photos.append(photo_copy)
+        else:
+            proxied = _proxy_listing_image_url(photo)
+            if proxied:
+                proxied_listing_photos.append(proxied)
+
+    updated["listing_photos"] = proxied_listing_photos
+    updated["photos"] = proxied_listing_photos
+    updated["primary_photo"] = _proxy_listing_image_url(updated.get("primary_photo")) or updated.get("primary_photo")
+    updated["primary_photo_url"] = _proxy_listing_image_url(updated.get("primary_photo_url")) or updated.get("primary_photo_url")
+    updated["image_url"] = _proxy_listing_image_url(updated.get("image_url")) or updated.get("image_url")
+    updated["photo"] = _proxy_listing_image_url(updated.get("photo")) or updated.get("photo")
+    updated["thumbnail"] = _proxy_listing_image_url(updated.get("thumbnail")) or updated.get("thumbnail")
+    return updated
+
+
 def _subscription_catalog():
     return {
         "Free": {
@@ -3144,6 +3199,7 @@ def api_property_tool_search():
             zip_code=zip_code,
             limit=limit,
         )
+        results = [_proxy_search_result_images(result) for result in results]
 
         return jsonify({
             "status": "ok",
