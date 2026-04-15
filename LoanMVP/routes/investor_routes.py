@@ -8180,10 +8180,10 @@ def deal_rehab_generate():
             except Exception:
                 raw_before = None
 
-        elif deal is not None:
+        if not image_base64 and deal is not None:
             seed_media = _resolve_rehab_before_seed(deal)
             saved_before_url = (seed_media.get("url") or "").strip()
-            if saved_before_url:
+            if saved_before_url and saved_before_url != image_url:
                 try:
                     raw_before = download_image_bytes(saved_before_url)
                     if raw_before:
