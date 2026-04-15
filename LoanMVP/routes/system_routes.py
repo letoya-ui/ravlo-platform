@@ -12,7 +12,7 @@ from datetime import datetime
 from LoanMVP.extensions import db, csrf
 from LoanMVP.models.system_models import System, SystemLog, AuditLog, SystemSettings
 from LoanMVP.models.crm_models import Lead, Message, CRMNote
-from LoanMVP.models.loan_models import LoanApplication, LoanNotification, Upload
+from LoanMVP.models.loan_models import LoanApplication, LoanNotification, LoanQuote, Upload
 from LoanMVP.models.document_models import DocumentRequest
 from LoanMVP.models.investor_models import DealConversation, DealMessage, FundingRequest, Project
 from LoanMVP.models.borrowers import Deal, ProjectBudget
@@ -22,7 +22,7 @@ from LoanMVP.models.ai_models import AIAssistantInteraction
 from LoanMVP.models.partner_models import ExternalPartnerLead
 from LoanMVP.models.campaign_model import Campaign, CampaignRecipient
 from LoanMVP.models.processor_model import ProcessorProfile
-from LoanMVP.models.underwriter_model import UnderwriterProfile
+from LoanMVP.models.underwriter_model import UnderwriterProfile, UnderwriterTask
 from LoanMVP.models.user_model import User
 
 from LoanMVP.utils.decorators import role_required
@@ -376,6 +376,36 @@ def delete_user(user_id):
         )
 
         # -- Processor & underwriter profiles --------------------------
+        # Nullify nullable FK references on child tables before deleting
+        # profiles, so LoanApplications / Tasks / Quotes are preserved.
+        proc_ids = [
+            p.id for p in ProcessorProfile.query
+            .filter_by(user_id=user.id)
+            .with_entities(ProcessorProfile.id)
+            .all()
+        ]
+        if proc_ids:
+            LoanApplication.query.filter(
+                LoanApplication.processor_id.in_(proc_ids)
+            ).update({"processor_id": None}, synchronize_session="fetch")
+
+        uw_ids = [
+            u.id for u in UnderwriterProfile.query
+            .filter_by(user_id=user.id)
+            .with_entities(UnderwriterProfile.id)
+            .all()
+        ]
+        if uw_ids:
+            LoanApplication.query.filter(
+                LoanApplication.underwriter_id.in_(uw_ids)
+            ).update({"underwriter_id": None}, synchronize_session="fetch")
+            UnderwriterTask.query.filter(
+                UnderwriterTask.assigned_to.in_(uw_ids)
+            ).update({"assigned_to": None}, synchronize_session="fetch")
+            LoanQuote.query.filter(
+                LoanQuote.assigned_underwriter_id.in_(uw_ids)
+            ).update({"assigned_underwriter_id": None}, synchronize_session="fetch")
+
         ProcessorProfile.query.filter_by(user_id=user.id).delete(
             synchronize_session="fetch")
         UnderwriterProfile.query.filter_by(user_id=user.id).delete(
