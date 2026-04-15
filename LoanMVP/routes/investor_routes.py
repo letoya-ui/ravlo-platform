@@ -429,6 +429,27 @@ def _proxy_listing_image_url(source_url):
     return url_for("investor.api_property_tool_image", src=source_url)
 
 
+def _proxy_photo_list(photo_urls):
+    """Proxy a flat list of photo URL strings through the image proxy."""
+    if not photo_urls:
+        return []
+    proxied = []
+    for url in photo_urls:
+        if isinstance(url, dict):
+            best = (
+                url.get("url") or url.get("src") or url.get("href")
+                or url.get("photo") or url.get("image")
+            )
+            p = _proxy_listing_image_url(best)
+            if p:
+                proxied.append(p)
+        else:
+            p = _proxy_listing_image_url(url)
+            if p:
+                proxied.append(p)
+    return proxied
+
+
 def _proxy_search_result_images(result):
     if not isinstance(result, dict):
         return result
@@ -4084,16 +4105,23 @@ def deal_workspace():
             workspace_analysis["baths"] = workspace_analysis.get("baths") or saved_property_payload.get("baths")
             workspace_analysis["year_built"] = workspace_analysis.get("year_built") or saved_property_payload.get("year_built")
             workspace_analysis["lot_size_sqft"] = workspace_analysis.get("lot_size_sqft") or saved_property_payload.get("lot_size_sqft")
-            workspace_analysis["listing_photos"] = _normalize_photo_urls(
-                workspace_analysis.get("listing_photos"),
-                deal_results.get("listing_photos"),
-                saved_seed.get("listing_photos"),
+            workspace_analysis["listing_photos"] = _proxy_photo_list(
+                _normalize_photo_urls(
+                    workspace_analysis.get("listing_photos"),
+                    deal_results.get("listing_photos"),
+                    saved_seed.get("listing_photos"),
+                )
             )
-            workspace_analysis["image_url"] = _resolve_photo(
-                workspace_analysis.get("image_url")
-                or deal_results.get("image_url")
-                or saved_seed.get("primary_photo"),
-                workspace_analysis.get("listing_photos"),
+            workspace_analysis["image_url"] = (
+                _proxy_listing_image_url(
+                    _resolve_photo(
+                        workspace_analysis.get("image_url")
+                        or deal_results.get("image_url")
+                        or saved_seed.get("primary_photo"),
+                        workspace_analysis.get("listing_photos"),
+                    )
+                )
+                or _resolve_photo(None, workspace_analysis.get("listing_photos"))
             )
 
             comparison = build_workspace_exit_comparison(
@@ -4175,10 +4203,12 @@ def deal_workspace():
             budget_snapshot = _project_budget_snapshot(budget)
 
         else:
+            _proxied_photos = _proxy_photo_list(saved_seed.get("listing_photos") or [])
+            _proxied_primary = _proxy_listing_image_url(saved_seed.get("primary_photo"))
             workspace_analysis = {
                 **saved_workspace,
-                "listing_photos": saved_seed.get("listing_photos"),
-                "image_url": saved_seed.get("primary_photo"),
+                "listing_photos": _proxied_photos,
+                "image_url": _proxied_primary or (_proxied_photos[0] if _proxied_photos else None),
                 "address": saved_property_payload.get("address") or getattr(selected_prop, "address", None),
                 "city": saved_property_payload.get("city"),
                 "state": saved_property_payload.get("state"),
