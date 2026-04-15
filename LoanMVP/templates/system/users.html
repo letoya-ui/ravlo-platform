@@ -20,6 +20,10 @@
 {% set total_users = users|length %}
 {% set active_users = users|selectattr('is_active')|list|length %}
 {% set inactive_users = total_users - active_users %}
+{% set pending_users = users|rejectattr('last_login')|list %}
+{% set current_users = users|selectattr('last_login')|list %}
+{% set pending_count = pending_users|length %}
+{% set current_count = current_users|length %}
 
 <div class="re-grid">
 
@@ -37,7 +41,7 @@
   </section>
   {% endif %}
 
-  <section class="re-grid-3">
+  <section class="re-grid-4">
     <div class="re-stat">
       <div class="re-stat-label">Total Users</div>
       <div class="re-stat-value">{{ total_users }}</div>
@@ -51,13 +55,34 @@
     </div>
 
     <div class="re-stat">
+      <div class="re-stat-label">Pending</div>
+      <div class="re-stat-value">{{ pending_count }}</div>
+      <div class="re-stat-meta">Never logged in</div>
+    </div>
+
+    <div class="re-stat">
       <div class="re-stat-label">Inactive</div>
       <div class="re-stat-value">{{ inactive_users }}</div>
       <div class="re-stat-meta">Disabled accounts</div>
     </div>
   </section>
 
+  {# ── Filter Tabs ── #}
   <section class="re-card pad">
+    <div style="display:flex; align-items:center; gap:8px; margin-bottom:1rem;">
+      <button type="button" class="re-btn ghost sm user-filter-tab active" data-filter="all">
+        All Users <span class="badge badge-info" style="margin-left:4px;">{{ total_users }}</span>
+      </button>
+      <button type="button" class="re-btn ghost sm user-filter-tab" data-filter="current">
+        <i class="lucide lucide-user-check"></i>
+        Current <span class="badge badge-success" style="margin-left:4px;">{{ current_count }}</span>
+      </button>
+      <button type="button" class="re-btn ghost sm user-filter-tab" data-filter="pending">
+        <i class="lucide lucide-user-plus"></i>
+        Pending <span class="badge badge-warning" style="margin-left:4px;">{{ pending_count }}</span>
+      </button>
+    </div>
+
     <div class="section-head">
       <div>
         <div class="eyebrow">ACCOUNT CONTROL</div>
@@ -70,7 +95,7 @@
 
     {% if users %}
       <div class="re-table-wrap mt-16">
-        <table class="re-table">
+        <table class="re-table" id="usersTable">
           <thead>
             <tr>
               <th>Name</th>
@@ -83,7 +108,7 @@
           </thead>
           <tbody>
             {% for user in users %}
-            <tr>
+            <tr data-user-type="{% if user.last_login %}current{% else %}pending{% endif %}">
               <td>
                 <div style="display:grid; gap:4px;">
                   <strong>
@@ -102,10 +127,12 @@
               </td>
 
               <td>
-                {% if user.is_active %}
-                  <span class="badge badge-success">Active</span>
-                {% else %}
+                {% if not user.is_active %}
                   <span class="badge badge-danger">Inactive</span>
+                {% elif not user.last_login %}
+                  <span class="badge badge-warning">Pending</span>
+                {% else %}
+                  <span class="badge badge-success">Active</span>
                 {% endif %}
               </td>
 
@@ -128,12 +155,12 @@
                   {% if user.id != current_user.id and not (single_admin_mode and (user.email or '')|lower == owner_admin_email) %}
                   <form method="POST"
                         action="{{ url_for('system.delete_user', user_id=user.id) }}"
-                        onsubmit="return confirm('Delete this account permanently? This action cannot be undone.');"
+                        onsubmit="return confirm('Remove this account permanently? This action cannot be undone.');"
                         style="margin:0;">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <button type="submit" class="re-btn danger sm">
                       <i class="lucide lucide-trash-2"></i>
-                      Delete
+                      Remove
                     </button>
                   </form>
                   {% else %}
@@ -158,5 +185,34 @@
   </section>
 
 </div>
+
+<style>
+  .user-filter-tab { opacity:.6; border-bottom:2px solid transparent; border-radius:0; }
+  .user-filter-tab.active { opacity:1; border-bottom-color:var(--gold, #c9a84c); }
+  .badge-warning { background:rgba(234,179,8,.15); color:#eab308; }
+  .re-grid-4 { display:grid; grid-template-columns:repeat(4,1fr); gap:1rem; }
+  @media(max-width:768px){ .re-grid-4 { grid-template-columns:repeat(2,1fr); } }
+</style>
+
+<script>
+document.addEventListener("DOMContentLoaded",function(){
+  var tabs=document.querySelectorAll(".user-filter-tab");
+  var rows=document.querySelectorAll("#usersTable tbody tr");
+  tabs.forEach(function(tab){
+    tab.addEventListener("click",function(){
+      tabs.forEach(function(t){t.classList.remove("active")});
+      tab.classList.add("active");
+      var f=tab.getAttribute("data-filter");
+      rows.forEach(function(row){
+        if(f==="all"||row.getAttribute("data-user-type")===f){
+          row.style.display="";
+        }else{
+          row.style.display="none";
+        }
+      });
+    });
+  });
+});
+</script>
 
 {% endblock %}

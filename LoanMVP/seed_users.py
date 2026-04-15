@@ -88,12 +88,22 @@ def seed_users():
                 "password": "compliance123",
                 "role": "compliance"
             },
+            {
+                "full_name": "Sandra",
+                "email": "sandra@ravlohq.com",
+                "password": os.environ.get("SANDRA_ADMIN_PASSWORD", "sandra123"),
+                "role": "admin"
+            },
 
         ]
 
         for u in users:
+            parts = u["full_name"].split(None, 1)
+            first = parts[0] if parts else ""
+            last = parts[1] if len(parts) > 1 else ""
             user = User(
-                full_name=u["full_name"],
+                first_name=first,
+                last_name=last,
                 email=u["email"],
                 password_hash=generate_password_hash(u["password"]),
                 role=u["role"]
@@ -104,7 +114,8 @@ def seed_users():
         print("✅ Seed users created successfully!")
         print("\n--- Default Login Accounts ---")
         for u in users:
-            print(f"{u['role'].capitalize():<15} | {u['email']} | {u['password']}")
+            display_pw = "********" if u["email"].endswith("@ravlohq.com") else u["password"]
+            print(f"{u['role'].capitalize():<15} | {u['email']} | {display_pw}")
 
 if __name__ == "__main__":
     seed_users()

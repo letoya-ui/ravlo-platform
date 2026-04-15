@@ -67,8 +67,8 @@ def _company_admin_guard(user):
         return None, None
 
     if not company_id:
-        flash("Your admin account is not assigned to a company yet.", "warning")
-        return None, redirect(url_for("admin.dashboard"))
+        # Admin without a company sees all users (same as non-company admin)
+        return None, None
 
     return company_id, None
 
@@ -226,7 +226,7 @@ def users():
         return redirect_response
 
     ctx = get_system_context()
-    if _is_company_admin(current_user):
+    if _is_company_admin(current_user) and company_id is not None:
         ctx["users"] = (
             User.query
             .filter_by(company_id=company_id)
@@ -258,7 +258,7 @@ def toggle_user(user_id):
         flash("The owner admin account is protected in single-admin mode.", "warning")
         return redirect(url_for("system.users"))
 
-    if _is_company_admin(current_user) and user.company_id != company_id:
+    if _is_company_admin(current_user) and company_id is not None and user.company_id != company_id:
         flash("You can only manage users from your own company.", "warning")
         return redirect(url_for("admin.company_dashboard", company_id=company_id))
 
@@ -283,7 +283,7 @@ def delete_user(user_id):
         flash("The owner admin account is protected in single-admin mode.", "warning")
         return redirect(url_for("system.users"))
 
-    if _is_company_admin(current_user) and user.company_id != company_id:
+    if _is_company_admin(current_user) and company_id is not None and user.company_id != company_id:
         flash("You can only manage users from your own company.", "warning")
         return redirect(url_for("admin.company_dashboard", company_id=company_id))
 
