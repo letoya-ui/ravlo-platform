@@ -489,8 +489,12 @@ def request_access():
         db.session.commit()
 
         if auto_approve_beta:
-            flash("Beta access approved immediately. You can log in now or reset your password.", "success")
-            return redirect(url_for("auth.login"))
+            token = generate_reset_token(email)
+            flash(
+                "Beta access approved! Please set your password to get started.",
+                "success",
+            )
+            return redirect(url_for("auth.reset_password", token=token))
 
         flash("Your access request has been submitted. An admin will review it.", "success")
         return redirect(url_for("auth.login"))

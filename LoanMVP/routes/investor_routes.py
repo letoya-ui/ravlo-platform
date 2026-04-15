@@ -1250,6 +1250,14 @@ def _run_mashvisor_validation(snapshot: dict) -> dict | None:
             lng=_safe_float(snapshot.get("longitude")),
         )
 
+        # Check for API-level errors before normalizing lookup fields
+        if isinstance(result, dict) and result.get("errors"):
+            current_app.logger.warning(
+                "Mashvisor API returned errors for %s: %s",
+                address, result["errors"],
+            )
+            return {"error": result["errors"]}
+
         lookup = result.get("content", result) if isinstance(result, dict) else {}
 
         return {
@@ -9371,6 +9379,9 @@ def v1_deal_architect_underwrite():
         return str(payload.get(key) or default).strip()
 
     asking_price = _num("asking_price", 0.0) or 0.0
+    if asking_price <= 0:
+        return jsonify({"error": "asking_price must be greater than zero."}), 400
+
     arv = _num("arv", 0.0) or 0.0
     monthly_rent = _num("monthly_rent", 0.0) or 0.0
     down_payment_pct = _num("down_payment_pct", 20.0) or 20.0
@@ -11850,7 +11861,26 @@ def subscription_checkout_success():
         flash("Unable to verify Stripe checkout session.", "danger")
         return redirect(url_for("investor.payments"))
 
+    # Verify payment was actually completed
+    if session_obj.payment_status != "paid":
+        current_app.logger.warning(
+            "Stripe checkout session %s has payment_status=%s",
+            session_id, session_obj.payment_status,
+        )
+        flash("Payment has not been completed.", "danger")
+        return redirect(url_for("investor.payments"))
+
     metadata = session_obj.get("metadata") or {}
+
+    # Verify the checkout session belongs to the current user
+    if str(metadata.get("user_id")) != str(current_user.id):
+        current_app.logger.warning(
+            "Stripe checkout user_id mismatch: session=%s current_user=%s",
+            metadata.get("user_id"), current_user.id,
+        )
+        flash("This checkout session does not belong to your account.", "danger")
+        return redirect(url_for("investor.payments"))
+
     plan = (metadata.get("subscription_plan") or "").strip().lower()
     allowed = {item["slug"] for item in _stripe_subscription_catalog() if item["configured"]}
     if plan in allowed:
