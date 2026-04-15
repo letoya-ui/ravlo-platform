@@ -47,7 +47,8 @@ def _scope_engine_headers() -> dict:
 
 
 def _renovation_engine_url(path=""):
-    return f"{RENOVATION_ENGINE_URL.rstrip('/')}{path}"
+    base = _engine_base_url() or RENOVATION_ENGINE_URL
+    return f"{base.rstrip('/')}{path}"
 
 
 def _scope_engine_url(path=""):
