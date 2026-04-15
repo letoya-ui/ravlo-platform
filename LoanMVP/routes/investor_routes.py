@@ -7873,6 +7873,30 @@ def deal_rehab_generate():
                 except Exception:
                     raw_before = None
 
+            if not image_base64 and getattr(deal, "saved_property_id", None):
+                saved_property = SavedProperty.query.filter_by(
+                    id=deal.saved_property_id,
+                    user_id=current_user.id,
+                ).first()
+                property_seed = _saved_property_workspace_seed(saved_property) if saved_property else {}
+                property_media = _saved_property_media(saved_property) if saved_property else {"primary_photo": None, "gallery": []}
+                fallback_gallery = _normalize_photo_urls(
+                    property_seed.get("listing_photos"),
+                    property_media.get("gallery"),
+                )
+                fallback_before_url = _resolve_photo(
+                    property_seed.get("primary_photo") or property_media.get("primary_photo"),
+                    fallback_gallery,
+                )
+                if fallback_before_url:
+                    try:
+                        raw_before = download_image_bytes(fallback_before_url)
+                        if raw_before:
+                            image_base64 = base64.b64encode(raw_before).decode("utf-8")
+                            before_uploaded_url = fallback_before_url
+                    except Exception:
+                        raw_before = None
+
         if not image_base64:
             raise RuntimeError("Provide a before photo or saved rehab before image.")
 
