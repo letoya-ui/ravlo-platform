@@ -21,6 +21,10 @@ from LoanMVP.services.investor.investor_route_helpers import (
     _property_matches_asset_type,
     _annotate_deal_finder_opportunity,
 )
+from LoanMVP.services.investor.investor_media_helpers import (
+    _normalize_photo_urls,
+    _resolve_photo,
+)
 
 
 @dataclass
@@ -213,38 +217,7 @@ class PropertyIntelligenceOrchestrator:
 
     @staticmethod
     def _normalize_photo_candidates(*sources):
-        out = []
-        seen = set()
-
-        def _push(url):
-            if not url:
-                return
-            url = str(url).strip()
-            if not url or url in seen:
-                return
-            seen.add(url)
-            out.append(url)
-
-        def _walk(value):
-            if not value:
-                return
-            if isinstance(value, str):
-                _push(value)
-            elif isinstance(value, list):
-                for item in value:
-                    _walk(item)
-            elif isinstance(value, dict):
-                for key in ("url", "src", "href", "photo", "image", "thumbnail"):
-                    if value.get(key):
-                        _push(value.get(key))
-                for key in ("photos", "images", "media", "gallery", "extra_images"):
-                    if value.get(key):
-                        _walk(value.get(key))
-
-        for src in sources:
-            _walk(src)
-
-        return out
+        return _normalize_photo_urls(*sources)
 
     def _extract_mashvisor_photos(
         self,
@@ -487,7 +460,28 @@ class PropertyIntelligenceOrchestrator:
         )
 
         filtered = [x for x in listings if _property_matches_asset_type(x, self.asset_type)]
-        return [self._from_realtor_listing(item) for item in filtered]
+        if filtered:
+            return [self._from_realtor_listing(item) for item in filtered]
+
+        fallback_listing = {}
+        if city and state:
+            try:
+                fallback_listing = find_rentcast_sale_listing(
+                    address=address,
+                    city=city,
+                    state=state,
+                    zip_code=zip_code,
+                    limit=min(max(limit, 5), 25),
+                ) or {}
+            except Exception:
+                fallback_listing = {}
+
+        if fallback_listing:
+            normalized = normalize_rentcast_sale_listing(fallback_listing)
+            if _property_matches_asset_type(normalized, self.asset_type):
+                return [self._from_rentcast_listing(normalized)]
+
+        return []
 
     def _from_realtor_listing(self, item: Dict[str, Any]) -> CanonicalProperty:
         photos = self._normalize_photo_candidates(
@@ -521,6 +515,45 @@ class PropertyIntelligenceOrchestrator:
             value_sources={
                 "listing_price": "realtor",
                 "photos": "realtor",
+            },
+            raw=item.get("raw") or item,
+        )
+
+    def _from_rentcast_listing(self, item: Dict[str, Any]) -> CanonicalProperty:
+        photos = self._normalize_photo_candidates(
+            item.get("photos"),
+            item.get("primary_photo"),
+            item.get("raw", {}),
+        )
+
+        primary_photo = _resolve_photo(item.get("primary_photo"), photos)
+
+        return CanonicalProperty(
+            provider_ids={"rentcast": item.get("property_id")},
+            address=item.get("address"),
+            address_line1=item.get("address"),
+            city=item.get("city"),
+            state=item.get("state"),
+            zip_code=item.get("zip_code"),
+            listing_price=self._as_float(item.get("price")),
+            purchase_price=self._as_float(item.get("price")),
+            beds=self._as_float(item.get("beds")),
+            baths=self._as_float(item.get("baths")),
+            square_feet=self._as_int(item.get("square_feet")),
+            lot_size_sqft=self._as_int(item.get("lot_size_sqft")),
+            year_built=self._as_int(item.get("year_built")),
+            property_type=item.get("property_type"),
+            primary_photo=primary_photo,
+            photos=photos,
+            status=item.get("status"),
+            days_on_market=self._as_int(item.get("days_on_market")),
+            latitude=self._as_float(item.get("latitude")),
+            longitude=self._as_float(item.get("longitude")),
+            strategy=self.strategy,
+            recommended_strategy=self.strategy,
+            value_sources={
+                "listing_price": "rentcast",
+                "photos": "rentcast" if primary_photo else "",
             },
             raw=item.get("raw") or item,
         )
@@ -666,9 +699,15 @@ class PropertyIntelligenceOrchestrator:
         cp.latitude = self._first_truthy(cp.latitude, self._as_float(sale_listing.get("latitude")))
         cp.longitude = self._first_truthy(cp.longitude, self._as_float(sale_listing.get("longitude")))
 
-        if not cp.primary_photo and sale_listing.get("primary_photo"):
-            cp.primary_photo = sale_listing.get("primary_photo")
-            cp.photos = [cp.primary_photo]
+        sale_listing_photos = self._normalize_photo_candidates(
+            cp.photos,
+            sale_listing.get("primary_photo"),
+            sale_listing.get("photos"),
+            sale_listing.get("raw", {}),
+        )
+        if sale_listing_photos:
+            cp.photos = sale_listing_photos
+            cp.primary_photo = _resolve_photo(cp.primary_photo, sale_listing_photos)
 
         cp.value_sources.update({
             "market_value": "rentcast",
@@ -748,7 +787,7 @@ class PropertyIntelligenceOrchestrator:
         if mashvisor_photos:
             cp.photos = self._normalize_photo_candidates(cp.photos, mashvisor_photos)
             if cp.photos:
-                cp.primary_photo = cp.primary_photo or cp.photos[0]
+                cp.primary_photo = _resolve_photo(cp.primary_photo, cp.photos)
 
         cp.value_sources.update({
             "airbnb_revenue": "mashvisor",

@@ -16,6 +16,11 @@ from LoanMVP.services.investor.investor_helpers import (
     _safe_json_list,
     _safe_json_loads_local,
 )
+from LoanMVP.services.investor.investor_media_helpers import (
+    _extract_listing_photos_from_payload,
+    _normalize_photo_urls,
+    _resolve_photo,
+)
 
 
 def _profile_id_filter(model, profile_id):
@@ -148,9 +153,9 @@ def _persist_property_core_fields(saved, payload):
     deal_finder_signal = _clean_str(payload.get("deal_finder_signal"))
     next_step = _clean_str(payload.get("next_step"))
     comp_confidence = _clean_str(payload.get("comp_confidence"))
-    image_url = _clean_str(payload.get("image_url"))
+    image_url = _clean_str(payload.get("image_url") or payload.get("primary_photo"))
     description = _clean_str(payload.get("description"))
-    listing_photos = _clean_string_list(payload.get("listing_photos"))
+    listing_photos = _extract_listing_photos_from_payload(payload)
 
     if address:
         saved.address = address
@@ -201,16 +206,8 @@ def _persist_property_core_fields(saved, payload):
     _assign_if_has_attr(saved, "deal_finder_signal", deal_finder_signal)
     _assign_if_has_attr(saved, "next_step", next_step)
     _assign_if_has_attr(saved, "comp_confidence", comp_confidence)
-    listing_photos = _clean_string_list(payload.get("listing_photos"))
-
-    best_image_url = None
-    if listing_photos:
-        best_image_url = listing_photos[0]
-    elif image_url:
-        best_image_url = image_url
-
+    best_image_url = _resolve_photo(image_url, listing_photos)
     _assign_if_has_attr(saved, "image_url", best_image_url)
-    _assign_if_has_attr(saved, "image_url", image_url)
     _assign_if_has_attr(saved, "description", description)
 
     # optional JSON/meta fields if your model supports them
@@ -229,6 +226,110 @@ def _persist_property_core_fields(saved, payload):
     _assign_if_has_attr(saved, "budget_status", "pending")
     _assign_if_has_attr(saved, "last_synced_at", datetime.utcnow())
     _assign_if_has_attr(saved, "updated_at", datetime.utcnow())
+
+    if hasattr(saved, "resolved_json"):
+        resolved = _safe_json_loads_local(getattr(saved, "resolved_json", None), default={})
+        if not isinstance(resolved, dict):
+            resolved = {}
+
+        property_payload = resolved.get("property")
+        if not isinstance(property_payload, dict):
+            property_payload = {}
+
+        merged_listing_photos = _normalize_photo_urls(
+            property_payload.get("listing_photos"),
+            listing_photos,
+            best_image_url,
+        )
+        merged_image_url = _resolve_photo(
+            best_image_url or property_payload.get("image_url"),
+            merged_listing_photos,
+        )
+
+        property_payload.update({
+            "address": address or property_payload.get("address"),
+            "city": city or property_payload.get("city"),
+            "state": state or property_payload.get("state"),
+            "zip_code": zipcode or property_payload.get("zip_code"),
+            "property_id": property_id or property_payload.get("property_id"),
+            "purchase_price": purchase_price if purchase_price is not None else property_payload.get("purchase_price"),
+            "price": purchase_price if purchase_price is not None else property_payload.get("price"),
+            "market_value": market_value if market_value is not None else property_payload.get("market_value"),
+            "assessed_value": assessed_value if assessed_value is not None else property_payload.get("assessed_value"),
+            "arv": arv if arv is not None else property_payload.get("arv"),
+            "monthly_rent_estimate": monthly_rent if monthly_rent is not None else property_payload.get("monthly_rent_estimate"),
+            "square_feet": sqft if sqft is not None else property_payload.get("square_feet"),
+            "sqft": sqft if sqft is not None else property_payload.get("sqft"),
+            "beds": beds if beds is not None else property_payload.get("beds"),
+            "baths": baths if baths is not None else property_payload.get("baths"),
+            "year_built": year_built if year_built is not None else property_payload.get("year_built"),
+            "lot_size_sqft": lot_size_sqft if lot_size_sqft is not None else property_payload.get("lot_size_sqft"),
+            "property_type": property_type or property_payload.get("property_type"),
+            "property_classification": _clean_str(payload.get("property_classification")) or property_payload.get("property_classification"),
+            "best_exit_strategy": _clean_str(payload.get("best_exit_strategy")) or property_payload.get("best_exit_strategy"),
+            "best_exit_reason": _clean_str(payload.get("best_exit_reason")) or property_payload.get("best_exit_reason"),
+            "deal_score": deal_score if deal_score is not None else property_payload.get("deal_score"),
+            "opportunity_tier": opportunity_tier or property_payload.get("opportunity_tier"),
+            "estimated_best_use": estimated_best_use or property_payload.get("estimated_best_use"),
+            "next_step": next_step or property_payload.get("next_step"),
+            "image_url": merged_image_url,
+            "listing_photos": merged_listing_photos,
+            "description": description or property_payload.get("description"),
+        })
+
+        workspace_analysis = resolved.get("workspace_analysis")
+        if not isinstance(workspace_analysis, dict):
+            workspace_analysis = {}
+
+        workspace_analysis.update({
+            "address": property_payload.get("address"),
+            "city": property_payload.get("city"),
+            "state": property_payload.get("state"),
+            "zip_code": property_payload.get("zip_code"),
+            "purchase_price": property_payload.get("purchase_price"),
+            "arv": property_payload.get("arv"),
+            "estimated_rent": property_payload.get("monthly_rent_estimate"),
+            "property_type": property_payload.get("property_type"),
+            "square_feet": property_payload.get("square_feet"),
+            "beds": property_payload.get("beds"),
+            "baths": property_payload.get("baths"),
+            "year_built": property_payload.get("year_built"),
+            "lot_size_sqft": property_payload.get("lot_size_sqft"),
+            "deal_score": property_payload.get("deal_score"),
+            "opportunity_tier": property_payload.get("opportunity_tier"),
+            "property_classification": property_payload.get("property_classification"),
+            "best_exit_strategy": property_payload.get("best_exit_strategy"),
+            "best_exit_reason": property_payload.get("best_exit_reason"),
+            "estimated_best_use": property_payload.get("estimated_best_use"),
+            "next_step": property_payload.get("next_step"),
+            "image_url": merged_image_url,
+            "listing_photos": merged_listing_photos,
+        })
+
+        if isinstance(payload.get("ai_recommendation"), dict) and payload.get("ai_recommendation"):
+            workspace_analysis["ai_recommendation"] = payload.get("ai_recommendation")
+        if isinstance(payload.get("exit_strategy_cards"), list) and payload.get("exit_strategy_cards"):
+            workspace_analysis["exit_strategy_cards"] = payload.get("exit_strategy_cards")
+
+        resolved["property"] = property_payload
+        resolved["workspace_analysis"] = workspace_analysis
+
+        if isinstance(payload.get("comp_analysis"), dict) and payload.get("comp_analysis"):
+            resolved["comp_analysis"] = payload.get("comp_analysis")
+        if isinstance(payload.get("rehab_analysis"), dict) and payload.get("rehab_analysis"):
+            resolved["rehab_analysis"] = payload.get("rehab_analysis")
+        if isinstance(payload.get("strategy_analysis"), dict) and payload.get("strategy_analysis"):
+            resolved["strategy_analysis"] = payload.get("strategy_analysis")
+        if isinstance(payload.get("exit_strategy_analysis"), dict) and payload.get("exit_strategy_analysis"):
+            resolved["exit_strategy_analysis"] = payload.get("exit_strategy_analysis")
+        if isinstance(payload.get("comparison"), dict) and payload.get("comparison"):
+            resolved["comparison"] = payload.get("comparison")
+        if isinstance(payload.get("recommendation"), dict) and payload.get("recommendation"):
+            resolved["recommendation"] = payload.get("recommendation")
+
+        saved.resolved_json = json.dumps(resolved)
+        if hasattr(saved, "resolved_at"):
+            saved.resolved_at = datetime.utcnow()
 
 
 def _upsert_saved_property_from_payload(ip, payload):
