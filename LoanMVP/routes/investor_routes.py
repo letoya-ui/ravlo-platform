@@ -7247,6 +7247,7 @@ def convert_build_project_to_deal(project_id):
             "source": "build_project",
             "build_project_id": project.id,
             "project_name": project.project_name,
+            "development_type": project.development_type,
             "property_type": project.property_type,
             "description": project.description,
             "lot_size": project.lot_size,
@@ -7258,6 +7259,7 @@ def convert_build_project_to_deal(project_id):
             "build_project": {
                 "project_id": project.id,
                 "project_name": project.project_name,
+                "development_type": project.development_type,
                 "property_type": project.property_type,
                 "description": project.description,
                 "lot_size": project.lot_size,
@@ -7265,13 +7267,23 @@ def convert_build_project_to_deal(project_id):
                 "location": project.location,
                 "notes": project.notes,
                 "concept_render_url": project.concept_render_url,
-                "blueprint_url": project.blueprint_url,
                 "site_plan_url": project.site_plan_url,
+                "exterior_url": project.exterior_url,
+                "blueprint_url": project.blueprint_url,
                 "presentation_url": project.presentation_url,
             }
         }
     )
 
+    db.session.add(deal)
+    db.session.commit()
+
+    flash("Build project converted into a deal.", "success")
+    return jsonify({
+        "status": "ok",
+        "deal_id": deal.id,
+        "redirect_url": url_for("investor.deal_detail", deal_id=deal.id)
+    })
     db.session.add(deal)
     db.session.commit()
 
