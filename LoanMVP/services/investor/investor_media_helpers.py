@@ -202,22 +202,28 @@ _BROWSER_HEADERS = {
 }
 
 
+_LISTING_PAGE_RULES: list[tuple[str, str]] = [
+    # (hostname_suffix, path_substring)
+    ("realtor.com", "/realestateandhomes-detail/"),
+    ("zillow.com", "/homedetails/"),
+    ("zillow.com", "/homes/"),
+    ("redfin.com", "/listing/"),
+    ("redfin.com", "/property/"),
+    ("trulia.com", "/property/"),
+    ("homes.com", "/listing/"),
+    ("realtor.com", "/property-overview/"),
+]
+
+
 def _is_image_url(url: str) -> bool:
-    """Return False for URLs that are clearly HTML pages, not direct images."""
+    """Return False for URLs that are clearly HTML listing pages, not images."""
     if not url or not url.startswith(("http://", "https://")):
         return False
     parsed = urlparse(url)
+    host = parsed.hostname or ""
     path = parsed.path.lower()
-    # Common real estate listing page patterns
-    non_image_patterns = (
-        "/realestateandhomes-detail/",
-        "/homedetails/",
-        "/homes/",
-        "/listing/",
-        "/property/",
-    )
-    for pattern in non_image_patterns:
-        if pattern in path:
+    for host_suffix, path_pattern in _LISTING_PAGE_RULES:
+        if host.endswith(host_suffix) and path_pattern in path:
             return False
     return True
 
