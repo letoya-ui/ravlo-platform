@@ -1066,7 +1066,7 @@ def loan_application():
         # --- default status events ---
         submission_desc = "Loan Officer submitted the application on behalf of borrower."
         if notes:
-            submission_desc += f"\n\nOfficer Notes: {notes}"
+            submission_desc += f"\n\nOfficer Notes: {notes[:300]}"
         default_events = [
             ("Application Submitted", submission_desc),
             ("Processor Review", "Processor will begin reviewing the file."),
