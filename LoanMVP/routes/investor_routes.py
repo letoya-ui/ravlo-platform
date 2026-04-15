@@ -145,7 +145,9 @@ from LoanMVP.services.blueprint_parser import extract_blueprint_structure, infer
 from LoanMVP.services.prompt_builder import build_blueprint_prompt
 from LoanMVP.services.investor.investor_prompt_helpers import (
     build_exterior_concept_prompt,
+    build_exterior_negative_prompt,
     build_rehab_concept_prompt,
+    build_rehab_negative_prompt,
 )
 from LoanMVP.services.concept_build_service import run_concept_build
 from LoanMVP.services.renovation_engine_client import (
@@ -5465,6 +5467,7 @@ def generate_build_exterior():
             style=style,
             description=description,
         )
+        exterior_neg = build_exterior_negative_prompt()
 
         # ---------------- PAYLOAD ----------------
         payload = {
@@ -5475,6 +5478,7 @@ def generate_build_exterior():
             "description": description,
             "build_description": description,
             "prompt": exterior_prompt,
+            "negative_prompt": exterior_neg,
             "lot_size": lot_size,
             "zoning": zoning,
             "prompt_notes": notes,
@@ -8159,6 +8163,7 @@ def deal_rehab_generate():
             property_type=property_type,
             notes=notes,
         )
+        rehab_neg = build_rehab_negative_prompt()
 
         payload = {
             "preset": preset,
@@ -8171,6 +8176,7 @@ def deal_rehab_generate():
             "desired_updates": notes,
             "prompt_notes": notes,
             "prompt": rehab_prompt,
+            "negative_prompt": rehab_neg,
             "keep_layout": True,
             "preserve_structure": True,
             "image_base64": image_base64,
