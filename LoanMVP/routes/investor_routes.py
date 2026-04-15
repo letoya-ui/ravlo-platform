@@ -5109,6 +5109,8 @@ def deal_rehab(deal_id=None):
             seen_urls.add(concept_url)
 
     preselected_image_url = (request.args.get("image_url") or "").strip()
+    if preselected_image_url and not preselected_image_url.lower().startswith(("http://", "https://")):
+        preselected_image_url = ""
 
     if preselected_image_url and not rehab_before.get("image_url"):
         rehab_before = {
