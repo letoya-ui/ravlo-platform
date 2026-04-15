@@ -27,7 +27,9 @@ from LoanMVP.models.renovation_models import RenovationMockup, BuildProject
 from LoanMVP.models.ai_models import (
     AIAssistantInteraction, AIIntakeSummary, LoanAIConversation,
 )
-from LoanMVP.models.partner_models import ExternalPartnerLead
+from LoanMVP.models.partner_models import (
+    ExternalPartnerLead, PartnerConnectionRequest, PartnerJob,
+)
 from LoanMVP.models.activity_models import BorrowerActivity
 from LoanMVP.models.credit_models import SoftCreditReport
 from LoanMVP.models.campaign_model import Campaign, CampaignRecipient
@@ -354,6 +356,13 @@ def delete_user(user_id):
             ProjectBudget.query.filter(
                 ProjectBudget.deal_id.in_(deal_ids)
             ).delete(synchronize_session="fetch")
+            # Nullify deal_id on tables that reference these deals
+            PartnerConnectionRequest.query.filter(
+                PartnerConnectionRequest.deal_id.in_(deal_ids)
+            ).update({"deal_id": None}, synchronize_session="fetch")
+            RenovationMockup.query.filter(
+                RenovationMockup.deal_id.in_(deal_ids)
+            ).update({"deal_id": None}, synchronize_session="fetch")
         # User's own funding requests on other users' deals
         FundingRequest.query.filter_by(investor_id=user.id).delete(
             synchronize_session="fetch"
@@ -506,6 +515,18 @@ def delete_user(user_id):
                      synchronize_session="fetch")
             SoftCreditReport.query.filter(
                 SoftCreditReport.investor_profile_id.in_(inv_ids)
+            ).update({"investor_profile_id": None},
+                     synchronize_session="fetch")
+            PartnerConnectionRequest.query.filter(
+                PartnerConnectionRequest.investor_profile_id.in_(inv_ids)
+            ).update({"investor_profile_id": None},
+                     synchronize_session="fetch")
+            PartnerJob.query.filter(
+                PartnerJob.investor_profile_id.in_(inv_ids)
+            ).update({"investor_profile_id": None},
+                     synchronize_session="fetch")
+            ExternalPartnerLead.query.filter(
+                ExternalPartnerLead.investor_profile_id.in_(inv_ids)
             ).update({"investor_profile_id": None},
                      synchronize_session="fetch")
 
