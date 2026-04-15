@@ -250,7 +250,7 @@ def create_app():
     @app.errorhandler(Exception)
     def handle_any_exception(e):
         current_app.logger.exception("Unhandled application error")
-        if app.debug or app.testing:
+        if current_app.debug or current_app.testing:
             tb = traceback.format_exc()
             return Response(f"<pre>{tb}</pre>", mimetype="text/plain"), 500
         return render_template("errors/500.html"), 500
@@ -391,4 +391,4 @@ if __name__ == "__main__":
     for rule in app.url_map.iter_rules():
         print(f"{rule.endpoint:40s} -> {rule.rule}")
 
-    socketio.run(app, host="0.0.0.0", port=5050, debug=True, use_reloader=False)
+    socketio.run(app, host="0.0.0.0", port=5050, debug=app.config.get("DEBUG", False), use_reloader=False)

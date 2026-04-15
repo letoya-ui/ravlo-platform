@@ -1,3 +1,4 @@
+import os
 from typing import Dict, Any
 
 from LoanMVP.services.attom_service import (
@@ -14,7 +15,7 @@ from LoanMVP.services.dealfinder_scoring import compute_deal_score
 import requests
 from LoanMVP.services.realtor_provider import fetch_realtor_data
 
-RENTCAST_API_KEY = "d0bdb63befcc468897409c4293fd5049"
+RENTCAST_API_KEY = os.getenv("RENTCAST_API_KEY", "").strip()
 
 
 def extract_attom_fields(raw):
