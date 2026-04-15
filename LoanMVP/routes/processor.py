@@ -732,16 +732,16 @@ def submit_underwriter(loan_id):
 @login_required
 @role_required("processor")
 def view_file(filename):
-    safe_name = secure_filename(filename)
-    if not safe_name:
-        abort(400, description="Invalid filename")
-
     upload_folder = current_app.config.get("UPLOAD_FOLDER")
 
     if not upload_folder:
         upload_folder = os.path.join(current_app.instance_path, "uploads")
 
-    return send_from_directory(upload_folder, safe_name)
+    # send_from_directory uses safe_join internally to prevent path traversal.
+    # We intentionally avoid secure_filename() here because existing uploads
+    # are stored with their original names (including spaces, parens, and
+    # subdirectory paths) — sanitising at read time would break lookups.
+    return send_from_directory(upload_folder, filename)
 
 # ---------------------------------------------------------
 # 📤 Upload Document
