@@ -93,18 +93,25 @@ def get_rentcast_value_estimate(
 
 
 def get_rentcast_sale_listings(
-    city: str,
-    state: str,
+    city: str = "",
+    state: str = "",
+    zip_code: str = "",
     status: str = "Active",
     limit: int = 10,
 ) -> List[Dict[str, Any]]:
     url = f"{RENTCAST_BASE_URL}/listings/sale"
-    params = {
-        "city": city,
-        "state": state,
+    params: Dict[str, Any] = {
         "status": status,
         "limit": limit,
     }
+    if city and state:
+        params["city"] = city
+        params["state"] = state
+    if zip_code:
+        params["zipCode"] = zip_code
+
+    if "city" not in params and "zipCode" not in params:
+        return []
 
     return _extract_listing_items(_safe_get(url, params))
 
@@ -178,7 +185,7 @@ def find_rentcast_sale_listing(
     Best-effort matcher for an active sale listing in RentCast.
     Search by city/state, then try to match the address locally.
     """
-    listings = get_rentcast_sale_listings(city=city, state=state, status="Active", limit=limit)
+    listings = get_rentcast_sale_listings(city=city, state=state, zip_code=zip_code, status="Active", limit=limit)
     target = _normalize_address_for_match(address)
     zip_digits = "".join(ch for ch in str(zip_code or "") if ch.isdigit())
 
