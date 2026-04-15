@@ -32,7 +32,7 @@ class ProviderBudget:
     rentcast_search: int = 1
     attom_detail: int = 4
     rentcast_detail: int = 4
-    mashvisor_detail: int = 2
+    mashvisor_detail: int = 4
     deal_architect: int = 4
 
     def use(self, key: str, amount: int = 1) -> bool:
@@ -535,8 +535,7 @@ class PropertyIntelligenceOrchestrator:
             cp = self._enrich_with_attom(cp)
             cp = self._enrich_with_rentcast(cp)
 
-            if idx < 2:
-                cp = self._enrich_with_mashvisor(cp)
+            cp = self._enrich_with_mashvisor(cp)
 
             enriched.append(cp)
 
