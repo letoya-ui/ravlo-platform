@@ -34,6 +34,12 @@ Review a saved property, compare exit paths, and move the best opportunity into 
     <a href="{{ url_for('investor.deal_rehab', deal_id=deal.id) }}" class="ravlo-btn ghost sm">
         Rehab Studio
     </a>
+    <a href="{{ url_for('investor.build_studio', deal_id=deal.id) }}" class="ravlo-btn ghost sm">
+        Build Studio
+    </a>
+    <a href="{{ url_for('investor.build_projects') }}" class="ravlo-btn ghost sm">
+        Project Build
+    </a>
     <a href="{{ url_for('investor.capital_application', deal_id=deal.id, prop_id=sp.id) }}" class="ravlo-btn primary sm">
         Apply
     </a>
@@ -344,6 +350,12 @@ Review a saved property, compare exit paths, and move the best opportunity into 
                 {% endif %}
                 <a href="{{ url_for('investor.deal_rehab', deal_id=deal.id) }}" class="ravlo-btn ghost">
                     Rehab Studio
+                </a>
+                <a href="{{ url_for('investor.build_studio', deal_id=deal.id) }}" class="ravlo-btn ghost">
+                    Build Studio
+                </a>
+                <a href="{{ url_for('investor.build_projects') }}" class="ravlo-btn ghost">
+                    Project Build
                 </a>
                 <a href="{{ url_for('investor.capital_application', deal_id=deal.id, prop_id=selected_prop.id) }}" class="ravlo-btn primary">
                     Apply

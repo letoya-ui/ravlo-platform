@@ -24,6 +24,9 @@
 
   <header class="rb-topbar">
     <div class="rb-topbar-left">
+      <button class="rb-mobile-menu-btn" type="button" aria-label="Toggle navigation" onclick="document.querySelector('.rb-nav').classList.toggle('rb-nav-open')">
+        R
+      </button>
       <div class="rb-brand">
         <div class="rb-mark">RV</div>
         <div>
@@ -108,6 +111,34 @@
 
 </div>
 
+<style>
+  .rb-mobile-menu-btn{
+    display:none;
+    width:42px;
+    height:42px;
+    border-radius:12px;
+    border:1px solid rgba(255,255,255,.10);
+    background:linear-gradient(180deg, rgba(95,168,255,.22), rgba(95,168,255,.10));
+    color:#F4F8FC;
+    font-weight:800;
+    font-size:1.1rem;
+    letter-spacing:.05em;
+    cursor:pointer;
+    place-items:center;
+    flex:0 0 42px;
+  }
+  @media (max-width: 640px){
+    .rb-mobile-menu-btn{
+      display:inline-grid;
+    }
+    .rb-nav{
+      display:none;
+    }
+    .rb-nav.rb-nav-open{
+      display:flex;
+    }
+  }
+</style>
 {% block scripts %}{% endblock %}
 </body>
 </html>

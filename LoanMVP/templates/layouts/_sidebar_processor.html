@@ -62,6 +62,12 @@
       <i class="icon lucide lucide-user-round"></i>
       <span>Profile</span>
     </a>
+
+    <a href="{{ url_for('account.settings') }}"
+       class="re-nav-link {% if active_tab == 'settings' %}active{% endif %}">
+      <i class="icon lucide lucide-settings"></i>
+      <span>Settings</span>
+    </a>
   </div>
 
   <div class="re-nav-group">
