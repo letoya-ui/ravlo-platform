@@ -200,44 +200,6 @@ def _enrich_property_with_detail(prop: Dict[str, Any]) -> Dict[str, Any]:
     except Exception:
         detail = {}
 
-    realtor_detail = {}
-    try:
-        from LoanMVP.services.realtor_provider import (
-            fetch_realtor_data,
-            fetch_realtor_photos,
-            fetch_realtor_estimate,
-        )
-
-        realtor_raw = fetch_realtor_data(address1, city, state)
-        if realtor_raw and realtor_raw.get("property"):
-            listing = realtor_raw["property"] or {}
-            realtor_detail = {
-                "price": _to_float(listing.get("price")),
-                "status": listing.get("status"),
-                "days_on_market": _to_int(listing.get("days_on_market")),
-                "description": listing.get("description"),
-                "primary_photo": listing.get("primary_photo"),
-                "photos": listing.get("photos") or [],
-                "beds": _to_int(listing.get("beds")),
-                "baths": _to_float(listing.get("baths")),
-                "square_feet": _to_int(listing.get("sqft")),
-            }
-
-        realtor_property_id = prop.get("property_id") or prop.get("attom_id")
-        estimate = fetch_realtor_estimate(realtor_property_id)
-        photos = fetch_realtor_photos(realtor_property_id)
-
-        if estimate:
-            realtor_detail["realtor_estimate"] = _to_float(estimate.get("estimate"))
-            realtor_detail["realtor_estimate_low"] = _to_float(estimate.get("low"))
-            realtor_detail["realtor_estimate_high"] = _to_float(estimate.get("high"))
-
-        if photos:
-            realtor_detail["photos"] = photos
-            realtor_detail["primary_photo"] = photos[0]
-    except Exception:
-        realtor_detail = {}
-
     rentcast_detail = {}
     try:
         from LoanMVP.services.rentcast_service import get_rentcast_rent_estimate
@@ -261,15 +223,14 @@ def _enrich_property_with_detail(prop: Dict[str, Any]) -> Dict[str, Any]:
         rentcast_detail = {}
 
     display_value = _build_display_value(
-        listing_price=_to_float(realtor_detail.get("price")) or _to_float(prop.get("price")),
-        market_value=_to_float(realtor_detail.get("realtor_estimate")) or _to_float(detail.get("market_value")),
+        listing_price=_to_float(prop.get("price")),
+        market_value=_to_float(detail.get("market_value")),
         assessed_value=_to_float(detail.get("assessed_value")),
         last_sale_price=_to_float(detail.get("last_sale_price")),
         last_sale_date=detail.get("last_sale_date"),
     )
 
     enriched = _merge_property_data(prop, detail)
-    enriched = _merge_property_data(enriched, realtor_detail)
     enriched = _merge_property_data(enriched, rentcast_detail)
     enriched.update(display_value)
     return enriched
@@ -524,37 +485,6 @@ def get_property_search_result(
     """
     Ravlo-friendly wrapper for routes/services.
     """
-
-    location_parts = []
-    if address:
-        location_parts.append(address)
-    if city:
-        location_parts.append(city)
-    if state:
-        location_parts.append(state)
-    if postalcode:
-        location_parts.append(postalcode)
-    realtor_location = ", ".join([part.strip() for part in location_parts if str(part).strip()])
-
-    if realtor_location:
-        try:
-            from LoanMVP.services.realtor_provider import search_realtor_for_sale
-
-            realtor_results = search_realtor_for_sale(
-                location=realtor_location,
-                limit=page_size,
-                offset=max(page - 1, 0) * page_size,
-            )
-            if realtor_results:
-                enriched = [_enrich_property_with_detail(item) for item in realtor_results]
-                return {
-                    "ok": True,
-                    "count": len(enriched),
-                    "properties": enriched,
-                    "source": "realtor",
-                }
-        except Exception:
-            pass
 
     if address:
         results = search_property_by_address(

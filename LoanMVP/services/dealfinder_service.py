@@ -1,3 +1,4 @@
+import os
 from typing import Dict, Any
 
 from LoanMVP.services.attom_service import (
@@ -12,9 +13,8 @@ from LoanMVP.services.rentcast_service import (
 from LoanMVP.services.dealfinder_normalizer import normalize_property
 from LoanMVP.services.dealfinder_scoring import compute_deal_score
 import requests
-from LoanMVP.services.realtor_provider import fetch_realtor_data
 
-RENTCAST_API_KEY = "d0bdb63befcc468897409c4293fd5049"
+RENTCAST_API_KEY = os.getenv("RENTCAST_API_KEY", "").strip()
 
 
 def extract_attom_fields(raw):
@@ -207,21 +207,6 @@ def build_dealfinder_profile(
         errors.append(f"RentCast sale listing: {e}")
     except Exception as e:
         errors.append(f"RentCast sale listing: {e}")
-
-    try:
-        realtor_raw = fetch_realtor_data(address, city, state)
-        if realtor_raw and realtor_raw.get("property"):
-            prop = realtor_raw["property"]
-            realtor_core.update({
-                "price": prop.get("price") or realtor_core.get("price"),
-                "photos": prop.get("photos") or realtor_core.get("photos"),
-                "primary_photo": prop.get("primary_photo") or realtor_core.get("primary_photo"),
-                "status": prop.get("status") or realtor_core.get("status"),
-                "days_on_market": prop.get("days_on_market") or realtor_core.get("days_on_market"),
-                "description": prop.get("description") or realtor_core.get("description"),
-            })
-    except Exception as e:
-        errors.append(f"Realtor: {e}")
 
     if not attom_core:
         return {

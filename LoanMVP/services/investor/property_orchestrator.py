@@ -3,12 +3,11 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Tuple
 
-from LoanMVP.services.realtor_provider import search_realtor_for_sale
-from LoanMVP.services.realtor_provider import fetch_realtor_photos
 from LoanMVP.services.attom_service import build_attom_dealfinder_profile, AttomServiceError
 from LoanMVP.services.rentcast_service import (
     get_rentcast_rent_estimate,
     get_rentcast_value_estimate,
+    get_rentcast_sale_listings,
     find_rentcast_sale_listing,
     normalize_rentcast_sale_listing,
     RentCastServiceError,
@@ -30,10 +29,10 @@ from LoanMVP.services.investor.investor_media_helpers import (
 
 @dataclass
 class ProviderBudget:
-    realtor_search: int = 1
+    rentcast_search: int = 1
     attom_detail: int = 4
     rentcast_detail: int = 4
-    mashvisor_detail: int = 2
+    mashvisor_detail: int = 4
     deal_architect: int = 4
 
     def use(self, key: str, amount: int = 1) -> bool:
@@ -445,29 +444,13 @@ class PropertyIntelligenceOrchestrator:
         zip_code: str = "",
         limit: int = 12,
     ) -> List[CanonicalProperty]:
-        if not self.budget.use("realtor_search", 1):
+        if not self.budget.use("rentcast_search", 1):
             return []
 
-        location_parts = [x.strip() for x in [address, city, state, zip_code] if x and str(x).strip()]
-        location = ", ".join(location_parts)
-
-        listings = search_realtor_for_sale(
-            location=location,
-            limit=min(limit, 12),
-            offset=0,
-            sort="relevance",
-            days_on=1,
-            expand_search_radius=0,
-        )
-
-        filtered = [x for x in listings if _property_matches_asset_type(x, self.asset_type)]
-        if filtered:
-            return [self._from_realtor_listing(item) for item in filtered]
-
-        fallback_listing = {}
-        if city and state:
+        # If an address is provided with city+state, try exact match first
+        if address and (city or state or zip_code):
             try:
-                fallback_listing = find_rentcast_sale_listing(
+                matched = find_rentcast_sale_listing(
                     address=address,
                     city=city,
                     state=state,
@@ -475,50 +458,32 @@ class PropertyIntelligenceOrchestrator:
                     limit=min(max(limit, 5), 25),
                 ) or {}
             except Exception:
-                fallback_listing = {}
+                matched = {}
 
-        if fallback_listing:
-            normalized = normalize_rentcast_sale_listing(fallback_listing)
+            if matched:
+                normalized = normalize_rentcast_sale_listing(matched)
+                if _property_matches_asset_type(normalized, self.asset_type):
+                    return [self._from_rentcast_listing(normalized)]
+
+        # Broad listing search by city/state or ZIP
+        try:
+            listings = get_rentcast_sale_listings(
+                city=city,
+                state=state,
+                zip_code=zip_code,
+                status="Active",
+                limit=min(limit, 25),
+            )
+        except Exception:
+            listings = []
+
+        results: List[CanonicalProperty] = []
+        for item in listings:
+            normalized = normalize_rentcast_sale_listing(item)
             if _property_matches_asset_type(normalized, self.asset_type):
-                return [self._from_rentcast_listing(normalized)]
+                results.append(self._from_rentcast_listing(normalized))
 
-        return []
-
-    def _from_realtor_listing(self, item: Dict[str, Any]) -> CanonicalProperty:
-        photos = self._normalize_photo_candidates(
-            item.get("photos"),
-            item.get("primary_photo"),
-            item.get("raw", {}),
-        )
-
-        return CanonicalProperty(
-            provider_ids={"realtor": item.get("property_id")},
-            address=item.get("address") or item.get("address_line1"),
-            address_line1=item.get("address_line1") or item.get("address"),
-            city=item.get("city"),
-            state=item.get("state"),
-            zip_code=item.get("zip_code"),
-            listing_price=self._as_float(item.get("price")),
-            purchase_price=self._as_float(item.get("price")),
-            beds=self._as_float(item.get("beds")),
-            baths=self._as_float(item.get("baths")),
-            square_feet=self._as_int(item.get("square_feet")),
-            lot_size_sqft=self._as_int(item.get("lot_size_sqft")),
-            year_built=self._as_int(item.get("year_built")),
-            property_type=item.get("property_type"),
-            primary_photo=item.get("primary_photo") or (photos[0] if photos else None),
-            photos=photos,
-            status=item.get("status"),
-            days_on_market=self._as_int(item.get("days_on_market")),
-            description=item.get("description"),
-            strategy=self.strategy,
-            recommended_strategy=self.strategy,
-            value_sources={
-                "listing_price": "realtor",
-                "photos": "realtor",
-            },
-            raw=item.get("raw") or item,
-        )
+        return results
 
     def _from_rentcast_listing(self, item: Dict[str, Any]) -> CanonicalProperty:
         photos = self._normalize_photo_candidates(
@@ -567,32 +532,14 @@ class PropertyIntelligenceOrchestrator:
                 enriched.append(cp)
                 continue
 
-            cp = self._enrich_with_realtor_photos(cp)
             cp = self._enrich_with_attom(cp)
             cp = self._enrich_with_rentcast(cp)
 
-            if idx < 2:
-                cp = self._enrich_with_mashvisor(cp)
+            cp = self._enrich_with_mashvisor(cp)
 
             enriched.append(cp)
 
         return enriched
-
-    def _enrich_with_realtor_photos(self, cp: CanonicalProperty) -> CanonicalProperty:
-        property_id = cp.provider_ids.get("realtor")
-        if not property_id:
-            return cp
-
-        try:
-            extra_photos = fetch_realtor_photos(property_id)
-        except Exception:
-            extra_photos = []
-
-        if extra_photos:
-            cp.photos = self._normalize_photo_candidates(cp.photos, extra_photos)
-            cp.primary_photo = _resolve_photo(cp.primary_photo, cp.photos)
-
-        return cp
 
     def _enrich_with_attom(self, cp: CanonicalProperty) -> CanonicalProperty:
         if not self.budget.use("attom_detail", 1):
@@ -958,7 +905,7 @@ class PropertyIntelligenceOrchestrator:
             "address": address,
             "engine_ready": any(r.get("deal_score") is not None for r in results),
             "budget_remaining": {
-                "realtor_search": self.budget.realtor_search,
+                "rentcast_search": self.budget.rentcast_search,
                 "attom_detail": self.budget.attom_detail,
                 "rentcast_detail": self.budget.rentcast_detail,
                 "mashvisor_detail": self.budget.mashvisor_detail,
