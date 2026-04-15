@@ -48,7 +48,9 @@ class BuildProject(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
 
     project_name = db.Column(db.String(255))
-    property_type = db.Column(db.String(100))
+    development_type = db.Column(db.String(64))
+    property_type = db.Column(db.String(64))
+
     description = db.Column(db.Text)
     lot_size = db.Column(db.String(100))
     zoning = db.Column(db.String(100))
@@ -59,10 +61,11 @@ class BuildProject(db.Model):
     concept_render_url = db.Column(db.String(500))
     blueprint_url = db.Column(db.String(500))
     site_plan_url = db.Column(db.String(500))
-    presentation_url = db.Column(db.String(500))
-    development_type = db.Column(db.String(64))  # condos, townhomes, apartments, single_family_subdivision
     exterior_url = db.Column(db.Text, nullable=True)
+    presentation_url = db.Column(db.String(500))
+
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     budgets = db.relationship(
         "ProjectBudget",
