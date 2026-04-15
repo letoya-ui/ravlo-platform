@@ -411,6 +411,29 @@ def delete_user(user_id):
         UnderwriterProfile.query.filter_by(user_id=user.id).delete(
             synchronize_session="fetch")
 
+        # -- Investor profile: detach loan applications --------------------
+        # User.investor_profile uses cascade="all, delete-orphan", which
+        # means db.session.delete(user) will ORM-cascade-delete the
+        # InvestorProfile.  InvestorProfile.capital_requests also has
+        # cascade="all, delete-orphan" → that would wipe out every linked
+        # LoanApplication (and *their* children: tasks, quotes, documents,
+        # conditions, budgets, scenarios, …).
+        # Nullify the FK first so those loans are detached before the
+        # cascade fires.  Investor-specific data (investments, saved
+        # properties, credit profiles, etc.) is still cleaned up by the
+        # cascade — only the loan pipeline is preserved.
+        inv_ids = [
+            ip.id for ip in InvestorProfile.query
+            .filter_by(user_id=user.id)
+            .with_entities(InvestorProfile.id)
+            .all()
+        ]
+        if inv_ids:
+            LoanApplication.query.filter(
+                LoanApplication.investor_profile_id.in_(inv_ids)
+            ).update({"investor_profile_id": None},
+                     synchronize_session="fetch")
+
         db.session.delete(user)
         db.session.commit()
         flash(f"Deleted user {user.email}.", "success")
