@@ -526,7 +526,7 @@ class PartnerNote(db.Model):
     content = db.Column(db.Text, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
-    partner = db.relationship("Partner", backref=db.backref("notes", lazy="dynamic"))
+    partner = db.relationship("Partner", backref=db.backref("partner_notes", lazy="dynamic"))
 
     def __repr__(self):
         return f"<PartnerNote {self.id} partner={self.partner_id}>"

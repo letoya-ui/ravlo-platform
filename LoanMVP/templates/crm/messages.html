@@ -18,7 +18,7 @@
           {% for msg in messages %}
             <div class="msg {{ 'user' if msg.sender_id == current_user.id else 'other' }}">
               {{ msg.content }}
-              <small>{{ msg.timestamp.strftime('%b %d, %Y • %I:%M %p') }}</small>
+              <small>{{ msg.created_at.strftime('%b %d, %Y • %I:%M %p') }}</small>
             </div>
           {% endfor %}
         {% else %}
@@ -27,7 +27,7 @@
       </div>
 
       <form class="chat-input" method="POST" action="{{ url_for('crm.messages') }}">
-        <input type="text" name="content" id="msgInput" placeholder="Type your message..." required>
+        <input type="text" name="message" id="msgInput" placeholder="Type your message..." required>
         <button class="btn btn-primary" type="submit">Send</button>
       </form>
 
