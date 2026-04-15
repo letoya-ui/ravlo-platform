@@ -12,9 +12,14 @@ from datetime import datetime
 from LoanMVP.extensions import db, csrf
 from LoanMVP.models.system_models import System, SystemLog, AuditLog, SystemSettings
 from LoanMVP.models.crm_models import Lead, Message, CRMNote
-from LoanMVP.models.loan_models import LoanApplication, LoanNotification, LoanQuote, Upload
+from LoanMVP.models.loan_models import (
+    BorrowerProfile, LoanApplication, LoanIntakeSession, LoanNotification,
+    LoanQuote, Upload,
+)
 from LoanMVP.models.document_models import DocumentRequest
-from LoanMVP.models.investor_models import DealConversation, DealMessage, FundingRequest, Project
+from LoanMVP.models.investor_models import (
+    DealConversation, DealMessage, FundingRequest, InvestorProfile, Project,
+)
 from LoanMVP.models.borrowers import Deal, ProjectBudget
 from LoanMVP.models.call_model import CallLog
 from LoanMVP.models.renovation_models import RenovationMockup, BuildProject
@@ -23,6 +28,7 @@ from LoanMVP.models.partner_models import ExternalPartnerLead
 from LoanMVP.models.campaign_model import Campaign, CampaignRecipient
 from LoanMVP.models.processor_model import ProcessorProfile
 from LoanMVP.models.underwriter_model import UnderwriterProfile, UnderwriterTask
+from LoanMVP.models.loan_officer_model import LoanOfficerProfile
 from LoanMVP.models.user_model import User
 
 from LoanMVP.utils.decorators import role_required
@@ -433,6 +439,41 @@ def delete_user(user_id):
                 LoanApplication.investor_profile_id.in_(inv_ids)
             ).update({"investor_profile_id": None},
                      synchronize_session="fetch")
+
+        # -- Loan officer profile: detach loans & borrowers ----------------
+        # User.loan_officer_profile has cascade="all, delete", which
+        # ORM-cascade-deletes the LoanOfficerProfile.  That profile has
+        # cascade="all, delete-orphan" on loans and borrowers, wiping out
+        # every assigned LoanApplication and BorrowerProfile (plus all
+        # *their* children).  Nullify the FKs to preserve the pipeline.
+        lo_ids = [
+            lo.id for lo in LoanOfficerProfile.query
+            .filter_by(user_id=user.id)
+            .with_entities(LoanOfficerProfile.id)
+            .all()
+        ]
+        if lo_ids:
+            LoanApplication.query.filter(
+                LoanApplication.loan_officer_id.in_(lo_ids)
+            ).update({"loan_officer_id": None},
+                     synchronize_session="fetch")
+            BorrowerProfile.query.filter(
+                BorrowerProfile.assigned_officer_id.in_(lo_ids)
+            ).update({"assigned_officer_id": None},
+                     synchronize_session="fetch")
+            LoanIntakeSession.query.filter(
+                LoanIntakeSession.assigned_officer_id.in_(lo_ids)
+            ).update({"assigned_officer_id": None},
+                     synchronize_session="fetch")
+            LoanQuote.query.filter(
+                LoanQuote.assigned_officer_id.in_(lo_ids)
+            ).update({"assigned_officer_id": None},
+                     synchronize_session="fetch")
+
+        # Force the ORM to reload all relationship collections from the
+        # database so the cascade triggered by db.session.delete(user)
+        # sees the nullified FK values rather than stale in-memory state.
+        db.session.expire_all()
 
         db.session.delete(user)
         db.session.commit()
