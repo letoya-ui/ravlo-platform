@@ -14,18 +14,13 @@
   </div>
 
   <nav class="re-nav">
-    <div class="re-nav-section-label">Executive</div>
+
+    <div class="re-nav-section-label">Overview</div>
 
     <a href="{{ url_for('executive.dashboard') }}"
        class="re-nav-link {% if ep == 'executive.dashboard' %}active{% endif %}">
       <i class="icon lucide lucide-layout-dashboard"></i>
       <span>Dashboard</span>
-    </a>
-
-    <a href="{{ url_for(exec_ns ~ '.analytics') }}"
-       class="re-nav-link {% if ep == exec_ns ~ '.analytics' %}active{% endif %}">
-      <i class="icon lucide lucide-bar-chart-3"></i>
-      <span>Analytics</span>
     </a>
 
     <a href="{{ url_for(exec_ns ~ '.demo_center') }}"
@@ -34,18 +29,30 @@
       <span>Demo Center</span>
     </a>
 
-    <div class="re-nav-section-label">People</div>
-
-    <a href="{{ url_for('system.users') }}"
-       class="re-nav-link {% if ep == 'system.users' %}active{% endif %}">
-      <i class="icon lucide lucide-user-cog"></i>
-      <span>Users</span>
+    <a href="{{ url_for(exec_ns ~ '.analytics') }}"
+       class="re-nav-link {% if ep == exec_ns ~ '.analytics' %}active{% endif %}">
+      <i class="icon lucide lucide-bar-chart-3"></i>
+      <span>Analytics</span>
     </a>
+
+    <a href="{{ url_for('admin.ai_dashboard') }}"
+       class="re-nav-link {% if ep == 'admin.ai_dashboard' %}active{% endif %}">
+      <i class="icon lucide lucide-sparkles"></i>
+      <span>AI Control</span>
+    </a>
+
+    <div class="re-nav-section-label">Onboarding</div>
 
     <a href="{{ url_for(exec_ns ~ '.access_requests') }}"
        class="re-nav-link {% if ep in [exec_ns ~ '.access_requests', exec_ns ~ '.request_detail'] %}active{% endif %}">
       <i class="icon lucide lucide-inbox"></i>
       <span>Access Requests</span>
+    </a>
+
+    <a href="{{ url_for(exec_ns ~ '.companies') }}"
+       class="re-nav-link {% if ep == exec_ns ~ '.companies' %}active{% endif %}">
+      <i class="icon lucide lucide-building-2"></i>
+      <span>Companies</span>
     </a>
 
     <a href="{{ url_for(exec_ns ~ '.licensing_applications') }}"
@@ -54,23 +61,46 @@
       <span>License Applications</span>
     </a>
 
-    <div class="re-nav-section-label">Platform</div>
+    <div class="re-nav-section-label">Operations</div>
 
-    <a href="{{ url_for(exec_ns ~ '.companies') }}"
-       class="re-nav-link {% if ep == exec_ns ~ '.companies' %}active{% endif %}">
-      <i class="icon lucide lucide-building-2"></i>
-      <span>Companies</span>
+    <a href="{{ url_for('admin.verify_data') }}"
+       class="re-nav-link {% if ep in ['admin.verify_data', 'admin.verify_doc'] %}active{% endif %}">
+      <i class="icon lucide lucide-badge-check"></i>
+      <span>Verify Documents</span>
     </a>
 
-    <a href="{{ url_for('crm.dashboard') }}" class="re-nav-link">
+    <a href="{{ url_for('admin.messages') }}"
+       class="re-nav-link {% if ep == 'admin.messages' %}active{% endif %}">
+      <i class="icon lucide lucide-messages-square"></i>
+      <span>Messages</span>
+    </a>
+
+    <a href="{{ url_for('admin.reports') }}"
+       class="re-nav-link {% if ep == 'admin.reports' %}active{% endif %}">
+      <i class="icon lucide lucide-file-spreadsheet"></i>
+      <span>Reports</span>
+    </a>
+
+    <div class="re-nav-section-label">Linked Systems</div>
+
+    <a href="{{ url_for('crm.dashboard') }}"
+       class="re-nav-link {% if ep == 'crm.dashboard' %}active{% endif %}">
       <i class="icon lucide lucide-users"></i>
       <span>CRM</span>
     </a>
 
-    <a href="{{ url_for('property.manage') }}" class="re-nav-link">
+    <a href="{{ url_for('system.users') }}"
+       class="re-nav-link {% if ep == 'system.users' %}active{% endif %}">
+      <i class="icon lucide lucide-user-cog"></i>
+      <span>Users</span>
+    </a>
+
+    <a href="{{ url_for('property.manage') }}"
+       class="re-nav-link {% if ep == 'property.manage' %}active{% endif %}">
       <i class="icon lucide lucide-building"></i>
       <span>Properties</span>
     </a>
+
   </nav>
 
   <div class="re-sidebar-footer">
