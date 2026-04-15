@@ -420,9 +420,19 @@ def _resolve_rehab_before_seed(deal):
     return {"url": url or "", "gallery": gallery}
 
 
+def _is_map_tile_url(url):
+    """Return True if *url* is an OpenStreetMap (or similar) map-tile URL."""
+    if not url:
+        return False
+    lower = str(url).lower()
+    return "tile.openstreetmap.org" in lower or "tiles.mapbox.com" in lower
+
+
 def _proxy_listing_image_url(source_url):
     source_url = safe_str(source_url)
     if not source_url:
+        return None
+    if _is_map_tile_url(source_url):
         return None
     if source_url.startswith("/") or source_url.startswith("data:"):
         return source_url
