@@ -40,7 +40,19 @@ def _ravlo_company() -> Company:
     return company
 
 
+# Accounts that should always have executive dashboard access regardless
+# of their stored role.  Keep addresses lower-cased.
+_EXECUTIVE_DASHBOARD_EMAILS: set[str] = {
+    "letoya@ravlohq.com",
+    "jamaine.caughman@ravlohq.com",
+}
+
+
 def _can_access_executive_dashboard(user) -> bool:
+    email = (getattr(user, "email", "") or "").strip().lower()
+    if email in _EXECUTIVE_DASHBOARD_EMAILS:
+        return True
+
     role = (getattr(user, "role", "") or "").strip().lower()
     ravlo_company_id = getattr(_ravlo_company(), "id", None)
     return (
