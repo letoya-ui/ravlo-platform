@@ -7283,22 +7283,6 @@ def build_project_detail(project_id):
         page_subtitle="Review your saved development concept."
     )
 
-@investor_bp.route("/build-projects/<int:project_id>/open-studio", methods=["GET"])
-@login_required
-@role_required("investor")
-def open_build_project_in_studio(project_id):
-    project = BuildProject.query.filter_by(
-        id=project_id,
-        user_id=current_user.id
-    ).first_or_404()
-
-    deal_id = request.args.get("deal_id", type=int)
-
-    if deal_id:
-        return redirect(url_for("investor.build_studio", deal_id=deal_id, project_id=project.id))
-
-    return redirect(url_for("investor.build_studio", project_id=project.id))
-
 @investor_bp.route("/build-projects/<int:project_id>/convert-to-deal", methods=["POST"])
 @login_required
 @role_required("investor")
@@ -7322,7 +7306,7 @@ def convert_build_project_to_deal(project_id):
             "source": "build_project",
             "build_project_id": project.id,
             "project_name": project.project_name,
-            "development_type": project.development_type,
+            "development_type": getattr(project, "development_type", None),
             "property_type": project.property_type,
             "description": project.description,
             "lot_size": project.lot_size,
@@ -7334,7 +7318,7 @@ def convert_build_project_to_deal(project_id):
             "build_project": {
                 "project_id": project.id,
                 "project_name": project.project_name,
-                "development_type": project.development_type,
+                "development_type": getattr(project, "development_type", None),
                 "property_type": project.property_type,
                 "description": project.description,
                 "lot_size": project.lot_size,
@@ -7343,7 +7327,7 @@ def convert_build_project_to_deal(project_id):
                 "notes": project.notes,
                 "concept_render_url": project.concept_render_url,
                 "site_plan_url": project.site_plan_url,
-                "exterior_url": project.exterior_url,
+                "exterior_url": getattr(project, "exterior_url", None),
                 "blueprint_url": project.blueprint_url,
                 "presentation_url": project.presentation_url,
             }
@@ -7359,23 +7343,10 @@ def convert_build_project_to_deal(project_id):
         "deal_id": deal.id,
         "redirect_url": url_for("investor.deal_detail", deal_id=deal.id)
     })
-    db.session.add(deal)
-    db.session.commit()
-
-    flash("Build project converted into a deal.", "success")
-    return jsonify({
-        "status": "ok",
-        "deal_id": deal.id,
-        "redirect_url": url_for("investor.deal_detail", deal_id=deal.id)
-    })
-
 
 # =========================================================
 # 🧭 AI DEAL ARCHITECT
-# =========================================================
-
-
-        
+# =========================================================    
 
 @investor_bp.route("/deal-architect", methods=["GET", "POST"])
 @investor_bp.route("/deal-architect/<int:deal_id>", methods=["GET", "POST"])

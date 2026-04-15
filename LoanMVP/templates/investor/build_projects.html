@@ -3,12 +3,12 @@
 
 {% block page_title %}Build Projects{% endblock %}
 {% block page_subline %}
-Manage saved development concepts, review project assets, and launch any project into Build Studio or Deal execution.
+Manage saved development projects, review site plans, exteriors, and blueprints, and launch any project into Build Studio or Deal execution.
 {% endblock %}
 
 {% block topbar_actions %}
   <a href="{{ url_for('investor.build_studio') }}" class="ravlo-btn primary sm">
-    New Build Concept
+    New Build Project
   </a>
 {% endblock %}
 
@@ -20,13 +20,13 @@ Manage saved development concepts, review project assets, and launch any project
       <div class="eyebrow">RAVLO DEVELOPMENT PIPELINE</div>
       <h2>Build Project Library</h2>
       <p class="muted">
-        Save, review, and move development concepts into Build Studio, budgeting, and deal execution.
+        Save, review, and move development projects into Build Studio, budgeting, and deal execution.
       </p>
 
       <div class="hero-chip-row">
         <span class="ravlo-chip">{{ projects|length }} Project{{ '' if projects|length == 1 else 's' }}</span>
-        <span class="ravlo-chip">Development Concepts</span>
-        <span class="ravlo-chip">Studio-Ready Workflow</span>
+        <span class="ravlo-chip">Condos • Townhomes • Apartments • Subdivisions</span>
+        <span class="ravlo-chip">Flexible Asset Workflow</span>
       </div>
     </div>
 
@@ -66,7 +66,15 @@ Manage saved development concepts, review project assets, and launch any project
             </p>
 
             <div class="project-chip-row">
-              <span class="ravlo-chip">{{ project.property_type or "No property type" }}</span>
+              <span class="ravlo-chip">
+                {% if project.development_type %}
+                  {{ project.development_type.replace('_', ' ').title() }}
+                {% elif project.property_type %}
+                  {{ project.property_type.replace('_', ' ').title() }}
+                {% else %}
+                  No development type
+                {% endif %}
+              </span>
 
               {% if project.zoning %}
                 <span class="ravlo-chip">Zoning: {{ project.zoning }}</span>
@@ -82,22 +90,22 @@ Manage saved development concepts, review project assets, and launch any project
             </div>
 
             <div class="project-assets">
-              {% if project.blueprint_url %}
-                <span class="asset-pill ready">Blueprint</span>
-              {% else %}
-                <span class="asset-pill">Blueprint</span>
-              {% endif %}
-
               {% if project.site_plan_url %}
                 <span class="asset-pill ready">Site Plan</span>
               {% else %}
                 <span class="asset-pill">Site Plan</span>
               {% endif %}
 
-              {% if project.presentation_url %}
-                <span class="asset-pill ready">Presentation</span>
+              {% if project.exterior_url %}
+                <span class="asset-pill ready">Exterior</span>
               {% else %}
-                <span class="asset-pill">Presentation</span>
+                <span class="asset-pill">Exterior</span>
+              {% endif %}
+
+              {% if project.blueprint_url %}
+                <span class="asset-pill ready">Blueprint</span>
+              {% else %}
+                <span class="asset-pill">Blueprint</span>
               {% endif %}
             </div>
 
@@ -147,12 +155,12 @@ Manage saved development concepts, review project assets, and launch any project
       <div class="empty-icon">🏗</div>
       <h3>No Build Projects Yet</h3>
       <p class="muted">
-        Start in Build Studio to create your first development concept, then save it into your Build Project library.
+        Start in Build Studio to create your first development project, then save it into your Build Project library.
       </p>
 
       <div class="empty-actions">
         <a href="{{ url_for('investor.build_studio') }}" class="ravlo-btn primary">
-          Create First Build Concept
+          Create First Build Project
         </a>
       </div>
     </section>

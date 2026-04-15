@@ -61,7 +61,7 @@ class BuildProject(db.Model):
     site_plan_url = db.Column(db.String(500))
     presentation_url = db.Column(db.String(500))
     development_type = db.Column(db.String(64))  # condos, townhomes, apartments, single_family_subdivision
-    property_type = db.Column(db.String(64))     # optional, keep only if still needed elsewhere 
+    exterior_url = db.Column(db.Text, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     budgets = db.relationship(
