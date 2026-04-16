@@ -9,6 +9,7 @@ import hashlib
 import zipfile
 import copy
 import mimetypes
+import re
 from collections import defaultdict
 from datetime import datetime
 from decimal import Decimal, InvalidOperation
@@ -5311,6 +5312,68 @@ def deal_rehab_generate_variant():
 # 🏗️ BUILD STUDIO — PAGE
 # =========================================================
 
+def _build_project_lot_count(*values):
+    for value in values:
+        raw = (value or "").strip()
+        if not raw:
+            continue
+        match = re.search(r"(\d+)\s*-\s*lot|(\d+)\s+lot", raw, re.IGNORECASE)
+        if match:
+            return int(match.group(1) or match.group(2))
+    return None
+
+
+def _build_project_development_label(property_type: str, lot_count: int | None) -> str:
+    label = (property_type or "development").replace("_", " ").title()
+    if lot_count and lot_count > 1:
+        return f"{lot_count}-Lot {label} Development"
+    return f"{label} Development"
+
+
+def _build_project_exterior_result(build_project: dict[str, Any]) -> dict[str, Any]:
+    exterior_block = build_project.get("exterior", {}) or {}
+    if isinstance(exterior_block.get("primary"), dict):
+        return exterior_block.get("primary", {}) or {}
+    return exterior_block
+
+
+def _seed_build_project_from_saved_project(project: BuildProject | None) -> dict[str, Any]:
+    if project is None:
+        return {}
+
+    lot_count = _build_project_lot_count(project.development_type)
+    build_project = {
+        "project_id": project.id,
+        "project_name": project.project_name or "",
+        "property_type": project.property_type or "",
+        "development_type": project.development_type or "",
+        "lot_count": lot_count,
+        "description": project.description or "",
+        "lot_size": project.lot_size or "",
+        "zoning": project.zoning or "",
+        "location": project.location or "",
+        "notes": project.notes or "",
+    }
+
+    if project.blueprint_url:
+        build_project["blueprint"] = {
+            "image_url": project.blueprint_url,
+            "blueprint_url": project.blueprint_url,
+        }
+
+    if project.site_plan_url:
+        build_project["site_plan"] = {
+            "image_url": project.site_plan_url,
+            "site_plan_url": project.site_plan_url,
+        }
+
+    if project.concept_render_url:
+        build_project["exterior"] = {
+            "image_url": project.concept_render_url,
+        }
+
+    return build_project
+
 @investor_bp.route("/deals/<int:deal_id>/build", methods=["GET"])
 @investor_bp.route("/deal-studio/build-studio", methods=["GET"])
 @login_required
@@ -5351,33 +5414,20 @@ def build_studio(deal_id=None):
     # only if deal has no build_project yet
     # -----------------------------
     if not build_project and project is not None:
-        project_results = getattr(project, "results_json", None) or {}
-
-        if isinstance(project_results, dict):
-            build_project = project_results.get("build_project", {}) or {}
-
-        if not build_project:
-            project_blueprint_url = (getattr(project, "blueprint_url", None) or "").strip()
-            project_concept_url = (getattr(project, "concept_render_url", None) or "").strip()
-            project_site_plan_url = (getattr(project, "site_plan_url", None) or "").strip()
-
-            if project_blueprint_url or project_concept_url or project_site_plan_url:
-                build_project = {
-                    "blueprint": {
-                        "image_url": project_blueprint_url,
-                        "blueprint_url": project_blueprint_url,
-                    },
-                    "exterior": {
-                        "image_url": project_concept_url,
-                    },
-                }
+        build_project = _seed_build_project_from_saved_project(project)
 
     blueprint_result = build_project.get("blueprint", {}) or {}
-    exterior_result = build_project.get("exterior", {}) or {}
+    exterior_result = _build_project_exterior_result(build_project)
 
     interior_block = build_project.get("interior", {}) or {}
     interior_result = interior_block.get("latest", {}) or {}
     interior_rooms = interior_block.get("rooms", []) or []
+
+    lot_count = _build_project_lot_count(
+        build_project.get("lot_count"),
+        build_project.get("development_type"),
+        getattr(project, "development_type", None),
+    )
 
     package_result = {
         "blueprint": blueprint_result.get("image_url") or blueprint_result.get("blueprint_url") or "",
@@ -5439,7 +5489,67 @@ def build_studio(deal_id=None):
         package_result=package_result,
         has_saved_package=has_saved_package,
         page_title="Build Studio",
-        page_subtitle="Design and visualize new construction projects.",
+        page_subtitle="Use a saved or uploaded blueprint to generate interior concepts.",
+        lot_count=lot_count,
+    )
+
+
+@investor_bp.route("/deals/<int:deal_id>/project-build", methods=["GET"])
+@investor_bp.route("/deal-studio/project-build", methods=["GET"])
+@login_required
+@role_required("investor")
+def project_build(deal_id=None):
+    deal = None
+    project = None
+
+    project_id = request.args.get("project_id", type=int)
+
+    if deal_id is None:
+        query_deal_id = request.args.get("deal_id", type=int)
+        if query_deal_id:
+            deal_id = query_deal_id
+
+    if deal_id is not None:
+        deal = _get_owned_deal_or_404(deal_id)
+
+    if project_id is not None:
+        project = BuildProject.query.filter_by(
+            id=project_id,
+            user_id=current_user.id,
+        ).first()
+
+    if project is None and deal is not None:
+        project = _safe_first_related(getattr(deal, "projects", None))
+
+    results = (deal.results_json or {}) if deal else {}
+    build_project = results.get("build_project", {}) or {}
+
+    if not build_project and project is not None:
+        build_project = _seed_build_project_from_saved_project(project)
+
+    blueprint_result = build_project.get("blueprint", {}) or {}
+    site_plan_result = build_project.get("site_plan", {}) or {}
+    exterior_result = _build_project_exterior_result(build_project)
+    build_analysis = results.get("build_analysis", {}) or {}
+
+    lot_count = _build_project_lot_count(
+        build_project.get("lot_count"),
+        build_project.get("development_type"),
+        getattr(project, "development_type", None),
+    )
+
+    return render_template(
+        "investor/project_build.html",
+        deal=deal,
+        project=project,
+        build_project=build_project,
+        blueprint_result=blueprint_result,
+        site_plan_result=site_plan_result,
+        exterior_result=exterior_result,
+        build_analysis=build_analysis,
+        lot_count=lot_count,
+        page_title="Project Build",
+        page_subtitle="Plan site development, lot layout, exterior massing, and blueprint outputs.",
     )
 
 # =========================================================
