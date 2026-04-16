@@ -1,9 +1,8 @@
-# LoanMVP/services/elena_templates.py
-
 from enum import Enum
 
 
 class TemplateType(str, Enum):
+    # Flyers
     JUST_LISTED = "just_listed"
     JUST_SOLD = "just_sold"
     COMING_SOON = "coming_soon"
@@ -12,11 +11,13 @@ class TemplateType(str, Enum):
     BUYER_NEED = "buyer_need"
     MARKET_UPDATE = "market_update"
 
+    # Emails
     FOLLOWUP_GENERAL = "followup_general"
     FOLLOWUP_AFTER_SHOWING = "followup_after_showing"
     FOLLOWUP_NEW_LEAD = "followup_new_lead"
     FOLLOWUP_INACTIVE = "followup_inactive"
 
+    # Social
     SOCIAL_JUST_LISTED = "social_just_listed"
     SOCIAL_JUST_SOLD = "social_just_sold"
     SOCIAL_OPEN_HOUSE = "social_open_house"
@@ -24,9 +25,6 @@ class TemplateType(str, Enum):
 
 
 TEMPLATES = {
-    # ---------------------------------------------------------
-    # FLYERS
-    # ---------------------------------------------------------
     TemplateType.JUST_LISTED: """
 You are writing a JUST LISTED real estate flyer.
 
@@ -128,7 +126,7 @@ Instructions:
 You are writing a BUYER NEED flyer.
 
 Agent: Elena James
-Buyer Type: {buyer_type}  (e.g., first-time buyer, upsizing family, investor)
+Buyer Type: {buyer_type}
 Budget: {budget}
 Beds: {beds}
 Baths: {baths}
@@ -137,7 +135,7 @@ Preferred Areas: {areas}
 Instructions:
 - Create a headline about an active, qualified buyer (max 10 words)
 - Write a 2–3 sentence description of what the buyer is seeking
-- Add 3–5 bullet points with specific criteria (location, features, timing)
+- Add 3–5 bullet points with specific criteria
 - Add a call-to-action for homeowners considering selling
 - Tone: respectful, professional, opportunity-focused
 """,
@@ -148,7 +146,7 @@ You are writing a local MARKET UPDATE flyer.
 Agent: Elena James
 Area: {area}
 Timeframe: {timeframe}
-Key Stats: {stats}  (e.g., avg days on market, median price, inventory)
+Key Stats: {stats}
 
 Instructions:
 - Create a headline about the current market (max 10 words)
@@ -158,9 +156,6 @@ Instructions:
 - Tone: informative, calm, expert, service-first
 """,
 
-    # ---------------------------------------------------------
-    # FOLLOW-UP EMAILS
-    # ---------------------------------------------------------
     TemplateType.FOLLOWUP_GENERAL: """
 Write a follow-up email.
 
@@ -203,7 +198,7 @@ Context: {context}
 
 Instructions:
 - Include a subject line
-- Acknowledge how they came into contact (lead source)
+- Acknowledge how they came into contact
 - Introduce Elena briefly and her approach
 - Invite a quick call or meeting
 - 3–6 sentences, friendly and confident
@@ -224,9 +219,6 @@ Instructions:
 - 3–6 sentences, warm and low-pressure
 """,
 
-    # ---------------------------------------------------------
-    # SOCIAL POSTS
-    # ---------------------------------------------------------
     TemplateType.SOCIAL_JUST_LISTED: """
 Write a short social media post for a JUST LISTED property.
 
@@ -243,7 +235,7 @@ Instructions:
 - Include a hook in the first line
 - Mention key features and location
 - Add a soft call-to-action to schedule a showing
-- Do NOT include hashtags (they will be added separately)
+- No hashtags
 - Tone: warm, excited, professional
 """,
 
@@ -260,7 +252,7 @@ Buyer/Seller Context: {context}
 Instructions:
 - 2–4 short sentences
 - Celebrate the sale and congratulate the clients
-- Mention the area and any notable detail (multiple offers, fast sale, etc.)
+- Mention the area and any notable detail
 - Add a soft call-to-action for homeowners thinking about selling
 - No hashtags
 - Tone: celebratory, grateful, professional
@@ -279,7 +271,7 @@ Time: {time}
 Instructions:
 - 2–4 short sentences
 - Invite people to the open house
-- Mention one or two key features of the home
+- Mention one or two key features
 - Clearly restate date and time
 - No hashtags
 - Tone: inviting, friendly, professional
