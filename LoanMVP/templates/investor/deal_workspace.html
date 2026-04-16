@@ -278,12 +278,21 @@ Review a saved property, compare exit paths, and move the best opportunity into 
     {% set airbnb_roi_strength = ((airbnb_roi / max_roi) * 100) if max_roi else 0 %}
     {% set land_roi_strength = ((land_score / max_roi) * 100) if max_roi else 0 %}
 
-    {% if primary_photo or listing_photos %}
+    {% set hero_photo = primary_photo %}
+    {% if not hero_photo and listing_photos %}
+        {% if listing_photos[0] is mapping %}
+            {% set hero_photo = listing_photos[0].get("url") %}
+        {% else %}
+            {% set hero_photo = listing_photos[0] %}
+        {% endif %}
+    {% endif %}
+
+    {% if hero_photo %}
     <section class="workspace-hero-image-section">
         <div class="workspace-hero-image-main">
-            <img src="{{ primary_photo or (listing_photos[0] if listing_photos else '/static/images/placeholder_property.jpg') }}" alt="{{ selected_prop.address or 'Property photo' }}" loading="lazy" referrerpolicy="no-referrer" onerror="this.onerror=null;this.src='/static/images/placeholder_property.jpg';">
+            <img src="{{ hero_photo }}" alt="{{ selected_prop.address or 'Property photo' }}" loading="lazy" referrerpolicy="no-referrer" onerror="this.onerror=null;this.src='/static/images/placeholder_property.jpg';">
             {% if deal %}
-            <a href="{{ url_for('investor.deal_rehab', deal_id=deal.id, image_url=primary_photo or (listing_photos[0] if listing_photos else '')) }}" class="workspace-hero-image-overlay" title="Use in Renovation Studio">
+            <a href="{{ url_for('investor.deal_rehab', deal_id=deal.id, image_url=hero_photo) }}" class="workspace-hero-image-overlay" title="Use in Renovation Studio">
                 <i data-lucide="sparkles"></i> Use in Renovation Studio
             </a>
             {% endif %}
