@@ -2,7 +2,6 @@ from LoanMVP.extensions import db
 from datetime import datetime
 from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey
 from sqlalchemy.orm import relationship
-import uuid
 
 
 # ---------------------------------------------------------
@@ -38,7 +37,8 @@ class ElenaClient(BaseModel):
     budget = Column(String, nullable=True)
 
     # Relationships
-    interactions = relationship("ElenaInteraction", backref="client", lazy=True)
+    interactions = relationship("ElenaInteraction", back_populates="client", lazy=True)
+    listings = relationship("ElenaListing", back_populates="client", lazy=True)
 
     def __repr__(self):
         return f"<ElenaClient {self.id} - {self.name}>"
@@ -66,8 +66,12 @@ class ElenaListing(BaseModel):
     description = Column(Text, nullable=True)
     photos_json = Column(Text, nullable=True)
 
-    # Relationships
-    flyers = relationship("ElenaFlyer", backref="listing", lazy=True)
+    # ⭐ Relationship to client (MISSING BEFORE)
+    client_id = Column(Integer, ForeignKey("elena_clients.id"), nullable=True)
+    client = relationship("ElenaClient", back_populates="listings")
+
+    # Flyers
+    flyers = relationship("ElenaFlyer", back_populates="listing", lazy=True)
 
     def __repr__(self):
         return f"<ElenaListing {self.id} - {self.address}>"
@@ -83,11 +87,14 @@ class ElenaFlyer(BaseModel):
 
     # Property reference
     property_address = Column(String, nullable=False)
-    property_id = Column(String, nullable=True)  # UUID or listing ID
+    property_id = Column(String, nullable=True)
     listing_id = Column(Integer, ForeignKey("elena_listings.id"), nullable=True)
 
     # Generated content
     body = Column(Text, nullable=False)
+
+    # Relationship back to listing
+    listing = relationship("ElenaListing", back_populates="flyers")
 
     def __repr__(self):
         return f"<ElenaFlyer {self.id} - {self.flyer_type}>"
@@ -112,6 +119,9 @@ class ElenaInteraction(BaseModel):
 
     content = Column(Text, nullable=False)
     meta = Column(String, nullable=True)
+
+    # Relationship back to client
+    client = relationship("ElenaClient", back_populates="interactions")
 
     def __repr__(self):
         return f"<ElenaInteraction {self.id} - {self.interaction_type}>"
