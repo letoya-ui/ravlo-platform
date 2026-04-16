@@ -36,7 +36,6 @@ from LoanMVP.models.loan_officer_model import (
     LoanOfficerAnalytics,
     LoanOfficerPortfolio,
     LenderQuote,
-    
 )
 
 # 💬 CRM Models (communication, notes, insights)
@@ -64,17 +63,28 @@ from LoanMVP.models.borrowers import (
     BorrowerMessage,
     Deal,
     DealShare,
-    
 )
 
 # 💬 Chat / AI conversation history
 from LoanMVP.models.chat_models import ChatHistory
 
-from LoanMVP.models.underwriter_model import UnderwriterProfile, UnderwritingCondition, ConditionRequest, UnderwriterAuditLog, UnderwriterTask
+from LoanMVP.models.underwriter_model import (
+    UnderwriterProfile,
+    UnderwritingCondition,
+    ConditionRequest,
+    UnderwriterAuditLog,
+    UnderwriterTask,
+)
 
 from LoanMVP.models.processor_model import ProcessorProfile
 
-from LoanMVP.models.ai_models import LoanAIConversation, AIAuditLog, LoanOfficerAISummary, AIIntakeSummary, AIAssistantInteraction
+from LoanMVP.models.ai_models import (
+    LoanAIConversation,
+    AIAuditLog,
+    LoanOfficerAISummary,
+    AIIntakeSummary,
+    AIAssistantInteraction,
+)
 
 from LoanMVP.models.system_models import System, SystemLog, AuditLog, SystemSettings
 
@@ -89,10 +99,46 @@ from LoanMVP.models.activity_models import BorrowerActivity
 from LoanMVP.models.payment_models import PaymentRecord
 
 from LoanMVP.models.credit_models import SoftCreditReport
-from LoanMVP.models.partner_models import  PartnerJob, PartnerConnectionRequest, PartnerPhoto, ExternalPartnerLead, PartnerInviteEvent, PartnerProposal
+
+from LoanMVP.models.partner_models import (
+    PartnerJob,
+    PartnerConnectionRequest,
+    PartnerPhoto,
+    ExternalPartnerLead,
+    PartnerInviteEvent,
+    PartnerProposal,
+)
+
 from LoanMVP.models.renovation_models import RenovationMockup, RehabJob, BuildProject
-from LoanMVP.models.investor_models import TimestampMixin, InvestorProfile, Investment, InvestmentDocument, DealMessage, DealConversation, FundingRequest, Project
-from LoanMVP.models.admin import UserInvite, AccessRequest, Company, LicenseApplication, LicenseInviteEvent
+
+from LoanMVP.models.investor_models import (
+    TimestampMixin,
+    InvestorProfile,
+    Investment,
+    InvestmentDocument,
+    DealMessage,
+    DealConversation,
+    FundingRequest,
+    Project,
+)
+
+from LoanMVP.models.admin import (
+    UserInvite,
+    AccessRequest,
+    Company,
+    LicenseApplication,
+    LicenseInviteEvent,
+)
+
+# ======================================================
+# 🧩 Elena Models (NEW)
+# ======================================================
+from LoanMVP.models.elena_models import (
+    ElenaClient,
+    ElenaListing,
+    ElenaFlyer,
+    ElenaInteraction,
+)
 
 # ======================================================
 # 🧩 SQLAlchemy Export (for Migrate / Shell)
@@ -133,5 +179,10 @@ __all__ = [
 
     # Chat History
     "ChatHistory",
-]
 
+    # Elena (NEW)
+    "ElenaClient",
+    "ElenaListing",
+    "ElenaFlyer",
+    "ElenaInteraction",
+]
