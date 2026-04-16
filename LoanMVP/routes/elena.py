@@ -174,3 +174,50 @@ def mls_import():
         "listing_id": listing.id,
         "flyer": flyer_output
     })
+@elena_bp.get("/templates/auto_fill/<int:client_id>/<template_type>")
+def template_auto_fill(client_id, template_type):
+    client = ElenaClient.query.get(client_id)
+    if not client:
+        return jsonify({"error": "Client not found"}), 404
+
+    # Base variables from CRM
+    variables = {
+        "client_name": client.name,
+        "email": client.email,
+        "phone": client.phone,
+        "pipeline_stage": client.pipeline_stage,
+        "context": client.notes or "",
+        "areas": client.preferred_areas or "",
+        "budget": client.budget or "",
+    }
+
+    # Add last interaction if exists
+    last_interaction = (
+        ElenaInteraction.query
+        .filter_by(client_id=client_id)
+        .order_by(ElenaInteraction.created_at.desc())
+        .first()
+    )
+
+    if last_interaction:
+        variables["last_contact"] = last_interaction.created_at.strftime("%Y-%m-%d")
+        variables["last_message"] = last_interaction.content[:200]
+
+    # Template-specific auto-fill
+    if template_type == "followup_after_showing":
+        last_showing = (
+            ElenaInteraction.query
+            .filter_by(client_id=client_id, interaction_type="showing")
+            .order_by(ElenaInteraction.created_at.desc())
+            .first()
+        )
+        if last_showing:
+            variables["address"] = last_showing.meta or ""
+        else:
+            variables["address"] = ""
+
+    return jsonify({
+        "client_id": client_id,
+        "template_type": template_type,
+        "variables": variables
+    })
