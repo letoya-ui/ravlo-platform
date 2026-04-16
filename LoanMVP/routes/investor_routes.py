@@ -5247,6 +5247,7 @@ def deal_rehab(deal_id=None):
         page_title="Renovation Studio",
         page_subtitle="Visualize renovation concepts before execution.",
     )
+
 @investor_bp.route("/deal-studio/rehab-studio/generate-variant", methods=["POST"])
 @login_required
 @role_required("investor")
@@ -6736,8 +6737,8 @@ def generate_full_build():
             "prompt_notes": site_notes,
             "special_features": f"{lot_count} total lots" if lot_count and lot_count > 1 else notes,
             "square_feet_target": _normalize_int(data.get("square_feet") or data.get("square_feet_target")),
-            "width": 1024,
-            "height": 1024,
+            "width": 768,
+            "height": 768,
             "steps": 18,
             "guidance": 6.0,
             "strength": 0.28,
@@ -6802,8 +6803,8 @@ def generate_full_build():
             "square_feet_target": _normalize_int(data.get("square_feet") or data.get("square_feet_target")),
             "image_base64": exterior_image_base64 or blueprint_primary_b64,
             "image_url": "" if (exterior_image_base64 or blueprint_primary_b64) else reference_image_url,
-            "width": 1024,
-            "height": 1024,
+            "width": 768,
+            "height": 768,
             "steps": 24,
             "guidance": 6.6,
             "strength": 0.28,
