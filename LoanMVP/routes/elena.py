@@ -16,7 +16,7 @@ from LoanMVP.services.ai_service import generate_text
 # If your ATTOM wrapper is different, adjust this import:
 from LoanMVP.services.attom_service import get_property_details
 
-
+elena_bp = Blueprint("elena", __name__, url_prefix="/elena")
 # ============================================================
 # ENUMS
 # ============================================================
