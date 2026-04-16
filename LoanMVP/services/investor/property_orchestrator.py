@@ -500,10 +500,15 @@ class PropertyIntelligenceOrchestrator:
         return results
 
     def _from_rentcast_listing(self, item: Dict[str, Any]) -> CanonicalProperty:
+        raw = item.get("raw") or {}
         photos = self._normalize_photo_candidates(
             item.get("photos"),
             item.get("primary_photo"),
-            item.get("raw", {}),
+            raw.get("imgSrc"),
+            raw.get("photos"),
+            raw.get("images"),
+            raw.get("primaryPhoto"),
+            raw,
         )
 
         primary_photo = _resolve_photo(item.get("primary_photo"), photos)
@@ -598,6 +603,22 @@ class PropertyIntelligenceOrchestrator:
         if profile.get("recommended_strategy") and not cp.recommended_strategy:
             cp.recommended_strategy = profile.get("recommended_strategy")
 
+        # ATTOM may include image URLs in some plans/responses.
+        attom_raw = profile.get("raw") or {}
+        attom_photos = self._normalize_photo_candidates(
+            attom_raw.get("photos"),
+            attom_raw.get("images"),
+            attom_raw.get("image"),
+            attom_raw.get("media"),
+            attom_raw.get("imgSrc"),
+            attom_raw.get("primaryPhoto"),
+        )
+        if attom_photos:
+            _log.info("[attom] extracted %d photos from raw response", len(attom_photos))
+            cp.photos = self._normalize_photo_candidates(cp.photos, attom_photos)
+            cp.primary_photo = _resolve_photo(cp.primary_photo, cp.photos)
+            cp.value_sources["photos"] = "attom"
+
         return cp
 
     def _enrich_with_rentcast(self, cp: CanonicalProperty) -> CanonicalProperty:
@@ -678,15 +699,31 @@ class PropertyIntelligenceOrchestrator:
         cp.latitude = self._first_truthy(cp.latitude, self._as_float(sale_listing.get("latitude")))
         cp.longitude = self._first_truthy(cp.longitude, self._as_float(sale_listing.get("longitude")))
 
-        sale_listing_photos = self._normalize_photo_candidates(
+        # Extract photos from ALL RentCast responses (sale listing, rent,
+        # and value endpoints may each carry image data).
+        sale_raw = sale_listing.get("raw") or {}
+        rentcast_photos = self._normalize_photo_candidates(
             cp.photos,
             sale_listing.get("primary_photo"),
             sale_listing.get("photos"),
-            sale_listing.get("raw", {}),
+            sale_raw.get("imgSrc"),
+            sale_raw.get("photos"),
+            sale_raw.get("images"),
+            sale_raw.get("primaryPhoto"),
+            rent_data.get("imgSrc") if isinstance(rent_data, dict) else None,
+            rent_data.get("photos") if isinstance(rent_data, dict) else None,
+            value_data.get("imgSrc") if isinstance(value_data, dict) else None,
+            value_data.get("photos") if isinstance(value_data, dict) else None,
         )
-        if sale_listing_photos:
-            cp.photos = sale_listing_photos
-            cp.primary_photo = _resolve_photo(cp.primary_photo, sale_listing_photos)
+        if rentcast_photos:
+            _log.info(
+                "[rentcast] extracted %d photos for %s",
+                len(rentcast_photos),
+                cp.address or cp.address_line1 or "unknown",
+            )
+            cp.photos = rentcast_photos
+            cp.primary_photo = _resolve_photo(cp.primary_photo, rentcast_photos)
+            cp.value_sources["photos"] = cp.value_sources.get("photos") or "rentcast"
 
         cp.value_sources.update({
             "market_value": "rentcast",
@@ -947,6 +984,20 @@ class PropertyIntelligenceOrchestrator:
         ranked = self.rank_candidates(enriched)
 
         results = [cp.to_result_dict() for cp in ranked[:4]]
+
+        # Log photo availability summary for debugging.
+        with_photos = sum(1 for r in results if r.get("listing_photos") or r.get("primary_photo") or r.get("image_url"))
+        _log.info(
+            "[run_search] returning %d results, %d with photos (address=%s zip=%s)",
+            len(results), with_photos, address, zip_code,
+        )
+        for r in results:
+            _log.debug(
+                "  -> %s  photos=%d  primary=%s",
+                r.get("address", "?"),
+                len(r.get("listing_photos") or []),
+                bool(r.get("primary_photo") or r.get("image_url")),
+            )
 
         meta = {
             "count": len(results),
