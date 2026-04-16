@@ -1,7 +1,7 @@
 """Add Elena CRM, listing and flyers relation
 
 Revision ID: 1382fd92af8d
-Revises: 49dbf4a0bf81
+Revises: 49dbf4a0bfb1
 Create Date: 2026-04-16 19:36:09.585444
 """
 
@@ -11,7 +11,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision = '1382fd92af8d'
-down_revision = '49dbf4a0bf81'
+down_revision = '49dbf4a0bfb1'
 branch_labels = None
 depends_on = None
 
