@@ -4027,6 +4027,54 @@ def deal_workspace():
     workspace_analysis = {}
     budget_snapshot = None
 
+    def _workspace_gallery_sources(base_urls, *, featured=None, mockups=None, build_project=None):
+        featured = featured or {}
+        mockups = mockups or []
+        build_project = build_project or {}
+
+        exterior_block = _build_project_exterior_result(build_project) if build_project else {}
+
+        return _normalize_photo_urls(
+            base_urls,
+            featured.get("before_url"),
+            featured.get("after_url"),
+            [getattr(mockup, "before_url", None) for mockup in mockups],
+            [getattr(mockup, "after_url", None) for mockup in mockups],
+            (build_project.get("blueprint", {}) or {}).get("image_url"),
+            (build_project.get("blueprint", {}) or {}).get("blueprint_url"),
+            (build_project.get("site_plan", {}) or {}).get("image_url"),
+            exterior_block.get("image_url"),
+            exterior_block.get("build_reference_image"),
+            exterior_block.get("gallery"),
+        )
+
+    def _apply_airbnb_workspace_metrics(target, *sources):
+        for source in sources:
+            if not isinstance(source, dict):
+                continue
+
+            target["airbnb_nightly_rate"] = (
+                target.get("airbnb_nightly_rate")
+                or source.get("nightly_rate")
+                or source.get("adr")
+            )
+            target["airbnb_occupancy_rate"] = (
+                target.get("airbnb_occupancy_rate")
+                or source.get("occupancy_rate")
+            )
+            target["airbnb_gross_monthly"] = (
+                target.get("airbnb_gross_monthly")
+                or source.get("gross_monthly")
+                or source.get("airbnb_rent")
+            )
+            target["airbnb_net_monthly"] = (
+                target.get("airbnb_net_monthly")
+                or source.get("net_monthly")
+                or source.get("cash_flow")
+            )
+
+        return target
+
     if prop_id:
         if investor_profile:
             selected_prop = (
@@ -4123,10 +4171,15 @@ def deal_workspace():
             workspace_analysis["year_built"] = workspace_analysis.get("year_built") or saved_property_payload.get("year_built")
             workspace_analysis["lot_size_sqft"] = workspace_analysis.get("lot_size_sqft") or saved_property_payload.get("lot_size_sqft")
             workspace_analysis["listing_photos"] = _proxy_photo_list(
-                _normalize_photo_urls(
-                    workspace_analysis.get("listing_photos"),
-                    deal_results.get("listing_photos"),
-                    saved_seed.get("listing_photos"),
+                _workspace_gallery_sources(
+                    _normalize_photo_urls(
+                        workspace_analysis.get("listing_photos"),
+                        deal_results.get("listing_photos"),
+                        saved_seed.get("listing_photos"),
+                    ),
+                    featured=featured,
+                    mockups=mockups,
+                    build_project=deal_results.get("build_project", {}) or {},
                 )
             )
             workspace_analysis["image_url"] = (
@@ -4139,6 +4192,13 @@ def deal_workspace():
                     )
                 )
                 or _resolve_photo(None, workspace_analysis.get("listing_photos"))
+            )
+
+            workspace_analysis = _apply_airbnb_workspace_metrics(
+                workspace_analysis,
+                strategy_analysis.get("airbnb", {}) or {},
+                (deal_results.get("comparison", {}) or {}).get("airbnb", {}) or {},
+                (saved_resolved.get("comparison", {}) or {}).get("airbnb", {}) or {},
             )
 
             comparison = build_workspace_exit_comparison(
@@ -4224,7 +4284,11 @@ def deal_workspace():
             _proxied_primary = _proxy_listing_image_url(saved_seed.get("primary_photo"))
             workspace_analysis = {
                 **saved_workspace,
-                "listing_photos": _proxied_photos,
+                "listing_photos": _workspace_gallery_sources(
+                    _proxied_photos,
+                    featured=featured,
+                    mockups=mockups,
+                ),
                 "image_url": _proxied_primary or (_proxied_photos[0] if _proxied_photos else None),
                 "address": saved_property_payload.get("address") or getattr(selected_prop, "address", None),
                 "city": saved_property_payload.get("city"),
@@ -4252,6 +4316,11 @@ def deal_workspace():
             rehab_analysis = saved_resolved.get("rehab_analysis", {}) or {}
             strategy_analysis = saved_resolved.get("strategy_analysis", {}) or {}
             comparison = saved_resolved.get("comparison", {}) or {}
+            workspace_analysis = _apply_airbnb_workspace_metrics(
+                workspace_analysis,
+                strategy_analysis.get("airbnb", {}) or {},
+                comparison.get("airbnb", {}) or {},
+            )
             exit_strategy_analysis = saved_resolved.get("exit_strategy_analysis", {}) or {}
             recommendation = saved_resolved.get("recommendation", {}) or {
                 "best": workspace_analysis.get("best_exit_strategy"),

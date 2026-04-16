@@ -734,13 +734,30 @@ def build_workspace_exit_comparison(
     rental_cap_rate = (annual_noi / total_basis) if total_basis > 0 else 0
     dscr = ((estimated_rent * 12) / max((total_basis * 0.09), 1)) if total_basis > 0 else 0
 
-    airbnb_nightly = to_float(workspace_analysis.get("airbnb_nightly_rate"))
-    airbnb_occupancy = to_float(workspace_analysis.get("airbnb_occupancy_rate"))
+    airbnb_nightly = to_float(
+        workspace_analysis.get("airbnb_nightly_rate")
+        or workspace_analysis.get("nightly_rate")
+    )
+    airbnb_occupancy = to_float(
+        workspace_analysis.get("airbnb_occupancy_rate")
+        or workspace_analysis.get("occupancy_rate")
+    )
     if airbnb_occupancy > 1:
         airbnb_occupancy = airbnb_occupancy / 100.0
 
-    airbnb_gross = airbnb_nightly * 30 * airbnb_occupancy if airbnb_nightly and airbnb_occupancy else 0
-    airbnb_net = airbnb_gross * 0.62 if airbnb_gross else 0
+    airbnb_gross = to_float(
+        workspace_analysis.get("airbnb_gross_monthly")
+        or workspace_analysis.get("gross_monthly")
+    )
+    airbnb_net = to_float(
+        workspace_analysis.get("airbnb_net_monthly")
+        or workspace_analysis.get("net_monthly")
+    )
+
+    if not airbnb_gross and airbnb_nightly and airbnb_occupancy:
+        airbnb_gross = airbnb_nightly * 30 * airbnb_occupancy
+    if not airbnb_net and airbnb_gross:
+        airbnb_net = airbnb_gross * 0.62
 
     lot_size = to_float(
         workspace_analysis.get("lot_size_sqft")
