@@ -1,0 +1,126 @@
+{% extends "layouts/ravlo_base.html" %}
+{% block title %}{{ page_title or "Project Build" }} | Ravlo{% endblock %}
+
+{% block content %}
+<div class="project-build-shell">
+  <section class="studio-hero-card">
+    <div>
+      <div class="eyebrow">RAVLO PROJECT BUILD</div>
+      <h1>Set the development before you open Build Studio.</h1>
+      <p class="muted">{{ page_subtitle or "Choose the lot count and development type, then continue into Build Studio for site plans, blueprints, and exterior concepts." }}</p>
+    </div>
+    <div class="hero-actions">
+      {% if project %}
+      <a href="{{ url_for('investor.build_studio', project_id=project.id) }}" class="ravlo-btn ghost">Open Build Studio</a>
+      <a href="{{ url_for('investor.design_studio', project_id=project.id) }}" class="ravlo-btn ghost">Open Design Studio</a>
+      {% elif deal %}
+      <a href="{{ url_for('investor.build_studio', deal_id=deal.id) }}" class="ravlo-btn ghost">Open Build Studio</a>
+      <a href="{{ url_for('investor.design_studio', deal_id=deal.id) }}" class="ravlo-btn ghost">Open Design Studio</a>
+      {% endif %}
+    </div>
+  </section>
+
+  <section class="project-build-grid">
+    <section class="ravlo-card pad">
+      <div class="section-head">
+        <div>
+          <div class="eyebrow">SETUP</div>
+          <h2>Development Setup</h2>
+        </div>
+      </div>
+
+      <form method="GET" action="{{ url_for('investor.build_studio') }}" class="build-form">
+        <input type="hidden" name="deal_id" value="{{ deal.id if deal else '' }}">
+        <input type="hidden" name="project_id" value="{{ project.id if project else '' }}">
+
+        <div class="form-grid two">
+          <div class="field">
+            <label for="project_name">Project Name</label>
+            <input id="project_name" name="project_name" value="{{ build_project.get('project_name') or (project.project_name if project else '') }}" placeholder="Maple Grove Townhomes">
+          </div>
+          <div class="field">
+            <label for="property_type">Development Type</label>
+            {% set property_type_value = build_project.get('property_type') or (project.property_type if project else 'single_family') %}
+            <select id="property_type" name="property_type">
+              <option value="single_family" {{ 'selected' if property_type_value == 'single_family' else '' }}>Single Family</option>
+              <option value="townhome" {{ 'selected' if property_type_value == 'townhome' else '' }}>Townhomes</option>
+              <option value="duplex" {{ 'selected' if property_type_value == 'duplex' else '' }}>Duplexes</option>
+              <option value="multifamily" {{ 'selected' if property_type_value == 'multifamily' else '' }}>Apartments / Multifamily</option>
+              <option value="mixed_use" {{ 'selected' if property_type_value == 'mixed_use' else '' }}>Mixed Use</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="lot_count">Number of Lots</label>
+            <input id="lot_count" name="lot_count" type="number" min="1" step="1" value="{{ lot_count or 1 }}">
+          </div>
+          <div class="field">
+            <label for="lot_size">Lot Size</label>
+            <input id="lot_size" name="lot_size" value="{{ build_project.get('lot_size') or (project.lot_size if project else '') }}" placeholder="2.6 acres">
+          </div>
+          <div class="field">
+            <label for="zoning">Zoning</label>
+            <input id="zoning" name="zoning" value="{{ build_project.get('zoning') or (project.zoning if project else '') }}" placeholder="R-3">
+          </div>
+          <div class="field">
+            <label for="location">Location</label>
+            <input id="location" name="location" value="{{ build_project.get('location') or (project.location if project else (deal.address if deal else '')) }}" placeholder="158 Whitlock Rd, Otisville, NY">
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="description">Project Description</label>
+          <textarea id="description" name="description" rows="4" placeholder="Describe the product type, building count, unit mix, and target use.">{{ build_project.get('description') or (project.description if project else '') }}</textarea>
+        </div>
+
+        <div class="field">
+          <label for="notes">Development Notes</label>
+          <textarea id="notes" name="notes" rows="3" placeholder="Setbacks, parking, access, grading, utilities, and deal-specific constraints.">{{ build_project.get('notes') or (project.notes if project else '') }}</textarea>
+        </div>
+
+        <button type="submit" class="ravlo-btn primary">Continue to Build Studio</button>
+        <p class="form-note">Project Build defines the lot count and development type. Build Studio uses that setup to generate site plans, blueprints, and exterior concepts for the deal.</p>
+      </form>
+    </section>
+
+    <section class="ravlo-card pad">
+      <div class="section-head">
+        <div>
+          <div class="eyebrow">FLOW</div>
+          <h2>How The Studios Work Together</h2>
+        </div>
+      </div>
+      <div class="result-meta compact">
+        <div><span>1</span><strong>Project Build</strong></div>
+        <div><span>2</span><strong>Build Studio</strong></div>
+        <div><span>3</span><strong>Design Studio</strong></div>
+      </div>
+      <div class="analysis-note">
+        <strong>Project Build</strong>
+        <p>Choose the lot count and development type such as single family, townhomes, apartments, duplexes, or mixed use.</p>
+      </div>
+      <div class="analysis-note">
+        <strong>Build Studio</strong>
+        <p>Create site plans, exterior concepts, and blueprints or build-ready layouts from the selected project setup.</p>
+      </div>
+      <div class="analysis-note">
+        <strong>Design Studio</strong>
+        <p>Create interior design concepts from a blueprint, floor plan, or interior photo once the structural direction is set.</p>
+      </div>
+    </section>
+  </section>
+</div>
+
+<style>
+.project-build-shell,.project-build-grid{display:grid;gap:20px}
+.studio-hero-card{display:grid;grid-template-columns:1fr auto;gap:18px;align-items:start}
+.project-build-grid{grid-template-columns:1.25fr .75fr}
+.form-grid.two{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.field{display:grid;gap:8px;margin-bottom:14px}
+.field input,.field select,.field textarea{width:100%;padding:12px 14px;border-radius:14px;border:1px solid rgba(255,255,255,.12);background:rgba(8,14,25,.88);color:#eef3ff}
+.result-meta{display:grid;gap:12px}
+.result-meta div{display:flex;justify-content:space-between;gap:16px;padding:12px 14px;border:1px solid rgba(255,255,255,.08);border-radius:14px;background:rgba(255,255,255,.03)}
+.analysis-note{margin-top:16px;padding:16px;border-radius:16px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08)}
+.form-note{margin-top:12px;color:#9fb0ca}
+@media (max-width: 900px){.studio-hero-card,.project-build-grid,.form-grid.two{grid-template-columns:1fr}}
+</style>
+{% endblock %}

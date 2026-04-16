@@ -11,8 +11,8 @@ Review your saved build concept, development inputs, and launch this project int
     Back to Build Projects
   </a>
 
-  <a href="{{ url_for('investor.build_studio', project_id=project.id) }}" class="ravlo-btn primary sm">
-    Open in Build Studio
+  <a href="{{ url_for('investor.project_build', project_id=project.id) }}" class="ravlo-btn primary sm">
+    Open in Project Build
   </a>
 
   <button type="button" class="ravlo-btn primary sm" onclick="convertToDeal({{ project.id }})">
@@ -57,8 +57,8 @@ Review your saved build concept, development inputs, and launch this project int
     </div>
 
     <div class="build-hero-actions">
-      <a href="{{ url_for('investor.build_studio', project_id=project.id) }}" class="ravlo-btn primary">
-        Open in Build Studio
+      <a href="{{ url_for('investor.project_build', project_id=project.id) }}" class="ravlo-btn primary">
+        Open in Project Build
       </a>
 
       <button type="button" class="ravlo-btn ghost" onclick="convertToDeal({{ project.id }})">
@@ -153,9 +153,14 @@ Review your saved build concept, development inputs, and launch this project int
         </div>
 
         <div class="quick-grid">
+          <a href="{{ url_for('investor.project_build', project_id=project.id) }}" class="quick-card">
+            <span class="quick-title">Open in Project Build</span>
+            <span class="quick-sub">Set lot count, development type, and the core project setup.</span>
+          </a>
+
           <a href="{{ url_for('investor.build_studio', project_id=project.id) }}" class="quick-card">
             <span class="quick-title">Open in Build Studio</span>
-            <span class="quick-sub">Update the site plan, exterior concept, and blueprint package.</span>
+            <span class="quick-sub">Generate site plans, blueprint layouts, and exterior concepts for this deal.</span>
           </a>
 
           <a href="{{ url_for('investor.design_studio', project_id=project.id) }}" class="quick-card">

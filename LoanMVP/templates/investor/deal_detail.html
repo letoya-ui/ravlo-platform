@@ -59,6 +59,9 @@ Review the saved deal, check strategy and funding status, and launch the next to
       <a href="{{ url_for('investor.build_studio', deal_id=deal.id) }}" class="ravlo-btn ghost">
         Build Studio
       </a>
+      <a href="{{ url_for('investor.project_build', deal_id=deal.id) }}" class="ravlo-btn ghost">
+        Project Build
+      </a>
       <a href="{{ url_for('investor.design_studio', deal_id=deal.id) }}" class="ravlo-btn ghost">
         Design Studio
       </a>
@@ -128,6 +131,14 @@ Review the saved deal, check strategy and funding status, and launch the next to
         <div class="studio-title">Build Studio</div>
         <div class="studio-sub">
           Create site plans, exterior concepts, and blueprint-ready layouts.
+        </div>
+      </a>
+
+      <a href="{{ url_for('investor.project_build', deal_id=deal.id) }}" class="studio-card">
+        <div class="studio-icon">🧭</div>
+        <div class="studio-title">Project Build</div>
+        <div class="studio-sub">
+          Set the lot count and development type before moving into structural planning.
         </div>
       </a>
 

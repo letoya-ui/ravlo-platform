@@ -3967,6 +3967,12 @@ def deal_studio():
             "endpoint": "investor.design_studio"
         },
         {
+            "name": "Project Build",
+            "description": "Choose lot count and development type before moving into structural planning.",
+            "icon": "map",
+            "endpoint": "investor.project_build"
+        },
+        {
             "name": "Build Studio",
             "description": "Site planning, exterior design, and blueprint development for new builds and renovations.",
             "icon": "home",
@@ -5373,6 +5379,38 @@ def _seed_build_project_from_saved_project(project: BuildProject | None) -> dict
 
     return build_project
 
+
+def _build_project_from_request_args() -> dict[str, Any]:
+    property_type = _clean_str(request.args.get("property_type"))
+    lot_count = _normalize_int(request.args.get("lot_count"))
+
+    if not any([
+        _clean_str(request.args.get("project_name")),
+        property_type,
+        _clean_str(request.args.get("lot_size")),
+        _clean_str(request.args.get("zoning")),
+        _clean_str(request.args.get("location")),
+        _clean_str(request.args.get("description")),
+        _clean_str(request.args.get("notes")),
+        lot_count,
+    ]):
+        return {}
+
+    lot_count = lot_count or 1
+    property_type = property_type or "single_family"
+
+    return {
+        "project_name": _clean_str(request.args.get("project_name")),
+        "property_type": property_type,
+        "development_type": _build_project_development_label(property_type, lot_count),
+        "lot_count": lot_count,
+        "lot_size": _clean_str(request.args.get("lot_size")),
+        "zoning": _clean_str(request.args.get("zoning")),
+        "location": _clean_str(request.args.get("location")),
+        "description": _clean_str(request.args.get("description")),
+        "notes": _clean_str(request.args.get("notes")),
+    }
+
 @investor_bp.route("/deals/<int:deal_id>/build", methods=["GET"])
 @investor_bp.route("/deal-studio/build-studio", methods=["GET"])
 @login_required
@@ -5414,6 +5452,13 @@ def build_studio(deal_id=None):
     # -----------------------------
     if not build_project and project is not None:
         build_project = _seed_build_project_from_saved_project(project)
+
+    request_seed = _build_project_from_request_args()
+    if request_seed:
+        build_project = {
+            **build_project,
+            **{key: value for key, value in request_seed.items() if value not in (None, "")},
+        }
 
     blueprint_result = build_project.get("blueprint", {}) or {}
     exterior_result = _build_project_exterior_result(build_project)
@@ -5612,7 +5657,56 @@ def design_studio(deal_id=None):
 @login_required
 @role_required("investor")
 def project_build(deal_id=None):
-    return build_studio(deal_id=deal_id)
+    deal = None
+    project = None
+
+    project_id = request.args.get("project_id", type=int)
+
+    if deal_id is None:
+        query_deal_id = request.args.get("deal_id", type=int)
+        if query_deal_id:
+            deal_id = query_deal_id
+
+    if deal_id is not None:
+        deal = _get_owned_deal_or_404(deal_id)
+
+    if project_id is not None:
+        project = BuildProject.query.filter_by(
+            id=project_id,
+            user_id=current_user.id,
+        ).first()
+
+    if project is None and deal is not None:
+        project = _safe_first_related(getattr(deal, "projects", None))
+
+    results = (deal.results_json or {}) if deal else {}
+    build_project = results.get("build_project", {}) or {}
+
+    if not build_project and project is not None:
+        build_project = _seed_build_project_from_saved_project(project)
+
+    request_seed = _build_project_from_request_args()
+    if request_seed:
+        build_project = {
+            **build_project,
+            **{key: value for key, value in request_seed.items() if value not in (None, "")},
+        }
+
+    lot_count = _build_project_lot_count(
+        build_project.get("lot_count"),
+        build_project.get("development_type"),
+        getattr(project, "development_type", None),
+    )
+
+    return render_template(
+        "investor/project_build_setup.html",
+        deal=deal,
+        project=project,
+        build_project=build_project,
+        lot_count=lot_count,
+        page_title="Project Build",
+        page_subtitle="Choose the lot count and development type before generating site plans, blueprints, and exterior concepts in Build Studio.",
+    )
 
 # =========================================================
 # 🏗️ BUILD STUDIO — GENERATE CONCEPT
