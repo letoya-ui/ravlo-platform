@@ -5698,7 +5698,7 @@ def design_studio(deal_id=None):
         }
 
     return render_template(
-        "investor/build_studio.html",
+        "investor/deal_rehab_studio.html",
         deal=deal,
         project=project,
         build_analysis=build_analysis,
