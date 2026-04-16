@@ -25,6 +25,7 @@ class TemplateType(str, Enum):
 
 
 TEMPLATES = {
+    # ---------------- FLYERS ----------------
     TemplateType.JUST_LISTED: """
 You are writing a JUST LISTED real estate flyer.
 
@@ -156,6 +157,7 @@ Instructions:
 - Tone: informative, calm, expert, service-first
 """,
 
+    # ---------------- EMAILS ----------------
     TemplateType.FOLLOWUP_GENERAL: """
 Write a follow-up email.
 
@@ -219,6 +221,7 @@ Instructions:
 - 3–6 sentences, warm and low-pressure
 """,
 
+    # ---------------- SOCIAL ----------------
     TemplateType.SOCIAL_JUST_LISTED: """
 Write a short social media post for a JUST LISTED property.
 
