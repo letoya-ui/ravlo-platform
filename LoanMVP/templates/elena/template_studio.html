@@ -2,16 +2,41 @@
 <html>
 <head>
     <title>Elena Template Studio</title>
+    <meta charset="utf-8">
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
 </head>
 
 <body class="bg-gray-100 p-8">
-    <div class="max-w-3xl mx-auto bg-white p-6 rounded shadow space-y-6">
+<div class="max-w-4xl mx-auto bg-white p-6 rounded shadow space-y-8">
 
-        <h1 class="text-2xl font-semibold">Elena Template Studio</h1>
+    <h1 class="text-3xl font-semibold">Elena Template Studio</h1>
+    <p class="text-gray-600">Generate flyers, emails, and social posts with CRM + MLS auto‑fill.</p>
 
-        <!-- Template Selector -->
-        <form method="POST" action="/elena/template-studio/preview" class="space-y-4">
+    <!-- ---------------- SELECT CLIENT / LISTING / TEMPLATE ---------------- -->
+    <form method="GET" action="/elena/template-studio" class="space-y-6">
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+
+            <div>
+                <label class="font-medium">Client ID (optional)</label>
+                <input
+                    name="client_id"
+                    value="{{ client_id or '' }}"
+                    class="border rounded px-3 py-2 w-full"
+                    placeholder="Enter client ID"
+                >
+            </div>
+
+            <div>
+                <label class="font-medium">Listing ID (optional)</label>
+                <input
+                    name="listing_id"
+                    value="{{ listing_id or '' }}"
+                    class="border rounded px-3 py-2 w-full"
+                    placeholder="Enter listing ID"
+                >
+            </div>
+
             <div>
                 <label class="font-medium">Template Type</label>
                 <select name="template_type" class="border rounded px-3 py-2 w-full">
@@ -24,49 +49,100 @@
                 </select>
             </div>
 
-            <!-- Dynamic Variables -->
+        </div>
+
+        <button class="bg-green-600 text-white px-4 py-2 rounded">
+            Load / Auto‑Fill
+        </button>
+    </form>
+
+
+    <!-- ---------------- VARIABLE FORM ---------------- -->
+    {% if selected_template %}
+        <form method="POST" action="/elena/template-studio/preview" class="space-y-6 mt-8">
+
+            <input type="hidden" name="template_type" value="{{ selected_template }}">
+            <input type="hidden" name="client_id" value="{{ client_id or '' }}">
+            <input type="hidden" name="listing_id" value="{{ listing_id or '' }}">
+
+            <h2 class="text-xl font-semibold">Template Variables</h2>
+
             {% if variables %}
-                <div class="space-y-3">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {% for key, value in variables.items() %}
                         <div>
                             <label class="font-medium">{{ key }}</label>
-                            <input name="{{ key }}" value="{{ value }}" class="border rounded px-3 py-2 w-full">
+                            <input
+                                name="{{ key }}"
+                                value="{{ value }}"
+                                class="border rounded px-3 py-2 w-full"
+                            >
                         </div>
                     {% endfor %}
                 </div>
+            {% else %}
+                <p class="text-gray-500 text-sm">
+                    No variables loaded yet. You can still preview with empty values.
+                </p>
             {% endif %}
 
-            <button class="bg-gray-800 text-white px-4 py-2 rounded">Preview Template</button>
+            <button class="bg-gray-800 text-white px-4 py-2 rounded">
+                Preview Template
+            </button>
+        </form>
+    {% endif %}
+
+
+    <!-- ---------------- PREVIEW ---------------- -->
+    {% if preview %}
+        <div class="mt-10">
+            <h2 class="text-xl font-semibold">Preview</h2>
+            <pre class="bg-gray-100 p-4 rounded whitespace-pre-wrap text-sm">{{ preview }}</pre>
+        </div>
+
+        <!-- Generate Button -->
+        <form method="POST" action="/elena/template-studio/generate" class="mt-4">
+            <input type="hidden" name="template_type" value="{{ selected_template }}">
+            <input type="hidden" name="client_id" value="{{ client_id or '' }}">
+            <input type="hidden" name="listing_id" value="{{ listing_id or '' }}">
+            {% for key, value in variables.items() %}
+                <input type="hidden" name="{{ key }}" value="{{ value }}">
+            {% endfor %}
+            <button class="bg-indigo-600 text-white px-4 py-2 rounded">
+                Generate Output
+            </button>
         </form>
 
-        <!-- Preview -->
-        {% if preview %}
-            <div>
-                <h2 class="text-xl font-semibold">Preview</h2>
-                <pre class="bg-gray-100 p-4 rounded whitespace-pre-wrap">{{ preview }}</pre>
-            </div>
-        {% endif %}
+        <!-- Generate & Save Button -->
+        <form method="POST" action="/elena/template-studio/generate_and_save" class="mt-4">
+            <input type="hidden" name="template_type" value="{{ selected_template }}">
+            <input type="hidden" name="client_id" value="{{ client_id or '' }}">
+            <input type="hidden" name="listing_id" value="{{ listing_id or '' }}">
+            {% for key, value in variables.items() %}
+                <input type="hidden" name="{{ key }}" value="{{ value }}">
+            {% endfor %}
+            <button class="bg-blue-600 text-white px-4 py-2 rounded">
+                Generate & Save to CRM
+            </button>
+        </form>
+    {% endif %}
 
-        <!-- Generate Output -->
-        {% if selected_template %}
-            <form method="POST" action="/elena/template-studio/generate">
-                {% for key, value in variables.items() %}
-                    <input type="hidden" name="{{ key }}" value="{{ value }}">
-                {% endfor %}
-                <input type="hidden" name="template_type" value="{{ selected_template }}">
 
-                <button class="bg-indigo-600 text-white px-4 py-2 rounded">Generate Output</button>
-            </form>
-        {% endif %}
+    <!-- ---------------- OUTPUT ---------------- -->
+    {% if output %}
+        <div class="mt-10">
+            <h2 class="text-xl font-semibold">Generated Output</h2>
+            <pre class="bg-gray-100 p-4 rounded whitespace-pre-wrap text-sm">{{ output }}</pre>
+        </div>
+    {% endif %}
 
-        <!-- Output -->
-        {% if output %}
-            <div>
-                <h2 class="text-xl font-semibold">Generated Output</h2>
-                <pre class="bg-gray-100 p-4 rounded whitespace-pre-wrap">{{ output }}</pre>
-            </div>
-        {% endif %}
+    <!-- ---------------- SAVED CONFIRMATION ---------------- -->
+    {% if saved_interaction_id %}
+        <div class="mt-6 p-4 bg-green-100 border border-green-300 rounded">
+            Saved to CRM as interaction #{{ saved_interaction_id }}
+        </div>
+    {% endif %}
 
-    </div>
+</div>
 </body>
 </html>
