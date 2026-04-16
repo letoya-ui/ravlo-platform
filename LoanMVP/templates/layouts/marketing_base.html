@@ -3,21 +3,22 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>{{ page_title|default("Ravlo") }}</title>
-  <meta name="description" content="{{ meta_description|default('Ravlo investor command center.') }}">
-  <link rel="canonical" href="{{ canonical_url|default(request.base_url) }}">
 
-  <meta property="og:title" content="{{ page_title|default('Ravlo') }}">
-  <meta property="og:description" content="{{ meta_description|default('Ravlo investor command center.') }}">
+  <title>{{ page_title|default("Ravlo | Investor Operating System") }}</title>
+  <meta name="description" content="{{ meta_description|default('Ravlo helps investors analyze deals, design interiors, plan builds, and manage budgets from one command center.') }}">
+  <link rel="canonical" href="{{ canonical_url|default('https://ravlohq.com' ~ request.path) }}">
+
+  <meta property="og:title" content="{{ page_title|default('Ravlo | Investor Operating System') }}">
+  <meta property="og:description" content="{{ meta_description|default('Ravlo helps investors analyze deals, design interiors, plan builds, and manage budgets from one command center.') }}">
   <meta property="og:type" content="website">
-  <meta property="og:url" content="{{ canonical_url|default(request.base_url) }}">
+  <meta property="og:url" content="{{ canonical_url|default('https://ravlohq.com' ~ request.path) }}">
   {% if hero_image %}
   <meta property="og:image" content="{{ url_for('static', filename=hero_image, _external=True) }}">
   {% endif %}
 
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="{{ page_title|default('Ravlo') }}">
-  <meta name="twitter:description" content="{{ meta_description|default('Ravlo investor command center.') }}">
+  <meta name="twitter:title" content="{{ page_title|default('Ravlo | Investor Operating System') }}">
+  <meta name="twitter:description" content="{{ meta_description|default('Ravlo helps investors analyze deals, design interiors, plan builds, and manage budgets from one command center.') }}">
   {% if hero_image %}
   <meta name="twitter:image" content="{{ url_for('static', filename=hero_image, _external=True) }}">
   {% endif %}
@@ -45,7 +46,7 @@
 
         <div class="mk-brand-copy">
           <span class="mk-brand-title">Ravlo</span>
-          <span class="mk-brand-sub">Investor Command Center</span>
+          <span class="mk-brand-sub">ravlohq.com</span>
         </div>
       </a>
 
@@ -115,8 +116,8 @@
         <div>
           <div class="mk-footer-brand">Ravlo</div>
           <p class="mk-footer-copy">
-            A smarter operating system for investors managing deals, renovation strategy,
-            and build planning in one place.
+            A smarter operating system for investors managing deals, interior design,
+            build planning, and budgets in one place.
           </p>
         </div>
 
@@ -148,8 +149,8 @@
 
       <div class="mk-footer-bottom">
         <span>© {{ site_name|default('Ravlo') }} {{ current_year|default(2026) }}</span>
-        <span>{{ site_tagline|default('Investor Command Center') }}</span>
-        <span>Legal pages updated April 9, 2026</span>
+        <span>{{ site_tagline|default('Investor Operating System') }}</span>
+        <span>ravlohq.com</span>
       </div>
     </div>
   </footer>
