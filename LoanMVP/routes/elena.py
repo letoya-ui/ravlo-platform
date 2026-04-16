@@ -3,20 +3,22 @@
 from flask import Blueprint, request, jsonify
 from datetime import datetime, timedelta
 from enum import Enum
+import json
 import pandas as pd
 
 from LoanMVP.extensions import db
 from sqlalchemy import (
     Column, Integer, String, DateTime, Text,
-    Enum as SAEnum, ForeignKey, func
+    Enum as SAEnum, ForeignKey, Float, func
 )
 from sqlalchemy.orm import relationship
 
-# If your AI wrapper is different, adjust this import:
 from LoanMVP.services.ai_service import generate_text
-
-# If your ATTOM wrapper is different, adjust this import:
-from LoanMVP.services.attom_service import get_property_details
+from LoanMVP.services.mashvisor_service import (
+    get_property_by_mls,
+    normalize_mls_listing,
+    MashvisorServiceError,
+)
 
 
 # ============================================================
@@ -58,7 +60,7 @@ class FlyerType(str, Enum):
 
 
 # ============================================================
-# MODELS (Elena-specific tables)
+# MODELS
 # ============================================================
 
 class ElenaClient(db.Model):
@@ -83,6 +85,7 @@ class ElenaClient(db.Model):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     interactions = relationship("ElenaInteraction", back_populates="client")
+    listings = relationship("ElenaListing", back_populates="client")
 
 
 class ElenaInteraction(db.Model):
@@ -98,53 +101,99 @@ class ElenaInteraction(db.Model):
     client = relationship("ElenaClient", back_populates="interactions")
 
 
+class ElenaListing(db.Model):
+    __tablename__ = "elena_listings"
+
+    id = Column(Integer, primary_key=True)
+    mls_number = Column(String, nullable=False, index=True)
+
+    address = Column(String, nullable=True)
+    city = Column(String, nullable=True)
+    state = Column(String, nullable=True)
+    zip_code = Column(String, nullable=True)
+
+    price = Column(Float, nullable=True)
+    beds = Column(Float, nullable=True)
+    baths = Column(Float, nullable=True)
+    sqft = Column(Integer, nullable=True)
+    lot_size = Column(Float, nullable=True)
+    property_type = Column(String, nullable=True)
+    year_built = Column(Integer, nullable=True)
+
+    description = Column(Text, nullable=True)
+    photos_json = Column(Text, nullable=True)
+
+    client_id = Column(Integer, ForeignKey("elena_clients.id"), nullable=True)
+
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    client = relationship("ElenaClient", back_populates="listings")
+    flyers = relationship("ElenaFlyer", back_populates="listing")
+
+
 class ElenaFlyer(db.Model):
     __tablename__ = "elena_flyers"
 
     id = Column(Integer, primary_key=True)
     flyer_type = Column(SAEnum(FlyerType), nullable=False)
+
     property_address = Column(String, nullable=True)
-    property_id = Column(String, nullable=True)
+    property_id = Column(String, nullable=True)  # can store listing.id or external id
 
     title = Column(String, nullable=True)
     body = Column(Text, nullable=False)
     export_url = Column(String, nullable=True)
 
+    listing_id = Column(Integer, ForeignKey("elena_listings.id"), nullable=True)
+
     created_at = Column(DateTime, default=datetime.utcnow)
     created_by = Column(String, default="elena")
 
+    listing = relationship("ElenaListing", back_populates="flyers")
+
 
 # ============================================================
-# AI SERVICES
+# AI HELPERS
 # ============================================================
 
-def generate_elena_flyer_text(flyer_type, property_id=None, address=None):
-    prop = get_property_details(property_id=property_id, address=address) if (property_id or address) else {}
+def generate_elena_flyer_text_from_listing(listing: ElenaListing, flyer_type: FlyerType) -> str:
+    photos = []
+    try:
+        photos = json.loads(listing.photos_json or "[]")
+    except Exception:
+        photos = []
 
     prompt = f"""
-    Create a real estate flyer for Hudson Valley Realtor Elena James (Keller Williams).
-    Flyer type: {flyer_type}
-    Address: {prop.get('address_full', address)}
-    Beds: {prop.get('beds', '')}
-    Baths: {prop.get('baths', '')}
-    Sqft: {prop.get('sqft', '')}
-    Price: {prop.get('list_price', '')}
+    You are writing a real estate flyer for Hudson Valley Realtor Elena James (Keller Williams).
+
+    Flyer type: {flyer_type.value}
+    Address: {listing.address}, {listing.city}, {listing.state} {listing.zip_code}
+    Beds: {listing.beds or ""}
+    Baths: {listing.baths or ""}
+    Sqft: {listing.sqft or ""}
+    Price: {listing.price or ""}
+
+    Existing description (if any):
+    {listing.description or ""}
+
+    Photos count: {len(photos)}
 
     Write:
-    - A headline (max 10 words)
-    - A 2–3 sentence description
-    - 4–6 bullet highlights
-    Tone: warm, professional, Hudson Valley lifestyle.
+    - A compelling headline (max 10 words)
+    - A 2–3 sentence lifestyle-focused description
+    - 4–6 bullet highlights (features, neighborhood, lifestyle)
+    Tone: warm, professional, Hudson Valley lifestyle, conversational but polished.
     """
 
     return generate_text(prompt)
 
 
-def generate_followup_email(client, template_type, context=None):
+def generate_followup_email(client: ElenaClient, template_type: str, context=None) -> str:
     context = context or {}
 
     prompt = f"""
     Write a follow-up email for Hudson Valley Realtor Elena James.
+
     Client: {client.full_name}
     Type: {template_type}
     Pipeline: {client.pipeline_stage.value}
@@ -153,7 +202,7 @@ def generate_followup_email(client, template_type, context=None):
     Include:
     - Subject line
     - 3–6 sentence body
-    Tone: warm, professional, helpful.
+    Tone: warm, professional, helpful, service-first.
     """
 
     return generate_text(prompt)
@@ -190,39 +239,140 @@ def dashboard_summary():
         .filter(ElenaClient.client_type == ClientType.SELLER)\
         .filter(ElenaClient.pipeline_stage != PipelineStage.CLOSED).scalar()
 
+    listings_count = db.session.query(func.count(ElenaListing.id)).scalar()
+
     return jsonify({
         "new_leads": new_leads,
         "needs_followup": needs_followup,
         "active_buyers": active_buyers,
         "active_sellers": active_sellers,
+        "listings_count": listings_count,
     })
 
 
 # ============================================================
-# CREATE FLYER
+# MLS IMPORT VIA MASHVISOR
+# ============================================================
+
+@elena_bp.post("/mls/import")
+def mls_import():
+    data = request.json or {}
+    mls_number = data.get("mls_number")
+    client_id = data.get("client_id")
+    auto_generate_flyer = bool(data.get("auto_generate_flyer", False))
+
+    if not mls_number:
+        return jsonify({"error": "mls_number is required"}), 400
+
+    try:
+        raw = get_property_by_mls(mls_number)
+    except MashvisorServiceError as e:
+        return jsonify({"error": f"Mashvisor error: {str(e)}"}), 502
+    except Exception as e:
+        return jsonify({"error": f"Unexpected error fetching MLS listing: {str(e)}"}), 500
+
+    normalized = normalize_mls_listing(raw)
+
+    listing = ElenaListing(
+        mls_number=normalized.get("mls_number") or mls_number,
+        address=normalized.get("address"),
+        city=normalized.get("city"),
+        state=normalized.get("state"),
+        zip_code=normalized.get("zip_code"),
+        price=normalized.get("price"),
+        beds=normalized.get("beds"),
+        baths=normalized.get("baths"),
+        sqft=normalized.get("sqft"),
+        lot_size=normalized.get("lot_size"),
+        property_type=normalized.get("property_type"),
+        year_built=normalized.get("year_built"),
+        description=normalized.get("description"),
+        photos_json=json.dumps(normalized.get("photos") or []),
+        client_id=client_id,
+    )
+
+    db.session.add(listing)
+    db.session.commit()
+
+    flyer_payload = None
+    if auto_generate_flyer:
+        flyer_text = generate_elena_flyer_text_from_listing(listing, FlyerType.JUST_LISTED)
+        flyer = ElenaFlyer(
+            flyer_type=FlyerType.JUST_LISTED,
+            property_address=listing.address,
+            property_id=str(listing.id),
+            body=flyer_text,
+            listing_id=listing.id,
+        )
+        db.session.add(flyer)
+        db.session.commit()
+
+        flyer_payload = {
+            "id": flyer.id,
+            "flyer_type": flyer.flyer_type.value,
+            "property_address": flyer.property_address,
+            "body": flyer.body,
+        }
+
+    return jsonify({
+        "listing": {
+            "id": listing.id,
+            "mls_number": listing.mls_number,
+            "address": listing.address,
+            "city": listing.city,
+            "state": listing.state,
+            "zip_code": listing.zip_code,
+            "price": listing.price,
+            "beds": listing.beds,
+            "baths": listing.baths,
+            "sqft": listing.sqft,
+            "lot_size": listing.lot_size,
+            "property_type": listing.property_type,
+            "year_built": listing.year_built,
+            "description": listing.description,
+        },
+        "flyer": flyer_payload,
+        "can_auto_generate_flyer": True,
+    })
+
+
+# ============================================================
+# FLYER CREATE (MANUAL)
 # ============================================================
 
 @elena_bp.post("/flyers/create")
 def create_flyer():
-    data = request.json
-    flyer_type = data["flyer_type"]
+    data = request.json or {}
+    flyer_type = data.get("flyer_type", FlyerType.JUST_LISTED.value)
+    property_address = data.get("property_address")
     property_id = data.get("property_id")
-    address = data.get("property_address")
+    listing_id = data.get("listing_id")
+    body = data.get("body")
 
-    text = generate_elena_flyer_text(flyer_type, property_id, address)
+    if listing_id and not body:
+        listing = ElenaListing.query.get(listing_id)
+        if not listing:
+            return jsonify({"error": "Listing not found"}), 404
+        body = generate_elena_flyer_text_from_listing(listing, FlyerType(flyer_type))
+        property_address = property_address or listing.address
+        property_id = property_id or str(listing.id)
+
+    if not body:
+        return jsonify({"error": "body is required if no listing_id provided"}), 400
 
     flyer = ElenaFlyer(
-        flyer_type=flyer_type,
+        flyer_type=FlyerType(flyer_type),
+        property_address=property_address,
         property_id=property_id,
-        property_address=address,
-        body=text,
+        body=body,
+        listing_id=listing_id,
     )
     db.session.add(flyer)
     db.session.commit()
 
     return jsonify({
         "id": flyer.id,
-        "flyer_type": flyer.flyer_type,
+        "flyer_type": flyer.flyer_type.value,
         "property_address": flyer.property_address,
         "body": flyer.body,
     })
@@ -234,9 +384,12 @@ def create_flyer():
 
 @elena_bp.post("/followup/generate")
 def followup_generate():
-    data = request.json
-    client_id = data["client_id"]
+    data = request.json or {}
+    client_id = data.get("client_id")
     template_type = data.get("template_type", "general_followup")
+
+    if not client_id:
+        return jsonify({"error": "client_id is required"}), 400
 
     client = ElenaClient.query.get(client_id)
     if not client:
@@ -279,9 +432,13 @@ def list_clients():
 
 @elena_bp.post("/clients")
 def create_client():
-    data = request.json
+    data = request.json or {}
+    full_name = data.get("full_name")
+    if not full_name:
+        return jsonify({"error": "full_name is required"}), 400
+
     client = ElenaClient(
-        full_name=data["full_name"],
+        full_name=full_name,
         email=data.get("email"),
         phone=data.get("phone"),
         client_type=ClientType(data.get("client_type", "lead")),
@@ -300,7 +457,10 @@ def create_client():
 
 @elena_bp.post("/import/preview")
 def import_preview():
-    file = request.files["file"]
+    file = request.files.get("file")
+    if not file:
+        return jsonify({"error": "file is required"}), 400
+
     df = pd.read_excel(file)
 
     return jsonify({
@@ -311,9 +471,9 @@ def import_preview():
 
 @elena_bp.post("/import/commit")
 def import_commit():
-    payload = request.json
-    mapping = payload["mapping"]
-    rows = payload["rows"]
+    payload = request.json or {}
+    mapping = payload.get("mapping") or {}
+    rows = payload.get("rows") or []
     source = payload.get("source", "excel_import")
 
     created = 0
