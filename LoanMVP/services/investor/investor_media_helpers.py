@@ -80,61 +80,60 @@ def _normalize_photo_list(value) -> list[str]:
     if not value:
         return photos
 
+    # Keys that hold a direct image URL inside a photo dict, ordered by
+    # preference (largest / highest-quality first).  Includes common keys
+    # returned by ATTOM, RentCast, Mashvisor, Realtor, and Zillow APIs.
+    _DIRECT_URL_KEYS = (
+        "full", "full_url", "fullSize", "full_size",
+        "original", "original_url",
+        "large", "large_url",
+        "imgSrc", "img_src",
+        "primaryPhoto", "primary_photo", "primaryPhotoUrl", "primary_photo_url",
+        "mainImage", "main_image", "listingImage", "listing_image",
+        "coverImage", "cover_image",
+        "url", "src", "href",
+        "photo", "image",
+        "thumbnail",
+    )
+
+    # Keys that hold nested collections of photos.
+    _NESTED_COLLECTION_KEYS = (
+        "photos", "images", "media", "gallery", "variants",
+        "listingPhotos", "listing_photos",
+        "propertyPhotos", "property_photos",
+        "extra_images",
+    )
+
     if isinstance(value, list):
         for item in value:
             if isinstance(item, str) and item.strip():
                 photos.append(item.strip())
             elif isinstance(item, dict):
-                ordered = [
-                    item.get("full"),
-                    item.get("full_url"),
-                    item.get("fullSize"),
-                    item.get("full_size"),
-                    item.get("original"),
-                    item.get("original_url"),
-                    item.get("large"),
-                    item.get("large_url"),
-                    item.get("url"),
-                    item.get("src"),
-                    item.get("href"),
-                    item.get("photo"),
-                    item.get("image"),
-                    item.get("thumbnail"),
-                ]
                 best = None
-                for candidate in ordered:
+                for key in _DIRECT_URL_KEYS:
+                    candidate = item.get(key)
                     if isinstance(candidate, str) and candidate.strip():
                         best = candidate.strip()
                         break
                 if best:
                     photos.append(best)
 
-                for key in ("photos", "images", "media", "gallery", "variants"):
+                for key in _NESTED_COLLECTION_KEYS:
                     nested = item.get(key)
                     if nested:
                         photos.extend(_normalize_photo_list(nested))
 
     elif isinstance(value, dict):
-        direct_url = (
-            value.get("full")
-            or value.get("full_url")
-            or value.get("fullSize")
-            or value.get("full_size")
-            or value.get("original")
-            or value.get("original_url")
-            or value.get("large")
-            or value.get("large_url")
-            or value.get("url")
-            or value.get("src")
-            or value.get("href")
-            or value.get("photo")
-            or value.get("image")
-            or value.get("thumbnail")
-        )
-        if isinstance(direct_url, str) and direct_url.strip():
-            photos.append(direct_url.strip())
+        direct_url = None
+        for key in _DIRECT_URL_KEYS:
+            candidate = value.get(key)
+            if isinstance(candidate, str) and candidate.strip():
+                direct_url = candidate.strip()
+                break
+        if direct_url:
+            photos.append(direct_url)
 
-        for key in ("photos", "images", "media", "gallery", "variants"):
+        for key in _NESTED_COLLECTION_KEYS:
             nested = value.get(key)
             if nested:
                 photos.extend(_normalize_photo_list(nested))
