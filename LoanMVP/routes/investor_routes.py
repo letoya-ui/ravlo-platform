@@ -2494,23 +2494,77 @@ def _property_matches_asset_type(prop, asset_type):
 @login_required
 @role_required("investor")
 def property_search():
-    initial_address = (request.args.get("address") or request.args.get("query") or "").strip()
-    initial_city = (request.args.get("city") or "").strip()
-    initial_state = (request.args.get("state") or "").strip()
-    initial_zip = (request.args.get("zip") or request.args.get("zip_code") or "").strip()
-    initial_asset_type = _normalize_asset_type(request.args.get("asset_type"))
-    initial_strategy = (request.args.get("strategy") or "flip").strip().lower()
+    ip = InvestorProfile.query.filter_by(user_id=current_user.id).first()
+    query = (request.args.get("query") or "").strip()
+    asset_type = _normalize_asset_type(request.args.get("asset_type"))
+
+    property_data = None
+    valuation = {}
+    rent_estimate = {}
+    comps = {}
+    market_snapshot = {}
+    ai_summary = None
+    error = None
+    debug = None
+    saved_id = None
+    primary_photo = None
+    photos = []
+
+    if query:
+        resolved = resolve_property_unified(query)
+
+        if resolved.get("status") == "ok":
+            raw_prop = resolved.get("property") or {}
+            if not _property_matches_asset_type(raw_prop, asset_type):
+                error = f"This property does not match the selected asset type lens: {_asset_type_label(asset_type)}."
+            else:
+                property_data = raw_prop
+                valuation = resolved.get("valuation") or raw_prop.get("valuation") or {}
+                rent_estimate = resolved.get("rent_estimate") or raw_prop.get("rent_estimate") or raw_prop.get("rentEstimate") or {}
+                comps = resolved.get("comps") or raw_prop.get("comps") or {}
+                market_snapshot = resolved.get("market_snapshot") or raw_prop.get("market_snapshot") or {}
+                ai_summary = resolved.get("ai_summary") or resolved.get("summary") or None
+
+                photos = property_data.get("photos") or []
+                primary_photo = property_data.get("primary_photo")
+
+                if ip and property_data.get("address"):
+                    try:
+                        existing = SavedProperty.query.filter(
+                            getattr(SavedProperty, "investor_profile_id", SavedProperty.borrower_profile_id) == ip.id,
+                            db.func.lower(SavedProperty.address) == property_data["address"].lower()
+                        ).first()
+                        if existing:
+                            saved_id = existing.id
+                    except Exception:
+                        saved_id = None
+
+        else:
+            error = resolved.get("error") or "unknown_error"
+            debug = {
+                "provider": resolved.get("provider"),
+                "stage": resolved.get("stage")
+            }
 
     return render_template(
-        "investor/property_tool.html",
-        page_source="property_search",
-        initial_address=initial_address,
-        initial_city=initial_city,
-        initial_state=initial_state,
-        initial_zip=initial_zip,
-        initial_asset_type=initial_asset_type or "any",
-        initial_strategy=initial_strategy or "flip",
-        auto_run_search=bool(initial_address or initial_zip),
+        "investor/property_search.html",
+        investor=ip,
+        title="Property Search",
+        active_page="property_search",
+        query=query,
+        asset_type=asset_type,
+        asset_type_options=COMMERCIAL_ASSET_LABELS,
+        error=error,
+        debug=debug,
+        property=property_data,
+        valuation=valuation,
+        rent_estimate=rent_estimate,
+        comps=comps,
+        market_snapshot=market_snapshot,
+        ai_summary=ai_summary,
+        saved_id=saved_id,
+        photos=photos,
+        primary_photo=primary_photo,
     )
 
 @investor_bp.route("/intelligence/save", methods=["POST"])
