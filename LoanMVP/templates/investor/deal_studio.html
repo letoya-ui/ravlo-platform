@@ -28,7 +28,7 @@ Compare strategies, shape scope, and prepare properties for execution.
     <a href="{{ url_for(tool.endpoint) }}"
        class="studio-card
        {% if tool.name == 'Budget Studio' %}studio-card-primary{% endif %}
-       {% if tool.name == 'Rehab Studio' %}studio-card-visual{% endif %}">
+       {% if tool.name == 'Design Studio' %}studio-card-visual{% endif %}">
 
       <div class="studio-icon">
         <i class="lucide lucide-{{ tool.icon }}"></i>
@@ -46,7 +46,7 @@ Compare strategies, shape scope, and prepare properties for execution.
         <div class="studio-badge">Core Engine</div>
       {% endif %}
 
-      {% if tool.name == "Rehab Studio" %}
+      {% if tool.name == "Design Studio" %}
         <div class="studio-badge studio-badge-visual">Visual Engine</div>
       {% endif %}
 
@@ -112,7 +112,7 @@ Compare strategies, shape scope, and prepare properties for execution.
 }
 
 /* ============================= */
-/* REHAB STUDIO (VISUAL ENGINE) */
+/* DESIGN STUDIO (VISUAL ENGINE) */
 /* ============================= */
 
 .studio-card-visual{

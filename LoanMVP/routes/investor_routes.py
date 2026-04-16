@@ -3961,15 +3961,14 @@ def deal_studio():
 
         # 🟠 FIXED — REHAB STUDIO
         {
-            "name": "Rehab Studio",
-            "description": "Visualize before-and-after transformations and bring your renovation vision to life.",
+            "name": "Design Studio",
+            "description": "Interior design concepts from blueprints, floor plans, and current-space photos.",
             "icon": "image",
-            "endpoint": "investor.deals_list"
+            "endpoint": "investor.design_studio"
         },
-
         {
             "name": "Build Studio",
-            "description": "Design ground-up development scenarios and construction plans.",
+            "description": "Site planning, exterior design, and blueprint development for new builds and renovations.",
             "icon": "home",
             "endpoint": "investor.build_studio"
         },
@@ -5476,31 +5475,36 @@ def build_studio(deal_id=None):
         }
 
     return render_template(
-        "investor/build_studio.html",
+        "investor/project_build.html",
         deal=deal,
         project=project,
         build_analysis=build_analysis,
         build_project=build_project,
         blueprint_result=blueprint_result,
+        site_plan_result=build_project.get("site_plan", {}) or {},
         exterior_result=exterior_result,
-        interior_result=interior_result,
-        interior_rooms=interior_rooms,
         property_photo_gallery=property_gallery,
         package_result=package_result,
         has_saved_package=has_saved_package,
         page_title="Build Studio",
-        page_subtitle="Use a saved or uploaded blueprint to generate interior concepts.",
+        page_subtitle="Site planning, exterior design, and blueprint development for new builds, renovations, and property transformations.",
         lot_count=lot_count,
+        hero_title="Site plans, exterior concepts, and blueprint-ready layouts.",
+        hero_eyebrow="RAVLO BUILD STUDIO",
+        companion_endpoint="investor.design_studio",
+        companion_label="Open Design Studio",
+        submit_label="Generate Build Studio Package",
     )
 
 
-@investor_bp.route("/deals/<int:deal_id>/project-build", methods=["GET"])
-@investor_bp.route("/deal-studio/project-build", methods=["GET"])
+@investor_bp.route("/deals/<int:deal_id>/design-studio", methods=["GET"])
+@investor_bp.route("/deal-studio/design-studio", methods=["GET"])
 @login_required
 @role_required("investor")
-def project_build(deal_id=None):
+def design_studio(deal_id=None):
     deal = None
     project = None
+    saved_property = None
 
     project_id = request.args.get("project_id", type=int)
 
@@ -5515,7 +5519,7 @@ def project_build(deal_id=None):
     if project_id is not None:
         project = BuildProject.query.filter_by(
             id=project_id,
-            user_id=current_user.id,
+            user_id=current_user.id
         ).first()
 
     if project is None and deal is not None:
@@ -5523,14 +5527,17 @@ def project_build(deal_id=None):
 
     results = (deal.results_json or {}) if deal else {}
     build_project = results.get("build_project", {}) or {}
+    build_analysis = results.get("build_analysis", {}) or {}
 
     if not build_project and project is not None:
         build_project = _seed_build_project_from_saved_project(project)
 
     blueprint_result = build_project.get("blueprint", {}) or {}
-    site_plan_result = build_project.get("site_plan", {}) or {}
     exterior_result = _build_project_exterior_result(build_project)
-    build_analysis = results.get("build_analysis", {}) or {}
+
+    interior_block = build_project.get("interior", {}) or {}
+    interior_result = interior_block.get("latest", {}) or {}
+    interior_rooms = interior_block.get("rooms", []) or []
 
     lot_count = _build_project_lot_count(
         build_project.get("lot_count"),
@@ -5538,19 +5545,74 @@ def project_build(deal_id=None):
         getattr(project, "development_type", None),
     )
 
+    package_result = {
+        "blueprint": blueprint_result.get("image_url") or blueprint_result.get("blueprint_url") or "",
+        "exterior": exterior_result.get("image_url") or "",
+        "interior": interior_result.get("image_url") or "",
+    }
+
+    has_saved_package = any([
+        package_result["blueprint"],
+        package_result["exterior"],
+        package_result["interior"],
+    ])
+
+    if deal and getattr(deal, "saved_property_id", None):
+        saved_property = SavedProperty.query.filter_by(id=deal.saved_property_id).first()
+
+    property_seed = _saved_property_workspace_seed(saved_property) if saved_property else {}
+    property_media = _saved_property_media(saved_property) if saved_property else {"primary_photo": None, "gallery": []}
+    property_gallery = _normalize_photo_urls(
+        property_seed.get("listing_photos"),
+        property_media.get("gallery"),
+    )
+    property_primary_photo = _resolve_photo(
+        property_seed.get("primary_photo") or property_media.get("primary_photo"),
+        property_gallery,
+    )
+
+    if property_primary_photo and not exterior_result.get("build_reference_image"):
+        exterior_result = {
+            **exterior_result,
+            "build_reference_image": property_primary_photo,
+        }
+
+    if property_gallery and not exterior_result.get("gallery"):
+        exterior_result = {
+            **exterior_result,
+            "gallery": property_gallery,
+        }
+
     return render_template(
-        "investor/project_build.html",
+        "investor/build_studio.html",
         deal=deal,
         project=project,
+        build_analysis=build_analysis,
         build_project=build_project,
         blueprint_result=blueprint_result,
-        site_plan_result=site_plan_result,
         exterior_result=exterior_result,
-        build_analysis=build_analysis,
+        interior_result=interior_result,
+        interior_rooms=interior_rooms,
+        property_photo_gallery=property_gallery,
+        package_result=package_result,
+        has_saved_package=has_saved_package,
+        page_title="Design Studio",
+        page_subtitle="Interior design concepts created from blueprints, floor plans, or photos of your current space.",
         lot_count=lot_count,
-        page_title="Project Build",
-        page_subtitle="Plan site development, lot layout, exterior massing, and blueprint outputs.",
+        hero_title="Interior design from blueprints, floor plans, and existing space photos.",
+        hero_eyebrow="RAVLO DESIGN STUDIO",
+        companion_endpoint="investor.build_studio",
+        companion_label="Open Build Studio",
+        submit_label="Generate Design Concept",
     )
+
+
+@investor_bp.route("/deals/<int:deal_id>/project-build", methods=["GET"])
+@investor_bp.route("/deal-studio/project-build", methods=["GET"])
+@login_required
+@role_required("investor")
+def project_build(deal_id=None):
+    return build_studio(deal_id=deal_id)
 
 # =========================================================
 # 🏗️ BUILD STUDIO — GENERATE CONCEPT
@@ -5752,6 +5814,7 @@ def generate_build_exterior():
         return jsonify({"status": "error", "message": str(e)}), 500
 
 @investor_bp.route("/deal-studio/build-studio/generate-interior", methods=["POST"])
+@investor_bp.route("/deal-studio/design-studio/generate", methods=["POST"])
 @login_required
 @role_required("investor")
 def generate_build_interior():
@@ -5761,6 +5824,8 @@ def generate_build_interior():
         data = request.form.to_dict() or {}
 
         deal_id = _normalize_int(data.get("deal_id"))
+        project_id = _normalize_int(data.get("project_id"))
+        project = None
         if deal_id:
             deal = Deal.query.filter_by(id=deal_id, user_id=current_user.id).first()
             if not deal:
@@ -5778,6 +5843,12 @@ def generate_build_interior():
             _set_deal_render_processing(deal)
             db.session.commit()
 
+        if project_id:
+            project = BuildProject.query.filter_by(
+                id=project_id,
+                user_id=current_user.id,
+            ).first()
+
         project_name = (data.get("project_name") or "").strip()
         property_type = (data.get("property_type") or "single_family").strip()
         style = (data.get("style") or "modern_luxury").strip()
@@ -5790,10 +5861,15 @@ def generate_build_interior():
         floor = (data.get("floor") or "main").strip()
         save_to_deal = str(data.get("save_to_deal") or "true").lower() in ("1", "true", "yes", "on")
 
-        interior_image = request.files.get("interior_image")
+        interior_image = (
+            request.files.get("interior_image")
+            or request.files.get("blueprint_file")
+            or request.files.get("blueprint_image")
+        )
 
         image_url = (
-            data.get("image_url")
+            data.get("blueprint_url")
+            or data.get("image_url")
             or data.get("reference_image_url")
             or ""
         ).strip()
@@ -5806,10 +5882,24 @@ def generate_build_interior():
                 image_base64 = base64.b64encode(raw).decode("utf-8")
                 image_url = ""
 
-        # Do NOT fall back to exterior for interior generation
-        # If no interior reference is provided, leave image_url empty
+        if not image_url and not image_base64 and project and getattr(project, "blueprint_url", None):
+            image_url = (project.blueprint_url or "").strip()
+
+        if not image_url and not image_base64 and deal is not None:
+            results = _deal_results(deal)
+            build_project = results.get("build_project", {}) or {}
+            saved_blueprint = build_project.get("blueprint", {}) or {}
+            image_url = (
+                saved_blueprint.get("blueprint_url")
+                or saved_blueprint.get("image_url")
+                or ""
+            ).strip()
+
         if not image_url and not image_base64:
-            image_url = ""
+            return jsonify({
+                "status": "error",
+                "message": "Upload a blueprint or use a saved project blueprint before generating interiors."
+            }), 400
 
 
         payload = {
@@ -5832,6 +5922,12 @@ def generate_build_interior():
             "width": 768,
             "height": 768,
         }
+
+        if image_base64:
+            payload["image_base64"] = image_base64
+            payload["image_url"] = ""
+        else:
+            payload["image_url"] = image_url
 
         current_app.logger.warning(f"BUILD INTERIOR ENGINE PAYLOAD: {payload}")
 
@@ -5867,6 +5963,13 @@ def generate_build_interior():
             results = _deal_results(deal)
             build_project = results.get("build_project", {}) or {}
 
+            blueprint_block = build_project.get("blueprint", {}) or {}
+            if image_url:
+                blueprint_block["image_url"] = blueprint_block.get("image_url") or image_url
+                blueprint_block["blueprint_url"] = blueprint_block.get("blueprint_url") or image_url
+            if blueprint_block:
+                build_project["blueprint"] = blueprint_block
+
             interior_block = build_project.get("interior", {}) or {}
             rooms = interior_block.get("rooms", []) or []
 
@@ -5895,6 +5998,7 @@ def generate_build_interior():
 
             build_project["interior"] = interior_block
             results["build_project"] = build_project
+            results["build_reference_image"] = image_url
             _set_deal_results(deal, results)
 
         if deal is not None:
@@ -5910,7 +6014,11 @@ def generate_build_interior():
             "meta": meta,
             "seed": seed,
             "job_id": job_id,
+            "room_type": room_type,
+            "floor": floor,
+            "blueprint_url": image_url,
             "deal_id": deal.id if deal else None,
+            "project_id": project.id if project else project_id,
             "saved_to_deal": bool(save_to_deal and deal is not None),
         })
 
@@ -6301,12 +6409,14 @@ def generate_full_build():
         style = (data.get("style") or "modern_farmhouse").strip()
         description = (data.get("description") or "").strip()
         lot_size = (data.get("lot_size") or "").strip()
+        lot_count = _normalize_int(data.get("lot_count"))
         zoning = (data.get("zoning") or "").strip()
         location = (data.get("location") or "").strip()
         notes = (data.get("notes") or "").strip()
-
-        room_type = (data.get("room_type") or "living room").strip()
-        floor = (data.get("floor") or "main").strip()
+        development_type = _build_project_development_label(property_type, lot_count)
+        site_notes = notes
+        if lot_count and lot_count > 1:
+            site_notes = f"{notes}. Plan for {lot_count} buildable lots across the site.".strip(". ").strip()
 
         if SCOPE_ENGINE_URL and description:
             try:
@@ -6438,7 +6548,8 @@ def generate_full_build():
             "build_description": description,
             "lot_size": lot_size,
             "zoning": zoning,
-            "prompt_notes": notes,
+            "prompt_notes": site_notes,
+            "special_features": f"{lot_count} total lots" if lot_count and lot_count > 1 else notes,
             "square_feet_target": _normalize_int(data.get("square_feet") or data.get("square_feet_target")),
             "width": 1024,
             "height": 1024,
@@ -6486,7 +6597,65 @@ def generate_full_build():
         blueprint_job_id = blueprint_json.get("job_id")
 
         # --------------------------------------------------
-        # 2. GENERATE EXTERIOR
+        # 2. GENERATE SITE PLAN
+        # --------------------------------------------------
+        site_plan_payload = {
+            "mode": "siteplan",
+            "project_name": project_name,
+            "property_type": property_type,
+            "style": style,
+            "description": description,
+            "build_description": description,
+            "lot_size": lot_size,
+            "zoning": zoning,
+            "prompt_notes": site_notes,
+            "special_features": (
+                f"{lot_count} buildable lots, internal drives, setbacks, parking, and site circulation"
+                if lot_count and lot_count > 1
+                else f"{notes}, access, setbacks, and site circulation".strip(", ")
+            ),
+            "square_feet_target": _normalize_int(data.get("square_feet") or data.get("square_feet_target")),
+            "image_base64": exterior_image_base64 or blueprint_primary_b64,
+            "image_url": "" if (exterior_image_base64 or blueprint_primary_b64) else reference_image_url,
+            "width": 1024,
+            "height": 1024,
+            "steps": 24,
+            "guidance": 6.6,
+            "strength": 0.28,
+            "count": 1,
+        }
+
+        current_app.logger.warning(f"PROJECT BUILD SITEPLAN PAYLOAD: {site_plan_payload}")
+
+        site_plan_json = _post_renovation_engine_json(
+            "/v1/build_concept",
+            site_plan_payload,
+            timeout=FULL_BUILD_BLUEPRINT_TIMEOUT,
+        )
+
+        site_plan_images_b64 = site_plan_json.get("images_base64") or []
+        if not site_plan_images_b64:
+            return jsonify({
+                "status": "error",
+                "message": "Site plan step returned no images."
+            }), 502
+
+        site_plan_batch_id = uuid.uuid4().hex
+        site_plan_urls = _upload_after_images_from_b64(site_plan_images_b64, site_plan_batch_id)
+
+        if not site_plan_urls:
+            return jsonify({
+                "status": "error",
+                "message": "Site plan generated but uploads failed."
+            }), 500
+
+        site_plan_primary_url = site_plan_urls[0]
+        site_plan_meta = site_plan_json.get("meta") or {}
+        site_plan_seed = site_plan_json.get("seed")
+        site_plan_job_id = site_plan_json.get("job_id")
+
+        # --------------------------------------------------
+        # 3. GENERATE EXTERIOR
         # Prefer land image if supplied, otherwise blueprint output
         # --------------------------------------------------
         exterior_payload = {
@@ -6498,8 +6667,12 @@ def generate_full_build():
             "build_description": description,
             "lot_size": lot_size,
             "zoning": zoning,
-            "prompt_notes": notes,
-            "special_features": notes,
+            "prompt_notes": site_notes,
+            "special_features": (
+                f"{lot_count} lots, cohesive streetscape, developer-ready massing"
+                if lot_count and lot_count > 1
+                else notes
+            ),
             "image_base64": exterior_image_base64 or blueprint_primary_b64,
             "image_url": "" if (exterior_image_base64 or blueprint_primary_b64) else reference_image_url,
             "width": 640,
@@ -6542,62 +6715,40 @@ def generate_full_build():
         exterior_job_id = exterior_json.get("job_id")
 
         # --------------------------------------------------
-        # 3. GENERATE INTERIOR
-        # text-only
+        # SAVE PROJECT + DEAL
         # --------------------------------------------------
-        interior_payload = {
-            "mode": "interior",
-            "project_name": project_name,
-            "property_type": property_type,
-            "style": style,
-            "description": description,
-            "build_description": description,
-            "lot_size": lot_size,
-            "zoning": zoning,
-            "room_type": room_type,
-            "floor": floor,
-            "prompt_notes": notes,
-            "special_features": notes,
-            "image_base64": blueprint_primary_b64,
-            "image_url": "",
-            "count": 1,
-            "steps": 22,
-            "guidance": 7.0,
-            "strength": 0.42,
-            "width": 768,
-            "height": 768,
-        }
+        if project is None:
+            project = BuildProject(user_id=current_user.id)
+            db.session.add(project)
 
-        current_app.logger.warning(f"FULL BUILD INTERIOR PAYLOAD: {interior_payload}")
+        project.project_name = project_name
+        project.property_type = property_type
+        project.development_type = development_type
+        project.description = description
+        project.lot_size = lot_size
+        project.zoning = zoning
+        project.location = location
+        project.notes = notes
+        project.blueprint_url = blueprint_primary_url
+        project.site_plan_url = site_plan_primary_url
+        project.concept_render_url = exterior_primary_url
 
-        interior_json = _post_renovation_engine_json(
-            "/v1/build_concept",
-            interior_payload,
-            timeout=RENDER_TIMEOUT,
-        )
+        db.session.flush()
 
-        current_app.logger.warning(f"FULL BUILD INTERIOR JSON: {interior_json}")
-
-        interior_images_b64 = interior_json.get("images_base64") or []
-        interior_urls = []
-        interior_primary_url = ""
-
-        if interior_images_b64:
-            interior_batch_id = uuid.uuid4().hex
-            interior_urls = _upload_after_images_from_b64(interior_images_b64, interior_batch_id)
-            if interior_urls:
-                interior_primary_url = interior_urls[0]
-
-        interior_meta = interior_json.get("meta") or {}
-        interior_seed = interior_json.get("seed")
-        interior_job_id = interior_json.get("job_id")
-
-        # --------------------------------------------------
-        # SAVE TO DEAL
-        # --------------------------------------------------
         if save_to_deal and deal is not None:
             results = _deal_results(deal)
             build_project = results.get("build_project", {}) or {}
+
+            build_project["project_id"] = project.id
+            build_project["project_name"] = project_name
+            build_project["property_type"] = property_type
+            build_project["development_type"] = development_type
+            build_project["lot_count"] = lot_count
+            build_project["description"] = description
+            build_project["lot_size"] = lot_size
+            build_project["zoning"] = zoning
+            build_project["location"] = location
+            build_project["notes"] = notes
 
             build_project["blueprint"] = {
                 "project_name": project_name,
@@ -6616,11 +6767,30 @@ def generate_full_build():
                 "job_id": blueprint_job_id,
             }
 
+            build_project["site_plan"] = {
+                "project_name": project_name,
+                "property_type": property_type,
+                "description": description,
+                "lot_size": lot_size,
+                "lot_count": lot_count,
+                "zoning": zoning,
+                "location": location,
+                "notes": notes,
+                "style": style,
+                "image_url": site_plan_primary_url,
+                "images": site_plan_urls,
+                "site_plan_url": site_plan_primary_url,
+                "meta": site_plan_meta,
+                "seed": site_plan_seed,
+                "job_id": site_plan_job_id,
+            }
+
             build_project["exterior"] = {
                 "project_name": project_name,
                 "property_type": property_type,
                 "description": description,
                 "lot_size": lot_size,
+                "lot_count": lot_count,
                 "zoning": zoning,
                 "location": location,
                 "notes": notes,
@@ -6633,40 +6803,10 @@ def generate_full_build():
                 "build_reference_image": reference_image_url or blueprint_primary_url,
             }
 
-            existing_interior = build_project.get("interior", {}) or {}
-            existing_rooms = existing_interior.get("rooms", []) or []
-
-            room_entry = {
-                "project_name": project_name,
-                "property_type": property_type,
-                "style": style,
-                "description": description,
-                "lot_size": lot_size,
-                "zoning": zoning,
-                "location": location,
-                "notes": notes,
-                "room_type": room_type,
-                "floor": floor,
-                "image_url": interior_primary_url,
-                "images": interior_urls,
-                "meta": interior_meta,
-                "seed": interior_seed,
-                "job_id": interior_job_id,
-                "build_reference_image": blueprint_primary_url,
-            }
-
-            if interior_primary_url:
-                existing_rooms.append(room_entry)
-
-            build_project["interior"] = {
-                "latest": room_entry,
-                "rooms": existing_rooms,
-            }
-
             if build_analysis:
                 results["build_analysis"] = build_analysis
             results["build_project"] = build_project
-            results["build_reference_image"] = reference_image_url or blueprint_primary_url
+            results["build_reference_image"] = blueprint_primary_url
             _set_deal_results(deal, results)
 
         if deal is not None:
@@ -6678,9 +6818,19 @@ def generate_full_build():
             "status": "ok",
             "mode": "full",
             "package": {
+                "site_plan": site_plan_primary_url,
                 "blueprint": blueprint_primary_url,
                 "exterior": exterior_primary_url,
-                "interior": interior_primary_url,
+            },
+            "project_id": project.id,
+            "lot_count": lot_count,
+            "development_type": development_type,
+            "site_plan_result": {
+                "image_url": site_plan_primary_url,
+                "images": site_plan_urls,
+                "meta": site_plan_meta,
+                "seed": site_plan_seed,
+                "job_id": site_plan_job_id,
             },
             "blueprint_result": {
                 "image_url": blueprint_primary_url,
@@ -6695,15 +6845,6 @@ def generate_full_build():
                 "meta": exterior_meta,
                 "seed": exterior_seed,
                 "job_id": exterior_job_id,
-            },
-            "interior_result": {
-                "image_url": interior_primary_url,
-                "images": interior_urls,
-                "meta": interior_meta,
-                "seed": interior_seed,
-                "job_id": interior_job_id,
-                "room_type": room_type,
-                "floor": floor,
             },
             "build_analysis": build_analysis,
             "deal_id": deal.id if deal else None,
@@ -7385,10 +7526,12 @@ def build_project_detail(project_id):
         id=project_id,
         user_id=current_user.id
     ).first_or_404()
+    lot_count = _build_project_lot_count(project.development_type)
 
     return render_template(
         "investor/build_project_detail.html",
         project=project,
+        lot_count=lot_count,
         page_title="Build Project",
         page_subtitle="Review your saved development concept."
     )

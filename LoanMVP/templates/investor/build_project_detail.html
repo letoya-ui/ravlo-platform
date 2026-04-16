@@ -44,6 +44,10 @@ Review your saved build concept, development inputs, and launch this project int
           <span class="ravlo-chip">Lot: {{ project.lot_size }}</span>
         {% endif %}
 
+        {% if lot_count %}
+          <span class="ravlo-chip">{{ lot_count }} Lots</span>
+        {% endif %}
+
         {% if project.created_at %}
           <span class="ravlo-chip">
             Created {{ project.created_at.strftime('%b %d, %Y') }}
@@ -151,7 +155,12 @@ Review your saved build concept, development inputs, and launch this project int
         <div class="quick-grid">
           <a href="{{ url_for('investor.build_studio', project_id=project.id) }}" class="quick-card">
             <span class="quick-title">Open in Build Studio</span>
-            <span class="quick-sub">Generate exterior, interior, and blueprint concepts from this project.</span>
+            <span class="quick-sub">Update the site plan, exterior concept, and blueprint package.</span>
+          </a>
+
+          <a href="{{ url_for('investor.design_studio', project_id=project.id) }}" class="quick-card">
+            <span class="quick-title">Open in Design Studio</span>
+            <span class="quick-sub">Use the saved blueprint for interior design concepts and room packages.</span>
           </a>
 
           <button type="button" class="quick-card quick-card-button" onclick="convertToDeal({{ project.id }})">

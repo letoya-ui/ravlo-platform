@@ -1,14 +1,14 @@
 {% extends "layouts/ravlo_base.html" %}
 {% block title %}Ravlo • Build Projects{% endblock %}
 
-{% block page_title %}Build Projects{% endblock %}
+{% block page_title %}Build Studio Library{% endblock %}
 {% block page_subline %}
-Manage saved development projects, review site plans, exteriors, and blueprints, and launch any project into Build Studio or Deal execution.
+Manage saved build packages, review site plans, exteriors, and blueprints, and launch any project into Build Studio or Design Studio.
 {% endblock %}
 
 {% block topbar_actions %}
   <a href="{{ url_for('investor.build_studio') }}" class="ravlo-btn primary sm">
-    New Build Project
+    New Build Studio Project
   </a>
 {% endblock %}
 
@@ -20,7 +20,7 @@ Manage saved development projects, review site plans, exteriors, and blueprints,
       <div class="eyebrow">RAVLO DEVELOPMENT PIPELINE</div>
       <h2>Build Project Library</h2>
       <p class="muted">
-        Save, review, and move development projects into Build Studio, budgeting, and deal execution.
+        Save, review, and move development projects into Build Studio, Design Studio, budgeting, and deal execution.
       </p>
 
       <div class="hero-chip-row">
@@ -155,12 +155,12 @@ Manage saved development projects, review site plans, exteriors, and blueprints,
       <div class="empty-icon">🏗</div>
       <h3>No Build Projects Yet</h3>
       <p class="muted">
-        Start in Build Studio to create your first development project, then save it into your Build Project library.
+        Start in Build Studio to create your first site plan, exterior, and blueprint package, then save it into your library.
       </p>
 
       <div class="empty-actions">
         <a href="{{ url_for('investor.build_studio') }}" class="ravlo-btn primary">
-          Create First Build Project
+          Create First Build Studio Project
         </a>
       </div>
     </section>

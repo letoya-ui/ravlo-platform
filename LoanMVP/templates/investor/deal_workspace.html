@@ -32,13 +32,13 @@ Review a saved property, compare exit paths, and move the best opportunity into 
     {% endif %}
 
     <a href="{{ url_for('investor.deal_rehab', deal_id=deal.id) }}" class="ravlo-btn ghost sm">
-        Rehab Studio
+        Renovation Studio
     </a>
     <a href="{{ url_for('investor.build_studio', deal_id=deal.id) }}" class="ravlo-btn ghost sm">
         Build Studio
     </a>
-    <a href="{{ url_for('investor.build_projects') }}" class="ravlo-btn ghost sm">
-        Project Build
+    <a href="{{ url_for('investor.design_studio', deal_id=deal.id) }}" class="ravlo-btn ghost sm">
+        Design Studio
     </a>
     <a href="{{ url_for('investor.capital_application', deal_id=deal.id, prop_id=sp.id) }}" class="ravlo-btn primary sm">
         Apply
@@ -349,13 +349,13 @@ Review a saved property, compare exit paths, and move the best opportunity into 
                 </a>
                 {% endif %}
                 <a href="{{ url_for('investor.deal_rehab', deal_id=deal.id) }}" class="ravlo-btn ghost">
-                    Rehab Studio
+                    Renovation Studio
                 </a>
                 <a href="{{ url_for('investor.build_studio', deal_id=deal.id) }}" class="ravlo-btn ghost">
                     Build Studio
                 </a>
-                <a href="{{ url_for('investor.build_projects') }}" class="ravlo-btn ghost">
-                    Project Build
+                <a href="{{ url_for('investor.design_studio', deal_id=deal.id) }}" class="ravlo-btn ghost">
+                    Design Studio
                 </a>
                 <a href="{{ url_for('investor.capital_application', deal_id=deal.id, prop_id=selected_prop.id) }}" class="ravlo-btn primary">
                     Apply
@@ -633,8 +633,8 @@ Review a saved property, compare exit paths, and move the best opportunity into 
                     <div class="workspace-photo-main workspace-photo-rehab-link">
                         <img src="{{ primary_photo }}" alt="Primary listing photo" loading="lazy" referrerpolicy="no-referrer" onerror="this.onerror=null;this.src='/static/images/placeholder_property.jpg';">
                         {% if deal %}
-                        <a href="{{ url_for('investor.deal_rehab', deal_id=deal.id, image_url=primary_photo) }}" class="workspace-photo-overlay" title="Use in Rehab Studio">
-                            <i data-lucide="sparkles"></i> Use in Rehab Studio
+                        <a href="{{ url_for('investor.deal_rehab', deal_id=deal.id, image_url=primary_photo) }}" class="workspace-photo-overlay" title="Use in Renovation Studio">
+                            <i data-lucide="sparkles"></i> Use in Renovation Studio
                         </a>
                         {% endif %}
                     </div>
@@ -652,7 +652,7 @@ Review a saved property, compare exit paths, and move the best opportunity into 
                             <div class="workspace-photo-tile workspace-photo-rehab-link">
                                 <img src="{{ photo_url }}" alt="Listing photo {{ loop.index }}" loading="lazy" referrerpolicy="no-referrer" onerror="this.onerror=null;this.src='/static/images/placeholder_property.jpg';">
                                 {% if deal %}
-                                <a href="{{ url_for('investor.deal_rehab', deal_id=deal.id, image_url=photo_url) }}" class="workspace-photo-overlay" title="Use in Rehab Studio">
+                                <a href="{{ url_for('investor.deal_rehab', deal_id=deal.id, image_url=photo_url) }}" class="workspace-photo-overlay" title="Use in Renovation Studio">
                                     <i data-lucide="sparkles"></i>
                                 </a>
                                 {% endif %}

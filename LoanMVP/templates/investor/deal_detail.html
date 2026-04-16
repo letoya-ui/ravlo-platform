@@ -59,8 +59,8 @@ Review the saved deal, check strategy and funding status, and launch the next to
       <a href="{{ url_for('investor.build_studio', deal_id=deal.id) }}" class="ravlo-btn ghost">
         Build Studio
       </a>
-      <a href="{{ url_for('investor.build_projects') }}" class="ravlo-btn ghost">
-        Project Build
+      <a href="{{ url_for('investor.design_studio', deal_id=deal.id) }}" class="ravlo-btn ghost">
+        Design Studio
       </a>
       <form method="POST"
             action="{{ url_for('investor.generate_budget_from_ai', deal_id=deal.id) }}"
@@ -127,15 +127,15 @@ Review the saved deal, check strategy and funding status, and launch the next to
         <div class="studio-icon">🏠</div>
         <div class="studio-title">Build Studio</div>
         <div class="studio-sub">
-          Design the full development package with blueprint, exterior, and interior concepts.
+          Create site plans, exterior concepts, and blueprint-ready layouts.
         </div>
       </a>
 
-      <a href="{{ url_for('investor.build_projects') }}" class="studio-card">
-        <div class="studio-icon">📁</div>
-        <div class="studio-title">Project Build</div>
+      <a href="{{ url_for('investor.design_studio', deal_id=deal.id) }}" class="studio-card">
+        <div class="studio-icon">🛋</div>
+        <div class="studio-title">Design Studio</div>
         <div class="studio-sub">
-          Manage saved development concepts and launch projects into execution.
+          Turn blueprints, floor plans, or space photos into polished interior concepts.
         </div>
       </a>
 
