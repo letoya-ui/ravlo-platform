@@ -407,7 +407,11 @@ function resolveImage(r){
 function resolveCardImageSrc(r){
   const raw = resolveImage(r);
   if (raw && raw !== PLACEHOLDER_IMAGE) {
-    if (raw.startsWith("/") || raw.startsWith("data:")) return raw;
+    if (
+      raw.startsWith("/") ||
+      raw.startsWith("data:") ||
+      raw.includes("/api/property_tool_image?src=")
+    ) return raw;
     return `${IMAGE_PROXY_URL}?src=${encodeURIComponent(raw)}`;
   }
 
