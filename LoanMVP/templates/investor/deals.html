@@ -57,7 +57,7 @@ Manage saved opportunities, open Project Studio, and move deals toward execution
         {% set saved_media = deal_image_map.get(deal.saved_property_id, {}) if deal_image_map is defined else {} %}
         {% set image_url = None %}
         {% if deal.results_json %}
-          {% set wa = deal.results_json.get("workspace_analysis", {}) %}
+          {% set wa = deal.results_json.get("workspace_analysis", {}) or {} %}
           {% set image_url = wa.get("image_url") %}
         {% endif %}
         {% if not image_url %}
