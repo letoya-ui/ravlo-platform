@@ -5,9 +5,11 @@ from datetime import datetime, timedelta
 from enum import Enum
 import pandas as pd
 
-from LoanMVP import db
-from LoanMVP.models import BaseModel  # if you have a base model
-from sqlalchemy import Column, Integer, String, DateTime, Text, Enum as SAEnum, ForeignKey, func
+from LoanMVP.extensions import db
+from sqlalchemy import (
+    Column, Integer, String, DateTime, Text,
+    Enum as SAEnum, ForeignKey, func
+)
 from sqlalchemy.orm import relationship
 
 # If your AI wrapper is different, adjust this import:
