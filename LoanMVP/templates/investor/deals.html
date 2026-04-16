@@ -54,6 +54,22 @@ Manage saved opportunities, open Project Studio, and move deals toward execution
         data-funding="{% if deal.submitted_for_funding %}requested{% else %}not_requested{% endif %}"
       >
 
+        {% set saved_media = deal_image_map.get(deal.saved_property_id, {}) if deal_image_map is defined else {} %}
+        {% set image_url = None %}
+        {% if deal.results_json %}
+          {% set wa = deal.results_json.get("workspace_analysis", {}) %}
+          {% set image_url = wa.get("image_url") %}
+        {% endif %}
+        {% if not image_url %}
+          {% set image_url = saved_media.get("image_url") %}
+        {% endif %}
+
+        {% if image_url %}
+          <div class="deal-card-image">
+            <img src="{{ image_url }}" alt="{{ deal.address or deal.title or 'Deal image' }}" loading="lazy" referrerpolicy="no-referrer" onerror="this.onerror=null;this.src='/static/images/placeholder_property.jpg';">
+          </div>
+        {% endif %}
+
         <a href="{{ url_for('investor.deal_detail', deal_id=deal.id) }}" class="deal-card-main">
           <div class="deal-card-top">
             <div>
@@ -233,6 +249,22 @@ Manage saved opportunities, open Project Studio, and move deals toward execution
     border-radius:22px;
     background:rgba(255,255,255,.03);
     border:1px solid rgba(255,255,255,.08);
+  }
+
+  .deal-card-image{
+    width:100%;
+    height:240px;
+    border-radius:18px;
+    overflow:hidden;
+    border:1px solid rgba(255,255,255,.08);
+    background:rgba(255,255,255,.03);
+  }
+
+  .deal-card-image img{
+    width:100%;
+    height:100%;
+    object-fit:cover;
+    display:block;
   }
 
   .deal-card-main{

@@ -4794,9 +4794,42 @@ def deals_cards():
         .all()
     )
 
+    investor_profile = InvestorProfile.query.filter_by(user_id=current_user.id).first()
+    deal_image_map = {}
+    if deals and investor_profile:
+        saved_property_ids = [d.saved_property_id for d in deals if d.saved_property_id]
+        if saved_property_ids:
+            saved_properties = (
+                SavedProperty.query
+                .filter(
+                    SavedProperty.investor_profile_id == investor_profile.id,
+                    SavedProperty.id.in_(saved_property_ids),
+                )
+                .all()
+            )
+            for prop in saved_properties:
+                seed = _saved_property_workspace_seed(prop)
+                deal_image_map[prop.id] = {
+                    "image_url": seed.get("primary_photo"),
+                    "listing_photos": seed.get("listing_photos"),
+                }
+
+        for deal in deals:
+            if deal.saved_property_id and deal.saved_property_id not in deal_image_map:
+                deal_image_map[deal.saved_property_id] = {}
+            results = deal.results_json or {}
+            wa = results.get("workspace_analysis", {}) or {}
+            image_url = wa.get("image_url") or results.get("image_url")
+            if image_url and deal.saved_property_id:
+                existing = deal_image_map.get(deal.saved_property_id, {})
+                if not existing.get("image_url"):
+                    existing["image_url"] = image_url
+                    deal_image_map[deal.saved_property_id] = existing
+
     return render_template(
         "investor/deals.html",
-        deals=deals
+        deals=deals,
+        deal_image_map=deal_image_map,
     )
     
 @investor_bp.route("/deals/create", methods=["GET", "POST"])
