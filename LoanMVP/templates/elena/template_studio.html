@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Elena Template Studio</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+
+<body class="bg-gray-100 p-8">
+    <div class="max-w-3xl mx-auto bg-white p-6 rounded shadow space-y-6">
+
+        <h1 class="text-2xl font-semibold">Elena Template Studio</h1>
+
+        <!-- Template Selector -->
+        <form method="POST" action="/elena/template-studio/preview" class="space-y-4">
+            <div>
+                <label class="font-medium">Template Type</label>
+                <select name="template_type" class="border rounded px-3 py-2 w-full">
+                    <option value="">Select a template</option>
+                    {% for t in templates %}
+                        <option value="{{ t }}" {% if selected_template == t %}selected{% endif %}>
+                            {{ t.replace("_", " ").upper() }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Dynamic Variables -->
+            {% if variables %}
+                <div class="space-y-3">
+                    {% for key, value in variables.items() %}
+                        <div>
+                            <label class="font-medium">{{ key }}</label>
+                            <input name="{{ key }}" value="{{ value }}" class="border rounded px-3 py-2 w-full">
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+
+            <button class="bg-gray-800 text-white px-4 py-2 rounded">Preview Template</button>
+        </form>
+
+        <!-- Preview -->
+        {% if preview %}
+            <div>
+                <h2 class="text-xl font-semibold">Preview</h2>
+                <pre class="bg-gray-100 p-4 rounded whitespace-pre-wrap">{{ preview }}</pre>
+            </div>
+        {% endif %}
+
+        <!-- Generate Output -->
+        {% if selected_template %}
+            <form method="POST" action="/elena/template-studio/generate">
+                {% for key, value in variables.items() %}
+                    <input type="hidden" name="{{ key }}" value="{{ value }}">
+                {% endfor %}
+                <input type="hidden" name="template_type" value="{{ selected_template }}">
+
+                <button class="bg-indigo-600 text-white px-4 py-2 rounded">Generate Output</button>
+            </form>
+        {% endif %}
+
+        <!-- Output -->
+        {% if output %}
+            <div>
+                <h2 class="text-xl font-semibold">Generated Output</h2>
+                <pre class="bg-gray-100 p-4 rounded whitespace-pre-wrap">{{ output }}</pre>
+            </div>
+        {% endif %}
+
+    </div>
+</body>
+</html>
