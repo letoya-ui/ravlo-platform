@@ -23,16 +23,13 @@ class BaseModel(db.Model):
 class ElenaClient(BaseModel):
     __tablename__ = "elena_clients"
 
-    # Basic info
     name = Column(String, nullable=False)
     email = Column(String, nullable=True)
     phone = Column(String, nullable=True)
 
-    # CRM fields
     pipeline_stage = Column(String, nullable=True)
     notes = Column(Text, nullable=True)
 
-    # Preferences
     preferred_areas = Column(String, nullable=True)
     budget = Column(String, nullable=True)
 
@@ -52,7 +49,6 @@ class ElenaListing(BaseModel):
 
     mls_number = Column(String, nullable=True)
 
-    # Property details
     address = Column(String, nullable=False)
     city = Column(String, nullable=False)
     state = Column(String, nullable=False)
@@ -66,42 +62,36 @@ class ElenaListing(BaseModel):
     description = Column(Text, nullable=True)
     photos_json = Column(Text, nullable=True)
 
-    # ⭐ Relationship to client (MISSING BEFORE)
+    # ⭐ REQUIRED — this was missing
     client_id = Column(Integer, ForeignKey("elena_clients.id"), nullable=True)
     client = relationship("ElenaClient", back_populates="listings")
 
-    # Flyers
-    flyers = relationship("ElenaFlyer", back_populates="listing", lazy=True)
+    flyers = relationship("ElenaFlyer", backref="listing", lazy=True)
 
     def __repr__(self):
         return f"<ElenaListing {self.id} - {self.address}>"
 
 
 # ---------------------------------------------------------
-# FLYER MODEL (GENERATED CONTENT)
+# FLYER MODEL
 # ---------------------------------------------------------
 class ElenaFlyer(BaseModel):
     __tablename__ = "elena_flyers"
 
     flyer_type = Column(String, nullable=False)
 
-    # Property reference
     property_address = Column(String, nullable=False)
     property_id = Column(String, nullable=True)
     listing_id = Column(Integer, ForeignKey("elena_listings.id"), nullable=True)
 
-    # Generated content
     body = Column(Text, nullable=False)
-
-    # Relationship back to listing
-    listing = relationship("ElenaListing", back_populates="flyers")
 
     def __repr__(self):
         return f"<ElenaFlyer {self.id} - {self.flyer_type}>"
 
 
 # ---------------------------------------------------------
-# INTERACTION MODEL (EMAILS, NOTES, LOGS)
+# INTERACTION MODEL
 # ---------------------------------------------------------
 class InteractionType:
     EMAIL = "email"
@@ -120,7 +110,6 @@ class ElenaInteraction(BaseModel):
     content = Column(Text, nullable=False)
     meta = Column(String, nullable=True)
 
-    # Relationship back to client
     client = relationship("ElenaClient", back_populates="interactions")
 
     def __repr__(self):
