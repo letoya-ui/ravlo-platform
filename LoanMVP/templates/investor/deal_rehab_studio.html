@@ -1455,8 +1455,19 @@
 
     resetBtn?.addEventListener("click", function () {
       form.reset();
+
+      document.getElementById("preset").value = "luxury";
+      document.getElementById("mode").value = "hgtv";
+      document.getElementById("room_type").value = "living room";
+      document.getElementById("strength").value = "0.58";
+      document.getElementById("notes").value = "";
+      document.getElementById("image_url").value = "";
+
       statusPill.textContent = "Ready";
-      if (beforePreview) beforePreview.textContent = "No before image selected";
+      if (beforePreview) {
+        beforePreview.innerHTML = "";
+        beforePreview.textContent = "No before image selected";
+      }
     });
 
     form?.addEventListener("submit", async function (e) {
