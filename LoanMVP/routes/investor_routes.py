@@ -5388,7 +5388,13 @@ def deal_rehab_generate_variant():
 
 def _build_project_lot_count(*values):
     for value in values:
-        raw = (value or "").strip()
+        if isinstance(value, (int, float)):
+            normalized = int(value)
+            if normalized > 0:
+                return normalized
+            continue
+
+        raw = str(value or "").strip()
         if not raw:
             continue
         match = re.search(r"(\d+)\s*-\s*lot|(\d+)\s+lot", raw, re.IGNORECASE)
