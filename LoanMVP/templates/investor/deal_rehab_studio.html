@@ -1,26 +1,26 @@
 {% extends "layouts/ravlo_base.html" %}
 
-{% block title %}Renovation Studio | Ravlo{% endblock %}
+{% block title %}Design Studio | Ravlo{% endblock %}
 
 {% block content %}
-<div class="rehab-studio-page">
+<div class="rehab-studio-page design-studio-page">
 
   <section class="studio-hero">
     <div class="hero-copy">
       <div class="eyebrow">
-        <i data-lucide="hammer"></i>
-        RAVLO RENOVATION STUDIO
+        <i data-lucide="sofa"></i>
+        RAVLO DESIGN STUDIO
       </div>
-      <h1>Visualize the renovation before the first dollar is spent.</h1>
+      <h1>Design interiors from blueprints, floor plans, and existing space photos.</h1>
       <p>
-        Upload the current property image, generate renovation concepts, compare styles,
-        and save the best direction to the deal workspace.
+        Upload a blueprint, floor plan, or current interior image to generate interior design concepts,
+        compare directions, and save the strongest concept to the workspace.
       </p>
 
       <div class="hero-chips">
-        <span class="chip"><i data-lucide="image"></i> Before / After</span>
-        <span class="chip"><i data-lucide="sparkles"></i> AI Renovation</span>
-        <span class="chip"><i data-lucide="clipboard-list"></i> Scope Ready</span>
+        <span class="chip"><i data-lucide="image"></i> Interior Concepts</span>
+        <span class="chip"><i data-lucide="layout-template"></i> Blueprint Ready</span>
+        <span class="chip"><i data-lucide="sparkles"></i> AI Design</span>
         {% if deal %}
         <span class="chip chip-accent"><i data-lucide="briefcase"></i> Deal #{{ deal.id }}</span>
         {% endif %}
@@ -30,14 +30,20 @@
     <div class="hero-stats">
       <div class="hero-stat">
         <span class="hero-stat-label">Project</span>
-        <strong>{{ deal.address if deal and deal.address else "Renovation Concept" }}</strong>
+        <strong>{{ deal.address if deal and deal.address else "Interior Design Concept" }}</strong>
       </div>
       <div class="hero-stat">
-        <span class="hero-stat-label">Before Photo</span>
-        <strong id="status-before">{{ "Loaded" if rehab_before and rehab_before.get("image_url") else "Pending" }}</strong>
+        <span class="hero-stat-label">Reference Source</span>
+        <strong id="status-before">
+          {% if rehab_before and rehab_before.get("image_url") %}
+            Loaded
+          {% else %}
+            Pending
+          {% endif %}
+        </strong>
       </div>
       <div class="hero-stat">
-        <span class="hero-stat-label">Renovation</span>
+        <span class="hero-stat-label">Design Output</span>
         <strong id="status-after">{{ "Generated" if rehab_latest and rehab_latest.get("image_url") else "Pending" }}</strong>
       </div>
       <div class="hero-stat">
@@ -54,11 +60,11 @@
     </div>
     <div class="workflow-step" data-step="2">
       <span class="step-number">2</span>
-      <span class="step-label">Before</span>
+      <span class="step-label">Reference</span>
     </div>
     <div class="workflow-step" data-step="3">
       <span class="step-number">3</span>
-      <span class="step-label">After</span>
+      <span class="step-label">Design</span>
     </div>
     <div class="workflow-step" data-step="4">
       <span class="step-number">4</span>
@@ -71,11 +77,14 @@
 
       <section class="ravlo-card setup-card">
         <div class="card-head">
-            <div>
-              <div class="card-kicker">STEP 1</div>
-              <h2>Renovation Setup</h2>
-              <p>Choose the renovation style, upload a current condition image, or start from the saved listing photo for this deal.</p>
-            </div>
+          <div>
+            <div class="card-kicker">STEP 1</div>
+            <h2>Design Studio Setup</h2>
+            <p>
+              Choose the interior style, room type, and reference source.
+              Start from a blueprint, floor plan, or an existing interior image.
+            </p>
+          </div>
           <div class="card-head-actions">
             <span class="status-pill" id="generation-status-pill">{{ "Concepts Loaded" if rehab_concepts else "Ready" }}</span>
           </div>
@@ -83,32 +92,31 @@
 
         <form id="rehabForm" class="studio-form" enctype="multipart/form-data">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-
           <input type="hidden" name="deal_id" value="{{ deal.id if deal else '' }}">
           <input type="hidden" name="save_to_deal" value="true">
 
           <div class="form-grid form-grid-2">
             <div class="field">
-              <label for="preset">Renovation Preset</label>
+              <label for="preset">Interior Style</label>
               {% set preset_value = rehab_latest.get("preset") if rehab_latest else "luxury" %}
               <select id="preset" name="preset">
-                <option value="luxury" {{ "selected" if preset_value == "luxury" else "" }}>Luxury</option>
+                <option value="luxury" {{ "selected" if preset_value == "luxury" else "" }}>Modern Luxury</option>
                 <option value="modern" {{ "selected" if preset_value == "modern" else "" }}>Modern</option>
-                <option value="airbnb" {{ "selected" if preset_value == "airbnb" else "" }}>Airbnb Ready</option>
-                <option value="flip" {{ "selected" if preset_value == "flip" else "" }}>Flip Ready</option>
+                <option value="airbnb" {{ "selected" if preset_value == "airbnb" else "" }}>Hospitality</option>
+                <option value="flip" {{ "selected" if preset_value == "flip" else "" }}>Market Ready</option>
                 <option value="budget" {{ "selected" if preset_value == "budget" else "" }}>Budget Refresh</option>
               </select>
             </div>
 
             <div class="field">
-              <label for="mode">Renovation Mode</label>
+              <label for="mode">Design Mode</label>
               {% set mode_value = rehab_latest.get("mode") if rehab_latest else "hgtv" %}
               <select id="mode" name="mode">
-                <option value="hgtv" {{ "selected" if mode_value == "hgtv" else "" }}>HGTV</option>
+                <option value="hgtv" {{ "selected" if mode_value == "hgtv" else "" }}>Editorial</option>
                 <option value="modern" {{ "selected" if mode_value == "modern" else "" }}>Modern</option>
                 <option value="luxury" {{ "selected" if mode_value == "luxury" else "" }}>Luxury</option>
                 <option value="budget" {{ "selected" if mode_value == "budget" else "" }}>Budget</option>
-                <option value="flip" {{ "selected" if mode_value == "flip" else "" }}>Flip</option>
+                <option value="flip" {{ "selected" if mode_value == "flip" else "" }}>Market Ready</option>
               </select>
             </div>
 
@@ -120,12 +128,13 @@
                 <option value="kitchen" {{ "selected" if room_type_value == "kitchen" else "" }}>Kitchen</option>
                 <option value="bathroom" {{ "selected" if room_type_value == "bathroom" else "" }}>Bathroom</option>
                 <option value="bedroom" {{ "selected" if room_type_value == "bedroom" else "" }}>Bedroom</option>
-                <option value="exterior" {{ "selected" if room_type_value == "exterior" else "" }}>Exterior</option>
+                <option value="dining room" {{ "selected" if room_type_value == "dining room" else "" }}>Dining Room</option>
+                <option value="office" {{ "selected" if room_type_value == "office" else "" }}>Office</option>
               </select>
             </div>
 
             <div class="field">
-              <label for="strength">Transformation Strength</label>
+              <label for="strength">Design Strength</label>
               <select id="strength" name="strength">
                 <option value="0.45">Light</option>
                 <option value="0.58" selected>Balanced</option>
@@ -134,31 +143,68 @@
             </div>
           </div>
 
+          <div class="form-grid form-grid-2 blueprint-fields">
+            <div class="field">
+              <label for="blueprint_url">Blueprint / Floor Plan URL</label>
+              <input
+                type="text"
+                id="blueprint_url"
+                name="blueprint_url"
+                value=""
+                placeholder="Paste a blueprint or floor plan URL"
+              >
+            </div>
+
+            <div class="field">
+              <label for="floor_label">Floor</label>
+              <select id="floor_label" name="floor_label">
+                <option value="main">Main</option>
+                <option value="upper">Upper</option>
+                <option value="lower">Lower</option>
+                <option value="basement">Basement</option>
+              </select>
+            </div>
+          </div>
+
           <div class="upload-grid rehab-upload-grid">
             <div class="upload-card">
               <div class="upload-head">
-                <h3>Before Photo</h3>
+                <h3>Reference Source</h3>
                 <span>Required</span>
               </div>
-              <p>Upload the current property photo that should be renovated, or use the saved listing photo already attached to the deal.</p>
+              <p>
+                Start with either a blueprint / floor plan or a current interior image.
+                Design Studio can use either reference type to generate the concept.
+              </p>
+
+              <label class="inline-upload-label" for="blueprint_file">Upload Blueprint / Floor Plan</label>
+              <input type="file" id="blueprint_file" name="blueprint_file" accept="image/*,.png,.jpg,.jpeg,.webp,.pdf">
+
+              <label class="inline-upload-label" for="before_image" style="margin-top:14px;">Upload Existing Interior Photo</label>
               <input type="file" id="before_image" name="before_image" accept="image/*,.png,.jpg,.jpeg,.webp">
+
               <input
                 type="text"
                 id="image_url"
                 name="image_url"
                 value="{{ rehab_before.get('image_url') or '' if rehab_before else '' }}"
-                placeholder="Or paste image URL"
+                placeholder="Or paste current interior image URL"
               >
-              <div class="mini-preview" id="beforePreview">
-                {% if rehab_before and rehab_before.get("image_url") %}
-                  <img src="{{ rehab_before.get('image_url') }}" alt="Before image">
-                  <span>Saved before image loaded</span>
-                {% else %}
-                  No before image selected
-                {% endif %}
+
+              <div class="mini-preview-stack">
+                <div class="mini-preview" id="blueprintPreview">No blueprint selected</div>
+                <div class="mini-preview" id="beforePreview">
+                  {% if rehab_before and rehab_before.get("image_url") %}
+                    <img src="{{ rehab_before.get('image_url') }}" alt="Reference image">
+                    <span>Saved reference image loaded</span>
+                  {% else %}
+                    No interior image selected
+                  {% endif %}
+                </div>
               </div>
+
               {% if workspace_images %}
-              <div class="seed-gallery-note">Choose a workspace image to use as the renovation starting point.</div>
+              <div class="seed-gallery-note">Choose a saved workspace image to use as the interior reference.</div>
               <div class="seed-thumb-row" id="savedBeforeGallery">
                 {% for img in workspace_images[:12] %}
                 <button
@@ -176,7 +222,7 @@
                 {% endfor %}
               </div>
               {% elif property_photo_gallery %}
-              <div class="seed-gallery-note">Choose a saved listing photo to use as the renovation starting point.</div>
+              <div class="seed-gallery-note">Choose a saved property image to use as the interior reference.</div>
               <div class="seed-thumb-row" id="savedBeforeGallery">
                 {% for photo in property_photo_gallery[:8] %}
                 <button
@@ -190,25 +236,27 @@
                 {% endfor %}
               </div>
               {% endif %}
-              {% if workspace_images or property_photo_gallery %}
-              <div class="seed-gallery-note">Workspace images are available for this property and can be used as the before photo.</div>
-              {% endif %}
             </div>
 
             <div class="upload-card">
               <div class="upload-head">
-                <h3>Renovation Notes</h3>
+                <h3>Design Notes</h3>
                 <span>Optional</span>
               </div>
-              <p>Add finishes, materials, lighting direction, or investor instructions.</p>
-              <textarea id="notes" name="notes" rows="6" placeholder="Brighten space, modern flooring, matte black fixtures, warm lighting, staged furniture.">{{ rehab_latest.get("notes") or "" if rehab_latest else "" }}</textarea>
+              <p>Add mood, finishes, materials, lighting direction, and target-user guidance.</p>
+              <textarea id="notes" name="notes" rows="6" placeholder="Warm modern palette, natural oak cabinetry, matte black fixtures, layered lighting, upscale but functional.">{{ rehab_latest.get("notes") or "" if rehab_latest else "" }}</textarea>
+
+              <div class="info-box" style="margin-top:14px;">
+                <strong>Build Studio Reminder</strong>
+                <p>Use Build Studio for site plans, exterior concepts, and blueprint-ready layouts.</p>
+              </div>
             </div>
           </div>
 
           <div class="cta-row">
             <button type="submit" class="ravlo-btn ravlo-btn-primary" id="generateBtn">
               <i data-lucide="sparkles"></i>
-              Generate Renovation Concept
+              Generate Design Concept
             </button>
 
             <button type="button" class="ravlo-btn ravlo-btn-secondary" id="resetBtn">
@@ -223,8 +271,8 @@
         <div class="results-header">
           <div>
             <div class="card-kicker">OUTPUT</div>
-            <h2>Renovation Results</h2>
-            <p>Compare the original property image to the generated renovation direction.</p>
+            <h2>Design Results</h2>
+            <p>Compare the source reference to the generated interior design direction.</p>
           </div>
           <div class="results-actions">
             <button type="button" class="ravlo-btn ravlo-btn-ghost" id="copyConceptLinkBtn" {% if not rehab_latest or not rehab_latest.get("image_url") %}disabled{% endif %}>
@@ -234,36 +282,63 @@
           </div>
         </div>
 
-        <div class="result-card">
-          <div class="result-head">
-            <div>
-              <div class="card-kicker">STEP 2</div>
-              <h3>Before Photo</h3>
+        <div class="results-dual-grid">
+          <div class="result-card">
+            <div class="result-head">
+              <div>
+                <div class="card-kicker">STEP 2</div>
+                <h3>Reference Preview</h3>
+              </div>
+              <span class="result-status" id="beforeBadge">{{ "Loaded" if rehab_before and rehab_before.get("image_url") else "Pending" }}</span>
             </div>
-            <span class="result-status" id="beforeBadge">{{ "Loaded" if rehab_before and rehab_before.get("image_url") else "Pending" }}</span>
+
+            <div class="result-body-single">
+              <div class="result-media {% if not (rehab_before and rehab_before.get('image_url')) %}empty{% endif %}" id="beforeMedia">
+                {% if rehab_before and rehab_before.get("image_url") %}
+                  <img src="{{ rehab_before.get('image_url') }}" alt="Reference image">
+                {% else %}
+                  <div class="empty-state">
+                    <i data-lucide="image"></i>
+                    <p>Reference image or blueprint will appear here.</p>
+                  </div>
+                {% endif %}
+              </div>
+
+              <div class="result-meta">
+                <div class="meta-row"><span>Status</span><strong id="beforeMetaStatus">{{ "Loaded" if rehab_before and rehab_before.get("image_url") else "Waiting" }}</strong></div>
+                <div class="meta-row"><span>Source Type</span><strong id="beforeSourceType">Reference</strong></div>
+                <a
+                  href="{{ rehab_before.get('image_url') or '#' if rehab_before else '#' }}"
+                  class="inline-link {% if not (rehab_before and rehab_before.get('image_url')) %}hidden{% endif %}"
+                  id="beforeLink"
+                  target="_blank"
+                  rel="noopener"
+                >Open Reference</a>
+              </div>
+            </div>
           </div>
 
-          <div class="result-body">
-            <div class="result-media {% if not (rehab_before and rehab_before.get('image_url')) %}empty{% endif %}" id="beforeMedia">
-              {% if rehab_before and rehab_before.get("image_url") %}
-                <img src="{{ rehab_before.get('image_url') }}" alt="Before photo">
-              {% else %}
-                <div class="empty-state">
-                  <i data-lucide="image"></i>
-                  <p>Before photo will appear here.</p>
-                </div>
-              {% endif %}
+          <div class="result-card blueprint-result-card">
+            <div class="result-head">
+              <div>
+                <div class="card-kicker">REFERENCE</div>
+                <h3>Blueprint Preview</h3>
+              </div>
+              <span class="result-status" id="blueprintBadge">Optional</span>
             </div>
 
-            <div class="result-meta">
-              <div class="meta-row"><span>Status</span><strong id="beforeMetaStatus">{{ "Loaded" if rehab_before and rehab_before.get("image_url") else "Waiting" }}</strong></div>
-              <a
-                href="{{ rehab_before.get('image_url') or '#' if rehab_before else '#' }}"
-                class="inline-link {% if not (rehab_before and rehab_before.get('image_url')) %}hidden{% endif %}"
-                id="beforeLink"
-                target="_blank"
-                rel="noopener"
-              >Open Before Image</a>
+            <div class="result-body-single">
+              <div class="result-media empty" id="blueprintMedia">
+                <div class="empty-state">
+                  <i data-lucide="layout-template"></i>
+                  <p>Blueprint preview will appear here.</p>
+                </div>
+              </div>
+
+              <div class="result-meta">
+                <div class="meta-row"><span>Floor</span><strong id="blueprintFloor">—</strong></div>
+                <div class="meta-row"><span>Source</span><strong id="blueprintSourceLabel">Not loaded</strong></div>
+              </div>
             </div>
           </div>
         </div>
@@ -272,7 +347,7 @@
           <div class="result-head">
             <div>
               <div class="card-kicker">STEP 3</div>
-              <h3>Renovation Concept</h3>
+              <h3>Interior Concept</h3>
             </div>
             <span class="result-status" id="afterBadge">
               {{ "Generated" if rehab_latest and rehab_latest.get("image_url") else "Pending" }}
@@ -284,17 +359,17 @@
           <div class="result-body">
             <div class="result-media {% if not (rehab_latest and rehab_latest.get('image_url')) %}empty{% endif %}" id="afterMedia">
               {% if rehab_latest and rehab_latest.get("image_url") %}
-                <img src="{{ rehab_latest.get('image_url') }}" alt="Renovation concept">
+                <img src="{{ rehab_latest.get('image_url') }}" alt="Interior design concept">
               {% else %}
                 <div class="empty-state">
                   <i data-lucide="sparkles"></i>
-                  <p>Generated concept will appear here.</p>
+                  <p>Generated design concept will appear here.</p>
                 </div>
               {% endif %}
             </div>
 
             <div class="result-meta">
-              <div class="meta-row"><span>Preset</span><strong id="afterPreset">{{ rehab_latest.get("preset") or "—" if rehab_latest else "—" }}</strong></div>
+              <div class="meta-row"><span>Style</span><strong id="afterPreset">{{ rehab_latest.get("preset") or "—" if rehab_latest else "—" }}</strong></div>
               <div class="meta-row"><span>Mode</span><strong id="afterMode">{{ rehab_latest.get("mode") or "—" if rehab_latest else "—" }}</strong></div>
               <div class="meta-row"><span>Seed</span><strong id="afterSeed">{{ rehab_latest.get("seed") or "—" if rehab_latest else "—" }}</strong></div>
               <div class="meta-row"><span>Job ID</span><strong id="afterJob">{{ rehab_latest.get("job_id") or "—" if rehab_latest else "—" }}</strong></div>
@@ -310,12 +385,12 @@
 
           {% if rehab_concepts %}
           <div class="saved-room-gallery" id="savedConceptGallery">
-            <div class="card-kicker">SAVED RENOVATION CONCEPTS</div>
+            <div class="card-kicker">SAVED DESIGN CONCEPTS</div>
             <div class="room-gallery-grid" id="conceptGalleryGrid">
               {% for concept in rehab_concepts %}
                 {% if concept.get("image_url") %}
                 <a href="{{ concept.get('image_url') }}" class="room-thumb-card" target="_blank" rel="noopener">
-                  <img src="{{ concept.get('image_url') }}" alt="{{ concept.get('preset') or 'Renovation concept' }}">
+                  <img src="{{ concept.get('image_url') }}" alt="{{ concept.get('preset') or 'Design concept' }}">
                   <div class="room-thumb-meta">
                     <strong>{{ concept.get("preset") or "Concept" }}</strong>
                     <span>{{ concept.get("mode") or "Mode not set" }}</span>
@@ -327,7 +402,7 @@
           </div>
           {% else %}
           <div class="saved-room-gallery hidden" id="savedConceptGallery">
-            <div class="card-kicker">SAVED RENOVATION CONCEPTS</div>
+            <div class="card-kicker">SAVED DESIGN CONCEPTS</div>
             <div class="room-gallery-grid" id="conceptGalleryGrid"></div>
           </div>
           {% endif %}
@@ -347,22 +422,22 @@
         <div class="card-head">
           <div>
             <div class="card-kicker">PACKAGE STATUS</div>
-            <h3>Renovation Tracker</h3>
+            <h3>Design Tracker</h3>
           </div>
         </div>
 
         <div class="tracker-list">
           <div class="tracker-item">
-            <span class="tracker-label">Before Uploaded</span>
+            <span class="tracker-label">Reference Loaded</span>
             <strong id="trackerBefore">{{ "Yes" if rehab_before and rehab_before.get("image_url") else "No" }}</strong>
+          </div>
+          <div class="tracker-item">
+            <span class="tracker-label">Blueprint Added</span>
+            <strong id="trackerBlueprint">No</strong>
           </div>
           <div class="tracker-item">
             <span class="tracker-label">Concept Generated</span>
             <strong id="trackerAfter">{{ "Yes" if rehab_latest and rehab_latest.get("image_url") else "No" }}</strong>
-          </div>
-          <div class="tracker-item">
-            <span class="tracker-label">Saved To Deal</span>
-            <strong id="trackerSaved">{{ "Yes" if rehab_latest and rehab_latest.get("image_url") else "No" }}</strong>
           </div>
           <div class="tracker-item">
             <span class="tracker-label">Saved Concepts</span>
@@ -374,33 +449,33 @@
       <section class="ravlo-card side-card" id="rehabScopeCard">
         <div class="card-head">
           <div>
-            <div class="card-kicker">ENGINE SCOPE</div>
-            <h3>Rehab Snapshot</h3>
+            <div class="card-kicker">DESIGN SNAPSHOT</div>
+            <h3>Concept Summary</h3>
           </div>
         </div>
 
         <div class="tracker-list">
           <div class="tracker-item">
-            <span class="tracker-label">Cost Low</span>
-            <strong id="scopeCostLow">{{ rehab_scope.get("cost_low") if rehab_scope else "—" }}</strong>
+            <span class="tracker-label">Room</span>
+            <strong id="scopeRoom">{{ rehab_latest.get("room_type") if rehab_latest else "—" }}</strong>
           </div>
           <div class="tracker-item">
-            <span class="tracker-label">Cost High</span>
-            <strong id="scopeCostHigh">{{ rehab_scope.get("cost_high") if rehab_scope else "—" }}</strong>
+            <span class="tracker-label">Style</span>
+            <strong id="scopeStyle">{{ rehab_latest.get("preset") if rehab_latest else "—" }}</strong>
           </div>
           <div class="tracker-item">
-            <span class="tracker-label">ARV</span>
-            <strong id="scopeArv">{{ rehab_scope.get("arv") if rehab_scope else "—" }}</strong>
+            <span class="tracker-label">Mode</span>
+            <strong id="scopeMode">{{ rehab_latest.get("mode") if rehab_latest else "—" }}</strong>
           </div>
           <div class="tracker-item">
-            <span class="tracker-label">Rooms</span>
-            <strong id="scopeRooms">{{ rehab_scope.get("rooms")|length if rehab_scope and rehab_scope.get("rooms") else 0 }}</strong>
+            <span class="tracker-label">Floor</span>
+            <strong id="scopeFloor">—</strong>
           </div>
         </div>
 
         <div class="info-box" style="margin-top:12px;">
           <strong>Plan Summary</strong>
-          <p id="scopePlan">{{ rehab_scope.get("plan") if rehab_scope else "Generate a concept with a before photo to pull the current rehab scope snapshot." }}</p>
+          <p id="scopePlan">Generate a concept from a blueprint or interior image to build the current design summary.</p>
         </div>
       </section>
 
@@ -414,16 +489,16 @@
 
         <div class="info-stack">
           <div class="info-box">
-            <strong>1. Upload Before Photo</strong>
-            <p>Start with the current property image in its existing condition.</p>
+            <strong>1. Add a Reference</strong>
+            <p>Start with a blueprint, floor plan, or existing interior image.</p>
           </div>
           <div class="info-box">
-            <strong>2. Generate Renovation</strong>
-            <p>Ravlo visualizes a polished after-state based on your preset and notes.</p>
+            <strong>2. Generate Design</strong>
+            <p>Ravlo creates an interior concept based on your style, room type, and notes.</p>
           </div>
           <div class="info-box">
             <strong>3. Compare Concepts</strong>
-            <p>Save multiple renovation directions and compare them before moving to scope or budget.</p>
+            <p>Save multiple interior directions and compare them before making decisions.</p>
           </div>
         </div>
       </section>
@@ -433,12 +508,12 @@
   <div class="loading-overlay hidden" id="loadingOverlay">
     <div class="loading-card">
       <div class="loader-ring"></div>
-      <h3 id="loadingTitle">Generating Renovation Concept...</h3>
-      <p id="loadingMessage">Ravlo is redesigning the property now.</p>
+      <h3 id="loadingTitle">Generating Design Concept...</h3>
+      <p id="loadingMessage">Ravlo is building the interior concept now.</p>
       <div class="loading-progress-list">
-        <div class="loading-step" id="loadingStep1">Uploading before photo...</div>
-        <div class="loading-step" id="loadingStep2">Generating renovation concept...</div>
-        <div class="loading-step" id="loadingStep3">Saving concept to deal...</div>
+        <div class="loading-step" id="loadingStep1">Loading reference...</div>
+        <div class="loading-step" id="loadingStep2">Generating design concept...</div>
+        <div class="loading-step" id="loadingStep3">Saving concept to workspace...</div>
       </div>
     </div>
   </div>
@@ -446,15 +521,15 @@
   <div class="loading-overlay hidden" id="variantModal">
     <div class="loading-card add-room-card">
       <h3 style="margin-top:0;">Generate Another Concept</h3>
-      <p>Create another renovation direction from the same before photo.</p>
+      <p>Create another interior direction from the same reference.</p>
 
       <div class="field">
-        <label for="modal_preset">Preset</label>
+        <label for="modal_preset">Style</label>
         <select id="modal_preset">
-          <option value="luxury">Luxury</option>
+          <option value="luxury">Modern Luxury</option>
           <option value="modern">Modern</option>
-          <option value="airbnb">Airbnb Ready</option>
-          <option value="flip">Flip Ready</option>
+          <option value="airbnb">Hospitality</option>
+          <option value="flip">Market Ready</option>
           <option value="budget">Budget Refresh</option>
         </select>
       </div>
@@ -462,11 +537,11 @@
       <div class="field">
         <label for="modal_mode">Mode</label>
         <select id="modal_mode">
-          <option value="hgtv">HGTV</option>
+          <option value="hgtv">Editorial</option>
           <option value="modern">Modern</option>
           <option value="luxury">Luxury</option>
           <option value="budget">Budget</option>
-          <option value="flip">Flip</option>
+          <option value="flip">Market Ready</option>
         </select>
       </div>
 
@@ -762,6 +837,20 @@
     line-height: 1.5;
   }
 
+  .inline-upload-label {
+    display: block;
+    margin-bottom: 8px;
+    color: #dbe5ee;
+    font-size: .92rem;
+    font-weight: 600;
+  }
+
+  .mini-preview-stack {
+    display: grid;
+    gap: 10px;
+    margin-top: 12px;
+  }
+
   .seed-gallery-note {
     margin-top: 10px;
     padding: 10px 12px;
@@ -788,6 +877,7 @@
     background: rgba(255,255,255,0.04);
     cursor: pointer;
     transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease;
+    position: relative;
   }
 
   .seed-thumb:hover,
@@ -795,10 +885,6 @@
     border-color: rgba(126,171,255,0.75);
     box-shadow: 0 0 0 1px rgba(126,171,255,0.3);
     transform: translateY(-1px);
-  }
-
-  .seed-thumb {
-    position: relative;
   }
 
   .seed-thumb img {
@@ -887,6 +973,13 @@
     margin-top: 22px;
   }
 
+  .results-dual-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 18px;
+    margin-top: 18px;
+  }
+
   .result-card {
     padding: 20px;
     margin-top: 18px;
@@ -896,6 +989,13 @@
     display: grid;
     grid-template-columns: minmax(0, 1.15fr) 260px;
     gap: 18px;
+    margin-top: 16px;
+  }
+
+  .result-body-single {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
     margin-top: 16px;
   }
 
@@ -910,11 +1010,16 @@
     justify-content: center;
   }
 
+  .blueprint-result-card .result-media {
+    min-height: 300px;
+  }
+
   .result-media img {
     width: 100%;
     height: 100%;
-    object-fit: cover;
+    object-fit: contain;
     display: block;
+    background: #0c1116;
   }
 
   .result-media.empty {
@@ -1153,7 +1258,8 @@
     .result-body,
     .upload-grid,
     .form-grid-2,
-    .workflow-strip {
+    .workflow-strip,
+    .results-dual-grid {
       grid-template-columns: 1fr;
     }
   }
@@ -1173,6 +1279,16 @@
     const beforePreview = document.getElementById("beforePreview");
     const savedBeforeGallery = document.getElementById("savedBeforeGallery");
 
+    const blueprintFileInput = document.getElementById("blueprint_file");
+    const blueprintUrlInput = document.getElementById("blueprint_url");
+    const blueprintPreview = document.getElementById("blueprintPreview");
+    const blueprintMedia = document.getElementById("blueprintMedia");
+    const blueprintBadge = document.getElementById("blueprintBadge");
+    const blueprintFloor = document.getElementById("blueprintFloor");
+    const blueprintSourceLabel = document.getElementById("blueprintSourceLabel");
+    const trackerBlueprint = document.getElementById("trackerBlueprint");
+    const scopeFloor = document.getElementById("scopeFloor");
+
     const variantModal = document.getElementById("variantModal");
     const openVariantBtn = document.getElementById("openVariantBtn");
     const closeVariantBtn = document.getElementById("closeVariantBtn");
@@ -1184,14 +1300,6 @@
 
     let conceptState = [];
     let activeConceptIndex = 0;
-
-    const rehabScopeEls = {
-      costLow: document.getElementById("scopeCostLow"),
-      costHigh: document.getElementById("scopeCostHigh"),
-      arv: document.getElementById("scopeArv"),
-      rooms: document.getElementById("scopeRooms"),
-      plan: document.getElementById("scopePlan")
-    };
 
     const afterEls = {
       media: document.getElementById("afterMedia"),
@@ -1210,24 +1318,6 @@
         .replaceAll(">", "&gt;")
         .replaceAll('"', "&quot;")
         .replaceAll("'", "&#039;");
-    }
-
-    function asMoney(value) {
-      const number = Number(value);
-      if (!Number.isFinite(number)) return "—";
-      return number.toLocaleString(undefined, {
-        style: "currency",
-        currency: "USD",
-        maximumFractionDigits: 0
-      });
-    }
-
-    function renderRehabScope(scope) {
-      if (rehabScopeEls.costLow) rehabScopeEls.costLow.textContent = scope?.cost_low != null ? asMoney(scope.cost_low) : "—";
-      if (rehabScopeEls.costHigh) rehabScopeEls.costHigh.textContent = scope?.cost_high != null ? asMoney(scope.cost_high) : "—";
-      if (rehabScopeEls.arv) rehabScopeEls.arv.textContent = scope?.arv != null ? asMoney(scope.arv) : "—";
-      if (rehabScopeEls.rooms) rehabScopeEls.rooms.textContent = Array.isArray(scope?.rooms) ? scope.rooms.length : 0;
-      if (rehabScopeEls.plan) rehabScopeEls.plan.textContent = scope?.plan || "Generate a concept with a before photo to pull the current rehab scope snapshot.";
     }
 
     function setPreview(fileInput, previewEl, emptyText) {
@@ -1251,7 +1341,7 @@
       }
     }
 
-    function renderImage(target, url, altText, emptyIcon, emptyText) {
+    function renderImage(target, url, altText, emptyIcon, emptyText, fit = "cover") {
       if (!target) return;
 
       if (!url) {
@@ -1266,7 +1356,7 @@
       }
 
       target.classList.remove("empty");
-      target.innerHTML = `<img src="${escapeHtml(url)}" alt="${escapeHtml(altText)}">`;
+      target.innerHTML = `<img src="${escapeHtml(url)}" alt="${escapeHtml(altText)}" style="object-fit:${fit};">`;
     }
 
     function setStepState(step, state) {
@@ -1304,7 +1394,7 @@
     function applyConcept(concept) {
       if (!concept) return;
 
-      renderImage(afterEls.media, concept.image_url || "", "Renovation concept", "sparkles", "Generated concept will appear here.");
+      renderImage(afterEls.media, concept.image_url || "", "Interior design concept", "sparkles", "Generated design concept will appear here.");
 
       if (afterEls.badge) afterEls.badge.textContent = concept.image_url ? "Generated" : "Pending";
       if (afterEls.preset) afterEls.preset.textContent = concept.preset || "—";
@@ -1324,7 +1414,11 @@
 
       document.getElementById("status-after").textContent = concept.image_url ? "Generated" : "Pending";
       document.getElementById("trackerAfter").textContent = concept.image_url ? "Yes" : "No";
-      document.getElementById("trackerSaved").textContent = concept.image_url ? "Yes" : "No";
+
+      document.getElementById("scopeRoom").textContent = concept.room_type || "—";
+      document.getElementById("scopeStyle").textContent = concept.preset || "—";
+      document.getElementById("scopeMode").textContent = concept.mode || "—";
+      document.getElementById("scopePlan").textContent = concept.notes || "Interior concept generated successfully.";
 
       if (copyConceptLinkBtn) {
         copyConceptLinkBtn.disabled = !concept.image_url;
@@ -1392,7 +1486,44 @@
     }
 
     beforeImageInput?.addEventListener("change", function () {
-      setPreview(this, beforePreview, "No before image selected");
+      setPreview(this, beforePreview, "No interior image selected");
+    });
+
+    blueprintFileInput?.addEventListener("change", function () {
+      const file = this.files && this.files[0];
+      setPreview(this, blueprintPreview, "No blueprint selected");
+
+      if (!file) return;
+
+      blueprintBadge.textContent = "Loaded";
+      trackerBlueprint.textContent = "Yes";
+      blueprintSourceLabel.textContent = "Upload";
+      blueprintFloor.textContent = document.getElementById("floor_label")?.value || "—";
+      scopeFloor.textContent = document.getElementById("floor_label")?.value || "—";
+
+      if (file.type && file.type.startsWith("image/")) {
+        const url = URL.createObjectURL(file);
+        renderImage(blueprintMedia, url, "Blueprint preview", "layout-template", "Blueprint preview will appear here.", "contain");
+      } else {
+        blueprintMedia.classList.remove("empty");
+        blueprintMedia.innerHTML = `<div class="empty-state"><p>${escapeHtml(file.name)} loaded.</p></div>`;
+      }
+    });
+
+    blueprintUrlInput?.addEventListener("change", function () {
+      const url = (this.value || "").trim();
+      if (!url) return;
+
+      blueprintBadge.textContent = "Loaded";
+      trackerBlueprint.textContent = "Yes";
+      blueprintSourceLabel.textContent = "URL";
+      blueprintFloor.textContent = document.getElementById("floor_label")?.value || "—";
+      scopeFloor.textContent = document.getElementById("floor_label")?.value || "—";
+
+      renderImage(blueprintMedia, url, "Blueprint preview", "layout-template", "Blueprint preview will appear here.", "contain");
+      if (blueprintPreview) {
+        blueprintPreview.innerHTML = `<img src="${escapeHtml(url)}" alt="Blueprint preview"><span>Blueprint URL loaded</span>`;
+      }
     });
 
     function selectSavedBefore(url) {
@@ -1402,15 +1533,15 @@
       if (beforeImageInput) beforeImageInput.value = "";
 
       if (beforePreview) {
-        beforePreview.innerHTML = `<img src="${escapeHtml(url)}" alt="Before image"><span>Saved property photo selected</span>`;
+        beforePreview.innerHTML = `<img src="${escapeHtml(url)}" alt="Reference image"><span>Saved reference image selected</span>`;
       }
 
       renderImage(
         document.getElementById("beforeMedia"),
         url,
-        "Before photo",
+        "Reference image",
         "image",
-        "Before photo will appear here."
+        "Reference image will appear here."
       );
 
       const beforeLink = document.getElementById("beforeLink");
@@ -1423,6 +1554,7 @@
       document.getElementById("beforeBadge").textContent = "Loaded";
       document.getElementById("beforeMetaStatus").textContent = "Loaded";
       document.getElementById("trackerBefore").textContent = "Yes";
+      document.getElementById("beforeSourceType").textContent = "Interior Image";
 
       savedBeforeGallery?.querySelectorAll(".seed-thumb").forEach((btn) => {
         btn.classList.toggle("is-active", btn.dataset.seedUrl === url);
@@ -1456,7 +1588,8 @@
     resetBtn?.addEventListener("click", function () {
       form.reset();
       statusPill.textContent = "Ready";
-      if (beforePreview) beforePreview.textContent = "No before image selected";
+      if (beforePreview) beforePreview.textContent = "No interior image selected";
+      if (blueprintPreview) blueprintPreview.textContent = "No blueprint selected";
     });
 
     form?.addEventListener("submit", async function (e) {
@@ -1464,9 +1597,9 @@
       startLoading();
 
       setLoadingTexts(
-        "Uploading before photo...",
-        "Generating renovation concept...",
-        "Saving concept to deal..."
+        "Loading reference source...",
+        "Generating interior design concept...",
+        "Saving concept to workspace..."
       );
 
       const formData = new FormData(form);
@@ -1485,16 +1618,16 @@
         const data = await response.json();
 
         if (!response.ok || data.status !== "ok") {
-          throw new Error(data.message || "Renovation generation failed.");
+          throw new Error(data.message || "Design generation failed.");
         }
 
         if (data.before_result?.image_url) {
           renderImage(
             document.getElementById("beforeMedia"),
             data.before_result.image_url,
-            "Before photo",
+            "Reference image",
             "image",
-            "Before photo will appear here."
+            "Reference image will appear here."
           );
 
           const beforeLink = document.getElementById("beforeLink");
@@ -1520,8 +1653,6 @@
           document.getElementById("status-concepts").textContent = conceptState.length;
           document.getElementById("trackerConcepts").textContent = conceptState.length;
         }
-
-        renderRehabScope(data.rehab_scope || null);
 
         setStepState(2, "complete");
         setStepState(3, "complete");
@@ -1567,6 +1698,7 @@
       fd.append("mode", document.getElementById("modal_mode")?.value || "hgtv");
       fd.append("room_type", document.getElementById("room_type")?.value || "living room");
       fd.append("notes", document.getElementById("notes")?.value || "");
+      fd.append("floor_label", document.getElementById("floor_label")?.value || "main");
 
       confirmVariantBtn.disabled = true;
       confirmVariantBtn.innerHTML = '<i data-lucide="loader"></i> Generating...';
@@ -1631,8 +1763,6 @@
     setStepState(3, "complete");
     setStepState(4, "complete");
     {% endif %}
-
-    renderRehabScope({{ rehab_scope|tojson }});
 
     if (window.lucide) {
       lucide.createIcons();
