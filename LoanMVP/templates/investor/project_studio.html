@@ -7,7 +7,7 @@ Open any address and let Ravlo compare the best plan before you move into scope,
 {% endblock %}
 
 {% block topbar_actions %}
-  <a href="{{ url_for('investor.property_tool') }}" class="ravlo-btn ghost sm">Find Deals</a>
+  <a href="{{ url_for('investor.property_search') }}" class="ravlo-btn ghost sm">Find Deals</a>
   <a href="{{ url_for('investor.deals_list') }}" class="ravlo-btn ghost sm">Deal Workspace</a>
   <a href="{{ url_for('investor.project_studio') }}" class="ravlo-btn primary sm">Project Studio</a>
 {% endblock %}
@@ -449,7 +449,7 @@ Open any address and let Ravlo compare the best plan before you move into scope,
         Deal Finder is for discovery. Project Studio is for planning. When a user selects a property in Deal Finder, the next move should bring them here to choose the best strategy.
       </p>
       <div class="ps-link-row">
-        <a href="{{ url_for('investor.property_tool') }}" class="ravlo-btn ghost">Open Deal Finder</a>
+        <a href="{{ url_for('investor.property_search') }}" class="ravlo-btn ghost">Open Deal Finder</a>
         <a href="{{ url_for('investor.deals_list') }}" class="ravlo-btn ghost">Open Deal Workspace</a>
       </div>
     </div>
