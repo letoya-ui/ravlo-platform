@@ -208,7 +208,7 @@ def _dashboard_for_role(role: str) -> str:
         "borrower": "borrower.create_profile",
     }
 
-    return dashboard_map.get(role, "marketing.marketing_home")
+    return dashboard_map.get(role, "marketing.homepage")
 
 def _full_name_from_user(user: User) -> str:
     first = (getattr(user, "first_name", "") or "").strip()
