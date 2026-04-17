@@ -1,7 +1,7 @@
 """Add Elena clients and interactions
 
 Revision ID: 980d0677dbba
-Revises: 1382fd92af8d
+Revises: 49db4fa0bfb1
 Create Date: 2026-04-16 21:50:27.248588
 """
 
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 revision = '980d0677dbba'
-down_revision = '1382fd92af8d'
+down_revision = '49db4fa0bfb1'
 branch_labels = None
 depends_on = None
 
