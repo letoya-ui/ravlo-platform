@@ -85,7 +85,7 @@ def _parse_due_at(raw):
 
 # ---------------- ELENA DASHBOARD (HTML) ----------------
 @elena_bp.get("/")
-@role_required("partner", "admin")
+@role_required("partner_group", "admin")
 def dashboard():
     """Elena CRM / Content-Engine dashboard (sections A–F of the spec)."""
     now = datetime.utcnow()
@@ -199,7 +199,7 @@ def dashboard():
 
 # ---------------- ADD CLIENT ----------------
 @elena_bp.route("/clients/new", methods=["GET", "POST"])
-@role_required("partner", "admin")
+@role_required("partner_group", "admin")
 def client_new():
     if request.method == "POST":
         name = (request.form.get("name") or "").strip()
@@ -234,7 +234,7 @@ def client_new():
 
 # ---------------- ADD LISTING ----------------
 @elena_bp.route("/listings/new", methods=["GET", "POST"])
-@role_required("partner", "admin")
+@role_required("partner_group", "admin")
 def listing_new():
     if request.method == "POST":
         address = (request.form.get("address") or "").strip()
@@ -294,7 +294,7 @@ def listing_new():
 
 # ---------------- LOG INTERACTION ----------------
 @elena_bp.route("/interactions/new", methods=["GET", "POST"])
-@role_required("partner", "admin")
+@role_required("partner_group", "admin")
 def interaction_new():
     if request.method == "POST":
         try:
