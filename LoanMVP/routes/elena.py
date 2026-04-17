@@ -105,12 +105,17 @@ def dashboard():
         "followups_due": followups_due,
     }
 
-    # C — Client pipeline view (cards grouped by pipeline_stage)
+    # C — Client pipeline view (cards grouped by pipeline_stage).
+    # `count` is the true stage total (separate aggregate query), while
+    # `clients` is capped at 12 for rendering.
     pipeline_groups = []
     for stage_key, stage_label in PIPELINE_STAGES:
+        stage_query = ElenaClient.query.filter(
+            ElenaClient.pipeline_stage == stage_key
+        )
+        stage_total = stage_query.count()
         clients = (
-            ElenaClient.query
-            .filter(ElenaClient.pipeline_stage == stage_key)
+            stage_query
             .order_by(ElenaClient.updated_at.desc())
             .limit(12)
             .all()
@@ -120,33 +125,33 @@ def dashboard():
                 "key": stage_key,
                 "label": stage_label,
                 "clients": clients,
-                "count": len(clients),
+                "count": stage_total,
             }
         )
 
     # Include any clients whose stage does not match the canonical list so
     # nothing is silently hidden.
     canonical_keys = {s[0] for s in PIPELINE_STAGES}
+    unstaged_filter = or_(
+        ElenaClient.pipeline_stage.is_(None),
+        ~ElenaClient.pipeline_stage.in_(canonical_keys),
+    )
+    unstaged_total = ElenaClient.query.filter(unstaged_filter).count()
     unstaged = (
         ElenaClient.query
-        .filter(
-            or_(
-                ElenaClient.pipeline_stage.is_(None),
-                ~ElenaClient.pipeline_stage.in_(canonical_keys),
-            )
-        )
+        .filter(unstaged_filter)
         .order_by(ElenaClient.updated_at.desc())
         .limit(12)
         .all()
     )
-    if unstaged:
+    if unstaged_total:
         pipeline_groups.insert(
             0,
             {
                 "key": "unstaged",
                 "label": "Unstaged",
                 "clients": unstaged,
-                "count": len(unstaged),
+                "count": unstaged_total,
             },
         )
 
