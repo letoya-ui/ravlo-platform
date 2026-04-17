@@ -70,7 +70,12 @@ def _parse_due_at(raw):
     """Parse a datetime-local form value into a datetime, or None."""
     if not raw:
         return None
-    for fmt in ("%Y-%m-%dT%H:%M", "%Y-%m-%d %H:%M:%S", "%Y-%m-%d"):
+    for fmt in (
+        "%Y-%m-%dT%H:%M",
+        "%Y-%m-%dT%H:%M:%S",
+        "%Y-%m-%d %H:%M:%S",
+        "%Y-%m-%d",
+    ):
         try:
             return datetime.strptime(raw, fmt)
         except ValueError:
