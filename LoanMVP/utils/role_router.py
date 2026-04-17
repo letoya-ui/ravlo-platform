@@ -24,7 +24,7 @@ def _dashboard_for_role(role: str) -> str:
         "partner": "partners.dashboard",  # ⚠️ fixed typo here
     }
 
-    return role_map.get(role, "marketing.marketing_home")
+    return role_map.get(role, "marketing.homepage")
 
 def get_role_display(role: str) -> str:
     role = (role or "").strip().lower()

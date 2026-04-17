@@ -274,6 +274,7 @@ def _persist_property_core_fields(saved, payload):
             "next_step": next_step or property_payload.get("next_step"),
             "image_url": merged_image_url,
             "listing_photos": merged_listing_photos,
+            "photos": merged_listing_photos,
             "description": description or property_payload.get("description"),
         })
 
@@ -304,6 +305,7 @@ def _persist_property_core_fields(saved, payload):
             "next_step": property_payload.get("next_step"),
             "image_url": merged_image_url,
             "listing_photos": merged_listing_photos,
+            "photos": merged_listing_photos,
         })
 
         if isinstance(payload.get("ai_recommendation"), dict) and payload.get("ai_recommendation"):

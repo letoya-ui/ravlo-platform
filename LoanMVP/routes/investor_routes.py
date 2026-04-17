@@ -363,6 +363,7 @@ def _saved_property_workspace_seed(saved_property):
         "property": property_payload,
         "workspace_analysis": workspace_analysis,
         "listing_photos": listing_photos,
+        "photos": listing_photos,
         "primary_photo": primary_photo,
     }
 
@@ -3460,6 +3461,8 @@ def api_property_tool_save():
             property_payload.get("photos"),
             property_payload.get("images"),
             property_payload.get("media"),
+            property_payload.get("photo_links"),
+            property_payload.get("image_urls"),
         )
 
         image_url = _resolve_photo(
@@ -3502,6 +3505,7 @@ def api_property_tool_save():
                 "address": getattr(saved, "address", None),
                 "image_url": _saved_property_workspace_seed(saved).get("primary_photo"),
                 "listing_photos": _saved_property_workspace_seed(saved).get("listing_photos"),
+                "photos": _saved_property_workspace_seed(saved).get("listing_photos"),
                 "city": getattr(saved, "city", None),
                 "state": getattr(saved, "state", None),
             }
@@ -3627,6 +3631,8 @@ def api_property_tool_save_and_analyze():
             property_payload.get("photos"),
             property_payload.get("images"),
             property_payload.get("media"),
+            property_payload.get("photo_links"),
+            property_payload.get("image_urls"),
         )
 
         image_url = _resolve_photo(
@@ -3813,6 +3819,7 @@ def api_property_tool_save_and_analyze():
                 "id": saved.id,
                 "address": getattr(saved, "address", None),
                 "image_url": _saved_property_workspace_seed(saved).get("primary_photo"),
+                "photos": _saved_property_workspace_seed(saved).get("listing_photos"),
             },
             "deal": {
                 "id": deal.id,

@@ -218,6 +218,10 @@ function buildPropertyPayload(r, analyzeId, saveId){
     latitude: r.latitude ?? null,
     longitude: r.longitude ?? null,
     last_sale_price: r.last_sale_price ?? null,
+    image_url: r.primary_photo || r.image_url || r.photo || r.thumbnail || (Array.isArray(r.photos) ? r.photos[0] : null) || (Array.isArray(r.listing_photos) ? r.listing_photos[0] : null) || null,
+    primary_photo: r.primary_photo || r.image_url || r.photo || r.thumbnail || (Array.isArray(r.photos) ? r.photos[0] : null) || (Array.isArray(r.listing_photos) ? r.listing_photos[0] : null) || null,
+    photos: Array.isArray(r.photos) ? r.photos : (Array.isArray(r.listing_photos) ? r.listing_photos : []),
+    listing_photos: Array.isArray(r.listing_photos) ? r.listing_photos : (Array.isArray(r.photos) ? r.photos : []),
     _btnId: analyzeId,
     _saveBtnId: saveId
   };
