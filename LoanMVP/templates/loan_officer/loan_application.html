@@ -1,0 +1,321 @@
+{% extends "layouts/ravlo_employee_base.html" %}
+{% block title %}Loan Application • Loan Officer{% endblock %}
+
+{% block page_title %}Loan Application{% endblock %}
+{% block page_subline %}
+Take a loan application on behalf of a borrower who doesn't have an account.
+{% endblock %}
+
+{% block content %}
+
+<div class="wrap">
+
+  <form method="POST" class="app-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+    <!-- BORROWER INFO -->
+    <div class="form-card">
+      <div class="form-card-head">
+        <h3>Borrower Information</h3>
+        <p class="muted">Personal details of the borrower requesting the loan.</p>
+      </div>
+
+      <div class="field-grid col-2">
+        <div class="field">
+          <label for="full_name">Full Name <span class="req">*</span></label>
+          <input id="full_name" class="form-control" name="full_name" placeholder="e.g. John Smith" required>
+        </div>
+        <div class="field">
+          <label for="email">Email</label>
+          <input id="email" class="form-control" name="email" type="email" placeholder="borrower@email.com">
+        </div>
+        <div class="field">
+          <label for="phone">Phone</label>
+          <input id="phone" class="form-control" name="phone" type="tel" placeholder="(555) 123-4567">
+        </div>
+        <div class="field">
+          <label for="dob">Date of Birth</label>
+          <input id="dob" class="form-control" name="dob" type="date">
+        </div>
+        <div class="field">
+          <label for="ssn">SSN (last 4 or full)</label>
+          <input id="ssn" class="form-control" name="ssn" placeholder="XXX-XX-XXXX" maxlength="11">
+        </div>
+      </div>
+    </div>
+
+    <!-- ADDRESS -->
+    <div class="form-card">
+      <div class="form-card-head">
+        <h3>Current Address</h3>
+      </div>
+
+      <div class="field-grid col-2">
+        <div class="field span-2">
+          <label for="address">Street Address</label>
+          <input id="address" class="form-control" name="address" placeholder="123 Main St">
+        </div>
+        <div class="field">
+          <label for="city">City</label>
+          <input id="city" class="form-control" name="city" placeholder="Los Angeles">
+        </div>
+        <div class="field">
+          <label for="state">State</label>
+          <input id="state" class="form-control" name="state" placeholder="CA">
+        </div>
+        <div class="field">
+          <label for="zip">ZIP Code</label>
+          <input id="zip" class="form-control" name="zip" placeholder="90001">
+        </div>
+      </div>
+    </div>
+
+    <!-- EMPLOYMENT -->
+    <div class="form-card">
+      <div class="form-card-head">
+        <h3>Employment &amp; Income</h3>
+      </div>
+
+      <div class="field-grid col-2">
+        <div class="field">
+          <label for="employment_status">Employment Status</label>
+          <select id="employment_status" class="form-control" name="employment_status">
+            <option value="">-- Select --</option>
+            <option value="Employed">Employed</option>
+            <option value="Self-Employed">Self-Employed</option>
+            <option value="Retired">Retired</option>
+            <option value="Unemployed">Unemployed</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="employer_name">Employer Name</label>
+          <input id="employer_name" class="form-control" name="employer_name" placeholder="Company Inc.">
+        </div>
+        <div class="field">
+          <label for="job_title">Job Title</label>
+          <input id="job_title" class="form-control" name="job_title" placeholder="Software Engineer">
+        </div>
+        <div class="field">
+          <label for="years_at_job">Years at Job</label>
+          <input id="years_at_job" class="form-control" name="years_at_job" type="number" min="0" placeholder="3">
+        </div>
+        <div class="field">
+          <label for="annual_income">Annual Income ($)</label>
+          <input id="annual_income" class="form-control" name="annual_income" type="number" step="0.01" placeholder="85000">
+        </div>
+      </div>
+    </div>
+
+    <!-- LOAN DETAILS -->
+    <div class="form-card">
+      <div class="form-card-head">
+        <h3>Loan Details</h3>
+        <p class="muted">Loan request information and property details.</p>
+      </div>
+
+      <div class="field-grid col-2">
+        <div class="field">
+          <label for="loan_type">Loan Type</label>
+          <select id="loan_type" class="form-control" name="loan_type">
+            <option value="Conventional">Conventional</option>
+            <option value="FHA">FHA</option>
+            <option value="VA">VA</option>
+            <option value="USDA">USDA</option>
+            <option value="DSCR">DSCR</option>
+            <option value="Bridge">Bridge</option>
+            <option value="Fix & Flip">Fix &amp; Flip</option>
+            <option value="Commercial">Commercial</option>
+            <option value="Private">Private</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="loan_purpose">Loan Purpose</label>
+          <select id="loan_purpose" class="form-control" name="loan_purpose">
+            <option value="Purchase">Purchase</option>
+            <option value="Refinance">Refinance</option>
+            <option value="Cash-Out Refinance">Cash-Out Refinance</option>
+            <option value="Construction">Construction</option>
+            <option value="Investment">Investment</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="loan_amount">Loan Amount ($) <span class="req">*</span></label>
+          <input id="loan_amount" class="form-control" name="loan_amount" type="number" step="0.01" placeholder="350000" required>
+        </div>
+        <div class="field">
+          <label for="property_value">Property Value ($) <span class="req">*</span></label>
+          <input id="property_value" class="form-control" name="property_value" type="number" step="0.01" placeholder="450000" required>
+        </div>
+        <div class="field">
+          <label for="rate">Interest Rate (%)</label>
+          <input id="rate" class="form-control" name="rate" type="number" step="0.01" placeholder="7.25">
+        </div>
+        <div class="field">
+          <label for="term_months">Term (Months)</label>
+          <input id="term_months" class="form-control" name="term_months" type="number" placeholder="360">
+        </div>
+        <div class="field span-2">
+          <label for="property_address">Property Address</label>
+          <input id="property_address" class="form-control" name="property_address" placeholder="456 Oak Ave, Los Angeles, CA 90001">
+        </div>
+      </div>
+    </div>
+
+    <!-- NOTES -->
+    <div class="form-card">
+      <div class="form-card-head">
+        <h3>Additional Notes</h3>
+      </div>
+
+      <div class="field span-2">
+        <label for="notes">Officer Notes</label>
+        <textarea id="notes" class="form-control" name="notes" rows="4"
+          placeholder="Any additional context about the borrower, property, or loan request..."></textarea>
+      </div>
+    </div>
+
+    <!-- ACTIONS -->
+    <div class="form-actions">
+      <a href="{{ url_for('loan_officer.dashboard') }}" class="ravlo-btn ghost">Cancel</a>
+      <button type="submit" class="ravlo-btn primary">Submit Application</button>
+    </div>
+
+  </form>
+
+</div>
+
+<style>
+.app-form {
+  display: grid;
+  gap: 20px;
+  max-width: 960px;
+}
+
+.form-card {
+  padding: 24px;
+  border-radius: 20px;
+  background: rgba(255,255,255,.03);
+  border: 1px solid rgba(255,255,255,.08);
+}
+
+.form-card-head {
+  margin-bottom: 20px;
+}
+
+.form-card-head h3 {
+  margin: 0 0 4px;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.form-card-head .muted {
+  margin: 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.field-grid {
+  display: grid;
+  gap: 16px;
+}
+
+.field-grid.col-2 {
+  grid-template-columns: 1fr 1fr;
+}
+
+.field label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.field .req {
+  color: #e74c3c;
+}
+
+.field.span-2 {
+  grid-column: 1 / -1;
+}
+
+.form-control {
+  width: 100%;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,.15);
+  background: rgba(255,255,255,.05);
+  color: var(--text);
+  font-size: 14px;
+  box-sizing: border-box;
+}
+
+.form-control:focus {
+  outline: none;
+  border-color: var(--accent, #3b82f6);
+  box-shadow: 0 0 0 3px rgba(59,130,246,.15);
+}
+
+select.form-control {
+  cursor: pointer;
+}
+
+textarea.form-control {
+  resize: vertical;
+  min-height: 80px;
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding-top: 8px;
+}
+
+.ravlo-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 22px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+  border: none;
+  transition: all .15s ease;
+}
+
+.ravlo-btn.primary {
+  background: var(--accent, #3b82f6);
+  color: #fff;
+}
+
+.ravlo-btn.primary:hover {
+  filter: brightness(1.1);
+}
+
+.ravlo-btn.ghost {
+  background: rgba(255,255,255,.06);
+  color: var(--text);
+  border: 1px solid rgba(255,255,255,.12);
+}
+
+.ravlo-btn.ghost:hover {
+  background: rgba(255,255,255,.1);
+}
+
+@media (max-width: 700px) {
+  .field-grid.col-2 {
+    grid-template-columns: 1fr;
+  }
+
+  .field.span-2 {
+    grid-column: auto;
+  }
+}
+</style>
+
+{% endblock %}
