@@ -28,7 +28,6 @@ from LoanMVP.utils.decorators import role_required
 elena_bp = Blueprint("elena", __name__, url_prefix="/elena")
 
 
-# Canonical pipeline stages used by the Elena dashboard kanban view.
 PIPELINE_STAGES = [
     ("new", "New"),
     ("warm", "Warm"),
@@ -67,7 +66,6 @@ INTERACTION_TYPES = [
 
 
 def _parse_due_at(raw):
-    """Parse a datetime-local form value into a datetime, or None."""
     if not raw:
         return None
     for fmt in (
@@ -83,18 +81,14 @@ def _parse_due_at(raw):
     return None
 
 
-# ---------------- ELENA DASHBOARD (HTML) ----------------
 @elena_bp.get("/")
 @role_required("partner_group", "admin")
 def dashboard():
-    """Elena CRM / Content-Engine dashboard (sections A–F of the spec)."""
     now = datetime.utcnow()
     week_ago = now - timedelta(days=7)
 
     total_clients = ElenaClient.query.count()
-    new_leads = (
-        ElenaClient.query.filter(ElenaClient.created_at >= week_ago).count()
-    )
+    new_leads = ElenaClient.query.filter(ElenaClient.created_at >= week_ago).count()
     active_listings = ElenaListing.query.filter_by(status="active").count()
     followups_due = ElenaInteraction.query.filter(
         ElenaInteraction.due_at.isnot(None),
@@ -102,7 +96,6 @@ def dashboard():
         ElenaInteraction.due_at <= now + timedelta(days=7),
     ).count()
 
-    # A — Top summary cards
     summary = {
         "total_clients": total_clients,
         "new_leads": new_leads,
@@ -110,9 +103,6 @@ def dashboard():
         "followups_due": followups_due,
     }
 
-    # C — Client pipeline view (cards grouped by pipeline_stage).
-    # `count` is the true stage total (separate aggregate query), while
-    # `clients` is capped at 12 for rendering.
     pipeline_groups = []
     for stage_key, stage_label in PIPELINE_STAGES:
         stage_query = ElenaClient.query.filter(
@@ -134,8 +124,6 @@ def dashboard():
             }
         )
 
-    # Include any clients whose stage does not match the canonical list so
-    # nothing is silently hidden.
     canonical_keys = {s[0] for s in PIPELINE_STAGES}
     unstaged_filter = or_(
         ElenaClient.pipeline_stage.is_(None),
@@ -160,7 +148,6 @@ def dashboard():
             },
         )
 
-    # D — Activity timeline
     recent_interactions = (
         ElenaInteraction.query
         .order_by(ElenaInteraction.created_at.desc())
@@ -168,14 +155,12 @@ def dashboard():
         .all()
     )
 
-    # F — Listing manager
     status_filter = (request.args.get("listing_status") or "").strip().lower()
     listings_query = ElenaListing.query
     if status_filter and status_filter in {s[0] for s in LISTING_STATUSES}:
         listings_query = listings_query.filter_by(status=status_filter)
     listings = listings_query.order_by(ElenaListing.updated_at.desc()).limit(12).all()
 
-    # Recent flyers for the sidebar
     recent_flyers = (
         ElenaFlyer.query.order_by(ElenaFlyer.created_at.desc()).limit(5).all()
     )
@@ -191,13 +176,12 @@ def dashboard():
         listing_status_filter=status_filter,
         recent_flyers=recent_flyers,
         template_types=[t.value for t in TemplateType],
-        portal="partner",
-        portal_name="Partner OS",
-        portal_home=url_for("partners.dashboard"),
+        portal="elena",
+        portal_name="Elena",
+        portal_home=url_for("elena.dashboard"),
     )
 
 
-# ---------------- ADD CLIENT ----------------
 @elena_bp.route("/clients/new", methods=["GET", "POST"])
 @role_required("partner_group", "admin")
 def client_new():
@@ -228,11 +212,12 @@ def client_new():
         client=None,
         pipeline_stages=PIPELINE_STAGES,
         client_roles=CLIENT_ROLES,
-        portal="partner",
+        portal="elena",
+        portal_name="Elena",
+        portal_home=url_for("elena.dashboard"),
     )
 
 
-# ---------------- ADD LISTING ----------------
 @elena_bp.route("/listings/new", methods=["GET", "POST"])
 @role_required("partner_group", "admin")
 def listing_new():
@@ -289,10 +274,11 @@ def listing_new():
         listing_statuses=LISTING_STATUSES,
         clients=clients,
         portal="elena",
+        portal_name="Elena",
+        portal_home=url_for("elena.dashboard"),
     )
 
 
-# ---------------- LOG INTERACTION ----------------
 @elena_bp.route("/interactions/new", methods=["GET", "POST"])
 @role_required("partner_group", "admin")
 def interaction_new():
@@ -339,16 +325,16 @@ def interaction_new():
         clients=clients,
         interaction_types=INTERACTION_TYPES,
         portal="elena",
+        portal_name="Elena",
+        portal_home=url_for("elena.dashboard"),
     )
 
 
-# ---------------- TEMPLATE LIST (JSON) ----------------
 @elena_bp.get("/templates")
 def list_templates():
     return jsonify({"templates": [t.value for t in TemplateType]})
 
 
-# ---------------- CRM AUTO-FILL (JSON) ----------------
 @elena_bp.get("/templates/auto_fill/<int:client_id>/<template_type>")
 def template_auto_fill(client_id, template_type):
     client = ElenaClient.query.get(client_id)
@@ -384,7 +370,6 @@ def template_auto_fill(client_id, template_type):
     )
 
 
-# ---------------- LISTING AUTO-FILL (JSON) ----------------
 @elena_bp.get("/templates/listing_auto_fill/<int:listing_id>/<template_type>")
 def template_listing_auto_fill(listing_id, template_type):
     listing = ElenaListing.query.get(listing_id)
@@ -412,7 +397,6 @@ def template_listing_auto_fill(listing_id, template_type):
     )
 
 
-# ---------------- TEMPLATE PREVIEW (JSON) ----------------
 @elena_bp.post("/templates/preview")
 def template_preview():
     data = request.json or {}
@@ -427,7 +411,6 @@ def template_preview():
     return jsonify({"template_type": template_type, "prompt": prompt})
 
 
-# ---------------- TEMPLATE GENERATE (JSON) ----------------
 @elena_bp.post("/templates/generate")
 def template_generate():
     data = request.json or {}
@@ -449,7 +432,6 @@ def template_generate():
     )
 
 
-# ---------------- TEMPLATE GENERATE + LOG (JSON) ----------------
 @elena_bp.post("/templates/generate_and_log")
 def template_generate_and_log():
     data = request.json or {}
@@ -488,7 +470,6 @@ def template_generate_and_log():
     )
 
 
-# ---------------- MLS IMPORT + AUTO FLYER ----------------
 @elena_bp.post("/mls/import")
 def mls_import():
     data = request.json or {}
@@ -498,7 +479,6 @@ def mls_import():
     if not mls_number:
         return jsonify({"error": "mls_number is required"}), 400
 
-    # Replace this with your real MLS/ATTOM integration
     listing_data = {
         "address": "123 Main St",
         "city": "Beacon",
@@ -543,7 +523,6 @@ def mls_import():
     )
 
 
-# ---------------- TEMPLATE STUDIO UI (GET) ----------------
 @elena_bp.get("/template-studio")
 def template_studio():
     template_type = request.args.get("template_type")
@@ -594,10 +573,12 @@ def template_studio():
         preview=None,
         output=None,
         saved_interaction_id=None,
+        portal="elena",
+        portal_name="Elena",
+        portal_home=url_for("elena.dashboard"),
     )
 
 
-# ---------------- TEMPLATE STUDIO PREVIEW (FORM POST) ----------------
 @elena_bp.post("/template-studio/preview")
 def template_studio_preview():
     template_type = request.form.get("template_type")
@@ -622,10 +603,12 @@ def template_studio_preview():
         preview=prompt,
         output=None,
         saved_interaction_id=None,
+        portal="elena",
+        portal_name="Elena",
+        portal_home=url_for("elena.dashboard"),
     )
 
 
-# ---------------- TEMPLATE STUDIO GENERATE (FORM POST) ----------------
 @elena_bp.post("/template-studio/generate")
 def template_studio_generate():
     template_type = request.form.get("template_type")
@@ -651,10 +634,12 @@ def template_studio_generate():
         preview=prompt,
         output=output,
         saved_interaction_id=None,
+        portal="elena",
+        portal_name="Elena",
+        portal_home=url_for("elena.dashboard"),
     )
 
 
-# ---------------- TEMPLATE STUDIO GENERATE + SAVE (FORM POST) ----------------
 @elena_bp.post("/template-studio/generate_and_save")
 def template_studio_generate_and_save():
     template_type = request.form.get("template_type")
@@ -695,4 +680,7 @@ def template_studio_generate_and_save():
         preview=prompt,
         output=output,
         saved_interaction_id=saved_interaction_id,
-            )
+        portal="elena",
+        portal_name="Elena",
+        portal_home=url_for("elena.dashboard"),
+    )
