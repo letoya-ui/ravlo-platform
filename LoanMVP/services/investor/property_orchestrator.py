@@ -867,12 +867,12 @@ class PropertyIntelligenceOrchestrator:
         back to `/propertyPhotos` by property id when the detail call does
         not return photos.
         """
-        if not self.budget.use("realtor_detail", 1):
-            _log.info("[realtor] skipping enrichment -- budget exhausted")
-            return cp
-
         addr = cp.address or cp.address_line1 or ""
         if not addr:
+            return cp
+
+        if not self.budget.use("realtor_detail", 1):
+            _log.info("[realtor] skipping enrichment -- budget exhausted")
             return cp
 
         _log.info("[realtor] enriching %s, %s %s %s", addr, cp.city, cp.state, cp.zip_code)
