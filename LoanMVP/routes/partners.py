@@ -124,7 +124,7 @@ def partner_has_premium_access(partner) -> bool:
 
 
 @partners_bp.route("/dashboard")
-@role_required("partner", "admin")
+@role_required("partner_group", "admin")
 def dashboard():
     partner = Partner.query.filter_by(user_id=current_user.id).first()
 
@@ -280,7 +280,7 @@ def dashboard():
 # ------------------------------------------------
 
 @partners_bp.route("/center")
-@role_required("partner")
+@role_required("partner_group")
 def center():
     # ✅ Get SINGLE partner (fixes your error)
     partner = Partner.query.filter_by(user_id=current_user.id).first()
@@ -334,7 +334,7 @@ def center():
 # ------------------------------------------------
 
 @partners_bp.route("/<int:partner_id>")
-@role_required("partner")
+@role_required("partner_group")
 def profile(partner_id):
 
     partner = Partner.query.get_or_404(partner_id)
@@ -354,7 +354,7 @@ def profile(partner_id):
 
 @partners_bp.route("/register", methods=["GET", "POST"])
 @csrf.exempt
-@role_required("partner")
+@role_required("partner_group")
 def register():
     partner = Partner.query.filter_by(user_id=current_user.id).first()
 
@@ -408,7 +408,7 @@ def register():
 
 
 @partners_bp.route("/requests/<int:request_id>", methods=["GET"])
-@role_required("partner")
+@role_required("partner_group")
 def request_detail(request_id):
     partner = Partner.query.filter_by(user_id=current_user.id).first()
 
@@ -437,7 +437,7 @@ def request_detail(request_id):
 # ------------------------------------------------
 
 @partners_bp.route("/requests")
-@role_required("partner", "admin")
+@role_required("partner_group", "admin")
 def requests_inbox():
     partner = Partner.query.filter_by(user_id=current_user.id).first()
 
@@ -486,7 +486,7 @@ def requests_inbox():
 
 @partners_bp.route("/requests/<int:req_id>/accept", methods=["POST"])
 @csrf.exempt
-@role_required("partner")
+@role_required("partner_group")
 def accept_request(req_id):
     partner = Partner.query.filter_by(user_id=current_user.id).first()
     req = PartnerConnectionRequest.query.get_or_404(req_id)
@@ -546,7 +546,7 @@ def accept_request(req_id):
 
 @partners_bp.route("/requests/<int:req_id>/decline", methods=["POST"])
 @csrf.exempt
-@role_required("partner")
+@role_required("partner_group")
 def decline_request(req_id):
 
     partner = Partner.query.filter_by(user_id=current_user.id).first()
@@ -571,7 +571,7 @@ def decline_request(req_id):
 
 @partners_bp.route("/requests/<int:request_id>/status", methods=["POST"])
 @csrf.exempt
-@role_required("partner")
+@role_required("partner_group")
 def update_request_status(request_id):
     partner = Partner.query.filter_by(user_id=current_user.id).first()
 
@@ -604,7 +604,7 @@ def update_request_status(request_id):
 # ------------------------------------------------
 
 @partners_bp.route("/workspace")
-@role_required("partner")
+@role_required("partner_group")
 def workspace_home():
 
     partner = Partner.query.filter_by(user_id=current_user.id).first()
@@ -632,7 +632,7 @@ def workspace_home():
 
 
 @partners_bp.route("/workspace/jobs/<int:job_id>")
-@role_required("partner")
+@role_required("partner_group")
 def workspace_job(job_id):
 
     partner = Partner.query.filter_by(user_id=current_user.id).first()
@@ -664,7 +664,7 @@ def workspace_job(job_id):
 
 @partners_bp.route("/photos/upload", methods=["POST"])
 @csrf.exempt
-@role_required("partner")
+@role_required("partner_group")
 def upload_photo():
 
     partner = Partner.query.filter_by(user_id=current_user.id).first()
@@ -702,7 +702,7 @@ def upload_photo():
 
 @partners_bp.route("/listing", methods=["GET", "POST"])
 @csrf.exempt
-@role_required("partner")
+@role_required("partner_group")
 def listing():
     partner = current_user.partner_profile
 
@@ -737,7 +737,7 @@ def listing():
 
 @partners_bp.route("/photos/<int:photo_id>/delete", methods=["POST"])
 @csrf.exempt
-@role_required("partner")
+@role_required("partner_group")
 def delete_photo(photo_id):
 
     partner = Partner.query.filter_by(user_id=current_user.id).first()
@@ -755,7 +755,7 @@ def delete_photo(photo_id):
     return redirect(request.referrer)
 
 @partners_bp.route("/leads")
-@role_required("partner")
+@role_required("partner_group")
 def leads():
     partner = current_user.partner_profile
 
@@ -776,7 +776,7 @@ def leads():
     )
 
 @partners_bp.route("/lead/<int:lead_id>")
-@role_required("partner")
+@role_required("partner_group")
 def lead_detail(lead_id):
     lead = Lead.query.get_or_404(lead_id)
 
@@ -792,7 +792,7 @@ def lead_detail(lead_id):
     )
     
 @partners_bp.route("/settings", methods=["GET", "POST"])
-@role_required("partner")
+@role_required("partner_group")
 def settings():
     partner = Partner.query.filter_by(user_id=current_user.id).first()
 
@@ -825,7 +825,7 @@ def settings():
 
 
 @partners_bp.route("/deals")
-@role_required("partner")
+@role_required("partner_group")
 def deals():
     partner = Partner.query.filter_by(user_id=current_user.id).first()
     if not partner:
@@ -846,7 +846,7 @@ def deals():
 
 
 @partners_bp.route("/resources")
-@role_required("partner")
+@role_required("partner_group")
 def resources():
     partner = Partner.query.filter_by(user_id=current_user.id).first()
     if not partner:
@@ -862,7 +862,7 @@ def resources():
     )
 
 @partners_bp.route("/subscribe/<tier>")
-@role_required("partner")
+@role_required("partner_group")
 def subscribe(tier):
     partner = Partner.query.filter_by(user_id=current_user.id).first()
     if not partner:
@@ -888,7 +888,7 @@ def subscribe(tier):
 
 @partners_bp.route("/subscribe/<tier>/confirm", methods=["POST"])
 @csrf.exempt
-@role_required("partner")
+@role_required("partner_group")
 def confirm_subscription(tier):
     partner = Partner.query.filter_by(user_id=current_user.id).first()
     if not partner:
@@ -919,7 +919,7 @@ def confirm_subscription(tier):
     return redirect(url_for("partners.billing"))
 
 @partners_bp.route("/billing")
-@role_required("partner")
+@role_required("partner_group")
 def billing():
     partner = Partner.query.filter_by(user_id=current_user.id).first()
     if not partner:
@@ -960,7 +960,7 @@ def billing():
     
 @partners_bp.route("/profile/edit", methods=["GET", "POST"])
 @csrf.exempt
-@role_required("partner")
+@role_required("partner_group")
 def edit_profile():
     partner = Partner.query.filter_by(user_id=current_user.id).first()
 
@@ -1006,7 +1006,7 @@ def edit_profile():
     return render_template("partners/partner_form.html", partner=partner)
 
 @partners_bp.route("/upgrade")
-@role_required("partner", "admin")
+@role_required("partner_group", "admin")
 def upgrade():
     partner = Partner.query.filter_by(user_id=current_user.id).first()
 
@@ -1029,7 +1029,7 @@ def upgrade():
     )
 
 @partners_bp.route("/proposals")
-@role_required("partner", "admin")
+@role_required("partner_group", "admin")
 def proposals():
     partner = Partner.query.filter_by(user_id=current_user.id).first()
 
@@ -1059,7 +1059,7 @@ def proposals():
 
 
 @partners_bp.route("/proposals/<int:proposal_id>", methods=["GET", "POST"])
-@role_required("partner", "admin")
+@role_required("partner_group", "admin")
 def proposal_detail(proposal_id):
     partner = Partner.query.filter_by(user_id=current_user.id).first()
 
@@ -1133,7 +1133,7 @@ def proposal_detail(proposal_id):
     )
 
 @partners_bp.route("/proposals/new", methods=["GET", "POST"])
-@role_required("partner", "admin")
+@role_required("partner_group", "admin")
 def create_proposal():
 
     # --------------------------------------------------

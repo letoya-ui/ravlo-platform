@@ -298,8 +298,18 @@ def fetch_realtor_data(
     Uses the `/v2/property` endpoint on `us-real-estate-listings.p.rapidapi.com`
     by default. The endpoint accepts `id`, `url`, or `address` as query params
     -- we build a freeform address string from the parts.
+
+    `/v2/property` is a strict exact-match endpoint: it returns
+    ``{"error": ...}`` when the address is not in its database (many real
+    addresses have no listing). We intentionally do NOT fall back to
+    `search_realtor_for_sale` here — that endpoint is a location-scoped
+    search that returns the top listing in the ZIP / city regardless of
+    the exact street, which would cause every unmatched candidate in the
+    same area to share the same "featured" listing's photos. Returning
+    ``None`` lets callers move on with whatever photos other providers
+    supplied.
     """
-    if not RAPIDAPI_KEY:
+    if not RAPIDAPI_KEY or not REALTOR_DETAIL_URL:
         return None
 
     location_parts = [
@@ -308,37 +318,6 @@ def fetch_realtor_data(
         if part and str(part).strip()
     ]
     location_query = ", ".join(location_parts)
-
-    def _fallback_search_result() -> Optional[Dict[str, Any]]:
-        if not location_query:
-            return None
-
-        listings = search_realtor_for_sale(location=location_query, limit=3)
-        if not listings:
-            return None
-
-        selected = listings[0]
-        return {
-            "status": "ok",
-            "provider": "realtor_search",
-            "property": {
-                "property_id": selected.get("property_id"),
-                "price": selected.get("price"),
-                "beds": selected.get("beds"),
-                "baths": selected.get("baths"),
-                "sqft": selected.get("square_feet"),
-                "status": selected.get("status"),
-                "days_on_market": selected.get("days_on_market"),
-                "description": None,
-                "photos": selected.get("photos") or [],
-                "primary_photo": selected.get("primary_photo"),
-            },
-            "raw": selected.get("raw") or selected,
-        }
-
-    if not REALTOR_DETAIL_URL:
-        return _fallback_search_result()
-
     if not location_query:
         return None
 
@@ -353,12 +332,12 @@ def fetch_realtor_data(
         if not resp.ok:
             body = (resp.text or "")[:300]
             print("Realtor Provider error:", body)
-            return _fallback_search_result()
+            return None
 
         data = resp.json()
         home = _find_listing_node(data)
         if not home:
-            return _fallback_search_result()
+            return None
 
         photos = _extract_photos(
             _pick(
@@ -401,7 +380,7 @@ def fetch_realtor_data(
 
     except Exception as e:
         print("Realtor Provider Exception:", e)
-        return _fallback_search_result()
+        return None
 
 
 def fetch_realtor_photos(property_id: str | int | None) -> List[str]:

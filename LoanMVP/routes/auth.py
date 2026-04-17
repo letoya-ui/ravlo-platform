@@ -21,6 +21,7 @@ from LoanMVP.extensions import csrf, db
 from LoanMVP.forms import RegisterForm, ResetPasswordForm, ResetPasswordRequestForm, LoginForm
 from LoanMVP.services.subscriptions import sync_features_with_subscription
 from LoanMVP.utils.blocking_helpers import is_user_blocked, get_user_block_message
+from LoanMVP.utils.decorators import PARTNER_ROLES
 from LoanMVP.models.user_model import User
 from LoanMVP.models.admin import AccessRequest, UserInvite, LicenseApplication, Company
 from LoanMVP.models.investor_models import InvestorProfile
@@ -207,6 +208,10 @@ def _dashboard_for_role(role: str) -> str:
     if role in admin_roles:
         return "admin.dashboard"
 
+    # Partner sub-categories all share /partners/dashboard (category-specific
+    # templates are selected downstream via Partner.category). Sourcing the set
+    # from utils.decorators.PARTNER_ROLES keeps login redirects and route
+    # decorators in sync.
     dashboard_map = {
         "loan_officer": "loan_officer.dashboard",
         "processor": "processor.dashboard",
@@ -219,8 +224,8 @@ def _dashboard_for_role(role: str) -> str:
         "crm": "crm.dashboard",
         "ai": "ai.dashboard",
         "intelligence": "intelligence.dashboard",
-        "partner": "partners.dashboard",
         "borrower": "borrower.create_profile",
+        **{r: "partners.dashboard" for r in PARTNER_ROLES},
     }
 
     return dashboard_map.get(role, "marketing.homepage")
