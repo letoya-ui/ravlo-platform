@@ -111,19 +111,48 @@ def _first_dict(*values: Any) -> Dict[str, Any]:
     return {}
 
 
+_LISTING_MARKER_KEYS = (
+    "property_id",
+    "propertyId",
+    "listing_id",
+    "mls_id",
+    "list_price",
+    "description",
+    "photos",
+    "home",
+    "primary_photo",
+)
+
+
+def _looks_like_listing(candidate: Any) -> bool:
+    if not isinstance(candidate, dict) or not candidate:
+        return False
+    return any(key in candidate for key in _LISTING_MARKER_KEYS)
+
+
 def _find_listing_node(data: Dict[str, Any]) -> Dict[str, Any]:
     data = data or {}
 
-    direct = _first_dict(
+    # The `/v2/property` endpoint on `us-real-estate-listings.p.rapidapi.com`
+    # returns `{"data": {...listing fields...}}` — the listing dict is
+    # directly under `data`, not nested under `data.home` / `data.property`.
+    # Other realtor RapidAPI providers wrap it under intermediate keys, so we
+    # check both the direct dict and the common nested shapes.
+    data_block = data.get("data") if isinstance(data.get("data"), dict) else {}
+
+    direct_candidates = [
         data.get("property"),
-        _first_dict(data.get("data")).get("home"),
-        _first_dict(data.get("data")).get("property"),
-        _first_dict(data.get("data")).get("listing"),
-        _first_dict(data.get("home")),
-        _first_dict(data.get("listing")),
-    )
-    if direct:
-        return direct
+        data_block.get("home"),
+        data_block.get("property"),
+        data_block.get("listing"),
+        data_block if _looks_like_listing(data_block) else None,
+        data.get("home"),
+        data.get("listing"),
+        data if _looks_like_listing(data) else None,
+    ]
+    for candidate in direct_candidates:
+        if isinstance(candidate, dict) and candidate:
+            return candidate
 
     for list_key in ("properties", "listings", "results", "home_search", "data"):
         container = data.get(list_key)
