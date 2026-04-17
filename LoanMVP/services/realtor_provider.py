@@ -111,15 +111,16 @@ def _first_dict(*values: Any) -> Dict[str, Any]:
     return {}
 
 
+# Marker keys used to recognise a dict as a flat listing body. Kept
+# intentionally specific -- generic keys like "description", "photos",
+# or "home" can also appear on wrapper / error / search envelope dicts
+# and would cause `_looks_like_listing` to return false positives.
 _LISTING_MARKER_KEYS = (
     "property_id",
     "propertyId",
     "listing_id",
     "mls_id",
     "list_price",
-    "description",
-    "photos",
-    "home",
     "primary_photo",
 )
 
@@ -148,7 +149,6 @@ def _find_listing_node(data: Dict[str, Any]) -> Dict[str, Any]:
         data_block if _looks_like_listing(data_block) else None,
         data.get("home"),
         data.get("listing"),
-        data if _looks_like_listing(data) else None,
     ]
     for candidate in direct_candidates:
         if isinstance(candidate, dict) and candidate:
@@ -167,6 +167,13 @@ def _find_listing_node(data: Dict[str, Any]) -> Dict[str, Any]:
                     first = nested[0]
                     if isinstance(first, dict):
                         return first
+
+    # Last-ditch: the top-level response itself carries listing markers
+    # (some providers return a flat payload without any wrapper). Runs
+    # after the list-container loop so we never short-circuit a wrapper
+    # whose actual listings live in a `properties` / `results` array.
+    if _looks_like_listing(data):
+        return data
 
     return {}
 
