@@ -160,6 +160,48 @@ function strategyLabel(v){
   return "All";
 }
 
+function pickPhotoUrl(photo){
+  if (!photo) return null;
+  if (typeof photo === "string") return photo;
+  if (typeof photo !== "object") return null;
+
+  return photo.url ||
+    photo.full ||
+    photo.full_url ||
+    photo.fullSize ||
+    photo.full_size ||
+    photo.original ||
+    photo.original_url ||
+    photo.large ||
+    photo.large_url ||
+    photo.src ||
+    photo.href ||
+    photo.photo ||
+    photo.image ||
+    photo.thumbnail ||
+    null;
+}
+
+function collectPhotoUrls(r){
+  const rawPhotos = [
+    ...(Array.isArray(r.listing_photos) ? r.listing_photos : []),
+    ...(Array.isArray(r.photos) ? r.photos : []),
+    ...(Array.isArray(r.images) ? r.images : []),
+    ...(Array.isArray(r.media) ? r.media : []),
+  ];
+
+  const urls = [
+    pickPhotoUrl(r.primary_photo),
+    pickPhotoUrl(r.primary_photo_url),
+    pickPhotoUrl(r.image_url),
+    pickPhotoUrl(r.photo),
+    pickPhotoUrl(r.thumbnail),
+    ...rawPhotos.map(pickPhotoUrl),
+  ].filter(Boolean);
+
+  return [...new Set(urls)];
+}
+
 function escapeHtml(str){
   return String(str ?? "")
     .replace(/&/g, "&amp;")
@@ -218,6 +260,13 @@ function buildPropertyPayload(r, analyzeId, saveId){
     latitude: r.latitude ?? null,
     longitude: r.longitude ?? null,
     last_sale_price: r.last_sale_price ?? null,
+    image_url: pickPhotoUrl(r.image_url) || pickPhotoUrl(r.primary_photo) || pickPhotoUrl(r.primary_photo_url) || null,
+    primary_photo: pickPhotoUrl(r.primary_photo) || pickPhotoUrl(r.image_url) || null,
+    primary_photo_url: pickPhotoUrl(r.primary_photo_url) || null,
+    photo: pickPhotoUrl(r.photo) || null,
+    thumbnail: pickPhotoUrl(r.thumbnail) || null,
+    listing_photos: collectPhotoUrls(r),
+    photos: collectPhotoUrls(r),
     _btnId: analyzeId,
     _saveBtnId: saveId
   };
@@ -341,7 +390,13 @@ function renderEmpty(title, body){
 }
 
 function resolveImage(r){
-  return r.primary_photo || r.primary_photo_url || r.image_url || r.photo || r.thumbnail || (Array.isArray(r.photos) ? r.photos[0] : null) || PLACEHOLDER_IMAGE;
+  return pickPhotoUrl(r.primary_photo) ||
+    pickPhotoUrl(r.primary_photo_url) ||
+    pickPhotoUrl(r.image_url) ||
+    pickPhotoUrl(r.photo) ||
+    pickPhotoUrl(r.thumbnail) ||
+    collectPhotoUrls(r)[0] ||
+    PLACEHOLDER_IMAGE;
 }
 
 function resolveReasons(r){

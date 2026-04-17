@@ -219,7 +219,7 @@ Manage how your business appears across the Ravlo network.
           <div class="photo-grid">
             {% for photo in partner.photos %}
               <div class="photo-card">
-                <img src="{{ photo.image_url if photo.image_url is defined else photo.photo_url }}" alt="Partner photo">
+                <img src="{{ photo.url }}" alt="Partner photo">
               </div>
             {% endfor %}
           </div>

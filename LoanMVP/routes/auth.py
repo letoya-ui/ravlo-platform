@@ -24,6 +24,7 @@ from LoanMVP.utils.blocking_helpers import is_user_blocked, get_user_block_messa
 from LoanMVP.models.user_model import User
 from LoanMVP.models.admin import AccessRequest, UserInvite, LicenseApplication, Company
 from LoanMVP.models.investor_models import InvestorProfile
+from LoanMVP.models.crm_models import Partner
 from flask_mail import Message as MailMessage
 
 
@@ -68,6 +69,33 @@ _EXECUTIVE_DASHBOARD_EMAILS: set[str] = {
     "jamaine.caughman@ravlohq.com",
 }
 
+_PARTNER_DASHBOARD_PRESETS: dict[str, dict[str, str | bool]] = {
+    "nyrealtorelena@gmail.com": {
+        "name": "Elena Realtor",
+        "company": "Elena Realty",
+        "category": "realtor",
+        "type": "Realtor",
+        "specialty": "NY residential investor-friendly acquisitions",
+        "service_area": "New York",
+        "bio": "Personalized realtor dashboard for Elena with investor-focused deal flow and workspace access.",
+        "listing_description": "Investor-friendly realtor serving New York acquisition, listing, and deal coordination needs.",
+        "active": True,
+        "approved": True,
+        "featured": True,
+        "status": "Active",
+        "subscription_tier": "Premium",
+        "crm_enabled": True,
+        "deal_visibility_enabled": True,
+        "proposal_builder_enabled": True,
+        "instant_quote_enabled": True,
+        "ai_assist_enabled": True,
+        "priority_placement_enabled": True,
+        "smart_notifications_enabled": True,
+        "portfolio_showcase_enabled": True,
+        "is_verified": True,
+    }
+}
+
 
 def _is_executive_dashboard_user(user) -> bool:
     if not user:
@@ -91,6 +119,31 @@ def _owner_admin_exists() -> bool:
         .first()
         is not None
     )
+
+
+def _ensure_partner_dashboard_profile(user) -> None:
+    if not user:
+        return
+
+    role = (getattr(user, "role", "") or "").strip().lower()
+    email = (getattr(user, "email", "") or "").strip().lower()
+    if role != "partner" or not email:
+        return
+
+    preset = _PARTNER_DASHBOARD_PRESETS.get(email)
+    if not preset:
+        return
+
+    partner = Partner.query.filter_by(user_id=user.id).first()
+    if not partner:
+        partner = Partner(user_id=user.id, name=str(preset.get("name") or user.full_name or email))
+        db.session.add(partner)
+
+    for field, value in preset.items():
+        setattr(partner, field, value)
+
+    if not partner.email:
+        partner.email = email
 
 
 def _workspace_recovery_mode() -> bool:
@@ -418,6 +471,9 @@ def register():
         db.session.add(user)
         db.session.commit()
 
+        _ensure_partner_dashboard_profile(user)
+        db.session.commit()
+
         login_user(user)
 
         if recovery_mode:
@@ -461,6 +517,10 @@ def restore_owner_admin():
 @login_required
 def post_login_redirect():
     role = (current_user.role or "").strip().lower()
+
+    if role == "partner":
+        _ensure_partner_dashboard_profile(current_user)
+        db.session.commit()
 
     if current_user.invite_accepted and not current_user.onboarding_complete:
         return redirect(url_for("auth.complete_profile"))

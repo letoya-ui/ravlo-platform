@@ -86,7 +86,7 @@ def security():
             flash("Please complete all password fields.", "warning")
             return redirect(url_for("account.security"))
 
-        if not check_password_hash(current_user.password_hash, current_password):
+        if not current_user.check_password(current_password):
             flash("Current password is incorrect.", "danger")
             return redirect(url_for("account.security"))
 
