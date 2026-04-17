@@ -93,6 +93,7 @@ def dashboard():
     active_listings = ElenaListing.query.filter_by(status="active").count()
     followups_due = ElenaInteraction.query.filter(
         ElenaInteraction.due_at.isnot(None),
+        ElenaInteraction.due_at >= now,
         ElenaInteraction.due_at <= now + timedelta(days=7),
     ).count()
 
