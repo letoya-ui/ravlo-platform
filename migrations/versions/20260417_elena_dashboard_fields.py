@@ -1,7 +1,7 @@
 """Elena dashboard — add missing fields on clients / listings / flyers / interactions
 
 Revision ID: 20260417elena01
-Revises: 980d0677dbba
+Revises: 1382fd92af8d
 Create Date: 2026-04-17 14:00:00.000000
 
 Adds the fields required by the Elena CRM dashboard spec:
@@ -22,7 +22,7 @@ import sqlalchemy as sa
 
 
 revision = "20260417elena01"
-down_revision = "980d0677dbba"
+down_revision = "1382fd92af8d"
 branch_labels = None
 depends_on = None
 
