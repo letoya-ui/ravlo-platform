@@ -192,6 +192,18 @@ def _dashboard_for_role(role: str) -> str:
     if role in admin_roles:
         return "admin.dashboard"
 
+    # Partner sub-categories (realtor / contractor / student / loan_officer_partner)
+    # all route into the Partner OS — /partners/dashboard handles category-specific
+    # rendering downstream via Partner.category. Listing them here prevents the
+    # fallback from firing when a user's role column stores the sub-category
+    # directly instead of the canonical "partner" value.
+    PARTNER_SUBROLES = {
+        "realtor",
+        "contractor",
+        "student",
+        "loan_officer_partner",
+    }
+
     dashboard_map = {
         "loan_officer": "loan_officer.dashboard",
         "processor": "processor.dashboard",
@@ -206,6 +218,7 @@ def _dashboard_for_role(role: str) -> str:
         "intelligence": "intelligence.dashboard",
         "partner": "partners.dashboard",
         "borrower": "borrower.create_profile",
+        **{subrole: "partners.dashboard" for subrole in PARTNER_SUBROLES},
     }
 
     return dashboard_map.get(role, "marketing.homepage")
