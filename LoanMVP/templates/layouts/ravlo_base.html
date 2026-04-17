@@ -1,6 +1,6 @@
 {% set bp = request.blueprint or "" %}
 {% set ep = request.endpoint or "" %}
-{% set active_portal = portal|default('partner' if bp == 'partners' else 'investor') %}
+{% set active_portal = portal|default('elena' if bp == 'elena' else ('partner' if bp == 'partners' else 'investor')) %}
 
 <!doctype html>
 <html lang="en">
@@ -27,14 +27,18 @@
 
     <aside class="ravlo-sidebar" id="sidebar">
       <div class="ravlo-sidebar-heading">
-        {% if active_portal == "partner" %}
+        {% if active_portal == "elena" %}
+          <span class="heading-label">Elena OS</span>
+        {% elif active_portal == "partner" %}
           <span class="heading-label">Partner Portal</span>
         {% else %}
           <span class="heading-label">Investor Portal</span>
         {% endif %}
       </div>
 
-      {% if active_portal == "partner" %}
+      {% if active_portal == "elena" %}
+        {% include "layouts/_sidebar_elena.html" %}
+      {% elif active_portal == "partner" %}
         {% include "layouts/_sidebar_partner.html" %}
       {% else %}
         {% include "layouts/_sidebar_investor.html" %}
