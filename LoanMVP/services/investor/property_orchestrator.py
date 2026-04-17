@@ -17,6 +17,10 @@ from LoanMVP.services.rentcast_service import (
 )
 from LoanMVP.services.mashvisor_client import MashvisorClient, MashvisorError
 from LoanMVP.services.mashvisor_service import normalize_mashvisor_validation
+from LoanMVP.services.realtor_provider import (
+    fetch_realtor_data,
+    fetch_realtor_photos,
+)
 
 from LoanMVP.services.investor.investor_route_helpers import (
     _normalize_asset_type,
@@ -36,6 +40,7 @@ class ProviderBudget:
     attom_detail: int = 4
     rentcast_detail: int = 4
     mashvisor_detail: int = 4
+    realtor_detail: int = 4
     deal_architect: int = 4
 
     def use(self, key: str, amount: int = 1) -> bool:
@@ -556,6 +561,8 @@ class PropertyIntelligenceOrchestrator:
 
             cp = self._enrich_with_mashvisor(cp)
 
+            cp = self._enrich_with_realtor(cp)
+
             enriched.append(cp)
 
         return enriched
@@ -852,6 +859,88 @@ class PropertyIntelligenceOrchestrator:
 
         return cp
 
+    def _enrich_with_realtor(self, cp: CanonicalProperty) -> CanonicalProperty:
+        """Enrich with Realtor.com data (primarily for photos + list price).
+
+        Uses the RapidAPI `/v2/property` endpoint via
+        :func:`LoanMVP.services.realtor_provider.fetch_realtor_data`. Falls
+        back to `/propertyPhotos` by property id when the detail call does
+        not return photos.
+        """
+        if not self.budget.use("realtor_detail", 1):
+            _log.info("[realtor] skipping enrichment -- budget exhausted")
+            return cp
+
+        addr = cp.address or cp.address_line1 or ""
+        if not addr:
+            return cp
+
+        _log.info("[realtor] enriching %s, %s %s %s", addr, cp.city, cp.state, cp.zip_code)
+
+        try:
+            data = fetch_realtor_data(
+                address=addr,
+                city=cp.city or "",
+                state=cp.state or "",
+                zip_code=cp.zip_code or "",
+            )
+        except Exception as exc:
+            _log.warning("[realtor] fetch_realtor_data failed: %s", exc)
+            return cp
+
+        if not isinstance(data, dict):
+            return cp
+
+        prop = data.get("property") or {}
+        if not isinstance(prop, dict):
+            prop = {}
+
+        property_id = prop.get("property_id")
+        if property_id:
+            cp.provider_ids["realtor"] = property_id
+
+        realtor_photos = self._normalize_photo_candidates(
+            prop.get("primary_photo"),
+            prop.get("photos"),
+        )
+
+        if not realtor_photos and property_id:
+            try:
+                gallery = fetch_realtor_photos(property_id)
+            except Exception as exc:
+                _log.warning("[realtor] fetch_realtor_photos failed: %s", exc)
+                gallery = []
+            if gallery:
+                realtor_photos = self._normalize_photo_candidates(gallery)
+
+        if realtor_photos:
+            _log.info(
+                "[realtor] extracted %d photos for %s",
+                len(realtor_photos),
+                addr,
+            )
+            # Merge realtor photos in front so they take priority when the
+            # gallery is otherwise empty, while still retaining any photos
+            # that ATTOM/RentCast/Mashvisor already surfaced.
+            cp.photos = self._normalize_photo_candidates(realtor_photos, cp.photos)
+            cp.primary_photo = _resolve_photo(cp.primary_photo, cp.photos)
+            cp.value_sources["photos"] = cp.value_sources.get("photos") or "realtor"
+
+        cp.listing_price = self._first_truthy(
+            cp.listing_price,
+            self._as_float(prop.get("price")),
+        )
+        cp.purchase_price = self._first_truthy(cp.purchase_price, cp.listing_price)
+        cp.status = self._first_truthy(cp.status, prop.get("status"))
+        cp.days_on_market = self._first_truthy(
+            cp.days_on_market,
+            self._as_int(prop.get("days_on_market")),
+        )
+        if isinstance(prop.get("description"), str) and prop.get("description"):
+            cp.description = cp.description or prop.get("description")
+
+        return cp
+
     def rank_candidates(self, results: List[CanonicalProperty]) -> List[CanonicalProperty]:
         ranked: List[CanonicalProperty] = []
 
@@ -1013,6 +1102,7 @@ class PropertyIntelligenceOrchestrator:
                 "attom_detail": self.budget.attom_detail,
                 "rentcast_detail": self.budget.rentcast_detail,
                 "mashvisor_detail": self.budget.mashvisor_detail,
+                "realtor_detail": self.budget.realtor_detail,
                 "deal_architect": self.budget.deal_architect,
             },
         }

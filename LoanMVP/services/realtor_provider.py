@@ -4,10 +4,17 @@ from typing import Dict, Any, Optional, List
 from urllib.parse import urlparse
 
 RAPIDAPI_KEY = os.getenv("RAPIDAPI_KEY")
-RAPIDAPI_HOST = os.getenv("REALTOR_RAPIDAPI_HOST", "realtor-search.p.rapidapi.com")
+RAPIDAPI_HOST = os.getenv(
+    "REALTOR_RAPIDAPI_HOST",
+    "us-real-estate-listings.p.rapidapi.com",
+)
 
-# Leave blank unless you have a verified working detail endpoint.
-REALTOR_DETAIL_URL = os.getenv("REALTOR_RAPIDAPI_URL", "").strip()
+# GET endpoint on `us-real-estate-listings.p.rapidapi.com`. Accepts `id`,
+# `url`, or `address` as query params.
+REALTOR_DETAIL_URL = os.getenv(
+    "REALTOR_RAPIDAPI_URL",
+    f"https://{RAPIDAPI_HOST}/v2/property",
+).strip()
 
 REALTOR_SEARCH_URL = os.getenv(
     "REALTOR_RAPIDAPI_SEARCH_URL",
@@ -226,7 +233,12 @@ def search_realtor_for_sale(
     }
 
     try:
-        resp = requests.get(REALTOR_SEARCH_URL, headers=_headers(), params=params, timeout=20)
+        resp = requests.get(
+            REALTOR_SEARCH_URL,
+            headers=_headers(host=_host_for_url(REALTOR_SEARCH_URL, RAPIDAPI_HOST)),
+            params=params,
+            timeout=20,
+        )
         if not resp.ok:
             print("Realtor Search error:", resp.text[:300])
             return []
@@ -239,11 +251,26 @@ def search_realtor_for_sale(
     return [_normalize_listing_item(item) for item in listings]
 
 
-def fetch_realtor_data(address: str, city: str, state: str) -> Optional[Dict[str, Any]]:
+def fetch_realtor_data(
+    address: str,
+    city: str,
+    state: str,
+    zip_code: str = "",
+) -> Optional[Dict[str, Any]]:
+    """Fetch a single realtor.com listing matching the given address.
+
+    Uses the `/v2/property` endpoint on `us-real-estate-listings.p.rapidapi.com`
+    by default. The endpoint accepts `id`, `url`, or `address` as query params
+    -- we build a freeform address string from the parts.
+    """
     if not RAPIDAPI_KEY:
         return None
 
-    location_parts = [part.strip() for part in [address, city, state] if part and str(part).strip()]
+    location_parts = [
+        part.strip()
+        for part in [address, city, state, zip_code]
+        if part and str(part).strip()
+    ]
     location_query = ", ".join(location_parts)
 
     def _fallback_search_result() -> Optional[Dict[str, Any]]:
@@ -276,17 +303,14 @@ def fetch_realtor_data(address: str, city: str, state: str) -> Optional[Dict[str
     if not REALTOR_DETAIL_URL:
         return _fallback_search_result()
 
-    try:
-        payload = {
-            "address": address,
-            "city": city,
-            "state_code": state,
-        }
+    if not location_query:
+        return None
 
-        resp = requests.post(
+    try:
+        resp = requests.get(
             REALTOR_DETAIL_URL,
-            json=payload,
-            headers=_headers(include_json=True, host=_host_for_url(REALTOR_DETAIL_URL, RAPIDAPI_HOST)),
+            params={"address": location_query},
+            headers=_headers(host=_host_for_url(REALTOR_DETAIL_URL, RAPIDAPI_HOST)),
             timeout=15,
         )
 
@@ -301,7 +325,24 @@ def fetch_realtor_data(address: str, city: str, state: str) -> Optional[Dict[str
             return _fallback_search_result()
 
         photos = _extract_photos(
-            _pick(home, ("photos",), ("primary_photo",), ("photo",), ("description", "photos"), ("media", "photos"))
+            _pick(
+                home,
+                ("photos",),
+                ("primary_photo",),
+                ("photo",),
+                ("description", "photos"),
+                ("media", "photos"),
+            )
+        )
+
+        # `description` in /v2/property is a full block dict. Prefer a text
+        # summary when present, but fall back to the raw dict so downstream
+        # callers can still pull fields like beds/baths/sqft from it.
+        description = _pick(
+            home,
+            ("description", "text"),
+            ("description", "summary"),
+            ("description",),
         )
 
         return {
@@ -309,13 +350,13 @@ def fetch_realtor_data(address: str, city: str, state: str) -> Optional[Dict[str
             "provider": "realtor",
             "property": {
                 "property_id": _pick(home, ("property_id",), ("propertyId",), ("listing_id",), ("mls_id",)),
-                "price": _pick(home, ("price",), ("list_price",), ("listPrice",), ("list_price_min",), ("description", "price")),
-                "beds": _pick(home, ("beds",), ("bedrooms",), ("description", "beds")),
-                "baths": _pick(home, ("baths",), ("bathrooms",), ("description", "baths")),
-                "sqft": _pick(home, ("sqft",), ("sqft_value",), ("building_size", "size"), ("description", "sqft")),
+                "price": _pick(home, ("list_price",), ("price",), ("listPrice",), ("list_price_min",), ("description", "price")),
+                "beds": _pick(home, ("description", "beds"), ("beds",), ("bedrooms",)),
+                "baths": _pick(home, ("description", "baths_consolidated"), ("description", "baths"), ("baths",), ("bathrooms",)),
+                "sqft": _pick(home, ("description", "sqft"), ("sqft",), ("sqft_value",), ("building_size", "size")),
                 "status": _pick(home, ("status",), ("listing_status",), ("description", "status")),
                 "days_on_market": _pick(home, ("days_on_market",), ("days_on_realtor",), ("description", "days_on_market")),
-                "description": _pick(home, ("description",), ("description", "text"), ("description", "summary")),
+                "description": description,
                 "photos": photos,
                 "primary_photo": photos[0] if photos else None,
             },
@@ -334,7 +375,7 @@ def fetch_realtor_photos(property_id: str | int | None) -> List[str]:
     try:
         resp = requests.get(
             REALTOR_PHOTOS_URL,
-            headers=_headers(),
+            headers=_headers(host=_host_for_url(REALTOR_PHOTOS_URL, RAPIDAPI_HOST)),
             params={"id": str(property_id)},
             timeout=15,
         )
@@ -362,7 +403,7 @@ def fetch_realtor_estimate(property_id: str | int | None) -> Dict[str, Any]:
     try:
         resp = requests.get(
             REALTOR_ESTIMATES_URL,
-            headers=_headers(),
+            headers=_headers(host=_host_for_url(REALTOR_ESTIMATES_URL, RAPIDAPI_HOST)),
             params={"id": str(property_id)},
             timeout=15,
         )
