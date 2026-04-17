@@ -104,4 +104,41 @@ def normalize_property(
             "description": realtor_data.get("description"),
         })
 
+    # -----------------------------
+    # Always guarantee a flat `photos` list
+    # Collect photos from every known source/shape and merge with any
+    # realtor photos already set above. The final `profile["photos"]`
+    # is ALWAYS a list (never None / missing).
+    # -----------------------------
+    _all_photo_candidates = []
+    for source in [attom_data, analytics_data, realtor_data or {}]:
+        for key in ("photos", "images", "image_urls", "media", "photo_links", "gallery", "listing_photos"):
+            val = source.get(key)
+            if isinstance(val, list):
+                for item in val:
+                    if isinstance(item, str) and item.strip():
+                        _all_photo_candidates.append(item.strip())
+                    elif isinstance(item, dict):
+                        url = item.get("url") or item.get("href") or item.get("src")
+                        if isinstance(url, str) and url.strip():
+                            _all_photo_candidates.append(url.strip())
+            elif isinstance(val, str) and val.strip():
+                _all_photo_candidates.append(val.strip())
+
+    _seen = set()
+    _clean_photos = []
+    for url in _all_photo_candidates:
+        if url not in _seen:
+            _seen.add(url)
+            _clean_photos.append(url)
+
+    existing = profile.get("photos") or []
+    if isinstance(existing, list):
+        for url in existing:
+            if isinstance(url, str) and url.strip() and url.strip() not in _seen:
+                _seen.add(url.strip())
+                _clean_photos.insert(0, url.strip())  # realtor photos first
+
+    profile["photos"] = _clean_photos or []
+
     return profile

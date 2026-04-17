@@ -400,6 +400,8 @@ def _extract_listing_photos_from_payload(payload) -> list[str]:
         payload.get("primary_photo"),
         payload.get("photo"),
         payload.get("thumbnail"),
+        payload.get("photo_links"),
+        payload.get("image_urls"),
         (payload.get("workspace_analysis") or {}).get("listing_photos") if isinstance(payload.get("workspace_analysis"), dict) else None,
         (payload.get("workspace_analysis") or {}).get("image_url") if isinstance(payload.get("workspace_analysis"), dict) else None,
     )
