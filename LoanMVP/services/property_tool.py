@@ -529,6 +529,7 @@ def build_property_card_data(prop: Dict[str, Any]) -> Dict[str, Any]:
         "year_built": prop.get("year_built"),
         "property_type": prop.get("property_type"),
         "primary_photo": prop.get("primary_photo"),
+        "photos": prop.get("photos") or [],
         "ravlo_score": prop.get("ravlo_score"),
         "recommended_strategy": prop.get("recommended_strategy"),
         "latitude": prop.get("latitude"),
