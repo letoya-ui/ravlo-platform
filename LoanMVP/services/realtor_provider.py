@@ -380,7 +380,7 @@ def fetch_realtor_data(
 
     except Exception as e:
         print("Realtor Provider Exception:", e)
-        return _fallback_search_result()
+        return None
 
 
 def fetch_realtor_photos(property_id: str | int | None) -> List[str]:
