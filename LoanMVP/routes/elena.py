@@ -288,7 +288,7 @@ def listing_new():
         listing=None,
         listing_statuses=LISTING_STATUSES,
         clients=clients,
-        portal="partner",
+        portal="elena",
     )
 
 
@@ -338,7 +338,7 @@ def interaction_new():
         interaction=None,
         clients=clients,
         interaction_types=INTERACTION_TYPES,
-        portal="partner",
+        portal="elena",
     )
 
 
