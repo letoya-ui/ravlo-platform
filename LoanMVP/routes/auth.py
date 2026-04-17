@@ -178,6 +178,21 @@ def verify_reset_token(token: str, expiration_seconds: int = 3600):
 # HELPERS
 # ============================================================
 
+# VIP user routing — specific users get their own personalized dashboard on
+# login, overriding role-based dispatch. Keys must be normalized (lowercased,
+# stripped). Values are Flask endpoint strings registered on the app.
+# Add a new VIP by creating their blueprint/endpoint first, then adding a
+# mapping here.
+VIP_USER_DASHBOARDS = {
+    "nyrealtorelena@gmail.com": "elena.dashboard",
+}
+
+
+def _vip_dashboard_endpoint(user) -> str | None:
+    email = (getattr(user, "email", "") or "").strip().lower()
+    return VIP_USER_DASHBOARDS.get(email)
+
+
 def _safe_next_url(default_endpoint: str = "investor.command_center"):
     next_page = (request.args.get("next") or "").strip()
     if next_page.startswith("/"):
@@ -464,6 +479,10 @@ def post_login_redirect():
 
     if current_user.invite_accepted and not current_user.onboarding_complete:
         return redirect(url_for("auth.complete_profile"))
+
+    vip_endpoint = _vip_dashboard_endpoint(current_user)
+    if vip_endpoint:
+        return redirect(url_for(vip_endpoint))
 
     if _is_executive_dashboard_user(current_user):
         return redirect(url_for("executive.dashboard"))
