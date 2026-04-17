@@ -27,6 +27,13 @@ class ElenaClient(BaseModel):
     email = Column(String, nullable=True)
     phone = Column(String, nullable=True)
 
+    # Contact type inside Elena's CRM:
+    # realtor, investor, contractor, partner, student, buyer, seller, etc.
+    role = Column(String(50), nullable=True)
+
+    # Free-form comma-separated tags used for filtering and segmentation.
+    tags = Column(String(255), nullable=True)
+
     pipeline_stage = Column(String, nullable=True)
     notes = Column(Text, nullable=True)
 
@@ -62,6 +69,9 @@ class ElenaListing(BaseModel):
     description = Column(Text, nullable=True)
     photos_json = Column(Text, nullable=True)
 
+    # Lifecycle status: active, pending, sold, withdrawn.
+    status = Column(String(20), nullable=False, default="active")
+
     # ⭐ REQUIRED — this was missing
     client_id = Column(Integer, ForeignKey("elena_clients.id"), nullable=True)
     client = relationship("ElenaClient", back_populates="listings")
@@ -84,6 +94,11 @@ class ElenaFlyer(BaseModel):
     property_id = Column(String, nullable=True)
     listing_id = Column(Integer, ForeignKey("elena_listings.id"), nullable=True)
 
+    # Optional display-facing title and call-to-action so flyers can be
+    # rendered without re-parsing the full body each time.
+    title = Column(String(255), nullable=True)
+    cta = Column(String(255), nullable=True)
+
     body = Column(Text, nullable=False)
 
     def __repr__(self):
@@ -99,6 +114,8 @@ class InteractionType:
     SHOWING = "showing"
     CALL = "call"
     TEXT = "text"
+    MEETING = "meeting"
+    FOLLOW_UP = "follow_up"
 
 
 class ElenaInteraction(BaseModel):
@@ -109,6 +126,9 @@ class ElenaInteraction(BaseModel):
 
     content = Column(Text, nullable=False)
     meta = Column(String, nullable=True)
+
+    # Optional scheduled time for follow-ups and meetings.
+    due_at = Column(DateTime, nullable=True)
 
     client = relationship("ElenaClient", back_populates="interactions")
 

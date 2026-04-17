@@ -1,4 +1,15 @@
-from flask import Blueprint, request, jsonify, render_template
+from datetime import datetime, timedelta
+from flask import (
+    Blueprint,
+    request,
+    jsonify,
+    render_template,
+    redirect,
+    url_for,
+    flash,
+)
+from sqlalchemy import or_
+
 from LoanMVP.extensions import db
 from LoanMVP.models.elena_models import (
     ElenaClient,
@@ -12,8 +23,312 @@ from LoanMVP.services.elena_templates import (
     render_template as render_elena_template,
     TemplateType,
 )
+from LoanMVP.utils.decorators import role_required
 
 elena_bp = Blueprint("elena", __name__, url_prefix="/elena")
+
+
+# Canonical pipeline stages used by the Elena dashboard kanban view.
+PIPELINE_STAGES = [
+    ("new", "New"),
+    ("warm", "Warm"),
+    ("active", "Active"),
+    ("under_contract", "Under Contract"),
+    ("closed", "Closed"),
+]
+
+LISTING_STATUSES = [
+    ("active", "Active"),
+    ("pending", "Pending"),
+    ("sold", "Sold"),
+    ("withdrawn", "Withdrawn"),
+]
+
+CLIENT_ROLES = [
+    "realtor",
+    "investor",
+    "contractor",
+    "partner",
+    "student",
+    "buyer",
+    "seller",
+    "other",
+]
+
+INTERACTION_TYPES = [
+    InteractionType.EMAIL,
+    InteractionType.CALL,
+    InteractionType.TEXT,
+    InteractionType.MEETING,
+    InteractionType.SHOWING,
+    InteractionType.NOTE,
+    InteractionType.FOLLOW_UP,
+]
+
+
+def _parse_due_at(raw):
+    """Parse a datetime-local form value into a datetime, or None."""
+    if not raw:
+        return None
+    for fmt in ("%Y-%m-%dT%H:%M", "%Y-%m-%d %H:%M:%S", "%Y-%m-%d"):
+        try:
+            return datetime.strptime(raw, fmt)
+        except ValueError:
+            continue
+    return None
+
+
+# ---------------- ELENA DASHBOARD (HTML) ----------------
+@elena_bp.get("/")
+@role_required("partner", "admin")
+def dashboard():
+    """Elena CRM / Content-Engine dashboard (sections A–F of the spec)."""
+    now = datetime.utcnow()
+    week_ago = now - timedelta(days=7)
+
+    total_clients = ElenaClient.query.count()
+    new_leads = (
+        ElenaClient.query.filter(ElenaClient.created_at >= week_ago).count()
+    )
+    active_listings = ElenaListing.query.filter_by(status="active").count()
+    followups_due = ElenaInteraction.query.filter(
+        ElenaInteraction.due_at.isnot(None),
+        ElenaInteraction.due_at <= now + timedelta(days=7),
+    ).count()
+
+    # A — Top summary cards
+    summary = {
+        "total_clients": total_clients,
+        "new_leads": new_leads,
+        "active_listings": active_listings,
+        "followups_due": followups_due,
+    }
+
+    # C — Client pipeline view (cards grouped by pipeline_stage)
+    pipeline_groups = []
+    for stage_key, stage_label in PIPELINE_STAGES:
+        clients = (
+            ElenaClient.query
+            .filter(ElenaClient.pipeline_stage == stage_key)
+            .order_by(ElenaClient.updated_at.desc())
+            .limit(12)
+            .all()
+        )
+        pipeline_groups.append(
+            {
+                "key": stage_key,
+                "label": stage_label,
+                "clients": clients,
+                "count": len(clients),
+            }
+        )
+
+    # Include any clients whose stage does not match the canonical list so
+    # nothing is silently hidden.
+    canonical_keys = {s[0] for s in PIPELINE_STAGES}
+    unstaged = (
+        ElenaClient.query
+        .filter(
+            or_(
+                ElenaClient.pipeline_stage.is_(None),
+                ~ElenaClient.pipeline_stage.in_(canonical_keys),
+            )
+        )
+        .order_by(ElenaClient.updated_at.desc())
+        .limit(12)
+        .all()
+    )
+    if unstaged:
+        pipeline_groups.insert(
+            0,
+            {
+                "key": "unstaged",
+                "label": "Unstaged",
+                "clients": unstaged,
+                "count": len(unstaged),
+            },
+        )
+
+    # D — Activity timeline
+    recent_interactions = (
+        ElenaInteraction.query
+        .order_by(ElenaInteraction.created_at.desc())
+        .limit(10)
+        .all()
+    )
+
+    # F — Listing manager
+    status_filter = (request.args.get("listing_status") or "").strip().lower()
+    listings_query = ElenaListing.query
+    if status_filter and status_filter in {s[0] for s in LISTING_STATUSES}:
+        listings_query = listings_query.filter_by(status=status_filter)
+    listings = listings_query.order_by(ElenaListing.updated_at.desc()).limit(12).all()
+
+    # Recent flyers for the sidebar
+    recent_flyers = (
+        ElenaFlyer.query.order_by(ElenaFlyer.created_at.desc()).limit(5).all()
+    )
+
+    return render_template(
+        "elena/dashboard.html",
+        summary=summary,
+        pipeline_groups=pipeline_groups,
+        pipeline_stages=PIPELINE_STAGES,
+        recent_interactions=recent_interactions,
+        listings=listings,
+        listing_statuses=LISTING_STATUSES,
+        listing_status_filter=status_filter,
+        recent_flyers=recent_flyers,
+        template_types=[t.value for t in TemplateType],
+        portal="partner",
+        portal_name="Partner OS",
+        portal_home=url_for("partners.dashboard"),
+    )
+
+
+# ---------------- ADD CLIENT ----------------
+@elena_bp.route("/clients/new", methods=["GET", "POST"])
+@role_required("partner", "admin")
+def client_new():
+    if request.method == "POST":
+        name = (request.form.get("name") or "").strip()
+        if not name:
+            flash("Client name is required.", "warning")
+            return redirect(url_for("elena.client_new"))
+
+        client = ElenaClient(
+            name=name,
+            email=(request.form.get("email") or None),
+            phone=(request.form.get("phone") or None),
+            role=(request.form.get("role") or None),
+            tags=(request.form.get("tags") or None),
+            pipeline_stage=(request.form.get("pipeline_stage") or "new"),
+            notes=(request.form.get("notes") or None),
+            preferred_areas=(request.form.get("preferred_areas") or None),
+            budget=(request.form.get("budget") or None),
+        )
+        db.session.add(client)
+        db.session.commit()
+        flash(f"Client '{client.name}' added.", "success")
+        return redirect(url_for("elena.dashboard"))
+
+    return render_template(
+        "elena/client_form.html",
+        client=None,
+        pipeline_stages=PIPELINE_STAGES,
+        client_roles=CLIENT_ROLES,
+        portal="partner",
+    )
+
+
+# ---------------- ADD LISTING ----------------
+@elena_bp.route("/listings/new", methods=["GET", "POST"])
+@role_required("partner", "admin")
+def listing_new():
+    if request.method == "POST":
+        address = (request.form.get("address") or "").strip()
+        city = (request.form.get("city") or "").strip()
+        state = (request.form.get("state") or "").strip()
+        zip_code = (request.form.get("zip_code") or "").strip()
+
+        missing = [
+            f
+            for f, v in [
+                ("address", address),
+                ("city", city),
+                ("state", state),
+                ("zip_code", zip_code),
+            ]
+            if not v
+        ]
+        if missing:
+            flash(f"Missing required fields: {', '.join(missing)}", "warning")
+            return redirect(url_for("elena.listing_new"))
+
+        def _int(val):
+            try:
+                return int(val) if val not in (None, "") else None
+            except (TypeError, ValueError):
+                return None
+
+        client_id = _int(request.form.get("client_id"))
+        listing = ElenaListing(
+            mls_number=(request.form.get("mls_number") or None),
+            address=address,
+            city=city,
+            state=state,
+            zip_code=zip_code,
+            beds=_int(request.form.get("beds")),
+            baths=_int(request.form.get("baths")),
+            sqft=_int(request.form.get("sqft")),
+            price=_int(request.form.get("price")),
+            description=(request.form.get("description") or None),
+            status=(request.form.get("status") or "active"),
+            client_id=client_id,
+        )
+        db.session.add(listing)
+        db.session.commit()
+        flash(f"Listing at {listing.address} added.", "success")
+        return redirect(url_for("elena.dashboard"))
+
+    clients = ElenaClient.query.order_by(ElenaClient.name.asc()).all()
+    return render_template(
+        "elena/listing_form.html",
+        listing=None,
+        listing_statuses=LISTING_STATUSES,
+        clients=clients,
+        portal="partner",
+    )
+
+
+# ---------------- LOG INTERACTION ----------------
+@elena_bp.route("/interactions/new", methods=["GET", "POST"])
+@role_required("partner", "admin")
+def interaction_new():
+    if request.method == "POST":
+        try:
+            client_id = int(request.form.get("client_id") or 0)
+        except ValueError:
+            client_id = 0
+
+        interaction_type = (request.form.get("interaction_type") or "").strip()
+        content = (request.form.get("content") or "").strip()
+
+        if not client_id or not interaction_type or not content:
+            flash(
+                "client_id, interaction_type, and content are required.",
+                "warning",
+            )
+            return redirect(url_for("elena.interaction_new"))
+
+        client = ElenaClient.query.get(client_id)
+        if not client:
+            flash("Client not found.", "danger")
+            return redirect(url_for("elena.interaction_new"))
+
+        interaction = ElenaInteraction(
+            client_id=client.id,
+            interaction_type=interaction_type,
+            content=content,
+            meta=(request.form.get("meta") or None),
+            due_at=_parse_due_at(request.form.get("due_at")),
+        )
+        db.session.add(interaction)
+        db.session.commit()
+        flash(
+            f"Interaction logged for {client.name} ({interaction.interaction_type}).",
+            "success",
+        )
+        return redirect(url_for("elena.dashboard"))
+
+    clients = ElenaClient.query.order_by(ElenaClient.name.asc()).all()
+    return render_template(
+        "elena/interaction_form.html",
+        interaction=None,
+        clients=clients,
+        interaction_types=INTERACTION_TYPES,
+        portal="partner",
+    )
 
 
 # ---------------- TEMPLATE LIST (JSON) ----------------

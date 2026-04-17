@@ -91,6 +91,13 @@
       <span>Workspace</span>
     </a>
 
+    <!-- ELENA (CRM + Content Engine) -->
+    <a href="{{ url_for('elena.dashboard') }}"
+       class="ravlo-nav-link {% if ep in ['elena.dashboard', 'elena.client_new', 'elena.listing_new', 'elena.interaction_new', 'elena.template_studio'] %}active{% endif %}">
+      <i class="lucide lucide-sparkles"></i>
+      <span>Elena CRM</span>
+    </a>
+
 
     <!-- GROWTH -->
     <div class="ravlo-nav-section">Growth</div>
