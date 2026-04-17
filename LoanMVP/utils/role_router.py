@@ -1,3 +1,6 @@
+from LoanMVP.utils.decorators import PARTNER_ROLES
+
+
 def _dashboard_for_role(role: str) -> str:
     """
     Return the dashboard endpoint for a given role.
@@ -13,6 +16,8 @@ def _dashboard_for_role(role: str) -> str:
     if role == "executive":
         return "executive.dashboard"
 
+    # Partner sub-categories all route into the Partner OS; /partners/dashboard
+    # handles category-specific rendering via Partner.category.
     role_map = {
         "investor": "investor.command_center",
         "borrower": "borrower.dashboard",
@@ -21,7 +26,7 @@ def _dashboard_for_role(role: str) -> str:
         "processor": "processor.dashboard",
         "underwriter": "underwriter.dashboard",
 
-        "partner": "partners.dashboard",  # ⚠️ fixed typo here
+        **{r: "partners.dashboard" for r in PARTNER_ROLES},
     }
 
     return role_map.get(role, "marketing.homepage")
