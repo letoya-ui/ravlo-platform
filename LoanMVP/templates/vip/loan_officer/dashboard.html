@@ -1,0 +1,20 @@
+{# templates/vip/loan_officer/dashboard.html #}
+{% extends "layouts/ravlo_base.html" %}
+
+{% block title %}Ravlo • VIP Loan Officer{% endblock %}
+{% block page_title %}{{ header_name }}{% endblock %}
+{% block page_subline %}Loan Officer Dashboard — borrowers, pipeline, programs, follow-ups, and assistant actions in one place.{% endblock %}
+
+{% block topbar_actions %}
+  <a href="{{ url_for('vip.ai_pilot') }}" class="ravlo-btn ghost sm">AI Pilot</a>
+  <a href="{{ url_for('vip.finances') }}" class="ravlo-btn primary sm">Finances</a>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto space-y-6">
+  <section class="ravlo-card pad">
+    <h3>VIP Loan Officer Dashboard</h3>
+    <p>This is the shared VIP foundation for loan officer workflows.</p>
+  </section>
+</div>
+{% endblock %}
