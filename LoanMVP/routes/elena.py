@@ -25,6 +25,13 @@ from LoanMVP.services.elena_templates import (
 )
 from LoanMVP.utils.decorators import role_required
 
+from LoanMVP.routes.canva import get_valid_access_token
+from LoanMVP.services.canva_service import (
+    create_design,
+    create_export_job,
+    get_export_job,
+)
+
 elena_bp = Blueprint("elena", __name__, url_prefix="/elena")
 
 
@@ -80,6 +87,7 @@ def _parse_due_at(raw):
             continue
     return None
 
+
 def _template_defaults():
     return {
         "address": "",
@@ -122,7 +130,8 @@ def _get_template_enum(template_type_value):
         return TemplateType(template_type_value)
     except ValueError:
         return None
-        
+
+
 @elena_bp.get("/")
 @role_required("partner_group", "admin")
 def dashboard():
@@ -668,13 +677,218 @@ def template_studio_generate_and_save():
     variables = {
         k: v
         for k, v in request.form.items()
-        if k not in ["template_type", "client_id", "listing_id", "action"]
+        if k not in ["template_type", "client_id", "listing_id", "action", "csrf_token"]
     }
 
-    prompt = render_elena_template(TemplateType(template_type), **variables)
+    template_enum = _get_template_enum(template_type)
+    if not template_enum:
+        flash("Please choose a valid template.", "warning")
+        return redirect(url_for("elena.template_studio"))
+
+    prompt = render_elena_template(template_enum, **variables)
     output = generate_text(prompt)
 
     saved_interaction_id = None
+    saved_flyer_id = None
 
-        
-        
+    if client_id:
+        client = ElenaClient.query.get(client_id)
+        if client:
+            interaction = ElenaInteraction(
+                client_id=client.id,
+                interaction_type=InteractionType.EMAIL,
+                content=output,
+                meta=f"template:{template_type}",
+            )
+            db.session.add(interaction)
+            db.session.commit()
+            saved_interaction_id = interaction.id
+
+    if listing_id:
+        listing = ElenaListing.query.get(listing_id)
+        if listing:
+            flyer = ElenaFlyer(
+                flyer_type=template_type,
+                property_address=listing.address,
+                property_id=str(listing.id),
+                body=output,
+                listing_id=listing.id,
+            )
+            db.session.add(flyer)
+            db.session.commit()
+            saved_flyer_id = flyer.id
+
+    return render_template(
+        "elena/template_studio.html",
+        templates=[t.value for t in TemplateType],
+        selected_template=template_type,
+        variables=variables,
+        client_id=client_id,
+        listing_id=listing_id,
+        preview=prompt,
+        output=output,
+        saved_interaction_id=saved_interaction_id,
+        saved_flyer_id=saved_flyer_id,
+        portal="elena",
+        portal_name="Elena",
+        portal_home=url_for("elena.dashboard"),
+    )
+
+
+@elena_bp.post("/flyers/<int:listing_id>/create-canva")
+@role_required("partner_group", "admin")
+def create_canva_flyer(listing_id):
+    access_token = get_valid_access_token()
+    if not access_token:
+        return jsonify({"error": "Canva not connected"}), 400
+
+    listing = ElenaListing.query.get(listing_id)
+    if not listing:
+        return jsonify({"error": "Listing not found"}), 404
+
+    data = request.json or {}
+    template_type = data.get("template_type") or TemplateType.JUST_LISTED.value
+
+    template_enum = _get_template_enum(template_type)
+    if not template_enum:
+        return jsonify({"error": "Invalid template_type"}), 400
+
+    variables = {
+        "address": listing.address,
+        "city": listing.city,
+        "state": listing.state,
+        "zip_code": listing.zip_code,
+        "beds": listing.beds,
+        "baths": listing.baths,
+        "sqft": listing.sqft,
+        "price": listing.price,
+        "description": getattr(listing, "description", "") or "",
+        "status": getattr(listing, "status", "") or "",
+        "days_on_market": "",
+        "offer_details": "",
+        "date": "",
+        "time": "",
+        "old_price": "",
+        "new_price": "",
+        "buyer_type": "",
+        "budget": "",
+        "areas": "",
+        "area": "",
+        "timeframe": "",
+        "stats": "",
+        "client_name": "",
+        "pipeline_stage": "",
+        "context": "",
+        "source": "",
+        "email": "",
+        "phone": "",
+        "title": "",
+        "cta": "",
+    }
+
+    prompt = render_elena_template(template_enum, **variables)
+    output = generate_text(prompt)
+
+    flyer = ElenaFlyer(
+        flyer_type=template_type,
+        property_address=listing.address,
+        property_id=str(listing.id),
+        body=output,
+        listing_id=listing.id,
+    )
+    db.session.add(flyer)
+    db.session.flush()
+
+    design_title = f"{listing.address} - {template_type.replace('_', ' ').title()}"
+    design = create_design(access_token, title=design_title)
+
+    flyer.canva_design_id = design.get("id") or design.get("design_id")
+    flyer.canva_edit_url = design.get("edit_url") or design.get("urls", {}).get("edit_url")
+    flyer.canva_status = "created"
+    flyer.canva_last_synced_at = datetime.utcnow()
+
+    db.session.commit()
+
+    return jsonify(
+        {
+            "flyer_id": flyer.id,
+            "listing_id": listing.id,
+            "template_type": template_type,
+            "prompt": prompt,
+            "output": output,
+            "canva_design_id": flyer.canva_design_id,
+            "canva_edit_url": flyer.canva_edit_url,
+            "canva_status": flyer.canva_status,
+        }
+    ), 201
+
+
+@elena_bp.post("/flyers/<int:flyer_id>/export-canva")
+@role_required("partner_group", "admin")
+def export_canva_flyer(flyer_id):
+    access_token = get_valid_access_token()
+    if not access_token:
+        return jsonify({"error": "Canva not connected"}), 400
+
+    flyer = ElenaFlyer.query.get(flyer_id)
+    if not flyer:
+        return jsonify({"error": "Flyer not found"}), 404
+
+    if not getattr(flyer, "canva_design_id", None):
+        return jsonify({"error": "Flyer has no Canva design"}), 400
+
+    export_type = (request.json or {}).get("export_type") or "pdf"
+    job = create_export_job(access_token, flyer.canva_design_id, export_type=export_type)
+
+    flyer.canva_export_job_id = job.get("id") or job.get("job_id")
+    flyer.canva_status = "export_pending"
+    flyer.canva_last_synced_at = datetime.utcnow()
+    db.session.commit()
+
+    return jsonify(
+        {
+            "flyer_id": flyer.id,
+            "canva_design_id": flyer.canva_design_id,
+            "canva_export_job_id": flyer.canva_export_job_id,
+            "canva_status": flyer.canva_status,
+        }
+    ), 202
+
+
+@elena_bp.get("/flyers/<int:flyer_id>/export-canva-status")
+@role_required("partner_group", "admin")
+def export_canva_flyer_status(flyer_id):
+    access_token = get_valid_access_token()
+    if not access_token:
+        return jsonify({"error": "Canva not connected"}), 400
+
+    flyer = ElenaFlyer.query.get(flyer_id)
+    if not flyer:
+        return jsonify({"error": "Flyer not found"}), 404
+
+    if not getattr(flyer, "canva_export_job_id", None):
+        return jsonify({"error": "No Canva export job found"}), 400
+
+    job = get_export_job(access_token, flyer.canva_export_job_id)
+
+    status = job.get("status", "unknown")
+    download_url = (
+        job.get("download_url")
+        or job.get("urls", {}).get("download_url")
+        or job.get("result", {}).get("url")
+    )
+
+    flyer.canva_status = status
+    if download_url:
+        flyer.canva_export_url = download_url
+    flyer.canva_last_synced_at = datetime.utcnow()
+    db.session.commit()
+
+    return jsonify(
+        {
+            "flyer_id": flyer.id,
+            "canva_export_job_id": flyer.canva_export_job_id,
+            "canva_status": flyer.canva_status,
+            "canva_export_url": flyer.canva_export_url,
+        }
+    )
