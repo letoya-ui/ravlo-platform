@@ -1,0 +1,727 @@
+{% extends "layouts/ravlo_base.html" %}
+
+{% block title %}Ravlo • Design Studio{% endblock %}
+{% block page_title %}{{ header_name }}{% endblock %}
+{% block page_subline %}
+Upload a blueprint or floor plan, mark changes, and explore redesign ideas.
+{% endblock %}
+
+{% block topbar_actions %}
+  {% if 'ai_pilot' in modules %}
+    <a href="{{ url_for('vip.ai_pilot') }}" class="ravlo-btn ghost sm">AI Pilot</a>
+  {% endif %}
+  <a href="{{ url_for('vip.onboarding') }}" class="ravlo-btn ghost sm">Customize</a>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto space-y-6">
+
+  <section class="ravlo-card pad">
+    <div class="design-studio-hero">
+      <div>
+        <h3 class="text-xl font-semibold">Design Studio</h3>
+        <p class="text-sm text-gray-400 mt-2">
+          Review floor plans, mark walls, explore room redesigns, and save layout ideas
+          before turning them into next steps, notes, or scope.
+        </p>
+      </div>
+
+      <div class="design-studio-badges">
+        {% if vip_profile.role_type == 'realtor' %}
+          <span class="design-badge">Realtor Use: Show potential</span>
+        {% elif vip_profile.role_type == 'designer' %}
+          <span class="design-badge">Designer Use: Plan layouts</span>
+        {% elif vip_profile.role_type == 'contractor' %}
+          <span class="design-badge">Contractor Use: Scope changes</span>
+        {% else %}
+          <span class="design-badge">VIP Design Module</span>
+        {% endif %}
+      </div>
+    </div>
+  </section>
+
+  <div class="grid grid-cols-1 xl:grid-cols-[320px_minmax(0,1fr)_340px] gap-6">
+
+    <!-- LEFT SIDEBAR -->
+    <aside class="space-y-6">
+
+      <section class="ravlo-card pad">
+        <h3 class="text-lg font-semibold mb-3">Project Setup</h3>
+
+        <form method="POST" action="{{ url_for('vip.create_design_project') }}" enctype="multipart/form-data" class="space-y-4">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+          <div>
+            <label class="design-label">Project Title</label>
+            <input
+              type="text"
+              name="title"
+              class="design-input"
+              placeholder="Kitchen + living room redesign"
+              value="{{ project.title if project else '' }}"
+              required
+            >
+          </div>
+
+          <div>
+            <label class="design-label">Source File URL (optional for now)</label>
+            <input
+              type="text"
+              name="source_file"
+              class="design-input"
+              placeholder="Blueprint URL or uploaded file path"
+              value="{{ project.source_file if project else '' }}"
+            >
+          </div>
+
+          <div>
+            <label class="design-label">Upload Blueprint / Floor Plan</label>
+            <label class="design-upload">
+              <input type="file" hidden disabled>
+              <div class="design-upload-icon">
+                <i class="lucide lucide-upload-cloud"></i>
+              </div>
+              <div class="design-upload-copy">
+                <strong>Upload wiring comes next</strong>
+                <span>For now, create the project and start saving annotations.</span>
+              </div>
+            </label>
+          </div>
+
+          <button type="submit" class="ravlo-btn primary w-full">
+            {% if project %}Update Project Later{% else %}Start Project{% endif %}
+          </button>
+        </form>
+      </section>
+
+      <section class="ravlo-card pad">
+        <h3 class="text-lg font-semibold mb-3">Tools</h3>
+
+        <div class="design-tool-grid">
+          <button type="button" class="design-tool-btn active" data-tool="select">
+            <i class="lucide lucide-mouse-pointer-click"></i>
+            <span>Select</span>
+          </button>
+
+          <button type="button" class="design-tool-btn" data-tool="area">
+            <i class="lucide lucide-square-dashed-mouse-pointer"></i>
+            <span>Mark Area</span>
+          </button>
+
+          <button type="button" class="design-tool-btn" data-tool="remove_wall">
+            <i class="lucide lucide-panel-left-close"></i>
+            <span>Remove Wall</span>
+          </button>
+
+          <button type="button" class="design-tool-btn" data-tool="move_wall">
+            <i class="lucide lucide-move-diagonal-2"></i>
+            <span>Move Wall</span>
+          </button>
+
+          <button type="button" class="design-tool-btn" data-tool="redesign_room">
+            <i class="lucide lucide-sofa"></i>
+            <span>Redesign Room</span>
+          </button>
+
+          <button type="button" class="design-tool-btn" data-tool="note">
+            <i class="lucide lucide-sticky-note"></i>
+            <span>Add Note</span>
+          </button>
+        </div>
+      </section>
+
+      <section class="ravlo-card pad">
+        <h3 class="text-lg font-semibold mb-3">Saved Ideas</h3>
+
+        {% if annotations %}
+          <div class="space-y-3">
+            {% for item in annotations %}
+              <div class="design-list-item">
+                <strong>{{ item.label or "Untitled annotation" }}</strong>
+                <p>
+                  {{ item.action_type or "review" }} · {{ item.annotation_type or "area" }}
+                  {% if item.body %}<br>{{ item.body }}{% endif %}
+                </p>
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="design-list-item">
+            <strong>No saved annotations yet</strong>
+            <p>Create a project, click the canvas, and save your first design note.</p>
+          </div>
+        {% endif %}
+      </section>
+
+    </aside>
+
+    <!-- CENTER CANVAS -->
+    <section class="space-y-6">
+
+      <section class="ravlo-card pad">
+        <div class="design-canvas-head">
+          <div>
+            <h3 class="text-lg font-semibold">Blueprint Canvas</h3>
+            <p class="text-sm text-gray-400">
+              Click anywhere on the canvas to place a new annotation draft, then save it from the right panel.
+            </p>
+          </div>
+
+          <div class="flex flex-wrap gap-2">
+            {% if project %}
+              <span class="design-badge">Project #{{ project.id }}</span>
+            {% else %}
+              <span class="design-badge">No project selected</span>
+            {% endif %}
+            <button type="button" class="ravlo-btn ghost sm" onclick="resetDraftPosition()">Reset Draft</button>
+          </div>
+        </div>
+
+        <div class="design-canvas-wrap">
+          <div class="design-canvas-board">
+            <div class="design-blueprint-placeholder" id="blueprintCanvas">
+
+              <div class="design-blueprint-grid"></div>
+
+              <div class="design-room room-kitchen">Kitchen</div>
+              <div class="design-room room-living">Living</div>
+              <div class="design-room room-bed">Bedroom</div>
+              <div class="design-room room-bath">Bath</div>
+
+              {% for item in annotations %}
+                <div
+                  class="design-annotation design-annotation-db {{ 'annotation-remove' if item.action_type == 'remove' else 'annotation-redesign' }}"
+                  style="
+                    left: {{ item.x or 20 }}px;
+                    top: {{ item.y or 20 }}px;
+                    width: {{ item.width or 140 }}px;
+                    min-height: {{ item.height or 36 }}px;
+                  "
+                  title="{{ item.body or '' }}"
+                >
+                  {{ item.label or (item.action_type or 'Annotation')|title }}
+                </div>
+              {% endfor %}
+
+              <div id="draftAnnotation" class="design-annotation design-annotation-draft hidden">
+                New Annotation
+              </div>
+
+              <div class="design-canvas-empty-state">
+                <i class="lucide lucide-drafting-compass"></i>
+                <strong>Blueprint workspace</strong>
+                <span>
+                  {% if project %}
+                    Click anywhere on the canvas to place your next annotation.
+                  {% else %}
+                    Create a project first, then start placing annotations.
+                  {% endif %}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="ravlo-card pad">
+        <h3 class="text-lg font-semibold mb-3">Project Notes</h3>
+        <textarea class="design-textarea" rows="6" placeholder="Add design thinking, scope ideas, structural questions, room concepts, or client notes...">{{ project.notes if project and project.notes else '' }}</textarea>
+      </section>
+    </section>
+
+    <!-- RIGHT PANEL -->
+    <aside class="space-y-6">
+
+      <section class="ravlo-card pad">
+        <h3 class="text-lg font-semibold mb-3">Selected Item</h3>
+
+        <div class="space-y-4">
+          <input type="hidden" id="projectId" value="{{ project.id if project else '' }}">
+          <input type="hidden" id="annotationX" value="">
+          <input type="hidden" id="annotationY" value="">
+          <input type="hidden" id="annotationWidth" value="140">
+          <input type="hidden" id="annotationHeight" value="36">
+
+          <div>
+            <label class="design-label">Type</label>
+            <select class="design-input" id="annotationType">
+              <option value="wall">Wall</option>
+              <option value="room">Room</option>
+              <option value="area" selected>Area</option>
+              <option value="note">Note</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="design-label">Action</label>
+            <select class="design-input" id="annotationAction">
+              <option value="remove">Remove</option>
+              <option value="move">Move</option>
+              <option value="redesign" selected>Redesign</option>
+              <option value="expand">Expand</option>
+              <option value="combine">Combine</option>
+              <option value="review">Review</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="design-label">Label</label>
+            <input type="text" class="design-input" id="annotationLabel" placeholder="Open kitchen wall">
+          </div>
+
+          <div>
+            <label class="design-label">Details</label>
+            <textarea class="design-textarea" rows="5" id="annotationBody" placeholder="Describe the concept, concern, or redesign opportunity..."></textarea>
+          </div>
+
+          <div class="space-y-2">
+            <button type="button" class="ravlo-btn primary w-full" onclick="saveAnnotation()">
+              Save Annotation
+            </button>
+            <button type="button" class="ravlo-btn ghost w-full">
+              Send to AI Pilot
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <section class="ravlo-card pad">
+        <h3 class="text-lg font-semibold mb-3">Next-Step Actions</h3>
+
+        <div class="space-y-3">
+          <button type="button" class="design-action-btn">
+            <i class="lucide lucide-file-text"></i>
+            <span>Generate redesign summary</span>
+          </button>
+
+          <button type="button" class="design-action-btn">
+            <i class="lucide lucide-mail"></i>
+            <span>Draft client email</span>
+          </button>
+
+          <button type="button" class="design-action-btn">
+            <i class="lucide lucide-clipboard-list"></i>
+            <span>Create scope notes</span>
+          </button>
+
+          <button type="button" class="design-action-btn">
+            <i class="lucide lucide-wallet"></i>
+            <span>Turn into budget ideas</span>
+          </button>
+        </div>
+      </section>
+
+      <section class="ravlo-card pad">
+        <h3 class="text-lg font-semibold mb-3">Important Note</h3>
+        <p class="text-sm text-gray-400 leading-6">
+          Design Studio captures conceptual layout ideas. Structural changes like wall removal
+          should be reviewed by the appropriate contractor, architect, or engineer before execution.
+        </p>
+      </section>
+
+    </aside>
+
+  </div>
+</div>
+{% endblock %}
+
+{% block head %}
+<style>
+  .design-studio-hero {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .design-studio-badges {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .design-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 6px 10px;
+    border-radius: 999px;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.08);
+    color: #dbe7f3;
+    font-size: 0.8rem;
+  }
+
+  .design-label {
+    display: block;
+    font-size: 0.85rem;
+    color: #b7c7d8;
+    margin-bottom: 6px;
+  }
+
+  .design-input,
+  .design-textarea {
+    width: 100%;
+    background: rgba(255,255,255,0.04);
+    color: #fff;
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 10px;
+    padding: 10px 12px;
+    font-size: 0.92rem;
+  }
+
+  .design-upload {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    padding: 14px;
+    border-radius: 14px;
+    border: 1px dashed rgba(255,255,255,0.2);
+    background: rgba(255,255,255,0.03);
+    cursor: not-allowed;
+  }
+
+  .design-upload-icon {
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
+    display: grid;
+    place-items: center;
+    background: rgba(255,255,255,0.06);
+    color: #dbe7f3;
+  }
+
+  .design-upload-copy {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .design-upload-copy strong {
+    color: #fff;
+    font-size: 0.92rem;
+  }
+
+  .design-upload-copy span {
+    color: #9db0c3;
+    font-size: 0.82rem;
+  }
+
+  .design-tool-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .design-tool-btn {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    align-items: center;
+    justify-content: center;
+    min-height: 88px;
+    border-radius: 14px;
+    border: 1px solid rgba(255,255,255,0.08);
+    background: rgba(255,255,255,0.03);
+    color: #dce7f2;
+    font-size: 0.85rem;
+    text-align: center;
+    padding: 10px;
+  }
+
+  .design-tool-btn.active {
+    border-color: rgba(79,140,255,0.5);
+    background: rgba(79,140,255,0.12);
+  }
+
+  .design-list-item {
+    padding: 12px;
+    border-radius: 12px;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.08);
+  }
+
+  .design-list-item strong {
+    display: block;
+    color: #fff;
+    font-size: 0.9rem;
+  }
+
+  .design-list-item p {
+    margin-top: 4px;
+    color: #9db0c3;
+    font-size: 0.82rem;
+    line-height: 1.45;
+  }
+
+  .design-canvas-head {
+    display: flex;
+    justify-content: space-between;
+    gap: 14px;
+    flex-wrap: wrap;
+    margin-bottom: 14px;
+  }
+
+  .design-canvas-wrap {
+    border-radius: 18px;
+    overflow: hidden;
+    border: 1px solid rgba(255,255,255,0.08);
+    background: rgba(255,255,255,0.02);
+  }
+
+  .design-canvas-board {
+    min-height: 720px;
+    padding: 20px;
+  }
+
+  .design-blueprint-placeholder {
+    position: relative;
+    min-height: 680px;
+    border-radius: 18px;
+    background:
+      linear-gradient(rgba(255,255,255,0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.04) 1px, transparent 1px),
+      rgba(11,16,24,0.95);
+    background-size: 28px 28px, 28px 28px, auto;
+    overflow: hidden;
+  }
+
+  .design-blueprint-grid {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background:
+      linear-gradient(rgba(79,140,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(79,140,255,0.03) 1px, transparent 1px);
+    background-size: 112px 112px;
+  }
+
+  .design-room {
+    position: absolute;
+    border: 2px solid rgba(255,255,255,0.18);
+    background: rgba(255,255,255,0.02);
+    color: #dbe7f3;
+    font-size: 0.82rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+  }
+
+  .room-kitchen { left: 60px; top: 110px; width: 210px; height: 170px; }
+  .room-living  { left: 300px; top: 90px; width: 280px; height: 220px; }
+  .room-bed     { left: 110px; top: 340px; width: 220px; height: 180px; }
+  .room-bath    { left: 380px; top: 360px; width: 130px; height: 120px; }
+
+  .design-annotation {
+    position: absolute;
+    padding: 8px 10px;
+    border-radius: 999px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    backdrop-filter: blur(4px);
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  .annotation-remove {
+    background: rgba(255,96,96,0.18);
+    border: 1px solid rgba(255,96,96,0.45);
+    color: #ffd0d0;
+  }
+
+  .annotation-redesign {
+    background: rgba(90,170,255,0.16);
+    border: 1px solid rgba(90,170,255,0.4);
+    color: #d7e9ff;
+  }
+
+  .design-annotation-draft {
+    background: rgba(255,255,255,0.12);
+    border: 1px dashed rgba(255,255,255,0.45);
+    color: #ffffff;
+    z-index: 5;
+  }
+
+  .hidden {
+    display: none !important;
+  }
+
+  .design-canvas-empty-state {
+    position: absolute;
+    right: 22px;
+    bottom: 22px;
+    width: 240px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 14px;
+    border-radius: 14px;
+    background: rgba(7,10,16,0.84);
+    border: 1px solid rgba(255,255,255,0.08);
+  }
+
+  .design-canvas-empty-state i {
+    color: #dbe7f3;
+  }
+
+  .design-canvas-empty-state strong {
+    color: #fff;
+    font-size: 0.92rem;
+  }
+
+  .design-canvas-empty-state span {
+    color: #9db0c3;
+    font-size: 0.8rem;
+    line-height: 1.45;
+  }
+
+  .design-action-btn {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 14px;
+    border-radius: 12px;
+    border: 1px solid rgba(255,255,255,0.08);
+    background: rgba(255,255,255,0.03);
+    color: #dbe7f3;
+    text-align: left;
+  }
+
+  @media (max-width: 1400px) {
+    .design-canvas-board {
+      min-height: 620px;
+    }
+
+    .design-blueprint-placeholder {
+      min-height: 580px;
+    }
+  }
+
+  @media (max-width: 900px) {
+    .design-tool-grid {
+      grid-template-columns: 1fr 1fr;
+    }
+
+    .design-canvas-board {
+      min-height: 480px;
+      padding: 12px;
+    }
+
+    .design-blueprint-placeholder {
+      min-height: 440px;
+    }
+
+    .room-kitchen { left: 24px; top: 50px; width: 140px; height: 110px; }
+    .room-living  { left: 180px; top: 40px; width: 180px; height: 140px; }
+    .room-bed     { left: 50px; top: 220px; width: 150px; height: 120px; }
+    .room-bath    { left: 235px; top: 225px; width: 95px; height: 90px; }
+
+    .design-canvas-empty-state {
+      width: calc(100% - 24px);
+      left: 12px;
+      right: 12px;
+      bottom: 12px;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  const blueprintCanvas = document.getElementById("blueprintCanvas");
+  const draftAnnotation = document.getElementById("draftAnnotation");
+  const projectIdInput = document.getElementById("projectId");
+  const annotationX = document.getElementById("annotationX");
+  const annotationY = document.getElementById("annotationY");
+  const annotationWidth = document.getElementById("annotationWidth");
+  const annotationHeight = document.getElementById("annotationHeight");
+  const annotationType = document.getElementById("annotationType");
+  const annotationAction = document.getElementById("annotationAction");
+  const annotationLabel = document.getElementById("annotationLabel");
+  const annotationBody = document.getElementById("annotationBody");
+
+  function resetDraftPosition() {
+    annotationX.value = "";
+    annotationY.value = "";
+    draftAnnotation.classList.add("hidden");
+  }
+
+  if (blueprintCanvas) {
+    blueprintCanvas.addEventListener("click", function (event) {
+      const projectId = projectIdInput.value;
+      if (!projectId) {
+        alert("Create a project first.");
+        return;
+      }
+
+      const rect = blueprintCanvas.getBoundingClientRect();
+      const x = Math.round(event.clientX - rect.left);
+      const y = Math.round(event.clientY - rect.top);
+
+      annotationX.value = x;
+      annotationY.value = y;
+
+      draftAnnotation.style.left = x + "px";
+      draftAnnotation.style.top = y + "px";
+      draftAnnotation.style.width = (annotationWidth.value || 140) + "px";
+      draftAnnotation.style.minHeight = (annotationHeight.value || 36) + "px";
+      draftAnnotation.textContent = annotationLabel.value || "New Annotation";
+      draftAnnotation.classList.remove("hidden");
+    });
+  }
+
+  annotationLabel?.addEventListener("input", function () {
+    if (!draftAnnotation.classList.contains("hidden")) {
+      draftAnnotation.textContent = annotationLabel.value || "New Annotation";
+    }
+  });
+
+  async function saveAnnotation() {
+    const projectId = projectIdInput.value;
+    if (!projectId) {
+      alert("Create a project first.");
+      return;
+    }
+
+    if (!annotationX.value || !annotationY.value) {
+      alert("Click the canvas to place the annotation first.");
+      return;
+    }
+
+    const payload = {
+      project_id: parseInt(projectId, 10),
+      type: annotationType.value,
+      action: annotationAction.value,
+      label: annotationLabel.value,
+      body: annotationBody.value,
+      x: parseInt(annotationX.value, 10),
+      y: parseInt(annotationY.value, 10),
+      width: parseInt(annotationWidth.value || "140", 10),
+      height: parseInt(annotationHeight.value || "36", 10)
+    };
+
+    try {
+      const response = await fetch("{{ url_for('vip.save_annotation') }}", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRFToken": "{{ csrf_token() }}"
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to save annotation");
+      }
+
+      window.location.href = "{{ url_for('vip.design_studio') }}" + "?project_id=" + projectId;
+    } catch (error) {
+      alert("Could not save annotation.");
+      console.error(error);
+    }
+  }
+</script>
+{% endblock %}

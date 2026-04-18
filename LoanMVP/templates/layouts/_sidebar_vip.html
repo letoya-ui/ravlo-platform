@@ -43,6 +43,14 @@
       </a>
     {% endif %}
 
+    {% if modules is defined and 'design_studio' in modules %}
+      <a href="{{ url_for('vip.design_studio') }}"
+         class="ravlo-nav-link {% if ep == 'vip.design_studio' %}active{% endif %}">
+      <i class="lucide lucide-layout-template"></i>
+      <span>Design Studio</span>
+    </a>
+  {% endif %}
+
     <a href="{{ url_for('vip.onboarding') }}"
        class="ravlo-nav-link {% if ep in ['vip.onboarding', 'vip.onboarding_save'] %}active{% endif %}">
       <i class="lucide lucide-sliders-horizontal"></i>

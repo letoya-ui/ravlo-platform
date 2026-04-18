@@ -142,6 +142,7 @@ class VIPIncome(VIPBaseModel):
 
     vip_profile = relationship("VIPProfile", back_populates="incomes")
     contact = relationship("VIPContact")
+    design_projects = relationship("VIPDesignProject", lazy=True)
 
     def __repr__(self):
         return f"<VIPIncome {self.id} - {self.category}>"
@@ -228,3 +229,36 @@ class VIPNotification(VIPBaseModel):
 
     def __repr__(self):
         return f"<VIPNotification {self.id} - {self.notification_type}>"
+
+class VIPDesignProject(db.Model):
+    __tablename__ = "vip_design_projects"
+
+    id = db.Column(db.Integer, primary_key=True)
+    vip_profile_id = db.Column(db.Integer, db.ForeignKey("vip_profiles.id"), nullable=False)
+    title = db.Column(db.String(255), nullable=False)
+    source_file = db.Column(db.Text, nullable=True)
+
+    notes = db.Column(db.Text, nullable=True)
+
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class VIPDesignAnnotation(db.Model):
+    __tablename__ = "vip_design_annotations"
+
+    id = db.Column(db.Integer, primary_key=True)
+    project_id = db.Column(db.Integer, db.ForeignKey("vip_design_projects.id"), nullable=False)
+
+    annotation_type = db.Column(db.String(50))  # wall, room, note
+    action_type = db.Column(db.String(50))      # remove, move, redesign
+
+    label = db.Column(db.String(255))
+    body = db.Column(db.Text)
+
+    x = db.Column(db.Integer)
+    y = db.Column(db.Integer)
+    width = db.Column(db.Integer)
+    height = db.Column(db.Integer)
+
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)

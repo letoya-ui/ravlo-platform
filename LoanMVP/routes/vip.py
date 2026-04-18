@@ -110,6 +110,7 @@ def inject_vip_context():
         "modules": get_enabled_modules(profile),
     }
 
+
 @vip_bp.get("/")
 @role_required("partner_group", "admin")
 def index():
@@ -330,3 +331,99 @@ def onboarding_save():
 
     flash("VIP setup saved.", "success")
     return redirect(url_for("vip.index"))
+
+@vip_bp.get("/design-studio")
+@role_required("partner_group", "admin")
+def design_studio():
+    profile = get_or_create_vip_profile()
+
+    project_id = request.args.get("project_id", type=int)
+    project = None
+    annotations = []
+
+    if project_id:
+        project = VIPDesignProject.query.filter_by(
+            id=project_id,
+            vip_profile_id=profile.id,
+        ).first()
+
+        if project:
+            annotations = (
+                VIPDesignAnnotation.query
+                .filter_by(project_id=project.id)
+                .order_by(VIPDesignAnnotation.created_at.asc())
+                .all()
+            )
+
+    return render_template(
+        "vip/design_studio.html",
+        vip_profile=profile,
+        modules=get_enabled_modules(profile),
+        header_name=get_dashboard_name(profile),
+        project=project,
+        annotations=annotations,
+        portal="vip",
+        portal_name="VIP",
+        portal_home=url_for("vip.index"),
+    )
+
+
+@vip_bp.post("/design-studio/create")
+@role_required("partner_group", "admin")
+def create_design_project():
+    profile = get_or_create_vip_profile()
+
+    title = (request.form.get("title") or "").strip()
+    source_file = (request.form.get("source_file") or "").strip() or None
+
+    if not title:
+        flash("Project title is required.", "warning")
+        return redirect(url_for("vip.design_studio"))
+
+    project = VIPDesignProject(
+        vip_profile_id=profile.id,
+        title=title,
+        source_file=source_file,
+    )
+
+    db.session.add(project)
+    db.session.commit()
+
+    flash("Design project created.", "success")
+    return redirect(url_for("vip.design_studio", project_id=project.id))
+
+
+@vip_bp.post("/design-studio/annotation")
+@role_required("partner_group", "admin")
+def save_annotation():
+    profile = get_or_create_vip_profile()
+    data = request.get_json() or {}
+
+    project_id = data.get("project_id")
+    project = VIPDesignProject.query.filter_by(
+        id=project_id,
+        vip_profile_id=profile.id,
+    ).first()
+
+    if not project:
+        return jsonify({"error": "Project not found"}), 404
+
+    annotation = VIPDesignAnnotation(
+        project_id=project.id,
+        annotation_type=data.get("type"),
+        action_type=data.get("action"),
+        label=data.get("label"),
+        body=data.get("body"),
+        x=data.get("x"),
+        y=data.get("y"),
+        width=data.get("width"),
+        height=data.get("height"),
+    )
+
+    db.session.add(annotation)
+    db.session.commit()
+
+    return jsonify({
+        "status": "ok",
+        "annotation_id": annotation.id,
+    }), 201
