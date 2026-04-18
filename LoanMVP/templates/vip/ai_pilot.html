@@ -1,0 +1,34 @@
+{# templates/vip/ai_pilot.html #}
+{% extends "layouts/ravlo_base.html" %}
+
+{% block title %}Ravlo • VIP AI Pilot{% endblock %}
+{% block page_title %}{{ header_name }}{% endblock %}
+{% block page_subline %}Type what you want Ravlo to do, then review the suggestion.{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto space-y-6">
+  <section class="ravlo-card pad">
+    <form method="POST" action="{{ url_for('vip.ai_pilot_command') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <label>Command</label>
+      <input name="command" class="border rounded px-3 py-2 w-full" placeholder="Email Sarah and say I’m sending comps tonight">
+      <div style="margin-top:12px;">
+        <button type="submit" class="ravlo-btn primary">Create Suggestion</button>
+      </div>
+    </form>
+  </section>
+
+  <section class="ravlo-card pad">
+    <h3>Recent Suggestions</h3>
+    {% for item in suggestions %}
+      <div style="padding:12px 0;border-top:1px solid rgba(255,255,255,.08);">
+        <strong>{{ item.title }}</strong>
+        <div>{{ item.body or "—" }}</div>
+        <div>Status: {{ item.status }}</div>
+      </div>
+    {% else %}
+      <div>No suggestions yet.</div>
+    {% endfor %}
+  </section>
+</div>
+{% endblock %}
