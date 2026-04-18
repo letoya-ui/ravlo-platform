@@ -3,7 +3,6 @@
 
 <div class="ravlo-sidebar-inner">
 
-  <!-- BRAND -->
   <div class="ravlo-sidebar-brand">
     <a href="{{ url_for('partners.dashboard') }}" class="ravlo-brand-link">
       <div class="ravlo-brand-mark">
@@ -20,7 +19,6 @@
 
   <nav class="ravlo-sidebar-nav">
 
-    <!-- COMMAND -->
     <div class="ravlo-nav-section">Command</div>
 
     <a href="{{ url_for('partners.dashboard') }}"
@@ -49,8 +47,6 @@
       <span>Partner Center</span>
     </a>
 
-
-    <!-- BUSINESS -->
     <div class="ravlo-nav-section">Business</div>
 
     <a href="{{ url_for('partners.listing') }}"
@@ -65,14 +61,12 @@
       <span>Leads</span>
     </a>
 
-    <!-- NEW: Lead Inbox (Requests) -->
     <a href="{{ url_for('partners.requests_inbox') }}"
        class="ravlo-nav-link {% if ep in ['partners.requests_inbox', 'partners.request_detail', 'partners.update_request_status'] %}active{% endif %}">
       <i class="lucide lucide-mail-check"></i>
       <span>Lead Inbox</span>
     </a>
 
-    <!-- NEW: Proposals -->
     <a href="{{ url_for('partners.proposals') }}"
        class="ravlo-nav-link {% if ep in ['partners.proposals', 'partners.create_proposal', 'partners.proposal_detail'] %}active{% endif %}">
       <i class="lucide lucide-file-text"></i>
@@ -91,18 +85,24 @@
       <span>Workspace</span>
     </a>
 
-    <!-- ELENA (CRM + Content Engine) -->
-    <a href="{{ url_for('elena.dashboard') }}"
-       class="ravlo-nav-link {% if ep in ['elena.dashboard', 'elena.client_new', 'elena.listing_new', 'elena.interaction_new', 'elena.template_studio'] %}active{% endif %}">
+    <a href="{{ url_for('vip.index') }}"
+       class="ravlo-nav-link {% if ep in [
+         'vip.index',
+         'vip.realtor_dashboard',
+         'vip.contractor_dashboard',
+         'vip.designer_dashboard',
+         'vip.partner_dashboard',
+         'vip.loan_officer_dashboard',
+         'vip.finances',
+         'vip.ai_pilot',
+         'vip.ai_pilot_command'
+       ] %}active{% endif %}">
       <i class="lucide lucide-sparkles"></i>
-      <span>Elena CRM</span>
+      <span>VIP Workspace</span>
     </a>
 
-
-    <!-- GROWTH -->
     <div class="ravlo-nav-section">Growth</div>
 
-    <!-- NEW: Growth Plans -->
     <a href="{{ url_for('partners.upgrade') }}"
        class="ravlo-nav-link {% if ep == 'partners.upgrade' %}active{% endif %}">
       <i class="lucide lucide-badge-dollar-sign"></i>
@@ -123,8 +123,6 @@
 
   </nav>
 
-
-  <!-- SYSTEM -->
   <div class="ravlo-sidebar-footer-simple">
 
     <div class="ravlo-nav-section">System</div>
