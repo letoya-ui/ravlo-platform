@@ -14,163 +14,301 @@ Build flyers, follow-ups, and social posts with client and listing details fille
 {% endblock %}
 
 {% block content %}
-<div class="max-w-6xl mx-auto space-y-6">
+<div class="partner-dashboard-page">
+  <div class="elena-studio-layout">
 
-  <section class="ravlo-card pad">
-    <div class="mb-4">
-      <h2 class="text-xl font-semibold">Template Studio</h2>
-      <p class="text-sm text-gray-400">
-        Choose a template, optionally load a client or listing, then preview, generate, and save.
-      </p>
-    </div>
-
-    <form method="GET" action="{{ url_for('elena.template_studio') }}" class="space-y-6">
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-
+    <section class="ravlo-card partner-section-card">
+      <div class="section-head">
         <div>
-          <label class="font-medium block mb-2">Client ID (optional)</label>
-          <input
-            name="client_id"
-            value="{{ client_id or '' }}"
-            class="border rounded px-3 py-2 w-full bg-white text-black"
-            placeholder="Enter client ID"
-          >
+          <h3>Template Studio</h3>
+          <p>Choose a template, optionally load a client or listing, then preview, generate, and save.</p>
         </div>
-
-        <div>
-          <label class="font-medium block mb-2">Listing ID (optional)</label>
-          <input
-            name="listing_id"
-            value="{{ listing_id or '' }}"
-            class="border rounded px-3 py-2 w-full bg-white text-black"
-            placeholder="Enter listing ID"
-          >
-        </div>
-
-        <div>
-          <label class="font-medium block mb-2">Template Type</label>
-          <select name="template_type" class="border rounded px-3 py-2 w-full bg-white text-black">
-            <option value="">Select a template</option>
-            {% for t in templates %}
-              <option value="{{ t }}" {% if selected_template == t %}selected{% endif %}>
-                {{ t.replace("_", " ").title() }}
-              </option>
-            {% endfor %}
-          </select>
-        </div>
-
       </div>
 
-      <button class="ravlo-btn primary" type="submit">
-        Load Template
-      </button>
-    </form>
-  </section>
+      <form method="GET" action="{{ url_for('elena.template_studio') }}" class="elena-form">
+        <div class="elena-form-grid elena-form-grid-3">
+          <label>
+            Client ID (optional)
+            <input
+              name="client_id"
+              value="{{ client_id or '' }}"
+              placeholder="Enter client ID"
+            >
+          </label>
 
-  {% if selected_template %}
-    <section class="ravlo-card pad">
-      <div class="mb-4">
-        <h3 class="text-lg font-semibold">Template Details</h3>
-        <p class="text-sm text-gray-400">
-          Review or edit the values below before previewing.
-        </p>
-      </div>
+          <label>
+            Listing ID (optional)
+            <input
+              name="listing_id"
+              value="{{ listing_id or '' }}"
+              placeholder="Enter listing ID"
+            >
+          </label>
 
-      <form method="POST" action="{{ url_for('elena.template_studio_preview') }}" class="space-y-6">
-        <input type="hidden" name="template_type" value="{{ selected_template }}">
-        <input type="hidden" name="client_id" value="{{ client_id or '' }}">
-        <input type="hidden" name="listing_id" value="{{ listing_id or '' }}">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {% for key, value in variables.items() %}
-            <div>
-              <label class="font-medium block mb-2">{{ key.replace('_', ' ').title() }}</label>
-              <input
-                name="{{ key }}"
-                value="{{ value }}"
-                class="border rounded px-3 py-2 w-full bg-white text-black"
-              >
-            </div>
-          {% endfor %}
+          <label>
+            Template Type
+            <select name="template_type">
+              <option value="">Select a template</option>
+              {% for t in templates %}
+                <option value="{{ t }}" {% if selected_template == t %}selected{% endif %}>
+                  {{ t.replace("_", " ").title() }}
+                </option>
+              {% endfor %}
+            </select>
+          </label>
         </div>
 
-        <button class="ravlo-btn ghost" type="submit">
-          Preview Template
-        </button>
+        <div class="elena-form-actions">
+          <button class="ravlo-btn primary" type="submit">
+            Load Template
+          </button>
+        </div>
       </form>
     </section>
-  {% endif %}
 
-  {% if preview %}
-    <section class="ravlo-card pad">
-      <div class="mb-4">
-        <h3 class="text-lg font-semibold">Preview</h3>
-        <p class="text-sm text-gray-400">
-          This is the prompt Elena will send to generate the final content.
-        </p>
-      </div>
+    {% if selected_template %}
+      <section class="ravlo-card partner-section-card">
+        <div class="section-head">
+          <div>
+            <h3>Template Variables</h3>
+            <p>Review or edit the values below before previewing the prompt.</p>
+          </div>
+        </div>
 
-      <pre class="bg-gray-100 text-black p-4 rounded whitespace-pre-wrap text-sm overflow-x-auto">{{ preview }}</pre>
-
-      <div class="flex flex-wrap gap-3 mt-4">
-        <form method="POST" action="{{ url_for('elena.template_studio_generate') }}">
+        <form method="POST" action="{{ url_for('elena.template_studio_preview') }}" class="elena-form">
           <input type="hidden" name="template_type" value="{{ selected_template }}">
           <input type="hidden" name="client_id" value="{{ client_id or '' }}">
           <input type="hidden" name="listing_id" value="{{ listing_id or '' }}">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-          {% for key, value in variables.items() %}
-            <input type="hidden" name="{{ key }}" value="{{ value }}">
-          {% endfor %}
-          <button class="ravlo-btn primary" type="submit">
-            Generate Output
-          </button>
+
+          <div class="elena-form-grid elena-form-grid-2">
+            {% for key, value in variables.items() %}
+              <label>
+                {{ key.replace('_', ' ').title() }}
+                <input
+                  name="{{ key }}"
+                  value="{{ value }}"
+                >
+              </label>
+            {% endfor %}
+          </div>
+
+          <div class="elena-form-actions">
+            <button class="ravlo-btn ghost" type="submit">
+              Preview Template
+            </button>
+          </div>
         </form>
+      </section>
+    {% endif %}
 
-        <form method="POST" action="{{ url_for('elena.template_studio_generate_and_save') }}">
-          <input type="hidden" name="template_type" value="{{ selected_template }}">
-          <input type="hidden" name="client_id" value="{{ client_id or '' }}">
-          <input type="hidden" name="listing_id" value="{{ listing_id or '' }}">
-          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-          {% for key, value in variables.items() %}
-            <input type="hidden" name="{{ key }}" value="{{ value }}">
+    {% if preview %}
+      <section class="ravlo-card partner-section-card">
+        <div class="section-head">
+          <div>
+            <h3>Prompt Preview</h3>
+            <p>This is the exact prompt Elena will use to generate the final content.</p>
+          </div>
+        </div>
+
+        <div class="elena-preview-card">
+          <pre>{{ preview }}</pre>
+        </div>
+
+        <div class="elena-form-actions">
+          <form method="POST" action="{{ url_for('elena.template_studio_generate') }}">
+            <input type="hidden" name="template_type" value="{{ selected_template }}">
+            <input type="hidden" name="client_id" value="{{ client_id or '' }}">
+            <input type="hidden" name="listing_id" value="{{ listing_id or '' }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            {% for key, value in variables.items() %}
+              <input type="hidden" name="{{ key }}" value="{{ value }}">
+            {% endfor %}
+            <button class="ravlo-btn primary" type="submit">
+              Generate Output
+            </button>
+          </form>
+
+          <form method="POST" action="{{ url_for('elena.template_studio_generate_and_save') }}">
+            <input type="hidden" name="template_type" value="{{ selected_template }}">
+            <input type="hidden" name="client_id" value="{{ client_id or '' }}">
+            <input type="hidden" name="listing_id" value="{{ listing_id or '' }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            {% for key, value in variables.items() %}
+              <input type="hidden" name="{{ key }}" value="{{ value }}">
+            {% endfor %}
+            <button class="ravlo-btn primary" type="submit">
+              Generate & Save
+            </button>
+          </form>
+        </div>
+      </section>
+    {% endif %}
+
+    {% if output %}
+      <section class="ravlo-card partner-section-card">
+        <div class="section-head">
+          <div>
+            <h3>Generated Output</h3>
+            <p>Review the final content below. This layout is designed to make flyer, email, and social output easier to scan.</p>
+          </div>
+        </div>
+
+        <div class="elena-output-card">
+          {% set lines = output.split('\n') %}
+          {% for line in lines %}
+            {% if line.strip() %}
+              {% if ':' in line and line.split(':', 1)[0].isupper() %}
+                <div class="elena-output-section">
+                  <div class="elena-output-label">{{ line.split(':', 1)[0]|replace('_', ' ')|title }}</div>
+                  <div class="elena-output-value">{{ line.split(':', 1)[1].strip() }}</div>
+                </div>
+              {% elif line.strip().startswith('-') %}
+                <div class="elena-output-bullet">{{ line.strip() }}</div>
+              {% else %}
+                <div class="elena-output-paragraph">{{ line }}</div>
+              {% endif %}
+            {% endif %}
           {% endfor %}
-          <button class="ravlo-btn primary" type="submit">
-            Generate & Save
-          </button>
-        </form>
-      </div>
-    </section>
-  {% endif %}
+        </div>
+      </section>
+    {% endif %}
 
-  {% if output %}
-    <section class="ravlo-card pad">
-      <div class="mb-4">
-        <h3 class="text-lg font-semibold">Generated Output</h3>
-        <p class="text-sm text-gray-400">
-          Review the final content below.
-        </p>
-      </div>
+    {% if saved_interaction_id %}
+      <section class="ravlo-card partner-section-card">
+        <div class="elena-success-banner">
+          Saved to client activity as interaction #{{ saved_interaction_id }}.
+        </div>
+      </section>
+    {% endif %}
 
-      <pre class="bg-gray-100 text-black p-4 rounded whitespace-pre-wrap text-sm overflow-x-auto">{{ output }}</pre>
-    </section>
-  {% endif %}
+    {% if saved_flyer_id %}
+      <section class="ravlo-card partner-section-card">
+        <div class="elena-success-banner">
+          Saved to flyers as flyer #{{ saved_flyer_id }}.
+        </div>
+      </section>
+    {% endif %}
 
-  {% if saved_interaction_id %}
-    <section class="ravlo-card pad">
-      <div class="text-green-300 font-medium">
-        Saved to client activity as interaction #{{ saved_interaction_id }}.
-      </div>
-    </section>
-  {% endif %}
-
-  {% if saved_flyer_id %}
-    <section class="ravlo-card pad">
-      <div class="text-green-300 font-medium">
-        Saved to flyers as flyer #{{ saved_flyer_id }}.
-      </div>
-    </section>
-  {% endif %}
-
+  </div>
 </div>
+
+<style>
+  .elena-studio-layout {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+
+  .elena-form-grid {
+    display: grid;
+    gap: 14px;
+  }
+
+  .elena-form-grid-2 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .elena-form-grid-3 {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .elena-form label {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    color: #cfe1f4;
+    font-size: 0.9rem;
+  }
+
+  .elena-form input,
+  .elena-form select,
+  .elena-form textarea {
+    background: rgba(255, 255, 255, 0.04);
+    color: #ffffff;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 8px;
+    padding: 9px 10px;
+    font-size: 0.92rem;
+  }
+
+  .elena-form-actions {
+    margin-top: 18px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .elena-preview-card,
+  .elena-output-card {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    padding: 16px;
+  }
+
+  .elena-preview-card pre {
+    margin: 0;
+    white-space: pre-wrap;
+    color: #dce8f5;
+    font-size: 0.92rem;
+    line-height: 1.55;
+    font-family: inherit;
+  }
+
+  .elena-output-card {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .elena-output-section {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  }
+
+  .elena-output-section:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+  }
+
+  .elena-output-label {
+    color: #8ea4b7;
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  .elena-output-value,
+  .elena-output-paragraph {
+    color: #ffffff;
+    font-size: 0.95rem;
+    line-height: 1.55;
+  }
+
+  .elena-output-bullet {
+    color: #dce8f5;
+    font-size: 0.93rem;
+    line-height: 1.5;
+    padding-left: 4px;
+  }
+
+  .elena-success-banner {
+    color: #9df0b8;
+    font-weight: 600;
+    font-size: 0.95rem;
+  }
+
+  @media (max-width: 900px) {
+    .elena-form-grid-3,
+    .elena-form-grid-2 {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
 {% endblock %}
