@@ -1,0 +1,139 @@
+{% extends "layouts/ravlo_base.html" %}
+
+{% block title %}Ravlo • VIP Onboarding{% endblock %}
+{% block page_title %}VIP Setup{% endblock %}
+{% block page_subline %}
+Tell Ravlo how you work so your dashboard feels personal from day one.
+{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto space-y-6">
+
+  <section class="ravlo-card pad">
+    <form method="POST" action="{{ url_for('vip.onboarding_save') }}" class="space-y-8">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+      <div>
+        <h3 class="text-lg font-semibold mb-4">Profile</h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label class="block mb-2 font-medium">Display Name</label>
+            <input
+              name="display_name"
+              value="{{ vip_profile.display_name or '' }}"
+              class="border rounded px-3 py-2 w-full bg-white text-black"
+            >
+          </div>
+
+          <div>
+            <label class="block mb-2 font-medium">Business Name</label>
+            <input
+              name="business_name"
+              value="{{ vip_profile.business_name or '' }}"
+              class="border rounded px-3 py-2 w-full bg-white text-black"
+            >
+          </div>
+
+          <div>
+            <label class="block mb-2 font-medium">Dashboard Title</label>
+            <input
+              name="dashboard_title"
+              value="{{ vip_profile.dashboard_title or '' }}"
+              class="border rounded px-3 py-2 w-full bg-white text-black"
+              placeholder="Optional custom title"
+            >
+          </div>
+
+          <div>
+            <label class="block mb-2 font-medium">Assistant Name</label>
+            <input
+              name="assistant_name"
+              value="{{ vip_profile.assistant_name or 'Ravlo' }}"
+              class="border rounded px-3 py-2 w-full bg-white text-black"
+            >
+          </div>
+
+          <div>
+            <label class="block mb-2 font-medium">Role Type</label>
+            <select name="role_type" class="border rounded px-3 py-2 w-full bg-white text-black">
+              {% set role = vip_profile.role_type or 'realtor' %}
+              <option value="realtor" {% if role == 'realtor' %}selected{% endif %}>Realtor</option>
+              <option value="contractor" {% if role == 'contractor' %}selected{% endif %}>Contractor</option>
+              <option value="designer" {% if role == 'designer' %}selected{% endif %}>Designer</option>
+              <option value="partner" {% if role == 'partner' %}selected{% endif %}>Partner</option>
+              <option value="loan_officer" {% if role == 'loan_officer' %}selected{% endif %}>Loan Officer</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block mb-2 font-medium">Service Area</label>
+            <input
+              name="service_area"
+              value="{{ vip_profile.service_area or '' }}"
+              class="border rounded px-3 py-2 w-full bg-white text-black"
+            >
+          </div>
+        </div>
+
+        <div class="mt-4">
+          <label class="block mb-2 font-medium">Headline</label>
+          <input
+            name="headline"
+            value="{{ vip_profile.headline or '' }}"
+            class="border rounded px-3 py-2 w-full bg-white text-black"
+          >
+        </div>
+
+        <div class="mt-4">
+          <label class="block mb-2 font-medium">Bio</label>
+          <textarea
+            name="bio"
+            rows="4"
+            class="border rounded px-3 py-2 w-full bg-white text-black"
+          >{{ vip_profile.bio or '' }}</textarea>
+        </div>
+      </div>
+
+      <div>
+        <h3 class="text-lg font-semibold mb-4">Modules</h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+          {% set mp = module_pref %}
+
+          {% for field, label in [
+            ('crm_enabled', 'CRM'),
+            ('finances_enabled', 'Finance Tracker'),
+            ('budget_enabled', 'Budget Tracker'),
+            ('ai_pilot_enabled', 'AI Pilot'),
+            ('content_studio_enabled', 'Content Studio'),
+            ('calendar_sync_enabled', 'Calendar Sync'),
+            ('voice_enabled', 'Voice Assistant'),
+            ('sms_enabled', 'SMS Assistant'),
+            ('email_enabled', 'Email Assistant'),
+            ('canva_enabled', 'Canva Integration'),
+            ('design_studio_enabled', 'Design Studio')
+          ] %}
+            <div class="ravlo-card pad">
+              <div class="flex items-center justify-between gap-4">
+                <div>{{ label }}</div>
+                <select name="{{ field }}" class="border rounded px-3 py-2 bg-white text-black">
+                  <option value="yes" {% if mp and mp[field] == 'yes' %}selected{% endif %}>Yes</option>
+                  <option value="no" {% if mp and mp[field] != 'yes' %}selected{% endif %}>No</option>
+                </select>
+              </div>
+            </div>
+          {% endfor %}
+
+        </div>
+      </div>
+
+      <div>
+        <button type="submit" class="ravlo-btn primary">
+          Save VIP Setup
+        </button>
+      </div>
+    </form>
+  </section>
+
+</div>
+{% endblock %}
