@@ -85,25 +85,26 @@ class ElenaListing(BaseModel):
 # ---------------------------------------------------------
 # FLYER MODEL
 # ---------------------------------------------------------
-class ElenaFlyer(BaseModel):
+
+class ElenaFlyer(db.Model):
     __tablename__ = "elena_flyers"
 
-    flyer_type = Column(String, nullable=False)
+    id = db.Column(db.Integer, primary_key=True)
+    flyer_type = db.Column(db.String(100), nullable=False)
+    property_address = db.Column(db.String(255))
+    property_id = db.Column(db.String(64))
+    body = db.Column(db.Text)
+    listing_id = db.Column(db.Integer, db.ForeignKey("elena_listing.id"), nullable=True)
 
-    property_address = Column(String, nullable=False)
-    property_id = Column(String, nullable=True)
-    listing_id = Column(Integer, ForeignKey("elena_listings.id"), nullable=True)
+    canva_design_id = db.Column(db.String(128), nullable=True, index=True)
+    canva_edit_url = db.Column(db.Text, nullable=True)
+    canva_export_job_id = db.Column(db.String(128), nullable=True)
+    canva_export_url = db.Column(db.Text, nullable=True)
+    canva_status = db.Column(db.String(50), nullable=True, default="draft")
+    canva_last_synced_at = db.Column(db.DateTime, nullable=True)
 
-    # Optional display-facing title and call-to-action so flyers can be
-    # rendered without re-parsing the full body each time.
-    title = Column(String(255), nullable=True)
-    cta = Column(String(255), nullable=True)
-
-    body = Column(Text, nullable=False)
-
-    def __repr__(self):
-        return f"<ElenaFlyer {self.id} - {self.flyer_type}>"
-
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 # ---------------------------------------------------------
 # INTERACTION MODEL
