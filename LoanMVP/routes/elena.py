@@ -80,7 +80,49 @@ def _parse_due_at(raw):
             continue
     return None
 
+def _template_defaults():
+    return {
+        "address": "",
+        "city": "",
+        "state": "",
+        "zip_code": "",
+        "beds": "",
+        "baths": "",
+        "sqft": "",
+        "price": "",
+        "description": "",
+        "status": "",
+        "days_on_market": "",
+        "offer_details": "",
+        "date": "",
+        "time": "",
+        "old_price": "",
+        "new_price": "",
+        "buyer_type": "",
+        "budget": "",
+        "areas": "",
+        "area": "",
+        "timeframe": "",
+        "stats": "",
+        "client_name": "",
+        "pipeline_stage": "",
+        "context": "",
+        "source": "",
+        "email": "",
+        "phone": "",
+        "title": "",
+        "cta": "",
+    }
 
+
+def _get_template_enum(template_type_value):
+    if not template_type_value:
+        return None
+    try:
+        return TemplateType(template_type_value)
+    except ValueError:
+        return None
+        
 @elena_bp.get("/")
 @role_required("partner_group", "admin")
 def dashboard():
