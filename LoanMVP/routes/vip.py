@@ -1,5 +1,5 @@
 # LoanMVP/routes/vip.py
-
+import json
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from flask_login import current_user
 
@@ -15,6 +15,40 @@ from LoanMVP.utils.decorators import role_required
 
 vip_bp = Blueprint("vip", __name__, url_prefix="/vip")
 
+MODULE_FIELD_MAP = {
+    "crm_enabled": "crm",
+    "finances_enabled": "finances",
+    "budget_enabled": "budget_tracker",
+    "ai_pilot_enabled": "ai_pilot",
+    "content_studio_enabled": "content_studio",
+    "calendar_sync_enabled": "calendar_sync",
+    "voice_enabled": "voice_assistant",
+    "sms_enabled": "sms_assistant",
+    "email_enabled": "email_assistant",
+    "canva_enabled": "canva",
+    "design_studio_enabled": "design_studio",
+}
+
+
+def get_enabled_modules(profile):
+    raw = profile.enabled_modules or "[]"
+    try:
+        value = json.loads(raw)
+        return value if isinstance(value, list) else []
+    except (TypeError, ValueError):
+        return []
+
+
+def has_module(profile, module_name):
+    return module_name in get_enabled_modules(profile)
+
+
+def build_enabled_modules_from_form(form):
+    modules = []
+    for field_name, module_name in MODULE_FIELD_MAP.items():
+        if (form.get(field_name) or "").strip().lower() == "yes":
+            modules.append(module_name)
+    return modules
 
 def get_or_create_vip_profile():
     profile = VIPProfile.query.filter_by(user_id=current_user.id).first()
@@ -67,6 +101,14 @@ def get_dashboard_name(profile):
         or "VIP Workspace"
     )
 
+@vip_bp.app_context_processor
+def inject_vip_context():
+    profile = get_or_create_vip_profile()
+
+    return {
+        "vip_profile": profile,
+        "modules": get_enabled_modules(profile),
+    }
 
 @vip_bp.get("/")
 @role_required("partner_group", "admin")
@@ -92,6 +134,7 @@ def realtor_dashboard():
     return render_template(
         "vip/realtor/dashboard.html",
         vip_profile=profile,
+        modules=get_enabled_modules(profile),
         header_name=get_dashboard_name(profile),
         portal="vip",
         portal_name="VIP",
@@ -106,6 +149,7 @@ def contractor_dashboard():
     return render_template(
         "vip/contractor/dashboard.html",
         vip_profile=profile,
+        modules=get_enabled_modules(profile),
         header_name=get_dashboard_name(profile),
         portal="vip",
         portal_name="VIP",
@@ -120,6 +164,7 @@ def designer_dashboard():
     return render_template(
         "vip/designer/dashboard.html",
         vip_profile=profile,
+        modules=get_enabled_modules(profile),
         header_name=get_dashboard_name(profile),
         portal="vip",
         portal_name="VIP",
@@ -134,6 +179,7 @@ def partner_dashboard():
     return render_template(
         "vip/partner/dashboard.html",
         vip_profile=profile,
+        modules=get_enabled_modules(profile),
         header_name=get_dashboard_name(profile),
         portal="vip",
         portal_name="VIP",
@@ -148,6 +194,7 @@ def loan_officer_dashboard():
     return render_template(
         "vip/loan_officer/dashboard.html",
         vip_profile=profile,
+        modules=get_enabled_modules(profile),
         header_name=get_dashboard_name(profile),
         portal="vip",
         portal_name="VIP",
@@ -239,3 +286,47 @@ def ai_pilot_command():
 
     flash("Assistant suggestion created.", "success")
     return redirect(url_for("vip.ai_pilot"))
+
+@vip_bp.get("/onboarding")
+@role_required("partner_group", "admin")
+def onboarding():
+    profile = get_or_create_vip_profile()
+
+    enabled = set(get_enabled_modules(profile))
+    module_pref = {}
+
+    for field_name, module_name in MODULE_FIELD_MAP.items():
+        module_pref[field_name] = "yes" if module_name in enabled else "no"
+
+    return render_template(
+        "vip/onboarding.html",
+        vip_profile=profile,
+        module_pref=module_pref,
+        header_name=get_dashboard_name(profile),
+        portal="vip",
+        portal_name="VIP",
+        portal_home=url_for("vip.index"),
+    )
+
+
+@vip_bp.post("/onboarding/save")
+@role_required("partner_group", "admin")
+def onboarding_save():
+    profile = get_or_create_vip_profile()
+
+    profile.display_name = (request.form.get("display_name") or profile.display_name or "").strip()
+    profile.business_name = (request.form.get("business_name") or "").strip() or None
+    profile.dashboard_title = (request.form.get("dashboard_title") or "").strip() or None
+    profile.assistant_name = (request.form.get("assistant_name") or "Ravlo").strip()
+    profile.role_type = (request.form.get("role_type") or profile.role_type or "partner").strip()
+    profile.service_area = (request.form.get("service_area") or "").strip() or None
+    profile.headline = (request.form.get("headline") or "").strip() or None
+    profile.bio = (request.form.get("bio") or "").strip() or None
+
+    enabled_modules = build_enabled_modules_from_form(request.form)
+    profile.enabled_modules = json.dumps(enabled_modules)
+
+    db.session.commit()
+
+    flash("VIP setup saved.", "success")
+    return redirect(url_for("vip.index"))

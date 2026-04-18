@@ -928,3 +928,51 @@ def export_canva_flyer_status(flyer_id):
             "canva_export_url": flyer.canva_export_url,
         }
     )
+
+@vip_bp.post("/ai-pilot/suggestions/<int:suggestion_id>/approve")
+@role_required("partner_group", "admin")
+def approve_suggestion(suggestion_id):
+    profile = get_or_create_vip_profile()
+
+    suggestion = VIPAssistantSuggestion.query.get_or_404(suggestion_id)
+
+    if suggestion.vip_profile_id != profile.id:
+        flash("Not authorized.", "danger")
+        return redirect(url_for("vip.ai_pilot"))
+
+    # mark approved
+    suggestion.status = "approved"
+
+    # execute action based on type
+    if suggestion.suggestion_type == "expense":
+        expense = VIPExpense(
+            vip_profile_id=profile.id,
+            category="general",
+            description=suggestion.title,
+            amount=suggestion.proposed_amount or 0,
+        )
+        db.session.add(expense)
+
+    elif suggestion.suggestion_type == "follow_up":
+        interaction = VIPInteraction(
+            vip_profile_id=profile.id,
+            interaction_type="follow_up",
+            content=suggestion.body or suggestion.title,
+        )
+        db.session.add(interaction)
+
+    elif suggestion.suggestion_type in ["email", "text"]:
+        action = VIPAssistantAction(
+            vip_profile_id=profile.id,
+            action_type=suggestion.suggestion_type,
+            content=suggestion.body,
+            status="draft",
+        )
+        db.session.add(action)
+
+    suggestion.status = "completed"
+
+    db.session.commit()
+
+    flash("Suggestion applied.", "success")
+    return redirect(url_for("vip.ai_pilot"))

@@ -27,16 +27,26 @@
       <span>Home</span>
     </a>
 
-    <a href="{{ url_for('vip.finances') }}"
-       class="ravlo-nav-link {% if ep == 'vip.finances' %}active{% endif %}">
-      <i class="lucide lucide-receipt"></i>
-      <span>Finances</span>
-    </a>
+    {% if modules is defined and 'finances' in modules %}
+      <a href="{{ url_for('vip.finances') }}"
+         class="ravlo-nav-link {% if ep == 'vip.finances' %}active{% endif %}">
+        <i class="lucide lucide-receipt"></i>
+        <span>Finances</span>
+      </a>
+    {% endif %}
 
-    <a href="{{ url_for('vip.ai_pilot') }}"
-       class="ravlo-nav-link {% if ep in ['vip.ai_pilot', 'vip.ai_pilot_command'] %}active{% endif %}">
-      <i class="lucide lucide-sparkles"></i>
-      <span>AI Pilot</span>
+    {% if modules is defined and 'ai_pilot' in modules %}
+      <a href="{{ url_for('vip.ai_pilot') }}"
+         class="ravlo-nav-link {% if ep in ['vip.ai_pilot', 'vip.ai_pilot_command'] %}active{% endif %}">
+        <i class="lucide lucide-sparkles"></i>
+        <span>AI Pilot</span>
+      </a>
+    {% endif %}
+
+    <a href="{{ url_for('vip.onboarding') }}"
+       class="ravlo-nav-link {% if ep in ['vip.onboarding', 'vip.onboarding_save'] %}active{% endif %}">
+      <i class="lucide lucide-sliders-horizontal"></i>
+      <span>VIP Setup</span>
     </a>
 
     <div class="ravlo-nav-section">Dashboards</div>

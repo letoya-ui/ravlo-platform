@@ -1,10 +1,185 @@
-{# templates/vip/realtor/dashboard.html #}
 {% extends "layouts/ravlo_base.html" %}
+
 {% block title %}Ravlo • VIP Realtor{% endblock %}
 {% block page_title %}{{ header_name }}{% endblock %}
-{% block page_subline %}VIP Realtor Dashboard{% endblock %}
+{% block page_subline %}
+Realtor Dashboard — clients, listings, closings, commissions, content, and assistant workflow in one place.
+{% endblock %}
+
+{% block topbar_actions %}
+  {% if 'ai_pilot' in modules %}
+    <a href="{{ url_for('vip.ai_pilot') }}" class="ravlo-btn ghost sm">AI Pilot</a>
+  {% endif %}
+
+  {% if 'finances' in modules %}
+    <a href="{{ url_for('vip.finances') }}" class="ravlo-btn primary sm">Finances</a>
+  {% endif %}
+
+  <a href="{{ url_for('vip.onboarding') }}" class="ravlo-btn ghost sm">Customize</a>
+{% endblock %}
+
 {% block content %}
-<div class="max-w-6xl mx-auto">
-  <div class="ravlo-card pad">Clients, listings, closings, content, and AI assistant.</div>
+<div class="max-w-6xl mx-auto space-y-6">
+
+  <section class="ravlo-card pad">
+    <h3 class="text-xl font-semibold">VIP Realtor Dashboard</h3>
+    <p class="text-sm text-gray-400">
+      Manage clients, listings, closings, commissions, content creation, and assistant-powered follow-up from one workspace.
+    </p>
+  </section>
+
+  <section class="partner-stats-grid">
+
+    {% if 'crm' in modules %}
+    <article class="ravlo-card partner-stat-card">
+      <div class="partner-stat-label">Client CRM</div>
+      <div class="partner-stat-value">On</div>
+      <div class="partner-stat-note">Contacts, pipeline, notes, and follow-ups</div>
+    </article>
+    {% endif %}
+
+    {% if 'finances' in modules %}
+    <article class="ravlo-card partner-stat-card">
+      <div class="partner-stat-label">Finances</div>
+      <div class="partner-stat-value">On</div>
+      <div class="partner-stat-note">Commissions, expenses, mileage, and net profit</div>
+    </article>
+    {% endif %}
+
+    {% if 'ai_pilot' in modules %}
+    <article class="ravlo-card partner-stat-card">
+      <div class="partner-stat-label">AI Pilot</div>
+      <div class="partner-stat-value">On</div>
+      <div class="partner-stat-note">Drafts, notes, suggestions, and next-step actions</div>
+    </article>
+    {% endif %}
+
+    {% if 'content_studio' in modules or 'canva' in modules %}
+    <article class="ravlo-card partner-stat-card">
+      <div class="partner-stat-label">Marketing</div>
+      <div class="partner-stat-value">On</div>
+      <div class="partner-stat-note">Flyers, social posts, listing content, and branded assets</div>
+    </article>
+    {% endif %}
+
+  </section>
+
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+    <div class="lg:col-span-2 space-y-6">
+
+      {% if 'crm' in modules %}
+      <section class="ravlo-card pad">
+        <h3 class="text-lg font-semibold mb-2">Clients + Listings</h3>
+        <p class="text-sm text-gray-400 mb-4">
+          Keep buyers, sellers, listings, and active deal flow organized in one place.
+        </p>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div class="ravlo-card pad">
+            <strong>Client Pipeline</strong>
+            <p class="text-sm text-gray-400 mt-2">
+              Track leads, active clients, and follow-up momentum from first touch to close.
+            </p>
+          </div>
+
+          <div class="ravlo-card pad">
+            <strong>Listing Workspace</strong>
+            <p class="text-sm text-gray-400 mt-2">
+              Organize listings, property details, and marketing-ready records.
+            </p>
+          </div>
+        </div>
+      </section>
+      {% endif %}
+
+      {% if 'content_studio' in modules or 'canva' in modules %}
+      <section class="ravlo-card pad">
+        <h3 class="text-lg font-semibold mb-2">Content + Canva</h3>
+        <p class="text-sm text-gray-400 mb-4">
+          Create listing flyers, open house materials, social posts, and branded marketing faster.
+        </p>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {% if 'content_studio' in modules %}
+          <div class="ravlo-card pad">
+            <strong>Content Studio</strong>
+            <p class="text-sm text-gray-400 mt-2">
+              Generate just-listed, just-sold, open house, and follow-up content quickly.
+            </p>
+          </div>
+          {% endif %}
+
+          {% if 'canva' in modules %}
+          <div class="ravlo-card pad">
+            <strong>Canva Integration</strong>
+            <p class="text-sm text-gray-400 mt-2">
+              Prefill listing data into flyers and open Canva for final polish.
+            </p>
+          </div>
+          {% endif %}
+        </div>
+      </section>
+      {% endif %}
+
+      {% if 'ai_pilot' in modules %}
+      <section class="ravlo-card pad">
+        <div class="flex justify-between items-center mb-3">
+          <h3 class="text-lg font-semibold">AI Pilot</h3>
+          <a href="{{ url_for('vip.ai_pilot') }}" class="ravlo-btn primary sm">
+            Open AI Pilot
+          </a>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div class="ravlo-card pad">
+            <strong>Example Commands</strong>
+            <ul class="text-sm text-gray-400 mt-3 space-y-2">
+              <li>“Email seller and say I’m sending comps tonight.”</li>
+              <li>“Text buyer I’m outside.”</li>
+              <li>“Add $180 for photos.”</li>
+              <li>“Create a follow-up for tomorrow.”</li>
+            </ul>
+          </div>
+
+          <div class="ravlo-card pad">
+            <strong>Assistant Focus</strong>
+            <p class="text-sm text-gray-400 mt-2">
+              Help with follow-ups, listing activity, quick logging, and day-to-day admin execution.
+            </p>
+          </div>
+        </div>
+      </section>
+      {% endif %}
+
+    </div>
+
+    <aside class="space-y-6">
+
+      {% if 'finances' in modules %}
+      <section class="ravlo-card pad">
+        <h3 class="text-lg font-semibold mb-2">Finances</h3>
+        <p class="text-sm text-gray-400 mb-4">
+          Track commissions, expenses, mileage, tolls, and overall net profit.
+        </p>
+        <a href="{{ url_for('vip.finances') }}" class="ravlo-btn primary sm">
+          Open Finances
+        </a>
+      </section>
+      {% endif %}
+
+      <section class="ravlo-card pad">
+        <h3 class="text-lg font-semibold mb-2">Workspace Settings</h3>
+        <p class="text-sm text-gray-400 mb-4">
+          Choose which modules shape your realtor workspace.
+        </p>
+        <a href="{{ url_for('vip.onboarding') }}" class="ravlo-btn ghost sm">
+          Open Setup
+        </a>
+      </section>
+
+    </aside>
+
+  </div>
 </div>
 {% endblock %}

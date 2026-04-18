@@ -136,11 +136,12 @@
         if (window.innerWidth <= 1100) closeSidebar();
       });
     });
-  </script>
-{% if active_portal == "vip" %}
-  {% include "layouts/_ai_pilot_fab.html" %}
-{% endif %}
+    </script>
 
-{% block scripts %}{% endblock %}
+  {% if active_portal == "vip" and modules is defined and 'ai_pilot' in modules %}
+    {% include "layouts/_ai_pilot_fab.html" %}
+  {% endif %}
+
+  {% block scripts %}{% endblock %}
 </body>
 </html>

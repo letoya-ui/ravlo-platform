@@ -1,20 +1,210 @@
-{# templates/vip/designer/dashboard.html #}
 {% extends "layouts/ravlo_base.html" %}
 
 {% block title %}Ravlo • VIP Designer{% endblock %}
 {% block page_title %}{{ header_name }}{% endblock %}
-{% block page_subline %}VIP Designer Dashboard — projects, assets, sourcing, budgets, and creative assistant tools.{% endblock %}
+{% block page_subline %}
+Designer Dashboard — clients, projects, sourcing, deliverables, and creative workflow in one place.
+{% endblock %}
 
 {% block topbar_actions %}
-  <a href="{{ url_for('vip.ai_pilot') }}" class="ravlo-btn ghost sm">AI Pilot</a>
-  <a href="{{ url_for('vip.finances') }}" class="ravlo-btn primary sm">Finances</a>
+  {% if 'ai_pilot' in modules %}
+    <a href="{{ url_for('vip.ai_pilot') }}" class="ravlo-btn ghost sm">AI Pilot</a>
+  {% endif %}
+
+  {% if 'finances' in modules %}
+    <a href="{{ url_for('vip.finances') }}" class="ravlo-btn primary sm">Finances</a>
+  {% endif %}
+
+  <a href="{{ url_for('vip.onboarding') }}" class="ravlo-btn ghost sm">Customize</a>
 {% endblock %}
 
 {% block content %}
 <div class="max-w-6xl mx-auto space-y-6">
+
   <section class="ravlo-card pad">
-    <h3>VIP Designer Dashboard</h3>
-    <p>This is the shared VIP foundation for designer workflows.</p>
+    <h3 class="text-xl font-semibold">VIP Designer Dashboard</h3>
+    <p class="text-sm text-gray-400">
+      Manage client work, design projects, sourcing costs, deliverables, and assistant-supported workflow.
+    </p>
   </section>
+
+  <section class="partner-stats-grid">
+
+    {% if 'crm' in modules %}
+    <article class="ravlo-card partner-stat-card">
+      <div class="partner-stat-label">Clients</div>
+      <div class="partner-stat-value">On</div>
+      <div class="partner-stat-note">Contacts, notes, and relationship history</div>
+    </article>
+    {% endif %}
+
+    {% if 'finances' in modules %}
+    <article class="ravlo-card partner-stat-card">
+      <div class="partner-stat-label">Finances</div>
+      <div class="partner-stat-value">On</div>
+      <div class="partner-stat-note">Sourcing, expenses, budgets, and profit tracking</div>
+    </article>
+    {% endif %}
+
+    {% if 'design_studio' in modules %}
+    <article class="ravlo-card partner-stat-card">
+      <div class="partner-stat-label">Design Tools</div>
+      <div class="partner-stat-value">On</div>
+      <div class="partner-stat-note">Creative workflow, revisions, and asset planning</div>
+    </article>
+    {% endif %}
+
+    {% if 'ai_pilot' in modules %}
+    <article class="ravlo-card partner-stat-card">
+      <div class="partner-stat-label">AI Pilot</div>
+      <div class="partner-stat-value">On</div>
+      <div class="partner-stat-note">Suggestions, drafting, notes, and task support</div>
+    </article>
+    {% endif %}
+
+  </section>
+
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+    <div class="lg:col-span-2 space-y-6">
+
+      {% if 'crm' in modules %}
+      <section class="ravlo-card pad">
+        <h3 class="text-lg font-semibold mb-2">Clients + Projects</h3>
+        <p class="text-sm text-gray-400 mb-4">
+          Organize client relationships, project status, and communication in one workspace.
+        </p>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div class="ravlo-card pad">
+            <strong>Client CRM</strong>
+            <p class="text-sm text-gray-400 mt-2">
+              Keep client details, preferences, and project notes together.
+            </p>
+          </div>
+
+          <div class="ravlo-card pad">
+            <strong>Project Tracking</strong>
+            <p class="text-sm text-gray-400 mt-2">
+              Track current projects, milestones, revisions, and delivery status.
+            </p>
+          </div>
+        </div>
+      </section>
+      {% endif %}
+
+      {% if 'design_studio' in modules %}
+      <section class="ravlo-card pad">
+        <h3 class="text-lg font-semibold mb-2">Design Studio</h3>
+        <p class="text-sm text-gray-400 mb-4">
+          Manage assets, references, concepts, revisions, and deliverables.
+        </p>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div class="ravlo-card pad">
+            <strong>Assets + References</strong>
+            <p class="text-sm text-gray-400 mt-2">
+              Store inspiration, uploads, visual references, and design direction.
+            </p>
+          </div>
+
+          <div class="ravlo-card pad">
+            <strong>Deliverables</strong>
+            <p class="text-sm text-gray-400 mt-2">
+              Keep design files, revisions, and final handoff organized by project.
+            </p>
+          </div>
+        </div>
+      </section>
+      {% endif %}
+
+      {% if 'content_studio' in modules or 'canva' in modules %}
+      <section class="ravlo-card pad">
+        <h3 class="text-lg font-semibold mb-2">Content + Brand Assets</h3>
+        <p class="text-sm text-gray-400 mb-4">
+          Support branded content, visual assets, and presentation-ready deliverables.
+        </p>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {% if 'content_studio' in modules %}
+          <div class="ravlo-card pad">
+            <strong>Content Studio</strong>
+            <p class="text-sm text-gray-400 mt-2">
+              Draft project copy, proposals, captions, and client-facing presentation text.
+            </p>
+          </div>
+          {% endif %}
+
+          {% if 'canva' in modules %}
+          <div class="ravlo-card pad">
+            <strong>Canva Integration</strong>
+            <p class="text-sm text-gray-400 mt-2">
+              Build branded visuals and polish assets in Canva before delivery.
+            </p>
+          </div>
+          {% endif %}
+        </div>
+      </section>
+      {% endif %}
+
+      {% if 'ai_pilot' in modules %}
+      <section class="ravlo-card pad">
+        <div class="flex justify-between items-center mb-3">
+          <h3 class="text-lg font-semibold">AI Pilot</h3>
+          <a href="{{ url_for('vip.ai_pilot') }}" class="ravlo-btn primary sm">
+            Open AI Pilot
+          </a>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div class="ravlo-card pad">
+            <strong>Example Commands</strong>
+            <ul class="text-sm text-gray-400 mt-3 space-y-2">
+              <li>“Draft an email with the next design update.”</li>
+              <li>“Create a follow-up for Friday.”</li>
+              <li>“Log $240 for sourcing.”</li>
+              <li>“Summarize project notes for the client.”</li>
+            </ul>
+          </div>
+
+          <div class="ravlo-card pad">
+            <strong>Assistant Focus</strong>
+            <p class="text-sm text-gray-400 mt-2">
+              Help with communication, project organization, notes, and administrative follow-through.
+            </p>
+          </div>
+        </div>
+      </section>
+      {% endif %}
+
+    </div>
+
+    <aside class="space-y-6">
+
+      {% if 'finances' in modules %}
+      <section class="ravlo-card pad">
+        <h3 class="text-lg font-semibold mb-2">Finances</h3>
+        <p class="text-sm text-gray-400 mb-4">
+          Track sourcing costs, project expenses, budgets, and overall profitability.
+        </p>
+        <a href="{{ url_for('vip.finances') }}" class="ravlo-btn primary sm">
+          Open Finances
+        </a>
+      </section>
+      {% endif %}
+
+      <section class="ravlo-card pad">
+        <h3 class="text-lg font-semibold mb-2">Workspace Settings</h3>
+        <p class="text-sm text-gray-400 mb-4">
+          Customize your modules and shape the dashboard around your workflow.
+        </p>
+        <a href="{{ url_for('vip.onboarding') }}" class="ravlo-btn ghost sm">
+          Open Setup
+        </a>
+      </section>
+
+    </aside>
+
+  </div>
 </div>
 {% endblock %}

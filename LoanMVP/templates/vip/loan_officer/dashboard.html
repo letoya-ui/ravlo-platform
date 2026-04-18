@@ -1,20 +1,198 @@
-{# templates/vip/loan_officer/dashboard.html #}
 {% extends "layouts/ravlo_base.html" %}
 
 {% block title %}Ravlo • VIP Loan Officer{% endblock %}
 {% block page_title %}{{ header_name }}{% endblock %}
-{% block page_subline %}Loan Officer Dashboard — borrowers, pipeline, programs, follow-ups, and assistant actions in one place.{% endblock %}
+{% block page_subline %}
+Loan Officer Dashboard — borrowers, pipeline, programs, follow-ups, and assistant actions in one place.
+{% endblock %}
 
 {% block topbar_actions %}
-  <a href="{{ url_for('vip.ai_pilot') }}" class="ravlo-btn ghost sm">AI Pilot</a>
-  <a href="{{ url_for('vip.finances') }}" class="ravlo-btn primary sm">Finances</a>
+  {% if 'ai_pilot' in modules %}
+    <a href="{{ url_for('vip.ai_pilot') }}" class="ravlo-btn ghost sm">AI Pilot</a>
+  {% endif %}
+
+  {% if 'finances' in modules %}
+    <a href="{{ url_for('vip.finances') }}" class="ravlo-btn primary sm">Finances</a>
+  {% endif %}
+
+  <a href="{{ url_for('vip.onboarding') }}" class="ravlo-btn ghost sm">Customize</a>
 {% endblock %}
 
 {% block content %}
 <div class="max-w-6xl mx-auto space-y-6">
+
   <section class="ravlo-card pad">
-    <h3>VIP Loan Officer Dashboard</h3>
-    <p>This is the shared VIP foundation for loan officer workflows.</p>
+    <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+      <div>
+        <h3 class="text-xl font-semibold">VIP Loan Officer Dashboard</h3>
+        <p class="text-sm text-gray-400">
+          Ravlo is your operating system for borrower communication, pipeline visibility,
+          assistant suggestions, finances, and marketing tools.
+        </p>
+      </div>
+      <div class="flex flex-wrap gap-2">
+        {% if 'crm' in modules %}
+          <span class="ravlo-btn ghost sm pointer-events-none">CRM Enabled</span>
+        {% endif %}
+        {% if 'finances' in modules %}
+          <span class="ravlo-btn ghost sm pointer-events-none">Finances Enabled</span>
+        {% endif %}
+        {% if 'ai_pilot' in modules %}
+          <span class="ravlo-btn ghost sm pointer-events-none">AI Pilot Enabled</span>
+        {% endif %}
+        {% if 'canva' in modules %}
+          <span class="ravlo-btn ghost sm pointer-events-none">Canva Enabled</span>
+        {% endif %}
+      </div>
+    </div>
   </section>
+
+  <section class="partner-stats-grid">
+    {% if 'crm' in modules %}
+      <article class="ravlo-card partner-stat-card">
+        <div class="partner-stat-label">Borrower CRM</div>
+        <div class="partner-stat-value">On</div>
+        <div class="partner-stat-note">Contacts, pipeline, and follow-ups</div>
+      </article>
+    {% endif %}
+
+    {% if 'finances' in modules %}
+      <article class="ravlo-card partner-stat-card">
+        <div class="partner-stat-label">Finances</div>
+        <div class="partner-stat-value">On</div>
+        <div class="partner-stat-note">Income, expenses, and net profit</div>
+      </article>
+    {% endif %}
+
+    {% if 'ai_pilot' in modules %}
+      <article class="ravlo-card partner-stat-card">
+        <div class="partner-stat-label">AI Pilot</div>
+        <div class="partner-stat-value">On</div>
+        <div class="partner-stat-note">Suggestions, drafts, and assistant actions</div>
+      </article>
+    {% endif %}
+
+    {% if 'content_studio' in modules or 'canva' in modules %}
+      <article class="ravlo-card partner-stat-card">
+        <div class="partner-stat-label">Marketing</div>
+        <div class="partner-stat-value">On</div>
+        <div class="partner-stat-note">Rate flyers, program content, and branded assets</div>
+      </article>
+    {% endif %}
+  </section>
+
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+    <div class="lg:col-span-2 space-y-6">
+
+      {% if 'crm' in modules %}
+        <section class="ravlo-card pad">
+          <h3 class="text-lg font-semibold mb-2">Borrowers + Pipeline</h3>
+          <p class="text-sm text-gray-400 mb-4">
+            Manage borrowers, loan stages, follow-ups, and task visibility from one place.
+          </p>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="ravlo-card pad">
+              <strong>Borrower Workspace</strong>
+              <p class="text-sm text-gray-400 mt-2">
+                View active borrowers, communication history, and next steps.
+              </p>
+            </div>
+            <div class="ravlo-card pad">
+              <strong>Loan Pipeline</strong>
+              <p class="text-sm text-gray-400 mt-2">
+                Track deals from inquiry to closing with clearer follow-up discipline.
+              </p>
+            </div>
+          </div>
+        </section>
+      {% endif %}
+
+      {% if 'ai_pilot' in modules %}
+        <section class="ravlo-card pad">
+          <div class="flex items-center justify-between gap-4 mb-3">
+            <div>
+              <h3 class="text-lg font-semibold">AI Pilot</h3>
+              <p class="text-sm text-gray-400">
+                Draft borrower emails, follow-ups, notes, and assistant suggestions.
+              </p>
+            </div>
+            <a href="{{ url_for('vip.ai_pilot') }}" class="ravlo-btn primary sm">Open AI Pilot</a>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="ravlo-card pad">
+              <strong>Example Commands</strong>
+              <ul class="mt-3 text-sm text-gray-400 space-y-2">
+                <li>“Email borrower and say I’m sending options tonight.”</li>
+                <li>“Create a follow-up for tomorrow at 10am.”</li>
+                <li>“Draft a text about missing conditions.”</li>
+                <li>“Log $95 for borrower credit report.”</li>
+              </ul>
+            </div>
+            <div class="ravlo-card pad">
+              <strong>Assistant Focus</strong>
+              <p class="text-sm text-gray-400 mt-2">
+                Suggest next steps, reduce manual follow-up work, and keep borrower communication moving.
+              </p>
+            </div>
+          </div>
+        </section>
+      {% endif %}
+
+      {% if 'content_studio' in modules or 'canva' in modules %}
+        <section class="ravlo-card pad">
+          <h3 class="text-lg font-semibold mb-2">Marketing + Program Content</h3>
+          <p class="text-sm text-gray-400 mb-4">
+            Create rate flyers, first responder offers, DPA content, and borrower-facing marketing.
+          </p>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {% if 'content_studio' in modules %}
+              <div class="ravlo-card pad">
+                <strong>Content Studio</strong>
+                <p class="text-sm text-gray-400 mt-2">
+                  Generate email, text, flyer, and borrower education content faster.
+                </p>
+              </div>
+            {% endif %}
+
+            {% if 'canva' in modules %}
+              <div class="ravlo-card pad">
+                <strong>Canva Integration</strong>
+                <p class="text-sm text-gray-400 mt-2">
+                  Prefill branded flyers and open them in Canva for final polish.
+                </p>
+              </div>
+            {% endif %}
+          </div>
+        </section>
+      {% endif %}
+
+    </div>
+
+    <aside class="space-y-6">
+
+      {% if 'finances' in modules %}
+        <section class="ravlo-card pad">
+          <h3 class="text-lg font-semibold mb-2">Finances</h3>
+          <p class="text-sm text-gray-400 mb-4">
+            Track commissions, expenses, and net profit across your business.
+          </p>
+          <a href="{{ url_for('vip.finances') }}" class="ravlo-btn primary sm">Open Finances</a>
+        </section>
+      {% endif %}
+
+      <section class="ravlo-card pad">
+        <h3 class="text-lg font-semibold mb-2">Workspace Settings</h3>
+        <p class="text-sm text-gray-400 mb-4">
+          Turn modules on or off and shape the dashboard around how you work.
+        </p>
+        <a href="{{ url_for('vip.onboarding') }}" class="ravlo-btn ghost sm">Open VIP Setup</a>
+      </section>
+
+    </aside>
+
+  </div>
 </div>
 {% endblock %}
