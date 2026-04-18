@@ -979,7 +979,7 @@ def approve_suggestion(suggestion_id):
 
 
 @elena_bp.route("/contacts/import", methods=["GET", "POST"])
-@login_required
+@role_required("partner_group", "admin")
 def import_contacts():
     if request.method == "POST":
         file = request.files.get("file")
@@ -1030,7 +1030,7 @@ def import_contacts():
 
 
 @elena_bp.route("/contacts/import/preview", methods=["GET", "POST"])
-@login_required
+@role_required("partner_group", "admin")
 def import_preview():
     if request.method == "POST":
         mapping = request.form.to_dict()
