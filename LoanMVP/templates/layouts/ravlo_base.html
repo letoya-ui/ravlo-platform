@@ -137,7 +137,10 @@
       });
     });
   </script>
+{% if active_portal == "vip" %}
+  {% include "layouts/_ai_pilot_fab.html" %}
+{% endif %}
 
-  {% block scripts %}{% endblock %}
+{% block scripts %}{% endblock %}
 </body>
 </html>
