@@ -25,66 +25,107 @@ class TemplateType(str, Enum):
 
 
 TEMPLATES = {
-    # ---------------- FLYERS ----------------
     TemplateType.JUST_LISTED: """
-You are writing a JUST LISTED real estate flyer.
+You are writing a JUST LISTED real estate flyer for Elena James of Keller Williams Hudson Valley.
 
-Agent: Elena James (Keller Williams Hudson Valley)
+Property:
 Address: {address}
 City: {city}, {state} {zip_code}
 Beds: {beds}
 Baths: {baths}
 Sqft: {sqft}
 Price: {price}
+Description: {description}
 
-Instructions:
-- Create a compelling headline (max 10 words)
-- Write a 2–3 sentence lifestyle-focused description
-- Add 4–6 bullet points highlighting features, upgrades, and neighborhood
-- Tone: warm, professional, Hudson Valley lifestyle, service-first
+Return the result in exactly this format:
+
+HEADLINE:
+SUBHEADLINE:
+BODY:
+BULLETS:
+- 
+- 
+- 
+CTA:
+
+Rules:
+- Headline must be 3 to 8 words
+- Subheadline must be one short sentence
+- Body must be 2 short sentences max
+- Bullets must be 3 to 5 concise points
+- CTA must be one sentence
+- Tone: elevated, warm, polished, service-first
+- No hashtags
 """,
 
     TemplateType.JUST_SOLD: """
-You are writing a JUST SOLD real estate flyer.
+You are writing a JUST SOLD real estate flyer for Elena James.
 
-Agent: Elena James
+Property:
 Address: {address}
 City: {city}, {state} {zip_code}
 Sale Price: {price}
 Days on Market: {days_on_market}
 Offer Details: {offer_details}
 
-Instructions:
-- Create a celebratory headline (max 10 words)
-- Mention that the home is sold and the area
-- Highlight 3–5 key features that made it attractive
-- Add a call-to-action for homeowners considering selling
-- Tone: confident, warm, professional
+Return the result in exactly this format:
+
+HEADLINE:
+SUBHEADLINE:
+BODY:
+BULLETS:
+- 
+- 
+- 
+CTA:
+
+Rules:
+- Celebrate the result
+- Mention the area naturally
+- Body must be 2 short sentences max
+- Bullets must highlight 3 to 5 selling points
+- CTA should invite nearby homeowners to connect
+- Tone: confident, warm, polished
+- No hashtags
 """,
 
     TemplateType.COMING_SOON: """
-You are writing a COMING SOON real estate flyer.
+You are writing a COMING SOON flyer for Elena James.
 
-Agent: Elena James
+Property:
 Address: {address}
 City: {city}, {state} {zip_code}
 Beds: {beds}
 Baths: {baths}
 Sqft: {sqft}
-Price (if available): {price}
+Price: {price}
+Description: {description}
 
-Instructions:
-- Create a teaser-style headline (max 10 words)
-- Write a short 2–3 sentence teaser description
-- Add 3–5 bullet points about features and location
-- Emphasize "more details coming soon" and "schedule early access"
-- Tone: anticipatory, inviting, professional
+Return the result in exactly this format:
+
+HEADLINE:
+SUBHEADLINE:
+BODY:
+BULLETS:
+- 
+- 
+- 
+CTA:
+
+Rules:
+- Create curiosity
+- Position this as early access
+- Body must be 2 short sentences max
+- Bullets must be 3 to 5 concise points
+- CTA should encourage early inquiry
+- Tone: anticipatory, inviting, polished
+- No hashtags
 """,
 
     TemplateType.OPEN_HOUSE: """
-You are writing an OPEN HOUSE flyer.
+You are writing an OPEN HOUSE flyer for Elena James.
 
-Agent: Elena James
+Property:
 Address: {address}
 City: {city}, {state} {zip_code}
 Date: {date}
@@ -93,20 +134,33 @@ Beds: {beds}
 Baths: {baths}
 Sqft: {sqft}
 Price: {price}
+Description: {description}
 
-Instructions:
-- Create an inviting headline (max 10 words)
-- Write a short 2–3 sentence description of the home
-- Add 3–5 bullet points about features and neighborhood
-- Clearly restate the open house date and time
-- Add a call-to-action to attend or schedule a private showing
-- Tone: friendly, welcoming, professional
+Return the result in exactly this format:
+
+HEADLINE:
+SUBHEADLINE:
+BODY:
+BULLETS:
+- 
+- 
+- 
+CTA:
+
+Rules:
+- Clearly reference the open house
+- Include date and time naturally
+- Body must be 2 short sentences max
+- Bullets must be 3 to 5 concise points
+- CTA should invite a visit or private showing
+- Tone: welcoming, polished, professional
+- No hashtags
 """,
 
     TemplateType.PRICE_DROP: """
-You are writing a PRICE IMPROVEMENT flyer.
+You are writing a PRICE IMPROVEMENT flyer for Elena James.
 
-Agent: Elena James
+Property:
 Address: {address}
 City: {city}, {state} {zip_code}
 Old Price: {old_price}
@@ -114,188 +168,255 @@ New Price: {new_price}
 Beds: {beds}
 Baths: {baths}
 Sqft: {sqft}
+Description: {description}
 
-Instructions:
-- Create a headline emphasizing the new price (max 10 words)
-- Write a 2–3 sentence description focusing on value
-- Add 3–5 bullet points about features and lifestyle
-- Mention that the price has been improved and invite showings
-- Tone: optimistic, value-focused, professional
+Return the result in exactly this format:
+
+HEADLINE:
+SUBHEADLINE:
+BODY:
+BULLETS:
+- 
+- 
+- 
+CTA:
+
+Rules:
+- Emphasize the new value
+- Body must be 2 short sentences max
+- Bullets must be 3 to 5 concise points
+- CTA should encourage immediate action
+- Tone: optimistic, value-driven, polished
+- No hashtags
 """,
 
     TemplateType.BUYER_NEED: """
-You are writing a BUYER NEED flyer.
+You are writing a BUYER NEED flyer for Elena James.
 
-Agent: Elena James
+Buyer:
 Buyer Type: {buyer_type}
 Budget: {budget}
 Beds: {beds}
 Baths: {baths}
 Preferred Areas: {areas}
 
-Instructions:
-- Create a headline about an active, qualified buyer (max 10 words)
-- Write a 2–3 sentence description of what the buyer is seeking
-- Add 3–5 bullet points with specific criteria
-- Add a call-to-action for homeowners considering selling
-- Tone: respectful, professional, opportunity-focused
+Return the result in exactly this format:
+
+HEADLINE:
+SUBHEADLINE:
+BODY:
+BULLETS:
+- 
+- 
+- 
+CTA:
+
+Rules:
+- Position the buyer as active and real
+- Body must be 2 short sentences max
+- Bullets must show 3 to 5 criteria
+- CTA should invite off-market opportunities
+- Tone: respectful, direct, opportunity-focused
+- No hashtags
 """,
 
     TemplateType.MARKET_UPDATE: """
-You are writing a local MARKET UPDATE flyer.
+You are writing a local MARKET UPDATE flyer for Elena James.
 
-Agent: Elena James
 Area: {area}
 Timeframe: {timeframe}
 Key Stats: {stats}
 
-Instructions:
-- Create a headline about the current market (max 10 words)
-- Write a 2–3 sentence overview of the market conditions
-- Add 4–6 bullet points with specific stats and insights
-- Add a call-to-action for buyers and sellers to reach out
-- Tone: informative, calm, expert, service-first
+Return the result in exactly this format:
+
+HEADLINE:
+SUBHEADLINE:
+BODY:
+BULLETS:
+- 
+- 
+- 
+CTA:
+
+Rules:
+- Make the market understandable
+- Body must be 2 short sentences max
+- Bullets should include 4 to 6 useful insights
+- CTA should invite buyers or sellers to connect
+- Tone: calm, expert, reassuring
+- No hashtags
 """,
 
-    # ---------------- EMAILS ----------------
     TemplateType.FOLLOWUP_GENERAL: """
-Write a follow-up email.
+Write a follow-up email from Elena James.
 
-Agent: Elena James
 Client Name: {client_name}
 Pipeline Stage: {pipeline_stage}
 Context: {context}
 
-Instructions:
-- Include a subject line
-- Write a warm, professional 3–6 sentence email
-- Focus on checking in, offering help, and next steps
-- Tone: service-first, friendly, not pushy
+Return the result in exactly this format:
+
+SUBJECT:
+EMAIL:
+
+Rules:
+- Email must be 4 to 7 sentences
+- Warm, polished, easy to reply to
+- Suggest a practical next step
+- Tone: service-first, not pushy
 """,
 
     TemplateType.FOLLOWUP_AFTER_SHOWING: """
-Write a follow-up email after a home showing.
+Write a post-showing follow-up email from Elena James.
 
-Agent: Elena James
 Client Name: {client_name}
 Property Address: {address}
 City: {city}, {state} {zip_code}
 Context: {context}
 
-Instructions:
-- Include a subject line
-- Reference the specific property they viewed
-- Ask for their thoughts and reactions
-- Offer to answer questions or schedule another showing
-- 3–6 sentences, warm and professional
+Return the result in exactly this format:
+
+SUBJECT:
+EMAIL:
+
+Rules:
+- Reference the property naturally
+- Ask for reaction or feedback
+- Offer next steps
+- Email must be 4 to 7 sentences
+- Tone: warm, attentive, professional
 """,
 
     TemplateType.FOLLOWUP_NEW_LEAD: """
-Write a follow-up email to a NEW LEAD.
+Write a new lead follow-up email from Elena James.
 
-Agent: Elena James
 Client Name: {client_name}
 Lead Source: {source}
 Context: {context}
 
-Instructions:
-- Include a subject line
-- Acknowledge how they came into contact
-- Introduce Elena briefly and her approach
-- Invite a quick call or meeting
-- 3–6 sentences, friendly and confident
+Return the result in exactly this format:
+
+SUBJECT:
+EMAIL:
+
+Rules:
+- Acknowledge how they came in
+- Briefly introduce Elena’s approach
+- Invite a call or reply
+- Email must be 4 to 7 sentences
+- Tone: warm, confident, approachable
 """,
 
     TemplateType.FOLLOWUP_INACTIVE: """
-Write a re-engagement email to an INACTIVE client.
+Write a re-engagement email from Elena James.
 
-Agent: Elena James
 Client Name: {client_name}
 Last Contact Context: {context}
 
-Instructions:
-- Include a subject line
-- Gently acknowledge it has been a while
-- Offer value (market update, new listings, strategy)
-- Invite them to reconnect if timing is better now
-- 3–6 sentences, warm and low-pressure
+Return the result in exactly this format:
+
+SUBJECT:
+EMAIL:
+
+Rules:
+- Gently acknowledge the gap
+- Offer value or a reason to reconnect
+- Keep pressure low
+- Email must be 4 to 7 sentences
+- Tone: thoughtful, low-pressure, warm
 """,
 
-    # ---------------- SOCIAL ----------------
     TemplateType.SOCIAL_JUST_LISTED: """
-Write a short social media post for a JUST LISTED property.
+Write a short social caption for a JUST LISTED property.
 
 Platform: Instagram + Facebook
-Agent: Elena James
 Address: {address}
 City: {city}, {state}
 Beds: {beds}
 Baths: {baths}
 Price: {price}
+Description: {description}
 
-Instructions:
-- 2–4 short sentences
-- Include a hook in the first line
-- Mention key features and location
-- Add a soft call-to-action to schedule a showing
+Return the result in exactly this format:
+
+HOOK:
+CAPTION:
+CTA:
+
+Rules:
+- Hook must be one short line
+- Caption must be 2 to 3 short sentences
+- CTA must be one sentence
 - No hashtags
-- Tone: warm, excited, professional
+- Tone: elevated, warm, exciting
 """,
 
     TemplateType.SOCIAL_JUST_SOLD: """
-Write a short social media post for a JUST SOLD property.
+Write a short social caption for a JUST SOLD property.
 
 Platform: Instagram + Facebook
-Agent: Elena James
 Address: {address}
 City: {city}, {state}
 Sale Price: {price}
-Buyer/Seller Context: {context}
+Context: {context}
 
-Instructions:
-- 2–4 short sentences
-- Celebrate the sale and congratulate the clients
-- Mention the area and any notable detail
-- Add a soft call-to-action for homeowners thinking about selling
+Return the result in exactly this format:
+
+HOOK:
+CAPTION:
+CTA:
+
+Rules:
+- Celebrate the outcome
+- Caption must stay concise
+- CTA should invite future sellers to connect
 - No hashtags
-- Tone: celebratory, grateful, professional
+- Tone: grateful, celebratory, polished
 """,
 
     TemplateType.SOCIAL_OPEN_HOUSE: """
-Write a short social media post for an OPEN HOUSE.
+Write a short social caption for an OPEN HOUSE.
 
 Platform: Instagram + Facebook
-Agent: Elena James
 Address: {address}
 City: {city}, {state}
 Date: {date}
 Time: {time}
 
-Instructions:
-- 2–4 short sentences
-- Invite people to the open house
-- Mention one or two key features
-- Clearly restate date and time
+Return the result in exactly this format:
+
+HOOK:
+CAPTION:
+CTA:
+
+Rules:
+- Mention date and time naturally
+- Caption must be 2 to 3 short sentences
+- CTA must invite attendance
 - No hashtags
-- Tone: inviting, friendly, professional
+- Tone: upbeat, welcoming, polished
 """,
 
     TemplateType.SOCIAL_MARKET_UPDATE: """
-Write a short social media post for a MARKET UPDATE.
+Write a short social caption for a MARKET UPDATE.
 
 Platform: Instagram + Facebook
-Agent: Elena James
 Area: {area}
 Timeframe: {timeframe}
 Key Stats: {stats}
 
-Instructions:
-- 2–4 short sentences
-- Summarize the market in plain language
-- Mention 2–3 key stats or trends
-- Add a soft call-to-action for buyers/sellers to reach out
+Return the result in exactly this format:
+
+HOOK:
+CAPTION:
+CTA:
+
+Rules:
+- Make the market feel understandable
+- Mention 2 to 3 useful takeaways
+- CTA should invite conversation
 - No hashtags
-- Tone: calm, expert, reassuring
+- Tone: calm, expert, approachable
 """,
 }
 
@@ -305,4 +426,3 @@ def render_template(template_type: TemplateType, **kwargs) -> str:
     if not template:
         raise ValueError(f"Template not found: {template_type}")
     return template.format(**kwargs)
-    

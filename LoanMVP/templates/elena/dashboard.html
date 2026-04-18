@@ -289,7 +289,7 @@ Your AI‑powered CRM and content engine — contacts, listings, interactions, a
           </div>
           {% for flyer in recent_flyers %}
             <div class="partner-tool-item">
-              <strong>{{ flyer.title or flyer.flyer_type|replace("_", " ")|capitalize }}</strong>
+              <strong>{{ flyer.flyer_type|replace("_", " ")|title }}</strong>
               <span>
                 {{ flyer.property_address or "—" }}
                 · {{ flyer.created_at.strftime("%b %d") }}
