@@ -656,19 +656,47 @@ def template_studio_generate_and_save():
     output = generate_text(prompt)
 
     saved_interaction_id = None
+@elena_bp.get("/template-studio")
+@role_required("partner_group", "admin")
+def template_studio():
+    template_type = request.args.get("template_type")
+    client_id = request.args.get("client_id")
+    listing_id = request.args.get("listing_id")
+
+    variables = _template_defaults()
 
     if client_id:
         client = ElenaClient.query.get(client_id)
         if client:
-            interaction = ElenaInteraction(
-                client_id=client.id,
-                interaction_type=InteractionType.EMAIL,
-                content=output,
-                meta=f"template:{template_type}",
+            variables.update(
+                {
+                    "client_name": client.name,
+                    "email": getattr(client, "email", "") or "",
+                    "phone": getattr(client, "phone", "") or "",
+                    "pipeline_stage": getattr(client, "pipeline_stage", "") or "",
+                    "context": getattr(client, "notes", "") or "",
+                    "areas": getattr(client, "preferred_areas", "") or "",
+                    "budget": getattr(client, "budget", "") or "",
+                }
             )
-            db.session.add(interaction)
-            db.session.commit()
-            saved_interaction_id = interaction.id
+
+    if listing_id:
+        listing = ElenaListing.query.get(listing_id)
+        if listing:
+            variables.update(
+                {
+                    "address": listing.address,
+                    "city": listing.city,
+                    "state": listing.state,
+                    "zip_code": listing.zip_code,
+                    "beds": listing.beds,
+                    "baths": listing.baths,
+                    "sqft": listing.sqft,
+                    "price": listing.price,
+                    "description": getattr(listing, "description", "") or "",
+                    "status": getattr(listing, "status", "") or "",
+                }
+            )
 
     return render_template(
         "elena/template_studio.html",
@@ -677,9 +705,180 @@ def template_studio_generate_and_save():
         variables=variables,
         client_id=client_id,
         listing_id=listing_id,
+        preview=None,
+        output=None,
+        saved_interaction_id=None,
+        saved_flyer_id=None,
+        portal="elena",
+        portal_name="Elena",
+        portal_home=url_for("elena.dashboard"),
+    )
+
+
+@elena_bp.post("/template-studio/preview")
+@role_required("partner_group", "admin")
+def template_studio_preview():
+    template_type_value = request.form.get("template_type")
+    client_id = request.form.get("client_id")
+    listing_id = request.form.get("listing_id")
+
+    template_enum = _get_template_enum(template_type_value)
+    if not template_enum:
+        flash("Please choose a valid template.", "warning")
+        return redirect(url_for("elena.template_studio"))
+
+    variables = _template_defaults()
+    variables.update({
+        k: v
+        for k, v in request.form.items()
+        if k not in ["template_type", "client_id", "listing_id", "action", "csrf_token"]
+    })
+
+    prompt = render_elena_template(template_enum, **variables)
+
+    return render_template(
+        "elena/template_studio.html",
+        templates=[t.value for t in TemplateType],
+        selected_template=template_type_value,
+        variables=variables,
+        client_id=client_id,
+        listing_id=listing_id,
+        preview=prompt,
+        output=None,
+        saved_interaction_id=None,
+        saved_flyer_id=None,
+        portal="elena",
+        portal_name="Elena",
+        portal_home=url_for("elena.dashboard"),
+    )
+
+
+@elena_bp.post("/template-studio/generate")
+@role_required("partner_group", "admin")
+def template_studio_generate():
+    template_type_value = request.form.get("template_type")
+    client_id = request.form.get("client_id")
+    listing_id = request.form.get("listing_id")
+
+    template_enum = _get_template_enum(template_type_value)
+    if not template_enum:
+        flash("Please choose a valid template.", "warning")
+        return redirect(url_for("elena.template_studio"))
+
+    variables = _template_defaults()
+    variables.update({
+        k: v
+        for k, v in request.form.items()
+        if k not in ["template_type", "client_id", "listing_id", "action", "csrf_token"]
+    })
+
+    prompt = render_elena_template(template_enum, **variables)
+    output = generate_text(prompt)
+
+    return render_template(
+        "elena/template_studio.html",
+        templates=[t.value for t in TemplateType],
+        selected_template=template_type_value,
+        variables=variables,
+        client_id=client_id,
+        listing_id=listing_id,
+        preview=prompt,
+        output=output,
+        saved_interaction_id=None,
+        saved_flyer_id=None,
+        portal="elena",
+        portal_name="Elena",
+        portal_home=url_for("elena.dashboard"),
+    )
+
+
+@elena_bp.post("/template-studio/generate_and_save")
+@role_required("partner_group", "admin")
+def template_studio_generate_and_save():
+    template_type_value = request.form.get("template_type")
+    client_id = request.form.get("client_id")
+    listing_id = request.form.get("listing_id")
+
+    template_enum = _get_template_enum(template_type_value)
+    if not template_enum:
+        flash("Please choose a valid template.", "warning")
+        return redirect(url_for("elena.template_studio"))
+
+    variables = _template_defaults()
+    variables.update({
+        k: v
+        for k, v in request.form.items()
+        if k not in ["template_type", "client_id", "listing_id", "action", "csrf_token"]
+    })
+
+    prompt = render_elena_template(template_enum, **variables)
+    output = generate_text(prompt)
+
+    saved_interaction_id = None
+    saved_flyer_id = None
+
+    marketing_templates = {
+        TemplateType.JUST_LISTED.value,
+        TemplateType.JUST_SOLD.value,
+        TemplateType.COMING_SOON.value,
+        TemplateType.OPEN_HOUSE.value,
+        TemplateType.PRICE_DROP.value,
+        TemplateType.BUYER_NEED.value,
+        TemplateType.MARKET_UPDATE.value,
+        TemplateType.SOCIAL_JUST_LISTED.value,
+        TemplateType.SOCIAL_JUST_SOLD.value,
+        TemplateType.SOCIAL_OPEN_HOUSE.value,
+        TemplateType.SOCIAL_MARKET_UPDATE.value,
+    }
+
+    if template_type_value in marketing_templates and listing_id:
+        listing = ElenaListing.query.get(listing_id)
+        if listing:
+            flyer = ElenaFlyer(
+                flyer_type=template_type_value,
+                property_address=listing.address or variables.get("address") or "",
+                property_id=str(listing.id),
+                listing_id=listing.id,
+                title=variables.get("title") or None,
+                cta=variables.get("cta") or None,
+                body=output,
+            )
+            db.session.add(flyer)
+            db.session.commit()
+            saved_flyer_id = flyer.id
+            flash("Content created and saved to flyers.", "success")
+        else:
+            flash("Listing not found. Content was generated but not saved.", "warning")
+
+    elif client_id:
+        client = ElenaClient.query.get(client_id)
+        if client:
+            interaction = ElenaInteraction(
+                client_id=client.id,
+                interaction_type=InteractionType.EMAIL,
+                content=output,
+                meta=f"template:{template_type_value}",
+            )
+            db.session.add(interaction)
+            db.session.commit()
+            saved_interaction_id = interaction.id
+            flash("Content created and saved to client activity.", "success")
+        else:
+            flash("Client not found. Content was generated but not saved.", "warning")
+    else:
+        flash("Content created. Add a client or listing to save it automatically.", "info")
+
+    return render_template(
+        "elena/template_studio.html",
+        templates=[t.value for t in TemplateType],
+        selected_template=template_type_value,
+        variables=variables,
+        client_id=client_id,
+        listing_id=listing_id,
         preview=prompt,
         output=output,
         saved_interaction_id=saved_interaction_id,
+        saved_flyer_id=saved_flyer_id,
         portal="elena",
         portal_name="Elena",
         portal_home=url_for("elena.dashboard"),
