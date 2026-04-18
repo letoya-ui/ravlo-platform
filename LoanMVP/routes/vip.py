@@ -128,7 +128,7 @@ def index():
     profile = get_or_create_vip_profile()
 
     role_map = {
-        "realtor": "vip.realtor_dashboard",
+        "realtor": "elena.dashboard",
         "contractor": "vip.contractor_dashboard",
         "designer": "vip.designer_dashboard",
         "partner": "vip.partner_dashboard",
