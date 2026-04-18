@@ -1,473 +1,408 @@
 {% extends "layouts/ravlo_base.html" %}
 
-{% block title %}Ravlo • Elena Dashboard{% endblock %}
-
+{% block title %}Ravlo • Elena{% endblock %}
 {% block page_title %}Elena Dashboard{% endblock %}
 {% block page_subline %}
-Your AI‑powered CRM and content engine — contacts, listings, interactions, and templates in one place.
+Clients, listings, flyers, follow-ups, and Copilot in one realtor workspace.
 {% endblock %}
 
 {% block topbar_actions %}
-  <a href="{{ url_for('elena.template_studio') }}" class="ravlo-btn ghost sm">
-    Template Studio
+  <a href="{{ url_for('elena.copilot') }}" class="ravlo-btn ghost sm">
+    <i class="lucide lucide-sparkles"></i>
+    <span>Copilot</span>
   </a>
-  <a href="{{ url_for('elena.client_new') }}" class="ravlo-btn primary sm">
-    Add Client
+
+  <a href="{{ url_for('elena.template_studio') }}" class="ravlo-btn ghost sm">
+    <i class="lucide lucide-file-edit"></i>
+    <span>Template Studio</span>
+  </a>
+
+  <a href="{{ url_for('elena.client_new') }}" class="ravlo-btn ghost sm">
+    <i class="lucide lucide-user-plus"></i>
+    <span>Add Client</span>
+  </a>
+
+  <a href="{{ url_for('elena.listing_new') }}" class="ravlo-btn primary sm">
+    <i class="lucide lucide-house-plus"></i>
+    <span>Add Listing</span>
   </a>
 {% endblock %}
 
 {% block content %}
-<div class="partner-dashboard-page elena-dashboard-page">
+<div class="partner-dashboard-page">
 
-  <!-- HERO -->
-  <section class="ravlo-card partner-hero-card">
-    <div class="partner-hero-grid">
-      <div class="partner-hero-copy">
-        <span class="partner-eyebrow">Elena — Relationship Brain</span>
-        <h2 class="partner-hero-title">
-          Contacts, listings, interactions, and content — all in one workspace.
-        </h2>
-        <p class="partner-hero-text">
-          Elena is the AI‑powered CRM and content engine for realtors, investors, loan officers,
-          contractors, and partners. Manage your pipeline, generate flyers and follow‑ups, and
-          keep every conversation connected to a deal.
-        </p>
-        <div class="partner-hero-actions">
-          <a href="{{ url_for('elena.client_new') }}" class="ravlo-btn primary">Add Client</a>
-          <a href="{{ url_for('elena.listing_new') }}" class="ravlo-btn ghost">Add Listing</a>
-          <a href="{{ url_for('elena.template_studio') }}" class="ravlo-btn ghost">
-            Open Template Studio
-          </a>
-        </div>
-      </div>
+  <form method="POST" action="{{ url_for('elena.switch_market') }}" class="elena-market-switcher">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="next" value="{{ request.full_path if request.query_string else request.path }}">
 
-      <div class="partner-hero-panel">
-        <div class="partner-mini-stat">
-          <span class="label">Priority Focus</span>
-          <strong>Pipeline movement and follow‑up discipline</strong>
-        </div>
-        <div class="partner-mini-stat">
-          <span class="label">Best Use</span>
-          <strong>Turn every client touch into a tracked interaction</strong>
-        </div>
-      </div>
-    </div>
-  </section>
+    <label for="market" class="elena-market-label">Market</label>
+    <select name="market" id="market" class="elena-market-select" onchange="this.form.submit()">
+      <option value="All Markets" {% if current_market == "All Markets" %}selected{% endif %}>All Markets</option>
+      {% for market in available_markets %}
+        <option value="{{ market }}" {% if current_market == market %}selected{% endif %}>{{ market }}</option>
+      {% endfor %}
+    </select>
+  </form>
 
-  <!-- A. TOP SUMMARY CARDS -->
   <section class="partner-stats-grid">
-    <article class="ravlo-card partner-stat-card" data-test="stat-total-clients">
+    <article class="ravlo-card partner-stat-card">
       <div class="partner-stat-label">Total Clients</div>
       <div class="partner-stat-value">{{ summary.total_clients }}</div>
-      <div class="partner-stat-note">Every contact inside Elena's CRM</div>
+      <div class="partner-stat-note">All active client records</div>
     </article>
 
-    <article class="ravlo-card partner-stat-card" data-test="stat-new-leads">
+    <article class="ravlo-card partner-stat-card">
       <div class="partner-stat-label">New Leads</div>
       <div class="partner-stat-value">{{ summary.new_leads }}</div>
       <div class="partner-stat-note">Added in the last 7 days</div>
     </article>
 
-    <article class="ravlo-card partner-stat-card" data-test="stat-active-listings">
+    <article class="ravlo-card partner-stat-card">
       <div class="partner-stat-label">Active Listings</div>
       <div class="partner-stat-value">{{ summary.active_listings }}</div>
-      <div class="partner-stat-note">Currently on the market</div>
+      <div class="partner-stat-note">
+        {% if current_market == "All Markets" %}
+          Across all markets
+        {% else %}
+          In {{ current_market }}
+        {% endif %}
+      </div>
     </article>
 
-    <article class="ravlo-card partner-stat-card" data-test="stat-followups-due">
-      <div class="partner-stat-label">Follow‑Ups Due</div>
+    <article class="ravlo-card partner-stat-card">
+      <div class="partner-stat-label">Follow-Ups Due</div>
       <div class="partner-stat-value">{{ summary.followups_due }}</div>
-      <div class="partner-stat-note">Scheduled within the next 7 days</div>
+      <div class="partner-stat-note">Due in the next 7 days</div>
     </article>
   </section>
 
-  <!-- MAIN GRID -->
-  <section class="partner-dashboard-grid">
+  <div class="elena-dashboard-grid">
+    <div class="elena-dashboard-main">
 
-    <div class="partner-dashboard-main">
-
-      <!-- B. QUICK ACTIONS -->
-      <article class="ravlo-card partner-section-card" data-test="section-quick-actions">
+      <section class="ravlo-card partner-section-card">
         <div class="section-head">
           <div>
-            <h3>Quick Actions</h3>
-            <p>Capture a contact, listing, interaction, or piece of content in seconds.</p>
+            <h3>Copilot</h3>
+            <p>Use Copilot for follow-ups, listing content, quick texts, and next-step suggestions.</p>
+          </div>
+          <a href="{{ url_for('elena.copilot') }}" class="ravlo-btn ghost sm">Open Copilot</a>
+        </div>
+
+        <div class="elena-copilot-panel">
+          <div class="elena-copilot-prompts">
+            <button type="button" class="elena-prompt-chip">Text buyer I’m outside</button>
+            <button type="button" class="elena-prompt-chip">Create follow-up for tomorrow</button>
+            <button type="button" class="elena-prompt-chip">Generate flyer for listing</button>
+            <button type="button" class="elena-prompt-chip">Summarize this client’s activity</button>
+          </div>
+
+          {% if copilot_suggestions %}
+            <div class="elena-copilot-suggestions">
+              {% for item in copilot_suggestions %}
+                <div class="elena-copilot-suggestion">
+                  <strong>{{ item.title }}</strong>
+                  <p>{{ item.body or item.suggestion_type }}</p>
+                </div>
+              {% endfor %}
+            </div>
+          {% else %}
+            <p class="muted-copy">No Copilot suggestions yet.</p>
+          {% endif %}
+        </div>
+      </section>
+
+      <section class="ravlo-card partner-section-card">
+        <div class="section-head">
+          <div>
+            <h3>Pipeline</h3>
+            <p>Grouped by current stage.</p>
           </div>
         </div>
 
-        <div class="quick-action-grid">
-          <a class="partner-action-card" href="{{ url_for('elena.client_new') }}">
-            <div class="partner-action-icon"><i class="lucide lucide-user-plus"></i></div>
-            <div class="partner-action-copy">
-              <h4>Add Client</h4>
-              <p>Capture a new contact with role, pipeline stage, and tags.</p>
-            </div>
-          </a>
-
-          <a class="partner-action-card" href="{{ url_for('elena.listing_new') }}">
-            <div class="partner-action-icon"><i class="lucide lucide-home"></i></div>
-            <div class="partner-action-copy">
-              <h4>Add Listing</h4>
-              <p>Create a property record with status, price, and photos.</p>
-            </div>
-          </a>
-
-          <a class="partner-action-card" href="{{ url_for('elena.interaction_new') }}">
-            <div class="partner-action-icon"><i class="lucide lucide-message-square-plus"></i></div>
-            <div class="partner-action-copy">
-              <h4>Log Interaction</h4>
-              <p>Record a call, email, text, meeting, showing, or follow‑up.</p>
-            </div>
-          </a>
-
-          <a class="partner-action-card" href="{{ url_for('elena.template_studio') }}">
-            <div class="partner-action-icon"><i class="lucide lucide-wand-sparkles"></i></div>
-            <div class="partner-action-copy">
-              <h4>Generate Content</h4>
-              <p>Flyers, emails, and social posts from {{ template_types|length }} templates.</p>
-            </div>
-          </a>
-        </div>
-      </article>
-
-      <!-- C. CLIENT PIPELINE VIEW -->
-      <article class="ravlo-card partner-section-card" data-test="section-pipeline">
-        <div class="section-head">
-          <div>
-            <h3>Client Pipeline</h3>
-            <p>Deals grouped by stage — drag a client through the funnel with follow‑ups.</p>
-          </div>
-        </div>
-
-        <div class="elena-pipeline-grid">
+        <div class="pipeline-grid">
           {% for group in pipeline_groups %}
-            <div class="elena-pipeline-column" data-test="pipeline-col-{{ group.key }}">
-              <div class="elena-pipeline-column-head">
+            <div class="pipeline-column">
+              <div class="pipeline-column-head">
                 <strong>{{ group.label }}</strong>
-                <span class="elena-pipeline-count">{{ group.count }}</span>
+                <span>{{ group.count }}</span>
               </div>
-              <div class="elena-pipeline-cards">
-                {% for client in group.clients %}
-                  <div class="elena-pipeline-card" data-test="pipeline-card">
-                    <div class="elena-pipeline-card-name">{{ client.name }}</div>
-                    {% if client.role %}
-                      <div class="elena-pipeline-card-role">{{ client.role }}</div>
-                    {% endif %}
-                    {% if client.tags %}
-                      <div class="elena-pipeline-card-tags">{{ client.tags }}</div>
-                    {% endif %}
-                  </div>
-                {% else %}
-                  <div class="elena-pipeline-empty">No clients in this stage.</div>
-                {% endfor %}
-              </div>
+
+              {% if group.clients %}
+                <div class="pipeline-client-list">
+                  {% for client in group.clients %}
+                    <div class="pipeline-client-card">
+                      <strong>{{ client.name }}</strong>
+                      <p>{{ client.email or client.phone or "No contact info" }}</p>
+                    </div>
+                  {% endfor %}
+                </div>
+              {% else %}
+                <div class="pipeline-empty">No clients</div>
+              {% endif %}
             </div>
           {% endfor %}
         </div>
-      </article>
+      </section>
 
-      <!-- D. ACTIVITY TIMELINE -->
-      <article class="ravlo-card partner-section-card" data-test="section-timeline">
+      <section class="ravlo-card partner-section-card">
         <div class="section-head">
           <div>
-            <h3>Activity Timeline</h3>
-            <p>Your 10 most recent interactions across every client.</p>
+            <h3>Listings</h3>
+            <p>
+              {% if current_market == "All Markets" %}
+                Recent listings across all markets.
+              {% else %}
+                Recent listings in {{ current_market }}.
+              {% endif %}
+            </p>
           </div>
-          <a href="{{ url_for('elena.interaction_new') }}" class="ravlo-btn ghost sm">
-            Log Interaction
-          </a>
+          <a href="{{ url_for('elena.listing_new') }}" class="ravlo-btn ghost sm">Add Listing</a>
         </div>
-
-        {% if recent_interactions %}
-          <div class="elena-timeline">
-            {% for item in recent_interactions %}
-              <div class="elena-timeline-item">
-                <div class="elena-timeline-dot"></div>
-                <div class="elena-timeline-body">
-                  <div class="elena-timeline-meta">
-                    <strong>{{ item.interaction_type|capitalize }}</strong>
-                    <span>
-                      {% if item.client %}{{ item.client.name }}{% else %}—{% endif %}
-                      · {{ item.created_at.strftime("%b %d, %H:%M") }}
-                    </span>
-                  </div>
-                  <p class="elena-timeline-content">
-                    {{ item.content[:240] }}{% if item.content|length > 240 %}…{% endif %}
-                  </p>
-                  {% if item.due_at %}
-                    <div class="elena-timeline-due">
-                      Follow‑up due {{ item.due_at.strftime("%b %d, %H:%M") }}
-                    </div>
-                  {% endif %}
-                </div>
-              </div>
-            {% endfor %}
-          </div>
-        {% else %}
-          <div class="partner-tool-item">
-            <strong>No interactions yet</strong>
-            <span>Use the Log Interaction button to record the first touch.</span>
-          </div>
-        {% endif %}
-      </article>
-
-      <!-- F. LISTING MANAGER -->
-      <article class="ravlo-card partner-section-card" data-test="section-listings">
-        <div class="section-head">
-          <div>
-            <h3>Listing Manager</h3>
-            <p>Properties you're tracking. Filter by status to focus the view.</p>
-          </div>
-          <a href="{{ url_for('elena.listing_new') }}" class="ravlo-btn ghost sm">
-            Add Listing
-          </a>
-        </div>
-
-        <form method="GET" action="{{ url_for('elena.dashboard') }}" class="elena-listing-filter">
-          <label>
-            Status
-            <select name="listing_status" onchange="this.form.submit()">
-              <option value="" {% if not listing_status_filter %}selected{% endif %}>All</option>
-              {% for key, label in listing_statuses %}
-                <option value="{{ key }}" {% if listing_status_filter == key %}selected{% endif %}>
-                  {{ label }}
-                </option>
-              {% endfor %}
-            </select>
-          </label>
-        </form>
 
         {% if listings %}
-          <div class="elena-listing-table">
-            <div class="elena-listing-row elena-listing-head">
-              <div>Address</div>
-              <div>City</div>
-              <div>Price</div>
-              <div>Beds / Baths</div>
-              <div>Status</div>
-            </div>
+          <div class="listing-grid">
             {% for listing in listings %}
-              <div class="elena-listing-row" data-test="listing-row">
-                <div>{{ listing.address }}</div>
-                <div>{{ listing.city }}, {{ listing.state }}</div>
-                <div>{% if listing.price %}${{ "{:,}".format(listing.price) }}{% else %}—{% endif %}</div>
-                <div>{{ listing.beds or "—" }} / {{ listing.baths or "—" }}</div>
-                <div>
-                  <span class="elena-status-pill elena-status-{{ listing.status }}">
-                    {{ listing.status|capitalize }}
-                  </span>
+              <article class="listing-card">
+                <div class="listing-card-top">
+                  <strong>{{ listing.address }}</strong>
+                  <span class="listing-status">{{ listing.status|title }}</span>
                 </div>
-              </div>
+                <p>{{ listing.city }}, {{ listing.state }} {{ listing.zip_code }}</p>
+                <p class="listing-market">{{ listing.market or "Unassigned market" }}</p>
+                <div class="listing-meta">
+                  {% if listing.price %}<span>${{ "{:,}".format(listing.price) }}</span>{% endif %}
+                  {% if listing.beds is not none %}<span>{{ listing.beds }} bd</span>{% endif %}
+                  {% if listing.baths is not none %}<span>{{ listing.baths }} ba</span>{% endif %}
+                  {% if listing.sqft %}<span>{{ "{:,}".format(listing.sqft) }} sqft</span>{% endif %}
+                </div>
+              </article>
             {% endfor %}
           </div>
         {% else %}
-          <div class="partner-tool-item">
-            <strong>No listings yet</strong>
-            <span>Add a listing to start generating flyers and social posts.</span>
-          </div>
+          <div class="empty-panel">No listings found for this market.</div>
         {% endif %}
-      </article>
+      </section>
 
     </div>
 
-    <!-- SIDE -->
-    <aside class="partner-dashboard-side">
+    <aside class="elena-dashboard-side">
 
-      <!-- E. TEMPLATE STUDIO -->
-      <article class="ravlo-card partner-section-card" data-test="section-template-studio">
+      <section class="ravlo-card partner-section-card">
         <div class="section-head">
           <div>
-            <h3>Template Studio</h3>
-            <p>AI‑generated flyers, emails, and social posts.</p>
+            <h3>Recent Activity</h3>
+            <p>Latest interactions across the workspace.</p>
           </div>
         </div>
 
-        <div class="partner-tool-list">
-          <div class="partner-tool-item">
-            <strong>{{ template_types|length }} templates</strong>
-            <span>Just‑listed, just‑sold, open house, follow‑ups, market updates and more.</span>
+        {% if recent_interactions %}
+          <div class="activity-list">
+            {% for item in recent_interactions %}
+              <div class="activity-item">
+                <strong>{{ item.interaction_type|replace("_", " ")|title }}</strong>
+                <p>{{ item.content[:140] }}{% if item.content|length > 140 %}...{% endif %}</p>
+              </div>
+            {% endfor %}
           </div>
-          {% for flyer in recent_flyers %}
-            <div class="partner-tool-item">
-              <strong>{{ flyer.flyer_type|replace("_", " ")|title }}</strong>
-              <span>
-                {{ flyer.property_address or "—" }}
-                · {{ flyer.created_at.strftime("%b %d") }}
-              </span>
-            </div>
-          {% endfor %}
-        </div>
+        {% else %}
+          <div class="empty-panel">No interactions yet.</div>
+        {% endif %}
+      </section>
 
-        <a href="{{ url_for('elena.template_studio') }}" class="ravlo-btn primary">
-          Open Template Studio
-        </a>
-      </article>
-
-      <!-- TODAY -->
-      <article class="ravlo-card partner-section-card">
+      <section class="ravlo-card partner-section-card">
         <div class="section-head">
           <div>
-            <h3>CRM Snapshot</h3>
-            <p>Quick state of your book of business.</p>
+            <h3>Recent Flyers</h3>
+            <p>Latest generated flyer records.</p>
           </div>
         </div>
 
-        <div class="partner-checklist">
-          <div class="partner-check-item">Clients: {{ summary.total_clients }}</div>
-          <div class="partner-check-item">New leads (7 days): {{ summary.new_leads }}</div>
-          <div class="partner-check-item">Active listings: {{ summary.active_listings }}</div>
-          <div class="partner-check-item">Follow‑ups due (7 days): {{ summary.followups_due }}</div>
-        </div>
-      </article>
+        {% if recent_flyers %}
+          <div class="flyer-list">
+            {% for flyer in recent_flyers %}
+              <div class="flyer-item">
+                <strong>{{ flyer.property_address or flyer.flyer_type|replace("_", " ")|title }}</strong>
+                <p>{{ flyer.flyer_type|replace("_", " ")|title }}</p>
+                {% if flyer.canva_status %}
+                  <span class="flyer-status">{{ flyer.canva_status|title }}</span>
+                {% endif %}
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="empty-panel">No flyers yet.</div>
+        {% endif %}
+      </section>
 
     </aside>
-
-  </section>
+  </div>
 </div>
+{% endblock %}
 
+{% block head %}
 <style>
-  .elena-pipeline-grid {
+  .elena-market-switcher {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 18px;
+  }
+
+  .elena-market-label {
+    color: #b7c7d8;
+    font-size: 0.9rem;
+    font-weight: 600;
+  }
+
+  .elena-market-select {
+    background: rgba(255,255,255,0.04);
+    color: #fff;
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 10px;
+    padding: 8px 12px;
+    font-size: 0.92rem;
+  }
+
+  .elena-dashboard-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    grid-template-columns: minmax(0, 2fr) minmax(320px, 1fr);
+    gap: 18px;
+  }
+
+  .elena-dashboard-main,
+  .elena-dashboard-side {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+
+  .elena-copilot-panel {
+    display: flex;
+    flex-direction: column;
     gap: 14px;
   }
-  .elena-pipeline-column {
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px solid rgba(255, 255, 255, 0.06);
-    border-radius: 12px;
-    padding: 12px;
+
+  .elena-copilot-prompts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .elena-prompt-chip {
+    border: 1px solid rgba(255,255,255,0.10);
+    background: rgba(255,255,255,0.04);
+    color: #dce7f2;
+    border-radius: 999px;
+    padding: 8px 12px;
+    font-size: 0.86rem;
+  }
+
+  .elena-copilot-suggestions,
+  .activity-list,
+  .flyer-list {
     display: flex;
     flex-direction: column;
     gap: 10px;
-    min-height: 160px;
-  }
-  .elena-pipeline-column-head {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    color: #ffffff;
-    font-size: 0.95rem;
-  }
-  .elena-pipeline-count {
-    background: rgba(255, 255, 255, 0.08);
-    color: #cfe1f4;
-    border-radius: 999px;
-    padding: 2px 10px;
-    font-size: 0.75rem;
-  }
-  .elena-pipeline-cards {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-  }
-  .elena-pipeline-card {
-    background: rgba(255, 255, 255, 0.04);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 10px;
-    padding: 10px 12px;
-  }
-  .elena-pipeline-card-name {
-    color: #ffffff;
-    font-weight: 600;
-    font-size: 0.92rem;
-  }
-  .elena-pipeline-card-role,
-  .elena-pipeline-card-tags {
-    color: #8ea4b7;
-    font-size: 0.78rem;
-    margin-top: 2px;
-  }
-  .elena-pipeline-empty {
-    color: #6d7e91;
-    font-size: 0.82rem;
-    font-style: italic;
   }
 
-  .elena-timeline { display: flex; flex-direction: column; gap: 14px; }
-  .elena-timeline-item {
-    display: grid;
-    grid-template-columns: 14px 1fr;
-    gap: 12px;
-    align-items: start;
+  .elena-copilot-suggestion,
+  .activity-item,
+  .flyer-item,
+  .pipeline-client-card,
+  .listing-card {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 12px;
+    padding: 12px;
   }
-  .elena-timeline-dot {
-    width: 10px; height: 10px;
-    border-radius: 50%;
-    background: #4f8cff;
-    margin-top: 6px;
-    box-shadow: 0 0 0 4px rgba(79, 140, 255, 0.15);
-  }
-  .elena-timeline-meta {
-    display: flex;
-    gap: 8px;
-    align-items: baseline;
-    color: #ffffff;
-  }
-  .elena-timeline-meta span { color: #8ea4b7; font-size: 0.82rem; }
-  .elena-timeline-content {
-    color: #cfe1f4;
-    font-size: 0.9rem;
+
+  .elena-copilot-suggestion p,
+  .activity-item p,
+  .flyer-item p,
+  .pipeline-client-card p,
+  .listing-card p,
+  .muted-copy {
+    color: #9fb1c4;
     margin-top: 4px;
     line-height: 1.45;
   }
-  .elena-timeline-due {
-    color: #ffb36d;
-    font-size: 0.8rem;
-    margin-top: 4px;
+
+  .pipeline-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
   }
 
-  .elena-listing-filter { margin: 8px 0 12px; }
-  .elena-listing-filter label {
-    display: inline-flex; gap: 8px; align-items: center;
-    color: #cfe1f4; font-size: 0.88rem;
+  .pipeline-column {
+    background: rgba(255,255,255,0.02);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 14px;
+    padding: 12px;
   }
-  .elena-listing-filter select {
-    background: rgba(255, 255, 255, 0.04);
-    color: #ffffff;
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    border-radius: 8px;
-    padding: 6px 10px;
+
+  .pipeline-column-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
   }
-  .elena-listing-table {
+
+  .pipeline-client-list {
     display: flex;
     flex-direction: column;
-    gap: 6px;
-  }
-  .elena-listing-row {
-    display: grid;
-    grid-template-columns: 2fr 1.4fr 1fr 1fr 1fr;
     gap: 10px;
-    padding: 10px 12px;
-    border-radius: 10px;
-    background: rgba(255, 255, 255, 0.03);
+  }
+
+  .pipeline-empty,
+  .empty-panel {
+    color: #94a7bb;
+    padding: 14px;
+    border-radius: 12px;
+    background: rgba(255,255,255,0.02);
+    border: 1px dashed rgba(255,255,255,0.08);
+  }
+
+  .listing-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+  }
+
+  .listing-card-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .listing-status,
+  .flyer-status,
+  .listing-market {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
     color: #cfe1f4;
+    font-size: 0.8rem;
+  }
+
+  .listing-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 8px;
+    color: #dce7f2;
     font-size: 0.88rem;
   }
-  .elena-listing-head {
-    background: transparent;
-    color: #8ea4b7;
-    font-size: 0.78rem;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    padding: 6px 12px;
-  }
-  .elena-status-pill {
-    display: inline-block;
-    padding: 2px 10px;
-    border-radius: 999px;
-    font-size: 0.74rem;
-    color: #ffffff;
-  }
-  .elena-status-active   { background: rgba(90, 200, 120, 0.22); color: #b7f2c6; }
-  .elena-status-pending  { background: rgba(255, 200, 80, 0.22); color: #ffde9d; }
-  .elena-status-sold     { background: rgba(120, 140, 255, 0.22); color: #c7d2ff; }
-  .elena-status-withdrawn{ background: rgba(255, 110, 110, 0.22); color: #ffb8b8; }
 
-  @media (max-width: 900px) {
-    .elena-listing-row {
-      grid-template-columns: 1fr 1fr;
+  @media (max-width: 1100px) {
+    .elena-dashboard-grid {
+      grid-template-columns: 1fr;
     }
-    .elena-listing-row.elena-listing-head { display: none; }
+
+    .pipeline-grid,
+    .listing-grid {
+      grid-template-columns: 1fr;
+    }
   }
 </style>
 {% endblock %}

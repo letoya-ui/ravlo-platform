@@ -1,114 +1,187 @@
 {% extends "layouts/ravlo_base.html" %}
 
-{% block title %}Ravlo • Elena — Add Listing{% endblock %}
+{% block title %}Ravlo • Add Listing{% endblock %}
 {% block page_title %}Add Listing{% endblock %}
-{% block page_subline %}Create a property record Elena can flyer, post, or email about.{% endblock %}
+{% block page_subline %}
+Add a new property and assign it to a market.
+{% endblock %}
+
+{% block topbar_actions %}
+  <a href="{{ url_for('elena.copilot') }}" class="ravlo-btn ghost sm">
+    <i class="lucide lucide-sparkles"></i>
+    <span>Copilot</span>
+  </a>
+  <a href="{{ url_for('elena.dashboard') }}" class="ravlo-btn ghost sm">
+    <i class="lucide lucide-arrow-left"></i>
+    <span>Back to Dashboard</span>
+  </a>
+{% endblock %}
 
 {% block content %}
-<div class="partner-dashboard-page">
-  <article class="ravlo-card partner-section-card" style="max-width: 860px;">
+<div class="max-w-4xl mx-auto">
+  <section class="ravlo-card partner-section-card">
     <div class="section-head">
       <div>
-        <h3>New Listing</h3>
-        <p>Address, price, beds/baths, and status feed the Template Studio and the dashboard listing manager.</p>
+        <h3>Listing Details</h3>
+        <p>Create a listing for Hudson Valley or Sarasota.</p>
       </div>
-      <a href="{{ url_for('elena.dashboard') }}" class="ravlo-btn ghost sm">Back to Dashboard</a>
     </div>
 
-    <form method="POST" action="{{ url_for('elena.listing_new') }}" class="elena-form">
+    <form method="POST" class="elena-form-grid">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
-      <div class="elena-form-grid">
-        <label class="elena-form-wide">
-          Address*
-          <input name="address" required placeholder="158 Whitlock Rd">
-        </label>
+      <div class="elena-form-row">
         <label>
-          City*
-          <input name="city" required placeholder="Otisville">
+          MLS Number
+          <input type="text" name="mls_number" value="{{ listing.mls_number if listing else '' }}">
         </label>
+
         <label>
-          State*
-          <input name="state" required placeholder="NY" maxlength="4">
+          Market
+          <select name="market">
+            <option value="">Select market</option>
+            {% for market in available_markets %}
+              <option value="{{ market }}"
+                {% if listing and listing.market == market %}selected{% elif not listing and current_market == market %}selected{% endif %}>
+                {{ market }}
+              </option>
+            {% endfor %}
+          </select>
         </label>
+      </div>
+
+      <div class="elena-form-row">
         <label>
-          Zip*
-          <input name="zip_code" required placeholder="10963" maxlength="10">
+          Address
+          <input type="text" name="address" required value="{{ listing.address if listing else '' }}">
         </label>
+      </div>
+
+      <div class="elena-form-row three">
         <label>
-          MLS #
-          <input name="mls_number" placeholder="MLS‑123456">
+          City
+          <input type="text" name="city" required value="{{ listing.city if listing else '' }}">
         </label>
+
+        <label>
+          State
+          <input type="text" name="state" required value="{{ listing.state if listing else '' }}">
+        </label>
+
+        <label>
+          Zip Code
+          <input type="text" name="zip_code" required value="{{ listing.zip_code if listing else '' }}">
+        </label>
+      </div>
+
+      <div class="elena-form-row four">
+        <label>
+          Beds
+          <input type="number" name="beds" value="{{ listing.beds if listing else '' }}">
+        </label>
+
+        <label>
+          Baths
+          <input type="number" name="baths" value="{{ listing.baths if listing else '' }}">
+        </label>
+
+        <label>
+          Sqft
+          <input type="number" name="sqft" value="{{ listing.sqft if listing else '' }}">
+        </label>
+
+        <label>
+          Price
+          <input type="number" name="price" value="{{ listing.price if listing else '' }}">
+        </label>
+      </div>
+
+      <div class="elena-form-row">
         <label>
           Status
           <select name="status">
-            {% for key, label in listing_statuses %}
-              <option value="{{ key }}" {% if key == "active" %}selected{% endif %}>{{ label }}</option>
+            {% for value, label in listing_statuses %}
+              <option value="{{ value }}" {% if listing and listing.status == value %}selected{% endif %}>{{ label }}</option>
             {% endfor %}
           </select>
         </label>
+
         <label>
-          Price ($)
-          <input name="price" inputmode="numeric" placeholder="549000">
-        </label>
-        <label>
-          Beds
-          <input name="beds" inputmode="numeric" placeholder="3">
-        </label>
-        <label>
-          Baths
-          <input name="baths" inputmode="numeric" placeholder="2">
-        </label>
-        <label>
-          Square feet
-          <input name="sqft" inputmode="numeric" placeholder="1800">
-        </label>
-        <label class="elena-form-wide">
-          Associated client
+          Client
           <select name="client_id">
-            <option value="">—</option>
-            {% for c in clients %}
-              <option value="{{ c.id }}">{{ c.name }}{% if c.role %} · {{ c.role }}{% endif %}</option>
+            <option value="">No client linked</option>
+            {% for client in clients %}
+              <option value="{{ client.id }}">{{ client.name }}</option>
             {% endfor %}
           </select>
         </label>
-        <label class="elena-form-wide">
+      </div>
+
+      <div class="elena-form-row">
+        <label>
           Description
-          <textarea name="description" rows="4" placeholder="Highlights, features, marketing language…"></textarea>
+          <textarea name="description" rows="6">{{ listing.description if listing else '' }}</textarea>
         </label>
       </div>
 
       <div class="elena-form-actions">
         <button type="submit" class="ravlo-btn primary">Save Listing</button>
-        <a href="{{ url_for('elena.dashboard') }}" class="ravlo-btn ghost">Cancel</a>
       </div>
     </form>
-  </article>
+  </section>
 </div>
+{% endblock %}
 
+{% block head %}
 <style>
   .elena-form-grid {
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    display: flex;
+    flex-direction: column;
     gap: 14px;
   }
-  .elena-form-grid label {
-    display: flex; flex-direction: column; gap: 6px;
-    color: #cfe1f4; font-size: 0.9rem;
+
+  .elena-form-row {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
   }
-  .elena-form-grid .elena-form-wide { grid-column: 1 / -1; }
-  .elena-form-grid input,
-  .elena-form-grid select,
-  .elena-form-grid textarea {
-    background: rgba(255, 255, 255, 0.04);
-    color: #ffffff;
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    border-radius: 8px;
-    padding: 8px 10px;
+
+  .elena-form-row.three {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .elena-form-row.four {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .elena-form-row label {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    color: #cfe1f4;
     font-size: 0.92rem;
   }
-  .elena-form-actions { margin-top: 18px; display: flex; gap: 10px; }
-  @media (max-width: 900px) { .elena-form-grid { grid-template-columns: repeat(2, 1fr); } }
-  @media (max-width: 600px) { .elena-form-grid { grid-template-columns: 1fr; } }
+
+  .elena-form-row input,
+  .elena-form-row select,
+  .elena-form-row textarea {
+    background: rgba(255,255,255,0.04);
+    color: #fff;
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 10px;
+    padding: 10px 12px;
+  }
+
+  .elena-form-actions {
+    margin-top: 6px;
+  }
+
+  @media (max-width: 1000px) {
+    .elena-form-row,
+    .elena-form-row.three,
+    .elena-form-row.four {
+      grid-template-columns: 1fr;
+    }
+  }
 </style>
 {% endblock %}
