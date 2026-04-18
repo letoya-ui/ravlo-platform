@@ -139,7 +139,17 @@ from LoanMVP.models.elena_models import (
     ElenaFlyer,
     ElenaInteraction,
 )
-
+from LoanMVP.models.vip_models import (
+    VIPProfile,
+    VIPContact,
+    VIPInteraction,
+    VIPExpense,
+    VIPIncome,
+    VIPBudget,
+    VIPAssistantSuggestion,
+    VIPAssistantAction,
+    VIPNotification,
+)
 # ======================================================
 # 🧩 SQLAlchemy Export (for Migrate / Shell)
 # ======================================================
