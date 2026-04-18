@@ -132,6 +132,107 @@ def _get_template_enum(template_type_value):
         return None
 
 
+def _clean_listing_value(value):
+    if value is None:
+        return None
+    if isinstance(value, str):
+        value = value.strip()
+        return value or None
+    return value
+
+
+def _to_int(value):
+    value = _clean_listing_value(value)
+    if value is None:
+        return None
+    if isinstance(value, (int, float)):
+        return int(value)
+    digits = "".join(ch for ch in str(value) if ch.isdigit())
+    return int(digits) if digits else None
+
+
+def upsert_listing_from_feed(data):
+    mls_number = _clean_listing_value(data.get("mls_number"))
+    listing_id = data.get("listing_id")
+
+    listing = None
+
+    if mls_number:
+        listing = ElenaListing.query.filter_by(mls_number=mls_number).first()
+
+    if not listing and listing_id:
+        listing = ElenaListing.query.get(listing_id)
+
+    if not listing:
+        listing = ElenaListing()
+        db.session.add(listing)
+
+    listing.mls_number = mls_number
+    listing.address = _clean_listing_value(data.get("address")) or listing.address
+    listing.city = _clean_listing_value(data.get("city")) or listing.city
+    listing.state = _clean_listing_value(data.get("state")) or listing.state
+    listing.zip_code = _clean_listing_value(data.get("zip_code") or data.get("zip")) or listing.zip_code
+
+    listing.price = _to_int(data.get("price"))
+    listing.beds = _to_int(data.get("beds"))
+    listing.baths = _to_int(data.get("baths"))
+    listing.sqft = _to_int(data.get("sqft"))
+
+    listing.description = _clean_listing_value(data.get("description")) or listing.description
+    listing.photos_json = data.get("photos_json") or listing.photos_json
+    listing.status = _clean_listing_value(data.get("status")) or listing.status or "active"
+
+    db.session.flush()
+    return listing
+
+
+def upsert_flyer_for_listing(listing):
+    flyer = ElenaFlyer.query.filter_by(listing_id=listing.id).first()
+
+    body_parts = []
+    if listing.price:
+        body_parts.append(f"${listing.price:,}")
+    if listing.beds is not None:
+        body_parts.append(f"{listing.beds} bd")
+    if listing.baths is not None:
+        body_parts.append(f"{listing.baths} ba")
+    if listing.sqft:
+        body_parts.append(f"{listing.sqft:,} sqft")
+
+    summary_line = " • ".join(body_parts)
+    if listing.description:
+        body = f"{summary_line}\n\n{listing.description}" if summary_line else listing.description
+    else:
+        body = summary_line
+
+    if not flyer:
+        flyer = ElenaFlyer(
+            flyer_type="listing",
+            property_address=listing.address,
+            property_id=str(listing.id),
+            body=body,
+            listing_id=listing.id,
+        )
+        db.session.add(flyer)
+    else:
+        flyer.flyer_type = flyer.flyer_type or "listing"
+        flyer.property_address = listing.address
+        flyer.property_id = str(listing.id)
+        flyer.body = body or flyer.body
+
+    if hasattr(flyer, "canva_status") and not getattr(flyer, "canva_status", None):
+        flyer.canva_status = "draft"
+
+    db.session.flush()
+    return flyer
+
+
+def process_listing_import(data):
+    listing = upsert_listing_from_feed(data)
+    flyer = upsert_flyer_for_listing(listing)
+    db.session.commit()
+    return listing, flyer
+
 @elena_bp.get("/")
 @role_required("partner_group", "admin")
 def dashboard():
@@ -1097,3 +1198,48 @@ def import_preview():
         columns=session.get("import_columns"),
         column_map=session.get("column_map"),
     )
+
+
+
+@elena_bp.post("/listings/import")
+@role_required("partner_group", "admin")
+def import_listing():
+    data = request.get_json(silent=True) or request.form.to_dict()
+
+    required_fields = ["address", "city", "state", "zip_code"]
+    missing = [field for field in required_fields if not _clean_listing_value(data.get(field))]
+    if missing:
+        return jsonify({
+            "error": "Missing required listing fields",
+            "missing_fields": missing,
+        }), 400
+
+    listing, flyer = process_listing_import(data)
+
+    return jsonify({
+        "message": "Listing imported successfully",
+        "listing": {
+            "id": listing.id,
+            "mls_number": listing.mls_number,
+            "address": listing.address,
+            "city": listing.city,
+            "state": listing.state,
+            "zip_code": listing.zip_code,
+            "price": listing.price,
+            "beds": listing.beds,
+            "baths": listing.baths,
+            "sqft": listing.sqft,
+            "status": listing.status,
+            "description": listing.description,
+        },
+        "flyer": {
+            "id": flyer.id,
+            "flyer_type": flyer.flyer_type,
+            "property_address": flyer.property_address,
+            "listing_id": flyer.listing_id,
+            "body": flyer.body,
+            "canva_status": getattr(flyer, "canva_status", None),
+            "canva_design_id": getattr(flyer, "canva_design_id", None),
+            "canva_edit_url": getattr(flyer, "canva_edit_url", None),
+        }
+    }), 201
