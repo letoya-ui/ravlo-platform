@@ -7,10 +7,15 @@ from flask import (
     redirect,
     url_for,
     flash,
+    session,
 )
 from sqlalchemy import or_
 import pandas as pd
 from LoanMVP.extensions import db
+
+from LoanMVP.models.vip_models import VIPProfile, VIPAssistantSuggestion
+
+rom LoanMVP.models.vip_models import VIPProfile, VIPAssistantSuggestion
 from LoanMVP.models.elena_models import (
     ElenaClient,
     ElenaListing,
@@ -18,6 +23,8 @@ from LoanMVP.models.elena_models import (
     ElenaInteraction,
     InteractionType,
 )
+
+from LoanMVP.services.vip_ai_pilot import parse_vip_command
 from LoanMVP.services.ai_service import generate_text
 from LoanMVP.services.elena_templates import (
     render_template as render_elena_template,
@@ -70,6 +77,55 @@ INTERACTION_TYPES = [
     InteractionType.NOTE,
     InteractionType.FOLLOW_UP,
 ]
+
+
+FRANK_MARKETS = ["Hudson Valley", "Sarasota"]
+
+
+def get_current_market():
+    return session.get("elena_market", "All Markets")
+
+
+def set_current_market(value):
+    allowed = {"All Markets", *FRANK_MARKETS}
+    session["elena_market"] = value if value in allowed else "All Markets"
+
+
+def infer_market_from_listing_data(data):
+    market = (data.get("market") or "").strip()
+    if market:
+        return market
+
+    city = (data.get("city") or "").strip().lower()
+    state = (data.get("state") or "").strip().lower()
+
+    if state == "ny":
+        return "Hudson Valley"
+    if state == "fl" and "sarasota" in city:
+        return "Sarasota"
+    if state == "fl":
+        return "Sarasota"
+
+    return None
+
+
+def _clean_listing_value(value):
+    if value is None:
+        return None
+    if isinstance(value, str):
+        value = value.strip()
+        return value or None
+    return value
+
+
+def _to_int(value):
+    value = _clean_listing_value(value)
+    if value is None:
+        return None
+    if isinstance(value, (int, float)):
+        return int(value)
+    digits = "".join(ch for ch in str(value) if ch.isdigit())
+    return int(digits) if digits else None
 
 
 def _parse_due_at(raw):
@@ -131,26 +187,6 @@ def _get_template_enum(template_type_value):
     except ValueError:
         return None
 
-
-def _clean_listing_value(value):
-    if value is None:
-        return None
-    if isinstance(value, str):
-        value = value.strip()
-        return value or None
-    return value
-
-
-def _to_int(value):
-    value = _clean_listing_value(value)
-    if value is None:
-        return None
-    if isinstance(value, (int, float)):
-        return int(value)
-    digits = "".join(ch for ch in str(value) if ch.isdigit())
-    return int(digits) if digits else None
-
-
 def upsert_listing_from_feed(data):
     mls_number = _clean_listing_value(data.get("mls_number"))
     listing_id = data.get("listing_id")
@@ -172,6 +208,7 @@ def upsert_listing_from_feed(data):
     listing.city = _clean_listing_value(data.get("city")) or listing.city
     listing.state = _clean_listing_value(data.get("state")) or listing.state
     listing.zip_code = _clean_listing_value(data.get("zip_code") or data.get("zip")) or listing.zip_code
+    listing.market = infer_market_from_listing_data(data) or listing.market
 
     listing.price = _to_int(data.get("price"))
     listing.beds = _to_int(data.get("beds"))
@@ -198,6 +235,8 @@ def upsert_flyer_for_listing(listing):
         body_parts.append(f"{listing.baths} ba")
     if listing.sqft:
         body_parts.append(f"{listing.sqft:,} sqft")
+    if listing.market:
+        body_parts.append(listing.market)
 
     summary_line = " • ".join(body_parts)
     if listing.description:
@@ -233,15 +272,38 @@ def process_listing_import(data):
     db.session.commit()
     return listing, flyer
 
+def get_or_create_realtor_vip_profile():
+    profile = VIPProfile.query.filter_by(display_name="Elena").first()
+    if profile:
+        return profile
+
+    profile = VIPProfile(
+        user_id=1,  # replace later if you want true current-user binding
+        display_name="Elena",
+        role_type="realtor",
+        assistant_name="Copilot",
+    )
+    db.session.add(profile)
+    db.session.commit()
+    return profile
+
 @elena_bp.get("/")
 @role_required("partner_group", "admin")
 def dashboard():
     now = datetime.utcnow()
     week_ago = now - timedelta(days=7)
+    current_market = get_current_market()
 
     total_clients = ElenaClient.query.count()
     new_leads = ElenaClient.query.filter(ElenaClient.created_at >= week_ago).count()
-    active_listings = ElenaListing.query.filter_by(status="active").count()
+
+    active_listings_query = ElenaListing.query.filter_by(status="active")
+    if current_market != "All Markets":
+        active_listings_query = active_listings_query.filter(
+            ElenaListing.market == current_market
+        )
+    active_listings = active_listings_query.count()
+
     followups_due = ElenaInteraction.query.filter(
         ElenaInteraction.due_at.isnot(None),
         ElenaInteraction.due_at >= now,
@@ -254,6 +316,20 @@ def dashboard():
         "active_listings": active_listings,
         "followups_due": followups_due,
     }
+
+    PIPELINE_STAGES = [
+        ("new", "New"),
+        ("warm", "Warm"),
+        ("active", "Active"),
+        ("under_contract", "Under Contract"),
+        ("closed", "Closed"),
+    ]
+    LISTING_STATUSES = [
+        ("active", "Active"),
+        ("pending", "Pending"),
+        ("sold", "Sold"),
+        ("withdrawn", "Withdrawn"),
+    ]
 
     pipeline_groups = []
     for stage_key, stage_label in PIPELINE_STAGES:
@@ -309,12 +385,35 @@ def dashboard():
 
     status_filter = (request.args.get("listing_status") or "").strip().lower()
     listings_query = ElenaListing.query
+
+    if current_market != "All Markets":
+        listings_query = listings_query.filter(ElenaListing.market == current_market)
+
     if status_filter and status_filter in {s[0] for s in LISTING_STATUSES}:
         listings_query = listings_query.filter_by(status=status_filter)
+
     listings = listings_query.order_by(ElenaListing.updated_at.desc()).limit(12).all()
 
+    recent_flyers_query = ElenaFlyer.query
+    if current_market != "All Markets":
+        recent_flyers_query = (
+            recent_flyers_query
+            .join(ElenaListing, ElenaFlyer.listing_id == ElenaListing.id)
+            .filter(ElenaListing.market == current_market)
+        )
+
     recent_flyers = (
-        ElenaFlyer.query.order_by(ElenaFlyer.created_at.desc()).limit(5).all()
+        recent_flyers_query
+        .order_by(ElenaFlyer.created_at.desc())
+        .limit(5)
+        .all()
+    )
+
+    copilot_suggestions = (
+        VIPAssistantSuggestion.query
+        .order_by(VIPAssistantSuggestion.created_at.desc())
+        .limit(5)
+        .all()
     )
 
     return render_template(
@@ -328,11 +427,13 @@ def dashboard():
         listing_status_filter=status_filter,
         recent_flyers=recent_flyers,
         template_types=[t.value for t in TemplateType],
+        current_market=current_market,
+        available_markets=FRANK_MARKETS,
+        copilot_suggestions=copilot_suggestions,
         portal="elena",
         portal_name="Elena",
         portal_home=url_for("elena.dashboard"),
     )
-
 
 @elena_bp.route("/clients/new", methods=["GET", "POST"])
 @role_required("partner_group", "admin")
@@ -373,21 +474,27 @@ def client_new():
 @elena_bp.route("/listings/new", methods=["GET", "POST"])
 @role_required("partner_group", "admin")
 def listing_new():
+    LISTING_STATUSES = [
+        ("active", "Active"),
+        ("pending", "Pending"),
+        ("sold", "Sold"),
+        ("withdrawn", "Withdrawn"),
+    ]
+
     if request.method == "POST":
         address = (request.form.get("address") or "").strip()
         city = (request.form.get("city") or "").strip()
         state = (request.form.get("state") or "").strip()
         zip_code = (request.form.get("zip_code") or "").strip()
+        market = (request.form.get("market") or "").strip() or None
 
         missing = [
-            f
-            for f, v in [
+            f for f, v in [
                 ("address", address),
                 ("city", city),
                 ("state", state),
                 ("zip_code", zip_code),
-            ]
-            if not v
+            ] if not v
         ]
         if missing:
             flash(f"Missing required fields: {', '.join(missing)}", "warning")
@@ -406,6 +513,7 @@ def listing_new():
             city=city,
             state=state,
             zip_code=zip_code,
+            market=market,
             beds=_int(request.form.get("beds")),
             baths=_int(request.form.get("baths")),
             sqft=_int(request.form.get("sqft")),
@@ -424,12 +532,13 @@ def listing_new():
         "elena/listing_form.html",
         listing=None,
         listing_statuses=LISTING_STATUSES,
+        available_markets=FRANK_MARKETS,
+        current_market=get_current_market(),
         clients=clients,
         portal="elena",
         portal_name="Elena",
         portal_home=url_for("elena.dashboard"),
     )
-
 
 @elena_bp.route("/interactions/new", methods=["GET", "POST"])
 @role_required("partner_group", "admin")
@@ -1200,7 +1309,6 @@ def import_preview():
     )
 
 
-
 @elena_bp.post("/listings/import")
 @role_required("partner_group", "admin")
 def import_listing():
@@ -1225,6 +1333,7 @@ def import_listing():
             "city": listing.city,
             "state": listing.state,
             "zip_code": listing.zip_code,
+            "market": listing.market,
             "price": listing.price,
             "beds": listing.beds,
             "baths": listing.baths,
@@ -1243,3 +1352,64 @@ def import_listing():
             "canva_edit_url": getattr(flyer, "canva_edit_url", None),
         }
     }), 201
+
+@elena_bp.post("/market/switch")
+@role_required("partner_group", "admin")
+def switch_market():
+    selected_market = (request.form.get("market") or "All Markets").strip()
+    set_current_market(selected_market)
+
+    next_url = request.form.get("next") or url_for("elena.dashboard")
+    return redirect(next_url)
+
+
+@elena_bp.get("/copilot")
+@role_required("partner_group", "admin")
+def copilot():
+    profile = get_or_create_realtor_vip_profile()
+
+    suggestions = (
+        VIPAssistantSuggestion.query
+        .filter_by(vip_profile_id=profile.id)
+        .order_by(VIPAssistantSuggestion.created_at.desc())
+        .limit(20)
+        .all()
+    )
+
+    return render_template(
+        "elena/copilot.html",
+        vip_profile=profile,
+        header_name="Copilot",
+        suggestions=suggestions,
+        current_market=get_current_market(),
+        available_markets=FRANK_MARKETS,
+        portal="elena",
+        portal_name="Elena",
+        portal_home=url_for("elena.dashboard"),
+    )
+
+
+@elena_bp.post("/copilot/command")
+@role_required("partner_group", "admin")
+def copilot_command():
+    profile = get_or_create_realtor_vip_profile()
+
+    command = (request.form.get("command") or "").strip()
+    if not command:
+        flash("Please enter a command.", "warning")
+        return redirect(url_for("elena.copilot"))
+
+    result = parse_vip_command(command)
+
+    suggestion = VIPAssistantSuggestion(
+        vip_profile_id=profile.id,
+        suggestion_type=result["suggestion_type"],
+        title=result["title"],
+        body=result.get("body"),
+        source="elena_manual",
+    )
+    db.session.add(suggestion)
+    db.session.commit()
+
+    flash("Copilot suggestion created.", "success")
+    return redirect(url_for("elena.copilot"))
