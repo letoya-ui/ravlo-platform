@@ -1,7 +1,7 @@
 """add vip design studio tables
 
-Revision ID: add_vip_design_studio_tables
-Revises: <your_previous_revision_id>
+Revision ID: f5f563891db3
+Revises: 1aef2e50120d
 Create Date: 2026-04-18
 """
 
@@ -10,8 +10,8 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = "add_vip_design_studio_tables"
-down_revision = "<your_previous_revision_id>"
+revision = "f5f563891db3"
+down_revision = "1aef2e50120d"
 branch_labels = None
 depends_on = None
 

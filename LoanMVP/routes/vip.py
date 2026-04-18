@@ -1,16 +1,20 @@
 # LoanMVP/routes/vip.py
 import json
-from flask import Blueprint, render_template, request, redirect, url_for, flash
+from flask import Blueprint, render_template, request, redirect, url_for, flash,jsonify
 from flask_login import current_user
 
 from LoanMVP.extensions import db
+
 from LoanMVP.models.vip_models import (
     VIPProfile,
     VIPIncome,
     VIPExpense,
     VIPAssistantSuggestion,
 )
+from LoanMVP.models.vip_models import VIPDesignProject, VIPDesignAnnotation
+
 from LoanMVP.services.vip_ai_pilot import parse_vip_command
+
 from LoanMVP.utils.decorators import role_required
 
 vip_bp = Blueprint("vip", __name__, url_prefix="/vip")
@@ -427,3 +431,55 @@ def save_annotation():
         "status": "ok",
         "annotation_id": annotation.id,
     }), 201
+
+@vip_bp.post("/design-studio/annotation/update")
+@role_required("partner_group", "admin")
+def update_annotation():
+    profile = get_or_create_vip_profile()
+    data = request.get_json() or {}
+
+    annotation = VIPDesignAnnotation.query.get(data.get("id"))
+
+    if not annotation:
+        return jsonify({"error": "Not found"}), 404
+
+    project = VIPDesignProject.query.filter_by(
+        id=annotation.project_id,
+        vip_profile_id=profile.id,
+    ).first()
+
+    if not project:
+        return jsonify({"error": "Unauthorized"}), 403
+
+    annotation.annotation_type = data.get("type")
+    annotation.action_type = data.get("action")
+    annotation.label = data.get("label")
+    annotation.body = data.get("body")
+
+    db.session.commit()
+
+    return jsonify({"status": "updated"})
+
+@vip_bp.post("/design-studio/annotation/delete")
+@role_required("partner_group", "admin")
+def delete_annotation():
+    profile = get_or_create_vip_profile()
+    data = request.get_json() or {}
+
+    annotation = VIPDesignAnnotation.query.get(data.get("id"))
+
+    if not annotation:
+        return jsonify({"error": "Not found"}), 404
+
+    project = VIPDesignProject.query.filter_by(
+        id=annotation.project_id,
+        vip_profile_id=profile.id,
+    ).first()
+
+    if not project:
+        return jsonify({"error": "Unauthorized"}), 403
+
+    db.session.delete(annotation)
+    db.session.commit()
+
+    return jsonify({"status": "deleted"})
