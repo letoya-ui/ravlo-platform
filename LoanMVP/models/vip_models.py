@@ -71,6 +71,7 @@ class VIPContact(VIPBaseModel):
 
     vip_profile = relationship("VIPProfile", back_populates="contacts")
     interactions = relationship("VIPInteraction", back_populates="contact", lazy=True)
+    design_projects = relationship("VIPDesignProject", lazy=True)
 
     def __repr__(self):
         return f"<VIPContact {self.id} - {self.name}>"
@@ -142,7 +143,7 @@ class VIPIncome(VIPBaseModel):
 
     vip_profile = relationship("VIPProfile", back_populates="incomes")
     contact = relationship("VIPContact")
-    design_projects = relationship("VIPDesignProject", lazy=True)
+    
 
     def __repr__(self):
         return f"<VIPIncome {self.id} - {self.category}>"
