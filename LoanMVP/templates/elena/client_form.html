@@ -1,0 +1,106 @@
+{% extends "layouts/ravlo_base.html" %}
+
+{% block title %}Ravlo • Elena — Add Client{% endblock %}
+{% block page_title %}Add Client{% endblock %}
+{% block page_subline %}Capture a contact inside Elena's CRM.{% endblock %}
+
+{% block content %}
+<div class="partner-dashboard-page">
+  <article class="ravlo-card partner-section-card" style="max-width: 760px;">
+    <div class="section-head">
+      <div>
+        <h3>New Client</h3>
+        <p>Role, pipeline stage, and tags help Elena route follow‑ups automatically.</p>
+      </div>
+      <a href="{{ url_for('elena.dashboard') }}" class="ravlo-btn ghost sm">Back to Dashboard</a>
+    </div>
+
+    <form method="POST" action="{{ url_for('elena.client_new') }}" class="elena-form">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+      <div class="elena-form-grid">
+        <label>
+          Name*
+          <input name="name" required placeholder="Jane Doe">
+        </label>
+        <label>
+          Email
+          <input name="email" type="email" placeholder="jane@example.com">
+        </label>
+        <label>
+          Phone
+          <input name="phone" placeholder="(555) 123‑4567">
+        </label>
+        <label>
+          Role
+          <select name="role">
+            <option value="">—</option>
+            {% for role in client_roles %}
+              <option value="{{ role }}">{{ role|capitalize }}</option>
+            {% endfor %}
+          </select>
+        </label>
+        <label>
+          Pipeline Stage
+          <select name="pipeline_stage">
+            {% for key, label in pipeline_stages %}
+              <option value="{{ key }}" {% if key == "new" %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </label>
+        <label>
+          Tags
+          <input name="tags" placeholder="vip, first-time, brooklyn">
+        </label>
+        <label class="elena-form-wide">
+          Preferred areas
+          <input name="preferred_areas" placeholder="Beacon, Newburgh, Hudson Valley">
+        </label>
+        <label class="elena-form-wide">
+          Budget
+          <input name="budget" placeholder="$400k – $600k">
+        </label>
+        <label class="elena-form-wide">
+          Notes
+          <textarea name="notes" rows="4" placeholder="Context, source, what they're looking for…"></textarea>
+        </label>
+      </div>
+
+      <div class="elena-form-actions">
+        <button type="submit" class="ravlo-btn primary">Save Client</button>
+        <a href="{{ url_for('elena.dashboard') }}" class="ravlo-btn ghost">Cancel</a>
+      </div>
+    </form>
+  </article>
+</div>
+
+<style>
+  .elena-form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+  }
+  .elena-form-grid label {
+    display: flex; flex-direction: column; gap: 6px;
+    color: #cfe1f4; font-size: 0.9rem;
+  }
+  .elena-form-grid .elena-form-wide { grid-column: 1 / -1; }
+  .elena-form-grid input,
+  .elena-form-grid select,
+  .elena-form-grid textarea {
+    background: rgba(255, 255, 255, 0.04);
+    color: #ffffff;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 8px;
+    padding: 8px 10px;
+    font-size: 0.92rem;
+  }
+  .elena-form-actions {
+    margin-top: 18px;
+    display: flex; gap: 10px;
+  }
+  @media (max-width: 720px) {
+    .elena-form-grid { grid-template-columns: 1fr; }
+  }
+</style>
+{% endblock %}

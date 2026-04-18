@@ -43,6 +43,34 @@ Manage leads, capital applications, active loans, and pipeline performance.
     </div>
   </div>
 
+  <!-- QUICK ACTIONS -->
+  <section class="dashboard-card">
+    <div class="section-head">
+      <div>
+        <div class="eyebrow">QUICK ACTIONS</div>
+        <h3>Get Started</h3>
+      </div>
+    </div>
+    <div class="quick-actions-row">
+      <a href="{{ url_for('loan_officer.loan_application') }}" class="quick-action-btn primary">
+        <i class="icon lucide lucide-file-pen"></i>
+        <span>New Loan Application</span>
+      </a>
+      <a href="{{ url_for('loan_officer.loan_queue') }}" class="quick-action-btn">
+        <i class="icon lucide lucide-landmark"></i>
+        <span>Loan Queue</span>
+      </a>
+      <a href="{{ url_for('crm.leads') }}" class="quick-action-btn">
+        <i class="icon lucide lucide-flame"></i>
+        <span>View Leads</span>
+      </a>
+      <a href="{{ url_for('loan_officer.borrowers') }}" class="quick-action-btn">
+        <i class="icon lucide lucide-user-round"></i>
+        <span>Borrowers</span>
+      </a>
+    </div>
+  </section>
+
   <!-- AI SUMMARY -->
   <section class="dashboard-card">
     <div class="section-head">
@@ -377,6 +405,42 @@ Manage leads, capital applications, active loans, and pipeline performance.
   background:rgba(255,255,255,.02);
   border:1px dashed rgba(255,255,255,.12);
   color:var(--muted);
+}
+
+.quick-actions-row{
+  display:flex;
+  gap:12px;
+  flex-wrap:wrap;
+}
+
+.quick-action-btn{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  padding:12px 20px;
+  border-radius:14px;
+  background:rgba(255,255,255,.05);
+  border:1px solid rgba(255,255,255,.1);
+  color:var(--text);
+  font-size:14px;
+  font-weight:600;
+  text-decoration:none;
+  transition:all .15s ease;
+}
+
+.quick-action-btn:hover{
+  background:rgba(255,255,255,.1);
+  border-color:rgba(255,255,255,.18);
+}
+
+.quick-action-btn.primary{
+  background:var(--accent, #3b82f6);
+  border-color:transparent;
+  color:#fff;
+}
+
+.quick-action-btn.primary:hover{
+  filter:brightness(1.12);
 }
 
 @media (max-width: 1200px){

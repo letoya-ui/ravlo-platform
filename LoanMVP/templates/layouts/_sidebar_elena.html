@@ -1,0 +1,70 @@
+{% set ep = request.endpoint or "" %}
+
+<div class="ravlo-sidebar-inner">
+
+  <div class="ravlo-sidebar-brand">
+    <a href="{{ url_for('elena.dashboard') }}" class="ravlo-brand-link">
+      <div class="ravlo-brand-mark">
+        <span>EL</span>
+      </div>
+
+      <div class="ravlo-brand-copy">
+        <div class="ravlo-brand-name">ELENA</div>
+        <div class="ravlo-brand-sub">Your CRM Assistant</div>
+      </div>
+    </a>
+    <div class="ravlo-brand-glow"></div>
+  </div>
+
+  <nav class="ravlo-sidebar-nav">
+
+    <div class="ravlo-nav-section">Start Here</div>
+
+    <a href="{{ url_for('elena.dashboard') }}"
+       class="ravlo-nav-link {% if ep == 'elena.dashboard' %}active{% endif %}">
+      <i class="lucide lucide-house"></i>
+      <span>Home</span>
+    </a>
+
+    <div class="ravlo-nav-section">People</div>
+
+    <a href="{{ url_for('elena.client_new') }}"
+       class="ravlo-nav-link {% if ep == 'elena.client_new' %}active{% endif %}">
+      <i class="lucide lucide-user-plus"></i>
+      <span>Add a Client</span>
+    </a>
+
+    <a href="{{ url_for('elena.interaction_new') }}"
+       class="ravlo-nav-link {% if ep == 'elena.interaction_new' %}active{% endif %}">
+      <i class="lucide lucide-message-square-plus"></i>
+      <span>Log a Follow-Up</span>
+    </a>
+
+    <div class="ravlo-nav-section">Listings</div>
+
+    <a href="{{ url_for('elena.listing_new') }}"
+       class="ravlo-nav-link {% if ep == 'elena.listing_new' %}active{% endif %}">
+      <i class="lucide lucide-home-plus"></i>
+      <span>Add a Listing</span>
+    </a>
+
+    <div class="ravlo-nav-section">Content</div>
+
+    <a href="{{ url_for('elena.template_studio') }}"
+       class="ravlo-nav-link {% if ep in ['elena.template_studio', 'elena.template_studio_preview', 'elena.template_studio_generate', 'elena.template_studio_generate_and_save'] %}active{% endif %}">
+      <i class="lucide lucide-wand-sparkles"></i>
+      <span>Create Content</span>
+    </a>
+
+    <div class="ravlo-nav-section">Account</div>
+
+    <form method="post" action="{{ url_for('auth.logout') }}" class="ravlo-sidebar-logout-form">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button type="submit" class="ravlo-btn ghost sm ravlo-logout-btn sidebar-logout-full">
+        <i class="lucide lucide-log-out"></i>
+        <span>Logout</span>
+      </button>
+    </form>
+
+  </nav>
+</div>

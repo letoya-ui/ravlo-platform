@@ -20,6 +20,18 @@ STAFF_ROLES = {
     "underwriter",
 }
 
+# Partner sub-categories that all share /partners/dashboard as their landing
+# page. /partners/dashboard then picks a category-specific template via
+# Partner.category. Keep this list in sync with any future partner subroles
+# surfaced by onboarding / admin tooling.
+PARTNER_ROLES = {
+    "partner",
+    "realtor",
+    "contractor",
+    "student",
+    "loan_officer_partner",
+}
+
 
 def normalize_role(role):
     return (role or "").strip().lower()
@@ -80,6 +92,8 @@ def role_required(*roles):
                     expanded_roles.update(ADMIN_ROLES)
                 elif role == "staff_group":
                     expanded_roles.update(STAFF_ROLES)
+                elif role == "partner_group":
+                    expanded_roles.update(PARTNER_ROLES)
                 else:
                     expanded_roles.add(role)
 

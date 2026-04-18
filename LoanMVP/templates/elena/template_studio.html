@@ -1,0 +1,176 @@
+{% extends "layouts/ravlo_base.html" %}
+
+{% block title %}Ravlo • Elena Content Studio{% endblock %}
+
+{% block page_title %}Create Content{% endblock %}
+{% block page_subline %}
+Build flyers, follow-ups, and social posts with client and listing details filled in for you.
+{% endblock %}
+
+{% block topbar_actions %}
+  <a href="{{ url_for('elena.dashboard') }}" class="ravlo-btn ghost sm">
+    Back to Elena
+  </a>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto space-y-6">
+
+  <section class="ravlo-card pad">
+    <div class="mb-4">
+      <h2 class="text-xl font-semibold">Template Studio</h2>
+      <p class="text-sm text-gray-400">
+        Choose a template, optionally load a client or listing, then preview, generate, and save.
+      </p>
+    </div>
+
+    <form method="GET" action="{{ url_for('elena.template_studio') }}" class="space-y-6">
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+
+        <div>
+          <label class="font-medium block mb-2">Client ID (optional)</label>
+          <input
+            name="client_id"
+            value="{{ client_id or '' }}"
+            class="border rounded px-3 py-2 w-full bg-white text-black"
+            placeholder="Enter client ID"
+          >
+        </div>
+
+        <div>
+          <label class="font-medium block mb-2">Listing ID (optional)</label>
+          <input
+            name="listing_id"
+            value="{{ listing_id or '' }}"
+            class="border rounded px-3 py-2 w-full bg-white text-black"
+            placeholder="Enter listing ID"
+          >
+        </div>
+
+        <div>
+          <label class="font-medium block mb-2">Template Type</label>
+          <select name="template_type" class="border rounded px-3 py-2 w-full bg-white text-black">
+            <option value="">Select a template</option>
+            {% for t in templates %}
+              <option value="{{ t }}" {% if selected_template == t %}selected{% endif %}>
+                {{ t.replace("_", " ").title() }}
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+
+      </div>
+
+      <button class="ravlo-btn primary" type="submit">
+        Load Template
+      </button>
+    </form>
+  </section>
+
+  {% if selected_template %}
+    <section class="ravlo-card pad">
+      <div class="mb-4">
+        <h3 class="text-lg font-semibold">Template Details</h3>
+        <p class="text-sm text-gray-400">
+          Review or edit the values below before previewing.
+        </p>
+      </div>
+
+      <form method="POST" action="{{ url_for('elena.template_studio_preview') }}" class="space-y-6">
+        <input type="hidden" name="template_type" value="{{ selected_template }}">
+        <input type="hidden" name="client_id" value="{{ client_id or '' }}">
+        <input type="hidden" name="listing_id" value="{{ listing_id or '' }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {% for key, value in variables.items() %}
+            <div>
+              <label class="font-medium block mb-2">{{ key.replace('_', ' ').title() }}</label>
+              <input
+                name="{{ key }}"
+                value="{{ value }}"
+                class="border rounded px-3 py-2 w-full bg-white text-black"
+              >
+            </div>
+          {% endfor %}
+        </div>
+
+        <button class="ravlo-btn ghost" type="submit">
+          Preview Template
+        </button>
+      </form>
+    </section>
+  {% endif %}
+
+  {% if preview %}
+    <section class="ravlo-card pad">
+      <div class="mb-4">
+        <h3 class="text-lg font-semibold">Preview</h3>
+        <p class="text-sm text-gray-400">
+          This is the prompt Elena will send to generate the final content.
+        </p>
+      </div>
+
+      <pre class="bg-gray-100 text-black p-4 rounded whitespace-pre-wrap text-sm overflow-x-auto">{{ preview }}</pre>
+
+      <div class="flex flex-wrap gap-3 mt-4">
+        <form method="POST" action="{{ url_for('elena.template_studio_generate') }}">
+          <input type="hidden" name="template_type" value="{{ selected_template }}">
+          <input type="hidden" name="client_id" value="{{ client_id or '' }}">
+          <input type="hidden" name="listing_id" value="{{ listing_id or '' }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          {% for key, value in variables.items() %}
+            <input type="hidden" name="{{ key }}" value="{{ value }}">
+          {% endfor %}
+          <button class="ravlo-btn primary" type="submit">
+            Generate Output
+          </button>
+        </form>
+
+        <form method="POST" action="{{ url_for('elena.template_studio_generate_and_save') }}">
+          <input type="hidden" name="template_type" value="{{ selected_template }}">
+          <input type="hidden" name="client_id" value="{{ client_id or '' }}">
+          <input type="hidden" name="listing_id" value="{{ listing_id or '' }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          {% for key, value in variables.items() %}
+            <input type="hidden" name="{{ key }}" value="{{ value }}">
+          {% endfor %}
+          <button class="ravlo-btn primary" type="submit">
+            Generate & Save
+          </button>
+        </form>
+      </div>
+    </section>
+  {% endif %}
+
+  {% if output %}
+    <section class="ravlo-card pad">
+      <div class="mb-4">
+        <h3 class="text-lg font-semibold">Generated Output</h3>
+        <p class="text-sm text-gray-400">
+          Review the final content below.
+        </p>
+      </div>
+
+      <pre class="bg-gray-100 text-black p-4 rounded whitespace-pre-wrap text-sm overflow-x-auto">{{ output }}</pre>
+    </section>
+  {% endif %}
+
+  {% if saved_interaction_id %}
+    <section class="ravlo-card pad">
+      <div class="text-green-300 font-medium">
+        Saved to client activity as interaction #{{ saved_interaction_id }}.
+      </div>
+    </section>
+  {% endif %}
+
+  {% if saved_flyer_id %}
+    <section class="ravlo-card pad">
+      <div class="text-green-300 font-medium">
+        Saved to flyers as flyer #{{ saved_flyer_id }}.
+      </div>
+    </section>
+  {% endif %}
+
+</div>
+{% endblock %}

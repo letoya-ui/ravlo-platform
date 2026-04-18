@@ -1,9 +1,19 @@
+"""Build Studio engine -- calls the Renovation Engine /v1/build_concept endpoint."""
+
+from __future__ import annotations
+
 import os
 import uuid
 from flask import current_app
 
+from LoanMVP.services.investor.investor_engine_helpers import (
+    _post_renovation_engine_json,
+    UPLOAD_TIMEOUT,
+)
+
 
 def save_generated_image(image_bytes, folder="uploads/studios"):
+    """Persist raw image bytes under static/<folder> and return the relative path."""
     filename = f"{uuid.uuid4().hex}.png"
     relative_path = f"{folder}/{filename}"
     absolute_path = os.path.join(current_app.root_path, "static", relative_path)
@@ -17,67 +27,54 @@ def save_generated_image(image_bytes, folder="uploads/studios"):
 
 
 def run_build_concept(payload):
+    """Call the Renovation Engine to generate a build concept.
+
+    Parameters
+    ----------
+    payload : dict
+        Keys accepted by the engine's ``BuildConceptRequest``:
+        project_name, property_type, style, description, lot_size,
+        zoning, location, notes, mode, room_type, floor, image_base64,
+        image_url, etc.
+
+    Returns
+    -------
+    dict
+        The JSON response from the engine (images_base64, job_id, seed, meta, ...).
     """
-    payload keys:
-      - project_name
-      - property_type
-      - description
-      - lot_size
-      - zoning
-      - location
-      - notes
-      - land_image_path
-    """
-
-    concept_prompt = f"""
-    Create a polished exterior concept rendering for a {payload.get('property_type', 'residential project')}.
-    Project name: {payload.get('project_name', '')}
-    Description: {payload.get('description', '')}
-    Lot size: {payload.get('lot_size', '')}
-    Zoning: {payload.get('zoning', '')}
-    Location: {payload.get('location', '')}
-    Notes: {payload.get('notes', '')}
-    """
-
-    # -------------------------------
-    # CONTROLNET / IMAGE GENERATION
-    # -------------------------------
-
-    land_image_path = payload.get("land_image_path")
-    generated_concept_path = None
-
-    try:
-        if land_image_path:
-            # 👉 replace this block with your real ControlNet call
-            # Example placeholder for now:
-
-            with open(os.path.join(current_app.root_path, "static", land_image_path), "rb") as f:
-                input_image = f.read()
-
-            # ⚠️ Replace this with real AI response
-            fake_ai_output = input_image  # placeholder
-
-            generated_concept_path = save_generated_image(fake_ai_output)
-
-    except Exception as e:
-        print("Build Studio generation error:", str(e))
-
-    # -------------------------------
-    # FALLBACKS
-    # -------------------------------
-
-    concept_render_url = (
-        f"/static/{generated_concept_path}"
-        if generated_concept_path
-        else "/static/images/placeholders/build_render_placeholder.jpg"
-    )
-
-    return {
-        "concept_render_url": concept_render_url,
-        "blueprint_url": "/static/images/placeholders/blueprint_placeholder.jpg",
-        "site_plan_url": "/static/images/placeholders/siteplan_placeholder.jpg",
-        "presentation_url": "/static/images/placeholders/presentation_placeholder.jpg",
-        "prompts": {
-            "concept_prompt": concept_prompt,
-        }
+    engine_payload = {
+        "mode": payload.get("mode", "exterior"),
+        "project_name": payload.get("project_name", ""),
+        "property_type": payload.get("property_type", "single_family"),
+        "style": payload.get("style", "modern_farmhouse"),
+        "description": payload.get("description", ""),
+        "build_description": payload.get("description", ""),
+        "lot_size": payload.get("lot_size", ""),
+        "zoning": payload.get("zoning", ""),
+        "location": payload.get("location", ""),
+        "prompt_notes": payload.get("notes", ""),
+        "count": 1,
+        "steps": payload.get("steps", 20),
+        "guidance": payload.get("guidance", 7.5),
+        "strength": payload.get("strength", 0.65),
+        "width": payload.get("width", 768),
+        "height": payload.get("height", 768),
     }
+
+    # Optional image input
+    if payload.get("image_base64"):
+        engine_payload["image_base64"] = payload["image_base64"]
+    if payload.get("image_url"):
+        engine_payload["image_url"] = payload["image_url"]
+
+    # Interior-specific fields
+    if payload.get("room_type"):
+        engine_payload["room_type"] = payload["room_type"]
+    if payload.get("floor"):
+        engine_payload["floor"] = payload["floor"]
+
+    return _post_renovation_engine_json(
+        "/v1/build_concept",
+        engine_payload,
+        timeout=UPLOAD_TIMEOUT,
+    )

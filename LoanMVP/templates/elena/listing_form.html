@@ -1,0 +1,114 @@
+{% extends "layouts/ravlo_base.html" %}
+
+{% block title %}Ravlo • Elena — Add Listing{% endblock %}
+{% block page_title %}Add Listing{% endblock %}
+{% block page_subline %}Create a property record Elena can flyer, post, or email about.{% endblock %}
+
+{% block content %}
+<div class="partner-dashboard-page">
+  <article class="ravlo-card partner-section-card" style="max-width: 860px;">
+    <div class="section-head">
+      <div>
+        <h3>New Listing</h3>
+        <p>Address, price, beds/baths, and status feed the Template Studio and the dashboard listing manager.</p>
+      </div>
+      <a href="{{ url_for('elena.dashboard') }}" class="ravlo-btn ghost sm">Back to Dashboard</a>
+    </div>
+
+    <form method="POST" action="{{ url_for('elena.listing_new') }}" class="elena-form">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+      <div class="elena-form-grid">
+        <label class="elena-form-wide">
+          Address*
+          <input name="address" required placeholder="158 Whitlock Rd">
+        </label>
+        <label>
+          City*
+          <input name="city" required placeholder="Otisville">
+        </label>
+        <label>
+          State*
+          <input name="state" required placeholder="NY" maxlength="4">
+        </label>
+        <label>
+          Zip*
+          <input name="zip_code" required placeholder="10963" maxlength="10">
+        </label>
+        <label>
+          MLS #
+          <input name="mls_number" placeholder="MLS‑123456">
+        </label>
+        <label>
+          Status
+          <select name="status">
+            {% for key, label in listing_statuses %}
+              <option value="{{ key }}" {% if key == "active" %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </label>
+        <label>
+          Price ($)
+          <input name="price" inputmode="numeric" placeholder="549000">
+        </label>
+        <label>
+          Beds
+          <input name="beds" inputmode="numeric" placeholder="3">
+        </label>
+        <label>
+          Baths
+          <input name="baths" inputmode="numeric" placeholder="2">
+        </label>
+        <label>
+          Square feet
+          <input name="sqft" inputmode="numeric" placeholder="1800">
+        </label>
+        <label class="elena-form-wide">
+          Associated client
+          <select name="client_id">
+            <option value="">—</option>
+            {% for c in clients %}
+              <option value="{{ c.id }}">{{ c.name }}{% if c.role %} · {{ c.role }}{% endif %}</option>
+            {% endfor %}
+          </select>
+        </label>
+        <label class="elena-form-wide">
+          Description
+          <textarea name="description" rows="4" placeholder="Highlights, features, marketing language…"></textarea>
+        </label>
+      </div>
+
+      <div class="elena-form-actions">
+        <button type="submit" class="ravlo-btn primary">Save Listing</button>
+        <a href="{{ url_for('elena.dashboard') }}" class="ravlo-btn ghost">Cancel</a>
+      </div>
+    </form>
+  </article>
+</div>
+
+<style>
+  .elena-form-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 14px;
+  }
+  .elena-form-grid label {
+    display: flex; flex-direction: column; gap: 6px;
+    color: #cfe1f4; font-size: 0.9rem;
+  }
+  .elena-form-grid .elena-form-wide { grid-column: 1 / -1; }
+  .elena-form-grid input,
+  .elena-form-grid select,
+  .elena-form-grid textarea {
+    background: rgba(255, 255, 255, 0.04);
+    color: #ffffff;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 8px;
+    padding: 8px 10px;
+    font-size: 0.92rem;
+  }
+  .elena-form-actions { margin-top: 18px; display: flex; gap: 10px; }
+  @media (max-width: 900px) { .elena-form-grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 600px) { .elena-form-grid { grid-template-columns: 1fr; } }
+</style>
+{% endblock %}

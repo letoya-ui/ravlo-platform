@@ -517,6 +517,21 @@ class FollowUpTask(db.Model):
     def __repr__(self):
         return f"<FollowUpTask {self.id}>"
 
+class PartnerNote(db.Model):
+    __tablename__ = "partner_note"
+
+    id = db.Column(db.Integer, primary_key=True)
+    partner_id = db.Column(db.Integer, db.ForeignKey("partners.id"), nullable=False)
+    author = db.Column(db.String(120), nullable=True)
+    content = db.Column(db.Text, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    partner = db.relationship("Partner", backref=db.backref("partner_notes", lazy="dynamic"))
+
+    def __repr__(self):
+        return f"<PartnerNote {self.id} partner={self.partner_id}>"
+
+
 class LastContact(db.Model):
     __tablename__ = "last_contact"
 

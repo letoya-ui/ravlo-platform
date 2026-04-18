@@ -1,0 +1,95 @@
+{% extends "layouts/ravlo_base.html" %}
+
+{% block title %}Ravlo • Elena — Log Interaction{% endblock %}
+{% block page_title %}Log Interaction{% endblock %}
+{% block page_subline %}Record a call, email, text, meeting, showing, note, or follow‑up.{% endblock %}
+
+{% block content %}
+<div class="partner-dashboard-page">
+  <article class="ravlo-card partner-section-card" style="max-width: 760px;">
+    <div class="section-head">
+      <div>
+        <h3>New Interaction</h3>
+        <p>Attach it to a client. Set a due_at to create a follow‑up reminder.</p>
+      </div>
+      <a href="{{ url_for('elena.dashboard') }}" class="ravlo-btn ghost sm">Back to Dashboard</a>
+    </div>
+
+    {% if not clients %}
+      <div class="partner-tool-item">
+        <strong>You need at least one client first</strong>
+        <span>
+          <a href="{{ url_for('elena.client_new') }}" class="ravlo-btn ghost sm" style="margin-left:8px;">
+            Add Client
+          </a>
+        </span>
+      </div>
+    {% else %}
+      <form method="POST" action="{{ url_for('elena.interaction_new') }}" class="elena-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        <div class="elena-form-grid">
+          <label>
+            Client*
+            <select name="client_id" required>
+              {% for c in clients %}
+                <option value="{{ c.id }}">{{ c.name }}{% if c.role %} · {{ c.role }}{% endif %}</option>
+              {% endfor %}
+            </select>
+          </label>
+          <label>
+            Type*
+            <select name="interaction_type" required>
+              {% for t in interaction_types %}
+                <option value="{{ t }}">{{ t|replace("_", " ")|capitalize }}</option>
+              {% endfor %}
+            </select>
+          </label>
+          <label>
+            Follow‑up due (optional)
+            <input name="due_at" type="datetime-local">
+          </label>
+          <label>
+            Meta (optional)
+            <input name="meta" placeholder="ref, campaign, template:...">
+          </label>
+          <label class="elena-form-wide">
+            Content*
+            <textarea name="content" rows="5" required placeholder="Summary of the conversation, email body, meeting notes…"></textarea>
+          </label>
+        </div>
+
+        <div class="elena-form-actions">
+          <button type="submit" class="ravlo-btn primary">Save Interaction</button>
+          <a href="{{ url_for('elena.dashboard') }}" class="ravlo-btn ghost">Cancel</a>
+        </div>
+      </form>
+    {% endif %}
+  </article>
+</div>
+
+<style>
+  .elena-form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+  }
+  .elena-form-grid label {
+    display: flex; flex-direction: column; gap: 6px;
+    color: #cfe1f4; font-size: 0.9rem;
+  }
+  .elena-form-grid .elena-form-wide { grid-column: 1 / -1; }
+  .elena-form-grid input,
+  .elena-form-grid select,
+  .elena-form-grid textarea {
+    background: rgba(255, 255, 255, 0.04);
+    color: #ffffff;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 8px;
+    padding: 8px 10px;
+    font-size: 0.92rem;
+  }
+  .elena-form-actions { margin-top: 18px; display: flex; gap: 10px; }
+  @media (max-width: 720px) { .elena-form-grid { grid-template-columns: 1fr; } }
+</style>
+{% endblock %}

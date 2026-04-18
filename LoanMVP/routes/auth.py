@@ -21,6 +21,7 @@ from LoanMVP.extensions import csrf, db
 from LoanMVP.forms import RegisterForm, ResetPasswordForm, ResetPasswordRequestForm, LoginForm
 from LoanMVP.services.subscriptions import sync_features_with_subscription
 from LoanMVP.utils.blocking_helpers import is_user_blocked, get_user_block_message
+from LoanMVP.utils.decorators import PARTNER_ROLES
 from LoanMVP.models.user_model import User
 from LoanMVP.models.admin import AccessRequest, UserInvite, LicenseApplication, Company
 from LoanMVP.models.investor_models import InvestorProfile
@@ -231,6 +232,21 @@ def verify_reset_token(token: str, expiration_seconds: int = 3600):
 # HELPERS
 # ============================================================
 
+# VIP user routing — specific users get their own personalized dashboard on
+# login, overriding role-based dispatch. Keys must be normalized (lowercased,
+# stripped). Values are Flask endpoint strings registered on the app.
+# Add a new VIP by creating their blueprint/endpoint first, then adding a
+# mapping here.
+VIP_USER_DASHBOARDS = {
+    "nyrealtorelena@gmail.com": "elena.dashboard",
+}
+
+
+def _vip_dashboard_endpoint(user) -> str | None:
+    email = (getattr(user, "email", "") or "").strip().lower()
+    return VIP_USER_DASHBOARDS.get(email)
+
+
 def _safe_next_url(default_endpoint: str = "investor.command_center"):
     next_page = (request.args.get("next") or "").strip()
     if next_page.startswith("/"):
@@ -245,6 +261,10 @@ def _dashboard_for_role(role: str) -> str:
     if role in admin_roles:
         return "admin.dashboard"
 
+    # Partner sub-categories all share /partners/dashboard (category-specific
+    # templates are selected downstream via Partner.category). Sourcing the set
+    # from utils.decorators.PARTNER_ROLES keeps login redirects and route
+    # decorators in sync.
     dashboard_map = {
         "loan_officer": "loan_officer.dashboard",
         "processor": "processor.dashboard",
@@ -257,11 +277,11 @@ def _dashboard_for_role(role: str) -> str:
         "crm": "crm.dashboard",
         "ai": "ai.dashboard",
         "intelligence": "intelligence.dashboard",
-        "partner": "partners.dashboard",
         "borrower": "borrower.create_profile",
+        **{r: "partners.dashboard" for r in PARTNER_ROLES},
     }
 
-    return dashboard_map.get(role, "marketing.marketing_home")
+    return dashboard_map.get(role, "marketing.homepage")
 
 def _full_name_from_user(user: User) -> str:
     first = (getattr(user, "first_name", "") or "").strip()
@@ -524,6 +544,10 @@ def post_login_redirect():
 
     if current_user.invite_accepted and not current_user.onboarding_complete:
         return redirect(url_for("auth.complete_profile"))
+
+    vip_endpoint = _vip_dashboard_endpoint(current_user)
+    if vip_endpoint:
+        return redirect(url_for(vip_endpoint))
 
     if _is_executive_dashboard_user(current_user):
         return redirect(url_for("executive.dashboard"))

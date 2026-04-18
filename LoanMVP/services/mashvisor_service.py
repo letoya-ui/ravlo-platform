@@ -202,3 +202,35 @@ def normalize_mashvisor_validation(result: Dict[str, Any]) -> Dict[str, Any]:
         ),
         "raw": result,
     }
+
+def get_property_by_mls(mls_number: str) -> Dict[str, Any]:
+    """
+    Fetch property details from Mashvisor using MLS number.
+    """
+    if not mls_number:
+        raise MashvisorServiceError("MLS number is required.")
+
+    return _get(
+        f"/v1.1/client/property/MLS/{mls_number}",
+        params={}
+    )
+def normalize_mls_listing(raw: Dict[str, Any]) -> Dict[str, Any]:
+    content = raw.get("content") or raw
+
+    return {
+        "mls_number": content.get("mls_id") or content.get("mls_number"),
+        "address": content.get("address"),
+        "city": content.get("city"),
+        "state": content.get("state"),
+        "zip_code": content.get("zip_code"),
+        "price": content.get("price"),
+        "beds": content.get("beds"),
+        "baths": content.get("baths"),
+        "sqft": content.get("sqft"),
+        "lot_size": content.get("lot_size"),
+        "property_type": content.get("property_type"),
+        "year_built": content.get("year_built"),
+        "description": content.get("description"),
+        "photos": content.get("photos") or [],
+        "raw": raw,
+    }

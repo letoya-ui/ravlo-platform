@@ -46,7 +46,7 @@ sendgrid==6.11.0
 
 requests==2.32.3
 urllib3==2.2.1
-
+pandas==2.2.0
 weasyprint==61.0
 reportlab==4.2.2
 

@@ -17,6 +17,10 @@ from LoanMVP.services.rentcast_service import (
 )
 from LoanMVP.services.mashvisor_client import MashvisorClient, MashvisorError
 from LoanMVP.services.mashvisor_service import normalize_mashvisor_validation
+from LoanMVP.services.realtor_provider import (
+    fetch_realtor_data,
+    fetch_realtor_photos,
+)
 
 from LoanMVP.services.investor.investor_route_helpers import (
     _normalize_asset_type,
@@ -36,6 +40,7 @@ class ProviderBudget:
     attom_detail: int = 4
     rentcast_detail: int = 4
     mashvisor_detail: int = 4
+    realtor_detail: int = 4
     deal_architect: int = 4
 
     def use(self, key: str, amount: int = 1) -> bool:
@@ -500,10 +505,15 @@ class PropertyIntelligenceOrchestrator:
         return results
 
     def _from_rentcast_listing(self, item: Dict[str, Any]) -> CanonicalProperty:
+        raw = item.get("raw") or {}
         photos = self._normalize_photo_candidates(
             item.get("photos"),
             item.get("primary_photo"),
-            item.get("raw", {}),
+            raw.get("imgSrc"),
+            raw.get("photos"),
+            raw.get("images"),
+            raw.get("primaryPhoto"),
+            raw,
         )
 
         primary_photo = _resolve_photo(item.get("primary_photo"), photos)
@@ -551,6 +561,8 @@ class PropertyIntelligenceOrchestrator:
 
             cp = self._enrich_with_mashvisor(cp)
 
+            cp = self._enrich_with_realtor(cp)
+
             enriched.append(cp)
 
         return enriched
@@ -597,6 +609,22 @@ class PropertyIntelligenceOrchestrator:
             cp.deal_score = self._as_int(profile.get("ravlo_score"))
         if profile.get("recommended_strategy") and not cp.recommended_strategy:
             cp.recommended_strategy = profile.get("recommended_strategy")
+
+        # ATTOM may include image URLs in some plans/responses.
+        attom_raw = profile.get("raw") or {}
+        attom_photos = self._normalize_photo_candidates(
+            attom_raw.get("photos"),
+            attom_raw.get("images"),
+            attom_raw.get("image"),
+            attom_raw.get("media"),
+            attom_raw.get("imgSrc"),
+            attom_raw.get("primaryPhoto"),
+        )
+        if attom_photos:
+            _log.info("[attom] extracted %d photos from raw response", len(attom_photos))
+            cp.photos = self._normalize_photo_candidates(cp.photos, attom_photos)
+            cp.primary_photo = _resolve_photo(cp.primary_photo, cp.photos)
+            cp.value_sources["photos"] = "attom"
 
         return cp
 
@@ -678,15 +706,31 @@ class PropertyIntelligenceOrchestrator:
         cp.latitude = self._first_truthy(cp.latitude, self._as_float(sale_listing.get("latitude")))
         cp.longitude = self._first_truthy(cp.longitude, self._as_float(sale_listing.get("longitude")))
 
-        sale_listing_photos = self._normalize_photo_candidates(
+        # Extract photos from ALL RentCast responses (sale listing, rent,
+        # and value endpoints may each carry image data).
+        sale_raw = sale_listing.get("raw") or {}
+        rentcast_photos = self._normalize_photo_candidates(
             cp.photos,
             sale_listing.get("primary_photo"),
             sale_listing.get("photos"),
-            sale_listing.get("raw", {}),
+            sale_raw.get("imgSrc"),
+            sale_raw.get("photos"),
+            sale_raw.get("images"),
+            sale_raw.get("primaryPhoto"),
+            rent_data.get("imgSrc") if isinstance(rent_data, dict) else None,
+            rent_data.get("photos") if isinstance(rent_data, dict) else None,
+            value_data.get("imgSrc") if isinstance(value_data, dict) else None,
+            value_data.get("photos") if isinstance(value_data, dict) else None,
         )
-        if sale_listing_photos:
-            cp.photos = sale_listing_photos
-            cp.primary_photo = _resolve_photo(cp.primary_photo, sale_listing_photos)
+        if rentcast_photos:
+            _log.info(
+                "[rentcast] extracted %d photos for %s",
+                len(rentcast_photos),
+                cp.address or cp.address_line1 or "unknown",
+            )
+            cp.photos = rentcast_photos
+            cp.primary_photo = _resolve_photo(cp.primary_photo, rentcast_photos)
+            cp.value_sources["photos"] = cp.value_sources.get("photos") or "rentcast"
 
         cp.value_sources.update({
             "market_value": "rentcast",
@@ -812,6 +856,88 @@ class PropertyIntelligenceOrchestrator:
             "occupancy_rate": "mashvisor",
             "photos": "mashvisor" if cp.photos else cp.value_sources.get("photos"),
         })
+
+        return cp
+
+    def _enrich_with_realtor(self, cp: CanonicalProperty) -> CanonicalProperty:
+        """Enrich with Realtor.com data (primarily for photos + list price).
+
+        Uses the RapidAPI `/v2/property` endpoint via
+        :func:`LoanMVP.services.realtor_provider.fetch_realtor_data`. Falls
+        back to `/propertyPhotos` by property id when the detail call does
+        not return photos.
+        """
+        addr = cp.address or cp.address_line1 or ""
+        if not addr:
+            return cp
+
+        if not self.budget.use("realtor_detail", 1):
+            _log.info("[realtor] skipping enrichment -- budget exhausted")
+            return cp
+
+        _log.info("[realtor] enriching %s, %s %s %s", addr, cp.city, cp.state, cp.zip_code)
+
+        try:
+            data = fetch_realtor_data(
+                address=addr,
+                city=cp.city or "",
+                state=cp.state or "",
+                zip_code=cp.zip_code or "",
+            )
+        except Exception as exc:
+            _log.warning("[realtor] fetch_realtor_data failed: %s", exc)
+            return cp
+
+        if not isinstance(data, dict):
+            return cp
+
+        prop = data.get("property") or {}
+        if not isinstance(prop, dict):
+            prop = {}
+
+        property_id = prop.get("property_id")
+        if property_id:
+            cp.provider_ids["realtor"] = property_id
+
+        realtor_photos = self._normalize_photo_candidates(
+            prop.get("primary_photo"),
+            prop.get("photos"),
+        )
+
+        if not realtor_photos and property_id:
+            try:
+                gallery = fetch_realtor_photos(property_id)
+            except Exception as exc:
+                _log.warning("[realtor] fetch_realtor_photos failed: %s", exc)
+                gallery = []
+            if gallery:
+                realtor_photos = self._normalize_photo_candidates(gallery)
+
+        if realtor_photos:
+            _log.info(
+                "[realtor] extracted %d photos for %s",
+                len(realtor_photos),
+                addr,
+            )
+            # Merge realtor photos in front so they take priority when the
+            # gallery is otherwise empty, while still retaining any photos
+            # that ATTOM/RentCast/Mashvisor already surfaced.
+            cp.photos = self._normalize_photo_candidates(realtor_photos, cp.photos)
+            cp.primary_photo = _resolve_photo(cp.primary_photo, cp.photos)
+            cp.value_sources["photos"] = cp.value_sources.get("photos") or "realtor"
+
+        cp.listing_price = self._first_truthy(
+            cp.listing_price,
+            self._as_float(prop.get("price")),
+        )
+        cp.purchase_price = self._first_truthy(cp.purchase_price, cp.listing_price)
+        cp.status = self._first_truthy(cp.status, prop.get("status"))
+        cp.days_on_market = self._first_truthy(
+            cp.days_on_market,
+            self._as_int(prop.get("days_on_market")),
+        )
+        if isinstance(prop.get("description"), str) and prop.get("description"):
+            cp.description = cp.description or prop.get("description")
 
         return cp
 
@@ -948,6 +1074,20 @@ class PropertyIntelligenceOrchestrator:
 
         results = [cp.to_result_dict() for cp in ranked[:4]]
 
+        # Log photo availability summary for debugging.
+        with_photos = sum(1 for r in results if r.get("listing_photos") or r.get("primary_photo") or r.get("image_url"))
+        _log.info(
+            "[run_search] returning %d results, %d with photos (address=%s zip=%s)",
+            len(results), with_photos, address, zip_code,
+        )
+        for r in results:
+            _log.debug(
+                "  -> %s  photos=%d  primary=%s",
+                r.get("address", "?"),
+                len(r.get("listing_photos") or []),
+                bool(r.get("primary_photo") or r.get("image_url")),
+            )
+
         meta = {
             "count": len(results),
             "total_matches": len(ranked),
@@ -962,6 +1102,7 @@ class PropertyIntelligenceOrchestrator:
                 "attom_detail": self.budget.attom_detail,
                 "rentcast_detail": self.budget.rentcast_detail,
                 "mashvisor_detail": self.budget.mashvisor_detail,
+                "realtor_detail": self.budget.realtor_detail,
                 "deal_architect": self.budget.deal_architect,
             },
         }
