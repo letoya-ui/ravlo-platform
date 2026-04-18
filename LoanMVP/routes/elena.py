@@ -651,31 +651,38 @@ def template_studio_preview():
     )
 
 
-@elena_bp.post("/template-studio/generate")
-def template_studio_generate():
-    template_type = request.form.get("template_type")
+@elena_bp.post("/template-studio/preview")
+@role_required("partner_group", "admin")
+def template_studio_preview():
+    template_type_value = request.form.get("template_type")
     client_id = request.form.get("client_id")
     listing_id = request.form.get("listing_id")
 
-    variables = {
+    template_enum = _get_template_enum(template_type_value)
+    if not template_enum:
+        flash("Please choose a valid template.", "warning")
+        return redirect(url_for("elena.template_studio"))
+
+    variables = _template_defaults()
+    variables.update({
         k: v
         for k, v in request.form.items()
-        if k not in ["template_type", "client_id", "listing_id", "action"]
-    }
+        if k not in ["template_type", "client_id", "listing_id", "action", "csrf_token"]
+    })
 
-    prompt = render_elena_template(TemplateType(template_type), **variables)
-    output = generate_text(prompt)
+    prompt = render_elena_template(template_enum, **variables)
 
     return render_template(
         "elena/template_studio.html",
         templates=[t.value for t in TemplateType],
-        selected_template=template_type,
+        selected_template=template_type_value,
         variables=variables,
         client_id=client_id,
         listing_id=listing_id,
         preview=prompt,
-        output=output,
+        output=None,
         saved_interaction_id=None,
+        saved_flyer_id=None,
         portal="elena",
         portal_name="Elena",
         portal_home=url_for("elena.dashboard"),
