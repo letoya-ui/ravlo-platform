@@ -1,5 +1,3 @@
-# LoanMVP/models/vip_models.py
-
 from datetime import datetime
 from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey
 from sqlalchemy.orm import relationship
@@ -7,6 +5,9 @@ from sqlalchemy.orm import relationship
 from LoanMVP.extensions import db
 
 
+# ---------------------------------------------------------
+# BASE MODEL
+# ---------------------------------------------------------
 class VIPBaseModel(db.Model):
     __abstract__ = True
 
@@ -15,6 +16,9 @@ class VIPBaseModel(db.Model):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 
+# ---------------------------------------------------------
+# PROFILE
+# ---------------------------------------------------------
 class VIPProfile(VIPBaseModel):
     __tablename__ = "vip_profiles"
 
@@ -51,10 +55,16 @@ class VIPProfile(VIPBaseModel):
     actions = relationship("VIPAssistantAction", back_populates="vip_profile", lazy=True)
     notifications = relationship("VIPNotification", back_populates="vip_profile", lazy=True)
 
+    # ✅ DESIGN STUDIO
+    design_projects = relationship("VIPDesignProject", lazy=True)
+
     def __repr__(self):
         return f"<VIPProfile {self.id} - {self.display_name}>"
 
 
+# ---------------------------------------------------------
+# CONTACTS
+# ---------------------------------------------------------
 class VIPContact(VIPBaseModel):
     __tablename__ = "vip_contacts"
 
@@ -71,25 +81,17 @@ class VIPContact(VIPBaseModel):
 
     vip_profile = relationship("VIPProfile", back_populates="contacts")
     interactions = relationship("VIPInteraction", back_populates="contact", lazy=True)
-    design_projects = relationship(
-        "VIPDesignProject",
-        back_populates="contact",
-        lazy=True
-    )
+
+    # ✅ NOW VALID (because we added FK in project)
+    design_projects = relationship("VIPDesignProject", back_populates="contact", lazy=True)
 
     def __repr__(self):
         return f"<VIPContact {self.id} - {self.name}>"
 
 
-class VIPInteractionType:
-    EMAIL = "email"
-    TEXT = "text"
-    CALL = "call"
-    NOTE = "note"
-    MEETING = "meeting"
-    FOLLOW_UP = "follow_up"
-
-
+# ---------------------------------------------------------
+# INTERACTIONS
+# ---------------------------------------------------------
 class VIPInteraction(VIPBaseModel):
     __tablename__ = "vip_interactions"
 
@@ -104,10 +106,10 @@ class VIPInteraction(VIPBaseModel):
     vip_profile = relationship("VIPProfile", back_populates="interactions")
     contact = relationship("VIPContact", back_populates="interactions")
 
-    def __repr__(self):
-        return f"<VIPInteraction {self.id} - {self.interaction_type}>"
 
-
+# ---------------------------------------------------------
+# EXPENSES
+# ---------------------------------------------------------
 class VIPExpense(VIPBaseModel):
     __tablename__ = "vip_expenses"
 
@@ -127,10 +129,10 @@ class VIPExpense(VIPBaseModel):
     vip_profile = relationship("VIPProfile", back_populates="expenses")
     contact = relationship("VIPContact")
 
-    def __repr__(self):
-        return f"<VIPExpense {self.id} - {self.category}>"
 
-
+# ---------------------------------------------------------
+# INCOME (NO DESIGN RELATIONSHIP ❌)
+# ---------------------------------------------------------
 class VIPIncome(VIPBaseModel):
     __tablename__ = "vip_income"
 
@@ -147,12 +149,11 @@ class VIPIncome(VIPBaseModel):
 
     vip_profile = relationship("VIPProfile", back_populates="incomes")
     contact = relationship("VIPContact")
-    
-
-    def __repr__(self):
-        return f"<VIPIncome {self.id} - {self.category}>"
 
 
+# ---------------------------------------------------------
+# BUDGETS
+# ---------------------------------------------------------
 class VIPBudget(VIPBaseModel):
     __tablename__ = "vip_budgets"
 
@@ -160,19 +161,20 @@ class VIPBudget(VIPBaseModel):
 
     category = Column(String(50), nullable=False)
     budget_amount = Column(Integer, nullable=False)
-    period_type = Column(String(20), nullable=False)  # monthly, project, listing, client
+    period_type = Column(String(20), nullable=False)
     notes = Column(Text, nullable=True)
 
     vip_profile = relationship("VIPProfile", back_populates="budgets")
 
-    def __repr__(self):
-        return f"<VIPBudget {self.id} - {self.category}>"
 
-
+# ---------------------------------------------------------
+# AI
+# ---------------------------------------------------------
 class VIPAssistantSuggestion(VIPBaseModel):
     __tablename__ = "vip_assistant_suggestions"
 
     vip_profile_id = Column(Integer, ForeignKey("vip_profiles.id"), nullable=False)
+
     suggestion_type = Column(String(50), nullable=False)
     status = Column(String(20), nullable=False, default="pending")
 
@@ -181,23 +183,15 @@ class VIPAssistantSuggestion(VIPBaseModel):
 
     contact_id = Column(Integer, ForeignKey("vip_contacts.id"), nullable=True)
 
-    proposed_amount = Column(Integer, nullable=True)
-    proposed_miles = Column(Integer, nullable=True)
-
-    source = Column(String(50), nullable=True)
-    due_at = Column(DateTime, nullable=True)
-
     vip_profile = relationship("VIPProfile", back_populates="suggestions")
     contact = relationship("VIPContact")
-
-    def __repr__(self):
-        return f"<VIPAssistantSuggestion {self.id} - {self.suggestion_type}>"
 
 
 class VIPAssistantAction(VIPBaseModel):
     __tablename__ = "vip_assistant_actions"
 
     vip_profile_id = Column(Integer, ForeignKey("vip_profiles.id"), nullable=False)
+
     action_type = Column(String(50), nullable=False)
     status = Column(String(20), nullable=False, default="draft")
 
@@ -206,15 +200,8 @@ class VIPAssistantAction(VIPBaseModel):
     subject = Column(String(255), nullable=True)
     content = Column(Text, nullable=True)
 
-    amount = Column(Integer, nullable=True)
-    miles = Column(Integer, nullable=True)
-    notes = Column(Text, nullable=True)
-
     vip_profile = relationship("VIPProfile", back_populates="actions")
     contact = relationship("VIPContact")
-
-    def __repr__(self):
-        return f"<VIPAssistantAction {self.id} - {self.action_type}>"
 
 
 class VIPNotification(VIPBaseModel):
@@ -232,51 +219,47 @@ class VIPNotification(VIPBaseModel):
 
     vip_profile = relationship("VIPProfile", back_populates="notifications")
 
-    def __repr__(self):
-        return f"<VIPNotification {self.id} - {self.notification_type}>"
 
+# ---------------------------------------------------------
+# DESIGN STUDIO
+# ---------------------------------------------------------
 class VIPDesignProject(VIPBaseModel):
     __tablename__ = "vip_design_projects"
 
-    id = db.Column(db.Integer, primary_key=True)
-    vip_profile_id = db.Column(db.Integer, db.ForeignKey("vip_profiles.id"), nullable=False)
+    vip_profile_id = Column(Integer, ForeignKey("vip_profiles.id"), nullable=False)
+    contact_id = Column(Integer, ForeignKey("vip_contacts.id"), nullable=True)
 
-    # ✅ ADD THIS
-    contact_id = db.Column(db.Integer, db.ForeignKey("vip_contacts.id"), nullable=True)
+    title = Column(String(255), nullable=False)
+    status = Column(String(50), nullable=False, default="draft")
 
-    title = db.Column(db.String(255), nullable=False)
-    source_file = db.Column(db.Text, nullable=True)
-    notes = db.Column(db.Text, nullable=True)
+    source_file = Column(Text, nullable=True)
+    notes = Column(Text, nullable=True)
 
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-
-    # ✅ ADD RELATIONSHIP
+    vip_profile = relationship("VIPProfile")
     contact = relationship("VIPContact", back_populates="design_projects")
+
     annotations = relationship(
         "VIPDesignAnnotation",
         back_populates="project",
+        lazy=True,
         cascade="all, delete-orphan",
-        lazy=True
     )
+
 
 class VIPDesignAnnotation(VIPBaseModel):
     __tablename__ = "vip_design_annotations"
 
-    id = db.Column(db.Integer, primary_key=True)
-    project_id = db.Column(db.Integer, db.ForeignKey("vip_design_projects.id"), nullable=False)
+    project_id = Column(Integer, ForeignKey("vip_design_projects.id"), nullable=False)
 
-    annotation_type = db.Column(db.String(50))  # wall, room, note
-    action_type = db.Column(db.String(50))      # remove, move, redesign
+    annotation_type = Column(String(50), nullable=True)
+    action_type = Column(String(50), nullable=True)
 
-    label = db.Column(db.String(255))
-    body = db.Column(db.Text)
+    label = Column(String(255), nullable=True)
+    body = Column(Text, nullable=True)
 
-    x = db.Column(db.Integer)
-    y = db.Column(db.Integer)
-    width = db.Column(db.Integer)
-    height = db.Column(db.Integer)
-
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    x = Column(Integer, nullable=True)
+    y = Column(Integer, nullable=True)
+    width = Column(Integer, nullable=True)
+    height = Column(Integer, nullable=True)
 
     project = relationship("VIPDesignProject", back_populates="annotations")

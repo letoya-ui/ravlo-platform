@@ -55,6 +55,9 @@ def build_enabled_modules_from_form(form):
     return modules
 
 def get_or_create_vip_profile():
+    if not getattr(current_user, "is_authenticated", False):
+        return None
+
     profile = VIPProfile.query.filter_by(user_id=current_user.id).first()
     if profile:
         return profile
@@ -96,7 +99,6 @@ def get_or_create_vip_profile():
     db.session.commit()
     return profile
 
-
 def get_dashboard_name(profile):
     return (
         profile.dashboard_title
@@ -107,13 +109,18 @@ def get_dashboard_name(profile):
 
 @vip_bp.app_context_processor
 def inject_vip_context():
+    if not getattr(current_user, "is_authenticated", False):
+        return {
+            "vip_profile": None,
+            "modules": [],
+        }
+
     profile = get_or_create_vip_profile()
 
     return {
         "vip_profile": profile,
         "modules": get_enabled_modules(profile),
     }
-
 
 @vip_bp.get("/")
 @role_required("partner_group", "admin")
