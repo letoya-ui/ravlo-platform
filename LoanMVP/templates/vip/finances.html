@@ -1,0 +1,25 @@
+{# templates/vip/finances.html #}
+{% extends "layouts/ravlo_base.html" %}
+
+{% block title %}Ravlo • VIP Finances{% endblock %}
+{% block page_title %}{{ header_name }}{% endblock %}
+{% block page_subline %}Income, expenses, and profit in one place.{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto space-y-6">
+  <section class="partner-stats-grid">
+    <article class="ravlo-card partner-stat-card">
+      <div class="partner-stat-label">Income</div>
+      <div class="partner-stat-value">${{ "{:,.0f}".format(total_income or 0) }}</div>
+    </article>
+    <article class="ravlo-card partner-stat-card">
+      <div class="partner-stat-label">Expenses</div>
+      <div class="partner-stat-value">${{ "{:,.0f}".format(total_expenses or 0) }}</div>
+    </article>
+    <article class="ravlo-card partner-stat-card">
+      <div class="partner-stat-label">Net</div>
+      <div class="partner-stat-value">${{ "{:,.0f}".format(net_profit or 0) }}</div>
+    </article>
+  </section>
+</div>
+{% endblock %}
