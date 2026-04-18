@@ -1,0 +1,203 @@
+{% extends "layouts/ravlo_base.html" %}
+
+{% block title %}Ravlo • Partner OS{% endblock %}
+{% block page_title %}{{ partner.company or partner.name or "Partner OS" }}{% endblock %}
+{% block page_subline %}
+Marketplace, leads, proposals, billing, and partner operations in one place.
+{% endblock %}
+
+{% block topbar_actions %}
+  <a href="{{ url_for('vip.index') }}" class="ravlo-btn primary sm">
+    Open My VIP Workspace
+  </a>
+{% endblock %}
+
+{% block content %}
+<div class="partner-dashboard-page">
+
+  <section class="ravlo-card partner-hero-card">
+    <div class="partner-hero-grid">
+      <div class="partner-hero-copy">
+        <span class="partner-eyebrow">Partner OS</span>
+        <h2 class="partner-hero-title">
+          Manage your marketplace presence, opportunities, and partner activity.
+        </h2>
+        <p class="partner-hero-text">
+          Partner OS handles your marketplace profile, leads, requests, proposals, and billing.
+          Your VIP Workspace is where you run your personalized dashboard, AI Pilot, finances,
+          and role-based tools.
+        </p>
+        <div class="partner-hero-actions">
+          <a href="{{ url_for('vip.index') }}" class="ravlo-btn primary">Open My VIP Workspace</a>
+          <a href="{{ url_for('partners.requests_inbox') }}" class="ravlo-btn ghost">View Requests</a>
+          <a href="{{ url_for('partners.proposals') }}" class="ravlo-btn ghost">View Proposals</a>
+        </div>
+      </div>
+
+      <div class="partner-hero-panel">
+        <div class="partner-mini-stat">
+          <span class="label">Active Plan</span>
+          <strong>{{ partner.subscription_tier or "Free" }}</strong>
+        </div>
+        <div class="partner-mini-stat">
+          <span class="label">Profile Completion</span>
+          <strong>{{ stats.profile_completion or 0 }}%</strong>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="partner-stats-grid">
+    <article class="ravlo-card partner-stat-card">
+      <div class="partner-stat-label">Pending</div>
+      <div class="partner-stat-value">{{ pending_count }}</div>
+      <div class="partner-stat-note">Requests waiting on you</div>
+    </article>
+
+    <article class="ravlo-card partner-stat-card">
+      <div class="partner-stat-label">Accepted</div>
+      <div class="partner-stat-value">{{ accepted_count }}</div>
+      <div class="partner-stat-note">Requests in progress</div>
+    </article>
+
+    <article class="ravlo-card partner-stat-card">
+      <div class="partner-stat-label">Completed</div>
+      <div class="partner-stat-value">{{ completed_count }}</div>
+      <div class="partner-stat-note">Finished opportunities</div>
+    </article>
+
+    <article class="ravlo-card partner-stat-card">
+      <div class="partner-stat-label">Locked Tools</div>
+      <div class="partner-stat-value">{{ locked_feature_count }}</div>
+      <div class="partner-stat-note">Upgrade to unlock more</div>
+    </article>
+  </section>
+
+  <section class="partner-dashboard-grid">
+
+    <div class="partner-dashboard-main">
+
+      <article class="ravlo-card partner-section-card">
+        <div class="section-head">
+          <div>
+            <h3>Quick Actions</h3>
+            <p>Take care of your most important partner tasks.</p>
+          </div>
+        </div>
+
+        <div class="quick-action-grid">
+          <a class="partner-action-card" href="{{ url_for('partners.requests_inbox') }}">
+            <div class="partner-action-icon"><i class="lucide lucide-inbox"></i></div>
+            <div class="partner-action-copy">
+              <h4>Requests</h4>
+              <p>Review new opportunities and respond quickly.</p>
+            </div>
+          </a>
+
+          <a class="partner-action-card" href="{{ url_for('partners.proposals') }}">
+            <div class="partner-action-icon"><i class="lucide lucide-file-text"></i></div>
+            <div class="partner-action-copy">
+              <h4>Proposals</h4>
+              <p>Build and manage proposals for incoming work.</p>
+            </div>
+          </a>
+
+          <a class="partner-action-card" href="{{ url_for('partners.listing') }}">
+            <div class="partner-action-icon"><i class="lucide lucide-store"></i></div>
+            <div class="partner-action-copy">
+              <h4>Marketplace Listing</h4>
+              <p>Control how your business appears in the marketplace.</p>
+            </div>
+          </a>
+
+          <a class="partner-action-card" href="{{ url_for('vip.index') }}">
+            <div class="partner-action-icon"><i class="lucide lucide-sparkles"></i></div>
+            <div class="partner-action-copy">
+              <h4>VIP Workspace</h4>
+              <p>Open your personalized dashboard, AI Pilot, and finances.</p>
+            </div>
+          </a>
+        </div>
+      </article>
+
+      <article class="ravlo-card partner-section-card">
+        <div class="section-head">
+          <div>
+            <h3>Recent Requests</h3>
+            <p>Your latest marketplace and partner opportunities.</p>
+          </div>
+          <a href="{{ url_for('partners.requests_inbox') }}" class="ravlo-btn ghost sm">
+            Open Inbox
+          </a>
+        </div>
+
+        {% if recent_requests %}
+          <div class="partner-tool-list">
+            {% for req in recent_requests %}
+              <div class="partner-tool-item">
+                <strong>{{ req.title or req.category or "New request" }}</strong>
+                <span>
+                  {{ req.status|title if req.status else "Pending" }}
+                  {% if req.created_at %} · {{ req.created_at.strftime("%b %d") }}{% endif %}
+                </span>
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="partner-tool-item">
+            <strong>No recent requests</strong>
+            <span>New requests will show up here when they come in.</span>
+          </div>
+        {% endif %}
+      </article>
+
+    </div>
+
+    <aside class="partner-dashboard-side">
+
+      <article class="ravlo-card partner-section-card">
+        <div class="section-head">
+          <div>
+            <h3>Feature Access</h3>
+            <p>Your current Partner OS tools and upgrades.</p>
+          </div>
+        </div>
+
+        <div class="partner-tool-list">
+          {% for item in feature_cards %}
+            <div class="partner-tool-item">
+              <strong>{{ item.title }}</strong>
+              <span>
+                {{ item.badge }} ·
+                {% if item.enabled %}Enabled{% else %}Locked{% endif %}
+              </span>
+            </div>
+          {% endfor %}
+        </div>
+
+        <a href="{{ url_for('partners.upgrade') }}" class="ravlo-btn primary">
+          Manage Plan
+        </a>
+      </article>
+
+      <article class="ravlo-card partner-section-card">
+        <div class="section-head">
+          <div>
+            <h3>Partner Snapshot</h3>
+            <p>Quick view of your business account.</p>
+          </div>
+        </div>
+
+        <div class="partner-checklist">
+          <div class="partner-check-item">Deals: {{ stats.deals }}</div>
+          <div class="partner-check-item">Volume: {{ stats.volume }}</div>
+          <div class="partner-check-item">Rating: {{ stats.rating }}</div>
+          <div class="partner-check-item">Reviews: {{ stats.review_count }}</div>
+        </div>
+      </article>
+
+    </aside>
+
+  </section>
+</div>
+{% endblock %}

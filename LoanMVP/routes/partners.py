@@ -236,27 +236,7 @@ def dashboard():
         "profile_completion": partner.profile_completion() if hasattr(partner, "profile_completion") else 0,
     }
 
-    dashboards = {
-        "contractor": "partners/dashboards/contractor.html",
-        "designer": "partners/dashboards/designer.html",
-        "cleaner": "partners/dashboards/cleaner.html",
-        "janitorial": "partners/dashboards/cleaner.html",
-        "realtor": "partners/dashboards/realtor.html",
-        "inspector": "partners/dashboards/inspector.html",
-        "appraiser": "partners/dashboards/appraiser.html",
-        "title": "partners/dashboards/title.html",
-        "insurance": "partners/dashboards/insurance.html",
-        "attorney": "partners/dashboards/attorney.html",
-        "property_manager": "partners/dashboards/property_manager.html",
-        "lender": "partners/dashboards/lender.html",
-        "broker": "partners/dashboards/broker.html",
-        "vendor": "partners/dashboards/vendor.html",
-    }
-
-    template = dashboards.get(
-        (partner.category or "").strip().lower(),
-        "partners/dashboards/default.html"
-    )
+        template = "partners/dashboards/home.html"
 
     return render_template(
         template,

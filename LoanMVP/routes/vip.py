@@ -18,20 +18,54 @@ vip_bp = Blueprint("vip", __name__, url_prefix="/vip")
 
 def get_or_create_vip_profile():
     profile = VIPProfile.query.filter_by(user_id=current_user.id).first()
-    if not profile:
-        profile = VIPProfile(
-            user_id=current_user.id,
-            display_name=getattr(current_user, "name", None) or getattr(current_user, "email", "VIP User"),
-            role_type="realtor",
-            assistant_name="Ravlo",
-        )
-        db.session.add(profile)
-        db.session.commit()
+    if profile:
+        return profile
+
+    partner = getattr(current_user, "partner_profile", None)
+
+    default_role_type = "partner"
+    if partner and getattr(partner, "category", None):
+        raw_category = (partner.category or "").strip().lower()
+
+        role_map = {
+            "realtor": "realtor",
+            "contractor": "contractor",
+            "designer": "designer",
+            "lender": "loan_officer",
+            "loan_officer": "loan_officer",
+            "broker": "partner",
+            "vendor": "partner",
+            "property_manager": "partner",
+            "attorney": "partner",
+            "insurance": "partner",
+            "title": "partner",
+            "inspector": "partner",
+            "appraiser": "partner",
+            "cleaner": "contractor",
+            "janitorial": "contractor",
+        }
+        default_role_type = role_map.get(raw_category, "partner")
+
+    profile = VIPProfile(
+        user_id=current_user.id,
+        display_name=getattr(current_user, "name", None)
+        or getattr(current_user, "email", "VIP User"),
+        business_name=getattr(partner, "company", None) if partner else None,
+        role_type=default_role_type,
+        assistant_name="Ravlo",
+    )
+    db.session.add(profile)
+    db.session.commit()
     return profile
 
 
 def get_dashboard_name(profile):
-    return profile.dashboard_title or profile.business_name or profile.display_name or "VIP Workspace"
+    return (
+        profile.dashboard_title
+        or profile.business_name
+        or profile.display_name
+        or "VIP Workspace"
+    )
 
 
 @vip_bp.get("/")
@@ -47,7 +81,8 @@ def index():
         "loan_officer": "vip.loan_officer_dashboard",
         "lender": "vip.loan_officer_dashboard",
     }
-    return redirect(url_for(role_map.get(profile.role_type, "vip.realtor_dashboard")))
+
+    return redirect(url_for(role_map.get(profile.role_type, "vip.partner_dashboard")))
 
 
 @vip_bp.get("/realtor")
@@ -126,15 +161,13 @@ def finances():
     profile = get_or_create_vip_profile()
 
     incomes = (
-        VIPIncome.query
-        .filter_by(vip_profile_id=profile.id)
+        VIPIncome.query.filter_by(vip_profile_id=profile.id)
         .order_by(VIPIncome.created_at.desc())
         .limit(25)
         .all()
     )
     expenses = (
-        VIPExpense.query
-        .filter_by(vip_profile_id=profile.id)
+        VIPExpense.query.filter_by(vip_profile_id=profile.id)
         .order_by(VIPExpense.created_at.desc())
         .limit(25)
         .all()
@@ -165,8 +198,7 @@ def ai_pilot():
     profile = get_or_create_vip_profile()
 
     suggestions = (
-        VIPAssistantSuggestion.query
-        .filter_by(vip_profile_id=profile.id)
+        VIPAssistantSuggestion.query.filter_by(vip_profile_id=profile.id)
         .order_by(VIPAssistantSuggestion.created_at.desc())
         .limit(20)
         .all()
