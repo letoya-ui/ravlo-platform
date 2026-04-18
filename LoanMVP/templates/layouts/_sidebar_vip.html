@@ -1,17 +1,16 @@
-{# templates/layouts/_sidebar_vip.html #}
 {% set ep = request.endpoint or "" %}
 
 <div class="ravlo-sidebar-inner">
 
   <div class="ravlo-sidebar-brand">
-    <a href="{{ url_for('vip.index') }}" class="ravlo-brand-link">
+    <a href="{{ url_for('elena.dashboard') }}" class="ravlo-brand-link">
       <div class="ravlo-brand-mark">
-        <span>VP</span>
+        <span>EL</span>
       </div>
 
       <div class="ravlo-brand-copy">
-        <div class="ravlo-brand-name">RAVLO</div>
-        <div class="ravlo-brand-sub">VIP Assistant</div>
+        <div class="ravlo-brand-name">ELENA</div>
+        <div class="ravlo-brand-sub">Realtor Workspace</div>
       </div>
     </a>
     <div class="ravlo-brand-glow"></div>
@@ -19,77 +18,65 @@
 
   <nav class="ravlo-sidebar-nav">
 
+    <div class="ravlo-nav-section">Start Here</div>
+
+    <a href="{{ url_for('elena.dashboard') }}"
+       class="ravlo-nav-link {% if ep == 'elena.dashboard' %}active{% endif %}">
+      <i class="lucide lucide-house"></i>
+      <span>Dashboard</span>
+    </a>
+
+    <a href="{{ url_for('elena.copilot') }}"
+       class="ravlo-nav-link {% if ep in ['elena.copilot', 'elena.copilot_command'] %}active{% endif %}">
+      <i class="lucide lucide-sparkles"></i>
+      <span>Copilot</span>
+    </a>
+
+    <div class="ravlo-nav-section">People</div>
+
+    <a href="{{ url_for('elena.client_new') }}"
+       class="ravlo-nav-link {% if ep == 'elena.client_new' %}active{% endif %}">
+      <i class="lucide lucide-user-plus"></i>
+      <span>Add Client</span>
+    </a>
+
+    <a href="{{ url_for('elena.interaction_new') }}"
+       class="ravlo-nav-link {% if ep == 'elena.interaction_new' %}active{% endif %}">
+      <i class="lucide lucide-message-square-plus"></i>
+      <span>Log Follow-Up</span>
+    </a>
+
+    <div class="ravlo-nav-section">Listings</div>
+
+    <a href="{{ url_for('elena.listing_new') }}"
+       class="ravlo-nav-link {% if ep == 'elena.listing_new' %}active{% endif %}">
+      <i class="lucide lucide-house-plus"></i>
+      <span>Add Listing</span>
+    </a>
+
+    <a href="{{ url_for('elena.dashboard') }}"
+       class="ravlo-nav-link {% if ep == 'elena.dashboard' %}active{% endif %}">
+      <i class="lucide lucide-building-2"></i>
+      <span>View Listings</span>
+    </a>
+
+    <div class="ravlo-nav-section">Content</div>
+
+    <a href="{{ url_for('elena.template_studio') }}"
+       class="ravlo-nav-link {% if ep in ['elena.template_studio', 'elena.template_studio_preview', 'elena.template_studio_generate', 'elena.template_studio_generate_and_save'] %}active{% endif %}">
+      <i class="lucide lucide-wand-sparkles"></i>
+      <span>Content Studio</span>
+    </a>
+
     <div class="ravlo-nav-section">Workspace</div>
 
-    <a href="{{ url_for('vip.index') }}"
-       class="ravlo-nav-link {% if ep == 'vip.index' %}active{% endif %}">
-      <i class="lucide lucide-layout-dashboard"></i>
-      <span>Home</span>
+    <a href="{{ url_for('elena.dashboard') }}"
+       class="ravlo-nav-link {% if ep == 'elena.dashboard' %}active{% endif %}">
+      <i class="lucide lucide-map-pinned"></i>
+      <span>Markets</span>
     </a>
 
-    {% if modules is defined and 'finances' in modules %}
-      <a href="{{ url_for('vip.finances') }}"
-         class="ravlo-nav-link {% if ep == 'vip.finances' %}active{% endif %}">
-        <i class="lucide lucide-receipt"></i>
-        <span>Finances</span>
-      </a>
-    {% endif %}
-
-    {% if modules is defined and 'ai_pilot' in modules %}
-      <a href="{{ url_for('vip.ai_pilot') }}"
-         class="ravlo-nav-link {% if ep in ['vip.ai_pilot', 'vip.ai_pilot_command'] %}active{% endif %}">
-        <i class="lucide lucide-sparkles"></i>
-        <span>AI Pilot</span>
-      </a>
-    {% endif %}
-
-    {% if modules is defined and 'design_studio' in modules %}
-      <a href="{{ url_for('vip.design_studio') }}"
-         class="ravlo-nav-link {% if ep == 'vip.design_studio' %}active{% endif %}">
-      <i class="lucide lucide-layout-template"></i>
-      <span>Design Studio</span>
-    </a>
-  {% endif %}
-
-    <a href="{{ url_for('vip.onboarding') }}"
-       class="ravlo-nav-link {% if ep in ['vip.onboarding', 'vip.onboarding_save'] %}active{% endif %}">
-      <i class="lucide lucide-sliders-horizontal"></i>
-      <span>VIP Setup</span>
-    </a>
-
-    <div class="ravlo-nav-section">Dashboards</div>
-
-    <a href="{{ url_for('vip.realtor_dashboard') }}"
-       class="ravlo-nav-link {% if ep == 'vip.realtor_dashboard' %}active{% endif %}">
-      <i class="lucide lucide-house"></i>
-      <span>Realtor</span>
-    </a>
-
-    <a href="{{ url_for('vip.contractor_dashboard') }}"
-       class="ravlo-nav-link {% if ep == 'vip.contractor_dashboard' %}active{% endif %}">
-      <i class="lucide lucide-hammer"></i>
-      <span>Contractor</span>
-    </a>
-
-    <a href="{{ url_for('vip.designer_dashboard') }}"
-       class="ravlo-nav-link {% if ep == 'vip.designer_dashboard' %}active{% endif %}">
-      <i class="lucide lucide-pencil-ruler"></i>
-      <span>Designer</span>
-    </a>
-
-    <a href="{{ url_for('vip.partner_dashboard') }}"
-       class="ravlo-nav-link {% if ep == 'vip.partner_dashboard' %}active{% endif %}">
-      <i class="lucide lucide-briefcase-business"></i>
-      <span>Partner</span>
-    </a>
-
-    <a href="{{ url_for('vip.loan_officer_dashboard') }}"
-       class="ravlo-nav-link {% if ep == 'vip.loan_officer_dashboard' %}active{% endif %}">
-      <i class="lucide lucide-badge-dollar-sign"></i>
-      <span>Loan Officer</span>
-    </a>
-
-    <div class="ravlo-nav-section">System</div>
+    <div class="ravlo-nav-section">Account</div>
 
     <form method="post" action="{{ url_for('auth.logout') }}" class="ravlo-sidebar-logout-form">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
