@@ -236,7 +236,7 @@ def dashboard():
         "profile_completion": partner.profile_completion() if hasattr(partner, "profile_completion") else 0,
     }
 
-        template = "partners/dashboards/home.html"
+    template = "partners/dashboards/home.html"
 
     return render_template(
         template,
