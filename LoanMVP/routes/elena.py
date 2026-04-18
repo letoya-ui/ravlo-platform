@@ -929,7 +929,7 @@ def export_canva_flyer_status(flyer_id):
         }
     )
 
-@vip_bp.post("/ai-pilot/suggestions/<int:suggestion_id>/approve")
+@elena_bp.route("/ai-pilot/suggestions/<int:suggestion_id>/approve")
 @role_required("partner_group", "admin")
 def approve_suggestion(suggestion_id):
     profile = get_or_create_vip_profile()
