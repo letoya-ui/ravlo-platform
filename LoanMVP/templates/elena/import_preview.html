@@ -1,0 +1,129 @@
+{% extends "layouts/ravlo_base.html" %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto space-y-6">
+
+  <h2 class="text-xl font-semibold">Map Fields</h2>
+
+  <form method="POST">
+
+    <div class="grid grid-cols-2 gap-4">
+
+      <label>Name
+        <select name="name">
+          {% for col in columns %}
+            <option value="{{ col }}"
+              {% if column_map.name == col %}selected{% endif %}>
+              {{ col }}
+            </option>
+          {% endfor %}
+        </select>
+      </label>
+
+      <label>Email
+        <select name="email">
+          {% for col in columns %}
+            <option value="{{ col }}"
+              {% if column_map.email == col %}selected{% endif %}>
+              {{ col }}
+            </option>
+          {% endfor %}
+        </select>
+      </label>
+
+      <label>Phone
+        <select name="phone">
+          {% for col in columns %}
+            <option value="{{ col }}"
+              {% if column_map.phone == col %}selected{% endif %}>
+              {{ col }}
+            </option>
+          {% endfor %}
+        </select>
+      </label>
+
+      <label>Role
+        <select name="role">
+          {% for col in columns %}
+            <option value="{{ col }}"
+              {% if column_map.role == col %}selected{% endif %}>
+              {{ col }}
+            </option>
+          {% endfor %}
+        </select>
+      </label>
+
+      <label>Tags
+        <select name="tags">
+          {% for col in columns %}
+            <option value="{{ col }}"
+              {% if column_map.tags == col %}selected{% endif %}>
+              {{ col }}
+            </option>
+          {% endfor %}
+        </select>
+      </label>
+
+      <label>Notes
+        <select name="notes">
+          {% for col in columns %}
+            <option value="{{ col }}"
+              {% if column_map.notes == col %}selected{% endif %}>
+              {{ col }}
+            </option>
+          {% endfor %}
+        </select>
+      </label>
+
+    </div>
+
+    <button class="btn primary mt-6">
+      Import Contacts
+    </button>
+
+  </form>
+
+  <!-- PREVIEW TABLE -->
+  <div class="card pad mt-6 overflow-auto">
+    <table class="table-auto w-full text-sm">
+      <thead>
+        <tr>{% extends "layouts/base.html" %}
+
+{% block content %}
+<div class="max-w-xl mx-auto">
+  <div class="card pad">
+    <h2 class="text-xl font-semibold mb-4">Import Contacts</h2>
+
+    <form method="POST" enctype="multipart/form-data">
+      <input type="file" name="file" accept=".csv,.xlsx,.xls" required>
+
+      <button class="btn primary mt-4 w-full">
+        Upload & Preview
+      </button>
+    </form>
+
+    <p class="text-sm text-gray-500 mt-4">
+      Upload CSV or Excel file with headers.
+    </p>
+  </div>
+</div>
+{% endblock %}
+          {% for col in columns %}
+            <th class="text-left px-2 py-1">{{ col }}</th>
+          {% endfor %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in preview %}
+          <tr class="border-t">
+            {% for col in columns %}
+              <td class="px-2 py-1">{{ row[col] }}</td>
+            {% endfor %}
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+</div>
+{% endblock %}

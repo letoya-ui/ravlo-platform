@@ -9,7 +9,7 @@ from flask import (
     flash,
 )
 from sqlalchemy import or_
-
+import pandas as pd
 from LoanMVP.extensions import db
 from LoanMVP.models.elena_models import (
     ElenaClient,
@@ -976,3 +976,124 @@ def approve_suggestion(suggestion_id):
 
     flash("Suggestion applied.", "success")
     return redirect(url_for("vip.ai_pilot"))
+
+
+@elena_bp.route("/contacts/import", methods=["GET", "POST"])
+@login_required
+def import_contacts():
+    if request.method == "POST":
+        file = request.files.get("file")
+
+        if not file:
+            flash("No file uploaded", "warning")
+            return redirect(request.url)
+
+        filename = file.filename.lower()
+
+        try:
+            if filename.endswith(".csv"):
+                df = pd.read_csv(file)
+            elif filename.endswith(".xlsx"):
+                df = pd.read_excel(file, engine="openpyxl")
+            elif filename.endswith(".xls"):
+                df = pd.read_excel(file)
+            else:
+                flash("Unsupported file type.", "danger")
+                return redirect(request.url)
+
+        except Exception as e:
+            flash(f"Error reading file: {str(e)}", "danger")
+            return redirect(request.url)
+
+        # CLEAN DATA
+        df.columns = df.columns.str.strip().str.lower()
+        df = df.fillna("")
+
+        # AUTO MAP
+        column_map = {
+            "name": next((c for c in df.columns if "name" in c), None),
+            "email": next((c for c in df.columns if "email" in c), None),
+            "phone": next((c for c in df.columns if "phone" in c), None),
+            "role": next((c for c in df.columns if "role" in c or "type" in c), None),
+            "tags": next((c for c in df.columns if "tag" in c), None),
+            "notes": next((c for c in df.columns if "note" in c), None),
+        }
+
+        session["import_preview"] = df.head(50).to_dict(orient="records")
+        session["import_columns"] = list(df.columns)
+        session["import_full"] = df.to_dict(orient="records")
+        session["column_map"] = column_map
+
+        return redirect(url_for("elena.import_preview"))
+
+    return render_template("elena/import_contacts.html")
+
+
+@elena_bp.route("/contacts/import/preview", methods=["GET", "POST"])
+@login_required
+def import_preview():
+    if request.method == "POST":
+        mapping = request.form.to_dict()
+        data = session.get("import_full", [])
+
+        skip_duplicates = request.form.get("skip_duplicates")
+
+        created = 0
+        updated = 0
+        skipped = 0
+
+        for row in data:
+            email = (row.get(mapping.get("email")) or "").strip().lower()
+            phone = (row.get(mapping.get("phone")) or "").strip()
+
+            # skip empty rows
+            if not email and not phone:
+                skipped += 1
+                continue
+
+            existing = None
+
+            if email:
+                existing = ElenaClient.query.filter_by(email=email).first()
+
+            if not existing and phone:
+                existing = ElenaClient.query.filter_by(phone=phone).first()
+
+            if existing:
+                if skip_duplicates:
+                    skipped += 1
+                    continue
+
+                # UPDATE
+                existing.name = row.get(mapping.get("name")) or existing.name
+                existing.role = row.get(mapping.get("role")) or existing.role
+                existing.tags = row.get(mapping.get("tags")) or existing.tags
+                existing.notes = row.get(mapping.get("notes")) or existing.notes
+
+                updated += 1
+
+            else:
+                # CREATE
+                client = ElenaClient(
+                    name=row.get(mapping.get("name")),
+                    email=email,
+                    phone=phone,
+                    role=row.get(mapping.get("role")),
+                    tags=row.get(mapping.get("tags")),
+                    notes=row.get(mapping.get("notes")),
+                )
+
+                db.session.add(client)
+                created += 1
+
+        db.session.commit()
+
+        flash(f"{created} created • {updated} updated • {skipped} skipped", "success")
+        return redirect(url_for("elena.clients"))
+
+    return render_template(
+        "elena/import_preview.html",
+        preview=session.get("import_preview"),
+        columns=session.get("import_columns"),
+        column_map=session.get("column_map"),
+    )
