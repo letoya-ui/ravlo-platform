@@ -150,6 +150,8 @@ from LoanMVP.models.vip_models import (
     VIPAssistantAction,
     VIPNotification,
 )
+
+from LoanMVP.models.canva_models import CanvaConnection
 # ======================================================
 # 🧩 SQLAlchemy Export (for Migrate / Shell)
 # ======================================================
@@ -195,4 +197,16 @@ __all__ = [
     "ElenaListing",
     "ElenaFlyer",
     "ElenaInteraction",
+    
+    "VIPProfile",
+    "VIPContact",
+    "VIPInteraction",
+    "VIPExpense",
+    "VIPIncome",
+    "VIPBudget",
+    "VIPAssistantSuggestion",
+    "VIPAssistantAction",
+    "VIPNotification",
+
+    "CanvaConnection",
 ]
