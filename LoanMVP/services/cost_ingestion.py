@@ -145,18 +145,22 @@ def record_from_deal(deal, *, source: str = "investor_input") -> Optional[CostOb
         scope = rehab_scope.get("scope") or scope
 
     deal_id = getattr(deal, "id", None)
+
+    # Look up prior observation ID first (read-only — no session mutation).
+    # Marking it 'superseded' is deferred until we've confirmed the new row
+    # was successfully created; otherwise a failed insert (e.g. missing
+    # sqft → record_observation returns None) would leak a dirty
+    # prior.status change into the session with no replacement.
     prior_id: Optional[int] = None
     if deal_id is not None:
         try:
-            prior = (
-                CostObservation.query
+            prior_id = (
+                db.session.query(CostObservation.id)
                 .filter_by(deal_id=deal_id, category=CATEGORY_REHAB, status="verified")
                 .order_by(CostObservation.id.desc())
-                .first()
+                .limit(1)
+                .scalar()
             )
-            if prior is not None:
-                prior.status = "superseded"
-                prior_id = prior.id
         except Exception as e:  # pragma: no cover - defensive
             logger.warning("cost_ingestion: supersede lookup failed: %s", e)
             try:
@@ -178,13 +182,18 @@ def record_from_deal(deal, *, source: str = "investor_input") -> Optional[CostOb
         deal_id=deal_id,
     )
 
+    # Only now that a replacement row exists do we mark the prior as
+    # superseded + link the two, atomically in a single commit.
     if row is not None and prior_id is not None:
         try:
+            prior = db.session.get(CostObservation, prior_id)
+            if prior is not None and prior.status != "superseded":
+                prior.status = "superseded"
             row.supersedes_id = prior_id
             db.session.add(row)
             db.session.commit()
         except Exception as e:  # pragma: no cover - defensive
-            logger.warning("cost_ingestion: supersedes_id set failed: %s", e)
+            logger.warning("cost_ingestion: supersede+link commit failed: %s", e)
             try:
                 db.session.rollback()
             except Exception:
