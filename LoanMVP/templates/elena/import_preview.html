@@ -3,111 +3,97 @@
 {% block content %}
 <div class="max-w-6xl mx-auto space-y-6">
 
-  <h2 class="text-xl font-semibold">Map Fields</h2>
+  <div class="flex justify-between items-center">
+    <div>
+      <h2 class="text-xl font-semibold">Map Fields</h2>
+      <p class="text-sm text-gray-500">
+        Confirm which spreadsheet columns map to each contact field, then import.
+      </p>
+    </div>
+    <a href="{{ url_for('elena.import_contacts') }}" class="ravlo-btn ghost sm">Re-upload</a>
+  </div>
 
-  <form method="POST">
+  <form method="POST" class="ravlo-card pad space-y-4">
 
-    <div class="grid grid-cols-2 gap-4">
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
 
-      <label>Name
-        <select name="name">
+      <label class="block">
+        <span class="block text-sm font-medium mb-1">Name</span>
+        <select name="name" class="ravlo-input w-full">
           {% for col in columns %}
-            <option value="{{ col }}"
-              {% if column_map.name == col %}selected{% endif %}>
-              {{ col }}
-            </option>
+            <option value="{{ col }}" {% if column_map.name == col %}selected{% endif %}>{{ col }}</option>
           {% endfor %}
         </select>
       </label>
 
-      <label>Email
-        <select name="email">
+      <label class="block">
+        <span class="block text-sm font-medium mb-1">Email</span>
+        <select name="email" class="ravlo-input w-full">
           {% for col in columns %}
-            <option value="{{ col }}"
-              {% if column_map.email == col %}selected{% endif %}>
-              {{ col }}
-            </option>
+            <option value="{{ col }}" {% if column_map.email == col %}selected{% endif %}>{{ col }}</option>
           {% endfor %}
         </select>
       </label>
 
-      <label>Phone
-        <select name="phone">
+      <label class="block">
+        <span class="block text-sm font-medium mb-1">Phone</span>
+        <select name="phone" class="ravlo-input w-full">
           {% for col in columns %}
-            <option value="{{ col }}"
-              {% if column_map.phone == col %}selected{% endif %}>
-              {{ col }}
-            </option>
+            <option value="{{ col }}" {% if column_map.phone == col %}selected{% endif %}>{{ col }}</option>
           {% endfor %}
         </select>
       </label>
 
-      <label>Role
-        <select name="role">
+      <label class="block">
+        <span class="block text-sm font-medium mb-1">Role / Type</span>
+        <select name="role" class="ravlo-input w-full">
           {% for col in columns %}
-            <option value="{{ col }}"
-              {% if column_map.role == col %}selected{% endif %}>
-              {{ col }}
-            </option>
+            <option value="{{ col }}" {% if column_map.role == col %}selected{% endif %}>{{ col }}</option>
           {% endfor %}
         </select>
       </label>
 
-      <label>Tags
-        <select name="tags">
+      <label class="block">
+        <span class="block text-sm font-medium mb-1">Tags</span>
+        <select name="tags" class="ravlo-input w-full">
           {% for col in columns %}
-            <option value="{{ col }}"
-              {% if column_map.tags == col %}selected{% endif %}>
-              {{ col }}
-            </option>
+            <option value="{{ col }}" {% if column_map.tags == col %}selected{% endif %}>{{ col }}</option>
           {% endfor %}
         </select>
       </label>
 
-      <label>Notes
-        <select name="notes">
+      <label class="block">
+        <span class="block text-sm font-medium mb-1">Notes</span>
+        <select name="notes" class="ravlo-input w-full">
           {% for col in columns %}
-            <option value="{{ col }}"
-              {% if column_map.notes == col %}selected{% endif %}>
-              {{ col }}
-            </option>
+            <option value="{{ col }}" {% if column_map.notes == col %}selected{% endif %}>{{ col }}</option>
           {% endfor %}
         </select>
       </label>
 
     </div>
 
-    <button class="btn primary mt-6">
-      Import Contacts
-    </button>
+    <label class="inline-flex items-center gap-2 text-sm">
+      <input type="checkbox" name="skip_duplicates" value="1" checked>
+      Skip existing contacts (matched by email or phone).
+    </label>
+
+    <div class="flex justify-end">
+      <button type="submit" class="ravlo-btn primary">
+        Import Contacts
+      </button>
+    </div>
 
   </form>
 
-  <!-- PREVIEW TABLE -->
-  <div class="card pad mt-6 overflow-auto">
+  {# ── PREVIEW TABLE ── #}
+  <div class="ravlo-card pad overflow-auto">
+    <h3 class="text-sm font-semibold mb-3 text-gray-400 uppercase tracking-wide">
+      Preview — first {{ preview|length }} row(s)
+    </h3>
     <table class="table-auto w-full text-sm">
       <thead>
-        <tr>{% extends "layouts/base.html" %}
-
-{% block content %}
-<div class="max-w-xl mx-auto">
-  <div class="card pad">
-    <h2 class="text-xl font-semibold mb-4">Import Contacts</h2>
-
-    <form method="POST" enctype="multipart/form-data">
-      <input type="file" name="file" accept=".csv,.xlsx,.xls" required>
-
-      <button class="btn primary mt-4 w-full">
-        Upload & Preview
-      </button>
-    </form>
-
-    <p class="text-sm text-gray-500 mt-4">
-      Upload CSV or Excel file with headers.
-    </p>
-  </div>
-</div>
-{% endblock %}
+        <tr class="text-xs text-gray-500 uppercase border-b border-white/10">
           {% for col in columns %}
             <th class="text-left px-2 py-1">{{ col }}</th>
           {% endfor %}
@@ -115,7 +101,7 @@
       </thead>
       <tbody>
         {% for row in preview %}
-          <tr class="border-t">
+          <tr class="border-t border-white/5">
             {% for col in columns %}
               <td class="px-2 py-1">{{ row[col] }}</td>
             {% endfor %}

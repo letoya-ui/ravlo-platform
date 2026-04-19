@@ -7,7 +7,8 @@
 {% endblock %}
 
 {% block topbar_actions %}
-  {# Market switcher #}
+  {# Market switcher — only shown when the realtor operates in 2+ markets. #}
+  {% if multi_market %}
   <form method="POST" action="{{ url_for('vip.realtor_market_switch') }}" class="inline-flex items-center gap-2">
     <input type="hidden" name="next" value="{{ request.path }}">
     <select name="market" onchange="this.form.submit()"
@@ -18,6 +19,11 @@
       {% endfor %}
     </select>
   </form>
+  {% elif available_markets|length == 1 %}
+  <span class="text-xs text-gray-400 uppercase tracking-wide">
+    Market: <span class="text-gray-200">{{ available_markets[0] }}</span>
+  </span>
+  {% endif %}
 
   {% if 'ai_pilot' in modules %}
     <a href="{{ url_for('vip.ai_pilot') }}" class="ravlo-btn ghost sm">AI Pilot</a>
@@ -62,6 +68,87 @@
 
   </section>
 
+  {# ── PER-MARKET SNAPSHOT CARDS (dual-market beta) ──────── #}
+  {% if multi_market and current_market == 'All Markets' %}
+  <section class="grid grid-cols-1 md:grid-cols-{{ available_markets|length }} gap-4">
+    {% for market in available_markets %}
+    <article class="ravlo-card pad">
+      <div class="flex justify-between items-start mb-3">
+        <div>
+          <div class="text-xs uppercase tracking-wide text-gray-500">Market</div>
+          <h3 class="text-lg font-semibold">{{ market }}</h3>
+        </div>
+        <form method="POST" action="{{ url_for('vip.realtor_market_switch') }}">
+          <input type="hidden" name="market" value="{{ market }}">
+          <input type="hidden" name="next" value="{{ request.path }}">
+          <button type="submit" class="ravlo-btn ghost xs">Focus</button>
+        </form>
+      </div>
+
+      <div class="grid grid-cols-2 gap-3 text-sm">
+        <div>
+          <div class="text-xs text-gray-500 uppercase">Active Listings</div>
+          <div class="text-xl font-semibold">{{ market_stats[market].active_listings }}</div>
+        </div>
+        {% if finances_by_market and finances_by_market[market] is defined %}
+        <div>
+          <div class="text-xs text-gray-500 uppercase">Net (YTD)</div>
+          <div class="text-xl font-semibold">${{ '{:,.0f}'.format(finances_by_market[market].net) }}</div>
+        </div>
+        {% endif %}
+      </div>
+
+      {% set ml = listings_by_market.get(market, []) %}
+      {% if ml %}
+      <div class="mt-3 pt-3 border-t border-white/5 text-xs space-y-1">
+        {% for listing in ml[:3] %}
+        <div class="flex justify-between text-gray-400">
+          <span class="truncate">{{ listing.address }}</span>
+          {% if listing.price %}<span class="text-gray-300">${{ '{:,}'.format(listing.price) }}</span>{% endif %}
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+    </article>
+    {% endfor %}
+  </section>
+  {% endif %}
+
+  {# ── COMBINED FINANCES SNAPSHOT (dual-market beta) ─────── #}
+  {% if multi_market and finances_combined and current_market == 'All Markets' %}
+  <section class="ravlo-card pad">
+    <div class="flex justify-between items-center mb-4">
+      <h3 class="text-lg font-semibold">Finances — Combined + Per-Market</h3>
+      {% if 'finances' in modules %}
+        <a href="{{ url_for('vip.finances') }}" class="ravlo-btn ghost sm">Open</a>
+      {% endif %}
+    </div>
+    <div class="grid grid-cols-1 md:grid-cols-{{ available_markets|length + 1 }} gap-3 text-sm">
+      <div class="ravlo-card p-3 bg-white/5">
+        <div class="text-xs uppercase text-gray-400 mb-1">All Markets</div>
+        <div class="flex justify-between"><span>Income</span><span>${{ '{:,.0f}'.format(finances_combined.income) }}</span></div>
+        <div class="flex justify-between"><span>Expenses</span><span>${{ '{:,.0f}'.format(finances_combined.expenses) }}</span></div>
+        <div class="flex justify-between font-semibold pt-1 border-t border-white/10 mt-1">
+          <span>Net</span><span>${{ '{:,.0f}'.format(finances_combined.net) }}</span>
+        </div>
+      </div>
+      {% for market in available_markets %}
+      {% set f = finances_by_market.get(market) %}
+      {% if f %}
+      <div class="ravlo-card p-3">
+        <div class="text-xs uppercase text-gray-400 mb-1">{{ market }}</div>
+        <div class="flex justify-between"><span>Income</span><span>${{ '{:,.0f}'.format(f.income) }}</span></div>
+        <div class="flex justify-between"><span>Expenses</span><span>${{ '{:,.0f}'.format(f.expenses) }}</span></div>
+        <div class="flex justify-between font-semibold pt-1 border-t border-white/10 mt-1">
+          <span>Net</span><span>${{ '{:,.0f}'.format(f.net) }}</span>
+        </div>
+      </div>
+      {% endif %}
+      {% endfor %}
+    </div>
+  </section>
+  {% endif %}
+
   {# ── MAIN GRID ────────────────────────────────────────── #}
   <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
@@ -73,7 +160,10 @@
       <section class="ravlo-card pad">
         <div class="flex justify-between items-center mb-4">
           <h3 class="text-lg font-semibold">Client Pipeline</h3>
-          <a href="{{ url_for('elena.client_new') }}" class="ravlo-btn primary sm">+ Add Client</a>
+          <div class="flex gap-2 items-center">
+            <a href="{{ url_for('elena.import_contacts') }}" class="ravlo-btn ghost sm">Import Spreadsheet</a>
+            <a href="{{ url_for('elena.client_new') }}" class="ravlo-btn primary sm">+ Add Client</a>
+          </div>
         </div>
 
         <div class="flex gap-3 overflow-x-auto pb-2">
