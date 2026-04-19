@@ -118,10 +118,10 @@ def partner_has_premium_access(partner) -> bool:
     tier = (partner.subscription_tier or "").strip()
     return tier in ("Premium", "Enterprise") and partner.is_active_listing()
 
+
 # ------------------------------------------------
 # DASHBOARD
 # ------------------------------------------------
-
 
 @partners_bp.route("/dashboard")
 @role_required("partner_group", "admin")
@@ -236,10 +236,8 @@ def dashboard():
         "profile_completion": partner.profile_completion() if hasattr(partner, "profile_completion") else 0,
     }
 
-    template = "partners/dashboards/home.html"
-
     return render_template(
-        template,
+        "partners/dashboards/home.html",
         partner=partner,
         pending_count=pending_count,
         accepted_count=accepted_count,
@@ -255,6 +253,7 @@ def dashboard():
         portal_home=url_for("partners.dashboard")
     )
 
+
 # ------------------------------------------------
 # PARTNER DIRECTORY (internal)
 # ------------------------------------------------
@@ -262,10 +261,8 @@ def dashboard():
 @partners_bp.route("/center")
 @role_required("partner_group")
 def center():
-    # ✅ Get SINGLE partner (fixes your error)
     partner = Partner.query.filter_by(user_id=current_user.id).first()
 
-    # --- Safe defaults ---
     jobs = []
     connections = []
     stats = {
@@ -275,7 +272,6 @@ def center():
     }
 
     if partner:
-        # --- Jobs ---
         jobs = (
             PartnerJob.query
             .filter_by(partner_id=partner.id)
@@ -287,7 +283,6 @@ def center():
         stats["active_jobs"] = len([j for j in jobs if j.status in ["new", "in_progress"]])
         stats["completed_jobs"] = len([j for j in jobs if j.status == "completed"])
 
-        # --- Connection Requests ---
         connections = (
             PartnerConnectionRequest.query
             .filter_by(partner_id=partner.id)
@@ -298,7 +293,6 @@ def center():
 
         stats["connection_requests"] = len(connections)
 
-    # --- Render ---
     return render_template(
         "partners/center.html",
         partner=partner,
@@ -316,7 +310,6 @@ def center():
 @partners_bp.route("/<int:partner_id>")
 @role_required("partner_group")
 def profile(partner_id):
-
     partner = Partner.query.get_or_404(partner_id)
 
     return render_template(
@@ -412,6 +405,7 @@ def request_detail(request_id):
         portal_home=url_for("partners.dashboard"),
     )
 
+
 # ------------------------------------------------
 # PARTNER REQUEST INBOX
 # ------------------------------------------------
@@ -459,6 +453,7 @@ def requests_inbox():
         portal_name="Partner OS",
         portal_home=url_for("partners.dashboard"),
     )
+
 
 # ------------------------------------------------
 # ACCEPT REQUEST
@@ -520,6 +515,7 @@ def accept_request(req_id):
     flash("Request accepted.", "success")
     return redirect(url_for("partners.requests_inbox"))
 
+
 # ------------------------------------------------
 # DECLINE REQUEST
 # ------------------------------------------------
@@ -528,7 +524,6 @@ def accept_request(req_id):
 @csrf.exempt
 @role_required("partner_group")
 def decline_request(req_id):
-
     partner = Partner.query.filter_by(user_id=current_user.id).first()
     req = PartnerConnectionRequest.query.get_or_404(req_id)
 
@@ -545,7 +540,6 @@ def decline_request(req_id):
     db.session.commit()
 
     flash("Request declined.", "info")
-
     return redirect(url_for("partners.requests_inbox"))
 
 
@@ -579,6 +573,7 @@ def update_request_status(request_id):
     flash("Request status updated.", "success")
     return redirect(url_for("partners.request_detail", request_id=req.id))
 
+
 # ------------------------------------------------
 # PREMIUM WORKSPACE
 # ------------------------------------------------
@@ -586,7 +581,6 @@ def update_request_status(request_id):
 @partners_bp.route("/workspace")
 @role_required("partner_group")
 def workspace_home():
-
     partner = Partner.query.filter_by(user_id=current_user.id).first()
 
     if not partner or not partner_has_premium_access(partner):
@@ -614,7 +608,6 @@ def workspace_home():
 @partners_bp.route("/workspace/jobs/<int:job_id>")
 @role_required("partner_group")
 def workspace_job(job_id):
-
     partner = Partner.query.filter_by(user_id=current_user.id).first()
     job = PartnerJob.query.get_or_404(job_id)
 
@@ -646,7 +639,6 @@ def workspace_job(job_id):
 @csrf.exempt
 @role_required("partner_group")
 def upload_photo():
-
     partner = Partner.query.filter_by(user_id=current_user.id).first()
 
     if not partner:
@@ -660,12 +652,9 @@ def upload_photo():
         return redirect(request.referrer)
 
     filename = secure_filename(file.filename)
-
     upload_dir = Path("static/uploads/partners") / str(partner.id)
     upload_dir.mkdir(parents=True, exist_ok=True)
-
     filepath = upload_dir / filename
-
     file.save(filepath)
 
     photo = PartnerPhoto(
@@ -677,8 +666,8 @@ def upload_photo():
     db.session.commit()
 
     flash("Photo uploaded successfully.", "success")
-
     return redirect(request.referrer)
+
 
 @partners_bp.route("/listing", methods=["GET", "POST"])
 @csrf.exempt
@@ -711,6 +700,7 @@ def listing():
         page_subline="Manage how you appear in the Ravlo Partner Marketplace."
     )
 
+
 # ------------------------------------------------
 # DELETE PHOTO
 # ------------------------------------------------
@@ -719,9 +709,7 @@ def listing():
 @csrf.exempt
 @role_required("partner_group")
 def delete_photo(photo_id):
-
     partner = Partner.query.filter_by(user_id=current_user.id).first()
-
     photo = PartnerPhoto.query.get_or_404(photo_id)
 
     if photo.partner_id != partner.id:
@@ -731,8 +719,8 @@ def delete_photo(photo_id):
     db.session.commit()
 
     flash("Photo removed.", "success")
-
     return redirect(request.referrer)
+
 
 @partners_bp.route("/leads")
 @role_required("partner_group")
@@ -743,7 +731,6 @@ def leads():
         flash("Please complete your partner profile first.", "warning")
         return redirect(url_for("partners.profile_setup"))
 
-    # Leads linked through your partner_lead_link table
     leads = partner.leads.order_by(Lead.created_at.desc()).all()
 
     return render_template(
@@ -754,6 +741,7 @@ def leads():
         page_title="Leads",
         page_subline="Your incoming opportunities from the Ravlo ecosystem."
     )
+
 
 @partners_bp.route("/lead/<int:lead_id>")
 @role_required("partner_group")
@@ -770,7 +758,8 @@ def lead_detail(lead_id):
         page_title=lead.name,
         page_subline="Lead details and activity"
     )
-    
+
+
 @partners_bp.route("/settings", methods=["GET", "POST"])
 @role_required("partner_group")
 def settings():
@@ -841,6 +830,7 @@ def resources():
         portal_home=url_for("partners.dashboard"),
     )
 
+
 @partners_bp.route("/subscribe/<tier>")
 @role_required("partner_group")
 def subscribe(tier):
@@ -882,7 +872,6 @@ def confirm_subscription(tier):
         flash("Invalid subscription tier.", "danger")
         return redirect(url_for("partners.billing"))
 
-    # placeholder subscription logic for testing
     partner.subscription_tier = normalized
     partner.approved = True
     partner.active = True
@@ -897,6 +886,7 @@ def confirm_subscription(tier):
 
     flash(f"Your subscription has been updated to {normalized}.", "success")
     return redirect(url_for("partners.billing"))
+
 
 @partners_bp.route("/billing")
 @role_required("partner_group")
@@ -937,7 +927,8 @@ def billing():
         page_title="Billing",
         page_subline="Manage your Ravlo Partner plan."
     )
-    
+
+
 @partners_bp.route("/profile/edit", methods=["GET", "POST"])
 @csrf.exempt
 @role_required("partner_group")
@@ -969,13 +960,6 @@ def edit_profile():
         partner.listing_description = (request.form.get("listing_description") or "").strip() or None
         partner.bio = (request.form.get("bio") or "").strip() or None
 
-        # usually these should not be partner-controlled unless you want them to be
-        # partner.relationship_level = ...
-        # partner.subscription_tier = ...
-        # partner.approved = ...
-        # partner.featured = ...
-        # partner.is_verified = ...
-
         if not partner.id:
             db.session.add(partner)
 
@@ -984,6 +968,7 @@ def edit_profile():
         return redirect(url_for("partners.profile", partner_id=partner.id))
 
     return render_template("partners/partner_form.html", partner=partner)
+
 
 @partners_bp.route("/upgrade")
 @role_required("partner_group", "admin")
@@ -1007,6 +992,7 @@ def upgrade():
         portal_name="Partner OS",
         portal_home=url_for("partners.dashboard"),
     )
+
 
 @partners_bp.route("/proposals")
 @role_required("partner_group", "admin")
@@ -1112,29 +1098,20 @@ def proposal_detail(proposal_id):
         portal_home=url_for("partners.dashboard"),
     )
 
+
 @partners_bp.route("/proposals/new", methods=["GET", "POST"])
 @role_required("partner_group", "admin")
 def create_proposal():
-
-    # --------------------------------------------------
-    # Load partner
-    # --------------------------------------------------
     partner = Partner.query.filter_by(user_id=current_user.id).first()
 
     if not partner:
         flash("Partner profile not found. Please register.", "warning")
         return redirect(url_for("partners.register"))
 
-    # --------------------------------------------------
-    # Feature gate
-    # --------------------------------------------------
     if not partner_feature_enabled(partner, "proposal_builder_enabled", False):
         flash("Proposal Builder is available on an upgraded plan.", "warning")
         return redirect(url_for("partners.upgrade"))
 
-    # --------------------------------------------------
-    # Load request (if passed)
-    # --------------------------------------------------
     request_id = request.args.get("request_id", type=int)
     linked_request = None
 
@@ -1144,9 +1121,6 @@ def create_proposal():
             partner_id=partner.id
         ).first()
 
-    # --------------------------------------------------
-    # Prefill defaults
-    # --------------------------------------------------
     prefill = {
         "title": "",
         "estimated_timeline": "",
@@ -1162,15 +1136,10 @@ def create_proposal():
         prefill["estimated_timeline"] = linked_request.timeline or ""
         prefill["scope_of_work"] = linked_request.message or ""
 
-    # --------------------------------------------------
-    # Handle POST
-    # --------------------------------------------------
     if request.method == "POST":
-
         action = (request.form.get("action") or "save").strip().lower()
         form_request_id = request.form.get("request_id", type=int)
 
-        # Load request again safely
         safe_request = None
         if form_request_id:
             safe_request = PartnerConnectionRequest.query.filter_by(
@@ -1178,9 +1147,6 @@ def create_proposal():
                 partner_id=partner.id
             ).first()
 
-        # --------------------------------------------------
-        # Form data
-        # --------------------------------------------------
         title = (request.form.get("title") or "").strip()
         proposal_text = (request.form.get("proposal_text") or "").strip()
         scope_of_work = (request.form.get("scope_of_work") or "").strip()
@@ -1190,11 +1156,7 @@ def create_proposal():
         materials_cost = request.form.get("materials_cost", type=float) or 0.0
         other_cost = request.form.get("other_cost", type=float) or 0.0
 
-        # --------------------------------------------------
-        # 🔥 AI GENERATION
-        # --------------------------------------------------
         if action == "generate_ai":
-
             ai = AIAssistant()
 
             ai_input = f"""
@@ -1240,9 +1202,6 @@ Keep it clear, confident, and investor-friendly.
                 portal_home=url_for("partners.dashboard"),
             )
 
-        # --------------------------------------------------
-        # Validate
-        # --------------------------------------------------
         if not title:
             flash("Proposal title is required.", "danger")
 
@@ -1266,9 +1225,6 @@ Keep it clear, confident, and investor-friendly.
                 portal_home=url_for("partners.dashboard"),
             )
 
-        # --------------------------------------------------
-        # Save proposal
-        # --------------------------------------------------
         proposal = PartnerProposal(
             partner_id=partner.id,
             request_id=safe_request.id if safe_request else None,
@@ -1289,12 +1245,8 @@ Keep it clear, confident, and investor-friendly.
         db.session.commit()
 
         flash("Proposal saved as draft.", "success")
-
         return redirect(url_for("partners.proposal_detail", proposal_id=proposal.id))
 
-    # --------------------------------------------------
-    # GET request
-    # --------------------------------------------------
     return render_template(
         "partners/proposal_builder.html",
         partner=partner,

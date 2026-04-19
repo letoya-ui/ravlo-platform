@@ -1,0 +1,643 @@
+{% extends "layouts/ravlo_base.html" %}
+
+{% block title %}Ravlo • {{ header_name }} — Lending{% endblock %}
+
+{% block content %}
+<div class="rl-shell">
+
+  {# ── SIDEBAR ── #}
+  <aside class="rl-sidebar">
+    <div class="rl-brand">
+      <div class="rl-mark">CM</div>
+      <div>
+        <div class="rl-brand-name">{{ header_name }}</div>
+        <div class="rl-brand-sub">Lending OS</div>
+      </div>
+    </div>
+
+    <nav class="rl-nav">
+      <div class="rl-nav-group">
+        <div class="rl-nav-label">Workspace</div>
+        <a href="{{ url_for('vip.loan_officer_dashboard') }}"
+           class="rl-nav-link active">
+          <i class="bi bi-speedometer2"></i> Dashboard
+        </a>
+        <a href="{{ url_for('loan_officer.pipeline') }}"
+           class="rl-nav-link">
+          <i class="bi bi-funnel"></i> Pipeline
+        </a>
+        <a href="{{ url_for('loan_officer.loan_queue') }}"
+           class="rl-nav-link">
+          <i class="bi bi-stack"></i> Loan Queue
+        </a>
+      </div>
+
+      <div class="rl-nav-group">
+        <div class="rl-nav-label">Capital</div>
+        <a href="#funding-requests" class="rl-nav-link">
+          <i class="bi bi-cash-coin"></i> Funding Requests
+          {% if stats.pending_review > 0 %}
+          <span class="rl-badge badge-warning ms-auto">{{ stats.pending_review }}</span>
+          {% endif %}
+        </a>
+        <a href="#capital-loans" class="rl-nav-link">
+          <i class="bi bi-building"></i> Capital Loans
+        </a>
+        <a href="#quotes" class="rl-nav-link">
+          <i class="bi bi-file-earmark-text"></i> Quotes
+        </a>
+      </div>
+
+      <div class="rl-nav-group">
+        <div class="rl-nav-label">Tools</div>
+        <a href="{{ url_for('loan_officer.quote_engine') }}"
+           class="rl-nav-link">
+          <i class="bi bi-calculator"></i> Quote Engine
+        </a>
+        <a href="{{ url_for('loan_officer.borrowers') }}"
+           class="rl-nav-link">
+          <i class="bi bi-people"></i> Borrowers
+        </a>
+        {% if 'ai_pilot' in modules %}
+        <a href="{{ url_for('vip.ai_pilot') }}"
+           class="rl-nav-link">
+          <i class="bi bi-robot"></i> Copilot
+        </a>
+        {% endif %}
+        {% if 'finances' in modules %}
+        <a href="{{ url_for('vip.finances') }}"
+           class="rl-nav-link">
+          <i class="bi bi-graph-up-arrow"></i> Finances
+        </a>
+        {% endif %}
+      </div>
+
+      <div class="rl-nav-group">
+        <div class="rl-nav-label">Settings</div>
+        <a href="{{ url_for('vip.onboarding') }}" class="rl-nav-link">
+          <i class="bi bi-sliders"></i> Workspace
+        </a>
+        <a href="{{ url_for('loan_officer.dashboard') }}" class="rl-nav-link">
+          <i class="bi bi-arrow-left-circle"></i> Full LO Portal
+        </a>
+      </div>
+    </nav>
+
+    <div class="rl-sidebar-foot">
+      <div class="rl-user-chip">
+        <div class="rl-user-avatar">
+          {{ vip_profile.display_name[0] | upper }}
+        </div>
+        <div>
+          <div class="rl-user-name">{{ vip_profile.display_name }}</div>
+          <div class="rl-user-role">Loan Officer</div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  {# ── MAIN ── #}
+  <main class="rl-main">
+
+    {# Topbar #}
+    <div class="rl-topbar">
+      <button class="rl-menu-btn" onclick="document.body.classList.toggle('rl-sidebar-open')">
+        ☰
+      </button>
+      <div class="rl-topbar-left">
+        <div>
+          <div class="rl-page-title">{{ header_name }}</div>
+          <div class="rl-page-subline">
+            Investment Lending — Fix &amp; Flip · DSCR · Bridge · New Construction
+          </div>
+        </div>
+      </div>
+      <div class="rl-topbar-actions">
+        {% if stats.out_of_scope > 0 %}
+        <span class="rl-badge badge-warning">
+          ⚠ {{ stats.out_of_scope }} out-of-scope
+        </span>
+        {% endif %}
+        <a href="{{ url_for('loan_officer.new_application') }}"
+           class="rl-btn primary sm">
+          + New Application
+        </a>
+        <a href="{{ url_for('vip.ai_pilot') }}" class="rl-btn ghost sm">
+          Copilot
+        </a>
+      </div>
+    </div>
+
+    {# Flash messages #}
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+      <div class="rl-flashes">
+        {% for category, message in messages %}
+        <div class="rl-alert {{ category }}">{{ message }}</div>
+        {% endfor %}
+      </div>
+      {% endif %}
+    {% endwith %}
+
+    <div class="rl-content">
+
+      {# ── OUT OF SCOPE WARNING ── #}
+      {% if out_of_scope_loans %}
+      <div class="rl-alert warning">
+        <strong>{{ out_of_scope_loans | length }} residential loan{{ 's' if out_of_scope_loans | length != 1 }}</strong>
+        detected — Caughman Mason is not licensed for owner-occupied or conventional loans.
+        These should be referred to a licensed residential lender.
+      </div>
+      {% endif %}
+
+      {# ── STATS ── #}
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-label">Funding Requests</div>
+          <div class="stat-value">{{ stats.funding_requests }}</div>
+          <div class="re-stat-meta text-muted mt-8">
+            {{ stats.pending_review }} pending review
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Capital Loans</div>
+          <div class="stat-value">{{ stats.capital_loans }}</div>
+          <div class="re-stat-meta text-muted mt-8">Investment deals only</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Quotes Sent</div>
+          <div class="stat-value">{{ stats.quotes_sent }}</div>
+          <div class="re-stat-meta text-muted mt-8">
+            {% if stats.total_quoted > 0 %}
+              ${{ '{:,.0f}'.format(stats.total_quoted) }} total
+            {% else %}
+              No quotes yet
+            {% endif %}
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Loan Types</div>
+          <div class="stat-value" style="font-size:1rem;line-height:1.6;font-weight:600;color:var(--muted);">
+            Fix &amp; Flip<br>DSCR · Bridge<br>Construction
+          </div>
+        </div>
+      </div>
+
+      {# ── TWO COLUMN LAYOUT ── #}
+      <div class="re-grid-2" style="align-items:start;">
+
+        {# LEFT COLUMN #}
+        <div class="stack">
+
+          {# ── FUNDING REQUESTS ── #}
+          <div class="rl-card pad" id="funding-requests">
+            <div class="section-head">
+              <h3 class="rl-card-title">Investor Funding Requests</h3>
+              <span class="rl-badge badge-info">{{ funding_with_context | length }}</span>
+            </div>
+
+            {% if funding_with_context %}
+            <div class="stack">
+              {% for item in funding_with_context %}
+              {% set fr = item.request %}
+              {% set ctx = item.context %}
+
+              <div class="mini-row" style="flex-direction:column;gap:12px;">
+
+                {# Header #}
+                <div class="row-between">
+                  <div>
+                    <div class="mini-title">
+                      {{ ctx.address or 'Address not provided' }}
+                    </div>
+                    <div class="mini-sub">
+                      {% if ctx.strategy %}
+                        <span style="color:var(--accent);">{{ ctx.strategy | upper }}</span> ·
+                      {% endif %}
+                      Submitted {{ fr.created_at.strftime('%b %d') if fr.created_at else '' }}
+                      {% if fr.status == 'reviewing' %}
+                        · <span style="color:var(--info);">In review</span>
+                      {% endif %}
+                    </div>
+                  </div>
+                  <div style="text-align:right;">
+                    <div style="font-size:1.2rem;font-weight:800;">
+                      ${{ '{:,.0f}'.format(ctx.requested_amount) }}
+                    </div>
+                    <div class="mini-sub">Requested</div>
+                  </div>
+                </div>
+
+                {# Deal intelligence #}
+                {% if ctx.arv or ctx.ltv or ctx.rehab_cost %}
+                <div class="re-grid-4" style="gap:8px;">
+                  {% if ctx.arv %}
+                  <div class="ravlo-kpi">
+                    <div class="label">
+                      ARV
+                      {% if ctx.arv_confidence == 'high' %}
+                        <span style="color:var(--success);">✓</span>
+                      {% endif %}
+                    </div>
+                    <div class="value" style="color:var(--success);">
+                      ${{ '{:,.0f}'.format(ctx.arv) }}
+                    </div>
+                  </div>
+                  {% endif %}
+                  {% if ctx.ltv %}
+                  <div class="ravlo-kpi">
+                    <div class="label">LTV</div>
+                    <div class="value" style="color:
+                      {% if ctx.ltv <= 0.65 %}var(--success)
+                      {% elif ctx.ltv <= 0.75 %}var(--warning)
+                      {% else %}var(--danger){% endif %};">
+                      {{ (ctx.ltv * 100) | round(1) }}%
+                    </div>
+                  </div>
+                  {% endif %}
+                  {% if ctx.contractor_rehab or ctx.rehab_cost %}
+                  <div class="ravlo-kpi">
+                    <div class="label">
+                      Rehab
+                      {% if ctx.contractor_verified %}
+                        <span style="color:var(--info);">✓</span>
+                      {% endif %}
+                    </div>
+                    <div class="value" style="color:var(--info);">
+                      ${{ '{:,.0f}'.format(ctx.contractor_rehab or ctx.rehab_cost) }}
+                    </div>
+                  </div>
+                  {% endif %}
+                  {% if ctx.estimated_profit %}
+                  <div class="ravlo-kpi">
+                    <div class="label">Est. Profit</div>
+                    <div class="value" style="color:
+                      {% if ctx.estimated_profit > 0 %}var(--success){% else %}var(--danger){% endif %};">
+                      ${{ '{:,.0f}'.format(ctx.estimated_profit) }}
+                    </div>
+                  </div>
+                  {% endif %}
+                </div>
+                {% endif %}
+
+                {# Verification signals #}
+                {% if ctx.contractor_verified or ctx.realtor_arv %}
+                <div class="row" style="gap:16px;font-size:.8rem;">
+                  {% if ctx.contractor_verified %}
+                  <span style="color:var(--info);">✓ Contractor verified rehab</span>
+                  {% endif %}
+                  {% if ctx.realtor_arv %}
+                  <span style="color:var(--success);">
+                    ✓ Realtor ARV: ${{ '{:,.0f}'.format(ctx.realtor_arv) }}
+                  </span>
+                  {% endif %}
+                </div>
+                {% endif %}
+
+                {# Deal score #}
+                {% if ctx.deal_score %}
+                <div style="font-size:.82rem;color:var(--muted);">
+                  Deal Score:
+                  <strong style="color:
+                    {% if ctx.deal_score >= 75 %}var(--success)
+                    {% elif ctx.deal_score >= 50 %}var(--warning)
+                    {% else %}var(--danger){% endif %};">
+                    {{ ctx.deal_score }}/100
+                  </strong>
+                </div>
+                {% endif %}
+
+                {# Quote form #}
+                {% if fr.status == 'submitted' %}
+                <details style="border-top:1px solid rgba(255,255,255,.06);padding-top:12px;margin-top:4px;">
+                  <summary style="color:var(--accent);cursor:pointer;font-size:.85rem;font-weight:600;">
+                    Submit Quote →
+                  </summary>
+
+                  <form method="POST"
+                        action="{{ url_for('vip.loan_officer_submit_quote', funding_id=fr.id) }}"
+                        style="margin-top:14px;">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                    <div class="re-grid-2" style="gap:10px;margin-bottom:10px;">
+                      <div>
+                        <label class="eyebrow mb-8" style="display:block;">Loan Amount ($)</label>
+                        <input name="quoted_amount" type="number" step="0.01"
+                               value="{{ ctx.requested_amount | int }}" required>
+                      </div>
+                      <div>
+                        <label class="eyebrow mb-8" style="display:block;">Rate (%)</label>
+                        <input name="rate" type="number" step="0.01" placeholder="e.g. 10.5" required>
+                      </div>
+                    </div>
+
+                    <div class="re-grid-2" style="gap:10px;margin-bottom:10px;">
+                      <div>
+                        <label class="eyebrow mb-8" style="display:block;">Term (months)</label>
+                        <input name="term_months" type="number" value="12">
+                      </div>
+                      <div>
+                        <label class="eyebrow mb-8" style="display:block;">Points</label>
+                        <input name="points" type="number" step="0.25" value="2">
+                      </div>
+                    </div>
+
+                    <div style="margin-bottom:10px;">
+                      <label class="eyebrow mb-8" style="display:block;">Loan Type</label>
+                      <select name="loan_type">
+                        {% for lt in investment_loan_types %}
+                        <option value="{{ lt }}"
+                          {% if ctx.strategy and lt.lower() in ctx.strategy.lower() %}selected{% endif %}>
+                          {{ lt | title }}
+                        </option>
+                        {% endfor %}
+                      </select>
+                    </div>
+
+                    <div style="margin-bottom:14px;">
+                      <label class="eyebrow mb-8" style="display:block;">Notes / Conditions</label>
+                      <textarea name="notes" style="min-height:70px;"
+                                placeholder="Any conditions, requirements, or deal notes…"></textarea>
+                    </div>
+
+                    <div class="row" style="gap:8px;">
+                      <button type="submit" name="decision" value="quote"
+                              class="rl-btn primary sm" style="flex:1;">
+                        Send Quote
+                      </button>
+                      <button type="submit" name="decision" value="approve"
+                              class="rl-btn ghost sm" style="flex:1;">
+                        Approve
+                      </button>
+                    </div>
+                  </form>
+
+                  <form method="POST"
+                        action="{{ url_for('vip.loan_officer_decline_funding', funding_id=fr.id) }}"
+                        style="margin-top:8px;">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input name="reason" placeholder="Decline reason (optional)"
+                           style="margin-bottom:8px;">
+                    <button type="submit" class="rl-btn danger sm w-full">
+                      Decline
+                    </button>
+                  </form>
+                </details>
+                {% else %}
+                <div style="font-size:.8rem;color:var(--muted);">
+                  Status: <strong style="color:var(--text-soft);">{{ fr.status | title }}</strong>
+                </div>
+                {% endif %}
+
+              </div>
+              {% endfor %}
+            </div>
+
+            {% else %}
+            <div class="rl-empty text-center">
+              <div style="font-size:1.8rem;margin-bottom:8px;">💼</div>
+              No funding requests yet.<br>
+              <span style="font-size:.85rem;">Investor capital requests will appear here.</span>
+            </div>
+            {% endif %}
+          </div>
+
+          {# ── CAPITAL LOANS ── #}
+          {% if capital_with_context %}
+          <div class="rl-card pad" id="capital-loans">
+            <div class="section-head">
+              <h3 class="rl-card-title">Capital Loan Applications</h3>
+              <span class="rl-badge badge-neutral">{{ capital_with_context | length }}</span>
+            </div>
+
+            <div class="rl-table-wrap">
+              <table class="rl-table">
+                <thead>
+                  <tr>
+                    <th>Borrower / Property</th>
+                    <th>Loan Type</th>
+                    <th>Amount</th>
+                    <th>ARV</th>
+                    <th>LTV</th>
+                    <th>Rate Est.</th>
+                    <th>Status</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for item in capital_with_context %}
+                  {% set loan = item.loan %}
+                  {% set ctx  = item.context %}
+                  <tr>
+                    <td>
+                      <div style="font-weight:600;font-size:.9rem;">
+                        {% if loan.borrower_profile %}
+                          {{ loan.borrower_profile.full_name or 'Borrower' }}
+                        {% else %}
+                          Loan #{{ loan.id }}
+                        {% endif %}
+                      </div>
+                      {% if loan.property_address %}
+                      <div style="font-size:.78rem;color:var(--muted);">
+                        {{ loan.property_address }}
+                      </div>
+                      {% endif %}
+                    </td>
+                    <td>
+                      <span class="rl-badge badge-info" style="font-size:.72rem;">
+                        {{ loan.loan_type or '—' }}
+                      </span>
+                    </td>
+                    <td style="font-weight:700;">
+                      ${{ '{:,.0f}'.format(loan.amount or 0) }}
+                    </td>
+                    <td style="color:var(--success);">
+                      {% if ctx.arv %}${{ '{:,.0f}'.format(ctx.arv) }}{% else %}—{% endif %}
+                    </td>
+                    <td>
+                      {% if ctx.ltv %}
+                      <span style="color:
+                        {% if ctx.ltv <= 0.65 %}var(--success)
+                        {% elif ctx.ltv <= 0.75 %}var(--warning)
+                        {% else %}var(--danger){% endif %};">
+                        {{ (ctx.ltv * 100) | round(1) }}%
+                      </span>
+                      {% else %}—{% endif %}
+                    </td>
+                    <td style="color:var(--accent);">
+                      {% if ctx.suggested_rate %}{{ ctx.suggested_rate }}%{% else %}—{% endif %}
+                    </td>
+                    <td>
+                      {% set s = (loan.status or '') | lower %}
+                      <span class="rl-badge
+                        {% if 'approved' in s or 'clear' in s %}badge-success
+                        {% elif 'review' in s or 'processing' in s %}badge-info
+                        {% elif 'declined' in s %}badge-danger
+                        {% else %}badge-neutral{% endif %}">
+                        {{ loan.status or '—' }}
+                      </span>
+                    </td>
+                    <td>
+                      <a href="{{ url_for('loan_officer.loan_file', loan_id=loan.id) }}"
+                         class="rl-btn ghost sm">View</a>
+                    </td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </div>
+          {% endif %}
+
+        </div>
+
+        {# RIGHT COLUMN — sidebar #}
+        <div class="stack">
+
+          {# ── COPILOT ── #}
+          {% if 'ai_pilot' in modules %}
+          <div class="rl-card pad">
+            <div class="section-head">
+              <h3 class="rl-card-title">Copilot</h3>
+              <a href="{{ url_for('vip.ai_pilot') }}" class="rl-btn ghost sm">Open</a>
+            </div>
+
+            {% if copilot_suggestions %}
+            <div class="stack">
+              {% for s in copilot_suggestions %}
+              <div class="mini-row" style="padding:10px 12px;">
+                <div>
+                  <div class="mini-title" style="font-size:.88rem;">{{ s.title }}</div>
+                  {% if s.body %}
+                  <div class="mini-sub" style="font-size:.78rem;">{{ s.body }}</div>
+                  {% endif %}
+                  <div style="font-size:.74rem;color:var(--muted);margin-top:4px;">
+                    {{ s.suggestion_type | title }}
+                    {% if s.created_at %}· {{ s.created_at.strftime('%b %d') }}{% endif %}
+                  </div>
+                </div>
+              </div>
+              {% endfor %}
+            </div>
+            {% else %}
+            <p style="color:var(--muted);font-size:.85rem;font-style:italic;">
+              No suggestions yet.
+            </p>
+            {% endif %}
+          </div>
+          {% endif %}
+
+          {# ── RECENT QUOTES ── #}
+          <div class="rl-card pad" id="quotes">
+            <div class="section-head">
+              <h3 class="rl-card-title">Recent Quotes</h3>
+              <a href="{{ url_for('loan_officer.quote_engine') }}"
+                 class="rl-btn ghost sm">Engine</a>
+            </div>
+
+            {% if recent_quotes %}
+            <div class="stack">
+              {% for q in recent_quotes %}
+              <div class="mini-row" style="padding:10px 12px;">
+                <div>
+                  <div class="mini-title" style="font-size:.88rem;">
+                    {{ q.loan_type or 'Quote' }} #{{ q.id }}
+                  </div>
+                  <div class="mini-sub">
+                    {{ q.rate }}% · {{ q.term_months }}mo
+                    {% if q.created_at %}· {{ q.created_at.strftime('%b %d') }}{% endif %}
+                  </div>
+                </div>
+                <div style="text-align:right;">
+                  <div style="font-weight:700;font-size:.92rem;">
+                    ${{ '{:,.0f}'.format(q.loan_amount or 0) }}
+                  </div>
+                  <span class="rl-badge
+                    {% if q.status == 'accepted' %}badge-success
+                    {% elif q.status == 'sent' %}badge-info
+                    {% else %}badge-neutral{% endif %}"
+                    style="font-size:.7rem;">
+                    {{ q.status | title }}
+                  </span>
+                </div>
+              </div>
+              {% endfor %}
+            </div>
+            {% else %}
+            <p style="color:var(--muted);font-size:.85rem;font-style:italic;">
+              No quotes sent yet.
+            </p>
+            {% endif %}
+          </div>
+
+          {# ── OUT OF SCOPE LOANS ── #}
+          {% if out_of_scope_loans %}
+          <div class="rl-card pad" style="border-color:rgba(216,171,77,.2);">
+            <div class="section-head">
+              <h3 class="rl-card-title" style="color:var(--warning);">
+                ⚠ Refer Out
+              </h3>
+              <span class="rl-badge badge-warning">{{ out_of_scope_loans | length }}</span>
+            </div>
+            <p style="color:var(--muted);font-size:.84rem;margin-bottom:12px;">
+              These loan types are outside Caughman Mason's licensing scope.
+            </p>
+            <div class="stack">
+              {% for loan in out_of_scope_loans %}
+              <div class="mini-row" style="padding:10px 12px;">
+                <div>
+                  <div class="mini-title" style="font-size:.86rem;">
+                    {{ loan.loan_type }} — #{{ loan.id }}
+                  </div>
+                  {% if loan.borrower_profile %}
+                  <div class="mini-sub">{{ loan.borrower_profile.full_name }}</div>
+                  {% endif %}
+                </div>
+                <form method="POST"
+                      action="{{ url_for('vip.loan_officer_refer_out', loan_id=loan.id) }}">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <button type="submit" class="rl-btn warning sm">Refer Out</button>
+                </form>
+              </div>
+              {% endfor %}
+            </div>
+          </div>
+          {% endif %}
+
+          {# ── QUICK ACTIONS ── #}
+          <div class="rl-card pad">
+            <h3 class="rl-card-title mb-12">Quick Actions</h3>
+            <div class="stack" style="gap:8px;">
+              <a href="{{ url_for('loan_officer.loan_application') }}"
+                 class="rl-btn primary w-full">New Application</a>
+              <a href="{{ url_for('loan_officer.borrower_intake') }}"
+                 class="rl-btn ghost w-full">Add Borrower</a>
+              <a href="{{ url_for('loan_officer.quote_engine') }}"
+                 class="rl-btn ghost w-full">Generate Quote</a>
+              <a href="{{ url_for('vip.onboarding') }}"
+                 class="rl-btn ghost w-full">Workspace Settings</a>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </div>{# end rl-content #}
+  </main>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Close sidebar on overlay click (mobile)
+document.addEventListener("click", function(e) {
+  if (
+    document.body.classList.contains("rl-sidebar-open") &&
+    !e.target.closest(".rl-sidebar") &&
+    !e.target.closest(".rl-menu-btn")
+  ) {
+    document.body.classList.remove("rl-sidebar-open");
+  }
+});
+</script>
+{% endblock %}

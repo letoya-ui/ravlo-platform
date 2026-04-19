@@ -1,185 +1,293 @@
 {% extends "layouts/ravlo_base.html" %}
 
-{% block title %}Ravlo • VIP Realtor{% endblock %}
+{% block title %}Ravlo • {{ header_name }}{% endblock %}
 {% block page_title %}{{ header_name }}{% endblock %}
 {% block page_subline %}
-Realtor Dashboard — clients, listings, closings, commissions, content, and assistant workflow in one place.
+  Realtor Dashboard — clients, listings, closings, commissions, content, and assistant workflow.
 {% endblock %}
 
 {% block topbar_actions %}
+  {# Market switcher #}
+  <form method="POST" action="{{ url_for('vip.realtor_market_switch') }}" class="inline-flex items-center gap-2">
+    <input type="hidden" name="next" value="{{ request.path }}">
+    <select name="market" onchange="this.form.submit()"
+            class="ravlo-input sm text-sm bg-transparent border border-white/10 rounded px-2 py-1">
+      <option value="All Markets" {% if current_market == 'All Markets' %}selected{% endif %}>All Markets</option>
+      {% for m in available_markets %}
+        <option value="{{ m }}" {% if current_market == m %}selected{% endif %}>{{ m }}</option>
+      {% endfor %}
+    </select>
+  </form>
+
   {% if 'ai_pilot' in modules %}
     <a href="{{ url_for('vip.ai_pilot') }}" class="ravlo-btn ghost sm">AI Pilot</a>
   {% endif %}
-
   {% if 'finances' in modules %}
     <a href="{{ url_for('vip.finances') }}" class="ravlo-btn primary sm">Finances</a>
   {% endif %}
-
   <a href="{{ url_for('vip.onboarding') }}" class="ravlo-btn ghost sm">Customize</a>
 {% endblock %}
 
 {% block content %}
 <div class="max-w-6xl mx-auto space-y-6">
 
-  <section class="ravlo-card pad">
-    <h3 class="text-xl font-semibold">VIP Realtor Dashboard</h3>
-    <p class="text-sm text-gray-400">
-      Manage clients, listings, closings, commissions, content creation, and assistant-powered follow-up from one workspace.
-    </p>
-  </section>
-
+  {# ── SUMMARY STATS ────────────────────────────────────── #}
   <section class="partner-stats-grid">
 
-    {% if 'crm' in modules %}
     <article class="ravlo-card partner-stat-card">
-      <div class="partner-stat-label">Client CRM</div>
-      <div class="partner-stat-value">On</div>
-      <div class="partner-stat-note">Contacts, pipeline, notes, and follow-ups</div>
+      <div class="partner-stat-label">Total Clients</div>
+      <div class="partner-stat-value">{{ summary.total_clients }}</div>
+      <div class="partner-stat-note">In your CRM</div>
     </article>
-    {% endif %}
 
-    {% if 'finances' in modules %}
     <article class="ravlo-card partner-stat-card">
-      <div class="partner-stat-label">Finances</div>
-      <div class="partner-stat-value">On</div>
-      <div class="partner-stat-note">Commissions, expenses, mileage, and net profit</div>
+      <div class="partner-stat-label">New This Week</div>
+      <div class="partner-stat-value">{{ summary.new_leads }}</div>
+      <div class="partner-stat-note">Added in last 7 days</div>
     </article>
-    {% endif %}
 
-    {% if 'ai_pilot' in modules %}
     <article class="ravlo-card partner-stat-card">
-      <div class="partner-stat-label">AI Pilot</div>
-      <div class="partner-stat-value">On</div>
-      <div class="partner-stat-note">Drafts, notes, suggestions, and next-step actions</div>
+      <div class="partner-stat-label">Active Listings</div>
+      <div class="partner-stat-value">{{ summary.active_listings }}</div>
+      <div class="partner-stat-note">
+        {% if current_market != 'All Markets' %}{{ current_market }}{% else %}All markets{% endif %}
+      </div>
     </article>
-    {% endif %}
 
-    {% if 'content_studio' in modules or 'canva' in modules %}
     <article class="ravlo-card partner-stat-card">
-      <div class="partner-stat-label">Marketing</div>
-      <div class="partner-stat-value">On</div>
-      <div class="partner-stat-note">Flyers, social posts, listing content, and branded assets</div>
+      <div class="partner-stat-label">Follow-ups Due</div>
+      <div class="partner-stat-value">{{ summary.followups_due }}</div>
+      <div class="partner-stat-note">Next 7 days</div>
     </article>
-    {% endif %}
 
   </section>
 
+  {# ── MAIN GRID ────────────────────────────────────────── #}
   <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
+    {# LEFT COLUMN (2/3) #}
     <div class="lg:col-span-2 space-y-6">
 
-      {% if 'crm' in modules %}
+      {# ── PIPELINE ── #}
+      {% if pipeline_groups %}
       <section class="ravlo-card pad">
-        <h3 class="text-lg font-semibold mb-2">Clients + Listings</h3>
-        <p class="text-sm text-gray-400 mb-4">
-          Keep buyers, sellers, listings, and active deal flow organized in one place.
-        </p>
+        <div class="flex justify-between items-center mb-4">
+          <h3 class="text-lg font-semibold">Client Pipeline</h3>
+          <a href="{{ url_for('elena.client_new') }}" class="ravlo-btn primary sm">+ Add Client</a>
+        </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div class="ravlo-card pad">
-            <strong>Client Pipeline</strong>
-            <p class="text-sm text-gray-400 mt-2">
-              Track leads, active clients, and follow-up momentum from first touch to close.
-            </p>
-          </div>
+        <div class="flex gap-3 overflow-x-auto pb-2">
+          {% for group in pipeline_groups %}
+          <div class="min-w-[180px] flex-shrink-0">
+            <div class="flex justify-between items-center mb-2">
+              <span class="text-xs font-semibold uppercase tracking-wide text-gray-400">
+                {{ group.label }}
+              </span>
+              <span class="text-xs bg-white/10 rounded-full px-2 py-0.5">{{ group.count }}</span>
+            </div>
 
-          <div class="ravlo-card pad">
-            <strong>Listing Workspace</strong>
-            <p class="text-sm text-gray-400 mt-2">
-              Organize listings, property details, and marketing-ready records.
-            </p>
+            <div class="space-y-2">
+              {% for client in group.clients %}
+              <div class="ravlo-card p-2 text-sm hover:bg-white/5 transition cursor-pointer">
+                <div class="font-medium truncate">{{ client.name }}</div>
+                {% if client.role %}
+                  <div class="text-xs text-gray-500 truncate">{{ client.role }}</div>
+                {% endif %}
+                {% if client.updated_at %}
+                  <div class="text-xs text-gray-600 mt-1">
+                    {{ client.updated_at.strftime('%b %d') }}
+                  </div>
+                {% endif %}
+              </div>
+              {% else %}
+              <div class="text-xs text-gray-600 italic">No clients</div>
+              {% endfor %}
+            </div>
           </div>
+          {% endfor %}
         </div>
       </section>
       {% endif %}
 
-      {% if 'content_studio' in modules or 'canva' in modules %}
+      {# ── LISTINGS ── #}
       <section class="ravlo-card pad">
-        <h3 class="text-lg font-semibold mb-2">Content + Canva</h3>
-        <p class="text-sm text-gray-400 mb-4">
-          Create listing flyers, open house materials, social posts, and branded marketing faster.
-        </p>
-
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {% if 'content_studio' in modules %}
-          <div class="ravlo-card pad">
-            <strong>Content Studio</strong>
-            <p class="text-sm text-gray-400 mt-2">
-              Generate just-listed, just-sold, open house, and follow-up content quickly.
-            </p>
+        <div class="flex justify-between items-center mb-4">
+          <h3 class="text-lg font-semibold">Listings</h3>
+          <div class="flex gap-2 items-center">
+            {# Status filter #}
+            <form method="GET" class="inline-flex gap-1">
+              <select name="listing_status" onchange="this.form.submit()"
+                      class="ravlo-input sm text-xs bg-transparent border border-white/10 rounded px-2 py-1">
+                <option value="">All Statuses</option>
+                {% for key, label in listing_statuses %}
+                  <option value="{{ key }}"
+                    {% if listing_status_filter == key %}selected{% endif %}>
+                    {{ label }}
+                  </option>
+                {% endfor %}
+              </select>
+            </form>
+            <a href="{{ url_for('elena.listing_new') }}" class="ravlo-btn primary sm">+ Add Listing</a>
           </div>
-          {% endif %}
-
-          {% if 'canva' in modules %}
-          <div class="ravlo-card pad">
-            <strong>Canva Integration</strong>
-            <p class="text-sm text-gray-400 mt-2">
-              Prefill listing data into flyers and open Canva for final polish.
-            </p>
-          </div>
-          {% endif %}
         </div>
+
+        {% if listings %}
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="text-xs text-gray-500 uppercase border-b border-white/10">
+                <th class="text-left pb-2 pr-4">Address</th>
+                <th class="text-left pb-2 pr-4">Market</th>
+                <th class="text-left pb-2 pr-4">Price</th>
+                <th class="text-left pb-2 pr-4">Beds/Baths</th>
+                <th class="text-left pb-2">Status</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-white/5">
+              {% for listing in listings %}
+              <tr class="hover:bg-white/5 transition">
+                <td class="py-2 pr-4 font-medium">
+                  {{ listing.address }}
+                  {% if listing.city %}<span class="text-gray-500">, {{ listing.city }}</span>{% endif %}
+                </td>
+                <td class="py-2 pr-4 text-gray-400">{{ listing.market or '—' }}</td>
+                <td class="py-2 pr-4">
+                  {% if listing.price %}${{ '{:,}'.format(listing.price) }}{% else %}—{% endif %}
+                </td>
+                <td class="py-2 pr-4 text-gray-400">
+                  {% if listing.beds is not none %}{{ listing.beds }}bd{% endif %}
+                  {% if listing.baths is not none %} / {{ listing.baths }}ba{% endif %}
+                  {% if listing.beds is none and listing.baths is none %}—{% endif %}
+                </td>
+                <td class="py-2">
+                  <span class="text-xs px-2 py-0.5 rounded-full
+                    {% if listing.status == 'active' %}bg-green-500/20 text-green-400
+                    {% elif listing.status == 'pending' %}bg-yellow-500/20 text-yellow-400
+                    {% elif listing.status == 'sold' %}bg-blue-500/20 text-blue-400
+                    {% else %}bg-white/10 text-gray-400{% endif %}">
+                    {{ listing.status | title }}
+                  </span>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <p class="text-sm text-gray-500 italic">No listings found. <a href="{{ url_for('elena.listing_new') }}" class="text-blue-400 underline">Add one</a>.</p>
+        {% endif %}
       </section>
-      {% endif %}
 
-      {% if 'ai_pilot' in modules %}
+      {# ── RECENT ACTIVITY ── #}
+      {% if recent_interactions %}
       <section class="ravlo-card pad">
-        <div class="flex justify-between items-center mb-3">
-          <h3 class="text-lg font-semibold">AI Pilot</h3>
-          <a href="{{ url_for('vip.ai_pilot') }}" class="ravlo-btn primary sm">
-            Open AI Pilot
-          </a>
-        </div>
-
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div class="ravlo-card pad">
-            <strong>Example Commands</strong>
-            <ul class="text-sm text-gray-400 mt-3 space-y-2">
-              <li>“Email seller and say I’m sending comps tonight.”</li>
-              <li>“Text buyer I’m outside.”</li>
-              <li>“Add $180 for photos.”</li>
-              <li>“Create a follow-up for tomorrow.”</li>
-            </ul>
+        <h3 class="text-lg font-semibold mb-4">Recent Activity</h3>
+        <div class="space-y-2">
+          {% for interaction in recent_interactions %}
+          <div class="flex gap-3 items-start border-b border-white/5 pb-2 last:border-0">
+            <div class="text-xs text-gray-500 w-16 flex-shrink-0 pt-0.5">
+              {{ interaction.created_at.strftime('%b %d') if interaction.created_at else '' }}
+            </div>
+            <div>
+              <div class="text-sm font-medium">
+                {{ interaction.interaction_type.value if interaction.interaction_type else 'Note' }}
+                {% if interaction.client %}
+                  — <span class="text-gray-400">{{ interaction.client.name }}</span>
+                {% endif %}
+              </div>
+              {% if interaction.content %}
+              <div class="text-xs text-gray-500 truncate max-w-md">{{ interaction.content }}</div>
+              {% endif %}
+            </div>
           </div>
-
-          <div class="ravlo-card pad">
-            <strong>Assistant Focus</strong>
-            <p class="text-sm text-gray-400 mt-2">
-              Help with follow-ups, listing activity, quick logging, and day-to-day admin execution.
-            </p>
-          </div>
+          {% endfor %}
         </div>
       </section>
       {% endif %}
 
     </div>
 
+    {# RIGHT SIDEBAR (1/3) #}
     <aside class="space-y-6">
 
+      {# ── COPILOT SUGGESTIONS ── #}
+      {% if 'ai_pilot' in modules %}
+      <section class="ravlo-card pad">
+        <div class="flex justify-between items-center mb-3">
+          <h3 class="text-base font-semibold">Copilot</h3>
+          <a href="{{ url_for('vip.ai_pilot') }}" class="ravlo-btn ghost sm">Open</a>
+        </div>
+
+        {% if copilot_suggestions %}
+        <div class="space-y-2">
+          {% for s in copilot_suggestions %}
+          <div class="ravlo-card p-2 text-sm">
+            <div class="font-medium truncate">{{ s.title }}</div>
+            {% if s.body %}
+              <div class="text-xs text-gray-500 truncate mt-0.5">{{ s.body }}</div>
+            {% endif %}
+            <div class="text-xs text-gray-600 mt-1">
+              {{ s.suggestion_type | title }}
+              {% if s.created_at %}· {{ s.created_at.strftime('%b %d') }}{% endif %}
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+        <p class="text-xs text-gray-500 italic">No suggestions yet. Use AI Pilot to get started.</p>
+        {% endif %}
+      </section>
+      {% endif %}
+
+      {# ── RECENT FLYERS ── #}
+      {% if recent_flyers %}
+      <section class="ravlo-card pad">
+        <div class="flex justify-between items-center mb-3">
+          <h3 class="text-base font-semibold">Recent Flyers</h3>
+          <a href="{{ url_for('elena.template_studio') }}" class="ravlo-btn ghost sm">Studio</a>
+        </div>
+        <div class="space-y-2">
+          {% for flyer in recent_flyers %}
+          <div class="ravlo-card p-2 text-sm">
+            <div class="font-medium truncate">{{ flyer.property_address or 'Untitled' }}</div>
+            <div class="text-xs text-gray-500 flex gap-2 mt-0.5">
+              <span>{{ flyer.flyer_type | replace('_', ' ') | title }}</span>
+              {% if flyer.canva_status %}
+                <span class="text-gray-600">· {{ flyer.canva_status }}</span>
+              {% endif %}
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </section>
+      {% endif %}
+
+      {# ── FINANCES ── #}
       {% if 'finances' in modules %}
       <section class="ravlo-card pad">
-        <h3 class="text-lg font-semibold mb-2">Finances</h3>
-        <p class="text-sm text-gray-400 mb-4">
-          Track commissions, expenses, mileage, tolls, and overall net profit.
+        <h3 class="text-base font-semibold mb-2">Finances</h3>
+        <p class="text-xs text-gray-500 mb-3">
+          Commissions, expenses, mileage, and net profit.
         </p>
-        <a href="{{ url_for('vip.finances') }}" class="ravlo-btn primary sm">
+        <a href="{{ url_for('vip.finances') }}" class="ravlo-btn primary sm w-full text-center block">
           Open Finances
         </a>
       </section>
       {% endif %}
 
+      {# ── WORKSPACE SETTINGS ── #}
       <section class="ravlo-card pad">
-        <h3 class="text-lg font-semibold mb-2">Workspace Settings</h3>
-        <p class="text-sm text-gray-400 mb-4">
-          Choose which modules shape your realtor workspace.
+        <h3 class="text-base font-semibold mb-2">Workspace</h3>
+        <p class="text-xs text-gray-500 mb-3">
+          Customize your modules and assistant name.
         </p>
-        <a href="{{ url_for('vip.onboarding') }}" class="ravlo-btn ghost sm">
+        <a href="{{ url_for('vip.onboarding') }}" class="ravlo-btn ghost sm w-full text-center block">
           Open Setup
         </a>
       </section>
 
     </aside>
-
   </div>
+
 </div>
 {% endblock %}

@@ -2,184 +2,566 @@
 
 {% block title %}Ravlo • Design Studio{% endblock %}
 {% block page_title %}{{ header_name }}{% endblock %}
+{% block page_subline %}Blueprint annotations, remodel scope, and design planning.{% endblock %}
+
+{% block head %}
+<style>
+  /* ── Canvas ─────────────────────────────────────────── */
+  .design-canvas-wrap {
+    position: relative;
+    width: 100%;
+    overflow: hidden;
+    border-radius: 12px;
+    background: #080d14;
+    border: 1px solid rgba(255,255,255,0.06);
+  }
+
+  #blueprintCanvas {
+    position: relative;
+    min-height: 580px;
+    width: 100%;
+    background:
+      linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px),
+      #080d14;
+    background-size: 40px 40px;
+    cursor: crosshair;
+    overflow: hidden;
+  }
+
+  #blueprintCanvas.has-image {
+    cursor: crosshair;
+    background: #080d14;
+  }
+
+  #blueprintImage {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    object-fit: contain;
+    pointer-events: none;
+    display: none;
+  }
+
+  #blueprintImage.visible { display: block; }
+
+  /* ── Annotations ────────────────────────────────────── */
+  .design-annotation {
+    position: absolute;
+    padding: 4px 10px;
+    border-radius: 999px;
+    cursor: pointer;
+    font-size: 11px;
+    font-weight: 500;
+    white-space: nowrap;
+    max-width: 180px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    transition: transform 0.1s, box-shadow 0.1s;
+    user-select: none;
+    border: 1px solid transparent;
+  }
+
+  .design-annotation:hover {
+    transform: scale(1.05);
+    z-index: 10;
+  }
+
+  .design-annotation.selected {
+    outline: 2px solid white;
+    outline-offset: 2px;
+    z-index: 20;
+  }
+
+  .annotation-remove   { background: rgba(239,68,68,0.25);  color: #fca5a5; border-color: rgba(239,68,68,0.3); }
+  .annotation-move     { background: rgba(234,179,8,0.2);   color: #fde68a; border-color: rgba(234,179,8,0.3); }
+  .annotation-redesign { background: rgba(59,130,246,0.25); color: #93c5fd; border-color: rgba(59,130,246,0.3); }
+  .annotation-review   { background: rgba(168,85,247,0.2);  color: #d8b4fe; border-color: rgba(168,85,247,0.3); }
+
+  .annotation-draft {
+    background: rgba(255,255,255,0.08);
+    color: #9ca3af;
+    border: 1px dashed rgba(255,255,255,0.3);
+    pointer-events: none;
+  }
+
+  /* ── Empty state ────────────────────────────────────── */
+  .canvas-empty-state {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    pointer-events: none;
+  }
+
+  .canvas-empty-state.hidden { display: none; }
+
+  /* ── Right panel ────────────────────────────────────── */
+  .design-input {
+    width: 100%;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 8px;
+    color: #e5e7eb;
+    padding: 8px 10px;
+    font-size: 13px;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+
+  .design-input:focus {
+    border-color: rgba(255,255,255,0.25);
+  }
+
+  textarea.design-input { resize: vertical; min-height: 80px; }
+
+  /* ── Action type legend ─────────────────────────────── */
+  .legend-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    display: inline-block;
+    flex-shrink: 0;
+  }
+
+  /* ── Annotation list ────────────────────────────────── */
+  .annotation-list-item {
+    display: flex;
+    gap: 8px;
+    align-items: flex-start;
+    padding: 8px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.1s;
+    border: 1px solid transparent;
+  }
+
+  .annotation-list-item:hover  { background: rgba(255,255,255,0.04); }
+  .annotation-list-item.active { background: rgba(255,255,255,0.07); border-color: rgba(255,255,255,0.1); }
+</style>
+{% endblock %}
+
+{% block topbar_actions %}
+  {% if project %}
+    <span class="text-sm text-gray-400">{{ project.title }}</span>
+  {% endif %}
+  <button onclick="document.getElementById('newProjectModal').classList.remove('hidden')"
+          class="ravlo-btn primary sm">+ New Project</button>
+  <a href="{{ url_for('vip.design_studio') }}" class="ravlo-btn ghost sm">All Projects</a>
+{% endblock %}
 
 {% block content %}
-<div class="max-w-7xl mx-auto space-y-6">
+<div class="max-w-7xl mx-auto space-y-5">
 
-  <div class="grid grid-cols-1 xl:grid-cols-[1fr_320px] gap-6">
+  {# ── No project selected: show project picker ── #}
+  {% if not project %}
+  <section class="ravlo-card pad text-center py-16">
+    <div class="text-4xl mb-4">🏗</div>
+    <h3 class="text-xl font-semibold mb-2">Design Studio</h3>
+    <p class="text-sm text-gray-400 mb-6 max-w-sm mx-auto">
+      Create a project, upload a blueprint or floor plan image, then annotate what to remove, move, or redesign.
+    </p>
+    <button onclick="document.getElementById('newProjectModal').classList.remove('hidden')"
+            class="ravlo-btn primary">
+      Create First Project
+    </button>
+  </section>
+  {% else %}
 
-    <!-- CANVAS -->
-    <section class="ravlo-card pad">
-      <h3 class="text-lg font-semibold mb-4">Blueprint Canvas</h3>
+  {# ── Main studio layout ── #}
+  <div class="grid grid-cols-1 xl:grid-cols-[1fr_300px] gap-5">
 
-      <div class="design-canvas-wrap">
-        <div class="design-blueprint-placeholder" id="blueprintCanvas">
+    {# ── LEFT: Canvas ── #}
+    <div class="space-y-3">
 
+      {# Toolbar #}
+      <div class="ravlo-card px-4 py-3 flex items-center gap-3 flex-wrap">
+        {# Mode indicator #}
+        <div class="flex items-center gap-2 text-sm text-gray-400">
+          <span id="modeLabel" class="text-white font-medium">Place Mode</span>
+          <span class="text-gray-600">— click canvas to add annotation</span>
+        </div>
+
+        <div class="flex-1"></div>
+
+        {# Image upload #}
+        <label class="ravlo-btn ghost sm cursor-pointer">
+          Upload Blueprint
+          <input type="file" accept="image/*" class="hidden" onchange="loadBlueprintImage(this)">
+        </label>
+
+        {# Clear selection #}
+        <button onclick="clearSelection()" id="clearBtn"
+                class="ravlo-btn ghost sm hidden">
+          ✕ Deselect
+        </button>
+      </div>
+
+      {# Canvas #}
+      <section class="design-canvas-wrap">
+        <div id="blueprintCanvas" onclick="handleCanvasClick(event)">
+
+          <img id="blueprintImage" src="" alt="Blueprint">
+
+          {# Empty state #}
+          <div class="canvas-empty-state" id="emptyState">
+            <div class="text-gray-600 text-sm">Upload a blueprint or click to place annotations</div>
+            <div class="text-gray-700 text-xs">Click anywhere on the canvas to start</div>
+          </div>
+
+          {# Existing annotations #}
           {% for item in annotations %}
           <div
-            class="design-annotation {{ 'annotation-remove' if item.action_type == 'remove' else 'annotation-redesign' }}"
-            style="
-              left: {{ item.x }}px;
-              top: {{ item.y }}px;
-              width: {{ item.width or 140 }}px;
-            "
-            onclick="selectAnnotation({{ item.id }}, '{{ item.annotation_type }}', '{{ item.action_type }}', `{{ item.label or '' }}`, `{{ item.body or '' }}`)"
+            class="design-annotation annotation-{{ item.action_type or 'review' }}"
+            id="ann-{{ item.id }}"
+            style="left: {{ item.x }}px; top: {{ item.y }}px;"
+            onclick="event.stopPropagation(); selectAnnotation({{ item.id }}, '{{ item.annotation_type }}', '{{ item.action_type }}', `{{ (item.label or '') | replace('`', "'") }}`, `{{ (item.body or '') | replace('`', "'") }}`)"
+            title="{{ item.label or 'Annotation' }}"
           >
-            {{ item.label or "Annotation" }}
+            {{ item.label or "Note" }}
           </div>
           {% endfor %}
 
-          <div id="draftAnnotation" class="design-annotation draft hidden">
+          {# Draft (placement preview) #}
+          <div id="draftAnnotation"
+               class="design-annotation annotation-draft hidden"
+               style="pointer-events:none;">
             New
           </div>
 
         </div>
+      </section>
+
+      {# Legend #}
+      <div class="flex gap-4 flex-wrap px-1">
+        {% for action, color, label in [
+          ('remove',   '#ef4444', 'Remove'),
+          ('move',     '#eab308', 'Move'),
+          ('redesign', '#3b82f6', 'Redesign'),
+          ('review',   '#a855f7', 'Review'),
+        ] %}
+        <div class="flex items-center gap-1.5 text-xs text-gray-500">
+          <span class="legend-dot" style="background: {{ color }};"></span>
+          {{ label }}
+        </div>
+        {% endfor %}
+        <div class="flex items-center gap-1.5 text-xs text-gray-500">
+          <span class="legend-dot" style="background: rgba(255,255,255,0.2); border: 1px dashed #666;"></span>
+          Draft
+        </div>
       </div>
-    </section>
+    </div>
 
-    <!-- RIGHT PANEL -->
-    <aside class="ravlo-card pad">
-      <h3 class="text-lg font-semibold mb-4">Annotation</h3>
+    {# ── RIGHT: Panel ── #}
+    <aside class="space-y-4">
 
-      <input type="hidden" id="projectId" value="{{ project.id if project else '' }}">
-      <input type="hidden" id="annotationX">
-      <input type="hidden" id="annotationY">
+      {# Annotation editor #}
+      <section class="ravlo-card pad">
+        <h3 class="text-sm font-semibold mb-3 text-gray-300" id="panelTitle">
+          New Annotation
+        </h3>
 
-      <div class="space-y-3">
+        <input type="hidden" id="projectId"     value="{{ project.id }}">
+        <input type="hidden" id="annotationX"   value="0">
+        <input type="hidden" id="annotationY"   value="0">
 
-        <select id="annotationType" class="design-input">
-          <option value="wall">Wall</option>
-          <option value="room">Room</option>
-          <option value="area">Area</option>
-          <option value="note">Note</option>
-        </select>
+        <div class="space-y-2">
+          <div>
+            <label class="text-xs text-gray-500 mb-1 block">Type</label>
+            <select id="annotationType" class="design-input">
+              <option value="wall">Wall</option>
+              <option value="room">Room</option>
+              <option value="area">Area</option>
+              <option value="note">Note</option>
+            </select>
+          </div>
 
-        <select id="annotationAction" class="design-input">
-          <option value="remove">Remove</option>
-          <option value="move">Move</option>
-          <option value="redesign">Redesign</option>
-          <option value="review">Review</option>
-        </select>
+          <div>
+            <label class="text-xs text-gray-500 mb-1 block">Action</label>
+            <select id="annotationAction" class="design-input" onchange="updateDraftColor()">
+              <option value="remove">🔴 Remove</option>
+              <option value="move">🟡 Move</option>
+              <option value="redesign">🔵 Redesign</option>
+              <option value="review">🟣 Review</option>
+            </select>
+          </div>
 
-        <input id="annotationLabel" class="design-input" placeholder="Label">
+          <div>
+            <label class="text-xs text-gray-500 mb-1 block">Label</label>
+            <input id="annotationLabel" class="design-input" placeholder="e.g. Kitchen wall">
+          </div>
 
-        <textarea id="annotationBody" class="design-input" placeholder="Details"></textarea>
+          <div>
+            <label class="text-xs text-gray-500 mb-1 block">Notes</label>
+            <textarea id="annotationBody" class="design-input"
+                      placeholder="Details, measurements, instructions…"></textarea>
+          </div>
 
-        <button onclick="saveAnnotation()" class="ravlo-btn primary w-full" id="saveBtn">
-          Save Annotation
-        </button>
+          <button onclick="saveAnnotation()" class="ravlo-btn primary w-full" id="saveBtn">
+            Save Annotation
+          </button>
 
-        <button onclick="deleteAnnotation()" class="ravlo-btn ghost w-full hidden" id="deleteBtn">
-          Delete
-        </button>
+          <button onclick="deleteAnnotation()"
+                  class="ravlo-btn ghost w-full hidden text-red-400 hover:text-red-300"
+                  id="deleteBtn">
+            Delete Annotation
+          </button>
+        </div>
+      </section>
 
-      </div>
+      {# Annotation list #}
+      {% if annotations %}
+      <section class="ravlo-card pad">
+        <h3 class="text-sm font-semibold mb-3 text-gray-300">
+          All Annotations
+          <span class="text-gray-600 font-normal">({{ annotations | length }})</span>
+        </h3>
+        <div class="space-y-1 max-h-64 overflow-y-auto">
+          {% for item in annotations %}
+          <div
+            class="annotation-list-item"
+            id="list-{{ item.id }}"
+            onclick="selectAnnotation({{ item.id }}, '{{ item.annotation_type }}', '{{ item.action_type }}', `{{ (item.label or '') | replace('`', "'") }}`, `{{ (item.body or '') | replace('`', "'") }}`)"
+          >
+            <span class="legend-dot mt-1 flex-shrink-0"
+              style="background:
+                {% if item.action_type == 'remove' %}#ef4444
+                {% elif item.action_type == 'move' %}#eab308
+                {% elif item.action_type == 'redesign' %}#3b82f6
+                {% else %}#a855f7{% endif %};">
+            </span>
+            <div class="min-w-0">
+              <div class="text-xs font-medium text-gray-200 truncate">
+                {{ item.label or 'Annotation' }}
+              </div>
+              <div class="text-xs text-gray-600">
+                {{ item.action_type | title }} · {{ item.annotation_type | title }}
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </section>
+      {% endif %}
+
+      {# Project info #}
+      <section class="ravlo-card pad">
+        <h3 class="text-sm font-semibold mb-2 text-gray-400">Project</h3>
+        <div class="text-sm font-medium">{{ project.title }}</div>
+        {% if project.created_at %}
+          <div class="text-xs text-gray-600 mt-1">
+            Created {{ project.created_at.strftime('%b %d, %Y') }}
+          </div>
+        {% endif %}
+        <div class="text-xs text-gray-600 mt-1">
+          {{ annotations | length }} annotation{{ 's' if annotations | length != 1 else '' }}
+        </div>
+      </section>
+
     </aside>
+  </div>
+  {% endif %}
 
+</div>
+
+{# ── New Project Modal ── #}
+<div id="newProjectModal"
+     class="fixed inset-0 z-50 hidden flex items-center justify-center bg-black/60 backdrop-blur-sm"
+     onclick="if(event.target===this) this.classList.add('hidden')">
+  <div class="ravlo-card pad w-full max-w-md mx-4" onclick="event.stopPropagation()">
+    <h3 class="text-lg font-semibold mb-4">New Design Project</h3>
+    <form method="POST" action="{{ url_for('vip.create_design_project') }}" class="space-y-3">
+      <div>
+        <label class="text-xs text-gray-500 mb-1 block">Project Title</label>
+        <input name="title" class="design-input" placeholder="e.g. 123 Main St — Kitchen Remodel"
+               required autofocus>
+      </div>
+      <div>
+        <label class="text-xs text-gray-500 mb-1 block">Source File / Notes (optional)</label>
+        <input name="source_file" class="design-input"
+               placeholder="URL or file reference">
+      </div>
+      <div class="flex gap-2 pt-1">
+        <button type="submit" class="ravlo-btn primary flex-1">Create Project</button>
+        <button type="button" onclick="document.getElementById('newProjectModal').classList.add('hidden')"
+                class="ravlo-btn ghost flex-1">Cancel</button>
+      </div>
+    </form>
   </div>
 </div>
-{% endblock %}
 
-{% block head %}
-<style>
-.design-blueprint-placeholder {
-  position: relative;
-  height: 600px;
-  background: #0b1018;
-  border-radius: 12px;
-}
-
-.design-annotation {
-  position: absolute;
-  padding: 6px 10px;
-  border-radius: 999px;
-  cursor: pointer;
-}
-
-.annotation-remove {
-  background: rgba(255,0,0,0.2);
-}
-
-.annotation-redesign {
-  background: rgba(0,120,255,0.2);
-}
-
-.draft {
-  border: 1px dashed white;
-}
-
-.hidden {
-  display: none;
-}
-</style>
 {% endblock %}
 
 {% block scripts %}
 <script>
+// ── State ─────────────────────────────────────────────────
 let selectedAnnotationId = null;
+let pendingX = 0;
+let pendingY = 0;
 
-const canvas = document.getElementById("blueprintCanvas");
-const draft = document.getElementById("draftAnnotation");
+const canvas    = document.getElementById("blueprintCanvas");
+const draft     = document.getElementById("draftAnnotation");
+const emptyState = document.getElementById("emptyState");
 
-canvas.addEventListener("click", function(e) {
-  if (selectedAnnotationId) return;
+// ── Canvas click: place new annotation ───────────────────
+function handleCanvasClick(e) {
+  // If clicking on an existing annotation, let it handle
+  if (e.target.classList.contains("design-annotation") && !e.target.id.startsWith("draft")) return;
+
+  // Deselect if we had one selected
+  if (selectedAnnotationId) {
+    clearSelection();
+    return;
+  }
 
   const rect = canvas.getBoundingClientRect();
-  const x = e.clientX - rect.left;
-  const y = e.clientY - rect.top;
+  pendingX = Math.round(e.clientX - rect.left);
+  pendingY = Math.round(e.clientY - rect.top);
 
-  document.getElementById("annotationX").value = x;
-  document.getElementById("annotationY").value = y;
+  document.getElementById("annotationX").value = pendingX;
+  document.getElementById("annotationY").value = pendingY;
 
-  draft.style.left = x + "px";
-  draft.style.top = y + "px";
+  // Show draft marker
+  draft.style.left = pendingX + "px";
+  draft.style.top  = pendingY + "px";
+  draft.textContent = document.getElementById("annotationLabel").value || "New";
   draft.classList.remove("hidden");
-});
 
-function selectAnnotation(id, type, action, label, body) {
-  selectedAnnotationId = id;
+  // Hide empty state
+  if (emptyState) emptyState.classList.add("hidden");
 
-  document.getElementById("annotationType").value = type || "area";
-  document.getElementById("annotationAction").value = action || "review";
-  document.getElementById("annotationLabel").value = label || "";
-  document.getElementById("annotationBody").value = body || "";
-
-  document.getElementById("saveBtn").innerText = "Update Annotation";
-  document.getElementById("deleteBtn").classList.remove("hidden");
+  // Focus label
+  document.getElementById("annotationLabel").focus();
 }
 
+// ── Select existing annotation ────────────────────────────
+function selectAnnotation(id, type, action, label, body) {
+  // Clear previous
+  clearSelection(false);
+
+  selectedAnnotationId = id;
+
+  document.getElementById("annotationType").value  = type   || "area";
+  document.getElementById("annotationAction").value = action || "review";
+  document.getElementById("annotationLabel").value  = label  || "";
+  document.getElementById("annotationBody").value   = body   || "";
+
+  document.getElementById("panelTitle").textContent = "Edit Annotation";
+  document.getElementById("saveBtn").textContent    = "Update";
+  document.getElementById("deleteBtn").classList.remove("hidden");
+  document.getElementById("clearBtn").classList.remove("hidden");
+
+  // Hide draft
+  draft.classList.add("hidden");
+
+  // Highlight in canvas
+  const el = document.getElementById("ann-" + id);
+  if (el) el.classList.add("selected");
+
+  // Highlight in list
+  const li = document.getElementById("list-" + id);
+  if (li) li.classList.add("active");
+}
+
+// ── Clear selection ───────────────────────────────────────
+function clearSelection(resetForm = true) {
+  if (selectedAnnotationId) {
+    const el = document.getElementById("ann-" + selectedAnnotationId);
+    if (el) el.classList.remove("selected");
+    const li = document.getElementById("list-" + selectedAnnotationId);
+    if (li) li.classList.remove("active");
+  }
+
+  selectedAnnotationId = null;
+
+  if (resetForm) {
+    document.getElementById("panelTitle").textContent = "New Annotation";
+    document.getElementById("saveBtn").textContent    = "Save Annotation";
+    document.getElementById("deleteBtn").classList.add("hidden");
+    document.getElementById("clearBtn").classList.add("hidden");
+    document.getElementById("annotationLabel").value  = "";
+    document.getElementById("annotationBody").value   = "";
+    draft.classList.add("hidden");
+  }
+}
+
+// ── Update draft pill color when action changes ───────────
+function updateDraftColor() {
+  if (!draft.classList.contains("hidden")) {
+    draft.textContent = document.getElementById("annotationLabel").value || "New";
+  }
+}
+
+// Live update draft label as user types
+document.getElementById("annotationLabel").addEventListener("input", function() {
+  if (!draft.classList.contains("hidden")) {
+    draft.textContent = this.value || "New";
+  }
+});
+
+// ── Save (create or update) ───────────────────────────────
 async function saveAnnotation() {
   const projectId = document.getElementById("projectId").value;
+  if (!projectId) {
+    alert("Please create a project first.");
+    return;
+  }
+
+  const label = document.getElementById("annotationLabel").value.trim();
+  if (!label) {
+    document.getElementById("annotationLabel").focus();
+    return;
+  }
 
   const payload = {
-    id: selectedAnnotationId,
+    id:         selectedAnnotationId || null,
     project_id: parseInt(projectId),
-    type: document.getElementById("annotationType").value,
-    action: document.getElementById("annotationAction").value,
-    label: document.getElementById("annotationLabel").value,
-    body: document.getElementById("annotationBody").value,
-    x: parseInt(document.getElementById("annotationX").value || 0),
-    y: parseInt(document.getElementById("annotationY").value || 0)
+    type:       document.getElementById("annotationType").value,
+    action:     document.getElementById("annotationAction").value,
+    label:      label,
+    body:       document.getElementById("annotationBody").value.trim(),
+    x:          parseInt(document.getElementById("annotationX").value) || pendingX,
+    y:          parseInt(document.getElementById("annotationY").value) || pendingY,
+    width:      140,
+    height:     30,
   };
 
   const url = selectedAnnotationId
     ? "{{ url_for('vip.update_annotation') }}"
     : "{{ url_for('vip.save_annotation') }}";
 
-  await fetch(url, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "X-CSRFToken": "{{ csrf_token() }}"
-    },
-    body: JSON.stringify(payload)
-  });
+  const btn = document.getElementById("saveBtn");
+  btn.textContent = "Saving…";
+  btn.disabled = true;
 
-  location.reload();
+  try {
+    const res = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-CSRFToken": "{{ csrf_token() }}"
+      },
+      body: JSON.stringify(payload)
+    });
+
+    if (res.ok) {
+      location.reload();
+    } else {
+      btn.textContent = "Error — retry";
+      btn.disabled = false;
+    }
+  } catch {
+    btn.textContent = "Error — retry";
+    btn.disabled = false;
+  }
 }
 
+// ── Delete ────────────────────────────────────────────────
 async function deleteAnnotation() {
   if (!selectedAnnotationId) return;
+  if (!confirm("Delete this annotation?")) return;
 
   await fetch("{{ url_for('vip.delete_annotation') }}", {
     method: "POST",
@@ -192,5 +574,29 @@ async function deleteAnnotation() {
 
   location.reload();
 }
+
+// ── Load blueprint image ──────────────────────────────────
+function loadBlueprintImage(input) {
+  if (!input.files || !input.files[0]) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const img = document.getElementById("blueprintImage");
+    img.src = e.target.result;
+    img.classList.add("visible");
+    canvas.classList.add("has-image");
+    // Remove grid background when image is loaded
+    canvas.style.backgroundImage = "none";
+    if (emptyState) emptyState.classList.add("hidden");
+  };
+  reader.readAsDataURL(input.files[0]);
+}
+
+// ── Init: hide empty state if annotations exist ───────────
+document.addEventListener("DOMContentLoaded", function() {
+  const hasAnnotations = document.querySelectorAll(".design-annotation:not(#draftAnnotation)").length > 0;
+  if (hasAnnotations && emptyState) {
+    emptyState.classList.add("hidden");
+  }
+});
 </script>
 {% endblock %}
