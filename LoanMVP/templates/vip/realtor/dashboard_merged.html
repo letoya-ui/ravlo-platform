@@ -1,0 +1,387 @@
+{% extends "layouts/ravlo_base.html" %}
+
+{% block title %}Ravlo • Frank Golio{% endblock %}
+{% block page_title %}{{ header_name }}{% endblock %}
+{% block page_subline %}
+Multi-market realtor workspace for listings, pipeline, flyers, Copilot, and finances.
+{% endblock %}
+
+{% block topbar_actions %}
+  <a href="{{ url_for('elena.template_studio') }}" class="ravlo-btn ghost sm">
+    <i class="lucide lucide-file-edit"></i>
+    <span>Content Studio</span>
+  </a>
+
+  <a href="{{ url_for('vip.finances') }}" class="ravlo-btn ghost sm">
+    <i class="lucide lucide-receipt"></i>
+    <span>Finances</span>
+  </a>
+
+  <a href="{{ url_for('vip.ai_pilot') }}" class="ravlo-btn primary sm">
+    <i class="lucide lucide-sparkles"></i>
+    <span>Copilot</span>
+  </a>
+{% endblock %}
+
+{% block content %}
+<div class="partner-dashboard-page">
+
+  <form method="POST" action="{{ url_for('vip.realtor_market_switch') }}" class="frank-market-switcher">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="next" value="{{ request.full_path if request.query_string else request.path }}">
+
+    <label for="market" class="frank-market-label">Market</label>
+    <select name="market" id="market" class="frank-market-select" onchange="this.form.submit()">
+      <option value="All Markets" {% if current_market == "All Markets" %}selected{% endif %}>All Markets</option>
+      {% for market in available_markets %}
+        <option value="{{ market }}" {% if current_market == market %}selected{% endif %}>{{ market }}</option>
+      {% endfor %}
+    </select>
+  </form>
+
+  <section class="partner-stats-grid">
+    <article class="ravlo-card partner-stat-card">
+      <div class="partner-stat-label">Total Clients</div>
+      <div class="partner-stat-value">{{ summary.total_clients }}</div>
+      <div class="partner-stat-note">Across Frank’s CRM</div>
+    </article>
+
+    <article class="ravlo-card partner-stat-card">
+      <div class="partner-stat-label">New Leads</div>
+      <div class="partner-stat-value">{{ summary.new_leads }}</div>
+      <div class="partner-stat-note">Added in the last 7 days</div>
+    </article>
+
+    <article class="ravlo-card partner-stat-card">
+      <div class="partner-stat-label">Active Listings</div>
+      <div class="partner-stat-value">{{ summary.active_listings }}</div>
+      <div class="partner-stat-note">
+        {% if current_market == "All Markets" %}
+          Across all markets
+        {% else %}
+          In {{ current_market }}
+        {% endif %}
+      </div>
+    </article>
+
+    <article class="ravlo-card partner-stat-card">
+      <div class="partner-stat-label">Follow-Ups Due</div>
+      <div class="partner-stat-value">{{ summary.followups_due }}</div>
+      <div class="partner-stat-note">Next 7 days</div>
+    </article>
+  </section>
+
+  <div class="frank-dashboard-grid">
+    <div class="frank-dashboard-main">
+
+      <section class="ravlo-card partner-section-card">
+        <div class="section-head">
+          <div>
+            <h3>Copilot</h3>
+            <p>Use Copilot for follow-ups, listing content, quick texts, and next-step suggestions.</p>
+          </div>
+          <a href="{{ url_for('vip.ai_pilot') }}" class="ravlo-btn ghost sm">Open Copilot</a>
+        </div>
+
+        <div class="frank-copilot-panel">
+          <div class="frank-copilot-prompts">
+            <button type="button" class="frank-prompt-chip">Text buyer I’m outside</button>
+            <button type="button" class="frank-prompt-chip">Create follow-up for tomorrow</button>
+            <button type="button" class="frank-prompt-chip">Generate flyer for listing</button>
+            <button type="button" class="frank-prompt-chip">Summarize this client’s activity</button>
+          </div>
+
+          {% if copilot_suggestions %}
+            <div class="frank-copilot-suggestions">
+              {% for item in copilot_suggestions %}
+                <div class="frank-copilot-suggestion">
+                  <strong>{{ item.title }}</strong>
+                  <p>{{ item.body or item.suggestion_type }}</p>
+                </div>
+              {% endfor %}
+            </div>
+          {% else %}
+            <p class="muted-copy">No Copilot suggestions yet.</p>
+          {% endif %}
+        </div>
+      </section>
+
+      <section class="ravlo-card partner-section-card">
+        <div class="section-head">
+          <div>
+            <h3>Pipeline</h3>
+            <p>Grouped by current stage.</p>
+          </div>
+        </div>
+
+        <div class="pipeline-grid">
+          {% for group in pipeline_groups %}
+            <div class="pipeline-column">
+              <div class="pipeline-column-head">
+                <strong>{{ group.label }}</strong>
+                <span>{{ group.count }}</span>
+              </div>
+
+              {% if group.clients %}
+                <div class="pipeline-client-list">
+                  {% for client in group.clients %}
+                    <div class="pipeline-client-card">
+                      <strong>{{ client.name }}</strong>
+                      <p>{{ client.email or client.phone or "No contact info" }}</p>
+                    </div>
+                  {% endfor %}
+                </div>
+              {% else %}
+                <div class="pipeline-empty">No clients</div>
+              {% endif %}
+            </div>
+          {% endfor %}
+        </div>
+      </section>
+
+      <section class="ravlo-card partner-section-card">
+        <div class="section-head">
+          <div>
+            <h3>Listings</h3>
+            <p>
+              {% if current_market == "All Markets" %}
+                Recent listings across all markets.
+              {% else %}
+                Recent listings in {{ current_market }}.
+              {% endif %}
+            </p>
+          </div>
+          <a href="{{ url_for('elena.listing_new') }}" class="ravlo-btn ghost sm">Add Listing</a>
+        </div>
+
+        {% if listings %}
+          <div class="listing-grid">
+            {% for listing in listings %}
+              <article class="listing-card">
+                <div class="listing-card-top">
+                  <strong>{{ listing.address }}</strong>
+                  <span class="listing-status">{{ listing.status|title }}</span>
+                </div>
+                <p>{{ listing.city }}, {{ listing.state }} {{ listing.zip_code }}</p>
+                <p class="listing-market">{{ listing.market or "Unassigned market" }}</p>
+                <div class="listing-meta">
+                  {% if listing.price %}<span>${{ "{:,}".format(listing.price) }}</span>{% endif %}
+                  {% if listing.beds is not none %}<span>{{ listing.beds }} bd</span>{% endif %}
+                  {% if listing.baths is not none %}<span>{{ listing.baths }} ba</span>{% endif %}
+                  {% if listing.sqft %}<span>{{ "{:,}".format(listing.sqft) }} sqft</span>{% endif %}
+                </div>
+              </article>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="empty-panel">No listings found for this market.</div>
+        {% endif %}
+      </section>
+
+    </div>
+
+    <aside class="frank-dashboard-side">
+
+      <section class="ravlo-card partner-section-card">
+        <div class="section-head">
+          <div>
+            <h3>Finances</h3>
+            <p>Frank’s VIP finance layer.</p>
+          </div>
+          <a href="{{ url_for('vip.finances') }}" class="ravlo-btn ghost sm">Open</a>
+        </div>
+
+        <div class="frank-finance-grid">
+          <div class="frank-finance-item">
+            <span>Income</span>
+            <strong>${{ "{:,}".format(total_income) }}</strong>
+          </div>
+          <div class="frank-finance-item">
+            <span>Expenses</span>
+            <strong>${{ "{:,}".format(total_expenses) }}</strong>
+          </div>
+          <div class="frank-finance-item">
+            <span>Net</span>
+            <strong>${{ "{:,}".format(net_profit) }}</strong>
+          </div>
+        </div>
+      </section>
+
+      <section class="ravlo-card partner-section-card">
+        <div class="section-head">
+          <div>
+            <h3>Recent Activity</h3>
+            <p>Latest interactions across the workspace.</p>
+          </div>
+        </div>
+
+        {% if recent_interactions %}
+          <div class="activity-list">
+            {% for item in recent_interactions %}
+              <div class="activity-item">
+                <strong>{{ item.interaction_type|replace("_", " ")|title }}</strong>
+                <p>{{ item.content[:140] }}{% if item.content|length > 140 %}...{% endif %}</p>
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="empty-panel">No interactions yet.</div>
+        {% endif %}
+      </section>
+
+      <section class="ravlo-card partner-section-card">
+        <div class="section-head">
+          <div>
+            <h3>Recent Flyers</h3>
+            <p>Latest flyer records.</p>
+          </div>
+        </div>
+
+        {% if recent_flyers %}
+          <div class="flyer-list">
+            {% for flyer in recent_flyers %}
+              <div class="flyer-item">
+                <strong>{{ flyer.property_address or flyer.flyer_type|replace("_", " ")|title }}</strong>
+                <p>{{ flyer.flyer_type|replace("_", " ")|title }}</p>
+                {% if flyer.canva_status %}
+                  <span class="flyer-status">{{ flyer.canva_status|title }}</span>
+                {% endif %}
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="empty-panel">No flyers yet.</div>
+        {% endif %}
+      </section>
+
+    </aside>
+  </div>
+</div>
+{% endblock %}
+
+{% block head %}
+<style>
+  .frank-market-switcher {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 18px;
+  }
+  .frank-market-label {
+    color: #b7c7d8;
+    font-size: 0.9rem;
+    font-weight: 600;
+  }
+  .frank-market-select {
+    background: rgba(255,255,255,0.04);
+    color: #fff;
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 10px;
+    padding: 8px 12px;
+    font-size: 0.92rem;
+  }
+  .frank-dashboard-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 2fr) minmax(320px, 1fr);
+    gap: 18px;
+  }
+  .frank-dashboard-main,
+  .frank-dashboard-side {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+  .frank-copilot-panel,
+  .frank-copilot-suggestions,
+  .activity-list,
+  .flyer-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .frank-copilot-prompts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .frank-prompt-chip {
+    border: 1px solid rgba(255,255,255,0.10);
+    background: rgba(255,255,255,0.04);
+    color: #dce7f2;
+    border-radius: 999px;
+    padding: 8px 12px;
+    font-size: 0.86rem;
+  }
+  .frank-copilot-suggestion,
+  .activity-item,
+  .flyer-item,
+  .pipeline-client-card,
+  .listing-card,
+  .frank-finance-item {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 12px;
+    padding: 12px;
+  }
+  .pipeline-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+  }
+  .pipeline-column {
+    background: rgba(255,255,255,0.02);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 14px;
+    padding: 12px;
+  }
+  .pipeline-column-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+  }
+  .pipeline-client-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .listing-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+  }
+  .listing-card-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .listing-meta,
+  .frank-finance-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 8px;
+  }
+  .listing-status,
+  .flyer-status,
+  .listing-market,
+  .empty-panel,
+  .pipeline-empty,
+  .muted-copy,
+  .activity-item p,
+  .flyer-item p,
+  .frank-copilot-suggestion p,
+  .listing-card p,
+  .pipeline-client-card p {
+    color: #9fb1c4;
+  }
+  @media (max-width: 1100px) {
+    .frank-dashboard-grid,
+    .pipeline-grid,
+    .listing-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+{% endblock %}

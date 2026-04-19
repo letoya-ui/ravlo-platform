@@ -106,6 +106,16 @@ def get_dashboard_name(profile):
         or profile.display_name
         or "VIP Workspace"
     )
+@vip_bp.post("/realtor/market-switch")
+@role_required("partner_group", "admin")
+def realtor_market_switch():
+    selected_market = (request.form.get("market") or "All Markets").strip()
+    allowed = {"All Markets", "Hudson Valley", "Sarasota"}
+
+    session["frank_market"] = selected_market if selected_market in allowed else "All Markets"
+
+    next_url = request.form.get("next") or url_for("vip.realtor_dashboard")
+    return redirect(next_url)
 
 @vip_bp.app_context_processor
 def inject_vip_context():
