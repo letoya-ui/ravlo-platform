@@ -1,3 +1,6 @@
+from LoanMVP.services.cost_index import describe_learned_index
+
+
 def _to_money(value):
     return "${:,.0f}".format(value)
 
@@ -15,6 +18,7 @@ def _safe_float_from_text(text, default=0):
 def generate_deal_architect_strategies(payload):
     property_address = payload.get("property_address") or ""
     zip_code = payload.get("zip_code") or ""
+    state = payload.get("state") or ""
     property_type = (payload.get("property_type") or "").lower()
     lot_size = payload.get("lot_size") or ""
     zoning = (payload.get("zoning") or "").upper()
@@ -24,6 +28,20 @@ def generate_deal_architect_strategies(payload):
 
     context_label = property_address or zip_code or "This opportunity"
     numeric_budget = _safe_float_from_text(budget, default=0)
+
+    # Local cost index (RSMeans seed blended with real CostObservations).
+    # Ground-up build numbers get the new_build category; rehab/flip numbers
+    # get the rehab category. Seed-only until the observation table fills in.
+    build_index = describe_learned_index(
+        zip_code=zip_code, state=state,
+        category="new_build", scope=None,
+    )
+    rehab_index = describe_learned_index(
+        zip_code=zip_code, state=state,
+        category="rehab", scope="medium",
+    )
+    build_factor = float(build_index.get("factor") or 1.0)
+    rehab_factor = float(rehab_index.get("factor") or 1.0)
 
     strategies = []
 
@@ -149,13 +167,59 @@ def generate_deal_architect_strategies(payload):
     if notes:
         summary += " Ravlo should keep the notes in mind when refining the final recommendation."
 
+    # Apply the local cost index to every strategy's cost side. We multiply
+    # build_cost (and rehab_cost if present) by the appropriate category
+    # factor, leave ARV alone (ARV is a market/comps figure, not a cost),
+    # and recompute profit + ROI off the adjusted numbers. Each strategy
+    # carries its own ``local_index`` so the UI can surface the factor.
     for strategy in strategies:
-        strategy["build_cost_label"] = _to_money(strategy["build_cost"])
-        strategy["arv_label"] = _to_money(strategy["arv"])
-        strategy["profit_label"] = _to_money(strategy["profit"])
+        is_build = strategy.get("recommended_workspace") == "build"
+        factor = build_factor if is_build else rehab_factor
+        index_info = build_index if is_build else rehab_index
+
+        national_build_cost = _to_number(strategy.get("build_cost"), 0.0)
+        local_build_cost = national_build_cost * factor
+
+        arv = _to_number(strategy.get("arv"), 0.0)
+        profit = arv - local_build_cost
+        roi_pct = (profit / local_build_cost * 100.0) if local_build_cost else 0.0
+
+        strategy["national_build_cost"] = national_build_cost
+        strategy["build_cost"] = local_build_cost
+        strategy["profit"] = profit
+        strategy["roi"] = f"{roi_pct:.0f}%"
+
+        strategy["build_cost_label"]  = _to_money(local_build_cost)
+        strategy["arv_label"]         = _to_money(arv)
+        strategy["profit_label"]      = _to_money(profit)
+        strategy["local_factor"]      = round(factor, 3)
+        strategy["local_index"]       = index_info
+        strategy["local_index_label"] = index_info.get("signed_label")
+        strategy["local_index_detail"] = index_info.get("detail")
 
     return {
         "context_label": context_label,
         "summary": summary,
-        "strategies": strategies
+        "strategies": strategies,
+        "local_index": {
+            "build": build_index,
+            "rehab": rehab_index,
+        },
     }
+
+
+def _to_number(x, default=0.0):
+    """Local fallback for numeric coercion (matches rehab_service)."""
+    if x is None:
+        return default
+    if isinstance(x, (int, float)):
+        return float(x)
+    if isinstance(x, str):
+        s = x.strip().replace("$", "").replace(",", "")
+        if not s:
+            return default
+        try:
+            return float(s)
+        except ValueError:
+            return default
+    return default

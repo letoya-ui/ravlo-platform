@@ -9,6 +9,11 @@ Handles:
 - Material costs
 - Rehab notes
 """
+from LoanMVP.services.cost_index import (
+    describe_learned_index,
+    get_learned_multiplier,
+)
+
 
 def _to_number(x, default=0.0):
     """Convert ints/floats and common numeric strings ('$250,000') to float."""
@@ -27,28 +32,53 @@ def _to_number(x, default=0.0):
     return default
 
 
-def estimate_rehab_cost(property_sqft, scope="medium", items=None):
+def estimate_rehab_cost(
+    property_sqft,
+    scope="medium",
+    items=None,
+    *,
+    zip_code=None,
+    state=None,
+):
+    """Estimate rehab cost for a property.
+
+    When ``zip_code`` / ``state`` are provided, every per-sqft rate and every
+    per-line-item cost is multiplied by the local cost index (RSMeans seed
+    blended with real ``CostObservation`` data for the ZIP3/state). When no
+    location is given, behaves exactly like the legacy national-average
+    estimator.
+    """
     base_costs = {"light": 15, "medium": 30, "heavy": 50}
     base = base_costs.get(scope, 30)
 
+    local = describe_learned_index(
+        zip_code=zip_code, state=state,
+        category="rehab", scope=scope,
+    )
+    multiplier = float(local.get("factor") or 1.0)
+
     sqft = _to_number(property_sqft, 0.0)
-    base_total = sqft * base
+    local_rate = base * multiplier
+    base_total = sqft * local_rate
 
     breakdown = {
         "base_rehab": base_total,
         "items": {},
         "total": base_total,
-        "cost_per_sqft": base,   # per-sqft baseline rate
+        "cost_per_sqft": local_rate,        # per-sqft rate, locally adjusted
+        "national_cost_per_sqft": base,     # reference: flat national rate
         "scope": scope,
+        "local_factor": round(multiplier, 3),
+        "local_index":  local,              # full describe_learned_index() dict
     }
 
     default_items = {
-        "kitchen": {"light": 8000, "medium": 15000, "heavy": 25000},
-        "bathroom": {"light": 4000, "medium": 8000, "heavy": 15000},
-        "flooring": {"light": 3000, "medium": 6000, "heavy": 12000},
-        "paint": {"light": 2000, "medium": 4000, "heavy": 8000},
-        "roof": {"light": 3000, "medium": 7000, "heavy": 12000},
-        "hvac": {"light": 2000, "medium": 5000, "heavy": 9000},
+        "kitchen":  {"light": 8000, "medium": 15000, "heavy": 25000},
+        "bathroom": {"light": 4000, "medium":  8000, "heavy": 15000},
+        "flooring": {"light": 3000, "medium":  6000, "heavy": 12000},
+        "paint":    {"light": 2000, "medium":  4000, "heavy":  8000},
+        "roof":     {"light": 3000, "medium":  7000, "heavy": 12000},
+        "hvac":     {"light": 2000, "medium":  5000, "heavy":  9000},
     }
 
     total = base_total
@@ -56,9 +86,14 @@ def estimate_rehab_cost(property_sqft, scope="medium", items=None):
     if items:
         for key, level in items.items():
             if key in default_items and level:
-                cost = _to_number(default_items[key].get(level, 0), 0.0)
-                breakdown["items"][key] = {"level": level, "cost": cost}
-                total += cost
+                national_cost = _to_number(default_items[key].get(level, 0), 0.0)
+                local_cost = national_cost * multiplier
+                breakdown["items"][key] = {
+                    "level": level,
+                    "cost": local_cost,
+                    "national_cost": national_cost,
+                }
+                total += local_cost
 
     breakdown["total"] = total
     breakdown["cost_per_sqft"] = (total / sqft) if sqft else 0.0

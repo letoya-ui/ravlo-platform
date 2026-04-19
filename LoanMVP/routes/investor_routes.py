@@ -5060,7 +5060,33 @@ def save_deal():
         )
         db.session.add(deal)
 
+    # Snapshot the Local Cost Index onto the deal so its budget math stays
+    # stable even if the seed table / observation pool shifts later.
+    try:
+        from LoanMVP.services.cost_index import describe_learned_index
+        _rehab_scope = None
+        if isinstance(rehab_scope_json, dict):
+            _rehab_scope = rehab_scope_json.get("scope")
+        _local = describe_learned_index(
+            zip_code=zip_code, state=state,
+            category="rehab", scope=_rehab_scope,
+        )
+        if _local and _local.get("factor"):
+            deal.local_cost_factor = float(_local["factor"])
+            deal.local_cost_label = _local.get("label")
+    except Exception as _e:  # pragma: no cover - defensive
+        current_app.logger.warning("local cost snapshot failed: %s", _e)
+
     db.session.commit()
+
+    # Feed the learning loop: if the investor entered a real rehab cost
+    # alongside a ZIP, record it as a CostObservation. Never blocks save.
+    try:
+        from LoanMVP.services.cost_ingestion import record_from_deal
+        if deal.rehab_cost and deal.zip_code:
+            record_from_deal(deal, source="investor_input")
+    except Exception as _e:  # pragma: no cover - defensive
+        current_app.logger.warning("cost observation ingest failed: %s", _e)
 
     flash("Deal saved.", "success")
     return redirect(url_for("investor.deal_analysis", deal_id=deal.id))

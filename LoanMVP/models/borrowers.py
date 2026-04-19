@@ -304,6 +304,12 @@ class Deal(db.Model):
     reveal_is_public = db.Column(db.Boolean, default=False, nullable=False)
     reveal_published_at = db.Column(db.DateTime, nullable=True)
 
+    # Snapshot of the Local Cost Index used when this deal's cost numbers
+    # were computed. Stored so a later refresh of the RSMeans/observation
+    # table does not retroactively change closed-deal math.
+    local_cost_factor = db.Column(db.Float, nullable=True)
+    local_cost_label  = db.Column(db.String(120), nullable=True)
+
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 

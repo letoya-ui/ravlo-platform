@@ -152,6 +152,8 @@ from LoanMVP.models.vip_models import (
 )
 
 from LoanMVP.models.canva_models import CanvaConnection
+
+from LoanMVP.models.cost_models import CostObservation
 # ======================================================
 # 🧩 SQLAlchemy Export (for Migrate / Shell)
 # ======================================================
@@ -209,4 +211,6 @@ __all__ = [
     "VIPNotification",
 
     "CanvaConnection",
+
+    "CostObservation",
 ]
