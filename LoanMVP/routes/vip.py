@@ -3,9 +3,13 @@ import json
 from datetime import datetime, timedelta
 from flask import (
     Blueprint, render_template, request, redirect,
-    url_for, flash, jsonify, session,
+    url_for, flash, jsonify, session, current_app,
 )
 from flask_login import current_user
+
+# VIP tiers that unlock the Realtor VIP Workspace.
+# Keep tier comparisons case-insensitive.
+VIP_ACCESS_TIERS = {"premium", "enterprise"}
 from sqlalchemy import or_
 
 from LoanMVP.extensions import db
@@ -197,17 +201,79 @@ def _get_frank_market():
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# VIP access gating
+# ─────────────────────────────────────────────────────────────────────────────
+
+def partner_has_vip_access(user) -> bool:
+    """True when this user is allowed into the VIP Realtor Workspace.
+
+    Gate is partner.subscription_tier in Premium/Enterprise. Admins and the
+    FREE_PARTNER_MODE testing flag bypass the gate.
+    """
+    if not getattr(user, "is_authenticated", False):
+        return False
+
+    if (getattr(user, "role", "") or "").lower() == "admin":
+        return True
+
+    if current_app.config.get("FREE_PARTNER_MODE", False):
+        return True
+    if current_app.config.get("BYPASS_PARTNER_SUBSCRIPTION", False):
+        return True
+
+    partner = getattr(user, "partner_profile", None)
+    if not partner:
+        return False
+
+    tier = (getattr(partner, "subscription_tier", "") or "").strip().lower()
+    return tier in VIP_ACCESS_TIERS
+
+
+def require_vip_access():
+    """Return a redirect response if the current user lacks VIP access, else None.
+
+    Use at the top of VIP realtor routes:
+
+        gate = require_vip_access()
+        if gate is not None:
+            return gate
+    """
+    if partner_has_vip_access(current_user):
+        return None
+
+    partner = getattr(current_user, "partner_profile", None)
+    if not partner:
+        flash(
+            "Create a partner profile first, then upgrade to unlock the VIP Workspace.",
+            "warning",
+        )
+        return redirect(url_for("partners.register"))
+
+    flash(
+        "The VIP Realtor Workspace is unlocked on Premium and above. "
+        "Upgrade to continue.",
+        "warning",
+    )
+    return redirect(url_for("partners.upgrade"))
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # Context processor
 # ─────────────────────────────────────────────────────────────────────────────
 
 @vip_bp.app_context_processor
 def inject_vip_context():
     if not getattr(current_user, "is_authenticated", False):
-        return {"vip_profile": None, "modules": []}
+        return {
+            "vip_profile": None,
+            "modules": [],
+            "partner_has_vip_access": False,
+        }
     profile = get_or_create_vip_profile()
     return {
-        "vip_profile": profile,
-        "modules":     get_enabled_modules(profile),
+        "vip_profile":            profile,
+        "modules":                get_enabled_modules(profile),
+        "partner_has_vip_access": partner_has_vip_access(current_user),
     }
 
 
@@ -226,6 +292,13 @@ def index():
             return redirect(url_for("vip.loan_officer_dashboard"))
         return redirect(url_for("vip.loan_officer_external_dashboard"))
 
+    # Realtors require a paid VIP tier. Send non-upgraded realtors to the
+    # upgrade page so there is a single funnel into the VIP experience.
+    if profile.role_type == "realtor" and not partner_has_vip_access(current_user):
+        gate = require_vip_access()
+        if gate is not None:
+            return gate
+
     role_map = {
         "realtor":    "vip.realtor_dashboard",
         "contractor": "vip.contractor_dashboard",
@@ -242,6 +315,10 @@ def index():
 @vip_bp.post("/realtor/market-switch")
 @role_required("partner_group", "admin")
 def realtor_market_switch():
+    gate = require_vip_access()
+    if gate is not None:
+        return gate
+
     selected = (request.form.get("market") or "All Markets").strip()
     allowed  = {"All Markets", *FRANK_MARKETS}
     session["frank_market"] = selected if selected in allowed else "All Markets"
@@ -252,6 +329,10 @@ def realtor_market_switch():
 @vip_bp.get("/realtor")
 @role_required("partner_group", "admin")
 def realtor_dashboard():
+    gate = require_vip_access()
+    if gate is not None:
+        return gate
+
     profile        = get_or_create_vip_profile()
     now            = datetime.utcnow()
     week_ago       = now - timedelta(days=7)
@@ -361,6 +442,10 @@ def realtor_dashboard():
 @vip_bp.post("/frank/market-switch")
 @role_required("partner_group", "admin")
 def frank_market_switch():
+    gate = require_vip_access()
+    if gate is not None:
+        return gate
+
     selected = (request.form.get("market") or "All Markets").strip()
     allowed  = {"All Markets", *FRANK_MARKETS}
     session["frank_market"] = selected if selected in allowed else "All Markets"
@@ -371,6 +456,10 @@ def frank_market_switch():
 @vip_bp.get("/frank")
 @role_required("partner_group", "admin")
 def frank_dashboard():
+    gate = require_vip_access()
+    if gate is not None:
+        return gate
+
     profile        = get_or_create_vip_profile()
     now            = datetime.utcnow()
     week_ago       = now - timedelta(days=7)
@@ -526,6 +615,10 @@ def frank_dashboard():
 @vip_bp.get("/realtor/investor-flow")
 @role_required("partner_group", "admin")
 def realtor_investor_flow():
+    gate = require_vip_access()
+    if gate is not None:
+        return gate
+
     profile        = get_or_create_vip_profile()
     partner        = getattr(current_user, "partner_profile", None)
     current_market = _get_frank_market()
@@ -615,6 +708,10 @@ def realtor_investor_flow():
 @vip_bp.post("/realtor/deal/<int:deal_id>/attach-market-data")
 @role_required("partner_group", "admin")
 def realtor_attach_market_data(deal_id):
+    gate = require_vip_access()
+    if gate is not None:
+        return gate
+
     profile = get_or_create_vip_profile()
     partner = getattr(current_user, "partner_profile", None)
     deal    = Deal.query.get_or_404(deal_id)

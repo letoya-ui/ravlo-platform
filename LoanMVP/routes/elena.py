@@ -13,7 +13,7 @@ from sqlalchemy import or_
 import pandas as pd
 from LoanMVP.extensions import db
 
-from LoanMVP.models.vip_models import VIPProfile, VIPAssistantSuggestion
+from flask_login import current_user
 
 from LoanMVP.models.vip_models import VIPProfile, VIPAssistantSuggestion
 from LoanMVP.models.elena_models import (
@@ -284,12 +284,33 @@ def process_listing_import(data):
     return listing, flyer
 
 def get_or_create_realtor_vip_profile():
+    """Return the VIPProfile for the current realtor.
+
+    Historically this was hardcoded to the single "Elena" profile. It now
+    delegates to the per-user VIP profile helper so every upgraded realtor
+    gets their own profile. When there's no authenticated user (e.g. CLI
+    scripts hitting these helpers), we fall back to the legacy Elena row
+    to preserve existing data access.
+    """
+    # Lazy import to avoid any blueprint-registration-order issues.
+    from LoanMVP.routes.vip import get_or_create_vip_profile
+
+    if getattr(current_user, "is_authenticated", False):
+        profile = get_or_create_vip_profile()
+        # Force the realtor role for anyone using the realtor-only CRUD
+        # endpoints in this blueprint.
+        if (profile.role_type or "").lower() != "realtor":
+            profile.role_type = "realtor"
+            db.session.commit()
+        return profile
+
+    # Fallback: legacy shared Elena profile for unauthenticated contexts.
     profile = VIPProfile.query.filter_by(display_name="Elena").first()
     if profile:
         return profile
 
     profile = VIPProfile(
-        user_id=1,  # replace later if you want true current-user binding
+        user_id=1,
         display_name="Elena",
         role_type="realtor",
         assistant_name="Copilot",
@@ -297,6 +318,29 @@ def get_or_create_realtor_vip_profile():
     db.session.add(profile)
     db.session.commit()
     return profile
+
+
+@elena_bp.before_request
+def _gate_elena_on_vip_access():
+    """All /elena/* routes require VIP access (Premium+ or admin).
+
+    Non-upgraded realtors are redirected to the upgrade page. This keeps
+    the Elena CRUD endpoints available to any upgraded realtor, not just
+    the original hardcoded user.
+    """
+    # Lazy import to keep module-load order flexible.
+    from LoanMVP.routes.vip import require_vip_access
+
+    if not getattr(current_user, "is_authenticated", False):
+        # Let the @role_required on each view handle auth redirects so we
+        # don't shadow the login flow.
+        return None
+
+    user_role = (getattr(current_user, "role", "") or "").lower()
+    if user_role == "admin":
+        return None
+
+    return require_vip_access()
 
 @elena_bp.get("/")
 @role_required("partner_group", "admin")
