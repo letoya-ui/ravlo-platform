@@ -178,6 +178,17 @@ def _template_defaults():
         "cta": "",
     }
 
+def assign_market(state, city):
+    state = (state or "").lower()
+    city = (city or "").lower()
+
+    if state == "ny":
+        return "Hudson Valley"
+
+    if state == "fl":
+        return "Sarasota"
+
+    return None
 
 def _get_template_enum(template_type_value):
     if not template_type_value:
@@ -481,12 +492,17 @@ def listing_new():
         ("withdrawn", "Withdrawn"),
     ]
 
+    def _int(val):
+        try:
+            return int(val) if val not in (None, "") else None
+        except (TypeError, ValueError):
+            return None
+
     if request.method == "POST":
         address = (request.form.get("address") or "").strip()
         city = (request.form.get("city") or "").strip()
         state = (request.form.get("state") or "").strip()
         zip_code = (request.form.get("zip_code") or "").strip()
-        market = (request.form.get("market") or "").strip() or None
 
         missing = [
             f for f, v in [
@@ -500,13 +516,14 @@ def listing_new():
             flash(f"Missing required fields: {', '.join(missing)}", "warning")
             return redirect(url_for("elena.listing_new"))
 
-        def _int(val):
-            try:
-                return int(val) if val not in (None, "") else None
-            except (TypeError, ValueError):
-                return None
+        market = assign_market(
+            state=state,
+            city=city,
+            explicit_market=request.form.get("market"),
+        )
 
         client_id = _int(request.form.get("client_id"))
+
         listing = ElenaListing(
             mls_number=(request.form.get("mls_number") or None),
             address=address,
@@ -523,8 +540,12 @@ def listing_new():
             client_id=client_id,
         )
         db.session.add(listing)
+        db.session.flush()
+
+        upsert_flyer_for_listing(listing)
         db.session.commit()
-        flash(f"Listing at {listing.address} added.", "success")
+
+        flash(f"Listing at {listing.address} added and flyer created.", "success")
         return redirect(url_for("elena.dashboard"))
 
     clients = ElenaClient.query.order_by(ElenaClient.name.asc()).all()
@@ -535,56 +556,6 @@ def listing_new():
         available_markets=FRANK_MARKETS,
         current_market=get_current_market(),
         clients=clients,
-        portal="elena",
-        portal_name="Elena",
-        portal_home=url_for("elena.dashboard"),
-    )
-
-@elena_bp.route("/interactions/new", methods=["GET", "POST"])
-@role_required("partner_group", "admin")
-def interaction_new():
-    if request.method == "POST":
-        try:
-            client_id = int(request.form.get("client_id") or 0)
-        except ValueError:
-            client_id = 0
-
-        interaction_type = (request.form.get("interaction_type") or "").strip()
-        content = (request.form.get("content") or "").strip()
-
-        if not client_id or not interaction_type or not content:
-            flash(
-                "client_id, interaction_type, and content are required.",
-                "warning",
-            )
-            return redirect(url_for("elena.interaction_new"))
-
-        client = ElenaClient.query.get(client_id)
-        if not client:
-            flash("Client not found.", "danger")
-            return redirect(url_for("elena.interaction_new"))
-
-        interaction = ElenaInteraction(
-            client_id=client.id,
-            interaction_type=interaction_type,
-            content=content,
-            meta=(request.form.get("meta") or None),
-            due_at=_parse_due_at(request.form.get("due_at")),
-        )
-        db.session.add(interaction)
-        db.session.commit()
-        flash(
-            f"Interaction logged for {client.name} ({interaction.interaction_type}).",
-            "success",
-        )
-        return redirect(url_for("elena.dashboard"))
-
-    clients = ElenaClient.query.order_by(ElenaClient.name.asc()).all()
-    return render_template(
-        "elena/interaction_form.html",
-        interaction=None,
-        clients=clients,
-        interaction_types=INTERACTION_TYPES,
         portal="elena",
         portal_name="Elena",
         portal_home=url_for("elena.dashboard"),
