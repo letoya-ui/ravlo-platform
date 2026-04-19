@@ -21,7 +21,13 @@ from LoanMVP.models.property import SavedProperty
 from LoanMVP.services.vip_ai_pilot import parse_vip_command
 
 from LoanMVP.utils.decorators import role_required
-
+from LoanMVP.utils.company_policy import (
+    get_user_lending_policy,
+    is_out_of_scope_loan_type,
+    INVESTMENT_LOAN_TYPES,
+    ALL_LOAN_TYPES,
+)
+from LoanMVP.models.admin import Company
 vip_bp = Blueprint("vip", __name__, url_prefix="/vip")
 
 MODULE_FIELD_MAP = {
