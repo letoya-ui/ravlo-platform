@@ -9,10 +9,14 @@ Handles:
 - Material costs
 - Rehab notes
 """
-from LoanMVP.services.cost_index import (
-    describe_learned_index,
-    get_learned_multiplier,
-)
+try:
+    from LoanMVP.services.cost_index import (
+        describe_learned_index,
+        get_learned_multiplier,
+    )
+except Exception:  # pragma: no cover - defensive: never break this module
+    describe_learned_index = None
+    get_learned_multiplier = None
 
 
 def _to_number(x, default=0.0):
@@ -51,10 +55,16 @@ def estimate_rehab_cost(
     base_costs = {"light": 15, "medium": 30, "heavy": 50}
     base = base_costs.get(scope, 30)
 
-    local = describe_learned_index(
-        zip_code=zip_code, state=state,
-        category="rehab", scope=scope,
-    )
+    if describe_learned_index is not None:
+        try:
+            local = describe_learned_index(
+                zip_code=zip_code, state=state,
+                category="rehab", scope=scope,
+            )
+        except Exception:
+            local = {"factor": 1.0}
+    else:
+        local = {"factor": 1.0}
     multiplier = float(local.get("factor") or 1.0)
 
     sqft = _to_number(property_sqft, 0.0)

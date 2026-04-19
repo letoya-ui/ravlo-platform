@@ -501,19 +501,33 @@ def build_location_cost_context(
 
 
 def _should_apply_multiplier(response: Any, factor: float) -> bool:
-    """If the engine returned its own ``location_cost_context.factor`` and
-    that factor matches ours, the engine already localised the numbers and
-    we must NOT multiply again (idempotency)."""
+    """Decide whether we still need to multiply the engine's response.
+
+    We cannot rely on "the engine echoed back a context with a matching
+    factor" — many APIs echo request bodies verbatim, which would
+    incorrectly skip the multiplication. Instead the engine MUST set an
+    explicit sentinel the client side never writes: either
+    ``costs_localized: True`` at the top level or inside
+    ``location_cost_context``. Any truthy value (``True``, ``"yes"``, ``1``)
+    counts. If that sentinel is not set, we always multiply.
+    """
     if not isinstance(response, dict):
         return True
+
+    def _truthy(v: Any) -> bool:
+        if v is True:
+            return True
+        if isinstance(v, (int, float)) and not isinstance(v, bool):
+            return v > 0
+        if isinstance(v, str):
+            return v.strip().lower() in {"1", "true", "yes", "y"}
+        return False
+
+    if _truthy(response.get("costs_localized")):
+        return False
     ctx = response.get("location_cost_context")
-    if isinstance(ctx, dict):
-        engine_factor = ctx.get("factor")
-        try:
-            if engine_factor is not None and abs(float(engine_factor) - float(factor)) < 1e-3:
-                return False
-        except (TypeError, ValueError):
-            pass
+    if isinstance(ctx, dict) and _truthy(ctx.get("costs_localized")):
+        return False
     return True
 
 

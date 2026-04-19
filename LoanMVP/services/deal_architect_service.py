@@ -1,4 +1,7 @@
-from LoanMVP.services.cost_index import describe_learned_index
+try:
+    from LoanMVP.services.cost_index import describe_learned_index
+except Exception:  # pragma: no cover - defensive: never break this module
+    describe_learned_index = None
 
 
 def _to_money(value):
@@ -32,14 +35,24 @@ def generate_deal_architect_strategies(payload):
     # Local cost index (RSMeans seed blended with real CostObservations).
     # Ground-up build numbers get the new_build category; rehab/flip numbers
     # get the rehab category. Seed-only until the observation table fills in.
-    build_index = describe_learned_index(
-        zip_code=zip_code, state=state,
-        category="new_build", scope=None,
-    )
-    rehab_index = describe_learned_index(
-        zip_code=zip_code, state=state,
-        category="rehab", scope="medium",
-    )
+    # describe_learned_index may be None if cost_index failed to import at
+    # module load time; in that case we degrade to national averages.
+    if describe_learned_index is not None:
+        try:
+            build_index = describe_learned_index(
+                zip_code=zip_code, state=state,
+                category="new_build", scope=None,
+            )
+            rehab_index = describe_learned_index(
+                zip_code=zip_code, state=state,
+                category="rehab", scope="medium",
+            )
+        except Exception:
+            build_index = {"factor": 1.0}
+            rehab_index = {"factor": 1.0}
+    else:
+        build_index = {"factor": 1.0}
+        rehab_index = {"factor": 1.0}
     build_factor = float(build_index.get("factor") or 1.0)
     rehab_factor = float(rehab_index.get("factor") or 1.0)
 
