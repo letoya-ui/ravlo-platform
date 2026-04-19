@@ -420,3 +420,134 @@ def describe_learned_index(
         "observed":     learned["observed"],
         "n_effective":  n_eff,
     }
+
+
+# ---------------------------------------------------------------------------
+# Renovation-engine integration helpers
+# ---------------------------------------------------------------------------
+#
+# The renovation engine (external FastAPI service, typically tunneled through
+# ngrok) may return cost-ish fields (`cost_per_sqft`, `total_cost`,
+# `budget`, `estimate`, nested line items, …). The engine itself is
+# location-agnostic — it produces a national-baseline number. We inject the
+# local context into the outbound payload so the engine can optionally use
+# it (or persist it for analytics), and we multiply any cost fields it
+# returns by the local factor so downstream UI sees a location-correct
+# number even when the engine is unchanged.
+#
+# Behaviour is intentionally conservative:
+#   - if the engine already returned a `location_cost_context.factor` that
+#     matches ours, we treat its costs as already-localised and skip the
+#     multiplication (idempotent).
+#   - we only multiply known, numeric fields; anything else is passed
+#     through untouched.
+
+# Keys whose values (when numeric) are multiplied by the local cost factor.
+# Kept small on purpose: must be unambiguously a dollar amount or $/sqft.
+_COST_RESPONSE_KEYS = {
+    "build_cost",
+    "rehab_cost",
+    "construction_cost",
+    "hard_cost",
+    "hard_costs",
+    "soft_cost",
+    "soft_costs",
+    "total_cost",
+    "total_budget",
+    "budget",
+    "budget_low",
+    "budget_high",
+    "estimate",
+    "estimate_low",
+    "estimate_high",
+    "cost_per_sqft",
+    "cost_psf",
+    "price_per_sqft",
+    "unit_cost",
+    "line_cost",
+    "material_cost",
+    "labor_cost",
+    "amount",
+}
+
+
+def build_location_cost_context(
+    zip_code: Optional[str] = None,
+    state: Optional[str] = None,
+    category: str = "rehab",
+    scope: Optional[str] = None,
+) -> Dict[str, Any]:
+    """Build the ``location_cost_context`` dict to inject into an outbound
+    renovation-engine payload.
+
+    Mirrors :func:`describe_learned_index` but is shaped so the engine can
+    read it directly (flat keys, JSON-serialisable primitives only).
+    """
+    info = describe_learned_index(
+        zip_code=zip_code, state=state, category=category, scope=scope
+    )
+    return {
+        "factor": info["factor"],
+        "baseline": info["baseline"],
+        "delta_pct": info["delta_pct"],
+        "label": info["label"],
+        "detail": info["detail"],
+        "source": info["source"],
+        "category": category,
+        "scope": scope,
+        "zip_code": zip_code,
+        "state": state,
+    }
+
+
+def _should_apply_multiplier(response: Any, factor: float) -> bool:
+    """If the engine returned its own ``location_cost_context.factor`` and
+    that factor matches ours, the engine already localised the numbers and
+    we must NOT multiply again (idempotency)."""
+    if not isinstance(response, dict):
+        return True
+    ctx = response.get("location_cost_context")
+    if isinstance(ctx, dict):
+        engine_factor = ctx.get("factor")
+        try:
+            if engine_factor is not None and abs(float(engine_factor) - float(factor)) < 1e-3:
+                return False
+        except (TypeError, ValueError):
+            pass
+    return True
+
+
+def apply_multiplier_to_engine_response(
+    response: Any,
+    factor: Optional[float],
+) -> Any:
+    """Walk ``response`` and multiply any known cost-ish numeric fields by
+    ``factor``. Safe on any shape — unknown keys, strings, None are passed
+    through unchanged. Returns the same object mutated in-place for dicts
+    and lists, so callers don't need to rebind.
+    """
+    if factor is None or factor == 1.0:
+        return response
+    try:
+        factor = float(factor)
+    except (TypeError, ValueError):
+        return response
+    if not _should_apply_multiplier(response, factor):
+        return response
+
+    def _walk(node: Any, parent_key: Optional[str] = None) -> Any:
+        if isinstance(node, dict):
+            for k, v in list(node.items()):
+                if k in _COST_RESPONSE_KEYS and isinstance(v, (int, float)) and not isinstance(v, bool):
+                    node[k] = round(float(v) * factor, 2)
+                else:
+                    _walk(v, parent_key=k)
+            return node
+        if isinstance(node, list):
+            for item in node:
+                _walk(item, parent_key=parent_key)
+            return node
+        return node
+
+    _walk(response)
+    return response

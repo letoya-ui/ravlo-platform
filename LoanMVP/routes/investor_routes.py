@@ -8316,7 +8316,34 @@ def deal_architect_analyze():
         if not payload["description"]:
             return jsonify({"status": "error", "message": "description is required"}), 400
 
+        # Inject Local Cost Index context so the engine sees location-aware
+        # signal on the way in, and multiply any cost fields it returns so
+        # downstream UI reads localised numbers regardless of whether the
+        # engine itself applied the factor. See `cost_index` module docstring.
+        try:
+            from LoanMVP.services.cost_index import (
+                build_location_cost_context,
+                apply_multiplier_to_engine_response,
+            )
+            cost_ctx = build_location_cost_context(
+                zip_code=payload.get("zip_code"),
+                state=payload.get("state"),
+                category="new_build" if (payload.get("property_type") or "").lower() in {"land", "lot", "new_build"} else "rehab",
+            )
+            payload["location_cost_context"] = cost_ctx
+            if payload.get("market_cost_multiplier") in (None, 0, 0.0):
+                payload["market_cost_multiplier"] = cost_ctx.get("factor")
+        except Exception:
+            cost_ctx = None
+
         engine_data = _post_renovation_engine_json("/v1/deal_architect", payload, timeout=60) or {}
+
+        if cost_ctx and isinstance(engine_data, dict):
+            try:
+                apply_multiplier_to_engine_response(engine_data, cost_ctx.get("factor"))
+                engine_data.setdefault("location_cost_context", cost_ctx)
+            except Exception:
+                pass
 
         if deal is not None:
             results = _deal_results(deal)

@@ -11,6 +11,15 @@ from LoanMVP.services.investor.investor_engine_helpers import (
     UPLOAD_TIMEOUT,
 )
 
+try:
+    from LoanMVP.services.cost_index import (
+        build_location_cost_context,
+        apply_multiplier_to_engine_response,
+    )
+except Exception:  # pragma: no cover
+    build_location_cost_context = None
+    apply_multiplier_to_engine_response = None
+
 
 def save_generated_image(image_bytes, folder="uploads/studios"):
     """Persist raw image bytes under static/<folder> and return the relative path."""
@@ -73,8 +82,31 @@ def run_build_concept(payload):
     if payload.get("floor"):
         engine_payload["floor"] = payload["floor"]
 
-    return _post_renovation_engine_json(
+    cost_ctx = None
+    if build_location_cost_context is not None:
+        try:
+            cost_ctx = build_location_cost_context(
+                zip_code=payload.get("zip_code"),
+                state=payload.get("state"),
+                category="new_build",
+                scope=payload.get("scope"),
+            )
+            engine_payload["location_cost_context"] = cost_ctx
+        except Exception:
+            cost_ctx = None
+
+    response = _post_renovation_engine_json(
         "/v1/build_concept",
         engine_payload,
         timeout=UPLOAD_TIMEOUT,
     )
+
+    if cost_ctx and apply_multiplier_to_engine_response is not None:
+        try:
+            apply_multiplier_to_engine_response(response, cost_ctx.get("factor"))
+            if isinstance(response, dict):
+                response.setdefault("location_cost_context", cost_ctx)
+        except Exception:
+            pass
+
+    return response
