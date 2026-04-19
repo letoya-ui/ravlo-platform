@@ -1,0 +1,450 @@
+{% extends "layouts/ravlo_base.html" %}
+
+{% block title %}Ravlo • {{ header_name }} — Workspace{% endblock %}
+
+{% block content %}
+<div class="rl-shell">
+
+  {# ── SIDEBAR ── #}
+  <aside class="rl-sidebar">
+    <div class="rl-brand">
+      <div class="rl-mark">
+        {{ vip_profile.display_name[0] | upper }}
+      </div>
+      <div>
+        <div class="rl-brand-name">{{ header_name }}</div>
+        <div class="rl-brand-sub">LO Workspace</div>
+      </div>
+    </div>
+
+    <nav class="rl-nav">
+      <div class="rl-nav-group">
+        <div class="rl-nav-label">My Workspace</div>
+        <a href="{{ url_for('vip.loan_officer_external_dashboard') }}"
+           class="rl-nav-link active">
+          <i class="bi bi-speedometer2"></i> Dashboard
+        </a>
+        <a href="{{ url_for('loan_officer.pipeline') }}"
+           class="rl-nav-link">
+          <i class="bi bi-funnel"></i> Pipeline
+        </a>
+        <a href="{{ url_for('loan_officer.borrowers') }}"
+           class="rl-nav-link">
+          <i class="bi bi-people"></i> Borrowers
+        </a>
+        <a href="{{ url_for('loan_officer.loan_queue') }}"
+           class="rl-nav-link">
+          <i class="bi bi-stack"></i> Loan Queue
+        </a>
+      </div>
+
+      <div class="rl-nav-group">
+        <div class="rl-nav-label">Tools</div>
+        <a href="{{ url_for('loan_officer.new_application') }}"
+           class="rl-nav-link">
+          <i class="bi bi-plus-circle"></i> New Application
+        </a>
+        <a href="{{ url_for('loan_officer.quote_engine') }}"
+           class="rl-nav-link">
+          <i class="bi bi-calculator"></i> Quote Engine
+        </a>
+        <a href="{{ url_for('loan_officer.borrower_intake') }}"
+           class="rl-nav-link">
+          <i class="bi bi-person-plus"></i> Add Borrower
+        </a>
+        {% if 'ai_pilot' in modules %}
+        <a href="{{ url_for('vip.ai_pilot') }}" class="rl-nav-link">
+          <i class="bi bi-robot"></i> Copilot
+        </a>
+        {% endif %}
+        {% if 'finances' in modules %}
+        <a href="{{ url_for('vip.finances') }}" class="rl-nav-link">
+          <i class="bi bi-graph-up-arrow"></i> Finances
+        </a>
+        {% endif %}
+      </div>
+
+      <div class="rl-nav-group">
+        <div class="rl-nav-label">Settings</div>
+        <a href="{{ url_for('vip.onboarding') }}" class="rl-nav-link">
+          <i class="bi bi-sliders"></i> Workspace Settings
+        </a>
+        <a href="{{ url_for('loan_officer.dashboard') }}" class="rl-nav-link">
+          <i class="bi bi-arrow-left-circle"></i> Full LO Portal
+        </a>
+      </div>
+    </nav>
+
+    <div class="rl-sidebar-foot">
+      <div class="rl-user-chip">
+        <div class="rl-user-avatar">
+          {{ vip_profile.display_name[0] | upper }}
+        </div>
+        <div>
+          <div class="rl-user-name">{{ vip_profile.display_name }}</div>
+          <div class="rl-user-role">
+            Licensed LO
+            {% if vip_profile.lo_license_state %}
+              · {{ vip_profile.lo_license_state }}
+            {% endif %}
+          </div>
+        </div>
+      </div>
+
+      {# License info #}
+      {% if vip_profile.lo_nmls %}
+      <div style="margin-top:10px;padding:10px 12px;border-radius:12px;
+                  background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.05);">
+        <div style="font-size:.72rem;color:var(--muted);text-transform:uppercase;
+                    letter-spacing:.12em;margin-bottom:4px;">NMLS</div>
+        <div style="font-size:.88rem;font-weight:700;color:var(--text-soft);">
+          #{{ vip_profile.lo_nmls }}
+        </div>
+      </div>
+      {% endif %}
+    </div>
+  </aside>
+
+  {# ── MAIN ── #}
+  <main class="rl-main">
+
+    {# Topbar #}
+    <div class="rl-topbar">
+      <button class="rl-menu-btn"
+              onclick="document.body.classList.toggle('rl-sidebar-open')">☰</button>
+      <div class="rl-topbar-left">
+        <div>
+          <div class="rl-page-title">{{ header_name }}</div>
+          <div class="rl-page-subline">
+            Your private lending workspace — all loan types, your borrowers only
+          </div>
+        </div>
+      </div>
+      <div class="rl-topbar-actions">
+        <a href="{{ url_for('loan_officer.new_application') }}"
+           class="rl-btn primary sm">+ New Application</a>
+        <a href="{{ url_for('loan_officer.borrower_intake') }}"
+           class="rl-btn ghost sm">Add Borrower</a>
+      </div>
+    </div>
+
+    {# Flash messages #}
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+      <div class="rl-flashes">
+        {% for category, message in messages %}
+        <div class="rl-alert {{ category }}">{{ message }}</div>
+        {% endfor %}
+      </div>
+      {% endif %}
+    {% endwith %}
+
+    <div class="rl-content">
+
+      {# ── STATS ── #}
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-label">Borrowers</div>
+          <div class="stat-value">{{ stats.total_borrowers }}</div>
+          <div class="re-stat-meta text-muted mt-8">In your workspace</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Active Pipeline</div>
+          <div class="stat-value">{{ stats.in_pipeline }}</div>
+          <div class="re-stat-meta text-muted mt-8">
+            {{ stats.total_loans }} total loans
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Closed</div>
+          <div class="stat-value">{{ stats.closed }}</div>
+          <div class="re-stat-meta text-muted mt-8">
+            {% if stats.total_volume > 0 %}
+              ${{ '{:,.0f}'.format(stats.total_volume) }} volume
+            {% else %}
+              No closed loans yet
+            {% endif %}
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Quotes Sent</div>
+          <div class="stat-value">{{ stats.quotes_sent }}</div>
+          <div class="re-stat-meta text-muted mt-8">All loan types</div>
+        </div>
+      </div>
+
+      {# ── MAIN GRID ── #}
+      <div class="re-grid-2" style="align-items:start;">
+
+        {# LEFT ─ pipeline + borrowers #}
+        <div class="stack">
+
+          {# ── PIPELINE KANBAN ── #}
+          <div class="rl-card pad">
+            <div class="section-head">
+              <h3 class="rl-card-title">Pipeline</h3>
+              <a href="{{ url_for('loan_officer.pipeline') }}"
+                 class="rl-btn ghost sm">Full View</a>
+            </div>
+
+            {% if my_loans %}
+            {# Horizontal scroll kanban #}
+            <div style="display:flex;gap:12px;overflow-x:auto;padding-bottom:8px;">
+              {% for stage_key, stage_label in [
+                ('submitted',      'Submitted'),
+                ('in_review',      'In Review'),
+                ('approved',       'Approved'),
+                ('clear_to_close', 'CTC'),
+                ('closed',         'Closed'),
+              ] %}
+              {% set stage_loans = pipeline[stage_key] %}
+              <div style="min-width:160px;flex-shrink:0;">
+                <div class="row-between mb-8">
+                  <span class="eyebrow">{{ stage_label }}</span>
+                  <span class="rl-badge badge-neutral" style="font-size:.7rem;">
+                    {{ stage_loans | length }}
+                  </span>
+                </div>
+                <div class="stack" style="gap:8px;">
+                  {% for loan in stage_loans[:5] %}
+                  <a href="{{ url_for('loan_officer.loan_file', loan_id=loan.id) }}"
+                     style="display:block;padding:10px 12px;border-radius:14px;
+                            background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);
+                            transition:var(--ease);">
+                    <div style="font-weight:600;font-size:.84rem;
+                                white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+                      {% if loan.borrower_profile %}
+                        {{ loan.borrower_profile.full_name or 'Borrower' }}
+                      {% else %}
+                        Loan #{{ loan.id }}
+                      {% endif %}
+                    </div>
+                    <div style="display:flex;justify-content:space-between;
+                                font-size:.76rem;color:var(--muted);margin-top:4px;">
+                      <span>{{ loan.loan_type or '—' }}</span>
+                      {% if loan.amount %}
+                      <span>${{ '{:,.0f}'.format(loan.amount) }}</span>
+                      {% endif %}
+                    </div>
+                  </a>
+                  {% else %}
+                  <div style="font-size:.78rem;color:var(--muted);
+                              font-style:italic;padding:8px;">Empty</div>
+                  {% endfor %}
+                </div>
+              </div>
+              {% endfor %}
+            </div>
+
+            {# Loan type breakdown #}
+            {% if loan_type_counts %}
+            <div style="border-top:1px solid rgba(255,255,255,.05);
+                        padding-top:12px;margin-top:12px;
+                        display:flex;gap:8px;flex-wrap:wrap;">
+              {% for lt, count in loan_type_counts.items() %}
+              <span class="rl-badge badge-neutral" style="font-size:.74rem;">
+                {{ lt }} ({{ count }})
+              </span>
+              {% endfor %}
+            </div>
+            {% endif %}
+
+            {% else %}
+            <div class="rl-empty text-center">
+              <div style="font-size:1.8rem;margin-bottom:8px;">📋</div>
+              No loans yet.<br>
+              <a href="{{ url_for('loan_officer.new_application') }}"
+                 style="color:var(--accent);font-size:.88rem;">
+                Start first application
+              </a>
+            </div>
+            {% endif %}
+          </div>
+
+          {# ── BORROWERS TABLE ── #}
+          <div class="rl-card pad">
+            <div class="section-head">
+              <h3 class="rl-card-title">My Borrowers</h3>
+              <a href="{{ url_for('loan_officer.borrowers') }}"
+                 class="rl-btn ghost sm">All</a>
+            </div>
+
+            {% if my_borrowers %}
+            <div class="rl-table-wrap">
+              <table class="rl-table">
+                <thead>
+                  <tr>
+                    <th>Name</th>
+                    <th>Loan Type</th>
+                    <th>Status</th>
+                    <th>Added</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for borrower in my_borrowers %}
+                  {% set latest = borrower.loans[-1] if borrower.loans else None %}
+                  <tr>
+                    <td style="font-weight:600;">
+                      {{ borrower.full_name or '—' }}
+                    </td>
+                    <td style="color:var(--muted);font-size:.84rem;">
+                      {{ latest.loan_type if latest else '—' }}
+                    </td>
+                    <td>
+                      {% if latest %}
+                      {% set s = (latest.status or '') | lower %}
+                      <span class="rl-badge
+                        {% if 'approved' in s or 'clear' in s %}badge-success
+                        {% elif 'review' in s or 'processing' in s %}badge-info
+                        {% elif 'declined' in s %}badge-danger
+                        {% else %}badge-neutral{% endif %}"
+                        style="font-size:.72rem;">
+                        {{ latest.status or '—' }}
+                      </span>
+                      {% else %}
+                      <span style="color:var(--muted);font-size:.82rem;">No loan</span>
+                      {% endif %}
+                    </td>
+                    <td style="color:var(--muted);font-size:.82rem;">
+                      {{ borrower.created_at.strftime('%b %d') if borrower.created_at else '—' }}
+                    </td>
+                    <td>
+                      <a href="{{ url_for('loan_officer.view_borrower', borrower_id=borrower.id) }}"
+                         class="rl-btn ghost sm">View</a>
+                    </td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+            {% else %}
+            <div class="rl-empty text-center">
+              <div style="font-size:1.8rem;margin-bottom:8px;">👤</div>
+              No borrowers yet.<br>
+              <a href="{{ url_for('loan_officer.borrower_intake') }}"
+                 style="color:var(--accent);font-size:.88rem;">Add first borrower</a>
+            </div>
+            {% endif %}
+          </div>
+
+        </div>
+
+        {# RIGHT ─ sidebar #}
+        <div class="stack">
+
+          {# ── QUICK ACTIONS ── #}
+          <div class="rl-card pad">
+            <h3 class="rl-card-title mb-12">Quick Actions</h3>
+            <div class="stack" style="gap:8px;">
+              <a href="{{ url_for('loan_officer.loan_application') }}"
+                 class="rl-btn primary w-full">New Application</a>
+              <a href="{{ url_for('loan_officer.borrower_intake') }}"
+                 class="rl-btn ghost w-full">Add Borrower</a>
+              <a href="{{ url_for('loan_officer.quote_engine') }}"
+                 class="rl-btn ghost w-full">Generate Quote</a>
+              <a href="{{ url_for('loan_officer.pipeline') }}"
+                 class="rl-btn ghost w-full">Full Pipeline</a>
+            </div>
+          </div>
+
+          {# ── RECENT QUOTES ── #}
+          {% if my_quotes %}
+          <div class="rl-card pad">
+            <div class="section-head">
+              <h3 class="rl-card-title">Recent Quotes</h3>
+              <a href="{{ url_for('loan_officer.quote_engine') }}"
+                 class="rl-btn ghost sm">Engine</a>
+            </div>
+            <div class="stack">
+              {% for q in my_quotes %}
+              <div class="mini-row" style="padding:10px 12px;">
+                <div>
+                  <div class="mini-title" style="font-size:.88rem;">
+                    {{ q.loan_type or 'Quote' }} #{{ q.id }}
+                  </div>
+                  <div class="mini-sub">
+                    {{ q.rate }}% · {{ q.term_months }}mo
+                    {% if q.created_at %}· {{ q.created_at.strftime('%b %d') }}{% endif %}
+                  </div>
+                </div>
+                <div style="text-align:right;">
+                  <div style="font-weight:700;font-size:.92rem;">
+                    ${{ '{:,.0f}'.format(q.loan_amount or 0) }}
+                  </div>
+                  <span class="rl-badge
+                    {% if q.status == 'accepted' %}badge-success
+                    {% elif q.status == 'sent' %}badge-info
+                    {% else %}badge-neutral{% endif %}"
+                    style="font-size:.7rem;">
+                    {{ q.status | title }}
+                  </span>
+                </div>
+              </div>
+              {% endfor %}
+            </div>
+          </div>
+          {% endif %}
+
+          {# ── COPILOT ── #}
+          {% if 'ai_pilot' in modules %}
+          <div class="rl-card pad">
+            <div class="section-head">
+              <h3 class="rl-card-title">Copilot</h3>
+              <a href="{{ url_for('vip.ai_pilot') }}" class="rl-btn ghost sm">Open</a>
+            </div>
+            {% if copilot_suggestions %}
+            <div class="stack">
+              {% for s in copilot_suggestions %}
+              <div class="mini-row" style="padding:10px 12px;">
+                <div>
+                  <div class="mini-title" style="font-size:.86rem;">{{ s.title }}</div>
+                  {% if s.body %}
+                  <div class="mini-sub" style="font-size:.78rem;">{{ s.body }}</div>
+                  {% endif %}
+                </div>
+              </div>
+              {% endfor %}
+            </div>
+            {% else %}
+            <p style="color:var(--muted);font-size:.85rem;font-style:italic;">
+              No suggestions yet.
+            </p>
+            {% endif %}
+          </div>
+          {% endif %}
+
+          {# ── WORKSPACE NOTE ── #}
+          <div class="rl-card pad"
+               style="border-color:rgba(122,184,255,.1);
+                      background:linear-gradient(180deg,rgba(18,28,40,.95),rgba(10,16,23,.98));">
+            <h3 class="rl-card-title mb-8" style="font-size:.9rem;">Your Workspace</h3>
+            <p style="color:var(--muted);font-size:.82rem;line-height:1.6;">
+              This is your private lending workspace. Your borrowers, loans, and
+              quotes are fully isolated — only you can see them inside Ravlo.
+            </p>
+            <a href="{{ url_for('vip.onboarding') }}"
+               class="rl-btn ghost sm w-full mt-12">Workspace Settings</a>
+          </div>
+
+        </div>
+      </div>
+
+    </div>{# end rl-content #}
+  </main>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener("click", function(e) {
+  if (
+    document.body.classList.contains("rl-sidebar-open") &&
+    !e.target.closest(".rl-sidebar") &&
+    !e.target.closest(".rl-menu-btn")
+  ) {
+    document.body.classList.remove("rl-sidebar-open");
+  }
+});
+</script>
+{% endblock %}
