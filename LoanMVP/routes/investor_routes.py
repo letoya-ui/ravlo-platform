@@ -8330,9 +8330,16 @@ def deal_architect_analyze():
                 state=payload.get("state"),
                 category="new_build" if (payload.get("property_type") or "").lower() in {"land", "lot", "new_build"} else "rehab",
             )
+            # Informational only: attach the context so the engine can
+            # persist/echo it if it wants. We deliberately do NOT touch
+            # `market_cost_multiplier` here — that field is part of the
+            # engine's existing schema and the engine may already use it
+            # to adjust costs. Double-writing it would risk factor²
+            # inflation once apply_multiplier_to_engine_response runs
+            # below. We rely on the post-hoc multiply + the idempotency
+            # guard in `_should_apply_multiplier`, matching the pattern
+            # used in ai/build_engine.py and ai/rehab_engine.py.
             payload["location_cost_context"] = cost_ctx
-            if payload.get("market_cost_multiplier") in (None, 0, 0.0):
-                payload["market_cost_multiplier"] = cost_ctx.get("factor")
         except Exception:
             cost_ctx = None
 
