@@ -1,1306 +1,417 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, abort, current_app
-from flask_login import current_user
-from datetime import datetime
-from pathlib import Path
-from werkzeug.utils import secure_filename
-from sqlalchemy import desc
-
-from LoanMVP.extensions import db, csrf
-from LoanMVP.utils.decorators import role_required
-from LoanMVP.ai.base_ai import AIAssistant
-
-from LoanMVP.services.partner_search_service import search_external_partners
-
-from LoanMVP.models.crm_models import Partner, Task, CRMNote, Lead
-from LoanMVP.models.partner_models import (
-    PartnerConnectionRequest,
-    PartnerJob,
-    PartnerPhoto,
-    PartnerProposal,
+# LoanMVP/routes/vip.py
+import json
+from datetime import datetime, timedelta
+from flask import (
+    Blueprint, render_template, request, redirect,
+    url_for, flash, jsonify, session
 )
+from flask_login import current_user
+from sqlalchemy import or_
 
-partners_bp = Blueprint("partners", __name__, url_prefix="/partners")
+from LoanMVP.extensions import db
+from LoanMVP.models.vip_models import (
+    VIPProfile, VIPIncome, VIPExpense,
+    VIPAssistantSuggestion, VIPDesignProject, VIPDesignAnnotation,
+)
+from LoanMVP.models.elena_models import (
+    ElenaClient, ElenaListing, ElenaFlyer, ElenaInteraction,
+)
+from LoanMVP.models.partner_models import PartnerJob, PartnerConnectionRequest
+from LoanMVP.services.vip_ai_pilot import parse_vip_command
+from LoanMVP.utils.decorators import role_required
+
+vip_bp = Blueprint("vip", __name__, url_prefix="/vip")
+
+PIPELINE_STAGES = [
+    ("new", "New"), ("warm", "Warm"), ("active", "Active"),
+    ("under_contract", "Under Contract"), ("closed", "Closed"),
+]
+LISTING_STATUSES = [
+    ("active", "Active"), ("pending", "Pending"),
+    ("sold", "Sold"), ("withdrawn", "Withdrawn"),
+]
+FRANK_MARKETS = ["Hudson Valley", "Sarasota"]
+
+MODULE_FIELD_MAP = {
+    "crm_enabled": "crm",
+    "finances_enabled": "finances",
+    "budget_enabled": "budget_tracker",
+    "ai_pilot_enabled": "ai_pilot",
+    "content_studio_enabled": "content_studio",
+    "calendar_sync_enabled": "calendar_sync",
+    "voice_enabled": "voice_assistant",
+    "sms_enabled": "sms_assistant",
+    "email_enabled": "email_assistant",
+    "canva_enabled": "canva",
+    "design_studio_enabled": "design_studio",
+}
 
 
-def _partner_testing_enabled() -> bool:
-    return bool(
-        current_app.config.get("FREE_PARTNER_MODE", False)
-        or current_app.config.get("BYPASS_PARTNER_SUBSCRIPTION", False)
+# ── helpers ──────────────────────────────────────────────
+
+def get_enabled_modules(profile):
+    raw = profile.enabled_modules or "[]"
+    try:
+        value = json.loads(raw)
+        return value if isinstance(value, list) else []
+    except (TypeError, ValueError):
+        return []
+
+
+def has_module(profile, module_name):
+    return module_name in get_enabled_modules(profile)
+
+
+def build_enabled_modules_from_form(form):
+    modules = []
+    for field_name, module_name in MODULE_FIELD_MAP.items():
+        if (form.get(field_name) or "").strip().lower() == "yes":
+            modules.append(module_name)
+    return modules
+
+
+def get_or_create_vip_profile():
+    if not getattr(current_user, "is_authenticated", False):
+        return None
+
+    profile = VIPProfile.query.filter_by(user_id=current_user.id).first()
+    if profile:
+        return profile
+
+    partner = getattr(current_user, "partner_profile", None)
+    default_role_type = "partner"
+    if partner and getattr(partner, "category", None):
+        raw_category = (partner.category or "").strip().lower()
+        role_map = {
+            "realtor": "realtor", "contractor": "contractor",
+            "designer": "designer", "lender": "loan_officer",
+            "loan_officer": "loan_officer",
+        }
+        default_role_type = role_map.get(raw_category, "partner")
+
+    profile = VIPProfile(
+        user_id=current_user.id,
+        display_name=(getattr(current_user, "name", None)
+                      or getattr(current_user, "email", "VIP User")),
+        business_name=getattr(partner, "company", None) if partner else None,
+        role_type=default_role_type,
+        assistant_name="Ravlo",
+    )
+    db.session.add(profile)
+    db.session.commit()
+    return profile
+
+
+def get_dashboard_name(profile):
+    return (
+        profile.dashboard_title
+        or profile.business_name
+        or profile.display_name
+        or "VIP Workspace"
     )
 
 
-def _partner_tier_features(partner) -> set[str]:
-    tier = ((getattr(partner, "subscription_tier", "") or "").strip().lower())
-
-    features_by_tier = {
-        "free": {"crm_enabled"},
-        "featured": {
-            "crm_enabled",
-            "deal_visibility_enabled",
-            "priority_placement_enabled",
-            "smart_notifications_enabled",
-            "portfolio_showcase_enabled",
-        },
-        "premium": {
-            "crm_enabled",
-            "deal_visibility_enabled",
-            "priority_placement_enabled",
-            "smart_notifications_enabled",
-            "portfolio_showcase_enabled",
-            "proposal_builder_enabled",
-            "instant_quote_enabled",
-            "ai_assist_enabled",
-        },
-        "enterprise": {
-            "crm_enabled",
-            "deal_visibility_enabled",
-            "priority_placement_enabled",
-            "smart_notifications_enabled",
-            "portfolio_showcase_enabled",
-            "proposal_builder_enabled",
-            "instant_quote_enabled",
-            "ai_assist_enabled",
-        },
-    }
-
-    return features_by_tier.get(tier, set())
+def _get_frank_market():
+    return session.get("frank_market", "All Markets")
 
 
-def partner_feature_enabled(partner, feature_attr: str, default: bool = False) -> bool:
-    if _partner_testing_enabled():
-        return bool(partner)
+# ── context processor ────────────────────────────────────
 
-    if not partner:
-        return False
-
-    if getattr(partner, feature_attr, default):
-        return True
-
-    return feature_attr in _partner_tier_features(partner)
+@vip_bp.app_context_processor
+def inject_vip_context():
+    if not getattr(current_user, "is_authenticated", False):
+        return {"vip_profile": None, "modules": []}
+    profile = get_or_create_vip_profile()
+    return {"vip_profile": profile, "modules": get_enabled_modules(profile)}
 
 
-def partner_effective_feature_access(partner) -> dict[str, bool]:
-    feature_defaults = {
-        "crm_enabled": True,
-        "deal_visibility_enabled": False,
-        "proposal_builder_enabled": False,
-        "instant_quote_enabled": False,
-        "ai_assist_enabled": False,
-        "priority_placement_enabled": False,
-        "smart_notifications_enabled": False,
-        "portfolio_showcase_enabled": False,
-    }
+# ── index (smart redirect) ───────────────────────────────
 
-    return {
-        feature_name: partner_feature_enabled(partner, feature_name, default)
-        for feature_name, default in feature_defaults.items()
-    }
-
-
-def partner_has_pro_access(partner) -> bool:
-    if current_app.config.get("FREE_PARTNER_MODE", False):
-        return bool(partner)
-
-    if not partner or not partner.approved:
-        return False
-
-    tier = (partner.subscription_tier or "").strip()
-    return tier in ("Featured", "Premium", "Enterprise") and partner.is_active_listing()
-
-
-def partner_has_premium_access(partner) -> bool:
-    if current_app.config.get("FREE_PARTNER_MODE", False):
-        return bool(partner)
-
-    if not partner or not partner.approved:
-        return False
-
-    tier = (partner.subscription_tier or "").strip()
-    return tier in ("Premium", "Enterprise") and partner.is_active_listing()
-
-# ------------------------------------------------
-# DASHBOARD
-# ------------------------------------------------
-
-
-@partners_bp.route("/dashboard")
+@vip_bp.get("/")
 @role_required("partner_group", "admin")
-def dashboard():
-    partner = Partner.query.filter_by(user_id=current_user.id).first()
+def index():
+    profile = get_or_create_vip_profile()
+    role_map = {
+        "realtor":      "vip.realtor_dashboard",
+        "contractor":   "vip.contractor_dashboard",
+        "designer":     "vip.designer_dashboard",
+        "partner":      "vip.partner_dashboard",
+        "loan_officer": "vip.loan_officer_dashboard",
+        "lender":       "vip.loan_officer_dashboard",
+    }
+    return redirect(url_for(role_map.get(profile.role_type, "vip.partner_dashboard")))
 
-    if not partner:
-        flash("Partner profile not found. Please register.", "warning")
-        return redirect(url_for("partners.register"))
 
-    base_query = PartnerConnectionRequest.query.filter_by(partner_id=partner.id)
+# ── market switch ────────────────────────────────────────
 
-    pending_count = base_query.filter_by(status="pending").count()
-    accepted_count = base_query.filter_by(status="accepted").count()
-    completed_count = base_query.filter_by(status="completed").count()
-    awaiting_match_count = base_query.filter_by(status="awaiting_match").count()
-    declined_count = base_query.filter_by(status="declined").count()
+@vip_bp.post("/realtor/market-switch")
+@role_required("partner_group", "admin")
+def realtor_market_switch():
+    selected = (request.form.get("market") or "All Markets").strip()
+    allowed = {"All Markets", *FRANK_MARKETS}
+    session["frank_market"] = selected if selected in allowed else "All Markets"
+    next_url = request.form.get("next") or url_for("vip.realtor_dashboard")
+    return redirect(next_url)
 
-    recent_requests = (
-        base_query.order_by(desc(PartnerConnectionRequest.created_at))
-        .limit(8)
-        .all()
-    )
 
-    feature_cards = [
-        {
-            "key": "crm",
-            "title": "CRM",
-            "description": "Manage contacts, follow-up, and lead activity inside Ravlo.",
-            "enabled": partner_feature_enabled(partner, "crm_enabled", True),
-            "cta": "Open CRM",
-            "endpoint": "partners.crm",
-            "badge": "Core",
-        },
-        {
-            "key": "deal_visibility",
-            "title": "Deal Visibility",
-            "description": "See project, deal, and property context tied to requests.",
-            "enabled": partner_feature_enabled(partner, "deal_visibility_enabled", False),
-            "cta": "View Opportunities",
-            "endpoint": "partners.requests",
-            "badge": "Growth Tool",
-        },
-        {
-            "key": "proposal_builder",
-            "title": "Proposal Builder",
-            "description": "Create scopes, service proposals, and branded responses.",
-            "enabled": partner_feature_enabled(partner, "proposal_builder_enabled", False),
-            "cta": "Build Proposal",
-            "endpoint": "partners.proposals",
-            "badge": "Premium",
-        },
-        {
-            "key": "instant_quote",
-            "title": "Instant Quote",
-            "description": "Generate pricing quickly for incoming work opportunities.",
-            "enabled": partner_feature_enabled(partner, "instant_quote_enabled", False),
-            "cta": "Create Quote",
-            "endpoint": "partners.quotes",
-            "badge": "Premium",
-        },
-        {
-            "key": "ai_assist",
-            "title": "AI Assist",
-            "description": "Use AI to help draft responses, estimates, and timelines.",
-            "enabled": partner_feature_enabled(partner, "ai_assist_enabled", False),
-            "cta": "Open AI",
-            "endpoint": "partners.ai",
-            "badge": "Premium",
-        },
-        {
-            "key": "priority_placement",
-            "title": "Priority Placement",
-            "description": "Appear higher in Ravlo search and partner recommendations.",
-            "enabled": partner_feature_enabled(partner, "priority_placement_enabled", False),
-            "cta": "Boost Visibility",
-            "endpoint": "partners.upgrade",
-            "badge": "Visibility",
-        },
-        {
-            "key": "smart_notifications",
-            "title": "Smart Notifications",
-            "description": "Get alerts when new requests match your service area.",
-            "enabled": partner_feature_enabled(partner, "smart_notifications_enabled", False),
-            "cta": "Manage Alerts",
-            "endpoint": "partners.notifications",
-            "badge": "Automation",
-        },
-        {
-            "key": "portfolio_showcase",
-            "title": "Portfolio Showcase",
-            "description": "Display photos and project work to help investors trust faster.",
-            "enabled": partner_feature_enabled(partner, "portfolio_showcase_enabled", False),
-            "cta": "Manage Portfolio",
-            "endpoint": "partners.portfolio",
-            "badge": "Brand",
-        },
-    ]
+# ── REALTOR dashboard (Elena-quality data) ───────────────
 
-    locked_feature_count = sum(1 for item in feature_cards if not item["enabled"])
+@vip_bp.get("/realtor")
+@role_required("partner_group", "admin")
+def realtor_dashboard():
+    profile = get_or_create_vip_profile()
+    now = datetime.utcnow()
+    week_ago = now - timedelta(days=7)
+    current_market = _get_frank_market()
 
-    stats = {
-        "pending": pending_count,
-        "accepted": accepted_count,
-        "completed": completed_count,
-        "awaiting_match": awaiting_match_count,
-        "declined": declined_count,
-        "deals": partner.deals or 0,
-        "volume": partner.volume or 0.0,
-        "rating": partner.rating or 0.0,
-        "review_count": partner.review_count or 0,
-        "profile_completion": partner.profile_completion() if hasattr(partner, "profile_completion") else 0,
+    # — summary stats —
+    total_clients = ElenaClient.query.count()
+    new_leads = ElenaClient.query.filter(ElenaClient.created_at >= week_ago).count()
+
+    listing_q = ElenaListing.query.filter_by(status="active")
+    if current_market != "All Markets":
+        listing_q = listing_q.filter_by(market=current_market)
+    active_listings = listing_q.count()
+
+    followups_due = ElenaInteraction.query.filter(
+        ElenaInteraction.due_at.isnot(None),
+        ElenaInteraction.due_at >= now,
+        ElenaInteraction.due_at <= now + timedelta(days=7),
+    ).count()
+
+    summary = {
+        "total_clients": total_clients,
+        "new_leads": new_leads,
+        "active_listings": active_listings,
+        "followups_due": followups_due,
     }
 
-    template = "partners/dashboards/home.html"
+    # — pipeline —
+    pipeline_groups = []
+    canonical_keys = {s[0] for s in PIPELINE_STAGES}
+    for stage_key, stage_label in PIPELINE_STAGES:
+        q = ElenaClient.query.filter_by(pipeline_stage=stage_key)
+        pipeline_groups.append({
+            "key": stage_key,
+            "label": stage_label,
+            "count": q.count(),
+            "clients": q.order_by(ElenaClient.updated_at.desc()).limit(12).all(),
+        })
+
+    unstaged_filter = or_(
+        ElenaClient.pipeline_stage.is_(None),
+        ~ElenaClient.pipeline_stage.in_(canonical_keys),
+    )
+    unstaged_total = ElenaClient.query.filter(unstaged_filter).count()
+    if unstaged_total:
+        pipeline_groups.insert(0, {
+            "key": "unstaged", "label": "Unstaged",
+            "count": unstaged_total,
+            "clients": (ElenaClient.query.filter(unstaged_filter)
+                        .order_by(ElenaClient.updated_at.desc()).limit(12).all()),
+        })
+
+    # — listings —
+    status_filter = (request.args.get("listing_status") or "").strip().lower()
+    listings_q = ElenaListing.query
+    if current_market != "All Markets":
+        listings_q = listings_q.filter_by(market=current_market)
+    if status_filter and status_filter in {s[0] for s in LISTING_STATUSES}:
+        listings_q = listings_q.filter_by(status=status_filter)
+    listings = listings_q.order_by(ElenaListing.updated_at.desc()).limit(12).all()
+
+    # — recent activity —
+    recent_interactions = (ElenaInteraction.query
+                           .order_by(ElenaInteraction.created_at.desc()).limit(10).all())
+
+    flyers_q = ElenaFlyer.query
+    if current_market != "All Markets":
+        flyers_q = (flyers_q
+                    .join(ElenaListing, ElenaFlyer.listing_id == ElenaListing.id)
+                    .filter(ElenaListing.market == current_market))
+    recent_flyers = flyers_q.order_by(ElenaFlyer.created_at.desc()).limit(5).all()
+
+    copilot_suggestions = (VIPAssistantSuggestion.query
+                           .filter_by(vip_profile_id=profile.id)
+                           .order_by(VIPAssistantSuggestion.created_at.desc())
+                           .limit(5).all())
 
     return render_template(
-        template,
-        partner=partner,
-        pending_count=pending_count,
-        accepted_count=accepted_count,
-        completed_count=completed_count,
-        awaiting_match_count=awaiting_match_count,
-        declined_count=declined_count,
-        recent_requests=recent_requests,
-        feature_cards=feature_cards,
-        locked_feature_count=locked_feature_count,
-        stats=stats,
-        portal="partner",
-        portal_name="Partner OS",
-        portal_home=url_for("partners.dashboard")
+        "vip/realtor/dashboard.html",
+        vip_profile=profile,
+        modules=get_enabled_modules(profile),
+        header_name=get_dashboard_name(profile),
+        summary=summary,
+        pipeline_groups=pipeline_groups,
+        pipeline_stages=PIPELINE_STAGES,
+        recent_interactions=recent_interactions,
+        listings=listings,
+        listing_statuses=LISTING_STATUSES,
+        listing_status_filter=status_filter,
+        recent_flyers=recent_flyers,
+        copilot_suggestions=copilot_suggestions,
+        current_market=current_market,
+        available_markets=FRANK_MARKETS,
+        portal="vip",
+        portal_name="VIP",
+        portal_home=url_for("vip.realtor_dashboard"),
     )
 
-# ------------------------------------------------
-# PARTNER DIRECTORY (internal)
-# ------------------------------------------------
 
-@partners_bp.route("/center")
-@role_required("partner_group")
-def center():
-    # ✅ Get SINGLE partner (fixes your error)
-    partner = Partner.query.filter_by(user_id=current_user.id).first()
+# ── CONTRACTOR dashboard ─────────────────────────────────
 
-    # --- Safe defaults ---
+@vip_bp.get("/contractor")
+@role_required("partner_group", "admin")
+def contractor_dashboard():
+    profile = get_or_create_vip_profile()
+    partner = getattr(current_user, "partner_profile", None)
+
     jobs = []
-    connections = []
-    stats = {
-        "active_jobs": 0,
-        "completed_jobs": 0,
-        "connection_requests": 0,
-    }
+    stats = {"open": 0, "in_progress": 0, "completed": 0, "total_volume": 0.0}
 
     if partner:
-        # --- Jobs ---
-        jobs = (
-            PartnerJob.query
-            .filter_by(partner_id=partner.id)
-            .order_by(PartnerJob.created_at.desc())
-            .limit(10)
-            .all()
+        jobs = (PartnerJob.query
+                .filter_by(partner_id=partner.id)
+                .order_by(PartnerJob.created_at.desc())
+                .limit(20).all())
+        stats["open"] = sum(1 for j in jobs if j.status == "Open")
+        stats["in_progress"] = sum(1 for j in jobs if j.status == "in_progress")
+        stats["completed"] = sum(1 for j in jobs if j.status == "completed")
+        stats["total_volume"] = sum(
+            (j.total_cost or 0) for j in jobs if j.status == "completed"
         )
 
-        stats["active_jobs"] = len([j for j in jobs if j.status in ["new", "in_progress"]])
-        stats["completed_jobs"] = len([j for j in jobs if j.status == "completed"])
+    copilot_suggestions = (VIPAssistantSuggestion.query
+                           .filter_by(vip_profile_id=profile.id)
+                           .order_by(VIPAssistantSuggestion.created_at.desc())
+                           .limit(5).all())
 
-        # --- Connection Requests ---
-        connections = (
-            PartnerConnectionRequest.query
-            .filter_by(partner_id=partner.id)
-            .order_by(PartnerConnectionRequest.created_at.desc())
-            .limit(10)
-            .all()
-        )
-
-        stats["connection_requests"] = len(connections)
-
-    # --- Render ---
     return render_template(
-        "partners/center.html",
-        partner=partner,
+        "vip/contractor/dashboard.html",
+        vip_profile=profile,
+        modules=get_enabled_modules(profile),
+        header_name=get_dashboard_name(profile),
         jobs=jobs,
-        connections=connections,
         stats=stats,
-        active_tab="center",
+        copilot_suggestions=copilot_suggestions,
+        portal="vip",
+        portal_name="VIP",
+        portal_home=url_for("vip.contractor_dashboard"),
     )
 
 
-# ------------------------------------------------
-# PARTNER PROFILE
-# ------------------------------------------------
+# ── DESIGNER dashboard ───────────────────────────────────
 
-@partners_bp.route("/<int:partner_id>")
-@role_required("partner_group")
-def profile(partner_id):
-
-    partner = Partner.query.get_or_404(partner_id)
-
-    return render_template(
-        "partners/profile.html",
-        partner=partner,
-        portal="partner",
-        portal_name="Partner OS",
-        portal_home=url_for("partners.dashboard"),
-    )
-
-
-# ------------------------------------------------
-# PARTNER REGISTRATION
-# ------------------------------------------------
-
-@partners_bp.route("/register", methods=["GET", "POST"])
-@csrf.exempt
-@role_required("partner_group")
-def register():
-    partner = Partner.query.filter_by(user_id=current_user.id).first()
-
-    if request.method == "POST":
-        name = (request.form.get("name") or request.form.get("company") or "").strip() or None
-        category = (request.form.get("category") or request.form.get("role") or "").strip() or None
-        company = request.form.get("company", "").strip() or None
-        service_area = request.form.get("service_area", "").strip() or None
-        specialty = request.form.get("specialty", "").strip() or None
-        bio = request.form.get("bio", "").strip() or None
-
-        if not name:
-            flash("Please enter a contact name or company name.", "danger")
-            return render_template("partners/register.html", partner=partner)
-
-        if partner:
-            partner.name = name
-            partner.category = category
-            partner.company = company
-            partner.service_area = service_area
-            partner.specialty = specialty
-            partner.bio = bio
-        else:
-            partner = Partner(
-                user_id=current_user.id,
-                name=name,
-                category=category,
-                company=company,
-                service_area=service_area,
-                specialty=specialty,
-                bio=bio,
-                active=True,
-                status="Active",
-                approved=True,
-                featured=True,
-                subscription_tier="Premium",
-            )
-            db.session.add(partner)
-
-        db.session.commit()
-        flash("Partner profile saved.", "success")
-        return redirect(url_for("partners.dashboard"))
-
-    return render_template(
-        "partners/register.html",
-        partner=partner,
-        portal="partner",
-        portal_name="Partner OS",
-        portal_home=url_for("partners.dashboard"),
-    )
-
-
-@partners_bp.route("/requests/<int:request_id>", methods=["GET"])
-@role_required("partner_group")
-def request_detail(request_id):
-    partner = Partner.query.filter_by(user_id=current_user.id).first()
-
-    if not partner:
-        flash("Partner profile not found.", "danger")
-        return redirect(url_for("auth.login"))
-
-    req = PartnerConnectionRequest.query.filter_by(
-        id=request_id,
-        partner_id=partner.id
-    ).first_or_404()
-
-    return render_template(
-        "partners/request_detail.html",
-        partner=partner,
-        req=req,
-        page_title="Request Detail",
-        page_subline="Review opportunity details and next steps.",
-        portal="partner",
-        portal_name="Partner OS",
-        portal_home=url_for("partners.dashboard"),
-    )
-
-# ------------------------------------------------
-# PARTNER REQUEST INBOX
-# ------------------------------------------------
-
-@partners_bp.route("/requests")
+@vip_bp.get("/designer")
 @role_required("partner_group", "admin")
-def requests_inbox():
-    partner = Partner.query.filter_by(user_id=current_user.id).first()
+def designer_dashboard():
+    profile = get_or_create_vip_profile()
+    partner = getattr(current_user, "partner_profile", None)
 
-    if not partner:
-        flash("Partner profile not found.", "warning")
-        return redirect(url_for("partners.register"))
+    projects = (VIPDesignProject.query
+                .filter_by(vip_profile_id=profile.id)
+                .order_by(VIPDesignProject.created_at.desc())
+                .limit(10).all())
 
-    if not partner_has_pro_access(partner):
-        return render_template(
-            "partners/upgrade_required.html",
-            partner=partner,
-            portal="partner",
-            portal_name="Partner OS",
-            portal_home=url_for("partners.dashboard"),
-        ), 403
+    recent_requests = []
+    if partner:
+        recent_requests = (PartnerConnectionRequest.query
+                           .filter_by(partner_id=partner.id)
+                           .order_by(PartnerConnectionRequest.created_at.desc())
+                           .limit(8).all())
 
-    selected_status = (request.args.get("status") or "").strip()
-    selected_source = (request.args.get("source") or "").strip()
-
-    query = PartnerConnectionRequest.query.filter_by(partner_id=partner.id)
-
-    if selected_status:
-        query = query.filter(PartnerConnectionRequest.status == selected_status)
-
-    if selected_source:
-        query = query.filter(PartnerConnectionRequest.source == selected_source)
-
-    requests_list = query.order_by(
-        PartnerConnectionRequest.created_at.desc()
-    ).all()
+    copilot_suggestions = (VIPAssistantSuggestion.query
+                           .filter_by(vip_profile_id=profile.id)
+                           .order_by(VIPAssistantSuggestion.created_at.desc())
+                           .limit(5).all())
 
     return render_template(
-        "partners/requests.html",
-        partner=partner,
-        requests_list=requests_list,
-        selected_status=selected_status,
-        selected_source=selected_source,
-        portal="partner",
-        portal_name="Partner OS",
-        portal_home=url_for("partners.dashboard"),
-    )
-
-# ------------------------------------------------
-# ACCEPT REQUEST
-# ------------------------------------------------
-
-@partners_bp.route("/requests/<int:req_id>/accept", methods=["POST"])
-@csrf.exempt
-@role_required("partner_group")
-def accept_request(req_id):
-    partner = Partner.query.filter_by(user_id=current_user.id).first()
-    req = PartnerConnectionRequest.query.get_or_404(req_id)
-
-    if not partner or req.partner_id != partner.id:
-        abort(403)
-
-    if req.status != "pending":
-        flash("This request is no longer pending.", "info")
-        return redirect(url_for("partners.requests_inbox"))
-
-    req.status = "accepted"
-    req.responded_at = datetime.utcnow()
-
-    task = Task(
-        borrower_id=req.borrower_profile_id,
-        title=f"{req.category or partner.category} • New Request",
-        description=req.message,
-        assigned_to=current_user.id,
-        status="Pending",
-        priority="Normal"
-    )
-    db.session.add(task)
-
-    if req.borrower_profile_id:
-        db.session.add(CRMNote(
-            borrower_id=req.borrower_profile_id,
-            user_id=current_user.id,
-            content=f"Accepted partner request (Partner: {partner.company or partner.name})."
-        ))
-
-    if partner_has_premium_access(partner):
-        job = PartnerJob(
-            partner_id=partner.id,
-            borrower_profile_id=req.borrower_profile_id,
-            investor_profile_id=req.investor_profile_id,
-            property_id=req.property_id,
-            title=f"{req.category or partner.category} Job",
-            scope=req.message,
-            status="Open"
-        )
-
-        db.session.add(job)
-        db.session.flush()
-
-        if hasattr(task, "partner_job_id"):
-            task.partner_job_id = job.id
-
-    db.session.commit()
-
-    flash("Request accepted.", "success")
-    return redirect(url_for("partners.requests_inbox"))
-
-# ------------------------------------------------
-# DECLINE REQUEST
-# ------------------------------------------------
-
-@partners_bp.route("/requests/<int:req_id>/decline", methods=["POST"])
-@csrf.exempt
-@role_required("partner_group")
-def decline_request(req_id):
-
-    partner = Partner.query.filter_by(user_id=current_user.id).first()
-    req = PartnerConnectionRequest.query.get_or_404(req_id)
-
-    if not partner or req.partner_id != partner.id:
-        abort(403)
-
-    if req.status != "pending":
-        flash("This request is no longer pending.", "info")
-        return redirect(url_for("partners.requests_inbox"))
-
-    req.status = "declined"
-    req.responded_at = datetime.utcnow()
-
-    db.session.commit()
-
-    flash("Request declined.", "info")
-
-    return redirect(url_for("partners.requests_inbox"))
-
-
-@partners_bp.route("/requests/<int:request_id>/status", methods=["POST"])
-@csrf.exempt
-@role_required("partner_group")
-def update_request_status(request_id):
-    partner = Partner.query.filter_by(user_id=current_user.id).first()
-
-    if not partner:
-        flash("Partner profile not found.", "danger")
-        return redirect(url_for("auth.login"))
-
-    req = PartnerConnectionRequest.query.filter_by(
-        id=request_id,
-        partner_id=partner.id
-    ).first_or_404()
-
-    new_status = (request.form.get("status") or "").strip().lower()
-    allowed = {"pending", "accepted", "declined", "canceled", "completed", "awaiting_match"}
-
-    if new_status not in allowed:
-        flash("Invalid request status.", "danger")
-        return redirect(url_for("partners.request_detail", request_id=req.id))
-
-    req.status = new_status
-    req.responded_at = datetime.utcnow()
-
-    db.session.commit()
-
-    flash("Request status updated.", "success")
-    return redirect(url_for("partners.request_detail", request_id=req.id))
-
-# ------------------------------------------------
-# PREMIUM WORKSPACE
-# ------------------------------------------------
-
-@partners_bp.route("/workspace")
-@role_required("partner_group")
-def workspace_home():
-
-    partner = Partner.query.filter_by(user_id=current_user.id).first()
-
-    if not partner or not partner_has_premium_access(partner):
-        return render_template(
-            "partners/upgrade_required.html",
-            partner=partner
-        ), 403
-
-    jobs = PartnerJob.query.filter_by(
-        partner_id=partner.id
-    ).order_by(
-        PartnerJob.created_at.desc()
-    ).all()
-
-    return render_template(
-        "partners/workspace/home.html",
-        partner=partner,
-        jobs=jobs,
-        portal="partner",
-        portal_name="Partner OS",
-        portal_home=url_for("partners.dashboard"),
+        "vip/designer/dashboard.html",
+        vip_profile=profile,
+        modules=get_enabled_modules(profile),
+        header_name=get_dashboard_name(profile),
+        projects=projects,
+        recent_requests=recent_requests,
+        copilot_suggestions=copilot_suggestions,
+        portal="vip",
+        portal_name="VIP",
+        portal_home=url_for("vip.designer_dashboard"),
     )
 
 
-@partners_bp.route("/workspace/jobs/<int:job_id>")
-@role_required("partner_group")
-def workspace_job(job_id):
+# ── LOAN OFFICER dashboard ───────────────────────────────
 
-    partner = Partner.query.filter_by(user_id=current_user.id).first()
-    job = PartnerJob.query.get_or_404(job_id)
-
-    if not partner or job.partner_id != partner.id:
-        abort(403)
-
-    tasks = Task.query.filter_by(
-        partner_job_id=job.id
-    ).order_by(
-        Task.created_at.desc()
-    ).all()
-
-    return render_template(
-        "partners/workspace/job.html",
-        partner=partner,
-        job=job,
-        tasks=tasks,
-        portal="partner",
-        portal_name="Partner OS",
-        portal_home=url_for("partners.dashboard"),
-    )
-
-
-# ------------------------------------------------
-# PHOTO UPLOAD
-# ------------------------------------------------
-
-@partners_bp.route("/photos/upload", methods=["POST"])
-@csrf.exempt
-@role_required("partner_group")
-def upload_photo():
-
-    partner = Partner.query.filter_by(user_id=current_user.id).first()
-
-    if not partner:
-        flash("Partner profile not found.", "danger")
-        return redirect(request.referrer)
-
-    file = request.files.get("photo")
-
-    if not file:
-        flash("No file uploaded.", "danger")
-        return redirect(request.referrer)
-
-    filename = secure_filename(file.filename)
-
-    upload_dir = Path("static/uploads/partners") / str(partner.id)
-    upload_dir.mkdir(parents=True, exist_ok=True)
-
-    filepath = upload_dir / filename
-
-    file.save(filepath)
-
-    photo = PartnerPhoto(
-        partner_id=partner.id,
-        url=f"/static/uploads/partners/{partner.id}/{filename}"
-    )
-
-    db.session.add(photo)
-    db.session.commit()
-
-    flash("Photo uploaded successfully.", "success")
-
-    return redirect(request.referrer)
-
-@partners_bp.route("/listing", methods=["GET", "POST"])
-@csrf.exempt
-@role_required("partner_group")
-def listing():
-    partner = current_user.partner_profile
-
-    if not partner:
-        flash("Please complete your partner profile first.", "warning")
-        return redirect(url_for("partners.profile_setup"))
-
-    if request.method == "POST":
-        partner.listing_description = request.form.get("listing_description")
-        partner.bio = request.form.get("bio")
-        partner.specialty = request.form.get("specialty")
-        partner.service_area = request.form.get("service_area")
-        partner.logo_url = request.form.get("logo_url")
-        partner.featured = "featured" in request.form
-        partner.subscription_tier = request.form.get("subscription_tier")
-
-        db.session.commit()
-        flash("Your marketplace listing has been updated.", "success")
-        return redirect(url_for("partners.listing"))
-
-    return render_template(
-        "partners/listing.html",
-        partner=partner,
-        portal="partner",
-        page_title="Marketplace Listing",
-        page_subline="Manage how you appear in the Ravlo Partner Marketplace."
-    )
-
-# ------------------------------------------------
-# DELETE PHOTO
-# ------------------------------------------------
-
-@partners_bp.route("/photos/<int:photo_id>/delete", methods=["POST"])
-@csrf.exempt
-@role_required("partner_group")
-def delete_photo(photo_id):
-
-    partner = Partner.query.filter_by(user_id=current_user.id).first()
-
-    photo = PartnerPhoto.query.get_or_404(photo_id)
-
-    if photo.partner_id != partner.id:
-        abort(403)
-
-    db.session.delete(photo)
-    db.session.commit()
-
-    flash("Photo removed.", "success")
-
-    return redirect(request.referrer)
-
-@partners_bp.route("/leads")
-@role_required("partner_group")
-def leads():
-    partner = current_user.partner_profile
-
-    if not partner:
-        flash("Please complete your partner profile first.", "warning")
-        return redirect(url_for("partners.profile_setup"))
-
-    # Leads linked through your partner_lead_link table
-    leads = partner.leads.order_by(Lead.created_at.desc()).all()
-
-    return render_template(
-        "partners/leads.html",
-        partner=partner,
-        leads=leads,
-        portal="partner",
-        page_title="Leads",
-        page_subline="Your incoming opportunities from the Ravlo ecosystem."
-    )
-
-@partners_bp.route("/lead/<int:lead_id>")
-@role_required("partner_group")
-def lead_detail(lead_id):
-    lead = Lead.query.get_or_404(lead_id)
-
-    if current_user.partner_profile not in lead.partners:
-        abort(403)
-
-    return render_template(
-        "partners/lead_detail.html",
-        lead=lead,
-        portal="partner",
-        page_title=lead.name,
-        page_subline="Lead details and activity"
-    )
-    
-@partners_bp.route("/settings", methods=["GET", "POST"])
-@role_required("partner_group")
-def settings():
-    partner = Partner.query.filter_by(user_id=current_user.id).first()
-
-    if not partner:
-        flash("Partner profile not found.", "warning")
-        return redirect(url_for("partners.register"))
-
-    if request.method == "POST":
-        company = request.form.get("company")
-        category = request.form.get("category") or request.form.get("role")
-        service_area = request.form.get("service_area")
-        bio = request.form.get("bio")
-
-        partner.company = company
-        partner.category = category
-        partner.service_area = service_area
-        partner.bio = bio
-
-        db.session.commit()
-        flash("Settings updated.", "success")
-        return redirect(url_for("partners.settings"))
-
-    return render_template(
-        "partners/settings.html",
-        partner=partner,
-        portal="partner",
-        portal_name="Partner OS",
-        portal_home=url_for("partners.dashboard"),
-    )
-
-
-@partners_bp.route("/deals")
-@role_required("partner_group")
-def deals():
-    partner = Partner.query.filter_by(user_id=current_user.id).first()
-    if not partner:
-        flash("Partner profile not found.", "warning")
-        return redirect(url_for("partners.register"))
-
-    jobs = PartnerJob.query.filter_by(partner_id=partner.id)\
-        .order_by(PartnerJob.created_at.desc()).all()
-
-    return render_template(
-        "partners/deals.html",
-        partner=partner,
-        jobs=jobs,
-        portal="partner",
-        portal_name="Partner OS",
-        portal_home=url_for("partners.dashboard"),
-    )
-
-
-@partners_bp.route("/resources")
-@role_required("partner_group")
-def resources():
-    partner = Partner.query.filter_by(user_id=current_user.id).first()
-    if not partner:
-        flash("Partner profile not found.", "warning")
-        return redirect(url_for("partners.register"))
-
-    return render_template(
-        "partners/resources.html",
-        partner=partner,
-        portal="partner",
-        portal_name="Partner OS",
-        portal_home=url_for("partners.dashboard"),
-    )
-
-@partners_bp.route("/subscribe/<tier>")
-@role_required("partner_group")
-def subscribe(tier):
-    partner = Partner.query.filter_by(user_id=current_user.id).first()
-    if not partner:
-        flash("Partner profile not found.", "warning")
-        return redirect(url_for("partners.register"))
-
-    allowed_tiers = {"Free", "Featured", "Premium", "Enterprise"}
-    normalized = tier.strip().title()
-
-    if normalized not in allowed_tiers:
-        flash("Invalid subscription tier.", "danger")
-        return redirect(url_for("partners.billing"))
-
-    return render_template(
-        "partners/subscribe.html",
-        partner=partner,
-        selected_tier=normalized,
-        portal="partner",
-        page_title="Choose Plan",
-        page_subline="Confirm your Ravlo Partner subscription tier."
-    )
-
-
-@partners_bp.route("/subscribe/<tier>/confirm", methods=["POST"])
-@csrf.exempt
-@role_required("partner_group")
-def confirm_subscription(tier):
-    partner = Partner.query.filter_by(user_id=current_user.id).first()
-    if not partner:
-        flash("Partner profile not found.", "warning")
-        return redirect(url_for("partners.register"))
-
-    allowed_tiers = {"Free", "Featured", "Premium", "Enterprise"}
-    normalized = tier.strip().title()
-
-    if normalized not in allowed_tiers:
-        flash("Invalid subscription tier.", "danger")
-        return redirect(url_for("partners.billing"))
-
-    # placeholder subscription logic for testing
-    partner.subscription_tier = normalized
-    partner.approved = True
-    partner.active = True
-    partner.status = "Active"
-
-    if normalized in {"Featured", "Premium", "Enterprise"}:
-        partner.featured = True
-    else:
-        partner.featured = False
-
-    db.session.commit()
-
-    flash(f"Your subscription has been updated to {normalized}.", "success")
-    return redirect(url_for("partners.billing"))
-
-@partners_bp.route("/billing")
-@role_required("partner_group")
-def billing():
-    partner = Partner.query.filter_by(user_id=current_user.id).first()
-    if not partner:
-        flash("Partner profile not found.", "warning")
-        return redirect(url_for("partners.register"))
-
-    plans = [
-        {
-            "name": "Free",
-            "price": "$0",
-            "features": ["Basic profile", "Limited visibility", "Starter access"]
-        },
-        {
-            "name": "Featured",
-            "price": "$49/mo",
-            "features": ["Featured listing", "More visibility", "Pro request access"]
-        },
-        {
-            "name": "Premium",
-            "price": "$99/mo",
-            "features": ["Workspace access", "Priority visibility", "Advanced tools"]
-        },
-        {
-            "name": "Enterprise",
-            "price": "Custom",
-            "features": ["Full suite", "Priority support", "Custom partner setup"]
-        },
-    ]
-
-    return render_template(
-        "partners/billing.html",
-        partner=partner,
-        plans=plans,
-        portal="partner",
-        page_title="Billing",
-        page_subline="Manage your Ravlo Partner plan."
-    )
-    
-@partners_bp.route("/profile/edit", methods=["GET", "POST"])
-@csrf.exempt
-@role_required("partner_group")
-def edit_profile():
-    partner = Partner.query.filter_by(user_id=current_user.id).first()
-
-    if not partner:
-        partner = Partner(user_id=current_user.id, name=current_user.name or "Partner")
-
-    if request.method == "POST":
-        name = (request.form.get("name") or "").strip()
-        if not name:
-            flash("Contact name is required.", "warning")
-            return render_template("partner/partner_form.html", partner=partner)
-
-        partner.name = name
-        partner.company = (request.form.get("company") or "").strip() or None
-        partner.email = (request.form.get("email") or "").strip() or None
-        partner.phone = (request.form.get("phone") or "").strip() or None
-        partner.website = (request.form.get("website") or "").strip() or None
-        partner.category = (request.form.get("category") or "").strip() or None
-        partner.type = (request.form.get("type") or "").strip() or None
-        partner.specialty = (request.form.get("specialty") or "").strip() or None
-        partner.service_area = (request.form.get("service_area") or "").strip() or None
-        partner.address = (request.form.get("address") or "").strip() or None
-        partner.city = (request.form.get("city") or "").strip() or None
-        partner.state = (request.form.get("state") or "").strip() or None
-        partner.zip_code = (request.form.get("zip_code") or "").strip() or None
-        partner.listing_description = (request.form.get("listing_description") or "").strip() or None
-        partner.bio = (request.form.get("bio") or "").strip() or None
-
-        # usually these should not be partner-controlled unless you want them to be
-        # partner.relationship_level = ...
-        # partner.subscription_tier = ...
-        # partner.approved = ...
-        # partner.featured = ...
-        # partner.is_verified = ...
-
-        if not partner.id:
-            db.session.add(partner)
-
-        db.session.commit()
-        flash("Your partner profile was updated successfully.", "success")
-        return redirect(url_for("partners.profile", partner_id=partner.id))
-
-    return render_template("partners/partner_form.html", partner=partner)
-
-@partners_bp.route("/upgrade")
+@vip_bp.get("/loan-officer")
 @role_required("partner_group", "admin")
-def upgrade():
-    partner = Partner.query.filter_by(user_id=current_user.id).first()
+def loan_officer_dashboard():
+    profile = get_or_create_vip_profile()
+    partner = getattr(current_user, "partner_profile", None)
 
-    if not partner:
-        flash("Partner profile not found. Please register.", "warning")
-        return redirect(url_for("partners.register"))
+    recent_requests = []
+    stats = {"pending": 0, "accepted": 0, "completed": 0}
 
-    feature_access = partner_effective_feature_access(partner)
-    locked_feature_count = sum(1 for item in feature_access.values() if not item)
+    if partner:
+        recent_requests = (PartnerConnectionRequest.query
+                           .filter_by(partner_id=partner.id)
+                           .order_by(PartnerConnectionRequest.created_at.desc())
+                           .limit(10).all())
+        stats["pending"] = sum(1 for r in recent_requests if r.status == "pending")
+        stats["accepted"] = sum(1 for r in recent_requests if r.status == "accepted")
+        stats["completed"] = sum(1 for r in recent_requests if r.status == "completed")
+
+    copilot_suggestions = (VIPAssistantSuggestion.query
+                           .filter_by(vip_profile_id=profile.id)
+                           .order_by(VIPAssistantSuggestion.created_at.desc())
+                           .limit(5).all())
 
     return render_template(
-        "partners/upgrade.html",
-        partner=partner,
-        feature_access=feature_access,
-        locked_feature_count=locked_feature_count,
-        testing_unlocks_enabled=_partner_testing_enabled(),
-        portal="partner",
-        portal_name="Partner OS",
-        portal_home=url_for("partners.dashboard"),
+        "vip/loan_officer/dashboard.html",
+        vip_profile=profile,
+        modules=get_enabled_modules(profile),
+        header_name=get_dashboard_name(profile),
+        recent_requests=recent_requests,
+        stats=stats,
+        copilot_suggestions=copilot_suggestions,
+        portal="vip",
+        portal_name="VIP",
+        portal_home=url_for("vip.loan_officer_dashboard"),
     )
 
-@partners_bp.route("/proposals")
+
+# ── PARTNER dashboard ────────────────────────────────────
+
+@vip_bp.get("/partner")
 @role_required("partner_group", "admin")
-def proposals():
-    partner = Partner.query.filter_by(user_id=current_user.id).first()
+def partner_dashboard():
+    profile = get_or_create_vip_profile()
+    partner = getattr(current_user, "partner_profile", None)
 
-    if not partner:
-        flash("Partner profile not found. Please register.", "warning")
-        return redirect(url_for("partners.register"))
+    recent_requests = []
+    stats = {"pending": 0, "accepted": 0, "completed": 0}
 
-    if not partner_feature_enabled(partner, "proposal_builder_enabled", False):
-        flash("Proposal Builder is available on an upgraded plan.", "warning")
-        return redirect(url_for("partners.upgrade"))
+    if partner:
+        recent_requests = (PartnerConnectionRequest.query
+                           .filter_by(partner_id=partner.id)
+                           .order_by(PartnerConnectionRequest.created_at.desc())
+                           .limit(8).all())
+        stats["pending"] = sum(1 for r in recent_requests if r.status == "pending")
+        stats["accepted"] = sum(1 for r in recent_requests if r.status == "accepted")
+        stats["completed"] = sum(1 for r in recent_requests if r.status == "completed")
 
-    proposals_list = (
-        PartnerProposal.query
-        .filter_by(partner_id=partner.id)
-        .order_by(desc(PartnerProposal.created_at))
-        .all()
-    )
-
-    return render_template(
-        "partners/proposals.html",
-        partner=partner,
-        proposals_list=proposals_list,
-        portal="partner",
-        portal_name="Partner OS",
-        portal_home=url_for("partners.dashboard"),
-    )
-
-
-@partners_bp.route("/proposals/<int:proposal_id>", methods=["GET", "POST"])
-@role_required("partner_group", "admin")
-def proposal_detail(proposal_id):
-    partner = Partner.query.filter_by(user_id=current_user.id).first()
-
-    if not partner:
-        flash("Partner profile not found. Please register.", "warning")
-        return redirect(url_for("partners.register"))
-
-    if not partner_feature_enabled(partner, "proposal_builder_enabled", False):
-        flash("Proposal Builder is available on an upgraded plan.", "warning")
-        return redirect(url_for("partners.upgrade"))
-
-    proposal = PartnerProposal.query.filter_by(
-        id=proposal_id,
-        partner_id=partner.id
-    ).first_or_404()
-
-    linked_request = proposal.request
-
-    if request.method == "POST":
-        proposal.title = (request.form.get("title") or "").strip()
-        proposal.proposal_text = (request.form.get("proposal_text") or "").strip()
-        proposal.scope_of_work = (request.form.get("scope_of_work") or "").strip()
-        proposal.estimated_timeline = (request.form.get("estimated_timeline") or "").strip()
-
-        proposal.labor_cost = request.form.get("labor_cost", type=float) or 0.0
-        proposal.materials_cost = request.form.get("materials_cost", type=float) or 0.0
-        proposal.other_cost = request.form.get("other_cost", type=float) or 0.0
-        proposal.calculate_total()
-
-        action = (request.form.get("action") or "save").strip().lower()
-
-        if action == "send":
-            proposal.status = "sent"
-            proposal.sent_at = datetime.utcnow()
-
-            if linked_request:
-                linked_request.status = "accepted"
-                linked_request.responded_at = datetime.utcnow()
-
-            db.session.commit()
-            flash("Proposal sent and request updated.", "success")
-
-            if linked_request:
-                return redirect(url_for("partners.request_detail", request_id=linked_request.id))
-            return redirect(url_for("partners.proposal_detail", proposal_id=proposal.id))
-
-        elif action == "accept":
-            proposal.status = "accepted"
-            db.session.commit()
-            flash("Proposal marked accepted.", "success")
-            return redirect(url_for("partners.proposal_detail", proposal_id=proposal.id))
-
-        elif action == "decline":
-            proposal.status = "declined"
-            db.session.commit()
-            flash("Proposal marked declined.", "warning")
-            return redirect(url_for("partners.proposal_detail", proposal_id=proposal.id))
-
-        else:
-            db.session.commit()
-            flash("Proposal saved.", "success")
-            return redirect(url_for("partners.proposal_detail", proposal_id=proposal.id))
+    copilot_suggestions = (VIPAssistantSuggestion.query
+                           .filter_by(vip_profile_id=profile.id)
+                           .order_by(VIPAssistantSuggestion.created_at.desc())
+                           .limit(5).all())
 
     return render_template(
-        "partners/proposal_detail.html",
-        partner=partner,
-        proposal=proposal,
-        portal="partner",
-        portal_name="Partner OS",
-        portal_home=url_for("partners.dashboard"),
-    )
-
-@partners_bp.route("/proposals/new", methods=["GET", "POST"])
-@role_required("partner_group", "admin")
-def create_proposal():
-
-    # --------------------------------------------------
-    # Load partner
-    # --------------------------------------------------
-    partner = Partner.query.filter_by(user_id=current_user.id).first()
-
-    if not partner:
-        flash("Partner profile not found. Please register.", "warning")
-        return redirect(url_for("partners.register"))
-
-    # --------------------------------------------------
-    # Feature gate
-    # --------------------------------------------------
-    if not partner_feature_enabled(partner, "proposal_builder_enabled", False):
-        flash("Proposal Builder is available on an upgraded plan.", "warning")
-        return redirect(url_for("partners.upgrade"))
-
-    # --------------------------------------------------
-    # Load request (if passed)
-    # --------------------------------------------------
-    request_id = request.args.get("request_id", type=int)
-    linked_request = None
-
-    if request_id:
-        linked_request = PartnerConnectionRequest.query.filter_by(
-            id=request_id,
-            partner_id=partner.id
-        ).first()
-
-    # --------------------------------------------------
-    # Prefill defaults
-    # --------------------------------------------------
-    prefill = {
-        "title": "",
-        "estimated_timeline": "",
-        "proposal_text": "",
-        "scope_of_work": "",
-        "labor_cost": "",
-        "materials_cost": "",
-        "other_cost": "",
-    }
-
-    if linked_request:
-        prefill["title"] = linked_request.title or linked_request.category or "Service Proposal"
-        prefill["estimated_timeline"] = linked_request.timeline or ""
-        prefill["scope_of_work"] = linked_request.message or ""
-
-    # --------------------------------------------------
-    # Handle POST
-    # --------------------------------------------------
-    if request.method == "POST":
-
-        action = (request.form.get("action") or "save").strip().lower()
-        form_request_id = request.form.get("request_id", type=int)
-
-        # Load request again safely
-        safe_request = None
-        if form_request_id:
-            safe_request = PartnerConnectionRequest.query.filter_by(
-                id=form_request_id,
-                partner_id=partner.id
-            ).first()
-
-        # --------------------------------------------------
-        # Form data
-        # --------------------------------------------------
-        title = (request.form.get("title") or "").strip()
-        proposal_text = (request.form.get("proposal_text") or "").strip()
-        scope_of_work = (request.form.get("scope_of_work") or "").strip()
-        estimated_timeline = (request.form.get("estimated_timeline") or "").strip()
-
-        labor_cost = request.form.get("labor_cost", type=float) or 0.0
-        materials_cost = request.form.get("materials_cost", type=float) or 0.0
-        other_cost = request.form.get("other_cost", type=float) or 0.0
-
-        # --------------------------------------------------
-        # 🔥 AI GENERATION
-        # --------------------------------------------------
-        if action == "generate_ai":
-
-            ai = AIAssistant()
-
-            ai_input = f"""
-You are a professional contractor preparing a proposal for a real estate investor.
-
-Partner: {partner.display_name()}
-Category: {partner.category or partner.type}
-
-Request Title: {safe_request.title if safe_request else title}
-Request Details: {safe_request.message if safe_request else scope_of_work}
-Budget: {safe_request.budget if safe_request else ''}
-Timeline: {safe_request.timeline if safe_request else estimated_timeline}
-
-Write:
-
-1. Proposal Summary
-2. Scope of Work
-3. Timeline & Execution
-4. Closing Statement
-
-Keep it clear, confident, and investor-friendly.
-"""
-
-            generated_text = ai.generate_reply(ai_input, role="general")
-
-            prefill = {
-                "title": title or (safe_request.title if safe_request else "Service Proposal"),
-                "estimated_timeline": estimated_timeline or (safe_request.timeline if safe_request else ""),
-                "proposal_text": generated_text,
-                "scope_of_work": scope_of_work or (safe_request.message if safe_request else ""),
-                "labor_cost": labor_cost,
-                "materials_cost": materials_cost,
-                "other_cost": other_cost,
-            }
-
-            return render_template(
-                "partners/proposal_builder.html",
-                partner=partner,
-                linked_request=safe_request,
-                prefill=prefill,
-                portal="partner",
-                portal_name="Partner OS",
-                portal_home=url_for("partners.dashboard"),
-            )
-
-        # --------------------------------------------------
-        # Validate
-        # --------------------------------------------------
-        if not title:
-            flash("Proposal title is required.", "danger")
-
-            prefill = {
-                "title": title,
-                "estimated_timeline": estimated_timeline,
-                "proposal_text": proposal_text,
-                "scope_of_work": scope_of_work,
-                "labor_cost": labor_cost,
-                "materials_cost": materials_cost,
-                "other_cost": other_cost,
-            }
-
-            return render_template(
-                "partners/proposal_builder.html",
-                partner=partner,
-                linked_request=safe_request,
-                prefill=prefill,
-                portal="partner",
-                portal_name="Partner OS",
-                portal_home=url_for("partners.dashboard"),
-            )
-
-        # --------------------------------------------------
-        # Save proposal
-        # --------------------------------------------------
-        proposal = PartnerProposal(
-            partner_id=partner.id,
-            request_id=safe_request.id if safe_request else None,
-            title=title,
-            proposal_text=proposal_text,
-            scope_of_work=scope_of_work,
-            labor_cost=labor_cost,
-            materials_cost=materials_cost,
-            other_cost=other_cost,
-            estimated_timeline=estimated_timeline,
-            status="draft",
-            created_at=datetime.utcnow()
-        )
-
-        proposal.calculate_total()
-
-        db.session.add(proposal)
-        db.session.commit()
-
-        flash("Proposal saved as draft.", "success")
-
-        return redirect(url_for("partners.proposal_detail", proposal_id=proposal.id))
-
-    # --------------------------------------------------
-    # GET request
-    # --------------------------------------------------
-    return render_template(
-        "partners/proposal_builder.html",
-        partner=partner,
-        linked_request=linked_request,
-        prefill=prefill,
-        portal="partner",
-        portal_name="Partner OS",
-        portal_home=url_for("partners.dashboard"),
+        "vip/partner/dashboard.html",
+        vip_profile=profile,
+        modules=get_enabled_modules(profile),
+        header_name=get_dashboard_name(profile),
+        recent_requests=recent_requests,
+        stats=stats,
+        copilot_suggestions=copilot_suggestions,
+        portal="vip",
+        portal_name="VIP",
+        portal_home=url_for("vip.partner_dashboard"),
     )
