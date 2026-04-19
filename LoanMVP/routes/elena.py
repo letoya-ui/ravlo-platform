@@ -1387,7 +1387,7 @@ def copilot_command():
 
 # LoanMVP/routes/elena.py
 
-@elena_bp.post('/interaction/new', methods=['GET', 'POST'])
+@elena_bp.route('/interaction/new', methods=['GET', 'POST'])
 def interaction_new():
     if request.method == 'POST':
         # handle form submission
