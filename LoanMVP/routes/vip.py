@@ -563,7 +563,10 @@ def realtor_dashboard():
         listing_status_filter = status_filter,
         recent_flyers         = recent_flyers,
         copilot_suggestions   = copilot_suggestions,
-        current_market        = current_market,
+        # `effective_market` reflects what the queries were actually
+        # scoped to — for a single-market realtor this is their one market
+        # even though the session still holds "All Markets".
+        current_market        = effective_market,
         available_markets     = available_markets,
         multi_market          = multi_market,
         market_stats          = market_stats,

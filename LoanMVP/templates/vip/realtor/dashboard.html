@@ -160,7 +160,10 @@
       <section class="ravlo-card pad">
         <div class="flex justify-between items-center mb-4">
           <h3 class="text-lg font-semibold">Client Pipeline</h3>
-          <a href="{{ url_for('elena.client_new') }}" class="ravlo-btn primary sm">+ Add Client</a>
+          <div class="flex gap-2 items-center">
+            <a href="{{ url_for('elena.import_contacts') }}" class="ravlo-btn ghost sm">Import Spreadsheet</a>
+            <a href="{{ url_for('elena.client_new') }}" class="ravlo-btn primary sm">+ Add Client</a>
+          </div>
         </div>
 
         <div class="flex gap-3 overflow-x-auto pb-2">

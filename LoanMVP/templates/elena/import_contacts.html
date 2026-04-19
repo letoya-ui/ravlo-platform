@@ -1,17 +1,46 @@
 {% extends "layouts/ravlo_base.html" %}
 
+{% block page_title %}Import Contacts{% endblock %}
+{% block page_subline %}
+Upload a spreadsheet of leads, clients, or past customers. Column names
+like <em>name</em>, <em>email</em>, <em>phone</em>, <em>role</em>, <em>tags</em>,
+and <em>notes</em> are auto-detected; you can remap on the next step.
+{% endblock %}
+
 {% block content %}
 <div class="max-w-xl mx-auto">
-  <div class="card pad">
-    <h2 class="text-xl font-semibold mb-4">Import Contacts</h2>
+  <div class="ravlo-card pad space-y-4">
+    <h2 class="text-xl font-semibold">Upload spreadsheet</h2>
 
-    <form method="POST" enctype="multipart/form-data">
-      <input type="file" name="file" accept=".csv,.xlsx" required>
+    <form method="POST" enctype="multipart/form-data" class="space-y-4">
+      <label class="block text-sm">
+        <span class="block font-medium mb-1">File</span>
+        <input
+          type="file"
+          name="file"
+          accept=".csv,.xlsx,.xls"
+          required
+          class="block w-full text-sm"
+        >
+        <span class="block text-xs text-gray-500 mt-1">
+          Accepts CSV, Excel (.xlsx), and legacy Excel (.xls). First row
+          must be headers.
+        </span>
+      </label>
 
-      <button class="btn primary mt-4 w-full">
-        Upload & Preview
+      <button type="submit" class="ravlo-btn primary w-full">
+        Upload &amp; Preview
       </button>
     </form>
+
+    <div class="text-xs text-gray-500 border-t border-white/5 pt-3">
+      <p class="font-medium text-gray-400 mb-1">Tips</p>
+      <ul class="list-disc list-inside space-y-0.5">
+        <li>Existing contacts are matched by email, then phone.</li>
+        <li>You can skip duplicates or overwrite them on the next step.</li>
+        <li>Up to 50 rows preview; the full file imports after confirmation.</li>
+      </ul>
+    </div>
   </div>
 </div>
 {% endblock %}
