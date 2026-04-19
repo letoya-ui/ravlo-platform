@@ -137,15 +137,15 @@ def inject_vip_context():
 def index():
     profile = get_or_create_vip_profile()
 
-    role_map = {
-        "realtor": "elena.dashboard",
-        "contractor": "vip.contractor_dashboard",
-        "designer": "vip.designer_dashboard",
-        "partner": "vip.partner_dashboard",
-        "loan_officer": "vip.loan_officer_dashboard",
-        "lender": "vip.loan_officer_dashboard",
-    }
+    # Frank gets his dual-market workspace
+    if getattr(profile, "dual_market", False):
+        return redirect(url_for("vip.frank_dashboard"))
 
+    role_map = {
+        "realtor":      "vip.realtor_dashboard",
+        "contractor":   "vip.contractor_dashboard",
+        ...
+    }
     return redirect(url_for(role_map.get(profile.role_type, "vip.partner_dashboard")))
 
 
@@ -500,3 +500,210 @@ def delete_annotation():
     db.session.commit()
 
     return jsonify({"status": "deleted"})
+
+# ─────────────────────────────────────────────────────────────
+# Add these constants near the top of vip.py (already there):
+#   FRANK_MARKETS = ["Hudson Valley", "Sarasota"]
+#
+# Add this helper if not already present:
+# ─────────────────────────────────────────────────────────────
+
+def _get_frank_market():
+    """Returns Frank's active market filter from session.
+    Stored under 'frank_market' — never touches Elena's 'elena_market'."""
+    return session.get("frank_market", "All Markets")
+
+
+# ─────────────────────────────────────────────────────────────
+# FRANK — dual-market realtor dashboard
+# ─────────────────────────────────────────────────────────────
+
+@vip_bp.post("/frank/market-switch")
+@role_required("partner_group", "admin")
+def frank_market_switch():
+    selected = (request.form.get("market") or "All Markets").strip()
+    allowed = {"All Markets", *FRANK_MARKETS}
+    session["frank_market"] = selected if selected in allowed else "All Markets"
+    next_url = request.form.get("next") or url_for("vip.frank_dashboard")
+    return redirect(next_url)
+
+
+@vip_bp.get("/frank")
+@role_required("partner_group", "admin")
+def frank_dashboard():
+    profile = get_or_create_vip_profile()
+    now = datetime.utcnow()
+    week_ago = now - timedelta(days=7)
+    current_market = _get_frank_market()
+
+    # ── COMBINED summary (always both markets) ──────────────
+    total_clients     = ElenaClient.query.count()
+    new_leads         = ElenaClient.query.filter(ElenaClient.created_at >= week_ago).count()
+    total_listings    = ElenaListing.query.filter_by(status="active").count()
+    followups_due     = ElenaInteraction.query.filter(
+        ElenaInteraction.due_at.isnot(None),
+        ElenaInteraction.due_at >= now,
+        ElenaInteraction.due_at <= now + timedelta(days=7),
+    ).count()
+
+    summary = {
+        "total_clients":  total_clients,
+        "new_leads":      new_leads,
+        "total_listings": total_listings,
+        "followups_due":  followups_due,
+    }
+
+    # ── PER-MARKET stats (for the split finance cards) ──────
+    market_stats = {}
+    for market in FRANK_MARKETS:
+        active = ElenaListing.query.filter_by(status="active", market=market).count()
+        clients = ElenaClient.query.count()   # extend with market tag if you add one later
+        market_stats[market] = {
+            "active_listings": active,
+            "clients": clients,
+        }
+
+    # ── PIPELINE (filtered) ─────────────────────────────────
+    pipeline_groups = []
+    canonical_keys = {s[0] for s in PIPELINE_STAGES}
+
+    for stage_key, stage_label in PIPELINE_STAGES:
+        q = ElenaClient.query.filter_by(pipeline_stage=stage_key)
+        pipeline_groups.append({
+            "key":     stage_key,
+            "label":   stage_label,
+            "count":   q.count(),
+            "clients": q.order_by(ElenaClient.updated_at.desc()).limit(10).all(),
+        })
+
+    unstaged_filter = or_(
+        ElenaClient.pipeline_stage.is_(None),
+        ~ElenaClient.pipeline_stage.in_(canonical_keys),
+    )
+    unstaged_total = ElenaClient.query.filter(unstaged_filter).count()
+    if unstaged_total:
+        pipeline_groups.insert(0, {
+            "key":     "unstaged",
+            "label":   "Unstaged",
+            "count":   unstaged_total,
+            "clients": (ElenaClient.query.filter(unstaged_filter)
+                        .order_by(ElenaClient.updated_at.desc()).limit(10).all()),
+        })
+
+    # ── LISTINGS (respect market filter) ────────────────────
+    status_filter = (request.args.get("listing_status") or "").strip().lower()
+    listings_q = ElenaListing.query
+    if current_market != "All Markets":
+        listings_q = listings_q.filter_by(market=current_market)
+    if status_filter and status_filter in {s[0] for s in LISTING_STATUSES}:
+        listings_q = listings_q.filter_by(status=status_filter)
+    listings = listings_q.order_by(ElenaListing.updated_at.desc()).limit(15).all()
+
+    # ── LISTINGS split by market (for side panels) ──────────
+    listings_by_market = {}
+    for market in FRANK_MARKETS:
+        listings_by_market[market] = (
+            ElenaListing.query
+            .filter_by(market=market, status="active")
+            .order_by(ElenaListing.updated_at.desc())
+            .limit(6)
+            .all()
+        )
+
+    # ── FLYERS (respect market filter) ──────────────────────
+    flyers_q = ElenaFlyer.query.join(ElenaListing, ElenaFlyer.listing_id == ElenaListing.id)
+    if current_market != "All Markets":
+        flyers_q = flyers_q.filter(ElenaListing.market == current_market)
+    recent_flyers = flyers_q.order_by(ElenaFlyer.created_at.desc()).limit(6).all()
+
+    # ── FLYERS split by market ───────────────────────────────
+    flyers_by_market = {}
+    for market in FRANK_MARKETS:
+        flyers_by_market[market] = (
+            ElenaFlyer.query
+            .join(ElenaListing, ElenaFlyer.listing_id == ElenaListing.id)
+            .filter(ElenaListing.market == market)
+            .order_by(ElenaFlyer.created_at.desc())
+            .limit(4)
+            .all()
+        )
+
+    # ── FINANCES — combined + per-market ────────────────────
+    all_income   = VIPIncome.query.filter_by(vip_profile_id=profile.id).all()
+    all_expenses = VIPExpense.query.filter_by(vip_profile_id=profile.id).all()
+
+    total_income   = sum((i.amount or 0) for i in all_income)
+    total_expenses = sum((e.amount or 0) for e in all_expenses)
+    net_profit     = total_income - total_expenses
+
+    # Split by market tag (assumes VIPIncome/VIPExpense have a `market` column;
+    # fall back gracefully if not — show combined only)
+    finances_combined = {
+        "income":   total_income,
+        "expenses": total_expenses,
+        "net":      net_profit,
+    }
+
+    finances_by_market = {}
+    for market in FRANK_MARKETS:
+        try:
+            m_income   = sum((i.amount or 0) for i in all_income   if getattr(i, "market", None) == market)
+            m_expenses = sum((e.amount or 0) for e in all_expenses if getattr(e, "market", None) == market)
+            finances_by_market[market] = {
+                "income":   m_income,
+                "expenses": m_expenses,
+                "net":      m_income - m_expenses,
+            }
+        except Exception:
+            finances_by_market[market] = {"income": 0, "expenses": 0, "net": 0}
+
+    # ── RECENT INTERACTIONS ──────────────────────────────────
+    recent_interactions = (
+        ElenaInteraction.query
+        .order_by(ElenaInteraction.created_at.desc())
+        .limit(10)
+        .all()
+    )
+
+    # ── COPILOT (market-aware) ───────────────────────────────
+    copilot_suggestions = (
+        VIPAssistantSuggestion.query
+        .filter_by(vip_profile_id=profile.id)
+        .order_by(VIPAssistantSuggestion.created_at.desc())
+        .limit(8)
+        .all()
+    )
+
+    return render_template(
+        "vip/realtor/frank_dashboard.html",
+        vip_profile         = profile,
+        modules             = get_enabled_modules(profile),
+        header_name         = get_dashboard_name(profile),
+        # market state
+        current_market      = current_market,
+        available_markets   = FRANK_MARKETS,
+        market_stats        = market_stats,
+        # summary
+        summary             = summary,
+        # pipeline
+        pipeline_groups     = pipeline_groups,
+        pipeline_stages     = PIPELINE_STAGES,
+        # listings
+        listings            = listings,
+        listings_by_market  = listings_by_market,
+        listing_statuses    = LISTING_STATUSES,
+        listing_status_filter = status_filter,
+        # flyers
+        recent_flyers       = recent_flyers,
+        flyers_by_market    = flyers_by_market,
+        # finances
+        finances_combined   = finances_combined,
+        finances_by_market  = finances_by_market,
+        # activity
+        recent_interactions = recent_interactions,
+        copilot_suggestions = copilot_suggestions,
+        # portal
+        portal      = "vip",
+        portal_name = "VIP",
+        portal_home = url_for("vip.frank_dashboard"),
+    )
