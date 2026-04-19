@@ -13,6 +13,11 @@ from LoanMVP.models.vip_models import (
 )
 from LoanMVP.models.vip_models import VIPDesignProject, VIPDesignAnnotation
 
+from LoanMVP.models.borrowers import ProjectBudget, ProjectExpense, Deal, PropertyAnalysis
+from LoanMVP.models.partner_models import PartnerConnectionRequest, PartnerProposal
+from LoanMVP.models.investor_models import InvestorProfile
+from LoanMVP.models.property import SavedProperty
+
 from LoanMVP.services.vip_ai_pilot import parse_vip_command
 
 from LoanMVP.utils.decorators import role_required
@@ -165,18 +170,558 @@ def realtor_dashboard():
 
 
 @vip_bp.get("/contractor")
+# ─────────────────────────────────────────────────────────────────
+# Add to vip.py — Contractor VIP + Deal Architect feedback loop
+# ─────────────────────────────────────────────────────────────────
+#
+# Required imports to add at top of vip.py:
+#
+# from LoanMVP.models.borrowers import ProjectBudget, ProjectExpense, Deal, PropertyAnalysis
+# from LoanMVP.models.partner_models import PartnerConnectionRequest, PartnerProposal
+# from LoanMVP.models.investor_models import InvestorProfile
+# from LoanMVP.models.property import SavedProperty
+# ─────────────────────────────────────────────────────────────────
+
+
+# ── CONTRACTOR DASHBOARD ─────────────────────────────────────────
+
+@vip_bp.get("/contractor")
 @role_required("partner_group", "admin")
 def contractor_dashboard():
     profile = get_or_create_vip_profile()
+    partner = getattr(current_user, "partner_profile", None)
+
+    requests_with_context = []
+    active_jobs = []
+    stats = {
+        "open_requests": 0,
+        "active_jobs": 0,
+        "completed_jobs": 0,
+        "total_volume": 0.0,
+        "ai_estimate_total": 0.0,
+        "contractor_total": 0.0,
+    }
+
+    if partner:
+        # ── Incoming requests with full deal context ──────────────
+        raw_requests = (
+            PartnerConnectionRequest.query
+            .filter_by(partner_id=partner.id)
+            .filter(PartnerConnectionRequest.status.in_(["pending", "accepted", "awaiting_match"]))
+            .order_by(PartnerConnectionRequest.created_at.desc())
+            .limit(20)
+            .all()
+        )
+
+        for req in raw_requests:
+            context = _build_request_deal_context(req)
+            requests_with_context.append({"request": req, "context": context})
+
+        stats["open_requests"] = len(requests_with_context)
+
+        # ── Active jobs with budget comparison ───────────────────
+        raw_jobs = (
+            PartnerJob.query
+            .filter_by(partner_id=partner.id)
+            .order_by(PartnerJob.created_at.desc())
+            .limit(20)
+            .all()
+        )
+
+        for job in raw_jobs:
+            job_data = {"job": job, "budget": None, "ai_estimate": None, "delta": None}
+
+            # Find linked ProjectBudget via deal or property
+            budget = None
+            if job.investor_profile_id:
+                budget = (
+                    ProjectBudget.query
+                    .filter_by(investor_profile_id=job.investor_profile_id)
+                    .order_by(ProjectBudget.updated_at.desc())
+                    .first()
+                )
+
+            if budget:
+                job_data["budget"] = budget
+
+                # Find the Deal Architect estimate from PropertyAnalysis or Deal
+                deal = None
+                if hasattr(job, "deal_id") and job.deal_id:
+                    deal = Deal.query.get(job.deal_id)
+                elif budget.deal_id:
+                    deal = Deal.query.get(budget.deal_id)
+
+                if deal and deal.rehab_cost:
+                    ai_estimate = float(deal.rehab_cost or 0)
+                    contractor_cost = float(budget.total_cost or 0)
+                    job_data["ai_estimate"] = ai_estimate
+                    job_data["delta"] = round(contractor_cost - ai_estimate, 2)
+                    job_data["delta_pct"] = (
+                        round(((contractor_cost - ai_estimate) / ai_estimate) * 100, 1)
+                        if ai_estimate > 0 else None
+                    )
+
+            active_jobs.append(job_data)
+
+        stats["active_jobs"] = sum(1 for j in active_jobs if j["job"].status in ["Open", "in_progress"])
+        stats["completed_jobs"] = sum(1 for j in active_jobs if j["job"].status == "completed")
+        stats["total_volume"] = sum(
+            float(j["budget"].total_cost or 0)
+            for j in active_jobs
+            if j["budget"] and j["job"].status == "completed"
+        )
+        stats["ai_estimate_total"] = sum(
+            j["ai_estimate"] for j in active_jobs if j["ai_estimate"]
+        )
+        stats["contractor_total"] = sum(
+            float(j["budget"].total_cost or 0)
+            for j in active_jobs if j["budget"]
+        )
+
+    copilot_suggestions = (
+        VIPAssistantSuggestion.query
+        .filter_by(vip_profile_id=profile.id)
+        .order_by(VIPAssistantSuggestion.created_at.desc())
+        .limit(5)
+        .all()
+    )
+
+    recent_proposals = []
+    if partner:
+        recent_proposals = (
+            PartnerProposal.query
+            .filter_by(partner_id=partner.id)
+            .order_by(PartnerProposal.created_at.desc())
+            .limit(5)
+            .all()
+        )
+
     return render_template(
         "vip/contractor/dashboard.html",
         vip_profile=profile,
         modules=get_enabled_modules(profile),
         header_name=get_dashboard_name(profile),
+        requests_with_context=requests_with_context,
+        active_jobs=active_jobs,
+        recent_proposals=recent_proposals,
+        stats=stats,
+        copilot_suggestions=copilot_suggestions,
         portal="vip",
         portal_name="VIP",
         portal_home=url_for("vip.contractor_dashboard"),
     )
+
+
+def _build_request_deal_context(req):
+    """
+    Pull deal context from a PartnerConnectionRequest.
+    Returns a dict with whatever deal data is available.
+    """
+    ctx = {
+        "deal": None,
+        "property_analysis": None,
+        "ai_rehab_estimate": None,
+        "arv": None,
+        "purchase_price": None,
+        "strategy": None,
+        "address": req.related_address(),
+        "requester": req.requester_name(),
+        "budget": req.budget,
+        "timeline": req.timeline,
+    }
+
+    # Try Deal first (most complete)
+    if req.deal_id:
+        deal = Deal.query.get(req.deal_id)
+        if deal:
+            ctx["deal"] = deal
+            ctx["ai_rehab_estimate"] = float(deal.rehab_cost or 0)
+            ctx["arv"] = float(deal.arv or 0)
+            ctx["purchase_price"] = float(deal.purchase_price or 0)
+            ctx["strategy"] = deal.strategy
+            ctx["address"] = ctx["address"] or deal.address
+
+            # Pull rehab scope if available
+            if deal.rehab_scope_json:
+                ctx["rehab_scope"] = deal.rehab_scope_json
+
+            return ctx
+
+    # Fall back to SavedProperty → PropertyAnalysis
+    if req.saved_property_id:
+        analysis = (
+            PropertyAnalysis.query
+            .filter_by(investor_profile_id=req.investor_profile_id)
+            .order_by(PropertyAnalysis.created_at.desc())
+            .first()
+        )
+        if analysis:
+            ctx["property_analysis"] = analysis
+            ctx["ai_rehab_estimate"] = float(analysis.rehab_cost or 0)
+            ctx["arv"] = float(analysis.arv or 0)
+            ctx["purchase_price"] = float(analysis.purchase_price or 0)
+            ctx["address"] = ctx["address"] or analysis.address
+
+    return ctx
+
+
+# ── CONTRACTOR: Accept request + create budget ───────────────────
+
+@vip_bp.post("/contractor/request/<int:req_id>/accept")
+@role_required("partner_group", "admin")
+def contractor_accept_request(req_id):
+    profile = get_or_create_vip_profile()
+    partner = getattr(current_user, "partner_profile", None)
+
+    if not partner:
+        flash("Partner profile not found.", "danger")
+        return redirect(url_for("vip.contractor_dashboard"))
+
+    req = PartnerConnectionRequest.query.filter_by(
+        id=req_id, partner_id=partner.id
+    ).first_or_404()
+
+    req.status = "accepted"
+    req.responded_at = datetime.utcnow()
+
+    # Create a PartnerJob linked to the deal
+    job = PartnerJob(
+        partner_id=partner.id,
+        investor_profile_id=req.investor_profile_id,
+        borrower_profile_id=req.borrower_profile_id,
+        property_id=req.property_id,
+        title=req.title or f"{partner.category or 'Contractor'} Job",
+        scope=req.message,
+        status="Open",
+    )
+
+    # Link deal_id if PartnerJob has that column
+    if hasattr(job, "deal_id") and req.deal_id:
+        job.deal_id = req.deal_id
+
+    db.session.add(job)
+    db.session.flush()
+
+    flash("Request accepted. Job created.", "success")
+    db.session.commit()
+    return redirect(url_for("vip.contractor_dashboard"))
+
+
+# ── CONTRACTOR: Submit scope back into ProjectBudget ─────────────
+
+@vip_bp.post("/contractor/job/<int:job_id>/submit-scope")
+@role_required("partner_group", "admin")
+def contractor_submit_scope(job_id):
+    """
+    Contractor submits actual scope numbers.
+    Writes into ProjectBudget — closes the AI feedback loop.
+    """
+    profile = get_or_create_vip_profile()
+    partner = getattr(current_user, "partner_profile", None)
+
+    if not partner:
+        flash("Partner profile not found.", "danger")
+        return redirect(url_for("vip.contractor_dashboard"))
+
+    job = PartnerJob.query.filter_by(
+        id=job_id, partner_id=partner.id
+    ).first_or_404()
+
+    labor_cost = float(request.form.get("labor_cost") or 0)
+    materials_cost = float(request.form.get("materials_cost") or 0)
+    other_cost = float(request.form.get("other_cost") or 0)
+    timeline = (request.form.get("timeline") or "").strip()
+    scope_notes = (request.form.get("scope_notes") or "").strip()
+    total = labor_cost + materials_cost + other_cost
+
+    # Find or create a ProjectBudget for this job/deal
+    budget = None
+    deal_id = getattr(job, "deal_id", None)
+
+    if deal_id:
+        budget = ProjectBudget.query.filter_by(deal_id=deal_id).first()
+
+    if not budget and job.investor_profile_id:
+        budget = ProjectBudget.query.filter_by(
+            investor_profile_id=job.investor_profile_id
+        ).first()
+
+    if not budget:
+        budget = ProjectBudget(
+            investor_profile_id=job.investor_profile_id,
+            borrower_profile_id=job.borrower_profile_id,
+            deal_id=deal_id,
+            budget_type="rehab",
+            name=job.title or "Contractor Scope",
+            project_name=job.title,
+        )
+        db.session.add(budget)
+        db.session.flush()
+
+    # Update budget with contractor numbers
+    budget.labor_cost = labor_cost
+    budget.materials_cost = materials_cost
+    budget.total_cost = total
+    if scope_notes:
+        budget.notes = f"[Contractor: {partner.name}]\n{scope_notes}"
+
+    # Add line-item expenses
+    line_items = request.form.getlist("line_category[]")
+    line_descs = request.form.getlist("line_description[]")
+    line_amounts = request.form.getlist("line_amount[]")
+
+    for cat, desc, amt in zip(line_items, line_descs, line_amounts):
+        if not desc:
+            continue
+        expense = ProjectExpense(
+            budget_id=budget.id,
+            category=cat or "General",
+            description=desc,
+            vendor=partner.name or partner.company,
+            estimated_amount=float(amt or 0),
+            status="planned",
+        )
+        db.session.add(expense)
+
+    budget.recalculate_totals()
+
+    # ── AI FEEDBACK LOOP ─────────────────────────────────────────
+    # Compare contractor total vs Deal Architect estimate
+    # Store delta so AI can learn accuracy over time
+    if deal_id:
+        deal = Deal.query.get(deal_id)
+        if deal and deal.rehab_cost:
+            ai_estimate = float(deal.rehab_cost)
+            contractor_total = float(budget.total_cost)
+            delta = contractor_total - ai_estimate
+            delta_pct = round((delta / ai_estimate) * 100, 2) if ai_estimate > 0 else 0
+
+            # Store in deal's results_json for Deal Architect to read
+            results = deal.results_json or {}
+            if "contractor_feedback" not in results:
+                results["contractor_feedback"] = []
+
+            results["contractor_feedback"].append({
+                "partner_id": partner.id,
+                "partner_name": partner.name or partner.company,
+                "ai_estimate": ai_estimate,
+                "contractor_total": contractor_total,
+                "labor": labor_cost,
+                "materials": materials_cost,
+                "delta": delta,
+                "delta_pct": delta_pct,
+                "timeline": timeline,
+                "submitted_at": datetime.utcnow().isoformat(),
+            })
+
+            deal.results_json = results
+
+            # Flag the deal's scope as having a real contractor number
+            if hasattr(deal, "inputs_json") and deal.inputs_json:
+                inputs = deal.inputs_json or {}
+                inputs["contractor_verified_rehab"] = contractor_total
+                inputs["contractor_verified_at"] = datetime.utcnow().isoformat()
+                deal.inputs_json = inputs
+
+    # Also create a PartnerProposal for the record
+    proposal = PartnerProposal(
+        partner_id=partner.id,
+        title=job.title or "Scope Submission",
+        scope_of_work=scope_notes,
+        labor_cost=labor_cost,
+        materials_cost=materials_cost,
+        other_cost=other_cost,
+        estimated_timeline=timeline,
+        status="sent",
+        sent_at=datetime.utcnow(),
+    )
+    proposal.calculate_total()
+    db.session.add(proposal)
+
+    db.session.commit()
+
+    flash(f"Scope submitted. Total: ${total:,.0f}", "success")
+    return redirect(url_for("vip.contractor_dashboard"))
+
+
+# ── REALTOR VIP: Market-matched investor properties ───────────────
+
+@vip_bp.get("/realtor/investor-flow")
+@role_required("partner_group", "admin")
+def realtor_investor_flow():
+    """
+    Shows realtor (Frank/Elena) properties investors are actively
+    analyzing in their market. Two-way: realtor can attach comps/
+    listing data back to the investor's deal.
+    """
+    profile = get_or_create_vip_profile()
+    partner = getattr(current_user, "partner_profile", None)
+    current_market = _get_frank_market()
+
+    service_area = getattr(partner, "service_area", "") or ""
+
+    # ── Match SavedProperties to realtor's market ─────────────────
+    # Strategy 1: explicit market tag on SavedProperty
+    # Strategy 2: geo match on state/city vs service_area
+    # Strategy 3: investor explicitly sent a PartnerConnectionRequest
+    # to this realtor (category = realtor/listing)
+
+    matched_properties = []
+
+    # Method 1 + 2: market/geo match on active SavedProperties
+    # that have been analyzed (have a linked PropertyAnalysis)
+    analyzed_ids = (
+        db.session.query(PropertyAnalysis.investor_profile_id)
+        .filter(PropertyAnalysis.investor_profile_id.isnot(None))
+        .distinct()
+        .all()
+    )
+    analyzed_investor_ids = [row[0] for row in analyzed_ids]
+
+    if analyzed_investor_ids:
+        sp_query = SavedProperty.query.filter(
+            SavedProperty.investor_profile_id.in_(analyzed_investor_ids)
+        )
+
+        # Market tag match (Frank's markets)
+        market_matches = []
+        geo_matches = []
+
+        if current_market != "All Markets":
+            # Try market column first
+            if hasattr(SavedProperty, "market"):
+                market_matches = sp_query.filter_by(market=current_market).limit(20).all()
+
+            # Geo fallback — match state/city
+            if not market_matches:
+                state_map = {
+                    "Hudson Valley": ("NY", ["beacon", "kingston", "poughkeepsie",
+                                             "newburgh", "hudson", "rhinebeck",
+                                             "woodstock", "catskill"]),
+                    "Sarasota": ("FL", ["sarasota", "bradenton", "venice",
+                                        "north port", "osprey", "nokomis"]),
+                }
+                if current_market in state_map:
+                    state_code, cities = state_map[current_market]
+                    geo_matches = sp_query.filter(
+                        db.func.lower(SavedProperty.state) == state_code.lower()
+                    ).limit(20).all()
+        else:
+            # All Markets — show everything analyzed
+            market_matches = sp_query.limit(30).all()
+
+        raw_properties = market_matches or geo_matches
+
+        for sp in raw_properties:
+            # Get the deal tied to this property if any
+            deal = Deal.query.filter_by(saved_property_id=sp.id).first()
+
+            # Get the latest analysis
+            analysis = (
+                PropertyAnalysis.query
+                .filter_by(investor_profile_id=sp.investor_profile_id)
+                .order_by(PropertyAnalysis.created_at.desc())
+                .first()
+            )
+
+            matched_properties.append({
+                "property": sp,
+                "deal": deal,
+                "analysis": analysis,
+                "arv": float(deal.arv or 0) if deal else float(getattr(analysis, "arv", 0) or 0),
+                "rehab": float(deal.rehab_cost or 0) if deal else float(getattr(analysis, "rehab_cost", 0) or 0),
+                "strategy": deal.strategy if deal else None,
+                "address": (getattr(sp, "address", None) or
+                           (deal.address if deal else None) or
+                           (analysis.address if analysis else "—")),
+            })
+
+    # Method 3: PartnerConnectionRequests sent TO this realtor
+    # (category contains realtor/listing/comps)
+    realtor_requests = []
+    if partner:
+        realtor_requests = (
+            PartnerConnectionRequest.query
+            .filter_by(partner_id=partner.id)
+            .filter(PartnerConnectionRequest.category.in_(
+                ["realtor", "listing", "comps", "market_analysis", "buyer_agent"]
+            ))
+            .filter(PartnerConnectionRequest.status.in_(["pending", "accepted"]))
+            .order_by(PartnerConnectionRequest.created_at.desc())
+            .limit(10)
+            .all()
+        )
+
+    return render_template(
+        "vip/realtor/investor_flow.html",
+        vip_profile=profile,
+        modules=get_enabled_modules(profile),
+        header_name=get_dashboard_name(profile),
+        matched_properties=matched_properties,
+        realtor_requests=realtor_requests,
+        current_market=current_market,
+        available_markets=FRANK_MARKETS,
+        portal="vip",
+        portal_name="VIP",
+        portal_home=url_for("vip.realtor_dashboard"),
+    )
+
+
+# ── REALTOR: Attach comps/listing data to investor deal ──────────
+
+@vip_bp.post("/realtor/deal/<int:deal_id>/attach-market-data")
+@role_required("partner_group", "admin")
+def realtor_attach_market_data(deal_id):
+    """
+    Realtor pushes market context (comps, listing notes, market analysis)
+    back into the investor's deal. Feeds Deal Architect accuracy.
+    """
+    profile = get_or_create_vip_profile()
+    partner = getattr(current_user, "partner_profile", None)
+
+    deal = Deal.query.get_or_404(deal_id)
+
+    comps_note = (request.form.get("comps_note") or "").strip()
+    suggested_arv = request.form.get("suggested_arv", type=float)
+    market_note = (request.form.get("market_note") or "").strip()
+    days_on_market = request.form.get("days_on_market", type=int)
+    list_price = request.form.get("list_price", type=float)
+
+    # Write realtor's market intelligence into deal's results_json
+    results = deal.results_json or {}
+
+    results["realtor_market_data"] = {
+        "realtor_id": partner.id if partner else None,
+        "realtor_name": partner.name if partner else profile.display_name,
+        "market": _get_frank_market(),
+        "suggested_arv": suggested_arv,
+        "comps_note": comps_note,
+        "market_note": market_note,
+        "days_on_market": days_on_market,
+        "list_price": list_price,
+        "submitted_at": datetime.utcnow().isoformat(),
+    }
+
+    # If realtor is suggesting a different ARV — flag for Deal Architect
+    if suggested_arv and deal.arv:
+        arv_delta = suggested_arv - float(deal.arv)
+        results["realtor_market_data"]["arv_delta"] = round(arv_delta, 2)
+        results["realtor_market_data"]["arv_delta_pct"] = (
+            round((arv_delta / float(deal.arv)) * 100, 2)
+            if deal.arv > 0 else None
+        )
+
+    deal.results_json = results
+
+    # SQLAlchemy JSON mutation tracking
+    from sqlalchemy.orm.attributes import flag_modified
+    flag_modified(deal, "results_json")
+
+    db.session.commit()
+
+    flash("Market data attached to deal.", "success")
+    return redirect(url_for("vip.realtor_investor_flow"))
+
 
 
 @vip_bp.get("/designer")
