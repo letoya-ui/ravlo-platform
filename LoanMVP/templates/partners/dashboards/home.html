@@ -7,9 +7,15 @@ Marketplace, leads, proposals, billing, and partner operations in one place.
 {% endblock %}
 
 {% block topbar_actions %}
-  <a href="{{ url_for('vip.index') }}" class="ravlo-btn primary sm">
-    Open My VIP Workspace
-  </a>
+  {% if is_realtor and not vip_unlocked %}
+    <a href="{{ url_for('partners.upgrade') }}" class="ravlo-btn primary sm">
+      Upgrade to VIP Workspace
+    </a>
+  {% else %}
+    <a href="{{ url_for('vip.index') }}" class="ravlo-btn primary sm">
+      Open My VIP Workspace
+    </a>
+  {% endif %}
 {% endblock %}
 
 {% block content %}
@@ -23,12 +29,26 @@ Marketplace, leads, proposals, billing, and partner operations in one place.
           Manage your marketplace presence, opportunities, and partner activity.
         </h2>
         <p class="partner-hero-text">
-          Partner OS handles your marketplace profile, leads, requests, proposals, and billing.
-          Your VIP Workspace is where you run your personalized dashboard, AI Pilot, finances,
-          and role-based tools.
+          {% if is_realtor and not vip_unlocked %}
+            Partner OS handles your marketplace profile, leads, requests, proposals,
+            and billing. Upgrade to Premium to unlock the VIP Realtor Workspace —
+            your personalized pipeline, listings, Canva flyers, AI Pilot, and finances.
+          {% else %}
+            Partner OS handles your marketplace profile, leads, requests, proposals, and billing.
+            Your VIP Workspace is where you run your personalized dashboard, AI Pilot, finances,
+            and role-based tools.
+          {% endif %}
         </p>
         <div class="partner-hero-actions">
-          <a href="{{ url_for('vip.index') }}" class="ravlo-btn primary">Open My VIP Workspace</a>
+          {% if is_realtor and not vip_unlocked %}
+            <a href="{{ url_for('partners.upgrade') }}" class="ravlo-btn primary">
+              Upgrade to VIP Workspace
+            </a>
+          {% else %}
+            <a href="{{ url_for('vip.index') }}" class="ravlo-btn primary">
+              Open My VIP Workspace
+            </a>
+          {% endif %}
           <a href="{{ url_for('partners.requests_inbox') }}" class="ravlo-btn ghost">View Requests</a>
           <a href="{{ url_for('partners.proposals') }}" class="ravlo-btn ghost">View Proposals</a>
         </div>

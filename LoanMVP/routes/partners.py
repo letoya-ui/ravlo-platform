@@ -119,6 +119,33 @@ def partner_has_premium_access(partner) -> bool:
     return tier in ("Premium", "Enterprise") and partner.is_active_listing()
 
 
+# Tiers that unlock the VIP Realtor Workspace. Matches
+# LoanMVP.routes.vip.VIP_ACCESS_TIERS (kept local to avoid import cycle).
+_VIP_ACCESS_TIERS = {"premium", "enterprise"}
+
+
+def partner_is_realtor(partner) -> bool:
+    if not partner:
+        return False
+    category = (getattr(partner, "category", "") or "").strip().lower()
+    type_ = (getattr(partner, "type", "") or "").strip().lower()
+    return "realtor" in (category, type_)
+
+
+def partner_vip_tier_unlocked(partner) -> bool:
+    """True if this partner's current tier already unlocks VIP."""
+    if not partner:
+        return False
+
+    if current_app.config.get("FREE_PARTNER_MODE", False):
+        return True
+    if current_app.config.get("BYPASS_PARTNER_SUBSCRIPTION", False):
+        return True
+
+    tier = (getattr(partner, "subscription_tier", "") or "").strip().lower()
+    return tier in _VIP_ACCESS_TIERS
+
+
 # ------------------------------------------------
 # DASHBOARD
 # ------------------------------------------------
@@ -236,6 +263,9 @@ def dashboard():
         "profile_completion": partner.profile_completion() if hasattr(partner, "profile_completion") else 0,
     }
 
+    is_realtor = partner_is_realtor(partner)
+    vip_unlocked = partner_vip_tier_unlocked(partner)
+
     return render_template(
         "partners/dashboards/home.html",
         partner=partner,
@@ -248,6 +278,8 @@ def dashboard():
         feature_cards=feature_cards,
         locked_feature_count=locked_feature_count,
         stats=stats,
+        is_realtor=is_realtor,
+        vip_unlocked=vip_unlocked,
         portal="partner",
         portal_name="Partner OS",
         portal_home=url_for("partners.dashboard")
@@ -884,6 +916,15 @@ def confirm_subscription(tier):
 
     db.session.commit()
 
+    # When a realtor upgrades into a VIP-unlocking tier, send them straight
+    # into the VIP Realtor Workspace so the upgrade is immediately tangible.
+    if partner_is_realtor(partner) and normalized.lower() in _VIP_ACCESS_TIERS:
+        flash(
+            f"Your VIP Realtor Workspace is unlocked — welcome to {normalized}.",
+            "success",
+        )
+        return redirect(url_for("vip.realtor_dashboard"))
+
     flash(f"Your subscription has been updated to {normalized}.", "success")
     return redirect(url_for("partners.billing"))
 
@@ -982,12 +1023,17 @@ def upgrade():
     feature_access = partner_effective_feature_access(partner)
     locked_feature_count = sum(1 for item in feature_access.values() if not item)
 
+    is_realtor = partner_is_realtor(partner)
+    vip_unlocked = partner_vip_tier_unlocked(partner)
+
     return render_template(
         "partners/upgrade.html",
         partner=partner,
         feature_access=feature_access,
         locked_feature_count=locked_feature_count,
         testing_unlocks_enabled=_partner_testing_enabled(),
+        is_realtor=is_realtor,
+        vip_unlocked=vip_unlocked,
         portal="partner",
         portal_name="Partner OS",
         portal_home=url_for("partners.dashboard"),
