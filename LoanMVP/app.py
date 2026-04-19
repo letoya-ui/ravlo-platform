@@ -70,6 +70,58 @@ def resource_path(relative_path: str) -> str:
 
 
 # ---------------------------------------------------------
+# Schema self-heal
+# ---------------------------------------------------------
+# Columns added in recent migrations that must exist for the app to boot,
+# paired with the SQL-level type to add if the migration hasn't run yet.
+# Only additive, nullable columns are safe to self-heal here — destructive
+# or type-changing operations must go through Alembic.
+_SCHEMA_COMPAT_COLUMNS = [
+    ("vip_profiles", "markets_json", "TEXT"),
+]
+
+
+def _ensure_schema_compat(app):
+    """Best-effort guard against deploys that race ahead of Alembic.
+
+    For each (table, column, type) tuple above, if the column is missing we
+    issue `ALTER TABLE ... ADD COLUMN`. Errors are logged but never raised:
+    at worst we fall back to whatever downstream try/except the callers
+    already have. Running `flask db upgrade` afterward is still the correct
+    path — this is just a safety net so a cold deploy doesn't 500 every
+    realtor dashboard page until the migration lands.
+    """
+    try:
+        from sqlalchemy import inspect, text
+    except Exception as e:
+        print(f"[schema-compat] sqlalchemy import failed: {e}")
+        return
+
+    with app.app_context():
+        try:
+            inspector = inspect(db.engine)
+        except Exception as e:
+            print(f"[schema-compat] could not inspect engine: {e}")
+            return
+
+        for table, column, col_type in _SCHEMA_COMPAT_COLUMNS:
+            try:
+                if not inspector.has_table(table):
+                    continue
+                existing = {c["name"] for c in inspector.get_columns(table)}
+                if column in existing:
+                    continue
+
+                print(f"[schema-compat] adding {table}.{column} ({col_type})")
+                with db.engine.begin() as conn:
+                    conn.execute(text(
+                        f'ALTER TABLE "{table}" ADD COLUMN "{column}" {col_type}'
+                    ))
+            except Exception as e:
+                print(f"[schema-compat] failed on {table}.{column}: {e}")
+
+
+# ---------------------------------------------------------
 # App Factory
 # ---------------------------------------------------------
 def create_app():
@@ -132,6 +184,10 @@ def create_app():
 
     # Register all route blueprints dynamically
     register_blueprints(app)
+
+    # Best-effort schema self-heal for columns added by recent migrations.
+    # Keeps prod from hard-crashing when a deploy beats the Alembic run.
+    _ensure_schema_compat(app)
 
     # -----------------------------------------------------
     # Routes
