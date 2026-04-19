@@ -1,0 +1,65 @@
+{% extends "layouts/ravlo_base.html" %}
+
+{% block title %}New Interaction{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h3 mb-0">New Interaction</h1>
+    <a href="{{ url_for('elena.dashboard') }}" class="btn btn-outline-secondary">
+      Back to Elena
+    </a>
+  </div>
+
+  <div class="card shadow-sm">
+    <div class="card-body">
+      <form method="POST" action="{{ url_for('elena.interaction_new') }}">
+        <div class="mb-3">
+          <label for="user_id" class="form-label">User ID</label>
+          <input
+            type="number"
+            class="form-control"
+            id="user_id"
+            name="user_id"
+            required
+          >
+        </div>
+
+        <div class="mb-3">
+          <label for="interaction_type" class="form-label">Interaction Type</label>
+          <select
+            class="form-select"
+            id="interaction_type"
+            name="interaction_type"
+            required
+          >
+            <option value="">Select type</option>
+            <option value="message">Message</option>
+            <option value="action">Action</option>
+            <option value="event">Event</option>
+          </select>
+        </div>
+
+        <div class="mb-3">
+          <label for="payload" class="form-label">Payload (JSON or plain text)</label>
+          <textarea
+            class="form-control"
+            id="payload"
+            name="payload"
+            rows="6"
+            placeholder='{"text": "Hello Elena"}'
+          ></textarea>
+          <div class="form-text">
+            For a message, you can use: {"text": "Hello Elena"}
+          </div>
+        </div>
+
+        <div class="d-flex gap-2">
+          <button type="submit" class="btn btn-primary">Create Interaction</button>
+          <a href="{{ url_for('elena.dashboard') }}" class="btn btn-light">Cancel</a>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
