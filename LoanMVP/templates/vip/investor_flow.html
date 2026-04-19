@@ -1,0 +1,317 @@
+{% extends "layouts/ravlo_base.html" %}
+
+{% block title %}Ravlo • Investor Deal Flow{% endblock %}
+{% block page_title %}{{ header_name }}{% endblock %}
+{% block page_subline %}Investor properties being analyzed in your market{% endblock %}
+
+{% block topbar_actions %}
+  {# Market switcher #}
+  <form method="POST" action="{{ url_for('vip.frank_market_switch') }}"
+        class="inline-flex items-center gap-2">
+    <input type="hidden" name="next" value="{{ request.path }}">
+    <div class="inline-flex rounded-lg overflow-hidden border border-white/10 text-xs font-medium">
+      {% for option in ['All Markets'] + available_markets %}
+        <button type="submit" name="market" value="{{ option }}"
+                class="px-3 py-1.5 transition
+                  {% if current_market == option %}bg-white text-black
+                  {% else %}bg-white/5 text-gray-400 hover:bg-white/10{% endif %}">
+          {{ option }}
+        </button>
+      {% endfor %}
+    </div>
+  </form>
+  <a href="{{ url_for('vip.realtor_dashboard') }}" class="ravlo-btn ghost sm">← Dashboard</a>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto space-y-6">
+
+  {# ── Intro ── #}
+  <section class="ravlo-card pad">
+    <div class="flex justify-between items-start">
+      <div>
+        <h3 class="text-lg font-semibold">Investor Deal Flow</h3>
+        <p class="text-sm text-gray-400 mt-1">
+          Properties investors are actively analyzing
+          {% if current_market != 'All Markets' %}in <strong class="text-white">{{ current_market }}</strong>{% endif %}.
+          Attach your market expertise — comps, listing context, ARV opinion — back into their deal.
+        </p>
+      </div>
+      <div class="text-2xl font-bold text-gray-200">{{ matched_properties | length }}</div>
+    </div>
+  </section>
+
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+    {# LEFT: Matched properties #}
+    <div class="lg:col-span-2 space-y-4">
+
+      {# Direct requests from investors TO this realtor #}
+      {% if realtor_requests %}
+      <section class="ravlo-card pad">
+        <h3 class="text-base font-semibold mb-3">
+          Direct Requests
+          <span class="text-gray-500 font-normal text-sm">({{ realtor_requests | length }})</span>
+        </h3>
+        <div class="space-y-2">
+          {% for req in realtor_requests %}
+          <div class="ravlo-card p-3 border border-blue-500/20">
+            <div class="flex justify-between items-start">
+              <div>
+                <div class="text-sm font-medium">{{ req.title or req.category | title }}</div>
+                <div class="text-xs text-gray-500 mt-0.5">
+                  {{ req.requester_name() }}
+                  {% if req.related_address() %} · {{ req.related_address() }}{% endif %}
+                  {% if req.created_at %} · {{ req.created_at.strftime('%b %d') }}{% endif %}
+                </div>
+              </div>
+              <span class="text-xs px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-400">
+                {{ req.status | title }}
+              </span>
+            </div>
+            {% if req.budget %}
+            <div class="text-xs text-gray-500 mt-1">
+              Budget: <strong class="text-gray-300">${{ '{:,.0f}'.format(req.budget) }}</strong>
+            </div>
+            {% endif %}
+            {% if req.message %}
+            <div class="text-xs text-gray-600 italic truncate mt-1">{{ req.message }}</div>
+            {% endif %}
+          </div>
+          {% endfor %}
+        </div>
+      </section>
+      {% endif %}
+
+      {# Market-matched investor properties #}
+      {% if matched_properties %}
+      <section>
+        <h3 class="text-base font-semibold mb-3 px-1">
+          Properties in Your Market
+          {% if current_market != 'All Markets' %}
+            <span class="text-sm font-normal
+              {% if current_market == 'Hudson Valley' %}text-emerald-400
+              {% else %}text-sky-400{% endif %}">
+              · {{ current_market }}
+            </span>
+          {% endif %}
+        </h3>
+
+        <div class="space-y-4">
+          {% for item in matched_properties %}
+          {% set sp = item.property %}
+          {% set deal = item.deal %}
+
+          <div class="ravlo-card p-4 border border-white/10">
+            <div class="flex justify-between items-start mb-3">
+              <div>
+                <div class="font-medium text-sm">{{ item.address or 'Address unavailable' }}</div>
+                <div class="text-xs text-gray-500 mt-0.5">
+                  {% if item.strategy %}
+                    <span class="text-purple-400">{{ item.strategy | upper }}</span> ·
+                  {% endif %}
+                  {% if deal %}
+                    Deal #{{ deal.id }}
+                    {% if deal.status %} · {{ deal.status | title }}{% endif %}
+                  {% endif %}
+                  {% if sp and sp.created_at %}
+                    · Analyzed {{ sp.created_at.strftime('%b %d') }}
+                  {% endif %}
+                </div>
+              </div>
+
+              {# Deal score if available #}
+              {% if deal and deal.deal_score %}
+              <div class="text-center">
+                <div class="text-lg font-bold
+                  {% if deal.deal_score >= 75 %}text-green-400
+                  {% elif deal.deal_score >= 50 %}text-yellow-400
+                  {% else %}text-red-400{% endif %}">
+                  {{ deal.deal_score }}
+                </div>
+                <div class="text-xs text-gray-600">Score</div>
+              </div>
+              {% endif %}
+            </div>
+
+            {# Deal numbers #}
+            <div class="grid grid-cols-3 gap-2 mb-3">
+              {% if item.arv %}
+              <div class="ravlo-card p-2 text-center">
+                <div class="text-xs text-gray-500 mb-0.5">AI ARV</div>
+                <div class="text-sm font-semibold text-green-400">
+                  ${{ '{:,.0f}'.format(item.arv) }}
+                </div>
+              </div>
+              {% endif %}
+              {% if item.rehab %}
+              <div class="ravlo-card p-2 text-center">
+                <div class="text-xs text-gray-500 mb-0.5">Rehab Est.</div>
+                <div class="text-sm font-semibold text-blue-400">
+                  ${{ '{:,.0f}'.format(item.rehab) }}
+                </div>
+              </div>
+              {% endif %}
+              {% if deal and deal.purchase_price %}
+              <div class="ravlo-card p-2 text-center">
+                <div class="text-xs text-gray-500 mb-0.5">Purchase</div>
+                <div class="text-sm font-semibold">
+                  ${{ '{:,.0f}'.format(deal.purchase_price) }}
+                </div>
+              </div>
+              {% endif %}
+            </div>
+
+            {# Realtor market data form — attach your expertise #}
+            {% if deal %}
+            <details class="border-t border-white/5 pt-3 mt-1">
+              <summary class="text-xs text-blue-400 cursor-pointer hover:text-blue-300">
+                Attach Market Data to This Deal →
+              </summary>
+
+              <form method="POST"
+                    action="{{ url_for('vip.realtor_attach_market_data', deal_id=deal.id) }}"
+                    class="mt-3 space-y-2">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                <div class="grid grid-cols-2 gap-2">
+                  <div>
+                    <label class="text-xs text-gray-500">Your ARV Opinion ($)</label>
+                    <input name="suggested_arv" type="number" step="0.01"
+                           class="design-input text-xs mt-1"
+                           placeholder="{{ item.arv or '' }}">
+                  </div>
+                  <div>
+                    <label class="text-xs text-gray-500">List Price ($)</label>
+                    <input name="list_price" type="number" step="0.01"
+                           class="design-input text-xs mt-1"
+                           placeholder="Current or suggested">
+                  </div>
+                </div>
+
+                <div>
+                  <label class="text-xs text-gray-500">Days on Market (avg for area)</label>
+                  <input name="days_on_market" type="number"
+                         class="design-input text-xs mt-1"
+                         placeholder="e.g. 45">
+                </div>
+
+                <div>
+                  <label class="text-xs text-gray-500">Comps Note</label>
+                  <textarea name="comps_note" class="design-input text-xs mt-1"
+                            placeholder="Recent comps you know of, price per sqft, neighborhood notes…"></textarea>
+                </div>
+
+                <div>
+                  <label class="text-xs text-gray-500">Market Note</label>
+                  <textarea name="market_note" class="design-input text-xs mt-1"
+                            placeholder="Market conditions, buyer demand, seasonality…"></textarea>
+                </div>
+
+                <button type="submit" class="ravlo-btn primary sm w-full">
+                  Submit to Deal Architect
+                </button>
+              </form>
+            </details>
+            {% endif %}
+
+            {# Show if market data was already attached #}
+            {% if deal and deal.results_json and deal.results_json.get('realtor_market_data') %}
+            {% set rmd = deal.results_json.realtor_market_data %}
+            <div class="mt-2 border-t border-white/5 pt-2">
+              <div class="text-xs text-green-400">✓ Market data attached</div>
+              {% if rmd.suggested_arv %}
+              <div class="text-xs text-gray-500">
+                Your ARV: ${{ '{:,.0f}'.format(rmd.suggested_arv) }}
+                {% if rmd.arv_delta %}
+                  <span class="{% if rmd.arv_delta > 0 %}text-green-400{% else %}text-red-400{% endif %}">
+                    ({{ '+' if rmd.arv_delta > 0 else '' }}${{ '{:,.0f}'.format(rmd.arv_delta | abs) }})
+                  </span>
+                {% endif %}
+              </div>
+              {% endif %}
+            </div>
+            {% endif %}
+
+          </div>
+          {% endfor %}
+        </div>
+      </section>
+
+      {% else %}
+      <section class="ravlo-card pad text-center py-12">
+        <div class="text-3xl mb-3">🏘</div>
+        <h3 class="text-base font-semibold mb-1">No investor activity yet</h3>
+        <p class="text-sm text-gray-500">
+          {% if current_market != 'All Markets' %}
+            No investors are analyzing properties in {{ current_market }} right now.
+            Try switching to All Markets.
+          {% else %}
+            No investor deal flow to show yet.
+          {% endif %}
+        </p>
+      </section>
+      {% endif %}
+
+    </div>
+
+    {# RIGHT: Sidebar #}
+    <aside class="space-y-5">
+
+      <section class="ravlo-card pad">
+        <h3 class="text-base font-semibold mb-2">How This Works</h3>
+        <div class="space-y-3 text-xs text-gray-500 leading-relaxed">
+          <div class="flex gap-2">
+            <span class="text-blue-400 flex-shrink-0">1.</span>
+            Investor runs deal analysis on a property in your market
+          </div>
+          <div class="flex gap-2">
+            <span class="text-blue-400 flex-shrink-0">2.</span>
+            Property appears here with their AI numbers — ARV, rehab estimate, strategy
+          </div>
+          <div class="flex gap-2">
+            <span class="text-blue-400 flex-shrink-0">3.</span>
+            You attach your market expertise — comps, ARV opinion, days on market
+          </div>
+          <div class="flex gap-2">
+            <span class="text-blue-400 flex-shrink-0">4.</span>
+            Deal Architect compares your ARV to the AI estimate — trains accuracy for your market
+          </div>
+        </div>
+      </section>
+
+      {% if current_market != 'All Markets' %}
+      <section class="ravlo-card pad">
+        <h3 class="text-base font-semibold mb-2">
+          {% if current_market == 'Hudson Valley' %}
+            <span class="text-emerald-400">Hudson Valley</span>
+          {% else %}
+            <span class="text-sky-400">Sarasota</span>
+          {% endif %}
+        </h3>
+        <div class="text-xs text-gray-500 space-y-1">
+          <div>{{ matched_properties | length }} propert{{ 'ies' if matched_properties | length != 1 else 'y' }} being analyzed</div>
+          <div>{{ realtor_requests | length }} direct request{{ 's' if realtor_requests | length != 1 else '' }}</div>
+        </div>
+      </section>
+      {% endif %}
+
+      <section class="ravlo-card pad">
+        <h3 class="text-base font-semibold mb-2">Back to Dashboard</h3>
+        <a href="{{ url_for('vip.realtor_dashboard') }}"
+           class="ravlo-btn ghost sm w-full text-center block">
+          ← Realtor Dashboard
+        </a>
+        {% if 'ai_pilot' in modules %}
+        <a href="{{ url_for('vip.ai_pilot') }}"
+           class="ravlo-btn ghost sm w-full text-center block mt-2">
+          Open Copilot
+        </a>
+        {% endif %}
+      </section>
+
+    </aside>
+  </div>
+
+</div>
+{% endblock %}
