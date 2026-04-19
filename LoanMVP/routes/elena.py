@@ -15,7 +15,7 @@ from LoanMVP.extensions import db
 
 from LoanMVP.models.vip_models import VIPProfile, VIPAssistantSuggestion
 
-rom LoanMVP.models.vip_models import VIPProfile, VIPAssistantSuggestion
+from LoanMVP.models.vip_models import VIPProfile, VIPAssistantSuggestion
 from LoanMVP.models.elena_models import (
     ElenaClient,
     ElenaListing,
