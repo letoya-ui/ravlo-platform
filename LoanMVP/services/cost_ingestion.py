@@ -157,14 +157,13 @@ def record_from_deal(deal, *, source: str = "investor_input") -> Optional[CostOb
             if prior is not None:
                 prior.status = "superseded"
                 prior_id = prior.id
-                db.session.add(prior)
-                db.session.commit()
         except Exception as e:  # pragma: no cover - defensive
             logger.warning("cost_ingestion: supersede lookup failed: %s", e)
             try:
                 db.session.rollback()
             except Exception:
                 pass
+            prior_id = None
 
     row = record_observation(
         source=source,
