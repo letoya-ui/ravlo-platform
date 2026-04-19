@@ -1384,3 +1384,13 @@ def copilot_command():
 
     flash("Copilot suggestion created.", "success")
     return redirect(url_for("elena.copilot"))
+
+# LoanMVP/routes/elena.py
+
+@elena.route('/interaction/new', methods=['GET', 'POST'])
+def interaction_new():
+    if request.method == 'POST':
+        # handle form submission
+        pass
+
+    return render_template('elena/interaction_new.html')
