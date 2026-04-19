@@ -9836,7 +9836,11 @@ def budget_studio(deal_id=None):
         ).first_or_404()
 
         results = copy.deepcopy(deal.results_json or {})
-        results["budget_seed"] = _build_budget_seed_from_results(results)
+        results["budget_seed"] = _build_budget_seed_from_results(
+            results,
+            zip_code=getattr(deal, "zip_code", None),
+            state=getattr(deal, "state", None),
+        )
 
         ip = InvestorProfile.query.filter_by(user_id=current_user.id).first()
         if ip:
@@ -9854,6 +9858,18 @@ def budget_studio(deal_id=None):
     arv = float(getattr(deal, "arv", 0) or 0) if deal else 0
     rehab_cost = float(getattr(deal, "rehab_cost", 0) or 0) if deal else 0
 
+    local_cost_index = {}
+    if deal:
+        local_cost_index = (results.get("budget_seed") or {}).get("local_cost_index") or {}
+        if not local_cost_index.get("factor") and getattr(deal, "local_cost_factor", None):
+            local_cost_index = {
+                "factor": float(deal.local_cost_factor),
+                "label": deal.local_cost_label or "Saved snapshot",
+                "signed_label": None,
+                "detail": "Snapshot saved when this deal was created",
+                "source": "snapshot",
+            }
+
     return render_template(
         "investor/budget_studio.html",
         deal=deal,
@@ -9862,6 +9878,7 @@ def budget_studio(deal_id=None):
         purchase_price=purchase_price,
         arv=arv,
         rehab_cost=rehab_cost,
+        local_cost_index=local_cost_index,
         page_title="Budget Studio",
         page_subtitle="Control your numbers, track execution, and stay profitable."
     )
@@ -10323,12 +10340,31 @@ def rehab_budget_tracker(deal_id):
         "variance": budget.actual_total - budget.estimated_subtotal,
     }
 
+    local_cost_index = {}
+    try:
+        from LoanMVP.services.cost_index import describe_learned_index
+        local_cost_index = describe_learned_index(
+            zip_code=getattr(deal, "zip_code", None),
+            state=getattr(deal, "state", None),
+            category="rehab",
+        ) or {}
+    except Exception:
+        local_cost_index = {}
+    if not local_cost_index.get("factor") and getattr(deal, "local_cost_factor", None):
+        local_cost_index = {
+            "factor": float(deal.local_cost_factor),
+            "label": deal.local_cost_label or "Saved snapshot",
+            "detail": "Snapshot saved when this deal was created",
+            "source": "snapshot",
+        }
+
     return render_template(
         "investor/rehab_budget_tracker.html",
         deal=deal,
         budget=budget,
         items=items,
         summary=summary,
+        local_cost_index=local_cost_index,
         page_title="Rehab Budget Tracker",
         page_subtitle="Track projected vs actual renovation spend."
     )
@@ -10407,12 +10443,28 @@ def build_budget_tracker(project_id):
         "variance": budget.actual_total - budget.estimated_subtotal,
     }
 
+    location = (getattr(project, "location", "") or "").strip()
+    zip_match = re.search(r"(\d{5})(?:-\d{4})?", location)
+    state_match = re.search(r"\b([A-Z]{2})\b", location)
+    loc_zip = zip_match.group(1) if zip_match else None
+    loc_state = state_match.group(1) if state_match else None
+
+    local_cost_index = {}
+    try:
+        from LoanMVP.services.cost_index import describe_learned_index
+        local_cost_index = describe_learned_index(
+            zip_code=loc_zip, state=loc_state, category="new_build",
+        ) or {}
+    except Exception:
+        local_cost_index = {}
+
     return render_template(
         "investor/build_budget_tracker.html",
         project=project,
         budget=budget,
         items=items,
         summary=summary,
+        local_cost_index=local_cost_index,
         page_title="Build Budget Tracker",
         page_subtitle="Track projected vs actual construction spend."
     )
