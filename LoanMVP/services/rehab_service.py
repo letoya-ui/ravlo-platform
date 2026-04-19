@@ -246,9 +246,12 @@ def generate_rehab_notes(results, comps, strategy="flip"):
 
 # --- Optimization Engines ---
 
-def optimize_rehab_to_budget(target_budget, items, scope, sqft):
+def optimize_rehab_to_budget(target_budget, items, scope, sqft, *, zip_code=None, state=None):
     """
     Downgrades items until total cost fits target budget.
+
+    Optimization runs on the same locally-adjusted cost basis as the primary
+    estimate so the optimizer target and the estimator output agree.
     """
     optimized = (items or {}).copy()
     current_scope = scope
@@ -256,7 +259,10 @@ def optimize_rehab_to_budget(target_budget, items, scope, sqft):
     sqft = _to_number(sqft, 0.0)
 
     def calc():
-        rehab = estimate_rehab_cost(sqft, current_scope, optimized)
+        rehab = estimate_rehab_cost(
+            sqft, current_scope, optimized,
+            zip_code=zip_code, state=state,
+        )
         return _to_number(rehab["total"], 0.0), rehab
 
     total, rehab_data = calc()
@@ -293,7 +299,7 @@ def optimize_rehab_to_budget(target_budget, items, scope, sqft):
     return optimized, rehab_data
 
 
-def optimize_rehab_for_roi(items, scope, sqft, comps):
+def optimize_rehab_for_roi(items, scope, sqft, comps, *, zip_code=None, state=None):
     optimized = (items or {}).copy()
     current_scope = scope
     sqft = _to_number(sqft, 0.0)
@@ -313,11 +319,14 @@ def optimize_rehab_for_roi(items, scope, sqft, comps):
         optimized["kitchen"] = "heavy"
         optimized["bathroom"] = "heavy"
 
-    rehab = estimate_rehab_cost(sqft, current_scope, optimized)
+    rehab = estimate_rehab_cost(
+        sqft, current_scope, optimized,
+        zip_code=zip_code, state=state,
+    )
     return optimized, rehab
 
 
-def optimize_rehab_for_timeline(items, scope, sqft):
+def optimize_rehab_for_timeline(items, scope, sqft, *, zip_code=None, state=None):
     optimized = (items or {}).copy()
     current_scope = "light"
     sqft = _to_number(sqft, 0.0)
@@ -328,11 +337,14 @@ def optimize_rehab_for_timeline(items, scope, sqft):
     for key in ["roof", "hvac"]:
         optimized[key] = ""
 
-    rehab = estimate_rehab_cost(sqft, current_scope, optimized)
+    rehab = estimate_rehab_cost(
+        sqft, current_scope, optimized,
+        zip_code=zip_code, state=state,
+    )
     return optimized, rehab
 
 
-def optimize_rehab_for_arv(items, scope, sqft):
+def optimize_rehab_for_arv(items, scope, sqft, *, zip_code=None, state=None):
     optimized = (items or {}).copy()
     current_scope = "heavy"
     sqft = _to_number(sqft, 0.0)
@@ -342,5 +354,8 @@ def optimize_rehab_for_arv(items, scope, sqft):
     optimized["flooring"] = "medium"
     optimized["paint"] = "medium"
 
-    rehab = estimate_rehab_cost(sqft, current_scope, optimized)
+    rehab = estimate_rehab_cost(
+        sqft, current_scope, optimized,
+        zip_code=zip_code, state=state,
+    )
     return optimized, rehab
