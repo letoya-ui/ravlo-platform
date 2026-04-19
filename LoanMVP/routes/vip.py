@@ -137,21 +137,398 @@ def inject_vip_context():
         "modules": get_enabled_modules(profile),
     }
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Updates to vip.py — company-aware LO routing
+#
+# Required new imports:
+#   from LoanMVP.utils.company_policy import (
+#       get_user_lending_policy,
+#       is_out_of_scope_loan_type,
+#       INVESTMENT_LOAN_TYPES,
+#       ALL_LOAN_TYPES,
+#   )
+#   from LoanMVP.models.admin import Company
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+# ── 1. Updated index() — company-aware routing ───────────────────────────────
+
 @vip_bp.get("/")
 @role_required("partner_group", "admin")
 def index():
     profile = get_or_create_vip_profile()
 
-    # Frank gets his dual-market workspace
-    if getattr(profile, "dual_market", False):
-        return redirect(url_for("vip.frank_dashboard"))
+    if profile.role_type in ("loan_officer", "lender"):
+        policy = get_user_lending_policy(current_user)
+
+        if policy["is_caughman_mason"]:
+            # Caughman Mason LO — investment only VIP dashboard
+            return redirect(url_for("vip.loan_officer_dashboard"))
+        else:
+            # External licensed LO — their own full workspace
+            return redirect(url_for("vip.loan_officer_external_dashboard"))
 
     role_map = {
-        "realtor":      "vip.realtor_dashboard",
-        "contractor":   "vip.contractor_dashboard",
-        ...
+        "realtor":    "vip.realtor_dashboard",
+        "contractor": "vip.contractor_dashboard",
+        "designer":   "vip.designer_dashboard",
+        "partner":    "vip.partner_dashboard",
     }
     return redirect(url_for(role_map.get(profile.role_type, "vip.partner_dashboard")))
+
+
+# ── 2. Updated loan_officer_dashboard() — Caughman Mason VIP ─────────────────
+#
+# This replaces the current loan_officer/dashboard.html route.
+# Caughman Mason LOs now land here instead of loan_officer.dashboard.
+# Investment deals only — policy enforced at company level.
+
+@vip_bp.get("/loan-officer")
+@role_required("partner_group", "admin")
+def loan_officer_dashboard():
+    profile    = get_or_create_vip_profile()
+    policy     = get_user_lending_policy(current_user)
+    lo_profile = LoanOfficerProfile.query.filter_by(user_id=current_user.id).first()
+
+    # If external LO somehow lands here, send them to their workspace
+    if not policy["is_caughman_mason"] and not policy["investment_only"]:
+        return redirect(url_for("vip.loan_officer_external_dashboard"))
+
+    # ── Funding requests from investors ──────────────────────────────────────
+    raw_funding = (
+        FundingRequest.query
+        .filter(FundingRequest.status.in_(["submitted", "reviewing"]))
+        .order_by(FundingRequest.created_at.desc())
+        .limit(20)
+        .all()
+    )
+
+    funding_with_context = []
+    for fr in raw_funding:
+        deal = Deal.query.get(fr.deal_id) if fr.deal_id else None
+
+        # Skip owner-occupied deals — CM not licensed
+        if deal:
+            strategy = (getattr(deal, "strategy", "") or "").lower()
+            if strategy in {"primary", "owner occupied", "owner_occupied"}:
+                continue
+
+        ctx = _build_funding_context(fr, deal)
+        funding_with_context.append({"request": fr, "deal": deal, "context": ctx})
+
+    # ── Capital loan applications ─────────────────────────────────────────────
+    capital_with_context = []
+    out_of_scope_loans   = []
+
+    if lo_profile:
+        assigned_loans = (
+            LoanApplication.query
+            .filter_by(loan_officer_id=lo_profile.id)
+            .order_by(LoanApplication.created_at.desc())
+            .all()
+        )
+    else:
+        assigned_loans = (
+            LoanApplication.query
+            .filter(LoanApplication.status.in_(
+                ["Capital Submitted", "Submitted", "Processing", "Under Review"]
+            ))
+            .order_by(LoanApplication.created_at.desc())
+            .limit(15)
+            .all()
+        )
+
+    for loan in assigned_loans:
+        if is_out_of_scope_loan_type(loan.loan_type, policy):
+            out_of_scope_loans.append(loan)
+            continue
+        ctx = _build_loan_deal_context(loan)
+        capital_with_context.append({"loan": loan, "context": ctx})
+
+    # ── Recent quotes ─────────────────────────────────────────────────────────
+    recent_quotes = _get_lo_recent_quotes(lo_profile)
+
+    # ── Stats ─────────────────────────────────────────────────────────────────
+    stats = {
+        "funding_requests": len(funding_with_context),
+        "capital_loans":    len(capital_with_context),
+        "quotes_sent":      len(recent_quotes),
+        "pending_review":   sum(
+            1 for item in funding_with_context
+            if item["request"].status == "submitted"
+        ),
+        "out_of_scope":     len(out_of_scope_loans),
+        "total_quoted":     sum(
+            float(getattr(q, "loan_amount", 0) or 0)
+            for q in recent_quotes
+        ),
+    }
+
+    copilot_suggestions = (
+        VIPAssistantSuggestion.query
+        .filter_by(vip_profile_id=profile.id)
+        .order_by(VIPAssistantSuggestion.created_at.desc())
+        .limit(5)
+        .all()
+    )
+
+    return render_template(
+        "vip/loan_officer/dashboard.html",
+        vip_profile          = profile,
+        modules              = get_enabled_modules(profile),
+        header_name          = get_dashboard_name(profile),
+        policy               = policy,
+        funding_with_context = funding_with_context,
+        capital_with_context = capital_with_context,
+        out_of_scope_loans   = out_of_scope_loans,
+        recent_quotes        = recent_quotes,
+        stats                = stats,
+        copilot_suggestions  = copilot_suggestions,
+        investment_loan_types = INVESTMENT_LOAN_TYPES,
+        portal      = "vip",
+        portal_name = "VIP",
+        portal_home = url_for("vip.loan_officer_dashboard"),
+    )
+
+
+# ── 3. Updated external dashboard — non-CM companies ─────────────────────────
+
+@vip_bp.get("/loan-officer/workspace")
+@role_required("partner_group", "admin")
+def loan_officer_external_dashboard():
+    profile    = get_or_create_vip_profile()
+    policy     = get_user_lending_policy(current_user)
+    lo_profile = LoanOfficerProfile.query.filter_by(user_id=current_user.id).first()
+
+    # Caughman Mason LOs should not be here
+    if policy["is_caughman_mason"]:
+        return redirect(url_for("vip.loan_officer_dashboard"))
+
+    # ── Their borrowers ───────────────────────────────────────────────────────
+    my_borrowers = []
+    if lo_profile:
+        my_borrowers = (
+            BorrowerProfile.query
+            .filter_by(assigned_officer_id=lo_profile.id)
+            .order_by(BorrowerProfile.created_at.desc())
+            .limit(20)
+            .all()
+        )
+
+    # ── Their pipeline — all types ────────────────────────────────────────────
+    my_loans = []
+    if lo_profile:
+        my_loans = (
+            LoanApplication.query
+            .filter_by(loan_officer_id=lo_profile.id)
+            .order_by(LoanApplication.created_at.desc())
+            .limit(30)
+            .all()
+        )
+
+    def _norm(v):
+        return (v or "").strip().lower()
+
+    pipeline = {
+        "submitted":      [l for l in my_loans if _norm(l.status) in {"submitted", "application submitted"}],
+        "in_review":      [l for l in my_loans if _norm(l.status) in {"in review", "in_review", "processing", "under review"}],
+        "approved":       [l for l in my_loans if _norm(l.status) == "approved"],
+        "clear_to_close": [l for l in my_loans if _norm(l.status) in {"clear to close", "ctc"}],
+        "closed":         [l for l in my_loans if _norm(l.status) == "closed"],
+        "declined":       [l for l in my_loans if _norm(l.status) == "declined"],
+    }
+
+    loan_type_counts = {}
+    for loan in my_loans:
+        lt = (loan.loan_type or "Other").title()
+        loan_type_counts[lt] = loan_type_counts.get(lt, 0) + 1
+
+    recent_quotes = _get_lo_recent_quotes(lo_profile)
+
+    stats = {
+        "total_borrowers": len(my_borrowers),
+        "total_loans":     len(my_loans),
+        "in_pipeline":     len([l for l in my_loans if _norm(l.status) not in {"closed", "declined"}]),
+        "closed":          len(pipeline["closed"]),
+        "quotes_sent":     len(recent_quotes),
+        "total_volume":    sum(float(l.amount or 0) for l in pipeline["closed"]),
+    }
+
+    copilot_suggestions = (
+        VIPAssistantSuggestion.query
+        .filter_by(vip_profile_id=profile.id)
+        .order_by(VIPAssistantSuggestion.created_at.desc())
+        .limit(5)
+        .all()
+    )
+
+    return render_template(
+        "vip/loan_officer/external_dashboard.html",
+        vip_profile       = profile,
+        modules           = get_enabled_modules(profile),
+        header_name       = get_dashboard_name(profile),
+        policy            = policy,
+        my_borrowers      = my_borrowers,
+        my_loans          = my_loans,
+        pipeline          = pipeline,
+        loan_type_counts  = loan_type_counts,
+        my_quotes         = recent_quotes,
+        stats             = stats,
+        copilot_suggestions = copilot_suggestions,
+        lo_profile        = lo_profile,
+        all_loan_types    = ALL_LOAN_TYPES,
+        portal      = "vip",
+        portal_name = "VIP",
+        portal_home = url_for("vip.loan_officer_external_dashboard"),
+    )
+
+
+# ── 4. Updated submit quote — policy-aware ───────────────────────────────────
+
+@vip_bp.post("/loan-officer/funding/<int:funding_id>/quote")
+@role_required("partner_group", "admin")
+def loan_officer_submit_quote(funding_id):
+    profile    = get_or_create_vip_profile()
+    policy     = get_user_lending_policy(current_user)
+    lo_profile = LoanOfficerProfile.query.filter_by(user_id=current_user.id).first()
+    fr         = FundingRequest.query.get_or_404(funding_id)
+    deal       = Deal.query.get(fr.deal_id) if fr.deal_id else None
+
+    loan_type = (request.form.get("loan_type") or "").strip()
+
+    # Hard stop for Caughman Mason — no residential
+    if policy["is_caughman_mason"] and is_out_of_scope_loan_type(loan_type, policy):
+        flash(
+            f"Caughman Mason is not licensed for '{loan_type}'. "
+            "Refer this to a licensed residential lender.",
+            "danger"
+        )
+        return redirect(url_for("vip.loan_officer_dashboard"))
+
+    quoted_amount = request.form.get("quoted_amount", type=float)
+    rate          = request.form.get("rate",          type=float)
+    term_months   = request.form.get("term_months",   type=int) or 12
+    notes         = (request.form.get("notes") or "").strip()
+    decision      = (request.form.get("decision") or "quote").strip()
+    points        = request.form.get("points", type=float) or 0.0
+
+    if not quoted_amount or not rate:
+        flash("Amount and rate are required.", "warning")
+        return redirect(url_for("vip.loan_officer_dashboard"))
+
+    quote = LoanQuote(
+        rate        = rate,
+        term_months = term_months,
+        loan_amount = quoted_amount,
+        loan_type   = loan_type or "Investor Capital",
+        status      = "sent",
+        ai_suggestion = notes,
+        created_at  = datetime.utcnow(),
+    )
+
+    if deal:
+        linked_loan = LoanApplication.query.filter(
+            LoanApplication.investor_profile_id == deal.investor_profile_id
+        ).order_by(LoanApplication.created_at.desc()).first()
+        if linked_loan:
+            quote.loan_application_id = linked_loan.id
+            quote.borrower_profile_id = linked_loan.borrower_profile_id
+
+    db.session.add(quote)
+    db.session.flush()
+
+    fr.status     = "reviewing" if decision == "quote" else decision
+    fr.updated_at = datetime.utcnow()
+
+    # ── Deal Architect feedback loop ──────────────────────────────────────────
+    if deal:
+        results   = deal.results_json or {}
+        lo_quotes = results.setdefault("lo_quotes", [])
+
+        requested   = float(fr.requested_amount or 0)
+        delta       = quoted_amount - requested
+        delta_pct   = round((delta / requested) * 100, 2) if requested else None
+        monthly_pmt = calc_payment(quoted_amount, rate, term=max(term_months // 12, 1))
+
+        lo_quotes.append({
+            "lo_id":           lo_profile.id if lo_profile else None,
+            "lo_name":         lo_profile.name if lo_profile else profile.display_name,
+            "company":         policy["company_name"],
+            "quote_id":        quote.id,
+            "requested":       requested,
+            "quoted":          quoted_amount,
+            "rate":            rate,
+            "points":          points,
+            "term_months":     term_months,
+            "loan_type":       loan_type,
+            "monthly_payment": monthly_pmt,
+            "decision":        decision,
+            "delta":           round(delta, 2),
+            "delta_pct":       delta_pct,
+            "notes":           notes,
+            "submitted_at":    datetime.utcnow().isoformat(),
+        })
+
+        if decision == "approve":
+            results["capital_approved"] = {
+                "amount":      quoted_amount,
+                "rate":        rate,
+                "points":      points,
+                "company":     policy["company_name"],
+                "approved_at": datetime.utcnow().isoformat(),
+            }
+            deal.submitted_for_funding = True
+
+        deal.results_json = results
+        from sqlalchemy.orm.attributes import flag_modified
+        flag_modified(deal, "results_json")
+
+    db.session.commit()
+
+    redirect_target = (
+        url_for("vip.loan_officer_dashboard")
+        if policy["is_caughman_mason"]
+        else url_for("vip.loan_officer_external_dashboard")
+    )
+
+    flash(f"Quote submitted — ${quoted_amount:,.0f} at {rate}% for {term_months}mo.", "success")
+    return redirect(redirect_target)
+
+
+# ── 5. Refer out — policy-aware ───────────────────────────────────────────────
+
+@vip_bp.post("/loan-officer/loan/<int:loan_id>/refer-out")
+@role_required("partner_group", "admin")
+def loan_officer_refer_out(loan_id):
+    policy = get_user_lending_policy(current_user)
+    loan   = LoanApplication.query.get_or_404(loan_id)
+    reason = (request.form.get("reason") or "").strip()
+
+    if not reason:
+        if policy["is_caughman_mason"]:
+            reason = "Outside Caughman Mason licensing scope — referred to licensed residential lender."
+        else:
+            reason = "Referred out."
+
+    loan.status = "Referred Out"
+
+    from LoanMVP.models.loan_models import LoanStatusEvent
+    event = LoanStatusEvent(
+        loan_id     = loan.id,
+        event_name  = "Referred Out",
+        description = reason,
+    )
+    db.session.add(event)
+    db.session.commit()
+
+    flash("Loan referred out.", "info")
+
+    return redirect(
+        url_for("vip.loan_officer_dashboard")
+        if policy["is_caughman_mason"]
+        else url_for("vip.loan_officer_external_dashboard")
+    )
+
 
 
 @vip_bp.get("/realtor")
@@ -167,20 +544,6 @@ def realtor_dashboard():
         portal_name="VIP",
         portal_home=url_for("vip.realtor_dashboard"),
     )
-
-
-@vip_bp.get("/contractor")
-# ─────────────────────────────────────────────────────────────────
-# Add to vip.py — Contractor VIP + Deal Architect feedback loop
-# ─────────────────────────────────────────────────────────────────
-#
-# Required imports to add at top of vip.py:
-#
-# from LoanMVP.models.borrowers import ProjectBudget, ProjectExpense, Deal, PropertyAnalysis
-# from LoanMVP.models.partner_models import PartnerConnectionRequest, PartnerProposal
-# from LoanMVP.models.investor_models import InvestorProfile
-# from LoanMVP.models.property import SavedProperty
-# ─────────────────────────────────────────────────────────────────
 
 
 # ── CONTRACTOR DASHBOARD ─────────────────────────────────────────
@@ -751,21 +1114,6 @@ def partner_dashboard():
         portal="vip",
         portal_name="VIP",
         portal_home=url_for("vip.partner_dashboard"),
-    )
-
-
-@vip_bp.get("/loan-officer")
-@role_required("partner_group", "admin")
-def loan_officer_dashboard():
-    profile = get_or_create_vip_profile()
-    return render_template(
-        "vip/loan_officer/dashboard.html",
-        vip_profile=profile,
-        modules=get_enabled_modules(profile),
-        header_name=get_dashboard_name(profile),
-        portal="vip",
-        portal_name="VIP",
-        portal_home=url_for("vip.loan_officer_dashboard"),
     )
 
 
