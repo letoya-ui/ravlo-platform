@@ -119,7 +119,13 @@ def record_observation(
 
 
 def record_from_deal(deal, *, source: str = "investor_input") -> Optional[CostObservation]:
-    """Convenience: pull fields off a Deal and record a rehab observation."""
+    """Convenience: pull fields off a Deal and record a rehab observation.
+
+    Re-saves of the same deal should not inflate the learning layer. If a
+    prior rehab observation for this deal already exists we mark it
+    ``superseded`` and point the new row at it via ``supersedes_id`` so
+    ``_collect_observations`` counts only the latest figure.
+    """
     if deal is None:
         return None
 
@@ -127,8 +133,6 @@ def record_from_deal(deal, *, source: str = "investor_input") -> Optional[CostOb
     if not total or total <= 0:
         return None
 
-    # Try to infer sqft from stored inputs/resolved JSON if the deal model
-    # doesn't carry it directly.
     sqft = None
     for container in (getattr(deal, "inputs_json", None),
                       getattr(deal, "resolved_json", None)):
@@ -140,7 +144,29 @@ def record_from_deal(deal, *, source: str = "investor_input") -> Optional[CostOb
     if isinstance(rehab_scope, dict):
         scope = rehab_scope.get("scope") or scope
 
-    return record_observation(
+    deal_id = getattr(deal, "id", None)
+    prior_id: Optional[int] = None
+    if deal_id is not None:
+        try:
+            prior = (
+                CostObservation.query
+                .filter_by(deal_id=deal_id, category=CATEGORY_REHAB, status="verified")
+                .order_by(CostObservation.id.desc())
+                .first()
+            )
+            if prior is not None:
+                prior.status = "superseded"
+                prior_id = prior.id
+                db.session.add(prior)
+                db.session.commit()
+        except Exception as e:  # pragma: no cover - defensive
+            logger.warning("cost_ingestion: supersede lookup failed: %s", e)
+            try:
+                db.session.rollback()
+            except Exception:
+                pass
+
+    row = record_observation(
         source=source,
         category=CATEGORY_REHAB,
         total_cost=total,
@@ -150,5 +176,19 @@ def record_from_deal(deal, *, source: str = "investor_input") -> Optional[CostOb
         state=getattr(deal, "state", None),
         city=getattr(deal, "city", None),
         user_id=getattr(deal, "user_id", None),
-        deal_id=getattr(deal, "id", None),
+        deal_id=deal_id,
     )
+
+    if row is not None and prior_id is not None:
+        try:
+            row.supersedes_id = prior_id
+            db.session.add(row)
+            db.session.commit()
+        except Exception as e:  # pragma: no cover - defensive
+            logger.warning("cost_ingestion: supersedes_id set failed: %s", e)
+            try:
+                db.session.rollback()
+            except Exception:
+                pass
+
+    return row

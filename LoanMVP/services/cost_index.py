@@ -267,7 +267,7 @@ def _collect_observations(
     try:
         q = CostObservation.query.filter(
             CostObservation.category == category,
-            CostObservation.status != "rejected",
+            CostObservation.status.notin_(["rejected", "superseded"]),
             CostObservation.cost_per_sqft.isnot(None),
         )
         if scope:
