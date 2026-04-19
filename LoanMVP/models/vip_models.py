@@ -41,6 +41,11 @@ class VIPProfile(VIPBaseModel):
 
     enabled_modules = Column(Text, nullable=True)
 
+    # JSON-encoded list of market names this realtor operates in, e.g.
+    # ["Hudson Valley", "Sarasota"]. Drives the dual-market dashboard.
+    # Empty / NULL = legacy single-pool behavior, no market switcher.
+    markets_json    = Column(Text, nullable=True)
+
     brand_color       = Column(String(50),  nullable=True)
     logo_url          = Column(String(500), nullable=True)
     profile_image_url = Column(String(500), nullable=True)

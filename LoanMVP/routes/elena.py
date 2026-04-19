@@ -79,16 +79,33 @@ INTERACTION_TYPES = [
 ]
 
 
-FRANK_MARKETS = ["Hudson Valley", "Sarasota"]
+# Elena reuses the unified VIP market plumbing. These thin wrappers keep the
+# existing call sites terse while delegating state to `vip.py` helpers so the
+# session key, validation, and per-user market list stay in one place.
+
+def _elena_profile():
+    from LoanMVP.routes.vip import get_or_create_vip_profile
+    return get_or_create_vip_profile()
+
+
+def _elena_available_markets():
+    from LoanMVP.routes.vip import get_user_markets
+    return get_user_markets(_elena_profile())
 
 
 def get_current_market():
-    return session.get("elena_market", "All Markets")
+    from LoanMVP.routes.vip import _get_vip_market
+    return _get_vip_market(_elena_profile())
 
 
 def set_current_market(value):
-    allowed = {"All Markets", *FRANK_MARKETS}
-    session["elena_market"] = value if value in allowed else "All Markets"
+    from LoanMVP.routes.vip import (
+        ALL_MARKETS,
+        VIP_MARKET_SESSION_KEY,
+        get_user_markets,
+    )
+    allowed = {ALL_MARKETS, *get_user_markets(_elena_profile())}
+    session[VIP_MARKET_SESSION_KEY] = value if value in allowed else ALL_MARKETS
 
 
 def infer_market_from_listing_data(data):
@@ -511,7 +528,7 @@ def dashboard():
         recent_flyers=recent_flyers,
         template_types=[t.value for t in TemplateType],
         current_market=current_market,
-        available_markets=FRANK_MARKETS,
+        available_markets=_elena_available_markets(),
         copilot_suggestions=copilot_suggestions,
         portal="elena",
         portal_name="Elena",
@@ -625,7 +642,7 @@ def listing_new():
         "elena/listing_form.html",
         listing=None,
         listing_statuses=LISTING_STATUSES,
-        available_markets=FRANK_MARKETS,
+        available_markets=_elena_available_markets(),
         current_market=get_current_market(),
         clients=clients,
         portal="elena",
@@ -1425,7 +1442,7 @@ def copilot():
         header_name="Copilot",
         suggestions=suggestions,
         current_market=get_current_market(),
-        available_markets=FRANK_MARKETS,
+        available_markets=_elena_available_markets(),
         portal="elena",
         portal_name="Elena",
         portal_home=url_for("elena.dashboard"),

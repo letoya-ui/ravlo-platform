@@ -6,7 +6,7 @@
 
 {% block topbar_actions %}
   {# Market switcher #}
-  <form method="POST" action="{{ url_for('vip.frank_market_switch') }}"
+  <form method="POST" action="{{ url_for('vip.realtor_market_switch') }}"
         class="inline-flex items-center gap-2">
     <input type="hidden" name="next" value="{{ request.path }}">
     <div class="inline-flex rounded-lg overflow-hidden border border-white/10 text-xs font-medium">

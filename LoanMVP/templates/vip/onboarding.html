@@ -76,6 +76,21 @@ Tell Ravlo how you work so your dashboard feels personal from day one.
         </div>
 
         <div class="mt-4">
+          <label class="block mb-2 font-medium">Markets</label>
+          <input
+            name="markets"
+            value="{{ markets_csv or '' }}"
+            placeholder="e.g. Hudson Valley, Sarasota"
+            class="border rounded px-3 py-2 w-full bg-white text-black"
+          >
+          <p class="mt-1 text-xs text-gray-500">
+            Comma-separated. Add a second market to unlock the dual-market
+            dashboard with combined + per-market views. Leave blank for a
+            single shared pool.
+          </p>
+        </div>
+
+        <div class="mt-4">
           <label class="block mb-2 font-medium">Headline</label>
           <input
             name="headline"
