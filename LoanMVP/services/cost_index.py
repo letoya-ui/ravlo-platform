@@ -221,6 +221,10 @@ NATIONAL_COST_PER_SQFT = {
         "medium": 30.0,
         "heavy":  50.0,
         "luxury": 85.0,
+        # Used when a rehab observation / lookup comes through without a
+        # specific scope. Picks "medium" as the most representative rate;
+        # prevents accidental 2x skew from falling through to "light".
+        "default": 30.0,
     },
     "new_build": {
         None: 225.0,      # category-level fallback if no sub-scope
@@ -265,6 +269,8 @@ def _collect_observations(
         return []
 
     try:
+        from sqlalchemy import or_
+
         q = CostObservation.query.filter(
             CostObservation.category == category,
             CostObservation.status.notin_(["rejected", "superseded"]),
@@ -274,14 +280,19 @@ def _collect_observations(
             q = q.filter(CostObservation.scope == scope)
 
         # Prefer ZIP3 matches; fall back to state matches if sparse.
+        # SQL "zip3 != zip3" is NULL-unsafe, so state-level observations
+        # without a ZIP (admin-seeded or contractor-wide data) would be
+        # silently dropped. OR with IS NULL to keep them.
         rows = []
         if zip3:
             rows = q.filter(CostObservation.zip3 == zip3).all()
         if len(rows) < 3 and state:
-            rows = rows + q.filter(
-                CostObservation.state == state,
-                CostObservation.zip3 != zip3 if zip3 else True,
-            ).all()
+            state_q = q.filter(CostObservation.state == state)
+            if zip3:
+                state_q = state_q.filter(
+                    or_(CostObservation.zip3 != zip3, CostObservation.zip3.is_(None))
+                )
+            rows = rows + state_q.all()
         return rows
     except Exception as e:
         # cost_observations may not exist yet in the DB on a cold boot
