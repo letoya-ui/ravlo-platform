@@ -297,9 +297,14 @@ def get_or_create_realtor_vip_profile():
 
     if getattr(current_user, "is_authenticated", False):
         profile = get_or_create_vip_profile()
-        # Force the realtor role for anyone using the realtor-only CRUD
-        # endpoints in this blueprint.
-        if (profile.role_type or "").lower() != "realtor":
+        # Only set role_type when it hasn't been specified yet. We must NOT
+        # overwrite an existing non-realtor role (e.g. "contractor",
+        # "designer", "loan_officer") — doing so would corrupt that user's
+        # VIP dashboard routing. The Elena blueprint is gated to realtors
+        # in `_gate_elena_on_vip_access`, so in practice this only applies
+        # to brand-new profiles or the generic "partner" bootstrap role.
+        current_role = (profile.role_type or "").lower()
+        if current_role in ("", "partner"):
             profile.role_type = "realtor"
             db.session.commit()
         return profile
@@ -322,14 +327,17 @@ def get_or_create_realtor_vip_profile():
 
 @elena_bp.before_request
 def _gate_elena_on_vip_access():
-    """All /elena/* routes require VIP access (Premium+ or admin).
+    """All /elena/* routes require VIP access (Premium+ or admin) AND
+    the user must be a realtor.
 
-    Non-upgraded realtors are redirected to the upgrade page. This keeps
-    the Elena CRUD endpoints available to any upgraded realtor, not just
-    the original hardcoded user.
+    Non-upgraded realtors are redirected to the upgrade page. Upgraded
+    non-realtor partners (contractor/designer/loan_officer) are bounced
+    to the VIP index so they land on their role-appropriate dashboard —
+    Elena is a realtor-only workspace.
     """
     # Lazy import to keep module-load order flexible.
     from LoanMVP.routes.vip import require_vip_access
+    from LoanMVP.routes.partners import partner_is_realtor
 
     if not getattr(current_user, "is_authenticated", False):
         # Let the @role_required on each view handle auth redirects so we
@@ -340,7 +348,27 @@ def _gate_elena_on_vip_access():
     if user_role == "admin":
         return None
 
-    return require_vip_access()
+    # Tier gate first — sends non-upgraded users to /partners/upgrade.
+    gate = require_vip_access()
+    if gate is not None:
+        return gate
+
+    # Role gate — Elena is realtor-only. Check partner category first
+    # (source of truth), then fall back to VIPProfile.role_type.
+    partner = getattr(current_user, "partner_profile", None)
+    if partner_is_realtor(partner):
+        return None
+
+    existing_profile = VIPProfile.query.filter_by(user_id=current_user.id).first()
+    if existing_profile and (existing_profile.role_type or "").lower() == "realtor":
+        return None
+
+    flash(
+        "The Elena workspace is for realtor partners. "
+        "Opening your VIP dashboard instead.",
+        "info",
+    )
+    return redirect(url_for("vip.index"))
 
 @elena_bp.get("/")
 @role_required("partner_group", "admin")
