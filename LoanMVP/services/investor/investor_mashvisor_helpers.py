@@ -84,6 +84,33 @@ def _run_full_mashvisor_analysis(snapshot: dict) -> dict | None:
 
         analytics = extract_core_fields(analytics_result)
 
+        # -------------------------
+        # TEMP DEBUG — remove after response shape is confirmed
+        # -------------------------
+        import json
+        current_app.logger.warning(
+            "MASHVISOR DEBUG property_result keys=%s sample=%s",
+            list(property_result.keys()) if isinstance(property_result, dict) else type(property_result),
+            json.dumps(property_result, default=str)[:800],
+        )
+        current_app.logger.warning(
+            "MASHVISOR DEBUG lookup_result keys=%s sample=%s",
+            list(lookup_result.keys()) if isinstance(lookup_result, dict) else type(lookup_result),
+            json.dumps(lookup_result, default=str)[:800],
+        )
+        current_app.logger.warning(
+            "MASHVISOR DEBUG analytics_result keys=%s sample=%s",
+            list(analytics_result.keys()) if isinstance(analytics_result, dict) else type(analytics_result),
+            json.dumps(analytics_result, default=str)[:800],
+        )
+        current_app.logger.warning(
+            "MASHVISOR DEBUG analytics extracted=%s",
+            json.dumps(analytics, default=str),
+        )
+        # -------------------------
+        # END TEMP DEBUG
+        # -------------------------
+
         # normalize payloads
         property_content = (
             property_result.get("content", property_result)
