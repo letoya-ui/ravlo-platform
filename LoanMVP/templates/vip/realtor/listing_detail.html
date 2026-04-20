@@ -4,6 +4,7 @@
 {% block page_title %}{{ listing.address }}{% endblock %}
 {% block page_subline %}
   {{ listing.city }}{% if listing.state %}, {{ listing.state }}{% endif %}{% if listing.zip_code %} {{ listing.zip_code }}{% endif %}
+  {% if listing.county %} • {{ listing.county }} County{% endif %}
   {% if listing.market %} • {{ listing.market }}{% endif %}
 {% endblock %}
 

@@ -2745,6 +2745,8 @@ def realtor_listings():
 
     status_filter = (request.args.get("status") or "").strip().lower()
     market_filter = (request.args.get("market") or "").strip()
+    county_filter = (request.args.get("county") or "").strip()
+    search_query  = (request.args.get("q") or "").strip()
 
     q = ElenaListing.query
     if market_filter and market_filter != ALL_MARKETS:
@@ -2755,7 +2757,27 @@ def realtor_listings():
     if status_filter and status_filter in {s[0] for s in _LISTING_STATUSES}:
         q = q.filter(ElenaListing.status == status_filter)
 
+    if county_filter:
+        q = q.filter(ElenaListing.county == county_filter)
+
+    if search_query:
+        like_pat = f"%{search_query}%"
+        q = q.filter(
+            or_(
+                ElenaListing.address.ilike(like_pat),
+                ElenaListing.city.ilike(like_pat),
+                ElenaListing.county.ilike(like_pat),
+                ElenaListing.zip_code.ilike(like_pat),
+            )
+        )
+
     listings = q.order_by(ElenaListing.updated_at.desc()).all()
+
+    # Distinct counties for the filter dropdown.
+    available_counties = sorted({
+        l.county for l in ElenaListing.query.with_entities(ElenaListing.county).distinct()
+        if l.county
+    })
 
     # Attach presentation counts for the list view.
     presentation_counts = dict(
@@ -2776,7 +2798,10 @@ def realtor_listings():
         listing_statuses    = _LISTING_STATUSES,
         status_filter       = status_filter,
         market_filter       = market_filter or current_market,
+        county_filter       = county_filter,
+        search_query        = search_query,
         available_markets   = available_markets,
+        available_counties  = available_counties,
         presentation_counts = presentation_counts,
         portal              = "vip",
         portal_name         = "VIP",

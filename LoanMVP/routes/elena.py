@@ -628,6 +628,7 @@ def listing_new():
             city=city,
             state=state,
             zip_code=zip_code,
+            county=(request.form.get("county") or "").strip() or None,
             market=market,
             beds=_int(request.form.get("beds")),
             baths=_int(request.form.get("baths")),

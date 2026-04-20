@@ -22,6 +22,11 @@
 
   <section class="ravlo-card partner-section-card">
     <form method="GET" class="listings-filter">
+      <label class="search-label">
+        <span>Search</span>
+        <input type="text" name="q" placeholder="Address, city, county, zip..."
+               value="{{ search_query }}" autocomplete="off">
+      </label>
       <label>
         <span>Status</span>
         <select name="status" onchange="this.form.submit()">
@@ -31,6 +36,17 @@
           {% endfor %}
         </select>
       </label>
+      {% if available_counties %}
+      <label>
+        <span>County</span>
+        <select name="county" onchange="this.form.submit()">
+          <option value="">All counties</option>
+          {% for c in available_counties %}
+            <option value="{{ c }}" {% if county_filter == c %}selected{% endif %}>{{ c }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      {% endif %}
       {% if available_markets|length >= 2 %}
       <label>
         <span>Market</span>
@@ -42,6 +58,9 @@
         </select>
       </label>
       {% endif %}
+      <button type="submit" class="ravlo-btn ghost sm search-btn">
+        <i class="lucide lucide-search"></i>
+      </button>
     </form>
   </section>
 
@@ -69,6 +88,9 @@
             <div class="listing-card-body">
               <div class="listing-address">{{ l.address }}</div>
               <div class="listing-sub">{{ l.city }}{% if l.state %}, {{ l.state }}{% endif %}{% if l.zip_code %} {{ l.zip_code }}{% endif %}</div>
+              {% if l.county %}
+                <div class="listing-county">{{ l.county }} County</div>
+              {% endif %}
               <div class="listing-meta">
                 {% if l.beds %}<span>{{ l.beds }}bd</span>{% endif %}
                 {% if l.baths %}<span>{{ l.baths }}ba</span>{% endif %}
@@ -101,6 +123,7 @@
     display: flex;
     gap: 14px;
     flex-wrap: wrap;
+    align-items: flex-end;
   }
   .listings-filter label {
     display: flex;
@@ -109,7 +132,8 @@
     font-size: 0.85rem;
     color: #cfe1f4;
   }
-  .listings-filter select {
+  .listings-filter select,
+  .listings-filter input[type="text"] {
     background: rgba(255,255,255,0.05);
     color: #fff;
     border: 1px solid rgba(255,255,255,0.12);
@@ -117,6 +141,8 @@
     padding: 8px 10px;
     min-width: 170px;
   }
+  .search-label { flex: 1; min-width: 200px; }
+  .search-btn { align-self: flex-end; padding: 8px 12px !important; }
 
   .listings-grid {
     display: grid;
@@ -170,6 +196,7 @@
 
   .listing-address { font-weight: 600; font-size: 1rem; }
   .listing-sub     { font-size: 0.85rem; color: #9fb3c8; margin-top: 2px; }
+  .listing-county  { font-size: 0.78rem; color: #b0c8df; margin-top: 2px; font-style: italic; }
   .listing-meta    { display: flex; gap: 12px; margin-top: 8px; font-size: 0.82rem; color: #9fb3c8; }
   .listing-price   { margin-top: 10px; font-weight: 700; color: #9effcf; }
   .listing-market  { margin-top: 6px; font-size: 0.75rem; color: #78c8ff; text-transform: uppercase; letter-spacing: 0.06em; }
