@@ -10526,11 +10526,14 @@ def build_budget_tracker(project_id):
         "variance": budget.actual_total - budget.estimated_subtotal,
     }
 
+    # Parse "City, ST 12345" style free-text. Anchor the state match to the
+    # ZIP boundary so address-part abbreviations (ST/CT/DR/NE) don't hijack
+    # the state code. Example: "123 OAK CT, Dallas, TX 75001" -> state "TX".
     location = (getattr(project, "location", "") or "").strip()
     zip_match = re.search(r"(\d{5})(?:-\d{4})?", location)
-    state_match = re.search(r"\b([A-Z]{2})\b", location)
+    state_zip_match = re.search(r"\b([A-Z]{2})\s+\d{5}(?:-\d{4})?\b", location)
     loc_zip = zip_match.group(1) if zip_match else None
-    loc_state = state_match.group(1) if state_match else None
+    loc_state = state_zip_match.group(1) if state_zip_match else None
 
     local_cost_index = {}
     try:
