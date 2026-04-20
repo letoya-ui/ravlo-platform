@@ -5,60 +5,74 @@
     class="ravlo-ai-fab"
     id="ravloAiPilotFab"
     onclick="toggleAiPilot()"
-    aria-label="Open AI Pilot"
+    aria-label="Open Ravlo Copilot"
   >
     <i class="lucide lucide-sparkles"></i>
-    <span>AI Pilot</span>
+    <span>Copilot</span>
   </button>
 </div>
 
 <div class="ravlo-ai-panel" id="ravloAiPilotPanel" aria-hidden="true">
   <div class="ravlo-ai-panel-head">
     <div>
-      <strong>AI Pilot</strong>
-      <div class="ravlo-ai-panel-sub">Quick commands, notes, drafts, and suggestions.</div>
+      <strong>Ravlo Copilot</strong>
+      <div class="ravlo-ai-panel-sub">Say <em>&ldquo;Ravlo&hellip;&rdquo;</em> or type a command.</div>
     </div>
-    <button type="button" class="ravlo-ai-close" onclick="closeAiPilot()" aria-label="Close AI Pilot">
+    <button type="button" class="ravlo-ai-close" onclick="closeAiPilot()" aria-label="Close Copilot">
       <i class="lucide lucide-x"></i>
     </button>
   </div>
 
-  <form method="POST" action="{{ url_for('vip.ai_pilot_command') }}" class="ravlo-ai-form">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <div class="ravlo-ai-form">
+    <div class="ravlo-ai-mic-row">
+      <button type="button" id="ravloAiMic" class="ravlo-ai-mic" aria-label="Hold to speak">
+        <i class="lucide lucide-mic"></i>
+        <span id="ravloAiMicLabel">Start listening</span>
+      </button>
+      <label class="ravlo-ai-wake">
+        <input type="checkbox" id="ravloAiWake">
+        <span>Wake word <code>Ravlo</code></span>
+      </label>
+    </div>
 
     <textarea
-      name="command"
-      rows="4"
+      id="ravloAiCommand"
+      rows="3"
       class="ravlo-ai-textarea"
-      placeholder="Example: Email Sarah and say I’m sending comps tonight."
+      placeholder="Example: Ravlo, add a listing at 123 Main St for $425,000."
     ></textarea>
 
     <div class="ravlo-ai-actions">
-      <button type="submit" class="ravlo-btn primary sm">
-        Create Suggestion
+      <button type="button" id="ravloAiRun" class="ravlo-btn primary sm" onclick="runAiPilot()">
+        Send to Copilot
       </button>
       <a href="{{ url_for('vip.ai_pilot') }}" class="ravlo-btn ghost sm">
-        Open Full AI Pilot
+        Open full Copilot
       </a>
     </div>
-  </form>
+
+    <div class="ravlo-ai-result" id="ravloAiResult" hidden></div>
+  </div>
 
   <div class="ravlo-ai-quick-actions">
-    <div class="ravlo-ai-quick-title">Quick ideas</div>
-    <button type="button" class="ravlo-ai-chip" onclick="fillAiPilot('Email Sarah and say I’m sending comps tonight.')">
-      Draft Email
+    <div class="ravlo-ai-quick-title">Quick commands</div>
+    <button type="button" class="ravlo-ai-chip" onclick="fillAiPilot('Ravlo, add my listing at 123 Main St for $425,000.')">
+      Add listing
     </button>
-    <button type="button" class="ravlo-ai-chip" onclick="fillAiPilot('Text buyer I’m outside.')">
-      Draft Text
+    <button type="button" class="ravlo-ai-chip" onclick="fillAiPilot('Ravlo, make a flyer for my newest listing.')">
+      Make flyer
     </button>
-    <button type="button" class="ravlo-ai-chip" onclick="fillAiPilot('Create a follow-up for tomorrow morning.')">
-      Follow-Up
+    <button type="button" class="ravlo-ai-chip" onclick="fillAiPilot('Ravlo, log a $180 photography expense.')">
+      Log expense
     </button>
-    <button type="button" class="ravlo-ai-chip" onclick="fillAiPilot('Log a $180 photo expense.')">
-      Log Expense
+    <button type="button" class="ravlo-ai-chip" onclick="fillAiPilot('Ravlo, I got paid $9,200 commission.')">
+      Log income
     </button>
-    <button type="button" class="ravlo-ai-chip" onclick="fillAiPilot('Add 24 miles and tolls from today’s showings.')">
-      Log Mileage
+    <button type="button" class="ravlo-ai-chip" onclick="fillAiPilot('Ravlo, how much should I save for taxes?')">
+      Tax set-aside
+    </button>
+    <button type="button" class="ravlo-ai-chip" onclick="fillAiPilot('Ravlo, remind me to follow up with Sarah tomorrow.')">
+      Follow-up
     </button>
   </div>
 </div>
@@ -77,32 +91,49 @@
     gap: 8px;
     border: none;
     border-radius: 999px;
-    padding: 12px 16px;
+    padding: 12px 18px;
     cursor: pointer;
     background: linear-gradient(135deg, #4f8cff, #7b61ff);
     color: #ffffff;
-    box-shadow: 0 12px 32px rgba(79, 140, 255, 0.28);
+    box-shadow: 0 16px 36px rgba(79, 140, 255, 0.32);
     font-weight: 600;
+    font-size: 0.95rem;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+  }
+
+  .ravlo-ai-fab:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 18px 40px rgba(123, 97, 255, 0.38);
+  }
+
+  .ravlo-ai-fab.listening {
+    background: linear-gradient(135deg, #ff6b8b, #ff3d71);
+    box-shadow: 0 0 0 6px rgba(255, 61, 113, 0.18), 0 16px 36px rgba(255,61,113,0.35);
+    animation: ravlo-ai-pulse 1.4s ease-in-out infinite;
+  }
+
+  @keyframes ravlo-ai-pulse {
+    0%, 100% { transform: scale(1); }
+    50%      { transform: scale(1.04); }
   }
 
   .ravlo-ai-panel {
     position: fixed;
     right: 20px;
     bottom: 84px;
-    width: min(420px, calc(100vw - 32px));
+    width: min(440px, calc(100vw - 32px));
     background: rgba(14, 20, 28, 0.96);
     border: 1px solid rgba(255,255,255,0.08);
     border-radius: 18px;
     padding: 16px;
     z-index: 1051;
-    box-shadow: 0 18px 48px rgba(0,0,0,0.35);
+    box-shadow: 0 20px 56px rgba(0,0,0,0.4);
     backdrop-filter: blur(16px);
     display: none;
+    color: #e6eef7;
   }
 
-  .ravlo-ai-panel.open {
-    display: block;
-  }
+  .ravlo-ai-panel.open { display: block; }
 
   .ravlo-ai-panel-head {
     display: flex;
@@ -118,6 +149,12 @@
     margin-top: 2px;
   }
 
+  .ravlo-ai-panel-sub code {
+    background: rgba(255,255,255,0.08);
+    padding: 0 4px;
+    border-radius: 4px;
+  }
+
   .ravlo-ai-close {
     background: transparent;
     border: none;
@@ -125,10 +162,46 @@
     cursor: pointer;
   }
 
-  .ravlo-ai-form {
+  .ravlo-ai-form { display: flex; flex-direction: column; gap: 10px; }
+
+  .ravlo-ai-mic-row {
     display: flex;
-    flex-direction: column;
-    gap: 12px;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .ravlo-ai-mic {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    border: 1px solid rgba(255,255,255,0.12);
+    background: rgba(255,255,255,0.04);
+    color: #cfe1f4;
+    border-radius: 999px;
+    padding: 6px 12px;
+    cursor: pointer;
+    font-size: 0.86rem;
+  }
+
+  .ravlo-ai-mic.listening {
+    background: rgba(255, 61, 113, 0.18);
+    border-color: rgba(255, 61, 113, 0.5);
+    color: #ffd2dc;
+  }
+
+  .ravlo-ai-wake {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: #8ea4b7;
+    font-size: 0.82rem;
+  }
+
+  .ravlo-ai-wake code {
+    background: rgba(255,255,255,0.08);
+    padding: 0 4px;
+    border-radius: 4px;
   }
 
   .ravlo-ai-textarea {
@@ -141,14 +214,28 @@
     resize: vertical;
   }
 
-  .ravlo-ai-textarea::placeholder {
-    color: #8ea4b7;
+  .ravlo-ai-textarea::placeholder { color: #8ea4b7; }
+
+  .ravlo-ai-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+
+  .ravlo-ai-result {
+    border-radius: 12px;
+    padding: 10px 12px;
+    background: rgba(79,140,255,0.12);
+    color: #cfe1f4;
+    font-size: 0.88rem;
+    line-height: 1.4;
   }
 
-  .ravlo-ai-actions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
+  .ravlo-ai-result.error {
+    background: rgba(255,61,113,0.18);
+    color: #ffd2dc;
+  }
+
+  .ravlo-ai-result a {
+    color: #ffffff;
+    font-weight: 600;
+    text-decoration: underline;
   }
 
   .ravlo-ai-quick-actions {
@@ -175,39 +262,178 @@
     font-size: 0.84rem;
   }
 
-  @media (max-width: 900px) {
-    .ravlo-ai-fab-wrap {
-      right: 14px;
-      bottom: 14px;
-    }
+  .ravlo-ai-chip:hover {
+    background: rgba(255,255,255,0.08);
+    color: #ffffff;
+  }
 
-    .ravlo-ai-panel {
-      right: 14px;
-      bottom: 74px;
-      width: calc(100vw - 28px);
-    }
+  @media (max-width: 900px) {
+    .ravlo-ai-fab-wrap { right: 14px; bottom: 14px; }
+    .ravlo-ai-panel    { right: 14px; bottom: 74px; width: calc(100vw - 28px); }
   }
 </style>
 
 <script>
-  function toggleAiPilot() {
-    const panel = document.getElementById("ravloAiPilotPanel");
+(function() {
+  const ACTION_URL = "{{ url_for('vip.ai_pilot_action') }}";
+  const CSRF       = "{{ csrf_token() }}";
+
+  function el(id) { return document.getElementById(id); }
+
+  window.toggleAiPilot = function() {
+    const panel = el("ravloAiPilotPanel");
     if (!panel) return;
     panel.classList.toggle("open");
     panel.setAttribute("aria-hidden", panel.classList.contains("open") ? "false" : "true");
-  }
+    if (panel.classList.contains("open")) {
+      setTimeout(function(){ var ta = el("ravloAiCommand"); if (ta) ta.focus(); }, 80);
+    }
+  };
 
-  function closeAiPilot() {
-    const panel = document.getElementById("ravloAiPilotPanel");
+  window.closeAiPilot = function() {
+    const panel = el("ravloAiPilotPanel");
     if (!panel) return;
     panel.classList.remove("open");
     panel.setAttribute("aria-hidden", "true");
+  };
+
+  window.fillAiPilot = function(text) {
+    const ta = el("ravloAiCommand");
+    if (!ta) return;
+    ta.value = text;
+    const panel = el("ravloAiPilotPanel");
+    if (panel && !panel.classList.contains("open")) toggleAiPilot();
+    ta.focus();
+  };
+
+  function showResult(payload, isError) {
+    const box = el("ravloAiResult");
+    if (!box) return;
+    box.hidden = false;
+    box.classList.toggle("error", !!isError);
+    if (isError) {
+      box.textContent = (payload && payload.error) || "Sorry, I couldn't do that.";
+      return;
+    }
+    let html = "";
+    if (payload.summary) html += "<strong>" + payload.title + ":</strong> " + payload.summary;
+    else                 html += "<strong>" + (payload.title || "Copilot") + "</strong>";
+    if (payload.action_url) html += ' <a href="' + payload.action_url + '">Open &rarr;</a>';
+    box.innerHTML = html;
   }
 
-  function fillAiPilot(text) {
-    const textarea = document.querySelector('#ravloAiPilotPanel textarea[name="command"]');
-    if (!textarea) return;
-    textarea.value = text;
-    textarea.focus();
+  window.runAiPilot = function(overrideText) {
+    const ta = el("ravloAiCommand");
+    const text = (overrideText || (ta ? ta.value : "") || "").trim();
+    if (!text) return;
+
+    const btn = el("ravloAiRun");
+    if (btn) { btn.disabled = true; btn.textContent = "Working..."; }
+
+    fetch(ACTION_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+        "X-CSRFToken": CSRF,
+      },
+      credentials: "same-origin",
+      body: JSON.stringify({ command: text }),
+    })
+      .then(function(r) { return r.json().then(function(j){ return { ok: r.ok, body: j }; }); })
+      .then(function(res) {
+        showResult(res.body, !res.ok || !res.body.ok);
+        if (res.ok && res.body.ok && ta) ta.value = "";
+      })
+      .catch(function() { showResult({ error: "Network error." }, true); })
+      .finally(function() {
+        if (btn) { btn.disabled = false; btn.textContent = "Send to Copilot"; }
+      });
+  };
+
+  // ── Voice (Web Speech API) ──────────────────────────────────────────────
+  const Rec = window.SpeechRecognition || window.webkitSpeechRecognition;
+  let rec = null;
+  let listening = false;
+  let wakeMode = false;
+
+  function setListening(on) {
+    listening = on;
+    const mic  = el("ravloAiMic");
+    const fab  = el("ravloAiPilotFab");
+    const lbl  = el("ravloAiMicLabel");
+    if (mic) mic.classList.toggle("listening", on);
+    if (fab) fab.classList.toggle("listening", on);
+    if (lbl) lbl.textContent = on ? "Listening..." : (wakeMode ? "Say: Ravlo..." : "Start listening");
   }
+
+  function stripWake(text) {
+    return (text || "").replace(/^\s*(hey\s+|okay\s+|ok\s+)?ravlo[\s,.:;-]*/i, "").trim();
+  }
+
+  function handleTranscript(transcript) {
+    if (!transcript) return;
+    const ta = el("ravloAiCommand");
+    if (wakeMode) {
+      const lower = transcript.toLowerCase();
+      if (lower.indexOf("ravlo") === -1) return;
+      const cleaned = stripWake(transcript);
+      if (!cleaned) return;
+      if (ta) ta.value = cleaned;
+      const panel = el("ravloAiPilotPanel");
+      if (panel && !panel.classList.contains("open")) toggleAiPilot();
+      runAiPilot(cleaned);
+    } else {
+      if (ta) ta.value = (ta.value ? ta.value + " " : "") + transcript;
+    }
+  }
+
+  function startRec() {
+    if (!Rec) { alert("Voice input isn't supported in this browser. Chrome or Edge work well."); return; }
+    if (rec) { try { rec.stop(); } catch(e){} }
+    rec = new Rec();
+    rec.lang = "en-US";
+    rec.interimResults = false;
+    rec.continuous = wakeMode;
+    rec.onresult = function(ev) {
+      for (let i = ev.resultIndex; i < ev.results.length; i++) {
+        if (ev.results[i].isFinal) handleTranscript(ev.results[i][0].transcript);
+      }
+    };
+    rec.onend   = function() { if (wakeMode && listening) { try { rec.start(); } catch(e){} } else setListening(false); };
+    rec.onerror = function() { setListening(false); };
+    try { rec.start(); setListening(true); } catch(e) { setListening(false); }
+  }
+
+  function stopRec() {
+    if (!rec) { setListening(false); return; }
+    try { rec.stop(); } catch(e){}
+    setListening(false);
+  }
+
+  document.addEventListener("DOMContentLoaded", function() {
+    const mic  = el("ravloAiMic");
+    const wake = el("ravloAiWake");
+    const ta   = el("ravloAiCommand");
+
+    if (mic) {
+      mic.addEventListener("click", function() {
+        if (listening) stopRec(); else startRec();
+      });
+    }
+
+    if (wake) {
+      wake.addEventListener("change", function(ev) {
+        wakeMode = !!ev.target.checked;
+        if (wakeMode) startRec(); else stopRec();
+      });
+    }
+
+    if (ta) {
+      ta.addEventListener("keydown", function(ev) {
+        if ((ev.metaKey || ev.ctrlKey) && ev.key === "Enter") { ev.preventDefault(); runAiPilot(); }
+      });
+    }
+  });
+})();
 </script>

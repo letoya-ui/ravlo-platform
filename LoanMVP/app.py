@@ -78,6 +78,14 @@ def resource_path(relative_path: str) -> str:
 # or type-changing operations must go through Alembic.
 _SCHEMA_COMPAT_COLUMNS = [
     ("vip_profiles", "markets_json", "TEXT"),
+    ("elena_listings", "market", "VARCHAR(100)"),
+    ("elena_clients", "market", "VARCHAR(100)"),
+    ("elena_clients", "assigned_member_id", "INTEGER"),
+    ("vip_expenses", "market", "VARCHAR(100)"),
+    ("vip_income", "market", "VARCHAR(100)"),
+    ("vip_income", "status", "VARCHAR(50)"),
+    ("vip_assistant_suggestions", "proposed_amount", "INTEGER"),
+    ("vip_assistant_suggestions", "source", "VARCHAR(50)"),
 ]
 
 

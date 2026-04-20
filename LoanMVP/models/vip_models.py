@@ -68,6 +68,7 @@ class VIPProfile(VIPBaseModel):
     suggestions   = relationship("VIPAssistantSuggestion", back_populates="vip_profile", lazy=True)
     actions       = relationship("VIPAssistantAction",    back_populates="vip_profile", lazy=True)
     notifications = relationship("VIPNotification",       back_populates="vip_profile", lazy=True)
+    team_members  = relationship("VIPTeamMember",         back_populates="vip_profile", lazy=True)
 
     # ✅ FIXED — back_populates on both sides, overlaps silences the warning
     design_projects = relationship(
@@ -287,3 +288,25 @@ class VIPDesignAnnotation(VIPBaseModel):
     height          = Column(Integer,     nullable=True)
 
     project = relationship("VIPDesignProject", back_populates="annotations")
+
+
+# ---------------------------------------------------------
+# TEAM MEMBERS  (Frank's team + lead-distribution)
+# ---------------------------------------------------------
+class VIPTeamMember(VIPBaseModel):
+    __tablename__ = "vip_team_members"
+
+    vip_profile_id = Column(Integer, ForeignKey("vip_profiles.id"), nullable=False)
+
+    name   = Column(String(255), nullable=False)
+    email  = Column(String(255), nullable=True)
+    phone  = Column(String(50),  nullable=True)
+    role   = Column(String(80),  nullable=True)
+    market = Column(String(100), nullable=True)
+    notes  = Column(Text,        nullable=True)
+    active = Column(Boolean,     nullable=False, default=True)
+
+    vip_profile = relationship("VIPProfile", back_populates="team_members")
+
+    def __repr__(self):
+        return f"<VIPTeamMember {self.id} - {self.name}>"
