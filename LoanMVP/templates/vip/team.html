@@ -19,9 +19,9 @@
     <article class="ravlo-card partner-stat-card">
       <div class="partner-stat-label">Assigned leads</div>
       <div class="partner-stat-value">
-        {% set assigned_count = 0 %}
-        {% for _m_id, leads in leads_by_member.items() %}{% set assigned_count = assigned_count + leads|length %}{% endfor %}
-        {{ assigned_count }}
+        {% set ns = namespace(count=0) %}
+        {% for _m_id, leads in leads_by_member.items() %}{% set ns.count = ns.count + leads|length %}{% endfor %}
+        {{ ns.count }}
       </div>
     </article>
     <article class="ravlo-card partner-stat-card">
@@ -34,6 +34,7 @@
   <section class="ravlo-card p-6">
     <h2 class="text-lg font-semibold mb-4">Add teammate</h2>
     <form method="post" action="{{ url_for('vip.team_add') }}" class="grid md:grid-cols-3 gap-3">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <label class="text-xs uppercase opacity-70">Name
         <input type="text" name="name" required class="ravlo-input mt-1 w-full" placeholder="Sam Diaz">
       </label>
@@ -79,6 +80,7 @@
       </div>
       {% if members|selectattr('active')|list %}
       <form method="post" action="{{ url_for('vip.team_auto_distribute') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <button type="submit" class="ravlo-btn ravlo-btn-outline">
           Auto-distribute {{ unassigned|length }} lead{{ '' if unassigned|length == 1 else 's' }}
         </button>
@@ -103,6 +105,7 @@
               <td>{{ lead.budget or '—' }}</td>
               <td class="text-right">
                 <form method="post" action="{{ url_for('vip.team_assign_lead', lead_id=lead.id) }}" class="inline-flex gap-2">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                   <select name="member_id" class="ravlo-input ravlo-input-sm">
                     <option value="">— Assign —</option>
                     {% for m in members if m.active %}
@@ -139,12 +142,14 @@
               </div>
               <div class="flex gap-2">
                 <form method="post" action="{{ url_for('vip.team_toggle', member_id=m.id) }}">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                   <button class="ravlo-btn ravlo-btn-ghost ravlo-btn-sm" type="submit">
                     {{ 'Deactivate' if m.active else 'Activate' }}
                   </button>
                 </form>
                 <form method="post" action="{{ url_for('vip.team_delete', member_id=m.id) }}"
                       onsubmit="return confirm('Remove {{ m.name }} and release their leads?');">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                   <button class="ravlo-btn ravlo-btn-ghost ravlo-btn-sm" type="submit">Remove</button>
                 </form>
               </div>
@@ -159,6 +164,7 @@
                     <li class="flex items-center justify-between gap-2 text-sm">
                       <span>{{ lead.name }}{% if lead.pipeline_stage %} <span class="opacity-60">({{ lead.pipeline_stage }})</span>{% endif %}</span>
                       <form method="post" action="{{ url_for('vip.team_assign_lead', lead_id=lead.id) }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <input type="hidden" name="member_id" value="0">
                         <button class="ravlo-btn ravlo-btn-ghost ravlo-btn-sm" type="submit" title="Release back to unassigned">Release</button>
                       </form>

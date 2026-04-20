@@ -10,7 +10,7 @@ from flask_login import current_user
 # VIP tiers that unlock the Realtor VIP Workspace.
 # Keep tier comparisons case-insensitive.
 VIP_ACCESS_TIERS = {"premium", "enterprise"}
-from sqlalchemy import or_
+from sqlalchemy import or_, func
 
 from LoanMVP.extensions import db
 
@@ -1618,10 +1618,26 @@ def _parse_money(raw):
 
 
 def _sync_projected_closing_income(profile):
+    """Auto-create pending commission rows for in-flight listings that belong
+    to one of this realtor's configured markets.
+
+    ElenaListing is not currently owned per-user, so we scope by market to
+    avoid cross-realtor pollution. Realtors with no configured markets opt
+    out of auto-sync — they can always add pending commissions manually.
+    """
+    user_markets = get_user_markets(profile)
+    if not user_markets:
+        return
+
+    normalized_markets = {m.strip().lower() for m in user_markets if m}
+    if not normalized_markets:
+        return
+
     active_statuses = ("under_contract", "pending", "in_escrow")
     candidate_listings = (
         ElenaListing.query
         .filter(ElenaListing.status.in_(active_statuses))
+        .filter(ElenaListing.market.isnot(None))
         .all()
     )
     if not candidate_listings:
@@ -1639,6 +1655,9 @@ def _sync_projected_closing_income(profile):
     created = 0
     for listing in candidate_listings:
         if not listing.price or listing.price <= 0:
+            continue
+        listing_market = (listing.market or "").strip().lower()
+        if listing_market not in normalized_markets:
             continue
         desc = "Projected commission - " + str(listing.address or ("listing #" + str(listing.id)))
         if desc in existing_descs:
@@ -1670,9 +1689,17 @@ def finances():
     expenses = (VIPExpense.query.filter_by(vip_profile_id=profile.id)
                 .order_by(VIPExpense.created_at.desc()).limit(50).all())
 
-    total_received = sum((i.amount or 0) for i in incomes if (i.status or "pending") == "received")
-    total_pending  = sum((i.amount or 0) for i in incomes if (i.status or "pending") == "pending")
-    total_expenses = sum((e.amount or 0) for e in expenses)
+    total_received = int(db.session.query(func.coalesce(func.sum(VIPIncome.amount), 0))
+                         .filter(VIPIncome.vip_profile_id == profile.id,
+                                 func.coalesce(VIPIncome.status, "received") == "received")
+                         .scalar() or 0)
+    total_pending  = int(db.session.query(func.coalesce(func.sum(VIPIncome.amount), 0))
+                         .filter(VIPIncome.vip_profile_id == profile.id,
+                                 VIPIncome.status == "pending")
+                         .scalar() or 0)
+    total_expenses = int(db.session.query(func.coalesce(func.sum(VIPExpense.amount), 0))
+                         .filter(VIPExpense.vip_profile_id == profile.id)
+                         .scalar() or 0)
 
     tax_rate       = _finance_tax_rate(profile)
     taxable_income = max(total_received - total_expenses, 0)

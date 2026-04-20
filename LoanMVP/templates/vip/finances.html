@@ -55,6 +55,7 @@
     <article class="ravlo-card p-6">
       <h2 class="text-lg font-semibold mb-4">Add income</h2>
       <form method="post" action="{{ url_for('vip.finances_add_income') }}" class="space-y-3">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="grid grid-cols-2 gap-3">
           <label class="text-xs uppercase opacity-70">Category
             <select name="category" class="ravlo-input mt-1 w-full">
@@ -97,6 +98,7 @@
     <article class="ravlo-card p-6">
       <h2 class="text-lg font-semibold mb-4">Add expense</h2>
       <form method="post" action="{{ url_for('vip.finances_add_expense') }}" class="space-y-3">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <label class="text-xs uppercase opacity-70 block">Category
           <select name="category" class="ravlo-input mt-1 w-full">
             <option value="marketing">Marketing</option>
@@ -160,10 +162,12 @@
               <td class="text-right whitespace-nowrap">
                 {% if (i.status or 'received') == 'pending' %}
                 <form method="post" action="{{ url_for('vip.finances_mark_income_received', income_id=i.id) }}" class="inline">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                   <button class="ravlo-btn ravlo-btn-outline ravlo-btn-sm" title="Mark as received">Mark received</button>
                 </form>
                 {% endif %}
                 <form method="post" action="{{ url_for('vip.finances_delete_income', income_id=i.id) }}" class="inline" onsubmit="return confirm('Delete this income entry?');">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                   <button class="ravlo-btn ravlo-btn-ghost ravlo-btn-sm" title="Delete">✕</button>
                 </form>
               </td>
@@ -198,6 +202,7 @@
               <td class="text-right">${{ "{:,.0f}".format(e.amount or 0) }}</td>
               <td class="text-right whitespace-nowrap">
                 <form method="post" action="{{ url_for('vip.finances_delete_expense', expense_id=e.id) }}" class="inline" onsubmit="return confirm('Delete this expense?');">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                   <button class="ravlo-btn ravlo-btn-ghost ravlo-btn-sm">✕</button>
                 </form>
               </td>
