@@ -20,7 +20,11 @@ import sqlalchemy as sa
 
 
 revision = "20260420r01"
-down_revision = "20260417elena01"
+# Chain linearly off the VIP base models migration (the previous head of the
+# VIP branch) instead of `20260417elena01` — the Elena-dashboard migration
+# `5fd82a8f3e41` already chains off `20260417elena01`, and pointing two
+# revisions at the same parent creates a fork / multiple Alembic heads.
+down_revision = "5fd82a8f3e41"
 branch_labels = None
 depends_on = None
 
