@@ -799,6 +799,8 @@ def contractor_dashboard():
     todays = date.today()
 
     def _is_today(j):
+        if j.status in ("completed", "cancelled"):
+            return False
         return j.start_date == todays or (
             j.status == "in_progress"
             and (j.end_date is None or j.end_date >= todays)
@@ -2133,10 +2135,13 @@ def _dispatch_copilot_intent(profile, result, command):
             vip_profile_id = profile.id,
             prospect_name  = "New prospect",
             address        = address or None,
-            total_cost     = price,
+            labor_cost     = price,
+            materials_cost = 0,
+            other_cost     = 0,
             scope_text     = command,
             status         = "draft",
         )
+        bid.recalc_total()
         db.session.add(bid)
         db.session.commit()
         summary = "Drafted bid" + ((" for $" + format(price, ",")) if price else "")
