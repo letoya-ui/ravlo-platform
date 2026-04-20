@@ -477,6 +477,14 @@ _COST_RESPONSE_KEYS = {
     "estimate",
     "estimate_low",
     "estimate_high",
+    # Cost range keys returned by the renovation engine's /v1/rehab_scope
+    # and /v1/build_scope endpoints. These are the only cost fields those
+    # endpoints carry on the response, so leaving them out meant the
+    # rehab/build scope routes looked like they were localised but the
+    # numbers that actually propagated to ``deal.rehab_cost`` stayed at the
+    # national baseline.
+    "cost_low",
+    "cost_high",
     "cost_per_sqft",
     "cost_psf",
     "price_per_sqft",
@@ -484,9 +492,11 @@ _COST_RESPONSE_KEYS = {
     "line_cost",
     "material_cost",
     "labor_cost",
-    # NOTE: intentionally do not include generic keys like "amount" or "value"
-    # — those appear in loan, payment, and count structures too and would get
-    # silently inflated by the local cost factor on nested engine responses.
+    # NOTE: intentionally do not include generic keys like "amount", "value",
+    # or market-value fields like "arv" / "estimated_value" — those are
+    # market-driven, not cost-driven, so the local cost factor should not
+    # adjust them. They also appear in loan, payment, and count structures
+    # on nested engine responses and would get silently inflated.
 }
 
 
