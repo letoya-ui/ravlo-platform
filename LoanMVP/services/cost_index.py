@@ -34,7 +34,6 @@ from __future__ import annotations
 import json
 import logging
 import os
-from functools import lru_cache
 from typing import Any, Dict, Optional, Tuple
 
 logger = logging.getLogger(__name__)
@@ -47,10 +46,20 @@ _DATA_PATH = os.path.join(
 
 NATIONAL_BASELINE = 1.00
 
+# Only cache *successful* loads. If the data file is missing on the first
+# call (e.g. during a rolling deploy where the code image lands before the
+# data file), @lru_cache would permanently memoize the empty fallback and
+# every later lookup would silently return the national baseline until the
+# process restarted. Caching on success only lets the next call try again.
+_INDEX_CACHE: Optional[Dict[str, Any]] = None
 
-@lru_cache(maxsize=1)
+
 def _load_index() -> Dict[str, Any]:
-    """Load and cache the cost-index JSON. Safe on bad file — returns empty."""
+    """Load the cost-index JSON. Safe on bad file — returns empty fallback
+    without memoising so a later retry can pick up the real file."""
+    global _INDEX_CACHE
+    if _INDEX_CACHE is not None:
+        return _INDEX_CACHE
     try:
         with open(_DATA_PATH, "r", encoding="utf-8") as fh:
             data = json.load(fh)
@@ -65,7 +74,15 @@ def _load_index() -> Dict[str, Any]:
     data.setdefault("states", {})
     data.setdefault("zip3", {})
     data.setdefault("national_baseline", NATIONAL_BASELINE)
+    _INDEX_CACHE = data
     return data
+
+
+def _reset_index_cache() -> None:
+    """Test hook. Clears the module-level cache so the next ``_load_index``
+    call re-reads from disk."""
+    global _INDEX_CACHE
+    _INDEX_CACHE = None
 
 
 def _normalize_zip3(zip_code: Optional[str]) -> Optional[str]:

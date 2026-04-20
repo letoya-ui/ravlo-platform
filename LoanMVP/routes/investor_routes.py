@@ -5111,21 +5111,15 @@ def save_deal():
 
     db.session.commit()
 
-    # Feed the learning loop: if the investor saved a real rehab cost
-    # alongside a ZIP, record it as a CostObservation. Source is
-    # ``engine_estimate`` (lower confidence, 0.25) because on this route
-    # ``rehab_cost`` comes from ``results_json.get("rehab_total")``, which
-    # may have already been passed through
-    # ``apply_multiplier_to_engine_response``. Weighting it low prevents
-    # engine-echo observations from dominating the learning blend. The
-    # ``create_deal`` path uses ``investor_input`` (0.50) because the
-    # number comes straight from the form. Never blocks save.
-    try:
-        from LoanMVP.services.cost_ingestion import record_from_deal
-        if deal.rehab_cost and deal.zip_code:
-            record_from_deal(deal, source="engine_estimate")
-    except Exception as _e:  # pragma: no cover - defensive
-        current_app.logger.warning("cost observation ingest failed: %s", _e)
+    # Intentionally do NOT record a CostObservation from this route.
+    # ``rehab_cost`` here is ``results_json.get("rehab_total")``, which has
+    # already been passed through ``apply_multiplier_to_engine_response``
+    # (i.e. it already bakes in the local factor). Feeding that number back
+    # into the learning loop would produce factor² bias: the engine echoes
+    # out a locally-adjusted cost, we divide by the flat national baseline
+    # to derive an implied factor, and the blend drifts upward each cycle.
+    # Only the ``create_deal`` path records here, because that number comes
+    # straight from the investor's form (pre-multiplication).
 
     flash("Deal saved.", "success")
     return redirect(url_for("investor.deal_analysis", deal_id=deal.id))
