@@ -273,7 +273,7 @@
         <h3 class="text-lg font-semibold mb-3">Copilot suggestions</h3>
         <ul class="space-y-2 text-sm">
           {% for s in copilot_suggestions %}
-            <li class="text-gray-300">• {{ s.suggestion_text or s.title }}</li>
+            <li class="text-gray-300">• {{ s.body or s.title }}</li>
           {% endfor %}
         </ul>
       </section>

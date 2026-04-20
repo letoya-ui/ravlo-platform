@@ -2131,7 +2131,7 @@ def _dispatch_copilot_intent(profile, result, command):
         price   = result.get("amount") or 0
         bid = ContractorBid(
             vip_profile_id = profile.id,
-            prospect_name  = (address or "New prospect")[:200],
+            prospect_name  = "New prospect",
             address        = address or None,
             total_cost     = price,
             scope_text     = command,
