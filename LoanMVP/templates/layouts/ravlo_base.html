@@ -138,7 +138,7 @@
     });
     </script>
 
-  {% if active_portal == "vip" and modules is defined and 'ai_pilot' in modules %}
+  {% if active_portal == "vip" or active_portal == "elena" %}
     {% include "layouts/_ai_pilot_fab.html" %}
   {% endif %}
 

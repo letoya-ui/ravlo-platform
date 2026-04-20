@@ -126,10 +126,13 @@
     <div class="grid grid-cols-1 md:grid-cols-{{ available_markets|length + 1 }} gap-3 text-sm">
       <div class="ravlo-card p-3 bg-white/5">
         <div class="text-xs uppercase text-gray-400 mb-1">All Markets</div>
-        <div class="flex justify-between"><span>Income</span><span>${{ '{:,.0f}'.format(finances_combined.income) }}</span></div>
+        <div class="flex justify-between"><span>Received</span><span>${{ '{:,.0f}'.format(finances_combined.income) }}</span></div>
+        {% if finances_combined.pending %}
+        <div class="flex justify-between text-amber-300/80"><span>Pending</span><span>${{ '{:,.0f}'.format(finances_combined.pending) }}</span></div>
+        {% endif %}
         <div class="flex justify-between"><span>Expenses</span><span>${{ '{:,.0f}'.format(finances_combined.expenses) }}</span></div>
         <div class="flex justify-between font-semibold pt-1 border-t border-white/10 mt-1">
-          <span>Net</span><span>${{ '{:,.0f}'.format(finances_combined.net) }}</span>
+          <span>Net (Received)</span><span>${{ '{:,.0f}'.format(finances_combined.net) }}</span>
         </div>
       </div>
       {% for market in available_markets %}
@@ -137,10 +140,13 @@
       {% if f %}
       <div class="ravlo-card p-3">
         <div class="text-xs uppercase text-gray-400 mb-1">{{ market }}</div>
-        <div class="flex justify-between"><span>Income</span><span>${{ '{:,.0f}'.format(f.income) }}</span></div>
+        <div class="flex justify-between"><span>Received</span><span>${{ '{:,.0f}'.format(f.income) }}</span></div>
+        {% if f.pending %}
+        <div class="flex justify-between text-amber-300/80"><span>Pending</span><span>${{ '{:,.0f}'.format(f.pending) }}</span></div>
+        {% endif %}
         <div class="flex justify-between"><span>Expenses</span><span>${{ '{:,.0f}'.format(f.expenses) }}</span></div>
         <div class="flex justify-between font-semibold pt-1 border-t border-white/10 mt-1">
-          <span>Net</span><span>${{ '{:,.0f}'.format(f.net) }}</span>
+          <span>Net (Received)</span><span>${{ '{:,.0f}'.format(f.net) }}</span>
         </div>
       </div>
       {% endif %}

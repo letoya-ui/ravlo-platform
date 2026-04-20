@@ -254,21 +254,27 @@
         </div>
 
         {# Combined row #}
-        <div class="grid grid-cols-3 gap-3 mb-4">
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
           <div class="ravlo-card p-3 text-center">
-            <div class="text-xs text-gray-500 mb-1">Total Income</div>
+            <div class="text-xs text-gray-500 mb-1">Received</div>
             <div class="text-lg font-semibold text-green-400">
               ${{ '{:,.0f}'.format(finances_combined.income) }}
             </div>
           </div>
           <div class="ravlo-card p-3 text-center">
-            <div class="text-xs text-gray-500 mb-1">Total Expenses</div>
+            <div class="text-xs text-gray-500 mb-1">Pending</div>
+            <div class="text-lg font-semibold text-amber-300">
+              ${{ '{:,.0f}'.format(finances_combined.pending or 0) }}
+            </div>
+          </div>
+          <div class="ravlo-card p-3 text-center">
+            <div class="text-xs text-gray-500 mb-1">Expenses</div>
             <div class="text-lg font-semibold text-red-400">
               ${{ '{:,.0f}'.format(finances_combined.expenses) }}
             </div>
           </div>
           <div class="ravlo-card p-3 text-center">
-            <div class="text-xs text-gray-500 mb-1">Net Profit</div>
+            <div class="text-xs text-gray-500 mb-1">Net (Received)</div>
             <div class="text-lg font-semibold
               {% if finances_combined.net >= 0 %}text-green-400{% else %}text-red-400{% endif %}">
               ${{ '{:,.0f}'.format(finances_combined.net) }}
@@ -294,8 +300,11 @@
                   Net ${{ '{:,.0f}'.format(mf.net) }}
                 </span>
               </div>
-              <div class="flex gap-4 text-xs text-gray-400">
+              <div class="flex flex-wrap gap-4 text-xs text-gray-400">
                 <span>In: <strong class="text-gray-200">${{ '{:,.0f}'.format(mf.income) }}</strong></span>
+                {% if mf.pending %}
+                <span>Pending: <strong class="text-amber-300">${{ '{:,.0f}'.format(mf.pending) }}</strong></span>
+                {% endif %}
                 <span>Out: <strong class="text-gray-200">${{ '{:,.0f}'.format(mf.expenses) }}</strong></span>
               </div>
             </div>

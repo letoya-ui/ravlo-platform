@@ -10,7 +10,7 @@ from flask_login import current_user
 # VIP tiers that unlock the Realtor VIP Workspace.
 # Keep tier comparisons case-insensitive.
 VIP_ACCESS_TIERS = {"premium", "enterprise"}
-from sqlalchemy import or_
+from sqlalchemy import or_, func
 
 from LoanMVP.extensions import db
 
@@ -22,6 +22,7 @@ from LoanMVP.models.vip_models import (
     VIPAssistantSuggestion,
     VIPDesignProject,
     VIPDesignAnnotation,
+    VIPTeamMember,
 )
 
 # ── Investor / deal models ────────────────────────────────────────────────────
@@ -84,10 +85,9 @@ vip_bp = Blueprint("vip", __name__, url_prefix="/vip")
 # Constants
 # ─────────────────────────────────────────────────────────────────────────────
 
-# Backwards-compatible fallback for profiles that don't have any markets
-# configured yet. New code should read markets from the per-user VIPProfile
-# via `get_user_markets(profile)` instead.
-_LEGACY_FALLBACK_MARKETS = ["Hudson Valley", "Sarasota"]
+# Per-user markets now come from `VIPProfile.markets_json` (set during
+# onboarding). There is no global fallback — realtors with zero configured
+# markets see the shared "All Markets" pool.
 
 VIP_MARKET_SESSION_KEY = "vip_market"
 ALL_MARKETS = "All Markets"
@@ -532,21 +532,37 @@ def realtor_dashboard():
         all_income   = VIPIncome.query.filter_by(vip_profile_id=profile.id).all()
         all_expenses = VIPExpense.query.filter_by(vip_profile_id=profile.id).all()
 
-        total_income   = sum((i.amount or 0) for i in all_income)
+        # NULL status is treated as "received" to match the finances page.
+        def _is_received(i):
+            return (i.status or "received") == "received"
+        def _is_pending(i):
+            return (i.status or "received") == "pending"
+
+        received_income = [i for i in all_income if _is_received(i)]
+        pending_income  = [i for i in all_income if _is_pending(i)]
+
+        total_received = sum((i.amount or 0) for i in received_income)
+        total_pending  = sum((i.amount or 0) for i in pending_income)
         total_expenses = sum((e.amount or 0) for e in all_expenses)
         finances_combined = {
-            "income":   total_income,
+            "income":   total_received,
+            "pending":  total_pending,
             "expenses": total_expenses,
-            "net":      total_income - total_expenses,
+            "net":      total_received - total_expenses,
         }
 
         for market in available_markets:
-            m_income   = sum((i.amount or 0) for i in all_income   if getattr(i, "market", None) == market)
-            m_expenses = sum((e.amount or 0) for e in all_expenses if getattr(e, "market", None) == market)
+            m_received = sum((i.amount or 0) for i in received_income
+                             if getattr(i, "market", None) == market)
+            m_pending  = sum((i.amount or 0) for i in pending_income
+                             if getattr(i, "market", None) == market)
+            m_expenses = sum((e.amount or 0) for e in all_expenses
+                             if getattr(e, "market", None) == market)
             finances_by_market[market] = {
-                "income":   m_income,
+                "income":   m_received,
+                "pending":  m_pending,
                 "expenses": m_expenses,
-                "net":      m_income - m_expenses,
+                "net":      m_received - m_expenses,
             }
 
     return render_template(
@@ -638,15 +654,20 @@ def realtor_investor_flow():
                 market_matches = sp_query.filter_by(market=current_market).limit(20).all()
 
             if not market_matches:
-                state_map = {
-                    "Hudson Valley": ("NY", ["beacon", "kingston", "poughkeepsie", "newburgh"]),
-                    "Sarasota":      ("FL", ["sarasota", "bradenton", "venice", "north port"]),
-                }
-                if current_market in state_map:
-                    state_code, _ = state_map[current_market]
-                    geo_matches = sp_query.filter(
-                        db.func.lower(SavedProperty.state) == state_code.lower()
-                    ).limit(20).all()
+                # Realtors now define their own markets, so we fall back to
+                # fuzzy-matching the market label against the saved property
+                # city/state instead of hard-coding state codes.
+                label_tokens = [
+                    t for t in (current_market or "").lower().split() if t
+                ]
+                if label_tokens:
+                    conditions = []
+                    for token in label_tokens:
+                        like = f"%{token}%"
+                        conditions.append(db.func.lower(SavedProperty.city).like(like))
+                        if hasattr(SavedProperty, "state"):
+                            conditions.append(db.func.lower(SavedProperty.state).like(like))
+                    geo_matches = sp_query.filter(or_(*conditions)).limit(20).all()
         else:
             market_matches = sp_query.limit(30).all()
 
@@ -1575,16 +1596,135 @@ def loan_officer_refer_out(loan_id):
 # FINANCES
 # ─────────────────────────────────────────────────────────────────────────────
 
+DEFAULT_TAX_RATE = 0.28
+
+
+def _finance_tax_rate(profile):
+    raw = getattr(profile, "tax_rate", None) or DEFAULT_TAX_RATE
+    try:
+        rate = float(raw)
+    except (TypeError, ValueError):
+        rate = DEFAULT_TAX_RATE
+    if rate <= 0:
+        return DEFAULT_TAX_RATE
+    if rate > 1:
+        rate = rate / 100.0
+    return min(rate, 0.6)
+
+
+def _parse_date_input(raw):
+    if not raw:
+        return None
+    for fmt in ("%Y-%m-%dT%H:%M", "%Y-%m-%d %H:%M:%S", "%Y-%m-%d"):
+        try:
+            return datetime.strptime(raw.strip(), fmt)
+        except (TypeError, ValueError):
+            continue
+    return None
+
+
+def _parse_money(raw):
+    if raw in (None, ""):
+        return None
+    try:
+        cleaned = str(raw).replace(",", "").replace("$", "").strip()
+        return int(round(float(cleaned)))
+    except (TypeError, ValueError):
+        return None
+
+
+def _sync_projected_closing_income(profile):
+    """Auto-create pending commission rows for in-flight listings that belong
+    to one of this realtor's configured markets.
+
+    ElenaListing is not currently owned per-user, so we scope by market to
+    avoid cross-realtor pollution. Realtors with no configured markets opt
+    out of auto-sync — they can always add pending commissions manually.
+    """
+    user_markets = get_user_markets(profile)
+    if not user_markets:
+        return
+
+    normalized_markets = {m.strip().lower() for m in user_markets if m}
+    if not normalized_markets:
+        return
+
+    active_statuses = ("under_contract", "pending", "in_escrow")
+    candidate_listings = (
+        ElenaListing.query
+        .filter(ElenaListing.status.in_(active_statuses))
+        .filter(ElenaListing.market.isnot(None))
+        .all()
+    )
+    if not candidate_listings:
+        return
+
+    # Dedupe across ALL statuses, not just pending — otherwise marking a
+    # projected commission as received lets the auto-sync recreate it on
+    # the next page load.
+    existing_descs = {
+        (i.description or "").strip()
+        for i in VIPIncome.query.filter_by(
+            vip_profile_id=profile.id,
+            category="commission",
+        ).all()
+    }
+
+    created = 0
+    for listing in candidate_listings:
+        if not listing.price or listing.price <= 0:
+            continue
+        listing_market = (listing.market or "").strip().lower()
+        if listing_market not in normalized_markets:
+            continue
+        desc = "Projected commission - " + str(listing.address or ("listing #" + str(listing.id)))
+        if desc in existing_descs:
+            continue
+        projected = int(round(float(listing.price) * 0.03))
+        db.session.add(VIPIncome(
+            vip_profile_id = profile.id,
+            category       = "commission",
+            description    = desc,
+            amount         = projected,
+            income_date    = datetime.utcnow(),
+            status         = "pending",
+            market         = listing.market,
+            notes          = "Auto-added from listing #" + str(listing.id) + " (" + str(listing.status) + ").",
+        ))
+        created += 1
+    if created:
+        db.session.commit()
+
+
 @vip_bp.get("/finances")
 @role_required("partner_group", "admin")
 def finances():
     profile = get_or_create_vip_profile()
+    _sync_projected_closing_income(profile)
 
-    incomes  = VIPIncome.query.filter_by(vip_profile_id=profile.id).order_by(VIPIncome.created_at.desc()).limit(25).all()
-    expenses = VIPExpense.query.filter_by(vip_profile_id=profile.id).order_by(VIPExpense.created_at.desc()).limit(25).all()
+    incomes  = (VIPIncome.query.filter_by(vip_profile_id=profile.id)
+                .order_by(VIPIncome.created_at.desc()).limit(50).all())
+    expenses = (VIPExpense.query.filter_by(vip_profile_id=profile.id)
+                .order_by(VIPExpense.created_at.desc()).limit(50).all())
 
-    total_income   = sum((i.amount or 0) for i in incomes)
-    total_expenses = sum((e.amount or 0) for e in expenses)
+    total_received = int(db.session.query(func.coalesce(func.sum(VIPIncome.amount), 0))
+                         .filter(VIPIncome.vip_profile_id == profile.id,
+                                 func.coalesce(VIPIncome.status, "received") == "received")
+                         .scalar() or 0)
+    total_pending  = int(db.session.query(func.coalesce(func.sum(VIPIncome.amount), 0))
+                         .filter(VIPIncome.vip_profile_id == profile.id,
+                                 VIPIncome.status == "pending")
+                         .scalar() or 0)
+    total_expenses = int(db.session.query(func.coalesce(func.sum(VIPExpense.amount), 0))
+                         .filter(VIPExpense.vip_profile_id == profile.id)
+                         .scalar() or 0)
+
+    tax_rate       = _finance_tax_rate(profile)
+    taxable_income = max(total_received - total_expenses, 0)
+    tax_set_aside  = int(round(taxable_income * tax_rate))
+    tax_projected  = int(round(max(total_pending, 0) * tax_rate))
+
+    markets = get_user_markets(profile)
 
     return render_template(
         "vip/finances.html",
@@ -1592,13 +1732,103 @@ def finances():
         header_name    = get_dashboard_name(profile),
         incomes        = incomes,
         expenses       = expenses,
-        total_income   = total_income,
+        total_received = total_received,
+        total_pending  = total_pending,
         total_expenses = total_expenses,
-        net_profit     = total_income - total_expenses,
+        net_profit     = total_received - total_expenses,
+        tax_rate       = tax_rate,
+        tax_rate_pct   = int(round(tax_rate * 100)),
+        tax_set_aside  = tax_set_aside,
+        tax_projected  = tax_projected,
+        markets        = markets,
         portal         = "vip",
         portal_name    = "VIP",
-        portal_home    = url_for("vip.index"),
+        portal_home    = url_for("vip.realtor_dashboard"),
     )
+
+
+@vip_bp.post("/finances/income/new")
+@role_required("partner_group", "admin")
+def finances_add_income():
+    profile = get_or_create_vip_profile()
+
+    amount = _parse_money(request.form.get("amount"))
+    if amount is None or amount <= 0:
+        flash("Income amount must be a positive number.", "warning")
+        return redirect(url_for("vip.finances"))
+
+    db.session.add(VIPIncome(
+        vip_profile_id = profile.id,
+        category       = (request.form.get("category") or "commission").strip().lower(),
+        description    = (request.form.get("description") or "").strip() or None,
+        amount         = amount,
+        income_date    = _parse_date_input(request.form.get("income_date")) or datetime.utcnow(),
+        status         = (request.form.get("status") or "received").strip().lower(),
+        market         = (request.form.get("market") or "").strip() or None,
+        notes          = (request.form.get("notes") or "").strip() or None,
+    ))
+    db.session.commit()
+    flash("Income added.", "success")
+    return redirect(url_for("vip.finances"))
+
+
+@vip_bp.post("/finances/expense/new")
+@role_required("partner_group", "admin")
+def finances_add_expense():
+    profile = get_or_create_vip_profile()
+
+    amount = _parse_money(request.form.get("amount"))
+    if amount is None or amount <= 0:
+        flash("Expense amount must be a positive number.", "warning")
+        return redirect(url_for("vip.finances"))
+
+    db.session.add(VIPExpense(
+        vip_profile_id = profile.id,
+        category       = (request.form.get("category") or "other").strip().lower(),
+        description    = (request.form.get("description") or "").strip() or None,
+        amount         = amount,
+        expense_date   = _parse_date_input(request.form.get("expense_date")) or datetime.utcnow(),
+        source         = "manual",
+        market         = (request.form.get("market") or "").strip() or None,
+        notes          = (request.form.get("notes") or "").strip() or None,
+    ))
+    db.session.commit()
+    flash("Expense added.", "success")
+    return redirect(url_for("vip.finances"))
+
+
+@vip_bp.post("/finances/income/<int:income_id>/delete")
+@role_required("partner_group", "admin")
+def finances_delete_income(income_id):
+    profile = get_or_create_vip_profile()
+    income  = VIPIncome.query.filter_by(id=income_id, vip_profile_id=profile.id).first_or_404()
+    db.session.delete(income)
+    db.session.commit()
+    flash("Income entry deleted.", "info")
+    return redirect(url_for("vip.finances"))
+
+
+@vip_bp.post("/finances/expense/<int:expense_id>/delete")
+@role_required("partner_group", "admin")
+def finances_delete_expense(expense_id):
+    profile = get_or_create_vip_profile()
+    expense = VIPExpense.query.filter_by(id=expense_id, vip_profile_id=profile.id).first_or_404()
+    db.session.delete(expense)
+    db.session.commit()
+    flash("Expense entry deleted.", "info")
+    return redirect(url_for("vip.finances"))
+
+
+@vip_bp.post("/finances/income/<int:income_id>/mark-received")
+@role_required("partner_group", "admin")
+def finances_mark_income_received(income_id):
+    profile = get_or_create_vip_profile()
+    income  = VIPIncome.query.filter_by(id=income_id, vip_profile_id=profile.id).first_or_404()
+    income.status = "received"
+    income.income_date = income.income_date or datetime.utcnow()
+    db.session.commit()
+    flash("Income marked as received.", "success")
+    return redirect(url_for("vip.finances"))
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1648,6 +1878,391 @@ def ai_pilot_command():
 
     flash("Assistant suggestion created.", "success")
     return redirect(url_for("vip.ai_pilot"))
+
+
+def _has_endpoint(name):
+    try:
+        return name in current_app.view_functions
+    except RuntimeError:
+        return False
+
+
+def _dispatch_copilot_intent(profile, result, command):
+    intent = result.get("intent") or "note"
+    markets = get_user_markets(profile)
+    default_market = markets[0] if len(markets) == 1 else None
+
+    summary = ""
+    action_url = url_for("vip.ai_pilot")
+    executed = False
+
+    if intent == "add_listing":
+        address = result.get("address") or "Untitled listing"
+        price = result.get("price")
+        listing = ElenaListing(
+            address     = address,
+            city        = "",
+            state       = "",
+            zip_code    = "",
+            price       = price,
+            status      = "active",
+            market      = default_market,
+            description = command,
+        )
+        db.session.add(listing)
+        db.session.flush()
+        db.session.commit()
+        price_str = " ($" + format(price, ",") + ")" if price else ""
+        summary = "Added listing: " + address + price_str
+        action_url = url_for("vip.realtor_dashboard")
+        executed = True
+
+    elif intent == "add_expense":
+        # Preserve None (no amount spoken) vs 0 (explicit zero).
+        raw_amount = result.get("amount")
+        db.session.add(VIPExpense(
+            vip_profile_id = profile.id,
+            category       = "other",
+            description    = command[:240],
+            amount         = raw_amount,
+            expense_date   = datetime.utcnow(),
+            source         = "copilot",
+            market         = default_market,
+        ))
+        db.session.commit()
+        if raw_amount is not None:
+            summary = "Logged expense of $" + format(raw_amount, ",")
+        else:
+            summary = "Logged expense (no amount detected — edit to add \\$)."
+        action_url = url_for("vip.finances")
+        executed = True
+
+    elif intent == "add_income":
+        # Preserve the three distinct cases:
+        #   * parser returned None  -> no amount spoken; record $1 placeholder,
+        #                              mark pending so the realtor fills it in.
+        #   * parser returned 0     -> user explicitly said $0; keep the $0 but
+        #                              still mark received (rare but honest).
+        #   * parser returned > 0   -> normal received income.
+        raw_amount = result.get("amount")
+        stored_amount = raw_amount if raw_amount is not None else 1
+        db.session.add(VIPIncome(
+            vip_profile_id = profile.id,
+            category       = "commission",
+            description    = command[:240],
+            amount         = stored_amount,
+            income_date    = datetime.utcnow(),
+            status         = "received" if raw_amount is not None else "pending",
+            market         = default_market,
+        ))
+        db.session.commit()
+        summary = ("Logged income"
+                   + ((" of $" + format(raw_amount, ",")) if raw_amount is not None else ""))
+        action_url = url_for("vip.finances")
+        executed = True
+
+    elif intent == "make_flyer":
+        address = result.get("address")
+        listing = None
+        if address:
+            listing = (ElenaListing.query
+                       .filter(ElenaListing.address.ilike("%" + address + "%"))
+                       .first())
+        if not listing:
+            listing = (ElenaListing.query
+                       .order_by(ElenaListing.updated_at.desc())
+                       .first())
+        if listing:
+            flyer = ElenaFlyer(
+                flyer_type       = "listing",
+                property_address = listing.address,
+                property_id      = str(listing.id),
+                listing_id       = listing.id,
+                body             = command,
+            )
+            db.session.add(flyer)
+            db.session.commit()
+            summary = "Drafted flyer for " + str(listing.address)
+            action_url = url_for("elena.template_studio")
+            executed = True
+        else:
+            summary = "No listing found to attach a flyer to."
+            action_url = url_for("elena.template_studio")
+
+    elif intent == "tax_suggestion":
+        rate = _finance_tax_rate(profile)
+        # NULL status is treated as "received" to match the finances page
+        # (keeps the copilot's tax set-aside in lockstep with the card total).
+        total_received = sum(
+            (i.amount or 0)
+            for i in VIPIncome.query.filter_by(vip_profile_id=profile.id).all()
+            if (i.status or "received") == "received"
+        )
+        set_aside = int(round(total_received * rate))
+        summary = ("Set aside $" + format(set_aside, ",")
+                   + " for taxes (" + str(int(round(rate * 100)))
+                   + "% of $" + format(total_received, ",") + ").")
+        action_url = url_for("vip.finances")
+
+    elif intent == "follow_up":
+        summary = "Follow-up saved to the copilot queue."
+    elif intent == "draft_email":
+        summary = "Email draft saved to the copilot queue."
+    elif intent == "draft_text":
+        summary = "Text draft saved to the copilot queue."
+    else:
+        summary = "Note saved."
+
+    suggestion = VIPAssistantSuggestion(
+        vip_profile_id  = profile.id,
+        suggestion_type = result.get("suggestion_type") or "note",
+        title           = result.get("title") or "Copilot",
+        body            = (summary + "\n\n" + command).strip(),
+        source          = "copilot_voice",
+    )
+    db.session.add(suggestion)
+    db.session.commit()
+
+    return {
+        "ok":         True,
+        "executed":   executed,
+        "intent":     intent,
+        "title":      result.get("title") or "Copilot",
+        "summary":    summary,
+        "action_url": action_url,
+    }
+
+
+@vip_bp.post("/ai-pilot/action")
+@role_required("partner_group", "admin")
+def ai_pilot_action():
+    profile = get_or_create_vip_profile()
+
+    if request.is_json:
+        data = request.get_json(silent=True) or {}
+        command = (data.get("command") or "").strip()
+    else:
+        command = (request.form.get("command") or "").strip()
+
+    if not command:
+        return jsonify({"ok": False, "error": "Empty command."}), 400
+
+    result  = parse_vip_command(command)
+    payload = _dispatch_copilot_intent(profile, result, command)
+    return jsonify(payload)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# TEAM + LEAD DISTRIBUTION
+# ─────────────────────────────────────────────────────────────────────────────
+
+TEAM_ROLE_CHOICES = [
+    ("buyer_agent",     "Buyer's Agent"),
+    ("listing_agent",   "Listing Agent"),
+    ("showing_agent",   "Showing Agent"),
+    ("transaction_coordinator", "Transaction Coordinator"),
+    ("assistant",       "Admin Assistant"),
+    ("marketing",       "Marketing"),
+    ("other",           "Other"),
+]
+
+
+def _unassigned_leads(profile):
+    """Unassigned leads scoped to this realtor.
+
+    ElenaClient has no per-user FK yet, so we filter by the realtor's
+    configured markets (case-insensitive). Realtors with no markets
+    configured fall back to the shared pool — which is the expected
+    single-tenant behavior for local / demo environments.
+    """
+    q = (ElenaClient.query
+         .filter((ElenaClient.assigned_member_id == None) |  # noqa: E711
+                 (ElenaClient.assigned_member_id == 0)))
+
+    user_markets = get_user_markets(profile)
+    if user_markets:
+        normalized = [m.strip().lower() for m in user_markets if m]
+        if normalized:
+            q = q.filter(
+                (ElenaClient.market == None) |  # noqa: E711
+                (func.lower(func.trim(ElenaClient.market)).in_(normalized))
+            )
+
+    return q.order_by(ElenaClient.created_at.desc()).limit(50).all()
+
+
+def _realtor_owns_lead(profile, lead) -> bool:
+    """True if the lead is unassigned or already routed to one of this
+    realtor's teammates, or falls within the realtor's configured markets."""
+    if lead is None:
+        return False
+
+    if lead.assigned_member_id:
+        member = VIPTeamMember.query.get(lead.assigned_member_id)
+        if member and member.vip_profile_id == profile.id:
+            return True
+        # Lead is routed to a teammate on a different realtor's roster —
+        # deny regardless of this realtor's market config.
+        if member:
+            return False
+
+    user_markets = get_user_markets(profile)
+    if not user_markets:
+        return True
+
+    normalized = {m.strip().lower() for m in user_markets if m}
+    if not normalized:
+        return True
+
+    if not lead.market:
+        return True
+
+    return lead.market.strip().lower() in normalized
+
+
+@vip_bp.get("/team")
+@role_required("partner_group", "admin")
+def team():
+    profile = get_or_create_vip_profile()
+
+    members = (VIPTeamMember.query
+               .filter_by(vip_profile_id=profile.id)
+               .order_by(VIPTeamMember.active.desc(),
+                         VIPTeamMember.name.asc())
+               .all())
+
+    member_ids = [m.id for m in members]
+    leads_by_member = {}
+    if member_ids:
+        all_assigned = (ElenaClient.query
+                        .filter(ElenaClient.assigned_member_id.in_(member_ids))
+                        .order_by(ElenaClient.created_at.desc()).all())
+        for lead in all_assigned:
+            leads_by_member.setdefault(lead.assigned_member_id, []).append(lead)
+
+    unassigned = _unassigned_leads(profile)
+
+    return render_template(
+        "vip/team.html",
+        vip_profile     = profile,
+        header_name     = get_dashboard_name(profile),
+        members         = members,
+        role_choices    = TEAM_ROLE_CHOICES,
+        leads_by_member = leads_by_member,
+        unassigned      = unassigned,
+        markets         = get_user_markets(profile),
+        portal          = "vip",
+        portal_name     = "VIP",
+        portal_home     = url_for("vip.realtor_dashboard"),
+    )
+
+
+@vip_bp.post("/team/new")
+@role_required("partner_group", "admin")
+def team_add():
+    profile = get_or_create_vip_profile()
+
+    name = (request.form.get("name") or "").strip()
+    if not name:
+        flash("Teammate name is required.", "warning")
+        return redirect(url_for("vip.team"))
+
+    db.session.add(VIPTeamMember(
+        vip_profile_id = profile.id,
+        name           = name,
+        email          = (request.form.get("email") or "").strip() or None,
+        phone          = (request.form.get("phone") or "").strip() or None,
+        role           = (request.form.get("role") or "other").strip() or "other",
+        market         = (request.form.get("market") or "").strip() or None,
+        notes          = (request.form.get("notes") or "").strip() or None,
+        active         = True,
+    ))
+    db.session.commit()
+    flash("Teammate added.", "success")
+    return redirect(url_for("vip.team"))
+
+
+@vip_bp.post("/team/<int:member_id>/toggle")
+@role_required("partner_group", "admin")
+def team_toggle(member_id):
+    profile = get_or_create_vip_profile()
+    member  = VIPTeamMember.query.filter_by(id=member_id, vip_profile_id=profile.id).first_or_404()
+    member.active = not member.active
+    db.session.commit()
+    flash("Teammate " + ("activated" if member.active else "deactivated") + ".", "info")
+    return redirect(url_for("vip.team"))
+
+
+@vip_bp.post("/team/<int:member_id>/delete")
+@role_required("partner_group", "admin")
+def team_delete(member_id):
+    profile = get_or_create_vip_profile()
+    member  = VIPTeamMember.query.filter_by(id=member_id, vip_profile_id=profile.id).first_or_404()
+
+    ElenaClient.query.filter_by(assigned_member_id=member.id).update(
+        {"assigned_member_id": None}, synchronize_session=False
+    )
+    db.session.delete(member)
+    db.session.commit()
+    flash("Teammate removed and their leads released.", "info")
+    return redirect(url_for("vip.team"))
+
+
+@vip_bp.post("/team/leads/<int:lead_id>/assign")
+@role_required("partner_group", "admin")
+def team_assign_lead(lead_id):
+    profile = get_or_create_vip_profile()
+    lead    = ElenaClient.query.get_or_404(lead_id)
+
+    if not _realtor_owns_lead(profile, lead):
+        flash("That lead isn't in your workspace.", "warning")
+        return redirect(url_for("vip.team"))
+
+    raw = (request.form.get("member_id") or "").strip()
+    if raw in ("", "0", "none"):
+        lead.assigned_member_id = None
+    else:
+        try:
+            member_id = int(raw)
+        except ValueError:
+            flash("Invalid teammate.", "warning")
+            return redirect(url_for("vip.team"))
+        member = VIPTeamMember.query.filter_by(id=member_id, vip_profile_id=profile.id, active=True).first()
+        if not member:
+            flash("Teammate not found or inactive.", "warning")
+            return redirect(url_for("vip.team"))
+        lead.assigned_member_id = member.id
+
+    db.session.commit()
+    flash("Lead routing updated.", "success")
+    return redirect(url_for("vip.team"))
+
+
+@vip_bp.post("/team/leads/auto-distribute")
+@role_required("partner_group", "admin")
+def team_auto_distribute():
+    """Round-robin unassigned leads across active teammates."""
+    profile = get_or_create_vip_profile()
+
+    active_members = (VIPTeamMember.query
+                      .filter_by(vip_profile_id=profile.id, active=True)
+                      .order_by(VIPTeamMember.id.asc()).all())
+    if not active_members:
+        flash("Add at least one active teammate before distributing leads.", "warning")
+        return redirect(url_for("vip.team"))
+
+    unassigned = _unassigned_leads(profile)
+    if not unassigned:
+        flash("No unassigned leads to distribute.", "info")
+        return redirect(url_for("vip.team"))
+
+    for idx, lead in enumerate(unassigned):
+        target = active_members[idx % len(active_members)]
+        lead.assigned_member_id = target.id
+    db.session.commit()
+
+    flash("Distributed " + str(len(unassigned)) + " lead(s) across " + str(len(active_members)) + " teammate(s).", "success")
+    return redirect(url_for("vip.team"))
 
 
 # ─────────────────────────────────────────────────────────────────────────────
