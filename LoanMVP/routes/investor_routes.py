@@ -4857,6 +4857,11 @@ def create_deal():
         arv = float(request.form.get("arv") or 0)
         estimated_rent = float(request.form.get("estimated_rent") or 0)
         rehab_cost = float(request.form.get("rehab_cost") or 0)
+        sqft_raw = (request.form.get("sqft") or "").strip()
+        try:
+            sqft = float(sqft_raw) if sqft_raw else None
+        except ValueError:
+            sqft = None
 
         notes = (request.form.get("notes") or "").strip()
 
@@ -4890,6 +4895,7 @@ def create_deal():
                 "arv": arv,
                 "estimated_rent": estimated_rent,
                 "rehab_cost": rehab_cost,
+                "sqft": sqft,
                 "notes": notes,
             },
         )
