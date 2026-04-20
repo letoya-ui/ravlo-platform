@@ -76,20 +76,20 @@ def parse_vip_command(command: str) -> dict:
             "address":         _extract_address(body),
         }
 
-    if any(k in text for k in ("expense", "paid", "toll", "mile", "gas", "lunch", "meal")):
-        return {
-            "intent":          "add_expense",
-            "suggestion_type": "expense",
-            "title":           "Log Expense",
-            "body":            body,
-            "amount":          _extract_amount(body),
-        }
-
-    if any(k in text for k in ("commission", "closing", "received", "got paid", "income")):
+    if any(k in text for k in ("commission", "closing", "received", "got paid", "income", "earned")):
         return {
             "intent":          "add_income",
             "suggestion_type": "income",
             "title":           "Log Income",
+            "body":            body,
+            "amount":          _extract_amount(body),
+        }
+
+    if any(k in text for k in ("expense", "paid for", "i paid", "toll", "mile", "gas", "lunch", "meal", "receipt")):
+        return {
+            "intent":          "add_expense",
+            "suggestion_type": "expense",
+            "title":           "Log Expense",
             "body":            body,
             "amount":          _extract_amount(body),
         }

@@ -2036,11 +2036,52 @@ TEAM_ROLE_CHOICES = [
 
 
 def _unassigned_leads(profile):
-    return (ElenaClient.query
-            .filter((ElenaClient.assigned_member_id == None) |  # noqa: E711
-                    (ElenaClient.assigned_member_id == 0))
-            .order_by(ElenaClient.created_at.desc())
-            .limit(50).all())
+    """Unassigned leads scoped to this realtor.
+
+    ElenaClient has no per-user FK yet, so we filter by the realtor's
+    configured markets (case-insensitive). Realtors with no markets
+    configured fall back to the shared pool — which is the expected
+    single-tenant behavior for local / demo environments.
+    """
+    q = (ElenaClient.query
+         .filter((ElenaClient.assigned_member_id == None) |  # noqa: E711
+                 (ElenaClient.assigned_member_id == 0)))
+
+    user_markets = get_user_markets(profile)
+    if user_markets:
+        normalized = [m.strip().lower() for m in user_markets if m]
+        if normalized:
+            q = q.filter(
+                (ElenaClient.market == None) |  # noqa: E711
+                (func.lower(func.trim(ElenaClient.market)).in_(normalized))
+            )
+
+    return q.order_by(ElenaClient.created_at.desc()).limit(50).all()
+
+
+def _realtor_owns_lead(profile, lead) -> bool:
+    """True if the lead is unassigned or already routed to one of this
+    realtor's teammates, or falls within the realtor's configured markets."""
+    if lead is None:
+        return False
+
+    if lead.assigned_member_id:
+        member = VIPTeamMember.query.get(lead.assigned_member_id)
+        if member and member.vip_profile_id == profile.id:
+            return True
+
+    user_markets = get_user_markets(profile)
+    if not user_markets:
+        return True
+
+    normalized = {m.strip().lower() for m in user_markets if m}
+    if not normalized:
+        return True
+
+    if not lead.market:
+        return True
+
+    return lead.market.strip().lower() in normalized
 
 
 @vip_bp.get("/team")
@@ -2136,6 +2177,10 @@ def team_delete(member_id):
 def team_assign_lead(lead_id):
     profile = get_or_create_vip_profile()
     lead    = ElenaClient.query.get_or_404(lead_id)
+
+    if not _realtor_owns_lead(profile, lead):
+        flash("That lead isn't in your workspace.", "warning")
+        return redirect(url_for("vip.team"))
 
     raw = (request.form.get("member_id") or "").strip()
     if raw in ("", "0", "none"):

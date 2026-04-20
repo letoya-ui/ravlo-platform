@@ -46,7 +46,7 @@ def upgrade():
                     "status",
                     sa.String(length=50),
                     nullable=False,
-                    server_default="pending",
+                    server_default="received",
                 )
             )
 
