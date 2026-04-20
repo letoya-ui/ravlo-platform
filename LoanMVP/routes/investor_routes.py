@@ -8364,10 +8364,20 @@ def deal_architect_analyze():
                 build_location_cost_context,
                 apply_multiplier_to_engine_response,
             )
+            # Keep the land/build property-type set in sync with
+            # ``deal_architect_service.generate_deal_architect_strategies``
+            # (which recognises vacant land / development site as ground-up
+            # build) so observations land in the same learning bucket as the
+            # strategy cards they inform.
+            _ptype = (payload.get("property_type") or "").lower()
+            _is_build = _ptype in {
+                "land", "lot", "new_build",
+                "vacant land", "development site",
+            }
             cost_ctx = build_location_cost_context(
                 zip_code=payload.get("zip_code"),
                 state=payload.get("state"),
-                category="new_build" if (payload.get("property_type") or "").lower() in {"land", "lot", "new_build"} else "rehab",
+                category="new_build" if _is_build else "rehab",
             )
             # Informational only: attach the context so the engine can
             # persist/echo it if it wants. We deliberately do NOT touch

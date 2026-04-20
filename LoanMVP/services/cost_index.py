@@ -467,7 +467,9 @@ _COST_RESPONSE_KEYS = {
     "line_cost",
     "material_cost",
     "labor_cost",
-    "amount",
+    # NOTE: intentionally do not include generic keys like "amount" or "value"
+    # — those appear in loan, payment, and count structures too and would get
+    # silently inflated by the local cost factor on nested engine responses.
 }
 
 
