@@ -2848,6 +2848,8 @@ def contractor_job_delete(job_id):
     if not job:
         flash("Job not found.", "warning")
         return redirect(url_for("vip.contractor_jobs"))
+    for photo in list(job.photos):
+        _remove_photo_file(photo)
     db.session.delete(job)
     db.session.commit()
     flash("Job deleted.", "success")
@@ -2863,6 +2865,20 @@ def _allowed_photo(filename):
     if not filename or "." not in filename:
         return False
     return filename.rsplit(".", 1)[1].lower() in ALLOWED_PHOTO_EXT
+
+
+def _remove_photo_file(photo):
+    """Best-effort delete of a photo's file on disk. Silently ignores errors
+    so a missing/previously-removed file can't block DB cleanup."""
+    if not photo or not photo.file_path:
+        return
+    upload_dir = current_app.config.get("UPLOAD_FOLDER") or ""
+    try:
+        fpath = os.path.join(upload_dir, photo.file_path)
+        if os.path.exists(fpath):
+            os.remove(fpath)
+    except Exception:
+        pass
 
 
 @vip_bp.post("/contractor/jobs/<int:job_id>/photos")
@@ -2923,6 +2939,7 @@ def contractor_job_photo_delete(job_id, photo_id):
         id=photo_id, job_id=job.id, vip_profile_id=profile.id
     ).first()
     if photo:
+        _remove_photo_file(photo)
         db.session.delete(photo)
         db.session.commit()
         flash("Photo removed.", "success")

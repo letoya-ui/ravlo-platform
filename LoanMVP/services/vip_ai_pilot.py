@@ -245,7 +245,7 @@ def parse_vip_command(command: str) -> dict:
 
     # ── Lender intents ───────────────────────────────────────────────────────
     if any(k in text for k in (
-        "quote", "quote engine", "send quote", "new quote",
+        "loan quote", "quote engine", "send quote", "new quote",
     )):
         return {
             "intent":          "loan_quote",
