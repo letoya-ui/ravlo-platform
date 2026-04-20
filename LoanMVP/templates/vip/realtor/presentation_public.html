@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ pres.title or "Listing Presentation" }}</title>
+  <meta name="description" content="Listing presentation for {{ pres.property_address or 'your property' }}.">
+  {% include "vip/realtor/_presentation_deck_styles.html" %}
+</head>
+<body>
+  <div class="deck">
+    {% include "vip/realtor/_presentation_deck.html" %}
+    <div style="padding:18px 56px; background:#f5f8fc; color:#64748b; font-size:0.82rem; text-align:center;">
+      Presented via Ravlo
+    </div>
+  </div>
+</body>
+</html>

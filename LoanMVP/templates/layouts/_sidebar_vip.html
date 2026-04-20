@@ -36,10 +36,16 @@
       <span>Clients</span>
     </a>
 
-    <a href="{{ url_for('elena.listing_new') }}"
-       class="ravlo-nav-link {% if ep == 'elena.listing_new' %}active{% endif %}">
-      <i class="lucide lucide-house-plus"></i>
-      <span>Listings</span>
+    <a href="{{ url_for('vip.realtor_listings') }}"
+       class="ravlo-nav-link {% if ep in ['vip.realtor_listings', 'vip.realtor_listing_detail', 'elena.listing_new'] %}active{% endif %}">
+      <i class="lucide lucide-building-2"></i>
+      <span>Properties</span>
+    </a>
+
+    <a href="{{ url_for('vip.listing_presentations') }}"
+       class="ravlo-nav-link {% if ep in ['vip.listing_presentations', 'vip.listing_presentation_new', 'vip.listing_presentation_edit'] %}active{% endif %}">
+      <i class="lucide lucide-presentation"></i>
+      <span>Listing Presentations</span>
     </a>
 
     <a href="{{ url_for('elena.interaction_new') }}"

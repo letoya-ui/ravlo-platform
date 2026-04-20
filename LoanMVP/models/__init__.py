@@ -138,6 +138,7 @@ from LoanMVP.models.elena_models import (
     ElenaListing,
     ElenaFlyer,
     ElenaInteraction,
+    RealtorListingPresentation,
 )
 from LoanMVP.models.vip_models import (
     VIPProfile,
@@ -199,6 +200,7 @@ __all__ = [
     "ElenaListing",
     "ElenaFlyer",
     "ElenaInteraction",
+    "RealtorListingPresentation",
     
     "VIPProfile",
     "VIPContact",

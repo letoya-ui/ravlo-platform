@@ -1,0 +1,138 @@
+{% extends "layouts/ravlo_base.html" %}
+
+{% block title %}Ravlo • Listing Presentations{% endblock %}
+{% block page_title %}Listing Presentations{% endblock %}
+{% block page_subline %}
+  Win more listings — build, share, and track every pitch deck.
+{% endblock %}
+
+{% block topbar_actions %}
+  <a href="{{ url_for('vip.realtor_listings') }}" class="ravlo-btn ghost sm">
+    <i class="lucide lucide-building-2"></i>
+    <span>Properties</span>
+  </a>
+  <a href="{{ url_for('vip.listing_presentation_new') }}" class="ravlo-btn primary sm">
+    <i class="lucide lucide-plus"></i>
+    <span>New Presentation</span>
+  </a>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto space-y-6">
+
+  <section class="ravlo-card partner-section-card">
+    <div class="section-head">
+      <div>
+        <h3>{{ presentations|length }} presentation{% if presentations|length != 1 %}s{% endif %}</h3>
+        <p>Click any presentation to keep building.</p>
+      </div>
+    </div>
+
+    {% if presentations %}
+      <div class="pres-grid">
+        {% for p in presentations %}
+          <a href="{{ url_for('vip.listing_presentation_edit', pres_id=p.id) }}" class="pres-card">
+            <div class="pres-card-head">
+              <span class="pres-status pres-status-{{ p.status }}">{{ p.status|title }}</span>
+              {% if p.share_enabled %}
+                <span class="pres-share">
+                  <i class="lucide lucide-link"></i> Shared
+                </span>
+              {% endif %}
+            </div>
+            <div class="pres-card-title">{{ p.title or "Listing Presentation" }}</div>
+            {% if p.property_address %}
+              <div class="pres-card-sub">
+                {{ p.property_address }}
+                {% if p.property_city %}, {{ p.property_city }}{% endif %}
+              </div>
+            {% endif %}
+            {% if p.prospect_name %}
+              <div class="pres-card-prospect">for {{ p.prospect_name }}</div>
+            {% endif %}
+            <div class="pres-card-footer">
+              <span>{% if p.updated_at %}Updated {{ p.updated_at.strftime('%b %d, %Y') }}{% endif %}</span>
+              {% if p.view_count %}
+                <span><i class="lucide lucide-eye"></i> {{ p.view_count }}</span>
+              {% endif %}
+            </div>
+          </a>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="empty-block">
+        <p>No presentations yet. Start your first pitch deck.</p>
+        <a href="{{ url_for('vip.listing_presentation_new') }}" class="ravlo-btn primary sm">
+          <i class="lucide lucide-plus"></i>
+          <span>New Presentation</span>
+        </a>
+      </div>
+    {% endif %}
+  </section>
+
+</div>
+{% endblock %}
+
+{% block head %}
+<style>
+  .pres-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 14px;
+  }
+  .pres-card {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 14px;
+    padding: 14px;
+    color: #fff;
+    text-decoration: none;
+    transition: transform 0.12s ease, border-color 0.12s ease;
+  }
+  .pres-card:hover {
+    transform: translateY(-1px);
+    border-color: rgba(120,190,255,0.4);
+  }
+
+  .pres-card-head { display: flex; justify-content: space-between; align-items: center; }
+  .pres-status {
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding: 2px 8px;
+    border-radius: 999px;
+    border: 1px solid rgba(255,255,255,0.15);
+  }
+  .pres-status-draft { background: rgba(160,160,160,0.12); color: #d8e1ea; }
+  .pres-status-sent  { background: rgba(230,180,60,0.14);  color: #ffe1a0; border-color: rgba(230,180,60,0.4); }
+  .pres-status-won   { background: rgba(30,190,130,0.14);  color: #9effcf; border-color: rgba(30,190,130,0.4); }
+  .pres-status-lost  { background: rgba(200,120,120,0.14); color: #ffd4d4; border-color: rgba(200,120,120,0.4); }
+
+  .pres-share { font-size: 0.72rem; color: #78c8ff; display: inline-flex; gap: 4px; align-items: center; }
+
+  .pres-card-title { font-weight: 600; margin-top: 6px; }
+  .pres-card-sub { font-size: 0.85rem; color: #9fb3c8; }
+  .pres-card-prospect { font-size: 0.82rem; color: #cfe1f4; }
+
+  .pres-card-footer {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 10px;
+    font-size: 0.78rem;
+    color: #9fb3c8;
+  }
+
+  .empty-block {
+    padding: 40px 0;
+    text-align: center;
+    color: #9fb3c8;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    align-items: center;
+  }
+</style>
+{% endblock %}

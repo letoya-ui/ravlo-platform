@@ -1,0 +1,210 @@
+{% extends "layouts/ravlo_base.html" %}
+
+{% block title %}Ravlo • {{ listing.address }}{% endblock %}
+{% block page_title %}{{ listing.address }}{% endblock %}
+{% block page_subline %}
+  {{ listing.city }}{% if listing.state %}, {{ listing.state }}{% endif %}{% if listing.zip_code %} {{ listing.zip_code }}{% endif %}
+  {% if listing.market %} • {{ listing.market }}{% endif %}
+{% endblock %}
+
+{% block topbar_actions %}
+  <a href="{{ url_for('vip.realtor_listings') }}" class="ravlo-btn ghost sm">
+    <i class="lucide lucide-arrow-left"></i>
+    <span>All Properties</span>
+  </a>
+  <form method="POST" action="{{ url_for('vip.listing_presentation_new') }}" class="inline-flex">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="listing_id" value="{{ listing.id }}">
+    <button type="submit" class="ravlo-btn primary sm">
+      <i class="lucide lucide-presentation"></i>
+      <span>New Listing Presentation</span>
+    </button>
+  </form>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto space-y-6">
+
+  {# ── Property summary ─────────────────────────────────── #}
+  <section class="ravlo-card partner-section-card">
+    <div class="prop-grid">
+      <div class="prop-grid-main">
+        <div class="prop-price">
+          {% if listing.price %}${{ "{:,}".format(listing.price) }}{% else %}—{% endif %}
+        </div>
+        <div class="prop-meta">
+          {% if listing.beds %}<span><strong>{{ listing.beds }}</strong> bd</span>{% endif %}
+          {% if listing.baths %}<span><strong>{{ listing.baths }}</strong> ba</span>{% endif %}
+          {% if listing.sqft %}<span><strong>{{ "{:,}".format(listing.sqft) }}</strong> sqft</span>{% endif %}
+          {% if listing.mls_number %}<span>MLS <strong>{{ listing.mls_number }}</strong></span>{% endif %}
+        </div>
+        {% if listing.description %}
+          <div class="prop-desc">{{ listing.description }}</div>
+        {% endif %}
+      </div>
+
+      <div class="prop-grid-side">
+        <form method="POST" action="{{ url_for('vip.realtor_listing_status', listing_id=listing.id) }}" class="status-form">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <label>
+            <span>Status</span>
+            <select name="status" onchange="this.form.submit()">
+              {% for value, label in listing_statuses %}
+                <option value="{{ value }}" {% if listing.status == value %}selected{% endif %}>{{ label }}</option>
+              {% endfor %}
+            </select>
+          </label>
+        </form>
+
+        <form method="POST" action="{{ url_for('vip.realtor_listing_delete', listing_id=listing.id) }}"
+              onsubmit="return confirm('Delete this listing permanently?');"
+              class="status-form">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button type="submit" class="ravlo-btn danger sm">
+            <i class="lucide lucide-trash-2"></i>
+            <span>Delete</span>
+          </button>
+        </form>
+      </div>
+    </div>
+  </section>
+
+  {# ── Presentations ───────────────────────────────────── #}
+  <section class="ravlo-card partner-section-card">
+    <div class="section-head">
+      <div>
+        <h3>Listing Presentations</h3>
+        <p>Pitch decks built for this property.</p>
+      </div>
+      <form method="POST" action="{{ url_for('vip.listing_presentation_new') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="listing_id" value="{{ listing.id }}">
+        <button type="submit" class="ravlo-btn primary sm">
+          <i class="lucide lucide-plus"></i>
+          <span>New Presentation</span>
+        </button>
+      </form>
+    </div>
+
+    {% if presentations %}
+      <ul class="pres-list">
+        {% for p in presentations %}
+          <li>
+            <a href="{{ url_for('vip.listing_presentation_edit', pres_id=p.id) }}">
+              <div class="pres-list-title">{{ p.title }}</div>
+              <div class="pres-list-sub">
+                {{ p.status|title }} • updated {{ p.updated_at.strftime('%b %d, %Y') if p.updated_at else '—' }}
+                {% if p.view_count %} • {{ p.view_count }} view{{ 's' if p.view_count != 1 }}{% endif %}
+              </div>
+            </a>
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <div class="empty-line">No presentations yet.</div>
+    {% endif %}
+  </section>
+
+  {# ── Flyers ─────────────────────────────────────────── #}
+  <section class="ravlo-card partner-section-card">
+    <div class="section-head">
+      <div>
+        <h3>Flyers</h3>
+        <p>Marketing collateral attached to this listing.</p>
+      </div>
+      <a href="{{ url_for('elena.template_studio') }}" class="ravlo-btn ghost sm">
+        <i class="lucide lucide-wand-sparkles"></i>
+        <span>Open Content Studio</span>
+      </a>
+    </div>
+    {% if flyers %}
+      <ul class="pres-list">
+        {% for f in flyers %}
+          <li>
+            <div class="pres-list-title">{{ f.flyer_type|title }}</div>
+            <div class="pres-list-sub">
+              {% if f.created_at %}{{ f.created_at.strftime('%b %d, %Y') }}{% endif %}
+              • status: {{ f.canva_status or 'draft' }}
+            </div>
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <div class="empty-line">No flyers yet.</div>
+    {% endif %}
+  </section>
+
+  {# ── Interactions ───────────────────────────────────── #}
+  {% if interactions %}
+  <section class="ravlo-card partner-section-card">
+    <div class="section-head">
+      <div>
+        <h3>Recent Client Activity</h3>
+        <p>Latest interactions with the seller.</p>
+      </div>
+    </div>
+    <ul class="pres-list">
+      {% for i in interactions %}
+        <li>
+          <div class="pres-list-title">{{ i.interaction_type|title }}</div>
+          <div class="pres-list-sub">{{ i.created_at.strftime('%b %d, %Y') }} — {{ i.content|truncate(120) }}</div>
+        </li>
+      {% endfor %}
+    </ul>
+  </section>
+  {% endif %}
+
+</div>
+{% endblock %}
+
+{% block head %}
+<style>
+  .prop-grid {
+    display: grid;
+    grid-template-columns: 1fr 260px;
+    gap: 18px;
+  }
+  .prop-price { font-size: 2rem; font-weight: 700; color: #9effcf; }
+  .prop-meta  { display: flex; gap: 18px; margin-top: 8px; color: #9fb3c8; }
+  .prop-meta strong { color: #fff; }
+  .prop-desc  { margin-top: 14px; color: #cfe1f4; line-height: 1.55; }
+
+  .prop-grid-side { display: flex; flex-direction: column; gap: 10px; }
+
+  .status-form label {
+    display: flex; flex-direction: column; gap: 4px;
+    font-size: 0.82rem; color: #cfe1f4;
+  }
+  .status-form select {
+    background: rgba(255,255,255,0.05);
+    color: #fff;
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 10px;
+    padding: 8px 10px;
+  }
+
+  .pres-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .pres-list li {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 10px;
+    padding: 10px 12px;
+  }
+  .pres-list li a { display: block; color: #fff; text-decoration: none; }
+  .pres-list-title { font-weight: 600; }
+  .pres-list-sub { font-size: 0.82rem; color: #9fb3c8; margin-top: 2px; }
+
+  .empty-line { color: #9fb3c8; padding: 8px 0; }
+
+  @media (max-width: 900px) {
+    .prop-grid { grid-template-columns: 1fr; }
+  }
+</style>
+{% endblock %}

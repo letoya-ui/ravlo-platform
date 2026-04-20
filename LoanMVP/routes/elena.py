@@ -1492,3 +1492,39 @@ def interaction_new():
         pass
 
     return render_template('elena/interaction_new.html')
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Realtor property / presentation aliases
+# ─────────────────────────────────────────────────────────────────────────────
+# The unified realtor workspace lives under ``vip_bp``. Elena's blueprint
+# exposes thin redirect aliases so the /elena/* URLs users have bookmarked
+# or see in the Elena sidebar keep working.
+
+@elena_bp.get("/properties")
+@role_required("partner_group", "admin")
+def properties():
+    return redirect(url_for("vip.realtor_listings"))
+
+
+@elena_bp.get("/properties/<int:listing_id>")
+@role_required("partner_group", "admin")
+def property_detail(listing_id):
+    return redirect(url_for("vip.realtor_listing_detail", listing_id=listing_id))
+
+
+@elena_bp.get("/presentations")
+@role_required("partner_group", "admin")
+def presentations():
+    return redirect(url_for("vip.listing_presentations"))
+
+
+@elena_bp.get("/presentations/new")
+@role_required("partner_group", "admin")
+def presentation_new():
+    return redirect(url_for("vip.listing_presentation_new"))
+
+
+@elena_bp.get("/presentations/<int:pres_id>")
+@role_required("partner_group", "admin")
+def presentation_edit(pres_id):
+    return redirect(url_for("vip.listing_presentation_edit", pres_id=pres_id))

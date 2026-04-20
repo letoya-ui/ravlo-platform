@@ -110,6 +110,18 @@ def parse_vip_command(command: str) -> dict:
             "price":           _extract_amount(body),
         }
 
+    if any(k in text for k in (
+        "listing presentation", "pitch deck", "listing pitch",
+        "make a presentation", "build a presentation",
+    )):
+        return {
+            "intent":          "listing_presentation",
+            "suggestion_type": "presentation",
+            "title":           "Listing Presentation",
+            "body":            body,
+            "address":         _extract_address(body),
+        }
+
     if any(k in text for k in ("flyer", "make a flyer", "design flyer", "create flyer")):
         return {
             "intent":          "make_flyer",

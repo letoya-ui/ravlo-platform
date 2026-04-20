@@ -1,0 +1,184 @@
+{# Shared "deck" renderer used by the internal print view and the public view.
+   Callers must pass `pres` (RealtorListingPresentation) and `view`
+   (dict returned from routes/vip.py::_serialize_presentation_view). #}
+
+<section class="deck-cover"
+         {% if pres.cover_image_url %}style="background-image: linear-gradient(180deg, rgba(0,0,0,0.2), rgba(0,0,0,0.75)), url('{{ pres.cover_image_url }}');"{% endif %}>
+  <div class="deck-cover-inner">
+    <div class="deck-eyebrow">{{ pres.title or "Listing Presentation" }}</div>
+    {% if pres.property_address %}
+      <h1 class="deck-title">{{ pres.property_address }}</h1>
+      {% if pres.property_city or pres.property_state %}
+        <div class="deck-sub">
+          {{ pres.property_city }}{% if pres.property_state %}, {{ pres.property_state }}{% endif %}
+          {% if pres.property_zip %} {{ pres.property_zip }}{% endif %}
+        </div>
+      {% endif %}
+    {% endif %}
+    <ul class="deck-cover-meta">
+      {% if pres.property_beds %}<li><strong>{{ pres.property_beds }}</strong> bd</li>{% endif %}
+      {% if pres.property_baths %}<li><strong>{{ pres.property_baths }}</strong> ba</li>{% endif %}
+      {% if pres.property_sqft %}<li><strong>{{ "{:,}".format(pres.property_sqft) }}</strong> sqft</li>{% endif %}
+      {% if pres.suggested_list_price %}<li><strong>${{ "{:,}".format(pres.suggested_list_price) }}</strong> suggested</li>{% endif %}
+    </ul>
+    {% if pres.prospect_name %}
+      <div class="deck-prepared">Prepared for <strong>{{ pres.prospect_name }}</strong></div>
+    {% endif %}
+    {% if pres.signature_line %}
+      <div class="deck-signed">Presented by {{ pres.signature_line }}</div>
+    {% endif %}
+  </div>
+</section>
+
+{% if pres.agent_tagline or pres.agent_bio or view.agent_stats %}
+<section class="deck-section">
+  <h2>About Your Agent</h2>
+  {% if pres.agent_tagline %}<p class="deck-lede">{{ pres.agent_tagline }}</p>{% endif %}
+  {% if pres.agent_bio %}<p class="deck-body">{{ pres.agent_bio }}</p>{% endif %}
+  {% if view.agent_stats %}
+    <div class="deck-stats">
+      {% for s in view.agent_stats %}
+        {% if s.label or s.value %}
+        <div class="deck-stat">
+          <div class="deck-stat-value">{{ s.value }}</div>
+          <div class="deck-stat-label">{{ s.label }}</div>
+        </div>
+        {% endif %}
+      {% endfor %}
+    </div>
+  {% endif %}
+</section>
+{% endif %}
+
+{% if pres.market_snapshot or view.market_stats %}
+<section class="deck-section">
+  <h2>Local Market Snapshot</h2>
+  {% if pres.market_snapshot %}<p class="deck-body">{{ pres.market_snapshot }}</p>{% endif %}
+  {% if view.market_stats %}
+    <div class="deck-stats">
+      {% for s in view.market_stats %}
+        {% if s.label or s.value %}
+        <div class="deck-stat">
+          <div class="deck-stat-value">{{ s.value }}</div>
+          <div class="deck-stat-label">{{ s.label }}</div>
+        </div>
+        {% endif %}
+      {% endfor %}
+    </div>
+  {% endif %}
+</section>
+{% endif %}
+
+{% if view.cma_rows or pres.cma_summary %}
+<section class="deck-section">
+  <h2>Comparable Sales</h2>
+  {% if pres.cma_summary %}<p class="deck-body">{{ pres.cma_summary }}</p>{% endif %}
+  {% if view.cma_rows %}
+    <table class="deck-table">
+      <thead>
+        <tr>
+          <th>Address</th><th>Status</th><th>Price</th><th>Sqft</th>
+          <th>Beds</th><th>Baths</th><th>Adjustments</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in view.cma_rows %}
+          <tr>
+            <td>{{ r.address }}</td>
+            <td>{{ r.status }}</td>
+            <td>{{ r.price }}</td>
+            <td>{{ r.sqft }}</td>
+            <td>{{ r.beds }}</td>
+            <td>{{ r.baths }}</td>
+            <td>{{ r.adjustments }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% endif %}
+</section>
+{% endif %}
+
+{% if pres.suggested_list_price or pres.pricing_rationale %}
+<section class="deck-section">
+  <h2>Pricing Strategy</h2>
+  <div class="deck-price-row">
+    {% if pres.pricing_range_low or pres.pricing_range_high %}
+      <div class="deck-price-pill">
+        Range:
+        {% if pres.pricing_range_low %}${{ "{:,}".format(pres.pricing_range_low) }}{% endif %}
+        {% if pres.pricing_range_low and pres.pricing_range_high %} — {% endif %}
+        {% if pres.pricing_range_high %}${{ "{:,}".format(pres.pricing_range_high) }}{% endif %}
+      </div>
+    {% endif %}
+    {% if pres.suggested_list_price %}
+      <div class="deck-price-big">
+        Suggested list price: <strong>${{ "{:,}".format(pres.suggested_list_price) }}</strong>
+      </div>
+    {% endif %}
+  </div>
+  {% if pres.pricing_rationale %}<p class="deck-body">{{ pres.pricing_rationale }}</p>{% endif %}
+</section>
+{% endif %}
+
+{% if view.marketing_plan %}
+<section class="deck-section">
+  <h2>Marketing Plan</h2>
+  <div class="deck-tactics">
+    {% for m in view.marketing_plan %}
+      {% if m.title or m.description %}
+      <div class="deck-tactic">
+        <div class="deck-tactic-title">{{ m.title }}</div>
+        <div class="deck-tactic-desc">{{ m.description }}</div>
+      </div>
+      {% endif %}
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+
+{% if view.testimonials %}
+<section class="deck-section">
+  <h2>What Clients Say</h2>
+  <div class="deck-quotes">
+    {% for t in view.testimonials %}
+      {% if t.quote %}
+      <blockquote class="deck-quote">
+        <p>"{{ t.quote }}"</p>
+        {% if t.author %}<footer>— {{ t.author }}</footer>{% endif %}
+      </blockquote>
+      {% endif %}
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+
+{% if pres.commission_rate or pres.listing_term_months or pres.listing_term_notes %}
+<section class="deck-section">
+  <h2>Commission &amp; Listing Terms</h2>
+  <div class="deck-terms">
+    {% if pres.commission_rate %}
+      <div class="deck-term-pill"><strong>{{ pres.commission_rate }}</strong> commission</div>
+    {% endif %}
+    {% if pres.listing_term_months %}
+      <div class="deck-term-pill"><strong>{{ pres.listing_term_months }}</strong> month listing term</div>
+    {% endif %}
+  </div>
+  {% if pres.listing_term_notes %}<p class="deck-body">{{ pres.listing_term_notes }}</p>{% endif %}
+</section>
+{% endif %}
+
+{% if pres.next_steps %}
+<section class="deck-section">
+  <h2>Next Steps</h2>
+  <p class="deck-body">{{ pres.next_steps }}</p>
+</section>
+{% endif %}
+
+{% if pres.signature_line %}
+<section class="deck-section deck-sign-off">
+  <h2>Let's Get Started</h2>
+  <div class="deck-sign-agent">{{ pres.signature_line }}</div>
+  <div class="deck-sign-note">Call or email anytime — I'm ready when you are.</div>
+</section>
+{% endif %}

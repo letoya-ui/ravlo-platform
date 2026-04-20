@@ -1,0 +1,99 @@
+{% extends "layouts/ravlo_base.html" %}
+
+{% block title %}Ravlo • New Listing Presentation{% endblock %}
+{% block page_title %}New Listing Presentation{% endblock %}
+{% block page_subline %}
+  Pick a property to auto-fill the cover, or start from a blank address.
+{% endblock %}
+
+{% block topbar_actions %}
+  <a href="{{ url_for('vip.listing_presentations') }}" class="ravlo-btn ghost sm">
+    <i class="lucide lucide-arrow-left"></i>
+    <span>Back</span>
+  </a>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto space-y-6">
+  <section class="ravlo-card partner-section-card">
+    <form method="POST" class="new-pres-form">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+      <div class="section-head">
+        <div>
+          <h3>Start from an existing property</h3>
+          <p>We'll copy over the address, beds/baths, sqft, and price.</p>
+        </div>
+      </div>
+
+      <label class="full">
+        <span>Select a property</span>
+        <select name="listing_id">
+          <option value="">— None (start blank) —</option>
+          {% for l in listings %}
+            <option value="{{ l.id }}">
+              {{ l.address }}{% if l.city %}, {{ l.city }}{% endif %}
+              {% if l.price %} — ${{ "{:,}".format(l.price) }}{% endif %}
+            </option>
+          {% endfor %}
+        </select>
+      </label>
+
+      <div class="section-head" style="margin-top:24px;">
+        <div>
+          <h3>Or enter a prospect address</h3>
+          <p>Use this for a pitch to a seller whose property isn't listed yet.</p>
+        </div>
+      </div>
+
+      <label class="full">
+        <span>Prospect name</span>
+        <input type="text" name="prospect_name" placeholder="e.g. The Smith Family">
+      </label>
+
+      <label class="full">
+        <span>Property address</span>
+        <input type="text" name="property_address" placeholder="123 Main St, Brooklyn, NY">
+      </label>
+
+      <label class="full">
+        <span>Title</span>
+        <input type="text" name="title" placeholder="Listing Presentation" value="Listing Presentation">
+      </label>
+
+      <div class="actions">
+        <button type="submit" class="ravlo-btn primary">
+          <i class="lucide lucide-presentation"></i>
+          <span>Start Presentation</span>
+        </button>
+      </div>
+    </form>
+  </section>
+</div>
+{% endblock %}
+
+{% block head %}
+<style>
+  .new-pres-form {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .new-pres-form label {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    color: #cfe1f4;
+    font-size: 0.92rem;
+  }
+  .new-pres-form input,
+  .new-pres-form select {
+    background: rgba(255,255,255,0.04);
+    color: #fff;
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 10px;
+    padding: 10px 12px;
+  }
+  .actions { margin-top: 8px; }
+</style>
+{% endblock %}
