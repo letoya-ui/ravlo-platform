@@ -98,9 +98,13 @@ def downgrade():
             pass
         op.drop_table("vip_team_members")
 
-    if _has_column("vip_income", "status"):
-        with op.batch_alter_table("vip_income") as batch:
-            batch.drop_column("status")
+    # NOTE: `vip_income.status` pre-dates this migration in some deployments
+    # (the column has been part of VIPIncome for a while, even though the
+    # migration only *formally* adds it when missing). Dropping it on
+    # downgrade would delete pre-existing received/pending data, so we
+    # intentionally leave the column in place. If you need to revert the
+    # server_default change, do it with a targeted ALTER in a follow-up
+    # migration rather than dropping the column here.
 
     if _has_table("elena_clients"):
         if _has_column("elena_clients", "assigned_member_id"):

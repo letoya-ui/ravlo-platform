@@ -1934,21 +1934,26 @@ def _dispatch_copilot_intent(profile, result, command):
         executed = True
 
     elif intent == "add_income":
-        # Distinguish "no amount parsed" (None) from "explicit zero" so
-        # commands like "Ravlo, I got paid" don't get marked pending.
+        # Preserve the three distinct cases:
+        #   * parser returned None  -> no amount spoken; record $1 placeholder,
+        #                              mark pending so the realtor fills it in.
+        #   * parser returned 0     -> user explicitly said $0; keep the $0 but
+        #                              still mark received (rare but honest).
+        #   * parser returned > 0   -> normal received income.
         raw_amount = result.get("amount")
-        amount = raw_amount or 0
+        stored_amount = raw_amount if raw_amount is not None else 1
         db.session.add(VIPIncome(
             vip_profile_id = profile.id,
             category       = "commission",
             description    = command[:240],
-            amount         = amount or 1,
+            amount         = stored_amount,
             income_date    = datetime.utcnow(),
             status         = "received" if raw_amount is not None else "pending",
             market         = default_market,
         ))
         db.session.commit()
-        summary = "Logged income" + ((" of $" + format(amount, ",")) if amount else "")
+        summary = ("Logged income"
+                   + ((" of $" + format(raw_amount, ",")) if raw_amount is not None else ""))
         action_url = url_for("vip.finances")
         executed = True
 
