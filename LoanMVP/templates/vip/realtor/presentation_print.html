@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>{{ pres.title or "Listing Presentation" }} — Print</title>
+  {% include "vip/realtor/_presentation_deck_styles.html" %}
+</head>
+<body>
+  <div class="no-print" style="text-align:center; padding:14px; background:#0b1320; color:#9ac3ff;">
+    <button onclick="window.print()" style="padding:8px 14px; border-radius:8px; border:1px solid #9ac3ff; background:transparent; color:#9ac3ff; cursor:pointer;">
+      Print / Save as PDF
+    </button>
+  </div>
+  <div class="deck">
+    {% include "vip/realtor/_presentation_deck.html" %}
+  </div>
+</body>
+</html>

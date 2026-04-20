@@ -1,0 +1,187 @@
+{% extends "layouts/ravlo_base.html" %}
+
+{% block title %}Ravlo • Properties{% endblock %}
+{% block page_title %}Properties{% endblock %}
+{% block page_subline %}
+  Every listing you manage, in one place — photos, pricing, marketing, and pitch decks.
+{% endblock %}
+
+{% block topbar_actions %}
+  <a href="{{ url_for('vip.listing_presentations') }}" class="ravlo-btn ghost sm">
+    <i class="lucide lucide-presentation"></i>
+    <span>Presentations</span>
+  </a>
+  <a href="{{ url_for('elena.listing_new') }}" class="ravlo-btn primary sm">
+    <i class="lucide lucide-plus"></i>
+    <span>Add Property</span>
+  </a>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto space-y-6">
+
+  <section class="ravlo-card partner-section-card">
+    <form method="GET" class="listings-filter">
+      <label>
+        <span>Status</span>
+        <select name="status" onchange="this.form.submit()">
+          <option value="">All</option>
+          {% for value, label in listing_statuses %}
+            <option value="{{ value }}" {% if status_filter == value %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      {% if available_markets|length >= 2 %}
+      <label>
+        <span>Market</span>
+        <select name="market" onchange="this.form.submit()">
+          <option value="">All markets</option>
+          {% for m in available_markets %}
+            <option value="{{ m }}" {% if market_filter == m %}selected{% endif %}>{{ m }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      {% endif %}
+    </form>
+  </section>
+
+  <section class="ravlo-card partner-section-card">
+    <div class="section-head">
+      <div>
+        <h3>{{ listings|length }} propert{% if listings|length == 1 %}y{% else %}ies{% endif %}</h3>
+        <p>Click a property to open its hub.</p>
+      </div>
+    </div>
+
+    {% if listings %}
+      <div class="listings-grid">
+        {% for l in listings %}
+          <a href="{{ url_for('vip.realtor_listing_detail', listing_id=l.id) }}" class="listing-card">
+            <div class="listing-card-head">
+              <span class="listing-status listing-status-{{ l.status }}">{{ l.status|title }}</span>
+              {% if presentation_counts.get(l.id) %}
+                <span class="listing-pres-count">
+                  <i class="lucide lucide-presentation"></i>
+                  {{ presentation_counts.get(l.id) }}
+                </span>
+              {% endif %}
+            </div>
+            <div class="listing-card-body">
+              <div class="listing-address">{{ l.address }}</div>
+              <div class="listing-sub">{{ l.city }}{% if l.state %}, {{ l.state }}{% endif %}{% if l.zip_code %} {{ l.zip_code }}{% endif %}</div>
+              <div class="listing-meta">
+                {% if l.beds %}<span>{{ l.beds }}bd</span>{% endif %}
+                {% if l.baths %}<span>{{ l.baths }}ba</span>{% endif %}
+                {% if l.sqft %}<span>{{ "{:,}".format(l.sqft) }} sqft</span>{% endif %}
+              </div>
+              {% if l.price %}
+                <div class="listing-price">${{ "{:,}".format(l.price) }}</div>
+              {% endif %}
+              {% if l.market %}
+                <div class="listing-market">{{ l.market }}</div>
+              {% endif %}
+            </div>
+          </a>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="empty-block">
+        <p>No properties yet.</p>
+        <a href="{{ url_for('elena.listing_new') }}" class="ravlo-btn primary sm">Add your first property</a>
+      </div>
+    {% endif %}
+  </section>
+
+</div>
+{% endblock %}
+
+{% block head %}
+<style>
+  .listings-filter {
+    display: flex;
+    gap: 14px;
+    flex-wrap: wrap;
+  }
+  .listings-filter label {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 0.85rem;
+    color: #cfe1f4;
+  }
+  .listings-filter select {
+    background: rgba(255,255,255,0.05);
+    color: #fff;
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 10px;
+    padding: 8px 10px;
+    min-width: 170px;
+  }
+
+  .listings-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 14px;
+  }
+
+  .listing-card {
+    display: flex;
+    flex-direction: column;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 14px;
+    padding: 14px;
+    color: #fff;
+    text-decoration: none;
+    transition: transform 0.12s ease, border-color 0.12s ease;
+  }
+  .listing-card:hover {
+    transform: translateY(-1px);
+    border-color: rgba(120,190,255,0.4);
+  }
+
+  .listing-card-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+  }
+
+  .listing-status {
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding: 2px 8px;
+    border-radius: 999px;
+    border: 1px solid rgba(255,255,255,0.15);
+  }
+  .listing-status-active   { background: rgba(30,190,130,0.15); border-color: rgba(30,190,130,0.45); color: #9effcf; }
+  .listing-status-pending  { background: rgba(230,180,60,0.15); border-color: rgba(230,180,60,0.45); color: #ffe1a0; }
+  .listing-status-sold     { background: rgba(120,170,255,0.15); border-color: rgba(120,170,255,0.45); color: #cfe1ff; }
+  .listing-status-withdrawn{ background: rgba(200,120,120,0.15); border-color: rgba(200,120,120,0.45); color: #ffd4d4; }
+
+  .listing-pres-count {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.75rem;
+    color: #cfe1f4;
+  }
+
+  .listing-address { font-weight: 600; font-size: 1rem; }
+  .listing-sub     { font-size: 0.85rem; color: #9fb3c8; margin-top: 2px; }
+  .listing-meta    { display: flex; gap: 12px; margin-top: 8px; font-size: 0.82rem; color: #9fb3c8; }
+  .listing-price   { margin-top: 10px; font-weight: 700; color: #9effcf; }
+  .listing-market  { margin-top: 6px; font-size: 0.75rem; color: #78c8ff; text-transform: uppercase; letter-spacing: 0.06em; }
+
+  .empty-block {
+    padding: 40px 0;
+    text-align: center;
+    color: #9fb3c8;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    align-items: center;
+  }
+</style>
+{% endblock %}

@@ -60,6 +60,7 @@ from LoanMVP.models.elena_models import (
     ElenaListing,
     ElenaFlyer,
     ElenaInteraction,
+    RealtorListingPresentation,
 )
 
 # ── Admin ─────────────────────────────────────────────────────────────────────
@@ -1961,6 +1962,22 @@ def _dispatch_copilot_intent(profile, result, command):
         action_url = url_for("vip.finances")
         executed = True
 
+    elif intent == "listing_presentation":
+        address = (result.get("address") or "").strip()
+        listing = None
+        if address:
+            listing = (ElenaListing.query
+                       .filter(ElenaListing.address.ilike("%" + address + "%"))
+                       .first())
+        pres = _create_presentation_from_listing(profile, listing, fallback_address=address)
+        db.session.add(pres)
+        db.session.commit()
+        summary = "Drafted listing presentation" + (
+            (" for " + str(pres.property_address)) if pres.property_address else ""
+        )
+        action_url = url_for("vip.listing_presentation_edit", pres_id=pres.id)
+        executed = True
+
     elif intent == "make_flyer":
         address = result.get("address")
         listing = None
@@ -2459,3 +2476,548 @@ def delete_annotation():
     db.session.commit()
 
     return jsonify({"status": "deleted"})
+
+
+# =============================================================================
+# REALTOR • PROPERTY / LISTING HUB + LISTING PRESENTATION BUILDER
+# =============================================================================
+#
+# All routes live under ``vip_bp`` (``/vip/realtor/...``) but are mirrored
+# from Elena via a small alias blueprint registered in ``routes/elena.py`` so
+# the unified realtor workspace (Frank + Elena + VIP realtor) has a single
+# canonical URL space for listing pages and presentations.
+# =============================================================================
+
+import secrets as _pysecrets
+
+_LISTING_STATUSES = [
+    ("active",    "Active"),
+    ("pending",   "Pending"),
+    ("sold",      "Sold"),
+    ("withdrawn", "Withdrawn"),
+]
+
+_PRESENTATION_STATUSES = [
+    ("draft", "Draft"),
+    ("sent",  "Sent"),
+    ("won",   "Won"),
+    ("lost",  "Lost"),
+]
+
+
+def _int(val):
+    try:
+        return int(val) if val not in (None, "") else None
+    except (TypeError, ValueError):
+        return None
+
+
+def _json_list(raw):
+    """Decode a JSON-encoded list column. Returns [] on any failure so the
+    template never has to defensively null-check."""
+    if not raw:
+        return []
+    try:
+        data = json.loads(raw)
+    except (TypeError, ValueError):
+        return []
+    return data if isinstance(data, list) else []
+
+
+def _dump_list(items):
+    """Encode a list of dicts for JSON storage. Strips entirely-empty rows
+    so blank form fields don't poison the deck."""
+    cleaned = []
+    for item in (items or []):
+        if isinstance(item, dict):
+            trimmed = {k: (v.strip() if isinstance(v, str) else v) for k, v in item.items()}
+            if any(trimmed.values()):
+                cleaned.append(trimmed)
+    return json.dumps(cleaned) if cleaned else None
+
+
+def _new_share_slug():
+    """Short URL-safe slug (~16 chars). Collisions are astronomically rare
+    but we still re-roll on the off chance one occurs."""
+    for _ in range(5):
+        slug = _pysecrets.token_urlsafe(12)
+        if not RealtorListingPresentation.query.filter_by(share_slug=slug).first():
+            return slug
+    return _pysecrets.token_urlsafe(24)
+
+
+def _listing_or_404(listing_id):
+    listing = ElenaListing.query.get(listing_id)
+    return listing
+
+
+def _presentation_or_404(pres_id, profile):
+    """Scope every presentation load to the current VIP profile so a user
+    can't enumerate other realtors' decks by guessing ids."""
+    pres = RealtorListingPresentation.query.get(pres_id)
+    if not pres:
+        return None
+    if pres.vip_profile_id and profile and pres.vip_profile_id != profile.id:
+        return None
+    return pres
+
+
+def _create_presentation_from_listing(profile, listing, fallback_address=None):
+    """Factory that returns an unsaved ``RealtorListingPresentation`` row
+    seeded from a listing (when available) or a bare prospect address.
+
+    Kept as a standalone helper so the copilot intent handler and the
+    ``/presentations/new`` route produce identical starting state."""
+    pres = RealtorListingPresentation(
+        vip_profile_id = profile.id if profile else None,
+        listing_id     = listing.id if listing else None,
+        client_id      = listing.client_id if listing else None,
+        title          = "Listing Presentation",
+        status         = "draft",
+    )
+    if listing:
+        pres.property_address = listing.address
+        pres.property_city    = listing.city
+        pres.property_state   = listing.state
+        pres.property_zip     = listing.zip_code
+        pres.property_beds    = listing.beds
+        pres.property_baths   = listing.baths
+        pres.property_sqft    = listing.sqft
+        pres.suggested_list_price = listing.price
+    elif fallback_address:
+        pres.property_address = fallback_address
+
+    # Sensible scaffolding so the first editor load isn't empty.
+    if profile:
+        pres.agent_tagline = (profile.headline
+                              or "Your local expert — proven results, personal service.")
+        pres.agent_bio     = profile.bio or None
+        pres.signature_line = profile.display_name
+
+    pres.marketing_plan_json = json.dumps([
+        {"title": "Professional photography",
+         "description": "HDR interior + twilight exterior, drone aerials for property overview."},
+        {"title": "MLS + syndication",
+         "description": "Listed on MLS, Zillow, Redfin, Realtor.com with premium placement."},
+        {"title": "Social + email blasts",
+         "description": "Featured on Instagram / Facebook, sent to sphere and top producer network."},
+        {"title": "Open houses",
+         "description": "Two weekend open houses with full e-flyer + neighborhood invites."},
+        {"title": "Weekly seller report",
+         "description": "Showing activity, buyer feedback, and adjustments emailed every Monday."},
+    ])
+    pres.cma_rows_json = json.dumps([])
+    pres.testimonials_json = json.dumps([])
+    pres.agent_stats_json = json.dumps([])
+    pres.market_stats_json = json.dumps([])
+    pres.next_steps = ("Sign the listing agreement and schedule the photoshoot for "
+                       "this week — we'll be on the market within 7 days.")
+    return pres
+
+
+def _serialize_presentation_view(pres):
+    """Shape the DB row into a dict the templates render directly. Keeps
+    all JSON decoding in one place."""
+    return {
+        "id":   pres.id,
+        "row":  pres,
+        "cma_rows":        _json_list(pres.cma_rows_json),
+        "marketing_plan":  _json_list(pres.marketing_plan_json),
+        "testimonials":    _json_list(pres.testimonials_json),
+        "agent_stats":     _json_list(pres.agent_stats_json),
+        "market_stats":    _json_list(pres.market_stats_json),
+    }
+
+
+def _apply_presentation_form(pres, form):
+    """Mutate ``pres`` from a POSTed form. Accepts both the full editor
+    (all sections) and partial saves (only the fields present)."""
+    def _get(key, fallback=None):
+        if key in form:
+            v = (form.get(key) or "").strip()
+            return v or fallback
+        return fallback
+
+    if "title" in form:
+        pres.title = _get("title", pres.title) or "Listing Presentation"
+
+    for attr in (
+        "prospect_name", "prospect_email", "prospect_phone",
+        "property_address", "property_city", "property_state", "property_zip",
+        "cover_image_url",
+        "agent_tagline", "agent_bio", "market_snapshot",
+        "cma_summary", "pricing_rationale",
+        "commission_rate", "listing_term_notes",
+        "next_steps", "signature_line",
+    ):
+        if attr in form:
+            setattr(pres, attr, _get(attr))
+
+    for attr in ("property_beds", "property_baths", "property_sqft",
+                 "suggested_list_price", "pricing_range_low", "pricing_range_high",
+                 "listing_term_months"):
+        if attr in form:
+            setattr(pres, attr, _int(form.get(attr)))
+
+    if "status" in form:
+        status = (form.get("status") or "draft").strip().lower()
+        if status in {s[0] for s in _PRESENTATION_STATUSES}:
+            pres.status = status
+
+    # Repeatable sections — forms submit parallel arrays (e.g.
+    # ``cma_address[]``) that we zip into row dicts.
+    if "cma_address[]" in form or "cma_price[]" in form:
+        rows = []
+        addrs  = form.getlist("cma_address[]")
+        stats  = form.getlist("cma_status[]")
+        prices = form.getlist("cma_price[]")
+        sqfts  = form.getlist("cma_sqft[]")
+        beds   = form.getlist("cma_beds[]")
+        baths  = form.getlist("cma_baths[]")
+        adjs   = form.getlist("cma_adjustments[]")
+        for i in range(max(len(addrs), len(prices), 0)):
+            rows.append({
+                "address":     (addrs[i]  if i < len(addrs)  else "").strip(),
+                "status":      (stats[i]  if i < len(stats)  else "").strip(),
+                "price":       (prices[i] if i < len(prices) else "").strip(),
+                "sqft":        (sqfts[i]  if i < len(sqfts)  else "").strip(),
+                "beds":        (beds[i]   if i < len(beds)   else "").strip(),
+                "baths":       (baths[i]  if i < len(baths)  else "").strip(),
+                "adjustments": (adjs[i]   if i < len(adjs)   else "").strip(),
+            })
+        pres.cma_rows_json = _dump_list(rows)
+
+    if "mkt_title[]" in form:
+        titles = form.getlist("mkt_title[]")
+        descs  = form.getlist("mkt_description[]")
+        rows = []
+        for i in range(len(titles)):
+            rows.append({
+                "title":       titles[i].strip(),
+                "description": (descs[i] if i < len(descs) else "").strip(),
+            })
+        pres.marketing_plan_json = _dump_list(rows)
+
+    if "test_quote[]" in form:
+        quotes  = form.getlist("test_quote[]")
+        authors = form.getlist("test_author[]")
+        rows = []
+        for i in range(len(quotes)):
+            rows.append({
+                "quote":  quotes[i].strip(),
+                "author": (authors[i] if i < len(authors) else "").strip(),
+            })
+        pres.testimonials_json = _dump_list(rows)
+
+    if "agent_stat_label[]" in form:
+        labels = form.getlist("agent_stat_label[]")
+        values = form.getlist("agent_stat_value[]")
+        rows = []
+        for i in range(len(labels)):
+            rows.append({
+                "label": labels[i].strip(),
+                "value": (values[i] if i < len(values) else "").strip(),
+            })
+        pres.agent_stats_json = _dump_list(rows)
+
+    if "market_stat_label[]" in form:
+        labels = form.getlist("market_stat_label[]")
+        values = form.getlist("market_stat_value[]")
+        rows = []
+        for i in range(len(labels)):
+            rows.append({
+                "label": labels[i].strip(),
+                "value": (values[i] if i < len(values) else "").strip(),
+            })
+        pres.market_stats_json = _dump_list(rows)
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# LISTING HUB
+# ──────────────────────────────────────────────────────────────────────────────
+
+@vip_bp.get("/realtor/listings")
+@role_required("partner_group", "admin")
+def realtor_listings():
+    profile           = get_or_create_vip_profile()
+    available_markets = get_user_markets(profile)
+    current_market    = _get_vip_market(profile)
+
+    status_filter = (request.args.get("status") or "").strip().lower()
+    market_filter = (request.args.get("market") or "").strip()
+
+    q = ElenaListing.query
+    if market_filter and market_filter != ALL_MARKETS:
+        q = q.filter(ElenaListing.market == market_filter)
+    elif current_market and current_market != ALL_MARKETS and len(available_markets) == 1:
+        q = q.filter(ElenaListing.market == current_market)
+
+    if status_filter and status_filter in {s[0] for s in _LISTING_STATUSES}:
+        q = q.filter(ElenaListing.status == status_filter)
+
+    listings = q.order_by(ElenaListing.updated_at.desc()).all()
+
+    # Attach presentation counts for the list view.
+    presentation_counts = dict(
+        db.session.query(
+            RealtorListingPresentation.listing_id,
+            func.count(RealtorListingPresentation.id),
+        )
+        .filter(RealtorListingPresentation.listing_id.isnot(None))
+        .group_by(RealtorListingPresentation.listing_id)
+        .all()
+    )
+
+    return render_template(
+        "vip/realtor/listings.html",
+        vip_profile         = profile,
+        header_name         = get_dashboard_name(profile),
+        listings            = listings,
+        listing_statuses    = _LISTING_STATUSES,
+        status_filter       = status_filter,
+        market_filter       = market_filter or current_market,
+        available_markets   = available_markets,
+        presentation_counts = presentation_counts,
+        portal              = "vip",
+        portal_name         = "VIP",
+        portal_home         = url_for("vip.realtor_dashboard"),
+    )
+
+
+@vip_bp.get("/realtor/listings/<int:listing_id>")
+@role_required("partner_group", "admin")
+def realtor_listing_detail(listing_id):
+    profile = get_or_create_vip_profile()
+    listing = _listing_or_404(listing_id)
+    if not listing:
+        flash("Listing not found.", "warning")
+        return redirect(url_for("vip.realtor_listings"))
+
+    presentations = (RealtorListingPresentation.query
+                     .filter_by(listing_id=listing.id)
+                     .order_by(RealtorListingPresentation.updated_at.desc())
+                     .all())
+    flyers = (ElenaFlyer.query
+              .filter_by(listing_id=listing.id)
+              .order_by(ElenaFlyer.created_at.desc())
+              .all())
+    interactions = []
+    if listing.client_id:
+        interactions = (ElenaInteraction.query
+                        .filter_by(client_id=listing.client_id)
+                        .order_by(ElenaInteraction.created_at.desc())
+                        .limit(15).all())
+
+    return render_template(
+        "vip/realtor/listing_detail.html",
+        vip_profile      = profile,
+        header_name      = get_dashboard_name(profile),
+        listing          = listing,
+        presentations    = presentations,
+        flyers           = flyers,
+        interactions     = interactions,
+        listing_statuses = _LISTING_STATUSES,
+        portal           = "vip",
+        portal_name      = "VIP",
+        portal_home      = url_for("vip.realtor_dashboard"),
+    )
+
+
+@vip_bp.post("/realtor/listings/<int:listing_id>/delete")
+@role_required("partner_group", "admin")
+def realtor_listing_delete(listing_id):
+    listing = _listing_or_404(listing_id)
+    if listing:
+        db.session.delete(listing)
+        db.session.commit()
+        flash("Listing deleted.", "success")
+    return redirect(url_for("vip.realtor_listings"))
+
+
+@vip_bp.post("/realtor/listings/<int:listing_id>/status")
+@role_required("partner_group", "admin")
+def realtor_listing_status(listing_id):
+    listing = _listing_or_404(listing_id)
+    if not listing:
+        return redirect(url_for("vip.realtor_listings"))
+    status = (request.form.get("status") or "").strip().lower()
+    if status in {s[0] for s in _LISTING_STATUSES}:
+        listing.status = status
+        db.session.commit()
+        flash("Listing status updated.", "success")
+    return redirect(url_for("vip.realtor_listing_detail", listing_id=listing.id))
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# LISTING PRESENTATION
+# ──────────────────────────────────────────────────────────────────────────────
+
+@vip_bp.get("/realtor/presentations")
+@role_required("partner_group", "admin")
+def listing_presentations():
+    profile = get_or_create_vip_profile()
+    presentations = (RealtorListingPresentation.query
+                     .filter(or_(
+                         RealtorListingPresentation.vip_profile_id == profile.id,
+                         RealtorListingPresentation.vip_profile_id.is_(None),
+                     ))
+                     .order_by(RealtorListingPresentation.updated_at.desc())
+                     .all())
+    return render_template(
+        "vip/realtor/presentations.html",
+        vip_profile           = profile,
+        header_name           = get_dashboard_name(profile),
+        presentations         = presentations,
+        presentation_statuses = _PRESENTATION_STATUSES,
+        portal                = "vip",
+        portal_name           = "VIP",
+        portal_home           = url_for("vip.realtor_dashboard"),
+    )
+
+
+@vip_bp.route("/realtor/presentations/new", methods=["GET", "POST"])
+@role_required("partner_group", "admin")
+def listing_presentation_new():
+    profile = get_or_create_vip_profile()
+
+    if request.method == "POST":
+        listing_id = _int(request.form.get("listing_id"))
+        listing = _listing_or_404(listing_id) if listing_id else None
+        fallback_address = (request.form.get("property_address") or "").strip()
+        pres = _create_presentation_from_listing(
+            profile, listing, fallback_address=fallback_address or None,
+        )
+        # Overlay any form fields the user filled out up-front.
+        _apply_presentation_form(pres, request.form)
+        db.session.add(pres)
+        db.session.commit()
+        flash("Listing presentation started.", "success")
+        return redirect(url_for("vip.listing_presentation_edit", pres_id=pres.id))
+
+    listings = (ElenaListing.query
+                .order_by(ElenaListing.updated_at.desc())
+                .limit(50).all())
+    return render_template(
+        "vip/realtor/presentation_new.html",
+        vip_profile = profile,
+        header_name = get_dashboard_name(profile),
+        listings    = listings,
+        portal      = "vip",
+        portal_name = "VIP",
+        portal_home = url_for("vip.realtor_dashboard"),
+    )
+
+
+@vip_bp.route("/realtor/presentations/<int:pres_id>", methods=["GET", "POST"])
+@role_required("partner_group", "admin")
+def listing_presentation_edit(pres_id):
+    profile = get_or_create_vip_profile()
+    pres = _presentation_or_404(pres_id, profile)
+    if not pres:
+        flash("Presentation not found.", "warning")
+        return redirect(url_for("vip.listing_presentations"))
+
+    if request.method == "POST":
+        _apply_presentation_form(pres, request.form)
+        db.session.commit()
+        flash("Presentation saved.", "success")
+        return redirect(url_for("vip.listing_presentation_edit", pres_id=pres.id))
+
+    view = _serialize_presentation_view(pres)
+    return render_template(
+        "vip/realtor/presentation_edit.html",
+        vip_profile           = profile,
+        header_name           = get_dashboard_name(profile),
+        pres                  = pres,
+        view                  = view,
+        presentation_statuses = _PRESENTATION_STATUSES,
+        portal                = "vip",
+        portal_name           = "VIP",
+        portal_home           = url_for("vip.realtor_dashboard"),
+    )
+
+
+@vip_bp.post("/realtor/presentations/<int:pres_id>/delete")
+@role_required("partner_group", "admin")
+def listing_presentation_delete(pres_id):
+    profile = get_or_create_vip_profile()
+    pres = _presentation_or_404(pres_id, profile)
+    if pres:
+        db.session.delete(pres)
+        db.session.commit()
+        flash("Presentation deleted.", "success")
+    return redirect(url_for("vip.listing_presentations"))
+
+
+@vip_bp.post("/realtor/presentations/<int:pres_id>/share")
+@role_required("partner_group", "admin")
+def listing_presentation_share_toggle(pres_id):
+    profile = get_or_create_vip_profile()
+    pres = _presentation_or_404(pres_id, profile)
+    if not pres:
+        flash("Presentation not found.", "warning")
+        return redirect(url_for("vip.listing_presentations"))
+    enable = (request.form.get("enable") or "1") != "0"
+    pres.share_enabled = enable
+    if enable and not pres.share_slug:
+        pres.share_slug = _new_share_slug()
+    db.session.commit()
+    flash("Share link " + ("enabled." if enable else "disabled."), "info")
+    return redirect(url_for("vip.listing_presentation_edit", pres_id=pres.id))
+
+
+@vip_bp.post("/realtor/presentations/<int:pres_id>/status")
+@role_required("partner_group", "admin")
+def listing_presentation_status(pres_id):
+    profile = get_or_create_vip_profile()
+    pres = _presentation_or_404(pres_id, profile)
+    if not pres:
+        return redirect(url_for("vip.listing_presentations"))
+    status = (request.form.get("status") or "draft").strip().lower()
+    if status in {s[0] for s in _PRESENTATION_STATUSES}:
+        pres.status = status
+        if status == "sent" and not pres.sent_at:
+            pres.sent_at = datetime.utcnow()
+        db.session.commit()
+        flash("Presentation marked as " + status + ".", "success")
+    return redirect(url_for("vip.listing_presentation_edit", pres_id=pres.id))
+
+
+@vip_bp.get("/realtor/presentations/<int:pres_id>/print")
+@role_required("partner_group", "admin")
+def listing_presentation_print(pres_id):
+    profile = get_or_create_vip_profile()
+    pres = _presentation_or_404(pres_id, profile)
+    if not pres:
+        flash("Presentation not found.", "warning")
+        return redirect(url_for("vip.listing_presentations"))
+    view = _serialize_presentation_view(pres)
+    return render_template(
+        "vip/realtor/presentation_print.html",
+        vip_profile = profile,
+        pres        = pres,
+        view        = view,
+    )
+
+
+@vip_bp.get("/p/<slug>")
+def listing_presentation_public(slug):
+    """Publicly-shareable presentation view. No auth — the share_slug acts
+    as the capability token. Disabled presentations 404."""
+    pres = RealtorListingPresentation.query.filter_by(share_slug=slug).first()
+    if not pres or not pres.share_enabled:
+        from flask import abort
+        abort(404)
+
+    pres.last_viewed_at = datetime.utcnow()
+    pres.view_count = (pres.view_count or 0) + 1
+    db.session.commit()
+
+    view = _serialize_presentation_view(pres)
+    owner = VIPProfile.query.get(pres.vip_profile_id) if pres.vip_profile_id else None
+    return render_template(
+        "vip/realtor/presentation_public.html",
+        pres  = pres,
+        view  = view,
+        owner = owner,
+    )
