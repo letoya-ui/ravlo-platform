@@ -45,6 +45,7 @@ class ElenaListing(BaseModel):
     city = Column(String, nullable=False)
     state = Column(String, nullable=False)
     zip_code = Column(String, nullable=False)
+    county = Column(String(120), nullable=True)
     beds = Column(Integer, nullable=True)
     baths = Column(Integer, nullable=True)
     sqft = Column(Integer, nullable=True)
