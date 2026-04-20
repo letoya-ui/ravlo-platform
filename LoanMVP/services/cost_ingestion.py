@@ -63,11 +63,20 @@ def record_observation(
     confidence: Optional[float] = None,
     status: str = "verified",
     notes: Optional[str] = None,
+    commit: bool = True,
 ) -> Optional[CostObservation]:
     """Persist a single cost observation. Returns the row, or None on failure.
 
     Requires enough signal to compute a ``cost_per_sqft``: either a
     ``cost_per_sqft`` directly, or both ``total_cost`` and ``sqft``.
+
+    When ``commit=False`` the row is added to the session and flushed so the
+    caller can read its ``id`` / link related rows, but no commit is issued.
+    The caller is then responsible for committing (and rolling back on
+    failure) so multiple related writes land atomically in a single
+    transaction. This is how ``record_from_deal`` does its new-row +
+    supersede-link work without leaving orphaned ``verified`` rows when the
+    linking step fails.
     """
     cpsf = _to_float(cost_per_sqft)
     tc = _to_float(total_cost)
@@ -107,7 +116,12 @@ def record_observation(
             notes=notes,
         )
         db.session.add(row)
-        db.session.commit()
+        if commit:
+            db.session.commit()
+        else:
+            # Flush so row.id is available to callers that want to link
+            # other rows (e.g. ``supersedes_id``) in the same transaction.
+            db.session.flush()
         return row
     except Exception as e:
         logger.warning("cost_ingestion: failed to record observation: %s", e)
@@ -169,6 +183,11 @@ def record_from_deal(deal, *, source: str = "investor_input") -> Optional[CostOb
                 pass
             prior_id = None
 
+    # Stage the new row without committing so the new-row insert, the
+    # prior-row ``superseded`` status mutation, and the ``supersedes_id``
+    # back-link all land in a single transaction. If any step fails we
+    # rollback cleanly and leave the database exactly as it was before the
+    # call — no orphaned ``verified`` duplicates.
     row = record_observation(
         source=source,
         category=CATEGORY_REHAB,
@@ -180,23 +199,27 @@ def record_from_deal(deal, *, source: str = "investor_input") -> Optional[CostOb
         city=getattr(deal, "city", None),
         user_id=getattr(deal, "user_id", None),
         deal_id=deal_id,
+        commit=False,
     )
 
-    # Only now that a replacement row exists do we mark the prior as
-    # superseded + link the two, atomically in a single commit.
-    if row is not None and prior_id is not None:
-        try:
+    if row is None:
+        # ``record_observation`` already rolled back on failure / missing
+        # $/sqft inputs. Nothing more to do.
+        return None
+
+    try:
+        if prior_id is not None:
             prior = db.session.get(CostObservation, prior_id)
             if prior is not None and prior.status != "superseded":
                 prior.status = "superseded"
             row.supersedes_id = prior_id
-            db.session.add(row)
-            db.session.commit()
-        except Exception as e:  # pragma: no cover - defensive
-            logger.warning("cost_ingestion: supersede+link commit failed: %s", e)
-            try:
-                db.session.rollback()
-            except Exception:
-                pass
+        db.session.commit()
+    except Exception as e:  # pragma: no cover - defensive
+        logger.warning("cost_ingestion: supersede+link commit failed: %s", e)
+        try:
+            db.session.rollback()
+        except Exception:
+            pass
+        return None
 
     return row

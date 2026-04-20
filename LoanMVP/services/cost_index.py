@@ -569,4 +569,10 @@ def apply_multiplier_to_engine_response(
         return node
 
     _walk(response)
+    # Mark the response as localised so a second pass through this helper
+    # (retry, middleware, future refactor) cannot silently square the factor.
+    # ``_should_apply_multiplier`` keys off ``costs_localized`` exactly for
+    # this — we were relying on it at read time but never writing it.
+    if isinstance(response, dict):
+        response["costs_localized"] = True
     return response
