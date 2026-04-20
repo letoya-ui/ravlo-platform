@@ -1643,12 +1643,14 @@ def _sync_projected_closing_income(profile):
     if not candidate_listings:
         return
 
+    # Dedupe across ALL statuses, not just pending — otherwise marking a
+    # projected commission as received lets the auto-sync recreate it on
+    # the next page load.
     existing_descs = {
         (i.description or "").strip()
         for i in VIPIncome.query.filter_by(
             vip_profile_id=profile.id,
             category="commission",
-            status="pending",
         ).all()
     }
 
