@@ -7,6 +7,15 @@ from LoanMVP.services.investor.investor_engine_helpers import (
     RENDER_TIMEOUT,
 )
 
+try:
+    from LoanMVP.services.cost_index import (
+        build_location_cost_context,
+        apply_multiplier_to_engine_response,
+    )
+except Exception:  # pragma: no cover - defensive during cold imports
+    build_location_cost_context = None
+    apply_multiplier_to_engine_response = None
+
 
 def run_rehab_concept(payload):
     """Call the Renovation Engine to generate a rehab concept.
@@ -52,8 +61,33 @@ def run_rehab_concept(payload):
     if payload.get("prompt_notes"):
         engine_payload["prompt_notes"] = payload["prompt_notes"]
 
-    return _post_renovation_engine_json(
+    # Attach Local Cost Index context so the engine can use ZIP-aware
+    # pricing; multiply any cost fields it returns on the way back.
+    cost_ctx = None
+    if build_location_cost_context is not None:
+        try:
+            cost_ctx = build_location_cost_context(
+                zip_code=payload.get("zip_code"),
+                state=payload.get("state"),
+                category="rehab",
+                scope=payload.get("scope"),
+            )
+            engine_payload["location_cost_context"] = cost_ctx
+        except Exception:
+            cost_ctx = None
+
+    response = _post_renovation_engine_json(
         "/v1/renovate",
         engine_payload,
         timeout=RENDER_TIMEOUT,
     )
+
+    if cost_ctx and apply_multiplier_to_engine_response is not None:
+        try:
+            apply_multiplier_to_engine_response(response, cost_ctx.get("factor"))
+            if isinstance(response, dict):
+                response.setdefault("location_cost_context", cost_ctx)
+        except Exception:
+            pass
+
+    return response

@@ -284,6 +284,17 @@ Review the saved deal, check strategy and funding status, and launch the next to
             <strong>${{ "{:,.0f}".format(deal.rehab_cost or 0) }}</strong>
           </div>
 
+          {% if deal.local_cost_factor %}
+          <div class="detail-row" title="Regional construction-cost adjustment applied when this deal was saved. Stays locked on historical deals so refreshing the index doesn't change closed-deal math.">
+            <span>Local Cost Index</span>
+            <strong>
+              {{ deal.local_cost_label or 'Locked' }}
+              {% set _pct = ((deal.local_cost_factor - 1.0) * 100) | round(0, 'common') | int %}
+              ({% if _pct > 0 %}+{% endif %}{{ _pct }}% vs. national)
+            </strong>
+          </div>
+          {% endif %}
+
           <div class="detail-row">
             <span>Total Cost</span>
             <strong>${{ "{:,.0f}".format((deal.purchase_price or 0) + (deal.rehab_cost or 0)) }}</strong>

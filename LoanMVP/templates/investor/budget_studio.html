@@ -586,6 +586,28 @@ Build the financial operating system for your deal.
     </div>
   </section>
 
+  {% if local_cost_index and local_cost_index.get('factor') %}
+  {% set _lci = local_cost_index %}
+  {% set _pct = ((_lci.factor - 1.0) * 100) | round(0, 'common') | int %}
+  <section class="studio-card" style="padding:16px 20px;background:rgba(122,184,255,.06);border:1px solid rgba(122,184,255,.18);border-radius:18px;"
+           title="Local cost multiplier applied to rehab + build numbers on this deal. Seeded from RSMeans Location Factors; learns from real investor and contractor observations over time.">
+    <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
+      <div style="font-size:.78rem;text-transform:uppercase;letter-spacing:.08em;color:rgba(228,236,246,.62);font-weight:800;">
+        Local Cost Index
+      </div>
+      <div style="color:#fff;font-weight:700;">
+        {{ _lci.label or 'Regional' }}
+        &nbsp;<span style="color:{% if _pct > 0 %}#ffb37a{% elif _pct < 0 %}#9af2c3{% else %}rgba(228,236,246,.72){% endif %};">
+          ({% if _pct > 0 %}+{% endif %}{{ _pct }}% vs. national)
+        </span>
+      </div>
+      {% if _lci.get('detail') %}
+      <div style="color:rgba(228,236,246,.6);font-size:.85rem;">{{ _lci.detail }}</div>
+      {% endif %}
+    </div>
+  </section>
+  {% endif %}
+
   <div class="studio-layout">
     <div class="studio-main">
 

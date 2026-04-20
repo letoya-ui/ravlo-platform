@@ -77,21 +77,25 @@ def resource_path(relative_path: str) -> str:
 # Only additive, nullable columns are safe to self-heal here — destructive
 # or type-changing operations must go through Alembic.
 _SCHEMA_COMPAT_COLUMNS = [
-    ("vip_profiles", "markets_json", "TEXT"),
-    ("elena_listings", "market", "VARCHAR(100)"),
-    ("elena_clients", "market", "VARCHAR(100)"),
-    ("elena_clients", "assigned_member_id", "INTEGER"),
-    ("vip_expenses", "market", "VARCHAR(100)"),
-    ("vip_income", "market", "VARCHAR(100)"),
-    ("vip_income", "status", "VARCHAR(50) DEFAULT 'received'"),
-    ("vip_assistant_suggestions", "proposed_amount", "INTEGER"),
-    ("vip_assistant_suggestions", "source", "VARCHAR(50)"),
+    ("vip_profiles",              "markets_json",       "TEXT"),
+    ("deals",                     "local_cost_factor",  "FLOAT"),
+    ("deals",                     "local_cost_label",   "VARCHAR(120)"),
+    ("elena_listings",            "market",             "VARCHAR(100)"),
+    ("elena_clients",             "market",             "VARCHAR(100)"),
+    ("elena_clients",             "assigned_member_id", "INTEGER"),
+    ("vip_expenses",              "market",             "VARCHAR(100)"),
+    ("vip_income",                "market",             "VARCHAR(100)"),
+    ("vip_income",                "status",             "VARCHAR(50) DEFAULT 'received'"),
+    ("vip_assistant_suggestions", "proposed_amount",    "INTEGER"),
+    ("vip_assistant_suggestions", "source",             "VARCHAR(50)"),
 ]
 
-# Tables the app assumes exist on boot. If the Alembic migration hasn't been
-# applied yet, we'll create them from the SQLAlchemy model metadata. Only
-# additive — never drops or alters existing tables.
+# Tables that must exist at boot. If missing, we ask SQLAlchemy's metadata
+# to create just that table (equivalent to a single `db.create_all()` scoped
+# to one model). Order only matters for foreign-key dependencies; the list
+# here is kept small on purpose.
 _SCHEMA_COMPAT_TABLES = [
+    "cost_observations",
     "vip_team_members",
 ]
 
@@ -99,12 +103,14 @@ _SCHEMA_COMPAT_TABLES = [
 def _ensure_schema_compat(app):
     """Best-effort guard against deploys that race ahead of Alembic.
 
-    For each (table, column, type) tuple above, if the column is missing we
-    issue `ALTER TABLE ... ADD COLUMN`. Errors are logged but never raised:
-    at worst we fall back to whatever downstream try/except the callers
-    already have. Running `flask db upgrade` afterward is still the correct
-    path — this is just a safety net so a cold deploy doesn't 500 every
-    realtor dashboard page until the migration lands.
+    For each (table, column, type) tuple, if the column is missing we issue
+    `ALTER TABLE ... ADD COLUMN`. For each table in `_SCHEMA_COMPAT_TABLES`,
+    if the table is missing we ask SQLAlchemy to create it from the model
+    metadata. Errors are logged but never raised — at worst we fall back to
+    whatever downstream try/except the callers already have. Running
+    `flask db upgrade` afterward is still the correct long-term path; this
+    is a safety net so a cold deploy doesn't 500 the app while migrations
+    catch up.
     """
     try:
         from sqlalchemy import inspect, text
@@ -142,12 +148,12 @@ def _ensure_schema_compat(app):
                     continue
                 table_obj = db.metadata.tables.get(table_name)
                 if table_obj is None:
-                    print(f"[schema-compat] unknown table {table_name}, skipping")
+                    print(f"[schema-compat] no model found for missing table {table_name}")
                     continue
                 print(f"[schema-compat] creating table {table_name}")
                 table_obj.create(bind=db.engine, checkfirst=True)
             except Exception as e:
-                print(f"[schema-compat] failed creating {table_name}: {e}")
+                print(f"[schema-compat] failed creating table {table_name}: {e}")
 
 
 # ---------------------------------------------------------

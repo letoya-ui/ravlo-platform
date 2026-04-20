@@ -1,5 +1,21 @@
+try:
+    from LoanMVP.services.cost_index import describe_learned_index
+except Exception:  # pragma: no cover - defensive: never break this module
+    describe_learned_index = None
+
+
 def _to_money(value):
-    return "${:,.0f}".format(value)
+    # Render negatives as ``-$1,234`` instead of ``$-1,234`` (the former is
+    # the convention investors expect; the latter looks like a typo). Matters
+    # for Deal Architect when a high local cost factor eats the margin and
+    # ``profit`` goes negative — the strategy still renders, just flagged.
+    try:
+        v = float(value)
+    except (TypeError, ValueError):
+        v = 0.0
+    if v < 0:
+        return "-${:,.0f}".format(-v)
+    return "${:,.0f}".format(v)
 
 
 def _safe_float_from_text(text, default=0):
@@ -15,6 +31,7 @@ def _safe_float_from_text(text, default=0):
 def generate_deal_architect_strategies(payload):
     property_address = payload.get("property_address") or ""
     zip_code = payload.get("zip_code") or ""
+    state = payload.get("state") or ""
     property_type = (payload.get("property_type") or "").lower()
     lot_size = payload.get("lot_size") or ""
     zoning = (payload.get("zoning") or "").upper()
@@ -25,6 +42,41 @@ def generate_deal_architect_strategies(payload):
     context_label = property_address or zip_code or "This opportunity"
     numeric_budget = _safe_float_from_text(budget, default=0)
 
+    # Local cost index (RSMeans seed blended with real CostObservations).
+    # Ground-up build numbers get the new_build category; rehab/flip numbers
+    # get the rehab category. Seed-only until the observation table fills in.
+    # describe_learned_index may be None if cost_index failed to import at
+    # module load time; in that case we degrade to national averages.
+    # Fallback must match the shape downstream code (and templates) expects
+    # from describe_learned_index so ``index_info.get("signed_label")`` and
+    # ``index_info.get("detail")`` never surface literal 'None' in the UI.
+    _NATIONAL_FALLBACK = {
+        "factor": 1.0,
+        "label": "U.S. average",
+        "delta_pct": 0,
+        "signed_label": "at national average",
+        "detail": "RSMeans seed only",
+        "source": "baseline",
+    }
+    if describe_learned_index is not None:
+        try:
+            build_index = describe_learned_index(
+                zip_code=zip_code, state=state,
+                category="new_build", scope=None,
+            )
+            rehab_index = describe_learned_index(
+                zip_code=zip_code, state=state,
+                category="rehab", scope="medium",
+            )
+        except Exception:
+            build_index = dict(_NATIONAL_FALLBACK)
+            rehab_index = dict(_NATIONAL_FALLBACK)
+    else:
+        build_index = dict(_NATIONAL_FALLBACK)
+        rehab_index = dict(_NATIONAL_FALLBACK)
+    build_factor = float(build_index.get("factor") or 1.0)
+    rehab_factor = float(rehab_index.get("factor") or 1.0)
+
     strategies = []
 
     # LAND / LOT / DEVELOPMENT
@@ -33,6 +85,7 @@ def generate_deal_architect_strategies(payload):
             "name": "Single-Family Build",
             "tag": "Lower complexity",
             "description": "A simpler ground-up strategy with a faster path to concepting, pricing, and funding.",
+            "purchase_price": 0,
             "build_cost": 425000,
             "arv": 690000,
             "profit": 265000,
@@ -48,6 +101,7 @@ def generate_deal_architect_strategies(payload):
             "name": "Duplex Development",
             "tag": "Income-focused",
             "description": "A strong option when zoning and lot shape support 2 units and higher total value creation.",
+            "purchase_price": 0,
             "build_cost": 560000,
             "arv": 860000,
             "profit": 300000,
@@ -63,6 +117,7 @@ def generate_deal_architect_strategies(payload):
             "name": "Townhome / Small Development Concept",
             "tag": "Higher upside",
             "description": "A more aggressive approach for parcels with stronger zoning flexibility and exit potential.",
+            "purchase_price": 0,
             "build_cost": 890000,
             "arv": 1325000,
             "profit": 435000,
@@ -86,6 +141,7 @@ def generate_deal_architect_strategies(payload):
             "name": "Value-Add Flip",
             "tag": "Fastest reposition",
             "description": "Best when the property has clear cosmetic or layout upside and a strong resale ceiling.",
+            "purchase_price": 200000,
             "build_cost": 85000,
             "arv": 355000,
             "profit": 70000,
@@ -101,6 +157,7 @@ def generate_deal_architect_strategies(payload):
             "name": "BRRRR / Rental Hold",
             "tag": "Cash-flow path",
             "description": "A better fit when the area supports rents, moderate rehab, and long-term hold performance.",
+            "purchase_price": 203000,
             "build_cost": 65000,
             "arv": 320000,
             "profit": 52000,
@@ -116,6 +173,11 @@ def generate_deal_architect_strategies(payload):
             "name": "Tear-Down + New Build",
             "tag": "Highest change",
             "description": "Worth comparing when the existing structure limits upside and the lot supports a stronger new product.",
+            # Tear-down targets are typically acquired cheap (land value +
+            # minus demo cost). 100K keeps the strategy an existing-house
+            # play (not a land-only play) while producing a realistic
+            # profit/ROI off the original hardcoded build_cost and arv.
+            "purchase_price": 100000,
             "build_cost": 490000,
             "arv": 760000,
             "profit": 270000,
@@ -149,13 +211,84 @@ def generate_deal_architect_strategies(payload):
     if notes:
         summary += " Ravlo should keep the notes in mind when refining the final recommendation."
 
+    # Apply the local cost index to every strategy's cost side. We multiply
+    # build_cost (construction/rehab spend) by the appropriate category
+    # factor, leave both ARV (market/comps figure) and purchase_price
+    # (existing asset price, not a construction-cost item) alone, and
+    # recompute profit + ROI off the adjusted total investment. Each
+    # strategy carries its own ``local_index`` so the UI can surface it.
+    #
+    # ``purchase_price`` is explicit on each strategy dict: 0 for
+    # ground-up builds where ``build_cost`` already represents the total
+    # investment, and non-zero for existing-house rehab strategies where
+    # ``build_cost`` is just the rehab spend.
+    # The "Tear-Down + New Build" strategy is a mixed scope: ~15% demo /
+    # site work (rehab-category labor) and ~85% ground-up construction
+    # (new_build-category). Using the pure new_build factor over-adjusts
+    # the demo side; using the pure rehab factor under-adjusts the build
+    # side. Blend 85/15 so the number tracks the actual spend profile.
+    _TEARDOWN_BUILD_WEIGHT = 0.85
     for strategy in strategies:
-        strategy["build_cost_label"] = _to_money(strategy["build_cost"])
-        strategy["arv_label"] = _to_money(strategy["arv"])
-        strategy["profit_label"] = _to_money(strategy["profit"])
+        is_build = strategy.get("recommended_workspace") == "build"
+        is_teardown = strategy.get("name") == "Tear-Down + New Build"
+        if is_teardown:
+            factor = (
+                _TEARDOWN_BUILD_WEIGHT * build_factor
+                + (1.0 - _TEARDOWN_BUILD_WEIGHT) * rehab_factor
+            )
+            # Surface the build index — it's the dominant component and
+            # matches what the UI already calls the strategy ("new build").
+            index_info = build_index
+        else:
+            factor = build_factor if is_build else rehab_factor
+            index_info = build_index if is_build else rehab_index
+
+        national_build_cost = _to_number(strategy.get("build_cost"), 0.0)
+        local_build_cost = national_build_cost * factor
+
+        arv = _to_number(strategy.get("arv"), 0.0)
+        purchase_price = _to_number(strategy.get("purchase_price"), 0.0)
+        total_investment = purchase_price + local_build_cost
+        profit = arv - total_investment
+        roi_pct = (profit / total_investment * 100.0) if total_investment else 0.0
+
+        strategy["national_build_cost"] = national_build_cost
+        strategy["build_cost"] = local_build_cost
+        strategy["total_investment"] = total_investment
+        strategy["profit"] = profit
+        strategy["roi"] = f"{roi_pct:.0f}%"
+
+        strategy["build_cost_label"]  = _to_money(local_build_cost)
+        strategy["arv_label"]         = _to_money(arv)
+        strategy["profit_label"]      = _to_money(profit)
+        strategy["local_factor"]      = round(factor, 3)
+        strategy["local_index"]       = index_info
+        strategy["local_index_label"] = index_info.get("signed_label")
+        strategy["local_index_detail"] = index_info.get("detail")
 
     return {
         "context_label": context_label,
         "summary": summary,
-        "strategies": strategies
+        "strategies": strategies,
+        "local_index": {
+            "build": build_index,
+            "rehab": rehab_index,
+        },
     }
+
+
+def _to_number(x, default=0.0):
+    """Local fallback for numeric coercion (matches rehab_service)."""
+    if x is None:
+        return default
+    if isinstance(x, (int, float)):
+        return float(x)
+    if isinstance(x, str):
+        s = x.strip().replace("$", "").replace(",", "")
+        if not s:
+            return default
+        try:
+            return float(s)
+        except ValueError:
+            return default
+    return default

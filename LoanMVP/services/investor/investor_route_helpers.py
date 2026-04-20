@@ -962,7 +962,12 @@ def build_exit_strategy_analysis(
 # BUDGET / LOAN SIZING
 # -------------------------------------------------------------------
 
-def _build_budget_seed_from_results(results_json: Dict[str, Any]) -> Dict[str, Any]:
+def _build_budget_seed_from_results(
+    results_json: Dict[str, Any],
+    *,
+    zip_code: str | None = None,
+    state: str | None = None,
+) -> Dict[str, Any]:
     results = results_json or {}
     workspace = results.get("workspace_analysis", {}) or {}
     comp_analysis = results.get("comp_analysis", {}) or {}
@@ -994,6 +999,20 @@ def _build_budget_seed_from_results(results_json: Dict[str, Any]) -> Dict[str, A
     total_project_cost = purchase_price + rehab_cost
     contingency = rehab_cost * 0.1 if rehab_cost > 0 else 0.0
 
+    local_cost_index: Dict[str, Any] = {}
+    try:
+        from LoanMVP.services.cost_index import describe_learned_index
+        scope = None
+        rehab_scope = rehab_analysis.get("scope") or workspace.get("rehab_scope")
+        if isinstance(rehab_scope, str):
+            scope = rehab_scope
+        local_cost_index = describe_learned_index(
+            zip_code=zip_code, state=state,
+            category="rehab", scope=scope,
+        ) or {}
+    except Exception:
+        local_cost_index = {}
+
     return {
         "purchase_price": purchase_price,
         "rehab_cost": rehab_cost,
@@ -1009,6 +1028,7 @@ def _build_budget_seed_from_results(results_json: Dict[str, Any]) -> Dict[str, A
         ),
         "property_classification": exit_analysis.get("property_classification"),
         "budget_line_items": rehab_analysis.get("line_items", {}),
+        "local_cost_index": local_cost_index,
     }
 
 

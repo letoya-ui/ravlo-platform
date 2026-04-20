@@ -9,6 +9,15 @@ Handles:
 - Material costs
 - Rehab notes
 """
+try:
+    from LoanMVP.services.cost_index import (
+        describe_learned_index,
+        get_learned_multiplier,
+    )
+except Exception:  # pragma: no cover - defensive: never break this module
+    describe_learned_index = None
+    get_learned_multiplier = None
+
 
 def _to_number(x, default=0.0):
     """Convert ints/floats and common numeric strings ('$250,000') to float."""
@@ -27,28 +36,59 @@ def _to_number(x, default=0.0):
     return default
 
 
-def estimate_rehab_cost(property_sqft, scope="medium", items=None):
+def estimate_rehab_cost(
+    property_sqft,
+    scope="medium",
+    items=None,
+    *,
+    zip_code=None,
+    state=None,
+):
+    """Estimate rehab cost for a property.
+
+    When ``zip_code`` / ``state`` are provided, every per-sqft rate and every
+    per-line-item cost is multiplied by the local cost index (RSMeans seed
+    blended with real ``CostObservation`` data for the ZIP3/state). When no
+    location is given, behaves exactly like the legacy national-average
+    estimator.
+    """
     base_costs = {"light": 15, "medium": 30, "heavy": 50}
     base = base_costs.get(scope, 30)
 
+    if describe_learned_index is not None:
+        try:
+            local = describe_learned_index(
+                zip_code=zip_code, state=state,
+                category="rehab", scope=scope,
+            )
+        except Exception:
+            local = {"factor": 1.0}
+    else:
+        local = {"factor": 1.0}
+    multiplier = float(local.get("factor") or 1.0)
+
     sqft = _to_number(property_sqft, 0.0)
-    base_total = sqft * base
+    local_rate = base * multiplier
+    base_total = sqft * local_rate
 
     breakdown = {
         "base_rehab": base_total,
         "items": {},
         "total": base_total,
-        "cost_per_sqft": base,   # per-sqft baseline rate
+        "cost_per_sqft": local_rate,        # per-sqft rate, locally adjusted
+        "national_cost_per_sqft": base,     # reference: flat national rate
         "scope": scope,
+        "local_factor": round(multiplier, 3),
+        "local_index":  local,              # full describe_learned_index() dict
     }
 
     default_items = {
-        "kitchen": {"light": 8000, "medium": 15000, "heavy": 25000},
-        "bathroom": {"light": 4000, "medium": 8000, "heavy": 15000},
-        "flooring": {"light": 3000, "medium": 6000, "heavy": 12000},
-        "paint": {"light": 2000, "medium": 4000, "heavy": 8000},
-        "roof": {"light": 3000, "medium": 7000, "heavy": 12000},
-        "hvac": {"light": 2000, "medium": 5000, "heavy": 9000},
+        "kitchen":  {"light": 8000, "medium": 15000, "heavy": 25000},
+        "bathroom": {"light": 4000, "medium":  8000, "heavy": 15000},
+        "flooring": {"light": 3000, "medium":  6000, "heavy": 12000},
+        "paint":    {"light": 2000, "medium":  4000, "heavy":  8000},
+        "roof":     {"light": 3000, "medium":  7000, "heavy": 12000},
+        "hvac":     {"light": 2000, "medium":  5000, "heavy":  9000},
     }
 
     total = base_total
@@ -56,9 +96,14 @@ def estimate_rehab_cost(property_sqft, scope="medium", items=None):
     if items:
         for key, level in items.items():
             if key in default_items and level:
-                cost = _to_number(default_items[key].get(level, 0), 0.0)
-                breakdown["items"][key] = {"level": level, "cost": cost}
-                total += cost
+                national_cost = _to_number(default_items[key].get(level, 0), 0.0)
+                local_cost = national_cost * multiplier
+                breakdown["items"][key] = {
+                    "level": level,
+                    "cost": local_cost,
+                    "national_cost": national_cost,
+                }
+                total += local_cost
 
     breakdown["total"] = total
     breakdown["cost_per_sqft"] = (total / sqft) if sqft else 0.0
@@ -74,7 +119,15 @@ def generate_rehab_risk_flags(results, comps):
         return flags
 
     total = _to_number(rehab.get("total", 0), 0.0)
+    # The cost_per_sqft on the breakdown is locally adjusted (base + line
+    # items blended), so in high-cost markets it will naturally exceed $60
+    # without being "unusual" for that market. For the unusual-spend flag we
+    # compare the *national-equivalent* rate (total divided by the local
+    # factor, or equivalently ``total / sqft / factor``) against the flat
+    # national threshold.
+    local_factor = _to_number(rehab.get("local_factor", 1.0), 1.0) or 1.0
     cpsf  = _to_number(rehab.get("cost_per_sqft", 0), 0.0)
+    national_cpsf_equiv = cpsf / local_factor if local_factor else cpsf
     scope = rehab.get("scope")
     items = rehab.get("items", {}) or {}
 
@@ -87,7 +140,7 @@ def generate_rehab_risk_flags(results, comps):
     if purchase_price and total > purchase_price * 0.5:
         flags.append("Rehab cost exceeds 50% of purchase price.")
 
-    if cpsf > 60:
+    if national_cpsf_equiv > 60:
         flags.append("Cost per sqft is unusually high.")
 
     heavy_items = [k for k, v in items.items() if isinstance(v, dict) and v.get("level") == "heavy"]
@@ -194,7 +247,12 @@ def generate_rehab_notes(results, comps, strategy="flip"):
 
     if strategy == "flip":
         notes.append("For flips, prioritize kitchens, bathrooms, flooring.")
-        if cpsf > 50:
+        # Same normalization as generate_rehab_risk_flags: compare the
+        # national-equivalent rate to the flat national $50 threshold so a
+        # Manhattan medium rehab (1.4x) doesn't trip it at normal market rate.
+        local_factor = _to_number(rehab.get("local_factor", 1.0), 1.0) or 1.0
+        national_cpsf_equiv = cpsf / local_factor if local_factor else cpsf
+        if national_cpsf_equiv > 50:
             notes.append("High cost per sqft — ensure ARV supports it.")
 
     if strategy == "rental":
@@ -211,9 +269,12 @@ def generate_rehab_notes(results, comps, strategy="flip"):
 
 # --- Optimization Engines ---
 
-def optimize_rehab_to_budget(target_budget, items, scope, sqft):
+def optimize_rehab_to_budget(target_budget, items, scope, sqft, *, zip_code=None, state=None):
     """
     Downgrades items until total cost fits target budget.
+
+    Optimization runs on the same locally-adjusted cost basis as the primary
+    estimate so the optimizer target and the estimator output agree.
     """
     optimized = (items or {}).copy()
     current_scope = scope
@@ -221,7 +282,10 @@ def optimize_rehab_to_budget(target_budget, items, scope, sqft):
     sqft = _to_number(sqft, 0.0)
 
     def calc():
-        rehab = estimate_rehab_cost(sqft, current_scope, optimized)
+        rehab = estimate_rehab_cost(
+            sqft, current_scope, optimized,
+            zip_code=zip_code, state=state,
+        )
         return _to_number(rehab["total"], 0.0), rehab
 
     total, rehab_data = calc()
@@ -258,7 +322,7 @@ def optimize_rehab_to_budget(target_budget, items, scope, sqft):
     return optimized, rehab_data
 
 
-def optimize_rehab_for_roi(items, scope, sqft, comps):
+def optimize_rehab_for_roi(items, scope, sqft, comps, *, zip_code=None, state=None):
     optimized = (items or {}).copy()
     current_scope = scope
     sqft = _to_number(sqft, 0.0)
@@ -278,11 +342,14 @@ def optimize_rehab_for_roi(items, scope, sqft, comps):
         optimized["kitchen"] = "heavy"
         optimized["bathroom"] = "heavy"
 
-    rehab = estimate_rehab_cost(sqft, current_scope, optimized)
+    rehab = estimate_rehab_cost(
+        sqft, current_scope, optimized,
+        zip_code=zip_code, state=state,
+    )
     return optimized, rehab
 
 
-def optimize_rehab_for_timeline(items, scope, sqft):
+def optimize_rehab_for_timeline(items, scope, sqft, *, zip_code=None, state=None):
     optimized = (items or {}).copy()
     current_scope = "light"
     sqft = _to_number(sqft, 0.0)
@@ -293,11 +360,14 @@ def optimize_rehab_for_timeline(items, scope, sqft):
     for key in ["roof", "hvac"]:
         optimized[key] = ""
 
-    rehab = estimate_rehab_cost(sqft, current_scope, optimized)
+    rehab = estimate_rehab_cost(
+        sqft, current_scope, optimized,
+        zip_code=zip_code, state=state,
+    )
     return optimized, rehab
 
 
-def optimize_rehab_for_arv(items, scope, sqft):
+def optimize_rehab_for_arv(items, scope, sqft, *, zip_code=None, state=None):
     optimized = (items or {}).copy()
     current_scope = "heavy"
     sqft = _to_number(sqft, 0.0)
@@ -307,5 +377,8 @@ def optimize_rehab_for_arv(items, scope, sqft):
     optimized["flooring"] = "medium"
     optimized["paint"] = "medium"
 
-    rehab = estimate_rehab_cost(sqft, current_scope, optimized)
+    rehab = estimate_rehab_cost(
+        sqft, current_scope, optimized,
+        zip_code=zip_code, state=state,
+    )
     return optimized, rehab

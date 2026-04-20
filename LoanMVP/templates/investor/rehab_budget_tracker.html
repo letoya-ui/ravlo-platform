@@ -275,6 +275,22 @@ Track projected vs actual renovation spend for this deal.
         <div class="stat-sub">Budget still available</div>
       </div>
     </div>
+
+    {% if local_cost_index and local_cost_index.get('factor') %}
+    {% set _lci = local_cost_index %}
+    {% set _pct = ((_lci.factor - 1.0) * 100) | round(0, 'common') | int %}
+    <div class="stat-card" style="margin-top:14px;background:rgba(122,184,255,.06);border:1px solid rgba(122,184,255,.18);"
+         title="Regional construction-cost multiplier applied to this deal's rehab math. Seeded from RSMeans and refined by real investor + contractor observations over time.">
+      <div class="stat-label">Local Cost Index</div>
+      <div class="stat-value" style="font-size:1.2rem;">
+        {{ _lci.label or 'Regional' }}
+        <span style="color:{% if _pct > 0 %}#ffb37a{% elif _pct < 0 %}#9af2c3{% else %}inherit{% endif %};font-weight:700;">
+          ({% if _pct > 0 %}+{% endif %}{{ _pct }}% vs. national)
+        </span>
+      </div>
+      <div class="stat-sub">{{ _lci.get('detail') or 'Regional cost index' }}</div>
+    </div>
+    {% endif %}
   </section>
 
   <section class="budget-grid">
