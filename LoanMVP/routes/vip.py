@@ -2676,6 +2676,16 @@ def _parse_float(value):
         return None
 
 
+def _parse_int(value):
+    """Coerce form input to int, returning None on empty/invalid input."""
+    if value in (None, ""):
+        return None
+    try:
+        return int(float(value))
+    except (TypeError, ValueError):
+        return None
+
+
 @vip_bp.get("/contractor/jobs")
 @role_required("partner_group", "admin")
 def contractor_jobs():
@@ -2984,7 +2994,7 @@ def contractor_change_order_new(job_id):
         title          = title[:200],
         description    = (request.form.get("description") or "").strip() or None,
         added_cost     = _parse_float(request.form.get("added_cost")) or 0.0,
-        added_days     = int(request.form.get("added_days") or 0),
+        added_days     = _parse_int(request.form.get("added_days")) or 0,
         status         = "pending",
         requested_at   = datetime.utcnow(),
     )
@@ -3233,8 +3243,8 @@ def lender_rate_sheet_new():
         loan_type      = (request.form.get("loan_type") or "").strip()[:100] or None,
         base_rate      = _parse_float(request.form.get("base_rate")),
         max_ltv        = _parse_float(request.form.get("max_ltv")),
-        min_credit     = int(request.form.get("min_credit") or 0) or None,
-        term_months    = int(request.form.get("term_months") or 0) or None,
+        min_credit     = _parse_int(request.form.get("min_credit")),
+        term_months    = _parse_int(request.form.get("term_months")),
         points         = _parse_float(request.form.get("points")),
         fees_text      = (request.form.get("fees_text") or "").strip() or None,
         notes          = (request.form.get("notes") or "").strip() or None,
