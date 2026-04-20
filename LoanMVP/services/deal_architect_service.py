@@ -47,6 +47,17 @@ def generate_deal_architect_strategies(payload):
     # get the rehab category. Seed-only until the observation table fills in.
     # describe_learned_index may be None if cost_index failed to import at
     # module load time; in that case we degrade to national averages.
+    # Fallback must match the shape downstream code (and templates) expects
+    # from describe_learned_index so ``index_info.get("signed_label")`` and
+    # ``index_info.get("detail")`` never surface literal 'None' in the UI.
+    _NATIONAL_FALLBACK = {
+        "factor": 1.0,
+        "label": "U.S. average",
+        "delta_pct": 0,
+        "signed_label": "at national average",
+        "detail": "RSMeans seed only",
+        "source": "baseline",
+    }
     if describe_learned_index is not None:
         try:
             build_index = describe_learned_index(
@@ -58,11 +69,11 @@ def generate_deal_architect_strategies(payload):
                 category="rehab", scope="medium",
             )
         except Exception:
-            build_index = {"factor": 1.0}
-            rehab_index = {"factor": 1.0}
+            build_index = dict(_NATIONAL_FALLBACK)
+            rehab_index = dict(_NATIONAL_FALLBACK)
     else:
-        build_index = {"factor": 1.0}
-        rehab_index = {"factor": 1.0}
+        build_index = dict(_NATIONAL_FALLBACK)
+        rehab_index = dict(_NATIONAL_FALLBACK)
     build_factor = float(build_index.get("factor") or 1.0)
     rehab_factor = float(rehab_index.get("factor") or 1.0)
 

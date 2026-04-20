@@ -542,7 +542,7 @@ def apply_multiplier_to_engine_response(
     through unchanged. Returns the same object mutated in-place for dicts
     and lists, so callers don't need to rebind.
     """
-    if factor is None or factor == 1.0:
+    if factor is None:
         return response
     try:
         factor = float(factor)
@@ -552,6 +552,13 @@ def apply_multiplier_to_engine_response(
     # only come from corrupted data; leave the response untouched rather than
     # silently destroying its numbers.
     if factor <= 0:
+        return response
+    # Factor of 1.0 is a no-op on values but still needs to mark the response
+    # as localised so a later pass (retry, middleware, different code path
+    # that computed a non-1.0 factor) cannot silently multiply twice.
+    if factor == 1.0:
+        if isinstance(response, dict):
+            response["costs_localized"] = True
         return response
     if not _should_apply_multiplier(response, factor):
         return response
