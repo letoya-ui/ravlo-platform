@@ -163,7 +163,11 @@ class VIPIncome(VIPBaseModel):
     description = Column(String(255), nullable=True)
     amount      = Column(Integer,     nullable=False)
     income_date = Column(DateTime,    nullable=True)
-    status      = Column(String(50),  nullable=False, default="pending")
+    # Default "received" to match the Alembic server_default and schema-compat
+    # path, and the finances page's COALESCE(status, 'received') fallback.
+    # Pending rows are created explicitly (projected commissions, copilot
+    # add_income without a parsed amount).
+    status      = Column(String(50),  nullable=False, default="received")
     notes       = Column(Text,        nullable=True)
 
     # market column for per-market finance split (Frank dashboard)

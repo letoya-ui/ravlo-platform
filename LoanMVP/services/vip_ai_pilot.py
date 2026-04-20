@@ -119,20 +119,29 @@ def parse_vip_command(command: str) -> dict:
             "address":         _extract_address(body),
         }
 
-    if any(k in text for k in ("commission", "closing", "received", "got paid", "income", "earned")):
-        return {
-            "intent":          "add_income",
-            "suggestion_type": "income",
-            "title":           "Log Income",
-            "body":            body,
-            "amount":          _extract_amount(body),
-        }
-
-    if any(k in text for k in ("expense", "paid for", "i paid", "toll", "mile", "gas", "lunch", "meal", "receipt")):
+    # Expense intent is checked BEFORE income because "I paid $X in closing
+    # costs" should be an expense, not income (the income block uses a bare
+    # 'closing' keyword that would otherwise swallow expense phrases).
+    if any(k in text for k in (
+        "expense", "paid for", "i paid", "closing cost", "closing costs",
+        "toll", "mile", "gas", "lunch", "meal", "receipt",
+    )):
         return {
             "intent":          "add_expense",
             "suggestion_type": "expense",
             "title":           "Log Expense",
+            "body":            body,
+            "amount":          _extract_amount(body),
+        }
+
+    if any(k in text for k in (
+        "commission", "at closing", "closing commission",
+        "received", "got paid", "income", "earned",
+    )):
+        return {
+            "intent":          "add_income",
+            "suggestion_type": "income",
+            "title":           "Log Income",
             "body":            body,
             "amount":          _extract_amount(body),
         }
