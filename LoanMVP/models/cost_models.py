@@ -35,10 +35,15 @@ SCOPE_LUXURY = "luxury"
 
 # Source trust weights — baseline confidence when no other signal is present.
 SOURCE_CONFIDENCE = {
-    "admin_seed":     0.40,
-    "investor_input": 0.50,
-    "contractor_bid": 0.70,
-    "closed_deal":    1.00,
+    "admin_seed":       0.40,
+    # Cost came from an engine-derived ``results_json`` (Deal Architect
+    # analysis output). Lower than ``investor_input`` because the number
+    # may already carry an applied local-cost factor, so the observation
+    # is partially circular. Weighted low so it can't dominate the blend.
+    "engine_estimate":  0.25,
+    "investor_input":   0.50,
+    "contractor_bid":   0.70,
+    "closed_deal":      1.00,
 }
 
 

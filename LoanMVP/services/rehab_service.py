@@ -247,7 +247,12 @@ def generate_rehab_notes(results, comps, strategy="flip"):
 
     if strategy == "flip":
         notes.append("For flips, prioritize kitchens, bathrooms, flooring.")
-        if cpsf > 50:
+        # Same normalization as generate_rehab_risk_flags: compare the
+        # national-equivalent rate to the flat national $50 threshold so a
+        # Manhattan medium rehab (1.4x) doesn't trip it at normal market rate.
+        local_factor = _to_number(rehab.get("local_factor", 1.0), 1.0) or 1.0
+        national_cpsf_equiv = cpsf / local_factor if local_factor else cpsf
+        if national_cpsf_equiv > 50:
             notes.append("High cost per sqft — ensure ARV supports it.")
 
     if strategy == "rental":
