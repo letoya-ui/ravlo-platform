@@ -64,6 +64,7 @@ def generate_deal_architect_strategies(payload):
             "name": "Single-Family Build",
             "tag": "Lower complexity",
             "description": "A simpler ground-up strategy with a faster path to concepting, pricing, and funding.",
+            "purchase_price": 0,
             "build_cost": 425000,
             "arv": 690000,
             "profit": 265000,
@@ -79,6 +80,7 @@ def generate_deal_architect_strategies(payload):
             "name": "Duplex Development",
             "tag": "Income-focused",
             "description": "A strong option when zoning and lot shape support 2 units and higher total value creation.",
+            "purchase_price": 0,
             "build_cost": 560000,
             "arv": 860000,
             "profit": 300000,
@@ -94,6 +96,7 @@ def generate_deal_architect_strategies(payload):
             "name": "Townhome / Small Development Concept",
             "tag": "Higher upside",
             "description": "A more aggressive approach for parcels with stronger zoning flexibility and exit potential.",
+            "purchase_price": 0,
             "build_cost": 890000,
             "arv": 1325000,
             "profit": 435000,
@@ -117,6 +120,7 @@ def generate_deal_architect_strategies(payload):
             "name": "Value-Add Flip",
             "tag": "Fastest reposition",
             "description": "Best when the property has clear cosmetic or layout upside and a strong resale ceiling.",
+            "purchase_price": 200000,
             "build_cost": 85000,
             "arv": 355000,
             "profit": 70000,
@@ -132,6 +136,7 @@ def generate_deal_architect_strategies(payload):
             "name": "BRRRR / Rental Hold",
             "tag": "Cash-flow path",
             "description": "A better fit when the area supports rents, moderate rehab, and long-term hold performance.",
+            "purchase_price": 203000,
             "build_cost": 65000,
             "arv": 320000,
             "profit": 52000,
@@ -147,6 +152,7 @@ def generate_deal_architect_strategies(payload):
             "name": "Tear-Down + New Build",
             "tag": "Highest change",
             "description": "Worth comparing when the existing structure limits upside and the lot supports a stronger new product.",
+            "purchase_price": 0,
             "build_cost": 490000,
             "arv": 760000,
             "profit": 270000,
@@ -181,10 +187,16 @@ def generate_deal_architect_strategies(payload):
         summary += " Ravlo should keep the notes in mind when refining the final recommendation."
 
     # Apply the local cost index to every strategy's cost side. We multiply
-    # build_cost (and rehab_cost if present) by the appropriate category
-    # factor, leave ARV alone (ARV is a market/comps figure, not a cost),
-    # and recompute profit + ROI off the adjusted numbers. Each strategy
-    # carries its own ``local_index`` so the UI can surface the factor.
+    # build_cost (construction/rehab spend) by the appropriate category
+    # factor, leave both ARV (market/comps figure) and purchase_price
+    # (existing asset price, not a construction-cost item) alone, and
+    # recompute profit + ROI off the adjusted total investment. Each
+    # strategy carries its own ``local_index`` so the UI can surface it.
+    #
+    # ``purchase_price`` is explicit on each strategy dict: 0 for
+    # ground-up builds where ``build_cost`` already represents the total
+    # investment, and non-zero for existing-house rehab strategies where
+    # ``build_cost`` is just the rehab spend.
     for strategy in strategies:
         is_build = strategy.get("recommended_workspace") == "build"
         factor = build_factor if is_build else rehab_factor
@@ -194,11 +206,14 @@ def generate_deal_architect_strategies(payload):
         local_build_cost = national_build_cost * factor
 
         arv = _to_number(strategy.get("arv"), 0.0)
-        profit = arv - local_build_cost
-        roi_pct = (profit / local_build_cost * 100.0) if local_build_cost else 0.0
+        purchase_price = _to_number(strategy.get("purchase_price"), 0.0)
+        total_investment = purchase_price + local_build_cost
+        profit = arv - total_investment
+        roi_pct = (profit / total_investment * 100.0) if total_investment else 0.0
 
         strategy["national_build_cost"] = national_build_cost
         strategy["build_cost"] = local_build_cost
+        strategy["total_investment"] = total_investment
         strategy["profit"] = profit
         strategy["roi"] = f"{roi_pct:.0f}%"
 
