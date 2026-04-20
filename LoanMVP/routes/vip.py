@@ -2071,6 +2071,10 @@ def _realtor_owns_lead(profile, lead) -> bool:
         member = VIPTeamMember.query.get(lead.assigned_member_id)
         if member and member.vip_profile_id == profile.id:
             return True
+        # Lead is routed to a teammate on a different realtor's roster —
+        # deny regardless of this realtor's market config.
+        if member:
+            return False
 
     user_markets = get_user_markets(profile)
     if not user_markets:

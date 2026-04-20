@@ -20,26 +20,69 @@ def _strip_wake_word(text: str) -> str:
     return text
 
 
+_MONEY_RE          = re.compile(r"\$\s*([0-9][0-9,]*(?:\.[0-9]+)?)")
+_AMOUNT_KEYWORD_RE = re.compile(
+    r"(?:for|price(?:\s+of)?|at|worth|amount|total|of)\s+\$?\s*([0-9][0-9,]*(?:\.[0-9]+)?)",
+    flags=re.IGNORECASE,
+)
+_BARE_NUMBER_RE    = re.compile(r"(?<![\w-])([0-9][0-9,]*(?:\.[0-9]+)?)(?![\w-])")
+
+
 def _extract_amount(text: str):
-    m = re.search(r"\$?\s*([0-9][0-9,]*(?:\.[0-9]+)?)", text)
-    if not m:
+    """Prefer $-prefixed or keyword-prefixed amounts; fall back to a bare
+    number only when nothing that *looks* like money is present. This stops
+    street numbers like ``123 Main St for $425,000`` from being interpreted
+    as the price."""
+    if not text:
         return None
-    try:
-        return int(round(float(m.group(1).replace(",", ""))))
-    except (TypeError, ValueError):
-        return None
+
+    for regex in (_MONEY_RE, _AMOUNT_KEYWORD_RE):
+        m = regex.search(text)
+        if m:
+            try:
+                return int(round(float(m.group(1).replace(",", ""))))
+            except (TypeError, ValueError):
+                continue
+
+    # Fall back to a bare number, but skip numbers that look like street
+    # numbers (``123 Main``) so addresses don't get interpreted as prices.
+    for m in _BARE_NUMBER_RE.finditer(text):
+        tail = text[m.end(): m.end() + 24]
+        if re.match(r"\s+[A-Z][A-Za-z]", tail):
+            continue
+        try:
+            return int(round(float(m.group(1).replace(",", ""))))
+        except (TypeError, ValueError):
+            continue
+    return None
+
+
+_ADDRESS_TRAILING_WORDS = {"for", "at", "on", "price", "worth", "amount", "total", "of"}
+
+
+def _clean_address(raw: str) -> str:
+    cleaned = raw.strip().rstrip(".").rstrip(",").strip()
+    # Drop trailing words like "... Main St for" (the preposition was swept
+    # up by the greedy character class).
+    tokens = cleaned.split()
+    while tokens and tokens[-1].lower() in _ADDRESS_TRAILING_WORDS:
+        tokens.pop()
+    return " ".join(tokens)
 
 
 def _extract_address(text: str):
     m = re.search(
-        r"(?:at|on|for)\s+(\d+\s+[A-Za-z0-9 '.,-]{2,80})",
+        r"(?:at|on|for)\s+(\d+\s+[A-Za-z0-9 '.,-]{2,80}?)(?=\s+(?:for|price|worth|amount|at|on)\b|\s*\$|[.;\n]|$)",
         text, flags=re.IGNORECASE,
     )
     if m:
-        return m.group(1).strip().rstrip(".")
+        return _clean_address(m.group(1))
+    m = re.search(r"(\d+\s+[A-Za-z][A-Za-z0-9 '.,-]{2,80}?)(?=\s+(?:for|price|worth|amount|at|on)\b|\s*\$|[.;\n]|$)", text)
+    if m:
+        return _clean_address(m.group(1))
     m = re.search(r"(\d+\s+[A-Za-z][A-Za-z0-9 '.,-]{2,80})", text)
     if m:
-        return m.group(1).strip().rstrip(".")
+        return _clean_address(m.group(1))
     return None
 
 
