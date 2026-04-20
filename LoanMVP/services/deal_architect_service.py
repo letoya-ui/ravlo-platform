@@ -222,10 +222,26 @@ def generate_deal_architect_strategies(payload):
     # ground-up builds where ``build_cost`` already represents the total
     # investment, and non-zero for existing-house rehab strategies where
     # ``build_cost`` is just the rehab spend.
+    # The "Tear-Down + New Build" strategy is a mixed scope: ~15% demo /
+    # site work (rehab-category labor) and ~85% ground-up construction
+    # (new_build-category). Using the pure new_build factor over-adjusts
+    # the demo side; using the pure rehab factor under-adjusts the build
+    # side. Blend 85/15 so the number tracks the actual spend profile.
+    _TEARDOWN_BUILD_WEIGHT = 0.85
     for strategy in strategies:
         is_build = strategy.get("recommended_workspace") == "build"
-        factor = build_factor if is_build else rehab_factor
-        index_info = build_index if is_build else rehab_index
+        is_teardown = strategy.get("name") == "Tear-Down + New Build"
+        if is_teardown:
+            factor = (
+                _TEARDOWN_BUILD_WEIGHT * build_factor
+                + (1.0 - _TEARDOWN_BUILD_WEIGHT) * rehab_factor
+            )
+            # Surface the build index — it's the dominant component and
+            # matches what the UI already calls the strategy ("new build").
+            index_info = build_index
+        else:
+            factor = build_factor if is_build else rehab_factor
+            index_info = build_index if is_build else rehab_index
 
         national_build_cost = _to_number(strategy.get("build_cost"), 0.0)
         local_build_cost = national_build_cost * factor
