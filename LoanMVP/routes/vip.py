@@ -1,11 +1,13 @@
 # LoanMVP/routes/vip.py
 import json
-from datetime import datetime, timedelta
+import os
+from datetime import datetime, timedelta, date
 from flask import (
     Blueprint, render_template, request, redirect,
     url_for, flash, jsonify, session, current_app,
 )
 from flask_login import current_user
+from werkzeug.utils import secure_filename
 
 # VIP tiers that unlock the Realtor VIP Workspace.
 # Keep tier comparisons case-insensitive.
@@ -43,6 +45,15 @@ from LoanMVP.models.partner_models import (
     PartnerConnectionRequest,
     PartnerProposal,
     PartnerJob,
+)
+
+# ── Contractor / Lender VIP workspace models ─────────────────────────────────
+from LoanMVP.models.contractor_models import (
+    ContractorJob,
+    ContractorBid,
+    ContractorChangeOrder,
+    ContractorJobPhoto,
+    LenderRateSheet,
 )
 
 # ── Lending models ────────────────────────────────────────────────────────────
@@ -776,13 +787,47 @@ def contractor_dashboard():
     profile = get_or_create_vip_profile()
     partner = getattr(current_user, "partner_profile", None)
 
+    # ── Contractor-owned jobs / bids / change orders ─────────────────────────
+    my_jobs = (
+        ContractorJob.query
+        .filter_by(vip_profile_id=profile.id)
+        .order_by(ContractorJob.start_date.asc().nullslast(),
+                  ContractorJob.created_at.desc())
+        .all()
+    )
+
+    todays = date.today()
+
+    def _is_today(j):
+        return j.start_date == todays or (
+            j.status == "in_progress"
+            and (j.end_date is None or j.end_date >= todays)
+        )
+
+    todays_jobs   = [j for j in my_jobs if _is_today(j)]
+    scheduled     = [j for j in my_jobs if j.status == "scheduled"]
+    in_progress   = [j for j in my_jobs if j.status == "in_progress"]
+    completed     = [j for j in my_jobs if j.status == "completed"]
+
+    my_bids = (
+        ContractorBid.query
+        .filter_by(vip_profile_id=profile.id)
+        .order_by(ContractorBid.created_at.desc())
+        .limit(20).all()
+    )
+    open_bids = [b for b in my_bids if b.status in ("draft", "sent")]
+
+    pending_changes = (
+        ContractorChangeOrder.query
+        .filter_by(vip_profile_id=profile.id, status="pending")
+        .order_by(ContractorChangeOrder.requested_at.desc())
+        .limit(10).all()
+    )
+
+    # ── Investor-initiated work (kept for backwards compat) ──────────────────
     requests_with_context = []
-    active_jobs = []
-    stats = {
-        "open_requests":     0,
-        "active_jobs":       0,
-        "completed_jobs":    0,
-        "total_volume":      0.0,
+    partner_jobs          = []
+    legacy_stats = {
         "ai_estimate_total": 0.0,
         "contractor_total":  0.0,
     }
@@ -791,18 +836,17 @@ def contractor_dashboard():
         raw_requests = (
             PartnerConnectionRequest.query
             .filter_by(partner_id=partner.id)
-            .filter(PartnerConnectionRequest.status.in_(["pending", "accepted", "awaiting_match"]))
+            .filter(PartnerConnectionRequest.status.in_(
+                ["pending", "accepted", "awaiting_match"]
+            ))
             .order_by(PartnerConnectionRequest.created_at.desc())
             .limit(20).all()
         )
-
         for req in raw_requests:
             requests_with_context.append({
                 "request": req,
                 "context": _build_request_deal_context(req),
             })
-
-        stats["open_requests"] = len(requests_with_context)
 
         raw_jobs = (
             PartnerJob.query
@@ -810,10 +854,14 @@ def contractor_dashboard():
             .order_by(PartnerJob.created_at.desc())
             .limit(20).all()
         )
-
         for job in raw_jobs:
-            job_data = {"job": job, "budget": None, "ai_estimate": None, "delta": None, "delta_pct": None}
-
+            job_data = {
+                "job":         job,
+                "budget":      None,
+                "ai_estimate": None,
+                "delta":       None,
+                "delta_pct":   None,
+            }
             budget = None
             if job.investor_profile_id:
                 budget = (
@@ -822,7 +870,6 @@ def contractor_dashboard():
                     .order_by(ProjectBudget.updated_at.desc())
                     .first()
                 )
-
             if budget:
                 job_data["budget"] = budget
                 deal = None
@@ -830,7 +877,6 @@ def contractor_dashboard():
                     deal = Deal.query.get(job.deal_id)
                 elif budget.deal_id:
                     deal = Deal.query.get(budget.deal_id)
-
                 if deal and deal.rehab_cost:
                     ai_est  = float(deal.rehab_cost or 0)
                     co_cost = float(budget.total_cost or 0)
@@ -840,14 +886,56 @@ def contractor_dashboard():
                         round(((co_cost - ai_est) / ai_est) * 100, 1)
                         if ai_est > 0 else None
                     )
+            partner_jobs.append(job_data)
 
-            active_jobs.append(job_data)
+        legacy_stats["ai_estimate_total"] = sum(
+            j["ai_estimate"] for j in partner_jobs if j["ai_estimate"]
+        )
+        legacy_stats["contractor_total"] = sum(
+            float(j["budget"].total_cost or 0)
+            for j in partner_jobs if j["budget"]
+        )
 
-        stats["active_jobs"]       = sum(1 for j in active_jobs if j["job"].status in ["Open", "in_progress"])
-        stats["completed_jobs"]    = sum(1 for j in active_jobs if j["job"].status == "completed")
-        stats["total_volume"]      = sum(float(j["budget"].total_cost or 0) for j in active_jobs if j["budget"] and j["job"].status == "completed")
-        stats["ai_estimate_total"] = sum(j["ai_estimate"] for j in active_jobs if j["ai_estimate"])
-        stats["contractor_total"]  = sum(float(j["budget"].total_cost or 0) for j in active_jobs if j["budget"])
+    total_volume = sum(
+        float(j.agreed_price or 0) for j in completed
+    )
+
+    stats = {
+        "open_requests":     len(requests_with_context),
+        "todays_jobs":       len(todays_jobs),
+        "active_jobs":       len(in_progress) + len(scheduled),
+        "completed_jobs":    len(completed),
+        "open_bids":         len(open_bids),
+        "pending_changes":   len(pending_changes),
+        "total_volume":      total_volume,
+        "ai_estimate_total": legacy_stats["ai_estimate_total"],
+        "contractor_total":  legacy_stats["contractor_total"],
+    }
+
+    # ── Finance snapshot (reuse VIPIncome / VIPExpense) ──────────────────────
+    all_income = (
+        VIPIncome.query
+        .filter_by(vip_profile_id=profile.id).all()
+    )
+    all_expenses = (
+        VIPExpense.query
+        .filter_by(vip_profile_id=profile.id).all()
+    )
+    received = sum(
+        (i.amount or 0) for i in all_income
+        if (i.status or "received") == "received"
+    )
+    pending = sum(
+        (i.amount or 0) for i in all_income
+        if (i.status or "received") == "pending"
+    )
+    total_expenses = sum((e.amount or 0) for e in all_expenses)
+    finances = {
+        "received": received,
+        "pending":  pending,
+        "expenses": total_expenses,
+        "net":      received - total_expenses,
+    }
 
     copilot_suggestions = (
         VIPAssistantSuggestion.query
@@ -870,10 +958,18 @@ def contractor_dashboard():
         vip_profile           = profile,
         modules               = get_enabled_modules(profile),
         header_name           = get_dashboard_name(profile),
+        todays_jobs           = todays_jobs,
+        scheduled_jobs        = scheduled,
+        active_jobs           = in_progress,
+        completed_jobs        = completed[:10],
+        my_bids               = my_bids,
+        open_bids             = open_bids,
+        pending_changes       = pending_changes,
         requests_with_context = requests_with_context,
-        active_jobs           = active_jobs,
+        partner_jobs          = partner_jobs,
         recent_proposals      = recent_proposals,
         stats                 = stats,
+        finances              = finances,
         copilot_suggestions   = copilot_suggestions,
         portal                = "vip",
         portal_name           = "VIP",
@@ -2010,6 +2106,89 @@ def _dispatch_copilot_intent(profile, result, command):
         summary = "Email draft saved to the copilot queue."
     elif intent == "draft_text":
         summary = "Text draft saved to the copilot queue."
+
+    # ── Contractor intents ────────────────────────────────────────────────
+    elif intent == "start_job":
+        address = result.get("address") or ""
+        price   = result.get("amount")
+        job = ContractorJob(
+            vip_profile_id = profile.id,
+            title          = (address or command[:80]) or "New job",
+            address        = address or None,
+            status         = "scheduled",
+            agreed_price   = price,
+            scope_text     = command,
+            source         = "copilot",
+        )
+        db.session.add(job)
+        db.session.commit()
+        summary = "Started job: " + job.title
+        action_url = url_for("vip.contractor_job_detail", job_id=job.id)
+        executed = True
+
+    elif intent == "send_bid":
+        address = result.get("address") or ""
+        price   = result.get("amount") or 0
+        bid = ContractorBid(
+            vip_profile_id = profile.id,
+            prospect_name  = (address or "New prospect")[:200],
+            address        = address or None,
+            total_cost     = price,
+            scope_text     = command,
+            status         = "draft",
+        )
+        db.session.add(bid)
+        db.session.commit()
+        summary = "Drafted bid" + ((" for $" + format(price, ",")) if price else "")
+        action_url = url_for("vip.contractor_bid_detail", bid_id=bid.id)
+        executed = True
+
+    elif intent == "change_order":
+        # Attach to most recent active job, else queue as a note.
+        job = (ContractorJob.query
+               .filter_by(vip_profile_id=profile.id)
+               .filter(ContractorJob.status.in_(("scheduled", "in_progress")))
+               .order_by(ContractorJob.updated_at.desc())
+               .first())
+        if job:
+            co = ContractorChangeOrder(
+                vip_profile_id = profile.id,
+                job_id         = job.id,
+                title          = command[:200],
+                description    = command,
+                added_cost     = result.get("amount"),
+                status         = "pending",
+            )
+            db.session.add(co)
+            db.session.commit()
+            summary = "Change order queued for " + job.title
+            action_url = url_for("vip.contractor_job_detail", job_id=job.id)
+            executed = True
+        else:
+            summary = "No active job found — open a job first."
+            action_url = url_for("vip.contractor_jobs")
+
+    elif intent == "job_photo":
+        summary = "Open the job and use the Before/After uploader."
+        last_job = (ContractorJob.query
+                    .filter_by(vip_profile_id=profile.id)
+                    .order_by(ContractorJob.updated_at.desc()).first())
+        action_url = (url_for("vip.contractor_job_detail", job_id=last_job.id)
+                      if last_job else url_for("vip.contractor_jobs"))
+
+    # ── Lender intents ────────────────────────────────────────────────────
+    elif intent == "rate_sheet":
+        summary = "Rate sheet opened. Add or toggle products."
+        action_url = url_for("vip.lender_rate_sheet")
+
+    elif intent == "loan_quote":
+        summary = "Quote engine opened."
+        action_url = url_for("loan_officer.quote_engine") if _has_endpoint("loan_officer.quote_engine") else url_for("vip.loan_officer_external_dashboard")
+
+    elif intent == "add_borrower":
+        summary = "Borrower intake opened."
+        action_url = url_for("loan_officer.borrower_intake") if _has_endpoint("loan_officer.borrower_intake") else url_for("vip.loan_officer_external_dashboard")
+
     else:
         summary = "Note saved."
 
@@ -2459,3 +2638,691 @@ def delete_annotation():
     db.session.commit()
 
     return jsonify({"status": "deleted"})
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# CONTRACTOR JOBS CRUD
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _contractor_job_or_404(job_id, profile):
+    """Return a contractor job this VIP profile owns, else None."""
+    return ContractorJob.query.filter_by(
+        id=job_id, vip_profile_id=profile.id
+    ).first()
+
+
+def _contractor_bid_or_404(bid_id, profile):
+    return ContractorBid.query.filter_by(
+        id=bid_id, vip_profile_id=profile.id
+    ).first()
+
+
+def _parse_date(value):
+    value = (value or "").strip()
+    if not value:
+        return None
+    try:
+        return datetime.strptime(value, "%Y-%m-%d").date()
+    except ValueError:
+        return None
+
+
+def _parse_float(value):
+    try:
+        if value in (None, ""):
+            return None
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
+@vip_bp.get("/contractor/jobs")
+@role_required("partner_group", "admin")
+def contractor_jobs():
+    profile = get_or_create_vip_profile()
+
+    status = (request.args.get("status") or "").strip().lower()
+    q = ContractorJob.query.filter_by(vip_profile_id=profile.id)
+    if status in {"scheduled", "in_progress", "blocked", "completed", "cancelled"}:
+        q = q.filter_by(status=status)
+
+    jobs = q.order_by(
+        ContractorJob.start_date.asc().nullslast(),
+        ContractorJob.created_at.desc(),
+    ).all()
+
+    return render_template(
+        "vip/contractor/jobs.html",
+        vip_profile   = profile,
+        modules       = get_enabled_modules(profile),
+        header_name   = get_dashboard_name(profile),
+        jobs          = jobs,
+        active_status = status or "all",
+        portal        = "vip",
+        portal_name   = "VIP",
+        portal_home   = url_for("vip.contractor_dashboard"),
+    )
+
+
+@vip_bp.route("/contractor/jobs/new", methods=["GET", "POST"])
+@role_required("partner_group", "admin")
+def contractor_job_new():
+    profile = get_or_create_vip_profile()
+
+    if request.method == "POST":
+        title = (request.form.get("title") or "").strip()
+        if not title:
+            flash("Job title is required.", "warning")
+            return redirect(url_for("vip.contractor_job_new"))
+
+        job = ContractorJob(
+            vip_profile_id = profile.id,
+            title          = title[:200],
+            client_name    = (request.form.get("client_name") or "").strip()[:200] or None,
+            client_email   = (request.form.get("client_email") or "").strip()[:255] or None,
+            client_phone   = (request.form.get("client_phone") or "").strip()[:50]  or None,
+            address        = (request.form.get("address") or "").strip()[:255] or None,
+            scope_text     = (request.form.get("scope_text") or "").strip() or None,
+            status         = (request.form.get("status") or "scheduled").strip() or "scheduled",
+            agreed_price   = _parse_float(request.form.get("agreed_price")),
+            start_date     = _parse_date(request.form.get("start_date")),
+            end_date       = _parse_date(request.form.get("end_date")),
+            source         = "direct",
+            notes          = (request.form.get("notes") or "").strip() or None,
+        )
+        db.session.add(job)
+        db.session.commit()
+        flash("Job created.", "success")
+        return redirect(url_for("vip.contractor_job_detail", job_id=job.id))
+
+    return render_template(
+        "vip/contractor/job_form.html",
+        vip_profile = profile,
+        modules     = get_enabled_modules(profile),
+        header_name = get_dashboard_name(profile),
+        job         = None,
+        portal      = "vip",
+        portal_name = "VIP",
+        portal_home = url_for("vip.contractor_dashboard"),
+    )
+
+
+@vip_bp.get("/contractor/jobs/<int:job_id>")
+@role_required("partner_group", "admin")
+def contractor_job_detail(job_id):
+    profile = get_or_create_vip_profile()
+    job = _contractor_job_or_404(job_id, profile)
+    if not job:
+        flash("Job not found.", "warning")
+        return redirect(url_for("vip.contractor_jobs"))
+
+    before_photos = [p for p in job.photos if p.phase == "before"]
+    during_photos = [p for p in job.photos if p.phase == "during"]
+    after_photos  = [p for p in job.photos if p.phase == "after"]
+
+    change_orders = (
+        ContractorChangeOrder.query
+        .filter_by(job_id=job.id, vip_profile_id=profile.id)
+        .order_by(ContractorChangeOrder.requested_at.desc())
+        .all()
+    )
+
+    total_added_cost = sum(
+        float(co.added_cost or 0) for co in change_orders
+        if co.status == "approved"
+    )
+
+    return render_template(
+        "vip/contractor/job_detail.html",
+        vip_profile      = profile,
+        modules          = get_enabled_modules(profile),
+        header_name      = get_dashboard_name(profile),
+        job              = job,
+        before_photos    = before_photos,
+        during_photos    = during_photos,
+        after_photos     = after_photos,
+        change_orders    = change_orders,
+        total_added_cost = total_added_cost,
+        portal           = "vip",
+        portal_name      = "VIP",
+        portal_home      = url_for("vip.contractor_dashboard"),
+    )
+
+
+@vip_bp.route("/contractor/jobs/<int:job_id>/edit", methods=["GET", "POST"])
+@role_required("partner_group", "admin")
+def contractor_job_edit(job_id):
+    profile = get_or_create_vip_profile()
+    job = _contractor_job_or_404(job_id, profile)
+    if not job:
+        flash("Job not found.", "warning")
+        return redirect(url_for("vip.contractor_jobs"))
+
+    if request.method == "POST":
+        job.title        = (request.form.get("title") or job.title).strip()[:200]
+        job.client_name  = (request.form.get("client_name") or "").strip()[:200] or None
+        job.client_email = (request.form.get("client_email") or "").strip()[:255] or None
+        job.client_phone = (request.form.get("client_phone") or "").strip()[:50]  or None
+        job.address      = (request.form.get("address") or "").strip()[:255] or None
+        job.scope_text   = (request.form.get("scope_text") or "").strip() or None
+        new_status       = (request.form.get("status") or job.status).strip()
+        if new_status in {"scheduled", "in_progress", "blocked", "completed", "cancelled"}:
+            if new_status == "completed" and job.status != "completed":
+                job.completed_at = datetime.utcnow()
+            job.status = new_status
+        job.agreed_price = _parse_float(request.form.get("agreed_price"))
+        job.start_date   = _parse_date(request.form.get("start_date"))
+        job.end_date     = _parse_date(request.form.get("end_date"))
+        job.notes        = (request.form.get("notes") or "").strip() or None
+        db.session.commit()
+        flash("Job updated.", "success")
+        return redirect(url_for("vip.contractor_job_detail", job_id=job.id))
+
+    return render_template(
+        "vip/contractor/job_form.html",
+        vip_profile = profile,
+        modules     = get_enabled_modules(profile),
+        header_name = get_dashboard_name(profile),
+        job         = job,
+        portal      = "vip",
+        portal_name = "VIP",
+        portal_home = url_for("vip.contractor_dashboard"),
+    )
+
+
+@vip_bp.post("/contractor/jobs/<int:job_id>/delete")
+@role_required("partner_group", "admin")
+def contractor_job_delete(job_id):
+    profile = get_or_create_vip_profile()
+    job = _contractor_job_or_404(job_id, profile)
+    if not job:
+        flash("Job not found.", "warning")
+        return redirect(url_for("vip.contractor_jobs"))
+    db.session.delete(job)
+    db.session.commit()
+    flash("Job deleted.", "success")
+    return redirect(url_for("vip.contractor_jobs"))
+
+
+# ─── Job photos (before / during / after) ────────────────────────────────────
+
+ALLOWED_PHOTO_EXT = {"png", "jpg", "jpeg", "gif", "webp", "heic"}
+
+
+def _allowed_photo(filename):
+    if not filename or "." not in filename:
+        return False
+    return filename.rsplit(".", 1)[1].lower() in ALLOWED_PHOTO_EXT
+
+
+@vip_bp.post("/contractor/jobs/<int:job_id>/photos")
+@role_required("partner_group", "admin")
+def contractor_job_photo_upload(job_id):
+    profile = get_or_create_vip_profile()
+    job = _contractor_job_or_404(job_id, profile)
+    if not job:
+        flash("Job not found.", "warning")
+        return redirect(url_for("vip.contractor_jobs"))
+
+    phase = (request.form.get("phase") or "before").strip().lower()
+    if phase not in {"before", "during", "after"}:
+        phase = "before"
+
+    file = request.files.get("file")
+    if not file or not file.filename:
+        flash("No photo uploaded.", "warning")
+        return redirect(url_for("vip.contractor_job_detail", job_id=job.id))
+
+    if not _allowed_photo(file.filename):
+        flash("Unsupported file type.", "warning")
+        return redirect(url_for("vip.contractor_job_detail", job_id=job.id))
+
+    safe = secure_filename(file.filename)
+    stamped = f"contractor_{profile.id}_{job.id}_{int(datetime.utcnow().timestamp())}_{safe}"
+    upload_dir = current_app.config.get("UPLOAD_FOLDER")
+    if not upload_dir:
+        flash("Upload folder not configured.", "danger")
+        return redirect(url_for("vip.contractor_job_detail", job_id=job.id))
+
+    os.makedirs(upload_dir, exist_ok=True)
+    save_path = os.path.join(upload_dir, stamped)
+    file.save(save_path)
+
+    db.session.add(ContractorJobPhoto(
+        vip_profile_id = profile.id,
+        job_id         = job.id,
+        phase          = phase,
+        file_path      = stamped,
+        caption        = (request.form.get("caption") or "").strip()[:500] or None,
+    ))
+    db.session.commit()
+    flash(f"{phase.title()} photo added.", "success")
+    return redirect(url_for("vip.contractor_job_detail", job_id=job.id))
+
+
+@vip_bp.post("/contractor/jobs/<int:job_id>/photos/<int:photo_id>/delete")
+@role_required("partner_group", "admin")
+def contractor_job_photo_delete(job_id, photo_id):
+    profile = get_or_create_vip_profile()
+    job = _contractor_job_or_404(job_id, profile)
+    if not job:
+        flash("Job not found.", "warning")
+        return redirect(url_for("vip.contractor_jobs"))
+
+    photo = ContractorJobPhoto.query.filter_by(
+        id=photo_id, job_id=job.id, vip_profile_id=profile.id
+    ).first()
+    if photo:
+        db.session.delete(photo)
+        db.session.commit()
+        flash("Photo removed.", "success")
+    return redirect(url_for("vip.contractor_job_detail", job_id=job.id))
+
+
+@vip_bp.get("/contractor/jobs/<int:job_id>/report")
+@role_required("partner_group", "admin")
+def contractor_job_report(job_id):
+    profile = get_or_create_vip_profile()
+    job = _contractor_job_or_404(job_id, profile)
+    if not job:
+        flash("Job not found.", "warning")
+        return redirect(url_for("vip.contractor_jobs"))
+
+    before = [p for p in job.photos if p.phase == "before"]
+    during = [p for p in job.photos if p.phase == "during"]
+    after  = [p for p in job.photos if p.phase == "after"]
+
+    change_orders = (
+        ContractorChangeOrder.query
+        .filter_by(job_id=job.id, vip_profile_id=profile.id)
+        .order_by(ContractorChangeOrder.requested_at.asc())
+        .all()
+    )
+    approved_added = sum(
+        float(co.added_cost or 0) for co in change_orders if co.status == "approved"
+    )
+    final_total = float(job.agreed_price or 0) + approved_added
+
+    return render_template(
+        "vip/contractor/job_report.html",
+        vip_profile    = profile,
+        modules        = get_enabled_modules(profile),
+        header_name    = get_dashboard_name(profile),
+        job            = job,
+        before_photos  = before,
+        during_photos  = during,
+        after_photos   = after,
+        change_orders  = change_orders,
+        approved_added = approved_added,
+        final_total    = final_total,
+        now            = datetime.utcnow(),
+        portal         = "vip",
+        portal_name    = "VIP",
+        portal_home    = url_for("vip.contractor_dashboard"),
+    )
+
+
+# ─── Change orders ───────────────────────────────────────────────────────────
+
+@vip_bp.post("/contractor/jobs/<int:job_id>/change-orders/new")
+@role_required("partner_group", "admin")
+def contractor_change_order_new(job_id):
+    profile = get_or_create_vip_profile()
+    job = _contractor_job_or_404(job_id, profile)
+    if not job:
+        flash("Job not found.", "warning")
+        return redirect(url_for("vip.contractor_jobs"))
+
+    title = (request.form.get("title") or "").strip()
+    if not title:
+        flash("Change order title required.", "warning")
+        return redirect(url_for("vip.contractor_job_detail", job_id=job.id))
+
+    co = ContractorChangeOrder(
+        vip_profile_id = profile.id,
+        job_id         = job.id,
+        title          = title[:200],
+        description    = (request.form.get("description") or "").strip() or None,
+        added_cost     = _parse_float(request.form.get("added_cost")) or 0.0,
+        added_days     = int(request.form.get("added_days") or 0),
+        status         = "pending",
+        requested_at   = datetime.utcnow(),
+    )
+    db.session.add(co)
+    db.session.commit()
+    flash("Change order submitted.", "success")
+    return redirect(url_for("vip.contractor_job_detail", job_id=job.id))
+
+
+@vip_bp.post("/contractor/change-orders/<int:co_id>/status")
+@role_required("partner_group", "admin")
+def contractor_change_order_status(co_id):
+    profile = get_or_create_vip_profile()
+    co = ContractorChangeOrder.query.filter_by(
+        id=co_id, vip_profile_id=profile.id
+    ).first()
+    if not co:
+        flash("Change order not found.", "warning")
+        return redirect(url_for("vip.contractor_dashboard"))
+
+    new_status = (request.form.get("status") or "").strip().lower()
+    if new_status not in {"pending", "approved", "declined"}:
+        flash("Invalid status.", "warning")
+        return redirect(url_for("vip.contractor_job_detail", job_id=co.job_id))
+
+    co.status = new_status
+    if new_status in ("approved", "declined"):
+        co.responded_at = datetime.utcnow()
+    db.session.commit()
+    flash(f"Change order {new_status}.", "success")
+    return redirect(url_for("vip.contractor_job_detail", job_id=co.job_id))
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# CONTRACTOR BIDS
+# ─────────────────────────────────────────────────────────────────────────────
+
+@vip_bp.get("/contractor/bids")
+@role_required("partner_group", "admin")
+def contractor_bids():
+    profile = get_or_create_vip_profile()
+    status = (request.args.get("status") or "").strip().lower()
+    q = ContractorBid.query.filter_by(vip_profile_id=profile.id)
+    if status in {"draft", "sent", "accepted", "declined", "expired"}:
+        q = q.filter_by(status=status)
+    bids = q.order_by(ContractorBid.created_at.desc()).all()
+
+    return render_template(
+        "vip/contractor/bids.html",
+        vip_profile   = profile,
+        modules       = get_enabled_modules(profile),
+        header_name   = get_dashboard_name(profile),
+        bids          = bids,
+        active_status = status or "all",
+        portal        = "vip",
+        portal_name   = "VIP",
+        portal_home   = url_for("vip.contractor_dashboard"),
+    )
+
+
+@vip_bp.route("/contractor/bids/new", methods=["GET", "POST"])
+@role_required("partner_group", "admin")
+def contractor_bid_new():
+    profile = get_or_create_vip_profile()
+
+    if request.method == "POST":
+        prospect_name = (request.form.get("prospect_name") or "").strip()
+        if not prospect_name:
+            flash("Prospect name required.", "warning")
+            return redirect(url_for("vip.contractor_bid_new"))
+
+        bid = ContractorBid(
+            vip_profile_id = profile.id,
+            prospect_name  = prospect_name[:200],
+            prospect_email = (request.form.get("prospect_email") or "").strip()[:255] or None,
+            prospect_phone = (request.form.get("prospect_phone") or "").strip()[:50]  or None,
+            address        = (request.form.get("address") or "").strip()[:255] or None,
+            scope_text     = (request.form.get("scope_text") or "").strip() or None,
+            labor_cost     = _parse_float(request.form.get("labor_cost"))     or 0,
+            materials_cost = _parse_float(request.form.get("materials_cost")) or 0,
+            other_cost     = _parse_float(request.form.get("other_cost"))     or 0,
+            timeline       = (request.form.get("timeline") or "").strip()[:120] or None,
+            status         = "draft",
+            notes          = (request.form.get("notes") or "").strip() or None,
+        )
+        bid.recalc_total()
+        db.session.add(bid)
+        db.session.commit()
+
+        if (request.form.get("send_now") or "").strip() == "1":
+            bid.status = "sent"
+            bid.sent_at = datetime.utcnow()
+            db.session.commit()
+
+        flash("Bid saved.", "success")
+        return redirect(url_for("vip.contractor_bid_detail", bid_id=bid.id))
+
+    return render_template(
+        "vip/contractor/bid_form.html",
+        vip_profile = profile,
+        modules     = get_enabled_modules(profile),
+        header_name = get_dashboard_name(profile),
+        bid         = None,
+        portal      = "vip",
+        portal_name = "VIP",
+        portal_home = url_for("vip.contractor_dashboard"),
+    )
+
+
+@vip_bp.get("/contractor/bids/<int:bid_id>")
+@role_required("partner_group", "admin")
+def contractor_bid_detail(bid_id):
+    profile = get_or_create_vip_profile()
+    bid = _contractor_bid_or_404(bid_id, profile)
+    if not bid:
+        flash("Bid not found.", "warning")
+        return redirect(url_for("vip.contractor_bids"))
+
+    return render_template(
+        "vip/contractor/bid_detail.html",
+        vip_profile = profile,
+        modules     = get_enabled_modules(profile),
+        header_name = get_dashboard_name(profile),
+        bid         = bid,
+        portal      = "vip",
+        portal_name = "VIP",
+        portal_home = url_for("vip.contractor_dashboard"),
+    )
+
+
+@vip_bp.post("/contractor/bids/<int:bid_id>/send")
+@role_required("partner_group", "admin")
+def contractor_bid_send(bid_id):
+    profile = get_or_create_vip_profile()
+    bid = _contractor_bid_or_404(bid_id, profile)
+    if not bid:
+        flash("Bid not found.", "warning")
+        return redirect(url_for("vip.contractor_bids"))
+
+    if bid.status == "draft":
+        bid.status  = "sent"
+        bid.sent_at = datetime.utcnow()
+        db.session.commit()
+        flash("Bid sent.", "success")
+    return redirect(url_for("vip.contractor_bid_detail", bid_id=bid.id))
+
+
+@vip_bp.post("/contractor/bids/<int:bid_id>/status")
+@role_required("partner_group", "admin")
+def contractor_bid_status(bid_id):
+    profile = get_or_create_vip_profile()
+    bid = _contractor_bid_or_404(bid_id, profile)
+    if not bid:
+        flash("Bid not found.", "warning")
+        return redirect(url_for("vip.contractor_bids"))
+
+    new_status = (request.form.get("status") or "").strip().lower()
+    if new_status not in {"draft", "sent", "accepted", "declined", "expired"}:
+        flash("Invalid status.", "warning")
+        return redirect(url_for("vip.contractor_bid_detail", bid_id=bid.id))
+
+    bid.status = new_status
+    if new_status in {"accepted", "declined", "expired"}:
+        bid.responded_at = datetime.utcnow()
+
+    # Accepted bids auto-create a job so the contractor can track it.
+    if new_status == "accepted" and not bid.job_id:
+        job = ContractorJob(
+            vip_profile_id = profile.id,
+            title          = bid.prospect_name + " — " + (bid.address or "Job"),
+            client_name    = bid.prospect_name,
+            client_email   = bid.prospect_email,
+            client_phone   = bid.prospect_phone,
+            address        = bid.address,
+            scope_text     = bid.scope_text,
+            status         = "scheduled",
+            agreed_price   = bid.total_cost,
+            source         = "bid",
+            source_ref     = str(bid.id),
+        )
+        db.session.add(job)
+        db.session.flush()
+        bid.job_id = job.id
+
+    db.session.commit()
+    flash(f"Bid {new_status}.", "success")
+    return redirect(url_for("vip.contractor_bid_detail", bid_id=bid.id))
+
+
+@vip_bp.post("/contractor/bids/<int:bid_id>/delete")
+@role_required("partner_group", "admin")
+def contractor_bid_delete(bid_id):
+    profile = get_or_create_vip_profile()
+    bid = _contractor_bid_or_404(bid_id, profile)
+    if not bid:
+        flash("Bid not found.", "warning")
+        return redirect(url_for("vip.contractor_bids"))
+    db.session.delete(bid)
+    db.session.commit()
+    flash("Bid deleted.", "success")
+    return redirect(url_for("vip.contractor_bids"))
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# LENDER — RATE SHEET CRUD
+# ─────────────────────────────────────────────────────────────────────────────
+
+@vip_bp.get("/loan-officer/rate-sheet")
+@role_required("partner_group", "admin")
+def lender_rate_sheet():
+    profile = get_or_create_vip_profile()
+    sheets = (
+        LenderRateSheet.query
+        .filter_by(vip_profile_id=profile.id)
+        .order_by(
+            LenderRateSheet.is_active.desc(),
+            LenderRateSheet.loan_type.asc().nullslast(),
+            LenderRateSheet.product_name.asc(),
+        )
+        .all()
+    )
+    return render_template(
+        "vip/loan_officer/rate_sheet.html",
+        vip_profile = profile,
+        modules     = get_enabled_modules(profile),
+        header_name = get_dashboard_name(profile),
+        sheets      = sheets,
+        portal      = "vip",
+        portal_name = "VIP",
+        portal_home = url_for("vip.loan_officer_external_dashboard"),
+    )
+
+
+@vip_bp.post("/loan-officer/rate-sheet/new")
+@role_required("partner_group", "admin")
+def lender_rate_sheet_new():
+    profile = get_or_create_vip_profile()
+    product_name = (request.form.get("product_name") or "").strip()
+    if not product_name:
+        flash("Product name required.", "warning")
+        return redirect(url_for("vip.lender_rate_sheet"))
+
+    sheet = LenderRateSheet(
+        vip_profile_id = profile.id,
+        product_name   = product_name[:200],
+        loan_type      = (request.form.get("loan_type") or "").strip()[:100] or None,
+        base_rate      = _parse_float(request.form.get("base_rate")),
+        max_ltv        = _parse_float(request.form.get("max_ltv")),
+        min_credit     = int(request.form.get("min_credit") or 0) or None,
+        term_months    = int(request.form.get("term_months") or 0) or None,
+        points         = _parse_float(request.form.get("points")),
+        fees_text      = (request.form.get("fees_text") or "").strip() or None,
+        notes          = (request.form.get("notes") or "").strip() or None,
+        is_active      = True,
+        effective_date = _parse_date(request.form.get("effective_date")) or date.today(),
+    )
+    db.session.add(sheet)
+    db.session.commit()
+    flash("Rate added to sheet.", "success")
+    return redirect(url_for("vip.lender_rate_sheet"))
+
+
+@vip_bp.post("/loan-officer/rate-sheet/<int:sheet_id>/toggle")
+@role_required("partner_group", "admin")
+def lender_rate_sheet_toggle(sheet_id):
+    profile = get_or_create_vip_profile()
+    sheet = LenderRateSheet.query.filter_by(
+        id=sheet_id, vip_profile_id=profile.id
+    ).first()
+    if sheet:
+        sheet.is_active = not sheet.is_active
+        db.session.commit()
+    return redirect(url_for("vip.lender_rate_sheet"))
+
+
+@vip_bp.post("/loan-officer/rate-sheet/<int:sheet_id>/delete")
+@role_required("partner_group", "admin")
+def lender_rate_sheet_delete(sheet_id):
+    profile = get_or_create_vip_profile()
+    sheet = LenderRateSheet.query.filter_by(
+        id=sheet_id, vip_profile_id=profile.id
+    ).first()
+    if sheet:
+        db.session.delete(sheet)
+        db.session.commit()
+        flash("Rate removed.", "success")
+    return redirect(url_for("vip.lender_rate_sheet"))
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# LENDER — COMMISSIONS / EARNINGS VIEW (reuses VIPIncome / VIPExpense)
+# ─────────────────────────────────────────────────────────────────────────────
+
+@vip_bp.get("/loan-officer/commissions")
+@role_required("partner_group", "admin")
+def lender_commissions():
+    profile = get_or_create_vip_profile()
+    incomes = (
+        VIPIncome.query
+        .filter_by(vip_profile_id=profile.id)
+        .order_by(VIPIncome.income_date.desc().nullslast(),
+                  VIPIncome.created_at.desc())
+        .limit(200).all()
+    )
+    expenses = (
+        VIPExpense.query
+        .filter_by(vip_profile_id=profile.id)
+        .order_by(VIPExpense.expense_date.desc().nullslast(),
+                  VIPExpense.created_at.desc())
+        .limit(200).all()
+    )
+
+    received = sum(
+        (i.amount or 0) for i in incomes
+        if (i.status or "received") == "received"
+    )
+    pending = sum(
+        (i.amount or 0) for i in incomes
+        if (i.status or "received") == "pending"
+    )
+    total_expenses = sum((e.amount or 0) for e in expenses)
+
+    finances = {
+        "received": received,
+        "pending":  pending,
+        "expenses": total_expenses,
+        "net":      received - total_expenses,
+    }
+
+    return render_template(
+        "vip/loan_officer/commissions.html",
+        vip_profile = profile,
+        modules     = get_enabled_modules(profile),
+        header_name = get_dashboard_name(profile),
+        incomes     = incomes,
+        expenses    = expenses,
+        finances    = finances,
+        portal      = "vip",
+        portal_name = "VIP",
+        portal_home = url_for("vip.loan_officer_external_dashboard"),
+    )

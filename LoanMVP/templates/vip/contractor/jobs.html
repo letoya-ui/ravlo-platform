@@ -1,0 +1,80 @@
+{% extends "layouts/ravlo_base.html" %}
+
+{% block title %}Ravlo • Jobs{% endblock %}
+{% block page_title %}{{ header_name }}{% endblock %}
+{% block page_subline %}All jobs — scheduled, in progress, and completed{% endblock %}
+
+{% block topbar_actions %}
+  <a href="{{ url_for('vip.contractor_job_new') }}" class="ravlo-btn primary sm">+ New Job</a>
+  <a href="{{ url_for('vip.contractor_dashboard') }}" class="ravlo-btn ghost sm">Dashboard</a>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto space-y-4">
+
+  <div class="ravlo-card pad flex gap-2 flex-wrap">
+    {% for val, label in [('all','All'),('scheduled','Scheduled'),('in_progress','In Progress'),('blocked','Blocked'),('completed','Completed'),('cancelled','Cancelled')] %}
+      <a href="{% if val == 'all' %}{{ url_for('vip.contractor_jobs') }}{% else %}{{ url_for('vip.contractor_jobs', status=val) }}{% endif %}"
+         class="ravlo-btn sm {% if active_status == val %}primary{% else %}ghost{% endif %}">
+        {{ label }}
+      </a>
+    {% endfor %}
+  </div>
+
+  {% if jobs %}
+    <div class="ravlo-card pad">
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead class="text-left text-xs uppercase text-gray-500 border-b border-white/10">
+            <tr>
+              <th class="py-2 pr-3">Job</th>
+              <th class="py-2 pr-3">Client</th>
+              <th class="py-2 pr-3">Start</th>
+              <th class="py-2 pr-3">Status</th>
+              <th class="py-2 pr-3 text-right">Price</th>
+              <th class="py-2"></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for j in jobs %}
+              <tr class="border-b border-white/5">
+                <td class="py-2 pr-3">
+                  <a href="{{ url_for('vip.contractor_job_detail', job_id=j.id) }}"
+                     class="font-medium hover:underline">{{ j.title }}</a>
+                  {% if j.address %}<div class="text-xs text-gray-500">{{ j.address }}</div>{% endif %}
+                </td>
+                <td class="py-2 pr-3 text-gray-300">{{ j.client_name or '—' }}</td>
+                <td class="py-2 pr-3 text-gray-300">
+                  {{ j.start_date.strftime('%b %d, %Y') if j.start_date else '—' }}
+                </td>
+                <td class="py-2 pr-3">
+                  <span class="text-xs px-2 py-0.5 rounded-full
+                    {% if j.status == 'in_progress' %}bg-blue-500/20 text-blue-300
+                    {% elif j.status == 'blocked' %}bg-red-500/20 text-red-300
+                    {% elif j.status == 'completed' %}bg-green-500/20 text-green-300
+                    {% elif j.status == 'cancelled' %}bg-gray-500/20 text-gray-400
+                    {% else %}bg-white/10 text-gray-300{% endif %}">
+                    {{ j.status | replace('_',' ') | title }}
+                  </span>
+                </td>
+                <td class="py-2 pr-3 text-right">
+                  {% if j.agreed_price %}${{ '{:,.0f}'.format(j.agreed_price) }}{% else %}—{% endif %}
+                </td>
+                <td class="py-2 text-right">
+                  <a href="{{ url_for('vip.contractor_job_detail', job_id=j.id) }}"
+                     class="ravlo-btn ghost sm">Open</a>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  {% else %}
+    <div class="ravlo-card pad text-center text-gray-400">
+      No jobs yet.
+      <a href="{{ url_for('vip.contractor_job_new') }}" class="underline">Start one</a>.
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

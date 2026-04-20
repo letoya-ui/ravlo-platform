@@ -1,0 +1,232 @@
+{% extends "layouts/ravlo_base.html" %}
+
+{% block title %}Ravlo • {{ header_name }} — Lender{% endblock %}
+{% block page_title %}{{ header_name }}{% endblock %}
+{% block page_subline %}Lender Workspace — pipeline, borrowers, rates & commissions{% endblock %}
+
+{% block topbar_actions %}
+  <a href="{{ url_for('loan_officer.new_application') }}" class="ravlo-btn primary sm">
+    <i class="lucide lucide-plus"></i><span>New Application</span>
+  </a>
+  <a href="{{ url_for('loan_officer.borrower_intake') }}" class="ravlo-btn ghost sm">Add Borrower</a>
+  <a href="{{ url_for('vip.lender_rate_sheet') }}" class="ravlo-btn ghost sm">Rate Sheet</a>
+  <a href="{{ url_for('vip.finances') }}" class="ravlo-btn ghost sm">Finances</a>
+  <a href="{{ url_for('vip.onboarding') }}" class="ravlo-btn ghost sm">Settings</a>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto space-y-6">
+
+  {# ── STATS ── #}
+  <section class="partner-stats-grid">
+    <article class="ravlo-card partner-stat-card">
+      <div class="partner-stat-label">In Pipeline</div>
+      <div class="partner-stat-value">{{ stats.in_pipeline }}</div>
+      <div class="partner-stat-note">Open loan files</div>
+    </article>
+    <article class="ravlo-card partner-stat-card">
+      <div class="partner-stat-label">Borrowers</div>
+      <div class="partner-stat-value">{{ stats.total_borrowers }}</div>
+      <div class="partner-stat-note">Assigned to you</div>
+    </article>
+    <article class="ravlo-card partner-stat-card">
+      <div class="partner-stat-label">Quotes Sent</div>
+      <div class="partner-stat-value">{{ stats.quotes_sent }}</div>
+      <div class="partner-stat-note">Recent</div>
+    </article>
+    <article class="ravlo-card partner-stat-card">
+      <div class="partner-stat-label">Closed Volume</div>
+      <div class="partner-stat-value">${{ '{:,.0f}'.format(stats.total_volume or 0) }}</div>
+      <div class="partner-stat-note">{{ stats.closed }} loans closed</div>
+    </article>
+  </section>
+
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+    {# LEFT — pipeline + borrowers #}
+    <div class="lg:col-span-2 space-y-6">
+
+      <section class="ravlo-card pad">
+        <div class="flex items-center justify-between mb-3">
+          <h3 class="text-lg font-semibold">Pipeline</h3>
+          <a href="{{ url_for('loan_officer.pipeline') }}" class="ravlo-btn ghost sm">Full pipeline</a>
+        </div>
+        <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
+          {% for key, label in [
+            ('submitted','Submitted'),
+            ('in_review','In Review'),
+            ('approved','Approved'),
+            ('clear_to_close','Clear to Close'),
+            ('closed','Closed'),
+            ('declined','Declined')
+          ] %}
+            <div class="ravlo-card p-3 border border-white/10">
+              <div class="text-xs uppercase text-gray-500 mb-1">{{ label }}</div>
+              <div class="text-2xl font-bold">{{ pipeline[key]|length }}</div>
+              {% if pipeline[key] %}
+                <ul class="mt-2 space-y-1 text-xs">
+                  {% for l in pipeline[key][:3] %}
+                    <li class="text-gray-300 truncate">
+                      {{ (l.borrower_profile.full_name if l.borrower_profile else None) or l.loan_type or 'Loan #' ~ l.id }}
+                      {% if l.amount %}
+                        <span class="text-gray-500">· ${{ '{:,.0f}'.format(l.amount) }}</span>
+                      {% endif %}
+                    </li>
+                  {% endfor %}
+                </ul>
+              {% endif %}
+            </div>
+          {% endfor %}
+        </div>
+      </section>
+
+      <section class="ravlo-card pad">
+        <div class="flex items-center justify-between mb-3">
+          <h3 class="text-lg font-semibold">Recent loans</h3>
+          <a href="{{ url_for('loan_officer.loan_queue') }}" class="ravlo-btn ghost sm">Loan queue</a>
+        </div>
+        {% if my_loans %}
+          <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+              <thead class="text-left text-xs uppercase text-gray-500 border-b border-white/10">
+                <tr>
+                  <th class="py-2 pr-3">Borrower</th>
+                  <th class="py-2 pr-3">Type</th>
+                  <th class="py-2 pr-3">Status</th>
+                  <th class="py-2 pr-3 text-right">Amount</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for l in my_loans[:10] %}
+                  <tr class="border-b border-white/5">
+                    <td class="py-2 pr-3">{{ (l.borrower_profile.full_name if l.borrower_profile else None) or '—' }}</td>
+                    <td class="py-2 pr-3 text-gray-300">{{ (l.loan_type or '').title() or '—' }}</td>
+                    <td class="py-2 pr-3 text-gray-300">{{ l.status or '—' }}</td>
+                    <td class="py-2 pr-3 text-right">
+                      {% if l.amount %}${{ '{:,.0f}'.format(l.amount) }}{% else %}—{% endif %}
+                    </td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% else %}
+          <p class="text-sm text-gray-500">
+            No loan files yet.
+            <a href="{{ url_for('loan_officer.new_application') }}" class="underline">Start one</a>.
+          </p>
+        {% endif %}
+      </section>
+
+      <section class="ravlo-card pad">
+        <div class="flex items-center justify-between mb-3">
+          <h3 class="text-lg font-semibold">Recent borrowers</h3>
+          <a href="{{ url_for('loan_officer.borrowers') }}" class="ravlo-btn ghost sm">All borrowers</a>
+        </div>
+        {% if my_borrowers %}
+          <div class="space-y-2">
+            {% for b in my_borrowers[:8] %}
+              <div class="flex items-center justify-between gap-3 py-2 border-b border-white/5 last:border-0">
+                <div class="min-w-0">
+                  <div class="font-medium truncate">
+                    {{ b.full_name or 'Unnamed borrower' }}
+                  </div>
+                  <div class="text-xs text-gray-500 truncate">
+                    {% if b.email %}{{ b.email }}{% endif %}
+                    {% if b.phone %}{% if b.email %} · {% endif %}{{ b.phone }}{% endif %}
+                  </div>
+                </div>
+                {% if b.credit_score %}
+                  <span class="text-xs px-2 py-0.5 rounded-full bg-white/10 text-gray-300">
+                    FICO {{ b.credit_score }}
+                  </span>
+                {% endif %}
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <p class="text-sm text-gray-500">
+            No borrowers yet.
+            <a href="{{ url_for('loan_officer.borrower_intake') }}" class="underline">Add borrower</a>.
+          </p>
+        {% endif %}
+      </section>
+    </div>
+
+    {# RIGHT — rates + quotes + copilot #}
+    <div class="space-y-6">
+
+      <section class="ravlo-card pad">
+        <div class="flex items-center justify-between mb-3">
+          <h3 class="text-lg font-semibold">Loan mix</h3>
+        </div>
+        {% if loan_type_counts %}
+          <ul class="space-y-2 text-sm">
+            {% for lt, count in loan_type_counts.items() %}
+              <li class="flex justify-between">
+                <span class="text-gray-300">{{ lt }}</span>
+                <span class="font-semibold">{{ count }}</span>
+              </li>
+            {% endfor %}
+          </ul>
+        {% else %}
+          <p class="text-xs text-gray-500">No loans yet.</p>
+        {% endif %}
+      </section>
+
+      <section class="ravlo-card pad">
+        <div class="flex items-center justify-between mb-3">
+          <h3 class="text-lg font-semibold">Quick tools</h3>
+        </div>
+        <div class="space-y-2">
+          <a href="{{ url_for('loan_officer.quote_engine') }}"
+             class="block ravlo-btn ghost sm w-full text-left">
+            <i class="lucide lucide-calculator"></i><span>Quote Engine</span>
+          </a>
+          <a href="{{ url_for('vip.lender_rate_sheet') }}"
+             class="block ravlo-btn ghost sm w-full text-left">
+            <i class="lucide lucide-percent"></i><span>Rate Sheet</span>
+          </a>
+          <a href="{{ url_for('vip.lender_commissions') }}"
+             class="block ravlo-btn ghost sm w-full text-left">
+            <i class="lucide lucide-banknote"></i><span>Commissions</span>
+          </a>
+          <a href="{{ url_for('vip.ai_pilot') }}"
+             class="block ravlo-btn ghost sm w-full text-left">
+            <i class="lucide lucide-sparkles"></i><span>Ask Copilot</span>
+          </a>
+        </div>
+      </section>
+
+      {% if my_quotes %}
+        <section class="ravlo-card pad">
+          <h3 class="text-lg font-semibold mb-3">Recent quotes</h3>
+          <ul class="space-y-2 text-sm">
+            {% for q in my_quotes[:5] %}
+              <li class="flex justify-between gap-2">
+                <span class="truncate text-gray-300">
+                  {{ (q.borrower_profile.full_name if q.borrower_profile else None) or q.loan_type or ('Quote #' ~ q.id) }}
+                </span>
+                {% if q.loan_amount %}
+                  <span class="font-semibold">${{ '{:,.0f}'.format(q.loan_amount) }}</span>
+                {% endif %}
+              </li>
+            {% endfor %}
+          </ul>
+        </section>
+      {% endif %}
+
+      {% if copilot_suggestions %}
+        <section class="ravlo-card pad">
+          <h3 class="text-lg font-semibold mb-3">Copilot suggestions</h3>
+          <ul class="space-y-2 text-sm">
+            {% for s in copilot_suggestions %}
+              <li class="text-gray-300">• {{ s.suggestion_text or s.title }}</li>
+            {% endfor %}
+          </ul>
+        </section>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

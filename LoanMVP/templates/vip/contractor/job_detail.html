@@ -1,0 +1,196 @@
+{% extends "layouts/ravlo_base.html" %}
+
+{% block title %}Ravlo • {{ job.title }}{% endblock %}
+{% block page_title %}{{ job.title }}{% endblock %}
+{% block page_subline %}
+  {% if job.client_name %}{{ job.client_name }}{% endif %}
+  {% if job.address %} · {{ job.address }}{% endif %}
+{% endblock %}
+
+{% block topbar_actions %}
+  <a href="{{ url_for('vip.contractor_job_edit', job_id=job.id) }}" class="ravlo-btn ghost sm">Edit</a>
+  <a href="{{ url_for('vip.contractor_job_report', job_id=job.id) }}"
+     target="_blank" class="ravlo-btn primary sm">
+     <i class="lucide lucide-file-text"></i><span>Report</span>
+  </a>
+  <a href="{{ url_for('vip.contractor_jobs') }}" class="ravlo-btn ghost sm">All jobs</a>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto space-y-6">
+
+  <section class="ravlo-card pad">
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
+      <div>
+        <div class="text-xs uppercase text-gray-500">Status</div>
+        <div class="font-medium mt-0.5">{{ job.status | replace('_',' ') | title }}</div>
+      </div>
+      <div>
+        <div class="text-xs uppercase text-gray-500">Start</div>
+        <div class="font-medium mt-0.5">{{ job.start_date.strftime('%b %d, %Y') if job.start_date else '—' }}</div>
+      </div>
+      <div>
+        <div class="text-xs uppercase text-gray-500">End</div>
+        <div class="font-medium mt-0.5">{{ job.end_date.strftime('%b %d, %Y') if job.end_date else '—' }}</div>
+      </div>
+      <div>
+        <div class="text-xs uppercase text-gray-500">Agreed price</div>
+        <div class="font-medium mt-0.5">
+          {% if job.agreed_price %}${{ '{:,.0f}'.format(job.agreed_price) }}{% else %}—{% endif %}
+        </div>
+      </div>
+    </div>
+
+    {% if job.scope_text %}
+      <div class="mt-4 pt-4 border-t border-white/5">
+        <div class="text-xs uppercase text-gray-500 mb-1">Scope of work</div>
+        <p class="text-sm text-gray-200 whitespace-pre-line">{{ job.scope_text }}</p>
+      </div>
+    {% endif %}
+    {% if job.notes %}
+      <div class="mt-4 pt-4 border-t border-white/5">
+        <div class="text-xs uppercase text-gray-500 mb-1">Notes</div>
+        <p class="text-sm text-gray-200 whitespace-pre-line">{{ job.notes }}</p>
+      </div>
+    {% endif %}
+  </section>
+
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+    {# ── Photos ── #}
+    <section class="lg:col-span-2 ravlo-card pad">
+      <h3 class="text-lg font-semibold mb-3">Before & After</h3>
+
+      {% for phase, photos, label in [
+        ('before', before_photos, 'Before'),
+        ('during', during_photos, 'During'),
+        ('after',  after_photos,  'After')
+      ] %}
+        <div class="mb-4">
+          <div class="flex justify-between items-center mb-2">
+            <h4 class="font-medium text-sm">{{ label }} <span class="text-gray-500">({{ photos|length }})</span></h4>
+          </div>
+
+          <form method="POST" enctype="multipart/form-data"
+                action="{{ url_for('vip.contractor_job_photo_upload', job_id=job.id) }}"
+                class="flex gap-2 mb-2 flex-wrap items-end">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="phase" value="{{ phase }}">
+            <div class="flex-1 min-w-[180px]">
+              <input type="file" name="file" accept="image/*" required
+                     class="ravlo-input text-sm" />
+            </div>
+            <div class="flex-1 min-w-[180px]">
+              <input type="text" name="caption" maxlength="500" placeholder="Caption (optional)"
+                     class="ravlo-input text-sm" />
+            </div>
+            <button type="submit" class="ravlo-btn ghost sm">Upload {{ label }}</button>
+          </form>
+
+          {% if photos %}
+            <div class="grid grid-cols-2 md:grid-cols-3 gap-2">
+              {% for p in photos %}
+                <div class="ravlo-card p-2 border border-white/10">
+                  <img src="{{ url_for('static', filename='uploads/' ~ p.file_path) }}"
+                       alt="{{ p.caption or label }}"
+                       class="w-full h-32 object-cover rounded">
+                  {% if p.caption %}
+                    <div class="text-xs text-gray-400 mt-1 truncate">{{ p.caption }}</div>
+                  {% endif %}
+                  <form method="POST"
+                        action="{{ url_for('vip.contractor_job_photo_delete', job_id=job.id, photo_id=p.id) }}"
+                        onsubmit="return confirm('Delete this photo?');"
+                        class="mt-1">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="text-xs text-red-400 hover:underline">Remove</button>
+                  </form>
+                </div>
+              {% endfor %}
+            </div>
+          {% else %}
+            <div class="text-xs text-gray-500">No {{ label|lower }} photos yet.</div>
+          {% endif %}
+        </div>
+      {% endfor %}
+    </section>
+
+    {# ── Change orders ── #}
+    <div class="space-y-4">
+      <section class="ravlo-card pad">
+        <h3 class="text-lg font-semibold mb-3">Change orders</h3>
+
+        <form method="POST"
+              action="{{ url_for('vip.contractor_change_order_new', job_id=job.id) }}"
+              class="space-y-2 mb-3">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input type="text" name="title" required maxlength="200"
+                 placeholder="Title (e.g. Add roof patch)" class="ravlo-input text-sm" />
+          <textarea name="description" rows="2" placeholder="Details"
+                    class="ravlo-input text-sm"></textarea>
+          <div class="grid grid-cols-2 gap-2">
+            <input type="number" step="0.01" name="added_cost"
+                   placeholder="Added $" class="ravlo-input text-sm" />
+            <input type="number" name="added_days"
+                   placeholder="Added days" class="ravlo-input text-sm" />
+          </div>
+          <button type="submit" class="ravlo-btn primary sm w-full">Submit change</button>
+        </form>
+
+        {% if change_orders %}
+          <div class="space-y-2">
+            {% for co in change_orders %}
+              <div class="ravlo-card p-3 border border-white/10">
+                <div class="flex justify-between items-center gap-2">
+                  <div class="font-medium text-sm truncate">{{ co.title }}</div>
+                  <span class="text-xs px-2 py-0.5 rounded-full
+                    {% if co.status == 'approved' %}bg-green-500/20 text-green-300
+                    {% elif co.status == 'declined' %}bg-red-500/20 text-red-300
+                    {% else %}bg-yellow-500/20 text-yellow-300{% endif %}">
+                    {{ co.status | title }}
+                  </span>
+                </div>
+                <div class="text-xs text-gray-400 mt-1">
+                  {% if co.added_cost %}+${{ '{:,.0f}'.format(co.added_cost) }}{% endif %}
+                  {% if co.added_days %}{% if co.added_cost %} · {% endif %}+{{ co.added_days }}d{% endif %}
+                </div>
+                {% if co.description %}
+                  <p class="text-xs text-gray-300 mt-1 whitespace-pre-line">{{ co.description }}</p>
+                {% endif %}
+                {% if co.status == 'pending' %}
+                  <div class="flex gap-2 mt-2">
+                    {% for st, label, cls in [('approved','Approve','primary'),('declined','Decline','ghost')] %}
+                      <form method="POST"
+                            action="{{ url_for('vip.contractor_change_order_status', co_id=co.id) }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <input type="hidden" name="status" value="{{ st }}">
+                        <button type="submit" class="ravlo-btn {{ cls }} sm">{{ label }}</button>
+                      </form>
+                    {% endfor %}
+                  </div>
+                {% endif %}
+              </div>
+            {% endfor %}
+          </div>
+          {% if total_added_cost %}
+            <div class="mt-3 text-xs text-gray-400 text-right">
+              Approved additions: <strong>${{ '{:,.0f}'.format(total_added_cost) }}</strong>
+            </div>
+          {% endif %}
+        {% else %}
+          <p class="text-xs text-gray-500">No change orders yet.</p>
+        {% endif %}
+      </section>
+
+      <section class="ravlo-card pad">
+        <h3 class="text-lg font-semibold mb-2">Danger zone</h3>
+        <form method="POST"
+              action="{{ url_for('vip.contractor_job_delete', job_id=job.id) }}"
+              onsubmit="return confirm('Delete this job and all photos & change orders?');">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button type="submit" class="ravlo-btn ghost sm text-red-400">Delete job</button>
+        </form>
+      </section>
+    </div>
+  </div>
+</div>
+{% endblock %}

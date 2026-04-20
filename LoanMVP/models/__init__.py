@@ -92,7 +92,15 @@ from LoanMVP.models.campaign_model import Campaign, CampaignRecipient, CampaignM
 
 from LoanMVP.models.call_model import CallLog, CommunicationLog
 
-from LoanMVP.models.contractor_models import Contractor, ContractorPayment
+from LoanMVP.models.contractor_models import (
+    Contractor,
+    ContractorPayment,
+    ContractorJob,
+    ContractorBid,
+    ContractorChangeOrder,
+    ContractorJobPhoto,
+    LenderRateSheet,
+)
 
 from LoanMVP.models.activity_models import BorrowerActivity
 

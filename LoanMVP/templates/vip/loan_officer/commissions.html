@@ -1,0 +1,128 @@
+{% extends "layouts/ravlo_base.html" %}
+
+{% block title %}Ravlo • Commissions{% endblock %}
+{% block page_title %}Commissions{% endblock %}
+{% block page_subline %}Commission income & business expenses{% endblock %}
+
+{% block topbar_actions %}
+  <a href="{{ url_for('vip.finances_add_income') }}" class="ravlo-btn primary sm">+ Income</a>
+  <a href="{{ url_for('vip.finances_add_expense') }}" class="ravlo-btn ghost sm">+ Expense</a>
+  <a href="{{ url_for('vip.loan_officer_external_dashboard') }}" class="ravlo-btn ghost sm">Dashboard</a>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto space-y-6">
+
+  {# ── Totals ── #}
+  <section class="partner-stats-grid">
+    <article class="ravlo-card partner-stat-card">
+      <div class="partner-stat-label">Received</div>
+      <div class="partner-stat-value">${{ '{:,.0f}'.format(finances.received or 0) }}</div>
+    </article>
+    <article class="ravlo-card partner-stat-card">
+      <div class="partner-stat-label">Pending</div>
+      <div class="partner-stat-value">${{ '{:,.0f}'.format(finances.pending or 0) }}</div>
+    </article>
+    <article class="ravlo-card partner-stat-card">
+      <div class="partner-stat-label">Expenses</div>
+      <div class="partner-stat-value">${{ '{:,.0f}'.format(finances.expenses or 0) }}</div>
+    </article>
+    <article class="ravlo-card partner-stat-card">
+      <div class="partner-stat-label">Net (Received)</div>
+      <div class="partner-stat-value">${{ '{:,.0f}'.format(finances.net or 0) }}</div>
+    </article>
+  </section>
+
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+    <section class="ravlo-card pad">
+      <h3 class="text-lg font-semibold mb-3">Commission income</h3>
+      {% if incomes %}
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead class="text-left text-xs uppercase text-gray-500 border-b border-white/10">
+              <tr>
+                <th class="py-2 pr-2">Date</th>
+                <th class="py-2 pr-2">Source</th>
+                <th class="py-2 pr-2">Status</th>
+                <th class="py-2 pr-2 text-right">Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for i in incomes %}
+                <tr class="border-b border-white/5">
+                  <td class="py-2 pr-2 text-gray-300">
+                    {{ i.income_date.strftime('%b %d, %Y') if i.income_date else '—' }}
+                  </td>
+                  <td class="py-2 pr-2">
+                    <div class="font-medium">{{ i.source or i.category or 'Income' }}</div>
+                    {% if i.description %}
+                      <div class="text-xs text-gray-500 truncate">{{ i.description }}</div>
+                    {% endif %}
+                  </td>
+                  <td class="py-2 pr-2">
+                    {% set st = i.status or 'received' %}
+                    <span class="text-xs px-2 py-0.5 rounded-full
+                      {% if st == 'received' %}bg-green-500/20 text-green-300
+                      {% else %}bg-yellow-500/20 text-yellow-300{% endif %}">
+                      {{ st | title }}
+                    </span>
+                  </td>
+                  <td class="py-2 pr-2 text-right font-semibold">
+                    ${{ '{:,.2f}'.format(i.amount or 0) }}
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <p class="text-sm text-gray-500">
+          No commissions yet.
+          <a href="{{ url_for('vip.finances_add_income') }}" class="underline">Log one</a>.
+        </p>
+      {% endif %}
+    </section>
+
+    <section class="ravlo-card pad">
+      <h3 class="text-lg font-semibold mb-3">Expenses</h3>
+      {% if expenses %}
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead class="text-left text-xs uppercase text-gray-500 border-b border-white/10">
+              <tr>
+                <th class="py-2 pr-2">Date</th>
+                <th class="py-2 pr-2">Category</th>
+                <th class="py-2 pr-2 text-right">Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for e in expenses %}
+                <tr class="border-b border-white/5">
+                  <td class="py-2 pr-2 text-gray-300">
+                    {{ e.expense_date.strftime('%b %d, %Y') if e.expense_date else '—' }}
+                  </td>
+                  <td class="py-2 pr-2">
+                    <div class="font-medium">{{ e.category or 'Expense' }}</div>
+                    {% if e.description %}
+                      <div class="text-xs text-gray-500 truncate">{{ e.description }}</div>
+                    {% endif %}
+                  </td>
+                  <td class="py-2 pr-2 text-right font-semibold text-red-300">
+                    ${{ '{:,.2f}'.format(e.amount or 0) }}
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <p class="text-sm text-gray-500">
+          No expenses yet.
+          <a href="{{ url_for('vip.finances_add_expense') }}" class="underline">Log one</a>.
+        </p>
+      {% endif %}
+    </section>
+  </div>
+</div>
+{% endblock %}

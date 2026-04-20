@@ -196,6 +196,85 @@ def parse_vip_command(command: str) -> dict:
             "body":            body,
         }
 
+    # ── Contractor intents ───────────────────────────────────────────────────
+    if any(k in text for k in (
+        "send bid", "send a bid", "new bid", "draft bid", "create bid", "bid for",
+    )):
+        return {
+            "intent":          "send_bid",
+            "suggestion_type": "bid",
+            "title":           "Send Bid",
+            "body":            body,
+            "address":         _extract_address(body),
+            "amount":          amount_hint,
+        }
+
+    if any(k in text for k in (
+        "start job", "start a job", "new job", "create job", "begin job", "add job",
+    )):
+        return {
+            "intent":          "start_job",
+            "suggestion_type": "job",
+            "title":           "Start Job",
+            "body":            body,
+            "address":         _extract_address(body),
+            "amount":          amount_hint,
+        }
+
+    if any(k in text for k in (
+        "change order", "request change", "log change", "add change order",
+    )):
+        return {
+            "intent":          "change_order",
+            "suggestion_type": "change_order",
+            "title":           "Request Change Order",
+            "body":            body,
+            "amount":          amount_hint,
+        }
+
+    if any(k in text for k in (
+        "before photo", "after photo", "before picture", "after picture",
+        "upload before", "upload after", "before and after",
+    )):
+        return {
+            "intent":          "job_photo",
+            "suggestion_type": "job_photo",
+            "title":           "Attach Job Photo",
+            "body":            body,
+        }
+
+    # ── Lender intents ───────────────────────────────────────────────────────
+    if any(k in text for k in (
+        "quote", "quote engine", "send quote", "new quote",
+    )):
+        return {
+            "intent":          "loan_quote",
+            "suggestion_type": "loan_quote",
+            "title":           "Loan Quote",
+            "body":            body,
+            "amount":          amount_hint,
+        }
+
+    if any(k in text for k in (
+        "rate sheet", "update rates", "add rate", "new rate", "rate for",
+    )):
+        return {
+            "intent":          "rate_sheet",
+            "suggestion_type": "rate_sheet",
+            "title":           "Update Rate Sheet",
+            "body":            body,
+        }
+
+    if any(k in text for k in (
+        "new borrower", "add borrower", "borrower intake", "log borrower",
+    )):
+        return {
+            "intent":          "add_borrower",
+            "suggestion_type": "borrower",
+            "title":           "Add Borrower",
+            "body":            body,
+        }
+
     return {
         "intent":          "note",
         "suggestion_type": "note",

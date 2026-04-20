@@ -2,15 +2,16 @@
 
 {% block title %}Ravlo • {{ header_name }} — Contractor{% endblock %}
 {% block page_title %}{{ header_name }}{% endblock %}
-{% block page_subline %}Contractor Workspace — jobs, scopes, and deal context{% endblock %}
+{% block page_subline %}Contractor Workspace — day-to-day jobs, bids, change orders & financials{% endblock %}
 
 {% block topbar_actions %}
-  {% if 'ai_pilot' in modules %}
-    <a href="{{ url_for('vip.ai_pilot') }}" class="ravlo-btn ghost sm">Copilot</a>
-  {% endif %}
-  {% if 'finances' in modules %}
-    <a href="{{ url_for('vip.finances') }}" class="ravlo-btn primary sm">Finances</a>
-  {% endif %}
+  <a href="{{ url_for('vip.contractor_job_new') }}" class="ravlo-btn primary sm">
+    <i class="lucide lucide-plus"></i><span>New Job</span>
+  </a>
+  <a href="{{ url_for('vip.contractor_bid_new') }}" class="ravlo-btn ghost sm">
+    <i class="lucide lucide-file-plus"></i><span>New Bid</span>
+  </a>
+  <a href="{{ url_for('vip.finances') }}" class="ravlo-btn ghost sm">Finances</a>
   <a href="{{ url_for('vip.onboarding') }}" class="ravlo-btn ghost sm">Settings</a>
 {% endblock %}
 
@@ -20,291 +21,197 @@
   {# ── STATS ROW ── #}
   <section class="partner-stats-grid">
     <article class="ravlo-card partner-stat-card">
-      <div class="partner-stat-label">Open Requests</div>
-      <div class="partner-stat-value">{{ stats.open_requests }}</div>
-      <div class="partner-stat-note">Awaiting your response</div>
+      <div class="partner-stat-label">Today</div>
+      <div class="partner-stat-value">{{ stats.todays_jobs }}</div>
+      <div class="partner-stat-note">Jobs on deck</div>
     </article>
     <article class="ravlo-card partner-stat-card">
       <div class="partner-stat-label">Active Jobs</div>
       <div class="partner-stat-value">{{ stats.active_jobs }}</div>
-      <div class="partner-stat-note">In progress</div>
+      <div class="partner-stat-note">Scheduled + in progress</div>
+    </article>
+    <article class="ravlo-card partner-stat-card">
+      <div class="partner-stat-label">Open Bids</div>
+      <div class="partner-stat-value">{{ stats.open_bids }}</div>
+      <div class="partner-stat-note">Drafts + sent, awaiting reply</div>
     </article>
     <article class="ravlo-card partner-stat-card">
       <div class="partner-stat-label">Completed</div>
       <div class="partner-stat-value">{{ stats.completed_jobs }}</div>
-      <div class="partner-stat-note">Total volume ${{ '{:,.0f}'.format(stats.total_volume) }}</div>
+      <div class="partner-stat-note">${{ '{:,.0f}'.format(stats.total_volume or 0) }} total</div>
     </article>
-
-    {# AI accuracy card — only shows once there's data #}
-    {% if stats.ai_estimate_total > 0 and stats.contractor_total > 0 %}
-    {% set accuracy_delta = stats.contractor_total - stats.ai_estimate_total %}
-    {% set accuracy_pct = ((accuracy_delta / stats.ai_estimate_total) * 100) | round(1) if stats.ai_estimate_total > 0 else 0 %}
-    <article class="ravlo-card partner-stat-card">
-      <div class="partner-stat-label">Deal Architect Accuracy</div>
-      <div class="partner-stat-value
-        {% if accuracy_pct | abs < 10 %}text-green-400
-        {% elif accuracy_pct | abs < 20 %}text-yellow-400
-        {% else %}text-red-400{% endif %}">
-        {% if accuracy_delta > 0 %}+{% endif %}{{ accuracy_pct }}%
-      </div>
-      <div class="partner-stat-note">
-        AI: ${{ '{:,.0f}'.format(stats.ai_estimate_total) }} vs
-        Your: ${{ '{:,.0f}'.format(stats.contractor_total) }}
-      </div>
-    </article>
-    {% endif %}
   </section>
 
   <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-    {# LEFT — main content #}
+    {# LEFT — day-to-day + bids + investor requests #}
     <div class="lg:col-span-2 space-y-6">
 
-      {# ── INCOMING REQUESTS WITH DEAL CONTEXT ── #}
-      {% if requests_with_context %}
+      {# ── TODAY ── #}
       <section class="ravlo-card pad">
-        <h3 class="text-lg font-semibold mb-4">Incoming Requests</h3>
+        <div class="flex items-center justify-between mb-3">
+          <h3 class="text-lg font-semibold">Day-to-day</h3>
+          <a href="{{ url_for('vip.contractor_jobs') }}" class="ravlo-btn ghost sm">All jobs</a>
+        </div>
 
-        <div class="space-y-4">
-          {% for item in requests_with_context %}
-          {% set req = item.request %}
-          {% set ctx = item.context %}
-
-          <div class="ravlo-card p-4 border border-white/10">
-            <div class="flex justify-between items-start gap-4 flex-wrap">
-
-              {# Request header #}
-              <div class="flex-1 min-w-0">
-                <div class="flex items-center gap-2 mb-1">
-                  <span class="font-medium text-sm">{{ req.title or req.category or 'Job Request' }}</span>
-                  <span class="text-xs px-2 py-0.5 rounded-full
-                    {% if req.status == 'pending' %}bg-yellow-500/20 text-yellow-400
-                    {% elif req.status == 'accepted' %}bg-blue-500/20 text-blue-400
-                    {% else %}bg-white/10 text-gray-400{% endif %}">
-                    {{ req.status | title }}
-                  </span>
+        {% if todays_jobs %}
+          <div class="space-y-2">
+            {% for j in todays_jobs %}
+              <a href="{{ url_for('vip.contractor_job_detail', job_id=j.id) }}"
+                 class="block ravlo-card p-3 border border-white/10 hover:border-white/30 transition">
+                <div class="flex items-center justify-between gap-3">
+                  <div class="min-w-0">
+                    <div class="font-medium truncate">{{ j.title }}</div>
+                    <div class="text-xs text-gray-500 truncate">
+                      {% if j.client_name %}{{ j.client_name }} · {% endif %}
+                      {% if j.address %}{{ j.address }}{% endif %}
+                    </div>
+                  </div>
+                  <div class="text-right">
+                    <span class="text-xs px-2 py-0.5 rounded-full
+                      {% if j.status == 'in_progress' %}bg-blue-500/20 text-blue-300
+                      {% elif j.status == 'blocked' %}bg-red-500/20 text-red-300
+                      {% elif j.status == 'completed' %}bg-green-500/20 text-green-300
+                      {% else %}bg-white/10 text-gray-300{% endif %}">
+                      {{ j.status | replace('_',' ') | title }}
+                    </span>
+                    {% if j.agreed_price %}
+                      <div class="text-xs text-gray-400 mt-1">${{ '{:,.0f}'.format(j.agreed_price) }}</div>
+                    {% endif %}
+                  </div>
                 </div>
-                <div class="text-xs text-gray-500">
-                  From: {{ ctx.requester }}
-                  {% if ctx.address %} · {{ ctx.address }}{% endif %}
-                  {% if req.created_at %} · {{ req.created_at.strftime('%b %d') }}{% endif %}
-                </div>
-              </div>
-
-              {# Accept button if pending #}
-              {% if req.status == 'pending' %}
-              <form method="POST"
-                    action="{{ url_for('vip.contractor_accept_request', req_id=req.id) }}">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <button type="submit" class="ravlo-btn primary sm">Accept</button>
-              </form>
-              {% endif %}
-            </div>
-
-            {# Deal context box — THIS is what makes it feel premium #}
-            {% if ctx.ai_rehab_estimate or ctx.arv or ctx.strategy %}
-            <div class="mt-3 grid grid-cols-2 md:grid-cols-4 gap-2 pt-3
-                        border-t border-white/5">
-
-              {% if ctx.ai_rehab_estimate %}
-              <div class="text-center ravlo-card p-2">
-                <div class="text-xs text-gray-500 mb-0.5">AI Rehab Est.</div>
-                <div class="text-sm font-semibold text-blue-400">
-                  ${{ '{:,.0f}'.format(ctx.ai_rehab_estimate) }}
-                </div>
-              </div>
-              {% endif %}
-
-              {% if ctx.arv %}
-              <div class="text-center ravlo-card p-2">
-                <div class="text-xs text-gray-500 mb-0.5">ARV</div>
-                <div class="text-sm font-semibold text-green-400">
-                  ${{ '{:,.0f}'.format(ctx.arv) }}
-                </div>
-              </div>
-              {% endif %}
-
-              {% if ctx.purchase_price %}
-              <div class="text-center ravlo-card p-2">
-                <div class="text-xs text-gray-500 mb-0.5">Purchase</div>
-                <div class="text-sm font-semibold">
-                  ${{ '{:,.0f}'.format(ctx.purchase_price) }}
-                </div>
-              </div>
-              {% endif %}
-
-              {% if ctx.strategy %}
-              <div class="text-center ravlo-card p-2">
-                <div class="text-xs text-gray-500 mb-0.5">Strategy</div>
-                <div class="text-sm font-semibold text-purple-400">
-                  {{ ctx.strategy | upper }}
-                </div>
-              </div>
-              {% endif %}
-
-            </div>
-            {% endif %}
-
-            {# Budget / timeline from request #}
-            {% if ctx.budget or ctx.timeline or req.message %}
-            <div class="mt-2 text-xs text-gray-500 space-y-0.5">
-              {% if ctx.budget %}
-                <div>Investor budget: <strong class="text-gray-300">${{ '{:,.0f}'.format(ctx.budget) }}</strong></div>
-              {% endif %}
-              {% if ctx.timeline %}
-                <div>Timeline: <strong class="text-gray-300">{{ ctx.timeline }}</strong></div>
-              {% endif %}
-              {% if req.message %}
-                <div class="mt-1 text-gray-600 italic truncate">{{ req.message }}</div>
-              {% endif %}
-            </div>
-            {% endif %}
-
+              </a>
+            {% endfor %}
           </div>
+        {% else %}
+          <p class="text-sm text-gray-500">
+            Nothing on the schedule for today.
+            <a href="{{ url_for('vip.contractor_job_new') }}" class="underline">Add a job</a>.
+          </p>
+        {% endif %}
+
+        {% if scheduled_jobs or active_jobs %}
+          <div class="mt-4 pt-4 border-t border-white/5 grid grid-cols-2 gap-3">
+            <div>
+              <div class="text-xs uppercase text-gray-500 mb-1">Scheduled</div>
+              {% for j in scheduled_jobs[:5] %}
+                <a href="{{ url_for('vip.contractor_job_detail', job_id=j.id) }}"
+                   class="block text-sm hover:underline truncate">
+                  {{ j.title }}{% if j.start_date %} <span class="text-gray-500">· {{ j.start_date.strftime('%b %d') }}</span>{% endif %}
+                </a>
+              {% else %}
+                <div class="text-xs text-gray-500">—</div>
+              {% endfor %}
+            </div>
+            <div>
+              <div class="text-xs uppercase text-gray-500 mb-1">In Progress</div>
+              {% for j in active_jobs[:5] %}
+                <a href="{{ url_for('vip.contractor_job_detail', job_id=j.id) }}"
+                   class="block text-sm hover:underline truncate">{{ j.title }}</a>
+              {% else %}
+                <div class="text-xs text-gray-500">—</div>
+              {% endfor %}
+            </div>
+          </div>
+        {% endif %}
+      </section>
+
+      {# ── BIDS ── #}
+      <section class="ravlo-card pad">
+        <div class="flex items-center justify-between mb-3">
+          <h3 class="text-lg font-semibold">Bids</h3>
+          <div class="flex gap-2">
+            <a href="{{ url_for('vip.contractor_bids') }}" class="ravlo-btn ghost sm">All</a>
+            <a href="{{ url_for('vip.contractor_bid_new') }}" class="ravlo-btn primary sm">Send a bid</a>
+          </div>
+        </div>
+
+        {% if my_bids %}
+          <div class="space-y-2">
+            {% for b in my_bids[:6] %}
+              <a href="{{ url_for('vip.contractor_bid_detail', bid_id=b.id) }}"
+                 class="block ravlo-card p-3 border border-white/10 hover:border-white/30 transition">
+                <div class="flex justify-between items-center gap-3">
+                  <div class="min-w-0">
+                    <div class="font-medium truncate">{{ b.prospect_name }}</div>
+                    <div class="text-xs text-gray-500 truncate">
+                      {% if b.address %}{{ b.address }} · {% endif %}
+                      {% if b.timeline %}{{ b.timeline }}{% endif %}
+                    </div>
+                  </div>
+                  <div class="text-right">
+                    <div class="font-semibold">${{ '{:,.0f}'.format(b.total_cost or 0) }}</div>
+                    <span class="text-xs px-2 py-0.5 rounded-full
+                      {% if b.status == 'draft' %}bg-white/10 text-gray-300
+                      {% elif b.status == 'sent' %}bg-blue-500/20 text-blue-300
+                      {% elif b.status == 'accepted' %}bg-green-500/20 text-green-300
+                      {% elif b.status == 'declined' %}bg-red-500/20 text-red-300
+                      {% else %}bg-yellow-500/20 text-yellow-300{% endif %}">
+                      {{ b.status | title }}
+                    </span>
+                  </div>
+                </div>
+              </a>
+            {% endfor %}
+          </div>
+        {% else %}
+          <p class="text-sm text-gray-500">
+            No bids yet.
+            <a href="{{ url_for('vip.contractor_bid_new') }}" class="underline">Send your first bid</a>.
+          </p>
+        {% endif %}
+      </section>
+
+      {# ── PENDING CHANGE ORDERS ── #}
+      {% if pending_changes %}
+      <section class="ravlo-card pad">
+        <div class="flex items-center justify-between mb-3">
+          <h3 class="text-lg font-semibold">Change orders awaiting approval</h3>
+        </div>
+        <div class="space-y-2">
+          {% for co in pending_changes %}
+            <div class="ravlo-card p-3 border border-white/10">
+              <div class="flex justify-between items-center gap-3">
+                <div class="min-w-0">
+                  <div class="font-medium truncate">{{ co.title }}</div>
+                  <div class="text-xs text-gray-500">
+                    {% if co.added_cost %}+${{ '{:,.0f}'.format(co.added_cost) }}{% endif %}
+                    {% if co.added_days %}{% if co.added_cost %} · {% endif %}+{{ co.added_days }}d{% endif %}
+                  </div>
+                </div>
+                <a href="{{ url_for('vip.contractor_job_detail', job_id=co.job_id) }}"
+                   class="ravlo-btn ghost sm">Open</a>
+              </div>
+            </div>
           {% endfor %}
         </div>
       </section>
-      {% else %}
-      <section class="ravlo-card pad text-center py-10">
-        <p class="text-gray-500 text-sm">No open requests right now.</p>
-        <p class="text-gray-600 text-xs mt-1">New investor requests will appear here with full deal context.</p>
-      </section>
       {% endif %}
 
-      {# ── ACTIVE JOBS WITH BUDGET COMPARISON ── #}
-      {% if active_jobs %}
+      {# ── Investor-initiated requests (legacy) ── #}
+      {% if requests_with_context %}
       <section class="ravlo-card pad">
-        <h3 class="text-lg font-semibold mb-4">Active Jobs</h3>
-
-        <div class="space-y-4">
-          {% for item in active_jobs %}
-          {% set job = item.job %}
-
-          <div class="ravlo-card p-4 border border-white/10">
-            <div class="flex justify-between items-start mb-3">
-              <div>
-                <div class="font-medium text-sm">{{ job.title }}</div>
-                <div class="text-xs text-gray-500">
-                  {{ job.status }}
-                  {% if job.created_at %} · {{ job.created_at.strftime('%b %d') }}{% endif %}
+        <h3 class="text-lg font-semibold mb-3">Investor-initiated requests</h3>
+        <div class="space-y-3">
+          {% for item in requests_with_context %}
+            {% set req = item.request %}
+            {% set ctx = item.context %}
+            <div class="ravlo-card p-3 border border-white/10">
+              <div class="flex justify-between items-center gap-3">
+                <div class="min-w-0">
+                  <div class="font-medium truncate">{{ req.title or req.category or 'Job Request' }}</div>
+                  <div class="text-xs text-gray-500 truncate">
+                    From: {{ ctx.requester }}{% if ctx.address %} · {{ ctx.address }}{% endif %}
+                  </div>
                 </div>
+                <span class="text-xs px-2 py-0.5 rounded-full
+                  {% if req.status == 'pending' %}bg-yellow-500/20 text-yellow-400
+                  {% elif req.status == 'accepted' %}bg-blue-500/20 text-blue-400
+                  {% else %}bg-white/10 text-gray-400{% endif %}">
+                  {{ req.status | title }}
+                </span>
               </div>
-
-              {# AI vs Contractor delta badge #}
-              {% if item.delta is not none %}
-              <div class="text-xs px-2 py-1 rounded-full
-                {% if item.delta | abs / (item.ai_estimate or 1) < 0.1 %}bg-green-500/20 text-green-400
-                {% elif item.delta | abs / (item.ai_estimate or 1) < 0.2 %}bg-yellow-500/20 text-yellow-400
-                {% else %}bg-red-500/20 text-red-400{% endif %}">
-                {% if item.delta > 0 %}+{% endif %}{{ item.delta_pct }}% vs AI
-              </div>
-              {% endif %}
             </div>
-
-            {# Numbers comparison #}
-            {% if item.budget or item.ai_estimate %}
-            <div class="grid grid-cols-3 gap-2 text-xs">
-              {% if item.ai_estimate %}
-              <div class="ravlo-card p-2 text-center">
-                <div class="text-gray-500 mb-0.5">AI Estimate</div>
-                <div class="font-semibold text-blue-400">
-                  ${{ '{:,.0f}'.format(item.ai_estimate) }}
-                </div>
-              </div>
-              {% endif %}
-
-              {% if item.budget %}
-              <div class="ravlo-card p-2 text-center">
-                <div class="text-gray-500 mb-0.5">Your Scope</div>
-                <div class="font-semibold text-white">
-                  ${{ '{:,.0f}'.format(item.budget.total_cost or 0) }}
-                </div>
-              </div>
-              {% endif %}
-
-              {% if item.delta is not none %}
-              <div class="ravlo-card p-2 text-center">
-                <div class="text-gray-500 mb-0.5">Delta</div>
-                <div class="font-semibold
-                  {% if item.delta > 0 %}text-red-400{% elif item.delta < 0 %}text-green-400{% else %}text-gray-400{% endif %}">
-                  {% if item.delta > 0 %}+{% endif %}${{ '{:,.0f}'.format(item.delta | abs) }}
-                </div>
-              </div>
-              {% endif %}
-            </div>
-            {% endif %}
-
-            {# Scope submission form — collapsed by default #}
-            {% if job.status in ['Open', 'in_progress'] %}
-            <details class="mt-3">
-              <summary class="text-xs text-blue-400 cursor-pointer hover:text-blue-300">
-                Submit / Update Scope →
-              </summary>
-
-              <form method="POST"
-                    action="{{ url_for('vip.contractor_submit_scope', job_id=job.id) }}"
-                    class="mt-3 space-y-3">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-
-                <div class="grid grid-cols-3 gap-2">
-                  <div>
-                    <label class="text-xs text-gray-500">Labor ($)</label>
-                    <input name="labor_cost" type="number" step="0.01" min="0"
-                           value="{{ item.budget.labor_cost if item.budget else '' }}"
-                           class="design-input text-xs mt-1"
-                           placeholder="0">
-                  </div>
-                  <div>
-                    <label class="text-xs text-gray-500">Materials ($)</label>
-                    <input name="materials_cost" type="number" step="0.01" min="0"
-                           value="{{ item.budget.materials_cost if item.budget else '' }}"
-                           class="design-input text-xs mt-1"
-                           placeholder="0">
-                  </div>
-                  <div>
-                    <label class="text-xs text-gray-500">Other ($)</label>
-                    <input name="other_cost" type="number" step="0.01" min="0"
-                           class="design-input text-xs mt-1"
-                           placeholder="0">
-                  </div>
-                </div>
-
-                <div>
-                  <label class="text-xs text-gray-500">Timeline</label>
-                  <input name="timeline" class="design-input text-xs mt-1"
-                         placeholder="e.g. 3–4 weeks">
-                </div>
-
-                <div>
-                  <label class="text-xs text-gray-500">Scope Notes</label>
-                  <textarea name="scope_notes" class="design-input text-xs mt-1"
-                            placeholder="What's included, exclusions, assumptions…">{{ item.budget.notes if item.budget else '' }}</textarea>
-                </div>
-
-                {# Line items #}
-                <div id="lineItems-{{ job.id }}">
-                  <div class="text-xs text-gray-500 mb-1">Line Items (optional)</div>
-                  <div class="line-item-row grid grid-cols-[120px_1fr_100px] gap-2 mb-1">
-                    <input name="line_category[]" class="design-input text-xs" placeholder="Category">
-                    <input name="line_description[]" class="design-input text-xs" placeholder="Description">
-                    <input name="line_amount[]" type="number" class="design-input text-xs" placeholder="$">
-                  </div>
-                </div>
-
-                <button type="button"
-                        onclick="addLineItem('{{ job.id }}')"
-                        class="text-xs text-blue-400 hover:text-blue-300">
-                  + Add line item
-                </button>
-
-                <button type="submit" class="ravlo-btn primary sm w-full mt-2">
-                  Submit Scope to Deal Architect
-                </button>
-              </form>
-            </details>
-            {% endif %}
-
-          </div>
           {% endfor %}
         </div>
       </section>
@@ -312,94 +219,66 @@
 
     </div>
 
-    {# RIGHT SIDEBAR #}
-    <aside class="space-y-5">
-
-      {# Copilot #}
-      {% if 'ai_pilot' in modules %}
+    {# RIGHT — finances + quick actions #}
+    <div class="space-y-6">
       <section class="ravlo-card pad">
-        <div class="flex justify-between items-center mb-3">
-          <h3 class="text-base font-semibold">Copilot</h3>
-          <a href="{{ url_for('vip.ai_pilot') }}" class="ravlo-btn ghost sm">Open</a>
+        <div class="flex items-center justify-between mb-3">
+          <h3 class="text-lg font-semibold">Financials</h3>
+          <a href="{{ url_for('vip.finances') }}" class="ravlo-btn ghost sm">Open</a>
         </div>
-        {% if copilot_suggestions %}
+        <dl class="space-y-2 text-sm">
+          <div class="flex justify-between">
+            <dt class="text-gray-400">Received</dt>
+            <dd class="font-semibold text-green-400">${{ '{:,.0f}'.format(finances.received or 0) }}</dd>
+          </div>
+          <div class="flex justify-between">
+            <dt class="text-gray-400">Pending</dt>
+            <dd class="font-semibold text-yellow-300">${{ '{:,.0f}'.format(finances.pending or 0) }}</dd>
+          </div>
+          <div class="flex justify-between">
+            <dt class="text-gray-400">Expenses</dt>
+            <dd class="font-semibold text-red-300">${{ '{:,.0f}'.format(finances.expenses or 0) }}</dd>
+          </div>
+          <div class="flex justify-between border-t border-white/10 pt-2">
+            <dt class="text-gray-400">Net (Received)</dt>
+            <dd class="font-bold">${{ '{:,.0f}'.format(finances.net or 0) }}</dd>
+          </div>
+        </dl>
+        <div class="mt-3 flex gap-2">
+          <a href="{{ url_for('vip.finances_add_income') }}" class="ravlo-btn primary sm">+ Income</a>
+          <a href="{{ url_for('vip.finances_add_expense') }}" class="ravlo-btn ghost sm">+ Expense</a>
+        </div>
+      </section>
+
+      <section class="ravlo-card pad">
+        <h3 class="text-lg font-semibold mb-3">Quick actions</h3>
         <div class="space-y-2">
+          <a href="{{ url_for('vip.contractor_job_new') }}"
+             class="block ravlo-btn ghost sm w-full text-left">
+            <i class="lucide lucide-hammer"></i><span>Start a new job</span>
+          </a>
+          <a href="{{ url_for('vip.contractor_bid_new') }}"
+             class="block ravlo-btn ghost sm w-full text-left">
+            <i class="lucide lucide-file-plus"></i><span>Send a bid</span>
+          </a>
+          <a href="{{ url_for('vip.ai_pilot') }}"
+             class="block ravlo-btn ghost sm w-full text-left">
+            <i class="lucide lucide-sparkles"></i><span>Ask Copilot</span>
+          </a>
+        </div>
+      </section>
+
+      {% if copilot_suggestions %}
+      <section class="ravlo-card pad">
+        <h3 class="text-lg font-semibold mb-3">Copilot suggestions</h3>
+        <ul class="space-y-2 text-sm">
           {% for s in copilot_suggestions %}
-          <div class="ravlo-card p-2 text-xs">
-            <div class="font-medium truncate">{{ s.title }}</div>
-            {% if s.body %}<div class="text-gray-500 truncate mt-0.5">{{ s.body }}</div>{% endif %}
-          </div>
+            <li class="text-gray-300">• {{ s.suggestion_text or s.title }}</li>
           {% endfor %}
-        </div>
-        {% else %}
-        <p class="text-xs text-gray-500 italic">No suggestions yet.</p>
-        {% endif %}
+        </ul>
       </section>
       {% endif %}
-
-      {# Recent proposals #}
-      {% if recent_proposals %}
-      <section class="ravlo-card pad">
-        <div class="flex justify-between items-center mb-3">
-          <h3 class="text-base font-semibold">Recent Proposals</h3>
-          <a href="{{ url_for('partners.proposals') }}" class="ravlo-btn ghost sm">All</a>
-        </div>
-        <div class="space-y-2">
-          {% for prop in recent_proposals %}
-          <div class="ravlo-card p-2 text-xs">
-            <div class="font-medium truncate">{{ prop.title }}</div>
-            <div class="flex justify-between text-gray-500 mt-0.5">
-              <span>{{ prop.status | title }}</span>
-              <span>${{ '{:,.0f}'.format(prop.total_cost or 0) }}</span>
-            </div>
-          </div>
-          {% endfor %}
-        </div>
-      </section>
-      {% endif %}
-
-      {# Deal Architect explainer #}
-      <section class="ravlo-card pad">
-        <h3 class="text-base font-semibold mb-2">Deal Architect Loop</h3>
-        <p class="text-xs text-gray-500 leading-relaxed">
-          When you submit scope numbers, they're compared to Ravlo's AI
-          rehab estimate. The delta helps Deal Architect get more accurate
-          over time for your market and property type.
-        </p>
-        <div class="mt-3 space-y-1 text-xs text-gray-600">
-          <div class="flex gap-2 items-center">
-            <span class="w-2 h-2 rounded-full bg-blue-500 flex-shrink-0"></span>
-            AI estimate — Deal Architect
-          </div>
-          <div class="flex gap-2 items-center">
-            <span class="w-2 h-2 rounded-full bg-white flex-shrink-0"></span>
-            Your scope — actual numbers
-          </div>
-          <div class="flex gap-2 items-center">
-            <span class="w-2 h-2 rounded-full bg-green-500 flex-shrink-0"></span>
-            Delta — trains accuracy
-          </div>
-        </div>
-      </section>
-
-    </aside>
+    </div>
   </div>
-
 </div>
-{% endblock %}
-
-{% block scripts %}
-<script>
-function addLineItem(jobId) {
-  const container = document.getElementById("lineItems-" + jobId);
-  const row = document.createElement("div");
-  row.className = "line-item-row grid grid-cols-[120px_1fr_100px] gap-2 mb-1";
-  row.innerHTML = `
-    <input name="line_category[]" class="design-input text-xs" placeholder="Category">
-    <input name="line_description[]" class="design-input text-xs" placeholder="Description">
-    <input name="line_amount[]" type="number" class="design-input text-xs" placeholder="$">
-  `;
-  container.appendChild(row);
-}
-</script>
 {% endblock %}
