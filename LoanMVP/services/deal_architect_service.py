@@ -5,7 +5,17 @@ except Exception:  # pragma: no cover - defensive: never break this module
 
 
 def _to_money(value):
-    return "${:,.0f}".format(value)
+    # Render negatives as ``-$1,234`` instead of ``$-1,234`` (the former is
+    # the convention investors expect; the latter looks like a typo). Matters
+    # for Deal Architect when a high local cost factor eats the margin and
+    # ``profit`` goes negative — the strategy still renders, just flagged.
+    try:
+        v = float(value)
+    except (TypeError, ValueError):
+        v = 0.0
+    if v < 0:
+        return "-${:,.0f}".format(-v)
+    return "${:,.0f}".format(v)
 
 
 def _safe_float_from_text(text, default=0):

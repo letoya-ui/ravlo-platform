@@ -119,7 +119,15 @@ def generate_rehab_risk_flags(results, comps):
         return flags
 
     total = _to_number(rehab.get("total", 0), 0.0)
+    # The cost_per_sqft on the breakdown is locally adjusted (base + line
+    # items blended), so in high-cost markets it will naturally exceed $60
+    # without being "unusual" for that market. For the unusual-spend flag we
+    # compare the *national-equivalent* rate (total divided by the local
+    # factor, or equivalently ``total / sqft / factor``) against the flat
+    # national threshold.
+    local_factor = _to_number(rehab.get("local_factor", 1.0), 1.0) or 1.0
     cpsf  = _to_number(rehab.get("cost_per_sqft", 0), 0.0)
+    national_cpsf_equiv = cpsf / local_factor if local_factor else cpsf
     scope = rehab.get("scope")
     items = rehab.get("items", {}) or {}
 
@@ -132,7 +140,7 @@ def generate_rehab_risk_flags(results, comps):
     if purchase_price and total > purchase_price * 0.5:
         flags.append("Rehab cost exceeds 50% of purchase price.")
 
-    if cpsf > 60:
+    if national_cpsf_equiv > 60:
         flags.append("Cost per sqft is unusually high.")
 
     heavy_items = [k for k, v in items.items() if isinstance(v, dict) and v.get("level") == "heavy"]

@@ -546,6 +546,11 @@ def apply_multiplier_to_engine_response(
         factor = float(factor)
     except (TypeError, ValueError):
         return response
+    # A factor of 0 (or negative) would zero-out every cost field. That can
+    # only come from corrupted data; leave the response untouched rather than
+    # silently destroying its numbers.
+    if factor <= 0:
+        return response
     if not _should_apply_multiplier(response, factor):
         return response
 
