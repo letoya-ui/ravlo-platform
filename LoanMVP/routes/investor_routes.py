@@ -5249,108 +5249,11 @@ def request_funding(deal_id):
 # REHAB STUDIO PAGE
 # =========================================================
 
-@investor_bp.route("/deals/<int:deal_id>/rehab", methods=["GET"])
-@investor_bp.route("/deal-studio/rehab-studio", methods=["GET"])
-@login_required
-@role_required("investor")
-def deal_rehab(deal_id=None):
-    deal = None
-    saved_property = None
-
-    if deal_id is None:
-        query_deal_id = request.args.get("deal_id", type=int)
-        if query_deal_id:
-            deal_id = query_deal_id
-
-    if deal_id is not None:
-        deal = _get_owned_deal_or_404(deal_id)
-
-    results = (deal.results_json or {}) if deal else {}
-    rehab_project = results.get("rehab_project", {}) or {}
-    rehab_scope = results.get("rehab_scope") or (getattr(deal, "rehab_scope_json", None) if deal else None) or {}
-
-    rehab_before = rehab_project.get("before", {}) or {}
-    rehab_latest = rehab_project.get("latest", {}) or {}
-    rehab_concepts = rehab_project.get("concepts", []) or []
-
-    if deal and getattr(deal, "saved_property_id", None):
-        saved_property = SavedProperty.query.filter_by(id=deal.saved_property_id).first()
-
-    property_seed = _saved_property_workspace_seed(saved_property) if saved_property else {}
-    property_media = _saved_property_media(saved_property) if saved_property else {"primary_photo": None, "gallery": []}
-
-    workspace_analysis = results.get("workspace_analysis", {}) or {}
-
-    property_gallery = _normalize_photo_urls(
-        property_seed.get("listing_photos"),
-        property_media.get("gallery"),
-        workspace_analysis.get("listing_photos"),
-        results.get("listing_photos"),
-    )
-    property_primary_photo = _resolve_photo(
-        property_seed.get("primary_photo") or property_media.get("primary_photo"),
-        property_gallery,
-    )
-
-    workspace_images = []
-    seen_urls = set()
-    for url in property_gallery:
-        if url and url not in seen_urls:
-            workspace_images.append({"url": url, "label": "Listing Photo", "source": "listing"})
-            seen_urls.add(url)
-
-    for concept in rehab_concepts:
-        concept_url = concept.get("image_url") if isinstance(concept, dict) else None
-        if concept_url and concept_url not in seen_urls:
-            concept_label = (concept.get("preset") or "Concept").title()
-            raw_mode = (concept.get("mode") or "").strip()
-            concept_mode = raw_mode.upper() if raw_mode.lower() in {"hgtv"} else raw_mode.title()
-            label = f"{concept_label} — {concept_mode}" if concept_mode else concept_label
-            workspace_images.append({"url": concept_url, "label": label, "source": "concept"})
-            seen_urls.add(concept_url)
-
-    preselected_image_url = (request.args.get("image_url") or "").strip()
-    if preselected_image_url and not preselected_image_url.lower().startswith(("http://", "https://")):
-        preselected_image_url = ""
-
-    if preselected_image_url and not rehab_before.get("image_url"):
-        rehab_before = {
-            **rehab_before,
-            "image_url": preselected_image_url,
-            "source": "workspace_preselect",
-        }
-    elif property_primary_photo and not rehab_before.get("image_url"):
-        rehab_before = {
-            **rehab_before,
-            "image_url": property_primary_photo,
-            "source": "saved_listing_photo",
-        }
-
-    if property_gallery and not rehab_before.get("gallery"):
-        rehab_before = {
-            **rehab_before,
-            "gallery": property_gallery,
-        }
-
-    return render_template(
-        "investor/deal_rehab_studio.html",
-        deal=deal,
-        rehab_project=rehab_project,
-        rehab_scope=rehab_scope,
-        rehab_before=rehab_before,
-        rehab_latest=rehab_latest,
-        rehab_concepts=rehab_concepts,
-        property_photo_gallery=property_gallery,
-        workspace_images=workspace_images,
-        preselected_image_url=preselected_image_url,
-        page_title="Renovation Studio",
-        page_subtitle="Visualize renovation concepts before execution.",
-    )
-
+@investor_bp.route("/deal-studio/design-studio/generate-variant", methods=["POST"])
 @investor_bp.route("/deal-studio/rehab-studio/generate-variant", methods=["POST"])
 @login_required
 @role_required("investor")
-def deal_rehab_generate_variant():
+def design_studio_generate_variant():
     deal = None
 
     try:
@@ -5373,7 +5276,7 @@ def deal_rehab_generate_variant():
         if _deal_render_lock_active(deal):
             return jsonify({
                 "status": "error",
-                "message": "A rehab render is already in progress for this deal."
+                "message": "A design render is already in progress for this deal."
             }), 409
 
         _set_deal_render_processing(deal)
@@ -5389,7 +5292,7 @@ def deal_rehab_generate_variant():
             db.session.commit()
             return jsonify({
                 "status": "error",
-                "message": "Before image is required before generating another concept."
+                "message": "A reference image is required before generating another concept."
             }), 400
 
         try:
@@ -5402,7 +5305,7 @@ def deal_rehab_generate_variant():
             db.session.commit()
             return jsonify({
                 "status": "error",
-                "message": "Unable to load saved before image."
+                "message": "Unable to load saved reference image."
             }), 422
 
         image_base64 = base64.b64encode(raw_before).decode("utf-8")
@@ -5484,7 +5387,7 @@ def deal_rehab_generate_variant():
         })
 
     except Exception as e:
-        current_app.logger.exception("Rehab variant generation error")
+        current_app.logger.exception("Design Studio variant generation error")
 
         if deal is not None:
             try:
@@ -5733,16 +5636,17 @@ def build_studio(deal_id=None):
     )
 
 
+# =========================================================
+# DESIGN STUDIO PAGE
+# =========================================================
+
 @investor_bp.route("/deals/<int:deal_id>/design-studio", methods=["GET"])
 @investor_bp.route("/deal-studio/design-studio", methods=["GET"])
 @login_required
 @role_required("investor")
 def design_studio(deal_id=None):
     deal = None
-    project = None
     saved_property = None
-
-    project_id = request.args.get("project_id", type=int)
 
     if deal_id is None:
         query_deal_id = request.args.get("deal_id", type=int)
@@ -5752,96 +5656,108 @@ def design_studio(deal_id=None):
     if deal_id is not None:
         deal = _get_owned_deal_or_404(deal_id)
 
-    if project_id is not None:
-        project = BuildProject.query.filter_by(
-            id=project_id,
-            user_id=current_user.id
-        ).first()
-
-    if project is None and deal is not None:
-        project = _safe_first_related(getattr(deal, "projects", None))
-
     results = (deal.results_json or {}) if deal else {}
-    build_project = results.get("build_project", {}) or {}
-    build_analysis = results.get("build_analysis", {}) or {}
+    rehab_project = results.get("rehab_project", {}) or {}
+    rehab_scope = results.get("rehab_scope") or (getattr(deal, "rehab_scope_json", None) if deal else None) or {}
 
-    if not build_project and project is not None:
-        build_project = _seed_build_project_from_saved_project(project)
-
-    blueprint_result = build_project.get("blueprint", {}) or {}
-    exterior_result = _build_project_exterior_result(build_project)
-
-    interior_block = build_project.get("interior", {}) or {}
-    interior_result = interior_block.get("latest", {}) or {}
-    interior_rooms = interior_block.get("rooms", []) or []
-
-    lot_count = _build_project_lot_count(
-        build_project.get("lot_count"),
-        build_project.get("development_type"),
-        getattr(project, "development_type", None),
-    )
-
-    package_result = {
-        "blueprint": blueprint_result.get("image_url") or blueprint_result.get("blueprint_url") or "",
-        "exterior": exterior_result.get("image_url") or "",
-        "interior": interior_result.get("image_url") or "",
-    }
-
-    has_saved_package = any([
-        package_result["blueprint"],
-        package_result["exterior"],
-        package_result["interior"],
-    ])
+    rehab_before = rehab_project.get("before", {}) or {}
+    rehab_latest = rehab_project.get("latest", {}) or {}
+    rehab_concepts = rehab_project.get("concepts", []) or []
 
     if deal and getattr(deal, "saved_property_id", None):
         saved_property = SavedProperty.query.filter_by(id=deal.saved_property_id).first()
 
     property_seed = _saved_property_workspace_seed(saved_property) if saved_property else {}
     property_media = _saved_property_media(saved_property) if saved_property else {"primary_photo": None, "gallery": []}
+
+    workspace_analysis = results.get("workspace_analysis", {}) or {}
+
     property_gallery = _normalize_photo_urls(
         property_seed.get("listing_photos"),
         property_media.get("gallery"),
+        workspace_analysis.get("listing_photos"),
+        results.get("listing_photos"),
     )
     property_primary_photo = _resolve_photo(
         property_seed.get("primary_photo") or property_media.get("primary_photo"),
         property_gallery,
     )
 
-    if property_primary_photo and not exterior_result.get("build_reference_image"):
-        exterior_result = {
-            **exterior_result,
-            "build_reference_image": property_primary_photo,
+    workspace_images = []
+    seen_urls = set()
+    for url in property_gallery:
+        if url and url not in seen_urls:
+            workspace_images.append({"url": url, "label": "Listing Photo", "source": "listing"})
+            seen_urls.add(url)
+
+    for concept in rehab_concepts:
+        concept_url = concept.get("image_url") if isinstance(concept, dict) else None
+        if concept_url and concept_url not in seen_urls:
+            concept_label = (concept.get("preset") or "Concept").title()
+            raw_mode = (concept.get("mode") or "").strip()
+            concept_mode = raw_mode.upper() if raw_mode.lower() in {"hgtv"} else raw_mode.title()
+            label = f"{concept_label} — {concept_mode}" if concept_mode else concept_label
+            workspace_images.append({"url": concept_url, "label": label, "source": "concept"})
+            seen_urls.add(concept_url)
+
+    preselected_image_url = (request.args.get("image_url") or "").strip()
+    if preselected_image_url and not preselected_image_url.lower().startswith(("http://", "https://")):
+        preselected_image_url = ""
+
+    if preselected_image_url and not rehab_before.get("image_url"):
+        rehab_before = {
+            **rehab_before,
+            "image_url": preselected_image_url,
+            "source": "workspace_preselect",
+        }
+    elif property_primary_photo and not rehab_before.get("image_url"):
+        rehab_before = {
+            **rehab_before,
+            "image_url": property_primary_photo,
+            "source": "saved_listing_photo",
         }
 
-    if property_gallery and not exterior_result.get("gallery"):
-        exterior_result = {
-            **exterior_result,
+    if property_gallery and not rehab_before.get("gallery"):
+        rehab_before = {
+            **rehab_before,
             "gallery": property_gallery,
         }
 
     return render_template(
         "investor/deal_rehab_studio.html",
         deal=deal,
-        project=project,
-        build_analysis=build_analysis,
-        build_project=build_project,
-        blueprint_result=blueprint_result,
-        exterior_result=exterior_result,
-        interior_result=interior_result,
-        interior_rooms=interior_rooms,
+        rehab_project=rehab_project,
+        rehab_scope=rehab_scope,
+        rehab_before=rehab_before,
+        rehab_latest=rehab_latest,
+        rehab_concepts=rehab_concepts,
         property_photo_gallery=property_gallery,
-        package_result=package_result,
-        has_saved_package=has_saved_package,
+        workspace_images=workspace_images,
+        preselected_image_url=preselected_image_url,
         page_title="Design Studio",
-        page_subtitle="Interior design concepts created from blueprints, floor plans, or photos of your current space.",
-        lot_count=lot_count,
-        hero_title="Interior design from blueprints, floor plans, and existing space photos.",
-        hero_eyebrow="RAVLO DESIGN STUDIO",
-        companion_endpoint="investor.build_studio",
-        companion_label="Open Build Studio",
-        submit_label="Generate Design Concept",
+        page_subtitle="Create interior design concepts from blueprints, floor plans, and existing spaces.",
     )
 
+
+# ---------------------------------------------------------
+# LEGACY REHAB ROUTE -> REDIRECT TO DESIGN STUDIO
+# ---------------------------------------------------------
+
+@investor_bp.route("/deals/<int:deal_id>/rehab", methods=["GET"])
+@investor_bp.route("/deal-studio/rehab-studio", methods=["GET"])
+@login_required
+@role_required("investor")
+def deal_rehab(deal_id=None):
+    if deal_id is None:
+        deal_id = request.args.get("deal_id", type=int)
+
+    if deal_id:
+        image_url = (request.args.get("image_url") or "").strip()
+        if image_url:
+            return redirect(url_for("investor.design_studio", deal_id=deal_id, image_url=image_url))
+        return redirect(url_for("investor.design_studio", deal_id=deal_id))
+
+    return redirect(url_for("investor.design_studio"))
 
 @investor_bp.route("/deals/<int:deal_id>/project-build", methods=["GET"])
 @investor_bp.route("/deal-studio/project-build", methods=["GET"])
@@ -8669,10 +8585,11 @@ def renovation_upload():
 # PHOTO RENOVATION VISUALIZER
 # =========================================================
 
+@investor_bp.route("/deal-studio/design-studio/generate", methods=["POST"])
 @investor_bp.route("/deal-studio/rehab-studio/generate", methods=["POST"])
 @login_required
 @role_required("investor")
-def deal_rehab_generate():
+def design_studio_generate():
     deal = None
     rehab_scope_result = {}
 
@@ -8698,7 +8615,7 @@ def deal_rehab_generate():
             if _deal_render_lock_active(deal):
                 return jsonify({
                     "status": "error",
-                    "message": "A rehab render is already in progress for this deal."
+                    "message": "A design render is already in progress for this deal."
                 }), 409
 
             _set_deal_render_processing(deal)
@@ -8737,7 +8654,7 @@ def deal_rehab_generate():
                     db.session.commit()
                 return jsonify({
                     "status": "error",
-                    "message": "Empty before image upload."
+                    "message": "Empty reference image upload."
                 }), 400
 
             image_base64 = base64.b64encode(raw_before).decode("utf-8")
@@ -8774,7 +8691,7 @@ def deal_rehab_generate():
                 db.session.commit()
             return jsonify({
                 "status": "error",
-                "message": "Provide a before photo or saved rehab before image."
+                "message": "Provide a reference photo or saved design reference image."
             }), 400
 
         property_type = (
@@ -8783,7 +8700,7 @@ def deal_rehab_generate():
             or "residential property"
         )
         stable_seed = _stable_render_seed(
-            "rehab",
+            "design",
             getattr(deal, "id", None),
             before_uploaded_url or image_url,
             preset,
@@ -8832,13 +8749,13 @@ def deal_rehab_generate():
 
         images_b64 = engine_json.get("images_base64") or []
         if not images_b64:
-            raise RuntimeError("Renovation engine returned no images.")
+            raise RuntimeError("Design engine returned no images.")
 
         render_batch_id = uuid.uuid4().hex
         after_urls = _upload_after_images_from_b64(images_b64, render_batch_id)
 
         if not after_urls:
-            raise RuntimeError("Renovation generated but uploads failed.")
+            raise RuntimeError("Design concept generated but uploads failed.")
 
         concept_entry = {
             "image_url": after_urls[0],
@@ -8866,7 +8783,7 @@ def deal_rehab_generate():
                     timeout=60,
                 ) or {}
             except Exception:
-                current_app.logger.exception("Rehab Studio scope analysis failed")
+                current_app.logger.exception("Design Studio scope analysis failed")
                 rehab_scope_result = {}
 
         if save_to_deal and deal is not None:
@@ -8916,7 +8833,7 @@ def deal_rehab_generate():
         })
 
     except Exception as e:
-        current_app.logger.exception("Rehab Studio generation error")
+        current_app.logger.exception("Design Studio generation error")
 
         if deal is not None:
             try:
@@ -8929,7 +8846,6 @@ def deal_rehab_generate():
             "status": "error",
             "message": str(e)
         }), 500
-
 
 # =========================================================
 # SAVE MOCKUPS MANUALLY
