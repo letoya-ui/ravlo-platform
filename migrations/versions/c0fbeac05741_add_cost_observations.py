@@ -1,7 +1,7 @@
 """add cost_observations table
 
 Revision ID: c0fbeac05741
-Revises: a1b2c3d4e5f6
+Revises: 20260420r01
 Create Date: 2026-04-19 21:30:00.000000
 """
 from alembic import op
@@ -9,8 +9,12 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
+# NOTE: down_revision originally pointed at "a1b2c3d4e5f6" (from PR #50), but
+# that revision ID now collides with an unrelated migration already on main
+# (9f3d2c7a4b10_company_access_invite.py also uses it). Chain off the newest
+# unambiguous head on main instead so flask db upgrade has a clean lineage.
 revision = "c0fbeac05741"
-down_revision = "a1b2c3d4e5f6"
+down_revision = "20260420r01"
 branch_labels = None
 depends_on = None
 
