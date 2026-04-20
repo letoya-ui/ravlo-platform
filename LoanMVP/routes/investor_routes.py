@@ -7488,11 +7488,45 @@ def ai_build_scope():
     if not payload["description"]:
         return jsonify({"status": "error", "message": "description is required."}), 400
 
+    # Inject Local Cost Index context so the engine can trace which ZIP
+    # the build scope was scored against. The engine stays location-neutral
+    # on cost math — we own the multiplier and apply it to the response
+    # post-hoc. See ``cost_index.py`` module docstring for details.
+    cost_ctx = None
+    try:
+        from LoanMVP.services.cost_index import (
+            build_location_cost_context,
+            apply_multiplier_to_engine_response,
+        )
+        zip_code = (data.get("zip_code") or "").strip() or None
+        state = (data.get("state") or "").strip() or None
+        if zip_code or state:
+            cost_ctx = build_location_cost_context(
+                zip_code=zip_code,
+                state=state,
+                category="new_build",
+            )
+            payload["zip_code"] = zip_code
+            payload["state"] = state
+            payload["location_cost_context"] = cost_ctx
+    except Exception:
+        current_app.logger.exception("Failed to build build_scope location context")
+
     try:
         if not SCOPE_ENGINE_URL:
             return jsonify({"status": "error", "message": "Scope engine is not configured."}), 500
 
         engine_data = _post_scope_engine_json("/v1/build_scope", payload, timeout=60) or {}
+
+        if cost_ctx and isinstance(engine_data, dict):
+            try:
+                apply_multiplier_to_engine_response(engine_data, cost_ctx.get("factor"))
+                engine_data.setdefault("location_cost_context", cost_ctx)
+            except Exception:
+                current_app.logger.exception(
+                    "apply_multiplier_to_engine_response failed for /v1/build_scope"
+                )
+
         return jsonify(engine_data)
 
     except Exception as e:
@@ -8572,11 +8606,50 @@ def rehab_architect_generate_scope():
     if image_url:
         try:
             if SCOPE_ENGINE_URL:
+                # Inject Local Cost Index context so the engine can trace
+                # which ZIP the scope was scored against. We still own the
+                # multiplier on this side — the engine's cost math is
+                # location-neutral. See ``cost_index.py`` module docstring
+                # for the single-source-of-truth rationale.
+                cost_ctx = None
+                try:
+                    from LoanMVP.services.cost_index import (
+                        build_location_cost_context,
+                        apply_multiplier_to_engine_response,
+                    )
+                    cost_ctx = build_location_cost_context(
+                        zip_code=getattr(deal, "zip_code", None),
+                        state=getattr(deal, "state", None),
+                        category="rehab",
+                        scope=rehab_level,
+                    )
+                except Exception:
+                    current_app.logger.exception("Failed to build rehab_scope location context")
+
+                scope_payload = {"image_url": image_url}
+                if cost_ctx:
+                    scope_payload["zip_code"] = cost_ctx.get("zip_code")
+                    scope_payload["state"] = cost_ctx.get("state")
+                    scope_payload["location_cost_context"] = cost_ctx
+
                 external_scope_result = _post_scope_engine_json(
                     "/v1/rehab_scope",
-                    {"image_url": image_url},
+                    scope_payload,
                     timeout=SCOPE_TIMEOUT,
                 )
+
+                if cost_ctx and isinstance(external_scope_result, dict):
+                    try:
+                        apply_multiplier_to_engine_response(
+                            external_scope_result, cost_ctx.get("factor")
+                        )
+                        external_scope_result.setdefault(
+                            "location_cost_context", cost_ctx
+                        )
+                    except Exception:
+                        current_app.logger.exception(
+                            "apply_multiplier_to_engine_response failed for /v1/rehab_scope"
+                        )
 
                 estimated_rehab_cost = (
                     external_scope_result.get("cost_high")
