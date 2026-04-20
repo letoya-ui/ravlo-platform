@@ -78,6 +78,21 @@ def resource_path(relative_path: str) -> str:
 # or type-changing operations must go through Alembic.
 _SCHEMA_COMPAT_COLUMNS = [
     ("vip_profiles", "markets_json", "TEXT"),
+    ("elena_listings", "market", "VARCHAR(100)"),
+    ("elena_clients", "market", "VARCHAR(100)"),
+    ("elena_clients", "assigned_member_id", "INTEGER"),
+    ("vip_expenses", "market", "VARCHAR(100)"),
+    ("vip_income", "market", "VARCHAR(100)"),
+    ("vip_income", "status", "VARCHAR(50) DEFAULT 'received'"),
+    ("vip_assistant_suggestions", "proposed_amount", "INTEGER"),
+    ("vip_assistant_suggestions", "source", "VARCHAR(50)"),
+]
+
+# Tables the app assumes exist on boot. If the Alembic migration hasn't been
+# applied yet, we'll create them from the SQLAlchemy model metadata. Only
+# additive — never drops or alters existing tables.
+_SCHEMA_COMPAT_TABLES = [
+    "vip_team_members",
 ]
 
 
@@ -119,6 +134,20 @@ def _ensure_schema_compat(app):
                     ))
             except Exception as e:
                 print(f"[schema-compat] failed on {table}.{column}: {e}")
+
+        # Table-level self-heal for tables introduced without a migration.
+        for table_name in _SCHEMA_COMPAT_TABLES:
+            try:
+                if inspector.has_table(table_name):
+                    continue
+                table_obj = db.metadata.tables.get(table_name)
+                if table_obj is None:
+                    print(f"[schema-compat] unknown table {table_name}, skipping")
+                    continue
+                print(f"[schema-compat] creating table {table_name}")
+                table_obj.create(bind=db.engine, checkfirst=True)
+            except Exception as e:
+                print(f"[schema-compat] failed creating {table_name}: {e}")
 
 
 # ---------------------------------------------------------

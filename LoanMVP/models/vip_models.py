@@ -68,6 +68,7 @@ class VIPProfile(VIPBaseModel):
     suggestions   = relationship("VIPAssistantSuggestion", back_populates="vip_profile", lazy=True)
     actions       = relationship("VIPAssistantAction",    back_populates="vip_profile", lazy=True)
     notifications = relationship("VIPNotification",       back_populates="vip_profile", lazy=True)
+    team_members  = relationship("VIPTeamMember",         back_populates="vip_profile", lazy=True)
 
     # ✅ FIXED — back_populates on both sides, overlaps silences the warning
     design_projects = relationship(
@@ -162,7 +163,11 @@ class VIPIncome(VIPBaseModel):
     description = Column(String(255), nullable=True)
     amount      = Column(Integer,     nullable=False)
     income_date = Column(DateTime,    nullable=True)
-    status      = Column(String(50),  nullable=False, default="pending")
+    # Default "received" to match the Alembic server_default and schema-compat
+    # path, and the finances page's COALESCE(status, 'received') fallback.
+    # Pending rows are created explicitly (projected commissions, copilot
+    # add_income without a parsed amount).
+    status      = Column(String(50),  nullable=False, default="received")
     notes       = Column(Text,        nullable=True)
 
     # market column for per-market finance split (Frank dashboard)
@@ -287,3 +292,25 @@ class VIPDesignAnnotation(VIPBaseModel):
     height          = Column(Integer,     nullable=True)
 
     project = relationship("VIPDesignProject", back_populates="annotations")
+
+
+# ---------------------------------------------------------
+# TEAM MEMBERS  (Frank's team + lead-distribution)
+# ---------------------------------------------------------
+class VIPTeamMember(VIPBaseModel):
+    __tablename__ = "vip_team_members"
+
+    vip_profile_id = Column(Integer, ForeignKey("vip_profiles.id"), nullable=False)
+
+    name   = Column(String(255), nullable=False)
+    email  = Column(String(255), nullable=True)
+    phone  = Column(String(50),  nullable=True)
+    role   = Column(String(80),  nullable=True)
+    market = Column(String(100), nullable=True)
+    notes  = Column(Text,        nullable=True)
+    active = Column(Boolean,     nullable=False, default=True)
+
+    vip_profile = relationship("VIPProfile", back_populates="team_members")
+
+    def __repr__(self):
+        return f"<VIPTeamMember {self.id} - {self.name}>"

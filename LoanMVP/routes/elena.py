@@ -109,21 +109,15 @@ def set_current_market(value):
 
 
 def infer_market_from_listing_data(data):
+    """Return the market label from feed/form data.
+
+    Every realtor configures their own markets on VIP onboarding, so we no
+    longer hard-code state-to-market mappings. If the feed/form provides an
+    explicit ``market`` we use it; otherwise the listing stays untagged and
+    falls into the "All Markets" bucket until the realtor assigns it.
+    """
     market = (data.get("market") or "").strip()
-    if market:
-        return market
-
-    city = (data.get("city") or "").strip().lower()
-    state = (data.get("state") or "").strip().lower()
-
-    if state == "ny":
-        return "Hudson Valley"
-    if state == "fl" and "sarasota" in city:
-        return "Sarasota"
-    if state == "fl":
-        return "Sarasota"
-
-    return None
+    return market or None
 
 
 def _clean_listing_value(value):
@@ -195,16 +189,18 @@ def _template_defaults():
         "cta": "",
     }
 
-def assign_market(state, city):
-    state = (state or "").lower()
-    city = (city or "").lower()
+def assign_market(state=None, city=None, explicit_market=None):
+    """Resolve the market label for a new listing.
 
-    if state == "ny":
-        return "Hudson Valley"
-
-    if state == "fl":
-        return "Sarasota"
-
+    Priority: explicit form/feed value, otherwise None. Each realtor
+    configures their own markets on VIP onboarding so we never infer a
+    market from the US state anymore (that was the legacy Hudson Valley
+    / Sarasota shortcut).
+    """
+    if explicit_market is not None:
+        cleaned = str(explicit_market).strip()
+        if cleaned:
+            return cleaned
     return None
 
 def _get_template_enum(template_type_value):
@@ -390,6 +386,19 @@ def _gate_elena_on_vip_access():
 @elena_bp.get("/")
 @role_required("partner_group", "admin")
 def dashboard():
+    """Elena's root URL redirects to the unified realtor dashboard.
+
+    Every realtor — Elena, Frank, and future beta partners — shares the same
+    VIP realtor dashboard at ``/vip/realtor``. The Elena blueprint keeps its
+    deep pages (listings, clients, interactions, template studio, etc.) so
+    existing URLs stay valid, but the landing page is the unified view.
+    """
+    return redirect(url_for("vip.realtor_dashboard"))
+
+
+@elena_bp.get("/legacy-dashboard")
+@role_required("partner_group", "admin")
+def dashboard_legacy():
     now = datetime.utcnow()
     week_ago = now - timedelta(days=7)
     current_market = get_current_market()

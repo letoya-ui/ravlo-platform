@@ -27,6 +27,9 @@ class ElenaClient(BaseModel):
     preferred_areas = Column(String, nullable=True)
     budget = Column(String, nullable=True)
 
+    assigned_member_id = Column(Integer, nullable=True)
+    market = Column(String(100), nullable=True)
+
     interactions = relationship("ElenaInteraction", back_populates="client", lazy=True)
     listings = relationship("ElenaListing", back_populates="client", lazy=True)
 
@@ -49,6 +52,8 @@ class ElenaListing(BaseModel):
     description = Column(Text, nullable=True)
     photos_json = Column(Text, nullable=True)
     status = Column(String(20), nullable=False, default="active")
+
+    market = Column(String(100), nullable=True)
 
     client_id = Column(Integer, ForeignKey("elena_clients.id"), nullable=True)
     client = relationship("ElenaClient", back_populates="listings")

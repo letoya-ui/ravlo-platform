@@ -1,25 +1,220 @@
 {# templates/vip/finances.html #}
 {% extends "layouts/ravlo_base.html" %}
 
-{% block title %}Ravlo • VIP Finances{% endblock %}
+{% block title %}Ravlo • Finances{% endblock %}
 {% block page_title %}{{ header_name }}{% endblock %}
-{% block page_subline %}Income, expenses, and profit in one place.{% endblock %}
+{% block page_subline %}Income, expenses, closings, and tax set-aside in one place.{% endblock %}
 
 {% block content %}
 <div class="max-w-6xl mx-auto space-y-6">
+
   <section class="partner-stats-grid">
     <article class="ravlo-card partner-stat-card">
-      <div class="partner-stat-label">Income</div>
-      <div class="partner-stat-value">${{ "{:,.0f}".format(total_income or 0) }}</div>
+      <div class="partner-stat-label">Received</div>
+      <div class="partner-stat-value">${{ "{:,.0f}".format(total_received or 0) }}</div>
+      <div class="partner-stat-sub">Deposited income</div>
+    </article>
+    <article class="ravlo-card partner-stat-card">
+      <div class="partner-stat-label">Pending</div>
+      <div class="partner-stat-value">${{ "{:,.0f}".format(total_pending or 0) }}</div>
+      <div class="partner-stat-sub">Closings in flight</div>
     </article>
     <article class="ravlo-card partner-stat-card">
       <div class="partner-stat-label">Expenses</div>
       <div class="partner-stat-value">${{ "{:,.0f}".format(total_expenses or 0) }}</div>
     </article>
     <article class="ravlo-card partner-stat-card">
-      <div class="partner-stat-label">Net</div>
+      <div class="partner-stat-label">Net Profit</div>
       <div class="partner-stat-value">${{ "{:,.0f}".format(net_profit or 0) }}</div>
+      <div class="partner-stat-sub">Received minus expenses</div>
     </article>
   </section>
+
+  <section class="ravlo-card p-6">
+    <div class="flex flex-wrap items-center justify-between gap-4">
+      <div>
+        <h2 class="text-lg font-semibold">Tax set-aside</h2>
+        <p class="text-sm opacity-70">
+          At your configured rate of <strong>{{ tax_rate_pct }}%</strong>, set aside
+          <strong>${{ "{:,.0f}".format(tax_set_aside or 0) }}</strong>
+          from received income today.
+          {% if tax_projected %}
+            Expect another <strong>${{ "{:,.0f}".format(tax_projected or 0) }}</strong>
+            owed on pending closings.
+          {% endif %}
+        </p>
+      </div>
+      <a href="{{ url_for('vip.onboarding') }}" class="ravlo-btn ravlo-btn-outline">
+        Adjust tax rate
+      </a>
+    </div>
+  </section>
+
+  <section class="grid md:grid-cols-2 gap-6">
+
+    <article class="ravlo-card p-6">
+      <h2 class="text-lg font-semibold mb-4">Add income</h2>
+      <form method="post" action="{{ url_for('vip.finances_add_income') }}" class="space-y-3">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="grid grid-cols-2 gap-3">
+          <label class="text-xs uppercase opacity-70">Category
+            <select name="category" class="ravlo-input mt-1 w-full">
+              <option value="commission">Commission</option>
+              <option value="bonus">Bonus</option>
+              <option value="referral">Referral</option>
+              <option value="other">Other</option>
+            </select>
+          </label>
+          <label class="text-xs uppercase opacity-70">Status
+            <select name="status" class="ravlo-input mt-1 w-full">
+              <option value="received">Received</option>
+              <option value="pending">Pending (closing)</option>
+            </select>
+          </label>
+        </div>
+        <label class="text-xs uppercase opacity-70 block">Amount ($)
+          <input type="number" min="0" step="1" name="amount" required class="ravlo-input mt-1 w-full" placeholder="5000">
+        </label>
+        <label class="text-xs uppercase opacity-70 block">Description
+          <input type="text" name="description" class="ravlo-input mt-1 w-full" placeholder="123 Main St closing">
+        </label>
+        <div class="grid grid-cols-2 gap-3">
+          <label class="text-xs uppercase opacity-70">Date
+            <input type="date" name="income_date" class="ravlo-input mt-1 w-full">
+          </label>
+          {% if markets %}
+          <label class="text-xs uppercase opacity-70">Market
+            <select name="market" class="ravlo-input mt-1 w-full">
+              <option value="">—</option>
+              {% for m in markets %}<option value="{{ m }}">{{ m }}</option>{% endfor %}
+            </select>
+          </label>
+          {% endif %}
+        </div>
+        <button class="ravlo-btn ravlo-btn-primary w-full" type="submit">Add income</button>
+      </form>
+    </article>
+
+    <article class="ravlo-card p-6">
+      <h2 class="text-lg font-semibold mb-4">Add expense</h2>
+      <form method="post" action="{{ url_for('vip.finances_add_expense') }}" class="space-y-3">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <label class="text-xs uppercase opacity-70 block">Category
+          <select name="category" class="ravlo-input mt-1 w-full">
+            <option value="marketing">Marketing</option>
+            <option value="gas">Gas / Mileage</option>
+            <option value="tolls">Tolls</option>
+            <option value="meals">Meals</option>
+            <option value="staging">Staging</option>
+            <option value="photography">Photography</option>
+            <option value="dues">Dues / Fees</option>
+            <option value="other">Other</option>
+          </select>
+        </label>
+        <label class="text-xs uppercase opacity-70 block">Amount ($)
+          <input type="number" min="0" step="1" name="amount" required class="ravlo-input mt-1 w-full" placeholder="120">
+        </label>
+        <label class="text-xs uppercase opacity-70 block">Description
+          <input type="text" name="description" class="ravlo-input mt-1 w-full" placeholder="Open house signage">
+        </label>
+        <div class="grid grid-cols-2 gap-3">
+          <label class="text-xs uppercase opacity-70">Date
+            <input type="date" name="expense_date" class="ravlo-input mt-1 w-full">
+          </label>
+          {% if markets %}
+          <label class="text-xs uppercase opacity-70">Market
+            <select name="market" class="ravlo-input mt-1 w-full">
+              <option value="">—</option>
+              {% for m in markets %}<option value="{{ m }}">{{ m }}</option>{% endfor %}
+            </select>
+          </label>
+          {% endif %}
+        </div>
+        <button class="ravlo-btn ravlo-btn-primary w-full" type="submit">Add expense</button>
+      </form>
+    </article>
+
+  </section>
+
+  <section class="ravlo-card p-6">
+    <h2 class="text-lg font-semibold mb-4">Income</h2>
+    {% if incomes %}
+      <div class="overflow-x-auto">
+        <table class="ravlo-table w-full">
+          <thead>
+            <tr>
+              <th>Date</th><th>Category</th><th>Description</th>
+              <th>Market</th><th>Status</th>
+              <th class="text-right">Amount</th><th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for i in incomes %}
+            <tr>
+              <td>{{ (i.income_date or i.created_at).strftime('%b %d, %Y') if i.income_date or i.created_at else '—' }}</td>
+              <td>{{ i.category }}</td>
+              <td>{{ i.description or '—' }}</td>
+              <td>{{ i.market or '—' }}</td>
+              <td>
+                <span class="ravlo-chip">{{ (i.status or 'received').title() }}</span>
+              </td>
+              <td class="text-right">${{ "{:,.0f}".format(i.amount or 0) }}</td>
+              <td class="text-right whitespace-nowrap">
+                {% if (i.status or 'received') == 'pending' %}
+                <form method="post" action="{{ url_for('vip.finances_mark_income_received', income_id=i.id) }}" class="inline">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <button class="ravlo-btn ravlo-btn-outline ravlo-btn-sm" title="Mark as received">Mark received</button>
+                </form>
+                {% endif %}
+                <form method="post" action="{{ url_for('vip.finances_delete_income', income_id=i.id) }}" class="inline" onsubmit="return confirm('Delete this income entry?');">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <button class="ravlo-btn ravlo-btn-ghost ravlo-btn-sm" title="Delete">✕</button>
+                </form>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <p class="opacity-70">No income recorded yet. Add your first entry above.</p>
+    {% endif %}
+  </section>
+
+  <section class="ravlo-card p-6">
+    <h2 class="text-lg font-semibold mb-4">Expenses</h2>
+    {% if expenses %}
+      <div class="overflow-x-auto">
+        <table class="ravlo-table w-full">
+          <thead>
+            <tr>
+              <th>Date</th><th>Category</th><th>Description</th>
+              <th>Market</th><th class="text-right">Amount</th><th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for e in expenses %}
+            <tr>
+              <td>{{ (e.expense_date or e.created_at).strftime('%b %d, %Y') if e.expense_date or e.created_at else '—' }}</td>
+              <td>{{ e.category }}</td>
+              <td>{{ e.description or '—' }}</td>
+              <td>{{ e.market or '—' }}</td>
+              <td class="text-right">${{ "{:,.0f}".format(e.amount or 0) }}</td>
+              <td class="text-right whitespace-nowrap">
+                <form method="post" action="{{ url_for('vip.finances_delete_expense', expense_id=e.id) }}" class="inline" onsubmit="return confirm('Delete this expense?');">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <button class="ravlo-btn ravlo-btn-ghost ravlo-btn-sm">✕</button>
+                </form>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <p class="opacity-70">No expenses recorded yet. Log your first one above.</p>
+    {% endif %}
+  </section>
+
 </div>
 {% endblock %}

@@ -1,0 +1,191 @@
+{# templates/vip/team.html #}
+{% extends "layouts/ravlo_base.html" %}
+
+{% block title %}Ravlo • Team{% endblock %}
+{% block page_title %}{{ header_name }}{% endblock %}
+{% block page_subline %}Your team, lead routing, and distribution.{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto space-y-6">
+
+  <section class="partner-stats-grid">
+    <article class="ravlo-card partner-stat-card">
+      <div class="partner-stat-label">Teammates</div>
+      <div class="partner-stat-value">{{ members|length }}</div>
+      <div class="partner-stat-sub">
+        {{ members|selectattr('active')|list|length }} active
+      </div>
+    </article>
+    <article class="ravlo-card partner-stat-card">
+      <div class="partner-stat-label">Assigned leads</div>
+      <div class="partner-stat-value">
+        {% set ns = namespace(count=0) %}
+        {% for _m_id, leads in leads_by_member.items() %}{% set ns.count = ns.count + leads|length %}{% endfor %}
+        {{ ns.count }}
+      </div>
+    </article>
+    <article class="ravlo-card partner-stat-card">
+      <div class="partner-stat-label">Unassigned</div>
+      <div class="partner-stat-value">{{ unassigned|length }}</div>
+      <div class="partner-stat-sub">Waiting for routing</div>
+    </article>
+  </section>
+
+  <section class="ravlo-card p-6">
+    <h2 class="text-lg font-semibold mb-4">Add teammate</h2>
+    <form method="post" action="{{ url_for('vip.team_add') }}" class="grid md:grid-cols-3 gap-3">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <label class="text-xs uppercase opacity-70">Name
+        <input type="text" name="name" required class="ravlo-input mt-1 w-full" placeholder="Sam Diaz">
+      </label>
+      <label class="text-xs uppercase opacity-70">Email
+        <input type="email" name="email" class="ravlo-input mt-1 w-full" placeholder="sam@frankteam.com">
+      </label>
+      <label class="text-xs uppercase opacity-70">Phone
+        <input type="tel" name="phone" class="ravlo-input mt-1 w-full" placeholder="(555) 123-4567">
+      </label>
+      <label class="text-xs uppercase opacity-70">Role
+        <select name="role" class="ravlo-input mt-1 w-full">
+          {% for value, label in role_choices %}
+            <option value="{{ value }}">{{ label }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      {% if markets %}
+      <label class="text-xs uppercase opacity-70">Market
+        <select name="market" class="ravlo-input mt-1 w-full">
+          <option value="">All markets</option>
+          {% for m in markets %}<option value="{{ m }}">{{ m }}</option>{% endfor %}
+        </select>
+      </label>
+      {% else %}
+      <label class="text-xs uppercase opacity-70">Market
+        <input type="text" name="market" class="ravlo-input mt-1 w-full" placeholder="Optional">
+      </label>
+      {% endif %}
+      <label class="text-xs uppercase opacity-70 md:col-span-3">Notes
+        <input type="text" name="notes" class="ravlo-input mt-1 w-full" placeholder="Handles buyer showings on weekends.">
+      </label>
+      <div class="md:col-span-3">
+        <button type="submit" class="ravlo-btn ravlo-btn-primary">Add teammate</button>
+      </div>
+    </form>
+  </section>
+
+  <section class="ravlo-card p-6">
+    <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+      <div>
+        <h2 class="text-lg font-semibold">Unassigned leads</h2>
+        <p class="text-sm opacity-70">Route new leads to a teammate or auto-distribute round-robin.</p>
+      </div>
+      {% if members|selectattr('active')|list %}
+      <form method="post" action="{{ url_for('vip.team_auto_distribute') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="ravlo-btn ravlo-btn-outline">
+          Auto-distribute {{ unassigned|length }} lead{{ '' if unassigned|length == 1 else 's' }}
+        </button>
+      </form>
+      {% endif %}
+    </div>
+
+    {% if unassigned %}
+      <div class="overflow-x-auto">
+        <table class="ravlo-table w-full">
+          <thead>
+            <tr>
+              <th>Lead</th><th>Stage</th><th>Email</th><th>Budget</th><th class="text-right">Route to</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for lead in unassigned %}
+            <tr>
+              <td><strong>{{ lead.name }}</strong></td>
+              <td>{{ lead.pipeline_stage or '—' }}</td>
+              <td>{{ lead.email or '—' }}</td>
+              <td>{{ lead.budget or '—' }}</td>
+              <td class="text-right">
+                <form method="post" action="{{ url_for('vip.team_assign_lead', lead_id=lead.id) }}" class="inline-flex gap-2">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <select name="member_id" class="ravlo-input ravlo-input-sm">
+                    <option value="">— Assign —</option>
+                    {% for m in members if m.active %}
+                      <option value="{{ m.id }}">{{ m.name }} ({{ m.role or 'team' }})</option>
+                    {% endfor %}
+                  </select>
+                  <button class="ravlo-btn ravlo-btn-sm ravlo-btn-primary" type="submit">Assign</button>
+                </form>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <p class="opacity-70">No unassigned leads. Great work.</p>
+    {% endif %}
+  </section>
+
+  <section class="ravlo-card p-6">
+    <h2 class="text-lg font-semibold mb-4">Team roster</h2>
+    {% if members %}
+      <div class="grid md:grid-cols-2 gap-4">
+        {% for m in members %}
+          <article class="ravlo-card p-4 {% if not m.active %}opacity-60{% endif %}">
+            <header class="flex items-start justify-between gap-3">
+              <div>
+                <div class="font-semibold">{{ m.name }}</div>
+                <div class="text-sm opacity-70">{{ m.role or 'Team member' }}{% if m.market %} • {{ m.market }}{% endif %}</div>
+                <div class="text-xs opacity-60 mt-1">
+                  {% if m.email %}{{ m.email }}{% endif %}
+                  {% if m.phone %} · {{ m.phone }}{% endif %}
+                </div>
+              </div>
+              <div class="flex gap-2">
+                <form method="post" action="{{ url_for('vip.team_toggle', member_id=m.id) }}">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <button class="ravlo-btn ravlo-btn-ghost ravlo-btn-sm" type="submit">
+                    {{ 'Deactivate' if m.active else 'Activate' }}
+                  </button>
+                </form>
+                <form method="post" action="{{ url_for('vip.team_delete', member_id=m.id) }}"
+                      onsubmit="return confirm('Remove {{ m.name }} and release their leads?');">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <button class="ravlo-btn ravlo-btn-ghost ravlo-btn-sm" type="submit">Remove</button>
+                </form>
+              </div>
+            </header>
+
+            {% set my_leads = leads_by_member.get(m.id, []) %}
+            <div class="mt-3">
+              <div class="text-xs uppercase opacity-60">Assigned leads · {{ my_leads|length }}</div>
+              {% if my_leads %}
+                <ul class="mt-1 space-y-1">
+                  {% for lead in my_leads %}
+                    <li class="flex items-center justify-between gap-2 text-sm">
+                      <span>{{ lead.name }}{% if lead.pipeline_stage %} <span class="opacity-60">({{ lead.pipeline_stage }})</span>{% endif %}</span>
+                      <form method="post" action="{{ url_for('vip.team_assign_lead', lead_id=lead.id) }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <input type="hidden" name="member_id" value="0">
+                        <button class="ravlo-btn ravlo-btn-ghost ravlo-btn-sm" type="submit" title="Release back to unassigned">Release</button>
+                      </form>
+                    </li>
+                  {% endfor %}
+                </ul>
+              {% else %}
+                <p class="text-sm opacity-60 mt-1">No leads assigned yet.</p>
+              {% endif %}
+            </div>
+
+            {% if m.notes %}
+              <p class="text-sm opacity-70 mt-3">{{ m.notes }}</p>
+            {% endif %}
+          </article>
+        {% endfor %}
+      </div>
+    {% else %}
+      <p class="opacity-70">No teammates yet — add one above to start distributing leads.</p>
+    {% endif %}
+  </section>
+
+</div>
+{% endblock %}
