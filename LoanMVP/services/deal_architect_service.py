@@ -162,7 +162,11 @@ def generate_deal_architect_strategies(payload):
             "name": "Tear-Down + New Build",
             "tag": "Highest change",
             "description": "Worth comparing when the existing structure limits upside and the lot supports a stronger new product.",
-            "purchase_price": 0,
+            # Tear-down targets are typically acquired cheap (land value +
+            # minus demo cost). 100K keeps the strategy an existing-house
+            # play (not a land-only play) while producing a realistic
+            # profit/ROI off the original hardcoded build_cost and arv.
+            "purchase_price": 100000,
             "build_cost": 490000,
             "arv": 760000,
             "profit": 270000,
