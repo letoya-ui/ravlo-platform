@@ -2872,14 +2872,21 @@ def _allowed_photo(filename):
     return filename.rsplit(".", 1)[1].lower() in ALLOWED_PHOTO_EXT
 
 
+def _contractor_photo_dir():
+    """Directory where contractor job photos live on disk. We save inside
+    the Flask static folder so the default static URL handler serves them,
+    matching the url_for('static', filename='uploads/' ~ p.file_path)
+    pattern used by the contractor templates."""
+    return os.path.join(current_app.static_folder, "uploads")
+
+
 def _remove_photo_file(photo):
     """Best-effort delete of a photo's file on disk. Silently ignores errors
     so a missing/previously-removed file can't block DB cleanup."""
     if not photo or not photo.file_path:
         return
-    upload_dir = current_app.config.get("UPLOAD_FOLDER") or ""
     try:
-        fpath = os.path.join(upload_dir, photo.file_path)
+        fpath = os.path.join(_contractor_photo_dir(), photo.file_path)
         if os.path.exists(fpath):
             os.remove(fpath)
     except Exception:
@@ -2910,10 +2917,7 @@ def contractor_job_photo_upload(job_id):
 
     safe = secure_filename(file.filename)
     stamped = f"contractor_{profile.id}_{job.id}_{int(datetime.utcnow().timestamp())}_{safe}"
-    upload_dir = current_app.config.get("UPLOAD_FOLDER")
-    if not upload_dir:
-        flash("Upload folder not configured.", "danger")
-        return redirect(url_for("vip.contractor_job_detail", job_id=job.id))
+    upload_dir = _contractor_photo_dir()
 
     os.makedirs(upload_dir, exist_ok=True)
     save_path = os.path.join(upload_dir, stamped)
