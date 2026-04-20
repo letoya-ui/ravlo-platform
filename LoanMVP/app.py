@@ -83,7 +83,7 @@ _SCHEMA_COMPAT_COLUMNS = [
     ("elena_clients", "assigned_member_id", "INTEGER"),
     ("vip_expenses", "market", "VARCHAR(100)"),
     ("vip_income", "market", "VARCHAR(100)"),
-    ("vip_income", "status", "VARCHAR(50)"),
+    ("vip_income", "status", "VARCHAR(50) DEFAULT 'received'"),
     ("vip_assistant_suggestions", "proposed_amount", "INTEGER"),
     ("vip_assistant_suggestions", "source", "VARCHAR(50)"),
 ]

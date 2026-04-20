@@ -1963,10 +1963,12 @@ def _dispatch_copilot_intent(profile, result, command):
 
     elif intent == "tax_suggestion":
         rate = _finance_tax_rate(profile)
+        # NULL status is treated as "received" to match the finances page
+        # (keeps the copilot's tax set-aside in lockstep with the card total).
         total_received = sum(
             (i.amount or 0)
             for i in VIPIncome.query.filter_by(vip_profile_id=profile.id).all()
-            if (i.status or "pending") == "received"
+            if (i.status or "received") == "received"
         )
         set_aside = int(round(total_received * rate))
         summary = ("Set aside $" + format(set_aside, ",")

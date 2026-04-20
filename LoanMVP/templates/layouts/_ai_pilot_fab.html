@@ -306,6 +306,27 @@
     ta.focus();
   };
 
+  function _esc(s) {
+    return String(s == null ? "" : s)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  }
+
+  function _safeUrl(u) {
+    // Only allow same-origin / relative URLs or http(s) — blocks javascript:
+    try {
+      const s = String(u || "").trim();
+      if (!s) return "";
+      if (s.startsWith("/") && !s.startsWith("//")) return _esc(s);
+      const parsed = new URL(s, window.location.origin);
+      if (parsed.protocol === "http:" || parsed.protocol === "https:") return _esc(parsed.href);
+    } catch (e) { /* fall through */ }
+    return "";
+  }
+
   function showResult(payload, isError) {
     const box = el("ravloAiResult");
     if (!box) return;
@@ -315,10 +336,13 @@
       box.textContent = (payload && payload.error) || "Sorry, I couldn't do that.";
       return;
     }
+    const title   = _esc(payload.title || "Copilot");
+    const summary = _esc(payload.summary || "");
     let html = "";
-    if (payload.summary) html += "<strong>" + payload.title + ":</strong> " + payload.summary;
-    else                 html += "<strong>" + (payload.title || "Copilot") + "</strong>";
-    if (payload.action_url) html += ' <a href="' + payload.action_url + '">Open &rarr;</a>';
+    if (summary) html += "<strong>" + title + ":</strong> " + summary;
+    else         html += "<strong>" + title + "</strong>";
+    const safeHref = _safeUrl(payload.action_url);
+    if (safeHref) html += ' <a href="' + safeHref + '">Open &rarr;</a>';
     box.innerHTML = html;
   }
 
