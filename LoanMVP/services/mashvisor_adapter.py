@@ -1,7 +1,12 @@
+import json
+import logging
+
 from typing import Any, Dict
 
 from LoanMVP.services.mashvisor_client import MashvisorClient, MashvisorError
 from LoanMVP.services.mashvisor_service import normalize_mashvisor_validation
+
+logger = logging.getLogger(__name__)
 
 
 class MashvisorAdapter:
@@ -42,6 +47,10 @@ class MashvisorAdapter:
                 lng=lng,
                 include_comps=include_comps,
             )
+
+            # TEMP DEBUG — paste the WARNING log output and we'll fix the field mapping
+            logger.warning("MASHVISOR RAW: " + json.dumps(result, default=str)[:3000])
+
             return normalize_mashvisor_validation(result)
         except MashvisorError:
             return {}
