@@ -120,30 +120,48 @@ def parse_vip_command(command: str) -> dict:
         }
 
     # Expense intent is checked BEFORE income because "I paid $X in closing
-    # costs" should be an expense, not income (the income block uses a bare
-    # 'closing' keyword that would otherwise swallow expense phrases).
-    if any(k in text for k in (
-        "expense", "paid for", "i paid", "closing cost", "closing costs",
-        "toll", "mile", "gas", "lunch", "meal", "receipt",
-    )):
+    # costs" should be an expense, not income.
+    EXPENSE_STRONG = (
+        "expense", "log expense", "record expense",
+        "paid for", "i paid", "closing cost", "closing costs",
+        "toll", "tolls", "mileage", "receipt",
+    )
+    # Ambiguous tokens that only fire when accompanied by a money/amount cue.
+    # "gas" matches "I bought gas"; "lunch"/"meal" match "lunch with client".
+    EXPENSE_AMBIGUOUS = ("gas", "mile", "miles", "lunch", "meal")
+
+    amount_hint = _extract_amount(body)
+    has_money_cue = ("$" in body) or (amount_hint is not None)
+
+    if any(k in text for k in EXPENSE_STRONG) or (
+        has_money_cue and any(k in text for k in EXPENSE_AMBIGUOUS)
+    ):
         return {
             "intent":          "add_expense",
             "suggestion_type": "expense",
             "title":           "Log Expense",
             "body":            body,
-            "amount":          _extract_amount(body),
+            "amount":          amount_hint,
         }
 
-    if any(k in text for k in (
+    INCOME_STRONG = (
         "commission", "at closing", "closing commission",
-        "received", "got paid", "income", "earned",
-    )):
+        "log income", "record income", "got paid",
+    )
+    # Substring matches like "received"/"earned"/"income" trip on
+    # everyday phrases ("I received a text", "earned a coffee break").
+    # Only treat them as income when there's a money/amount cue.
+    INCOME_AMBIGUOUS = ("received", "earned", "income")
+
+    if any(k in text for k in INCOME_STRONG) or (
+        has_money_cue and any(k in text for k in INCOME_AMBIGUOUS)
+    ):
         return {
             "intent":          "add_income",
             "suggestion_type": "income",
             "title":           "Log Income",
             "body":            body,
-            "amount":          _extract_amount(body),
+            "amount":          amount_hint,
         }
 
     if "follow up" in text or "remind me" in text or "reminder" in text:

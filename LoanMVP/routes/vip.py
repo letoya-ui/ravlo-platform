@@ -1918,18 +1918,22 @@ def _dispatch_copilot_intent(profile, result, command):
         executed = True
 
     elif intent == "add_expense":
-        amount = result.get("amount") or 0
+        # Preserve None (no amount spoken) vs 0 (explicit zero).
+        raw_amount = result.get("amount")
         db.session.add(VIPExpense(
             vip_profile_id = profile.id,
             category       = "other",
             description    = command[:240],
-            amount         = amount or None,
+            amount         = raw_amount,
             expense_date   = datetime.utcnow(),
             source         = "copilot",
             market         = default_market,
         ))
         db.session.commit()
-        summary = "Logged expense" + ((" of $" + format(amount, ",")) if amount else "")
+        if raw_amount is not None:
+            summary = "Logged expense of $" + format(raw_amount, ",")
+        else:
+            summary = "Logged expense (no amount detected — edit to add \\$)."
         action_url = url_for("vip.finances")
         executed = True
 
