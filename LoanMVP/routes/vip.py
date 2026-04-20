@@ -532,21 +532,37 @@ def realtor_dashboard():
         all_income   = VIPIncome.query.filter_by(vip_profile_id=profile.id).all()
         all_expenses = VIPExpense.query.filter_by(vip_profile_id=profile.id).all()
 
-        total_income   = sum((i.amount or 0) for i in all_income)
+        # NULL status is treated as "received" to match the finances page.
+        def _is_received(i):
+            return (i.status or "received") == "received"
+        def _is_pending(i):
+            return (i.status or "received") == "pending"
+
+        received_income = [i for i in all_income if _is_received(i)]
+        pending_income  = [i for i in all_income if _is_pending(i)]
+
+        total_received = sum((i.amount or 0) for i in received_income)
+        total_pending  = sum((i.amount or 0) for i in pending_income)
         total_expenses = sum((e.amount or 0) for e in all_expenses)
         finances_combined = {
-            "income":   total_income,
+            "income":   total_received,
+            "pending":  total_pending,
             "expenses": total_expenses,
-            "net":      total_income - total_expenses,
+            "net":      total_received - total_expenses,
         }
 
         for market in available_markets:
-            m_income   = sum((i.amount or 0) for i in all_income   if getattr(i, "market", None) == market)
-            m_expenses = sum((e.amount or 0) for e in all_expenses if getattr(e, "market", None) == market)
+            m_received = sum((i.amount or 0) for i in received_income
+                             if getattr(i, "market", None) == market)
+            m_pending  = sum((i.amount or 0) for i in pending_income
+                             if getattr(i, "market", None) == market)
+            m_expenses = sum((e.amount or 0) for e in all_expenses
+                             if getattr(e, "market", None) == market)
             finances_by_market[market] = {
-                "income":   m_income,
+                "income":   m_received,
+                "pending":  m_pending,
                 "expenses": m_expenses,
-                "net":      m_income - m_expenses,
+                "net":      m_received - m_expenses,
             }
 
     return render_template(
@@ -1918,14 +1934,17 @@ def _dispatch_copilot_intent(profile, result, command):
         executed = True
 
     elif intent == "add_income":
-        amount = result.get("amount") or 0
+        # Distinguish "no amount parsed" (None) from "explicit zero" so
+        # commands like "Ravlo, I got paid" don't get marked pending.
+        raw_amount = result.get("amount")
+        amount = raw_amount or 0
         db.session.add(VIPIncome(
             vip_profile_id = profile.id,
             category       = "commission",
             description    = command[:240],
             amount         = amount or 1,
             income_date    = datetime.utcnow(),
-            status         = "received" if amount else "pending",
+            status         = "received" if raw_amount is not None else "pending",
             market         = default_market,
         ))
         db.session.commit()
