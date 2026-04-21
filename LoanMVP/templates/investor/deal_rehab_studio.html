@@ -1605,7 +1605,7 @@
       const formData = new FormData(form);
 
       try {
-        const response = await fetch("{{ url_for('investor.deal_design_generate') }}", {
+        const response = await fetch("{{ url_for('investor.design_studio_generate') }}", {
           method: "POST",
           body: formData,
           headers: {
@@ -1705,7 +1705,7 @@
       if (window.lucide) lucide.createIcons();
 
       try {
-        const response = await fetch("{{ url_for('investor.deal_design_generate_variant') }}", {
+        const response = await fetch("{{ url_for('investor.design_studio_generate_variant') }}", {
           method: "POST",
           body: fd,
           headers: {
