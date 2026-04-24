@@ -291,6 +291,13 @@ def _persist_property_core_fields(saved, payload):
             "listing_photos": merged_listing_photos,
             "photos": merged_listing_photos,
             "description": description or property_payload.get("description"),
+
+            "airbnb_revenue": _clean_num(payload.get("airbnb_revenue")) if payload.get("airbnb_revenue") is not None else property_payload.get("airbnb_revenue"),
+            "airbnb_rent_estimate": _clean_num(payload.get("airbnb_rent_estimate")) if payload.get("airbnb_rent_estimate") is not None else property_payload.get("airbnb_rent_estimate"),
+            "occupancy_rate": _clean_num(payload.get("occupancy_rate")) if payload.get("occupancy_rate") is not None else property_payload.get("occupancy_rate"),
+            "daily_rate": _clean_num(payload.get("daily_rate")) if payload.get("daily_rate") is not None else property_payload.get("daily_rate"),
+            "cash_flow": _clean_num(payload.get("cash_flow")) if payload.get("cash_flow") is not None else property_payload.get("cash_flow"),
+            "airbnb_cash_on_cash": _clean_num(payload.get("airbnb_cash_on_cash")) if payload.get("airbnb_cash_on_cash") is not None else property_payload.get("airbnb_cash_on_cash"),
         })
 
         workspace_analysis = resolved.get("workspace_analysis")
@@ -321,6 +328,7 @@ def _persist_property_core_fields(saved, payload):
             "image_url": merged_image_url,
             "listing_photos": merged_listing_photos,
             "photos": merged_listing_photos,
+            "workspace_short_term_rent": property_payload.get("airbnb_revenue") or property_payload.get("airbnb_rent_estimate"),
         })
 
         if isinstance(payload.get("ai_recommendation"), dict) and payload.get("ai_recommendation"):
