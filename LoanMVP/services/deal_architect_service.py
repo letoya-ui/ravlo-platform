@@ -292,3 +292,133 @@ def _to_number(x, default=0.0):
         except ValueError:
             return default
     return default
+
+def _auto_generate_build_budget_from_deal(deal, project_id=None):
+    results = _deal_results(deal)
+    build_project = results.get("build_project", {}) or {}
+
+    if not build_project:
+        return None
+
+    blueprint = build_project.get("blueprint", {}) or {}
+    site_plan = build_project.get("site_plan", {}) or {}
+    exterior = build_project.get("exterior", {}) or {}
+
+    lot_count = int(build_project.get("lot_count") or 1)
+    property_type = build_project.get("property_type") or "single_family"
+
+    package = {
+        "deal_id": deal.id,
+        "project_id": project_id or build_project.get("project_id"),
+        "strategy": deal.strategy,
+        "address": deal.address,
+        "city": deal.city,
+        "state": deal.state,
+        "zip_code": deal.zip_code,
+        "purchase_price": deal.purchase_price or 0,
+        "arv": deal.arv or 0,
+        "project_name": build_project.get("project_name") or deal.title,
+        "property_type": property_type,
+        "development_type": build_project.get("development_type"),
+        "lot_count": lot_count,
+        "description": build_project.get("description"),
+        "lot_size": build_project.get("lot_size"),
+        "zoning": build_project.get("zoning"),
+        "location": build_project.get("location"),
+        "notes": build_project.get("notes"),
+        "blueprint_url": blueprint.get("image_url") or blueprint.get("blueprint_url"),
+        "site_plan_url": site_plan.get("image_url") or site_plan.get("site_plan_url"),
+        "exterior_url": exterior.get("image_url"),
+    }
+
+    try:
+        cost_json = _post_scope_engine_json(
+            "/v1/build_cost",
+            package,
+            timeout=90,
+        ) or {}
+    except Exception:
+        current_app.logger.exception("Auto build-cost engine failed")
+        cost_json = {}
+
+    if not cost_json or not cost_json.get("line_items"):
+        fallback_items = [
+            {"category": "Sitework", "description": "Clearing, grading, access, utility prep", "estimated_amount": 35000 * lot_count},
+            {"category": "Foundation", "description": "Foundation and slab / basement allowance", "estimated_amount": 45000 * lot_count},
+            {"category": "Framing", "description": f"{property_type} framing and shell", "estimated_amount": 85000 * lot_count},
+            {"category": "Exterior", "description": "Roofing, siding, windows, doors", "estimated_amount": 65000 * lot_count},
+            {"category": "MEP", "description": "Mechanical, electrical, plumbing rough-ins", "estimated_amount": 70000 * lot_count},
+            {"category": "Interior Finishes", "description": "Drywall, flooring, cabinets, fixtures, paint", "estimated_amount": 95000 * lot_count},
+            {"category": "Soft Costs", "description": "Permits, design, engineering, inspections", "estimated_amount": 30000 * lot_count},
+        ]
+
+        subtotal = sum(float(i["estimated_amount"]) for i in fallback_items)
+        contingency = round(subtotal * 0.10, 2)
+
+        cost_json = {
+            "source": "auto_fallback_deal_architect",
+            "category": "new_build",
+            "line_items": fallback_items,
+            "subtotal": subtotal,
+            "contingency": contingency,
+            "total_budget": subtotal + contingency,
+            "notes": "Auto-generated estimate from Build Studio package.",
+        }
+
+    line_items = cost_json.get("line_items") or []
+    subtotal = float(cost_json.get("subtotal") or sum(float(i.get("estimated_amount") or 0) for i in line_items))
+    contingency = float(cost_json.get("contingency") or round(subtotal * 0.10, 2))
+    total_budget = float(cost_json.get("total_budget") or subtotal + contingency)
+
+    budget = ProjectBudget(
+        investor_profile_id=getattr(deal, "investor_profile_id", None),
+        deal_id=deal.id,
+        build_project_id=project_id or build_project.get("project_id"),
+        budget_type=cost_json.get("category") or "new_build",
+        name=f"{build_project.get('project_name') or deal.title or 'Build'} Budget",
+        project_name=build_project.get("project_name") or deal.title,
+        total_cost=subtotal,
+        contingency=contingency,
+        total_budget=total_budget,
+        total_amount=total_budget,
+        notes=cost_json.get("notes") or "Generated automatically from Build Studio package.",
+    )
+    db.session.add(budget)
+    db.session.flush()
+
+    for item in line_items:
+        db.session.add(ProjectExpense(
+            budget_id=budget.id,
+            category=item.get("category") or "Construction",
+            description=item.get("description") or item.get("name") or "Build cost item",
+            vendor=item.get("vendor"),
+            estimated_amount=float(item.get("estimated_amount") or item.get("amount") or 0),
+            actual_amount=0,
+            paid_amount=0,
+            status=item.get("status") or "planned",
+            notes=item.get("notes"),
+        ))
+
+    budget.recalculate_totals()
+
+    results["deal_architect"] = results.get("deal_architect", {}) or {}
+    results["deal_architect"]["build_costs"] = {
+        "budget_id": budget.id,
+        "source": cost_json.get("source") or "auto_deal_architect",
+        "subtotal": subtotal,
+        "contingency": contingency,
+        "total_budget": total_budget,
+        "line_items": line_items,
+        "package": package,
+    }
+
+    deal.rehab_cost = total_budget
+    _set_deal_results(deal, results)
+
+    return {
+        "budget_id": budget.id,
+        "subtotal": subtotal,
+        "contingency": contingency,
+        "total_budget": total_budget,
+        "budget_url": url_for("investor.budget_studio", deal_id=deal.id, budget_id=budget.id),
+    }

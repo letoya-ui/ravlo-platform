@@ -1,920 +1,442 @@
 {% extends "layouts/ravlo_base.html" %}
-
-{% block title %}Ravlo • Deal Analysis{% endblock %}
-
-{% block page_title %}Thesis Studio{% endblock %}
-{% block page_subline %}
-Analyze the deal, test the assumptions, and choose the highest-conviction path.
-{% endblock %}
-
-{% block topbar_actions %}
-  {% if deal %}
-    <a class="ravlo-btn ghost sm" href="{{ url_for('investor.deal_detail', deal_id=deal.id) }}">Back to Deal</a>
-    <a class="ravlo-btn ghost sm" href="{{ url_for('investor.budget_studio', deal_id=deal.id) }}">Budget Studio</a>
-    <a class="ravlo-btn ghost sm" href="{{ url_for('investor.deal_rehab', deal_id=deal.id) }}">Renovation Studio</a>
-    <a class="ravlo-btn ghost sm" href="{{ url_for('investor.build_studio', deal_id=deal.id) }}">Build Studio</a>
-  {% endif %}
-{% endblock %}
+{% block title %}{{ page_title or "Deal Architect" }} | Ravlo{% endblock %}
 
 {% block content %}
-
-{% set analysis = underwriting if underwriting else {} %}
-{% set verdict = analysis.get("verdict", {}) if analysis else {} %}
-{% set meta = analysis.get("meta", {}) if analysis else {} %}
-{% set market = meta.get("market", {}) if meta else {} %}
-{% set breakdown = meta.get("verdict_breakdown", {}) if meta else {} %}
-{% set comp_analysis = meta.get("comp_analysis", {}) if meta else {} %}
-{% set normalized_comps = comp_analysis.get("normalized_comps", []) if comp_analysis else [] %}
-{% set strengths = verdict.get("strengths", []) if verdict else [] %}
-{% set risks = verdict.get("risks", []) if verdict else [] %}
-
-<style>
-  .uw-shell{
-    display:grid;
-    gap:22px;
-    padding-bottom:28px;
-  }
-
-  .uw-hero{
-    position:relative;
-    overflow:hidden;
-    border-radius:28px;
-    padding:26px;
-    border:1px solid rgba(255,255,255,.08);
-    background:
-      radial-gradient(900px 460px at 0% 0%, rgba(122,184,255,.18), transparent 52%),
-      radial-gradient(820px 420px at 100% 0%, rgba(66,120,255,.10), transparent 42%),
-      linear-gradient(180deg, rgba(255,255,255,.045), rgba(255,255,255,.02));
-    box-shadow:0 18px 50px rgba(0,0,0,.18);
-  }
-
-  .uw-hero-grid{
-    display:grid;
-    grid-template-columns:1.15fr .85fr;
-    gap:22px;
-    align-items:end;
-  }
-
-  .uw-tag{
-    display:inline-flex;
-    align-items:center;
-    gap:.5rem;
-    padding:.46rem .8rem;
-    border-radius:999px;
-    background:rgba(255,255,255,.06);
-    border:1px solid rgba(255,255,255,.12);
-    color:#eef4ff;
-    font-size:.78rem;
-    font-weight:800;
-    letter-spacing:.05em;
-    text-transform:uppercase;
-  }
-
-  .uw-title{
-    margin:.8rem 0 .45rem;
-    font-size:2.25rem;
-    line-height:1.02;
-    letter-spacing:-.04em;
-    color:#fff;
-  }
-
-  .uw-subtitle{
-    color:rgba(228,236,246,.78);
-    max-width:760px;
-    line-height:1.7;
-    font-size:1rem;
-  }
-
-  .uw-chip-row{
-    display:flex;
-    gap:10px;
-    flex-wrap:wrap;
-    margin-top:18px;
-  }
-
-  .uw-chip{
-    display:inline-flex;
-    align-items:center;
-    gap:.45rem;
-    padding:.56rem .82rem;
-    border-radius:999px;
-    background:rgba(255,255,255,.05);
-    border:1px solid rgba(255,255,255,.08);
-    color:#dfe9f7;
-    font-size:.84rem;
-    font-weight:700;
-  }
-
-  .uw-hero-side{
-    display:grid;
-    gap:12px;
-  }
-
-  .uw-hero-stat-grid{
-    display:grid;
-    grid-template-columns:repeat(2, minmax(0,1fr));
-    gap:12px;
-  }
-
-  .uw-hero-stat{
-    padding:16px;
-    border-radius:18px;
-    background:rgba(255,255,255,.04);
-    border:1px solid rgba(255,255,255,.08);
-  }
-
-  .uw-hero-stat-label{
-    color:rgba(228,236,246,.62);
-    text-transform:uppercase;
-    font-size:.72rem;
-    letter-spacing:.06em;
-    margin-bottom:6px;
-  }
-
-  .uw-hero-stat-value{
-    color:#fff;
-    font-size:1.15rem;
-    font-weight:800;
-    letter-spacing:-.02em;
-  }
-
-  .uw-layout{
-    display:grid;
-    grid-template-columns:minmax(0, 1.05fr) 390px;
-    gap:22px;
-    align-items:start;
-  }
-
-  .uw-main,
-  .uw-side{
-    display:grid;
-    gap:22px;
-  }
-
-  .uw-card{
-    background:rgba(255,255,255,.02);
-    border:1px solid rgba(255,255,255,.08);
-    border-radius:24px;
-    padding:22px;
-    box-shadow:0 10px 30px rgba(0,0,0,.08);
-  }
-
-  .uw-card-head{
-    display:flex;
-    justify-content:space-between;
-    align-items:flex-start;
-    gap:16px;
-    margin-bottom:14px;
-  }
-
-  .uw-eyebrow{
-    color:#8ebdff;
-    text-transform:uppercase;
-    font-size:.74rem;
-    font-weight:800;
-    letter-spacing:.08em;
-    margin-bottom:6px;
-  }
-
-  .uw-card h3{
-    margin:0;
-    color:#fff;
-    font-size:1.08rem;
-    letter-spacing:-.02em;
-  }
-
-  .uw-note{
-    margin:6px 0 0;
-    color:rgba(228,236,246,.72);
-    line-height:1.65;
-  }
-
-  .uw-badge{
-    display:inline-flex;
-    align-items:center;
-    gap:.45rem;
-    padding:.48rem .75rem;
-    border-radius:999px;
-    background:rgba(122,184,255,.12);
-    border:1px solid rgba(122,184,255,.24);
-    color:#bfe0ff;
-    font-size:.78rem;
-    font-weight:800;
-    white-space:nowrap;
-  }
-
-  .uw-form-sections{
-    display:grid;
-    gap:18px;
-  }
-
-  .uw-form-section{
-    padding:16px;
-    border-radius:18px;
-    background:rgba(255,255,255,.025);
-    border:1px solid rgba(255,255,255,.07);
-  }
-
-  .uw-form-section-title{
-    font-size:.76rem;
-    text-transform:uppercase;
-    letter-spacing:.08em;
-    color:rgba(228,236,246,.62);
-    font-weight:800;
-    margin-bottom:12px;
-  }
-
-  .uw-grid-2{
-    display:grid;
-    grid-template-columns:repeat(2, minmax(0,1fr));
-    gap:12px;
-  }
-
-  .uw-field{
-    display:grid;
-    gap:8px;
-  }
-
-  .uw-field label{
-    color:#eef4ff;
-    font-size:.88rem;
-    font-weight:700;
-  }
-
-  .uw-input,
-  .uw-select,
-  .uw-textarea{
-    width:100%;
-    padding:.86rem .95rem;
-    border-radius:14px;
-    background:#0f141a;
-    border:1px solid rgba(255,255,255,.1);
-    color:#fff;
-    min-height:50px;
-    outline:none;
-    transition:border-color .16s ease, box-shadow .16s ease, background .16s ease;
-  }
-
-  .uw-input::placeholder,
-  .uw-textarea::placeholder{
-    color:rgba(228,236,246,.35);
-  }
-
-  .uw-input:focus,
-  .uw-select:focus,
-  .uw-textarea:focus{
-    border-color:rgba(122,184,255,.42);
-    box-shadow:0 0 0 3px rgba(122,184,255,.12);
-    background:#111821;
-  }
-
-  .uw-textarea{
-    min-height:122px;
-    resize:vertical;
-  }
-
-  .uw-toolbar{
-    display:flex;
-    gap:10px;
-    flex-wrap:wrap;
-    margin-top:14px;
-  }
-
-  .uw-btn{
-    display:inline-flex;
-    align-items:center;
-    justify-content:center;
-    gap:.45rem;
-    padding:.8rem 1rem;
-    border-radius:14px;
-    cursor:pointer;
-    font-weight:800;
-    font-size:.92rem;
-    text-decoration:none;
-    transition:.18s ease;
-    white-space:nowrap;
-    border:1px solid rgba(122,184,255,.42);
-    background:rgba(122,184,255,.12);
-    color:#7ab8ff;
-  }
-
-  .uw-btn:hover{
-    background:rgba(122,184,255,.2);
-    box-shadow:0 0 14px rgba(122,184,255,.18);
-    transform:translateY(-1px);
-  }
-
-  .uw-btn.secondary{
-    background:rgba(255,255,255,.04);
-    border:1px solid rgba(255,255,255,.12);
-    color:#eef4ff;
-  }
-
-  .uw-btn.success{
-    background:rgba(104,211,160,.12);
-    border:1px solid rgba(104,211,160,.34);
-    color:#7ee8b1;
-  }
-
-  .uw-kpi-grid{
-    display:grid;
-    grid-template-columns:repeat(2, minmax(0,1fr));
-    gap:12px;
-  }
-
-  .uw-kpi{
-    border-radius:18px;
-    padding:16px;
-    background:rgba(255,255,255,.035);
-    border:1px solid rgba(255,255,255,.08);
-  }
-
-  .uw-kpi-label{
-    color:rgba(228,236,246,.62);
-    font-size:.76rem;
-    text-transform:uppercase;
-    letter-spacing:.06em;
-    margin-bottom:6px;
-  }
-
-  .uw-kpi-value{
-    color:#fff;
-    font-size:1.35rem;
-    font-weight:800;
-    letter-spacing:-.03em;
-  }
-
-  .uw-kpi-value.positive{ color:#7ee8b1; }
-  .uw-kpi-value.negative{ color:#ff9a9a; }
-  .uw-kpi-value.watch{ color:#ffd37a; }
-
-  .uw-summary{
-    display:grid;
-    gap:10px;
-    margin-top:12px;
-  }
-
-  .uw-summary-row{
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-    gap:14px;
-    padding:12px 0;
-    border-bottom:1px solid rgba(255,255,255,.08);
-  }
-
-  .uw-summary-row:last-child{
-    border-bottom:none;
-  }
-
-  .uw-summary-label{
-    color:rgba(228,236,246,.66);
-  }
-
-  .uw-summary-value{
-    color:#fff;
-    font-weight:800;
-    text-align:right;
-  }
-
-  .uw-summary-value.good{ color:#7ee8b1; }
-  .uw-summary-value.watch{ color:#ffd37a; }
-  .uw-summary-value.risk{ color:#ff9a9a; }
-
-  .uw-callout{
-    padding:16px;
-    border-radius:18px;
-    background:rgba(122,184,255,.08);
-    border:1px solid rgba(122,184,255,.16);
-  }
-
-  .uw-callout strong{
-    display:block;
-    margin-bottom:6px;
-    color:#fff;
-  }
-
-  .uw-callout p{
-    margin:0;
-    color:rgba(228,236,246,.78);
-    line-height:1.65;
-  }
-
-  .uw-list{
-    display:grid;
-    gap:12px;
-  }
-
-  .uw-list-item{
-    padding:15px 16px;
-    border-radius:18px;
-    background:rgba(255,255,255,.03);
-    border:1px solid rgba(255,255,255,.08);
-  }
-
-  .uw-list-item strong{
-    display:block;
-    color:#fff;
-    margin-bottom:6px;
-  }
-
-  .uw-list-item p{
-    margin:0;
-    color:rgba(228,236,246,.72);
-    line-height:1.6;
-  }
-
-  .uw-signal-grid{
-    display:grid;
-    grid-template-columns:1fr 1fr;
-    gap:14px;
-  }
-
-  .uw-signal-col{
-    display:grid;
-    gap:12px;
-  }
-
-  .uw-signal-title{
-    font-size:.76rem;
-    text-transform:uppercase;
-    letter-spacing:.08em;
-    color:rgba(228,236,246,.62);
-    font-weight:800;
-  }
-
-  .uw-table-wrap{
-    overflow:auto;
-    border-radius:18px;
-    border:1px solid rgba(255,255,255,.08);
-    background:rgba(255,255,255,.02);
-  }
-
-  .uw-table{
-    width:100%;
-    border-collapse:collapse;
-    min-width:760px;
-  }
-
-  .uw-table th,
-  .uw-table td{
-    padding:14px 14px;
-    text-align:left;
-    border-bottom:1px solid rgba(255,255,255,.06);
-    font-size:.92rem;
-  }
-
-  .uw-table th{
-    color:#b8d6f4;
-    font-size:.76rem;
-    text-transform:uppercase;
-    letter-spacing:.06em;
-    background:rgba(255,255,255,.02);
-  }
-
-  .uw-table td{
-    color:rgba(235,241,249,.82);
-  }
-
-  .uw-table tr:last-child td{
-    border-bottom:none;
-  }
-
-  .uw-empty{
-    padding:16px;
-    border-radius:16px;
-    background:rgba(255,255,255,.03);
-    border:1px dashed rgba(255,255,255,.12);
-    color:rgba(228,236,246,.72);
-  }
-
-  .uw-sticky{
-    position:sticky;
-    top:18px;
-  }
-
-  @media (max-width: 1180px){
-    .uw-layout{ grid-template-columns:1fr; }
-    .uw-sticky{ position:static; }
-  }
-
-  @media (max-width: 980px){
-    .uw-hero-grid,
-    .uw-grid-2,
-    .uw-signal-grid{
-      grid-template-columns:1fr;
-    }
-  }
-
-  @media (max-width: 700px){
-    .uw-title{ font-size:1.9rem; }
-    .uw-kpi-grid{ grid-template-columns:1fr; }
-  }
-</style>
-
-<div class="uw-shell">
-
-  <section class="uw-hero">
-    <div class="uw-hero-grid">
-      <div>
-        <div class="uw-tag">
-          🧠 Ravlo Deal Analysis
-          {% if deal %}• Deal #{{ deal.id }}{% endif %}
-        </div>
-
-        <h1 class="uw-title">
-          {{ deal.address if deal and deal.address else deal.title if deal and deal.title else "Thesis Studio" }}
-        </h1>
-
-        <div class="uw-subtitle">
-          Assemble deal inputs, location context, and market signals into a single analysis view. Use this workspace to test the thesis, validate spread, and decide the strongest execution path.
-        </div>
-
-        <div class="uw-chip-row">
-          <span class="uw-chip">Source of Truth</span>
-          <span class="uw-chip">Market Aware</span>
-          <span class="uw-chip">Risk Adjusted</span>
-          <span class="uw-chip">Execution Ready</span>
-        </div>
-      </div>
-
-      <div class="uw-hero-side">
-        <div class="uw-hero-stat-grid">
-          <div class="uw-hero-stat">
-            <div class="uw-hero-stat-label">Verdict</div>
-            <div class="uw-hero-stat-value">{{ verdict.get("label") or verdict.get("grade") or "Pending" }}</div>
-          </div>
-          <div class="uw-hero-stat">
-            <div class="uw-hero-stat-label">Confidence</div>
-            <div class="uw-hero-stat-value">{{ verdict.get("confidence") or meta.get("confidence") or "—" }}</div>
-          </div>
-          <div class="uw-hero-stat">
-            <div class="uw-hero-stat-label">Market</div>
-            <div class="uw-hero-stat-value">{{ market.get("city") or market.get("market_name") or "Not loaded" }}</div>
-          </div>
-          <div class="uw-hero-stat">
-            <div class="uw-hero-stat-label">Comps</div>
-            <div class="uw-hero-stat-value">{{ normalized_comps|length if normalized_comps else 0 }}</div>
-          </div>
-        </div>
-      </div>
+<div class="deal-architect-shell">
+  <section class="architect-hero-card">
+    <div>
+      <div class="eyebrow">RAVLO DEAL ARCHITECT</div>
+      <h1>{{ page_title or "Deal Architect" }}</h1>
+      <p class="muted">{{ page_subtitle or "Analyze the opportunity, score the risk, and shape the best strategy." }}</p>
+    </div>
+
+    <div class="hero-actions">
+      {% if deal %}
+        <a href="{{ url_for('investor.build_studio', deal_id=deal.id) }}" class="ravlo-btn ghost">Open Build Studio</a>
+      {% endif %}
+      {% if deal and build_project %}
+        <button type="button" class="ravlo-btn primary" id="generateBuildCostsTopBtn">Generate Build Costs</button>
+      {% endif %}
     </div>
   </section>
 
-  <div class="uw-layout">
-    <div class="uw-main">
+  {% if not deal %}
+  <section class="ravlo-card pad">
+    <div class="empty-state-inline">Select a deal to use Deal Architect.</div>
+  </section>
+  {% else %}
 
-      <section class="uw-card">
-        <div class="uw-card-head">
-          <div>
-            <div class="uw-eyebrow">Request Assembly</div>
-            <h3>Deal + Site + Market Inputs</h3>
-            <p class="uw-note">
-              Structure the assumptions that drive your analysis. Grouped inputs keep the page usable and make the output easier to trust.
-            </p>
-          </div>
-          <div class="uw-badge">Analysis Input Layer</div>
+  <section class="architect-grid">
+    <section class="ravlo-card pad">
+      <div class="section-head">
+        <div>
+          <div class="eyebrow">DEAL INPUTS</div>
+          <h2>Project Assumptions</h2>
         </div>
+      </div>
 
-        <form method="POST" action="{% if deal %}{{ url_for('investor.run_analysis', deal_id=deal.id) }}{% else %}#{% endif %}">
-          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <form method="POST" class="architect-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
-          <div class="uw-form-sections">
-            <div class="uw-form-section">
-              <div class="uw-form-section-title">Deal Basics</div>
-              <div class="uw-grid-2">
-                <div class="uw-field">
-                  <label for="address">Address</label>
-                  <input class="uw-input" id="address" name="address" value="{{ deal.address if deal and deal.address else '' }}" placeholder="28 Genung St">
-                </div>
-                <div class="uw-field">
-                  <label for="property_type">Property Type</label>
-                  <input class="uw-input" id="property_type" name="property_type" value="{{ analysis.get('property_type', '') }}" placeholder="Single Family">
-                </div>
-
-                <div class="uw-field">
-                  <label for="purchase_price">Purchase Price</label>
-                  <input class="uw-input" id="purchase_price" name="purchase_price" type="number" step="0.01" value="{{ purchase_price or '' }}" placeholder="350000">
-                </div>
-                <div class="uw-field">
-                  <label for="arv">ARV / Exit Value</label>
-                  <input class="uw-input" id="arv" name="arv" type="number" step="0.01" value="{{ arv or '' }}" placeholder="525000">
-                </div>
-              </div>
-            </div>
-
-            <div class="uw-form-section">
-              <div class="uw-form-section-title">Site + Physical Inputs</div>
-              <div class="uw-grid-2">
-                <div class="uw-field">
-                  <label for="lot_size">Lot Size</label>
-                  <input class="uw-input" id="lot_size" name="lot_size" value="{{ analysis.get('lot_size', '') }}" placeholder="99000">
-                </div>
-                <div class="uw-field">
-                  <label for="zoning">Zoning</label>
-                  <input class="uw-input" id="zoning" name="zoning" value="{{ analysis.get('zoning', '') }}" placeholder="R-1">
-                </div>
-
-                <div class="uw-field">
-                  <label for="square_feet_target">Target Sq Ft</label>
-                  <input class="uw-input" id="square_feet_target" name="square_feet_target" type="number" step="1" value="{{ analysis.get('square_feet_target', '') }}" placeholder="1400">
-                </div>
-                <div class="uw-field">
-                  <label for="bed_bath">Beds / Baths</label>
-                  <input class="uw-input" id="bed_bath" name="bed_bath" value="{{ analysis.get('bed_bath', '') }}" placeholder="3 / 2">
-                </div>
-              </div>
-            </div>
-
-            <div class="uw-form-section">
-              <div class="uw-form-section-title">Market + Cost Assumptions</div>
-              <div class="uw-grid-2">
-                <div class="uw-field">
-                  <label for="market_cost_multiplier">Market Cost Multiplier</label>
-                  <input class="uw-input" id="market_cost_multiplier" name="market_cost_multiplier" type="number" step="0.01" value="{{ analysis.get('market_cost_multiplier', '') }}" placeholder="1.00">
-                </div>
-                <div class="uw-field">
-                  <label for="market_value_multiplier">Market Value Multiplier</label>
-                  <input class="uw-input" id="market_value_multiplier" name="market_value_multiplier" type="number" step="0.01" value="{{ analysis.get('market_value_multiplier', '') }}" placeholder="1.00">
-                </div>
-
-                <div class="uw-field">
-                  <label for="annual_tax_rate">Annual Tax Rate</label>
-                  <input class="uw-input" id="annual_tax_rate" name="annual_tax_rate" type="number" step="0.01" value="{{ analysis.get('annual_tax_rate', '') }}" placeholder="Optional">
-                </div>
-                <div class="uw-field">
-                  <label for="annual_insurance_rate">Annual Insurance Rate</label>
-                  <input class="uw-input" id="annual_insurance_rate" name="annual_insurance_rate" type="number" step="0.01" value="{{ analysis.get('annual_insurance_rate', '') }}" placeholder="Optional">
-                </div>
-              </div>
-            </div>
-
-            <div class="uw-form-section">
-              <div class="uw-form-section-title">Comparable Set</div>
-              <div class="uw-field">
-                <label for="comps_json">Comps JSON</label>
-                <textarea class="uw-textarea" id="comps_json" name="comps_json" placeholder='[{"address":"123 Main St","price":320000,"sqft":1400,"beds":3,"baths":2,"distance_miles":0.4,"months_ago":2}]'>{{ analysis.get("comps_json", "") }}</textarea>
-              </div>
-            </div>
+        <div class="form-grid two">
+          <div class="field">
+            <label>Property Address</label>
+            <input value="{{ property_address or '' }}" readonly>
           </div>
 
-          <div class="uw-toolbar">
-            <button class="uw-btn success" type="submit">Run Analysis</button>
-            {% if deal %}
-              <a class="uw-btn secondary" href="{{ url_for('investor.budget_studio', deal_id=deal.id) }}">Open Budget Studio</a>
-            {% endif %}
+          <div class="field">
+            <label for="property_type">Property Type</label>
+            <input id="property_type" name="property_type" value="{{ build_property_type or property_type or '' }}" placeholder="single_family, townhome, multifamily">
           </div>
-        </form>
-      </section>
 
-      <section class="uw-card">
-        <div class="uw-card-head">
-          <div>
-            <div class="uw-eyebrow">Top Signals</div>
-            <h3>Strengths & Risks</h3>
-            <p class="uw-note">
-              High-level decision signals should be fast to scan and easy to defend.
-            </p>
+          <div class="field">
+            <label for="city">City</label>
+            <input id="city" value="{{ city or '' }}" readonly>
+          </div>
+
+          <div class="field">
+            <label for="state">State</label>
+            <input id="state" value="{{ state or '' }}" readonly>
+          </div>
+
+          <div class="field">
+            <label for="zip_code">ZIP</label>
+            <input id="zip_code" value="{{ zip_code or '' }}" readonly>
+          </div>
+
+          <div class="field">
+            <label for="strategy">Strategy</label>
+            <select id="strategy" name="strategy">
+              {% set strategy_value = strategy or deal.strategy or '' %}
+              <option value="flip" {{ 'selected' if strategy_value == 'flip' else '' }}>Flip</option>
+              <option value="rental" {{ 'selected' if strategy_value == 'rental' else '' }}>Rental</option>
+              <option value="brrrr" {{ 'selected' if strategy_value == 'brrrr' else '' }}>BRRRR</option>
+              <option value="development" {{ 'selected' if strategy_value == 'development' else '' }}>Development</option>
+              <option value="new_build" {{ 'selected' if strategy_value == 'new_build' else '' }}>New Build</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="purchase_price">Purchase Price</label>
+            <input id="purchase_price" name="purchase_price" value="{{ purchase_price or '' }}" placeholder="250000">
+          </div>
+
+          <div class="field">
+            <label for="arv">ARV / Stabilized Value</label>
+            <input id="arv" name="arv" value="{{ arv or '' }}" placeholder="425000">
+          </div>
+
+          <div class="field">
+            <label for="estimated_rent">Monthly Rent</label>
+            <input id="estimated_rent" name="estimated_rent" value="{{ estimated_rent or '' }}" placeholder="3200">
+          </div>
+
+          <div class="field">
+            <label for="rehab_cost">Current Rehab / Build Cost</label>
+            <input id="rehab_cost" name="rehab_cost" value="{{ rehab_cost or '' }}" placeholder="125000">
+          </div>
+
+          <div class="field">
+            <label for="sqft">Square Feet</label>
+            <input id="sqft" name="sqft" value="{{ sqft or '' }}" placeholder="2200">
+          </div>
+
+          <div class="field">
+            <label for="lot_size">Lot Size</label>
+            <input id="lot_size" name="lot_size" value="{{ build_project.get('lot_size') if build_project else lot_size or '' }}" placeholder="0.5 acre">
+          </div>
+
+          <div class="field">
+            <label for="zoning">Zoning</label>
+            <input id="zoning" name="zoning" value="{{ build_project.get('zoning') if build_project else zoning or '' }}" placeholder="R-2">
+          </div>
+
+          <div class="field">
+            <label for="year_built">Year Built</label>
+            <input id="year_built" name="year_built" value="{{ year_built or '' }}" placeholder="1985">
           </div>
         </div>
 
-        <div class="uw-signal-grid">
-          <div class="uw-signal-col">
-            <div class="uw-signal-title">Strengths</div>
-            {% if strengths %}
-              <div class="uw-list">
-                {% for item in strengths %}
-                  <div class="uw-list-item">
-                    <strong>{{ item.get("title") or item if item is mapping else item }}</strong>
-                    <p>
-                      {% if item is mapping and item.get("detail") %}{{ item.get("detail") }}
-                      {% elif item is mapping and item.get("description") %}{{ item.get("description") }}
-                      {% else %}Positive signal supporting the deal thesis.{% endif %}
-                    </p>
-                  </div>
-                {% endfor %}
-              </div>
-            {% else %}
-              <div class="uw-empty">No strengths have been returned yet.</div>
-            {% endif %}
-          </div>
-
-          <div class="uw-signal-col">
-            <div class="uw-signal-title">Risks</div>
-            {% if risks %}
-              <div class="uw-list">
-                {% for item in risks %}
-                  <div class="uw-list-item">
-                    <strong>{{ item.get("title") or item if item is mapping else item }}</strong>
-                    <p>
-                      {% if item is mapping and item.get("detail") %}{{ item.get("detail") }}
-                      {% elif item is mapping and item.get("description") %}{{ item.get("description") }}
-                      {% else %}Risk signal that could impact pricing, execution, or margin.{% endif %}
-                    </p>
-                  </div>
-                {% endfor %}
-              </div>
-            {% else %}
-              <div class="uw-empty">No risks have been returned yet.</div>
-            {% endif %}
-          </div>
-        </div>
-      </section>
-
-      <section class="uw-card">
-        <div class="uw-card-head">
-          <div>
-            <div class="uw-eyebrow">Verdict Breakdown</div>
-            <h3>Decision Subscores</h3>
-            <p class="uw-note">
-              Break the deal decision into explainable parts instead of one opaque score.
-            </p>
-          </div>
+        <div class="field">
+          <label for="notes">Deal Notes</label>
+          <textarea id="notes" name="notes" rows="4" placeholder="Risks, exit strategy, scope, market assumptions.">{{ build_project.get('notes') if build_project and build_project.get('notes') else notes or '' }}</textarea>
         </div>
 
-        {% if breakdown %}
-          <div class="uw-kpi-grid">
-            {% for key, value in breakdown.items() %}
-              <div class="uw-kpi">
-                <div class="uw-kpi-label">{{ key|replace("_", " ")|title }}</div>
-                <div class="uw-kpi-value">{{ value }}</div>
-              </div>
-            {% endfor %}
-          </div>
-        {% else %}
-          <div class="uw-empty">No verdict breakdown returned yet.</div>
-        {% endif %}
-      </section>
-
-      <section class="uw-card">
-        <div class="uw-card-head">
-          <div>
-            <div class="uw-eyebrow">Comparables</div>
-            <h3>Normalized Comp Set</h3>
-            <p class="uw-note">
-              This is the evidence layer behind pricing confidence and exit logic.
-            </p>
-          </div>
+        <div class="form-actions">
+          <button type="submit" class="ravlo-btn ghost">Save Inputs</button>
+          <button type="button" id="analyzeDealBtn" class="ravlo-btn primary">Analyze Deal</button>
         </div>
+      </form>
+    </section>
 
-        {% if normalized_comps %}
-          <div class="uw-table-wrap">
-            <table class="uw-table">
-              <thead>
-                <tr>
-                  <th>Address</th>
-                  <th>Price</th>
-                  <th>Sq Ft</th>
-                  <th>Beds</th>
-                  <th>Baths</th>
-                  <th>Distance</th>
-                  <th>Months Ago</th>
-                </tr>
-              </thead>
-              <tbody>
-                {% for comp in normalized_comps %}
-                  <tr>
-                    <td>{{ comp.get("address") or "—" }}</td>
-                    <td>${{ "{:,.0f}".format(comp.get("price", 0) or 0) }}</td>
-                    <td>{{ comp.get("sqft") or "—" }}</td>
-                    <td>{{ comp.get("beds") or "—" }}</td>
-                    <td>{{ comp.get("baths") or "—" }}</td>
-                    <td>{{ comp.get("distance_miles") or "—" }}</td>
-                    <td>{{ comp.get("months_ago") or "—" }}</td>
-                  </tr>
-                {% endfor %}
-              </tbody>
-            </table>
-          </div>
-        {% else %}
-          <div class="uw-empty">No normalized comps returned yet.</div>
-        {% endif %}
-      </section>
-
-      <section class="uw-card">
-        <div class="uw-card-head">
-          <div>
-            <div class="uw-eyebrow">Market Assumptions</div>
-            <h3>Context Layer</h3>
-            <p class="uw-note">
-              Surface the market assumptions that shape cost, value, and confidence.
-            </p>
-          </div>
+    <section class="ravlo-card pad">
+      <div class="section-head">
+        <div>
+          <div class="eyebrow">OUTPUT</div>
+          <h2>Strategy Snapshot</h2>
         </div>
+        <strong id="analysisStatus">{{ 'Ready' if strategy_analysis else 'Waiting' }}</strong>
+      </div>
 
-        {% if market %}
-          <div class="uw-list">
-            {% for key, value in market.items() %}
-              <div class="uw-list-item">
-                <strong>{{ key|replace("_", " ")|title }}</strong>
-                <p>{{ value }}</p>
-              </div>
-            {% endfor %}
-          </div>
-        {% else %}
-          <div class="uw-empty">No market assumptions returned yet.</div>
-        {% endif %}
-      </section>
+      <div class="score-card">
+        <span>Deal Score</span>
+        <strong id="dealScore">{{ strategy_analysis.get('deal_score') or deal.deal_score or '—' }}</strong>
+      </div>
 
+      <div class="result-meta">
+        <div><span>Recommended Strategy</span><strong id="recommendedStrategy">{{ strategy_analysis.get('recommended_type') or deal.recommended_strategy or '—' }}</strong></div>
+        <div><span>Cost Low</span><strong id="costLow">{{ strategy_analysis.get('cost_low') or '—' }}</strong></div>
+        <div><span>Cost High</span><strong id="costHigh">{{ strategy_analysis.get('cost_high') or '—' }}</strong></div>
+        <div><span>Estimated Value</span><strong id="estimatedValue">{{ strategy_analysis.get('estimated_value') or arv or '—' }}</strong></div>
+      </div>
+
+      <div class="analysis-summary" id="analysisSummary">
+        {{ strategy_analysis.get('summary') or 'Run Deal Architect to generate strategy, valuation, and risk insights.' }}
+      </div>
+    </section>
+  </section>
+
+  {% if build_project %}
+  <section class="ravlo-card pad">
+    <div class="section-head">
+      <div>
+        <div class="eyebrow">BUILD STUDIO PACKAGE</div>
+        <h2>{{ build_project_name or build_project.get('project_name') or 'Build Package' }}</h2>
+        <p class="muted">
+          {% if build_lot_count %}{{ build_lot_count }} lot{% if build_lot_count != 1 %}s{% endif %}{% endif %}
+          {% if build_property_type %} · {{ build_property_type|replace('_', ' ')|title }}{% endif %}
+        </p>
+      </div>
+      <div class="package-actions">
+        <button type="button" class="ravlo-btn ghost" id="downloadBuildPackageBtn">Download Images</button>
+        <button type="button" class="ravlo-btn primary" id="generateBuildCostsBtn">Generate Build Costs</button>
+      </div>
     </div>
 
-    <aside class="uw-side">
-      <div class="uw-sticky">
+    <div class="build-preview-grid">
+      {% if build_blueprint_url %}
+      <a href="{{ build_blueprint_url }}" target="_blank" class="build-preview-card" data-build-image="{{ build_blueprint_url }}">
+        <img src="{{ build_blueprint_url }}" alt="Build blueprint">
+        <strong>Blueprint</strong>
+      </a>
+      {% endif %}
 
-        <section class="uw-card">
-          <div class="uw-card-head">
-            <div>
-              <div class="uw-eyebrow">Decision Snapshot</div>
-              <h3>Analysis Verdict</h3>
-              <p class="uw-note">
-                The right rail should answer the decision question immediately.
-              </p>
-            </div>
-            <div class="uw-badge">Live Output</div>
-          </div>
+      {% if build_site_plan_url %}
+      <a href="{{ build_site_plan_url }}" target="_blank" class="build-preview-card" data-build-image="{{ build_site_plan_url }}">
+        <img src="{{ build_site_plan_url }}" alt="Build site plan">
+        <strong>Site Plan</strong>
+      </a>
+      {% endif %}
 
-          <div class="uw-kpi-grid">
-            <div class="uw-kpi">
-              <div class="uw-kpi-label">Score</div>
-              <div class="uw-kpi-value">{{ verdict.get("score") or meta.get("score") or "—" }}</div>
-            </div>
+      {% if build_exterior_url %}
+      <a href="{{ build_exterior_url }}" target="_blank" class="build-preview-card" data-build-image="{{ build_exterior_url }}">
+        <img src="{{ build_exterior_url }}" alt="Build exterior rendering">
+        <strong>Exterior</strong>
+      </a>
+      {% endif %}
+    </div>
 
-            <div class="uw-kpi">
-              <div class="uw-kpi-label">Verdict</div>
-              <div class="uw-kpi-value">{{ verdict.get("label") or verdict.get("grade") or "Pending" }}</div>
-            </div>
-
-            <div class="uw-kpi">
-              <div class="uw-kpi-label">Estimated Profit</div>
-              <div class="uw-kpi-value {% if meta.get('estimated_profit', 0) >= 0 %}positive{% else %}negative{% endif %}">
-                {% if meta.get("estimated_profit") is not none %}
-                  ${{ "{:,.0f}".format(meta.get("estimated_profit") or 0) }}
-                {% else %}
-                  —
-                {% endif %}
-              </div>
-            </div>
-
-            <div class="uw-kpi">
-              <div class="uw-kpi-label">Margin</div>
-              <div class="uw-kpi-value {% if meta.get('margin_pct', 0) >= 15 %}positive{% elif meta.get('margin_pct', 0) >= 8 %}watch{% else %}negative{% endif %}">
-                {% if meta.get("margin_pct") is not none %}
-                  {{ "%.1f"|format(meta.get("margin_pct") or 0) }}%
-                {% else %}
-                  —
-                {% endif %}
-              </div>
-            </div>
-          </div>
-
-          <div class="uw-summary">
-            <div class="uw-summary-row">
-              <span class="uw-summary-label">Purchase Price</span>
-              <strong class="uw-summary-value">
-                {% if purchase_price is not none %}${{ "{:,.0f}".format(purchase_price or 0) }}{% else %}—{% endif %}
-              </strong>
-            </div>
-
-            <div class="uw-summary-row">
-              <span class="uw-summary-label">Exit Value</span>
-              <strong class="uw-summary-value">
-                {% if arv is not none %}${{ "{:,.0f}".format(arv or 0) }}{% else %}—{% endif %}
-              </strong>
-            </div>
-
-            <div class="uw-summary-row">
-              <span class="uw-summary-label">Risk Level</span>
-              <strong class="uw-summary-value {% if verdict.get('risk_level') == 'Low' %}good{% elif verdict.get('risk_level') == 'Moderate' %}watch{% else %}risk{% endif %}">
-                {{ verdict.get("risk_level") or meta.get("risk_level") or "—" }}
-              </strong>
-            </div>
-
-            <div class="uw-summary-row">
-              <span class="uw-summary-label">Recommended Path</span>
-              <strong class="uw-summary-value">{{ verdict.get("recommended_path") or meta.get("recommended_path") or "—" }}</strong>
-            </div>
-          </div>
-        </section>
-
-        <section class="uw-card">
-          <div class="uw-card-head">
-            <div>
-              <div class="uw-eyebrow">Recommendation</div>
-              <h3>Operator Read</h3>
-            </div>
-          </div>
-
-          <div class="uw-callout">
-            <strong>{{ verdict.get("label") or "Analysis Pending" }}</strong>
-            <p>
-              {{ verdict.get("summary") or meta.get("summary") or "Run analysis to generate a recommendation, confidence signal, and decision rationale." }}
-            </p>
-          </div>
-        </section>
-
+    <div class="cost-output hidden" id="buildCostOutput">
+      <div class="result-meta">
+        <div><span>Subtotal</span><strong id="buildCostSubtotal">—</strong></div>
+        <div><span>Contingency</span><strong id="buildCostContingency">—</strong></div>
+        <div><span>Total Budget</span><strong id="buildCostTotal">—</strong></div>
       </div>
-    </aside>
-  </div>
+      <a href="#" class="ravlo-btn primary hidden" id="openBudgetBtn">Open Budget Studio</a>
+    </div>
+  </section>
+  {% else %}
+  <section class="ravlo-card pad">
+    <div class="section-head">
+      <div>
+        <div class="eyebrow">BUILD STUDIO PACKAGE</div>
+        <h2>No build package yet</h2>
+      </div>
+      <a href="{{ url_for('investor.build_studio', deal_id=deal.id) }}" class="ravlo-btn primary">Open Build Studio</a>
+    </div>
+    <div class="empty-state-inline">Generate a blueprint, site plan, and exterior rendering before creating build costs.</div>
+  </section>
+  {% endif %}
+
+  {% endif %}
 </div>
 
+<style>
+.deal-architect-shell{display:grid;gap:20px}
+.architect-hero-card,.architect-grid{display:grid;gap:18px}
+.architect-hero-card{grid-template-columns:1fr auto;align-items:start}
+.hero-actions,.form-actions,.package-actions{display:flex;flex-wrap:wrap;gap:10px;justify-content:flex-end}
+.architect-grid{grid-template-columns:1.25fr .95fr}
+.form-grid.two{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.field{display:grid;gap:8px;margin-bottom:14px}
+.field input,.field select,.field textarea{width:100%;padding:12px 14px;border-radius:14px;border:1px solid rgba(255,255,255,.12);background:rgba(8,14,25,.88);color:#eef3ff}
+.score-card{display:grid;gap:8px;place-items:center;min-height:150px;border:1px solid rgba(255,255,255,.08);border-radius:20px;background:rgba(255,255,255,.04);margin-bottom:14px}
+.score-card span{color:#9fb0ca}
+.score-card strong{font-size:56px;line-height:1}
+.result-meta{display:grid;gap:12px;align-content:start}
+.result-meta div{display:flex;justify-content:space-between;gap:16px;padding:12px 14px;border:1px solid rgba(255,255,255,.08);border-radius:14px;background:rgba(255,255,255,.03)}
+.analysis-summary{margin-top:14px;padding:14px;border:1px solid rgba(255,255,255,.08);border-radius:14px;background:rgba(255,255,255,.03);color:#dce7fb;line-height:1.55}
+.build-preview-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin-top:16px}
+.build-preview-card{display:grid;gap:10px;padding:12px;border-radius:18px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03);text-decoration:none;color:inherit}
+.build-preview-card img{width:100%;height:210px;object-fit:cover;border-radius:14px;background:rgba(255,255,255,.04)}
+.cost-output{margin-top:18px;display:grid;gap:14px}
+.hidden{display:none!important}
+@media (max-width:900px){.architect-hero-card,.architect-grid,.form-grid.two{grid-template-columns:1fr}.hero-actions,.form-actions,.package-actions{justify-content:flex-start}}
+</style>
+
+<script>
+(() => {
+  const dealId = {{ (deal.id if deal else None)|tojson }};
+  const projectId = {{ (build_project.get('project_id') if build_project else None)|tojson }};
+  const csrfToken = {{ csrf_token()|tojson }};
+
+  const analyzeDealBtn = document.getElementById('analyzeDealBtn');
+  const analysisStatus = document.getElementById('analysisStatus');
+  const dealScore = document.getElementById('dealScore');
+  const recommendedStrategy = document.getElementById('recommendedStrategy');
+  const costLow = document.getElementById('costLow');
+  const costHigh = document.getElementById('costHigh');
+  const estimatedValue = document.getElementById('estimatedValue');
+  const analysisSummary = document.getElementById('analysisSummary');
+
+  const generateBuildCostsBtn = document.getElementById('generateBuildCostsBtn');
+  const generateBuildCostsTopBtn = document.getElementById('generateBuildCostsTopBtn');
+  const downloadBuildPackageBtn = document.getElementById('downloadBuildPackageBtn');
+  const buildCostOutput = document.getElementById('buildCostOutput');
+  const buildCostSubtotal = document.getElementById('buildCostSubtotal');
+  const buildCostContingency = document.getElementById('buildCostContingency');
+  const buildCostTotal = document.getElementById('buildCostTotal');
+  const openBudgetBtn = document.getElementById('openBudgetBtn');
+
+  function parseMoney(value) {
+    if (value === null || value === undefined || value === '') return null;
+    const parsed = Number(String(value).replace(/[$,]/g, '').trim());
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+
+  function formatMoney(value) {
+    const parsed = Number(value || 0);
+    return parsed.toLocaleString(undefined, { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
+  }
+
+  function imageFileName(prefix, url) {
+    const cleanPrefix = (prefix || 'ravlo-image').replace(/[^a-z0-9-_]+/gi, '-').toLowerCase();
+    try {
+      const pathname = new URL(url, window.location.origin).pathname;
+      const ext = pathname.split('.').pop();
+      if (ext && ext.length <= 5 && !ext.includes('/')) return `${cleanPrefix}.${ext}`;
+    } catch (_) {}
+    return `${cleanPrefix}.png`;
+  }
+
+  async function downloadImage(url, filename) {
+    if (!url || url === '#') return;
+    try {
+      const response = await fetch(url, { mode: 'cors', credentials: 'omit' });
+      if (!response.ok) throw new Error('Image download failed.');
+      const blob = await response.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = objectUrl;
+      link.download = filename || imageFileName('ravlo-build', url);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+    } catch (_) {
+      window.open(url, '_blank');
+    }
+  }
+
+  function collectBuildImageUrls() {
+    return Array.from(document.querySelectorAll('[data-build-image]'))
+      .map((node) => node.getAttribute('data-build-image'))
+      .filter(Boolean);
+  }
+
+  async function generateBuildCosts(triggerBtn) {
+    if (!dealId) {
+      alert('Missing deal id.');
+      return;
+    }
+
+    const buttons = [generateBuildCostsBtn, generateBuildCostsTopBtn].filter(Boolean);
+    buttons.forEach((btn) => {
+      btn.disabled = true;
+      btn.textContent = 'Generating Costs...';
+    });
+
+    try {
+      const response = await fetch("{{ url_for('investor.generate_build_costs_from_package') }}", {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': csrfToken,
+          'X-Requested-With': 'XMLHttpRequest'
+        },
+        credentials: 'same-origin',
+        body: JSON.stringify({
+          deal_id: dealId,
+          project_id: projectId,
+          square_feet_target: parseMoney(document.getElementById('sqft')?.value)
+        })
+      });
+
+      const data = await response.json();
+      if (!response.ok || data.status !== 'ok') {
+        throw new Error(data.message || 'Failed to generate build costs.');
+      }
+
+      if (buildCostOutput) buildCostOutput.classList.remove('hidden');
+      if (buildCostSubtotal) buildCostSubtotal.textContent = formatMoney(data.subtotal);
+      if (buildCostContingency) buildCostContingency.textContent = formatMoney(data.contingency);
+      if (buildCostTotal) buildCostTotal.textContent = formatMoney(data.total_budget);
+
+      const rehabCostInput = document.getElementById('rehab_cost');
+      if (rehabCostInput && data.total_budget) rehabCostInput.value = Math.round(Number(data.total_budget));
+
+      if (openBudgetBtn && data.budget_url) {
+        openBudgetBtn.href = data.budget_url;
+        openBudgetBtn.classList.remove('hidden');
+      }
+
+      if (data.budget_url) {
+        window.location.href = data.budget_url;
+      }
+    } catch (error) {
+      alert(error.message || 'Failed to generate build costs.');
+      buttons.forEach((btn) => {
+        btn.disabled = false;
+        btn.textContent = 'Generate Build Costs';
+      });
+    }
+  }
+
+  analyzeDealBtn?.addEventListener('click', async () => {
+    if (!dealId) return;
+
+    analyzeDealBtn.disabled = true;
+    analyzeDealBtn.textContent = 'Analyzing...';
+    if (analysisStatus) analysisStatus.textContent = 'Analyzing';
+
+    try {
+      const payload = {
+        deal_id: dealId,
+        project_name: {{ (build_project_name or '')|tojson }},
+        description: document.getElementById('notes')?.value || 'Deal Architect analysis',
+        property_type: document.getElementById('property_type')?.value || '',
+        lot_size: document.getElementById('lot_size')?.value || '',
+        zoning: document.getElementById('zoning')?.value || '',
+        asking_price: parseMoney(document.getElementById('purchase_price')?.value),
+        arv: parseMoney(document.getElementById('arv')?.value),
+        monthly_rent: parseMoney(document.getElementById('estimated_rent')?.value),
+        square_feet_target: parseMoney(document.getElementById('sqft')?.value),
+        city: {{ (city or '')|tojson }},
+        state: {{ (state or '')|tojson }},
+        zip_code: {{ (zip_code or '')|tojson }}
+      };
+
+      const response = await fetch("{{ url_for('investor.deal_architect_analyze') }}", {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': csrfToken,
+          'X-Requested-With': 'XMLHttpRequest'
+        },
+        credentials: 'same-origin',
+        body: JSON.stringify(payload)
+      });
+
+      const data = await response.json();
+      if (!response.ok || data.status === 'error') {
+        throw new Error(data.message || data.error || 'Deal analysis failed.');
+      }
+
+      if (analysisStatus) analysisStatus.textContent = 'Analyzed';
+      if (dealScore) dealScore.textContent = data.deal_score || '—';
+      if (recommendedStrategy) recommendedStrategy.textContent = data.recommended_type || data.recommended_strategy || '—';
+      if (costLow) costLow.textContent = data.cost_low ? formatMoney(data.cost_low) : '—';
+      if (costHigh) costHigh.textContent = data.cost_high ? formatMoney(data.cost_high) : '—';
+      if (estimatedValue) estimatedValue.textContent = data.estimated_value ? formatMoney(data.estimated_value) : '—';
+      if (analysisSummary) analysisSummary.textContent = data.summary || data.next_step || 'Analysis complete.';
+    } catch (error) {
+      if (analysisStatus) analysisStatus.textContent = 'Error';
+      alert(error.message || 'Deal analysis failed.');
+    } finally {
+      analyzeDealBtn.disabled = false;
+      analyzeDealBtn.textContent = 'Analyze Deal';
+    }
+  });
+
+  generateBuildCostsBtn?.addEventListener('click', () => generateBuildCosts(generateBuildCostsBtn));
+  generateBuildCostsTopBtn?.addEventListener('click', () => generateBuildCosts(generateBuildCostsTopBtn));
+
+  downloadBuildPackageBtn?.addEventListener('click', async () => {
+    const urls = collectBuildImageUrls();
+    for (let i = 0; i < urls.length; i += 1) {
+      await downloadImage(urls[i], imageFileName(`ravlo-build-package-${i + 1}`, urls[i]));
+    }
+  });
+})();
+</script>
 {% endblock %}

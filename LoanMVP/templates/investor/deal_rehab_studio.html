@@ -1,1781 +1,404 @@
 {% extends "layouts/ravlo_base.html" %}
-
-{% block title %}Design Studio | Ravlo{% endblock %}
+{% block title %}{{ page_title or "Design Studio" }} | Ravlo{% endblock %}
 
 {% block content %}
-<div class="rehab-studio-page design-studio-page">
+<div class="build-lite-shell">
+  <section class="studio-hero-card">
+    <div>
+      <div class="eyebrow">{{ hero_eyebrow or "RAVLO DESIGN STUDIO" }}</div>
+      <h1>{{ hero_title or "Generate interiors from a blueprint." }}</h1>
+      <p class="muted">{{ page_subtitle or "Design Studio focuses on interior rooms, finishes, and furnishing concepts." }}</p>
+    </div>
 
-  <section class="studio-hero">
-    <div class="hero-copy">
-      <div class="eyebrow">
-        <i data-lucide="sofa"></i>
-        RAVLO DESIGN STUDIO
+    <div class="hero-actions">
+      {% if project and companion_endpoint %}
+      <a href="{{ url_for(companion_endpoint, project_id=project.id) }}" class="ravlo-btn ghost">{{ companion_label or "Open Build Studio" }}</a>
+      {% elif deal and companion_endpoint %}
+      <a href="{{ url_for(companion_endpoint, deal_id=deal.id) }}" class="ravlo-btn ghost">{{ companion_label or "Open Build Studio" }}</a>
+      {% endif %}
+
+      <button type="button" class="ravlo-btn ghost hidden" id="downloadCurrentBtn">Download Image</button>
+      <button type="button" class="ravlo-btn ghost hidden" id="downloadAllBtn">Download All Images</button>
+      <a href="#" class="ravlo-btn primary hidden" id="continueToDealArchitectBtn">Continue to Deal Architect</a>
+    </div>
+  </section>
+
+  <section class="build-lite-grid">
+    <section class="ravlo-card pad">
+      <div class="section-head">
+        <div>
+          <div class="eyebrow">INPUT</div>
+          <h2>{{ page_title or "Design Studio" }} Interior Generator</h2>
+        </div>
       </div>
-      <h1>Design interiors from blueprints, floor plans, and existing space photos.</h1>
-      <p>
-        Upload a blueprint, floor plan, or current interior image to generate interior design concepts,
-        compare directions, and save the strongest concept to the workspace.
-      </p>
 
-      <div class="hero-chips">
-        <span class="chip"><i data-lucide="image"></i> Interior Concepts</span>
-        {% if deal %}<a href="{{ url_for('investor.budget_studio', deal_id=deal.id) }}" class="chip chip-link"><i data-lucide="wallet"></i> Generate Budget</a>{% endif %}
-        <span class="chip"><i data-lucide="layout-template"></i> Blueprint Ready</span>
-        <span class="chip"><i data-lucide="sparkles"></i> AI Design</span>
-        {% if deal %}
-        <span class="chip chip-accent"><i data-lucide="briefcase"></i> Deal #{{ deal.id }}</span>
+      <form id="interiorBuildForm" class="build-form" enctype="multipart/form-data">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="deal_id" value="{{ deal.id if deal else '' }}">
+        <input type="hidden" name="project_id" value="{{ project.id if project else '' }}">
+        <input type="hidden" name="save_to_deal" value="true">
+
+        <div class="form-grid two">
+          <div class="field">
+            <label for="project_name">Project Name</label>
+            <input id="project_name" name="project_name" value="{{ project.project_name if project else '' }}" placeholder="Maple Grove Residences">
+          </div>
+
+          <div class="field">
+            <label for="property_type">Property Type</label>
+            {% set property_type_value = project.property_type if project and project.property_type else 'single_family' %}
+            <select id="property_type" name="property_type">
+              <option value="single_family" {{ 'selected' if property_type_value == 'single_family' else '' }}>Single Family</option>
+              <option value="duplex" {{ 'selected' if property_type_value == 'duplex' else '' }}>Duplex</option>
+              <option value="townhome" {{ 'selected' if property_type_value == 'townhome' else '' }}>Townhome</option>
+              <option value="multifamily" {{ 'selected' if property_type_value == 'multifamily' else '' }}>Multifamily</option>
+              <option value="mixed_use" {{ 'selected' if property_type_value == 'mixed_use' else '' }}>Mixed Use</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="style">Interior Style</label>
+            <select id="style" name="style">
+              <option value="modern_luxury">Modern Luxury</option>
+              <option value="modern_farmhouse">Modern Farmhouse</option>
+              <option value="minimal_modern">Minimal Modern</option>
+              <option value="traditional">Traditional</option>
+              <option value="industrial_loft">Industrial Loft</option>
+              <option value="coastal">Coastal</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="room_type">Room Type</label>
+            <select id="room_type" name="room_type">
+              <option value="living room">Living Room</option>
+              <option value="kitchen">Kitchen</option>
+              <option value="primary bedroom">Primary Bedroom</option>
+              <option value="bathroom">Bathroom</option>
+              <option value="dining room">Dining Room</option>
+              <option value="office">Office</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="floor">Floor</label>
+            <select id="floor" name="floor">
+              <option value="main">Main</option>
+              <option value="upper">Upper</option>
+              <option value="lower">Lower</option>
+              <option value="basement">Basement</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="blueprint_url">Blueprint URL</label>
+            <input id="blueprint_url" name="blueprint_url" value="{{ blueprint_result.get('blueprint_url') or blueprint_result.get('image_url') or (project.blueprint_url if project else '') }}" placeholder="Paste a saved blueprint URL">
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="description">Design Notes</label>
+          <textarea id="description" name="description" rows="4" placeholder="Describe finishes, mood, functionality, and target buyer.">{{ project.description if project else '' }}</textarea>
+        </div>
+
+        <div class="field">
+          <label for="notes">Interior Notes</label>
+          <textarea id="notes" name="notes" rows="3" placeholder="Cabinet style, materials, lighting, furnishing direction.">{{ interior_result.get('notes') or '' }}</textarea>
+        </div>
+
+        <div class="field">
+          <label for="blueprint_file">Upload Blueprint</label>
+          <input type="file" id="blueprint_file" name="blueprint_file" accept="image/*,.png,.jpg,.jpeg,.webp,.pdf">
+        </div>
+
+        <button type="submit" class="ravlo-btn primary" id="generateInteriorBtn">{{ submit_label or "Generate Design Concept" }}</button>
+        <p class="form-note">Use Build Studio for site plans, exterior concepts, and blueprint-ready layouts.</p>
+      </form>
+    </section>
+
+    <section class="ravlo-card pad">
+      <div class="section-head">
+        <div>
+          <div class="eyebrow">REFERENCE</div>
+          <h2>Blueprint Source</h2>
+        </div>
+      </div>
+
+      <div class="reference-panel" id="blueprintPreview">
+        {% set blueprint_src = blueprint_result.get('image_url') or blueprint_result.get('blueprint_url') or (project.blueprint_url if project else '') %}
+        {% if blueprint_src %}
+        <img src="{{ blueprint_src }}" alt="Blueprint reference">
+        {% else %}
+        <div class="empty-state-inline">Upload a blueprint or open a saved project with one attached.</div>
         {% endif %}
       </div>
-    </div>
 
-    <div class="hero-stats">
-      <div class="hero-stat">
-        <span class="hero-stat-label">Project</span>
-        <strong>{{ deal.address if deal and deal.address else "Interior Design Concept" }}</strong>
-      </div>
-      <div class="hero-stat">
-        <span class="hero-stat-label">Reference Source</span>
-        <strong id="status-before">
-          {% if rehab_before and rehab_before.get("image_url") %}
-            Loaded
-          {% else %}
-            Pending
-          {% endif %}
-        </strong>
-      </div>
-      <div class="hero-stat">
-        <span class="hero-stat-label">Design Output</span>
-        <strong id="status-after">{{ "Generated" if rehab_latest and rehab_latest.get("image_url") else "Pending" }}</strong>
-      </div>
-      <div class="hero-stat">
-        <span class="hero-stat-label">Saved Concepts</span>
-        <strong id="status-concepts">{{ rehab_concepts|length if rehab_concepts else 0 }}</strong>
-      </div>
-    </div>
+      {% if lot_count %}
+      <div class="ravlo-chip-row"><span class="ravlo-chip">{{ lot_count }} Lots Planned</span></div>
+      {% endif %}
+    </section>
   </section>
 
-  <section class="workflow-strip">
-    <div class="workflow-step is-active" data-step="1">
-      <span class="step-number">1</span>
-      <span class="step-label">Setup</span>
+  <section class="ravlo-card pad">
+    <div class="section-head">
+      <div>
+        <div class="eyebrow">OUTPUT</div>
+        <h2>Interior Result</h2>
+      </div>
+      <strong id="interiorStatus">{{ 'Generated' if interior_result and interior_result.get('image_url') else 'Waiting' }}</strong>
     </div>
-    <div class="workflow-step" data-step="2">
-      <span class="step-number">2</span>
-      <span class="step-label">Reference</span>
+
+    <div class="result-grid">
+      <div class="result-media" id="interiorResultMedia">
+        {% if interior_result and interior_result.get('image_url') %}
+        <img src="{{ interior_result.get('image_url') }}" alt="Interior result">
+        {% else %}
+        <div class="empty-state-inline">Interior output will appear here.</div>
+        {% endif %}
+      </div>
+
+      <div class="result-meta">
+        <div><span>Room</span><strong id="resultRoom">{{ interior_result.get('room_type') or '—' }}</strong></div>
+        <div><span>Floor</span><strong id="resultFloor">{{ interior_result.get('floor') or '—' }}</strong></div>
+        <div><span>Seed</span><strong id="resultSeed">{{ interior_result.get('seed') or '—' }}</strong></div>
+        <div><span>Job ID</span><strong id="resultJob">{{ interior_result.get('job_id') or '—' }}</strong></div>
+
+        <a id="resultLink" href="{{ interior_result.get('image_url') or '#' }}" target="_blank" class="ravlo-btn ghost {% if not interior_result or not interior_result.get('image_url') %}hidden{% endif %}">Open Interior</a>
+        <button type="button" id="downloadResultBtn" class="ravlo-btn ghost {% if not interior_result or not interior_result.get('image_url') %}hidden{% endif %}">Download Interior</button>
+        <a href="#" id="resultDealArchitectBtn" class="ravlo-btn primary hidden">Send to Deal Architect</a>
+      </div>
     </div>
-    <div class="workflow-step" data-step="3">
-      <span class="step-number">3</span>
-      <span class="step-label">Design</span>
+
+    {% if interior_rooms %}
+    <div class="room-gallery" id="roomGallery">
+      {% for room in interior_rooms %}
+      {% if room.get('image_url') %}
+      <a href="{{ room.get('image_url') }}" target="_blank" class="room-card" data-image-url="{{ room.get('image_url') }}">
+        <img src="{{ room.get('image_url') }}" alt="{{ room.get('room_type') or 'Interior room' }}">
+        <div>
+          <strong>{{ room.get('room_type') or 'Room' }}</strong>
+          <span>{{ room.get('floor') or 'Floor' }}</span>
+        </div>
+      </a>
+      {% endif %}
+      {% endfor %}
     </div>
-    <div class="workflow-step" data-step="4">
-      <span class="step-number">4</span>
-      <span class="step-label">Concepts</span>
-    </div>
+    {% else %}
+    <div class="empty-state-inline" id="roomGallery">Generated rooms will stack here.</div>
+    {% endif %}
   </section>
-
-  <div class="studio-grid">
-    <div class="studio-main">
-
-      <section class="ravlo-card setup-card">
-        <div class="card-head">
-          <div>
-            <div class="card-kicker">STEP 1</div>
-            <h2>Design Studio Setup</h2>
-            <p>
-              Choose the interior style, room type, and reference source.
-              Start from a blueprint, floor plan, or an existing interior image.
-            </p>
-          </div>
-          <div class="card-head-actions">
-            <span class="status-pill" id="generation-status-pill">{{ "Concepts Loaded" if rehab_concepts else "Ready" }}</span>
-          </div>
-        </div>
-
-        <form id="rehabForm" class="studio-form" enctype="multipart/form-data">
-          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-          <input type="hidden" name="deal_id" value="{{ deal.id if deal else '' }}">
-          <input type="hidden" name="save_to_deal" value="true">
-
-          <div class="form-grid form-grid-2">
-            <div class="field">
-              <label for="preset">Interior Style</label>
-              {% set preset_value = rehab_latest.get("preset") if rehab_latest else "luxury" %}
-              <select id="preset" name="preset">
-                <option value="luxury" {{ "selected" if preset_value == "luxury" else "" }}>Modern Luxury</option>
-                <option value="modern" {{ "selected" if preset_value == "modern" else "" }}>Modern</option>
-                <option value="airbnb" {{ "selected" if preset_value == "airbnb" else "" }}>Hospitality</option>
-                <option value="flip" {{ "selected" if preset_value == "flip" else "" }}>Market Ready</option>
-                <option value="budget" {{ "selected" if preset_value == "budget" else "" }}>Budget Refresh</option>
-              </select>
-            </div>
-
-            <div class="field">
-              <label for="mode">Design Mode</label>
-              {% set mode_value = rehab_latest.get("mode") if rehab_latest else "hgtv" %}
-              <select id="mode" name="mode">
-                <option value="hgtv" {{ "selected" if mode_value == "hgtv" else "" }}>Editorial</option>
-                <option value="modern" {{ "selected" if mode_value == "modern" else "" }}>Modern</option>
-                <option value="luxury" {{ "selected" if mode_value == "luxury" else "" }}>Luxury</option>
-                <option value="budget" {{ "selected" if mode_value == "budget" else "" }}>Budget</option>
-                <option value="flip" {{ "selected" if mode_value == "flip" else "" }}>Market Ready</option>
-              </select>
-            </div>
-
-            <div class="field">
-              <label for="room_type">Room / Area</label>
-              {% set room_type_value = rehab_latest.get("room_type") if rehab_latest else "living room" %}
-              <select id="room_type" name="room_type">
-                <option value="living room" {{ "selected" if room_type_value == "living room" else "" }}>Living Room</option>
-                <option value="kitchen" {{ "selected" if room_type_value == "kitchen" else "" }}>Kitchen</option>
-                <option value="bathroom" {{ "selected" if room_type_value == "bathroom" else "" }}>Bathroom</option>
-                <option value="bedroom" {{ "selected" if room_type_value == "bedroom" else "" }}>Bedroom</option>
-                <option value="dining room" {{ "selected" if room_type_value == "dining room" else "" }}>Dining Room</option>
-                <option value="office" {{ "selected" if room_type_value == "office" else "" }}>Office</option>
-              </select>
-            </div>
-
-            <div class="field">
-              <label for="strength">Design Strength</label>
-              <select id="strength" name="strength">
-                <option value="0.45">Light</option>
-                <option value="0.58" selected>Balanced</option>
-                <option value="0.68">Strong</option>
-              </select>
-            </div>
-          </div>
-
-          <div class="form-grid form-grid-2 blueprint-fields">
-            <div class="field">
-              <label for="blueprint_url">Blueprint / Floor Plan URL</label>
-              <input
-                type="text"
-                id="blueprint_url"
-                name="blueprint_url"
-                value=""
-                placeholder="Paste a blueprint or floor plan URL"
-              >
-            </div>
-
-            <div class="field">
-              <label for="floor_label">Floor</label>
-              <select id="floor_label" name="floor_label">
-                <option value="main">Main</option>
-                <option value="upper">Upper</option>
-                <option value="lower">Lower</option>
-                <option value="basement">Basement</option>
-              </select>
-            </div>
-          </div>
-
-          <div class="upload-grid rehab-upload-grid">
-            <div class="upload-card">
-              <div class="upload-head">
-                <h3>Reference Source</h3>
-                <span>Required</span>
-              </div>
-              <p>
-                Start with either a blueprint / floor plan or a current interior image.
-                Design Studio can use either reference type to generate the concept.
-              </p>
-
-              <label class="inline-upload-label" for="blueprint_file">Upload Blueprint / Floor Plan</label>
-              <input type="file" id="blueprint_file" name="blueprint_file" accept="image/*,.png,.jpg,.jpeg,.webp,.pdf">
-
-              <label class="inline-upload-label" for="before_image" style="margin-top:14px;">Upload Existing Interior Photo</label>
-              <input type="file" id="before_image" name="before_image" accept="image/*,.png,.jpg,.jpeg,.webp">
-
-              <input
-                type="text"
-                id="image_url"
-                name="image_url"
-                value="{{ rehab_before.get('image_url') or '' if rehab_before else '' }}"
-                placeholder="Or paste current interior image URL"
-              >
-
-              <div class="mini-preview-stack">
-                <div class="mini-preview" id="blueprintPreview">No blueprint selected</div>
-                <div class="mini-preview" id="beforePreview">
-                  {% if rehab_before and rehab_before.get("image_url") %}
-                    <img src="{{ rehab_before.get('image_url') }}" alt="Reference image">
-                    <span>Saved reference image loaded</span>
-                  {% else %}
-                    No interior image selected
-                  {% endif %}
-                </div>
-              </div>
-
-              {% if workspace_images %}
-              <div class="seed-gallery-note">Choose a saved workspace image to use as the interior reference.</div>
-              <div class="seed-thumb-row" id="savedBeforeGallery">
-                {% for img in workspace_images[:12] %}
-                <button
-                  type="button"
-                  class="seed-thumb{% if rehab_before and rehab_before.get('image_url') == img.url %} is-active{% endif %}"
-                  data-seed-url="{{ img.url }}"
-                  aria-label="Use {{ img.label }} {{ loop.index }}"
-                  title="{{ img.label }}"
-                >
-                  <img src="{{ img.url }}" alt="{{ img.label }} {{ loop.index }}">
-                  {% if img.source == 'concept' %}
-                  <span class="seed-badge">AI</span>
-                  {% endif %}
-                </button>
-                {% endfor %}
-              </div>
-              {% elif property_photo_gallery %}
-              <div class="seed-gallery-note">Choose a saved property image to use as the interior reference.</div>
-              <div class="seed-thumb-row" id="savedBeforeGallery">
-                {% for photo in property_photo_gallery[:8] %}
-                <button
-                  type="button"
-                  class="seed-thumb{% if rehab_before and rehab_before.get('image_url') == photo %} is-active{% elif loop.first and not (rehab_before and rehab_before.get('image_url')) %} is-active{% endif %}"
-                  data-seed-url="{{ photo }}"
-                  aria-label="Use saved property photo {{ loop.index }}"
-                >
-                  <img src="{{ photo }}" alt="Saved property photo {{ loop.index }}">
-                </button>
-                {% endfor %}
-              </div>
-              {% endif %}
-            </div>
-
-            <div class="upload-card">
-              <div class="upload-head">
-                <h3>Design Notes</h3>
-                <span>Optional</span>
-              </div>
-              <p>Add mood, finishes, materials, lighting direction, and target-user guidance.</p>
-              <textarea id="notes" name="notes" rows="6" placeholder="Warm modern palette, natural oak cabinetry, matte black fixtures, layered lighting, upscale but functional.">{{ rehab_latest.get("notes") or "" if rehab_latest else "" }}</textarea>
-
-              <div class="info-box" style="margin-top:14px;">
-                <strong>Build Studio Reminder</strong>
-                <p>Use Build Studio for site plans, exterior concepts, and blueprint-ready layouts.</p>
-              </div>
-            </div>
-          </div>
-
-          <div class="cta-row">
-            <button type="submit" class="ravlo-btn ravlo-btn-primary" id="generateBtn">
-              <i data-lucide="sparkles"></i>
-              Generate Design Concept
-            </button>
-
-            {% if deal %}
-            <a href="{{ url_for('investor.budget_studio', deal_id=deal.id) }}" class="ravlo-btn ravlo-btn-secondary">
-              <i data-lucide="wallet"></i>
-              Generate Budget
-            </a>
-            {% endif %}
-
-            <button type="button" class="ravlo-btn ravlo-btn-secondary" id="resetBtn">
-              <i data-lucide="rotate-ccw"></i>
-              Reset
-            </button>
-          </div>
-        </form>
-      </section>
-
-      <section class="results-shell">
-        <div class="results-header">
-          <div>
-            <div class="card-kicker">OUTPUT</div>
-            <h2>Design Results</h2>
-            <p>Compare the source reference to the generated interior design direction.</p>
-          </div>
-          <div class="results-actions">
-            <button type="button" class="ravlo-btn ravlo-btn-ghost" id="copyConceptLinkBtn" {% if not rehab_latest or not rehab_latest.get("image_url") %}disabled{% endif %}>
-              <i data-lucide="link"></i>
-              Copy Result Link
-            </button>
-          </div>
-        </div>
-
-        <div class="results-dual-grid">
-          <div class="result-card">
-            <div class="result-head">
-              <div>
-                <div class="card-kicker">STEP 2</div>
-                <h3>Reference Preview</h3>
-              </div>
-              <span class="result-status" id="beforeBadge">{{ "Loaded" if rehab_before and rehab_before.get("image_url") else "Pending" }}</span>
-            </div>
-
-            <div class="result-body-single">
-              <div class="result-media {% if not (rehab_before and rehab_before.get('image_url')) %}empty{% endif %}" id="beforeMedia">
-                {% if rehab_before and rehab_before.get("image_url") %}
-                  <img src="{{ rehab_before.get('image_url') }}" alt="Reference image">
-                {% else %}
-                  <div class="empty-state">
-                    <i data-lucide="image"></i>
-                    <p>Reference image or blueprint will appear here.</p>
-                  </div>
-                {% endif %}
-              </div>
-
-              <div class="result-meta">
-                <div class="meta-row"><span>Status</span><strong id="beforeMetaStatus">{{ "Loaded" if rehab_before and rehab_before.get("image_url") else "Waiting" }}</strong></div>
-                <div class="meta-row"><span>Source Type</span><strong id="beforeSourceType">Reference</strong></div>
-                <a
-                  href="{{ rehab_before.get('image_url') or '#' if rehab_before else '#' }}"
-                  class="inline-link {% if not (rehab_before and rehab_before.get('image_url')) %}hidden{% endif %}"
-                  id="beforeLink"
-                  target="_blank"
-                  rel="noopener"
-                >Open Reference</a>
-              </div>
-            </div>
-          </div>
-
-          <div class="result-card blueprint-result-card">
-            <div class="result-head">
-              <div>
-                <div class="card-kicker">REFERENCE</div>
-                <h3>Blueprint Preview</h3>
-              </div>
-              <span class="result-status" id="blueprintBadge">Optional</span>
-            </div>
-
-            <div class="result-body-single">
-              <div class="result-media empty" id="blueprintMedia">
-                <div class="empty-state">
-                  <i data-lucide="layout-template"></i>
-                  <p>Blueprint preview will appear here.</p>
-                </div>
-              </div>
-
-              <div class="result-meta">
-                <div class="meta-row"><span>Floor</span><strong id="blueprintFloor">—</strong></div>
-                <div class="meta-row"><span>Source</span><strong id="blueprintSourceLabel">Not loaded</strong></div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="result-card" id="afterCard">
-          <div class="result-head">
-            <div>
-              <div class="card-kicker">STEP 3</div>
-              <h3>Interior Concept</h3>
-            </div>
-            <span class="result-status" id="afterBadge">
-              {{ "Generated" if rehab_latest and rehab_latest.get("image_url") else "Pending" }}
-            </span>
-          </div>
-
-          <div class="room-tabs" id="conceptTabs"></div>
-
-          <div class="result-body">
-            <div class="result-media {% if not (rehab_latest and rehab_latest.get('image_url')) %}empty{% endif %}" id="afterMedia">
-              {% if rehab_latest and rehab_latest.get("image_url") %}
-                <img src="{{ rehab_latest.get('image_url') }}" alt="Interior design concept">
-              {% else %}
-                <div class="empty-state">
-                  <i data-lucide="sparkles"></i>
-                  <p>Generated design concept will appear here.</p>
-                </div>
-              {% endif %}
-            </div>
-
-            <div class="result-meta">
-              <div class="meta-row"><span>Style</span><strong id="afterPreset">{{ rehab_latest.get("preset") or "—" if rehab_latest else "—" }}</strong></div>
-              <div class="meta-row"><span>Mode</span><strong id="afterMode">{{ rehab_latest.get("mode") or "—" if rehab_latest else "—" }}</strong></div>
-              <div class="meta-row"><span>Seed</span><strong id="afterSeed">{{ rehab_latest.get("seed") or "—" if rehab_latest else "—" }}</strong></div>
-              <div class="meta-row"><span>Job ID</span><strong id="afterJob">{{ rehab_latest.get("job_id") or "—" if rehab_latest else "—" }}</strong></div>
-              <a
-                href="{{ rehab_latest.get('image_url') or '#' if rehab_latest else '#' }}"
-                class="inline-link {% if not (rehab_latest and rehab_latest.get('image_url')) %}hidden{% endif %}"
-                id="afterLink"
-                target="_blank"
-                rel="noopener"
-              >Open Concept</a>
-            </div>
-          </div>
-
-          {% if rehab_concepts %}
-          <div class="saved-room-gallery" id="savedConceptGallery">
-            <div class="card-kicker">SAVED DESIGN CONCEPTS</div>
-            <div class="room-gallery-grid" id="conceptGalleryGrid">
-              {% for concept in rehab_concepts %}
-                {% if concept.get("image_url") %}
-                <a href="{{ concept.get('image_url') }}" class="room-thumb-card" target="_blank" rel="noopener">
-                  <img src="{{ concept.get('image_url') }}" alt="{{ concept.get('preset') or 'Design concept' }}">
-                  <div class="room-thumb-meta">
-                    <strong>{{ concept.get("preset") or "Concept" }}</strong>
-                    <span>{{ concept.get("mode") or "Mode not set" }}</span>
-                  </div>
-                </a>
-                {% endif %}
-              {% endfor %}
-            </div>
-          </div>
-          {% else %}
-          <div class="saved-room-gallery hidden" id="savedConceptGallery">
-            <div class="card-kicker">SAVED DESIGN CONCEPTS</div>
-            <div class="room-gallery-grid" id="conceptGalleryGrid"></div>
-          </div>
-          {% endif %}
-
-          <div class="cta-row" style="margin-top:14px;">
-            <button type="button" class="ravlo-btn ravlo-btn-secondary" id="openVariantBtn">
-              <i data-lucide="plus"></i>
-              Generate Another Concept
-            </button>
-          </div>
-        </div>
-      </section>
-    </div>
-
-    <aside class="studio-side">
-      <section class="ravlo-card side-card">
-        <div class="card-head">
-          <div>
-            <div class="card-kicker">PACKAGE STATUS</div>
-            <h3>Design Tracker</h3>
-          </div>
-        </div>
-
-        <div class="tracker-list">
-          <div class="tracker-item">
-            <span class="tracker-label">Reference Loaded</span>
-            <strong id="trackerBefore">{{ "Yes" if rehab_before and rehab_before.get("image_url") else "No" }}</strong>
-          </div>
-          <div class="tracker-item">
-            <span class="tracker-label">Blueprint Added</span>
-            <strong id="trackerBlueprint">No</strong>
-          </div>
-          <div class="tracker-item">
-            <span class="tracker-label">Concept Generated</span>
-            <strong id="trackerAfter">{{ "Yes" if rehab_latest and rehab_latest.get("image_url") else "No" }}</strong>
-          </div>
-          <div class="tracker-item">
-            <span class="tracker-label">Saved Concepts</span>
-            <strong id="trackerConcepts">{{ rehab_concepts|length if rehab_concepts else 0 }}</strong>
-          </div>
-        </div>
-      </section>
-
-      <section class="ravlo-card side-card" id="rehabScopeCard">
-        <div class="card-head">
-          <div>
-            <div class="card-kicker">DESIGN SNAPSHOT</div>
-            <h3>Concept Summary</h3>
-          </div>
-        </div>
-
-        <div class="tracker-list">
-          <div class="tracker-item">
-            <span class="tracker-label">Room</span>
-            <strong id="scopeRoom">{{ rehab_latest.get("room_type") if rehab_latest else "—" }}</strong>
-          </div>
-          <div class="tracker-item">
-            <span class="tracker-label">Style</span>
-            <strong id="scopeStyle">{{ rehab_latest.get("preset") if rehab_latest else "—" }}</strong>
-          </div>
-          <div class="tracker-item">
-            <span class="tracker-label">Mode</span>
-            <strong id="scopeMode">{{ rehab_latest.get("mode") if rehab_latest else "—" }}</strong>
-          </div>
-          <div class="tracker-item">
-            <span class="tracker-label">Floor</span>
-            <strong id="scopeFloor">—</strong>
-          </div>
-        </div>
-
-        <div class="info-box" style="margin-top:12px;">
-          <strong>Plan Summary</strong>
-          <p id="scopePlan">Generate a concept from a blueprint or interior image to build the current design summary.</p>
-        </div>
-      </section>
-
-      <section class="ravlo-card side-card">
-        <div class="card-head">
-          <div>
-            <div class="card-kicker">WORKFLOW</div>
-            <h3>How this works</h3>
-          </div>
-        </div>
-
-        <div class="info-stack">
-          <div class="info-box">
-            <strong>1. Add a Reference</strong>
-            <p>Start with a blueprint, floor plan, or existing interior image.</p>
-          </div>
-          <div class="info-box">
-            <strong>2. Generate Design</strong>
-            <p>Ravlo creates an interior concept based on your style, room type, and notes.</p>
-          </div>
-          <div class="info-box">
-            <strong>3. Compare Concepts</strong>
-            <p>Save multiple interior directions and compare them before making decisions.</p>
-          </div>
-        </div>
-      </section>
-    </aside>
-  </div>
-
-  <div class="loading-overlay hidden" id="loadingOverlay">
-    <div class="loading-card">
-      <div class="loader-ring"></div>
-      <h3 id="loadingTitle">Generating Design Concept...</h3>
-      <p id="loadingMessage">Ravlo is building the interior concept now.</p>
-      <div class="loading-progress-list">
-        <div class="loading-step" id="loadingStep1">Loading reference...</div>
-        <div class="loading-step" id="loadingStep2">Generating design concept...</div>
-        <div class="loading-step" id="loadingStep3">Saving concept to workspace...</div>
-      </div>
-    </div>
-  </div>
-
-  <div class="loading-overlay hidden" id="variantModal">
-    <div class="loading-card add-room-card">
-      <h3 style="margin-top:0;">Generate Another Concept</h3>
-      <p>Create another interior direction from the same reference.</p>
-
-      <div class="field">
-        <label for="modal_preset">Style</label>
-        <select id="modal_preset">
-          <option value="luxury">Modern Luxury</option>
-          <option value="modern">Modern</option>
-          <option value="airbnb">Hospitality</option>
-          <option value="flip">Market Ready</option>
-          <option value="budget">Budget Refresh</option>
-        </select>
-      </div>
-
-      <div class="field">
-        <label for="modal_mode">Mode</label>
-        <select id="modal_mode">
-          <option value="hgtv">Editorial</option>
-          <option value="modern">Modern</option>
-          <option value="luxury">Luxury</option>
-          <option value="budget">Budget</option>
-          <option value="flip">Market Ready</option>
-        </select>
-      </div>
-
-      <div class="cta-row">
-        <button type="button" class="ravlo-btn ravlo-btn-primary" id="confirmVariantBtn">
-          <i data-lucide="sparkles"></i>
-          Generate Concept
-        </button>
-        <button type="button" class="ravlo-btn ravlo-btn-secondary" id="closeVariantBtn">
-          Cancel
-        </button>
-      </div>
-    </div>
-  </div>
 </div>
 
 <style>
-  .rehab-studio-page {
-    padding: 28px 0 60px;
-  }
-
-  .studio-hero {
-    display: grid;
-    grid-template-columns: 1.5fr 1fr;
-    gap: 20px;
-    margin-bottom: 22px;
-    padding: 28px;
-    border: 1px solid rgba(255,255,255,0.08);
-    border-radius: 28px;
-    background:
-      radial-gradient(circle at top left, rgba(58,92,122,0.18), transparent 38%),
-      linear-gradient(135deg, rgba(12,17,22,0.96), rgba(18,24,32,0.98));
-    box-shadow: 0 22px 60px rgba(0,0,0,0.28);
-  }
-
-  .eyebrow,
-  .card-kicker {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    font-size: 11px;
-    font-weight: 700;
-    color: #93a7bb;
-    margin-bottom: 10px;
-  }
-
-  .studio-hero h1 {
-    margin: 0 0 10px;
-    font-size: 2.2rem;
-    line-height: 1.08;
-    color: #fff;
-  }
-
-  .studio-hero p {
-    margin: 0;
-    max-width: 700px;
-    color: #b3c0cc;
-    font-size: 1rem;
-    line-height: 1.6;
-  }
-
-  .hero-chips {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-    margin-top: 18px;
-  }
-
-  .chip {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    padding: 10px 14px;
-    border-radius: 999px;
-    background: rgba(255,255,255,0.06);
-    border: 1px solid rgba(255,255,255,0.08);
-    color: #d8e3ec;
-    font-size: 0.92rem;
-  }
-
-  .chip-accent {
-    background: rgba(58,92,122,0.22);
-    color: #fff;
-  }
-
-  .hero-stats {
-    display: grid;
-    gap: 12px;
-    align-content: start;
-  }
-
-  .hero-stat {
-    padding: 16px 18px;
-    border-radius: 20px;
-    border: 1px solid rgba(255,255,255,0.08);
-    background: rgba(255,255,255,0.04);
-  }
-
-  .hero-stat-label {
-    display: block;
-    margin-bottom: 6px;
-    font-size: 12px;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: #8fa2b5;
-  }
-
-  .hero-stat strong {
-    color: #fff;
-    font-size: 1rem;
-  }
-
-  .workflow-strip {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 12px;
-    margin-bottom: 22px;
-  }
-
-  .workflow-step {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 14px 16px;
-    border-radius: 18px;
-    background: #121821;
-    border: 1px solid rgba(255,255,255,0.06);
-    color: #aebdca;
-  }
-
-  .workflow-step.is-active,
-  .workflow-step.is-complete {
-    border-color: rgba(58,92,122,0.5);
-    background: linear-gradient(180deg, rgba(58,92,122,0.22), rgba(18,24,33,0.92));
-    color: #fff;
-  }
-
-  .step-number {
-    width: 34px;
-    height: 34px;
-    border-radius: 50%;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: 700;
-    background: rgba(255,255,255,0.08);
-  }
-
-  .studio-grid {
-    display: grid;
-    grid-template-columns: minmax(0, 1.5fr) 360px;
-    gap: 22px;
-  }
-
-  .ravlo-card,
-  .result-card {
-    border-radius: 26px;
-    border: 1px solid rgba(255,255,255,0.06);
-    background: linear-gradient(180deg, rgba(20,27,36,0.98), rgba(14,19,26,0.98));
-    box-shadow: 0 18px 50px rgba(0,0,0,0.22);
-  }
-
-  .setup-card,
-  .results-shell,
-  .side-card {
-    padding: 24px;
-  }
-
-  .card-head,
-  .results-header,
-  .result-head {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 16px;
-  }
-
-  .card-head h2,
-  .results-header h2,
-  .result-head h3,
-  .side-card h3 {
-    margin: 0;
-    color: #fff;
-  }
-
-  .card-head p,
-  .results-header p,
-  .side-card p {
-    margin: 6px 0 0;
-    color: #9fb0bf;
-  }
-
-  .status-pill,
-  .result-status {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    min-height: 34px;
-    padding: 8px 12px;
-    border-radius: 999px;
-    background: rgba(255,255,255,0.07);
-    color: #d7e2eb;
-    font-weight: 600;
-  }
-
-  .studio-form {
-    margin-top: 20px;
-  }
-
-  .form-grid {
-    display: grid;
-    gap: 16px;
-  }
-
-  .form-grid-2 {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .field {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    margin-bottom: 16px;
-  }
-
-  .field label {
-    color: #d7e1ea;
-    font-size: 0.95rem;
-    font-weight: 600;
-  }
-
-  .field input,
-  .field select,
-  .field textarea {
-    width: 100%;
-    border-radius: 16px;
-    border: 1px solid rgba(255,255,255,0.08);
-    background: #0f141b;
-    color: #fff;
-    padding: 14px 15px;
-    outline: none;
-    transition: border-color 0.18s ease, box-shadow 0.18s ease;
-  }
-
-  .field input:focus,
-  .field select:focus,
-  .field textarea:focus {
-    border-color: rgba(86,129,167,0.75);
-    box-shadow: 0 0 0 4px rgba(58,92,122,0.18);
-  }
-
-  .upload-grid {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 16px;
-    margin-bottom: 16px;
-  }
-
-  .upload-card {
-    padding: 18px;
-    border-radius: 22px;
-    border: 1px dashed rgba(255,255,255,0.12);
-    background: rgba(255,255,255,0.025);
-  }
-
-  .upload-head {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    margin-bottom: 8px;
-  }
-
-  .upload-head h3 {
-    margin: 0;
-    color: #fff;
-    font-size: 1rem;
-  }
-
-  .upload-head span {
-    padding: 6px 10px;
-    border-radius: 999px;
-    background: rgba(255,255,255,0.06);
-    color: #b8c8d6;
-    font-size: 12px;
-  }
-
-  .upload-card p {
-    margin: 0 0 14px;
-    color: #9cb0c1;
-    line-height: 1.5;
-  }
-
-  .inline-upload-label {
-    display: block;
-    margin-bottom: 8px;
-    color: #dbe5ee;
-    font-size: .92rem;
-    font-weight: 600;
-  }
-
-  .mini-preview-stack {
-    display: grid;
-    gap: 10px;
-    margin-top: 12px;
-  }
-
-  .seed-gallery-note {
-    margin-top: 10px;
-    padding: 10px 12px;
-    border-radius: 14px;
-    background: rgba(90,140,255,0.08);
-    border: 1px solid rgba(126,171,255,0.16);
-    color: #c8d8f2;
-    font-size: .82rem;
-    line-height: 1.45;
-  }
-
-  .seed-thumb-row {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(74px, 1fr));
-    gap: 10px;
-    margin-top: 12px;
-  }
-
-  .seed-thumb {
-    padding: 0;
-    border: 1px solid rgba(255,255,255,0.12);
-    border-radius: 14px;
-    overflow: hidden;
-    background: rgba(255,255,255,0.04);
-    cursor: pointer;
-    transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease;
-    position: relative;
-  }
-
-  .seed-thumb:hover,
-  .seed-thumb.is-active {
-    border-color: rgba(126,171,255,0.75);
-    box-shadow: 0 0 0 1px rgba(126,171,255,0.3);
-    transform: translateY(-1px);
-  }
-
-  .seed-thumb img {
-    display: block;
-    width: 100%;
-    height: 74px;
-    object-fit: cover;
-  }
-
-  .seed-badge {
-    position: absolute;
-    top: 4px;
-    right: 4px;
-    padding: 2px 6px;
-    border-radius: 6px;
-    background: linear-gradient(135deg, #3a5c7a, #567ea3);
-    color: #fff;
-    font-size: 9px;
-    font-weight: 700;
-    letter-spacing: 0.06em;
-    line-height: 1.4;
-    pointer-events: none;
-  }
-
-  .mini-preview {
-    min-height: 62px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    color: #90a3b6;
-    font-size: 0.92rem;
-  }
-
-  .mini-preview img {
-    width: 56px;
-    height: 56px;
-    object-fit: cover;
-    border-radius: 12px;
-    border: 1px solid rgba(255,255,255,0.08);
-  }
-
-  .cta-row,
-  .results-actions {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    flex-wrap: wrap;
-  }
-
-  .ravlo-btn {
-    border: none;
-    cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-    min-height: 46px;
-    border-radius: 16px;
-    padding: 0 18px;
-    font-weight: 700;
-    transition: transform 0.16s ease, box-shadow 0.16s ease, opacity 0.16s ease;
-  }
-
-  .ravlo-btn:hover {
-    transform: translateY(-1px);
-  }
-
-  .ravlo-btn-primary {
-    background: linear-gradient(135deg, #3a5c7a, #567ea3);
-    color: #fff;
-    box-shadow: 0 12px 28px rgba(58,92,122,0.34);
-  }
-
-  .ravlo-btn-secondary {
-    background: rgba(255,255,255,0.08);
-    color: #dce7f0;
-  }
-
-  .ravlo-btn-ghost {
-    background: transparent;
-    border: 1px solid rgba(255,255,255,0.1);
-    color: #d5e2ec;
-  }
-
-  .results-shell {
-    margin-top: 22px;
-  }
-
-  .results-dual-grid {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 18px;
-    margin-top: 18px;
-  }
-
-  .result-card {
-    padding: 20px;
-    margin-top: 18px;
-  }
-
-  .result-body {
-    display: grid;
-    grid-template-columns: minmax(0, 1.15fr) 260px;
-    gap: 18px;
-    margin-top: 16px;
-  }
-
-  .result-body-single {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr);
-    gap: 16px;
-    margin-top: 16px;
-  }
-
-  .result-media {
-    min-height: 300px;
-    border-radius: 22px;
-    border: 1px solid rgba(255,255,255,0.06);
-    background: #0c1116;
-    overflow: hidden;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-
-  .blueprint-result-card .result-media {
-    min-height: 300px;
-  }
-
-  .result-media img {
-    width: 100%;
-    height: 100%;
-    object-fit: contain;
-    display: block;
-    background: #0c1116;
-  }
-
-  .result-media.empty {
-    background:
-      radial-gradient(circle at center, rgba(58,92,122,0.10), transparent 55%),
-      #0c1116;
-  }
-
-  .empty-state {
-    text-align: center;
-    color: #8fa5b8;
-    padding: 20px;
-  }
-
-  .empty-state i {
-    width: 34px;
-    height: 34px;
-    margin-bottom: 10px;
-  }
-
-  .result-meta {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    padding: 16px;
-    border-radius: 20px;
-    background: rgba(255,255,255,0.03);
-    border: 1px solid rgba(255,255,255,0.05);
-  }
-
-  .meta-row,
-  .tracker-item {
-    display: flex;
-    justify-content: space-between;
-    gap: 12px;
-    align-items: center;
-  }
-
-  .meta-row span,
-  .tracker-label {
-    color: #93a8ba;
-  }
-
-  .meta-row strong,
-  .tracker-item strong {
-    color: #fff;
-    text-align: right;
-  }
-
-  .tracker-list,
-  .info-stack {
-    display: grid;
-    gap: 12px;
-    margin-top: 12px;
-  }
-
-  .info-box {
-    padding: 15px 16px;
-    border-radius: 18px;
-    background: rgba(255,255,255,0.03);
-    border: 1px solid rgba(255,255,255,0.05);
-  }
-
-  .info-box strong {
-    display: block;
-    margin-bottom: 6px;
-    color: #fff;
-  }
-
-  .info-box p {
-    margin: 0;
-    color: #9eb0be;
-    font-size: 0.95rem;
-  }
-
-  .inline-link {
-    color: #a9c6e0;
-    text-decoration: none;
-    font-weight: 600;
-  }
-
-  .inline-link:hover {
-    color: #d6ebff;
-  }
-
-  .saved-room-gallery {
-    margin-top: 18px;
-  }
-
-  .room-gallery-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-    gap: 14px;
-    margin-top: 10px;
-  }
-
-  .room-thumb-card {
-    display: block;
-    overflow: hidden;
-    border-radius: 18px;
-    text-decoration: none;
-    border: 1px solid rgba(255,255,255,0.08);
-    background: rgba(255,255,255,0.03);
-  }
-
-  .room-thumb-card img {
-    width: 100%;
-    height: 140px;
-    object-fit: cover;
-    display: block;
-  }
-
-  .room-thumb-meta {
-    padding: 12px;
-  }
-
-  .room-thumb-meta strong {
-    display: block;
-    color: #fff;
-  }
-
-  .room-thumb-meta span {
-    color: #97aabb;
-    font-size: 0.92rem;
-  }
-
-  .room-tabs {
-    display: flex;
-    gap: 10px;
-    flex-wrap: wrap;
-    margin-bottom: 12px;
-  }
-
-  .room-tab {
-    padding: 8px 12px;
-    border-radius: 999px;
-    background: rgba(255,255,255,0.06);
-    border: 1px solid rgba(255,255,255,0.08);
-    color: #cfe0ec;
-    font-size: 0.85rem;
-    cursor: pointer;
-    transition: all 0.15s ease;
-  }
-
-  .room-tab:hover {
-    background: rgba(255,255,255,0.12);
-  }
-
-  .room-tab.active {
-    background: linear-gradient(135deg, #3a5c7a, #567ea3);
-    color: #fff;
-    border-color: transparent;
-  }
-
-  .loading-overlay {
-    position: fixed;
-    inset: 0;
-    z-index: 999;
-    background: rgba(5,8,11,0.72);
-    backdrop-filter: blur(8px);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 24px;
-  }
-
-  .loading-card {
-    width: min(560px, 100%);
-    padding: 28px;
-    border-radius: 28px;
-    background: linear-gradient(180deg, rgba(18,24,33,0.98), rgba(12,17,22,0.98));
-    border: 1px solid rgba(255,255,255,0.08);
-    box-shadow: 0 24px 60px rgba(0,0,0,0.35);
-    text-align: center;
-  }
-
-  .loading-card h3 {
-    margin: 16px 0 8px;
-    color: #fff;
-  }
-
-  .loading-card p {
-    color: #9db0bf;
-    margin: 0 0 18px;
-  }
-
-  .loading-progress-list {
-    display: grid;
-    gap: 10px;
-    margin-top: 20px;
-    text-align: left;
-  }
-
-  .loading-step {
-    padding: 12px 14px;
-    border-radius: 16px;
-    background: rgba(255,255,255,0.05);
-    color: #d5e2ec;
-  }
-
-  .loader-ring {
-    width: 56px;
-    height: 56px;
-    margin: 0 auto;
-    border: 4px solid rgba(255,255,255,0.12);
-    border-top-color: #7fa5c7;
-    border-radius: 50%;
-    animation: spin 0.8s linear infinite;
-  }
-
-  .add-room-card {
-    width: min(520px, 100%);
-    text-align: left;
-  }
-
-  .hidden {
-    display: none !important;
-  }
-
-  @keyframes spin {
-    to { transform: rotate(360deg); }
-  }
-
-  @media (max-width: 1180px) {
-    .studio-grid {
-      grid-template-columns: 1fr;
-    }
-
-    .studio-side {
-      order: -1;
-    }
-  }
-
-  @media (max-width: 960px) {
-    .studio-hero,
-    .result-body,
-    .upload-grid,
-    .form-grid-2,
-    .workflow-strip,
-    .results-dual-grid {
-      grid-template-columns: 1fr;
-    }
-  }
-.chip-link{color:#eef6ff;text-decoration:none;border-color:rgba(122,184,255,.25);background:rgba(122,184,255,.10)}
+.build-lite-shell{display:grid;gap:20px}
+.studio-hero-card,.build-lite-grid,.result-grid{display:grid;gap:18px}
+.studio-hero-card{grid-template-columns:1fr auto;align-items:start}
+.hero-actions{display:flex;flex-wrap:wrap;gap:10px;justify-content:flex-end}
+.build-lite-grid{grid-template-columns:1.25fr .95fr}
+.form-grid.two{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.field{display:grid;gap:8px;margin-bottom:14px}
+.field input,.field select,.field textarea{width:100%;padding:12px 14px;border-radius:14px;border:1px solid rgba(255,255,255,.12);background:rgba(8,14,25,.88);color:#eef3ff}
+.reference-panel,.result-media{border:1px solid rgba(255,255,255,.08);border-radius:20px;background:rgba(255,255,255,.03);min-height:320px;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.reference-panel img,.result-media img{width:100%;height:100%;object-fit:cover;display:block}
+.result-grid{grid-template-columns:1.2fr .8fr}
+.result-meta{display:grid;gap:12px;align-content:start}
+.result-meta div{display:flex;justify-content:space-between;gap:16px;padding:12px 14px;border:1px solid rgba(255,255,255,.08);border-radius:14px;background:rgba(255,255,255,.03)}
+.room-gallery{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-top:18px}
+.room-card{display:grid;gap:10px;padding:12px;border-radius:16px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03);text-decoration:none;color:inherit}
+.room-card img{width:100%;height:140px;object-fit:cover;border-radius:12px}
+.form-note{margin-top:12px;color:#9fb0ca}
+.hidden{display:none!important}
+@media (max-width: 900px){.studio-hero-card,.build-lite-grid,.result-grid,.form-grid.two{grid-template-columns:1fr}.hero-actions{justify-content:flex-start}}
 </style>
 
 <script>
-  (function () {
-    const form = document.getElementById("rehabForm");
-    const generateBtn = document.getElementById("generateBtn");
-    const resetBtn = document.getElementById("resetBtn");
-    const loadingOverlay = document.getElementById("loadingOverlay");
-    const statusPill = document.getElementById("generation-status-pill");
-    const copyConceptLinkBtn = document.getElementById("copyConceptLinkBtn");
+(() => {
+  const form = document.getElementById('interiorBuildForm');
+  const button = document.getElementById('generateInteriorBtn');
+  const blueprintFile = document.getElementById('blueprint_file');
+  const blueprintUrl = document.getElementById('blueprint_url');
+  const blueprintPreview = document.getElementById('blueprintPreview');
+  const interiorStatus = document.getElementById('interiorStatus');
+  const resultMedia = document.getElementById('interiorResultMedia');
+  const resultRoom = document.getElementById('resultRoom');
+  const resultFloor = document.getElementById('resultFloor');
+  const resultSeed = document.getElementById('resultSeed');
+  const resultJob = document.getElementById('resultJob');
+  const resultLink = document.getElementById('resultLink');
+  const roomGallery = document.getElementById('roomGallery');
+  const downloadCurrentBtn = document.getElementById('downloadCurrentBtn');
+  const downloadAllBtn = document.getElementById('downloadAllBtn');
+  const downloadResultBtn = document.getElementById('downloadResultBtn');
+  const continueToDealArchitectBtn = document.getElementById('continueToDealArchitectBtn');
+  const resultDealArchitectBtn = document.getElementById('resultDealArchitectBtn');
 
-    const beforeImageInput = document.getElementById("before_image");
-    const beforeUrlInput = document.getElementById("image_url");
-    const beforePreview = document.getElementById("beforePreview");
-    const savedBeforeGallery = document.getElementById("savedBeforeGallery");
+  let currentImageUrl = {{ (interior_result.get('image_url') if interior_result else '')|tojson }};
+  let nextUrl = '';
 
-    const blueprintFileInput = document.getElementById("blueprint_file");
-    const blueprintUrlInput = document.getElementById("blueprint_url");
-    const blueprintPreview = document.getElementById("blueprintPreview");
-    const blueprintMedia = document.getElementById("blueprintMedia");
-    const blueprintBadge = document.getElementById("blueprintBadge");
-    const blueprintFloor = document.getElementById("blueprintFloor");
-    const blueprintSourceLabel = document.getElementById("blueprintSourceLabel");
-    const trackerBlueprint = document.getElementById("trackerBlueprint");
-    const scopeFloor = document.getElementById("scopeFloor");
+  function setBlueprintPreviewFromUrl(url) {
+    if (!url) return;
+    blueprintPreview.innerHTML = `<img src="${url}" alt="Blueprint reference">`;
+  }
 
-    const variantModal = document.getElementById("variantModal");
-    const openVariantBtn = document.getElementById("openVariantBtn");
-    const closeVariantBtn = document.getElementById("closeVariantBtn");
-    const confirmVariantBtn = document.getElementById("confirmVariantBtn");
+  function imageFileName(prefix, url) {
+    const cleanPrefix = (prefix || 'ravlo-image').replace(/[^a-z0-9-_]+/gi, '-').toLowerCase();
+    try {
+      const pathname = new URL(url, window.location.origin).pathname;
+      const ext = pathname.split('.').pop();
+      if (ext && ext.length <= 5 && !ext.includes('/')) return `${cleanPrefix}.${ext}`;
+    } catch (_) {}
+    return `${cleanPrefix}.png`;
+  }
 
-    const conceptTabs = document.getElementById("conceptTabs");
-    const savedConceptGallery = document.getElementById("savedConceptGallery");
-    const conceptGalleryGrid = document.getElementById("conceptGalleryGrid");
+  async function downloadImage(url, filename) {
+    if (!url || url === '#') return;
 
-    let conceptState = [];
-    let activeConceptIndex = 0;
-
-    const afterEls = {
-      media: document.getElementById("afterMedia"),
-      badge: document.getElementById("afterBadge"),
-      preset: document.getElementById("afterPreset"),
-      mode: document.getElementById("afterMode"),
-      seed: document.getElementById("afterSeed"),
-      job: document.getElementById("afterJob"),
-      link: document.getElementById("afterLink")
-    };
-
-    function escapeHtml(str) {
-      return String(str || "")
-        .replaceAll("&", "&amp;")
-        .replaceAll("<", "&lt;")
-        .replaceAll(">", "&gt;")
-        .replaceAll('"', "&quot;")
-        .replaceAll("'", "&#039;");
+    try {
+      const response = await fetch(url, { mode: 'cors', credentials: 'omit' });
+      if (!response.ok) throw new Error('Image download failed.');
+      const blob = await response.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = objectUrl;
+      link.download = filename || imageFileName('ravlo-design', url);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+    } catch (_) {
+      window.open(url, '_blank');
     }
+  }
 
-    function setPreview(fileInput, previewEl, emptyText) {
-      const file = fileInput.files && fileInput.files[0];
-      previewEl.innerHTML = "";
+  function collectImageUrls() {
+    const urls = new Set();
+    if (currentImageUrl) urls.add(currentImageUrl);
+    document.querySelectorAll('[data-image-url]').forEach((node) => {
+      const url = node.getAttribute('data-image-url');
+      if (url) urls.add(url);
+    });
+    return Array.from(urls);
+  }
 
-      if (!file) {
-        previewEl.textContent = emptyText;
-        return;
-      }
+  function refreshActionButtons() {
+    const hasImage = Boolean(currentImageUrl);
 
-      if (file.type && file.type.startsWith("image/")) {
-        const img = document.createElement("img");
-        const text = document.createElement("span");
-        img.src = URL.createObjectURL(file);
-        text.textContent = file.name;
-        previewEl.appendChild(img);
-        previewEl.appendChild(text);
-      } else {
-        previewEl.textContent = file.name;
-      }
-    }
-
-    function renderImage(target, url, altText, emptyIcon, emptyText, fit = "cover") {
-      if (!target) return;
-
-      if (!url) {
-        target.classList.add("empty");
-        target.innerHTML = `
-          <div class="empty-state">
-            <i data-lucide="${escapeHtml(emptyIcon)}"></i>
-            <p>${escapeHtml(emptyText)}</p>
-          </div>
-        `;
-        return;
-      }
-
-      target.classList.remove("empty");
-      target.innerHTML = `<img src="${escapeHtml(url)}" alt="${escapeHtml(altText)}" style="object-fit:${fit};">`;
-    }
-
-    function setStepState(step, state) {
-      const el = document.querySelector(`.workflow-step[data-step="${step}"]`);
-      if (!el) return;
-      el.classList.remove("is-active", "is-complete");
-      if (state === "active") el.classList.add("is-active");
-      if (state === "complete") el.classList.add("is-complete");
-    }
-
-    function startLoading() {
-      loadingOverlay.classList.remove("hidden");
-      statusPill.textContent = "Generating";
-      generateBtn.disabled = true;
-      generateBtn.style.opacity = "0.7";
-
-      setStepState(1, "complete");
-      setStepState(2, "active");
-      setStepState(3, "");
-      setStepState(4, "");
-    }
-
-    function stopLoading() {
-      loadingOverlay.classList.add("hidden");
-      generateBtn.disabled = false;
-      generateBtn.style.opacity = "1";
-    }
-
-    function setLoadingTexts(a, b, c) {
-      document.getElementById("loadingStep1").textContent = a;
-      document.getElementById("loadingStep2").textContent = b;
-      document.getElementById("loadingStep3").textContent = c;
-    }
-
-    function applyConcept(concept) {
-      if (!concept) return;
-
-      renderImage(afterEls.media, concept.image_url || "", "Interior design concept", "sparkles", "Generated design concept will appear here.");
-
-      if (afterEls.badge) afterEls.badge.textContent = concept.image_url ? "Generated" : "Pending";
-      if (afterEls.preset) afterEls.preset.textContent = concept.preset || "—";
-      if (afterEls.mode) afterEls.mode.textContent = concept.mode || "—";
-      if (afterEls.seed) afterEls.seed.textContent = concept.seed || "—";
-      if (afterEls.job) afterEls.job.textContent = concept.job_id || "—";
-
-      if (afterEls.link) {
-        if (concept.image_url) {
-          afterEls.link.href = concept.image_url;
-          afterEls.link.classList.remove("hidden");
-        } else {
-          afterEls.link.href = "#";
-          afterEls.link.classList.add("hidden");
-        }
-      }
-
-      document.getElementById("status-after").textContent = concept.image_url ? "Generated" : "Pending";
-      document.getElementById("trackerAfter").textContent = concept.image_url ? "Yes" : "No";
-
-      document.getElementById("scopeRoom").textContent = concept.room_type || "—";
-      document.getElementById("scopeStyle").textContent = concept.preset || "—";
-      document.getElementById("scopeMode").textContent = concept.mode || "—";
-      document.getElementById("scopePlan").textContent = concept.notes || "Interior concept generated successfully.";
-
-      if (copyConceptLinkBtn) {
-        copyConceptLinkBtn.disabled = !concept.image_url;
-        copyConceptLinkBtn.dataset.link = concept.image_url || "";
-      }
-    }
-
-    function renderConceptTabs() {
-      if (!conceptTabs) return;
-      conceptTabs.innerHTML = "";
-
-      conceptState.forEach((concept, index) => {
-        const btn = document.createElement("button");
-        btn.type = "button";
-        btn.className = "room-tab" + (index === activeConceptIndex ? " active" : "");
-        btn.textContent = `${concept.preset || "Concept"} (${concept.mode || "mode"})`;
-
-        btn.addEventListener("click", function () {
-          activeConceptIndex = index;
-          applyConcept(concept);
-          renderConceptTabs();
-        });
-
-        conceptTabs.appendChild(btn);
-      });
-    }
-
-    function appendConceptCard(concept) {
-      if (!conceptGalleryGrid || !concept || !concept.image_url) return;
-
-      if (savedConceptGallery) savedConceptGallery.classList.remove("hidden");
-
-      const anchor = document.createElement("a");
-      anchor.href = concept.image_url;
-      anchor.className = "room-thumb-card";
-      anchor.target = "_blank";
-      anchor.rel = "noopener";
-
-      anchor.innerHTML = `
-        <img src="${escapeHtml(concept.image_url)}" alt="${escapeHtml(concept.preset || "Concept")}">
-        <div class="room-thumb-meta">
-          <strong>${escapeHtml(concept.preset || "Concept")}</strong>
-          <span>${escapeHtml(concept.mode || "Mode not set")}</span>
-        </div>
-      `;
-
-      conceptGalleryGrid.appendChild(anchor);
-    }
-
-    function upsertConceptState(concept) {
-      if (!concept) return;
-
-      const preset = String(concept.preset || "").trim().toLowerCase();
-      const mode = String(concept.mode || "").trim().toLowerCase();
-
-      conceptState = conceptState.filter((c) => {
-        return !(
-          String(c.preset || "").trim().toLowerCase() === preset &&
-          String(c.mode || "").trim().toLowerCase() === mode
-        );
-      });
-
-      conceptState.push(concept);
-      activeConceptIndex = conceptState.length - 1;
-    }
-
-    beforeImageInput?.addEventListener("change", function () {
-      setPreview(this, beforePreview, "No interior image selected");
+    [downloadCurrentBtn, downloadResultBtn].forEach((btn) => {
+      if (!btn) return;
+      btn.classList.toggle('hidden', !hasImage);
     });
 
-    blueprintFileInput?.addEventListener("change", function () {
-      const file = this.files && this.files[0];
-      setPreview(this, blueprintPreview, "No blueprint selected");
-
-      if (!file) return;
-
-      blueprintBadge.textContent = "Loaded";
-      trackerBlueprint.textContent = "Yes";
-      blueprintSourceLabel.textContent = "Upload";
-      blueprintFloor.textContent = document.getElementById("floor_label")?.value || "—";
-      scopeFloor.textContent = document.getElementById("floor_label")?.value || "—";
-
-      if (file.type && file.type.startsWith("image/")) {
-        const url = URL.createObjectURL(file);
-        renderImage(blueprintMedia, url, "Blueprint preview", "layout-template", "Blueprint preview will appear here.", "contain");
-      } else {
-        blueprintMedia.classList.remove("empty");
-        blueprintMedia.innerHTML = `<div class="empty-state"><p>${escapeHtml(file.name)} loaded.</p></div>`;
-      }
-    });
-
-    blueprintUrlInput?.addEventListener("change", function () {
-      const url = (this.value || "").trim();
-      if (!url) return;
-
-      blueprintBadge.textContent = "Loaded";
-      trackerBlueprint.textContent = "Yes";
-      blueprintSourceLabel.textContent = "URL";
-      blueprintFloor.textContent = document.getElementById("floor_label")?.value || "—";
-      scopeFloor.textContent = document.getElementById("floor_label")?.value || "—";
-
-      renderImage(blueprintMedia, url, "Blueprint preview", "layout-template", "Blueprint preview will appear here.", "contain");
-      if (blueprintPreview) {
-        blueprintPreview.innerHTML = `<img src="${escapeHtml(url)}" alt="Blueprint preview"><span>Blueprint URL loaded</span>`;
-      }
-    });
-
-    function selectSavedBefore(url) {
-      if (!url) return;
-
-      if (beforeUrlInput) beforeUrlInput.value = url;
-      if (beforeImageInput) beforeImageInput.value = "";
-
-      if (beforePreview) {
-        beforePreview.innerHTML = `<img src="${escapeHtml(url)}" alt="Reference image"><span>Saved reference image selected</span>`;
-      }
-
-      renderImage(
-        document.getElementById("beforeMedia"),
-        url,
-        "Reference image",
-        "image",
-        "Reference image will appear here."
-      );
-
-      const beforeLink = document.getElementById("beforeLink");
-      if (beforeLink) {
-        beforeLink.href = url;
-        beforeLink.classList.remove("hidden");
-      }
-
-      document.getElementById("status-before").textContent = "Loaded";
-      document.getElementById("beforeBadge").textContent = "Loaded";
-      document.getElementById("beforeMetaStatus").textContent = "Loaded";
-      document.getElementById("trackerBefore").textContent = "Yes";
-      document.getElementById("beforeSourceType").textContent = "Interior Image";
-
-      savedBeforeGallery?.querySelectorAll(".seed-thumb").forEach((btn) => {
-        btn.classList.toggle("is-active", btn.dataset.seedUrl === url);
-      });
+    if (downloadAllBtn) {
+      downloadAllBtn.classList.toggle('hidden', collectImageUrls().length === 0);
     }
 
-    savedBeforeGallery?.querySelectorAll(".seed-thumb").forEach((btn) => {
-      btn.addEventListener("click", function () {
-        selectSavedBefore(this.dataset.seedUrl || "");
-      });
-    });
-
-    copyConceptLinkBtn?.addEventListener("click", async function () {
-      const link = this.dataset.link || "";
+    [continueToDealArchitectBtn, resultDealArchitectBtn].forEach((link) => {
       if (!link) return;
-
-      try {
-        await navigator.clipboard.writeText(link);
-        this.innerHTML = '<i data-lucide="check"></i> Link Copied';
-        if (window.lucide) lucide.createIcons();
-
-        setTimeout(() => {
-          this.innerHTML = '<i data-lucide="link"></i> Copy Result Link';
-          if (window.lucide) lucide.createIcons();
-        }, 1800);
-      } catch (err) {
-        console.error(err);
+      if (nextUrl) {
+        link.href = nextUrl;
+        link.classList.remove('hidden');
+      } else {
+        link.href = '#';
+        link.classList.add('hidden');
       }
     });
+  }
 
-    resetBtn?.addEventListener("click", function () {
-      form.reset();
-      statusPill.textContent = "Ready";
-      if (beforePreview) beforePreview.textContent = "No interior image selected";
-      if (blueprintPreview) blueprintPreview.textContent = "No blueprint selected";
-    });
+  blueprintFile?.addEventListener('change', function () {
+    const file = this.files && this.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => setBlueprintPreviewFromUrl(e.target?.result || '');
+    reader.readAsDataURL(file);
+  });
 
-    form?.addEventListener("submit", async function (e) {
-      e.preventDefault();
-      startLoading();
+  blueprintUrl?.addEventListener('change', function () {
+    if (this.value.trim()) setBlueprintPreviewFromUrl(this.value.trim());
+  });
 
-      setLoadingTexts(
-        "Loading reference source...",
-        "Generating interior design concept...",
-        "Saving concept to workspace..."
-      );
+  downloadCurrentBtn?.addEventListener('click', () => {
+    downloadImage(currentImageUrl, imageFileName('ravlo-current-interior', currentImageUrl));
+  });
 
-      const formData = new FormData(form);
+  downloadResultBtn?.addEventListener('click', () => {
+    downloadImage(currentImageUrl, imageFileName('ravlo-interior-result', currentImageUrl));
+  });
 
-      try {
-        const response = await fetch("{{ url_for('investor.design_studio_generate') }}", {
-          method: "POST",
-          body: formData,
-          headers: {
-            "X-Requested-With": "XMLHttpRequest",
-            "X-CSRFToken": "{{ csrf_token() }}"
-          },
-          credentials: "same-origin"
-        });
-
-        const data = await response.json();
-
-        if (!response.ok || data.status !== "ok") {
-          throw new Error(data.message || "Design generation failed.");
-        }
-
-        if (data.before_result?.image_url) {
-          renderImage(
-            document.getElementById("beforeMedia"),
-            data.before_result.image_url,
-            "Reference image",
-            "image",
-            "Reference image will appear here."
-          );
-
-          const beforeLink = document.getElementById("beforeLink");
-          if (beforeLink) {
-            beforeLink.href = data.before_result.image_url;
-            beforeLink.classList.remove("hidden");
-          }
-
-          document.getElementById("beforeBadge").textContent = "Loaded";
-          document.getElementById("beforeMetaStatus").textContent = "Loaded";
-          document.getElementById("status-before").textContent = "Loaded";
-          document.getElementById("trackerBefore").textContent = "Yes";
-        }
-
-        if (data.concept_result?.image_url) {
-          upsertConceptState(data.concept_result);
-          applyConcept(data.concept_result);
-          renderConceptTabs();
-
-          if (conceptGalleryGrid) conceptGalleryGrid.innerHTML = "";
-          conceptState.forEach(appendConceptCard);
-
-          document.getElementById("status-concepts").textContent = conceptState.length;
-          document.getElementById("trackerConcepts").textContent = conceptState.length;
-        }
-
-        setStepState(2, "complete");
-        setStepState(3, "complete");
-        setStepState(4, "complete");
-
-        statusPill.textContent = "Concept Ready";
-
-      } catch (error) {
-        console.error(error);
-        statusPill.textContent = "Error";
-        alert(error.message || "Something went wrong during generation.");
-      } finally {
-        stopLoading();
-        if (window.lucide) lucide.createIcons();
-      }
-    });
-
-    openVariantBtn?.addEventListener("click", function () {
-      variantModal.classList.remove("hidden");
-      if (window.lucide) lucide.createIcons();
-    });
-
-    closeVariantBtn?.addEventListener("click", function () {
-      variantModal.classList.add("hidden");
-    });
-
-    variantModal?.addEventListener("click", function (e) {
-      if (e.target === variantModal) {
-        variantModal.classList.add("hidden");
-      }
-    });
-
-    confirmVariantBtn?.addEventListener("click", async function () {
-      const dealId = document.querySelector('input[name="deal_id"]')?.value;
-      if (!dealId) {
-        alert("Deal ID is required.");
-        return;
-      }
-
-      const fd = new FormData();
-      fd.append("deal_id", dealId);
-      fd.append("preset", document.getElementById("modal_preset")?.value || "luxury");
-      fd.append("mode", document.getElementById("modal_mode")?.value || "hgtv");
-      fd.append("room_type", document.getElementById("room_type")?.value || "living room");
-      fd.append("notes", document.getElementById("notes")?.value || "");
-      fd.append("floor_label", document.getElementById("floor_label")?.value || "main");
-
-      confirmVariantBtn.disabled = true;
-      confirmVariantBtn.innerHTML = '<i data-lucide="loader"></i> Generating...';
-      if (window.lucide) lucide.createIcons();
-
-      try {
-        const response = await fetch("{{ url_for('investor.design_studio_generate_variant') }}", {
-          method: "POST",
-          body: fd,
-          headers: {
-            "X-Requested-With": "XMLHttpRequest",
-            "X-CSRFToken": "{{ csrf_token() }}"
-          },
-          credentials: "same-origin"
-        });
-
-        const data = await response.json();
-
-        if (!response.ok || data.status !== "ok") {
-          throw new Error(data.message || "Variant generation failed.");
-        }
-
-        const concept = data.concept_result || {};
-        upsertConceptState(concept);
-        applyConcept(concept);
-        renderConceptTabs();
-
-        if (conceptGalleryGrid) conceptGalleryGrid.innerHTML = "";
-        conceptState.forEach(appendConceptCard);
-
-        document.getElementById("status-concepts").textContent = conceptState.length;
-        document.getElementById("trackerConcepts").textContent = conceptState.length;
-
-        variantModal.classList.add("hidden");
-
-      } catch (error) {
-        console.error(error);
-        alert(error.message || "Failed to generate concept.");
-      } finally {
-        confirmVariantBtn.disabled = false;
-        confirmVariantBtn.innerHTML = '<i data-lucide="sparkles"></i> Generate Concept';
-        if (window.lucide) lucide.createIcons();
-      }
-    });
-
-    {% if rehab_concepts %}
-    conceptState = {{ rehab_concepts|tojson }};
-    activeConceptIndex = conceptState.length - 1;
-
-    if (conceptState.length > 0) {
-      applyConcept(conceptState[activeConceptIndex]);
-      renderConceptTabs();
+  downloadAllBtn?.addEventListener('click', async () => {
+    const urls = collectImageUrls();
+    for (let i = 0; i < urls.length; i += 1) {
+      await downloadImage(urls[i], imageFileName(`ravlo-design-${i + 1}`, urls[i]));
     }
-    {% endif %}
+  });
 
-    {% if rehab_before and rehab_before.get("image_url") %}
-    setStepState(1, "complete");
-    setStepState(2, "complete");
-    {% endif %}
+  form?.addEventListener('submit', async function (e) {
+    e.preventDefault();
+    button.disabled = true;
+    button.textContent = 'Generating...';
+    interiorStatus.textContent = 'Generating';
 
-    {% if rehab_latest and rehab_latest.get("image_url") %}
-    setStepState(3, "complete");
-    setStepState(4, "complete");
-    {% endif %}
+    try {
+      const response = await fetch("{{ url_for('investor.generate_build_interior') }}", {
+        method: 'POST',
+        body: new FormData(form),
+        headers: {
+          'X-CSRFToken': '{{ csrf_token() }}',
+          'X-Requested-With': 'XMLHttpRequest'
+        },
+        credentials: 'same-origin'
+      });
 
-    if (window.lucide) {
-      lucide.createIcons();
+      const data = await response.json();
+      if (!response.ok || data.status !== 'ok') {
+        throw new Error(data.message || 'Interior generation failed.');
+      }
+
+      if (data.blueprint_url) setBlueprintPreviewFromUrl(data.blueprint_url);
+
+      currentImageUrl = data.image_url || '';
+      nextUrl = data.next_url || data.deal_architect_url || '';
+
+      interiorStatus.textContent = 'Generated';
+      resultRoom.textContent = data.room_type || '—';
+      resultFloor.textContent = data.floor || '—';
+      resultSeed.textContent = data.seed || '—';
+      resultJob.textContent = data.job_id || '—';
+
+      resultMedia.innerHTML = data.image_url
+        ? `<img src="${data.image_url}" alt="Interior result">`
+        : '<div class="empty-state-inline">No image returned.</div>';
+
+      if (data.image_url) {
+        resultLink.href = data.image_url;
+        resultLink.classList.remove('hidden');
+      }
+
+      if (data.image_url && roomGallery) {
+        const card = document.createElement('a');
+        card.className = 'room-card';
+        card.href = data.image_url;
+        card.target = '_blank';
+        card.setAttribute('data-image-url', data.image_url);
+        card.innerHTML = `<img src="${data.image_url}" alt="${data.room_type || 'Interior room'}"><div><strong>${data.room_type || 'Room'}</strong><span>${data.floor || 'Floor'}</span></div>`;
+
+        if (roomGallery.classList.contains('empty-state-inline')) {
+          roomGallery.className = 'room-gallery';
+          roomGallery.innerHTML = '';
+        }
+        roomGallery.prepend(card);
+      }
+
+      refreshActionButtons();
+    } catch (error) {
+      interiorStatus.textContent = 'Error';
+      alert(error.message || 'Interior generation failed.');
+    } finally {
+      button.disabled = false;
+      button.textContent = {{ (submit_label or "Generate Design Concept")|tojson }};
     }
-  })();
+  });
+
+  refreshActionButtons();
+})();
 </script>
 {% endblock %}

@@ -167,7 +167,7 @@ from LoanMVP.services.partner_marketplace_service import (
     search_internal_partners,
     search_google_places,
 )
-
+from LoanMVP.services.deal_architect_service import generate_build_budget_from_package
 from LoanMVP.utils.pdf_utils import add_signature_to_pdf
 
 # -------------------------
@@ -6625,6 +6625,7 @@ def generate_full_build():
         location = (data.get("location") or "").strip()
         notes = (data.get("notes") or "").strip()
         development_type = _build_project_development_label(property_type, lot_count)
+
         site_notes = notes
         if lot_count and lot_count > 1:
             site_notes = f"{notes}. Plan for {lot_count} buildable lots across the site.".strip(". ").strip()
@@ -6700,9 +6701,6 @@ def generate_full_build():
                 except Exception:
                     raw_blueprint = None
 
-        # --------------------------------------------------
-        # If no blueprint image, allow text-only blueprint generation
-        # --------------------------------------------------
         has_text_seed = any([
             project_name,
             property_type,
@@ -6718,7 +6716,7 @@ def generate_full_build():
             }), 400
 
         # --------------------------------------------------
-        # EXTERIOR SOURCE RESOLUTION
+        # EXTERIOR / SITE SOURCE RESOLUTION
         # --------------------------------------------------
         if land_image:
             raw_land = land_image.read()
@@ -6830,8 +6828,11 @@ def generate_full_build():
                 else f"{notes}, access, setbacks, and site circulation".strip(", ")
             ),
             "square_feet_target": _normalize_int(data.get("square_feet") or data.get("square_feet_target")),
+
+            # Use uploaded/saved blueprint if present, otherwise generated blueprint.
             "blueprint_image_base64": blueprint_image_base64 or blueprint_primary_b64,
             "blueprint_image_url": "" if (blueprint_image_base64 or blueprint_primary_b64) else (blueprint_url or blueprint_primary_url),
+
             "width": 768,
             "height": 768,
             "steps": 24,
@@ -6872,39 +6873,42 @@ def generate_full_build():
 
         # --------------------------------------------------
         # 3. GENERATE EXTERIOR
-        # Prefer a direct site image, then the generated site plan, then blueprint output.
+        # Blueprint = architecture/massing.
+        # Site image/site plan = context only.
         # --------------------------------------------------
-        exterior_reference_b64 = exterior_image_base64 or site_plan_primary_b64 or blueprint_primary_b64
-        exterior_reference_url = "" if exterior_reference_b64 else (
-            reference_image_url or site_plan_primary_url or blueprint_primary_url
-        )
+        site_context_b64 = exterior_image_base64 or site_plan_primary_b64
+        site_context_url = "" if site_context_b64 else (reference_image_url or site_plan_primary_url or "")
 
         exterior_payload = {
             "mode": "exterior",
-
-            # project context
             "project_name": project_name,
             "property_type": property_type,
             "style": style,
+            "blueprint_style": blueprint_style,
             "description": description,
+            "build_description": description,
             "lot_size": lot_size,
             "zoning": zoning,
             "prompt_notes": (
                 site_notes
-                + " Use the blueprint as the architectural layout and massing constraint. "
-                + "Use the site plan as the land/context reference. "
-                + "Generate a realistic developer-grade exterior rendering."
+                + " Use the blueprint as the architectural layout, footprint, massing, roofline, and structure constraint. "
+                + "Use the site plan or site image only for land context, lot placement, driveway, roads, setbacks, and surroundings. "
+                + "Generate a realistic developer-grade exterior rendering that matches the blueprint."
+            ),
+            "special_features": (
+                f"{lot_count} lots, cohesive streetscape, developer-ready massing"
+                if lot_count and lot_count > 1
+                else notes
             ),
 
-            # architectural constraint
+            # This is the key fix.
             "blueprint_image_base64": blueprint_primary_b64,
             "blueprint_image_url": "",
 
-            # site/context reference
-            "site_image_base64": exterior_image_base64 or site_plan_primary_b64,
-            "site_image_url": "",
+            # Site/context reference stays separate.
+            "site_image_base64": site_context_b64,
+            "site_image_url": site_context_url,
 
-            # rendering settings
             "width": 1024,
             "height": 1024,
             "steps": 28,
@@ -7032,11 +7036,14 @@ def generate_full_build():
                 "meta": exterior_meta,
                 "seed": exterior_seed,
                 "job_id": exterior_job_id,
-                "build_reference_image": reference_image_url or blueprint_primary_url,
+                "build_reference_image": reference_image_url or site_plan_primary_url,
+                "blueprint_reference_image": blueprint_primary_url,
+                "site_plan_reference_image": site_plan_primary_url,
             }
 
             if build_analysis:
                 results["build_analysis"] = build_analysis
+
             results["build_project"] = build_project
             results["build_reference_image"] = blueprint_primary_url
             _set_deal_results(deal, results)
@@ -7054,6 +7061,11 @@ def generate_full_build():
                 "blueprint": blueprint_primary_url,
                 "exterior": exterior_primary_url,
             },
+            "next_url": url_for(
+                "investor.deal_architect",
+                deal_id=deal.id,
+                project_id=project.id
+            ) if deal else None,
             "project_id": project.id,
             "lot_count": lot_count,
             "development_type": development_type,
@@ -7929,6 +7941,16 @@ def deal_architect(deal_id=None):
         build_analysis = results.get("build_analysis", {}) or {}
         build_preview_url = results.get("build_preview_url", "") or ""
         build_mockups = results.get("build_mockups", []) or []
+   
+        build_project = results.get("build_project", {}) or {}
+
+        build_blueprint_url = (build_project.get("blueprint", {}) or {}).get("image_url")
+        build_site_plan_url = (build_project.get("site_plan", {}) or {}).get("image_url")
+        build_exterior_url = (build_project.get("exterior", {}) or {}).get("image_url")
+
+        build_project_name = build_project.get("project_name")
+        build_lot_count = build_project.get("lot_count")
+        build_property_type = build_project.get("property_type")
 
     # -------------------------------------------------
     # SMALL HELPERS
@@ -8024,6 +8046,13 @@ def deal_architect(deal_id=None):
         build_analysis=build_analysis,
         build_preview_url=build_preview_url,
         build_mockups=build_mockups,
+        build_project=build_project,
+        build_blueprint_url=build_blueprint_url,
+        build_site_plan_url=build_site_plan_url,
+        build_exterior_url=build_exterior_url,
+        build_project_name=build_project_name,
+        build_lot_count=build_lot_count,
+        build_property_type=build_property_type,
     )
 
 
@@ -8577,6 +8606,205 @@ def rehab_architect_generate_scope():
         "external_scope_result": external_scope_result
     })
 
+@investor_bp.route("/deal-studio/deal-architect/generate-build-costs", methods=["POST"])
+@login_required
+@role_required("investor")
+def generate_build_costs_from_package():
+    try:
+        data = request.get_json(silent=True) or request.form.to_dict() or {}
+
+        deal_id = _normalize_int(data.get("deal_id"))
+        project_id = _normalize_int(data.get("project_id"))
+
+        if not deal_id:
+            return jsonify({
+                "status": "error",
+                "message": "Missing deal_id."
+            }), 400
+
+        deal = Deal.query.filter_by(id=deal_id, user_id=current_user.id).first()
+        if not deal:
+            return jsonify({
+                "status": "error",
+                "message": "Deal not found or not authorized."
+            }), 404
+
+        results = _deal_results(deal)
+        build_project = results.get("build_project", {}) or {}
+
+        if not build_project:
+            return jsonify({
+                "status": "error",
+                "message": "No Build Studio package found for this deal."
+            }), 400
+
+        blueprint = build_project.get("blueprint", {}) or {}
+        site_plan = build_project.get("site_plan", {}) or {}
+        exterior = build_project.get("exterior", {}) or {}
+
+        package = {
+            "deal_id": deal.id,
+            "project_id": project_id or build_project.get("project_id"),
+            "strategy": deal.strategy,
+            "address": deal.address,
+            "city": deal.city,
+            "state": deal.state,
+            "zip_code": deal.zip_code,
+            "purchase_price": deal.purchase_price or 0,
+            "arv": deal.arv or 0,
+
+            "project_name": build_project.get("project_name") or deal.title,
+            "property_type": build_project.get("property_type"),
+            "development_type": build_project.get("development_type"),
+            "lot_count": build_project.get("lot_count") or 1,
+            "description": build_project.get("description"),
+            "lot_size": build_project.get("lot_size"),
+            "zoning": build_project.get("zoning"),
+            "location": build_project.get("location"),
+            "notes": build_project.get("notes"),
+
+            "blueprint_url": blueprint.get("image_url") or blueprint.get("blueprint_url"),
+            "site_plan_url": site_plan.get("image_url") or site_plan.get("site_plan_url"),
+            "exterior_url": exterior.get("image_url"),
+        }
+
+        # Prefer your RunPod / scope engine if available.
+        try:
+            cost_json = _post_scope_engine_json(
+                "/v1/build_cost",
+                package,
+                timeout=90,
+            ) or {}
+        except Exception:
+            current_app.logger.exception("Deal Architect build-cost engine failed")
+            cost_json = {}
+
+        # Safe fallback so the product still works.
+        if not cost_json or not cost_json.get("line_items"):
+            lot_count = int(package.get("lot_count") or 1)
+            property_type = package.get("property_type") or "single_family"
+            category = "new_build" if deal.strategy in ("build", "new_build", "development") else "rehab"
+
+            fallback_items = [
+                {"category": "Sitework", "description": "Clearing, grading, access, utility prep", "estimated_amount": 35000 * lot_count},
+                {"category": "Foundation", "description": "Foundation and slab / basement allowance", "estimated_amount": 45000 * lot_count},
+                {"category": "Framing", "description": f"{property_type} framing and shell", "estimated_amount": 85000 * lot_count},
+                {"category": "Exterior", "description": "Roofing, siding, windows, doors", "estimated_amount": 65000 * lot_count},
+                {"category": "MEP", "description": "Mechanical, electrical, plumbing rough-ins", "estimated_amount": 70000 * lot_count},
+                {"category": "Interior Finishes", "description": "Drywall, flooring, cabinets, fixtures, paint", "estimated_amount": 95000 * lot_count},
+                {"category": "Soft Costs", "description": "Permits, design, engineering, inspections", "estimated_amount": 30000 * lot_count},
+            ]
+
+            subtotal = sum(float(i["estimated_amount"]) for i in fallback_items)
+            contingency = round(subtotal * 0.10, 2)
+
+            cost_json = {
+                "source": "fallback_deal_architect",
+                "category": category,
+                "line_items": fallback_items,
+                "subtotal": subtotal,
+                "contingency": contingency,
+                "total_budget": subtotal + contingency,
+                "notes": "Fallback estimate generated from Build Studio package. Replace with RunPod cost engine output when available.",
+            }
+
+        line_items = cost_json.get("line_items") or []
+        subtotal = float(cost_json.get("subtotal") or sum(float(i.get("estimated_amount") or 0) for i in line_items))
+        contingency = float(cost_json.get("contingency") or round(subtotal * 0.10, 2))
+        total_budget = float(cost_json.get("total_budget") or subtotal + contingency)
+
+        investor_profile_id = getattr(deal, "investor_profile_id", None)
+
+        budget = ProjectBudget(
+            investor_profile_id=investor_profile_id,
+            deal_id=deal.id,
+            build_project_id=project_id or build_project.get("project_id"),
+            budget_type=cost_json.get("category") or "new_build",
+            name=f"{build_project.get('project_name') or deal.title or 'Build'} Budget",
+            project_name=build_project.get("project_name") or deal.title,
+            total_cost=subtotal,
+            contingency=contingency,
+            total_budget=total_budget,
+            total_amount=total_budget,
+            notes=cost_json.get("notes") or "Generated by Deal Architect from Build Studio package.",
+        )
+        db.session.add(budget)
+        db.session.flush()
+
+        for item in line_items:
+            db.session.add(ProjectExpense(
+                budget_id=budget.id,
+                category=item.get("category") or "Construction",
+                description=item.get("description") or item.get("name") or "Build cost item",
+                vendor=item.get("vendor"),
+                estimated_amount=float(item.get("estimated_amount") or item.get("amount") or 0),
+                actual_amount=0,
+                paid_amount=0,
+                status=item.get("status") or "planned",
+                notes=item.get("notes"),
+            ))
+
+        budget.recalculate_totals()
+
+        # Save into deal results for Deal Architect + Budget Studio views.
+        results["deal_architect"] = results.get("deal_architect", {}) or {}
+        results["deal_architect"]["build_costs"] = {
+            "budget_id": budget.id,
+            "source": cost_json.get("source") or "deal_architect",
+            "subtotal": subtotal,
+            "contingency": contingency,
+            "total_budget": total_budget,
+            "line_items": line_items,
+            "package": package,
+        }
+
+        deal.rehab_cost = total_budget
+        _set_deal_results(deal, results)
+
+        # Optional learning signal.
+        try:
+            sqft = _normalize_int(data.get("square_feet") or data.get("square_feet_target"))
+            db.session.add(CostObservation(
+                source="engine_estimate",
+                user_id=current_user.id,
+                deal_id=deal.id,
+                zip_code=deal.zip_code,
+                zip3=(deal.zip_code or "")[:3] if deal.zip_code else None,
+                state=(deal.state or "")[:2].upper() if deal.state else None,
+                city=deal.city,
+                category=cost_json.get("category") or "new_build",
+                asset_type=build_project.get("property_type"),
+                sqft=sqft,
+                total_cost=total_budget,
+                cost_per_sqft=(total_budget / sqft) if sqft else None,
+                confidence=0.25,
+                status="verified",
+                notes="Deal Architect estimate generated from Build Studio package.",
+            ))
+        except Exception:
+            current_app.logger.exception("CostObservation save failed")
+
+        db.session.commit()
+
+        return jsonify({
+            "status": "ok",
+            "budget_id": budget.id,
+            "deal_id": deal.id,
+            "project_id": project_id or build_project.get("project_id"),
+            "subtotal": subtotal,
+            "contingency": contingency,
+            "total_budget": total_budget,
+            "line_items": line_items,
+            "budget_url": url_for("investor.budget_studio", deal_id=deal.id, budget_id=budget.id),
+        })
+
+    except Exception as e:
+        current_app.logger.exception("Generate build costs from package failed")
+        db.session.rollback()
+        return jsonify({
+            "status": "error",
+            "message": str(e),
+        }), 500
 # =========================================================
 # REHAB IMAGE UPLOAD
 # =========================================================

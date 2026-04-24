@@ -15,6 +15,9 @@
       {% elif deal and companion_endpoint %}
       <a href="{{ url_for(companion_endpoint, deal_id=deal.id) }}" class="ravlo-btn ghost">{{ companion_label or "Open Build Studio" }}</a>
       {% endif %}
+      <button type="button" class="ravlo-btn ghost hidden" id="downloadCurrentBtn">Download Image</button>
+      <button type="button" class="ravlo-btn ghost hidden" id="downloadAllBtn">Download All Images</button>
+      <a href="#" class="ravlo-btn primary hidden" id="continueToDealArchitectBtn">Continue to Deal Architect</a>
     </div>
   </section>
 
@@ -38,6 +41,7 @@
             <label for="project_name">Project Name</label>
             <input id="project_name" name="project_name" value="{{ project.project_name if project else '' }}" placeholder="Maple Grove Residences">
           </div>
+
           <div class="field">
             <label for="property_type">Property Type</label>
             {% set property_type_value = project.property_type if project and project.property_type else 'single_family' %}
@@ -49,6 +53,7 @@
               <option value="mixed_use" {{ 'selected' if property_type_value == 'mixed_use' else '' }}>Mixed Use</option>
             </select>
           </div>
+
           <div class="field">
             <label for="style">Interior Style</label>
             <select id="style" name="style">
@@ -60,6 +65,7 @@
               <option value="coastal">Coastal</option>
             </select>
           </div>
+
           <div class="field">
             <label for="room_type">Room Type</label>
             <select id="room_type" name="room_type">
@@ -71,6 +77,7 @@
               <option value="office">Office</option>
             </select>
           </div>
+
           <div class="field">
             <label for="floor">Floor</label>
             <select id="floor" name="floor">
@@ -80,6 +87,7 @@
               <option value="basement">Basement</option>
             </select>
           </div>
+
           <div class="field">
             <label for="blueprint_url">Blueprint URL</label>
             <input id="blueprint_url" name="blueprint_url" value="{{ blueprint_result.get('blueprint_url') or blueprint_result.get('image_url') or (project.blueprint_url if project else '') }}" placeholder="Paste a saved blueprint URL">
@@ -142,12 +150,16 @@
         <div class="empty-state-inline">Interior output will appear here.</div>
         {% endif %}
       </div>
+
       <div class="result-meta">
         <div><span>Room</span><strong id="resultRoom">{{ interior_result.get('room_type') or '—' }}</strong></div>
         <div><span>Floor</span><strong id="resultFloor">{{ interior_result.get('floor') or '—' }}</strong></div>
         <div><span>Seed</span><strong id="resultSeed">{{ interior_result.get('seed') or '—' }}</strong></div>
         <div><span>Job ID</span><strong id="resultJob">{{ interior_result.get('job_id') or '—' }}</strong></div>
+
         <a id="resultLink" href="{{ interior_result.get('image_url') or '#' }}" target="_blank" class="ravlo-btn ghost {% if not interior_result or not interior_result.get('image_url') %}hidden{% endif %}">Open Interior</a>
+        <button type="button" id="downloadResultBtn" class="ravlo-btn ghost {% if not interior_result or not interior_result.get('image_url') %}hidden{% endif %}">Download Interior</button>
+        <a href="#" id="resultDealArchitectBtn" class="ravlo-btn primary hidden">Send to Deal Architect</a>
       </div>
     </div>
 
@@ -155,7 +167,7 @@
     <div class="room-gallery" id="roomGallery">
       {% for room in interior_rooms %}
       {% if room.get('image_url') %}
-      <a href="{{ room.get('image_url') }}" target="_blank" class="room-card">
+      <a href="{{ room.get('image_url') }}" target="_blank" class="room-card" data-image-url="{{ room.get('image_url') }}">
         <img src="{{ room.get('image_url') }}" alt="{{ room.get('room_type') or 'Interior room' }}">
         <div>
           <strong>{{ room.get('room_type') or 'Room' }}</strong>
@@ -175,6 +187,7 @@
 .build-lite-shell{display:grid;gap:20px}
 .studio-hero-card,.build-lite-grid,.result-grid{display:grid;gap:18px}
 .studio-hero-card{grid-template-columns:1fr auto;align-items:start}
+.hero-actions{display:flex;flex-wrap:wrap;gap:10px;justify-content:flex-end}
 .build-lite-grid{grid-template-columns:1.25fr .95fr}
 .form-grid.two{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
 .field{display:grid;gap:8px;margin-bottom:14px}
@@ -189,7 +202,7 @@
 .room-card img{width:100%;height:140px;object-fit:cover;border-radius:12px}
 .form-note{margin-top:12px;color:#9fb0ca}
 .hidden{display:none!important}
-@media (max-width: 900px){.studio-hero-card,.build-lite-grid,.result-grid,.form-grid.two{grid-template-columns:1fr}}
+@media (max-width: 900px){.studio-hero-card,.build-lite-grid,.result-grid,.form-grid.two{grid-template-columns:1fr}.hero-actions{justify-content:flex-start}}
 </style>
 
 <script>
@@ -207,10 +220,82 @@
   const resultJob = document.getElementById('resultJob');
   const resultLink = document.getElementById('resultLink');
   const roomGallery = document.getElementById('roomGallery');
+  const downloadCurrentBtn = document.getElementById('downloadCurrentBtn');
+  const downloadAllBtn = document.getElementById('downloadAllBtn');
+  const downloadResultBtn = document.getElementById('downloadResultBtn');
+  const continueToDealArchitectBtn = document.getElementById('continueToDealArchitectBtn');
+  const resultDealArchitectBtn = document.getElementById('resultDealArchitectBtn');
+
+  let currentImageUrl = {{ (interior_result.get('image_url') if interior_result else '')|tojson }};
+  let nextUrl = '';
 
   function setBlueprintPreviewFromUrl(url) {
     if (!url) return;
     blueprintPreview.innerHTML = `<img src="${url}" alt="Blueprint reference">`;
+  }
+
+  function imageFileName(prefix, url) {
+    const cleanPrefix = (prefix || 'ravlo-image').replace(/[^a-z0-9-_]+/gi, '-').toLowerCase();
+    try {
+      const pathname = new URL(url, window.location.origin).pathname;
+      const ext = pathname.split('.').pop();
+      if (ext && ext.length <= 5 && !ext.includes('/')) return `${cleanPrefix}.${ext}`;
+    } catch (_) {}
+    return `${cleanPrefix}.png`;
+  }
+
+  async function downloadImage(url, filename) {
+    if (!url || url === '#') return;
+
+    try {
+      const response = await fetch(url, { mode: 'cors', credentials: 'omit' });
+      if (!response.ok) throw new Error('Image download failed.');
+      const blob = await response.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = objectUrl;
+      link.download = filename || imageFileName('ravlo-design', url);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+    } catch (_) {
+      window.open(url, '_blank');
+    }
+  }
+
+  function collectImageUrls() {
+    const urls = new Set();
+    if (currentImageUrl) urls.add(currentImageUrl);
+    document.querySelectorAll('[data-image-url]').forEach((node) => {
+      const url = node.getAttribute('data-image-url');
+      if (url) urls.add(url);
+    });
+    return Array.from(urls);
+  }
+
+  function refreshActionButtons() {
+    const hasImage = Boolean(currentImageUrl);
+
+    [downloadCurrentBtn, downloadResultBtn].forEach((btn) => {
+      if (!btn) return;
+      btn.classList.toggle('hidden', !hasImage);
+    });
+
+    if (downloadAllBtn) {
+      downloadAllBtn.classList.toggle('hidden', collectImageUrls().length === 0);
+    }
+
+    [continueToDealArchitectBtn, resultDealArchitectBtn].forEach((link) => {
+      if (!link) return;
+      if (nextUrl) {
+        link.href = nextUrl;
+        link.classList.remove('hidden');
+      } else {
+        link.href = '#';
+        link.classList.add('hidden');
+      }
+    });
   }
 
   blueprintFile?.addEventListener('change', function () {
@@ -225,28 +310,58 @@
     if (this.value.trim()) setBlueprintPreviewFromUrl(this.value.trim());
   });
 
+  downloadCurrentBtn?.addEventListener('click', () => {
+    downloadImage(currentImageUrl, imageFileName('ravlo-current-interior', currentImageUrl));
+  });
+
+  downloadResultBtn?.addEventListener('click', () => {
+    downloadImage(currentImageUrl, imageFileName('ravlo-interior-result', currentImageUrl));
+  });
+
+  downloadAllBtn?.addEventListener('click', async () => {
+    const urls = collectImageUrls();
+    for (let i = 0; i < urls.length; i += 1) {
+      await downloadImage(urls[i], imageFileName(`ravlo-design-${i + 1}`, urls[i]));
+    }
+  });
+
   form?.addEventListener('submit', async function (e) {
     e.preventDefault();
     button.disabled = true;
     button.textContent = 'Generating...';
+    interiorStatus.textContent = 'Generating';
 
     try {
       const response = await fetch("{{ url_for('investor.generate_build_interior') }}", {
         method: 'POST',
         body: new FormData(form),
-        headers: { 'X-CSRFToken': '{{ csrf_token() }}', 'X-Requested-With': 'XMLHttpRequest' },
+        headers: {
+          'X-CSRFToken': '{{ csrf_token() }}',
+          'X-Requested-With': 'XMLHttpRequest'
+        },
         credentials: 'same-origin'
       });
+
       const data = await response.json();
-      if (!response.ok || data.status !== 'ok') throw new Error(data.message || 'Interior generation failed.');
+      if (!response.ok || data.status !== 'ok') {
+        throw new Error(data.message || 'Interior generation failed.');
+      }
 
       if (data.blueprint_url) setBlueprintPreviewFromUrl(data.blueprint_url);
+
+      currentImageUrl = data.image_url || '';
+      nextUrl = data.next_url || data.deal_architect_url || '';
+
       interiorStatus.textContent = 'Generated';
       resultRoom.textContent = data.room_type || '—';
       resultFloor.textContent = data.floor || '—';
       resultSeed.textContent = data.seed || '—';
       resultJob.textContent = data.job_id || '—';
-      resultMedia.innerHTML = data.image_url ? `<img src="${data.image_url}" alt="Interior result">` : '<div class="empty-state-inline">No image returned.</div>';
+
+      resultMedia.innerHTML = data.image_url
+        ? `<img src="${data.image_url}" alt="Interior result">`
+        : '<div class="empty-state-inline">No image returned.</div>';
+
       if (data.image_url) {
         resultLink.href = data.image_url;
         resultLink.classList.remove('hidden');
@@ -257,20 +372,27 @@
         card.className = 'room-card';
         card.href = data.image_url;
         card.target = '_blank';
+        card.setAttribute('data-image-url', data.image_url);
         card.innerHTML = `<img src="${data.image_url}" alt="${data.room_type || 'Interior room'}"><div><strong>${data.room_type || 'Room'}</strong><span>${data.floor || 'Floor'}</span></div>`;
+
         if (roomGallery.classList.contains('empty-state-inline')) {
           roomGallery.className = 'room-gallery';
           roomGallery.innerHTML = '';
         }
         roomGallery.prepend(card);
       }
+
+      refreshActionButtons();
     } catch (error) {
+      interiorStatus.textContent = 'Error';
       alert(error.message || 'Interior generation failed.');
     } finally {
       button.disabled = false;
       button.textContent = {{ (submit_label or "Generate Design Concept")|tojson }};
     }
   });
+
+  refreshActionButtons();
 })();
 </script>
 {% endblock %}
