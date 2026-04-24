@@ -1369,7 +1369,7 @@ def partner_dashboard():
 # ─────────────────────────────────────────────────────────────────────────────
 
 @vip_bp.get("/loan-officer")
-@role_required("partner_group", "admin")
+@role_required("partner_group", "admin", "loan_officer")
 def loan_officer_dashboard():
     profile    = get_or_create_vip_profile()
     policy     = get_user_lending_policy(current_user)
@@ -1418,6 +1418,7 @@ def loan_officer_dashboard():
 
     recent_quotes = _get_lo_recent_quotes(lo_profile)
 
+    closed_loans = [l for l in assigned_loans if (getattr(l, "status", "") or "").lower() in ("funded", "closed", "approved")]
     stats = {
         "funding_requests": len(funding_with_context),
         "capital_loans":    len(capital_with_context),
@@ -1425,6 +1426,9 @@ def loan_officer_dashboard():
         "pending_review":   sum(1 for i in funding_with_context if i["request"].status == "submitted"),
         "out_of_scope":     len(out_of_scope_loans),
         "total_quoted":     sum(float(getattr(q, "loan_amount", 0) or 0) for q in recent_quotes),
+        "total_loans":      len(assigned_loans),
+        "closed":           len(closed_loans),
+        "total_volume":     sum(float(getattr(l, "amount", 0) or 0) for l in closed_loans),
     }
 
     copilot_suggestions = (
@@ -1458,7 +1462,7 @@ def loan_officer_dashboard():
 # ─────────────────────────────────────────────────────────────────────────────
 
 @vip_bp.get("/loan-officer/workspace")
-@role_required("partner_group", "admin")
+@role_required("partner_group", "admin", "loan_officer")
 def loan_officer_external_dashboard():
     profile    = get_or_create_vip_profile()
     policy     = get_user_lending_policy(current_user)
