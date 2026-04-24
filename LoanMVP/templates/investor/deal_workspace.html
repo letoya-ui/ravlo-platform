@@ -700,13 +700,8 @@ Review a saved property, compare exit paths, and move the best opportunity into 
                                 {% set photo_url = photo %}
                             {% endif %}
                             {% if photo_url %}
-                            <div class="workspace-photo-tile workspace-photo-rehab-link">
+                            <div class="workspace-photo-tile">
                                 <img src="{{ photo_url }}" alt="Listing photo {{ loop.index }}" loading="lazy" referrerpolicy="no-referrer" onerror="this.onerror=null;this.src='/static/images/placeholder_property.jpg';">
-                                {% if deal %}
-                                <a href="{{ url_for('investor.deal_rehab', deal_id=deal.id, image_url=photo_url) }}" class="workspace-photo-overlay" title="Use in Renovation Studio">
-                                    <i data-lucide="sparkles"></i>
-                                </a>
-                                {% endif %}
                             </div>
                             {% endif %}
                         {% endfor %}
