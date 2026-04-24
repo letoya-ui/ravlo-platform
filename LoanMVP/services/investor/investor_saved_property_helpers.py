@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import hashlib
 from datetime import datetime
 
 from flask import jsonify
@@ -21,6 +22,9 @@ from LoanMVP.services.investor.investor_media_helpers import (
     _normalize_photo_urls,
     _resolve_photo,
 )
+
+
+SAVED_PROPERTY_ID_MAX_LENGTH = 50
 
 
 def _profile_id_filter(model, profile_id):
@@ -69,7 +73,7 @@ def _get_investor_profile_or_error():
 
 def _find_existing_saved_property(ip, payload):
     address = _clean_str(payload.get("address"))
-    property_id = _clean_str(payload.get("property_id") or payload.get("attom_id"))
+    property_id = _normalize_saved_property_id(payload.get("property_id") or payload.get("attom_id"))
 
     fk = _profile_id_filter(SavedProperty, ip.id)
     existing = None
@@ -105,6 +109,17 @@ def _clean_string_list(value):
     return [str(value).strip()] if str(value).strip() else []
 
 
+def _normalize_saved_property_id(value):
+    property_id = _clean_str(value)
+    if not property_id:
+        return None
+    if len(property_id) <= SAVED_PROPERTY_ID_MAX_LENGTH:
+        return property_id
+
+    digest = hashlib.sha1(property_id.encode("utf-8")).hexdigest()
+    return f"pid_{digest[:SAVED_PROPERTY_ID_MAX_LENGTH - 4]}"
+
+
 def _persist_property_core_fields(saved, payload):
     """
     Persist richer canonical fields when the SavedProperty model supports them.
@@ -114,7 +129,7 @@ def _persist_property_core_fields(saved, payload):
     city = _clean_str(payload.get("city"))
     state = _clean_str(payload.get("state"))
     zipcode = _clean_str(payload.get("zip") or payload.get("zip_code"))
-    property_id = _clean_str(payload.get("property_id") or payload.get("attom_id"))
+    property_id = _normalize_saved_property_id(payload.get("property_id") or payload.get("attom_id"))
 
     purchase_price = _clean_num(
         payload.get("purchase_price")
@@ -347,7 +362,7 @@ def _upsert_saved_property_from_payload(ip, payload):
     )
     sqft = _clean_int(payload.get("sqft") or payload.get("square_feet"))
     zipcode = _clean_str(payload.get("zip") or payload.get("zip_code"))
-    property_id = _clean_str(payload.get("property_id") or payload.get("attom_id"))
+    property_id = _normalize_saved_property_id(payload.get("property_id") or payload.get("attom_id"))
     image_url = _clean_str(payload.get("image_url"))
 
     existing = _find_existing_saved_property(ip, payload)

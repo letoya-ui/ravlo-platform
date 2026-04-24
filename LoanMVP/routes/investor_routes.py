@@ -270,6 +270,7 @@ from LoanMVP.services.investor.investor_saved_property_helpers import (
     _find_existing_saved_property,
     _get_investor_profile_or_error,
     _merge_nonempty_dict,
+    _normalize_saved_property_id,
     _persist_property_core_fields,
     _profile_id_filter,
     _property_payload_from_any,
@@ -2617,6 +2618,7 @@ def save_property():
                 sqft = None
 
     final_property_id = raw_property_id or resolved_property_id or None
+    final_property_id = _normalize_saved_property_id(final_property_id)
 
     existing = None
     fk = _profile_id_filter(SavedProperty, ip.id)
@@ -2624,7 +2626,7 @@ def save_property():
     if final_property_id:
         existing = SavedProperty.query.filter_by(
             **fk,
-            property_id=str(final_property_id)
+            property_id=final_property_id
         ).first()
 
     if not existing and normalized_address:
@@ -2643,7 +2645,7 @@ def save_property():
         if (not getattr(existing, "price", None)) and raw_price is not None:
             existing.price = str(raw_price)
         if (not getattr(existing, "property_id", None)) and final_property_id:
-            existing.property_id = str(final_property_id)
+            existing.property_id = final_property_id
 
         if resolved:
             _store_saved_property_media(existing, resolved, source="unified_resolver")
@@ -2653,7 +2655,7 @@ def save_property():
 
     saved = SavedProperty(
         **fk,
-        property_id=str(final_property_id) if final_property_id else None,
+        property_id=final_property_id,
         address=normalized_address,
         price=str(raw_price or ""),
         sqft=sqft,
@@ -2800,7 +2802,7 @@ def save_property_and_analyze():
 
     form_pid = (request.form.get("property_id") or "").strip()
     final_property_id = form_pid or resolved_property_id or None
-    final_property_id = str(final_property_id).strip() if final_property_id else None
+    final_property_id = _normalize_saved_property_id(final_property_id)
 
     fk = _profile_id_filter(SavedProperty, ip.id)
 
