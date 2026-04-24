@@ -1,11 +1,11 @@
 {% set ep = request.endpoint or "" %}
 {% set role = (vip_profile.role_type if vip_profile else "realtor") %}
-{% set brand_sub = (vip_profile.business_name if vip_profile else None) or (vip_profile.display_name if vip_profile else None) or "Realtor Workspace" %}
+{% set brand_sub = (vip_profile.business_name if vip_profile else None) or (vip_profile.display_name if vip_profile else None) or "Workspace" %}
 
 <div class="ravlo-sidebar-inner">
 
   <div class="ravlo-sidebar-brand">
-    <a href="{{ url_for('vip.realtor_dashboard') if role == 'realtor' else url_for('vip.index') }}" class="ravlo-brand-link">
+    <a href="{% if role == 'contractor' %}{{ url_for('vip.contractor_dashboard') }}{% elif role == 'realtor' %}{{ url_for('vip.realtor_dashboard') }}{% else %}{{ url_for('vip.index') }}{% endif %}" class="ravlo-brand-link">
       <div class="ravlo-brand-mark">
         <span>R</span>
       </div>
@@ -24,6 +24,52 @@
 
     <div class="ravlo-nav-section">Workspace</div>
 
+    {% if role == 'contractor' %}
+    {# ── CONTRACTOR SIDEBAR ── #}
+    <a href="{{ url_for('vip.contractor_dashboard') }}"
+       class="ravlo-nav-link {% if ep == 'vip.contractor_dashboard' %}active{% endif %}">
+      <i class="lucide lucide-layout-dashboard"></i>
+      <span>Dashboard</span>
+    </a>
+
+    <a href="{{ url_for('partners.requests_inbox') }}"
+       class="ravlo-nav-link {% if ep == 'partners.requests_inbox' %}active{% endif %}">
+      <i class="lucide lucide-inbox"></i>
+      <span>Job Requests</span>
+    </a>
+
+    <a href="{{ url_for('partners.proposals') }}"
+       class="ravlo-nav-link {% if ep == 'partners.proposals' %}active{% endif %}">
+      <i class="lucide lucide-file-text"></i>
+      <span>Proposals</span>
+    </a>
+
+    <a href="{{ url_for('partners.deals') }}"
+       class="ravlo-nav-link {% if ep == 'partners.deals' %}active{% endif %}">
+      <i class="lucide lucide-building-2"></i>
+      <span>Deals</span>
+    </a>
+
+    <a href="{{ url_for('vip.finances') }}"
+       class="ravlo-nav-link {% if ep in ['vip.finances', 'vip.finances_add_income', 'vip.finances_add_expense'] %}active{% endif %}">
+      <i class="lucide lucide-receipt"></i>
+      <span>Finances</span>
+    </a>
+
+    <a href="{{ url_for('vip.team') }}"
+       class="ravlo-nav-link {% if ep in ['vip.team', 'vip.team_add', 'vip.team_assign_lead', 'vip.team_auto_distribute', 'vip.team_toggle', 'vip.team_delete'] %}active{% endif %}">
+      <i class="lucide lucide-users"></i>
+      <span>Team</span>
+    </a>
+
+    <a href="{{ url_for('vip.ai_pilot') }}"
+       class="ravlo-nav-link {% if ep in ['vip.ai_pilot', 'vip.ai_pilot_command'] %}active{% endif %}">
+      <i class="lucide lucide-sparkles"></i>
+      <span>Copilot</span>
+    </a>
+
+    {% else %}
+    {# ── REALTOR / DEFAULT SIDEBAR ── #}
     <a href="{{ url_for('vip.realtor_dashboard') }}"
        class="ravlo-nav-link {% if ep == 'vip.realtor_dashboard' %}active{% endif %}">
       <i class="lucide lucide-layout-dashboard"></i>
@@ -77,6 +123,7 @@
       <i class="lucide lucide-sparkles"></i>
       <span>Copilot</span>
     </a>
+    {% endif %}
 
     <div class="ravlo-nav-section">Settings</div>
 
